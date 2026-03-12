@@ -22,13 +22,6 @@
   display: none;
 }
 
-.status {
-  @apply inline-flex items-center rounded-[6px] border px-2.5 py-1 text-xs font-medium;
-  border-color: var(--erp-line-strong);
-  background-color: var(--erp-panel-muted);
-  color: var(--erp-light);
-}
-
 .metadataSection {
   @apply grid gap-3 border-b px-4 py-3 text-xs print:hidden md:grid-cols-2;
   border-color: var(--erp-line);
@@ -50,12 +43,14 @@
 }
 
 .topTable {
-  @apply w-full table-fixed border-collapse border border-black bg-white text-black;
+  @apply w-full table-fixed border-collapse border bg-white text-black;
+  border-color: var(--erp-line-strong);
   min-width: 720px;
 }
 
 .mainTable {
-  @apply w-full table-fixed border-collapse border border-black border-t-0 bg-white text-black;
+  @apply w-full table-fixed border-collapse border border-t-0 bg-white text-black;
+  border-color: var(--erp-line-strong);
   min-width: 720px;
 }
 
@@ -80,11 +75,14 @@
 }
 
 .headingCell {
-  @apply border border-black bg-slate-50 p-2 text-center font-semibold;
+  @apply border p-2 text-center font-semibold;
+  border-color: var(--erp-line-strong);
+  background-color: var(--erp-panel-muted);
 }
 
 .inputCell {
-  @apply border border-black p-2 text-left;
+  @apply border p-2 text-left;
+  border-color: var(--erp-line-strong);
 }
 
 .textInput {
@@ -92,11 +90,14 @@
 }
 
 .sectionHeadingCell {
-  @apply border border-black bg-slate-50 p-2 text-center font-semibold;
+  @apply border p-2 text-center font-semibold;
+  border-color: var(--erp-line-strong);
+  background-color: var(--erp-panel-muted);
 }
 
 .textareaCell {
-  @apply border border-black p-2 align-top;
+  @apply border p-2 align-top;
+  border-color: var(--erp-line-strong);
 }
 
 .textareaInput {
@@ -104,7 +105,8 @@
 }
 
 .photoCell {
-  @apply border border-black p-2 align-top;
+  @apply border p-2 align-top;
+  border-color: var(--erp-line-strong);
 }
 
 .photoFrame {
@@ -113,6 +115,21 @@
 }
 
 @media print {
+  .topTable,
+  .mainTable,
+  .headingCell,
+  .inputCell,
+  .sectionHeadingCell,
+  .textareaCell,
+  .photoCell {
+    border-color: #000;
+  }
+
+  .headingCell,
+  .sectionHeadingCell {
+    background-color: #f8fafc;
+  }
+
   .photoFrame {
     background-color: #fff;
   }

@@ -1,5 +1,5 @@
 import SiteOverviewChecklist from '@/components/site-overview/SiteOverviewChecklist';
-import SiteOverviewUploadPanel from '@/components/site-overview/SiteOverviewUploadPanel';
+import { createEmptyCausativeAgentMap } from '@/constants/siteOverview';
 import type { CausativeAgentKey, CausativeAgentReport } from '@/types/siteOverview';
 import styles from './InspectionSessionWorkspace.module.css';
 
@@ -16,11 +16,19 @@ export default function SessionSiteOverviewSection({
 }: SessionSiteOverviewSectionProps) {
   return (
     <div className={styles.overviewGrid}>
-      <SiteOverviewUploadPanel
-        onSuccess={onSuccess}
+      <SiteOverviewChecklist
+        report={report}
+        onAgentToggle={onToggle}
+        onUploadSuccess={onSuccess}
+        onUploadClear={() =>
+          onSuccess({
+            agents: createEmptyCausativeAgentMap(),
+            reasoning: '',
+            photoUrl: '',
+          })
+        }
         onRawResponse={() => undefined}
       />
-      <SiteOverviewChecklist report={report} onAgentToggle={onToggle} />
     </div>
   );
 }

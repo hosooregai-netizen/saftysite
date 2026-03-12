@@ -29,6 +29,8 @@ export interface InspectionCover {
 
 export interface PreviousGuidanceItem {
   id: string;
+  sourceSessionId?: string;
+  sourceHazardId?: string;
   title: string;
   description: string;
   status: GuidanceStatus;

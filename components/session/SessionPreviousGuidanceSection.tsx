@@ -5,28 +5,18 @@ import styles from './InspectionSessionWorkspace.module.css';
 
 interface SessionPreviousGuidanceSectionProps {
   items: PreviousGuidanceItem[];
-  relatedSessionsCount: number;
-  canImport: boolean;
-  onImportLatest: () => void;
-  onAdd: () => void;
   onChange: (itemId: string, patch: Partial<PreviousGuidanceItem>) => void;
   onPhotoChange: (
     itemId: string,
-    field: 'previousPhotoUrl' | 'currentPhotoUrl',
+    field: 'currentPhotoUrl',
     event: ChangeEvent<HTMLInputElement>
   ) => void;
-  onRemove: (itemId: string) => void;
 }
 
 export default function SessionPreviousGuidanceSection({
   items,
-  relatedSessionsCount,
-  canImport,
-  onImportLatest,
-  onAdd,
   onChange,
   onPhotoChange,
-  onRemove,
 }: SessionPreviousGuidanceSectionProps) {
   const handleStatusChange = (itemId: string, value: GuidanceStatus) => {
     onChange(itemId, { status: value });
@@ -34,65 +24,20 @@ export default function SessionPreviousGuidanceSection({
 
   return (
     <div className={styles.sectionStack}>
-      <div className={styles.guidanceToolbar}>
-        <p className={styles.relatedHint}>
-          같은 사업장 기준 과거 세션 {relatedSessionsCount}건을 참조할 수 있습니다.
-        </p>
-        <div className={styles.bottomActions}>
-          {canImport && (
-            <button
-              type="button"
-              onClick={onImportLatest}
-              className="app-button app-button-secondary"
-            >
-              최근 지적사항 불러오기
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={onAdd}
-            className="app-button app-button-primary"
-          >
-            항목 추가
-          </button>
-        </div>
-      </div>
-
       {items.length > 0 ? (
         <div className={styles.guidanceList}>
           {items.map((item, index) => (
             <article key={item.id} className={styles.guidanceCard}>
               <div className={styles.guidanceCardHeader}>
                 <div>
-                  <h3 className={styles.itemTitle}>이전 지적사항 #{index + 1}</h3>
-                  <p className={styles.fieldHint}>
-                    과거 지적 내용과 현재 이행 상태를 함께 기록합니다.
-                  </p>
-                </div>
-
-                <div className={styles.bottomActions}>
-                  <button
-                    type="button"
-                    onClick={() => onRemove(item.id)}
-                    className="app-button app-button-secondary"
-                  >
-                    삭제
-                  </button>
+                  <h3 className={styles.itemTitle}>이전 지도 사항 #{index + 1}</h3>
                 </div>
               </div>
 
               <div className={styles.formGrid}>
                 <div className={styles.formField}>
-                  <label className={styles.fieldLabel}>지적사항 제목</label>
-                  <input
-                    type="text"
-                    value={item.title}
-                    onChange={(event) =>
-                      onChange(item.id, { title: event.target.value })
-                    }
-                    className="app-input"
-                    placeholder="예: 개구부 방호 미설치"
-                  />
+                  <label className={styles.fieldLabel}>과거 위험 항목</label>
+                  <input type="text" value={item.title} className="app-input" readOnly />
                 </div>
 
                 <div className={styles.formField}>
@@ -121,14 +66,11 @@ export default function SessionPreviousGuidanceSection({
                 </div>
 
                 <div className={`${styles.formField} ${styles.formFieldWide}`}>
-                  <label className={styles.fieldLabel}>지적 내용</label>
+                  <label className={styles.fieldLabel}>과거 현재 위험 데이터</label>
                   <textarea
                     value={item.description}
-                    onChange={(event) =>
-                      onChange(item.id, { description: event.target.value })
-                    }
                     className="app-textarea"
-                    placeholder="과거 기술지도 시 지적했던 내용을 적습니다."
+                    readOnly
                   />
                 </div>
               </div>
@@ -141,31 +83,14 @@ export default function SessionPreviousGuidanceSection({
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={item.previousPhotoUrl}
-                        alt="과거 지적 사진"
+                        alt="과거 현재 위험 사진"
                         className={styles.photoPreview}
                       />
                     ) : (
                       <div className={styles.photoPlaceholder}>
-                        과거 사진을 등록해 비교 기준을 남깁니다.
+                        과거 보고서에 등록된 사진이 없습니다.
                       </div>
                     )}
-                  </div>
-                  <div className={styles.photoActions}>
-                    <label
-                      htmlFor={`${item.id}-previous-photo`}
-                      className="app-button app-button-secondary"
-                    >
-                      사진 선택
-                    </label>
-                    <input
-                      id={`${item.id}-previous-photo`}
-                      type="file"
-                      accept="image/*"
-                      onChange={(event) =>
-                        onPhotoChange(item.id, 'previousPhotoUrl', event)
-                      }
-                      className={styles.hiddenInput}
-                    />
                   </div>
                 </div>
 
@@ -176,12 +101,12 @@ export default function SessionPreviousGuidanceSection({
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={item.currentPhotoUrl}
-                        alt="현재 이행 상태 사진"
+                        alt="현재 조치 상태 사진"
                         className={styles.photoPreview}
                       />
                     ) : (
                       <div className={styles.photoPlaceholder}>
-                        현재 상태 사진을 올려 이행 여부를 남깁니다.
+                        현재 조치 상태 사진을 올려 이행 여부를 남깁니다.
                       </div>
                     )}
                   </div>
@@ -211,7 +136,7 @@ export default function SessionPreviousGuidanceSection({
                   value={item.note}
                   onChange={(event) => onChange(item.id, { note: event.target.value })}
                   className="app-textarea"
-                  placeholder="추가 확인사항이나 미이행 사유를 적습니다."
+                  placeholder="추가 확인 사항이나 미이행 사유를 기록합니다."
                 />
               </div>
             </article>
@@ -219,8 +144,7 @@ export default function SessionPreviousGuidanceSection({
         </div>
       ) : (
         <div className={styles.emptyPanel}>
-          이전 지적사항 항목이 없습니다. 필요하면 수동으로 추가하거나 같은 사업장
-          과거 세션에서 불러올 수 있습니다.
+          같은 현장의 과거 현재 위험 데이터가 아직 없습니다.
         </div>
       )}
     </div>

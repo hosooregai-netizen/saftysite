@@ -60,12 +60,8 @@
   color: var(--erp-white);
 }
 
-.headerLabel {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: #d5deea;
+.headerMetaSpacer {
+  min-height: 14px;
 }
 
 .headerTitleRow {
@@ -192,13 +188,22 @@
 }
 
 .sectionTabActive {
-  border-color: var(--erp-mid);
-  background-color: #edf2f7;
-  box-shadow: 0 0 0 2px rgba(31, 48, 69, 0.1);
+  border-color: var(--erp-navy);
+  background: linear-gradient(180deg, var(--erp-mid) 0%, var(--erp-navy) 100%);
+  box-shadow: 0 0 0 2px rgba(16, 24, 43, 0.12);
+}
+
+.sectionTabCompleted {
+  border-color: #9ab3cb;
+  background: linear-gradient(180deg, #f4f8fc 0%, #e8f0f8 100%);
 }
 
 .sectionTabCompleted .sectionTabIndex {
-  background-color: var(--erp-gold-soft);
+  background: linear-gradient(180deg, #4f7aa3 0%, #385d80 100%);
+  color: var(--erp-white);
+}
+
+.sectionTabCompleted .sectionTabLabel {
   color: var(--erp-mid);
 }
 
@@ -215,6 +220,21 @@
   color: var(--erp-text-muted);
 }
 
+.sectionTabActive .sectionTabIndex {
+  background: rgba(255, 255, 255, 0.16);
+  color: var(--erp-white);
+}
+
+.sectionTabActive.sectionTabCompleted {
+  border-color: var(--erp-navy);
+  background: linear-gradient(180deg, var(--erp-mid) 0%, var(--erp-navy) 100%);
+}
+
+.sectionTabActive.sectionTabCompleted .sectionTabIndex {
+  background: rgba(255, 255, 255, 0.16);
+  color: var(--erp-white);
+}
+
 .sectionTabText {
   display: inline-flex;
   align-items: center;
@@ -224,6 +244,14 @@
   font-size: 14px;
   font-weight: 700;
   color: var(--erp-dark);
+}
+
+.sectionTabActive .sectionTabLabel {
+  color: var(--erp-white);
+}
+
+.sectionTabActive.sectionTabCompleted .sectionTabLabel {
+  color: var(--erp-white);
 }
 
 .content {
@@ -269,12 +297,14 @@
 .formGrid {
   display: grid;
   gap: 16px;
+  min-width: 0;
 }
 
 .formField {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-width: 0;
 }
 
 .formFieldWide {
@@ -297,8 +327,7 @@
 }
 
 .overviewGrid {
-  display: grid;
-  gap: 16px;
+  display: block;
 }
 
 .guidanceToolbar,
@@ -319,6 +348,7 @@
 .futureList {
   display: grid;
   gap: 14px;
+  min-width: 0;
 }
 
 .guidanceCard,
@@ -327,6 +357,7 @@
   border-radius: 12px;
   background-color: var(--erp-panel-muted);
   padding: 16px;
+  min-width: 0;
 }
 
 .guidanceCardHeader,
@@ -375,6 +406,7 @@
 .photoCompareGrid {
   display: grid;
   gap: 12px;
+  min-width: 0;
 }
 
 .photoCard {
@@ -382,6 +414,7 @@
   border-radius: 12px;
   background-color: var(--erp-white);
   padding: 14px;
+  min-width: 0;
 }
 
 .photoCardTitle {
@@ -427,86 +460,13 @@
   display: none;
 }
 
-.hazardLayout {
+.hazardReportList {
   display: grid;
-  gap: 16px;
+  gap: 14px;
 }
 
-.hazardSidebar {
-  border: 1px solid var(--erp-line);
-  border-radius: 12px;
-  background-color: var(--erp-panel-muted);
-  padding: 14px;
-}
-
-.hazardSidebarHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 12px;
-}
-
-.hazardSidebarTitle {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--erp-dark);
-}
-
-.hazardList {
-  display: grid;
-  gap: 10px;
-}
-
-.hazardItemButton {
-  width: 100%;
-  border: 1px solid var(--erp-line);
-  border-radius: 12px;
-  background-color: var(--erp-white);
-  padding: 14px;
-  text-align: left;
-  transition:
-    border-color 0.2s ease,
-    background-color 0.2s ease;
-}
-
-.hazardItemButton:hover {
-  border-color: var(--erp-line-strong);
-}
-
-.hazardItemButtonActive {
-  border-color: var(--erp-mid);
-  background-color: #edf2f7;
-}
-
-.hazardItemTitle {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--erp-dark);
-}
-
-.hazardItemMeta {
-  margin-top: 6px;
-  font-size: 13px;
-  color: var(--erp-text-muted);
-}
-
-.hazardItemSnippet {
-  margin-top: 10px;
-  font-size: 13px;
-  line-height: 1.7;
-  color: var(--erp-text-muted);
-}
-
-.hazardDetail {
-  display: grid;
-  gap: 12px;
-}
-
-.hazardDetailHeader {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+.hazardReportCard {
+  min-width: 0;
 }
 
 .emptyPanel {
@@ -636,10 +596,6 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .overviewGrid {
-    grid-template-columns: minmax(300px, 380px) minmax(0, 1fr);
-  }
-
   .photoCompareGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -649,11 +605,6 @@
     flex-direction: row;
     align-items: flex-start;
     justify-content: space-between;
-  }
-
-  .hazardLayout {
-    grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
-    align-items: start;
   }
 
   .supportGrid {
@@ -697,7 +648,6 @@
     padding-right: 0;
   }
 
-  .hazardLayout,
   .overviewGrid,
   .photoCompareGrid,
   .supportGrid,

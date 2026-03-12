@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { useCallback, useState } from 'react';
 import SiteOverviewChecklist from '@/components/site-overview/SiteOverviewChecklist';
-import SiteOverviewUploadPanel from '@/components/site-overview/SiteOverviewUploadPanel';
 import { createEmptyCausativeAgentMap } from '@/constants/siteOverview';
 import type { CausativeAgentKey, CausativeAgentReport } from '@/types/siteOverview';
 import styles from './page.module.css';
@@ -70,17 +69,13 @@ export default function SiteOverviewPage() {
           </header>
 
           <div className={styles.contentGrid}>
-            <aside className={styles.uploadAside}>
-              <SiteOverviewUploadPanel
-                onSuccess={setReport}
-                onRawResponse={() => undefined}
-              />
-            </aside>
-
             <div className={styles.checklistPane}>
               <SiteOverviewChecklist
                 report={report}
                 onAgentToggle={handleAgentToggle}
+                onUploadSuccess={setReport}
+                onUploadClear={() => setReport(createEmptyOverviewReport())}
+                onRawResponse={() => undefined}
               />
             </div>
           </div>

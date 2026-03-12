@@ -147,7 +147,7 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
               <Link href="/" className={styles.backLink}>
                 현장 목록으로
               </Link>
-              <p className={styles.heroKicker}>현장 보고서</p>
+              <div className={styles.heroMetaSpacer} aria-hidden="true" />
               <div className={styles.heroTitleRow}>
                 <h1 className={styles.heroTitle}>{currentSite.title}</h1>
               </div>
@@ -226,6 +226,31 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
                             <span className={styles.dataValue}>
                               {formatDateTime(session.lastSavedAt)}
                             </span>
+                          </div>
+
+                          <div className={styles.mobileActions}>
+                            <Link href={sessionHref} className="app-button app-button-primary">
+                              이어서 작성
+                            </Link>
+                            <button
+                              type="button"
+                              className="app-button app-button-secondary"
+                              onClick={() => setDialogState({ type: 'pdf' })}
+                            >
+                              PDF 출력
+                            </button>
+                            <button
+                              type="button"
+                              className={`${styles.mobileDangerButton} app-button app-button-secondary`}
+                              onClick={() =>
+                                setDialogState({
+                                  type: 'delete',
+                                  sessionId: session.id,
+                                })
+                              }
+                            >
+                              삭제
+                            </button>
                           </div>
 
                           <details className={styles.menuShell} data-menu-root="report-menu">

@@ -2,16 +2,6 @@
   @apply grid gap-6 px-5 py-5 md:px-8 print:block;
 }
 
-@media (min-width: 1024px) {
-  .contentGrid {
-    grid-template-columns: 360px minmax(0, 1fr);
-  }
-}
-
-.uploadAside {
-  @apply print:hidden;
-}
-
 .checklistPane {
   min-width: 0;
 }

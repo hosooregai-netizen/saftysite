@@ -1,12 +1,14 @@
 import {
   createInspectionHazardItem,
-  createPreviousGuidanceItem,
+  getSessionSiteKey,
+  getSessionSortTime,
 } from '@/constants/inspectionSession';
 import type { HazardReportItem } from '@/types/hazard';
 import type {
   DraftState,
   GuidanceStatus,
   InspectionHazardItem,
+  InspectionSession,
   PreviousGuidanceItem,
 } from '@/types/inspectionSession';
 
@@ -51,17 +53,6 @@ export function readFileAsDataUrl(file: File): Promise<string> {
   });
 }
 
-export function hasGuidanceContent(item: PreviousGuidanceItem): boolean {
-  return Boolean(
-    item.title ||
-      item.description ||
-      item.note ||
-      item.previousPhotoUrl ||
-      item.currentPhotoUrl ||
-      item.status !== 'pending'
-  );
-}
-
 export function toInspectionHazardItem(
   report: HazardReportItem
 ): InspectionHazardItem {
@@ -71,14 +62,144 @@ export function toInspectionHazardItem(
   };
 }
 
-export function clonePreviousGuidanceItem(
-  item: PreviousGuidanceItem
-): PreviousGuidanceItem {
-  const base = createPreviousGuidanceItem();
-  return {
-    ...base,
-    title: item.title,
-    description: item.description,
-    previousPhotoUrl: item.currentPhotoUrl || item.previousPhotoUrl,
-  };
+function normalizeText(value: string | null | undefined): string {
+  return value?.trim() ?? '';
+}
+
+function getGuidanceSourceKey(
+  sourceSessionId?: string,
+  sourceHazardId?: string
+): string {
+  return `${sourceSessionId ?? ''}::${sourceHazardId ?? ''}`;
+}
+
+function createDerivedGuidanceId(sourceSessionId: string, sourceHazardId: string): string {
+  return `guidance-${sourceSessionId}-${sourceHazardId}`;
+}
+
+function getHazardLocationLabel(report: HazardReportItem): string {
+  const location = normalizeText(report.location);
+  const locationDetail = normalizeText(report.locationDetail);
+
+  if (location && locationDetail) {
+    return `${location} / ${locationDetail}`;
+  }
+
+  return locationDetail || location;
+}
+
+function buildGuidanceTitle(report: HazardReportItem): string {
+  const locationLabel = getHazardLocationLabel(report);
+  if (locationLabel) return locationLabel;
+
+  return summarize(report.hazardFactors, '이전 위험 항목');
+}
+
+function buildGuidanceDescription(report: HazardReportItem): string {
+  const sections = [
+    normalizeText(report.hazardFactors)
+      ? `위험요인: ${normalizeText(report.hazardFactors)}`
+      : '',
+    normalizeText(report.improvementItems)
+      ? `개선사항: ${normalizeText(report.improvementItems)}`
+      : '',
+    normalizeText(report.riskAssessmentResult)
+      ? `위험도: ${normalizeText(report.riskAssessmentResult)}`
+      : '',
+  ].filter(Boolean);
+
+  return sections.join('\n');
+}
+
+function findExistingGuidanceItem(
+  items: PreviousGuidanceItem[],
+  sourceSessionId: string,
+  sourceHazardId: string,
+  title: string,
+  previousPhotoUrl: string
+): PreviousGuidanceItem | undefined {
+  const sourceKey = getGuidanceSourceKey(sourceSessionId, sourceHazardId);
+
+  return items.find((item) => {
+    if (
+      getGuidanceSourceKey(item.sourceSessionId, item.sourceHazardId) === sourceKey &&
+      item.sourceSessionId &&
+      item.sourceHazardId
+    ) {
+      return true;
+    }
+
+    return item.title === title && item.previousPhotoUrl === previousPhotoUrl;
+  });
+}
+
+export function buildPreviousGuidanceItems(
+  session: InspectionSession,
+  sessions: InspectionSession[]
+): PreviousGuidanceItem[] {
+  const currentSiteKey = getSessionSiteKey(session);
+  const currentSortTime = getSessionSortTime(session);
+
+  return sessions
+    .filter(
+      (item) =>
+        item.id !== session.id &&
+        getSessionSiteKey(item) === currentSiteKey &&
+        getSessionSortTime(item) < currentSortTime
+    )
+    .flatMap((sourceSession) =>
+      sourceSession.currentHazards.map((hazard) => {
+        const title = buildGuidanceTitle(hazard);
+        const previousPhotoUrl = normalizeText(hazard.photoUrl);
+        const existingItem = findExistingGuidanceItem(
+          session.previousGuidanceItems,
+          sourceSession.id,
+          hazard.id,
+          title,
+          previousPhotoUrl
+        );
+
+        return {
+          id:
+            existingItem?.id ??
+            createDerivedGuidanceId(sourceSession.id, hazard.id),
+          sourceSessionId: sourceSession.id,
+          sourceHazardId: hazard.id,
+          title,
+          description: buildGuidanceDescription(hazard),
+          status: existingItem?.status ?? 'pending',
+          previousPhotoUrl,
+          currentPhotoUrl: existingItem?.currentPhotoUrl ?? '',
+          note: existingItem?.note ?? '',
+          createdAt: existingItem?.createdAt ?? hazard.createdAt,
+          updatedAt: existingItem?.updatedAt ?? hazard.updatedAt,
+        };
+      })
+    );
+}
+
+export function arePreviousGuidanceItemsEqual(
+  left: PreviousGuidanceItem[],
+  right: PreviousGuidanceItem[]
+): boolean {
+  if (left.length !== right.length) return false;
+
+  return left.every((item, index) => {
+    const other = right[index];
+    if (!other) return false;
+
+    return (
+      item.id === other.id &&
+      item.sourceSessionId === other.sourceSessionId &&
+      item.sourceHazardId === other.sourceHazardId &&
+      item.title === other.title &&
+      item.description === other.description &&
+      item.status === other.status &&
+      item.previousPhotoUrl === other.previousPhotoUrl &&
+      item.currentPhotoUrl === other.currentPhotoUrl &&
+      item.note === other.note &&
+      item.createdAt === other.createdAt &&
+      item.updatedAt === other.updatedAt
+    );
+  });
 }

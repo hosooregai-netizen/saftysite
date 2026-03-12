@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef } from 'react';
+import { type ChangeEvent, type ReactNode, useCallback, useRef } from 'react';
 import type { HazardReportItem } from '@/types/hazard';
 import { useAutoResizeTextarea } from '@/hooks/useAutoResizeTextarea';
 import styles from './HazardReportTable.module.css';
@@ -9,12 +9,14 @@ interface HazardReportTableProps {
   data: HazardReportItem;
   onChange: (data: HazardReportItem) => void;
   index: number;
+  headerActions?: ReactNode;
 }
 
 export default function HazardReportTable({
   data,
   onChange,
   index,
+  headerActions,
 }: HazardReportTableProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { ref: hazardFactorsRef, resize: resizeHazard } =
@@ -33,8 +35,8 @@ export default function HazardReportTable({
     [data, onChange]
   );
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handlePhotoChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
@@ -55,9 +57,11 @@ export default function HazardReportTable({
         <div className={styles.headerRow}>
           <div>
             <p className={styles.headerTitle}>위험성평가 보고서 #{index + 1}</p>
-            <p className={styles.headerDescription}>출력 전 내용을 직접 검토하고 수정합니다.</p>
+            <p className={styles.headerDescription}>
+              출력 전 내용을 직접 검토하고 수정합니다.
+            </p>
           </div>
-          <span className={styles.status}>편집 가능</span>
+          {headerActions}
         </div>
       </div>
 
@@ -89,27 +93,23 @@ export default function HazardReportTable({
         </colgroup>
         <thead>
           <tr>
-            <th className={styles.headingCell}>
-              {data.location || '유해·위험요소'}
-            </th>
+            <th className={styles.headingCell}>{data.location || '유해·위험요소'}</th>
             <th className={styles.inputCell}>
               <input
                 type="text"
                 value={data.locationDetail}
-                onChange={(e) => handleChange('locationDetail', e.target.value)}
+                onChange={(event) => handleChange('locationDetail', event.target.value)}
                 className={styles.textInput}
-                placeholder="예: 외벽 보수 구간"
+                placeholder="예: 3층 보수 구간"
               />
             </th>
-            <th className={styles.headingCell}>
-              위험도 평가 결과
-            </th>
+            <th className={styles.headingCell}>위험도 평가 결과</th>
             <th className={styles.inputCell}>
               <input
                 type="text"
                 value={data.riskAssessmentResult}
-                onChange={(e) =>
-                  handleChange('riskAssessmentResult', e.target.value)
+                onChange={(event) =>
+                  handleChange('riskAssessmentResult', event.target.value)
                 }
                 className={styles.textInput}
                 placeholder="예: 보통 (4)"
@@ -140,8 +140,8 @@ export default function HazardReportTable({
               <textarea
                 ref={hazardFactorsRef}
                 value={data.hazardFactors}
-                onChange={(e) => {
-                  handleChange('hazardFactors', e.target.value);
+                onChange={(event) => {
+                  handleChange('hazardFactors', event.target.value);
                   requestAnimationFrame(() => resizeHazard());
                 }}
                 className={styles.textareaInput}
@@ -153,12 +153,12 @@ export default function HazardReportTable({
               <textarea
                 ref={improvementItemsRef}
                 value={data.improvementItems}
-                onChange={(e) => {
-                  handleChange('improvementItems', e.target.value);
+                onChange={(event) => {
+                  handleChange('improvementItems', event.target.value);
                   requestAnimationFrame(() => resizeImprovement());
                 }}
                 className={styles.textareaInput}
-                placeholder="예: 안전난간 설치, 출입통제, 작업 전 교육 실시"
+                placeholder="예: 안전난간 설치, 출입통제, 작업 전 교육 재실시"
                 rows={3}
               />
             </td>
@@ -204,7 +204,9 @@ export default function HazardReportTable({
                     className={styles.photoPlaceholder}
                   >
                     <span>이미지 선택</span>
-                    <span className={styles.photoPlaceholderHint}>클릭해서 사진을 추가하세요.</span>
+                    <span className={styles.photoPlaceholderHint}>
+                      클릭해서 사진을 추가하세요
+                    </span>
                   </label>
                 )}
               </div>
@@ -213,12 +215,12 @@ export default function HazardReportTable({
               <textarea
                 ref={legalInfoRef}
                 value={data.legalInfo}
-                onChange={(e) => {
-                  handleChange('legalInfo', e.target.value);
+                onChange={(event) => {
+                  handleChange('legalInfo', event.target.value);
                   requestAnimationFrame(() => resizeLegal());
                 }}
                 className={styles.textareaInput}
-                placeholder="관련 법령, 기준, 참고사항을 입력하세요."
+                placeholder="관련 법령, 기준, 참고사항을 입력하세요"
                 rows={5}
               />
             </td>
@@ -231,8 +233,8 @@ export default function HazardReportTable({
               <input
                 type="text"
                 value={data.implementationPeriod}
-                onChange={(e) =>
-                  handleChange('implementationPeriod', e.target.value)
+                onChange={(event) =>
+                  handleChange('implementationPeriod', event.target.value)
                 }
                 className={styles.textInput}
                 placeholder="예: 즉시 이행"

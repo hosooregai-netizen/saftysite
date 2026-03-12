@@ -3,7 +3,7 @@
 }
 
 .dropzone {
-  @apply mb-4 flex min-h-40 items-center justify-center rounded-panel border border-dashed px-4 py-6 text-center transition;
+  @apply flex min-h-40 items-center justify-center rounded-panel border border-dashed px-4 py-6 text-center transition;
   border-color: var(--erp-line-strong);
   background-color: var(--erp-panel-muted);
   cursor: pointer;
@@ -36,33 +36,47 @@
   display: none;
 }
 
-.actionBar {
-  @apply mb-4 flex flex-wrap gap-2;
-}
-
-.filePanel {
-  @apply mb-3 overflow-hidden rounded-panel border;
-  border-color: var(--erp-line);
-}
-
-.fileHeader {
-  @apply border-b px-4 py-2 text-xs font-semibold uppercase;
+.previewFrame {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 320px;
+  overflow: hidden;
+  border-radius: 8px;
   background-color: #f8fafc;
-  color: #475569;
-  letter-spacing: 0.12em;
-  border-color: var(--erp-line);
 }
 
-.fileBody {
-  @apply px-4 py-3 text-sm;
-  color: #334155;
+.previewImage {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  max-height: min(56vh, 520px);
+  height: auto;
+  object-fit: contain;
 }
 
-.fileNameStrong {
-  font-weight: 500;
+.removeButton {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid rgba(143, 45, 45, 0.34);
+  border-radius: 4px;
+  background-color: rgba(255, 245, 245, 0.92);
+  font-size: 12px;
+  font-weight: 700;
+  color: #8f2d2d;
+  box-shadow: 0 4px 12px rgba(16, 24, 43, 0.12);
 }
 
 .error {
+  margin-top: 12px;
   @apply text-sm;
   color: #e11d48;
 }

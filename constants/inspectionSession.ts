@@ -8,7 +8,6 @@ import type {
   InspectionSectionMeta,
   InspectionSite,
   InspectionSession,
-  PreviousGuidanceItem,
 } from '@/types/inspectionSession';
 
 export const INSPECTION_SECTIONS: InspectionSectionMeta[] = [
@@ -79,21 +78,6 @@ export function createInspectionSite(title: string): InspectionSite {
   };
 }
 
-export function createPreviousGuidanceItem(): PreviousGuidanceItem {
-  const timestamp = createTimestamp();
-  return {
-    id: generateId('guidance'),
-    title: '',
-    description: '',
-    status: 'pending',
-    previousPhotoUrl: '',
-    currentPhotoUrl: '',
-    note: '',
-    createdAt: timestamp,
-    updatedAt: timestamp,
-  };
-}
-
 export function createInspectionHazardItem(): InspectionHazardItem {
   const timestamp = createTimestamp();
   return {
@@ -145,7 +129,7 @@ export function createInspectionSession(
       photoUrl: '',
     },
     siteOverviewStatus: 'draft',
-    previousGuidanceItems: [createPreviousGuidanceItem()],
+    previousGuidanceItems: [],
     currentHazards: [],
     futureProcessRisks: [createFutureProcessRiskItem()],
     supportItems: {
@@ -222,7 +206,7 @@ export function getSectionCompletion(
       return Boolean(session.siteOverview.photoUrl);
     case 'previousGuidance':
       return session.previousGuidanceItems.some(
-        (item) => item.title || item.currentPhotoUrl || item.status !== 'pending'
+        (item) => item.currentPhotoUrl || item.note || item.status !== 'pending'
       );
     case 'currentHazards':
       return session.currentHazards.length > 0;

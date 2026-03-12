@@ -2,12 +2,11 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ChangeEvent, useMemo, useState } from 'react';
+import { ChangeEvent, useCallback, useEffect, useMemo } from 'react';
 import {
   INSPECTION_SECTIONS,
   createFutureProcessRiskItem,
   createInspectionHazardItem,
-  createPreviousGuidanceItem,
   getSectionCompletion,
   getSessionProgress,
   getSessionSiteKey,
@@ -32,8 +31,8 @@ import SessionPreviousGuidanceSection from './SessionPreviousGuidanceSection';
 import SessionSiteOverviewSection from './SessionSiteOverviewSection';
 import SessionSupportSection from './SessionSupportSection';
 import {
-  clonePreviousGuidanceItem,
-  hasGuidanceContent,
+  arePreviousGuidanceItemsEqual,
+  buildPreviousGuidanceItems,
   readFileAsDataUrl,
   toInspectionHazardItem,
 } from './sessionUtils';
@@ -56,37 +55,15 @@ export default function InspectionSessionWorkspace({
     saveNow,
   } = useInspectionSessions();
   const session = getSessionById(sessionId);
-  const [activeHazardId, setActiveHazardId] = useState<string | null>(null);
 
   const progress = session ? getSessionProgress(session) : null;
   const currentSectionIndex = session
     ? INSPECTION_SECTIONS.findIndex((section) => section.key === session.currentSection)
     : -1;
-  const effectiveActiveHazardId =
-    session?.currentHazards.some((item) => item.id === activeHazardId)
-      ? activeHazardId
-      : session?.currentHazards[0]?.id ?? null;
 
-  const selectedHazard = useMemo(() => {
-    if (!session || session.currentHazards.length === 0) return null;
-
-    return (
-      session.currentHazards.find((item) => item.id === effectiveActiveHazardId) ||
-      session.currentHazards[0]
-    );
-  }, [effectiveActiveHazardId, session]);
-
-  const relatedSessions = useMemo(() => {
+  const derivedPreviousGuidanceItems = useMemo(() => {
     if (!session) return [];
-
-    const currentSiteKey = getSessionSiteKey(session);
-
-    return sessions.filter(
-      (item) =>
-        item.id !== session.id &&
-        getSessionSiteKey(item) === currentSiteKey &&
-        item.previousGuidanceItems.some(hasGuidanceContent)
-    );
+    return buildPreviousGuidanceItems(session, sessions);
   }, [session, sessions]);
 
   const siteTitle = session
@@ -95,9 +72,29 @@ export default function InspectionSessionWorkspace({
       '이름 없는 현장'
     : '';
 
-  const handleSessionChange = (updater: Parameters<typeof updateSession>[1]) => {
-    updateSession(sessionId, updater);
-  };
+  const handleSessionChange = useCallback(
+    (updater: Parameters<typeof updateSession>[1]) => {
+      updateSession(sessionId, updater);
+    },
+    [sessionId, updateSession]
+  );
+
+  useEffect(() => {
+    if (!session) return;
+    if (
+      arePreviousGuidanceItemsEqual(
+        session.previousGuidanceItems,
+        derivedPreviousGuidanceItems
+      )
+    ) {
+      return;
+    }
+
+    handleSessionChange((current) => ({
+      ...current,
+      previousGuidanceItems: derivedPreviousGuidanceItems,
+    }));
+  }, [derivedPreviousGuidanceItems, handleSessionChange, session]);
 
   const handleSectionChange = (section: InspectionSectionKey) => {
     handleSessionChange((current) => ({
@@ -146,14 +143,6 @@ export default function InspectionSessionWorkspace({
     }));
   };
 
-  const handleAddPreviousGuidance = () => {
-    const item = createPreviousGuidanceItem();
-    handleSessionChange((current) => ({
-      ...current,
-      previousGuidanceItems: [...current.previousGuidanceItems, item],
-    }));
-  };
-
   const handlePreviousGuidanceChange = (
     itemId: string,
     patch: Partial<PreviousGuidanceItem>
@@ -168,7 +157,7 @@ export default function InspectionSessionWorkspace({
 
   const handlePreviousGuidancePhoto = async (
     itemId: string,
-    field: 'previousPhotoUrl' | 'currentPhotoUrl',
+    field: 'currentPhotoUrl',
     event: ChangeEvent<HTMLInputElement>
   ) => {
     const file = event.target.files?.[0];
@@ -179,33 +168,6 @@ export default function InspectionSessionWorkspace({
     event.target.value = '';
   };
 
-  const handleRemovePreviousGuidance = (itemId: string) => {
-    handleSessionChange((current) => ({
-      ...current,
-      previousGuidanceItems: current.previousGuidanceItems.filter(
-        (item) => item.id !== itemId
-      ),
-    }));
-  };
-
-  const handleImportLatestGuidance = () => {
-    const latestRelatedSession = relatedSessions[0];
-    if (!latestRelatedSession) return;
-
-    const importedItems = latestRelatedSession.previousGuidanceItems
-      .filter(hasGuidanceContent)
-      .map(clonePreviousGuidanceItem);
-
-    if (importedItems.length === 0) return;
-
-    handleSessionChange((current) => ({
-      ...current,
-      previousGuidanceItems: current.previousGuidanceItems.some(hasGuidanceContent)
-        ? [...current.previousGuidanceItems, ...importedItems]
-        : importedItems,
-    }));
-  };
-
   const handleHazardUploadSuccess = (reports: HazardReportItem[]) => {
     const nextItems = reports.map(toInspectionHazardItem);
     handleSessionChange((current) => ({
@@ -214,7 +176,6 @@ export default function InspectionSessionWorkspace({
     }));
 
     if (nextItems[0]) {
-      setActiveHazardId(nextItems[0].id);
       handleSectionChange('currentHazards');
     }
   };
@@ -225,7 +186,6 @@ export default function InspectionSessionWorkspace({
       ...current,
       currentHazards: [...current.currentHazards, item],
     }));
-    setActiveHazardId(item.id);
   };
 
   const handleHazardChange = (itemId: string, data: HazardReportItem) => {
@@ -237,29 +197,11 @@ export default function InspectionSessionWorkspace({
     }));
   };
 
-  const handleHazardStatusChange = (itemId: string, status: DraftState) => {
-    handleSessionChange((current) => ({
-      ...current,
-      currentHazards: current.currentHazards.map((item) =>
-        item.id === itemId ? touchUpdatedAt({ ...item, status }) : item
-      ),
-    }));
-  };
-
   const handleRemoveHazard = (itemId: string) => {
-    if (!session) return;
-
-    const currentIndex = session.currentHazards.findIndex((item) => item.id === itemId);
-    const nextSelected =
-      session.currentHazards[currentIndex + 1] ||
-      session.currentHazards[currentIndex - 1] ||
-      null;
-
     handleSessionChange((current) => ({
       ...current,
       currentHazards: current.currentHazards.filter((item) => item.id !== itemId),
     }));
-    setActiveHazardId(nextSelected?.id ?? null);
   };
 
   const handleAddFutureRisk = () => {
@@ -354,9 +296,9 @@ export default function InspectionSessionWorkspace({
             <header className={styles.header}>
               <div className={styles.headerMain}>
                 <Link href={siteHref} className={styles.backLink}>
-                  현장 목록으로
+                  보고서 목록으로
                 </Link>
-                <span className={styles.headerLabel}>현장 보고서</span>
+                <div className={styles.headerMetaSpacer} aria-hidden="true" />
                 <div className={styles.headerTitleRow}>
                   <h1 className={styles.headerTitle}>{siteTitle}</h1>
                   <p className={styles.headerReportTitle}>
@@ -468,26 +410,18 @@ export default function InspectionSessionWorkspace({
                       {section.key === 'previousGuidance' && (
                         <SessionPreviousGuidanceSection
                           items={session.previousGuidanceItems}
-                          relatedSessionsCount={relatedSessions.length}
-                          canImport={Boolean(relatedSessions[0])}
-                          onImportLatest={handleImportLatestGuidance}
-                          onAdd={handleAddPreviousGuidance}
                           onChange={handlePreviousGuidanceChange}
                           onPhotoChange={handlePreviousGuidancePhoto}
-                          onRemove={handleRemovePreviousGuidance}
                         />
                       )}
 
                       {section.key === 'currentHazards' && (
                         <SessionCurrentHazardsSection
                           items={session.currentHazards}
-                          selectedItem={selectedHazard}
-                          onSelect={setActiveHazardId}
                           onUploadSuccess={handleHazardUploadSuccess}
                           onAdd={handleAddHazard}
                           onRemove={handleRemoveHazard}
                           onChange={handleHazardChange}
-                          onStatusChange={handleHazardStatusChange}
                         />
                       )}
 
@@ -519,9 +453,6 @@ export default function InspectionSessionWorkspace({
               </p>
 
               <div className={styles.bottomActions}>
-                <Link href={siteHref} className="app-button app-button-secondary">
-                  현장으로
-                </Link>
                 <button
                   type="button"
                   onClick={() => saveNow()}

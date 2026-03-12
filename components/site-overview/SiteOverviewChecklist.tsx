@@ -4,6 +4,7 @@ import {
   CAUSATIVE_AGENT_SECTIONS,
   createEmptyCausativeAgentMap,
 } from '@/constants/siteOverview';
+import SiteOverviewUploadPanel from './SiteOverviewUploadPanel';
 import type {
   CausativeAgentChecklistItem,
   CausativeAgentKey,
@@ -14,6 +15,9 @@ import styles from './SiteOverviewChecklist.module.css';
 interface SiteOverviewChecklistProps {
   report: CausativeAgentReport | null;
   onAgentToggle: (key: CausativeAgentKey, checked: boolean) => void;
+  onUploadSuccess: (report: CausativeAgentReport) => void;
+  onUploadClear: () => void;
+  onRawResponse: (raw: unknown) => void;
 }
 
 function ChecklistCell({
@@ -66,8 +70,17 @@ function ChecklistCell({
 export default function SiteOverviewChecklist({
   report,
   onAgentToggle,
+  onUploadSuccess,
+  onUploadClear,
+  onRawResponse,
 }: SiteOverviewChecklistProps) {
   const agents = report?.agents ?? createEmptyCausativeAgentMap();
+  const mobileItems = CAUSATIVE_AGENT_SECTIONS.flatMap((section) =>
+    section.rows.flatMap((row) => [
+      { sectionLabel: section.label, item: row.left },
+      { sectionLabel: section.label, item: row.right },
+    ])
+  );
   const selectedItems = CAUSATIVE_AGENT_SECTIONS.flatMap((section) =>
     section.rows.flatMap((row) => [row.left, row.right])
   ).filter((item) => agents[item.key]);
@@ -99,20 +112,18 @@ export default function SiteOverviewChecklist({
             <tbody>
               <tr>
                 <td className={styles.photoCell}>
-                  {report?.photoUrl ? (
-                    <div className={styles.photoFrame}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={report.photoUrl}
-                        alt="점검 사업장 전경 사진"
-                        className={styles.photoImage}
-                      />
-                    </div>
-                  ) : (
-                    <div className={styles.photoPlaceholder}>
-                      전경 사진을 업로드하면 여기에 표시됩니다.
-                    </div>
-                  )}
+                  <SiteOverviewUploadPanel
+                    report={
+                      report ?? {
+                        agents: createEmptyCausativeAgentMap(),
+                        reasoning: '',
+                        photoUrl: '',
+                      }
+                    }
+                    onSuccess={onUploadSuccess}
+                    onClear={onUploadClear}
+                    onRawResponse={onRawResponse}
+                  />
                 </td>
               </tr>
             </tbody>
@@ -172,6 +183,41 @@ export default function SiteOverviewChecklist({
               )}
             </tbody>
           </table>
+
+          <div className={styles.mobileChecklistList}>
+            <div className={styles.mobileChecklistHeader}>
+              건설현장 12대 사망사고 기인물 핵심 안전조치
+            </div>
+            {mobileItems.map(({ sectionLabel, item }) => {
+              const rowClassName = [
+                styles.mobileChecklistItem,
+                agents[item.key] ? styles.checkedCell : '',
+              ]
+                .filter(Boolean)
+                .join(' ');
+
+              return (
+                <div key={item.key} className={rowClassName}>
+                  <div className={styles.mobileChecklistTop}>
+                    <span className={styles.mobileChecklistSection}>{sectionLabel}</span>
+                    <label className={styles.mobileChecklistLabel}>
+                      <input
+                        type="checkbox"
+                        checked={agents[item.key]}
+                        onChange={(event) => onAgentToggle(item.key, event.target.checked)}
+                        className={styles.checkbox}
+                        aria-label={`${item.number}. ${item.label}`}
+                      />
+                      <span>
+                        {item.number}. {item.label}
+                      </span>
+                    </label>
+                  </div>
+                  <p className={styles.mobileChecklistGuidance}>{item.guidance}</p>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 

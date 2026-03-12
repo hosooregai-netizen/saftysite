@@ -52,12 +52,8 @@
   color: var(--erp-white);
 }
 
-.heroKicker {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: #d5deea;
+.heroMetaSpacer {
+  min-height: 14px;
 }
 
 .heroTitle {
@@ -146,6 +142,28 @@
   color: var(--erp-dark);
 }
 
+.mobileActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mobileActions :global(.app-button) {
+  min-width: 0;
+  padding-inline: 12px;
+}
+
+.mobileDangerButton {
+  border-color: #deb2b2 !important;
+  background-color: var(--erp-danger-soft) !important;
+  color: #8f2d2d !important;
+}
+
+.mobileDangerButton:hover {
+  border-color: #cf9898 !important;
+  background-color: #f8e3e3 !important;
+}
+
 .progressStack {
   display: flex;
   flex-direction: column;
@@ -186,6 +204,7 @@
 }
 
 .menuShell {
+  display: none;
   position: relative;
 }
 
@@ -337,7 +356,12 @@
     display: none;
   }
 
+  .mobileActions {
+    display: none;
+  }
+
   .menuShell {
+    display: block;
     justify-self: center;
   }
 }
