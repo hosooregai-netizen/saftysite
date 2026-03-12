@@ -1,0 +1,37 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --hazard-border: 1px solid #000;
+    --hazard-input-focus: 1px solid #3b82f6;
+  }
+}
+
+/* 인쇄 스타일 */
+@media print {
+  @page {
+    size: A4;
+    margin: 1cm;
+  }
+
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  table,
+  th,
+  td {
+    border: var(--hazard-border) !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  input,
+  textarea {
+    border: none !important;
+    box-shadow: none !important;
+  }
+}

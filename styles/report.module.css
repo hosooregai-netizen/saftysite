@@ -1,0 +1,65 @@
+/* HazardReport 테이블 스타일 */
+
+.container {
+  @apply mb-8 break-inside-avoid space-y-0;
+}
+
+.tableTop {
+  @apply min-w-[640px] w-full border-collapse border border-black bg-white text-black overflow-visible table-fixed;
+}
+
+.tableMain {
+  @apply min-w-[640px] w-full border-collapse border border-black border-t-0 bg-white text-black overflow-visible table-fixed;
+}
+
+.cell {
+  @apply border border-black p-2 align-top;
+}
+
+.cellTitle {
+  @apply border border-black p-2 font-semibold align-middle text-center;
+}
+
+.cellTitleNowrap {
+  @apply border border-black p-2 text-center font-semibold align-top whitespace-nowrap;
+}
+
+.cellData {
+  @apply border border-black p-2 text-left align-top;
+}
+
+.input {
+  @apply w-full border-0 bg-transparent p-0 text-inherit min-w-0;
+}
+
+.inputFocus {
+  @apply focus:outline-none focus:ring-1 focus:ring-blue-500;
+}
+
+.textarea {
+  @apply w-full border-0 bg-transparent p-0 text-inherit resize-none whitespace-pre-wrap break-words;
+}
+
+.textareaBase {
+  @apply min-h-[80px];
+}
+
+.textareaLegal {
+  @apply min-h-[120px];
+}
+
+.photoZone {
+  @apply min-h-[120px] flex flex-col items-center justify-center gap-2 bg-gray-50;
+}
+
+.photoZonePrint {
+  @apply print:bg-white;
+}
+
+.photoPlaceholder {
+  @apply flex cursor-pointer flex-col items-center justify-center gap-1 rounded border border-dashed border-gray-400 py-6 text-sm text-gray-500 hover:border-black hover:text-black print:border-gray-300;
+}
+
+.reportLabel {
+  @apply text-sm text-gray-500 mt-1 print:hidden;
+}

@@ -1,0 +1,41 @@
+/* HazardUploadPanel 스타일 */
+
+.panel {
+  @apply rounded-lg border border-black bg-white p-4 print:hidden;
+}
+
+.panelTitle {
+  @apply mb-3 text-sm font-semibold text-black;
+}
+
+.buttonGroup {
+  @apply mb-3 flex flex-wrap gap-2;
+}
+
+.btnSecondary {
+  @apply rounded border border-black bg-white px-3 py-1.5 text-sm text-black transition hover:bg-gray-100 disabled:opacity-50;
+}
+
+.btnPrimary {
+  @apply rounded border border-black bg-black px-3 py-1.5 text-sm text-white transition hover:bg-gray-800 disabled:opacity-50;
+}
+
+.fileList {
+  @apply mb-3 max-h-32 overflow-y-auto text-xs text-gray-600;
+}
+
+.fileItem {
+  @apply flex items-center gap-2;
+}
+
+.fileName {
+  @apply truncate flex-1;
+}
+
+.fileRemove {
+  @apply text-red-600 hover:underline;
+}
+
+.error {
+  @apply text-sm text-red-600;
+}
