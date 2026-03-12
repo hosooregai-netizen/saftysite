@@ -14,7 +14,12 @@ function extractObject(raw: unknown): UnknownRecord {
 
   if (raw && typeof raw === 'object') {
     const obj = raw as UnknownRecord;
-    const nested = obj.data ?? obj.result ?? obj.response;
+    const nested =
+      obj.data ??
+      obj.result ??
+      obj.response ??
+      obj.item ??
+      obj.payload;
     if (nested && nested !== raw) {
       return extractObject(nested);
     }
@@ -24,13 +29,42 @@ function extractObject(raw: unknown): UnknownRecord {
   return {};
 }
 
+function normalizeKey(value: string): string {
+  return value
+    .normalize('NFKC')
+    .replace(/[\s_\-.,·/()[\]]+/g, '')
+    .toLowerCase();
+}
+
+function coerceBoolean(value: unknown): boolean {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value !== 0;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (['true', '1', 'y', 'yes', 'checked'].includes(normalized)) return true;
+    if (['false', '0', 'n', 'no', 'unchecked', ''].includes(normalized)) {
+      return false;
+    }
+  }
+
+  return Boolean(value);
+}
+
 function normalizeAgents(value: unknown): CausativeAgentMap {
   const normalized = createEmptyCausativeAgentMap();
   if (!value || typeof value !== 'object') return normalized;
 
   const input = value as UnknownRecord;
+  const keyMap = new Map<string, CausativeAgentKey>();
+
   (Object.keys(normalized) as CausativeAgentKey[]).forEach((key) => {
-    normalized[key] = Boolean(input[key]);
+    keyMap.set(normalizeKey(key), key);
+  });
+
+  Object.entries(input).forEach(([rawKey, rawValue]) => {
+    const matchedKey = keyMap.get(normalizeKey(rawKey));
+    if (!matchedKey) return;
+    normalized[matchedKey] = coerceBoolean(rawValue);
   });
 
   return normalized;
@@ -50,9 +84,15 @@ export async function normalizeCausativeAgentResponse(
   uploadedFile?: File
 ): Promise<CausativeAgentReport> {
   const payload = extractObject(raw);
+  const agentsSource =
+    payload.agents_checked ??
+    payload.agents ??
+    payload.checked_agents ??
+    payload.causative_agents ??
+    payload;
 
   return {
-    agents: normalizeAgents(payload.agents),
+    agents: normalizeAgents(agentsSource),
     reasoning:
       typeof payload.reasoning === 'string' ? payload.reasoning.trim() : '',
     photoUrl: uploadedFile ? await fileToDataUrl(uploadedFile) : '',

@@ -5,25 +5,32 @@ import Link from 'next/link';
 import RawJsonViewer from '@/components/RawJsonViewer';
 import SiteOverviewChecklist from '@/components/site-overview/SiteOverviewChecklist';
 import SiteOverviewUploadPanel from '@/components/site-overview/SiteOverviewUploadPanel';
+import { createEmptyCausativeAgentMap } from '@/constants/siteOverview';
 import type { CausativeAgentKey, CausativeAgentReport } from '@/types/siteOverview';
 
+function createEmptyOverviewReport(): CausativeAgentReport {
+  return {
+    agents: createEmptyCausativeAgentMap(),
+    reasoning: '',
+    photoUrl: '',
+  };
+}
+
 export default function SiteOverviewPage() {
-  const [report, setReport] = useState<CausativeAgentReport | null>(null);
+  const [report, setReport] = useState<CausativeAgentReport>(
+    createEmptyOverviewReport
+  );
   const [rawResponse, setRawResponse] = useState<unknown>(null);
 
   const handleAgentToggle = useCallback(
     (key: CausativeAgentKey, checked: boolean) => {
-      setReport((current) => {
-        if (!current) return current;
-
-        return {
-          ...current,
-          agents: {
-            ...current.agents,
-            [key]: checked,
-          },
-        };
-      });
+      setReport((current) => ({
+        ...current,
+        agents: {
+          ...current.agents,
+          [key]: checked,
+        },
+      }));
     },
     []
   );
@@ -52,18 +59,17 @@ export default function SiteOverviewPage() {
             <button
               type="button"
               onClick={() => window.print()}
-              disabled={!report}
-              className="rounded-full border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-200 disabled:text-slate-500"
+              className="rounded-full border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800"
             >
               인쇄
             </button>
             <button
               type="button"
               onClick={() => {
-                setReport(null);
+                setReport(createEmptyOverviewReport());
                 setRawResponse(null);
               }}
-              disabled={!report && rawResponse == null}
+              disabled={rawResponse == null && !report.photoUrl}
               className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-400"
             >
               초기화
