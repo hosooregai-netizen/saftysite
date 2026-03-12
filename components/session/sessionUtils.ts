@@ -82,16 +82,3 @@ export function clonePreviousGuidanceItem(
     previousPhotoUrl: item.currentPhotoUrl || item.previousPhotoUrl,
   };
 }
-
-export function getSaveStateLabel(value: string): string {
-  switch (value) {
-    case 'saving':
-      return '저장 중';
-    case 'saved':
-      return '저장됨';
-    case 'error':
-      return '저장 실패';
-    default:
-      return '저장 대기';
-  }
-}

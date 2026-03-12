@@ -154,16 +154,29 @@ export default function HomePage() {
       <div className="app-container">
         <section className={`app-shell ${styles.shell}`}>
           <header className={styles.hero}>
-            <div className={styles.heroBody}>
-              <p className={styles.heroKicker}>현장 작성 모드</p>
-              <h1 className={styles.heroTitle}>현장 목록</h1>
+            <div className={styles.heroMain}>
+              <div className={styles.heroTopRow} aria-hidden="true">
+                <span className={styles.heroTopPlaceholder}>.</span>
+              </div>
+              <p className={styles.heroKicker} aria-hidden="true">
+                현장 보고서
+              </p>
+              <div className={styles.heroTitleRow}>
+                <div className={styles.heroBody}>
+                  <h1 className={styles.heroTitle}>현장 목록</h1>
+                </div>
+                <div className={styles.heroActionsPlaceholder} aria-hidden="true">
+                  <span className="app-chip">총 00건</span>
+                  <span className="app-button app-button-primary">새 보고서 시작</span>
+                </div>
+              </div>
             </div>
           </header>
 
           <div className={styles.pageGrid}>
             <section className={styles.sessionPanel}>
               <div className={styles.panelHeader}>
-                <h2 className={styles.panelTitle}>현장 리스트</h2>
+                <h2 className={styles.panelTitle}>현장</h2>
                 <div className={styles.panelActions}>
                   <span className="app-chip">총 {siteSummaries.length}개 현장</span>
                   <button

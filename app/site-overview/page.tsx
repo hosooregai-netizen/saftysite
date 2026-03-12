@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useState } from 'react';
 import Link from 'next/link';
+import { useCallback, useState } from 'react';
 import SiteOverviewChecklist from '@/components/site-overview/SiteOverviewChecklist';
 import SiteOverviewUploadPanel from '@/components/site-overview/SiteOverviewUploadPanel';
 import { createEmptyCausativeAgentMap } from '@/constants/siteOverview';
@@ -45,7 +45,7 @@ export default function SiteOverviewPage() {
               <Link href="/" className="app-breadcrumb">
                 메인 메뉴
               </Link>
-              <h1 className="app-page-title">환경 점검표 작성</h1>
+              <h1 className="app-page-title">전경 점검 작성</h1>
             </div>
 
             <div className="app-toolbar">

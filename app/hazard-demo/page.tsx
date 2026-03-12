@@ -76,7 +76,7 @@ export default function HazardDemoPage() {
                   ))
                 ) : (
                   <div className="app-empty-state print:hidden">
-                    업로드된 분석 결과가 없습니다.
+                    업로드한 분석 결과가 없습니다.
                   </div>
                 )}
               </div>

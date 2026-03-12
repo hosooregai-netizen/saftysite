@@ -357,9 +357,12 @@ export default function InspectionSessionWorkspace({
                   현장 목록으로
                 </Link>
                 <span className={styles.headerLabel}>현장 보고서</span>
-                <div className={styles.headerIntro}>
+                <div className={styles.headerTitleRow}>
                   <h1 className={styles.headerTitle}>{siteTitle}</h1>
-                  <p className={styles.headerReportTitle}>{getSessionTitle(session)}</p>
+                  <p className={styles.headerReportTitle}>
+                    <span className={styles.headerTitleDivider}>-</span>
+                    {getSessionTitle(session)}
+                  </p>
                 </div>
               </div>
 
@@ -430,7 +433,7 @@ export default function InspectionSessionWorkspace({
             </nav>
 
             <div className={styles.content}>
-              {INSPECTION_SECTIONS.map((section, index) => {
+              {INSPECTION_SECTIONS.map((section) => {
                 const isActive = section.key === session.currentSection;
                 const className = [
                   styles.sectionCard,
@@ -442,7 +445,6 @@ export default function InspectionSessionWorkspace({
                 return (
                   <section key={section.key} className={className}>
                     <div className={styles.sectionHeader}>
-                      <p className={styles.sectionKicker}>Section {index + 1}</p>
                       <h2 className={styles.sectionTitle}>{section.label}</h2>
                       <p className={styles.sectionDescription}>{section.description}</p>
                     </div>

@@ -15,7 +15,6 @@ export type GuidanceStatus =
   | 'implemented'
   | 'partial'
   | 'notImplemented';
-export type SessionSaveState = 'idle' | 'saving' | 'saved' | 'error';
 
 export interface InspectionCover {
   businessName: string;

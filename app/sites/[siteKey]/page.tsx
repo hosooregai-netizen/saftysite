@@ -148,7 +148,9 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
                 현장 목록으로
               </Link>
               <p className={styles.heroKicker}>현장 보고서</p>
-              <h1 className={styles.heroTitle}>{currentSite.title}</h1>
+              <div className={styles.heroTitleRow}>
+                <h1 className={styles.heroTitle}>{currentSite.title}</h1>
+              </div>
             </div>
 
             <div className={styles.heroActions}>

@@ -5,16 +5,26 @@
 .hero {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 136px;
   border-bottom: 1px solid var(--erp-line);
   background: linear-gradient(135deg, #112035 0%, #1b3048 100%);
-  padding: 24px;
+  padding: 18px 20px 16px;
   color: var(--erp-white);
 }
 
 .heroMain {
   display: grid;
-  gap: 8px;
+  align-content: space-between;
+  gap: 6px;
+  min-height: 100%;
+}
+
+.heroTitleRow {
+  display: flex;
+  align-items: flex-end;
+  min-height: 40px;
 }
 
 .backLink {
@@ -51,8 +61,9 @@
 }
 
 .heroTitle {
-  font-size: 30px;
+  font-size: 28px;
   font-weight: 700;
+  line-height: 1.1;
   letter-spacing: -0.03em;
 }
 
@@ -61,10 +72,11 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+  min-height: 36px;
 }
 
 .pageGrid {
-  padding: 20px;
+  padding: 16px;
 }
 
 .panel {
@@ -84,8 +96,8 @@
 
 .reportRow {
   display: grid;
-  gap: 14px;
-  padding: 16px 20px;
+  gap: 10px;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--erp-line);
 }
 
@@ -104,7 +116,7 @@
 }
 
 .reportTitle {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   line-height: 1.35;
   color: var(--erp-dark);
@@ -130,7 +142,7 @@
 }
 
 .dataValue {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--erp-dark);
 }
 
@@ -147,25 +159,30 @@
   height: 10px;
   overflow: hidden;
   border-radius: 999px;
-  background: linear-gradient(180deg, #e7effa 0%, #d9e6f5 100%);
-  box-shadow: inset 0 1px 2px rgba(18, 28, 47, 0.08);
+  background: linear-gradient(180deg, #e4ebf2 0%, #d7e0e8 100%);
+  box-shadow: inset 0 1px 2px rgba(18, 28, 47, 0.1);
 }
 
 .progressFill {
   display: block;
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, #1d4ed8 0%, #2563eb 52%, #60a5fa 100%);
+  background: linear-gradient(
+    90deg,
+    var(--erp-mid) 0%,
+    var(--erp-light) 58%,
+    var(--erp-slate) 100%
+  );
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.26),
-    0 0 0 1px rgba(37, 99, 235, 0.1);
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 0 0 1px rgba(31, 48, 69, 0.12);
 }
 
 .progressText {
   font-size: 12px;
   font-weight: 600;
   line-height: 1.2;
-  color: #1e3a8a;
+  color: var(--erp-mid);
 }
 
 .menuShell {
@@ -247,11 +264,11 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 12px;
-  padding: 28px 20px;
+  padding: 24px 16px;
 }
 
 .emptyTitle {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
   color: var(--erp-dark);
 }
@@ -259,20 +276,34 @@
 @media (min-width: 960px) {
   .hero {
     flex-direction: row;
-    align-items: flex-end;
+    align-items: stretch;
     justify-content: space-between;
-    padding: 30px 32px 26px;
+    min-height: 156px;
+    padding: 22px 28px 20px;
+  }
+
+  .heroMain {
+    justify-content: space-between;
+  }
+
+  .heroTitleRow {
+    min-height: 46px;
+  }
+
+  .heroActions {
+    align-self: flex-end;
+    justify-content: flex-end;
   }
 
   .pageGrid {
-    padding: 24px 32px 28px;
+    padding: 20px 28px 24px;
   }
 
   .listHead {
     display: grid;
     grid-template-columns: minmax(220px, 1.5fr) minmax(100px, 0.8fr) minmax(180px, 1.2fr) minmax(110px, 0.75fr) minmax(150px, 0.95fr) 40px;
     gap: 20px;
-    padding: 12px 20px 10px;
+    padding: 9px 16px 8px;
     border-bottom: 1px solid var(--erp-line);
     background-color: var(--erp-panel-muted);
     font-size: 11px;

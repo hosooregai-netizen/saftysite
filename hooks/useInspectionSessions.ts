@@ -12,7 +12,6 @@ import type {
   InspectionCover,
   InspectionSite,
   InspectionSession,
-  SessionSaveState,
 } from '@/types/inspectionSession';
 
 const STORAGE_KEY = 'inspection-sessions-v1';
@@ -94,8 +93,6 @@ export function useInspectionSessions() {
   const [sessions, setSessions] = useState<InspectionSession[]>([]);
   const [sites, setSites] = useState<InspectionSite[]>([]);
   const [isReady, setIsReady] = useState(false);
-  const [saveState, setSaveState] = useState<SessionSaveState>('idle');
-  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const skipNextSessionPersistRef = useRef(true);
   const skipNextSitePersistRef = useRef(true);
 
@@ -106,7 +103,6 @@ export function useInspectionSessions() {
     const nextSites = loadSites(nextSessions);
     setSessions(nextSessions);
     setSites(nextSites);
-    setLastSavedAt(nextSessions[0]?.lastSavedAt ?? null);
     setIsReady(true);
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
@@ -117,11 +113,7 @@ export function useInspectionSessions() {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
       skipNextSessionPersistRef.current = true;
       setSessions(normalized);
-      setLastSavedAt(normalized[0]?.lastSavedAt ?? null);
-      setSaveState('saved');
-    } catch {
-      setSaveState('error');
-    }
+    } catch {}
   }, []);
 
   const persistSites = useCallback((nextSites: InspectionSite[]) => {
@@ -129,10 +121,7 @@ export function useInspectionSessions() {
       window.localStorage.setItem(SITE_STORAGE_KEY, JSON.stringify(nextSites));
       skipNextSitePersistRef.current = true;
       setSites(nextSites);
-      setSaveState('saved');
-    } catch {
-      setSaveState('error');
-    }
+    } catch {}
   }, []);
 
   useEffect(() => {
@@ -165,7 +154,6 @@ export function useInspectionSessions() {
 
   const createSite = useCallback((title: string) => {
     const nextSite = createInspectionSite(title);
-    setSaveState('saving');
     persistSites([nextSite, ...sites]);
     return nextSite;
   }, [persistSites, sites]);
@@ -173,7 +161,6 @@ export function useInspectionSessions() {
   const updateSite = useCallback(
     (siteId: string, updater: (current: InspectionSite) => InspectionSite) => {
       const updatedAt = new Date().toISOString();
-      setSaveState('saving');
       setSites((current) =>
         current.map((site) =>
           site.id === siteId
@@ -189,7 +176,6 @@ export function useInspectionSessions() {
   );
 
   const deleteSite = useCallback((siteId: string) => {
-    setSaveState('saving');
     setSites((current) => current.filter((site) => site.id !== siteId));
     setSessions((current) =>
       current.filter((session) => getSessionSiteKey(session) !== siteId)
@@ -220,7 +206,6 @@ export function useInspectionSessions() {
         lastSavedAt: savedAt,
       };
 
-      setSaveState('saving');
       persistSessions([nextSession, ...sessions]);
       return nextSession;
     },
@@ -233,7 +218,6 @@ export function useInspectionSessions() {
       updater: (current: InspectionSession) => InspectionSession
     ) => {
       const savedAt = new Date().toISOString();
-      setSaveState('saving');
 
       setSessions((current) =>
         sortSessions(
@@ -259,7 +243,6 @@ export function useInspectionSessions() {
       updater: (current: InspectionSession) => InspectionSession
     ) => {
       const savedAt = new Date().toISOString();
-      setSaveState('saving');
 
       setSessions((current) =>
         sortSessions(
@@ -280,13 +263,11 @@ export function useInspectionSessions() {
   );
 
   const deleteSession = useCallback((sessionId: string) => {
-    setSaveState('saving');
     setSessions((current) => current.filter((session) => session.id !== sessionId));
   }, []);
 
   const deleteSessions = useCallback(
     (predicate: (session: InspectionSession) => boolean) => {
-      setSaveState('saving');
       setSessions((current) => current.filter((session) => !predicate(session)));
     },
     []
@@ -294,7 +275,6 @@ export function useInspectionSessions() {
 
   const saveNow = useCallback(() => {
     if (!isReady) return;
-    setSaveState('saving');
     persistSessions(sessions);
   }, [isReady, persistSessions, sessions]);
 
@@ -313,8 +293,6 @@ export function useInspectionSessions() {
       sites,
       sessions,
       isReady,
-      saveState,
-      lastSavedAt,
       createSite,
       updateSite,
       deleteSite,
@@ -331,8 +309,6 @@ export function useInspectionSessions() {
       sites,
       sessions,
       isReady,
-      saveState,
-      lastSavedAt,
       createSite,
       updateSite,
       deleteSite,
