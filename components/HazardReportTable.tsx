@@ -1,7 +1,7 @@
 'use client';
 
-import { useRef, useCallback } from 'react';
-import { type HazardReportItem } from '@/types/hazard';
+import { useCallback, useRef } from 'react';
+import type { HazardReportItem } from '@/types/hazard';
 import { useAutoResizeTextarea } from '@/hooks/useAutoResizeTextarea';
 
 interface HazardReportTableProps {
@@ -16,9 +16,14 @@ export default function HazardReportTable({
   index,
 }: HazardReportTableProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { ref: hazardFactorsRef, resize: resizeHazard } = useAutoResizeTextarea(data.hazardFactors, 80);
-  const { ref: improvementItemsRef, resize: resizeImprovement } = useAutoResizeTextarea(data.improvementItems, 80);
-  const { ref: legalInfoRef, resize: resizeLegal } = useAutoResizeTextarea(data.legalInfo, 120);
+  const { ref: hazardFactorsRef, resize: resizeHazard } =
+    useAutoResizeTextarea(data.hazardFactors, 88);
+  const { ref: improvementItemsRef, resize: resizeImprovement } =
+    useAutoResizeTextarea(data.improvementItems, 88);
+  const { ref: legalInfoRef, resize: resizeLegal } = useAutoResizeTextarea(
+    data.legalInfo,
+    128
+  );
 
   const handleChange = useCallback(
     (field: keyof HazardReportItem, value: string) => {
@@ -30,6 +35,7 @@ export default function HazardReportTable({
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
     const reader = new FileReader();
     reader.onload = () => {
       handleChange('photoUrl', reader.result as string);
@@ -43,9 +49,8 @@ export default function HazardReportTable({
   };
 
   return (
-    <div className="mb-8 break-inside-avoid space-y-0">
-      {/* 상단: 유해·위험장소 / 위험성 평가 결과 (좌우 1:1) */}
-      <table className="min-w-[640px] w-full border-collapse border border-black bg-white text-black overflow-visible table-fixed">
+    <section className="mb-8 break-inside-avoid space-y-0">
+      <table className="min-w-[680px] w-full table-fixed border-collapse border border-black bg-white text-black">
         <colgroup>
           <col className="w-[18%]" />
           <col className="w-[32%]" />
@@ -54,38 +59,37 @@ export default function HazardReportTable({
         </colgroup>
         <thead>
           <tr>
-            <th className="border border-black p-2 text-center font-semibold align-top whitespace-nowrap">
-              유해·위험장소
+            <th className="border border-black p-2 text-center font-semibold">
+              유해·위험요소
             </th>
-            <th className="border border-black p-2 text-left align-top">
+            <th className="border border-black p-2 text-left">
               <input
                 type="text"
                 value={data.locationDetail}
                 onChange={(e) => handleChange('locationDetail', e.target.value)}
-                className="w-full border-0 bg-transparent p-0 text-inherit focus:outline-none focus:ring-1 focus:ring-blue-500 min-w-0"
-                placeholder="전층 복층 구간"
+                className="w-full min-w-0 border-0 bg-transparent p-0 text-inherit focus:outline-none focus:ring-1 focus:ring-sky-500"
+                placeholder="예: 외벽 보수 구간"
               />
             </th>
-            <th className="border border-black p-2 text-center font-semibold align-top whitespace-nowrap">
-              위험성 평가 결과
+            <th className="border border-black p-2 text-center font-semibold">
+              위험도 평가 결과
             </th>
-            <th className="border border-black p-2 text-left align-top">
+            <th className="border border-black p-2 text-left">
               <input
                 type="text"
                 value={data.riskAssessmentResult}
                 onChange={(e) =>
                   handleChange('riskAssessmentResult', e.target.value)
                 }
-                className="w-full border-0 bg-transparent p-0 text-inherit focus:outline-none focus:ring-1 focus:ring-blue-500 min-w-0"
-                placeholder="보통 (4)"
+                className="w-full min-w-0 border-0 bg-transparent p-0 text-inherit focus:outline-none focus:ring-1 focus:ring-sky-500"
+                placeholder="예: 보통 (4)"
               />
             </th>
           </tr>
         </thead>
       </table>
 
-      {/* 유해·위험요인 ~ 이행시기 (좌우 1:2) */}
-      <table className="min-w-[640px] w-full border-collapse border border-black border-t-0 bg-white text-black overflow-visible table-fixed">
+      <table className="min-w-[680px] w-full table-fixed border-collapse border border-black border-t-0 bg-white text-black">
         <colgroup>
           <col className="w-[8%]" />
           <col className="w-[25%]" />
@@ -93,17 +97,25 @@ export default function HazardReportTable({
           <col className="w-[59%]" />
         </colgroup>
         <tbody>
-          {/* 유해·위험요인 (타이틀 위 | 데이터 아래) */}
           <tr>
-            <td className="border border-black p-2 font-semibold align-middle text-center" colSpan={2}>
+            <td
+              className="border border-black p-2 text-center font-semibold"
+              colSpan={2}
+            >
               유해·위험요인
             </td>
-            <td className="border border-black p-2 font-semibold align-middle text-center" colSpan={2}>
-              지적사항(재해예방 대책)
+            <td
+              className="border border-black p-2 text-center font-semibold"
+              colSpan={2}
+            >
+              지도사항 및 개선대책
             </td>
           </tr>
           <tr>
-            <td className="border border-black p-2 align-top overflow-visible [&_textarea]:block" colSpan={2}>
+            <td
+              className="border border-black p-2 align-top [&_textarea]:block"
+              colSpan={2}
+            >
               <textarea
                 ref={hazardFactorsRef}
                 value={data.hazardFactors}
@@ -111,12 +123,15 @@ export default function HazardReportTable({
                   handleChange('hazardFactors', e.target.value);
                   requestAnimationFrame(() => resizeHazard());
                 }}
-                className="w-full min-h-[80px] border-0 bg-transparent p-0 text-inherit focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none whitespace-pre-wrap break-words"
-                placeholder="복층의 상층부에서 작업 중 부주의 시 떨어짐 위험"
-                rows={2}
+                className="w-full resize-none whitespace-pre-wrap break-words border-0 bg-transparent p-0 text-inherit focus:outline-none focus:ring-1 focus:ring-sky-500"
+                placeholder="예: 개구부 주변에서 작업 중 추락 위험이 확인됨"
+                rows={3}
               />
             </td>
-            <td className="border border-black p-2 align-top overflow-visible [&_textarea]:block" colSpan={2}>
+            <td
+              className="border border-black p-2 align-top [&_textarea]:block"
+              colSpan={2}
+            >
               <textarea
                 ref={improvementItemsRef}
                 value={data.improvementItems}
@@ -124,60 +139,62 @@ export default function HazardReportTable({
                   handleChange('improvementItems', e.target.value);
                   requestAnimationFrame(() => resizeImprovement());
                 }}
-                className="w-full min-h-[80px] border-0 bg-transparent p-0 text-inherit focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none whitespace-pre-wrap break-words"
-                placeholder="안전모 및 안전대 착용, 출입문 폐쇄 등"
+                className="w-full resize-none whitespace-pre-wrap break-words border-0 bg-transparent p-0 text-inherit focus:outline-none focus:ring-1 focus:ring-sky-500"
+                placeholder="예: 안전난간 설치, 출입통제, 작업 전 교육 실시"
                 rows={3}
               />
             </td>
           </tr>
-          {/* 사진 / 법률 (제목 셀과 내용 셀 통합) */}
           <tr>
-            <td className="border border-black p-2 align-top overflow-visible" colSpan={2}>
-              <div className="min-h-[120px] flex flex-col items-center justify-center gap-2 bg-gray-50 print:bg-white">
+            <td className="border border-black p-2 align-top" colSpan={2}>
+              <div className="flex min-h-[128px] flex-col items-center justify-center gap-2 bg-slate-50 print:bg-white">
                 <input
                   ref={fileInputRef}
                   type="file"
                   accept="image/*"
                   onChange={handlePhotoChange}
                   className="hidden"
-                  id={`photo-${index}`}
+                  id={`hazard-photo-${index}`}
                 />
                 {data.photoUrl ? (
                   <div className="relative w-full">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={data.photoUrl}
-                      alt="위험 구역 사진"
-                      className="mx-auto max-h-[160px] w-auto object-contain"
+                      alt="위험요인 사진"
+                      className="mx-auto max-h-[180px] w-auto object-contain"
                     />
                     <div className="mt-2 flex gap-2 print:hidden">
                       <label
-                        htmlFor={`photo-${index}`}
-                        className="cursor-pointer text-xs text-blue-600 underline"
+                        htmlFor={`hazard-photo-${index}`}
+                        className="cursor-pointer text-xs font-medium text-sky-700 hover:underline"
                       >
-                        변경
+                        사진 변경
                       </label>
                       <button
                         type="button"
                         onClick={handleRemovePhoto}
-                        className="text-xs text-red-600 underline"
+                        className="text-xs font-medium text-rose-600 hover:underline"
                       >
-                        삭제
+                        사진 제거
                       </button>
                     </div>
                   </div>
                 ) : (
                   <label
-                    htmlFor={`photo-${index}`}
-                    className="flex cursor-pointer flex-col items-center justify-center gap-1 rounded border border-dashed border-gray-400 py-6 text-sm text-gray-500 hover:border-black hover:text-black print:border-gray-300"
+                    htmlFor={`hazard-photo-${index}`}
+                    className="flex cursor-pointer flex-col items-center justify-center gap-1 rounded border border-dashed border-slate-400 px-4 py-6 text-sm text-slate-500 hover:border-slate-900 hover:text-slate-900 print:border-slate-300"
                   >
                     <span>이미지 선택</span>
-                    <span className="text-xs">클릭하여 사진 추가</span>
+                    <span className="text-xs">클릭해서 사진을 추가하세요.</span>
                   </label>
                 )}
               </div>
             </td>
-            <td className="border border-black p-2 align-top overflow-visible [&_textarea]:block" colSpan={2}>
+            <td
+              className="border border-black p-2 align-top [&_textarea]:block"
+              colSpan={2}
+            >
               <textarea
                 ref={legalInfoRef}
                 value={data.legalInfo}
@@ -185,37 +202,37 @@ export default function HazardReportTable({
                   handleChange('legalInfo', e.target.value);
                   requestAnimationFrame(() => resizeLegal());
                 }}
-                className="w-full min-h-[120px] border-0 bg-transparent p-0 text-inherit focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none whitespace-pre-wrap break-words"
-                placeholder="산업안전보건기준에 관한 규칙 제43조 등"
+                className="w-full resize-none whitespace-pre-wrap break-words border-0 bg-transparent p-0 text-inherit focus:outline-none focus:ring-1 focus:ring-sky-500"
+                placeholder="관련 법령, 기준, 참고사항을 입력하세요."
                 rows={5}
               />
             </td>
           </tr>
-          {/* 이행시기 / 이행시기 데이터 */}
           <tr>
-            <td className="border border-black p-2 font-semibold text-center" colSpan={2}>
+            <td
+              className="border border-black p-2 text-center font-semibold"
+              colSpan={2}
+            >
               이행시기
             </td>
-            <td
-              colSpan={2}
-              className="border border-black p-2"
-            >
+            <td className="border border-black p-2" colSpan={2}>
               <input
                 type="text"
                 value={data.implementationPeriod}
                 onChange={(e) =>
                   handleChange('implementationPeriod', e.target.value)
                 }
-                className="w-full border-0 bg-transparent p-0 text-inherit focus:outline-none focus:ring-1 focus:ring-blue-500 min-w-0"
-                placeholder="즉시 이행가능"
+                className="w-full min-w-0 border-0 bg-transparent p-0 text-inherit focus:outline-none focus:ring-1 focus:ring-sky-500"
+                placeholder="예: 즉시 이행"
               />
             </td>
           </tr>
         </tbody>
       </table>
-      <p className="text-sm text-gray-500 mt-1 print:hidden">
+
+      <p className="mt-1 text-sm text-slate-500 print:hidden">
         보고서 #{index + 1}
       </p>
-    </div>
+    </section>
   );
 }

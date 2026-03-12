@@ -1,38 +1,38 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import type { HazardReportItem } from '@/types/hazard';
-import { analyzeHazardPhotos } from '@/lib/api';
-import { normalizeHazardResponse } from '@/lib/normalizeHazardResponse';
+import { checkCausativeAgents } from '@/lib/api';
+import { normalizeCausativeAgentResponse } from '@/lib/normalizeCausativeAgentResponse';
+import type { CausativeAgentReport } from '@/types/siteOverview';
 
-interface HazardUploadPanelProps {
-  onSuccess: (reports: HazardReportItem[]) => void;
+interface SiteOverviewUploadPanelProps {
+  onSuccess: (report: CausativeAgentReport) => void;
   onRawResponse: (raw: unknown) => void;
 }
 
-export default function HazardUploadPanel({
+export default function SiteOverviewUploadPanel({
   onSuccess,
   onRawResponse,
-}: HazardUploadPanelProps) {
-  const [files, setFiles] = useState<File[]>([]);
+}: SiteOverviewUploadPanelProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
 
-  const addFiles = (incoming: File[]) => {
-    const imageFiles = incoming.filter((file) => file.type.startsWith('image/'));
-    if (imageFiles.length === 0) {
+  const setImageFile = (incoming: File | undefined) => {
+    if (!incoming) return;
+    if (!incoming.type.startsWith('image/')) {
       setError('이미지 파일만 업로드할 수 있습니다.');
       return;
     }
 
-    setFiles((prev) => [...prev, ...imageFiles]);
+    setFile(incoming);
     setError(null);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    addFiles(Array.from(e.target.files ?? []));
+    setImageFile(e.target.files?.[0]);
     e.target.value = '';
   };
 
@@ -54,16 +54,12 @@ export default function HazardUploadPanel({
     setDragActive(false);
     if (loading) return;
 
-    addFiles(Array.from(e.dataTransfer.files ?? []));
-  };
-
-  const removeFile = (index: number) => {
-    setFiles((prev) => prev.filter((_, i) => i !== index));
+    setImageFile(e.dataTransfer.files?.[0]);
   };
 
   const handleUpload = async () => {
-    if (files.length === 0) {
-      setError('사진을 먼저 선택해 주세요.');
+    if (!file) {
+      setError('전경 사진을 먼저 선택해 주세요.');
       return;
     }
 
@@ -71,12 +67,11 @@ export default function HazardUploadPanel({
     setError(null);
 
     try {
-      const raw = await analyzeHazardPhotos(files);
+      const raw = await checkCausativeAgents([file]);
       onRawResponse(raw);
 
-      const reports = await normalizeHazardResponse(raw, files);
-      onSuccess(reports);
-      setFiles([]);
+      const normalized = await normalizeCausativeAgentResponse(raw, file);
+      onSuccess(normalized);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -90,10 +85,11 @@ export default function HazardUploadPanel({
     <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="mb-4">
         <h2 className="text-base font-semibold text-slate-950">
-          위험요인 사진 업로드
+          전경 사진 업로드
         </h2>
         <p className="mt-1 text-sm text-slate-500">
-          여러 장의 사진을 한 번에 올려 분석 결과를 보고서 표로 정리합니다.
+          백엔드 응답의 <code>agents</code> 값을 기준으로 체크표를 자동으로
+          채웁니다.
         </p>
       </div>
 
@@ -101,18 +97,17 @@ export default function HazardUploadPanel({
         ref={inputRef}
         type="file"
         accept="image/*"
-        multiple
         onChange={handleFileChange}
         className="hidden"
       />
 
       <div
+        onClick={openPicker}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        onClick={openPicker}
         className={[
-          'mb-4 flex min-h-36 cursor-pointer items-center justify-center rounded-2xl border border-dashed px-4 py-6 text-center transition',
+          'mb-4 flex min-h-40 cursor-pointer items-center justify-center rounded-2xl border border-dashed px-4 py-6 text-center transition',
           loading ? 'cursor-not-allowed opacity-60' : '',
           dragActive
             ? 'border-slate-950 bg-slate-100'
@@ -121,10 +116,10 @@ export default function HazardUploadPanel({
       >
         <div className="space-y-1">
           <p className="text-sm font-medium text-slate-950">
-            사진을 여기로 끌어오거나 클릭해서 선택
+            전경 사진을 여기로 끌어오거나 클릭해서 선택
           </p>
           <p className="text-xs text-slate-500">
-            이미지 파일 여러 장을 업로드할 수 있습니다.
+            한 장의 이미지 파일을 업로드합니다.
           </p>
         </div>
       </div>
@@ -141,31 +136,30 @@ export default function HazardUploadPanel({
         <button
           type="button"
           onClick={handleUpload}
-          disabled={loading || files.length === 0}
+          disabled={loading || !file}
           className="rounded-full border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:opacity-50"
         >
-          {loading ? '분석 중...' : '업로드 및 분석'}
+          {loading ? '판독 중...' : '업로드 및 판독'}
         </button>
+        {file && (
+          <button
+            type="button"
+            onClick={() => {
+              setFile(null);
+              setError(null);
+            }}
+            disabled={loading}
+            className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-100 disabled:opacity-50"
+          >
+            선택 해제
+          </button>
+        )}
       </div>
 
-      {files.length > 0 && (
-        <ul className="mb-3 max-h-36 space-y-2 overflow-y-auto text-sm text-slate-600">
-          {files.map((file, index) => (
-            <li
-              key={`${file.name}-${index}`}
-              className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2"
-            >
-              <span className="flex-1 truncate">{file.name}</span>
-              <button
-                type="button"
-                onClick={() => removeFile(index)}
-                className="text-xs font-medium text-rose-600 hover:underline"
-              >
-                제거
-              </button>
-            </li>
-          ))}
-        </ul>
+      {file && (
+        <div className="mb-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+          선택된 파일: <span className="font-medium">{file.name}</span>
+        </div>
       )}
 
       {error && <p className="text-sm text-rose-600">{error}</p>}

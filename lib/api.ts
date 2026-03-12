@@ -1,17 +1,23 @@
 const API_BASE = 'http://35.76.230.177:8008';
 
-export async function analyzeHazardPhotos(files: File[]): Promise<unknown> {
+async function parseApiResponse(res: Response): Promise<unknown> {
+  const contentType = res.headers.get('content-type');
+  if (contentType?.includes('application/json')) {
+    return res.json();
+  }
+
+  return res.text();
+}
+
+async function postFiles(path: string, files: File[]): Promise<unknown> {
   const formData = new FormData();
   files.forEach((file) => {
     formData.append('files', file);
   });
 
-  const res = await fetch(`${API_BASE}/vision/analyze-hazard-photos`, {
+  const res = await fetch(`${API_BASE}${path}`, {
     method: 'POST',
     body: formData,
-    headers: {
-      // multipart/form-data는 브라우저가 boundary 자동 설정
-    },
   });
 
   if (!res.ok) {
@@ -19,9 +25,13 @@ export async function analyzeHazardPhotos(files: File[]): Promise<unknown> {
     throw new Error(`API 오류 (${res.status}): ${text || res.statusText}`);
   }
 
-  const contentType = res.headers.get('content-type');
-  if (contentType?.includes('application/json')) {
-    return res.json();
-  }
-  return res.text();
+  return parseApiResponse(res);
+}
+
+export function analyzeHazardPhotos(files: File[]): Promise<unknown> {
+  return postFiles('/vision/analyze-hazard-photos', files);
+}
+
+export function checkCausativeAgents(files: File[]): Promise<unknown> {
+  return postFiles('/vision/check-causative-agents', files);
 }

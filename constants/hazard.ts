@@ -1,9 +1,8 @@
 import type { HazardReportItem } from '@/types/hazard';
 
-/** 빈 보고서 아이템 팩토리 */
 export function createEmptyReport(): HazardReportItem {
   return {
-    location: '유해·위험장소',
+    location: '유해·위험요소',
     locationDetail: '',
     riskAssessmentResult: '',
     hazardFactors: '',
@@ -14,30 +13,31 @@ export function createEmptyReport(): HazardReportItem {
   };
 }
 
-/** Mock 데이터 */
 export const MOCK_DATA: HazardReportItem[] = [
   {
-    location: '유해·위험장소',
-    locationDetail: '전층 복층 구간',
+    location: '유해·위험요소',
+    locationDetail: '외벽 보수 구간',
     riskAssessmentResult: '보통 (4)',
     hazardFactors:
-      '복층의 상층부에서 작업 중 부주의 시 떨어짐 위험',
+      '외벽 개구부 주변에서 작업 중 추락 위험이 확인되며, 이동 동선과 작업 구간이 명확히 분리되지 않음.',
     improvementItems:
-      '[기술지도요원 강조사항]\n- 복층 구간 작업 시 안전모 및 안전대 착용\n- 출입문 폐쇄, 안전 교육 강화\n\n[산업안전보건기준에 관한 규칙 제43조]\n- 개구부 등에 안전난간, 울타리 설치',
+      '[기술·교육 필요 강조사항]\n\n- 개구부 주변 안전난간 설치\n- 작업구간 출입통제 및 신호수 배치\n- 작업 전 TBM 교육 실시',
     photoUrl: '',
     legalInfo:
-      '산업안전보건기준에 관한 규칙 제43조(추락-개구부 등의 방호 조치)',
-    implementationPeriod: '즉시 이행가능',
+      '산업안전보건기준에 관한 규칙 제42조(추락의 방지)\n산업안전보건기준에 관한 규칙 제43조(개구부 등의 방호조치)',
+    implementationPeriod: '즉시 이행',
   },
   {
-    location: '유해·위험장소',
+    location: '유해·위험요소',
     locationDetail: '지하 1층 전기실',
-    riskAssessmentResult: '높음 (2)',
-    hazardFactors: '전기 감전 위험, 밀폐 공간 작업 시 환기 부족',
+    riskAssessmentResult: '높음 (6)',
+    hazardFactors:
+      '임시 배선이 정리되지 않아 감전 위험이 있으며, 협소한 공간에서 장비 이동 중 충돌 우려가 있음.',
     improvementItems:
-      '- 전기 작업 시 절연 장갑 착용\n- 차단기 표시 및 작업 전 전원 차단 확인',
+      '- 작업 전 전원 차단 및 잠금표지 실시\n- 임시 배선 정리 및 절연 상태 점검\n- 감시자 배치 후 순차 작업 진행',
     photoUrl: '',
-    legalInfo: '',
-    implementationPeriod: '2주 이내',
+    legalInfo:
+      '산업안전보건기준에 관한 규칙 제301조(전기기계·기구의 충전부 방호)',
+    implementationPeriod: '2일 이내',
   },
 ];

@@ -2,29 +2,33 @@ import type { HazardReportItem } from '@/types/hazard';
 
 type UnknownRecord = Record<string, unknown>;
 
-function safeStr(val: unknown): string {
-  if (val == null) return '';
-  if (typeof val === 'string') return val;
-  if (typeof val === 'number' || typeof val === 'boolean') return String(val);
-  if (Array.isArray(val)) return val.map(safeStr).join('\n');
-  if (typeof val === 'object') return JSON.stringify(val);
+function safeString(value: unknown): string {
+  if (value == null) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => safeString(item)).filter(Boolean).join('\n');
+  }
+  if (typeof value === 'object') return JSON.stringify(value);
   return '';
 }
 
-function safeArr(val: unknown): string[] {
-  if (!Array.isArray(val)) return [];
-  return val.map((v) => safeStr(v)).filter(Boolean);
+function safeStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((item) => safeString(item)).filter(Boolean);
 }
 
-function pick(obj: UnknownRecord, ...keys: string[]): string {
-  for (const k of keys) {
-    const v = obj[k];
-    if (v != null && v !== '') return safeStr(v);
+function pickString(obj: UnknownRecord, ...keys: string[]): string {
+  for (const key of keys) {
+    const value = obj[key];
+    if (value != null && value !== '') return safeString(value);
   }
   return '';
 }
 
-function fileToBase64(file: File): Promise<string> {
+function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result));
@@ -33,39 +37,29 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
-/** 새 API 응답 구조 (metadata, objects, risk_factor, improvements, laws, likelihood, severity) */
-function mapNewApiItem(
-  raw: UnknownRecord,
-  index: number,
-  uploadedFiles?: File[]
-): HazardReportItem {
-  const metadata = pick(raw, 'metadata');
-  const objects = safeArr(raw.objects);
-  const riskFactor = pick(raw, 'risk_factor');
-  const improvements = safeArr(raw.improvements);
-  const laws = safeArr(raw.laws);
+function mapRiskApiItem(raw: UnknownRecord): HazardReportItem {
+  const metadata = pickString(raw, 'metadata');
+  const objects = safeStringArray(raw.objects);
+  const riskFactor = pickString(raw, 'risk_factor');
+  const improvements = safeStringArray(raw.improvements);
+  const laws = safeStringArray(raw.laws);
   const likelihood = typeof raw.likelihood === 'number' ? raw.likelihood : 1;
   const severity = typeof raw.severity === 'number' ? raw.severity : 1;
+  const score = likelihood * severity;
 
-  const product = likelihood * severity;
   let riskLabel = '';
-  if (product >= 1 && product <= 2) riskLabel = '낮음';
-  else if (product >= 3 && product <= 4) riskLabel = '보통';
-  else if (product >= 5 && product <= 9) riskLabel = '높음';
-  const riskAssessmentResult =
-    riskLabel ? `${riskLabel} (${product})` : '';
-
-  const improvementText = improvements.join('\n');
-  const improvementItems = improvementText
-    ? `[기술지도요원 강조사항]\n\n${improvementText}`
-    : '';
+  if (score >= 1 && score <= 2) riskLabel = '낮음';
+  else if (score >= 3 && score <= 4) riskLabel = '보통';
+  else if (score >= 5) riskLabel = '높음';
 
   return {
-    location: '유해·위험장소',
-    locationDetail: pick(raw, 'filename') || '',
-    riskAssessmentResult,
+    location: '유해·위험요소',
+    locationDetail: pickString(raw, 'filename'),
+    riskAssessmentResult: riskLabel ? `${riskLabel} (${score})` : '',
     hazardFactors: riskFactor,
-    improvementItems,
+    improvementItems: improvements.length
+      ? `[기술·교육 필요 강조사항]\n\n${improvements.join('\n')}`
+      : '',
     photoUrl: '',
     legalInfo: laws.join('\n'),
     implementationPeriod: '',
@@ -74,53 +68,44 @@ function mapNewApiItem(
   };
 }
 
-/** 기존 API 응답 구조 (filename, metadata, detected_objects, improvements, laws 등) */
-function mapApiItem(
-  raw: UnknownRecord,
-  index: number,
-  uploadedFiles?: File[]
-): HazardReportItem {
-  const metadata = pick(raw, 'metadata');
-  const detectedObjects = safeArr(raw.detected_objects);
-  const detectedSituations = safeArr(raw.detected_situations);
-  const improvements = safeArr(raw.improvements);
-  const laws = safeArr(raw.laws);
+function mapDetectedApiItem(raw: UnknownRecord): HazardReportItem {
+  const metadata = pickString(raw, 'metadata');
+  const detectedObjects = safeStringArray(raw.detected_objects);
+  const detectedSituations = safeStringArray(raw.detected_situations);
+  const improvements = safeStringArray(raw.improvements);
+  const laws = safeStringArray(raw.laws);
 
   const hazardParts: string[] = [];
   if (metadata) hazardParts.push(metadata);
-  if (detectedObjects.length)
-    hazardParts.push('검출 객체: ' + detectedObjects.join(', '));
-  if (detectedSituations.length)
-    hazardParts.push('검출 상황: ' + detectedSituations.join(', '));
-
-  const hazardFactors = hazardParts.join('\n\n');
-  const improvementItems = improvements.join('\n');
-  const legalInfo = laws.join('\n');
+  if (detectedObjects.length > 0) {
+    hazardParts.push(`검출 객체: ${detectedObjects.join(', ')}`);
+  }
+  if (detectedSituations.length > 0) {
+    hazardParts.push(`검출 상황: ${detectedSituations.join(', ')}`);
+  }
 
   return {
-    location: '유해·위험장소',
-    locationDetail: pick(raw, 'filename') || '',
+    location: '유해·위험요소',
+    locationDetail: pickString(raw, 'filename'),
     riskAssessmentResult:
-      detectedSituations.length > 0
-        ? `검출 위험 ${detectedSituations.length}건`
-        : '',
-    hazardFactors,
-    improvementItems,
+      detectedSituations.length > 0 ? `검출 위험 ${detectedSituations.length}건` : '',
+    hazardFactors: hazardParts.join('\n\n'),
+    improvementItems: improvements.join('\n'),
     photoUrl: '',
-    legalInfo,
+    legalInfo: laws.join('\n'),
     implementationPeriod: '',
   };
 }
 
-/** 기타 구조용 fallback */
-function toItem(raw: unknown): HazardReportItem {
-  const o = (raw && typeof raw === 'object' ? raw : {}) as UnknownRecord;
+function toFallbackItem(raw: unknown): HazardReportItem {
+  const obj = (raw && typeof raw === 'object' ? raw : {}) as UnknownRecord;
+
   return {
     location:
-      pick(o, 'location', 'location_label', '유해위험장소', 'place') ||
-      '유해·위험장소',
-    locationDetail: pick(
-      o,
+      pickString(obj, 'location', 'location_label', '위치', 'place') ||
+      '유해·위험요소',
+    locationDetail: pickString(
+      obj,
       'locationDetail',
       'location_detail',
       'locationData',
@@ -130,17 +115,17 @@ function toItem(raw: unknown): HazardReportItem {
       'place_name',
       'filename'
     ),
-    riskAssessmentResult: pick(
-      o,
+    riskAssessmentResult: pickString(
+      obj,
       'riskAssessmentResult',
       'risk_assessment_result',
       'assessment_result',
-      '위험성평가결과',
+      '위험도평가결과',
       'risk_level',
       'riskLevel'
     ),
-    hazardFactors: pick(
-      o,
+    hazardFactors: pickString(
+      obj,
       'hazardFactors',
       'hazard_factors',
       'hazard_factors_text',
@@ -149,19 +134,19 @@ function toItem(raw: unknown): HazardReportItem {
       'risk_factors',
       'metadata'
     ),
-    improvementItems: pick(
-      o,
+    improvementItems: pickString(
+      obj,
       'improvementItems',
       'improvement_items',
       'improvement_items_text',
-      '지적사항',
-      '재해예방대책',
+      '지도사항',
+      '개선대책',
       'measures',
       'recommendations',
       'improvements'
     ),
-    photoUrl: pick(
-      o,
+    photoUrl: pickString(
+      obj,
       'photoUrl',
       'photo_url',
       'image_url',
@@ -169,18 +154,18 @@ function toItem(raw: unknown): HazardReportItem {
       'image',
       'photo'
     ),
-    legalInfo: pick(
-      o,
+    legalInfo: pickString(
+      obj,
       'legalInfo',
       'legal_info',
       'legal_data',
-      '법률데이터',
+      '법령데이터',
       'regulations',
       'law_reference',
       'laws'
     ),
-    implementationPeriod: pick(
-      o,
+    implementationPeriod: pickString(
+      obj,
       'implementationPeriod',
       'implementation_period',
       '이행시기',
@@ -190,12 +175,13 @@ function toItem(raw: unknown): HazardReportItem {
   };
 }
 
-function isNewApiShape(raw: UnknownRecord): boolean {
+function isRiskApiShape(raw: UnknownRecord): boolean {
   return 'risk_factor' in raw && ('likelihood' in raw || 'severity' in raw);
 }
 
-function isApiShape(raw: UnknownRecord): boolean {
-  if (isNewApiShape(raw)) return false;
+function isDetectedApiShape(raw: UnknownRecord): boolean {
+  if (isRiskApiShape(raw)) return false;
+
   return (
     'metadata' in raw ||
     'detected_objects' in raw ||
@@ -206,54 +192,55 @@ function isApiShape(raw: UnknownRecord): boolean {
 
 function extractArray(raw: unknown): unknown[] {
   if (Array.isArray(raw)) return raw;
+
   if (raw && typeof raw === 'object') {
-    const o = raw as UnknownRecord;
-    const arr =
-      o.results ??
-      o.data ??
-      o.items ??
-      o.analyses ??
-      o.reports ??
-      o.hazards ??
-      o.list ??
+    const obj = raw as UnknownRecord;
+    const candidate =
+      obj.results ??
+      obj.data ??
+      obj.items ??
+      obj.analyses ??
+      obj.reports ??
+      obj.hazards ??
+      obj.list ??
       [];
-    return Array.isArray(arr) ? arr : [arr];
+
+    return Array.isArray(candidate) ? candidate : [candidate];
   }
+
   return [];
+}
+
+function mapItem(raw: unknown): HazardReportItem {
+  const obj = (raw && typeof raw === 'object' ? raw : {}) as UnknownRecord;
+
+  if (isRiskApiShape(obj)) return mapRiskApiItem(obj);
+  if (isDetectedApiShape(obj)) return mapDetectedApiItem(obj);
+  return toFallbackItem(raw);
 }
 
 export async function normalizeHazardResponse(
   raw: unknown,
   uploadedFiles?: File[]
 ): Promise<HazardReportItem[]> {
-  const arr = extractArray(raw);
+  const array = extractArray(raw);
 
-  if (arr.length === 0) {
-    const single = (raw && typeof raw === 'object' ? raw : {}) as UnknownRecord;
-    const item = isNewApiShape(single)
-      ? mapNewApiItem(single, 0, uploadedFiles)
-      : isApiShape(single)
-        ? mapApiItem(single, 0, uploadedFiles)
-        : toItem(raw);
+  if (array.length === 0) {
+    const item = mapItem(raw);
     if (uploadedFiles?.[0]) {
-      item.photoUrl = await fileToBase64(uploadedFiles[0]);
+      item.photoUrl = await fileToDataUrl(uploadedFiles[0]);
     }
     return [item];
   }
 
   const items: HazardReportItem[] = [];
-  for (let i = 0; i < arr.length; i++) {
-    const el = arr[i];
-    const o = (el && typeof el === 'object' ? el : {}) as UnknownRecord;
-    const item = isNewApiShape(o)
-      ? mapNewApiItem(o, i, uploadedFiles)
-      : isApiShape(o)
-        ? mapApiItem(o, i, uploadedFiles)
-        : toItem(el);
-    if (uploadedFiles?.[i]) {
-      item.photoUrl = await fileToBase64(uploadedFiles[i]);
+  for (let index = 0; index < array.length; index += 1) {
+    const item = mapItem(array[index]);
+    if (uploadedFiles?.[index]) {
+      item.photoUrl = await fileToDataUrl(uploadedFiles[index]);
     }
     items.push(item);
   }
+
   return items;
 }
