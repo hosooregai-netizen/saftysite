@@ -73,7 +73,7 @@
   }
 
   .app-shell {
-    @apply overflow-hidden rounded-[10px] border bg-white shadow-panel print:overflow-visible print:rounded-none print:border-0 print:shadow-none;
+    @apply overflow-hidden rounded-[6px] border bg-white shadow-panel print:overflow-visible print:rounded-none print:border-0 print:shadow-none;
     border-color: var(--erp-line-strong);
   }
 
@@ -159,7 +159,7 @@
   }
 
   .app-button {
-    @apply inline-flex items-center justify-center rounded-[8px] border px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center rounded-[4px] border px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .app-button-primary {
@@ -195,14 +195,14 @@
   }
 
   .app-chip {
-    @apply inline-flex items-center rounded-[6px] border px-2.5 py-1 text-xs font-medium;
+    @apply inline-flex items-center rounded-[4px] border px-2.5 py-1 text-xs font-medium;
     border-color: var(--erp-line-strong);
     background-color: var(--erp-panel-muted);
     color: var(--erp-light);
   }
 
   .app-status {
-    @apply inline-flex items-center rounded-[6px] border px-2.5 py-1 text-xs font-medium;
+    @apply inline-flex items-center rounded-[4px] border px-2.5 py-1 text-xs font-medium;
   }
 
   .app-status-neutral {
@@ -242,7 +242,7 @@
   }
 
   .app-checkbox {
-    @apply h-4 w-4 rounded-[3px] border;
+    @apply h-4 w-4 rounded-[2px] border;
     border-color: var(--erp-line-strong);
     accent-color: var(--erp-mid);
   }

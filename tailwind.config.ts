@@ -23,8 +23,8 @@ const config: Config = {
         },
       },
       borderRadius: {
-        panel: '8px',
-        field: '6px',
+        panel: '5px',
+        field: '4px',
       },
       boxShadow: {
         panel: '0 1px 2px rgba(16, 24, 43, 0.06)',

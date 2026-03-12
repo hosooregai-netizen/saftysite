@@ -1,0 +1,232 @@
+.hero {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  border-bottom: 1px solid var(--erp-line);
+  background: linear-gradient(135deg, #112035 0%, #1b3048 100%);
+  padding: 24px;
+  color: var(--erp-white);
+}
+
+.heroMain {
+  display: grid;
+  gap: 8px;
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid rgba(213, 222, 234, 0.34);
+  border-radius: 4px;
+  background-color: rgba(255, 255, 255, 0.08);
+  font-size: 13px;
+  font-weight: 700;
+  color: #d5deea;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.backLink:hover {
+  border-color: rgba(213, 222, 234, 0.58);
+  background-color: rgba(255, 255, 255, 0.14);
+  color: var(--erp-white);
+}
+
+.heroKicker {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #d5deea;
+}
+
+.heroTitle {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.heroDescription {
+  font-size: 14px;
+  line-height: 1.7;
+  color: #d5deea;
+}
+
+.heroActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.pageGrid {
+  padding: 20px;
+}
+
+.panel {
+  border: 1px solid var(--erp-line);
+  border-radius: 6px;
+  background-color: var(--erp-white);
+}
+
+.listHead {
+  display: none;
+}
+
+.reportList {
+  display: grid;
+}
+
+.reportRow {
+  display: grid;
+  gap: 14px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--erp-line);
+}
+
+.reportRow:last-child {
+  border-bottom: 0;
+}
+
+.primaryCell {
+  min-width: 0;
+}
+
+.reportTitle {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--erp-dark);
+}
+
+.reportMeta {
+  margin-top: 3px;
+  font-size: 13px;
+  color: var(--erp-text-muted);
+}
+
+.dataCell,
+.progressCell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mobileLabel {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--erp-text-muted);
+}
+
+.dataValue {
+  font-size: 14px;
+  color: var(--erp-dark);
+}
+
+.progressStack {
+  display: grid;
+  gap: 8px;
+}
+
+.progressTrack {
+  position: relative;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #e7effa 0%, #d9e6f5 100%);
+  box-shadow: inset 0 1px 2px rgba(18, 28, 47, 0.08);
+}
+
+.progressFill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #1d4ed8 0%, #2563eb 52%, #60a5fa 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.26),
+    0 0 0 1px rgba(37, 99, 235, 0.1);
+}
+
+.progressText {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e3a8a;
+}
+
+.rowActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 28px 20px;
+}
+
+.emptyTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--erp-dark);
+}
+
+@media (min-width: 960px) {
+  .hero {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding: 30px 32px 26px;
+  }
+
+  .pageGrid {
+    padding: 24px 32px 28px;
+  }
+
+  .listHead {
+    display: grid;
+    grid-template-columns: minmax(240px, 1.7fr) minmax(220px, 1.5fr) minmax(120px, 0.8fr) minmax(150px, 1fr) 176px;
+    gap: 20px;
+    padding: 12px 20px 10px;
+    border-bottom: 1px solid var(--erp-line);
+    background-color: var(--erp-panel-muted);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--erp-text-muted);
+  }
+
+  .listHead span:last-child {
+    justify-self: end;
+  }
+
+  .reportRow {
+    align-items: center;
+    grid-template-columns: minmax(240px, 1.7fr) minmax(220px, 1.5fr) minmax(120px, 0.8fr) minmax(150px, 1fr) 176px;
+    gap: 20px;
+  }
+
+  .progressCell {
+    min-width: 220px;
+  }
+
+  .mobileLabel {
+    display: none;
+  }
+
+  .rowActions {
+    justify-content: flex-end;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+  }
+}
