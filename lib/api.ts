@@ -1,4 +1,4 @@
-const API_BASE = 'http://35.76.230.177:8008';
+const API_BASE = '/api';
 
 async function parseApiResponse(res: Response): Promise<unknown> {
   const contentType = res.headers.get('content-type');
