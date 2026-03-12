@@ -19,6 +19,9 @@
     --erp-text-muted: #5f6b7a;
     --erp-gold-soft: #fff4d7;
     --erp-danger-soft: #fbefef;
+    --erp-danger-line: #d7a6a6;
+    --erp-danger-text: #8f2d2d;
+    --erp-focus-ring: 0 0 0 3px rgba(31, 48, 69, 0.16);
     --hazard-border: 1px solid #000;
     --hazard-input-focus: 1px solid #1f3045;
     --hazard-input-shadow: 0 0 0 2px rgba(31, 48, 69, 0.14);
@@ -56,6 +59,13 @@
   textarea,
   select {
     font: inherit;
+  }
+
+  a:focus-visible,
+  button:focus-visible,
+  summary:focus-visible {
+    outline: none;
+    box-shadow: var(--erp-focus-ring);
   }
 
   ::selection {
@@ -140,6 +150,12 @@
     background-color: var(--erp-dark);
   }
 
+  .app-button-primary:focus-visible {
+    box-shadow:
+      var(--erp-focus-ring),
+      0 0 0 1px rgba(18, 28, 47, 0.18);
+  }
+
   .app-button-secondary {
     border-color: var(--erp-line-strong);
     background-color: var(--erp-white);
@@ -149,6 +165,17 @@
   .app-button-secondary:hover {
     background-color: #f8fafc;
     border-color: #96a4b4;
+  }
+
+  .app-button-danger {
+    border-color: var(--erp-danger-line);
+    background-color: var(--erp-danger-soft);
+    color: var(--erp-danger-text);
+  }
+
+  .app-button-danger:hover {
+    border-color: #c88f8f;
+    background-color: #f8e3e3;
   }
 
   .app-button-accent {
@@ -179,6 +206,14 @@
   .app-input:focus,
   .app-textarea:focus,
   .app-select:focus {
+    border-color: var(--erp-mid);
+    box-shadow: var(--hazard-input-shadow);
+  }
+
+  .app-input:focus-visible,
+  .app-textarea:focus-visible,
+  .app-select:focus-visible {
+    outline: none;
     border-color: var(--erp-mid);
     box-shadow: var(--hazard-input-shadow);
   }

@@ -236,7 +236,7 @@ export default function HomePage() {
                               <button
                                 type="button"
                                 onClick={() => handleDeleteSite(site.id)}
-                                className={`${styles.mobileDangerButton} app-button app-button-secondary`}
+                                className={`${styles.mobileDangerButton} app-button app-button-danger`}
                               >
                                 삭제
                               </button>
@@ -398,7 +398,7 @@ export default function HomePage() {
             </button>
             <button
               type="button"
-              className="app-button app-button-primary"
+              className="app-button app-button-danger"
               onClick={submitDeleteSite}
             >
               삭제

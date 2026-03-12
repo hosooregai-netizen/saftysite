@@ -92,8 +92,8 @@
 
 .reportRow {
   display: grid;
-  gap: 10px;
-  padding: 12px 16px;
+  gap: 8px;
+  padding: 11px 16px;
   border-bottom: 1px solid var(--erp-line);
 }
 
@@ -112,7 +112,7 @@
 }
 
 .reportTitle {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   line-height: 1.35;
   color: var(--erp-dark);
@@ -120,6 +120,10 @@
 
 .reportLink:hover .reportTitle {
   color: var(--erp-mid);
+}
+
+.reportLink:focus-visible {
+  border-radius: 4px;
 }
 
 .dataCell,
@@ -130,7 +134,7 @@
 }
 
 .mobileLabel {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -138,7 +142,7 @@
 }
 
 .dataValue {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--erp-dark);
 }
 
@@ -212,12 +216,12 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 30px;
+  width: 38px;
+  height: 34px;
   border: 1px solid var(--erp-line);
   border-radius: 4px;
   background-color: var(--erp-white);
-  font-size: 20px;
+  font-size: 18px;
   line-height: 1;
   color: var(--erp-mid);
   cursor: pointer;
@@ -231,6 +235,10 @@
 .menuButton:hover {
   border-color: var(--erp-line-strong);
   background-color: #f8fafc;
+}
+
+.menuButton:focus-visible {
+  border-color: var(--erp-mid);
 }
 
 .menuShell[open] .menuButton {
@@ -256,7 +264,7 @@
   display: flex;
   align-items: center;
   width: 100%;
-  min-height: 36px;
+  min-height: 38px;
   padding: 0 12px;
   border: 0;
   background-color: var(--erp-white);
@@ -272,6 +280,11 @@
 
 .menuItem:hover {
   background-color: #f8fafc;
+}
+
+.menuItem:focus-visible {
+  background-color: #edf2f7;
+  outline: none;
 }
 
 .menuItemDanger {
@@ -325,7 +338,7 @@
     padding: 9px 16px 8px;
     border-bottom: 1px solid var(--erp-line);
     background-color: var(--erp-panel-muted);
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -340,6 +353,7 @@
     align-items: center;
     grid-template-columns: minmax(220px, 1.5fr) minmax(100px, 0.8fr) minmax(180px, 1.2fr) minmax(110px, 0.75fr) minmax(150px, 0.95fr) 40px;
     gap: 20px;
+    min-height: 54px;
   }
 
   .progressCell {

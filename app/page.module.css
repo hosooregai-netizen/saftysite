@@ -84,7 +84,7 @@
 .siteRow {
   display: grid;
   gap: 8px;
-  padding: 10px 16px;
+  padding: 11px 16px;
   border-bottom: 1px solid var(--erp-line);
 }
 
@@ -113,6 +113,10 @@
   color: var(--erp-mid);
 }
 
+.siteLink:focus-visible {
+  border-radius: 4px;
+}
+
 .dataCell {
   display: flex;
   flex-direction: column;
@@ -129,7 +133,7 @@
 
 .dataValue {
   font-size: 12px;
-  line-height: 1.35;
+  line-height: 1.4;
   color: var(--erp-dark);
 }
 
@@ -164,12 +168,12 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 30px;
+  width: 38px;
+  height: 34px;
   border: 1px solid var(--erp-line);
   border-radius: 4px;
   background-color: var(--erp-white);
-  font-size: 20px;
+  font-size: 18px;
   line-height: 1;
   color: var(--erp-mid);
   cursor: pointer;
@@ -183,6 +187,10 @@
 .menuButton:hover {
   border-color: var(--erp-line-strong);
   background-color: #f8fafc;
+}
+
+.menuButton:focus-visible {
+  border-color: var(--erp-mid);
 }
 
 .menuShell[open] .menuButton {
@@ -208,7 +216,7 @@
   display: flex;
   align-items: center;
   width: 100%;
-  min-height: 36px;
+  min-height: 38px;
   padding: 0 12px;
   border: 0;
   background-color: var(--erp-white);
@@ -224,6 +232,11 @@
 
 .menuItem:hover {
   background-color: #f8fafc;
+}
+
+.menuItem:focus-visible {
+  background-color: #edf2f7;
+  outline: none;
 }
 
 .menuItemDanger {
@@ -292,7 +305,7 @@
     align-items: center;
     grid-template-columns: minmax(260px, 2.1fr) minmax(200px, 1.3fr) minmax(90px, 0.7fr) minmax(150px, 1fr) 40px;
     gap: 20px;
-    min-height: 52px;
+    min-height: 54px;
   }
 
   .mobileLabel {

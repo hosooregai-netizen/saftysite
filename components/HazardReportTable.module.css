@@ -1,5 +1,5 @@
 .container {
-  @apply mb-8 break-inside-avoid overflow-hidden rounded-panel border bg-white shadow-panel print:overflow-visible print:rounded-none print:border-0 print:shadow-none;
+  @apply break-inside-avoid overflow-hidden rounded-panel border bg-white shadow-panel print:overflow-visible print:rounded-none print:border-0 print:shadow-none;
   border-color: var(--erp-line);
 }
 
@@ -16,10 +16,6 @@
 .headerTitle {
   @apply text-sm font-semibold;
   color: var(--erp-dark);
-}
-
-.headerDescription {
-  display: none;
 }
 
 .metadataSection {
@@ -42,97 +38,59 @@
   @apply whitespace-pre-wrap;
 }
 
-.topTable {
-  @apply w-full table-fixed border-collapse border bg-white text-black;
-  border-color: var(--erp-line-strong);
-  min-width: 720px;
+.formShell {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
 }
 
-.mainTable {
-  @apply w-full table-fixed border-collapse border border-t-0 bg-white text-black;
-  border-color: var(--erp-line-strong);
-  min-width: 720px;
-}
-
-.topColLabel {
-  width: 18%;
-}
-
-.topColValue {
-  width: 32%;
-}
-
-.mainColNarrow {
-  width: 8%;
-}
-
-.mainColMedium {
-  width: 25%;
-}
-
-.mainColWide {
-  width: 59%;
-}
-
-.headingCell {
-  @apply border p-2 text-center font-semibold;
-  border-color: var(--erp-line-strong);
+.topCard,
+.photoCard,
+.detailsCard {
+  border: 1px solid var(--erp-line);
+  border-radius: 8px;
   background-color: var(--erp-panel-muted);
 }
 
-.inputCell {
-  @apply border p-2 text-left;
-  border-color: var(--erp-line-strong);
+.topCard {
+  padding: 14px;
 }
 
-.textInput {
-  @apply w-full min-w-0 border-0 bg-transparent p-0 text-inherit focus:outline-none;
+.topGrid {
+  display: grid;
+  gap: 12px;
 }
 
-.sectionHeadingCell {
-  @apply border p-2 text-center font-semibold;
-  border-color: var(--erp-line-strong);
-  background-color: var(--erp-panel-muted);
+.fieldBlock {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
 }
 
-.textareaCell {
-  @apply border p-2 align-top;
-  border-color: var(--erp-line-strong);
+.fieldLabel,
+.sectionLabel,
+.cardTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--erp-dark);
 }
 
-.textareaInput {
-  @apply block w-full resize-none whitespace-pre-wrap break-words border-0 bg-transparent p-0 text-inherit focus:outline-none;
+.contentGrid {
+  display: grid;
+  gap: 14px;
 }
 
-.photoCell {
-  @apply border p-2 align-top;
-  border-color: var(--erp-line-strong);
+.cardHeader {
+  border-bottom: 1px solid var(--erp-line);
+  padding: 14px 14px 12px;
 }
 
 .photoFrame {
-  @apply flex min-h-[128px] flex-col items-center justify-center gap-2;
-  background-color: #f8fafc;
-}
-
-@media print {
-  .topTable,
-  .mainTable,
-  .headingCell,
-  .inputCell,
-  .sectionHeadingCell,
-  .textareaCell,
-  .photoCell {
-    border-color: #000;
-  }
-
-  .headingCell,
-  .sectionHeadingCell {
-    background-color: #f8fafc;
-  }
-
-  .photoFrame {
-    background-color: #fff;
-  }
+  display: flex;
+  min-height: 260px;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
 }
 
 .hiddenInput {
@@ -140,20 +98,27 @@
 }
 
 .photoPreviewWrap {
-  position: relative;
   width: 100%;
 }
 
 .photoPreview {
-  @apply mx-auto max-h-[180px] w-auto object-contain;
+  display: block;
+  width: 100%;
+  max-height: 420px;
+  object-fit: contain;
 }
 
 .photoActions {
-  @apply mt-2 flex gap-2 print:hidden;
+  @apply mt-2 flex gap-3 print:hidden;
+}
+
+.photoAction,
+.photoRemoveButton {
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .photoAction {
-  @apply text-xs font-medium;
   color: var(--erp-mid);
   cursor: pointer;
 }
@@ -163,8 +128,7 @@
 }
 
 .photoRemoveButton {
-  @apply text-xs font-medium;
-  color: #e11d48;
+  color: #b42318;
 }
 
 .photoRemoveButton:hover {
@@ -172,22 +136,75 @@
 }
 
 .photoPlaceholder {
-  @apply flex cursor-pointer flex-col items-center justify-center gap-1 rounded-field border border-dashed px-4 py-6 text-sm;
-  border-color: #94a3b8;
+  display: flex;
+  width: 100%;
+  min-height: 232px;
+  cursor: pointer;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px dashed var(--erp-line-strong);
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
   color: var(--erp-text-muted);
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    color 0.2s ease;
 }
 
 .photoPlaceholder:hover {
   border-color: var(--erp-mid);
+  background-color: #edf2f7;
   color: var(--erp-dark);
 }
 
-@media print {
-  .photoPlaceholder {
-    border-color: #cbd5e1;
-  }
+.photoPlaceholderHint {
+  font-size: 12px;
 }
 
-.photoPlaceholderHint {
-  @apply text-xs;
+.detailStack {
+  display: grid;
+  gap: 0;
+}
+
+.detailBlock {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+}
+
+.detailDivider {
+  height: 1px;
+  background-color: var(--erp-line);
+}
+
+.editorTextarea {
+  min-height: 132px;
+  resize: vertical;
+}
+
+@media (min-width: 900px) {
+  .formShell {
+    gap: 16px;
+    padding: 16px;
+  }
+
+  .topGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .contentGrid {
+    grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1.4fr);
+    gap: 16px;
+    align-items: start;
+  }
+
+  .photoCard,
+  .detailsCard {
+    min-height: 100%;
+  }
 }

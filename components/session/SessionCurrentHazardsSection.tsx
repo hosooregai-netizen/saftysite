@@ -50,7 +50,7 @@ export default function SessionCurrentHazardsSection({
                   <button
                     type="button"
                     onClick={() => onRemove(item.id)}
-                    className="app-button app-button-secondary"
+                    className="app-button app-button-danger"
                   >
                     삭제
                   </button>

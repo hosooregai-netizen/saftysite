@@ -55,12 +55,7 @@ export default function HazardReportTable({
     <section className={styles.container}>
       <div className={styles.header}>
         <div className={styles.headerRow}>
-          <div>
-            <p className={styles.headerTitle}>위험성평가 보고서 #{index + 1}</p>
-            <p className={styles.headerDescription}>
-              출력 전 내용을 직접 검토하고 수정합니다.
-            </p>
-          </div>
+          <p className={styles.headerTitle}>위험성평가 보고서 #{index + 1}</p>
           {headerActions}
         </div>
       </div>
@@ -84,165 +79,161 @@ export default function HazardReportTable({
         </div>
       )}
 
-      <table className={styles.topTable}>
-        <colgroup>
-          <col className={styles.topColLabel} />
-          <col className={styles.topColValue} />
-          <col className={styles.topColLabel} />
-          <col className={styles.topColValue} />
-        </colgroup>
-        <thead>
-          <tr>
-            <th className={styles.headingCell}>{data.location || '유해·위험요소'}</th>
-            <th className={styles.inputCell}>
+      <div className={styles.formShell}>
+        <section className={styles.topCard}>
+          <div className={styles.topGrid}>
+            <div className={styles.fieldBlock}>
+              <label className={styles.fieldLabel}>{data.location || '유해·위험요소'}</label>
               <input
                 type="text"
                 value={data.locationDetail}
                 onChange={(event) => handleChange('locationDetail', event.target.value)}
-                className={styles.textInput}
+                className="app-input"
                 placeholder="예: 3층 보수 구간"
               />
-            </th>
-            <th className={styles.headingCell}>위험도 평가 결과</th>
-            <th className={styles.inputCell}>
+            </div>
+
+            <div className={styles.fieldBlock}>
+              <label className={styles.fieldLabel}>위험성 평가 결과</label>
               <input
                 type="text"
                 value={data.riskAssessmentResult}
                 onChange={(event) =>
                   handleChange('riskAssessmentResult', event.target.value)
                 }
-                className={styles.textInput}
+                className="app-input"
                 placeholder="예: 보통 (4)"
               />
-            </th>
-          </tr>
-        </thead>
-      </table>
+            </div>
+          </div>
+        </section>
 
-      <table className={styles.mainTable}>
-        <colgroup>
-          <col className={styles.mainColNarrow} />
-          <col className={styles.mainColMedium} />
-          <col className={styles.mainColNarrow} />
-          <col className={styles.mainColWide} />
-        </colgroup>
-        <tbody>
-          <tr>
-            <td className={styles.sectionHeadingCell} colSpan={2}>
-              유해·위험요인
-            </td>
-            <td className={styles.sectionHeadingCell} colSpan={2}>
-              지도사항 및 개선대책
-            </td>
-          </tr>
-          <tr>
-            <td className={styles.textareaCell} colSpan={2}>
-              <textarea
-                ref={hazardFactorsRef}
-                value={data.hazardFactors}
-                onChange={(event) => {
-                  handleChange('hazardFactors', event.target.value);
-                  requestAnimationFrame(() => resizeHazard());
-                }}
-                className={styles.textareaInput}
-                placeholder="예: 개구부 주변에서 작업 중 추락 위험이 확인됨"
-                rows={3}
-              />
-            </td>
-            <td className={styles.textareaCell} colSpan={2}>
-              <textarea
-                ref={improvementItemsRef}
-                value={data.improvementItems}
-                onChange={(event) => {
-                  handleChange('improvementItems', event.target.value);
-                  requestAnimationFrame(() => resizeImprovement());
-                }}
-                className={styles.textareaInput}
-                placeholder="예: 안전난간 설치, 출입통제, 작업 전 교육 재실시"
-                rows={3}
-              />
-            </td>
-          </tr>
-          <tr>
-            <td className={styles.photoCell} colSpan={2}>
-              <div className={styles.photoFrame}>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handlePhotoChange}
-                  className={styles.hiddenInput}
-                  id={`hazard-photo-${index}`}
-                />
-                {data.photoUrl ? (
-                  <div className={styles.photoPreviewWrap}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={data.photoUrl}
-                      alt="위험요인 사진"
-                      className={styles.photoPreview}
-                    />
-                    <div className={styles.photoActions}>
-                      <label
-                        htmlFor={`hazard-photo-${index}`}
-                        className={styles.photoAction}
-                      >
-                        사진 변경
-                      </label>
-                      <button
-                        type="button"
-                        onClick={handleRemovePhoto}
-                        className={styles.photoRemoveButton}
-                      >
-                        사진 제거
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <label
-                    htmlFor={`hazard-photo-${index}`}
-                    className={styles.photoPlaceholder}
-                  >
-                    <span>이미지 선택</span>
-                    <span className={styles.photoPlaceholderHint}>
-                      클릭해서 사진을 추가하세요
-                    </span>
-                  </label>
-                )}
-              </div>
-            </td>
-            <td className={styles.textareaCell} colSpan={2}>
-              <textarea
-                ref={legalInfoRef}
-                value={data.legalInfo}
-                onChange={(event) => {
-                  handleChange('legalInfo', event.target.value);
-                  requestAnimationFrame(() => resizeLegal());
-                }}
-                className={styles.textareaInput}
-                placeholder="관련 법령, 기준, 참고사항을 입력하세요"
-                rows={5}
-              />
-            </td>
-          </tr>
-          <tr>
-            <td className={styles.sectionHeadingCell} colSpan={2}>
-              이행시기
-            </td>
-            <td className={styles.inputCell} colSpan={2}>
+        <div className={styles.contentGrid}>
+          <section className={styles.photoCard}>
+            <div className={styles.cardHeader}>
+              <h3 className={styles.cardTitle}>현장 사진</h3>
+            </div>
+
+            <div className={styles.photoFrame}>
               <input
-                type="text"
-                value={data.implementationPeriod}
-                onChange={(event) =>
-                  handleChange('implementationPeriod', event.target.value)
-                }
-                className={styles.textInput}
-                placeholder="예: 즉시 이행"
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoChange}
+                className={styles.hiddenInput}
+                id={`hazard-photo-${index}`}
               />
-            </td>
-          </tr>
-        </tbody>
-      </table>
+              {data.photoUrl ? (
+                <div className={styles.photoPreviewWrap}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={data.photoUrl}
+                    alt="위험요인 사진"
+                    className={styles.photoPreview}
+                  />
+                  <div className={styles.photoActions}>
+                    <label
+                      htmlFor={`hazard-photo-${index}`}
+                      className={styles.photoAction}
+                    >
+                      사진 변경
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleRemovePhoto}
+                      className={styles.photoRemoveButton}
+                    >
+                      사진 제거
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <label
+                  htmlFor={`hazard-photo-${index}`}
+                  className={styles.photoPlaceholder}
+                >
+                  <span>이미지 선택</span>
+                  <span className={styles.photoPlaceholderHint}>
+                    클릭해서 사진을 추가하세요
+                  </span>
+                </label>
+              )}
+            </div>
+          </section>
+
+          <section className={styles.detailsCard}>
+            <div className={styles.cardHeader}>
+              <h3 className={styles.cardTitle}>세부 내용</h3>
+            </div>
+
+            <div className={styles.detailStack}>
+              <div className={styles.detailBlock}>
+                <label className={styles.sectionLabel}>유해·위험요인</label>
+                <textarea
+                  ref={hazardFactorsRef}
+                  value={data.hazardFactors}
+                  onChange={(event) => {
+                    handleChange('hazardFactors', event.target.value);
+                    requestAnimationFrame(() => resizeHazard());
+                  }}
+                  className={`app-textarea ${styles.editorTextarea}`}
+                  placeholder="예: 개구부 주변에서 작업 중 추락 위험이 확인됨"
+                  rows={4}
+                />
+              </div>
+
+              <div className={styles.detailDivider} aria-hidden="true" />
+
+              <div className={styles.detailBlock}>
+                <label className={styles.sectionLabel}>지도사항 및 개선대책</label>
+                <textarea
+                  ref={improvementItemsRef}
+                  value={data.improvementItems}
+                  onChange={(event) => {
+                    handleChange('improvementItems', event.target.value);
+                    requestAnimationFrame(() => resizeImprovement());
+                  }}
+                  className={`app-textarea ${styles.editorTextarea}`}
+                  placeholder="예: 안전난간 설치, 출입통제, 작업 전 교육 재실시"
+                  rows={4}
+                />
+              </div>
+
+              <div className={styles.detailDivider} aria-hidden="true" />
+
+              <div className={styles.detailBlock}>
+                <label className={styles.sectionLabel}>관련 법령 / 참고사항</label>
+                <textarea
+                  ref={legalInfoRef}
+                  value={data.legalInfo}
+                  onChange={(event) => {
+                    handleChange('legalInfo', event.target.value);
+                    requestAnimationFrame(() => resizeLegal());
+                  }}
+                  className={`app-textarea ${styles.editorTextarea}`}
+                  placeholder="관련 법령, 기준, 참고사항을 입력하세요"
+                  rows={5}
+                />
+              </div>
+
+              <div className={styles.detailDivider} aria-hidden="true" />
+
+              <div className={styles.detailBlock}>
+                <label className={styles.sectionLabel}>이행시기</label>
+                <input
+                  type="text"
+                  value={data.implementationPeriod}
+                  onChange={(event) =>
+                    handleChange('implementationPeriod', event.target.value)
+                  }
+                  className="app-input"
+                  placeholder="예: 즉시 이행"
+                />
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
     </section>
   );
 }

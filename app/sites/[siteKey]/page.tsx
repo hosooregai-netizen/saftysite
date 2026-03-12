@@ -241,7 +241,7 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
                             </button>
                             <button
                               type="button"
-                              className={`${styles.mobileDangerButton} app-button app-button-secondary`}
+                              className={`${styles.mobileDangerButton} app-button app-button-danger`}
                               onClick={() =>
                                 setDialogState({
                                   type: 'delete',
@@ -337,7 +337,7 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
             </button>
             <button
               type="button"
-              className="app-button app-button-primary"
+              className="app-button app-button-danger"
               onClick={submitDeleteSession}
             >
               삭제
