@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: '한국종합안전',
-  description: '현장 사진 기반 전경 확인 및 위험요인분석 도구',
+  title: '한국종합안전 업무 시스템',
+  description: '산업안전 문서관리 및 위험성평가 보고서 작성 화면',
 };
 
 export default function RootLayout({
@@ -13,7 +13,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko">
-      <body className="antialiased">{children}</body>
+      <body>{children}</body>
     </html>
   );
 }

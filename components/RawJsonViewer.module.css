@@ -1,0 +1,15 @@
+.toggleButton {
+  @apply flex w-full items-center justify-between text-left text-sm font-medium;
+  color: #334155;
+}
+
+.toggleState {
+  color: var(--erp-text-muted);
+}
+
+.jsonBlock {
+  @apply mt-3 max-h-72 overflow-auto rounded-field border px-4 py-3 font-mono text-xs whitespace-pre-wrap break-all;
+  border-color: var(--erp-line);
+  background-color: var(--erp-navy);
+  color: #e2e8f0;
+}

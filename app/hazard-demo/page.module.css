@@ -1,0 +1,34 @@
+.uploadSection {
+  @apply px-5 py-5 md:px-8 print:hidden;
+}
+
+.contentSection {
+  @apply border-t px-5 py-5 md:px-8 print:px-0 print:py-0;
+  border-color: var(--erp-line);
+}
+
+.contentHeader {
+  @apply mb-4 flex flex-col gap-3 print:hidden md:flex-row md:items-center md:justify-between;
+}
+
+.contentTitleBlock {
+  min-width: 0;
+}
+
+.contentTitle {
+  @apply text-lg font-semibold;
+  color: var(--erp-dark);
+}
+
+.contentDescription {
+  @apply mt-1 text-sm;
+  color: var(--erp-text-muted);
+}
+
+.reportViewport {
+  @apply overflow-visible print:overflow-visible;
+}
+
+.reportViewportInner {
+  @apply min-w-full overflow-x-auto overflow-y-visible pb-4 print:overflow-visible;
+}

@@ -1,0 +1,49 @@
+.hero {
+  @apply border-b px-6 py-5 text-white md:px-8;
+  background-color: var(--erp-navy);
+}
+
+.heroKicker {
+  @apply text-xs font-semibold uppercase;
+  color: #cbd5e1;
+  letter-spacing: 0.18em;
+}
+
+.heroTitle {
+  @apply mt-2 text-3xl font-semibold md:text-4xl;
+  letter-spacing: -0.02em;
+}
+
+.heroDescription {
+  @apply mt-3 max-w-3xl text-sm leading-6 md:text-base;
+  color: #cbd5e1;
+}
+
+.entryGrid {
+  @apply grid gap-4 px-6 py-6 md:grid-cols-2 md:px-8;
+}
+
+.entryCard {
+  @apply rounded-panel border bg-white p-5 transition;
+  border-color: var(--erp-line);
+}
+
+.entryCard:hover {
+  border-color: var(--erp-mid);
+  box-shadow: var(--hazard-input-shadow);
+}
+
+.entryTitle {
+  @apply text-lg font-semibold;
+  color: var(--erp-dark);
+}
+
+.entryDescription {
+  @apply mt-2 text-sm leading-6;
+  color: var(--erp-text-muted);
+}
+
+.entryLink {
+  @apply mt-4 inline-flex text-sm font-semibold;
+  color: var(--erp-mid);
+}

@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import type { HazardReportItem } from '@/types/hazard';
 import { analyzeHazardPhotos } from '@/lib/api';
 import { normalizeHazardResponse } from '@/lib/normalizeHazardResponse';
+import styles from './HazardUploadPanel.module.css';
 
 interface HazardUploadPanelProps {
   onSuccess: (reports: HazardReportItem[]) => void;
@@ -85,15 +86,20 @@ export default function HazardUploadPanel({
   };
 
   const openPicker = () => inputRef.current?.click();
+  const dropzoneClassName = [
+    styles.dropzone,
+    loading ? styles.dropzoneDisabled : styles.dropzoneReady,
+    dragActive ? styles.dropzoneActive : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="mb-4">
-        <h2 className="text-base font-semibold text-slate-950">
-          위험요인 사진 업로드
-        </h2>
-        <p className="mt-1 text-sm text-slate-500">
-          여러 장의 사진을 한 번에 올려 분석 결과를 보고서 표로 정리합니다.
+    <section className="app-panel">
+      <div className="app-panel-header">
+        <h2 className="app-panel-title">위험요인 사진 등록</h2>
+        <p className="app-panel-description">
+          여러 장의 현장 사진을 등록해 위험성평가 보고서 초안을 생성합니다.
         </p>
       </div>
 
@@ -103,7 +109,7 @@ export default function HazardUploadPanel({
         accept="image/*"
         multiple
         onChange={handleFileChange}
-        className="hidden"
+        className={styles.hiddenInput}
       />
 
       <div
@@ -111,30 +117,22 @@ export default function HazardUploadPanel({
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={openPicker}
-        className={[
-          'mb-4 flex min-h-36 cursor-pointer items-center justify-center rounded-2xl border border-dashed px-4 py-6 text-center transition',
-          loading ? 'cursor-not-allowed opacity-60' : '',
-          dragActive
-            ? 'border-slate-950 bg-slate-100'
-            : 'border-slate-300 bg-slate-50 hover:border-slate-900 hover:bg-slate-100',
-        ].join(' ')}
+        className={dropzoneClassName}
       >
-        <div className="space-y-1">
-          <p className="text-sm font-medium text-slate-950">
-            사진을 여기로 끌어오거나 클릭해서 선택
-          </p>
-          <p className="text-xs text-slate-500">
-            이미지 파일 여러 장을 업로드할 수 있습니다.
+        <div className={styles.dropzoneContent}>
+          <p className={styles.dropzoneTitle}>사진 파일 등록</p>
+          <p className={styles.dropzoneDescription}>
+            이 영역에 파일을 끌어오거나 클릭하여 여러 장의 이미지를 선택합니다.
           </p>
         </div>
       </div>
 
-      <div className="mb-4 flex flex-wrap gap-2">
+      <div className={styles.actionBar}>
         <button
           type="button"
           onClick={openPicker}
           disabled={loading}
-          className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-800 transition hover:border-slate-400 hover:bg-slate-100 disabled:opacity-50"
+          className="app-button app-button-secondary"
         >
           사진 선택
         </button>
@@ -142,33 +140,35 @@ export default function HazardUploadPanel({
           type="button"
           onClick={handleUpload}
           disabled={loading || files.length === 0}
-          className="rounded-full border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:opacity-50"
+          className="app-button app-button-accent"
         >
           {loading ? '분석 중...' : '업로드 및 분석'}
         </button>
       </div>
 
       {files.length > 0 && (
-        <ul className="mb-3 max-h-36 space-y-2 overflow-y-auto text-sm text-slate-600">
-          {files.map((file, index) => (
-            <li
-              key={`${file.name}-${index}`}
-              className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2"
-            >
-              <span className="flex-1 truncate">{file.name}</span>
-              <button
-                type="button"
-                onClick={() => removeFile(index)}
-                className="text-xs font-medium text-rose-600 hover:underline"
-              >
-                제거
-              </button>
-            </li>
-          ))}
-        </ul>
+        <div className={styles.filePanel}>
+          <div className={styles.fileHeader}>
+            등록 대기 파일 {files.length}건
+          </div>
+          <ul className={styles.fileList}>
+            {files.map((file, index) => (
+              <li key={`${file.name}-${index}`} className={styles.fileItem}>
+                <span className={styles.fileName}>{file.name}</span>
+                <button
+                  type="button"
+                  onClick={() => removeFile(index)}
+                  className={styles.removeButton}
+                >
+                  제거
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
-      {error && <p className="text-sm text-rose-600">{error}</p>}
+      {error && <p className={styles.error}>{error}</p>}
     </section>
   );
 }

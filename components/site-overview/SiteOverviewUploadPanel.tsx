@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { checkCausativeAgents } from '@/lib/api';
 import { normalizeCausativeAgentResponse } from '@/lib/normalizeCausativeAgentResponse';
 import type { CausativeAgentReport } from '@/types/siteOverview';
+import styles from './SiteOverviewUploadPanel.module.css';
 
 interface SiteOverviewUploadPanelProps {
   onSuccess: (report: CausativeAgentReport) => void;
@@ -80,16 +81,20 @@ export default function SiteOverviewUploadPanel({
   };
 
   const openPicker = () => inputRef.current?.click();
+  const dropzoneClassName = [
+    styles.dropzone,
+    loading ? styles.dropzoneDisabled : styles.dropzoneReady,
+    dragActive ? styles.dropzoneActive : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="mb-4">
-        <h2 className="text-base font-semibold text-slate-950">
-          전경 사진 업로드
-        </h2>
-        <p className="mt-1 text-sm text-slate-500">
-          백엔드 응답의 <code>agents</code> 값을 기준으로 체크표를 자동으로
-          채웁니다.
+    <section className="app-panel">
+      <div className="app-panel-header">
+        <h2 className="app-panel-title">전경 사진 등록</h2>
+        <p className="app-panel-description">
+          점검표 작성용 전경 이미지를 1건 등록하고 기인물 체크 결과를 불러옵니다.
         </p>
       </div>
 
@@ -98,7 +103,7 @@ export default function SiteOverviewUploadPanel({
         type="file"
         accept="image/*"
         onChange={handleFileChange}
-        className="hidden"
+        className={styles.hiddenInput}
       />
 
       <div
@@ -106,30 +111,22 @@ export default function SiteOverviewUploadPanel({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={[
-          'mb-4 flex min-h-40 cursor-pointer items-center justify-center rounded-2xl border border-dashed px-4 py-6 text-center transition',
-          loading ? 'cursor-not-allowed opacity-60' : '',
-          dragActive
-            ? 'border-slate-950 bg-slate-100'
-            : 'border-slate-300 bg-slate-50 hover:border-slate-900 hover:bg-slate-100',
-        ].join(' ')}
+        className={dropzoneClassName}
       >
-        <div className="space-y-1">
-          <p className="text-sm font-medium text-slate-950">
-            전경 사진을 여기로 끌어오거나 클릭해서 선택
-          </p>
-          <p className="text-xs text-slate-500">
-            한 장의 이미지 파일을 업로드합니다.
+        <div className={styles.dropzoneContent}>
+          <p className={styles.dropzoneTitle}>전경 사진 등록</p>
+          <p className={styles.dropzoneDescription}>
+            파일을 끌어오거나 클릭하여 이미지 1건을 선택합니다.
           </p>
         </div>
       </div>
 
-      <div className="mb-4 flex flex-wrap gap-2">
+      <div className={styles.actionBar}>
         <button
           type="button"
           onClick={openPicker}
           disabled={loading}
-          className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-800 transition hover:border-slate-400 hover:bg-slate-100 disabled:opacity-50"
+          className="app-button app-button-secondary"
         >
           사진 선택
         </button>
@@ -137,7 +134,7 @@ export default function SiteOverviewUploadPanel({
           type="button"
           onClick={handleUpload}
           disabled={loading || !file}
-          className="rounded-full border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:opacity-50"
+          className="app-button app-button-accent"
         >
           {loading ? '판독 중...' : '업로드 및 판독'}
         </button>
@@ -149,7 +146,7 @@ export default function SiteOverviewUploadPanel({
               setError(null);
             }}
             disabled={loading}
-            className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-100 disabled:opacity-50"
+            className="app-button app-button-secondary"
           >
             선택 해제
           </button>
@@ -157,12 +154,15 @@ export default function SiteOverviewUploadPanel({
       </div>
 
       {file && (
-        <div className="mb-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-          선택된 파일: <span className="font-medium">{file.name}</span>
+        <div className={styles.filePanel}>
+          <div className={styles.fileHeader}>등록 대상 파일</div>
+          <div className={styles.fileBody}>
+            선택된 파일: <span className={styles.fileNameStrong}>{file.name}</span>
+          </div>
         </div>
       )}
 
-      {error && <p className="text-sm text-rose-600">{error}</p>}
+      {error && <p className={styles.error}>{error}</p>}
     </section>
   );
 }

@@ -1,0 +1,177 @@
+.container {
+  @apply mb-8 break-inside-avoid overflow-hidden rounded-panel border bg-white shadow-panel print:overflow-visible print:rounded-none print:border-0 print:shadow-none;
+  border-color: var(--erp-line);
+}
+
+.header {
+  @apply border-b px-4 py-3 print:hidden;
+  border-color: var(--erp-line);
+  background-color: #f8fafc;
+}
+
+.headerRow {
+  @apply flex flex-wrap items-center justify-between gap-3;
+}
+
+.headerTitle {
+  @apply text-sm font-semibold;
+  color: var(--erp-dark);
+}
+
+.headerDescription {
+  @apply mt-1 text-xs;
+  color: var(--erp-text-muted);
+}
+
+.status {
+  @apply inline-flex items-center rounded-[6px] border px-2.5 py-1 text-xs font-medium;
+  border-color: var(--erp-line-strong);
+  background-color: var(--erp-panel-muted);
+  color: var(--erp-light);
+}
+
+.metadataSection {
+  @apply grid gap-3 border-b px-4 py-3 text-xs print:hidden md:grid-cols-2;
+  border-color: var(--erp-line);
+}
+
+.metadataLabel {
+  @apply font-semibold uppercase;
+  color: #64748b;
+  letter-spacing: 0.12em;
+}
+
+.metadataValue {
+  @apply mt-1 leading-5;
+  color: #334155;
+}
+
+.metadataMultiline {
+  @apply whitespace-pre-wrap;
+}
+
+.topTable {
+  @apply w-full table-fixed border-collapse border border-black bg-white text-black;
+  min-width: 720px;
+}
+
+.mainTable {
+  @apply w-full table-fixed border-collapse border border-black border-t-0 bg-white text-black;
+  min-width: 720px;
+}
+
+.topColLabel {
+  width: 18%;
+}
+
+.topColValue {
+  width: 32%;
+}
+
+.mainColNarrow {
+  width: 8%;
+}
+
+.mainColMedium {
+  width: 25%;
+}
+
+.mainColWide {
+  width: 59%;
+}
+
+.headingCell {
+  @apply border border-black bg-slate-50 p-2 text-center font-semibold;
+}
+
+.inputCell {
+  @apply border border-black p-2 text-left;
+}
+
+.textInput {
+  @apply w-full min-w-0 border-0 bg-transparent p-0 text-inherit focus:outline-none;
+}
+
+.sectionHeadingCell {
+  @apply border border-black bg-slate-50 p-2 text-center font-semibold;
+}
+
+.textareaCell {
+  @apply border border-black p-2 align-top;
+}
+
+.textareaInput {
+  @apply block w-full resize-none whitespace-pre-wrap break-words border-0 bg-transparent p-0 text-inherit focus:outline-none;
+}
+
+.photoCell {
+  @apply border border-black p-2 align-top;
+}
+
+.photoFrame {
+  @apply flex min-h-[128px] flex-col items-center justify-center gap-2;
+  background-color: #f8fafc;
+}
+
+@media print {
+  .photoFrame {
+    background-color: #fff;
+  }
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.photoPreviewWrap {
+  position: relative;
+  width: 100%;
+}
+
+.photoPreview {
+  @apply mx-auto max-h-[180px] w-auto object-contain;
+}
+
+.photoActions {
+  @apply mt-2 flex gap-2 print:hidden;
+}
+
+.photoAction {
+  @apply text-xs font-medium;
+  color: var(--erp-mid);
+  cursor: pointer;
+}
+
+.photoAction:hover {
+  text-decoration: underline;
+}
+
+.photoRemoveButton {
+  @apply text-xs font-medium;
+  color: #e11d48;
+}
+
+.photoRemoveButton:hover {
+  text-decoration: underline;
+}
+
+.photoPlaceholder {
+  @apply flex cursor-pointer flex-col items-center justify-center gap-1 rounded-field border border-dashed px-4 py-6 text-sm;
+  border-color: #94a3b8;
+  color: var(--erp-text-muted);
+}
+
+.photoPlaceholder:hover {
+  border-color: var(--erp-mid);
+  color: var(--erp-dark);
+}
+
+@media print {
+  .photoPlaceholder {
+    border-color: #cbd5e1;
+  }
+}
+
+.photoPlaceholderHint {
+  @apply text-xs;
+}

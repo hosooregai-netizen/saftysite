@@ -1,0 +1,233 @@
+.section {
+  @apply space-y-0;
+}
+
+.shell {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  background-color: #fff;
+}
+
+.summaryHeader {
+  @apply border-b px-4 py-3 print:hidden;
+  border-color: var(--erp-line);
+  background-color: #f8fafc;
+}
+
+.summaryHeaderRow {
+  @apply flex flex-wrap items-center justify-between gap-3;
+}
+
+.summaryTitle {
+  @apply text-sm font-semibold;
+  color: var(--erp-dark);
+}
+
+.summaryDescription {
+  @apply mt-1 text-xs;
+  color: var(--erp-text-muted);
+}
+
+.summaryStatus {
+  @apply inline-flex items-center rounded-[6px] border px-2.5 py-1 text-xs font-medium;
+  border-color: var(--erp-line-strong);
+  background-color: var(--erp-panel-muted);
+  color: var(--erp-light);
+}
+
+.tableFrame {
+  width: 100%;
+  max-width: 100%;
+}
+
+.photoTable,
+.checklistTable {
+  @apply w-full table-fixed border-collapse;
+}
+
+.tableTitleCell {
+  @apply border border-black bg-slate-50 p-3 text-center text-lg font-semibold;
+}
+
+.photoCell {
+  @apply border border-black p-6;
+}
+
+.photoFrame {
+  @apply flex min-h-[320px] items-center justify-center;
+}
+
+.photoImage {
+  @apply max-h-[420px] w-auto max-w-full object-contain;
+}
+
+.photoPlaceholder {
+  @apply flex min-h-[320px] items-center justify-center rounded-field border border-dashed bg-slate-50 px-4 text-sm;
+  border-color: #cbd5e1;
+  color: var(--erp-text-muted);
+}
+
+.checklistTable {
+  border-top: 0;
+}
+
+.colSection {
+  width: 10%;
+}
+
+.colCheck {
+  width: 6%;
+}
+
+.colLabel {
+  width: 18%;
+}
+
+.colGuidanceWide {
+  width: 22%;
+}
+
+.colGuidance {
+  width: 20%;
+}
+
+.headerRow {
+  @apply text-center;
+  background-color: #f8fafc;
+}
+
+.headerCell {
+  @apply border border-black p-2;
+}
+
+.sectionCell {
+  @apply border border-black p-3 text-center align-middle font-semibold;
+}
+
+.checkCell {
+  @apply border border-black p-2 text-center align-middle;
+}
+
+.labelCell {
+  @apply border border-black p-2 align-middle font-semibold;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.guidanceCell {
+  @apply border border-black p-2 align-middle whitespace-pre-wrap;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.checkedCell {
+  background-color: var(--erp-gold-soft);
+}
+
+@media print {
+  .checkedCell {
+    background-color: #fff;
+  }
+}
+
+.checkbox {
+  @apply h-4 w-4 rounded-[3px] border;
+  border-color: var(--erp-line-strong);
+  accent-color: var(--erp-mid);
+}
+
+.footerGrid {
+  @apply grid gap-4 border border-t-0 border-black bg-white p-5 text-sm;
+  color: #334155;
+}
+
+@media print {
+  .footerGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.noteCard {
+  @apply rounded-field border bg-slate-50 p-4;
+  border-color: var(--erp-line);
+}
+
+@media print {
+  .noteCard {
+    border-color: #000;
+    background-color: #fff;
+  }
+}
+
+.noteCardHeader {
+  @apply flex items-center justify-between gap-3;
+}
+
+.noteTitle {
+  @apply text-base font-semibold;
+  color: var(--erp-dark);
+}
+
+.noteStatus {
+  @apply inline-flex items-center rounded-[6px] border px-2.5 py-1 text-xs font-medium print:hidden;
+  border-color: var(--erp-line-strong);
+  background-color: var(--erp-panel-muted);
+  color: var(--erp-light);
+}
+
+.noteBody {
+  @apply mt-2 whitespace-pre-wrap leading-6;
+}
+
+.summaryTableWrap {
+  @apply mt-3 overflow-hidden rounded-field border bg-white;
+  border-color: var(--erp-line);
+}
+
+@media print {
+  .summaryTableWrap {
+    border-color: #000;
+  }
+}
+
+.summaryTable {
+  @apply w-full border-collapse text-sm;
+}
+
+.summaryTableHead {
+  background-color: #e2e8f0;
+}
+
+@media print {
+  .summaryTableHead {
+    background-color: #fff;
+  }
+}
+
+.summaryHeadCell {
+  @apply border-b px-3 py-2 text-left font-semibold;
+}
+
+.summaryRow {
+  border-bottom: 1px solid var(--erp-line);
+}
+
+.summaryRow:last-child {
+  border-bottom: 0;
+}
+
+.summaryNumber {
+  @apply px-3 py-2;
+  color: var(--erp-text-muted);
+}
+
+.summaryItem {
+  @apply px-3 py-2 font-medium;
+  color: var(--erp-dark);
+}
+
+.emptyText {
+  @apply mt-2;
+  color: var(--erp-text-muted);
+}

@@ -1,0 +1,23 @@
+.kicker {
+  @apply text-xs font-semibold uppercase;
+  color: var(--erp-text-muted);
+  letter-spacing: 0.14em;
+}
+
+.title {
+  @apply mt-2 text-sm font-semibold;
+  color: var(--erp-dark);
+}
+
+.textarea {
+  @apply mb-3 mt-3 min-h-[140px] font-mono text-xs;
+}
+
+.actions {
+  @apply flex items-center gap-3;
+}
+
+.error {
+  @apply text-xs;
+  color: #e11d48;
+}

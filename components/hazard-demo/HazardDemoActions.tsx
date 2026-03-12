@@ -1,5 +1,7 @@
 'use client';
 
+import styles from './HazardDemoActions.module.css';
+
 interface HazardDemoActionsProps {
   reportsCount: number;
   onAddReport: () => void;
@@ -14,11 +16,11 @@ export default function HazardDemoActions({
   onPrint,
 }: HazardDemoActionsProps) {
   return (
-    <div className="flex flex-wrap gap-3">
+    <div className={styles.actions}>
       <button
         type="button"
         onClick={onAddReport}
-        className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-800 transition hover:border-slate-400 hover:bg-slate-100"
+        className="app-button app-button-primary"
       >
         보고서 추가
       </button>
@@ -26,7 +28,7 @@ export default function HazardDemoActions({
         <button
           type="button"
           onClick={onRemoveLastReport}
-          className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-800 transition hover:border-slate-400 hover:bg-slate-100"
+          className="app-button app-button-secondary"
         >
           마지막 보고서 제거
         </button>
@@ -34,7 +36,7 @@ export default function HazardDemoActions({
       <button
         type="button"
         onClick={onPrint}
-        className="rounded-full border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800"
+        className="app-button app-button-accent"
       >
         인쇄
       </button>

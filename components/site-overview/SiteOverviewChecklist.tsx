@@ -9,6 +9,7 @@ import type {
   CausativeAgentKey,
   CausativeAgentReport,
 } from '@/types/siteOverview';
+import styles from './SiteOverviewChecklist.module.css';
 
 interface SiteOverviewChecklistProps {
   report: CausativeAgentReport | null;
@@ -24,31 +25,40 @@ function ChecklistCell({
   checked: boolean;
   onToggle: (checked: boolean) => void;
 }) {
-  const highlightClass = checked ? 'bg-emerald-50 print:bg-white' : '';
+  const checkCellClassName = [
+    styles.checkCell,
+    checked ? styles.checkedCell : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+  const labelCellClassName = [
+    styles.labelCell,
+    checked ? styles.checkedCell : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+  const guidanceCellClassName = [
+    styles.guidanceCell,
+    checked ? styles.checkedCell : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <>
-      <td
-        className={`border border-black p-2 text-center align-middle ${highlightClass}`}
-      >
+      <td className={checkCellClassName}>
         <input
           type="checkbox"
           checked={checked}
           onChange={(event) => onToggle(event.target.checked)}
-          className="h-4 w-4 accent-emerald-600"
+          className={styles.checkbox}
           aria-label={`${item.number}. ${item.label}`}
         />
       </td>
-      <td
-        className={`border border-black p-2 align-middle font-semibold ${highlightClass}`}
-      >
+      <td className={labelCellClassName}>
         {item.number}. {item.label}
       </td>
-      <td
-        className={`border border-black p-2 align-middle whitespace-pre-wrap ${highlightClass}`}
-      >
-        {item.guidance}
-      </td>
+      <td className={guidanceCellClassName}>{item.guidance}</td>
     </>
   );
 }
@@ -63,31 +73,43 @@ export default function SiteOverviewChecklist({
   ).filter((item) => agents[item.key]);
 
   return (
-    <section className="space-y-0">
-      <div className="overflow-x-auto">
-        <div className="min-w-[1100px] bg-white text-black">
-          <table className="w-full border-collapse border border-black">
+    <section className={styles.section}>
+      <div className={styles.shell}>
+        <div className={styles.summaryHeader}>
+          <div className={styles.summaryHeaderRow}>
+            <div>
+              <p className={styles.summaryTitle}>전경 점검 체크표</p>
+              <p className={styles.summaryDescription}>
+                체크 결과를 검토하고 필요한 항목을 직접 수정한 뒤 출력합니다.
+              </p>
+            </div>
+            <span className={styles.summaryStatus}>
+              선택 항목 {selectedItems.length}건
+            </span>
+          </div>
+        </div>
+
+        <div className={styles.tableFrame}>
+          <table className={styles.photoTable}>
             <thead>
               <tr>
-                <th className="border border-black p-3 text-center text-lg font-semibold">
-                  전경사진
-                </th>
+                <th className={styles.tableTitleCell}>전경사진</th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td className="border border-black p-6">
+                <td className={styles.photoCell}>
                   {report?.photoUrl ? (
-                    <div className="flex min-h-[320px] items-center justify-center">
+                    <div className={styles.photoFrame}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={report.photoUrl}
                         alt="점검 사업장 전경 사진"
-                        className="max-h-[420px] w-auto max-w-full object-contain"
+                        className={styles.photoImage}
                       />
                     </div>
                   ) : (
-                    <div className="flex min-h-[320px] items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 text-sm text-slate-500">
+                    <div className={styles.photoPlaceholder}>
                       전경 사진을 업로드하면 여기에 표시됩니다.
                     </div>
                   )}
@@ -96,33 +118,30 @@ export default function SiteOverviewChecklist({
             </tbody>
           </table>
 
-          <table className="w-full border-collapse border border-black border-t-0">
+          <table className={styles.checklistTable}>
             <colgroup>
-              <col className="w-[10%]" />
-              <col className="w-[6%]" />
-              <col className="w-[18%]" />
-              <col className="w-[22%]" />
-              <col className="w-[6%]" />
-              <col className="w-[18%]" />
-              <col className="w-[20%]" />
+              <col className={styles.colSection} />
+              <col className={styles.colCheck} />
+              <col className={styles.colLabel} />
+              <col className={styles.colGuidanceWide} />
+              <col className={styles.colCheck} />
+              <col className={styles.colLabel} />
+              <col className={styles.colGuidance} />
             </colgroup>
             <thead>
               <tr>
-                <th
-                  colSpan={7}
-                  className="border border-black p-3 text-center text-lg font-semibold"
-                >
+                <th colSpan={7} className={styles.tableTitleCell}>
                   건설현장 12대 사망사고 기인물 핵심 안전조치
                 </th>
               </tr>
-              <tr className="text-center">
-                <th className="border border-black p-2">구분</th>
-                <th className="border border-black p-2">체크</th>
-                <th className="border border-black p-2">사망사고 다발 기인물</th>
-                <th className="border border-black p-2">필수 지도사항</th>
-                <th className="border border-black p-2">체크</th>
-                <th className="border border-black p-2">사망사고 다발 기인물</th>
-                <th className="border border-black p-2">필수 지도사항</th>
+              <tr className={styles.headerRow}>
+                <th className={styles.headerCell}>구분</th>
+                <th className={styles.headerCell}>체크</th>
+                <th className={styles.headerCell}>사망사고 다발 기인물</th>
+                <th className={styles.headerCell}>필수 지도사항</th>
+                <th className={styles.headerCell}>체크</th>
+                <th className={styles.headerCell}>사망사고 다발 기인물</th>
+                <th className={styles.headerCell}>필수 지도사항</th>
               </tr>
             </thead>
             <tbody>
@@ -130,10 +149,7 @@ export default function SiteOverviewChecklist({
                 section.rows.map((row, rowIndex) => (
                   <tr key={row.left.key}>
                     {rowIndex === 0 && (
-                      <td
-                        rowSpan={section.rows.length}
-                        className="border border-black p-3 text-center align-middle font-semibold"
-                      >
+                      <td rowSpan={section.rows.length} className={styles.sectionCell}>
                         {section.label}
                       </td>
                     )}
@@ -159,33 +175,40 @@ export default function SiteOverviewChecklist({
         </div>
       </div>
 
-      <div className="rounded-b-2xl border border-black border-t-0 bg-white p-5 text-sm text-slate-800">
-        <div>
-          <h2 className="text-base font-semibold text-slate-950">AI 판독 근거</h2>
-          <p className="mt-2 whitespace-pre-wrap leading-6">
+      <div className={styles.footerGrid}>
+        <div className={styles.noteCard}>
+          <div className={styles.noteCardHeader}>
+            <h2 className={styles.noteTitle}>판독 근거</h2>
+            <span className={styles.noteStatus}>검토 참고</span>
+          </div>
+          <p className={styles.noteBody}>
             {report?.reasoning || '아직 판독 결과가 없습니다.'}
           </p>
         </div>
 
-        <div className="mt-5">
-          <h2 className="text-base font-semibold text-slate-950">
-            체크된 기인물
-          </h2>
+        <div className={styles.noteCard}>
+          <h2 className={styles.noteTitle}>선택 항목 요약</h2>
           {selectedItems.length > 0 ? (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {selectedItems.map((item) => (
-                <span
-                  key={item.key}
-                  className="rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-900"
-                >
-                  {item.number}. {item.label}
-                </span>
-              ))}
+            <div className={styles.summaryTableWrap}>
+              <table className={styles.summaryTable}>
+                <thead className={styles.summaryTableHead}>
+                  <tr>
+                    <th className={styles.summaryHeadCell}>번호</th>
+                    <th className={styles.summaryHeadCell}>항목</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selectedItems.map((item) => (
+                    <tr key={item.key} className={styles.summaryRow}>
+                      <td className={styles.summaryNumber}>{item.number}</td>
+                      <td className={styles.summaryItem}>{item.label}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           ) : (
-            <p className="mt-2 text-slate-500">
-              체크된 기인물이 없습니다.
-            </p>
+            <p className={styles.emptyText}>체크된 기인물이 없습니다.</p>
           )}
         </div>
       </div>

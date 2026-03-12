@@ -1,0 +1,69 @@
+.hiddenInput {
+  display: none;
+}
+
+.dropzone {
+  @apply mb-4 flex min-h-40 items-center justify-center rounded-panel border border-dashed px-4 py-6 text-center transition;
+  border-color: var(--erp-line-strong);
+  background-color: var(--erp-panel-muted);
+  cursor: pointer;
+}
+
+.dropzoneReady:hover {
+  border-color: var(--erp-mid);
+}
+
+.dropzoneDisabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.dropzoneActive {
+  border-color: var(--erp-mid);
+  background-color: #edf2f7;
+}
+
+.dropzoneContent {
+  @apply space-y-1;
+}
+
+.dropzoneTitle {
+  @apply text-sm font-medium;
+  color: var(--erp-dark);
+}
+
+.dropzoneDescription {
+  @apply text-xs;
+  color: var(--erp-text-muted);
+}
+
+.actionBar {
+  @apply mb-4 flex flex-wrap gap-2;
+}
+
+.filePanel {
+  @apply mb-3 overflow-hidden rounded-panel border;
+  border-color: var(--erp-line);
+}
+
+.fileHeader {
+  @apply border-b px-4 py-2 text-xs font-semibold uppercase;
+  background-color: #f8fafc;
+  color: #475569;
+  letter-spacing: 0.12em;
+  border-color: var(--erp-line);
+}
+
+.fileBody {
+  @apply px-4 py-3 text-sm;
+  color: #334155;
+}
+
+.fileNameStrong {
+  font-weight: 500;
+}
+
+.error {
+  @apply text-sm;
+  color: #e11d48;
+}
