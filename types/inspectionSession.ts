@@ -69,6 +69,7 @@ export interface SupportItems {
 
 export interface InspectionSession {
   id: string;
+  siteKey: string;
   currentSection: InspectionSectionKey;
   cover: InspectionCover;
   siteOverview: CausativeAgentReport;
@@ -81,6 +82,13 @@ export interface InspectionSession {
   createdAt: string;
   updatedAt: string;
   lastSavedAt: string | null;
+}
+
+export interface InspectionSite {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface InspectionSectionMeta {

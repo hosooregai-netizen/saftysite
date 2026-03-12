@@ -1,3 +1,7 @@
+.shell {
+  overflow: visible;
+}
+
 .hero {
   display: flex;
   flex-direction: column;
@@ -52,12 +56,6 @@
   letter-spacing: -0.03em;
 }
 
-.heroDescription {
-  font-size: 14px;
-  line-height: 1.7;
-  color: #d5deea;
-}
-
 .heroActions {
   display: flex;
   flex-wrap: wrap;
@@ -70,6 +68,7 @@
 }
 
 .panel {
+  overflow: visible;
   border: 1px solid var(--erp-line);
   border-radius: 6px;
   background-color: var(--erp-white);
@@ -98,16 +97,21 @@
   min-width: 0;
 }
 
+.reportLink {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+}
+
 .reportTitle {
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 700;
+  line-height: 1.35;
   color: var(--erp-dark);
 }
 
-.reportMeta {
-  margin-top: 3px;
-  font-size: 13px;
-  color: var(--erp-text-muted);
+.reportLink:hover .reportTitle {
+  color: var(--erp-mid);
 }
 
 .dataCell,
@@ -131,12 +135,15 @@
 }
 
 .progressStack {
-  display: grid;
-  gap: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  width: min(100%, 180px);
 }
 
 .progressTrack {
-  position: relative;
+  width: 100%;
   height: 10px;
   overflow: hidden;
   border-radius: 999px;
@@ -155,15 +162,84 @@
 }
 
 .progressText {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
+  line-height: 1.2;
   color: #1e3a8a;
 }
 
-.rowActions {
+.menuShell {
+  position: relative;
+}
+
+.menuButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 30px;
+  border: 1px solid var(--erp-line);
+  border-radius: 4px;
+  background-color: var(--erp-white);
+  font-size: 20px;
+  line-height: 1;
+  color: var(--erp-mid);
+  cursor: pointer;
+  list-style: none;
+}
+
+.menuButton::-webkit-details-marker {
+  display: none;
+}
+
+.menuButton:hover {
+  border-color: var(--erp-line-strong);
+  background-color: #f8fafc;
+}
+
+.menuShell[open] .menuButton {
+  border-color: var(--erp-mid);
+  background-color: #edf2f7;
+}
+
+.menuList {
+  display: grid;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 20;
+  min-width: 132px;
+  overflow: hidden;
+  border: 1px solid var(--erp-line-strong);
+  border-radius: 6px;
+  background-color: var(--erp-white);
+  box-shadow: 0 8px 24px rgba(16, 24, 43, 0.12);
+}
+
+.menuItem {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  align-items: center;
+  width: 100%;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 0;
+  background-color: var(--erp-white);
+  font-size: 13px;
+  text-align: left;
+  color: var(--erp-dark);
+  cursor: pointer;
+}
+
+.menuItem + .menuItem {
+  border-top: 1px solid var(--erp-line);
+}
+
+.menuItem:hover {
+  background-color: #f8fafc;
+}
+
+.menuItemDanger {
+  color: #8f2d2d;
 }
 
 .emptyState {
@@ -194,7 +270,7 @@
 
   .listHead {
     display: grid;
-    grid-template-columns: minmax(240px, 1.7fr) minmax(220px, 1.5fr) minmax(120px, 0.8fr) minmax(150px, 1fr) 176px;
+    grid-template-columns: minmax(220px, 1.5fr) minmax(100px, 0.8fr) minmax(180px, 1.2fr) minmax(110px, 0.75fr) minmax(150px, 0.95fr) 40px;
     gap: 20px;
     padding: 12px 20px 10px;
     border-bottom: 1px solid var(--erp-line);
@@ -207,26 +283,30 @@
   }
 
   .listHead span:last-child {
-    justify-self: end;
+    justify-self: center;
   }
 
   .reportRow {
     align-items: center;
-    grid-template-columns: minmax(240px, 1.7fr) minmax(220px, 1.5fr) minmax(120px, 0.8fr) minmax(150px, 1fr) 176px;
+    grid-template-columns: minmax(220px, 1.5fr) minmax(100px, 0.8fr) minmax(180px, 1.2fr) minmax(110px, 0.75fr) minmax(150px, 0.95fr) 40px;
     gap: 20px;
   }
 
   .progressCell {
-    min-width: 220px;
+    align-items: center;
+    justify-content: center;
+    min-width: 180px;
+  }
+
+  .progressStack {
+    align-self: center;
   }
 
   .mobileLabel {
     display: none;
   }
 
-  .rowActions {
-    justify-content: flex-end;
-    flex-wrap: nowrap;
-    white-space: nowrap;
+  .menuShell {
+    justify-self: center;
   }
 }

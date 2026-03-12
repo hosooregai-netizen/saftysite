@@ -1,3 +1,7 @@
+.shell {
+  overflow: visible;
+}
+
 .hero {
   border-bottom: 1px solid var(--erp-line);
   background: linear-gradient(135deg, #112035 0%, #1b3048 100%);
@@ -24,18 +28,12 @@
   letter-spacing: -0.03em;
 }
 
-.heroDescription {
-  margin-top: 12px;
-  font-size: 14px;
-  line-height: 1.7;
-  color: #d5deea;
-}
-
 .pageGrid {
   padding: 20px;
 }
 
 .sessionPanel {
+  overflow: visible;
   border: 1px solid var(--erp-line);
   border-radius: 6px;
   background-color: var(--erp-white);
@@ -61,13 +59,6 @@
   font-size: 18px;
   font-weight: 700;
   color: var(--erp-dark);
-}
-
-.panelDescription {
-  margin-top: 4px;
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--erp-text-muted);
 }
 
 .listHead {
@@ -216,12 +207,6 @@
   font-size: 18px;
   font-weight: 700;
   color: var(--erp-dark);
-}
-
-.emptyDescription {
-  font-size: 14px;
-  line-height: 1.7;
-  color: var(--erp-text-muted);
 }
 
 @media (min-width: 960px) {

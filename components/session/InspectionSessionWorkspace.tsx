@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ChangeEvent, useEffect, useMemo, useState } from 'react';
+import { ChangeEvent, useMemo, useState } from 'react';
 import {
   INSPECTION_SECTIONS,
   createFutureProcessRiskItem,
@@ -33,8 +33,6 @@ import SessionSiteOverviewSection from './SessionSiteOverviewSection';
 import SessionSupportSection from './SessionSupportSection';
 import {
   clonePreviousGuidanceItem,
-  formatDateTime,
-  getSaveStateLabel,
   hasGuidanceContent,
   readFileAsDataUrl,
   toInspectionHazardItem,
@@ -50,9 +48,9 @@ export default function InspectionSessionWorkspace({
 }: InspectionSessionWorkspaceProps) {
   const router = useRouter();
   const {
+    getSiteById,
     sessions,
     isReady,
-    saveState,
     updateSession,
     getSessionById,
     saveNow,
@@ -60,34 +58,23 @@ export default function InspectionSessionWorkspace({
   const session = getSessionById(sessionId);
   const [activeHazardId, setActiveHazardId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!session) return;
-
-    if (session.currentHazards.length === 0) {
-      if (activeHazardId !== null) {
-        setActiveHazardId(null);
-      }
-      return;
-    }
-
-    if (!activeHazardId || !session.currentHazards.some((item) => item.id === activeHazardId)) {
-      setActiveHazardId(session.currentHazards[0].id);
-    }
-  }, [activeHazardId, session]);
-
   const progress = session ? getSessionProgress(session) : null;
   const currentSectionIndex = session
     ? INSPECTION_SECTIONS.findIndex((section) => section.key === session.currentSection)
     : -1;
+  const effectiveActiveHazardId =
+    session?.currentHazards.some((item) => item.id === activeHazardId)
+      ? activeHazardId
+      : session?.currentHazards[0]?.id ?? null;
 
   const selectedHazard = useMemo(() => {
     if (!session || session.currentHazards.length === 0) return null;
 
     return (
-      session.currentHazards.find((item) => item.id === activeHazardId) ||
+      session.currentHazards.find((item) => item.id === effectiveActiveHazardId) ||
       session.currentHazards[0]
     );
-  }, [activeHazardId, session]);
+  }, [effectiveActiveHazardId, session]);
 
   const relatedSessions = useMemo(() => {
     if (!session) return [];
@@ -102,9 +89,13 @@ export default function InspectionSessionWorkspace({
     );
   }, [session, sessions]);
 
-  const handleSessionChange = (
-    updater: Parameters<typeof updateSession>[1]
-  ) => {
+  const siteTitle = session
+    ? getSiteById(getSessionSiteKey(session))?.title ||
+      session.cover.businessName ||
+      '이름 없는 현장'
+    : '';
+
+  const handleSessionChange = (updater: Parameters<typeof updateSession>[1]) => {
     updateSession(sessionId, updater);
   };
 
@@ -333,7 +324,7 @@ export default function InspectionSessionWorkspace({
         <div className="app-container">
           <section className="app-shell">
             <div className={styles.notFoundState}>
-              <p>요청한 현장 세션을 찾을 수 없습니다.</p>
+              <p>요청한 보고서를 찾을 수 없습니다.</p>
               <div className={styles.bottomActions}>
                 <Link href="/" className="app-button app-button-secondary">
                   현장 목록으로
@@ -343,7 +334,7 @@ export default function InspectionSessionWorkspace({
                   onClick={() => router.push('/')}
                   className="app-button app-button-primary"
                 >
-                  새로 시작
+                  처음으로
                 </button>
               </div>
             </div>
@@ -363,69 +354,51 @@ export default function InspectionSessionWorkspace({
             <header className={styles.header}>
               <div className={styles.headerMain}>
                 <Link href={siteHref} className={styles.backLink}>
-                  현장 목록으로 돌아가기
+                  현장 목록으로
                 </Link>
-                <span className={styles.headerLabel}>Inspection Session</span>
-                <div className={styles.headerTitleRow}>
-                  <div>
-                    <h1 className={styles.headerTitle}>{getSessionTitle(session)}</h1>
-                    <p className={styles.headerSubtitle}>
-                      {session.cover.projectName || '공사명 미입력'} · 점검일{' '}
-                      {session.cover.inspectionDate || '미입력'} · 담당{' '}
-                      {session.cover.consultantName || '미입력'}
-                    </p>
-                  </div>
-
-                  <div className={styles.headerActions}>
-                    <button
-                      type="button"
-                      onClick={() => saveNow()}
-                      className="app-button app-button-secondary"
-                    >
-                      임시저장
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => window.print()}
-                      className="app-button app-button-accent"
-                    >
-                      출력
-                    </button>
-                  </div>
+                <span className={styles.headerLabel}>현장 보고서</span>
+                <div className={styles.headerIntro}>
+                  <h1 className={styles.headerTitle}>{siteTitle}</h1>
+                  <p className={styles.headerReportTitle}>{getSessionTitle(session)}</p>
                 </div>
               </div>
 
-              <div className={styles.headerStats}>
-                <div className={styles.statCard}>
-                  <p className={styles.statLabel}>진행률</p>
-                  <p className={styles.statValue}>{progress.percentage}%</p>
-                  <p className={styles.statMeta}>
-                    {progress.completed}/{progress.total} 섹션 완료
-                  </p>
+              <div className={styles.headerSide}>
+                <div className={styles.headerProgress}>
+                  <div className={styles.headerProgressMeta}>
+                    <span className={styles.headerProgressLabel}>진행률</span>
+                    <span className={styles.headerProgressValue}>
+                      {progress.completed}/{progress.total} 완료
+                    </span>
+                  </div>
+                  <div className={styles.headerProgressTrack} aria-hidden="true">
+                    <span
+                      className={styles.headerProgressFill}
+                      style={{ width: `${progress.percentage}%` }}
+                    />
+                  </div>
                 </div>
-                <div className={styles.statCard}>
-                  <p className={styles.statLabel}>저장 상태</p>
-                  <p className={styles.statValue}>{getSaveStateLabel(saveState)}</p>
-                  <p className={styles.statMeta}>작성 내용은 브라우저에 임시 저장됩니다.</p>
-                </div>
-                <div className={styles.statCard}>
-                  <p className={styles.statLabel}>마지막 저장</p>
-                  <p className={styles.statValue}>{formatDateTime(session.lastSavedAt)}</p>
-                  <p className={styles.statMeta}>현장 이동 중에도 이어서 편집할 수 있습니다.</p>
-                </div>
-                <div className={styles.statCard}>
-                  <p className={styles.statLabel}>현재 섹션</p>
-                  <p className={styles.statValue}>
-                    {INSPECTION_SECTIONS[currentSectionIndex]?.shortLabel || '표지'}
-                  </p>
-                  <p className={styles.statMeta}>
-                    총 {session.currentHazards.length}개 위험요인 항목 작성 중
-                  </p>
+
+                <div className={styles.headerActions}>
+                  <button
+                    type="button"
+                    onClick={() => saveNow()}
+                    className="app-button app-button-secondary"
+                  >
+                    임시저장
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="app-button app-button-accent"
+                  >
+                    출력
+                  </button>
                 </div>
               </div>
             </header>
 
-            <nav className={styles.sectionNav} aria-label="현장 세션 섹션">
+            <nav className={styles.sectionNav} aria-label="보고서 섹션">
               <div className={styles.sectionNavList}>
                 {INSPECTION_SECTIONS.map((section, index) => {
                   const isActive = section.key === session.currentSection;
@@ -448,12 +421,7 @@ export default function InspectionSessionWorkspace({
                     >
                       <span className={styles.sectionTabIndex}>{index + 1}</span>
                       <span className={styles.sectionTabText}>
-                        <span className={styles.sectionTabLabel}>
-                          {section.shortLabel}
-                        </span>
-                        <span className={styles.sectionTabDescription}>
-                          {section.description}
-                        </span>
+                        <span className={styles.sectionTabLabel}>{section.shortLabel}</span>
                       </span>
                     </button>
                   );
@@ -550,7 +518,7 @@ export default function InspectionSessionWorkspace({
 
               <div className={styles.bottomActions}>
                 <Link href={siteHref} className="app-button app-button-secondary">
-                  뒤로가기
+                  현장으로
                 </Link>
                 <button
                   type="button"

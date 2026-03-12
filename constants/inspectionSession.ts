@@ -6,6 +6,7 @@ import type {
   InspectionHazardItem,
   InspectionSectionKey,
   InspectionSectionMeta,
+  InspectionSite,
   InspectionSession,
   PreviousGuidanceItem,
 } from '@/types/inspectionSession';
@@ -67,6 +68,17 @@ function createTimestamp(): string {
   return new Date().toISOString();
 }
 
+export function createInspectionSite(title: string): InspectionSite {
+  const timestamp = createTimestamp();
+
+  return {
+    id: generateId('site'),
+    title: title.trim(),
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
+}
+
 export function createPreviousGuidanceItem(): PreviousGuidanceItem {
   const timestamp = createTimestamp();
   return {
@@ -108,11 +120,13 @@ export function createFutureProcessRiskItem(): FutureProcessRiskItem {
 }
 
 export function createInspectionSession(
-  initialCover: Partial<InspectionCover> = {}
+  initialCover: Partial<InspectionCover> = {},
+  siteKey = UNTITLED_SITE_KEY
 ): InspectionSession {
   const timestamp = createTimestamp();
   return {
     id: generateId('session'),
+    siteKey,
     currentSection: 'cover',
     cover: {
       businessName: '',
@@ -156,10 +170,17 @@ export function touchUpdatedAt<T extends { updatedAt: string }>(item: T): T {
   };
 }
 
-export function getSessionSiteKey(session: Pick<InspectionSession, 'cover'>): string {
+export function getSessionSiteKey(
+  session: Pick<InspectionSession, 'cover' | 'siteKey'>
+): string {
+  const explicitSiteKey =
+    'siteKey' in session && typeof session.siteKey === 'string'
+      ? normalizeText(session.siteKey)
+      : '';
   const businessName = normalizeText(session.cover.businessName);
   const projectName = normalizeText(session.cover.projectName);
 
+  if (explicitSiteKey) return explicitSiteKey;
   if (!businessName && !projectName) return UNTITLED_SITE_KEY;
   return `${businessName}::${projectName}`;
 }
@@ -170,17 +191,6 @@ export function getSessionSiteTitle(session: Pick<InspectionSession, 'cover'>): 
     normalizeText(session.cover.projectName) ||
     '이름 없는 현장'
   );
-}
-
-export function getSessionSiteSubtitle(
-  session: Pick<InspectionSession, 'cover'>
-): string {
-  const businessName = normalizeText(session.cover.businessName);
-  const projectName = normalizeText(session.cover.projectName);
-  const siteAddress = normalizeText(session.cover.siteAddress);
-
-  if (businessName && projectName && businessName !== projectName) return projectName;
-  return siteAddress;
 }
 
 export function getSessionTitle(session: InspectionSession): string {
@@ -255,52 +265,4 @@ export function getSessionSortTime(session: InspectionSession): number {
   return new Date(
     session.lastSavedAt ?? session.updatedAt ?? session.createdAt
   ).getTime();
-}
-
-export interface InspectionSiteSummary {
-  key: string;
-  title: string;
-  subtitle: string;
-  sessionCount: number;
-  latestSession: InspectionSession;
-}
-
-export function groupSessionsBySite(
-  sessions: InspectionSession[]
-): InspectionSiteSummary[] {
-  const grouped = new Map<string, InspectionSiteSummary>();
-
-  for (const session of sessions) {
-    const key = getSessionSiteKey(session);
-    const existing = grouped.get(key);
-
-    if (!existing) {
-      grouped.set(key, {
-        key,
-        title: getSessionSiteTitle(session),
-        subtitle: getSessionSiteSubtitle(session),
-        sessionCount: 1,
-        latestSession: session,
-      });
-      continue;
-    }
-
-    const latestSession =
-      getSessionSortTime(session) > getSessionSortTime(existing.latestSession)
-        ? session
-        : existing.latestSession;
-
-    grouped.set(key, {
-      ...existing,
-      title: getSessionSiteTitle(latestSession),
-      subtitle: getSessionSiteSubtitle(latestSession),
-      sessionCount: existing.sessionCount + 1,
-      latestSession,
-    });
-  }
-
-  return Array.from(grouped.values()).sort(
-    (left, right) =>
-      getSessionSortTime(right.latestSession) - getSessionSortTime(left.latestSession)
-  );
 }

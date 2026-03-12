@@ -20,11 +20,6 @@
   color: var(--erp-dark);
 }
 
-.contentDescription {
-  @apply mt-1 text-sm;
-  color: var(--erp-text-muted);
-}
-
 .reportViewport {
   @apply overflow-visible print:overflow-visible;
 }

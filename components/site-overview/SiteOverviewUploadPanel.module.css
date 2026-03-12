@@ -33,8 +33,7 @@
 }
 
 .dropzoneDescription {
-  @apply text-xs;
-  color: var(--erp-text-muted);
+  display: none;
 }
 
 .actionBar {

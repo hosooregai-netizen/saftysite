@@ -1,26 +1,33 @@
 .page {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 14px;
 }
 
 .shell {
-  overflow: hidden;
+  overflow: visible;
 }
 
 .header {
   display: flex;
   flex-direction: column;
   gap: 18px;
-  padding: 22px 20px;
+  padding: 20px 18px 18px;
   border-bottom: 1px solid var(--erp-line);
-  background-color: var(--erp-white);
+  background: linear-gradient(135deg, #112035 0%, #1b3048 100%);
+  color: var(--erp-white);
 }
 
 .headerMain {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.headerSide {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .backLink {
@@ -30,12 +37,12 @@
   width: fit-content;
   min-height: 36px;
   padding: 0 12px;
-  border: 1px solid var(--erp-line);
+  border: 1px solid rgba(213, 222, 234, 0.34);
   border-radius: 4px;
-  background-color: var(--erp-panel-muted);
+  background-color: rgba(255, 255, 255, 0.08);
   font-size: 13px;
   font-weight: 700;
-  color: var(--erp-mid);
+  color: #d5deea;
   transition:
     border-color 0.2s ease,
     background-color 0.2s ease,
@@ -43,69 +50,35 @@
 }
 
 .backLink:hover {
-  border-color: var(--erp-line-strong);
-  background-color: #edf2f7;
-  color: var(--erp-dark);
+  border-color: rgba(213, 222, 234, 0.58);
+  background-color: rgba(255, 255, 255, 0.14);
+  color: var(--erp-white);
 }
 
 .headerLabel {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--erp-text-muted);
+  color: #d5deea;
 }
 
-.headerTitleRow {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+.headerIntro {
+  display: grid;
+  gap: 6px;
 }
 
 .headerTitle {
-  font-size: 28px;
+  font-size: 30px;
   font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--erp-dark);
+  letter-spacing: -0.03em;
+  color: var(--erp-white);
 }
 
-.headerSubtitle {
+.headerReportTitle {
   font-size: 14px;
-  line-height: 1.7;
-  color: var(--erp-text-muted);
-}
-
-.headerStats {
-  display: grid;
-  gap: 12px;
-}
-
-.statCard {
-  border: 1px solid var(--erp-line);
-  border-radius: 12px;
-  background-color: var(--erp-panel-muted);
-  padding: 14px 16px;
-}
-
-.statLabel {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--erp-text-muted);
-}
-
-.statValue {
-  margin-top: 8px;
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--erp-dark);
-}
-
-.statMeta {
-  margin-top: 6px;
-  font-size: 13px;
-  color: var(--erp-text-muted);
+  font-weight: 600;
+  color: #d5deea;
 }
 
 .headerActions {
@@ -114,26 +87,75 @@
   gap: 8px;
 }
 
+.headerProgress {
+  display: grid;
+  gap: 8px;
+  min-width: min(100%, 280px);
+}
+
+.headerProgressMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.headerProgressLabel {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #d5deea;
+}
+
+.headerProgressValue {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--erp-white);
+}
+
+.headerProgressTrack {
+  width: 100%;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(213, 222, 234, 0.22);
+}
+
+.headerProgressFill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #60a5fa 0%, #3b82f6 55%, #2563eb 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 0 0 1px rgba(96, 165, 250, 0.2);
+}
+
 .sectionNav {
   border-bottom: 1px solid var(--erp-line);
   background-color: var(--erp-panel-muted);
-  padding: 14px 20px;
+  padding: 10px 18px 12px;
 }
 
 .sectionNavList {
-  display: grid;
-  gap: 10px;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: thin;
 }
 
 .sectionTab {
   display: flex;
   align-items: center;
-  gap: 10px;
-  width: 100%;
+  gap: 8px;
+  flex: 0 0 auto;
   border: 1px solid var(--erp-line);
   border-radius: 12px;
   background-color: var(--erp-white);
-  padding: 12px 14px;
+  padding: 9px 12px;
   text-align: left;
   transition:
     border-color 0.2s ease,
@@ -160,31 +182,24 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 26px;
+  height: 26px;
   border-radius: 999px;
   background-color: var(--erp-panel-muted);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--erp-text-muted);
 }
 
 .sectionTabText {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
+  display: inline-flex;
+  align-items: center;
 }
 
 .sectionTabLabel {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--erp-dark);
-}
-
-.sectionTabDescription {
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--erp-text-muted);
 }
 
 .content {
@@ -229,10 +244,7 @@
 }
 
 .sectionDescription {
-  margin-top: 10px;
-  font-size: 14px;
-  line-height: 1.8;
-  color: var(--erp-text-muted);
+  display: none;
 }
 
 .sectionBody {
@@ -261,9 +273,7 @@
 }
 
 .fieldHint {
-  font-size: 12px;
-  line-height: 1.6;
-  color: var(--erp-text-muted);
+  display: none;
 }
 
 .sectionStack {
@@ -287,8 +297,7 @@
 }
 
 .relatedHint {
-  font-size: 13px;
-  color: var(--erp-text-muted);
+  display: none;
 }
 
 .guidanceList,
@@ -561,25 +570,40 @@
 
 @media (min-width: 900px) {
   .header {
-    padding: 28px 28px 24px;
-  }
-
-  .headerTitleRow {
     flex-direction: row;
     align-items: flex-end;
     justify-content: space-between;
+    gap: 24px;
+    padding: 24px 28px 22px;
   }
 
-  .headerStats {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+  .headerMain {
+    min-width: 0;
+  }
+
+  .headerTitle {
+    font-size: 34px;
+  }
+
+  .headerSide {
+    align-items: flex-end;
+    min-width: 320px;
+  }
+
+  .headerProgress {
+    width: min(100%, 320px);
+  }
+
+  .headerActions {
+    justify-content: flex-end;
   }
 
   .sectionNav {
-    padding: 16px 28px;
+    padding: 10px 24px 12px;
   }
 
   .sectionNavList {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
   }
 
   .content {

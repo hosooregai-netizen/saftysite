@@ -19,8 +19,7 @@
 }
 
 .headerDescription {
-  @apply mt-1 text-xs;
-  color: var(--erp-text-muted);
+  display: none;
 }
 
 .status {

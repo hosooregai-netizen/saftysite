@@ -92,11 +92,6 @@
     color: var(--erp-dark);
   }
 
-  .app-page-description {
-    @apply mt-2 max-w-3xl text-sm leading-6;
-    color: var(--erp-text-muted);
-  }
-
   .app-toolbar {
     @apply flex flex-wrap gap-2;
   }
@@ -117,8 +112,7 @@
   }
 
   .app-panel-description {
-    @apply mt-1 text-sm leading-6;
-    color: var(--erp-text-muted);
+    display: none;
   }
 
   .app-subpanel {

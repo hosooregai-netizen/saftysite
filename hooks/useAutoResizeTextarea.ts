@@ -1,11 +1,11 @@
 'use client';
 
-import { useRef, useEffect, useLayoutEffect } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 
 export function useAutoResizeTextarea(value: string, minHeight = 80) {
   const ref = useRef<HTMLTextAreaElement>(null);
 
-  const resize = () => {
+  const resize = useCallback(() => {
     const el = ref.current;
     if (!el) return;
     el.style.height = '1px';
@@ -13,11 +13,11 @@ export function useAutoResizeTextarea(value: string, minHeight = 80) {
     const newHeight = Math.max(el.scrollHeight + 4, minHeight);
     el.style.height = `${newHeight}px`;
     el.style.overflow = 'hidden';
-  };
+  }, [minHeight]);
 
   useLayoutEffect(() => {
     resize();
-  }, [value, minHeight]);
+  }, [resize, value]);
 
   useEffect(() => {
     const t1 = setTimeout(resize, 0);
@@ -26,7 +26,7 @@ export function useAutoResizeTextarea(value: string, minHeight = 80) {
       clearTimeout(t1);
       clearTimeout(t2);
     };
-  }, [value]);
+  }, [resize, value]);
 
   return { ref, resize };
 }
