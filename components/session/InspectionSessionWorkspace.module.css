@@ -95,10 +95,13 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  justify-content: flex-end;
 }
 
-.heroSaveButton {
-  display: none;
+.headerError {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #ffd2cf;
 }
 
 .headerProgress {
@@ -862,6 +865,10 @@
 
   .headerActions {
     justify-content: flex-end;
+  }
+
+  .headerError {
+    text-align: right;
   }
 
   .sectionNav {

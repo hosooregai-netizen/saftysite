@@ -59,7 +59,9 @@ interface HazardReportTableProps {
   headerActions?: ReactNode;
   text?: HazardReportTableText;
   readOnlyFields?: Partial<Record<HazardFieldKey, boolean>>;
+  hiddenFields?: Partial<Record<HazardFieldKey, boolean>>;
   photoMode?: 'analyze' | 'upload' | 'readonly';
+  photoGroupExtraContent?: ReactNode;
   extraContent?: ReactNode;
 }
 
@@ -104,6 +106,13 @@ function isReadOnly(
   return Boolean(readOnlyFields?.[key]);
 }
 
+function isHidden(
+  hiddenFields: Partial<Record<HazardFieldKey, boolean>> | undefined,
+  key: HazardFieldKey
+): boolean {
+  return Boolean(hiddenFields?.[key]);
+}
+
 function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -120,7 +129,9 @@ export default function HazardReportTable({
   headerActions,
   text,
   readOnlyFields,
+  hiddenFields,
   photoMode = 'analyze',
+  photoGroupExtraContent,
   extraContent,
 }: HazardReportTableProps) {
   const containerRef = useRef<HTMLElement>(null);
@@ -305,6 +316,90 @@ export default function HazardReportTable({
     requestPick();
   };
 
+  const showsImplementationField = !isHidden(hiddenFields, 'implementationPeriod');
+  const photoColumn = (
+    <div className={`${styles.formField} ${styles.photoColumn}`}>
+      <label className={styles.fieldLabel} htmlFor={`hazard-photo-${index}`}>
+        {mergedText.photoLabel}
+      </label>
+      <div className={styles.photoField}>
+        {photoMode !== 'readonly' ? (
+          <>
+            <input
+              ref={galleryInputRef}
+              type="file"
+              accept="image/*"
+              onChange={(event) => {
+                void handlePhotoChange(event);
+              }}
+              className={styles.hiddenInput}
+              id={`hazard-photo-gallery-${index}`}
+              disabled={isPhotoLoading}
+            />
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={(event) => {
+                void handlePhotoChange(event);
+              }}
+              className={styles.hiddenInput}
+              id={`hazard-photo-camera-${index}`}
+              disabled={isPhotoLoading}
+            />
+          </>
+        ) : null}
+        {data.photoUrl ? (
+          <div className={styles.photoPreviewWrap}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={data.photoUrl}
+              alt={mergedText.photoAlt}
+              className={styles.photoPreview}
+            />
+            {photoMode !== 'readonly' ? (
+              <div className={styles.photoActions}>
+                <button
+                  type="button"
+                  onClick={openPicker}
+                  className={styles.photoAction}
+                  disabled={isPhotoLoading}
+                >
+                  {mergedText.photoChangeLabel}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRemovePhoto}
+                  className={styles.photoRemoveButton}
+                  disabled={isPhotoLoading}
+                >
+                  {mergedText.photoRemoveLabel}
+                </button>
+              </div>
+            ) : null}
+          </div>
+        ) : photoMode === 'readonly' ? (
+          <div className={styles.photoPlaceholder}>
+            <span>{mergedText.photoEmptyHint}</span>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={openPicker}
+            className={`${styles.photoPlaceholder} ${styles.photoPlaceholderButton}`}
+            disabled={isPhotoLoading}
+          >
+            <span>{mergedText.photoEmptyTitle}</span>
+            <span className={styles.photoPlaceholderHint}>
+              {mergedText.photoEmptyHint}
+            </span>
+          </button>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <section ref={containerRef} className={styles.container}>
       {isPhotoLoading ? (
@@ -390,87 +485,24 @@ export default function HazardReportTable({
             </div>
           </div>
 
-          <div className={styles.pairedGrid}>
-            <div className={`${styles.formField} ${styles.photoColumn}`}>
-              <label className={styles.fieldLabel} htmlFor={`hazard-photo-${index}`}>
-                {mergedText.photoLabel}
-              </label>
-              <div className={styles.photoField}>
-                {photoMode !== 'readonly' ? (
-                  <>
-                    <input
-                      ref={galleryInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={(event) => {
-                        void handlePhotoChange(event);
-                      }}
-                      className={styles.hiddenInput}
-                      id={`hazard-photo-gallery-${index}`}
-                      disabled={isPhotoLoading}
-                    />
-                    <input
-                      ref={cameraInputRef}
-                      type="file"
-                      accept="image/*"
-                      capture="environment"
-                      onChange={(event) => {
-                        void handlePhotoChange(event);
-                      }}
-                      className={styles.hiddenInput}
-                      id={`hazard-photo-camera-${index}`}
-                      disabled={isPhotoLoading}
-                    />
-                  </>
-                ) : null}
-                {data.photoUrl ? (
-                  <div className={styles.photoPreviewWrap}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={data.photoUrl}
-                      alt={mergedText.photoAlt}
-                      className={styles.photoPreview}
-                    />
-                    {photoMode !== 'readonly' ? (
-                      <div className={styles.photoActions}>
-                        <button
-                          type="button"
-                          onClick={openPicker}
-                          className={styles.photoAction}
-                          disabled={isPhotoLoading}
-                        >
-                          {mergedText.photoChangeLabel}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleRemovePhoto}
-                          className={styles.photoRemoveButton}
-                          disabled={isPhotoLoading}
-                        >
-                          {mergedText.photoRemoveLabel}
-                        </button>
-                      </div>
-                    ) : null}
-                  </div>
-                ) : photoMode === 'readonly' ? (
-                  <div className={styles.photoPlaceholder}>
-                    <span>{mergedText.photoEmptyHint}</span>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={openPicker}
-                    className={`${styles.photoPlaceholder} ${styles.photoPlaceholderButton}`}
-                    disabled={isPhotoLoading}
-                  >
-                    <span>{mergedText.photoEmptyTitle}</span>
-                    <span className={styles.photoPlaceholderHint}>
-                      {mergedText.photoEmptyHint}
-                    </span>
-                  </button>
-                )}
+          <div
+            className={[
+              styles.pairedGrid,
+              photoGroupExtraContent ? styles.pairedGridWide : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+          >
+            {photoGroupExtraContent ? (
+              <div className={styles.photoGroupColumn}>
+                <div className={styles.photoGroup}>
+                  {photoColumn}
+                  <div className={styles.photoGroupExtra}>{photoGroupExtraContent}</div>
+                </div>
               </div>
-            </div>
+            ) : (
+              photoColumn
+            )}
 
             <div className={`${styles.formField} ${styles.textColumn}`}>
               <label className={styles.fieldLabel} htmlFor={`hazard-improvement-${index}`}>
@@ -532,22 +564,24 @@ export default function HazardReportTable({
             </div>
           </div>
 
-          <div className={styles.footerField}>
-            <label className={styles.fieldLabel} htmlFor={`hazard-period-${index}`}>
-              {mergedText.implementationPeriodLabel}
-            </label>
-            <input
-              id={`hazard-period-${index}`}
-              type="text"
-              value={data.implementationPeriod}
-              onChange={(event) =>
-                updateReport({ implementationPeriod: event.target.value })
-              }
-              className="app-input"
-              placeholder={mergedText.implementationPeriodPlaceholder}
-              readOnly={isReadOnly(readOnlyFields, 'implementationPeriod')}
-            />
-          </div>
+          {showsImplementationField ? (
+            <div className={styles.footerField}>
+              <label className={styles.fieldLabel} htmlFor={`hazard-period-${index}`}>
+                {mergedText.implementationPeriodLabel}
+              </label>
+              <input
+                id={`hazard-period-${index}`}
+                type="text"
+                value={data.implementationPeriod}
+                onChange={(event) =>
+                  updateReport({ implementationPeriod: event.target.value })
+                }
+                className="app-input"
+                placeholder={mergedText.implementationPeriodPlaceholder}
+                readOnly={isReadOnly(readOnlyFields, 'implementationPeriod')}
+              />
+            </div>
+          ) : null}
 
           {extraContent}
         </div>

@@ -38,17 +38,18 @@ export default function SessionFutureRisksSection({
               data={item}
               onChange={(data) => onChange(item.id, data)}
               index={index + 100}
+              hiddenFields={{
+                implementationPeriod: true,
+              }}
               text={{
                 locationDetailLabel: '다음 진행 공정',
                 locationDetailPlaceholder: '예: 철근 가공 및 반입 작업',
                 photoLabel: '공정 관련 사진',
                 photoAlt: '향후 공정 사진',
-                hazardFactorsLabel: '지적사항',
+                hazardFactorsLabel: '유해위험요인',
                 hazardFactorsPlaceholder: '예: 낙하물 충돌, 협착 위험',
                 legalInfoLabel: '비고 / 참고사항',
                 legalInfoPlaceholder: '예: 공정 전달 메모, 추가 확인 사항',
-                implementationPeriodLabel: '이행 시기',
-                implementationPeriodPlaceholder: '예: 작업 전 / 자재 반입 전 / 금주 내',
               }}
               headerActions={
                 <button

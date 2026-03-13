@@ -151,12 +151,12 @@ export default function SessionPreviousGuidanceSection({
                 photoLabel: '과거 사진',
                 photoAlt: '과거 지도 사항 사진',
                 photoEmptyHint: '과거 보고서에 등록된 사진이 없습니다.',
-                hazardFactorsLabel: '지적사항',
+                hazardFactorsLabel: '유해위험요인',
                 implementationPeriodLabel: '이행 결과',
                 implementationPeriodPlaceholder:
-                  '예: 안전난간 설치 완료, 추가 보완 예정',
+                  '예: 이행완료, 추가 보완 예정',
               }}
-              extraContent={
+              photoGroupExtraContent={
                 <PreviousGuidanceCurrentPhotoField
                   item={item}
                   onChange={onChange}

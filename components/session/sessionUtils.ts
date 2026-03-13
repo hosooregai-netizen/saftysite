@@ -1,4 +1,5 @@
 import {
+  DEFAULT_PREVIOUS_GUIDANCE_RESULT,
   createInspectionHazardItem,
   getSessionSiteKey,
   getSessionSortTime,
@@ -92,7 +93,7 @@ function buildGuidanceTitle(report: HazardReportItem): string {
 }
 
 function buildLegacyImplementationResult(item: PreviousGuidanceItem | undefined): string {
-  if (!item) return '';
+  if (!item) return DEFAULT_PREVIOUS_GUIDANCE_RESULT;
 
   const explicitResult = normalizeText(item.implementationResult);
   if (explicitResult) return explicitResult;
@@ -103,7 +104,7 @@ function buildLegacyImplementationResult(item: PreviousGuidanceItem | undefined)
       : '';
   const note = normalizeText(item.note);
 
-  return [statusLabel, note].filter(Boolean).join('\n');
+  return [statusLabel, note].filter(Boolean).join('\n') || DEFAULT_PREVIOUS_GUIDANCE_RESULT;
 }
 
 function findExistingGuidanceItem(

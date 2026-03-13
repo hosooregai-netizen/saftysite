@@ -62,6 +62,10 @@
   align-items: start;
 }
 
+.pairedGridWide {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+}
+
 .formField,
 .footerField {
   display: grid;
@@ -250,6 +254,21 @@
   height: auto;
 }
 
+.photoGroupColumn {
+  min-width: 0;
+}
+
+.photoGroup {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  min-width: 0;
+}
+
+.photoGroupExtra {
+  min-width: 0;
+}
+
 @keyframes hazard-loading-spin {
   from {
     transform: rotate(0deg);
@@ -291,6 +310,10 @@
     padding: 10px;
   }
 
+  .photoGroup {
+    gap: 8px;
+  }
+
   .editorTextarea {
     min-height: var(--hazard-paired-body-height);
   }
@@ -311,6 +334,10 @@
 
   .pairedGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pairedGridWide {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
   }
 
   .photoColumn,

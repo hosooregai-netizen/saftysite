@@ -225,6 +225,7 @@ export default function HomePage() {
                 siteSummaries.length > 0 ? (
                   <>
                     <div className={styles.listHead} aria-hidden="true">
+                      <span className={styles.numberHead}>번호</span>
                       <span>현장명</span>
                       <span>최근 점검일</span>
                       <span>보고서 수</span>
@@ -233,14 +234,23 @@ export default function HomePage() {
                     </div>
 
                     <div className={styles.siteList}>
-                      {siteSummaries.map(({ site, latestSession, sessionCount }) => {
+                      {siteSummaries.map(({ site, latestSession, sessionCount }, index) => {
                         const siteHref = `/sites/${encodeURIComponent(site.id)}`;
 
                         return (
                           <article key={site.id} className={styles.siteRow}>
+                            <div className={styles.numberCell} aria-hidden="true">
+                              <span className={styles.siteNumberBadge}>{index + 1}</span>
+                            </div>
+
                             <div className={styles.primaryCell}>
                               <Link href={siteHref} className={styles.siteLink}>
-                                <h3 className={styles.siteTitle}>{site.title}</h3>
+                                <div className={styles.siteTitleRow}>
+                                  <span className={styles.siteNumberBadgeMobile}>
+                                    {index + 1}
+                                  </span>
+                                  <h3 className={styles.siteTitle}>{site.title}</h3>
+                                </div>
                               </Link>
                             </div>
 

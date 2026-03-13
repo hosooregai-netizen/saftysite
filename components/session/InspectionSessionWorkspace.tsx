@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ChangeEvent, useCallback, useEffect, useMemo } from 'react';
+import { ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   INSPECTION_SECTIONS,
   createFutureProcessRiskItem,
@@ -14,6 +14,7 @@ import {
   touchUpdatedAt,
 } from '@/constants/inspectionSession';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
+import { fetchInspectionWordDocument, saveBlobAsFile } from '@/lib/api';
 import type { HazardReportItem } from '@/types/hazard';
 import type {
   InspectionCover,
@@ -22,6 +23,7 @@ import type {
   SupportItems,
 } from '@/types/inspectionSession';
 import type { CausativeAgentKey, CausativeAgentReport } from '@/types/siteOverview';
+import AppModal from '@/components/ui/AppModal';
 import SessionCoverSection from './SessionCoverSection';
 import SessionCurrentHazardsSection from './SessionCurrentHazardsSection';
 import SessionFutureRisksSection from './SessionFutureRisksSection';
@@ -52,6 +54,9 @@ export default function InspectionSessionWorkspace({
     saveNow,
   } = useInspectionSessions();
   const session = getSessionById(sessionId);
+  const [isDownloadingWord, setIsDownloadingWord] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [isCompletionModalOpen, setIsCompletionModalOpen] = useState(false);
 
   const progress = session ? getSessionProgress(session) : null;
   const currentSectionIndex = session
@@ -92,6 +97,22 @@ export default function InspectionSessionWorkspace({
       previousGuidanceItems: derivedPreviousGuidanceItems,
     }));
   }, [derivedPreviousGuidanceItems, handleSessionChange, session]);
+
+  useEffect(() => {
+    if (!session) return;
+    if (!session.futureProcessRisks.some((item) => item.implementationPeriod)) {
+      return;
+    }
+
+    handleSessionChange((current) => ({
+      ...current,
+      futureProcessRisks: current.futureProcessRisks.map((item) =>
+        item.implementationPeriod
+          ? touchUpdatedAt({ ...item, implementationPeriod: '' })
+          : item
+      ),
+    }));
+  }, [handleSessionChange, session]);
 
   const handleSectionChange = (section: InspectionSectionKey) => {
     handleSessionChange((current) => ({
@@ -223,6 +244,27 @@ export default function InspectionSessionWorkspace({
     }));
   };
 
+  const handleDownloadWord = useCallback(async () => {
+    if (!session || isDownloadingWord) return;
+
+    setDownloadError(null);
+    saveNow();
+    setIsDownloadingWord(true);
+
+    try {
+      const { blob, filename } = await fetchInspectionWordDocument(session);
+      saveBlobAsFile(blob, filename);
+    } catch (error) {
+      setDownloadError(
+        error instanceof Error
+          ? error.message
+          : '워드 다운로드에 실패했습니다.'
+      );
+    } finally {
+      setIsDownloadingWord(false);
+    }
+  }, [isDownloadingWord, saveNow, session]);
+
   if (!isReady) {
     return (
       <main className="app-page">
@@ -262,6 +304,12 @@ export default function InspectionSessionWorkspace({
   }
 
   const siteHref = `/sites/${encodeURIComponent(getSessionSiteKey(session))}`;
+  const isLastSection = currentSectionIndex === INSPECTION_SECTIONS.length - 1;
+  const handleCompleteReview = () => {
+    saveNow();
+    setIsCompletionModalOpen(false);
+    router.push(siteHref);
+  };
 
   return (
     <main className="app-page">
@@ -302,19 +350,18 @@ export default function InspectionSessionWorkspace({
                 <div className={styles.headerActions}>
                   <button
                     type="button"
-                    onClick={() => saveNow()}
-                    className={`${styles.heroSaveButton} app-button app-button-secondary`}
-                  >
-                    임시저장
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => window.print()}
+                    onClick={() => {
+                      void handleDownloadWord();
+                    }}
+                    disabled={isDownloadingWord}
                     className="app-button app-button-accent"
                   >
-                    다운로드
+                    {isDownloadingWord ? '워드 생성 중...' : '다운로드'}
                   </button>
                 </div>
+                {downloadError ? (
+                  <p className={styles.headerError}>{downloadError}</p>
+                ) : null}
               </div>
             </header>
 
@@ -448,13 +495,6 @@ export default function InspectionSessionWorkspace({
               <div className={styles.bottomActions}>
                 <button
                   type="button"
-                  onClick={() => saveNow()}
-                  className="app-button app-button-secondary"
-                >
-                  임시저장
-                </button>
-                <button
-                  type="button"
                   onClick={() => moveSection(-1)}
                   disabled={currentSectionIndex <= 0}
                   className="app-button app-button-secondary"
@@ -463,17 +503,50 @@ export default function InspectionSessionWorkspace({
                 </button>
                 <button
                   type="button"
-                  onClick={() => moveSection(1)}
-                  disabled={currentSectionIndex >= INSPECTION_SECTIONS.length - 1}
+                  onClick={() => {
+                    if (isLastSection) {
+                      setIsCompletionModalOpen(true);
+                      return;
+                    }
+                    moveSection(1);
+                  }}
                   className="app-button app-button-primary"
                 >
-                  다음 단계
+                  {isLastSection ? '확인' : '다음 단계'}
                 </button>
               </div>
             </div>
           </div>
         </section>
       </div>
+      <AppModal
+        open={isCompletionModalOpen}
+        title="보고서 확인"
+        onClose={() => setIsCompletionModalOpen(false)}
+        actions={
+          <>
+            <button
+              type="button"
+              onClick={() => {
+                void handleDownloadWord();
+              }}
+              disabled={isDownloadingWord}
+              className="app-button app-button-secondary"
+            >
+              {isDownloadingWord ? '문서 생성 중...' : '문서 다운로드'}
+            </button>
+            <button
+              type="button"
+              onClick={handleCompleteReview}
+              className="app-button app-button-primary"
+            >
+              확인
+            </button>
+          </>
+        }
+      >
+        <p>보고서를 검토했으면 목록으로 돌아가거나 문서를 먼저 다운로드할 수 있습니다.</p>
+      </AppModal>
     </main>
   );
 }

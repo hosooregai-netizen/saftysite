@@ -58,6 +58,8 @@ export const INSPECTION_SECTIONS: InspectionSectionMeta[] = [
   },
 ];
 
+export const DEFAULT_PREVIOUS_GUIDANCE_RESULT = '이행완료';
+
 const UNTITLED_SITE_KEY = '__untitled_site__';
 const LEGACY_GUIDANCE_STATUS_LABELS: Record<GuidanceStatus, string> = {
   implemented: '이행',
@@ -116,7 +118,7 @@ function buildLegacyImplementationResult(raw: Record<string, unknown>): string {
     return `${statusLabel}\n${note}`;
   }
 
-  return statusLabel || note;
+  return statusLabel || note || DEFAULT_PREVIOUS_GUIDANCE_RESULT;
 }
 
 function generateId(prefix: string): string {
@@ -166,6 +168,7 @@ export function createFutureProcessRiskItem(): FutureProcessRiskItem {
   return {
     ...createInspectionHazardItem(),
     id: generateId('future-risk'),
+    implementationPeriod: '',
   };
 }
 
