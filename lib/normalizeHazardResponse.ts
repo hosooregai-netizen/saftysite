@@ -1,4 +1,9 @@
+import { DEFAULT_IMPLEMENTATION_PERIOD } from '@/constants/hazard';
 import type { HazardReportItem } from '@/types/hazard';
+import {
+  calculateRiskAssessmentResult,
+  normalizeRiskNumber,
+} from '@/lib/riskAssessment';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -28,6 +33,14 @@ function pickString(obj: UnknownRecord, ...keys: string[]): string {
   return '';
 }
 
+function pickNumber(obj: UnknownRecord, ...keys: string[]): number | null {
+  for (const key of keys) {
+    const parsed = normalizeRiskNumber(obj[key]);
+    if (parsed != null) return parsed;
+  }
+  return null;
+}
+
 function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -40,29 +53,28 @@ function fileToDataUrl(file: File): Promise<string> {
 function mapRiskApiItem(raw: UnknownRecord): HazardReportItem {
   const metadata = pickString(raw, 'metadata');
   const objects = safeStringArray(raw.objects);
-  const riskFactor = pickString(raw, 'risk_factor');
+  const riskFactor = pickString(raw, 'risk_factor', 'hazardFactors', '유해위험요인');
   const improvements = safeStringArray(raw.improvements);
   const laws = safeStringArray(raw.laws);
-  const likelihood = typeof raw.likelihood === 'number' ? raw.likelihood : 1;
-  const severity = typeof raw.severity === 'number' ? raw.severity : 1;
-  const score = likelihood * severity;
-
-  let riskLabel = '';
-  if (score >= 1 && score <= 2) riskLabel = '낮음';
-  else if (score >= 3 && score <= 4) riskLabel = '보통';
-  else if (score >= 5) riskLabel = '높음';
+  const likelihood =
+    pickNumber(raw, 'likelihood', 'risk_likelihood', 'possibility', '가능성(빈도)', '가능성') ??
+    1;
+  const severity =
+    pickNumber(raw, 'severity', 'risk_severity', '중대성') ?? 1;
 
   return {
     location: '유해·위험요소',
-    locationDetail: pickString(raw, 'filename'),
-    riskAssessmentResult: riskLabel ? `${riskLabel} (${score})` : '',
+    locationDetail: pickString(raw, 'locationDetail', '장소'),
+    likelihood: String(likelihood),
+    severity: String(severity),
+    riskAssessmentResult: calculateRiskAssessmentResult(likelihood, severity),
     hazardFactors: riskFactor,
     improvementItems: improvements.length
-      ? `[기술·교육 필요 강조사항]\n\n${improvements.join('\n')}`
+      ? `[기술적·교육적 필요 강조사항]\n\n${improvements.join('\n')}`
       : '',
     photoUrl: '',
     legalInfo: laws.join('\n'),
-    implementationPeriod: '',
+    implementationPeriod: DEFAULT_IMPLEMENTATION_PERIOD,
     metadata: metadata || undefined,
     objects: objects.length > 0 ? objects : undefined,
   };
@@ -74,6 +86,8 @@ function mapDetectedApiItem(raw: UnknownRecord): HazardReportItem {
   const detectedSituations = safeStringArray(raw.detected_situations);
   const improvements = safeStringArray(raw.improvements);
   const laws = safeStringArray(raw.laws);
+  const likelihood = pickString(raw, '가능성(빈도)', '가능성', 'likelihood');
+  const severity = pickString(raw, '중대성', 'severity');
 
   const hazardParts: string[] = [];
   if (metadata) hazardParts.push(metadata);
@@ -86,24 +100,33 @@ function mapDetectedApiItem(raw: UnknownRecord): HazardReportItem {
 
   return {
     location: '유해·위험요소',
-    locationDetail: pickString(raw, 'filename'),
-    riskAssessmentResult:
-      detectedSituations.length > 0 ? `검출 위험 ${detectedSituations.length}건` : '',
+    locationDetail: pickString(raw, 'locationDetail', '장소'),
+    likelihood,
+    severity,
+    riskAssessmentResult: calculateRiskAssessmentResult(likelihood, severity),
     hazardFactors: hazardParts.join('\n\n'),
     improvementItems: improvements.join('\n'),
     photoUrl: '',
     legalInfo: laws.join('\n'),
-    implementationPeriod: '',
+    implementationPeriod: DEFAULT_IMPLEMENTATION_PERIOD,
   };
 }
 
 function toFallbackItem(raw: unknown): HazardReportItem {
   const obj = (raw && typeof raw === 'object' ? raw : {}) as UnknownRecord;
+  const likelihood = pickString(
+    obj,
+    'likelihood',
+    'risk_likelihood',
+    'possibility',
+    '가능성(빈도)',
+    '가능성'
+  );
+  const severity = pickString(obj, 'severity', 'risk_severity', '중대성');
 
   return {
     location:
-      pickString(obj, 'location', 'location_label', '위치', 'place') ||
-      '유해·위험요소',
+      pickString(obj, 'location', 'location_label', '위치', 'place') || '유해·위험요소',
     locationDetail: pickString(
       obj,
       'locationDetail',
@@ -112,18 +135,11 @@ function toFallbackItem(raw: unknown): HazardReportItem {
       'place_detail',
       'placeDetail',
       '장소',
-      'place_name',
-      'filename'
+      'place_name'
     ),
-    riskAssessmentResult: pickString(
-      obj,
-      'riskAssessmentResult',
-      'risk_assessment_result',
-      'assessment_result',
-      '위험도평가결과',
-      'risk_level',
-      'riskLevel'
-    ),
+    likelihood,
+    severity,
+    riskAssessmentResult: calculateRiskAssessmentResult(likelihood, severity),
     hazardFactors: pickString(
       obj,
       'hazardFactors',
@@ -139,7 +155,6 @@ function toFallbackItem(raw: unknown): HazardReportItem {
       'improvementItems',
       'improvement_items',
       'improvement_items_text',
-      '지도사항',
       '개선대책',
       'measures',
       'recommendations',
@@ -176,7 +191,17 @@ function toFallbackItem(raw: unknown): HazardReportItem {
 }
 
 function isRiskApiShape(raw: UnknownRecord): boolean {
-  return 'risk_factor' in raw && ('likelihood' in raw || 'severity' in raw);
+  return (
+    'risk_factor' in raw &&
+    ('likelihood' in raw ||
+      'severity' in raw ||
+      'risk_likelihood' in raw ||
+      'risk_severity' in raw ||
+      'possibility' in raw ||
+      '가능성(빈도)' in raw ||
+      '가능성' in raw ||
+      '중대성' in raw)
+  );
 }
 
 function isDetectedApiShape(raw: UnknownRecord): boolean {

@@ -158,17 +158,46 @@
   color: var(--erp-dark);
 }
 
+.mobileChecklistHeaderMeta {
+  display: grid;
+  grid-template-columns: 108px minmax(180px, 0.95fr) minmax(240px, 1.45fr);
+  border-inline: 1px solid var(--erp-line-strong);
+  border-bottom: 1px solid var(--erp-line-strong);
+  background-color: var(--erp-panel-muted);
+  min-width: 560px;
+}
+
+.mobileChecklistHeaderMetaItem {
+  padding: 8px 10px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--erp-text-muted);
+}
+
+.mobileChecklistHeaderMetaItem + .mobileChecklistHeaderMetaItem {
+  border-left: 1px solid var(--erp-line);
+}
+
 .mobileChecklistItem {
+  display: grid;
+  grid-template-columns: 108px minmax(180px, 0.95fr) minmax(240px, 1.45fr);
+  align-items: center;
+  gap: 0;
   border-inline: 1px solid var(--erp-line-strong);
   border-bottom: 1px solid var(--erp-line-strong);
   background-color: #fff;
-  padding: 12px 16px;
+  min-width: 560px;
+  padding: 0;
 }
 
-.mobileChecklistTop {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.mobileChecklistItem > * {
+  min-width: 0;
+  padding: 10px 12px;
+}
+
+.mobileChecklistItem > * + * {
+  border-left: 1px solid rgba(184, 195, 208, 0.42);
 }
 
 .mobileChecklistSection {
@@ -184,63 +213,101 @@
   background-color: var(--erp-panel-muted);
 }
 
-.mobileChecklistLabel {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
+.mobileChecklistCheckField {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  width: 100%;
+  min-width: 0;
   font-weight: 700;
   color: var(--erp-dark);
 }
 
-.mobileChecklistGuidance {
-  margin-top: 8px;
-  padding-left: 28px;
+.mobileChecklistValue {
+  min-width: 0;
   font-size: 14px;
-  line-height: 1.6;
+  line-height: 1.5;
+  color: var(--erp-dark);
+}
+
+.mobileChecklistValue,
+.mobileChecklistGuidance {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobileChecklistValue {
+  display: inline-flex;
+  align-items: center;
+  font-weight: 700;
+}
+
+.mobileChecklistGuidance {
+  font-size: 14px;
+  line-height: 1.5;
   color: #334155;
 }
 
-.reasoningDisclosure {
-  border-top: 1px solid var(--erp-line);
-  padding-top: 8px;
+.reasoningCard {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-surface);
+  background-color: var(--erp-panel-muted);
 }
 
-.reasoningSummary {
+.reasoningHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 4px 0;
-  cursor: pointer;
-  list-style: none;
-  font-size: 13px;
+}
+
+.reasoningCopy {
+  display: grid;
+  gap: 4px;
+}
+
+.reasoningEyebrow {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--erp-text-muted);
+}
+
+.reasoningTitle {
+  font-size: 14px;
   font-weight: 700;
   color: var(--erp-dark);
 }
 
-.reasoningSummary::-webkit-details-marker {
-  display: none;
+.reasoningToggle {
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--erp-mid);
+  cursor: pointer;
 }
 
-.reasoningSummaryIcon {
-  font-size: 12px;
-  color: var(--erp-text-muted);
-  transition: transform 0.2s ease;
-}
-
-.reasoningDisclosure[open] .reasoningSummaryIcon {
-  transform: rotate(180deg);
-}
-
-.reasoningSummaryLabel {
-  min-width: 0;
-}
-
-.noteBody {
+.reasoningBody {
   white-space: pre-wrap;
+  font-size: 14px;
   line-height: 1.7;
-  padding: 12px 0 0;
   color: #334155;
+}
+
+.reasoningBodyCollapsed {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 }
 
 .loadingOverlay {
@@ -303,21 +370,27 @@
     background-color: #fff;
   }
 
-  .reasoningDisclosure {
-    border-top-color: #000;
+  .reasoningCard {
+    border-color: #000;
+    background-color: #fff;
   }
 
-  .noteBody {
-    padding-top: 8px;
+  .reasoningToggle {
+    display: none;
   }
 }
 
-@media (max-width: 767px) {
+@media (max-width: 1099px) {
   .checklistTable {
     display: none;
   }
 
   .mobileChecklistList {
     display: block;
+    overflow-x: auto;
+  }
+
+  .mobileChecklistHeader {
+    min-width: 560px;
   }
 }

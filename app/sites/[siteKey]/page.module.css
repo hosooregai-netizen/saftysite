@@ -105,6 +105,14 @@
   min-width: 0;
 }
 
+.consultantCell,
+.progressArea,
+.inspectionCell,
+.savedCell,
+.actionsCell {
+  min-width: 0;
+}
+
 .reportLink {
   display: inline-flex;
   width: fit-content;
@@ -303,6 +311,66 @@
   font-size: 16px;
   font-weight: 700;
   color: var(--erp-dark);
+}
+
+@media (min-width: 640px) and (max-width: 959px) {
+  .reportRow {
+    grid-template-columns:
+      minmax(0, 1.2fr)
+      minmax(112px, 0.7fr)
+      minmax(112px, 0.68fr)
+      minmax(232px, 1fr);
+    grid-template-areas:
+      'title title progress progress'
+      'consultant saved progress progress'
+      '. inspection actions actions';
+    gap: 12px 16px;
+    align-items: start;
+    padding: 14px 16px;
+  }
+
+  .primaryCell {
+    grid-area: title;
+  }
+
+  .progressArea {
+    grid-area: progress;
+    align-items: stretch;
+    justify-content: center;
+  }
+
+  .consultantCell {
+    grid-area: consultant;
+  }
+
+  .inspectionCell {
+    grid-area: inspection;
+  }
+
+  .savedCell {
+    grid-area: saved;
+  }
+
+  .actionsCell {
+    grid-area: actions;
+    align-self: end;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    padding-top: 0;
+  }
+
+  .actionsCell :global(.app-button) {
+    flex: 0 0 auto;
+    padding-inline: 10px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .progressStack {
+    width: 100%;
+    max-width: 240px;
+    margin-left: auto;
+  }
 }
 
 @media (min-width: 960px) {

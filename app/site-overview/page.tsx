@@ -75,7 +75,6 @@ export default function SiteOverviewPage() {
                 onAgentToggle={handleAgentToggle}
                 onUploadSuccess={setReport}
                 onUploadClear={() => setReport(createEmptyOverviewReport())}
-                onRawResponse={() => undefined}
               />
             </div>
           </div>

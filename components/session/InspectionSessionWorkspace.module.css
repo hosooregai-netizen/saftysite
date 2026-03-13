@@ -250,11 +250,26 @@
   color: var(--erp-dark);
 }
 
+.sectionTabLabelCompact {
+  display: none;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--erp-dark);
+}
+
 .sectionTabActive .sectionTabLabel {
   color: var(--erp-white);
 }
 
 .sectionTabActive.sectionTabCompleted .sectionTabLabel {
+  color: var(--erp-white);
+}
+
+.sectionTabActive .sectionTabLabelCompact {
+  color: var(--erp-white);
+}
+
+.sectionTabActive.sectionTabCompleted .sectionTabLabelCompact {
   color: var(--erp-white);
 }
 
@@ -278,6 +293,11 @@
 }
 
 .sectionHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   padding: 0 0 14px;
 }
 
@@ -285,10 +305,6 @@
   font-size: 22px;
   font-weight: 700;
   color: var(--erp-dark);
-}
-
-.sectionDescription {
-  display: none;
 }
 
 .sectionBody {
@@ -325,23 +341,6 @@
 .sectionStack {
   display: grid;
   gap: 16px;
-}
-
-.sectionIntro {
-  display: grid;
-  gap: 4px;
-}
-
-.sectionIntroLabel {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--erp-dark);
-}
-
-.sectionIntroText {
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--erp-text-muted);
 }
 
 .entryCard {
@@ -406,10 +405,6 @@
   justify-content: space-between;
 }
 
-.relatedHint {
-  display: none;
-}
-
 .guidanceList,
 .futureList {
   display: grid;
@@ -417,33 +412,139 @@
   min-width: 0;
 }
 
-.guidanceCard,
-.futureCard {
+.guidanceCard {
+  --guidance-photo-height: 132px;
+  display: grid;
+  gap: 8px;
   border: 1px solid var(--erp-line);
   border-radius: var(--erp-radius-card);
-  background-color: var(--erp-panel-muted);
-  padding: 16px;
+  background-color: #fff;
+  padding: 12px;
+}
+
+.guidanceHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  margin-bottom: -2px;
+}
+
+.guidanceLayout {
+  display: grid;
+  gap: 10px;
+}
+
+.guidanceTopGrid,
+.guidancePhotoGrid,
+.guidanceTextGrid {
+  display: grid;
+  gap: 10px;
+}
+
+.guidancePhotoGrid,
+.guidanceTextGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.guidancePhotoFrame {
+  display: grid;
+  height: var(--guidance-photo-height);
+  overflow: hidden;
+  border-radius: var(--erp-radius-surface);
+}
+
+.guidancePhotoPreview {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-surface);
+  background-color: #f8fafc;
+}
+
+.guidancePhotoPlaceholder {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--erp-line-strong);
+  border-radius: var(--erp-radius-surface);
+  padding: 14px;
+  font-size: 13px;
+  line-height: 1.6;
+  text-align: center;
+  color: var(--erp-text-muted);
+  background-color: #fff;
+}
+
+.guidancePhotoActions {
+  display: flex;
+  gap: 8px;
+  padding-top: 8px;
+}
+
+.guidanceTextarea {
+  min-height: 132px;
+  height: 132px;
+  resize: none;
+}
+
+.futureRiskCard {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-card);
+  background-color: #fff;
+  padding: 12px;
+}
+
+.futureRiskHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-bottom: -2px;
+}
+
+.futureRiskLayout {
+  display: grid;
+  gap: 10px;
+}
+
+.futureRiskTopGrid,
+.futureRiskPairGrid {
+  display: grid;
+  gap: 10px;
+}
+
+.futureRiskPairGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.futureProcessField {
   min-width: 0;
 }
 
-.guidanceCardHeader,
-.futureCardHeader {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-bottom: 16px;
+.futureRiskTextarea {
+  min-height: 132px;
+  height: 132px;
+  resize: none;
 }
 
-.itemTitle {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--erp-dark);
+.futureRiskNoteTextarea {
+  min-height: 72px;
+  resize: vertical;
 }
 
 .statusRow {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 }
 
 .statusButton {
@@ -453,8 +554,8 @@
   border: 1px solid var(--erp-line-strong);
   border-radius: 999px;
   background-color: var(--erp-white);
-  padding: 8px 14px;
-  font-size: 13px;
+  padding: 6px 12px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--erp-text-muted);
   transition:
@@ -537,6 +638,28 @@
   min-width: 0;
 }
 
+.dangerIconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 0;
+  background-color: transparent;
+  padding: 0;
+  font-size: 20px;
+  line-height: 1;
+  font-weight: 400;
+  color: #98a2b3;
+  transition: color 0.2s ease, opacity 0.2s ease;
+}
+
+.dangerIconButton:hover {
+  color: #667085;
+  opacity: 1;
+}
+
 .emptyPanel {
   border: 1px dashed var(--erp-line-strong);
   border-radius: var(--erp-radius-card);
@@ -611,6 +734,98 @@
   padding: 28px 24px;
 }
 
+@media (max-width: 767px) {
+  .sectionNavList {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 8px;
+    overflow-x: visible;
+    padding-bottom: 0;
+  }
+
+  .sectionTab {
+    width: 100%;
+    min-width: 0;
+    justify-content: center;
+    gap: 6px;
+    padding: 9px 6px;
+  }
+
+  .sectionTabText {
+    justify-content: center;
+  }
+
+  .sectionTabIndex {
+    width: 24px;
+    height: 24px;
+  }
+
+  .sectionTabLabel {
+    display: none;
+  }
+
+  .sectionTabLabelCompact {
+    display: inline;
+  }
+
+  .futureRiskCard,
+  .guidanceCard,
+  .guidanceLayout,
+  .guidanceTopGrid,
+  .guidancePhotoGrid,
+  .guidanceTextGrid,
+  .futureRiskLayout,
+  .futureRiskTopGrid,
+  .futureRiskPairGrid {
+    gap: 8px;
+  }
+
+  .guidanceCard {
+    --guidance-photo-height: 120px;
+  }
+
+  .guidancePhotoGrid,
+  .guidanceTextGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .guidanceTextarea {
+    min-height: 120px;
+    height: 120px;
+  }
+
+  .futureRiskTextarea {
+    min-height: 120px;
+    height: 120px;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1099px) {
+  .sectionNavList {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    overflow-x: visible;
+    padding-bottom: 0;
+  }
+
+  .sectionTab {
+    width: 100%;
+    min-width: 0;
+    justify-content: center;
+    padding: 9px 10px;
+  }
+
+  .sectionTabText {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 539px) {
+  .sectionNavList {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 @media (min-width: 900px) {
   .header {
     flex-direction: row;
@@ -668,11 +883,8 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .guidanceCardHeader,
-  .futureCardHeader {
-    flex-direction: row;
-    align-items: flex-start;
-    justify-content: space-between;
+  .futureRiskTopGrid {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .supportGrid {
@@ -719,7 +931,9 @@
   .overviewGrid,
   .photoCompareGrid,
   .supportGrid,
-  .formGrid {
+  .formGrid,
+  .futureRiskPairGrid,
+  .futureRiskTopGrid {
     display: block;
   }
 

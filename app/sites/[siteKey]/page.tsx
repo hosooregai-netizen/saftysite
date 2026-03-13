@@ -197,14 +197,14 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
                             </Link>
                           </div>
 
-                          <div className={styles.dataCell}>
+                          <div className={`${styles.dataCell} ${styles.consultantCell}`}>
                             <span className={styles.mobileLabel}>담당</span>
                             <span className={styles.dataValue}>
                               {session.cover.consultantName || '미입력'}
                             </span>
                           </div>
 
-                          <div className={styles.progressCell}>
+                          <div className={`${styles.progressCell} ${styles.progressArea}`}>
                             <span className={styles.mobileLabel}>진행</span>
                             <div className={styles.progressStack}>
                               <div className={styles.progressTrack} aria-hidden="true">
@@ -219,21 +219,21 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
                             </div>
                           </div>
 
-                          <div className={styles.dataCell}>
+                          <div className={`${styles.dataCell} ${styles.inspectionCell}`}>
                             <span className={styles.mobileLabel}>점검일</span>
                             <span className={styles.dataValue}>
                               {session.cover.inspectionDate || '미입력'}
                             </span>
                           </div>
 
-                          <div className={styles.dataCell}>
+                          <div className={`${styles.dataCell} ${styles.savedCell}`}>
                             <span className={styles.mobileLabel}>마지막 저장</span>
                             <span className={styles.dataValue}>
                               {formatDateTime(session.lastSavedAt)}
                             </span>
                           </div>
 
-                          <div className={styles.mobileActions}>
+                          <div className={`${styles.mobileActions} ${styles.actionsCell}`}>
                             <Link href={sessionHref} className="app-button app-button-primary">
                               이어서 작성
                             </Link>

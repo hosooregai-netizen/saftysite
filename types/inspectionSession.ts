@@ -31,14 +31,24 @@ export interface PreviousGuidanceItem {
   id: string;
   sourceSessionId?: string;
   sourceHazardId?: string;
-  title: string;
-  description: string;
-  status: GuidanceStatus;
-  previousPhotoUrl: string;
+  location: string;
+  locationDetail: string;
+  likelihood?: string;
+  severity?: string;
+  riskAssessmentResult: string;
+  hazardFactors: string;
+  improvementItems: string;
+  photoUrl: string;
+  legalInfo: string;
   currentPhotoUrl: string;
-  note: string;
+  implementationResult: string;
   createdAt: string;
   updatedAt: string;
+  status?: GuidanceStatus;
+  title?: string;
+  description?: string;
+  note?: string;
+  previousPhotoUrl?: string;
 }
 
 export interface InspectionHazardItem extends HazardReportItem {
@@ -48,15 +58,11 @@ export interface InspectionHazardItem extends HazardReportItem {
   updatedAt: string;
 }
 
-export interface FutureProcessRiskItem {
-  id: string;
-  processName: string;
-  expectedHazard: string;
-  countermeasure: string;
-  note: string;
-  status: DraftState;
-  createdAt: string;
-  updatedAt: string;
+export interface FutureProcessRiskItem extends InspectionHazardItem {
+  processName?: string;
+  expectedHazard?: string;
+  countermeasure?: string;
+  note?: string;
 }
 
 export interface SupportItems {
@@ -96,5 +102,5 @@ export interface InspectionSectionMeta {
   key: InspectionSectionKey;
   label: string;
   shortLabel: string;
-  description: string;
+  compactLabel: string;
 }

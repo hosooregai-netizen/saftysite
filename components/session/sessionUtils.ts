@@ -6,29 +6,25 @@ import {
 import type { HazardReportItem } from '@/types/hazard';
 import type {
   DraftState,
-  GuidanceStatus,
   InspectionHazardItem,
   InspectionSession,
   PreviousGuidanceItem,
 } from '@/types/inspectionSession';
 
-export const GUIDANCE_STATUS_OPTIONS: Array<{
-  value: GuidanceStatus;
-  label: string;
-}> = [
-  { value: 'implemented', label: '이행' },
-  { value: 'partial', label: '부분이행' },
-  { value: 'notImplemented', label: '미이행' },
-  { value: 'pending', label: '검토중' },
-];
+const LEGACY_GUIDANCE_STATUS_LABELS = {
+  implemented: '이행',
+  partial: '부분 이행',
+  notImplemented: '미이행',
+  pending: '검토중',
+} as const;
 
 export const DRAFT_OPTIONS: Array<{ value: DraftState; label: string }> = [
   { value: 'draft', label: '초안' },
-  { value: 'reviewed', label: '검토완료' },
+  { value: 'reviewed', label: '검토 완료' },
 ];
 
 export function formatDateTime(value: string | null): string {
-  if (!value) return '저장 이력 없음';
+  if (!value) return '저장 기록 없음';
 
   return new Intl.DateTimeFormat('ko-KR', {
     month: '2-digit',
@@ -95,27 +91,26 @@ function buildGuidanceTitle(report: HazardReportItem): string {
   return summarize(report.hazardFactors, '이전 위험 항목');
 }
 
-function buildGuidanceDescription(report: HazardReportItem): string {
-  const sections = [
-    normalizeText(report.hazardFactors)
-      ? `위험요인: ${normalizeText(report.hazardFactors)}`
-      : '',
-    normalizeText(report.improvementItems)
-      ? `개선사항: ${normalizeText(report.improvementItems)}`
-      : '',
-    normalizeText(report.riskAssessmentResult)
-      ? `위험도: ${normalizeText(report.riskAssessmentResult)}`
-      : '',
-  ].filter(Boolean);
+function buildLegacyImplementationResult(item: PreviousGuidanceItem | undefined): string {
+  if (!item) return '';
 
-  return sections.join('\n');
+  const explicitResult = normalizeText(item.implementationResult);
+  if (explicitResult) return explicitResult;
+
+  const statusLabel =
+    item.status && item.status !== 'pending'
+      ? LEGACY_GUIDANCE_STATUS_LABELS[item.status]
+      : '';
+  const note = normalizeText(item.note);
+
+  return [statusLabel, note].filter(Boolean).join('\n');
 }
 
 function findExistingGuidanceItem(
   items: PreviousGuidanceItem[],
   sourceSessionId: string,
   sourceHazardId: string,
-  title: string,
+  locationDetail: string,
   previousPhotoUrl: string
 ): PreviousGuidanceItem | undefined {
   const sourceKey = getGuidanceSourceKey(sourceSessionId, sourceHazardId);
@@ -129,7 +124,10 @@ function findExistingGuidanceItem(
       return true;
     }
 
-    return item.title === title && item.previousPhotoUrl === previousPhotoUrl;
+    return (
+      normalizeText(item.locationDetail || item.title) === locationDetail &&
+      normalizeText(item.photoUrl || item.previousPhotoUrl) === previousPhotoUrl
+    );
   });
 }
 
@@ -149,13 +147,13 @@ export function buildPreviousGuidanceItems(
     )
     .flatMap((sourceSession) =>
       sourceSession.currentHazards.map((hazard) => {
-        const title = buildGuidanceTitle(hazard);
+        const locationDetail = getHazardLocationLabel(hazard) || buildGuidanceTitle(hazard);
         const previousPhotoUrl = normalizeText(hazard.photoUrl);
         const existingItem = findExistingGuidanceItem(
           session.previousGuidanceItems,
           sourceSession.id,
           hazard.id,
-          title,
+          locationDetail,
           previousPhotoUrl
         );
 
@@ -165,12 +163,17 @@ export function buildPreviousGuidanceItems(
             createDerivedGuidanceId(sourceSession.id, hazard.id),
           sourceSessionId: sourceSession.id,
           sourceHazardId: hazard.id,
-          title,
-          description: buildGuidanceDescription(hazard),
-          status: existingItem?.status ?? 'pending',
-          previousPhotoUrl,
+          location: hazard.location,
+          locationDetail,
+          likelihood: hazard.likelihood,
+          severity: hazard.severity,
+          riskAssessmentResult: hazard.riskAssessmentResult,
+          hazardFactors: hazard.hazardFactors,
+          improvementItems: hazard.improvementItems,
+          photoUrl: previousPhotoUrl,
+          legalInfo: hazard.legalInfo,
           currentPhotoUrl: existingItem?.currentPhotoUrl ?? '',
-          note: existingItem?.note ?? '',
+          implementationResult: buildLegacyImplementationResult(existingItem),
           createdAt: existingItem?.createdAt ?? hazard.createdAt,
           updatedAt: existingItem?.updatedAt ?? hazard.updatedAt,
         };
@@ -192,12 +195,17 @@ export function arePreviousGuidanceItemsEqual(
       item.id === other.id &&
       item.sourceSessionId === other.sourceSessionId &&
       item.sourceHazardId === other.sourceHazardId &&
-      item.title === other.title &&
-      item.description === other.description &&
-      item.status === other.status &&
-      item.previousPhotoUrl === other.previousPhotoUrl &&
+      item.location === other.location &&
+      item.locationDetail === other.locationDetail &&
+      item.likelihood === other.likelihood &&
+      item.severity === other.severity &&
+      item.riskAssessmentResult === other.riskAssessmentResult &&
+      item.hazardFactors === other.hazardFactors &&
+      item.improvementItems === other.improvementItems &&
+      item.photoUrl === other.photoUrl &&
+      item.legalInfo === other.legalInfo &&
       item.currentPhotoUrl === other.currentPhotoUrl &&
-      item.note === other.note &&
+      item.implementationResult === other.implementationResult &&
       item.createdAt === other.createdAt &&
       item.updatedAt === other.updatedAt
     );

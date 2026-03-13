@@ -27,7 +27,6 @@ export default function SessionSiteOverviewSection({
             photoUrl: '',
           })
         }
-        onRawResponse={() => undefined}
       />
     </div>
   );

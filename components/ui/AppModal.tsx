@@ -10,6 +10,7 @@ interface AppModalProps {
   actions: ReactNode;
   onClose: () => void;
   closeOnBackdrop?: boolean;
+  size?: 'default' | 'large';
 }
 
 export default function AppModal({
@@ -19,6 +20,7 @@ export default function AppModal({
   actions,
   onClose,
   closeOnBackdrop = true,
+  size = 'default',
 }: AppModalProps) {
   useEffect(() => {
     if (!open) return;
@@ -52,7 +54,12 @@ export default function AppModal({
       }}
     >
       <div
-        className={styles.dialog}
+        className={[
+          styles.dialog,
+          size === 'large' ? styles.dialogLarge : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
         role="dialog"
         aria-modal="true"
         aria-labelledby="app-modal-title"

@@ -18,6 +18,10 @@
   box-shadow: 0 24px 60px rgba(16, 24, 43, 0.18);
 }
 
+.dialogLarge {
+  width: min(100%, 880px);
+}
+
 .body {
   display: grid;
   gap: 14px;

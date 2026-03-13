@@ -1,6 +1,8 @@
 export interface HazardReportItem {
   location: string;
   locationDetail: string;
+  likelihood?: string;
+  severity?: string;
   riskAssessmentResult: string;
   hazardFactors: string;
   improvementItems: string;

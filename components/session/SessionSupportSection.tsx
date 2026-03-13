@@ -12,13 +12,6 @@ export default function SessionSupportSection({
 }: SessionSupportSectionProps) {
   return (
     <div className={styles.sectionStack}>
-      <div className={styles.sectionIntro}>
-        <p className={styles.sectionIntroLabel}>지원 사항</p>
-        <p className={styles.sectionIntroText}>
-          현장 지원 내역과 사고 여부를 표지처럼 항목별로 기록합니다.
-        </p>
-      </div>
-
       <div className={styles.formGrid}>
         <div className={styles.formField}>
           <label className={styles.fieldLabel}>기술자료 배포</label>
@@ -46,7 +39,7 @@ export default function SessionSupportSection({
             value={items.equipmentInspection}
             onChange={(event) => onChange('equipmentInspection', event.target.value)}
             className="app-textarea"
-            placeholder="예: 이동식 비계 바퀴 고정상태 확인"
+            placeholder="예: 이동식 비계 발판 고정상태 확인"
           />
         </div>
 
@@ -98,7 +91,7 @@ export default function SessionSupportSection({
             value={items.accidentNotes}
             onChange={(event) => onChange('accidentNotes', event.target.value)}
             className="app-textarea"
-            placeholder="사고 발생 시 일시, 유형, 현재 조치 상태를 적습니다."
+            placeholder="사고 발생 일시, 유형, 현재 조치 상태를 적습니다."
           />
         </div>
       </div>

@@ -16,8 +16,6 @@ import {
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import type { HazardReportItem } from '@/types/hazard';
 import type {
-  DraftState,
-  FutureProcessRiskItem,
   InspectionCover,
   InspectionSectionKey,
   PreviousGuidanceItem,
@@ -201,12 +199,12 @@ export default function InspectionSessionWorkspace({
 
   const handleFutureRiskChange = (
     itemId: string,
-    patch: Partial<FutureProcessRiskItem>
+    data: HazardReportItem
   ) => {
     handleSessionChange((current) => ({
       ...current,
       futureProcessRisks: current.futureProcessRisks.map((item) =>
-        item.id === itemId ? touchUpdatedAt({ ...item, ...patch }) : item
+        item.id === itemId ? touchUpdatedAt({ ...item, ...data }) : item
       ),
     }));
   };
@@ -216,10 +214,6 @@ export default function InspectionSessionWorkspace({
       ...current,
       futureProcessRisks: current.futureProcessRisks.filter((item) => item.id !== itemId),
     }));
-  };
-
-  const handleFutureRiskStatusChange = (itemId: string, status: DraftState) => {
-    handleFutureRiskChange(itemId, { status });
   };
 
   const handleSupportChange = <T extends keyof SupportItems>(
@@ -354,6 +348,9 @@ export default function InspectionSessionWorkspace({
                       <span className={styles.sectionTabIndex}>{index + 1}</span>
                       <span className={styles.sectionTabText}>
                         <span className={styles.sectionTabLabel}>{section.shortLabel}</span>
+                        <span className={styles.sectionTabLabelCompact}>
+                          {section.compactLabel}
+                        </span>
                       </span>
                     </button>
                   );
@@ -375,7 +372,24 @@ export default function InspectionSessionWorkspace({
                   <section key={section.key} className={className}>
                     <div className={styles.sectionHeader}>
                       <h2 className={styles.sectionTitle}>{section.label}</h2>
-                      <p className={styles.sectionDescription}>{section.description}</p>
+                      {section.key === 'currentHazards' ? (
+                        <button
+                          type="button"
+                          onClick={handleAddHazard}
+                          className="app-button app-button-primary"
+                        >
+                          항목 추가
+                        </button>
+                      ) : null}
+                      {section.key === 'futureRisks' ? (
+                        <button
+                          type="button"
+                          onClick={handleAddFutureRisk}
+                          className="app-button app-button-primary"
+                        >
+                          항목 추가
+                        </button>
+                      ) : null}
                     </div>
 
                     <div className={styles.sectionBody}>
@@ -417,7 +431,6 @@ export default function InspectionSessionWorkspace({
                           onAdd={handleAddFutureRisk}
                           onChange={handleFutureRiskChange}
                           onRemove={handleRemoveFutureRisk}
-                          onStatusChange={handleFutureRiskStatusChange}
                         />
                       )}
 

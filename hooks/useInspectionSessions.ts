@@ -7,6 +7,7 @@ import {
   getSessionSiteKey,
   getSessionSiteTitle,
   getSessionSortTime,
+  normalizeInspectionSession,
 } from '@/constants/inspectionSession';
 import type {
   InspectionCover,
@@ -38,16 +39,18 @@ function loadSessions(): InspectionSession[] {
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
 
-    const migrated = (parsed as InspectionSession[]).map((session) => ({
-      ...session,
-      siteKey:
-        typeof session.siteKey === 'string' && session.siteKey.trim()
-          ? session.siteKey
-          : getSessionSiteKey({
-              cover: session.cover,
-              siteKey: '',
-            }),
-    }));
+    const migrated = (parsed as InspectionSession[]).map((session) =>
+      normalizeInspectionSession({
+        ...session,
+        siteKey:
+          typeof session.siteKey === 'string' && session.siteKey.trim()
+            ? session.siteKey
+            : getSessionSiteKey({
+                cover: session.cover,
+                siteKey: '',
+              }),
+      })
+    );
 
     return sortSessions(migrated);
   } catch {

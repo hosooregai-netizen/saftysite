@@ -10,7 +10,7 @@ interface SiteOverviewUploadPanelProps {
   report: CausativeAgentReport;
   onSuccess: (report: CausativeAgentReport) => void;
   onClear: () => void;
-  onRawResponse: (raw: unknown) => void;
+  onRawResponse?: (raw: unknown) => void;
   onLoadingChange?: (loading: boolean) => void;
 }
 
@@ -39,7 +39,7 @@ export default function SiteOverviewUploadPanel({
 
     try {
       const raw = await checkCausativeAgents([incoming]);
-      onRawResponse(raw);
+      onRawResponse?.(raw);
 
       const normalized = await normalizeCausativeAgentResponse(raw, incoming);
       onSuccess(normalized);
