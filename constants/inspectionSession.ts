@@ -630,17 +630,6 @@ export function ensureSessionReportNumbers(
   const nextNumberBySessionId = new Map<string, number>();
 
   for (const group of sessionsBySite.values()) {
-    const hasValidNumbers =
-      group.every((session) => session.reportNumber > 0) &&
-      new Set(group.map((session) => session.reportNumber)).size === group.length;
-
-    if (hasValidNumbers) {
-      for (const session of group) {
-        nextNumberBySessionId.set(session.id, session.reportNumber);
-      }
-      continue;
-    }
-
     const ordered = [...group].sort((left, right) => {
       const primary = new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime();
       if (primary !== 0) return primary;
@@ -687,6 +676,10 @@ export function getSectionCompletion(
     case 'siteOverview':
       return Boolean(session.siteOverview.photoUrl);
     case 'previousGuidance':
+      if (session.previousGuidanceItems.length === 0) {
+        return true;
+      }
+
       return session.previousGuidanceItems.some(
         (item) => item.currentPhotoUrl || item.implementationResult
       );

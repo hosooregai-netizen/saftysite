@@ -189,6 +189,7 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
                       const progress = getSessionProgress(session);
                       const sessionHref = `/sessions/${session.id}`;
                       const sessionTitle = getSessionTitle(session);
+                      const reportListTitle = session.cover.projectName.trim() || sessionTitle;
 
                       return (
                           <article key={session.id} className={styles.reportRow}>
@@ -204,7 +205,7 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
                                   <span className={styles.reportNumberBadgeMobile}>
                                     {session.reportNumber}
                                   </span>
-                                  <h2 className={styles.reportTitle}>{sessionTitle}</h2>
+                                  <h2 className={styles.reportTitle}>{reportListTitle}</h2>
                                 </div>
                               </Link>
                             </div>

@@ -32,6 +32,10 @@ function sortSessions(items: InspectionSession[]): InspectionSession[] {
   });
 }
 
+function normalizeSessions(items: InspectionSession[]): InspectionSession[] {
+  return sortSessions(ensureSessionReportNumbers(items));
+}
+
 function loadSessions(): InspectionSession[] {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
@@ -53,7 +57,7 @@ function loadSessions(): InspectionSession[] {
       })
     );
 
-    return sortSessions(ensureSessionReportNumbers(migrated));
+    return normalizeSessions(migrated);
   } catch {
     return [];
   }
@@ -113,7 +117,7 @@ export function useInspectionSessions() {
 
   const persistSessions = useCallback((nextSessions: InspectionSession[]) => {
     try {
-      const normalized = sortSessions(ensureSessionReportNumbers(nextSessions));
+      const normalized = normalizeSessions(nextSessions);
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
       skipNextSessionPersistRef.current = true;
       setSessions(normalized);
@@ -182,7 +186,7 @@ export function useInspectionSessions() {
   const deleteSite = useCallback((siteId: string) => {
     setSites((current) => current.filter((site) => site.id !== siteId));
     setSessions((current) =>
-      current.filter((session) => getSessionSiteKey(session) !== siteId)
+      normalizeSessions(current.filter((session) => getSessionSiteKey(session) !== siteId))
     );
   }, []);
 
@@ -233,7 +237,7 @@ export function useInspectionSessions() {
       const savedAt = new Date().toISOString();
 
       setSessions((current) =>
-        sortSessions(
+        normalizeSessions(
           current.map((session) => {
             if (session.id !== sessionId) return session;
 
@@ -258,7 +262,7 @@ export function useInspectionSessions() {
       const savedAt = new Date().toISOString();
 
       setSessions((current) =>
-        sortSessions(
+        normalizeSessions(
           current.map((session) => {
             if (!predicate(session)) return session;
 
@@ -276,12 +280,16 @@ export function useInspectionSessions() {
   );
 
   const deleteSession = useCallback((sessionId: string) => {
-    setSessions((current) => current.filter((session) => session.id !== sessionId));
+    setSessions((current) =>
+      normalizeSessions(current.filter((session) => session.id !== sessionId))
+    );
   }, []);
 
   const deleteSessions = useCallback(
     (predicate: (session: InspectionSession) => boolean) => {
-      setSessions((current) => current.filter((session) => !predicate(session)));
+      setSessions((current) =>
+        normalizeSessions(current.filter((session) => !predicate(session)))
+      );
     },
     []
   );
