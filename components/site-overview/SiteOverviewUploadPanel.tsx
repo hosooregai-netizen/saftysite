@@ -1,6 +1,7 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useState } from 'react';
+import { useImageSourcePicker } from '@/hooks/useImageSourcePicker';
 import { checkCausativeAgents } from '@/lib/api';
 import { normalizeCausativeAgentResponse } from '@/lib/normalizeCausativeAgentResponse';
 import type { CausativeAgentReport } from '@/types/siteOverview';
@@ -21,10 +22,11 @@ export default function SiteOverviewUploadPanel({
   onRawResponse,
   onLoadingChange,
 }: SiteOverviewUploadPanelProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { galleryInputRef, cameraInputRef, requestPick, pickerModal } =
+    useImageSourcePicker({ title: '현장 사진 추가' });
 
   const uploadFile = async (incoming: File | undefined) => {
     if (!incoming) return;
@@ -77,7 +79,10 @@ export default function SiteOverviewUploadPanel({
     void uploadFile(e.dataTransfer.files?.[0]);
   };
 
-  const openPicker = () => inputRef.current?.click();
+  const openPicker = () => {
+    if (loading) return;
+    requestPick();
+  };
   const dropzoneClassName = [
     styles.dropzone,
     loading ? styles.dropzoneDisabled : styles.dropzoneReady,
@@ -89,9 +94,17 @@ export default function SiteOverviewUploadPanel({
   return (
     <>
       <input
-        ref={inputRef}
+        ref={galleryInputRef}
         type="file"
         accept="image/*"
+        onChange={handleFileChange}
+        className={styles.hiddenInput}
+      />
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
         onChange={handleFileChange}
         className={styles.hiddenInput}
       />
@@ -137,6 +150,7 @@ export default function SiteOverviewUploadPanel({
       </div>
 
       {error && <p className={styles.error}>{error}</p>}
+      {pickerModal}
     </>
   );
 }

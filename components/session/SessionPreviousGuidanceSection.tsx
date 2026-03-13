@@ -1,8 +1,9 @@
 import type { ChangeEvent } from 'react';
 import HazardReportTable from '@/components/HazardReportTable';
+import hazardStyles from '@/components/HazardReportTable.module.css';
+import { useImageSourcePicker } from '@/hooks/useImageSourcePicker';
 import type { HazardReportItem } from '@/types/hazard';
 import type { PreviousGuidanceItem } from '@/types/inspectionSession';
-import hazardStyles from '@/components/HazardReportTable.module.css';
 import styles from './InspectionSessionWorkspace.module.css';
 
 interface SessionPreviousGuidanceSectionProps {
@@ -28,6 +29,87 @@ function toHazardReportItem(item: PreviousGuidanceItem): HazardReportItem {
     legalInfo: item.legalInfo,
     implementationPeriod: item.implementationResult,
   };
+}
+
+function PreviousGuidanceCurrentPhotoField({
+  item,
+  onChange,
+  onPhotoChange,
+}: {
+  item: PreviousGuidanceItem;
+  onChange: (itemId: string, patch: Partial<PreviousGuidanceItem>) => void;
+  onPhotoChange: (
+    itemId: string,
+    field: 'currentPhotoUrl',
+    event: ChangeEvent<HTMLInputElement>
+  ) => void;
+}) {
+  const { galleryInputRef, cameraInputRef, requestPick, pickerModal } =
+    useImageSourcePicker({ title: '현재 사진 추가' });
+
+  return (
+    <div className={`${hazardStyles.formField} ${hazardStyles.photoColumn}`}>
+      <label className={hazardStyles.fieldLabel}>현재 사진</label>
+      <div className={hazardStyles.photoField}>
+        {item.currentPhotoUrl ? (
+          <div className={hazardStyles.photoPreviewWrap}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={item.currentPhotoUrl}
+              alt="현재 조치 상태 사진"
+              className={hazardStyles.photoPreview}
+            />
+            <div className={hazardStyles.photoActions}>
+              <button
+                type="button"
+                onClick={requestPick}
+                className={hazardStyles.photoAction}
+              >
+                사진 변경
+              </button>
+              <button
+                type="button"
+                onClick={() => onChange(item.id, { currentPhotoUrl: '' })}
+                className={hazardStyles.photoRemoveButton}
+              >
+                사진 제거
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={requestPick}
+            className={`${hazardStyles.photoPlaceholder} ${hazardStyles.photoPlaceholderButton}`}
+          >
+            <span>이미지 선택</span>
+            <span className={hazardStyles.photoPlaceholderHint}>
+              현재 조치 상태 사진을 추가하세요.
+            </span>
+          </button>
+        )}
+
+        <input
+          ref={galleryInputRef}
+          id={`${item.id}-current-photo-gallery`}
+          type="file"
+          accept="image/*"
+          onChange={(event) => onPhotoChange(item.id, 'currentPhotoUrl', event)}
+          className={hazardStyles.hiddenInput}
+        />
+        <input
+          ref={cameraInputRef}
+          id={`${item.id}-current-photo-camera`}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={(event) => onPhotoChange(item.id, 'currentPhotoUrl', event)}
+          className={hazardStyles.hiddenInput}
+        />
+      </div>
+      {pickerModal}
+    </div>
+  );
 }
 
 export default function SessionPreviousGuidanceSection({
@@ -71,61 +153,15 @@ export default function SessionPreviousGuidanceSection({
                 photoEmptyHint: '과거 보고서에 등록된 사진이 없습니다.',
                 hazardFactorsLabel: '지적사항',
                 implementationPeriodLabel: '이행 결과',
-                implementationPeriodPlaceholder: '예: 안전난간 설치 완료, 추가 보완 예정',
+                implementationPeriodPlaceholder:
+                  '예: 안전난간 설치 완료, 추가 보완 예정',
               }}
               extraContent={
-                <div className={`${hazardStyles.formField} ${hazardStyles.photoColumn}`}>
-                  <label
-                    className={hazardStyles.fieldLabel}
-                    htmlFor={`${item.id}-current-photo`}
-                  >
-                    현재 사진
-                  </label>
-                  <div className={hazardStyles.photoField}>
-                    {item.currentPhotoUrl ? (
-                      <div className={hazardStyles.photoPreviewWrap}>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={item.currentPhotoUrl}
-                          alt="현재 조치 상태 사진"
-                          className={hazardStyles.photoPreview}
-                        />
-                        <div className={hazardStyles.photoActions}>
-                          <label
-                            htmlFor={`${item.id}-current-photo`}
-                            className={hazardStyles.photoAction}
-                          >
-                            사진 변경
-                          </label>
-                          <button
-                            type="button"
-                            onClick={() => onChange(item.id, { currentPhotoUrl: '' })}
-                            className={hazardStyles.photoRemoveButton}
-                          >
-                            사진 제거
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <label
-                        htmlFor={`${item.id}-current-photo`}
-                        className={hazardStyles.photoPlaceholder}
-                      >
-                        <span>이미지 선택</span>
-                        <span className={hazardStyles.photoPlaceholderHint}>
-                          현재 조치 상태 사진을 추가하세요.
-                        </span>
-                      </label>
-                    )}
-                    <input
-                      id={`${item.id}-current-photo`}
-                      type="file"
-                      accept="image/*"
-                      onChange={(event) => onPhotoChange(item.id, 'currentPhotoUrl', event)}
-                      className={hazardStyles.hiddenInput}
-                    />
-                  </div>
-                </div>
+                <PreviousGuidanceCurrentPhotoField
+                  item={item}
+                  onChange={onChange}
+                  onPhotoChange={onPhotoChange}
+                />
               }
             />
           </div>

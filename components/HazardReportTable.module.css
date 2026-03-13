@@ -123,6 +123,9 @@
 
 .photoAction,
 .photoRemoveButton {
+  padding: 0;
+  border: 0;
+  background: none;
   font-size: 12px;
   font-weight: 600;
 }
@@ -169,6 +172,11 @@
   border-color: var(--erp-mid);
   background-color: #edf2f7;
   color: var(--erp-dark);
+}
+
+.photoPlaceholderButton {
+  appearance: none;
+  background: none;
 }
 
 .photoPlaceholderHint {

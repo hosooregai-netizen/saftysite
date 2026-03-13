@@ -710,8 +710,10 @@
   position: sticky;
   bottom: 0;
   display: flex;
-  flex-direction: column;
-  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 12px;
   border-top: 1px solid var(--erp-line);
   background-color: rgba(255, 255, 255, 0.96);
   padding: 14px 20px 18px;
@@ -719,6 +721,7 @@
 }
 
 .bottomMeta {
+  flex: 1 1 220px;
   font-size: 13px;
   color: var(--erp-text-muted);
 }
@@ -727,6 +730,8 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  margin-left: auto;
+  justify-content: flex-end;
 }
 
 .loadingState,
@@ -892,9 +897,6 @@
   }
 
   .bottomBar {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
     padding: 14px 28px 18px;
   }
 }

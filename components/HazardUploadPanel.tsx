@@ -1,6 +1,7 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useState } from 'react';
+import { useImageSourcePicker } from '@/hooks/useImageSourcePicker';
 import type { HazardReportItem } from '@/types/hazard';
 import { analyzeHazardPhotos } from '@/lib/api';
 import { normalizeHazardResponse } from '@/lib/normalizeHazardResponse';
@@ -19,7 +20,8 @@ export default function HazardUploadPanel({
   const [loading, setLoading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const { galleryInputRef, cameraInputRef, requestPick, pickerModal } =
+    useImageSourcePicker({ title: '위험요인 사진 추가' });
 
   const addFiles = (incoming: File[]) => {
     const imageFiles = incoming.filter((file) => file.type.startsWith('image/'));
@@ -85,7 +87,10 @@ export default function HazardUploadPanel({
     }
   };
 
-  const openPicker = () => inputRef.current?.click();
+  const openPicker = () => {
+    if (loading) return;
+    requestPick();
+  };
   const dropzoneClassName = [
     styles.dropzone,
     loading ? styles.dropzoneDisabled : styles.dropzoneReady,
@@ -104,10 +109,18 @@ export default function HazardUploadPanel({
       </div>
 
       <input
-        ref={inputRef}
+        ref={galleryInputRef}
         type="file"
         accept="image/*"
         multiple
+        onChange={handleFileChange}
+        className={styles.hiddenInput}
+      />
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
         onChange={handleFileChange}
         className={styles.hiddenInput}
       />
@@ -169,6 +182,7 @@ export default function HazardUploadPanel({
       )}
 
       {error && <p className={styles.error}>{error}</p>}
+      {pickerModal}
     </section>
   );
 }

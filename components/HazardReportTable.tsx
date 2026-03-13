@@ -1,7 +1,8 @@
 'use client';
 
-import { type ChangeEvent, type ReactNode, useCallback, useRef, useState } from 'react';
+import { type ChangeEvent, type ReactNode, useCallback, useState } from 'react';
 import { useAutoResizeTextarea } from '@/hooks/useAutoResizeTextarea';
+import { useImageSourcePicker } from '@/hooks/useImageSourcePicker';
 import { analyzeHazardPhotos } from '@/lib/api';
 import { normalizeHazardResponse } from '@/lib/normalizeHazardResponse';
 import { calculateRiskAssessmentResult } from '@/lib/riskAssessment';
@@ -114,9 +115,10 @@ export default function HazardReportTable({
   photoMode = 'analyze',
   extraContent,
 }: HazardReportTableProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isPhotoLoading, setIsPhotoLoading] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
+  const { galleryInputRef, cameraInputRef, requestPick, pickerModal } =
+    useImageSourcePicker({ title: '사진 추가' });
   const { ref: hazardFactorsRef, resize: resizeHazard } =
     useAutoResizeTextarea(data.hazardFactors, 72);
   const { ref: improvementItemsRef, resize: resizeImprovement } =
@@ -207,9 +209,13 @@ export default function HazardReportTable({
       })
     );
 
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+    if (galleryInputRef.current) galleryInputRef.current.value = '';
+    if (cameraInputRef.current) cameraInputRef.current.value = '';
+  };
+
+  const openPicker = () => {
+    if (isPhotoLoading || photoMode === 'readonly') return;
+    requestPick();
   };
 
   return (
@@ -304,17 +310,31 @@ export default function HazardReportTable({
               </label>
               <div className={styles.photoField}>
                 {photoMode !== 'readonly' ? (
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={(event) => {
-                      void handlePhotoChange(event);
-                    }}
-                    className={styles.hiddenInput}
-                    id={`hazard-photo-${index}`}
-                    disabled={isPhotoLoading}
-                  />
+                  <>
+                    <input
+                      ref={galleryInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={(event) => {
+                        void handlePhotoChange(event);
+                      }}
+                      className={styles.hiddenInput}
+                      id={`hazard-photo-gallery-${index}`}
+                      disabled={isPhotoLoading}
+                    />
+                    <input
+                      ref={cameraInputRef}
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={(event) => {
+                        void handlePhotoChange(event);
+                      }}
+                      className={styles.hiddenInput}
+                      id={`hazard-photo-camera-${index}`}
+                      disabled={isPhotoLoading}
+                    />
+                  </>
                 ) : null}
                 {data.photoUrl ? (
                   <div className={styles.photoPreviewWrap}>
@@ -326,9 +346,14 @@ export default function HazardReportTable({
                     />
                     {photoMode !== 'readonly' ? (
                       <div className={styles.photoActions}>
-                        <label htmlFor={`hazard-photo-${index}`} className={styles.photoAction}>
+                        <button
+                          type="button"
+                          onClick={openPicker}
+                          className={styles.photoAction}
+                          disabled={isPhotoLoading}
+                        >
                           {mergedText.photoChangeLabel}
-                        </label>
+                        </button>
                         <button
                           type="button"
                           onClick={handleRemovePhoto}
@@ -345,12 +370,17 @@ export default function HazardReportTable({
                     <span>{mergedText.photoEmptyHint}</span>
                   </div>
                 ) : (
-                  <label htmlFor={`hazard-photo-${index}`} className={styles.photoPlaceholder}>
+                  <button
+                    type="button"
+                    onClick={openPicker}
+                    className={`${styles.photoPlaceholder} ${styles.photoPlaceholderButton}`}
+                    disabled={isPhotoLoading}
+                  >
                     <span>{mergedText.photoEmptyTitle}</span>
                     <span className={styles.photoPlaceholderHint}>
                       {mergedText.photoEmptyHint}
                     </span>
-                  </label>
+                  </button>
                 )}
               </div>
             </div>
@@ -435,6 +465,7 @@ export default function HazardReportTable({
           {extraContent}
         </div>
       </div>
+      {pickerModal}
     </section>
   );
 }
