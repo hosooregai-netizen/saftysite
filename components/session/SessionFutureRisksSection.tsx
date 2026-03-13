@@ -20,9 +20,12 @@ export default function SessionFutureRisksSection({
   return (
     <div className={styles.sectionStack}>
       <div className={styles.futureToolbar}>
-        <p className={styles.relatedHint}>
-          다음 진행 공정을 먼저 적고 예상 위험요인과 대책 초안을 누적합니다.
-        </p>
+        <div className={styles.sectionIntro}>
+          <p className={styles.sectionIntroLabel}>향후 위험</p>
+          <p className={styles.sectionIntroText}>
+            다음 진행 공정과 예상 위험요인, 대책 초안을 항목별로 정리합니다.
+          </p>
+        </div>
         <button
           type="button"
           onClick={onAdd}
@@ -34,16 +37,14 @@ export default function SessionFutureRisksSection({
 
       <div className={styles.futureList}>
         {items.map((item, index) => (
-          <article key={item.id} className={styles.futureCard}>
-            <div className={styles.futureCardHeader}>
-              <div>
-                <h3 className={styles.itemTitle}>향후 공정 #{index + 1}</h3>
-                <p className={styles.fieldHint}>
-                  다음 공정별 예상 위험과 대책을 출력 문서에 맞게 정리합니다.
-                </p>
+          <article key={item.id} className={styles.entryCard}>
+            <div className={styles.entryHeader}>
+              <div className={styles.entryHeaderCopy}>
+                <p className={styles.entryEyebrow}>향후 위험</p>
+                <h3 className={styles.entryTitle}>항목 {index + 1}</h3>
               </div>
 
-              <div className={styles.bottomActions}>
+              <div className={styles.entryActions}>
                 <div className={styles.statusRow}>
                   {DRAFT_OPTIONS.map((option) => {
                     const className = [
@@ -81,9 +82,7 @@ export default function SessionFutureRisksSection({
                 <input
                   type="text"
                   value={item.processName}
-                  onChange={(event) =>
-                    onChange(item.id, { processName: event.target.value })
-                  }
+                  onChange={(event) => onChange(item.id, { processName: event.target.value })}
                   className="app-input"
                   placeholder="예: 외부 비계 해체 작업"
                 />

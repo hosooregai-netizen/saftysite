@@ -22,131 +22,145 @@ export default function SessionPreviousGuidanceSection({
     onChange(itemId, { status: value });
   };
 
+  if (items.length === 0) {
+    return (
+      <div className={styles.sectionStack}>
+        <div className={styles.sectionIntro}>
+          <p className={styles.sectionIntroLabel}>이전 지도 사항</p>
+          <p className={styles.sectionIntroText}>
+            같은 현장의 이전 지적 사항과 현재 이행 상태를 비교합니다.
+          </p>
+        </div>
+        <div className={styles.emptyPanel}>
+          같은 현장의 과거 현재 위험 데이터가 아직 없습니다.
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.sectionStack}>
-      {items.length > 0 ? (
-        <div className={styles.guidanceList}>
-          {items.map((item, index) => (
-            <article key={item.id} className={styles.guidanceCard}>
-              <div className={styles.guidanceCardHeader}>
-                <div>
-                  <h3 className={styles.itemTitle}>이전 지도 사항 #{index + 1}</h3>
-                </div>
+      <div className={styles.sectionIntro}>
+        <p className={styles.sectionIntroLabel}>이전 지도 사항</p>
+        <p className={styles.sectionIntroText}>
+          같은 현장의 이전 지적 사항과 현재 이행 상태를 비교합니다.
+        </p>
+      </div>
+
+      <div className={styles.guidanceList}>
+        {items.map((item, index) => (
+          <article key={item.id} className={styles.entryCard}>
+            <div className={styles.entryHeader}>
+              <div className={styles.entryHeaderCopy}>
+                <p className={styles.entryEyebrow}>이전 지도 사항</p>
+                <h3 className={styles.entryTitle}>항목 {index + 1}</h3>
+              </div>
+            </div>
+
+            <div className={styles.formGrid}>
+              <div className={styles.formField}>
+                <label className={styles.fieldLabel}>과거 위험 항목</label>
+                <input type="text" value={item.title} className="app-input" readOnly />
               </div>
 
-              <div className={styles.formGrid}>
-                <div className={styles.formField}>
-                  <label className={styles.fieldLabel}>과거 위험 항목</label>
-                  <input type="text" value={item.title} className="app-input" readOnly />
-                </div>
+              <div className={styles.formField}>
+                <label className={styles.fieldLabel}>이행 상태</label>
+                <div className={styles.statusRow}>
+                  {GUIDANCE_STATUS_OPTIONS.map((option) => {
+                    const className = [
+                      styles.statusButton,
+                      item.status === option.value ? styles.statusButtonActive : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ');
 
-                <div className={styles.formField}>
-                  <label className={styles.fieldLabel}>이행 상태</label>
-                  <div className={styles.statusRow}>
-                    {GUIDANCE_STATUS_OPTIONS.map((option) => {
-                      const className = [
-                        styles.statusButton,
-                        item.status === option.value ? styles.statusButtonActive : '',
-                      ]
-                        .filter(Boolean)
-                        .join(' ');
-
-                      return (
-                        <button
-                          key={option.value}
-                          type="button"
-                          onClick={() => handleStatusChange(item.id, option.value)}
-                          className={className}
-                        >
-                          {option.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className={`${styles.formField} ${styles.formFieldWide}`}>
-                  <label className={styles.fieldLabel}>과거 현재 위험 데이터</label>
-                  <textarea
-                    value={item.description}
-                    className="app-textarea"
-                    readOnly
-                  />
-                </div>
-              </div>
-
-              <div className={styles.photoCompareGrid}>
-                <div className={styles.photoCard}>
-                  <p className={styles.photoCardTitle}>과거 사진</p>
-                  <div className={styles.photoFrame}>
-                    {item.previousPhotoUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={item.previousPhotoUrl}
-                        alt="과거 현재 위험 사진"
-                        className={styles.photoPreview}
-                      />
-                    ) : (
-                      <div className={styles.photoPlaceholder}>
-                        과거 보고서에 등록된 사진이 없습니다.
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className={styles.photoCard}>
-                  <p className={styles.photoCardTitle}>현재 사진</p>
-                  <div className={styles.photoFrame}>
-                    {item.currentPhotoUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={item.currentPhotoUrl}
-                        alt="현재 조치 상태 사진"
-                        className={styles.photoPreview}
-                      />
-                    ) : (
-                      <div className={styles.photoPlaceholder}>
-                        현재 조치 상태 사진을 올려 이행 여부를 남깁니다.
-                      </div>
-                    )}
-                  </div>
-                  <div className={styles.photoActions}>
-                    <label
-                      htmlFor={`${item.id}-current-photo`}
-                      className="app-button app-button-secondary"
-                    >
-                      사진 선택
-                    </label>
-                    <input
-                      id={`${item.id}-current-photo`}
-                      type="file"
-                      accept="image/*"
-                      onChange={(event) =>
-                        onPhotoChange(item.id, 'currentPhotoUrl', event)
-                      }
-                      className={styles.hiddenInput}
-                    />
-                  </div>
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => handleStatusChange(item.id, option.value)}
+                        className={className}
+                      >
+                        {option.label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
               <div className={`${styles.formField} ${styles.formFieldWide}`}>
-                <label className={styles.fieldLabel}>비고</label>
-                <textarea
-                  value={item.note}
-                  onChange={(event) => onChange(item.id, { note: event.target.value })}
-                  className="app-textarea"
-                  placeholder="추가 확인 사항이나 미이행 사유를 기록합니다."
-                />
+                <label className={styles.fieldLabel}>과거 현재 위험 데이터</label>
+                <textarea value={item.description} className="app-textarea" readOnly />
               </div>
-            </article>
-          ))}
-        </div>
-      ) : (
-        <div className={styles.emptyPanel}>
-          같은 현장의 과거 현재 위험 데이터가 아직 없습니다.
-        </div>
-      )}
+            </div>
+
+            <div className={styles.photoCompareGrid}>
+              <div className={styles.formField}>
+                <label className={styles.fieldLabel}>과거 사진</label>
+                <div className={styles.photoFrame}>
+                  {item.previousPhotoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={item.previousPhotoUrl}
+                      alt="과거 현재 위험 사진"
+                      className={styles.photoPreview}
+                    />
+                  ) : (
+                    <div className={styles.photoPlaceholder}>
+                      과거 보고서에 등록된 사진이 없습니다.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className={styles.formField}>
+                <label className={styles.fieldLabel} htmlFor={`${item.id}-current-photo`}>
+                  현재 사진
+                </label>
+                <div className={styles.photoFrame}>
+                  {item.currentPhotoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={item.currentPhotoUrl}
+                      alt="현재 조치 상태 사진"
+                      className={styles.photoPreview}
+                    />
+                  ) : (
+                    <div className={styles.photoPlaceholder}>
+                      현재 조치 상태 사진을 올려 이행 여부를 남깁니다.
+                    </div>
+                  )}
+                </div>
+                <div className={styles.photoActions}>
+                  <label
+                    htmlFor={`${item.id}-current-photo`}
+                    className="app-button app-button-secondary"
+                  >
+                    사진 선택
+                  </label>
+                  <input
+                    id={`${item.id}-current-photo`}
+                    type="file"
+                    accept="image/*"
+                    onChange={(event) => onPhotoChange(item.id, 'currentPhotoUrl', event)}
+                    className={styles.hiddenInput}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className={`${styles.formField} ${styles.formFieldWide}`}>
+              <label className={styles.fieldLabel}>비고</label>
+              <textarea
+                value={item.note}
+                onChange={(event) => onChange(item.id, { note: event.target.value })}
+                className="app-textarea"
+                placeholder="추가 확인 사항이나 미이행 사유를 기록합니다."
+              />
+            </div>
+          </article>
+        ))}
+      </div>
     </div>
   );
 }

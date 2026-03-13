@@ -1,97 +1,93 @@
 .container {
-  @apply break-inside-avoid overflow-hidden rounded-panel border bg-white shadow-panel print:overflow-visible print:rounded-none print:border-0 print:shadow-none;
-  border-color: var(--erp-line);
+  break-inside: avoid;
+  display: grid;
+  gap: 16px;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-card);
+  background-color: #fff;
+  padding: 18px;
 }
 
 .header {
-  @apply border-b px-4 py-3 print:hidden;
-  border-color: var(--erp-line);
-  background-color: #f8fafc;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-.headerRow {
-  @apply flex flex-wrap items-center justify-between gap-3;
+.headerCopy {
+  display: grid;
+  gap: 4px;
+}
+
+.headerEyebrow {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--erp-text-muted);
 }
 
 .headerTitle {
-  @apply text-sm font-semibold;
+  font-size: 20px;
+  font-weight: 700;
   color: var(--erp-dark);
 }
 
 .metadataSection {
-  @apply grid gap-3 border-b px-4 py-3 text-xs print:hidden md:grid-cols-2;
-  border-color: var(--erp-line);
+  display: grid;
+  gap: 12px;
+  padding-bottom: 2px;
+}
+
+.metadataBlock {
+  display: grid;
+  gap: 6px;
 }
 
 .metadataLabel {
-  @apply font-semibold uppercase;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: #64748b;
-  letter-spacing: 0.12em;
 }
 
 .metadataValue {
-  @apply mt-1 leading-5;
+  font-size: 14px;
+  line-height: 1.6;
   color: #334155;
 }
 
 .metadataMultiline {
-  @apply whitespace-pre-wrap;
+  white-space: pre-wrap;
 }
 
-.formShell {
+.formGrid {
   display: grid;
-  gap: 14px;
-  padding: 14px;
+  gap: 16px;
 }
 
-.topCard,
-.photoCard,
-.detailsCard {
-  border: 1px solid var(--erp-line);
-  border-radius: var(--erp-radius-surface);
-  background-color: var(--erp-panel-muted);
-  overflow: hidden;
-}
-
-.topCard {
-  padding: 14px;
-}
-
-.topGrid {
-  display: grid;
-  gap: 12px;
-}
-
-.fieldBlock {
+.formField {
   display: grid;
   gap: 8px;
   min-width: 0;
 }
 
-.fieldLabel,
-.sectionLabel,
-.cardTitle {
-  font-size: 13px;
+.formFieldWide {
+  grid-column: 1 / -1;
+}
+
+.fieldLabel {
+  font-size: 14px;
   font-weight: 700;
   color: var(--erp-dark);
 }
 
-.contentGrid {
+.photoField {
   display: grid;
-  gap: 14px;
-}
-
-.cardHeader {
-  border-bottom: 1px solid var(--erp-line);
-  padding: 14px 14px 12px;
-}
-
-.photoFrame {
-  display: flex;
-  min-height: 260px;
-  align-items: center;
-  justify-content: center;
-  padding: 14px;
+  gap: 10px;
 }
 
 .hiddenInput {
@@ -99,7 +95,8 @@
 }
 
 .photoPreviewWrap {
-  width: 100%;
+  display: grid;
+  gap: 0;
 }
 
 .photoPreview {
@@ -107,10 +104,16 @@
   width: 100%;
   max-height: 420px;
   object-fit: contain;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-surface);
+  background-color: #fff;
 }
 
 .photoActions {
-  @apply mt-2 flex gap-3 print:hidden;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-top: 2px;
 }
 
 .photoAction,
@@ -139,7 +142,7 @@
 .photoPlaceholder {
   display: flex;
   width: 100%;
-  min-height: 232px;
+  min-height: 240px;
   cursor: pointer;
   flex-direction: column;
   align-items: center;
@@ -166,50 +169,29 @@
   font-size: 12px;
 }
 
-.detailStack {
-  display: grid;
-  gap: 0;
-}
-
-.detailBlock {
-  display: grid;
-  gap: 8px;
-  padding: 14px;
-}
-
-.detailDivider {
-  height: 1px;
-  background-color: var(--erp-line);
-}
-
 .editorTextarea {
   min-height: 132px;
   resize: vertical;
 }
 
 @media (min-width: 900px) {
-  .formShell {
-    gap: 16px;
-    padding: 16px;
-  }
-
-  .topGrid {
+  .metadataSection {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 16px;
   }
 
-  .contentGrid {
-    grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1.4fr);
-    gap: 16px;
-    align-items: start;
+  .formGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-
-.photoCard,
-.detailsCard {
-  min-height: 100%;
 }
 
-  .photoCard {
-    align-self: stretch;
+@media print {
+  .container {
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+  }
+
+  .photoActions {
+    display: none;
   }
 }

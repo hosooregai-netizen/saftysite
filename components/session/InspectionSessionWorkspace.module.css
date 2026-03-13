@@ -327,6 +327,71 @@
   gap: 16px;
 }
 
+.sectionIntro {
+  display: grid;
+  gap: 4px;
+}
+
+.sectionIntroLabel {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--erp-dark);
+}
+
+.sectionIntroText {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--erp-text-muted);
+}
+
+.entryCard {
+  display: grid;
+  gap: 16px;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-card);
+  background-color: #fff;
+  padding: 18px;
+}
+
+.entryHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.entryHeaderCopy {
+  display: grid;
+  gap: 4px;
+}
+
+.entryEyebrow {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--erp-text-muted);
+}
+
+.entryTitle {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--erp-dark);
+}
+
+.entryActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.statusField {
+  display: grid;
+  gap: 8px;
+}
+
 .overviewGrid {
   display: block;
 }
@@ -427,9 +492,7 @@
 .photoFrame {
   margin-top: 10px;
   overflow: hidden;
-  border: 1px solid var(--erp-line);
-  border-radius: var(--erp-radius-card);
-  background-color: var(--erp-panel-muted);
+  border-radius: var(--erp-radius-surface);
 }
 
 .photoPreview {
@@ -437,6 +500,8 @@
   width: 100%;
   max-height: 220px;
   object-fit: cover;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-surface);
 }
 
 .photoPlaceholder {
@@ -444,6 +509,8 @@
   align-items: center;
   justify-content: center;
   min-height: 180px;
+  border: 1px dashed var(--erp-line-strong);
+  border-radius: var(--erp-radius-surface);
   padding: 16px;
   font-size: 13px;
   line-height: 1.6;
@@ -454,7 +521,7 @@
 .photoActions {
   display: flex;
   gap: 8px;
-  padding: 12px;
+  padding-top: 10px;
 }
 
 .hiddenInput {

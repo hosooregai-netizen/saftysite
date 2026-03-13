@@ -1,91 +1,69 @@
 .section {
-  @apply space-y-0;
+  display: grid;
+  gap: 16px;
 }
 
-.shell {
-  width: 100%;
-  max-width: 100%;
-  overflow: hidden;
-  background-color: #fff;
-}
-
-.summaryHeader {
-  @apply border-b px-4 py-3 print:hidden;
-  border-color: var(--erp-line);
-  background-color: #f8fafc;
-}
-
-.summaryHeaderRow {
-  @apply flex flex-wrap items-center justify-between gap-3;
-}
-
-.summaryTitle {
-  @apply text-sm font-semibold;
-  color: var(--erp-dark);
-}
-
-.summaryDescription {
-  display: none;
-}
-
-.summaryStatus {
-  @apply inline-flex items-center rounded-[6px] border px-2.5 py-1 text-xs font-medium;
-  border-color: var(--erp-line-strong);
-  background-color: var(--erp-panel-muted);
-  color: var(--erp-light);
-}
-
-.tableFrame {
+.contentFrame {
   position: relative;
-  width: 100%;
-  max-width: 100%;
 }
 
-.tableFrameContent {
+.contentShell {
+  display: grid;
+  gap: 16px;
   transition:
     filter 0.2s ease,
     opacity 0.2s ease;
 }
 
-.tableFrameContentAnalyzing {
+.contentShellAnalyzing {
   filter: blur(3px);
   opacity: 0.72;
   pointer-events: none;
   user-select: none;
 }
 
-.checklistBody {
-  position: relative;
-}
-
-.checklistTable {
-  @apply w-full table-fixed border-collapse;
-}
-
-.photoSection {
+.stack {
   display: grid;
-  gap: 12px;
-  padding: 16px;
+  gap: 16px;
 }
 
-.photoSectionTitle {
+.fieldBlock {
+  display: grid;
+  gap: 10px;
+}
+
+.fieldHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.fieldLabel {
   font-size: 14px;
   font-weight: 700;
   color: var(--erp-dark);
 }
 
-.tableTitleCell {
-  @apply border bg-slate-50 p-3 text-center text-lg font-semibold;
-  border-color: var(--erp-line-strong);
-  color: var(--erp-dark);
-}
-
-.mobileChecklistList {
-  display: none;
+.tableFrame {
+  width: 100%;
+  max-width: 100%;
 }
 
 .checklistTable {
-  border-top: 0;
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+.tableTitleCell {
+  border: 1px solid var(--erp-line-strong);
+  background-color: #f8fafc;
+  padding: 12px;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--erp-dark);
 }
 
 .colSection {
@@ -109,37 +87,46 @@
 }
 
 .headerRow {
-  @apply text-center;
+  text-align: center;
   background-color: #f8fafc;
 }
 
 .headerCell {
-  @apply border p-2;
-  border-color: var(--erp-line-strong);
+  border: 1px solid var(--erp-line-strong);
+  padding: 8px;
 }
 
 .sectionCell {
-  @apply border p-3 text-center align-middle font-semibold;
-  border-color: var(--erp-line-strong);
-  background-color: var(--erp-panel-muted);
+  border: 1px solid var(--erp-line-strong);
+  padding: 12px;
+  text-align: center;
+  vertical-align: middle;
+  font-weight: 700;
   color: var(--erp-dark);
+  background-color: var(--erp-panel-muted);
 }
 
 .checkCell {
-  @apply border p-2 text-center align-middle;
-  border-color: var(--erp-line-strong);
+  border: 1px solid var(--erp-line-strong);
+  padding: 8px;
+  text-align: center;
+  vertical-align: middle;
 }
 
 .labelCell {
-  @apply border p-2 align-middle font-semibold;
-  border-color: var(--erp-line-strong);
+  border: 1px solid var(--erp-line-strong);
+  padding: 8px;
+  vertical-align: middle;
+  font-weight: 700;
   word-break: keep-all;
   overflow-wrap: anywhere;
 }
 
 .guidanceCell {
-  @apply border p-2 align-middle whitespace-pre-wrap;
-  border-color: var(--erp-line-strong);
+  border: 1px solid var(--erp-line-strong);
+  padding: 8px;
+  vertical-align: middle;
+  white-space: pre-wrap;
   word-break: keep-all;
   overflow-wrap: anywhere;
   color: #334155;
@@ -149,58 +136,73 @@
   background-color: var(--erp-gold-soft);
 }
 
+.checkbox {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  border: 1px solid var(--erp-line-strong);
+  accent-color: var(--erp-mid);
+}
+
+.mobileChecklistList {
+  display: none;
+}
+
 .mobileChecklistHeader {
-  @apply border bg-slate-50 px-4 py-3 text-center text-base font-semibold;
-  border-color: var(--erp-line-strong);
+  border: 1px solid var(--erp-line-strong);
+  background-color: #f8fafc;
+  padding: 12px 16px;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
   color: var(--erp-dark);
 }
 
 .mobileChecklistItem {
-  @apply border-x border-b bg-white px-4 py-3;
-  border-color: var(--erp-line-strong);
+  border-inline: 1px solid var(--erp-line-strong);
+  border-bottom: 1px solid var(--erp-line-strong);
+  background-color: #fff;
+  padding: 12px 16px;
 }
 
 .mobileChecklistTop {
-  @apply flex flex-col gap-2;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .mobileChecklistSection {
-  @apply inline-flex w-fit items-center rounded-[4px] border px-2 py-1 text-[11px] font-semibold;
-  border-color: var(--erp-line-strong);
-  background-color: var(--erp-panel-muted);
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  border: 1px solid var(--erp-line-strong);
+  border-radius: var(--erp-radius-control);
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 700;
   color: var(--erp-light);
+  background-color: var(--erp-panel-muted);
 }
 
 .mobileChecklistLabel {
-  @apply flex items-start gap-3 font-semibold;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-weight: 700;
   color: var(--erp-dark);
 }
 
 .mobileChecklistGuidance {
-  @apply mt-2 pl-7 text-sm leading-6;
-  color: #334155;
-}
-
-@media print {
-  .checkedCell {
-    background-color: #fff;
-  }
-}
-
-.checkbox {
-  @apply h-4 w-4 rounded-[3px] border;
-  border-color: var(--erp-line-strong);
-  accent-color: var(--erp-mid);
-}
-
-.footerGrid {
-  @apply border border-t-0 bg-white text-sm;
-  border-color: var(--erp-line-strong);
+  margin-top: 8px;
+  padding-left: 28px;
+  font-size: 14px;
+  line-height: 1.6;
   color: #334155;
 }
 
 .reasoningDisclosure {
-  overflow: hidden;
+  border-top: 1px solid var(--erp-line);
+  padding-top: 8px;
 }
 
 .reasoningSummary {
@@ -208,13 +210,12 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 16px;
+  padding: 4px 0;
   cursor: pointer;
   list-style: none;
   font-size: 13px;
   font-weight: 700;
   color: var(--erp-dark);
-  background-color: #f8fafc;
 }
 
 .reasoningSummary::-webkit-details-marker {
@@ -235,76 +236,11 @@
   min-width: 0;
 }
 
-@media print {
-  .footerGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
 .noteBody {
-  @apply whitespace-pre-wrap leading-6;
-  border-top: 1px solid var(--erp-line);
-  padding: 14px 16px 16px;
-}
-
-.summaryTableWrap {
-  @apply mt-3 overflow-hidden rounded-field border bg-white;
-  border-color: var(--erp-line);
-}
-
-@media print {
-  .summaryTableWrap {
-    border-color: #000;
-  }
-}
-
-.summaryTable {
-  @apply w-full border-collapse text-sm;
-}
-
-.summaryTableHead {
-  background-color: #e2e8f0;
-}
-
-@media print {
-  .summaryTableHead {
-    background-color: #fff;
-  }
-}
-
-.summaryHeadCell {
-  @apply border-b px-3 py-2 text-left font-semibold;
-}
-
-.summaryRow {
-  border-bottom: 1px solid var(--erp-line);
-}
-
-.summaryRow:last-child {
-  border-bottom: 0;
-}
-
-.summaryNumber {
-  @apply px-3 py-2;
-  color: var(--erp-text-muted);
-}
-
-.summaryItem {
-  @apply px-3 py-2 font-medium;
-  color: var(--erp-dark);
-}
-
-.emptyText {
-  @apply mt-2;
-  color: var(--erp-text-muted);
-}
-
-.loadingContent {
-  display: grid;
-  justify-items: center;
-  gap: 14px;
-  padding: 6px 0 2px;
-  text-align: center;
+  white-space: pre-wrap;
+  line-height: 1.7;
+  padding: 12px 0 0;
+  color: #334155;
 }
 
 .loadingOverlay {
@@ -359,6 +295,20 @@
 
   to {
     transform: rotate(360deg);
+  }
+}
+
+@media print {
+  .checkedCell {
+    background-color: #fff;
+  }
+
+  .reasoningDisclosure {
+    border-top-color: #000;
+  }
+
+  .noteBody {
+    padding-top: 8px;
   }
 }
 

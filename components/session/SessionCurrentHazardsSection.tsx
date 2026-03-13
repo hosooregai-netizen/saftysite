@@ -32,6 +32,12 @@ export default function SessionCurrentHazardsSection({
   return (
     <div className={styles.sectionStack}>
       <div className={styles.hazardToolbar}>
+        <div className={styles.sectionIntro}>
+          <p className={styles.sectionIntroLabel}>현재 위험 항목</p>
+          <p className={styles.sectionIntroText}>
+            현장에서 확인한 위험요인을 항목별로 정리합니다.
+          </p>
+        </div>
         <div className={styles.bottomActions}>
           <button
             type="button"
