@@ -92,6 +92,7 @@ export default function SiteOverviewUploadPanel({
         ref={inputRef}
         type="file"
         accept="image/*"
+        capture="environment"
         onChange={handleFileChange}
         className={styles.hiddenInput}
       />
