@@ -1,3 +1,6 @@
+import type { GenerateInspectionWordRequest } from '@/types/documents';
+import type { InspectionSession } from '@/types/inspectionSession';
+
 const API_BASE = '/api';
 
 async function parseApiResponse(res: Response): Promise<unknown> {
@@ -34,4 +37,45 @@ export function analyzeHazardPhotos(files: File[]): Promise<unknown> {
 
 export function checkCausativeAgents(files: File[]): Promise<unknown> {
   return postFiles('/vision/check-causative-agents', files);
+}
+
+function getDownloadFilenameFromDisposition(header: string | null): string {
+  if (!header) return 'inspection-report.docx';
+
+  const match = header.match(/filename="([^"]+)"/i);
+  return match?.[1] ?? 'inspection-report.docx';
+}
+
+export async function fetchInspectionWordDocument(
+  session: InspectionSession
+): Promise<{ blob: Blob; filename: string }> {
+  const body: GenerateInspectionWordRequest = {
+    session,
+    templateId: 'default-inspection',
+  };
+
+  const res = await fetch(`${API_BASE}/documents/inspection/word`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const errorBody = await parseApiResponse(res);
+    const message =
+      typeof errorBody === 'object' && errorBody && 'error' in errorBody
+        ? String(errorBody.error)
+        : res.statusText;
+
+    throw new Error(`워드 다운로드 실패 (${res.status}): ${message}`);
+  }
+
+  return {
+    blob: await res.blob(),
+    filename: getDownloadFilenameFromDisposition(
+      res.headers.get('content-disposition')
+    ),
+  };
 }

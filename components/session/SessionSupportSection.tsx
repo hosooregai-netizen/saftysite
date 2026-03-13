@@ -180,6 +180,16 @@ function TechnicalMaterialCard({
 }) {
   return (
     <article className={styles.entryCard}>
+      <button
+        type="button"
+        onClick={onRemove}
+        className={styles.removeButton}
+        aria-label="항목 삭제"
+        title="항목 삭제"
+      >
+        x
+      </button>
+
       <div className={styles.entryGrid}>
         <PhotoInputCell
           photoUrl={item.photoUrl}
@@ -190,9 +200,6 @@ function TechnicalMaterialCard({
         <div className={styles.contentCell}>
           <div className={styles.contentHeader}>
             <span className={styles.contentHeaderTitle}>내용</span>
-            <button type="button" onClick={onRemove} className={styles.removeButton}>
-              삭제
-            </button>
           </div>
 
           <div className={styles.detailTable}>
@@ -272,6 +279,16 @@ function EquipmentCheckCard({
 }) {
   return (
     <article className={styles.entryCard}>
+      <button
+        type="button"
+        onClick={onRemove}
+        className={styles.removeButton}
+        aria-label="항목 삭제"
+        title="항목 삭제"
+      >
+        x
+      </button>
+
       <div className={styles.entryGrid}>
         <PhotoInputCell
           photoUrl={item.photoUrl}
@@ -282,9 +299,6 @@ function EquipmentCheckCard({
         <div className={styles.contentCell}>
           <div className={styles.contentHeader}>
             <span className={styles.contentHeaderTitle}>내용</span>
-            <button type="button" onClick={onRemove} className={styles.removeButton}>
-              삭제
-            </button>
           </div>
 
           <div className={styles.detailTable}>
@@ -380,6 +394,16 @@ function SupportEntryCard({
 }) {
   return (
     <article className={styles.entryCard}>
+      <button
+        type="button"
+        onClick={onRemove}
+        className={styles.removeButton}
+        aria-label="항목 삭제"
+        title="항목 삭제"
+      >
+        x
+      </button>
+
       <div className={styles.entryGrid}>
         <PhotoInputCell
           photoUrl={item.photoUrl}
@@ -390,9 +414,6 @@ function SupportEntryCard({
         <div className={styles.contentCell}>
           <div className={styles.contentHeader}>
             <span className={styles.contentHeaderTitle}>내용</span>
-            <button type="button" onClick={onRemove} className={styles.removeButton}>
-              삭제
-            </button>
           </div>
 
           <div className={styles.detailTable}>
