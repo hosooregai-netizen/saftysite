@@ -308,7 +308,6 @@ export default function HazardReportTable({
                     ref={fileInputRef}
                     type="file"
                     accept="image/*"
-                    capture="environment"
                     onChange={(event) => {
                       void handlePhotoChange(event);
                     }}

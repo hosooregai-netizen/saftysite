@@ -121,7 +121,6 @@ export default function SessionPreviousGuidanceSection({
                       id={`${item.id}-current-photo`}
                       type="file"
                       accept="image/*"
-                      capture="environment"
                       onChange={(event) => onPhotoChange(item.id, 'currentPhotoUrl', event)}
                       className={hazardStyles.hiddenInput}
                     />
