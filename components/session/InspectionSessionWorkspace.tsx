@@ -216,16 +216,10 @@ export default function InspectionSessionWorkspace({
     }));
   };
 
-  const handleSupportChange = <T extends keyof SupportItems>(
-    field: T,
-    value: SupportItems[T]
-  ) => {
+  const handleSupportChange = (supportItems: SupportItems) => {
     handleSessionChange((current) => ({
       ...current,
-      supportItems: {
-        ...current.supportItems,
-        [field]: value,
-      },
+      supportItems,
     }));
   };
 

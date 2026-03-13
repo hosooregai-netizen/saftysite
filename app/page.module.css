@@ -96,6 +96,13 @@
   min-width: 0;
 }
 
+.inspectionCell,
+.reportCountCell,
+.savedCell,
+.actionsCell {
+  min-width: 0;
+}
+
 .siteLink {
   display: inline-flex;
   width: fit-content;
@@ -282,6 +289,91 @@
 
 .loadingActions {
   display: none;
+}
+
+@media (max-width: 639px) {
+  .siteRow {
+    grid-template-columns: minmax(0, 1fr) minmax(116px, 0.8fr);
+    grid-template-areas:
+      'title title'
+      'inspection reportCount'
+      'saved saved'
+      'actions actions';
+    gap: 12px 16px;
+    align-items: start;
+    padding: 14px 16px;
+  }
+
+  .primaryCell {
+    grid-area: title;
+  }
+
+  .inspectionCell {
+    grid-area: inspection;
+  }
+
+  .reportCountCell {
+    grid-area: reportCount;
+  }
+
+  .savedCell {
+    grid-area: saved;
+  }
+
+  .actionsCell {
+    grid-area: actions;
+  }
+
+  .mobileActions {
+    justify-content: flex-start;
+  }
+}
+
+@media (min-width: 640px) and (max-width: 959px) {
+  .siteRow {
+    grid-template-columns:
+      minmax(0, 1.15fr)
+      minmax(120px, 0.72fr)
+      minmax(108px, 0.56fr)
+      minmax(150px, 0.88fr);
+    grid-template-areas:
+      'title title title saved'
+      'inspection reportCount . .'
+      'actions actions actions actions';
+    gap: 10px 16px;
+    align-items: start;
+    padding: 13px 16px;
+  }
+
+  .primaryCell {
+    grid-area: title;
+  }
+
+  .inspectionCell {
+    grid-area: inspection;
+  }
+
+  .reportCountCell {
+    grid-area: reportCount;
+  }
+
+  .savedCell {
+    grid-area: saved;
+  }
+
+  .actionsCell {
+    grid-area: actions;
+    align-self: start;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    padding-top: 2px;
+  }
+
+  .actionsCell :global(.app-button) {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    padding-inline: 10px;
+  }
 }
 
 @keyframes loading-spin {

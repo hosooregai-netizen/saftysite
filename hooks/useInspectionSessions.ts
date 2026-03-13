@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   createInspectionSite,
   createInspectionSession,
+  ensureSessionReportNumbers,
   getSessionSiteKey,
   getSessionSiteTitle,
   getSessionSortTime,
@@ -52,7 +53,7 @@ function loadSessions(): InspectionSession[] {
       })
     );
 
-    return sortSessions(migrated);
+    return sortSessions(ensureSessionReportNumbers(migrated));
   } catch {
     return [];
   }
@@ -112,7 +113,7 @@ export function useInspectionSessions() {
 
   const persistSessions = useCallback((nextSessions: InspectionSession[]) => {
     try {
-      const normalized = sortSessions(nextSessions);
+      const normalized = sortSessions(ensureSessionReportNumbers(nextSessions));
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
       skipNextSessionPersistRef.current = true;
       setSessions(normalized);
@@ -204,7 +205,16 @@ export function useInspectionSessions() {
           siteKey: '',
         });
       const nextSession = {
-        ...createInspectionSession(initialCover, resolvedSiteKey),
+        ...createInspectionSession(
+          initialCover,
+          resolvedSiteKey,
+          Math.max(
+            0,
+            ...sessions
+              .filter((session) => getSessionSiteKey(session) === resolvedSiteKey)
+              .map((session) => session.reportNumber || 0)
+          ) + 1
+        ),
         updatedAt: savedAt,
         lastSavedAt: savedAt,
       };

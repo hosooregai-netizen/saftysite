@@ -1,5 +1,6 @@
 .container {
   --hazard-paired-body-height: 132px;
+  --hazard-photo-max-height: var(--hazard-paired-body-height);
   break-inside: avoid;
   position: relative;
   display: grid;
@@ -58,7 +59,7 @@
 
 .pairedGrid {
   grid-template-columns: minmax(112px, 0.86fr) minmax(0, 1.14fr);
-  align-items: stretch;
+  align-items: start;
 }
 
 .formField,
@@ -80,9 +81,12 @@
 
 .photoField {
   display: grid;
-  height: 100%;
+  height: auto;
   min-height: 0;
-  overflow: hidden;
+  max-height: none;
+  overflow: visible;
+  align-content: start;
+  justify-items: stretch;
 }
 
 .hiddenInput {
@@ -92,20 +96,29 @@
 .photoPreviewWrap {
   display: grid;
   position: relative;
-  height: var(--hazard-paired-body-height);
-  min-height: 0;
-  overflow: hidden;
-}
-
-.photoPreview {
-  display: block;
   width: 100%;
-  height: 100%;
-  object-fit: contain;
-  object-position: center;
+  height: var(--hazard-photo-max-height);
+  min-height: var(--hazard-paired-body-height);
+  max-height: var(--hazard-photo-max-height);
+  overflow: hidden;
+  justify-self: stretch;
+  box-sizing: border-box;
   border: 1px solid var(--erp-line);
   border-radius: var(--erp-radius-surface);
   background-color: #f8fafc;
+  padding: 0;
+}
+
+.photoPreview {
+  position: absolute;
+  inset: 8px;
+  display: block;
+  width: calc(100% - 16px);
+  height: calc(100% - 16px);
+  max-width: none;
+  max-height: none;
+  object-fit: contain;
+  object-position: center;
 }
 
 .photoActions {
@@ -150,13 +163,15 @@
 .photoPlaceholder {
   display: flex;
   width: 100%;
-  min-height: 0;
-  height: var(--hazard-paired-body-height);
+  height: var(--hazard-photo-max-height);
+  min-height: var(--hazard-paired-body-height);
+  max-height: var(--hazard-photo-max-height);
   cursor: pointer;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 4px;
+  box-sizing: border-box;
   border: 1px dashed var(--erp-line-strong);
   border-radius: var(--erp-radius-surface);
   padding: 14px;
@@ -231,8 +246,8 @@
 .photoColumn,
 .textColumn {
   grid-template-rows: auto 1fr;
-  align-self: stretch;
-  height: 100%;
+  align-self: start;
+  height: auto;
 }
 
 @keyframes hazard-loading-spin {
@@ -264,11 +279,15 @@
   }
 
   .photoPreview {
-    height: 100%;
+    inset: 8px;
+    width: calc(100% - 16px);
+    height: calc(100% - 16px);
+    max-width: none;
+    max-height: none;
   }
 
   .photoPlaceholder {
-    min-height: var(--hazard-paired-body-height);
+    height: var(--hazard-photo-max-height);
     padding: 10px;
   }
 
@@ -292,6 +311,12 @@
 
   .pairedGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .photoColumn,
+  .textColumn {
+    align-self: start;
+    height: auto;
   }
 }
 

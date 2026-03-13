@@ -1,7 +1,10 @@
 import { createEmptyReport } from '@/constants/hazard';
 import { createEmptyCausativeAgentMap } from '@/constants/siteOverview';
 import type {
+  AccidentSummary,
   DraftState,
+  EducationSupportItem,
+  EquipmentCheckItem,
   FutureProcessRiskItem,
   GuidanceStatus,
   InspectionCover,
@@ -10,7 +13,10 @@ import type {
   InspectionSectionMeta,
   InspectionSite,
   InspectionSession,
+  OtherSupportItem,
   PreviousGuidanceItem,
+  SupportItems,
+  TechnicalMaterialItem,
 } from '@/types/inspectionSession';
 
 export const INSPECTION_SECTIONS: InspectionSectionMeta[] = [
@@ -68,6 +74,10 @@ function normalizeTimestamp(value: unknown, fallback: string): string {
   return typeof value === 'string' && value ? value : fallback;
 }
 
+function normalizeReportNumber(value: unknown): number {
+  return typeof value === 'number' && Number.isInteger(value) && value > 0 ? value : 0;
+}
+
 function normalizeDraftState(value: unknown): DraftState {
   return value === 'reviewed' ? 'reviewed' : 'draft';
 }
@@ -121,6 +131,15 @@ function createTimestamp(): string {
   return new Date().toISOString();
 }
 
+type LegacySupportItems = {
+  technicalMaterials?: unknown;
+  educationResults?: unknown;
+  equipmentInspection?: unknown;
+  otherSupport?: unknown;
+  accidentOccurred?: unknown;
+  accidentNotes?: unknown;
+};
+
 export function createInspectionSite(title: string): InspectionSite {
   const timestamp = createTimestamp();
 
@@ -148,6 +167,275 @@ export function createFutureProcessRiskItem(): FutureProcessRiskItem {
     ...createInspectionHazardItem(),
     id: generateId('future-risk'),
   };
+}
+
+export function createTechnicalMaterialItem(
+  initial: Partial<TechnicalMaterialItem> = {}
+): TechnicalMaterialItem {
+  return {
+    id: generateId('support-technical'),
+    photoUrl: '',
+    materialName: '',
+    providedKinds: '',
+    participantCount: '',
+    educationContent: '',
+    note: '',
+    ...initial,
+  };
+}
+
+export function createEquipmentCheckItem(
+  initial: Partial<EquipmentCheckItem> = {}
+): EquipmentCheckItem {
+  return {
+    id: generateId('support-equipment'),
+    photoUrl: '',
+    equipmentName: '',
+    measurementLocation: '',
+    measurementCriteria: '',
+    measuredValue: '',
+    suitability: '',
+    note: '',
+    ...initial,
+  };
+}
+
+export function createEducationSupportItem(
+  initial: Partial<EducationSupportItem> = {}
+): EducationSupportItem {
+  return {
+    id: generateId('support-education'),
+    photoUrl: '',
+    supportItem: '',
+    details: '',
+    note: '',
+    ...initial,
+  };
+}
+
+export function createOtherSupportItem(
+  initial: Partial<OtherSupportItem> = {}
+): OtherSupportItem {
+  return {
+    id: generateId('support-other'),
+    photoUrl: '',
+    supportItem: '',
+    details: '',
+    note: '',
+    ...initial,
+  };
+}
+
+export function createAccidentSummary(
+  initial: Partial<AccidentSummary> = {}
+): AccidentSummary {
+  return {
+    periodStart: '',
+    periodEnd: '',
+    accidentDescription: '',
+    occurred: false,
+    ...initial,
+  };
+}
+
+export function createSupportItems(
+  initial: Partial<SupportItems> = {}
+): SupportItems {
+  return {
+    technicalMaterials:
+      initial.technicalMaterials?.length
+        ? initial.technicalMaterials.map((item) => createTechnicalMaterialItem(item))
+        : [createTechnicalMaterialItem()],
+    equipmentChecks:
+      initial.equipmentChecks?.length
+        ? initial.equipmentChecks.map((item) => createEquipmentCheckItem(item))
+        : [createEquipmentCheckItem()],
+    educationSupports:
+      initial.educationSupports?.length
+        ? initial.educationSupports.map((item) => createEducationSupportItem(item))
+        : [createEducationSupportItem()],
+    otherSupports:
+      initial.otherSupports?.length
+        ? initial.otherSupports.map((item) => createOtherSupportItem(item))
+        : [createOtherSupportItem()],
+    accidentSummary: createAccidentSummary(initial.accidentSummary),
+  };
+}
+
+function normalizeSupportItemId(value: unknown, fallback: string): string {
+  return typeof value === 'string' && value.trim() ? value : fallback;
+}
+
+function normalizeTechnicalMaterialItem(raw: unknown): TechnicalMaterialItem {
+  const source = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+  return createTechnicalMaterialItem({
+    id: normalizeSupportItemId(source.id, generateId('support-technical')),
+    photoUrl: normalizeText(typeof source.photoUrl === 'string' ? source.photoUrl : ''),
+    materialName: normalizeText(
+      typeof source.materialName === 'string' ? source.materialName : ''
+    ),
+    providedKinds: normalizeText(
+      typeof source.providedKinds === 'string' ? source.providedKinds : ''
+    ),
+    participantCount: normalizeText(
+      typeof source.participantCount === 'string' ? source.participantCount : ''
+    ),
+    educationContent: normalizeText(
+      typeof source.educationContent === 'string' ? source.educationContent : ''
+    ),
+    note: normalizeText(typeof source.note === 'string' ? source.note : ''),
+  });
+}
+
+function normalizeEquipmentCheckItem(raw: unknown): EquipmentCheckItem {
+  const source = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+  return createEquipmentCheckItem({
+    id: normalizeSupportItemId(source.id, generateId('support-equipment')),
+    photoUrl: normalizeText(typeof source.photoUrl === 'string' ? source.photoUrl : ''),
+    equipmentName: normalizeText(
+      typeof source.equipmentName === 'string' ? source.equipmentName : ''
+    ),
+    measurementLocation: normalizeText(
+      typeof source.measurementLocation === 'string'
+        ? source.measurementLocation
+        : ''
+    ),
+    measurementCriteria: normalizeText(
+      typeof source.measurementCriteria === 'string'
+        ? source.measurementCriteria
+        : ''
+    ),
+    measuredValue: normalizeText(
+      typeof source.measuredValue === 'string' ? source.measuredValue : ''
+    ),
+    suitability: normalizeText(
+      typeof source.suitability === 'string' ? source.suitability : ''
+    ),
+    note: normalizeText(typeof source.note === 'string' ? source.note : ''),
+  });
+}
+
+function normalizeEducationSupportItem(raw: unknown): EducationSupportItem {
+  const source = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+  return createEducationSupportItem({
+    id: normalizeSupportItemId(source.id, generateId('support-education')),
+    photoUrl: normalizeText(typeof source.photoUrl === 'string' ? source.photoUrl : ''),
+    supportItem: normalizeText(
+      typeof source.supportItem === 'string' ? source.supportItem : ''
+    ),
+    details: normalizeText(typeof source.details === 'string' ? source.details : ''),
+    note: normalizeText(typeof source.note === 'string' ? source.note : ''),
+  });
+}
+
+function normalizeOtherSupportItem(raw: unknown): OtherSupportItem {
+  const source = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+  return createOtherSupportItem({
+    id: normalizeSupportItemId(source.id, generateId('support-other')),
+    photoUrl: normalizeText(typeof source.photoUrl === 'string' ? source.photoUrl : ''),
+    supportItem: normalizeText(
+      typeof source.supportItem === 'string' ? source.supportItem : ''
+    ),
+    details: normalizeText(typeof source.details === 'string' ? source.details : ''),
+    note: normalizeText(typeof source.note === 'string' ? source.note : ''),
+  });
+}
+
+function normalizeAccidentSummary(raw: unknown): AccidentSummary {
+  const source = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+  return createAccidentSummary({
+    periodStart: normalizeText(
+      typeof source.periodStart === 'string' ? source.periodStart : ''
+    ),
+    periodEnd: normalizeText(typeof source.periodEnd === 'string' ? source.periodEnd : ''),
+    accidentDescription: normalizeText(
+      typeof source.accidentDescription === 'string' ? source.accidentDescription : ''
+    ),
+    occurred: Boolean(source.occurred),
+  });
+}
+
+function migrateLegacySupportItems(raw: LegacySupportItems): SupportItems {
+  return createSupportItems({
+    technicalMaterials: [
+      createTechnicalMaterialItem({
+        materialName: normalizeText(
+          typeof raw.technicalMaterials === 'string' ? raw.technicalMaterials : ''
+        ),
+        educationContent: normalizeText(
+          typeof raw.educationResults === 'string' ? raw.educationResults : ''
+        ),
+      }),
+    ],
+    equipmentChecks: [
+      createEquipmentCheckItem({
+        note: normalizeText(
+          typeof raw.equipmentInspection === 'string' ? raw.equipmentInspection : ''
+        ),
+      }),
+    ],
+    educationSupports: [createEducationSupportItem()],
+    otherSupports: [
+      createOtherSupportItem({
+        details: normalizeText(typeof raw.otherSupport === 'string' ? raw.otherSupport : ''),
+      }),
+    ],
+    accidentSummary: createAccidentSummary({
+      occurred: Boolean(raw.accidentOccurred),
+      accidentDescription: normalizeText(
+        typeof raw.accidentNotes === 'string' ? raw.accidentNotes : ''
+      ),
+    }),
+  });
+}
+
+export function normalizeSupportItems(raw: unknown): SupportItems {
+  const source = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+
+  const hasNewShape =
+    Array.isArray(source.technicalMaterials) ||
+    Array.isArray(source.equipmentChecks) ||
+    Array.isArray(source.educationSupports) ||
+    Array.isArray(source.otherSupports) ||
+    (source.accidentSummary && typeof source.accidentSummary === 'object');
+
+  if (!hasNewShape) {
+    return migrateLegacySupportItems(source as LegacySupportItems);
+  }
+
+  return createSupportItems({
+    technicalMaterials: Array.isArray(source.technicalMaterials)
+      ? source.technicalMaterials.map((item) => normalizeTechnicalMaterialItem(item))
+      : undefined,
+    equipmentChecks: Array.isArray(source.equipmentChecks)
+      ? source.equipmentChecks.map((item) => normalizeEquipmentCheckItem(item))
+      : undefined,
+    educationSupports: Array.isArray(source.educationSupports)
+      ? source.educationSupports.map((item) => normalizeEducationSupportItem(item))
+      : undefined,
+    otherSupports: Array.isArray(source.otherSupports)
+      ? source.otherSupports.map((item) => normalizeOtherSupportItem(item))
+      : undefined,
+    accidentSummary: normalizeAccidentSummary(source.accidentSummary),
+  });
+}
+
+function supportArrayHasContent<T extends object>(items: T[]): boolean {
+  return items.some((item) =>
+    Object.entries(item as Record<string, unknown>).some(([key, value]) => {
+      if (key === 'id') return false;
+      return typeof value === 'string' ? Boolean(normalizeText(value)) : Boolean(value);
+    })
+  );
+}
+
+function accidentSummaryHasContent(summary: AccidentSummary): boolean {
+  return Boolean(
+    summary.periodStart ||
+      summary.periodEnd ||
+      summary.accidentDescription ||
+      summary.occurred
+  );
 }
 
 function normalizeHazardFields(
@@ -242,6 +530,7 @@ export function normalizeFutureProcessRiskItem(raw: unknown): FutureProcessRiskI
 export function normalizeInspectionSession(session: InspectionSession): InspectionSession {
   return {
     ...session,
+    reportNumber: normalizeReportNumber(session.reportNumber),
     previousGuidanceItems: Array.isArray(session.previousGuidanceItems)
       ? session.previousGuidanceItems.map((item) => normalizePreviousGuidanceItem(item))
       : [],
@@ -251,17 +540,22 @@ export function normalizeInspectionSession(session: InspectionSession): Inspecti
     futureProcessRisks: Array.isArray(session.futureProcessRisks)
       ? session.futureProcessRisks.map((item) => normalizeFutureProcessRiskItem(item))
       : [createFutureProcessRiskItem()],
+    supportItems: normalizeSupportItems(
+      (session as unknown as Record<string, unknown>).supportItems
+    ),
   };
 }
 
 export function createInspectionSession(
   initialCover: Partial<InspectionCover> = {},
-  siteKey = UNTITLED_SITE_KEY
+  siteKey = UNTITLED_SITE_KEY,
+  reportNumber = 1
 ): InspectionSession {
   const timestamp = createTimestamp();
   return {
     id: generateId('session'),
     siteKey,
+    reportNumber,
     currentSection: 'cover',
     cover: {
       businessName: '',
@@ -283,14 +577,7 @@ export function createInspectionSession(
     previousGuidanceItems: [],
     currentHazards: [createInspectionHazardItem()],
     futureProcessRisks: [createFutureProcessRiskItem()],
-    supportItems: {
-      technicalMaterials: '',
-      educationResults: '',
-      equipmentInspection: '',
-      otherSupport: '',
-      accidentOccurred: false,
-      accidentNotes: '',
-    },
+    supportItems: createSupportItems(),
     supportStatus: 'draft',
     createdAt: timestamp,
     updatedAt: timestamp,
@@ -326,6 +613,50 @@ export function getSessionSiteTitle(session: Pick<InspectionSession, 'cover'>): 
     normalizeText(session.cover.projectName) ||
     '이름 없는 현장'
   );
+}
+
+export function ensureSessionReportNumbers(
+  sessions: InspectionSession[]
+): InspectionSession[] {
+  const sessionsBySite = new Map<string, InspectionSession[]>();
+
+  for (const session of sessions) {
+    const siteKey = getSessionSiteKey(session);
+    const group = sessionsBySite.get(siteKey) ?? [];
+    group.push(session);
+    sessionsBySite.set(siteKey, group);
+  }
+
+  const nextNumberBySessionId = new Map<string, number>();
+
+  for (const group of sessionsBySite.values()) {
+    const hasValidNumbers =
+      group.every((session) => session.reportNumber > 0) &&
+      new Set(group.map((session) => session.reportNumber)).size === group.length;
+
+    if (hasValidNumbers) {
+      for (const session of group) {
+        nextNumberBySessionId.set(session.id, session.reportNumber);
+      }
+      continue;
+    }
+
+    const ordered = [...group].sort((left, right) => {
+      const primary = new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime();
+      if (primary !== 0) return primary;
+
+      return new Date(left.updatedAt).getTime() - new Date(right.updatedAt).getTime();
+    });
+
+    ordered.forEach((item, index) => {
+      nextNumberBySessionId.set(item.id, index + 1);
+    });
+  }
+
+  return sessions.map((session) => ({
+    ...session,
+    reportNumber: nextNumberBySessionId.get(session.id) ?? session.reportNumber ?? 0,
+  }));
 }
 
 export function getSessionTitle(session: InspectionSession): string {
@@ -373,12 +704,11 @@ export function getSectionCompletion(
       );
     case 'support':
       return Boolean(
-        session.supportItems.technicalMaterials ||
-          session.supportItems.educationResults ||
-          session.supportItems.equipmentInspection ||
-          session.supportItems.otherSupport ||
-          session.supportItems.accidentOccurred ||
-          session.supportItems.accidentNotes
+        supportArrayHasContent(session.supportItems.technicalMaterials) ||
+          supportArrayHasContent(session.supportItems.equipmentChecks) ||
+          supportArrayHasContent(session.supportItems.educationSupports) ||
+          supportArrayHasContent(session.supportItems.otherSupports) ||
+          accidentSummaryHasContent(session.supportItems.accidentSummary)
       );
     default:
       return false;

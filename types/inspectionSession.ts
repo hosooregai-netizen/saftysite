@@ -65,18 +65,62 @@ export interface FutureProcessRiskItem extends InspectionHazardItem {
   note?: string;
 }
 
+export interface TechnicalMaterialItem {
+  id: string;
+  photoUrl: string;
+  materialName: string;
+  providedKinds: string;
+  participantCount: string;
+  educationContent: string;
+  note: string;
+}
+
+export interface EquipmentCheckItem {
+  id: string;
+  photoUrl: string;
+  equipmentName: string;
+  measurementLocation: string;
+  measurementCriteria: string;
+  measuredValue: string;
+  suitability: string;
+  note: string;
+}
+
+export interface EducationSupportItem {
+  id: string;
+  photoUrl: string;
+  supportItem: string;
+  details: string;
+  note: string;
+}
+
+export interface OtherSupportItem {
+  id: string;
+  photoUrl: string;
+  supportItem: string;
+  details: string;
+  note: string;
+}
+
+export interface AccidentSummary {
+  periodStart: string;
+  periodEnd: string;
+  accidentDescription: string;
+  occurred: boolean;
+}
+
 export interface SupportItems {
-  technicalMaterials: string;
-  educationResults: string;
-  equipmentInspection: string;
-  otherSupport: string;
-  accidentOccurred: boolean;
-  accidentNotes: string;
+  technicalMaterials: TechnicalMaterialItem[];
+  equipmentChecks: EquipmentCheckItem[];
+  educationSupports: EducationSupportItem[];
+  otherSupports: OtherSupportItem[];
+  accidentSummary: AccidentSummary;
 }
 
 export interface InspectionSession {
   id: string;
   siteKey: string;
+  reportNumber: number;
   currentSection: InspectionSectionKey;
   cover: InspectionCover;
   siteOverview: CausativeAgentReport;

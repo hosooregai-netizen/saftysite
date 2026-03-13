@@ -1,6 +1,14 @@
 'use client';
 
-import { type ChangeEvent, type ReactNode, useCallback, useState } from 'react';
+import {
+  type ChangeEvent,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 import { useAutoResizeTextarea } from '@/hooks/useAutoResizeTextarea';
 import { useImageSourcePicker } from '@/hooks/useImageSourcePicker';
 import { analyzeHazardPhotos } from '@/lib/api';
@@ -56,12 +64,12 @@ interface HazardReportTableProps {
 }
 
 const DEFAULT_TEXT: Required<HazardReportTableText> = {
-  locationDetailLabel: '유해위험 개소',
+  locationDetailLabel: '유해위험 장소',
   locationDetailPlaceholder: '예: 3층 외벽 보수 구간',
   likelihoodLabel: '가능성',
-  likelihoodPlaceholder: '예: 2',
+  likelihoodPlaceholder: '1~3',
   severityLabel: '중대성',
-  severityPlaceholder: '예: 3',
+  severityPlaceholder: '1~3',
   riskAssessmentResultLabel: '위험성 평가 결과',
   photoLabel: '유해위험요인 사진',
   photoAlt: '유해위험요인 사진',
@@ -115,6 +123,7 @@ export default function HazardReportTable({
   photoMode = 'analyze',
   extraContent,
 }: HazardReportTableProps) {
+  const containerRef = useRef<HTMLElement>(null);
   const [isPhotoLoading, setIsPhotoLoading] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const { galleryInputRef, cameraInputRef, requestPick, pickerModal } =
@@ -133,6 +142,84 @@ export default function HazardReportTable({
     data.likelihood,
     data.severity
   );
+
+  const syncPhotoMaxHeight = useCallback(() => {
+    const container = containerRef.current;
+    const improvementTextarea = improvementItemsRef.current;
+    if (!container || !improvementTextarea) return;
+
+    const nextHeight = Math.max(
+      improvementTextarea.getBoundingClientRect().height,
+      120
+    );
+    container.style.setProperty('--hazard-photo-max-height', `${nextHeight}px`);
+  }, [improvementItemsRef]);
+
+  const syncBottomPairHeight = useCallback(() => {
+    const hazardTextarea = hazardFactorsRef.current;
+    const legalTextarea = legalInfoRef.current;
+    if (!hazardTextarea || !legalTextarea) return;
+
+    const nextHeight = Math.max(
+      hazardTextarea.getBoundingClientRect().height,
+      legalTextarea.getBoundingClientRect().height,
+      120
+    );
+
+    hazardTextarea.style.height = `${nextHeight}px`;
+    legalTextarea.style.height = `${nextHeight}px`;
+  }, [hazardFactorsRef, legalInfoRef]);
+
+  useLayoutEffect(() => {
+    syncPhotoMaxHeight();
+    syncBottomPairHeight();
+  }, [
+    data.hazardFactors,
+    data.improvementItems,
+    data.legalInfo,
+    syncBottomPairHeight,
+    syncPhotoMaxHeight,
+  ]);
+
+  useEffect(() => {
+    const improvementTextarea = improvementItemsRef.current;
+    if (!improvementTextarea) return;
+
+    syncPhotoMaxHeight();
+
+    const observer = new ResizeObserver(() => {
+      syncPhotoMaxHeight();
+    });
+
+    observer.observe(improvementTextarea);
+    window.addEventListener('resize', syncPhotoMaxHeight);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', syncPhotoMaxHeight);
+    };
+  }, [improvementItemsRef, syncPhotoMaxHeight]);
+
+  useEffect(() => {
+    const hazardTextarea = hazardFactorsRef.current;
+    const legalTextarea = legalInfoRef.current;
+    if (!hazardTextarea || !legalTextarea) return;
+
+    syncBottomPairHeight();
+
+    const observer = new ResizeObserver(() => {
+      syncBottomPairHeight();
+    });
+
+    observer.observe(hazardTextarea);
+    observer.observe(legalTextarea);
+    window.addEventListener('resize', syncBottomPairHeight);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', syncBottomPairHeight);
+    };
+  }, [hazardFactorsRef, legalInfoRef, syncBottomPairHeight]);
 
   const updateReport = useCallback(
     (patch: Partial<HazardReportItem>) => {
@@ -219,7 +306,7 @@ export default function HazardReportTable({
   };
 
   return (
-    <section className={styles.container}>
+    <section ref={containerRef} className={styles.container}>
       {isPhotoLoading ? (
         <div className={styles.loadingOverlay} role="status" aria-live="polite">
           <div className={styles.loadingPanel}>

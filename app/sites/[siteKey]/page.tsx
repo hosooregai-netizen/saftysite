@@ -175,6 +175,7 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
               {siteSessions.length > 0 ? (
                 <>
                   <div className={styles.listHead} aria-hidden="true">
+                    <span className={styles.numberHead}>번호</span>
                     <span>보고서명</span>
                     <span>담당</span>
                     <span>진행</span>
@@ -190,12 +191,23 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
                       const sessionTitle = getSessionTitle(session);
 
                       return (
-                        <article key={session.id} className={styles.reportRow}>
-                          <div className={styles.primaryCell}>
-                            <Link href={sessionHref} className={styles.reportLink}>
-                              <h2 className={styles.reportTitle}>{sessionTitle}</h2>
-                            </Link>
-                          </div>
+                          <article key={session.id} className={styles.reportRow}>
+                            <div className={styles.numberCell} aria-hidden="true">
+                              <span className={styles.reportNumberBadge}>
+                                {session.reportNumber}
+                              </span>
+                            </div>
+
+                            <div className={styles.primaryCell}>
+                              <Link href={sessionHref} className={styles.reportLink}>
+                                <div className={styles.reportTitleRow}>
+                                  <span className={styles.reportNumberBadgeMobile}>
+                                    {session.reportNumber}
+                                  </span>
+                                  <h2 className={styles.reportTitle}>{sessionTitle}</h2>
+                                </div>
+                              </Link>
+                            </div>
 
                           <div className={`${styles.dataCell} ${styles.consultantCell}`}>
                             <span className={styles.mobileLabel}>담당</span>

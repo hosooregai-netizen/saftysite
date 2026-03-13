@@ -244,26 +244,26 @@ export default function HomePage() {
                               </Link>
                             </div>
 
-                            <div className={styles.dataCell}>
+                            <div className={`${styles.dataCell} ${styles.inspectionCell}`}>
                               <span className={styles.mobileLabel}>최근 점검일</span>
                               <span className={styles.dataValue}>
                                 {latestSession?.cover.inspectionDate || '-'}
                               </span>
                             </div>
 
-                            <div className={styles.dataCell}>
+                            <div className={`${styles.dataCell} ${styles.reportCountCell}`}>
                               <span className={styles.mobileLabel}>보고서 수</span>
                               <span className={styles.dataValue}>{sessionCount}건</span>
                             </div>
 
-                            <div className={styles.dataCell}>
+                            <div className={`${styles.dataCell} ${styles.savedCell}`}>
                               <span className={styles.mobileLabel}>마지막 저장</span>
                               <span className={styles.dataValue}>
                                 {latestSession ? formatDateTime(latestSession.lastSavedAt) : '-'}
                               </span>
                             </div>
 
-                            <div className={styles.mobileActions}>
+                            <div className={`${styles.mobileActions} ${styles.actionsCell}`}>
                               <Link href={siteHref} className="app-button app-button-primary">
                                 현장 보기
                               </Link>

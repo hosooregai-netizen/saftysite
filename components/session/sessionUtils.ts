@@ -136,49 +136,54 @@ export function buildPreviousGuidanceItems(
   sessions: InspectionSession[]
 ): PreviousGuidanceItem[] {
   const currentSiteKey = getSessionSiteKey(session);
-  const currentSortTime = getSessionSortTime(session);
-
-  return sessions
+  const sourceSession = sessions
     .filter(
       (item) =>
         item.id !== session.id &&
         getSessionSiteKey(item) === currentSiteKey &&
-        getSessionSortTime(item) < currentSortTime
+        item.reportNumber < session.reportNumber
     )
-    .flatMap((sourceSession) =>
-      sourceSession.currentHazards.map((hazard) => {
-        const locationDetail = getHazardLocationLabel(hazard) || buildGuidanceTitle(hazard);
-        const previousPhotoUrl = normalizeText(hazard.photoUrl);
-        const existingItem = findExistingGuidanceItem(
-          session.previousGuidanceItems,
-          sourceSession.id,
-          hazard.id,
-          locationDetail,
-          previousPhotoUrl
-        );
+    .sort((left, right) => {
+      const primary = right.reportNumber - left.reportNumber;
+      if (primary !== 0) return primary;
 
-        return {
-          id:
-            existingItem?.id ??
-            createDerivedGuidanceId(sourceSession.id, hazard.id),
-          sourceSessionId: sourceSession.id,
-          sourceHazardId: hazard.id,
-          location: hazard.location,
-          locationDetail,
-          likelihood: hazard.likelihood,
-          severity: hazard.severity,
-          riskAssessmentResult: hazard.riskAssessmentResult,
-          hazardFactors: hazard.hazardFactors,
-          improvementItems: hazard.improvementItems,
-          photoUrl: previousPhotoUrl,
-          legalInfo: hazard.legalInfo,
-          currentPhotoUrl: existingItem?.currentPhotoUrl ?? '',
-          implementationResult: buildLegacyImplementationResult(existingItem),
-          createdAt: existingItem?.createdAt ?? hazard.createdAt,
-          updatedAt: existingItem?.updatedAt ?? hazard.updatedAt,
-        };
-      })
+      return getSessionSortTime(right) - getSessionSortTime(left);
+    })[0];
+
+  if (!sourceSession) {
+    return [];
+  }
+
+  return sourceSession.currentHazards.map((hazard) => {
+    const locationDetail = getHazardLocationLabel(hazard) || buildGuidanceTitle(hazard);
+    const previousPhotoUrl = normalizeText(hazard.photoUrl);
+    const existingItem = findExistingGuidanceItem(
+      session.previousGuidanceItems,
+      sourceSession.id,
+      hazard.id,
+      locationDetail,
+      previousPhotoUrl
     );
+
+    return {
+      id: existingItem?.id ?? createDerivedGuidanceId(sourceSession.id, hazard.id),
+      sourceSessionId: sourceSession.id,
+      sourceHazardId: hazard.id,
+      location: hazard.location,
+      locationDetail,
+      likelihood: hazard.likelihood,
+      severity: hazard.severity,
+      riskAssessmentResult: hazard.riskAssessmentResult,
+      hazardFactors: hazard.hazardFactors,
+      improvementItems: hazard.improvementItems,
+      photoUrl: previousPhotoUrl,
+      legalInfo: hazard.legalInfo,
+      currentPhotoUrl: existingItem?.currentPhotoUrl ?? '',
+      implementationResult: buildLegacyImplementationResult(existingItem),
+      createdAt: existingItem?.createdAt ?? hazard.createdAt,
+      updatedAt: existingItem?.updatedAt ?? hazard.updatedAt,
+    };
+  });
 }
 
 export function arePreviousGuidanceItemsEqual(
