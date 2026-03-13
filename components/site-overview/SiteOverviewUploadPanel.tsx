@@ -11,6 +11,7 @@ interface SiteOverviewUploadPanelProps {
   onSuccess: (report: CausativeAgentReport) => void;
   onClear: () => void;
   onRawResponse: (raw: unknown) => void;
+  onLoadingChange?: (loading: boolean) => void;
 }
 
 export default function SiteOverviewUploadPanel({
@@ -18,6 +19,7 @@ export default function SiteOverviewUploadPanel({
   onSuccess,
   onClear,
   onRawResponse,
+  onLoadingChange,
 }: SiteOverviewUploadPanelProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
@@ -32,6 +34,7 @@ export default function SiteOverviewUploadPanel({
     }
 
     setLoading(true);
+    onLoadingChange?.(true);
     setError(null);
 
     try {
@@ -44,6 +47,7 @@ export default function SiteOverviewUploadPanel({
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
+      onLoadingChange?.(false);
     }
   };
 

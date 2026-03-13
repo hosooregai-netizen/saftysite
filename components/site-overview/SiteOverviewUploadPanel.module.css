@@ -44,7 +44,7 @@
   width: 100%;
   min-height: 320px;
   overflow: hidden;
-  border-radius: 8px;
+  border-radius: var(--erp-radius-surface);
   background-color: #f8fafc;
 }
 
@@ -67,7 +67,7 @@
   min-height: 30px;
   padding: 0 10px;
   border: 1px solid rgba(143, 45, 45, 0.34);
-  border-radius: 4px;
+  border-radius: var(--erp-radius-control);
   background-color: rgba(255, 245, 245, 0.92);
   font-size: 12px;
   font-weight: 700;

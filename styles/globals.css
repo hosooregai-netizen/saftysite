@@ -22,6 +22,9 @@
     --erp-danger-line: #d7a6a6;
     --erp-danger-text: #8f2d2d;
     --erp-focus-ring: 0 0 0 3px rgba(31, 48, 69, 0.16);
+    --erp-radius-control: 3px;
+    --erp-radius-surface: 4px;
+    --erp-radius-card: 6px;
     --hazard-border: 1px solid #000;
     --hazard-input-focus: 1px solid #1f3045;
     --hazard-input-shadow: 0 0 0 2px rgba(31, 48, 69, 0.14);
@@ -83,7 +86,8 @@
   }
 
   .app-shell {
-    @apply overflow-hidden rounded-[6px] border bg-white shadow-panel print:overflow-visible print:rounded-none print:border-0 print:shadow-none;
+    @apply overflow-hidden border bg-white shadow-panel print:overflow-visible print:rounded-none print:border-0 print:shadow-none;
+    border-radius: var(--erp-radius-surface);
     border-color: var(--erp-line-strong);
   }
 
@@ -137,7 +141,8 @@
   }
 
   .app-button {
-    @apply inline-flex items-center justify-center rounded-[4px] border px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center border px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50;
+    border-radius: var(--erp-radius-control);
   }
 
   .app-button-primary {
@@ -190,7 +195,8 @@
   }
 
   .app-chip {
-    @apply inline-flex items-center rounded-[4px] border px-2.5 py-1 text-xs font-medium;
+    @apply inline-flex items-center border px-2.5 py-1 text-xs font-medium;
+    border-radius: var(--erp-radius-control);
     border-color: var(--erp-line-strong);
     background-color: var(--erp-panel-muted);
     color: var(--erp-light);

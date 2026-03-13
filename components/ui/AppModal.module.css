@@ -13,7 +13,7 @@
 .dialog {
   width: min(100%, 420px);
   border: 1px solid var(--erp-line-strong);
-  border-radius: 6px;
+  border-radius: var(--erp-radius-surface);
   background-color: var(--erp-white);
   box-shadow: 0 24px 60px rgba(16, 24, 43, 0.18);
 }

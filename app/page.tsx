@@ -35,11 +35,22 @@ type SiteDialogState =
   | { type: 'delete'; siteId: string }
   | null;
 
+const INITIAL_SESSION_MODAL_MIN_MS = 1000
+
 export default function HomePage() {
   const router = useRouter();
-  const { sites, sessions, isReady, createSite, updateSite, deleteSite, updateSessions } =
-    useInspectionSessions();
+  const {
+    sites,
+    sessions,
+    isReady,
+    createSite,
+    createSession,
+    updateSite,
+    deleteSite,
+    updateSessions,
+  } = useInspectionSessions();
   const [dialogState, setDialogState] = useState<SiteDialogState>(null);
+  const [isCreatingInitialSession, setIsCreatingInitialSession] = useState(false);
 
   const siteSummaries = useMemo(
     () =>
@@ -85,6 +96,7 @@ export default function HomePage() {
   const closeDialog = () => setDialogState(null);
 
   const handleCreateSite = () => {
+    if (isCreatingInitialSession) return;
     closeOpenMenus();
     setDialogState({ type: 'create', value: '' });
   };
@@ -105,14 +117,37 @@ export default function HomePage() {
   };
 
   const submitCreateSite = () => {
-    if (!dialogState || dialogState.type !== 'create') return;
+    if (!dialogState || dialogState.type !== 'create' || isCreatingInitialSession) return;
 
     const siteTitle = dialogState.value.trim();
     if (!siteTitle) return;
 
-    const site = createSite(siteTitle);
     setDialogState(null);
-    router.push(`/sites/${site.id}`);
+    setIsCreatingInitialSession(true);
+    const startedAt = Date.now();
+
+    window.setTimeout(() => {
+      try {
+        const site = createSite(siteTitle);
+        const session = createSession(
+          {
+            businessName: site.title,
+          },
+          site.id
+        );
+
+        const remainingDelay = Math.max(
+          0,
+          INITIAL_SESSION_MODAL_MIN_MS - (Date.now() - startedAt)
+        );
+
+        window.setTimeout(() => {
+          router.push(`/sessions/${session.id}`);
+        }, remainingDelay);
+      } catch {
+        setIsCreatingInitialSession(false);
+      }
+    }, 0);
   };
 
   const submitRenameSite = () => {
@@ -149,6 +184,11 @@ export default function HomePage() {
     setDialogState(null);
   };
 
+  const deletingSite =
+    dialogState?.type === 'delete'
+      ? sites.find((site) => site.id === dialogState.siteId) ?? null
+      : null;
+
   return (
     <main className="app-page">
       <div className="app-container">
@@ -172,6 +212,7 @@ export default function HomePage() {
                 type="button"
                 onClick={handleCreateSite}
                 className="app-button app-button-primary"
+                disabled={isCreatingInitialSession}
               >
                 새 현장 시작
               </button>
@@ -291,6 +332,7 @@ export default function HomePage() {
                       type="button"
                       onClick={handleCreateSite}
                       className="app-button app-button-primary"
+                      disabled={isCreatingInitialSession}
                     >
                       첫 현장 시작
                     </button>
@@ -319,7 +361,11 @@ export default function HomePage() {
               type="button"
               className="app-button app-button-primary"
               onClick={submitCreateSite}
-              disabled={dialogState?.type !== 'create' || !dialogState.value.trim()}
+              disabled={
+                dialogState?.type !== 'create' ||
+                !dialogState.value.trim() ||
+                isCreatingInitialSession
+              }
             >
               생성
             </button>
@@ -345,6 +391,21 @@ export default function HomePage() {
             }
           }}
         />
+      </AppModal>
+
+      <AppModal
+        open={isCreatingInitialSession}
+        title="새 현장을 생성하고 있습니다."
+        onClose={() => {}}
+        closeOnBackdrop={false}
+        actions={<div className={styles.loadingActions} aria-hidden="true" />}
+      >
+        <div className={styles.loadingContent}>
+          <div className={styles.loadingSpinner} aria-hidden="true" />
+          <p className={styles.loadingDescription}>
+            기본 보고서를 생성하는 중입니다.
+          </p>
+        </div>
       </AppModal>
 
       <AppModal
@@ -405,7 +466,12 @@ export default function HomePage() {
             </button>
           </>
         }
-      />
+      >
+        <p>
+          삭제된 {deletingSite ? `"${deletingSite.title}" 현장` : '현장'}은 복구할 수
+          없습니다.
+        </p>
+      </AppModal>
     </main>
   );
 }

@@ -48,8 +48,9 @@
 .photoCard,
 .detailsCard {
   border: 1px solid var(--erp-line);
-  border-radius: 8px;
+  border-radius: var(--erp-radius-surface);
   background-color: var(--erp-panel-muted);
+  overflow: hidden;
 }
 
 .topCard {
@@ -145,7 +146,7 @@
   justify-content: center;
   gap: 6px;
   border: 1px dashed var(--erp-line-strong);
-  border-radius: 8px;
+  border-radius: var(--erp-radius-surface);
   padding: 20px;
   text-align: center;
   color: var(--erp-text-muted);
@@ -203,8 +204,12 @@
     align-items: start;
   }
 
-  .photoCard,
-  .detailsCard {
-    min-height: 100%;
+.photoCard,
+.detailsCard {
+  min-height: 100%;
+}
+
+  .photoCard {
+    align-self: stretch;
   }
 }

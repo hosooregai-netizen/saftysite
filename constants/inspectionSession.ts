@@ -130,7 +130,7 @@ export function createInspectionSession(
     },
     siteOverviewStatus: 'draft',
     previousGuidanceItems: [],
-    currentHazards: [],
+    currentHazards: [createInspectionHazardItem()],
     futureProcessRisks: [createFutureProcessRiskItem()],
     supportItems: {
       technicalMaterials: '',

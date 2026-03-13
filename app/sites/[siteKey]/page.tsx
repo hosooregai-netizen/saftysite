@@ -107,6 +107,11 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
     setDialogState(null);
   };
 
+  const deletingSession =
+    dialogState?.type === 'delete'
+      ? siteSessions.find((session) => session.id === dialogState.sessionId) ?? null
+      : null;
+
   if (!isReady) {
     return (
       <main className="app-page">
@@ -237,7 +242,7 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
                               className="app-button app-button-secondary"
                               onClick={() => setDialogState({ type: 'pdf' })}
                             >
-                              PDF 출력
+                              다운로드
                             </button>
                             <button
                               type="button"
@@ -276,7 +281,7 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
                                   setDialogState({ type: 'pdf' });
                                 }}
                               >
-                                PDF 출력
+                                다운로드
                               </button>
                               <button
                                 type="button"
@@ -317,7 +322,7 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
 
       <AppModal
         open={dialogState?.type === 'pdf'}
-        title="PDF 출력"
+        title="다운로드"
         onClose={closeDialog}
         actions={
           <button type="button" className="app-button app-button-primary" onClick={closeDialog}>
@@ -344,7 +349,13 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
             </button>
           </>
         }
-      />
+      >
+        <p>
+          삭제된{' '}
+          {deletingSession ? `"${getSessionTitle(deletingSession)}" 보고서` : '보고서'}는
+          복구할 수 없습니다.
+        </p>
+      </AppModal>
     </main>
   );
 }

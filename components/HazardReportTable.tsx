@@ -83,7 +83,7 @@ export default function HazardReportTable({
         <section className={styles.topCard}>
           <div className={styles.topGrid}>
             <div className={styles.fieldBlock}>
-              <label className={styles.fieldLabel}>{data.location || '유해·위험요소'}</label>
+              <label className={styles.fieldLabel}>유해위험 장소</label>
               <input
                 type="text"
                 value={data.locationDetail}
@@ -159,6 +159,23 @@ export default function HazardReportTable({
                 </label>
               )}
             </div>
+
+            <div className={styles.detailDivider} aria-hidden="true" />
+
+            <div className={styles.detailBlock}>
+              <label className={styles.sectionLabel}>유해·위험요인</label>
+              <textarea
+                ref={hazardFactorsRef}
+                value={data.hazardFactors}
+                onChange={(event) => {
+                  handleChange('hazardFactors', event.target.value);
+                  requestAnimationFrame(() => resizeHazard());
+                }}
+                className={`app-textarea ${styles.editorTextarea}`}
+                placeholder="예: 개구부 주변에서 작업 중 추락 위험이 확인됨"
+                rows={5}
+              />
+            </div>
           </section>
 
           <section className={styles.detailsCard}>
@@ -167,23 +184,6 @@ export default function HazardReportTable({
             </div>
 
             <div className={styles.detailStack}>
-              <div className={styles.detailBlock}>
-                <label className={styles.sectionLabel}>유해·위험요인</label>
-                <textarea
-                  ref={hazardFactorsRef}
-                  value={data.hazardFactors}
-                  onChange={(event) => {
-                    handleChange('hazardFactors', event.target.value);
-                    requestAnimationFrame(() => resizeHazard());
-                  }}
-                  className={`app-textarea ${styles.editorTextarea}`}
-                  placeholder="예: 개구부 주변에서 작업 중 추락 위험이 확인됨"
-                  rows={4}
-                />
-              </div>
-
-              <div className={styles.detailDivider} aria-hidden="true" />
-
               <div className={styles.detailBlock}>
                 <label className={styles.sectionLabel}>지도사항 및 개선대책</label>
                 <textarea

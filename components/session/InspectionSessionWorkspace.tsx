@@ -34,7 +34,6 @@ import {
   arePreviousGuidanceItemsEqual,
   buildPreviousGuidanceItems,
   readFileAsDataUrl,
-  toInspectionHazardItem,
 } from './sessionUtils';
 import styles from './InspectionSessionWorkspace.module.css';
 
@@ -166,18 +165,6 @@ export default function InspectionSessionWorkspace({
     const dataUrl = await readFileAsDataUrl(file);
     handlePreviousGuidanceChange(itemId, { [field]: dataUrl });
     event.target.value = '';
-  };
-
-  const handleHazardUploadSuccess = (reports: HazardReportItem[]) => {
-    const nextItems = reports.map(toInspectionHazardItem);
-    handleSessionChange((current) => ({
-      ...current,
-      currentHazards: [...current.currentHazards, ...nextItems],
-    }));
-
-    if (nextItems[0]) {
-      handleSectionChange('currentHazards');
-    }
   };
 
   const handleAddHazard = () => {
@@ -328,7 +315,7 @@ export default function InspectionSessionWorkspace({
                   <button
                     type="button"
                     onClick={() => saveNow()}
-                    className="app-button app-button-secondary"
+                    className={`${styles.heroSaveButton} app-button app-button-secondary`}
                   >
                     임시저장
                   </button>
@@ -337,13 +324,13 @@ export default function InspectionSessionWorkspace({
                     onClick={() => window.print()}
                     className="app-button app-button-accent"
                   >
-                    출력
+                    다운로드
                   </button>
                 </div>
               </div>
             </header>
 
-            <nav className={styles.sectionNav} aria-label="보고서 섹션">
+            <nav className={styles.sectionNav} aria-label="보고서 단계">
               <div className={styles.sectionNavList}>
                 {INSPECTION_SECTIONS.map((section, index) => {
                   const isActive = section.key === session.currentSection;
@@ -418,7 +405,6 @@ export default function InspectionSessionWorkspace({
                       {section.key === 'currentHazards' && (
                         <SessionCurrentHazardsSection
                           items={session.currentHazards}
-                          onUploadSuccess={handleHazardUploadSuccess}
                           onAdd={handleAddHazard}
                           onRemove={handleRemoveHazard}
                           onChange={handleHazardChange}
@@ -449,7 +435,7 @@ export default function InspectionSessionWorkspace({
 
             <div className={styles.bottomBar}>
               <p className={styles.bottomMeta}>
-                현재 {currentSectionIndex + 1} / {INSPECTION_SECTIONS.length} 섹션 작성 중
+                현재 {currentSectionIndex + 1} / {INSPECTION_SECTIONS.length} 단계 작성 중
               </p>
 
               <div className={styles.bottomActions}>
@@ -466,7 +452,7 @@ export default function InspectionSessionWorkspace({
                   disabled={currentSectionIndex <= 0}
                   className="app-button app-button-secondary"
                 >
-                  이전 섹션
+                  이전 단계
                 </button>
                 <button
                   type="button"
@@ -474,7 +460,7 @@ export default function InspectionSessionWorkspace({
                   disabled={currentSectionIndex >= INSPECTION_SECTIONS.length - 1}
                   className="app-button app-button-primary"
                 >
-                  다음 섹션
+                  다음 단계
                 </button>
               </div>
             </div>

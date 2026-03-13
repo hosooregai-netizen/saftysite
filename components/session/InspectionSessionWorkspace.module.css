@@ -43,7 +43,7 @@
   min-height: 36px;
   padding: 0 12px;
   border: 1px solid rgba(213, 222, 234, 0.34);
-  border-radius: 4px;
+  border-radius: var(--erp-radius-control);
   background-color: rgba(255, 255, 255, 0.08);
   font-size: 13px;
   font-weight: 700;
@@ -95,6 +95,10 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.heroSaveButton {
+  display: none;
 }
 
 .headerProgress {
@@ -173,7 +177,7 @@
   gap: 8px;
   flex: 0 0 auto;
   border: 1px solid var(--erp-line);
-  border-radius: 12px;
+  border-radius: var(--erp-radius-card);
   background-color: var(--erp-white);
   padding: 9px 12px;
   text-align: left;
@@ -262,9 +266,7 @@
 }
 
 .sectionCard {
-  border: 1px solid var(--erp-line);
-  border-radius: 14px;
-  background-color: var(--erp-white);
+  min-width: 0;
 }
 
 .sectionCardActive {
@@ -276,8 +278,7 @@
 }
 
 .sectionHeader {
-  border-bottom: 1px solid var(--erp-line);
-  padding: 20px 20px 16px;
+  padding: 0 0 14px;
 }
 
 .sectionTitle {
@@ -291,7 +292,7 @@
 }
 
 .sectionBody {
-  padding: 20px;
+  padding: 0;
 }
 
 .formGrid {
@@ -354,7 +355,7 @@
 .guidanceCard,
 .futureCard {
   border: 1px solid var(--erp-line);
-  border-radius: 12px;
+  border-radius: var(--erp-radius-card);
   background-color: var(--erp-panel-muted);
   padding: 16px;
   min-width: 0;
@@ -411,7 +412,7 @@
 
 .photoCard {
   border: 1px solid var(--erp-line);
-  border-radius: 12px;
+  border-radius: var(--erp-radius-card);
   background-color: var(--erp-white);
   padding: 14px;
   min-width: 0;
@@ -427,7 +428,7 @@
   margin-top: 10px;
   overflow: hidden;
   border: 1px solid var(--erp-line);
-  border-radius: 12px;
+  border-radius: var(--erp-radius-card);
   background-color: var(--erp-panel-muted);
 }
 
@@ -471,7 +472,7 @@
 
 .emptyPanel {
   border: 1px dashed var(--erp-line-strong);
-  border-radius: 12px;
+  border-radius: var(--erp-radius-card);
   background-color: var(--erp-white);
   padding: 28px 20px;
   font-size: 14px;
@@ -487,7 +488,7 @@
 
 .supportCard {
   border: 1px solid var(--erp-line);
-  border-radius: 12px;
+  border-radius: var(--erp-radius-card);
   background-color: var(--erp-panel-muted);
   padding: 16px;
 }
@@ -589,7 +590,7 @@
   }
 
   .sectionBody {
-    padding: 24px;
+    padding: 0;
   }
 
   .formGrid {
