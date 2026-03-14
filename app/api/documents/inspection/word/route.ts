@@ -3,13 +3,26 @@ import { normalizeInspectionSession } from '@/constants/inspectionSession';
 import type { GenerateInspectionWordRequest } from '@/types/documents';
 import {
   DocumentGenerationError,
-  DocumentGeneratorNotConfiguredError,
   DocumentTemplateNotFoundError,
 } from '@/server/documents/errors';
 import { generateInspectionWordDocument } from '@/server/documents/generators/generateInspectionWordDocument';
 import { mapInspectionSessionToWordData } from '@/server/documents/mappers/mapInspectionSessionToWordData';
 
 export const runtime = 'nodejs';
+
+function createContentDisposition(filename: string): string {
+  const asciiFallback =
+    filename
+      .normalize('NFKD')
+      .replace(/[^\x20-\x7e]/g, '')
+      .replace(/[<>:"/\\|?*\u0000-\u001f]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim() || 'inspection-report.docx';
+
+  return `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encodeURIComponent(
+    filename
+  )}`;
+}
 
 function isGenerateInspectionWordRequest(
   value: unknown
@@ -38,18 +51,15 @@ export async function POST(request: Request): Promise<Response> {
       data,
     });
 
-    return new Response(document.buffer, {
+    return new Response(new Uint8Array(document.buffer), {
       headers: {
         'Content-Type': document.contentType,
-        'Content-Disposition': `attachment; filename="${document.filename}"`,
+        'Content-Disposition': createContentDisposition(document.filename),
         'Cache-Control': 'no-store',
       },
     });
   } catch (error) {
-    if (
-      error instanceof DocumentTemplateNotFoundError ||
-      error instanceof DocumentGeneratorNotConfiguredError
-    ) {
+    if (error instanceof DocumentTemplateNotFoundError) {
       return NextResponse.json({ error: error.message }, { status: 501 });
     }
 
@@ -63,4 +73,3 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 }
-

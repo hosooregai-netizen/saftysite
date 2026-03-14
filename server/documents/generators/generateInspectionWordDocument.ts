@@ -1,13 +1,15 @@
 import 'server-only';
 
-import { access } from 'node:fs/promises';
+import { access, readFile } from 'node:fs/promises';
 import type { InspectionWordTemplateId } from '@/types/documents';
 import {
-  DocumentGeneratorNotConfiguredError,
+  DocumentGenerationError,
   DocumentTemplateNotFoundError,
 } from '@/server/documents/errors';
 import type { InspectionWordData } from '@/server/documents/mappers/mapInspectionSessionToWordData';
 import { getInspectionWordTemplate } from '@/server/documents/templates';
+import { TemplateHandler } from 'easy-template-x';
+import { buildInspectionWordTemplatePayload } from './buildInspectionWordTemplatePayload';
 
 export interface GeneratedWordDocument {
   buffer: Buffer;
@@ -30,20 +32,61 @@ export async function generateInspectionWordDocument({
     await access(template.absolutePath);
   } catch {
     throw new DocumentTemplateNotFoundError(
-      [
-        `워드 템플릿 파일이 없습니다: ${template.relativePath}`,
-        '템플릿 파일을 추가한 뒤 docx 렌더러를 연결하면 바로 생성 흐름을 붙일 수 있습니다.',
-      ].join(' ')
+      `워드 템플릿 파일이 없습니다: ${template.relativePath}`
     );
   }
 
-  throw new DocumentGeneratorNotConfiguredError(
-    [
-      `워드 템플릿은 확인됐지만 생성 엔진은 아직 연결되지 않았습니다. (${template.id})`,
-      `다음 단계: ${template.relativePath} 에 docx 템플릿을 두고,`,
-      '`generateInspectionWordDocument` 안에서 템플릿 치환 라이브러리를 연결하세요.',
-      `현재 매핑된 문서 제목: ${data.meta.title}`,
-    ].join(' ')
-  );
+  try {
+    const templateFile = await readFile(template.absolutePath);
+    const payload = await buildInspectionWordTemplatePayload(data);
+    const handler = new TemplateHandler({
+      delimiters: {
+        tagStart: '[[',
+        tagEnd: ']]',
+        containerTagOpen: '#',
+        containerTagClose: '/',
+      },
+    });
+
+    const buffer = await handler.process(templateFile, payload);
+
+    return {
+      buffer,
+      contentType:
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      filename: `${sanitizeFilename(getDocumentFilenameBase(data))}.docx`,
+    };
+  } catch (error) {
+    throw new DocumentGenerationError(
+      error instanceof Error
+        ? `워드 문서를 생성하지 못했습니다: ${error.message}`
+        : '워드 문서를 생성하지 못했습니다.'
+    );
+  }
 }
 
+function getDocumentFilenameBase(data: InspectionWordData): string {
+  const inspectionDate = normalizeText(data.cover.inspectionDate);
+  const projectName = normalizeText(data.cover.projectName);
+
+  if (inspectionDate && projectName) {
+    return `${inspectionDate} - ${projectName}`;
+  }
+
+  if (inspectionDate) return inspectionDate;
+  if (projectName) return projectName;
+  return normalizeText(data.meta.title) || 'inspection-report';
+}
+
+function sanitizeFilename(value: string): string {
+  const normalized = value
+    .replace(/[<>:"/\\|?*\u0000-\u001f]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return normalized || 'inspection-report';
+}
+
+function normalizeText(value: string | null | undefined): string {
+  return value?.trim() ?? '';
+}

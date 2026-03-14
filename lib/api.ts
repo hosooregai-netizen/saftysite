@@ -42,8 +42,35 @@ export function checkCausativeAgents(files: File[]): Promise<unknown> {
 function getDownloadFilenameFromDisposition(header: string | null): string {
   if (!header) return 'inspection-report.docx';
 
+  const encodedMatch = header.match(/filename\*=UTF-8''([^;]+)/i);
+  if (encodedMatch) {
+    try {
+      return decodeURIComponent(encodedMatch[1]);
+    } catch {
+      // Fall through to other filename formats.
+    }
+  }
+
   const match = header.match(/filename="([^"]+)"/i);
-  return match?.[1] ?? 'inspection-report.docx';
+  if (match?.[1]) return match[1];
+
+  const bareMatch = header.match(/filename=([^;]+)/i);
+  return bareMatch?.[1]?.trim() ?? 'inspection-report.docx';
+}
+
+export function saveBlobAsFile(blob: Blob, filename: string): void {
+  const blobUrl = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+
+  link.href = blobUrl;
+  link.download = filename || 'inspection-report.docx';
+  document.body.appendChild(link);
+  link.click();
+
+  window.setTimeout(() => {
+    link.remove();
+    URL.revokeObjectURL(blobUrl);
+  }, 0);
 }
 
 export async function fetchInspectionWordDocument(

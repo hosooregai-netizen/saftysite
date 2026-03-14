@@ -322,6 +322,12 @@
   background-color: #f8fafc;
 }
 
+.menuItem:disabled {
+  cursor: not-allowed;
+  color: var(--erp-text-muted);
+  background-color: var(--erp-panel-muted);
+}
+
 .menuItem:focus-visible {
   background-color: #edf2f7;
   outline: none;
@@ -329,6 +335,13 @@
 
 .menuItemDanger {
   color: #8f2d2d;
+}
+
+.rowError {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #b42318;
 }
 
 .emptyState {

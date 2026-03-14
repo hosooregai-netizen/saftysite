@@ -10,6 +10,8 @@ import {
   getSessionTitle,
 } from '@/constants/inspectionSession';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
+import { fetchInspectionWordDocument, saveBlobAsFile } from '@/lib/api';
+import type { InspectionSession } from '@/types/inspectionSession';
 import styles from './page.module.css';
 
 interface SiteReportsPageProps {
@@ -39,10 +41,7 @@ function closeMenuFromEvent(event: MouseEvent<HTMLElement>) {
   event.currentTarget.closest('details')?.removeAttribute('open');
 }
 
-type ReportDialogState =
-  | { type: 'pdf' }
-  | { type: 'delete'; sessionId: string }
-  | null;
+type ReportDialogState = { type: 'delete'; sessionId: string } | null;
 
 export default function SiteReportsPage({ params }: SiteReportsPageProps) {
   const { siteKey } = use(params);
@@ -50,6 +49,11 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
   const decodedSiteKey = decodeURIComponent(siteKey);
   const { sites, sessions, isReady, createSession, deleteSession } = useInspectionSessions();
   const [dialogState, setDialogState] = useState<ReportDialogState>(null);
+  const [downloadingSessionId, setDownloadingSessionId] = useState<string | null>(null);
+  const [downloadError, setDownloadError] = useState<{
+    sessionId: string;
+    message: string;
+  } | null>(null);
 
   useEffect(() => {
     const handlePointerDown = (event: PointerEvent) => {
@@ -100,6 +104,30 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
   };
 
   const closeDialog = () => setDialogState(null);
+
+  const handleDownloadWord = async (session: InspectionSession) => {
+    if (downloadingSessionId === session.id) return;
+
+    setDownloadError(null);
+    setDownloadingSessionId(session.id);
+
+    try {
+      const { blob, filename } = await fetchInspectionWordDocument(session);
+      saveBlobAsFile(blob, filename);
+    } catch (error) {
+      setDownloadError({
+        sessionId: session.id,
+        message:
+          error instanceof Error
+            ? error.message
+            : '워드 다운로드에 실패했습니다.',
+      });
+    } finally {
+      setDownloadingSessionId((current) =>
+        current === session.id ? null : current
+      );
+    }
+  };
 
   const submitDeleteSession = () => {
     if (!dialogState || dialogState.type !== 'delete') return;
@@ -253,9 +281,14 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
                             <button
                               type="button"
                               className="app-button app-button-secondary"
-                              onClick={() => setDialogState({ type: 'pdf' })}
+                              onClick={() => {
+                                void handleDownloadWord(session);
+                              }}
+                              disabled={downloadingSessionId === session.id}
                             >
-                              다운로드
+                              {downloadingSessionId === session.id
+                                ? '워드 생성 중...'
+                                : '다운로드'}
                             </button>
                             <button
                               type="button"
@@ -291,10 +324,13 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
                                 className={styles.menuItem}
                                 onClick={(event) => {
                                   closeMenuFromEvent(event);
-                                  setDialogState({ type: 'pdf' });
+                                  void handleDownloadWord(session);
                                 }}
+                                disabled={downloadingSessionId === session.id}
                               >
-                                다운로드
+                                {downloadingSessionId === session.id
+                                  ? '워드 생성 중...'
+                                  : '다운로드'}
                               </button>
                               <button
                                 type="button"
@@ -311,6 +347,9 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
                               </button>
                             </div>
                           </details>
+                          {downloadError?.sessionId === session.id ? (
+                            <p className={styles.rowError}>{downloadError.message}</p>
+                          ) : null}
                         </article>
                       );
                     })}
@@ -332,17 +371,6 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
           </div>
         </section>
       </div>
-
-      <AppModal
-        open={dialogState?.type === 'pdf'}
-        title="다운로드"
-        onClose={closeDialog}
-        actions={
-          <button type="button" className="app-button app-button-primary" onClick={closeDialog}>
-            확인
-          </button>
-        }
-      />
 
       <AppModal
         open={dialogState?.type === 'delete'}
