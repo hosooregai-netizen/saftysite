@@ -5,6 +5,10 @@ import {
   getSessionSortTime,
   normalizePreviousGuidanceResult,
 } from '@/constants/inspectionSession';
+import {
+  DEFAULT_IMPLEMENTATION_PERIOD,
+  createEmptyReport,
+} from '@/constants/hazard';
 import type { HazardReportItem } from '@/types/hazard';
 import type {
   DraftState,
@@ -12,6 +16,8 @@ import type {
   InspectionSession,
   PreviousGuidanceItem,
 } from '@/types/inspectionSession';
+
+const DEFAULT_LOCATION_LABEL = createEmptyReport().location;
 
 const LEGACY_GUIDANCE_STATUS_LABELS = {
   implemented: '이행',
@@ -63,6 +69,74 @@ export function toInspectionHazardItem(
 
 function normalizeText(value: string | null | undefined): string {
   return value?.trim() ?? '';
+}
+
+function normalizeLocation(value: string | null | undefined): string {
+  const normalized = normalizeText(value);
+  return normalized === DEFAULT_LOCATION_LABEL ? '' : normalized;
+}
+
+function hasMeaningfulImplementationPeriod(
+  value: string | null | undefined
+): boolean {
+  const normalized = normalizeText(value);
+  return Boolean(normalized) && normalized !== DEFAULT_IMPLEMENTATION_PERIOD;
+}
+
+function hasMeaningfulHazardContent(
+  item: Pick<
+    HazardReportItem,
+    | 'location'
+    | 'locationDetail'
+    | 'likelihood'
+    | 'severity'
+    | 'hazardFactors'
+    | 'improvementItems'
+    | 'photoUrl'
+    | 'legalInfo'
+    | 'implementationPeriod'
+  > & { processName?: string }
+): boolean {
+  return Boolean(
+    normalizeText(item.processName) ||
+      normalizeLocation(item.location) ||
+      normalizeText(item.locationDetail) ||
+      normalizeText(item.likelihood) ||
+      normalizeText(item.severity) ||
+      normalizeText(item.hazardFactors) ||
+      normalizeText(item.improvementItems) ||
+      normalizeText(item.photoUrl) ||
+      normalizeText(item.legalInfo) ||
+      hasMeaningfulImplementationPeriod(item.implementationPeriod)
+  );
+}
+
+function hasMeaningfulPreviousGuidanceContent(
+  item: Pick<
+    PreviousGuidanceItem,
+    | 'location'
+    | 'locationDetail'
+    | 'likelihood'
+    | 'severity'
+    | 'hazardFactors'
+    | 'improvementItems'
+    | 'photoUrl'
+    | 'legalInfo'
+    | 'implementationResult'
+  >
+): boolean {
+  return Boolean(
+    normalizeLocation(item.location) ||
+      normalizeText(item.locationDetail) ||
+      normalizeText(item.likelihood) ||
+      normalizeText(item.severity) ||
+      normalizeText(item.hazardFactors) ||
+      normalizeText(item.improvementItems) ||
+      normalizeText(item.photoUrl) ||
+      normalizeText(item.legalInfo) ||
+      normalizePreviousGuidanceResult(item.implementationResult) !==
+        DEFAULT_PREVIOUS_GUIDANCE_RESULT
+  );
 }
 
 function getGuidanceSourceKey(
@@ -277,6 +351,10 @@ export function buildPreviousGuidanceItems(
   const nextItems: PreviousGuidanceItem[] = [];
 
   for (const hazard of sourceSession.currentHazards) {
+    if (!hasMeaningfulHazardContent(hazard)) {
+      continue;
+    }
+
     const nextItem = buildGuidanceItemFromHazard(hazard, sourceSession, session);
     const identity =
       getGuidanceSourceKey(nextItem.sourceSessionId, nextItem.sourceHazardId) ||
@@ -291,6 +369,9 @@ export function buildPreviousGuidanceItems(
   }
 
   for (const item of sourceSession.previousGuidanceItems) {
+    if (!hasMeaningfulPreviousGuidanceContent(item)) {
+      continue;
+    }
     if (normalizePreviousGuidanceResult(item.implementationResult) !== '미이행') {
       continue;
     }

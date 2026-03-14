@@ -10,6 +10,7 @@ interface SessionFutureRisksSectionProps {
   items: FutureProcessRiskItem[];
   onAdd: () => void;
   onChange: (itemId: string, data: HazardReportItem) => void;
+  onPhotoSelectStart: (itemId: string) => void;
   onAppendReports: (itemId: string, reports: HazardReportItem[]) => void;
   onRemove: (itemId: string) => void;
 }
@@ -18,6 +19,7 @@ export default function SessionFutureRisksSection({
   items,
   onAdd,
   onChange,
+  onPhotoSelectStart,
   onAppendReports,
   onRemove,
 }: SessionFutureRisksSectionProps) {
@@ -39,6 +41,7 @@ export default function SessionFutureRisksSection({
             <HazardReportTable
               data={item}
               onChange={(data) => onChange(item.id, data)}
+              onPhotoSelectStart={() => onPhotoSelectStart(item.id)}
               onAppendReports={(reports) => onAppendReports(item.id, reports)}
               index={index + 100}
               hiddenFields={{

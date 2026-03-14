@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { DEFAULT_IMPLEMENTATION_PERIOD } from '@/constants/hazard';
 import {
   INSPECTION_SECTIONS,
@@ -98,6 +99,18 @@ function ensureTrailingEmptyItem<T extends HazardReportItem & { id: string }>(
     : [...items, createItem()];
 }
 
+function ensureTrailingEmptyItemExcludingId<T extends HazardReportItem & { id: string }>(
+  items: T[],
+  excludedItemId: string,
+  createItem: () => T
+): T[] {
+  return items.some(
+    (item) => item.id !== excludedItemId && isEffectivelyEmptyHazardItem(item)
+  )
+    ? items
+    : [...items, createItem()];
+}
+
 export default function InspectionSessionWorkspace({
   sessionId,
 }: InspectionSessionWorkspaceProps) {
@@ -114,6 +127,7 @@ export default function InspectionSessionWorkspace({
   const [isDownloadingWord, setIsDownloadingWord] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const [isCompletionModalOpen, setIsCompletionModalOpen] = useState(false);
+  const [isLeavingWithSave, setIsLeavingWithSave] = useState(false);
   const didMountCurrentSectionRef = useRef(false);
 
   const progress = session ? getSessionProgress(session) : null;
@@ -181,11 +195,11 @@ export default function InspectionSessionWorkspace({
       return;
     }
 
-    saveNow();
+    void saveNow();
   }, [currentSectionKey, saveNow]);
 
   useEffect(() => () => {
-    saveNow();
+    void saveNow();
   }, [saveNow]);
 
   const handleSectionChange = (section: InspectionSectionKey) => {
@@ -273,6 +287,24 @@ export default function InspectionSessionWorkspace({
     }));
   };
 
+  const handleHazardPhotoSelectStart = (itemId: string) => {
+    handleSessionChange((current) => {
+      const selectedItem = current.currentHazards.find((item) => item.id === itemId);
+      if (!selectedItem || normalizeText(selectedItem.photoUrl)) {
+        return current;
+      }
+
+      return {
+        ...current,
+        currentHazards: ensureTrailingEmptyItemExcludingId(
+          current.currentHazards,
+          itemId,
+          createInspectionHazardItem
+        ),
+      };
+    });
+  };
+
   const handleAppendHazardReports = (
     itemId: string,
     reports: HazardReportItem[]
@@ -329,6 +361,24 @@ export default function InspectionSessionWorkspace({
     }));
   };
 
+  const handleFutureRiskPhotoSelectStart = (itemId: string) => {
+    handleSessionChange((current) => {
+      const selectedItem = current.futureProcessRisks.find((item) => item.id === itemId);
+      if (!selectedItem || normalizeText(selectedItem.photoUrl)) {
+        return current;
+      }
+
+      return {
+        ...current,
+        futureProcessRisks: ensureTrailingEmptyItemExcludingId(
+          current.futureProcessRisks,
+          itemId,
+          createFutureProcessRiskItem
+        ),
+      };
+    });
+  };
+
   const handleAppendFutureRiskReports = (
     itemId: string,
     reports: HazardReportItem[]
@@ -367,10 +417,10 @@ export default function InspectionSessionWorkspace({
     if (!session || isDownloadingWord) return;
 
     setDownloadError(null);
-    saveNow();
     setIsDownloadingWord(true);
 
     try {
+      await saveNow();
       const { blob, filename } = await fetchInspectionWordDocument(session);
       saveBlobAsFile(blob, filename);
     } catch (error) {
@@ -383,6 +433,24 @@ export default function InspectionSessionWorkspace({
       setIsDownloadingWord(false);
     }
   }, [isDownloadingWord, saveNow, session]);
+
+  const navigateAfterSave = useCallback(
+    async (href: string, options?: { closeCompletionModal?: boolean }) => {
+      flushSync(() => {
+        if (options?.closeCompletionModal) {
+          setIsCompletionModalOpen(false);
+        }
+        setIsLeavingWithSave(true);
+      });
+
+      await saveNow();
+
+      window.setTimeout(() => {
+        router.push(href);
+      }, 80);
+    },
+    [router, saveNow]
+  );
 
   if (!isReady) {
     return (
@@ -425,9 +493,7 @@ export default function InspectionSessionWorkspace({
   const siteHref = `/sites/${encodeURIComponent(getSessionSiteKey(session))}`;
   const isLastSection = currentSectionIndex === INSPECTION_SECTIONS.length - 1;
   const handleCompleteReview = () => {
-    saveNow();
-    setIsCompletionModalOpen(false);
-    router.push(siteHref);
+    void navigateAfterSave(siteHref, { closeCompletionModal: true });
   };
 
   return (
@@ -437,9 +503,15 @@ export default function InspectionSessionWorkspace({
           <div className={styles.page}>
             <header className={styles.header}>
               <div className={styles.headerMain}>
-                <Link href={siteHref} className={styles.backLink}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void navigateAfterSave(siteHref);
+                  }}
+                  className={styles.backLink}
+                >
                   보고서 목록으로
-                </Link>
+                </button>
                 <div className={styles.headerMetaSpacer} aria-hidden="true" />
                 <div className={styles.headerTitleRow}>
                   <h1 className={styles.headerTitle}>{siteTitle}</h1>
@@ -581,6 +653,7 @@ export default function InspectionSessionWorkspace({
                           onAdd={handleAddHazard}
                           onRemove={handleRemoveHazard}
                           onChange={handleHazardChange}
+                          onPhotoSelectStart={handleHazardPhotoSelectStart}
                           onAppendReports={handleAppendHazardReports}
                         />
                       )}
@@ -590,6 +663,7 @@ export default function InspectionSessionWorkspace({
                           items={session.futureProcessRisks}
                           onAdd={handleAddFutureRisk}
                           onChange={handleFutureRiskChange}
+                          onPhotoSelectStart={handleFutureRiskPhotoSelectStart}
                           onAppendReports={handleAppendFutureRiskReports}
                           onRemove={handleRemoveFutureRisk}
                         />
@@ -666,6 +740,15 @@ export default function InspectionSessionWorkspace({
         }
       >
         <p>보고서를 검토했으면 목록으로 돌아가거나 문서를 먼저 다운로드할 수 있습니다.</p>
+      </AppModal>
+      <AppModal
+        open={isLeavingWithSave}
+        title="저장 중"
+        onClose={() => {}}
+        closeOnBackdrop={false}
+        actions={<></>}
+      >
+        <p>변경 내용을 저장한 뒤 화면을 이동하고 있습니다.</p>
       </AppModal>
     </main>
   );

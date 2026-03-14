@@ -10,6 +10,7 @@ import {
   getSessionSortTime,
   normalizeInspectionSession,
 } from '@/constants/inspectionSession';
+import { readPersistedValue, writePersistedValue } from '@/lib/clientPersistence';
 import type {
   InspectionCover,
   InspectionSite,
@@ -101,60 +102,75 @@ export function useInspectionSessions() {
   const [sessions, setSessions] = useState<InspectionSession[]>([]);
   const [sites, setSites] = useState<InspectionSite[]>([]);
   const [isReady, setIsReady] = useState(false);
-  const skipNextSessionPersistRef = useRef(true);
-  const skipNextSitePersistRef = useRef(true);
   const sessionsRef = useRef<InspectionSession[]>([]);
   const sitesRef = useRef<InspectionSite[]>([]);
 
-  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    // Local storage hydration is intentionally deferred until mount.
-    const nextSessions = loadSessions();
-    const nextSites = loadSites(nextSessions);
-    sessionsRef.current = nextSessions;
-    sitesRef.current = nextSites;
-    setSessions(nextSessions);
-    setSites(nextSites);
-    setIsReady(true);
-  }, []);
-  /* eslint-enable react-hooks/set-state-in-effect */
+    let cancelled = false;
 
-  const persistSessions = useCallback((nextSessions: InspectionSession[]) => {
-    try {
-      const normalized = normalizeSessions(nextSessions);
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
-      skipNextSessionPersistRef.current = true;
-      sessionsRef.current = normalized;
-      setSessions(normalized);
-    } catch {}
-  }, []);
+    const hydrate = async () => {
+      const storedSessions = await readPersistedValue<InspectionSession[]>(STORAGE_KEY);
+      const shouldMigrateSessions = !Array.isArray(storedSessions);
+      const nextSessions = Array.isArray(storedSessions)
+        ? normalizeSessions(
+            storedSessions.map((session) =>
+              normalizeInspectionSession({
+                ...session,
+                siteKey:
+                  typeof session.siteKey === 'string' && session.siteKey.trim()
+                    ? session.siteKey
+                    : getSessionSiteKey({
+                        cover: session.cover,
+                        siteKey: '',
+                      }),
+              })
+            )
+          )
+        : loadSessions();
 
-  const persistSites = useCallback((nextSites: InspectionSite[]) => {
-    try {
-      window.localStorage.setItem(SITE_STORAGE_KEY, JSON.stringify(nextSites));
-      skipNextSitePersistRef.current = true;
+      const storedSites = await readPersistedValue<InspectionSite[]>(SITE_STORAGE_KEY);
+      const shouldMigrateSites = !Array.isArray(storedSites);
+      const nextSites = Array.isArray(storedSites)
+        ? storedSites
+        : loadSites(nextSessions);
+
+      if (cancelled) return;
+
+      sessionsRef.current = nextSessions;
       sitesRef.current = nextSites;
+      setSessions(nextSessions);
       setSites(nextSites);
-    } catch {}
+      setIsReady(true);
+
+      if (shouldMigrateSessions) {
+        void writePersistedValue(STORAGE_KEY, nextSessions);
+      }
+      if (shouldMigrateSites) {
+        void writePersistedValue(SITE_STORAGE_KEY, nextSites);
+      }
+    };
+
+    void hydrate();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  useEffect(() => {
-    sessionsRef.current = sessions;
-  }, [sessions]);
+  const persistSessions = useCallback(async (nextSessions: InspectionSession[]) => {
+    const normalized = normalizeSessions(nextSessions);
+    await writePersistedValue(STORAGE_KEY, normalized);
+  }, []);
 
-  useEffect(() => {
-    sitesRef.current = sites;
-  }, [sites]);
+  const persistSites = useCallback(async (nextSites: InspectionSite[]) => {
+    await writePersistedValue(SITE_STORAGE_KEY, nextSites);
+  }, []);
 
   useEffect(() => {
     if (!isReady) return;
-    if (skipNextSessionPersistRef.current) {
-      skipNextSessionPersistRef.current = false;
-      return;
-    }
 
     const timeout = window.setTimeout(() => {
-      persistSessions(sessions);
+      void persistSessions(sessionsRef.current);
     }, 400);
 
     return () => window.clearTimeout(timeout);
@@ -162,13 +178,9 @@ export function useInspectionSessions() {
 
   useEffect(() => {
     if (!isReady) return;
-    if (skipNextSitePersistRef.current) {
-      skipNextSitePersistRef.current = false;
-      return;
-    }
 
     const timeout = window.setTimeout(() => {
-      persistSites(sites);
+      void persistSites(sitesRef.current);
     }, 400);
 
     return () => window.clearTimeout(timeout);
@@ -176,32 +188,45 @@ export function useInspectionSessions() {
 
   const createSite = useCallback((title: string) => {
     const nextSite = createInspectionSite(title);
-    persistSites([nextSite, ...sites]);
+    const nextSites = [nextSite, ...sitesRef.current];
+    sitesRef.current = nextSites;
+    setSites(nextSites);
+    void persistSites(nextSites);
     return nextSite;
-  }, [persistSites, sites]);
+  }, [persistSites]);
 
   const updateSite = useCallback(
     (siteId: string, updater: (current: InspectionSite) => InspectionSite) => {
       const updatedAt = new Date().toISOString();
-      setSites((current) =>
-        current.map((site) =>
+      setSites((current) => {
+        const nextSites = current.map((site) =>
           site.id === siteId
             ? {
                 ...updater(site),
                 updatedAt,
               }
             : site
-        )
-      );
+        );
+        sitesRef.current = nextSites;
+        return nextSites;
+      });
     },
     []
   );
 
   const deleteSite = useCallback((siteId: string) => {
-    setSites((current) => current.filter((site) => site.id !== siteId));
-    setSessions((current) =>
-      normalizeSessions(current.filter((session) => getSessionSiteKey(session) !== siteId))
-    );
+    setSites((current) => {
+      const nextSites = current.filter((site) => site.id !== siteId);
+      sitesRef.current = nextSites;
+      return nextSites;
+    });
+    setSessions((current) => {
+      const nextSessions = normalizeSessions(
+        current.filter((session) => getSessionSiteKey(session) !== siteId)
+      );
+      sessionsRef.current = nextSessions;
+      return nextSessions;
+    });
   }, []);
 
   const createSession = useCallback(
@@ -228,7 +253,7 @@ export function useInspectionSessions() {
           resolvedSiteKey,
           Math.max(
             0,
-            ...sessions
+            ...sessionsRef.current
               .filter((session) => getSessionSiteKey(session) === resolvedSiteKey)
               .map((session) => session.reportNumber || 0)
           ) + 1
@@ -237,10 +262,14 @@ export function useInspectionSessions() {
         lastSavedAt: savedAt,
       };
 
-      persistSessions([nextSession, ...sessions]);
+      const nextSessions = [nextSession, ...sessionsRef.current];
+      const normalized = normalizeSessions(nextSessions);
+      sessionsRef.current = normalized;
+      setSessions(normalized);
+      void persistSessions(normalized);
       return nextSession;
     },
-    [persistSessions, sessions]
+    [persistSessions]
   );
 
   const updateSession = useCallback(
@@ -250,8 +279,8 @@ export function useInspectionSessions() {
     ) => {
       const savedAt = new Date().toISOString();
 
-      setSessions((current) =>
-        normalizeSessions(
+      setSessions((current) => {
+        const nextSessions = normalizeSessions(
           current.map((session) => {
             if (session.id !== sessionId) return session;
 
@@ -262,8 +291,10 @@ export function useInspectionSessions() {
               lastSavedAt: savedAt,
             };
           })
-        )
-      );
+        );
+        sessionsRef.current = nextSessions;
+        return nextSessions;
+      });
     },
     []
   );
@@ -275,8 +306,8 @@ export function useInspectionSessions() {
     ) => {
       const savedAt = new Date().toISOString();
 
-      setSessions((current) =>
-        normalizeSessions(
+      setSessions((current) => {
+        const nextSessions = normalizeSessions(
           current.map((session) => {
             if (!predicate(session)) return session;
 
@@ -287,31 +318,43 @@ export function useInspectionSessions() {
               lastSavedAt: savedAt,
             };
           })
-        )
-      );
+        );
+        sessionsRef.current = nextSessions;
+        return nextSessions;
+      });
     },
     []
   );
 
   const deleteSession = useCallback((sessionId: string) => {
-    setSessions((current) =>
-      normalizeSessions(current.filter((session) => session.id !== sessionId))
-    );
+    setSessions((current) => {
+      const nextSessions = normalizeSessions(
+        current.filter((session) => session.id !== sessionId)
+      );
+      sessionsRef.current = nextSessions;
+      return nextSessions;
+    });
   }, []);
 
   const deleteSessions = useCallback(
     (predicate: (session: InspectionSession) => boolean) => {
-      setSessions((current) =>
-        normalizeSessions(current.filter((session) => !predicate(session)))
-      );
+      setSessions((current) => {
+        const nextSessions = normalizeSessions(
+          current.filter((session) => !predicate(session))
+        );
+        sessionsRef.current = nextSessions;
+        return nextSessions;
+      });
     },
     []
   );
 
-  const saveNow = useCallback(() => {
+  const saveNow = useCallback(async () => {
     if (!isReady) return;
-    persistSessions(sessionsRef.current);
-    persistSites(sitesRef.current);
+    await Promise.all([
+      persistSessions(sessionsRef.current),
+      persistSites(sitesRef.current),
+    ]);
   }, [isReady, persistSessions, persistSites]);
 
   useEffect(() => {
@@ -319,12 +362,12 @@ export function useInspectionSessions() {
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
-        saveNow();
+        void saveNow();
       }
     };
 
     const handlePageHide = () => {
-      saveNow();
+      void saveNow();
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);

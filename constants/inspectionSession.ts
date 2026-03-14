@@ -28,9 +28,9 @@ export const INSPECTION_SECTIONS: InspectionSectionMeta[] = [
   },
   {
     key: 'siteOverview',
-    label: '2. 개요',
-    shortLabel: '개요',
-    compactLabel: '개요',
+    label: '2. 전경',
+    shortLabel: '전경',
+    compactLabel: '전경',
   },
   {
     key: 'previousGuidance',

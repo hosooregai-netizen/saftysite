@@ -56,6 +56,7 @@ interface HazardReportTableProps {
   data: HazardReportItem;
   onChange: (data: HazardReportItem) => void;
   onAppendReports?: (reports: HazardReportItem[]) => void;
+  onPhotoSelectStart?: () => void;
   index: number;
   headerActions?: ReactNode;
   topGridExtraContent?: ReactNode;
@@ -132,6 +133,7 @@ export default function HazardReportTable({
   data,
   onChange,
   onAppendReports,
+  onPhotoSelectStart,
   index,
   headerActions,
   topGridExtraContent,
@@ -274,6 +276,7 @@ export default function HazardReportTable({
     event.target.value = '';
     if (files.length === 0 || photoMode === 'readonly') return;
 
+    onPhotoSelectStart?.();
     setIsPhotoLoading(true);
     setPhotoError(null);
 

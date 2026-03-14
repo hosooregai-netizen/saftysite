@@ -11,6 +11,7 @@ interface SessionCurrentHazardsSectionProps {
   onAdd: () => void;
   onRemove: (itemId: string) => void;
   onChange: (itemId: string, data: HazardReportItem) => void;
+  onPhotoSelectStart: (itemId: string) => void;
   onAppendReports: (itemId: string, reports: HazardReportItem[]) => void;
 }
 
@@ -19,6 +20,7 @@ export default function SessionCurrentHazardsSection({
   onAdd,
   onRemove,
   onChange,
+  onPhotoSelectStart,
   onAppendReports,
 }: SessionCurrentHazardsSectionProps) {
   useEffect(() => {
@@ -39,6 +41,7 @@ export default function SessionCurrentHazardsSection({
             <HazardReportTable
               data={item}
               onChange={(data) => onChange(item.id, data)}
+              onPhotoSelectStart={() => onPhotoSelectStart(item.id)}
               onAppendReports={(reports) => onAppendReports(item.id, reports)}
               index={index}
               headerActions={
