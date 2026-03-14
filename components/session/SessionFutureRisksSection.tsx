@@ -10,6 +10,7 @@ interface SessionFutureRisksSectionProps {
   items: FutureProcessRiskItem[];
   onAdd: () => void;
   onChange: (itemId: string, data: HazardReportItem) => void;
+  onAppendReports: (itemId: string, reports: HazardReportItem[]) => void;
   onRemove: (itemId: string) => void;
 }
 
@@ -17,6 +18,7 @@ export default function SessionFutureRisksSection({
   items,
   onAdd,
   onChange,
+  onAppendReports,
   onRemove,
 }: SessionFutureRisksSectionProps) {
   useEffect(() => {
@@ -37,6 +39,7 @@ export default function SessionFutureRisksSection({
             <HazardReportTable
               data={item}
               onChange={(data) => onChange(item.id, data)}
+              onAppendReports={(reports) => onAppendReports(item.id, reports)}
               index={index + 100}
               hiddenFields={{
                 implementationPeriod: true,

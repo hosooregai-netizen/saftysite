@@ -91,21 +91,34 @@ function PhotoInputCell({
   emptyTitle = '이미지 선택',
   emptyHint = '클릭해서 사진을 추가하세요.',
   onChange,
+  onAppend,
 }: {
   photoUrl: string;
   pickerTitle: string;
   emptyTitle?: string;
   emptyHint?: string;
   onChange: (nextPhotoUrl: string) => void;
+  onAppend?: (nextPhotoUrls: string[]) => void;
 }) {
   const { galleryInputRef, cameraInputRef, requestPick, pickerModal } =
     useImageSourcePicker({ title: pickerTitle });
 
   const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+    const files = Array.from(event.target.files ?? []).filter((file) =>
+      file.type.startsWith('image/')
+    );
     event.target.value = '';
-    if (!file) return;
-    onChange(await readFileAsDataUrl(file));
+    if (files.length === 0) return;
+
+    const photoUrls = await Promise.all(files.map((file) => readFileAsDataUrl(file)));
+    const [firstPhotoUrl, ...restPhotoUrls] = photoUrls;
+
+    if (!firstPhotoUrl) return;
+
+    onChange(firstPhotoUrl);
+    if (restPhotoUrls.length > 0) {
+      onAppend?.(restPhotoUrls);
+    }
   };
 
   return (
@@ -148,6 +161,7 @@ function PhotoInputCell({
           ref={galleryInputRef}
           type="file"
           accept="image/*"
+          multiple
           onChange={(event) => {
             void handleFileChange(event);
           }}
@@ -172,10 +186,12 @@ function PhotoInputCell({
 function TechnicalMaterialCard({
   item,
   onChange,
+  onAppendPhotos,
   onRemove,
 }: {
   item: TechnicalMaterialItem;
   onChange: (patch: Partial<TechnicalMaterialItem>) => void;
+  onAppendPhotos: (photoUrls: string[]) => void;
   onRemove: () => void;
 }) {
   return (
@@ -195,6 +211,7 @@ function TechnicalMaterialCard({
           photoUrl={item.photoUrl}
           pickerTitle="기술자료 사진 추가"
           onChange={(photoUrl) => onChange({ photoUrl })}
+          onAppend={onAppendPhotos}
         />
 
         <div className={styles.contentCell}>
@@ -271,10 +288,12 @@ function TechnicalMaterialCard({
 function EquipmentCheckCard({
   item,
   onChange,
+  onAppendPhotos,
   onRemove,
 }: {
   item: EquipmentCheckItem;
   onChange: (patch: Partial<EquipmentCheckItem>) => void;
+  onAppendPhotos: (photoUrls: string[]) => void;
   onRemove: () => void;
 }) {
   return (
@@ -294,6 +313,7 @@ function EquipmentCheckCard({
           photoUrl={item.photoUrl}
           pickerTitle="장비 사진 추가"
           onChange={(photoUrl) => onChange({ photoUrl })}
+          onAppend={onAppendPhotos}
         />
 
         <div className={styles.contentCell}>
@@ -385,11 +405,13 @@ function SupportEntryCard({
   title,
   item,
   onChange,
+  onAppendPhotos,
   onRemove,
 }: {
   title: string;
   item: EducationSupportItem | OtherSupportItem;
   onChange: (patch: Partial<EducationSupportItem | OtherSupportItem>) => void;
+  onAppendPhotos: (photoUrls: string[]) => void;
   onRemove: () => void;
 }) {
   return (
@@ -409,6 +431,7 @@ function SupportEntryCard({
           photoUrl={item.photoUrl}
           pickerTitle={`${title} 사진 추가`}
           onChange={(photoUrl) => onChange({ photoUrl })}
+          onAppend={onAppendPhotos}
         />
 
         <div className={styles.contentCell}>
@@ -559,6 +582,27 @@ export default function SessionSupportSection({
     updateRows(key, (rows) => [...rows, createRowBySection(key) as SupportRowMap[typeof key]]);
   };
 
+  const insertRowsAfter = <K extends RowSectionKey>(
+    key: K,
+    itemId: string,
+    nextRows: SupportRowMap[K][]
+  ) => {
+    if (nextRows.length === 0) return;
+
+    updateRows(key, (rows) => {
+      const targetIndex = rows.findIndex((row) => row.id === itemId);
+      if (targetIndex < 0) {
+        return [...rows, ...nextRows];
+      }
+
+      return [
+        ...rows.slice(0, targetIndex + 1),
+        ...nextRows,
+        ...rows.slice(targetIndex + 1),
+      ];
+    });
+  };
+
   const updateRow = <K extends RowSectionKey>(
     key: K,
     itemId: string,
@@ -597,6 +641,13 @@ export default function SessionSupportSection({
               key={item.id}
               item={item}
               onChange={(patch) => updateRow('technicalMaterials', item.id, patch)}
+              onAppendPhotos={(photoUrls) =>
+                insertRowsAfter(
+                  'technicalMaterials',
+                  item.id,
+                  photoUrls.map((photoUrl) => createTechnicalMaterialItem({ photoUrl }))
+                )
+              }
               onRemove={() => removeRow('technicalMaterials', item.id)}
             />
           ))}
@@ -620,6 +671,13 @@ export default function SessionSupportSection({
               key={item.id}
               item={item}
               onChange={(patch) => updateRow('equipmentChecks', item.id, patch)}
+              onAppendPhotos={(photoUrls) =>
+                insertRowsAfter(
+                  'equipmentChecks',
+                  item.id,
+                  photoUrls.map((photoUrl) => createEquipmentCheckItem({ photoUrl }))
+                )
+              }
               onRemove={() => removeRow('equipmentChecks', item.id)}
             />
           ))}
@@ -644,6 +702,13 @@ export default function SessionSupportSection({
               title="교육"
               item={item}
               onChange={(patch) => updateRow('educationSupports', item.id, patch)}
+              onAppendPhotos={(photoUrls) =>
+                insertRowsAfter(
+                  'educationSupports',
+                  item.id,
+                  photoUrls.map((photoUrl) => createEducationSupportItem({ photoUrl }))
+                )
+              }
               onRemove={() => removeRow('educationSupports', item.id)}
             />
           ))}
@@ -668,6 +733,13 @@ export default function SessionSupportSection({
               title="기타"
               item={item}
               onChange={(patch) => updateRow('otherSupports', item.id, patch)}
+              onAppendPhotos={(photoUrls) =>
+                insertRowsAfter(
+                  'otherSupports',
+                  item.id,
+                  photoUrls.map((photoUrl) => createOtherSupportItem({ photoUrl }))
+                )
+              }
               onRemove={() => removeRow('otherSupports', item.id)}
             />
           ))}

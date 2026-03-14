@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { createEmptyReport, DEFAULT_IMPLEMENTATION_PERIOD } from '@/constants/hazard';
+import { createEmptyCausativeAgentMap } from '@/constants/siteOverview';
 import type { InspectionWordData } from '@/server/documents/mappers/mapInspectionSessionToWordData';
 import { MimeType, type ImageContent, type TemplateData } from 'easy-template-x';
 import { imageSize } from 'image-size';
@@ -16,6 +17,26 @@ const SECTION_IMAGE_BOUNDS = {
   width: 240,
   height: 180,
 };
+
+const CHECKED_MARK = '\u2611';
+const UNCHECKED_MARK = '\u2610';
+
+const FATAL_ACCIDENT_CAUSE_CODES = [
+  'openEdge',
+  'steel',
+  'roof',
+  'scaffoldWorkPlatform',
+  'excavator',
+  'aerialWorkPlatform',
+  'ladder',
+  'suspendedScaffold',
+  'truck',
+  'mobileScaffold',
+  'formworkSupport',
+  'mobileCrane',
+  'fireExplosion',
+  'otherHazard',
+] as const;
 
 const DATA_URL_MIME_FORMATS: Record<string, ImageContent['format']> = {
   'image/png': MimeType.Png,
@@ -56,6 +77,7 @@ function hasAnyStringContent<T extends object>(
 }
 
 function shouldIncludeHazardItem(item: {
+  processName?: string;
   locationDetail?: string;
   likelihood?: string;
   severity?: string;
@@ -65,15 +87,18 @@ function shouldIncludeHazardItem(item: {
   legalInfo?: string;
   implementationPeriod?: string;
 }): boolean {
+  const implementationPeriod = normalizeText(item.implementationPeriod);
+
   return Boolean(
-    normalizeText(item.locationDetail) ||
+    normalizeText(item.processName) ||
+      normalizeText(item.locationDetail) ||
       normalizeText(item.likelihood) ||
       normalizeText(item.severity) ||
       normalizeText(item.hazardFactors) ||
       normalizeText(item.improvementItems) ||
       normalizeText(item.photoUrl) ||
       normalizeText(item.legalInfo) ||
-      normalizeText(item.implementationPeriod) !== DEFAULT_IMPLEMENTATION_PERIOD
+      (implementationPeriod && implementationPeriod !== DEFAULT_IMPLEMENTATION_PERIOD)
   );
 }
 
@@ -146,10 +171,62 @@ function buildImageContent(
   }
 }
 
+function buildCoverPayload(
+  cover: InspectionWordData['cover']
+): Record<string, string> {
+  return {
+    'cover.businessName': normalizeText(cover.businessName),
+    'cover.projectName': normalizeText(cover.projectName),
+    'cover.inspectionDate': normalizeText(cover.inspectionDate),
+    'cover.consultantName': normalizeText(cover.consultantName),
+    'cover.processSummary': normalizeText(cover.processSummary),
+    'cover.siteAddress': normalizeText(cover.siteAddress),
+    'cover.contractorName': normalizeText(cover.contractorName),
+    'cover.notes': normalizeText(cover.notes),
+  };
+}
+
+function buildFutureProcessSummaryPayload(
+  items: InspectionWordData['futureProcessRisks']
+): Record<string, string> {
+  const processNames = items
+    .map((item) => normalizeText(item.processName) || normalizeText(item.locationDetail))
+    .filter(Boolean)
+    .slice(0, 9);
+
+  return Object.fromEntries(
+    Array.from({ length: 9 }, (_, index) => [
+      `futureProcessSummary.item${index + 1}`,
+      processNames[index] ?? '',
+    ])
+  );
+}
+
+function buildFatalAccidentCauseChecksPayload(
+  agents: InspectionWordData['siteOverview']['agents']
+): Record<string, string> {
+  const causativeAgentKeys = Object.keys(
+    createEmptyCausativeAgentMap()
+  ) as Array<keyof typeof agents>;
+
+  return Object.fromEntries(
+    FATAL_ACCIDENT_CAUSE_CODES.map((code, index) => {
+      const agentKey = causativeAgentKeys[index];
+      return [
+        `fatalAccidentCauseChecks.${code}`,
+        agentKey && agents[agentKey] ? CHECKED_MARK : UNCHECKED_MARK,
+      ];
+    })
+  );
+}
+
 export async function buildInspectionWordTemplatePayload(
   data: InspectionWordData
 ): Promise<TemplateData> {
   return {
+    ...buildCoverPayload(data.cover),
+    ...buildFutureProcessSummaryPayload(data.futureProcessRisks),
+    ...buildFatalAccidentCauseChecksPayload(data.siteOverview.agents),
     'image:siteOverview.photoUrl': buildImageContent(
       data.siteOverview.photoUrl,
       SITE_OVERVIEW_IMAGE_BOUNDS
@@ -157,6 +234,8 @@ export async function buildInspectionWordTemplatePayload(
     previousGuidanceItems: data.previousGuidanceItems.map((item) => ({
       'previousGuidanceItems.location': normalizeLocation(item.location),
       'previousGuidanceItems.locationDetail': normalizeText(item.locationDetail),
+      'previousGuidanceItems.guidanceDate': normalizeText(item.guidanceDate),
+      'previousGuidanceItems.confirmationDate': normalizeText(item.confirmationDate),
       'previousGuidanceItems.hazardFactors': normalizeText(item.hazardFactors),
       'previousGuidanceItems.improvementItems': normalizeText(item.improvementItems),
       'previousGuidanceItems.legalInfo': normalizeText(item.legalInfo),

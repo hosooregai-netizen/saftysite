@@ -103,12 +103,16 @@ export function useInspectionSessions() {
   const [isReady, setIsReady] = useState(false);
   const skipNextSessionPersistRef = useRef(true);
   const skipNextSitePersistRef = useRef(true);
+  const sessionsRef = useRef<InspectionSession[]>([]);
+  const sitesRef = useRef<InspectionSite[]>([]);
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     // Local storage hydration is intentionally deferred until mount.
     const nextSessions = loadSessions();
     const nextSites = loadSites(nextSessions);
+    sessionsRef.current = nextSessions;
+    sitesRef.current = nextSites;
     setSessions(nextSessions);
     setSites(nextSites);
     setIsReady(true);
@@ -120,6 +124,7 @@ export function useInspectionSessions() {
       const normalized = normalizeSessions(nextSessions);
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
       skipNextSessionPersistRef.current = true;
+      sessionsRef.current = normalized;
       setSessions(normalized);
     } catch {}
   }, []);
@@ -128,9 +133,18 @@ export function useInspectionSessions() {
     try {
       window.localStorage.setItem(SITE_STORAGE_KEY, JSON.stringify(nextSites));
       skipNextSitePersistRef.current = true;
+      sitesRef.current = nextSites;
       setSites(nextSites);
     } catch {}
   }, []);
+
+  useEffect(() => {
+    sessionsRef.current = sessions;
+  }, [sessions]);
+
+  useEffect(() => {
+    sitesRef.current = sites;
+  }, [sites]);
 
   useEffect(() => {
     if (!isReady) return;
@@ -296,8 +310,33 @@ export function useInspectionSessions() {
 
   const saveNow = useCallback(() => {
     if (!isReady) return;
-    persistSessions(sessions);
-  }, [isReady, persistSessions, sessions]);
+    persistSessions(sessionsRef.current);
+    persistSites(sitesRef.current);
+  }, [isReady, persistSessions, persistSites]);
+
+  useEffect(() => {
+    if (!isReady) return;
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        saveNow();
+      }
+    };
+
+    const handlePageHide = () => {
+      saveNow();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('pagehide', handlePageHide);
+    window.addEventListener('beforeunload', handlePageHide);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pagehide', handlePageHide);
+      window.removeEventListener('beforeunload', handlePageHide);
+    };
+  }, [isReady, saveNow]);
 
   const getSessionById = useCallback(
     (sessionId: string) => sessions.find((session) => session.id === sessionId) || null,

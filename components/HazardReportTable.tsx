@@ -55,9 +55,15 @@ interface HazardReportTableText {
 interface HazardReportTableProps {
   data: HazardReportItem;
   onChange: (data: HazardReportItem) => void;
+  onAppendReports?: (reports: HazardReportItem[]) => void;
   index: number;
   headerActions?: ReactNode;
+  topGridExtraContent?: ReactNode;
   text?: HazardReportTableText;
+  implementationPeriodOptions?: Array<{
+    value: string;
+    label?: string;
+  }>;
   readOnlyFields?: Partial<Record<HazardFieldKey, boolean>>;
   hiddenFields?: Partial<Record<HazardFieldKey, boolean>>;
   photoMode?: 'analyze' | 'upload' | 'readonly';
@@ -125,9 +131,12 @@ function readFileAsDataUrl(file: File): Promise<string> {
 export default function HazardReportTable({
   data,
   onChange,
+  onAppendReports,
   index,
   headerActions,
+  topGridExtraContent,
   text,
+  implementationPeriodOptions,
   readOnlyFields,
   hiddenFields,
   photoMode = 'analyze',
@@ -261,32 +270,55 @@ export default function HazardReportTable({
   );
 
   const handlePhotoChange = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+    const files = Array.from(event.target.files ?? []);
     event.target.value = '';
-    if (!file || photoMode === 'readonly') return;
+    if (files.length === 0 || photoMode === 'readonly') return;
 
     setIsPhotoLoading(true);
     setPhotoError(null);
 
     try {
       if (photoMode === 'upload') {
+        const photoUrls = await Promise.all(files.map((file) => readFileAsDataUrl(file)));
+        const [firstPhotoUrl, ...restPhotoUrls] = photoUrls;
+
+        if (!firstPhotoUrl) {
+          return;
+        }
+
         updateReport({
-          photoUrl: await readFileAsDataUrl(file),
+          photoUrl: firstPhotoUrl,
           metadata: undefined,
           objects: undefined,
         });
+
+        if (restPhotoUrls.length > 0 && onAppendReports) {
+          onAppendReports(
+            restPhotoUrls.map((photoUrl) =>
+              syncRiskAssessmentResult({
+                ...data,
+                photoUrl,
+                metadata: undefined,
+                objects: undefined,
+              })
+            )
+          );
+        }
         return;
       }
 
-      const raw = await analyzeHazardPhotos([file]);
-      const reports = await normalizeHazardResponse(raw, [file]);
-      const analyzedReport = reports[0];
+      const raw = await analyzeHazardPhotos(files);
+      const reports = await normalizeHazardResponse(raw, files);
+      const [analyzedReport, ...restReports] = reports;
 
       if (!analyzedReport) {
         throw new Error('분석 결과를 불러오지 못했습니다.');
       }
 
       onChange(mergeAnalyzedReport(analyzedReport));
+      if (restReports.length > 0 && onAppendReports) {
+        onAppendReports(restReports);
+      }
     } catch (error) {
       setPhotoError(error instanceof Error ? error.message : String(error));
     } finally {
@@ -329,6 +361,7 @@ export default function HazardReportTable({
               ref={galleryInputRef}
               type="file"
               accept="image/*"
+              multiple
               onChange={(event) => {
                 void handlePhotoChange(event);
               }}
@@ -422,7 +455,14 @@ export default function HazardReportTable({
         {photoError ? <p className={styles.photoError}>{photoError}</p> : null}
 
         <div className={styles.layout}>
-          <div className={styles.topGrid}>
+          <div
+            className={[
+              styles.topGrid,
+              topGridExtraContent ? styles.topGridExtended : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+          >
             {headerActions ? (
               <div className={styles.topGridActions}>{headerActions}</div>
             ) : null}
@@ -440,6 +480,8 @@ export default function HazardReportTable({
                 readOnly={isReadOnly(readOnlyFields, 'locationDetail')}
               />
             </div>
+
+            {topGridExtraContent}
 
             <div className={`${styles.formField} ${styles.metricField}`}>
               <label className={styles.fieldLabel} htmlFor={`hazard-likelihood-${index}`}>
@@ -569,17 +611,35 @@ export default function HazardReportTable({
               <label className={styles.fieldLabel} htmlFor={`hazard-period-${index}`}>
                 {mergedText.implementationPeriodLabel}
               </label>
-              <input
-                id={`hazard-period-${index}`}
-                type="text"
-                value={data.implementationPeriod}
-                onChange={(event) =>
-                  updateReport({ implementationPeriod: event.target.value })
-                }
-                className="app-input"
-                placeholder={mergedText.implementationPeriodPlaceholder}
-                readOnly={isReadOnly(readOnlyFields, 'implementationPeriod')}
-              />
+              {implementationPeriodOptions?.length ? (
+                <select
+                  id={`hazard-period-${index}`}
+                  value={data.implementationPeriod}
+                  onChange={(event) =>
+                    updateReport({ implementationPeriod: event.target.value })
+                  }
+                  className="app-select"
+                  disabled={isReadOnly(readOnlyFields, 'implementationPeriod')}
+                >
+                  {implementationPeriodOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label ?? option.value}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  id={`hazard-period-${index}`}
+                  type="text"
+                  value={data.implementationPeriod}
+                  onChange={(event) =>
+                    updateReport({ implementationPeriod: event.target.value })
+                  }
+                  className="app-input"
+                  placeholder={mergedText.implementationPeriodPlaceholder}
+                  readOnly={isReadOnly(readOnlyFields, 'implementationPeriod')}
+                />
+              )}
             </div>
           ) : null}
 

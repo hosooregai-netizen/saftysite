@@ -31,6 +31,8 @@ export interface PreviousGuidanceItem {
   id: string;
   sourceSessionId?: string;
   sourceHazardId?: string;
+  guidanceDate: string;
+  confirmationDate: string;
   location: string;
   locationDetail: string;
   likelihood?: string;

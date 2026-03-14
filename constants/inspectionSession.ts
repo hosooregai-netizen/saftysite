@@ -58,7 +58,11 @@ export const INSPECTION_SECTIONS: InspectionSectionMeta[] = [
   },
 ];
 
-export const DEFAULT_PREVIOUS_GUIDANCE_RESULT = '이행완료';
+export const DEFAULT_PREVIOUS_GUIDANCE_RESULT = '미이행';
+export const PREVIOUS_GUIDANCE_RESULT_OPTIONS = [
+  { value: '이행완료', label: '이행완료' },
+  { value: '미이행', label: '미이행' },
+] as const;
 
 const UNTITLED_SITE_KEY = '__untitled_site__';
 const LEGACY_GUIDANCE_STATUS_LABELS: Record<GuidanceStatus, string> = {
@@ -96,6 +100,45 @@ function normalizeGuidanceStatus(value: unknown): GuidanceStatus {
   }
 }
 
+export function normalizePreviousGuidanceResult(
+  value: string | null | undefined
+): string {
+  const normalized = value?.trim() ?? '';
+
+  if (!normalized) {
+    return DEFAULT_PREVIOUS_GUIDANCE_RESULT;
+  }
+
+  if (normalized === '이행완료' || normalized === '미이행') {
+    return normalized;
+  }
+
+  if (
+    normalized.includes('미이행') ||
+    normalized.includes('부분 이행') ||
+    normalized.includes('검토중') ||
+    normalized.includes('검토 중') ||
+    normalized.includes('보완') ||
+    normalized.includes('예정') ||
+    normalized.includes('대기')
+  ) {
+    return '미이행';
+  }
+
+  if (
+    normalized.includes('이행완료') ||
+    normalized.includes('이행 완료') ||
+    normalized.includes('조치완료') ||
+    normalized.includes('조치 완료') ||
+    normalized === '이행' ||
+    normalized.includes('완료')
+  ) {
+    return '이행완료';
+  }
+
+  return '미이행';
+}
+
 function normalizeObjects(value: unknown): string[] | undefined {
   if (!Array.isArray(value)) return undefined;
 
@@ -104,21 +147,19 @@ function normalizeObjects(value: unknown): string[] | undefined {
 }
 
 function buildLegacyImplementationResult(raw: Record<string, unknown>): string {
-  const explicitResult = normalizeText(
+  const explicitResult = normalizePreviousGuidanceResult(
     typeof raw.implementationResult === 'string' ? raw.implementationResult : ''
   );
-  if (explicitResult) return explicitResult;
+  if (typeof raw.implementationResult === 'string' && raw.implementationResult.trim()) {
+    return explicitResult;
+  }
 
   const status = normalizeGuidanceStatus(raw.status);
   const note = normalizeText(typeof raw.note === 'string' ? raw.note : '');
   const statusLabel =
     status !== 'pending' ? LEGACY_GUIDANCE_STATUS_LABELS[status] : '';
 
-  if (statusLabel && note) {
-    return `${statusLabel}\n${note}`;
-  }
-
-  return statusLabel || note || DEFAULT_PREVIOUS_GUIDANCE_RESULT;
+  return normalizePreviousGuidanceResult(statusLabel || note);
 }
 
 function generateId(prefix: string): string {
@@ -484,13 +525,23 @@ export function normalizeInspectionHazardItem(raw: unknown): InspectionHazardIte
   return normalizeHazardFields(source, fallback);
 }
 
-export function normalizePreviousGuidanceItem(raw: unknown): PreviousGuidanceItem {
+export function normalizePreviousGuidanceItem(
+  raw: unknown,
+  fallbackConfirmationDate = ''
+): PreviousGuidanceItem {
   const fallback = createInspectionHazardItem();
   const source = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
   const normalized = normalizeHazardFields(source, fallback);
 
   return {
     ...normalized,
+    guidanceDate: normalizeText(
+      typeof source.guidanceDate === 'string' ? source.guidanceDate : ''
+    ),
+    confirmationDate:
+      normalizeText(
+        typeof source.confirmationDate === 'string' ? source.confirmationDate : ''
+      ) || normalizeText(fallbackConfirmationDate),
     status:
       typeof source.status === 'string'
         ? normalizeGuidanceStatus(source.status)
@@ -505,7 +556,9 @@ export function normalizePreviousGuidanceItem(raw: unknown): PreviousGuidanceIte
     currentPhotoUrl: normalizeText(
       typeof source.currentPhotoUrl === 'string' ? source.currentPhotoUrl : ''
     ),
-    implementationResult: buildLegacyImplementationResult(source),
+    implementationResult: normalizePreviousGuidanceResult(
+      buildLegacyImplementationResult(source)
+    ),
   };
 }
 
@@ -535,7 +588,9 @@ export function normalizeInspectionSession(session: InspectionSession): Inspecti
     ...session,
     reportNumber: normalizeReportNumber(session.reportNumber),
     previousGuidanceItems: Array.isArray(session.previousGuidanceItems)
-      ? session.previousGuidanceItems.map((item) => normalizePreviousGuidanceItem(item))
+      ? session.previousGuidanceItems.map((item) =>
+          normalizePreviousGuidanceItem(item, session.cover.inspectionDate)
+        )
       : [],
     currentHazards: Array.isArray(session.currentHazards)
       ? session.currentHazards.map((item) => normalizeInspectionHazardItem(item))

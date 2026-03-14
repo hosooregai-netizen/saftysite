@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { DEFAULT_IMPLEMENTATION_PERIOD } from '@/constants/hazard';
 import {
   INSPECTION_SECTIONS,
   createFutureProcessRiskItem,
@@ -33,12 +34,68 @@ import SessionSupportSection from './SessionSupportSection';
 import {
   arePreviousGuidanceItemsEqual,
   buildPreviousGuidanceItems,
-  readFileAsDataUrl,
 } from './sessionUtils';
 import styles from './InspectionSessionWorkspace.module.css';
 
 interface InspectionSessionWorkspaceProps {
   sessionId: string;
+}
+
+function insertItemsAfterId<T extends { id: string }>(
+  items: T[],
+  itemId: string,
+  nextItems: T[]
+): T[] {
+  if (nextItems.length === 0) {
+    return items;
+  }
+
+  const targetIndex = items.findIndex((item) => item.id === itemId);
+  if (targetIndex < 0) {
+    return [...items, ...nextItems];
+  }
+
+  return [
+    ...items.slice(0, targetIndex + 1),
+    ...nextItems,
+    ...items.slice(targetIndex + 1),
+  ];
+}
+
+function normalizeText(value: string | null | undefined): string {
+  return value?.trim() ?? '';
+}
+
+function hasMeaningfulImplementationPeriod(
+  value: string | null | undefined
+): boolean {
+  const normalized = normalizeText(value);
+  return Boolean(normalized) && normalized !== DEFAULT_IMPLEMENTATION_PERIOD;
+}
+
+function isEffectivelyEmptyHazardItem(
+  item: Partial<HazardReportItem> & { processName?: string }
+): boolean {
+  return !(
+    normalizeText(item.processName) ||
+    normalizeText(item.locationDetail) ||
+    normalizeText(item.likelihood) ||
+    normalizeText(item.severity) ||
+    normalizeText(item.hazardFactors) ||
+    normalizeText(item.improvementItems) ||
+    normalizeText(item.photoUrl) ||
+    normalizeText(item.legalInfo) ||
+    hasMeaningfulImplementationPeriod(item.implementationPeriod)
+  );
+}
+
+function ensureTrailingEmptyItem<T extends HazardReportItem & { id: string }>(
+  items: T[],
+  createItem: () => T
+): T[] {
+  return items.some((item) => isEffectivelyEmptyHazardItem(item))
+    ? items
+    : [...items, createItem()];
 }
 
 export default function InspectionSessionWorkspace({
@@ -57,8 +114,10 @@ export default function InspectionSessionWorkspace({
   const [isDownloadingWord, setIsDownloadingWord] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const [isCompletionModalOpen, setIsCompletionModalOpen] = useState(false);
+  const didMountCurrentSectionRef = useRef(false);
 
   const progress = session ? getSessionProgress(session) : null;
+  const currentSectionKey = session?.currentSection ?? null;
   const currentSectionIndex = session
     ? INSPECTION_SECTIONS.findIndex((section) => section.key === session.currentSection)
     : -1;
@@ -113,6 +172,21 @@ export default function InspectionSessionWorkspace({
       ),
     }));
   }, [handleSessionChange, session]);
+
+  useEffect(() => {
+    if (!currentSectionKey) return;
+
+    if (!didMountCurrentSectionRef.current) {
+      didMountCurrentSectionRef.current = true;
+      return;
+    }
+
+    saveNow();
+  }, [currentSectionKey, saveNow]);
+
+  useEffect(() => () => {
+    saveNow();
+  }, [saveNow]);
 
   const handleSectionChange = (section: InspectionSectionKey) => {
     handleSessionChange((current) => ({
@@ -173,19 +247,6 @@ export default function InspectionSessionWorkspace({
     }));
   };
 
-  const handlePreviousGuidancePhoto = async (
-    itemId: string,
-    field: 'currentPhotoUrl',
-    event: ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const dataUrl = await readFileAsDataUrl(file);
-    handlePreviousGuidanceChange(itemId, { [field]: dataUrl });
-    event.target.value = '';
-  };
-
   const handleAddHazard = () => {
     const item = createInspectionHazardItem();
     handleSessionChange((current) => ({
@@ -197,8 +258,37 @@ export default function InspectionSessionWorkspace({
   const handleHazardChange = (itemId: string, data: HazardReportItem) => {
     handleSessionChange((current) => ({
       ...current,
-      currentHazards: current.currentHazards.map((item) =>
-        item.id === itemId ? touchUpdatedAt({ ...item, ...data }) : item
+      currentHazards: (() => {
+        const previousItem = current.currentHazards.find((item) => item.id === itemId);
+        const nextItems = current.currentHazards.map((item) =>
+          item.id === itemId ? touchUpdatedAt({ ...item, ...data }) : item
+        );
+        const shouldAppendEmptyItem =
+          !normalizeText(previousItem?.photoUrl) && Boolean(normalizeText(data.photoUrl));
+
+        return shouldAppendEmptyItem
+          ? ensureTrailingEmptyItem(nextItems, createInspectionHazardItem)
+          : nextItems;
+      })(),
+    }));
+  };
+
+  const handleAppendHazardReports = (
+    itemId: string,
+    reports: HazardReportItem[]
+  ) => {
+    handleSessionChange((current) => ({
+      ...current,
+      currentHazards: ensureTrailingEmptyItem(
+        insertItemsAfterId(
+          current.currentHazards,
+          itemId,
+          reports.map((report) => ({
+            ...createInspectionHazardItem(),
+            ...report,
+          }))
+        ),
+        createInspectionHazardItem
       ),
     }));
   };
@@ -224,8 +314,37 @@ export default function InspectionSessionWorkspace({
   ) => {
     handleSessionChange((current) => ({
       ...current,
-      futureProcessRisks: current.futureProcessRisks.map((item) =>
-        item.id === itemId ? touchUpdatedAt({ ...item, ...data }) : item
+      futureProcessRisks: (() => {
+        const previousItem = current.futureProcessRisks.find((item) => item.id === itemId);
+        const nextItems = current.futureProcessRisks.map((item) =>
+          item.id === itemId ? touchUpdatedAt({ ...item, ...data }) : item
+        );
+        const shouldAppendEmptyItem =
+          !normalizeText(previousItem?.photoUrl) && Boolean(normalizeText(data.photoUrl));
+
+        return shouldAppendEmptyItem
+          ? ensureTrailingEmptyItem(nextItems, createFutureProcessRiskItem)
+          : nextItems;
+      })(),
+    }));
+  };
+
+  const handleAppendFutureRiskReports = (
+    itemId: string,
+    reports: HazardReportItem[]
+  ) => {
+    handleSessionChange((current) => ({
+      ...current,
+      futureProcessRisks: ensureTrailingEmptyItem(
+        insertItemsAfterId(
+          current.futureProcessRisks,
+          itemId,
+          reports.map((report) => ({
+            ...createFutureProcessRiskItem(),
+            ...report,
+          }))
+        ),
+        createFutureProcessRiskItem
       ),
     }));
   };
@@ -453,7 +572,6 @@ export default function InspectionSessionWorkspace({
                         <SessionPreviousGuidanceSection
                           items={session.previousGuidanceItems}
                           onChange={handlePreviousGuidanceChange}
-                          onPhotoChange={handlePreviousGuidancePhoto}
                         />
                       )}
 
@@ -463,6 +581,7 @@ export default function InspectionSessionWorkspace({
                           onAdd={handleAddHazard}
                           onRemove={handleRemoveHazard}
                           onChange={handleHazardChange}
+                          onAppendReports={handleAppendHazardReports}
                         />
                       )}
 
@@ -471,6 +590,7 @@ export default function InspectionSessionWorkspace({
                           items={session.futureProcessRisks}
                           onAdd={handleAddFutureRisk}
                           onChange={handleFutureRiskChange}
+                          onAppendReports={handleAppendFutureRiskReports}
                           onRemove={handleRemoveFutureRisk}
                         />
                       )}

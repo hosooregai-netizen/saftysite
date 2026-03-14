@@ -1,7 +1,6 @@
-import type { ChangeEvent } from 'react';
 import HazardReportTable from '@/components/HazardReportTable';
 import hazardStyles from '@/components/HazardReportTable.module.css';
-import { useImageSourcePicker } from '@/hooks/useImageSourcePicker';
+import { PREVIOUS_GUIDANCE_RESULT_OPTIONS } from '@/constants/inspectionSession';
 import type { HazardReportItem } from '@/types/hazard';
 import type { PreviousGuidanceItem } from '@/types/inspectionSession';
 import styles from './InspectionSessionWorkspace.module.css';
@@ -9,11 +8,6 @@ import styles from './InspectionSessionWorkspace.module.css';
 interface SessionPreviousGuidanceSectionProps {
   items: PreviousGuidanceItem[];
   onChange: (itemId: string, patch: Partial<PreviousGuidanceItem>) => void;
-  onPhotoChange: (
-    itemId: string,
-    field: 'currentPhotoUrl',
-    event: ChangeEvent<HTMLInputElement>
-  ) => void;
 }
 
 function toHazardReportItem(item: PreviousGuidanceItem): HazardReportItem {
@@ -31,91 +25,53 @@ function toHazardReportItem(item: PreviousGuidanceItem): HazardReportItem {
   };
 }
 
-function PreviousGuidanceCurrentPhotoField({
+function PreviousGuidanceDateFields({
   item,
-  onChange,
-  onPhotoChange,
+  index,
 }: {
   item: PreviousGuidanceItem;
-  onChange: (itemId: string, patch: Partial<PreviousGuidanceItem>) => void;
-  onPhotoChange: (
-    itemId: string,
-    field: 'currentPhotoUrl',
-    event: ChangeEvent<HTMLInputElement>
-  ) => void;
+  index: number;
 }) {
-  const { galleryInputRef, cameraInputRef, requestPick, pickerModal } =
-    useImageSourcePicker({ title: '현재 사진 추가' });
-
   return (
-    <div className={`${hazardStyles.formField} ${hazardStyles.photoColumn}`}>
-      <label className={hazardStyles.fieldLabel}>현재 사진</label>
-      <div className={hazardStyles.photoField}>
-        {item.currentPhotoUrl ? (
-          <div className={hazardStyles.photoPreviewWrap}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={item.currentPhotoUrl}
-              alt="현재 조치 상태 사진"
-              className={hazardStyles.photoPreview}
-            />
-            <div className={hazardStyles.photoActions}>
-              <button
-                type="button"
-                onClick={requestPick}
-                className={hazardStyles.photoAction}
-              >
-                사진 변경
-              </button>
-              <button
-                type="button"
-                onClick={() => onChange(item.id, { currentPhotoUrl: '' })}
-                className={hazardStyles.photoRemoveButton}
-              >
-                사진 제거
-              </button>
-            </div>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={requestPick}
-            className={`${hazardStyles.photoPlaceholder} ${hazardStyles.photoPlaceholderButton}`}
-          >
-            <span>이미지 선택</span>
-            <span className={hazardStyles.photoPlaceholderHint}>
-              현재 조치 상태 사진을 추가하세요.
-            </span>
-          </button>
-        )}
-
+    <>
+      <div className={hazardStyles.formField}>
+        <label
+          className={hazardStyles.fieldLabel}
+          htmlFor={`previous-guidance-date-${index}`}
+        >
+          지도일
+        </label>
         <input
-          ref={galleryInputRef}
-          id={`${item.id}-current-photo-gallery`}
-          type="file"
-          accept="image/*"
-          onChange={(event) => onPhotoChange(item.id, 'currentPhotoUrl', event)}
-          className={hazardStyles.hiddenInput}
-        />
-        <input
-          ref={cameraInputRef}
-          id={`${item.id}-current-photo-camera`}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          onChange={(event) => onPhotoChange(item.id, 'currentPhotoUrl', event)}
-          className={hazardStyles.hiddenInput}
+          id={`previous-guidance-date-${index}`}
+          type="text"
+          value={item.guidanceDate}
+          readOnly
+          className="app-input"
         />
       </div>
-      {pickerModal}
-    </div>
+
+      <div className={hazardStyles.formField}>
+        <label
+          className={hazardStyles.fieldLabel}
+          htmlFor={`previous-guidance-confirmation-date-${index}`}
+        >
+          확인일
+        </label>
+        <input
+          id={`previous-guidance-confirmation-date-${index}`}
+          type="text"
+          value={item.confirmationDate}
+          readOnly
+          className="app-input"
+        />
+      </div>
+    </>
   );
 }
 
 export default function SessionPreviousGuidanceSection({
   items,
   onChange,
-  onPhotoChange,
 }: SessionPreviousGuidanceSectionProps) {
   if (items.length === 0) {
     return (
@@ -139,6 +95,10 @@ export default function SessionPreviousGuidanceSection({
               }
               index={index + 200}
               photoMode="readonly"
+              topGridExtraContent={
+                <PreviousGuidanceDateFields item={item} index={index + 200} />
+              }
+              implementationPeriodOptions={[...PREVIOUS_GUIDANCE_RESULT_OPTIONS]}
               readOnlyFields={{
                 locationDetail: true,
                 likelihood: true,
@@ -148,21 +108,13 @@ export default function SessionPreviousGuidanceSection({
                 legalInfo: true,
               }}
               text={{
+                locationDetailLabel: '유해 위험장소',
                 photoLabel: '과거 사진',
                 photoAlt: '과거 지도 사항 사진',
                 photoEmptyHint: '과거 보고서에 등록된 사진이 없습니다.',
                 hazardFactorsLabel: '유해위험요인',
                 implementationPeriodLabel: '이행 결과',
-                implementationPeriodPlaceholder:
-                  '예: 이행완료, 추가 보완 예정',
               }}
-              photoGroupExtraContent={
-                <PreviousGuidanceCurrentPhotoField
-                  item={item}
-                  onChange={onChange}
-                  onPhotoChange={onPhotoChange}
-                />
-              }
             />
           </div>
         ))}
