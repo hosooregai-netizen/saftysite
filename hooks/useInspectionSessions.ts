@@ -2,23 +2,102 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  createInspectionSite,
   createInspectionSession,
+  createInspectionSite,
   ensureSessionReportNumbers,
   getSessionSiteKey,
-  getSessionSiteTitle,
   getSessionSortTime,
   normalizeInspectionSession,
+  normalizeInspectionSite,
 } from '@/constants/inspectionSession';
-import { readPersistedValue, writePersistedValue } from '@/lib/clientPersistence';
+import {
+  deletePersistedValue,
+  writePersistedValue,
+} from '@/lib/clientPersistence';
 import type {
-  InspectionCover,
+  AdminSiteSnapshot,
+  InspectionReportMeta,
   InspectionSite,
   InspectionSession,
 } from '@/types/inspectionSession';
 
-const STORAGE_KEY = 'inspection-sessions-v1';
-const SITE_STORAGE_KEY = 'inspection-sites-v1';
+const STORAGE_KEY = 'inspection-sessions-v7';
+const SITE_STORAGE_KEY = 'inspection-sites-v7';
+const RESET_TARGET_KEYS = [
+  'inspection-sessions-v1',
+  'inspection-sites-v1',
+  'inspection-sessions-v2',
+  'inspection-sites-v2',
+  'inspection-sessions-v3',
+  'inspection-sites-v3',
+  'inspection-sessions-v4',
+  'inspection-sites-v4',
+  'inspection-sessions-v5',
+  'inspection-sites-v5',
+  'inspection-sessions-v6',
+  'inspection-sites-v6',
+  'inspection-sessions-v7',
+  'inspection-sites-v7',
+];
+
+function createMockData(): {
+  sessions: InspectionSession[];
+  sites: InspectionSite[];
+} {
+  const site = createInspectionSite({
+    customerName: '대명건설 주식회사',
+    siteName: '평택 고덕 A-12BL 지식산업센터 신축공사',
+    assigneeName: '박준호',
+    siteManagementNumber: 'PS-2026-018',
+    businessStartNumber: '240318-01',
+    constructionPeriod: '2026.02.10 ~ 2027.01.30',
+    constructionAmount: '15,800,000,000원',
+    siteManagerName: '김도현 현장소장',
+    siteContactEmail: '010-2486-1033 / pjh@daemyung-enc.co.kr',
+    siteAddress: '경기도 평택시 고덕동 1887-2',
+    companyName: '대명건설 주식회사',
+    corporationRegistrationNumber: '110111-2345678',
+    businessRegistrationNumber: '214-81-45678',
+    licenseNumber: '건축공사업 경기-26-0412',
+    headquartersContact: '02-6123-7788',
+    headquartersAddress: '서울특별시 송파구 법원로 11길 25',
+  });
+  const mockSiteId = 'mock-site-pyeongtaek-godeok-a12bl';
+  const session = createInspectionSession(
+    {
+      adminSiteSnapshot: site.adminSiteSnapshot,
+      meta: {
+        siteName: site.siteName,
+        reportDate: '2026-03-18',
+        drafter: site.assigneeName,
+        reviewer: '이선영',
+        approver: '최민석',
+      },
+    },
+    mockSiteId,
+    1
+  );
+
+  const seededSession: InspectionSession = {
+    ...session,
+    id: 'mock-session-pyeongtaek-godeok-a12bl-20260318',
+    siteKey: mockSiteId,
+    currentSection: 'doc2',
+    createdAt: '2026-03-18T08:40:00.000Z',
+    updatedAt: '2026-03-18T09:10:00.000Z',
+    lastSavedAt: '2026-03-18T09:10:00.000Z',
+  };
+  const seededSite: InspectionSite = {
+    ...site,
+    id: mockSiteId,
+    updatedAt: '2026-03-18T09:10:00.000Z',
+  };
+
+  return {
+    sites: [seededSite],
+    sessions: normalizeSessions([seededSession]),
+  };
+}
 
 function sortSessions(items: InspectionSession[]): InspectionSession[] {
   return [...items].sort((left, right) => {
@@ -37,67 +116,6 @@ function normalizeSessions(items: InspectionSession[]): InspectionSession[] {
   return sortSessions(ensureSessionReportNumbers(items));
 }
 
-function loadSessions(): InspectionSession[] {
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-
-    const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) return [];
-
-    const migrated = (parsed as InspectionSession[]).map((session) =>
-      normalizeInspectionSession({
-        ...session,
-        siteKey:
-          typeof session.siteKey === 'string' && session.siteKey.trim()
-            ? session.siteKey
-            : getSessionSiteKey({
-                cover: session.cover,
-                siteKey: '',
-              }),
-      })
-    );
-
-    return normalizeSessions(migrated);
-  } catch {
-    return [];
-  }
-}
-
-function loadSites(sessions: InspectionSession[]): InspectionSite[] {
-  try {
-    const raw = window.localStorage.getItem(SITE_STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as unknown;
-      if (Array.isArray(parsed)) {
-        return parsed as InspectionSite[];
-      }
-    }
-  } catch {
-    // Fall through to migration from stored sessions.
-  }
-
-  const derivedSites = new Map<string, InspectionSite>();
-
-  for (const session of sessions) {
-    const siteKey = getSessionSiteKey(session);
-    if (derivedSites.has(siteKey)) continue;
-
-    const title = getSessionSiteTitle(session);
-    derivedSites.set(siteKey, {
-      id: siteKey,
-      title,
-      createdAt: session.createdAt,
-      updatedAt: session.updatedAt,
-    });
-  }
-
-  return Array.from(derivedSites.values()).sort(
-    (left, right) =>
-      new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime()
-  );
-}
-
 export function useInspectionSessions() {
   const [sessions, setSessions] = useState<InspectionSession[]>([]);
   const [sites, setSites] = useState<InspectionSite[]>([]);
@@ -109,30 +127,10 @@ export function useInspectionSessions() {
     let cancelled = false;
 
     const hydrate = async () => {
-      const storedSessions = await readPersistedValue<InspectionSession[]>(STORAGE_KEY);
-      const shouldMigrateSessions = !Array.isArray(storedSessions);
-      const nextSessions = Array.isArray(storedSessions)
-        ? normalizeSessions(
-            storedSessions.map((session) =>
-              normalizeInspectionSession({
-                ...session,
-                siteKey:
-                  typeof session.siteKey === 'string' && session.siteKey.trim()
-                    ? session.siteKey
-                    : getSessionSiteKey({
-                        cover: session.cover,
-                        siteKey: '',
-                      }),
-              })
-            )
-          )
-        : loadSessions();
-
-      const storedSites = await readPersistedValue<InspectionSite[]>(SITE_STORAGE_KEY);
-      const shouldMigrateSites = !Array.isArray(storedSites);
-      const nextSites = Array.isArray(storedSites)
-        ? storedSites
-        : loadSites(nextSessions);
+      await Promise.all(RESET_TARGET_KEYS.map((key) => deletePersistedValue(key)));
+      const mockData = createMockData();
+      const nextSessions = mockData.sessions;
+      const nextSites = mockData.sites;
 
       if (cancelled) return;
 
@@ -142,12 +140,8 @@ export function useInspectionSessions() {
       setSites(nextSites);
       setIsReady(true);
 
-      if (shouldMigrateSessions) {
-        void writePersistedValue(STORAGE_KEY, nextSessions);
-      }
-      if (shouldMigrateSites) {
-        void writePersistedValue(SITE_STORAGE_KEY, nextSites);
-      }
+      void writePersistedValue(STORAGE_KEY, nextSessions);
+      void writePersistedValue(SITE_STORAGE_KEY, nextSites);
     };
 
     void hydrate();
@@ -186,27 +180,32 @@ export function useInspectionSessions() {
     return () => window.clearTimeout(timeout);
   }, [isReady, persistSites, sites]);
 
-  const createSite = useCallback((title: string) => {
-    const nextSite = createInspectionSite(title);
-    const nextSites = [nextSite, ...sitesRef.current];
-    sitesRef.current = nextSites;
-    setSites(nextSites);
-    void persistSites(nextSites);
-    return nextSite;
-  }, [persistSites]);
+  const createSite = useCallback(
+    (snapshot: Partial<AdminSiteSnapshot>) => {
+      const nextSite = createInspectionSite(snapshot);
+      const nextSites = [nextSite, ...sitesRef.current];
+      sitesRef.current = nextSites;
+      setSites(nextSites);
+      void persistSites(nextSites);
+      return nextSite;
+    },
+    [persistSites]
+  );
 
   const updateSite = useCallback(
     (siteId: string, updater: (current: InspectionSite) => InspectionSite) => {
       const updatedAt = new Date().toISOString();
       setSites((current) => {
-        const nextSites = current.map((site) =>
-          site.id === siteId
-            ? {
-                ...updater(site),
-                updatedAt,
-              }
-            : site
-        );
+        const nextSites = current.map((site) => {
+          if (site.id !== siteId) return site;
+
+          const updated = normalizeInspectionSite(updater(site));
+          return {
+            ...updated,
+            updatedAt,
+          };
+        });
+
         sitesRef.current = nextSites;
         return nextSites;
       });
@@ -220,6 +219,7 @@ export function useInspectionSessions() {
       sitesRef.current = nextSites;
       return nextSites;
     });
+
     setSessions((current) => {
       const nextSessions = normalizeSessions(
         current.filter((session) => getSessionSiteKey(session) !== siteId)
@@ -230,31 +230,28 @@ export function useInspectionSessions() {
   }, []);
 
   const createSession = useCallback(
-    (initialCover: Partial<InspectionCover> = {}, siteKey?: string) => {
+    (
+      site: InspectionSite,
+      initial?: {
+        meta?: Partial<InspectionReportMeta>;
+      }
+    ) => {
       const savedAt = new Date().toISOString();
-      const resolvedSiteKey =
-        siteKey ??
-        getSessionSiteKey({
-          cover: {
-            businessName: initialCover.businessName ?? '',
-            projectName: initialCover.projectName ?? '',
-            inspectionDate: initialCover.inspectionDate ?? '',
-            consultantName: initialCover.consultantName ?? '',
-            processSummary: initialCover.processSummary ?? '',
-            siteAddress: initialCover.siteAddress ?? '',
-            contractorName: initialCover.contractorName ?? '',
-            notes: initialCover.notes ?? '',
-          },
-          siteKey: '',
-        });
       const nextSession = {
         ...createInspectionSession(
-          initialCover,
-          resolvedSiteKey,
+          {
+            adminSiteSnapshot: site.adminSiteSnapshot,
+            meta: {
+              siteName: site.siteName,
+              drafter: site.assigneeName,
+              ...initial?.meta,
+            },
+          },
+          site.id,
           Math.max(
             0,
             ...sessionsRef.current
-              .filter((session) => getSessionSiteKey(session) === resolvedSiteKey)
+              .filter((session) => getSessionSiteKey(session) === site.id)
               .map((session) => session.reportNumber || 0)
           ) + 1
         ),
@@ -284,14 +281,14 @@ export function useInspectionSessions() {
           current.map((session) => {
             if (session.id !== sessionId) return session;
 
-            const updated = updater(session);
             return {
-              ...updated,
+              ...normalizeInspectionSession(updater(session)),
               updatedAt: savedAt,
               lastSavedAt: savedAt,
             };
           })
         );
+
         sessionsRef.current = nextSessions;
         return nextSessions;
       });
@@ -311,14 +308,14 @@ export function useInspectionSessions() {
           current.map((session) => {
             if (!predicate(session)) return session;
 
-            const updated = updater(session);
             return {
-              ...updated,
+              ...normalizeInspectionSession(updater(session)),
               updatedAt: savedAt,
               lastSavedAt: savedAt,
             };
           })
         );
+
         sessionsRef.current = nextSessions;
         return nextSessions;
       });

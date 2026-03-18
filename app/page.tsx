@@ -1,12 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { MouseEvent, useEffect, useMemo, useState } from 'react';
-import AppModal from '@/components/ui/AppModal';
+import { useMemo } from 'react';
 import { getSessionSiteKey, getSessionSortTime } from '@/constants/inspectionSession';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import styles from './page.module.css';
+
+const ASSIGNED_SITES_ENABLED = true;
 
 function formatDateTime(value: string | null): string {
   if (!value) return '기록 없음';
@@ -19,40 +19,10 @@ function formatDateTime(value: string | null): string {
   }).format(new Date(value));
 }
 
-function closeOpenMenus() {
-  document
-    .querySelectorAll<HTMLDetailsElement>('details[data-menu-root][open]')
-    .forEach((element) => element.removeAttribute('open'));
-}
-
-function closeMenuFromEvent(event: MouseEvent<HTMLElement>) {
-  event.currentTarget.closest('details')?.removeAttribute('open');
-}
-
-type SiteDialogState =
-  | { type: 'create'; value: string }
-  | { type: 'rename'; siteId: string; currentTitle: string; value: string }
-  | { type: 'delete'; siteId: string }
-  | null;
-
-const INITIAL_SESSION_MODAL_MIN_MS = 1000
-
 export default function HomePage() {
-  const router = useRouter();
-  const {
-    sites,
-    sessions,
-    isReady,
-    createSite,
-    createSession,
-    updateSite,
-    deleteSite,
-    updateSessions,
-  } = useInspectionSessions();
-  const [dialogState, setDialogState] = useState<SiteDialogState>(null);
-  const [isCreatingInitialSession, setIsCreatingInitialSession] = useState(false);
+  const { sites, sessions, isReady } = useInspectionSessions();
 
-  const siteSummaries = useMemo(
+  const rawSiteSummaries = useMemo(
     () =>
       sites
         .map((site) => {
@@ -72,122 +42,7 @@ export default function HomePage() {
         .sort((left, right) => right.sortTime - left.sortTime),
     [sessions, sites]
   );
-
-  useEffect(() => {
-    const handlePointerDown = (event: PointerEvent) => {
-      const target = event.target;
-      if (!(target instanceof Element)) return;
-      if (target.closest('[data-menu-root]')) return;
-      closeOpenMenus();
-    };
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') closeOpenMenus();
-    };
-
-    document.addEventListener('pointerdown', handlePointerDown);
-    document.addEventListener('keydown', handleEscape);
-    return () => {
-      document.removeEventListener('pointerdown', handlePointerDown);
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, []);
-
-  const closeDialog = () => setDialogState(null);
-
-  const handleCreateSite = () => {
-    if (isCreatingInitialSession) return;
-    closeOpenMenus();
-    setDialogState({ type: 'create', value: '' });
-  };
-
-  const handleRenameSite = (siteId: string, currentTitle: string) => {
-    closeOpenMenus();
-    setDialogState({
-      type: 'rename',
-      siteId,
-      currentTitle,
-      value: currentTitle,
-    });
-  };
-
-  const handleDeleteSite = (siteId: string) => {
-    closeOpenMenus();
-    setDialogState({ type: 'delete', siteId });
-  };
-
-  const submitCreateSite = () => {
-    if (!dialogState || dialogState.type !== 'create' || isCreatingInitialSession) return;
-
-    const siteTitle = dialogState.value.trim();
-    if (!siteTitle) return;
-
-    setDialogState(null);
-    setIsCreatingInitialSession(true);
-    const startedAt = Date.now();
-
-    window.setTimeout(() => {
-      try {
-        const site = createSite(siteTitle);
-        const session = createSession(
-          {
-            businessName: site.title,
-          },
-          site.id
-        );
-
-        const remainingDelay = Math.max(
-          0,
-          INITIAL_SESSION_MODAL_MIN_MS - (Date.now() - startedAt)
-        );
-
-        window.setTimeout(() => {
-          router.push(`/sessions/${session.id}`);
-        }, remainingDelay);
-      } catch {
-        setIsCreatingInitialSession(false);
-      }
-    }, 0);
-  };
-
-  const submitRenameSite = () => {
-    if (!dialogState || dialogState.type !== 'rename') return;
-
-    const nextTitle = dialogState.value.trim();
-    if (!nextTitle || nextTitle === dialogState.currentTitle) {
-      setDialogState(null);
-      return;
-    }
-
-    updateSite(dialogState.siteId, (site) => ({
-      ...site,
-      title: nextTitle,
-    }));
-
-    updateSessions(
-      (session) => getSessionSiteKey(session) === dialogState.siteId,
-      (session) => ({
-        ...session,
-        cover: {
-          ...session.cover,
-          businessName: nextTitle,
-        },
-      })
-    );
-
-    setDialogState(null);
-  };
-
-  const submitDeleteSite = () => {
-    if (!dialogState || dialogState.type !== 'delete') return;
-    deleteSite(dialogState.siteId);
-    setDialogState(null);
-  };
-
-  const deletingSite =
-    dialogState?.type === 'delete'
-      ? sites.find((site) => site.id === dialogState.siteId) ?? null
-      : null;
+  const siteSummaries = ASSIGNED_SITES_ENABLED ? rawSiteSummaries : [];
 
   return (
     <main className="app-page">
@@ -195,141 +50,93 @@ export default function HomePage() {
         <section className={`app-shell ${styles.shell}`}>
           <header className={styles.hero}>
             <div className={styles.heroMain}>
-              <span className={styles.heroBackLinkPlaceholder} aria-hidden="true">
-                현장 목록으로
-              </span>
-              <div className={styles.heroMetaSpacer} aria-hidden="true" />
+              <div className={styles.heroMeta}>
+                <span className="app-chip">배정 현장</span>
+                <span className="app-chip">목업 데이터 고정</span>
+              </div>
               <div className={styles.heroTitleRow}>
-                <div className={styles.heroBody}>
-                  <h1 className={styles.heroTitle}>현장 목록</h1>
+                <div>
+                  <h1 className={styles.heroTitle}>배정된 고객사 현장</h1>
+                  <p className={styles.heroDescription}>
+                    현장 기본 데이터는 추후 관리자 페이지에서 관리할 예정입니다. 현재는
+                    목업 현장 1건만 노출하며, 신규 현장 등록은 이 화면에서 제공하지
+                    않습니다.
+                  </p>
                 </div>
               </div>
             </div>
 
             <div className={styles.heroActions}>
               <span className="app-chip">총 {siteSummaries.length}개 현장</span>
-              <button
-                type="button"
-                onClick={handleCreateSite}
-                className="app-button app-button-primary"
-                disabled={isCreatingInitialSession}
-              >
-                새 현장 시작
-              </button>
             </div>
           </header>
 
           <div className={styles.pageGrid}>
-            <section className={styles.sessionPanel}>
+            <section className={styles.tablePanel}>
               {isReady ? (
                 siteSummaries.length > 0 ? (
                   <>
                     <div className={styles.listHead} aria-hidden="true">
-                      <span className={styles.numberHead}>번호</span>
+                      <span>고객사명</span>
                       <span>현장명</span>
-                      <span>최근 점검일</span>
+                      <span>담당</span>
+                      <span>최근 작성일</span>
                       <span>보고서 수</span>
                       <span>마지막 저장</span>
                       <span>작업</span>
                     </div>
 
                     <div className={styles.siteList}>
-                      {siteSummaries.map(({ site, latestSession, sessionCount }, index) => {
+                      {siteSummaries.map(({ site, latestSession, sessionCount }) => {
                         const siteHref = `/sites/${encodeURIComponent(site.id)}`;
 
                         return (
                           <article key={site.id} className={styles.siteRow}>
-                            <div className={styles.numberCell} aria-hidden="true">
-                              <span className={styles.siteNumberBadge}>{index + 1}</span>
-                            </div>
-
-                            <div className={styles.primaryCell}>
-                              <Link href={siteHref} className={styles.siteLink}>
-                                <div className={styles.siteTitleRow}>
-                                  <span className={styles.siteNumberBadgeMobile}>
-                                    {index + 1}
-                                  </span>
-                                  <h3 className={styles.siteTitle}>{site.title}</h3>
-                                </div>
-                              </Link>
-                            </div>
-
-                            <div className={`${styles.dataCell} ${styles.inspectionCell}`}>
-                              <span className={styles.mobileLabel}>최근 점검일</span>
-                              <span className={styles.dataValue}>
-                                {latestSession?.cover.inspectionDate || '-'}
+                            <div className={`${styles.cell} ${styles.customerCell}`}>
+                              <span className={styles.mobileLabel}>고객사명</span>
+                              <span className={styles.cellValue}>
+                                {site.customerName || '미입력'}
                               </span>
                             </div>
 
-                            <div className={`${styles.dataCell} ${styles.reportCountCell}`}>
-                              <span className={styles.mobileLabel}>보고서 수</span>
-                              <span className={styles.dataValue}>{sessionCount}건</span>
+                            <div className={`${styles.primaryCell} ${styles.siteNameCell}`}>
+                              <span className={styles.mobileLabel}>현장명</span>
+                              <Link href={siteHref} className={styles.siteLink}>
+                                {site.siteName || '미입력'}
+                              </Link>
                             </div>
 
-                            <div className={`${styles.dataCell} ${styles.savedCell}`}>
+                            <div className={`${styles.cell} ${styles.assigneeCell}`}>
+                              <span className={styles.mobileLabel}>담당</span>
+                              <span className={styles.cellValue}>
+                                {site.assigneeName || '미입력'}
+                              </span>
+                            </div>
+
+                            <div className={`${styles.cell} ${styles.dateCell}`}>
+                              <span className={styles.mobileLabel}>최근 작성일</span>
+                              <span className={styles.cellValue}>
+                                {latestSession?.meta.reportDate || '-'}
+                              </span>
+                            </div>
+
+                            <div className={`${styles.cell} ${styles.countCell}`}>
+                              <span className={styles.mobileLabel}>보고서 수</span>
+                              <span className={styles.cellValue}>{sessionCount}건</span>
+                            </div>
+
+                            <div className={`${styles.cell} ${styles.savedCell}`}>
                               <span className={styles.mobileLabel}>마지막 저장</span>
-                              <span className={styles.dataValue}>
+                              <span className={styles.cellValue}>
                                 {latestSession ? formatDateTime(latestSession.lastSavedAt) : '-'}
                               </span>
                             </div>
 
-                            <div className={`${styles.mobileActions} ${styles.actionsCell}`}>
+                            <div className={`${styles.actionCell} ${styles.actionsCell}`}>
                               <Link href={siteHref} className="app-button app-button-primary">
-                                현장 보기
+                                보고서 보기
                               </Link>
-                              <button
-                                type="button"
-                                onClick={() => handleRenameSite(site.id, site.title)}
-                                className="app-button app-button-secondary"
-                              >
-                                이름 수정
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteSite(site.id)}
-                                className={`${styles.mobileDangerButton} app-button app-button-danger`}
-                              >
-                                삭제
-                              </button>
                             </div>
-
-                            <details className={styles.menuShell} data-menu-root="site-menu">
-                              <summary
-                                className={styles.menuButton}
-                                aria-label={`${site.title} 작업 열기`}
-                              >
-                                ...
-                              </summary>
-                              <div className={styles.menuList}>
-                                <Link
-                                  href={siteHref}
-                                  className={styles.menuItem}
-                                  onClick={closeMenuFromEvent}
-                                >
-                                  현장 보기
-                                </Link>
-                                <button
-                                  type="button"
-                                  className={styles.menuItem}
-                                  onClick={(event) => {
-                                    closeMenuFromEvent(event);
-                                    handleRenameSite(site.id, site.title);
-                                  }}
-                                >
-                                  이름 수정
-                                </button>
-                                <button
-                                  type="button"
-                                  className={`${styles.menuItem} ${styles.menuItemDanger}`}
-                                  onClick={(event) => {
-                                    closeMenuFromEvent(event);
-                                    handleDeleteSite(site.id);
-                                  }}
-                                >
-                                  삭제
-                                </button>
-                              </div>
-                            </details>
                           </article>
                         );
                       })}
@@ -337,15 +144,11 @@ export default function HomePage() {
                   </>
                 ) : (
                   <div className={styles.emptyState}>
-                    <p className={styles.emptyTitle}>등록된 현장이 없습니다.</p>
-                    <button
-                      type="button"
-                      onClick={handleCreateSite}
-                      className="app-button app-button-primary"
-                      disabled={isCreatingInitialSession}
-                    >
-                      첫 현장 시작
-                    </button>
+                    <p className={styles.emptyTitle}>배정된 현장이 없습니다.</p>
+                    <p className={styles.emptyDescription}>
+                      관리자 페이지 연결 전까지는 배정 현장 데이터가 비어 있는 상태로
+                      표시됩니다.
+                    </p>
                   </div>
                 )
               ) : (
@@ -357,131 +160,6 @@ export default function HomePage() {
           </div>
         </section>
       </div>
-
-      <AppModal
-        open={dialogState?.type === 'create'}
-        title="새 현장 만들기"
-        onClose={closeDialog}
-        actions={
-          <>
-            <button type="button" className="app-button app-button-secondary" onClick={closeDialog}>
-              취소
-            </button>
-            <button
-              type="button"
-              className="app-button app-button-primary"
-              onClick={submitCreateSite}
-              disabled={
-                dialogState?.type !== 'create' ||
-                !dialogState.value.trim() ||
-                isCreatingInitialSession
-              }
-            >
-              생성
-            </button>
-          </>
-        }
-      >
-        <input
-          autoFocus
-          className="app-input"
-          placeholder="예: 사업장1"
-          value={dialogState?.type === 'create' ? dialogState.value : ''}
-          onChange={(event) => {
-            if (dialogState?.type !== 'create') return;
-            setDialogState({
-              ...dialogState,
-              value: event.target.value,
-            });
-          }}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') {
-              event.preventDefault();
-              submitCreateSite();
-            }
-          }}
-        />
-      </AppModal>
-
-      <AppModal
-        open={isCreatingInitialSession}
-        title="새 현장을 생성하고 있습니다."
-        onClose={() => {}}
-        closeOnBackdrop={false}
-        actions={<div className={styles.loadingActions} aria-hidden="true" />}
-      >
-        <div className={styles.loadingContent}>
-          <div className={styles.loadingSpinner} aria-hidden="true" />
-          <p className={styles.loadingDescription}>
-            기본 보고서를 생성하는 중입니다.
-          </p>
-        </div>
-      </AppModal>
-
-      <AppModal
-        open={dialogState?.type === 'rename'}
-        title="현장 이름 수정"
-        onClose={closeDialog}
-        actions={
-          <>
-            <button type="button" className="app-button app-button-secondary" onClick={closeDialog}>
-              취소
-            </button>
-            <button
-              type="button"
-              className="app-button app-button-primary"
-              onClick={submitRenameSite}
-              disabled={dialogState?.type !== 'rename' || !dialogState.value.trim()}
-            >
-              저장
-            </button>
-          </>
-        }
-      >
-        <input
-          autoFocus
-          className="app-input"
-          value={dialogState?.type === 'rename' ? dialogState.value : ''}
-          onChange={(event) => {
-            if (dialogState?.type !== 'rename') return;
-            setDialogState({
-              ...dialogState,
-              value: event.target.value,
-            });
-          }}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') {
-              event.preventDefault();
-              submitRenameSite();
-            }
-          }}
-        />
-      </AppModal>
-
-      <AppModal
-        open={dialogState?.type === 'delete'}
-        title="현장 삭제"
-        onClose={closeDialog}
-        actions={
-          <>
-            <button type="button" className="app-button app-button-secondary" onClick={closeDialog}>
-              취소
-            </button>
-            <button
-              type="button"
-              className="app-button app-button-danger"
-              onClick={submitDeleteSite}
-            >
-              삭제
-            </button>
-          </>
-        }
-      >
-        <p>
-          삭제된 {deletingSite ? `"${deletingSite.title}" 현장` : '현장'}은 복구할 수
-          없습니다.
-        </p>
-      </AppModal>
     </main>
   );
 }

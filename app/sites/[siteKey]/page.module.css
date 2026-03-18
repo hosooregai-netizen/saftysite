@@ -5,26 +5,17 @@
 .hero {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 136px;
+  gap: 16px;
+  min-height: 156px;
   border-bottom: 1px solid var(--erp-line);
   background: linear-gradient(135deg, #112035 0%, #1b3048 100%);
-  padding: 18px 20px 16px;
+  padding: 22px 24px 20px;
   color: var(--erp-white);
 }
 
 .heroMain {
   display: grid;
-  align-content: space-between;
-  gap: 6px;
-  min-height: 100%;
-}
-
-.heroTitleRow {
-  display: flex;
-  align-items: flex-end;
-  min-height: 40px;
+  gap: 14px;
 }
 
 .backLink {
@@ -40,10 +31,6 @@
   font-size: 13px;
   font-weight: 700;
   color: #d5deea;
-  transition:
-    background-color 0.2s ease,
-    border-color 0.2s ease,
-    color 0.2s ease;
 }
 
 .backLink:hover {
@@ -52,8 +39,11 @@
   color: var(--erp-white);
 }
 
-.heroMetaSpacer {
-  min-height: 14px;
+.heroTitleRow {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .heroTitle {
@@ -61,6 +51,17 @@
   font-weight: 700;
   line-height: 1.1;
   letter-spacing: -0.03em;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.heroDescription {
+  margin-top: 8px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: #d5deea;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 
 .heroActions {
@@ -68,11 +69,10 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  min-height: 36px;
 }
 
 .pageGrid {
-  padding: 16px;
+  padding: 18px;
 }
 
 .panel {
@@ -92,8 +92,8 @@
 
 .reportRow {
   display: grid;
-  gap: 8px;
-  padding: 11px 16px;
+  gap: 12px;
+  padding: 16px;
   border-bottom: 1px solid var(--erp-line);
 }
 
@@ -101,79 +101,25 @@
   border-bottom: 0;
 }
 
-.numberCell {
-  display: none;
-}
-
-.primaryCell {
+.primaryCell,
+.dataCell,
+.progressCell,
+.actionCell {
   min-width: 0;
 }
 
-.consultantCell,
+.titleCell,
+.reportDateCell,
+.drafterCell,
 .progressArea,
-.inspectionCell,
-.savedCell,
+.lastSavedCell,
 .actionsCell {
   min-width: 0;
 }
 
-.reportLink {
-  display: inline-flex;
-  width: fit-content;
-  max-width: 100%;
-}
-
-.reportTitleRow {
-  display: inline-flex;
-  align-items: flex-start;
-  gap: 10px;
-  min-width: 0;
-  max-width: 100%;
-}
-
-.reportNumberBadge,
-.reportNumberBadgeMobile {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 24px;
-  min-height: 24px;
-  padding: 0 7px;
-  border: 1px solid rgba(27, 48, 72, 0.12);
-  border-radius: 999px;
-  background: #eef3f8;
-  font-size: 12px;
-  font-weight: 800;
-  line-height: 1;
-  color: var(--erp-mid);
-}
-
-.reportTitle {
-  font-size: 14px;
-  font-weight: 700;
-  line-height: 1.35;
-  color: var(--erp-dark);
-  min-width: 0;
-  padding-top: 2px;
-}
-
-.reportLink:hover .reportTitle {
-  color: var(--erp-mid);
-}
-
-.reportLink:focus-visible {
-  border-radius: var(--erp-radius-control);
-}
-
-.dataCell,
-.progressCell {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
 .mobileLabel {
+  display: block;
+  margin-bottom: 4px;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -181,39 +127,35 @@
   color: var(--erp-text-muted);
 }
 
-.dataValue {
-  font-size: 12px;
+.reportLink {
+  display: block;
+  width: 100%;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.4;
   color: var(--erp-dark);
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 
-.mobileActions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+.reportLink:hover {
+  color: var(--erp-mid);
 }
 
-.mobileActions :global(.app-button) {
-  min-width: 0;
-  padding-inline: 12px;
-}
-
-.mobileDangerButton {
-  border-color: #deb2b2 !important;
-  background-color: var(--erp-danger-soft) !important;
-  color: #8f2d2d !important;
-}
-
-.mobileDangerButton:hover {
-  border-color: #cf9898 !important;
-  background-color: #f8e3e3 !important;
+.dataValue {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--erp-dark);
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 
 .progressStack {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
+  display: grid;
   gap: 6px;
-  width: min(100%, 180px);
+  width: min(100%, 220px);
 }
 
 .progressTrack {
@@ -235,121 +177,26 @@
     var(--erp-light) 58%,
     var(--erp-slate) 100%
   );
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.2),
-    0 0 0 1px rgba(31, 48, 69, 0.12);
 }
 
 .progressText {
   font-size: 12px;
   font-weight: 600;
-  line-height: 1.2;
   color: var(--erp-mid);
 }
 
-.menuShell {
-  display: none;
-  position: relative;
-}
-
-.menuButton {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 38px;
-  height: 34px;
-  border: 1px solid var(--erp-line);
-  border-radius: var(--erp-radius-control);
-  background-color: var(--erp-white);
-  font-size: 18px;
-  line-height: 1;
-  color: var(--erp-mid);
-  cursor: pointer;
-  list-style: none;
-}
-
-.menuButton::-webkit-details-marker {
-  display: none;
-}
-
-.menuButton:hover {
-  border-color: var(--erp-line-strong);
-  background-color: #f8fafc;
-}
-
-.menuButton:focus-visible {
-  border-color: var(--erp-mid);
-}
-
-.menuShell[open] .menuButton {
-  border-color: var(--erp-mid);
-  background-color: #edf2f7;
-}
-
-.menuList {
-  display: grid;
-  position: absolute;
-  right: 0;
-  top: calc(100% + 6px);
-  z-index: 20;
-  min-width: 132px;
-  overflow: hidden;
-  border: 1px solid var(--erp-line-strong);
-  border-radius: var(--erp-radius-surface);
-  background-color: var(--erp-white);
-  box-shadow: 0 8px 24px rgba(16, 24, 43, 0.12);
-}
-
-.menuItem {
+.actionCell {
   display: flex;
-  align-items: center;
-  width: 100%;
-  min-height: 38px;
-  padding: 0 12px;
-  border: 0;
-  background-color: var(--erp-white);
-  font-size: 13px;
-  text-align: left;
-  color: var(--erp-dark);
-  cursor: pointer;
-}
-
-.menuItem + .menuItem {
-  border-top: 1px solid var(--erp-line);
-}
-
-.menuItem:hover {
-  background-color: #f8fafc;
-}
-
-.menuItem:disabled {
-  cursor: not-allowed;
-  color: var(--erp-text-muted);
-  background-color: var(--erp-panel-muted);
-}
-
-.menuItem:focus-visible {
-  background-color: #edf2f7;
-  outline: none;
-}
-
-.menuItemDanger {
-  color: #8f2d2d;
-}
-
-.rowError {
-  grid-column: 1 / -1;
-  font-size: 12px;
-  line-height: 1.5;
-  color: #b42318;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: stretch;
 }
 
 .emptyState {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
   gap: 12px;
-  padding: 24px 16px;
+  padding: 28px 24px;
 }
 
 .emptyTitle {
@@ -358,42 +205,64 @@
   color: var(--erp-dark);
 }
 
-@media (max-width: 639px) {
+@media (max-width: 899px) {
   .reportRow {
-    grid-template-columns: minmax(0, 1fr) minmax(136px, 0.92fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .primaryCell,
+  .actionCell {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (min-width: 900px) and (max-width: 1199px) {
+  .hero {
+    padding: 24px 28px 22px;
+  }
+
+  .pageGrid {
+    padding: 18px 22px 22px;
+  }
+
+  .reportRow {
+    grid-template-columns:
+      minmax(220px, 1.6fr)
+      minmax(120px, 0.9fr)
+      minmax(130px, 0.95fr)
+      minmax(170px, 1.1fr);
     grid-template-areas:
-      'title title'
-      'consultant inspection'
-      'progress saved'
-      'actions actions';
-    gap: 12px 16px;
+      'title title title actions'
+      'reportDate drafter progress lastSaved';
+    gap: 10px 14px;
     align-items: start;
     padding: 14px 16px;
   }
 
-  .primaryCell {
+  .titleCell {
     grid-area: title;
   }
 
-  .consultantCell {
-    grid-area: consultant;
+  .reportDateCell {
+    grid-area: reportDate;
   }
 
-  .inspectionCell {
-    grid-area: inspection;
+  .drafterCell {
+    grid-area: drafter;
   }
 
   .progressArea {
     grid-area: progress;
-    align-items: stretch;
   }
 
-  .savedCell {
-    grid-area: saved;
+  .lastSavedCell {
+    grid-area: lastSaved;
   }
 
   .actionsCell {
     grid-area: actions;
+    justify-content: flex-end;
+    align-self: center;
   }
 
   .progressStack {
@@ -402,102 +271,12 @@
   }
 }
 
-@media (min-width: 640px) and (max-width: 959px) {
-  .reportRow {
-    grid-template-columns:
-      minmax(0, 1.15fr)
-      minmax(112px, 0.56fr)
-      minmax(132px, 0.72fr)
-      minmax(220px, 0.92fr);
-    grid-template-areas:
-      'title title progress progress'
-      'consultant inspection saved actions';
-    gap: 8px 14px;
-    align-items: start;
-    padding: 12px 16px;
-  }
-
-  .primaryCell {
-    grid-area: title;
-  }
-
-  .progressArea {
-    grid-area: progress;
-    align-items: stretch;
-    justify-content: center;
-  }
-
-  .consultantCell {
-    grid-area: consultant;
-  }
-
-  .inspectionCell {
-    grid-area: inspection;
-  }
-
-  .savedCell {
-    grid-area: saved;
-  }
-
-  .actionsCell {
-    grid-area: actions;
-    align-self: center;
-    flex-wrap: nowrap;
-    justify-content: flex-end;
-    padding-top: 0;
-  }
-
-  .actionsCell :global(.app-button) {
-    flex: 0 0 auto;
-    padding-inline: 10px;
-    font-size: 13px;
-    white-space: nowrap;
-  }
-
-  .progressStack {
-    width: 100%;
-    max-width: 240px;
-    margin-left: auto;
-  }
-
-  .progressArea .mobileLabel {
-    width: 100%;
-    max-width: 240px;
-    margin-left: auto;
-  }
-}
-
-@media (min-width: 960px) {
-  .panel {
-    --report-columns-desktop:
-      28px
-      minmax(180px, 1.45fr)
-      minmax(100px, 0.8fr)
-      minmax(180px, 1.2fr)
-      minmax(110px, 0.75fr)
-      minmax(150px, 0.95fr)
-      40px;
-  }
-
+@media (min-width: 1200px) {
   .hero {
     flex-direction: row;
-    align-items: stretch;
+    align-items: flex-end;
     justify-content: space-between;
-    min-height: 156px;
-    padding: 22px 28px 20px;
-  }
-
-  .heroMain {
-    justify-content: space-between;
-  }
-
-  .heroTitleRow {
-    min-height: 46px;
-  }
-
-  .heroActions {
-    align-self: flex-end;
-    justify-content: flex-end;
+    padding: 24px 28px 22px;
   }
 
   .pageGrid {
@@ -506,9 +285,15 @@
 
   .listHead {
     display: grid;
-    grid-template-columns: var(--report-columns-desktop);
-    gap: 16px;
-    padding: 9px 16px 8px;
+    grid-template-columns:
+      minmax(240px, 1.5fr)
+      minmax(120px, 0.8fr)
+      minmax(140px, 0.9fr)
+      minmax(200px, 1fr)
+      minmax(150px, 0.9fr)
+      minmax(220px, 1.1fr);
+    gap: 14px;
+    padding: 10px 16px 9px;
     border-bottom: 1px solid var(--erp-line);
     background-color: var(--erp-panel-muted);
     font-size: 10px;
@@ -518,53 +303,23 @@
     color: var(--erp-text-muted);
   }
 
-  .numberHead,
-  .numberCell {
-    justify-self: center;
-  }
-
-  .listHead span:last-child {
-    justify-self: center;
-  }
-
   .reportRow {
-    align-items: center;
-    grid-template-columns: var(--report-columns-desktop);
-    gap: 16px;
-    min-height: 54px;
-  }
-
-  .numberCell {
-    display: flex;
-    align-items: center;
-  }
-
-  .reportNumberBadgeMobile {
-    display: none;
-  }
-
-  .progressCell {
-    align-items: flex-start;
-    justify-content: center;
-    min-width: 180px;
-  }
-
-  .progressStack {
-    width: 100%;
-    max-width: 180px;
-    align-self: flex-start;
+    grid-template-columns:
+      minmax(240px, 1.5fr)
+      minmax(120px, 0.8fr)
+      minmax(140px, 0.9fr)
+      minmax(200px, 1fr)
+      minmax(150px, 0.9fr)
+      minmax(220px, 1.1fr);
+    gap: 14px;
+    align-items: start;
   }
 
   .mobileLabel {
     display: none;
   }
 
-  .mobileActions {
-    display: none;
-  }
-
-  .menuShell {
-    display: block;
-    justify-self: center;
+  .actionCell {
+    justify-content: flex-start;
   }
 }

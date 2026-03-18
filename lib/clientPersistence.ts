@@ -105,3 +105,31 @@ export async function writePersistedValue<T>(key: string, value: T): Promise<voi
   if (typeof window === 'undefined') return;
   window.localStorage.setItem(key, JSON.stringify(value));
 }
+
+export async function deletePersistedValue(key: string): Promise<void> {
+  const db = await openDatabase();
+
+  if (db) {
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const transaction = db.transaction(STORE_NAME, 'readwrite');
+        const store = transaction.objectStore(STORE_NAME);
+        store.delete(key);
+
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = () => reject(transaction.error);
+        transaction.onabort = () => reject(transaction.error);
+      });
+
+      db.close();
+    } catch {
+      db.close();
+    }
+  }
+
+  if (typeof window === 'undefined') return;
+
+  try {
+    window.localStorage.removeItem(key);
+  } catch {}
+}
