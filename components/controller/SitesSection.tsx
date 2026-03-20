@@ -146,6 +146,7 @@ export default function SitesSection(props: SitesSectionProps) {
         <div>
           <h2 className={styles.sectionTitle}>현장 CRUD</h2>
           <p className={styles.sectionDescription}>현장 목록은 테이블로, 추가와 수정은 모달 폼으로 정리했습니다.</p>
+          <p className={styles.modalHint}>공사 시작일과 종료일은 현재 서버 오류로 임시 저장 제외 처리됩니다.</p>
         </div>
         <div className={styles.sectionHeaderActions}>
           <span className="app-chip">총 {sites.length}개</span>
@@ -224,14 +225,15 @@ export default function SitesSection(props: SitesSectionProps) {
           <label className={styles.modalField}><span className={styles.label}>현장명</span><input className="app-input" value={form.site_name} onChange={(e) => setForm({ ...form, site_name: e.target.value })} disabled={busy} /></label>
           <label className={styles.modalField}><span className={styles.label}>현장 코드</span><input className="app-input" value={form.site_code} onChange={(e) => setForm({ ...form, site_code: e.target.value })} disabled={busy} /></label>
           <label className={styles.modalField}><span className={styles.label}>관리번호</span><input className="app-input" value={form.management_number} onChange={(e) => setForm({ ...form, management_number: e.target.value })} disabled={busy} /></label>
-          <label className={styles.modalField}><span className={styles.label}>공사 시작일</span><input className="app-input" type="date" value={form.project_start_date} onChange={(e) => setForm({ ...form, project_start_date: e.target.value })} disabled={busy} /></label>
-          <label className={styles.modalField}><span className={styles.label}>공사 종료일</span><input className="app-input" type="date" value={form.project_end_date} onChange={(e) => setForm({ ...form, project_end_date: e.target.value })} disabled={busy} /></label>
+          <label className={styles.modalField}><span className={styles.label}>공사 시작일</span><input className="app-input" type="date" value={form.project_start_date} onChange={(e) => setForm({ ...form, project_start_date: e.target.value })} disabled /></label>
+          <label className={styles.modalField}><span className={styles.label}>공사 종료일</span><input className="app-input" type="date" value={form.project_end_date} onChange={(e) => setForm({ ...form, project_end_date: e.target.value })} disabled /></label>
           <label className={styles.modalField}><span className={styles.label}>공사 금액</span><input className="app-input" value={form.project_amount} onChange={(e) => setForm({ ...form, project_amount: e.target.value })} disabled={busy} /></label>
           <label className={styles.modalField}><span className={styles.label}>상태</span><select className="app-select" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as typeof form.status })} disabled={busy}>{SITE_STATUS_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
           <label className={styles.modalField}><span className={styles.label}>현장 책임자</span><input className="app-input" value={form.manager_name} onChange={(e) => setForm({ ...form, manager_name: e.target.value })} disabled={busy} /></label>
           <label className={styles.modalField}><span className={styles.label}>책임자 연락처</span><input className="app-input" value={form.manager_phone} onChange={(e) => setForm({ ...form, manager_phone: e.target.value })} disabled={busy} /></label>
           <label className={styles.modalFieldWide}><span className={styles.label}>현장 주소</span><input className="app-input" value={form.site_address} onChange={(e) => setForm({ ...form, site_address: e.target.value })} disabled={busy} /></label>
           <label className={styles.modalFieldWide}><span className={styles.label}>메모</span><textarea className="app-textarea" value={form.memo} onChange={(e) => setForm({ ...form, memo: e.target.value })} disabled={busy} /></label>
+          <p className={styles.modalHint}>날짜 필드는 백엔드 수정 후 다시 활성화하는 편이 안전합니다.</p>
         </div>
       </AppModal>
 

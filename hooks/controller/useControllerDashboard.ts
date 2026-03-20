@@ -52,6 +52,13 @@ function getErrorMessage(error: unknown): string {
   return '관제 데이터를 처리하는 중 오류가 발생했습니다.';
 }
 
+function hasSiteScheduleValues(input: {
+  project_start_date?: string | null;
+  project_end_date?: string | null;
+}): boolean {
+  return Boolean(input.project_start_date || input.project_end_date);
+}
+
 export function useControllerDashboard(enabled: boolean) {
   const [data, setData] = useState<ControllerDashboardData>(EMPTY_DATA);
   const [isLoading, setIsLoading] = useState(false);
@@ -142,9 +149,19 @@ export function useControllerDashboard(enabled: boolean) {
     deactivateHeadquarter: (id: string) =>
       runMutation((token) => deactivateSafetyHeadquarter(token, id), '사업장을 비활성화했습니다.'),
     createSite: (input: SafetySiteInput) =>
-      runMutation((token) => createSafetySite(token, input), '현장을 생성했습니다.'),
+      runMutation(
+        (token) => createSafetySite(token, input),
+        hasSiteScheduleValues(input)
+          ? '현장을 생성했습니다. 공사 시작일과 종료일은 서버 이슈로 제외하고 저장했습니다.'
+          : '현장을 생성했습니다.'
+      ),
     updateSite: (id: string, input: SafetySiteUpdateInput) =>
-      runMutation((token) => updateSafetySite(token, id, input), '현장 정보를 수정했습니다.'),
+      runMutation(
+        (token) => updateSafetySite(token, id, input),
+        hasSiteScheduleValues(input)
+          ? '현장 정보를 수정했습니다. 공사 시작일과 종료일은 서버 이슈로 제외하고 저장했습니다.'
+          : '현장 정보를 수정했습니다.'
+      ),
     deactivateSite: (id: string) =>
       runMutation((token) => deactivateSafetySite(token, id), '현장을 종료 처리했습니다.'),
     createAssignment: (input: SafetyAssignmentInput) =>
