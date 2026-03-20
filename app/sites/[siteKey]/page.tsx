@@ -4,26 +4,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { use, useMemo, useState } from 'react';
 import LoginPanel from '@/components/auth/LoginPanel';
+import ReportList from '@/components/site/ReportList';
 import AppModal from '@/components/ui/AppModal';
-import {
-  getSessionProgress,
-  getSessionSiteKey,
-  getSessionTitle,
-  getSiteDisplayTitle,
-} from '@/constants/inspectionSession';
+import { getSessionSiteKey, getSessionTitle, getSiteDisplayTitle } from '@/constants/inspectionSession';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
+import { formatDateTime } from '@/lib/formatDateTime';
 import styles from './page.module.css';
-
-function formatDateTime(value: string | null): string {
-  if (!value) return '기록 없음';
-
-  return new Intl.DateTimeFormat('ko-KR', {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(value));
-}
 
 type ReportDialogState = { type: 'delete'; sessionId: string } | null;
 
@@ -159,100 +145,17 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
 
           <div className={styles.pageGrid}>
             <section className={styles.panel}>
-              {siteSessions.length > 0 ? (
-                <>
-                  <div className={styles.listHead} aria-hidden="true">
-                    <span>보고서명</span>
-                    <span>작성일</span>
-                    <span>작성자</span>
-                    <span>진행률</span>
-                    <span>마지막 저장</span>
-                    <span>작업</span>
-                  </div>
-
-                  <div className={styles.reportList}>
-                    {siteSessions.map((session) => {
-                      const progress = getSessionProgress(session);
-                      const sessionHref = `/sessions/${session.id}`;
-
-                      return (
-                        <article key={session.id} className={styles.reportRow}>
-                          <div className={`${styles.primaryCell} ${styles.titleCell}`}>
-                            <span className={styles.mobileLabel}>보고서명</span>
-                            <Link href={sessionHref} className={styles.reportLink}>
-                              {getSessionTitle(session)}
-                            </Link>
-                          </div>
-
-                          <div className={`${styles.dataCell} ${styles.reportDateCell}`}>
-                            <span className={styles.mobileLabel}>작성일</span>
-                            <span className={styles.dataValue}>
-                              {session.meta.reportDate || '미입력'}
-                            </span>
-                          </div>
-
-                          <div className={`${styles.dataCell} ${styles.drafterCell}`}>
-                            <span className={styles.mobileLabel}>작성자</span>
-                            <span className={styles.dataValue}>
-                              {session.meta.drafter || currentSite.assigneeName || '미입력'}
-                            </span>
-                          </div>
-
-                          <div className={`${styles.progressCell} ${styles.progressArea}`}>
-                            <span className={styles.mobileLabel}>진행률</span>
-                            <div className={styles.progressStack}>
-                              <div className={styles.progressTrack} aria-hidden="true">
-                                <span
-                                  className={styles.progressFill}
-                                  style={{ width: `${progress.percentage}%` }}
-                                />
-                              </div>
-                              <span className={styles.progressText}>
-                                {progress.completed}/{progress.total} 완료
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className={`${styles.dataCell} ${styles.lastSavedCell}`}>
-                            <span className={styles.mobileLabel}>마지막 저장</span>
-                            <span className={styles.dataValue}>
-                              {formatDateTime(session.lastSavedAt)}
-                            </span>
-                          </div>
-
-                          <div className={`${styles.actionCell} ${styles.actionsCell}`}>
-                            <Link href={sessionHref} className="app-button app-button-primary">
-                              이어서 작성
-                            </Link>
-                            {canArchiveReports ? (
-                              <button
-                                type="button"
-                                className="app-button app-button-danger"
-                                onClick={() =>
-                                  setDialogState({ type: 'delete', sessionId: session.id })
-                                }
-                              >
-                                삭제
-                              </button>
-                            ) : null}
-                          </div>
-                        </article>
-                      );
-                    })}
-                  </div>
-                </>
-              ) : (
-                <div className={styles.emptyState}>
-                  <p className={styles.emptyTitle}>아직 작성된 보고서가 없습니다.</p>
-                  <button
-                    type="button"
-                    onClick={handleCreateReport}
-                    className="app-button app-button-primary"
-                  >
-                    첫 보고서 시작
-                  </button>
-                </div>
-              )}
+              <ReportList
+                currentSite={currentSite}
+                siteSessions={siteSessions}
+                canArchiveReports={canArchiveReports}
+                formatDateTime={formatDateTime}
+                onCreateReport={handleCreateReport}
+                onDeleteRequest={(sessionId) =>
+                  setDialogState({ type: 'delete', sessionId })
+                }
+                styles={styles}
+              />
             </section>
           </div>
         </section>
