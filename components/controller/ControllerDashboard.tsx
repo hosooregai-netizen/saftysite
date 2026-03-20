@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import type { SafetyUser } from '@/types/backend';
+import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { useControllerDashboard } from '@/hooks/controller/useControllerDashboard';
 import styles from './ControllerDashboard.module.css';
 import ContentItemsSection from './ContentItemsSection';
@@ -23,6 +24,7 @@ export default function ControllerDashboard({
   const [activeSection, setActiveSection] = useState<ControllerSectionKey>('overview');
   const [menuOpen, setMenuOpen] = useState(false);
   const dashboard = useControllerDashboard(true);
+  const { sessions } = useInspectionSessions();
   const busy = dashboard.isLoading || dashboard.isMutating;
   const activeMeta = useMemo(
     () => CONTROLLER_SECTIONS.find((section) => section.key === activeSection),
@@ -32,7 +34,7 @@ export default function ControllerDashboard({
   const renderSection = () => {
     switch (activeSection) {
       case 'users':
-        return <UsersSection busy={busy} styles={styles} users={dashboard.data.users} onCreate={dashboard.createUser} onUpdate={dashboard.updateUser} onResetPassword={dashboard.resetUserPassword} onDeactivate={dashboard.deactivateUser} />;
+        return <UsersSection busy={busy} styles={styles} assignments={dashboard.data.assignments} sessions={sessions} sites={dashboard.data.sites} users={dashboard.data.users} onCreate={dashboard.createUser} onUpdate={dashboard.updateUser} onResetPassword={dashboard.resetUserPassword} onDeactivate={dashboard.deactivateUser} />;
       case 'headquarters':
         return <HeadquartersSection busy={busy} styles={styles} headquarters={dashboard.data.headquarters} onCreate={dashboard.createHeadquarter} onUpdate={dashboard.updateHeadquarter} onDeactivate={dashboard.deactivateHeadquarter} />;
       case 'sites':
@@ -40,7 +42,7 @@ export default function ControllerDashboard({
       case 'content':
         return <ContentItemsSection busy={busy} styles={styles} items={dashboard.data.contentItems} onCreate={dashboard.createContentItem} onUpdate={dashboard.updateContentItem} onDeactivate={dashboard.deactivateContentItem} />;
       default:
-        return <OverviewPanel data={dashboard.data} styles={styles} />;
+        return <OverviewPanel data={dashboard.data} sessions={sessions} styles={styles} />;
     }
   };
 

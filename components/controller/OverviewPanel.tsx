@@ -1,14 +1,34 @@
+import { getSessionProgress } from '@/constants/inspectionSession';
+import type { InspectionSession } from '@/types/inspectionSession';
 import type { ControllerDashboardData } from '@/types/controller';
 import { formatTimestamp } from './shared';
 
 interface OverviewPanelProps {
   data: ControllerDashboardData;
+  sessions: InspectionSession[];
   styles: Record<string, string>;
 }
 
-export default function OverviewPanel({ data, styles }: OverviewPanelProps) {
+export default function OverviewPanel({ data, sessions, styles }: OverviewPanelProps) {
   const latestAssignment = [...data.assignments]
     .sort((left, right) => right.assigned_at.localeCompare(left.assigned_at))[0];
+  const activeAssignments = data.assignments.filter((item) => item.is_active);
+  const activeSites = data.sites.filter((item) => item.status === 'active');
+  const assignedSiteIds = new Set(activeAssignments.map((item) => item.site_id));
+  const activeFieldAgents = data.users.filter(
+    (item) => item.role === 'field_agent' && item.is_active
+  );
+  const reportStats = sessions.reduce(
+    (accumulator, session) => {
+      const percentage = getSessionProgress(session).percentage;
+      accumulator.total += 1;
+      if (percentage >= 100) accumulator.completed += 1;
+      else if (percentage > 0) accumulator.inProgress += 1;
+      else accumulator.notStarted += 1;
+      return accumulator;
+    },
+    { total: 0, inProgress: 0, completed: 0, notStarted: 0 }
+  );
 
   return (
     <section className={styles.sectionCard}>
@@ -24,7 +44,7 @@ export default function OverviewPanel({ data, styles }: OverviewPanelProps) {
       <div className={styles.sectionBody}>
         <div className={styles.stats}>
           <article className={styles.statCard}>
-            <p className={styles.statLabel}>사용자</p>
+            <p className={styles.statLabel}>전체 사용자</p>
             <p className={styles.statValue}>{data.users.length}</p>
           </article>
           <article className={styles.statCard}>
@@ -32,12 +52,30 @@ export default function OverviewPanel({ data, styles }: OverviewPanelProps) {
             <p className={styles.statValue}>{data.headquarters.length}</p>
           </article>
           <article className={styles.statCard}>
-            <p className={styles.statLabel}>현장</p>
-            <p className={styles.statValue}>{data.sites.length}</p>
+            <p className={styles.statLabel}>운영 현장</p>
+            <p className={styles.statValue}>{activeSites.length}</p>
           </article>
           <article className={styles.statCard}>
-            <p className={styles.statLabel}>배정</p>
-            <p className={styles.statValue}>{data.assignments.length}</p>
+            <p className={styles.statLabel}>지도요원</p>
+            <p className={styles.statValue}>{activeFieldAgents.length}</p>
+          </article>
+          <article className={styles.statCard}>
+            <p className={styles.statLabel}>전체 보고서</p>
+            <p className={styles.statValue}>{reportStats.total}</p>
+          </article>
+          <article className={styles.statCard}>
+            <p className={styles.statLabel}>진행 중 보고서</p>
+            <p className={styles.statValue}>{reportStats.inProgress}</p>
+          </article>
+          <article className={styles.statCard}>
+            <p className={styles.statLabel}>완료 보고서</p>
+            <p className={styles.statValue}>{reportStats.completed}</p>
+          </article>
+          <article className={styles.statCard}>
+            <p className={styles.statLabel}>미배정 현장</p>
+            <p className={styles.statValue}>
+              {activeSites.filter((item) => !assignedSiteIds.has(item.id)).length}
+            </p>
           </article>
         </div>
 

@@ -1,8 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import Link from 'next/link';
+import { useMemo, useState } from 'react';
 import AppModal from '@/components/ui/AppModal';
-import type { SafetyUser } from '@/types/backend';
+import type { SafetySite, SafetyUser } from '@/types/backend';
+import { getSessionTitle } from '@/constants/inspectionSession';
+import type { InspectionSession } from '@/types/inspectionSession';
+import type { SafetyAssignment } from '@/types/controller';
 import {
   USER_ROLE_LABELS,
   USER_ROLE_OPTIONS,
@@ -11,7 +15,10 @@ import {
 } from './shared';
 
 interface UsersSectionProps {
+  assignments: SafetyAssignment[];
   busy: boolean;
+  sessions: InspectionSession[];
+  sites: SafetySite[];
   styles: Record<string, string>;
   users: SafetyUser[];
   onCreate: (input: {
@@ -48,10 +55,18 @@ const EMPTY_FORM = {
 };
 
 export default function UsersSection(props: UsersSectionProps) {
-  const { busy, styles, users, onCreate, onUpdate, onResetPassword, onDeactivate } = props;
+  const { assignments, busy, sessions, sites, styles, users, onCreate, onUpdate, onResetPassword, onDeactivate } = props;
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const isOpen = editingId !== null;
+  const sitesById = useMemo(() => new Map(sites.map((site) => [site.id, site])), [sites]);
+  const activeAssignmentsByUser = useMemo(() => {
+    const next = new Map<string, SafetyAssignment[]>();
+    assignments.filter((item) => item.is_active).forEach((item) => {
+      next.set(item.user_id, [...(next.get(item.user_id) || []), item]);
+    });
+    return next;
+  }, [assignments]);
 
   const openCreate = () => {
     setEditingId('create');
@@ -135,6 +150,8 @@ export default function UsersSection(props: UsersSectionProps) {
                     <th>이름</th>
                     <th>이메일</th>
                     <th>권한</th>
+                    <th>담당 현장</th>
+                    <th>보고서</th>
                     <th>연락처</th>
                     <th>상태</th>
                     <th>최근 로그인</th>
@@ -142,7 +159,18 @@ export default function UsersSection(props: UsersSectionProps) {
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((user) => (
+                  {users.map((user) => {
+                    const assignedSites = (activeAssignmentsByUser.get(user.id) || [])
+                      .map((assignment) => sitesById.get(assignment.site_id))
+                      .filter(Boolean) as SafetySite[];
+                    const relatedSessions = sessions.filter((session) =>
+                      assignedSites.some((site) => site.id === session.siteKey)
+                    );
+                    const latestSession = [...relatedSessions].sort((left, right) =>
+                      right.updatedAt.localeCompare(left.updatedAt)
+                    )[0];
+
+                    return (
                     <tr key={user.id}>
                       <td>
                         <div className={styles.tablePrimary}>{user.name}</div>
@@ -152,6 +180,43 @@ export default function UsersSection(props: UsersSectionProps) {
                       </td>
                       <td>{user.email}</td>
                       <td>{USER_ROLE_LABELS[user.role]}</td>
+                      <td>
+                        {assignedSites.length === 0 ? (
+                          '-'
+                        ) : (
+                          <div className={styles.tableActions}>
+                            {assignedSites.map((site) => (
+                              <Link key={site.id} href={`/sites/${encodeURIComponent(site.id)}`} className="app-button app-button-secondary">
+                                {site.site_name}
+                              </Link>
+                            ))}
+                          </div>
+                        )}
+                      </td>
+                      <td>
+                        {assignedSites.length === 0 ? (
+                          '-'
+                        ) : (
+                          <>
+                            <div className={styles.tablePrimary}>{relatedSessions.length}건</div>
+                            <div className={styles.tableActions} style={{ marginTop: 8 }}>
+                              {latestSession ? (
+                                <Link href={`/sessions/${encodeURIComponent(latestSession.id)}`} className="app-button app-button-primary">
+                                  최근 보고서
+                                </Link>
+                              ) : null}
+                              {assignedSites[0] ? (
+                                <Link href={`/sites/${encodeURIComponent(assignedSites[0].id)}`} className="app-button app-button-secondary">
+                                  보고서 목록
+                                </Link>
+                              ) : null}
+                            </div>
+                            {latestSession ? (
+                              <div className={styles.tableSecondary}>{getSessionTitle(latestSession)}</div>
+                            ) : null}
+                          </>
+                        )}
+                      </td>
                       <td>{user.phone || '-'}</td>
                       <td>{user.is_active ? '활성' : '비활성'}</td>
                       <td>{formatTimestamp(user.last_login_at)}</td>
@@ -162,7 +227,8 @@ export default function UsersSection(props: UsersSectionProps) {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
