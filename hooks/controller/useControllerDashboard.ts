@@ -99,8 +99,16 @@ export function useControllerDashboard(enabled: boolean) {
 
       try {
         await task(getToken());
-        await reload();
-        setNotice(successMessage);
+
+        try {
+          await reload();
+          setNotice(successMessage);
+        } catch (reloadError) {
+          console.error('Controller dashboard reload failed after mutation', reloadError);
+          setNotice(
+            `${successMessage} 목록 새로고침은 실패했습니다. 상단 새로고침 버튼으로 다시 불러와 주세요.`
+          );
+        }
       } catch (error) {
         const message = getErrorMessage(error);
         setError(message);

@@ -80,7 +80,11 @@ export async function requestSafetyApi<T>(
   }
 
   if (!response.ok) {
-    throw new SafetyApiError(await parseErrorMessage(response), response.status);
+    const message = await parseErrorMessage(response);
+    throw new SafetyApiError(
+      `${requestLabel} 요청이 실패했습니다 (${response.status}). ${message}`,
+      response.status
+    );
   }
 
   if (response.status === 204) {
