@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { use, useMemo, useState } from 'react';
+import LoginPanel from '@/components/auth/LoginPanel';
 import AppModal from '@/components/ui/AppModal';
 import {
   getSessionProgress,
@@ -12,8 +13,6 @@ import {
 } from '@/constants/inspectionSession';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import styles from './page.module.css';
-
-const ASSIGNED_SITES_ENABLED = true;
 
 function formatDateTime(value: string | null): string {
   if (!value) return '기록 없음';
@@ -38,14 +37,21 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
   const { siteKey } = use(params);
   const router = useRouter();
   const decodedSiteKey = decodeURIComponent(siteKey);
-  const { sites, sessions, isReady, createSession, deleteSession } = useInspectionSessions();
+  const {
+    sites,
+    sessions,
+    isReady,
+    isAuthenticated,
+    authError,
+    login,
+    createSession,
+    deleteSession,
+    canArchiveReports,
+  } = useInspectionSessions();
   const [dialogState, setDialogState] = useState<ReportDialogState>(null);
 
   const currentSite = useMemo(
-    () =>
-      ASSIGNED_SITES_ENABLED
-        ? sites.find((site) => site.id === decodedSiteKey) ?? null
-        : null,
+    () => sites.find((site) => site.id === decodedSiteKey) ?? null,
     [decodedSiteKey, sites]
   );
 
@@ -69,7 +75,7 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
 
   const submitDeleteSession = () => {
     if (!dialogState || dialogState.type !== 'delete') return;
-    deleteSession(dialogState.sessionId);
+    void deleteSession(dialogState.sessionId);
     setDialogState(null);
   };
 
@@ -89,6 +95,17 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
           </section>
         </div>
       </main>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <LoginPanel
+        error={authError}
+        onSubmit={login}
+        title="보고서 목록 로그인"
+        description="현장별 보고서 목록과 자동저장 데이터를 불러오려면 다시 로그인해 주세요."
+      />
     );
   }
 
@@ -207,15 +224,17 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
                             <Link href={sessionHref} className="app-button app-button-primary">
                               이어서 작성
                             </Link>
-                            <button
-                              type="button"
-                              className="app-button app-button-danger"
-                              onClick={() =>
-                                setDialogState({ type: 'delete', sessionId: session.id })
-                              }
-                            >
-                              삭제
-                            </button>
+                            {canArchiveReports ? (
+                              <button
+                                type="button"
+                                className="app-button app-button-danger"
+                                onClick={() =>
+                                  setDialogState({ type: 'delete', sessionId: session.id })
+                                }
+                              >
+                                삭제
+                              </button>
+                            ) : null}
                           </div>
                         </article>
                       );
@@ -240,7 +259,7 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
       </div>
 
       <AppModal
-        open={dialogState?.type === 'delete'}
+        open={canArchiveReports && dialogState?.type === 'delete'}
         title="보고서 삭제"
         onClose={() => setDialogState(null)}
         actions={

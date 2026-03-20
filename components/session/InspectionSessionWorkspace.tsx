@@ -3,6 +3,8 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import LoginPanel from '@/components/auth/LoginPanel';
+import SignaturePad from '@/components/ui/SignaturePad';
 import {
   ACCIDENT_TYPE_OPTIONS,
   ACTIVITY_TYPE_OPTIONS,
@@ -107,7 +109,7 @@ const META_TOUCH_FALLBACK_SECTION: InspectionSectionKey = 'doc2';
 const SECTION_DESCRIPTIONS: Record<InspectionSectionKey, string> = {
   doc1: '관리자 기준 현장 스냅샷을 읽기 전용으로 보여줍니다.',
   doc2: '기술지도 개요와 작업계획서 13종, 재해 및 특이사항을 입력합니다.',
-  doc3: '현장 전경 사진 2장과 설명 2건을 고정 슬롯으로 관리합니다.',
+  doc3: '현장 전경 사진을 최대 6장까지 관리하고 주요 진행공정을 함께 기록합니다.',
   doc4: '이전 보고서의 후속조치 대상과 시정 결과를 before/after 카드로 확인합니다.',
   doc5: '문서 7 데이터로 자동 집계된 4개 차트와 기술지도 총평을 관리합니다.',
   doc6: '문서 7의 재해유형/기인물 기준 추천을 반영한 14개 핵심 조치를 체크합니다.',
@@ -313,10 +315,27 @@ function ChartCard({ entries, title }: { entries: ChartEntry[]; title: string })
 export default function InspectionSessionWorkspace({
   sessionId,
 }: InspectionSessionWorkspaceProps) {
-  const { getSessionById, getSiteById, isReady, saveNow, sessions, updateSession } =
-    useInspectionSessions();
+  const {
+    getSessionById,
+    getSiteById,
+    isReady,
+    isAuthenticated,
+    authError,
+    login,
+    saveNow,
+    sessions,
+    updateSession,
+    masterData,
+    syncError,
+    isSaving,
+  } = useInspectionSessions();
   const session = getSessionById(sessionId);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const legalReferenceLibrary =
+    masterData.legalReferences.length > 0
+      ? masterData.legalReferences
+      : LEGAL_REFERENCE_LIBRARY;
+  const correctionResultOptions = masterData.correctionResultOptions;
 
   useEffect(
     () => () => {
@@ -815,23 +834,21 @@ export default function InspectionSessionWorkspace({
                       }
                     />
                   </label>
-                  <label className={styles.field}>
-                    <span className={styles.fieldLabel}>직접전달 서명</span>
-                    <input
-                      type="text"
-                      className="app-input"
+                  <div className={`${styles.field} ${styles.fieldWide}`}>
+                    <SignaturePad
+                      label="직접전달 서명"
                       value={session.document2Overview.notificationRecipientSignature}
-                      onChange={(event) =>
+                      onChange={(nextValue) =>
                         applyDocumentUpdate('doc2', 'manual', (current) => ({
                           ...current,
                           document2Overview: {
                             ...current.document2Overview,
-                            notificationRecipientSignature: event.target.value,
+                            notificationRecipientSignature: nextValue,
                           },
                         }))
                       }
                     />
-                  </label>
+                  </div>
                 </>
               ) : null}
               {session.document2Overview.notificationMethod === 'other' ? (
@@ -996,55 +1013,63 @@ export default function InspectionSessionWorkspace({
 
       case 'doc3':
         return (
-          <div className={styles.dualUploadGrid}>
-            {session.document3Scenes.slice(0, 2).map((item, index) => (
-              <article key={item.id} className={styles.card}>
-                <div className={styles.cardHeader}>
-                  <h3 className={styles.cardTitle}>{`현장 전경 사진 ${index + 1}`}</h3>
-                </div>
-                <UploadBox
-                  id={`scene-photo-${item.id}`}
-                  label="사진"
-                  value={item.photoUrl}
-                  onClear={() =>
-                    applyDocumentUpdate('doc3', 'manual', (current) => ({
-                      ...current,
-                      document3Scenes: current.document3Scenes.map((scene, sceneIndex) =>
-                        sceneIndex === index ? { ...scene, photoUrl: '' } : scene
-                      ),
-                    }))
-                  }
-                  onSelect={async (file) =>
-                    withFileData(file, (dataUrl) =>
+          <div className={styles.sectionStack}>
+            <div className={styles.sectionToolbar}>
+              <span className="app-chip">최대 6장</span>
+              <span className="app-chip">1~2번 우선 입력</span>
+            </div>
+            <div className={styles.dualUploadGrid}>
+              {session.document3Scenes.map((item, index) => (
+                <article key={item.id} className={styles.card}>
+                  <div className={styles.cardHeader}>
+                    <h3 className={styles.cardTitle}>
+                      {item.title || `현장 전경 사진 ${index + 1}`}
+                    </h3>
+                  </div>
+                  <UploadBox
+                    id={`scene-photo-${item.id}`}
+                    label="사진"
+                    value={item.photoUrl}
+                    onClear={() =>
                       applyDocumentUpdate('doc3', 'manual', (current) => ({
                         ...current,
                         document3Scenes: current.document3Scenes.map((scene, sceneIndex) =>
-                          sceneIndex === index ? { ...scene, photoUrl: dataUrl } : scene
-                        ),
-                      }))
-                    )
-                  }
-                />
-                <label className={styles.field}>
-                  <span className={styles.fieldLabel}>사진 설명</span>
-                  <input
-                    type="text"
-                    className="app-input"
-                    value={item.description}
-                    onChange={(event) =>
-                      applyDocumentUpdate('doc3', 'manual', (current) => ({
-                        ...current,
-                        document3Scenes: current.document3Scenes.map((scene, sceneIndex) =>
-                          sceneIndex === index
-                            ? { ...scene, description: event.target.value }
-                            : scene
+                          sceneIndex === index ? { ...scene, photoUrl: '' } : scene
                         ),
                       }))
                     }
+                    onSelect={async (file) =>
+                      withFileData(file, (dataUrl) =>
+                        applyDocumentUpdate('doc3', 'manual', (current) => ({
+                          ...current,
+                          document3Scenes: current.document3Scenes.map((scene, sceneIndex) =>
+                            sceneIndex === index ? { ...scene, photoUrl: dataUrl } : scene
+                          ),
+                        }))
+                      )
+                    }
                   />
-                </label>
-              </article>
-            ))}
+                  <label className={styles.field}>
+                    <span className={styles.fieldLabel}>사진 설명</span>
+                    <input
+                      type="text"
+                      className="app-input"
+                      value={item.description}
+                      onChange={(event) =>
+                        applyDocumentUpdate('doc3', 'manual', (current) => ({
+                          ...current,
+                          document3Scenes: current.document3Scenes.map((scene, sceneIndex) =>
+                            sceneIndex === index
+                              ? { ...scene, description: event.target.value }
+                              : scene
+                          ),
+                        }))
+                      }
+                    />
+                  </label>
+                </article>
+              ))}
+            </div>
           </div>
         );
 
@@ -1224,8 +1249,10 @@ export default function InspectionSessionWorkspace({
 
                   <label className={styles.field}>
                     <span className={styles.fieldLabel}>시정조치 결과</span>
-                    <textarea
-                      className="app-textarea"
+                    <input
+                      type="text"
+                      list={`correction-result-options-${item.id}`}
+                      className="app-input"
                       value={item.result}
                       onChange={(event) =>
                         applyDocumentUpdate('doc4', 'manual', (current) => ({
@@ -1238,6 +1265,13 @@ export default function InspectionSessionWorkspace({
                         }))
                       }
                     />
+                    {correctionResultOptions.length > 0 ? (
+                      <datalist id={`correction-result-options-${item.id}`}>
+                        {correctionResultOptions.map((option) => (
+                          <option key={option} value={option} />
+                        ))}
+                      </datalist>
+                    ) : null}
                   </label>
                 </article>
               );
@@ -1617,7 +1651,7 @@ export default function InspectionSessionWorkspace({
                           className="app-select"
                           value={item.legalReferenceId}
                           onChange={(event) => {
-                            const reference = LEGAL_REFERENCE_LIBRARY.find(
+                            const reference = legalReferenceLibrary.find(
                               (libraryItem) => libraryItem.id === event.target.value
                             );
 
@@ -1640,7 +1674,7 @@ export default function InspectionSessionWorkspace({
                           }}
                         >
                           <option value="">선택</option>
-                          {LEGAL_REFERENCE_LIBRARY.map((libraryItem) => (
+                          {legalReferenceLibrary.map((libraryItem) => (
                             <option key={libraryItem.id} value={libraryItem.id}>
                               {libraryItem.title}
                             </option>
@@ -1885,7 +1919,7 @@ export default function InspectionSessionWorkspace({
             <section className={styles.readonlyLegalCard}>
               <h3 className={styles.matrixTitle}>법령 본문</h3>
               <div className={styles.legalTextList}>
-                {LEGAL_REFERENCE_LIBRARY.map((item) => (
+                {legalReferenceLibrary.map((item) => (
                   <article key={item.id} className={styles.legalTextItem}>
                     <strong>{item.title}</strong>
                     <p>{item.body}</p>
@@ -2365,6 +2399,17 @@ export default function InspectionSessionWorkspace({
     );
   }
 
+  if (!isAuthenticated) {
+    return (
+      <LoginPanel
+        error={authError}
+        onSubmit={login}
+        title="보고서 작성 로그인"
+        description="작성 중인 보고서를 서버 자동저장 기준으로 복구하려면 로그인해 주세요."
+      />
+    );
+  }
+
   if (!session || !progress || !currentSectionMeta) {
     return (
       <main className="app-page">
@@ -2427,10 +2472,11 @@ export default function InspectionSessionWorkspace({
                   className="app-button app-button-secondary"
                   onClick={() => void saveNow()}
                 >
-                  지금 저장
+                  {isSaving ? '저장 중...' : '지금 저장'}
                 </button>
               </div>
               {uploadError ? <p className={styles.headerError}>{uploadError}</p> : null}
+              {syncError ? <p className={styles.headerError}>{syncError}</p> : null}
             </div>
           </header>
 
@@ -2589,6 +2635,7 @@ export default function InspectionSessionWorkspace({
           <footer className={styles.bottomBar}>
             <div className={styles.bottomMeta}>
               자동 저장 기준으로 동작합니다. 마지막 저장 시각: {formatDateTime(session.lastSavedAt)}
+              {isSaving ? ' · 서버 저장 중' : ''}
             </div>
             <div className={styles.bottomActions}>
               <button
@@ -2604,7 +2651,7 @@ export default function InspectionSessionWorkspace({
                 className="app-button app-button-secondary"
                 onClick={() => void saveNow()}
               >
-                저장
+                {isSaving ? '저장 중' : '저장'}
               </button>
               <button
                 type="button"

@@ -34,6 +34,7 @@ type UnknownRecord = Record<string, unknown>;
 const UNTITLED_SITE_KEY = '__untitled_site__';
 const DEFAULT_GUIDANCE_AGENCY = '한국종합안전주식회사';
 const DEFAULT_CONSTRUCTION_TYPE = '건설공사';
+const FIXED_SCENE_COUNT = 6;
 const DEFAULT_MEASUREMENT_CRITERIA = [
   '1. 초정밀작업 : 750 Lux 이상',
   '2. 정밀작업 : 300 Lux 이상',
@@ -322,6 +323,12 @@ function generateId(prefix: string): string {
 
 function createTimestamp(): string {
   return new Date().toISOString();
+}
+
+function createDefaultScenePhotos(): SiteScenePhoto[] {
+  return Array.from({ length: FIXED_SCENE_COUNT }, (_, index) =>
+    createSiteScenePhoto(`현장 전경 ${index + 1}`)
+  );
 }
 
 function createDocumentMeta(source: InspectionDocumentSource): InspectionDocumentMeta {
@@ -677,10 +684,7 @@ export function createInspectionSession(
       },
       adminSiteSnapshot
     ),
-    document3Scenes: [
-      createSiteScenePhoto('현장 전경 1'),
-      createSiteScenePhoto('현장 전경 2'),
-    ],
+    document3Scenes: createDefaultScenePhotos(),
     document4FollowUps: [
       createPreviousGuidanceFollowUpItem({ confirmationDate: meta.reportDate }),
       createPreviousGuidanceFollowUpItem({ confirmationDate: meta.reportDate }),
@@ -1066,7 +1070,9 @@ function migrateLegacyInspectionSession(raw: unknown): InspectionSession {
           : {},
         0
       ),
-      createSiteScenePhoto('현장 전경 2'),
+      ...Array.from({ length: FIXED_SCENE_COUNT - 1 }, (_, index) =>
+        createSiteScenePhoto(`현장 전경 ${index + 2}`)
+      ),
     ],
     document4FollowUps: Array.isArray(source.previousGuidanceItems)
       ? source.previousGuidanceItems.map((item) =>
@@ -1141,7 +1147,7 @@ export function normalizeInspectionSession(raw: unknown): InspectionSession {
   const document14SafetyInfosSource = Array.isArray(source.document14SafetyInfos)
     ? source.document14SafetyInfos
     : [];
-  while (document3Scenes.length < 2) {
+  while (document3Scenes.length < FIXED_SCENE_COUNT) {
     document3Scenes.push(
       createSiteScenePhoto(`현장 전경 ${document3Scenes.length + 1}`)
     );
@@ -1389,6 +1395,9 @@ export function ensureSessionReportNumbers(
 
   const nextNumberBySessionId = new Map<string, number>();
   sessionsBySite.forEach((group) => {
+    const usedNumbers = new Set<number>();
+    let nextNumber = 1;
+
     [...group]
       .sort((left, right) => {
         const created =
@@ -1397,8 +1406,24 @@ export function ensureSessionReportNumbers(
 
         return new Date(left.updatedAt).getTime() - new Date(right.updatedAt).getTime();
       })
-      .forEach((session, index) => {
-        nextNumberBySessionId.set(session.id, index + 1);
+      .forEach((session) => {
+        if (
+          Number.isInteger(session.reportNumber) &&
+          session.reportNumber > 0 &&
+          !usedNumbers.has(session.reportNumber)
+        ) {
+          usedNumbers.add(session.reportNumber);
+          nextNumberBySessionId.set(session.id, session.reportNumber);
+          return;
+        }
+
+        while (usedNumbers.has(nextNumber)) {
+          nextNumber += 1;
+        }
+
+        usedNumbers.add(nextNumber);
+        nextNumberBySessionId.set(session.id, nextNumber);
+        nextNumber += 1;
       });
   });
 
@@ -1445,7 +1470,7 @@ export function getSectionCompletion(
           session.document2Overview.processAndNotes
       );
     case 'doc3':
-      return session.document3Scenes.every((item) => Boolean(item.photoUrl));
+      return session.document3Scenes.slice(0, 2).every((item) => Boolean(item.photoUrl));
     case 'doc4': {
       const requiredItems = getRequiredFollowUps(session);
       if (requiredItems.length === 0) {
