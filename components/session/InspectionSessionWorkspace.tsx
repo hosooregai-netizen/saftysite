@@ -114,12 +114,15 @@ export default function InspectionSessionWorkspace({
     });
   };
 
-  const withFileData = async (file: File, onLoaded: (dataUrl: string, selectedFile: File) => void) => {
+  const withFileData = async (file: File, onLoaded?: (dataUrl: string, selectedFile: File) => void) => {
     try {
       setUploadError(null);
-      onLoaded(await readFileAsDataUrl(file), file);
+      const dataUrl = await readFileAsDataUrl(file);
+      onLoaded?.(dataUrl, file);
+      return dataUrl;
     } catch (error) {
       setUploadError(error instanceof Error ? error.message : '파일을 불러오는 중 오류가 발생했습니다.');
+      return null;
     }
   };
 

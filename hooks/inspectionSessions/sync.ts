@@ -24,6 +24,23 @@ import { getErrorMessage, isAuthFailure, normalizeSessions, SITE_STORAGE_KEY, ST
 import type { InspectionSessionsStore } from './store';
 
 export function useInspectionSessionsSync(store: InspectionSessionsStore) {
+  const {
+    authTokenRef,
+    clearAuthState,
+    masterDataRef,
+    persistSessions,
+    persistSites,
+    resetSessionVersions,
+    setAuthError,
+    setCurrentUser,
+    setDataError,
+    setIsReady,
+    setMasterData,
+    setSessionState,
+    setSiteState,
+    setSyncError,
+  } = store;
+
   const hydrateRemoteState = useCallback(
     async (token: string): Promise<SafetyHydratedData> => {
       const [user, contentItems] = await Promise.all([
@@ -58,39 +75,49 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
 
   const applyHydratedState = useCallback(
     async (data: SafetyHydratedData) => {
-      store.authTokenRef.current = readSafetyAuthToken();
-      store.masterDataRef.current = data.masterData;
-      store.setCurrentUser(data.user);
-      store.setMasterData(data.masterData);
-      store.setSiteState(data.sites);
-      store.setSessionState(data.sessions);
-      store.resetSessionVersions(data.sessions);
-      await Promise.all([store.persistSites(data.sites), store.persistSessions(data.sessions)]);
+      authTokenRef.current = readSafetyAuthToken();
+      masterDataRef.current = data.masterData;
+      setCurrentUser(data.user);
+      setMasterData(data.masterData);
+      setSiteState(data.sites);
+      setSessionState(data.sessions);
+      resetSessionVersions(data.sessions);
+      await Promise.all([persistSites(data.sites), persistSessions(data.sessions)]);
     },
-    [store]
+    [
+      authTokenRef,
+      masterDataRef,
+      persistSessions,
+      persistSites,
+      resetSessionVersions,
+      setCurrentUser,
+      setMasterData,
+      setSessionState,
+      setSiteState,
+    ]
   );
 
   const reload = useCallback(async () => {
-    const token = store.authTokenRef.current;
+    const token = authTokenRef.current;
     if (!token) {
-      store.setIsReady(true);
+      setIsReady(true);
       return;
     }
 
-    store.setDataError(null);
+    setDataError(null);
     try {
       await applyHydratedState(await hydrateRemoteState(token));
     } catch (error) {
       if (isAuthFailure(error)) {
-        store.clearAuthState();
-        store.setAuthError('로그인이 만료되었습니다. 다시 로그인해 주세요.');
+        clearAuthState();
+        setAuthError('로그인이 만료되었습니다. 다시 로그인해 주세요.');
       } else {
-        store.setDataError(getErrorMessage(error));
+        setDataError(getErrorMessage(error));
       }
     } finally {
-      store.setIsReady(true);
+      setIsReady(true);
     }
-  }, [applyHydratedState, hydrateRemoteState, store]);
+  }, [applyHydratedState, authTokenRef, clearAuthState, hydrateRemoteState, setAuthError, setDataError, setIsReady]);
 
   useEffect(() => {
     let cancelled = false;
@@ -100,17 +127,17 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
         readPersistedValue<InspectionSite[]>(SITE_STORAGE_KEY),
       ]);
       if (cancelled) return;
-      if (cachedSites?.length) store.setSiteState(cachedSites);
+      if (cachedSites?.length) setSiteState(cachedSites);
       if (cachedSessions?.length) {
-        store.setSessionState(cachedSessions);
-        store.resetSessionVersions(cachedSessions);
+        setSessionState(cachedSessions);
+        resetSessionVersions(cachedSessions);
       }
       const token = readSafetyAuthToken();
       if (!token) {
-        store.setIsReady(true);
+        setIsReady(true);
         return;
       }
-      store.authTokenRef.current = token;
+      authTokenRef.current = token;
       await reload();
     };
 
@@ -118,35 +145,35 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
     return () => {
       cancelled = true;
     };
-  }, [reload, store]);
+  }, [authTokenRef, reload, resetSessionVersions, setIsReady, setSessionState, setSiteState]);
 
   const login = useCallback(async (input: SafetyLoginInput) => {
-    store.setAuthError(null);
-    store.setDataError(null);
-    store.setSyncError(null);
-    store.setIsReady(false);
+    setAuthError(null);
+    setDataError(null);
+    setSyncError(null);
+    setIsReady(false);
 
     try {
       const token = await loginSafetyApi(input);
       writeSafetyAuthToken(token.access_token);
-      store.authTokenRef.current = token.access_token;
+      authTokenRef.current = token.access_token;
       await applyHydratedState(await hydrateRemoteState(token.access_token));
     } catch (error) {
-      store.clearAuthState();
-      store.setAuthError(getErrorMessage(error));
+      clearAuthState();
+      setAuthError(getErrorMessage(error));
       throw error;
     } finally {
-      store.setIsReady(true);
+      setIsReady(true);
     }
-  }, [applyHydratedState, hydrateRemoteState, store]);
+  }, [applyHydratedState, authTokenRef, clearAuthState, hydrateRemoteState, setAuthError, setDataError, setIsReady, setSyncError]);
 
   const logout = useCallback(() => {
-    store.clearAuthState();
-    store.setAuthError(null);
-    store.setDataError(null);
-    store.setSyncError(null);
-    store.setIsReady(true);
-  }, [store]);
+    clearAuthState();
+    setAuthError(null);
+    setDataError(null);
+    setSyncError(null);
+    setIsReady(true);
+  }, [clearAuthState, setAuthError, setDataError, setIsReady, setSyncError]);
 
   return { login, logout, reload };
 }

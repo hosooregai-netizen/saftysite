@@ -44,53 +44,62 @@ export default function LoginPanel({
     <main className="app-page">
       <div className="app-container">
         <section className={`app-shell ${styles.shell}`}>
-          <div className={styles.hero}>
-            <span className="app-chip">Safety API</span>
-            <span className="app-chip">현장 보고서 연동</span>
-          </div>
+          <div className={styles.backdrop} aria-hidden="true" />
 
           <div className={styles.content}>
-            <div className={styles.copy}>
-              <h1 className={styles.title}>{title}</h1>
-              <p className={styles.description}>{description}</p>
-            </div>
-
             <form className={styles.form} onSubmit={handleSubmit}>
-              <label className={styles.field}>
-                <span className={styles.label}>이메일</span>
-                <input
-                  type="email"
-                  className="app-input"
-                  value={email}
-                  autoComplete="username"
-                  onChange={(event) => setEmail(event.target.value)}
-                  disabled={busy}
-                />
-              </label>
+              <div className={styles.brandRow}>
+                <span className="app-chip">Safety API</span>
+                <span className="app-chip">업무 시스템</span>
+              </div>
 
-              <label className={styles.field}>
-                <span className={styles.label}>비밀번호</span>
-                <input
-                  type="password"
-                  className="app-input"
-                  value={password}
-                  autoComplete="current-password"
-                  onChange={(event) => setPassword(event.target.value)}
-                  disabled={busy}
-                />
-              </label>
+              <div className={styles.formHeader}>
+                <p className={styles.formEyebrow}>Sign in</p>
+                <h1 className={styles.formTitle}>{title}</h1>
+                <p className={styles.formDescription}>{description}</p>
+              </div>
+
+              <div className={styles.formFields}>
+                <label className={styles.field}>
+                  <span className={styles.label}>이메일</span>
+                  <input
+                    type="email"
+                    className="app-input"
+                    value={email}
+                    autoComplete="username"
+                    placeholder="name@example.com"
+                    onChange={(event) => setEmail(event.target.value)}
+                    disabled={busy}
+                  />
+                </label>
+
+                <label className={styles.field}>
+                  <span className={styles.label}>비밀번호</span>
+                  <input
+                    type="password"
+                    className="app-input"
+                    value={password}
+                    autoComplete="current-password"
+                    placeholder="비밀번호를 입력하세요"
+                    onChange={(event) => setPassword(event.target.value)}
+                    disabled={busy}
+                  />
+                </label>
+              </div>
 
               {localError || error ? (
                 <p className={styles.error}>{localError || error}</p>
               ) : null}
 
-              <button
-                type="submit"
-                className="app-button app-button-primary"
-                disabled={busy}
-              >
-                {busy ? '로그인 중...' : '로그인'}
-              </button>
+              <div className={styles.formActions}>
+                <button
+                  type="submit"
+                  className={`app-button app-button-primary ${styles.submitButton}`}
+                  disabled={busy}
+                >
+                  {busy ? '로그인 중...' : '로그인'}
+                </button>
+              </div>
             </form>
           </div>
         </section>

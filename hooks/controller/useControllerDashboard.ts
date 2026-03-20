@@ -49,7 +49,7 @@ const EMPTY_DATA: ControllerDashboardData = {
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof SafetyApiError || error instanceof Error) return error.message;
-  return '관제 데이터를 처리하는 중 오류가 발생했습니다.';
+  return '관리자 데이터를 처리하는 중 오류가 발생했습니다.';
 }
 
 function hasSiteScheduleValues(input: {
@@ -57,6 +57,10 @@ function hasSiteScheduleValues(input: {
   project_end_date?: string | null;
 }): boolean {
   return Boolean(input.project_start_date || input.project_end_date);
+}
+
+function hasValues(input: object): boolean {
+  return Object.keys(input).length > 0;
 }
 
 export function useControllerDashboard(enabled: boolean) {
@@ -140,6 +144,19 @@ export function useControllerDashboard(enabled: boolean) {
       runMutation((token) => updateSafetyUser(token, id, input), '사용자 정보를 수정했습니다.'),
     resetUserPassword: (id: string, password: string) =>
       runMutation((token) => updateSafetyUserPassword(token, id, password), '비밀번호를 변경했습니다.'),
+    saveUserEdit: (
+      id: string,
+      input: SafetyUserUpdateInput,
+      password?: string | null
+    ) =>
+      runMutation(async (token) => {
+        if (hasValues(input)) {
+          await updateSafetyUser(token, id, input);
+        }
+        if (password) {
+          await updateSafetyUserPassword(token, id, password);
+        }
+      }, hasValues(input) && password ? '사용자 정보와 비밀번호를 수정했습니다.' : password ? '비밀번호를 변경했습니다.' : '사용자 정보를 수정했습니다.'),
     deactivateUser: (id: string) =>
       runMutation((token) => deactivateSafetyUser(token, id), '사용자를 비활성화했습니다.'),
     createHeadquarter: (input: SafetyHeadquarterInput) =>

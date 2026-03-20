@@ -28,6 +28,7 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
     sessions,
     isReady,
     isAuthenticated,
+    currentUser,
     authError,
     login,
     createSession,
@@ -45,6 +46,9 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
     () => sessions.filter((session) => getSessionSiteKey(session) === decodedSiteKey),
     [decodedSiteKey, sessions]
   );
+  const assignedUserDisplay = [currentUser?.name, currentUser?.position]
+    .filter(Boolean)
+    .join(' · ');
 
   const handleCreateReport = () => {
     if (!currentSite) return;
@@ -146,6 +150,7 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
           <div className={styles.pageGrid}>
             <section className={styles.panel}>
               <ReportList
+                assignedUserDisplay={assignedUserDisplay}
                 currentSite={currentSite}
                 siteSessions={siteSessions}
                 canArchiveReports={canArchiveReports}

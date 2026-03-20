@@ -8,10 +8,13 @@ import { getSessionTitle } from '@/constants/inspectionSession';
 import type { InspectionSession } from '@/types/inspectionSession';
 import type { SafetyAssignment } from '@/types/controller';
 import {
-  USER_ROLE_LABELS,
   USER_ROLE_OPTIONS,
   formatTimestamp,
+  getUserRoleLabel,
+  toBackendUserRole,
   toNullableText,
+  toUserRoleView,
+  type UserRoleView,
 } from './shared';
 
 interface UsersSectionProps {
@@ -31,15 +34,14 @@ interface UsersSectionProps {
     organization_name?: string | null;
     is_active?: boolean;
   }) => Promise<void>;
-  onUpdate: (id: string, input: {
+  onSaveEdit: (id: string, input: {
     name?: string | null;
     phone?: string | null;
-    role?: SafetyUser['role'] | null;
+    role?: SafetyUser['role'];
     position?: string | null;
     organization_name?: string | null;
     is_active?: boolean | null;
-  }) => Promise<void>;
-  onResetPassword: (id: string, password: string) => Promise<void>;
+  }, password?: string | null) => Promise<void>;
   onDeactivate: (id: string) => Promise<void>;
 }
 
@@ -48,16 +50,18 @@ const EMPTY_FORM = {
   name: '',
   password: '',
   phone: '',
-  role: 'field_agent' as SafetyUser['role'],
+  role: 'field_agent' as UserRoleView,
   position: '',
   organization_name: '',
   is_active: true,
 };
 
 export default function UsersSection(props: UsersSectionProps) {
-  const { assignments, busy, sessions, sites, styles, users, onCreate, onUpdate, onResetPassword, onDeactivate } = props;
+  const { assignments, busy, sessions, sites, styles, users, onCreate, onSaveEdit, onDeactivate } = props;
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [initialForm, setInitialForm] = useState(EMPTY_FORM);
+  const [editingRoleSource, setEditingRoleSource] = useState<SafetyUser['role']>('field_agent');
   const isOpen = editingId !== null;
   const sitesById = useMemo(() => new Map(sites.map((site) => [site.id, site])), [sites]);
   const activeAssignmentsByUser = useMemo(() => {
@@ -71,26 +75,62 @@ export default function UsersSection(props: UsersSectionProps) {
   const openCreate = () => {
     setEditingId('create');
     setForm(EMPTY_FORM);
+    setInitialForm(EMPTY_FORM);
+    setEditingRoleSource('field_agent');
   };
 
   const openEdit = (user: SafetyUser) => {
     setEditingId(user.id);
-    setForm({
+    const nextForm = {
       email: user.email,
       name: user.name,
       password: '',
       phone: user.phone ?? '',
-      role: user.role,
+      role: toUserRoleView(user.role),
       position: user.position ?? '',
       organization_name: user.organization_name ?? '',
       is_active: user.is_active,
-    });
+    };
+    setForm(nextForm);
+    setInitialForm(nextForm);
+    setEditingRoleSource(user.role);
   };
 
   const closeModal = () => {
     if (busy) return;
     setEditingId(null);
     setForm(EMPTY_FORM);
+    setInitialForm(EMPTY_FORM);
+    setEditingRoleSource('field_agent');
+  };
+
+  const buildUpdateInput = () => {
+    const nextRole =
+      form.role !== initialForm.role
+        ? toBackendUserRole(form.role, editingRoleSource)
+        : undefined;
+    const next = {
+      name: form.name.trim(),
+      phone: toNullableText(form.phone),
+      role: nextRole,
+      position: toNullableText(form.position),
+      organization_name: toNullableText(form.organization_name),
+      is_active: form.is_active,
+    };
+    const previous = {
+      name: initialForm.name.trim(),
+      phone: toNullableText(initialForm.phone),
+      role: initialForm.role,
+      position: toNullableText(initialForm.position),
+      organization_name: toNullableText(initialForm.organization_name),
+      is_active: initialForm.is_active,
+    };
+    return Object.fromEntries(
+      Object.entries(next).filter(
+        ([key, value]) =>
+          value !== undefined && previous[key as keyof typeof previous] !== value
+      )
+    ) as NonNullable<Parameters<UsersSectionProps['onSaveEdit']>[1]>;
   };
 
   const submit = async () => {
@@ -103,23 +143,19 @@ export default function UsersSection(props: UsersSectionProps) {
         name: form.name.trim(),
         password: form.password.trim(),
         phone: toNullableText(form.phone),
-        role: form.role,
+        role: toBackendUserRole(form.role),
         position: toNullableText(form.position),
         organization_name: toNullableText(form.organization_name),
         is_active: form.is_active,
       });
     } else if (editingId) {
-      await onUpdate(editingId, {
-        name: form.name.trim(),
-        phone: toNullableText(form.phone),
-        role: form.role,
-        position: toNullableText(form.position),
-        organization_name: toNullableText(form.organization_name),
-        is_active: form.is_active,
-      });
-      if (form.password.trim()) {
-        await onResetPassword(editingId, form.password.trim());
+      const updateInput = buildUpdateInput();
+      const nextPassword = form.password.trim() || null;
+      if (Object.keys(updateInput).length === 0 && !nextPassword) {
+        closeModal();
+        return;
       }
+      await onSaveEdit(editingId, updateInput, nextPassword);
     }
 
     closeModal();
@@ -179,7 +215,7 @@ export default function UsersSection(props: UsersSectionProps) {
                         </div>
                       </td>
                       <td>{user.email}</td>
-                      <td>{USER_ROLE_LABELS[user.role]}</td>
+                      <td>{getUserRoleLabel(user.role)}</td>
                       <td>
                         {assignedSites.length === 0 ? (
                           '-'
@@ -252,8 +288,12 @@ export default function UsersSection(props: UsersSectionProps) {
           <div className={styles.modalGrid}>
             <label className={styles.modalField}><span className={styles.label}>이름</span><input className="app-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} disabled={busy} /></label>
             <label className={styles.modalField}><span className={styles.label}>이메일</span><input className="app-input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} disabled={busy || editingId !== 'create'} /></label>
-            <label className={styles.modalField}><span className={styles.label}>{editingId === 'create' ? '비밀번호' : '새 비밀번호'}</span><input className="app-input" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} disabled={busy} /></label>
-            <label className={styles.modalField}><span className={styles.label}>권한</span><select className="app-select" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as SafetyUser['role'] })} disabled={busy}>{USER_ROLE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
+            <label className={styles.modalField}>
+              <span className={styles.label}>{editingId === 'create' ? '비밀번호' : '새 비밀번호'}</span>
+              <input className="app-input" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} disabled={busy} />
+              {editingId !== 'create' ? <span className={styles.modalHint}>입력한 경우에만 비밀번호 변경 API를 별도로 호출합니다.</span> : null}
+            </label>
+            <label className={styles.modalField}><span className={styles.label}>권한</span><select className="app-select" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as UserRoleView })} disabled={busy}>{USER_ROLE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
             <label className={styles.modalField}><span className={styles.label}>전화번호</span><input className="app-input" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} disabled={busy} /></label>
             <label className={styles.modalField}><span className={styles.label}>직책</span><input className="app-input" value={form.position} onChange={(e) => setForm({ ...form, position: e.target.value })} disabled={busy} /></label>
             <label className={styles.modalFieldWide}><span className={styles.label}>소속</span><input className="app-input" value={form.organization_name} onChange={(e) => setForm({ ...form, organization_name: e.target.value })} disabled={busy} /></label>

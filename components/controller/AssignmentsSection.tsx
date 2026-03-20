@@ -4,7 +4,7 @@ import { useState } from 'react';
 import AppModal from '@/components/ui/AppModal';
 import type { SafetySite, SafetyUser } from '@/types/backend';
 import type { SafetyAssignment } from '@/types/controller';
-import { formatTimestamp, toNullableText } from './shared';
+import { formatTimestamp, isFieldAgentUserRole, toNullableText } from './shared';
 
 interface AssignmentsSectionProps {
   busy: boolean;
@@ -140,7 +140,7 @@ export default function AssignmentsSection(props: AssignmentsSectionProps) {
         }
       >
         <div className={styles.modalGrid}>
-          <label className={styles.modalField}><span className={styles.label}>사용자</span><select className="app-select" value={form.user_id} onChange={(e) => setForm({ ...form, user_id: e.target.value })} disabled={busy || editingId !== 'create'}><option value="">선택</option>{users.filter((user) => user.is_active).map((user) => <option key={user.id} value={user.id}>{user.name} · {user.role}</option>)}</select></label>
+          <label className={styles.modalField}><span className={styles.label}>사용자</span><select className="app-select" value={form.user_id} onChange={(e) => setForm({ ...form, user_id: e.target.value })} disabled={busy || editingId !== 'create'}><option value="">선택</option>{users.filter((user) => user.is_active && isFieldAgentUserRole(user.role)).map((user) => <option key={user.id} value={user.id}>{user.name} · 지도요원</option>)}</select></label>
           <label className={styles.modalField}><span className={styles.label}>현장</span><select className="app-select" value={form.site_id} onChange={(e) => setForm({ ...form, site_id: e.target.value })} disabled={busy || editingId !== 'create'}><option value="">선택</option>{sites.filter((site) => site.status !== 'closed').map((site) => <option key={site.id} value={site.id}>{site.site_name}</option>)}</select></label>
           <label className={styles.modalFieldWide}><span className={styles.label}>역할</span><input className="app-input" value={form.role_on_site} onChange={(e) => setForm({ ...form, role_on_site: e.target.value })} disabled={busy} /></label>
           <label className={styles.modalFieldWide}><span className={styles.label}>메모</span><textarea className="app-textarea" value={form.memo} onChange={(e) => setForm({ ...form, memo: e.target.value })} disabled={busy} /></label>

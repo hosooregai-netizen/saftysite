@@ -1,9 +1,10 @@
 'use client';
 
 import SignaturePad from '@/components/ui/SignaturePad';
+import { Doc3SceneSection } from '@/components/session/workspace/Doc3SceneSection';
 import { ACCIDENT_OCCURRENCE_OPTIONS, ACCIDENT_TYPE_OPTIONS, NOTIFICATION_METHOD_OPTIONS, PREVIOUS_IMPLEMENTATION_OPTIONS, WORK_PLAN_ITEMS, WORK_PLAN_STATUS_OPTIONS } from '@/components/session/workspace/constants';
 import type { OverviewSectionProps } from '@/components/session/workspace/types';
-import { InfoTable, UploadBox } from '@/components/session/workspace/widgets';
+import { InfoTable } from '@/components/session/workspace/widgets';
 import styles from '@/components/session/InspectionSessionWorkspace.module.css';
 import type { InspectionSectionKey, WorkPlanCheckKey } from '@/types/inspectionSession';
 
@@ -169,27 +170,7 @@ export function renderDoc2(props: OverviewSectionProps) {
 }
 
 export function renderDoc3(props: OverviewSectionProps) {
-  const { applyDocumentUpdate, session, withFileData } = props;
-  return (
-    <div className={styles.sectionStack}>
-      <div className={styles.sectionToolbar}>
-        <span className="app-chip">최대 6장</span>
-        <span className="app-chip">1~2번 우선 입력</span>
-      </div>
-      <div className={styles.dualUploadGrid}>
-        {session.document3Scenes.map((item, index) => (
-          <article key={item.id} className={styles.card}>
-            <div className={styles.cardHeader}><h3 className={styles.cardTitle}>{item.title || `현장 전경 사진 ${index + 1}`}</h3></div>
-            <UploadBox id={`scene-photo-${item.id}`} label="사진" value={item.photoUrl} onClear={() => applyDocumentUpdate('doc3', 'manual', (current) => ({ ...current, document3Scenes: current.document3Scenes.map((scene, sceneIndex) => sceneIndex === index ? { ...scene, photoUrl: '' } : scene) }))} onSelect={async (file) => withFileData(file, (dataUrl) => applyDocumentUpdate('doc3', 'manual', (current) => ({ ...current, document3Scenes: current.document3Scenes.map((scene, sceneIndex) => sceneIndex === index ? { ...scene, photoUrl: dataUrl } : scene) })))} />
-            <label className={styles.field}>
-              <span className={styles.fieldLabel}>사진 설명</span>
-              <input type="text" className="app-input" value={item.description} onChange={(event) => applyDocumentUpdate('doc3', 'manual', (current) => ({ ...current, document3Scenes: current.document3Scenes.map((scene, sceneIndex) => sceneIndex === index ? { ...scene, description: event.target.value } : scene) }))} />
-            </label>
-          </article>
-        ))}
-      </div>
-    </div>
-  );
+  return <Doc3SceneSection {...props} />;
 }
 
 export function renderOverviewSection(section: InspectionSectionKey, props: OverviewSectionProps) {

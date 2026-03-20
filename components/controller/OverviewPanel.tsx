@@ -1,7 +1,7 @@
 import { getSessionProgress } from '@/constants/inspectionSession';
 import type { InspectionSession } from '@/types/inspectionSession';
 import type { ControllerDashboardData } from '@/types/controller';
-import { formatTimestamp, type ControllerSectionKey } from './shared';
+import { formatTimestamp, isFieldAgentUserRole, type ControllerSectionKey } from './shared';
 
 interface OverviewPanelProps {
   data: ControllerDashboardData;
@@ -22,7 +22,7 @@ export default function OverviewPanel({
   const activeSites = data.sites.filter((item) => item.status === 'active');
   const assignedSiteIds = new Set(activeAssignments.map((item) => item.site_id));
   const activeFieldAgents = data.users.filter(
-    (item) => item.role === 'field_agent' && item.is_active
+    (item) => isFieldAgentUserRole(item.role) && item.is_active
   );
   const reportStats = sessions.reduce(
     (accumulator, session) => {
@@ -58,9 +58,9 @@ export default function OverviewPanel({
     <section className={styles.sectionCard}>
       <div className={styles.sectionHeader}>
         <div>
-          <h2 className={styles.sectionTitle}>관제 운영 개요</h2>
+          <h2 className={styles.sectionTitle}>관리자 운영 개요</h2>
           <p className={styles.sectionDescription}>
-            사업장, 현장, 사용자, 배정, 마스터 데이터를 한 화면에서 관리할 수 있습니다.
+            사업장, 현장, 사용자, 배정, 콘텐츠 데이터를 한 화면에서 관리할 수 있습니다.
           </p>
         </div>
       </div>

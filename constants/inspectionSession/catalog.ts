@@ -15,7 +15,7 @@ import type {
 export const UNTITLED_SITE_KEY = '__untitled_site__';
 export const DEFAULT_GUIDANCE_AGENCY = '한국종합안전주식회사';
 export const DEFAULT_CONSTRUCTION_TYPE = '건설공사';
-export const FIXED_SCENE_COUNT = 6;
+export const FIXED_SCENE_COUNT = 2;
 export const DEFAULT_MEASUREMENT_CRITERIA = [
   '1. 초정밀작업 : 750 Lux 이상',
   '2. 정밀작업 : 300 Lux 이상',

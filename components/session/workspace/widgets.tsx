@@ -12,7 +12,7 @@ interface UploadBoxProps {
   label: string;
   mode?: 'image' | 'file';
   onClear?: () => void;
-  onSelect: (file: File) => Promise<void> | void;
+  onSelect: (file: File) => Promise<unknown> | void;
   value: string;
 }
 

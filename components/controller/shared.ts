@@ -1,6 +1,9 @@
 import type { SafetyContentType, SafetyUserRole } from '@/types/backend';
 import type { SafetySiteStatus } from '@/types/controller';
 
+export type ContentEditorMode = 'list' | 'text' | 'image' | 'file';
+export type UserRoleView = 'admin' | 'field_agent';
+
 export type ControllerSectionKey =
   | 'overview'
   | 'users'
@@ -20,16 +23,37 @@ export const CONTROLLER_SECTIONS: Array<{
   { key: 'content', label: '콘텐츠', description: '콘텐츠 관리' },
 ];
 
-export const USER_ROLE_OPTIONS: Array<{ value: SafetyUserRole; label: string }> = [
-  { value: 'super_admin', label: '최고 관리자' },
+const ADMIN_USER_ROLES = new Set<SafetyUserRole>(['super_admin', 'admin', 'controller']);
+
+export const USER_ROLE_OPTIONS: Array<{ value: UserRoleView; label: string }> = [
   { value: 'admin', label: '관리자' },
-  { value: 'controller', label: '관제' },
   { value: 'field_agent', label: '지도요원' },
-  { value: 'client_viewer', label: '고객 열람' },
 ];
-export const USER_ROLE_LABELS = Object.fromEntries(
-  USER_ROLE_OPTIONS.map((option) => [option.value, option.label])
-) as Record<SafetyUserRole, string>;
+
+export function isAdminUserRole(role: SafetyUserRole | null | undefined): boolean {
+  return Boolean(role && ADMIN_USER_ROLES.has(role));
+}
+
+export function isFieldAgentUserRole(role: SafetyUserRole | null | undefined): boolean {
+  return role === 'field_agent';
+}
+
+export function toUserRoleView(role: SafetyUserRole): UserRoleView {
+  return isAdminUserRole(role) ? 'admin' : 'field_agent';
+}
+
+export function toBackendUserRole(
+  roleView: UserRoleView,
+  currentRole?: SafetyUserRole
+): SafetyUserRole {
+  if (roleView === 'field_agent') return 'field_agent';
+  if (currentRole && isAdminUserRole(currentRole)) return currentRole;
+  return 'admin';
+}
+
+export function getUserRoleLabel(role: SafetyUserRole): string {
+  return toUserRoleView(role) === 'admin' ? '관리자' : '지도요원';
+}
 
 export const SITE_STATUS_OPTIONS: Array<{ value: SafetySiteStatus; label: string }> = [
   { value: 'planned', label: '준비중' },
@@ -40,20 +64,36 @@ export const SITE_STATUS_LABELS = Object.fromEntries(
   SITE_STATUS_OPTIONS.map((option) => [option.value, option.label])
 ) as Record<SafetySiteStatus, string>;
 
-export const CONTENT_TYPE_OPTIONS: Array<{ value: SafetyContentType; label: string }> = [
-  { value: 'hazard_category', label: '위험 카테고리' },
-  { value: 'accident_type', label: '사고 유형' },
-  { value: 'measurement_template', label: '계측 템플릿' },
-  { value: 'safety_news', label: '안전 소식' },
-  { value: 'disaster_case', label: '재해 사례' },
-  { value: 'campaign_template', label: '캠페인 템플릿' },
-  { value: 'ai_prompt', label: 'AI 프롬프트' },
-  { value: 'legal_reference', label: '법령 레퍼런스' },
-  { value: 'correction_result_option', label: '시정조치 옵션' },
+export const CONTENT_TYPE_OPTIONS: Array<{
+  value: SafetyContentType;
+  label: string;
+  description: string;
+  editorMode: ContentEditorMode;
+  bodyLabel: string;
+  fileLabels?: [string, string];
+}> = [
+  { value: 'hazard_category', label: '위험 분류', description: '위험 카테고리 목록값', editorMode: 'list', bodyLabel: '표시 텍스트' },
+  { value: 'accident_type', label: '재해 유형', description: '재해 유형 목록값', editorMode: 'list', bodyLabel: '표시 텍스트' },
+  { value: 'measurement_template', label: '계측 점검 템플릿', description: '계측 점검 텍스트 템플릿', editorMode: 'text', bodyLabel: '템플릿 내용' },
+  { value: 'safety_news', label: '안전 정보', description: '텍스트와 대표 이미지를 함께 관리', editorMode: 'image', bodyLabel: '안전 정보 본문' },
+  { value: 'disaster_case', label: '재해 사례', description: '사례 요약과 대표 이미지 관리', editorMode: 'image', bodyLabel: '사례 요약' },
+  { value: 'campaign_template', label: '캠페인 자료', description: '캠페인 문구와 이미지 관리', editorMode: 'image', bodyLabel: '캠페인 설명' },
+  { value: 'ai_prompt', label: 'AI 프롬프트', description: '자동생성용 프롬프트 텍스트', editorMode: 'text', bodyLabel: '프롬프트 본문' },
+  { value: 'legal_reference', label: '법령 / 참고자료', description: '법령 본문과 참고자료 파일 관리', editorMode: 'file', bodyLabel: '법령 본문', fileLabels: ['참고자료 1', '참고자료 2'] },
+  { value: 'correction_result_option', label: '시정조치 결과 옵션', description: '결과 옵션 목록값', editorMode: 'list', bodyLabel: '표시 텍스트' },
 ];
 export const CONTENT_TYPE_LABELS = Object.fromEntries(
   CONTENT_TYPE_OPTIONS.map((option) => [option.value, option.label])
 ) as Record<SafetyContentType, string>;
+export const CONTENT_TYPE_META = Object.fromEntries(
+  CONTENT_TYPE_OPTIONS.map((option) => [option.value, option])
+) as Record<SafetyContentType, (typeof CONTENT_TYPE_OPTIONS)[number]>;
+export const CONTENT_EDITOR_MODE_LABELS: Record<ContentEditorMode, string> = {
+  list: '목록값',
+  text: '텍스트',
+  image: '이미지 업로드',
+  file: '파일 업로드',
+};
 
 export function toNullableText(value: string): string | null {
   const normalized = value.trim();

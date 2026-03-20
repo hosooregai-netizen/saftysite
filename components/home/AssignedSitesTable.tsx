@@ -2,16 +2,22 @@ import Link from 'next/link';
 import type { SiteSummary } from '@/components/home/siteSummaries';
 
 interface AssignedSitesTableProps {
+  currentUserName?: string;
+  currentUserPosition?: string | null;
   siteSummaries: SiteSummary[];
   styles: Record<string, string>;
   formatDateTime: (value: string | null) => string;
 }
 
 export default function AssignedSitesTable({
+  currentUserName,
+  currentUserPosition,
   siteSummaries,
   styles,
   formatDateTime,
 }: AssignedSitesTableProps) {
+  const assigneeDisplay = [currentUserName, currentUserPosition].filter(Boolean).join(' · ');
+
   if (siteSummaries.length === 0) {
     return (
       <div className={styles.emptyState}>
@@ -56,7 +62,9 @@ export default function AssignedSitesTable({
 
               <div className={`${styles.cell} ${styles.assigneeCell}`}>
                 <span className={styles.mobileLabel}>담당</span>
-                <span className={styles.cellValue}>{site.assigneeName || '미입력'}</span>
+                <span className={styles.cellValue}>
+                  {assigneeDisplay || site.assigneeName || '미입력'}
+                </span>
               </div>
 
               <div className={`${styles.cell} ${styles.dateCell}`}>

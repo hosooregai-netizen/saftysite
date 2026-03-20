@@ -150,6 +150,16 @@
   padding: 20px;
 }
 
+.topRail,
+.topRailHeader,
+.topRailActions,
+.navRail,
+.navTabText,
+.metaModal {
+  display: grid;
+  gap: 12px;
+}
+
 .sidebarCard,
 .editorCard {
   padding: 16px;
@@ -206,6 +216,64 @@
 
 .navButtonCompleted {
   border-color: #9ab3cb;
+}
+
+.topRail {
+  gap: 14px;
+}
+
+.topRailHeader {
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+}
+
+.topRailActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.topRailMeta {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--erp-text-muted);
+}
+
+.navRail {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: thin;
+}
+
+.navTab {
+  display: grid;
+  grid-template-columns: 28px minmax(140px, 1fr);
+  gap: 10px;
+  align-items: start;
+  min-width: 220px;
+  padding: 12px 14px;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-card);
+  background-color: var(--erp-white);
+  text-align: left;
+  flex: 0 0 auto;
+}
+
+.navTabActive {
+  border-color: var(--erp-navy);
+  background: #eef3f8;
+}
+
+.navTabCompleted {
+  border-color: #9ab3cb;
+}
+
+.navTabText {
+  min-width: 0;
+  gap: 4px;
 }
 
 .navIndex {
@@ -270,6 +338,10 @@
   border: 1px solid var(--erp-line);
   border-radius: var(--erp-radius-card);
   background-color: var(--erp-panel-muted);
+}
+
+.metaModal {
+  gap: 16px;
 }
 
 .metaGrid,
@@ -385,7 +457,8 @@
 
 .filePreview,
 .caseBody,
-.noticeBody {
+.noticeBody,
+.sceneAddPanel {
   display: grid;
   gap: 10px;
   padding: 16px;
@@ -502,6 +575,27 @@
   display: none;
 }
 
+.sceneAddPanel {
+  border: 1px dashed var(--erp-line-strong);
+  border-radius: var(--erp-radius-card);
+  background-color: var(--erp-panel-muted);
+  justify-items: start;
+}
+
+.sceneAddTitle {
+  color: var(--erp-dark);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.sceneAddDescription {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--erp-text-muted);
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
 @media (min-width: 900px) {
   .header {
     flex-direction: row;
@@ -511,8 +605,12 @@
   }
 
   .workspace {
-    grid-template-columns: 300px minmax(0, 1fr);
     padding: 24px 28px;
+  }
+
+  .topRailHeader {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 16px;
   }
 
   .metaGrid,
@@ -541,5 +639,9 @@
 @media (max-width: 899px) {
   .findingGrid {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .navTab {
+    min-width: 180px;
   }
 }

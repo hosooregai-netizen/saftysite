@@ -3,6 +3,7 @@ import { getSessionProgress, getSessionTitle } from '@/constants/inspectionSessi
 import type { InspectionSession, InspectionSite } from '@/types/inspectionSession';
 
 interface ReportListProps {
+  assignedUserDisplay?: string;
   currentSite: InspectionSite;
   siteSessions: InspectionSession[];
   canArchiveReports: boolean;
@@ -13,6 +14,7 @@ interface ReportListProps {
 }
 
 export default function ReportList({
+  assignedUserDisplay,
   currentSite,
   siteSessions,
   canArchiveReports,
@@ -69,7 +71,7 @@ export default function ReportList({
               <div className={`${styles.dataCell} ${styles.drafterCell}`}>
                 <span className={styles.mobileLabel}>작성자</span>
                 <span className={styles.dataValue}>
-                  {session.meta.drafter || currentSite.assigneeName || '미입력'}
+                  {session.meta.drafter || assignedUserDisplay || currentSite.assigneeName || '미입력'}
                 </span>
               </div>
 

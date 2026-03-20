@@ -3,6 +3,7 @@
 import AppModal from '@/components/ui/AppModal';
 import type { SafetySite, SafetyUser } from '@/types/backend';
 import type { SafetyAssignment } from '@/types/controller';
+import { isFieldAgentUserRole } from './shared';
 
 interface SiteAssignmentModalProps {
   busy: boolean;
@@ -18,7 +19,9 @@ interface SiteAssignmentModalProps {
 
 export default function SiteAssignmentModal(props: SiteAssignmentModalProps) {
   const { busy, styles, open, site, users, currentAssignment, onClose, onAssign, onClear } = props;
-  const fieldAgents = users.filter((user) => user.role === 'field_agent' && user.is_active);
+  const fieldAgents = users.filter(
+    (user) => isFieldAgentUserRole(user.role) && user.is_active
+  );
 
   return (
     <AppModal
@@ -31,6 +34,9 @@ export default function SiteAssignmentModal(props: SiteAssignmentModalProps) {
       <div className={styles.modalForm}>
         <p className={styles.modalHint}>
           현재 배정: {currentAssignment?.user?.name || site?.assigned_user?.name || '없음'}
+        </p>
+        <p className={styles.modalHint}>
+          관리자 계정은 모든 현장을 조회할 수 있으므로, 이 목록에는 지도요원 계정만 표시합니다.
         </p>
         <div className={styles.tableShell}>
           {fieldAgents.length === 0 ? (

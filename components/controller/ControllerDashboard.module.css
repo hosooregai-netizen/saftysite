@@ -233,6 +233,32 @@
   color: var(--erp-text-muted);
 }
 
+.filterRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.filterButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--erp-line);
+  border-radius: 4px;
+  background: var(--erp-white);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--erp-dark);
+}
+
+.filterButtonActive {
+  border-color: var(--erp-mid);
+  background: #eef3f8;
+}
+
 .modalForm {
   display: grid;
   gap: 14px;
@@ -259,6 +285,85 @@
   font-size: 12px;
   line-height: 1.6;
   color: var(--erp-text-muted);
+}
+
+.contentTypePanel {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--erp-line);
+  border-radius: 4px;
+  background: #fbfcfd;
+}
+
+.contentTypeHeader {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.assetGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.assetField {
+  display: grid;
+  gap: 8px;
+}
+
+.assetHeader,
+.assetActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.assetBox {
+  min-height: 180px;
+  overflow: hidden;
+  border: 1px dashed var(--erp-line-strong);
+  border-radius: 4px;
+  background: var(--erp-panel-muted);
+}
+
+.assetPlaceholder,
+.assetFilePreview {
+  display: grid;
+  place-items: center;
+  min-height: 180px;
+  padding: 16px;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--erp-text-muted);
+}
+
+.assetFilePreview strong {
+  color: var(--erp-dark);
+}
+
+.assetPreviewImage {
+  display: block;
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+}
+
+.assetClear {
+  border: 0;
+  background: none;
+  font-size: 12px;
+  font-weight: 700;
+  color: #b42318;
+}
+
+.hiddenInput {
+  display: none;
 }
 
 .stats {
@@ -448,7 +553,8 @@
   .stats,
   .splitGrid,
   .formGrid,
-  .modalGrid {
+  .modalGrid,
+  .assetGrid {
     grid-template-columns: minmax(0, 1fr);
   }
 }

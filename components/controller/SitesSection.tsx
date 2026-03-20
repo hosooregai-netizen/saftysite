@@ -87,6 +87,7 @@ export default function SitesSection(props: SitesSectionProps) {
   const assignmentSite = sites.find((site) => site.id === assignmentSiteId) || null;
   const currentAssignment =
     assignments.find((assignment) => assignment.site_id === assignmentSiteId && assignment.is_active) || null;
+  const usersById = new Map(users.map((user) => [user.id, user]));
 
   const openCreate = () => {
     setEditingId('create');
@@ -174,7 +175,14 @@ export default function SitesSection(props: SitesSectionProps) {
                   </tr>
                 </thead>
                 <tbody>
-                  {sites.map((site) => (
+                  {sites.map((site) => {
+                    const siteAssignment =
+                      assignments.find((assignment) => assignment.site_id === site.id && assignment.is_active) || null;
+                    const assignedUser =
+                      (siteAssignment ? usersById.get(siteAssignment.user_id) : null) ||
+                      (site.assigned_user ? usersById.get(site.assigned_user.id) : null) ||
+                      null;
+                    return (
                     <tr key={site.id}>
                       <td>
                         <div className={styles.tablePrimary}>{site.site_name}</div>
@@ -186,7 +194,16 @@ export default function SitesSection(props: SitesSectionProps) {
                         <div className={styles.tablePrimary}>{site.manager_name || '-'}</div>
                         <div className={styles.tableSecondary}>{site.manager_phone || '연락처 미입력'}</div>
                       </td>
-                      <td>{site.assigned_user?.name || currentAssignment?.user?.name || '-'}</td>
+                      <td>
+                        <div className={styles.tablePrimary}>
+                          {assignedUser?.name || site.assigned_user?.name || '-'}
+                        </div>
+                        <div className={styles.tableSecondary}>
+                          {assignedUser
+                            ? [assignedUser.position || '직급 미입력', assignedUser.organization_name || '소속 미입력'].join(' · ')
+                            : '배정 정보 없음'}
+                        </div>
+                      </td>
                       <td>{site.project_start_date || '-'} ~ {site.project_end_date || '-'}</td>
                       <td>{SITE_STATUS_LABELS[site.status as keyof typeof SITE_STATUS_LABELS] || site.status}</td>
                       <td>
@@ -200,7 +217,8 @@ export default function SitesSection(props: SitesSectionProps) {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

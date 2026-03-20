@@ -19,6 +19,7 @@ import {
   normalizeCases,
   normalizeScenePhoto,
 } from '@/constants/inspectionSession/normalizeParts';
+import { getFixedSceneTitle } from '@/constants/inspectionSession/scenePhotos';
 import { createInspectionSession } from '@/constants/inspectionSession/sessionFactory';
 import { finalizeInspectionSession } from '@/constants/inspectionSession/sessionState';
 import {
@@ -65,7 +66,7 @@ export function normalizeInspectionSession(raw: unknown): InspectionSession {
     ? source.document3Scenes.map((item, index) => normalizeScenePhoto(item, index))
     : session.document3Scenes;
   while (document3Scenes.length < FIXED_SCENE_COUNT) {
-    document3Scenes.push(createSiteScenePhoto(`현장 전경 ${document3Scenes.length + 1}`));
+    document3Scenes.push(createSiteScenePhoto(getFixedSceneTitle(document3Scenes.length)));
   }
 
   const normalizedSession: InspectionSession = {

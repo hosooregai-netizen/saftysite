@@ -26,6 +26,7 @@ import {
   createWorkPlanChecks,
   generateId,
 } from '@/constants/inspectionSession/shared';
+import { getFixedSceneTitle } from './scenePhotos';
 import { FATAL_ACCIDENT_MEASURE_LIBRARY } from './catalog';
 import type {
   AdminSiteSnapshot,
@@ -42,7 +43,7 @@ import { finalizeInspectionSession } from './sessionState';
 
 function createDefaultScenePhotos() {
   return Array.from({ length: FIXED_SCENE_COUNT }, (_, index) =>
-    createSiteScenePhoto(`현장 전경 ${index + 1}`)
+    createSiteScenePhoto(getFixedSceneTitle(index))
   );
 }
 

@@ -67,7 +67,32 @@ export function InspectionSessionsProvider({
       getSessionById,
       getSiteById,
     }),
-    [createSession, createSite, deleteSessionRemotely, deleteSessions, deleteSite, getSessionById, getSiteById, login, logout, reload, saveNow, store, updateSession, updateSessions, updateSite]
+    [
+      createSession,
+      createSite,
+      deleteSessionRemotely,
+      deleteSessions,
+      deleteSite,
+      getSessionById,
+      getSiteById,
+      login,
+      logout,
+      reload,
+      saveNow,
+      store.authError,
+      store.authTokenRef,
+      store.currentUser,
+      store.dataError,
+      store.isReady,
+      store.isSaving,
+      store.masterData,
+      store.sessions,
+      store.sites,
+      store.syncError,
+      updateSession,
+      updateSessions,
+      updateSite,
+    ]
   );
 
   return (

@@ -5,6 +5,7 @@ import AssignedSitesTable from '@/components/home/AssignedSitesTable';
 import ControllerDashboard from '@/components/controller/ControllerDashboard';
 import { buildSiteSummaries } from '@/components/home/siteSummaries';
 import LoginPanel from '@/components/auth/LoginPanel';
+import { isAdminUserRole } from '@/components/controller/shared';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { formatDateTime } from '@/lib/formatDateTime';
 import styles from './page.module.css';
@@ -24,12 +25,7 @@ export default function HomePage() {
   } = useInspectionSessions();
 
   const siteSummaries = useMemo(() => buildSiteSummaries(sites, sessions), [sessions, sites]);
-  const isControllerView = Boolean(
-    currentUser &&
-      (currentUser.role === 'controller' ||
-        currentUser.role === 'admin' ||
-        currentUser.role === 'super_admin')
-  );
+  const isControllerView = Boolean(currentUser && isAdminUserRole(currentUser.role));
 
   if (!isReady) {
     return (
@@ -67,7 +63,7 @@ export default function HomePage() {
           <header className={styles.hero}>
             <div className={styles.heroMain}>
               <div className={styles.heroMeta}>
-                <span className="app-chip">배정 현장</span>
+                <span className="app-chip">지도요원</span>
                 <span className="app-chip">{currentUser?.name || '현장 사용자'}</span>
               </div>
               <div className={styles.heroTitleRow}>
@@ -110,6 +106,8 @@ export default function HomePage() {
           <div className={styles.pageGrid}>
             <section className={styles.tablePanel}>
               <AssignedSitesTable
+                currentUserName={currentUser?.name}
+                currentUserPosition={currentUser?.position}
                 siteSummaries={siteSummaries}
                 styles={styles}
                 formatDateTime={formatDateTime}
