@@ -2,3 +2,4 @@
 
 Hazard analysis report app built with Next.js.
 # safety-client
+# safety-client
