@@ -1,8 +1,14 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
+import AppModal from '@/components/ui/AppModal';
 import type { SafetyUser } from '@/types/backend';
-import { USER_ROLE_OPTIONS, formatTimestamp, toNullableText } from './shared';
+import {
+  USER_ROLE_LABELS,
+  USER_ROLE_OPTIONS,
+  formatTimestamp,
+  toNullableText,
+} from './shared';
 
 interface UsersSectionProps {
   busy: boolean;
@@ -41,59 +47,18 @@ const EMPTY_FORM = {
   is_active: true,
 };
 
-export default function UsersSection({
-  busy,
-  styles,
-  users,
-  onCreate,
-  onUpdate,
-  onResetPassword,
-  onDeactivate,
-}: UsersSectionProps) {
+export default function UsersSection(props: UsersSectionProps) {
+  const { busy, styles, users, onCreate, onUpdate, onResetPassword, onDeactivate } = props;
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
-  const roleLabel = useMemo(
-    () => Object.fromEntries(USER_ROLE_OPTIONS.map((option) => [option.value, option.label])),
-    []
-  );
+  const isOpen = editingId !== null;
 
-  const resetForm = () => {
-    setEditingId(null);
+  const openCreate = () => {
+    setEditingId('create');
     setForm(EMPTY_FORM);
   };
 
-  const handleSubmit = async () => {
-    if (!form.name.trim()) return;
-
-    if (editingId) {
-      await onUpdate(editingId, {
-        name: form.name.trim(),
-        phone: toNullableText(form.phone),
-        role: form.role,
-        position: toNullableText(form.position),
-        organization_name: toNullableText(form.organization_name),
-        is_active: form.is_active,
-      });
-      if (form.password.trim()) {
-        await onResetPassword(editingId, form.password.trim());
-      }
-    } else if (form.email.trim() && form.password.trim()) {
-      await onCreate({
-        email: form.email.trim(),
-        name: form.name.trim(),
-        password: form.password.trim(),
-        phone: toNullableText(form.phone),
-        role: form.role,
-        position: toNullableText(form.position),
-        organization_name: toNullableText(form.organization_name),
-        is_active: form.is_active,
-      });
-    }
-
-    resetForm();
-  };
-
-  const startEdit = (user: SafetyUser) => {
+  const openEdit = (user: SafetyUser) => {
     setEditingId(user.id);
     setForm({
       email: user.email,
@@ -107,65 +72,130 @@ export default function UsersSection({
     });
   };
 
+  const closeModal = () => {
+    if (busy) return;
+    setEditingId(null);
+    setForm(EMPTY_FORM);
+  };
+
+  const submit = async () => {
+    if (!form.name.trim()) return;
+
+    if (editingId === 'create') {
+      if (!form.email.trim() || !form.password.trim()) return;
+      await onCreate({
+        email: form.email.trim(),
+        name: form.name.trim(),
+        password: form.password.trim(),
+        phone: toNullableText(form.phone),
+        role: form.role,
+        position: toNullableText(form.position),
+        organization_name: toNullableText(form.organization_name),
+        is_active: form.is_active,
+      });
+    } else if (editingId) {
+      await onUpdate(editingId, {
+        name: form.name.trim(),
+        phone: toNullableText(form.phone),
+        role: form.role,
+        position: toNullableText(form.position),
+        organization_name: toNullableText(form.organization_name),
+        is_active: form.is_active,
+      });
+      if (form.password.trim()) {
+        await onResetPassword(editingId, form.password.trim());
+      }
+    }
+
+    closeModal();
+  };
+
   return (
     <section className={styles.sectionCard}>
       <div className={styles.sectionHeader}>
         <div>
           <h2 className={styles.sectionTitle}>사용자 CRUD</h2>
-          <p className={styles.sectionDescription}>관제, 지도요원, 열람 계정을 생성하고 수정합니다.</p>
+          <p className={styles.sectionDescription}>계정 목록을 테이블에서 보고 추가와 수정은 모달로 처리합니다.</p>
+        </div>
+        <div className={styles.sectionHeaderActions}>
+          <span className="app-chip">총 {users.length}명</span>
+          <button type="button" className="app-button app-button-primary" onClick={openCreate} disabled={busy}>사용자 추가</button>
         </div>
       </div>
-      <div className={`${styles.sectionBody} ${styles.splitGrid}`}>
-        <div className={styles.recordCard}>
-          <div className={styles.recordTop}>
-            <strong className={styles.recordTitle}>{editingId ? '사용자 수정' : '사용자 생성'}</strong>
-          </div>
-          <div className={styles.formGrid} style={{ marginTop: 14 }}>
-            <label className={styles.field}><span className={styles.label}>이름</span><input className="app-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} disabled={busy} /></label>
-            <label className={styles.field}><span className={styles.label}>이메일</span><input className="app-input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} disabled={busy || Boolean(editingId)} /></label>
-            <label className={styles.field}><span className={styles.label}>{editingId ? '새 비밀번호' : '비밀번호'}</span><input className="app-input" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} disabled={busy} /></label>
-            <label className={styles.field}><span className={styles.label}>권한</span><select className="app-select" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as SafetyUser['role'] })} disabled={busy}>{USER_ROLE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
-            <label className={styles.field}><span className={styles.label}>전화번호</span><input className="app-input" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} disabled={busy} /></label>
-            <label className={styles.field}><span className={styles.label}>직책</span><input className="app-input" value={form.position} onChange={(e) => setForm({ ...form, position: e.target.value })} disabled={busy} /></label>
-            <label className={styles.fieldWide}><span className={styles.label}>소속</span><input className="app-input" value={form.organization_name} onChange={(e) => setForm({ ...form, organization_name: e.target.value })} disabled={busy} /></label>
-          </div>
-          <label className={styles.field} style={{ marginTop: 12 }}><span className={styles.label}>활성 여부</span><select className="app-select" value={form.is_active ? 'true' : 'false'} onChange={(e) => setForm({ ...form, is_active: e.target.value === 'true' })} disabled={busy}><option value="true">활성</option><option value="false">비활성</option></select></label>
-          <div className={styles.formActions} style={{ marginTop: 14 }}>
-            <button type="button" className="app-button app-button-primary" onClick={() => void handleSubmit()} disabled={busy}>{editingId ? '저장' : '생성'}</button>
-            <button type="button" className="app-button app-button-secondary" onClick={resetForm} disabled={busy}>초기화</button>
-          </div>
-          <p className={styles.hint}>{editingId ? '비밀번호를 입력하면 저장 후 즉시 재설정됩니다.' : '신규 계정은 이메일과 비밀번호가 모두 필요합니다.'}</p>
-        </div>
 
-        <div className={styles.recordList}>
+      <div className={styles.sectionBody}>
+        <div className={styles.tableShell}>
           {users.length === 0 ? (
-            <div className={styles.empty}>등록된 사용자가 없습니다.</div>
-          ) : users.map((user) => (
-            <article key={user.id} className={styles.recordCard}>
-              <div className={styles.recordTop}>
-                <div>
-                  <strong className={styles.recordTitle}>{user.name}</strong>
-                  <div className={styles.recordMeta}>
-                    <span className="app-chip">{roleLabel[user.role]}</span>
-                    <span className="app-chip">{user.email}</span>
-                    <span className="app-chip">{user.is_active ? '활성' : '비활성'}</span>
-                  </div>
-                </div>
-                <div className={styles.recordActions}>
-                  <button type="button" className="app-button app-button-secondary" onClick={() => startEdit(user)} disabled={busy}>수정</button>
-                  <button type="button" className="app-button app-button-danger" onClick={() => void onDeactivate(user.id)} disabled={busy || !user.is_active}>비활성화</button>
-                </div>
-              </div>
-              <p className={styles.recordDescription}>
-                연락처: {user.phone || '미입력'}
-                {'\n'}직책: {user.position || '미입력'}
-                {'\n'}소속: {user.organization_name || '미입력'}
-                {'\n'}최근 로그인: {formatTimestamp(user.last_login_at)}
-              </p>
-            </article>
-          ))}
+            <div className={styles.tableEmpty}>등록된 사용자가 없습니다.</div>
+          ) : (
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>이름</th>
+                    <th>이메일</th>
+                    <th>권한</th>
+                    <th>연락처</th>
+                    <th>상태</th>
+                    <th>최근 로그인</th>
+                    <th>작업</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.map((user) => (
+                    <tr key={user.id}>
+                      <td>
+                        <div className={styles.tablePrimary}>{user.name}</div>
+                        <div className={styles.tableSecondary}>
+                          {user.position || '직책 미입력'} · {user.organization_name || '소속 미입력'}
+                        </div>
+                      </td>
+                      <td>{user.email}</td>
+                      <td>{USER_ROLE_LABELS[user.role]}</td>
+                      <td>{user.phone || '-'}</td>
+                      <td>{user.is_active ? '활성' : '비활성'}</td>
+                      <td>{formatTimestamp(user.last_login_at)}</td>
+                      <td>
+                        <div className={styles.tableActions}>
+                          <button type="button" className="app-button app-button-secondary" onClick={() => openEdit(user)} disabled={busy}>수정</button>
+                          <button type="button" className="app-button app-button-danger" onClick={() => void onDeactivate(user.id)} disabled={busy || !user.is_active}>비활성화</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
+
+      <AppModal
+        open={isOpen}
+        title={editingId === 'create' ? '사용자 추가' : '사용자 수정'}
+        size="large"
+        onClose={closeModal}
+        actions={
+          <>
+            <button type="button" className="app-button app-button-secondary" onClick={closeModal} disabled={busy}>취소</button>
+            <button type="button" className="app-button app-button-primary" onClick={() => void submit()} disabled={busy}>{editingId === 'create' ? '생성' : '저장'}</button>
+          </>
+        }
+      >
+        <div className={styles.modalForm}>
+          <div className={styles.modalGrid}>
+            <label className={styles.modalField}><span className={styles.label}>이름</span><input className="app-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} disabled={busy} /></label>
+            <label className={styles.modalField}><span className={styles.label}>이메일</span><input className="app-input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} disabled={busy || editingId !== 'create'} /></label>
+            <label className={styles.modalField}><span className={styles.label}>{editingId === 'create' ? '비밀번호' : '새 비밀번호'}</span><input className="app-input" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} disabled={busy} /></label>
+            <label className={styles.modalField}><span className={styles.label}>권한</span><select className="app-select" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as SafetyUser['role'] })} disabled={busy}>{USER_ROLE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
+            <label className={styles.modalField}><span className={styles.label}>전화번호</span><input className="app-input" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} disabled={busy} /></label>
+            <label className={styles.modalField}><span className={styles.label}>직책</span><input className="app-input" value={form.position} onChange={(e) => setForm({ ...form, position: e.target.value })} disabled={busy} /></label>
+            <label className={styles.modalFieldWide}><span className={styles.label}>소속</span><input className="app-input" value={form.organization_name} onChange={(e) => setForm({ ...form, organization_name: e.target.value })} disabled={busy} /></label>
+            <label className={styles.modalField}><span className={styles.label}>활성 여부</span><select className="app-select" value={form.is_active ? 'true' : 'false'} onChange={(e) => setForm({ ...form, is_active: e.target.value === 'true' })} disabled={busy}><option value="true">활성</option><option value="false">비활성</option></select></label>
+          </div>
+          <p className={styles.modalHint}>{editingId === 'create' ? '신규 계정은 이메일과 비밀번호가 모두 필요합니다.' : '수정 모드에서는 비밀번호를 입력한 경우에만 재설정됩니다.'}</p>
+        </div>
+      </AppModal>
     </section>
   );
 }

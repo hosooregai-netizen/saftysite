@@ -138,9 +138,17 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
+  align-items: flex-start;
   gap: 12px;
   padding: 18px;
   border-bottom: 1px solid var(--erp-line);
+}
+
+.sectionHeaderActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
 }
 
 .sectionTitle {
@@ -158,6 +166,99 @@
 
 .sectionBody {
   padding: 18px;
+}
+
+.tableShell {
+  overflow: hidden;
+  border: 1px solid var(--erp-line);
+  border-radius: 4px;
+  background: #fff;
+}
+
+.tableWrap {
+  overflow: auto;
+}
+
+.table {
+  width: 100%;
+  min-width: 820px;
+  border-collapse: collapse;
+}
+
+.table th {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--erp-line);
+  background: #f6f9fc;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: left;
+  letter-spacing: 0.04em;
+  color: var(--erp-text-muted);
+}
+
+.table td {
+  padding: 14px;
+  border-bottom: 1px solid var(--erp-line);
+  font-size: 13px;
+  vertical-align: top;
+  color: var(--erp-dark);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.tablePrimary {
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--erp-dark);
+}
+
+.tableSecondary {
+  margin-top: 4px;
+  line-height: 1.55;
+  color: var(--erp-text-muted);
+}
+
+.tableActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tableEmpty {
+  padding: 48px 24px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--erp-text-muted);
+}
+
+.modalForm {
+  display: grid;
+  gap: 14px;
+}
+
+.modalGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.modalField {
+  display: grid;
+  gap: 6px;
+}
+
+.modalFieldWide {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 6px;
+}
+
+.modalHint {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--erp-text-muted);
 }
 
 .stats {
@@ -319,7 +420,8 @@
 
   .stats,
   .splitGrid,
-  .formGrid {
+  .formGrid,
+  .modalGrid {
     grid-template-columns: minmax(0, 1fr);
   }
 }

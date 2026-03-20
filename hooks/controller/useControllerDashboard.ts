@@ -141,6 +141,29 @@ export function useControllerDashboard(enabled: boolean) {
       runMutation((token) => deactivateSafetySite(token, id), '현장을 종료 처리했습니다.'),
     createAssignment: (input: SafetyAssignmentInput) =>
       runMutation((token) => createSafetyAssignment(token, input), '현장 배정을 생성했습니다.'),
+    assignFieldAgentToSite: (
+      siteId: string,
+      userId: string | null,
+      options?: { roleOnSite?: string; memo?: string | null }
+    ) =>
+      runMutation(async (token) => {
+        const activeAssignments = data.assignments.filter(
+          (assignment) => assignment.site_id === siteId && assignment.is_active
+        );
+
+        for (const assignment of activeAssignments) {
+          await deactivateSafetyAssignment(token, assignment.id);
+        }
+
+        if (userId) {
+          await createSafetyAssignment(token, {
+            site_id: siteId,
+            user_id: userId,
+            role_on_site: options?.roleOnSite || '담당 지도요원',
+            memo: options?.memo ?? null,
+          });
+        }
+      }, userId ? '지도요원을 배정했습니다.' : '지도요원 배정을 해제했습니다.'),
     updateAssignment: (id: string, input: SafetyAssignmentUpdateInput) =>
       runMutation((token) => updateSafetyAssignment(token, id, input), '배정 정보를 수정했습니다.'),
     deactivateAssignment: (id: string) =>

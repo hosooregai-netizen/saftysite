@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect } from 'react';
 import { readPersistedValue } from '@/lib/clientPersistence';
+import { fetchSafetySitesAdmin } from '@/lib/safetyApi/adminEndpoints';
 import {
   fetchAssignedSafetySites,
   fetchCurrentSafetyUser,
@@ -13,6 +14,7 @@ import {
 } from '@/lib/safetyApi';
 import {
   buildSafetyMasterData,
+  isSafetyAdmin,
   mapSafetyReportToInspectionSession,
   mapSafetySiteToInspectionSite,
 } from '@/lib/safetyApiMappers';
@@ -24,11 +26,13 @@ import type { InspectionSessionsStore } from './store';
 export function useInspectionSessionsSync(store: InspectionSessionsStore) {
   const hydrateRemoteState = useCallback(
     async (token: string): Promise<SafetyHydratedData> => {
-      const [user, rawSites, contentItems] = await Promise.all([
+      const [user, contentItems] = await Promise.all([
         fetchCurrentSafetyUser(token),
-        fetchAssignedSafetySites(token),
         fetchSafetyContentItems(token),
       ]);
+      const rawSites = isSafetyAdmin(user)
+        ? await fetchSafetySitesAdmin(token)
+        : await fetchAssignedSafetySites(token);
       const mappedSites = rawSites.map(mapSafetySiteToInspectionSite);
       const nextMasterData = buildSafetyMasterData(contentItems);
       const reportGroups = await Promise.all(

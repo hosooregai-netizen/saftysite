@@ -4,7 +4,6 @@ import { useMemo, useState } from 'react';
 import type { SafetyUser } from '@/types/backend';
 import { useControllerDashboard } from '@/hooks/controller/useControllerDashboard';
 import styles from './ControllerDashboard.module.css';
-import AssignmentsSection from './AssignmentsSection';
 import ContentItemsSection from './ContentItemsSection';
 import HeadquartersSection from './HeadquartersSection';
 import OverviewPanel from './OverviewPanel';
@@ -37,9 +36,7 @@ export default function ControllerDashboard({
       case 'headquarters':
         return <HeadquartersSection busy={busy} styles={styles} headquarters={dashboard.data.headquarters} onCreate={dashboard.createHeadquarter} onUpdate={dashboard.updateHeadquarter} onDeactivate={dashboard.deactivateHeadquarter} />;
       case 'sites':
-        return <SitesSection busy={busy} styles={styles} headquarters={dashboard.data.headquarters} sites={dashboard.data.sites} onCreate={dashboard.createSite} onUpdate={dashboard.updateSite} onDeactivate={dashboard.deactivateSite} />;
-      case 'assignments':
-        return <AssignmentsSection busy={busy} styles={styles} assignments={dashboard.data.assignments} users={dashboard.data.users} sites={dashboard.data.sites} onCreate={dashboard.createAssignment} onUpdate={dashboard.updateAssignment} onDeactivate={dashboard.deactivateAssignment} />;
+        return <SitesSection busy={busy} styles={styles} assignments={dashboard.data.assignments} headquarters={dashboard.data.headquarters} sites={dashboard.data.sites} users={dashboard.data.users} onCreate={dashboard.createSite} onUpdate={dashboard.updateSite} onDeactivate={dashboard.deactivateSite} onAssignFieldAgent={dashboard.assignFieldAgentToSite} />;
       case 'content':
         return <ContentItemsSection busy={busy} styles={styles} items={dashboard.data.contentItems} onCreate={dashboard.createContentItem} onUpdate={dashboard.updateContentItem} onDeactivate={dashboard.deactivateContentItem} />;
       default:

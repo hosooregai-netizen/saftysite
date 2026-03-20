@@ -6,7 +6,6 @@ export type ControllerSectionKey =
   | 'users'
   | 'headquarters'
   | 'sites'
-  | 'assignments'
   | 'content';
 
 export const CONTROLLER_SECTIONS: Array<{
@@ -18,7 +17,6 @@ export const CONTROLLER_SECTIONS: Array<{
   { key: 'users', label: '사용자', description: '계정 관리' },
   { key: 'headquarters', label: '사업장', description: '본사 정보' },
   { key: 'sites', label: '현장', description: '현장 정보' },
-  { key: 'assignments', label: '배정', description: '지도요원 배정' },
   { key: 'content', label: '마스터', description: '콘텐츠 관리' },
 ];
 
@@ -29,12 +27,18 @@ export const USER_ROLE_OPTIONS: Array<{ value: SafetyUserRole; label: string }> 
   { value: 'field_agent', label: '지도요원' },
   { value: 'client_viewer', label: '고객 열람' },
 ];
+export const USER_ROLE_LABELS = Object.fromEntries(
+  USER_ROLE_OPTIONS.map((option) => [option.value, option.label])
+) as Record<SafetyUserRole, string>;
 
 export const SITE_STATUS_OPTIONS: Array<{ value: SafetySiteStatus; label: string }> = [
   { value: 'planned', label: '준비중' },
   { value: 'active', label: '운영중' },
   { value: 'closed', label: '종료' },
 ];
+export const SITE_STATUS_LABELS = Object.fromEntries(
+  SITE_STATUS_OPTIONS.map((option) => [option.value, option.label])
+) as Record<SafetySiteStatus, string>;
 
 export const CONTENT_TYPE_OPTIONS: Array<{ value: SafetyContentType; label: string }> = [
   { value: 'hazard_category', label: '위험 카테고리' },
@@ -47,6 +51,9 @@ export const CONTENT_TYPE_OPTIONS: Array<{ value: SafetyContentType; label: stri
   { value: 'legal_reference', label: '법령 레퍼런스' },
   { value: 'correction_result_option', label: '시정조치 옵션' },
 ];
+export const CONTENT_TYPE_LABELS = Object.fromEntries(
+  CONTENT_TYPE_OPTIONS.map((option) => [option.value, option.label])
+) as Record<SafetyContentType, string>;
 
 export function toNullableText(value: string): string | null {
   const normalized = value.trim();
