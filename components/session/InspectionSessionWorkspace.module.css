@@ -111,6 +111,7 @@
 .progressMeta,
 .chartMeta,
 .cardHeader,
+.cardHeaderActions,
 .matrixHeader,
 .metaBar,
 .editorHeader,
@@ -594,6 +595,12 @@
   color: var(--erp-text-muted);
   word-break: keep-all;
   overflow-wrap: anywhere;
+}
+
+.fieldAssist {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--erp-text-muted);
 }
 
 @media (min-width: 900px) {

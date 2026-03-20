@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+
 import { createSiteScenePhoto } from '@/constants/inspectionSession/itemFactory';
 import { FIXED_SCENE_COUNT } from '@/constants/inspectionSession/catalog';
 import { getFixedSceneTitle } from '@/constants/inspectionSession/scenePhotos';
@@ -59,8 +61,19 @@ export function Doc3SceneSection({
   session,
   withFileData,
 }: OverviewSectionProps) {
+  const [analyzingSceneIds, setAnalyzingSceneIds] = useState<string[]>([]);
   const fixedScenes = session.document3Scenes.slice(0, FIXED_SCENE_COUNT);
   const extraScenes = session.document3Scenes.slice(FIXED_SCENE_COUNT);
+  const analyzingCount = analyzingSceneIds.length;
+
+  const setSceneAnalyzing = (sceneIds: string[], active: boolean) =>
+    setAnalyzingSceneIds((current) =>
+      active
+        ? Array.from(new Set([...current, ...sceneIds]))
+        : current.filter((sceneId) => !sceneIds.includes(sceneId))
+    );
+
+  const isSceneAnalyzing = (sceneId: string) => analyzingSceneIds.includes(sceneId);
 
   const updateScene = (sceneId: string, patch: Partial<SiteScenePhoto>) =>
     applyDocumentUpdate('doc3', 'manual', (current) => ({
@@ -81,31 +94,51 @@ export function Doc3SceneSection({
   };
 
   const handleExtraUpload = async (sceneId: string, file: File) => {
-    const [dataUrl, [title]] = await Promise.all([withFileData(file), inferSceneTitles([file])]);
+    const dataUrl = await withFileData(file);
     if (!dataUrl) return;
-    updateScene(sceneId, { photoUrl: dataUrl, title });
+    updateScene(sceneId, { photoUrl: dataUrl, title: '' });
+    setSceneAnalyzing([sceneId], true);
+    try {
+      const [title] = await inferSceneTitles([file]);
+      updateScene(sceneId, { title });
+    } finally {
+      setSceneAnalyzing([sceneId], false);
+    }
   };
 
   const handleExtraFiles = async (files: FileList | null) => {
     const selectedFiles = Array.from(files ?? []);
     if (selectedFiles.length === 0) return;
 
-    const [dataUrls, titles] = await Promise.all([
-      Promise.all(selectedFiles.map((file) => withFileData(file))),
-      inferSceneTitles(selectedFiles),
-    ]);
+    const uploadedFiles = (
+      await Promise.all(
+        selectedFiles.map(async (file) => ({ file, dataUrl: await withFileData(file) }))
+      )
+    ).flatMap((item) => (item.dataUrl ? [item as { file: File; dataUrl: string }] : []));
 
-    const nextScenes = dataUrls.flatMap((dataUrl, index) =>
-      dataUrl
-        ? [createSiteScenePhoto('', { photoUrl: dataUrl, title: titles[index] || '' })]
-        : []
+    const nextScenes = uploadedFiles.map(({ dataUrl }) =>
+      createSiteScenePhoto('', { photoUrl: dataUrl })
     );
 
     if (nextScenes.length === 0) return;
+    const sceneIds = nextScenes.map((scene) => scene.id);
     applyDocumentUpdate('doc3', 'manual', (current) => ({
       ...current,
       document3Scenes: [...current.document3Scenes, ...nextScenes],
     }));
+    setSceneAnalyzing(sceneIds, true);
+    try {
+      const titles = await inferSceneTitles(uploadedFiles.map(({ file }) => file));
+      applyDocumentUpdate('doc3', 'manual', (current) => ({
+        ...current,
+        document3Scenes: current.document3Scenes.map((scene) => {
+          const titleIndex = sceneIds.indexOf(scene.id);
+          return titleIndex === -1 ? scene : { ...scene, title: titles[titleIndex] || '' };
+        }),
+      }));
+    } finally {
+      setSceneAnalyzing(sceneIds, false);
+    }
   };
 
   return (
@@ -113,6 +146,9 @@ export function Doc3SceneSection({
       <div className={styles.sectionToolbar}>
         <span className="app-chip">필수 2장</span>
         <span className="app-chip">추가 이미지는 여러 장 업로드 가능</span>
+        {analyzingCount > 0 ? (
+          <span className="app-chip">{`AI가 ${analyzingCount}개 이미지 제목을 정리 중`}</span>
+        ) : null}
       </div>
       <div className={styles.dualUploadGrid}>
         {fixedScenes.map((item, index) => (
@@ -125,25 +161,42 @@ export function Doc3SceneSection({
             </label>
           </article>
         ))}
-        {extraScenes.map((item, index) => (
-          <article key={item.id} className={styles.card}>
-            <div className={styles.cardHeader}>
-              <h3 className={styles.cardTitle}>{`추가 이미지 ${index + 1}`}</h3>
-              <button type="button" className={styles.inlineDangerButton} onClick={() => removeScene(item.id)}>
-                항목 삭제
-              </button>
-            </div>
-            <UploadBox id={`scene-extra-photo-${item.id}`} label="사진" value={item.photoUrl} onClear={() => updateScene(item.id, { photoUrl: '', title: '', description: '' })} onSelect={async (file) => handleExtraUpload(item.id, file)} />
-            <label className={styles.field}>
-              <span className={styles.fieldLabel}>이미지 제목</span>
-              <input type="text" className="app-input" placeholder="AI가 자동으로 채우고, 필요하면 수정할 수 있습니다." value={item.title} onChange={(event) => updateScene(item.id, { title: event.target.value })} />
-            </label>
-            <label className={styles.field}>
-              <span className={styles.fieldLabel}>사진 설명</span>
-              <input type="text" className="app-input" value={item.description} onChange={(event) => updateScene(item.id, { description: event.target.value })} />
-            </label>
-          </article>
-        ))}
+        {extraScenes.map((item, index) => {
+          const isAnalyzing = isSceneAnalyzing(item.id);
+
+          return (
+            <article key={item.id} className={styles.card}>
+              <div className={styles.cardHeader}>
+                <div>
+                  <div className={styles.cardEyebrow}>{`추가 전경 이미지 ${index + 1}`}</div>
+                  <h3 className={styles.cardTitle}>
+                    {isAnalyzing ? 'AI가 이미지 제목을 분석하는 중...' : item.title || '이미지 제목 미입력'}
+                  </h3>
+                </div>
+                <div className={styles.cardHeaderActions}>
+                  {isAnalyzing ? <span className="app-chip">AI 제목 생성 중</span> : null}
+                  <button type="button" className={styles.inlineDangerButton} onClick={() => removeScene(item.id)}>
+                    항목 삭제
+                  </button>
+                </div>
+              </div>
+              <UploadBox id={`scene-extra-photo-${item.id}`} label="사진" value={item.photoUrl} onClear={() => updateScene(item.id, { photoUrl: '', title: '', description: '' })} onSelect={async (file) => handleExtraUpload(item.id, file)} />
+              <label className={styles.field}>
+                <span className={styles.fieldLabel}>이미지 제목</span>
+                <input type="text" className="app-input" placeholder="AI가 자동으로 채우고, 필요하면 수정할 수 있습니다." value={item.title} onChange={(event) => updateScene(item.id, { title: event.target.value })} />
+              </label>
+              <p className={styles.fieldAssist}>
+                {isAnalyzing
+                  ? '업로드한 사진을 AI가 읽고 현장에 맞는 짧은 제목을 만들고 있습니다.'
+                  : 'AI가 제안한 제목을 자동 입력합니다. 어색하면 바로 수정하면 됩니다.'}
+              </p>
+              <label className={styles.field}>
+                <span className={styles.fieldLabel}>사진 설명</span>
+                <input type="text" className="app-input" value={item.description} onChange={(event) => updateScene(item.id, { description: event.target.value })} />
+              </label>
+            </article>
+          );
+        })}
       </div>
       <label htmlFor="scene-extra-upload" className={styles.sceneAddPanel}>
         <strong className={styles.sceneAddTitle}>추가 이미지 업로드</strong>
