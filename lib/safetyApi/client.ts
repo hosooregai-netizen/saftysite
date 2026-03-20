@@ -10,6 +10,11 @@ export class SafetyApiError extends Error {
   }
 }
 
+function formatRequestLabel(path: string, method?: string): string {
+  const normalizedMethod = (method || 'GET').toUpperCase();
+  return `${normalizedMethod} ${path}`;
+}
+
 async function parseErrorMessage(response: Response): Promise<string> {
   const contentType = response.headers.get('content-type') ?? '';
 
@@ -46,6 +51,7 @@ export async function requestSafetyApi<T>(
   options: RequestInit = {},
   token?: string | null
 ): Promise<T> {
+  const requestLabel = formatRequestLabel(path, options.method);
   const headers = new Headers(options.headers);
 
   if (!headers.has('Content-Type') && options.body && !(options.body instanceof FormData)) {
@@ -66,7 +72,9 @@ export async function requestSafetyApi<T>(
     });
   } catch (error) {
     throw new SafetyApiError(
-      error instanceof Error ? error.message : '안전 API 서버에 연결하지 못했습니다.',
+      error instanceof Error
+        ? `${requestLabel} 요청 중 네트워크 오류가 발생했습니다. ${error.message}`
+        : `${requestLabel} 요청 중 안전 API 서버에 연결하지 못했습니다.`,
       null
     );
   }
