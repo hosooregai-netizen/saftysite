@@ -1,4 +1,4 @@
-export const DEFAULT_SAFETY_API_BASE_URL = 'http://35.76.230.177:8011/api/v1';
+export const DEFAULT_SAFETY_API_BASE_URL = '/api/safety';
 export const SAFETY_AUTH_TOKEN_KEY = 'safety-api-access-token';
 
 function normalizeBaseUrl(value: string): string {
@@ -7,7 +7,7 @@ function normalizeBaseUrl(value: string): string {
 
 export function getSafetyApiBaseUrl(): string {
   const configured = process.env.NEXT_PUBLIC_SAFETY_API_BASE_URL?.trim();
-  if (configured) {
+  if (configured?.startsWith('/')) {
     return normalizeBaseUrl(configured);
   }
 
