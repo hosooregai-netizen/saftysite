@@ -108,7 +108,7 @@ export default function ContentItemsSection(props: ContentItemsSectionProps) {
     <section className={styles.sectionCard}>
       <div className={styles.sectionHeader}>
         <div>
-          <h2 className={styles.sectionTitle}>마스터/콘텐츠 CRUD</h2>
+          <h2 className={styles.sectionTitle}>콘텐츠 데이터 CRUD</h2>
           <p className={styles.sectionDescription}>콘텐츠를 표에서 비교하고 편집은 모달에서 처리하도록 정리했습니다.</p>
         </div>
         <div className={styles.sectionHeaderActions}>
@@ -120,7 +120,7 @@ export default function ContentItemsSection(props: ContentItemsSectionProps) {
       <div className={styles.sectionBody}>
         <div className={styles.tableShell}>
           {items.length === 0 ? (
-            <div className={styles.tableEmpty}>등록된 마스터 데이터가 없습니다.</div>
+            <div className={styles.tableEmpty}>등록된 콘텐츠 데이터가 없습니다.</div>
           ) : (
             <div className={styles.tableWrap}>
               <table className={styles.table}>

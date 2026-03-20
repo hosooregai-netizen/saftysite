@@ -17,7 +17,7 @@ export const CONTROLLER_SECTIONS: Array<{
   { key: 'users', label: '사용자', description: '계정 관리' },
   { key: 'headquarters', label: '사업장', description: '본사 정보' },
   { key: 'sites', label: '현장', description: '현장 정보' },
-  { key: 'content', label: '마스터', description: '콘텐츠 관리' },
+  { key: 'content', label: '콘텐츠', description: '콘텐츠 관리' },
 ];
 
 export const USER_ROLE_OPTIONS: Array<{ value: SafetyUserRole; label: string }> = [

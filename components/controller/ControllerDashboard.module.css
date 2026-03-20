@@ -274,6 +274,26 @@
   background: #fbfcfd;
 }
 
+.statButton {
+  display: grid;
+  gap: 0;
+  width: 100%;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition:
+    border-color 0.18s ease,
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.statButton:hover,
+.statButton:focus-visible {
+  border-color: var(--erp-mid);
+  box-shadow: 0 14px 28px rgba(18, 45, 71, 0.08);
+  transform: translateY(-1px);
+}
+
 .statLabel {
   font-size: 12px;
   font-weight: 700;
@@ -287,6 +307,13 @@
   font-size: 30px;
   font-weight: 700;
   color: var(--erp-dark);
+}
+
+.statMeta {
+  margin-top: 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--erp-text-muted);
 }
 
 .splitGrid {

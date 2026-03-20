@@ -1,15 +1,21 @@
 import { getSessionProgress } from '@/constants/inspectionSession';
 import type { InspectionSession } from '@/types/inspectionSession';
 import type { ControllerDashboardData } from '@/types/controller';
-import { formatTimestamp } from './shared';
+import { formatTimestamp, type ControllerSectionKey } from './shared';
 
 interface OverviewPanelProps {
   data: ControllerDashboardData;
+  onSelectSection: (section: ControllerSectionKey) => void;
   sessions: InspectionSession[];
   styles: Record<string, string>;
 }
 
-export default function OverviewPanel({ data, sessions, styles }: OverviewPanelProps) {
+export default function OverviewPanel({
+  data,
+  onSelectSection,
+  sessions,
+  styles,
+}: OverviewPanelProps) {
   const latestAssignment = [...data.assignments]
     .sort((left, right) => right.assigned_at.localeCompare(left.assigned_at))[0];
   const activeAssignments = data.assignments.filter((item) => item.is_active);
@@ -29,6 +35,24 @@ export default function OverviewPanel({ data, sessions, styles }: OverviewPanelP
     },
     { total: 0, inProgress: 0, completed: 0, notStarted: 0 }
   );
+  const stats: Array<{
+    label: string;
+    target: ControllerSectionKey;
+    value: number;
+  }> = [
+    { label: '전체 사용자', value: data.users.length, target: 'users' },
+    { label: '사업장', value: data.headquarters.length, target: 'headquarters' },
+    { label: '운영 현장', value: activeSites.length, target: 'sites' },
+    { label: '지도요원', value: activeFieldAgents.length, target: 'users' },
+    { label: '전체 보고서', value: reportStats.total, target: 'sites' },
+    { label: '진행 중 보고서', value: reportStats.inProgress, target: 'sites' },
+    { label: '완료 보고서', value: reportStats.completed, target: 'sites' },
+    {
+      label: '미배정 현장',
+      value: activeSites.filter((item) => !assignedSiteIds.has(item.id)).length,
+      target: 'sites',
+    },
+  ];
 
   return (
     <section className={styles.sectionCard}>
@@ -43,40 +67,18 @@ export default function OverviewPanel({ data, sessions, styles }: OverviewPanelP
 
       <div className={styles.sectionBody}>
         <div className={styles.stats}>
-          <article className={styles.statCard}>
-            <p className={styles.statLabel}>전체 사용자</p>
-            <p className={styles.statValue}>{data.users.length}</p>
-          </article>
-          <article className={styles.statCard}>
-            <p className={styles.statLabel}>사업장</p>
-            <p className={styles.statValue}>{data.headquarters.length}</p>
-          </article>
-          <article className={styles.statCard}>
-            <p className={styles.statLabel}>운영 현장</p>
-            <p className={styles.statValue}>{activeSites.length}</p>
-          </article>
-          <article className={styles.statCard}>
-            <p className={styles.statLabel}>지도요원</p>
-            <p className={styles.statValue}>{activeFieldAgents.length}</p>
-          </article>
-          <article className={styles.statCard}>
-            <p className={styles.statLabel}>전체 보고서</p>
-            <p className={styles.statValue}>{reportStats.total}</p>
-          </article>
-          <article className={styles.statCard}>
-            <p className={styles.statLabel}>진행 중 보고서</p>
-            <p className={styles.statValue}>{reportStats.inProgress}</p>
-          </article>
-          <article className={styles.statCard}>
-            <p className={styles.statLabel}>완료 보고서</p>
-            <p className={styles.statValue}>{reportStats.completed}</p>
-          </article>
-          <article className={styles.statCard}>
-            <p className={styles.statLabel}>미배정 현장</p>
-            <p className={styles.statValue}>
-              {activeSites.filter((item) => !assignedSiteIds.has(item.id)).length}
-            </p>
-          </article>
+          {stats.map((stat) => (
+            <button
+              key={stat.label}
+              type="button"
+              className={`${styles.statCard} ${styles.statButton}`}
+              onClick={() => onSelectSection(stat.target)}
+            >
+              <p className={styles.statLabel}>{stat.label}</p>
+              <p className={styles.statValue}>{stat.value}</p>
+              <p className={styles.statMeta}>해당 테이블 보기</p>
+            </button>
+          ))}
         </div>
 
         <div className={styles.splitGrid} style={{ marginTop: 16 }}>
@@ -107,8 +109,8 @@ export default function OverviewPanel({ data, sessions, styles }: OverviewPanelP
               <strong className={styles.recordTitle}>운영 메모</strong>
             </div>
             <p className={styles.recordDescription}>
-              관제 계정은 사업장/현장 CRUD와 지도요원 배정, 마스터 데이터 관리가
-              가능해야 합니다. 모바일에서는 상단 메뉴 버튼으로 섹션을 전환할 수 있습니다.
+              상단 요약 카드를 누르면 바로 해당 관리 테이블로 이동합니다. 모바일에서는
+              긴 모달도 화면 안에서 스크롤되도록 정리했습니다.
             </p>
           </article>
         </div>

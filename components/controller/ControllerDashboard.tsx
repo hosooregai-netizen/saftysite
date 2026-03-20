@@ -42,7 +42,7 @@ export default function ControllerDashboard({
       case 'content':
         return <ContentItemsSection busy={busy} styles={styles} items={dashboard.data.contentItems} onCreate={dashboard.createContentItem} onUpdate={dashboard.updateContentItem} onDeactivate={dashboard.deactivateContentItem} />;
       default:
-        return <OverviewPanel data={dashboard.data} sessions={sessions} styles={styles} />;
+        return <OverviewPanel data={dashboard.data} sessions={sessions} styles={styles} onSelectSection={selectSection} />;
     }
   };
 
@@ -79,7 +79,7 @@ export default function ControllerDashboard({
                 </div>
                 <h1 className={styles.heroTitle}>관제 대시보드</h1>
                 <p className={styles.heroDescription}>
-                  {activeMeta?.label} 섹션에서 사업장, 현장, 지도요원 배정, 마스터 데이터를 직접 CRUD 할 수 있습니다.
+                  {activeMeta?.label} 섹션에서 사업장, 현장, 지도요원 배정, 콘텐츠 데이터를 직접 관리할 수 있습니다.
                 </p>
               </div>
               <div className={styles.heroActions}>
