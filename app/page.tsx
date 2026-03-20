@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import AssignedSitesTable from '@/components/home/AssignedSitesTable';
+import ControllerDashboard from '@/components/controller/ControllerDashboard';
 import { buildSiteSummaries } from '@/components/home/siteSummaries';
 import LoginPanel from '@/components/auth/LoginPanel';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
@@ -23,6 +24,12 @@ export default function HomePage() {
   } = useInspectionSessions();
 
   const siteSummaries = useMemo(() => buildSiteSummaries(sites, sessions), [sessions, sites]);
+  const isControllerView = Boolean(
+    currentUser &&
+      (currentUser.role === 'controller' ||
+        currentUser.role === 'admin' ||
+        currentUser.role === 'super_admin')
+  );
 
   if (!isReady) {
     return (
@@ -47,6 +54,10 @@ export default function HomePage() {
         description="API 서버에 로그인하면 배정된 현장과 보고서 목록을 바로 이어서 불러올 수 있습니다."
       />
     );
+  }
+
+  if (currentUser && isControllerView) {
+    return <ControllerDashboard currentUser={currentUser} onLogout={logout} />;
   }
 
   return (
