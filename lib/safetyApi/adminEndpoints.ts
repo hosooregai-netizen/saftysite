@@ -36,21 +36,6 @@ function sendJson<T>(path: string, token: string, method: string, body?: unknown
   return requestSafetyApi<T>(path, { method, body: body ? JSON.stringify(body) : undefined }, token);
 }
 
-function sanitizeSiteBody<T extends SafetySiteInput | SafetySiteUpdateInput>(body: T): T {
-  const next = { ...body };
-
-  // The live backend currently throws 500 when non-empty date strings are sent.
-  if ('project_start_date' in next && typeof next.project_start_date === 'string') {
-    delete next.project_start_date;
-  }
-
-  if ('project_end_date' in next && typeof next.project_end_date === 'string') {
-    delete next.project_end_date;
-  }
-
-  return next;
-}
-
 export const fetchSafetyUsers = (token: string) =>
   requestSafetyApi<SafetyUser[]>(withQuery('/users', { active_only: false, limit: 200 }), {}, token);
 export const createSafetyUser = (token: string, body: SafetyUserCreateInput) =>
@@ -86,9 +71,9 @@ export const fetchSafetySitesAdmin = (token: string) =>
     token
   );
 export const createSafetySite = (token: string, body: SafetySiteInput) =>
-  sendJson<SafetySite>('/sites', token, 'POST', sanitizeSiteBody(body));
+  sendJson<SafetySite>('/sites', token, 'POST', body);
 export const updateSafetySite = (token: string, id: string, body: SafetySiteUpdateInput) =>
-  sendJson<SafetySite>(`/sites/${id}`, token, 'PATCH', sanitizeSiteBody(body));
+  sendJson<SafetySite>(`/sites/${id}`, token, 'PATCH', body);
 export const deactivateSafetySite = (token: string, id: string) =>
   requestSafetyApi<SafetySite>(`/sites/${id}`, { method: 'DELETE' }, token);
 
