@@ -63,6 +63,16 @@ function hasValues(input: object): boolean {
   return Object.keys(input).length > 0;
 }
 
+function buildAssignmentPayload(
+  options?: { roleOnSite?: string; memo?: string | null },
+  fallback?: { role_on_site?: string | null; memo?: string | null }
+) {
+  return {
+    role_on_site: options?.roleOnSite ?? fallback?.role_on_site ?? '담당 지도요원',
+    memo: options?.memo ?? fallback?.memo ?? null,
+  };
+}
+
 export function useControllerDashboard(enabled: boolean) {
   const [data, setData] = useState<ControllerDashboardData>(EMPTY_DATA);
   const [isLoading, setIsLoading] = useState(false);
@@ -182,15 +192,37 @@ export function useControllerDashboard(enabled: boolean) {
     deactivateSite: (id: string) =>
       runMutation((token) => deactivateSafetySite(token, id), '현장을 종료 처리했습니다.'),
     createAssignment: (input: SafetyAssignmentInput) =>
-      runMutation((token) => createSafetyAssignment(token, input), '현장 배정을 생성했습니다.'),
+      runMutation(async (token) => {
+        const existingAssignment = data.assignments.find(
+          (assignment) =>
+            assignment.site_id === input.site_id && assignment.user_id === input.user_id
+        );
+
+        if (existingAssignment) {
+          await updateSafetyAssignment(token, existingAssignment.id, {
+            role_on_site: input.role_on_site ?? existingAssignment.role_on_site,
+            memo: input.memo ?? existingAssignment.memo ?? null,
+            is_active: true,
+          });
+          return;
+        }
+
+        await createSafetyAssignment(token, input);
+      }, '현장 배정을 생성했습니다.'),
     assignFieldAgentToSite: (
       siteId: string,
       userId: string | null,
       options?: { roleOnSite?: string; memo?: string | null }
     ) =>
       runMutation(async (token) => {
-        const activeAssignments = data.assignments.filter(
-          (assignment) => assignment.site_id === siteId && assignment.is_active
+        const siteAssignments = data.assignments.filter(
+          (assignment) => assignment.site_id === siteId
+        );
+        const matchedAssignment = userId
+          ? siteAssignments.find((assignment) => assignment.user_id === userId)
+          : null;
+        const activeAssignments = siteAssignments.filter(
+          (assignment) => assignment.is_active && assignment.id !== matchedAssignment?.id
         );
 
         for (const assignment of activeAssignments) {
@@ -198,12 +230,16 @@ export function useControllerDashboard(enabled: boolean) {
         }
 
         if (userId) {
-          await createSafetyAssignment(token, {
-            site_id: siteId,
-            user_id: userId,
-            role_on_site: options?.roleOnSite || '담당 지도요원',
-            memo: options?.memo ?? null,
-          });
+          if (matchedAssignment) {
+            await updateSafetyAssignment(token, matchedAssignment.id, {
+              ...buildAssignmentPayload(options, matchedAssignment),
+              is_active: true,
+            });
+            return;
+          }
+
+          const nextPayload = buildAssignmentPayload(options);
+          await createSafetyAssignment(token, { site_id: siteId, user_id: userId, ...nextPayload });
         }
       }, userId ? '지도요원을 배정했습니다.' : '지도요원 배정을 해제했습니다.'),
     updateAssignment: (id: string, input: SafetyAssignmentUpdateInput) =>
