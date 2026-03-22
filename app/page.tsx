@@ -24,16 +24,27 @@ export default function HomePage() {
     reload,
   } = useInspectionSessions();
   const [query, setQuery] = useState('');
+  const [sortMode, setSortMode] = useState<'recent' | 'name' | 'reports'>('recent');
 
   const siteSummaries = useMemo(() => buildSiteSummaries(sites, sessions), [sessions, sites]);
   const deferredQuery = useDeferredValue(query);
   const filteredSiteSummaries = useMemo(() => {
     const normalizedQuery = deferredQuery.trim().toLowerCase();
-    if (!normalizedQuery) return siteSummaries;
-    return siteSummaries.filter(({ site }) =>
+    const filtered = !normalizedQuery
+      ? siteSummaries
+      : siteSummaries.filter(({ site }) =>
       [site.customerName, site.siteName, site.assigneeName].join(' ').toLowerCase().includes(normalizedQuery)
     );
-  }, [deferredQuery, siteSummaries]);
+    return [...filtered].sort((left, right) => {
+      if (sortMode === 'name') {
+        return left.site.siteName.localeCompare(right.site.siteName, 'ko');
+      }
+      if (sortMode === 'reports') {
+        return right.sessionCount - left.sessionCount || right.sortTime - left.sortTime;
+      }
+      return right.sortTime - left.sortTime;
+    });
+  }, [deferredQuery, siteSummaries, sortMode]);
   const isControllerView = Boolean(currentUser && isAdminUserRole(currentUser.role));
 
   if (!isReady) {
@@ -137,6 +148,15 @@ export default function HomePage() {
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                 />
+                <select
+                  className={`app-select ${styles.tableSort}`}
+                  value={sortMode}
+                  onChange={(event) => setSortMode(event.target.value as typeof sortMode)}
+                >
+                  <option value="recent">최근 작업순</option>
+                  <option value="name">현장명순</option>
+                  <option value="reports">보고서 많은 순</option>
+                </select>
               </div>
               <AssignedSitesTable
                 currentUserName={currentUser?.name}

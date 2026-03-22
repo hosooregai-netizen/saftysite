@@ -1,7 +1,12 @@
-import { getSessionSiteKey, getSessionSortTime } from '@/constants/inspectionSession';
+import {
+  getSessionProgress,
+  getSessionSiteKey,
+  getSessionSortTime,
+} from '@/constants/inspectionSession';
 import type { InspectionSession, InspectionSite } from '@/types/inspectionSession';
 
 export interface SiteSummary {
+  latestProgress: number;
   site: InspectionSite;
   sessionCount: number;
   latestSession: InspectionSession | null;
@@ -34,6 +39,7 @@ export function buildSiteSummaries(
           : null;
 
       return {
+        latestProgress: latestSession ? getSessionProgress(latestSession).percentage : 0,
         site,
         sessionCount: siteSessions.length,
         latestSession,

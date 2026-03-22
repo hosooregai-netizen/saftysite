@@ -212,6 +212,9 @@
 }
 
 .table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   padding: 12px 14px;
   border-bottom: 1px solid var(--erp-line);
   background: #f6f9fc;
@@ -228,6 +231,14 @@
   font-size: 13px;
   vertical-align: top;
   color: var(--erp-dark);
+}
+
+.table tbody tr:nth-child(even) td {
+  background: #fcfdff;
+}
+
+.table tbody tr:hover td {
+  background: #f6f9fc;
 }
 
 .table tbody tr:last-child td {

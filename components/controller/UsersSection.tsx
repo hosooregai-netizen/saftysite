@@ -74,6 +74,44 @@ export default function UsersSection(props: UsersSectionProps) {
     });
     return next;
   }, [assignments]);
+  const latestSessionBySiteId = useMemo(() => {
+    const next = new Map<string, InspectionSession>();
+    sessions.forEach((session) => {
+      const current = next.get(session.siteKey);
+      if (!current || current.updatedAt.localeCompare(session.updatedAt) < 0) {
+        next.set(session.siteKey, session);
+      }
+    });
+    return next;
+  }, [sessions]);
+  const sessionCountBySiteId = useMemo(() => {
+    const next = new Map<string, number>();
+    sessions.forEach((session) => {
+      next.set(session.siteKey, (next.get(session.siteKey) || 0) + 1);
+    });
+    return next;
+  }, [sessions]);
+  const userOverviewById = useMemo(() => {
+    const next = new Map<
+      string,
+      { assignedSites: SafetySite[]; latestSession: InspectionSession | null; reportCount: number }
+    >();
+    users.forEach((user) => {
+      const assignedSites = (activeAssignmentsByUser.get(user.id) || [])
+        .map((assignment) => sitesById.get(assignment.site_id))
+        .filter(Boolean) as SafetySite[];
+      const latestSession = assignedSites
+        .map((site) => latestSessionBySiteId.get(site.id) || null)
+        .filter(Boolean)
+        .sort((left, right) => right!.updatedAt.localeCompare(left!.updatedAt))[0] || null;
+      const reportCount = assignedSites.reduce(
+        (total, site) => total + (sessionCountBySiteId.get(site.id) || 0),
+        0
+      );
+      next.set(user.id, { assignedSites, latestSession, reportCount });
+    });
+    return next;
+  }, [activeAssignmentsByUser, latestSessionBySiteId, sessionCountBySiteId, sitesById, users]);
   const deferredQuery = useDeferredValue(query);
   const filteredUsers = useMemo(() => {
     const normalizedQuery = deferredQuery.trim().toLowerCase();
@@ -233,15 +271,12 @@ export default function UsersSection(props: UsersSectionProps) {
                 </thead>
                 <tbody>
                   {filteredUsers.map((user) => {
-                    const assignedSites = (activeAssignmentsByUser.get(user.id) || [])
-                      .map((assignment) => sitesById.get(assignment.site_id))
-                      .filter(Boolean) as SafetySite[];
-                    const relatedSessions = sessions.filter((session) =>
-                      assignedSites.some((site) => site.id === session.siteKey)
-                    );
-                    const latestSession = [...relatedSessions].sort((left, right) =>
-                      right.updatedAt.localeCompare(left.updatedAt)
-                    )[0];
+                    const overview = userOverviewById.get(user.id) || {
+                      assignedSites: [],
+                      latestSession: null,
+                      reportCount: 0,
+                    };
+                    const { assignedSites, latestSession, reportCount } = overview;
 
                     return (
                     <tr key={user.id}>
@@ -271,7 +306,7 @@ export default function UsersSection(props: UsersSectionProps) {
                           '-'
                         ) : (
                           <>
-                            <div className={styles.tablePrimary}>{relatedSessions.length}건</div>
+                            <div className={styles.tablePrimary}>{reportCount}건</div>
                             <div className={styles.tableActions} style={{ marginTop: 8 }}>
                               {latestSession ? (
                                 <Link href={`/sessions/${encodeURIComponent(latestSession.id)}`} className="app-button app-button-primary">

@@ -18,8 +18,13 @@ export default function OverviewPanel({
   sessions,
   styles,
 }: OverviewPanelProps) {
-  const latestAssignment = [...data.assignments]
-    .sort((left, right) => right.assigned_at.localeCompare(left.assigned_at))[0];
+  const latestAssignment = data.assignments.reduce<typeof data.assignments[number] | null>(
+    (latest, assignment) =>
+      !latest || latest.assigned_at.localeCompare(assignment.assigned_at) < 0
+        ? assignment
+        : latest,
+    null
+  );
   const activeAssignments = data.assignments.filter((item) => item.is_active);
   const activeSites = data.sites.filter((item) => item.status === 'active');
   const assignedSiteIds = new Set(activeAssignments.map((item) => item.site_id));

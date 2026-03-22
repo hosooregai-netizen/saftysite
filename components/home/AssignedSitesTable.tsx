@@ -36,6 +36,7 @@ export default function AssignedSitesTable({
         <span>고객사명</span>
         <span>현장명</span>
         <span>담당</span>
+        <span>진행상태</span>
         <span>최근 작성일</span>
         <span>보고서 수</span>
         <span>마지막 저장</span>
@@ -43,8 +44,14 @@ export default function AssignedSitesTable({
       </div>
 
       <div className={styles.siteList}>
-        {siteSummaries.map(({ site, latestSession, sessionCount }) => {
+        {siteSummaries.map(({ site, latestProgress, latestSession, sessionCount }) => {
           const siteHref = `/sites/${encodeURIComponent(site.id)}`;
+          const progressLabel =
+            latestProgress >= 100
+              ? '완료'
+              : latestProgress > 0
+                ? '진행중'
+                : '미작성';
 
           return (
             <article key={site.id} className={styles.siteRow}>
@@ -58,6 +65,10 @@ export default function AssignedSitesTable({
                 <Link href={siteHref} className={styles.siteLink}>
                   {site.siteName || '미입력'}
                 </Link>
+                <div className={styles.siteMetaRow}>
+                  <span className="app-chip">{progressLabel}</span>
+                  <span className={styles.tableHintText}>{sessionCount}건 보고서</span>
+                </div>
               </div>
 
               <div className={`${styles.cell} ${styles.assigneeCell}`}>
@@ -65,6 +76,11 @@ export default function AssignedSitesTable({
                 <span className={styles.cellValue}>
                   {assigneeDisplay || site.assigneeName || '미입력'}
                 </span>
+              </div>
+
+              <div className={`${styles.cell} ${styles.statusCell}`}>
+                <span className={styles.mobileLabel}>진행상태</span>
+                <span className={styles.cellValue}>{progressLabel}</span>
               </div>
 
               <div className={`${styles.cell} ${styles.dateCell}`}>

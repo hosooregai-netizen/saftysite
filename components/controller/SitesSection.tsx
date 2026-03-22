@@ -91,12 +91,18 @@ export default function SitesSection(props: SitesSectionProps) {
   const currentAssignment =
     assignments.find((assignment) => assignment.site_id === assignmentSiteId && assignment.is_active) || null;
   const usersById = useMemo(() => new Map(users.map((user) => [user.id, user])), [users]);
+  const activeAssignmentBySiteId = useMemo(() => {
+    const next = new Map<string, SafetyAssignment>();
+    assignments.forEach((assignment) => {
+      if (assignment.is_active) next.set(assignment.site_id, assignment);
+    });
+    return next;
+  }, [assignments]);
   const deferredQuery = useDeferredValue(query);
   const filteredSites = useMemo(() => {
     const normalizedQuery = deferredQuery.trim().toLowerCase();
     return sites.filter((site) => {
-      const siteAssignment =
-        assignments.find((assignment) => assignment.site_id === site.id && assignment.is_active) || null;
+      const siteAssignment = activeAssignmentBySiteId.get(site.id) || null;
       const assignedUser =
         (siteAssignment ? usersById.get(siteAssignment.user_id) : null) ||
         (site.assigned_user ? usersById.get(site.assigned_user.id) : null) ||
@@ -117,7 +123,7 @@ export default function SitesSection(props: SitesSectionProps) {
         .toLowerCase();
       return haystack.includes(normalizedQuery);
     });
-  }, [assignments, deferredQuery, showUnassignedOnly, sites, statusFilter, usersById]);
+  }, [activeAssignmentBySiteId, deferredQuery, showUnassignedOnly, sites, statusFilter, usersById]);
 
   const openCreate = () => {
     setEditingId('create');
@@ -222,8 +228,7 @@ export default function SitesSection(props: SitesSectionProps) {
                 </thead>
                 <tbody>
                   {filteredSites.map((site) => {
-                    const siteAssignment =
-                      assignments.find((assignment) => assignment.site_id === site.id && assignment.is_active) || null;
+                    const siteAssignment = activeAssignmentBySiteId.get(site.id) || null;
                     const assignedUser =
                       (siteAssignment ? usersById.get(siteAssignment.user_id) : null) ||
                       (site.assigned_user ? usersById.get(site.assigned_user.id) : null) ||
