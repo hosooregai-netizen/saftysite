@@ -74,10 +74,12 @@ export function saveBlobAsFile(blob: Blob, filename: string): void {
 }
 
 export async function fetchInspectionWordDocument(
-  session: InspectionSession
+  session: InspectionSession,
+  siteSessions: InspectionSession[] = [session]
 ): Promise<{ blob: Blob; filename: string }> {
   const body: GenerateInspectionWordRequest = {
     session,
+    siteSessions,
     templateId: 'default-inspection',
   };
 

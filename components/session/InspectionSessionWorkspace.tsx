@@ -14,6 +14,10 @@ import {
   readFileAsDataUrl,
 } from '@/components/session/workspace/utils';
 import {
+  fetchInspectionWordDocument,
+  saveBlobAsFile,
+} from '@/lib/api';
+import {
   INSPECTION_SECTIONS,
   LEGAL_REFERENCE_LIBRARY,
   areFollowUpItemsEqual,
@@ -55,6 +59,8 @@ export default function InspectionSessionWorkspace({
   } = useInspectionSessions();
   const session = getSessionById(sessionId);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [documentError, setDocumentError] = useState<string | null>(null);
+  const [isGeneratingDocument, setIsGeneratingDocument] = useState(false);
   const legalReferenceLibrary =
     masterData.legalReferences.length > 0 ? masterData.legalReferences : LEGAL_REFERENCE_LIBRARY;
   const correctionResultOptions = masterData.correctionResultOptions;
@@ -152,6 +158,25 @@ export default function InspectionSessionWorkspace({
     }
   };
 
+  const handleGenerateDocument = async () => {
+    if (!session) return;
+    try {
+      setDocumentError(null);
+      setIsGeneratingDocument(true);
+      await saveNow();
+      const { blob, filename } = await fetchInspectionWordDocument(session, siteSessions);
+      saveBlobAsFile(blob, filename);
+    } catch (error) {
+      setDocumentError(
+        error instanceof Error
+          ? error.message
+          : '문서 생성 중 오류가 발생했습니다.'
+      );
+    } finally {
+      setIsGeneratingDocument(false);
+    }
+  };
+
   if (!isReady) return <LoadingStatePanel />;
   if (!isAuthenticated) return <LoginPanel error={authError} onSubmit={login} title="보고서 작성 로그인" description="작성 중인 보고서를 서버 자동저장 기준으로 복구하려면 로그인해 주세요." />;
   if (!session || !progress || !currentSectionMeta) return <MissingStatePanel />;
@@ -162,9 +187,12 @@ export default function InspectionSessionWorkspace({
       currentSection={currentSection}
       currentSectionIndex={currentSectionIndex}
       currentSectionMeta={currentSectionMeta}
+      documentError={documentError}
+      isGeneratingDocument={isGeneratingDocument}
       isSaving={isSaving}
       moveSection={moveSection}
       onMetaChange={handleMetaChange}
+      onGenerateDocument={() => void handleGenerateDocument()}
       onSave={() => void saveNow()}
       onSectionSelect={(key) => updateSession(sessionId, (current) => ({ ...current, currentSection: key }))}
       progress={progress}

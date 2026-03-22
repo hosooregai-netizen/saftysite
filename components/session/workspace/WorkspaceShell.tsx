@@ -18,8 +18,11 @@ interface WorkspaceShellProps {
   currentSection: InspectionSectionKey;
   currentSectionIndex: number;
   currentSectionMeta: InspectionSession['documentsMeta'][InspectionSectionKey];
+  documentError: string | null;
+  isGeneratingDocument: boolean;
   isSaving: boolean;
   moveSection: (direction: -1 | 1) => void;
+  onGenerateDocument: () => void;
   onMetaChange: (field: keyof InspectionSession['meta'], value: string) => void;
   onSave: () => void;
   onSectionSelect: (key: InspectionSectionKey) => void;
@@ -36,8 +39,11 @@ export default function WorkspaceShell({
   currentSection,
   currentSectionIndex,
   currentSectionMeta,
+  documentError,
+  isGeneratingDocument,
   isSaving,
   moveSection,
+  onGenerateDocument,
   onMetaChange,
   onSave,
   onSectionSelect,
@@ -53,6 +59,7 @@ export default function WorkspaceShell({
     INSPECTION_SECTIONS.find((section) => section.key === currentSection) || INSPECTION_SECTIONS[0];
   const canMovePrev = currentSectionIndex > 0;
   const canMoveNext = currentSectionIndex < INSPECTION_SECTIONS.length - 1;
+  const isLastSection = !canMoveNext;
 
   return (
     <main className="app-page">
@@ -87,6 +94,7 @@ export default function WorkspaceShell({
               </div>
               {uploadError ? <p className={styles.headerError}>{uploadError}</p> : null}
               {syncError ? <p className={styles.headerError}>{syncError}</p> : null}
+              {documentError ? <p className={styles.headerError}>{documentError}</p> : null}
             </div>
           </header>
 
@@ -209,7 +217,18 @@ export default function WorkspaceShell({
             <div className={styles.bottomActions}>
               <button type="button" className="app-button app-button-secondary" disabled={!canMovePrev} onClick={() => moveSection(-1)}>이전 문서</button>
               <button type="button" className="app-button app-button-secondary" onClick={onSave}>{isSaving ? '저장 중' : '저장'}</button>
-              <button type="button" className="app-button app-button-primary" disabled={!canMoveNext} onClick={() => moveSection(1)}>다음 문서</button>
+              {isLastSection ? (
+                <button
+                  type="button"
+                  className="app-button app-button-primary"
+                  onClick={onGenerateDocument}
+                  disabled={isGeneratingDocument}
+                >
+                  {isGeneratingDocument ? '문서 생성 중...' : '보고서 생성하기'}
+                </button>
+              ) : (
+                <button type="button" className="app-button app-button-primary" disabled={!canMoveNext} onClick={() => moveSection(1)}>다음 문서</button>
+              )}
             </div>
           </footer>
         </section>
