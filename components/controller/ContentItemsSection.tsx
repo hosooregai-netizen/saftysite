@@ -53,11 +53,24 @@ export default function ContentItemsSection(props: ContentItemsSectionProps) {
   const { busy, styles, items, onCreate, onUpdate, onDeactivate } = props;
   const [editingId, setEditingId] = useState<string | null>(null);
   const [activeType, setActiveType] = useState<SafetyContentItem['content_type'] | 'all'>('all');
+  const [query, setQuery] = useState('');
   const [form, setForm] = useState(createEmptyContentForm());
   const isOpen = editingId !== null;
   const filteredItems = useMemo(
-    () => (activeType === 'all' ? items : items.filter((item) => item.content_type === activeType)),
-    [activeType, items]
+    () => (activeType === 'all' ? items : items.filter((item) => item.content_type === activeType)).filter((item) => {
+      const normalizedQuery = query.trim().toLowerCase();
+      if (!normalizedQuery) return true;
+      return [
+        item.title,
+        item.code ?? '',
+        getContentPreview(item),
+        getContentAttachmentSummary(item),
+      ]
+        .join(' ')
+        .toLowerCase()
+        .includes(normalizedQuery);
+    }),
+    [activeType, items, query]
   );
   const activeTypeMeta =
     form.content_type in CONTENT_TYPE_META ? CONTENT_TYPE_META[form.content_type] : null;
@@ -113,6 +126,12 @@ export default function ContentItemsSection(props: ContentItemsSectionProps) {
 
       <div className={styles.sectionBody}>
         <div className={styles.filterRow}>
+          <input
+            className={`app-input ${styles.filterSearch}`}
+            placeholder="제목, 코드, 미리보기 내용으로 검색"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
           <button type="button" className={`${styles.filterButton} ${activeType === 'all' ? styles.filterButtonActive : ''}`} onClick={() => setActiveType('all')}>
             전체
           </button>

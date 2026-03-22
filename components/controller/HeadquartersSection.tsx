@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import AppModal from '@/components/ui/AppModal';
 import type { SafetyHeadquarter } from '@/types/controller';
 import { formatTimestamp, toNullableText } from './shared';
@@ -49,8 +49,26 @@ const EMPTY_FORM = {
 export default function HeadquartersSection(props: HeadquartersSectionProps) {
   const { busy, styles, headquarters, onCreate, onUpdate, onDeactivate } = props;
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
   const [form, setForm] = useState(EMPTY_FORM);
   const isOpen = editingId !== null;
+  const filteredHeadquarters = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    if (!normalizedQuery) return headquarters;
+    return headquarters.filter((item) =>
+      [
+        item.name,
+        item.contact_name ?? '',
+        item.contact_phone ?? '',
+        item.business_registration_no ?? '',
+        item.corporate_registration_no ?? '',
+        item.address ?? '',
+      ]
+        .join(' ')
+        .toLowerCase()
+        .includes(normalizedQuery)
+    );
+  }, [headquarters, query]);
 
   const openCreate = () => {
     setEditingId('create');
@@ -104,14 +122,22 @@ export default function HeadquartersSection(props: HeadquartersSectionProps) {
           <p className={styles.sectionDescription}>사업장 리스트를 테이블에서 보고 추가와 수정은 모달에서 처리합니다.</p>
         </div>
         <div className={styles.sectionHeaderActions}>
-          <span className="app-chip">총 {headquarters.length}개</span>
+          <span className="app-chip">표시 {filteredHeadquarters.length} / 전체 {headquarters.length}개</span>
           <button type="button" className="app-button app-button-primary" onClick={openCreate} disabled={busy}>사업장 추가</button>
         </div>
       </div>
 
       <div className={styles.sectionBody}>
+        <div className={styles.filterRow}>
+          <input
+            className={`app-input ${styles.filterSearch}`}
+            placeholder="사업장명, 담당자, 등록번호, 주소로 검색"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </div>
         <div className={styles.tableShell}>
-          {headquarters.length === 0 ? (
+          {filteredHeadquarters.length === 0 ? (
             <div className={styles.tableEmpty}>등록된 사업장이 없습니다.</div>
           ) : (
             <div className={styles.tableWrap}>
@@ -128,7 +154,7 @@ export default function HeadquartersSection(props: HeadquartersSectionProps) {
                   </tr>
                 </thead>
                 <tbody>
-                  {headquarters.map((item) => (
+                  {filteredHeadquarters.map((item) => (
                     <tr key={item.id}>
                       <td>
                         <div className={styles.tablePrimary}>{item.name}</div>

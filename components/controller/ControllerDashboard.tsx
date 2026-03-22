@@ -94,6 +94,19 @@ export default function ControllerDashboard({
             </div>
           </header>
 
+          <div className={styles.sectionTabs} aria-label="관리자 빠른 메뉴">
+            {CONTROLLER_SECTIONS.map((section) => (
+              <button
+                key={section.key}
+                type="button"
+                className={`${styles.sectionTab} ${activeSection === section.key ? styles.sectionTabActive : ''}`}
+                onClick={() => selectSection(section.key)}
+              >
+                {section.label}
+              </button>
+            ))}
+          </div>
+
           <div className={styles.workspace}>
             <aside className={styles.nav}>{navigation}</aside>
             <section className={styles.content}>

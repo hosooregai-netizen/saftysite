@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import AppModal from '@/components/ui/AppModal';
 import type { SafetySite, SafetyUser } from '@/types/backend';
 import type { SafetyAssignment, SafetyHeadquarter } from '@/types/controller';
@@ -82,12 +82,41 @@ export default function SitesSection(props: SitesSectionProps) {
   } = props;
   const [editingId, setEditingId] = useState<string | null>(null);
   const [assignmentSiteId, setAssignmentSiteId] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'planned' | 'active' | 'closed'>('all');
+  const [showUnassignedOnly, setShowUnassignedOnly] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const isOpen = editingId !== null;
   const assignmentSite = sites.find((site) => site.id === assignmentSiteId) || null;
   const currentAssignment =
     assignments.find((assignment) => assignment.site_id === assignmentSiteId && assignment.is_active) || null;
-  const usersById = new Map(users.map((user) => [user.id, user]));
+  const usersById = useMemo(() => new Map(users.map((user) => [user.id, user])), [users]);
+  const filteredSites = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    return sites.filter((site) => {
+      const siteAssignment =
+        assignments.find((assignment) => assignment.site_id === site.id && assignment.is_active) || null;
+      const assignedUser =
+        (siteAssignment ? usersById.get(siteAssignment.user_id) : null) ||
+        (site.assigned_user ? usersById.get(site.assigned_user.id) : null) ||
+        null;
+      if (statusFilter !== 'all' && site.status !== statusFilter) return false;
+      if (showUnassignedOnly && assignedUser) return false;
+      if (!normalizedQuery) return true;
+      const haystack = [
+        site.site_name,
+        site.site_code ?? '',
+        site.management_number ?? '',
+        site.site_address ?? '',
+        site.manager_name ?? '',
+        site.headquarter_detail?.name ?? site.headquarter?.name ?? '',
+        assignedUser?.name ?? '',
+      ]
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(normalizedQuery);
+    });
+  }, [assignments, query, showUnassignedOnly, sites, statusFilter, usersById]);
 
   const openCreate = () => {
     setEditingId('create');
@@ -149,14 +178,31 @@ export default function SitesSection(props: SitesSectionProps) {
           <p className={styles.sectionDescription}>현장 목록은 테이블로, 추가와 수정은 모달 폼으로 정리했습니다.</p>
         </div>
         <div className={styles.sectionHeaderActions}>
-          <span className="app-chip">총 {sites.length}개</span>
+          <span className="app-chip">표시 {filteredSites.length} / 전체 {sites.length}개</span>
           <button type="button" className="app-button app-button-primary" onClick={openCreate} disabled={busy}>현장 추가</button>
         </div>
       </div>
 
       <div className={styles.sectionBody}>
+        <div className={styles.filterRow}>
+          <input
+            className={`app-input ${styles.filterSearch}`}
+            placeholder="현장명, 사업장명, 책임자, 배정 지도요원으로 검색"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+          <button type="button" className={`${styles.filterButton} ${statusFilter === 'all' ? styles.filterButtonActive : ''}`} onClick={() => setStatusFilter('all')}>전체 상태</button>
+          {SITE_STATUS_OPTIONS.map((option) => (
+            <button key={option.value} type="button" className={`${styles.filterButton} ${statusFilter === option.value ? styles.filterButtonActive : ''}`} onClick={() => setStatusFilter(option.value)}>
+              {option.label}
+            </button>
+          ))}
+          <button type="button" className={`${styles.filterButton} ${showUnassignedOnly ? styles.filterButtonActive : ''}`} onClick={() => setShowUnassignedOnly((current) => !current)}>
+            미배정만
+          </button>
+        </div>
         <div className={styles.tableShell}>
-          {sites.length === 0 ? (
+          {filteredSites.length === 0 ? (
             <div className={styles.tableEmpty}>등록된 현장이 없습니다.</div>
           ) : (
             <div className={styles.tableWrap}>
@@ -174,7 +220,7 @@ export default function SitesSection(props: SitesSectionProps) {
                   </tr>
                 </thead>
                 <tbody>
-                  {sites.map((site) => {
+                  {filteredSites.map((site) => {
                     const siteAssignment =
                       assignments.find((assignment) => assignment.site_id === site.id && assignment.is_active) || null;
                     const assignedUser =

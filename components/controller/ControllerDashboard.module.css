@@ -55,6 +55,32 @@
   gap: 0;
 }
 
+.sectionTabs {
+  display: flex;
+  gap: 10px;
+  padding: 12px 18px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--erp-line);
+  background: #f8fbfe;
+}
+
+.sectionTab {
+  flex: 0 0 auto;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--erp-line);
+  border-radius: 999px;
+  background: var(--erp-white);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--erp-dark);
+}
+
+.sectionTabActive {
+  border-color: var(--erp-mid);
+  background: #eaf1f8;
+}
+
 .nav {
   border-right: 1px solid var(--erp-line);
   background: #f6f9fc;
@@ -240,6 +266,11 @@
   margin-bottom: 14px;
 }
 
+.filterSearch {
+  min-width: min(100%, 280px);
+  flex: 1 1 280px;
+}
+
 .filterButton {
   display: inline-flex;
   align-items: center;
@@ -370,6 +401,40 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 12px;
+}
+
+.insightGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.insightCard {
+  padding: 14px;
+  border: 1px solid var(--erp-line);
+  border-radius: 4px;
+  background: #fbfcfd;
+}
+
+.insightTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--erp-dark);
+}
+
+.insightText {
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--erp-text-muted);
+}
+
+.insightActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
 }
 
 .statCard {
@@ -552,6 +617,7 @@
 
   .stats,
   .splitGrid,
+  .insightGrid,
   .formGrid,
   .modalGrid,
   .assetGrid {
@@ -559,10 +625,51 @@
   }
 }
 
+@media (max-width: 767px) {
+  .hero {
+    padding: 18px 16px;
+  }
+
+  .heroTitle {
+    font-size: 24px;
+  }
+
+  .heroActions {
+    width: 100%;
+  }
+
+  .heroActions > * {
+    flex: 1 1 calc(50% - 8px);
+  }
+
+  .sectionTabs {
+    padding: 10px 14px;
+  }
+
+  .content {
+    padding: 14px;
+  }
+
+  .sectionHeader,
+  .sectionBody,
+  .recordCard {
+    padding: 14px;
+  }
+
+  .table th,
+  .table td {
+    padding: 10px 12px;
+  }
+}
+
 @media (min-width: 1024px) {
   .mobileMenuButton,
   .drawer,
   .drawerBackdrop {
+    display: none;
+  }
+
+  .sectionTabs {
     display: none;
   }
 }

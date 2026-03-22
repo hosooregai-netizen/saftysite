@@ -59,6 +59,9 @@ const EMPTY_FORM = {
 export default function UsersSection(props: UsersSectionProps) {
   const { assignments, busy, sessions, sites, styles, users, onCreate, onSaveEdit, onDeactivate } = props;
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+  const [roleFilter, setRoleFilter] = useState<'all' | UserRoleView>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [form, setForm] = useState(EMPTY_FORM);
   const [initialForm, setInitialForm] = useState(EMPTY_FORM);
   const [editingRoleSource, setEditingRoleSource] = useState<SafetyUser['role']>('field_agent');
@@ -71,6 +74,25 @@ export default function UsersSection(props: UsersSectionProps) {
     });
     return next;
   }, [assignments]);
+  const filteredUsers = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    return users.filter((user) => {
+      if (roleFilter !== 'all' && toUserRoleView(user.role) !== roleFilter) return false;
+      if (statusFilter === 'active' && !user.is_active) return false;
+      if (statusFilter === 'inactive' && user.is_active) return false;
+      if (!normalizedQuery) return true;
+      const haystack = [
+        user.name,
+        user.email,
+        user.phone ?? '',
+        user.position ?? '',
+        user.organization_name ?? '',
+      ]
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(normalizedQuery);
+    });
+  }, [query, roleFilter, statusFilter, users]);
 
   const openCreate = () => {
     setEditingId('create');
@@ -169,14 +191,28 @@ export default function UsersSection(props: UsersSectionProps) {
           <p className={styles.sectionDescription}>계정 목록을 테이블에서 보고 추가와 수정은 모달로 처리합니다.</p>
         </div>
         <div className={styles.sectionHeaderActions}>
-          <span className="app-chip">총 {users.length}명</span>
+          <span className="app-chip">표시 {filteredUsers.length} / 전체 {users.length}명</span>
           <button type="button" className="app-button app-button-primary" onClick={openCreate} disabled={busy}>사용자 추가</button>
         </div>
       </div>
 
       <div className={styles.sectionBody}>
+        <div className={styles.filterRow}>
+          <input
+            className={`app-input ${styles.filterSearch}`}
+            placeholder="이름, 이메일, 직책, 소속으로 검색"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+          <button type="button" className={`${styles.filterButton} ${roleFilter === 'all' ? styles.filterButtonActive : ''}`} onClick={() => setRoleFilter('all')}>전체 권한</button>
+          <button type="button" className={`${styles.filterButton} ${roleFilter === 'admin' ? styles.filterButtonActive : ''}`} onClick={() => setRoleFilter('admin')}>관리자</button>
+          <button type="button" className={`${styles.filterButton} ${roleFilter === 'field_agent' ? styles.filterButtonActive : ''}`} onClick={() => setRoleFilter('field_agent')}>지도요원</button>
+          <button type="button" className={`${styles.filterButton} ${statusFilter === 'all' ? styles.filterButtonActive : ''}`} onClick={() => setStatusFilter('all')}>전체 상태</button>
+          <button type="button" className={`${styles.filterButton} ${statusFilter === 'active' ? styles.filterButtonActive : ''}`} onClick={() => setStatusFilter('active')}>활성</button>
+          <button type="button" className={`${styles.filterButton} ${statusFilter === 'inactive' ? styles.filterButtonActive : ''}`} onClick={() => setStatusFilter('inactive')}>비활성</button>
+        </div>
         <div className={styles.tableShell}>
-          {users.length === 0 ? (
+          {filteredUsers.length === 0 ? (
             <div className={styles.tableEmpty}>등록된 사용자가 없습니다.</div>
           ) : (
             <div className={styles.tableWrap}>
@@ -195,7 +231,7 @@ export default function UsersSection(props: UsersSectionProps) {
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((user) => {
+                  {filteredUsers.map((user) => {
                     const assignedSites = (activeAssignmentsByUser.get(user.id) || [])
                       .map((assignment) => sitesById.get(assignment.site_id))
                       .filter(Boolean) as SafetySite[];

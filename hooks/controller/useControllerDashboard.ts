@@ -230,10 +230,10 @@ export function useControllerDashboard(enabled: boolean) {
     deactivateAssignment: (id: string) =>
       runMutation((token) => deactivateSafetyAssignment(token, id), '배정을 비활성화했습니다.'),
     createContentItem: (input: SafetyContentItemInput) =>
-      runMutation((token) => createSafetyContentItem(token, input), '마스터 데이터를 생성했습니다.'),
+      runMutation((token) => createSafetyContentItem(token, input), '콘텐츠 데이터를 생성했습니다.'),
     updateContentItem: (id: string, input: SafetyContentItemUpdateInput) =>
-      runMutation((token) => updateSafetyContentItem(token, id, input), '마스터 데이터를 수정했습니다.'),
+      runMutation((token) => updateSafetyContentItem(token, id, input), '콘텐츠 데이터를 수정했습니다.'),
     deactivateContentItem: (id: string) =>
-      runMutation((token) => deactivateSafetyContentItem(token, id), '마스터 데이터를 비활성화했습니다.'),
+      runMutation((token) => deactivateSafetyContentItem(token, id), '콘텐츠 데이터를 비활성화했습니다.'),
   };
 }
