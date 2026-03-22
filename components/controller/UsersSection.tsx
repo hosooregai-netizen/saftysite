@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useDeferredValue, useMemo, useState } from 'react';
 import AppModal from '@/components/ui/AppModal';
 import type { SafetySite, SafetyUser } from '@/types/backend';
 import { getSessionTitle } from '@/constants/inspectionSession';
@@ -74,8 +74,9 @@ export default function UsersSection(props: UsersSectionProps) {
     });
     return next;
   }, [assignments]);
+  const deferredQuery = useDeferredValue(query);
   const filteredUsers = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
+    const normalizedQuery = deferredQuery.trim().toLowerCase();
     return users.filter((user) => {
       if (roleFilter !== 'all' && toUserRoleView(user.role) !== roleFilter) return false;
       if (statusFilter === 'active' && !user.is_active) return false;
@@ -92,7 +93,7 @@ export default function UsersSection(props: UsersSectionProps) {
         .toLowerCase();
       return haystack.includes(normalizedQuery);
     });
-  }, [query, roleFilter, statusFilter, users]);
+  }, [deferredQuery, roleFilter, statusFilter, users]);
 
   const openCreate = () => {
     setEditingId('create');

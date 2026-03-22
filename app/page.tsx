@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useDeferredValue, useMemo, useState } from 'react';
 import AssignedSitesTable from '@/components/home/AssignedSitesTable';
 import ControllerDashboard from '@/components/controller/ControllerDashboard';
 import { buildSiteSummaries } from '@/components/home/siteSummaries';
@@ -23,8 +23,17 @@ export default function HomePage() {
     logout,
     reload,
   } = useInspectionSessions();
+  const [query, setQuery] = useState('');
 
   const siteSummaries = useMemo(() => buildSiteSummaries(sites, sessions), [sessions, sites]);
+  const deferredQuery = useDeferredValue(query);
+  const filteredSiteSummaries = useMemo(() => {
+    const normalizedQuery = deferredQuery.trim().toLowerCase();
+    if (!normalizedQuery) return siteSummaries;
+    return siteSummaries.filter(({ site }) =>
+      [site.customerName, site.siteName, site.assigneeName].join(' ').toLowerCase().includes(normalizedQuery)
+    );
+  }, [deferredQuery, siteSummaries]);
   const isControllerView = Boolean(currentUser && isAdminUserRole(currentUser.role));
 
   if (!isReady) {
@@ -79,6 +88,7 @@ export default function HomePage() {
 
             <div className={styles.heroActions}>
               <span className="app-chip">총 {siteSummaries.length}개 현장</span>
+              <span className="app-chip">검색 결과 {filteredSiteSummaries.length}개</span>
               <button
                 type="button"
                 className="app-button app-button-secondary"
@@ -104,11 +114,34 @@ export default function HomePage() {
           ) : null}
 
           <div className={styles.pageGrid}>
+            <section className={styles.summaryBar}>
+              <article className={styles.summaryCard}>
+                <span className={styles.summaryCardLabel}>전체 현장</span>
+                <strong className={styles.summaryCardValue}>{siteSummaries.length}</strong>
+              </article>
+              <article className={styles.summaryCard}>
+                <span className={styles.summaryCardLabel}>진행 보고서</span>
+                <strong className={styles.summaryCardValue}>{siteSummaries.filter((item) => item.sessionCount > 0).length}</strong>
+              </article>
+              <article className={styles.summaryCard}>
+                <span className={styles.summaryCardLabel}>최근 작성 현장</span>
+                <strong className={styles.summaryCardValue}>{siteSummaries[0]?.site.siteName || '-'}</strong>
+              </article>
+            </section>
+
             <section className={styles.tablePanel}>
+              <div className={styles.tableTools}>
+                <input
+                  className={`app-input ${styles.tableSearch}`}
+                  placeholder="고객사명, 현장명, 담당자로 검색"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                />
+              </div>
               <AssignedSitesTable
                 currentUserName={currentUser?.name}
                 currentUserPosition={currentUser?.position}
-                siteSummaries={siteSummaries}
+                siteSummaries={filteredSiteSummaries}
                 styles={styles}
                 formatDateTime={formatDateTime}
               />

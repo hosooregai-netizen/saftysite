@@ -21,6 +21,7 @@ export default function LoginPanel({
 }: LoginPanelProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -75,15 +76,25 @@ export default function LoginPanel({
 
                 <label className={styles.field}>
                   <span className={styles.label}>비밀번호</span>
-                  <input
-                    type="password"
-                    className="app-input"
-                    value={password}
-                    autoComplete="current-password"
-                    placeholder="비밀번호를 입력하세요"
-                    onChange={(event) => setPassword(event.target.value)}
-                    disabled={busy}
-                  />
+                  <div className={styles.passwordField}>
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      className="app-input"
+                      value={password}
+                      autoComplete="current-password"
+                      placeholder="비밀번호를 입력하세요"
+                      onChange={(event) => setPassword(event.target.value)}
+                      disabled={busy}
+                    />
+                    <button
+                      type="button"
+                      className={`app-button app-button-secondary ${styles.visibilityButton}`}
+                      onClick={() => setShowPassword((current) => !current)}
+                      disabled={busy}
+                    >
+                      {showPassword ? '숨기기' : '보기'}
+                    </button>
+                  </div>
                 </label>
               </div>
 

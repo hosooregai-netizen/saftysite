@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useDeferredValue, useMemo, useState } from 'react';
 import AppModal from '@/components/ui/AppModal';
 import type { SafetyHeadquarter } from '@/types/controller';
 import { formatTimestamp, toNullableText } from './shared';
@@ -52,8 +52,9 @@ export default function HeadquartersSection(props: HeadquartersSectionProps) {
   const [query, setQuery] = useState('');
   const [form, setForm] = useState(EMPTY_FORM);
   const isOpen = editingId !== null;
+  const deferredQuery = useDeferredValue(query);
   const filteredHeadquarters = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
+    const normalizedQuery = deferredQuery.trim().toLowerCase();
     if (!normalizedQuery) return headquarters;
     return headquarters.filter((item) =>
       [
@@ -68,7 +69,7 @@ export default function HeadquartersSection(props: HeadquartersSectionProps) {
         .toLowerCase()
         .includes(normalizedQuery)
     );
-  }, [headquarters, query]);
+  }, [deferredQuery, headquarters]);
 
   const openCreate = () => {
     setEditingId('create');

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useDeferredValue, useMemo, useState } from 'react';
 import AppModal from '@/components/ui/AppModal';
 import type { SafetySite, SafetyUser } from '@/types/backend';
 import type { SafetyAssignment, SafetyHeadquarter } from '@/types/controller';
@@ -91,8 +91,9 @@ export default function SitesSection(props: SitesSectionProps) {
   const currentAssignment =
     assignments.find((assignment) => assignment.site_id === assignmentSiteId && assignment.is_active) || null;
   const usersById = useMemo(() => new Map(users.map((user) => [user.id, user])), [users]);
+  const deferredQuery = useDeferredValue(query);
   const filteredSites = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
+    const normalizedQuery = deferredQuery.trim().toLowerCase();
     return sites.filter((site) => {
       const siteAssignment =
         assignments.find((assignment) => assignment.site_id === site.id && assignment.is_active) || null;
@@ -116,7 +117,7 @@ export default function SitesSection(props: SitesSectionProps) {
         .toLowerCase();
       return haystack.includes(normalizedQuery);
     });
-  }, [assignments, query, showUnassignedOnly, sites, statusFilter, usersById]);
+  }, [assignments, deferredQuery, showUnassignedOnly, sites, statusFilter, usersById]);
 
   const openCreate = () => {
     setEditingId('create');

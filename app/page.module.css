@@ -58,7 +58,52 @@
 }
 
 .pageGrid {
+  display: grid;
+  gap: 16px;
   padding: 18px;
+}
+
+.summaryBar {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.summaryCard {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-card);
+  background: linear-gradient(180deg, #fcfdff 0%, #f6f9fc 100%);
+}
+
+.summaryCardLabel {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--erp-text-muted);
+}
+
+.summaryCardValue {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--erp-dark);
+}
+
+.tableTools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 16px;
+  border-bottom: 1px solid var(--erp-line);
+  background: #fbfcfe;
+}
+
+.tableSearch {
+  min-width: min(100%, 320px);
+  flex: 1 1 320px;
 }
 
 .tablePanel {
@@ -219,6 +264,10 @@
 }
 
 @media (max-width: 899px) {
+  .summaryBar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .siteRow {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

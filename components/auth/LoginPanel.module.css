@@ -84,6 +84,18 @@
   gap: 8px;
 }
 
+.passwordField {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.visibilityButton {
+  min-height: 42px;
+  padding-inline: 12px;
+}
+
 .label {
   font-size: 0.875rem;
   font-weight: 700;
@@ -119,5 +131,9 @@
 
   .form {
     padding: 20px;
+  }
+
+  .passwordField {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

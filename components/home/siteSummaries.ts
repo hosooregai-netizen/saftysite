@@ -12,18 +12,33 @@ export function buildSiteSummaries(
   sites: InspectionSite[],
   sessions: InspectionSession[]
 ): SiteSummary[] {
+  const sessionsBySite = sessions.reduce<Map<string, InspectionSession[]>>((accumulator, session) => {
+    const siteKey = getSessionSiteKey(session);
+    const bucket = accumulator.get(siteKey);
+    if (bucket) {
+      bucket.push(session);
+    } else {
+      accumulator.set(siteKey, [session]);
+    }
+    return accumulator;
+  }, new Map());
+
   return sites
     .map((site) => {
-      const siteSessions = sessions.filter(
-        (session) => getSessionSiteKey(session) === site.id
-      );
+      const siteSessions = sessionsBySite.get(site.id) || [];
+      const latestSession =
+        siteSessions.length > 0
+          ? [...siteSessions].sort(
+              (left, right) => getSessionSortTime(right) - getSessionSortTime(left)
+            )[0]
+          : null;
 
       return {
         site,
         sessionCount: siteSessions.length,
-        latestSession: siteSessions[0] ?? null,
-        sortTime: siteSessions[0]
-          ? getSessionSortTime(siteSessions[0])
+        latestSession,
+        sortTime: latestSession
+          ? getSessionSortTime(latestSession)
           : new Date(site.updatedAt).getTime(),
       };
     })

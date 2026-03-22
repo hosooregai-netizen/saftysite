@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useDeferredValue, useMemo, useState } from 'react';
 import AppModal from '@/components/ui/AppModal';
 import ContentAssetField from '@/components/controller/ContentAssetField';
 import type { SafetyContentItem } from '@/types/backend';
@@ -56,9 +56,10 @@ export default function ContentItemsSection(props: ContentItemsSectionProps) {
   const [query, setQuery] = useState('');
   const [form, setForm] = useState(createEmptyContentForm());
   const isOpen = editingId !== null;
+  const deferredQuery = useDeferredValue(query);
   const filteredItems = useMemo(
     () => (activeType === 'all' ? items : items.filter((item) => item.content_type === activeType)).filter((item) => {
-      const normalizedQuery = query.trim().toLowerCase();
+      const normalizedQuery = deferredQuery.trim().toLowerCase();
       if (!normalizedQuery) return true;
       return [
         item.title,
@@ -70,7 +71,7 @@ export default function ContentItemsSection(props: ContentItemsSectionProps) {
         .toLowerCase()
         .includes(normalizedQuery);
     }),
-    [activeType, items, query]
+    [activeType, deferredQuery, items]
   );
   const activeTypeMeta =
     form.content_type in CONTENT_TYPE_META ? CONTENT_TYPE_META[form.content_type] : null;
