@@ -1,7 +1,10 @@
 'use client';
 
+import { useState } from 'react';
+
 import { ACCIDENT_TYPE_OPTIONS, CAUSATIVE_AGENT_LABELS, RISK_SCALE_OPTIONS } from '@/components/session/workspace/constants';
 import type { ApplyDocumentUpdate, WithFileData } from '@/components/session/workspace/types';
+import { buildHazardFindingAutoFill, dataUrlToFile } from '@/components/session/workspace/doc7Ai';
 import { UploadBox } from '@/components/session/workspace/widgets';
 import { CAUSATIVE_AGENT_OPTIONS } from '@/components/session/workspace/constants';
 import { calculateRiskAssessmentResult } from '@/lib/riskAssessment';
@@ -32,6 +35,9 @@ export default function Doc7FindingCard({
   removable,
   withFileData,
 }: Doc7FindingCardProps) {
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [aiError, setAiError] = useState('');
+
   const updateFinding = (updater: (finding: CurrentHazardFinding) => CurrentHazardFinding) =>
     applyDocumentUpdate('doc7', 'manual', (current) => ({
       ...current,
@@ -40,14 +46,56 @@ export default function Doc7FindingCard({
       ),
     }));
 
+  const runAiAutofill = async (file: File) => {
+    setIsAnalyzing(true);
+    setAiError('');
+    try {
+      const patch = await buildHazardFindingAutoFill(file);
+      updateFinding((finding) => ({ ...finding, ...patch }));
+    } catch (error) {
+      setAiError(
+        error instanceof Error
+          ? error.message
+          : 'AI 초안을 만드는 중 문제가 발생했습니다.'
+      );
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const handlePhotoSelect = async (file: File) => {
+    const dataUrl = await withFileData(file);
+    if (!dataUrl) return;
+    updateFinding((finding) => ({ ...finding, photoUrl: dataUrl }));
+    await runAiAutofill(file);
+  };
+
+  const handleAiRetry = async () => {
+    if (!item.photoUrl) return;
+    const file = await dataUrlToFile(item.photoUrl, `finding-${item.id}.jpg`);
+    await runAiAutofill(file);
+  };
+
   return (
     <article className={styles.card}>
       <div className={styles.cardHeader}>
         <div><div className={styles.cardEyebrow}>반복 카드</div><h3 className={styles.cardTitle}>{`위험요인 ${index + 1}`}</h3></div>
-        {removable ? <button type="button" className="app-button app-button-danger" onClick={() => applyDocumentUpdate('doc7', 'manual', (current) => ({ ...current, document7Findings: current.document7Findings.filter((finding) => finding.id !== item.id) }))}>삭제</button> : null}
+        <div className={styles.cardHeaderActions}>
+          {item.photoUrl ? <button type="button" className="app-button app-button-secondary" onClick={() => void handleAiRetry()} disabled={isAnalyzing}>AI 다시 채우기</button> : null}
+          {isAnalyzing ? <span className="app-chip">AI 초안 생성 중</span> : null}
+          {removable ? <button type="button" className="app-button app-button-danger" onClick={() => applyDocumentUpdate('doc7', 'manual', (current) => ({ ...current, document7Findings: current.document7Findings.filter((finding) => finding.id !== item.id) }))}>삭제</button> : null}
+        </div>
       </div>
       <div className={styles.findingGrid}>
-        <UploadBox id={`finding-photo-${item.id}`} label="현장 사진" value={item.photoUrl} onClear={() => updateFinding((finding) => ({ ...finding, photoUrl: '' }))} onSelect={async (file) => withFileData(file, (dataUrl) => updateFinding((finding) => ({ ...finding, photoUrl: dataUrl })))} />
+        <div className={styles.sectionStack}>
+          <UploadBox id={`finding-photo-${item.id}`} label="현장 사진" value={item.photoUrl} onClear={() => updateFinding((finding) => ({ ...finding, photoUrl: '' }))} onSelect={async (file) => handlePhotoSelect(file)} />
+          <p className={styles.fieldAssist}>
+            {isAnalyzing
+              ? '사진을 분석해 위험장소, 위험도, 재해유형, 기인물, 개선대책 초안을 자동으로 채우는 중입니다.'
+              : '사진을 올리면 AI가 위험요인 카드 초안을 자동으로 채웁니다.'}
+          </p>
+          {aiError ? <p className={styles.fieldAssistError}>{aiError}</p> : null}
+        </div>
         <div className={styles.sectionStack}>
           <div className={styles.formGrid}>
             <label className={styles.field}><span className={styles.fieldLabel}>유해·위험장소</span><input type="text" className="app-input" value={item.location} onChange={(event) => updateFinding((finding) => ({ ...finding, location: event.target.value }))} /></label>

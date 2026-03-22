@@ -51,6 +51,8 @@ export default function WorkspaceShell({
   const [metaModalOpen, setMetaModalOpen] = useState(false);
   const currentSectionInfo =
     INSPECTION_SECTIONS.find((section) => section.key === currentSection) || INSPECTION_SECTIONS[0];
+  const canMovePrev = currentSectionIndex > 0;
+  const canMoveNext = currentSectionIndex < INSPECTION_SECTIONS.length - 1;
 
   return (
     <main className="app-page">
@@ -92,18 +94,66 @@ export default function WorkspaceShell({
             <div className={styles.topRail}>
               <div className={styles.topRailHeader}>
                 <div className={styles.topRailActions}>
-                  <button
-                    type="button"
-                    className="app-button app-button-secondary"
-                    onClick={() => setMetaModalOpen(true)}
-                  >
-                    기본 정보
-                  </button>
-                  <span className="app-chip">{DOCUMENT_SOURCE_LABELS[currentSectionMeta.source]}</span>
-                  <span className="app-chip">{DOCUMENT_STATUS_LABELS[currentSectionMeta.status]}</span>
+                  <div className={styles.topRailPrimaryActions}>
+                    <button
+                      type="button"
+                      className="app-button app-button-secondary"
+                      onClick={() => setMetaModalOpen(true)}
+                    >
+                      기본 정보
+                    </button>
+                    <button
+                      type="button"
+                      className="app-button app-button-secondary"
+                      onClick={onSave}
+                    >
+                      {isSaving ? '저장 중...' : '저장'}
+                    </button>
+                  </div>
+                  <div className={styles.topRailStatus}>
+                    <span className="app-chip">{`문서 ${currentSectionIndex + 1}/${INSPECTION_SECTIONS.length}`}</span>
+                    <span className="app-chip">{DOCUMENT_SOURCE_LABELS[currentSectionMeta.source]}</span>
+                    <span className="app-chip">{DOCUMENT_STATUS_LABELS[currentSectionMeta.status]}</span>
+                  </div>
                 </div>
                 <div className={styles.topRailMeta}>
                   마지막 저장 {formatDateTime(session.lastSavedAt)}
+                </div>
+              </div>
+              <div className={styles.quickControls}>
+                <label className={styles.sectionPicker}>
+                  <span className={styles.sectionPickerLabel}>문서 빠른 이동</span>
+                  <select
+                    className="app-select"
+                    value={currentSection}
+                    onChange={(event) =>
+                      onSectionSelect(event.target.value as InspectionSectionKey)
+                    }
+                  >
+                    {INSPECTION_SECTIONS.map((section) => (
+                      <option key={section.key} value={section.key}>
+                        {`${section.compactLabel}. ${section.shortLabel}`}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <div className={styles.quickMoveButtons}>
+                  <button
+                    type="button"
+                    className="app-button app-button-secondary"
+                    disabled={!canMovePrev}
+                    onClick={() => moveSection(-1)}
+                  >
+                    이전
+                  </button>
+                  <button
+                    type="button"
+                    className="app-button app-button-primary"
+                    disabled={!canMoveNext}
+                    onClick={() => moveSection(1)}
+                  >
+                    다음
+                  </button>
                 </div>
               </div>
               <nav className={styles.navRail} aria-label="문서 이동">
@@ -157,9 +207,9 @@ export default function WorkspaceShell({
               {isSaving ? ' · 서버 저장 중' : ''}
             </div>
             <div className={styles.bottomActions}>
-              <button type="button" className="app-button app-button-secondary" disabled={currentSectionIndex <= 0} onClick={() => moveSection(-1)}>이전 문서</button>
+              <button type="button" className="app-button app-button-secondary" disabled={!canMovePrev} onClick={() => moveSection(-1)}>이전 문서</button>
               <button type="button" className="app-button app-button-secondary" onClick={onSave}>{isSaving ? '저장 중' : '저장'}</button>
-              <button type="button" className="app-button app-button-primary" disabled={currentSectionIndex >= INSPECTION_SECTIONS.length - 1} onClick={() => moveSection(1)}>다음 문서</button>
+              <button type="button" className="app-button app-button-primary" disabled={!canMoveNext} onClick={() => moveSection(1)}>다음 문서</button>
             </div>
           </footer>
         </section>
