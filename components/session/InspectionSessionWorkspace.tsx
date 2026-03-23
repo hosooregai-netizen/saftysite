@@ -14,9 +14,9 @@ import {
   readFileAsDataUrl,
 } from '@/components/session/workspace/utils';
 import {
-  fetchInspectionWordDocument,
   saveBlobAsFile,
 } from '@/lib/api';
+import { generateInspectionHwpxBlob } from '@/lib/documents/inspection/hwpxClient';
 import {
   INSPECTION_SECTIONS,
   LEGAL_REFERENCE_LIBRARY,
@@ -164,7 +164,14 @@ export default function InspectionSessionWorkspace({
       setDocumentError(null);
       setIsGeneratingDocument(true);
       await saveNow();
-      const { blob, filename } = await fetchInspectionWordDocument(session, siteSessions);
+      const { blob, filename, warnings, deferred } = await generateInspectionHwpxBlob(session, siteSessions);
+      if (warnings.length > 0 || deferred.length > 0) {
+        console.warn('HWPX generation warnings', {
+          sessionId: session.id,
+          warnings,
+          deferred,
+        });
+      }
       saveBlobAsFile(blob, filename);
     } catch (error) {
       setDocumentError(
