@@ -4,6 +4,8 @@ import {
   DEFAULT_GUIDANCE_AGENCY,
   WORK_PLAN_ITEMS,
 } from '@/constants/inspectionSession';
+import { FIXED_SCENE_COUNT } from '@/constants/inspectionSession/catalog';
+import { getExtraSceneTitle } from '@/constants/inspectionSession/scenePhotos';
 import type { InspectionSession } from '@/types/inspectionSession';
 import {
   ReportPageDraft,
@@ -110,7 +112,6 @@ function buildDoc3(session: InspectionSession): ReportPageDraft {
               <div class="image-card">
                 <div class="image-card-title">현장 전경 ${index + 1}</div>
                 ${imageTag(scene.photoUrl, `현장 전경 ${index + 1}`)}
-                <div class="image-caption">${valueText(scene.description)}</div>
               </div>
             `
           )
@@ -120,13 +121,15 @@ function buildDoc3(session: InspectionSession): ReportPageDraft {
         extra.length > 0
           ? `<div class="subsection-title">추가 이미지</div><div class="image-grid">${extra
               .map(
-                (scene) => `
+                (scene, extraIndex) => {
+                  const slotFallback = getExtraSceneTitle(FIXED_SCENE_COUNT + extraIndex) || '추가 이미지';
+                  return `
                   <div class="image-card">
-                    <div class="image-card-title">${valueText(scene.title, '추가 이미지')}</div>
-                    ${imageTag(scene.photoUrl, scene.title || '추가 이미지')}
-                    <div class="image-caption">${valueText(scene.description)}</div>
+                    <div class="image-card-title">${valueText(scene.title, slotFallback)}</div>
+                    ${imageTag(scene.photoUrl, scene.title?.trim() || slotFallback)}
                   </div>
-                `
+                `;
+                }
               )
               .join('')}</div>`
           : ''
@@ -136,19 +139,25 @@ function buildDoc3(session: InspectionSession): ReportPageDraft {
 }
 
 function buildDoc4(session: InspectionSession): ReportPageDraft {
-  const blocks =
-    session.document4FollowUps.length > 0
-      ? session.document4FollowUps
-      : [{ id: 'empty', location: '', guidanceDate: '', confirmationDate: '', beforePhotoUrl: '', afterPhotoUrl: '', result: '' }];
+  const blocks = session.document4FollowUps;
+
+  if (blocks.length === 0) {
+    return {
+      body: `
+      ${sectionTitle('4. 이전 기술지도 사항 이행여부')}
+      <p class="doc4-empty-notice">이전 기술지도 사항이 없습니다</p>
+    `,
+    };
+  }
 
   return {
     body: `
-      ${sectionTitle('4. 이전 기술지도 사항 이해여부')}
+      ${sectionTitle('4. 이전 기술지도 사항 이행여부')}
       ${blocks
         .map(
           (item, index) => `
             <div class="followup-block">
-              <div class="subsection-title">후속조치 ${index + 1}</div>
+              <div class="subsection-title">이행여부 ${index + 1}</div>
               <table class="info-table compact-table">${infoRows([
                 { label: '유해·위험장소', value: item.location },
                 { label: '지도일', value: formatDate(item.guidanceDate) },

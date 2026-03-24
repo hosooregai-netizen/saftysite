@@ -33,6 +33,7 @@ const STYLE = `
   .doc-image, .case-image { width: 100%; max-height: 230px; object-fit: contain; border: 1px solid #c6cfdb; background: #fff; }
   .image-caption, .image-placeholder { color: #59677a; font-size: 10pt; line-height: 1.6; }
   .image-placeholder { display: flex; align-items: center; justify-content: center; min-height: 150px; border: 1px dashed #b8c3d1; background: #f8fafc; }
+  .doc4-empty-notice { margin: 0; padding: 14px 12px; border: 1px dashed #b8c3d1; border-radius: 4px; background: #f8fafc; color: #59677a; text-align: center; line-height: 1.7; }
 `;
 
 export function buildInspectionReportHtml(

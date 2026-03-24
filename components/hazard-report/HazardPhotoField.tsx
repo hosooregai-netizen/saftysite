@@ -3,6 +3,7 @@
 import type { ChangeEvent, RefObject } from 'react';
 import type { HazardReportItem } from '@/types/hazard';
 import styles from '@/components/HazardReportTable.module.css';
+import { IMAGE_UPLOAD_LABEL_DESKTOP, IMAGE_UPLOAD_LABEL_MOBILE } from '@/constants/imageUploadLabels';
 import type { HazardReportTableText } from './shared';
 
 interface HazardPhotoFieldProps {
@@ -49,15 +50,15 @@ function renderPhotoBody({
   if (photoMode === 'readonly') {
     return (
       <div className={styles.photoPlaceholder}>
-        <span>{mergedText.photoEmptyHint}</span>
+        <span>{IMAGE_UPLOAD_LABEL_MOBILE}</span>
       </div>
     );
   }
 
   return (
     <button type="button" onClick={openPicker} className={`${styles.photoPlaceholder} ${styles.photoPlaceholderButton}`} disabled={isPhotoLoading}>
-      <span>{mergedText.photoEmptyTitle}</span>
-      <span className={styles.photoPlaceholderHint}>{mergedText.photoEmptyHint}</span>
+      <span className={styles.photoUploadLabelNarrow}>{IMAGE_UPLOAD_LABEL_MOBILE}</span>
+      <span className={styles.photoUploadLabelWide}>{IMAGE_UPLOAD_LABEL_DESKTOP}</span>
     </button>
   );
 }

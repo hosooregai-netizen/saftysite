@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { FIXED_SCENE_COUNT, TOTAL_SCENE_COUNT } from '@/constants/inspectionSession/catalog';
+import { isExtraScenePlaceholderTitle } from '@/constants/inspectionSession/scenePhotos';
 import styles from '@/components/session/InspectionSessionWorkspace.module.css';
 import type { OverviewSectionProps } from '@/components/session/workspace/types';
 import { analyzeHazardPhotos } from '@/lib/api';
@@ -43,7 +44,6 @@ export default function Doc3Section({
   const [analyzingSceneIds, setAnalyzingSceneIds] = useState<string[]>([]);
   const fixedScenes = session.document3Scenes.slice(0, FIXED_SCENE_COUNT);
   const extraScenes = session.document3Scenes.slice(FIXED_SCENE_COUNT, TOTAL_SCENE_COUNT);
-  const uploadedCount = session.document3Scenes.slice(0, TOTAL_SCENE_COUNT).filter((item) => Boolean(item.photoUrl)).length;
 
   const updateScene = (sceneId: string, patch: Partial<SiteScenePhoto>) =>
     applyDocumentUpdate('doc3', 'manual', (current) => ({
@@ -62,8 +62,17 @@ export default function Doc3Section({
   };
 
   const handleExtraUpload = async (sceneId: string, file: File, fallbackTitle: string) => {
+    const priorTitle = session.document3Scenes.find((s) => s.id === sceneId)?.title;
+    const useAutoTitle = isExtraScenePlaceholderTitle(priorTitle, fallbackTitle);
+
     const dataUrl = await withFileData(file);
     if (!dataUrl) return;
+
+    if (!useAutoTitle) {
+      updateScene(sceneId, { photoUrl: dataUrl });
+      return;
+    }
+
     updateScene(sceneId, { photoUrl: dataUrl, title: fallbackTitle });
     toggleAnalyzing([sceneId], true);
     try {
@@ -76,23 +85,12 @@ export default function Doc3Section({
 
   return (
     <div className={`${styles.sectionStack} ${styles.doc3SceneStack}`}>
-      <section className={`${styles.card} ${styles.doc3SceneIntro} ${styles.doc3FullRow}`}>
-        <div className={styles.cardHeader}>
-          <div>
-            <div className={styles.cardEyebrow}>문서 배치 기준 입력</div>
-            <h3 className={styles.cardTitle}>현장 전경 2장 + 주요 진행공정 4장</h3>
-          </div>
-          <span className="app-chip">{`${uploadedCount}/${TOTAL_SCENE_COUNT} 업로드`}</span>
-        </div>
-        <p className={styles.fieldAssist}>상단 2칸은 현장 전경, 하단 4칸은 주요 진행공정으로 문서에 그대로 배치됩니다. 사진만 먼저 올린 뒤 설명과 공정명을 보완해도 됩니다.</p>
-      </section>
-
       {analyzingSceneIds.length > 0 ? (
         <p className={`${styles.fieldAssist} ${styles.doc3FullRow}`}>{`AI가 ${analyzingSceneIds.length}개 이미지 제목을 정리 중입니다.`}</p>
       ) : null}
 
-      <Doc3FixedScenes items={fixedScenes} onClear={(sceneId) => updateScene(sceneId, { photoUrl: '', description: '' })} onDescriptionChange={(sceneId, value) => updateScene(sceneId, { description: value })} onUpload={handleFixedUpload} />
-      <Doc3ExtraScenes items={extraScenes} isAnalyzing={(sceneId) => analyzingSceneIds.includes(sceneId)} onClear={(sceneId, defaultTitle) => updateScene(sceneId, { photoUrl: '', title: defaultTitle, description: '' })} onDescriptionChange={(sceneId, value) => updateScene(sceneId, { description: value })} onTitleChange={(sceneId, value) => updateScene(sceneId, { title: value })} onUpload={handleExtraUpload} />
+      <Doc3FixedScenes items={fixedScenes} onClear={(sceneId) => updateScene(sceneId, { photoUrl: '' })} onUpload={handleFixedUpload} />
+      <Doc3ExtraScenes items={extraScenes} isAnalyzing={(sceneId) => analyzingSceneIds.includes(sceneId)} onClear={(sceneId) => updateScene(sceneId, { photoUrl: '' })} onTitleChange={(sceneId, value) => updateScene(sceneId, { title: value })} onUpload={handleExtraUpload} />
     </div>
   );
 }

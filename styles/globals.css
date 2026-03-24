@@ -274,7 +274,11 @@
   }
 
   .app-dropzone {
-    @apply flex min-h-40 items-center justify-center rounded-panel border border-dashed px-4 py-6 text-center transition;
+    @apply flex items-center justify-center rounded-panel border border-dashed px-4 py-6 text-center transition;
+    box-sizing: border-box;
+    min-height: 250px;
+    height: 250px;
+    max-height: 250px;
     border-color: var(--erp-line-strong);
     background-color: var(--erp-panel-muted);
   }

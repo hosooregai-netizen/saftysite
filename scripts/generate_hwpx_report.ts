@@ -995,12 +995,12 @@ function mapWebDataToTemplateBinding(data: ExistingWebReportData): TemplateBindi
     truncated.document3Scenes = data.document3Scenes.length - 6;
     warnings.push(`Section 3 only has 6 visual slots in the current template. ${truncated.document3Scenes} scene(s) were not rendered.`);
   }
-  text['sec3.fixed[0].description'] = valueOrDash(fixedScenes[0].description);
-  text['sec3.fixed[1].description'] = valueOrDash(fixedScenes[1].description);
+  text['sec3.fixed[0].description'] = '';
+  text['sec3.fixed[1].description'] = '';
   text['sec3.extra[0].title'] = valueOrDash(extraScenes[0].title);
-  text['sec3.extra[0].description'] = valueOrDash(extraScenes[0].description);
+  text['sec3.extra[0].description'] = '';
   text['sec3.extra[1].title'] = valueOrDash(extraScenes[1].title);
-  text['sec3.extra[1].description'] = valueOrDash(extraScenes[1].description);
+  text['sec3.extra[1].description'] = '';
   images['sec3.fixed[0].photo_image'] = valueOrBlank(fixedScenes[0].photoUrl);
   images['sec3.fixed[1].photo_image'] = valueOrBlank(fixedScenes[1].photoUrl);
   images['sec3.extra[0].photo_image'] = valueOrBlank(extraScenes[0].photoUrl);

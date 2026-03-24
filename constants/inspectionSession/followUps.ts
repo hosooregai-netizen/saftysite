@@ -45,11 +45,7 @@ export function buildDerivedFollowUpItems(
   );
 
   if (!previousSession) {
-    const nextItems = [...manualItems];
-    while (nextItems.length < 3) {
-      nextItems.push(createPreviousGuidanceFollowUpItem({ confirmationDate: session.meta.reportDate }));
-    }
-    return nextItems;
+    return [...manualItems];
   }
 
   const existingByKey = new Map(
@@ -76,11 +72,7 @@ export function buildDerivedFollowUpItems(
       });
     });
 
-  const nextItems = [...derivedItems, ...manualItems];
-  while (nextItems.length < 3) {
-    nextItems.push(createPreviousGuidanceFollowUpItem({ confirmationDate: session.meta.reportDate }));
-  }
-  return nextItems;
+  return [...derivedItems, ...manualItems];
 }
 
 export function areFollowUpItemsEqual(

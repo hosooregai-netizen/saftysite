@@ -36,7 +36,6 @@ export default function Doc5Section(props: {
   return (
     <div className={styles.sectionStack}>
       <div className={styles.sectionToolbar}>
-        <span className="app-chip">문서 7 분석값 반영</span>
         <button type="button" className="app-button app-button-secondary" onClick={() => applyDocumentUpdate('doc5', 'derived', (current) => ({ ...current, document5Summary: { ...current.document5Summary, summaryText: buildDoc5SummaryDraft(current, currentAccidentEntries, currentAgentEntries) } }))}>
           총평 초안 생성
         </button>

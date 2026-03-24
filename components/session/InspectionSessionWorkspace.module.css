@@ -106,7 +106,6 @@
 .metaStatus,
 .sectionToolbar,
 .bottomActions,
-.uploadActions,
 .rowActions {
   display: flex;
   flex-wrap: wrap;
@@ -209,6 +208,98 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+}
+
+.doc4Toolbar {
+  justify-content: flex-end;
+}
+
+.doc4EmptyState {
+  padding: 20px 16px;
+  border: 1px dashed var(--erp-line);
+  border-radius: var(--erp-radius-card);
+  background: var(--erp-panel-muted);
+  color: var(--erp-text-muted);
+  font-size: var(--text-body);
+  text-align: center;
+}
+
+.doc4CardHeaderSpacer {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.doc4SectionStack {
+  gap: 10px;
+}
+
+/* doc4: 유해·위험장소 | 지도일 | 확인일 = 1:1:1 */
+.doc4MetaRow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  align-items: start;
+  min-width: 0;
+  width: 100%;
+}
+
+.doc4MetaRow .field {
+  min-width: 0;
+}
+
+.doc4MetaRow :global(.app-input) {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* doc4: 시정 전·후 사진 = 1:1, 라벨은 상단 메타 행과 동일(field + fieldLabel) */
+.doc4PhotoRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  align-items: start;
+  min-width: 0;
+  width: 100%;
+}
+
+.doc4PhotoRow .field {
+  min-width: 0;
+}
+
+/* doc4 이행여부 카드: 컴팩트 여백·스트로크 */
+.card.doc4Card {
+  display: grid;
+  gap: 12px;
+  padding: 12px 14px 14px;
+  border-color: var(--erp-line-strong);
+  box-shadow:
+    0 1px 2px rgba(22, 36, 59, 0.05),
+    0 3px 10px rgba(22, 36, 59, 0.05);
+}
+
+.card.doc4Card .field {
+  gap: 6px;
+}
+
+.cardHeader.doc4CardHeader {
+  align-items: center;
+  gap: 8px;
+  min-height: 0;
+}
+
+.card.doc4Card .doc4CardDeleteBtn {
+  padding: 3px 9px;
+  font-size: var(--text-ui-sm);
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+@media (max-width: 640px) {
+  .card.doc4Card {
+    gap: 10px;
+    padding: 10px 12px 12px;
+  }
 }
 
 .progressTrack,
@@ -861,8 +952,7 @@
 }
 
 .emptyInline,
-.casePlaceholder,
-.uploadPlaceholder {
+.casePlaceholder {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -871,6 +961,114 @@
   border: 1px dashed var(--erp-line-strong);
   background-color: var(--erp-panel-muted);
   text-align: center;
+}
+
+.uploadPlaceholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 auto;
+  box-sizing: border-box;
+  min-height: 0;
+  padding: 16px;
+  border: 1px dashed var(--erp-line-strong);
+  background-color: var(--erp-panel-muted);
+  text-align: center;
+}
+
+button.uploadPlaceholder {
+  width: 100%;
+  box-sizing: border-box;
+  flex-direction: column;
+  gap: 8px;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border-style: dashed;
+}
+
+button.uploadPreviewHit {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 0;
+  border: none;
+  background: var(--erp-panel-muted);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.uploadHint {
+  display: block;
+  font-size: var(--text-ui);
+  font-weight: 500;
+  color: var(--erp-text-muted);
+}
+
+.uploadPrimaryLabel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.uploadLabelNarrow,
+.uploadLabelWide {
+  display: block;
+  font-size: clamp(0.95rem, 2.1vw, 1.1rem);
+  font-weight: 600;
+  line-height: 1.45;
+  letter-spacing: -0.01em;
+  color: var(--erp-text-muted);
+}
+
+.uploadLabelWide {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .uploadLabelNarrow {
+    display: none;
+  }
+
+  .uploadLabelWide {
+    display: block;
+  }
+}
+
+.uploadBox {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-card);
+  overflow: hidden;
+  background-color: var(--erp-white);
+}
+
+.uploadFieldLabelRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.uploadBodyField {
+  border-radius: var(--erp-radius-control);
+  border: 1px solid var(--erp-line-strong);
+  background-color: var(--erp-white);
+  overflow: hidden;
+}
+
+.uploadBodyField .uploadPlaceholder {
+  min-height: 0;
+  flex: 1 1 auto;
+  border: 0;
+  border-radius: 0;
+  background-color: var(--erp-panel-muted);
 }
 
 .infoTableHeader,
@@ -907,21 +1105,85 @@
 }
 
 .uploadBody,
-.uploadPreview,
 .caseImage,
 .noticeImage {
   width: 100%;
 }
 
 .uploadBody {
-  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  min-height: 250px;
+  height: 250px;
+  max-height: 250px;
+  min-width: 0;
+  overflow: hidden;
 }
 
-.uploadPreview,
+.uploadBody.uploadBodyField {
+  min-height: 250px;
+  height: 250px;
+  max-height: 250px;
+}
+
+/* Doc3: 미리보기 영역 높이 고정 → 그리드 행에서 이웃 카드가 늘어나지 않도록 align-items:start와 함께 사용 */
+.doc3SlotCard .uploadBody.uploadBodyField:has(.uploadPreviewHit) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  height: 250px;
+  max-height: 250px;
+  overflow: hidden;
+}
+
+.doc3SlotCard .uploadBody.uploadBodyField:has(.uploadPreviewHit) .uploadPreviewHit {
+  flex: 1 1 auto;
+  align-self: stretch;
+  min-height: 0;
+  width: 100%;
+}
+
+.uploadPreviewHit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+  cursor: pointer;
+  background-color: var(--erp-panel-muted);
+}
+
+.uploadFileHit {
+  display: block;
+  flex: 1 1 auto;
+  min-height: 0;
+  cursor: pointer;
+}
+
+.uploadPreviewHit:focus-visible,
+.uploadFileHit:focus-visible {
+  outline: 2px solid var(--erp-mid);
+  outline-offset: 2px;
+}
+
+.uploadPreview {
+  display: block;
+  max-width: 100%;
+  max-height: 250px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
 .caseImage,
 .noticeImage {
   display: block;
-  max-height: 260px;
+  max-height: 250px;
   object-fit: cover;
 }
 
@@ -1077,12 +1339,59 @@
 .doc3SectionGrid {
   display: grid;
   gap: 14px;
+  align-items: start;
 }
 
 .doc3SlotCard {
   display: grid;
   gap: 14px;
   padding: 16px;
+  min-width: 0;
+}
+
+.doc3ProcessNameLabelRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+
+.doc3AiInline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-ui-sm);
+  color: var(--erp-text-muted);
+}
+
+.doc3AiSpinner {
+  box-sizing: border-box;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(27, 48, 72, 0.15);
+  border-top-color: var(--erp-mid);
+  border-radius: 999px;
+  animation: doc3-ai-spin 0.7s linear infinite;
+}
+
+.doc3AiCaption {
+  font-weight: 600;
+}
+
+@keyframes doc3-ai-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.doc3SceneTitleInput:placeholder-shown:not(:focus) {
+  opacity: 0.55;
+}
+
+.doc3SceneTitleInput:focus {
+  opacity: 1;
 }
 
 .doc3SlotIndex {

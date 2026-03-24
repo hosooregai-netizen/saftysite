@@ -69,16 +69,6 @@ export default function HazardReportContent({
   const riskAssessmentResult = calculateRiskAssessmentResult(data.likelihood, data.severity);
   const showsImplementationField = !isHidden(hiddenFields, 'implementationPeriod');
 
-  const syncPhotoMaxHeight = useCallback(() => {
-    const container = containerRef.current;
-    const improvementTextarea = improvementItemsRef.current;
-    if (!container || !improvementTextarea) return;
-    container.style.setProperty(
-      '--hazard-photo-max-height',
-      `${Math.max(improvementTextarea.getBoundingClientRect().height, 120)}px`
-    );
-  }, [improvementItemsRef]);
-
   const syncBottomPairHeight = useCallback(() => {
     const hazardTextarea = hazardFactorsRef.current;
     const legalTextarea = legalInfoRef.current;
@@ -93,9 +83,8 @@ export default function HazardReportContent({
   }, [hazardFactorsRef, legalInfoRef]);
 
   useLayoutEffect(() => {
-    syncPhotoMaxHeight();
     syncBottomPairHeight();
-  }, [data.hazardFactors, data.improvementItems, data.legalInfo, syncBottomPairHeight, syncPhotoMaxHeight]);
+  }, [data.hazardFactors, data.improvementItems, data.legalInfo, syncBottomPairHeight]);
 
   return (
     <section ref={containerRef} className={styles.container}>
@@ -148,7 +137,7 @@ export default function HazardReportContent({
           />
           <div className={`${styles.formField} ${styles.textColumn}`}>
             <label className={styles.fieldLabel} htmlFor={`hazard-improvement-${index}`}>{mergedText.improvementItemsLabel}</label>
-            <textarea id={`hazard-improvement-${index}`} ref={improvementItemsRef} value={data.improvementItems} onChange={(event) => { onChange({ improvementItems: event.target.value }); requestAnimationFrame(() => { resizeImprovement(); syncPhotoMaxHeight(); }); }} className={`app-textarea ${styles.editorTextarea}`} placeholder={mergedText.improvementItemsPlaceholder} rows={4} readOnly={isReadOnly(readOnlyFields, 'improvementItems')} />
+            <textarea id={`hazard-improvement-${index}`} ref={improvementItemsRef} value={data.improvementItems} onChange={(event) => { onChange({ improvementItems: event.target.value }); requestAnimationFrame(() => { resizeImprovement(); }); }} className={`app-textarea ${styles.editorTextarea}`} placeholder={mergedText.improvementItemsPlaceholder} rows={4} readOnly={isReadOnly(readOnlyFields, 'improvementItems')} />
           </div>
         </div>
 

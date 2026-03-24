@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { IMAGE_UPLOAD_LABEL_DESKTOP, IMAGE_UPLOAD_LABEL_MOBILE } from '@/constants/imageUploadLabels';
 import { useImageSourcePicker } from '@/hooks/useImageSourcePicker';
 import { checkCausativeAgents } from '@/lib/api';
 import { normalizeCausativeAgentResponse } from '@/lib/normalizeCausativeAgentResponse';
@@ -140,10 +141,14 @@ export default function SiteOverviewUploadPanel({
         ) : (
           <div className={styles.dropzoneContent}>
             <p className={styles.dropzoneTitle}>
-              {loading ? '판독 중...' : '전경 사진 업로드'}
-            </p>
-            <p className={styles.dropzoneDescription}>
-              파일을 끌어오거나 클릭하여 바로 업로드합니다.
+              {loading ? (
+                '판독 중...'
+              ) : (
+                <>
+                  <span className={styles.dropzoneLabelNarrow}>{IMAGE_UPLOAD_LABEL_MOBILE}</span>
+                  <span className={styles.dropzoneLabelWide}>{IMAGE_UPLOAD_LABEL_DESKTOP}</span>
+                </>
+              )}
             </p>
           </div>
         )}

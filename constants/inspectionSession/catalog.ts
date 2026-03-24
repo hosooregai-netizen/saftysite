@@ -29,7 +29,7 @@ export const INSPECTION_SECTIONS: InspectionSectionMeta[] = [
   { key: 'doc1', label: '1. 기술지도 대상사업장', shortLabel: '대상사업장', compactLabel: '1' },
   { key: 'doc2', label: '2. 기술지도 개요', shortLabel: '기술지도 개요', compactLabel: '2' },
   { key: 'doc3', label: '3. 현장 전경 및 주요 진행공정', shortLabel: '현장 전경', compactLabel: '3' },
-  { key: 'doc4', label: '4. 이전 기술지도 사항 이해여부', shortLabel: '이전 지도 사항', compactLabel: '4' },
+  { key: 'doc4', label: '4. 이전 기술지도 사항 이행여부', shortLabel: '이전 지도 사항', compactLabel: '4' },
   { key: 'doc5', label: '5. 현존 유해·위험요인 분류', shortLabel: '현존 요인 통계', compactLabel: '5' },
   { key: 'doc6', label: '6. 12대 사망사고 기인물', shortLabel: '사망사고 기인물', compactLabel: '6' },
   { key: 'doc7', label: '7. 현존 유해·위험요인 세부 지적', shortLabel: '세부 지적', compactLabel: '7' },

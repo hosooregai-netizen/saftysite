@@ -373,7 +373,10 @@
 }
 
 .assetBox {
-  min-height: 180px;
+  box-sizing: border-box;
+  min-height: 250px;
+  height: 250px;
+  max-height: 250px;
   overflow: hidden;
   border: 1px dashed var(--erp-line-strong);
   border-radius: 1px;
@@ -384,12 +387,47 @@
 .assetFilePreview {
   display: grid;
   place-items: center;
-  min-height: 180px;
+  box-sizing: border-box;
+  min-height: 250px;
+  height: 250px;
+  max-height: 250px;
   padding: 16px;
   text-align: center;
   font-size: var(--text-body);
   line-height: 1.7;
   color: var(--erp-text-muted);
+}
+
+.assetPlaceholderImage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.assetUploadLabelNarrow,
+.assetUploadLabelWide {
+  display: block;
+  font-size: clamp(0.95rem, 2.1vw, 1.1rem);
+  font-weight: 600;
+  line-height: 1.45;
+  letter-spacing: -0.01em;
+  color: var(--erp-text-muted);
+}
+
+.assetUploadLabelWide {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .assetUploadLabelNarrow {
+    display: none;
+  }
+
+  .assetUploadLabelWide {
+    display: block;
+  }
 }
 
 .assetFilePreview strong {
@@ -399,7 +437,8 @@
 .assetPreviewImage {
   display: block;
   width: 100%;
-  height: 180px;
+  height: 250px;
+  max-height: 250px;
   object-fit: cover;
 }
 

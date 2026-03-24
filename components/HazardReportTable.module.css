@@ -1,6 +1,6 @@
 .container {
   --hazard-paired-body-height: 132px;
-  --hazard-photo-max-height: var(--hazard-paired-body-height);
+  --hazard-photo-max-height: 250px;
   break-inside: avoid;
   position: relative;
   display: grid;
@@ -200,6 +200,30 @@
 .photoPlaceholderButton {
   appearance: none;
   background: none;
+}
+
+.photoUploadLabelNarrow,
+.photoUploadLabelWide {
+  display: block;
+  font-size: clamp(0.95rem, 2.1vw, 1.1rem);
+  font-weight: 600;
+  line-height: 1.45;
+  letter-spacing: -0.01em;
+  color: var(--erp-text-muted);
+}
+
+.photoUploadLabelWide {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .photoUploadLabelNarrow {
+    display: none;
+  }
+
+  .photoUploadLabelWide {
+    display: block;
+  }
 }
 
 .photoPlaceholderHint {

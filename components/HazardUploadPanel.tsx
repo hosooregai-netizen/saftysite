@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { IMAGE_UPLOAD_LABEL_DESKTOP, IMAGE_UPLOAD_LABEL_MOBILE } from '@/constants/imageUploadLabels';
 import { useImageSourcePicker } from '@/hooks/useImageSourcePicker';
 import type { HazardReportItem } from '@/types/hazard';
 import { analyzeHazardPhotos } from '@/lib/api';
@@ -133,9 +134,9 @@ export default function HazardUploadPanel({
         className={dropzoneClassName}
       >
         <div className={styles.dropzoneContent}>
-          <p className={styles.dropzoneTitle}>사진 파일 등록</p>
-          <p className={styles.dropzoneDescription}>
-            이 영역에 파일을 끌어오거나 클릭하여 여러 장의 이미지를 선택합니다.
+          <p className={styles.dropzoneTitle}>
+            <span className={styles.dropzoneLabelNarrow}>{IMAGE_UPLOAD_LABEL_MOBILE}</span>
+            <span className={styles.dropzoneLabelWide}>{IMAGE_UPLOAD_LABEL_DESKTOP}</span>
           </p>
         </div>
       </div>

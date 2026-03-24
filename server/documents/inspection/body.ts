@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { WORK_PLAN_ITEMS } from '@/constants/inspectionSession';
+import { getSceneSlotTitle } from '@/constants/inspectionSession/scenePhotos';
 import type { InspectionSession } from '@/types/inspectionSession';
 import { causativeLabel, countByLabel, formatDate } from './format';
 import type { InspectionDocContext } from './media';
@@ -59,7 +60,12 @@ function sceneGrid(session: InspectionSession, context: InspectionDocContext) {
       [left, right].map((sceneValue, cellIndex) => {
         const scene = sceneValue ?? { id: `scene-${rowIndex}-${cellIndex}`, title: '', photoUrl: '', description: '' };
         const sceneIndex = rowIndex * 2 + cellIndex;
-        const title = sceneIndex === 0 ? '현장 전경 1' : sceneIndex === 1 ? '현장 전경 2' : scene?.title || `추가 이미지 ${sceneIndex - 1}`;
+        const title =
+          sceneIndex === 0
+            ? '현장 전경 1'
+            : sceneIndex === 1
+              ? '현장 전경 2'
+              : scene?.title?.trim() || getSceneSlotTitle(sceneIndex);
         const image = context.addImage(scene.photoUrl, {
           fallbackName: `scene-${scene.id}`,
           maxHeightPx: 250,
@@ -69,7 +75,7 @@ function sceneGrid(session: InspectionSession, context: InspectionDocContext) {
           [
             paragraph(title, { align: 'center', bold: true, spacingAfter: 80 }),
             imageBlock(image, title, { align: 'center', spacingAfter: 80 }),
-            scene.description ? paragraph(scene.description, { align: 'center' }) : paragraph(' ', { align: 'center' }),
+            paragraph(' ', { align: 'center' }),
           ].join(''),
           { verticalAlign: 'center' }
         );
@@ -92,7 +98,7 @@ function followUpBlock(session: InspectionSession, context: InspectionDocContext
     maxWidthPx: 260,
   });
   return [
-    subsectionHeading(`후속조치 ${index + 1}`),
+    subsectionHeading(`이행여부 ${index + 1}`),
     table(
       [
         [
@@ -395,8 +401,10 @@ export function buildInspectionDocumentBody(
     pageBreak(),
 
     pageBanner(),
-    sectionHeading('4.이전 기술지도 사항 이해여부'),
-    ...session.document4FollowUps.map((item, index) => followUpBlock(session, context, item, index)),
+    sectionHeading('4.이전 기술지도 사항 이행여부'),
+    ...(session.document4FollowUps.length > 0
+      ? session.document4FollowUps.map((item, index) => followUpBlock(session, context, item, index))
+      : [noteBox('이전 기술지도 사항이 없습니다.')]),
     pageFooter(page++),
     pageBreak(),
 

@@ -5,6 +5,10 @@ import AppModal from '@/components/ui/AppModal';
 
 interface UseImageSourcePickerOptions {
   title?: string;
+  /** 갤러리·파일 탐색기 (기본: 파일 선택) */
+  fileButtonLabel?: string;
+  /** 카메라 촬영 (기본: 카메라) */
+  cameraButtonLabel?: string;
 }
 
 function isPortableUploadEnvironment(): boolean {
@@ -22,6 +26,8 @@ function isPortableUploadEnvironment(): boolean {
 
 export function useImageSourcePicker({
   title = '사진 불러오기',
+  fileButtonLabel = '파일 선택',
+  cameraButtonLabel = '카메라',
 }: UseImageSourcePickerOptions = {}) {
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -88,15 +94,15 @@ export function useImageSourcePicker({
             취소
           </button>
           <button type="button" onClick={openGallery} className="app-button app-button-secondary">
-            갤러리에서 선택
+            {fileButtonLabel}
           </button>
           <button type="button" onClick={openCamera} className="app-button app-button-primary">
-            카메라 촬영
+            {cameraButtonLabel}
           </button>
         </>
       }
     >
-      <p>사진을 가져올 방법을 선택하세요.</p>
+      <p>카메라로 촬영하거나 기기에서 파일을 선택하세요.</p>
     </AppModal>
   );
 

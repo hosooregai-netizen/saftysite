@@ -3,6 +3,7 @@
 
 import { useId } from 'react';
 import styles from './ControllerDashboard.module.css';
+import { IMAGE_UPLOAD_LABEL_DESKTOP, IMAGE_UPLOAD_LABEL_MOBILE } from '@/constants/imageUploadLabels';
 import { readFileAsDataUrl } from './contentItems';
 
 interface ContentAssetFieldProps {
@@ -42,8 +43,19 @@ export default function ContentAssetField(props: ContentAssetFieldProps) {
             </div>
           )
         ) : (
-          <div className={styles.assetPlaceholder}>
-            {mode === 'image' ? '이미지를 업로드해 주세요.' : '파일을 업로드해 주세요.'}
+          <div
+            className={
+              mode === 'image' ? `${styles.assetPlaceholder} ${styles.assetPlaceholderImage}` : styles.assetPlaceholder
+            }
+          >
+            {mode === 'image' ? (
+              <>
+                <span className={styles.assetUploadLabelNarrow}>{IMAGE_UPLOAD_LABEL_MOBILE}</span>
+                <span className={styles.assetUploadLabelWide}>{IMAGE_UPLOAD_LABEL_DESKTOP}</span>
+              </>
+            ) : (
+              '파일을 업로드해 주세요.'
+            )}
           </div>
         )}
       </div>

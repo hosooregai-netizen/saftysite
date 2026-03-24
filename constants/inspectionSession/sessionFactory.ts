@@ -148,9 +148,7 @@ export function createInspectionSession(
       adminSiteSnapshot
     ),
     document3Scenes: createDefaultScenePhotos(),
-    document4FollowUps: Array.from({ length: 3 }, () =>
-      createPreviousGuidanceFollowUpItem({ confirmationDate: meta.reportDate })
-    ),
+    document4FollowUps: [],
     document5Summary: createHazardSummaryDocument(),
     document6Measures: FATAL_ACCIDENT_MEASURE_LIBRARY.map((item) =>
       createFatalAccidentMeasureItem(item.key)

@@ -2,6 +2,8 @@
 
 import JSZip from 'jszip';
 
+import { FIXED_SCENE_COUNT } from '@/constants/inspectionSession/catalog';
+import { getExtraSceneTitle } from '@/constants/inspectionSession/scenePhotos';
 import type { ChecklistRating, InspectionSession } from '@/types/inspectionSession';
 
 type RepeatBlockPath = 'sec7.findings' | 'sec8.plans' | 'sec11.education' | 'sec12.activities';
@@ -605,12 +607,16 @@ function mapSessionToTemplateBinding(session: InspectionSession): TemplateBindin
     warnings.push(`Section 3 has only 6 visual slots. ${truncated.document3Scenes} extra scene(s) were skipped.`);
   }
 
-  text['sec3.fixed[0].description'] = valueOrDash(fixedScenes[0].description);
-  text['sec3.fixed[1].description'] = valueOrDash(fixedScenes[1].description);
-  text['sec3.extra[0].title'] = valueOrDash(extraScenes[0].title);
-  text['sec3.extra[0].description'] = valueOrDash(extraScenes[0].description);
-  text['sec3.extra[1].title'] = valueOrDash(extraScenes[1].title);
-  text['sec3.extra[1].description'] = valueOrDash(extraScenes[1].description);
+  text['sec3.fixed[0].description'] = '';
+  text['sec3.fixed[1].description'] = '';
+  text['sec3.extra[0].title'] = valueOrDash(
+    extraScenes[0].title?.trim() || getExtraSceneTitle(FIXED_SCENE_COUNT),
+  );
+  text['sec3.extra[0].description'] = '';
+  text['sec3.extra[1].title'] = valueOrDash(
+    extraScenes[1].title?.trim() || getExtraSceneTitle(FIXED_SCENE_COUNT + 1),
+  );
+  text['sec3.extra[1].description'] = '';
   images['sec3.fixed[0].photo_image'] = valueOrBlank(fixedScenes[0].photoUrl);
   images['sec3.fixed[1].photo_image'] = valueOrBlank(fixedScenes[1].photoUrl);
   images['sec3.extra[0].photo_image'] = valueOrBlank(extraScenes[0].photoUrl);
