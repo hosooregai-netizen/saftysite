@@ -119,8 +119,36 @@
   background-color: var(--erp-white);
 }
 
+.listViewport {
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
+}
+
+.listTrack {
+  min-width: 1140px;
+}
+
 .listHead {
-  display: none;
+  display: grid;
+  grid-template-columns:
+    minmax(150px, 0.95fr)
+    minmax(180px, 1.35fr)
+    minmax(120px, 0.9fr)
+    minmax(90px, 0.7fr)
+    minmax(110px, 0.85fr)
+    minmax(90px, 0.65fr)
+    minmax(150px, 1fr)
+    72px;
+  gap: 12px;
+  padding: 9px 16px 8px;
+  border-bottom: 1px solid var(--erp-line);
+  background-color: var(--erp-panel-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--erp-text-muted);
 }
 
 .siteList {
@@ -129,8 +157,18 @@
 
 .siteRow {
   display: grid;
-  gap: 10px 12px;
-  padding: 14px 16px;
+  grid-template-columns:
+    minmax(150px, 0.95fr)
+    minmax(180px, 1.35fr)
+    minmax(120px, 0.9fr)
+    minmax(90px, 0.7fr)
+    minmax(110px, 0.85fr)
+    minmax(90px, 0.65fr)
+    minmax(150px, 1fr)
+    72px;
+  gap: 12px;
+  align-items: center;
+  padding: 11px 16px;
   border-bottom: 1px solid var(--erp-line);
 }
 
@@ -155,16 +193,6 @@
   min-width: 0;
 }
 
-.mobileLabel {
-  display: block;
-  margin-bottom: 4px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--erp-text-muted);
-}
-
 .siteLink {
   display: block;
   width: 100%;
@@ -172,9 +200,9 @@
   font-weight: 700;
   line-height: 1.3;
   color: var(--erp-dark);
-  white-space: normal;
-  word-break: keep-all;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .siteLink:hover {
@@ -182,23 +210,19 @@
 }
 
 .cellValue {
+  display: block;
   font-size: 13px;
   line-height: 1.4;
   color: var(--erp-dark);
-  white-space: normal;
-  word-break: keep-all;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .actionCell {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  justify-content: center;
   align-items: center;
-}
-
-.actionCell :global(.app-button) {
-  white-space: nowrap;
 }
 
 .formGrid {
@@ -241,7 +265,7 @@
   display: grid;
   justify-items: center;
   gap: 14px;
-  padding: 4px 0 2px;
+  padding: 16px 0 14px;
   text-align: center;
 }
 
@@ -310,19 +334,15 @@
     flex: 1 1 100%;
   }
 
+  .listTrack {
+    min-width: 1040px;
+  }
+
+  .listHead,
   .siteRow {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px 12px;
-    padding: 12px 10px;
-  }
-
-  .primaryCell,
-  .actionCell {
-    grid-column: 1 / -1;
-  }
-
-  .mobileLabel {
-    margin-bottom: 3px;
+    gap: 10px;
+    padding-left: 10px;
+    padding-right: 10px;
   }
 
   .siteLink {
@@ -331,15 +351,6 @@
 
   .cellValue {
     font-size: 12px;
-  }
-
-  .actionsCell {
-    justify-content: stretch;
-  }
-
-  .actionsCell :global(.app-button) {
-    flex: 1 1 100%;
-    justify-content: center;
   }
 }
 
@@ -358,53 +369,14 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
+  .listTrack {
+    min-width: 1080px;
+  }
+
+  .listHead,
   .siteRow {
-    grid-template-columns:
-      minmax(130px, 0.95fr)
-      minmax(180px, 1.45fr)
-      minmax(120px, 0.9fr)
-      minmax(150px, 1fr)
-      auto;
-    grid-template-areas:
-      'customer title assignee saved actions'
-      'status recent reportCount saved actions';
-    gap: 10px 12px;
-    align-items: center;
-    padding: 12px 14px;
-  }
-
-  .customerCell {
-    grid-area: customer;
-  }
-
-  .siteNameCell {
-    grid-area: title;
-  }
-
-  .assigneeCell {
-    grid-area: assignee;
-  }
-
-  .dateCell {
-    grid-area: recent;
-  }
-
-  .statusCell {
-    grid-area: status;
-  }
-
-  .countCell {
-    grid-area: reportCount;
-  }
-
-  .savedCell {
-    grid-area: saved;
-  }
-
-  .actionsCell {
-    grid-area: actions;
-    justify-content: flex-end;
-    align-self: center;
+    padding-left: 14px;
+    padding-right: 14px;
   }
 }
 
@@ -420,53 +392,7 @@
     padding: 20px 28px 24px;
   }
 
-  .listHead {
-    display: grid;
-    grid-template-columns:
-      minmax(150px, 0.95fr)
-      minmax(180px, 1.35fr)
-      minmax(120px, 0.9fr)
-      minmax(90px, 0.7fr)
-      minmax(110px, 0.85fr)
-      minmax(90px, 0.65fr)
-      minmax(150px, 1fr)
-      minmax(150px, max-content);
-    gap: 12px;
-    padding: 9px 16px 8px;
-    border-bottom: 1px solid var(--erp-line);
-    background-color: var(--erp-panel-muted);
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--erp-text-muted);
-  }
-
-  .siteRow {
-    grid-template-columns:
-      minmax(150px, 0.95fr)
-      minmax(180px, 1.35fr)
-      minmax(120px, 0.9fr)
-      minmax(90px, 0.7fr)
-      minmax(110px, 0.85fr)
-      minmax(90px, 0.65fr)
-      minmax(150px, 1fr)
-      minmax(150px, max-content);
-    gap: 12px;
-    align-items: center;
-    padding: 11px 16px;
-  }
-
-  .mobileLabel {
-    display: none;
-  }
-
   .formGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .actionCell {
-    justify-content: flex-start;
-    align-self: center;
   }
 }

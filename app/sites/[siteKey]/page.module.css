@@ -82,8 +82,34 @@
   background-color: var(--erp-white);
 }
 
+.listViewport {
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
+}
+
+.listTrack {
+  min-width: 980px;
+}
+
 .listHead {
-  display: none;
+  display: grid;
+  grid-template-columns:
+    minmax(220px, 1.45fr)
+    minmax(110px, 0.8fr)
+    minmax(130px, 0.9fr)
+    minmax(190px, 1fr)
+    minmax(150px, 0.95fr)
+    72px;
+  gap: 12px;
+  padding: 9px 16px 8px;
+  border-bottom: 1px solid var(--erp-line);
+  background-color: var(--erp-panel-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--erp-text-muted);
 }
 
 .reportList {
@@ -92,8 +118,16 @@
 
 .reportRow {
   display: grid;
-  gap: 10px 12px;
-  padding: 14px 16px;
+  grid-template-columns:
+    minmax(220px, 1.45fr)
+    minmax(110px, 0.8fr)
+    minmax(130px, 0.9fr)
+    minmax(190px, 1fr)
+    minmax(150px, 0.95fr)
+    72px;
+  gap: 12px;
+  align-items: center;
+  padding: 11px 16px;
   border-bottom: 1px solid var(--erp-line);
 }
 
@@ -117,16 +151,6 @@
   min-width: 0;
 }
 
-.mobileLabel {
-  display: block;
-  margin-bottom: 4px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--erp-text-muted);
-}
-
 .reportLink {
   display: block;
   width: 100%;
@@ -134,9 +158,9 @@
   font-weight: 700;
   line-height: 1.3;
   color: var(--erp-dark);
-  white-space: normal;
-  word-break: keep-all;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .reportLink:hover {
@@ -144,18 +168,22 @@
 }
 
 .dataValue {
+  display: block;
   font-size: 13px;
   line-height: 1.4;
   color: var(--erp-dark);
-  white-space: normal;
-  word-break: keep-all;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .progressStack {
   display: grid;
-  gap: 6px;
-  width: min(100%, 220px);
+  grid-template-columns: minmax(108px, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
 }
 
 .progressTrack {
@@ -183,17 +211,13 @@
   font-size: 12px;
   font-weight: 600;
   color: var(--erp-mid);
+  white-space: nowrap;
 }
 
 .actionCell {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  justify-content: center;
   align-items: center;
-}
-
-.actionCell :global(.app-button) {
-  white-space: nowrap;
 }
 
 .emptyState {
@@ -214,19 +238,15 @@
     padding: 10px;
   }
 
+  .listTrack {
+    min-width: 920px;
+  }
+
+  .listHead,
   .reportRow {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px 12px;
-    padding: 12px 10px;
-  }
-
-  .primaryCell,
-  .actionCell {
-    grid-column: 1 / -1;
-  }
-
-  .mobileLabel {
-    margin-bottom: 3px;
+    gap: 10px;
+    padding-left: 10px;
+    padding-right: 10px;
   }
 
   .reportLink {
@@ -236,19 +256,6 @@
   .dataValue,
   .progressText {
     font-size: 12px;
-  }
-
-  .progressStack {
-    width: 100%;
-  }
-
-  .actionsCell {
-    justify-content: stretch;
-  }
-
-  .actionsCell :global(.app-button) {
-    flex: 1 1 100%;
-    justify-content: center;
   }
 }
 
@@ -261,50 +268,14 @@
     padding: 18px 22px 22px;
   }
 
+  .listTrack {
+    min-width: 960px;
+  }
+
+  .listHead,
   .reportRow {
-    grid-template-columns:
-      minmax(220px, 1.45fr)
-      minmax(120px, 0.85fr)
-      minmax(150px, 1fr)
-      minmax(160px, 1fr)
-      auto;
-    grid-template-areas:
-      'title title drafter lastSaved actions'
-      'reportDate progress progress lastSaved actions';
-    gap: 10px 12px;
-    align-items: center;
-    padding: 12px 14px;
-  }
-
-  .titleCell {
-    grid-area: title;
-  }
-
-  .reportDateCell {
-    grid-area: reportDate;
-  }
-
-  .drafterCell {
-    grid-area: drafter;
-  }
-
-  .progressArea {
-    grid-area: progress;
-  }
-
-  .lastSavedCell {
-    grid-area: lastSaved;
-  }
-
-  .actionsCell {
-    grid-area: actions;
-    justify-content: flex-end;
-    align-self: center;
-  }
-
-  .progressStack {
-    width: 100%;
-    max-width: none;
+    padding-left: 14px;
+    padding-right: 14px;
   }
 }
 
@@ -318,47 +289,5 @@
 
   .pageGrid {
     padding: 20px 28px 24px;
-  }
-
-  .listHead {
-    display: grid;
-    grid-template-columns:
-      minmax(220px, 1.45fr)
-      minmax(110px, 0.8fr)
-      minmax(130px, 0.9fr)
-      minmax(170px, 0.95fr)
-      minmax(150px, 0.95fr)
-      minmax(180px, max-content);
-    gap: 12px;
-    padding: 9px 16px 8px;
-    border-bottom: 1px solid var(--erp-line);
-    background-color: var(--erp-panel-muted);
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--erp-text-muted);
-  }
-
-  .reportRow {
-    grid-template-columns:
-      minmax(220px, 1.45fr)
-      minmax(110px, 0.8fr)
-      minmax(130px, 0.9fr)
-      minmax(170px, 0.95fr)
-      minmax(150px, 0.95fr)
-      minmax(180px, max-content);
-    gap: 12px;
-    align-items: center;
-    padding: 11px 16px;
-  }
-
-  .mobileLabel {
-    display: none;
-  }
-
-  .actionCell {
-    justify-content: flex-start;
-    align-self: center;
   }
 }
