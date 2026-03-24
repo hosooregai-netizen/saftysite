@@ -1,9 +1,18 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import AppModal from '@/components/ui/AppModal';
-import { INSPECTION_SECTIONS, getSectionCompletion } from '@/constants/inspectionSession';
+import {
+  INSPECTION_SECTIONS,
+  getSectionCompletion,
+  getSessionTitle,
+} from '@/constants/inspectionSession';
+import { useInspectionSessions } from '@/hooks/useInspectionSessions';
+import {
+  WorkerMenuButton,
+  WorkerMenuDrawer,
+  WorkerMenuPanel,
+} from '@/components/worker/WorkerMenu';
 import styles from '@/components/session/InspectionSessionWorkspace.module.css';
 import type {
   InspectionSectionKey,
@@ -33,7 +42,7 @@ interface WorkspaceShellProps {
 }
 
 export default function WorkspaceShell({
-  backHref,
+  backHref: _backHref,
   currentSection,
   currentSectionIndex,
   currentSectionMeta: _currentSectionMeta,
@@ -53,6 +62,8 @@ export default function WorkspaceShell({
   uploadError,
 }: WorkspaceShellProps) {
   const [metaModalOpen, setMetaModalOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const { currentUser, sites, logout } = useInspectionSessions();
   const currentSectionInfo =
     INSPECTION_SECTIONS.find((section) => section.key === currentSection) ||
     INSPECTION_SECTIONS[0];
@@ -65,146 +76,166 @@ export default function WorkspaceShell({
       <div className="app-container">
         <section className={`app-shell ${styles.shell}`}>
           <header className={styles.header}>
-            <div className={styles.headerMain}>
-              <Link href={backHref} className={styles.backLink}>
-                보고서 목록으로
-              </Link>
-              <div>
-                <h1 className={styles.headerTitle}>{session.meta.siteName || '보고서'}</h1>
+            <div className={styles.headerTop}>
+              <div className={styles.mobileMenuOnly}>
+                <WorkerMenuButton onClick={() => setMenuOpen(true)} />
               </div>
             </div>
 
-            <div className={styles.headerSide}>
-              <div className={styles.progressCard}>
-                <div className={styles.progressMeta}>
-                  <strong className={styles.progressValue}>
-                    {progress.completed}/{progress.total} ({progress.percentage}%)
-                  </strong>
-                </div>
-                <div className={styles.progressTrack} aria-hidden="true">
-                  <span
-                    className={styles.progressFill}
-                    style={{ width: `${progress.percentage}%` }}
-                  />
-                </div>
+            <div className={styles.headerBody}>
+              <div className={styles.headerMain}>
+                <h1 className={styles.headerTitle}>{getSessionTitle(session)}</h1>
               </div>
 
-              <div className={styles.headerActions}>
-                <button type="button" className="app-button app-button-secondary" onClick={onSave}>
-                  {isSaving ? '저장 중...' : '지금 저장'}
-                </button>
-              </div>
-
-              {uploadError ? <p className={styles.headerError}>{uploadError}</p> : null}
-              {syncError ? <p className={styles.headerError}>{syncError}</p> : null}
-              {documentError ? <p className={styles.headerError}>{documentError}</p> : null}
-            </div>
-          </header>
-
-          <div className={styles.workspace}>
-            <div className={styles.topRail}>
-              <div className={styles.topRailHeader}>
-                <div className={styles.topRailActions}>
-                  <div className={styles.topRailPrimaryActions}>
-                    <button
-                      type="button"
-                      className="app-button app-button-secondary"
-                      onClick={() => setMetaModalOpen(true)}
-                    >
-                      기본 정보
-                    </button>
-                    <button
-                      type="button"
-                      className="app-button app-button-secondary"
-                      onClick={onSave}
-                    >
-                      {isSaving ? '저장 중...' : '저장'}
-                    </button>
+              <div className={styles.headerSide}>
+                <div className={styles.progressCard}>
+                  <div className={styles.progressCluster}>
+                    <div className={styles.progressSummary}>
+                      <strong className={styles.progressValue}>
+                        {progress.completed}/{progress.total} ({progress.percentage}%)
+                      </strong>
+                      <span className={styles.progressCaption}>진행률</span>
+                    </div>
+                    <div className={styles.progressTrack} aria-hidden="true">
+                      <span
+                        className={styles.progressFill}
+                        style={{ width: `${progress.percentage}%` }}
+                      />
+                    </div>
                   </div>
 
-                  <div className={styles.topRailStatus}>
-                    <span className="app-chip">
-                      문서 {currentSectionIndex + 1}/{INSPECTION_SECTIONS.length}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className={styles.quickControls}>
-                <label className={styles.sectionPicker}>
-                  <select
-                    className="app-select"
-                    value={currentSection}
-                    onChange={(event) =>
-                      onSectionSelect(event.target.value as InspectionSectionKey)
-                    }
-                  >
-                    {INSPECTION_SECTIONS.map((section) => (
-                      <option key={section.key} value={section.key}>
-                        {`${section.compactLabel}. ${section.shortLabel}`}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <div className={styles.quickMoveButtons}>
                   <button
                     type="button"
                     className="app-button app-button-secondary"
-                    disabled={!canMovePrev}
-                    onClick={() => moveSection(-1)}
+                    onClick={onSave}
                   >
-                    이전
-                  </button>
-                  <button
-                    type="button"
-                    className="app-button app-button-primary"
-                    disabled={!canMoveNext}
-                    onClick={() => moveSection(1)}
-                  >
-                    다음
+                    {isSaving ? '저장 중...' : '저장하기'}
                   </button>
                 </div>
+
+                {uploadError ? <p className={styles.headerError}>{uploadError}</p> : null}
+                {syncError ? <p className={styles.headerError}>{syncError}</p> : null}
+                {documentError ? <p className={styles.headerError}>{documentError}</p> : null}
               </div>
-
-              <nav className={styles.navRail} aria-label="문서 이동">
-                {INSPECTION_SECTIONS.map((section) => {
-                  const isActive = section.key === currentSection;
-                  const isCompleted = getSectionCompletion(session, section.key);
-
-                  return (
-                    <button
-                      key={section.key}
-                      type="button"
-                      className={[
-                        styles.navTab,
-                        isActive ? styles.navTabActive : '',
-                        isCompleted ? styles.navTabCompleted : '',
-                      ]
-                        .filter(Boolean)
-                        .join(' ')}
-                      onClick={() => onSectionSelect(section.key)}
-                    >
-                      <span className={styles.navIndex}>{section.compactLabel}</span>
-                      <span className={styles.navTabText}>
-                        <strong>{section.shortLabel}</strong>
-                      </span>
-                    </button>
-                  );
-                })}
-              </nav>
             </div>
+          </header>
 
-            <section className={styles.editor}>
-              <div className={styles.editorCard}>
-                <div className={styles.editorHeader}>
-                  <div>
-                    <h2 className={styles.editorTitle}>{currentSectionInfo.label}</h2>
+          <div className={styles.shellBody}>
+            <aside className={styles.menuSidebar}>
+              <WorkerMenuPanel
+                currentUserName={currentUser?.name}
+                siteCount={sites.length}
+                onLogout={logout}
+              />
+            </aside>
+
+            <div className={styles.workspacePanel}>
+              <div className={styles.workspace}>
+                <div className={styles.topRail}>
+                  <div className={styles.topRailHeader}>
+                    <div className={styles.topRailActions}>
+                      <div className={styles.topRailPrimaryActions}>
+                        <button
+                          type="button"
+                          className="app-button app-button-secondary"
+                          onClick={() => setMetaModalOpen(true)}
+                        >
+                          기본 정보
+                        </button>
+                        <button
+                          type="button"
+                          className="app-button app-button-secondary"
+                          onClick={onSave}
+                        >
+                          {isSaving ? '저장 중...' : '저장'}
+                        </button>
+                      </div>
+
+                      <div className={styles.topRailStatus}>
+                        <span className="app-chip">
+                          문서 {currentSectionIndex + 1}/{INSPECTION_SECTIONS.length}
+                        </span>
+                      </div>
+                    </div>
                   </div>
+
+                  <div className={styles.quickControls}>
+                    <label className={styles.sectionPicker}>
+                      <select
+                        className="app-select"
+                        value={currentSection}
+                        onChange={(event) =>
+                          onSectionSelect(event.target.value as InspectionSectionKey)
+                        }
+                      >
+                        {INSPECTION_SECTIONS.map((section) => (
+                          <option key={section.key} value={section.key}>
+                            {`${section.compactLabel}. ${section.shortLabel}`}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <div className={styles.quickMoveButtons}>
+                      <button
+                        type="button"
+                        className="app-button app-button-secondary"
+                        disabled={!canMovePrev}
+                        onClick={() => moveSection(-1)}
+                      >
+                        이전
+                      </button>
+                      <button
+                        type="button"
+                        className="app-button app-button-primary"
+                        disabled={!canMoveNext}
+                        onClick={() => moveSection(1)}
+                      >
+                        다음
+                      </button>
+                    </div>
+                  </div>
+
+                  <nav className={styles.navRail} aria-label="문서 이동">
+                    {INSPECTION_SECTIONS.map((section) => {
+                      const isActive = section.key === currentSection;
+                      const isCompleted = getSectionCompletion(session, section.key);
+
+                      return (
+                        <button
+                          key={section.key}
+                          type="button"
+                          className={[
+                            styles.navTab,
+                            isActive ? styles.navTabActive : '',
+                            isCompleted ? styles.navTabCompleted : '',
+                          ]
+                            .filter(Boolean)
+                            .join(' ')}
+                          onClick={() => onSectionSelect(section.key)}
+                        >
+                          <span className={styles.navIndex}>{section.compactLabel}</span>
+                          <span className={styles.navTabText}>
+                            <strong>{section.shortLabel}</strong>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </nav>
                 </div>
-                <div className={styles.editorBody}>{renderSection}</div>
+
+                <section className={styles.editor}>
+                  <div className={styles.editorCard}>
+                    <div className={styles.editorHeader}>
+                      <div>
+                        <h2 className={styles.editorTitle}>{currentSectionInfo.label}</h2>
+                      </div>
+                    </div>
+                    <div className={styles.editorBody}>{renderSection}</div>
+                  </div>
+                </section>
               </div>
-            </section>
+            </div>
           </div>
 
           <footer className={styles.bottomBar}>
@@ -287,6 +318,14 @@ export default function WorkspaceShell({
           </div>
         </div>
       </AppModal>
+
+      <WorkerMenuDrawer
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        currentUserName={currentUser?.name}
+        siteCount={sites.length}
+        onLogout={logout}
+      />
     </main>
   );
 }

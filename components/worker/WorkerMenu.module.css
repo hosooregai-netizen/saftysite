@@ -1,0 +1,121 @@
+.panel {
+  display: grid;
+  gap: 14px;
+}
+
+.title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--erp-text-muted);
+}
+
+.navList {
+  display: grid;
+  gap: 8px;
+}
+
+.navLink {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid var(--erp-line);
+  background: var(--erp-white);
+  text-align: left;
+  color: var(--erp-dark);
+}
+
+.navLinkActive {
+  border-color: var(--erp-mid);
+  background: #eaf1f8;
+}
+
+.navLabel {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--erp-dark);
+}
+
+.navDescription {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--erp-text-muted);
+}
+
+.metaCard {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--erp-line);
+  background: var(--erp-white);
+}
+
+.metaRow {
+  display: grid;
+  gap: 4px;
+}
+
+.metaLabel {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--erp-text-muted);
+}
+
+.metaValue {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--erp-dark);
+}
+
+.actions {
+  display: grid;
+  gap: 8px;
+}
+
+.menuButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(213, 222, 234, 0.5);
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--erp-white);
+}
+
+.menuButtonDots {
+  display: grid;
+  gap: 3px;
+  justify-items: center;
+}
+
+.menuButtonDots span {
+  display: block;
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.drawerBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: rgba(10, 19, 32, 0.42);
+}
+
+.drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 71;
+  width: min(84vw, 320px);
+  padding: 20px 16px;
+  border-right: 1px solid var(--erp-line);
+  background: #f6f9fc;
+  overflow-y: auto;
+}
