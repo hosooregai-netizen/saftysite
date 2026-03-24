@@ -597,9 +597,6 @@ function mapSessionToTemplateBinding(session: InspectionSession): TemplateBindin
   if (valueOrBlank(overview.notificationRecipientSignature)) {
     warnings.push('Section 2 signature is text-only in the current template and is rendered as an asset label.');
   }
-  if (valueOrBlank(overview.workPlanChecks.otherHighRiskWork)) {
-    warnings.push('document2Overview.workPlanChecks.otherHighRiskWork has no placeholder in the current template.');
-  }
 
   const fixedScenes = padFixedSlots(session.document3Scenes.slice(0, 2), 2, createEmptyScene);
   const extraScenes = padFixedSlots(session.document3Scenes.slice(2, 6), 4, createEmptyScene);

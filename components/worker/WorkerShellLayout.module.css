@@ -7,6 +7,7 @@
   min-height: 0;
   align-items: stretch;
   overflow: hidden;
+  transition: grid-template-columns 0.28s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .workerShellBodyCollapsed {
@@ -17,6 +18,7 @@
   .workerShellBody,
   .workerShellBodyCollapsed {
     grid-template-columns: minmax(0, 1fr);
+    transition: none;
   }
 }
 
@@ -28,6 +30,7 @@
       #f6f9fc 248px,
       var(--erp-white) 248px
     );
+    transition: background 0.28s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .workerShellBodyGradient.workerShellBodyCollapsed {
@@ -53,12 +56,18 @@
   border-right: 1px solid var(--erp-line);
   background: #f6f9fc;
   padding: 12px 10px 18px;
+  transition: padding 0.28s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .menuSidebarCollapsed {
   cursor: pointer;
   padding-left: 8px;
   padding-right: 8px;
+}
+
+/* 축소: 네비·활성 아이콘 숨김 — 햄버거 토글만 표시 */
+.menuSidebarPanelHidden {
+  display: none;
 }
 
 @media (max-width: 1199px) {
@@ -71,25 +80,49 @@
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  justify-content: center;
   width: 100%;
-  min-height: 32px;
+  box-sizing: border-box;
+  height: 40px;
+  min-height: 40px;
+  max-height: 40px;
   margin-bottom: 8px;
-  padding: 4px 6px;
+  padding: 0 8px;
   border: none;
-  border-radius: var(--erp-radius-control);
-  background: rgba(31, 48, 69, 0.06);
+  border-radius: 6px;
+  background: transparent;
   color: var(--erp-mid);
-  font-size: var(--text-body);
-  font-weight: 700;
-  line-height: 1;
+  line-height: 0;
   cursor: pointer;
-  transition: background-color 0.12s ease, color 0.12s ease;
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease;
+}
+
+.sidebarToggleCollapsed {
+  justify-content: center;
+}
+
+.sidebarToggleExpanded {
+  justify-content: flex-start;
+  gap: 8px;
 }
 
 .sidebarToggle:hover {
-  background: rgba(31, 48, 69, 0.1);
+  background: rgba(31, 48, 69, 0.07);
   color: var(--erp-dark);
+}
+
+.sidebarToggleIcon {
+  display: block;
+  flex-shrink: 0;
+}
+
+.sidebarToggleLabel {
+  font-size: var(--text-ui-sm);
+  font-weight: 600;
+  line-height: 1.2;
+  color: inherit;
+  white-space: nowrap;
 }
 
 .sidebarToggle:focus-visible {

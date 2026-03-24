@@ -22,9 +22,13 @@
   margin: 0;
   font-size: var(--text-ui-sm);
   font-weight: 700;
+  line-height: 1.25;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--erp-text-muted);
+  /* 확장·축소 동일 높이(숨김 시에도 레이아웃 유지) */
+  min-height: calc(var(--text-ui-sm) * 1.25);
+  box-sizing: border-box;
 }
 
 .menuList {
@@ -35,23 +39,34 @@
 .menuItem {
   display: grid;
   gap: 4px;
-  padding: 12px;
-  border: 1px solid var(--erp-line);
-  background: var(--erp-white);
+  padding: 12px 12px 12px 14px;
+  border: none;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.95);
   text-align: left;
   color: var(--erp-dark);
   text-decoration: none;
-  border-radius: var(--erp-radius-control, 2px);
-  transition: border-color 0.12s ease, background-color 0.12s ease;
+  box-shadow: inset 0 0 0 1px rgba(219, 226, 234, 0.65);
+  transition:
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .menuItem:hover {
-  border-color: var(--erp-mid);
+  background: rgba(255, 255, 255, 1);
+  box-shadow: inset 0 0 0 1px rgba(188, 199, 211, 0.9);
 }
 
 .menuItemActive {
-  border-color: var(--erp-mid);
-  background: #eaf1f8;
+  border-radius: 4px;
+  background: rgba(31, 48, 69, 0.06);
+  box-shadow:
+    inset 4px 0 0 var(--erp-navy),
+    inset 0 0 0 1px rgba(219, 226, 234, 0.35);
+}
+
+.menuItemActive:hover {
+  background: rgba(31, 48, 69, 0.08);
 }
 
 .menuItemLabel {
@@ -66,6 +81,22 @@
   color: var(--erp-text-muted);
 }
 
+/* 확장: 기술 지도 — 제목·부제 한 줄 (가로 배치) */
+.menuItemTechGuideLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 0.35em;
+  min-width: 0;
+  line-height: 1.45;
+}
+
+.menuItemTechGuideSep {
+  color: var(--erp-text-muted);
+  font-size: var(--text-ui-sm);
+  font-weight: 500;
+}
+
 .srOnly {
   position: absolute;
   width: 1px;
@@ -78,28 +109,24 @@
   border-width: 0;
 }
 
+/* 축소 시에도 확장과 동일한 블록 높이 유지 → 아이콘 세로 위치 정렬 */
 .sectionTitleHidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border-width: 0;
+  visibility: hidden;
+  user-select: none;
+  pointer-events: none;
 }
 
 .sectionCollapsed .menuList {
-  gap: 6px;
+  gap: 8px;
 }
 
 .menuItemCollapsed {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 44px;
-  padding: 8px 6px;
+  min-height: 0;
+  /* 확장 행과 동일한 상·하 패딩 → 아이콘 세로 위치 정렬 */
+  padding: 12px 8px;
   gap: 0;
 }
 
@@ -126,6 +153,7 @@
 }
 
 .menuItemActive .menuItemGlyph {
+  border-radius: 0;
   background: rgba(31, 48, 69, 0.16);
   color: var(--erp-navy);
 }

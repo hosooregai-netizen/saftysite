@@ -611,10 +611,219 @@
 .formGrid,
 .dualUploadGrid,
 .findingGrid,
-.infoTableGrid,
 .chartGrid {
   display: grid;
   gap: 14px;
+}
+
+.infoTableGrid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+}
+
+/* 기술지도 개요(doc2) 상단: 한 줄당 한 행, fr 비율 = 가로 폭 비율 (모든 뷰포트 동일) */
+.doc2OverviewForm {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.doc2OverviewRow {
+  display: grid;
+  gap: 14px;
+  align-items: start;
+  min-width: 0;
+}
+
+.doc2OverviewRow .field {
+  min-width: 0;
+}
+
+.doc2OverviewRow :global(.app-input),
+.doc2OverviewRow :global(.app-select) {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* 실시일 | (공정률·회차·총회차) = 1:1 → 아래 줄 공사구분|통보방법(1:1)과 세로 구분선 정렬 */
+.doc2OverviewRowDates {
+  grid-template-columns: 1fr 1fr;
+}
+
+.doc2OverviewDatesRight {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 14px;
+  align-items: start;
+  min-width: 0;
+}
+
+.doc2OverviewDatesRight .field {
+  min-width: 0;
+}
+
+.doc2OverviewDatesRight :global(.app-input),
+.doc2OverviewDatesRight :global(.app-select) {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.doc2OverviewRowFollow {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+.doc2OverviewRowNotify {
+  grid-template-columns: 1fr 1fr;
+}
+
+.doc2OverviewSignatureWrap {
+  width: 100%;
+  min-width: 0;
+}
+
+.doc2OverviewOtherField {
+  max-width: 100%;
+}
+
+/* 산업재해: 발생유무·최근일자·재해형태 — 모든 뷰포트 1:1:1 */
+.doc2AccidentRowThree {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+  grid-column: 1 / -1;
+  width: 100%;
+  min-width: 0;
+}
+
+.doc2AccidentRowThree .field {
+  min-width: 0;
+}
+
+.doc2DateDialog {
+  width: min(100vw - 32px, 400px);
+  max-width: calc(100vw - 24px);
+  padding: 20px;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-card);
+  background: var(--erp-white);
+  box-shadow: 0 16px 48px rgba(15, 23, 42, 0.18);
+}
+
+.doc2DateDialog::backdrop {
+  background: rgba(15, 23, 42, 0.4);
+}
+
+.doc2DateDialogTitle {
+  margin: 0 0 14px;
+  font-size: var(--text-title);
+  font-weight: 700;
+  color: var(--erp-dark);
+}
+
+.doc2DateDialogPickers {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.doc2DateDialogField {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.doc2DateDialogActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* 작업계획서 12종: 단일 표 — 제목행 1 + 본문 6행 × 4열(2×2쌍), 사실상 4×7 */
+.workPlanSection {
+  min-width: 0;
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.workPlanTable {
+  width: 100%;
+  min-width: min(100%, 520px);
+  border-collapse: collapse;
+  border: 1px solid var(--erp-line);
+  background: var(--erp-white);
+  table-layout: fixed;
+}
+
+/* 작업명:여부 ≈ 5:3 (4열 = 5+3+5+3) */
+.workPlanColTitle {
+  width: 31.25%;
+}
+
+.workPlanColNarrow {
+  width: 18.75%;
+}
+
+.workPlanCaption {
+  caption-side: top;
+  margin: 0 0 10px;
+  padding: 0;
+  font-size: var(--text-title);
+  font-weight: 700;
+  color: var(--erp-dark);
+  text-align: left;
+}
+
+.workPlanTable thead th {
+  padding: 8px 10px;
+  border: 1px solid var(--erp-line);
+  background: var(--erp-panel-muted);
+  font-size: var(--text-ui-sm);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--erp-mid);
+  text-align: left;
+}
+
+.workPlanThNarrow {
+  padding-left: 8px;
+  padding-right: 8px;
+  text-align: center;
+}
+
+.workPlanTable tbody td {
+  padding: 8px 10px;
+  border: 1px solid var(--erp-line);
+  vertical-align: middle;
+}
+
+.workPlanTdLabel {
+  font-size: var(--text-ui);
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--erp-text-muted);
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.workPlanTdSelect {
+  padding: 6px 8px;
+}
+
+.workPlanTdSelect :global(.app-select) {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  font-size: var(--text-ui-sm);
 }
 
 .metaField,
@@ -718,8 +927,7 @@
 
 .filePreview,
 .caseBody,
-.noticeBody,
-.sceneAddPanel {
+.noticeBody {
   display: grid;
   gap: 10px;
   padding: 16px;
@@ -841,25 +1049,25 @@
   display: none;
 }
 
-.sceneAddPanel {
-  border: 1px dashed var(--erp-line-strong);
-  border-radius: var(--erp-radius-card);
-  background-color: var(--erp-panel-muted);
-  justify-items: start;
+.doc3SceneStack {
+  min-width: 0;
 }
 
-.sceneAddTitle {
-  color: var(--erp-dark);
-  font-size: var(--text-body-md);
-  font-weight: 700;
+@media (min-width: 900px) {
+  .doc3SceneStack {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
-.sceneAddDescription {
-  font-size: var(--text-body);
-  line-height: 1.7;
-  color: var(--erp-text-muted);
-  word-break: keep-all;
-  overflow-wrap: anywhere;
+.doc3FullRow {
+  grid-column: 1 / -1;
+}
+
+.doc3AddRow {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  cursor: pointer;
 }
 
 .fieldAssist {
@@ -904,7 +1112,6 @@
   }
 
   .dualUploadGrid,
-  .infoTableGrid,
   .chartGrid,
   .caseGrid,
   .measureRow {

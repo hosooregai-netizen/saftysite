@@ -128,10 +128,13 @@ export function WorkerMenuPanel({
                 <span className={styles.srOnly}>기술 지도, 배정된 고객사 현장</span>
               </>
             ) : (
-              <>
+              <span className={styles.menuItemTechGuideLine}>
                 <span className={styles.menuItemLabel}>기술 지도</span>
+                <span className={styles.menuItemTechGuideSep} aria-hidden="true">
+                  /
+                </span>
                 <span className={styles.menuItemDescription}>배정된 고객사 현장</span>
-              </>
+              </span>
             )}
           </Link>
           {items.map((item) => (

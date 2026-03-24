@@ -15,7 +15,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 0;
+  min-height: 32px;
 }
 
 .heroBackLink {
@@ -91,10 +91,10 @@
 
 .summaryCard {
   display: grid;
-  gap: 4px;
+  gap: 6px;
   align-self: start;
   width: 100%;
-  padding: 10px 14px;
+  padding: 15px 18px;
   border: 1px solid var(--erp-line);
   border-radius: var(--erp-radius-card);
   background: var(--erp-white);
@@ -102,7 +102,7 @@
 }
 
 .summaryCardLabel {
-  font-size: var(--text-kicker);
+  font-size: var(--text-ui-sm);
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -110,7 +110,7 @@
 }
 
 .summaryCardValue {
-  font-size: var(--text-title);
+  font-size: var(--text-lead);
   font-weight: 700;
   line-height: 1.2;
   color: var(--erp-dark);
@@ -119,7 +119,7 @@
 }
 
 .summaryCardValueWide {
-  font-size: var(--text-body-lg);
+  font-size: var(--text-body-md);
   font-weight: 600;
   line-height: 1.45;
 }
@@ -358,21 +358,21 @@
   }
 
   .summaryCard {
-    gap: 4px;
-    padding: 8px 10px;
+    gap: 6px;
+    padding: 12px 14px;
   }
 
   .summaryCardLabel {
-    font-size: var(--text-micro);
+    font-size: var(--text-kicker);
     letter-spacing: 0.04em;
   }
 
   .summaryCardValue {
-    font-size: var(--text-body-md);
+    font-size: var(--text-title);
   }
 
   .summaryCardValueWide {
-    font-size: var(--text-body);
+    font-size: var(--text-body-lg);
   }
 
   .tableTools {

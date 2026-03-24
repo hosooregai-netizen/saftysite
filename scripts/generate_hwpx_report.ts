@@ -19,8 +19,7 @@ type WorkPlanCheckKey =
   | 'electricalWork'
   | 'heavyMaterialHandling'
   | 'earthwork'
-  | 'railwayFacilityMaintenance'
-  | 'otherHighRiskWork';
+  | 'railwayFacilityMaintenance';
 type RepeatBlockPath = 'sec7.findings' | 'sec8.plans' | 'sec11.education' | 'sec12.activities';
 
 interface ExistingWebReportData {
@@ -987,11 +986,6 @@ function mapWebDataToTemplateBinding(data: ExistingWebReportData): TemplateBindi
   if (valueOrBlank(overview.notificationRecipientSignature)) {
     warnings.push(
       'Section 2 signature placeholder is text-only in the current template-ready HWPX. The binding writes a short asset label instead of embedding the signature image.',
-    );
-  }
-  if (valueOrBlank(overview.workPlanChecks.otherHighRiskWork)) {
-    warnings.push(
-      'document2Overview.workPlanChecks.otherHighRiskWork exists in web data but the current template-ready HWPX has no matching placeholder, so it is skipped.',
     );
   }
 

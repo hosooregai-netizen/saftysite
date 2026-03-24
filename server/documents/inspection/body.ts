@@ -359,7 +359,7 @@ export function buildInspectionDocumentBody(
     table(
       [
         [textCell('지도기관명', { bold: true, shaded: true }), textCell(overview.guidanceAgencyName || '한국종합안전주식회사'), textCell('기술지도실시일', { bold: true, shaded: true }), textCell(formatDate(overview.guidanceDate))],
-        [textCell('구분', { bold: true, shaded: true }), textCell(overview.constructionType || '건설공사'), textCell('공정율', { bold: true, shaded: true }), textCell(overview.progressRate || '-')],
+        [textCell('공사구분', { bold: true, shaded: true }), textCell(overview.constructionType || '건설공사'), textCell('공정률', { bold: true, shaded: true }), textCell(overview.progressRate || '-')],
         [textCell('횟수', { bold: true, shaded: true }), textCell(`(${overview.visitCount || '-'})회차 / 총(${overview.totalVisitCount || '-'})회`), textCell('담당요원', { bold: true, shaded: true }), textCell(overview.assignee || session.meta.drafter || '-')],
         [textCell('이전기술지도 이행여부', { bold: true, shaded: true }), textCell(labelImplementation(overview.previousImplementationStatus)), textCell('연락처', { bold: true, shaded: true }), textCell(overview.contact || '-')],
         [textCell('현장책임자 등 통보 방법', { bold: true, shaded: true }), textCell(`${overview.notificationRecipientName || '-'} / ${overview.notificationMethod || '-'}`, { colSpan: 3 })],
@@ -367,7 +367,7 @@ export function buildInspectionDocumentBody(
       [1800, 2800, 1800, 2800],
       { width: 9200 }
     ),
-    subsectionHeading('작업계획서 작성 확인(대상13종)'),
+    subsectionHeading('작업계획서 작성 확인(대상12종)'),
     gridTable(
       pairs(WORK_PLAN_ITEMS).map(([left, right]) => [
         left.label,

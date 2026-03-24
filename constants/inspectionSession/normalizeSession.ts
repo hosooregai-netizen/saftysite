@@ -26,6 +26,7 @@ import {
   asRecord,
   createEmptyAdminSiteSnapshot,
   createTimestamp,
+  createWorkPlanChecks,
   normalizeBoolean,
   normalizeReportNumber,
   normalizeSectionKey,
@@ -40,6 +41,10 @@ import type {
   InspectionSession,
   TechnicalGuidanceOverview,
 } from '@/types/inspectionSession';
+
+function normalizeAccidentOccurred(value: unknown): 'yes' | 'no' {
+  return value === 'yes' ? 'yes' : 'no';
+}
 
 export function normalizeInspectionSession(raw: unknown): InspectionSession {
   const source = asRecord(raw);
@@ -69,6 +74,8 @@ export function normalizeInspectionSession(raw: unknown): InspectionSession {
     document3Scenes.push(createSiteScenePhoto(getFixedSceneTitle(document3Scenes.length)));
   }
 
+  const doc2Partial = asRecord(source.document2Overview) as Partial<TechnicalGuidanceOverview>;
+
   const normalizedSession: InspectionSession = {
     ...session,
     id: normalizeText(source.id) || session.id,
@@ -82,7 +89,17 @@ export function normalizeInspectionSession(raw: unknown): InspectionSession {
     },
     adminSiteSnapshot,
     documentsMeta: normalizeDocumentMetaMap(source.documentsMeta),
-    document2Overview: { ...session.document2Overview, ...(asRecord(source.document2Overview) as Partial<TechnicalGuidanceOverview>) },
+    document2Overview: {
+      ...session.document2Overview,
+      ...doc2Partial,
+      accidentOccurred: normalizeAccidentOccurred(
+        doc2Partial.accidentOccurred ?? session.document2Overview.accidentOccurred
+      ),
+      workPlanChecks: createWorkPlanChecks({
+        ...session.document2Overview.workPlanChecks,
+        ...(doc2Partial.workPlanChecks ?? {}),
+      }),
+    },
     document3Scenes,
     document4FollowUps: Array.isArray(source.document4FollowUps) && source.document4FollowUps.length > 0
       ? source.document4FollowUps.map((item) => normalizeFollowUpItem(item, session.meta.reportDate))

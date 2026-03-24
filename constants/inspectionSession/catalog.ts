@@ -76,13 +76,19 @@ export const WORK_PLAN_ITEMS: Array<{ key: WorkPlanCheckKey; label: string }> = 
   { key: 'heavyMaterialHandling', label: '중량물 취급작업' },
   { key: 'earthwork', label: '굴착작업' },
   { key: 'railwayFacilityMaintenance', label: '궤도와 그 밖의 설비보수 작업' },
-  { key: 'otherHighRiskWork', label: '그 밖의 고위험 작업' },
 ];
 
 export const WORK_PLAN_STATUS_OPTIONS: Array<{ value: WorkPlanCheckStatus; label: string }> = [
   { value: 'written', label: '작성' },
   { value: 'not_written', label: '미작성' },
   { value: 'not_applicable', label: '해당없음' },
+];
+
+/** 중·소 화면용: 작성/미작성/해당없음 → O / X / - */
+export const WORK_PLAN_STATUS_OPTIONS_COMPACT: Array<{ value: WorkPlanCheckStatus; label: string }> = [
+  { value: 'written', label: 'O' },
+  { value: 'not_written', label: 'X' },
+  { value: 'not_applicable', label: '-' },
 ];
 
 export const NOTIFICATION_METHOD_OPTIONS: Array<{ value: NotificationMethod; label: string }> = [

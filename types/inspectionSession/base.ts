@@ -71,8 +71,7 @@ export type WorkPlanCheckKey =
   | 'electricalWork'
   | 'heavyMaterialHandling'
   | 'earthwork'
-  | 'railwayFacilityMaintenance'
-  | 'otherHighRiskWork';
+  | 'railwayFacilityMaintenance';
 
 export type WorkPlanCheckStatus = 'written' | 'not_written' | 'not_applicable';
 

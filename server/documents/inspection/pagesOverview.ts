@@ -75,8 +75,8 @@ function buildDoc1Doc2(session: InspectionSession): ReportPageDraft {
       <table class="info-table">${infoRows([
         { label: '지도기관명', value: overview.guidanceAgencyName || DEFAULT_GUIDANCE_AGENCY },
         { label: '기술지도실시일', value: formatDate(overview.guidanceDate) },
-        { label: '구분', value: overview.constructionType },
-        { label: '공정율', value: overview.progressRate },
+        { label: '공사구분', value: overview.constructionType },
+        { label: '공정률', value: overview.progressRate },
         { label: '횟수', value: `${overview.visitCount} / 총 ${overview.totalVisitCount}` },
         { label: '이전기술지도 이행여부', value: overview.previousImplementationStatus },
         { label: '현장책임자 등', value: overview.notificationRecipientName },
@@ -88,7 +88,7 @@ function buildDoc1Doc2(session: InspectionSession): ReportPageDraft {
         { label: '재해형태', value: overview.accidentType },
         { label: '재해개요', value: overview.accidentSummary },
       ])}</table>
-      <div class="subsection-title">작업계획서 작성 확인(대상 13종)</div>
+      <div class="subsection-title">작업계획서 작성 확인(대상 12종)</div>
       <table class="info-table compact-table">${workPlanRows}</table>
       <div class="subsection-title">진행공정 및 특이사항</div>
       <div class="text-block">${lineBreaks(overview.processAndNotes || '-')}</div>

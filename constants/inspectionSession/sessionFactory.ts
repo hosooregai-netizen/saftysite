@@ -65,7 +65,7 @@ function createTechnicalGuidanceOverview(
     notificationRecipientName: '',
     notificationRecipientSignature: '',
     otherNotificationMethod: '',
-    accidentOccurred: '',
+    accidentOccurred: 'no',
     recentAccidentDate: '',
     accidentType: '',
     accidentSummary: '',
