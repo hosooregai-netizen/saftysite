@@ -2,6 +2,7 @@
 
 import { useDeferredValue, useMemo, useState } from 'react';
 import AppModal from '@/components/ui/AppModal';
+import ActionMenu from '@/components/ui/ActionMenu';
 import ContentAssetField from '@/components/controller/ContentAssetField';
 import type { SafetyContentItem } from '@/types/backend';
 import {
@@ -117,7 +118,6 @@ export default function ContentItemsSection(props: ContentItemsSectionProps) {
       <div className={styles.sectionHeader}>
         <div>
           <h2 className={styles.sectionTitle}>콘텐츠 데이터 CRUD</h2>
-          <p className={styles.sectionDescription}>유형별로 분류해서 보고, 이미지형과 파일형은 업로드 방식에 맞춰 입력할 수 있습니다.</p>
         </div>
         <div className={styles.sectionHeaderActions}>
           <span className="app-chip">총 {filteredItems.length}개</span>
@@ -156,7 +156,7 @@ export default function ContentItemsSection(props: ContentItemsSectionProps) {
                     <th>내용 미리보기</th>
                     <th>첨부</th>
                     <th>수정일</th>
-                    <th>작업</th>
+                    <th>메뉴</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -174,9 +174,24 @@ export default function ContentItemsSection(props: ContentItemsSectionProps) {
                       <td>{getContentAttachmentSummary(item)}</td>
                       <td>{formatTimestamp(item.updated_at)}</td>
                       <td>
-                        <div className={styles.tableActions}>
-                          <button type="button" className="app-button app-button-secondary" onClick={() => openEdit(item)} disabled={busy}>수정</button>
-                          <button type="button" className="app-button app-button-danger" onClick={() => void onDeactivate(item.id)} disabled={busy || !item.is_active}>비활성화</button>
+                        <div className={styles.tableActionMenuWrap}>
+                          <ActionMenu
+                            label={`${item.title} 콘텐츠 작업 메뉴 열기`}
+                            items={[
+                              { label: '수정', onSelect: () => { if (!busy) openEdit(item); } },
+                              ...(item.is_active
+                                ? [
+                                    {
+                                      label: '비활성화',
+                                      tone: 'danger' as const,
+                                      onSelect: () => {
+                                        if (!busy) void onDeactivate(item.id);
+                                      },
+                                    },
+                                  ]
+                                : []),
+                            ]}
+                          />
                         </div>
                       </td>
                     </tr>

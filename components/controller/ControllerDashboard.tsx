@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import WorkerAppHeader from '@/components/worker/WorkerAppHeader';
 import WorkerMenuSidebar from '@/components/worker/WorkerMenuSidebar';
 import WorkerShellBody from '@/components/worker/WorkerShellBody';
@@ -8,12 +8,18 @@ import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { useControllerDashboard } from '@/hooks/controller/useControllerDashboard';
 import type { SafetyUser } from '@/types/backend';
 import styles from './ControllerDashboard.module.css';
+import { ControllerMenuDrawer, ControllerMenuPanel } from './ControllerMenu';
 import ContentItemsSection from './ContentItemsSection';
 import HeadquartersSection from './HeadquartersSection';
 import OverviewPanel from './OverviewPanel';
 import SitesSection from './SitesSection';
 import UsersSection from './UsersSection';
-import { CONTROLLER_SECTIONS, type ControllerSectionKey } from './shared';
+import {
+  CONTROLLER_SECTIONS,
+  getControllerSectionHref,
+  parseControllerSectionKey,
+  type ControllerSectionKey,
+} from './shared';
 
 interface ControllerDashboardProps {
   currentUser: SafetyUser;
@@ -24,15 +30,18 @@ export default function ControllerDashboard({
   currentUser,
   onLogout,
 }: ControllerDashboardProps) {
-  const [activeSection, setActiveSection] = useState<ControllerSectionKey>('overview');
   const [menuOpen, setMenuOpen] = useState(false);
   const dashboard = useControllerDashboard(true);
   const { sessions } = useInspectionSessions();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const busy = dashboard.isLoading || dashboard.isMutating;
+  const activeSection =
+    parseControllerSectionKey(searchParams.get('section')) ?? 'overview';
 
   const selectSection = (next: ControllerSectionKey) => {
-    setActiveSection(next);
     setMenuOpen(false);
+    router.replace(getControllerSectionHref(next));
   };
   const activeSectionMeta =
     CONTROLLER_SECTIONS.find((section) => section.key === activeSection) ?? CONTROLLER_SECTIONS[0];
@@ -102,31 +111,6 @@ export default function ControllerDashboard({
     }
   };
 
-  const menuButtons = CONTROLLER_SECTIONS.map((section) => (
-    <button
-      key={section.key}
-      type="button"
-      className={`${styles.menuButton} ${
-        activeSection === section.key ? styles.menuButtonActive : ''
-      }`}
-      onClick={() => selectSection(section.key)}
-    >
-      <span className={styles.menuLabel}>{section.label}</span>
-      <span className={styles.menuDescription}>{section.description}</span>
-    </button>
-  ));
-
-  const navigation = (
-    <div className={styles.menuPanel} id="worker-menu-nav-panel">
-      <section className={styles.menuSection} aria-labelledby="controller-menu-heading">
-        <h2 id="controller-menu-heading" className={styles.menuTitle}>
-          관리자 메뉴
-        </h2>
-        <div className={styles.menuList}>{menuButtons}</div>
-      </section>
-    </div>
-  );
-
   return (
     <main className="app-page">
       <div className="app-container">
@@ -140,7 +124,12 @@ export default function ControllerDashboard({
           />
 
           <WorkerShellBody>
-            <WorkerMenuSidebar>{navigation}</WorkerMenuSidebar>
+            <WorkerMenuSidebar>
+              <ControllerMenuPanel
+                activeSection={activeSection}
+                onSelectSection={selectSection}
+              />
+            </WorkerMenuSidebar>
 
             <div className={styles.contentColumn}>
               <header className={styles.hero}>
@@ -182,17 +171,12 @@ export default function ControllerDashboard({
         </section>
       </div>
 
-      {menuOpen ? (
-        <>
-          <button
-            type="button"
-            className={styles.drawerBackdrop}
-            onClick={() => setMenuOpen(false)}
-            aria-label="메뉴 닫기"
-          />
-          <aside className={styles.drawer}>{navigation}</aside>
-        </>
-      ) : null}
+      <ControllerMenuDrawer
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        activeSection={activeSection}
+        onSelectSection={selectSection}
+      />
     </main>
   );
 }

@@ -23,6 +23,17 @@ export const CONTROLLER_SECTIONS: Array<{
   { key: 'content', label: '콘텐츠', description: '콘텐츠 관리' },
 ];
 
+export function parseControllerSectionKey(value: string | null | undefined): ControllerSectionKey | null {
+  if (!value) return null;
+  return CONTROLLER_SECTIONS.some((section) => section.key === value)
+    ? (value as ControllerSectionKey)
+    : null;
+}
+
+export function getControllerSectionHref(section: ControllerSectionKey): string {
+  return `/admin?section=${section}`;
+}
+
 const ADMIN_USER_ROLES = new Set<SafetyUserRole>(['super_admin', 'admin', 'controller']);
 
 export const USER_ROLE_OPTIONS: Array<{ value: UserRoleView; label: string }> = [

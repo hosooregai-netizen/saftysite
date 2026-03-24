@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useDeferredValue, useMemo, useState } from 'react';
 import AppModal from '@/components/ui/AppModal';
+import ActionMenu from '@/components/ui/ActionMenu';
 import type { SafetySite, SafetyUser } from '@/types/backend';
 import { getSessionTitle } from '@/constants/inspectionSession';
 import type { InspectionSession } from '@/types/inspectionSession';
@@ -227,7 +228,6 @@ export default function UsersSection(props: UsersSectionProps) {
       <div className={styles.sectionHeader}>
         <div>
           <h2 className={styles.sectionTitle}>사용자 CRUD</h2>
-          <p className={styles.sectionDescription}>계정 목록을 테이블에서 보고 추가와 수정은 모달로 처리합니다.</p>
         </div>
         <div className={styles.sectionHeaderActions}>
           <span className="app-chip">표시 {filteredUsers.length} / 전체 {users.length}명</span>
@@ -266,7 +266,7 @@ export default function UsersSection(props: UsersSectionProps) {
                     <th>연락처</th>
                     <th>상태</th>
                     <th>최근 로그인</th>
-                    <th>작업</th>
+                    <th>메뉴</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -292,9 +292,14 @@ export default function UsersSection(props: UsersSectionProps) {
                         {assignedSites.length === 0 ? (
                           '-'
                         ) : (
-                          <div className={styles.tableActions}>
+                          <div className={styles.tableInlineLinks}>
                             {assignedSites.map((site) => (
-                              <Link key={site.id} href={`/sites/${encodeURIComponent(site.id)}`} className="app-button app-button-secondary">
+                              <Link
+                                key={site.id}
+                                href={`/sites/${encodeURIComponent(site.id)}`}
+                                className={styles.tableChipLink}
+                                title={site.site_name}
+                              >
                                 {site.site_name}
                               </Link>
                             ))}
@@ -305,33 +310,56 @@ export default function UsersSection(props: UsersSectionProps) {
                         {assignedSites.length === 0 ? (
                           '-'
                         ) : (
-                          <>
-                            <div className={styles.tablePrimary}>{reportCount}건</div>
-                            <div className={styles.tableActions} style={{ marginTop: 8 }}>
-                              {latestSession ? (
-                                <Link href={`/sessions/${encodeURIComponent(latestSession.id)}`} className="app-button app-button-primary">
-                                  최근 보고서
-                                </Link>
-                              ) : null}
-                              {assignedSites[0] ? (
-                                <Link href={`/sites/${encodeURIComponent(assignedSites[0].id)}`} className="app-button app-button-secondary">
-                                  보고서 목록
-                                </Link>
-                              ) : null}
-                            </div>
+                          <div className={styles.tableCellOneLine}>
+                            <span className={styles.tablePrimary}>{reportCount}건</span>
                             {latestSession ? (
-                              <div className={styles.tableSecondary}>{getSessionTitle(latestSession)}</div>
+                              <>
+                                <span className={styles.tableSep}>·</span>
+                                <Link
+                                  href={`/sessions/${encodeURIComponent(latestSession.id)}`}
+                                  className={styles.tableInlineLink}
+                                  title={getSessionTitle(latestSession)}
+                                >
+                                  최근
+                                </Link>
+                              </>
                             ) : null}
-                          </>
+                            {assignedSites[0] ? (
+                              <>
+                                <span className={styles.tableSep}>·</span>
+                                <Link
+                                  href={`/sites/${encodeURIComponent(assignedSites[0].id)}`}
+                                  className={styles.tableInlineLink}
+                                >
+                                  목록
+                                </Link>
+                              </>
+                            ) : null}
+                          </div>
                         )}
                       </td>
                       <td>{user.phone || '-'}</td>
                       <td>{user.is_active ? '활성' : '비활성'}</td>
                       <td>{formatTimestamp(user.last_login_at)}</td>
                       <td>
-                        <div className={styles.tableActions}>
-                          <button type="button" className="app-button app-button-secondary" onClick={() => openEdit(user)} disabled={busy}>수정</button>
-                          <button type="button" className="app-button app-button-danger" onClick={() => void onDeactivate(user.id)} disabled={busy || !user.is_active}>비활성화</button>
+                        <div className={styles.tableActionMenuWrap}>
+                          <ActionMenu
+                            label={`${user.name} 작업 메뉴 열기`}
+                            items={[
+                              { label: '수정', onSelect: () => { if (!busy) openEdit(user); } },
+                              ...(user.is_active
+                                ? [
+                                    {
+                                      label: '비활성화',
+                                      tone: 'danger' as const,
+                                      onSelect: () => {
+                                        if (!busy) void onDeactivate(user.id);
+                                      },
+                                    },
+                                  ]
+                                : []),
+                            ]}
+                          />
                         </div>
                       </td>
                     </tr>

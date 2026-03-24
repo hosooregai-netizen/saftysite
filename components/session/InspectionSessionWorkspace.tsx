@@ -3,6 +3,7 @@
 
 
 import LoginPanel from '@/components/auth/LoginPanel';
+import { getControllerSectionHref, isAdminUserRole } from '@/components/controller/shared';
 
 import { renderSectionBody, renderSectionToolbar } from '@/components/session/workspace/renderSectionBody';
 
@@ -97,6 +98,8 @@ export default function InspectionSessionWorkspace({
     authError,
 
     login,
+
+    currentUser,
 
     saveNow,
 
@@ -332,13 +335,18 @@ export default function InspectionSessionWorkspace({
 
   if (!session || !progress || !currentSectionMeta) return <MissingStatePanel />;
 
+  const fallbackBackHref =
+    currentUser && isAdminUserRole(currentUser.role)
+      ? getControllerSectionHref('sites')
+      : '/';
+
 
 
   return (
 
     <WorkspaceShell
 
-      backHref={site ? `/sites/${encodeURIComponent(site.id)}` : '/'}
+      backHref={site ? `/sites/${encodeURIComponent(site.id)}` : fallbackBackHref}
 
       currentSection={currentSection}
 

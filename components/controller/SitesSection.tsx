@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useDeferredValue, useMemo, useState } from 'react';
 import AppModal from '@/components/ui/AppModal';
+import ActionMenu from '@/components/ui/ActionMenu';
 import type { SafetySite, SafetyUser } from '@/types/backend';
 import type { SafetyAssignment, SafetyHeadquarter } from '@/types/controller';
 import SiteAssignmentModal from './SiteAssignmentModal';
@@ -182,7 +183,6 @@ export default function SitesSection(props: SitesSectionProps) {
       <div className={styles.sectionHeader}>
         <div>
           <h2 className={styles.sectionTitle}>현장 CRUD</h2>
-          <p className={styles.sectionDescription}>현장 목록은 테이블로, 추가와 수정은 모달 폼으로 정리했습니다.</p>
         </div>
         <div className={styles.sectionHeaderActions}>
           <span className="app-chip">표시 {filteredSites.length} / 전체 {sites.length}개</span>
@@ -223,7 +223,7 @@ export default function SitesSection(props: SitesSectionProps) {
                     <th>배정 지도요원</th>
                     <th>기간</th>
                     <th>상태</th>
-                    <th>작업</th>
+                    <th>메뉴</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -258,13 +258,31 @@ export default function SitesSection(props: SitesSectionProps) {
                       <td>{site.project_start_date || '-'} ~ {site.project_end_date || '-'}</td>
                       <td>{SITE_STATUS_LABELS[site.status as keyof typeof SITE_STATUS_LABELS] || site.status}</td>
                       <td>
-                        <div className={styles.tableActions}>
-                          <Link href={`/sites/${encodeURIComponent(site.id)}`} className="app-button app-button-primary">
-                            보고서
-                          </Link>
-                          <button type="button" className="app-button app-button-secondary" onClick={() => setAssignmentSiteId(site.id)} disabled={busy}>지도요원 배정</button>
-                          <button type="button" className="app-button app-button-secondary" onClick={() => openEdit(site)} disabled={busy}>수정</button>
-                          <button type="button" className="app-button app-button-danger" onClick={() => void onDeactivate(site.id)} disabled={busy || site.status === 'closed'}>종료</button>
+                        <div className={styles.tableActionMenuWrap}>
+                          <ActionMenu
+                            label={`${site.site_name} 현장 작업 메뉴 열기`}
+                            items={[
+                              { label: '보고서', href: `/sites/${encodeURIComponent(site.id)}` },
+                              {
+                                label: '지도요원 배정',
+                                onSelect: () => {
+                                  if (!busy) setAssignmentSiteId(site.id);
+                                },
+                              },
+                              { label: '수정', onSelect: () => { if (!busy) openEdit(site); } },
+                              ...(site.status !== 'closed'
+                                ? [
+                                    {
+                                      label: '종료',
+                                      tone: 'danger' as const,
+                                      onSelect: () => {
+                                        if (!busy) void onDeactivate(site.id);
+                                      },
+                                    },
+                                  ]
+                                : []),
+                            ]}
+                          />
                         </div>
                       </td>
                     </tr>

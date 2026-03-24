@@ -267,13 +267,6 @@
   color: var(--erp-dark);
 }
 
-.sectionDescription {
-  margin-top: 6px;
-  font-size: var(--text-ui);
-  line-height: 1.6;
-  color: var(--erp-text-muted);
-}
-
 .sectionBody {
   padding: 18px;
 }
@@ -303,9 +296,12 @@
 
 .listSectionCard .table th {
   padding: 9px 16px 8px;
+  border-bottom: 1px solid var(--erp-line);
   background-color: var(--erp-panel-muted);
   font-size: var(--text-micro);
+  font-weight: 700;
   letter-spacing: 0.02em;
+  color: var(--erp-text-muted);
 }
 
 .listSectionCard .table td {
@@ -317,14 +313,100 @@
   background: var(--erp-white);
 }
 
+.listSectionCard .table tbody tr:hover td {
+  background: #f6f9fc;
+}
+
+/* 작업자 목록과 유사: 마지막 열은 메뉴(점 아이콘) 전용 */
+.listSectionCard .table th:last-child,
+.listSectionCard .table td:last-child {
+  width: 1%;
+  min-width: 48px;
+  max-width: 56px;
+  padding-left: 8px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.listSectionCard .tableActionMenuWrap {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  min-height: 36px;
+}
+
+/* 인라인 링크·칩을 한 줄로 (가로 스크롤) */
+.tableInlineLinks {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tableInlineLinks a {
+  flex-shrink: 0;
+}
+
+.tableChipLink {
+  display: inline-flex;
+  align-items: center;
+  max-width: 140px;
+  padding: 3px 8px;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-control);
+  background: var(--erp-white);
+  font-size: var(--text-ui-sm);
+  font-weight: 600;
+  color: var(--erp-navy);
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tableChipLink:hover {
+  border-color: var(--erp-mid);
+  background: #f8fafc;
+}
+
+.tableCellOneLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  min-width: 0;
+}
+
+.tableSep {
+  color: var(--erp-text-muted);
+  font-weight: 400;
+}
+
+.tableInlineLink {
+  font-size: var(--text-ui-sm);
+  font-weight: 700;
+  color: var(--erp-mid);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.tableInlineLink:hover {
+  text-decoration: underline;
+}
+
 .listSectionCard .tablePrimary {
   font-size: var(--text-body-lg);
   line-height: 1.3;
 }
 
 .listSectionCard .tableSecondary {
-  font-size: var(--text-ui);
-  line-height: 1.4;
+  margin-top: 2px;
+  font-size: var(--text-ui-sm);
+  line-height: 1.35;
 }
 
 .listSectionCard .tableEmpty {
@@ -1108,12 +1190,6 @@
 
   .overviewCard .sectionTitle {
     font-size: var(--text-lead);
-  }
-
-  .overviewCard .sectionDescription {
-    margin-top: 4px;
-    font-size: var(--text-ui-sm);
-    line-height: 1.45;
   }
 
   .overviewBody {

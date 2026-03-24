@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { useState } from 'react';
 
 import AppModal from '@/components/ui/AppModal';
+import { ControllerMenuDrawer, ControllerMenuPanel } from '@/components/controller/ControllerMenu';
+import { isAdminUserRole } from '@/components/controller/shared';
 import { INSPECTION_SECTIONS, getSessionTitle } from '@/constants/inspectionSession';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import WorkerAppHeader from '@/components/worker/WorkerAppHeader';
@@ -64,6 +66,7 @@ export default function WorkspaceShell({
   const [metaModalOpen, setMetaModalOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const { currentUser, logout } = useInspectionSessions();
+  const isAdminView = Boolean(currentUser && isAdminUserRole(currentUser.role));
   const currentSectionInfo =
     INSPECTION_SECTIONS.find((section) => section.key === currentSection) ||
     INSPECTION_SECTIONS[0];
@@ -83,7 +86,11 @@ export default function WorkspaceShell({
 
           <WorkerShellBody>
             <WorkerMenuSidebar>
-              <WorkerMenuPanel />
+              {isAdminView ? (
+                <ControllerMenuPanel activeSection="sites" />
+              ) : (
+                <WorkerMenuPanel />
+              )}
             </WorkerMenuSidebar>
 
             <div className={styles.workspacePanel}>
@@ -266,7 +273,15 @@ export default function WorkspaceShell({
         </div>
       </AppModal>
 
-      <WorkerMenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} />
+      {isAdminView ? (
+        <ControllerMenuDrawer
+          open={menuOpen}
+          onClose={() => setMenuOpen(false)}
+          activeSection="sites"
+        />
+      ) : (
+        <WorkerMenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} />
+      )}
     </main>
   );
 }

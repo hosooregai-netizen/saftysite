@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { use, useDeferredValue, useMemo, useState } from 'react';
 import LoginPanel from '@/components/auth/LoginPanel';
+import { ControllerMenuDrawer, ControllerMenuPanel } from '@/components/controller/ControllerMenu';
+import { getControllerSectionHref, isAdminUserRole } from '@/components/controller/shared';
 import ReportList from '@/components/site/ReportList';
 import AppModal from '@/components/ui/AppModal';
 import WorkerAppHeader from '@/components/worker/WorkerAppHeader';
@@ -48,6 +50,7 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [reportQuery, setReportQuery] = useState('');
   const [reportSortMode, setReportSortMode] = useState<'recent' | 'name' | 'progress'>('recent');
+  const isAdminView = Boolean(currentUser && isAdminUserRole(currentUser.role));
 
   const currentSite = useMemo(
     () => sites.find((site) => site.id === decodedSiteKey) ?? null,
@@ -196,14 +199,18 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
 
           <WorkerShellBody>
             <WorkerMenuSidebar>
-              <WorkerMenuPanel />
+              {isAdminView ? (
+                <ControllerMenuPanel activeSection="sites" />
+              ) : (
+                <WorkerMenuPanel />
+              )}
             </WorkerMenuSidebar>
 
             <div className={styles.contentColumn}>
               <header className={styles.hero}>
                 <div className={styles.heroBody}>
                   <Link
-                    href="/"
+                    href={isAdminView ? getControllerSectionHref('sites') : '/'}
                     className={styles.heroBackLink}
                     aria-label="메인 메뉴로 돌아가기"
                   >
@@ -315,7 +322,15 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
         </p>
       </AppModal>
 
-      <WorkerMenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} />
+      {isAdminView ? (
+        <ControllerMenuDrawer
+          open={menuOpen}
+          onClose={() => setMenuOpen(false)}
+          activeSection="sites"
+        />
+      ) : (
+        <WorkerMenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} />
+      )}
     </main>
   );
 }

@@ -1,8 +1,8 @@
 'use client';
 
-import { useDeferredValue, useMemo, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import LoginPanel from '@/components/auth/LoginPanel';
-import ControllerDashboard from '@/components/controller/ControllerDashboard';
 import AssignedSitesTable from '@/components/home/AssignedSitesTable';
 import { buildSiteSummaries } from '@/components/home/siteSummaries';
 import WorkerAppHeader from '@/components/worker/WorkerAppHeader';
@@ -30,6 +30,7 @@ export default function HomePage() {
   const [query, setQuery] = useState('');
   const [sortMode, setSortMode] = useState<'recent' | 'name' | 'reports'>('recent');
   const [menuOpen, setMenuOpen] = useState(false);
+  const router = useRouter();
 
   const siteSummaries = useMemo(() => buildSiteSummaries(sites, sessions), [sessions, sites]);
   const deferredQuery = useDeferredValue(query);
@@ -60,6 +61,12 @@ export default function HomePage() {
     (isHydrating || (hasAuthToken && !currentUser)) && siteSummaries.length === 0;
   const shouldShowLogin = isReady && !hasAuthToken && !currentUser;
 
+  useEffect(() => {
+    if (currentUser && isControllerView) {
+      router.replace('/admin');
+    }
+  }, [currentUser, isControllerView, router]);
+
   if (shouldShowLogin) {
     return (
       <LoginPanel
@@ -72,7 +79,7 @@ export default function HomePage() {
   }
 
   if (currentUser && isControllerView) {
-    return <ControllerDashboard currentUser={currentUser} onLogout={logout} />;
+    return null;
   }
 
   return (
