@@ -1,6 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import { WorkerShellSidebarProvider } from '@/components/worker/WorkerShellSidebarContext';
 import { InspectionSessionsProvider } from '@/hooks/useInspectionSessions';
 
 export default function AppProviders({
@@ -8,5 +9,9 @@ export default function AppProviders({
 }: Readonly<{
   children: ReactNode;
 }>) {
-  return <InspectionSessionsProvider>{children}</InspectionSessionsProvider>;
+  return (
+    <InspectionSessionsProvider>
+      <WorkerShellSidebarProvider>{children}</WorkerShellSidebarProvider>
+    </InspectionSessionsProvider>
+  );
 }

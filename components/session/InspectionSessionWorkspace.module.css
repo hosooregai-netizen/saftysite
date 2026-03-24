@@ -1,5 +1,13 @@
-.shell {
-  overflow: visible;
+/* 뷰포트 높이에 고정해 본문 스크롤만 두고 하단 바가 항상 보이게 함 (app-shell의 min-h-screen 무시) */
+:global(.app-shell).shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  max-height: 100vh;
+  height: 100dvh;
+  max-height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .header {
@@ -14,10 +22,52 @@
 .headerBody {
   display: flex;
   align-items: center;
+  gap: 10px;
   min-height: 0;
 }
 
-.headerMain,
+.headerBackLink {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 4px 6px;
+  margin: 0 -2px;
+  border: none;
+  background: transparent;
+  font-size: var(--text-ui-sm);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: var(--erp-mid);
+  text-decoration: none;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  border-radius: var(--erp-radius-control);
+  transition:
+    color 0.12s ease,
+    text-decoration-color 0.12s ease;
+}
+
+.headerBackLink:hover {
+  color: var(--erp-dark);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+}
+
+.headerBackLink:focus-visible {
+  outline: 2px solid var(--erp-mid);
+  outline-offset: 2px;
+}
+
+.headerMain {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
 .sectionStack,
 .sidebar,
 .navList,
@@ -175,7 +225,7 @@
   display: block;
   height: 100%;
   border-radius: 1px;
-  background: linear-gradient(90deg, #7fb3dc 0%, #2f6fa3 100%);
+  background: linear-gradient(90deg, var(--erp-light) 0%, var(--erp-mid) 52%, var(--erp-navy) 100%);
 }
 
 .workspaceError {
@@ -187,29 +237,46 @@
 }
 
 .workspace {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  /* 첫 행(문서 선택·진행률 툴바)은 콘텐츠 높이만, 본문만 남는 높이를 채움 */
-  grid-template-rows: auto minmax(0, 1fr);
-  align-content: start;
+  display: flex;
+  flex-direction: column;
   gap: 20px;
   padding: 20px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.workspace > .editor {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  gap: 14px;
+}
+
+.workspace > .editor .editorCard {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.workspace > .editor .editorHeader {
+  flex-shrink: 0;
+}
+
+.workspace > .editor .editorBody {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
 }
 
-.workspace > .editor {
-  min-height: 0;
-}
-
 .workspaceToolbar {
   display: grid;
+  flex-shrink: 0;
   gap: 8px;
   min-width: 0;
-  position: sticky;
-  top: 12px;
-  z-index: 7;
   padding: 14px;
   border: 1px solid var(--erp-line);
   border-radius: var(--erp-radius-card);
@@ -274,6 +341,7 @@
   overflow: hidden;
   border-radius: 1px;
   background-color: var(--erp-panel-muted);
+  background-color: color-mix(in srgb, var(--erp-mid) 14%, var(--erp-panel-muted));
 }
 
 .toolbarProgressFill {
@@ -286,7 +354,7 @@
   height: 100%;
   padding-right: 6px;
   border-radius: 1px;
-  background: linear-gradient(90deg, #d5deea 0%, #8fa3b7 100%);
+  background: linear-gradient(90deg, var(--erp-light) 0%, var(--erp-mid) 48%, var(--erp-navy) 100%);
 }
 
 .toolbarProgressFillPercent {
@@ -306,35 +374,13 @@
   color: var(--erp-dark);
 }
 
-.shellBody {
-  display: grid;
-  grid-template-columns: 248px minmax(0, 1fr);
-  flex: 1 1 auto;
-  min-height: 0;
-  align-items: stretch;
-}
-
-.menuSidebar {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  align-self: start;
-  position: sticky;
-  top: 0;
-  max-height: 100vh;
-  max-height: 100dvh;
-  overflow: hidden;
-  border-right: 1px solid var(--erp-line);
-  background: #f6f9fc;
-  padding: 18px 14px;
-}
-
 .workspacePanel {
   display: flex;
   flex-direction: column;
   min-width: 0;
   min-height: 0;
   align-self: stretch;
+  overflow: hidden;
   background-color: var(--erp-white);
 }
 
@@ -768,11 +814,15 @@
   flex-wrap: wrap;
   gap: 12px;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: flex-end;
   flex-shrink: 0;
   padding: 14px 20px 18px;
   border-top: 1px solid var(--erp-line);
   background-color: rgba(255, 255, 255, 0.96);
+}
+
+.bottomBar .bottomActions {
+  justify-content: flex-end;
 }
 
 .bottomMeta {
@@ -822,23 +872,6 @@
   font-size: var(--text-ui);
   line-height: 1.6;
   color: #b42318;
-}
-
-/* 홈·현장 상세와 동일: 1200px 미만은 사이드바 대신 헤더 메뉴 버튼 */
-@media (max-width: 1199px) {
-  .shellBody {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .menuSidebar {
-    display: none;
-  }
-}
-
-@media (min-width: 1200px) {
-  .shellBody {
-    background: linear-gradient(90deg, #f6f9fc 0, #f6f9fc 248px, var(--erp-white) 248px);
-  }
 }
 
 @media (min-width: 900px) {
@@ -901,7 +934,6 @@
 
   .workspaceToolbar {
     gap: 10px;
-    top: 8px;
     padding: 12px;
   }
 
@@ -931,6 +963,12 @@
     width: 100%;
   }
 
+  .bottomBar .bottomActions {
+    width: min(100%, 360px);
+    margin-left: auto;
+    margin-right: 0;
+  }
+
   .topRailPrimaryActions > :global(.app-button),
   .quickMoveButtons > :global(.app-button),
   .bottomActions > :global(.app-button) {
@@ -951,12 +989,7 @@
   }
 
   .bottomBar {
-    position: sticky;
-    bottom: 0;
-    z-index: 8;
     padding: 12px 16px calc(16px + env(safe-area-inset-bottom));
-    border-top: 1px solid var(--erp-line);
-    box-shadow: 0 -10px 30px rgba(17, 32, 53, 0.08);
   }
 }
 
@@ -986,6 +1019,15 @@
   .caseCard,
   .infoTable {
     overflow: hidden;
+  }
+}
+
+@media print {
+  :global(.app-shell).shell {
+    height: auto;
+    max-height: none;
+    min-height: 0;
+    overflow: visible;
   }
 }
 

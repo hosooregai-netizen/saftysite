@@ -66,6 +66,70 @@
   color: var(--erp-text-muted);
 }
 
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+.sectionTitleHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+.sectionCollapsed .menuList {
+  gap: 6px;
+}
+
+.menuItemCollapsed {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 8px 6px;
+  gap: 0;
+}
+
+.menuItemIcon {
+  flex-shrink: 0;
+  color: var(--erp-mid);
+}
+
+.menuItemActive .menuItemIcon {
+  color: var(--erp-navy);
+}
+
+.menuItemGlyph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 1px;
+  background: rgba(31, 48, 69, 0.08);
+  font-size: var(--text-body);
+  font-weight: 800;
+  color: var(--erp-mid);
+}
+
+.menuItemActive .menuItemGlyph {
+  background: rgba(31, 48, 69, 0.16);
+  color: var(--erp-navy);
+}
+
 .menuButton {
   display: inline-flex;
   align-items: center;

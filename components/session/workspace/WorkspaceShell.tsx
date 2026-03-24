@@ -1,11 +1,14 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 
 import AppModal from '@/components/ui/AppModal';
 import { INSPECTION_SECTIONS, getSessionTitle } from '@/constants/inspectionSession';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import WorkerAppHeader from '@/components/worker/WorkerAppHeader';
+import WorkerMenuSidebar from '@/components/worker/WorkerMenuSidebar';
+import WorkerShellBody from '@/components/worker/WorkerShellBody';
 import { WorkerMenuDrawer, WorkerMenuPanel } from '@/components/worker/WorkerMenu';
 import styles from '@/components/session/InspectionSessionWorkspace.module.css';
 import type {
@@ -36,7 +39,7 @@ interface WorkspaceShellProps {
 }
 
 export default function WorkspaceShell({
-  backHref: _backHref,
+  backHref,
   currentSection,
   currentSectionIndex,
   currentSectionMeta: _currentSectionMeta,
@@ -75,14 +78,21 @@ export default function WorkspaceShell({
             onOpenMenu={() => setMenuOpen(true)}
           />
 
-          <div className={styles.shellBody}>
-            <aside className={styles.menuSidebar}>
+          <WorkerShellBody>
+            <WorkerMenuSidebar>
               <WorkerMenuPanel />
-            </aside>
+            </WorkerMenuSidebar>
 
             <div className={styles.workspacePanel}>
               <header className={styles.header}>
                 <div className={styles.headerBody}>
+                  <Link
+                    href={backHref}
+                    className={styles.headerBackLink}
+                    aria-label="이전 화면으로 돌아가기"
+                  >
+                    {'<'} 이전
+                  </Link>
                   <div className={styles.headerMain}>
                     <h1 className={styles.headerTitle}>
                       기술 지도 - {getSessionTitle(session)}
@@ -204,7 +214,7 @@ export default function WorkspaceShell({
                 </div>
               </footer>
             </div>
-          </div>
+          </WorkerShellBody>
         </section>
       </div>
 

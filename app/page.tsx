@@ -6,6 +6,8 @@ import ControllerDashboard from '@/components/controller/ControllerDashboard';
 import AssignedSitesTable from '@/components/home/AssignedSitesTable';
 import { buildSiteSummaries } from '@/components/home/siteSummaries';
 import WorkerAppHeader from '@/components/worker/WorkerAppHeader';
+import WorkerMenuSidebar from '@/components/worker/WorkerMenuSidebar';
+import WorkerShellBody from '@/components/worker/WorkerShellBody';
 import { WorkerMenuDrawer, WorkerMenuPanel } from '@/components/worker/WorkerMenu';
 import { isAdminUserRole } from '@/components/controller/shared';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
@@ -95,10 +97,10 @@ export default function HomePage() {
             onOpenMenu={() => setMenuOpen(true)}
           />
 
-          <div className={styles.shellBody}>
-            <aside className={styles.menuSidebar}>
+          <WorkerShellBody>
+            <WorkerMenuSidebar>
               <WorkerMenuPanel />
-            </aside>
+            </WorkerMenuSidebar>
 
             <div className={styles.contentColumn}>
               {dataError ? (
@@ -182,7 +184,7 @@ export default function HomePage() {
                 </>
               )}
             </div>
-          </div>
+          </WorkerShellBody>
         </section>
       </div>
 

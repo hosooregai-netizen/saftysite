@@ -7,6 +7,8 @@ import LoginPanel from '@/components/auth/LoginPanel';
 import ReportList from '@/components/site/ReportList';
 import AppModal from '@/components/ui/AppModal';
 import WorkerAppHeader from '@/components/worker/WorkerAppHeader';
+import WorkerMenuSidebar from '@/components/worker/WorkerMenuSidebar';
+import WorkerShellBody from '@/components/worker/WorkerShellBody';
 import { WorkerMenuDrawer, WorkerMenuPanel } from '@/components/worker/WorkerMenu';
 import {
   getSessionProgress,
@@ -192,14 +194,21 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
             onOpenMenu={() => setMenuOpen(true)}
           />
 
-          <div className={styles.shellBody}>
-            <aside className={styles.menuSidebar}>
+          <WorkerShellBody>
+            <WorkerMenuSidebar>
               <WorkerMenuPanel />
-            </aside>
+            </WorkerMenuSidebar>
 
             <div className={styles.contentColumn}>
               <header className={styles.hero}>
                 <div className={styles.heroBody}>
+                  <Link
+                    href="/"
+                    className={styles.heroBackLink}
+                    aria-label="메인 메뉴로 돌아가기"
+                  >
+                    {'<'} 이전
+                  </Link>
                   <div className={styles.heroMain}>
                     <h1 className={styles.heroTitle}>
                       기술 지도 - {currentSite.siteName} 보고서 목록
@@ -272,7 +281,7 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
                 </section>
               </div>
             </div>
-          </div>
+          </WorkerShellBody>
         </section>
       </div>
 
