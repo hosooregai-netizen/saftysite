@@ -6,7 +6,10 @@ import type { InspectionSession, InspectionSite } from '@/types/inspectionSessio
 interface ReportListProps {
   assignedUserDisplay?: string;
   currentSite: InspectionSite;
+  /** 검색·정렬이 적용된 목록 */
   siteSessions: InspectionSession[];
+  /** 필터 전 전체 보고서 수(빈 현장 vs 검색 무결과 구분) */
+  totalSessionCount: number;
   canArchiveReports: boolean;
   formatDateTime: (value: string | null) => string;
   onCreateReport: () => void;
@@ -18,13 +21,14 @@ export default function ReportList({
   assignedUserDisplay,
   currentSite,
   siteSessions,
+  totalSessionCount,
   canArchiveReports,
   formatDateTime,
   onCreateReport,
   onDeleteRequest,
   styles,
 }: ReportListProps) {
-  if (siteSessions.length === 0) {
+  if (totalSessionCount === 0) {
     return (
       <div className={styles.emptyState}>
         <p className={styles.emptyTitle}>아직 작성된 보고서가 없습니다.</p>
@@ -35,6 +39,15 @@ export default function ReportList({
         >
           첫 보고서 시작
         </button>
+      </div>
+    );
+  }
+
+  if (siteSessions.length === 0) {
+    return (
+      <div className={styles.emptyState}>
+        <p className={styles.emptyTitle}>검색 조건에 맞는 보고서가 없습니다.</p>
+        <p className={styles.emptySearchHint}>검색어나 정렬을 바꿔 다시 시도해 보세요.</p>
       </div>
     );
   }

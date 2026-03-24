@@ -2,13 +2,17 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { use, useMemo, useState } from 'react';
+import { use, useDeferredValue, useMemo, useState } from 'react';
 import LoginPanel from '@/components/auth/LoginPanel';
 import ReportList from '@/components/site/ReportList';
 import AppModal from '@/components/ui/AppModal';
 import WorkerAppHeader from '@/components/worker/WorkerAppHeader';
 import { WorkerMenuDrawer, WorkerMenuPanel } from '@/components/worker/WorkerMenu';
-import { getSessionSiteKey, getSessionTitle } from '@/constants/inspectionSession';
+import {
+  getSessionProgress,
+  getSessionSiteKey,
+  getSessionTitle,
+} from '@/constants/inspectionSession';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { formatDateTime } from '@/lib/formatDateTime';
 import styles from './page.module.css';
@@ -40,6 +44,8 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
   } = useInspectionSessions();
   const [dialogState, setDialogState] = useState<ReportDialogState>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [reportQuery, setReportQuery] = useState('');
+  const [reportSortMode, setReportSortMode] = useState<'recent' | 'name' | 'progress'>('recent');
 
   const currentSite = useMemo(
     () => sites.find((site) => site.id === decodedSiteKey) ?? null,
@@ -51,9 +57,57 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
     [decodedSiteKey, sessions]
   );
 
+  const deferredReportQuery = useDeferredValue(reportQuery);
+
   const assignedUserDisplay = [currentUser?.name, currentUser?.position]
     .filter(Boolean)
     .join(' / ');
+
+  const filteredSiteSessions = useMemo(() => {
+    const normalized = deferredReportQuery.trim().toLowerCase();
+    const drafterFallback = assignedUserDisplay || currentSite?.assigneeName || '';
+
+    let list = siteSessions;
+    if (normalized) {
+      list = siteSessions.filter((session) => {
+        const title = getSessionTitle(session);
+        const drafter = session.meta.drafter || drafterFallback;
+        const haystack = [
+          title,
+          session.meta.reportDate || '',
+          drafter,
+          session.lastSavedAt || '',
+        ]
+          .join(' ')
+          .toLowerCase();
+        return haystack.includes(normalized);
+      });
+    }
+
+    return [...list].sort((a, b) => {
+      if (reportSortMode === 'name') {
+        return getSessionTitle(a).localeCompare(getSessionTitle(b), 'ko');
+      }
+      if (reportSortMode === 'progress') {
+        const pa = getSessionProgress(a);
+        const pb = getSessionProgress(b);
+        return (
+          pb.percentage - pa.percentage ||
+          pb.completed - pa.completed ||
+          getSessionTitle(a).localeCompare(getSessionTitle(b), 'ko')
+        );
+      }
+      const ta = a.lastSavedAt ? new Date(a.lastSavedAt).getTime() : 0;
+      const tb = b.lastSavedAt ? new Date(b.lastSavedAt).getTime() : 0;
+      return tb - ta;
+    });
+  }, [
+    siteSessions,
+    deferredReportQuery,
+    reportSortMode,
+    assignedUserDisplay,
+    currentSite?.assigneeName,
+  ]);
 
   const handleCreateReport = () => {
     if (!currentSite) return;
@@ -121,6 +175,13 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
     );
   }
 
+  const snap = currentSite.adminSiteSnapshot;
+  const siteNameDisplay =
+    currentSite.siteName?.trim() || snap.siteName?.trim() || '—';
+  const addressDisplay = snap.siteAddress?.trim() || '—';
+  const periodDisplay = snap.constructionPeriod?.trim() || '—';
+  const amountDisplay = snap.constructionAmount?.trim() || '—';
+
   return (
     <main className="app-page">
       <div className="app-container">
@@ -148,11 +209,60 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
               </header>
 
               <div className={styles.pageGrid}>
+                <section className={styles.summaryBar} aria-label="현장 정보">
+                  <article className={styles.summaryCard}>
+                    <span className={styles.summaryCardLabel}>현장명</span>
+                    <strong className={styles.summaryCardValue}>{siteNameDisplay}</strong>
+                  </article>
+                  <article className={styles.summaryCard}>
+                    <span className={styles.summaryCardLabel}>현장 주소</span>
+                    <strong
+                      className={`${styles.summaryCardValue} ${styles.summaryCardValueWide}`}
+                    >
+                      {addressDisplay}
+                    </strong>
+                  </article>
+                  <article className={styles.summaryCard}>
+                    <span className={styles.summaryCardLabel}>공사기간</span>
+                    <strong className={styles.summaryCardValue}>{periodDisplay}</strong>
+                  </article>
+                  <article className={styles.summaryCard}>
+                    <span className={styles.summaryCardLabel}>공사금액</span>
+                    <strong className={styles.summaryCardValue}>{amountDisplay}</strong>
+                  </article>
+                </section>
+
                 <section className={styles.panel}>
+                  {siteSessions.length > 0 ? (
+                    <div className={styles.tableTools}>
+                      <input
+                        className={`app-input ${styles.tableSearch}`}
+                        placeholder="보고서명, 작업일, 작성자로 검색"
+                        value={reportQuery}
+                        onChange={(event) => setReportQuery(event.target.value)}
+                        aria-label="보고서 검색"
+                      />
+                      <select
+                        className={`app-select ${styles.tableSort}`}
+                        value={reportSortMode}
+                        onChange={(event) =>
+                          setReportSortMode(
+                            event.target.value as 'recent' | 'name' | 'progress'
+                          )
+                        }
+                        aria-label="보고서 정렬"
+                      >
+                        <option value="recent">최근 저장순</option>
+                        <option value="name">보고서명순</option>
+                        <option value="progress">진행률 높은 순</option>
+                      </select>
+                    </div>
+                  ) : null}
                   <ReportList
                     assignedUserDisplay={assignedUserDisplay}
                     currentSite={currentSite}
-                    siteSessions={siteSessions}
+                    siteSessions={filteredSiteSessions}
+                    totalSessionCount={siteSessions.length}
                     canArchiveReports={canArchiveReports}
                     formatDateTime={formatDateTime}
                     onCreateReport={handleCreateReport}
