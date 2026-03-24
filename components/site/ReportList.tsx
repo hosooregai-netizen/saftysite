@@ -44,11 +44,11 @@ export default function ReportList({
       <div className={styles.listTrack}>
         <div className={styles.listHead} aria-hidden="true">
           <span>보고서명</span>
-          <span>작업일</span>
+          <span className={styles.desktopOnly}>작업일</span>
           <span>작성자</span>
           <span>진행률</span>
-          <span>마지막 저장</span>
-          <span>작업</span>
+          <span className={styles.desktopOnly}>마지막 저장</span>
+          <span>메뉴</span>
         </div>
 
         <div className={styles.reportList}>
@@ -76,7 +76,7 @@ export default function ReportList({
                   </Link>
                 </div>
 
-                <div className={`${styles.dataCell} ${styles.reportDateCell}`}>
+                <div className={`${styles.dataCell} ${styles.reportDateCell} ${styles.desktopOnly}`}>
                   <span className={styles.dataValue}>{session.meta.reportDate || '미입력'}</span>
                 </div>
 
@@ -98,12 +98,13 @@ export default function ReportList({
                       />
                     </div>
                     <span className={styles.progressText}>
-                      {progress.completed}/{progress.total} 완료
+                      {progress.completed}/{progress.total}
+                      <span className={styles.desktopProgressSuffix}> 완료</span>
                     </span>
                   </div>
                 </div>
 
-                <div className={`${styles.dataCell} ${styles.lastSavedCell}`}>
+                <div className={`${styles.dataCell} ${styles.lastSavedCell} ${styles.desktopOnly}`}>
                   <span className={styles.dataValue}>{formatDateTime(session.lastSavedAt)}</span>
                 </div>
 

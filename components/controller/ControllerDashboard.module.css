@@ -75,7 +75,7 @@
   min-height: 38px;
   padding: 0 14px;
   border: 1px solid var(--erp-line);
-  border-radius: 999px;
+  border-radius: 1px;
   background: var(--erp-white);
   font-size: 13px;
   font-weight: 700;
@@ -113,7 +113,7 @@
   gap: 4px;
   padding: 12px;
   border: 1px solid var(--erp-line);
-  border-radius: 4px;
+  border-radius: 1px;
   background: var(--erp-white);
   text-align: left;
 }
@@ -144,7 +144,7 @@
 .bannerError,
 .bannerNotice {
   padding: 12px 14px;
-  border-radius: 4px;
+  border-radius: 1px;
   font-size: 14px;
   line-height: 1.6;
 }
@@ -163,7 +163,7 @@
 
 .sectionCard {
   border: 1px solid var(--erp-line);
-  border-radius: 4px;
+  border-radius: 1px;
   background: var(--erp-white);
 }
 
@@ -204,7 +204,7 @@
 .tableShell {
   overflow: hidden;
   border: 1px solid var(--erp-line);
-  border-radius: 4px;
+  border-radius: 1px;
   background: #fff;
 }
 
@@ -296,7 +296,7 @@
   min-height: 36px;
   padding: 0 12px;
   border: 1px solid var(--erp-line);
-  border-radius: 4px;
+  border-radius: 1px;
   background: var(--erp-white);
   font-size: 13px;
   font-weight: 700;
@@ -341,7 +341,7 @@
   gap: 14px;
   padding: 14px;
   border: 1px solid var(--erp-line);
-  border-radius: 4px;
+  border-radius: 1px;
   background: #fbfcfd;
 }
 
@@ -376,7 +376,7 @@
   min-height: 180px;
   overflow: hidden;
   border: 1px dashed var(--erp-line-strong);
-  border-radius: 4px;
+  border-radius: 1px;
   background: var(--erp-panel-muted);
 }
 
@@ -431,7 +431,7 @@
 .insightCard {
   padding: 14px;
   border: 1px solid var(--erp-line);
-  border-radius: 4px;
+  border-radius: 1px;
   background: #fbfcfd;
 }
 
@@ -458,7 +458,7 @@
 .statCard {
   padding: 16px;
   border: 1px solid var(--erp-line);
-  border-radius: 4px;
+  border-radius: 1px;
   background: #fbfcfd;
 }
 
@@ -557,7 +557,7 @@
 .recordCard {
   padding: 16px;
   border: 1px solid var(--erp-line);
-  border-radius: 4px;
+  border-radius: 1px;
   background: #fcfdff;
 }
 
@@ -599,7 +599,7 @@
 .empty {
   padding: 20px;
   border: 1px dashed var(--erp-line-strong);
-  border-radius: 4px;
+  border-radius: 1px;
   text-align: center;
   font-size: 14px;
   color: var(--erp-text-muted);
@@ -1018,3 +1018,4 @@
     display: none;
   }
 }
+

@@ -22,9 +22,9 @@
     --erp-danger-line: #d7a6a6;
     --erp-danger-text: #8f2d2d;
     --erp-focus-ring: 0 0 0 3px rgba(31, 48, 69, 0.16);
-    --erp-radius-control: 2px;
-    --erp-radius-surface: 3px;
-    --erp-radius-card: 4px;
+    --erp-radius-control: 1px;
+    --erp-radius-surface: 1px;
+    --erp-radius-card: 1px;
     --hazard-border: 1px solid #000;
     --hazard-input-focus: 1px solid #1f3045;
     --hazard-input-shadow: 0 0 0 2px rgba(31, 48, 69, 0.14);
@@ -301,3 +301,4 @@
     box-shadow: none !important;
   }
 }
+

@@ -10,6 +10,17 @@ interface AssignedSitesTableProps {
   formatDateTime: (value: string | null) => string;
 }
 
+function formatCompactReportDate(value: string | null | undefined) {
+  if (!value) return '-';
+  const normalized = value.trim();
+  const match = normalized.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (match) {
+    return `${match[2]}.${match[3]}`;
+  }
+
+  return normalized;
+}
+
 export default function AssignedSitesTable({
   currentUserName,
   currentUserPosition,
@@ -38,12 +49,12 @@ export default function AssignedSitesTable({
         <div className={styles.listHead} aria-hidden="true">
           <span>고객사명</span>
           <span>현장명</span>
-          <span>담당</span>
-          <span>진행상태</span>
+          <span className={styles.desktopOnly}>담당</span>
+          <span className={styles.desktopOnly}>진행상태</span>
           <span>최근 작성일</span>
           <span>보고서 수</span>
-          <span>마지막 저장</span>
-          <span>작업</span>
+          <span className={styles.desktopOnly}>마지막 저장</span>
+          <span>메뉴</span>
         </div>
 
         <div className={styles.siteList}>
@@ -64,25 +75,30 @@ export default function AssignedSitesTable({
                   </Link>
                 </div>
 
-                <div className={`${styles.cell} ${styles.assigneeCell}`}>
+                <div className={`${styles.cell} ${styles.assigneeCell} ${styles.desktopOnly}`}>
                   <span className={styles.cellValue}>
                     {assigneeDisplay || site.assigneeName || '미입력'}
                   </span>
                 </div>
 
-                <div className={`${styles.cell} ${styles.statusCell}`}>
+                <div className={`${styles.cell} ${styles.statusCell} ${styles.desktopOnly}`}>
                   <span className={styles.cellValue}>{progressLabel}</span>
                 </div>
 
                 <div className={`${styles.cell} ${styles.dateCell}`}>
-                  <span className={styles.cellValue}>{latestSession?.meta.reportDate || '-'}</span>
+                  <span className={`${styles.cellValue} ${styles.desktopDate}`}>
+                    {latestSession?.meta.reportDate || '-'}
+                  </span>
+                  <span className={`${styles.cellValue} ${styles.compactDate}`}>
+                    {formatCompactReportDate(latestSession?.meta.reportDate)}
+                  </span>
                 </div>
 
                 <div className={`${styles.cell} ${styles.countCell}`}>
                   <span className={styles.cellValue}>{sessionCount}건</span>
                 </div>
 
-                <div className={`${styles.cell} ${styles.savedCell}`}>
+                <div className={`${styles.cell} ${styles.savedCell} ${styles.desktopOnly}`}>
                   <span className={styles.cellValue}>
                     {latestSession ? formatDateTime(latestSession.lastSavedAt) : '-'}
                   </span>

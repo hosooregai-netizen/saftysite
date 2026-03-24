@@ -83,13 +83,11 @@
 }
 
 .listViewport {
-  overflow-x: auto;
-  overflow-y: visible;
-  -webkit-overflow-scrolling: touch;
+  overflow: hidden;
 }
 
 .listTrack {
-  min-width: 980px;
+  min-width: 0;
 }
 
 .listHead {
@@ -97,18 +95,17 @@
   grid-template-columns:
     minmax(220px, 1.45fr)
     minmax(110px, 0.8fr)
-    minmax(130px, 0.9fr)
-    minmax(190px, 1fr)
+    minmax(118px, 0.72fr)
+    minmax(168px, 0.84fr)
     minmax(150px, 0.95fr)
-    72px;
-  gap: 12px;
+    40px;
+  gap: 10px;
   padding: 9px 16px 8px;
   border-bottom: 1px solid var(--erp-line);
   background-color: var(--erp-panel-muted);
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0.02em;
   color: var(--erp-text-muted);
 }
 
@@ -121,11 +118,11 @@
   grid-template-columns:
     minmax(220px, 1.45fr)
     minmax(110px, 0.8fr)
-    minmax(130px, 0.9fr)
-    minmax(190px, 1fr)
+    minmax(118px, 0.72fr)
+    minmax(168px, 0.84fr)
     minmax(150px, 0.95fr)
-    72px;
-  gap: 12px;
+    40px;
+  gap: 10px;
   align-items: center;
   padding: 11px 16px;
   border-bottom: 1px solid var(--erp-line);
@@ -179,9 +176,9 @@
 
 .progressStack {
   display: grid;
-  grid-template-columns: minmax(108px, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
   min-width: 0;
 }
@@ -190,7 +187,7 @@
   width: 100%;
   height: 10px;
   overflow: hidden;
-  border-radius: 999px;
+  border-radius: 1px;
   background: linear-gradient(180deg, #e4ebf2 0%, #d7e0e8 100%);
   box-shadow: inset 0 1px 2px rgba(18, 28, 47, 0.1);
 }
@@ -198,7 +195,7 @@
 .progressFill {
   display: block;
   height: 100%;
-  border-radius: 999px;
+  border-radius: 1px;
   background: linear-gradient(
     90deg,
     var(--erp-mid) 0%,
@@ -214,10 +211,18 @@
   white-space: nowrap;
 }
 
+.desktopProgressSuffix {
+  display: inline;
+}
+
 .actionCell {
   display: flex;
-  justify-content: center;
+  justify-content: flex-end;
   align-items: center;
+}
+
+.desktopOnly {
+  display: block;
 }
 
 .emptyState {
@@ -238,24 +243,45 @@
     padding: 10px;
   }
 
-  .listTrack {
-    min-width: 920px;
-  }
-
   .listHead,
   .reportRow {
-    gap: 10px;
+    grid-template-columns:
+      minmax(0, 1.24fr)
+      minmax(0, 0.8fr)
+      minmax(68px, 0.74fr)
+      36px;
+    gap: 6px;
     padding-left: 10px;
     padding-right: 10px;
   }
 
+  .listHead {
+    font-size: 9px;
+  }
+
+  .desktopOnly {
+    display: none;
+  }
+
+  .desktopProgressSuffix {
+    display: none;
+  }
+
   .reportLink {
-    font-size: 14px;
+    font-size: 12px;
   }
 
   .dataValue,
   .progressText {
-    font-size: 12px;
+    font-size: 11px;
+  }
+
+  .progressStack {
+    gap: 6px;
+  }
+
+  .progressTrack {
+    height: 8px;
   }
 }
 
@@ -268,14 +294,24 @@
     padding: 18px 22px 22px;
   }
 
-  .listTrack {
-    min-width: 960px;
-  }
-
   .listHead,
   .reportRow {
+    grid-template-columns:
+      minmax(0, 1.4fr)
+      minmax(0, 0.92fr)
+      minmax(92px, 0.96fr)
+      40px;
+    gap: 8px;
     padding-left: 14px;
     padding-right: 14px;
+  }
+
+  .desktopOnly {
+    display: none;
+  }
+
+  .desktopProgressSuffix {
+    display: none;
   }
 }
 
@@ -291,3 +327,4 @@
     padding: 20px 28px 24px;
   }
 }
+

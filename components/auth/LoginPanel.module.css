@@ -33,7 +33,7 @@
   width: min(100%, 440px);
   padding: 28px;
   border: 1px solid rgba(188, 199, 211, 0.78);
-  border-radius: 24px;
+  border-radius: 1px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 249, 251, 0.96)),
     radial-gradient(circle at top right, rgba(247, 176, 25, 0.14), transparent 38%);
@@ -137,3 +137,4 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+

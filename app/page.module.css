@@ -120,13 +120,11 @@
 }
 
 .listViewport {
-  overflow-x: auto;
-  overflow-y: visible;
-  -webkit-overflow-scrolling: touch;
+  overflow: hidden;
 }
 
 .listTrack {
-  min-width: 1140px;
+  min-width: 0;
 }
 
 .listHead {
@@ -139,15 +137,14 @@
     minmax(110px, 0.85fr)
     minmax(90px, 0.65fr)
     minmax(150px, 1fr)
-    72px;
-  gap: 12px;
+    40px;
+  gap: 10px;
   padding: 9px 16px 8px;
   border-bottom: 1px solid var(--erp-line);
   background-color: var(--erp-panel-muted);
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0.02em;
   color: var(--erp-text-muted);
 }
 
@@ -165,8 +162,8 @@
     minmax(110px, 0.85fr)
     minmax(90px, 0.65fr)
     minmax(150px, 1fr)
-    72px;
-  gap: 12px;
+    40px;
+  gap: 10px;
   align-items: center;
   padding: 11px 16px;
   border-bottom: 1px solid var(--erp-line);
@@ -219,10 +216,22 @@
   text-overflow: ellipsis;
 }
 
+.desktopDate {
+  display: block;
+}
+
+.compactDate {
+  display: none;
+}
+
 .actionCell {
   display: flex;
-  justify-content: center;
+  justify-content: flex-end;
   align-items: center;
+}
+
+.desktopOnly {
+  display: block;
 }
 
 .formGrid {
@@ -334,23 +343,41 @@
     flex: 1 1 100%;
   }
 
-  .listTrack {
-    min-width: 1040px;
-  }
-
   .listHead,
   .siteRow {
-    gap: 10px;
+    grid-template-columns:
+      minmax(0, 0.92fr)
+      minmax(0, 1fr)
+      minmax(42px, 0.32fr)
+      minmax(50px, 0.42fr)
+      36px;
+    gap: 6px;
     padding-left: 10px;
     padding-right: 10px;
   }
 
+  .listHead {
+    font-size: 9px;
+  }
+
+  .desktopOnly {
+    display: none;
+  }
+
+  .desktopDate {
+    display: none;
+  }
+
+  .compactDate {
+    display: block;
+  }
+
   .siteLink {
-    font-size: 14px;
+    font-size: 12px;
   }
 
   .cellValue {
-    font-size: 12px;
+    font-size: 11px;
   }
 }
 
@@ -369,14 +396,29 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .listTrack {
-    min-width: 1080px;
-  }
-
   .listHead,
   .siteRow {
+    grid-template-columns:
+      minmax(0, 1fr)
+      minmax(0, 1.2fr)
+      minmax(52px, 0.4fr)
+      minmax(70px, 0.52fr)
+      40px;
+    gap: 8px;
     padding-left: 14px;
     padding-right: 14px;
+  }
+
+  .desktopOnly {
+    display: none;
+  }
+
+  .desktopDate {
+    display: none;
+  }
+
+  .compactDate {
+    display: block;
   }
 }
 
