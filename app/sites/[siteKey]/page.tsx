@@ -6,11 +6,8 @@ import { use, useMemo, useState } from 'react';
 import LoginPanel from '@/components/auth/LoginPanel';
 import ReportList from '@/components/site/ReportList';
 import AppModal from '@/components/ui/AppModal';
-import {
-  WorkerMenuButton,
-  WorkerMenuDrawer,
-  WorkerMenuPanel,
-} from '@/components/worker/WorkerMenu';
+import WorkerAppHeader from '@/components/worker/WorkerAppHeader';
+import { WorkerMenuDrawer, WorkerMenuPanel } from '@/components/worker/WorkerMenu';
 import { getSessionSiteKey, getSessionTitle } from '@/constants/inspectionSession';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { formatDateTime } from '@/lib/formatDateTime';
@@ -128,41 +125,28 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
     <main className="app-page">
       <div className="app-container">
         <section className={`app-shell ${styles.shell}`}>
-          <header className={styles.hero}>
-            <div className={styles.heroTop}>
-              <div className={styles.mobileMenuOnly}>
-                <WorkerMenuButton onClick={() => setMenuOpen(true)} />
-              </div>
-            </div>
-
-            <div className={styles.heroBody}>
-              <div className={styles.heroMain}>
-                <h1 className={styles.heroTitle}>{currentSite.siteName}</h1>
-              </div>
-
-              <div className={styles.heroActions}>
-                <p className={styles.heroMetaText}>총 {siteSessions.length}건 보고서</p>
-                <button
-                  type="button"
-                  onClick={handleCreateReport}
-                  className="app-button app-button-primary"
-                >
-                  새 보고서 시작
-                </button>
-              </div>
-            </div>
-          </header>
+          <WorkerAppHeader
+            currentUserName={currentUser?.name}
+            onLogout={logout}
+            onOpenMenu={() => setMenuOpen(true)}
+          />
 
           <div className={styles.shellBody}>
             <aside className={styles.menuSidebar}>
-              <WorkerMenuPanel
-                currentUserName={currentUser?.name}
-                siteCount={sites.length}
-                onLogout={logout}
-              />
+              <WorkerMenuPanel />
             </aside>
 
             <div className={styles.contentColumn}>
+              <header className={styles.hero}>
+                <div className={styles.heroBody}>
+                  <div className={styles.heroMain}>
+                    <h1 className={styles.heroTitle}>
+                      기술 지도 - {currentSite.siteName} 보고서 목록
+                    </h1>
+                  </div>
+                </div>
+              </header>
+
               <div className={styles.pageGrid}>
                 <section className={styles.panel}>
                   <ReportList
@@ -212,13 +196,7 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
         </p>
       </AppModal>
 
-      <WorkerMenuDrawer
-        open={menuOpen}
-        onClose={() => setMenuOpen(false)}
-        currentUserName={currentUser?.name}
-        siteCount={sites.length}
-        onLogout={logout}
-      />
+      <WorkerMenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} />
     </main>
   );
 }

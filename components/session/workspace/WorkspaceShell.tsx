@@ -8,11 +8,8 @@ import {
   getSessionTitle,
 } from '@/constants/inspectionSession';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
-import {
-  WorkerMenuButton,
-  WorkerMenuDrawer,
-  WorkerMenuPanel,
-} from '@/components/worker/WorkerMenu';
+import WorkerAppHeader from '@/components/worker/WorkerAppHeader';
+import { WorkerMenuDrawer, WorkerMenuPanel } from '@/components/worker/WorkerMenu';
 import styles from '@/components/session/InspectionSessionWorkspace.module.css';
 import type {
   InspectionSectionKey,
@@ -75,62 +72,60 @@ export default function WorkspaceShell({
     <main className="app-page">
       <div className="app-container">
         <section className={`app-shell ${styles.shell}`}>
-          <header className={styles.header}>
-            <div className={styles.headerTop}>
-              <div className={styles.mobileMenuOnly}>
-                <WorkerMenuButton onClick={() => setMenuOpen(true)} />
-              </div>
-            </div>
-
-            <div className={styles.headerBody}>
-              <div className={styles.headerMain}>
-                <h1 className={styles.headerTitle}>{getSessionTitle(session)}</h1>
-              </div>
-
-              <div className={styles.headerSide}>
-                <div className={styles.progressCard}>
-                  <div className={styles.progressCluster}>
-                    <div className={styles.progressSummary}>
-                      <strong className={styles.progressValue}>
-                        {progress.completed}/{progress.total} ({progress.percentage}%)
-                      </strong>
-                      <span className={styles.progressCaption}>진행률</span>
-                    </div>
-                    <div className={styles.progressTrack} aria-hidden="true">
-                      <span
-                        className={styles.progressFill}
-                        style={{ width: `${progress.percentage}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    className="app-button app-button-secondary"
-                    onClick={onSave}
-                  >
-                    {isSaving ? '저장 중...' : '저장하기'}
-                  </button>
-                </div>
-
-                {uploadError ? <p className={styles.headerError}>{uploadError}</p> : null}
-                {syncError ? <p className={styles.headerError}>{syncError}</p> : null}
-                {documentError ? <p className={styles.headerError}>{documentError}</p> : null}
-              </div>
-            </div>
-          </header>
+          <WorkerAppHeader
+            currentUserName={currentUser?.name}
+            onLogout={logout}
+            onOpenMenu={() => setMenuOpen(true)}
+          />
 
           <div className={styles.shellBody}>
             <aside className={styles.menuSidebar}>
-              <WorkerMenuPanel
-                currentUserName={currentUser?.name}
-                siteCount={sites.length}
-                onLogout={logout}
-              />
+              <WorkerMenuPanel />
             </aside>
 
             <div className={styles.workspacePanel}>
+              <header className={styles.header}>
+                <div className={styles.headerBody}>
+                  <div className={styles.headerMain}>
+                    <h1 className={styles.headerTitle}>
+                      기술 지도 - {getSessionTitle(session)}
+                    </h1>
+                  </div>
+                </div>
+              </header>
+
               <div className={styles.workspace}>
+                <div className={styles.workspaceLead}>
+                  <div className={styles.progressCard}>
+                    <div className={styles.progressCluster}>
+                      <div className={styles.progressSummary}>
+                        <strong className={styles.progressValue}>
+                          {progress.completed}/{progress.total} ({progress.percentage}%)
+                        </strong>
+                        <span className={styles.progressCaption}>진행률</span>
+                      </div>
+                      <div className={styles.progressTrack} aria-hidden="true">
+                        <span
+                          className={styles.progressFill}
+                          style={{ width: `${progress.percentage}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="app-button app-button-secondary"
+                      onClick={onSave}
+                    >
+                      {isSaving ? '저장 중...' : '저장하기'}
+                    </button>
+                  </div>
+
+                  {uploadError ? <p className={styles.workspaceError}>{uploadError}</p> : null}
+                  {syncError ? <p className={styles.workspaceError}>{syncError}</p> : null}
+                  {documentError ? <p className={styles.workspaceError}>{documentError}</p> : null}
+                </div>
+
                 <div className={styles.topRail}>
                   <div className={styles.topRailHeader}>
                     <div className={styles.topRailActions}>
@@ -235,43 +230,43 @@ export default function WorkspaceShell({
                   </div>
                 </section>
               </div>
+
+              <footer className={styles.bottomBar}>
+                <div className={styles.bottomActions}>
+                  <button
+                    type="button"
+                    className="app-button app-button-secondary"
+                    disabled={!canMovePrev}
+                    onClick={() => moveSection(-1)}
+                  >
+                    이전 문서
+                  </button>
+                  <button type="button" className="app-button app-button-secondary" onClick={onSave}>
+                    {isSaving ? '저장 중' : '저장'}
+                  </button>
+                  {isLastSection ? (
+                    <button
+                      type="button"
+                      className="app-button app-button-primary"
+                      onClick={onGenerateDocument}
+                      disabled={isGeneratingDocument}
+                    >
+                      {isGeneratingDocument ? '문서 생성 중...' : '보고서 생성하기'}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="app-button app-button-primary"
+                      disabled={!canMoveNext}
+                      onClick={() => moveSection(1)}
+                    >
+                      다음 문서
+                    </button>
+                  )}
+                </div>
+              </footer>
             </div>
           </div>
-
-          <footer className={styles.bottomBar}>
-            <div className={styles.bottomActions}>
-              <button
-                type="button"
-                className="app-button app-button-secondary"
-                disabled={!canMovePrev}
-                onClick={() => moveSection(-1)}
-              >
-                이전 문서
-              </button>
-              <button type="button" className="app-button app-button-secondary" onClick={onSave}>
-                {isSaving ? '저장 중' : '저장'}
-              </button>
-              {isLastSection ? (
-                <button
-                  type="button"
-                  className="app-button app-button-primary"
-                  onClick={onGenerateDocument}
-                  disabled={isGeneratingDocument}
-                >
-                  {isGeneratingDocument ? '문서 생성 중...' : '보고서 생성하기'}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className="app-button app-button-primary"
-                  disabled={!canMoveNext}
-                  onClick={() => moveSection(1)}
-                >
-                  다음 문서
-                </button>
-              )}
-            </div>
-          </footer>
         </section>
       </div>
 
@@ -319,13 +314,7 @@ export default function WorkspaceShell({
         </div>
       </AppModal>
 
-      <WorkerMenuDrawer
-        open={menuOpen}
-        onClose={() => setMenuOpen(false)}
-        currentUserName={currentUser?.name}
-        siteCount={sites.length}
-        onLogout={logout}
-      />
+      <WorkerMenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} />
     </main>
   );
 }

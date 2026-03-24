@@ -5,11 +5,8 @@ import LoginPanel from '@/components/auth/LoginPanel';
 import ControllerDashboard from '@/components/controller/ControllerDashboard';
 import AssignedSitesTable from '@/components/home/AssignedSitesTable';
 import { buildSiteSummaries } from '@/components/home/siteSummaries';
-import {
-  WorkerMenuButton,
-  WorkerMenuDrawer,
-  WorkerMenuPanel,
-} from '@/components/worker/WorkerMenu';
+import WorkerAppHeader from '@/components/worker/WorkerAppHeader';
+import { WorkerMenuDrawer, WorkerMenuPanel } from '@/components/worker/WorkerMenu';
 import { isAdminUserRole } from '@/components/controller/shared';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { formatDateTime } from '@/lib/formatDateTime';
@@ -92,37 +89,36 @@ export default function HomePage() {
     <main className="app-page">
       <div className="app-container">
         <section className={`app-shell ${styles.shell}`}>
-          <header className={styles.hero}>
-            <div className={styles.heroTop}>
-              <div className={styles.mobileMenuOnly}>
-                <WorkerMenuButton onClick={() => setMenuOpen(true)} />
-              </div>
-            </div>
-            <div className={styles.heroBody}>
-              <div className={styles.heroMain}>
-                <h1 className={styles.heroTitle}>배정된 고객사 현장</h1>
-              </div>
-            </div>
-          </header>
-
-          {dataError ? (
-            <div className={styles.emptyState}>
-              <p className={styles.emptyTitle}>데이터를 불러오지 못했습니다.</p>
-              <p className={styles.emptyDescription}>{dataError}</p>
-            </div>
-          ) : null}
+          <WorkerAppHeader
+            currentUserName={currentUser?.name}
+            onLogout={logout}
+            onOpenMenu={() => setMenuOpen(true)}
+          />
 
           <div className={styles.shellBody}>
             <aside className={styles.menuSidebar}>
-              <WorkerMenuPanel
-                currentUserName={currentUser?.name}
-                siteCount={siteSummaries.length}
-                onLogout={logout}
-              />
+              <WorkerMenuPanel />
             </aside>
 
             <div className={styles.contentColumn}>
-              <div className={styles.pageGrid}>
+              {dataError ? (
+                <div className={styles.emptyState}>
+                  <p className={styles.emptyTitle}>데이터를 불러오지 못했습니다.</p>
+                  <p className={styles.emptyDescription}>{dataError}</p>
+                </div>
+              ) : (
+                <>
+                  <header className={styles.hero}>
+                    <div className={styles.heroBody}>
+                      <div className={styles.heroMain}>
+                        <h1 className={styles.heroTitle}>
+                          기술 지도 - 배정된 고객사 현장
+                        </h1>
+                      </div>
+                    </div>
+                  </header>
+
+                  <div className={styles.pageGrid}>
                 <section className={styles.summaryBar}>
                   <article className={styles.summaryCard}>
                     <span className={styles.summaryCardLabel}>전체 현장</span>
@@ -182,19 +178,15 @@ export default function HomePage() {
                     />
                   )}
                 </section>
-              </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </section>
       </div>
 
-      <WorkerMenuDrawer
-        open={menuOpen}
-        onClose={() => setMenuOpen(false)}
-        currentUserName={currentUser?.name}
-        siteCount={siteSummaries.length}
-        onLogout={logout}
-      />
+      <WorkerMenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} />
     </main>
   );
 }

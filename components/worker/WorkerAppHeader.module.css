@@ -1,0 +1,107 @@
+.appHeader {
+  flex-shrink: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(135deg, #112035 0%, #1b3048 100%);
+  color: var(--erp-white);
+  padding: 12px 18px;
+}
+
+.appHeaderBar {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.menuButtonWrap {
+  display: none;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+@media (max-width: 1199px) {
+  .menuButtonWrap {
+    display: inline-flex;
+  }
+}
+
+.brand {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.headerRight {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px 10px;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.accountBlock {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.accountLabel {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #d5deea;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.accountName {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--erp-white);
+  min-width: 0;
+  max-width: min(42vw, 220px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.logoutButton {
+  flex-shrink: 0;
+}
+
+@media (max-width: 767px) {
+  .appHeader {
+    padding: 10px 12px;
+  }
+
+  .brand {
+    font-size: 15px;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .accountName {
+    max-width: min(36vw, 160px);
+  }
+
+  .logoutButton {
+    padding-left: 10px;
+    padding-right: 10px;
+    font-size: 13px;
+  }
+}

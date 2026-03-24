@@ -95,7 +95,7 @@
   }
 
   .app-shell {
-    @apply min-h-screen bg-white print:min-h-0 print:overflow-visible print:rounded-none print:border-0 print:shadow-none;
+    @apply flex min-h-screen min-h-[100dvh] flex-col bg-white print:min-h-0 print:overflow-visible print:rounded-none print:border-0 print:shadow-none;
     border: 0;
     border-radius: 0;
     box-shadow: none;

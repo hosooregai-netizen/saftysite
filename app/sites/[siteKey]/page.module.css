@@ -3,26 +3,17 @@
 }
 
 .hero {
-  display: grid;
-  grid-template-rows: auto 1fr;
-  gap: 8px;
-  min-height: var(--app-header-min-height);
+  flex-shrink: 0;
+  min-height: 0;
   border-bottom: 1px solid var(--erp-line);
-  background: linear-gradient(135deg, #112035 0%, #1b3048 100%);
-  padding: 16px 18px 14px;
-  color: var(--erp-white);
-}
-
-.heroTop {
-  display: flex;
-  justify-content: flex-start;
+  background: #f6f9fc;
+  padding: 18px 27px 17px;
+  color: var(--erp-dark);
 }
 
 .heroBody {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
   min-height: 0;
 }
 
@@ -39,56 +30,44 @@
   width: fit-content;
   min-height: 38px;
   padding: 0 14px;
-  border: 1px solid rgba(213, 222, 234, 0.5);
+  border: 1px solid var(--erp-line);
   border-radius: var(--erp-radius-control);
-  background-color: rgba(255, 255, 255, 0.12);
+  background-color: var(--erp-white);
   font-size: 13px;
   font-weight: 700;
-  color: var(--erp-white);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+  color: var(--erp-dark);
+  box-shadow: 0 1px 0 rgba(16, 24, 43, 0.04);
 }
 
 .backLink:hover {
-  border-color: rgba(213, 222, 234, 0.74);
-  background-color: rgba(255, 255, 255, 0.18);
-  color: var(--erp-white);
+  border-color: #c5d0de;
+  background-color: #f8fafc;
+  color: var(--erp-dark);
 }
 
 .heroTitle {
   margin: 0;
-  font-size: 28px;
+  font-size: 18px;
   font-weight: 700;
-  line-height: 1.1;
-  letter-spacing: -0.03em;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
   word-break: keep-all;
   overflow-wrap: anywhere;
+  color: var(--erp-dark);
 }
 
 .heroDescription {
   margin-top: 8px;
   font-size: 14px;
   line-height: 1.7;
-  color: #d5deea;
+  color: var(--erp-text-muted);
   word-break: keep-all;
   overflow-wrap: anywhere;
 }
 
-.heroActions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
-.heroMetaText {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.5;
-  color: #d5deea;
-}
-
 .pageGrid {
+  flex: 1 1 auto;
+  min-height: 0;
   padding: 18px;
 }
 
@@ -96,21 +75,33 @@
   display: grid;
   grid-template-columns: 248px minmax(0, 1fr);
   flex: 1 1 auto;
+  min-height: 0;
   align-items: stretch;
 }
 
 .menuSidebar {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  align-self: start;
+  position: sticky;
+  top: 0;
+  max-height: 100vh;
+  max-height: 100dvh;
+  overflow: hidden;
   border-right: 1px solid var(--erp-line);
   background: #f6f9fc;
   padding: 18px 14px;
 }
 
 .contentColumn {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
-}
-
-.mobileMenuOnly {
-  display: none;
+  min-height: 0;
+  flex: 1 1 auto;
+  align-self: stretch;
+  background-color: var(--erp-white);
 }
 
 .panel {
@@ -184,6 +175,11 @@
 .lastSavedCell,
 .actionsCell {
   min-width: 0;
+}
+
+/* 진행률(막대·분수)과 메뉴 버튼 사이 시각적 간격 */
+.progressArea {
+  padding-right: 20px;
 }
 
 .reportLink {
@@ -285,24 +281,16 @@
     display: none;
   }
 
-  .mobileMenuOnly {
-    display: inline-flex;
+  .hero {
+    padding: 15px 21px 14px;
+  }
+
+  .heroTitle {
+    font-size: 16px;
   }
 
   .pageGrid {
     padding: 10px;
-  }
-
-  .heroBody {
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: center;
-    gap: 12px;
-  }
-
-  .heroActions {
-    width: 100%;
-    justify-content: space-between;
   }
 
   .listHead,
@@ -342,6 +330,10 @@
     gap: 6px;
   }
 
+  .progressArea {
+    padding-right: 14px;
+  }
+
   .progressTrack {
     height: 8px;
   }
@@ -349,7 +341,11 @@
 
 @media (min-width: 768px) and (max-width: 1199px) {
   .hero {
-    padding: 18px 22px 16px;
+    padding: 18px 33px 17px;
+  }
+
+  .heroTitle {
+    font-size: 17px;
   }
 
   .shellBody {
@@ -358,10 +354,6 @@
 
   .menuSidebar {
     display: none;
-  }
-
-  .mobileMenuOnly {
-    display: inline-flex;
   }
 
   .pageGrid {
@@ -391,7 +383,11 @@
 
 @media (min-width: 1200px) {
   .hero {
-    padding: 18px 22px 16px;
+    padding: 18px 42px 17px;
+  }
+
+  .shellBody {
+    background: linear-gradient(90deg, #f6f9fc 0, #f6f9fc 248px, var(--erp-white) 248px);
   }
 
   .pageGrid {
