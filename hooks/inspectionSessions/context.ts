@@ -17,6 +17,7 @@ export interface InspectionSessionsContextValue {
   sites: InspectionSite[];
   sessions: InspectionSession[];
   isReady: boolean;
+  isHydrating: boolean;
   isAuthenticated: boolean;
   isSaving: boolean;
   currentUser: SafetyUser | null;

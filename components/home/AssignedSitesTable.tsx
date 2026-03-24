@@ -16,15 +16,16 @@ export default function AssignedSitesTable({
   styles,
   formatDateTime,
 }: AssignedSitesTableProps) {
-  const assigneeDisplay = [currentUserName, currentUserPosition].filter(Boolean).join(' · ');
+  const assigneeDisplay = [currentUserName, currentUserPosition]
+    .filter(Boolean)
+    .join(' · ');
 
   if (siteSummaries.length === 0) {
     return (
       <div className={styles.emptyState}>
         <p className={styles.emptyTitle}>배정된 현장이 없습니다.</p>
         <p className={styles.emptyDescription}>
-          현재 로그인한 계정에 연결된 현장이 없거나, 배정 데이터가 아직 등록되지
-          않았습니다.
+          현재 로그인한 계정에 연결된 현장 데이터가 아직 등록되지 않았습니다.
         </p>
       </div>
     );
@@ -47,11 +48,7 @@ export default function AssignedSitesTable({
         {siteSummaries.map(({ site, latestProgress, latestSession, sessionCount }) => {
           const siteHref = `/sites/${encodeURIComponent(site.id)}`;
           const progressLabel =
-            latestProgress >= 100
-              ? '완료'
-              : latestProgress > 0
-                ? '진행중'
-                : '미작성';
+            latestProgress >= 100 ? '완료' : latestProgress > 0 ? '진행중' : '미작성';
 
           return (
             <article key={site.id} className={styles.siteRow}>
@@ -65,10 +62,6 @@ export default function AssignedSitesTable({
                 <Link href={siteHref} className={styles.siteLink}>
                   {site.siteName || '미입력'}
                 </Link>
-                <div className={styles.siteMetaRow}>
-                  <span className="app-chip">{progressLabel}</span>
-                  <span className={styles.tableHintText}>{sessionCount}건 보고서</span>
-                </div>
               </div>
 
               <div className={`${styles.cell} ${styles.assigneeCell}`}>

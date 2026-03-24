@@ -71,7 +71,10 @@ export default function ReportList({
               <div className={`${styles.dataCell} ${styles.drafterCell}`}>
                 <span className={styles.mobileLabel}>작성자</span>
                 <span className={styles.dataValue}>
-                  {session.meta.drafter || assignedUserDisplay || currentSite.assigneeName || '미입력'}
+                  {session.meta.drafter ||
+                    assignedUserDisplay ||
+                    currentSite.assigneeName ||
+                    '미입력'}
                 </span>
               </div>
 

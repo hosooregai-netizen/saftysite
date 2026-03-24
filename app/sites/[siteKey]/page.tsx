@@ -6,7 +6,7 @@ import { use, useMemo, useState } from 'react';
 import LoginPanel from '@/components/auth/LoginPanel';
 import ReportList from '@/components/site/ReportList';
 import AppModal from '@/components/ui/AppModal';
-import { getSessionSiteKey, getSessionTitle, getSiteDisplayTitle } from '@/constants/inspectionSession';
+import { getSessionSiteKey, getSessionTitle } from '@/constants/inspectionSession';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { formatDateTime } from '@/lib/formatDateTime';
 import styles from './page.module.css';
@@ -46,6 +46,7 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
     () => sessions.filter((session) => getSessionSiteKey(session) === decodedSiteKey),
     [decodedSiteKey, sessions]
   );
+
   const assignedUserDisplay = [currentUser?.name, currentUser?.position]
     .filter(Boolean)
     .join(' · ');
@@ -128,9 +129,6 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
               <div className={styles.heroTitleRow}>
                 <div>
                   <h1 className={styles.heroTitle}>{currentSite.siteName}</h1>
-                  <p className={styles.heroDescription}>
-                    {getSiteDisplayTitle(currentSite)}
-                  </p>
                 </div>
               </div>
             </div>
@@ -156,9 +154,7 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
                 canArchiveReports={canArchiveReports}
                 formatDateTime={formatDateTime}
                 onCreateReport={handleCreateReport}
-                onDeleteRequest={(sessionId) =>
-                  setDialogState({ type: 'delete', sessionId })
-                }
+                onDeleteRequest={(sessionId) => setDialogState({ type: 'delete', sessionId })}
                 styles={styles}
               />
             </section>

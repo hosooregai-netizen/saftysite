@@ -28,15 +28,16 @@
     --hazard-border: 1px solid #000;
     --hazard-input-focus: 1px solid #1f3045;
     --hazard-input-shadow: 0 0 0 2px rgba(31, 48, 69, 0.14);
+    --app-header-min-height: 118px;
   }
 
   html {
-    background-color: var(--erp-surface);
+    background-color: var(--erp-white);
   }
 
   body {
     min-height: 100vh;
-    background: linear-gradient(180deg, #f5f7fa 0%, #eef2f5 100%);
+    background: var(--erp-white);
     color: var(--erp-dark);
     font-family:
       "Noto Sans KR",
@@ -76,19 +77,28 @@
   }
 }
 
+@media (min-width: 900px) {
+  @layer base {
+    :root {
+      --app-header-min-height: 140px;
+    }
+  }
+}
+
 @layer components {
   .app-page {
-    @apply min-h-screen px-4 py-6 md:px-8 md:py-8 print:bg-white print:p-0;
+    @apply min-h-screen print:bg-white print:p-0;
   }
 
   .app-container {
-    @apply mx-auto max-w-7xl;
+    @apply w-full max-w-none;
   }
 
   .app-shell {
-    @apply overflow-hidden border bg-white shadow-panel print:overflow-visible print:rounded-none print:border-0 print:shadow-none;
-    border-radius: var(--erp-radius-surface);
-    border-color: var(--erp-line-strong);
+    @apply min-h-screen bg-white print:min-h-0 print:overflow-visible print:rounded-none print:border-0 print:shadow-none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
   }
 
   .app-page-header {

@@ -18,7 +18,7 @@ import {
   mapSafetyReportToInspectionSession,
   mapSafetySiteToInspectionSite,
 } from '@/lib/safetyApiMappers';
-import type { SafetyHydratedData, SafetyLoginInput } from '@/types/backend';
+import type { SafetyHydratedData, SafetyLoginInput, SafetyUser } from '@/types/backend';
 import type { InspectionSite, InspectionSession } from '@/types/inspectionSession';
 import { getErrorMessage, isAuthFailure, normalizeSessions, SITE_STORAGE_KEY, STORAGE_KEY } from './helpers';
 import type { InspectionSessionsStore } from './store';
@@ -34,6 +34,7 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
     setAuthError,
     setCurrentUser,
     setDataError,
+    setIsHydrating,
     setIsReady,
     setMasterData,
     setSessionState,
@@ -41,12 +42,9 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
     setSyncError,
   } = store;
 
-  const hydrateRemoteState = useCallback(
-    async (token: string): Promise<SafetyHydratedData> => {
-      const [user, contentItems] = await Promise.all([
-        fetchCurrentSafetyUser(token),
-        fetchSafetyContentItems(token),
-      ]);
+  const hydrateRemoteCollections = useCallback(
+    async (token: string, user: SafetyUser) => {
+      const contentItems = await fetchSafetyContentItems(token);
       const rawSites = isSafetyAdmin(user)
         ? await fetchSafetySitesAdmin(token)
         : await fetchAssignedSafetySites(token);
@@ -60,7 +58,6 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
       );
 
       return {
-        user,
         sites: mappedSites,
         sessions: normalizeSessions(
           reportGroups.flatMap(({ site, reports }) =>
@@ -71,6 +68,19 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
       };
     },
     []
+  );
+
+  const hydrateRemoteState = useCallback(
+    async (token: string): Promise<SafetyHydratedData> => {
+      const user = await fetchCurrentSafetyUser(token);
+      const collections = await hydrateRemoteCollections(token, user);
+
+      return {
+        user,
+        ...collections,
+      };
+    },
+    [hydrateRemoteCollections]
   );
 
   const applyHydratedState = useCallback(
@@ -101,10 +111,12 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
     const token = authTokenRef.current;
     if (!token) {
       setIsReady(true);
+      setIsHydrating(false);
       return;
     }
 
     setDataError(null);
+    setIsHydrating(true);
     try {
       await applyHydratedState(await hydrateRemoteState(token));
     } catch (error) {
@@ -115,9 +127,10 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
         setDataError(getErrorMessage(error));
       }
     } finally {
+      setIsHydrating(false);
       setIsReady(true);
     }
-  }, [applyHydratedState, authTokenRef, clearAuthState, hydrateRemoteState, setAuthError, setDataError, setIsReady]);
+  }, [applyHydratedState, authTokenRef, clearAuthState, hydrateRemoteState, setAuthError, setDataError, setIsHydrating, setIsReady]);
 
   useEffect(() => {
     let cancelled = false;
@@ -151,21 +164,45 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
     setAuthError(null);
     setDataError(null);
     setSyncError(null);
-    setIsReady(false);
+    setIsHydrating(true);
+    let backgroundStarted = false;
 
     try {
       const token = await loginSafetyApi(input);
       writeSafetyAuthToken(token.access_token);
       authTokenRef.current = token.access_token;
-      await applyHydratedState(await hydrateRemoteState(token.access_token));
+      const user = await fetchCurrentSafetyUser(token.access_token);
+      setCurrentUser(user);
+      setIsReady(true);
+      backgroundStarted = true;
+
+      void (async () => {
+        try {
+          const collections = await hydrateRemoteCollections(token.access_token, user);
+          await applyHydratedState({ user, ...collections });
+        } catch (error) {
+          if (isAuthFailure(error)) {
+            clearAuthState();
+            setAuthError('濡쒓렇?몄씠 留뚮즺?섏뿀?듬땲?? ?ㅼ떆 濡쒓렇?명빐 二쇱꽭??');
+          } else {
+            setDataError(getErrorMessage(error));
+          }
+        } finally {
+          setIsHydrating(false);
+          setIsReady(true);
+        }
+      })();
     } catch (error) {
       clearAuthState();
       setAuthError(getErrorMessage(error));
       throw error;
     } finally {
-      setIsReady(true);
+      if (!backgroundStarted) {
+        setIsHydrating(false);
+        setIsReady(true);
+      }
     }
-  }, [applyHydratedState, authTokenRef, clearAuthState, hydrateRemoteState, setAuthError, setDataError, setIsReady, setSyncError]);
+  }, [applyHydratedState, authTokenRef, clearAuthState, hydrateRemoteCollections, setAuthError, setCurrentUser, setDataError, setIsHydrating, setIsReady, setSyncError]);
 
   const logout = useCallback(() => {
     clearAuthState();
