@@ -1,6 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import WorkerAppHeader from '@/components/worker/WorkerAppHeader';
+import WorkerMenuSidebar from '@/components/worker/WorkerMenuSidebar';
+import WorkerShellBody from '@/components/worker/WorkerShellBody';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { useControllerDashboard } from '@/hooks/controller/useControllerDashboard';
 import type { SafetyUser } from '@/types/backend';
@@ -18,7 +21,7 @@ interface ControllerDashboardProps {
 }
 
 export default function ControllerDashboard({
-  currentUser: _currentUser,
+  currentUser,
   onLogout,
 }: ControllerDashboardProps) {
   const [activeSection, setActiveSection] = useState<ControllerSectionKey>('overview');
@@ -31,6 +34,8 @@ export default function ControllerDashboard({
     setActiveSection(next);
     setMenuOpen(false);
   };
+  const activeSectionMeta =
+    CONTROLLER_SECTIONS.find((section) => section.key === activeSection) ?? CONTROLLER_SECTIONS[0];
 
   const renderSection = () => {
     switch (activeSection) {
@@ -97,90 +102,83 @@ export default function ControllerDashboard({
     }
   };
 
+  const menuButtons = CONTROLLER_SECTIONS.map((section) => (
+    <button
+      key={section.key}
+      type="button"
+      className={`${styles.menuButton} ${
+        activeSection === section.key ? styles.menuButtonActive : ''
+      }`}
+      onClick={() => selectSection(section.key)}
+    >
+      <span className={styles.menuLabel}>{section.label}</span>
+      <span className={styles.menuDescription}>{section.description}</span>
+    </button>
+  ));
+
   const navigation = (
-    <>
-      <p className={styles.navTitle}>관리자 메뉴</p>
-      <div className={styles.navList}>
-        {CONTROLLER_SECTIONS.map((section) => (
-          <button
-            key={section.key}
-            type="button"
-            className={`${styles.navButton} ${
-              activeSection === section.key ? styles.navButtonActive : ''
-            }`}
-            onClick={() => selectSection(section.key)}
-          >
-            <span className={styles.navLabel}>{section.label}</span>
-            <span className={styles.navDescription}>{section.description}</span>
-          </button>
-        ))}
-      </div>
-    </>
+    <div className={styles.menuPanel} id="worker-menu-nav-panel">
+      <section className={styles.menuSection} aria-labelledby="controller-menu-heading">
+        <h2 id="controller-menu-heading" className={styles.menuTitle}>
+          관리자 메뉴
+        </h2>
+        <div className={styles.menuList}>{menuButtons}</div>
+      </section>
+    </div>
   );
 
   return (
     <main className="app-page">
       <div className="app-container">
         <section className={`app-shell ${styles.shell}`}>
-          <header className={styles.hero}>
-            <div className={styles.heroTop}>
-              <div>
-                <h1 className={styles.heroTitle}>관리자 대시보드</h1>
-              </div>
-              <div className={styles.heroActions}>
-                <button
-                  type="button"
-                  className={`app-button app-button-secondary ${styles.mobileMenuButton}`}
-                  onClick={() => setMenuOpen(true)}
-                >
-                  메뉴
-                </button>
-                <button
-                  type="button"
-                  className="app-button app-button-secondary"
-                  onClick={() => void dashboard.reload()}
-                  disabled={busy}
-                >
-                  새로고침
-                </button>
-                <button
-                  type="button"
-                  className="app-button app-button-secondary"
-                  onClick={onLogout}
-                >
-                  로그아웃
-                </button>
+          <WorkerAppHeader
+            currentUserName={currentUser.name}
+            onLogout={onLogout}
+            onOpenMenu={() => setMenuOpen(true)}
+            brand="한국 종합 안전"
+            accountLabel="관리자 계정"
+          />
+
+          <WorkerShellBody>
+            <WorkerMenuSidebar>{navigation}</WorkerMenuSidebar>
+
+            <div className={styles.contentColumn}>
+              <header className={styles.hero}>
+                <div className={styles.heroBody}>
+                  <div className={styles.heroMain}>
+                    <h1 className={styles.heroTitle}>{activeSectionMeta.label}</h1>
+                  </div>
+                </div>
+              </header>
+
+              <div className={styles.pageGrid}>
+                <section className={styles.mobileSectionRail} aria-label="관리자 섹션 빠른 이동">
+                  {CONTROLLER_SECTIONS.map((section) => (
+                    <button
+                      key={`mobile-${section.key}`}
+                      type="button"
+                      className={`${styles.mobileSectionButton} ${
+                        activeSection === section.key ? styles.mobileSectionButtonActive : ''
+                      }`}
+                      onClick={() => selectSection(section.key)}
+                    >
+                      {section.label}
+                    </button>
+                  ))}
+                </section>
+
+                <section className={styles.contentStack}>
+                  {dashboard.error ? (
+                    <div className={styles.bannerError}>{dashboard.error}</div>
+                  ) : null}
+                  {dashboard.notice ? (
+                    <div className={styles.bannerNotice}>{dashboard.notice}</div>
+                  ) : null}
+                  {renderSection()}
+                </section>
               </div>
             </div>
-          </header>
-
-          <div className={styles.sectionTabs} aria-label="관리자 메뉴">
-            {CONTROLLER_SECTIONS.map((section) => (
-              <button
-                key={section.key}
-                type="button"
-                className={`${styles.sectionTab} ${
-                  activeSection === section.key ? styles.sectionTabActive : ''
-                }`}
-                onClick={() => selectSection(section.key)}
-              >
-                {section.label}
-              </button>
-            ))}
-          </div>
-
-          <div className={styles.workspace}>
-            <aside className={styles.nav}>{navigation}</aside>
-            <section className={styles.content}>
-              {dashboard.error ? (
-                <div className={styles.bannerError}>{dashboard.error}</div>
-              ) : null}
-              {dashboard.notice ? (
-                <div className={styles.bannerNotice}>{dashboard.notice}</div>
-              ) : null}
-              {renderSection()}
-            </section>
-          </div>
+          </WorkerShellBody>
         </section>
       </div>
 

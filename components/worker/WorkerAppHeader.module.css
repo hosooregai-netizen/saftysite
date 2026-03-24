@@ -51,6 +51,13 @@
   min-width: 0;
 }
 
+.headerActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
 .accountBlock {
   display: flex;
   flex-direction: row;
@@ -128,6 +135,10 @@
 
   .accountName {
     max-width: min(36vw, 160px);
+  }
+
+  .headerActions {
+    gap: 6px;
   }
 
   .logoutButton {

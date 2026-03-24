@@ -223,7 +223,7 @@ export default function UsersSection(props: UsersSectionProps) {
   };
 
   return (
-    <section className={styles.sectionCard}>
+    <section className={`${styles.sectionCard} ${styles.listSectionCard}`}>
       <div className={styles.sectionHeader}>
         <div>
           <h2 className={styles.sectionTitle}>사용자 CRUD</h2>

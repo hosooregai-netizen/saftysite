@@ -5,140 +5,191 @@
 }
 
 .hero {
-  display: grid;
-  gap: 10px;
-  min-height: var(--app-header-min-height);
-  padding: 16px 18px 14px;
+  flex-shrink: 0;
+  min-height: 0;
+  padding: 18px 27px 17px;
   border-bottom: 1px solid var(--erp-line);
-  background: linear-gradient(135deg, #102338 0%, #173250 100%);
-  color: var(--erp-white);
+  background: #f6f9fc;
+  color: var(--erp-dark);
 }
 
-.heroTop {
+.heroBody {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 10px;
+  min-height: 32px;
 }
 
-.heroMeta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+.heroMain {
+  display: grid;
+  align-content: center;
+  min-width: 0;
 }
 
 .heroTitle {
-  font-size: var(--text-hero);
+  margin: 0;
+  font-size: var(--text-title);
   font-weight: 700;
-  letter-spacing: -0.03em;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  color: var(--erp-dark);
 }
 
-.heroDescription {
-  max-width: 760px;
-  margin-top: 8px;
-  font-size: var(--text-body);
-  line-height: 1.7;
-  color: #d7e0eb;
-}
-
-.heroActions {
+.contentColumn {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: flex-start;
-}
-
-.mobileMenuButton {
-  display: inline-flex;
-}
-
-.workspace {
-  display: grid;
-  grid-template-columns: 248px minmax(0, 1fr);
-  gap: 0;
   flex: 1 1 auto;
-  align-items: stretch;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--erp-white);
 }
 
-.sectionTabs {
-  display: flex;
-  gap: 10px;
-  padding: 12px 18px;
-  overflow-x: auto;
-  border-bottom: 1px solid var(--erp-line);
-  background: #f8fbfe;
+.pageGrid {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 20px 28px 24px;
 }
 
-.sectionTab {
+.summaryBar {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.summaryCard {
+  display: grid;
+  gap: 6px;
+  padding: 15px 18px;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-card);
+  background: var(--erp-white);
+  box-shadow: 0 1px 0 rgba(16, 24, 43, 0.04);
+}
+
+.summaryCardLabel {
+  font-size: var(--text-ui-sm);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--erp-text-muted);
+}
+
+.summaryCardValue {
+  font-size: var(--text-lead);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--erp-dark);
+}
+
+.summaryCardMeta {
+  font-size: var(--text-ui);
+  line-height: 1.5;
+  color: var(--erp-text-muted);
+}
+
+.mobileSectionRail {
+  display: none;
+}
+
+.mobileSectionButton {
   flex: 0 0 auto;
   min-height: 38px;
   padding: 0 14px;
   border: 1px solid var(--erp-line);
-  border-radius: 1px;
+  border-radius: 6px;
   background: var(--erp-white);
   font-size: var(--text-ui);
   font-weight: 700;
   color: var(--erp-dark);
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease;
 }
 
-.sectionTabActive {
-  border-color: var(--erp-mid);
-  background: #eaf1f8;
+.mobileSectionButton:hover {
+  background: #f8fafc;
+  border-color: #96a4b4;
 }
 
-.nav {
-  border-right: 1px solid var(--erp-line);
-  background: #f6f9fc;
-  padding: 18px 14px;
-  align-self: stretch;
+.mobileSectionButtonActive {
+  border-color: rgba(31, 48, 69, 0.24);
+  background: rgba(31, 48, 69, 0.06);
 }
 
-.navTitle {
-  margin-bottom: 12px;
+.contentStack {
+  display: grid;
+  gap: 16px;
+}
+
+.menuPanel {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.menuSection {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.menuTitle {
+  margin: 0;
   font-size: var(--text-ui-sm);
   font-weight: 700;
+  line-height: 1.25;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--erp-text-muted);
 }
 
-.navList {
+.menuList {
   display: grid;
   gap: 8px;
 }
 
-.navButton {
+.menuButton {
   display: grid;
   gap: 4px;
-  padding: 12px;
-  border: 1px solid var(--erp-line);
-  border-radius: 1px;
-  background: var(--erp-white);
+  padding: 12px 12px 12px 14px;
+  border: none;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.95);
   text-align: left;
+  color: var(--erp-dark);
+  box-shadow: inset 0 0 0 1px rgba(219, 226, 234, 0.65);
+  transition:
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
-.navButtonActive {
-  border-color: var(--erp-mid);
-  background: #eaf1f8;
+.menuButton:hover {
+  background: rgba(255, 255, 255, 1);
+  box-shadow: inset 0 0 0 1px rgba(188, 199, 211, 0.9);
 }
 
-.navLabel {
+.menuButtonActive {
+  background: rgba(31, 48, 69, 0.06);
+  box-shadow:
+    inset 4px 0 0 var(--erp-navy),
+    inset 0 0 0 1px rgba(219, 226, 234, 0.35);
+}
+
+.menuLabel {
   font-size: var(--text-body);
   font-weight: 700;
   color: var(--erp-dark);
 }
 
-.navDescription {
+.menuDescription {
   font-size: var(--text-ui-sm);
   line-height: 1.5;
   color: var(--erp-text-muted);
-}
-
-.content {
-  padding: 18px;
-  display: grid;
-  gap: 16px;
 }
 
 .bannerError,
@@ -161,10 +212,35 @@
   color: var(--erp-mid);
 }
 
+.drawerBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: rgba(10, 19, 32, 0.42);
+}
+
+.drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 71;
+  display: flex;
+  flex-direction: column;
+  width: min(84vw, 320px);
+  padding: 20px 16px;
+  border-right: 1px solid var(--erp-line);
+  background: #f6f9fc;
+  overflow: hidden;
+  min-height: 0;
+}
+
 .sectionCard {
   border: 1px solid var(--erp-line);
-  border-radius: 1px;
+  border-radius: var(--erp-radius-surface);
   background: var(--erp-white);
+  box-shadow: 0 1px 0 rgba(16, 24, 43, 0.04);
+  overflow: hidden;
 }
 
 .sectionHeader {
@@ -175,6 +251,7 @@
   gap: 12px;
   padding: 18px;
   border-bottom: 1px solid var(--erp-line);
+  background: #fbfcfe;
 }
 
 .sectionHeaderActions {
@@ -201,11 +278,65 @@
   padding: 18px;
 }
 
+.listSectionCard .sectionBody {
+  padding: 0;
+}
+
+.listSectionCard .filterRow {
+  gap: 10px;
+  margin-bottom: 0;
+  padding: 16px;
+  border-bottom: 1px solid var(--erp-line);
+  background: #fbfcfe;
+}
+
+.listSectionCard .filterSearch {
+  min-width: min(100%, 320px);
+  flex: 1 1 320px;
+}
+
+.listSectionCard .tableShell {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.listSectionCard .table th {
+  padding: 9px 16px 8px;
+  background-color: var(--erp-panel-muted);
+  font-size: var(--text-micro);
+  letter-spacing: 0.02em;
+}
+
+.listSectionCard .table td {
+  padding: 11px 16px;
+  vertical-align: middle;
+}
+
+.listSectionCard .table tbody tr:nth-child(even) td {
+  background: var(--erp-white);
+}
+
+.listSectionCard .tablePrimary {
+  font-size: var(--text-body-lg);
+  line-height: 1.3;
+}
+
+.listSectionCard .tableSecondary {
+  font-size: var(--text-ui);
+  line-height: 1.4;
+}
+
+.listSectionCard .tableEmpty {
+  padding: 28px 24px;
+}
+
 .tableShell {
   overflow: hidden;
   border: 1px solid var(--erp-line);
-  border-radius: 1px;
+  border-radius: var(--erp-radius-surface);
   background: #fff;
+  box-shadow: 0 1px 0 rgba(16, 24, 43, 0.04);
 }
 
 .tableWrap {
@@ -301,6 +432,14 @@
   font-size: var(--text-ui);
   font-weight: 700;
   color: var(--erp-dark);
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.filterButton:hover {
+  background: #f8fafc;
+  border-color: #96a4b4;
 }
 
 .filterButtonActive {
@@ -341,8 +480,9 @@
   gap: 14px;
   padding: 14px;
   border: 1px solid var(--erp-line);
-  border-radius: 1px;
-  background: #fbfcfd;
+  border-radius: var(--erp-radius-surface);
+  background: var(--erp-white);
+  box-shadow: 0 1px 0 rgba(16, 24, 43, 0.04);
 }
 
 .contentTypeHeader {
@@ -470,8 +610,9 @@
 .insightCard {
   padding: 14px;
   border: 1px solid var(--erp-line);
-  border-radius: 1px;
-  background: #fbfcfd;
+  border-radius: var(--erp-radius-surface);
+  background: var(--erp-white);
+  box-shadow: 0 1px 0 rgba(16, 24, 43, 0.04);
 }
 
 .insightTitle {
@@ -497,8 +638,9 @@
 .statCard {
   padding: 16px;
   border: 1px solid var(--erp-line);
-  border-radius: 1px;
-  background: #fbfcfd;
+  border-radius: var(--erp-radius-surface);
+  background: var(--erp-white);
+  box-shadow: 0 1px 0 rgba(16, 24, 43, 0.04);
 }
 
 .statButton {
@@ -596,8 +738,9 @@
 .recordCard {
   padding: 16px;
   border: 1px solid var(--erp-line);
-  border-radius: 1px;
-  background: #fcfdff;
+  border-radius: var(--erp-radius-surface);
+  background: var(--erp-white);
+  box-shadow: 0 1px 0 rgba(16, 24, 43, 0.04);
 }
 
 .recordTop {
@@ -647,7 +790,7 @@
 .drawerBackdrop {
   position: fixed;
   inset: 0;
-  z-index: 60;
+  z-index: 70;
   background: rgba(10, 19, 32, 0.42);
 }
 
@@ -656,11 +799,15 @@
   top: 0;
   left: 0;
   bottom: 0;
-  z-index: 61;
+  z-index: 71;
+  display: flex;
+  flex-direction: column;
   width: min(84vw, 320px);
   padding: 20px 16px;
-  background: var(--erp-white);
-  box-shadow: 24px 0 48px rgba(0, 0, 0, 0.12);
+  border-right: 1px solid var(--erp-line);
+  background: #f6f9fc;
+  overflow: hidden;
+  min-height: 0;
 }
 
 .overviewBody {
@@ -1058,3 +1205,89 @@
   }
 }
 
+@media (max-width: 1199px) {
+  .hero {
+    padding: 18px 22px 17px;
+  }
+
+  .pageGrid {
+    padding: 18px 22px 22px;
+  }
+
+  .summaryBar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mobileSectionRail {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+}
+
+@media (max-width: 767px) {
+  .listSectionCard .filterRow {
+    gap: 8px;
+    padding: 12px 10px;
+  }
+
+  .listSectionCard .filterSearch {
+    min-width: 0;
+    flex: 1 1 100%;
+  }
+
+  .listSectionCard .table th,
+  .listSectionCard .table td {
+    padding: 10px 12px;
+  }
+
+  .hero {
+    padding: 15px 21px 14px;
+  }
+
+  .heroTitle {
+    font-size: var(--text-body-md);
+  }
+
+  .pageGrid {
+    gap: 12px;
+    padding: 10px;
+  }
+
+  .summaryBar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .summaryCard {
+    padding: 12px 14px;
+  }
+
+  .summaryCardLabel {
+    font-size: var(--text-kicker);
+    letter-spacing: 0.04em;
+  }
+
+  .summaryCardValue {
+    font-size: var(--text-title);
+  }
+
+  .summaryCardMeta {
+    font-size: var(--text-kicker);
+  }
+
+  .mobileSectionRail {
+    gap: 8px;
+  }
+
+  .mobileSectionButton {
+    min-height: 34px;
+    padding: 0 12px;
+    font-size: var(--text-ui-sm);
+  }
+
+  .contentStack {
+    gap: 12px;
+  }
+}
