@@ -29,11 +29,7 @@ export default function WorkerAppHeader({
             <span className={styles.accountLabel}>로그인 계정</span>
             <strong className={styles.accountName}>{currentUserName || '작업자'}</strong>
           </div>
-          <button
-            type="button"
-            className={`app-button app-button-secondary ${styles.logoutButton}`}
-            onClick={onLogout}
-          >
+          <button type="button" className={styles.logoutButton} onClick={onLogout}>
             로그아웃
           </button>
         </div>
