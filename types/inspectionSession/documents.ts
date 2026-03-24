@@ -63,7 +63,10 @@ export interface FatalAccidentMeasureItem {
 
 export interface CurrentHazardFinding {
   id: string;
+  /** 현장 사진 1 */
   photoUrl: string;
+  /** 현장 사진 2 */
+  photoUrl2: string;
   location: string;
   likelihood: string;
   severity: string;
@@ -106,6 +109,7 @@ export interface MeasurementCheckItem {
   id: string;
   instrumentType: string;
   measurementLocation: string;
+  photoUrl: string;
   measuredValue: string;
   safetyCriteria: string;
   actionTaken: string;
@@ -117,6 +121,8 @@ export interface SafetyEducationRecord {
   materialUrl: string;
   materialName: string;
   attendeeCount: string;
+  /** 교육 주제 */
+  topic: string;
   content: string;
 }
 

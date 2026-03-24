@@ -2,40 +2,103 @@ import { CAUSATIVE_AGENT_SECTIONS } from '@/constants/siteOverview';
 import styles from '@/components/session/InspectionSessionWorkspace.module.css';
 import type { OverviewSectionProps } from '@/components/session/workspace/types';
 
+const DOC6_MEASURE_ITEMS = CAUSATIVE_AGENT_SECTIONS.flatMap((section) =>
+  section.rows.flatMap((row) => [row.left, row.right])
+);
+
+const DOC6_PAIR_ROWS = Array.from({ length: 7 }, (_, rowIndex) => ({
+  left: DOC6_MEASURE_ITEMS[rowIndex * 2]!,
+  right: DOC6_MEASURE_ITEMS[rowIndex * 2 + 1]!,
+}));
+
 export default function Doc6Section({
   applyDocumentUpdate,
-  recommendedAgentKeys,
   session,
 }: {
   applyDocumentUpdate: OverviewSectionProps['applyDocumentUpdate'];
-  recommendedAgentKeys: Set<string>;
   session: OverviewSectionProps['session'];
 }) {
   return (
     <div className={styles.sectionStack}>
-      <div className={styles.sectionToolbar}>
-        <span className="app-chip">추천 {recommendedAgentKeys.size}건</span>
-        <button type="button" className="app-button app-button-secondary" onClick={() => applyDocumentUpdate('doc6', 'derived', (current) => ({ ...current, document6Measures: current.document6Measures.map((measure) => ({ ...measure, checked: recommendedAgentKeys.has(measure.key) })) }))}>
-          추천값 다시 반영
-        </button>
-      </div>
-      <div className={styles.measureTable}>
-        {CAUSATIVE_AGENT_SECTIONS.flatMap((section) => section.rows).map((row) => (
-          <div key={`${row.left.key}-${row.right.key}`} className={styles.measureRow}>
-            {[row.left, row.right].map((item) => {
-              const currentMeasure = session.document6Measures.find((measure) => measure.key === item.key);
+      <div className={styles.workPlanSection}>
+        <table className={`${styles.workPlanTable} ${styles.doc6MeasureTable}`}>
+          <colgroup>
+            <col className={styles.workPlanColTitle} />
+            <col className={styles.workPlanColNarrow} />
+            <col className={styles.workPlanColTitle} />
+            <col className={styles.workPlanColNarrow} />
+          </colgroup>
+          <thead>
+            <tr>
+              <th scope="col" className={styles.workPlanThTitle}>
+                조치항목
+              </th>
+              <th scope="col" className={styles.workPlanThNarrow}>
+                해당
+              </th>
+              <th scope="col" className={styles.workPlanThTitle}>
+                조치항목
+              </th>
+              <th scope="col" className={styles.workPlanThNarrow}>
+                해당
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {DOC6_PAIR_ROWS.map(({ left, right }, rowIndex) => {
+              const leftMeasure = session.document6Measures.find((m) => m.key === left.key);
+              const rightMeasure = session.document6Measures.find((m) => m.key === right.key);
               return (
-                <label key={item.key} className={styles.measureCell}>
-                  <div className={styles.measureMain}>
-                    <input type="checkbox" className="app-checkbox" checked={currentMeasure?.checked ?? false} onChange={(event) => applyDocumentUpdate('doc6', 'manual', (current) => ({ ...current, document6Measures: current.document6Measures.map((measure) => measure.key === item.key ? { ...measure, checked: event.target.checked } : measure) }))} />
-                    <div><div className={styles.measureTitle}><span className={styles.measureNumber}>{item.number}</span><span>{item.label}</span></div><p className={styles.measureText}>{item.guidance}</p></div>
-                  </div>
-                  {recommendedAgentKeys.has(item.key) ? <span className={styles.recommendBadge}>추천</span> : null}
-                </label>
+                <tr key={rowIndex}>
+                  <td className={styles.workPlanTdLabel}>
+                    <div className={styles.doc6MeasureHeading}>
+                      {left.number}. {left.label}
+                    </div>
+                    <p className={styles.measureText}>{left.guidance}</p>
+                  </td>
+                  <td className={styles.workPlanTdSelect}>
+                    <input
+                      type="checkbox"
+                      className="app-checkbox"
+                      checked={leftMeasure?.checked ?? false}
+                      onChange={(event) =>
+                        applyDocumentUpdate('doc6', 'manual', (current) => ({
+                          ...current,
+                          document6Measures: current.document6Measures.map((measure) =>
+                            measure.key === left.key ? { ...measure, checked: event.target.checked } : measure
+                          ),
+                        }))
+                      }
+                      aria-label={`${left.label} 해당`}
+                    />
+                  </td>
+                  <td className={styles.workPlanTdLabel}>
+                    <div className={styles.doc6MeasureHeading}>
+                      {right.number}. {right.label}
+                    </div>
+                    <p className={styles.measureText}>{right.guidance}</p>
+                  </td>
+                  <td className={styles.workPlanTdSelect}>
+                    <input
+                      type="checkbox"
+                      className="app-checkbox"
+                      checked={rightMeasure?.checked ?? false}
+                      onChange={(event) =>
+                        applyDocumentUpdate('doc6', 'manual', (current) => ({
+                          ...current,
+                          document6Measures: current.document6Measures.map((measure) =>
+                            measure.key === right.key ? { ...measure, checked: event.target.checked } : measure
+                          ),
+                        }))
+                      }
+                      aria-label={`${right.label} 해당`}
+                    />
+                  </td>
+                </tr>
               );
             })}
-          </div>
-        ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );

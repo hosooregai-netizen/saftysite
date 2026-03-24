@@ -1,6 +1,6 @@
 .container {
   --hazard-paired-body-height: 132px;
-  --hazard-photo-max-height: 250px;
+  --hazard-photo-max-height: 300px;
   break-inside: avoid;
   position: relative;
   display: grid;

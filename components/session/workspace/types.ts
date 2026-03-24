@@ -6,7 +6,6 @@ import type {
   InspectionSectionKey,
   InspectionSession,
 } from '@/types/inspectionSession';
-import type { CausativeAgentKey } from '@/types/siteOverview';
 import type { ChartEntry } from './utils';
 
 export type ApplyDocumentUpdate = (
@@ -34,7 +33,6 @@ export interface HazardStatsSectionProps {
   currentAgentEntries: ChartEntry[];
   cumulativeAccidentEntries: ChartEntry[];
   cumulativeAgentEntries: ChartEntry[];
-  recommendedAgentKeys: Set<CausativeAgentKey>;
   session: InspectionSession;
   withFileData: WithFileData;
   legalReferenceLibrary: Array<{

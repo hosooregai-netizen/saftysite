@@ -3,6 +3,7 @@ import {
   INSPECTION_SECTIONS,
   TOTAL_SCENE_COUNT,
 } from '@/constants/inspectionSession/catalog';
+import { padDocument12Activities } from '@/constants/inspectionSession/itemFactory';
 import { createDocumentMeta, createDocumentMetaMap, createTimestamp, normalizeText } from '@/constants/inspectionSession/shared';
 import type {
   ActivityRecord,
@@ -23,7 +24,7 @@ function hasChecklistProgress(questions: ChecklistQuestion[]): boolean {
 }
 
 function hasFindingContent(item: CurrentHazardFinding): boolean {
-  return Boolean(item.photoUrl || item.location || item.likelihood || item.severity || item.accidentType || item.causativeAgentKey || item.inspector || item.emphasis || item.improvementPlan || item.legalReferenceTitle);
+  return Boolean(item.photoUrl || item.photoUrl2 || item.location || item.likelihood || item.severity || item.accidentType || item.causativeAgentKey || item.inspector || item.emphasis || item.improvementPlan || item.legalReferenceTitle);
 }
 
 function hasFuturePlanContent(item: FutureProcessRiskPlan): boolean {
@@ -31,11 +32,18 @@ function hasFuturePlanContent(item: FutureProcessRiskPlan): boolean {
 }
 
 function hasMeasurementContent(item: MeasurementCheckItem): boolean {
-  return Boolean(item.measurementLocation || item.measuredValue || item.actionTaken);
+  return Boolean(
+    item.photoUrl ||
+      item.measurementLocation ||
+      item.measuredValue ||
+      item.actionTaken,
+  );
 }
 
 function hasEducationContent(item: SafetyEducationRecord): boolean {
-  return Boolean(item.photoUrl || item.materialUrl || item.materialName || item.attendeeCount || item.content);
+  return Boolean(
+    item.photoUrl || item.materialUrl || item.materialName || item.attendeeCount || item.topic || item.content,
+  );
 }
 
 function hasActivityContent(item: ActivityRecord): boolean {
@@ -100,13 +108,17 @@ function computeSectionStatus(
 
 export function finalizeInspectionSession(session: InspectionSession): InspectionSession {
   const siteName = normalizeText(session.meta.siteName) || session.adminSiteSnapshot.siteName;
+  const normalized: InspectionSession = {
+    ...session,
+    document12Activities: padDocument12Activities(session.document12Activities),
+  };
 
   return {
-    ...session,
-    meta: { ...session.meta, siteName },
+    ...normalized,
+    meta: { ...normalized.meta, siteName },
     documentsMeta: INSPECTION_SECTIONS.reduce<Record<InspectionSectionKey, InspectionDocumentMeta>>((accumulator, section) => {
-      const current = session.documentsMeta[section.key] ?? createDocumentMeta(DEFAULT_DOCUMENT_SOURCES[section.key]);
-      accumulator[section.key] = { ...current, status: computeSectionStatus(session, section.key, current) };
+      const current = normalized.documentsMeta[section.key] ?? createDocumentMeta(DEFAULT_DOCUMENT_SOURCES[section.key]);
+      accumulator[section.key] = { ...current, status: computeSectionStatus(normalized, section.key, current) };
       return accumulator;
     }, createDocumentMetaMap()),
   };

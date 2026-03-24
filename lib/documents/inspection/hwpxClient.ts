@@ -64,7 +64,7 @@ const WORK_PLAN_PLACEHOLDERS = [
 
 const REPEAT_BLOCKS: RepeatBlockPath[] = ['sec7.findings', 'sec8.plans', 'sec11.education', 'sec12.activities'];
 
-const DEFERRED_SECTIONS = ['sec5', 'section15_removed_from_binding', 'sec10.measurements[*].photo_image'];
+const DEFERRED_SECTIONS = ['sec5', 'section15_removed_from_binding'];
 
 const IMAGE_EXTENSION_TO_MEDIA_TYPE: Record<string, string> = {
   png: 'image/png',
@@ -190,6 +190,7 @@ const TEXT_PLACEHOLDERS = [
     `sec10.measurements[${index}].action_taken`,
   ]).flat(),
   'sec11.education[0].attendee_count',
+  'sec11.education[0].topic',
   'sec11.education[0].content',
   'sec12.activities[0].activity_type',
   'sec12.activities[0].content',
@@ -220,7 +221,7 @@ const TEMPLATE_IMAGE_PLACEHOLDERS: TemplateImagePlaceholder[] = [
     table: 5,
     row: 2,
     col: 2,
-    placeholderPath: 'sec7.findings[0].photo_image',
+    placeholderPath: 'sec7.findings[0].photo_image_2',
     binaryItemId: 'tplimg08',
     repeatBlockPath: 'sec7.findings',
   },
@@ -246,7 +247,6 @@ const TEMPLATE_IMAGE_PLACEHOLDERS: TemplateImagePlaceholder[] = [
     col: 0,
     placeholderPath: 'sec10.measurements[0].photo_image',
     binaryItemId: 'tplimg11',
-    deferred: true,
   },
   {
     table: 8,
@@ -254,7 +254,6 @@ const TEMPLATE_IMAGE_PLACEHOLDERS: TemplateImagePlaceholder[] = [
     col: 0,
     placeholderPath: 'sec10.measurements[1].photo_image',
     binaryItemId: 'tplimg12',
-    deferred: true,
   },
   {
     table: 8,
@@ -262,7 +261,6 @@ const TEMPLATE_IMAGE_PLACEHOLDERS: TemplateImagePlaceholder[] = [
     col: 0,
     placeholderPath: 'sec10.measurements[2].photo_image',
     binaryItemId: 'tplimg13',
-    deferred: true,
   },
   {
     table: 9,
@@ -465,6 +463,7 @@ function createEmptyFinding() {
   return {
     id: '',
     photoUrl: '',
+    photoUrl2: '',
     location: '',
     likelihood: '',
     severity: '',
@@ -490,6 +489,7 @@ function createEmptyMeasurement() {
   return {
     instrumentType: '',
     measurementLocation: '',
+    photoUrl: '',
     measuredValue: '',
     safetyCriteria: '',
     actionTaken: '',
@@ -503,6 +503,7 @@ function createEmptyEducationRecord() {
     materialUrl: '',
     materialName: '',
     attendeeCount: '',
+    topic: '',
     content: '',
   };
 }
@@ -667,6 +668,7 @@ function mapSessionToTemplateBinding(session: InspectionSession): TemplateBindin
       ? ''
       : valueOrBlank(item.referenceMaterial2);
     images[`sec7.findings[${index}].photo_image`] = valueOrBlank(item.photoUrl);
+    images[`sec7.findings[${index}].photo_image_2`] = valueOrBlank(item.photoUrl2);
     images[`sec7.findings[${index}].reference_material_1_image`] = looksLikeImageSource(item.referenceMaterial1)
       ? valueOrBlank(item.referenceMaterial1)
       : '';
@@ -710,6 +712,7 @@ function mapSessionToTemplateBinding(session: InspectionSession): TemplateBindin
     text[`sec10.measurements[${index}].measured_value`] = valueOrDash(item.measuredValue);
     text[`sec10.measurements[${index}].safety_criteria`] = valueOrDash(item.safetyCriteria);
     text[`sec10.measurements[${index}].action_taken`] = valueOrDash(item.actionTaken);
+    images[`sec10.measurements[${index}].photo_image`] = valueOrBlank(item.photoUrl);
   });
 
   const educationRecords = ensureRepeatItems(
@@ -719,6 +722,7 @@ function mapSessionToTemplateBinding(session: InspectionSession): TemplateBindin
   repeatCounts['sec11.education'] = educationRecords.length;
   educationRecords.forEach((item, index) => {
     text[`sec11.education[${index}].attendee_count`] = valueOrDash(item.attendeeCount);
+    text[`sec11.education[${index}].topic`] = valueOrDash(item.topic);
     text[`sec11.education[${index}].content`] = valueOrDash(item.content);
     images[`sec11.education[${index}].photo_image`] = valueOrBlank(item.photoUrl);
     images[`sec11.education[${index}].material_image_or_file`] = looksLikeImageSource(item.materialUrl)
@@ -735,7 +739,7 @@ function mapSessionToTemplateBinding(session: InspectionSession): TemplateBindin
   );
   repeatCounts['sec12.activities'] = activities.length;
   activities.forEach((item, index) => {
-    text[`sec12.activities[${index}].activity_type`] = valueOrDash(item.activityType);
+    text[`sec12.activities[${index}].activity_type`] = valueOrDash(item.content || item.activityType);
     text[`sec12.activities[${index}].content`] = valueOrDash(item.content);
     images[`sec12.activities[${index}].photo_image`] = valueOrBlank(item.photoUrl);
   });

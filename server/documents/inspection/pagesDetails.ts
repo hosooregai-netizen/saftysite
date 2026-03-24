@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { padDocument12Activities } from '@/constants/inspectionSession/itemFactory';
 import type { InspectionSession } from '@/types/inspectionSession';
 import {
   ReportPageDraft,
@@ -73,7 +74,7 @@ function buildDoc5And6(
 function buildDoc7Pages(session: InspectionSession): ReportPageDraft[] {
   const findings =
     session.document7Findings.filter(
-      (item) => item.photoUrl || item.location || item.emphasis || item.improvementPlan
+      (item) => item.photoUrl || item.photoUrl2 || item.location || item.emphasis || item.improvementPlan
     ) || [];
   const fallback = session.document7Findings[0];
   const items = findings.length > 0 ? findings : fallback ? [fallback] : [];
@@ -82,7 +83,7 @@ function buildDoc7Pages(session: InspectionSession): ReportPageDraft[] {
     body: `
       ${sectionTitle('7. 현재 공정내 현존하는 유해·위험요인')}
       <div class="subsection-title">위험요인 ${index + 1}</div>
-      <div class="image-grid single-image">${imageTag(item.photoUrl, `위험요인 ${index + 1}`)}</div>
+      <div class="image-grid" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:start;">${imageTag(item.photoUrl, `현장 사진 1`)}${imageTag(item.photoUrl2, `현장 사진 2`)}</div>
       <table class="info-table">${infoRows([
         { label: '유해·위험장소', value: item.location },
         { label: '위험도', value: `${item.likelihood || '-'} / ${item.severity || '-'} / ${item.riskLevel || '-'}` },
@@ -164,20 +165,32 @@ export function buildDetailPages(
                 <div class="image-card">${imageTag(item.photoUrl, '교육 사진')}<div class="image-caption">교육 사진</div></div>
                 <div class="image-card">${imageTag(item.materialUrl, '교육 자료')}<div class="image-caption">${valueText(item.materialName, '교육 자료')}</div></div>
               </div>
-              <table class="info-table compact-table">${infoRows([{ label: '참석인원', value: item.attendeeCount }, { label: '교육내용', value: item.content }])}</table>
+              <table class="info-table compact-table">
+                <tr>
+                  <th>참석인원</th>
+                  <td>${valueText(item.attendeeCount)}</td>
+                  <th>교육 주제</th>
+                  <td>${valueText(item.topic)}</td>
+                </tr>
+                <tr>
+                  <th>교육내용</th>
+                  <td colspan="3">${item.content?.trim() ? lineBreaks(item.content) : '-'}</td>
+                </tr>
+              </table>
             `
           )
           .join('')}
         ${sectionTitle('12. 안전보건 활동실적')}
-        ${session.document12Activities
+        <div class="case-grid">${padDocument12Activities(session.document12Activities)
           .map(
-            (item, index) => `
-              <div class="subsection-title">활동 ${index + 1}</div>
-              <div class="image-grid single-image">${imageTag(item.photoUrl, '활동 사진')}</div>
-              <table class="info-table compact-table">${infoRows([{ label: '활동구분', value: item.activityType }, { label: '활동내용', value: item.content }])}</table>
+            (item) => `
+              <div class="case-card">
+                <div class="case-title">${valueText(item.content || item.activityType)}</div>
+                ${imageTag(item.photoUrl, item.content || '활동 사진', 'case-image')}
+              </div>
             `
           )
-          .join('')}
+          .join('')}</div>
       `,
     },
     {

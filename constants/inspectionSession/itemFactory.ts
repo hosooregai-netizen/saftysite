@@ -59,6 +59,7 @@ export function createCurrentHazardFinding(
   return {
     id: initial.id ?? generateId('finding'),
     photoUrl: '',
+    photoUrl2: '',
     location: '',
     likelihood: '',
     severity: '',
@@ -99,6 +100,7 @@ export function createMeasurementCheckItem(
     id: initial.id ?? generateId('measurement'),
     instrumentType: '조도계',
     measurementLocation: '',
+    photoUrl: '',
     measuredValue: '',
     safetyCriteria: DEFAULT_MEASUREMENT_CRITERIA,
     actionTaken: '',
@@ -115,6 +117,7 @@ export function createSafetyEducationRecord(
     materialUrl: '',
     materialName: '',
     attendeeCount: '',
+    topic: '',
     content: '',
     ...initial,
   };
@@ -130,4 +133,15 @@ export function createActivityRecord(
     content: '',
     ...initial,
   };
+}
+
+/** 12번 안전보건 활동실적: 워크스페이스·템플릿 모두 2×2(4칸) 고정 */
+export const DOC12_ACTIVITY_GRID_SLOTS = 4;
+
+export function padDocument12Activities(items: ActivityRecord[]): ActivityRecord[] {
+  const list = [...items];
+  while (list.length < DOC12_ACTIVITY_GRID_SLOTS) {
+    list.push(createActivityRecord());
+  }
+  return list.slice(0, DOC12_ACTIVITY_GRID_SLOTS);
 }

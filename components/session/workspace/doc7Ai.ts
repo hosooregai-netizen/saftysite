@@ -4,7 +4,7 @@ import { ACCIDENT_TYPE_OPTIONS } from '@/components/session/workspace/constants'
 import { analyzeHazardPhotos, checkCausativeAgents } from '@/lib/api';
 import { normalizeCausativeAgentResponse } from '@/lib/normalizeCausativeAgentResponse';
 import { normalizeHazardResponse } from '@/lib/normalizeHazardResponse';
-import { calculateRiskAssessmentResult } from '@/lib/riskAssessment';
+import { normalizeRiskNumber } from '@/lib/riskAssessment';
 import type { CurrentHazardFinding } from '@/types/inspectionSession';
 import type { CausativeAgentKey } from '@/types/siteOverview';
 
@@ -82,6 +82,39 @@ function splitLegalInfo(value: string) {
     .filter(Boolean);
 }
 
+/** AI 1~3 가능성·중대성 → 세부 지적용 상·중·하 */
+function mapLikelihoodSeverityToTriLevel(likelihood: string, severity: string): string {
+  const ln = normalizeRiskNumber(likelihood);
+  const sn = normalizeRiskNumber(severity);
+  if (ln == null || sn == null) return '';
+  const score = ln * sn;
+  if (score >= 5) return '상';
+  if (score >= 3) return '중';
+  return '하';
+}
+
+/**
+ * AI가 필드를 채워도 될지: 유해·위험 관련 값이 하나도 없을 때만 true.
+ * 지도요원(작성자 자동 기입 등)은 제외.
+ */
+export function isFindingEmptyForAiAutofill(item: CurrentHazardFinding): boolean {
+  const t = (s: string | null | undefined) => String(s ?? '').trim();
+  if (item.carryForward) return false;
+  if (t(item.location)) return false;
+  if (t(item.likelihood) || t(item.severity)) return false;
+  if (t(item.riskLevel)) return false;
+  if (t(item.accidentType)) return false;
+  if (item.causativeAgentKey) return false;
+  if (t(item.emphasis)) return false;
+  if (t(item.improvementPlan)) return false;
+  if (t(item.legalReferenceId)) return false;
+  if (t(item.legalReferenceTitle)) return false;
+  if (t(item.referenceMaterial1)) return false;
+  if (t(item.referenceMaterial2)) return false;
+  if (t(item.metadata)) return false;
+  return true;
+}
+
 export async function buildHazardFindingAutoFill(
   file: File
 ): Promise<Partial<CurrentHazardFinding>> {
@@ -96,9 +129,9 @@ export async function buildHazardFindingAutoFill(
 
   return {
     location: buildLocation(report),
-    likelihood,
-    severity,
-    riskLevel: calculateRiskAssessmentResult(likelihood, severity),
+    likelihood: '',
+    severity: '',
+    riskLevel: mapLikelihoodSeverityToTriLevel(likelihood, severity),
     accidentType: pickAccidentType(report),
     causativeAgentKey: pickCausativeAgentKey(causativeReport),
     metadata: normalizeLine(report?.metadata ?? ''),

@@ -1,5 +1,12 @@
 'use client';
 
+import {
+  createCurrentHazardFinding,
+  createFutureProcessRiskPlan,
+  createMeasurementCheckItem,
+  createPreviousGuidanceFollowUpItem,
+  createSafetyEducationRecord,
+} from '@/constants/inspectionSession';
 import Doc10Section from '@/components/session/workspace/sections/Doc10Section';
 import Doc11Section from '@/components/session/workspace/sections/Doc11Section';
 import Doc12Section from '@/components/session/workspace/sections/Doc12Section';
@@ -27,6 +34,107 @@ type RenderSectionProps = OverviewSectionProps &
   SupportSectionProps & {
     currentSection: InspectionSectionKey;
   };
+
+export function renderSectionToolbar({
+  currentSection,
+  ...props
+}: RenderSectionProps) {
+  switch (currentSection) {
+    case 'doc4':
+      return (
+        <div className={`${styles.sectionToolbar} ${styles.doc4Toolbar}`}>
+          <button
+            type="button"
+            className="app-button app-button-secondary"
+            onClick={() =>
+              props.applyDocumentUpdate('doc4', 'manual', (current) => ({
+                ...current,
+                document4FollowUps: [
+                  ...current.document4FollowUps,
+                  createPreviousGuidanceFollowUpItem({ confirmationDate: current.meta.reportDate }),
+                ],
+              }))
+            }
+          >
+            이행여부 추가
+          </button>
+        </div>
+      );
+    case 'doc7':
+      return (
+        <div className={`${styles.sectionToolbar} ${styles.doc4Toolbar}`}>
+          <button
+            type="button"
+            className="app-button app-button-secondary"
+            onClick={() =>
+              props.applyDocumentUpdate('doc7', 'manual', (current) => ({
+                ...current,
+                document7Findings: [
+                  ...current.document7Findings,
+                  createCurrentHazardFinding({ inspector: current.meta.drafter }),
+                ],
+              }))
+            }
+          >
+            위험요인 추가
+          </button>
+        </div>
+      );
+    case 'doc8':
+      return (
+        <div className={`${styles.sectionToolbar} ${styles.doc4Toolbar}`}>
+          <button
+            type="button"
+            className="app-button app-button-secondary"
+            onClick={() =>
+              props.applyDocumentUpdate('doc8', 'manual', (current) => ({
+                ...current,
+                document8Plans: [...current.document8Plans, createFutureProcessRiskPlan()],
+              }))
+            }
+          >
+            행 추가
+          </button>
+        </div>
+      );
+    case 'doc10':
+      return (
+        <div className={`${styles.sectionToolbar} ${styles.doc4Toolbar}`}>
+          <button
+            type="button"
+            className="app-button app-button-secondary"
+            onClick={() =>
+              props.applyDocumentUpdate('doc10', 'manual', (current) => ({
+                ...current,
+                document10Measurements: [...current.document10Measurements, createMeasurementCheckItem()],
+              }))
+            }
+          >
+            행 추가
+          </button>
+        </div>
+      );
+    case 'doc11':
+      return (
+        <div className={`${styles.sectionToolbar} ${styles.doc4Toolbar}`}>
+          <button
+            type="button"
+            className="app-button app-button-secondary"
+            onClick={() =>
+              props.applyDocumentUpdate('doc11', 'manual', (current) => ({
+                ...current,
+                document11EducationRecords: [...current.document11EducationRecords, createSafetyEducationRecord()],
+              }))
+            }
+          >
+            교육 기록 추가
+          </button>
+        </div>
+      );
+    default:
+      return null;
+  }
+}
 
 export function renderSectionBody({
   currentSection,

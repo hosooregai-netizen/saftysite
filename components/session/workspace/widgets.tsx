@@ -6,6 +6,7 @@ import type { ChecklistQuestion, ChecklistRating } from '@/types/inspectionSessi
 import styles from '@/components/session/InspectionSessionWorkspace.module.css';
 import { IMAGE_UPLOAD_LABEL_DESKTOP, IMAGE_UPLOAD_LABEL_MOBILE } from '@/constants/imageUploadLabels';
 import { useImageSourcePicker } from '@/hooks/useImageSourcePicker';
+import { buildDonutSlices } from './chartDonutUtils';
 import { isImageValue, type ChartEntry } from './utils';
 
 interface UploadBoxProps {
@@ -15,6 +16,8 @@ interface UploadBoxProps {
   label: string;
   /** panel: 상단 라벨 바(기본). field: 일반 입력 필드와 동일하게 라벨 + 아래 업로드 영역 */
   labelLayout?: 'panel' | 'field';
+  /** field일 때 삭제를 라벨 줄이 아니라 미리보기 영역 오른쪽 아래에 표시 */
+  fieldClearOverlay?: boolean;
   mode?: 'image' | 'file';
   onClear?: () => void;
   onSelect: (file: File) => Promise<unknown> | void;
@@ -27,6 +30,7 @@ export function UploadBox({
   id,
   label,
   labelLayout = 'panel',
+  fieldClearOverlay = false,
   mode = 'image',
   onClear,
   onSelect,
@@ -114,17 +118,28 @@ export function UploadBox({
     );
 
   if (labelLayout === 'field') {
+    const clearInLabel = Boolean(hasValue && onClear && !fieldClearOverlay);
+    const clearOverlay = Boolean(hasValue && onClear && fieldClearOverlay);
     return (
       <div className={styles.field}>
         <div className={styles.uploadFieldLabelRow}>
           <span className={styles.fieldLabel}>{label}</span>
-          {hasValue && onClear ? (
+          {clearInLabel ? (
             <button type="button" className={styles.inlineDangerButton} onClick={onClear}>
               삭제
             </button>
           ) : null}
         </div>
-        <div className={`${styles.uploadBody} ${styles.uploadBodyField}`}>{bodyInner}</div>
+        <div
+          className={`${styles.uploadBody} ${styles.uploadBodyField} ${clearOverlay ? styles.uploadBodyFieldOverlayClear : ''}`}
+        >
+          {bodyInner}
+          {clearOverlay ? (
+            <button type="button" className={`${styles.inlineDangerButton} ${styles.uploadFieldClearOverlay}`} onClick={onClear}>
+              삭제
+            </button>
+          ) : null}
+        </div>
         {fileInputs}
       </div>
     );
@@ -147,24 +162,43 @@ export function UploadBox({
 }
 
 export function ChartCard({ entries, title }: { entries: ChartEntry[]; title: string }) {
-  const max = entries.reduce((current, item) => Math.max(current, item.count), 0);
+  const total = entries.reduce((sum, item) => sum + item.count, 0);
+  const slices = total > 0 ? buildDonutSlices(entries, total) : [];
+  const summaryLabel = `${title}: 총 ${total}건`;
 
   return (
     <article className={styles.chartCard}>
       <h3 className={styles.chartTitle}>{title}</h3>
-      {entries.length > 0 ? (
-        <div className={styles.chartList}>
-          {entries.map((item) => (
-            <div key={item.label} className={styles.chartRow}>
-              <div className={styles.chartMeta}>
-                <span className={styles.chartLabel}>{item.label}</span>
-                <span className={styles.chartCount}>{item.count}</span>
-              </div>
-              <div className={styles.chartTrack} aria-hidden="true">
-                <span className={styles.chartFill} style={{ width: `${max > 0 ? Math.max(14, (item.count / max) * 100) : 0}%` }} />
-              </div>
-            </div>
-          ))}
+      {entries.length > 0 && total > 0 ? (
+        <div className={styles.chartDonutBody}>
+          <div className={styles.chartDonutFigure}>
+            <svg
+              className={styles.chartDonutSvg}
+              viewBox="-50 -50 100 100"
+              role="img"
+              aria-label={summaryLabel}
+            >
+              <title>{summaryLabel}</title>
+              {slices.map((slice) => (
+                <path key={slice.label} d={slice.path} fill={slice.color} stroke="none" />
+              ))}
+            </svg>
+          </div>
+          <ul className={styles.chartDonutLegend}>
+            {entries.map((item, index) => (
+              <li key={item.label} className={styles.chartDonutLegendItem}>
+                <span
+                  className={styles.chartDonutSwatch}
+                  style={{
+                    backgroundColor: slices[index]?.color,
+                  }}
+                  aria-hidden="true"
+                />
+                <span className={styles.chartDonutLegendLabel}>{item.label}</span>
+                <span className={styles.chartDonutLegendCount}>{item.count}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       ) : (
         <div className={styles.emptyInline}>집계할 위험요인 데이터가 없습니다.</div>
@@ -201,31 +235,60 @@ export function ChecklistTable({
   title: string;
 }) {
   return (
-    <section className={styles.matrixCard}>
-      <div className={styles.matrixHeader}>
-        <h3 className={styles.matrixTitle}>{title}</h3>
-      </div>
-      <div className={styles.checklistTable}>
-        <div className={styles.checklistHead}>
-          <span>문항</span>
-          <span>양호</span>
-          <span>보통</span>
-          <span>미흡</span>
-          <span>비고</span>
-        </div>
-        {items.map((item) => (
-          <div key={item.id} className={styles.checklistRow}>
-            <div className={styles.checklistPrompt}>{item.prompt}</div>
+    <div className={styles.workPlanSection}>
+      <table className={`${styles.workPlanTable} ${styles.doc9ChecklistTable}`}>
+        <caption className={styles.workPlanCaption}>{title}</caption>
+        <colgroup>
+          <col className={styles.doc9ColPrompt} />
+          {ratingOptions.map((option) => (
+            <col key={option.value} className={styles.doc9ColRating} />
+          ))}
+          <col className={styles.doc9ColNote} />
+        </colgroup>
+        <thead>
+          <tr>
+            <th scope="col" className={styles.workPlanThTitle}>
+              문항
+            </th>
             {ratingOptions.map((option) => (
-              <label key={option.value} className={styles.ratingCell}>
-                <input type="radio" className={styles.appRadio} name={item.id} checked={item.rating === option.value} onChange={() => onChange(item.id, { rating: option.value })} />
-                <span className={styles.ratingLabel}>{option.label}</span>
-              </label>
+              <th key={option.value} scope="col" className={styles.workPlanThNarrow}>
+                {option.label}
+              </th>
             ))}
-            <input type="text" className="app-input" value={item.note} onChange={(event) => onChange(item.id, { note: event.target.value })} />
-          </div>
-        ))}
-      </div>
-    </section>
+            <th scope="col" className={styles.workPlanThTitle}>
+              비고
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((item) => (
+            <tr key={item.id}>
+              <td className={styles.workPlanTdLabel}>{item.prompt}</td>
+              {ratingOptions.map((option) => (
+                <td key={option.value} className={styles.doc9TdRating}>
+                  <input
+                    type="radio"
+                    className={styles.appRadio}
+                    name={item.id}
+                    checked={item.rating === option.value}
+                    onChange={() => onChange(item.id, { rating: option.value })}
+                    aria-label={`${item.prompt}: ${option.label}`}
+                  />
+                </td>
+              ))}
+              <td className={styles.workPlanTdSelect}>
+                <input
+                  type="text"
+                  className={`app-input ${styles.doc9NoteInput}`}
+                  value={item.note}
+                  onChange={(event) => onChange(item.id, { note: event.target.value })}
+                  aria-label={`${item.prompt} 비고`}
+                />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }

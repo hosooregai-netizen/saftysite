@@ -26,6 +26,7 @@ const STYLE = `
   .info-table th { width: 26%; background: #f6f8fb; text-align: left; }
   .stats-grid, .image-grid, .case-grid { display: grid; gap: 12px; }
   .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 12px; }
+  .case-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
   .image-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
   .single-image { grid-template-columns: minmax(0, 1fr); }
   .image-card, .stats-card, .case-card, .followup-block { display: grid; gap: 8px; }

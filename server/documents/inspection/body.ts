@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { WORK_PLAN_ITEMS } from '@/constants/inspectionSession';
+import { padDocument12Activities } from '@/constants/inspectionSession/itemFactory';
 import { getSceneSlotTitle } from '@/constants/inspectionSession/scenePhotos';
 import type { InspectionSession } from '@/types/inspectionSession';
 import { causativeLabel, countByLabel, formatDate } from './format';
@@ -68,7 +69,7 @@ function sceneGrid(session: InspectionSession, context: InspectionDocContext) {
               : scene?.title?.trim() || getSceneSlotTitle(sceneIndex);
         const image = context.addImage(scene.photoUrl, {
           fallbackName: `scene-${scene.id}`,
-          maxHeightPx: 250,
+          maxHeightPx: 300,
           maxWidthPx: 300,
         });
         return xmlCell(
@@ -146,7 +147,12 @@ function measuresTable(session: InspectionSession) {
 
 function findingPage(session: InspectionSession, context: InspectionDocContext, item: InspectionSession['document7Findings'][number], index: number) {
   const mainImage = context.addImage(item.photoUrl, {
-    fallbackName: `finding-${item.id}`,
+    fallbackName: `finding-${item.id}-1`,
+    maxHeightPx: 260,
+    maxWidthPx: 320,
+  });
+  const secondImage = context.addImage(item.photoUrl2, {
+    fallbackName: `finding-${item.id}-2`,
     maxHeightPx: 260,
     maxWidthPx: 320,
   });
@@ -175,14 +181,20 @@ function findingPage(session: InspectionSession, context: InspectionDocContext, 
           textCell(item.accidentType || '-'),
         ],
         [
-          xmlCell(imageBlock(mainImage, '현장 사진', { align: 'center' }), { colSpan: 3, verticalAlign: 'center' }),
+          xmlCell(imageBlock(mainImage, '현장 사진 1', { align: 'center' }), { colSpan: 2, verticalAlign: 'center' }),
+          xmlCell(
+            secondImage
+              ? imageBlock(secondImage, '현장 사진 2', { align: 'center' })
+              : paragraph('현장 사진 2 없음', { align: 'center' }),
+            { colSpan: 2, verticalAlign: 'center' }
+          ),
           xmlCell(
             [
               paragraph(`기인물: ${causativeLabel(item.causativeAgentKey)}`, { bold: true, spacingAfter: 80 }),
               paragraph(`지도요원: ${item.inspector || session.meta.drafter || '-'}`, { spacingAfter: 80 }),
               paragraph(`강조사항: ${item.emphasis || '-'}`),
             ].join(''),
-            { colSpan: 3 }
+            { colSpan: 2 }
           ),
         ],
         [
@@ -244,36 +256,42 @@ function educationAndActivities(session: InspectionSession, context: InspectionD
         { width: 9200 }
       ),
       paragraph(`[교육내용]`, { bold: true, spacingBefore: 80 }),
-      paragraph(`참석인원 : ${item.attendeeCount || '-'}명`),
+      paragraph(`참석인원 : ${item.attendeeCount || '-'}명 · 교육 주제 : ${item.topic || '-'}`),
       paragraph(item.content || '-')
     );
   });
   sections.push(sectionHeading('12.안전보건 활동실적'));
-  session.document12Activities.forEach((item, index) => {
-    const activityPhoto = context.addImage(item.photoUrl, {
-      fallbackName: `activity-photo-${item.id}`,
-      maxHeightPx: 190,
-      maxWidthPx: 270,
-    });
-    sections.push(
-      subsectionHeading(`활동 ${index + 1}`),
-      table(
-        [
-          [
-            textCell(item.activityType || '안전보건 활동', { bold: true, shaded: true, align: 'center' }),
-            textCell(item.content || '활동 내용', { bold: true, shaded: true, align: 'center' }),
-          ],
-          [
-            xmlCell(imageBlock(activityPhoto, '활동 사진', { align: 'center' })),
-            textCell(item.content || '-', { verticalAlign: 'center' }),
-          ],
-        ],
-        [4600, 4600],
-        { width: 9200 }
-      )
-    );
-  });
+  sections.push(activityGrid(session, context));
   return sections.join('');
+}
+
+function activityGrid(session: InspectionSession, context: InspectionDocContext) {
+  const cards = padDocument12Activities(session.document12Activities);
+  return table(
+    pairs(cards).map(([left, right]) =>
+      [left, right].map((itemValue, cellIndex) => {
+        const item = itemValue ?? { id: `activity-${cellIndex}`, photoUrl: '', activityType: '', content: '' };
+        const activityPhoto = context.addImage(item.photoUrl, {
+          fallbackName: `activity-photo-${item.id}`,
+          maxHeightPx: 180,
+          maxWidthPx: 250,
+        });
+        const titleText = (item.content || item.activityType || '-').trim() || '-';
+        return xmlCell(
+          table(
+            [
+              [textCell(titleText, { bold: true, shaded: true, align: 'center' })],
+              [xmlCell(imageBlock(activityPhoto, '활동 사진', { align: 'center' }))],
+            ],
+            [4600],
+            { width: 4600 }
+          )
+        );
+      })
+    ),
+    [4600, 4600],
+    { width: 9200 }
+  );
 }
 
 function caseGrid(session: InspectionSession, context: InspectionDocContext) {
@@ -422,7 +440,7 @@ export function buildInspectionDocumentBody(
     pageBreak(),
 
     ...session.document7Findings
-      .filter((item) => item.photoUrl || item.location || item.emphasis || item.improvementPlan)
+      .filter((item) => item.photoUrl || item.photoUrl2 || item.location || item.emphasis || item.improvementPlan)
       .flatMap((item, index) => [findingPage(session, context, item, index), pageFooter(page++), pageBreak()]),
 
     pageBanner(),

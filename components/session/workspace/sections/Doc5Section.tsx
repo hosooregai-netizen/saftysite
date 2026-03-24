@@ -35,11 +35,6 @@ export default function Doc5Section(props: {
 
   return (
     <div className={styles.sectionStack}>
-      <div className={styles.sectionToolbar}>
-        <button type="button" className="app-button app-button-secondary" onClick={() => applyDocumentUpdate('doc5', 'derived', (current) => ({ ...current, document5Summary: { ...current.document5Summary, summaryText: buildDoc5SummaryDraft(current, currentAccidentEntries, currentAgentEntries) } }))}>
-          총평 초안 생성
-        </button>
-      </div>
       <div className={styles.chartGrid}>
         <ChartCard title="지적유형별 금회" entries={currentAccidentEntries} />
         <ChartCard title="지적유형별 누적" entries={cumulativeAccidentEntries} />
@@ -47,7 +42,16 @@ export default function Doc5Section(props: {
         <ChartCard title="기인물별 누적" entries={cumulativeAgentEntries} />
       </div>
       <label className={styles.field}>
-        <span className={styles.fieldLabel}>기술지도 총평</span>
+        <div className={styles.doc5SummaryFieldHeader}>
+          <span className={styles.fieldLabel}>기술지도 총평</span>
+          <button
+            type="button"
+            className={styles.doc5SummaryDraftBtn}
+            onClick={() => applyDocumentUpdate('doc5', 'derived', (current) => ({ ...current, document5Summary: { ...current.document5Summary, summaryText: buildDoc5SummaryDraft(current, currentAccidentEntries, currentAgentEntries) } }))}
+          >
+            총평 초안 생성
+          </button>
+        </div>
         <textarea className="app-textarea" value={session.document5Summary.summaryText} onChange={(event) => applyDocumentUpdate('doc5', 'manual', (current) => ({ ...current, document5Summary: { ...current.document5Summary, summaryText: event.target.value } }))} />
       </label>
     </div>

@@ -1,5 +1,4 @@
 import {
-  ACTIVITY_TYPE_OPTIONS,
   DEFAULT_CASE_FEED,
   DEFAULT_MEASUREMENT_CRITERIA,
   DEFAULT_SAFETY_INFOS,
@@ -78,6 +77,7 @@ export function normalizeHazardFinding(raw: unknown, fallbackInspector: string) 
   return createCurrentHazardFinding({
     id: normalizeText(source.id) || generateId('finding'),
     photoUrl: normalizeText(source.photoUrl),
+    photoUrl2: normalizeText(source.photoUrl2),
     location: normalizeText(source.location) || normalizeText(source.locationDetail) || normalizeText(source.title),
     likelihood,
     severity,
@@ -134,6 +134,7 @@ export function normalizeMeasurement(raw: unknown): MeasurementCheckItem {
     id: normalizeText(source.id) || generateId('measurement'),
     instrumentType: normalizeText(source.instrumentType) || '조도계',
     measurementLocation: normalizeText(source.measurementLocation) || normalizeText(source.measurementLocationDetail) || normalizeText(source.measurementLocationValue) || normalizeText(source.measurementLocationName),
+    photoUrl: normalizeText(source.photoUrl),
     measuredValue: normalizeText(source.measuredValue) || normalizeText(source.measurementValue),
     safetyCriteria: normalizeText(source.safetyCriteria) || normalizeText(source.measurementCriteria) || DEFAULT_MEASUREMENT_CRITERIA,
     actionTaken: normalizeText(source.actionTaken) || normalizeText(source.actionStatus) || normalizeText(source.suitability),
@@ -148,6 +149,11 @@ export function normalizeEducationRecord(raw: unknown): SafetyEducationRecord {
     materialUrl: normalizeText(source.materialUrl),
     materialName: normalizeText(source.materialName) || normalizeText(source.providedKinds) || normalizeText(source.supportItem),
     attendeeCount: normalizeText(source.attendeeCount) || normalizeText(source.participantCount),
+    topic:
+      normalizeText(source.topic) ||
+      normalizeText(source.educationTopic) ||
+      normalizeText(source.subject) ||
+      normalizeText(source.educationSubject),
     content: normalizeText(source.content) || normalizeText(source.educationContent) || normalizeText(source.details),
   });
 }
@@ -157,7 +163,7 @@ export function normalizeActivity(raw: unknown) {
   return createActivityRecord({
     id: normalizeText(source.id) || generateId('activity'),
     photoUrl: normalizeText(source.photoUrl),
-    activityType: normalizeText(source.activityType) || normalizeText(source.supportItem) || ACTIVITY_TYPE_OPTIONS[0],
+    activityType: normalizeText(source.activityType) || normalizeText(source.supportItem),
     content: normalizeText(source.content) || normalizeText(source.details),
   });
 }

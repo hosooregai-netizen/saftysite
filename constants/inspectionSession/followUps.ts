@@ -1,7 +1,6 @@
 import { createPreviousGuidanceFollowUpItem } from '@/constants/inspectionSession/itemFactory';
 import { getSessionSiteKey } from '@/constants/inspectionSession/sessionIdentity';
 import { normalizeText } from '@/constants/inspectionSession/shared';
-import type { CausativeAgentKey } from '@/types/siteOverview';
 import type {
   CurrentHazardFinding,
   InspectionSession,
@@ -11,6 +10,7 @@ import type {
 function hasFindingContent(item: CurrentHazardFinding): boolean {
   return Boolean(
     normalizeText(item.photoUrl) ||
+      normalizeText(item.photoUrl2) ||
       normalizeText(item.location) ||
       normalizeText(item.likelihood) ||
       normalizeText(item.severity) ||
@@ -94,12 +94,3 @@ export function areFollowUpItemsEqual(
   });
 }
 
-export function getRecommendedCausativeAgentKeys(
-  findings: CurrentHazardFinding[]
-): Set<CausativeAgentKey> {
-  return new Set(
-    findings
-      .map((item) => item.causativeAgentKey)
-      .filter((item): item is CausativeAgentKey => Boolean(item))
-  );
-}

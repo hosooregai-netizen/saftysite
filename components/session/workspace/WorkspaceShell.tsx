@@ -32,6 +32,8 @@ interface WorkspaceShellProps {
   onSectionSelect: (key: InspectionSectionKey) => void;
   progress: { completed: number; total: number; percentage: number };
   renderSection: React.ReactNode;
+  /** 문서 제목(h2)과 같은 행에 표시(위험요인 추가 등) */
+  sectionToolbar?: React.ReactNode;
   session: InspectionSession;
   site: InspectionSite | null;
   syncError: string | null;
@@ -53,6 +55,7 @@ export default function WorkspaceShell({
   onSectionSelect,
   progress,
   renderSection,
+  sectionToolbar,
   session,
   site: _site,
   syncError,
@@ -106,19 +109,13 @@ export default function WorkspaceShell({
                   <div
                     className={styles.workspaceToolbarMain}
                     role="group"
-                    aria-label="문서 선택 및 진행률"
+                    aria-label="문서 선택, 진행률, 기본 정보"
                   >
                     <span
                       className={styles.toolbarAxisLabel}
                       id="workspace-toolbar-doc-heading"
                     >
                       문서 선택
-                    </span>
-                    <span
-                      className={styles.toolbarAxisLabel}
-                      id="workspace-toolbar-progress-heading"
-                    >
-                      진행률
                     </span>
                     <div className={styles.toolbarCellSelect}>
                       <select
@@ -136,6 +133,12 @@ export default function WorkspaceShell({
                         ))}
                       </select>
                     </div>
+                    <span
+                      className={styles.toolbarAxisLabel}
+                      id="workspace-toolbar-progress-heading"
+                    >
+                      진행률
+                    </span>
                     <div
                       className={styles.toolbarCellProgress}
                       aria-labelledby="workspace-toolbar-progress-heading"
@@ -156,6 +159,13 @@ export default function WorkspaceShell({
                         </strong>
                       </div>
                     </div>
+                    <button
+                      type="button"
+                      className={`app-button app-button-secondary ${styles.toolbarMetaButton}`}
+                      onClick={() => setMetaModalOpen(true)}
+                    >
+                      기본 정보
+                    </button>
                   </div>
 
                   {uploadError ? <p className={styles.workspaceError}>{uploadError}</p> : null}
@@ -166,16 +176,10 @@ export default function WorkspaceShell({
                 <section className={styles.editor}>
                   <div className={styles.editorCard}>
                     <div className={styles.editorHeader}>
-                      <div>
-                        <h2 className={styles.editorTitle}>{currentSectionInfo.label}</h2>
-                      </div>
-                      <button
-                        type="button"
-                        className="app-button app-button-secondary"
-                        onClick={() => setMetaModalOpen(true)}
-                      >
-                        기본 정보
-                      </button>
+                      <h2 className={styles.editorTitle}>{currentSectionInfo.label}</h2>
+                      {sectionToolbar ? (
+                        <div className={styles.editorHeaderToolbar}>{sectionToolbar}</div>
+                      ) : null}
                     </div>
                     <div className={styles.editorBody}>{renderSection}</div>
                   </div>

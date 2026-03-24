@@ -152,7 +152,6 @@
 .sidebarCard,
 .editorCard,
 .card,
-.chartCard,
 .matrixCard,
 .tableCard,
 .readonlyLegalCard,
@@ -162,6 +161,71 @@
   border: 1px solid var(--erp-line);
   border-radius: var(--erp-radius-card);
   background-color: var(--erp-white);
+}
+
+.chartCard {
+  border: none;
+  border-radius: var(--erp-radius-card);
+  background-color: var(--erp-white);
+}
+
+.chartDonutBody {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 20px;
+  min-height: 250px;
+}
+
+.chartDonutFigure {
+  width: 250px;
+  height: 250px;
+  flex-shrink: 0;
+}
+
+.chartDonutSvg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.chartDonutLegend {
+  flex: 1 1 160px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.chartDonutLegendItem {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.chartDonutSwatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.chartDonutLegendLabel {
+  font-size: var(--text-body-sm);
+  color: var(--erp-text-muted);
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.chartDonutLegendCount {
+  font-size: var(--text-body-sm);
+  font-weight: 700;
+  color: var(--erp-dark);
+  font-variant-numeric: tabular-nums;
 }
 
 .progressCard {
@@ -214,6 +278,39 @@
   justify-content: flex-end;
 }
 
+.doc5SummaryFieldHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+}
+
+.doc5SummaryDraftBtn {
+  margin: 0;
+  padding: 2px 6px;
+  border: none;
+  border-radius: var(--erp-radius-control);
+  background: transparent;
+  font: inherit;
+  font-size: var(--text-ui-sm);
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--erp-navy);
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.doc5SummaryDraftBtn:hover {
+  color: var(--erp-dark);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.doc5SummaryDraftBtn:focus-visible {
+  outline: 2px solid var(--erp-navy);
+  outline-offset: 2px;
+}
+
 .doc4EmptyState {
   padding: 20px 16px;
   border: 1px dashed var(--erp-line);
@@ -224,32 +321,40 @@
   text-align: center;
 }
 
-.doc4CardHeaderSpacer {
-  flex: 1;
-  min-width: 0;
-  min-height: 0;
-}
-
 .doc4SectionStack {
   gap: 10px;
 }
 
-/* doc4: 유해·위험장소 | 지도일 | 확인일 = 1:1:1 */
-.doc4MetaRow {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+/* doc4 메타: 유해·위험장소 전체 너비 → 지도일·확인일은 한 행에서 1:1로 컨테이너 가로 fill */
+.doc4MetaBundle {
+  display: flex;
+  flex-direction: column;
   gap: 10px;
-  align-items: start;
+  align-items: stretch;
   min-width: 0;
   width: 100%;
 }
 
-.doc4MetaRow .field {
+.doc4MetaBundleRow2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+  width: 100%;
   min-width: 0;
+  align-items: start;
 }
 
-.doc4MetaRow :global(.app-input) {
+.doc4MetaBundle > .field,
+.doc4MetaBundleRow2 .field {
   min-width: 0;
+  width: 100%;
+}
+
+.doc4MetaBundle :global(.app-input),
+.doc4MetaBundleRow2 :global(.app-input) {
+  box-sizing: border-box;
+  min-width: 0;
+  width: 100%;
   max-width: 100%;
 }
 
@@ -267,10 +372,64 @@
   min-width: 0;
 }
 
-/* doc4 이행여부 카드: 컴팩트 여백·스트로크 */
-.card.doc4Card {
+/* doc11 안전교육: 교육 사진·교육 자료 2열 — doc4 시정 전·후와 동일한 필드형 업로드 높이·미리보기 고정 */
+.doc11EducationPhotoRow {
   display: grid;
-  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+  min-width: 0;
+  width: 100%;
+}
+
+.doc11EducationPhotoRow .field {
+  min-width: 0;
+}
+
+.doc11EducationPhotoRow .uploadBody.uploadBodyField {
+  box-sizing: border-box;
+  min-height: 300px;
+  height: 300px;
+  max-height: 300px;
+}
+
+/* 이미지 첨부 시 doc3 슬롯과 같이 박스 안에 맞춤(넘침 방지) */
+.doc11EducationPhotoRow .uploadBody.uploadBodyField:has(.uploadPreviewHit) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.doc11EducationPhotoRow .uploadBody.uploadBodyField:has(.uploadPreviewHit) .uploadPreviewHit {
+  flex: 1 1 auto;
+  align-self: stretch;
+  min-height: 0;
+  width: 100%;
+}
+
+.doc11EducationPhotoRow .uploadBody.uploadBodyField:has(.uploadPreviewHit) .uploadPreview {
+  max-height: 100%;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+@media (max-width: 899px) {
+  .doc11EducationPhotoRow {
+    grid-template-columns: 1fr;
+  }
+
+  .doc11EducationPhotoRow .uploadBody.uploadBodyField {
+    min-height: 220px;
+    height: 220px;
+    max-height: 220px;
+  }
+}
+
+/* doc4 이행여부 카드: 본문은 doc4CardInner 그리드, 삭제는 카드에만 겹침(그리드 밖 → 빈 열 없음) */
+.card.doc4Card {
+  position: relative;
   padding: 12px 14px 14px;
   border-color: var(--erp-line-strong);
   box-shadow:
@@ -278,28 +437,295 @@
     0 3px 10px rgba(22, 36, 59, 0.05);
 }
 
+.doc4CardInner {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+@media (min-width: 900px) {
+  .doc4CardInner {
+    display: grid;
+    /* 데스크톱: 텍스트(좌·메타+시정결과) : 사진(우) = 1 : 1 */
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 14px 28px;
+    align-items: start;
+  }
+
+  .doc4MetaBundle {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    width: 100%;
+    min-width: 0;
+    align-self: stretch;
+  }
+
+  /* 오른쪽 고정 높이 업로드와 하단 정렬: 남는 세로는 지도일·확인일 행과 시정결과 사이로만 흡수 */
+  .doc4MetaBundle .doc4ResultField {
+    margin-top: auto;
+  }
+
+  .doc4MetaBundle > .field,
+  .doc4MetaBundleRow2 .field {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .doc4MetaBundleRow2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .doc4ResultField :global(.app-input) {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .doc4PhotoRow {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: start;
+    min-width: 0;
+    padding-left: 22px;
+    margin-left: 2px;
+    border-left: 1px solid var(--erp-line);
+  }
+
+  /* 데스크톱: 좌측 폼과 시각적 균형 — doc4 업로드 높이 */
+  .doc4PhotoRow .uploadBody.uploadBodyField {
+    min-height: 300px;
+    height: 300px;
+    max-height: 300px;
+  }
+
+  .doc4CardInnerWithEyebrow .doc4DerivedEyebrow {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+
+  .doc4CardInnerWithEyebrow .doc4MetaBundle {
+    grid-row: 2 / span 2;
+  }
+
+  .doc4CardInnerWithEyebrow .doc4PhotoRow {
+    grid-row: 2 / span 2;
+  }
+
+  .card.doc4Card {
+    padding: 14px 18px 16px;
+  }
+
+  .doc4CardDeleteOverlay {
+    top: 13px;
+    right: 14px;
+  }
+}
+
 .card.doc4Card .field {
   gap: 6px;
 }
 
-.cardHeader.doc4CardHeader {
-  align-items: center;
-  gap: 8px;
-  min-height: 0;
+.doc4DerivedEyebrow {
+  min-width: 0;
 }
 
-.card.doc4Card .doc4CardDeleteBtn {
-  padding: 3px 9px;
-  font-size: var(--text-ui-sm);
-  font-weight: 600;
-  line-height: 1.25;
+.doc4CardDeleteOverlay {
+  position: absolute;
+  top: 11px;
+  right: 12px;
+  z-index: 2;
+  margin: 0;
+  width: max-content;
+  max-width: calc(100% - 24px);
 }
 
 @media (max-width: 640px) {
   .card.doc4Card {
-    gap: 10px;
     padding: 10px 12px 12px;
   }
+
+  .doc4CardInner {
+    gap: 10px;
+  }
+
+  .doc4CardDeleteOverlay {
+    top: 9px;
+    right: 10px;
+  }
+}
+
+/* doc7 세부 지적: doc4 카드와 동일한 테두리·그림자, 좌 폼 · 우 현장사진(구분선) */
+.doc7CardInner {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.doc7Eyebrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  min-width: 0;
+}
+
+.doc7EyebrowWithCardDelete {
+  padding-right: 48px;
+}
+
+.doc7FormColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.doc7PhotoColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.doc7PhotoColumn .field {
+  min-width: 0;
+}
+
+.doc7AiActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.doc7FieldStack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  width: 100%;
+}
+
+.doc7FieldStack > .field,
+.doc7FieldStack > .checkboxField {
+  width: 100%;
+  min-width: 0;
+}
+
+.doc7PairRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+  min-width: 0;
+  width: 100%;
+}
+
+.doc7PairRow .field {
+  min-width: 0;
+}
+
+@media (min-width: 900px) {
+  .doc7CardInner {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    gap: 14px 28px;
+    align-items: stretch;
+  }
+
+  .doc7Eyebrow {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+
+  .doc7FormColumn {
+    grid-column: 1;
+    grid-row: 2;
+    min-height: 0;
+  }
+
+  .doc7PhotoColumn {
+    grid-column: 2;
+    grid-row: 2;
+    align-self: stretch;
+    min-width: 0;
+    min-height: 0;
+    padding-left: 22px;
+    margin-left: 2px;
+    border-left: 1px solid var(--erp-line);
+  }
+
+}
+
+/* 세부 지적 현장 사진 1·2: 작은·중간 뷰포트 좌우 / 900px 이상(오른쪽 열)만 위·아래 */
+.doc7ScenePhotoRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  align-items: start;
+  width: 100%;
+  min-width: 0;
+}
+
+@media (min-width: 900px) {
+  .doc7ScenePhotoRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 문서7 현장사진 업로드: 다른 섹션과 동일 300px 고정 */
+.doc7PhotoColumn .doc7ScenePhotoRow .uploadBody.uploadBodyField {
+  min-height: 300px;
+  height: 300px;
+  max-height: 300px;
+}
+
+@media (min-width: 900px) {
+  .doc7PhotoColumn .doc7ScenePhotoRow .uploadBody.uploadBodyField {
+    min-height: 300px;
+    height: 300px;
+    max-height: 300px;
+  }
+}
+
+/* 세부 지적: 목록 하단 추가 — 박스 없음, 텍스트형 버튼 */
+.doc7SectionAddFooter {
+  display: flex;
+  justify-content: center;
+  padding: 20px 8px 10px;
+  margin-top: 4px;
+}
+
+.doc7SectionAddFooterBtn {
+  margin: 0;
+  padding: 8px 12px;
+  border: none;
+  border-radius: var(--erp-radius-control);
+  background: transparent;
+  box-shadow: none;
+  font: inherit;
+  font-size: var(--text-body-md);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.45;
+  color: color-mix(in srgb, var(--erp-text-muted) 72%, var(--erp-white));
+  cursor: pointer;
+}
+
+.doc7SectionAddFooterBtn:hover {
+  color: color-mix(in srgb, var(--erp-mid) 55%, var(--erp-text-muted));
+}
+
+.doc7SectionAddFooterBtn:focus-visible {
+  outline: 2px solid var(--erp-mid);
+  outline-offset: 3px;
 }
 
 .progressTrack,
@@ -357,6 +783,20 @@
   flex-shrink: 0;
 }
 
+.workspace > .editor .editorHeader .editorTitle {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.editorHeaderToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .workspace > .editor .editorBody {
   flex: 1 1 auto;
   min-height: 0;
@@ -377,12 +817,18 @@
 }
 
 .workspaceToolbarMain {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  grid-template-rows: auto auto;
-  gap: 5px 16px;
+  display: flex;
+  flex-wrap: nowrap;
   align-items: center;
+  gap: 10px 14px;
   min-width: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.toolbarMetaButton {
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .toolbarAxisLabel {
@@ -400,17 +846,21 @@
 .toolbarCellSelect {
   display: flex;
   align-items: center;
-  min-width: 0;
+  flex: 1 1 160px;
+  min-width: 120px;
+  max-width: min(420px, 100%);
 }
 
 .toolbarCellSelect select {
   width: 100%;
+  min-width: 0;
 }
 
 .toolbarCellProgress {
   display: flex;
   align-items: center;
-  min-width: 0;
+  flex: 1 1 140px;
+  min-width: 100px;
 }
 
 .toolbarProgressRow {
@@ -874,6 +1324,41 @@
   text-align: left;
 }
 
+/* 문서 8: 표 캡션(행 추가는 에디터 제목 행 툴바) */
+.doc8CaptionWrap {
+  caption-side: top;
+  margin: 0 0 10px;
+  padding: 0;
+  width: 100%;
+  text-align: left;
+}
+
+.doc8CaptionRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.doc8CaptionTitle {
+  margin: 0;
+  min-width: 0;
+  flex: 1 1 auto;
+  font-size: var(--text-title);
+  font-weight: 700;
+  color: var(--erp-dark);
+  line-height: 1.25;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.doc8CaptionActions {
+  flex-shrink: 0;
+}
+
 .workPlanTable thead th {
   padding: 8px 10px;
   border: 1px solid var(--erp-line);
@@ -883,6 +1368,10 @@
   letter-spacing: 0.04em;
   color: var(--erp-mid);
   text-align: left;
+}
+
+.workPlanThTitle {
+  vertical-align: middle;
 }
 
 .workPlanThNarrow {
@@ -915,6 +1404,179 @@
   min-width: 0;
   max-width: 100%;
   font-size: var(--text-ui-sm);
+}
+
+.workPlanTdSelect :global(.app-checkbox) {
+  display: block;
+  margin: 0 auto;
+}
+
+/* 문서 9: TBM·위험성평가 체크 — 작업계획서 표와 동일한 테이블 톤, 문항당 1행 */
+.doc9ChecklistTable {
+  min-width: min(100%, 640px);
+}
+
+.doc9ChecklistTable .doc9ColPrompt {
+  width: 43%;
+}
+
+.doc9ChecklistTable .doc9ColRating {
+  width: 9%;
+}
+
+.doc9ChecklistTable .doc9ColNote {
+  width: 22%;
+  min-width: 112px;
+}
+
+.doc9TdRating {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.doc9NoteInput {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  font-size: var(--text-ui-sm);
+}
+
+/* 문서 8: 향후 진행공정 — 3열: 15/20/65 · 4열(삭제 표시 시): 15/20/60/5 */
+.doc8FutureTable {
+  min-width: min(100%, 600px);
+}
+
+.doc8ColProcess {
+  width: 15%;
+  min-width: 96px;
+}
+
+.doc8ColHazard {
+  width: 20%;
+  min-width: 120px;
+}
+
+.doc8ColMeasure {
+  width: 60%;
+  min-width: 160px;
+}
+
+.doc8ColMeasureWide {
+  width: 65%;
+  min-width: 180px;
+}
+
+.doc8ColAction {
+  width: 5%;
+  min-width: 72px;
+  max-width: 96px;
+}
+
+.doc8FutureTable .doc8Th {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.doc8ThAction {
+  white-space: nowrap;
+}
+
+.doc8FutureTable tbody td.doc8TdAction {
+  padding: 8px 6px;
+  vertical-align: middle;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.doc8FutureTable tbody td.doc8TdAction :global(.app-button) {
+  width: 100%;
+  min-width: 0;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.doc8FutureTable tbody td {
+  vertical-align: top;
+}
+
+.doc8FutureTable tbody tr:not(:first-child) td {
+  border-top: 3px double var(--erp-line);
+}
+
+.doc8TdProcess {
+  padding: 8px 10px;
+}
+
+.doc8ProcessInput {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  font-size: var(--text-ui-sm);
+}
+
+.doc8CellMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.doc8TdArea {
+  padding: 8px 10px;
+}
+
+/* 향후 주요 작업공정 `.app-input`과 동일한 한 줄 높이 — globals의 `.app-textarea { min-h-[120px] }`보다 우선 */
+.doc8FutureTable .doc8TdArea .doc8Textarea:global(.app-textarea) {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  display: block;
+  resize: vertical;
+  min-height: 2.5rem !important;
+  height: auto;
+  line-height: 1.25;
+}
+
+/* 문서 6 전용: 해당 열 hug · 조치항목·해당 가운데 정렬 (문서 2 작업계획서 표는 유지) */
+.doc6MeasureTable {
+  table-layout: auto;
+  width: 100%;
+}
+
+.doc6MeasureTable col.workPlanColNarrow {
+  width: auto;
+}
+
+.doc6MeasureTable .workPlanThNarrow,
+.doc6MeasureTable .workPlanTdSelect {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.doc6MeasureTable .workPlanTdSelect {
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
+.doc6MeasureTable .workPlanThTitle {
+  text-align: center;
+}
+
+.doc6MeasureTable .workPlanTdLabel {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.doc6MeasureTable .workPlanTdLabel .measureText {
+  text-align: center;
+}
+
+.doc6MeasureHeading {
+  font-weight: 600;
+  line-height: 1.45;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 
 .metaField,
@@ -1088,9 +1750,7 @@ button.uploadPreviewHit {
 }
 
 .infoRow,
-.planRow,
-.measurementRow,
-.futureTableRow {
+.planRow {
   display: grid;
   gap: 10px;
   padding: 12px 14px;
@@ -1098,10 +1758,104 @@ button.uploadPreviewHit {
 }
 
 .infoRow:first-child,
-.planRow:first-child,
-.measurementRow:first-child,
-.futureTableRow:first-child {
+.planRow:first-child {
   border-top: 0;
+}
+
+/* doc10 계측: doc7과 동일 doc4 카드 + 우상단 텍스트 삭제; 본문 래퍼만 분리 */
+.doc10CardInner {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.measurementCardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 0;
+  min-width: 0;
+}
+
+.measurementMetaRow {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.measurementSplit {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.measurementPhotoSlot {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  min-height: 0;
+  min-width: 0;
+  height: 100%;
+}
+
+.measurementPhotoSlot .field {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* 전역 .uploadBody(300px 고정)을 덮어써서 오른쪽 필드 열과 높이를 맞춤 */
+.measurementPhotoSlot .uploadBody.uploadBodyField {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  max-height: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.measurementPhotoSlot .uploadBody.uploadBodyField .uploadPreviewHit,
+.measurementPhotoSlot .uploadBody.uploadBodyField .uploadPlaceholder {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.measurementPhotoSlot .uploadPreview {
+  max-height: 100%;
+  min-height: 0;
+}
+
+.measurementFieldsCol {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  align-items: stretch;
+}
+
+.measurementFieldsCol .field {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.measurementFieldsCol .field :global(.app-input),
+.measurementFieldsCol .field :global(.app-textarea) {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+}
+
+@media (max-width: 899px) {
+  .measurementSplit {
+    grid-template-columns: 1fr;
+  }
+
+  .measurementPhotoSlot .uploadBody.uploadBodyField {
+    min-height: 200px;
+  }
 }
 
 .uploadBody,
@@ -1114,17 +1868,32 @@ button.uploadPreviewHit {
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  min-height: 250px;
-  height: 250px;
-  max-height: 250px;
+  min-height: 300px;
+  height: 300px;
+  max-height: 300px;
   min-width: 0;
   overflow: hidden;
 }
 
 .uploadBody.uploadBodyField {
-  min-height: 250px;
-  height: 250px;
-  max-height: 250px;
+  min-height: 300px;
+  height: 300px;
+  max-height: 300px;
+}
+
+.uploadBody.uploadBodyField.uploadBodyFieldOverlayClear {
+  position: relative;
+}
+
+.uploadFieldClearOverlay {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  z-index: 4;
+  margin: 0;
+  text-shadow:
+    0 0 8px var(--erp-white),
+    0 0 2px var(--erp-white);
 }
 
 /* Doc3: 미리보기 영역 높이 고정 → 그리드 행에서 이웃 카드가 늘어나지 않도록 align-items:start와 함께 사용 */
@@ -1133,8 +1902,8 @@ button.uploadPreviewHit {
   align-items: center;
   justify-content: center;
   min-height: 0;
-  height: 250px;
-  max-height: 250px;
+  height: 300px;
+  max-height: 300px;
   overflow: hidden;
 }
 
@@ -1174,7 +1943,7 @@ button.uploadPreviewHit {
 .uploadPreview {
   display: block;
   max-width: 100%;
-  max-height: 250px;
+  max-height: 300px;
   width: auto;
   height: auto;
   object-fit: contain;
@@ -1183,7 +1952,7 @@ button.uploadPreviewHit {
 .caseImage,
 .noticeImage {
   display: block;
-  max-height: 250px;
+  max-height: 300px;
   object-fit: cover;
 }
 
@@ -1207,29 +1976,13 @@ button.uploadPreviewHit {
   font-weight: 700;
 }
 
-.measurementHead,
-.futureTableHead,
 .checklistHead {
   display: none;
 }
 
-.measureTable,
 .checklistTable {
   display: grid;
   gap: 10px;
-}
-
-.measureRow {
-  display: grid;
-  gap: 10px;
-}
-
-.measureCell {
-  display: grid;
-  gap: 10px;
-  padding: 14px;
-  border: 1px solid var(--erp-line);
-  background-color: var(--erp-panel-muted);
 }
 
 .measureMain,
@@ -1277,6 +2030,59 @@ button.uploadPreviewHit {
 .caseGrid {
   display: grid;
   gap: 14px;
+}
+
+.activityCard {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.activityHeader {
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--erp-line);
+  background-color: var(--erp-panel-muted);
+}
+
+.activityHeaderLabel {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 12px 14px;
+}
+
+.activityHeaderLabelText {
+  font-size: var(--text-ui-sm);
+  font-weight: 600;
+  color: var(--erp-text-muted);
+}
+
+.activityHeaderInput {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-sm);
+  font-size: var(--text-body);
+  font-weight: 600;
+  text-align: center;
+  background: var(--erp-white);
+}
+
+.activityPhoto {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.activityCard .uploadBody.uploadBodyField {
+  min-height: 200px;
+  height: 220px;
+  max-height: 280px;
 }
 
 .bottomBar {
@@ -1462,8 +2268,7 @@ button.uploadPreviewHit {
 
   .dualUploadGrid,
   .chartGrid,
-  .caseGrid,
-  .measureRow {
+  .caseGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -1590,4 +2395,3 @@ button.uploadPreviewHit {
     overflow: visible;
   }
 }
-

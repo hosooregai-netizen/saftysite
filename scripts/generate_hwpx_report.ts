@@ -97,6 +97,7 @@ interface ExistingWebReportData {
   document7Findings: Array<{
     id?: string;
     photoUrl: string;
+    photoUrl2: string;
     location: string;
     likelihood: string;
     severity: string;
@@ -125,6 +126,7 @@ interface ExistingWebReportData {
     id?: string;
     instrumentType: string;
     measurementLocation: string;
+    photoUrl?: string;
     measuredValue: string;
     safetyCriteria: string;
     actionTaken: string;
@@ -135,6 +137,7 @@ interface ExistingWebReportData {
     materialUrl: string;
     materialName: string;
     attendeeCount: string;
+    topic: string;
     content: string;
   }>;
   document12Activities: Array<{
@@ -363,7 +366,7 @@ const SEC10_TEXT_PLACEHOLDERS = Array.from({ length: 3 }, (_, index) => [
   `sec10.measurements[${index}].safety_criteria`,
   `sec10.measurements[${index}].action_taken`,
 ]).flat();
-const SEC11_TEXT_PLACEHOLDERS = ['sec11.education[0].attendee_count', 'sec11.education[0].content'];
+const SEC11_TEXT_PLACEHOLDERS = ['sec11.education[0].attendee_count', 'sec11.education[0].topic', 'sec11.education[0].content'];
 const SEC12_TEXT_PLACEHOLDERS = ['sec12.activities[0].activity_type', 'sec12.activities[0].content'];
 const SEC13_TEXT_PLACEHOLDERS = Array.from({ length: 4 }, (_, index) => [
   `sec13.cases[${index}].title`,
@@ -390,7 +393,7 @@ const TEMPLATE_IMAGE_PLACEHOLDERS: TemplateImagePlaceholder[] = [
     table: 5,
     row: 2,
     col: 2,
-    placeholderPath: 'sec7.findings[0].photo_image',
+    placeholderPath: 'sec7.findings[0].photo_image_2',
     binaryItemId: 'tplimg08',
     repeatBlockPath: 'sec7.findings',
   },
@@ -416,7 +419,6 @@ const TEMPLATE_IMAGE_PLACEHOLDERS: TemplateImagePlaceholder[] = [
     col: 0,
     placeholderPath: 'sec10.measurements[0].photo_image',
     binaryItemId: 'tplimg11',
-    deferred: true,
   },
   {
     table: 8,
@@ -424,7 +426,6 @@ const TEMPLATE_IMAGE_PLACEHOLDERS: TemplateImagePlaceholder[] = [
     col: 0,
     placeholderPath: 'sec10.measurements[1].photo_image',
     binaryItemId: 'tplimg12',
-    deferred: true,
   },
   {
     table: 8,
@@ -432,7 +433,6 @@ const TEMPLATE_IMAGE_PLACEHOLDERS: TemplateImagePlaceholder[] = [
     col: 0,
     placeholderPath: 'sec10.measurements[2].photo_image',
     binaryItemId: 'tplimg13',
-    deferred: true,
   },
   {
     table: 9,
@@ -573,7 +573,6 @@ const TEMPLATE_SECTIONS: TemplateSectionContract[] = [
     imagePlaceholders: TEMPLATE_IMAGE_PLACEHOLDERS.filter((item) => item.placeholderPath.startsWith('sec10.')).map(
       (item) => item.placeholderPath,
     ),
-    note: 'Measurement photo slots are deferred because current web data has no matching image field.',
   },
   {
     key: 'sec11',
@@ -647,7 +646,7 @@ const TEMPLATE_CONTRACT: TemplateContract = {
     ...SEC14_TEXT_PLACEHOLDERS,
   ],
   repeatBlocks: REPEAT_BLOCKS,
-  deferred: ['sec5', 'section15_removed_from_binding', 'sec10.measurements[*].photo_image'],
+  deferred: ['sec5', 'section15_removed_from_binding'],
   textOnlyImageFallbackPlaceholders: TEXT_ONLY_IMAGE_FALLBACK_PLACEHOLDERS,
   sections: TEMPLATE_SECTIONS,
   imagePlaceholders: TEMPLATE_IMAGE_PLACEHOLDERS,
@@ -856,6 +855,7 @@ function createEmptyFollowUp() {
 function createEmptyFinding() {
   return {
     photoUrl: '',
+    photoUrl2: '',
     location: '',
     likelihood: '',
     severity: '',
@@ -879,6 +879,7 @@ function createEmptyMeasurement() {
   return {
     instrumentType: '',
     measurementLocation: '',
+    photoUrl: '',
     measuredValue: '',
     safetyCriteria: '',
     actionTaken: '',
@@ -891,6 +892,7 @@ function createEmptyEducationRecord() {
     materialUrl: '',
     materialName: '',
     attendeeCount: '',
+    topic: '',
     content: '',
   };
 }
@@ -1067,6 +1069,7 @@ function mapWebDataToTemplateBinding(data: ExistingWebReportData): TemplateBindi
       ? ''
       : valueOrBlank(item.referenceMaterial2);
     images[`sec7.findings[${index}].photo_image`] = valueOrBlank(item.photoUrl);
+    images[`sec7.findings[${index}].photo_image_2`] = valueOrBlank(item.photoUrl2);
     images[`sec7.findings[${index}].reference_material_1_image`] = looksLikeImageSource(item.referenceMaterial1)
       ? valueOrBlank(item.referenceMaterial1)
       : '';
@@ -1121,6 +1124,7 @@ function mapWebDataToTemplateBinding(data: ExistingWebReportData): TemplateBindi
     text[`sec10.measurements[${index}].measured_value`] = valueOrDash(item.measuredValue);
     text[`sec10.measurements[${index}].safety_criteria`] = valueOrDash(item.safetyCriteria);
     text[`sec10.measurements[${index}].action_taken`] = valueOrDash(item.actionTaken);
+    images[`sec10.measurements[${index}].photo_image`] = valueOrBlank(item.photoUrl);
   });
 
   const educationRecords = ensureRepeatItems(
@@ -1130,6 +1134,7 @@ function mapWebDataToTemplateBinding(data: ExistingWebReportData): TemplateBindi
   repeatCounts['sec11.education'] = educationRecords.length;
   educationRecords.forEach((item, index) => {
     text[`sec11.education[${index}].attendee_count`] = valueOrDash(item.attendeeCount);
+    text[`sec11.education[${index}].topic`] = valueOrDash(item.topic);
     text[`sec11.education[${index}].content`] = valueOrDash(item.content);
     images[`sec11.education[${index}].photo_image`] = valueOrBlank(item.photoUrl);
     images[`sec11.education[${index}].material_image_or_file`] = looksLikeImageSource(item.materialUrl)
@@ -1148,7 +1153,7 @@ function mapWebDataToTemplateBinding(data: ExistingWebReportData): TemplateBindi
   );
   repeatCounts['sec12.activities'] = activities.length;
   activities.forEach((item, index) => {
-    text[`sec12.activities[${index}].activity_type`] = valueOrDash(item.activityType);
+    text[`sec12.activities[${index}].activity_type`] = valueOrDash(item.content || item.activityType);
     text[`sec12.activities[${index}].content`] = valueOrDash(item.content);
     images[`sec12.activities[${index}].photo_image`] = valueOrBlank(item.photoUrl);
   });

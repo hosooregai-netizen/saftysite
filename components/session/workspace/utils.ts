@@ -51,6 +51,7 @@ export function getMetaTouchSection(currentSection: InspectionSectionKey): Inspe
 export function hasFindingContent(item: CurrentHazardFinding): boolean {
   return Boolean(
     normalizeText(item.photoUrl) ||
+      normalizeText(item.photoUrl2) ||
       normalizeText(item.location) ||
       normalizeText(item.likelihood) ||
       normalizeText(item.severity) ||
