@@ -24,7 +24,7 @@ import {
   normalizeBoolean,
   normalizeText,
 } from '@/constants/inspectionSession/shared';
-import { getFixedSceneTitle, normalizeSceneTitle } from '@/constants/inspectionSession/scenePhotos';
+import { getSceneSlotTitle, normalizeSceneTitle } from '@/constants/inspectionSession/scenePhotos';
 import { calculateRiskAssessmentResult } from '@/lib/riskAssessment';
 import type { CausativeAgentKey } from '@/types/siteOverview';
 import type {
@@ -47,7 +47,7 @@ function normalizeRiskLevel(likelihood: string, severity: string, existing: stri
 
 export function normalizeScenePhoto(raw: unknown, index: number): SiteScenePhoto {
   const source = asRecord(raw);
-  return createSiteScenePhoto(getFixedSceneTitle(index), {
+  return createSiteScenePhoto(getSceneSlotTitle(index), {
     id: normalizeText(source.id) || generateId('scene'),
     title: normalizeSceneTitle(index, normalizeText(source.title)),
     photoUrl: normalizeText(source.photoUrl),

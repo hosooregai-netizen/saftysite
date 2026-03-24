@@ -16,6 +16,7 @@ import type {
 export interface InspectionSessionsContextValue {
   sites: InspectionSite[];
   sessions: InspectionSession[];
+  hasAuthToken: boolean;
   isReady: boolean;
   isHydrating: boolean;
   isAuthenticated: boolean;

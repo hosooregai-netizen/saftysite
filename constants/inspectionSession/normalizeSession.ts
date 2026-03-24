@@ -1,7 +1,7 @@
 import {
   DEFAULT_CASE_FEED,
   DEFAULT_SAFETY_INFOS,
-  FIXED_SCENE_COUNT,
+  TOTAL_SCENE_COUNT,
   UNTITLED_SITE_KEY,
 } from '@/constants/inspectionSession/catalog';
 import { createFatalAccidentMeasureItem, createSiteScenePhoto } from '@/constants/inspectionSession/itemFactory';
@@ -19,7 +19,7 @@ import {
   normalizeCases,
   normalizeScenePhoto,
 } from '@/constants/inspectionSession/normalizeParts';
-import { getFixedSceneTitle } from '@/constants/inspectionSession/scenePhotos';
+import { getSceneSlotTitle } from '@/constants/inspectionSession/scenePhotos';
 import { createInspectionSession } from '@/constants/inspectionSession/sessionFactory';
 import { finalizeInspectionSession } from '@/constants/inspectionSession/sessionState';
 import {
@@ -70,8 +70,8 @@ export function normalizeInspectionSession(raw: unknown): InspectionSession {
   const document3Scenes = Array.isArray(source.document3Scenes)
     ? source.document3Scenes.map((item, index) => normalizeScenePhoto(item, index))
     : session.document3Scenes;
-  while (document3Scenes.length < FIXED_SCENE_COUNT) {
-    document3Scenes.push(createSiteScenePhoto(getFixedSceneTitle(document3Scenes.length)));
+  while (document3Scenes.length < TOTAL_SCENE_COUNT) {
+    document3Scenes.push(createSiteScenePhoto(getSceneSlotTitle(document3Scenes.length)));
   }
 
   const doc2Partial = asRecord(source.document2Overview) as Partial<TechnicalGuidanceOverview>;

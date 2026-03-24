@@ -43,6 +43,7 @@ export function InspectionSessionsProvider({
     () => ({
       sites: store.sites,
       sessions: store.sessions,
+      hasAuthToken: store.hasAuthToken,
       isReady: store.isReady,
       isHydrating: store.isHydrating,
       isAuthenticated: Boolean(store.currentUser && store.authTokenRef.current),
@@ -84,6 +85,7 @@ export function InspectionSessionsProvider({
       store.authTokenRef,
       store.currentUser,
       store.dataError,
+      store.hasAuthToken,
       store.isHydrating,
       store.isReady,
       store.isSaving,

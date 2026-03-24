@@ -19,6 +19,7 @@ export function useInspectionSessionsStore() {
   const [sites, setSites] = useState<InspectionSite[]>([]);
   const [masterData, setMasterData] = useState<SafetyMasterData>(EMPTY_MASTER_DATA);
   const [currentUser, setCurrentUser] = useState<SafetyUser | null>(null);
+  const [hasAuthToken, setHasAuthToken] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const [isHydrating, setIsHydrating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -71,6 +72,7 @@ export function useInspectionSessionsStore() {
     setSites([]);
     setMasterData(EMPTY_MASTER_DATA);
     setCurrentUser(null);
+    setHasAuthToken(false);
     setIsHydrating(false);
     setIsSaving(false);
   }, []);
@@ -82,6 +84,7 @@ export function useInspectionSessionsStore() {
     currentUser,
     dataError,
     dirtySessionIdsRef,
+    hasAuthToken,
     isFlushingRef,
     isHydrating,
     isReady,
@@ -97,6 +100,7 @@ export function useInspectionSessionsStore() {
     setAuthError,
     setCurrentUser,
     setDataError,
+    setHasAuthToken,
     setIsHydrating,
     setIsReady,
     setIsSaving,

@@ -1,6 +1,7 @@
 import {
   DEFAULT_DOCUMENT_SOURCES,
   INSPECTION_SECTIONS,
+  TOTAL_SCENE_COUNT,
 } from '@/constants/inspectionSession/catalog';
 import { createDocumentMeta, createDocumentMetaMap, createTimestamp, normalizeText } from '@/constants/inspectionSession/shared';
 import type {
@@ -57,7 +58,7 @@ export function getSectionCompletion(
     case 'doc2':
       return Boolean(session.document2Overview.guidanceDate && session.document2Overview.assignee && session.document2Overview.processAndNotes);
     case 'doc3':
-      return session.document3Scenes.slice(0, 2).every((item) => Boolean(item.photoUrl));
+      return session.document3Scenes.slice(0, TOTAL_SCENE_COUNT).every((item) => Boolean(item.photoUrl));
     case 'doc4': {
       const requiredItems = getRequiredFollowUps(session);
       return requiredItems.length === 0 || requiredItems.every((item) => Boolean(item.afterPhotoUrl || item.result));

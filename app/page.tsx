@@ -18,9 +18,9 @@ export default function HomePage() {
   const {
     sites,
     sessions,
+    hasAuthToken,
     isReady,
     isHydrating,
-    isAuthenticated,
     currentUser,
     authError,
     dataError,
@@ -56,23 +56,11 @@ export default function HomePage() {
   }, [deferredQuery, siteSummaries, sortMode]);
 
   const isControllerView = Boolean(currentUser && isAdminUserRole(currentUser.role));
-  const isInitialHydration = isHydrating && siteSummaries.length === 0;
+  const isInitialHydration =
+    (isHydrating || (hasAuthToken && !currentUser)) && siteSummaries.length === 0;
+  const shouldShowLogin = isReady && !hasAuthToken && !currentUser;
 
-  if (!isReady) {
-    return (
-      <main className="app-page">
-        <div className="app-container">
-          <section className={`app-shell ${styles.shell}`}>
-            <div className={styles.emptyState}>
-              <p className={styles.emptyTitle}>배정된 현장 정보를 불러오는 중입니다.</p>
-            </div>
-          </section>
-        </div>
-      </main>
-    );
-  }
-
-  if (!isAuthenticated) {
+  if (shouldShowLogin) {
     return (
       <LoginPanel
         error={authError}
@@ -121,65 +109,59 @@ export default function HomePage() {
                   </header>
 
                   <div className={styles.pageGrid}>
-                <section className={styles.summaryBar}>
-                  <article className={styles.summaryCard}>
-                    <span className={styles.summaryCardLabel}>전체 현장</span>
-                    <strong className={styles.summaryCardValue}>
-                      {isInitialHydration ? '...' : siteSummaries.length}
-                    </strong>
-                  </article>
-                  <article className={styles.summaryCard}>
-                    <span className={styles.summaryCardLabel}>진행 보고서</span>
-                    <strong className={styles.summaryCardValue}>
-                      {isInitialHydration
-                        ? '...'
-                        : siteSummaries.filter((item) => item.sessionCount > 0).length}
-                    </strong>
-                  </article>
-                  <article className={styles.summaryCard}>
-                    <span className={styles.summaryCardLabel}>최근 작성 현장</span>
-                    <strong className={styles.summaryCardValue}>
-                      {isInitialHydration ? '...' : siteSummaries[0]?.site.siteName || '-'}
-                    </strong>
-                  </article>
-                </section>
+                    <section className={styles.summaryBar}>
+                      <article className={styles.summaryCard}>
+                        <span className={styles.summaryCardLabel}>전체 현장</span>
+                        <strong className={styles.summaryCardValue}>
+                          {isInitialHydration ? '...' : siteSummaries.length}
+                        </strong>
+                      </article>
+                      <article className={styles.summaryCard}>
+                        <span className={styles.summaryCardLabel}>진행 보고서</span>
+                        <strong className={styles.summaryCardValue}>
+                          {isInitialHydration
+                            ? '...'
+                            : siteSummaries.filter((item) => item.sessionCount > 0).length}
+                        </strong>
+                      </article>
+                      <article className={styles.summaryCard}>
+                        <span className={styles.summaryCardLabel}>최근 작성 현장</span>
+                        <strong className={styles.summaryCardValue}>
+                          {isInitialHydration ? '...' : siteSummaries[0]?.site.siteName || '-'}
+                        </strong>
+                      </article>
+                    </section>
 
-                <section className={styles.tablePanel}>
-                  <div className={styles.tableTools}>
-                    <input
-                      className={`app-input ${styles.tableSearch}`}
-                      placeholder="고객사명, 현장명, 담당자로 검색"
-                      value={query}
-                      onChange={(event) => setQuery(event.target.value)}
-                    />
-                    <select
-                      className={`app-select ${styles.tableSort}`}
-                      value={sortMode}
-                      onChange={(event) => setSortMode(event.target.value as typeof sortMode)}
-                    >
-                      <option value="recent">최근 작업순</option>
-                      <option value="name">현장명순</option>
-                      <option value="reports">보고서 많은 순</option>
-                    </select>
-                  </div>
+                    <section className={styles.tablePanel}>
+                      <div className={styles.tableTools}>
+                        <input
+                          className={`app-input ${styles.tableSearch}`}
+                          placeholder="고객사명, 현장명, 담당자로 검색"
+                          value={query}
+                          onChange={(event) => setQuery(event.target.value)}
+                          disabled={isInitialHydration}
+                        />
+                        <select
+                          className={`app-select ${styles.tableSort}`}
+                          value={sortMode}
+                          onChange={(event) => setSortMode(event.target.value as typeof sortMode)}
+                          disabled={isInitialHydration}
+                        >
+                          <option value="recent">최근 작업순</option>
+                          <option value="name">현장명순</option>
+                          <option value="reports">보고서 많은 순</option>
+                        </select>
+                      </div>
 
-                  {isInitialHydration ? (
-                    <div className={styles.loadingContent}>
-                      <div className={styles.loadingSpinner} aria-hidden="true" />
-                      <p className={styles.loadingDescription}>
-                        현장과 보고서를 불러오는 중입니다.
-                      </p>
-                    </div>
-                  ) : (
-                    <AssignedSitesTable
-                      currentUserName={currentUser?.name}
-                      currentUserPosition={currentUser?.position}
-                      siteSummaries={filteredSiteSummaries}
-                      styles={styles}
-                      formatDateTime={formatDateTime}
-                    />
-                  )}
-                </section>
+                      <AssignedSitesTable
+                        currentUserName={currentUser?.name}
+                        currentUserPosition={currentUser?.position}
+                        isLoading={isInitialHydration}
+                        siteSummaries={filteredSiteSummaries}
+                        styles={styles}
+                        formatDateTime={formatDateTime}
+                      />
+                    </section>
                   </div>
                 </>
               )}

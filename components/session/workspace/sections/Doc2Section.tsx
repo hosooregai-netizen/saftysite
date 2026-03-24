@@ -1,0 +1,135 @@
+import SignaturePad from '@/components/ui/SignaturePad';
+import { DEFAULT_CONSTRUCTION_TYPE } from '@/constants/inspectionSession/catalog';
+import {
+  ACCIDENT_OCCURRENCE_OPTIONS,
+  NOTIFICATION_METHOD_OPTIONS,
+  PREVIOUS_IMPLEMENTATION_OPTIONS,
+} from '@/components/session/workspace/constants';
+import styles from '@/components/session/InspectionSessionWorkspace.module.css';
+import type { OverviewSectionProps } from '@/components/session/workspace/types';
+import type { WorkPlanCheckKey } from '@/types/inspectionSession';
+import Doc2AccidentDatePicker from './Doc2AccidentDatePicker';
+import Doc2WorkPlanTable from './Doc2WorkPlanTable';
+import { updateOverviewField } from './doc2Shared';
+
+export default function Doc2Section(props: OverviewSectionProps) {
+  const { applyDocumentUpdate, session } = props;
+  const constructionDisplay =
+    session.document2Overview.constructionType?.trim() || DEFAULT_CONSTRUCTION_TYPE;
+
+  const updateWorkPlanCheck = (key: WorkPlanCheckKey, value: string) =>
+    applyDocumentUpdate('doc2', 'manual', (current) => ({
+      ...current,
+      document2Overview: {
+        ...current.document2Overview,
+        workPlanChecks: {
+          ...current.document2Overview.workPlanChecks,
+          [key]: value as (typeof current.document2Overview.workPlanChecks)[WorkPlanCheckKey],
+        },
+      },
+    }));
+
+  return (
+    <div className={styles.sectionStack}>
+      <div className={styles.doc2OverviewForm}>
+        <div className={`${styles.doc2OverviewRow} ${styles.doc2OverviewRowDates}`}>
+          <label className={styles.field}>
+            <span className={styles.fieldLabel}>실시일</span>
+            <input type="date" className="app-input" value={session.document2Overview.guidanceDate} onChange={(event) => updateOverviewField(props, 'guidanceDate', event.target.value)} />
+          </label>
+          <div className={styles.doc2OverviewDatesRight}>
+            {[
+              ['공정률', 'progressRate', '예: 45%'],
+              ['회차', 'visitCount', ''],
+              ['총회차', 'totalVisitCount', ''],
+            ].map(([label, key, placeholder]) => (
+              <label key={key} className={styles.field}>
+                <span className={styles.fieldLabel}>{label}</span>
+                <input type="text" className="app-input" value={session.document2Overview[key as 'progressRate' | 'visitCount' | 'totalVisitCount']} placeholder={placeholder} onChange={(event) => updateOverviewField(props, key as 'progressRate' | 'visitCount' | 'totalVisitCount', event.target.value)} />
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div className={`${styles.doc2OverviewRow} ${styles.doc2OverviewRowFollow}`}>
+          <label className={styles.field}>
+            <span className={styles.fieldLabel}>이전기술지도 이행여부</span>
+            <select className="app-select" value={session.document2Overview.previousImplementationStatus} onChange={(event) => updateOverviewField(props, 'previousImplementationStatus', event.target.value)}>
+              {PREVIOUS_IMPLEMENTATION_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </label>
+          <label className={styles.field}>
+            <span className={styles.fieldLabel}>담당요원</span>
+            <input type="text" className="app-input" value={session.document2Overview.assignee} onChange={(event) => updateOverviewField(props, 'assignee', event.target.value)} />
+          </label>
+          <label className={styles.field}>
+            <span className={styles.fieldLabel}>연락처</span>
+            <input type="text" className="app-input" value={session.document2Overview.contact} onChange={(event) => updateOverviewField(props, 'contact', event.target.value)} />
+          </label>
+        </div>
+
+        <div className={`${styles.doc2OverviewRow} ${styles.doc2OverviewRowNotify}`}>
+          <label className={styles.field}>
+            <span className={styles.fieldLabel}>공사구분</span>
+            <input type="text" className="app-input" value={constructionDisplay} readOnly />
+          </label>
+          <label className={styles.field}>
+            <span className={styles.fieldLabel}>현장 책임자 통보방법</span>
+            <select className="app-select" value={session.document2Overview.notificationMethod} onChange={(event) => updateOverviewField(props, 'notificationMethod', event.target.value)}>
+              <option value="">선택</option>
+              {NOTIFICATION_METHOD_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        {session.document2Overview.notificationMethod === 'direct' ? (
+          <div className={styles.doc2OverviewSignatureWrap}>
+            <SignaturePad label="직접전달 서명" value={session.document2Overview.notificationRecipientSignature} onChange={(nextValue) => updateOverviewField(props, 'notificationRecipientSignature', nextValue)} />
+          </div>
+        ) : null}
+
+        {session.document2Overview.notificationMethod === 'other' ? (
+          <label className={`${styles.field} ${styles.doc2OverviewOtherField}`}>
+            <span className={styles.fieldLabel}>기타 통보방법</span>
+            <input type="text" className="app-input" value={session.document2Overview.otherNotificationMethod} onChange={(event) => updateOverviewField(props, 'otherNotificationMethod', event.target.value)} />
+          </label>
+        ) : null}
+      </div>
+
+      <Doc2WorkPlanTable session={session} onChange={updateWorkPlanCheck} />
+
+      <div className={styles.formGrid}>
+        <div className={styles.doc2AccidentRowThree}>
+          <label className={styles.field}>
+            <span className={styles.fieldLabel}>산업재해 발생유무</span>
+            <select className="app-select" value={session.document2Overview.accidentOccurred === 'yes' ? 'yes' : 'no'} onChange={(event) => updateOverviewField(props, 'accidentOccurred', event.target.value)}>
+              {ACCIDENT_OCCURRENCE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </label>
+          <label className={styles.field}>
+            <span className={styles.fieldLabel}>최근 발생일자</span>
+            <Doc2AccidentDatePicker value={session.document2Overview.recentAccidentDate} disabled={session.document2Overview.accidentOccurred !== 'yes'} onChange={(next) => updateOverviewField(props, 'recentAccidentDate', next)} />
+          </label>
+          <label className={styles.field}>
+            <span className={styles.fieldLabel}>재해형태</span>
+            <input type="text" className="app-input" disabled={session.document2Overview.accidentOccurred !== 'yes'} value={session.document2Overview.accidentType} onChange={(event) => updateOverviewField(props, 'accidentType', event.target.value)} placeholder="예: 추락" />
+          </label>
+        </div>
+        <label className={`${styles.field} ${styles.fieldWide}`}>
+          <span className={styles.fieldLabel}>재해개요</span>
+          <input type="text" className="app-input" disabled={session.document2Overview.accidentOccurred !== 'yes'} value={session.document2Overview.accidentSummary} onChange={(event) => updateOverviewField(props, 'accidentSummary', event.target.value)} placeholder="재해 개요 입력" />
+        </label>
+        <label className={`${styles.field} ${styles.fieldWide}`}>
+          <span className={styles.fieldLabel}>진행공정 및 특이사항</span>
+          <textarea className="app-textarea" value={session.document2Overview.processAndNotes} onChange={(event) => updateOverviewField(props, 'processAndNotes', event.target.value)} />
+        </label>
+      </div>
+    </div>
+  );
+}

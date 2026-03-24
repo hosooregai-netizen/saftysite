@@ -34,6 +34,7 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
     setAuthError,
     setCurrentUser,
     setDataError,
+    setHasAuthToken,
     setIsHydrating,
     setIsReady,
     setMasterData,
@@ -110,11 +111,13 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
   const reload = useCallback(async () => {
     const token = authTokenRef.current;
     if (!token) {
+      setHasAuthToken(false);
       setIsReady(true);
       setIsHydrating(false);
       return;
     }
 
+    setHasAuthToken(true);
     setDataError(null);
     setIsHydrating(true);
     try {
@@ -130,7 +133,7 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
       setIsHydrating(false);
       setIsReady(true);
     }
-  }, [applyHydratedState, authTokenRef, clearAuthState, hydrateRemoteState, setAuthError, setDataError, setIsHydrating, setIsReady]);
+  }, [applyHydratedState, authTokenRef, clearAuthState, hydrateRemoteState, setAuthError, setDataError, setHasAuthToken, setIsHydrating, setIsReady]);
 
   useEffect(() => {
     let cancelled = false;
@@ -147,10 +150,12 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
       }
       const token = readSafetyAuthToken();
       if (!token) {
+        setHasAuthToken(false);
         setIsReady(true);
         return;
       }
       authTokenRef.current = token;
+      setHasAuthToken(true);
       await reload();
     };
 
@@ -158,7 +163,7 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
     return () => {
       cancelled = true;
     };
-  }, [authTokenRef, reload, resetSessionVersions, setIsReady, setSessionState, setSiteState]);
+  }, [authTokenRef, reload, resetSessionVersions, setHasAuthToken, setIsReady, setSessionState, setSiteState]);
 
   const login = useCallback(async (input: SafetyLoginInput) => {
     setAuthError(null);
@@ -171,6 +176,7 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
       const token = await loginSafetyApi(input);
       writeSafetyAuthToken(token.access_token);
       authTokenRef.current = token.access_token;
+      setHasAuthToken(true);
       const user = await fetchCurrentSafetyUser(token.access_token);
       setCurrentUser(user);
       setIsReady(true);
@@ -202,7 +208,7 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
         setIsReady(true);
       }
     }
-  }, [applyHydratedState, authTokenRef, clearAuthState, hydrateRemoteCollections, setAuthError, setCurrentUser, setDataError, setIsHydrating, setIsReady, setSyncError]);
+  }, [applyHydratedState, authTokenRef, clearAuthState, hydrateRemoteCollections, setAuthError, setCurrentUser, setDataError, setHasAuthToken, setIsHydrating, setIsReady, setSyncError]);
 
   const logout = useCallback(() => {
     clearAuthState();

@@ -3,9 +3,9 @@ import {
   DEFAULT_CONSTRUCTION_TYPE,
   DEFAULT_GUIDANCE_AGENCY,
   DEFAULT_SAFETY_INFOS,
-  FIXED_SCENE_COUNT,
   RISK_ASSESSMENT_QUESTION_PROMPTS,
   TBM_QUESTION_PROMPTS,
+  TOTAL_SCENE_COUNT,
   UNTITLED_SITE_KEY,
 } from '@/constants/inspectionSession/catalog';
 import {
@@ -26,7 +26,7 @@ import {
   createWorkPlanChecks,
   generateId,
 } from '@/constants/inspectionSession/shared';
-import { getFixedSceneTitle } from './scenePhotos';
+import { getSceneSlotTitle } from './scenePhotos';
 import { FATAL_ACCIDENT_MEASURE_LIBRARY } from './catalog';
 import type {
   AdminSiteSnapshot,
@@ -42,8 +42,8 @@ import type {
 import { finalizeInspectionSession } from './sessionState';
 
 function createDefaultScenePhotos() {
-  return Array.from({ length: FIXED_SCENE_COUNT }, (_, index) =>
-    createSiteScenePhoto(getFixedSceneTitle(index))
+  return Array.from({ length: TOTAL_SCENE_COUNT }, (_, index) =>
+    createSiteScenePhoto(getSceneSlotTitle(index))
   );
 }
 

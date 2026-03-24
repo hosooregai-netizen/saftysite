@@ -1,8 +1,8 @@
 import {
   DEFAULT_CASE_FEED,
   DEFAULT_SAFETY_INFOS,
-  FIXED_SCENE_COUNT,
   FATAL_ACCIDENT_MEASURE_LIBRARY,
+  TOTAL_SCENE_COUNT,
   UNTITLED_SITE_KEY,
 } from '@/constants/inspectionSession/catalog';
 import {
@@ -32,6 +32,7 @@ import {
   normalizeHazardFinding,
   normalizeMeasurement,
 } from './normalizeParts';
+import { getSceneSlotTitle } from './scenePhotos';
 
 function buildAdminSiteSnapshotFromLegacy(raw: UnknownRecord): AdminSiteSnapshot {
   const cover = asRecord(raw.cover);
@@ -97,13 +98,13 @@ export function migrateLegacyInspectionSession(raw: unknown): InspectionSession 
     document3Scenes: [
       ((overview) =>
         overview.photoUrl
-          ? createSiteScenePhoto('현장 전경 1', {
+          ? createSiteScenePhoto(getSceneSlotTitle(0), {
               photoUrl: normalizeText(overview.photoUrl),
               description: normalizeText(cover.processSummary),
             })
-          : createSiteScenePhoto('현장 전경 1'))(asRecord(source.siteOverview)),
-      ...Array.from({ length: FIXED_SCENE_COUNT - 1 }, (_, index) =>
-        createSiteScenePhoto(`현장 전경 ${index + 2}`)
+          : createSiteScenePhoto(getSceneSlotTitle(0)))(asRecord(source.siteOverview)),
+      ...Array.from({ length: TOTAL_SCENE_COUNT - 1 }, (_, index) =>
+        createSiteScenePhoto(getSceneSlotTitle(index + 1))
       ),
     ],
     document4FollowUps: Array.isArray(source.previousGuidanceItems)

@@ -63,7 +63,7 @@ export const META_TOUCH_FALLBACK_SECTION: InspectionSectionKey = 'doc2';
 export const SECTION_DESCRIPTIONS: Record<InspectionSectionKey, string> = {
   doc1: '관리자 기준 현장 스냅샷을 읽기 전용으로 보여줍니다.',
   doc2: '기술지도 개요와 작업계획서 12종, 재해 및 특이사항을 입력합니다.',
-  doc3: '현장 전경 사진을 최대 6장까지 관리하고 주요 진행공정을 함께 기록합니다.',
+  doc3: '현장 전경 2장과 주요 진행공정 4장을 고정 슬롯으로 입력하고 문서 배치에 맞춰 관리합니다.',
   doc4: '이전 보고서의 후속조치 대상과 시정 결과를 before/after 카드로 확인합니다.',
   doc5: '문서 7 데이터로 자동 집계된 4개 차트와 기술지도 총평을 관리합니다.',
   doc6: '문서 7의 재해유형/기인물 기준 추천을 반영한 14개 핵심 조치를 체크합니다.',
