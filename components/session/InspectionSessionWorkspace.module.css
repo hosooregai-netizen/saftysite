@@ -39,7 +39,7 @@
   border: 1px solid var(--erp-line);
   border-radius: var(--erp-radius-control);
   background-color: var(--erp-white);
-  font-size: 13px;
+  font-size: var(--text-ui);
   font-weight: 700;
   color: var(--erp-dark);
   box-shadow: 0 1px 0 rgba(16, 24, 43, 0.04);
@@ -66,7 +66,7 @@
 
 .headerTitle {
   margin: 0;
-  font-size: 18px;
+  font-size: var(--text-title);
   font-weight: 700;
   line-height: 1.25;
   letter-spacing: -0.02em;
@@ -92,7 +92,7 @@
 
 .headerDescription {
   margin-top: 8px;
-  font-size: 14px;
+  font-size: var(--text-body);
   line-height: 1.7;
   color: var(--erp-text-muted);
   word-break: keep-all;
@@ -117,7 +117,7 @@
 
 .progressCard {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
   gap: 12px;
   padding: 12px 14px;
@@ -139,11 +139,11 @@
 }
 
 .progressCaption {
-  font-size: 11px;
+  font-size: var(--text-kicker);
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--erp-text-muted);
+  color: #4e6b86;
 }
 
 .progressMeta,
@@ -175,12 +175,12 @@
   display: block;
   height: 100%;
   border-radius: 1px;
-  background: linear-gradient(90deg, #d5deea 0%, #8fa3b7 100%);
+  background: linear-gradient(90deg, #7fb3dc 0%, #2f6fa3 100%);
 }
 
 .workspaceError {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--text-ui-sm);
   font-weight: 600;
   line-height: 1.5;
   color: #b42318;
@@ -188,6 +188,10 @@
 
 .workspace {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  /* 첫 행(문서 선택·진행률 툴바)은 콘텐츠 높이만, 본문만 남는 높이를 채움 */
+  grid-template-rows: auto minmax(0, 1fr);
+  align-content: start;
   gap: 20px;
   padding: 20px;
   flex: 1 1 auto;
@@ -195,10 +199,111 @@
   overflow-y: auto;
 }
 
-.workspaceLead {
+.workspace > .editor {
+  min-height: 0;
+}
+
+.workspaceToolbar {
   display: grid;
   gap: 8px;
   min-width: 0;
+  position: sticky;
+  top: 12px;
+  z-index: 7;
+  padding: 14px;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-card);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 14px 28px rgba(16, 24, 43, 0.06);
+  backdrop-filter: blur(14px);
+}
+
+.workspaceToolbarMain {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  gap: 5px 16px;
+  align-items: center;
+  min-width: 0;
+}
+
+.toolbarAxisLabel {
+  font-size: var(--text-kicker);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--erp-text-muted);
+}
+
+.toolbarAxisLabelEnd {
+  text-align: right;
+}
+
+.toolbarCellSelect {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.toolbarCellSelect select {
+  width: 100%;
+}
+
+.toolbarCellProgress {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.toolbarProgressRow {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+}
+
+.toolbarProgressTrack {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: stretch;
+  min-width: 64px;
+  width: auto;
+  height: 38px;
+  overflow: hidden;
+  border-radius: 1px;
+  background-color: var(--erp-panel-muted);
+}
+
+.toolbarProgressFill {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+  height: 100%;
+  padding-right: 6px;
+  border-radius: 1px;
+  background: linear-gradient(90deg, #d5deea 0%, #8fa3b7 100%);
+}
+
+.toolbarProgressFillPercent {
+  font-size: var(--text-kicker);
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 0 1px rgba(0, 0, 0, 0.35);
+  white-space: nowrap;
+}
+
+.toolbarProgressFraction {
+  flex-shrink: 0;
+  font-size: var(--text-body-lg);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--erp-dark);
 }
 
 .shellBody {
@@ -233,7 +338,6 @@
   background-color: var(--erp-white);
 }
 
-.topRail,
 .topRailHeader,
 .topRailActions,
 .topRailPrimaryActions,
@@ -261,7 +365,7 @@
 .caseTitle,
 .noticeTitle,
 .stateTitle {
-  font-size: 18px;
+  font-size: var(--text-title);
   font-weight: 700;
   color: var(--erp-dark);
 }
@@ -306,19 +410,6 @@
   border-color: #9ab3cb;
 }
 
-.topRail {
-  gap: 14px;
-  position: sticky;
-  top: 12px;
-  z-index: 7;
-  padding: 14px;
-  border: 1px solid var(--erp-line);
-  border-radius: var(--erp-radius-card);
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 14px 28px rgba(16, 24, 43, 0.06);
-  backdrop-filter: blur(14px);
-}
-
 .topRailHeader {
   grid-template-columns: minmax(0, 1fr);
   align-items: center;
@@ -332,7 +423,7 @@
 }
 
 .topRailMeta {
-  font-size: 13px;
+  font-size: var(--text-ui);
   line-height: 1.6;
   color: var(--erp-text-muted);
 }
@@ -351,7 +442,7 @@
 }
 
 .sectionPickerLabel {
-  font-size: 12px;
+  font-size: var(--text-ui-sm);
   font-weight: 700;
   color: var(--erp-text-muted);
 }
@@ -405,7 +496,7 @@
   border-radius: 1px;
   background-color: var(--erp-mid);
   color: var(--erp-white);
-  font-size: 12px;
+  font-size: var(--text-ui-sm);
   font-weight: 700;
 }
 
@@ -434,7 +525,6 @@
 .noticeText,
 .caseSummary,
 .bottomMeta,
-.readonlyBanner,
 .emptyInline {
   white-space: normal;
   word-break: keep-all;
@@ -451,6 +541,13 @@
 .chartCount,
 .filePreviewTitle {
   font-weight: 700;
+}
+
+.progressValue {
+  font-size: var(--text-title);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #163b5b;
 }
 
 .metaBar {
@@ -499,9 +596,8 @@
 .stateDescription,
 .filePreviewText,
 .emptyInline,
-.readonlyBanner,
 .legalTextItem p {
-  font-size: 14px;
+  font-size: var(--text-body);
   line-height: 1.7;
 }
 
@@ -509,7 +605,6 @@
   margin-top: 18px;
 }
 
-.readonlyBanner,
 .emptyInline,
 .casePlaceholder,
 .uploadPlaceholder {
@@ -528,7 +623,7 @@
 .fileLink,
 .recommendBadge,
 .cardEyebrow {
-  font-size: 12px;
+  font-size: var(--text-ui-sm);
   font-weight: 700;
 }
 
@@ -592,7 +687,7 @@
   border: 0;
   background: none;
   color: #b42318;
-  font-size: 12px;
+  font-size: var(--text-ui-sm);
   font-weight: 700;
 }
 
@@ -681,7 +776,7 @@
 }
 
 .bottomMeta {
-  font-size: 13px;
+  font-size: var(--text-ui);
   color: var(--erp-text-muted);
 }
 
@@ -705,12 +800,12 @@
 
 .sceneAddTitle {
   color: var(--erp-dark);
-  font-size: 16px;
+  font-size: var(--text-body-md);
   font-weight: 700;
 }
 
 .sceneAddDescription {
-  font-size: 14px;
+  font-size: var(--text-body);
   line-height: 1.7;
   color: var(--erp-text-muted);
   word-break: keep-all;
@@ -718,13 +813,13 @@
 }
 
 .fieldAssist {
-  font-size: 13px;
+  font-size: var(--text-ui);
   line-height: 1.6;
   color: var(--erp-text-muted);
 }
 
 .fieldAssistError {
-  font-size: 13px;
+  font-size: var(--text-ui);
   line-height: 1.6;
   color: #b42318;
 }
@@ -804,10 +899,18 @@
     padding: 16px;
   }
 
-  .topRail {
+  .workspaceToolbar {
     gap: 10px;
     top: 8px;
     padding: 12px;
+  }
+
+  .workspaceToolbarMain {
+    gap: 4px 10px;
+  }
+
+  .toolbarProgressFraction {
+    font-size: var(--text-body);
   }
 
   .topRailActions,
@@ -824,7 +927,7 @@
 
   .bottomActions {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     width: 100%;
   }
 
@@ -863,7 +966,7 @@
   }
 
   .headerTitle {
-    font-size: 16px;
+    font-size: var(--text-body-md);
   }
 }
 

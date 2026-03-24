@@ -1,12 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+
 import AppModal from '@/components/ui/AppModal';
-import {
-  INSPECTION_SECTIONS,
-  getSectionCompletion,
-  getSessionTitle,
-} from '@/constants/inspectionSession';
+import { INSPECTION_SECTIONS, getSessionTitle } from '@/constants/inspectionSession';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import WorkerAppHeader from '@/components/worker/WorkerAppHeader';
 import { WorkerMenuDrawer, WorkerMenuPanel } from '@/components/worker/WorkerMenu';
@@ -45,11 +42,11 @@ export default function WorkspaceShell({
   currentSectionMeta: _currentSectionMeta,
   documentError,
   isGeneratingDocument,
-  isSaving,
+  isSaving: _isSaving,
   moveSection,
   onGenerateDocument,
   onMetaChange,
-  onSave,
+  onSave: _onSave,
   onSectionSelect,
   progress,
   renderSection,
@@ -60,7 +57,7 @@ export default function WorkspaceShell({
 }: WorkspaceShellProps) {
   const [metaModalOpen, setMetaModalOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const { currentUser, sites, logout } = useInspectionSessions();
+  const { currentUser, logout } = useInspectionSessions();
   const currentSectionInfo =
     INSPECTION_SECTIONS.find((section) => section.key === currentSection) ||
     INSPECTION_SECTIONS[0];
@@ -95,73 +92,32 @@ export default function WorkspaceShell({
               </header>
 
               <div className={styles.workspace}>
-                <div className={styles.workspaceLead}>
-                  <div className={styles.progressCard}>
-                    <div className={styles.progressCluster}>
-                      <div className={styles.progressSummary}>
-                        <strong className={styles.progressValue}>
-                          {progress.completed}/{progress.total} ({progress.percentage}%)
-                        </strong>
-                        <span className={styles.progressCaption}>진행률</span>
-                      </div>
-                      <div className={styles.progressTrack} aria-hidden="true">
-                        <span
-                          className={styles.progressFill}
-                          style={{ width: `${progress.percentage}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      className="app-button app-button-secondary"
-                      onClick={onSave}
+                <div className={styles.workspaceToolbar}>
+                  <div
+                    className={styles.workspaceToolbarMain}
+                    role="group"
+                    aria-label="문서 선택 및 진행률"
+                  >
+                    <span
+                      className={styles.toolbarAxisLabel}
+                      id="workspace-toolbar-doc-heading"
                     >
-                      {isSaving ? '저장 중...' : '저장하기'}
-                    </button>
-                  </div>
-
-                  {uploadError ? <p className={styles.workspaceError}>{uploadError}</p> : null}
-                  {syncError ? <p className={styles.workspaceError}>{syncError}</p> : null}
-                  {documentError ? <p className={styles.workspaceError}>{documentError}</p> : null}
-                </div>
-
-                <div className={styles.topRail}>
-                  <div className={styles.topRailHeader}>
-                    <div className={styles.topRailActions}>
-                      <div className={styles.topRailPrimaryActions}>
-                        <button
-                          type="button"
-                          className="app-button app-button-secondary"
-                          onClick={() => setMetaModalOpen(true)}
-                        >
-                          기본 정보
-                        </button>
-                        <button
-                          type="button"
-                          className="app-button app-button-secondary"
-                          onClick={onSave}
-                        >
-                          {isSaving ? '저장 중...' : '저장'}
-                        </button>
-                      </div>
-
-                      <div className={styles.topRailStatus}>
-                        <span className="app-chip">
-                          문서 {currentSectionIndex + 1}/{INSPECTION_SECTIONS.length}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className={styles.quickControls}>
-                    <label className={styles.sectionPicker}>
+                      문서 선택
+                    </span>
+                    <span
+                      className={styles.toolbarAxisLabel}
+                      id="workspace-toolbar-progress-heading"
+                    >
+                      진행률
+                    </span>
+                    <div className={styles.toolbarCellSelect}>
                       <select
                         className="app-select"
                         value={currentSection}
                         onChange={(event) =>
                           onSectionSelect(event.target.value as InspectionSectionKey)
                         }
+                        aria-labelledby="workspace-toolbar-doc-heading"
                       >
                         {INSPECTION_SECTIONS.map((section) => (
                           <option key={section.key} value={section.key}>
@@ -169,54 +125,32 @@ export default function WorkspaceShell({
                           </option>
                         ))}
                       </select>
-                    </label>
-
-                    <div className={styles.quickMoveButtons}>
-                      <button
-                        type="button"
-                        className="app-button app-button-secondary"
-                        disabled={!canMovePrev}
-                        onClick={() => moveSection(-1)}
-                      >
-                        이전
-                      </button>
-                      <button
-                        type="button"
-                        className="app-button app-button-primary"
-                        disabled={!canMoveNext}
-                        onClick={() => moveSection(1)}
-                      >
-                        다음
-                      </button>
+                    </div>
+                    <div
+                      className={styles.toolbarCellProgress}
+                      aria-labelledby="workspace-toolbar-progress-heading"
+                    >
+                      <div className={styles.toolbarProgressRow}>
+                        <div className={styles.toolbarProgressTrack}>
+                          <span
+                            className={styles.toolbarProgressFill}
+                            style={{ width: `${progress.percentage}%` }}
+                          >
+                            <span className={styles.toolbarProgressFillPercent}>
+                              {progress.percentage}%
+                            </span>
+                          </span>
+                        </div>
+                        <strong className={styles.toolbarProgressFraction}>
+                          {progress.completed}/{progress.total}
+                        </strong>
+                      </div>
                     </div>
                   </div>
 
-                  <nav className={styles.navRail} aria-label="문서 이동">
-                    {INSPECTION_SECTIONS.map((section) => {
-                      const isActive = section.key === currentSection;
-                      const isCompleted = getSectionCompletion(session, section.key);
-
-                      return (
-                        <button
-                          key={section.key}
-                          type="button"
-                          className={[
-                            styles.navTab,
-                            isActive ? styles.navTabActive : '',
-                            isCompleted ? styles.navTabCompleted : '',
-                          ]
-                            .filter(Boolean)
-                            .join(' ')}
-                          onClick={() => onSectionSelect(section.key)}
-                        >
-                          <span className={styles.navIndex}>{section.compactLabel}</span>
-                          <span className={styles.navTabText}>
-                            <strong>{section.shortLabel}</strong>
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </nav>
+                  {uploadError ? <p className={styles.workspaceError}>{uploadError}</p> : null}
+                  {syncError ? <p className={styles.workspaceError}>{syncError}</p> : null}
+                  {documentError ? <p className={styles.workspaceError}>{documentError}</p> : null}
                 </div>
 
                 <section className={styles.editor}>
@@ -225,6 +159,13 @@ export default function WorkspaceShell({
                       <div>
                         <h2 className={styles.editorTitle}>{currentSectionInfo.label}</h2>
                       </div>
+                      <button
+                        type="button"
+                        className="app-button app-button-secondary"
+                        onClick={() => setMetaModalOpen(true)}
+                      >
+                        기본 정보
+                      </button>
                     </div>
                     <div className={styles.editorBody}>{renderSection}</div>
                   </div>
@@ -240,9 +181,6 @@ export default function WorkspaceShell({
                     onClick={() => moveSection(-1)}
                   >
                     이전 문서
-                  </button>
-                  <button type="button" className="app-button app-button-secondary" onClick={onSave}>
-                    {isSaving ? '저장 중' : '저장'}
                   </button>
                   {isLastSection ? (
                     <button

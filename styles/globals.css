@@ -29,14 +29,32 @@
     --hazard-input-focus: 1px solid #1f3045;
     --hazard-input-shadow: 0 0 0 2px rgba(31, 48, 69, 0.14);
     --app-header-min-height: 118px;
+
+    /* Typography scale (rem = html 16px) */
+    --text-display: 1.75rem; /* 28px — route title */
+    --text-hero: 1.875rem; /* 30px — dashboard / large metric headline */
+    --text-stat: 1.5rem; /* 24px — secondary large numbers */
+    --text-metric: 1.375rem; /* 22px — KPI / emphasized counts */
+    --text-title: 1.125rem; /* 18px — shell/panel titles, brand */
+    --text-lead: 1.25rem; /* 20px — optional emphasis */
+    --text-body-md: 1rem; /* 16px */
+    --text-body: 0.875rem; /* 14px — default body */
+    --text-body-lg: 0.9375rem; /* 15px */
+    --text-ui: 0.8125rem; /* 13px — controls, meta */
+    --text-ui-sm: 0.75rem; /* 12px */
+    --text-kicker: 0.6875rem; /* 11px — uppercase labels */
+    --text-micro: 0.625rem; /* 10px */
+    --text-nano: 0.5625rem; /* 9px — print/dense only */
   }
 
   html {
+    font-size: 16px;
     background-color: var(--erp-white);
   }
 
   body {
     min-height: 100vh;
+    font-size: var(--text-body);
     background: var(--erp-white);
     color: var(--erp-dark);
     font-family:
@@ -112,7 +130,8 @@
   }
 
   .app-page-title {
-    @apply text-[28px] font-semibold tracking-[-0.02em];
+    font-size: var(--text-display);
+    @apply font-semibold tracking-[-0.02em];
     color: var(--erp-dark);
   }
 
@@ -131,7 +150,8 @@
   }
 
   .app-panel-title {
-    @apply text-base font-semibold;
+    font-size: var(--text-title);
+    @apply font-semibold;
     color: var(--erp-dark);
   }
 

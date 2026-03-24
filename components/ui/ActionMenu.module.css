@@ -61,7 +61,7 @@
   border-radius: 1px;
   background: transparent;
   color: var(--erp-dark);
-  font-size: 13px;
+  font-size: var(--text-ui);
   font-weight: 600;
   text-align: left;
   text-decoration: none;

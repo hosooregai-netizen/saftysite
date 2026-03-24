@@ -12,9 +12,6 @@ export function renderDoc1(session: OverviewSectionProps['session']) {
   const snapshot = session.adminSiteSnapshot;
   return (
     <div className={styles.sectionStack}>
-      <div className={styles.readonlyBanner}>
-        문서 1은 관리자 기준 현장 정보 스냅샷입니다. 현장 사용자는 수정할 수 없습니다.
-      </div>
       <div className={styles.infoTableGrid}>
         <InfoTable
           title="현장 정보"

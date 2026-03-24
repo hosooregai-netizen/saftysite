@@ -29,7 +29,7 @@
 }
 
 .heroTitle {
-  font-size: 30px;
+  font-size: var(--text-hero);
   font-weight: 700;
   letter-spacing: -0.03em;
 }
@@ -37,7 +37,7 @@
 .heroDescription {
   max-width: 760px;
   margin-top: 8px;
-  font-size: 14px;
+  font-size: var(--text-body);
   line-height: 1.7;
   color: #d7e0eb;
 }
@@ -77,7 +77,7 @@
   border: 1px solid var(--erp-line);
   border-radius: 1px;
   background: var(--erp-white);
-  font-size: 13px;
+  font-size: var(--text-ui);
   font-weight: 700;
   color: var(--erp-dark);
 }
@@ -96,7 +96,7 @@
 
 .navTitle {
   margin-bottom: 12px;
-  font-size: 12px;
+  font-size: var(--text-ui-sm);
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -124,13 +124,13 @@
 }
 
 .navLabel {
-  font-size: 14px;
+  font-size: var(--text-body);
   font-weight: 700;
   color: var(--erp-dark);
 }
 
 .navDescription {
-  font-size: 12px;
+  font-size: var(--text-ui-sm);
   line-height: 1.5;
   color: var(--erp-text-muted);
 }
@@ -145,7 +145,7 @@
 .bannerNotice {
   padding: 12px 14px;
   border-radius: 1px;
-  font-size: 14px;
+  font-size: var(--text-body);
   line-height: 1.6;
 }
 
@@ -185,14 +185,14 @@
 }
 
 .sectionTitle {
-  font-size: 22px;
+  font-size: var(--text-metric);
   font-weight: 700;
   color: var(--erp-dark);
 }
 
 .sectionDescription {
   margin-top: 6px;
-  font-size: 13px;
+  font-size: var(--text-ui);
   line-height: 1.6;
   color: var(--erp-text-muted);
 }
@@ -225,7 +225,7 @@
   padding: 12px 14px;
   border-bottom: 1px solid var(--erp-line);
   background: #f6f9fc;
-  font-size: 12px;
+  font-size: var(--text-ui-sm);
   font-weight: 700;
   text-align: left;
   letter-spacing: 0.04em;
@@ -235,7 +235,7 @@
 .table td {
   padding: 14px;
   border-bottom: 1px solid var(--erp-line);
-  font-size: 13px;
+  font-size: var(--text-ui);
   vertical-align: top;
   color: var(--erp-dark);
 }
@@ -273,7 +273,7 @@
 .tableEmpty {
   padding: 48px 24px;
   text-align: center;
-  font-size: 14px;
+  font-size: var(--text-body);
   color: var(--erp-text-muted);
 }
 
@@ -298,7 +298,7 @@
   border: 1px solid var(--erp-line);
   border-radius: 1px;
   background: var(--erp-white);
-  font-size: 13px;
+  font-size: var(--text-ui);
   font-weight: 700;
   color: var(--erp-dark);
 }
@@ -331,7 +331,7 @@
 }
 
 .modalHint {
-  font-size: 12px;
+  font-size: var(--text-ui-sm);
   line-height: 1.6;
   color: var(--erp-text-muted);
 }
@@ -387,7 +387,7 @@
   min-height: 180px;
   padding: 16px;
   text-align: center;
-  font-size: 14px;
+  font-size: var(--text-body);
   line-height: 1.7;
   color: var(--erp-text-muted);
 }
@@ -406,7 +406,7 @@
 .assetClear {
   border: 0;
   background: none;
-  font-size: 12px;
+  font-size: var(--text-ui-sm);
   font-weight: 700;
   color: #b42318;
 }
@@ -436,14 +436,14 @@
 }
 
 .insightTitle {
-  font-size: 14px;
+  font-size: var(--text-body);
   font-weight: 700;
   color: var(--erp-dark);
 }
 
 .insightText {
   margin-top: 8px;
-  font-size: 13px;
+  font-size: var(--text-ui);
   line-height: 1.6;
   color: var(--erp-text-muted);
 }
@@ -483,7 +483,7 @@
 }
 
 .statLabel {
-  font-size: 12px;
+  font-size: var(--text-ui-sm);
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -492,14 +492,14 @@
 
 .statValue {
   margin-top: 8px;
-  font-size: 30px;
+  font-size: var(--text-hero);
   font-weight: 700;
   color: var(--erp-dark);
 }
 
 .statMeta {
   margin-top: 10px;
-  font-size: 12px;
+  font-size: var(--text-ui-sm);
   line-height: 1.5;
   color: var(--erp-text-muted);
 }
@@ -532,13 +532,13 @@
 }
 
 .label {
-  font-size: 13px;
+  font-size: var(--text-ui);
   font-weight: 700;
   color: var(--erp-dark);
 }
 
 .hint {
-  font-size: 12px;
+  font-size: var(--text-ui-sm);
   line-height: 1.5;
   color: var(--erp-text-muted);
 }
@@ -569,7 +569,7 @@
 }
 
 .recordTitle {
-  font-size: 16px;
+  font-size: var(--text-body-md);
   font-weight: 700;
   color: var(--erp-dark);
 }
@@ -583,7 +583,7 @@
 
 .recordDescription {
   margin-top: 10px;
-  font-size: 13px;
+  font-size: var(--text-ui);
   line-height: 1.6;
   color: var(--erp-text-muted);
   white-space: pre-wrap;
@@ -601,7 +601,7 @@
   border: 1px dashed var(--erp-line-strong);
   border-radius: 1px;
   text-align: center;
-  font-size: 14px;
+  font-size: var(--text-body);
   color: var(--erp-text-muted);
 }
 
@@ -733,18 +733,18 @@
   }
 
   .overviewStatLabel {
-    font-size: 10px;
+    font-size: var(--text-micro);
     letter-spacing: 0.03em;
   }
 
   .overviewStatValue {
     margin-top: 4px;
-    font-size: 22px;
+    font-size: var(--text-metric);
   }
 
   .overviewStatMeta {
     margin-top: 6px;
-    font-size: 10px;
+    font-size: var(--text-micro);
   }
 
   .overviewInsights {
@@ -757,11 +757,11 @@
   }
 
   .overviewInsightTitle {
-    font-size: 13px;
+    font-size: var(--text-ui);
   }
 
   .overviewInsightText {
-    font-size: 11px;
+    font-size: var(--text-kicker);
     line-height: 1.4;
   }
 
@@ -772,7 +772,7 @@
   .overviewInsightActions :global(.app-button) {
     min-height: 32px;
     padding: 0 10px;
-    font-size: 12px;
+    font-size: var(--text-ui-sm);
   }
 
   .overviewSplitGrid {
@@ -785,11 +785,11 @@
   }
 
   .overviewRecordTitle {
-    font-size: 14px;
+    font-size: var(--text-body);
   }
 
   .overviewRecordDescription {
-    font-size: 11px;
+    font-size: var(--text-kicker);
     line-height: 1.4;
   }
 }
@@ -800,7 +800,7 @@
   }
 
   .heroTitle {
-    font-size: 24px;
+    font-size: var(--text-stat);
   }
 
   .heroActions {
@@ -844,18 +844,18 @@
   }
 
   .overviewStatLabel {
-    font-size: 9px;
+    font-size: var(--text-nano);
     letter-spacing: 0;
   }
 
   .overviewStatValue {
     margin-top: 4px;
-    font-size: 18px;
+    font-size: var(--text-title);
   }
 
   .overviewStatMeta {
     margin-top: 4px;
-    font-size: 9px;
+    font-size: var(--text-nano);
     line-height: 1.25;
   }
 
@@ -869,11 +869,11 @@
   }
 
   .overviewInsightTitle {
-    font-size: 11px;
+    font-size: var(--text-kicker);
   }
 
   .overviewInsightText {
-    font-size: 10px;
+    font-size: var(--text-micro);
     line-height: 1.35;
   }
 
@@ -884,7 +884,7 @@
   .overviewInsightActions :global(.app-button) {
     min-height: 28px;
     padding: 0 8px;
-    font-size: 11px;
+    font-size: var(--text-kicker);
   }
 
   .overviewSplitGrid {
@@ -898,15 +898,15 @@
 
   .overviewRecordCard :global(.app-chip) {
     padding: 3px 6px;
-    font-size: 10px;
+    font-size: var(--text-micro);
   }
 
   .overviewRecordTitle {
-    font-size: 12px;
+    font-size: var(--text-ui-sm);
   }
 
   .overviewRecordDescription {
-    font-size: 10px;
+    font-size: var(--text-micro);
     line-height: 1.35;
   }
 }
@@ -921,12 +921,12 @@
   }
 
   .overviewCard .sectionTitle {
-    font-size: 20px;
+    font-size: var(--text-lead);
   }
 
   .overviewCard .sectionDescription {
     margin-top: 4px;
-    font-size: 12px;
+    font-size: var(--text-ui-sm);
     line-height: 1.45;
   }
 
@@ -943,18 +943,18 @@
   }
 
   .overviewStatLabel {
-    font-size: 10px;
+    font-size: var(--text-micro);
     letter-spacing: 0.03em;
   }
 
   .overviewStatValue {
     margin-top: 4px;
-    font-size: 24px;
+    font-size: var(--text-stat);
   }
 
   .overviewStatMeta {
     margin-top: 6px;
-    font-size: 10px;
+    font-size: var(--text-micro);
     line-height: 1.3;
   }
 
@@ -967,12 +967,12 @@
   }
 
   .overviewInsightTitle {
-    font-size: 13px;
+    font-size: var(--text-ui);
   }
 
   .overviewInsightText {
     margin-top: 4px;
-    font-size: 11px;
+    font-size: var(--text-kicker);
     line-height: 1.35;
   }
 
@@ -983,7 +983,7 @@
   .overviewInsightActions :global(.app-button) {
     min-height: 32px;
     padding: 0 10px;
-    font-size: 12px;
+    font-size: var(--text-ui-sm);
   }
 
   .overviewSplitGrid {
@@ -996,15 +996,15 @@
 
   .overviewRecordCard :global(.app-chip) {
     padding: 3px 6px;
-    font-size: 10px;
+    font-size: var(--text-micro);
   }
 
   .overviewRecordTitle {
-    font-size: 14px;
+    font-size: var(--text-body);
   }
 
   .overviewRecordDescription {
-    font-size: 11px;
+    font-size: var(--text-kicker);
     line-height: 1.35;
   }
 

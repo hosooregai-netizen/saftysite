@@ -27,7 +27,7 @@
 }
 
 .photoError {
-  font-size: 13px;
+  font-size: var(--text-ui);
   color: #b42318;
 }
 
@@ -82,7 +82,7 @@
 }
 
 .fieldLabel {
-  font-size: 13px;
+  font-size: var(--text-ui);
   font-weight: 700;
   color: var(--erp-dark);
 }
@@ -147,7 +147,7 @@
   padding: 0;
   border: 0;
   background: none;
-  font-size: 12px;
+  font-size: var(--text-ui-sm);
   font-weight: 600;
 }
 
@@ -203,7 +203,7 @@
 }
 
 .photoPlaceholderHint {
-  font-size: 11px;
+  font-size: var(--text-kicker);
 }
 
 .editorTextarea {
@@ -246,7 +246,7 @@
 }
 
 .loadingTitle {
-  font-size: 14px;
+  font-size: var(--text-body);
   font-weight: 700;
   color: var(--erp-dark);
 }
@@ -297,7 +297,7 @@
   }
 
   .fieldLabel {
-    font-size: 12px;
+    font-size: var(--text-ui-sm);
     line-height: 1.25;
   }
 

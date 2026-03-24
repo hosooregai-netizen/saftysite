@@ -20,7 +20,7 @@
 
 .sectionTitle {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--text-ui-sm);
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -55,13 +55,13 @@
 }
 
 .menuItemLabel {
-  font-size: 14px;
+  font-size: var(--text-body);
   font-weight: 700;
   color: var(--erp-dark);
 }
 
 .menuItemDescription {
-  font-size: 12px;
+  font-size: var(--text-ui-sm);
   line-height: 1.5;
   color: var(--erp-text-muted);
 }

@@ -25,7 +25,7 @@
 
 .heroTitle {
   margin: 0;
-  font-size: 18px;
+  font-size: var(--text-title);
   font-weight: 700;
   line-height: 1.25;
   letter-spacing: -0.02em;
@@ -37,7 +37,7 @@
 .heroDescription {
   margin-top: 8px;
   max-width: 720px;
-  font-size: 14px;
+  font-size: var(--text-body);
   line-height: 1.7;
   color: #d5deea;
   word-break: keep-all;
@@ -108,7 +108,7 @@
 }
 
 .summaryCardLabel {
-  font-size: 11px;
+  font-size: var(--text-kicker);
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -116,7 +116,7 @@
 }
 
 .summaryCardValue {
-  font-size: 17px;
+  font-size: var(--text-title);
   font-weight: 700;
   line-height: 1.2;
   color: var(--erp-dark);
@@ -171,7 +171,7 @@
   padding: 9px 16px 8px;
   border-bottom: 1px solid var(--erp-line);
   background-color: var(--erp-panel-muted);
-  font-size: 10px;
+  font-size: var(--text-micro);
   font-weight: 700;
   letter-spacing: 0.02em;
   color: var(--erp-text-muted);
@@ -222,7 +222,7 @@
 .siteLink {
   display: block;
   width: 100%;
-  font-size: 15px;
+  font-size: var(--text-body-lg);
   font-weight: 700;
   line-height: 1.3;
   color: var(--erp-dark);
@@ -237,7 +237,7 @@
 
 .cellValue {
   display: block;
-  font-size: 13px;
+  font-size: var(--text-ui);
   line-height: 1.4;
   color: var(--erp-dark);
   white-space: nowrap;
@@ -275,7 +275,7 @@
 }
 
 .formLabel {
-  font-size: 13px;
+  font-size: var(--text-ui);
   font-weight: 700;
   color: var(--erp-dark);
 }
@@ -288,13 +288,13 @@
 }
 
 .emptyTitle {
-  font-size: 16px;
+  font-size: var(--text-body-md);
   font-weight: 700;
   color: var(--erp-dark);
 }
 
 .emptyDescription {
-  font-size: 14px;
+  font-size: var(--text-body);
   line-height: 1.7;
   color: var(--erp-text-muted);
 }
@@ -317,7 +317,7 @@
 }
 
 .loadingDescription {
-  font-size: 14px;
+  font-size: var(--text-body);
   line-height: 1.6;
   color: var(--erp-text);
 }
@@ -350,7 +350,7 @@
   }
 
   .heroTitle {
-    font-size: 16px;
+    font-size: var(--text-body-md);
   }
 
   .pageGrid {
@@ -369,12 +369,12 @@
   }
 
   .summaryCardLabel {
-    font-size: 10px;
+    font-size: var(--text-micro);
     letter-spacing: 0.04em;
   }
 
   .summaryCardValue {
-    font-size: 16px;
+    font-size: var(--text-body-md);
   }
 
   .tableTools {
@@ -402,7 +402,7 @@
   }
 
   .listHead {
-    font-size: 9px;
+    font-size: var(--text-nano);
   }
 
   .desktopOnly {
@@ -418,11 +418,11 @@
   }
 
   .siteLink {
-    font-size: 12px;
+    font-size: var(--text-ui-sm);
   }
 
   .cellValue {
-    font-size: 11px;
+    font-size: var(--text-kicker);
   }
 }
 
@@ -432,7 +432,7 @@
   }
 
   .heroTitle {
-    font-size: 17px;
+    font-size: var(--text-title);
   }
 
   .shellBody {

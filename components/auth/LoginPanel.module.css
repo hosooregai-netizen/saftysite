@@ -69,7 +69,7 @@
 
 .formDescription {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--text-body);
   line-height: 1.7;
   color: var(--erp-text-muted);
 }
@@ -108,7 +108,7 @@
   border: 1px solid rgba(215, 166, 166, 0.92);
   background: var(--erp-danger-soft);
   color: #9b2525;
-  font-size: 14px;
+  font-size: var(--text-body);
   line-height: 1.6;
 }
 
@@ -119,7 +119,7 @@
 
 .submitButton {
   min-height: 46px;
-  font-size: 15px;
+  font-size: var(--text-body-lg);
   font-weight: 700;
 }
 
