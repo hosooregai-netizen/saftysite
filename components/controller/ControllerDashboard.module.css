@@ -557,6 +557,14 @@
   color: var(--erp-text-muted);
 }
 
+.modalHintStrong {
+  margin-top: 4px;
+  font-size: var(--text-ui-sm);
+  line-height: 1.6;
+  font-weight: 700;
+  color: var(--erp-dark);
+}
+
 .contentTypePanel {
   display: grid;
   gap: 14px;
@@ -578,6 +586,28 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+
+.batchCaseGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.batchCaseCard {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-surface);
+  background: var(--erp-panel-muted);
+}
+
+.batchCaseHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .assetField {
@@ -983,7 +1013,8 @@
   .insightGrid,
   .formGrid,
   .modalGrid,
-  .assetGrid {
+  .assetGrid,
+  .batchCaseGrid {
     grid-template-columns: minmax(0, 1fr);
   }
 

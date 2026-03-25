@@ -16,6 +16,7 @@ import {
   buildSafetyMasterData,
   isSafetyAdmin,
   mapSafetyReportToInspectionSession,
+  mergeMasterDataIntoSession,
   mapSafetySiteToInspectionSite,
 } from '@/lib/safetyApiMappers';
 import type { SafetyHydratedData, SafetyLoginInput, SafetyUser } from '@/types/backend';
@@ -41,6 +42,7 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
     setSessionState,
     setSiteState,
     setSyncError,
+    sessionsRef,
   } = store;
 
   const hydrateRemoteCollections = useCallback(
@@ -107,6 +109,22 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
       setSiteState,
     ]
   );
+
+  const refreshMasterData = async () => {
+    const token = authTokenRef.current;
+    if (!token) return;
+
+    const contentItems = await fetchSafetyContentItems(token);
+    const nextMasterData = buildSafetyMasterData(contentItems);
+    const nextSessions = sessionsRef.current.map((session) =>
+      mergeMasterDataIntoSession(session, nextMasterData),
+    );
+
+    masterDataRef.current = nextMasterData;
+    setMasterData(nextMasterData);
+    setSessionState(nextSessions);
+    await persistSessions(nextSessions);
+  };
 
   const reload = useCallback(async () => {
     const token = authTokenRef.current;
@@ -218,5 +236,5 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
     setIsReady(true);
   }, [clearAuthState, setAuthError, setDataError, setIsReady, setSyncError]);
 
-  return { login, logout, reload };
+  return { login, logout, reload, refreshMasterData };
 }

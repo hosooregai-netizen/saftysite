@@ -4,20 +4,18 @@
   justify-content: center;
   width: 36px;
   height: 36px;
-  border: 1px solid var(--erp-line);
+  border: none;
   border-radius: 1px;
-  background: var(--erp-white);
+  background: transparent;
   color: var(--erp-dark);
   cursor: pointer;
   transition:
-    border-color 0.16s ease,
     background-color 0.16s ease,
     box-shadow 0.16s ease;
 }
 
 .trigger:hover,
 .triggerOpen {
-  border-color: rgba(17, 32, 53, 0.18);
   background: #f6f9fc;
   box-shadow: 0 8px 18px rgba(17, 32, 53, 0.08);
 }

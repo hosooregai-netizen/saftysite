@@ -128,9 +128,6 @@ export default function OverviewPanel({
       <div className={styles.sectionHeader}>
         <div>
           <h2 className={styles.sectionTitle}>관리자 운영 개요</h2>
-          <p className={styles.sectionDescription}>
-            사업장, 현장, 사용자, 배정, 콘텐츠 데이터를 한 화면에서 관리할 수 있습니다.
-          </p>
         </div>
       </div>
 

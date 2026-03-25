@@ -34,8 +34,35 @@ export function contentBodyToImageUrl(body: unknown): string {
   return (
     normalizeMapperText(record.image_url) ||
     normalizeMapperText(record.imageUrl) ||
+    normalizeMapperText(record.file_url) ||
+    normalizeMapperText(record.fileUrl) ||
+    normalizeMapperText(record.asset_url) ||
+    normalizeMapperText(record.assetUrl) ||
     normalizeMapperText(record.thumbnail_url) ||
     normalizeMapperText(record.thumbnailUrl)
+  );
+}
+
+export function contentBodyToAssetUrl(body: unknown): string {
+  const record = asMapperRecord(body);
+  return (
+    normalizeMapperText(record.file_url) ||
+    normalizeMapperText(record.fileUrl) ||
+    normalizeMapperText(record.asset_url) ||
+    normalizeMapperText(record.assetUrl) ||
+    contentBodyToImageUrl(body)
+  );
+}
+
+export function contentBodyToAssetName(body: unknown): string {
+  const record = asMapperRecord(body);
+  return (
+    normalizeMapperText(record.file_name) ||
+    normalizeMapperText(record.fileName) ||
+    normalizeMapperText(record.asset_name) ||
+    normalizeMapperText(record.assetName) ||
+    normalizeMapperText(record.image_name) ||
+    normalizeMapperText(record.imageName)
   );
 }
 

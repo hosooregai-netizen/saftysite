@@ -30,6 +30,7 @@ const STYLE = `
   .image-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
   .single-image { grid-template-columns: minmax(0, 1fr); }
   .image-card, .stats-card, .case-card, .followup-block { display: grid; gap: 8px; }
+  .case-card-photos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; align-items: start; }
   .image-card-title, .case-title { font-weight: 700; }
   .doc-image, .case-image { width: 100%; max-height: 230px; object-fit: contain; border: 1px solid #c6cfdb; background: #fff; }
   .image-caption, .image-placeholder { color: #59677a; font-size: 10pt; line-height: 1.6; }

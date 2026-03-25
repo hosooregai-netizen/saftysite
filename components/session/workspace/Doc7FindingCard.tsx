@@ -249,17 +249,6 @@ export default function Doc7FindingCard({
                 />
               </label>
             </div>
-            <label className={styles.checkboxField}>
-              <input
-                type="checkbox"
-                className="app-checkbox"
-                checked={item.carryForward}
-                onChange={(event) =>
-                  updateFinding((finding) => ({ ...finding, carryForward: event.target.checked }))
-                }
-              />
-              <span>이전 기술지도 후속조치 대상에 이관</span>
-            </label>
           </div>
         </div>
         <div className={styles.doc7PhotoColumn}>

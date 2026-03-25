@@ -5,7 +5,6 @@ import {
   createFutureProcessRiskPlan,
   createMeasurementCheckItem,
   createPreviousGuidanceFollowUpItem,
-  createSafetyEducationRecord,
 } from '@/constants/inspectionSession';
 import Doc10Section from '@/components/session/workspace/sections/Doc10Section';
 import Doc11Section from '@/components/session/workspace/sections/Doc11Section';
@@ -111,23 +110,6 @@ export function renderSectionToolbar({
             }
           >
             행 추가
-          </button>
-        </div>
-      );
-    case 'doc11':
-      return (
-        <div className={`${styles.sectionToolbar} ${styles.doc4Toolbar}`}>
-          <button
-            type="button"
-            className="app-button app-button-secondary"
-            onClick={() =>
-              props.applyDocumentUpdate('doc11', 'manual', (current) => ({
-                ...current,
-                document11EducationRecords: [...current.document11EducationRecords, createSafetyEducationRecord()],
-              }))
-            }
-          >
-            교육 기록 추가
           </button>
         </div>
       );

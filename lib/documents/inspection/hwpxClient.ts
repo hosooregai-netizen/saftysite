@@ -6,7 +6,18 @@ import { FIXED_SCENE_COUNT } from '@/constants/inspectionSession/catalog';
 import { getExtraSceneTitle } from '@/constants/inspectionSession/scenePhotos';
 import type { ChecklistRating, InspectionSession } from '@/types/inspectionSession';
 
-type RepeatBlockPath = 'sec7.findings' | 'sec8.plans' | 'sec11.education' | 'sec12.activities';
+type RepeatBlockPath =
+  | 'sec4.follow_ups'
+  | 'sec7.findings'
+  | 'sec8.plans'
+  | 'sec10.measurements'
+  | 'sec11.education'
+  | 'sec12.activities';
+
+interface RepeatBlockConfig {
+  pageSize: number;
+  prototypeIndices: number[];
+}
 
 interface TemplateBindingData {
   text: Record<string, string>;
@@ -25,6 +36,7 @@ interface TemplateImagePlaceholder {
   binaryItemId: string;
   repeatBlockPath?: RepeatBlockPath;
   deferred?: boolean;
+  optional?: boolean;
 }
 
 interface ManifestItem {
@@ -39,10 +51,24 @@ interface ResolvedImageAsset {
   mediaType: string;
 }
 
-const TEMPLATE_FILENAME = '기술지도 수동보고서 앱 - 서식_4.annotated.hwpx';
+const HWPX_GENERATION_MODE: 'template_native' | 'advanced' = 'template_native';
+const IMAGE_BINDING_MODE: 'embedded' | 'text_only' = 'embedded';
+const TEMPLATE_FILENAME = '\uAE30\uC220\uC9C0\uB3C4 \uC218\uB3D9\uBCF4\uACE0\uC11C \uC571 - \uC11C\uC2DD_4.annotated.v7.hwpx';
 const TEMPLATE_URL = `/templates/inspection/${encodeURIComponent(TEMPLATE_FILENAME)}`;
 const BLANK_PNG_BASE64 =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5cH7QAAAAASUVORK5CYII=';
+const BLANK_JPEG_BASE64 =
+  '/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD3+iiigD//2Q==';
+const ZIP_STORED_ENTRY_NAMES = ['mimetype', 'version.xml'] as const;
+const ZIP_LOCAL_FILE_HEADER_SIGNATURE = 0x04034b50;
+const ZIP_CENTRAL_DIRECTORY_FILE_HEADER_SIGNATURE = 0x02014b50;
+const ZIP_END_OF_CENTRAL_DIRECTORY_SIGNATURE = 0x06054b50;
+const ZIP_VERSION_MADE_BY = 0x0b17;
+const ZIP_VERSION_NEEDED = 20;
+const ZIP_DEFAULT_EXTERNAL_ATTR = 0x81800020;
+const ZIP_OLE_EXTERNAL_ATTR = 0x81000021;
+const HWPX_UNITCHAR_NAMESPACE = 'xmlns:hwpunitchar="http://www.hancom.co.kr/hwpml/2016/HwpUnitChar"';
+const HWPX_LASTSAVEBY_META = '<opf:meta name="lastsaveby" content="text">\uC7A5\uC815\uADDC</opf:meta>';
 
 const WORK_PLAN_PLACEHOLDERS = [
   { sourceKey: 'towerCrane', placeholderPath: 'sec2.work_plan_checks.tower_crane' },
@@ -62,7 +88,16 @@ const WORK_PLAN_PLACEHOLDERS = [
   },
 ] as const;
 
-const REPEAT_BLOCKS: RepeatBlockPath[] = ['sec7.findings', 'sec8.plans', 'sec11.education', 'sec12.activities'];
+const REPEAT_BLOCK_CONFIG: Record<RepeatBlockPath, RepeatBlockConfig> = {
+  'sec4.follow_ups': { pageSize: 3, prototypeIndices: [0, 1, 2] },
+  'sec7.findings': { pageSize: 1, prototypeIndices: [0] },
+  'sec8.plans': { pageSize: 6, prototypeIndices: [0, 1, 2, 3, 4, 5] },
+  'sec10.measurements': { pageSize: 3, prototypeIndices: [0, 1, 2] },
+  'sec11.education': { pageSize: 1, prototypeIndices: [0] },
+  'sec12.activities': { pageSize: 1, prototypeIndices: [0] },
+};
+
+const REPEAT_BLOCKS = Object.keys(REPEAT_BLOCK_CONFIG) as RepeatBlockPath[];
 
 const DEFERRED_SECTIONS = ['sec5', 'section15_removed_from_binding'];
 
@@ -83,8 +118,8 @@ const IMAGE_MEDIA_TYPE_TO_EXTENSION: Record<string, string> = {
   'image/bmp': 'bmp',
   'image/webp': 'webp',
 };
-
-let templateBufferPromise: Promise<ArrayBuffer> | null = null;
+const INVALID_XML_CHAR_PATTERN = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\uD800-\uDFFF\uFFFE\uFFFF]/g;
+const HWPX_BALANCE_TAGS = ['hp:subList', 'hp:p', 'hp:tbl', 'hp:tr', 'hp:tc', 'hp:t'] as const;
 
 function decodeBase64ToBytes(base64: string): Uint8Array {
   const binary = atob(base64);
@@ -100,6 +135,25 @@ const BLANK_PNG_ASSET: ResolvedImageAsset = {
   extension: 'png',
   mediaType: 'image/png',
 };
+
+const BLANK_JPEG_ASSET: ResolvedImageAsset = {
+  buffer: decodeBase64ToBytes(BLANK_JPEG_BASE64),
+  extension: 'jpg',
+  mediaType: 'image/jpg',
+};
+
+const LEGACY_TEMPLATE_IMAGE_REPAIRS = [
+  {
+    binaryItemId: 'image8',
+    href: 'BinData/image8.jpg',
+    asset: BLANK_JPEG_ASSET,
+  },
+  {
+    binaryItemId: 'image9',
+    href: 'BinData/image9.jpg',
+    asset: BLANK_JPEG_ASSET,
+  },
+] as const;
 
 const TEXT_PLACEHOLDERS = [
   'cover.site_name',
@@ -168,10 +222,11 @@ const TEXT_PLACEHOLDERS = [
   'sec7.findings[0].legal_reference_title',
   'sec7.findings[0].reference_material_1',
   'sec7.findings[0].reference_material_2',
-  'sec8.plans[0].process_name',
-  'sec8.plans[0].hazard',
-  'sec8.plans[0].countermeasure',
-  'sec8.plans[0].note',
+  ...Array.from({ length: 6 }, (_, index) => [
+    `sec8.plans[${index}].process_name`,
+    `sec8.plans[${index}].hazard`,
+    `sec8.plans[${index}].countermeasure`,
+  ]).flat(),
   ...Array.from({ length: 5 }, (_, index) => [
     `sec9.tbm[${index}].good_box`,
     `sec9.tbm[${index}].average_box`,
@@ -201,6 +256,8 @@ const TEXT_PLACEHOLDERS = [
   'sec14.title',
   'sec14.body',
 ] as const;
+const TEMPLATE_TEXT_TOKEN_SET = new Set<string>(TEXT_PLACEHOLDERS);
+const TEMPLATE_REPEAT_TOKEN_SET = new Set<string>(REPEAT_BLOCKS);
 
 const TEMPLATE_IMAGE_PLACEHOLDERS: TemplateImagePlaceholder[] = [
   { table: 2, row: 2, col: 0, placeholderPath: 'sec3.fixed[0].photo_image', binaryItemId: 'tplimg01' },
@@ -247,6 +304,7 @@ const TEMPLATE_IMAGE_PLACEHOLDERS: TemplateImagePlaceholder[] = [
     col: 0,
     placeholderPath: 'sec10.measurements[0].photo_image',
     binaryItemId: 'tplimg11',
+    repeatBlockPath: 'sec10.measurements',
   },
   {
     table: 8,
@@ -254,6 +312,7 @@ const TEMPLATE_IMAGE_PLACEHOLDERS: TemplateImagePlaceholder[] = [
     col: 0,
     placeholderPath: 'sec10.measurements[1].photo_image',
     binaryItemId: 'tplimg12',
+    repeatBlockPath: 'sec10.measurements',
   },
   {
     table: 8,
@@ -261,6 +320,7 @@ const TEMPLATE_IMAGE_PLACEHOLDERS: TemplateImagePlaceholder[] = [
     col: 0,
     placeholderPath: 'sec10.measurements[2].photo_image',
     binaryItemId: 'tplimg13',
+    repeatBlockPath: 'sec10.measurements',
   },
   {
     table: 9,
@@ -291,6 +351,14 @@ const TEMPLATE_IMAGE_PLACEHOLDERS: TemplateImagePlaceholder[] = [
   { table: 10, row: 5, col: 0, placeholderPath: 'sec13.cases[2].image', binaryItemId: 'tplimg19' },
   { table: 10, row: 5, col: 1, placeholderPath: 'sec13.cases[3].image', binaryItemId: 'tplimg20' },
   { table: 11, row: 1, col: 0, placeholderPath: 'sec14.image', binaryItemId: 'tplimg21' },
+  {
+    table: 2,
+    row: 14,
+    col: 2,
+    placeholderPath: 'sec2.notification_recipient_signature_image',
+    binaryItemId: 'tplimg22',
+    optional: true,
+  },
 ];
 
 function valueOrBlank(value: unknown): string {
@@ -303,11 +371,12 @@ function valueOrDash(value: unknown): string {
 }
 
 function checkbox(checked: boolean): string {
-  return checked ? '☑' : '☐';
+  return checked ? '\u2611' : '\u2610';
 }
 
 function escapeXmlText(value: string): string {
   return value
+    .replace(INVALID_XML_CHAR_PATTERN, '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
@@ -316,6 +385,203 @@ function escapeXmlText(value: string): string {
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function normalizeHwpxPlainText(value: string): string {
+  return value.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+}
+
+function estimateHwpxMaxCharsPerLine(horzSize: number, textHeight: number): number {
+  const safeHeight = Math.max(textHeight, 900);
+  return Math.max(8, Math.floor(horzSize / (safeHeight * 1.05)));
+}
+
+function charWidthUnits(char: string): number {
+  return /[ -~]/.test(char) ? 0.6 : 1;
+}
+
+function wrapHwpxLine(text: string, maxCharsPerLine: number): string[] {
+  const normalized = text.replace(/\s+/g, ' ').trim();
+  if (!normalized) {
+    return [' '];
+  }
+
+  const lines: string[] = [];
+  let start = 0;
+
+  while (start < normalized.length) {
+    let width = 0;
+    let end = start;
+    let lastWhitespace = -1;
+
+    while (end < normalized.length) {
+      const nextWidth = width + charWidthUnits(normalized[end]);
+      if (nextWidth > maxCharsPerLine) {
+        break;
+      }
+      width = nextWidth;
+      if (/\s/.test(normalized[end])) {
+        lastWhitespace = end;
+      }
+      end += 1;
+    }
+
+    if (end === normalized.length) {
+      lines.push(normalized.slice(start));
+      break;
+    }
+
+    if (lastWhitespace >= start) {
+      lines.push(normalized.slice(start, lastWhitespace).trimEnd());
+      start = lastWhitespace + 1;
+      while (start < normalized.length && /\s/.test(normalized[start])) {
+        start += 1;
+      }
+      continue;
+    }
+
+    lines.push(normalized.slice(start, end));
+    start = end;
+  }
+
+  return lines.length ? lines : [' '];
+}
+
+function replaceInlineTextPlaceholders(text: string, textBindings: Record<string, string>): string {
+  return text.replace(/\{(?![#/])([^{}]+)\}/g, (_match, rawPath: string) =>
+    normalizeHwpxPlainText(textBindings[rawPath.trim()] ?? ''),
+  );
+}
+
+function extractFirstLineSegMetric(paragraphXml: string, name: string): number | null {
+  const match = paragraphXml.match(new RegExp(`<hp:lineseg\\b[^>]*\\b${name}="(\\d+)"`));
+  if (!match) {
+    return null;
+  }
+  return Number.parseInt(match[1], 10);
+}
+
+function isHwpxBlankParagraph(paragraphXml: string): boolean {
+  const textMatch = paragraphXml.match(/<hp:t>([\s\S]*?)<\/hp:t>/);
+  if (!textMatch) {
+    return true;
+  }
+
+  const text = textMatch[1]
+    .replace(/<hp:lineBreak\s*\/>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .trim();
+  return !text;
+}
+
+function replaceStructuredTextPlaceholders(xml: string, textBindings: Record<string, string>): string {
+  return xml.replace(/<hp:subList\b[\s\S]*?<\/hp:subList>/g, (subListXml) => {
+    const openTagMatch = subListXml.match(/^<hp:subList\b[^>]*>/);
+    if (!openTagMatch) {
+      return subListXml;
+    }
+
+    const openTag = openTagMatch[0];
+    const innerXml = subListXml.slice(openTag.length, -'</hp:subList>'.length);
+    const paragraphs = innerXml.match(/<hp:p\b[\s\S]*?<\/hp:p>/g);
+    if (!paragraphs?.length) {
+      return subListXml;
+    }
+
+    let changed = false;
+    const rebuilt: string[] = [];
+
+    for (let index = 0; index < paragraphs.length; index += 1) {
+      const paragraphXml = paragraphs[index];
+      const paragraphMatch = paragraphXml.match(
+        /^(<hp:p\b[^>]*>)([\s\S]*?)(<hp:linesegarray>[\s\S]*?<\/hp:linesegarray>)<\/hp:p>$/,
+      );
+      if (!paragraphMatch) {
+        rebuilt.push(paragraphXml);
+        continue;
+      }
+
+      const [, paragraphOpen, paragraphBody, lineSegArrayXml] = paragraphMatch;
+      const textRunMatch = paragraphBody.match(/^([\s\S]*?<hp:t>)([\s\S]*?)(<\/hp:t>[\s\S]*)$/);
+      if (!textRunMatch) {
+        rebuilt.push(paragraphXml);
+        continue;
+      }
+
+      const [, textPrefix, rawTextTemplate, textSuffix] = textRunMatch;
+      if (!/\{(?![#/])[^{}]+\}/.test(rawTextTemplate)) {
+        rebuilt.push(paragraphXml);
+        continue;
+      }
+
+      const lineSegMatch = lineSegArrayXml.match(
+        /^(<hp:linesegarray>\s*)(<hp:lineseg\b[^>]*\bvertpos="(\d+)"[^>]*\bvertsize="(\d+)"[^>]*\btextheight="(\d+)"[^>]*\bspacing="(\d+)"[^>]*\bhorzsize="(\d+)"[^>]*\/>)([\s\S]*<\/hp:linesegarray>)$/,
+      );
+      if (!lineSegMatch) {
+        rebuilt.push(paragraphXml);
+        continue;
+      }
+
+      const [
+        ,
+        lineSegArrayOpen,
+        lineSegTemplate,
+        baseVertPosText,
+        vertSizeText,
+        textHeightText,
+        spacingText,
+        horzSizeText,
+        lineSegArrayClose,
+      ] = lineSegMatch;
+
+      const consumedParagraphs = [paragraphXml];
+      let lookaheadIndex = index + 1;
+      while (lookaheadIndex < paragraphs.length && isHwpxBlankParagraph(paragraphs[lookaheadIndex])) {
+        consumedParagraphs.push(paragraphs[lookaheadIndex]);
+        lookaheadIndex += 1;
+      }
+
+      const baseVertPos = Number.parseInt(baseVertPosText, 10);
+      const vertSize = Number.parseInt(vertSizeText, 10);
+      const textHeight = Number.parseInt(textHeightText, 10);
+      const spacing = Number.parseInt(spacingText, 10);
+      const horzSize = Number.parseInt(horzSizeText, 10);
+      const reservedVertPositions = consumedParagraphs
+        .map((item) => extractFirstLineSegMetric(item, 'vertpos'))
+        .filter((value): value is number => value !== null);
+      const reservedSteps = reservedVertPositions
+        .slice(1)
+        .map((value, reservedIndex) => value - reservedVertPositions[reservedIndex])
+        .filter((value) => value > 0);
+      const lineStep = reservedSteps[0] ?? vertSize + spacing;
+
+      const renderedText = replaceInlineTextPlaceholders(rawTextTemplate, textBindings).replace(
+        /<hp:lineBreak\s*\/>/g,
+        '\n',
+      );
+      const logicalLines = normalizeHwpxPlainText(renderedText).split('\n');
+      const wrappedLines = logicalLines.flatMap((line) =>
+        wrapHwpxLine(line, estimateHwpxMaxCharsPerLine(horzSize, textHeight)),
+      );
+      const finalLines = wrappedLines.length ? wrappedLines : [' '];
+
+      rebuilt.push(
+        ...finalLines.map((line, lineIndex) => {
+          const nextVertPos = baseVertPos + lineStep * lineIndex;
+          const nextLineSeg = lineSegTemplate.replace(/\bvertpos="\d+"/, `vertpos="${nextVertPos}"`);
+          return `${paragraphOpen}${textPrefix}${escapeXmlText(line)}${textSuffix}${lineSegArrayOpen}${nextLineSeg}${lineSegArrayClose}</hp:p>`;
+        }),
+      );
+      changed = true;
+      index = lookaheadIndex - 1;
+    }
+
+    if (!changed) {
+      return subListXml;
+    }
+
+    return `${openTag}${rebuilt.join('')}</hp:subList>`;
+  });
 }
 
 function formatDateText(value: string): string {
@@ -339,11 +605,11 @@ function formatDateText(value: string): string {
 function mapPreviousImplementationStatus(value: string): string {
   switch (value) {
     case 'implemented':
-      return '이행';
+      return '\uC774\uD589';
     case 'partial':
-      return '부분 이행';
+      return '\uBD80\uBD84 \uC774\uD589';
     case 'not_implemented':
-      return '미이행';
+      return '\uBBF8\uC774\uD589';
     default:
       return '';
   }
@@ -352,9 +618,9 @@ function mapPreviousImplementationStatus(value: string): string {
 function mapAccidentOccurrence(value: string): string {
   switch (value) {
     case 'yes':
-      return '발생';
+      return '\uBC1C\uC0DD';
     case 'no':
-      return '미발생';
+      return '\uBBF8\uBC1C\uC0DD';
     default:
       return '';
   }
@@ -363,11 +629,11 @@ function mapAccidentOccurrence(value: string): string {
 function mapWorkPlanStatus(value: string): string {
   switch (value) {
     case 'written':
-      return '작성';
+      return '\uC791\uC131';
     case 'not_written':
-      return '미작성';
+      return '\uBBF8\uC791\uC131';
     case 'not_applicable':
-      return '해당없음';
+      return '\uD574\uB2F9\uC5C6\uC74C';
     default:
       return '';
   }
@@ -375,16 +641,15 @@ function mapWorkPlanStatus(value: string): string {
 
 function mapNotificationMethodText(method: string): string {
   const options = [
-    { value: 'direct', label: '직접전달' },
-    { value: 'registered_mail', label: '등기우편' },
-    { value: 'email', label: '이메일' },
-    { value: 'mobile', label: '모바일' },
-    { value: 'other', label: '기타' },
+    { value: 'direct', label: '\uC9C1\uC811\uC804\uB2EC' },
+    { value: 'registered_mail', label: '\uB4F1\uAE30\uC6B0\uD3B8' },
+    { value: 'email', label: '\uC804\uC790\uC6B0\uD3B8' },
+    { value: 'mobile', label: '\uBAA8\uBC14\uC77C' },
+    { value: 'other', label: '\uAE30\uD0C0' },
   ] as const;
 
   return options.map((item) => `${checkbox(method === item.value)} ${item.label}`).join(' ');
 }
-
 function mapRiskText(finding: InspectionSession['document7Findings'][number]): string {
   const riskLevel = valueOrBlank(finding.riskLevel);
   if (riskLevel) return riskLevel;
@@ -424,6 +689,22 @@ function assetTextFallback(source: string): string {
   return basename || normalized;
 }
 
+function textOnlyPlaceholderPathForImage(placeholderPath: string): string {
+  return `${placeholderPath}_text`;
+}
+
+function applyTextOnlyImageFallbacks(
+  text: Record<string, string>,
+  images: Record<string, string>,
+  warnings: string[],
+): void {
+  for (const [placeholderPath, source] of Object.entries(images)) {
+    text[textOnlyPlaceholderPathForImage(placeholderPath)] = assetTextFallback(source);
+  }
+
+  warnings.push('Image embedding is temporarily disabled. Image slots render as text labels only.');
+}
+
 function fileNameForSession(session: InspectionSession): string {
   const site = (session.meta.siteName || session.adminSiteSnapshot.siteName || 'inspection')
     .replace(/[\\/:*?"<>|]/g, '-')
@@ -442,6 +723,11 @@ function padFixedSlots<T>(items: T[], size: number, emptyFactory: () => T): T[] 
 
 function ensureRepeatItems<T>(items: T[], emptyFactory: () => T): T[] {
   return items.length > 0 ? items : [emptyFactory()];
+}
+
+function repeatBlockPageCount(repeatBlockPath: RepeatBlockPath, itemCount: number): number {
+  const { pageSize } = REPEAT_BLOCK_CONFIG[repeatBlockPath];
+  return Math.max(1, Math.ceil(Math.max(0, itemCount) / pageSize));
 }
 
 function createEmptyScene() {
@@ -509,7 +795,7 @@ function createEmptyEducationRecord() {
 }
 
 function createEmptyActivity() {
-  return { id: '', photoUrl: '', activityType: '', content: '' };
+  return { id: '', photoUrl: '', photoUrl2: '', activityType: '', content: '' };
 }
 
 function createEmptyCase() {
@@ -534,8 +820,10 @@ function mapSessionToTemplateBinding(session: InspectionSession): TemplateBindin
   const warnings: string[] = [];
   const truncated: Record<string, number> = {};
   const repeatCounts: Record<RepeatBlockPath, number> = {
+    'sec4.follow_ups': 1,
     'sec7.findings': 1,
     'sec8.plans': 1,
+    'sec10.measurements': 1,
     'sec11.education': 1,
     'sec12.activities': 1,
   };
@@ -597,8 +885,12 @@ function mapSessionToTemplateBinding(session: InspectionSession): TemplateBindin
     text[item.placeholderPath] = valueOrDash(mapWorkPlanStatus(overview.workPlanChecks[item.sourceKey]));
   }
 
-  if (valueOrBlank(overview.notificationRecipientSignature)) {
-    warnings.push('Section 2 signature is text-only in the current template and is rendered as an asset label.');
+  const signatureSource = valueOrBlank(overview.notificationRecipientSignature);
+  images['sec2.notification_recipient_signature_image'] =
+    overview.notificationMethod === 'direct' && looksLikeImageSource(signatureSource) ? signatureSource : '';
+
+  if (overview.notificationMethod === 'direct' && !looksLikeImageSource(signatureSource)) {
+    warnings.push('嶺뚯쉳???熬곣뫀堉????ルㅎ臾???嶺???類ㅺ뎄 ????嶺뚯솘??띠럾? ??怨룹꽑 ???沅??꾩렮維뽬떋??곸궠梨????類ㅺ뎄 ?잙갭梨??????닷젆????곕????덈펲.');
   }
 
   const fixedScenes = padFixedSlots(session.document3Scenes.slice(0, 2), 2, createEmptyScene);
@@ -625,11 +917,8 @@ function mapSessionToTemplateBinding(session: InspectionSession): TemplateBindin
   images['sec3.extra[2].photo_image'] = valueOrBlank(extraScenes[2].photoUrl);
   images['sec3.extra[3].photo_image'] = valueOrBlank(extraScenes[3].photoUrl);
 
-  const followUps = padFixedSlots(session.document4FollowUps.slice(0, 3), 3, createEmptyFollowUp);
-  if (session.document4FollowUps.length > 3) {
-    truncated.document4FollowUps = session.document4FollowUps.length - 3;
-    warnings.push(`Section 4 renders 3 fixed follow-up slots. ${truncated.document4FollowUps} extra item(s) were skipped.`);
-  }
+  const followUps = ensureRepeatItems(session.document4FollowUps, createEmptyFollowUp);
+  repeatCounts['sec4.follow_ups'] = followUps.length;
   for (let index = 0; index < followUps.length; index += 1) {
     const item = followUps[index];
     text[`sec4.follow_ups[${index}].location`] = valueOrDash(item.location);
@@ -701,11 +990,8 @@ function mapSessionToTemplateBinding(session: InspectionSession): TemplateBindin
     text[`sec9.risk_assessment[${index}].note`] = valueOrBlank(item.note);
   });
 
-  const measurements = padFixedSlots(session.document10Measurements.slice(0, 3), 3, createEmptyMeasurement);
-  if (session.document10Measurements.length > 3) {
-    truncated.document10Measurements = session.document10Measurements.length - 3;
-    warnings.push(`Section 10 renders 3 fixed measurement slots. ${truncated.document10Measurements} extra item(s) were skipped.`);
-  }
+  const measurements = ensureRepeatItems(session.document10Measurements, createEmptyMeasurement);
+  repeatCounts['sec10.measurements'] = measurements.length;
   measurements.forEach((item, index) => {
     text[`sec10.measurements[${index}].instrument_type`] = valueOrDash(item.instrumentType);
     text[`sec10.measurements[${index}].measurement_location`] = valueOrDash(item.measurementLocation);
@@ -742,6 +1028,7 @@ function mapSessionToTemplateBinding(session: InspectionSession): TemplateBindin
     text[`sec12.activities[${index}].activity_type`] = valueOrDash(item.content || item.activityType);
     text[`sec12.activities[${index}].content`] = valueOrDash(item.content);
     images[`sec12.activities[${index}].photo_image`] = valueOrBlank(item.photoUrl);
+    images[`sec12.activities[${index}].photo_image_2`] = valueOrBlank(item.photoUrl2);
   });
 
   const cases = padFixedSlots(session.document13Cases.slice(0, 4), 4, createEmptyCase);
@@ -756,6 +1043,10 @@ function mapSessionToTemplateBinding(session: InspectionSession): TemplateBindin
   text['sec14.body'] = valueOrDash(safetyInfo.body);
   images['sec14.image'] = valueOrBlank(safetyInfo.imageUrl);
 
+  if (IMAGE_BINDING_MODE === 'text_only') {
+    applyTextOnlyImageFallbacks(text, images, warnings);
+  }
+
   return {
     text,
     images,
@@ -769,9 +1060,15 @@ function mapSessionToTemplateBinding(session: InspectionSession): TemplateBindin
 function expandRepeatBlocks(
   xml: string,
   repeatCounts: Record<RepeatBlockPath, number>,
-): { xml: string; imagePlaceholders: TemplateImagePlaceholder[] } {
+  sourceBinaryByPlaceholderPath: Record<string, string> = {},
+): {
+  xml: string;
+  imagePlaceholders: TemplateImagePlaceholder[];
+  sourceBinaryByPlaceholderPath: Record<string, string>;
+} {
   let currentXml = xml;
   const expandedImagePlaceholders = TEMPLATE_IMAGE_PLACEHOLDERS.filter((item) => !item.repeatBlockPath).map((item) => ({ ...item }));
+  const expandedSourceBinaryByPlaceholderPath: Record<string, string> = { ...sourceBinaryByPlaceholderPath };
 
   for (const repeatBlockPath of REPEAT_BLOCKS) {
     const startMarker = `{#${repeatBlockPath}}`;
@@ -786,21 +1083,43 @@ function expandRepeatBlocks(
     const before = currentXml.slice(0, startIndex);
     const inner = currentXml.slice(startIndex + startMarker.length, endIndex);
     const after = currentXml.slice(endIndex + endMarker.length);
-    const repeatCount = Math.max(1, repeatCounts[repeatBlockPath] ?? 1);
+    const config = REPEAT_BLOCK_CONFIG[repeatBlockPath];
+    const repeatCount = repeatBlockPageCount(repeatBlockPath, repeatCounts[repeatBlockPath] ?? 1);
     const repeatImagePlaceholders = TEMPLATE_IMAGE_PLACEHOLDERS.filter((item) => item.repeatBlockPath === repeatBlockPath);
 
-    const repeatedXml = Array.from({ length: repeatCount }, (_, index) => {
-      let blockXml = inner.replaceAll(`${repeatBlockPath}[0].`, `${repeatBlockPath}[${index}].`);
+    const repeatedXml = Array.from({ length: repeatCount }, (_, pageIndex) => {
+      const indexMap = new Map<number, number>(
+        config.prototypeIndices.map((prototypeIndex) => [
+          prototypeIndex,
+          pageIndex * config.pageSize + prototypeIndex,
+        ]),
+      );
+      let blockXml = inner;
+
+      for (const [prototypeIndex, nextIndex] of indexMap) {
+        blockXml = blockXml.replaceAll(
+          `${repeatBlockPath}[${prototypeIndex}].`,
+          `${repeatBlockPath}[${nextIndex}].`,
+        );
+      }
 
       for (const imagePlaceholder of repeatImagePlaceholders) {
+        const placeholderIndexMatch = imagePlaceholder.placeholderPath.match(/\[(\d+)\]\./);
+        const placeholderIndex = placeholderIndexMatch ? Number.parseInt(placeholderIndexMatch[1], 10) : 0;
+        const nextPlaceholderIndex = indexMap.get(placeholderIndex);
+        if (nextPlaceholderIndex == null) {
+          continue;
+        }
         const repeatedPlaceholderPath = imagePlaceholder.placeholderPath.replace(
-          `${repeatBlockPath}[0].`,
-          `${repeatBlockPath}[${index}].`,
+          `${repeatBlockPath}[${placeholderIndex}].`,
+          `${repeatBlockPath}[${nextPlaceholderIndex}].`,
         );
         const repeatedBinaryItemId =
-          index === 0 ? imagePlaceholder.binaryItemId : `${imagePlaceholder.binaryItemId}__${index}`;
+          pageIndex === 0
+            ? imagePlaceholder.binaryItemId
+            : `${imagePlaceholder.binaryItemId}__${pageIndex}`;
 
-        if (index > 0) {
+        if (pageIndex > 0) {
           blockXml = blockXml.replaceAll(
             `binaryItemIDRef="${imagePlaceholder.binaryItemId}"`,
             `binaryItemIDRef="${repeatedBinaryItemId}"`,
@@ -812,6 +1131,10 @@ function expandRepeatBlocks(
           placeholderPath: repeatedPlaceholderPath,
           binaryItemId: repeatedBinaryItemId,
         });
+        const sourceBinaryItemId = sourceBinaryByPlaceholderPath[imagePlaceholder.placeholderPath];
+        if (sourceBinaryItemId) {
+          expandedSourceBinaryByPlaceholderPath[repeatedPlaceholderPath] = sourceBinaryItemId;
+        }
       }
 
       return blockXml;
@@ -823,10 +1146,22 @@ function expandRepeatBlocks(
   return {
     xml: currentXml.replace(/\{#([^{}]+)\}|\{\/([^{}]+)\}/g, ''),
     imagePlaceholders: expandedImagePlaceholders,
+    sourceBinaryByPlaceholderPath: expandedSourceBinaryByPlaceholderPath,
   };
 }
 
 function replaceTextPlaceholders(xml: string, textBindings: Record<string, string>): string {
+  return replaceStructuredTextPlaceholders(xml, textBindings).replace(/\{(?![#/])([^{}]+)\}/g, (_match, rawPath: string) => {
+    const placeholderPath = rawPath.trim();
+    return escapeXmlText(textBindings[placeholderPath] ?? '');
+  });
+}
+
+function stripRepeatBlockMarkers(xml: string): string {
+  return xml.replace(/\{#([^{}]+)\}|\{\/([^{}]+)\}/g, '');
+}
+
+function replaceTextPlaceholdersPlain(xml: string, textBindings: Record<string, string>): string {
   return xml.replace(/\{(?![#/])([^{}]+)\}/g, (_match, rawPath: string) => {
     const placeholderPath = rawPath.trim();
     return escapeXmlText(textBindings[placeholderPath] ?? '');
@@ -847,11 +1182,167 @@ function parseManifestItems(contentHpf: string): Map<string, ManifestItem> {
   return items;
 }
 
+function collectManifestItemIds(contentHpf: string): string[] {
+  return Array.from(contentHpf.matchAll(/<opf:item\b[^>]*\bid="([^"]+)"/g), (match) => match[1]);
+}
+
+function collectBinaryItemRefs(sectionXml: string): Set<string> {
+  return new Set(Array.from(sectionXml.matchAll(/binaryItemIDRef="([^"]+)"/g), (match) => match[1]));
+}
+
+function findUnresolvedTemplateTokens(sectionXml: string): string[] {
+  const unresolved = new Set<string>();
+
+  for (const match of sectionXml.matchAll(/\{(#|\/)?([^{}]+)\}/g)) {
+    const prefix = match[1] ?? '';
+    const token = match[2].trim();
+    const isKnownTextToken = !prefix && TEMPLATE_TEXT_TOKEN_SET.has(token);
+    const isKnownRepeatToken = Boolean(prefix) && TEMPLATE_REPEAT_TOKEN_SET.has(token);
+    if (isKnownTextToken || isKnownRepeatToken) {
+      unresolved.add(match[0]);
+    }
+  }
+
+  return Array.from(unresolved);
+}
+
+function countTagOccurrences(xml: string, tagName: string, closing = false): number {
+  const pattern = closing ? new RegExp(`</${tagName}>`, 'g') : new RegExp(`<${tagName}\\b`, 'g');
+  return Array.from(xml.matchAll(pattern)).length;
+}
+
+function countSelfClosingTagOccurrences(xml: string, tagName: string): number {
+  return Array.from(xml.matchAll(new RegExp(`<${tagName}\\b[^>]*\\/>`, 'g'))).length;
+}
+
+function validateGeneratedHwpxOrThrow(zip: JSZip, sectionXml: string, contentHpf: string): void {
+  const issues: string[] = [];
+  const unresolvedTokens = findUnresolvedTemplateTokens(sectionXml);
+  if (unresolvedTokens.length > 0) {
+    issues.push(`Unresolved template token(s): ${unresolvedTokens.slice(0, 5).join(', ')}`);
+  }
+
+  const manifestItems = parseManifestItems(contentHpf);
+  const manifestIds = collectManifestItemIds(contentHpf);
+  const duplicateManifestIds = manifestIds.filter((itemId, index) => manifestIds.indexOf(itemId) !== index);
+  if (duplicateManifestIds.length > 0) {
+    issues.push(`Duplicate manifest item id(s): ${Array.from(new Set(duplicateManifestIds)).slice(0, 5).join(', ')}`);
+  }
+
+  const binaryRefs = collectBinaryItemRefs(sectionXml);
+  for (const binaryRef of binaryRefs) {
+    const manifestItem = manifestItems.get(binaryRef);
+    if (!manifestItem) {
+      issues.push(`Missing manifest entry for binaryItemIDRef "${binaryRef}"`);
+      continue;
+    }
+    if (!zip.files[manifestItem.href]) {
+      issues.push(`Manifest item "${manifestItem.id}" points to missing zip entry "${manifestItem.href}"`);
+    }
+  }
+
+  for (const tagName of HWPX_BALANCE_TAGS) {
+    const openCount = countTagOccurrences(sectionXml, tagName);
+    const closeCount = countTagOccurrences(sectionXml, tagName, true);
+    const selfClosingCount = countSelfClosingTagOccurrences(sectionXml, tagName);
+    if (openCount !== closeCount + selfClosingCount) {
+      issues.push(
+        `Unbalanced ${tagName} tags (${openCount} open / ${closeCount} close / ${selfClosingCount} self-closing)`,
+      );
+    }
+  }
+
+  if (issues.length > 0) {
+    throw new Error(`Generated HWPX integrity check failed: ${issues.slice(0, 6).join(' | ')}`);
+  }
+}
+
 function upsertManifestItem(contentHpf: string, itemId: string, href: string, mediaType: string): string {
   const manifestItem = `<opf:item id="${itemId}" href="${href}" media-type="${mediaType}" isEmbeded="1" />`;
   const itemPattern = new RegExp(`<opf:item\\b[^>]*\\bid="${escapeRegExp(itemId)}"[^>]*/>`, 'g');
   const withoutExisting = contentHpf.replace(itemPattern, '');
   return withoutExisting.replace('</opf:manifest>', `${manifestItem}</opf:manifest>`);
+}
+
+function normalizeHwpxMediaType(mediaType: string, href: string): string {
+  const normalized = mediaType.toLowerCase();
+  const extension = href.split(/[?#]/)[0].split('.').pop()?.toLowerCase() ?? '';
+  if (normalized === 'image/jpeg' || normalized === 'image/jpg' || extension === 'jpg' || extension === 'jpeg') {
+    return 'image/jpg';
+  }
+  return normalized;
+}
+
+function extensionForManifestItem(item: ManifestItem): string {
+  const hrefExtension = item.href.split(/[?#]/)[0].split('.').pop()?.toLowerCase() ?? '';
+  if (hrefExtension) {
+    return hrefExtension === 'jpeg' ? 'jpg' : hrefExtension;
+  }
+
+  const mediaType = normalizeHwpxMediaType(item.mediaType, item.href);
+  return IMAGE_MEDIA_TYPE_TO_EXTENSION[mediaType] ?? 'bin';
+}
+
+async function cloneManifestBinaryAsset(
+  zip: JSZip,
+  item: ManifestItem,
+  targetBinaryItemId: string,
+): Promise<ManifestItem> {
+  const sourceEntry = zip.file(item.href);
+  if (!sourceEntry) {
+    throw new Error(`Manifest item "${item.id}" points to missing zip entry "${item.href}"`);
+  }
+
+  const extension = extensionForManifestItem(item);
+  const href = `BinData/${targetBinaryItemId}.${extension}`;
+  const buffer = await sourceEntry.async('uint8array');
+  zip.file(href, buffer, { compression: 'STORE' });
+
+  return {
+    id: targetBinaryItemId,
+    href,
+    mediaType: normalizeHwpxMediaType(item.mediaType, href),
+  };
+}
+
+function removeManifestItems(contentHpf: string, itemIds: Set<string>): string {
+  if (itemIds.size === 0) {
+    return contentHpf;
+  }
+
+  const itemPattern = new RegExp('<opf:item\\b[^>]*\\bid="([^"]+)"[^>]*\\/>\\s*', 'g');
+  return contentHpf.replace(itemPattern, (match, itemId: string) =>
+    itemIds.has(itemId) ? '' : match,
+  );
+}
+
+function pruneUnusedManifestBinaryAssets(zip: JSZip, contentHpf: string, sectionXml: string): string {
+  const referencedBinaryItemIds = collectBinaryItemRefs(sectionXml);
+  const manifestItems = parseManifestItems(contentHpf);
+  const removableItemIds = new Set<string>();
+  const retainedHrefs = new Set<string>();
+
+  for (const item of manifestItems.values()) {
+    if (!item.href.startsWith('BinData/')) {
+      continue;
+    }
+
+    if (referencedBinaryItemIds.has(item.id)) {
+      retainedHrefs.add(item.href);
+      continue;
+    }
+
+    removableItemIds.add(item.id);
+  }
+
+  for (const item of manifestItems.values()) {
+    if (!removableItemIds.has(item.id) || retainedHrefs.has(item.href)) {
+      continue;
+    }
+    delete zip.files[item.href];
+  }
+
+  return removeManifestItems(contentHpf, removableItemIds);
 }
 
 function tableSpans(xml: string): Array<{ start: number; end: number }> {
@@ -864,10 +1355,13 @@ function tableSpans(xml: string): Array<{ start: number; end: number }> {
 function replaceCellImageBinaryRef(
   xml: string,
   descriptor: TemplateImagePlaceholder,
-): { xml: string; sourceBinaryItemId: string | null } {
+): { xml: string; sourceBinaryItemId: string | null; found: boolean } {
   const spans = tableSpans(xml);
   const tableSpan = spans[descriptor.table];
   if (!tableSpan) {
+    if (descriptor.optional) {
+      return { xml, sourceBinaryItemId: null, found: false };
+    }
     throw new Error(`Template image table index not found: ${descriptor.table}`);
   }
 
@@ -889,6 +1383,9 @@ function replaceCellImageBinaryRef(
   });
 
   if (!updated) {
+    if (descriptor.optional) {
+      return { xml, sourceBinaryItemId: null, found: false };
+    }
     throw new Error(
       `Template image cell not found for ${descriptor.placeholderPath} at table=${descriptor.table}, row=${descriptor.row}, col=${descriptor.col}`,
     );
@@ -897,45 +1394,137 @@ function replaceCellImageBinaryRef(
   return {
     xml: `${xml.slice(0, tableSpan.start)}${patchedTableXml}${xml.slice(tableSpan.end)}`,
     sourceBinaryItemId,
+    found: true,
   };
+}
+
+function replaceCellImageWithTextPlaceholder(
+  xml: string,
+  descriptor: TemplateImagePlaceholder,
+): { xml: string; found: boolean } {
+  const spans = tableSpans(xml);
+  const tableSpan = spans[descriptor.table];
+  if (!tableSpan) {
+    if (descriptor.optional) {
+      return { xml, found: false };
+    }
+    throw new Error(`Template image table index not found: ${descriptor.table}`);
+  }
+
+  const tableXml = xml.slice(tableSpan.start, tableSpan.end);
+  const cellPattern = /<hp:tc\b[\s\S]*?<\/hp:tc>/g;
+  const marker = `<hp:cellAddr colAddr="${descriptor.col}" rowAddr="${descriptor.row}"`;
+  let updated = false;
+
+  const patchedTableXml = tableXml.replace(cellPattern, (cellXml) => {
+    if (updated || !cellXml.includes(marker)) {
+      return cellXml;
+    }
+
+    const subListMatch = cellXml.match(/<hp:subList\b[\s\S]*?<\/hp:subList>/);
+    const subListOpenMatch = cellXml.match(/<hp:subList\b[^>]*>/);
+    const paragraphOpenMatch = cellXml.match(/<hp:p\b[^>]*>/);
+    const charPrMatch = cellXml.match(/<hp:run\b[^>]*charPrIDRef="(\d+)"/);
+    const lineSegArrayMatch = cellXml.match(/<hp:linesegarray>[\s\S]*?<\/hp:linesegarray>/);
+
+    if (!subListMatch || !subListOpenMatch || !paragraphOpenMatch || !lineSegArrayMatch) {
+      if (descriptor.optional) {
+        return cellXml;
+      }
+      throw new Error(
+        `Template image cell structure is invalid for ${descriptor.placeholderPath} at table=${descriptor.table}, row=${descriptor.row}, col=${descriptor.col}`,
+      );
+    }
+
+    updated = true;
+    const charPrIDRef = charPrMatch?.[1] ?? '1';
+    const textToken = escapeXmlText(`{${textOnlyPlaceholderPathForImage(descriptor.placeholderPath)}}`);
+    const replacementSubList =
+      `${subListOpenMatch[0]}${paragraphOpenMatch[0]}` +
+      `<hp:run charPrIDRef="${charPrIDRef}"><hp:t>${textToken}</hp:t></hp:run>` +
+      `${lineSegArrayMatch[0]}</hp:p></hp:subList>`;
+
+    return cellXml.replace(subListMatch[0], replacementSubList);
+  });
+
+  if (!updated) {
+    if (descriptor.optional) {
+      return { xml, found: false };
+    }
+    throw new Error(
+      `Template image cell not found for ${descriptor.placeholderPath} at table=${descriptor.table}, row=${descriptor.row}, col=${descriptor.col}`,
+    );
+  }
+
+  return {
+    xml: `${xml.slice(0, tableSpan.start)}${patchedTableXml}${xml.slice(tableSpan.end)}`,
+    found: true,
+  };
+}
+
+function convertTemplateImageSlotsToTextPlaceholders(xml: string, warnings: string[]): string {
+  let nextXml = xml;
+
+  for (const descriptor of TEMPLATE_IMAGE_PLACEHOLDERS) {
+    const replaced = replaceCellImageWithTextPlaceholder(nextXml, descriptor);
+    if (!replaced.found) {
+      warnings.push(
+        `Template image cell missing for ${descriptor.placeholderPath}; image text fallback could not be inserted.`,
+      );
+      continue;
+    }
+
+    nextXml = replaced.xml;
+  }
+
+  return nextXml;
 }
 
 async function normalizeTemplateImageSlots(
   zip: JSZip,
   sectionXml: string,
   contentHpf: string,
-): Promise<{ sectionXml: string; contentHpf: string }> {
+  warnings: string[],
+): Promise<{ sectionXml: string; contentHpf: string; sourceBinaryByPlaceholderPath: Record<string, string> }> {
   let nextSectionXml = sectionXml;
   let nextContentHpf = contentHpf;
   const manifestItems = parseManifestItems(contentHpf);
+  const sourceBinaryByPlaceholderPath: Record<string, string> = {};
 
   for (const descriptor of TEMPLATE_IMAGE_PLACEHOLDERS) {
     const replaced = replaceCellImageBinaryRef(nextSectionXml, descriptor);
+    if (!replaced.found) {
+      warnings.push(
+        `Template image cell missing for ${descriptor.placeholderPath}; using text fallback when available.`,
+      );
+      continue;
+    }
     nextSectionXml = replaced.xml;
 
     if (!replaced.sourceBinaryItemId) {
       continue;
     }
+    sourceBinaryByPlaceholderPath[descriptor.placeholderPath] = replaced.sourceBinaryItemId;
 
     const sourceManifestItem = manifestItems.get(replaced.sourceBinaryItemId);
     if (!sourceManifestItem) {
       throw new Error(`Manifest item "${replaced.sourceBinaryItemId}" not found for ${descriptor.placeholderPath}.`);
     }
 
-    const sourceEntry = zip.file(sourceManifestItem.href);
-    if (!sourceEntry) {
-      throw new Error(`Template image asset "${sourceManifestItem.href}" not found for ${descriptor.placeholderPath}.`);
-    }
+    const clonedManifestItem = await cloneManifestBinaryAsset(zip, sourceManifestItem, descriptor.binaryItemId);
 
-    const extension = sourceManifestItem.href.split('.').pop() || 'bin';
-    const normalizedHref = `BinData/${descriptor.binaryItemId}.${extension}`;
-    zip.file(normalizedHref, await sourceEntry.async('uint8array'));
-    nextContentHpf = upsertManifestItem(nextContentHpf, descriptor.binaryItemId, normalizedHref, sourceManifestItem.mediaType);
+    nextContentHpf = upsertManifestItem(
+      nextContentHpf,
+      descriptor.binaryItemId,
+      clonedManifestItem.href,
+      clonedManifestItem.mediaType,
+    );
   }
 
   return {
     sectionXml: nextSectionXml,
     contentHpf: nextContentHpf,
+    sourceBinaryByPlaceholderPath,
   };
 }
 
@@ -1027,32 +1616,170 @@ async function bindImagesIntoZip(
   for (const imagePlaceholder of imagePlaceholders) {
     const source = binding.images[imagePlaceholder.placeholderPath] ?? '';
     const resolvedAsset = await resolveImageAsset(source, cache, warnings);
-    const finalAsset = resolvedAsset ?? (imagePlaceholder.deferred ? null : BLANK_PNG_ASSET);
+    if (!resolvedAsset) {
+      if (imagePlaceholder.deferred) {
+        continue;
+      }
 
-    if (!finalAsset) {
+      const href = `BinData/${imagePlaceholder.binaryItemId}.${BLANK_PNG_ASSET.extension}`;
+      zip.file(href, BLANK_PNG_ASSET.buffer, { compression: 'STORE' });
+      nextContentHpf = upsertManifestItem(
+        nextContentHpf,
+        imagePlaceholder.binaryItemId,
+        href,
+        BLANK_PNG_ASSET.mediaType,
+      );
+      warnings.push(`Template image fallback was missing for ${imagePlaceholder.placeholderPath}; inserted a blank placeholder image.`);
       continue;
     }
 
-    const href = `BinData/${imagePlaceholder.binaryItemId}.${finalAsset.extension}`;
-    zip.file(href, finalAsset.buffer);
-    nextContentHpf = upsertManifestItem(nextContentHpf, imagePlaceholder.binaryItemId, href, finalAsset.mediaType);
+    const href = `BinData/${imagePlaceholder.binaryItemId}.${resolvedAsset.extension}`;
+    zip.file(href, resolvedAsset.buffer, { compression: 'STORE' });
+    nextContentHpf = upsertManifestItem(
+      nextContentHpf,
+      imagePlaceholder.binaryItemId,
+      href,
+      normalizeHwpxMediaType(resolvedAsset.mediaType, href),
+    );
+  }
+
+  return nextContentHpf;
+}
+
+function pruneUnmanifestedBinaryAssets(zip: JSZip, contentHpf: string): void {
+  const manifestHrefs = new Set(
+    Array.from(parseManifestItems(contentHpf).values())
+      .map((item) => item.href)
+      .filter((href) => href.startsWith('BinData/')),
+  );
+
+  for (const fileName of Object.keys(zip.files)) {
+    if (!fileName.startsWith('BinData/') || fileName.endsWith('.ole')) {
+      continue;
+    }
+    if (manifestHrefs.has(fileName)) {
+      continue;
+    }
+    delete zip.files[fileName];
+  }
+}
+
+function removeDirectoryEntries(zip: JSZip): void {
+  for (const fileName of Object.keys(zip.files)) {
+    const zipEntry = zip.files[fileName];
+    if (zipEntry?.dir) {
+      delete zip.files[fileName];
+    }
+  }
+}
+
+async function preserveStoredPackageEntries(zip: JSZip): Promise<void> {
+  for (const fileName of ZIP_STORED_ENTRY_NAMES) {
+    const entry = zip.file(fileName);
+    if (!entry) {
+      continue;
+    }
+
+    const content = await entry.async(fileName === 'mimetype' ? 'string' : 'nodebuffer');
+    zip.file(fileName, content, { compression: 'STORE' });
+  }
+}
+
+function patchZipHeadersForHwpx(buffer: Uint8Array): Uint8Array {
+  const view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+  let eocdOffset = -1;
+  for (let index = buffer.byteLength - 22; index >= 0; index -= 1) {
+    if (view.getUint32(index, true) === ZIP_END_OF_CENTRAL_DIRECTORY_SIGNATURE) {
+      eocdOffset = index;
+      break;
+    }
+  }
+  if (eocdOffset === -1) {
+    throw new Error('Generated HWPX ZIP is missing the end of central directory record.');
+  }
+
+  const centralDirectoryOffset = view.getUint32(eocdOffset + 16, true);
+  const totalEntries = view.getUint16(eocdOffset + 10, true);
+  let offset = centralDirectoryOffset;
+
+  for (let entryIndex = 0; entryIndex < totalEntries; entryIndex += 1) {
+    if (view.getUint32(offset, true) !== ZIP_CENTRAL_DIRECTORY_FILE_HEADER_SIGNATURE) {
+      throw new Error(`Generated HWPX ZIP central directory is malformed at entry ${entryIndex}.`);
+    }
+
+    const compressionMethod = view.getUint16(offset + 10, true);
+    const fileNameLength = view.getUint16(offset + 28, true);
+    const extraFieldLength = view.getUint16(offset + 30, true);
+    const commentLength = view.getUint16(offset + 32, true);
+    const localHeaderOffset = view.getUint32(offset + 42, true);
+    const fileNameBytes = buffer.slice(offset + 46, offset + 46 + fileNameLength);
+    const fileName = new TextDecoder().decode(fileNameBytes);
+    const generalPurposeFlag = compressionMethod === 8 ? 4 : 0;
+    const externalAttr = fileName.endsWith('.ole') ? ZIP_OLE_EXTERNAL_ATTR : ZIP_DEFAULT_EXTERNAL_ATTR;
+
+    view.setUint16(offset + 4, ZIP_VERSION_MADE_BY, true);
+    view.setUint16(offset + 6, ZIP_VERSION_NEEDED, true);
+    view.setUint16(offset + 8, generalPurposeFlag, true);
+    view.setUint16(offset + 36, 0, true);
+    view.setUint16(offset + 38, externalAttr & 0xffff, true);
+    view.setUint16(offset + 40, (externalAttr >>> 16) & 0xffff, true);
+
+    if (view.getUint32(localHeaderOffset, true) !== ZIP_LOCAL_FILE_HEADER_SIGNATURE) {
+      throw new Error(`Generated HWPX ZIP local header is malformed for "${fileName}".`);
+    }
+
+    view.setUint16(localHeaderOffset + 4, ZIP_VERSION_NEEDED, true);
+    view.setUint16(localHeaderOffset + 6, generalPurposeFlag, true);
+
+    offset += 46 + fileNameLength + extraFieldLength + commentLength;
+  }
+
+  return buffer;
+}
+
+function repairLegacyTemplateImageAssets(zip: JSZip, contentHpf: string): string {
+  let nextContentHpf = contentHpf;
+
+  for (const repair of LEGACY_TEMPLATE_IMAGE_REPAIRS) {
+    zip.file(repair.href, repair.asset.buffer, { compression: 'STORE' });
+    nextContentHpf = upsertManifestItem(
+      nextContentHpf,
+      repair.binaryItemId,
+      repair.href,
+      repair.asset.mediaType,
+    );
+  }
+
+  return nextContentHpf;
+}
+
+function repairLegacyContentHpfMetadata(contentHpf: string): string {
+  let nextContentHpf = contentHpf;
+
+  if (!nextContentHpf.includes('xmlns:hwpunitchar=')) {
+    nextContentHpf = nextContentHpf.replace(
+      '<opf:package ',
+      `<opf:package ${HWPX_UNITCHAR_NAMESPACE} `,
+    );
+  }
+
+  if (!nextContentHpf.includes('name="lastsaveby"')) {
+    nextContentHpf = nextContentHpf.replace(
+      '<opf:meta name="CreatedDate" content="text">',
+      `${HWPX_LASTSAVEBY_META}<opf:meta name="CreatedDate" content="text">`,
+    );
   }
 
   return nextContentHpf;
 }
 
 async function loadTemplateBuffer(): Promise<ArrayBuffer> {
-  if (!templateBufferPromise) {
-    templateBufferPromise = fetch(TEMPLATE_URL).then(async (response) => {
-      if (!response.ok) {
-        throw new Error(`HWPX template download failed: ${response.status} ${response.statusText}`);
-      }
-      return response.arrayBuffer();
-    });
+  const response = await fetch(`${TEMPLATE_URL}?ts=${Date.now()}`, { cache: 'no-store' });
+  if (!response.ok) {
+    throw new Error(`HWPX template download failed: ${response.status} ${response.statusText}`);
   }
 
-  const buffer = await templateBufferPromise;
-  return buffer.slice(0);
+  return response.arrayBuffer();
 }
 
 export async function generateInspectionHwpxBlob(
@@ -1071,19 +1798,54 @@ export async function generateInspectionHwpxBlob(
 
   const sectionXml = await sectionEntry.async('string');
   const contentHpf = await contentEntry.async('string');
-  const normalized = await normalizeTemplateImageSlots(zip, sectionXml, contentHpf);
-  const expanded = expandRepeatBlocks(normalized.sectionXml, binding.repeatCounts);
-  const boundSectionXml = replaceTextPlaceholders(expanded.xml, binding.text);
-  const boundContentHpf = await bindImagesIntoZip(
-    zip,
-    normalized.contentHpf,
-    expanded.imagePlaceholders,
-    binding,
-    binding.warnings,
-  );
+  let boundSectionXml = '';
+
+  if (HWPX_GENERATION_MODE === 'template_native') {
+    boundSectionXml = replaceTextPlaceholdersPlain(stripRepeatBlockMarkers(sectionXml), binding.text);
+
+    for (const repeatBlockPath of REPEAT_BLOCKS) {
+      const itemCount = binding.repeatCounts[repeatBlockPath] ?? 1;
+      if (itemCount > REPEAT_BLOCK_CONFIG[repeatBlockPath].pageSize) {
+        binding.warnings.push(
+          `Template-native mode keeps only the first template page for ${repeatBlockPath}; extra items were skipped.`,
+        );
+      }
+    }
+
+    if (Object.values(binding.images).some((value) => valueOrBlank(value))) {
+      binding.warnings.push('Template-native mode keeps the original template image placeholders and does not embed uploaded images.');
+    }
+  } else {
+    const contentHpfWithRepairs = repairLegacyContentHpfMetadata(
+      repairLegacyTemplateImageAssets(zip, contentHpf),
+    );
+    let boundContentHpf = contentHpfWithRepairs;
+
+    if (IMAGE_BINDING_MODE === 'text_only') {
+      const textOnlySectionXml = convertTemplateImageSlotsToTextPlaceholders(sectionXml, binding.warnings);
+      const expanded = expandRepeatBlocks(textOnlySectionXml, binding.repeatCounts);
+      boundSectionXml = replaceTextPlaceholders(expanded.xml, binding.text);
+      boundContentHpf = pruneUnusedManifestBinaryAssets(zip, contentHpfWithRepairs, boundSectionXml);
+    } else {
+      const normalized = await normalizeTemplateImageSlots(zip, sectionXml, contentHpfWithRepairs, binding.warnings);
+      const expanded = expandRepeatBlocks(normalized.sectionXml, binding.repeatCounts, normalized.sourceBinaryByPlaceholderPath);
+      boundSectionXml = replaceTextPlaceholders(expanded.xml, binding.text);
+      boundContentHpf = await bindImagesIntoZip(
+        zip,
+        normalized.contentHpf,
+        expanded.imagePlaceholders,
+        binding,
+        binding.warnings,
+      );
+    }
+
+    validateGeneratedHwpxOrThrow(zip, boundSectionXml, boundContentHpf);
+    zip.file('Contents/content.hpf', boundContentHpf);
+    pruneUnmanifestedBinaryAssets(zip, boundContentHpf);
+    removeDirectoryEntries(zip);
+  }
 
   zip.file('Contents/section0.xml', boundSectionXml);
-  zip.file('Contents/content.hpf', boundContentHpf);
 
   const generatedBuffer = await zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' });
   const blobBuffer = generatedBuffer.buffer.slice(

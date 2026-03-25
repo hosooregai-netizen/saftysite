@@ -182,11 +182,22 @@ export function buildDetailPages(
           .join('')}
         ${sectionTitle('12. 안전보건 활동실적')}
         <div class="case-grid">${padDocument12Activities(session.document12Activities)
+          .slice(0, 1)
           .map(
             (item) => `
               <div class="case-card">
-                <div class="case-title">${valueText(item.content || item.activityType)}</div>
-                ${imageTag(item.photoUrl, item.content || '활동 사진', 'case-image')}
+                <div class="case-card-photos">
+                  ${imageTag(item.photoUrl, '활동 1 사진', 'case-image')}
+                  ${imageTag(item.photoUrl2, '활동 2 사진', 'case-image')}
+                </div>
+                <table class="info-table compact-table">
+                  <tr>
+                    <th>활동 1 내용</th>
+                    <td>${valueText(item.activityType)}</td>
+                    <th>활동 2 내용</th>
+                    <td>${valueText(item.content)}</td>
+                  </tr>
+                </table>
               </div>
             `
           )

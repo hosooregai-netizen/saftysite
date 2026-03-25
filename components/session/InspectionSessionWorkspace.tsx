@@ -36,6 +36,10 @@ import {
 } from '@/lib/api';
 
 import { generateInspectionHwpxBlob } from '@/lib/documents/inspection/hwpxClient';
+import {
+  getMeasurementTemplatesForReportDate,
+  mergeMasterDataIntoSession,
+} from '@/lib/safetyApiMappers/masterData';
 
 import {
 
@@ -128,6 +132,10 @@ export default function InspectionSessionWorkspace({
     masterData.legalReferences.length > 0 ? masterData.legalReferences : LEGAL_REFERENCE_LIBRARY;
 
   const correctionResultOptions = masterData.correctionResultOptions;
+  const measurementTemplates = useMemo(
+    () => (session ? getMeasurementTemplatesForReportDate(masterData, session.meta.reportDate) : []),
+    [masterData, session],
+  );
 
 
 
@@ -235,7 +243,7 @@ export default function InspectionSessionWorkspace({
 
       const previousDrafter = current.meta.drafter;
 
-      return {
+      const next = {
 
         ...current,
 
@@ -257,7 +265,9 @@ export default function InspectionSessionWorkspace({
 
       };
 
-    });
+      return field === 'reportDate' ? mergeMasterDataIntoSession(next, masterData) : next;
+
+    }, { touch: true });
 
   };
 
@@ -389,6 +399,7 @@ export default function InspectionSessionWorkspace({
         cumulativeAgentEntries,
 
         legalReferenceLibrary,
+        measurementTemplates,
 
         session,
 
@@ -413,6 +424,7 @@ export default function InspectionSessionWorkspace({
         cumulativeAgentEntries,
 
         legalReferenceLibrary,
+        measurementTemplates,
 
         session,
 

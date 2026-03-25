@@ -30,6 +30,7 @@ export interface InspectionSessionsContextValue {
   login: (input: SafetyLoginInput) => Promise<void>;
   logout: () => void;
   reload: () => Promise<void>;
+  refreshMasterData: () => Promise<void>;
   createSite: (snapshot: Partial<AdminSiteSnapshot>) => InspectionSite;
   updateSite: (siteId: string, updater: (current: InspectionSite) => InspectionSite) => void;
   deleteSite: (siteId: string) => void;

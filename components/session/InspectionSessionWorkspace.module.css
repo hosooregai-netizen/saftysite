@@ -311,6 +311,12 @@
   outline-offset: 2px;
 }
 
+.doc5SummaryDraftBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  text-decoration: none;
+}
+
 .doc4EmptyState {
   padding: 20px 16px;
   border: 1px dashed var(--erp-line);
@@ -421,6 +427,74 @@
   }
 
   .doc11EducationPhotoRow .uploadBody.uploadBodyField {
+    min-height: 220px;
+    height: 220px;
+    max-height: 220px;
+  }
+}
+
+/* doc12 활동 실적: 블록마다 사진 → 한 줄 내용; 모바일은 세로로 이미지·내용·이미지·내용 */
+.doc12Activities {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+  min-width: 0;
+  width: 100%;
+}
+
+.doc12ActivityBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.doc12ActivityBlock .field {
+  min-width: 0;
+}
+
+.doc12ActivityBlock .uploadBody.uploadBodyField {
+  box-sizing: border-box;
+  min-height: 300px;
+  height: 300px;
+  max-height: 300px;
+}
+
+.doc12ActivityBlock .uploadBody.uploadBodyField:has(.uploadPreviewHit) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.doc12ActivityBlock .uploadBody.uploadBodyField:has(.uploadPreviewHit) .uploadPreviewHit {
+  flex: 1 1 auto;
+  align-self: stretch;
+  min-height: 0;
+  width: 100%;
+}
+
+.doc12ActivityBlock .uploadBody.uploadBodyField:has(.uploadPreviewHit) .uploadPreview {
+  max-height: 100%;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.doc12ActivityBlock .field :global(.app-input) {
+  min-height: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 899px) {
+  .doc12Activities {
+    grid-template-columns: 1fr;
+  }
+
+  .doc12ActivityBlock .uploadBody.uploadBodyField {
     min-height: 220px;
     height: 220px;
     max-height: 220px;
@@ -632,6 +706,21 @@
   min-width: 0;
 }
 
+/* 모바일·태블릿: 현장 사진을 폼보다 위에 */
+@media (max-width: 899px) {
+  .doc7Eyebrow {
+    order: 0;
+  }
+
+  .doc7PhotoColumn {
+    order: 1;
+  }
+
+  .doc7FormColumn {
+    order: 2;
+  }
+}
+
 @media (min-width: 900px) {
   .doc7CardInner {
     display: grid;
@@ -643,12 +732,14 @@
   .doc7Eyebrow {
     grid-column: 1 / -1;
     grid-row: 1;
+    order: unset;
   }
 
   .doc7FormColumn {
     grid-column: 1;
     grid-row: 2;
     min-height: 0;
+    order: unset;
   }
 
   .doc7PhotoColumn {
@@ -660,11 +751,12 @@
     padding-left: 22px;
     margin-left: 2px;
     border-left: 1px solid var(--erp-line);
+    order: unset;
   }
 
 }
 
-/* 세부 지적 현장 사진 1·2: 작은·중간 뷰포트 좌우 / 900px 이상(오른쪽 열)만 위·아래 */
+/* 세부 지적 현장 사진 1·2: 900px 미만은 카드 상단에서 좌우 2열 / 900px 이상은 오른쪽 열에서 위·아래 */
 .doc7ScenePhotoRow {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1227,6 +1319,7 @@
 
 .doc2OverviewSignatureWrap {
   width: 100%;
+  max-width: 700px;
   min-width: 0;
 }
 
@@ -1247,6 +1340,12 @@
 
 .doc2AccidentRowThree .field {
   min-width: 0;
+}
+
+/* 산업재해 미발생: 발생유무 필드만 표시 */
+.doc2AccidentOccurrenceOnly {
+  grid-template-columns: minmax(0, min(100%, 380px));
+  grid-column: 1 / -1;
 }
 
 .doc2DateDialog {
@@ -1514,14 +1613,6 @@
   min-width: 0;
   box-sizing: border-box;
   font-size: var(--text-ui-sm);
-}
-
-.doc8CellMeta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin-top: 8px;
 }
 
 .doc8TdArea {
@@ -1966,6 +2057,72 @@ button.uploadPreviewHit {
   padding: 16px;
 }
 
+/* 14. 안전 정보: 관제실 연결 PDF·이미지 전체 보기 */
+.doc14ViewerCard {
+  padding: 0;
+  overflow: hidden;
+}
+
+.doc14Viewer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px 14px 16px;
+}
+
+.doc14Caption {
+  display: grid;
+  gap: 6px;
+  padding: 0 2px;
+}
+
+.doc14CaptionTitle {
+  margin: 0;
+  font-size: var(--text-body-md);
+  font-weight: 700;
+  color: var(--erp-navy);
+  line-height: 1.35;
+}
+
+.doc14PdfFrame {
+  display: block;
+  width: 100%;
+  min-height: min(85vh, 920px);
+  height: min(85vh, 920px);
+  max-height: min(90vh, 1200px);
+  border: 0;
+  border-radius: var(--erp-radius-sm);
+  background: #f1f5f9;
+}
+
+.doc14FullImage {
+  display: block;
+  width: 100%;
+  max-height: min(90vh, 1200px);
+  height: auto;
+  object-fit: contain;
+  object-position: top center;
+  background: #f8fafc;
+  border-radius: var(--erp-radius-sm);
+  border: 1px solid var(--erp-line);
+}
+
+.doc14TextBelow {
+  padding: 0 2px 4px;
+}
+
+@media (max-width: 899px) {
+  .doc14PdfFrame {
+    min-height: min(72vh, 640px);
+    height: min(72vh, 640px);
+  }
+
+  .doc14FullImage {
+    max-height: min(75vh, 720px);
+  }
+}
+
 .fileLink {
   color: var(--erp-mid);
 }
@@ -2239,6 +2396,13 @@ button.uploadPreviewHit {
   color: #b42318;
 }
 
+/* 현존 요인 통계(doc5) 차트: 태블릿 폭부터 2×2 (900px까지 기다리지 않음) */
+@media (min-width: 768px) {
+  .chartGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (min-width: 900px) {
   .header {
     padding: 18px 33px 17px;
@@ -2269,7 +2433,6 @@ button.uploadPreviewHit {
   }
 
   .dualUploadGrid,
-  .chartGrid,
   .caseGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

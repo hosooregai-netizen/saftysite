@@ -150,7 +150,7 @@ export function createChecklistQuestions(
   return prompts.map((prompt, index) => ({
     id: initial[index]?.id ?? generateId(`${prefix}-${index + 1}`),
     prompt,
-    rating: initial[index]?.rating ?? '',
+    rating: initial[index]?.rating ?? 'good',
     note: initial[index]?.note ?? '',
   }));
 }

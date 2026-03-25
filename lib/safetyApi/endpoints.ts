@@ -42,8 +42,13 @@ export function fetchAssignedSafetySites(token: string): Promise<SafetySite[]> {
   );
 }
 
+/** 관리자 CRUD와 동일하게 전체·충분한 limit으로 조회. API 기본값(active_only·limit)에 의해 일부 유형만 잘리는 것을 방지. */
 export function fetchSafetyContentItems(token: string): Promise<SafetyContentItem[]> {
-  return requestSafetyApi<SafetyContentItem[]>('/content-items', {}, token);
+  const query = new URLSearchParams({
+    active_only: 'false',
+    limit: '500',
+  });
+  return requestSafetyApi<SafetyContentItem[]>(`/content-items?${query.toString()}`, {}, token);
 }
 
 export function fetchSafetyReportsBySite(

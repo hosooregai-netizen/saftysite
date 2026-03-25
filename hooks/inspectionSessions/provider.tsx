@@ -16,7 +16,7 @@ export function InspectionSessionsProvider({
   children,
 }: Readonly<{ children: ReactNode }>) {
   const store = useInspectionSessionsStore();
-  const { login, logout, reload } = useInspectionSessionsSync(store);
+  const { login, logout, reload, refreshMasterData } = useInspectionSessionsSync(store);
   const { deleteSessionRemotely, markSessionDirty, saveNow } =
     useInspectionSessionsAutosave(store);
   const {
@@ -57,6 +57,7 @@ export function InspectionSessionsProvider({
       login,
       logout,
       reload,
+      refreshMasterData,
       createSite,
       updateSite,
       deleteSite,
@@ -80,6 +81,7 @@ export function InspectionSessionsProvider({
       login,
       logout,
       reload,
+      refreshMasterData,
       saveNow,
       store.authError,
       store.authTokenRef,

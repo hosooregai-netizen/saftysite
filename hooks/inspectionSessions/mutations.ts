@@ -3,11 +3,11 @@
 import { useCallback } from 'react';
 import {
   createInspectionSite,
-  createInspectionSession,
   getSessionSiteKey,
   normalizeInspectionSession,
   normalizeInspectionSite,
 } from '@/constants/inspectionSession';
+import { createNewSafetySession } from '@/lib/safetyApiMappers';
 import type {
   AdminSiteSnapshot,
   InspectionReportMeta,
@@ -22,6 +22,7 @@ export function useInspectionSessionsMutations(
 ) {
   const {
     dirtySessionIdsRef,
+    masterDataRef,
     sessionVersionsRef,
     sessionsRef,
     setSessionState,
@@ -56,18 +57,19 @@ export function useInspectionSessionsMutations(
   }, [sessionsRef, setSessionState, setSiteState, sitesRef]);
 
   const createSession = useCallback((site: InspectionSite, initial?: { meta?: Partial<InspectionReportMeta> }) => {
-    const nextSession = createInspectionSession(
-      { adminSiteSnapshot: site.adminSiteSnapshot, meta: initial?.meta },
-      site.id,
+    const nextSession = createNewSafetySession(
+      site,
       Math.max(
         0,
         ...sessionsRef.current.filter((session) => session.siteKey === site.id).map((session) => session.reportNumber || 0)
-      ) + 1
+      ) + 1,
+      masterDataRef.current,
+      { meta: initial?.meta }
     );
     setSessionState([nextSession, ...sessionsRef.current]);
     markSessionDirty(nextSession.id);
     return nextSession;
-  }, [markSessionDirty, sessionsRef, setSessionState]);
+  }, [markSessionDirty, masterDataRef, sessionsRef, setSessionState]);
 
   const updateSession = useCallback((sessionId: string, updater: (current: InspectionSession) => InspectionSession) => {
     const updatedAt = new Date().toISOString();

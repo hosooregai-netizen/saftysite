@@ -1,9 +1,61 @@
+'use client';
+
+import { useState } from 'react';
 import styles from '@/components/session/InspectionSessionWorkspace.module.css';
 import type { SupportSectionProps } from '@/components/session/workspace/types';
 import { UploadBox } from '@/components/session/workspace/widgets';
+import {
+  buildLocalDoc11EducationContent,
+  generateDoc11EducationContentWithOpenAi,
+} from '@/lib/openai/generateDoc11EducationContent';
+import { resolveOpenAiApiKey } from '@/lib/openai/browserClient';
 
 export default function Doc11Section(props: SupportSectionProps) {
   const { applyDocumentUpdate, session, withFileData } = props;
+  const [generatingId, setGeneratingId] = useState<string | null>(null);
+  const [contentGenNotice, setContentGenNotice] = useState<{ id: string; message: string } | null>(null);
+  const [contentGenError, setContentGenError] = useState<{ id: string; message: string } | null>(null);
+
+  const patchRecord = (recordId: string, content: string) =>
+    applyDocumentUpdate('doc11', 'derived', (current) => ({
+      ...current,
+      document11EducationRecords: current.document11EducationRecords.map((record) =>
+        record.id === recordId ? { ...record, content } : record,
+      ),
+    }));
+
+  const handleGenerateEducationContent = async (recordId: string) => {
+    const record = session.document11EducationRecords.find((r) => r.id === recordId);
+    if (!record) return;
+
+    setContentGenError(null);
+    setContentGenNotice(null);
+    setGeneratingId(recordId);
+
+    const input = {
+      topic: record.topic,
+      attendeeCount: record.attendeeCount,
+      materialName: record.materialName,
+    };
+
+    try {
+      if (!resolveOpenAiApiKey()) {
+        patchRecord(recordId, buildLocalDoc11EducationContent(input));
+        setContentGenNotice({ id: recordId, message: 'OpenAI API 키가 없어 규칙 기반 초안을 넣었습니다.' });
+        return;
+      }
+
+      const text = await generateDoc11EducationContentWithOpenAi(input);
+      patchRecord(recordId, text);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setContentGenError({ id: recordId, message });
+      patchRecord(recordId, buildLocalDoc11EducationContent(input));
+      setContentGenNotice({ id: recordId, message: 'AI 호출에 실패해 규칙 기반 초안으로 대체했습니다.' });
+    } finally {
+      setGeneratingId(null);
+    }
+  };
 
   return (
     <div className={styles.sectionStack}>
@@ -48,7 +100,25 @@ export default function Doc11Section(props: SupportSectionProps) {
               </div>
               <div className={styles.formGrid}>
                 <label className={`${styles.field} ${styles.fieldWide}`}>
-                  <span className={styles.fieldLabel}>교육내용</span>
+                  <div className={styles.doc5SummaryFieldHeader}>
+                    <span className={styles.fieldLabel}>교육내용</span>
+                    {generatingId === item.id ? (
+                      <span className={styles.doc3AiInline} role="status" aria-live="polite">
+                        <span className={styles.doc3AiSpinner} aria-hidden />
+                        <span className={styles.doc3AiCaption}>(ai 생성중)</span>
+                      </span>
+                    ) : null}
+                    <button
+                      type="button"
+                      className={styles.doc5SummaryDraftBtn}
+                      disabled={generatingId === item.id}
+                      onClick={() => void handleGenerateEducationContent(item.id)}
+                    >
+                      내용 자동 생성
+                    </button>
+                  </div>
+                  {contentGenError?.id === item.id ? <p className={styles.fieldAssistError}>{contentGenError.message}</p> : null}
+                  {contentGenNotice?.id === item.id ? <p className={styles.fieldAssist}>{contentGenNotice.message}</p> : null}
                   <textarea className="app-textarea" value={item.content} onChange={(event) => applyDocumentUpdate('doc11', 'manual', (current) => ({ ...current, document11EducationRecords: current.document11EducationRecords.map((record) => record.id === item.id ? { ...record, content: event.target.value } : record) }))} />
                 </label>
               </div>

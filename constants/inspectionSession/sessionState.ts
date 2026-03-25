@@ -47,7 +47,7 @@ function hasEducationContent(item: SafetyEducationRecord): boolean {
 }
 
 function hasActivityContent(item: ActivityRecord): boolean {
-  return Boolean(item.photoUrl || item.activityType || item.content);
+  return Boolean(item.photoUrl || item.photoUrl2 || item.activityType || item.content);
 }
 
 function getRequiredFollowUps(session: InspectionSession): PreviousGuidanceFollowUpItem[] {

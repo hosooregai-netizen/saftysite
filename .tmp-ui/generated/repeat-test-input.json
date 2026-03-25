@@ -1,0 +1,262 @@
+{
+  "meta": {
+    "siteName": "테스트 현장",
+    "reportDate": "2026-03-25",
+    "drafter": "테스터",
+    "reviewer": "",
+    "approver": ""
+  },
+  "adminSiteSnapshot": {
+    "customerName": "테스트 고객사",
+    "siteName": "테스트 현장",
+    "assigneeName": "테스터",
+    "siteManagementNumber": "",
+    "businessStartNumber": "",
+    "constructionPeriod": "",
+    "constructionAmount": "",
+    "siteManagerName": "",
+    "siteContactEmail": "",
+    "siteAddress": "",
+    "companyName": "",
+    "corporationRegistrationNumber": "",
+    "businessRegistrationNumber": "",
+    "licenseNumber": "",
+    "headquartersContact": "",
+    "headquartersAddress": ""
+  },
+  "document2Overview": {
+    "guidanceAgencyName": "",
+    "guidanceDate": "2026-03-25",
+    "constructionType": "",
+    "progressRate": "",
+    "visitCount": "",
+    "totalVisitCount": "",
+    "assignee": "테스터",
+    "previousImplementationStatus": "",
+    "contact": "",
+    "notificationMethod": "",
+    "notificationRecipientName": "",
+    "notificationRecipientSignature": "",
+    "otherNotificationMethod": "",
+    "workPlanChecks": {
+      "towerCrane": "not_applicable",
+      "tunnelExcavation": "not_applicable",
+      "vehicleLoadingMachine": "not_applicable",
+      "bridgeWork": "not_applicable",
+      "constructionMachine": "not_applicable",
+      "quarryWork": "not_applicable",
+      "chemicalFacility": "not_applicable",
+      "buildingDemolition": "not_applicable",
+      "electricalWork": "not_applicable",
+      "heavyMaterialHandling": "not_applicable",
+      "earthwork": "not_applicable",
+      "railwayFacilityMaintenance": "not_applicable"
+    },
+    "accidentOccurred": "no",
+    "recentAccidentDate": "",
+    "accidentType": "",
+    "accidentSummary": "",
+    "processAndNotes": ""
+  },
+  "document3Scenes": [
+    {
+      "id": "scene-1",
+      "title": "현장 전경 1",
+      "photoUrl": "",
+      "description": ""
+    },
+    {
+      "id": "scene-2",
+      "title": "현장 전경 2",
+      "photoUrl": "",
+      "description": ""
+    },
+    {
+      "id": "scene-3",
+      "title": "현장 전경 3",
+      "photoUrl": "",
+      "description": ""
+    },
+    {
+      "id": "scene-4",
+      "title": "현장 전경 4",
+      "photoUrl": "",
+      "description": ""
+    },
+    {
+      "id": "scene-5",
+      "title": "현장 전경 5",
+      "photoUrl": "",
+      "description": ""
+    },
+    {
+      "id": "scene-6",
+      "title": "현장 전경 6",
+      "photoUrl": "",
+      "description": ""
+    }
+  ],
+  "document4FollowUps": [],
+  "document5Summary": {
+    "summaryText": ""
+  },
+  "document6Measures": [],
+  "document7Findings": [
+    {
+      "id": "finding-1",
+      "photoUrl": "",
+      "photoUrl2": "",
+      "location": "loc-1",
+      "likelihood": "",
+      "severity": "",
+      "riskLevel": "",
+      "accidentType": "",
+      "causativeAgentKey": "",
+      "inspector": "tester",
+      "emphasis": "",
+      "improvementPlan": "",
+      "legalReferenceTitle": "",
+      "referenceMaterial1": "",
+      "referenceMaterial2": ""
+    },
+    {
+      "id": "finding-2",
+      "photoUrl": "",
+      "photoUrl2": "",
+      "location": "loc-2",
+      "likelihood": "",
+      "severity": "",
+      "riskLevel": "",
+      "accidentType": "",
+      "causativeAgentKey": "",
+      "inspector": "tester",
+      "emphasis": "",
+      "improvementPlan": "",
+      "legalReferenceTitle": "",
+      "referenceMaterial1": "",
+      "referenceMaterial2": ""
+    }
+  ],
+  "document8Plans": [
+    {
+      "id": "plan-1",
+      "processName": "",
+      "hazard": "",
+      "countermeasure": "",
+      "note": ""
+    }
+  ],
+  "document9SafetyChecks": {
+    "tbm": [],
+    "riskAssessment": []
+  },
+  "document10Measurements": [
+    {
+      "id": "measurement-1",
+      "instrumentType": "",
+      "measurementLocation": "",
+      "photoUrl": "",
+      "measuredValue": "",
+      "safetyCriteria": "",
+      "actionTaken": ""
+    },
+    {
+      "id": "measurement-2",
+      "instrumentType": "",
+      "measurementLocation": "",
+      "photoUrl": "",
+      "measuredValue": "",
+      "safetyCriteria": "",
+      "actionTaken": ""
+    },
+    {
+      "id": "measurement-3",
+      "instrumentType": "",
+      "measurementLocation": "",
+      "photoUrl": "",
+      "measuredValue": "",
+      "safetyCriteria": "",
+      "actionTaken": ""
+    }
+  ],
+  "document11EducationRecords": [
+    {
+      "id": "edu-1",
+      "photoUrl": "",
+      "materialUrl": "",
+      "materialName": "",
+      "attendeeCount": "10",
+      "topic": "topic-1",
+      "content": "content-1"
+    },
+    {
+      "id": "edu-2",
+      "photoUrl": "",
+      "materialUrl": "",
+      "materialName": "",
+      "attendeeCount": "11",
+      "topic": "topic-2",
+      "content": "content-2"
+    }
+  ],
+  "document12Activities": [
+    {
+      "id": "activity-1",
+      "photoUrl": "",
+      "activityType": "type-1",
+      "content": "content-1"
+    },
+    {
+      "id": "activity-2",
+      "photoUrl": "",
+      "activityType": "type-2",
+      "content": "content-2"
+    },
+    {
+      "id": "activity-3",
+      "photoUrl": "",
+      "activityType": "type-3",
+      "content": "content-3"
+    },
+    {
+      "id": "activity-4",
+      "photoUrl": "",
+      "activityType": "type-4",
+      "content": "content-4"
+    }
+  ],
+  "document13Cases": [
+    {
+      "id": "case-1",
+      "title": "",
+      "summary": "",
+      "imageUrl": ""
+    },
+    {
+      "id": "case-2",
+      "title": "",
+      "summary": "",
+      "imageUrl": ""
+    },
+    {
+      "id": "case-3",
+      "title": "",
+      "summary": "",
+      "imageUrl": ""
+    },
+    {
+      "id": "case-4",
+      "title": "",
+      "summary": "",
+      "imageUrl": ""
+    }
+  ],
+  "document14SafetyInfos": [
+    {
+      "id": "info-1",
+      "title": "",
+      "body": "",
+      "imageUrl": ""
+    }
+  ]
+}

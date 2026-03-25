@@ -1,6 +1,8 @@
 import type { SafetyContentItem, SafetyContentType } from '@/types/backend';
 import {
   asMapperRecord,
+  contentBodyToAssetName,
+  contentBodyToAssetUrl,
   contentBodyToImageUrl,
   contentBodyToText,
   normalizeMapperText,
@@ -32,6 +34,23 @@ function bodyRecord(body: unknown) {
 function readText(body: unknown, type: SafetyContentType) {
   const text = contentBodyToText(body);
   return text || (type === 'correction_result_option' ? normalizeMapperText(body) : '');
+}
+
+function readMeasurementSafetyCriteria(body: unknown) {
+  const record = bodyRecord(body);
+  const listText = Array.isArray(record.safety_standard)
+    ? record.safety_standard
+        .map((entry) => normalizeMapperText(entry))
+        .filter(Boolean)
+        .join('\n')
+    : '';
+
+  return (
+    normalizeMapperText(record.safetyCriteria) ||
+    normalizeMapperText(record.safety_criteria) ||
+    listText ||
+    readText(body, 'measurement_template')
+  );
 }
 
 function readFileUrl(body: unknown, order: 1 | 2) {
@@ -69,7 +88,7 @@ function readFileName(body: unknown, order: 1 | 2) {
 }
 
 export function createEmptyContentForm(
-  type: SafetyContentType = 'legal_reference'
+  type: SafetyContentType = 'legal_reference',
 ): ContentFormState {
   return {
     content_type: type,
@@ -92,15 +111,20 @@ export function createEmptyContentForm(
 
 export function mapContentItemToForm(item: SafetyContentItem): ContentFormState {
   const record = bodyRecord(item.body);
+  const isMeasurementTemplate = item.content_type === 'measurement_template';
+  const isSafetyNews = item.content_type === 'safety_news';
+
   return {
     content_type: item.content_type,
     title: item.title,
     code: item.code ?? '',
-    text_body: readText(item.body, item.content_type),
-    image_url: contentBodyToImageUrl(item.body),
-    image_name:
-      normalizeMapperText(record.imageName) ||
-      normalizeMapperText(record.image_name),
+    text_body: isMeasurementTemplate
+      ? readMeasurementSafetyCriteria(item.body)
+      : readText(item.body, item.content_type),
+    image_url: isSafetyNews ? contentBodyToAssetUrl(item.body) : contentBodyToImageUrl(item.body),
+    image_name: isSafetyNews
+      ? contentBodyToAssetName(item.body)
+      : normalizeMapperText(record.imageName) || normalizeMapperText(record.image_name),
     file_url_1: readFileUrl(item.body, 1),
     file_name_1: readFileName(item.body, 1),
     file_url_2: readFileUrl(item.body, 2),
@@ -115,7 +139,7 @@ export function mapContentItemToForm(item: SafetyContentItem): ContentFormState 
 
 export function switchContentType(
   form: ContentFormState,
-  nextType: SafetyContentType
+  nextType: SafetyContentType,
 ): ContentFormState {
   const next = createEmptyContentForm(nextType);
   return {
@@ -133,6 +157,21 @@ export function switchContentType(
 export function buildContentBody(form: ContentFormState): Record<string, unknown> | string {
   const meta = CONTENT_TYPE_META[form.content_type];
   const textBody = form.text_body.trim();
+
+  if (form.content_type === 'measurement_template') {
+    return {
+      instrumentName: form.title.trim(),
+      safetyCriteria: textBody,
+    };
+  }
+
+  if (form.content_type === 'safety_news') {
+    return {
+      body: textBody,
+      imageUrl: form.image_url || '',
+      imageName: form.image_name || '',
+    };
+  }
 
   if (meta.editorMode === 'image') {
     return {
@@ -161,17 +200,27 @@ export function buildContentBody(form: ContentFormState): Record<string, unknown
 
 export function getContentPreview(item: SafetyContentItem): string {
   const meta = CONTENT_TYPE_META[item.content_type];
-  const text = contentBodyToText(item.body) || normalizeMapperText(item.title);
+  const text =
+    item.content_type === 'measurement_template'
+      ? readMeasurementSafetyCriteria(item.body) || normalizeMapperText(item.title)
+      : contentBodyToText(item.body) || normalizeMapperText(item.title);
+
+  if (item.content_type === 'measurement_template') {
+    return text || '안전 기준 없음';
+  }
 
   if (meta.editorMode === 'image') {
     return contentBodyToImageUrl(item.body)
-      ? `${text || '이미지형 콘텐츠'} · 이미지 포함`
+      ? `${text || '이미지형 콘텐츠'} 및 이미지`
       : text || '이미지형 콘텐츠';
   }
 
   if (meta.editorMode === 'file') {
-    const hasFile = Boolean(readFileUrl(item.body, 1) || readFileUrl(item.body, 2));
-    return hasFile ? `${text || '파일형 콘텐츠'} · 파일 포함` : text || '파일형 콘텐츠';
+    const hasFile =
+      item.content_type === 'safety_news'
+        ? Boolean(contentBodyToAssetUrl(item.body))
+        : Boolean(readFileUrl(item.body, 1) || readFileUrl(item.body, 2));
+    return hasFile ? `${text || '파일형 콘텐츠'} 및 파일` : text || '파일형 콘텐츠';
   }
 
   return text || '-';
@@ -183,6 +232,9 @@ export function getContentAttachmentSummary(item: SafetyContentItem): string {
     return contentBodyToImageUrl(item.body) ? '이미지 업로드' : '이미지 없음';
   }
   if (mode === 'file') {
+    if (item.content_type === 'safety_news') {
+      return contentBodyToAssetUrl(item.body) ? 'PDF/이미지 업로드' : 'PDF/이미지 없음';
+    }
     return readFileUrl(item.body, 1) || readFileUrl(item.body, 2)
       ? '파일 업로드'
       : '파일 없음';

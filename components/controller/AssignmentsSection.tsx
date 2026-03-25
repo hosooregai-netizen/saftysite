@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import AppModal from '@/components/ui/AppModal';
+import ActionMenu from '@/components/ui/ActionMenu';
 import type { SafetySite, SafetyUser } from '@/types/backend';
 import type { SafetyAssignment } from '@/types/controller';
 import { formatTimestamp, isFieldAgentUserRole, toNullableText } from './shared';
@@ -77,7 +78,6 @@ export default function AssignmentsSection(props: AssignmentsSectionProps) {
       <div className={styles.sectionHeader}>
         <div>
           <h2 className={styles.sectionTitle}>지도요원 배정</h2>
-          <p className={styles.sectionDescription}>배정 상태를 테이블에서 확인하고 추가·수정은 모달에서 진행합니다.</p>
         </div>
         <div className={styles.sectionHeaderActions}>
           <span className="app-chip">총 {assignments.length}건</span>
@@ -100,7 +100,7 @@ export default function AssignmentsSection(props: AssignmentsSectionProps) {
                     <th>메모</th>
                     <th>배정일</th>
                     <th>상태</th>
-                    <th>작업</th>
+                    <th>메뉴</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -113,9 +113,24 @@ export default function AssignmentsSection(props: AssignmentsSectionProps) {
                       <td>{formatTimestamp(assignment.assigned_at)}</td>
                       <td>{assignment.is_active ? '활성' : '비활성'}</td>
                       <td>
-                        <div className={styles.tableActions}>
-                          <button type="button" className="app-button app-button-secondary" onClick={() => openEdit(assignment)} disabled={busy}>수정</button>
-                          <button type="button" className="app-button app-button-danger" onClick={() => void onDeactivate(assignment.id)} disabled={busy || !assignment.is_active}>비활성화</button>
+                        <div className={styles.tableActionMenuWrap}>
+                          <ActionMenu
+                            label={`${assignment.user?.name ?? '배정'} 작업 메뉴 열기`}
+                            items={[
+                              { label: '수정', onSelect: () => { if (!busy) openEdit(assignment); } },
+                              ...(assignment.is_active
+                                ? [
+                                    {
+                                      label: '비활성화',
+                                      tone: 'danger' as const,
+                                      onSelect: () => {
+                                        if (!busy) void onDeactivate(assignment.id);
+                                      },
+                                    },
+                                  ]
+                                : []),
+                            ]}
+                          />
                         </div>
                       </td>
                     </tr>

@@ -1,0 +1,1608 @@
+{
+  "generatedAt": "2026-03-25T12:06:24.220Z",
+  "sourceTemplatePath": "c:\\Users\\정호수\\Desktop\\한종안\\public\\templates\\inspection\\기술지도 수동보고서 앱 - 서식_4.annotated.hwpx",
+  "templateOutPath": "c:\\Users\\정호수\\Desktop\\한종안\\public\\templates\\inspection\\기술지도 수동보고서 앱 - 서식_4.raw-annotated.hwpx",
+  "repeatBlocks": [
+    {
+      "path": "sec4.follow_ups",
+      "start": "{#sec4.follow_ups}",
+      "end": "{/sec4.follow_ups}"
+    },
+    {
+      "path": "sec7.findings",
+      "start": "{#sec7.findings}",
+      "end": "{/sec7.findings}"
+    },
+    {
+      "path": "sec8.plans",
+      "start": "{#sec8.plans}",
+      "end": "{/sec8.plans}"
+    },
+    {
+      "path": "sec10.measurements",
+      "start": "{#sec10.measurements}",
+      "end": "{/sec10.measurements}"
+    },
+    {
+      "path": "sec11.education",
+      "start": "{#sec11.education}",
+      "end": "{/sec11.education}"
+    },
+    {
+      "path": "sec12.activities",
+      "start": "{#sec12.activities}",
+      "end": "{/sec12.activities}"
+    }
+  ],
+  "sections": [
+    {
+      "key": "cover",
+      "name": "Cover",
+      "deferred": false,
+      "repeatBlockPath": null,
+      "repeatMarkers": null,
+      "note": "",
+      "textPlaceholders": [
+        {
+          "kind": "text",
+          "placeholderPath": "cover.site_name",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "cover.report_date",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "cover.drafter",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "cover.reviewer",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "cover.approver",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "cover.company_name",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "cover.headquarters_address",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "cover.headquarters_contact",
+          "repeatBlockPath": null,
+          "note": ""
+        }
+      ],
+      "imagePlaceholders": []
+    },
+    {
+      "key": "sec1",
+      "name": "1. Site Overview",
+      "deferred": false,
+      "repeatBlockPath": null,
+      "repeatMarkers": null,
+      "note": "",
+      "textPlaceholders": [
+        {
+          "kind": "text",
+          "placeholderPath": "sec1.site_name",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec1.site_management_number",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec1.business_start_number",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec1.construction_period",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec1.construction_amount",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec1.site_manager_name",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec1.site_contact",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec1.site_address",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec1.company_name",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec1.corporation_registration_number",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec1.business_registration_number",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec1.license_number",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec1.headquarters_contact",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec1.headquarters_address",
+          "repeatBlockPath": null,
+          "note": ""
+        }
+      ],
+      "imagePlaceholders": []
+    },
+    {
+      "key": "sec2",
+      "name": "2. Guidance Overview",
+      "deferred": false,
+      "repeatBlockPath": null,
+      "repeatMarkers": null,
+      "note": "",
+      "textPlaceholders": [
+        {
+          "kind": "text",
+          "placeholderPath": "sec2.guidance_agency_name",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec2.guidance_date",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec2.construction_type",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec2.progress_rate",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec2.visit_count",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec2.total_visit_count",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec2.assignee",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec2.previous_implementation_status",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec2.contact",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec2.notification_method_text",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec2.notification_recipient_name",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec2.notification_recipient_signature",
+          "repeatBlockPath": null,
+          "note": "image source is written as text fallback in this template"
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec2.other_notification_method",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec2.accident_occurred",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec2.recent_accident_date",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec2.accident_type",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec2.accident_summary",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec2.process_and_notes",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec2.work_plan_checks.tower_crane",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec2.work_plan_checks.tunnel_excavation",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec2.work_plan_checks.vehicle_loading_machine",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec2.work_plan_checks.bridge_work",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec2.work_plan_checks.construction_machine",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec2.work_plan_checks.quarry_work",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec2.work_plan_checks.chemical_facility",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec2.work_plan_checks.building_demolition",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec2.work_plan_checks.electrical_work",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec2.work_plan_checks.heavy_material_handling",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec2.work_plan_checks.earthwork",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec2.work_plan_checks.railway_facility_maintenance",
+          "repeatBlockPath": null,
+          "note": ""
+        }
+      ],
+      "imagePlaceholders": [
+        {
+          "kind": "image",
+          "placeholderPath": "sec2.notification_recipient_signature_image",
+          "repeatBlockPath": null,
+          "table": 2,
+          "row": 14,
+          "col": 2,
+          "binaryItemId": "tplimg22",
+          "deferred": false,
+          "optional": true
+        }
+      ]
+    },
+    {
+      "key": "sec3",
+      "name": "3. Site Photos",
+      "deferred": false,
+      "repeatBlockPath": null,
+      "repeatMarkers": null,
+      "note": "",
+      "textPlaceholders": [
+        {
+          "kind": "text",
+          "placeholderPath": "sec3.fixed[0].description",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec3.fixed[1].description",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec3.extra[0].title",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec3.extra[0].description",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec3.extra[1].title",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec3.extra[1].description",
+          "repeatBlockPath": null,
+          "note": ""
+        }
+      ],
+      "imagePlaceholders": [
+        {
+          "kind": "image",
+          "placeholderPath": "sec3.fixed[0].photo_image",
+          "repeatBlockPath": null,
+          "table": 2,
+          "row": 2,
+          "col": 0,
+          "binaryItemId": "tplimg01",
+          "deferred": false,
+          "optional": false
+        },
+        {
+          "kind": "image",
+          "placeholderPath": "sec3.fixed[1].photo_image",
+          "repeatBlockPath": null,
+          "table": 2,
+          "row": 2,
+          "col": 1,
+          "binaryItemId": "tplimg02",
+          "deferred": false,
+          "optional": false
+        },
+        {
+          "kind": "image",
+          "placeholderPath": "sec3.extra[0].photo_image",
+          "repeatBlockPath": null,
+          "table": 2,
+          "row": 4,
+          "col": 0,
+          "binaryItemId": "tplimg03",
+          "deferred": false,
+          "optional": false
+        },
+        {
+          "kind": "image",
+          "placeholderPath": "sec3.extra[1].photo_image",
+          "repeatBlockPath": null,
+          "table": 2,
+          "row": 4,
+          "col": 1,
+          "binaryItemId": "tplimg04",
+          "deferred": false,
+          "optional": false
+        },
+        {
+          "kind": "image",
+          "placeholderPath": "sec3.extra[2].photo_image",
+          "repeatBlockPath": null,
+          "table": 2,
+          "row": 6,
+          "col": 0,
+          "binaryItemId": "tplimg05",
+          "deferred": false,
+          "optional": false
+        },
+        {
+          "kind": "image",
+          "placeholderPath": "sec3.extra[3].photo_image",
+          "repeatBlockPath": null,
+          "table": 2,
+          "row": 6,
+          "col": 2,
+          "binaryItemId": "tplimg06",
+          "deferred": false,
+          "optional": false
+        }
+      ]
+    },
+    {
+      "key": "sec4",
+      "name": "4. Follow-up Results",
+      "deferred": false,
+      "repeatBlockPath": "sec4.follow_ups",
+      "repeatMarkers": {
+        "start": "{#sec4.follow_ups}",
+        "end": "{/sec4.follow_ups}"
+      },
+      "note": "before/after photo placeholders are text-only in the current template-ready HWPX.",
+      "textPlaceholders": [
+        {
+          "kind": "text",
+          "placeholderPath": "sec4.follow_ups[0].location",
+          "repeatBlockPath": "sec4.follow_ups",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec4.follow_ups[0].guidance_date",
+          "repeatBlockPath": "sec4.follow_ups",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec4.follow_ups[0].confirmation_date",
+          "repeatBlockPath": "sec4.follow_ups",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec4.follow_ups[0].before_image_note",
+          "repeatBlockPath": "sec4.follow_ups",
+          "note": "image source is written as text fallback in this template"
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec4.follow_ups[0].after_image_note",
+          "repeatBlockPath": "sec4.follow_ups",
+          "note": "image source is written as text fallback in this template"
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec4.follow_ups[0].result",
+          "repeatBlockPath": "sec4.follow_ups",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec4.follow_ups[1].location",
+          "repeatBlockPath": "sec4.follow_ups",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec4.follow_ups[1].guidance_date",
+          "repeatBlockPath": "sec4.follow_ups",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec4.follow_ups[1].confirmation_date",
+          "repeatBlockPath": "sec4.follow_ups",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec4.follow_ups[1].before_image_note",
+          "repeatBlockPath": "sec4.follow_ups",
+          "note": "image source is written as text fallback in this template"
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec4.follow_ups[1].after_image_note",
+          "repeatBlockPath": "sec4.follow_ups",
+          "note": "image source is written as text fallback in this template"
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec4.follow_ups[1].result",
+          "repeatBlockPath": "sec4.follow_ups",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec4.follow_ups[2].location",
+          "repeatBlockPath": "sec4.follow_ups",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec4.follow_ups[2].guidance_date",
+          "repeatBlockPath": "sec4.follow_ups",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec4.follow_ups[2].confirmation_date",
+          "repeatBlockPath": "sec4.follow_ups",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec4.follow_ups[2].before_image_note",
+          "repeatBlockPath": "sec4.follow_ups",
+          "note": "image source is written as text fallback in this template"
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec4.follow_ups[2].after_image_note",
+          "repeatBlockPath": "sec4.follow_ups",
+          "note": "image source is written as text fallback in this template"
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec4.follow_ups[2].result",
+          "repeatBlockPath": "sec4.follow_ups",
+          "note": ""
+        }
+      ],
+      "imagePlaceholders": []
+    },
+    {
+      "key": "sec5",
+      "name": "5. Summary",
+      "deferred": true,
+      "repeatBlockPath": null,
+      "repeatMarkers": null,
+      "note": "Deferred. The template keeps the manual section with [DEFERRED_AUTO_AGG].",
+      "textPlaceholders": [],
+      "imagePlaceholders": []
+    },
+    {
+      "key": "sec6",
+      "name": "6. Preventive Measures",
+      "deferred": false,
+      "repeatBlockPath": null,
+      "repeatMarkers": null,
+      "note": "",
+      "textPlaceholders": [
+        {
+          "kind": "text",
+          "placeholderPath": "sec6.measures[0].checked_box",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec6.measures[1].checked_box",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec6.measures[2].checked_box",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec6.measures[3].checked_box",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec6.measures[4].checked_box",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec6.measures[5].checked_box",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec6.measures[6].checked_box",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec6.measures[7].checked_box",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec6.measures[8].checked_box",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec6.measures[9].checked_box",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec6.measures[10].checked_box",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec6.measures[11].checked_box",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec6.measures[12].checked_box",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec6.measures[13].checked_box",
+          "repeatBlockPath": null,
+          "note": ""
+        }
+      ],
+      "imagePlaceholders": []
+    },
+    {
+      "key": "sec7",
+      "name": "7. Findings and Improvements",
+      "deferred": false,
+      "repeatBlockPath": "sec7.findings",
+      "repeatMarkers": {
+        "start": "{#sec7.findings}",
+        "end": "{/sec7.findings}"
+      },
+      "note": "",
+      "textPlaceholders": [
+        {
+          "kind": "text",
+          "placeholderPath": "sec7.findings[0].location",
+          "repeatBlockPath": "sec7.findings",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec7.findings[0].risk_text",
+          "repeatBlockPath": "sec7.findings",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec7.findings[0].accident_type",
+          "repeatBlockPath": "sec7.findings",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec7.findings[0].causative_agent",
+          "repeatBlockPath": "sec7.findings",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec7.findings[0].inspector",
+          "repeatBlockPath": "sec7.findings",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec7.findings[0].emphasis",
+          "repeatBlockPath": "sec7.findings",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec7.findings[0].improvement_plan",
+          "repeatBlockPath": "sec7.findings",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec7.findings[0].legal_reference_title",
+          "repeatBlockPath": "sec7.findings",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec7.findings[0].reference_material_1",
+          "repeatBlockPath": "sec7.findings",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec7.findings[0].reference_material_2",
+          "repeatBlockPath": "sec7.findings",
+          "note": ""
+        }
+      ],
+      "imagePlaceholders": [
+        {
+          "kind": "image",
+          "placeholderPath": "sec7.findings[0].photo_image",
+          "repeatBlockPath": "sec7.findings",
+          "table": 5,
+          "row": 2,
+          "col": 0,
+          "binaryItemId": "tplimg07",
+          "deferred": false,
+          "optional": false
+        },
+        {
+          "kind": "image",
+          "placeholderPath": "sec7.findings[0].photo_image_2",
+          "repeatBlockPath": "sec7.findings",
+          "table": 5,
+          "row": 2,
+          "col": 2,
+          "binaryItemId": "tplimg08",
+          "deferred": false,
+          "optional": false
+        },
+        {
+          "kind": "image",
+          "placeholderPath": "sec7.findings[0].reference_material_1_image",
+          "repeatBlockPath": "sec7.findings",
+          "table": 5,
+          "row": 8,
+          "col": 0,
+          "binaryItemId": "tplimg09",
+          "deferred": false,
+          "optional": false
+        },
+        {
+          "kind": "image",
+          "placeholderPath": "sec7.findings[0].reference_material_2_image",
+          "repeatBlockPath": "sec7.findings",
+          "table": 5,
+          "row": 8,
+          "col": 2,
+          "binaryItemId": "tplimg10",
+          "deferred": false,
+          "optional": false
+        }
+      ]
+    },
+    {
+      "key": "sec8",
+      "name": "8. Process Risk Assessment",
+      "deferred": false,
+      "repeatBlockPath": "sec8.plans",
+      "repeatMarkers": {
+        "start": "{#sec8.plans}",
+        "end": "{/sec8.plans}"
+      },
+      "note": "",
+      "textPlaceholders": [
+        {
+          "kind": "text",
+          "placeholderPath": "sec8.plans[0].process_name",
+          "repeatBlockPath": "sec8.plans",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec8.plans[0].hazard",
+          "repeatBlockPath": "sec8.plans",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec8.plans[0].countermeasure",
+          "repeatBlockPath": "sec8.plans",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec8.plans[1].process_name",
+          "repeatBlockPath": "sec8.plans",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec8.plans[1].hazard",
+          "repeatBlockPath": "sec8.plans",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec8.plans[1].countermeasure",
+          "repeatBlockPath": "sec8.plans",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec8.plans[2].process_name",
+          "repeatBlockPath": "sec8.plans",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec8.plans[2].hazard",
+          "repeatBlockPath": "sec8.plans",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec8.plans[2].countermeasure",
+          "repeatBlockPath": "sec8.plans",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec8.plans[3].process_name",
+          "repeatBlockPath": "sec8.plans",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec8.plans[3].hazard",
+          "repeatBlockPath": "sec8.plans",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec8.plans[3].countermeasure",
+          "repeatBlockPath": "sec8.plans",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec8.plans[4].process_name",
+          "repeatBlockPath": "sec8.plans",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec8.plans[4].hazard",
+          "repeatBlockPath": "sec8.plans",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec8.plans[4].countermeasure",
+          "repeatBlockPath": "sec8.plans",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec8.plans[5].process_name",
+          "repeatBlockPath": "sec8.plans",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec8.plans[5].hazard",
+          "repeatBlockPath": "sec8.plans",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec8.plans[5].countermeasure",
+          "repeatBlockPath": "sec8.plans",
+          "note": ""
+        }
+      ],
+      "imagePlaceholders": []
+    },
+    {
+      "key": "sec9",
+      "name": "9. TBM and Risk Check",
+      "deferred": false,
+      "repeatBlockPath": null,
+      "repeatMarkers": null,
+      "note": "",
+      "textPlaceholders": [
+        {
+          "kind": "text",
+          "placeholderPath": "sec9.tbm[0].good_box",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec9.tbm[0].average_box",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec9.tbm[0].poor_box",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec9.tbm[0].note",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec9.tbm[1].good_box",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec9.tbm[1].average_box",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec9.tbm[1].poor_box",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec9.tbm[1].note",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec9.tbm[2].good_box",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec9.tbm[2].average_box",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec9.tbm[2].poor_box",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec9.tbm[2].note",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec9.tbm[3].good_box",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec9.tbm[3].average_box",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec9.tbm[3].poor_box",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec9.tbm[3].note",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec9.tbm[4].good_box",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec9.tbm[4].average_box",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec9.tbm[4].poor_box",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec9.tbm[4].note",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec9.risk_assessment[0].good_box",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec9.risk_assessment[0].average_box",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec9.risk_assessment[0].poor_box",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec9.risk_assessment[0].note",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec9.risk_assessment[1].good_box",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec9.risk_assessment[1].average_box",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec9.risk_assessment[1].poor_box",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec9.risk_assessment[1].note",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec9.risk_assessment[2].good_box",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec9.risk_assessment[2].average_box",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec9.risk_assessment[2].poor_box",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec9.risk_assessment[2].note",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec9.risk_assessment[3].good_box",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec9.risk_assessment[3].average_box",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec9.risk_assessment[3].poor_box",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec9.risk_assessment[3].note",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec9.risk_assessment[4].good_box",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec9.risk_assessment[4].average_box",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec9.risk_assessment[4].poor_box",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec9.risk_assessment[4].note",
+          "repeatBlockPath": null,
+          "note": ""
+        }
+      ],
+      "imagePlaceholders": []
+    },
+    {
+      "key": "sec10",
+      "name": "10. Measurements",
+      "deferred": false,
+      "repeatBlockPath": "sec10.measurements",
+      "repeatMarkers": {
+        "start": "{#sec10.measurements}",
+        "end": "{/sec10.measurements}"
+      },
+      "note": "",
+      "textPlaceholders": [
+        {
+          "kind": "text",
+          "placeholderPath": "sec10.measurements[0].instrument_type",
+          "repeatBlockPath": "sec10.measurements",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec10.measurements[0].measurement_location",
+          "repeatBlockPath": "sec10.measurements",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec10.measurements[0].measured_value",
+          "repeatBlockPath": "sec10.measurements",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec10.measurements[0].safety_criteria",
+          "repeatBlockPath": "sec10.measurements",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec10.measurements[0].action_taken",
+          "repeatBlockPath": "sec10.measurements",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec10.measurements[1].instrument_type",
+          "repeatBlockPath": "sec10.measurements",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec10.measurements[1].measurement_location",
+          "repeatBlockPath": "sec10.measurements",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec10.measurements[1].measured_value",
+          "repeatBlockPath": "sec10.measurements",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec10.measurements[1].safety_criteria",
+          "repeatBlockPath": "sec10.measurements",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec10.measurements[1].action_taken",
+          "repeatBlockPath": "sec10.measurements",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec10.measurements[2].instrument_type",
+          "repeatBlockPath": "sec10.measurements",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec10.measurements[2].measurement_location",
+          "repeatBlockPath": "sec10.measurements",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec10.measurements[2].measured_value",
+          "repeatBlockPath": "sec10.measurements",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec10.measurements[2].safety_criteria",
+          "repeatBlockPath": "sec10.measurements",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec10.measurements[2].action_taken",
+          "repeatBlockPath": "sec10.measurements",
+          "note": ""
+        }
+      ],
+      "imagePlaceholders": [
+        {
+          "kind": "image",
+          "placeholderPath": "sec10.measurements[0].photo_image",
+          "repeatBlockPath": "sec10.measurements",
+          "table": 8,
+          "row": 2,
+          "col": 0,
+          "binaryItemId": "tplimg11",
+          "deferred": false,
+          "optional": false
+        },
+        {
+          "kind": "image",
+          "placeholderPath": "sec10.measurements[1].photo_image",
+          "repeatBlockPath": "sec10.measurements",
+          "table": 8,
+          "row": 7,
+          "col": 0,
+          "binaryItemId": "tplimg12",
+          "deferred": false,
+          "optional": false
+        },
+        {
+          "kind": "image",
+          "placeholderPath": "sec10.measurements[2].photo_image",
+          "repeatBlockPath": "sec10.measurements",
+          "table": 8,
+          "row": 12,
+          "col": 0,
+          "binaryItemId": "tplimg13",
+          "deferred": false,
+          "optional": false
+        }
+      ]
+    },
+    {
+      "key": "sec11",
+      "name": "11. Education",
+      "deferred": false,
+      "repeatBlockPath": "sec11.education",
+      "repeatMarkers": {
+        "start": "{#sec11.education}",
+        "end": "{/sec11.education}"
+      },
+      "note": "material_image_or_file is image-only in the current template-ready HWPX.",
+      "textPlaceholders": [
+        {
+          "kind": "text",
+          "placeholderPath": "sec11.education[0].attendee_count",
+          "repeatBlockPath": "sec11.education",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec11.education[0].topic",
+          "repeatBlockPath": "sec11.education",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec11.education[0].content",
+          "repeatBlockPath": "sec11.education",
+          "note": ""
+        }
+      ],
+      "imagePlaceholders": [
+        {
+          "kind": "image",
+          "placeholderPath": "sec11.education[0].photo_image",
+          "repeatBlockPath": "sec11.education",
+          "table": 9,
+          "row": 2,
+          "col": 0,
+          "binaryItemId": "tplimg14",
+          "deferred": false,
+          "optional": false
+        },
+        {
+          "kind": "image",
+          "placeholderPath": "sec11.education[0].material_image_or_file",
+          "repeatBlockPath": "sec11.education",
+          "table": 9,
+          "row": 2,
+          "col": 1,
+          "binaryItemId": "tplimg15",
+          "deferred": false,
+          "optional": false
+        }
+      ]
+    },
+    {
+      "key": "sec12",
+      "name": "12. Activities",
+      "deferred": false,
+      "repeatBlockPath": "sec12.activities",
+      "repeatMarkers": {
+        "start": "{#sec12.activities}",
+        "end": "{/sec12.activities}"
+      },
+      "note": "",
+      "textPlaceholders": [
+        {
+          "kind": "text",
+          "placeholderPath": "sec12.activities[0].activity_type",
+          "repeatBlockPath": "sec12.activities",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec12.activities[0].content",
+          "repeatBlockPath": "sec12.activities",
+          "note": ""
+        }
+      ],
+      "imagePlaceholders": [
+        {
+          "kind": "image",
+          "placeholderPath": "sec12.activities[0].photo_image",
+          "repeatBlockPath": "sec12.activities",
+          "table": 9,
+          "row": 6,
+          "col": 0,
+          "binaryItemId": "tplimg16",
+          "deferred": false,
+          "optional": false
+        }
+      ]
+    },
+    {
+      "key": "sec13",
+      "name": "13. Case Studies",
+      "deferred": false,
+      "repeatBlockPath": null,
+      "repeatMarkers": null,
+      "note": "",
+      "textPlaceholders": [
+        {
+          "kind": "text",
+          "placeholderPath": "sec13.cases[0].title",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec13.cases[0].summary",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec13.cases[1].title",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec13.cases[1].summary",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec13.cases[2].title",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec13.cases[2].summary",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec13.cases[3].title",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec13.cases[3].summary",
+          "repeatBlockPath": null,
+          "note": ""
+        }
+      ],
+      "imagePlaceholders": [
+        {
+          "kind": "image",
+          "placeholderPath": "sec13.cases[0].image",
+          "repeatBlockPath": null,
+          "table": 10,
+          "row": 2,
+          "col": 0,
+          "binaryItemId": "tplimg17",
+          "deferred": false,
+          "optional": false
+        },
+        {
+          "kind": "image",
+          "placeholderPath": "sec13.cases[1].image",
+          "repeatBlockPath": null,
+          "table": 10,
+          "row": 2,
+          "col": 1,
+          "binaryItemId": "tplimg18",
+          "deferred": false,
+          "optional": false
+        },
+        {
+          "kind": "image",
+          "placeholderPath": "sec13.cases[2].image",
+          "repeatBlockPath": null,
+          "table": 10,
+          "row": 5,
+          "col": 0,
+          "binaryItemId": "tplimg19",
+          "deferred": false,
+          "optional": false
+        },
+        {
+          "kind": "image",
+          "placeholderPath": "sec13.cases[3].image",
+          "repeatBlockPath": null,
+          "table": 10,
+          "row": 5,
+          "col": 1,
+          "binaryItemId": "tplimg20",
+          "deferred": false,
+          "optional": false
+        }
+      ]
+    },
+    {
+      "key": "sec14",
+      "name": "14. Safety Information",
+      "deferred": false,
+      "repeatBlockPath": null,
+      "repeatMarkers": null,
+      "note": "",
+      "textPlaceholders": [
+        {
+          "kind": "text",
+          "placeholderPath": "sec14.title",
+          "repeatBlockPath": null,
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec14.body",
+          "repeatBlockPath": null,
+          "note": ""
+        }
+      ],
+      "imagePlaceholders": [
+        {
+          "kind": "image",
+          "placeholderPath": "sec14.image",
+          "repeatBlockPath": null,
+          "table": 11,
+          "row": 1,
+          "col": 0,
+          "binaryItemId": "tplimg21",
+          "deferred": false,
+          "optional": false
+        }
+      ]
+    }
+  ],
+  "textOnlyImageFallbackPlaceholders": [
+    "sec2.notification_recipient_signature",
+    "sec4.follow_ups[0].before_image_note",
+    "sec4.follow_ups[0].after_image_note",
+    "sec4.follow_ups[1].before_image_note",
+    "sec4.follow_ups[1].after_image_note",
+    "sec4.follow_ups[2].before_image_note",
+    "sec4.follow_ups[2].after_image_note"
+  ]
+}

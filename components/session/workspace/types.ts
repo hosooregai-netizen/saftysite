@@ -6,6 +6,7 @@ import type {
   InspectionSectionKey,
   InspectionSession,
 } from '@/types/inspectionSession';
+import type { SafetyMeasurementTemplate } from '@/types/backend';
 import type { ChartEntry } from './utils';
 
 export type ApplyDocumentUpdate = (
@@ -33,6 +34,7 @@ export interface HazardStatsSectionProps {
   currentAgentEntries: ChartEntry[];
   cumulativeAccidentEntries: ChartEntry[];
   cumulativeAgentEntries: ChartEntry[];
+  measurementTemplates: SafetyMeasurementTemplate[];
   session: InspectionSession;
   withFileData: WithFileData;
   legalReferenceLibrary: Array<{

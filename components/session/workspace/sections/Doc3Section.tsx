@@ -89,8 +89,14 @@ export default function Doc3Section({
         <p className={`${styles.fieldAssist} ${styles.doc3FullRow}`}>{`AI가 ${analyzingSceneIds.length}개 이미지 제목을 정리 중입니다.`}</p>
       ) : null}
 
-      <Doc3FixedScenes items={fixedScenes} onClear={(sceneId) => updateScene(sceneId, { photoUrl: '' })} onUpload={handleFixedUpload} />
-      <Doc3ExtraScenes items={extraScenes} isAnalyzing={(sceneId) => analyzingSceneIds.includes(sceneId)} onClear={(sceneId) => updateScene(sceneId, { photoUrl: '' })} onTitleChange={(sceneId, value) => updateScene(sceneId, { title: value })} onUpload={handleExtraUpload} />
+      <Doc3FixedScenes items={fixedScenes} onClear={(sceneId) => updateScene(sceneId, { photoUrl: '', title: '' })} onUpload={handleFixedUpload} />
+      <Doc3ExtraScenes
+        items={extraScenes}
+        isAnalyzing={(sceneId) => analyzingSceneIds.includes(sceneId)}
+        onClear={(sceneId) => updateScene(sceneId, { photoUrl: '', title: '' })}
+        onTitleChange={(sceneId, value) => updateScene(sceneId, { title: value })}
+        onUpload={handleExtraUpload}
+      />
     </div>
   );
 }

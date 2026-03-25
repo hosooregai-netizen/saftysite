@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import WorkerAppHeader from '@/components/worker/WorkerAppHeader';
 import WorkerMenuSidebar from '@/components/worker/WorkerMenuSidebar';
@@ -32,7 +33,7 @@ export default function ControllerDashboard({
 }: ControllerDashboardProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const dashboard = useControllerDashboard(true);
-  const { sessions } = useInspectionSessions();
+  const { sessions, refreshMasterData } = useInspectionSessions();
   const router = useRouter();
   const searchParams = useSearchParams();
   const busy = dashboard.isLoading || dashboard.isMutating;
@@ -45,6 +46,23 @@ export default function ControllerDashboard({
   };
   const activeSectionMeta =
     CONTROLLER_SECTIONS.find((section) => section.key === activeSection) ?? CONTROLLER_SECTIONS[0];
+
+  const createContentItem = async (...args: Parameters<typeof dashboard.createContentItem>) => {
+    await dashboard.createContentItem(...args);
+    await refreshMasterData();
+  };
+
+  const updateContentItem = async (...args: Parameters<typeof dashboard.updateContentItem>) => {
+    await dashboard.updateContentItem(...args);
+    await refreshMasterData();
+  };
+
+  const deactivateContentItem = async (
+    ...args: Parameters<typeof dashboard.deactivateContentItem>
+  ) => {
+    await dashboard.deactivateContentItem(...args);
+    await refreshMasterData();
+  };
 
   const renderSection = () => {
     switch (activeSection) {
@@ -94,9 +112,9 @@ export default function ControllerDashboard({
             busy={busy}
             styles={styles}
             items={dashboard.data.contentItems}
-            onCreate={dashboard.createContentItem}
-            onUpdate={dashboard.updateContentItem}
-            onDeactivate={dashboard.deactivateContentItem}
+            onCreate={createContentItem}
+            onUpdate={updateContentItem}
+            onDeactivate={deactivateContentItem}
           />
         );
       default:

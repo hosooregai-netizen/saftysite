@@ -129,6 +129,8 @@ export interface SafetyEducationRecord {
 export interface ActivityRecord {
   id: string;
   photoUrl: string;
+  /** 보조 활동 사진(doc11 교육 자료 슬롯과 동일한 2열 배치) */
+  photoUrl2: string;
   activityType: string;
   content: string;
 }

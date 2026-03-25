@@ -266,30 +266,44 @@ function educationAndActivities(session: InspectionSession, context: InspectionD
 }
 
 function activityGrid(session: InspectionSession, context: InspectionDocContext) {
-  const cards = padDocument12Activities(session.document12Activities);
+  const padded = padDocument12Activities(session.document12Activities);
+  const item = padded[0] ?? {
+    id: 'activity-placeholder',
+    photoUrl: '',
+    photoUrl2: '',
+    activityType: '',
+    content: '',
+  };
+  const activityPhoto = context.addImage(item.photoUrl, {
+    fallbackName: `activity-photo-${item.id}`,
+    maxHeightPx: 180,
+    maxWidthPx: 250,
+  });
+  const activityPhoto2 = context.addImage(item.photoUrl2, {
+    fallbackName: `activity-photo2-${item.id}`,
+    maxHeightPx: 180,
+    maxWidthPx: 250,
+  });
+  const titleText = [item.activityType, item.content].filter((t) => String(t).trim()).join(' · ') || '-';
   return table(
-    pairs(cards).map(([left, right]) =>
-      [left, right].map((itemValue, cellIndex) => {
-        const item = itemValue ?? { id: `activity-${cellIndex}`, photoUrl: '', activityType: '', content: '' };
-        const activityPhoto = context.addImage(item.photoUrl, {
-          fallbackName: `activity-photo-${item.id}`,
-          maxHeightPx: 180,
-          maxWidthPx: 250,
-        });
-        const titleText = (item.content || item.activityType || '-').trim() || '-';
-        return xmlCell(
+    [
+      [
+        xmlCell(
           table(
             [
-              [textCell(titleText, { bold: true, shaded: true, align: 'center' })],
-              [xmlCell(imageBlock(activityPhoto, '활동 사진', { align: 'center' }))],
+              [textCell(titleText, { bold: true, shaded: true, align: 'center', colSpan: 2 })],
+              [
+                xmlCell(imageBlock(activityPhoto, '활동 1 사진', { align: 'center' })),
+                xmlCell(imageBlock(activityPhoto2, '활동 2 사진', { align: 'center' })),
+              ],
             ],
-            [4600],
-            { width: 4600 }
+            [4600, 4600],
+            { width: 9200 }
           )
-        );
-      })
-    ),
-    [4600, 4600],
+        ),
+      ],
+    ],
+    [9200],
     { width: 9200 }
   );
 }

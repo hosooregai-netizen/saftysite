@@ -5,6 +5,31 @@ import type {
   SafetyInfoItem,
 } from '@/types/inspectionSession';
 
+export interface SafetyMeasurementTemplate {
+  id: string;
+  title: string;
+  instrumentName: string;
+  safetyCriteria: string;
+  effectiveFrom: string | null;
+  effectiveTo: string | null;
+  isActive: boolean;
+  sortOrder: number;
+}
+
+export interface SafetyCaseCatalogItem extends CaseFeedItem {
+  effectiveFrom: string | null;
+  effectiveTo: string | null;
+  isActive: boolean;
+  sortOrder: number;
+}
+
+export interface SafetyInfoCatalogItem extends SafetyInfoItem {
+  effectiveFrom: string | null;
+  effectiveTo: string | null;
+  isActive: boolean;
+  sortOrder: number;
+}
+
 export type SafetyUserRole =
   | 'super_admin'
   | 'admin'
@@ -137,11 +162,11 @@ export interface SafetyLegalReference {
 }
 
 export interface SafetyMasterData {
-  caseFeed: CaseFeedItem[];
-  safetyInfos: SafetyInfoItem[];
+  caseFeed: SafetyCaseCatalogItem[];
+  safetyInfos: SafetyInfoCatalogItem[];
   legalReferences: SafetyLegalReference[];
   correctionResultOptions: string[];
-  measurementTemplates: string[];
+  measurementTemplates: SafetyMeasurementTemplate[];
 }
 
 export interface SafetyHydratedData {

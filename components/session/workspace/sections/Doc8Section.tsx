@@ -57,11 +57,6 @@ export default function Doc8Section({
                       }));
                     }}
                   />
-                  {item.source === 'api' ? (
-                    <div className={styles.doc8CellMeta}>
-                      <span className="app-chip">자동채움</span>
-                    </div>
-                  ) : null}
                 </td>
                 <td className={styles.doc8TdArea}>
                   <textarea

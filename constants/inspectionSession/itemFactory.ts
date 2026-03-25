@@ -129,6 +129,7 @@ export function createActivityRecord(
   return {
     id: initial.id ?? generateId('activity'),
     photoUrl: '',
+    photoUrl2: '',
     activityType: '',
     content: '',
     ...initial,

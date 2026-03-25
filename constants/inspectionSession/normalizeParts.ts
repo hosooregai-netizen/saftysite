@@ -163,6 +163,7 @@ export function normalizeActivity(raw: unknown) {
   return createActivityRecord({
     id: normalizeText(source.id) || generateId('activity'),
     photoUrl: normalizeText(source.photoUrl),
+    photoUrl2: normalizeText(source.photoUrl2),
     activityType: normalizeText(source.activityType) || normalizeText(source.supportItem),
     content: normalizeText(source.content) || normalizeText(source.details),
   });
