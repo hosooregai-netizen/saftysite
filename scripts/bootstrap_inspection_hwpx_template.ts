@@ -1,4 +1,6 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
+export {};
+
 const fs = require('node:fs/promises');
 const path = require('node:path');
 

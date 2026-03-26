@@ -961,11 +961,17 @@ function buildDoc5ChartImages(
   const cumulativeAccidentEntries = buildDoc5ChartEntries(cumulativeFindings, (item) => item.accidentType);
   const currentAgentEntries = buildDoc5ChartEntries(
     currentFindings,
-    (item) => DOC5_CAUSATIVE_AGENT_LABELS.get(item.causativeAgentKey) ?? item.causativeAgentKey,
+    (item) => {
+      const key = item.causativeAgentKey;
+      return key ? DOC5_CAUSATIVE_AGENT_LABELS.get(key) ?? key : '';
+    },
   );
   const cumulativeAgentEntries = buildDoc5ChartEntries(
     cumulativeFindings,
-    (item) => DOC5_CAUSATIVE_AGENT_LABELS.get(item.causativeAgentKey) ?? item.causativeAgentKey,
+    (item) => {
+      const key = item.causativeAgentKey;
+      return key ? DOC5_CAUSATIVE_AGENT_LABELS.get(key) ?? key : '';
+    },
   );
 
   return {
