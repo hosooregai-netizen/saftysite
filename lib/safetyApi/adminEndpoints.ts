@@ -44,6 +44,7 @@ export const updateSafetyUser = (token: string, userId: string, body: SafetyUser
   sendJson<SafetyUser>(`/users/${userId}`, token, 'PATCH', body);
 export const deactivateSafetyUser = (token: string, userId: string) =>
   requestSafetyApi<SafetyUser>(`/users/${userId}`, { method: 'DELETE' }, token);
+export const deleteSafetyUser = deactivateSafetyUser;
 export const updateSafetyUserPassword = (token: string, userId: string, newPassword: string) =>
   sendJson<{ message: string }>(`/users/${userId}/password`, token, 'POST', { new_password: newPassword });
 
@@ -59,6 +60,7 @@ export const updateSafetyHeadquarter = (token: string, id: string, body: SafetyH
   sendJson<SafetyHeadquarter>(`/headquarters/${id}`, token, 'PATCH', body);
 export const deactivateSafetyHeadquarter = (token: string, id: string) =>
   requestSafetyApi<SafetyHeadquarter>(`/headquarters/${id}`, { method: 'DELETE' }, token);
+export const deleteSafetyHeadquarter = deactivateSafetyHeadquarter;
 
 export const fetchSafetySitesAdmin = (token: string) =>
   requestSafetyApi<SafetySite[]>(
@@ -76,6 +78,7 @@ export const updateSafetySite = (token: string, id: string, body: SafetySiteUpda
   sendJson<SafetySite>(`/sites/${id}`, token, 'PATCH', body);
 export const deactivateSafetySite = (token: string, id: string) =>
   requestSafetyApi<SafetySite>(`/sites/${id}`, { method: 'DELETE' }, token);
+export const deleteSafetySite = deactivateSafetySite;
 
 export const fetchSafetyAssignments = (token: string) =>
   requestSafetyApi<SafetyAssignment[]>(
@@ -89,6 +92,7 @@ export const updateSafetyAssignment = (token: string, id: string, body: SafetyAs
   sendJson<SafetyAssignment>(`/assignments/${id}`, token, 'PATCH', body);
 export const deactivateSafetyAssignment = (token: string, id: string) =>
   requestSafetyApi<SafetyAssignment>(`/assignments/${id}`, { method: 'DELETE' }, token);
+export const deleteSafetyAssignment = deactivateSafetyAssignment;
 
 export const fetchSafetyContentItemsAdmin = (token: string) =>
   requestSafetyApi<SafetyContentItem[]>(
@@ -102,3 +106,4 @@ export const updateSafetyContentItem = (token: string, id: string, body: SafetyC
   sendJson<SafetyContentItem>(`/content-items/${id}`, token, 'PATCH', body);
 export const deactivateSafetyContentItem = (token: string, id: string) =>
   requestSafetyApi<SafetyContentItem>(`/content-items/${id}`, { method: 'DELETE' }, token);
+export const deleteSafetyContentItem = deactivateSafetyContentItem;

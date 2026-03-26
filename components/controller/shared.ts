@@ -45,6 +45,10 @@ export function isAdminUserRole(role: SafetyUserRole | null | undefined): boolea
   return Boolean(role && ADMIN_USER_ROLES.has(role));
 }
 
+export function canDeleteControllerCrud(role: SafetyUserRole | null | undefined): boolean {
+  return role === 'super_admin' || role === 'admin';
+}
+
 export function isFieldAgentUserRole(role: SafetyUserRole | null | undefined): boolean {
   return role === 'field_agent';
 }

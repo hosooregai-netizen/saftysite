@@ -9,10 +9,10 @@ import {
   createSafetySite,
   createSafetyUser,
   deactivateSafetyAssignment,
-  deactivateSafetyContentItem,
-  deactivateSafetyHeadquarter,
-  deactivateSafetySite,
-  deactivateSafetyUser,
+  deleteSafetyContentItem,
+  deleteSafetyHeadquarter,
+  deleteSafetySite,
+  deleteSafetyUser,
   fetchSafetyAssignments,
   fetchSafetyContentItemsAdmin,
   fetchSafetyHeadquarters,
@@ -26,6 +26,7 @@ import {
   updateSafetyUserPassword,
 } from '@/lib/safetyApi/adminEndpoints';
 import type {
+  ControllerDashboardData,
   SafetyAssignmentInput,
   SafetyAssignmentUpdateInput,
   SafetyContentItemInput,
@@ -36,7 +37,6 @@ import type {
   SafetySiteUpdateInput,
   SafetyUserCreateInput,
   SafetyUserUpdateInput,
-  ControllerDashboardData,
 } from '@/types/controller';
 
 const EMPTY_DATA: ControllerDashboardData = {
@@ -61,9 +61,19 @@ function buildAssignmentPayload(
   fallback?: { role_on_site?: string | null; memo?: string | null }
 ) {
   return {
-    role_on_site: options?.roleOnSite ?? fallback?.role_on_site ?? '담당 지도요원',
+    role_on_site: options?.roleOnSite ?? fallback?.role_on_site ?? '현장 지도요원',
     memo: options?.memo ?? fallback?.memo ?? null,
   };
+}
+
+async function deleteAssignmentsById(token: string, assignmentIds: Iterable<string>) {
+  const seen = new Set<string>();
+
+  for (const assignmentId of assignmentIds) {
+    if (!assignmentId || seen.has(assignmentId)) continue;
+    seen.add(assignmentId);
+    await deactivateSafetyAssignment(token, assignmentId);
+  }
 }
 
 export function useControllerDashboard(enabled: boolean) {
@@ -94,8 +104,8 @@ export function useControllerDashboard(enabled: boolean) {
         fetchSafetyContentItemsAdmin(token),
       ]);
       setData({ users, headquarters, sites, assignments, contentItems });
-    } catch (error) {
-      setError(getErrorMessage(error));
+    } catch (nextError) {
+      setError(getErrorMessage(nextError));
     } finally {
       setIsLoading(false);
     }
@@ -120,13 +130,13 @@ export function useControllerDashboard(enabled: boolean) {
         } catch (reloadError) {
           console.error('Controller dashboard reload failed after mutation', reloadError);
           setNotice(
-            `${successMessage} 목록 새로고침은 실패했습니다. 페이지를 새로고침한 뒤 다시 시도해 주세요.`
+            `${successMessage} 목록 새로고침에는 실패했습니다. 페이지를 새로고침하거나 다시 시도해 주세요.`
           );
         }
-      } catch (error) {
-        const message = getErrorMessage(error);
+      } catch (nextError) {
+        const message = getErrorMessage(nextError);
         setError(message);
-        throw error;
+        throw nextError;
       } finally {
         setIsMutating(false);
       }
@@ -147,33 +157,62 @@ export function useControllerDashboard(enabled: boolean) {
       runMutation((token) => updateSafetyUser(token, id, input), '사용자 정보를 수정했습니다.'),
     resetUserPassword: (id: string, password: string) =>
       runMutation((token) => updateSafetyUserPassword(token, id, password), '비밀번호를 변경했습니다.'),
-    saveUserEdit: (
-      id: string,
-      input: SafetyUserUpdateInput,
-      password?: string | null
-    ) =>
+    saveUserEdit: (id: string, input: SafetyUserUpdateInput, password?: string | null) =>
+      runMutation(
+        async (token) => {
+          if (hasValues(input)) {
+            await updateSafetyUser(token, id, input);
+          }
+          if (password) {
+            await updateSafetyUserPassword(token, id, password);
+          }
+        },
+        hasValues(input) && password
+          ? '사용자 정보와 비밀번호를 수정했습니다.'
+          : password
+            ? '비밀번호를 변경했습니다.'
+            : '사용자 정보를 수정했습니다.'
+      ),
+    deleteUser: (id: string) =>
       runMutation(async (token) => {
-        if (hasValues(input)) {
-          await updateSafetyUser(token, id, input);
-        }
-        if (password) {
-          await updateSafetyUserPassword(token, id, password);
-        }
-      }, hasValues(input) && password ? '사용자 정보와 비밀번호를 수정했습니다.' : password ? '비밀번호를 변경했습니다.' : '사용자 정보를 수정했습니다.'),
-    deactivateUser: (id: string) =>
-      runMutation((token) => deactivateSafetyUser(token, id), '사용자를 비활성화했습니다.'),
+        const assignmentIds = data.assignments
+          .filter((assignment) => assignment.user_id === id)
+          .map((assignment) => assignment.id);
+        await deleteAssignmentsById(token, assignmentIds);
+        await deleteSafetyUser(token, id);
+      }, '사용자를 삭제했습니다.'),
     createHeadquarter: (input: SafetyHeadquarterInput) =>
       runMutation((token) => createSafetyHeadquarter(token, input), '사업장 정보를 생성했습니다.'),
     updateHeadquarter: (id: string, input: SafetyHeadquarterUpdateInput) =>
       runMutation((token) => updateSafetyHeadquarter(token, id, input), '사업장 정보를 수정했습니다.'),
-    deactivateHeadquarter: (id: string) =>
-      runMutation((token) => deactivateSafetyHeadquarter(token, id), '사업장을 비활성화했습니다.'),
+    deleteHeadquarter: (id: string) =>
+      runMutation(async (token) => {
+        const relatedSites = data.sites.filter((site) => site.headquarter_id === id);
+        const relatedSiteIds = new Set(relatedSites.map((site) => site.id));
+        const assignmentIds = data.assignments
+          .filter((assignment) => relatedSiteIds.has(assignment.site_id))
+          .map((assignment) => assignment.id);
+
+        await deleteAssignmentsById(token, assignmentIds);
+
+        for (const site of relatedSites) {
+          await deleteSafetySite(token, site.id);
+        }
+
+        await deleteSafetyHeadquarter(token, id);
+      }, '사업장을 삭제했습니다.'),
     createSite: (input: SafetySiteInput) =>
       runMutation((token) => createSafetySite(token, input), '현장을 생성했습니다.'),
     updateSite: (id: string, input: SafetySiteUpdateInput) =>
       runMutation((token) => updateSafetySite(token, id, input), '현장 정보를 수정했습니다.'),
-    deactivateSite: (id: string) =>
-      runMutation((token) => deactivateSafetySite(token, id), '현장을 종료 처리했습니다.'),
+    deleteSite: (id: string) =>
+      runMutation(async (token) => {
+        const assignmentIds = data.assignments
+          .filter((assignment) => assignment.site_id === id)
+          .map((assignment) => assignment.id);
+        await deleteAssignmentsById(token, assignmentIds);
+        await deleteSafetySite(token, id);
+      }, '현장을 삭제했습니다.'),
     createAssignment: (input: SafetyAssignmentInput) =>
       runMutation(async (token) => {
         const existingAssignment = data.assignments.find(
@@ -194,37 +233,41 @@ export function useControllerDashboard(enabled: boolean) {
       }, '현장 배정을 생성했습니다.'),
     assignFieldAgentToSite: (
       siteId: string,
-      userId: string | null,
+      userId: string,
       options?: { roleOnSite?: string; memo?: string | null }
     ) =>
       runMutation(async (token) => {
-        const siteAssignments = data.assignments.filter(
-          (assignment) => assignment.site_id === siteId
-        );
-        const matchedAssignment = userId
-          ? siteAssignments.find((assignment) => assignment.user_id === userId)
-          : null;
-        const activeAssignments = siteAssignments.filter(
-          (assignment) => assignment.is_active && assignment.id !== matchedAssignment?.id
+        const matchedAssignment = data.assignments.find(
+          (assignment) => assignment.site_id === siteId && assignment.user_id === userId
         );
 
-        for (const assignment of activeAssignments) {
-          await deactivateSafetyAssignment(token, assignment.id);
+        if (matchedAssignment) {
+          if (matchedAssignment.is_active) return;
+          await updateSafetyAssignment(token, matchedAssignment.id, {
+            ...buildAssignmentPayload(options, matchedAssignment),
+            is_active: true,
+          });
+          return;
         }
 
-        if (userId) {
-          if (matchedAssignment) {
-            await updateSafetyAssignment(token, matchedAssignment.id, {
-              ...buildAssignmentPayload(options, matchedAssignment),
-              is_active: true,
-            });
-            return;
-          }
-
-          const nextPayload = buildAssignmentPayload(options);
-          await createSafetyAssignment(token, { site_id: siteId, user_id: userId, ...nextPayload });
-        }
-      }, userId ? '지도요원을 배정했습니다.' : '지도요원 배정을 해제했습니다.'),
+        const nextPayload = buildAssignmentPayload(options);
+        await createSafetyAssignment(token, {
+          site_id: siteId,
+          user_id: userId,
+          ...nextPayload,
+        });
+      }, '지도요원을 배정했습니다.'),
+    unassignFieldAgentFromSite: (siteId: string, userId: string) =>
+      runMutation(async (token) => {
+        const matchedAssignment = data.assignments.find(
+          (assignment) =>
+            assignment.site_id === siteId &&
+            assignment.user_id === userId &&
+            assignment.is_active
+        );
+        if (!matchedAssignment) return;
+        await deactivateSafetyAssignment(token, matchedAssignment.id);
+      }, '지도요원 배정을 해제했습니다.'),
     updateAssignment: (id: string, input: SafetyAssignmentUpdateInput) =>
       runMutation((token) => updateSafetyAssignment(token, id, input), '배정 정보를 수정했습니다.'),
     deactivateAssignment: (id: string) =>
@@ -233,7 +276,7 @@ export function useControllerDashboard(enabled: boolean) {
       runMutation((token) => createSafetyContentItem(token, input), '콘텐츠 데이터를 생성했습니다.'),
     updateContentItem: (id: string, input: SafetyContentItemUpdateInput) =>
       runMutation((token) => updateSafetyContentItem(token, id, input), '콘텐츠 데이터를 수정했습니다.'),
-    deactivateContentItem: (id: string) =>
-      runMutation((token) => deactivateSafetyContentItem(token, id), '콘텐츠 데이터를 비활성화했습니다.'),
+    deleteContentItem: (id: string) =>
+      runMutation((token) => deleteSafetyContentItem(token, id), '콘텐츠 데이터를 삭제했습니다.'),
   };
 }

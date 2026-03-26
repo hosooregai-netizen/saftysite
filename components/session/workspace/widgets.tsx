@@ -162,14 +162,15 @@ export function UploadBox({
 }
 
 export function ChartCard({ entries, title }: { entries: ChartEntry[]; title: string }) {
-  const total = entries.reduce((sum, item) => sum + item.count, 0);
-  const slices = total > 0 ? buildDonutSlices(entries, total) : [];
+  const list = Array.isArray(entries) ? entries : [];
+  const total = list.reduce((sum, item) => sum + item.count, 0);
+  const slices = total > 0 ? buildDonutSlices(list, total) : [];
   const summaryLabel = `${title}: 총 ${total}건`;
 
   return (
     <article className={styles.chartCard}>
       <h3 className={styles.chartTitle}>{title}</h3>
-      {entries.length > 0 && total > 0 ? (
+      {list.length > 0 && total > 0 ? (
         <div className={styles.chartDonutBody}>
           <div className={styles.chartDonutFigure}>
             <svg
@@ -185,7 +186,7 @@ export function ChartCard({ entries, title }: { entries: ChartEntry[]; title: st
             </svg>
           </div>
           <ul className={styles.chartDonutLegend}>
-            {entries.map((item, index) => (
+            {list.map((item, index) => (
               <li key={item.label} className={styles.chartDonutLegendItem}>
                 <span
                   className={styles.chartDonutSwatch}

@@ -341,7 +341,8 @@ export default function InspectionSessionWorkspace({
 
   if (!isReady) return <LoadingStatePanel />;
 
-  if (!isAuthenticated) return <LoginPanel error={authError} onSubmit={login} title="보고서 작성 로그인" description="작성 중인 보고서를 서버 자동저장 기준으로 복구하려면 로그인해 주세요." />;
+  if (!isAuthenticated)
+    return <LoginPanel error={authError} onSubmit={login} title="한국 종합 안전 로그인" />;
 
   if (!session || !progress || !currentSectionMeta) return <MissingStatePanel />;
 

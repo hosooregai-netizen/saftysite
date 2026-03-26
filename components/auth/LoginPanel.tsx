@@ -17,7 +17,7 @@ export default function LoginPanel({
   error = null,
   onSubmit,
   title = '업무 시스템 로그인',
-  description = '배정 현장과 보고서를 불러오려면 API 서버 계정으로 로그인해 주세요.',
+  description,
 }: LoginPanelProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -42,22 +42,17 @@ export default function LoginPanel({
   };
 
   return (
-    <main className="app-page">
-      <div className="app-container">
+    <main className={`app-page ${styles.pageRoot}`}>
+      <div className={`app-container ${styles.pageInner}`}>
         <section className={`app-shell ${styles.shell}`}>
           <div className={styles.backdrop} aria-hidden="true" />
 
           <div className={styles.content}>
             <form className={styles.form} onSubmit={handleSubmit}>
-              <div className={styles.brandRow}>
-                <span className="app-chip">Safety API</span>
-                <span className="app-chip">업무 시스템</span>
-              </div>
-
               <div className={styles.formHeader}>
                 <p className={styles.formEyebrow}>Sign in</p>
                 <h1 className={styles.formTitle}>{title}</h1>
-                <p className={styles.formDescription}>{description}</p>
+                {description ? <p className={styles.formDescription}>{description}</p> : null}
               </div>
 
               <div className={styles.formFields}>

@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import AppModal from '@/components/ui/AppModal';
 import type { SafetySite, SafetyUser } from '@/types/backend';
 import type { SafetyAssignment } from '@/types/controller';
@@ -11,17 +12,22 @@ interface SiteAssignmentModalProps {
   open: boolean;
   site: SafetySite | null;
   users: SafetyUser[];
-  currentAssignment: SafetyAssignment | null;
+  currentAssignments: SafetyAssignment[];
   onClose: () => void;
   onAssign: (siteId: string, userId: string) => Promise<void>;
-  onClear: (siteId: string) => Promise<void>;
+  onClear: (siteId: string, userId: string) => Promise<void>;
 }
 
 export default function SiteAssignmentModal(props: SiteAssignmentModalProps) {
-  const { busy, styles, open, site, users, currentAssignment, onClose, onAssign, onClear } = props;
-  const fieldAgents = users.filter(
-    (user) => isFieldAgentUserRole(user.role) && user.is_active
+  const { busy, styles, open, site, users, currentAssignments, onClose, onAssign, onClear } = props;
+  const fieldAgents = users.filter((user) => isFieldAgentUserRole(user.role) && user.is_active);
+  const activeAssignmentUserIds = useMemo(
+    () => new Set(currentAssignments.filter((assignment) => assignment.is_active).map((assignment) => assignment.user_id)),
+    [currentAssignments]
   );
+  const currentAssignedNames = fieldAgents
+    .filter((user) => activeAssignmentUserIds.has(user.id))
+    .map((user) => user.name);
 
   return (
     <AppModal
@@ -29,14 +35,23 @@ export default function SiteAssignmentModal(props: SiteAssignmentModalProps) {
       title={site ? `${site.site_name} 지도요원 배정` : '지도요원 배정'}
       size="large"
       onClose={onClose}
-      actions={<button type="button" className="app-button app-button-secondary" onClick={onClose} disabled={busy}>닫기</button>}
+      actions={
+        <button
+          type="button"
+          className="app-button app-button-secondary"
+          onClick={onClose}
+          disabled={busy}
+        >
+          닫기
+        </button>
+      }
     >
       <div className={styles.modalForm}>
         <p className={styles.modalHint}>
-          현재 배정: {currentAssignment?.user?.name || site?.assigned_user?.name || '없음'}
+          현재 배정: {currentAssignedNames.length > 0 ? currentAssignedNames.join(', ') : '없음'}
         </p>
         <p className={styles.modalHint}>
-          관리자 계정은 모든 현장을 조회할 수 있으므로, 이 목록에는 지도요원 계정만 표시합니다.
+          같은 현장에는 여러 지도요원을 동시에 배정할 수 있고, 배정된 지도요원은 해당 현장 보고서를 함께 조회합니다.
         </p>
         <div className={styles.tableShell}>
           {fieldAgents.length === 0 ? (
@@ -48,23 +63,41 @@ export default function SiteAssignmentModal(props: SiteAssignmentModalProps) {
                   <tr>
                     <th>지도요원</th>
                     <th>연락처</th>
-                    <th>직책</th>
+                    <th>직급</th>
                     <th>상태</th>
                     <th>작업</th>
                   </tr>
                 </thead>
                 <tbody>
                   {fieldAgents.map((user) => {
-                    const isCurrent = currentAssignment?.user_id === user.id || site?.assigned_user?.id === user.id;
+                    const isAssigned = activeAssignmentUserIds.has(user.id);
                     return (
                       <tr key={user.id}>
                         <td>{user.name}</td>
                         <td>{user.phone || '-'}</td>
                         <td>{user.position || '-'}</td>
-                        <td>{isCurrent ? '현재 배정' : '배정 가능'}</td>
+                        <td>{isAssigned ? '현재 배정' : '배정 가능'}</td>
                         <td>
                           <div className={styles.tableActions}>
-                            <button type="button" className="app-button app-button-primary" onClick={() => site && void onAssign(site.id, user.id)} disabled={busy || isCurrent}>배정</button>
+                            {isAssigned ? (
+                              <button
+                                type="button"
+                                className="app-button app-button-secondary"
+                                onClick={() => site && void onClear(site.id, user.id)}
+                                disabled={busy}
+                              >
+                                해제
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                className="app-button app-button-primary"
+                                onClick={() => site && void onAssign(site.id, user.id)}
+                                disabled={busy}
+                              >
+                                배정
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -75,11 +108,6 @@ export default function SiteAssignmentModal(props: SiteAssignmentModalProps) {
             </div>
           )}
         </div>
-        {site ? (
-          <div className={styles.sectionHeaderActions}>
-            <button type="button" className="app-button app-button-danger" onClick={() => void onClear(site.id)} disabled={busy || !currentAssignment}>배정 해제</button>
-          </div>
-        ) : null}
       </div>
     </AppModal>
   );

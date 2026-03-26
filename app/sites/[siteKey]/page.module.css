@@ -170,6 +170,11 @@
   flex: 0 0 164px;
 }
 
+.tableCreateButton {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
 .listViewport {
   overflow: hidden;
 }
@@ -386,6 +391,10 @@
     flex: 1 1 100%;
   }
 
+  .tableCreateButton {
+    flex: 1 1 100%;
+  }
+
   .listHead,
   .reportRow {
     grid-template-columns:
@@ -479,4 +488,3 @@
     padding: 20px 28px 24px;
   }
 }
-

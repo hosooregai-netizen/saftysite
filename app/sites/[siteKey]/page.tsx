@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { use, useDeferredValue, useMemo, useState } from 'react';
+import { use, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import LoginPanel from '@/components/auth/LoginPanel';
 import { ControllerMenuDrawer, ControllerMenuPanel } from '@/components/controller/ControllerMenu';
 import { getControllerSectionHref, isAdminUserRole } from '@/components/controller/shared';
@@ -42,6 +42,7 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
     authError,
     login,
     logout,
+    reload,
     createSession,
     deleteSession,
     canArchiveReports,
@@ -50,7 +51,14 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [reportQuery, setReportQuery] = useState('');
   const [reportSortMode, setReportSortMode] = useState<'recent' | 'name' | 'progress'>('recent');
+  const hasReloadedRef = useRef(false);
   const isAdminView = Boolean(currentUser && isAdminUserRole(currentUser.role));
+
+  useEffect(() => {
+    if (!isAuthenticated || !isReady || hasReloadedRef.current) return;
+    hasReloadedRef.current = true;
+    void reload();
+  }, [isAuthenticated, isReady, reload]);
 
   const currentSite = useMemo(
     () => sites.find((site) => site.id === decodedSiteKey) ?? null,
@@ -272,6 +280,13 @@ export default function SiteReportsPage({ params }: SiteReportsPageProps) {
                         <option value="name">보고서명순</option>
                         <option value="progress">진행률 높은 순</option>
                       </select>
+                      <button
+                        type="button"
+                        className={`app-button app-button-primary ${styles.tableCreateButton}`}
+                        onClick={handleCreateReport}
+                      >
+                        보고서 추가
+                      </button>
                     </div>
                   ) : null}
                   <ReportList

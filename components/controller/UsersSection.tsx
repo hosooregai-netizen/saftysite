@@ -25,6 +25,7 @@ interface UsersSectionProps {
   sites: SafetySite[];
   styles: Record<string, string>;
   users: SafetyUser[];
+  canDelete: boolean;
   onCreate: (input: {
     email: string;
     name: string;
@@ -43,7 +44,7 @@ interface UsersSectionProps {
     organization_name?: string | null;
     is_active?: boolean | null;
   }, password?: string | null) => Promise<void>;
-  onDeactivate: (id: string) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
 }
 
 const EMPTY_FORM = {
@@ -58,7 +59,7 @@ const EMPTY_FORM = {
 };
 
 export default function UsersSection(props: UsersSectionProps) {
-  const { assignments, busy, sessions, sites, styles, users, onCreate, onSaveEdit, onDeactivate } = props;
+  const { assignments, busy, sessions, sites, styles, users, canDelete, onCreate, onSaveEdit, onDelete } = props;
   const [editingId, setEditingId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | UserRoleView>('all');
@@ -223,6 +224,15 @@ export default function UsersSection(props: UsersSectionProps) {
     closeModal();
   };
 
+  const handleDeleteUser = async (user: SafetyUser) => {
+    const confirmed = window.confirm(
+      `'${user.name}' 사용자를 삭제하시겠습니까?\n연결된 현장 배정도 함께 삭제되며, 이 작업은 되돌릴 수 없습니다.`
+    );
+
+    if (!confirmed) return;
+    await onDelete(user.id);
+  };
+
   return (
     <section className={`${styles.sectionCard} ${styles.listSectionCard}`}>
       <div className={styles.sectionHeader}>
@@ -347,16 +357,14 @@ export default function UsersSection(props: UsersSectionProps) {
                             label={`${user.name} 작업 메뉴 열기`}
                             items={[
                               { label: '수정', onSelect: () => { if (!busy) openEdit(user); } },
-                              ...(user.is_active
-                                ? [
-                                    {
-                                      label: '비활성화',
-                                      tone: 'danger' as const,
-                                      onSelect: () => {
-                                        if (!busy) void onDeactivate(user.id);
-                                      },
+                              ...(canDelete
+                                ? [{
+                                    label: '삭제',
+                                    tone: 'danger' as const,
+                                    onSelect: () => {
+                                      if (!busy) void handleDeleteUser(user);
                                     },
-                                  ]
+                                  }]
                                 : []),
                             ]}
                           />

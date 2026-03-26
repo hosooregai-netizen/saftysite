@@ -27,24 +27,56 @@ function createDerivedFollowUpKey(sourceSessionId: string, sourceFindingId: stri
   return `${sourceSessionId}::${sourceFindingId}`;
 }
 
+function normalizeResultText(value: string): string {
+  return normalizeText(value).replace(/\s+/g, '').toLowerCase();
+}
+
+function isCompletedFollowUpResult(result: string): boolean {
+  const normalized = normalizeResultText(result);
+  if (!normalized) {
+    return false;
+  }
+
+  if (
+    normalized.includes('미이행') ||
+    normalized.includes('부분이행') ||
+    normalized.includes('조치중') ||
+    normalized.includes('진행중') ||
+    normalized.includes('예정') ||
+    normalized.includes('보완중') ||
+    normalized.includes('대기')
+  ) {
+    return false;
+  }
+
+  return (
+    normalized.includes('이행완료') ||
+    normalized.includes('시정완료') ||
+    normalized.includes('조치완료') ||
+    normalized.includes('개선완료') ||
+    normalized === '완료' ||
+    normalized === '이행'
+  );
+}
+
 export function buildDerivedFollowUpItems(
   session: InspectionSession,
   sessions: InspectionSession[]
 ): PreviousGuidanceFollowUpItem[] {
-  const previousSession = sessions
+  const previousSessions = sessions
     .filter(
       (item) =>
         item.id !== session.id &&
         getSessionSiteKey(item) === getSessionSiteKey(session) &&
         item.reportNumber < session.reportNumber
     )
-    .sort((left, right) => right.reportNumber - left.reportNumber)[0];
+    .sort((left, right) => left.reportNumber - right.reportNumber);
 
   const manualItems = session.document4FollowUps.filter(
     (item) => !item.sourceSessionId || !item.sourceFindingId
   );
 
-  if (!previousSession) {
+  if (previousSessions.length === 0) {
     return [...manualItems];
   }
 
@@ -54,23 +86,47 @@ export function buildDerivedFollowUpItems(
       .map((item) => [createDerivedFollowUpKey(item.sourceSessionId!, item.sourceFindingId!), item])
   );
 
-  const derivedItems = previousSession.document7Findings
-    .filter((item) => hasFindingContent(item) && item.carryForward)
-    .map((item) => {
-      const key = createDerivedFollowUpKey(previousSession.id, item.id);
-      const existing = existingByKey.get(key);
-      return createPreviousGuidanceFollowUpItem({
-        id: existing?.id,
-        sourceSessionId: previousSession.id,
-        sourceFindingId: item.id,
-        location: item.location,
-        guidanceDate: previousSession.meta.reportDate,
-        confirmationDate: existing?.confirmationDate || session.meta.reportDate,
-        beforePhotoUrl: item.photoUrl,
-        afterPhotoUrl: existing?.afterPhotoUrl || '',
-        result: existing?.result || '',
-      });
+  const latestFollowUpByKey = new Map<string, PreviousGuidanceFollowUpItem>();
+  previousSessions.forEach((previousSession) => {
+    previousSession.document4FollowUps.forEach((item) => {
+      if (!item.sourceSessionId || !item.sourceFindingId) {
+        return;
+      }
+
+      latestFollowUpByKey.set(
+        createDerivedFollowUpKey(item.sourceSessionId, item.sourceFindingId),
+        item
+      );
     });
+  });
+
+  const derivedItems = previousSessions
+    .slice()
+    .sort((left, right) => right.reportNumber - left.reportNumber)
+    .flatMap((previousSession) =>
+      previousSession.document7Findings
+        .filter((item) => hasFindingContent(item))
+        .filter((item) => {
+          const key = createDerivedFollowUpKey(previousSession.id, item.id);
+          const latestFollowUp = latestFollowUpByKey.get(key);
+          return !latestFollowUp || !isCompletedFollowUpResult(latestFollowUp.result);
+        })
+        .map((item) => {
+          const key = createDerivedFollowUpKey(previousSession.id, item.id);
+          const existing = existingByKey.get(key);
+          return createPreviousGuidanceFollowUpItem({
+            id: existing?.id,
+            sourceSessionId: previousSession.id,
+            sourceFindingId: item.id,
+            location: item.location,
+            guidanceDate: previousSession.meta.reportDate,
+            confirmationDate: existing?.confirmationDate || session.meta.reportDate,
+            beforePhotoUrl: item.photoUrl,
+            afterPhotoUrl: existing?.afterPhotoUrl || '',
+            result: existing?.result || '',
+          });
+        })
+    )
 
   return [...derivedItems, ...manualItems];
 }

@@ -44,6 +44,7 @@ interface ContentItemsSectionProps {
   busy: boolean;
   styles: Record<string, string>;
   items: SafetyContentItem[];
+  canDelete: boolean;
   onCreate: (input: {
     content_type: SafetyContentItem['content_type'];
     title: string;
@@ -65,11 +66,11 @@ interface ContentItemsSectionProps {
     effective_to?: string | null;
     is_active?: boolean;
   }>) => Promise<void>;
-  onDeactivate: (id: string) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
 }
 
 export default function ContentItemsSection(props: ContentItemsSectionProps) {
-  const { busy, styles, items, onCreate, onUpdate, onDeactivate } = props;
+  const { busy, styles, items, canDelete, onCreate, onUpdate, onDelete } = props;
   const [editingId, setEditingId] = useState<string | null>(null);
   const [activeType, setActiveType] = useState<SafetyContentItem['content_type'] | 'all'>('all');
   const [query, setQuery] = useState('');
@@ -204,6 +205,15 @@ export default function ContentItemsSection(props: ContentItemsSectionProps) {
     closeModal();
   };
 
+  const handleDeleteContentItem = async (item: SafetyContentItem) => {
+    const confirmed = window.confirm(
+      `'${item.title}' 콘텐츠를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`
+    );
+
+    if (!confirmed) return;
+    await onDelete(item.id);
+  };
+
   return (
     <section className={`${styles.sectionCard} ${styles.listSectionCard}`}>
       <div className={styles.sectionHeader}>
@@ -292,16 +302,14 @@ export default function ContentItemsSection(props: ContentItemsSectionProps) {
                                   if (!busy) openEdit(item);
                                 },
                               },
-                              ...(item.is_active
-                                ? [
-                                    {
-                                      label: '비활성화',
-                                      tone: 'danger' as const,
-                                      onSelect: () => {
-                                        if (!busy) void onDeactivate(item.id);
-                                      },
+                              ...(canDelete
+                                ? [{
+                                    label: '삭제',
+                                    tone: 'danger' as const,
+                                    onSelect: () => {
+                                      if (!busy) void handleDeleteContentItem(item);
                                     },
-                                  ]
+                                  }]
                                 : []),
                             ]}
                           />

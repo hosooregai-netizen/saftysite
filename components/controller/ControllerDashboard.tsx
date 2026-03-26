@@ -16,6 +16,7 @@ import OverviewPanel from './OverviewPanel';
 import SitesSection from './SitesSection';
 import UsersSection from './UsersSection';
 import {
+  canDeleteControllerCrud,
   CONTROLLER_SECTIONS,
   getControllerSectionHref,
   parseControllerSectionKey,
@@ -37,6 +38,7 @@ export default function ControllerDashboard({
   const router = useRouter();
   const searchParams = useSearchParams();
   const busy = dashboard.isLoading || dashboard.isMutating;
+  const canDeleteCrud = canDeleteControllerCrud(currentUser.role);
   const activeSection =
     parseControllerSectionKey(searchParams.get('section')) ?? 'overview';
 
@@ -57,10 +59,10 @@ export default function ControllerDashboard({
     await refreshMasterData();
   };
 
-  const deactivateContentItem = async (
-    ...args: Parameters<typeof dashboard.deactivateContentItem>
+  const deleteContentItem = async (
+    ...args: Parameters<typeof dashboard.deleteContentItem>
   ) => {
-    await dashboard.deactivateContentItem(...args);
+    await dashboard.deleteContentItem(...args);
     await refreshMasterData();
   };
 
@@ -77,7 +79,8 @@ export default function ControllerDashboard({
             users={dashboard.data.users}
             onCreate={dashboard.createUser}
             onSaveEdit={dashboard.saveUserEdit}
-            onDeactivate={dashboard.deactivateUser}
+            onDelete={dashboard.deleteUser}
+            canDelete={canDeleteCrud}
           />
         );
       case 'headquarters':
@@ -88,7 +91,8 @@ export default function ControllerDashboard({
             headquarters={dashboard.data.headquarters}
             onCreate={dashboard.createHeadquarter}
             onUpdate={dashboard.updateHeadquarter}
-            onDeactivate={dashboard.deactivateHeadquarter}
+            onDelete={dashboard.deleteHeadquarter}
+            canDelete={canDeleteCrud}
           />
         );
       case 'sites':
@@ -102,8 +106,10 @@ export default function ControllerDashboard({
             users={dashboard.data.users}
             onCreate={dashboard.createSite}
             onUpdate={dashboard.updateSite}
-            onDeactivate={dashboard.deactivateSite}
+            onDelete={dashboard.deleteSite}
+            canDelete={canDeleteCrud}
             onAssignFieldAgent={dashboard.assignFieldAgentToSite}
+            onUnassignFieldAgent={dashboard.unassignFieldAgentFromSite}
           />
         );
       case 'content':
@@ -114,7 +120,8 @@ export default function ControllerDashboard({
             items={dashboard.data.contentItems}
             onCreate={createContentItem}
             onUpdate={updateContentItem}
-            onDeactivate={deactivateContentItem}
+            onDelete={deleteContentItem}
+            canDelete={canDeleteCrud}
           />
         );
       default:

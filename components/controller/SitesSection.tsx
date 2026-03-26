@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useDeferredValue, useMemo, useState } from 'react';
 import AppModal from '@/components/ui/AppModal';
 import ActionMenu from '@/components/ui/ActionMenu';
@@ -21,6 +20,7 @@ interface SitesSectionProps {
   headquarters: SafetyHeadquarter[];
   sites: SafetySite[];
   users: SafetyUser[];
+  canDelete: boolean;
   onCreate: (input: {
     headquarter_id: string;
     site_name: string;
@@ -49,8 +49,9 @@ interface SitesSectionProps {
     status?: 'planned' | 'active' | 'closed';
     memo?: string | null;
   }>) => Promise<void>;
-  onDeactivate: (id: string) => Promise<void>;
-  onAssignFieldAgent: (siteId: string, userId: string | null) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
+  onAssignFieldAgent: (siteId: string, userId: string) => Promise<void>;
+  onUnassignFieldAgent: (siteId: string, userId: string) => Promise<void>;
 }
 
 const EMPTY_FORM = {
@@ -68,6 +69,18 @@ const EMPTY_FORM = {
   memo: '',
 };
 
+function formatAssignedUsers(users: SafetyUser[]) {
+  if (users.length === 0) return '-';
+  return users.map((user) => user.name).join(', ');
+}
+
+function formatAssignedUserDetails(users: SafetyUser[]) {
+  if (users.length === 0) return '배정 정보 없음';
+  return users
+    .map((user) => [user.position || '직급 미입력', user.organization_name || '소속 미입력'].join(' · '))
+    .join(' / ');
+}
+
 export default function SitesSection(props: SitesSectionProps) {
   const {
     assignments,
@@ -76,10 +89,12 @@ export default function SitesSection(props: SitesSectionProps) {
     headquarters,
     sites,
     users,
+    canDelete,
     onCreate,
     onUpdate,
-    onDeactivate,
+    onDelete,
     onAssignFieldAgent,
+    onUnassignFieldAgent,
   } = props;
   const [editingId, setEditingId] = useState<string | null>(null);
   const [assignmentSiteId, setAssignmentSiteId] = useState<string | null>(null);
@@ -89,28 +104,39 @@ export default function SitesSection(props: SitesSectionProps) {
   const [form, setForm] = useState(EMPTY_FORM);
   const isOpen = editingId !== null;
   const assignmentSite = sites.find((site) => site.id === assignmentSiteId) || null;
-  const currentAssignment =
-    assignments.find((assignment) => assignment.site_id === assignmentSiteId && assignment.is_active) || null;
   const usersById = useMemo(() => new Map(users.map((user) => [user.id, user])), [users]);
-  const activeAssignmentBySiteId = useMemo(() => {
-    const next = new Map<string, SafetyAssignment>();
+  const activeAssignmentsBySiteId = useMemo(() => {
+    const next = new Map<string, SafetyAssignment[]>();
     assignments.forEach((assignment) => {
-      if (assignment.is_active) next.set(assignment.site_id, assignment);
+      if (!assignment.is_active) return;
+      const current = next.get(assignment.site_id) ?? [];
+      current.push(assignment);
+      next.set(assignment.site_id, current);
     });
     return next;
   }, [assignments]);
+  const currentAssignments = assignmentSiteId
+    ? activeAssignmentsBySiteId.get(assignmentSiteId) ?? []
+    : [];
   const deferredQuery = useDeferredValue(query);
   const filteredSites = useMemo(() => {
     const normalizedQuery = deferredQuery.trim().toLowerCase();
     return sites.filter((site) => {
-      const siteAssignment = activeAssignmentBySiteId.get(site.id) || null;
-      const assignedUser =
-        (siteAssignment ? usersById.get(siteAssignment.user_id) : null) ||
-        (site.assigned_user ? usersById.get(site.assigned_user.id) : null) ||
-        null;
+      const siteAssignments = activeAssignmentsBySiteId.get(site.id) ?? [];
+      const assignedUsers = siteAssignments
+        .map((assignment) => usersById.get(assignment.user_id))
+        .filter((user): user is SafetyUser => Boolean(user));
+      const fallbackAssignedUser =
+        assignedUsers.length === 0 && site.assigned_user
+          ? usersById.get(site.assigned_user.id) ?? null
+          : null;
+      const allAssignedNames = assignedUsers.map((user) => user.name);
+
+      if (fallbackAssignedUser) allAssignedNames.push(fallbackAssignedUser.name);
       if (statusFilter !== 'all' && site.status !== statusFilter) return false;
-      if (showUnassignedOnly && assignedUser) return false;
+      if (showUnassignedOnly && siteAssignments.length > 0) return false;
       if (!normalizedQuery) return true;
+
       const haystack = [
         site.site_name,
         site.site_code ?? '',
@@ -118,13 +144,13 @@ export default function SitesSection(props: SitesSectionProps) {
         site.site_address ?? '',
         site.manager_name ?? '',
         site.headquarter_detail?.name ?? site.headquarter?.name ?? '',
-        assignedUser?.name ?? '',
+        allAssignedNames.join(' '),
       ]
         .join(' ')
         .toLowerCase();
       return haystack.includes(normalizedQuery);
     });
-  }, [activeAssignmentBySiteId, deferredQuery, showUnassignedOnly, sites, statusFilter, usersById]);
+  }, [activeAssignmentsBySiteId, deferredQuery, showUnassignedOnly, sites, statusFilter, usersById]);
 
   const openCreate = () => {
     setEditingId('create');
@@ -178,6 +204,15 @@ export default function SitesSection(props: SitesSectionProps) {
     closeModal();
   };
 
+  const handleDeleteSite = async (site: SafetySite) => {
+    const confirmed = window.confirm(
+      `'${site.site_name}' 현장을 삭제하시겠습니까?\n연결된 현장 배정도 함께 정리되며, 이 작업은 되돌릴 수 없습니다.`
+    );
+
+    if (!confirmed) return;
+    await onDelete(site.id);
+  };
+
   return (
     <section className={`${styles.sectionCard} ${styles.listSectionCard}`}>
       <div className={styles.sectionHeader}>
@@ -186,7 +221,14 @@ export default function SitesSection(props: SitesSectionProps) {
         </div>
         <div className={styles.sectionHeaderActions}>
           <span className="app-chip">표시 {filteredSites.length} / 전체 {sites.length}개</span>
-          <button type="button" className="app-button app-button-primary" onClick={openCreate} disabled={busy}>현장 추가</button>
+          <button
+            type="button"
+            className="app-button app-button-primary"
+            onClick={openCreate}
+            disabled={busy}
+          >
+            현장 추가
+          </button>
         </div>
       </div>
 
@@ -198,13 +240,28 @@ export default function SitesSection(props: SitesSectionProps) {
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
-          <button type="button" className={`${styles.filterButton} ${statusFilter === 'all' ? styles.filterButtonActive : ''}`} onClick={() => setStatusFilter('all')}>전체 상태</button>
+          <button
+            type="button"
+            className={`${styles.filterButton} ${statusFilter === 'all' ? styles.filterButtonActive : ''}`}
+            onClick={() => setStatusFilter('all')}
+          >
+            전체 상태
+          </button>
           {SITE_STATUS_OPTIONS.map((option) => (
-            <button key={option.value} type="button" className={`${styles.filterButton} ${statusFilter === option.value ? styles.filterButtonActive : ''}`} onClick={() => setStatusFilter(option.value)}>
+            <button
+              key={option.value}
+              type="button"
+              className={`${styles.filterButton} ${statusFilter === option.value ? styles.filterButtonActive : ''}`}
+              onClick={() => setStatusFilter(option.value)}
+            >
               {option.label}
             </button>
           ))}
-          <button type="button" className={`${styles.filterButton} ${showUnassignedOnly ? styles.filterButtonActive : ''}`} onClick={() => setShowUnassignedOnly((current) => !current)}>
+          <button
+            type="button"
+            className={`${styles.filterButton} ${showUnassignedOnly ? styles.filterButtonActive : ''}`}
+            onClick={() => setShowUnassignedOnly((current) => !current)}
+          >
             미배정만
           </button>
         </div>
@@ -228,64 +285,86 @@ export default function SitesSection(props: SitesSectionProps) {
                 </thead>
                 <tbody>
                   {filteredSites.map((site) => {
-                    const siteAssignment = activeAssignmentBySiteId.get(site.id) || null;
-                    const assignedUser =
-                      (siteAssignment ? usersById.get(siteAssignment.user_id) : null) ||
-                      (site.assigned_user ? usersById.get(site.assigned_user.id) : null) ||
-                      null;
+                    const siteAssignments = activeAssignmentsBySiteId.get(site.id) ?? [];
+                    const assignedUsers = siteAssignments
+                      .map((assignment) => usersById.get(assignment.user_id))
+                      .filter((user): user is SafetyUser => Boolean(user));
+                    const fallbackAssignedUsers =
+                      assignedUsers.length === 0 && site.assigned_user
+                        ? [usersById.get(site.assigned_user.id) ?? site.assigned_user].filter(Boolean)
+                        : [];
+
                     return (
-                    <tr key={site.id}>
-                      <td>
-                        <div className={styles.tablePrimary}>{site.site_name}</div>
-                        <div className={styles.tableSecondary}>{site.site_address || '주소 미입력'}</div>
-                      </td>
-                      <td>{site.headquarter_detail?.name || site.headquarter?.name || '-'}</td>
-                      <td>{site.management_number || '-'}</td>
-                      <td>
-                        <div className={styles.tablePrimary}>{site.manager_name || '-'}</div>
-                        <div className={styles.tableSecondary}>{site.manager_phone || '연락처 미입력'}</div>
-                      </td>
-                      <td>
-                        <div className={styles.tablePrimary}>
-                          {assignedUser?.name || site.assigned_user?.name || '-'}
-                        </div>
-                        <div className={styles.tableSecondary}>
-                          {assignedUser
-                            ? [assignedUser.position || '직급 미입력', assignedUser.organization_name || '소속 미입력'].join(' · ')
-                            : '배정 정보 없음'}
-                        </div>
-                      </td>
-                      <td>{site.project_start_date || '-'} ~ {site.project_end_date || '-'}</td>
-                      <td>{SITE_STATUS_LABELS[site.status as keyof typeof SITE_STATUS_LABELS] || site.status}</td>
-                      <td>
-                        <div className={styles.tableActionMenuWrap}>
-                          <ActionMenu
-                            label={`${site.site_name} 현장 작업 메뉴 열기`}
-                            items={[
-                              { label: '보고서', href: `/sites/${encodeURIComponent(site.id)}` },
-                              {
-                                label: '지도요원 배정',
-                                onSelect: () => {
-                                  if (!busy) setAssignmentSiteId(site.id);
+                      <tr key={site.id}>
+                        <td>
+                          <div className={styles.tablePrimary}>{site.site_name}</div>
+                          <div className={styles.tableSecondary}>
+                            {site.site_address || '주소 미입력'}
+                          </div>
+                        </td>
+                        <td>{site.headquarter_detail?.name || site.headquarter?.name || '-'}</td>
+                        <td>{site.management_number || '-'}</td>
+                        <td>
+                          <div className={styles.tablePrimary}>{site.manager_name || '-'}</div>
+                          <div className={styles.tableSecondary}>
+                            {site.manager_phone || '연락처 미입력'}
+                          </div>
+                        </td>
+                        <td>
+                          <div className={styles.tablePrimary}>
+                            {assignedUsers.length > 0
+                              ? formatAssignedUsers(assignedUsers)
+                              : fallbackAssignedUsers.length > 0
+                                ? fallbackAssignedUsers.map((user) => user.name).join(', ')
+                                : '-'}
+                          </div>
+                          <div className={styles.tableSecondary}>
+                            {assignedUsers.length > 0
+                              ? formatAssignedUserDetails(assignedUsers)
+                              : '배정 정보 없음'}
+                          </div>
+                        </td>
+                        <td>
+                          {site.project_start_date || '-'} ~ {site.project_end_date || '-'}
+                        </td>
+                        <td>
+                          {SITE_STATUS_LABELS[site.status as keyof typeof SITE_STATUS_LABELS] ||
+                            site.status}
+                        </td>
+                        <td>
+                          <div className={styles.tableActionMenuWrap}>
+                            <ActionMenu
+                              label={`${site.site_name} 현장 작업 메뉴 열기`}
+                              items={[
+                                { label: '보고서', href: `/sites/${encodeURIComponent(site.id)}` },
+                                {
+                                  label: '지도요원 배정',
+                                  onSelect: () => {
+                                    if (!busy) setAssignmentSiteId(site.id);
+                                  },
                                 },
-                              },
-                              { label: '수정', onSelect: () => { if (!busy) openEdit(site); } },
-                              ...(site.status !== 'closed'
-                                ? [
-                                    {
-                                      label: '종료',
-                                      tone: 'danger' as const,
-                                      onSelect: () => {
-                                        if (!busy) void onDeactivate(site.id);
+                                {
+                                  label: '수정',
+                                  onSelect: () => {
+                                    if (!busy) openEdit(site);
+                                  },
+                                },
+                                ...(canDelete
+                                  ? [
+                                      {
+                                        label: '삭제',
+                                        tone: 'danger' as const,
+                                        onSelect: () => {
+                                          if (!busy) void handleDeleteSite(site);
+                                        },
                                       },
-                                    },
-                                  ]
-                                : []),
-                            ]}
-                          />
-                        </div>
-                      </td>
-                    </tr>
+                                    ]
+                                  : []),
+                              ]}
+                            />
+                          </div>
+                        </td>
+                      </tr>
                     );
                   })}
                 </tbody>
@@ -302,24 +381,149 @@ export default function SitesSection(props: SitesSectionProps) {
         onClose={closeModal}
         actions={
           <>
-            <button type="button" className="app-button app-button-secondary" onClick={closeModal} disabled={busy}>취소</button>
-            <button type="button" className="app-button app-button-primary" onClick={() => void submit()} disabled={busy}>{editingId === 'create' ? '생성' : '저장'}</button>
+            <button
+              type="button"
+              className="app-button app-button-secondary"
+              onClick={closeModal}
+              disabled={busy}
+            >
+              취소
+            </button>
+            <button
+              type="button"
+              className="app-button app-button-primary"
+              onClick={() => void submit()}
+              disabled={busy}
+            >
+              {editingId === 'create' ? '생성' : '저장'}
+            </button>
           </>
         }
       >
         <div className={styles.modalGrid}>
-          <label className={styles.modalField}><span className={styles.label}>사업장</span><select className="app-select" value={form.headquarter_id} onChange={(e) => setForm({ ...form, headquarter_id: e.target.value })} disabled={busy}><option value="">선택</option>{headquarters.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-          <label className={styles.modalField}><span className={styles.label}>현장명</span><input className="app-input" value={form.site_name} onChange={(e) => setForm({ ...form, site_name: e.target.value })} disabled={busy} /></label>
-          <label className={styles.modalField}><span className={styles.label}>현장 코드</span><input className="app-input" value={form.site_code} onChange={(e) => setForm({ ...form, site_code: e.target.value })} disabled={busy} /></label>
-          <label className={styles.modalField}><span className={styles.label}>관리번호</span><input className="app-input" value={form.management_number} onChange={(e) => setForm({ ...form, management_number: e.target.value })} disabled={busy} /></label>
-          <label className={styles.modalField}><span className={styles.label}>공사 시작일</span><input className="app-input" type="date" value={form.project_start_date} onChange={(e) => setForm({ ...form, project_start_date: e.target.value })} disabled={busy} /></label>
-          <label className={styles.modalField}><span className={styles.label}>공사 종료일</span><input className="app-input" type="date" value={form.project_end_date} onChange={(e) => setForm({ ...form, project_end_date: e.target.value })} disabled={busy} /></label>
-          <label className={styles.modalField}><span className={styles.label}>공사 금액</span><input className="app-input" value={form.project_amount} onChange={(e) => setForm({ ...form, project_amount: e.target.value })} disabled={busy} /></label>
-          <label className={styles.modalField}><span className={styles.label}>상태</span><select className="app-select" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as typeof form.status })} disabled={busy}>{SITE_STATUS_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
-          <label className={styles.modalField}><span className={styles.label}>현장 책임자</span><input className="app-input" value={form.manager_name} onChange={(e) => setForm({ ...form, manager_name: e.target.value })} disabled={busy} /></label>
-          <label className={styles.modalField}><span className={styles.label}>책임자 연락처</span><input className="app-input" value={form.manager_phone} onChange={(e) => setForm({ ...form, manager_phone: e.target.value })} disabled={busy} /></label>
-          <label className={styles.modalFieldWide}><span className={styles.label}>현장 주소</span><input className="app-input" value={form.site_address} onChange={(e) => setForm({ ...form, site_address: e.target.value })} disabled={busy} /></label>
-          <label className={styles.modalFieldWide}><span className={styles.label}>메모</span><textarea className="app-textarea" value={form.memo} onChange={(e) => setForm({ ...form, memo: e.target.value })} disabled={busy} /></label>
+          <label className={styles.modalField}>
+            <span className={styles.label}>사업장</span>
+            <select
+              className="app-select"
+              value={form.headquarter_id}
+              onChange={(e) => setForm({ ...form, headquarter_id: e.target.value })}
+              disabled={busy}
+            >
+              <option value="">선택</option>
+              {headquarters.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className={styles.modalField}>
+            <span className={styles.label}>현장명</span>
+            <input
+              className="app-input"
+              value={form.site_name}
+              onChange={(e) => setForm({ ...form, site_name: e.target.value })}
+              disabled={busy}
+            />
+          </label>
+          <label className={styles.modalField}>
+            <span className={styles.label}>현장 코드</span>
+            <input
+              className="app-input"
+              value={form.site_code}
+              onChange={(e) => setForm({ ...form, site_code: e.target.value })}
+              disabled={busy}
+            />
+          </label>
+          <label className={styles.modalField}>
+            <span className={styles.label}>관리번호</span>
+            <input
+              className="app-input"
+              value={form.management_number}
+              onChange={(e) => setForm({ ...form, management_number: e.target.value })}
+              disabled={busy}
+            />
+          </label>
+          <label className={styles.modalField}>
+            <span className={styles.label}>공사 시작일</span>
+            <input
+              className="app-input"
+              type="date"
+              value={form.project_start_date}
+              onChange={(e) => setForm({ ...form, project_start_date: e.target.value })}
+              disabled={busy}
+            />
+          </label>
+          <label className={styles.modalField}>
+            <span className={styles.label}>공사 종료일</span>
+            <input
+              className="app-input"
+              type="date"
+              value={form.project_end_date}
+              onChange={(e) => setForm({ ...form, project_end_date: e.target.value })}
+              disabled={busy}
+            />
+          </label>
+          <label className={styles.modalField}>
+            <span className={styles.label}>공사 금액</span>
+            <input
+              className="app-input"
+              value={form.project_amount}
+              onChange={(e) => setForm({ ...form, project_amount: e.target.value })}
+              disabled={busy}
+            />
+          </label>
+          <label className={styles.modalField}>
+            <span className={styles.label}>상태</span>
+            <select
+              className="app-select"
+              value={form.status}
+              onChange={(e) => setForm({ ...form, status: e.target.value as typeof form.status })}
+              disabled={busy}
+            >
+              {SITE_STATUS_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className={styles.modalField}>
+            <span className={styles.label}>현장 책임자</span>
+            <input
+              className="app-input"
+              value={form.manager_name}
+              onChange={(e) => setForm({ ...form, manager_name: e.target.value })}
+              disabled={busy}
+            />
+          </label>
+          <label className={styles.modalField}>
+            <span className={styles.label}>책임자 연락처</span>
+            <input
+              className="app-input"
+              value={form.manager_phone}
+              onChange={(e) => setForm({ ...form, manager_phone: e.target.value })}
+              disabled={busy}
+            />
+          </label>
+          <label className={styles.modalFieldWide}>
+            <span className={styles.label}>현장 주소</span>
+            <input
+              className="app-input"
+              value={form.site_address}
+              onChange={(e) => setForm({ ...form, site_address: e.target.value })}
+              disabled={busy}
+            />
+          </label>
+          <label className={styles.modalFieldWide}>
+            <span className={styles.label}>메모</span>
+            <textarea
+              className="app-textarea"
+              value={form.memo}
+              onChange={(e) => setForm({ ...form, memo: e.target.value })}
+              disabled={busy}
+            />
+          </label>
         </div>
       </AppModal>
 
@@ -329,15 +533,13 @@ export default function SitesSection(props: SitesSectionProps) {
         styles={styles}
         site={assignmentSite}
         users={users}
-        currentAssignment={currentAssignment}
+        currentAssignments={currentAssignments}
         onClose={() => setAssignmentSiteId(null)}
         onAssign={async (siteId, userId) => {
           await onAssignFieldAgent(siteId, userId);
-          setAssignmentSiteId(null);
         }}
-        onClear={async (siteId) => {
-          await onAssignFieldAgent(siteId, null);
-          setAssignmentSiteId(null);
+        onClear={async (siteId, userId) => {
+          await onUnassignFieldAgent(siteId, userId);
         }}
       />
     </section>

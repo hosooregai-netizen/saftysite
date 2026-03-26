@@ -10,6 +10,7 @@ interface HeadquartersSectionProps {
   busy: boolean;
   styles: Record<string, string>;
   headquarters: SafetyHeadquarter[];
+  canDelete: boolean;
   onCreate: (input: {
     name: string;
     business_registration_no?: string | null;
@@ -32,7 +33,7 @@ interface HeadquartersSectionProps {
     memo?: string | null;
     is_active?: boolean;
   }>) => Promise<void>;
-  onDeactivate: (id: string) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
 }
 
 const EMPTY_FORM = {
@@ -48,7 +49,7 @@ const EMPTY_FORM = {
 };
 
 export default function HeadquartersSection(props: HeadquartersSectionProps) {
-  const { busy, styles, headquarters, onCreate, onUpdate, onDeactivate } = props;
+  const { busy, styles, headquarters, canDelete, onCreate, onUpdate, onDelete } = props;
   const [editingId, setEditingId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [form, setForm] = useState(EMPTY_FORM);
@@ -116,6 +117,15 @@ export default function HeadquartersSection(props: HeadquartersSectionProps) {
     closeModal();
   };
 
+  const handleDeleteHeadquarter = async (item: SafetyHeadquarter) => {
+    const confirmed = window.confirm(
+      `'${item.name}' 사업장을 삭제하시겠습니까?\n연결된 현장과 현장 배정도 함께 삭제되며, 이 작업은 되돌릴 수 없습니다.`
+    );
+
+    if (!confirmed) return;
+    await onDelete(item.id);
+  };
+
   return (
     <section className={`${styles.sectionCard} ${styles.listSectionCard}`}>
       <div className={styles.sectionHeader}>
@@ -175,16 +185,14 @@ export default function HeadquartersSection(props: HeadquartersSectionProps) {
                             label={`${item.name} 작업 메뉴 열기`}
                             items={[
                               { label: '수정', onSelect: () => { if (!busy) openEdit(item); } },
-                              ...(item.is_active
-                                ? [
-                                    {
-                                      label: '비활성화',
-                                      tone: 'danger' as const,
-                                      onSelect: () => {
-                                        if (!busy) void onDeactivate(item.id);
-                                      },
+                              ...(canDelete
+                                ? [{
+                                    label: '삭제',
+                                    tone: 'danger' as const,
+                                    onSelect: () => {
+                                      if (!busy) void handleDeleteHeadquarter(item);
                                     },
-                                  ]
+                                  }]
                                 : []),
                             ]}
                           />
