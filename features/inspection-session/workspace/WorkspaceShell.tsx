@@ -22,8 +22,11 @@ interface WorkspaceShellProps {
   documentError: string | null;
   isAdminView: boolean;
   isGeneratingDocument: boolean;
+  isGeneratingHwpx: boolean;
+  isGeneratingPdf: boolean;
   moveSection: (direction: -1 | 1) => void;
-  onGenerateDocument: () => void;
+  onGenerateHwpxDocument: () => void;
+  onGeneratePdfDocument: () => void;
   onLogout: () => void;
   onMetaChange: (field: keyof InspectionSession['meta'], value: string) => void;
   onSectionSelect: (key: InspectionSectionKey) => void;
@@ -43,8 +46,11 @@ export function WorkspaceShell({
   documentError,
   isAdminView,
   isGeneratingDocument,
+  isGeneratingHwpx,
+  isGeneratingPdf,
   moveSection,
-  onGenerateDocument,
+  onGenerateHwpxDocument,
+  onGeneratePdfDocument,
   onLogout,
   onMetaChange,
   onSectionSelect,
@@ -111,9 +117,12 @@ export function WorkspaceShell({
                 canMoveNext={canMoveNext}
                 canMovePrev={canMovePrev}
                 isGeneratingDocument={isGeneratingDocument}
+                isGeneratingHwpx={isGeneratingHwpx}
+                isGeneratingPdf={isGeneratingPdf}
                 isLastSection={!canMoveNext}
                 moveSection={moveSection}
-                onGenerateDocument={onGenerateDocument}
+                onGenerateHwpxDocument={onGenerateHwpxDocument}
+                onGeneratePdfDocument={onGeneratePdfDocument}
               />
             </div>
           </WorkerShellBody>
@@ -139,4 +148,3 @@ export function WorkspaceShell({
     </main>
   );
 }
-

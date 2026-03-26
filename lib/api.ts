@@ -73,6 +73,38 @@ export function saveBlobAsFile(blob: Blob, filename: string): void {
   }, 0);
 }
 
+export async function convertHwpxBlobToPdf(
+  hwpxBlob: Blob,
+  hwpxFilename: string,
+): Promise<{ blob: Blob; filename: string }> {
+  const formData = new FormData();
+
+  formData.append('file', hwpxBlob, hwpxFilename || 'inspection-report.hwpx');
+  formData.append('filename', hwpxFilename || 'inspection-report.hwpx');
+
+  const res = await fetch(`${API_BASE}/documents/inspection/pdf`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const errorBody = await parseApiResponse(res);
+    const message =
+      typeof errorBody === 'object' && errorBody && 'error' in errorBody
+        ? String(errorBody.error)
+        : res.statusText;
+
+    throw new Error(`PDF 변환 실패 (${res.status}): ${message}`);
+  }
+
+  return {
+    blob: await res.blob(),
+    filename: getDownloadFilenameFromDisposition(
+      res.headers.get('content-disposition')
+    ),
+  };
+}
+
 export async function fetchInspectionWordDocument(
   session: InspectionSession,
   siteSessions: InspectionSession[] = [session]
@@ -108,4 +140,3 @@ export async function fetchInspectionWordDocument(
     ),
   };
 }
-

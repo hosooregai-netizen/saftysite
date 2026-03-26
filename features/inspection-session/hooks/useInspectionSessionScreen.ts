@@ -10,7 +10,7 @@ import {
   touchDocumentMeta,
 } from '@/constants/inspectionSession';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
-import { saveBlobAsFile } from '@/lib/api';
+import { convertHwpxBlobToPdf, saveBlobAsFile } from '@/lib/api';
 import { generateInspectionHwpxBlob } from '@/lib/documents/inspection/hwpxClient';
 import { getAdminSectionHref, isAdminUserRole } from '@/lib/admin';
 import type {
@@ -40,7 +40,8 @@ export function useInspectionSessionScreen(sessionId: string) {
     updateSession,
   } = useInspectionSessions();
   const [documentError, setDocumentError] = useState<string | null>(null);
-  const [isGeneratingDocument, setIsGeneratingDocument] = useState(false);
+  const [isGeneratingHwpx, setIsGeneratingHwpx] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const session = getSessionById(sessionId);
   const isAdminView = Boolean(currentUser && isAdminUserRole(currentUser.role));
@@ -142,33 +143,59 @@ export function useInspectionSessionScreen(sessionId: string) {
     updateSession(sessionId, (current) => ({ ...current, currentSection: key }));
   };
 
-  const generateDocument = async () => {
+  const buildHwpxDocument = async () => {
+    if (!session) return null;
+
+    await saveNow();
+    const generation = await generateInspectionHwpxBlob(session, derivedData.siteSessions);
+
+    if (generation.warnings.length > 0 || generation.deferred.length > 0) {
+      console.warn('HWPX generation warnings', {
+        deferred: generation.deferred,
+        sessionId: session.id,
+        warnings: generation.warnings,
+      });
+    }
+
+    return generation;
+  };
+
+  const generateHwpxDocument = async () => {
     if (!session) return;
 
     try {
       setDocumentError(null);
-      setIsGeneratingDocument(true);
-      await saveNow();
-      const { blob, filename, warnings, deferred } = await generateInspectionHwpxBlob(
-        session,
-        derivedData.siteSessions,
-      );
+      setIsGeneratingHwpx(true);
+      const generation = await buildHwpxDocument();
+      if (!generation) return;
 
-      if (warnings.length > 0 || deferred.length > 0) {
-        console.warn('HWPX generation warnings', {
-          deferred,
-          sessionId: session.id,
-          warnings,
-        });
-      }
-
-      saveBlobAsFile(blob, filename);
+      saveBlobAsFile(generation.blob, generation.filename);
     } catch (error) {
       setDocumentError(
         error instanceof Error ? error.message : '문서 생성 중 오류가 발생했습니다.',
       );
     } finally {
-      setIsGeneratingDocument(false);
+      setIsGeneratingHwpx(false);
+    }
+  };
+
+  const generatePdfDocument = async () => {
+    if (!session) return;
+
+    try {
+      setDocumentError(null);
+      setIsGeneratingPdf(true);
+      const generation = await buildHwpxDocument();
+      if (!generation) return;
+
+      const pdf = await convertHwpxBlobToPdf(generation.blob, generation.filename);
+      saveBlobAsFile(pdf.blob, pdf.filename);
+    } catch (error) {
+      setDocumentError(
+        error instanceof Error ? error.message : 'PDF 생성 중 오류가 발생했습니다.',
+      );
+    } finally {
+      setIsGeneratingPdf(false);
     }
   };
 
@@ -182,10 +209,13 @@ export function useInspectionSessionScreen(sessionId: string) {
     currentUserName: currentUser?.name,
     derivedData,
     documentError,
-    generateDocument,
+    generateHwpxDocument,
+    generatePdfDocument,
     isAdminView,
     isAuthenticated,
-    isGeneratingDocument,
+    isGeneratingDocument: isGeneratingHwpx || isGeneratingPdf,
+    isGeneratingHwpx,
+    isGeneratingPdf,
     isReady,
     isSaving,
     login,
@@ -199,4 +229,3 @@ export function useInspectionSessionScreen(sessionId: string) {
     withFileData,
   };
 }
-

@@ -4,18 +4,24 @@ interface WorkspaceBottomBarProps {
   canMoveNext: boolean;
   canMovePrev: boolean;
   isGeneratingDocument: boolean;
+  isGeneratingHwpx: boolean;
+  isGeneratingPdf: boolean;
   isLastSection: boolean;
   moveSection: (direction: -1 | 1) => void;
-  onGenerateDocument: () => void;
+  onGenerateHwpxDocument: () => void;
+  onGeneratePdfDocument: () => void;
 }
 
 export function WorkspaceBottomBar({
   canMoveNext,
   canMovePrev,
   isGeneratingDocument,
+  isGeneratingHwpx,
+  isGeneratingPdf,
   isLastSection,
   moveSection,
-  onGenerateDocument,
+  onGenerateHwpxDocument,
+  onGeneratePdfDocument,
 }: WorkspaceBottomBarProps) {
   return (
     <footer className={styles.bottomBar}>
@@ -29,14 +35,24 @@ export function WorkspaceBottomBar({
           이전 문서
         </button>
         {isLastSection ? (
-          <button
-            type="button"
-            className="app-button app-button-primary"
-            onClick={onGenerateDocument}
-            disabled={isGeneratingDocument}
-          >
-            {isGeneratingDocument ? '문서 생성 중...' : '보고서 생성하기'}
-          </button>
+          <>
+            <button
+              type="button"
+              className="app-button app-button-secondary"
+              onClick={onGenerateHwpxDocument}
+              disabled={isGeneratingDocument}
+            >
+              {isGeneratingHwpx ? '한글 파일 생성 중...' : '한글 파일 생성'}
+            </button>
+            <button
+              type="button"
+              className="app-button app-button-primary"
+              onClick={onGeneratePdfDocument}
+              disabled={isGeneratingDocument}
+            >
+              {isGeneratingPdf ? 'PDF 생성 중...' : 'PDF 보고서 생성'}
+            </button>
+          </>
         ) : (
           <button
             type="button"
@@ -51,4 +67,3 @@ export function WorkspaceBottomBar({
     </footer>
   );
 }
-

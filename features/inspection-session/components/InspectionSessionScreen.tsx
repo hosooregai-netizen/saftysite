@@ -54,8 +54,11 @@ export function InspectionSessionScreen({ sessionId }: InspectionSessionScreenPr
       documentError={screen.documentError}
       isAdminView={screen.isAdminView}
       isGeneratingDocument={screen.isGeneratingDocument}
+      isGeneratingHwpx={screen.isGeneratingHwpx}
+      isGeneratingPdf={screen.isGeneratingPdf}
       moveSection={screen.moveSection}
-      onGenerateDocument={() => void screen.generateDocument()}
+      onGenerateHwpxDocument={() => void screen.generateHwpxDocument()}
+      onGeneratePdfDocument={() => void screen.generatePdfDocument()}
       onLogout={screen.logout}
       onMetaChange={screen.changeMetaField}
       onSectionSelect={screen.selectSection}
@@ -68,4 +71,3 @@ export function InspectionSessionScreen({ sessionId }: InspectionSessionScreenPr
     />
   );
 }
-
