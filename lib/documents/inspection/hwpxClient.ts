@@ -1822,6 +1822,30 @@ function countSelfClosingTagOccurrences(xml: string, tagName: string): number {
   return Array.from(xml.matchAll(new RegExp(`<${tagName}\\b[^>]*\\/>`, 'g'))).length;
 }
 
+function ensureUniquePictureObjectIds(sectionXml: string): string {
+  const pictureTagPattern = /<hp:pic\b[^>]*>/g;
+  const currentPictureIds = Array.from(
+    sectionXml.matchAll(/<hp:pic\b[^>]*\bid="(\d+)"/g),
+    (match) => Number.parseInt(match[1], 10),
+  ).filter(Number.isFinite);
+  const currentInstanceIds = Array.from(
+    sectionXml.matchAll(/<hp:pic\b[^>]*\binstid="(\d+)"/g),
+    (match) => Number.parseInt(match[1], 10),
+  ).filter(Number.isFinite);
+  let nextPictureId = Math.max(2110926000, ...currentPictureIds, 0);
+  let nextInstanceId = Math.max(1037185000, ...currentInstanceIds, 0);
+
+  return sectionXml.replace(pictureTagPattern, (pictureTag) => {
+    nextPictureId += 1;
+    nextInstanceId += 1;
+
+    let nextTag = pictureTag;
+    nextTag = nextTag.replace(/\bid="\d+"/, `id="${nextPictureId}"`);
+    nextTag = nextTag.replace(/\binstid="\d+"/, `instid="${nextInstanceId}"`);
+    return nextTag;
+  });
+}
+
 function validateGeneratedHwpxOrThrow(zip: JSZip, sectionXml: string, contentHpf: string): void {
   const issues: string[] = [];
   const unresolvedTokens = findUnresolvedTemplateTokens(sectionXml);
@@ -2610,6 +2634,7 @@ export async function generateInspectionHwpxBlob(
     }
   }
 
+  boundSectionXml = ensureUniquePictureObjectIds(boundSectionXml);
   zip.file('Contents/section0.xml', boundSectionXml, buildZipWriteOptions(sectionEntry, 'DEFLATE'));
   removeDirectoryEntries(zip);
   await preserveStoredPackageEntries(zip);
