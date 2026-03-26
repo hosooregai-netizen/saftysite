@@ -49,3 +49,4 @@ export const MOCK_DATA: HazardReportItem[] = [
     implementationPeriod: '2일 이내',
   },
 ];
+

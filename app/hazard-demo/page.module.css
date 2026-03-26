@@ -27,3 +27,4 @@
 .reportViewportInner {
   @apply min-w-full overflow-x-auto overflow-y-visible pb-4 print:overflow-visible;
 }
+

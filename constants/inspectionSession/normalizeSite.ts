@@ -43,3 +43,4 @@ export function normalizeInspectionSite(raw: unknown): InspectionSite {
     updatedAt: normalizeTimestamp(source.updatedAt, timestamp),
   };
 }
+

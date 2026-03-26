@@ -20,3 +20,4 @@ export function clearSafetyAuthToken(): void {
   if (typeof window === 'undefined') return;
   window.localStorage.removeItem(SAFETY_AUTH_TOKEN_KEY);
 }
+

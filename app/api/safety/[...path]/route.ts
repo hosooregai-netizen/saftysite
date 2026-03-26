@@ -46,3 +46,4 @@ export function DELETE(request: Request, context: SafetyRouteContext): Promise<R
 export function HEAD(request: Request, context: SafetyRouteContext): Promise<Response> {
   return handleRequest(request, context);
 }
+

@@ -197,3 +197,4 @@ export interface SafetyUpsertReportInput {
   create_revision?: boolean;
   revision_reason?: 'autosave' | 'manual_save' | 'submit' | 'publish';
 }
+

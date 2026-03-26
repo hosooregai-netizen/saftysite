@@ -90,3 +90,4 @@ export function useHazardReports(): UseHazardReportsReturn {
     handleApplyDebugJson,
   };
 }
+

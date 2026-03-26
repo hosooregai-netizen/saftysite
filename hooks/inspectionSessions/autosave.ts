@@ -178,3 +178,4 @@ export function useInspectionSessionsAutosave(store: InspectionSessionsStore) {
 
   return { deleteSessionRemotely, flushDirtySessions, markSessionDirty, saveNow };
 }
+

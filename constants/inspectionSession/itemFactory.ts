@@ -146,3 +146,4 @@ export function padDocument12Activities(items: ActivityRecord[]): ActivityRecord
   }
   return list.slice(0, DOC12_ACTIVITY_GRID_SLOTS);
 }
+

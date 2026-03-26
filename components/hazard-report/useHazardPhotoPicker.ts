@@ -128,3 +128,4 @@ export function useHazardPhotoPicker({
     pickerModal,
   };
 }
+

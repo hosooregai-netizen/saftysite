@@ -42,13 +42,13 @@ export default function ActionMenu({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
   const [position, setPosition] = useState<MenuPosition>({
     top: 0,
     left: 0,
     minWidth: 148,
     origin: 'top',
   });
+  const canPortal = typeof document !== 'undefined';
 
   const updatePosition = () => {
     const trigger = triggerRef.current;
@@ -63,7 +63,7 @@ export default function ActionMenu({
     const preferredLeft = triggerRect.right - menuWidth;
     const left = Math.min(
       Math.max(VIEWPORT_GAP, preferredLeft),
-      viewportWidth - menuWidth - VIEWPORT_GAP
+      viewportWidth - menuWidth - VIEWPORT_GAP,
     );
 
     const spaceBelow = viewportHeight - triggerRect.bottom - VIEWPORT_GAP;
@@ -81,10 +81,6 @@ export default function ActionMenu({
       origin: shouldOpenUpward ? 'bottom' : 'top',
     });
   };
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   useLayoutEffect(() => {
     if (!isOpen) return;
@@ -147,7 +143,7 @@ export default function ActionMenu({
         </span>
       </button>
 
-      {isMounted && isOpen
+      {canPortal && isOpen
         ? createPortal(
             <div
               ref={menuRef}
@@ -186,12 +182,13 @@ export default function ActionMenu({
                   >
                     {item.label}
                   </button>
-                )
+                ),
               )}
             </div>,
-            document.body
+            document.body,
           )
         : null}
     </>
   );
 }
+

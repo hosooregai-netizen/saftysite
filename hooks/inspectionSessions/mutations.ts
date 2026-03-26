@@ -110,3 +110,4 @@ export function useInspectionSessionsMutations(
 
   return { createSession, createSite, deleteSessions, deleteSite, updateSession, updateSessions, updateSite };
 }
+

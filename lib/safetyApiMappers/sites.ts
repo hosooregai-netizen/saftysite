@@ -57,3 +57,4 @@ export function mapSafetySiteToInspectionSite(site: SafetySite): InspectionSite 
     updatedAt: site.updated_at,
   };
 }
+

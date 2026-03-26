@@ -69,3 +69,4 @@ export function extractArray(raw: unknown): unknown[] {
 export function toUnknownRecord(raw: unknown): UnknownRecord {
   return (raw && typeof raw === 'object' ? raw : {}) as UnknownRecord;
 }
+

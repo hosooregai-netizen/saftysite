@@ -96,3 +96,4 @@ export const CAUSATIVE_AGENT_LABELS = CAUSATIVE_AGENT_OPTIONS.reduce<Record<Caus
   },
   {} as Record<CausativeAgentKey, string>
 );
+

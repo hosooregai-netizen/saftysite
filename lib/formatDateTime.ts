@@ -8,3 +8,4 @@ export function formatDateTime(value: string | null, fallback = '기록 없음')
     minute: '2-digit',
   }).format(new Date(value));
 }
+

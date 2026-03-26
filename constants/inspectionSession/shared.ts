@@ -154,3 +154,4 @@ export function createChecklistQuestions(
     note: initial[index]?.note ?? '',
   }));
 }
+

@@ -102,3 +102,4 @@ export function getSessionProgress(session: InspectionSession): {
 
   return { completed, total, percentage: Math.round((completed / total) * 100) };
 }
+

@@ -14,7 +14,6 @@ import {
   createFatalAccidentMeasureItem,
   createFutureProcessRiskPlan,
   createMeasurementCheckItem,
-  createPreviousGuidanceFollowUpItem,
   createSafetyEducationRecord,
   createSiteScenePhoto,
 } from '@/constants/inspectionSession/itemFactory';
@@ -166,3 +165,4 @@ export function createInspectionSession(
     lastSavedAt: null,
   });
 }
+

@@ -148,3 +148,4 @@ export interface SafetyInfoItem {
   body: string;
   imageUrl: string;
 }
+

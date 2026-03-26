@@ -93,3 +93,4 @@ export async function requestSafetyApi<T>(
 
   return (await response.json()) as T;
 }
+

@@ -84,3 +84,4 @@ export function archiveSafetyReportByKey(
     token
   );
 }
+

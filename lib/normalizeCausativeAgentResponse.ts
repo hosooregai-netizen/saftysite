@@ -98,3 +98,4 @@ export async function normalizeCausativeAgentResponse(
     photoUrl: uploadedFile ? await fileToDataUrl(uploadedFile) : '',
   };
 }
+

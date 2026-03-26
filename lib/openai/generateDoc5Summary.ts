@@ -20,3 +20,4 @@ export async function generateDoc5SummaryWithOpenAi(input: Doc5SummaryPromptInpu
 }
 
 export { MAX_SUMMARY_CHARS };
+

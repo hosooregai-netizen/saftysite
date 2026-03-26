@@ -1,5 +1,3 @@
-'use client';
-
 import type {
   ChecklistQuestion,
   InspectionDocumentSource,
@@ -57,3 +55,4 @@ export interface ChecklistSectionProps {
   items: ChecklistQuestion[];
   onChange: (itemId: string, patch: Partial<ChecklistQuestion>) => void;
 }
+

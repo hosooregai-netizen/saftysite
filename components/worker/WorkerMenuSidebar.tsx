@@ -97,3 +97,4 @@ export default function WorkerMenuSidebar({ children }: { children: ReactNode })
     </aside>
   );
 }
+

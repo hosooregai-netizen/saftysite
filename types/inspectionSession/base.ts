@@ -92,3 +92,4 @@ export type NotificationMethod =
 export type AccidentOccurrence = 'yes' | 'no' | '';
 
 export type ChecklistRating = 'good' | 'average' | 'poor' | '';
+

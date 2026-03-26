@@ -135,3 +135,4 @@ export function migrateLegacyInspectionSession(raw: unknown): InspectionSession 
     lastSavedAt: normalizeText(source.lastSavedAt) || null,
   };
 }
+

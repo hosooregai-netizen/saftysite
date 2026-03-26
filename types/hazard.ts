@@ -12,3 +12,4 @@ export interface HazardReportItem {
   metadata?: string;
   objects?: string[];
 }
+

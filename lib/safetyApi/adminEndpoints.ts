@@ -107,3 +107,4 @@ export const updateSafetyContentItem = (token: string, id: string, body: SafetyC
 export const deactivateSafetyContentItem = (token: string, id: string) =>
   requestSafetyApi<SafetyContentItem>(`/content-items/${id}`, { method: 'DELETE' }, token);
 export const deleteSafetyContentItem = deactivateSafetyContentItem;
+

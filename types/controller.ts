@@ -130,3 +130,4 @@ export interface ControllerDashboardData {
   assignments: SafetyAssignment[];
   contentItems: SafetyContentItem[];
 }
+

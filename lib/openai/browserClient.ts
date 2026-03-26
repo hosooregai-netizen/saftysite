@@ -108,3 +108,4 @@ export async function openAiComplete(userPrompt: string, options: OpenAiChatOpti
   messages.push({ role: 'user', content: userPrompt });
   return openAiChat(messages, rest);
 }
+

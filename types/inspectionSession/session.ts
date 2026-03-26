@@ -64,3 +64,4 @@ export interface InspectionSectionMeta {
   compactLabel: string;
   description?: string;
 }
+

@@ -38,3 +38,4 @@ export interface CausativeAgentReport {
   reasoning: string;
   photoUrl: string;
 }
+

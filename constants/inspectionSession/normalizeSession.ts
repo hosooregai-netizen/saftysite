@@ -139,3 +139,4 @@ export function normalizeInspectionSession(raw: unknown): InspectionSession {
 
   return finalizeInspectionSession(normalizedSession);
 }
+

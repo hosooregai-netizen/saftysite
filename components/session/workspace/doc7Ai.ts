@@ -1,5 +1,3 @@
-'use client';
-
 import { ACCIDENT_TYPE_OPTIONS } from '@/components/session/workspace/constants';
 import { analyzeHazardPhotos, checkCausativeAgents } from '@/lib/api';
 import { normalizeCausativeAgentResponse } from '@/lib/normalizeCausativeAgentResponse';
@@ -147,3 +145,4 @@ export async function dataUrlToFile(dataUrl: string, filename: string) {
   const blob = await response.blob();
   return new File([blob], filename, { type: blob.type || 'image/jpeg' });
 }
+

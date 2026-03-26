@@ -34,7 +34,7 @@ function TechGuideIcon({ className }: { className?: string }) {
   );
 }
 
-/** 기술 지도: 현장 목록 → 보고서 목록 → 작성 화면까지 동일 섹션으로 취급 */
+/** 기술 지도: 현장 목록 -> 보고서 목록 -> 작성 화면까지 동일 섹션으로 취급 */
 function isTechGuidePath(pathname: string | null): boolean {
   if (!pathname) return false;
   if (pathname === '/') return true;
@@ -101,7 +101,9 @@ export function WorkerMenuPanel({
   };
 
   const itemClass = (activeClass?: string) =>
-    [styles.menuItem, activeClass, collapsed ? styles.menuItemCollapsed : ''].filter(Boolean).join(' ');
+    [styles.menuItem, activeClass, collapsed ? styles.menuItemCollapsed : '']
+      .filter(Boolean)
+      .join(' ');
 
   return (
     <div className={styles.panelScroll} id="worker-menu-nav-panel">
@@ -192,3 +194,4 @@ export function WorkerMenuDrawer({
     </>
   );
 }
+

@@ -1,4 +1,4 @@
-import InspectionSessionWorkspace from '@/components/session/InspectionSessionWorkspace';
+import { InspectionSessionScreen } from '@/features/inspection-session/components/InspectionSessionScreen';
 
 interface InspectionSessionPageProps {
   params: Promise<{
@@ -11,5 +11,6 @@ export default async function InspectionSessionPage({
 }: InspectionSessionPageProps) {
   const { sessionId } = await params;
 
-  return <InspectionSessionWorkspace sessionId={sessionId} />;
+  return <InspectionSessionScreen sessionId={sessionId} />;
 }
+

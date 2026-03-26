@@ -181,3 +181,4 @@ export function mapHazardResponseItem(raw: unknown): HazardReportItem {
   if (isDetectedApiShape(obj)) return mapDetectedApiItem(obj);
   return toFallbackItem(raw);
 }
+

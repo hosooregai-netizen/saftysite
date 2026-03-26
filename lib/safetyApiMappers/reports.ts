@@ -129,3 +129,4 @@ export function createNewSafetySession(
 export function isSafetyAdmin(user: Pick<SafetyUser, 'role'> | null): boolean {
   return Boolean(user && ADMIN_ROLES.has(user.role));
 }
+

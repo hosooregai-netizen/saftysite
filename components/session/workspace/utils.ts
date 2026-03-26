@@ -1,5 +1,3 @@
-'use client';
-
 import { META_TOUCH_FALLBACK_SECTION } from '@/components/session/workspace/constants';
 import type {
   CurrentHazardFinding,
@@ -83,3 +81,4 @@ export function buildCountEntries(
       return left.label.localeCompare(right.label, 'ko-KR');
     });
 }
+

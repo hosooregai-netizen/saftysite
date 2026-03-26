@@ -28,3 +28,4 @@ export function buildLocalDoc11EducationContent(input: Doc11EducationPromptInput
     '-사고사례(유사 작업 중 발생 가능한 사고 유형) 및 예방대책(현장 점검·교육 강화)',
   ].join('\n');
 }
+

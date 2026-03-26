@@ -315,3 +315,4 @@ void main().catch((error: unknown) => {
   console.error(`Measurement template seed failed: ${message}`);
   process.exitCode = 1;
 });
+

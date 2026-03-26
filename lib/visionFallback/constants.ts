@@ -78,3 +78,4 @@ export const AGENT_KEYS = [
   '13_화재_폭발',
   '14_기타_위험요인',
 ] as const;
+

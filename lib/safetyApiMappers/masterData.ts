@@ -337,3 +337,4 @@ export function mergeMasterDataIntoSession(
     document14SafetyInfos: getSafetyInfosForReportDate(masterData, session.meta.reportDate),
   });
 }
+

@@ -145,3 +145,4 @@ export function buildDonutSlices(entries: ChartEntry[], total: number): DonutSli
     };
   });
 }
+

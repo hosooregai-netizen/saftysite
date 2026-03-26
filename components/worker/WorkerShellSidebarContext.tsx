@@ -4,13 +4,13 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
-  useState,
+  useSyncExternalStore,
   type ReactNode,
 } from 'react';
 
 const STORAGE_KEY = 'workerShellSidebarCollapsed';
+const STORAGE_EVENT_NAME = 'worker-shell-sidebar-change';
 
 type WorkerShellSidebarContextValue = {
   collapsed: boolean;
@@ -21,38 +21,67 @@ type WorkerShellSidebarContextValue = {
 
 const WorkerShellSidebarContext = createContext<WorkerShellSidebarContextValue | null>(null);
 
+function readCollapsedSnapshot(): boolean {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  try {
+    return window.localStorage.getItem(STORAGE_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function subscribeToCollapsedState(onStoreChange: () => void): () => void {
+  if (typeof window === 'undefined') {
+    return () => undefined;
+  }
+
+  const handleStoreChange = () => {
+    onStoreChange();
+  };
+
+  window.addEventListener('storage', handleStoreChange);
+  window.addEventListener(STORAGE_EVENT_NAME, handleStoreChange);
+
+  return () => {
+    window.removeEventListener('storage', handleStoreChange);
+    window.removeEventListener(STORAGE_EVENT_NAME, handleStoreChange);
+  };
+}
+
+function writeCollapsedSnapshot(value: boolean) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(STORAGE_KEY, value ? 'true' : 'false');
+  } catch {
+    return;
+  }
+
+  window.dispatchEvent(new Event(STORAGE_EVENT_NAME));
+}
+
 export function WorkerShellSidebarProvider({ children }: { children: ReactNode }) {
-  const [collapsed, setCollapsedState] = useState(false);
-  const [hydrated, setHydrated] = useState(false);
-
-  useEffect(() => {
-    try {
-      setCollapsedState(localStorage.getItem(STORAGE_KEY) === 'true');
-    } catch {
-      /* ignore */
-    }
-    setHydrated(true);
-  }, []);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    try {
-      localStorage.setItem(STORAGE_KEY, collapsed ? 'true' : 'false');
-    } catch {
-      /* ignore */
-    }
-  }, [collapsed, hydrated]);
+  const collapsed = useSyncExternalStore(
+    subscribeToCollapsedState,
+    readCollapsedSnapshot,
+    () => false,
+  );
 
   const setCollapsed = useCallback((value: boolean) => {
-    setCollapsedState(value);
+    writeCollapsedSnapshot(value);
   }, []);
 
   const toggleCollapsed = useCallback(() => {
-    setCollapsedState((current) => !current);
+    writeCollapsedSnapshot(!readCollapsedSnapshot());
   }, []);
 
   const expandSidebar = useCallback(() => {
-    setCollapsedState(false);
+    writeCollapsedSnapshot(false);
   }, []);
 
   const value = useMemo(
@@ -81,3 +110,4 @@ export function useWorkerShellSidebar(): WorkerShellSidebarContextValue {
 export function useWorkerShellSidebarOptional(): WorkerShellSidebarContextValue | null {
   return useContext(WorkerShellSidebarContext);
 }
+

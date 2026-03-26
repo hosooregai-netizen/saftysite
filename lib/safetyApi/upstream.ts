@@ -21,3 +21,4 @@ export function getSafetyApiUpstreamBaseUrl(): string {
 
   return DEFAULT_SAFETY_API_UPSTREAM_BASE_URL;
 }
+

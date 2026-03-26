@@ -7,3 +7,4 @@ export interface GenerateInspectionWordRequest {
   siteSessions?: InspectionSession[];
   templateId?: InspectionWordTemplateId;
 }
+

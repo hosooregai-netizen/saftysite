@@ -151,3 +151,4 @@ export const DEFAULT_DOCUMENT_SOURCES: Record<InspectionSectionKey, InspectionDo
 export const FATAL_ACCIDENT_MEASURE_LIBRARY = CAUSATIVE_AGENT_SECTIONS.flatMap((section) =>
   section.rows.flatMap((row) => [row.left, row.right])
 ) as Array<{ key: CausativeAgentKey; number: number; label: string; guidance: string }>;
+

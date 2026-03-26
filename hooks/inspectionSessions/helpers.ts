@@ -57,3 +57,4 @@ export function useCollectionState<T>(
     [normalize, ref, setState]
   );
 }
+

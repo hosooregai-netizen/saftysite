@@ -25,3 +25,4 @@ export default function Doc7Section(props: HazardStatsSectionProps) {
     </div>
   );
 }
+

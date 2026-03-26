@@ -207,7 +207,7 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
         } catch (error) {
           if (isAuthFailure(error)) {
             clearAuthState();
-            setAuthError('濡쒓렇?몄씠 留뚮즺?섏뿀?듬땲?? ?ㅼ떆 濡쒓렇?명빐 二쇱꽭??');
+            setAuthError('로그인이 만료되었습니다. 다시 로그인해 주세요.');
           } else {
             setDataError(getErrorMessage(error));
           }
@@ -238,3 +238,4 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
 
   return { login, logout, reload, refreshMasterData };
 }
+

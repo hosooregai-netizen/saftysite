@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "rundev": "node scripts/rundev.js",
+    "rundev": "node scripts/rundev.mjs",
     "dev": "next dev --webpack",
     "build": "next build --webpack",
     "start": "next start",
@@ -32,3 +32,4 @@
     "typescript": "^5"
   }
 }
+

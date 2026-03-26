@@ -103,3 +103,4 @@ export default function Doc6Section({
     </div>
   );
 }
+

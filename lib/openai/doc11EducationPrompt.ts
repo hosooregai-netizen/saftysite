@@ -34,3 +34,4 @@ export function buildDoc11EducationUserContent(input: Doc11EducationPromptInput)
     .filter(Boolean)
     .join('\n');
 }
+

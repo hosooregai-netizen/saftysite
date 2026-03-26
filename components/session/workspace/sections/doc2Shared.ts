@@ -18,3 +18,4 @@ export function updateOverviewField(
     document2Overview: { ...current.document2Overview, [key]: value },
   }));
 }
+

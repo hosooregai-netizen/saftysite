@@ -205,3 +205,4 @@ export function normalizeSafetyInfos(source: unknown[]) {
     ? DEFAULT_SAFETY_INFOS.map((fallback, index) => normalizeSafetyInfoItem(source[index], fallback))
     : DEFAULT_SAFETY_INFOS.map((item) => ({ ...item }));
 }
+
