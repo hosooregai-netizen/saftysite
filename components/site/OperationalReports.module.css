@@ -1,0 +1,308 @@
+.sectionCard {
+  display: grid;
+  gap: 18px;
+  padding: 18px;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-surface);
+  background: var(--erp-white);
+}
+
+.sectionHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sectionTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--erp-dark);
+}
+
+.sectionDescription {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--erp-text-muted);
+}
+
+.statusRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.bannerError {
+  padding: 12px 14px;
+  border: 1px solid var(--erp-danger-line);
+  border-radius: var(--erp-radius-control);
+  background: var(--erp-danger-soft);
+  color: var(--erp-danger);
+  font-size: 13px;
+}
+
+.cardGrid {
+  display: grid;
+  gap: 12px;
+}
+
+.reportCard {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-control);
+  background: #fbfcfe;
+}
+
+.reportCardHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.reportCardTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--erp-dark);
+}
+
+.reportCardMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.reportCardDescription {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--erp-text-muted);
+}
+
+.reportActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.linkButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: var(--erp-radius-control);
+  background: var(--erp-mid);
+  color: var(--erp-white);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.linkButton:hover {
+  background: var(--erp-dark);
+  color: var(--erp-white);
+}
+
+.linkButtonSecondary {
+  background: #eef3f8;
+  color: var(--erp-dark);
+}
+
+.linkButtonSecondary:hover {
+  background: #dde7f2;
+  color: var(--erp-dark);
+}
+
+.emptyState {
+  padding: 18px;
+  border: 1px dashed var(--erp-line);
+  border-radius: var(--erp-radius-control);
+  background: #fbfcfe;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--erp-text-muted);
+}
+
+.editorShell {
+  display: grid;
+  gap: 18px;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.toolbarActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.summaryGrid {
+  display: grid;
+  gap: 12px;
+}
+
+.summaryCard {
+  padding: 14px;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-control);
+  background: #fbfcfe;
+}
+
+.summaryLabel {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--erp-text-muted);
+}
+
+.summaryValue {
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--erp-dark);
+}
+
+.formGrid {
+  display: grid;
+  gap: 12px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.fieldLabel {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--erp-dark);
+}
+
+.fieldWide {
+  grid-column: 1 / -1;
+}
+
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-control);
+}
+
+.table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--erp-line);
+  vertical-align: top;
+  text-align: left;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.table th {
+  background: var(--erp-panel-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--erp-text-muted);
+}
+
+.table tr:last-child td {
+  border-bottom: 0;
+}
+
+.tagList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #eef3f8;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--erp-dark);
+}
+
+.checkboxList {
+  display: grid;
+  gap: 8px;
+}
+
+.checkboxCard {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-control);
+  background: #fbfcfe;
+}
+
+.checkboxText {
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--erp-dark);
+}
+
+.muted {
+  font-size: 12px;
+  color: var(--erp-text-muted);
+}
+
+@media (min-width: 900px) {
+  .cardGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .summaryGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .formGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media print {
+  .toolbar,
+  .reportActions,
+  .statusRow {
+    display: none !important;
+  }
+
+  .sectionCard,
+  .summaryCard,
+  .reportCard,
+  .tableWrap,
+  .checkboxCard {
+    break-inside: avoid;
+    box-shadow: none;
+  }
+}

@@ -1,5 +1,10 @@
-import type { GenerateInspectionWordRequest } from '@/types/documents';
-import type { InspectionSession } from '@/types/inspectionSession';
+import type {
+  GenerateBadWorkplaceWordRequest,
+  GenerateInspectionWordRequest,
+  GenerateQuarterlyWordRequest,
+} from '@/types/documents';
+import type { BadWorkplaceReport, QuarterlySummaryReport } from '@/types/erpReports';
+import type { InspectionSession, InspectionSite } from '@/types/inspectionSession';
 
 const API_BASE = '/api';
 
@@ -58,6 +63,37 @@ function getDownloadFilenameFromDisposition(header: string | null): string {
   return bareMatch?.[1]?.trim() ?? 'inspection-report.docx';
 }
 
+async function fetchWordDocument<TBody>(
+  path: string,
+  body: TBody,
+  errorLabel: string
+): Promise<{ blob: Blob; filename: string }> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const errorBody = await parseApiResponse(res);
+    const message =
+      typeof errorBody === 'object' && errorBody && 'error' in errorBody
+        ? String(errorBody.error)
+        : res.statusText;
+
+    throw new Error(`${errorLabel} (${res.status}): ${message}`);
+  }
+
+  return {
+    blob: await res.blob(),
+    filename: getDownloadFilenameFromDisposition(
+      res.headers.get('content-disposition')
+    ),
+  };
+}
+
 export function saveBlobAsFile(blob: Blob, filename: string): void {
   const blobUrl = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -114,29 +150,29 @@ export async function fetchInspectionWordDocument(
     siteSessions,
     templateId: 'default-inspection',
   };
+  return fetchWordDocument('/documents/inspection/word', body, '워드 다운로드 실패');
+}
 
-  const res = await fetch(`${API_BASE}/documents/inspection/word`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  });
+export async function fetchQuarterlyWordDocument(
+  report: QuarterlySummaryReport,
+  site: InspectionSite
+): Promise<{ blob: Blob; filename: string }> {
+  const body: GenerateQuarterlyWordRequest = { report, site };
+  return fetchWordDocument(
+    '/documents/quarterly/word',
+    body,
+    '분기 보고서 다운로드 실패'
+  );
+}
 
-  if (!res.ok) {
-    const errorBody = await parseApiResponse(res);
-    const message =
-      typeof errorBody === 'object' && errorBody && 'error' in errorBody
-        ? String(errorBody.error)
-        : res.statusText;
-
-    throw new Error(`워드 다운로드 실패 (${res.status}): ${message}`);
-  }
-
-  return {
-    blob: await res.blob(),
-    filename: getDownloadFilenameFromDisposition(
-      res.headers.get('content-disposition')
-    ),
-  };
+export async function fetchBadWorkplaceWordDocument(
+  report: BadWorkplaceReport,
+  site: InspectionSite
+): Promise<{ blob: Blob; filename: string }> {
+  const body: GenerateBadWorkplaceWordRequest = { report, site };
+  return fetchWordDocument(
+    '/documents/bad-workplace/word',
+    body,
+    '불량사업장 신고서 다운로드 실패'
+  );
 }

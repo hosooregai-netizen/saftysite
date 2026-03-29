@@ -18,11 +18,18 @@ export function mapSafetySiteToAdminSnapshot(site: SafetySite): AdminSiteSnapsho
   const headquarterName =
     normalizeMapperText(site.headquarter_detail?.name) ||
     normalizeMapperText(site.headquarter?.name);
+  const assignedUserNames = (site.assigned_users || [])
+    .map((user) => normalizeMapperText(user.name))
+    .filter(Boolean);
+  const assigneeName =
+    assignedUserNames.length > 0
+      ? assignedUserNames.join(', ')
+      : normalizeMapperText(site.assigned_user?.name);
 
   return {
     customerName: headquarterName,
     siteName: normalizeMapperText(site.site_name),
-    assigneeName: normalizeMapperText(site.assigned_user?.name),
+    assigneeName,
     siteManagementNumber: normalizeMapperText(site.management_number),
     businessStartNumber: normalizeMapperText(site.site_code),
     constructionPeriod: formatDateRange(site.project_start_date, site.project_end_date),

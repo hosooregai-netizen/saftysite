@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { CAUSATIVE_AGENT_SECTIONS } from '@/constants/siteOverview';
+import { sanitizeWordFileName } from '@/server/documents/sharedDocx';
 import type { ChecklistRating, InspectionSession } from '@/types/inspectionSession';
 
 export interface ReportPageDraft {
@@ -60,9 +61,10 @@ export function formatDate(value: string | null | undefined): string {
 }
 
 export function fileNameForSession(session: InspectionSession): string {
-  const site = (session.meta.siteName || session.adminSiteSnapshot.siteName || 'inspection')
-    .replace(/[\\/:*?"<>|]/g, '-')
-    .trim();
+  const site = sanitizeWordFileName(
+    session.meta.siteName || session.adminSiteSnapshot.siteName || 'inspection',
+    'inspection'
+  );
   return `${site || 'inspection'}-${formatDate(session.meta.reportDate).replace(/\./g, '')}-${session.reportNumber}회.docx`;
 }
 

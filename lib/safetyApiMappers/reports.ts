@@ -3,6 +3,7 @@ import {
   getSessionTitle,
   normalizeInspectionSession,
 } from '@/constants/inspectionSession';
+import { TECHNICAL_GUIDANCE_REPORT_KIND } from '@/lib/erpReports/shared';
 import type {
   SafetyMasterData,
   SafetyReport,
@@ -82,10 +83,12 @@ export function buildSafetyReportUpsertInput(
     progress_rate: parseProgressRate(session.document2Overview.progressRate),
     payload: {
       ...session,
+      reportKind: TECHNICAL_GUIDANCE_REPORT_KIND,
       siteKey: site.id,
       adminSiteSnapshot: site.adminSiteSnapshot,
     },
     meta: {
+      reportKind: TECHNICAL_GUIDANCE_REPORT_KIND,
       siteName: session.meta.siteName,
       drafter: session.meta.drafter,
       reviewer: session.meta.reviewer,

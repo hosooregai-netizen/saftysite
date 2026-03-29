@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { buildInspectionWordDocument } from '@/server/documents/inspection/docx';
+import { resolveInspectionDocumentAssets } from '@/server/documents/inspection/assets';
+import { createWordDocumentDownloadResponse } from '@/server/documents/sharedDocx';
 import type { GenerateInspectionWordRequest } from '@/types/documents';
 
 export const runtime = 'nodejs';
@@ -11,19 +13,18 @@ export async function POST(request: Request): Promise<Response> {
       return NextResponse.json({ error: '문서 생성에 필요한 보고서 데이터가 없습니다.' }, { status: 400 });
     }
 
-    const { buffer, filename } = await buildInspectionWordDocument(
+    const { session, siteSessions } = await resolveInspectionDocumentAssets(
       body.session,
-      body.siteSessions ?? [body.session]
+      body.siteSessions ?? [body.session],
+      new URL(request.url).origin
     );
 
-    return new Response(new Uint8Array(buffer), {
-      status: 200,
-      headers: {
-        'Content-Type':
-          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
-      },
-    });
+    const document = await buildInspectionWordDocument(
+      session,
+      siteSessions
+    );
+
+    return createWordDocumentDownloadResponse(document);
   } catch (error) {
     return NextResponse.json(
       {

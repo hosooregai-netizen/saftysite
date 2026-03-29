@@ -1,3 +1,4 @@
+import OperationalKpiPanel from '@/components/controller/OperationalKpiPanel';
 import { buildAdminOverviewModel } from '@/features/admin/lib/buildAdminOverviewModel';
 import { formatTimestamp } from '@/lib/admin';
 import type { AdminSectionKey } from '@/lib/admin';
@@ -171,8 +172,9 @@ export function AdminOverviewSection({
             </p>
           </article>
         </div>
+
+        <OperationalKpiPanel sites={data.sites} styles={styles} users={data.users} />
       </div>
     </section>
   );
 }
-

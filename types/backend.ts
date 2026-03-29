@@ -100,6 +100,8 @@ export interface SafetySite {
   headquarter: SafetyHeadquarterSummary | null;
   headquarter_detail: SafetyHeadquarterDetail | null;
   assigned_user: SafetyUserSummary | null;
+  assigned_users?: SafetyUserSummary[] | null;
+  active_assignment_count?: number | null;
   site_name: string;
   site_code: string | null;
   management_number: string | null;

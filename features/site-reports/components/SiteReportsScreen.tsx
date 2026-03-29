@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import LoginPanel from '@/components/auth/LoginPanel';
 import { AdminMenuDrawer, AdminMenuPanel } from '@/components/admin/AdminMenu';
+import OperationalReportsPanel from '@/components/site/OperationalReportsPanel';
 import AppModal from '@/components/ui/AppModal';
 import WorkerAppHeader from '@/components/worker/WorkerAppHeader';
 import WorkerMenuSidebar from '@/components/worker/WorkerMenuSidebar';
@@ -32,11 +33,13 @@ export function SiteReportsScreen({ siteKey }: SiteReportsScreenProps) {
     canArchiveReports,
     createReport,
     currentSite,
+    currentUser,
     currentUserName,
     deleteSession,
     filteredSiteSessions,
     isAdminView,
     isAuthenticated,
+    isLoadingSiteReports,
     isReady,
     login,
     logout,
@@ -154,10 +157,21 @@ export function SiteReportsScreen({ siteKey }: SiteReportsScreenProps) {
                     currentSite={currentSite}
                     onCreateReport={createReport}
                     onDeleteRequest={setDialogSessionId}
-                    siteSessions={filteredSiteSessions}
+                    siteSessions={
+                      isLoadingSiteReports && siteSessions.length === 0 ? [] : filteredSiteSessions
+                    }
                     totalSessionCount={siteSessions.length}
                   />
+                  {isLoadingSiteReports && siteSessions.length === 0 ? (
+                    <div className={styles.tableTools}>이 현장의 보고서 목록을 불러오는 중입니다.</div>
+                  ) : null}
                 </section>
+
+                <OperationalReportsPanel
+                  currentSite={currentSite}
+                  currentUser={currentUser}
+                  siteSessions={siteSessions}
+                />
               </div>
             </div>
           </WorkerShellBody>
@@ -210,4 +224,3 @@ export function SiteReportsScreen({ siteKey }: SiteReportsScreenProps) {
     </main>
   );
 }
-

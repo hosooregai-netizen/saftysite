@@ -24,22 +24,44 @@ export function useSiteReportsScreen(siteKey: string) {
     authError,
     login,
     logout,
-    reload,
     createSession,
     deleteSession,
     canArchiveReports,
+    ensureSiteReportsLoaded,
   } = useInspectionSessions();
   const [reportQuery, setReportQuery] = useState('');
   const [reportSortMode, setReportSortMode] = useState<SiteReportSortMode>('recent');
   const hasReloadedRef = useRef(false);
+  const [isLoadingSiteReports, setIsLoadingSiteReports] = useState(false);
   const isAdminView = Boolean(currentUser && isAdminUserRole(currentUser.role));
+
+  useEffect(() => {
+    hasReloadedRef.current = false;
+  }, [decodedSiteKey]);
 
   useEffect(() => {
     if (!isAuthenticated || !isReady || hasReloadedRef.current) return;
 
     hasReloadedRef.current = true;
-    void reload();
-  }, [isAuthenticated, isReady, reload]);
+    let cancelled = false;
+    const loadSiteReports = async () => {
+      setIsLoadingSiteReports(true);
+
+      try {
+        await ensureSiteReportsLoaded(decodedSiteKey);
+      } finally {
+        if (!cancelled) {
+          setIsLoadingSiteReports(false);
+        }
+      }
+    };
+
+    void loadSiteReports();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [decodedSiteKey, ensureSiteReportsLoaded, isAuthenticated, isReady]);
 
   const currentSite = useMemo(
     () => sites.find((site) => site.id === decodedSiteKey) ?? null,
@@ -104,7 +126,7 @@ export function useSiteReportsScreen(siteKey: string) {
     const nextSession = createSession(currentSite, {
       meta: {
         siteName: currentSite.siteName,
-        drafter: currentSite.assigneeName,
+        drafter: currentUser?.name || currentSite.assigneeName,
       },
     });
 
@@ -117,11 +139,13 @@ export function useSiteReportsScreen(siteKey: string) {
     canArchiveReports,
     createReport,
     currentSite,
+    currentUser,
     currentUserName: currentUser?.name,
     deleteSession,
     filteredSiteSessions,
     isAdminView,
     isAuthenticated,
+    isLoadingSiteReports,
     isReady,
     login,
     logout,
@@ -133,4 +157,3 @@ export function useSiteReportsScreen(siteKey: string) {
     workerBackHref: isAdminView ? getAdminSectionHref('sites') : '/',
   };
 }
-
