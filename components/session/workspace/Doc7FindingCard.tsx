@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import type { ApplyDocumentUpdate, WithFileData } from '@/components/session/workspace/types';
 import {
+  assetUrlToFile,
   buildHazardFindingAutoFill,
-  dataUrlToFile,
   isFindingEmptyForAiAutofill,
 } from '@/components/session/workspace/doc7Ai';
 import styles from '@/components/session/InspectionSessionWorkspace.module.css';
@@ -89,14 +89,14 @@ export default function Doc7FindingCard({
   };
 
   const handlePhotoSelect = async (slot: 1 | 2, file: File) => {
-    const dataUrl = await withFileData(file);
-    if (!dataUrl) return;
+    const assetUrl = await withFileData(file);
+    if (!assetUrl) return;
 
     if (slot === 1) {
       const isFirstSitePhoto = !item.photoUrl?.trim();
       const shouldRunAi = isFirstSitePhoto && isFindingEmptyForAiAutofill(item);
 
-      updateFinding((finding) => ({ ...finding, photoUrl: dataUrl }));
+      updateFinding((finding) => ({ ...finding, photoUrl: assetUrl }));
       if (shouldRunAi) {
         await runAiAutofill(file);
       } else {
@@ -105,14 +105,14 @@ export default function Doc7FindingCard({
       return;
     }
 
-    updateFinding((finding) => ({ ...finding, photoUrl2: dataUrl }));
+    updateFinding((finding) => ({ ...finding, photoUrl2: assetUrl }));
   };
 
   const handleAiRetry = async () => {
     if (!item.photoUrl) return;
 
     setAiError('');
-    const file = await dataUrlToFile(item.photoUrl, `finding-${item.id}.jpg`);
+    const file = await assetUrlToFile(item.photoUrl, `finding-${item.id}.jpg`);
     await runAiAutofill(file);
   };
 
@@ -164,4 +164,3 @@ export default function Doc7FindingCard({
     </article>
   );
 }
-

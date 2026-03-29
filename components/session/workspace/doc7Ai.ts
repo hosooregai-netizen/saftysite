@@ -1,5 +1,12 @@
+'use client';
+
 import { ACCIDENT_TYPE_OPTIONS } from '@/components/session/workspace/constants';
 import { analyzeHazardPhotos, checkCausativeAgents } from '@/lib/api';
+import {
+  buildCatalogImprovementPlan,
+  getRecommendedDisasterCases,
+  getRecommendedLegalReference,
+} from '@/lib/disasterCaseCatalog';
 import { normalizeCausativeAgentResponse } from '@/lib/normalizeCausativeAgentResponse';
 import { normalizeHazardResponse } from '@/lib/normalizeHazardResponse';
 import { normalizeRiskNumber } from '@/lib/riskAssessment';
@@ -7,26 +14,31 @@ import type { CurrentHazardFinding } from '@/types/inspectionSession';
 import type { CausativeAgentKey } from '@/types/siteOverview';
 
 const ACCIDENT_KEYWORD_MAP: Array<{
-  type: (typeof ACCIDENT_TYPE_OPTIONS)[number];
   keywords: string[];
+  type: (typeof ACCIDENT_TYPE_OPTIONS)[number];
 }> = [
   { type: '추락', keywords: ['추락', '단부', '개구부', '고소', '난간', '발판'] },
+  { type: '떨어짐', keywords: ['떨어짐'] },
   { type: '낙하', keywords: ['낙하', '낙하물', '비래', '떨어'] },
+  { type: '맞음', keywords: ['맞음', '중량물', '자재 낙하'] },
+  { type: '부딪힘', keywords: ['부딪힘'] },
   { type: '충돌', keywords: ['충돌', '접촉', '부딪'] },
   { type: '감전', keywords: ['감전', '전기', '누전', '배선'] },
   { type: '끼임', keywords: ['끼임', '협착'] },
+  { type: '깔림', keywords: ['깔림', '압착'] },
+  { type: '매몰', keywords: ['매몰', '토사', '굴착면', '옹벽'] },
   { type: '전도', keywords: ['전도', '미끄', '넘어짐', '전복'] },
   { type: '화재·폭발', keywords: ['화재', '폭발', '인화', '용접'] },
+  { type: '화상', keywords: ['화상'] },
   { type: '붕괴', keywords: ['붕괴', '무너', '도괴'] },
+  { type: '찔림', keywords: ['찔림', '베임'] },
 ];
 
 function normalizeLine(value: string): string {
   return value.replace(/\[[^\]]+\]/g, '').replace(/\s+/g, ' ').trim();
 }
 
-function buildLocation(
-  report?: Awaited<ReturnType<typeof normalizeHazardResponse>>[number]
-) {
+function buildLocation(report?: Awaited<ReturnType<typeof normalizeHazardResponse>>[number]) {
   if (!report) return '';
 
   const candidates = [
@@ -49,9 +61,7 @@ function buildLocation(
   return '';
 }
 
-function pickAccidentType(
-  report?: Awaited<ReturnType<typeof normalizeHazardResponse>>[number]
-) {
+function pickAccidentType(report?: Awaited<ReturnType<typeof normalizeHazardResponse>>[number]) {
   if (!report) return '';
 
   const source = [report.metadata, report.hazardFactors, report.improvementItems]
@@ -68,7 +78,9 @@ function pickAccidentType(
   return '';
 }
 
-function pickCausativeAgentKey(raw: Awaited<ReturnType<typeof normalizeCausativeAgentResponse>>) {
+function pickCausativeAgentKey(
+  raw: Awaited<ReturnType<typeof normalizeCausativeAgentResponse>>,
+) {
   const activeEntry = Object.entries(raw.agents).find(([, checked]) => checked);
   return (activeEntry?.[0] ?? '') as CausativeAgentKey | '';
 }
@@ -80,41 +92,43 @@ function splitLegalInfo(value: string) {
     .filter(Boolean);
 }
 
-/** AI 1~3 가능성·중대성 → 세부 지적용 상·중·하 */
+function mergeImprovementPlan(aiPlan: string, catalogPlan: string) {
+  const segments = [aiPlan, catalogPlan].map((value) => value.trim()).filter(Boolean);
+  return segments.filter((value, index) => segments.indexOf(value) === index).join('\n');
+}
+
 function mapLikelihoodSeverityToTriLevel(likelihood: string, severity: string): string {
-  const ln = normalizeRiskNumber(likelihood);
-  const sn = normalizeRiskNumber(severity);
-  if (ln == null || sn == null) return '';
-  const score = ln * sn;
+  const likelihoodNumber = normalizeRiskNumber(likelihood);
+  const severityNumber = normalizeRiskNumber(severity);
+  if (likelihoodNumber == null || severityNumber == null) return '';
+
+  const score = likelihoodNumber * severityNumber;
   if (score >= 5) return '상';
   if (score >= 3) return '중';
   return '하';
 }
 
-/**
- * AI가 필드를 채워도 될지: 유해·위험 관련 값이 하나도 없을 때만 true.
- * 지도요원(작성자 자동 기입 등)은 제외.
- */
 export function isFindingEmptyForAiAutofill(item: CurrentHazardFinding): boolean {
-  const t = (s: string | null | undefined) => String(s ?? '').trim();
+  const normalize = (value: string | null | undefined) => String(value ?? '').trim();
+
   if (item.carryForward) return false;
-  if (t(item.location)) return false;
-  if (t(item.likelihood) || t(item.severity)) return false;
-  if (t(item.riskLevel)) return false;
-  if (t(item.accidentType)) return false;
+  if (normalize(item.location)) return false;
+  if (normalize(item.likelihood) || normalize(item.severity)) return false;
+  if (normalize(item.riskLevel)) return false;
+  if (normalize(item.accidentType)) return false;
   if (item.causativeAgentKey) return false;
-  if (t(item.emphasis)) return false;
-  if (t(item.improvementPlan)) return false;
-  if (t(item.legalReferenceId)) return false;
-  if (t(item.legalReferenceTitle)) return false;
-  if (t(item.referenceMaterial1)) return false;
-  if (t(item.referenceMaterial2)) return false;
-  if (t(item.metadata)) return false;
+  if (normalize(item.emphasis)) return false;
+  if (normalize(item.improvementPlan)) return false;
+  if (normalize(item.legalReferenceId)) return false;
+  if (normalize(item.legalReferenceTitle)) return false;
+  if (normalize(item.referenceMaterial1)) return false;
+  if (normalize(item.referenceMaterial2)) return false;
+  if (normalize(item.metadata)) return false;
   return true;
 }
 
 export async function buildHazardFindingAutoFill(
-  file: File
+  file: File,
 ): Promise<Partial<CurrentHazardFinding>> {
   const [hazardReports, causativeReport] = await Promise.all([
     normalizeHazardResponse(await analyzeHazardPhotos([file]), [file]),
@@ -124,25 +138,67 @@ export async function buildHazardFindingAutoFill(
   const likelihood = report?.likelihood ?? '';
   const severity = report?.severity ?? '';
   const laws = splitLegalInfo(report?.legalInfo ?? '');
+  const accidentType = pickAccidentType(report);
+  const causativeAgentKey = pickCausativeAgentKey(causativeReport);
+  const queryText = [
+    report?.metadata,
+    report?.hazardFactors,
+    report?.improvementItems,
+    report?.locationDetail,
+  ]
+    .filter(Boolean)
+    .join(' ');
+  const catalogPlan = buildCatalogImprovementPlan({
+    accidentType,
+    causativeAgentKey,
+    text: queryText,
+  });
+  const recommendedLegalReference = getRecommendedLegalReference({
+    accidentType,
+    causativeAgentKey,
+    text: queryText,
+  });
+  const recommendedCases = getRecommendedDisasterCases(
+    {
+      accidentType,
+      causativeAgentKey,
+      text: queryText,
+    },
+    2,
+  );
+  const relatedCaseSummary =
+    recommendedCases.length > 0
+      ? `재해사례 추천: ${recommendedCases.map((item) => item.title).join(', ')}`
+      : '';
 
   return {
     location: buildLocation(report),
-    likelihood: '',
-    severity: '',
+    likelihood,
+    severity,
     riskLevel: mapLikelihoodSeverityToTriLevel(likelihood, severity),
-    accidentType: pickAccidentType(report),
-    causativeAgentKey: pickCausativeAgentKey(causativeReport),
-    metadata: normalizeLine(report?.metadata ?? ''),
+    accidentType,
+    causativeAgentKey,
     emphasis: normalizeLine(report?.hazardFactors ?? report?.metadata ?? ''),
-    improvementPlan: normalizeLine(report?.improvementItems ?? ''),
-    referenceMaterial1: laws[0] ?? '',
-    referenceMaterial2: laws[1] ?? '',
+    improvementPlan: mergeImprovementPlan(
+      normalizeLine(report?.improvementItems ?? ''),
+      catalogPlan,
+    ),
+    legalReferenceId: recommendedLegalReference?.id ?? '',
+    legalReferenceTitle: recommendedLegalReference?.title ?? '',
+    metadata: [normalizeLine(report?.metadata ?? ''), relatedCaseSummary]
+      .filter(Boolean)
+      .join('\n'),
+    referenceMaterial1: laws[0] ?? recommendedLegalReference?.referenceMaterial1 ?? '',
+    referenceMaterial2: laws[1] ?? recommendedLegalReference?.referenceMaterial2 ?? '',
   };
 }
 
-export async function dataUrlToFile(dataUrl: string, filename: string) {
-  const response = await fetch(dataUrl);
+export async function assetUrlToFile(assetUrl: string, filename: string) {
+  const response = await fetch(assetUrl);
+  if (!response.ok) {
+    throw new Error('사진 파일을 다시 불러오는 중 오류가 발생했습니다.');
+  }
+
   const blob = await response.blob();
   return new File([blob], filename, { type: blob.type || 'image/jpeg' });
 }
-

@@ -101,7 +101,24 @@ export const NOTIFICATION_METHOD_OPTIONS: Array<{ value: NotificationMethod; lab
   { value: 'other', label: '기타' },
 ];
 
-export const ACCIDENT_TYPE_OPTIONS = ['추락', '낙하', '충돌', '감전', '끼임', '전도', '화재·폭발', '붕괴', '기타'] as const;
+export const ACCIDENT_TYPE_OPTIONS = [
+  '추락',
+  '떨어짐',
+  '낙하',
+  '맞음',
+  '부딪힘',
+  '충돌',
+  '끼임',
+  '깔림',
+  '매몰',
+  '감전',
+  '화재·폭발',
+  '화상',
+  '붕괴',
+  '전도',
+  '찔림',
+  '기타',
+] as const;
 
 export const LEGAL_REFERENCE_LIBRARY = [
   { id: 'rule-386', title: '산업안전보건기준에 관한 규칙 제386조', body: '제386조(중량물의 구름 위험방지) 사업주는 드럼통 등 구를 위험이 있는 중량물을 취급하는 경우 구름멈춤대, 쐐기 등을 이용하여 중량물의 움직임을 방지해야 한다.', referenceMaterial1: '참고자료 예시 1', referenceMaterial2: '참고자료 예시 2' },
