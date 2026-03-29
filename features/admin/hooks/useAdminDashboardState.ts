@@ -2,6 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import {
+  primeControllerDashboardContentItems,
+  primeControllerDashboardData,
+} from '@/hooks/controller/useControllerDashboard';
 import { readSafetyAuthToken, SafetyApiError } from '@/lib/safetyApi';
 import {
   createSafetyAssignment,
@@ -14,11 +18,6 @@ import {
   deleteSafetyHeadquarter,
   deleteSafetySite,
   deleteSafetyUser,
-  fetchSafetyAssignments,
-  fetchSafetyContentItemsAdmin,
-  fetchSafetyHeadquarters,
-  fetchSafetySitesAdmin,
-  fetchSafetyUsers,
   updateSafetyAssignment,
   updateSafetyContentItem,
   updateSafetyHeadquarter,
@@ -72,6 +71,7 @@ export function useAdminDashboardState({
 }: UseAdminDashboardStateOptions) {
   const [data, setData] = useState<ControllerDashboardData>(EMPTY_DATA);
   const [isLoading, setIsLoading] = useState(false);
+  const [isContentLoading, setIsContentLoading] = useState(false);
   const [isMutating, setIsMutating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -89,31 +89,41 @@ export function useAdminDashboardState({
     return token;
   }, []);
 
-  const reload = useCallback(async () => {
+  const reload = useCallback(async (options?: { includeContent?: boolean }) => {
     if (!enabled) return;
     setIsLoading(true);
     setError(null);
 
     try {
       const token = getToken();
-      const [users, headquarters, sites, assignments, contentItems] = await Promise.all([
-        fetchSafetyUsers(token),
-        fetchSafetyHeadquarters(token),
-        fetchSafetySitesAdmin(token),
-        fetchSafetyAssignments(token),
-        fetchSafetyContentItemsAdmin(token),
-      ]);
-      setData({ users, headquarters, sites, assignments, contentItems });
+      const { assignments, headquarters, sites, users } = await primeControllerDashboardData(token);
+
+      setData((current) => ({
+        ...current,
+        assignments,
+        headquarters,
+        sites,
+        users,
+      }));
+
+      if (options?.includeContent) {
+        setIsContentLoading(true);
+        const contentItems = await primeControllerDashboardContentItems(token);
+        setData((current) => ({ ...current, contentItems }));
+      }
     } catch (nextError) {
       setError(getErrorMessage(nextError));
     } finally {
       setIsLoading(false);
+      setIsContentLoading(false);
     }
   }, [enabled, getToken]);
 
   useEffect(() => {
-    if (enabled) void reload();
-  }, [enabled, reload]);
+    if (enabled) {
+      void reload({ includeContent: activeSection === 'content' });
+    }
+  }, [activeSection, enabled, reload]);
 
   const selectSection = useCallback(
     (nextSection: AdminSectionKey) => {
@@ -132,7 +142,7 @@ export function useAdminDashboardState({
         await task(getToken());
 
         try {
-          await reload();
+          await reload({ includeContent: activeSection === 'content' });
           setNotice(successMessage);
         } catch (reloadError) {
           console.error('Admin dashboard reload failed after mutation', reloadError);
@@ -148,7 +158,7 @@ export function useAdminDashboardState({
         setIsMutating(false);
       }
     },
-    [getToken, reload],
+    [activeSection, getToken, reload],
   );
 
   const runContentMutation = useCallback(
@@ -164,6 +174,7 @@ export function useAdminDashboardState({
     activeSectionMeta,
     data,
     error,
+    isContentLoading,
     isLoading,
     isMutating,
     notice,
@@ -297,4 +308,3 @@ export function useAdminDashboardState({
       runContentMutation((token) => deleteSafetyContentItem(token, id), '콘텐츠 데이터를 삭제했습니다.'),
   };
 }
-

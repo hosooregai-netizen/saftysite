@@ -12,6 +12,7 @@ import type { InspectionSite, InspectionSession } from '@/types/inspectionSessio
 
 export const STORAGE_KEY = 'inspection-sessions-v8';
 export const SITE_STORAGE_KEY = 'inspection-sites-v8';
+export const USER_STORAGE_KEY = 'inspection-user-v1';
 export const EMPTY_MASTER_DATA = buildSafetyMasterData([]);
 
 export function sortSessions(items: InspectionSession[]): InspectionSession[] {

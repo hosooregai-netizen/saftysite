@@ -16,7 +16,14 @@ export function InspectionSessionsProvider({
   children,
 }: Readonly<{ children: ReactNode }>) {
   const store = useInspectionSessionsStore();
-  const { login, logout, reload, refreshMasterData } = useInspectionSessionsSync(store);
+  const {
+    ensureMasterDataLoaded,
+    ensureSiteReportsLoaded,
+    login,
+    logout,
+    reload,
+    refreshMasterData,
+  } = useInspectionSessionsSync(store);
   const { deleteSessionRemotely, markSessionDirty, saveNow } =
     useInspectionSessionsAutosave(store);
   const {
@@ -31,12 +38,12 @@ export function InspectionSessionsProvider({
 
   const getSessionById = useCallback(
     (sessionId: string) => store.sessions.find((session) => session.id === sessionId) || null,
-    [store.sessions]
+    [store.sessions],
   );
 
   const getSiteById = useCallback(
     (siteId: string) => store.sites.find((site) => site.id === siteId) || null,
-    [store.sites]
+    [store.sites],
   );
 
   const contextValue = useMemo<InspectionSessionsContextValue>(
@@ -47,6 +54,7 @@ export function InspectionSessionsProvider({
       isReady: store.isReady,
       isHydrating: store.isHydrating,
       isAuthenticated: Boolean(store.currentUser && store.authTokenRef.current),
+      isHydratingReports: store.isHydratingReports,
       isSaving: store.isSaving,
       currentUser: store.currentUser,
       masterData: store.masterData,
@@ -54,6 +62,8 @@ export function InspectionSessionsProvider({
       dataError: store.dataError,
       syncError: store.syncError,
       canArchiveReports: isSafetyAdmin(store.currentUser),
+      ensureMasterDataLoaded,
+      ensureSiteReportsLoaded,
       login,
       logout,
       reload,
@@ -76,6 +86,8 @@ export function InspectionSessionsProvider({
       deleteSessionRemotely,
       deleteSessions,
       deleteSite,
+      ensureMasterDataLoaded,
+      ensureSiteReportsLoaded,
       getSessionById,
       getSiteById,
       login,
@@ -89,6 +101,7 @@ export function InspectionSessionsProvider({
       store.dataError,
       store.hasAuthToken,
       store.isHydrating,
+      store.isHydratingReports,
       store.isReady,
       store.isSaving,
       store.masterData,
@@ -98,7 +111,7 @@ export function InspectionSessionsProvider({
       updateSession,
       updateSessions,
       updateSite,
-    ]
+    ],
   );
 
   return (
@@ -107,4 +120,3 @@ export function InspectionSessionsProvider({
     </InspectionSessionsContext.Provider>
   );
 }
-

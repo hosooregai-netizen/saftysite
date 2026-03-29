@@ -31,7 +31,7 @@ function renderAdminSection(
 ) {
   const { assignments, canDelete, dashboard, headquarters, sessions, sites, users } =
     sectionProps;
-  const busy = dashboard.isLoading || dashboard.isMutating;
+  const busy = dashboard.isLoading || dashboard.isContentLoading || dashboard.isMutating;
 
   switch (activeSection) {
     case 'users':
@@ -131,4 +131,3 @@ export function AdminDashboardScreen({
     </AdminDashboardShell>
   );
 }
-

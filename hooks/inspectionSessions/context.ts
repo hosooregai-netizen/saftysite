@@ -20,6 +20,7 @@ export interface InspectionSessionsContextValue {
   isReady: boolean;
   isHydrating: boolean;
   isAuthenticated: boolean;
+  isHydratingReports: boolean;
   isSaving: boolean;
   currentUser: SafetyUser | null;
   masterData: SafetyMasterData;
@@ -27,6 +28,8 @@ export interface InspectionSessionsContextValue {
   dataError: string | null;
   syncError: string | null;
   canArchiveReports: boolean;
+  ensureMasterDataLoaded: () => Promise<void>;
+  ensureSiteReportsLoaded: (siteId: string) => Promise<void>;
   login: (input: SafetyLoginInput) => Promise<void>;
   logout: () => void;
   reload: () => Promise<void>;

@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState } from 'react';
 import { clearSafetyAuthToken } from '@/lib/safetyApi';
-import { writePersistedValue } from '@/lib/clientPersistence';
+import { deletePersistedValue, writePersistedValue } from '@/lib/clientPersistence';
 import type { SafetyMasterData, SafetyUser } from '@/types/backend';
 import type { InspectionSite, InspectionSession } from '@/types/inspectionSession';
 import {
@@ -11,6 +11,7 @@ import {
   normalizeSites,
   SITE_STORAGE_KEY,
   STORAGE_KEY,
+  USER_STORAGE_KEY,
   useCollectionState,
 } from './helpers';
 
@@ -23,6 +24,7 @@ export function useInspectionSessionsStore() {
   const [isReady, setIsReady] = useState(false);
   const [isHydrating, setIsHydrating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isHydratingReports, setIsHydratingReports] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [dataError, setDataError] = useState<string | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
@@ -60,6 +62,15 @@ export function useInspectionSessionsStore() {
     []
   );
 
+  const persistCurrentUser = useCallback(async (nextUser: SafetyUser | null) => {
+    if (!nextUser) {
+      await deletePersistedValue(USER_STORAGE_KEY);
+      return;
+    }
+
+    await writePersistedValue(USER_STORAGE_KEY, nextUser);
+  }, []);
+
   const clearAuthState = useCallback(() => {
     clearSafetyAuthToken();
     authTokenRef.current = null;
@@ -74,7 +85,9 @@ export function useInspectionSessionsStore() {
     setCurrentUser(null);
     setHasAuthToken(false);
     setIsHydrating(false);
+    setIsHydratingReports(false);
     setIsSaving(false);
+    void deletePersistedValue(USER_STORAGE_KEY);
   }, []);
 
   return {
@@ -87,10 +100,12 @@ export function useInspectionSessionsStore() {
     hasAuthToken,
     isFlushingRef,
     isHydrating,
+    isHydratingReports,
     isReady,
     isSaving,
     masterData,
     masterDataRef,
+    persistCurrentUser,
     persistSessions,
     persistSites,
     resetSessionVersions,
@@ -102,6 +117,7 @@ export function useInspectionSessionsStore() {
     setDataError,
     setHasAuthToken,
     setIsHydrating,
+    setIsHydratingReports,
     setIsReady,
     setIsSaving,
     setMasterData,
@@ -117,4 +133,3 @@ export function useInspectionSessionsStore() {
 }
 
 export type InspectionSessionsStore = ReturnType<typeof useInspectionSessionsStore>;
-

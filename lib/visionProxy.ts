@@ -1,6 +1,7 @@
 import { createVisionFallbackResponse } from '@/lib/visionFallback';
 
 const DEFAULT_API_BASE = 'http://35.76.230.177:8008';
+const VISION_UPSTREAM_TIMEOUT_MS = 5000;
 
 function getApiBase(): string {
   return (process.env.SAFETY_API_BASE || DEFAULT_API_BASE).replace(/\/$/, '');
@@ -91,12 +92,19 @@ export async function proxyVisionRequest(
   }
 
   let upstreamResponse: Response;
+  const abortController = new AbortController();
+  const timeoutId = setTimeout(() => {
+    abortController.abort(
+      new Error(`Vision upstream timed out after ${VISION_UPSTREAM_TIMEOUT_MS}ms.`)
+    );
+  }, VISION_UPSTREAM_TIMEOUT_MS);
 
   try {
     upstreamResponse = await fetch(`${getApiBase()}${path}`, {
       method: 'POST',
       body: upstreamFormData,
       cache: 'no-store',
+      signal: abortController.signal,
     });
   } catch (error) {
     const fallbackResponse = await createSafeFallbackResponse(path, files);
@@ -111,6 +119,8 @@ export async function proxyVisionRequest(
       },
       { status: 502 }
     );
+  } finally {
+    clearTimeout(timeoutId);
   }
 
   if (!upstreamResponse.ok && upstreamResponse.status >= 500) {

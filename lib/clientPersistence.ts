@@ -3,6 +3,7 @@
 const DB_NAME = 'inspection-session-storage';
 const STORE_NAME = 'keyValue';
 const DB_VERSION = 1;
+let databasePromise: Promise<IDBDatabase | null> | null = null;
 
 interface PersistedRecord<T> {
   key: string;
@@ -18,7 +19,11 @@ function openDatabase(): Promise<IDBDatabase | null> {
     return Promise.resolve(null);
   }
 
-  return new Promise((resolve) => {
+  if (databasePromise) {
+    return databasePromise;
+  }
+
+  databasePromise = new Promise((resolve) => {
     const request = window.indexedDB.open(DB_NAME, DB_VERSION);
 
     request.onupgradeneeded = () => {
@@ -28,9 +33,21 @@ function openDatabase(): Promise<IDBDatabase | null> {
       }
     };
 
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => resolve(null);
+    request.onsuccess = () => {
+      const db = request.result;
+      db.onversionchange = () => {
+        db.close();
+        databasePromise = null;
+      };
+      resolve(db);
+    };
+    request.onerror = () => {
+      databasePromise = null;
+      resolve(null);
+    };
   });
+
+  return databasePromise;
 }
 
 function readFromLocalStorage<T>(key: string): T | null {
@@ -60,13 +77,11 @@ export async function readPersistedValue<T>(key: string): Promise<T | null> {
         };
         request.onerror = () => reject(request.error);
       });
-
-      db.close();
       if (value !== null) {
         return value;
       }
     } catch {
-      db.close();
+      // Fall back to localStorage below.
     }
   }
 
@@ -88,8 +103,6 @@ export async function writePersistedValue<T>(key: string, value: T): Promise<voi
         transaction.onabort = () => reject(transaction.error);
       });
 
-      db.close();
-
       if (typeof window !== 'undefined') {
         try {
           window.localStorage.removeItem(key);
@@ -98,7 +111,7 @@ export async function writePersistedValue<T>(key: string, value: T): Promise<voi
 
       return;
     } catch {
-      db.close();
+      // Fall back to localStorage below.
     }
   }
 
@@ -120,10 +133,8 @@ export async function deletePersistedValue(key: string): Promise<void> {
         transaction.onerror = () => reject(transaction.error);
         transaction.onabort = () => reject(transaction.error);
       });
-
-      db.close();
     } catch {
-      db.close();
+      // Fall back to localStorage cleanup below.
     }
   }
 
