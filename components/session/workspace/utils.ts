@@ -19,7 +19,25 @@ export function normalizeText(value: string | null | undefined): string {
 }
 
 export function isImageValue(value: string): boolean {
-  return /^data:image\//.test(value) || /\.(png|jpe?g|gif|webp|svg)$/i.test(value);
+  const normalized = value.trim();
+  if (!normalized) return false;
+  if (/^data:image\//i.test(normalized) || /^blob:/i.test(normalized)) return true;
+
+  const imagePathPattern = /\.(png|jpe?g|gif|webp|svg|bmp)(?:$|[?#])/i;
+
+  try {
+    if (/^https?:\/\//i.test(normalized)) {
+      return imagePathPattern.test(new URL(normalized).pathname);
+    }
+
+    if (normalized.startsWith('/')) {
+      return imagePathPattern.test(new URL(normalized, 'https://preview.local').pathname);
+    }
+  } catch {
+    return imagePathPattern.test(normalized);
+  }
+
+  return imagePathPattern.test(normalized);
 }
 
 export function formatDateTime(value: string | null): string {

@@ -5,9 +5,13 @@ function normalizeBaseUrl(value: string): string {
   return value.replace(/\/+$/, '');
 }
 
+function isAbsoluteHttpUrl(value: string): boolean {
+  return /^https?:\/\//i.test(value);
+}
+
 export function getSafetyApiBaseUrl(): string {
   const configured = process.env.NEXT_PUBLIC_SAFETY_API_BASE_URL?.trim();
-  if (configured?.startsWith('/')) {
+  if (configured?.startsWith('/') || (configured && isAbsoluteHttpUrl(configured))) {
     return normalizeBaseUrl(configured);
   }
 

@@ -19,6 +19,9 @@ import type {
 } from '@/types/controller';
 import { requestSafetyApi } from './client';
 
+const ADMIN_LIST_LIMIT = 500;
+const ADMIN_CONTENT_ITEM_LIMIT = 1000;
+
 function withQuery(path: string, params: Record<string, string | number | boolean | null | undefined>) {
   const searchParams = new URLSearchParams();
 
@@ -36,8 +39,19 @@ function sendJson<T>(path: string, token: string, method: string, body?: unknown
   return requestSafetyApi<T>(path, { method, body: body ? JSON.stringify(body) : undefined }, token);
 }
 
+export interface SafetyContentAssetUpload {
+  path: string;
+  file_name: string;
+  content_type: string;
+  size: number;
+}
+
 export const fetchSafetyUsers = (token: string) =>
-  requestSafetyApi<SafetyUser[]>(withQuery('/users', { active_only: false, limit: 200 }), {}, token);
+  requestSafetyApi<SafetyUser[]>(
+    withQuery('/users', { active_only: false, limit: ADMIN_LIST_LIMIT }),
+    {},
+    token
+  );
 export const createSafetyUser = (token: string, body: SafetyUserCreateInput) =>
   sendJson<SafetyUser>('/users', token, 'POST', body);
 export const updateSafetyUser = (token: string, userId: string, body: SafetyUserUpdateInput) =>
@@ -50,7 +64,7 @@ export const updateSafetyUserPassword = (token: string, userId: string, newPassw
 
 export const fetchSafetyHeadquarters = (token: string) =>
   requestSafetyApi<SafetyHeadquarter[]>(
-    withQuery('/headquarters', { active_only: false, limit: 200 }),
+    withQuery('/headquarters', { active_only: false, limit: ADMIN_LIST_LIMIT }),
     {},
     token
   );
@@ -67,7 +81,7 @@ export const fetchSafetySitesAdmin = (token: string) =>
     withQuery('/sites', {
       include_headquarter_detail: true,
       include_assigned_user: true,
-      limit: 200,
+      limit: ADMIN_LIST_LIMIT,
     }),
     {},
     token
@@ -82,7 +96,7 @@ export const deleteSafetySite = deactivateSafetySite;
 
 export const fetchSafetyAssignments = (token: string) =>
   requestSafetyApi<SafetyAssignment[]>(
-    withQuery('/assignments', { active_only: false, limit: 200 }),
+    withQuery('/assignments', { active_only: false, limit: ADMIN_LIST_LIMIT }),
     {},
     token
   );
@@ -96,10 +110,19 @@ export const deleteSafetyAssignment = deactivateSafetyAssignment;
 
 export const fetchSafetyContentItemsAdmin = (token: string) =>
   requestSafetyApi<SafetyContentItem[]>(
-    withQuery('/content-items', { active_only: false, limit: 200 }),
+    withQuery('/content-items', { active_only: false, limit: ADMIN_CONTENT_ITEM_LIMIT }),
     {},
     token
   );
+export const uploadSafetyContentAsset = (token: string, file: File) => {
+  const body = new FormData();
+  body.set('file', file);
+  return requestSafetyApi<SafetyContentAssetUpload>(
+    '/content-items/assets/upload',
+    { method: 'POST', body },
+    token
+  );
+};
 export const createSafetyContentItem = (token: string, body: SafetyContentItemInput) =>
   sendJson<SafetyContentItem>('/content-items', token, 'POST', body);
 export const updateSafetyContentItem = (token: string, id: string, body: SafetyContentItemUpdateInput) =>

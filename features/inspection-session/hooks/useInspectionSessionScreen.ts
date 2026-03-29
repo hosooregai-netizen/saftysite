@@ -13,6 +13,10 @@ import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { convertHwpxBlobToPdf, saveBlobAsFile } from '@/lib/api';
 import { generateInspectionHwpxBlob } from '@/lib/documents/inspection/hwpxClient';
 import { getAdminSectionHref, isAdminUserRole } from '@/lib/admin';
+import {
+  uploadSafetyAssetFile,
+  validateSafetyAssetFile,
+} from '@/lib/safetyApi/assets';
 import type {
   InspectionDocumentSource,
   InspectionSectionKey,
@@ -20,12 +24,13 @@ import type {
 } from '@/types/inspectionSession';
 import { applyInspectionSessionMetaFieldChange } from '@/features/inspection-session/lib/applyInspectionSessionMetaFieldChange';
 import { buildInspectionSessionDerivedData } from '@/features/inspection-session/lib/buildInspectionSessionDerivedData';
-import { getMetaTouchSection, readFileAsDataUrl } from '@/components/session/workspace/utils';
+import { getMetaTouchSection } from '@/components/session/workspace/utils';
 
 export function useInspectionSessionScreen(sessionId: string) {
   const {
     authError,
     currentUser,
+    ensureMasterDataLoaded,
     getSessionById,
     getSiteById,
     isAuthenticated,
@@ -76,6 +81,10 @@ export function useInspectionSessionScreen(sessionId: string) {
   useEffect(() => () => void saveNow(), [saveNow]);
 
   useEffect(() => {
+    void ensureMasterDataLoaded();
+  }, [ensureMasterDataLoaded]);
+
+  useEffect(() => {
     if (!session) return;
 
     const nextFollowUps = buildDerivedFollowUpItems(session, sessions);
@@ -101,13 +110,19 @@ export function useInspectionSessionScreen(sessionId: string) {
 
   const withFileData = async (
     file: File,
-    onLoaded?: (dataUrl: string, selectedFile: File) => void,
+    onLoaded?: (value: string, selectedFile: File) => void,
   ) => {
     try {
       setUploadError(null);
-      const dataUrl = await readFileAsDataUrl(file);
-      onLoaded?.(dataUrl, file);
-      return dataUrl;
+      const validationMessage = validateSafetyAssetFile(file);
+      if (validationMessage) {
+        throw new Error(validationMessage);
+      }
+
+      const uploaded = await uploadSafetyAssetFile(file);
+      const value = uploaded.url;
+      onLoaded?.(value, file);
+      return value;
     } catch (error) {
       setUploadError(
         error instanceof Error ? error.message : '파일을 불러오는 중 오류가 발생했습니다.',

@@ -16,7 +16,7 @@ export type ApplyDocumentUpdate = (
 
 export type WithFileData = (
   file: File,
-  onLoaded?: (dataUrl: string, selectedFile: File) => void
+  onLoaded?: (value: string, selectedFile: File) => void
 ) => Promise<string | null>;
 
 export interface OverviewSectionProps {

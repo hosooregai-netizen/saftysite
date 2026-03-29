@@ -1,7 +1,7 @@
 'use client';
 /* eslint-disable @next/next/no-img-element */
 
-import { useId } from 'react';
+import { useId, useState } from 'react';
 import { IMAGE_UPLOAD_LABEL_DESKTOP, IMAGE_UPLOAD_LABEL_MOBILE } from '@/constants/imageUploadLabels';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import { readFileAsDataUrl } from '@/features/admin/sections/content/lib/contentItems';
@@ -10,24 +10,50 @@ interface ContentAssetFieldProps {
   accept: string;
   disabled: boolean;
   fileName: string;
+  helperText?: string;
   label: string;
   mode: 'image' | 'file';
   value: string;
-  onChange: (payload: { dataUrl: string; fileName: string }) => void;
+  onChange: (payload: { fileName: string; value: string }) => void;
   onClear: () => void;
+  resolveFile?: (file: File) => Promise<{ fileName?: string; value: string }>;
+  validateFile?: (file: File) => string | null;
 }
 
 export function ContentAssetField(props: ContentAssetFieldProps) {
-  const { accept, disabled, fileName, label, mode, value, onChange, onClear } = props;
+  const {
+    accept,
+    disabled,
+    fileName,
+    helperText,
+    label,
+    mode,
+    value,
+    onChange,
+    onClear,
+    resolveFile,
+    validateFile,
+  } = props;
   const inputId = useId();
-  const isImage = mode === 'image' && value.startsWith('data:image/');
+  const [error, setError] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const isImage = mode === 'image' && Boolean(value);
+  const isDisabled = disabled || isProcessing;
 
   return (
     <div className={styles.assetField}>
       <div className={styles.assetHeader}>
         <span className={styles.label}>{label}</span>
         {value ? (
-          <button type="button" className={styles.assetClear} onClick={onClear} disabled={disabled}>
+          <button
+            type="button"
+            className={styles.assetClear}
+            onClick={() => {
+              setError(null);
+              onClear();
+            }}
+            disabled={isDisabled}
+          >
             비우기
           </button>
         ) : null}
@@ -63,7 +89,13 @@ export function ContentAssetField(props: ContentAssetFieldProps) {
       </div>
       <div className={styles.assetActions}>
         <label htmlFor={inputId} className="app-button app-button-secondary">
-          {value ? '교체' : mode === 'image' ? '이미지 선택' : '파일 선택'}
+          {isProcessing
+            ? '업로드 중...'
+            : value
+              ? '교체'
+              : mode === 'image'
+                ? '이미지 선택'
+                : '파일 선택'}
         </label>
       </div>
       <input
@@ -71,17 +103,45 @@ export function ContentAssetField(props: ContentAssetFieldProps) {
         type="file"
         accept={accept}
         className={styles.hiddenInput}
-        disabled={disabled}
+        disabled={isDisabled}
         onChange={(event) => {
           const file = event.currentTarget.files?.[0];
           if (!file) return;
-          void readFileAsDataUrl(file).then((dataUrl) =>
-            onChange({ dataUrl, fileName: file.name }),
-          );
+
+          setError(null);
+          const validationMessage = validateFile?.(file) ?? null;
+          if (validationMessage) {
+            setError(validationMessage);
+            event.currentTarget.value = '';
+            return;
+          }
+
+          setIsProcessing(true);
+          const nextValue = resolveFile
+            ? resolveFile(file)
+            : readFileAsDataUrl(file).then((dataUrl) => ({
+                fileName: file.name,
+                value: dataUrl,
+              }));
+
+          void nextValue
+            .then((result) =>
+              onChange({ fileName: result.fileName || file.name, value: result.value }),
+            )
+            .catch((readError) =>
+              setError(
+                readError instanceof Error
+                  ? readError.message
+                  : '파일을 읽는 중 오류가 발생했습니다.',
+              ),
+            )
+            .finally(() => setIsProcessing(false));
+
           event.currentTarget.value = '';
         }}
       />
+      {helperText ? <p className={styles.modalHint}>{helperText}</p> : null}
+      {error ? <p className={styles.modalError}>{error}</p> : null}
     </div>
   );
 }
-

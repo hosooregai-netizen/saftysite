@@ -5,6 +5,11 @@ import AppModal from '@/components/ui/AppModal';
 import ActionMenu from '@/components/ui/ActionMenu';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import {
+  uploadSafetyAssetFile,
+  usesSafetyProxyUpload,
+  validateSafetyAssetFile,
+} from '@/lib/safetyApi/assets';
+import {
   CONTENT_EDITOR_MODE_LABELS,
   CONTENT_TYPE_LABELS,
   CONTENT_TYPE_META,
@@ -119,6 +124,18 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
   const isDisasterCaseBatchCreate = editingId === 'create' && isDisasterCase;
   const titleLabel = isMeasurementTemplate ? '장비명' : '제목';
   const titlePlaceholder = isMeasurementTemplate ? '예: 조도계' : '';
+  const usesSafetyProxy = usesSafetyProxyUpload();
+
+  const validateLargeFile = (file: File) =>
+    validateSafetyAssetFile(file, { usesProxy: usesSafetyProxy });
+
+  const uploadFileAsset = async (file: File) => {
+    const uploaded = await uploadSafetyAssetFile(file);
+    return {
+      fileName: uploaded.file_name || file.name,
+      value: uploaded.url,
+    };
+  };
 
   const openCreate = () => {
     setEditingId('create');
@@ -535,15 +552,16 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
                         <ContentAssetField
                           accept="image/*"
                           disabled={busy}
+                          helperText="이미지는 업로드 API에 저장됩니다."
                           label="대표 이미지"
                           mode="image"
                           value={item.image_url}
                           fileName={item.image_name}
-                          onChange={({ dataUrl, fileName }) =>
+                          onChange={({ value, fileName }) =>
                             setDisasterCaseBatchItems((current) =>
                               current.map((entry, entryIndex) =>
                                 entryIndex === index
-                                  ? { ...entry, image_url: dataUrl, image_name: fileName }
+                                  ? { ...entry, image_url: value, image_name: fileName }
                                   : entry,
                               ),
                             )
@@ -557,6 +575,8 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
                               ),
                             )
                           }
+                          resolveFile={uploadFileAsset}
+                          validateFile={validateLargeFile}
                         />
                       </article>
                     ))}
@@ -592,14 +612,17 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
                 <ContentAssetField
                   accept="image/*"
                   disabled={busy}
+                  helperText="이미지는 업로드 API에 저장됩니다."
                   label="대표 이미지"
                   mode="image"
                   value={form.image_url}
                   fileName={form.image_name}
-                  onChange={({ dataUrl, fileName }) =>
-                    setForm({ ...form, image_url: dataUrl, image_name: fileName })
+                  onChange={({ value, fileName }) =>
+                    setForm({ ...form, image_url: value, image_name: fileName })
                   }
                   onClear={() => setForm({ ...form, image_url: '', image_name: '' })}
+                  resolveFile={uploadFileAsset}
+                  validateFile={validateLargeFile}
                 />
               ) : null}
 
@@ -608,26 +631,40 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
                   <ContentAssetField
                     accept=".pdf,.doc,.docx,.hwp,.png,.jpg,.jpeg,.gif,.webp"
                     disabled={busy}
+                    helperText={
+                      usesSafetyProxy
+                        ? '현재 앱 기준 허용 용량은 50MB이며, 배포 프록시 제한이 더 작으면 업로드가 실패할 수 있습니다.'
+                        : undefined
+                    }
                     label={activeTypeMeta.fileLabels?.[0] || '파일 1'}
                     mode="file"
                     value={form.file_url_1}
                     fileName={form.file_name_1}
-                    onChange={({ dataUrl, fileName }) =>
-                      setForm({ ...form, file_url_1: dataUrl, file_name_1: fileName })
+                    onChange={({ value, fileName }) =>
+                      setForm({ ...form, file_url_1: value, file_name_1: fileName })
                     }
                     onClear={() => setForm({ ...form, file_url_1: '', file_name_1: '' })}
+                    resolveFile={uploadFileAsset}
+                    validateFile={validateLargeFile}
                   />
                   <ContentAssetField
                     accept=".pdf,.doc,.docx,.hwp,.png,.jpg,.jpeg,.gif,.webp"
                     disabled={busy}
+                    helperText={
+                      usesSafetyProxy
+                        ? '현재 앱 기준 허용 용량은 50MB이며, 배포 프록시 제한이 더 작으면 업로드가 실패할 수 있습니다.'
+                        : undefined
+                    }
                     label={activeTypeMeta.fileLabels?.[1] || '파일 2'}
                     mode="file"
                     value={form.file_url_2}
                     fileName={form.file_name_2}
-                    onChange={({ dataUrl, fileName }) =>
-                      setForm({ ...form, file_url_2: dataUrl, file_name_2: fileName })
+                    onChange={({ value, fileName }) =>
+                      setForm({ ...form, file_url_2: value, file_name_2: fileName })
                     }
                     onClear={() => setForm({ ...form, file_url_2: '', file_name_2: '' })}
+                    resolveFile={uploadFileAsset}
+                    validateFile={validateLargeFile}
                   />
                 </div>
               ) : null}
@@ -651,4 +688,3 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
     </section>
   );
 }
-
