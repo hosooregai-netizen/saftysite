@@ -1,12 +1,14 @@
 import Link from 'next/link';
-import ActionMenu from '@/components/ui/ActionMenu';
+import ActionMenu, { type ActionMenuItem } from '@/components/ui/ActionMenu';
 import { formatDateTime } from '@/lib/formatDateTime';
 import type { HomeSiteSummary } from '@/features/home/lib/buildHomeSiteSummaries';
 import styles from './HomeScreen.module.css';
 
 interface AssignedSitesTableProps {
+  buildActionMenuItems?: (summary: HomeSiteSummary) => ActionMenuItem[];
   currentUserName?: string;
   currentUserPosition?: string | null;
+  getSiteHref?: (summary: HomeSiteSummary) => string;
   isLoading?: boolean;
   siteSummaries: HomeSiteSummary[];
 }
@@ -25,8 +27,10 @@ function formatCompactReportDate(value: string | null | undefined): string {
 }
 
 export function AssignedSitesTable({
+  buildActionMenuItems,
   currentUserName,
   currentUserPosition,
+  getSiteHref,
   isLoading = false,
   siteSummaries,
 }: AssignedSitesTableProps) {
@@ -61,9 +65,7 @@ export function AssignedSitesTable({
                 </div>
 
                 <div className={`${styles.primaryCell} ${styles.siteNameCell}`}>
-                  <span
-                    className={`${styles.loadingSkeleton} ${styles.loadingSkeletonLong}`}
-                  />
+                  <span className={`${styles.loadingSkeleton} ${styles.loadingSkeletonLong}`} />
                 </div>
 
                 <div className={`${styles.cell} ${styles.assigneeCell} ${styles.desktopOnly}`}>
@@ -135,10 +137,14 @@ export function AssignedSitesTable({
         </div>
 
         <div className={styles.siteList}>
-          {siteSummaries.map(({ site, latestProgress, latestSession, sessionCount }) => {
-            const siteHref = `/sites/${encodeURIComponent(site.id)}`;
+          {siteSummaries.map((summary) => {
+            const { site, latestProgress, latestSession, sessionCount } = summary;
+            const siteHref =
+              getSiteHref?.(summary) ?? `/sites/${encodeURIComponent(site.id)}`;
             const progressLabel =
               latestProgress >= 100 ? '완료' : latestProgress > 0 ? '진행중' : '미작성';
+            const actionItems =
+              buildActionMenuItems?.(summary) ?? [{ label: '보고서 보기', href: siteHref }];
 
             return (
               <article key={site.id} className={styles.siteRow}>
@@ -183,7 +189,7 @@ export function AssignedSitesTable({
 
                 <div className={`${styles.actionCell} ${styles.actionsCell}`}>
                   <ActionMenu
-                    items={[{ label: '보고서 보기', href: siteHref }]}
+                    items={actionItems}
                     label={`${site.siteName || '현장'} 작업 메뉴 열기`}
                   />
                 </div>
@@ -195,4 +201,3 @@ export function AssignedSitesTable({
     </div>
   );
 }
-

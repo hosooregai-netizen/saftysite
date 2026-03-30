@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import LoginPanel from '@/components/auth/LoginPanel';
 import WorkerAppHeader from '@/components/worker/WorkerAppHeader';
@@ -8,10 +9,23 @@ import WorkerShellBody from '@/components/worker/WorkerShellBody';
 import { WorkerMenuDrawer, WorkerMenuPanel } from '@/components/worker/WorkerMenu';
 import { AssignedSitesTable } from '@/features/home/components/AssignedSitesTable';
 import { useHomeScreenState } from '@/features/home/hooks/useHomeScreenState';
-import { buildSiteHubHref, buildSiteReportsHref } from '@/features/home/lib/siteEntry';
-import styles from './HomeScreen.module.css';
+import {
+  buildSiteHubHref,
+  buildSiteReportsHref,
+  getWorkerSiteEntryDescription,
+  getWorkerSiteEntryTitle,
+  type WorkerSitePickerIntent,
+} from '@/features/home/lib/siteEntry';
+import homeStyles from './HomeScreen.module.css';
+import entryStyles from './SiteEntryScreens.module.css';
 
-export function HomeScreen() {
+interface WorkerSitePickerScreenProps {
+  intent: WorkerSitePickerIntent;
+}
+
+export function WorkerSitePickerScreen({
+  intent,
+}: WorkerSitePickerScreenProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const {
     authError,
@@ -26,7 +40,6 @@ export function HomeScreen() {
     query,
     setQuery,
     shouldShowLogin,
-    siteSummaries,
     sortMode,
     setSortMode,
   } = useHomeScreenState();
@@ -36,8 +49,8 @@ export function HomeScreen() {
       <LoginPanel
         error={authError}
         onSubmit={login}
-        title="현장 허브 로그인"
-        description="로그인하면 배정된 현장을 선택해 기술지도 보고서, 분기 종합보고서, 불량사업장 신고를 이어서 진행할 수 있습니다."
+        title={`${getWorkerSiteEntryTitle(intent)} 로그인`}
+        description="로그인하면 현장을 먼저 선택한 뒤 해당 업무를 이어서 진행할 수 있습니다."
       />
     );
   }
@@ -49,7 +62,7 @@ export function HomeScreen() {
   return (
     <main className="app-page">
       <div className="app-container">
-        <section className={`app-shell ${styles.shell}`}>
+        <section className={`app-shell ${homeStyles.shell}`}>
           <WorkerAppHeader
             currentUserName={currentUserName}
             onLogout={logout}
@@ -61,55 +74,44 @@ export function HomeScreen() {
               <WorkerMenuPanel />
             </WorkerMenuSidebar>
 
-            <div className={styles.contentColumn}>
+            <div className={homeStyles.contentColumn}>
               {dataError ? (
-                <div className={styles.emptyState}>
-                  <p className={styles.emptyTitle}>데이터를 불러오지 못했습니다.</p>
-                  <p className={styles.emptyDescription}>{dataError}</p>
+                <div className={homeStyles.emptyState}>
+                  <p className={homeStyles.emptyTitle}>데이터를 불러오지 못했습니다.</p>
+                  <p className={homeStyles.emptyDescription}>{dataError}</p>
                 </div>
               ) : (
                 <>
-                  <header className={styles.hero}>
-                    <div className={styles.heroBody}>
-                      <div className={styles.heroMain}>
-                        <h1 className={styles.heroTitle}>현장 허브</h1>
+                  <header className={homeStyles.hero}>
+                    <div className={homeStyles.heroBody}>
+                      <Link href="/" className={entryStyles.heroBackLink}>
+                        {'<'} 현장 허브
+                      </Link>
+                      <div className={homeStyles.heroMain}>
+                        <h1 className={homeStyles.heroTitle}>{getWorkerSiteEntryTitle(intent)}</h1>
                       </div>
                     </div>
                   </header>
 
-                  <div className={styles.pageGrid}>
-                    <section className={styles.summaryBar}>
-                      <article className={styles.summaryCard}>
-                        <span className={styles.summaryCardLabel}>배정 현장</span>
-                        <strong className={styles.summaryCardValue}>
-                          {isInitialHydration ? '...' : siteSummaries.length}
-                        </strong>
-                      </article>
-                      <article className={styles.summaryCard}>
-                        <span className={styles.summaryCardLabel}>검색 결과</span>
-                        <strong className={styles.summaryCardValue}>
-                          {isInitialHydration ? '...' : filteredSiteSummaries.length}
-                        </strong>
-                      </article>
-                      <article className={styles.summaryCard}>
-                        <span className={styles.summaryCardLabel}>최근 작업 현장</span>
-                        <strong className={styles.summaryCardValue}>
-                          {isInitialHydration ? '...' : siteSummaries[0]?.site.siteName || '-'}
-                        </strong>
-                      </article>
+                  <div className={homeStyles.pageGrid}>
+                    <section className={entryStyles.noticeCard}>
+                      <p className={entryStyles.noticeTitle}>현장을 먼저 선택하세요.</p>
+                      <p className={entryStyles.noticeDescription}>
+                        {getWorkerSiteEntryDescription(intent)}
+                      </p>
                     </section>
 
-                    <section className={styles.tablePanel}>
-                      <div className={styles.tableTools}>
+                    <section className={homeStyles.tablePanel}>
+                      <div className={homeStyles.tableTools}>
                         <input
-                          className={`app-input ${styles.tableSearch}`}
+                          className={`app-input ${homeStyles.tableSearch}`}
                           placeholder="고객명, 현장명, 담당자로 검색"
                           value={query}
                           onChange={(event) => setQuery(event.target.value)}
                           disabled={isInitialHydration}
                         />
                         <select
-                          className={`app-select ${styles.tableSort}`}
+                          className={`app-select ${homeStyles.tableSort}`}
                           value={sortMode}
                           onChange={(event) =>
                             setSortMode(event.target.value as typeof sortMode)
@@ -125,8 +127,12 @@ export function HomeScreen() {
                       <AssignedSitesTable
                         currentUserName={currentUserName}
                         currentUserPosition={currentUserPosition}
-                        getSiteHref={(summary) => buildSiteHubHref(summary.site.id)}
+                        getSiteHref={(summary) => buildSiteHubHref(summary.site.id, intent)}
                         buildActionMenuItems={(summary) => [
+                          {
+                            label: `${getWorkerSiteEntryTitle(intent)} 준비`,
+                            href: buildSiteHubHref(summary.site.id, intent),
+                          },
                           {
                             label: '현장 허브 열기',
                             href: buildSiteHubHref(summary.site.id),
@@ -134,14 +140,6 @@ export function HomeScreen() {
                           {
                             label: '기술지도 보고서',
                             href: buildSiteReportsHref(summary.site.id),
-                          },
-                          {
-                            label: '분기 종합보고서',
-                            href: buildSiteHubHref(summary.site.id, 'quarterly'),
-                          },
-                          {
-                            label: '불량사업장 신고',
-                            href: buildSiteHubHref(summary.site.id, 'bad-workplace'),
                           },
                         ]}
                         isLoading={isInitialHydration}

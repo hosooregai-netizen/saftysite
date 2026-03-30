@@ -1,0 +1,148 @@
+.heroBackLink {
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--text-body);
+  font-weight: 700;
+  color: var(--erp-mid);
+}
+
+.heroBackLink:hover {
+  color: var(--erp-dark);
+}
+
+.noticeCard {
+  display: grid;
+  gap: 6px;
+  padding: 18px 20px;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-surface);
+  background: #fbfcfe;
+}
+
+.noticeTitle {
+  margin: 0;
+  font-size: var(--text-title);
+  font-weight: 700;
+  color: var(--erp-dark);
+}
+
+.noticeDescription {
+  margin: 0;
+  font-size: var(--text-body);
+  line-height: 1.7;
+  color: var(--erp-text-muted);
+}
+
+.entryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.entryCard {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+  padding: 20px;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-surface);
+  background: var(--erp-white);
+}
+
+.entryCardActive {
+  border-color: var(--erp-line-strong);
+  box-shadow: inset 3px 0 0 var(--erp-navy);
+  background: #fbfcfe;
+}
+
+.entryHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.entryBody {
+  display: grid;
+  gap: 8px;
+}
+
+.entryTitle {
+  margin: 0;
+  font-size: var(--text-title);
+  font-weight: 700;
+  color: var(--erp-dark);
+}
+
+.entryDescription {
+  margin: 0;
+  font-size: var(--text-body);
+  line-height: 1.7;
+  color: var(--erp-text);
+}
+
+.entryMeta {
+  margin: 0;
+  font-size: var(--text-ui);
+  line-height: 1.6;
+  color: var(--erp-text-muted);
+}
+
+.entryActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.subLinkList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.subLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--erp-line-strong);
+  border-radius: var(--erp-radius-control);
+  background: var(--erp-white);
+  font-size: var(--text-ui);
+  font-weight: 700;
+  color: var(--erp-dark);
+}
+
+.subLink:hover {
+  background: #f8fafc;
+}
+
+.emptyHint {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px dashed var(--erp-line);
+  border-radius: var(--erp-radius-surface);
+  background: var(--erp-panel-muted);
+  font-size: var(--text-ui);
+  line-height: 1.7;
+  color: var(--erp-text-muted);
+}
+
+@media (max-width: 767px) {
+  .noticeCard,
+  .entryCard {
+    padding: 16px;
+  }
+
+  .entryGrid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .subLink,
+  .entryActions :global(.app-button) {
+    width: 100%;
+  }
+}

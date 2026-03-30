@@ -3,42 +3,33 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useWorkerShellSidebarOptional } from '@/components/worker/WorkerShellSidebarContext';
+import {
+  buildSiteHubHref,
+  buildWorkerPickerHref,
+  getWorkerSiteEntryLabel,
+  type WorkerSitePickerIntent,
+} from '@/features/home/lib/siteEntry';
 import styles from './WorkerMenu.module.css';
 
-const TECH_GUIDE_HREF = '/';
-
-function TechGuideIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      width="22"
-      height="22"
-      viewBox="0 0 24 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-    >
-      <path
-        d="M4 19.5V7a2 2 0 012-2h6l6 6v8.5a1 1 0 01-1 1H5a1 1 0 01-1-1z"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M14 5v4h4"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-/** 기술 지도: 현장 목록 -> 보고서 목록 -> 작성 화면까지 동일 섹션으로 취급 */
-function isTechGuidePath(pathname: string | null): boolean {
+function isSiteHubPath(pathname: string | null): boolean {
   if (!pathname) return false;
   if (pathname === '/') return true;
-  return pathname.startsWith('/sites/') || pathname.startsWith('/sessions/');
+  if (pathname.startsWith('/sessions/')) return true;
+  return /^\/sites\/[^/]+(?:\/entry)?$/.test(pathname);
+}
+
+function isOperationalPickerPath(
+  pathname: string | null,
+  intent: WorkerSitePickerIntent,
+): boolean {
+  if (!pathname) return false;
+  return pathname === buildWorkerPickerHref(intent) || pathname.includes(`/${intent}/`);
+}
+
+function getSiteKeyFromPath(pathname: string | null): string | null {
+  if (!pathname) return null;
+  const matched = pathname.match(/^\/sites\/([^/]+)/);
+  return matched ? decodeURIComponent(matched[1]) : null;
 }
 
 export interface WorkerMenuItem {
@@ -50,9 +41,7 @@ export interface WorkerMenuItem {
 
 interface WorkerMenuPanelProps {
   items?: WorkerMenuItem[];
-  /** 드로어 등에서 링크 선택 후 호출 */
   onNavClick?: () => void;
-  /** 모바일 드로어 등: 축소(아이콘만) 레이아웃을 쓰지 않음 */
   forceExpanded?: boolean;
 }
 
@@ -68,7 +57,7 @@ interface WorkerMenuDrawerProps extends WorkerMenuPanelProps {
 
 export function WorkerMenuButton({
   onClick,
-  label = '작업자 메뉴 열기',
+  label = '작업 메뉴 열기',
 }: WorkerMenuButtonProps) {
   return (
     <button
@@ -94,7 +83,34 @@ export function WorkerMenuPanel({
   const pathname = usePathname();
   const shell = useWorkerShellSidebarOptional();
   const collapsed = forceExpanded ? false : Boolean(shell?.collapsed);
-  const isTechGuideActive = isTechGuidePath(pathname);
+  const currentSiteKey = getSiteKeyFromPath(pathname);
+
+  const builtInItems: WorkerMenuItem[] = [
+    {
+      label: getWorkerSiteEntryLabel('site'),
+      description: '배정된 현장과 보고서 진입',
+      href: currentSiteKey ? buildSiteHubHref(currentSiteKey) : '/',
+      active: isSiteHubPath(pathname),
+    },
+    {
+      label: getWorkerSiteEntryLabel('quarterly'),
+      description: '현장을 선택해 분기 보고서로 이동',
+      href: currentSiteKey
+        ? buildSiteHubHref(currentSiteKey, 'quarterly')
+        : buildWorkerPickerHref('quarterly'),
+      active: isOperationalPickerPath(pathname, 'quarterly'),
+    },
+    {
+      label: getWorkerSiteEntryLabel('bad-workplace'),
+      description: '현장을 선택해 신고 초안을 작성',
+      href: currentSiteKey
+        ? buildSiteHubHref(currentSiteKey, 'bad-workplace')
+        : buildWorkerPickerHref('bad-workplace'),
+      active: isOperationalPickerPath(pathname, 'bad-workplace'),
+    },
+  ];
+
+  const menuItems = [...builtInItems, ...items];
 
   const handleNav = () => {
     onNavClick?.();
@@ -118,39 +134,22 @@ export function WorkerMenuPanel({
           작업자 메뉴
         </h2>
         <nav className={styles.menuList} aria-label="작업자 메뉴 항목">
-          <Link
-            href={TECH_GUIDE_HREF}
-            className={itemClass(isTechGuideActive ? styles.menuItemActive : undefined)}
-            onClick={handleNav}
-            title={collapsed ? '기술 지도 — 배정된 고객사 현장' : undefined}
-          >
-            {collapsed ? (
-              <>
-                <TechGuideIcon className={styles.menuItemIcon} />
-                <span className={styles.srOnly}>기술 지도, 배정된 고객사 현장</span>
-              </>
-            ) : (
-              <span className={styles.menuItemTechGuideLine}>
-                <span className={styles.menuItemLabel}>기술 지도</span>
-                <span className={styles.menuItemTechGuideSep} aria-hidden="true">
-                  /
-                </span>
-                <span className={styles.menuItemDescription}>배정된 고객사 현장</span>
-              </span>
-            )}
-          </Link>
-          {items.map((item) => (
+          {menuItems.map((item) => (
             <Link
               key={`${item.label}-${item.href}`}
               href={item.href}
               className={itemClass(item.active ? styles.menuItemActive : undefined)}
               onClick={handleNav}
-              title={collapsed ? `${item.label}${item.description ? ` — ${item.description}` : ''}` : undefined}
+              title={
+                collapsed
+                  ? `${item.label}${item.description ? ` - ${item.description}` : ''}`
+                  : undefined
+              }
             >
               {collapsed ? (
                 <>
                   <span className={styles.menuItemGlyph} aria-hidden="true">
-                    {item.label.trim().charAt(0) || '·'}
+                    {item.label.trim().charAt(0) || '메'}
                   </span>
                   <span className={styles.srOnly}>
                     {item.label}
@@ -194,4 +193,3 @@ export function WorkerMenuDrawer({
     </>
   );
 }
-
