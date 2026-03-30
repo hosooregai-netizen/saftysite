@@ -100,12 +100,17 @@ function normalizeBaseUrl(value: string): string {
 }
 
 function resolveApiBaseUrl(): string {
-  const directBase = process.env.SAFETY_API_BASE_URL?.trim();
+  const directBase =
+    process.env.SAFETY_API_UPSTREAM_BASE_URL?.trim() ||
+    process.env.SAFETY_API_BASE_URL?.trim();
   if (directBase) {
     return normalizeBaseUrl(directBase);
   }
 
-  const configured = process.env.NEXT_PUBLIC_SAFETY_API_BASE_URL?.trim();
+  const configured =
+    process.env.NEXT_PUBLIC_SAFETY_API_UPSTREAM_BASE_URL?.trim() ||
+    process.env.NEXT_PUBLIC_SAFETY_API_PROXY_BASE_URL?.trim() ||
+    process.env.NEXT_PUBLIC_SAFETY_API_BASE_URL?.trim();
   if (configured) {
     if (configured.startsWith('http://') || configured.startsWith('https://')) {
       return normalizeBaseUrl(configured);
