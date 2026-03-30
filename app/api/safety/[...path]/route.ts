@@ -4,6 +4,7 @@ import {
 } from '@/lib/safetyApi/proxy';
 
 export const runtime = 'nodejs';
+export const maxDuration = 300;
 
 type SafetyRouteContext = {
   params: Promise<{

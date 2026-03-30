@@ -2,9 +2,20 @@ import { NextResponse } from 'next/server';
 import { convertHwpxBufferToPdf } from '@/server/documents/inspection/hwpxToPdf';
 
 export const runtime = 'nodejs';
+export const maxDuration = 300;
 
 export async function POST(request: Request): Promise<Response> {
   try {
+    if (process.platform !== 'win32') {
+      return NextResponse.json(
+        {
+          error:
+            '이 PDF 변환은 Windows와 한컴오피스 자동화가 필요한 기능이라 현재 배포 환경에서는 실행할 수 없습니다.',
+        },
+        { status: 501 },
+      );
+    }
+
     const formData = await request.formData();
     const file = formData.get('file');
 

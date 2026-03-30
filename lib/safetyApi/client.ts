@@ -2,6 +2,7 @@ import { buildSafetyApiUrl } from './config';
 
 const DEFAULT_SAFETY_API_TIMEOUT_MS = 12000;
 const UPLOAD_SAFETY_API_TIMEOUT_MS = 45000;
+const REPORT_UPSERT_SAFETY_API_TIMEOUT_MS = 45000;
 const DEFAULT_GET_CACHE_TTL_MS = 5000;
 const CONTENT_ITEMS_CACHE_TTL_MS = 60000;
 const REPORTS_BY_SITE_CACHE_TTL_MS = 15000;
@@ -106,6 +107,10 @@ async function parseErrorMessage(response: Response): Promise<string> {
 function getSafetyApiTimeoutMs(path: string, options: RequestInit): number {
   if (path.includes('/assets/upload') || options.body instanceof FormData) {
     return UPLOAD_SAFETY_API_TIMEOUT_MS;
+  }
+
+  if (path === '/reports/upsert') {
+    return REPORT_UPSERT_SAFETY_API_TIMEOUT_MS;
   }
 
   return DEFAULT_SAFETY_API_TIMEOUT_MS;

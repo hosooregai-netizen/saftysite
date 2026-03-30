@@ -7,6 +7,11 @@ import type { BadWorkplaceReport, QuarterlySummaryReport } from '@/types/erpRepo
 import type { InspectionSession, InspectionSite } from '@/types/inspectionSession';
 
 const API_BASE = '/api';
+const VERCEL_FUNCTION_BODY_LIMIT_MB = 4.5;
+
+function formatBlobSizeMb(bytes: number): string {
+  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+}
 
 async function parseApiResponse(res: Response): Promise<unknown> {
   const contentType = res.headers.get('content-type');
@@ -124,6 +129,16 @@ export async function convertHwpxBlobToPdf(
   });
 
   if (!res.ok) {
+    if (res.status === 413) {
+      throw new Error(
+        [
+          `PDF 변환 요청 크기가 너무 큽니다. 현재 HWPX는 ${formatBlobSizeMb(hwpxBlob.size)}입니다.`,
+          `Vercel Functions 요청 본문 제한은 ${VERCEL_FUNCTION_BODY_LIMIT_MB}MB라서 이 배포 환경에서는 프런트만으로 처리할 수 없습니다.`,
+          'HWPX로 다운로드하거나, 별도의 Windows PDF 변환 서버로 보내는 구조가 필요합니다.',
+        ].join(' '),
+      );
+    }
+
     const errorBody = await parseApiResponse(res);
     const message =
       typeof errorBody === 'object' && errorBody && 'error' in errorBody
