@@ -7,19 +7,27 @@ import {
 import { CAUSATIVE_AGENT_SECTIONS } from '@/constants/siteOverview';
 import { createTimestamp } from '@/constants/inspectionSession/shared';
 import type { InspectionSession, InspectionSite } from '@/types/inspectionSession';
-import type { QuarterTarget, QuarterlyCounter, QuarterlySummaryReport } from '@/types/erpReports';
+import type {
+  QuarterTarget,
+  QuarterlyCounter,
+  QuarterlySummaryReport,
+} from '@/types/erpReports';
 import type { CausativeAgentKey } from '@/types/siteOverview';
-import { buildQuarterlyReportKey, isDateWithinRange, QUARTERLY_SUMMARY_REPORT_KIND } from './shared';
+import {
+  buildQuarterlyReportKey,
+  isDateWithinRange,
+  QUARTERLY_SUMMARY_REPORT_KIND,
+} from './shared';
 
 const CAUSATIVE_AGENT_LABELS = CAUSATIVE_AGENT_SECTIONS.flatMap((section) =>
-  section.rows.flatMap((row) => [row.left, row.right])
+  section.rows.flatMap((row) => [row.left, row.right]),
 ).reduce<Record<CausativeAgentKey, string>>((accumulator, item) => {
   accumulator[item.key] = item.label;
   return accumulator;
 }, {} as Record<CausativeAgentKey, string>);
 
 function hasMeaningfulFinding(
-  finding: InspectionSession['document7Findings'][number]
+  finding: InspectionSession['document7Findings'][number],
 ) {
   return Boolean(
     finding.location ||
@@ -27,7 +35,7 @@ function hasMeaningfulFinding(
       finding.improvementPlan ||
       finding.accidentType ||
       finding.causativeAgentKey ||
-      finding.metadata
+      finding.metadata,
   );
 }
 
@@ -46,38 +54,146 @@ function takeTopCounters(counterMap: Map<string, number>, limit = 6): QuarterlyC
     .map(([label, count]) => ({ label, count }));
 }
 
-function getQuarterSessions(
-  siteSessions: InspectionSession[],
-  target: Pick<QuarterTarget, 'startDate' | 'endDate'>
-) {
-  return [...siteSessions]
-    .filter((session) =>
-      isDateWithinRange(session.meta.reportDate, target.startDate, target.endDate)
-    )
-    .sort((left, right) => left.meta.reportDate.localeCompare(right.meta.reportDate));
+function sortSessionsByDateDesc(sessions: InspectionSession[]) {
+  return [...sessions].sort((left, right) => {
+    const rightTime = new Date(right.meta.reportDate || right.updatedAt).getTime();
+    const leftTime = new Date(left.meta.reportDate || left.updatedAt).getTime();
+    return rightTime - leftTime;
+  });
 }
 
 function buildOverallComment(
   target: QuarterTarget,
   sessions: InspectionSession[],
   accidentStats: QuarterlyCounter[],
-  causativeStats: QuarterlyCounter[]
+  causativeStats: QuarterlyCounter[],
 ) {
   if (sessions.length === 0) {
-    return `${target.label}에는 아직 수집된 기술지도 보고서가 없습니다. 해당 분기 기술지도 보고서가 작성되면 통계와 총평이 자동으로 채워집니다.`;
+    return `${target.label}에는 아직 집계할 기술지도 보고서가 없습니다. 대상 보고서를 선택한 뒤 다시 계산하면 종합 의견과 통계가 자동으로 채워집니다.`;
   }
 
   const completedReports = sessions.filter(
-    (session) => getSessionProgress(session).percentage >= 100
+    (session) => getSessionProgress(session).percentage >= 100,
   ).length;
-  const topAccident = accidentStats[0]?.label || '주요 재해유형 미확인';
-  const topCause = causativeStats[0]?.label || '주요 기인물 미확인';
+  const topAccident = accidentStats[0]?.label || '주요 재해유형 미확정';
+  const topCause = causativeStats[0]?.label || '주요 기인물 미확정';
 
   return [
-    `${target.label}에는 총 ${sessions.length}회의 기술지도가 누적되었습니다.`,
-    `완료 수준 보고서는 ${completedReports}건이며, 가장 자주 확인된 재해유형은 ${topAccident}입니다.`,
-    `주요 기인물은 ${topCause}로 집계되어 해당 영역 중심의 후속 관리가 필요합니다.`,
+    `${target.label}에는 총 ${sessions.length}건의 기술지도 보고서가 반영되었습니다.`,
+    `완료 처리된 보고서는 ${completedReports}건이며, 가장 자주 확인된 재해유형은 ${topAccident}입니다.`,
+    `주요 기인물은 ${topCause}로 집계되어 해당 영역을 중심으로 후속 관리가 필요합니다.`,
   ].join(' ');
+}
+
+export function getQuarterlySourceSessions(
+  siteSessions: InspectionSession[],
+  target: Pick<QuarterTarget, 'startDate' | 'endDate'>,
+) {
+  return [...siteSessions]
+    .filter((session) =>
+      isDateWithinRange(session.meta.reportDate, target.startDate, target.endDate),
+    )
+    .sort((left, right) => left.meta.reportDate.localeCompare(right.meta.reportDate));
+}
+
+function buildDerivedQuarterlyContent(
+  siteSessions: InspectionSession[],
+  target: QuarterTarget,
+  selectedSessionIds: string[],
+) {
+  const quarterSessions = getQuarterlySourceSessions(siteSessions, target);
+  const selectedIdSet = new Set(selectedSessionIds);
+  const selectedSessions =
+    selectedIdSet.size > 0
+      ? quarterSessions.filter((session) => selectedIdSet.has(session.id))
+      : [];
+  const accidentCounter = new Map<string, number>();
+  const causativeCounter = new Map<string, number>();
+  const majorMeasures: string[] = [];
+
+  selectedSessions.forEach((session) => {
+    session.document7Findings.filter(hasMeaningfulFinding).forEach((finding) => {
+      const accidentLabel = finding.accidentType || '기타';
+      accidentCounter.set(accidentLabel, (accidentCounter.get(accidentLabel) || 0) + 1);
+
+      const causativeLabel = finding.causativeAgentKey
+        ? CAUSATIVE_AGENT_LABELS[finding.causativeAgentKey]
+        : '기타 위험요인';
+      causativeCounter.set(
+        causativeLabel,
+        (causativeCounter.get(causativeLabel) || 0) + 1,
+      );
+
+      const normalizedMeasure = normalizeMeasureText(finding.improvementPlan);
+      if (normalizedMeasure && !majorMeasures.includes(normalizedMeasure)) {
+        majorMeasures.push(normalizedMeasure);
+      }
+    });
+  });
+
+  const implementationRows = selectedSessions.map((session) => ({
+    sessionId: session.id,
+    reportTitle: getSessionTitle(session),
+    reportDate: session.meta.reportDate,
+    reportNumber: session.reportNumber,
+    drafter: session.meta.drafter,
+    progressRate: session.document2Overview.progressRate || '',
+    findingCount: session.document7Findings.filter(hasMeaningfulFinding).length,
+    improvedCount: session.document4FollowUps.filter((item) => item.result === 'implemented')
+      .length,
+  }));
+
+  const latestSelectedSession =
+    sortSessionsByDateDesc(selectedSessions)[0] ||
+    sortSessionsByDateDesc(quarterSessions)[0] ||
+    sortSessionsByDateDesc(siteSessions)[0] ||
+    null;
+
+  const futurePlans =
+    latestSelectedSession?.document8Plans
+      .filter((item) => item.processName || item.hazard || item.countermeasure || item.note)
+      .map((item) => createFutureProcessRiskPlan(item)) ||
+    FUTURE_PROCESS_LIBRARY.slice(0, 3).map((item) =>
+      createFutureProcessRiskPlan({
+        processName: item.processName,
+        hazard: item.hazard,
+        countermeasure: item.countermeasure,
+        source: 'api',
+      }),
+    );
+
+  const accidentStats = takeTopCounters(accidentCounter);
+  const causativeStats = takeTopCounters(causativeCounter);
+
+  return {
+    generatedFromSessionIds: selectedSessions.map((session) => session.id),
+    overallComment: buildOverallComment(
+      target,
+      selectedSessions,
+      accidentStats,
+      causativeStats,
+    ),
+    implementationRows,
+    accidentStats,
+    causativeStats,
+    futurePlans,
+    majorMeasures: majorMeasures.slice(0, 5),
+  };
+}
+
+export function syncQuarterlySummaryReportSources(
+  report: QuarterlySummaryReport,
+  siteSessions: InspectionSession[],
+  target: QuarterTarget,
+  selectedSessionIds: string[],
+): QuarterlySummaryReport {
+  const derived = buildDerivedQuarterlyContent(siteSessions, target, selectedSessionIds);
+
+  return {
+    ...report,
+    title: `${target.label} 종합보고서`,
+    ...derived,
+  };
 }
 
 export function buildInitialQuarterlySummaryReport(
@@ -85,7 +201,7 @@ export function buildInitialQuarterlySummaryReport(
   siteSessions: InspectionSession[],
   target: QuarterTarget,
   drafter: string,
-  existing?: QuarterlySummaryReport | null
+  existing?: QuarterlySummaryReport | null,
 ): QuarterlySummaryReport {
   if (existing) {
     return {
@@ -97,63 +213,14 @@ export function buildInitialQuarterlySummaryReport(
   }
 
   const timestamp = createTimestamp();
-  const quarterSessions = getQuarterSessions(siteSessions, target);
-  const accidentCounter = new Map<string, number>();
-  const causativeCounter = new Map<string, number>();
-  const majorMeasures: string[] = [];
+  const quarterSessions = getQuarterlySourceSessions(siteSessions, target);
+  const derived = buildDerivedQuarterlyContent(
+    siteSessions,
+    target,
+    quarterSessions.map((session) => session.id),
+  );
 
-  quarterSessions.forEach((session) => {
-    session.document7Findings.filter(hasMeaningfulFinding).forEach((finding) => {
-      const accidentLabel = finding.accidentType || '기타';
-      accidentCounter.set(accidentLabel, (accidentCounter.get(accidentLabel) || 0) + 1);
-
-      const causativeLabel = finding.causativeAgentKey
-        ? CAUSATIVE_AGENT_LABELS[finding.causativeAgentKey]
-        : '기타 위험요인';
-      causativeCounter.set(causativeLabel, (causativeCounter.get(causativeLabel) || 0) + 1);
-
-      const normalizedMeasure = normalizeMeasureText(finding.improvementPlan);
-      if (normalizedMeasure && !majorMeasures.includes(normalizedMeasure)) {
-        majorMeasures.push(normalizedMeasure);
-      }
-    });
-  });
-
-  const implementationRows = quarterSessions.map((session) => ({
-    sessionId: session.id,
-    reportTitle: getSessionTitle(session),
-    reportDate: session.meta.reportDate,
-    reportNumber: session.reportNumber,
-    drafter: session.meta.drafter,
-    progressRate: session.document2Overview.progressRate || '',
-    findingCount: session.document7Findings.filter(hasMeaningfulFinding).length,
-    improvedCount: session.document4FollowUps.filter((item) => item.result === 'implemented').length,
-  }));
-
-  const latestSession =
-    [...quarterSessions]
-      .sort((left, right) => right.meta.reportDate.localeCompare(left.meta.reportDate))[0] ||
-    [...siteSessions]
-      .sort((left, right) => right.meta.reportDate.localeCompare(left.meta.reportDate))[0] ||
-    null;
-
-  const futurePlans =
-    latestSession?.document8Plans.filter(
-      (item) => item.processName || item.hazard || item.countermeasure || item.note
-    ).map((item) => createFutureProcessRiskPlan(item)) ||
-    FUTURE_PROCESS_LIBRARY.slice(0, 3).map((item) =>
-      createFutureProcessRiskPlan({
-        processName: item.processName,
-        hazard: item.hazard,
-        countermeasure: item.countermeasure,
-        source: 'api',
-      })
-    );
-
-  const accidentStats = takeTopCounters(accidentCounter);
-  const causativeStats = takeTopCounters(causativeCounter);
-
-  const nextReport: QuarterlySummaryReport = {
+  return {
     id: buildQuarterlyReportKey(site.id, target.quarterKey),
     siteId: site.id,
     title: `${target.label} 종합보고서`,
@@ -163,16 +230,8 @@ export function buildInitialQuarterlySummaryReport(
     quarter: target.quarter,
     status: 'draft',
     drafter,
-    generatedFromSessionIds: quarterSessions.map((session) => session.id),
-    overallComment: buildOverallComment(target, quarterSessions, accidentStats, causativeStats),
-    implementationRows,
-    accidentStats,
-    causativeStats,
-    futurePlans,
-    majorMeasures: majorMeasures.slice(0, 5),
+    ...derived,
     createdAt: timestamp,
     updatedAt: timestamp,
   };
-
-  return nextReport;
 }

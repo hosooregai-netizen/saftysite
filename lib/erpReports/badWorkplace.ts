@@ -3,10 +3,10 @@ import { createTimestamp, generateId } from '@/constants/inspectionSession/share
 import type { SafetyUser } from '@/types/backend';
 import type { BadWorkplaceReport, BadWorkplaceViolation } from '@/types/erpReports';
 import type { InspectionSession, InspectionSite } from '@/types/inspectionSession';
-import { buildBadWorkplaceReportKey, BAD_WORKPLACE_REPORT_KIND } from './shared';
+import { BAD_WORKPLACE_REPORT_KIND, buildBadWorkplaceReportKey } from './shared';
 
 function hasMeaningfulFinding(
-  finding: InspectionSession['document7Findings'][number]
+  finding: InspectionSession['document7Findings'][number],
 ) {
   return Boolean(
     finding.location ||
@@ -14,7 +14,7 @@ function hasMeaningfulFinding(
       finding.improvementPlan ||
       finding.legalReferenceTitle ||
       finding.referenceMaterial1 ||
-      finding.referenceMaterial2
+      finding.referenceMaterial2,
   );
 }
 
@@ -26,17 +26,24 @@ function sortSessionsByDateDesc(sessions: InspectionSession[]) {
   });
 }
 
+export function getBadWorkplaceSourceSessions(siteSessions: InspectionSession[]) {
+  return sortSessionsByDateDesc(siteSessions);
+}
+
+export function getBadWorkplaceSelectableFindings(session: InspectionSession | null) {
+  if (!session) return [];
+  return session.document7Findings.filter((finding) => hasMeaningfulFinding(finding));
+}
+
 export function buildBadWorkplaceViolations(
   session: InspectionSession | null,
-  findingIds?: string[]
+  findingIds?: string[],
 ): BadWorkplaceViolation[] {
   if (!session) return [];
   if (findingIds && findingIds.length === 0) return [];
 
-  const findings = session.document7Findings.filter(
-    (finding) =>
-      hasMeaningfulFinding(finding) &&
-      (!findingIds || findingIds.includes(finding.id))
+  const findings = getBadWorkplaceSelectableFindings(session).filter(
+    (finding) => !findingIds || findingIds.includes(finding.id),
   );
 
   return findings.map((finding) => ({
@@ -52,11 +59,29 @@ export function buildBadWorkplaceViolations(
       finding.location ||
       finding.accidentType,
     improvementMeasure: finding.improvementPlan,
-    nonCompliance: '기술지도 후에도 동일 위험요인이 개선되지 않아 후속 조치가 필요합니다.',
+    nonCompliance: '기술지도 이후에도 동일 위험요인이 개선되지 않아 후속 조치가 필요합니다.',
     confirmationDate: session.meta.reportDate,
     accidentType: finding.accidentType,
     causativeAgentKey: finding.causativeAgentKey,
   }));
+}
+
+export function syncBadWorkplaceReportSource(
+  report: BadWorkplaceReport,
+  session: InspectionSession | null,
+  selectedFindingIds?: string[],
+): BadWorkplaceReport {
+  const violations = buildBadWorkplaceViolations(session, selectedFindingIds);
+
+  return {
+    ...report,
+    progressRate: session?.document2Overview.progressRate || '',
+    implementationCount:
+      session?.document2Overview.visitCount || report.implementationCount,
+    sourceSessionId: session?.id || '',
+    sourceFindingIds: violations.map((item) => item.sourceFindingId),
+    violations,
+  };
 }
 
 export function buildInitialBadWorkplaceReport(
@@ -64,17 +89,17 @@ export function buildInitialBadWorkplaceReport(
   siteSessions: InspectionSession[],
   reporter: Pick<SafetyUser, 'id' | 'name' | 'phone' | 'organization_name'> | null,
   reportMonth: string,
-  existing?: BadWorkplaceReport | null
+  existing?: BadWorkplaceReport | null,
 ): BadWorkplaceReport {
   if (existing) {
     return existing;
   }
 
   const timestamp = createTimestamp();
-  const sourceSession = sortSessionsByDateDesc(siteSessions)[0] || null;
+  const sourceSession = getBadWorkplaceSourceSessions(siteSessions)[0] || null;
   const violations = buildBadWorkplaceViolations(sourceSession);
 
-  const nextReport: BadWorkplaceReport = {
+  return {
     id: buildBadWorkplaceReportKey(site.id, reportMonth, reporter?.id || 'anonymous'),
     siteId: site.id,
     title: `${reportMonth} 불량사업장 신고서`,
@@ -86,8 +111,7 @@ export function buildInitialBadWorkplaceReport(
     receiverName: site.adminSiteSnapshot.siteManagerName,
     progressRate: sourceSession?.document2Overview.progressRate || '',
     implementationCount:
-      sourceSession?.document2Overview.visitCount ||
-      String(siteSessions.length || ''),
+      sourceSession?.document2Overview.visitCount || String(siteSessions.length || ''),
     contractPeriod: site.adminSiteSnapshot.constructionPeriod,
     agencyName: reporter?.organization_name || DEFAULT_GUIDANCE_AGENCY,
     agencyRepresentative: reporter?.name || '',
@@ -100,6 +124,4 @@ export function buildInitialBadWorkplaceReport(
     createdAt: timestamp,
     updatedAt: timestamp,
   };
-
-  return nextReport;
 }

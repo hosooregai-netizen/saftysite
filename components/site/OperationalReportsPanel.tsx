@@ -55,14 +55,14 @@ export default function OperationalReportsPanel({
   const recentBadReports = badWorkplaceReports
     .filter((item) => !currentUser || item.reporterUserId === currentUser.id)
     .slice(0, 3);
+
   return (
     <section className={styles.sectionCard}>
       <div className={styles.sectionHeader}>
         <div>
           <h2 className={styles.sectionTitle}>추가 업무 문서</h2>
           <p className={styles.sectionDescription}>
-            기술지도 보고서를 바탕으로 분기 종합보고서와 불량사업장 신고서를 이어서 작성할 수
-            있습니다.
+            기술지도 보고서 흐름 안에서 분기 종합보고서와 불량사업장 신고서를 이어서 작성할 수 있습니다.
           </p>
         </div>
         <div className={styles.statusRow}>
@@ -84,14 +84,12 @@ export default function OperationalReportsPanel({
               <span className="app-chip">대상 분기 {quarterTargets.length}개</span>
             </div>
             <p className={styles.reportCardDescription}>
-              공사기간이 3개월 이상인 현장은 자동으로 대상 분기가 계산되고, 분기별 기술지도
-              내용을 이어받아 초안을 만들 수 있습니다.
+              현장이 이미 선택된 상태이므로, 대상 분기를 고른 뒤 기준 기술지도 보고서를 확인하면서 분기 초안을 바로 이어서 작성할 수 있습니다.
             </p>
 
             {quarterTargets.length === 0 ? (
               <div className={styles.emptyState}>
-                공사기간 정보가 3개월 미만이거나 기간 정보가 없어 자동 대상 분기를 계산하지
-                못했습니다.
+                공사기간 정보가 3개월 미만이거나 기간 정보가 없어 대상 분기를 계산하지 못했습니다.
               </div>
             ) : (
               <div className={styles.cardGrid}>
@@ -111,9 +109,14 @@ export default function OperationalReportsPanel({
                       <p className={styles.reportCardDescription}>
                         대상 기간: {target.startDate} ~ {target.endDate}
                       </p>
+                      {existing ? (
+                        <p className={styles.reportCardDescription}>
+                          현재 초안에 반영된 기준 보고서 {existing.generatedFromSessionIds.length}건
+                        </p>
+                      ) : null}
                       <div className={styles.reportActions}>
                         <Link href={href} className={styles.linkButton}>
-                          {existing ? '이어서 작성' : '초안 만들기'}
+                          {existing ? '기준 보고서 확인 후 이어서 작성' : '대상 보고서 고르고 초안 만들기'}
                         </Link>
                       </div>
                     </article>
@@ -129,15 +132,14 @@ export default function OperationalReportsPanel({
               <span className="app-chip">{formatReportMonthLabel(currentReportMonth)}</span>
             </div>
             <p className={styles.reportCardDescription}>
-              최근 기술지도 보고서의 지적사항을 불러와 신고서 초안을 만들고, 필요하면 바로
-              수정할 수 있습니다.
+              최신 기술지도 보고서를 자동으로 제안하고, 필요하면 다른 원본 보고서와 지적사항을 직접 골라 신고 초안을 작성할 수 있습니다.
             </p>
             <div className={styles.reportActions}>
               <Link
                 href={`/sites/${encodeURIComponent(currentSite.id)}/bad-workplace/${encodeURIComponent(currentReportMonth)}`}
                 className={styles.linkButton}
               >
-                {currentMonthReport ? '이번 달 신고서 이어서 작성' : '이번 달 신고서 작성'}
+                {currentMonthReport ? '원본 보고서 다시 확인하고 이어서 작성' : '원본 보고서 고르고 초안 만들기'}
               </Link>
             </div>
 
@@ -152,7 +154,7 @@ export default function OperationalReportsPanel({
                       <span className="app-chip">{getOperationalStatusLabel(item.status)}</span>
                     </div>
                     <p className={styles.reportCardDescription}>
-                      신고 항목 {item.violations.length}건
+                      원본 지적사항 {item.sourceFindingIds.length}건 / 신고 항목 {item.violations.length}건
                       {item.reporterName ? ` / 작성자 ${item.reporterName}` : ''}
                     </p>
                     <div className={styles.reportActions}>
@@ -168,8 +170,7 @@ export default function OperationalReportsPanel({
               </div>
             ) : (
               <div className={styles.emptyState}>
-                아직 등록된 불량사업장 신고서가 없습니다. 최근 기술지도 보고서에서 지적사항을
-                선택해 바로 초안을 만들 수 있습니다.
+                아직 등록된 불량사업장 신고서가 없습니다. 원본 기술지도 보고서를 고른 뒤 바로 초안을 만들 수 있습니다.
               </div>
             )}
           </article>

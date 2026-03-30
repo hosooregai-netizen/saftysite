@@ -4,17 +4,19 @@ import Link from 'next/link';
 import { use, useMemo, useState } from 'react';
 import LoginPanel from '@/components/auth/LoginPanel';
 import operationalStyles from '@/components/site/OperationalReports.module.css';
+import { getSessionProgress, getSessionTitle } from '@/constants/inspectionSession';
 import { createTimestamp } from '@/constants/inspectionSession/shared';
+import { fetchQuarterlyWordDocument, saveBlobAsFile } from '@/lib/api';
 import {
-  fetchQuarterlyWordDocument,
-  saveBlobAsFile,
-} from '@/lib/api';
-import { buildInitialQuarterlySummaryReport } from '@/lib/erpReports/quarterly';
+  buildInitialQuarterlySummaryReport,
+  getQuarterlySourceSessions,
+  syncQuarterlySummaryReportSources,
+} from '@/lib/erpReports/quarterly';
 import { parseQuarterKey } from '@/lib/erpReports/shared';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { useSiteOperationalReports } from '@/hooks/useSiteOperationalReports';
-import type { QuarterlySummaryReport } from '@/types/erpReports';
-import type { InspectionSite } from '@/types/inspectionSession';
+import type { QuarterTarget, QuarterlySummaryReport } from '@/types/erpReports';
+import type { InspectionSession, InspectionSite } from '@/types/inspectionSession';
 
 interface QuarterlyReportPageProps {
   params: Promise<{
@@ -38,19 +40,18 @@ export default function QuarterlyReportPage({ params }: QuarterlyReportPageProps
   } = useInspectionSessions();
   const currentSite = useMemo(
     () => sites.find((site) => site.id === decodedSiteKey) ?? null,
-    [decodedSiteKey, sites]
+    [decodedSiteKey, sites],
   );
   const siteSessions = useMemo(
     () => sessions.filter((session) => session.siteKey === decodedSiteKey),
-    [decodedSiteKey, sessions]
+    [decodedSiteKey, sessions],
   );
   const target = parseQuarterKey(decodedQuarterKey);
   const { quarterlyReports, isSaving, error, saveQuarterlyReport } =
     useSiteOperationalReports(currentSite);
   const existing = useMemo(
-    () =>
-      quarterlyReports.find((item) => item.quarterKey === decodedQuarterKey) || null,
-    [decodedQuarterKey, quarterlyReports]
+    () => quarterlyReports.find((item) => item.quarterKey === decodedQuarterKey) || null,
+    [decodedQuarterKey, quarterlyReports],
   );
   const initialDraft = useMemo(() => {
     if (!currentSite || !target) return null;
@@ -59,7 +60,7 @@ export default function QuarterlyReportPage({ params }: QuarterlyReportPageProps
       siteSessions,
       target,
       currentUser?.name || currentSite.assigneeName,
-      existing
+      existing,
     );
   }, [currentSite, currentUser?.name, existing, siteSessions, target]);
 
@@ -81,7 +82,7 @@ export default function QuarterlyReportPage({ params }: QuarterlyReportPageProps
         error={authError}
         onSubmit={login}
         title="분기 보고서 로그인"
-        description="분기 보고서를 저장하려면 다시 로그인해 주세요."
+        description="분기 보고서를 작성하려면 다시 로그인해 주세요."
       />
     );
   }
@@ -106,11 +107,12 @@ export default function QuarterlyReportPage({ params }: QuarterlyReportPageProps
         <QuarterlyReportEditor
           key={`${initialDraft.id}:${initialDraft.updatedAt}`}
           currentSite={currentSite}
-          quarterLabel={target.label}
+          target={target}
           initialDraft={initialDraft}
           isSaving={isSaving}
           error={error}
           onSave={saveQuarterlyReport}
+          siteSessions={siteSessions}
         />
       </div>
     </main>
@@ -119,25 +121,70 @@ export default function QuarterlyReportPage({ params }: QuarterlyReportPageProps
 
 interface QuarterlyReportEditorProps {
   currentSite: InspectionSite;
-  quarterLabel: string;
+  target: QuarterTarget;
   initialDraft: QuarterlySummaryReport;
   isSaving: boolean;
   error: string | null;
   onSave: (report: QuarterlySummaryReport) => Promise<void>;
+  siteSessions: InspectionSession[];
+}
+
+function getInitialSelectedSourceIds(
+  initialDraft: QuarterlySummaryReport,
+  sourceSessions: InspectionSession[],
+) {
+  const availableIds = new Set(sourceSessions.map((session) => session.id));
+  const existingIds = initialDraft.generatedFromSessionIds.filter((id) => availableIds.has(id));
+  if (existingIds.length > 0 || initialDraft.generatedFromSessionIds.length > 0) {
+    return existingIds;
+  }
+
+  return sourceSessions.map((session) => session.id);
+}
+
+function countMeaningfulFindings(session: InspectionSession) {
+  return session.document7Findings.filter(
+    (item) =>
+      item.location ||
+      item.emphasis ||
+      item.improvementPlan ||
+      item.accidentType ||
+      item.causativeAgentKey ||
+      item.metadata,
+  ).length;
+}
+
+function normalizeIds(value: string[]) {
+  return [...value].sort().join('|');
 }
 
 function QuarterlyReportEditor({
   currentSite,
-  quarterLabel,
+  target,
   initialDraft,
   isSaving,
   error,
   onSave,
+  siteSessions,
 }: QuarterlyReportEditorProps) {
+  const sourceSessions = useMemo(
+    () => getQuarterlySourceSessions(siteSessions, target),
+    [siteSessions, target],
+  );
   const [draft, setDraft] = useState(initialDraft);
+  const [selectedSourceSessionIds, setSelectedSourceSessionIds] = useState(() =>
+    getInitialSelectedSourceIds(initialDraft, sourceSessions),
+  );
   const [notice, setNotice] = useState<string | null>(null);
   const [documentError, setDocumentError] = useState<string | null>(null);
   const [isGeneratingDocument, setIsGeneratingDocument] = useState(false);
+
+  const selectedSourceSet = useMemo(
+    () => new Set(selectedSourceSessionIds),
+    [selectedSourceSessionIds],
+  );
+  const hasPendingSelectionChanges =
+    normalizeIds(selectedSourceSessionIds) !== normalizeIds(draft.generatedFromSessionIds);
 
   const handleSave = async () => {
     const nextDraft = { ...draft, updatedAt: createTimestamp() };
@@ -154,11 +201,39 @@ function QuarterlyReportEditor({
       saveBlobAsFile(blob, filename);
     } catch (error) {
       setDocumentError(
-        error instanceof Error ? error.message : '문서 다운로드 중 오류가 발생했습니다.'
+        error instanceof Error
+          ? error.message
+          : '문서 다운로드 중 오류가 발생했습니다.',
       );
     } finally {
       setIsGeneratingDocument(false);
     }
+  };
+
+  const handleToggleSourceSession = (sessionId: string, checked: boolean) => {
+    setSelectedSourceSessionIds((current) => {
+      if (checked) {
+        return current.includes(sessionId) ? current : [...current, sessionId];
+      }
+
+      return current.filter((item) => item !== sessionId);
+    });
+  };
+
+  const handleApplySourceSelection = () => {
+    setDraft((current) =>
+      syncQuarterlySummaryReportSources(
+        current,
+        siteSessions,
+        target,
+        selectedSourceSessionIds,
+      ),
+    );
+    setNotice(
+      selectedSourceSessionIds.length > 0
+        ? `선택한 기술지도 보고서 ${selectedSourceSessionIds.length}건을 기준으로 초안을 다시 계산했습니다.`
+        : '선택한 기술지도 보고서가 없어 분기 초안을 비운 상태로 다시 계산했습니다.',
+    );
   };
 
   return (
@@ -166,16 +241,16 @@ function QuarterlyReportEditor({
       <div className={operationalStyles.toolbar}>
         <div>
           <Link
-            href={`/sites/${encodeURIComponent(currentSite.id)}`}
-            className={operationalStyles.linkButtonSecondary + ' ' + operationalStyles.linkButton}
+            href={`/sites/${encodeURIComponent(currentSite.id)}/entry?entry=quarterly`}
+            className={`${operationalStyles.linkButtonSecondary} ${operationalStyles.linkButton}`}
           >
-            현장으로 돌아가기
+            현장 허브로 돌아가기
           </Link>
           <h1 className={operationalStyles.sectionTitle} style={{ marginTop: 14 }}>
             {draft.title}
           </h1>
           <p className={operationalStyles.sectionDescription}>
-            {currentSite.siteName} 현장의 {quarterLabel} 기술지도 데이터를 집계한 초안입니다.
+            {currentSite.siteName} 현장의 {target.label} 기술지도 보고서를 기준으로 분기 종합보고서를 작성합니다.
           </p>
         </div>
         <div className={operationalStyles.toolbarActions}>
@@ -203,7 +278,108 @@ function QuarterlyReportEditor({
 
       {error ? <div className={operationalStyles.bannerError}>{error}</div> : null}
       {documentError ? <div className={operationalStyles.bannerError}>{documentError}</div> : null}
-      {notice ? <div className="app-chip">{notice}</div> : null}
+      {notice ? <div className={operationalStyles.bannerInfo}>{notice}</div> : null}
+
+      <article className={operationalStyles.reportCard}>
+        <div className={operationalStyles.reportCardHeader}>
+          <strong className={operationalStyles.reportCardTitle}>1. 대상 분기와 기준 보고서 선택</strong>
+          <div className={operationalStyles.statusRow}>
+            <span className="app-chip">{target.label}</span>
+            <span className="app-chip">
+              {target.startDate} ~ {target.endDate}
+            </span>
+            <span className="app-chip">후보 보고서 {sourceSessions.length}건</span>
+            <span className="app-chip">선택 {selectedSourceSessionIds.length}건</span>
+          </div>
+        </div>
+        <p className={operationalStyles.reportCardDescription}>
+          대상 분기 안에 있는 기술지도 보고서를 먼저 자동 선택했습니다. 필요하면 체크를 조정한 뒤 아래 초안을 다시 계산하세요.
+        </p>
+
+        {sourceSessions.length > 0 ? (
+          <>
+            <div className={operationalStyles.sourceList}>
+              {sourceSessions.map((session) => {
+                const isSelected = selectedSourceSet.has(session.id);
+                const progress = getSessionProgress(session).percentage;
+                const findingCount = countMeaningfulFindings(session);
+
+                return (
+                  <article
+                    key={session.id}
+                    className={`${operationalStyles.sourceCard} ${
+                      isSelected ? operationalStyles.sourceCardActive : ''
+                    }`}
+                  >
+                    <div className={operationalStyles.sourceCardTop}>
+                      <input
+                        type="checkbox"
+                        className={`app-checkbox ${operationalStyles.sourceCheckbox}`}
+                        checked={isSelected}
+                        onChange={(event) =>
+                          handleToggleSourceSession(session.id, event.target.checked)
+                        }
+                      />
+                      <div className={operationalStyles.sourceCardBody}>
+                        <strong className={operationalStyles.sourceCardTitle}>
+                          {getSessionTitle(session)}
+                        </strong>
+                        <span className={operationalStyles.sourceCardMeta}>
+                          작성일 {session.meta.reportDate || '-'} / 작성자 {session.meta.drafter || '-'} / 진행률 {progress}% / 지적사항 {findingCount}건
+                        </span>
+                      </div>
+                      <span className="app-chip">{isSelected ? '선택됨' : '제외됨'}</span>
+                    </div>
+                    <div className={operationalStyles.sourceCardActions}>
+                      <Link
+                        href={`/sessions/${encodeURIComponent(session.id)}`}
+                        className={`${operationalStyles.linkButton} ${operationalStyles.linkButtonSecondary}`}
+                      >
+                        원본 보기
+                      </Link>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+
+            <div className={operationalStyles.reportActions}>
+              <button
+                type="button"
+                className="app-button app-button-secondary"
+                onClick={() => setSelectedSourceSessionIds(sourceSessions.map((session) => session.id))}
+              >
+                전체 선택
+              </button>
+              <button
+                type="button"
+                className="app-button app-button-secondary"
+                onClick={() => setSelectedSourceSessionIds([])}
+              >
+                선택 해제
+              </button>
+              <button
+                type="button"
+                className="app-button app-button-primary"
+                onClick={handleApplySourceSelection}
+                disabled={!hasPendingSelectionChanges}
+              >
+                선택한 보고서로 초안 다시 계산
+              </button>
+            </div>
+
+            {hasPendingSelectionChanges ? (
+              <div className={operationalStyles.bannerInfo}>
+                기준 보고서 선택이 바뀌었습니다. 초안 다시 계산을 누르면 아래 종합 의견, 통계, 집계 표가 선택 결과에 맞게 갱신됩니다.
+              </div>
+            ) : null}
+          </>
+        ) : (
+          <div className={operationalStyles.emptyState}>
+            대상 분기 안에 집계할 기술지도 보고서가 없습니다.
+          </div>
+        )}
+      </article>
 
       <div className={operationalStyles.summaryGrid}>
         <article className={operationalStyles.summaryCard}>
@@ -215,7 +391,7 @@ function QuarterlyReportEditor({
           <strong className={operationalStyles.summaryValue}>{draft.drafter || '-'}</strong>
         </article>
         <article className={operationalStyles.summaryCard}>
-          <span className={operationalStyles.summaryLabel}>집계 보고서</span>
+          <span className={operationalStyles.summaryLabel}>선택 보고서</span>
           <strong className={operationalStyles.summaryValue}>
             {draft.generatedFromSessionIds.length}건
           </strong>
@@ -262,10 +438,10 @@ function QuarterlyReportEditor({
         <table className={operationalStyles.table}>
           <thead>
             <tr>
-              <th>실시일</th>
+              <th>작성일</th>
               <th>보고서</th>
               <th>작성자</th>
-              <th>공정율</th>
+              <th>진행률</th>
               <th>지적 건수</th>
               <th>개선 건수</th>
             </tr>
@@ -284,7 +460,7 @@ function QuarterlyReportEditor({
               ))
             ) : (
               <tr>
-                <td colSpan={6}>대상 분기에 집계된 기술지도 보고서가 없습니다.</td>
+                <td colSpan={6}>선택된 기술지도 보고서가 없습니다.</td>
               </tr>
             )}
           </tbody>
@@ -340,7 +516,7 @@ function QuarterlyReportEditor({
                     futurePlans: current.futurePlans.map((plan) =>
                       plan.id === item.id
                         ? { ...plan, processName: event.target.value }
-                        : plan
+                        : plan,
                     ),
                   }))
                 }
@@ -353,7 +529,7 @@ function QuarterlyReportEditor({
                   setDraft((current) => ({
                     ...current,
                     futurePlans: current.futurePlans.map((plan) =>
-                      plan.id === item.id ? { ...plan, hazard: event.target.value } : plan
+                      plan.id === item.id ? { ...plan, hazard: event.target.value } : plan,
                     ),
                   }))
                 }
@@ -368,7 +544,7 @@ function QuarterlyReportEditor({
                     futurePlans: current.futurePlans.map((plan) =>
                       plan.id === item.id
                         ? { ...plan, countermeasure: event.target.value }
-                        : plan
+                        : plan,
                     ),
                   }))
                 }
@@ -381,7 +557,7 @@ function QuarterlyReportEditor({
                   setDraft((current) => ({
                     ...current,
                     futurePlans: current.futurePlans.map((plan) =>
-                      plan.id === item.id ? { ...plan, note: event.target.value } : plan
+                      plan.id === item.id ? { ...plan, note: event.target.value } : plan,
                     ),
                   }))
                 }
@@ -392,7 +568,7 @@ function QuarterlyReportEditor({
       </div>
 
       <article className={operationalStyles.summaryCard}>
-        <span className={operationalStyles.summaryLabel}>대표 안전대책</span>
+        <span className={operationalStyles.summaryLabel}>주요 안전대책</span>
         <div className={operationalStyles.tagList}>
           {draft.majorMeasures.length > 0 ? (
             draft.majorMeasures.map((item, index) => (
