@@ -20,6 +20,10 @@
   min-height: 32px;
 }
 
+.heroBodyCompact {
+  min-height: 36px;
+}
+
 .heroBackButton {
   display: inline-flex;
   flex-shrink: 0;
@@ -59,6 +63,13 @@
   min-width: 0;
 }
 
+.heroMainCompact {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 10px;
+}
+
 .heroTitle {
   margin: 0;
   font-size: var(--text-title);
@@ -68,11 +79,23 @@
   color: var(--erp-dark);
 }
 
+.heroTitleCompact {
+  font-size: var(--text-lead);
+  line-height: 1.2;
+}
+
 .heroDescription {
   margin: 6px 0 0;
   font-size: var(--text-body);
   line-height: 1.5;
   color: var(--erp-text-muted);
+}
+
+.heroDescriptionCompact {
+  margin: 0;
+  font-size: var(--text-ui);
+  line-height: 1.35;
+  white-space: nowrap;
 }
 
 .contentColumn {
@@ -1142,6 +1165,22 @@
     font-size: var(--text-stat);
   }
 
+  .heroBodyCompact {
+    align-items: flex-start;
+  }
+
+  .heroMainCompact {
+    align-items: flex-start;
+  }
+
+  .heroTitleCompact {
+    font-size: var(--text-body-md);
+  }
+
+  .heroDescriptionCompact {
+    white-space: normal;
+  }
+
   .heroActions {
     width: 100%;
   }
@@ -1395,6 +1434,10 @@
 
   .heroTitle {
     font-size: var(--text-body-md);
+  }
+
+  .heroTitleCompact {
+    font-size: var(--text-body);
   }
 
   .pageGrid {

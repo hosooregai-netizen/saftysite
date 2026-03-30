@@ -35,6 +35,7 @@ export function AdminDashboardShell({
   onSelectSection,
 }: AdminDashboardShellProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const hasHeroDescription = Boolean(activeSectionDescription);
 
   return (
     <main className="app-page">
@@ -61,7 +62,11 @@ export function AdminDashboardShell({
 
             <div className={styles.contentColumn}>
               <header className={styles.hero}>
-                <div className={styles.heroBody}>
+                <div
+                  className={`${styles.heroBody} ${
+                    hasHeroDescription ? styles.heroBodyCompact : ''
+                  }`}
+                >
                   {backLabel && onBack ? (
                     <button
                       type="button"
@@ -72,10 +77,26 @@ export function AdminDashboardShell({
                       {'<'} {backLabel}
                     </button>
                   ) : null}
-                  <div className={styles.heroMain}>
-                    <h1 className={styles.heroTitle}>{activeSectionLabel}</h1>
+                  <div
+                    className={`${styles.heroMain} ${
+                      hasHeroDescription ? styles.heroMainCompact : ''
+                    }`}
+                  >
+                    <h1
+                      className={`${styles.heroTitle} ${
+                        hasHeroDescription ? styles.heroTitleCompact : ''
+                      }`}
+                    >
+                      {activeSectionLabel}
+                    </h1>
                     {activeSectionDescription ? (
-                      <p className={styles.heroDescription}>{activeSectionDescription}</p>
+                      <p
+                        className={`${styles.heroDescription} ${
+                          hasHeroDescription ? styles.heroDescriptionCompact : ''
+                        }`}
+                      >
+                        {activeSectionDescription}
+                      </p>
                     ) : null}
                   </div>
                 </div>
