@@ -82,7 +82,7 @@ export function WorkspaceShell({
           <WorkerShellBody>
             <WorkerMenuSidebar>
               {isAdminView ? (
-                <AdminMenuPanel activeSection="sites" />
+                <AdminMenuPanel activeSection="headquarters" />
               ) : (
                 <WorkerMenuPanel />
               )}
@@ -140,7 +140,7 @@ export function WorkspaceShell({
         <AdminMenuDrawer
           open={menuOpen}
           onClose={() => setMenuOpen(false)}
-          activeSection="sites"
+          activeSection="headquarters"
         />
       ) : (
         <WorkerMenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} />

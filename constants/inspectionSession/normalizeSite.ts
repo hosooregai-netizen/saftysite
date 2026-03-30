@@ -34,6 +34,7 @@ export function normalizeInspectionSite(raw: unknown): InspectionSite {
 
   return {
     id: normalizeText(source.id) || generateId('site'),
+    headquarterId: normalizeText(source.headquarterId),
     title: normalizeText(source.title) || snapshot.siteName || snapshot.customerName || '현장',
     customerName: snapshot.customerName,
     siteName: snapshot.siteName,

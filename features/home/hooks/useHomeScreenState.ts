@@ -3,7 +3,7 @@
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
-import { isAdminUserRole } from '@/lib/admin';
+import { getAdminSectionHref, isAdminUserRole } from '@/lib/admin';
 import {
   buildHomeSiteSummaries,
   type HomeSiteSummary,
@@ -80,7 +80,7 @@ export function useHomeScreenState(): HomeScreenState {
 
   useEffect(() => {
     if (currentUser && isControllerView) {
-      router.replace('/admin');
+      router.replace(getAdminSectionHref('headquarters'));
     }
   }, [currentUser, isControllerView, router]);
 

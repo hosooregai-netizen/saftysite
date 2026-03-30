@@ -55,6 +55,7 @@ export function mapSafetySiteToInspectionSite(site: SafetySite): InspectionSite 
 
   return {
     id: site.id,
+    headquarterId: site.headquarter_id,
     title: adminSiteSnapshot.siteName || adminSiteSnapshot.customerName || '현장',
     customerName: adminSiteSnapshot.customerName,
     siteName: adminSiteSnapshot.siteName,

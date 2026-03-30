@@ -31,8 +31,13 @@ import {
   hasValues,
   refreshAdminMasterData,
 } from '@/features/admin/lib/adminDashboardMutations';
-import { ADMIN_SECTIONS, getAdminSectionHref, parseAdminSectionKey } from '@/lib/admin';
-import type { AdminSectionKey } from '@/lib/admin';
+import {
+  ADMIN_SECTIONS,
+  getAdminSectionHref,
+  isLegacyAdminSectionKey,
+  parseAdminSectionKey,
+} from '@/lib/admin';
+import type { AdminSectionKey, AdminSectionQuery } from '@/lib/admin';
 import type {
   ControllerDashboardData,
   SafetyAssignmentInput,
@@ -82,14 +87,37 @@ export function useAdminDashboardState({
   const [isLoading, setIsLoading] = useState(false);
   const [isContentLoading, setIsContentLoading] = useState(false);
   const [isMutating, setIsMutating] = useState(false);
+  const [hasLoadedCoreData, setHasLoadedCoreData] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const activeSection = parseAdminSectionKey(searchParams.get('section')) ?? 'overview';
+  const rawSection = searchParams.get('section');
+  const selectedHeadquarterId = searchParams.get('headquarterId');
+  const selectedSiteId = searchParams.get('siteId');
+  const activeSection = parseAdminSectionKey(rawSection) ?? 'headquarters';
   const activeSectionMeta = useMemo(
     () => ADMIN_SECTIONS.find((section) => section.key === activeSection) ?? ADMIN_SECTIONS[0],
     [activeSection],
+  );
+  const selectedHeadquarter = useMemo(
+    () =>
+      selectedHeadquarterId
+        ? data.headquarters.find((item) => item.id === selectedHeadquarterId) ?? null
+        : null,
+    [data.headquarters, selectedHeadquarterId],
+  );
+  const selectedSite = useMemo(
+    () =>
+      selectedSiteId ? data.sites.find((item) => item.id === selectedSiteId) ?? null : null,
+    [data.sites, selectedSiteId],
+  );
+
+  const replaceRoute = useCallback(
+    (section: AdminSectionKey, query: AdminSectionQuery = {}) => {
+      router.replace(getAdminSectionHref(section, query));
+    },
+    [router],
   );
 
   const getToken = useCallback(() => {
@@ -127,6 +155,7 @@ export function useAdminDashboardState({
     } catch (nextError) {
       setError(getErrorMessage(nextError));
     } finally {
+      setHasLoadedCoreData(true);
       setIsLoading(false);
       setIsContentLoading(false);
     }
@@ -138,11 +167,72 @@ export function useAdminDashboardState({
     }
   }, [activeSection, enabled, reload]);
 
+  useEffect(() => {
+    if (!enabled) return;
+
+    if (!rawSection || !isLegacyAdminSectionKey(rawSection)) {
+      replaceRoute('headquarters', {
+        headquarterId: selectedHeadquarterId,
+        siteId: selectedSiteId,
+      });
+    }
+  }, [enabled, rawSection, replaceRoute, selectedHeadquarterId, selectedSiteId]);
+
+  useEffect(() => {
+    if (!enabled || !hasLoadedCoreData) return;
+    if (!rawSection || !isLegacyAdminSectionKey(rawSection)) return;
+
+    if (rawSection === 'sites') {
+      const matchedSite = selectedSiteId
+        ? data.sites.find((site) => site.id === selectedSiteId) ?? null
+        : null;
+      replaceRoute('headquarters', {
+        headquarterId: matchedSite?.headquarter_id ?? selectedHeadquarterId,
+        siteId: matchedSite ? selectedSiteId : null,
+      });
+      return;
+    }
+
+    if (activeSection !== 'headquarters') return;
+
+    if (selectedSiteId) {
+      if (!selectedSite) {
+        replaceRoute('headquarters', {
+          headquarterId: selectedHeadquarterId,
+        });
+        return;
+      }
+
+      if (selectedHeadquarterId !== selectedSite.headquarter_id) {
+        replaceRoute('headquarters', {
+          headquarterId: selectedSite.headquarter_id,
+          siteId: selectedSite.id,
+        });
+        return;
+      }
+    }
+
+    if (selectedHeadquarterId && !selectedHeadquarter) {
+      replaceRoute('headquarters');
+    }
+  }, [
+    activeSection,
+    data.sites,
+    enabled,
+    hasLoadedCoreData,
+    rawSection,
+    replaceRoute,
+    selectedHeadquarter,
+    selectedHeadquarterId,
+    selectedSite,
+    selectedSiteId,
+  ]);
+
   const selectSection = useCallback(
-    (nextSection: AdminSectionKey) => {
-      router.replace(getAdminSectionHref(nextSection));
+    (nextSection: AdminSectionKey, query: AdminSectionQuery = {}) => {
+      replaceRoute(nextSection, query);
     },
-    [router],
+    [replaceRoute],
   );
 
   const runMutation = useCallback(
@@ -207,7 +297,20 @@ export function useAdminDashboardState({
     isMutating,
     notice,
     reload,
+    selectedHeadquarter,
+    selectedHeadquarterId,
+    selectedSite,
+    selectedSiteId,
     selectSection,
+    selectHeadquarter: (headquarterId: string) =>
+      replaceRoute('headquarters', { headquarterId }),
+    selectSite: (headquarterId: string, siteId: string) =>
+      replaceRoute('headquarters', { headquarterId, siteId }),
+    clearHeadquarterSelection: () => replaceRoute('headquarters'),
+    clearSiteSelection: () =>
+      replaceRoute('headquarters', {
+        headquarterId: selectedHeadquarterId,
+      }),
     createUser: (input: SafetyUserCreateInput) =>
       runMutation((token) => createSafetyUser(token, input), '사용자를 생성했습니다.'),
     updateUser: (id: string, input: SafetyUserUpdateInput) =>

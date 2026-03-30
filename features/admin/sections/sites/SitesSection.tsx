@@ -14,9 +14,6 @@ import type { SafetySite, SafetyUser } from '@/types/backend';
 import type { SafetyAssignment, SafetyHeadquarter } from '@/types/controller';
 import { SiteAssignmentModal } from './SiteAssignmentModal';
 
-// TODO(admin-refactor): Split the table and editor modal into separate files.
-// This file stayed large in this pass to preserve the existing site CRUD and assignment behavior unchanged.
-
 interface SitesSectionProps {
   busy: boolean;
   assignments: SafetyAssignment[];
@@ -55,6 +52,11 @@ interface SitesSectionProps {
   onDelete: (id: string) => Promise<void>;
   onAssignFieldAgent: (siteId: string, userId: string) => Promise<void>;
   onUnassignFieldAgent: (siteId: string, userId: string) => Promise<void>;
+  title?: string;
+  emptyMessage?: string;
+  showHeadquarterColumn?: boolean;
+  lockedHeadquarterId?: string | null;
+  onSelectSiteReports?: (site: SafetySite) => void;
 }
 
 const EMPTY_FORM = {
@@ -80,7 +82,7 @@ function formatAssignedUsers(users: SafetyUser[]) {
 function formatAssignedUserDetails(users: SafetyUser[]) {
   if (users.length === 0) return '배정 정보 없음';
   return users
-    .map((user) => [user.position || '직급 미입력', user.organization_name || '소속 미입력'].join(' · '))
+    .map((user) => [user.position || '직책 미입력', user.organization_name || '소속 미입력'].join(' · '))
     .join(' / ');
 }
 
@@ -97,6 +99,11 @@ export function SitesSection(props: SitesSectionProps) {
     onDelete,
     onAssignFieldAgent,
     onUnassignFieldAgent,
+    title = '현장 목록',
+    emptyMessage = '등록된 현장이 없습니다.',
+    showHeadquarterColumn = true,
+    lockedHeadquarterId = null,
+    onSelectSiteReports,
   } = props;
   const [editingId, setEditingId] = useState<string | null>(null);
   const [assignmentSiteId, setAssignmentSiteId] = useState<string | null>(null);
@@ -156,7 +163,10 @@ export function SitesSection(props: SitesSectionProps) {
 
   const openCreate = () => {
     setEditingId('create');
-    setForm(EMPTY_FORM);
+    setForm({
+      ...EMPTY_FORM,
+      headquarter_id: lockedHeadquarterId ?? '',
+    });
   };
 
   const openEdit = (site: SafetySite) => {
@@ -184,7 +194,7 @@ export function SitesSection(props: SitesSectionProps) {
   };
 
   const buildPayload = () => ({
-    headquarter_id: form.headquarter_id,
+    headquarter_id: lockedHeadquarterId ?? form.headquarter_id,
     site_name: form.site_name.trim(),
     site_code: toNullableText(form.site_code),
     management_number: toNullableText(form.management_number),
@@ -208,7 +218,7 @@ export function SitesSection(props: SitesSectionProps) {
 
   const handleDeleteSite = async (site: SafetySite) => {
     const confirmed = window.confirm(
-      `'${site.site_name}' 현장을 삭제하시겠습니까?\n연결된 현장 배정도 함께 정리되며, 이 작업은 되돌릴 수 없습니다.`,
+      `'${site.site_name}' 현장을 삭제하시겠습니까?\n연결된 현장 배정은 함께 정리되며, 이 작업은 되돌릴 수 없습니다.`,
     );
 
     if (!confirmed) return;
@@ -219,7 +229,7 @@ export function SitesSection(props: SitesSectionProps) {
     <section className={`${styles.sectionCard} ${styles.listSectionCard}`}>
       <div className={styles.sectionHeader}>
         <div>
-          <h2 className={styles.sectionTitle}>현장 CRUD</h2>
+          <h2 className={styles.sectionTitle}>{title}</h2>
         </div>
         <div className={styles.sectionHeaderActions}>
           <span className="app-chip">표시 {filteredSites.length} / 전체 {sites.length}개</span>
@@ -238,7 +248,7 @@ export function SitesSection(props: SitesSectionProps) {
         <div className={styles.filterRow}>
           <input
             className={`app-input ${styles.filterSearch}`}
-            placeholder="현장명, 사업장명, 책임자, 배정 지도요원으로 검색"
+            placeholder="현장명, 사업장명, 책임자, 배정 요원으로 검색"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
@@ -269,17 +279,17 @@ export function SitesSection(props: SitesSectionProps) {
         </div>
         <div className={styles.tableShell}>
           {filteredSites.length === 0 ? (
-            <div className={styles.tableEmpty}>등록된 현장이 없습니다.</div>
+            <div className={styles.tableEmpty}>{emptyMessage}</div>
           ) : (
             <div className={styles.tableWrap}>
               <table className={styles.table}>
                 <thead>
                   <tr>
                     <th>현장명</th>
-                    <th>사업장</th>
+                    {showHeadquarterColumn ? <th>사업장</th> : null}
                     <th>관리번호</th>
                     <th>책임자</th>
-                    <th>배정 지도요원</th>
+                    <th>배정 요원</th>
                     <th>기간</th>
                     <th>상태</th>
                     <th>메뉴</th>
@@ -299,12 +309,24 @@ export function SitesSection(props: SitesSectionProps) {
                     return (
                       <tr key={site.id}>
                         <td>
-                          <div className={styles.tablePrimary}>{site.site_name}</div>
+                          {onSelectSiteReports ? (
+                            <button
+                              type="button"
+                              className={styles.tableButtonLink}
+                              onClick={() => onSelectSiteReports(site)}
+                            >
+                              {site.site_name}
+                            </button>
+                          ) : (
+                            <div className={styles.tablePrimary}>{site.site_name}</div>
+                          )}
                           <div className={styles.tableSecondary}>
                             {site.site_address || '주소 미입력'}
                           </div>
                         </td>
-                        <td>{site.headquarter_detail?.name || site.headquarter?.name || '-'}</td>
+                        {showHeadquarterColumn ? (
+                          <td>{site.headquarter_detail?.name || site.headquarter?.name || '-'}</td>
+                        ) : null}
                         <td>{site.management_number || '-'}</td>
                         <td>
                           <div className={styles.tablePrimary}>{site.manager_name || '-'}</div>
@@ -338,7 +360,19 @@ export function SitesSection(props: SitesSectionProps) {
                             <ActionMenu
                               label={`${site.site_name} 현장 작업 메뉴 열기`}
                               items={[
-                                { label: '보고서', href: `/sites/${encodeURIComponent(site.id)}` },
+                                ...(onSelectSiteReports
+                                  ? [
+                                      {
+                                        label: '보고서 보기',
+                                        onSelect: () => onSelectSiteReports(site),
+                                      },
+                                    ]
+                                  : [
+                                      {
+                                        label: '보고서',
+                                        href: `/sites/${encodeURIComponent(site.id)}`,
+                                      },
+                                    ]),
                                 {
                                   label: '지도요원 배정',
                                   onSelect: () => {
@@ -407,9 +441,9 @@ export function SitesSection(props: SitesSectionProps) {
             <span className={styles.label}>사업장</span>
             <select
               className="app-select"
-              value={form.headquarter_id}
+              value={lockedHeadquarterId ?? form.headquarter_id}
               onChange={(e) => setForm({ ...form, headquarter_id: e.target.value })}
-              disabled={busy}
+              disabled={busy || Boolean(lockedHeadquarterId)}
             >
               <option value="">선택</option>
               {headquarters.map((item) => (
@@ -546,4 +580,3 @@ export function SitesSection(props: SitesSectionProps) {
     </section>
   );
 }
-

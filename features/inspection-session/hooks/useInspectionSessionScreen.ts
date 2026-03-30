@@ -73,9 +73,14 @@ export function useInspectionSessionScreen(sessionId: string) {
   );
   const site = session ? getSiteById(getSessionSiteKey(session)) : null;
   const backHref = site
-    ? `/sites/${encodeURIComponent(site.id)}`
+    ? isAdminView
+      ? getAdminSectionHref('headquarters', {
+          headquarterId: site.headquarterId,
+          siteId: site.id,
+        })
+      : `/sites/${encodeURIComponent(site.id)}`
     : isAdminView
-      ? getAdminSectionHref('sites')
+      ? getAdminSectionHref('headquarters')
       : '/';
 
   useEffect(() => () => void saveNow(), [saveNow]);

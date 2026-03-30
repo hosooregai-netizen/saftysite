@@ -31,33 +31,33 @@ export function AdminOverviewSection({
   const stats: Array<{ label: string; target: AdminSectionKey; value: number }> = [
     { label: '전체 사용자', value: data.users.length, target: 'users' },
     { label: '사업장', value: data.headquarters.length, target: 'headquarters' },
-    { label: '운영 현장', value: activeSites.length, target: 'sites' },
+    { label: '운영 현장', value: activeSites.length, target: 'headquarters' },
     { label: '지도요원', value: activeFieldAgents.length, target: 'users' },
-    { label: '전체 보고서', value: reportStats.total, target: 'sites' },
-    { label: '진행 중 보고서', value: reportStats.inProgress, target: 'sites' },
-    { label: '완료 보고서', value: reportStats.completed, target: 'sites' },
-    { label: '미배정 현장', value: unassignedActiveSiteCount, target: 'sites' },
+    { label: '전체 보고서', value: reportStats.total, target: 'headquarters' },
+    { label: '진행 중 보고서', value: reportStats.inProgress, target: 'headquarters' },
+    { label: '완료 보고서', value: reportStats.completed, target: 'headquarters' },
+    { label: '미배정 현장', value: unassignedActiveSiteCount, target: 'headquarters' },
   ];
 
   const insights = [
     unassignedActiveSiteCount > 0
       ? {
           title: '미배정 현장 확인',
-          text: `운영 중 현장 ${unassignedActiveSiteCount}곳이 아직 지도요원 배정이 없습니다.`,
-          target: 'sites' as const,
+          text: `운영 중인 현장 ${unassignedActiveSiteCount}곳이 아직 지도요원 배정이 없습니다.`,
+          target: 'headquarters' as const,
         }
       : null,
     reportStats.inProgress > 0
       ? {
           title: '진행 중 보고서 점검',
-          text: `작성 중 보고서가 ${reportStats.inProgress}건 있습니다. 현장 탭에서 바로 들어가 이어서 검토할 수 있습니다.`,
-          target: 'sites' as const,
+          text: `작성 중인 보고서가 ${reportStats.inProgress}건 있습니다. 사업장 화면에서 바로 확인할 수 있습니다.`,
+          target: 'headquarters' as const,
         }
       : null,
     overloadedAgents[0]
       ? {
-          title: '지도요원 배정 편중',
-          text: `${overloadedAgents[0].name}님에게 ${overloadedAgents[0].siteCount}개 현장이 배정되어 있습니다. 배정 균형을 한번 확인해보세요.`,
+          title: '지도요원 배정 편차',
+          text: `${overloadedAgents[0].name}에게 ${overloadedAgents[0].siteCount}개 현장이 배정되어 있습니다. 배정 균형을 확인해 보세요.`,
           target: 'users' as const,
         }
       : null,
@@ -71,7 +71,7 @@ export function AdminOverviewSection({
     inactiveUsers.length > 0
       ? {
           title: '비활성 사용자 정리',
-          text: `비활성 사용자 ${inactiveUsers.length}명이 있습니다. 재사용 여부를 확인하면 관리가 더 깔끔해집니다.`,
+          text: `비활성 사용자가 ${inactiveUsers.length}명 있습니다. 계정 상태를 한번 정리해 주세요.`,
           target: 'users' as const,
         }
       : null,
@@ -80,7 +80,7 @@ export function AdminOverviewSection({
   const fallbackInsights = [
     {
       title: '운영 상태 양호',
-      text: '현재 확인할 즉시 조치 항목은 없습니다. 필요할 때 각 관리 탭에서 데이터를 점검해 주세요.',
+      text: '지금 바로 조치가 필요한 항목은 없습니다. 필요한 경우 사업장 화면에서 현장과 보고서를 순서대로 확인해 주세요.',
       target: 'overview' as const,
     },
   ];
@@ -104,7 +104,7 @@ export function AdminOverviewSection({
             >
               <p className={`${styles.statLabel} ${styles.overviewStatLabel}`}>{stat.label}</p>
               <p className={`${styles.statValue} ${styles.overviewStatValue}`}>{stat.value}</p>
-              <p className={`${styles.statMeta} ${styles.overviewStatMeta}`}>해당 테이블 보기</p>
+              <p className={`${styles.statMeta} ${styles.overviewStatMeta}`}>해당 화면 보기</p>
             </button>
           ))}
         </div>
@@ -149,7 +149,7 @@ export function AdminOverviewSection({
                   <span className="app-chip">{formatTimestamp(latestAssignment.assigned_at)}</span>
                 </div>
                 <p className={`${styles.recordDescription} ${styles.overviewRecordDescription}`}>
-                  역할: {latestAssignment.role_on_site || '미지정'}
+                  역할: {latestAssignment.role_on_site || '미정'}
                   {'\n'}
                   메모: {latestAssignment.memo || '없음'}
                 </p>
@@ -166,9 +166,8 @@ export function AdminOverviewSection({
               </strong>
             </div>
             <p className={`${styles.recordDescription} ${styles.overviewRecordDescription}`}>
-              상단 요약 카드와 빠른 메뉴 탭으로 바로 해당 관리 화면에 이동할 수 있습니다.
-              모바일과 태블릿에서는 긴 모달과 필터 영역이 화면 안에서 자연스럽게 흐르도록
-              정리했습니다.
+              사업장 탭에서 사업장, 현장, 보고서까지 한 단계씩 내려가며 확인할 수 있도록 구성했습니다.
+              모바일과 태블릿에서도 같은 흐름이 유지되도록 상단 메뉴와 카드 구성을 맞춰두었습니다.
             </p>
           </article>
         </div>

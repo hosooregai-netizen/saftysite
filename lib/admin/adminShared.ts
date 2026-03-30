@@ -8,8 +8,14 @@ export type ControllerSectionKey =
   | 'overview'
   | 'users'
   | 'headquarters'
-  | 'sites'
   | 'content';
+
+type LegacyControllerSectionKey = ControllerSectionKey | 'sites';
+
+export interface ControllerSectionQuery {
+  headquarterId?: string | null;
+  siteId?: string | null;
+}
 
 export const CONTROLLER_SECTIONS: Array<{
   key: ControllerSectionKey;
@@ -19,19 +25,39 @@ export const CONTROLLER_SECTIONS: Array<{
   { key: 'overview', label: '개요', description: '운영 현황' },
   { key: 'users', label: '사용자', description: '계정 관리' },
   { key: 'headquarters', label: '사업장', description: '본사 정보' },
-  { key: 'sites', label: '현장', description: '현장 정보' },
   { key: 'content', label: '콘텐츠', description: '콘텐츠 관리' },
 ];
 
 export function parseControllerSectionKey(value: string | null | undefined): ControllerSectionKey | null {
   if (!value) return null;
+  if (value === 'sites') return 'headquarters';
   return CONTROLLER_SECTIONS.some((section) => section.key === value)
     ? (value as ControllerSectionKey)
     : null;
 }
 
-export function getControllerSectionHref(section: ControllerSectionKey): string {
-  return `/admin?section=${section}`;
+export function getControllerSectionHref(
+  section: ControllerSectionKey,
+  query: ControllerSectionQuery = {}
+): string {
+  const searchParams = new URLSearchParams();
+  searchParams.set('section', section);
+
+  if (query.headquarterId) {
+    searchParams.set('headquarterId', query.headquarterId);
+  }
+
+  if (query.siteId) {
+    searchParams.set('siteId', query.siteId);
+  }
+
+  return `/admin?${searchParams.toString()}`;
+}
+
+export function isLegacyControllerSectionKey(
+  value: string | null | undefined
+): value is LegacyControllerSectionKey {
+  return value === 'sites' || CONTROLLER_SECTIONS.some((section) => section.key === value);
 }
 
 const ADMIN_USER_ROLES = new Set<SafetyUserRole>(['super_admin', 'admin', 'controller']);

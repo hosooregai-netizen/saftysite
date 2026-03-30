@@ -10,6 +10,7 @@ interface HeadquartersTableProps {
   onCreateRequest: () => void;
   onDeleteRequest: (item: SafetyHeadquarter) => void;
   onEditRequest: (item: SafetyHeadquarter) => void;
+  onOpenSitesRequest: (item: SafetyHeadquarter) => void;
   onQueryChange: (value: string) => void;
   query: string;
   totalHeadquarterCount: number;
@@ -22,6 +23,7 @@ export function HeadquartersTable({
   onCreateRequest,
   onDeleteRequest,
   onEditRequest,
+  onOpenSitesRequest,
   onQueryChange,
   query,
   totalHeadquarterCount,
@@ -30,7 +32,7 @@ export function HeadquartersTable({
     <>
       <div className={styles.sectionHeader}>
         <div>
-          <h2 className={styles.sectionTitle}>사업장 정보 CRUD</h2>
+          <h2 className={styles.sectionTitle}>사업장 정보</h2>
         </div>
         <div className={styles.sectionHeaderActions}>
           <span className="app-chip">표시 {filteredHeadquarters.length} / 전체 {totalHeadquarterCount}개</span>
@@ -75,7 +77,15 @@ export function HeadquartersTable({
                   {filteredHeadquarters.map((item) => (
                     <tr key={item.id}>
                       <td>
-                        <div className={styles.tablePrimary}>{item.name}</div>
+                        <button
+                          type="button"
+                          className={styles.tableButtonLink}
+                          onClick={() => {
+                            if (!busy) onOpenSitesRequest(item);
+                          }}
+                        >
+                          {item.name}
+                        </button>
                         <div className={styles.tableSecondary}>면허번호 {item.license_no || '-'}</div>
                       </td>
                       <td>
@@ -91,6 +101,12 @@ export function HeadquartersTable({
                           <ActionMenu
                             label={`${item.name} 작업 메뉴 열기`}
                             items={[
+                              {
+                                label: '현장 보기',
+                                onSelect: () => {
+                                  if (!busy) onOpenSitesRequest(item);
+                                },
+                              },
                               {
                                 label: '수정',
                                 onSelect: () => {
@@ -123,4 +139,3 @@ export function HeadquartersTable({
     </>
   );
 }
-

@@ -124,6 +124,11 @@
   gap: 16px;
 }
 
+.drilldownStack {
+  display: grid;
+  gap: 16px;
+}
+
 .menuPanel {
   display: flex;
   flex: 1 1 auto;
@@ -471,6 +476,22 @@
   color: var(--erp-dark);
 }
 
+.tableButtonLink {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--erp-mid);
+  cursor: pointer;
+  text-align: left;
+}
+
+.tableButtonLink:hover {
+  text-decoration: underline;
+}
+
 .tableSecondary {
   margin-top: 4px;
   line-height: 1.55;
@@ -527,6 +548,37 @@
 .filterButtonActive {
   border-color: var(--erp-mid);
   background: #eef3f8;
+}
+
+.breadcrumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.breadcrumbButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 700;
+  color: var(--erp-mid);
+  cursor: pointer;
+}
+
+.breadcrumbButton:hover {
+  text-decoration: underline;
+}
+
+.breadcrumbSep {
+  color: var(--erp-text-muted);
+}
+
+.breadcrumbCurrent {
+  font-weight: 700;
+  color: var(--erp-dark);
 }
 
 .modalForm {

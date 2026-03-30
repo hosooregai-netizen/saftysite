@@ -48,6 +48,7 @@ export interface InspectionSession {
 
 export interface InspectionSite {
   id: string;
+  headquarterId?: string;
   title: string;
   customerName: string;
   siteName: string;

@@ -104,6 +104,7 @@ export function createInspectionSite(
 
   return {
     id: generateId('site'),
+    headquarterId: '',
     title: snapshot.siteName || snapshot.customerName || '현장',
     customerName: snapshot.customerName,
     siteName: snapshot.siteName,

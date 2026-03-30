@@ -9,7 +9,6 @@ import { useAdminDashboardState } from '@/features/admin/hooks/useAdminDashboard
 import { ContentItemsSection } from '@/features/admin/sections/content/ContentItemsSection';
 import { HeadquartersSection } from '@/features/admin/sections/headquarters/HeadquartersSection';
 import { AdminOverviewSection } from '@/features/admin/sections/overview/AdminOverviewSection';
-import { SitesSection } from '@/features/admin/sections/sites/SitesSection';
 import { UsersSection } from '@/features/admin/sections/users/UsersSection';
 
 interface AdminDashboardScreenProps {
@@ -51,26 +50,24 @@ function renderAdminSection(
     case 'headquarters':
       return (
         <HeadquartersSection
-          busy={busy}
-          canDelete={canDelete}
-          headquarters={headquarters}
-          onCreate={dashboard.createHeadquarter}
-          onDelete={dashboard.deleteHeadquarter}
-          onUpdate={dashboard.updateHeadquarter}
-        />
-      );
-    case 'sites':
-      return (
-        <SitesSection
           assignments={assignments}
           busy={busy}
           canDelete={canDelete}
           headquarters={headquarters}
           onAssignFieldAgent={dashboard.assignFieldAgentToSite}
-          onCreate={dashboard.createSite}
-          onDelete={dashboard.deleteSite}
+          onClearHeadquarterSelection={dashboard.clearHeadquarterSelection}
+          onClearSiteSelection={dashboard.clearSiteSelection}
+          onCreate={dashboard.createHeadquarter}
+          onCreateSite={dashboard.createSite}
+          onDelete={dashboard.deleteHeadquarter}
+          onDeleteSite={dashboard.deleteSite}
+          onSelectHeadquarter={dashboard.selectHeadquarter}
+          onSelectSite={dashboard.selectSite}
           onUnassignFieldAgent={dashboard.unassignFieldAgentFromSite}
-          onUpdate={dashboard.updateSite}
+          onUpdate={dashboard.updateHeadquarter}
+          onUpdateSite={dashboard.updateSite}
+          selectedHeadquarterId={dashboard.selectedHeadquarterId}
+          selectedSiteId={dashboard.selectedSiteId}
           sites={sites}
           users={users}
         />
