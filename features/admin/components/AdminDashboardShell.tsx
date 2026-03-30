@@ -11,20 +11,26 @@ import styles from './AdminDashboardShell.module.css';
 
 interface AdminDashboardShellProps {
   activeSection: AdminSectionKey;
+  activeSectionDescription?: string;
   activeSectionLabel: string;
+  backLabel?: string;
   banners: ReactNode;
   children: ReactNode;
   currentUserName: string;
+  onBack?: () => void;
   onLogout: () => void;
   onSelectSection: (section: AdminSectionKey) => void;
 }
 
 export function AdminDashboardShell({
   activeSection,
+  activeSectionDescription,
   activeSectionLabel,
+  backLabel,
   banners,
   children,
   currentUserName,
+  onBack,
   onLogout,
   onSelectSection,
 }: AdminDashboardShellProps) {
@@ -56,8 +62,21 @@ export function AdminDashboardShell({
             <div className={styles.contentColumn}>
               <header className={styles.hero}>
                 <div className={styles.heroBody}>
+                  {backLabel && onBack ? (
+                    <button
+                      type="button"
+                      className={styles.heroBackButton}
+                      onClick={onBack}
+                      aria-label={`${backLabel}으로 돌아가기`}
+                    >
+                      {'<'} {backLabel}
+                    </button>
+                  ) : null}
                   <div className={styles.heroMain}>
                     <h1 className={styles.heroTitle}>{activeSectionLabel}</h1>
+                    {activeSectionDescription ? (
+                      <p className={styles.heroDescription}>{activeSectionDescription}</p>
+                    ) : null}
                   </div>
                 </div>
               </header>

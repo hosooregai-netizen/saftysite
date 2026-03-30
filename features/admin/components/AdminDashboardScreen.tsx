@@ -104,15 +104,49 @@ export function AdminDashboardScreen({
     refreshMasterData,
   });
   const canDeleteCrud = canDeleteControllerCrud(currentUser.role);
+  const headquartersTitle =
+    dashboard.selectedSite?.site_name?.trim() ||
+    dashboard.selectedHeadquarter?.name?.trim() ||
+    '사업장 목록';
+  const headquartersDescription = dashboard.selectedSite
+    ? '보고서 및 추가 업무'
+    : dashboard.selectedHeadquarter
+      ? '현장 목록'
+      : undefined;
+  const shellBackLabel =
+    dashboard.activeSection === 'headquarters'
+      ? dashboard.selectedSiteId
+        ? dashboard.selectedHeadquarter?.name?.trim() || '현장 목록'
+        : dashboard.selectedHeadquarterId
+          ? '사업장 목록'
+          : undefined
+      : undefined;
+  const shellBackAction =
+    dashboard.activeSection === 'headquarters'
+      ? dashboard.selectedSiteId
+        ? dashboard.clearSiteSelection
+        : dashboard.selectedHeadquarterId
+          ? dashboard.clearHeadquarterSelection
+          : undefined
+      : undefined;
 
   return (
     <AdminDashboardShell
       activeSection={dashboard.activeSection}
-      activeSectionLabel={dashboard.activeSectionMeta.label}
+      activeSectionDescription={
+        dashboard.activeSection === 'headquarters' ? headquartersDescription : undefined
+      }
+      activeSectionLabel={
+        dashboard.activeSection === 'headquarters'
+          ? headquartersTitle
+          : dashboard.activeSectionMeta.label
+      }
+      backLabel={shellBackLabel}
       banners={
         <AdminDashboardStateBanners error={dashboard.error} notice={dashboard.notice} />
       }
       currentUserName={currentUser.name}
+      onBack={shellBackAction}
       onLogout={onLogout}
       onSelectSection={dashboard.selectSection}
     >

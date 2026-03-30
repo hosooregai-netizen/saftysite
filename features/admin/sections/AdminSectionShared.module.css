@@ -266,6 +266,11 @@
   align-items: center;
 }
 
+.sectionHeaderSpacer {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .sectionTitle {
   font-size: var(--text-metric);
   font-weight: 700;

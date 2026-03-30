@@ -13,6 +13,7 @@ interface HeadquartersTableProps {
   onOpenSitesRequest: (item: SafetyHeadquarter) => void;
   onQueryChange: (value: string) => void;
   query: string;
+  showHeader?: boolean;
   totalHeadquarterCount: number;
 }
 
@@ -26,14 +27,19 @@ export function HeadquartersTable({
   onOpenSitesRequest,
   onQueryChange,
   query,
+  showHeader = true,
   totalHeadquarterCount,
 }: HeadquartersTableProps) {
   return (
     <>
       <div className={styles.sectionHeader}>
-        <div>
-          <h2 className={styles.sectionTitle}>사업장 정보</h2>
-        </div>
+        {showHeader ? (
+          <div>
+            <h2 className={styles.sectionTitle}>사업장 목록</h2>
+          </div>
+        ) : (
+          <div className={styles.sectionHeaderSpacer} />
+        )}
         <div className={styles.sectionHeaderActions}>
           <span className="app-chip">표시 {filteredHeadquarters.length} / 전체 {totalHeadquarterCount}개</span>
           <button
@@ -90,7 +96,9 @@ export function HeadquartersTable({
                       </td>
                       <td>
                         <div className={styles.tablePrimary}>{item.contact_name || '-'}</div>
-                        <div className={styles.tableSecondary}>{item.contact_phone || '연락처 미입력'}</div>
+                        <div className={styles.tableSecondary}>
+                          {item.contact_phone || '연락처 미입력'}
+                        </div>
                       </td>
                       <td>{item.business_registration_no || '-'}</td>
                       <td>{item.corporate_registration_no || '-'}</td>

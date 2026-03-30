@@ -54,6 +54,7 @@ interface SitesSectionProps {
   onUnassignFieldAgent: (siteId: string, userId: string) => Promise<void>;
   title?: string;
   emptyMessage?: string;
+  showHeader?: boolean;
   showHeadquarterColumn?: boolean;
   lockedHeadquarterId?: string | null;
   onSelectSiteReports?: (site: SafetySite) => void;
@@ -99,6 +100,7 @@ export function SitesSection(props: SitesSectionProps) {
     onDelete,
     onAssignFieldAgent,
     onUnassignFieldAgent,
+    showHeader = true,
     title = '현장 목록',
     emptyMessage = '등록된 현장이 없습니다.',
     showHeadquarterColumn = true,
@@ -228,9 +230,13 @@ export function SitesSection(props: SitesSectionProps) {
   return (
     <section className={`${styles.sectionCard} ${styles.listSectionCard}`}>
       <div className={styles.sectionHeader}>
-        <div>
-          <h2 className={styles.sectionTitle}>{title}</h2>
-        </div>
+        {showHeader ? (
+          <div>
+            <h2 className={styles.sectionTitle}>{title}</h2>
+          </div>
+        ) : (
+          <div className={styles.sectionHeaderSpacer} />
+        )}
         <div className={styles.sectionHeaderActions}>
           <span className="app-chip">표시 {filteredSites.length} / 전체 {sites.length}개</span>
           <button

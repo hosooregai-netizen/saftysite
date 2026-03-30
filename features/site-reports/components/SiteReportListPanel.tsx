@@ -2,14 +2,14 @@
 
 import { useState } from 'react';
 import AppModal from '@/components/ui/AppModal';
+import { ReportList } from '@/features/site-reports/components/ReportList';
+import { SiteReportsSummaryBar } from '@/features/site-reports/components/SiteReportsSummaryBar';
+import type { SiteReportSortMode } from '@/features/site-reports/hooks/useSiteReportListState';
 import type {
   InspectionReportListItem,
   InspectionSite,
   ReportIndexStatus,
 } from '@/types/inspectionSession';
-import { ReportList } from '@/features/site-reports/components/ReportList';
-import { SiteReportsSummaryBar } from '@/features/site-reports/components/SiteReportsSummaryBar';
-import type { SiteReportSortMode } from '@/features/site-reports/hooks/useSiteReportListState';
 import styles from './SiteReportsScreen.module.css';
 
 interface SiteReportListPanelProps {
@@ -58,6 +58,55 @@ export function SiteReportListPanel({
   const periodDisplay = snapshot.constructionPeriod?.trim() || '-';
   const amountDisplay = snapshot.constructionAmount?.trim() || '-';
   const showTableTools = reportIndexStatus === 'loaded' && reportItems.length > 0;
+  const panelBody = (
+    <>
+      {showTableTools ? (
+        <div className={styles.tableTools}>
+          <input
+            className={`app-input ${styles.tableSearch}`}
+            placeholder="보고서명, 작성일, 작성자로 검색"
+            value={reportQuery}
+            onChange={(event) => setReportQuery(event.target.value)}
+            aria-label="보고서 검색"
+          />
+          <select
+            className={`app-select ${styles.tableSort}`}
+            value={reportSortMode}
+            onChange={(event) =>
+              setReportSortMode(event.target.value as SiteReportSortMode)
+            }
+            aria-label="보고서 정렬"
+          >
+            <option value="recent">최근 저장순</option>
+            <option value="name">보고서명순</option>
+            <option value="progress">진행률 높은 순</option>
+          </select>
+          <button
+            type="button"
+            className={`app-button app-button-primary ${styles.tableCreateButton}`}
+            onClick={createReport}
+            disabled={!canCreateReport}
+          >
+            보고서 추가
+          </button>
+        </div>
+      ) : null}
+
+      {reportIndexError ? <div className={styles.tableTools}>{reportIndexError}</div> : null}
+
+      <ReportList
+        assignedUserDisplay={assignedUserDisplay}
+        canArchiveReports={canArchiveReports}
+        canCreateReport={canCreateReport}
+        currentSite={currentSite}
+        onCreateReport={createReport}
+        onDeleteRequest={setDialogSessionId}
+        reportIndexStatus={reportIndexStatus}
+        reportItems={reportIndexStatus === 'loaded' ? filteredReportItems : []}
+        totalReportCount={reportItems.length}
+      />
+    </>
+  );
 
   return (
     <>
@@ -70,53 +119,7 @@ export function SiteReportListPanel({
         />
       ) : null}
 
-      <section className={styles.panel}>
-        {showTableTools ? (
-          <div className={styles.tableTools}>
-            <input
-              className={`app-input ${styles.tableSearch}`}
-              placeholder="보고서명, 작성일, 작성자로 검색"
-              value={reportQuery}
-              onChange={(event) => setReportQuery(event.target.value)}
-              aria-label="보고서 검색"
-            />
-            <select
-              className={`app-select ${styles.tableSort}`}
-              value={reportSortMode}
-              onChange={(event) =>
-                setReportSortMode(event.target.value as SiteReportSortMode)
-              }
-              aria-label="보고서 정렬"
-            >
-              <option value="recent">최근 저장순</option>
-              <option value="name">보고서명순</option>
-              <option value="progress">진행률 높은 순</option>
-            </select>
-            <button
-              type="button"
-              className={`app-button app-button-primary ${styles.tableCreateButton}`}
-              onClick={createReport}
-              disabled={!canCreateReport}
-            >
-              보고서 추가
-            </button>
-          </div>
-        ) : null}
-
-        {reportIndexError ? <div className={styles.tableTools}>{reportIndexError}</div> : null}
-
-        <ReportList
-          assignedUserDisplay={assignedUserDisplay}
-          canArchiveReports={canArchiveReports}
-          canCreateReport={canCreateReport}
-          currentSite={currentSite}
-          onCreateReport={createReport}
-          onDeleteRequest={setDialogSessionId}
-          reportIndexStatus={reportIndexStatus}
-          reportItems={reportIndexStatus === 'loaded' ? filteredReportItems : []}
-          totalReportCount={reportItems.length}
-        />
-      </section>
+      <section className={styles.panel}>{panelBody}</section>
 
       <AppModal
         open={canArchiveReports && Boolean(dialogSessionId)}

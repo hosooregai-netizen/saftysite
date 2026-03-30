@@ -32,42 +32,37 @@ export default function OperationalReportsPanel({
   enabled = true,
   siteReportCount,
 }: OperationalReportsPanelProps) {
-  const {
-    quarterlyReports,
-    badWorkplaceReports,
-    isLoading,
-    error,
-  } = useSiteOperationalReports(currentSite, enabled);
+  const { quarterlyReports, badWorkplaceReports, isLoading, error } =
+    useSiteOperationalReports(currentSite, enabled);
   const quarterTargets = useMemo(
     () =>
       getQuarterTargetsForConstructionPeriod(
-        currentSite.adminSiteSnapshot.constructionPeriod
+        currentSite.adminSiteSnapshot.constructionPeriod,
       ),
-    [currentSite.adminSiteSnapshot.constructionPeriod]
+    [currentSite.adminSiteSnapshot.constructionPeriod],
   );
   const quarterlyByKey = useMemo(
-    () =>
-      new Map(quarterlyReports.map((item) => [item.quarterKey, item])),
-    [quarterlyReports]
+    () => new Map(quarterlyReports.map((item) => [item.quarterKey, item])),
+    [quarterlyReports],
   );
   const currentReportMonth = getCurrentReportMonth();
   const currentMonthReport =
     badWorkplaceReports.find(
       (item) =>
         item.reportMonth === currentReportMonth &&
-        item.reporterUserId === currentUser?.id
+        item.reporterUserId === currentUser?.id,
     ) || null;
   const recentBadReports = badWorkplaceReports
     .filter((item) => !currentUser || item.reporterUserId === currentUser.id)
     .slice(0, 3);
-
   return (
     <section className={styles.sectionCard}>
       <div className={styles.sectionHeader}>
         <div>
           <h2 className={styles.sectionTitle}>추가 업무 문서</h2>
           <p className={styles.sectionDescription}>
-            기술지도 보고서를 바탕으로 분기 종합보고서와 불량사업장 신고서를 이어서 작성할 수 있습니다.
+            기술지도 보고서를 바탕으로 분기 종합보고서와 불량사업장 신고서를 이어서 작성할 수
+            있습니다.
           </p>
         </div>
         <div className={styles.statusRow}>
@@ -89,13 +84,14 @@ export default function OperationalReportsPanel({
               <span className="app-chip">대상 분기 {quarterTargets.length}개</span>
             </div>
             <p className={styles.reportCardDescription}>
-              공사기간이 3개월 이상인 현장은 자동으로 대상 분기가 계산되고, 분기별 기술지도 내용을
-              이어받아 초안을 만들 수 있습니다.
+              공사기간이 3개월 이상인 현장은 자동으로 대상 분기가 계산되고, 분기별 기술지도
+              내용을 이어받아 초안을 만들 수 있습니다.
             </p>
 
             {quarterTargets.length === 0 ? (
               <div className={styles.emptyState}>
-                공사기간 정보가 3개월 미만이거나 기간 정보가 없어 자동 대상 분기를 계산하지 못했습니다.
+                공사기간 정보가 3개월 미만이거나 기간 정보가 없어 자동 대상 분기를 계산하지
+                못했습니다.
               </div>
             ) : (
               <div className={styles.cardGrid}>
@@ -133,7 +129,8 @@ export default function OperationalReportsPanel({
               <span className="app-chip">{formatReportMonthLabel(currentReportMonth)}</span>
             </div>
             <p className={styles.reportCardDescription}>
-              최근 기술지도 보고서의 지적사항을 불러와 신고서 초안을 만들고, 필요하면 바로 수정할 수 있습니다.
+              최근 기술지도 보고서의 지적사항을 불러와 신고서 초안을 만들고, 필요하면 바로
+              수정할 수 있습니다.
             </p>
             <div className={styles.reportActions}>
               <Link
@@ -152,9 +149,7 @@ export default function OperationalReportsPanel({
                       <strong className={styles.reportCardTitle}>
                         {formatReportMonthLabel(item.reportMonth)}
                       </strong>
-                      <span className="app-chip">
-                        {getOperationalStatusLabel(item.status)}
-                      </span>
+                      <span className="app-chip">{getOperationalStatusLabel(item.status)}</span>
                     </div>
                     <p className={styles.reportCardDescription}>
                       신고 항목 {item.violations.length}건
@@ -173,8 +168,8 @@ export default function OperationalReportsPanel({
               </div>
             ) : (
               <div className={styles.emptyState}>
-                아직 등록된 불량사업장 신고서가 없습니다. 최근 기술지도 보고서에서 지적사항을 선택해 바로 초안을
-                만들 수 있습니다.
+                아직 등록된 불량사업장 신고서가 없습니다. 최근 기술지도 보고서에서 지적사항을
+                선택해 바로 초안을 만들 수 있습니다.
               </div>
             )}
           </article>

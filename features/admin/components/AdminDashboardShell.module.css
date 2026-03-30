@@ -20,6 +20,39 @@
   min-height: 32px;
 }
 
+.heroBackButton {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 4px 6px;
+  margin: 0 -2px;
+  border: none;
+  background: transparent;
+  font-size: var(--text-ui-sm);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: var(--erp-mid);
+  cursor: pointer;
+  border-radius: var(--erp-radius-control);
+  transition:
+    color 0.12s ease,
+    text-decoration-color 0.12s ease;
+}
+
+.heroBackButton:hover {
+  color: var(--erp-dark);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+}
+
+.heroBackButton:focus-visible {
+  outline: 2px solid var(--erp-mid);
+  outline-offset: 2px;
+}
+
 .heroMain {
   display: grid;
   align-content: center;
@@ -33,6 +66,13 @@
   line-height: 1.25;
   letter-spacing: -0.02em;
   color: var(--erp-dark);
+}
+
+.heroDescription {
+  margin: 6px 0 0;
+  font-size: var(--text-body);
+  line-height: 1.5;
+  color: var(--erp-text-muted);
 }
 
 .contentColumn {
