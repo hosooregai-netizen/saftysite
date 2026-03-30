@@ -52,6 +52,30 @@ function normalizeSafetyPath(pathname: string): string {
     .replace(/\/reports\/by-key\/[^/]+$/, '/reports/by-key/:id');
 }
 
+function toReportListItem(report: JsonRecord) {
+  return {
+    id: report.id,
+    report_key: report.report_key,
+    report_title: report.report_title,
+    site_id: report.site_id,
+    headquarter_id: report.headquarter_id ?? null,
+    assigned_user_id: report.assigned_user_id ?? null,
+    visit_date: report.visit_date ?? null,
+    visit_round: report.visit_round ?? null,
+    total_round: report.total_round ?? null,
+    progress_rate: report.progress_rate ?? null,
+    status: report.status,
+    payload_version: report.payload_version ?? 1,
+    latest_revision_no: report.latest_revision_no ?? 1,
+    submitted_at: report.submitted_at ?? null,
+    published_at: report.published_at ?? null,
+    last_autosaved_at: report.last_autosaved_at ?? null,
+    meta: report.meta ?? {},
+    created_at: report.created_at,
+    updated_at: report.updated_at,
+  };
+}
+
 function createSeedTechnicalGuidanceReport(siteId = 'site-1'): JsonRecord {
   const site = createInspectionSite({
     customerName: '기존 본사',
@@ -410,10 +434,12 @@ function createRouteHelpers(state: RouteState) {
   };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function runBrowserCrudSmoke() {
   const state = createInitialState();
   const helpers = createRouteHelpers(state);
   const requestCounts = new Map<string, number>();
+  const delayedReportListRequests = new Set<string>();
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ viewport: { width: 1440, height: 1200 } });
   const page = await context.newPage();
@@ -711,9 +737,40 @@ async function runBrowserCrudSmoke() {
       return;
     }
 
+    if (pathname === '/reports' && request.method() === 'GET') {
+      const siteId = url.searchParams.get('site_id');
+      const requestUserId = String(requestUser().id);
+      const delayKey = `${requestUserId}:${siteId || 'all'}`;
+      const shouldDelay =
+        requestUserId === 'field-1' &&
+        siteId === 'site-1' &&
+        !delayedReportListRequests.has(delayKey);
+
+      if (shouldDelay) {
+        delayedReportListRequests.add(delayKey);
+        await new Promise((resolve) => setTimeout(resolve, 700));
+      }
+
+      const reports = siteId
+        ? helpers.visibleReportsForSite(siteId)
+        : state.reports.filter((report) => String(report.status) !== 'archived');
+      await fulfillJson(clone(reports.map((report) => toReportListItem(report))));
+      return;
+    }
+
     if (pathname === '/reports/upsert' && request.method() === 'POST') {
       const body = (await json?.()) as JsonRecord;
       await fulfillJson(clone(helpers.upsertReport(body)));
+      return;
+    }
+
+    if (normalizedPath === '/reports/by-key/:id' && request.method() === 'GET') {
+      const reportKey = pathname.split('/').pop() || '';
+      const report = state.reports.find(
+        (item) => String(item.report_key) === reportKey && String(item.status) !== 'archived'
+      );
+      assert(report, `상세 보고서를 찾을 수 없습니다: ${reportKey}`);
+      await fulfillJson(clone(report));
       return;
     }
 
@@ -879,6 +936,16 @@ async function runBrowserCrudSmoke() {
   await row.getByRole('button', { name: '종료' }).click();
   await row.getByText('종료').waitFor({ state: 'visible' });
 
+  console.log('Step: admin headquarters drilldown');
+  const adminReportListBefore = requestCounts.get('GET /reports') || 0;
+  await page.goto(`${BASE_URL}/admin?section=headquarters`, { waitUntil: 'load' });
+  await page.locator('table tbody tr').first().locator('button').first().click();
+  await page.waitForURL(/headquarterId=/);
+  await page.locator('table tbody tr').first().locator('button').first().click();
+  await page.waitForURL(/siteId=/);
+  await waitForRequestCount('GET /reports', adminReportListBefore + 1);
+  await page.locator('a[href="/sessions/report-tech-1"]').first().waitFor({ state: 'visible' });
+
   console.log('Step: content CRUD');
   await openSection('콘텐츠');
   await page.getByRole('button', { name: '콘텐츠 추가' }).click();
@@ -1021,6 +1088,288 @@ async function runBrowserCrudSmoke() {
   assert.ok(
     state.reports.some((item) => item.status === 'archived'),
     '기술지도 보고서 삭제가 반영되지 않았습니다.'
+  );
+
+  await browser.close();
+
+  return {
+    requestCounts,
+  };
+}
+
+async function runBrowserErpSmoke() {
+  const state = createInitialState();
+  const helpers = createRouteHelpers(state);
+  const requestCounts = new Map<string, number>();
+  const delayedReportListRequests = new Set<string>();
+  const browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1200 } });
+  const page = await context.newPage();
+  page.setDefaultTimeout(15000);
+  const pageErrors: string[] = [];
+  const consoleErrors: string[] = [];
+
+  page.on('pageerror', (error) => {
+    pageErrors.push(error.message);
+  });
+  page.on('console', (message) => {
+    if (message.type() === 'error') {
+      consoleErrors.push(message.text());
+    }
+  });
+
+  await context.route('**/api/safety/**', async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    const pathname = url.pathname.replace('/api/safety', '') || '/';
+    const normalizedPath = normalizeSafetyPath(pathname);
+    const key = `${request.method()} ${normalizedPath}`;
+    requestCounts.set(key, (requestCounts.get(key) || 0) + 1);
+
+    const requestUser = () =>
+      helpers.getUserForToken(request.headers().authorization || null);
+    const fulfillJson = async (payload: unknown, status = 200) => {
+      await route.fulfill({
+        status,
+        contentType: 'application/json',
+        body: JSON.stringify(payload),
+      });
+    };
+
+    if (pathname === '/auth/token' && request.method() === 'POST') {
+      const username = new URLSearchParams(request.postData() || '')
+        .get('username')
+        ?.trim()
+        .toLowerCase();
+      const matchedUser =
+        state.users.find((user) => String(user.email).toLowerCase() === username) ??
+        state.users[0];
+      await fulfillJson({
+        access_token: getTokenForUser(String(matchedUser.id)),
+        token_type: 'bearer',
+      });
+      return;
+    }
+
+    if (pathname === '/auth/me' && request.method() === 'GET') {
+      await fulfillJson(clone(requestUser()));
+      return;
+    }
+
+    if (pathname === '/users' && request.method() === 'GET') {
+      await fulfillJson(clone(state.users));
+      return;
+    }
+
+    if (pathname === '/headquarters' && request.method() === 'GET') {
+      await fulfillJson(clone(state.headquarters));
+      return;
+    }
+
+    if (pathname === '/sites' && request.method() === 'GET') {
+      await fulfillJson(clone(helpers.hydratedSites()));
+      return;
+    }
+
+    if (pathname === '/assignments' && request.method() === 'GET') {
+      await fulfillJson(clone(helpers.hydratedAssignments()));
+      return;
+    }
+
+    if (pathname === '/assignments/me/sites' && request.method() === 'GET') {
+      await fulfillJson(clone(helpers.assignedSitesForUser(String(requestUser().id))));
+      return;
+    }
+
+    if (pathname === '/content-items' && request.method() === 'GET') {
+      await fulfillJson(clone(state.contentItems));
+      return;
+    }
+
+    if (normalizedPath === '/reports/site/:id/full' && request.method() === 'GET') {
+      const siteId = pathname.split('/')[3];
+      await fulfillJson(clone(helpers.visibleReportsForSite(siteId)));
+      return;
+    }
+
+    if (pathname === '/reports' && request.method() === 'GET') {
+      const siteId = url.searchParams.get('site_id');
+      const requestUserId = String(requestUser().id);
+      const delayKey = `${requestUserId}:${siteId || 'all'}`;
+      const shouldDelay =
+        requestUserId === 'field-1' &&
+        siteId === 'site-1' &&
+        !delayedReportListRequests.has(delayKey);
+
+      if (shouldDelay) {
+        delayedReportListRequests.add(delayKey);
+        await new Promise((resolve) => setTimeout(resolve, 700));
+      }
+
+      const reports = siteId
+        ? helpers.visibleReportsForSite(siteId)
+        : state.reports.filter((report) => String(report.status) !== 'archived');
+      await fulfillJson(clone(reports.map((report) => toReportListItem(report))));
+      return;
+    }
+
+    if (normalizedPath === '/reports/by-key/:id' && request.method() === 'GET') {
+      const reportKey = pathname.split('/').pop() || '';
+      const report = state.reports.find(
+        (item) => String(item.report_key) === reportKey && String(item.status) !== 'archived',
+      );
+      assert(report, `Missing detailed report fixture: ${reportKey}`);
+      await fulfillJson(clone(report));
+      return;
+    }
+
+    if (pathname === '/reports/upsert' && request.method() === 'POST') {
+      const body = request.postDataJSON?.() as JsonRecord;
+      await fulfillJson(clone(helpers.upsertReport(body)));
+      return;
+    }
+
+    throw new Error(`Unhandled ERP smoke request: ${request.method()} ${pathname}`);
+  });
+
+  async function waitForRequestCount(requestKey: string, minimumCount: number) {
+    const deadline = Date.now() + 15000;
+    while (Date.now() < deadline) {
+      if ((requestCounts.get(requestKey) || 0) >= minimumCount) {
+        return;
+      }
+      await page.waitForTimeout(100);
+    }
+
+    assert.fail(`Expected at least ${minimumCount} request(s) for ${requestKey}.`);
+  }
+
+  async function waitForLoginPanel() {
+    await page.locator('input[type="email"]').waitFor({ state: 'visible' });
+    await page.locator('input[type="password"]').waitFor({ state: 'visible' });
+    await page.locator('button[type="submit"]').waitFor({ state: 'visible' });
+  }
+
+  async function loginAs(email: string, password = 'smoke-password') {
+    await waitForLoginPanel();
+    await page.locator('input[type="email"]').fill(email);
+    await page.locator('input[type="password"]').fill(password);
+    await page.locator('button[type="submit"]').click();
+  }
+
+  async function logoutToLoginPanel() {
+    await context.clearCookies();
+    await page.goto(BASE_URL, { waitUntil: 'load' });
+    await page.evaluate(() => {
+      localStorage.clear();
+      sessionStorage.clear();
+    });
+    await page.reload({ waitUntil: 'load' });
+    await waitForLoginPanel();
+  }
+
+  console.log('ERP smoke: open login page');
+  await page.goto(BASE_URL, { waitUntil: 'load' });
+  await waitForLoginPanel();
+
+  console.log('ERP smoke: admin drilldown');
+  await loginAs('admin@example.com');
+  await waitForRequestCount('GET /users', 1);
+  await waitForRequestCount('GET /headquarters', 1);
+  await waitForRequestCount('GET /assignments', 1);
+
+  const adminReportListBefore = requestCounts.get('GET /reports') || 0;
+  await page.goto(`${BASE_URL}/admin?section=headquarters`, { waitUntil: 'load' });
+  await page.locator('table tbody tr').first().locator('button').first().click();
+  await page.waitForURL(/headquarterId=/);
+  await page.locator('table tbody tr').first().locator('button').first().click();
+  await page.waitForURL(/siteId=/);
+  await waitForRequestCount('GET /reports', adminReportListBefore + 1);
+  await page.locator('a[href="/sessions/report-tech-1"]').first().waitFor({ state: 'visible' });
+
+  console.log('ERP smoke: worker login');
+  await logoutToLoginPanel();
+  const fieldAssignmentsBefore = requestCounts.get('GET /assignments/me/sites') || 0;
+  const reportListReadsBefore = requestCounts.get('GET /reports') || 0;
+  const fullReportReadsBefore = requestCounts.get('GET /reports/site/:id/full') || 0;
+  const reportDetailReadsBefore = requestCounts.get('GET /reports/by-key/:id') || 0;
+  const reportWritesBefore = requestCounts.get('POST /reports/upsert') || 0;
+
+  await loginAs('agent@example.com');
+  await waitForRequestCount('GET /assignments/me/sites', fieldAssignmentsBefore + 1);
+  await page.locator('a[href="/sites/site-1/entry"]').first().waitFor({ state: 'visible' });
+  assert.equal(
+    requestCounts.get('GET /reports') || 0,
+    reportListReadsBefore,
+    'Worker login should not preload report indexes.',
+  );
+  assert.equal(
+    requestCounts.get('GET /reports/site/:id/full') || 0,
+    fullReportReadsBefore,
+    'Worker login should not preload full report payloads.',
+  );
+
+  console.log('ERP smoke: report list loading guard');
+  await page.goto(`${BASE_URL}/sites/site-1`, { waitUntil: 'load' });
+  assert.equal(
+    await page.getByRole('button', { name: '보고서 추가' }).count(),
+    0,
+    'The create-report button must stay hidden while the report index is loading.',
+  );
+  await waitForRequestCount('GET /reports', reportListReadsBefore + 1);
+  await page.locator('a[href="/sessions/report-tech-1"]').first().waitFor({ state: 'visible' });
+  await page.getByRole('button', { name: '보고서 추가' }).waitFor({ state: 'visible' });
+
+  console.log('ERP smoke: report detail hydration');
+  await page.locator('a[href="/sessions/report-tech-1"]').first().click();
+  await page.waitForURL(/\/sessions\/report-tech-1$/);
+  await waitForRequestCount('GET /reports/by-key/:id', reportDetailReadsBefore + 1);
+
+  console.log('ERP smoke: site-centric entry hub');
+  await page.goto(`${BASE_URL}/sites/site-1/entry`, { waitUntil: 'load' });
+  await page.locator('a[href="/sites/site-1"]').first().waitFor({ state: 'visible' });
+  await page.locator('a[href^="/sites/site-1/quarterly/"]').first().waitFor({ state: 'visible' });
+  await page.locator('a[href^="/sites/site-1/bad-workplace/"]').first().waitFor({ state: 'visible' });
+
+  const quarterKey = getQuarterTargetsForConstructionPeriod('2026-01-01 ~ 2026-06-30')[0]
+    ?.quarterKey;
+  assert.ok(quarterKey, 'Failed to calculate the seeded quarterly target.');
+
+  console.log('ERP smoke: quarterly summary draft and save');
+  await page
+    .locator(`a[href="/sites/site-1/quarterly/${encodeURIComponent(quarterKey)}"]`)
+    .first()
+    .click();
+  await page.waitForURL(new RegExp(`/sites/site-1/quarterly/${encodeURIComponent(quarterKey)}$`));
+  assert.ok(
+    (await page.locator('input[type="checkbox"]').count()) > 0,
+    'Quarterly summary should expose source report selection controls.',
+  );
+  await page.locator('button.app-button-primary').first().click();
+  await waitForRequestCount('POST /reports/upsert', reportWritesBefore + 1);
+
+  console.log('ERP smoke: bad workplace draft and save');
+  await page.goto(`${BASE_URL}/sites/site-1/entry?entry=bad-workplace`, {
+    waitUntil: 'load',
+  });
+  await page.locator('a[href^="/sites/site-1/bad-workplace/"]').first().click();
+  await page.waitForURL(/\/sites\/site-1\/bad-workplace\/[^/]+$/);
+  assert.ok(
+    (await page.locator('input[type="checkbox"]').count()) > 0,
+    'Bad workplace report should expose selectable source findings.',
+  );
+  await page.locator('button.app-button-primary').first().click();
+  await waitForRequestCount('POST /reports/upsert', reportWritesBefore + 2);
+
+  assert.equal(pageErrors.length, 0, `Browser page errors: ${pageErrors.join(' | ')}`);
+  assert.equal(consoleErrors.length, 0, `Browser console errors: ${consoleErrors.join(' | ')}`);
+  assert.ok(
+    state.reports.some((item) => item.meta?.reportKind === QUARTERLY_SUMMARY_REPORT_KIND),
+    'Quarterly summary report was not persisted by the smoke flow.',
+  );
+  assert.ok(
+    state.reports.some((item) => item.meta?.reportKind === BAD_WORKPLACE_REPORT_KIND),
+    'Bad workplace report was not persisted by the smoke flow.',
   );
 
   await browser.close();
@@ -1174,7 +1523,7 @@ async function runVisionSmoke() {
 
 async function main() {
   console.log('Smoke test started.');
-  const browserResult = await runBrowserCrudSmoke();
+  const browserResult = await runBrowserErpSmoke();
   await runDocumentSmoke();
   await runVisionSmoke();
 
