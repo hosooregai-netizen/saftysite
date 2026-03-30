@@ -186,6 +186,7 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
                 currentSite={reportListState.currentSite}
                 deleteSession={reportListState.deleteSession}
                 filteredReportItems={reportListState.filteredReportItems}
+                reloadReportIndex={reportListState.reloadReportIndex}
                 reportIndexError={reportListState.reportIndexError}
                 reportIndexStatus={reportListState.reportIndexStatus}
                 reportItems={reportListState.reportItems}

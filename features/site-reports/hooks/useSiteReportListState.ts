@@ -117,7 +117,7 @@ export function useSiteReportListState(
   ]);
 
   const createReport = () => {
-    if (!currentSite) return;
+    if (!currentSite || reportIndexStatus !== 'loaded') return;
 
     const nextSession = createSession(currentSite, {
       meta: {
@@ -130,6 +130,14 @@ export function useSiteReportListState(
   };
 
   const canCreateReport = reportIndexStatus === 'loaded';
+  const reloadReportIndex = () => {
+    if (!decodedSiteKey || !currentSite || !isAuthenticated || !isReady) {
+      return;
+    }
+
+    hasReloadedRef.current = true;
+    void ensureSiteReportIndexLoaded(decodedSiteKey, { force: true });
+  };
 
   return {
     assignedUserDisplay,
@@ -143,6 +151,7 @@ export function useSiteReportListState(
     reportIndexError: reportIndexState?.error ?? null,
     reportIndexStatus,
     reportItems,
+    reloadReportIndex,
     reportQuery,
     reportSortMode,
     setReportQuery,

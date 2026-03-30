@@ -44,10 +44,19 @@ export function ReportList({
   reportItems,
   totalReportCount,
 }: ReportListProps) {
-  if (reportIndexStatus !== 'loaded' && totalReportCount === 0) {
+  if ((reportIndexStatus === 'idle' || reportIndexStatus === 'loading') && totalReportCount === 0) {
     return (
       <div className={styles.emptyState}>
         <p className={styles.emptyTitle}>이 현장의 보고서 목록을 불러오는 중입니다.</p>
+      </div>
+    );
+  }
+
+  if (reportIndexStatus === 'error' && totalReportCount === 0) {
+    return (
+      <div className={styles.emptyState}>
+        <p className={styles.emptyTitle}>보고서 목록을 아직 불러오지 못했습니다.</p>
+        <p className={styles.emptySearchHint}>다시 불러오기를 눌러 목록을 새로 받아오세요.</p>
       </div>
     );
   }

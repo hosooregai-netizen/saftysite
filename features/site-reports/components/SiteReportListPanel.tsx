@@ -20,6 +20,7 @@ interface SiteReportListPanelProps {
   currentSite: InspectionSite;
   deleteSession: (sessionId: string) => Promise<void>;
   filteredReportItems: InspectionReportListItem[];
+  reloadReportIndex: () => void;
   reportIndexError: string | null;
   reportIndexStatus: ReportIndexStatus;
   reportItems: InspectionReportListItem[];
@@ -38,6 +39,7 @@ export function SiteReportListPanel({
   currentSite,
   deleteSession,
   filteredReportItems,
+  reloadReportIndex,
   reportIndexError,
   reportIndexStatus,
   reportItems,
@@ -92,7 +94,19 @@ export function SiteReportListPanel({
         </div>
       ) : null}
 
-      {reportIndexError ? <div className={styles.tableTools}>{reportIndexError}</div> : null}
+      {reportIndexError ? (
+        <div className={styles.tableTools}>
+          <span>{reportIndexError}</span>
+          <button
+            type="button"
+            className="app-button app-button-secondary"
+            onClick={reloadReportIndex}
+            disabled={reportIndexStatus === 'loading'}
+          >
+            다시 불러오기
+          </button>
+        </div>
+      ) : null}
 
       <ReportList
         assignedUserDisplay={assignedUserDisplay}

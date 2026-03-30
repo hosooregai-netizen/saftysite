@@ -18,6 +18,7 @@ import { TECHNICAL_GUIDANCE_REPORT_KIND } from '@/lib/erpReports/shared';
 import {
   buildSafetyMasterData,
   isSafetyAdmin,
+  mapInspectionSessionToReportListItem,
   mapSafetyReportListItem,
   mapSafetyReportToInspectionSession,
   mapSafetySiteToInspectionSite,
@@ -96,6 +97,21 @@ function buildReportIndexState(
     ...(base ?? {}),
     ...patch,
   };
+}
+
+function buildLocalReportIndexItems(
+  siteId: string,
+  sessions: InspectionSession[],
+  sites: InspectionSite[],
+) {
+  const site = sites.find((item) => item.id === siteId);
+  if (!site) {
+    return [];
+  }
+
+  return sessions
+    .filter((session) => session.siteKey === siteId)
+    .map((session) => mapInspectionSessionToReportListItem(session, site));
 }
 
 function buildFallbackSiteFromReport(report: SafetyReport): InspectionSite {
@@ -299,14 +315,14 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
   ]);
 
   const ensureSiteReportIndexLoaded = useCallback(
-    async (siteId: string) => {
+    async (siteId: string, options?: { force?: boolean }) => {
       const token = authTokenRef.current;
       if (!token) {
         return;
       }
 
       const existingState = reportIndexBySiteIdRef.current[siteId];
-      if (existingState?.status === 'loaded') {
+      if (!options?.force && existingState?.status === 'loaded') {
         return;
       }
 
@@ -338,12 +354,17 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
           const items = reports
             .filter(isTechnicalGuidanceReport)
             .map(mapSafetyReportListItem);
+          const localItems = buildLocalReportIndexItems(
+            siteId,
+            sessionsRef.current,
+            sitesRef.current,
+          );
 
           setReportIndexBySiteId((current) => ({
             ...current,
             [siteId]: buildReportIndexState(current[siteId], {
               status: 'loaded',
-              items,
+              items: mergeReportIndexItems(items, localItems),
               fetchedAt: new Date().toISOString(),
               error: null,
             }),
@@ -379,10 +400,12 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
       authTokenRef,
       clearAuthState,
       reportIndexBySiteIdRef,
+      sessionsRef,
       setAuthError,
       setDataError,
       setIsHydratingReports,
       setReportIndexBySiteId,
+      sitesRef,
     ],
   );
 

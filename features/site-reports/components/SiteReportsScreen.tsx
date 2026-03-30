@@ -43,6 +43,7 @@ export function SiteReportsScreen({ siteKey }: SiteReportsScreenProps) {
     reportIndexError,
     reportIndexStatus,
     reportItems,
+    reloadReportIndex,
     reportQuery,
     reportSortMode,
     setReportQuery,
@@ -130,6 +131,7 @@ export function SiteReportsScreen({ siteKey }: SiteReportsScreenProps) {
                   currentSite={currentSite}
                   deleteSession={deleteSession}
                   filteredReportItems={filteredReportItems}
+                  reloadReportIndex={reloadReportIndex}
                   reportIndexError={reportIndexError}
                   reportIndexStatus={reportIndexStatus}
                   reportItems={reportItems}

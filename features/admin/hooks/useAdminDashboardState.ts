@@ -61,7 +61,10 @@ const EMPTY_DATA: ControllerDashboardData = {
 };
 
 function getErrorMessage(error: unknown): string {
-  if (error instanceof SafetyApiError || error instanceof Error) return error.message;
+  if (error instanceof SafetyApiError || error instanceof Error) {
+    return error.message;
+  }
+
   return '관리자 데이터를 처리하는 중 오류가 발생했습니다.';
 }
 
@@ -72,6 +75,10 @@ function upsertRecordById<T extends { id: string }>(items: T[], nextItem: T): T[
   }
 
   return items.map((item) => (item.id === nextItem.id ? nextItem : item));
+}
+
+function removeRecordById<T extends { id: string }>(items: T[], targetId: string): T[] {
+  return items.filter((item) => item.id !== targetId);
 }
 
 interface UseAdminDashboardStateOptions {
@@ -90,6 +97,7 @@ export function useAdminDashboardState({
   const [hasLoadedCoreData, setHasLoadedCoreData] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+
   const router = useRouter();
   const searchParams = useSearchParams();
   const rawSection = searchParams.get('section');
@@ -108,8 +116,7 @@ export function useAdminDashboardState({
     [data.headquarters, selectedHeadquarterId],
   );
   const selectedSite = useMemo(
-    () =>
-      selectedSiteId ? data.sites.find((item) => item.id === selectedSiteId) ?? null : null,
+    () => (selectedSiteId ? data.sites.find((item) => item.id === selectedSiteId) ?? null : null),
     [data.sites, selectedSiteId],
   );
 
@@ -122,44 +129,53 @@ export function useAdminDashboardState({
 
   const getToken = useCallback(() => {
     const token = readSafetyAuthToken();
-    if (!token) throw new SafetyApiError('로그인이 만료되었습니다. 다시 로그인해 주세요.', 401);
+    if (!token) {
+      throw new SafetyApiError('로그인이 만료되었습니다. 다시 로그인해 주세요.', 401);
+    }
     return token;
   }, []);
 
-  const reload = useCallback(async (options?: { includeContent?: boolean; force?: boolean }) => {
-    if (!enabled) return;
-    setIsLoading(true);
-    setError(null);
+  const reload = useCallback(
+    async (options?: { includeContent?: boolean; force?: boolean }) => {
+      if (!enabled) return;
 
-    try {
-      const token = getToken();
-      const { assignments, headquarters, sites, users } = await primeControllerDashboardData(token, {
-        force: options?.force,
-      });
+      setIsLoading(true);
+      setError(null);
 
-      setData((current) => ({
-        ...current,
-        assignments,
-        headquarters,
-        sites,
-        users,
-      }));
+      try {
+        const token = getToken();
+        const { assignments, headquarters, sites, users } = await primeControllerDashboardData(
+          token,
+          {
+            force: options?.force,
+          },
+        );
 
-      if (options?.includeContent) {
-        setIsContentLoading(true);
-        const contentItems = await primeControllerDashboardContentItems(token, {
-          force: options?.force,
-        });
-        setData((current) => ({ ...current, contentItems }));
+        setData((current) => ({
+          ...current,
+          assignments,
+          headquarters,
+          sites,
+          users,
+        }));
+
+        if (options?.includeContent) {
+          setIsContentLoading(true);
+          const contentItems = await primeControllerDashboardContentItems(token, {
+            force: options?.force,
+          });
+          setData((current) => ({ ...current, contentItems }));
+        }
+      } catch (nextError) {
+        setError(getErrorMessage(nextError));
+      } finally {
+        setHasLoadedCoreData(true);
+        setIsLoading(false);
+        setIsContentLoading(false);
       }
-    } catch (nextError) {
-      setError(getErrorMessage(nextError));
-    } finally {
-      setHasLoadedCoreData(true);
-      setIsLoading(false);
-      setIsContentLoading(false);
-    }
-  }, [enabled, getToken]);
+    },
+    [enabled, getToken],
+  );
 
   useEffect(() => {
     if (enabled) {
@@ -186,6 +202,7 @@ export function useAdminDashboardState({
       const matchedSite = selectedSiteId
         ? data.sites.find((site) => site.id === selectedSiteId) ?? null
         : null;
+
       replaceRoute('headquarters', {
         headquarterId: matchedSite?.headquarter_id ?? selectedHeadquarterId,
         siteId: matchedSite ? selectedSiteId : null,
@@ -236,12 +253,12 @@ export function useAdminDashboardState({
   );
 
   const runMutation = useCallback(
-    async <TResult>(
+    async <TResult,>(
       task: (token: string) => Promise<TResult>,
       successMessage: string,
       options?: {
         applyResult?: (current: ControllerDashboardData, result: TResult) => ControllerDashboardData;
-      }
+      },
     ) => {
       setIsMutating(true);
       setError(null);
@@ -251,7 +268,7 @@ export function useAdminDashboardState({
         const result = await task(getToken());
 
         if (options?.applyResult) {
-          setData((current) => options.applyResult!(current, result));
+          setData((current) => options.applyResult?.(current, result) ?? current);
         }
 
         try {
@@ -261,7 +278,6 @@ export function useAdminDashboardState({
           console.error('Admin dashboard reload failed after mutation', reloadError);
           setNotice(`${successMessage} 목록 새로고침은 실패했습니다. 다시 시도해 주세요.`);
         }
-
       } catch (nextError) {
         const message = getErrorMessage(nextError);
         setError(message);
@@ -274,12 +290,12 @@ export function useAdminDashboardState({
   );
 
   const runContentMutation = useCallback(
-    async <TResult>(
+    async <TResult,>(
       task: (token: string) => Promise<TResult>,
       successMessage: string,
       options?: {
         applyResult?: (current: ControllerDashboardData, result: TResult) => ControllerDashboardData;
-      }
+      },
     ) => {
       await runMutation(task, successMessage, options);
       await refreshAdminMasterData(refreshMasterData);
@@ -302,8 +318,7 @@ export function useAdminDashboardState({
     selectedSite,
     selectedSiteId,
     selectSection,
-    selectHeadquarter: (headquarterId: string) =>
-      replaceRoute('headquarters', { headquarterId }),
+    selectHeadquarter: (headquarterId: string) => replaceRoute('headquarters', { headquarterId }),
     selectSite: (headquarterId: string, siteId: string) =>
       replaceRoute('headquarters', { headquarterId, siteId }),
     clearHeadquarterSelection: () => replaceRoute('headquarters'),
@@ -312,58 +327,118 @@ export function useAdminDashboardState({
         headquarterId: selectedHeadquarterId,
       }),
     createUser: (input: SafetyUserCreateInput) =>
-      runMutation((token) => createSafetyUser(token, input), '사용자를 생성했습니다.'),
+      runMutation((token) => createSafetyUser(token, input), '사용자를 생성했습니다.', {
+        applyResult: (current, user) => ({
+          ...current,
+          users: upsertRecordById(current.users, user),
+        }),
+      }),
     updateUser: (id: string, input: SafetyUserUpdateInput) =>
-      runMutation((token) => updateSafetyUser(token, id, input), '사용자 정보를 수정했습니다.'),
+      runMutation((token) => updateSafetyUser(token, id, input), '사용자 정보를 수정했습니다.', {
+        applyResult: (current, user) => ({
+          ...current,
+          users: upsertRecordById(current.users, user),
+        }),
+      }),
     resetUserPassword: (id: string, password: string) =>
-      runMutation((token) => updateSafetyUserPassword(token, id, password), '비밀번호를 변경했습니다.'),
+      runMutation(
+        (token) => updateSafetyUserPassword(token, id, password),
+        '비밀번호를 변경했습니다.',
+      ),
     saveUserEdit: (id: string, input: SafetyUserUpdateInput, password?: string | null) =>
       runMutation(
         async (token) => {
+          let nextUser = null;
+
           if (hasValues(input)) {
-            await updateSafetyUser(token, id, input);
+            nextUser = await updateSafetyUser(token, id, input);
           }
           if (password) {
             await updateSafetyUserPassword(token, id, password);
           }
-          return null;
+
+          return nextUser;
         },
         hasValues(input) && password
           ? '사용자 정보와 비밀번호를 수정했습니다.'
           : password
             ? '비밀번호를 변경했습니다.'
             : '사용자 정보를 수정했습니다.',
+        {
+          applyResult: (current, user) =>
+            user
+              ? {
+                  ...current,
+                  users: upsertRecordById(current.users, user),
+                }
+              : current,
+        },
       ),
     deleteUser: (id: string) =>
-      runMutation(async (token) => {
-        const assignmentIds = data.assignments
-          .filter((assignment) => assignment.user_id === id)
-          .map((assignment) => assignment.id);
-        await deleteAssignmentsById(token, assignmentIds, deactivateSafetyAssignment);
-        await deleteSafetyUser(token, id);
-        return { userId: id };
-      }, '사용자를 삭제했습니다.'),
+      runMutation(
+        async (token) => {
+          const assignmentIds = data.assignments
+            .filter((assignment) => assignment.user_id === id)
+            .map((assignment) => assignment.id);
+          await deleteAssignmentsById(token, assignmentIds, deactivateSafetyAssignment);
+          await deleteSafetyUser(token, id);
+          return { userId: id };
+        },
+        '사용자를 삭제했습니다.',
+        {
+          applyResult: (current, result) => ({
+            ...current,
+            users: removeRecordById(current.users, result.userId),
+            assignments: current.assignments.filter(
+              (assignment) => assignment.user_id !== result.userId,
+            ),
+          }),
+        },
+      ),
     createHeadquarter: (input: SafetyHeadquarterInput) =>
-      runMutation((token) => createSafetyHeadquarter(token, input), '사업장 정보를 생성했습니다.'),
+      runMutation((token) => createSafetyHeadquarter(token, input), '사업장 정보를 생성했습니다.', {
+        applyResult: (current, headquarter) => ({
+          ...current,
+          headquarters: upsertRecordById(current.headquarters, headquarter),
+        }),
+      }),
     updateHeadquarter: (id: string, input: SafetyHeadquarterUpdateInput) =>
-      runMutation((token) => updateSafetyHeadquarter(token, id, input), '사업장 정보를 수정했습니다.'),
+      runMutation((token) => updateSafetyHeadquarter(token, id, input), '사업장 정보를 수정했습니다.', {
+        applyResult: (current, headquarter) => ({
+          ...current,
+          headquarters: upsertRecordById(current.headquarters, headquarter),
+        }),
+      }),
     deleteHeadquarter: (id: string) =>
-      runMutation(async (token) => {
-        const relatedSites = data.sites.filter((site) => site.headquarter_id === id);
-        const relatedSiteIds = new Set(relatedSites.map((site) => site.id));
-        const assignmentIds = data.assignments
-          .filter((assignment) => relatedSiteIds.has(assignment.site_id))
-          .map((assignment) => assignment.id);
+      runMutation(
+        async (token) => {
+          const relatedSites = data.sites.filter((site) => site.headquarter_id === id);
+          const relatedSiteIds = new Set(relatedSites.map((site) => site.id));
+          const assignmentIds = data.assignments
+            .filter((assignment) => relatedSiteIds.has(assignment.site_id))
+            .map((assignment) => assignment.id);
 
-        await deleteAssignmentsById(token, assignmentIds, deactivateSafetyAssignment);
+          await deleteAssignmentsById(token, assignmentIds, deactivateSafetyAssignment);
 
-        for (const site of relatedSites) {
-          await deleteSafetySite(token, site.id);
-        }
+          for (const site of relatedSites) {
+            await deleteSafetySite(token, site.id);
+          }
 
-        await deleteSafetyHeadquarter(token, id);
-        return { headquarterId: id };
-      }, '사업장을 삭제했습니다.'),
+          await deleteSafetyHeadquarter(token, id);
+          return { headquarterId: id, relatedSiteIds: Array.from(relatedSiteIds) };
+        },
+        '사업장을 삭제했습니다.',
+        {
+          applyResult: (current, result) => ({
+            ...current,
+            headquarters: removeRecordById(current.headquarters, result.headquarterId),
+            sites: current.sites.filter((site) => site.headquarter_id !== result.headquarterId),
+            assignments: current.assignments.filter(
+              (assignment) => !result.relatedSiteIds.includes(assignment.site_id),
+            ),
+          }),
+        },
+      ),
     createSite: (input: SafetySiteInput) =>
       runMutation((token) => createSafetySite(token, input), '현장을 생성했습니다.', {
         applyResult: (current, site) => ({
@@ -379,81 +454,130 @@ export function useAdminDashboardState({
         }),
       }),
     deleteSite: (id: string) =>
-      runMutation(async (token) => {
-        const assignmentIds = data.assignments
-          .filter((assignment) => assignment.site_id === id)
-          .map((assignment) => assignment.id);
-        await deleteAssignmentsById(token, assignmentIds, deactivateSafetyAssignment);
-        await deleteSafetySite(token, id);
-        return { siteId: id };
-      }, '현장을 삭제했습니다.', {
-        applyResult: (current, result) => ({
-          ...current,
-          sites: current.sites.filter((site) => site.id !== result.siteId),
-          assignments: current.assignments.filter((assignment) => assignment.site_id !== result.siteId),
-        }),
-      }),
+      runMutation(
+        async (token) => {
+          const assignmentIds = data.assignments
+            .filter((assignment) => assignment.site_id === id)
+            .map((assignment) => assignment.id);
+          await deleteAssignmentsById(token, assignmentIds, deactivateSafetyAssignment);
+          await deleteSafetySite(token, id);
+          return { siteId: id };
+        },
+        '현장을 삭제했습니다.',
+        {
+          applyResult: (current, result) => ({
+            ...current,
+            sites: current.sites.filter((site) => site.id !== result.siteId),
+            assignments: current.assignments.filter(
+              (assignment) => assignment.site_id !== result.siteId,
+            ),
+          }),
+        },
+      ),
     createAssignment: (input: SafetyAssignmentInput) =>
-      runMutation(async (token) => {
-        const existingAssignment = data.assignments.find(
-          (assignment) =>
-            assignment.site_id === input.site_id && assignment.user_id === input.user_id,
-        );
+      runMutation(
+        async (token) => {
+          const existingAssignment = data.assignments.find(
+            (assignment) =>
+              assignment.site_id === input.site_id && assignment.user_id === input.user_id,
+          );
 
-        if (existingAssignment) {
-          await updateSafetyAssignment(token, existingAssignment.id, {
-            role_on_site: input.role_on_site ?? existingAssignment.role_on_site,
-            memo: input.memo ?? existingAssignment.memo ?? null,
-            is_active: true,
-          });
-          return null;
-        }
+          if (existingAssignment) {
+            return updateSafetyAssignment(token, existingAssignment.id, {
+              role_on_site: input.role_on_site ?? existingAssignment.role_on_site,
+              memo: input.memo ?? existingAssignment.memo ?? null,
+              is_active: true,
+            });
+          }
 
-        await createSafetyAssignment(token, input);
-        return null;
-      }, '현장 배정을 생성했습니다.'),
+          return createSafetyAssignment(token, input);
+        },
+        '현장 배정을 생성했습니다.',
+        {
+          applyResult: (current, assignment) => ({
+            ...current,
+            assignments: upsertRecordById(current.assignments, assignment),
+          }),
+        },
+      ),
     assignFieldAgentToSite: (
       siteId: string,
       userId: string,
       options?: { roleOnSite?: string; memo?: string | null },
     ) =>
-      runMutation(async (token) => {
-        const matchedAssignment = data.assignments.find(
-          (assignment) => assignment.site_id === siteId && assignment.user_id === userId,
-        );
+      runMutation(
+        async (token) => {
+          const matchedAssignment = data.assignments.find(
+            (assignment) => assignment.site_id === siteId && assignment.user_id === userId,
+          );
 
-        if (matchedAssignment) {
-          if (matchedAssignment.is_active) return null;
-          await updateSafetyAssignment(token, matchedAssignment.id, {
-            ...buildAssignmentPayload('현장 지도요원', options, matchedAssignment),
-            is_active: true,
+          if (matchedAssignment) {
+            if (matchedAssignment.is_active) {
+              return matchedAssignment;
+            }
+
+            return updateSafetyAssignment(token, matchedAssignment.id, {
+              ...buildAssignmentPayload('현장 지도요원', options, matchedAssignment),
+              is_active: true,
+            });
+          }
+
+          return createSafetyAssignment(token, {
+            site_id: siteId,
+            user_id: userId,
+            ...buildAssignmentPayload('현장 지도요원', options),
           });
-          return null;
-        }
-
-        await createSafetyAssignment(token, {
-          site_id: siteId,
-          user_id: userId,
-          ...buildAssignmentPayload('현장 지도요원', options),
-        });
-        return null;
-      }, '지도요원을 배정했습니다.'),
+        },
+        '지도요원을 배정했습니다.',
+        {
+          applyResult: (current, assignment) => ({
+            ...current,
+            assignments: upsertRecordById(current.assignments, assignment),
+          }),
+        },
+      ),
     unassignFieldAgentFromSite: (siteId: string, userId: string) =>
-      runMutation(async (token) => {
-        const matchedAssignment = data.assignments.find(
-          (assignment) =>
-            assignment.site_id === siteId &&
-            assignment.user_id === userId &&
-            assignment.is_active,
-        );
-        if (!matchedAssignment) return null;
-        await deactivateSafetyAssignment(token, matchedAssignment.id);
-        return null;
-      }, '지도요원 배정을 해제했습니다.'),
+      runMutation(
+        async (token) => {
+          const matchedAssignment = data.assignments.find(
+            (assignment) =>
+              assignment.site_id === siteId &&
+              assignment.user_id === userId &&
+              assignment.is_active,
+          );
+
+          if (!matchedAssignment) {
+            return null;
+          }
+
+          await deactivateSafetyAssignment(token, matchedAssignment.id);
+          return { assignmentId: matchedAssignment.id };
+        },
+        '지도요원 배정을 해제했습니다.',
+        {
+          applyResult: (current, result) =>
+            result
+              ? {
+                  ...current,
+                  assignments: removeRecordById(current.assignments, result.assignmentId),
+                }
+              : current,
+        },
+      ),
     updateAssignment: (id: string, input: SafetyAssignmentUpdateInput) =>
-      runMutation((token) => updateSafetyAssignment(token, id, input), '배정 정보를 수정했습니다.'),
+      runMutation((token) => updateSafetyAssignment(token, id, input), '배정 정보를 수정했습니다.', {
+        applyResult: (current, assignment) => ({
+          ...current,
+          assignments: upsertRecordById(current.assignments, assignment),
+        }),
+      }),
     deactivateAssignment: (id: string) =>
-      runMutation((token) => deactivateSafetyAssignment(token, id), '배정을 비활성화했습니다.'),
+      runMutation((token) => deactivateSafetyAssignment(token, id), '배정을 비활성화했습니다.', {
+        applyResult: (current, assignment) => ({
+          ...current,
+          assignments: removeRecordById(current.assignments, assignment.id),
+        }),
+      }),
     createContentItem: (input: SafetyContentItemInput) =>
       runContentMutation((token) => createSafetyContentItem(token, input), '콘텐츠 데이터를 생성했습니다.'),
     updateContentItem: (id: string, input: SafetyContentItemUpdateInput) =>

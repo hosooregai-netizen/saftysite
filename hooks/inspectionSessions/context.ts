@@ -32,8 +32,14 @@ export interface InspectionSessionsContextValue {
   canArchiveReports: boolean;
   ensureMasterDataLoaded: () => Promise<void>;
   ensureSessionLoaded: (reportKey: string) => Promise<void>;
-  ensureSiteReportIndexLoaded: (siteId: string) => Promise<void>;
-  ensureSiteReportsLoaded: (siteId: string) => Promise<void>;
+  ensureSiteReportIndexLoaded: (
+    siteId: string,
+    options?: { force?: boolean }
+  ) => Promise<void>;
+  ensureSiteReportsLoaded: (
+    siteId: string,
+    options?: { force?: boolean }
+  ) => Promise<void>;
   getReportIndexBySiteId: (siteId: string) => SiteReportIndexState | null;
   login: (input: SafetyLoginInput) => Promise<void>;
   logout: () => void;
