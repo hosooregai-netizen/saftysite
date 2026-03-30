@@ -43,21 +43,21 @@ export function AdminOverviewSection({
     unassignedActiveSiteCount > 0
       ? {
           title: '미배정 현장 확인',
-          text: `운영 중인 현장 ${unassignedActiveSiteCount}곳이 아직 지도요원 배정이 없습니다.`,
+          text: `운영 중인 현장 ${unassignedActiveSiteCount}곳이 아직 지도요원 배정 없이 남아 있습니다.`,
           target: 'headquarters' as const,
         }
       : null,
     reportStats.inProgress > 0
       ? {
           title: '진행 중 보고서 점검',
-          text: `작성 중인 보고서가 ${reportStats.inProgress}건 있습니다. 사업장 화면에서 바로 확인할 수 있습니다.`,
+          text: `작성 중인 보고서가 ${reportStats.inProgress}건 있습니다. 사업장 드릴다운에서 바로 이어 확인할 수 있습니다.`,
           target: 'headquarters' as const,
         }
       : null,
     overloadedAgents[0]
       ? {
-          title: '지도요원 배정 편차',
-          text: `${overloadedAgents[0].name}에게 ${overloadedAgents[0].siteCount}개 현장이 배정되어 있습니다. 배정 균형을 확인해 보세요.`,
+          title: '지도요원 배정 편중',
+          text: `${overloadedAgents[0].name}님에게 ${overloadedAgents[0].siteCount}개 현장이 배정되어 있습니다. 담당 현장 분산이 필요한지 확인해 주세요.`,
           target: 'users' as const,
         }
       : null,
@@ -71,7 +71,7 @@ export function AdminOverviewSection({
     inactiveUsers.length > 0
       ? {
           title: '비활성 사용자 정리',
-          text: `비활성 사용자가 ${inactiveUsers.length}명 있습니다. 계정 상태를 한번 정리해 주세요.`,
+          text: `비활성 사용자 계정이 ${inactiveUsers.length}명 있습니다. 계정 상태를 정리해 주세요.`,
           target: 'users' as const,
         }
       : null,
@@ -80,7 +80,7 @@ export function AdminOverviewSection({
   const fallbackInsights = [
     {
       title: '운영 상태 양호',
-      text: '지금 바로 조치가 필요한 항목은 없습니다. 필요한 경우 사업장 화면에서 현장과 보고서를 순서대로 확인해 주세요.',
+      text: '지금 바로 조치가 필요한 운영 이슈는 보이지 않습니다. 현장과 보고서를 순서대로 점검해 주세요.',
       target: 'overview' as const,
     },
   ];
@@ -90,6 +90,9 @@ export function AdminOverviewSection({
       <div className={styles.sectionHeader}>
         <div>
           <h2 className={styles.sectionTitle}>관리자 운영 개요</h2>
+          <p className={styles.hint}>
+            현장 운영 현황과 계정, 콘텐츠 상태를 한 화면에서 확인할 수 있습니다.
+          </p>
         </div>
       </div>
 
@@ -108,6 +111,8 @@ export function AdminOverviewSection({
             </button>
           ))}
         </div>
+
+        <OperationalKpiPanel sites={data.sites} styles={styles} users={data.users} />
 
         <div className={`${styles.insightGrid} ${styles.overviewInsights}`}>
           {(insights.length > 0 ? insights : fallbackInsights).map((insight) => (
@@ -166,13 +171,12 @@ export function AdminOverviewSection({
               </strong>
             </div>
             <p className={`${styles.recordDescription} ${styles.overviewRecordDescription}`}>
-              사업장 탭에서 사업장, 현장, 보고서까지 한 단계씩 내려가며 확인할 수 있도록 구성했습니다.
-              모바일과 태블릿에서도 같은 흐름이 유지되도록 상단 메뉴와 카드 구성을 맞춰두었습니다.
+              사업장 탭에서는 사업장, 현장, 보고서를 단계적으로 확인할 수 있고, overview에서는
+              우선 조치가 필요한 분기 누락 현장과 월간 신고 미달 요원을 먼저 확인할 수 있도록
+              구성했습니다.
             </p>
           </article>
         </div>
-
-        <OperationalKpiPanel sites={data.sites} styles={styles} users={data.users} />
       </div>
     </section>
   );
