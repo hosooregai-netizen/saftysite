@@ -315,16 +315,18 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
                 <SiteReportListPanel
                   assignedUserDisplay={reportListState.assignedUserDisplay}
                   canArchiveReports={reportListState.canArchiveReports}
+                  canCreateReport={reportListState.canCreateReport}
                   createReport={reportListState.createReport}
                   currentSite={reportListState.currentSite}
                   deleteSession={reportListState.deleteSession}
-                  filteredSiteSessions={reportListState.filteredSiteSessions}
-                  isLoadingSiteReports={reportListState.isLoadingSiteReports}
+                  filteredReportItems={reportListState.filteredReportItems}
+                  reportIndexError={reportListState.reportIndexError}
+                  reportIndexStatus={reportListState.reportIndexStatus}
+                  reportItems={reportListState.reportItems}
                   reportQuery={reportListState.reportQuery}
                   reportSortMode={reportListState.reportSortMode}
                   setReportQuery={reportListState.setReportQuery}
                   setReportSortMode={reportListState.setReportSortMode}
-                  siteSessions={reportListState.siteSessions}
                   showSummaryBar={false}
                 />
               ) : (

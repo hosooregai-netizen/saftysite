@@ -2,6 +2,7 @@ import type {
   SafetyContentItem,
   SafetyLoginInput,
   SafetyReport,
+  SafetyReportListItem,
   SafetySite,
   SafetyTokenResponse,
   SafetyUpsertReportInput,
@@ -71,6 +72,41 @@ export function fetchSafetyReportsBySite(
 
   return requestSafetyApi<SafetyReport[]>(
     `/reports/site/${siteId}/full?${searchParams.toString()}`,
+    {},
+    token
+  );
+}
+
+export function fetchSafetyReportList(
+  token: string,
+  options?: {
+    siteId?: string;
+    activeOnly?: boolean;
+    limit?: number;
+  }
+): Promise<SafetyReportListItem[]> {
+  const searchParams = new URLSearchParams({
+    active_only: String(options?.activeOnly ?? true),
+    limit: String(options?.limit ?? 100),
+  });
+
+  if (options?.siteId) {
+    searchParams.set('site_id', options.siteId);
+  }
+
+  return requestSafetyApi<SafetyReportListItem[]>(
+    `/reports?${searchParams.toString()}`,
+    {},
+    token
+  );
+}
+
+export function fetchSafetyReportByKey(
+  token: string,
+  reportKey: string
+): Promise<SafetyReport> {
+  return requestSafetyApi<SafetyReport>(
+    `/reports/by-key/${reportKey}`,
     {},
     token
   );

@@ -2,18 +2,33 @@
 
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  getSessionProgress,
-  getSessionSiteKey,
-  getSessionTitle,
-} from '@/constants/inspectionSession';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
-import type { InspectionSite } from '@/types/inspectionSession';
+import type {
+  InspectionReportListItem,
+  InspectionSite,
+  ReportIndexStatus,
+} from '@/types/inspectionSession';
 
 export type SiteReportSortMode = 'recent' | 'name' | 'progress';
 
 interface UseSiteReportListStateOptions {
   siteOverride?: InspectionSite | null;
+}
+
+function getDrafterFromReportItem(item: InspectionReportListItem) {
+  return typeof item.meta.drafter === 'string' ? item.meta.drafter : '';
+}
+
+function getReportSearchText(item: InspectionReportListItem, fallbackDrafter: string) {
+  return [
+    item.reportTitle,
+    item.visitDate || '',
+    getDrafterFromReportItem(item) || fallbackDrafter,
+    item.lastAutosavedAt || '',
+    item.updatedAt || '',
+  ]
+    .join(' ')
+    .toLowerCase();
 }
 
 export function useSiteReportListState(
@@ -24,11 +39,11 @@ export function useSiteReportListState(
   const decodedSiteKey = siteKey ? decodeURIComponent(siteKey) : null;
   const {
     sites,
-    sessions,
     currentUser,
     createSession,
     deleteSession,
-    ensureSiteReportsLoaded,
+    ensureSiteReportIndexLoaded,
+    getReportIndexBySiteId,
     canArchiveReports,
     isAuthenticated,
     isReady,
@@ -36,102 +51,69 @@ export function useSiteReportListState(
   const [reportQuery, setReportQuery] = useState('');
   const [reportSortMode, setReportSortMode] = useState<SiteReportSortMode>('recent');
   const hasReloadedRef = useRef(false);
-  const [isLoadingSiteReports, setIsLoadingSiteReports] = useState(false);
-  const hasStoredSite = useMemo(
-    () => Boolean(decodedSiteKey && sites.some((site) => site.id === decodedSiteKey)),
-    [decodedSiteKey, sites],
-  );
+  const currentSite = useMemo(() => {
+    if (!decodedSiteKey) return null;
+    return sites.find((site) => site.id === decodedSiteKey) ?? options.siteOverride ?? null;
+  }, [decodedSiteKey, options.siteOverride, sites]);
 
   useEffect(() => {
     hasReloadedRef.current = false;
   }, [decodedSiteKey]);
 
   useEffect(() => {
-    if (!decodedSiteKey || !hasStoredSite || !isAuthenticated || !isReady || hasReloadedRef.current) {
+    if (!decodedSiteKey || !currentSite || !isAuthenticated || !isReady || hasReloadedRef.current) {
       return;
     }
 
     hasReloadedRef.current = true;
-    let cancelled = false;
+    void ensureSiteReportIndexLoaded(decodedSiteKey);
+  }, [currentSite, decodedSiteKey, ensureSiteReportIndexLoaded, isAuthenticated, isReady]);
 
-    const loadSiteReports = async () => {
-      setIsLoadingSiteReports(true);
-
-      try {
-        await ensureSiteReportsLoaded(decodedSiteKey);
-      } finally {
-        if (!cancelled) {
-          setIsLoadingSiteReports(false);
-        }
-      }
-    };
-
-    void loadSiteReports();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [decodedSiteKey, ensureSiteReportsLoaded, hasStoredSite, isAuthenticated, isReady]);
-
-  const currentSite = useMemo(() => {
+  const reportIndexState = useMemo(() => {
     if (!decodedSiteKey) return null;
-    return sites.find((site) => site.id === decodedSiteKey) ?? options.siteOverride ?? null;
-  }, [decodedSiteKey, options.siteOverride, sites]);
-
-  const siteSessions = useMemo(
-    () =>
-      decodedSiteKey
-        ? sessions.filter((session) => getSessionSiteKey(session) === decodedSiteKey)
-        : [],
-    [decodedSiteKey, sessions],
-  );
+    return getReportIndexBySiteId(decodedSiteKey);
+  }, [decodedSiteKey, getReportIndexBySiteId]);
+  const reportItems = useMemo(() => reportIndexState?.items ?? [], [reportIndexState]);
+  const reportIndexStatus: ReportIndexStatus = reportIndexState?.status ?? 'idle';
   const deferredReportQuery = useDeferredValue(reportQuery);
   const assignedUserDisplay = [currentUser?.name, currentUser?.position]
     .filter(Boolean)
     .join(' / ');
-  const filteredSiteSessions = useMemo(() => {
+  const filteredReportItems = useMemo(() => {
     const normalizedQuery = deferredReportQuery.trim().toLowerCase();
     const drafterFallback = assignedUserDisplay || currentSite?.assigneeName || '';
 
-    const matchingSessions = !normalizedQuery
-      ? siteSessions
-      : siteSessions.filter((session) => {
-          const title = getSessionTitle(session);
-          const drafter = session.meta.drafter || drafterFallback;
-          const haystack = [title, session.meta.reportDate || '', drafter, session.lastSavedAt || '']
-            .join(' ')
-            .toLowerCase();
+    const matchingItems = !normalizedQuery
+      ? reportItems
+      : reportItems.filter((item) =>
+          getReportSearchText(item, drafterFallback).includes(normalizedQuery),
+        );
 
-          return haystack.includes(normalizedQuery);
-        });
-
-    return [...matchingSessions].sort((left, right) => {
+    return [...matchingItems].sort((left, right) => {
       if (reportSortMode === 'name') {
-        return getSessionTitle(left).localeCompare(getSessionTitle(right), 'ko');
+        return left.reportTitle.localeCompare(right.reportTitle, 'ko');
       }
 
       if (reportSortMode === 'progress') {
-        const leftProgress = getSessionProgress(left);
-        const rightProgress = getSessionProgress(right);
-
         return (
-          rightProgress.percentage - leftProgress.percentage ||
-          rightProgress.completed - leftProgress.completed ||
-          getSessionTitle(left).localeCompare(getSessionTitle(right), 'ko')
+          (right.progressRate ?? 0) - (left.progressRate ?? 0) ||
+          right.reportTitle.localeCompare(left.reportTitle, 'ko') * -1
         );
       }
 
-      const leftSavedTime = left.lastSavedAt ? new Date(left.lastSavedAt).getTime() : 0;
-      const rightSavedTime = right.lastSavedAt ? new Date(right.lastSavedAt).getTime() : 0;
+      const leftSavedTime = left.lastAutosavedAt ? new Date(left.lastAutosavedAt).getTime() : 0;
+      const rightSavedTime = right.lastAutosavedAt ? new Date(right.lastAutosavedAt).getTime() : 0;
+      const leftUpdatedTime = new Date(left.updatedAt).getTime();
+      const rightUpdatedTime = new Date(right.updatedAt).getTime();
 
-      return rightSavedTime - leftSavedTime;
+      return rightSavedTime - leftSavedTime || rightUpdatedTime - leftUpdatedTime;
     });
   }, [
     assignedUserDisplay,
     currentSite?.assigneeName,
     deferredReportQuery,
+    reportItems,
     reportSortMode,
-    siteSessions,
   ]);
 
   const createReport = () => {
@@ -147,19 +129,23 @@ export function useSiteReportListState(
     router.push(`/sessions/${nextSession.id}`);
   };
 
+  const canCreateReport = reportIndexStatus === 'loaded';
+
   return {
     assignedUserDisplay,
     canArchiveReports,
+    canCreateReport,
     createReport,
     currentSite,
     currentUser,
     deleteSession,
-    filteredSiteSessions,
-    isLoadingSiteReports,
+    filteredReportItems,
+    reportIndexError: reportIndexState?.error ?? null,
+    reportIndexStatus,
+    reportItems,
     reportQuery,
     reportSortMode,
     setReportQuery,
     setReportSortMode,
-    siteSessions,
   };
 }

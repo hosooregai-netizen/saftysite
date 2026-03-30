@@ -4,6 +4,7 @@ import type {
   InspectionReportMeta,
   InspectionSectionKey,
 } from './base';
+import type { SafetyReportStatus } from '@/types/backend';
 import type {
   ActivityRecord,
   CaseFeedItem,
@@ -64,5 +65,36 @@ export interface InspectionSectionMeta {
   shortLabel: string;
   compactLabel: string;
   description?: string;
+}
+
+export type ReportIndexStatus = 'idle' | 'loading' | 'loaded' | 'error';
+
+export interface InspectionReportListItem {
+  id: string;
+  reportKey: string;
+  reportTitle: string;
+  siteId: string;
+  headquarterId: string | null;
+  assignedUserId: string | null;
+  visitDate: string | null;
+  visitRound: number | null;
+  totalRound: number | null;
+  progressRate: number | null;
+  status: SafetyReportStatus;
+  payloadVersion: number;
+  latestRevisionNo: number;
+  submittedAt: string | null;
+  publishedAt: string | null;
+  lastAutosavedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  meta: Record<string, unknown>;
+}
+
+export interface SiteReportIndexState {
+  status: ReportIndexStatus;
+  items: InspectionReportListItem[];
+  fetchedAt: string | null;
+  error: string | null;
 }
 

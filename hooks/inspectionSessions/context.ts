@@ -3,9 +3,11 @@
 import { createContext, useContext } from 'react';
 import type {
   AdminSiteSnapshot,
+  InspectionReportListItem,
   InspectionReportMeta,
   InspectionSite,
   InspectionSession,
+  SiteReportIndexState,
 } from '@/types/inspectionSession';
 import type {
   SafetyLoginInput,
@@ -29,7 +31,10 @@ export interface InspectionSessionsContextValue {
   syncError: string | null;
   canArchiveReports: boolean;
   ensureMasterDataLoaded: () => Promise<void>;
+  ensureSessionLoaded: (reportKey: string) => Promise<void>;
+  ensureSiteReportIndexLoaded: (siteId: string) => Promise<void>;
   ensureSiteReportsLoaded: (siteId: string) => Promise<void>;
+  getReportIndexBySiteId: (siteId: string) => SiteReportIndexState | null;
   login: (input: SafetyLoginInput) => Promise<void>;
   logout: () => void;
   reload: () => Promise<void>;
@@ -54,6 +59,7 @@ export interface InspectionSessionsContextValue {
   saveNow: () => Promise<void>;
   getSessionById: (sessionId: string) => InspectionSession | null;
   getSiteById: (siteId: string) => InspectionSite | null;
+  upsertReportIndexItems: (siteId: string, items: InspectionReportListItem[]) => void;
 }
 
 export const InspectionSessionsContext =

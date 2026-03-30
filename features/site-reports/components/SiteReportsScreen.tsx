@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import LoginPanel from '@/components/auth/LoginPanel';
 import { AdminMenuDrawer, AdminMenuPanel } from '@/components/admin/AdminMenu';
 import OperationalReportsPanel from '@/components/site/OperationalReportsPanel';
@@ -23,29 +23,53 @@ interface SiteReportsScreenProps {
 
 export function SiteReportsScreen({ siteKey }: SiteReportsScreenProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [shouldLoadOperationalPanel, setShouldLoadOperationalPanel] = useState(false);
   const {
     assignedUserDisplay,
     authError,
     canArchiveReports,
+    canCreateReport,
     createReport,
     currentSite,
     currentUser,
     currentUserName,
     deleteSession,
-    filteredSiteSessions,
+    filteredReportItems,
     isAdminView,
     isAuthenticated,
-    isLoadingSiteReports,
     isReady,
     login,
     logout,
+    reportIndexError,
+    reportIndexStatus,
+    reportItems,
     reportQuery,
     reportSortMode,
     setReportQuery,
     setReportSortMode,
-    siteSessions,
     workerBackHref,
   } = useSiteReportsScreen(siteKey);
+
+  useEffect(() => {
+    const idleApi = window as typeof window & {
+      requestIdleCallback?: (
+        callback: IdleRequestCallback,
+        options?: IdleRequestOptions,
+      ) => number;
+    };
+
+    if (typeof idleApi.requestIdleCallback === 'function') {
+      const id = idleApi.requestIdleCallback(() => {
+        setShouldLoadOperationalPanel(true);
+      }, { timeout: 800 });
+      return () => window.cancelIdleCallback?.(id);
+    }
+
+    const timeout = window.setTimeout(() => {
+      setShouldLoadOperationalPanel(true);
+    }, 350);
+    return () => window.clearTimeout(timeout);
+  }, []);
 
   if (!isReady) {
     return <SiteReportsLoadingState />;
@@ -101,22 +125,25 @@ export function SiteReportsScreen({ siteKey }: SiteReportsScreenProps) {
                 <SiteReportListPanel
                   assignedUserDisplay={assignedUserDisplay}
                   canArchiveReports={canArchiveReports}
+                  canCreateReport={canCreateReport}
                   createReport={createReport}
                   currentSite={currentSite}
                   deleteSession={deleteSession}
-                  filteredSiteSessions={filteredSiteSessions}
-                  isLoadingSiteReports={isLoadingSiteReports}
+                  filteredReportItems={filteredReportItems}
+                  reportIndexError={reportIndexError}
+                  reportIndexStatus={reportIndexStatus}
+                  reportItems={reportItems}
                   reportQuery={reportQuery}
                   reportSortMode={reportSortMode}
                   setReportQuery={setReportQuery}
                   setReportSortMode={setReportSortMode}
-                  siteSessions={siteSessions}
                 />
 
                 <OperationalReportsPanel
                   currentSite={currentSite}
                   currentUser={currentUser}
-                  siteSessions={siteSessions}
+                  enabled={shouldLoadOperationalPanel}
+                  siteReportCount={reportItems.length}
                 />
               </div>
             </div>

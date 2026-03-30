@@ -31,6 +31,7 @@ export function useInspectionSessionScreen(sessionId: string) {
     authError,
     currentUser,
     ensureMasterDataLoaded,
+    ensureSessionLoaded,
     getSessionById,
     getSiteById,
     isAuthenticated,
@@ -47,6 +48,7 @@ export function useInspectionSessionScreen(sessionId: string) {
   const [documentError, setDocumentError] = useState<string | null>(null);
   const [isGeneratingHwpx, setIsGeneratingHwpx] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isLoadingSession, setIsLoadingSession] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const session = getSessionById(sessionId);
   const isAdminView = Boolean(currentUser && isAdminUserRole(currentUser.role));
@@ -88,6 +90,26 @@ export function useInspectionSessionScreen(sessionId: string) {
   useEffect(() => {
     void ensureMasterDataLoaded();
   }, [ensureMasterDataLoaded]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !isReady || session) {
+      setIsLoadingSession(false);
+      return;
+    }
+
+    let cancelled = false;
+    setIsLoadingSession(true);
+
+    void ensureSessionLoaded(sessionId).finally(() => {
+      if (!cancelled) {
+        setIsLoadingSession(false);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ensureSessionLoaded, isAuthenticated, isReady, session, sessionId]);
 
   useEffect(() => {
     if (!session) return;
@@ -236,6 +258,7 @@ export function useInspectionSessionScreen(sessionId: string) {
     isGeneratingDocument: isGeneratingHwpx || isGeneratingPdf,
     isGeneratingHwpx,
     isGeneratingPdf,
+    isLoadingSession,
     isReady,
     isSaving,
     login,

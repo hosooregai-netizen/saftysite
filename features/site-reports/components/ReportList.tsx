@@ -1,45 +1,75 @@
 import Link from 'next/link';
 import ActionMenu from '@/components/ui/ActionMenu';
-import { getSessionProgress, getSessionTitle } from '@/constants/inspectionSession';
 import { formatDateTime } from '@/lib/formatDateTime';
-import type { InspectionSession, InspectionSite } from '@/types/inspectionSession';
+import type {
+  InspectionReportListItem,
+  InspectionSite,
+  ReportIndexStatus,
+} from '@/types/inspectionSession';
 import styles from './SiteReportsScreen.module.css';
 
 interface ReportListProps {
   assignedUserDisplay?: string;
-  currentSite: InspectionSite;
-  siteSessions: InspectionSession[];
-  totalSessionCount: number;
   canArchiveReports: boolean;
+  canCreateReport: boolean;
+  currentSite: InspectionSite;
   onCreateReport: () => void;
-  onDeleteRequest: (sessionId: string) => void;
+  onDeleteRequest: (reportKey: string) => void;
+  reportIndexStatus: ReportIndexStatus;
+  reportItems: InspectionReportListItem[];
+  totalReportCount: number;
+}
+
+function getDrafterDisplay(
+  item: InspectionReportListItem,
+  assignedUserDisplay: string | undefined,
+  currentSite: InspectionSite,
+) {
+  return (
+    (typeof item.meta.drafter === 'string' && item.meta.drafter) ||
+    assignedUserDisplay ||
+    currentSite.assigneeName ||
+    '미입력'
+  );
 }
 
 export function ReportList({
   assignedUserDisplay,
-  currentSite,
-  siteSessions,
-  totalSessionCount,
   canArchiveReports,
+  canCreateReport,
+  currentSite,
   onCreateReport,
   onDeleteRequest,
+  reportIndexStatus,
+  reportItems,
+  totalReportCount,
 }: ReportListProps) {
-  if (totalSessionCount === 0) {
+  if (reportIndexStatus !== 'loaded' && totalReportCount === 0) {
     return (
       <div className={styles.emptyState}>
-        <p className={styles.emptyTitle}>아직 작성한 보고서가 없습니다.</p>
-        <button
-          type="button"
-          onClick={onCreateReport}
-          className="app-button app-button-primary"
-        >
-          첫 보고서 시작
-        </button>
+        <p className={styles.emptyTitle}>이 현장의 보고서 목록을 불러오는 중입니다.</p>
       </div>
     );
   }
 
-  if (siteSessions.length === 0) {
+  if (totalReportCount === 0) {
+    return (
+      <div className={styles.emptyState}>
+        <p className={styles.emptyTitle}>아직 작성된 보고서가 없습니다.</p>
+        {canCreateReport ? (
+          <button
+            type="button"
+            onClick={onCreateReport}
+            className="app-button app-button-primary"
+          >
+            첫 보고서 작성
+          </button>
+        ) : null}
+      </div>
+    );
+  }
+
+  if (reportItems.length === 0) {
     return (
       <div className={styles.emptyState}>
         <p className={styles.emptyTitle}>검색 조건에 맞는 보고서가 없습니다.</p>
@@ -61,9 +91,9 @@ export function ReportList({
         </div>
 
         <div className={styles.reportList}>
-          {siteSessions.map((session) => {
-            const progress = getSessionProgress(session);
-            const sessionHref = `/sessions/${session.id}`;
+          {reportItems.map((item) => {
+            const progressRate = Math.max(0, Math.min(100, item.progressRate ?? 0));
+            const sessionHref = `/sessions/${item.reportKey}`;
             const menuItems = [
               { label: '이어서 작성', href: sessionHref },
               ...(canArchiveReports
@@ -71,27 +101,27 @@ export function ReportList({
                     {
                       label: '삭제',
                       tone: 'danger' as const,
-                      onSelect: () => onDeleteRequest(session.id),
+                      onSelect: () => onDeleteRequest(item.reportKey),
                     },
                   ]
                 : []),
             ];
 
             return (
-              <article key={session.id} className={styles.reportRow}>
+              <article key={item.reportKey} className={styles.reportRow}>
                 <div className={`${styles.primaryCell} ${styles.titleCell}`}>
                   <Link href={sessionHref} className={styles.reportLink}>
-                    {getSessionTitle(session)}
+                    {item.reportTitle}
                   </Link>
                 </div>
 
                 <div className={`${styles.dataCell} ${styles.reportDateCell} ${styles.desktopOnly}`}>
-                  <span className={styles.dataValue}>{session.meta.reportDate || '미입력'}</span>
+                  <span className={styles.dataValue}>{item.visitDate || '미입력'}</span>
                 </div>
 
                 <div className={`${styles.dataCell} ${styles.drafterCell}`}>
                   <span className={styles.dataValue}>
-                    {session.meta.drafter || assignedUserDisplay || currentSite.assigneeName || '미입력'}
+                    {getDrafterDisplay(item, assignedUserDisplay, currentSite)}
                   </span>
                 </div>
 
@@ -100,24 +130,23 @@ export function ReportList({
                     <div className={styles.progressTrack} aria-hidden="true">
                       <span
                         className={styles.progressFill}
-                        style={{ width: `${progress.percentage}%` }}
+                        style={{ width: `${progressRate}%` }}
                       />
                     </div>
-                    <span className={styles.progressText}>
-                      {progress.completed}/{progress.total}
-                      <span className={styles.desktopProgressSuffix}> 완료</span>
-                    </span>
+                    <span className={styles.progressText}>{Math.round(progressRate)}%</span>
                   </div>
                 </div>
 
                 <div className={`${styles.dataCell} ${styles.lastSavedCell} ${styles.desktopOnly}`}>
-                  <span className={styles.dataValue}>{formatDateTime(session.lastSavedAt)}</span>
+                  <span className={styles.dataValue}>
+                    {formatDateTime(item.lastAutosavedAt || item.updatedAt)}
+                  </span>
                 </div>
 
                 <div className={`${styles.actionCell} ${styles.actionsCell}`}>
                   <ActionMenu
                     items={menuItems}
-                    label={`${getSessionTitle(session)} 작업 메뉴 열기`}
+                    label={`${item.reportTitle} 작업 메뉴 열기`}
                   />
                 </div>
               </article>
@@ -128,4 +157,3 @@ export function ReportList({
     </div>
   );
 }
-

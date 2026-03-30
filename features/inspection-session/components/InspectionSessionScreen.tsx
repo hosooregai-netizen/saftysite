@@ -27,6 +27,10 @@ export function InspectionSessionScreen({ sessionId }: InspectionSessionScreenPr
     return <LoginPanel error={screen.authError} onSubmit={screen.login} title="세션 로그인" />;
   }
 
+  if (screen.isLoadingSession) {
+    return <LoadingStatePanel />;
+  }
+
   if (!screen.sectionSession || !screen.derivedData.progress) {
     return <MissingStatePanel />;
   }

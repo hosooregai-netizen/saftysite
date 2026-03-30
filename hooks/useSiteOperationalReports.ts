@@ -23,7 +23,7 @@ function getErrorMessage(error: unknown) {
   return '운영 보고서를 불러오는 중 오류가 발생했습니다.';
 }
 
-export function useSiteOperationalReports(site: InspectionSite | null) {
+export function useSiteOperationalReports(site: InspectionSite | null, enabled = true) {
   const [quarterlyReports, setQuarterlyReports] = useState<QuarterlySummaryReport[]>([]);
   const [badWorkplaceReports, setBadWorkplaceReports] = useState<BadWorkplaceReport[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -31,6 +31,10 @@ export function useSiteOperationalReports(site: InspectionSite | null) {
   const [error, setError] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
+    if (!enabled) {
+      return;
+    }
+
     if (!site) {
       setQuarterlyReports([]);
       setBadWorkplaceReports([]);
@@ -80,11 +84,12 @@ export function useSiteOperationalReports(site: InspectionSite | null) {
     } finally {
       setIsLoading(false);
     }
-  }, [site]);
+  }, [enabled, site]);
 
   useEffect(() => {
+    if (!enabled) return;
     void reload();
-  }, [reload]);
+  }, [enabled, reload]);
 
   const saveQuarterlyReport = useCallback(
     async (report: QuarterlySummaryReport) => {

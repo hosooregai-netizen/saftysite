@@ -65,6 +65,10 @@ function getGetCacheTtlMs(path: string, method?: string): number {
     return REPORTS_BY_SITE_CACHE_TTL_MS;
   }
 
+  if (path.startsWith('/reports?') || path.includes('/reports?site_id=')) {
+    return REPORTS_BY_SITE_CACHE_TTL_MS;
+  }
+
   return DEFAULT_GET_CACHE_TTL_MS;
 }
 

@@ -7,13 +7,20 @@ import {
   normalizeInspectionSession,
   normalizeInspectionSite,
 } from '@/constants/inspectionSession';
-import { createNewSafetySession } from '@/lib/safetyApiMappers';
+import {
+  createNewSafetySession,
+  mapInspectionSessionToReportListItem,
+} from '@/lib/safetyApiMappers';
 import type {
   AdminSiteSnapshot,
   InspectionReportMeta,
   InspectionSite,
   InspectionSession,
 } from '@/types/inspectionSession';
+import {
+  createEmptyReportIndexState,
+  mergeReportIndexItems,
+} from './helpers';
 import type { InspectionSessionsStore } from './store';
 
 export function useInspectionSessionsMutations(
@@ -25,6 +32,7 @@ export function useInspectionSessionsMutations(
     masterDataRef,
     sessionVersionsRef,
     sessionsRef,
+    setReportIndexBySiteId,
     setSessionState,
     setSessions,
     setSiteState,
@@ -54,7 +62,13 @@ export function useInspectionSessionsMutations(
     setSessionState(
       sessionsRef.current.filter((session) => getSessionSiteKey(session) !== siteId)
     );
-  }, [sessionsRef, setSessionState, setSiteState, sitesRef]);
+    setReportIndexBySiteId((current) => {
+      if (!(siteId in current)) return current;
+      const next = { ...current };
+      delete next[siteId];
+      return next;
+    });
+  }, [sessionsRef, setReportIndexBySiteId, setSessionState, setSiteState, sitesRef]);
 
   const createSession = useCallback((site: InspectionSite, initial?: { meta?: Partial<InspectionReportMeta> }) => {
     const nextSession = createNewSafetySession(
@@ -67,9 +81,23 @@ export function useInspectionSessionsMutations(
       { meta: initial?.meta }
     );
     setSessionState([nextSession, ...sessionsRef.current]);
+    setReportIndexBySiteId((current) => ({
+      ...current,
+      [site.id]: {
+        ...createEmptyReportIndexState(),
+        ...(current[site.id] ?? {}),
+        status: current[site.id]?.status ?? 'loaded',
+        items: mergeReportIndexItems(
+          current[site.id]?.items ?? [],
+          [mapInspectionSessionToReportListItem(nextSession, site)],
+        ),
+        fetchedAt: current[site.id]?.fetchedAt ?? new Date().toISOString(),
+        error: null,
+      },
+    }));
     markSessionDirty(nextSession.id);
     return nextSession;
-  }, [markSessionDirty, masterDataRef, sessionsRef, setSessionState]);
+  }, [markSessionDirty, masterDataRef, sessionsRef, setReportIndexBySiteId, setSessionState]);
 
   const updateSession = useCallback((sessionId: string, updater: (current: InspectionSession) => InspectionSession) => {
     const updatedAt = new Date().toISOString();
@@ -106,7 +134,22 @@ export function useInspectionSessionsMutations(
       delete sessionVersionsRef.current[session.id];
     });
     setSessionState(remaining);
-  }, [dirtySessionIdsRef, sessionVersionsRef, sessionsRef, setSessionState]);
+    if (removed.length > 0) {
+      setReportIndexBySiteId((current) => {
+        const next = { ...current };
+        removed.forEach((session) => {
+          const siteId = getSessionSiteKey(session);
+          const currentState = next[siteId];
+          if (!currentState) return;
+          next[siteId] = {
+            ...currentState,
+            items: currentState.items.filter((item) => item.reportKey !== session.id),
+          };
+        });
+        return next;
+      });
+    }
+  }, [dirtySessionIdsRef, sessionVersionsRef, sessionsRef, setReportIndexBySiteId, setSessionState]);
 
   return { createSession, createSite, deleteSessions, deleteSite, updateSession, updateSessions, updateSite };
 }

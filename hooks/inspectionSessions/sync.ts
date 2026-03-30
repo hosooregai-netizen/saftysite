@@ -1,24 +1,24 @@
 'use client';
 
 import { startTransition, useCallback, useEffect, useRef } from 'react';
+import { normalizeInspectionSite } from '@/constants/inspectionSession/normalizeSite';
 import { readPersistedValue } from '@/lib/clientPersistence';
 import {
   fetchAssignedSafetySites,
   fetchCurrentSafetyUser,
   fetchSafetyContentItems,
-  fetchSafetyReportsBySite,
+  fetchSafetyReportByKey,
+  fetchSafetyReportList,
   loginSafetyApi,
   readSafetyAuthToken,
   writeSafetyAuthToken,
 } from '@/lib/safetyApi';
 import { primeControllerDashboardData } from '@/hooks/controller/useControllerDashboard';
-import {
-  getStoredReportKind,
-  TECHNICAL_GUIDANCE_REPORT_KIND,
-} from '@/lib/erpReports/shared';
+import { TECHNICAL_GUIDANCE_REPORT_KIND } from '@/lib/erpReports/shared';
 import {
   buildSafetyMasterData,
   isSafetyAdmin,
+  mapSafetyReportListItem,
   mapSafetyReportToInspectionSession,
   mapSafetySiteToInspectionSite,
   mergeMasterDataIntoSession,
@@ -26,13 +26,20 @@ import {
 import type {
   SafetyLoginInput,
   SafetyMasterData,
+  SafetyReport,
   SafetyUser,
 } from '@/types/backend';
-import type { InspectionSite, InspectionSession } from '@/types/inspectionSession';
+import type {
+  InspectionSite,
+  InspectionSession,
+  SiteReportIndexState,
+} from '@/types/inspectionSession';
 import {
+  createEmptyReportIndexState,
   EMPTY_MASTER_DATA,
   getErrorMessage,
   isAuthFailure,
+  mergeReportIndexItems,
   normalizeSessions,
   SITE_STORAGE_KEY,
   STORAGE_KEY,
@@ -40,7 +47,6 @@ import {
 } from './helpers';
 import type { InspectionSessionsStore } from './store';
 
-const REPORT_FETCH_CONCURRENCY = 6;
 const ADMIN_BACKGROUND_HYDRATION_DELAY_MS = 350;
 const PERSISTED_BOOTSTRAP_TIMEOUT_MS = 250;
 
@@ -73,6 +79,56 @@ function scheduleAdminBackgroundTask(task: () => void) {
   setTimeout(task, ADMIN_BACKGROUND_HYDRATION_DELAY_MS);
 }
 
+function isTechnicalGuidanceReport(item: { meta?: Record<string, unknown> }) {
+  const rawKind = typeof item.meta?.reportKind === 'string'
+    ? item.meta.reportKind.trim().toLowerCase()
+    : '';
+
+  return !rawKind || rawKind === TECHNICAL_GUIDANCE_REPORT_KIND;
+}
+
+function buildReportIndexState(
+  base: SiteReportIndexState | null | undefined,
+  patch: Partial<SiteReportIndexState>,
+): SiteReportIndexState {
+  return {
+    ...createEmptyReportIndexState(),
+    ...(base ?? {}),
+    ...patch,
+  };
+}
+
+function buildFallbackSiteFromReport(report: SafetyReport): InspectionSite {
+  const payload =
+    report.payload && typeof report.payload === 'object'
+      ? (report.payload as Record<string, unknown>)
+      : {};
+  const snapshot =
+    payload.adminSiteSnapshot && typeof payload.adminSiteSnapshot === 'object'
+      ? payload.adminSiteSnapshot
+      : {};
+  const meta = report.meta ?? {};
+
+  return normalizeInspectionSite({
+    id: report.site_id,
+    headquarterId: report.headquarter_id,
+    title:
+      (typeof payload.title === 'string' && payload.title) ||
+      (typeof meta.siteName === 'string' && meta.siteName) ||
+      report.report_title,
+    siteName:
+      (typeof meta.siteName === 'string' && meta.siteName) ||
+      (typeof payload.siteName === 'string' && payload.siteName) ||
+      report.report_title,
+    assigneeName:
+      (typeof meta.drafter === 'string' && meta.drafter) ||
+      (typeof payload.assigneeName === 'string' && payload.assigneeName),
+    adminSiteSnapshot: snapshot,
+    createdAt: report.created_at,
+    updatedAt: report.updated_at,
+  });
+}
+
 export function useInspectionSessionsSync(store: InspectionSessionsStore) {
   const {
     authTokenRef,
@@ -81,6 +137,7 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
     persistCurrentUser,
     persistSessions,
     persistSites,
+    reportIndexBySiteIdRef,
     resetSessionVersions,
     setAuthError,
     setCurrentUser,
@@ -90,6 +147,7 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
     setIsHydratingReports,
     setIsReady,
     setMasterData,
+    setReportIndexBySiteId,
     setSessionState,
     setSiteState,
     setSyncError,
@@ -99,7 +157,8 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
   const syncRequestIdRef = useRef(0);
   const hasLoadedRemoteMasterDataRef = useRef(false);
   const masterDataPromiseRef = useRef<Promise<SafetyMasterData> | null>(null);
-  const loadedReportSiteIdsRef = useRef<Set<string>>(new Set());
+  const reportIndexRequestsRef = useRef<Map<string, Promise<void>>>(new Map());
+  const sessionLoadRequestsRef = useRef<Map<string, Promise<void>>>(new Map());
 
   const applyMasterDataToSessions = useCallback(
     async (masterData: SafetyMasterData) => {
@@ -155,48 +214,6 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
     [authTokenRef, persistCurrentUser, setCurrentUser, setIsReady],
   );
 
-  const hydrateRemoteSessions = useCallback(
-    async (
-      token: string,
-      sites: InspectionSite[],
-      masterData: SafetyMasterData,
-    ): Promise<InspectionSession[]> => {
-      if (sites.length === 0) return [];
-
-      const pendingSites = [...sites];
-      const reportGroups: Array<{
-        reports: Awaited<ReturnType<typeof fetchSafetyReportsBySite>>;
-        site: InspectionSite;
-      }> = [];
-      const workerCount = Math.min(REPORT_FETCH_CONCURRENCY, pendingSites.length);
-
-      await Promise.all(
-        Array.from({ length: workerCount }, async () => {
-          while (pendingSites.length > 0) {
-            const site = pendingSites.shift();
-            if (!site) return;
-
-            const reports = await fetchSafetyReportsBySite(token, site.id);
-            reportGroups.push({ site, reports });
-          }
-        }),
-      );
-
-      return normalizeSessions(
-        reportGroups.flatMap(({ site, reports }) =>
-          reports
-            .filter(
-              (report) => getStoredReportKind(report) === TECHNICAL_GUIDANCE_REPORT_KIND,
-            )
-            .map((report) =>
-              mapSafetyReportToInspectionSession(report, site, masterData),
-            ),
-        ),
-      );
-    },
-    [],
-  );
-
   const applyHydratedBaseState = useCallback(
     async (data: HydratedBaseState, token: string) => {
       authTokenRef.current = token;
@@ -221,6 +238,19 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
       setMasterData,
       setSiteState,
     ],
+  );
+
+  const applyHydratedSessions = useCallback(
+    async (sessions: InspectionSession[]) => {
+      startTransition(() => {
+        setSessionState(sessions);
+        resetSessionVersions(sessions);
+      });
+      void persistSessions(sessions).catch(() => {
+        // Ignore cache persistence failures during optimistic sync.
+      });
+    },
+    [persistSessions, resetSessionVersions, setSessionState],
   );
 
   const refreshMasterData = useCallback(async () => {
@@ -268,129 +298,186 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
     setDataError,
   ]);
 
-  const applyHydratedSessions = useCallback(
-    async (sessions: InspectionSession[]) => {
-      startTransition(() => {
-        setSessionState(sessions);
-        resetSessionVersions(sessions);
-      });
-      void persistSessions(sessions).catch(() => {
-        // Ignore cache persistence failures during optimistic sync.
-      });
-    },
-    [persistSessions, resetSessionVersions, setSessionState],
-  );
-
-  const ensureSiteReportsLoaded = useCallback(
+  const ensureSiteReportIndexLoaded = useCallback(
     async (siteId: string) => {
       const token = authTokenRef.current;
-      if (!token || loadedReportSiteIdsRef.current.has(siteId)) {
+      if (!token) {
         return;
       }
 
-      const site = sitesRef.current.find((item) => item.id === siteId);
-      if (!site) {
+      const existingState = reportIndexBySiteIdRef.current[siteId];
+      if (existingState?.status === 'loaded') {
         return;
+      }
+
+      const inFlightRequest = reportIndexRequestsRef.current.get(siteId);
+      if (inFlightRequest) {
+        return inFlightRequest;
+      }
+
+      setReportIndexBySiteId((current) => ({
+        ...current,
+        [siteId]: buildReportIndexState(current[siteId], {
+          status: 'loading',
+          error: null,
+        }),
+      }));
+      setIsHydratingReports(true);
+
+      const request = (async () => {
+        try {
+          const reports = await fetchSafetyReportList(token, {
+            siteId,
+            activeOnly: true,
+          });
+
+          if (authTokenRef.current !== token) {
+            return;
+          }
+
+          const items = reports
+            .filter(isTechnicalGuidanceReport)
+            .map(mapSafetyReportListItem);
+
+          setReportIndexBySiteId((current) => ({
+            ...current,
+            [siteId]: buildReportIndexState(current[siteId], {
+              status: 'loaded',
+              items,
+              fetchedAt: new Date().toISOString(),
+              error: null,
+            }),
+          }));
+        } catch (error) {
+          if (isAuthFailure(error)) {
+            syncRequestIdRef.current += 1;
+            clearAuthState();
+            setAuthError('로그인이 만료되었습니다. 다시 로그인해 주세요.');
+          } else {
+            const message = getErrorMessage(error);
+            setDataError(message);
+            setReportIndexBySiteId((current) => ({
+              ...current,
+              [siteId]: buildReportIndexState(current[siteId], {
+                status: 'error',
+                error: message,
+              }),
+            }));
+          }
+        } finally {
+          reportIndexRequestsRef.current.delete(siteId);
+          setIsHydratingReports(
+            reportIndexRequestsRef.current.size > 0 || sessionLoadRequestsRef.current.size > 0,
+          );
+        }
+      })();
+
+      reportIndexRequestsRef.current.set(siteId, request);
+      return request;
+    },
+    [
+      authTokenRef,
+      clearAuthState,
+      reportIndexBySiteIdRef,
+      setAuthError,
+      setDataError,
+      setIsHydratingReports,
+      setReportIndexBySiteId,
+    ],
+  );
+
+  const ensureSessionLoaded = useCallback(
+    async (reportKey: string) => {
+      const token = authTokenRef.current;
+      if (!token) {
+        return;
+      }
+
+      if (sessionsRef.current.some((session) => session.id === reportKey)) {
+        return;
+      }
+
+      const inFlightRequest = sessionLoadRequestsRef.current.get(reportKey);
+      if (inFlightRequest) {
+        return inFlightRequest;
       }
 
       setIsHydratingReports(true);
 
-      try {
-        const reports = await fetchSafetyReportsBySite(token, site.id);
+      const request = (async () => {
+        try {
+          const report = await fetchSafetyReportByKey(token, reportKey);
 
-        if (authTokenRef.current !== token) {
-          return;
-        }
+          if (authTokenRef.current !== token) {
+            return;
+          }
 
-        const technicalGuidanceSessions = reports
-          .filter(
-            (report) => getStoredReportKind(report) === TECHNICAL_GUIDANCE_REPORT_KIND,
-          )
-          .map((report) =>
-            mapSafetyReportToInspectionSession(report, site, masterDataRef.current),
+          const site =
+            sitesRef.current.find((item) => item.id === report.site_id) ??
+            buildFallbackSiteFromReport(report);
+          const nextSession = mapSafetyReportToInspectionSession(
+            report,
+            site,
+            masterDataRef.current,
           );
 
-        const mergedSessions = normalizeSessions([
-          ...sessionsRef.current.filter((session) => session.siteKey !== siteId),
-          ...technicalGuidanceSessions,
-        ]);
+          if (!sitesRef.current.some((item) => item.id === site.id)) {
+            const nextSites = [...sitesRef.current, site];
+            setSiteState(nextSites);
+            void persistSites(nextSites).catch(() => {
+              // Ignore cache persistence failures during detail hydration.
+            });
+          }
 
-        await applyHydratedSessions(mergedSessions);
-        loadedReportSiteIdsRef.current.add(siteId);
-      } catch (error) {
-        if (isAuthFailure(error)) {
-          syncRequestIdRef.current += 1;
-          clearAuthState();
-          setAuthError('로그인이 만료되었습니다. 다시 로그인해 주세요.');
-        } else {
-          setDataError(getErrorMessage(error));
+          const mergedSessions = normalizeSessions([
+            ...sessionsRef.current.filter((session) => session.id !== reportKey),
+            nextSession,
+          ]);
+          await applyHydratedSessions(mergedSessions);
+          setReportIndexBySiteId((current) => ({
+            ...current,
+            [site.id]: buildReportIndexState(current[site.id], {
+              status: 'loaded',
+              items: mergeReportIndexItems(
+                current[site.id]?.items ?? [],
+                [mapSafetyReportListItem(report)],
+              ),
+              fetchedAt: current[site.id]?.fetchedAt ?? new Date().toISOString(),
+              error: null,
+            }),
+          }));
+        } catch (error) {
+          if (isAuthFailure(error)) {
+            syncRequestIdRef.current += 1;
+            clearAuthState();
+            setAuthError('로그인이 만료되었습니다. 다시 로그인해 주세요.');
+          } else {
+            setDataError(getErrorMessage(error));
+          }
+        } finally {
+          sessionLoadRequestsRef.current.delete(reportKey);
+          setIsHydratingReports(
+            reportIndexRequestsRef.current.size > 0 || sessionLoadRequestsRef.current.size > 0,
+          );
         }
-      } finally {
-        setIsHydratingReports(false);
-      }
+      })();
+
+      sessionLoadRequestsRef.current.set(reportKey, request);
+      return request;
     },
     [
       applyHydratedSessions,
       authTokenRef,
       clearAuthState,
       masterDataRef,
+      persistSites,
       sessionsRef,
       setAuthError,
       setDataError,
       setIsHydratingReports,
+      setReportIndexBySiteId,
+      setSiteState,
       sitesRef,
-    ],
-  );
-
-  const syncReportSessions = useCallback(
-    async (token: string, baseState: HydratedBaseState, requestId: number) => {
-      setIsHydratingReports(true);
-
-      try {
-        const sessions = await hydrateRemoteSessions(
-          token,
-          baseState.sites,
-          baseState.masterData,
-        );
-
-        if (
-          syncRequestIdRef.current !== requestId ||
-          authTokenRef.current !== token
-        ) {
-          return;
-        }
-
-        await applyHydratedSessions(sessions);
-        loadedReportSiteIdsRef.current = new Set(baseState.sites.map((site) => site.id));
-      } catch (error) {
-        if (
-          syncRequestIdRef.current !== requestId ||
-          authTokenRef.current !== token
-        ) {
-          return;
-        }
-
-        if (isAuthFailure(error)) {
-          syncRequestIdRef.current += 1;
-          clearAuthState();
-          setAuthError('로그인이 만료되었습니다. 다시 로그인해 주세요.');
-        } else {
-          setDataError(getErrorMessage(error));
-        }
-      } finally {
-        if (syncRequestIdRef.current === requestId) {
-          setIsHydratingReports(false);
-        }
-      }
-    },
-    [
-      applyHydratedSessions,
-      authTokenRef,
-      clearAuthState,
-      hydrateRemoteSessions,
-      setAuthError,
-      setDataError,
-      setIsHydratingReports,
     ],
   );
 
@@ -405,8 +492,6 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
 
       if (isSafetyAdmin(user)) {
         const coreDataPromise = primeControllerDashboardData(token);
-        await applyHydratedSessions([]);
-        loadedReportSiteIdsRef.current = new Set();
         await applyImmediateUserState(user, token);
 
         scheduleAdminBackgroundTask(() => {
@@ -467,12 +552,13 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
         return;
       }
 
-      const baseState = {
-        ...siteState,
-        masterData: EMPTY_MASTER_DATA,
-      };
-
-      await applyHydratedBaseState(baseState, token);
+      await applyHydratedBaseState(
+        {
+          ...siteState,
+          masterData: EMPTY_MASTER_DATA,
+        },
+        token,
+      );
 
       if (
         syncRequestIdRef.current !== requestId ||
@@ -482,11 +568,9 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
       }
 
       setIsReady(true);
-      void syncReportSessions(token, baseState, requestId);
     },
     [
       applyHydratedBaseState,
-      applyHydratedSessions,
       applyImmediateUserState,
       authTokenRef,
       clearAuthState,
@@ -494,7 +578,6 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
       setAuthError,
       setDataError,
       setIsReady,
-      syncReportSessions,
     ],
   );
 
@@ -555,8 +638,9 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
       const token = readSafetyAuthToken();
       if (!token) {
         hasLoadedRemoteMasterDataRef.current = false;
-        loadedReportSiteIdsRef.current = new Set();
         masterDataPromiseRef.current = null;
+        reportIndexRequestsRef.current.clear();
+        sessionLoadRequestsRef.current.clear();
         setHasAuthToken(false);
         setIsReady(true);
         return;
@@ -636,8 +720,10 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
       setIsHydratingReports(false);
       setIsReady(false);
       hasLoadedRemoteMasterDataRef.current = false;
-      loadedReportSiteIdsRef.current = new Set();
       masterDataPromiseRef.current = null;
+      reportIndexRequestsRef.current.clear();
+      sessionLoadRequestsRef.current.clear();
+      setReportIndexBySiteId({});
 
       try {
         const token = await loginSafetyApi(input);
@@ -668,6 +754,7 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
       setIsHydrating,
       setIsHydratingReports,
       setIsReady,
+      setReportIndexBySiteId,
       setSyncError,
     ],
   );
@@ -675,18 +762,22 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
   const logout = useCallback(() => {
     syncRequestIdRef.current += 1;
     hasLoadedRemoteMasterDataRef.current = false;
-    loadedReportSiteIdsRef.current = new Set();
     masterDataPromiseRef.current = null;
+    reportIndexRequestsRef.current.clear();
+    sessionLoadRequestsRef.current.clear();
     clearAuthState();
+    setReportIndexBySiteId({});
     setAuthError(null);
     setDataError(null);
     setSyncError(null);
     setIsReady(true);
-  }, [clearAuthState, setAuthError, setDataError, setIsReady, setSyncError]);
+  }, [clearAuthState, setAuthError, setDataError, setIsReady, setReportIndexBySiteId, setSyncError]);
 
   return {
     ensureMasterDataLoaded,
-    ensureSiteReportsLoaded,
+    ensureSessionLoaded,
+    ensureSiteReportIndexLoaded,
+    ensureSiteReportsLoaded: ensureSiteReportIndexLoaded,
     login,
     logout,
     refreshMasterData,

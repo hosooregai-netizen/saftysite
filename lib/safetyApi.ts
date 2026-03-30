@@ -17,6 +17,8 @@ export {
   fetchAssignedSafetySites,
   fetchCurrentSafetyUser,
   fetchSafetyContentItems,
+  fetchSafetyReportByKey,
+  fetchSafetyReportList,
   fetchSafetyReportsBySite,
   loginSafetyApi,
   upsertSafetyReport,

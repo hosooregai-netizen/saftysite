@@ -1,5 +1,6 @@
 import {
   createInspectionSession,
+  getSessionProgress,
   getSessionTitle,
   normalizeInspectionSession,
 } from '@/constants/inspectionSession';
@@ -7,19 +8,86 @@ import { TECHNICAL_GUIDANCE_REPORT_KIND } from '@/lib/erpReports/shared';
 import type {
   SafetyMasterData,
   SafetyReport,
+  SafetyReportListItem,
   SafetyUpsertReportInput,
   SafetyUser,
 } from '@/types/backend';
-import type { InspectionSession, InspectionSite } from '@/types/inspectionSession';
+import type {
+  InspectionReportListItem,
+  InspectionSession,
+  InspectionSite,
+} from '@/types/inspectionSession';
 import { mergeMasterDataIntoSession } from './masterData';
 import {
   asMapperRecord,
   normalizeMapperText,
   parsePositiveInteger,
-  parseProgressRate,
 } from './utils';
 
 const ADMIN_ROLES = new Set(['super_admin', 'admin', 'controller']);
+
+export function mapSafetyReportListItem(
+  report: SafetyReportListItem,
+): InspectionReportListItem {
+  return {
+    id: report.report_key,
+    reportKey: report.report_key,
+    reportTitle: report.report_title,
+    siteId: report.site_id,
+    headquarterId: report.headquarter_id,
+    assignedUserId: report.assigned_user_id,
+    visitDate: report.visit_date,
+    visitRound: report.visit_round,
+    totalRound: report.total_round,
+    progressRate: report.progress_rate,
+    status: report.status,
+    payloadVersion: report.payload_version,
+    latestRevisionNo: report.latest_revision_no,
+    submittedAt: report.submitted_at,
+    publishedAt: report.published_at,
+    lastAutosavedAt: report.last_autosaved_at,
+    createdAt: report.created_at,
+    updatedAt: report.updated_at,
+    meta: report.meta,
+  };
+}
+
+export function mapInspectionSessionToReportListItem(
+  session: InspectionSession,
+  site: InspectionSite,
+): InspectionReportListItem {
+  const progress = getSessionProgress(session);
+
+  return {
+    id: session.id,
+    reportKey: session.id,
+    reportTitle: getSessionTitle(session),
+    siteId: site.id,
+    headquarterId: site.headquarterId ?? null,
+    assignedUserId: null,
+    visitDate: session.meta.reportDate || null,
+    visitRound: session.reportNumber || null,
+    totalRound: progress.total,
+    progressRate: progress.percentage,
+    status: 'draft',
+    payloadVersion: 1,
+    latestRevisionNo: 0,
+    submittedAt: null,
+    publishedAt: null,
+    lastAutosavedAt: session.lastSavedAt,
+    createdAt: session.createdAt,
+    updatedAt: session.updatedAt,
+    meta: {
+      siteName: session.meta.siteName,
+      drafter: session.meta.drafter,
+      reviewer: session.meta.reviewer,
+      approver: session.meta.approver,
+      currentSection: session.currentSection,
+      reportNumber: session.reportNumber,
+      reportKind: TECHNICAL_GUIDANCE_REPORT_KIND,
+    },
+  };
+}
 
 export function mapSafetyReportToInspectionSession(
   report: SafetyReport,
@@ -73,6 +141,8 @@ export function buildSafetyReportUpsertInput(
   session: InspectionSession,
   site: InspectionSite
 ): SafetyUpsertReportInput {
+  const progress = getSessionProgress(session);
+
   return {
     report_key: session.id,
     report_title: getSessionTitle(session),
@@ -80,7 +150,7 @@ export function buildSafetyReportUpsertInput(
     visit_date: session.meta.reportDate || null,
     visit_round: session.reportNumber || null,
     total_round: parsePositiveInteger(session.document2Overview.totalVisitCount),
-    progress_rate: parseProgressRate(session.document2Overview.progressRate),
+    progress_rate: progress.percentage,
     payload: {
       ...session,
       reportKind: TECHNICAL_GUIDANCE_REPORT_KIND,

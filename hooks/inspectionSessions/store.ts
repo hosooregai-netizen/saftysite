@@ -4,7 +4,11 @@ import { useCallback, useRef, useState } from 'react';
 import { clearSafetyAuthToken } from '@/lib/safetyApi';
 import { deletePersistedValue, writePersistedValue } from '@/lib/clientPersistence';
 import type { SafetyMasterData, SafetyUser } from '@/types/backend';
-import type { InspectionSite, InspectionSession } from '@/types/inspectionSession';
+import type {
+  InspectionSite,
+  InspectionSession,
+  SiteReportIndexState,
+} from '@/types/inspectionSession';
 import {
   EMPTY_MASTER_DATA,
   normalizeSessions,
@@ -20,6 +24,9 @@ export function useInspectionSessionsStore() {
   const [sites, setSites] = useState<InspectionSite[]>([]);
   const [masterData, setMasterData] = useState<SafetyMasterData>(EMPTY_MASTER_DATA);
   const [currentUser, setCurrentUser] = useState<SafetyUser | null>(null);
+  const [reportIndexBySiteId, setReportIndexBySiteIdState] = useState<
+    Record<string, SiteReportIndexState>
+  >({});
   const [hasAuthToken, setHasAuthToken] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const [isHydrating, setIsHydrating] = useState(false);
@@ -32,6 +39,7 @@ export function useInspectionSessionsStore() {
   const sessionsRef = useRef<InspectionSession[]>([]);
   const sitesRef = useRef<InspectionSite[]>([]);
   const masterDataRef = useRef<SafetyMasterData>(EMPTY_MASTER_DATA);
+  const reportIndexBySiteIdRef = useRef<Record<string, SiteReportIndexState>>({});
   const authTokenRef = useRef<string | null>(null);
   const dirtySessionIdsRef = useRef<Set<string>>(new Set());
   const sessionVersionsRef = useRef<Record<string, number>>({});
@@ -39,6 +47,22 @@ export function useInspectionSessionsStore() {
 
   const setSessionState = useCollectionState(setSessions, sessionsRef, normalizeSessions);
   const setSiteState = useCollectionState(setSites, sitesRef, normalizeSites);
+  const setReportIndexBySiteId = useCallback(
+    (
+      updater:
+        | Record<string, SiteReportIndexState>
+        | ((
+            current: Record<string, SiteReportIndexState>
+          ) => Record<string, SiteReportIndexState>),
+    ) => {
+      setReportIndexBySiteIdState((current) => {
+        const next = typeof updater === 'function' ? updater(current) : updater;
+        reportIndexBySiteIdRef.current = next;
+        return next;
+      });
+    },
+    [],
+  );
 
   const resetSessionVersions = useCallback((nextSessions: InspectionSession[]) => {
     sessionVersionsRef.current = nextSessions.reduce<Record<string, number>>((accumulator, session) => {
@@ -79,9 +103,11 @@ export function useInspectionSessionsStore() {
     sessionsRef.current = [];
     sitesRef.current = [];
     masterDataRef.current = EMPTY_MASTER_DATA;
+    reportIndexBySiteIdRef.current = {};
     setSessions([]);
     setSites([]);
     setMasterData(EMPTY_MASTER_DATA);
+    setReportIndexBySiteIdState({});
     setCurrentUser(null);
     setHasAuthToken(false);
     setIsHydrating(false);
@@ -108,6 +134,8 @@ export function useInspectionSessionsStore() {
     persistCurrentUser,
     persistSessions,
     persistSites,
+    reportIndexBySiteId,
+    reportIndexBySiteIdRef,
     resetSessionVersions,
     sessionVersionsRef,
     sessions,
@@ -121,6 +149,7 @@ export function useInspectionSessionsStore() {
     setIsReady,
     setIsSaving,
     setMasterData,
+    setReportIndexBySiteId,
     setSessionState,
     setSessions,
     setSiteState,

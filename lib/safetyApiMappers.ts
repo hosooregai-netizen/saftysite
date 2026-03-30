@@ -6,6 +6,8 @@ export {
   buildSafetyReportUpsertInput,
   createNewSafetySession,
   isSafetyAdmin,
+  mapInspectionSessionToReportListItem,
+  mapSafetyReportListItem,
   mapSafetyReportToInspectionSession,
 } from '@/lib/safetyApiMappers/reports';
 export {

@@ -155,6 +155,28 @@ export interface SafetyReport {
   payload: Record<string, unknown>;
 }
 
+export interface SafetyReportListItem {
+  id: string;
+  report_key: string;
+  report_title: string;
+  site_id: string;
+  headquarter_id: string | null;
+  assigned_user_id: string | null;
+  visit_date: string | null;
+  visit_round: number | null;
+  total_round: number | null;
+  progress_rate: number | null;
+  status: SafetyReportStatus;
+  payload_version: number;
+  latest_revision_no: number;
+  submitted_at: string | null;
+  published_at: string | null;
+  last_autosaved_at: string | null;
+  meta: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface SafetyLegalReference {
   id: string;
   title: string;

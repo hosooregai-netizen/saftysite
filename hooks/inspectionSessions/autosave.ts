@@ -3,12 +3,18 @@
 import { useCallback, useEffect } from 'react';
 import { getSessionSiteKey } from '@/constants/inspectionSession';
 import {
+  createEmptyReportIndexState,
+  mergeReportIndexItems,
+} from '@/hooks/inspectionSessions/helpers';
+import {
   archiveSafetyReportByKey,
   upsertSafetyReport,
 } from '@/lib/safetyApi';
 import {
   buildSafetyReportUpsertInput,
   isSafetyAdmin,
+  mapInspectionSessionToReportListItem,
+  mapSafetyReportListItem,
 } from '@/lib/safetyApiMappers';
 import { getErrorMessage, isAuthFailure } from './helpers';
 import type { InspectionSessionsStore } from './store';
@@ -28,6 +34,7 @@ export function useInspectionSessionsAutosave(store: InspectionSessionsStore) {
     sessionsRef,
     setAuthError,
     setIsSaving,
+    setReportIndexBySiteId,
     setSessionState,
     setSessions,
     setSyncError,
@@ -75,6 +82,22 @@ export function useInspectionSessionsAutosave(store: InspectionSessionsStore) {
           authTokenRef.current,
           buildSafetyReportUpsertInput(session, site)
         );
+
+        setReportIndexBySiteId((current) => ({
+          ...current,
+          [site.id]: {
+            ...createEmptyReportIndexState(),
+            ...(current[site.id] ?? {}),
+            status: 'loaded',
+            items: mergeReportIndexItems(
+              current[site.id]?.items ?? [],
+              [mapSafetyReportListItem(savedReport)],
+            ),
+            fetchedAt: current[site.id]?.fetchedAt ?? new Date().toISOString(),
+            error: null,
+          },
+        }));
+
         if ((sessionVersionsRef.current[sessionId] ?? 0) === versionAtSync) {
           dirtySessionIdsRef.current.delete(sessionId);
           updateSavedTimestamp(
@@ -104,6 +127,7 @@ export function useInspectionSessionsAutosave(store: InspectionSessionsStore) {
     sessionsRef,
     setAuthError,
     setIsSaving,
+    setReportIndexBySiteId,
     setSyncError,
     sitesRef,
     updateSavedTimestamp,
@@ -126,20 +150,52 @@ export function useInspectionSessionsAutosave(store: InspectionSessionsStore) {
       return;
     }
 
+    const site = sitesRef.current.find((item) => item.id === targetSession.siteKey) ?? null;
+
     setSyncError(null);
     const nextSessions = sessionsRef.current.filter((session) => session.id !== sessionId);
     setSessionState(nextSessions);
     dirtySessionIdsRef.current.delete(sessionId);
     delete sessionVersionsRef.current[sessionId];
+    if (site) {
+      setReportIndexBySiteId((current) => {
+        const currentState = current[site.id];
+        if (!currentState) return current;
+
+        return {
+          ...current,
+          [site.id]: {
+            ...currentState,
+            items: currentState.items.filter((item) => item.reportKey !== targetSession.id),
+          },
+        };
+      });
+    }
 
     try {
       await archiveSafetyReportByKey(authTokenRef.current, targetSession.id);
     } catch (error) {
       setSyncError(getErrorMessage(error));
       setSessionState([...sessionsRef.current, targetSession]);
+      if (site) {
+        setReportIndexBySiteId((current) => ({
+          ...current,
+          [site.id]: {
+            ...createEmptyReportIndexState(),
+            ...(current[site.id] ?? {}),
+            status: current[site.id]?.status ?? 'loaded',
+            items: mergeReportIndexItems(
+              current[site.id]?.items ?? [],
+              [mapInspectionSessionToReportListItem(targetSession, site)],
+            ),
+            fetchedAt: current[site.id]?.fetchedAt ?? new Date().toISOString(),
+            error: current[site.id]?.error ?? null,
+          },
+        }));
+      }
       sessionVersionsRef.current[sessionId] = sessionVersionsRef.current[sessionId] ?? 0;
     }
-  }, [authTokenRef, currentUser, dirtySessionIdsRef, sessionVersionsRef, sessionsRef, setSessionState, setSyncError]);
+  }, [authTokenRef, currentUser, dirtySessionIdsRef, sessionVersionsRef, sessionsRef, setReportIndexBySiteId, setSessionState, setSyncError, sitesRef]);
 
   useEffect(() => {
     if (!isReady) return;
@@ -178,4 +234,3 @@ export function useInspectionSessionsAutosave(store: InspectionSessionsStore) {
 
   return { deleteSessionRemotely, flushDirtySessions, markSessionDirty, saveNow };
 }
-

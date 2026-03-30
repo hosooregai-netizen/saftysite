@@ -1,8 +1,13 @@
 'use client';
 
 import { useCallback, useMemo } from 'react';
+import {
+  createEmptyReportIndexState,
+  mergeReportIndexItems,
+} from '@/hooks/inspectionSessions/helpers';
 import { isSafetyAdmin } from '@/lib/safetyApiMappers';
 import type { ReactNode } from 'react';
+import type { InspectionReportListItem } from '@/types/inspectionSession';
 import { useInspectionSessionsAutosave } from './autosave';
 import {
   InspectionSessionsContext,
@@ -18,6 +23,8 @@ export function InspectionSessionsProvider({
   const store = useInspectionSessionsStore();
   const {
     ensureMasterDataLoaded,
+    ensureSessionLoaded,
+    ensureSiteReportIndexLoaded,
     ensureSiteReportsLoaded,
     login,
     logout,
@@ -46,6 +53,31 @@ export function InspectionSessionsProvider({
     [store.sites],
   );
 
+  const getReportIndexBySiteId = useCallback(
+    (siteId: string) => store.reportIndexBySiteId[siteId] || null,
+    [store.reportIndexBySiteId],
+  );
+
+  const upsertReportIndexItems = useCallback(
+    (siteId: string, items: InspectionReportListItem[]) => {
+      store.setReportIndexBySiteId((current) => {
+        const nextItems = mergeReportIndexItems(current[siteId]?.items ?? [], items);
+        return {
+          ...current,
+          [siteId]: {
+            ...createEmptyReportIndexState(),
+            ...(current[siteId] ?? {}),
+            status: 'loaded',
+            items: nextItems,
+            fetchedAt: current[siteId]?.fetchedAt ?? new Date().toISOString(),
+            error: null,
+          },
+        };
+      });
+    },
+    [store],
+  );
+
   const contextValue = useMemo<InspectionSessionsContextValue>(
     () => ({
       sites: store.sites,
@@ -63,7 +95,10 @@ export function InspectionSessionsProvider({
       syncError: store.syncError,
       canArchiveReports: isSafetyAdmin(store.currentUser),
       ensureMasterDataLoaded,
+      ensureSessionLoaded,
+      ensureSiteReportIndexLoaded,
       ensureSiteReportsLoaded,
+      getReportIndexBySiteId,
       login,
       logout,
       reload,
@@ -79,6 +114,7 @@ export function InspectionSessionsProvider({
       saveNow,
       getSessionById,
       getSiteById,
+      upsertReportIndexItems,
     }),
     [
       createSession,
@@ -87,7 +123,10 @@ export function InspectionSessionsProvider({
       deleteSessions,
       deleteSite,
       ensureMasterDataLoaded,
+      ensureSessionLoaded,
+      ensureSiteReportIndexLoaded,
       ensureSiteReportsLoaded,
+      getReportIndexBySiteId,
       getSessionById,
       getSiteById,
       login,
@@ -108,6 +147,7 @@ export function InspectionSessionsProvider({
       store.sessions,
       store.sites,
       store.syncError,
+      upsertReportIndexItems,
       updateSession,
       updateSessions,
       updateSite,
