@@ -48,7 +48,7 @@ export interface SafetyContentAssetUpload {
 
 export const fetchSafetyUsers = (token: string) =>
   requestSafetyApi<SafetyUser[]>(
-    withQuery('/users', { active_only: false, limit: ADMIN_LIST_LIMIT }),
+    withQuery('/users', { active_only: true, limit: ADMIN_LIST_LIMIT }),
     {},
     token
   );
@@ -64,7 +64,7 @@ export const updateSafetyUserPassword = (token: string, userId: string, newPassw
 
 export const fetchSafetyHeadquarters = (token: string) =>
   requestSafetyApi<SafetyHeadquarter[]>(
-    withQuery('/headquarters', { active_only: false, limit: ADMIN_LIST_LIMIT }),
+    withQuery('/headquarters', { active_only: true, limit: ADMIN_LIST_LIMIT }),
     {},
     token
   );
@@ -79,6 +79,7 @@ export const deleteSafetyHeadquarter = deactivateSafetyHeadquarter;
 export const fetchSafetySitesAdmin = (token: string) =>
   requestSafetyApi<SafetySite[]>(
     withQuery('/sites', {
+      active_only: true,
       include_headquarter_detail: true,
       include_assigned_user: true,
       limit: ADMIN_LIST_LIMIT,
@@ -96,7 +97,7 @@ export const deleteSafetySite = deactivateSafetySite;
 
 export const fetchSafetyAssignments = (token: string) =>
   requestSafetyApi<SafetyAssignment[]>(
-    withQuery('/assignments', { active_only: false, limit: ADMIN_LIST_LIMIT }),
+    withQuery('/assignments', { active_only: true, limit: ADMIN_LIST_LIMIT }),
     {},
     token
   );
@@ -110,7 +111,7 @@ export const deleteSafetyAssignment = deactivateSafetyAssignment;
 
 export const fetchSafetyContentItemsAdmin = (token: string) =>
   requestSafetyApi<SafetyContentItem[]>(
-    withQuery('/content-items', { active_only: false, limit: ADMIN_CONTENT_ITEM_LIMIT }),
+    withQuery('/content-items', { active_only: true, limit: ADMIN_CONTENT_ITEM_LIMIT }),
     {},
     token
   );

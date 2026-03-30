@@ -34,6 +34,7 @@ export function fetchCurrentSafetyUser(token: string): Promise<SafetyUser> {
 
 export function fetchAssignedSafetySites(token: string): Promise<SafetySite[]> {
   const searchParams = new URLSearchParams({
+    active_only: 'true',
     include_headquarter_detail: 'true',
     include_assigned_user: 'true',
     limit: String(CLIENT_SITE_LIST_LIMIT),
@@ -49,7 +50,7 @@ export function fetchAssignedSafetySites(token: string): Promise<SafetySite[]> {
 /** 관리자 CRUD와 동일하게 전체·충분한 limit으로 조회. API 기본값(active_only·limit)에 의해 일부 유형만 잘리는 것을 방지. */
 export function fetchSafetyContentItems(token: string): Promise<SafetyContentItem[]> {
   const searchParams = new URLSearchParams({
-    active_only: 'false',
+    active_only: 'true',
     limit: String(CLIENT_CONTENT_ITEM_LIMIT),
   });
 
@@ -64,7 +65,15 @@ export function fetchSafetyReportsBySite(
   token: string,
   siteId: string
 ): Promise<SafetyReport[]> {
-  return requestSafetyApi<SafetyReport[]>(`/reports/site/${siteId}/full`, {}, token);
+  const searchParams = new URLSearchParams({
+    active_only: 'true',
+  });
+
+  return requestSafetyApi<SafetyReport[]>(
+    `/reports/site/${siteId}/full?${searchParams.toString()}`,
+    {},
+    token
+  );
 }
 
 export function upsertSafetyReport(

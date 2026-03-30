@@ -60,6 +60,15 @@ function getErrorMessage(error: unknown): string {
   return '관리자 데이터를 처리하는 중 오류가 발생했습니다.';
 }
 
+function upsertRecordById<T extends { id: string }>(items: T[], nextItem: T): T[] {
+  const index = items.findIndex((item) => item.id === nextItem.id);
+  if (index < 0) {
+    return [nextItem, ...items];
+  }
+
+  return items.map((item) => (item.id === nextItem.id ? nextItem : item));
+}
+
 interface UseAdminDashboardStateOptions {
   enabled: boolean;
   refreshMasterData?: () => Promise<void> | void;
@@ -89,14 +98,16 @@ export function useAdminDashboardState({
     return token;
   }, []);
 
-  const reload = useCallback(async (options?: { includeContent?: boolean }) => {
+  const reload = useCallback(async (options?: { includeContent?: boolean; force?: boolean }) => {
     if (!enabled) return;
     setIsLoading(true);
     setError(null);
 
     try {
       const token = getToken();
-      const { assignments, headquarters, sites, users } = await primeControllerDashboardData(token);
+      const { assignments, headquarters, sites, users } = await primeControllerDashboardData(token, {
+        force: options?.force,
+      });
 
       setData((current) => ({
         ...current,
@@ -108,7 +119,9 @@ export function useAdminDashboardState({
 
       if (options?.includeContent) {
         setIsContentLoading(true);
-        const contentItems = await primeControllerDashboardContentItems(token);
+        const contentItems = await primeControllerDashboardContentItems(token, {
+          force: options?.force,
+        });
         setData((current) => ({ ...current, contentItems }));
       }
     } catch (nextError) {
@@ -133,23 +146,32 @@ export function useAdminDashboardState({
   );
 
   const runMutation = useCallback(
-    async (task: (token: string) => Promise<unknown>, successMessage: string) => {
+    async <TResult>(
+      task: (token: string) => Promise<TResult>,
+      successMessage: string,
+      options?: {
+        applyResult?: (current: ControllerDashboardData, result: TResult) => ControllerDashboardData;
+      }
+    ) => {
       setIsMutating(true);
       setError(null);
       setNotice(null);
 
       try {
-        await task(getToken());
+        const result = await task(getToken());
+
+        if (options?.applyResult) {
+          setData((current) => options.applyResult!(current, result));
+        }
 
         try {
-          await reload({ includeContent: activeSection === 'content' });
+          await reload({ includeContent: activeSection === 'content', force: true });
           setNotice(successMessage);
         } catch (reloadError) {
           console.error('Admin dashboard reload failed after mutation', reloadError);
-          setNotice(
-            `${successMessage} 목록 새로고침에는 실패했습니다. 페이지를 새로고침하거나 다시 시도해 주세요.`,
-          );
+          setNotice(`${successMessage} 목록 새로고침은 실패했습니다. 다시 시도해 주세요.`);
         }
+
       } catch (nextError) {
         const message = getErrorMessage(nextError);
         setError(message);
@@ -162,8 +184,14 @@ export function useAdminDashboardState({
   );
 
   const runContentMutation = useCallback(
-    async (task: (token: string) => Promise<unknown>, successMessage: string) => {
-      await runMutation(task, successMessage);
+    async <TResult>(
+      task: (token: string) => Promise<TResult>,
+      successMessage: string,
+      options?: {
+        applyResult?: (current: ControllerDashboardData, result: TResult) => ControllerDashboardData;
+      }
+    ) => {
+      await runMutation(task, successMessage, options);
       await refreshAdminMasterData(refreshMasterData);
     },
     [refreshMasterData, runMutation],
@@ -195,6 +223,7 @@ export function useAdminDashboardState({
           if (password) {
             await updateSafetyUserPassword(token, id, password);
           }
+          return null;
         },
         hasValues(input) && password
           ? '사용자 정보와 비밀번호를 수정했습니다.'
@@ -209,6 +238,7 @@ export function useAdminDashboardState({
           .map((assignment) => assignment.id);
         await deleteAssignmentsById(token, assignmentIds, deactivateSafetyAssignment);
         await deleteSafetyUser(token, id);
+        return { userId: id };
       }, '사용자를 삭제했습니다.'),
     createHeadquarter: (input: SafetyHeadquarterInput) =>
       runMutation((token) => createSafetyHeadquarter(token, input), '사업장 정보를 생성했습니다.'),
@@ -229,11 +259,22 @@ export function useAdminDashboardState({
         }
 
         await deleteSafetyHeadquarter(token, id);
+        return { headquarterId: id };
       }, '사업장을 삭제했습니다.'),
     createSite: (input: SafetySiteInput) =>
-      runMutation((token) => createSafetySite(token, input), '현장을 생성했습니다.'),
+      runMutation((token) => createSafetySite(token, input), '현장을 생성했습니다.', {
+        applyResult: (current, site) => ({
+          ...current,
+          sites: upsertRecordById(current.sites, site),
+        }),
+      }),
     updateSite: (id: string, input: SafetySiteUpdateInput) =>
-      runMutation((token) => updateSafetySite(token, id, input), '현장 정보를 수정했습니다.'),
+      runMutation((token) => updateSafetySite(token, id, input), '현장 정보를 수정했습니다.', {
+        applyResult: (current, site) => ({
+          ...current,
+          sites: upsertRecordById(current.sites, site),
+        }),
+      }),
     deleteSite: (id: string) =>
       runMutation(async (token) => {
         const assignmentIds = data.assignments
@@ -241,7 +282,14 @@ export function useAdminDashboardState({
           .map((assignment) => assignment.id);
         await deleteAssignmentsById(token, assignmentIds, deactivateSafetyAssignment);
         await deleteSafetySite(token, id);
-      }, '현장을 삭제했습니다.'),
+        return { siteId: id };
+      }, '현장을 삭제했습니다.', {
+        applyResult: (current, result) => ({
+          ...current,
+          sites: current.sites.filter((site) => site.id !== result.siteId),
+          assignments: current.assignments.filter((assignment) => assignment.site_id !== result.siteId),
+        }),
+      }),
     createAssignment: (input: SafetyAssignmentInput) =>
       runMutation(async (token) => {
         const existingAssignment = data.assignments.find(
@@ -255,10 +303,11 @@ export function useAdminDashboardState({
             memo: input.memo ?? existingAssignment.memo ?? null,
             is_active: true,
           });
-          return;
+          return null;
         }
 
         await createSafetyAssignment(token, input);
+        return null;
       }, '현장 배정을 생성했습니다.'),
     assignFieldAgentToSite: (
       siteId: string,
@@ -271,12 +320,12 @@ export function useAdminDashboardState({
         );
 
         if (matchedAssignment) {
-          if (matchedAssignment.is_active) return;
+          if (matchedAssignment.is_active) return null;
           await updateSafetyAssignment(token, matchedAssignment.id, {
             ...buildAssignmentPayload('현장 지도요원', options, matchedAssignment),
             is_active: true,
           });
-          return;
+          return null;
         }
 
         await createSafetyAssignment(token, {
@@ -284,6 +333,7 @@ export function useAdminDashboardState({
           user_id: userId,
           ...buildAssignmentPayload('현장 지도요원', options),
         });
+        return null;
       }, '지도요원을 배정했습니다.'),
     unassignFieldAgentFromSite: (siteId: string, userId: string) =>
       runMutation(async (token) => {
@@ -293,8 +343,9 @@ export function useAdminDashboardState({
             assignment.user_id === userId &&
             assignment.is_active,
         );
-        if (!matchedAssignment) return;
+        if (!matchedAssignment) return null;
         await deactivateSafetyAssignment(token, matchedAssignment.id);
+        return null;
       }, '지도요원 배정을 해제했습니다.'),
     updateAssignment: (id: string, input: SafetyAssignmentUpdateInput) =>
       runMutation((token) => updateSafetyAssignment(token, id, input), '배정 정보를 수정했습니다.'),

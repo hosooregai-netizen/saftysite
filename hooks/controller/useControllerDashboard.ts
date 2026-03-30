@@ -264,12 +264,18 @@ function getUserEditSuccessMessage(hasProfileChanges: boolean, hasPasswordChange
   return '사용자 정보를 수정했습니다.';
 }
 
-export function primeControllerDashboardData(token: string) {
-  return ensureControllerDashboardCoreData(token);
+export function primeControllerDashboardData(
+  token: string,
+  options?: { force?: boolean }
+) {
+  return ensureControllerDashboardCoreData(token, options);
 }
 
-export function primeControllerDashboardContentItems(token: string) {
-  return ensureControllerDashboardContentItems(token);
+export function primeControllerDashboardContentItems(
+  token: string,
+  options?: { force?: boolean }
+) {
+  return ensureControllerDashboardContentItems(token, options);
 }
 
 export function useControllerDashboard(enabled: boolean) {
