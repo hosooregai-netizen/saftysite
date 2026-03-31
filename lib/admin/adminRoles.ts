@@ -1,5 +1,6 @@
 export {
   canDeleteControllerCrud,
+  canUploadContentAssets,
   getUserRoleLabel,
   isAdminUserRole,
   isFieldAgentUserRole,

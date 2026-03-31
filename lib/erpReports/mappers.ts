@@ -1,5 +1,10 @@
 import { createFutureProcessRiskPlan } from '@/constants/inspectionSession';
-import { asRecord, generateId, normalizeText } from '@/constants/inspectionSession/shared';
+import {
+  asRecord,
+  createEmptyAdminSiteSnapshot,
+  generateId,
+  normalizeText,
+} from '@/constants/inspectionSession/shared';
 import { asMapperRecord, normalizeMapperText } from '@/lib/safetyApiMappers/utils';
 import type {
   SafetyReport,
@@ -127,9 +132,14 @@ export function mapSafetyReportToQuarterlySummaryReport(
     drafter:
       normalizeMapperText(payload.drafter) ||
       normalizeMapperText(meta.drafter),
+    siteSnapshot: createEmptyAdminSiteSnapshot(asRecord(payload.siteSnapshot)),
     generatedFromSessionIds: Array.isArray(payload.generatedFromSessionIds)
       ? payload.generatedFromSessionIds.map((item) => normalizeMapperText(item)).filter(Boolean)
       : [],
+    lastCalculatedAt:
+      normalizeMapperText(payload.lastCalculatedAt) ||
+      normalizeMapperText(payload.updatedAt) ||
+      report.updated_at,
     overallComment: normalizeMapperText(payload.overallComment),
     implementationRows: normalizeQuarterlyImplementationRows(payload.implementationRows),
     accidentStats: normalizeCounterItems(payload.accidentStats),
@@ -140,6 +150,15 @@ export function mapSafetyReportToQuarterlySummaryReport(
     majorMeasures: Array.isArray(payload.majorMeasures)
       ? payload.majorMeasures.map((item) => normalizeMapperText(item)).filter(Boolean)
       : [],
+    opsAssetId: normalizeMapperText(payload.opsAssetId),
+    opsAssetTitle: normalizeMapperText(payload.opsAssetTitle),
+    opsAssetDescription: normalizeMapperText(payload.opsAssetDescription),
+    opsAssetPreviewUrl: normalizeMapperText(payload.opsAssetPreviewUrl),
+    opsAssetFileUrl: normalizeMapperText(payload.opsAssetFileUrl),
+    opsAssetFileName: normalizeMapperText(payload.opsAssetFileName),
+    opsAssetType: normalizeMapperText(payload.opsAssetType) as QuarterlySummaryReport['opsAssetType'],
+    opsAssignedBy: normalizeMapperText(payload.opsAssignedBy),
+    opsAssignedAt: normalizeMapperText(payload.opsAssignedAt),
     createdAt: normalizeMapperText(payload.createdAt) || report.created_at,
     updatedAt: normalizeMapperText(payload.updatedAt) || report.updated_at,
   };

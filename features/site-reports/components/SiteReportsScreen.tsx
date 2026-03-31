@@ -1,10 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import LoginPanel from '@/components/auth/LoginPanel';
 import { AdminMenuDrawer, AdminMenuPanel } from '@/components/admin/AdminMenu';
-import OperationalReportsPanel from '@/components/site/OperationalReportsPanel';
 import WorkerAppHeader from '@/components/worker/WorkerAppHeader';
 import WorkerMenuSidebar from '@/components/worker/WorkerMenuSidebar';
 import WorkerShellBody from '@/components/worker/WorkerShellBody';
@@ -23,7 +22,6 @@ interface SiteReportsScreenProps {
 
 export function SiteReportsScreen({ siteKey }: SiteReportsScreenProps) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [shouldLoadOperationalPanel, setShouldLoadOperationalPanel] = useState(false);
   const {
     assignedUserDisplay,
     authError,
@@ -31,7 +29,6 @@ export function SiteReportsScreen({ siteKey }: SiteReportsScreenProps) {
     canCreateReport,
     createReport,
     currentSite,
-    currentUser,
     currentUserName,
     deleteSession,
     filteredReportItems,
@@ -50,27 +47,6 @@ export function SiteReportsScreen({ siteKey }: SiteReportsScreenProps) {
     setReportSortMode,
     workerBackHref,
   } = useSiteReportsScreen(siteKey);
-
-  useEffect(() => {
-    const idleApi = window as typeof window & {
-      requestIdleCallback?: (
-        callback: IdleRequestCallback,
-        options?: IdleRequestOptions,
-      ) => number;
-    };
-
-    if (typeof idleApi.requestIdleCallback === 'function') {
-      const id = idleApi.requestIdleCallback(() => {
-        setShouldLoadOperationalPanel(true);
-      }, { timeout: 800 });
-      return () => window.cancelIdleCallback?.(id);
-    }
-
-    const timeout = window.setTimeout(() => {
-      setShouldLoadOperationalPanel(true);
-    }, 350);
-    return () => window.clearTimeout(timeout);
-  }, []);
 
   if (!isReady) {
     return <SiteReportsLoadingState />;
@@ -106,7 +82,7 @@ export function SiteReportsScreen({ siteKey }: SiteReportsScreenProps) {
               {isAdminView ? (
                 <AdminMenuPanel activeSection="headquarters" />
               ) : (
-                <WorkerMenuPanel />
+                <WorkerMenuPanel currentSiteKey={currentSite.id} />
               )}
             </WorkerMenuSidebar>
 
@@ -140,13 +116,6 @@ export function SiteReportsScreen({ siteKey }: SiteReportsScreenProps) {
                   setReportQuery={setReportQuery}
                   setReportSortMode={setReportSortMode}
                 />
-
-                <OperationalReportsPanel
-                  currentSite={currentSite}
-                  currentUser={currentUser}
-                  enabled={shouldLoadOperationalPanel}
-                  siteReportCount={reportItems.length}
-                />
               </div>
             </div>
           </WorkerShellBody>
@@ -160,7 +129,11 @@ export function SiteReportsScreen({ siteKey }: SiteReportsScreenProps) {
           activeSection="headquarters"
         />
       ) : (
-        <WorkerMenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} />
+        <WorkerMenuDrawer
+          open={menuOpen}
+          onClose={() => setMenuOpen(false)}
+          currentSiteKey={currentSite.id}
+        />
       )}
     </main>
   );

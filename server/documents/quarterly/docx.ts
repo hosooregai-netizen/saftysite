@@ -21,8 +21,8 @@ import { formatDate } from '@/server/documents/inspection/format';
 
 function fileNameForQuarterlyReport(report: QuarterlySummaryReport, site: InspectionSite) {
   const siteName = sanitizeWordFileName(
-    site.siteName || report.siteId || 'quarterly-report',
-    'quarterly-report'
+    report.siteSnapshot.siteName || site.siteName || report.siteId || 'quarterly-report',
+    'quarterly-report',
   );
   return `${siteName}-${report.quarterKey}-분기종합보고서.docx`;
 }
@@ -38,7 +38,7 @@ function countTable(title: string, rows: Array<{ label: string; count: number }>
           : [['자료 없음', '0']]),
       ],
       [6200, 3000],
-      1
+      1,
     ),
   ].join('');
 }
@@ -46,7 +46,7 @@ function countTable(title: string, rows: Array<{ label: string; count: number }>
 function futurePlanTable(report: QuarterlySummaryReport) {
   return gridTable(
     [
-      ['향후 주요 작업공정', '유해·위험요인', '안전대책', '비고'],
+      ['향후 주요 작업공정', '유해위험요인', '안전대책', '비고'],
       ...(report.futurePlans.length > 0
         ? report.futurePlans.map((item) => [
             item.processName || '-',
@@ -57,14 +57,14 @@ function futurePlanTable(report: QuarterlySummaryReport) {
         : [['-', '-', '-', '-']]),
     ],
     [1800, 2500, 3300, 1600],
-    1
+    1,
   );
 }
 
 function implementationTable(report: QuarterlySummaryReport) {
   return gridTable(
     [
-      ['실시일', '차수', '작성자', '공정율', '지적 건수', '개선 건수'],
+      ['실시일', '차수', '담당자', '공정률', '지적 건수', '개선 건수'],
       ...(report.implementationRows.length > 0
         ? report.implementationRows.map((item) => [
             formatDate(item.reportDate),
@@ -77,22 +77,36 @@ function implementationTable(report: QuarterlySummaryReport) {
         : [['-', '-', '-', '-', '0', '0']]),
     ],
     [1600, 1000, 1800, 1300, 1500, 2000],
-    1
+    1,
   );
 }
 
-function measuresBlock(report: QuarterlySummaryReport) {
-  if (report.majorMeasures.length === 0) {
-    return paragraph('대표 안전대책이 아직 없습니다.');
+function opsSection(report: QuarterlySummaryReport) {
+  if (!report.opsAssetId) {
+    return noteBox('관리자 보완 대기 중입니다. 연결된 OPS / One Point Sheet 자료가 없습니다.');
   }
 
-  return report.majorMeasures
-    .map((item, index) => paragraph(`${index + 1}. ${item}`))
-    .join('');
+  return [
+    paragraph(report.opsAssetTitle || 'OPS 자료', { bold: true, spacingAfter: 80 }),
+    report.opsAssetDescription
+      ? noteBox(report.opsAssetDescription)
+      : noteBox('설명 없이 자료만 연결되었습니다.'),
+    paragraph(
+      report.opsAssetFileUrl
+        ? `자료 링크: ${report.opsAssetFileUrl}`
+        : '자료 링크 정보가 없습니다.',
+      { spacingBefore: 80 },
+    ),
+    paragraph(
+      report.opsAssignedBy
+        ? `연결자: ${report.opsAssignedBy} / 연결 시각: ${report.opsAssignedAt || '-'}`
+        : '연결 정보 없음',
+    ),
+  ].join('');
 }
 
 function buildQuarterlyWordBody(report: QuarterlySummaryReport, site: InspectionSite) {
-  const snapshot = site.adminSiteSnapshot;
+  const snapshot = report.siteSnapshot;
 
   return buildDocumentXml(
     [
@@ -107,39 +121,51 @@ function buildQuarterlyWordBody(report: QuarterlySummaryReport, site: Inspection
         align: 'center',
         spacingAfter: 160,
       }),
-      paragraph(`작성자: ${report.drafter || '-'}`, { align: 'center' }),
+      paragraph(`작성자 ${report.drafter || '-'}`, { align: 'center' }),
       pageBreak(),
       sectionHeading('1. 기술지도 대상사업장'),
       twoColTable([
-        { label: '현장명', value: snapshot.siteName || site.siteName || '-' },
+        { label: '현장명', value: snapshot.siteName || '-' },
         { label: '고객사', value: snapshot.customerName || '-' },
         { label: '사업장관리번호', value: snapshot.siteManagementNumber || '-' },
         { label: '사업개시번호', value: snapshot.businessStartNumber || '-' },
         { label: '공사기간', value: snapshot.constructionPeriod || '-' },
         { label: '공사금액', value: snapshot.constructionAmount || '-' },
         { label: '책임자', value: snapshot.siteManagerName || '-' },
-        { label: '연락처', value: snapshot.siteContactEmail || '-' },
+        { label: '연락처(이메일)', value: snapshot.siteContactEmail || '-' },
         { label: '현장주소', value: snapshot.siteAddress || '-' },
+        { label: '회사명', value: snapshot.companyName || '-' },
+        {
+          label: '법인등록번호',
+          value: snapshot.corporationRegistrationNumber || '-',
+        },
+        {
+          label: '사업자등록번호',
+          value: snapshot.businessRegistrationNumber || '-',
+        },
+        { label: '면허번호', value: snapshot.licenseNumber || '-' },
+        { label: '본사 연락처', value: snapshot.headquartersContact || '-' },
+        { label: '본사 주소', value: snapshot.headquartersAddress || '-' },
       ]),
       sectionHeading('2. 통계분석(누계)'),
-      countTable('재해유형별 분석', report.accidentStats),
+      countTable('재해형태별 분석', report.accidentStats),
       paragraph(' ', { spacingAfter: 80 }),
       countTable('기인물별 분석', report.causativeStats),
       sectionHeading('3. 기술지도 총평'),
       noteBox(report.overallComment || '총평이 아직 없습니다.'),
       sectionHeading('4. 기술지도 이행현황'),
       implementationTable(report),
-      sectionHeading('5. 향 후 공정 유해·위험요인 및 대책'),
+      sectionHeading('5. 향후 공정 유해위험요인 및 대책'),
       futurePlanTable(report),
-      sectionHeading('6. 주요 유해·위험작업 안전대책'),
-      measuresBlock(report),
-    ].join('')
+      sectionHeading('6. OPS / One Point Sheet'),
+      opsSection(report),
+    ].join(''),
   );
 }
 
 export async function buildQuarterlyWordDocument(
   report: QuarterlySummaryReport,
-  site: InspectionSite
+  site: InspectionSite,
 ) {
   return buildWordDocumentArchive({
     body: buildQuarterlyWordBody(report, site),

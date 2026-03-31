@@ -84,7 +84,7 @@ export function WorkspaceShell({
               {isAdminView ? (
                 <AdminMenuPanel activeSection="headquarters" />
               ) : (
-                <WorkerMenuPanel />
+                <WorkerMenuPanel currentSiteKey={session.siteKey} />
               )}
             </WorkerMenuSidebar>
 
@@ -143,7 +143,11 @@ export function WorkspaceShell({
           activeSection="headquarters"
         />
       ) : (
-        <WorkerMenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} />
+        <WorkerMenuDrawer
+          open={menuOpen}
+          onClose={() => setMenuOpen(false)}
+          currentSiteKey={session.siteKey}
+        />
       )}
     </main>
   );

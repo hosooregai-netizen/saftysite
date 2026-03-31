@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { getAdminSectionHref, isAdminUserRole } from '@/lib/admin';
+import { buildSiteHubHref } from '@/features/home/lib/siteEntry';
 import { useSiteReportListState } from './useSiteReportListState';
 
 export function useSiteReportsScreen(siteKey: string) {
@@ -18,7 +19,9 @@ export function useSiteReportsScreen(siteKey: string) {
   const isAdminView = Boolean(currentUser && isAdminUserRole(currentUser.role));
 
   const workerBackHref = useMemo(() => {
-    if (!isAdminView) return '/';
+    if (!isAdminView) {
+      return currentSite ? buildSiteHubHref(currentSite.id) : '/';
+    }
     if (!currentSite) return getAdminSectionHref('headquarters');
 
     return getAdminSectionHref('headquarters', {

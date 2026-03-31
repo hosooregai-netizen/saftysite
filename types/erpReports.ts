@@ -1,4 +1,5 @@
-import type { FutureProcessRiskPlan } from '@/types/inspectionSession';
+import type { SafetyContentType } from '@/types/backend';
+import type { AdminSiteSnapshot, FutureProcessRiskPlan } from '@/types/inspectionSession';
 import type { CausativeAgentKey } from '@/types/siteOverview';
 
 export type StoredReportKind =
@@ -43,13 +44,24 @@ export interface QuarterlySummaryReport {
   quarter: number;
   status: OperationalReportStatus;
   drafter: string;
+  siteSnapshot: AdminSiteSnapshot;
   generatedFromSessionIds: string[];
+  lastCalculatedAt: string;
   overallComment: string;
   implementationRows: QuarterlyImplementationRow[];
   accidentStats: QuarterlyCounter[];
   causativeStats: QuarterlyCounter[];
   futurePlans: FutureProcessRiskPlan[];
   majorMeasures: string[];
+  opsAssetId: string;
+  opsAssetTitle: string;
+  opsAssetDescription: string;
+  opsAssetPreviewUrl: string;
+  opsAssetFileUrl: string;
+  opsAssetFileName: string;
+  opsAssetType: SafetyContentType | '';
+  opsAssignedBy: string;
+  opsAssignedAt: string;
   createdAt: string;
   updatedAt: string;
 }

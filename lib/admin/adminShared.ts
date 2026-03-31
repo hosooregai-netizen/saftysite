@@ -75,6 +75,10 @@ export function canDeleteControllerCrud(role: SafetyUserRole | null | undefined)
   return role === 'super_admin' || role === 'admin';
 }
 
+export function canUploadContentAssets(role: SafetyUserRole | null | undefined): boolean {
+  return role === 'super_admin' || role === 'admin';
+}
+
 export function isFieldAgentUserRole(role: SafetyUserRole | null | undefined): boolean {
   return role === 'field_agent';
 }

@@ -9,10 +9,16 @@ import {
   getSessionSiteKey,
   touchDocumentMeta,
 } from '@/constants/inspectionSession';
+import { readFileAsDataUrl } from '@/components/session/workspace/utils';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { convertHwpxBlobToPdf, saveBlobAsFile } from '@/lib/api';
 import { generateInspectionHwpxBlob } from '@/lib/documents/inspection/hwpxClient';
-import { getAdminSectionHref, isAdminUserRole } from '@/lib/admin';
+import {
+  canUploadContentAssets,
+  getAdminSectionHref,
+  isAdminUserRole,
+} from '@/lib/admin';
+import { SafetyApiError } from '@/lib/safetyApi';
 import {
   uploadSafetyAssetFile,
   validateSafetyAssetFile,
@@ -146,8 +152,28 @@ export function useInspectionSessionScreen(sessionId: string) {
         throw new Error(validationMessage);
       }
 
-      const uploaded = await uploadSafetyAssetFile(file);
-      const value = uploaded.url;
+      const canUploadAssets = canUploadContentAssets(currentUser?.role);
+      let value = '';
+
+      if (canUploadAssets) {
+        try {
+          const uploaded = await uploadSafetyAssetFile(file);
+          value = uploaded.url;
+        } catch (error) {
+          if (
+            error instanceof SafetyApiError &&
+            error.status === 403 &&
+            file.type.startsWith('image/')
+          ) {
+            value = await readFileAsDataUrl(file);
+          } else {
+            throw error;
+          }
+        }
+      } else {
+        value = await readFileAsDataUrl(file);
+      }
+
       onLoaded?.(value, file);
       return value;
     } catch (error) {

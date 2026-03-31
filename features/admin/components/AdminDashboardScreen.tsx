@@ -1,7 +1,11 @@
 'use client';
 
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
-import { canDeleteControllerCrud, ADMIN_SECTIONS } from '@/lib/admin';
+import {
+  canDeleteControllerCrud,
+  canUploadContentAssets,
+  ADMIN_SECTIONS,
+} from '@/lib/admin';
 import type { SafetyUser } from '@/types/backend';
 import { AdminDashboardShell } from '@/features/admin/components/AdminDashboardShell';
 import { AdminDashboardStateBanners } from '@/features/admin/components/AdminDashboardStateBanners';
@@ -21,6 +25,7 @@ function renderAdminSection(
   sectionProps: {
     assignments: ReturnType<typeof useAdminDashboardState>['data']['assignments'];
     canDelete: boolean;
+    canUploadAssets: boolean;
     dashboard: ReturnType<typeof useAdminDashboardState>;
     headquarters: ReturnType<typeof useAdminDashboardState>['data']['headquarters'];
     sessions: ReturnType<typeof useInspectionSessions>['sessions'];
@@ -28,7 +33,16 @@ function renderAdminSection(
     users: ReturnType<typeof useAdminDashboardState>['data']['users'];
   },
 ) {
-  const { assignments, canDelete, dashboard, headquarters, sessions, sites, users } =
+  const {
+    assignments,
+    canDelete,
+    canUploadAssets,
+    dashboard,
+    headquarters,
+    sessions,
+    sites,
+    users,
+  } =
     sectionProps;
   const busy = dashboard.isLoading || dashboard.isContentLoading || dashboard.isMutating;
 
@@ -77,6 +91,7 @@ function renderAdminSection(
         <ContentItemsSection
           busy={busy}
           canDelete={canDelete}
+          canUploadAssets={canUploadAssets}
           items={dashboard.data.contentItems}
           onCreate={dashboard.createContentItem}
           onDelete={dashboard.deleteContentItem}
@@ -104,6 +119,7 @@ export function AdminDashboardScreen({
     refreshMasterData,
   });
   const canDeleteCrud = canDeleteControllerCrud(currentUser.role);
+  const canUploadAssets = canUploadContentAssets(currentUser.role);
   const headquartersTitle =
     dashboard.selectedSite?.site_name?.trim() ||
     dashboard.selectedHeadquarter?.name?.trim() ||
@@ -153,6 +169,7 @@ export function AdminDashboardScreen({
       {renderAdminSection(dashboard.activeSection, {
         assignments: dashboard.data.assignments,
         canDelete: canDeleteCrud,
+        canUploadAssets,
         dashboard,
         headquarters: dashboard.data.headquarters,
         sessions,

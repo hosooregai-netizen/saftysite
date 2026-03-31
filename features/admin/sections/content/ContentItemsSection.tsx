@@ -53,6 +53,7 @@ interface ContentItemsSectionProps {
   busy: boolean;
   items: SafetyContentItem[];
   canDelete: boolean;
+  canUploadAssets: boolean;
   onCreate: (input: {
     content_type: SafetyContentItem['content_type'];
     title: string;
@@ -78,7 +79,7 @@ interface ContentItemsSectionProps {
 }
 
 export function ContentItemsSection(props: ContentItemsSectionProps) {
-  const { busy, items, canDelete, onCreate, onUpdate, onDelete } = props;
+  const { busy, items, canDelete, canUploadAssets, onCreate, onUpdate, onDelete } = props;
   const [editingId, setEditingId] = useState<string | null>(null);
   const [activeType, setActiveType] = useState<SafetyContentItem['content_type'] | 'all'>('all');
   const [query, setQuery] = useState('');
@@ -125,6 +126,14 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
   const titleLabel = isMeasurementTemplate ? '장비명' : '제목';
   const titlePlaceholder = isMeasurementTemplate ? '예: 조도계' : '';
   const usesSafetyProxy = usesSafetyProxyUpload();
+  const uploadPermissionHelperText = canUploadAssets
+    ? '이미지는 업로드 API에 저장됩니다.'
+    : '이 역할에서는 콘텐츠 자산 업로드와 교체를 할 수 없습니다.';
+  const fileUploadHelperText = canUploadAssets
+    ? usesSafetyProxy
+      ? '현재 앱 기준 허용 용량은 50MB이며, 배포 프록시 제한이 더 작으면 업로드가 실패할 수 있습니다.'
+      : undefined
+    : uploadPermissionHelperText;
 
   const validateLargeFile = (file: File) =>
     validateSafetyAssetFile(file, { usesProxy: usesSafetyProxy });
@@ -551,10 +560,11 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
                         </label>
                         <ContentAssetField
                           accept="image/*"
-                          disabled={busy}
-                          helperText="이미지는 업로드 API에 저장됩니다."
+                          disabled={busy || !canUploadAssets}
+                          helperText={uploadPermissionHelperText}
                           label="대표 이미지"
                           mode="image"
+                          readOnly={!canUploadAssets}
                           value={item.image_url}
                           fileName={item.image_name}
                           onChange={({ value, fileName }) =>
@@ -611,10 +621,11 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
               {activeTypeMeta.editorMode === 'image' && !isDisasterCaseBatchCreate ? (
                 <ContentAssetField
                   accept="image/*"
-                  disabled={busy}
-                  helperText="이미지는 업로드 API에 저장됩니다."
+                  disabled={busy || !canUploadAssets}
+                  helperText={uploadPermissionHelperText}
                   label="대표 이미지"
                   mode="image"
+                  readOnly={!canUploadAssets}
                   value={form.image_url}
                   fileName={form.image_name}
                   onChange={({ value, fileName }) =>
@@ -630,14 +641,11 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
                 <div className={styles.assetGrid}>
                   <ContentAssetField
                     accept=".pdf,.doc,.docx,.hwp,.png,.jpg,.jpeg,.gif,.webp"
-                    disabled={busy}
-                    helperText={
-                      usesSafetyProxy
-                        ? '현재 앱 기준 허용 용량은 50MB이며, 배포 프록시 제한이 더 작으면 업로드가 실패할 수 있습니다.'
-                        : undefined
-                    }
+                    disabled={busy || !canUploadAssets}
+                    helperText={fileUploadHelperText}
                     label={activeTypeMeta.fileLabels?.[0] || '파일 1'}
                     mode="file"
+                    readOnly={!canUploadAssets}
                     value={form.file_url_1}
                     fileName={form.file_name_1}
                     onChange={({ value, fileName }) =>
@@ -649,14 +657,11 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
                   />
                   <ContentAssetField
                     accept=".pdf,.doc,.docx,.hwp,.png,.jpg,.jpeg,.gif,.webp"
-                    disabled={busy}
-                    helperText={
-                      usesSafetyProxy
-                        ? '현재 앱 기준 허용 용량은 50MB이며, 배포 프록시 제한이 더 작으면 업로드가 실패할 수 있습니다.'
-                        : undefined
-                    }
+                    disabled={busy || !canUploadAssets}
+                    helperText={fileUploadHelperText}
                     label={activeTypeMeta.fileLabels?.[1] || '파일 2'}
                     mode="file"
+                    readOnly={!canUploadAssets}
                     value={form.file_url_2}
                     fileName={form.file_name_2}
                     onChange={({ value, fileName }) =>

@@ -10,29 +10,6 @@
   color: var(--erp-dark);
 }
 
-.noticeCard {
-  display: grid;
-  gap: 6px;
-  padding: 18px 20px;
-  border: 1px solid var(--erp-line);
-  border-radius: var(--erp-radius-surface);
-  background: #fbfcfe;
-}
-
-.noticeTitle {
-  margin: 0;
-  font-size: var(--text-title);
-  font-weight: 700;
-  color: var(--erp-dark);
-}
-
-.noticeDescription {
-  margin: 0;
-  font-size: var(--text-body);
-  line-height: 1.7;
-  color: var(--erp-text-muted);
-}
-
 .entryGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -131,7 +108,6 @@
 }
 
 @media (max-width: 767px) {
-  .noticeCard,
   .entryCard {
     padding: 16px;
   }

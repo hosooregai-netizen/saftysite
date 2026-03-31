@@ -1,7 +1,6 @@
 'use client';
 
 import { useMemo } from 'react';
-import OperationalReportsPanel from '@/components/site/OperationalReportsPanel';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import { SitesSection } from '@/features/admin/sections/sites/SitesSection';
 import { SiteReportListPanel } from '@/features/site-reports/components/SiteReportListPanel';
@@ -195,11 +194,6 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
                 setReportQuery={reportListState.setReportQuery}
                 setReportSortMode={reportListState.setReportSortMode}
                 showSummaryBar={false}
-              />
-              <OperationalReportsPanel
-                currentSite={reportListState.currentSite}
-                currentUser={reportListState.currentUser}
-                siteReportCount={reportListState.reportItems.length}
               />
             </>
           ) : (

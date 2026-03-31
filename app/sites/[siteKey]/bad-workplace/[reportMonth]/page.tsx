@@ -2,11 +2,19 @@
 
 import Link from 'next/link';
 import { use, useMemo, useState } from 'react';
+import { AdminMenuDrawer, AdminMenuPanel } from '@/components/admin/AdminMenu';
 import LoginPanel from '@/components/auth/LoginPanel';
 import operationalStyles from '@/components/site/OperationalReports.module.css';
+import WorkerAppHeader from '@/components/worker/WorkerAppHeader';
+import WorkerMenuSidebar from '@/components/worker/WorkerMenuSidebar';
+import WorkerShellBody from '@/components/worker/WorkerShellBody';
+import { WorkerMenuDrawer, WorkerMenuPanel } from '@/components/worker/WorkerMenu';
 import { getSessionTitle } from '@/constants/inspectionSession';
 import { createTimestamp } from '@/constants/inspectionSession/shared';
+import { useInspectionSessions } from '@/hooks/useInspectionSessions';
+import { useSiteOperationalReports } from '@/hooks/useSiteOperationalReports';
 import { fetchBadWorkplaceWordDocument, saveBlobAsFile } from '@/lib/api';
+import { getAdminSectionHref, isAdminUserRole } from '@/lib/admin';
 import {
   buildInitialBadWorkplaceReport,
   getBadWorkplaceSelectableFindings,
@@ -14,8 +22,7 @@ import {
   syncBadWorkplaceReportSource,
 } from '@/lib/erpReports/badWorkplace';
 import { formatReportMonthLabel } from '@/lib/erpReports/shared';
-import { useInspectionSessions } from '@/hooks/useInspectionSessions';
-import { useSiteOperationalReports } from '@/hooks/useSiteOperationalReports';
+import shellStyles from '@/features/site-reports/components/SiteReportsScreen.module.css';
 import type { BadWorkplaceReport } from '@/types/erpReports';
 import type { InspectionSession, InspectionSite } from '@/types/inspectionSession';
 
@@ -29,6 +36,7 @@ interface BadWorkplaceReportPageProps {
 export default function BadWorkplaceReportPage({
   params,
 }: BadWorkplaceReportPageProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
   const { siteKey, reportMonth } = use(params);
   const decodedSiteKey = decodeURIComponent(siteKey);
   const decodedReportMonth = decodeURIComponent(reportMonth);
@@ -40,11 +48,24 @@ export default function BadWorkplaceReportPage({
     currentUser,
     authError,
     login,
+    logout,
   } = useInspectionSessions();
   const currentSite = useMemo(
     () => sites.find((site) => site.id === decodedSiteKey) ?? null,
     [decodedSiteKey, sites],
   );
+  const isAdminView = Boolean(currentUser && isAdminUserRole(currentUser.role));
+  const backHref = currentSite
+    ? isAdminView
+      ? getAdminSectionHref('headquarters', {
+          headquarterId: currentSite.headquarterId,
+          siteId: currentSite.id,
+        })
+      : `/sites/${encodeURIComponent(currentSite.id)}/entry?entry=bad-workplace`
+    : isAdminView
+      ? getAdminSectionHref('headquarters')
+      : '/';
+  const backLabel = isAdminView ? '현장 상세' : '현장 메뉴';
   const siteSessions = useMemo(
     () =>
       getBadWorkplaceSourceSessions(
@@ -114,17 +135,68 @@ export default function BadWorkplaceReportPage({
   return (
     <main className="app-page">
       <div className="app-container">
-        <BadWorkplaceReportEditor
-          key={`${initialDraft.id}:${initialDraft.updatedAt}`}
-          currentSite={currentSite}
-          siteSessions={siteSessions}
-          reportMonth={decodedReportMonth}
-          initialDraft={initialDraft}
-          isSaving={isSaving}
-          error={error}
-          onSave={saveBadWorkplaceReport}
-        />
+        <section className={`app-shell ${shellStyles.shell}`}>
+          <WorkerAppHeader
+            currentUserName={currentUser?.name}
+            onLogout={logout}
+            onOpenMenu={() => setMenuOpen(true)}
+          />
+
+          <WorkerShellBody>
+            <WorkerMenuSidebar>
+              {isAdminView ? (
+                <AdminMenuPanel activeSection="headquarters" />
+              ) : (
+                <WorkerMenuPanel currentSiteKey={currentSite.id} />
+              )}
+            </WorkerMenuSidebar>
+
+            <div className={shellStyles.contentColumn}>
+              <header className={shellStyles.hero}>
+                <div className={shellStyles.heroBody}>
+                  <Link
+                    href={backHref}
+                    className={shellStyles.heroBackLink}
+                    aria-label="이전 화면으로 돌아가기"
+                  >
+                    {'<'} {backLabel}
+                  </Link>
+                  <div className={shellStyles.heroMain}>
+                    <h1 className={shellStyles.heroTitle}>{initialDraft.title}</h1>
+                  </div>
+                </div>
+              </header>
+
+              <div className={shellStyles.pageGrid}>
+                <BadWorkplaceReportEditor
+                  key={`${initialDraft.id}:${initialDraft.updatedAt}`}
+                  currentSite={currentSite}
+                  siteSessions={siteSessions}
+                  reportMonth={decodedReportMonth}
+                  initialDraft={initialDraft}
+                  isSaving={isSaving}
+                  error={error}
+                  onSave={saveBadWorkplaceReport}
+                />
+              </div>
+            </div>
+          </WorkerShellBody>
+        </section>
       </div>
+
+      {isAdminView ? (
+        <AdminMenuDrawer
+          open={menuOpen}
+          onClose={() => setMenuOpen(false)}
+          activeSection="headquarters"
+        />
+      ) : (
+        <WorkerMenuDrawer
+          open={menuOpen}
+          onClose={() => setMenuOpen(false)}
+          currentSiteKey={currentSite.id}
+        />
+      )}
     </main>
   );
 }

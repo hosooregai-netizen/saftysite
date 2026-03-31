@@ -85,7 +85,7 @@ export function WorkerSitePickerScreen({
                   <header className={homeStyles.hero}>
                     <div className={homeStyles.heroBody}>
                       <Link href="/" className={entryStyles.heroBackLink}>
-                        {'<'} 현장 허브
+                        {'<'} 현장 목록
                       </Link>
                       <div className={homeStyles.heroMain}>
                         <h1 className={homeStyles.heroTitle}>{getWorkerSiteEntryTitle(intent)}</h1>
@@ -94,11 +94,13 @@ export function WorkerSitePickerScreen({
                   </header>
 
                   <div className={homeStyles.pageGrid}>
-                    <section className={entryStyles.noticeCard}>
-                      <p className={entryStyles.noticeTitle}>현장을 먼저 선택하세요.</p>
-                      <p className={entryStyles.noticeDescription}>
-                        {getWorkerSiteEntryDescription(intent)}
-                      </p>
+                    <section className={entryStyles.entryCard}>
+                      <div className={entryStyles.entryBody}>
+                        <h2 className={entryStyles.entryTitle}>현장을 먼저 선택하세요.</h2>
+                        <p className={entryStyles.entryMeta}>
+                          {getWorkerSiteEntryDescription(intent)}
+                        </p>
+                      </div>
                     </section>
 
                     <section className={homeStyles.tablePanel}>
@@ -134,7 +136,7 @@ export function WorkerSitePickerScreen({
                             href: buildSiteHubHref(summary.site.id, intent),
                           },
                           {
-                            label: '현장 허브 열기',
+                            label: '현장 열기',
                             href: buildSiteHubHref(summary.site.id),
                           },
                           {

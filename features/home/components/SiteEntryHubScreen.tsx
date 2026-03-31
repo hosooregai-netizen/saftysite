@@ -17,6 +17,7 @@ import {
   getWorkerSiteEntryTitle,
   parseWorkerSiteEntryIntent,
 } from '@/features/home/lib/siteEntry';
+import { SiteReportsSummaryBar } from '@/features/site-reports/components/SiteReportsSummaryBar';
 import {
   getCurrentReportMonth,
   getQuarterTargetsForConstructionPeriod,
@@ -67,6 +68,11 @@ export function SiteEntryHubScreen({
   }, [currentSite]);
   const reportIndexState = currentSite ? getReportIndexBySiteId(currentSite.id) : null;
   const reportCount = reportIndexState?.items.length ?? 0;
+  const snapshot = currentSite?.adminSiteSnapshot;
+  const siteNameDisplay = currentSite?.siteName?.trim() || snapshot?.siteName?.trim() || '-';
+  const addressDisplay = snapshot?.siteAddress?.trim() || '-';
+  const periodDisplay = snapshot?.constructionPeriod?.trim() || '-';
+  const amountDisplay = snapshot?.constructionAmount?.trim() || '-';
   const quarterTargets = useMemo(() => {
     if (!currentSite) return [];
     return getQuarterTargetsForConstructionPeriod(
@@ -79,7 +85,7 @@ export function SiteEntryHubScreen({
   const backHref = selectedEntryIntent ? buildWorkerPickerHref(selectedEntryIntent) : '/';
   const backLabel = selectedEntryIntent
     ? getWorkerSiteEntryTitle(selectedEntryIntent)
-    : '현장 허브';
+    : '현장 목록';
 
   useEffect(() => {
     if (isAdminView) {
@@ -129,11 +135,11 @@ export function SiteEntryHubScreen({
             <div className={homeStyles.emptyState}>
               <p className={homeStyles.emptyTitle}>현장을 찾을 수 없습니다.</p>
               <p className={homeStyles.emptyDescription}>
-                접근하려는 현장이 목록에 없거나 더 이상 배정되지 않았습니다.
+                연결하려는 현장 정보가 없거나 더 이상 배정되지 않았습니다.
               </p>
               <div>
                 <Link href="/" className="app-button app-button-secondary">
-                  현장 허브로 돌아가기
+                  현장 목록으로 돌아가기
                 </Link>
               </div>
             </div>
@@ -155,7 +161,7 @@ export function SiteEntryHubScreen({
 
           <WorkerShellBody>
             <WorkerMenuSidebar>
-              <WorkerMenuPanel />
+              <WorkerMenuPanel currentSiteKey={currentSite.id} />
             </WorkerMenuSidebar>
 
             <div className={homeStyles.contentColumn}>
@@ -171,12 +177,12 @@ export function SiteEntryHubScreen({
               </header>
 
               <div className={homeStyles.pageGrid}>
-                <section className={entryStyles.noticeCard}>
-                  <p className={entryStyles.noticeTitle}>이 현장에서 진행할 업무를 선택하세요.</p>
-                  <p className={entryStyles.noticeDescription}>
-                    기술지도 보고서 확인, 분기 종합보고서 작성, 불량사업장 신고 초안 작성이 모두 이 현장 컨텍스트 안에서 이어집니다.
-                  </p>
-                </section>
+                <SiteReportsSummaryBar
+                  addressDisplay={addressDisplay}
+                  amountDisplay={amountDisplay}
+                  periodDisplay={periodDisplay}
+                  siteNameDisplay={siteNameDisplay}
+                />
 
                 <section className={entryStyles.entryGrid}>
                   <article
@@ -187,9 +193,7 @@ export function SiteEntryHubScreen({
                     <div className={entryStyles.entryHeader}>
                       <span className="app-chip">기술지도</span>
                       <span className="app-chip">
-                        {reportIndexState?.status === 'loading'
-                          ? '불러오는 중'
-                          : `${reportCount}건`}
+                        {reportIndexState?.status === 'loading' ? '불러오는 중' : `${reportCount}건`}
                       </span>
                     </div>
                     <div className={entryStyles.entryBody}>
@@ -225,9 +229,10 @@ export function SiteEntryHubScreen({
                       <span className="app-chip">대상 {quarterTargets.length}개</span>
                     </div>
                     <div className={entryStyles.entryBody}>
-                      <h2 className={entryStyles.entryTitle}>분기 종합보고서</h2>
+                      <h2 className={entryStyles.entryTitle}>분기 종합 보고서</h2>
                       <p className={entryStyles.entryDescription}>
-                        공사기간을 기준으로 대상 분기를 고른 뒤 기술지도 보고서를 묶어 분기 종합보고서를 작성합니다.
+                        공사기간을 기준으로 대상 분기를 고른 뒤 기술지도 보고서를 묶어 분기
+                        종합보고서를 작성합니다.
                       </p>
                     </div>
                     {quarterTargets.length > 0 ? (
@@ -244,7 +249,8 @@ export function SiteEntryHubScreen({
                       </div>
                     ) : (
                       <p className={entryStyles.emptyHint}>
-                        공사기간이 3개월 미만이거나 기간 정보가 없어 대상 분기를 계산하지 못했습니다.
+                        공사기간이 3개월 미만이거나 기간 정보가 없어 대상 분기를 계산하지
+                        못했습니다.
                       </p>
                     )}
                   </article>
@@ -263,10 +269,12 @@ export function SiteEntryHubScreen({
                     <div className={entryStyles.entryBody}>
                       <h2 className={entryStyles.entryTitle}>불량사업장 신고</h2>
                       <p className={entryStyles.entryDescription}>
-                        최근 기술지도 보고서의 지적사항을 바탕으로 이번 달 신고 초안을 작성합니다.
+                        최근 기술지도 보고서의 지적사항을 바탕으로 이번 달 신고 초안을
+                        작성합니다.
                       </p>
                       <p className={entryStyles.entryMeta}>
-                        기술지도 보고서를 먼저 확인한 뒤, 필요한 지적사항을 이어서 가져올 수 있습니다.
+                        기술지도 보고서를 먼저 확인한 뒤 필요한 지적사항을 이어서 가져올 수
+                        있습니다.
                       </p>
                     </div>
                     <div className={entryStyles.entryActions}>
@@ -284,7 +292,11 @@ export function SiteEntryHubScreen({
         </section>
       </div>
 
-      <WorkerMenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} />
+      <WorkerMenuDrawer
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        currentSiteKey={currentSite.id}
+      />
     </main>
   );
 }

@@ -4,19 +4,15 @@ import {
   getSessionProgress,
   getSessionTitle,
 } from '@/constants/inspectionSession';
-import { CAUSATIVE_AGENT_SECTIONS } from '@/constants/siteOverview';
 import { createTimestamp } from '@/constants/inspectionSession/shared';
+import { CAUSATIVE_AGENT_SECTIONS } from '@/constants/siteOverview';
+import type { QuarterTarget, QuarterlyCounter, QuarterlySummaryReport } from '@/types/erpReports';
 import type { InspectionSession, InspectionSite } from '@/types/inspectionSession';
-import type {
-  QuarterTarget,
-  QuarterlyCounter,
-  QuarterlySummaryReport,
-} from '@/types/erpReports';
 import type { CausativeAgentKey } from '@/types/siteOverview';
 import {
+  QUARTERLY_SUMMARY_REPORT_KIND,
   buildQuarterlyReportKey,
   isDateWithinRange,
-  QUARTERLY_SUMMARY_REPORT_KIND,
 } from './shared';
 
 const CAUSATIVE_AGENT_LABELS = CAUSATIVE_AGENT_SECTIONS.flatMap((section) =>
@@ -26,9 +22,7 @@ const CAUSATIVE_AGENT_LABELS = CAUSATIVE_AGENT_SECTIONS.flatMap((section) =>
   return accumulator;
 }, {} as Record<CausativeAgentKey, string>);
 
-function hasMeaningfulFinding(
-  finding: InspectionSession['document7Findings'][number],
-) {
+function hasMeaningfulFinding(finding: InspectionSession['document7Findings'][number]) {
   return Boolean(
     finding.location ||
       finding.emphasis ||
@@ -69,7 +63,7 @@ function buildOverallComment(
   causativeStats: QuarterlyCounter[],
 ) {
   if (sessions.length === 0) {
-    return `${target.label}에는 아직 집계할 기술지도 보고서가 없습니다. 대상 보고서를 선택한 뒤 다시 계산하면 종합 의견과 통계가 자동으로 채워집니다.`;
+    return `${target.label}에는 아직 집계할 기술지도 보고서가 없습니다. 대상 보고서를 선택한 뒤 다시 계산하면 종합 총평과 통계가 자동으로 채워집니다.`;
   }
 
   const completedReports = sessions.filter(
@@ -80,9 +74,15 @@ function buildOverallComment(
 
   return [
     `${target.label}에는 총 ${sessions.length}건의 기술지도 보고서가 반영되었습니다.`,
-    `완료 처리된 보고서는 ${completedReports}건이며, 가장 자주 확인된 재해유형은 ${topAccident}입니다.`,
+    `완료 처리된 보고서는 ${completedReports}건이며 가장 자주 확인된 재해유형은 ${topAccident}입니다.`,
     `주요 기인물은 ${topCause}로 집계되어 해당 영역을 중심으로 후속 관리가 필요합니다.`,
   ].join(' ');
+}
+
+function createQuarterlySiteSnapshot(site: InspectionSite): QuarterlySummaryReport['siteSnapshot'] {
+  return {
+    ...site.adminSiteSnapshot,
+  };
 }
 
 export function getQuarterlySourceSessions(
@@ -97,6 +97,7 @@ export function getQuarterlySourceSessions(
 }
 
 function buildDerivedQuarterlyContent(
+  site: InspectionSite,
   siteSessions: InspectionSession[],
   target: QuarterTarget,
   selectedSessionIds: string[],
@@ -166,7 +167,9 @@ function buildDerivedQuarterlyContent(
   const causativeStats = takeTopCounters(causativeCounter);
 
   return {
+    siteSnapshot: createQuarterlySiteSnapshot(site),
     generatedFromSessionIds: selectedSessions.map((session) => session.id),
+    lastCalculatedAt: createTimestamp(),
     overallComment: buildOverallComment(
       target,
       selectedSessions,
@@ -183,11 +186,12 @@ function buildDerivedQuarterlyContent(
 
 export function syncQuarterlySummaryReportSources(
   report: QuarterlySummaryReport,
+  site: InspectionSite,
   siteSessions: InspectionSession[],
   target: QuarterTarget,
   selectedSessionIds: string[],
 ): QuarterlySummaryReport {
-  const derived = buildDerivedQuarterlyContent(siteSessions, target, selectedSessionIds);
+  const derived = buildDerivedQuarterlyContent(site, siteSessions, target, selectedSessionIds);
 
   return {
     ...report,
@@ -208,13 +212,28 @@ export function buildInitialQuarterlySummaryReport(
       ...existing,
       title: `${target.label} 종합보고서`,
       drafter: existing.drafter || drafter,
+      siteSnapshot:
+        existing.siteSnapshot && Object.values(existing.siteSnapshot).some(Boolean)
+          ? existing.siteSnapshot
+          : createQuarterlySiteSnapshot(site),
+      lastCalculatedAt: existing.lastCalculatedAt || existing.updatedAt || createTimestamp(),
       updatedAt: existing.updatedAt || createTimestamp(),
+      opsAssetId: existing.opsAssetId || '',
+      opsAssetTitle: existing.opsAssetTitle || '',
+      opsAssetDescription: existing.opsAssetDescription || '',
+      opsAssetPreviewUrl: existing.opsAssetPreviewUrl || '',
+      opsAssetFileUrl: existing.opsAssetFileUrl || '',
+      opsAssetFileName: existing.opsAssetFileName || '',
+      opsAssetType: existing.opsAssetType || '',
+      opsAssignedBy: existing.opsAssignedBy || '',
+      opsAssignedAt: existing.opsAssignedAt || '',
     };
   }
 
   const timestamp = createTimestamp();
   const quarterSessions = getQuarterlySourceSessions(siteSessions, target);
   const derived = buildDerivedQuarterlyContent(
+    site,
     siteSessions,
     target,
     quarterSessions.map((session) => session.id),
@@ -231,6 +250,15 @@ export function buildInitialQuarterlySummaryReport(
     status: 'draft',
     drafter,
     ...derived,
+    opsAssetId: '',
+    opsAssetTitle: '',
+    opsAssetDescription: '',
+    opsAssetPreviewUrl: '',
+    opsAssetFileUrl: '',
+    opsAssetFileName: '',
+    opsAssetType: '',
+    opsAssignedBy: '',
+    opsAssignedAt: '',
     createdAt: timestamp,
     updatedAt: timestamp,
   };

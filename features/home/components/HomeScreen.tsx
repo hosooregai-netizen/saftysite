@@ -36,7 +36,7 @@ export function HomeScreen() {
       <LoginPanel
         error={authError}
         onSubmit={login}
-        title="현장 허브 로그인"
+        title="현장 목록 로그인"
         description="로그인하면 배정된 현장을 선택해 기술지도 보고서, 분기 종합보고서, 불량사업장 신고를 이어서 진행할 수 있습니다."
       />
     );
@@ -72,7 +72,7 @@ export function HomeScreen() {
                   <header className={styles.hero}>
                     <div className={styles.heroBody}>
                       <div className={styles.heroMain}>
-                        <h1 className={styles.heroTitle}>현장 허브</h1>
+                        <h1 className={styles.heroTitle}>현장 목록</h1>
                       </div>
                     </div>
                   </header>
@@ -128,7 +128,7 @@ export function HomeScreen() {
                         getSiteHref={(summary) => buildSiteHubHref(summary.site.id)}
                         buildActionMenuItems={(summary) => [
                           {
-                            label: '현장 허브 열기',
+                            label: '현장 열기',
                             href: buildSiteHubHref(summary.site.id),
                           },
                           {

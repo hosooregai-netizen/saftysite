@@ -54,5 +54,5 @@ export function getWorkerSiteEntryDescription(intent: WorkerSitePickerIntent): s
 export function getWorkerSiteEntryLabel(intent: WorkerSiteEntryIntent): string {
   if (intent === 'quarterly') return '분기 종합보고서';
   if (intent === 'bad-workplace') return '불량사업장 신고';
-  return '현장 허브';
+  return '현장 목록';
 }
