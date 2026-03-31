@@ -62,6 +62,7 @@ function normalizeQuarterlyImplementationRows(
         typeof record.improvedCount === 'number' && Number.isFinite(record.improvedCount)
           ? record.improvedCount
           : 0,
+      note: normalizeText(record.note),
     };
   });
 }

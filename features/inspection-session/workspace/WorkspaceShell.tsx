@@ -9,7 +9,6 @@ import WorkerShellBody from '@/components/worker/WorkerShellBody';
 import { WorkerMenuDrawer, WorkerMenuPanel } from '@/components/worker/WorkerMenu';
 import type { InspectionSectionKey, InspectionSession } from '@/types/inspectionSession';
 import styles from '@/components/session/InspectionSessionWorkspace.module.css';
-import { WorkspaceBottomBar } from '@/features/inspection-session/workspace/components/WorkspaceBottomBar';
 import { WorkspaceHeader } from '@/features/inspection-session/workspace/components/WorkspaceHeader';
 import { WorkspaceMetaModal } from '@/features/inspection-session/workspace/components/WorkspaceMetaModal';
 import { WorkspaceToolbar } from '@/features/inspection-session/workspace/components/WorkspaceToolbar';
@@ -21,12 +20,7 @@ interface WorkspaceShellProps {
   currentUserName?: string;
   documentError: string | null;
   isAdminView: boolean;
-  isGeneratingDocument: boolean;
-  isGeneratingHwpx: boolean;
-  isGeneratingPdf: boolean;
   moveSection: (direction: -1 | 1) => void;
-  onGenerateHwpxDocument: () => void;
-  onGeneratePdfDocument: () => void;
   onLogout: () => void;
   onMetaChange: (field: keyof InspectionSession['meta'], value: string) => void;
   onSectionSelect: (key: InspectionSectionKey) => void;
@@ -45,12 +39,7 @@ export function WorkspaceShell({
   currentUserName,
   documentError,
   isAdminView,
-  isGeneratingDocument,
-  isGeneratingHwpx,
-  isGeneratingPdf,
   moveSection,
-  onGenerateHwpxDocument,
-  onGeneratePdfDocument,
   onLogout,
   onMetaChange,
   onSectionSelect,
@@ -91,39 +80,32 @@ export function WorkspaceShell({
             <div className={styles.workspacePanel}>
               <WorkspaceHeader backHref={backHref} session={session} />
 
-              <div className={styles.workspace}>
-                <WorkspaceToolbar
-                  currentSection={currentSection}
-                  errors={[uploadError, syncError, documentError]}
-                  onOpenMeta={() => setMetaModalOpen(true)}
-                  onSectionSelect={onSectionSelect}
-                  progress={progress}
-                />
+              <div className={styles.workspaceContentFrame}>
+                <div className={styles.workspace}>
+                  <WorkspaceToolbar
+                    canMoveNext={canMoveNext}
+                    canMovePrev={canMovePrev}
+                    currentSection={currentSection}
+                    errors={[uploadError, syncError, documentError]}
+                    moveSection={moveSection}
+                    onOpenMeta={() => setMetaModalOpen(true)}
+                    onSectionSelect={onSectionSelect}
+                    progress={progress}
+                  />
 
-                <section className={styles.editor}>
-                  <div className={styles.editorCard}>
-                    <div className={styles.editorHeader}>
-                      <h2 className={styles.editorTitle}>{currentSectionInfo.label}</h2>
-                      {sectionToolbar ? (
-                        <div className={styles.editorHeaderToolbar}>{sectionToolbar}</div>
-                      ) : null}
+                  <section className={styles.editor}>
+                    <div className={styles.editorCard}>
+                      <div className={styles.editorHeader}>
+                        <h2 className={styles.editorTitle}>{currentSectionInfo.label}</h2>
+                        {sectionToolbar ? (
+                          <div className={styles.editorHeaderToolbar}>{sectionToolbar}</div>
+                        ) : null}
+                      </div>
+                      <div className={styles.editorBody}>{renderSection}</div>
                     </div>
-                    <div className={styles.editorBody}>{renderSection}</div>
-                  </div>
-                </section>
+                  </section>
+                </div>
               </div>
-
-              <WorkspaceBottomBar
-                canMoveNext={canMoveNext}
-                canMovePrev={canMovePrev}
-                isGeneratingDocument={isGeneratingDocument}
-                isGeneratingHwpx={isGeneratingHwpx}
-                isGeneratingPdf={isGeneratingPdf}
-                isLastSection={!canMoveNext}
-                moveSection={moveSection}
-                onGenerateHwpxDocument={onGenerateHwpxDocument}
-                onGeneratePdfDocument={onGeneratePdfDocument}
-              />
             </div>
           </WorkerShellBody>
         </section>

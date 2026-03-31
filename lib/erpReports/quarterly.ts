@@ -4,23 +4,15 @@ import {
   getSessionProgress,
   getSessionTitle,
 } from '@/constants/inspectionSession';
+import { CAUSATIVE_AGENT_LABELS } from '@/constants/inspectionSession/doc7Catalog';
 import { createTimestamp } from '@/constants/inspectionSession/shared';
-import { CAUSATIVE_AGENT_SECTIONS } from '@/constants/siteOverview';
 import type { QuarterTarget, QuarterlyCounter, QuarterlySummaryReport } from '@/types/erpReports';
 import type { InspectionSession, InspectionSite } from '@/types/inspectionSession';
-import type { CausativeAgentKey } from '@/types/siteOverview';
 import {
   QUARTERLY_SUMMARY_REPORT_KIND,
   buildQuarterlyReportKey,
   isDateWithinRange,
 } from './shared';
-
-const CAUSATIVE_AGENT_LABELS = CAUSATIVE_AGENT_SECTIONS.flatMap((section) =>
-  section.rows.flatMap((row) => [row.left, row.right]),
-).reduce<Record<CausativeAgentKey, string>>((accumulator, item) => {
-  accumulator[item.key] = item.label;
-  return accumulator;
-}, {} as Record<CausativeAgentKey, string>);
 
 function hasMeaningfulFinding(finding: InspectionSession['document7Findings'][number]) {
   return Boolean(
@@ -41,10 +33,9 @@ function normalizeMeasureText(value: string) {
     .join(' ');
 }
 
-function takeTopCounters(counterMap: Map<string, number>, limit = 6): QuarterlyCounter[] {
+function buildQuarterlyCounters(counterMap: Map<string, number>): QuarterlyCounter[] {
   return [...counterMap.entries()]
     .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0], 'ko'))
-    .slice(0, limit)
     .map(([label, count]) => ({ label, count }));
 }
 
@@ -143,6 +134,7 @@ function buildDerivedQuarterlyContent(
     findingCount: session.document7Findings.filter(hasMeaningfulFinding).length,
     improvedCount: session.document4FollowUps.filter((item) => item.result === 'implemented')
       .length,
+    note: '',
   }));
 
   const latestSelectedSession =
@@ -164,8 +156,8 @@ function buildDerivedQuarterlyContent(
       }),
     );
 
-  const accidentStats = takeTopCounters(accidentCounter);
-  const causativeStats = takeTopCounters(causativeCounter);
+  const accidentStats = buildQuarterlyCounters(accidentCounter);
+  const causativeStats = buildQuarterlyCounters(causativeCounter);
 
   return {
     siteSnapshot: createQuarterlySiteSnapshot(site),

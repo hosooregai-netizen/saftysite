@@ -7,6 +7,7 @@ import {
   RISK_ASSESSMENT_QUESTION_PROMPTS,
   TBM_QUESTION_PROMPTS,
 } from '@/constants/inspectionSession/catalog';
+import { normalizeDoc7CausativeAgentKey } from '@/constants/inspectionSession/doc7Catalog';
 import {
   createActivityRecord,
   createCurrentHazardFinding,
@@ -83,7 +84,9 @@ export function normalizeHazardFinding(raw: unknown, fallbackInspector: string) 
     severity,
     riskLevel: normalizeRiskLevel(likelihood, severity, normalizeText(source.riskLevel || source.riskAssessmentResult)),
     accidentType: normalizeText(source.accidentType) || normalizeText(source.location),
-    causativeAgentKey: (normalizeText(source.causativeAgentKey) as CausativeAgentKey) || '',
+    causativeAgentKey: normalizeDoc7CausativeAgentKey(
+      (normalizeText(source.causativeAgentKey) as CausativeAgentKey) || '',
+    ),
     inspector: normalizeText(source.inspector) || fallbackInspector,
     emphasis: normalizeText(source.emphasis) || normalizeText(source.hazardFactors),
     improvementPlan: normalizeText(source.improvementPlan) || normalizeText(source.improvementItems),

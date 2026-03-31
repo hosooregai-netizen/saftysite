@@ -1,4 +1,4 @@
-import { CAUSATIVE_AGENT_LABELS } from '@/components/session/workspace/constants';
+import { CAUSATIVE_AGENT_LABELS } from '@/constants/inspectionSession/doc7Catalog';
 import type { ChartEntry } from '@/components/session/workspace/utils';
 import type { CurrentHazardFinding } from '@/types/inspectionSession';
 

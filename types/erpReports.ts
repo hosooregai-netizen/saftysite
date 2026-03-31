@@ -32,6 +32,7 @@ export interface QuarterlyImplementationRow {
   progressRate: string;
   findingCount: number;
   improvedCount: number;
+  note: string;
 }
 
 export interface QuarterlySummaryReport {

@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { CAUSATIVE_AGENT_SECTIONS } from '@/constants/siteOverview';
+import { CAUSATIVE_AGENT_LABELS } from '@/constants/inspectionSession/doc7Catalog';
 import { sanitizeWordFileName } from '@/server/documents/sharedDocx';
 import type { ChecklistRating, InspectionSession } from '@/types/inspectionSession';
 
@@ -15,15 +15,6 @@ const ratingLabels: Record<ChecklistRating, string> = {
   poor: '미흡',
   '': '-',
 };
-
-const causativeAgentLabels = Object.fromEntries(
-  CAUSATIVE_AGENT_SECTIONS.flatMap((section) =>
-    section.rows.flatMap((row) => [
-      [row.left.key, row.left.label],
-      [row.right.key, row.right.label],
-    ])
-  )
-);
 
 export function escapeHtml(value: string | null | undefined): string {
   return (value ?? '')
@@ -106,7 +97,7 @@ export function checklistLabel(value: ChecklistRating): string {
 }
 
 export function causativeLabel(key: string): string {
-  const label = (causativeAgentLabels[key] as string | undefined) ?? key;
+  const label = (CAUSATIVE_AGENT_LABELS[key as keyof typeof CAUSATIVE_AGENT_LABELS] as string | undefined) ?? key;
   return label || '-';
 }
 

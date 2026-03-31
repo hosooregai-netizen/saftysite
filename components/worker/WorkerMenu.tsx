@@ -6,6 +6,7 @@ import { useWorkerShellSidebarOptional } from '@/components/worker/WorkerShellSi
 import {
   buildSiteBadWorkplaceHref,
   buildSiteHubHref,
+  buildSiteQuarterlyListHref,
   buildSiteReportsHref,
 } from '@/features/home/lib/siteEntry';
 import { getCurrentReportMonth } from '@/lib/erpReports/shared';
@@ -145,7 +146,7 @@ export function WorkerMenuPanel({
         {
           label: '분기 종합 보고서',
           description: '현장 기준 분기 보고서 작성',
-          href: buildSiteHubHref(currentSiteKey, 'quarterly'),
+          href: buildSiteQuarterlyListHref(currentSiteKey),
           active: isQuarterlyPath(pathname, currentSiteKey, selectedEntry),
         },
         {

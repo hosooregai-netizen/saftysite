@@ -140,6 +140,13 @@
 .editorShell {
   display: grid;
   gap: 18px;
+  width: 100%;
+  max-width: 1320px;
+  margin-inline: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: 0;
 }
 
 .toolbar {
@@ -204,6 +211,122 @@
   grid-column: 1 / -1;
 }
 
+.snapshotSectionGrid {
+  display: grid;
+  gap: 16px;
+}
+
+.snapshotPanel {
+  border: 1px solid #b9c6d8;
+  background: var(--erp-white);
+  overflow: hidden;
+}
+
+.snapshotPanelTitle {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 14px;
+  border-bottom: 1px solid #d1dbe7;
+  background: #f8fbff;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--erp-dark);
+}
+
+.snapshotTableWrap {
+  overflow-x: auto;
+}
+
+.snapshotTable {
+  width: 100%;
+  min-width: 520px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.snapshotLabelCol {
+  width: 102px;
+}
+
+.snapshotValueCol {
+  width: calc((100% - 204px) / 2);
+}
+
+.snapshotTable th,
+.snapshotTable td {
+  border-right: 1px solid #d1dbe7;
+  border-bottom: 1px solid #d1dbe7;
+  padding: 0;
+  vertical-align: middle;
+}
+
+.snapshotTable tbody tr th:last-child,
+.snapshotTable tbody tr td:last-child {
+  border-right: 0;
+}
+
+.snapshotTable tbody tr:last-child th,
+.snapshotTable tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.snapshotLabelCell {
+  padding: 10px 12px;
+  background: #f7fafc;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.5;
+  color: var(--erp-dark);
+  text-align: center;
+  word-break: keep-all;
+  border-right-color: #d6e0eb;
+}
+
+.snapshotValueCell {
+  padding: 0;
+  background: var(--erp-white);
+}
+
+.snapshotControl,
+.snapshotTextarea {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 3px 10px;
+  color: var(--erp-dark);
+}
+
+.snapshotControl {
+  min-height: 38px;
+}
+
+.snapshotTextarea {
+  min-height: 38px;
+  line-height: 1.5;
+  resize: vertical;
+  overflow-y: hidden;
+}
+
+.snapshotControl:focus,
+.snapshotTextarea:focus,
+.snapshotControl:focus-visible,
+.snapshotTextarea:focus-visible {
+  border: 0;
+  outline: none;
+  box-shadow: none;
+  background: #f4f9ff;
+}
+
+.snapshotDualInput {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
 .tableWrap {
   overflow-x: auto;
   border: 1px solid var(--erp-line);
@@ -239,6 +362,188 @@
   border-bottom: 0;
 }
 
+.implementationTableWrap {
+  overflow-x: auto;
+  border: 1px solid #b9c6d8;
+  background: var(--erp-white);
+}
+
+.implementationTable {
+  width: 100%;
+  min-width: 980px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.implementationColDate {
+  width: 11%;
+}
+
+.implementationColTitle {
+  width: 21%;
+}
+
+.implementationColCompact {
+  width: 8%;
+}
+
+.implementationColPerson {
+  width: 10%;
+}
+
+.implementationColNote {
+  width: 19%;
+}
+
+.implementationColAction {
+  width: 7%;
+}
+
+.futurePlanColHazard {
+  width: 40%;
+}
+
+.futurePlanColMeasure {
+  width: 53%;
+}
+
+.futurePlanColAction {
+  width: 7%;
+}
+
+.implementationHeaderCell,
+.implementationValueCell,
+.implementationActionCell,
+.implementationEmptyCell {
+  border-right: 1px solid #d1dbe7;
+  border-bottom: 1px solid #d1dbe7;
+}
+
+.implementationHeaderCell {
+  padding: 10px 12px;
+  background: #f7fafc;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.5;
+  color: var(--erp-dark);
+  text-align: center;
+  word-break: keep-all;
+}
+
+.implementationHeaderActionCell {
+  padding: 4px;
+}
+
+.implementationValueCell {
+  padding: 0;
+  background: var(--erp-white);
+}
+
+.implementationControl {
+  width: 100%;
+  min-width: 0;
+  min-height: 38px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 3px 10px;
+  color: var(--erp-dark);
+}
+
+.implementationControl:focus,
+.implementationControl:focus-visible {
+  border: 0;
+  outline: none;
+  box-shadow: none;
+  background: #f4f9ff;
+}
+
+.futurePlanControl {
+  width: 100%;
+  min-width: 0;
+  min-height: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 3px 10px;
+  line-height: 1.5;
+  color: var(--erp-dark);
+  resize: none;
+  overflow-y: auto;
+}
+
+.futurePlanControl:focus,
+.futurePlanControl:focus-visible {
+  border: 0;
+  outline: none;
+  box-shadow: none;
+  background: #f4f9ff;
+}
+
+.implementationActionCell {
+  padding: 4px;
+  text-align: center;
+  background: var(--erp-white);
+}
+
+.implementationActionButton {
+  width: 100%;
+  min-height: 32px;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--erp-danger-text) !important;
+}
+
+.implementationAddButton {
+  width: 100%;
+  min-height: 32px;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--erp-mid) !important;
+}
+
+.implementationActionButton:hover,
+.implementationActionButton:focus-visible {
+  color: color-mix(in srgb, var(--erp-danger-text) 84%, #000) !important;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.implementationAddButton:hover,
+.implementationAddButton:focus-visible {
+  color: var(--erp-navy) !important;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.implementationActionButton:focus-visible,
+.implementationAddButton:focus-visible {
+  outline: none;
+}
+
+.implementationEmptyCell {
+  padding: 14px 12px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--erp-text-muted);
+  text-align: center;
+  background: var(--erp-white);
+}
+
+.implementationTable th:last-child,
+.implementationTable td:last-child {
+  border-right: 0;
+}
+
+.implementationTable tbody tr:last-child td {
+  border-bottom: 0;
+}
+
 .tagList {
   display: flex;
   flex-wrap: wrap;
@@ -264,7 +569,26 @@
 
 .inlineEditorRow {
   display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+}
+
+.inlineEditorActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 8px;
+}
+
+@media (max-width: 767px) {
+  .inlineEditorRow {
+    grid-template-columns: 1fr;
+  }
+
+  .inlineEditorActions {
+    justify-content: flex-start;
+  }
 }
 
 .sourceList {
@@ -432,6 +756,41 @@
 
   .opsAssetGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+}
+
+@media (max-width: 899px) {
+  .summaryGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .snapshotPanelTitle {
+    font-size: 14px;
+    min-height: 40px;
+    padding: 0 12px;
+  }
+
+  .snapshotLabelCell {
+    font-size: 12px;
+    padding: 9px 8px;
+  }
+
+  .snapshotValueCell {
+    padding: 4px 6px;
+  }
+
+  .snapshotDualInput {
+    gap: 6px;
+  }
+
+  .implementationHeaderCell {
+    padding: 9px 8px;
+    font-size: 11px;
+  }
+
+  .implementationActionCell {
+    padding: 4px;
   }
 }
 

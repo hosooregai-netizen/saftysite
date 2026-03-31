@@ -1,9 +1,9 @@
+import { RISK_TRI_LEVEL_OPTIONS } from '@/components/session/workspace/constants';
 import {
   ACCIDENT_TYPE_OPTIONS,
   CAUSATIVE_AGENT_LABELS,
   CAUSATIVE_AGENT_OPTIONS,
-  RISK_TRI_LEVEL_OPTIONS,
-} from '@/components/session/workspace/constants';
+} from '@/constants/inspectionSession/doc7Catalog';
 import styles from '@/components/session/InspectionSessionWorkspace.module.css';
 import type { CurrentHazardFinding } from '@/types/inspectionSession';
 import type { CausativeAgentKey } from '@/types/siteOverview';

@@ -168,7 +168,7 @@ export async function fetchInspectionWordDocument(
   return fetchWordDocument('/documents/inspection/word', body, '워드 다운로드 실패');
 }
 
-export async function fetchQuarterlyWordDocument(
+export async function fetchQuarterlyHwpxDocument(
   report: QuarterlySummaryReport,
   site: InspectionSite
 ): Promise<{ blob: Blob; filename: string }> {
@@ -179,6 +179,8 @@ export async function fetchQuarterlyWordDocument(
     '분기 보고서 다운로드 실패'
   );
 }
+
+export const fetchQuarterlyWordDocument = fetchQuarterlyHwpxDocument;
 
 export async function fetchBadWorkplaceWordDocument(
   report: BadWorkplaceReport,

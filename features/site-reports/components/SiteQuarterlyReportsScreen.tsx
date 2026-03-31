@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useDeferredValue, useMemo, useState } from 'react';
 import LoginPanel from '@/components/auth/LoginPanel';
 import { AdminMenuDrawer, AdminMenuPanel } from '@/components/admin/AdminMenu';
+import ActionMenu from '@/components/ui/ActionMenu';
 import WorkerAppHeader from '@/components/worker/WorkerAppHeader';
 import WorkerMenuSidebar from '@/components/worker/WorkerMenuSidebar';
 import WorkerShellBody from '@/components/worker/WorkerShellBody';
@@ -19,11 +20,22 @@ import {
 } from '@/lib/erpReports/shared';
 import { buildSiteHubHref, buildSiteQuarterlyHref } from '@/features/home/lib/siteEntry';
 import { SiteReportsSummaryBar } from './SiteReportsSummaryBar';
-import shellStyles from './SiteReportsScreen.module.css';
-import operationalStyles from '@/components/site/OperationalReports.module.css';
+import styles from './SiteReportsScreen.module.css';
 
 interface SiteQuarterlyReportsScreenProps {
   siteKey: string;
+}
+
+type QuarterlyListSortMode = 'recent' | 'name' | 'status';
+
+interface QuarterlyListRow {
+  href: string;
+  quarterKey: string;
+  reportTitle: string;
+  status: string;
+  selectedCount: number | null;
+  calculatedAt: string;
+  periodLabel: string;
 }
 
 function formatDateTimeLabel(value: string | null | undefined) {
@@ -46,8 +58,17 @@ function getStatusLabel(status?: 'draft' | 'completed') {
   return '미작성';
 }
 
+function getStatusOrder(status: string) {
+  if (status === '완료') return 0;
+  if (status === '작성 중') return 1;
+  return 2;
+}
+
 export function SiteQuarterlyReportsScreen({ siteKey }: SiteQuarterlyReportsScreenProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [sortMode, setSortMode] = useState<QuarterlyListSortMode>('recent');
+  const deferredQuery = useDeferredValue(query);
   const decodedSiteKey = decodeURIComponent(siteKey);
   const { authError, currentUser, isAuthenticated, isReady, login, logout, sites } =
     useInspectionSessions();
@@ -92,23 +113,62 @@ export function SiteQuarterlyReportsScreen({ siteKey }: SiteQuarterlyReportsScre
       byKey.set(currentQuarterTarget.quarterKey, currentQuarterTarget);
     }
 
-    return [...byKey.values()].sort((left, right) => right.quarterKey.localeCompare(left.quarterKey));
+    return [...byKey.values()];
   }, [currentQuarterTarget, quarterTargets, quarterlyReports]);
 
-  const quarterlyByKey = useMemo(
-    () => new Map(quarterlyReports.map((report) => [report.quarterKey, report])),
-    [quarterlyReports],
-  );
+  const rows = useMemo<QuarterlyListRow[]>(() => {
+    if (!currentSite) return [];
 
-  const latestUpdatedAt = useMemo(() => {
-    if (quarterlyReports.length === 0) return '';
-    return [...quarterlyReports]
-      .sort(
-        (left, right) =>
-          new Date(right.updatedAt || right.lastCalculatedAt).getTime() -
-          new Date(left.updatedAt || left.lastCalculatedAt).getTime(),
-      )[0]?.updatedAt;
-  }, [quarterlyReports]);
+    const reportByKey = new Map(quarterlyReports.map((report) => [report.quarterKey, report]));
+
+    return availableTargets.map((target) => {
+      const report = reportByKey.get(target.quarterKey);
+      return {
+        href: buildSiteQuarterlyHref(currentSite.id, target.quarterKey),
+        quarterKey: target.quarterKey,
+        reportTitle: report?.title || `${formatQuarterLabel(target)} 종합보고서`,
+        status: getStatusLabel(report?.status),
+        selectedCount: report ? report.generatedFromSessionIds.length : null,
+        calculatedAt: report?.lastCalculatedAt || report?.updatedAt || '',
+        periodLabel: `${target.startDate} ~ ${target.endDate}`,
+      };
+    });
+  }, [availableTargets, currentSite, quarterlyReports]);
+
+  const filteredRows = useMemo(() => {
+    const normalizedQuery = deferredQuery.trim().toLowerCase();
+    const matchingRows = !normalizedQuery
+      ? rows
+      : rows.filter((row) =>
+          [row.reportTitle, row.status, row.periodLabel, row.quarterKey]
+            .join(' ')
+            .toLowerCase()
+            .includes(normalizedQuery),
+        );
+
+    return [...matchingRows].sort((left, right) => {
+      if (sortMode === 'name') {
+        return left.reportTitle.localeCompare(right.reportTitle, 'ko');
+      }
+
+      if (sortMode === 'status') {
+        return (
+          getStatusOrder(left.status) - getStatusOrder(right.status) ||
+          right.quarterKey.localeCompare(left.quarterKey)
+        );
+      }
+
+      const leftTime = left.calculatedAt ? new Date(left.calculatedAt).getTime() : 0;
+      const rightTime = right.calculatedAt ? new Date(right.calculatedAt).getTime() : 0;
+      return rightTime - leftTime || right.quarterKey.localeCompare(left.quarterKey);
+    });
+  }, [deferredQuery, rows, sortMode]);
+
+  const currentQuarterHref = useMemo(() => {
+    if (!currentSite) return null;
+    const fallbackTarget = currentQuarterTarget || availableTargets[0];
+    return fallbackTarget ? buildSiteQuarterlyHref(currentSite.id, fallbackTarget.quarterKey) : null;
+  }, [availableTargets, currentQuarterTarget, currentSite]);
 
   const backHref = !isAdminView
     ? currentSite
@@ -132,8 +192,10 @@ export function SiteQuarterlyReportsScreen({ siteKey }: SiteQuarterlyReportsScre
     return (
       <main className="app-page">
         <div className="app-container">
-          <section className={operationalStyles.sectionCard}>
-            분기 종합보고서 목록을 불러오는 중입니다.
+          <section className={styles.panel}>
+            <div className={styles.emptyState}>
+              <p className={styles.emptyTitle}>분기 종합보고서 목록을 불러오는 중입니다.</p>
+            </div>
           </section>
         </div>
       </main>
@@ -155,8 +217,10 @@ export function SiteQuarterlyReportsScreen({ siteKey }: SiteQuarterlyReportsScre
     return (
       <main className="app-page">
         <div className="app-container">
-          <section className={operationalStyles.sectionCard}>
-            <div className={operationalStyles.emptyState}>현장 정보를 찾을 수 없습니다.</div>
+          <section className={styles.panel}>
+            <div className={styles.emptyState}>
+              <p className={styles.emptyTitle}>현장 정보를 찾을 수 없습니다.</p>
+            </div>
           </section>
         </div>
       </main>
@@ -166,7 +230,7 @@ export function SiteQuarterlyReportsScreen({ siteKey }: SiteQuarterlyReportsScre
   return (
     <main className="app-page">
       <div className="app-container">
-        <section className={`app-shell ${shellStyles.shell}`}>
+        <section className={`app-shell ${styles.shell}`}>
           <WorkerAppHeader
             currentUserName={currentUser?.name}
             onLogout={logout}
@@ -182,19 +246,19 @@ export function SiteQuarterlyReportsScreen({ siteKey }: SiteQuarterlyReportsScre
               )}
             </WorkerMenuSidebar>
 
-            <div className={shellStyles.contentColumn}>
-              <header className={shellStyles.hero}>
-                <div className={shellStyles.heroBody}>
-                  <Link href={backHref} className={shellStyles.heroBackLink}>
+            <div className={styles.contentColumn}>
+              <header className={styles.hero}>
+                <div className={styles.heroBody}>
+                  <Link href={backHref} className={styles.heroBackLink}>
                     {'<'} {backLabel}
                   </Link>
-                  <div className={shellStyles.heroMain}>
-                    <h1 className={shellStyles.heroTitle}>분기 종합보고서 목록</h1>
+                  <div className={styles.heroMain}>
+                    <h1 className={styles.heroTitle}>분기 종합보고서 목록</h1>
                   </div>
                 </div>
               </header>
 
-              <div className={shellStyles.pageGrid}>
+              <div className={styles.pageGrid}>
                 <SiteReportsSummaryBar
                   addressDisplay={addressDisplay}
                   amountDisplay={amountDisplay}
@@ -202,116 +266,112 @@ export function SiteQuarterlyReportsScreen({ siteKey }: SiteQuarterlyReportsScre
                   siteNameDisplay={siteNameDisplay}
                 />
 
-                <section className={shellStyles.panel}>
-                  <div className={shellStyles.tableTools}>
-                    <div>
-                      <strong className={operationalStyles.reportCardTitle}>분기 종합보고서</strong>
-                      <p className={operationalStyles.reportCardDescription}>
-                        기술지도 보고서 목록처럼 분기별 보고서 상태와 최근 계산 이력을 한 번에 확인할 수 있습니다.
+                <section className={styles.panel}>
+                  <div className={styles.tableTools}>
+                    <input
+                      className={`app-input ${styles.tableSearch}`}
+                      placeholder="보고서명, 상태, 기간 검색"
+                      value={query}
+                      onChange={(event) => setQuery(event.target.value)}
+                      aria-label="분기 종합보고서 검색"
+                    />
+                    <select
+                      className={`app-select ${styles.tableSort}`}
+                      value={sortMode}
+                      onChange={(event) => setSortMode(event.target.value as QuarterlyListSortMode)}
+                      aria-label="분기 종합보고서 정렬"
+                    >
+                      <option value="recent">최근 재계산순</option>
+                      <option value="name">보고서명순</option>
+                      <option value="status">상태순</option>
+                    </select>
+                    {currentQuarterHref ? (
+                      <Link
+                        href={currentQuarterHref}
+                        className={`app-button app-button-primary ${styles.tableCreateButton}`}
+                      >
+                        보고서 추가
+                      </Link>
+                    ) : null}
+                  </div>
+
+                  {error ? (
+                    <div className={styles.tableTools}>
+                      <span>{error}</span>
+                    </div>
+                  ) : null}
+
+                  {(isLoading || (!error && rows.length === 0)) && rows.length === 0 ? (
+                    <div className={styles.emptyState}>
+                      <p className={styles.emptyTitle}>
+                        {isLoading
+                          ? '분기 종합보고서 목록을 불러오는 중입니다.'
+                          : '아직 작성된 분기 종합보고서가 없습니다.'}
                       </p>
                     </div>
-                  </div>
-
-                  <div className={operationalStyles.summaryGrid} style={{ padding: '16px' }}>
-                    <article className={operationalStyles.summaryCard}>
-                      <span className={operationalStyles.summaryLabel}>대상 분기</span>
-                      <strong className={operationalStyles.summaryValue}>{availableTargets.length}개</strong>
-                    </article>
-                    <article className={operationalStyles.summaryCard}>
-                      <span className={operationalStyles.summaryLabel}>저장된 보고서</span>
-                      <strong className={operationalStyles.summaryValue}>{quarterlyReports.length}건</strong>
-                    </article>
-                    <article className={operationalStyles.summaryCard}>
-                      <span className={operationalStyles.summaryLabel}>현재 분기</span>
-                      <strong className={operationalStyles.summaryValue}>
-                        {currentQuarterTarget ? formatQuarterLabel(currentQuarterTarget) : '-'}
-                      </strong>
-                    </article>
-                    <article className={operationalStyles.summaryCard}>
-                      <span className={operationalStyles.summaryLabel}>마지막 수정</span>
-                      <strong className={operationalStyles.summaryValue}>
-                        {formatDateTimeLabel(latestUpdatedAt)}
-                      </strong>
-                    </article>
-                  </div>
-
-                  {error ? <div className={operationalStyles.bannerError}>{error}</div> : null}
-
-                  {availableTargets.length > 0 ? (
-                    <div className={shellStyles.listViewport}>
-                      <div className={shellStyles.listTrack}>
-                        <div className={shellStyles.listHead} aria-hidden="true">
+                  ) : filteredRows.length === 0 ? (
+                    <div className={styles.emptyState}>
+                      <p className={styles.emptyTitle}>검색 조건에 맞는 분기 보고서가 없습니다.</p>
+                      <p className={styles.emptySearchHint}>검색어나 정렬을 바꿔 다시 확인해 보세요.</p>
+                    </div>
+                  ) : (
+                    <div className={styles.listViewport}>
+                      <div className={styles.listTrack}>
+                        <div className={styles.listHead} aria-hidden="true">
                           <span>보고서명</span>
                           <span>상태</span>
                           <span>선택 보고서</span>
-                          <span className={shellStyles.desktopOnly}>마지막 재계산</span>
-                          <span className={shellStyles.desktopOnly}>대상 기간</span>
-                          <span>열기</span>
+                          <span className={styles.desktopOnly}>마지막 재계산</span>
+                          <span className={styles.desktopOnly}>대상 기간</span>
+                          <span>메뉴</span>
                         </div>
 
-                        <div className={shellStyles.reportList}>
-                          {availableTargets.map((target) => {
-                            const report = quarterlyByKey.get(target.quarterKey);
-                            const href = buildSiteQuarterlyHref(currentSite.id, target.quarterKey);
-                            const title = report?.title || `${target.label} 종합보고서`;
+                        <div className={styles.reportList}>
+                          {filteredRows.map((row) => (
+                            <article key={row.quarterKey} className={styles.reportRow}>
+                              <div className={`${styles.primaryCell} ${styles.titleCell}`}>
+                                <Link href={row.href} className={styles.reportLink}>
+                                  {row.reportTitle}
+                                </Link>
+                              </div>
 
-                            return (
-                              <article key={target.quarterKey} className={shellStyles.reportRow}>
-                                <div className={`${shellStyles.primaryCell} ${shellStyles.titleCell}`}>
-                                  <Link href={href} className={shellStyles.reportLink}>
-                                    {title}
-                                  </Link>
-                                </div>
+                              <div className={styles.dataCell}>
+                                <span className={styles.dataValue}>{row.status}</span>
+                              </div>
 
-                                <div className={shellStyles.dataCell}>
-                                  <span className={shellStyles.dataValue}>
-                                    {getStatusLabel(report?.status)}
-                                  </span>
-                                </div>
+                              <div className={styles.dataCell}>
+                                <span className={styles.dataValue}>
+                                  {row.selectedCount === null ? '-' : `${row.selectedCount}건`}
+                                </span>
+                              </div>
 
-                                <div className={shellStyles.dataCell}>
-                                  <span className={shellStyles.dataValue}>
-                                    {report ? `${report.generatedFromSessionIds.length}건` : '-'}
-                                  </span>
-                                </div>
+                              <div className={`${styles.dataCell} ${styles.desktopOnly}`}>
+                                <span className={styles.dataValue}>
+                                  {formatDateTimeLabel(row.calculatedAt)}
+                                </span>
+                              </div>
 
-                                <div className={`${shellStyles.dataCell} ${shellStyles.desktopOnly}`}>
-                                  <span className={shellStyles.dataValue}>
-                                    {formatDateTimeLabel(report?.lastCalculatedAt || report?.updatedAt)}
-                                  </span>
-                                </div>
+                              <div className={`${styles.dataCell} ${styles.desktopOnly}`}>
+                                <span className={styles.dataValue}>{row.periodLabel}</span>
+                              </div>
 
-                                <div className={`${shellStyles.dataCell} ${shellStyles.desktopOnly}`}>
-                                  <span className={shellStyles.dataValue}>
-                                    {target.startDate} ~ {target.endDate}
-                                  </span>
-                                </div>
-
-                                <div className={shellStyles.actionCell}>
-                                  <Link href={href} className="app-button app-button-secondary">
-                                    {report ? '열기' : '작성'}
-                                  </Link>
-                                </div>
-                              </article>
-                            );
-                          })}
+                              <div className={`${styles.actionCell} ${styles.actionsCell}`}>
+                                <ActionMenu
+                                  label={`${row.reportTitle} 작업 메뉴 열기`}
+                                  items={[
+                                    {
+                                      label: row.selectedCount === null ? '작성 시작' : '열기',
+                                      href: row.href,
+                                    },
+                                  ]}
+                                />
+                              </div>
+                            </article>
+                          ))}
                         </div>
                       </div>
                     </div>
-                  ) : (
-                    <div className={shellStyles.emptyState}>
-                      <p className={shellStyles.emptyTitle}>표시할 분기 정보가 없습니다.</p>
-                      <p className={shellStyles.emptySearchHint}>
-                        공사기간 정보가 없거나 아직 분기 대상이 계산되지 않았습니다.
-                      </p>
-                    </div>
                   )}
-
-                  {isLoading ? (
-                    <div className={operationalStyles.bannerInfo} style={{ margin: '0 16px 16px' }}>
-                      분기 보고서 목록을 새로 불러오고 있습니다.
-                    </div>
-                  ) : null}
                 </section>
               </div>
             </div>

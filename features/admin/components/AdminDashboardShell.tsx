@@ -36,6 +36,7 @@ export function AdminDashboardShell({
 }: AdminDashboardShellProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const hasHeroDescription = Boolean(activeSectionDescription);
+  const shouldCenterContent = activeSection !== 'overview';
 
   return (
     <main className="app-page">
@@ -45,7 +46,7 @@ export function AdminDashboardShell({
             currentUserName={currentUserName}
             onLogout={onLogout}
             onOpenMenu={() => setMenuOpen(true)}
-            brand="한국 종합 안전"
+            brand="산업 종합 안전"
             accountLabel="관리자 계정"
           />
 
@@ -117,7 +118,11 @@ export function AdminDashboardShell({
                     </button>
                   ))}
                 </section>
-                <section className={styles.contentStack}>
+                <section
+                  className={`${styles.contentStack} ${
+                    shouldCenterContent ? styles.contentStackCentered : ''
+                  }`}
+                >
                   {banners}
                   {children}
                 </section>
@@ -139,4 +144,3 @@ export function AdminDashboardShell({
     </main>
   );
 }
-

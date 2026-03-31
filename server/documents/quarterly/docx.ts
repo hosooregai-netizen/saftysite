@@ -64,7 +64,7 @@ function futurePlanTable(report: QuarterlySummaryReport) {
 function implementationTable(report: QuarterlySummaryReport) {
   return gridTable(
     [
-      ['실시일', '차수', '담당자', '공정률', '지적 건수', '개선 건수'],
+      ['실시일', '차수', '담당자', '공정률', '지적 건수', '개선 건수', '비고'],
       ...(report.implementationRows.length > 0
         ? report.implementationRows.map((item) => [
             formatDate(item.reportDate),
@@ -73,10 +73,11 @@ function implementationTable(report: QuarterlySummaryReport) {
             item.progressRate || '-',
             String(item.findingCount),
             String(item.improvedCount),
+            item.note || '-',
           ])
-        : [['-', '-', '-', '-', '0', '0']]),
+        : [['-', '-', '-', '-', '0', '0', '-']]),
     ],
-    [1600, 1000, 1800, 1300, 1500, 2000],
+    [1400, 900, 1600, 1200, 1300, 1400, 1800],
     1,
   );
 }
@@ -99,7 +100,7 @@ function opsSection(report: QuarterlySummaryReport) {
     ),
     paragraph(
       report.opsAssignedBy
-        ? `연결자: ${report.opsAssignedBy} / 연결 시각: ${report.opsAssignedAt || '-'}`
+        ? `연결자 ${report.opsAssignedBy} / 연결 시각: ${report.opsAssignedAt || '-'}`
         : '연결 정보 없음',
     ),
   ].join('');
@@ -135,20 +136,14 @@ function buildQuarterlyWordBody(report: QuarterlySummaryReport, site: Inspection
         { label: '연락처(이메일)', value: snapshot.siteContactEmail || '-' },
         { label: '현장주소', value: snapshot.siteAddress || '-' },
         { label: '회사명', value: snapshot.companyName || '-' },
-        {
-          label: '법인등록번호',
-          value: snapshot.corporationRegistrationNumber || '-',
-        },
-        {
-          label: '사업자등록번호',
-          value: snapshot.businessRegistrationNumber || '-',
-        },
+        { label: '법인등록번호', value: snapshot.corporationRegistrationNumber || '-' },
+        { label: '사업자등록번호', value: snapshot.businessRegistrationNumber || '-' },
         { label: '면허번호', value: snapshot.licenseNumber || '-' },
         { label: '본사 연락처', value: snapshot.headquartersContact || '-' },
         { label: '본사 주소', value: snapshot.headquartersAddress || '-' },
       ]),
       sectionHeading('2. 통계분석(누계)'),
-      countTable('재해형태별 분석', report.accidentStats),
+      countTable('지적유형별 분석', report.accidentStats),
       paragraph(' ', { spacingAfter: 80 }),
       countTable('기인물별 분석', report.causativeStats),
       sectionHeading('3. 기술지도 총평'),

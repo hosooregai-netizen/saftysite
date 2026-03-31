@@ -10,6 +10,7 @@ import WorkerAppHeader from '@/components/worker/WorkerAppHeader';
 import WorkerMenuSidebar from '@/components/worker/WorkerMenuSidebar';
 import WorkerShellBody from '@/components/worker/WorkerShellBody';
 import { WorkerMenuDrawer, WorkerMenuPanel } from '@/components/worker/WorkerMenu';
+import { ChartCard } from '@/components/session/workspace/widgets';
 import {
   createFutureProcessRiskPlan,
   getSessionProgress,
@@ -19,7 +20,7 @@ import { createTimestamp, generateId } from '@/constants/inspectionSession/share
 import { primeControllerDashboardContentItems } from '@/hooks/controller/useControllerDashboard';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { useSiteOperationalReports } from '@/hooks/useSiteOperationalReports';
-import { fetchQuarterlyWordDocument, saveBlobAsFile } from '@/lib/api';
+import { fetchQuarterlyHwpxDocument, saveBlobAsFile } from '@/lib/api';
 import { getAdminSectionHref, isAdminUserRole } from '@/lib/admin';
 import {
   buildInitialQuarterlySummaryReport,
@@ -36,7 +37,7 @@ import {
 } from '@/lib/safetyApiMappers/utils';
 import shellStyles from '@/features/site-reports/components/SiteReportsScreen.module.css';
 import type { SafetyContentItem } from '@/types/backend';
-import type { QuarterTarget, QuarterlyCounter, QuarterlySummaryReport } from '@/types/erpReports';
+import type { QuarterTarget, QuarterlySummaryReport } from '@/types/erpReports';
 import type { InspectionSession, InspectionSite } from '@/types/inspectionSession';
 
 interface QuarterlyReportPageProps {
@@ -301,10 +302,6 @@ function formatDateTimeLabel(value: string) {
   });
 }
 
-function createEmptyCounter(): QuarterlyCounter {
-  return { label: '', count: 0 };
-}
-
 function createEmptyImplementationRow() {
   return {
     sessionId: generateId('quarterly-row'),
@@ -315,6 +312,7 @@ function createEmptyImplementationRow() {
     progressRate: '',
     findingCount: 0,
     improvedCount: 0,
+    note: '',
   };
 }
 
@@ -455,7 +453,7 @@ function QuarterlyReportEditor({
     try {
       setDocumentError(null);
       setIsGeneratingDocument(true);
-      const { blob, filename } = await fetchQuarterlyWordDocument(draft, currentSite);
+      const { blob, filename } = await fetchQuarterlyHwpxDocument(draft, currentSite);
       saveBlobAsFile(blob, filename);
     } catch (nextError) {
       setDocumentError(
@@ -501,22 +499,6 @@ function QuarterlyReportEditor({
         ...current.siteSnapshot,
         [field]: value,
       },
-    }));
-  };
-
-  const handleCounterChange = (
-    key: 'accidentStats' | 'causativeStats',
-    index: number,
-    field: keyof QuarterlyCounter,
-    value: string,
-  ) => {
-    setDraft((current) => ({
-      ...current,
-      [key]: current[key].map((item, itemIndex) =>
-        itemIndex === index
-          ? { ...item, [field]: field === 'count' ? Number(value || 0) : value }
-          : item,
-      ),
     }));
   };
 
@@ -622,19 +604,7 @@ function QuarterlyReportEditor({
         }}
       />
       <QuarterlySiteSnapshotSection draft={draft} onChange={updateSiteSnapshotField} />
-      <QuarterlyStatsSection
-        draft={draft}
-        onCounterChange={handleCounterChange}
-        onAddCounter={(key) =>
-          setDraft((current) => ({ ...current, [key]: [...current[key], createEmptyCounter()] }))
-        }
-        onRemoveCounter={(key, index) =>
-          setDraft((current) => ({
-            ...current,
-            [key]: current[key].filter((_, itemIndex) => itemIndex !== index),
-          }))
-        }
-      />
+      <QuarterlyStatsSection draft={draft} />
       <QuarterlyOverallCommentSection
         value={draft.overallComment}
         onChange={(value) => setDraft((current) => ({ ...current, overallComment: value }))}
@@ -729,7 +699,7 @@ function QuarterlySummaryToolbar(props: {
           onClick={() => void onDownloadWord()}
           disabled={isGeneratingDocument}
         >
-          {isGeneratingDocument ? '문서 생성 중...' : '문서 다운로드 (.docx)'}
+          {isGeneratingDocument ? '문서 생성 중...' : '문서 다운로드 (.hwpx)'}
         </button>
         <button
           type="button"
@@ -874,27 +844,7 @@ function QuarterlySourceSelectionSection(props: {
       <SectionHeader title="지도 보고서 선택" />
       {sourceSessions.length > 0 ? (
         <>
-          <div className={operationalStyles.summaryGrid}>
-            <article className={operationalStyles.summaryCard}>
-              <span className={operationalStyles.summaryLabel}>선택 현황</span>
-              <strong className={operationalStyles.summaryValue}>
-                {selectedSourceSessionIds.length} / {sourceSessions.length}건
-              </strong>
-            </article>
-            <article className={operationalStyles.summaryCard}>
-              <span className={operationalStyles.summaryLabel}>재계산 상태</span>
-              <strong className={operationalStyles.summaryValue}>
-                {hasPendingSelectionChanges ? '변경 있음' : '최신 상태'}
-              </strong>
-            </article>
-          </div>
-          <article className={operationalStyles.summaryCard}>
-            <div className={operationalStyles.reportCardHeader}>
-              <strong className={operationalStyles.reportCardTitle}>선택된 보고서</strong>
-              <button type="button" className="app-button app-button-secondary" onClick={onOpenSelector}>
-                보고서 선택
-              </button>
-            </div>
+          <div className={operationalStyles.inlineEditorRow}>
             {previewSessions.length > 0 ? (
               <div className={operationalStyles.tagList}>
                 {previewSessions.map((session) => (
@@ -907,21 +857,21 @@ function QuarterlySourceSelectionSection(props: {
                 ) : null}
               </div>
             ) : (
-              <div className={operationalStyles.emptyState}>선택된 보고서가 없습니다.</div>
+              <div className={operationalStyles.muted}>선택된 보고서가 없습니다.</div>
             )}
-          </article>
-          <div className={operationalStyles.reportActions}>
-            <button type="button" className="app-button app-button-secondary" onClick={onOpenSelector}>
-              목록 열기
-            </button>
-            <button
-              type="button"
-              className="app-button app-button-primary"
-              onClick={onRecalculate}
-              disabled={!hasPendingSelectionChanges}
-            >
-              재계산
-            </button>
+            <div className={operationalStyles.inlineEditorActions}>
+              <button type="button" className="app-button app-button-secondary" onClick={onOpenSelector}>
+                보고서 선택
+              </button>
+              <button
+                type="button"
+                className="app-button app-button-primary"
+                onClick={onRecalculate}
+                disabled={!hasPendingSelectionChanges}
+              >
+                재계산
+              </button>
+            </div>
           </div>
         </>
       ) : (
@@ -1244,47 +1194,184 @@ function QuarterlySiteSnapshotSection(props: {
   onChange: (field: keyof QuarterlySummaryReport['siteSnapshot'], value: string) => void;
 }) {
   const { draft, onChange } = props;
+  const handleSiteManagementNumberChange = (value: string) => {
+    onChange('siteManagementNumber', value);
+    onChange('businessStartNumber', value);
+  };
+  const handleCorporationNumberChange = (value: string) => {
+    onChange('corporationRegistrationNumber', value);
+    onChange('businessRegistrationNumber', value);
+  };
+
   return (
     <article className={operationalStyles.reportCard}>
       <SectionHeader title="1. 기술지도 대상사업장" />
-      <div className={operationalStyles.formGrid}>
-        <FieldInput label="현장명" value={draft.siteSnapshot.siteName} onChange={(value) => onChange('siteName', value)} />
-        <FieldInput label="고객사" value={draft.siteSnapshot.customerName} onChange={(value) => onChange('customerName', value)} />
-        <FieldInput label="사업장관리번호" value={draft.siteSnapshot.siteManagementNumber} onChange={(value) => onChange('siteManagementNumber', value)} />
-        <FieldInput label="사업개시번호" value={draft.siteSnapshot.businessStartNumber} onChange={(value) => onChange('businessStartNumber', value)} />
-        <FieldInput label="공사기간" value={draft.siteSnapshot.constructionPeriod} onChange={(value) => onChange('constructionPeriod', value)} />
-        <FieldInput label="공사금액" value={draft.siteSnapshot.constructionAmount} onChange={(value) => onChange('constructionAmount', value)} />
-        <FieldInput label="책임자" value={draft.siteSnapshot.siteManagerName} onChange={(value) => onChange('siteManagerName', value)} />
-        <FieldInput label="연락처(이메일)" value={draft.siteSnapshot.siteContactEmail} onChange={(value) => onChange('siteContactEmail', value)} />
-        <FieldTextarea label="현장주소" value={draft.siteSnapshot.siteAddress} onChange={(value) => onChange('siteAddress', value)} />
-        <FieldInput label="회사명" value={draft.siteSnapshot.companyName} onChange={(value) => onChange('companyName', value)} />
-        <FieldInput label="법인등록번호" value={draft.siteSnapshot.corporationRegistrationNumber} onChange={(value) => onChange('corporationRegistrationNumber', value)} />
-        <FieldInput label="사업자등록번호" value={draft.siteSnapshot.businessRegistrationNumber} onChange={(value) => onChange('businessRegistrationNumber', value)} />
-        <FieldInput label="면허번호" value={draft.siteSnapshot.licenseNumber} onChange={(value) => onChange('licenseNumber', value)} />
-        <FieldInput label="본사 연락처" value={draft.siteSnapshot.headquartersContact} onChange={(value) => onChange('headquartersContact', value)} />
-        <FieldTextarea label="본사 주소" value={draft.siteSnapshot.headquartersAddress} onChange={(value) => onChange('headquartersAddress', value)} />
+      <div className={operationalStyles.snapshotSectionGrid}>
+        <section className={operationalStyles.snapshotPanel}>
+          <h3 className={operationalStyles.snapshotPanelTitle}>현장</h3>
+          <div className={operationalStyles.snapshotTableWrap}>
+            <table className={operationalStyles.snapshotTable}>
+              <colgroup>
+                <col className={operationalStyles.snapshotLabelCol} />
+                <col className={operationalStyles.snapshotValueCol} />
+                <col className={operationalStyles.snapshotLabelCol} />
+                <col className={operationalStyles.snapshotValueCol} />
+              </colgroup>
+              <tbody>
+                <tr>
+                  <th scope="row" className={operationalStyles.snapshotLabelCell}>
+                    현장명
+                  </th>
+                  <SnapshotInputCell
+                    label="현장명"
+                    value={draft.siteSnapshot.siteName}
+                    onChange={(value) => onChange('siteName', value)}
+                  />
+                  <th scope="row" className={operationalStyles.snapshotLabelCell}>
+                    사업장관리번호
+                  </th>
+                  <SnapshotInputCell
+                    label="사업장관리번호"
+                    value={draft.siteSnapshot.siteManagementNumber || draft.siteSnapshot.businessStartNumber}
+                    onChange={handleSiteManagementNumberChange}
+                  />
+                </tr>
+                <tr>
+                  <th scope="row" className={operationalStyles.snapshotLabelCell}>
+                    공사기간
+                  </th>
+                  <SnapshotInputCell
+                    label="공사기간"
+                    value={draft.siteSnapshot.constructionPeriod}
+                    onChange={(value) => onChange('constructionPeriod', value)}
+                  />
+                  <th scope="row" className={operationalStyles.snapshotLabelCell}>
+                    공사금액
+                  </th>
+                  <SnapshotInputCell
+                    label="공사금액"
+                    value={draft.siteSnapshot.constructionAmount}
+                    onChange={(value) => onChange('constructionAmount', value)}
+                  />
+                </tr>
+                <tr>
+                  <th scope="row" className={operationalStyles.snapshotLabelCell}>
+                    책임자
+                  </th>
+                  <SnapshotInputCell
+                    label="책임자"
+                    value={draft.siteSnapshot.siteManagerName}
+                    onChange={(value) => onChange('siteManagerName', value)}
+                  />
+                  <th scope="row" className={operationalStyles.snapshotLabelCell}>
+                    연락처(이메일)
+                  </th>
+                  <SnapshotInputCell
+                    label="연락처(이메일)"
+                    value={draft.siteSnapshot.siteContactEmail}
+                    onChange={(value) => onChange('siteContactEmail', value)}
+                  />
+                </tr>
+                <tr>
+                  <th scope="row" className={operationalStyles.snapshotLabelCell}>
+                    현장주소
+                  </th>
+                  <SnapshotInputCell
+                    label="현장주소"
+                    value={draft.siteSnapshot.siteAddress}
+                    onChange={(value) => onChange('siteAddress', value)}
+                    colSpan={3}
+                  />
+                </tr>
+                <tr>
+                  <th scope="row" className={operationalStyles.snapshotLabelCell}>
+                    고객사
+                  </th>
+                  <SnapshotInputCell
+                    label="고객사"
+                    value={draft.siteSnapshot.customerName}
+                    onChange={(value) => onChange('customerName', value)}
+                    colSpan={3}
+                  />
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+        <section className={operationalStyles.snapshotPanel}>
+          <h3 className={operationalStyles.snapshotPanelTitle}>본사</h3>
+          <div className={operationalStyles.snapshotTableWrap}>
+            <table className={operationalStyles.snapshotTable}>
+              <colgroup>
+                <col className={operationalStyles.snapshotLabelCol} />
+                <col className={operationalStyles.snapshotValueCol} />
+                <col className={operationalStyles.snapshotLabelCol} />
+                <col className={operationalStyles.snapshotValueCol} />
+              </colgroup>
+              <tbody>
+                <tr>
+                  <th scope="row" className={operationalStyles.snapshotLabelCell}>
+                    회사명
+                  </th>
+                  <SnapshotInputCell
+                    label="회사명"
+                    value={draft.siteSnapshot.companyName}
+                    onChange={(value) => onChange('companyName', value)}
+                  />
+                  <th scope="row" className={operationalStyles.snapshotLabelCell}>
+                    법인등록번호
+                  </th>
+                  <SnapshotInputCell
+                    label="법인등록번호"
+                    value={draft.siteSnapshot.corporationRegistrationNumber || draft.siteSnapshot.businessRegistrationNumber}
+                    onChange={handleCorporationNumberChange}
+                  />
+                </tr>
+                <tr>
+                  <th scope="row" className={operationalStyles.snapshotLabelCell}>
+                    면허번호
+                  </th>
+                  <SnapshotInputCell
+                    label="면허번호"
+                    value={draft.siteSnapshot.licenseNumber}
+                    onChange={(value) => onChange('licenseNumber', value)}
+                  />
+                  <th scope="row" className={operationalStyles.snapshotLabelCell}>
+                    연락처
+                  </th>
+                  <SnapshotInputCell
+                    label="본사 연락처"
+                    value={draft.siteSnapshot.headquartersContact}
+                    onChange={(value) => onChange('headquartersContact', value)}
+                  />
+                </tr>
+                <tr>
+                  <th scope="row" className={operationalStyles.snapshotLabelCell}>
+                    본사주소
+                  </th>
+                  <SnapshotInputCell
+                    label="본사주소"
+                    value={draft.siteSnapshot.headquartersAddress}
+                    onChange={(value) => onChange('headquartersAddress', value)}
+                    colSpan={3}
+                  />
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
       </div>
     </article>
   );
 }
 
-function QuarterlyStatsSection(props: {
-  draft: QuarterlySummaryReport;
-  onCounterChange: (
-    key: 'accidentStats' | 'causativeStats',
-    index: number,
-    field: keyof QuarterlyCounter,
-    value: string,
-  ) => void;
-  onAddCounter: (key: 'accidentStats' | 'causativeStats') => void;
-  onRemoveCounter: (key: 'accidentStats' | 'causativeStats', index: number) => void;
-}) {
+function QuarterlyStatsSection(props: { draft: QuarterlySummaryReport }) {
   return (
     <article className={operationalStyles.reportCard}>
       <SectionHeader title="2. 통계분석(누계)" />
-      <div className={operationalStyles.summaryGrid}>
-        <CounterEditorCard title="재해형태별 분석" items={props.draft.accidentStats} onChange={(index, field, value) => props.onCounterChange('accidentStats', index, field, value)} onAdd={() => props.onAddCounter('accidentStats')} onRemove={(index) => props.onRemoveCounter('accidentStats', index)} />
-        <CounterEditorCard title="기인물별 분석" items={props.draft.causativeStats} onChange={(index, field, value) => props.onCounterChange('causativeStats', index, field, value)} onAdd={() => props.onAddCounter('causativeStats')} onRemove={(index) => props.onRemoveCounter('causativeStats', index)} />
+      <div className={operationalStyles.cardGrid}>
+        <ChartCard title="지적유형별 종합" entries={props.draft.accidentStats} />
+        <ChartCard title="기인물별 종합" entries={props.draft.causativeStats} />
       </div>
     </article>
   );
@@ -1313,44 +1400,62 @@ function QuarterlyImplementationSection(props: {
   return (
     <article className={operationalStyles.reportCard}>
       <SectionHeader title="4. 기술지도 이행현황" />
-      <div className={operationalStyles.tableWrap}>
-        <table className={operationalStyles.table}>
+      <div className={operationalStyles.implementationTableWrap}>
+        <table className={operationalStyles.implementationTable}>
+          <colgroup>
+            <col className={operationalStyles.implementationColTitle} />
+            <col className={operationalStyles.implementationColCompact} />
+            <col className={operationalStyles.implementationColPerson} />
+            <col className={operationalStyles.implementationColDate} />
+            <col className={operationalStyles.implementationColCompact} />
+            <col className={operationalStyles.implementationColCompact} />
+            <col className={operationalStyles.implementationColCompact} />
+            <col className={operationalStyles.implementationColNote} />
+            <col className={operationalStyles.implementationColAction} />
+          </colgroup>
           <thead>
             <tr>
-              <th>실시일</th>
-              <th>보고서명</th>
-              <th>차수</th>
-              <th>담당자</th>
-              <th>공정률</th>
-              <th>지적 건수</th>
-              <th>개선 건수</th>
-              <th>작업</th>
+              <th className={operationalStyles.implementationHeaderCell}>보고서명</th>
+              <th className={operationalStyles.implementationHeaderCell}>차수</th>
+              <th className={operationalStyles.implementationHeaderCell}>담당자</th>
+              <th className={operationalStyles.implementationHeaderCell}>실시일</th>
+              <th className={operationalStyles.implementationHeaderCell}>공정률</th>
+              <th className={operationalStyles.implementationHeaderCell}>지적 건수</th>
+              <th className={operationalStyles.implementationHeaderCell}>개선 건수</th>
+              <th className={operationalStyles.implementationHeaderCell}>비고</th>
+              <th className={`${operationalStyles.implementationHeaderCell} ${operationalStyles.implementationHeaderActionCell}`}>
+                <button type="button" className={`app-button app-button-secondary ${operationalStyles.implementationAddButton}`} onClick={onAdd}>
+                  행 추가
+                </button>
+              </th>
             </tr>
           </thead>
           <tbody>
             {rows.length > 0 ? (
               rows.map((item, index) => (
                 <tr key={item.sessionId || index}>
-                  <td><input className="app-input" value={item.reportDate} onChange={(event) => onChange(index, 'reportDate', event.target.value)} /></td>
-                  <td><input className="app-input" value={item.reportTitle} onChange={(event) => onChange(index, 'reportTitle', event.target.value)} /></td>
-                  <td><input className="app-input" type="number" min={0} value={item.reportNumber} onChange={(event) => onChange(index, 'reportNumber', event.target.value)} /></td>
-                  <td><input className="app-input" value={item.drafter} onChange={(event) => onChange(index, 'drafter', event.target.value)} /></td>
-                  <td><input className="app-input" value={item.progressRate} onChange={(event) => onChange(index, 'progressRate', event.target.value)} /></td>
-                  <td><input className="app-input" type="number" min={0} value={item.findingCount} onChange={(event) => onChange(index, 'findingCount', event.target.value)} /></td>
-                  <td><input className="app-input" type="number" min={0} value={item.improvedCount} onChange={(event) => onChange(index, 'improvedCount', event.target.value)} /></td>
-                  <td><button type="button" className="app-button app-button-secondary" onClick={() => onRemove(index)}>삭제</button></td>
+                  <ImplementationInputCell value={item.reportTitle} onChange={(value) => onChange(index, 'reportTitle', value)} />
+                  <ImplementationInputCell type="number" min={0} value={item.reportNumber} onChange={(value) => onChange(index, 'reportNumber', value)} />
+                  <ImplementationInputCell value={item.drafter} onChange={(value) => onChange(index, 'drafter', value)} />
+                  <ImplementationInputCell value={item.reportDate} onChange={(value) => onChange(index, 'reportDate', value)} />
+                  <ImplementationInputCell value={item.progressRate} onChange={(value) => onChange(index, 'progressRate', value)} />
+                  <ImplementationInputCell type="number" min={0} value={item.findingCount} onChange={(value) => onChange(index, 'findingCount', value)} />
+                  <ImplementationInputCell type="number" min={0} value={item.improvedCount} onChange={(value) => onChange(index, 'improvedCount', value)} />
+                  <ImplementationInputCell value={item.note} onChange={(value) => onChange(index, 'note', value)} />
+                  <td className={operationalStyles.implementationActionCell}>
+                    <button type="button" className={`app-button app-button-secondary ${operationalStyles.implementationActionButton}`} onClick={() => onRemove(index)}>
+                      삭제
+                    </button>
+                  </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={8}>선택한 기술지도 보고서가 없습니다.</td>
+                <td colSpan={9} className={operationalStyles.implementationEmptyCell}>선택한 기술지도 보고서가 없습니다.</td>
               </tr>
             )}
           </tbody>
         </table>
-      </div>
-      <div className={operationalStyles.reportActions}>
-        <button type="button" className="app-button app-button-secondary" onClick={onAdd}>행 추가</button>
       </div>
     </article>
   );
@@ -1365,24 +1470,78 @@ function QuarterlyFuturePlansSection(props: {
   return (
     <article className={operationalStyles.reportCard}>
       <SectionHeader title="5. 향후 공정 유해위험요인 및 대책" />
-      <div className={operationalStyles.formGrid}>
-        {plans.map((item, index) => (
-          <div key={item.id} className={`${operationalStyles.field} ${operationalStyles.fieldWide}`}>
-            <span className={operationalStyles.fieldLabel}>향후 공정 {index + 1}</span>
-            <div className={operationalStyles.formGrid}>
-              <input className="app-input" value={item.processName} placeholder="공정명" onChange={(event) => onChange(plans.map((plan) => plan.id === item.id ? { ...plan, processName: event.target.value } : plan))} />
-              <input className="app-input" value={item.hazard} placeholder="유해위험요인" onChange={(event) => onChange(plans.map((plan) => plan.id === item.id ? { ...plan, hazard: event.target.value } : plan))} />
-              <textarea className={`app-textarea ${operationalStyles.fieldWide}`} value={item.countermeasure} placeholder="안전대책" onChange={(event) => onChange(plans.map((plan) => plan.id === item.id ? { ...plan, countermeasure: event.target.value } : plan))} />
-              <textarea className={`app-textarea ${operationalStyles.fieldWide}`} value={item.note} placeholder="비고" onChange={(event) => onChange(plans.map((plan) => plan.id === item.id ? { ...plan, note: event.target.value } : plan))} />
-            </div>
-            <div className={operationalStyles.reportActions}>
-              <button type="button" className="app-button app-button-secondary" onClick={() => onChange(plans.filter((plan) => plan.id !== item.id))}>삭제</button>
-            </div>
-          </div>
-        ))}
-      </div>
-      <div className={operationalStyles.reportActions}>
-        <button type="button" className="app-button app-button-secondary" onClick={onAdd}>계획 추가</button>
+      <div className={operationalStyles.implementationTableWrap}>
+        <table className={operationalStyles.implementationTable}>
+          <colgroup>
+            <col className={operationalStyles.futurePlanColHazard} />
+            <col className={operationalStyles.futurePlanColMeasure} />
+            <col className={operationalStyles.futurePlanColAction} />
+          </colgroup>
+          <thead>
+            <tr>
+              <th className={operationalStyles.implementationHeaderCell}>위험요인</th>
+              <th className={operationalStyles.implementationHeaderCell}>안전대책</th>
+              <th
+                className={`${operationalStyles.implementationHeaderCell} ${operationalStyles.implementationHeaderActionCell}`}
+              >
+                <button
+                  type="button"
+                  className={`app-button app-button-secondary ${operationalStyles.implementationAddButton}`}
+                  onClick={onAdd}
+                >
+                  행 추가
+                </button>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {plans.length > 0 ? (
+              plans.map((item) => (
+                <tr key={item.id}>
+                  <FuturePlanInputCell
+                    value={item.hazard}
+                    onChange={(value) =>
+                      onChange(
+                        plans.map((plan) =>
+                          plan.id === item.id
+                            ? { ...plan, processName: '', hazard: value }
+                            : plan,
+                        ),
+                      )
+                    }
+                  />
+                  <FuturePlanInputCell
+                    value={item.countermeasure}
+                    onChange={(value) =>
+                      onChange(
+                        plans.map((plan) =>
+                          plan.id === item.id
+                            ? { ...plan, note: '', countermeasure: value }
+                            : plan,
+                        ),
+                      )
+                    }
+                  />
+                  <td className={operationalStyles.implementationActionCell}>
+                    <button
+                      type="button"
+                      className={`app-button app-button-secondary ${operationalStyles.implementationActionButton}`}
+                      onClick={() => onChange(plans.filter((plan) => plan.id !== item.id))}
+                    >
+                      삭제
+                    </button>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={3} className={operationalStyles.implementationEmptyCell}>
+                  등록된 향후 공정 항목이 없습니다.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
     </article>
   );
@@ -1479,30 +1638,6 @@ function QuarterlyOpsAssetModal(props: {
   );
 }
 
-function CounterEditorCard(props: {
-  title: string;
-  items: QuarterlyCounter[];
-  onChange: (index: number, field: keyof QuarterlyCounter, value: string) => void;
-  onAdd: () => void;
-  onRemove: (index: number) => void;
-}) {
-  return (
-    <article className={operationalStyles.summaryCard}>
-      <span className={operationalStyles.summaryLabel}>{props.title}</span>
-      <div className={operationalStyles.checkboxList}>
-        {props.items.map((item, index) => (
-          <div key={`${props.title}-${index}`} className={operationalStyles.inlineEditorRow}>
-            <input className="app-input" value={item.label} placeholder="항목명" onChange={(event) => props.onChange(index, 'label', event.target.value)} />
-            <input className="app-input" type="number" min={0} value={item.count} placeholder="건수" onChange={(event) => props.onChange(index, 'count', event.target.value)} />
-            <button type="button" className="app-button app-button-secondary" onClick={() => props.onRemove(index)}>삭제</button>
-          </div>
-        ))}
-        <button type="button" className="app-button app-button-secondary" onClick={props.onAdd}>항목 추가</button>
-      </div>
-    </article>
-  );
-}
-
 function FieldInput(props: { label: string; value: string | number; onChange: (value: string) => void; placeholder?: string }) {
   return (
     <label className={operationalStyles.field}>
@@ -1518,5 +1653,57 @@ function FieldTextarea(props: { label: string; value: string; onChange: (value: 
       <span className={operationalStyles.fieldLabel}>{props.label}</span>
       <textarea className="app-textarea" value={props.value} onChange={(event) => props.onChange(event.target.value)} />
     </label>
+  );
+}
+
+function SnapshotInputCell(props: {
+  label: string;
+  value: string | number;
+  onChange: (value: string) => void;
+  colSpan?: number;
+}) {
+  return (
+    <td className={operationalStyles.snapshotValueCell} colSpan={props.colSpan}>
+      <input
+        aria-label={props.label}
+        className={`app-input ${operationalStyles.snapshotControl}`}
+        value={props.value}
+        onChange={(event) => props.onChange(event.target.value)}
+      />
+    </td>
+  );
+}
+
+function ImplementationInputCell(props: {
+  value: string | number;
+  onChange: (value: string) => void;
+  type?: 'text' | 'number';
+  min?: number;
+}) {
+  return (
+    <td className={operationalStyles.implementationValueCell}>
+      <input
+        className={`app-input ${operationalStyles.implementationControl}`}
+        type={props.type}
+        min={props.min}
+        value={props.value}
+        onChange={(event) => props.onChange(event.target.value)}
+      />
+    </td>
+  );
+}
+
+function FuturePlanInputCell(props: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <td className={operationalStyles.implementationValueCell}>
+      <textarea
+        className={`app-textarea ${operationalStyles.futurePlanControl}`}
+        value={props.value}
+        onChange={(event) => props.onChange(event.target.value)}
+      />
+    </td>
   );
 }

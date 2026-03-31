@@ -269,7 +269,7 @@ function BadWorkplaceReportEditor({
   };
 
   return (
-    <section className={operationalStyles.sectionCard}>
+    <section className={`${operationalStyles.sectionCard} ${operationalStyles.editorShell}`}>
       <div className={operationalStyles.toolbar}>
         <div>
           <h1 className={operationalStyles.sectionTitle} style={{ marginTop: 14 }}>

@@ -3,8 +3,8 @@
 import JSZip from 'jszip';
 
 import { FIXED_SCENE_COUNT } from '@/constants/inspectionSession/catalog';
+import { CAUSATIVE_AGENT_LABELS } from '@/constants/inspectionSession/doc7Catalog';
 import { getExtraSceneTitle } from '@/constants/inspectionSession/scenePhotos';
-import { CAUSATIVE_AGENT_SECTIONS } from '@/constants/siteOverview';
 import type { ChecklistRating, InspectionSession } from '@/types/inspectionSession';
 
 type RepeatBlockPath =
@@ -94,12 +94,7 @@ const DOC5_CHART_SEGMENT_COLORS = [
   '#6b6ee8',
   '#4cb0e8',
 ] as const;
-const DOC5_CAUSATIVE_AGENT_LABELS = new Map(
-  CAUSATIVE_AGENT_SECTIONS.flatMap((section) => section.rows.flatMap((row) => [row.left, row.right])).map((item) => [
-    item.key,
-    item.label,
-  ]),
-);
+const DOC5_CAUSATIVE_AGENT_LABELS = new Map(Object.entries(CAUSATIVE_AGENT_LABELS));
 const DOC5_INJECTED_IMAGE_BINDINGS: InjectedImageBinding[] = [
   { placeholderPath: 'sec5.current_accident_chart_image', binaryItemId: 'tplimg23' },
   { placeholderPath: 'sec5.cumulative_accident_chart_image', binaryItemId: 'tplimg24' },
