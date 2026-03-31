@@ -23,6 +23,10 @@ export function buildSiteQuarterlyHref(siteId: string, quarterKey: string): stri
   return `/sites/${encodeURIComponent(siteId)}/quarterly/${encodeURIComponent(quarterKey)}`;
 }
 
+export function buildSiteQuarterlyListHref(siteId: string): string {
+  return `/sites/${encodeURIComponent(siteId)}/quarterly`;
+}
+
 export function buildSiteBadWorkplaceHref(siteId: string, reportMonth: string): string {
   return `/sites/${encodeURIComponent(siteId)}/bad-workplace/${encodeURIComponent(reportMonth)}`;
 }
@@ -47,8 +51,8 @@ export function getWorkerSiteEntryTitle(intent: WorkerSitePickerIntent): string 
 
 export function getWorkerSiteEntryDescription(intent: WorkerSitePickerIntent): string {
   return intent === 'quarterly'
-    ? '먼저 현장을 선택한 뒤, 해당 현장 컨텍스트 안에서 대상 분기와 기술지도 보고서를 이어서 확인하세요.'
-    : '먼저 현장을 선택한 뒤, 해당 현장 컨텍스트 안에서 최근 기술지도 보고서를 바탕으로 신고 초안을 작성하세요.';
+    ? '먼저 현장을 선택한 뒤 해당 현장 컨텍스트 안에서 분기와 기술지도 보고서를 이어서 확인하세요.'
+    : '먼저 현장을 선택한 뒤 해당 현장 컨텍스트 안에서 최근 기술지도 보고서를 바탕으로 신고 초안을 작성하세요.';
 }
 
 export function getWorkerSiteEntryLabel(intent: WorkerSiteEntryIntent): string {

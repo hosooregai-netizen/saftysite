@@ -101,8 +101,9 @@ function buildDerivedQuarterlyContent(
   siteSessions: InspectionSession[],
   target: QuarterTarget,
   selectedSessionIds: string[],
+  availableSourceSessions?: InspectionSession[],
 ) {
-  const quarterSessions = getQuarterlySourceSessions(siteSessions, target);
+  const quarterSessions = availableSourceSessions ?? getQuarterlySourceSessions(siteSessions, target);
   const selectedIdSet = new Set(selectedSessionIds);
   const selectedSessions =
     selectedIdSet.size > 0
@@ -190,8 +191,15 @@ export function syncQuarterlySummaryReportSources(
   siteSessions: InspectionSession[],
   target: QuarterTarget,
   selectedSessionIds: string[],
+  availableSourceSessions?: InspectionSession[],
 ): QuarterlySummaryReport {
-  const derived = buildDerivedQuarterlyContent(site, siteSessions, target, selectedSessionIds);
+  const derived = buildDerivedQuarterlyContent(
+    site,
+    siteSessions,
+    target,
+    selectedSessionIds,
+    availableSourceSessions,
+  );
 
   return {
     ...report,

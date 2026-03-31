@@ -323,6 +323,44 @@
   margin-top: 2px;
 }
 
+.sourceModalList {
+  display: grid;
+  gap: 10px;
+}
+
+.sourceModalRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-control);
+  background: var(--erp-white);
+}
+
+.sourceModalRowActive {
+  border-color: var(--erp-line-strong);
+  box-shadow: inset 3px 0 0 var(--erp-mid);
+  background: #fbfcfe;
+}
+
+.sourceModalRowMain {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  flex: 1 1 420px;
+  min-width: 0;
+}
+
+.sourceModalRowActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
 .checkboxCard {
   display: flex;
   gap: 10px;

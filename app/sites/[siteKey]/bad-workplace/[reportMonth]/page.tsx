@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
 import { use, useMemo, useState } from 'react';
@@ -21,7 +21,6 @@ import {
   getBadWorkplaceSourceSessions,
   syncBadWorkplaceReportSource,
 } from '@/lib/erpReports/badWorkplace';
-import { formatReportMonthLabel } from '@/lib/erpReports/shared';
 import shellStyles from '@/features/site-reports/components/SiteReportsScreen.module.css';
 import type { BadWorkplaceReport } from '@/types/erpReports';
 import type { InspectionSession, InspectionSite } from '@/types/inspectionSession';
@@ -65,7 +64,7 @@ export default function BadWorkplaceReportPage({
     : isAdminView
       ? getAdminSectionHref('headquarters')
       : '/';
-  const backLabel = isAdminView ? '현장 상세' : '현장 메뉴';
+  const backLabel = isAdminView ? '본사 상세' : '현장 메뉴';
   const siteSessions = useMemo(
     () =>
       getBadWorkplaceSourceSessions(
@@ -99,9 +98,7 @@ export default function BadWorkplaceReportPage({
     return (
       <main className="app-page">
         <div className="app-container">
-          <section className={operationalStyles.sectionCard}>
-            신고서 초안을 불러오는 중입니다.
-          </section>
+          <section className={operationalStyles.sectionCard}>신고서 초안을 불러오는 중입니다.</section>
         </div>
       </main>
     );
@@ -123,9 +120,7 @@ export default function BadWorkplaceReportPage({
       <main className="app-page">
         <div className="app-container">
           <section className={operationalStyles.sectionCard}>
-            <div className={operationalStyles.emptyState}>
-              현장 또는 신고 대상 정보를 확인하지 못했습니다.
-            </div>
+            <div className={operationalStyles.emptyState}>현장 또는 신고 대상 정보를 확인하지 못했습니다.</div>
           </section>
         </div>
       </main>
@@ -172,7 +167,6 @@ export default function BadWorkplaceReportPage({
                   key={`${initialDraft.id}:${initialDraft.updatedAt}`}
                   currentSite={currentSite}
                   siteSessions={siteSessions}
-                  reportMonth={decodedReportMonth}
                   initialDraft={initialDraft}
                   isSaving={isSaving}
                   error={error}
@@ -204,7 +198,6 @@ export default function BadWorkplaceReportPage({
 interface BadWorkplaceReportEditorProps {
   currentSite: InspectionSite;
   siteSessions: InspectionSession[];
-  reportMonth: string;
   initialDraft: BadWorkplaceReport;
   isSaving: boolean;
   error: string | null;
@@ -214,7 +207,6 @@ interface BadWorkplaceReportEditorProps {
 function BadWorkplaceReportEditor({
   currentSite,
   siteSessions,
-  reportMonth,
   initialDraft,
   isSaving,
   error,
@@ -269,9 +261,7 @@ function BadWorkplaceReportEditor({
       saveBlobAsFile(blob, filename);
     } catch (error) {
       setDocumentError(
-        error instanceof Error
-          ? error.message
-          : '문서 다운로드 중 오류가 발생했습니다.',
+        error instanceof Error ? error.message : '문서를 다운로드하는 중 오류가 발생했습니다.',
       );
     } finally {
       setIsGeneratingDocument(false);
@@ -282,23 +272,11 @@ function BadWorkplaceReportEditor({
     <section className={operationalStyles.sectionCard}>
       <div className={operationalStyles.toolbar}>
         <div>
-          <Link
-            href={`/sites/${encodeURIComponent(currentSite.id)}/entry?entry=bad-workplace`}
-            className={`${operationalStyles.linkButtonSecondary} ${operationalStyles.linkButton}`}
-          >
-            현장 허브로 돌아가기
-          </Link>
           <h1 className={operationalStyles.sectionTitle} style={{ marginTop: 14 }}>
             {draft.title}
           </h1>
-          <p className={operationalStyles.sectionDescription}>
-            {formatReportMonthLabel(reportMonth)} 기준 불량사업장 신고서를 작성합니다. 최신 기술지도 보고서를 원본으로 자동 선택하며, 필요하면 다른 보고서와 지적사항을 직접 고를 수 있습니다.
-          </p>
         </div>
         <div className={operationalStyles.toolbarActions}>
-          <span className="app-chip">
-            {draft.status === 'completed' ? '완료' : '작성 중'}
-          </span>
           <button
             type="button"
             className="app-button app-button-secondary"
@@ -325,17 +303,7 @@ function BadWorkplaceReportEditor({
       <article className={operationalStyles.reportCard}>
         <div className={operationalStyles.reportCardHeader}>
           <strong className={operationalStyles.reportCardTitle}>1. 원본 기술지도 보고서 선택</strong>
-          <div className={operationalStyles.statusRow}>
-            <span className="app-chip">후보 보고서 {siteSessions.length}건</span>
-            <span className="app-chip">
-              선택 {selectedSession ? getSessionTitle(selectedSession) : '없음'}
-            </span>
-          </div>
         </div>
-        <p className={operationalStyles.reportCardDescription}>
-          기술지도 보고서를 최신순으로 보여줍니다. 선택한 보고서의 지적사항을 아래 신고 초안으로 이어받습니다.
-        </p>
-
         {siteSessions.length > 0 ? (
           <div className={operationalStyles.sourceList}>
             {siteSessions.map((session) => {
@@ -358,7 +326,6 @@ function BadWorkplaceReportEditor({
                         작성일 {session.meta.reportDate || '-'} / 작성자 {session.meta.drafter || '-'} / 지적사항 {findingCount}건 / 진행률 {session.document2Overview.progressRate || '-'}
                       </span>
                     </div>
-                    <span className="app-chip">{isSelected ? '선택됨' : '후보'}</span>
                   </div>
                   <div className={operationalStyles.sourceCardActions}>
                     <button
@@ -368,7 +335,7 @@ function BadWorkplaceReportEditor({
                       }`}
                       onClick={() => handleSourceSessionChange(session.id)}
                     >
-                      {isSelected ? '현재 원본' : '이 보고서 기준으로 불러오기'}
+                      {isSelected ? '현재 원본' : '이 보고서를 기준으로 불러오기'}
                     </button>
                     <Link
                       href={`/sessions/${encodeURIComponent(session.id)}`}
@@ -391,14 +358,6 @@ function BadWorkplaceReportEditor({
       <article className={operationalStyles.reportCard}>
         <div className={operationalStyles.reportCardHeader}>
           <strong className={operationalStyles.reportCardTitle}>2. 가져올 지적사항 선택</strong>
-          <div className={operationalStyles.statusRow}>
-            <span className="app-chip">
-              선택 지적사항 {draft.sourceFindingIds.length}건
-            </span>
-            {selectedSession ? (
-              <span className="app-chip">{selectedSession.meta.reportDate || '-'}</span>
-            ) : null}
-          </div>
         </div>
         <p className={operationalStyles.reportCardDescription}>
           선택한 원본 보고서에서 신고 초안으로 이어받을 지적사항을 고르세요. 체크를 바꾸면 아래 위반 사항 표도 함께 갱신됩니다.
@@ -406,7 +365,7 @@ function BadWorkplaceReportEditor({
 
         {selectedSession ? (
           <div className={operationalStyles.bannerInfo}>
-            원본 보고서: {getSessionTitle(selectedSession)} / 작성자 {selectedSession.meta.drafter || '-'}
+            원본 보고서 {getSessionTitle(selectedSession)} / 작성자 {selectedSession.meta.drafter || '-'}
           </div>
         ) : null}
 
@@ -453,7 +412,7 @@ function BadWorkplaceReportEditor({
           <strong className={operationalStyles.summaryValue}>{draft.progressRate || '-'}</strong>
         </article>
         <article className={operationalStyles.summaryCard}>
-          <span className={operationalStyles.summaryLabel}>기술지도 횟수</span>
+          <span className={operationalStyles.summaryLabel}>기술지도 실시 횟수</span>
           <strong className={operationalStyles.summaryValue}>{draft.implementationCount || '-'}</strong>
         </article>
       </div>
@@ -477,7 +436,7 @@ function BadWorkplaceReportEditor({
         </label>
 
         <label className={operationalStyles.field}>
-          <span className={operationalStyles.fieldLabel}>수신자</span>
+          <span className={operationalStyles.fieldLabel}>수신처</span>
           <input
             className="app-input"
             value={draft.receiverName}
@@ -551,7 +510,7 @@ function BadWorkplaceReportEditor({
           <thead>
             <tr>
               <th>관련 법칙</th>
-              <th>유해·위험요인</th>
+              <th>유해위험요인</th>
               <th>개선지시 사항</th>
               <th>불이행 사항</th>
               <th>확인일</th>
@@ -645,7 +604,7 @@ function BadWorkplaceReportEditor({
               ))
             ) : (
               <tr>
-                <td colSpan={5}>선택된 지적사항이 없습니다.</td>
+                <td colSpan={5}>선택한 지적사항이 없습니다.</td>
               </tr>
             )}
           </tbody>
@@ -665,3 +624,4 @@ function BadWorkplaceReportEditor({
     </section>
   );
 }
+

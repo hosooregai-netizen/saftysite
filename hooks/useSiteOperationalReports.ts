@@ -70,12 +70,8 @@ export function useSiteOperationalReports(site: InspectionSite | null, enabled =
         }
       });
 
-      nextQuarterly.sort((left, right) =>
-        right.quarterKey.localeCompare(left.quarterKey)
-      );
-      nextBadWorkplace.sort((left, right) =>
-        right.reportMonth.localeCompare(left.reportMonth)
-      );
+      nextQuarterly.sort((left, right) => right.quarterKey.localeCompare(left.quarterKey));
+      nextBadWorkplace.sort((left, right) => right.reportMonth.localeCompare(left.reportMonth));
 
       setQuarterlyReports(nextQuarterly);
       setBadWorkplaceReports(nextBadWorkplace);

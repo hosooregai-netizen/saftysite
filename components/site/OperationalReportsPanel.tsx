@@ -7,6 +7,7 @@ import {
   formatQuarterLabel,
   formatReportMonthLabel,
   getCurrentReportMonth,
+  getQuarterKeyForDate,
   getQuarterTargetsForConstructionPeriod,
 } from '@/lib/erpReports/shared';
 import type { SafetyUser } from '@/types/backend';
@@ -41,6 +42,7 @@ export default function OperationalReportsPanel({
       ),
     [currentSite.adminSiteSnapshot.constructionPeriod],
   );
+  const manualQuarterKey = useMemo(() => getQuarterKeyForDate(new Date()), []);
   const quarterlyByKey = useMemo(
     () => new Map(quarterlyReports.map((item) => [item.quarterKey, item])),
     [quarterlyReports],
@@ -88,9 +90,21 @@ export default function OperationalReportsPanel({
             </p>
 
             {quarterTargets.length === 0 ? (
+              <>
               <div className={styles.emptyState}>
                 공사기간 정보가 3개월 미만이거나 기간 정보가 없어 대상 분기를 계산하지 못했습니다.
               </div>
+              {manualQuarterKey ? (
+                <div className={styles.reportActions}>
+                  <Link
+                    href={`/sites/${encodeURIComponent(currentSite.id)}/quarterly/${encodeURIComponent(manualQuarterKey)}`}
+                    className={styles.linkButton}
+                  >
+                    보고서 직접 선택
+                  </Link>
+                </div>
+              ) : null}
+              </>
             ) : (
               <div className={styles.cardGrid}>
                 {quarterTargets.map((target) => {

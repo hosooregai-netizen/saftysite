@@ -59,7 +59,8 @@ export function buildBadWorkplaceViolations(
       finding.location ||
       finding.accidentType,
     improvementMeasure: finding.improvementPlan,
-    nonCompliance: '기술지도 이후에도 동일 위험요인이 개선되지 않아 후속 조치가 필요합니다.',
+    nonCompliance:
+      '기술지도 이후에도 동일 유해위험요인이 개선되지 않아 후속 조치가 필요합니다.',
     confirmationDate: session.meta.reportDate,
     accidentType: finding.accidentType,
     causativeAgentKey: finding.causativeAgentKey,

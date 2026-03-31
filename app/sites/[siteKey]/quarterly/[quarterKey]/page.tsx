@@ -1,10 +1,15 @@
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
 import { use, useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { AdminMenuDrawer, AdminMenuPanel } from '@/components/admin/AdminMenu';
 import LoginPanel from '@/components/auth/LoginPanel';
 import operationalStyles from '@/components/site/OperationalReports.module.css';
 import AppModal from '@/components/ui/AppModal';
+import WorkerAppHeader from '@/components/worker/WorkerAppHeader';
+import WorkerMenuSidebar from '@/components/worker/WorkerMenuSidebar';
+import WorkerShellBody from '@/components/worker/WorkerShellBody';
+import { WorkerMenuDrawer, WorkerMenuPanel } from '@/components/worker/WorkerMenu';
 import {
   createFutureProcessRiskPlan,
   getSessionProgress,
@@ -15,20 +20,21 @@ import { primeControllerDashboardContentItems } from '@/hooks/controller/useCont
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { useSiteOperationalReports } from '@/hooks/useSiteOperationalReports';
 import { fetchQuarterlyWordDocument, saveBlobAsFile } from '@/lib/api';
-import { isAdminUserRole } from '@/lib/admin';
+import { getAdminSectionHref, isAdminUserRole } from '@/lib/admin';
 import {
   buildInitialQuarterlySummaryReport,
-  getQuarterlySourceSessions,
   syncQuarterlySummaryReportSources,
 } from '@/lib/erpReports/quarterly';
 import { parseQuarterKey } from '@/lib/erpReports/shared';
 import { readSafetyAuthToken } from '@/lib/safetyApi';
+import { buildSiteQuarterlyListHref } from '@/features/home/lib/siteEntry';
 import {
   contentBodyToAssetName,
   contentBodyToAssetUrl,
   contentBodyToImageUrl,
   contentBodyToText,
 } from '@/lib/safetyApiMappers/utils';
+import shellStyles from '@/features/site-reports/components/SiteReportsScreen.module.css';
 import type { SafetyContentItem } from '@/types/backend';
 import type { QuarterTarget, QuarterlyCounter, QuarterlySummaryReport } from '@/types/erpReports';
 import type { InspectionSession, InspectionSite } from '@/types/inspectionSession';
@@ -48,6 +54,7 @@ interface QuarterlyReportEditorProps {
   error: string | null;
   onSave: (report: QuarterlySummaryReport) => Promise<void>;
   siteSessions: InspectionSession[];
+  sourceReportsLoading: boolean;
   currentUserName: string;
   isAdminView: boolean;
 }
@@ -63,6 +70,7 @@ interface OpsAssetOption {
 }
 
 export default function QuarterlyReportPage({ params }: QuarterlyReportPageProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
   const { siteKey, quarterKey } = use(params);
   const decodedSiteKey = decodeURIComponent(siteKey);
   const decodedQuarterKey = decodeURIComponent(quarterKey);
@@ -71,9 +79,14 @@ export default function QuarterlyReportPage({ params }: QuarterlyReportPageProps
     sessions,
     isReady,
     isAuthenticated,
+    isHydratingReports,
     currentUser,
     authError,
+    ensureSiteReportIndexLoaded,
+    ensureSessionLoaded,
+    getReportIndexBySiteId,
     login,
+    logout,
   } = useInspectionSessions();
   const currentSite = useMemo(
     () => sites.find((site) => site.id === decodedSiteKey) ?? null,
@@ -83,9 +96,25 @@ export default function QuarterlyReportPage({ params }: QuarterlyReportPageProps
     () => sessions.filter((session) => session.siteKey === decodedSiteKey),
     [decodedSiteKey, sessions],
   );
+  const reportIndexState = useMemo(
+    () => (currentSite ? getReportIndexBySiteId(currentSite.id) : null),
+    [currentSite, getReportIndexBySiteId],
+  );
   const target = parseQuarterKey(decodedQuarterKey);
   const { quarterlyReports, isSaving, error, saveQuarterlyReport } =
     useSiteOperationalReports(currentSite);
+  const isAdminView = Boolean(currentUser && isAdminUserRole(currentUser.role));
+  const backHref = currentSite
+    ? isAdminView
+      ? getAdminSectionHref('headquarters', {
+          headquarterId: currentSite.headquarterId,
+          siteId: currentSite.id,
+        })
+      : buildSiteQuarterlyListHref(currentSite.id)
+    : isAdminView
+      ? getAdminSectionHref('headquarters')
+      : '/';
+  const backLabel = isAdminView ? '본사 상세' : '분기 종합보고서 목록';
   const existing = useMemo(
     () => quarterlyReports.find((item) => item.quarterKey === decodedQuarterKey) || null,
     [decodedQuarterKey, quarterlyReports],
@@ -101,13 +130,34 @@ export default function QuarterlyReportPage({ params }: QuarterlyReportPageProps
     );
   }, [currentSite, currentUser?.name, existing, siteSessions, target]);
 
+  useEffect(() => {
+    if (!currentSite || !isAuthenticated || !isReady) return;
+    void ensureSiteReportIndexLoaded(currentSite.id);
+  }, [currentSite, ensureSiteReportIndexLoaded, isAuthenticated, isReady]);
+
+  useEffect(() => {
+    if (!currentSite || reportIndexState?.status !== 'loaded') return;
+    void Promise.all(
+      reportIndexState.items.map((item) => ensureSessionLoaded(item.reportKey)),
+    );
+  }, [currentSite, ensureSessionLoaded, reportIndexState]);
+
+  const sourceReportsLoading = Boolean(
+    currentSite &&
+      (reportIndexState?.status === 'loading' ||
+        reportIndexState?.status === 'idle' ||
+        (reportIndexState?.status === 'loaded' &&
+          reportIndexState.items.some(
+            (item) => !siteSessions.some((session) => session.id === item.reportKey),
+          )) ||
+        isHydratingReports),
+  );
+
   if (!isReady) {
     return (
       <main className="app-page">
         <div className="app-container">
-          <section className={operationalStyles.sectionCard}>
-            분기 보고서 초안을 불러오는 중입니다.
-          </section>
+          <section className={operationalStyles.sectionCard}>분기 보고서 초안을 불러오는 중입니다.</section>
         </div>
       </main>
     );
@@ -129,9 +179,7 @@ export default function QuarterlyReportPage({ params }: QuarterlyReportPageProps
       <main className="app-page">
         <div className="app-container">
           <section className={operationalStyles.sectionCard}>
-            <div className={operationalStyles.emptyState}>
-              현장 또는 대상 분기 정보를 확인하지 못했습니다.
-            </div>
+            <div className={operationalStyles.emptyState}>현장 또는 대상 분기 정보를 확인하지 못했습니다.</div>
           </section>
         </div>
       </main>
@@ -141,19 +189,71 @@ export default function QuarterlyReportPage({ params }: QuarterlyReportPageProps
   return (
     <main className="app-page">
       <div className="app-container">
-        <QuarterlyReportEditor
-          key={`${initialDraft.id}:${initialDraft.updatedAt}:${initialDraft.opsAssignedAt}`}
-          currentSite={currentSite}
-          target={target}
-          initialDraft={initialDraft}
-          isSaving={isSaving}
-          error={error}
-          onSave={saveQuarterlyReport}
-          siteSessions={siteSessions}
-          currentUserName={currentUser?.name || ''}
-          isAdminView={Boolean(currentUser && isAdminUserRole(currentUser.role))}
-        />
+        <section className={`app-shell ${shellStyles.shell}`}>
+          <WorkerAppHeader
+            currentUserName={currentUser?.name}
+            onLogout={logout}
+            onOpenMenu={() => setMenuOpen(true)}
+          />
+
+          <WorkerShellBody>
+            <WorkerMenuSidebar>
+              {isAdminView ? (
+                <AdminMenuPanel activeSection="headquarters" />
+              ) : (
+                <WorkerMenuPanel currentSiteKey={currentSite.id} />
+              )}
+            </WorkerMenuSidebar>
+
+            <div className={shellStyles.contentColumn}>
+              <header className={shellStyles.hero}>
+                <div className={shellStyles.heroBody}>
+                  <Link
+                    href={backHref}
+                    className={shellStyles.heroBackLink}
+                    aria-label="이전 페이지로"
+                  >
+                    {'<'} {backLabel}
+                  </Link>
+                  <div className={shellStyles.heroMain}>
+                    <h1 className={shellStyles.heroTitle}>{initialDraft.title}</h1>
+                  </div>
+                </div>
+              </header>
+
+              <div className={shellStyles.pageGrid}>
+                <QuarterlyReportEditor
+                  key={`${initialDraft.id}:${initialDraft.updatedAt}:${initialDraft.opsAssignedAt}`}
+                  currentSite={currentSite}
+                  target={target}
+                  initialDraft={initialDraft}
+                  isSaving={isSaving}
+                  error={error}
+                  onSave={saveQuarterlyReport}
+                  siteSessions={siteSessions}
+                  sourceReportsLoading={sourceReportsLoading}
+                  currentUserName={currentUser?.name || ''}
+                  isAdminView={isAdminView}
+                />
+              </div>
+            </div>
+          </WorkerShellBody>
+        </section>
       </div>
+
+      {isAdminView ? (
+        <AdminMenuDrawer
+          open={menuOpen}
+          onClose={() => setMenuOpen(false)}
+          activeSection="headquarters"
+        />
+      ) : (
+        <WorkerMenuDrawer
+          open={menuOpen}
+          onClose={() => setMenuOpen(false)}
+          currentSiteKey={currentSite.id}
+        />
+      )}
     </main>
   );
 }
@@ -238,12 +338,18 @@ function QuarterlyReportEditor({
   error,
   onSave,
   siteSessions,
+  sourceReportsLoading,
   currentUserName,
   isAdminView,
 }: QuarterlyReportEditorProps) {
   const sourceSessions = useMemo(
-    () => getQuarterlySourceSessions(siteSessions, target),
-    [siteSessions, target],
+    () =>
+      [...siteSessions].sort((left, right) => {
+        const leftTime = new Date(left.meta.reportDate || left.updatedAt).getTime();
+        const rightTime = new Date(right.meta.reportDate || right.updatedAt).getTime();
+        return rightTime - leftTime;
+      }),
+    [siteSessions],
   );
   const [draft, setDraft] = useState(initialDraft);
   const [selectedSourceSessionIds, setSelectedSourceSessionIds] = useState(() =>
@@ -252,6 +358,7 @@ function QuarterlyReportEditor({
   const [notice, setNotice] = useState<string | null>(null);
   const [documentError, setDocumentError] = useState<string | null>(null);
   const [isGeneratingDocument, setIsGeneratingDocument] = useState(false);
+  const [sourceModalOpen, setSourceModalOpen] = useState(false);
   const [opsAssets, setOpsAssets] = useState<OpsAssetOption[]>([]);
   const [opsLoading, setOpsLoading] = useState(false);
   const [opsError, setOpsError] = useState<string | null>(null);
@@ -263,6 +370,25 @@ function QuarterlyReportEditor({
     setDraft(initialDraft);
     setSelectedSourceSessionIds(getInitialSelectedSourceIds(initialDraft, sourceSessions));
   }, [initialDraft, sourceSessions]);
+
+  useEffect(() => {
+    if (sourceSessions.length === 0) return;
+
+    setDraft((current) => {
+      if (current.generatedFromSessionIds.length > 0) {
+        return current;
+      }
+
+      return syncQuarterlySummaryReportSources(
+        current,
+        currentSite,
+        siteSessions,
+        target,
+        sourceSessions.map((session) => session.id),
+        sourceSessions,
+      );
+    });
+  }, [currentSite, siteSessions, sourceSessions, target]);
 
   useEffect(() => {
     if (!isAdminView) return;
@@ -333,9 +459,7 @@ function QuarterlyReportEditor({
       saveBlobAsFile(blob, filename);
     } catch (nextError) {
       setDocumentError(
-        nextError instanceof Error
-          ? nextError.message
-          : '문서 다운로드 중 오류가 발생했습니다.',
+        nextError instanceof Error ? nextError.message : '문서를 다운로드하는 중 오류가 발생했습니다.',
       );
     } finally {
       setIsGeneratingDocument(false);
@@ -357,12 +481,13 @@ function QuarterlyReportEditor({
         siteSessions,
         target,
         selectedSourceSessionIds,
+        sourceSessions,
       ),
     );
     setNotice(
       selectedSourceSessionIds.length > 0
-        ? `선택한 기술지도 보고서 ${selectedSourceSessionIds.length}건 기준으로 분기 초안을 다시 계산했습니다.`
-        : '선택한 기술지도 보고서가 없어 분기 초안을 비운 상태로 다시 계산했습니다.',
+        ? `선택한 지도 보고서 ${selectedSourceSessionIds.length}건 기준으로 분기 초안을 다시 계산했습니다.`
+        : '선택한 지도 보고서가 없어 분기 초안을 빈 상태로 다시 계산했습니다.',
     );
   };
 
@@ -454,7 +579,6 @@ function QuarterlyReportEditor({
   return (
     <section className={`${operationalStyles.sectionCard} ${operationalStyles.editorShell}`}>
       <QuarterlySummaryToolbar
-        currentSite={currentSite}
         draft={draft}
         isGeneratingDocument={isGeneratingDocument}
         isSaving={isSaving}
@@ -469,14 +593,33 @@ function QuarterlyReportEditor({
       />
       <QuarterlySourceSelectionSection
         sourceSessions={sourceSessions}
+        loading={sourceReportsLoading}
         selectedSourceSet={selectedSourceSet}
         selectedSourceSessionIds={selectedSourceSessionIds}
         hasPendingSelectionChanges={hasPendingSelectionChanges}
         target={target}
+        onOpenSelector={() => setSourceModalOpen(true)}
         onToggleSourceSession={handleToggleSourceSession}
         onSelectAll={() => setSelectedSourceSessionIds(sourceSessions.map((session) => session.id))}
         onClearSelection={() => setSelectedSourceSessionIds([])}
         onRecalculate={handleApplySourceSelection}
+      />
+      <QuarterlySourceSelectionModal
+        open={sourceModalOpen}
+        sourceSessions={sourceSessions}
+        loading={sourceReportsLoading}
+        selectedSourceSet={selectedSourceSet}
+        selectedSourceSessionIds={selectedSourceSessionIds}
+        hasPendingSelectionChanges={hasPendingSelectionChanges}
+        target={target}
+        onClose={() => setSourceModalOpen(false)}
+        onToggleSourceSession={handleToggleSourceSession}
+        onSelectAll={() => setSelectedSourceSessionIds(sourceSessions.map((session) => session.id))}
+        onClearSelection={() => setSelectedSourceSessionIds([])}
+        onRecalculate={() => {
+          handleApplySourceSelection();
+          setSourceModalOpen(false);
+        }}
       />
       <QuarterlySiteSnapshotSection draft={draft} onChange={updateSiteSnapshotField} />
       <QuarterlyStatsSection
@@ -543,18 +686,20 @@ function QuarterlyReportEditor({
   );
 }
 
-function SectionHeader(props: { title: string; chips: string[]; description?: string }) {
+function SectionHeader(props: { title: string; chips?: string[]; description?: string }) {
   return (
     <>
       <div className={operationalStyles.reportCardHeader}>
         <strong className={operationalStyles.reportCardTitle}>{props.title}</strong>
-        <div className={operationalStyles.statusRow}>
-          {props.chips.map((chip) => (
-            <span key={chip} className="app-chip">
-              {chip}
-            </span>
-          ))}
-        </div>
+        {props.chips && props.chips.length > 0 ? (
+          <div className={operationalStyles.statusRow}>
+            {props.chips.map((chip) => (
+              <span key={chip} className="app-chip">
+                {chip}
+              </span>
+            ))}
+          </div>
+        ) : null}
       </div>
       {props.description ? (
         <p className={operationalStyles.reportCardDescription}>{props.description}</p>
@@ -564,40 +709,63 @@ function SectionHeader(props: { title: string; chips: string[]; description?: st
 }
 
 function QuarterlySummaryToolbar(props: {
-  currentSite: InspectionSite;
   draft: QuarterlySummaryReport;
   isGeneratingDocument: boolean;
   isSaving: boolean;
   onDownloadWord: () => Promise<void>;
   onSave: (status: QuarterlySummaryReport['status']) => Promise<void>;
 }) {
-  const { currentSite, draft, isGeneratingDocument, isSaving, onDownloadWord, onSave } = props;
+  const { draft, isGeneratingDocument, isSaving, onDownloadWord, onSave } = props;
 
   return (
     <div className={operationalStyles.toolbar}>
       <div>
-        <Link
-          href={`/sites/${encodeURIComponent(currentSite.id)}/entry?entry=quarterly`}
-          className={`${operationalStyles.linkButtonSecondary} ${operationalStyles.linkButton}`}
+        <h1 className={operationalStyles.sectionTitle}>{draft.title}</h1>
+      </div>
+      <div className={operationalStyles.toolbarActions}>
+        <button
+          type="button"
+          className="app-button app-button-secondary"
+          onClick={() => void onDownloadWord()}
+          disabled={isGeneratingDocument}
         >
-          현장 허브로 돌아가기
+          {isGeneratingDocument ? '문서 생성 중...' : '문서 다운로드 (.docx)'}
+        </button>
+        <button
+          type="button"
+          className="app-button app-button-primary"
+          onClick={() => void onSave('completed')}
+          disabled={isSaving}
+        >
+          {isSaving ? '처리 중...' : '완료 처리'}
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className={operationalStyles.toolbar}>
+      <div>
+
+        <Link href="#" className={operationalStyles.linkButton}>
+          ?꾩떆
         </Link>
         <h1 className={operationalStyles.sectionTitle} style={{ marginTop: 14 }}>
           {draft.title}
         </h1>
         <p className={operationalStyles.sectionDescription}>
-          자동 초안을 검토하고 1~5번을 편집하세요. 6번 OPS 자료는 관리자만 연결할 수 있습니다.
+          ?먮룞 珥덉븞??寃?좏븯怨?1~5踰덉쓣 ?몄쭛?섏꽭?? 6踰?OPS ?먮즺??愿由ъ옄留??곌껐?????덉뒿?덈떎.
         </p>
       </div>
       <div className={operationalStyles.toolbarActions}>
         <button type="button" className="app-button app-button-secondary" onClick={() => void onDownloadWord()} disabled={isGeneratingDocument}>
-          {isGeneratingDocument ? '문서 생성 중...' : '문서 다운로드 (.docx)'}
+          {isGeneratingDocument ? '臾몄꽌 ?앹꽦 以?..' : '臾몄꽌 ?ㅼ슫濡쒕뱶 (.docx)'}
         </button>
         <button type="button" className="app-button app-button-secondary" onClick={() => void onSave('draft')} disabled={isSaving}>
           {isSaving ? '저장 중...' : '초안 저장'}
         </button>
         <button type="button" className="app-button app-button-primary" onClick={() => void onSave('completed')} disabled={isSaving}>
-          {isSaving ? '처리 중...' : '완료 처리'}
+          {isSaving ? '泥섎━ 以?..' : '?꾨즺 泥섎━'}
         </button>
       </div>
     </div>
@@ -621,6 +789,34 @@ function QuarterlySummaryCards(props: {
         </article>
         <article className={operationalStyles.summaryCard}>
           <span className={operationalStyles.summaryLabel}>상태</span>
+          <strong className={operationalStyles.summaryValue}>
+            {draft.status === 'completed' ? '완료' : '작성 중'}
+          </strong>
+        </article>
+        <article className={operationalStyles.summaryCard}>
+          <span className={operationalStyles.summaryLabel}>선택 보고서</span>
+          <strong className={operationalStyles.summaryValue}>{draft.generatedFromSessionIds.length}건</strong>
+        </article>
+        <article className={operationalStyles.summaryCard}>
+          <span className={operationalStyles.summaryLabel}>마지막 재계산</span>
+          <strong className={operationalStyles.summaryValue}>{formatDateTimeLabel(draft.lastCalculatedAt)}</strong>
+        </article>
+      </div>
+      {error ? <div className={operationalStyles.bannerError}>{error}</div> : null}
+      {documentError ? <div className={operationalStyles.bannerError}>{documentError}</div> : null}
+      {notice ? <div className={operationalStyles.bannerInfo}>{notice}</div> : null}
+    </>
+  );
+
+  return (
+    <>
+      <div className={operationalStyles.summaryGrid}>
+        <article className={operationalStyles.summaryCard}>
+          <span className={operationalStyles.summaryLabel}>?꾩옣</span>
+          <strong className={operationalStyles.summaryValue}>{draft.siteSnapshot.siteName || '-'}</strong>
+        </article>
+        <article className={operationalStyles.summaryCard}>
+          <span className={operationalStyles.summaryLabel}>상태</span>
           <strong className={operationalStyles.summaryValue}>{draft.status === 'completed' ? '완료' : '작성 중'}</strong>
         </article>
         <article className={operationalStyles.summaryCard}>
@@ -637,7 +833,7 @@ function QuarterlySummaryCards(props: {
       {notice ? <div className={operationalStyles.bannerInfo}>{notice}</div> : null}
       {!draft.opsAssetId ? (
         <div className={operationalStyles.bannerInfo}>
-          6번 OPS 자료는 비어 있어도 저장/완료할 수 있습니다. 필요하면 관리자가 이후 보완합니다.
+          6踰?OPS ?먮즺??鍮꾩뼱 ?덉뼱??????꾨즺?????덉뒿?덈떎. ?꾩슂?섎㈃ 愿由ъ옄媛 ?댄썑 蹂댁셿?⑸땲??
         </div>
       ) : null}
     </>
@@ -646,10 +842,12 @@ function QuarterlySummaryCards(props: {
 
 function QuarterlySourceSelectionSection(props: {
   sourceSessions: InspectionSession[];
+  loading: boolean;
   selectedSourceSet: Set<string>;
   selectedSourceSessionIds: string[];
   hasPendingSelectionChanges: boolean;
   target: QuarterTarget;
+  onOpenSelector: () => void;
   onToggleSourceSession: (sessionId: string, checked: boolean) => void;
   onSelectAll: () => void;
   onClearSelection: () => void;
@@ -657,22 +855,165 @@ function QuarterlySourceSelectionSection(props: {
 }) {
   const {
     sourceSessions,
+    loading,
     selectedSourceSet,
     selectedSourceSessionIds,
     hasPendingSelectionChanges,
     target,
+    onOpenSelector,
     onToggleSourceSession,
     onSelectAll,
     onClearSelection,
     onRecalculate,
   } = props;
+  const selectedSessions = sourceSessions.filter((session) => selectedSourceSet.has(session.id));
+  const previewSessions = selectedSessions.slice(0, 3);
+
+  return (
+    <article className={operationalStyles.reportCard}>
+      <SectionHeader title="지도 보고서 선택" />
+      {sourceSessions.length > 0 ? (
+        <>
+          <div className={operationalStyles.summaryGrid}>
+            <article className={operationalStyles.summaryCard}>
+              <span className={operationalStyles.summaryLabel}>선택 현황</span>
+              <strong className={operationalStyles.summaryValue}>
+                {selectedSourceSessionIds.length} / {sourceSessions.length}건
+              </strong>
+            </article>
+            <article className={operationalStyles.summaryCard}>
+              <span className={operationalStyles.summaryLabel}>재계산 상태</span>
+              <strong className={operationalStyles.summaryValue}>
+                {hasPendingSelectionChanges ? '변경 있음' : '최신 상태'}
+              </strong>
+            </article>
+          </div>
+          <article className={operationalStyles.summaryCard}>
+            <div className={operationalStyles.reportCardHeader}>
+              <strong className={operationalStyles.reportCardTitle}>선택된 보고서</strong>
+              <button type="button" className="app-button app-button-secondary" onClick={onOpenSelector}>
+                보고서 선택
+              </button>
+            </div>
+            {previewSessions.length > 0 ? (
+              <div className={operationalStyles.tagList}>
+                {previewSessions.map((session) => (
+                  <span key={session.id} className={operationalStyles.tag}>
+                    {getSessionTitle(session)}
+                  </span>
+                ))}
+                {selectedSessions.length > previewSessions.length ? (
+                  <span className={operationalStyles.tag}>+{selectedSessions.length - previewSessions.length}건</span>
+                ) : null}
+              </div>
+            ) : (
+              <div className={operationalStyles.emptyState}>선택된 보고서가 없습니다.</div>
+            )}
+          </article>
+          <div className={operationalStyles.reportActions}>
+            <button type="button" className="app-button app-button-secondary" onClick={onOpenSelector}>
+              목록 열기
+            </button>
+            <button
+              type="button"
+              className="app-button app-button-primary"
+              onClick={onRecalculate}
+              disabled={!hasPendingSelectionChanges}
+            >
+              재계산
+            </button>
+          </div>
+        </>
+      ) : (
+        <div className={operationalStyles.emptyState}>
+          {loading ? '해당 현장 지도 보고서를 불러오는 중입니다.' : '선택 가능한 지도 보고서가 없습니다.'}
+        </div>
+      )}
+    </article>
+  );
 
   return (
     <article className={operationalStyles.reportCard}>
       <SectionHeader
-        title="상단. 소스 보고서 선택"
-        chips={['자동 초안', '재계산 우선', `${target.startDate} ~ ${target.endDate}`]}
-        description="분기 안의 기술지도 보고서를 골라 초안을 다시 계산합니다. 재계산하면 1~5번 수정값은 새 집계 결과로 덮어써집니다."
+        title="?곷떒. ?뚯뒪 蹂닿퀬???좏깮"
+        chips={['?먮룞 珥덉븞', '?ш퀎???곗꽑', `${target.startDate} ~ ${target.endDate}`]}
+        description="遺꾧린 ?듦퀎??諛섏쁺??湲곗닠吏??蹂닿퀬?쒕? 怨좊Ⅴ怨??ㅼ떆 ?ш퀎?고빀?덈떎. 蹂몃Ц? ?뺤텞?섍퀬, ?ㅼ젣 ?좏깮? 紐⑤떖 由ъ뒪?몄뿉??吏꾪뻾?⑸땲??"
+      />
+      {sourceSessions.length > 0 ? (
+        <>
+          <div className={operationalStyles.summaryGrid}>
+            <article className={operationalStyles.summaryCard}>
+              <span className={operationalStyles.summaryLabel}>?좏깮 ?꾪솴</span>
+              <strong className={operationalStyles.summaryValue}>
+                {selectedSourceSessionIds.length} / {sourceSessions.length}嫄?              </strong>
+              <p className={operationalStyles.muted}>
+                {hasPendingSelectionChanges
+                  ? '?좏깮??諛붾뚯뿀?듬땲?? ?ш퀎?고븯硫?1~5踰??먮룞 珥덉븞???덈줈 ??뼱?⑥쭛?덈떎.'
+                  : '?꾩옱 ?좏깮??蹂닿퀬??吏묓빀?쇰줈 遺꾧린 珥덉븞???좎??섍퀬 ?덉뒿?덈떎.'}
+              </p>
+            </article>
+            <article className={operationalStyles.summaryCard}>
+              <span className={operationalStyles.summaryLabel}>?좏깮 踰붿쐞</span>
+              <strong className={operationalStyles.summaryValue}>
+                {target.startDate} ~ {target.endDate}
+              </strong>
+              <p className={operationalStyles.muted}>湲곌컙 諛?蹂닿퀬?쒕룄 ?꾩슂?섎㈃ 紐⑤떖?먯꽌 吏곸젒 ?좏깮??諛섏쁺?????덉뒿?덈떎.</p>
+            </article>
+          </div>
+          <article className={operationalStyles.summaryCard}>
+            <div className={operationalStyles.reportCardHeader}>
+              <strong className={operationalStyles.reportCardTitle}>선택된 보고서</strong>
+              <button type="button" className="app-button app-button-secondary" onClick={onOpenSelector}>
+                蹂닿퀬???좏깮
+              </button>
+            </div>
+            {previewSessions.length > 0 ? (
+              <>
+                <div className={operationalStyles.tagList}>
+                  {previewSessions.map((session) => (
+                    <span key={session.id} className={operationalStyles.tag}>
+                      {getSessionTitle(session)}
+                    </span>
+                  ))}
+                  {selectedSessions.length > previewSessions.length ? (
+                    <span className={operationalStyles.tag}>+{selectedSessions.length - previewSessions.length}건</span>
+                  ) : null}
+                </div>
+                <p className={operationalStyles.muted}>
+                  紐⑸줉 ?닿린瑜??꾨Ⅴ硫??꾩껜 蹂닿퀬?쒕? 由ъ뒪?명삎 紐⑤떖?먯꽌 ?뺤씤?섍퀬 諛붽? ???덉뒿?덈떎.
+                </p>
+              </>
+            ) : (
+              <div className={operationalStyles.emptyState}>
+                ?꾩쭅 ?좏깮??蹂닿퀬?쒓? ?놁뒿?덈떎. 蹂닿퀬???좏깮 踰꾪듉???뚮윭 ?듦퀎??諛섏쁺??蹂닿퀬?쒕? 怨⑤씪二쇱꽭??
+              </div>
+            )}
+          </article>
+          <div className={operationalStyles.reportActions}>
+            <button type="button" className="app-button app-button-secondary" onClick={onOpenSelector}>
+              紐⑸줉 ?닿린
+            </button>
+            <button type="button" className="app-button app-button-primary" onClick={onRecalculate} disabled={!hasPendingSelectionChanges}>
+              ?좏깮??蹂닿퀬?쒕줈 ?ш퀎??            </button>
+          </div>
+          {selectedSourceSessionIds.length === 0 ? (
+            <div className={operationalStyles.bannerInfo}>
+              ?좏깮??蹂닿퀬?쒓? ?놁쑝硫??ш퀎????1~5踰??먮룞 珥덉븞??鍮꾩뼱吏????덉뒿?덈떎.
+            </div>
+          ) : null}
+        </>
+      ) : (
+        <div className={operationalStyles.emptyState}>吏묎퀎???ъ슜??湲곗닠吏??蹂닿퀬?쒓? ?놁뒿?덈떎.</div>
+      )}
+    </article>
+  );
+
+  return (
+    <article className={operationalStyles.reportCard}>
+      <SectionHeader
+        title="?곷떒. ?뚯뒪 蹂닿퀬???좏깮"
+        chips={['?먮룞 珥덉븞', '?ш퀎???곗꽑', `${target.startDate} ~ ${target.endDate}`]}
+        description="遺꾧린 ?덉쓽 湲곗닠吏??蹂닿퀬?쒕? 怨⑤씪 珥덉븞???ㅼ떆 怨꾩궛?⑸땲?? ?ш퀎?고븯硫?1~5踰??섏젙媛믪? ??吏묎퀎 寃곌낵濡???뼱?⑥쭛?덈떎."
       />
       {sourceSessions.length > 0 ? (
         <>
@@ -688,14 +1029,13 @@ function QuarterlySourceSelectionSection(props: {
                     <div className={operationalStyles.sourceCardBody}>
                       <strong className={operationalStyles.sourceCardTitle}>{getSessionTitle(session)}</strong>
                       <span className={operationalStyles.sourceCardMeta}>
-                        작성일 {session.meta.reportDate || '-'} / 작성자 {session.meta.drafter || '-'} / 진행률 {progress}% / 지적사항 {findingCount}건
-                      </span>
+                        ?묒꽦??{session.meta.reportDate || '-'} / ?묒꽦??{session.meta.drafter || '-'} / 吏꾪뻾瑜?{progress}% / 吏?곸궗??{findingCount}嫄?                      </span>
                     </div>
                     <span className="app-chip">{isSelected ? '선택됨' : '미선택'}</span>
                   </div>
                   <div className={operationalStyles.sourceCardActions}>
                     <Link href={`/sessions/${encodeURIComponent(session.id)}`} className={`${operationalStyles.linkButton} ${operationalStyles.linkButtonSecondary}`}>
-                      원본 보기
+                      ?먮낯 蹂닿린
                     </Link>
                   </div>
                 </article>
@@ -703,18 +1043,199 @@ function QuarterlySourceSelectionSection(props: {
             })}
           </div>
           <div className={operationalStyles.reportActions}>
-            <button type="button" className="app-button app-button-secondary" onClick={onSelectAll}>전체 선택</button>
-            <button type="button" className="app-button app-button-secondary" onClick={onClearSelection}>선택 해제</button>
-            <button type="button" className="app-button app-button-primary" onClick={onRecalculate} disabled={!hasPendingSelectionChanges}>선택한 보고서로 재계산</button>
+            <button type="button" className="app-button app-button-secondary" onClick={onSelectAll}>?꾩껜 ?좏깮</button>
+            <button type="button" className="app-button app-button-secondary" onClick={onClearSelection}>?좏깮 ?댁젣</button>
+            <button type="button" className="app-button app-button-primary" onClick={onRecalculate} disabled={!hasPendingSelectionChanges}>재계산</button>
           </div>
           {selectedSourceSessionIds.length === 0 ? (
-            <div className={operationalStyles.bannerInfo}>선택된 보고서가 없으면 재계산 후 1~5번 자동 초안이 비워집니다.</div>
+            <div className={operationalStyles.bannerInfo}>?좏깮??蹂닿퀬?쒓? ?놁쑝硫??ш퀎????1~5踰??먮룞 珥덉븞??鍮꾩썙吏묐땲??</div>
           ) : null}
         </>
       ) : (
-        <div className={operationalStyles.emptyState}>대상 분기 안에 집계할 기술지도 보고서가 없습니다.</div>
+        <div className={operationalStyles.emptyState}>???遺꾧린 ?덉뿉 吏묎퀎??湲곗닠吏??蹂닿퀬?쒓? ?놁뒿?덈떎.</div>
       )}
     </article>
+  );
+}
+
+function QuarterlySourceSelectionModal(props: {
+  open: boolean;
+  sourceSessions: InspectionSession[];
+  loading: boolean;
+  selectedSourceSet: Set<string>;
+  selectedSourceSessionIds: string[];
+  hasPendingSelectionChanges: boolean;
+  target: QuarterTarget;
+  onClose: () => void;
+  onToggleSourceSession: (sessionId: string, checked: boolean) => void;
+  onSelectAll: () => void;
+  onClearSelection: () => void;
+  onRecalculate: () => void;
+}) {
+  const {
+    open,
+    sourceSessions,
+    loading,
+    selectedSourceSet,
+    selectedSourceSessionIds,
+    hasPendingSelectionChanges,
+    target,
+    onClose,
+    onToggleSourceSession,
+    onSelectAll,
+    onClearSelection,
+    onRecalculate,
+  } = props;
+
+  return (
+    <AppModal
+      open={open}
+      title="지도 보고서 선택"
+      size="large"
+      onClose={onClose}
+      actions={
+        <>
+          <button type="button" className="app-button app-button-secondary" onClick={onSelectAll}>
+            전체 선택
+          </button>
+          <button type="button" className="app-button app-button-secondary" onClick={onClearSelection}>
+            선택 해제
+          </button>
+          <button
+            type="button"
+            className="app-button app-button-primary"
+            onClick={onRecalculate}
+            disabled={!hasPendingSelectionChanges}
+          >
+            재계산
+          </button>
+        </>
+      }
+    >
+      {selectedSourceSessionIds.length === 0 ? (
+        <div className={operationalStyles.bannerInfo}>선택된 보고서가 없습니다.</div>
+      ) : null}
+      {sourceSessions.length > 0 ? (
+        <div className={operationalStyles.sourceModalList}>
+          {sourceSessions.map((session) => {
+            const isSelected = selectedSourceSet.has(session.id);
+            const progress = getSessionProgress(session).percentage;
+            const findingCount = countMeaningfulFindings(session);
+
+            return (
+              <article
+                key={session.id}
+                className={`${operationalStyles.sourceModalRow} ${isSelected ? operationalStyles.sourceModalRowActive : ''}`}
+              >
+                <label className={operationalStyles.sourceModalRowMain}>
+                  <input
+                    type="checkbox"
+                    className={`app-checkbox ${operationalStyles.sourceCheckbox}`}
+                    checked={isSelected}
+                    onChange={(event) => onToggleSourceSession(session.id, event.target.checked)}
+                  />
+                  <div className={operationalStyles.sourceCardBody}>
+                    <strong className={operationalStyles.sourceCardTitle}>{getSessionTitle(session)}</strong>
+                    <span className={operationalStyles.sourceCardMeta}>
+                      작성일 {session.meta.reportDate || '-'} / 작성자 {session.meta.drafter || '-'} / 진행률 {progress}% /
+                      지적사항 {findingCount}건
+                    </span>
+                  </div>
+                </label>
+                <div className={operationalStyles.sourceModalRowActions}>
+                  <span className="app-chip">{isSelected ? '선택됨' : '미선택'}</span>
+                  <Link
+                    href={`/sessions/${encodeURIComponent(session.id)}`}
+                    className={`${operationalStyles.linkButton} ${operationalStyles.linkButtonSecondary}`}
+                  >
+                    원본 보기
+                  </Link>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      ) : (
+        <div className={operationalStyles.emptyState}>
+          {loading ? '해당 현장 지도 보고서를 불러오는 중입니다.' : '선택 가능한 지도 보고서가 없습니다.'}
+        </div>
+      )}
+    </AppModal>
+  );
+
+  return (
+    <AppModal
+      open={open}
+      title="?뚯뒪 蹂닿퀬???좏깮"
+      size="large"
+      onClose={onClose}
+      actions={
+        <>
+          <button type="button" className="app-button app-button-secondary" onClick={onSelectAll}>
+            ?꾩껜 ?좏깮
+          </button>
+          <button type="button" className="app-button app-button-secondary" onClick={onClearSelection}>
+            ?좏깮 ?댁젣
+          </button>
+          <button
+            type="button"
+            className="app-button app-button-primary"
+            onClick={onRecalculate}
+            disabled={!hasPendingSelectionChanges}
+          >
+            ?좏깮 ?곸슜 ???ш퀎??          </button>
+        </>
+      }
+    >
+      <p className={operationalStyles.reportCardDescription}>
+        {target.startDate} ~ {target.endDate} 援ш컙??遺꾧린 蹂닿퀬?쒖뿉 諛섏쁺??湲곗닠吏??蹂닿퀬?쒕? ?좏깮?섏꽭??
+      </p>
+      {selectedSourceSessionIds.length === 0 ? (
+        <div className={operationalStyles.bannerInfo}>?좏깮??蹂닿퀬?쒓? ?놁쑝硫??먮룞 吏묎퀎 寃곌낵媛 鍮꾩뼱吏????덉뒿?덈떎.</div>
+      ) : null}
+      {sourceSessions.length > 0 ? (
+        <div className={operationalStyles.sourceModalList}>
+          {sourceSessions.map((session) => {
+            const isSelected = selectedSourceSet.has(session.id);
+            const progress = getSessionProgress(session).percentage;
+            const findingCount = countMeaningfulFindings(session);
+
+            return (
+              <article
+                key={session.id}
+                className={`${operationalStyles.sourceModalRow} ${isSelected ? operationalStyles.sourceModalRowActive : ''}`}
+              >
+                <label className={operationalStyles.sourceModalRowMain}>
+                  <input
+                    type="checkbox"
+                    className={`app-checkbox ${operationalStyles.sourceCheckbox}`}
+                    checked={isSelected}
+                    onChange={(event) => onToggleSourceSession(session.id, event.target.checked)}
+                  />
+                  <div className={operationalStyles.sourceCardBody}>
+                    <strong className={operationalStyles.sourceCardTitle}>{getSessionTitle(session)}</strong>
+                    <span className={operationalStyles.sourceCardMeta}>
+                      ?묒꽦??{session.meta.reportDate || '-'} / ?묒꽦??{session.meta.drafter || '-'} / 吏꾪뻾瑜?{progress}% /
+                      吏?곸궗??{findingCount}嫄?                    </span>
+                  </div>
+                </label>
+                <div className={operationalStyles.sourceModalRowActions}>
+                  <span className="app-chip">{isSelected ? '선택됨' : '미선택'}</span>
+                  <Link
+                    href={`/sessions/${encodeURIComponent(session.id)}`}
+                    className={`${operationalStyles.linkButton} ${operationalStyles.linkButtonSecondary}`}
+                  >
+                    ?먮낯 蹂닿린
+                  </Link>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      ) : (
+        <div className={operationalStyles.emptyState}>?좏깮 媛?ν븳 湲곗닠吏??蹂닿퀬?쒓? ?놁뒿?덈떎.</div>
+      )}
+    </AppModal>
   );
 }
 
@@ -725,7 +1246,7 @@ function QuarterlySiteSnapshotSection(props: {
   const { draft, onChange } = props;
   return (
     <article className={operationalStyles.reportCard}>
-      <SectionHeader title="1. 기술지도 대상사업장" chips={['자동 초안', '수정 가능']} />
+      <SectionHeader title="1. 기술지도 대상사업장" />
       <div className={operationalStyles.formGrid}>
         <FieldInput label="현장명" value={draft.siteSnapshot.siteName} onChange={(value) => onChange('siteName', value)} />
         <FieldInput label="고객사" value={draft.siteSnapshot.customerName} onChange={(value) => onChange('customerName', value)} />
@@ -760,7 +1281,7 @@ function QuarterlyStatsSection(props: {
 }) {
   return (
     <article className={operationalStyles.reportCard}>
-      <SectionHeader title="2. 통계분석(누계)" chips={['자동 초안', '수정 가능']} />
+      <SectionHeader title="2. 통계분석(누계)" />
       <div className={operationalStyles.summaryGrid}>
         <CounterEditorCard title="재해형태별 분석" items={props.draft.accidentStats} onChange={(index, field, value) => props.onCounterChange('accidentStats', index, field, value)} onAdd={() => props.onAddCounter('accidentStats')} onRemove={(index) => props.onRemoveCounter('accidentStats', index)} />
         <CounterEditorCard title="기인물별 분석" items={props.draft.causativeStats} onChange={(index, field, value) => props.onCounterChange('causativeStats', index, field, value)} onAdd={() => props.onAddCounter('causativeStats')} onRemove={(index) => props.onRemoveCounter('causativeStats', index)} />
@@ -772,7 +1293,7 @@ function QuarterlyStatsSection(props: {
 function QuarterlyOverallCommentSection(props: { value: string; onChange: (value: string) => void }) {
   return (
     <article className={operationalStyles.reportCard}>
-      <SectionHeader title="3. 기술지도 총평" chips={['자동 초안', '수정 가능']} />
+      <SectionHeader title="3. 기술지도 총평" />
       <FieldTextarea label="총평" value={props.value} onChange={props.onChange} />
     </article>
   );
@@ -791,7 +1312,7 @@ function QuarterlyImplementationSection(props: {
   const { rows, onChange, onAdd, onRemove } = props;
   return (
     <article className={operationalStyles.reportCard}>
-      <SectionHeader title="4. 기술지도 이행현황" chips={['자동 초안', '수정 가능']} />
+      <SectionHeader title="4. 기술지도 이행현황" />
       <div className={operationalStyles.tableWrap}>
         <table className={operationalStyles.table}>
           <thead>
@@ -843,7 +1364,7 @@ function QuarterlyFuturePlansSection(props: {
   const { plans, onAdd, onChange } = props;
   return (
     <article className={operationalStyles.reportCard}>
-      <SectionHeader title="5. 향후 공정 유해위험요인 및 대책" chips={['자동 초안', '수정 가능']} />
+      <SectionHeader title="5. 향후 공정 유해위험요인 및 대책" />
       <div className={operationalStyles.formGrid}>
         {plans.map((item, index) => (
           <div key={item.id} className={`${operationalStyles.field} ${operationalStyles.fieldWide}`}>
@@ -876,7 +1397,11 @@ function QuarterlyOpsSection(props: {
   const { draft, isAdminView, onOpenSelector, onClear } = props;
   return (
     <article className={operationalStyles.reportCard}>
-      <SectionHeader title="6. OPS / One Point Sheet" chips={['관리자 전용', draft.opsAssetId ? '자료 연결됨' : '보완 대기']} description="작성자는 연결 결과만 확인할 수 있습니다. 관리자는 콘텐츠의 캠페인 자료를 선택해 이 섹션을 보완합니다." />
+      <SectionHeader
+        title="6. OPS / One Point Sheet"
+        chips={['관리자 전용', draft.opsAssetId ? '자료 연결됨' : '보완 대기']}
+        description="작성자는 연결 결과만 확인할 수 있습니다. 관리자는 콘텐츠의 캠페인 자료를 선택해 이 섹션을 보완합니다."
+      />
       {draft.opsAssetId ? (
         <div className={operationalStyles.opsAssetCard}>
           {draft.opsAssetPreviewUrl ? (
@@ -893,7 +1418,7 @@ function QuarterlyOpsSection(props: {
           </div>
         </div>
       ) : (
-        <div className={operationalStyles.emptyState}>아직 연결된 OPS 자료가 없습니다. 작성자는 그대로 진행할 수 있고, 관리자가 이후 자료를 연결할 수 있습니다.</div>
+        <div className={operationalStyles.emptyState}>아직 연결된 OPS 자료가 없습니다. 관리자가 이후 자료를 연결할 수 있습니다.</div>
       )}
       {isAdminView ? (
         <div className={operationalStyles.reportActions}>
@@ -948,7 +1473,7 @@ function QuarterlyOpsAssetModal(props: {
           })}
         </div>
       ) : (
-        <div className={operationalStyles.emptyState}>선택 가능한 캠페인 자료가 없습니다. 관리자 콘텐츠에서 `캠페인 자료`를 먼저 등록해 주세요.</div>
+        <div className={operationalStyles.emptyState}>선택 가능한 캠페인 자료가 없습니다. 관리자 콘텐츠에서 자료를 먼저 등록해 주세요.</div>
       )}
     </AppModal>
   );

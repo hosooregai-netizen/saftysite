@@ -177,8 +177,6 @@ export function getStoredReportKind(
 ): StoredReportKind {
   const payload = asMapperRecord(report.payload);
   const meta = asMapperRecord(report.meta);
-  const reportKind =
-    normalizeMapperText(payload.reportKind) ||
-    normalizeMapperText(meta.reportKind);
+  const reportKind = normalizeMapperText(payload.reportKind) || normalizeMapperText(meta.reportKind);
   return normalizeStoredReportKind(reportKind);
 }

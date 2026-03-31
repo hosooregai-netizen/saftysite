@@ -29,7 +29,7 @@ function fileNameForBadWorkplaceReport(report: BadWorkplaceReport, site: Inspect
 function violationTable(report: BadWorkplaceReport) {
   return gridTable(
     [
-      ['관련 법규', '유해·위험요인', '개선지도 사항', '불이행 사항', '확인일'],
+      ['관련 법칙', '유해위험요인', '개선지시 사항', '불이행 사항', '확인일'],
       ...(report.violations.length > 0
         ? report.violations.map((item) => [
             item.legalReference || '-',
@@ -50,15 +50,15 @@ function buildBadWorkplaceWordBody(report: BadWorkplaceReport, site: InspectionS
 
   return buildDocumentXml(
     [
-      titleBox('기술지도 개선지도 불이행 사항 통보서'),
+      titleBox('기술지도 개선지시 불이행 사항 통보'),
       paragraph(' ', { spacingAfter: 200 }),
       paragraph(report.title, { align: 'center', bold: true, size: 28, spacingAfter: 120 }),
       paragraph(snapshot.siteName || site.siteName || '-', {
         align: 'center',
         spacingAfter: 80,
       }),
-      paragraph(`작성월: ${report.reportMonth}`, { align: 'center', spacingAfter: 80 }),
-      paragraph(`작성자: ${report.reporterName || '-'}`, { align: 'center' }),
+      paragraph(`작성월 ${report.reportMonth}`, { align: 'center', spacingAfter: 80 }),
+      paragraph(`작성자 ${report.reporterName || '-'}`, { align: 'center' }),
       pageBreak(),
       sectionHeading('1. 기본 정보'),
       twoColTable([
@@ -67,9 +67,9 @@ function buildBadWorkplaceWordBody(report: BadWorkplaceReport, site: InspectionS
         { label: '사업장관리번호', value: snapshot.siteManagementNumber || '-' },
         { label: '사업개시번호', value: snapshot.businessStartNumber || '-' },
         { label: '공사기간', value: report.contractPeriod || snapshot.constructionPeriod || '-' },
-        { label: '공정율', value: report.progressRate || '-' },
+        { label: '공정률', value: report.progressRate || '-' },
         { label: '공사금액', value: snapshot.constructionAmount || '-' },
-        { label: '책임자(수신자)', value: report.receiverName || snapshot.siteManagerName || '-' },
+        { label: '책임자/수신처', value: report.receiverName || snapshot.siteManagerName || '-' },
         { label: '연락처', value: snapshot.siteContactEmail || '-' },
         { label: '현장주소', value: snapshot.siteAddress || '-' },
       ]),
@@ -79,7 +79,7 @@ function buildBadWorkplaceWordBody(report: BadWorkplaceReport, site: InspectionS
         { label: '대표자', value: report.agencyRepresentative || '-' },
         { label: '소재지', value: report.agencyAddress || '-' },
         { label: '연락처', value: report.agencyContact || '-' },
-        { label: '기술지도 실시횟수', value: report.implementationCount || '-' },
+        { label: '기술지도 실시 횟수', value: report.implementationCount || '-' },
         { label: '원본 보고서', value: report.sourceSessionId || '-' },
       ]),
       sectionHeading('3. 불이행 사항'),
@@ -97,6 +97,6 @@ export async function buildBadWorkplaceWordDocument(
   return buildWordDocumentArchive({
     body: buildBadWorkplaceWordBody(report, site),
     filename: fileNameForBadWorkplaceReport(report, site),
-    title: '기술지도 개선지도 불이행 사항 통보서',
+    title: '기술지도 개선지시 불이행 사항 통보',
   });
 }
