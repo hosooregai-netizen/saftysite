@@ -1,5 +1,6 @@
 import {
   LEGAL_REFERENCE_LIBRARY,
+  getSessionGuidanceDate,
   getSessionProgress,
   getSessionSiteKey,
 } from '@/constants/inspectionSession';
@@ -44,7 +45,7 @@ export function buildInspectionSessionDerivedData(
     legalReferenceLibrary,
     measurementTemplates: getMeasurementTemplatesForReportDate(
       masterData,
-      session.meta.reportDate,
+      getSessionGuidanceDate(session),
     ),
     progress: getSessionProgress(session),
     siteSessions,

@@ -1,4 +1,7 @@
-import { DEFAULT_GUIDANCE_AGENCY } from '@/constants/inspectionSession';
+import {
+  DEFAULT_GUIDANCE_AGENCY,
+  getSessionGuidanceDate,
+} from '@/constants/inspectionSession';
 import { createTimestamp, generateId } from '@/constants/inspectionSession/shared';
 import type { SafetyUser } from '@/types/backend';
 import type { BadWorkplaceReport, BadWorkplaceViolation } from '@/types/erpReports';
@@ -20,8 +23,8 @@ function hasMeaningfulFinding(
 
 function sortSessionsByDateDesc(sessions: InspectionSession[]) {
   return [...sessions].sort((left, right) => {
-    const rightTime = new Date(right.meta.reportDate || right.updatedAt).getTime();
-    const leftTime = new Date(left.meta.reportDate || left.updatedAt).getTime();
+    const rightTime = new Date(getSessionGuidanceDate(right) || right.updatedAt).getTime();
+    const leftTime = new Date(getSessionGuidanceDate(left) || left.updatedAt).getTime();
     return rightTime - leftTime;
   });
 }
@@ -61,7 +64,7 @@ export function buildBadWorkplaceViolations(
     improvementMeasure: finding.improvementPlan,
     nonCompliance:
       '기술지도 이후에도 동일 유해위험요인이 개선되지 않아 후속 조치가 필요합니다.',
-    confirmationDate: session.meta.reportDate,
+    confirmationDate: getSessionGuidanceDate(session),
     accidentType: finding.accidentType,
     causativeAgentKey: finding.causativeAgentKey,
   }));

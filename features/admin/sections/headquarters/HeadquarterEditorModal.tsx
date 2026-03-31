@@ -136,20 +136,6 @@ export function HeadquarterEditorModal({
             disabled={busy}
           />
         </label>
-        <label className={styles.modalField}>
-          <span className={styles.label}>활성 여부</span>
-          <select
-            className="app-select"
-            value={form.is_active ? 'true' : 'false'}
-            onChange={(event) =>
-              onFormChange({ ...form, is_active: event.target.value === 'true' })
-            }
-            disabled={busy}
-          >
-            <option value="true">활성</option>
-            <option value="false">비활성</option>
-          </select>
-        </label>
       </div>
     </AppModal>
   );

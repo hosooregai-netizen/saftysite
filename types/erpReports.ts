@@ -40,6 +40,8 @@ export interface QuarterlySummaryReport {
   siteId: string;
   title: string;
   reportKind: 'quarterly_summary';
+  periodStartDate: string;
+  periodEndDate: string;
   quarterKey: string;
   year: number;
   quarter: number;

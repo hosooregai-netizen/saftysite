@@ -2,6 +2,7 @@
 
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { compareReportIndexItemsByRound } from '@/hooks/inspectionSessions/helpers';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import type {
   InspectionReportListItem,
@@ -9,10 +10,15 @@ import type {
   ReportIndexStatus,
 } from '@/types/inspectionSession';
 
-export type SiteReportSortMode = 'recent' | 'name' | 'progress';
+export type SiteReportSortMode = 'round' | 'name' | 'progress';
 
 interface UseSiteReportListStateOptions {
   siteOverride?: InspectionSite | null;
+}
+
+export interface CreateSiteReportInput {
+  reportDate: string;
+  reportTitle: string;
 }
 
 function getDrafterFromReportItem(item: InspectionReportListItem) {
@@ -22,6 +28,7 @@ function getDrafterFromReportItem(item: InspectionReportListItem) {
 function getReportSearchText(item: InspectionReportListItem, fallbackDrafter: string) {
   return [
     item.reportTitle,
+    item.visitRound?.toString() || '',
     item.visitDate || '',
     getDrafterFromReportItem(item) || fallbackDrafter,
     item.lastAutosavedAt || '',
@@ -29,6 +36,12 @@ function getReportSearchText(item: InspectionReportListItem, fallbackDrafter: st
   ]
     .join(' ')
     .toLowerCase();
+}
+
+function buildDefaultReportTitle(reportDate: string, reportNumber: number) {
+  return reportDate
+    ? `${reportDate} 보고서 ${reportNumber}`
+    : `보고서 ${reportNumber}`;
 }
 
 export function useSiteReportListState(
@@ -39,6 +52,7 @@ export function useSiteReportListState(
   const decodedSiteKey = siteKey ? decodeURIComponent(siteKey) : null;
   const {
     sites,
+    sessions,
     currentUser,
     createSession,
     deleteSession,
@@ -49,7 +63,7 @@ export function useSiteReportListState(
     isReady,
   } = useInspectionSessions();
   const [reportQuery, setReportQuery] = useState('');
-  const [reportSortMode, setReportSortMode] = useState<SiteReportSortMode>('recent');
+  const [reportSortMode, setReportSortMode] = useState<SiteReportSortMode>('round');
   const hasReloadedRef = useRef(false);
   const currentSite = useMemo(() => {
     if (!decodedSiteKey) return null;
@@ -76,6 +90,10 @@ export function useSiteReportListState(
   const reportItems = useMemo(() => reportIndexState?.items ?? [], [reportIndexState]);
   const reportIndexStatus: ReportIndexStatus = reportIndexState?.status ?? 'idle';
   const deferredReportQuery = useDeferredValue(reportQuery);
+  const nextReportNumber = useMemo(() => {
+    if (!currentSite) return 1;
+    return sessions.filter((session) => session.siteKey === currentSite.id).length + 1;
+  }, [currentSite, sessions]);
   const assignedUserDisplay = [currentUser?.name, currentUser?.position]
     .filter(Boolean)
     .join(' / ');
@@ -101,12 +119,7 @@ export function useSiteReportListState(
         );
       }
 
-      const leftSavedTime = left.lastAutosavedAt ? new Date(left.lastAutosavedAt).getTime() : 0;
-      const rightSavedTime = right.lastAutosavedAt ? new Date(right.lastAutosavedAt).getTime() : 0;
-      const leftUpdatedTime = new Date(left.updatedAt).getTime();
-      const rightUpdatedTime = new Date(right.updatedAt).getTime();
-
-      return rightSavedTime - leftSavedTime || rightUpdatedTime - leftUpdatedTime;
+      return compareReportIndexItemsByRound(left, right);
     });
   }, [
     assignedUserDisplay,
@@ -116,12 +129,25 @@ export function useSiteReportListState(
     reportSortMode,
   ]);
 
-  const createReport = () => {
+  const getCreateReportTitleSuggestion = (reportDate: string) =>
+    buildDefaultReportTitle(reportDate, nextReportNumber);
+
+  const createReport = ({ reportDate, reportTitle }: CreateSiteReportInput) => {
     if (!currentSite || reportIndexStatus !== 'loaded') return;
+
+    const normalizedReportDate = reportDate.trim();
+    const normalizedReportTitle =
+      reportTitle.trim() || getCreateReportTitleSuggestion(normalizedReportDate);
+
+    if (!normalizedReportDate) {
+      return;
+    }
 
     const nextSession = createSession(currentSite, {
       meta: {
         siteName: currentSite.siteName,
+        reportDate: normalizedReportDate,
+        reportTitle: normalizedReportTitle,
         drafter: currentUser?.name || currentSite.assigneeName,
       },
     });
@@ -146,6 +172,7 @@ export function useSiteReportListState(
     createReport,
     currentSite,
     currentUser,
+    getCreateReportTitleSuggestion,
     deleteSession,
     filteredReportItems,
     reportIndexError: reportIndexState?.error ?? null,

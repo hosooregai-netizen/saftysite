@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import ActionMenu, { type ActionMenuItem } from '@/components/ui/ActionMenu';
+import { getSessionGuidanceDate } from '@/constants/inspectionSession';
 import { formatDateTime } from '@/lib/formatDateTime';
 import type { HomeSiteSummary } from '@/features/home/lib/buildHomeSiteSummaries';
 import styles from './HomeScreen.module.css';
@@ -45,7 +46,7 @@ export function AssignedSitesTable({
             <span>현장명</span>
             <span className={styles.desktopOnly}>담당</span>
             <span className={styles.desktopOnly}>진행상태</span>
-            <span>최근 작성일</span>
+            <span>최근 지도일</span>
             <span>보고서 수</span>
             <span className={styles.desktopOnly}>마지막 저장</span>
             <span>메뉴</span>
@@ -130,7 +131,7 @@ export function AssignedSitesTable({
           <span>현장명</span>
           <span className={styles.desktopOnly}>담당</span>
           <span className={styles.desktopOnly}>진행상태</span>
-          <span>최근 작성일</span>
+          <span>최근 지도일</span>
           <span>보고서 수</span>
           <span className={styles.desktopOnly}>마지막 저장</span>
           <span>메뉴</span>
@@ -170,10 +171,12 @@ export function AssignedSitesTable({
 
                 <div className={`${styles.cell} ${styles.dateCell}`}>
                   <span className={`${styles.cellValue} ${styles.desktopDate}`}>
-                    {latestSession?.meta.reportDate || '-'}
+                    {latestSession ? getSessionGuidanceDate(latestSession) || '-' : '-'}
                   </span>
                   <span className={`${styles.cellValue} ${styles.compactDate}`}>
-                    {formatCompactReportDate(latestSession?.meta.reportDate)}
+                    {formatCompactReportDate(
+                      latestSession ? getSessionGuidanceDate(latestSession) : null,
+                    )}
                   </span>
                 </div>
 

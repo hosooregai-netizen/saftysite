@@ -61,19 +61,13 @@ export function UserEditorModal({
     >
       <div className={styles.modalForm}>
         <div className={styles.modalGrid}>
-          <label className={styles.modalField}>
-            <span className={styles.label}>이름</span>
-            <input
-              className="app-input"
-              value={form.name}
-              onChange={(event) => onFormChange({ ...form, name: event.target.value })}
-              disabled={busy}
-            />
-          </label>
-          <label className={styles.modalField}>
+         <label className={styles.modalField}>
             <span className={styles.label}>이메일</span>
             <input
               className="app-input"
+              type="email"
+              name="user-email"
+              autoComplete={editingId === 'create' ? 'username' : 'off'}
               value={form.email}
               onChange={(event) => onFormChange({ ...form, email: event.target.value })}
               disabled={busy || editingId !== 'create'}
@@ -84,6 +78,8 @@ export function UserEditorModal({
             <input
               className="app-input"
               type="password"
+              name="user-password"
+              autoComplete="new-password"
               value={form.password}
               onChange={(event) => onFormChange({ ...form, password: event.target.value })}
               disabled={busy}
@@ -110,6 +106,8 @@ export function UserEditorModal({
             <span className={styles.label}>전화번호</span>
             <input
               className="app-input"
+              name="user-phone"
+              autoComplete="off"
               value={form.phone}
               onChange={(event) => onFormChange({ ...form, phone: event.target.value })}
               disabled={busy}
@@ -119,6 +117,8 @@ export function UserEditorModal({
             <span className={styles.label}>직책</span>
             <input
               className="app-input"
+              name="user-position"
+              autoComplete="off"
               value={form.position}
               onChange={(event) => onFormChange({ ...form, position: event.target.value })}
               disabled={busy}
@@ -128,6 +128,8 @@ export function UserEditorModal({
             <span className={styles.label}>소속</span>
             <input
               className="app-input"
+              name="user-organization"
+              autoComplete="off"
               value={form.organization_name}
               onChange={(event) =>
                 onFormChange({ ...form, organization_name: event.target.value })

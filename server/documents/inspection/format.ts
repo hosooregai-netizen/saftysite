@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { getSessionGuidanceDate } from '@/constants/inspectionSession';
 import { CAUSATIVE_AGENT_LABELS } from '@/constants/inspectionSession/doc7Catalog';
 import { sanitizeWordFileName } from '@/server/documents/sharedDocx';
 import type { ChecklistRating, InspectionSession } from '@/types/inspectionSession';
@@ -56,7 +57,7 @@ export function fileNameForSession(session: InspectionSession): string {
     session.meta.siteName || session.adminSiteSnapshot.siteName || 'inspection',
     'inspection'
   );
-  return `${site || 'inspection'}-${formatDate(session.meta.reportDate).replace(/\./g, '')}-${session.reportNumber}회.docx`;
+  return `${site || 'inspection'}-${formatDate(getSessionGuidanceDate(session)).replace(/\./g, '')}-${session.reportNumber}회.docx`;
 }
 
 export function imageTag(src: string, alt: string, className = 'doc-image'): string {

@@ -73,10 +73,7 @@ export function useInspectionSessionsMutations(
   const createSession = useCallback((site: InspectionSite, initial?: { meta?: Partial<InspectionReportMeta> }) => {
     const nextSession = createNewSafetySession(
       site,
-      Math.max(
-        0,
-        ...sessionsRef.current.filter((session) => session.siteKey === site.id).map((session) => session.reportNumber || 0)
-      ) + 1,
+      sessionsRef.current.filter((session) => session.siteKey === site.id).length + 1,
       masterDataRef.current,
       { meta: initial?.meta }
     );
@@ -101,15 +98,42 @@ export function useInspectionSessionsMutations(
 
   const updateSession = useCallback((sessionId: string, updater: (current: InspectionSession) => InspectionSession) => {
     const updatedAt = new Date().toISOString();
+    const currentSession = sessionsRef.current.find((session) => session.id === sessionId);
+    if (!currentSession) return;
+
+    const updatedSession = {
+      ...normalizeInspectionSession(updater(currentSession)),
+      updatedAt,
+    };
+
     setSessions((current) => {
       const nextSessions = current.map((session) =>
-        session.id === sessionId ? { ...normalizeInspectionSession(updater(session)), updatedAt } : session
+        session.id === sessionId ? updatedSession : session
       );
       sessionsRef.current = nextSessions;
       return nextSessions;
     });
+
+    const siteId = getSessionSiteKey(updatedSession);
+    const site = sitesRef.current.find((item) => item.id === siteId);
+    if (site) {
+      setReportIndexBySiteId((current) => ({
+        ...current,
+        [siteId]: {
+          ...createEmptyReportIndexState(),
+          ...(current[siteId] ?? {}),
+          status: current[siteId]?.status ?? 'loaded',
+          items: mergeReportIndexItems(
+            current[siteId]?.items ?? [],
+            [mapInspectionSessionToReportListItem(updatedSession, site)],
+          ),
+          fetchedAt: current[siteId]?.fetchedAt ?? new Date().toISOString(),
+          error: null,
+        },
+      }));
+    }
     markSessionDirty(sessionId);
-  }, [markSessionDirty, sessionsRef, setSessions]);
+  }, [markSessionDirty, sessionsRef, setReportIndexBySiteId, setSessions, sitesRef]);
 
   const updateSessions = useCallback((predicate: (session: InspectionSession) => boolean, updater: (current: InspectionSession) => InspectionSession) => {
     const updatedAt = new Date().toISOString();

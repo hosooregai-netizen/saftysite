@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
@@ -35,8 +35,6 @@ export function SiteEntryHubScreen({
   const {
     authError,
     currentUser,
-    ensureSiteReportIndexLoaded,
-    getReportIndexBySiteId,
     isAuthenticated,
     isReady,
     login,
@@ -59,12 +57,10 @@ export function SiteEntryHubScreen({
       siteId: currentSite.id,
     });
   }, [currentSite]);
-  const reportIndexState = currentSite ? getReportIndexBySiteId(currentSite.id) : null;
-  const reportCount = reportIndexState?.items.length ?? 0;
   const backHref = selectedEntryIntent ? buildWorkerPickerHref(selectedEntryIntent) : '/';
   const backLabel = selectedEntryIntent
     ? getWorkerSiteEntryTitle(selectedEntryIntent)
-    : '?꾩옣 紐⑸줉';
+    : '현장 목록';
 
   useEffect(() => {
     if (isAdminView) {
@@ -72,18 +68,13 @@ export function SiteEntryHubScreen({
     }
   }, [adminHref, isAdminView, router]);
 
-  useEffect(() => {
-    if (!currentSite) return;
-    void ensureSiteReportIndexLoaded(currentSite.id);
-  }, [currentSite, ensureSiteReportIndexLoaded]);
-
   if (!isReady) {
     return (
       <main className="app-page">
         <div className="app-container">
           <section className="app-shell">
             <div className={homeStyles.emptyState}>
-              <p className={homeStyles.emptyTitle}>?꾩옣 ?뺣낫瑜?遺덈윭?ㅻ뒗 以묒엯?덈떎.</p>
+              <p className={homeStyles.emptyTitle}>현장 정보를 불러오는 중입니다.</p>
             </div>
           </section>
         </div>
@@ -112,13 +103,14 @@ export function SiteEntryHubScreen({
         <div className="app-container">
           <section className="app-shell">
             <div className={homeStyles.emptyState}>
-              <p className={homeStyles.emptyTitle}>?꾩옣??李얠쓣 ???놁뒿?덈떎.</p>
+              <p className={homeStyles.emptyTitle}>현장을 찾을 수 없습니다.</p>
               <p className={homeStyles.emptyDescription}>
-                ?곌껐?섎젮???꾩옣 ?뺣낫媛 ?녾굅?????댁긽 諛곗젙?섏? ?딆븯?듬땲??
+                연결하려는 현장 정보가 없거나 더 이상 배정되지 않았습니다.
               </p>
               <div>
                 <Link href="/" className="app-button app-button-secondary">
-                  ?꾩옣 紐⑸줉?쇰줈 ?뚯븘媛湲?                </Link>
+                  현장 목록으로 돌아가기
+                </Link>
               </div>
             </div>
           </section>
@@ -157,8 +149,6 @@ export function SiteEntryHubScreen({
               <div className={homeStyles.pageGrid}>
                 <SiteEntryHubPanel
                   currentSite={currentSite}
-                  reportCount={reportCount}
-                  reportIndexStatus={reportIndexState?.status ?? null}
                   selectedEntryIntent={selectedEntryIntent}
                 />
               </div>

@@ -9,7 +9,10 @@ import WorkerAppHeader from '@/components/worker/WorkerAppHeader';
 import WorkerMenuSidebar from '@/components/worker/WorkerMenuSidebar';
 import WorkerShellBody from '@/components/worker/WorkerShellBody';
 import { WorkerMenuDrawer, WorkerMenuPanel } from '@/components/worker/WorkerMenu';
-import { getSessionTitle } from '@/constants/inspectionSession';
+import {
+  getSessionGuidanceDate,
+  getSessionTitle,
+} from '@/constants/inspectionSession';
 import { createTimestamp } from '@/constants/inspectionSession/shared';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { useSiteOperationalReports } from '@/hooks/useSiteOperationalReports';
@@ -232,7 +235,7 @@ function BadWorkplaceReportEditor({
     setDraft((current) => syncBadWorkplaceReportSource(current, nextSession));
     setNotice(
       nextSession
-        ? `${nextSession.meta.reportDate || '-'} 기술지도 보고서를 원본으로 선택했습니다.`
+        ? `${getSessionGuidanceDate(nextSession) || '-'} 기술지도 보고서를 원본으로 선택했습니다.`
         : null,
     );
   };
@@ -324,7 +327,7 @@ function BadWorkplaceReportEditor({
                         {getSessionTitle(session)}
                       </strong>
                       <span className={operationalStyles.sourceCardMeta}>
-                        작성일 {session.meta.reportDate || '-'} / 작성자 {session.meta.drafter || '-'} / 지적사항 {findingCount}건 / 진행률 {session.document2Overview.progressRate || '-'}
+                        지도일 {getSessionGuidanceDate(session) || '-'} / 작성자 {session.meta.drafter || '-'} / 지적사항 {findingCount}건 / 진행률 {session.document2Overview.progressRate || '-'}
                       </span>
                     </div>
                   </div>

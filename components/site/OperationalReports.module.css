@@ -238,6 +238,12 @@
   gap: 12px;
 }
 
+.periodFieldGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
 .field {
   display: grid;
   gap: 6px;

@@ -1,5 +1,6 @@
 import {
   createInspectionSession,
+  getSessionGuidanceDate,
   getSessionProgress,
   getSessionTitle,
   normalizeInspectionSession,
@@ -65,7 +66,7 @@ export function mapInspectionSessionToReportListItem(
     siteId: site.id,
     headquarterId: site.headquarterId ?? null,
     assignedUserId: null,
-    visitDate: session.meta.reportDate || null,
+    visitDate: getSessionGuidanceDate(session) || null,
     visitRound: session.reportNumber || null,
     totalRound: progress.total,
     progressRate: progress.percentage,
@@ -79,6 +80,7 @@ export function mapInspectionSessionToReportListItem(
     updatedAt: session.updatedAt,
     meta: {
       siteName: session.meta.siteName,
+      reportTitle: session.meta.reportTitle,
       drafter: session.meta.drafter,
       reviewer: session.meta.reviewer,
       approver: session.meta.approver,
@@ -121,6 +123,9 @@ export function mapSafetyReportToInspectionSession(
         normalizeMapperText(payloadMeta.reportDate) ||
         normalizeMapperText(report.visit_date) ||
         '',
+      reportTitle:
+        normalizeMapperText(payloadMeta.reportTitle) ||
+        normalizeMapperText(report.report_title),
       drafter:
         normalizeMapperText(payloadMeta.drafter) ||
         normalizeMapperText(reportMeta.drafter) ||
@@ -147,7 +152,7 @@ export function buildSafetyReportUpsertInput(
     report_key: session.id,
     report_title: getSessionTitle(session),
     site_id: site.id,
-    visit_date: session.meta.reportDate || null,
+    visit_date: getSessionGuidanceDate(session) || null,
     visit_round: session.reportNumber || null,
     total_round: parsePositiveInteger(session.document2Overview.totalVisitCount),
     progress_rate: progress.percentage,
@@ -160,6 +165,7 @@ export function buildSafetyReportUpsertInput(
     meta: {
       reportKind: TECHNICAL_GUIDANCE_REPORT_KIND,
       siteName: session.meta.siteName,
+      reportTitle: session.meta.reportTitle,
       drafter: session.meta.drafter,
       reviewer: session.meta.reviewer,
       approver: session.meta.approver,

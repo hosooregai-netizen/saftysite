@@ -32,6 +32,7 @@ export function SiteReportsScreen({ siteKey }: SiteReportsScreenProps) {
     currentUserName,
     deleteSession,
     filteredReportItems,
+    getCreateReportTitleSuggestion,
     isAdminView,
     isAuthenticated,
     isReady,
@@ -58,7 +59,7 @@ export function SiteReportsScreen({ siteKey }: SiteReportsScreenProps) {
         error={authError}
         onSubmit={login}
         title="보고서 목록 로그인"
-        description="현장별 보고서 목록과 저장된 데이터를 보려면 다시 로그인해 주세요."
+        description="현장별 보고서 목록과 저장한 데이터를 보려면 다시 로그인해 주세요."
       />
     );
   }
@@ -80,7 +81,10 @@ export function SiteReportsScreen({ siteKey }: SiteReportsScreenProps) {
           <WorkerShellBody>
             <WorkerMenuSidebar>
               {isAdminView ? (
-                <AdminMenuPanel activeSection="headquarters" currentSiteKey={currentSite.id} />
+                <AdminMenuPanel
+                  activeSection="headquarters"
+                  currentSiteKey={currentSite.id}
+                />
               ) : (
                 <WorkerMenuPanel currentSiteKey={currentSite.id} />
               )}
@@ -89,11 +93,17 @@ export function SiteReportsScreen({ siteKey }: SiteReportsScreenProps) {
             <div className={styles.contentColumn}>
               <header className={styles.hero}>
                 <div className={styles.heroBody}>
-                  <Link href={workerBackHref} className={styles.heroBackLink} aria-label="이전 화면으로 돌아가기">
+                  <Link
+                    href={workerBackHref}
+                    className={styles.heroBackLink}
+                    aria-label="이전 화면으로 돌아가기"
+                  >
                     {'<'} 이전
                   </Link>
                   <div className={styles.heroMain}>
-                    <h1 className={styles.heroTitle}>기술 지도 - {currentSite.siteName} 보고서 목록</h1>
+                    <h1 className={styles.heroTitle}>
+                      기술지도 보고서 - {currentSite.siteName}
+                    </h1>
                   </div>
                 </div>
               </header>
@@ -107,6 +117,7 @@ export function SiteReportsScreen({ siteKey }: SiteReportsScreenProps) {
                   currentSite={currentSite}
                   deleteSession={deleteSession}
                   filteredReportItems={filteredReportItems}
+                  getCreateReportTitleSuggestion={getCreateReportTitleSuggestion}
                   reloadReportIndex={reloadReportIndex}
                   reportIndexError={reportIndexError}
                   reportIndexStatus={reportIndexStatus}

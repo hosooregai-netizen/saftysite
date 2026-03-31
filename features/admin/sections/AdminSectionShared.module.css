@@ -475,6 +475,16 @@
   border-bottom: 0;
 }
 
+.tableClickableRow {
+  cursor: pointer;
+}
+
+.tableClickableRow:focus-visible td {
+  background: #f6f9fc;
+  outline: 2px solid var(--erp-mid);
+  outline-offset: -2px;
+}
+
 .tablePrimary {
   font-weight: 700;
   line-height: 1.4;
@@ -526,6 +536,28 @@
 .filterSearch {
   min-width: min(100%, 280px);
   flex: 1 1 280px;
+}
+
+.usersFilterRow {
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+.usersFilterSelect {
+  width: 132px;
+  min-width: 132px;
+  flex: 0 0 132px;
+}
+
+.contentFilterRow {
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+.contentFilterSelect {
+  width: 172px;
+  min-width: 172px;
+  flex: 0 0 172px;
 }
 
 .filterButton {
@@ -1071,6 +1103,7 @@
   display: grid;
   gap: 14px;
   align-items: center;
+  justify-content: start;
   grid-template-columns: minmax(120px, 148px) minmax(0, 1fr);
 }
 
@@ -1115,13 +1148,16 @@
   margin: 0;
   padding: 0;
   list-style: none;
+  justify-self: start;
+  align-content: start;
 }
 
 .kpiLegendItem {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto auto auto;
   align-items: center;
   gap: 8px;
+  justify-content: start;
 }
 
 .kpiLegendSwatch {
@@ -1142,6 +1178,8 @@
 
 .kpiLegendValue {
   font-weight: 700;
+  min-width: 2ch;
+  text-align: right;
 }
 
 .kpiBarList,
@@ -1499,6 +1537,26 @@
   }
 
   .listSectionCard .filterSearch {
+    min-width: 0;
+    flex: 1 1 100%;
+  }
+
+  .usersFilterRow {
+    flex-wrap: wrap;
+  }
+
+  .usersFilterSelect {
+    width: auto;
+    min-width: 0;
+    flex: 1 1 calc(50% - 4px);
+  }
+
+  .contentFilterRow {
+    flex-wrap: wrap;
+  }
+
+  .contentFilterSelect {
+    width: 100%;
     min-width: 0;
     flex: 1 1 100%;
   }

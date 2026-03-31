@@ -1,4 +1,7 @@
+'use client';
+
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import ActionMenu from '@/components/ui/ActionMenu';
 import { getSessionProgress, getSessionTitle } from '@/constants/inspectionSession';
 import type { InspectionSession, InspectionSite } from '@/types/inspectionSession';
@@ -17,6 +20,17 @@ interface ReportListProps {
   styles: Record<string, string>;
 }
 
+function shouldIgnoreRowClick(target: EventTarget | null) {
+  return (
+    target instanceof HTMLElement &&
+    Boolean(
+      target.closest(
+        'a, button, input, select, textarea, [role="button"], [role="menu"], [role="menuitem"]',
+      ),
+    )
+  );
+}
+
 export default function ReportList({
   assignedUserDisplay,
   currentSite,
@@ -28,6 +42,8 @@ export default function ReportList({
   onDeleteRequest,
   styles,
 }: ReportListProps) {
+  const router = useRouter();
+
   if (totalSessionCount === 0) {
     return (
       <div className={styles.emptyState}>
@@ -82,7 +98,22 @@ export default function ReportList({
             ];
 
             return (
-              <article key={session.id} className={styles.reportRow}>
+              <article
+                key={session.id}
+                className={`${styles.reportRow} ${styles.reportRowClickable ?? ''}`}
+                tabIndex={0}
+                role="link"
+                onClick={(event) => {
+                  if (shouldIgnoreRowClick(event.target)) return;
+                  router.push(sessionHref);
+                }}
+                onKeyDown={(event) => {
+                  if (shouldIgnoreRowClick(event.target)) return;
+                  if (event.key !== 'Enter' && event.key !== ' ') return;
+                  event.preventDefault();
+                  router.push(sessionHref);
+                }}
+              >
                 <div className={`${styles.primaryCell} ${styles.titleCell}`}>
                   <Link href={sessionHref} className={styles.reportLink}>
                     {getSessionTitle(session)}
@@ -121,7 +152,11 @@ export default function ReportList({
                   <span className={styles.dataValue}>{formatDateTime(session.lastSavedAt)}</span>
                 </div>
 
-                <div className={`${styles.actionCell} ${styles.actionsCell}`}>
+                <div
+                  className={`${styles.actionCell} ${styles.actionsCell}`}
+                  onClick={(event) => event.stopPropagation()}
+                  onKeyDown={(event) => event.stopPropagation()}
+                >
                   <ActionMenu
                     items={menuItems}
                     label={`${getSessionTitle(session)} 작업 메뉴 열기`}

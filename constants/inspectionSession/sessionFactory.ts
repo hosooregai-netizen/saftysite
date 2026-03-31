@@ -130,6 +130,7 @@ export function createInspectionSession(
   const meta: InspectionReportMeta = {
     siteName: options.meta?.siteName ?? adminSiteSnapshot.siteName,
     reportDate: options.meta?.reportDate ?? new Date().toISOString().slice(0, 10),
+    reportTitle: options.meta?.reportTitle ?? '',
     drafter: options.meta?.drafter ?? adminSiteSnapshot.assigneeName,
     reviewer: options.meta?.reviewer ?? '',
     approver: options.meta?.approver ?? '',
@@ -144,7 +145,11 @@ export function createInspectionSession(
     adminSiteSnapshot,
     documentsMeta: createDocumentMetaMap(),
     document2Overview: createTechnicalGuidanceOverview(
-      { guidanceDate: meta.reportDate, assignee: meta.drafter },
+      {
+        guidanceDate: meta.reportDate,
+        visitCount: String(reportNumber),
+        assignee: meta.drafter,
+      },
       adminSiteSnapshot
     ),
     document3Scenes: createDefaultScenePhotos(),

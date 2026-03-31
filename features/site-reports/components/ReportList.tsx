@@ -1,4 +1,7 @@
+'use client';
+
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import ActionMenu from '@/components/ui/ActionMenu';
 import { formatDateTime } from '@/lib/formatDateTime';
 import type {
@@ -18,6 +21,17 @@ interface ReportListProps {
   reportIndexStatus: ReportIndexStatus;
   reportItems: InspectionReportListItem[];
   totalReportCount: number;
+}
+
+function shouldIgnoreRowClick(target: EventTarget | null) {
+  return (
+    target instanceof HTMLElement &&
+    Boolean(
+      target.closest(
+        'a, button, input, select, textarea, [role="button"], [role="menu"], [role="menuitem"]',
+      ),
+    )
+  );
 }
 
 function getDrafterDisplay(
@@ -44,10 +58,15 @@ export function ReportList({
   reportItems,
   totalReportCount,
 }: ReportListProps) {
-  if ((reportIndexStatus === 'idle' || reportIndexStatus === 'loading') && totalReportCount === 0) {
+  const router = useRouter();
+
+  if (
+    (reportIndexStatus === 'idle' || reportIndexStatus === 'loading') &&
+    totalReportCount === 0
+  ) {
     return (
       <div className={styles.emptyState}>
-        <p className={styles.emptyTitle}>이 현장의 보고서 목록을 불러오는 중입니다.</p>
+        <p className={styles.emptyTitle}>보고서 목록을 불러오는 중입니다.</p>
       </div>
     );
   }
@@ -56,7 +75,9 @@ export function ReportList({
     return (
       <div className={styles.emptyState}>
         <p className={styles.emptyTitle}>보고서 목록을 아직 불러오지 못했습니다.</p>
-        <p className={styles.emptySearchHint}>다시 불러오기를 눌러 목록을 새로 받아오세요.</p>
+        <p className={styles.emptySearchHint}>
+          다시 불러오기를 눌러 목록을 새로 받아오세요.
+        </p>
       </div>
     );
   }
@@ -64,7 +85,7 @@ export function ReportList({
   if (totalReportCount === 0) {
     return (
       <div className={styles.emptyState}>
-        <p className={styles.emptyTitle}>아직 작성된 보고서가 없습니다.</p>
+        <p className={styles.emptyTitle}>아직 작성한 보고서가 없습니다.</p>
         {canCreateReport ? (
           <button
             type="button"
@@ -82,7 +103,9 @@ export function ReportList({
     return (
       <div className={styles.emptyState}>
         <p className={styles.emptyTitle}>검색 조건에 맞는 보고서가 없습니다.</p>
-        <p className={styles.emptySearchHint}>검색어와 정렬을 바꿔 다시 시도해 보세요.</p>
+        <p className={styles.emptySearchHint}>
+          검색어나 정렬을 바꿔 다시 시도해 보세요.
+        </p>
       </div>
     );
   }
@@ -91,8 +114,9 @@ export function ReportList({
     <div className={styles.listViewport}>
       <div className={styles.listTrack}>
         <div className={styles.listHead} aria-hidden="true">
+          <span>차수</span>
           <span>보고서명</span>
-          <span className={styles.desktopOnly}>작성일</span>
+          <span className={styles.desktopOnly}>지도일</span>
           <span>작성자</span>
           <span>진행률</span>
           <span className={styles.desktopOnly}>마지막 저장</span>
@@ -117,14 +141,35 @@ export function ReportList({
             ];
 
             return (
-              <article key={item.reportKey} className={styles.reportRow}>
+              <article
+                key={item.reportKey}
+                className={`${styles.reportRow} ${styles.reportRowClickable}`}
+                tabIndex={0}
+                role="link"
+                onClick={(event) => {
+                  if (shouldIgnoreRowClick(event.target)) return;
+                  router.push(sessionHref);
+                }}
+                onKeyDown={(event) => {
+                  if (shouldIgnoreRowClick(event.target)) return;
+                  if (event.key !== 'Enter' && event.key !== ' ') return;
+                  event.preventDefault();
+                  router.push(sessionHref);
+                }}
+              >
+                <div className={`${styles.dataCell} ${styles.roundCell}`}>
+                  <span className={styles.dataValue}>{item.visitRound ?? '-'}</span>
+                </div>
+
                 <div className={`${styles.primaryCell} ${styles.titleCell}`}>
                   <Link href={sessionHref} className={styles.reportLink}>
                     {item.reportTitle}
                   </Link>
                 </div>
 
-                <div className={`${styles.dataCell} ${styles.reportDateCell} ${styles.desktopOnly}`}>
+                <div
+                  className={`${styles.dataCell} ${styles.reportDateCell} ${styles.desktopOnly}`}
+                >
                   <span className={styles.dataValue}>{item.visitDate || '미입력'}</span>
                 </div>
 
@@ -146,13 +191,19 @@ export function ReportList({
                   </div>
                 </div>
 
-                <div className={`${styles.dataCell} ${styles.lastSavedCell} ${styles.desktopOnly}`}>
+                <div
+                  className={`${styles.dataCell} ${styles.lastSavedCell} ${styles.desktopOnly}`}
+                >
                   <span className={styles.dataValue}>
                     {formatDateTime(item.lastAutosavedAt || item.updatedAt)}
                   </span>
                 </div>
 
-                <div className={`${styles.actionCell} ${styles.actionsCell}`}>
+                <div
+                  className={`${styles.actionCell} ${styles.actionsCell}`}
+                  onClick={(event) => event.stopPropagation()}
+                  onKeyDown={(event) => event.stopPropagation()}
+                >
                   <ActionMenu
                     items={menuItems}
                     label={`${item.reportTitle} 작업 메뉴 열기`}

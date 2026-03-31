@@ -44,6 +44,17 @@ export function UsersTable({
   totalUserCount,
   userOverviewById,
 }: UsersTableProps) {
+  const roleOptions: Array<{ label: string; value: UsersTableProps['roleFilter'] }> = [
+    { label: '전체 권한', value: 'all' },
+    { label: '관리자', value: 'admin' },
+    { label: '지도요원', value: 'field_agent' },
+  ];
+  const statusOptions: Array<{ label: string; value: UsersTableProps['statusFilter'] }> = [
+    { label: '전체 상태', value: 'all' },
+    { label: '활성', value: 'active' },
+    { label: '비활성', value: 'inactive' },
+  ];
+
   return (
     <>
       <div className={styles.sectionHeader}>
@@ -51,7 +62,9 @@ export function UsersTable({
           <h2 className={styles.sectionTitle}>사용자 CRUD</h2>
         </div>
         <div className={styles.sectionHeaderActions}>
-          <span className="app-chip">표시 {filteredUsers.length} / 전체 {totalUserCount}명</span>
+          <span className="app-chip">
+            표시 {filteredUsers.length} / 전체 {totalUserCount}명
+          </span>
           <button
             type="button"
             className="app-button app-button-primary"
@@ -64,55 +77,45 @@ export function UsersTable({
       </div>
 
       <div className={styles.sectionBody}>
-        <div className={styles.filterRow}>
+        <div className={`${styles.filterRow} ${styles.usersFilterRow}`}>
           <input
             className={`app-input ${styles.filterSearch}`}
+            type="search"
+            name="user-search"
+            autoComplete="off"
+            spellCheck={false}
             placeholder="이름, 이메일, 직책, 소속으로 검색"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
-          <button
-            type="button"
-            className={`${styles.filterButton} ${roleFilter === 'all' ? styles.filterButtonActive : ''}`}
-            onClick={() => setRoleFilter('all')}
+          <select
+            className={`app-select ${styles.usersFilterSelect}`}
+            aria-label="권한 필터"
+            value={roleFilter}
+            onChange={(event) =>
+              setRoleFilter(event.target.value as UsersTableProps['roleFilter'])
+            }
           >
-            전체 권한
-          </button>
-          <button
-            type="button"
-            className={`${styles.filterButton} ${roleFilter === 'admin' ? styles.filterButtonActive : ''}`}
-            onClick={() => setRoleFilter('admin')}
+            {roleOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <select
+            className={`app-select ${styles.usersFilterSelect}`}
+            aria-label="활성 상태 필터"
+            value={statusFilter}
+            onChange={(event) =>
+              setStatusFilter(event.target.value as UsersTableProps['statusFilter'])
+            }
           >
-            관리자
-          </button>
-          <button
-            type="button"
-            className={`${styles.filterButton} ${roleFilter === 'field_agent' ? styles.filterButtonActive : ''}`}
-            onClick={() => setRoleFilter('field_agent')}
-          >
-            지도요원
-          </button>
-          <button
-            type="button"
-            className={`${styles.filterButton} ${statusFilter === 'all' ? styles.filterButtonActive : ''}`}
-            onClick={() => setStatusFilter('all')}
-          >
-            전체 상태
-          </button>
-          <button
-            type="button"
-            className={`${styles.filterButton} ${statusFilter === 'active' ? styles.filterButtonActive : ''}`}
-            onClick={() => setStatusFilter('active')}
-          >
-            활성
-          </button>
-          <button
-            type="button"
-            className={`${styles.filterButton} ${statusFilter === 'inactive' ? styles.filterButtonActive : ''}`}
-            onClick={() => setStatusFilter('inactive')}
-          >
-            비활성
-          </button>
+            {statusOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className={styles.tableShell}>
@@ -147,7 +150,8 @@ export function UsersTable({
                         <td>
                           <div className={styles.tablePrimary}>{user.name}</div>
                           <div className={styles.tableSecondary}>
-                            {user.position || '직책 미입력'} · {user.organization_name || '소속 미입력'}
+                            {user.position || '직책 미입력'} ·{' '}
+                            {user.organization_name || '소속 미입력'}
                           </div>
                         </td>
                         <td>{user.email}</td>
@@ -241,4 +245,3 @@ export function UsersTable({
     </>
   );
 }
-

@@ -35,6 +35,7 @@ export interface InspectionDocumentMeta {
 export interface InspectionReportMeta {
   siteName: string;
   reportDate: string;
+  reportTitle: string;
   drafter: string;
   reviewer: string;
   approver: string;

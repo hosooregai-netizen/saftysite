@@ -24,9 +24,11 @@ import {
   formatReportMonthLabel,
   getCurrentReportMonth,
   getQuarterTargetsForConstructionPeriod,
+  getStoredReportKind,
+  TECHNICAL_GUIDANCE_REPORT_KIND,
 } from '@/lib/erpReports/shared';
 import { SafetyApiError, fetchSafetyReportsBySite, readSafetyAuthToken } from '@/lib/safetyApi';
-import type { SafetySite, SafetyUser } from '@/types/backend';
+import type { SafetyReport, SafetySite, SafetyUser } from '@/types/backend';
 
 const FETCH_CONCURRENCY = 6;
 const KPI_CACHE_TTL_MS = 1000 * 60 * 5;
@@ -53,10 +55,17 @@ interface OperationalKpiCacheEntry {
   key: string;
   loadedAt: number;
   pendingAgentRows: AdminOverviewPendingAgentRow[];
+  reportProgressEntries: AdminOverviewChartEntry[];
   urgentSiteRows: AdminOverviewUrgentSiteRow[];
 }
 
 let operationalKpiCache: OperationalKpiCacheEntry | null = null;
+
+const EMPTY_REPORT_PROGRESS_ENTRIES: AdminOverviewChartEntry[] = [
+  { count: 0, label: '완료' },
+  { count: 0, label: '작성 중' },
+  { count: 0, label: '미착수' },
+];
 
 function isQuarterlyReport(
   value: ReturnType<typeof mapSafetyReportToQuarterlySummaryReport>,
@@ -97,6 +106,29 @@ function pushUniqueValue(values: string[], value: string) {
   }
 }
 
+function buildReportProgressEntriesFromReports(
+  reports: SafetyReport[],
+): AdminOverviewChartEntry[] {
+  const stats = reports.reduce(
+    (accumulator, report) => {
+      const progressRate = typeof report.progress_rate === 'number' ? report.progress_rate : 0;
+
+      if (progressRate >= 100) accumulator.completed += 1;
+      else if (progressRate > 0) accumulator.inProgress += 1;
+      else accumulator.notStarted += 1;
+
+      return accumulator;
+    },
+    { completed: 0, inProgress: 0, notStarted: 0 },
+  );
+
+  return [
+    { count: stats.completed, label: '완료' },
+    { count: stats.inProgress, label: '작성 중' },
+    { count: stats.notStarted, label: '미착수' },
+  ];
+}
+
 function renderSiteLinks(siteLinks: AdminOverviewSiteLink[], emptyLabel = '-') {
   if (siteLinks.length === 0) {
     return emptyLabel;
@@ -114,11 +146,9 @@ function renderSiteLinks(siteLinks: AdminOverviewSiteLink[], emptyLabel = '-') {
 }
 
 function DonutChartCard({
-  description,
   entries,
   title,
 }: {
-  description: string;
   entries: AdminOverviewChartEntry[];
   title: string;
 }) {
@@ -132,7 +162,6 @@ function DonutChartCard({
       <div className={styles.kpiVisualHeader}>
         <div>
           <h3 className={styles.kpiVisualTitle}>{title}</h3>
-          <p className={styles.kpiVisualDescription}>{description}</p>
         </div>
       </div>
 
@@ -194,7 +223,6 @@ function MissingSitesBarCard({
       <div className={styles.kpiVisualHeader}>
         <div>
           <h3 className={styles.kpiVisualTitle}>분기 누락 현장 Top 5</h3>
-          <p className={styles.kpiVisualDescription}>누락 분기가 많은 현장을 우선순위로 정리했습니다.</p>
         </div>
       </div>
 
@@ -249,9 +277,6 @@ function PendingAgentsPanel({
       <div className={styles.kpiAlertHeader}>
         <div>
           <h3 className={styles.kpiAlertTitle}>{currentMonthLabel} 신고 미달 지도요원</h3>
-          <p className={styles.kpiAlertDescription}>
-            이번 달 신고가 없는 지도요원만 추려서 보여줍니다.
-          </p>
         </div>
         <Link href={getControllerSectionHref('users')} className="app-button app-button-secondary">
           사용자 관리
@@ -291,6 +316,8 @@ export default function OperationalKpiPanel({
   sites,
   users,
 }: OperationalKpiPanelProps) {
+  const [asyncReportProgressEntries, setAsyncReportProgressEntries] =
+    useState<AdminOverviewChartEntry[] | null>(null);
   const [urgentSiteRows, setUrgentSiteRows] = useState<AdminOverviewUrgentSiteRow[]>([]);
   const [pendingAgentRows, setPendingAgentRows] = useState<AdminOverviewPendingAgentRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -308,6 +335,7 @@ export default function OperationalKpiPanel({
     () => buildKpiCacheKey(activeSites, activeFieldAgents, currentReportMonth),
     [activeFieldAgents, activeSites, currentReportMonth],
   );
+  const effectiveReportProgressEntries = asyncReportProgressEntries ?? reportProgressEntries;
 
   useEffect(() => {
     if (!onDataChange) return;
@@ -324,6 +352,7 @@ export default function OperationalKpiPanel({
       operationalKpiCache.key === cacheKey &&
       Date.now() - operationalKpiCache.loadedAt < KPI_CACHE_TTL_MS
     ) {
+      setAsyncReportProgressEntries(operationalKpiCache.reportProgressEntries);
       setUrgentSiteRows(operationalKpiCache.urgentSiteRows);
       setPendingAgentRows(operationalKpiCache.pendingAgentRows);
       setHasLoaded(true);
@@ -331,6 +360,7 @@ export default function OperationalKpiPanel({
       return;
     }
 
+    setAsyncReportProgressEntries(null);
     setUrgentSiteRows([]);
     setPendingAgentRows([]);
     setHasLoaded(false);
@@ -340,6 +370,7 @@ export default function OperationalKpiPanel({
   const loadKpi = useCallback(async () => {
     const token = readSafetyAuthToken();
     if (!token || activeSites.length === 0) {
+      setAsyncReportProgressEntries(EMPTY_REPORT_PROGRESS_ENTRIES);
       setUrgentSiteRows([]);
       setPendingAgentRows([]);
       setHasLoaded(true);
@@ -373,6 +404,7 @@ export default function OperationalKpiPanel({
 
       const siteReports: Array<{
         badWorkplaceReports: NonNullable<ReturnType<typeof mapSafetyReportToBadWorkplaceReport>>[];
+        technicalGuidanceReports: SafetyReport[];
         quarterlyReports: NonNullable<ReturnType<typeof mapSafetyReportToQuarterlySummaryReport>>[];
         site: SafetySite;
       }> = [];
@@ -389,6 +421,9 @@ export default function OperationalKpiPanel({
               badWorkplaceReports: reports
                 .map(mapSafetyReportToBadWorkplaceReport)
                 .filter(isBadWorkplaceReport),
+              technicalGuidanceReports: reports.filter(
+                (report) => getStoredReportKind(report) === TECHNICAL_GUIDANCE_REPORT_KIND,
+              ),
               quarterlyReports: reports
                 .map(mapSafetyReportToQuarterlySummaryReport)
                 .filter(isQuarterlyReport),
@@ -488,13 +523,18 @@ export default function OperationalKpiPanel({
         })
         .filter((row): row is AdminOverviewPendingAgentRow => Boolean(row))
         .sort((left, right) => left.userName.localeCompare(right.userName, 'ko'));
+      const nextReportProgressEntries = buildReportProgressEntriesFromReports(
+        siteReports.flatMap((item) => item.technicalGuidanceReports),
+      );
 
       operationalKpiCache = {
         key: cacheKey,
         loadedAt: Date.now(),
         pendingAgentRows: nextPendingAgentRows,
+        reportProgressEntries: nextReportProgressEntries,
         urgentSiteRows: nextUrgentSiteRows,
       };
+      setAsyncReportProgressEntries(nextReportProgressEntries);
       setUrgentSiteRows(nextUrgentSiteRows);
       setPendingAgentRows(nextPendingAgentRows);
       setHasLoaded(true);
@@ -522,9 +562,6 @@ export default function OperationalKpiPanel({
       <div className={styles.sectionHeader}>
         <div>
           <h2 className={styles.sectionTitle}>ERP 운영 현황</h2>
-          <p className={styles.hint}>
-            도표 중심으로 분기 누락과 월간 신고 미달 항목만 빠르게 확인할 수 있습니다.
-          </p>
         </div>
         <div className={styles.sectionHeaderActions}>
           <span className="app-chip">{currentMonthLabel} 기준</span>
@@ -546,13 +583,11 @@ export default function OperationalKpiPanel({
         <div className={styles.kpiVisualGrid}>
           <DonutChartCard
             title="현장 배정 커버리지"
-            description="운영 중인 현장 기준 배정 완료/미배정 비율"
             entries={coverageEntries}
           />
           <DonutChartCard
             title="보고서 진행률"
-            description="점검 세션 기준 완료, 작성 중, 미착수 현황"
-            entries={reportProgressEntries}
+            entries={effectiveReportProgressEntries}
           />
           <MissingSitesBarCard isLoading={isLoading && !hasLoaded} rows={urgentSiteRows} />
         </div>

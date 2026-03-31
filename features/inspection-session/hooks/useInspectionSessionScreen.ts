@@ -23,6 +23,7 @@ import {
   uploadSafetyAssetFile,
   validateSafetyAssetFile,
 } from '@/lib/safetyApi/assets';
+import { mergeMasterDataIntoSession } from '@/lib/safetyApiMappers/masterData';
 import type {
   InspectionDocumentSource,
   InspectionSectionKey,
@@ -137,7 +138,14 @@ export function useInspectionSessionScreen(sessionId: string) {
   ) => {
     updateSession(sessionId, (current) => {
       const next = updater(current);
-      return options?.touch === false ? next : touchDocumentMeta(next, key, source);
+      const nextWithMasterData =
+        current.document2Overview.guidanceDate !== next.document2Overview.guidanceDate
+          ? mergeMasterDataIntoSession(next, masterData)
+          : next;
+
+      return options?.touch === false
+        ? nextWithMasterData
+        : touchDocumentMeta(nextWithMasterData, key, source);
     });
   };
 

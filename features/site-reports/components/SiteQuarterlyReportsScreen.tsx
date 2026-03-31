@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useDeferredValue, useMemo, useState } from 'react';
 import LoginPanel from '@/components/auth/LoginPanel';
 import { AdminMenuDrawer, AdminMenuPanel } from '@/components/admin/AdminMenu';
@@ -10,16 +11,19 @@ import WorkerAppHeader from '@/components/worker/WorkerAppHeader';
 import WorkerMenuSidebar from '@/components/worker/WorkerMenuSidebar';
 import WorkerShellBody from '@/components/worker/WorkerShellBody';
 import { WorkerMenuDrawer, WorkerMenuPanel } from '@/components/worker/WorkerMenu';
+import { buildSiteHubHref, buildSiteQuarterlyHref } from '@/features/home/lib/siteEntry';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { useSiteOperationalReports } from '@/hooks/useSiteOperationalReports';
 import { getAdminSectionHref, isAdminUserRole } from '@/lib/admin';
 import {
-  formatQuarterLabel,
-  getQuarterKeyForDate,
-  getQuarterTargetsForConstructionPeriod,
-  parseQuarterKey,
+  createQuarterlySummaryDraft,
+  getQuarterlySourceSessions,
+  syncQuarterlySummaryReportSources,
+} from '@/lib/erpReports/quarterly';
+import {
+  buildQuarterlyTitleForPeriod,
+  formatPeriodRangeLabel,
 } from '@/lib/erpReports/shared';
-import { buildSiteHubHref, buildSiteQuarterlyHref } from '@/features/home/lib/siteEntry';
 import { SiteReportsSummaryBar } from './SiteReportsSummaryBar';
 import styles from './SiteReportsScreen.module.css';
 
@@ -27,17 +31,41 @@ interface SiteQuarterlyReportsScreenProps {
   siteKey: string;
 }
 
-type QuarterlyListSortMode = 'recent' | 'name' | 'status';
+type QuarterlyListSortMode = 'number' | 'recent' | 'name' | 'period';
 
 interface QuarterlyListRow {
+  sequenceNumber: number;
   href: string;
-  reportId: string | null;
-  quarterKey: string;
+  reportId: string;
   reportTitle: string;
-  status: string;
-  selectedCount: number | null;
-  calculatedAt: string;
+  selectedCount: number;
+  updatedAt: string;
+  periodStartDate: string;
+  periodEndDate: string;
   periodLabel: string;
+}
+
+interface CreateQuarterlyReportForm {
+  title: string;
+  periodStartDate: string;
+  periodEndDate: string;
+}
+
+const EMPTY_CREATE_FORM: CreateQuarterlyReportForm = {
+  title: '',
+  periodStartDate: '',
+  periodEndDate: '',
+};
+
+function shouldIgnoreRowClick(target: EventTarget | null) {
+  return (
+    target instanceof HTMLElement &&
+    Boolean(
+      target.closest(
+        'a, button, input, select, textarea, [role="button"], [role="menu"], [role="menuitem"]',
+      ),
+    )
+  );
 }
 
 function formatDateTimeLabel(value: string | null | undefined) {
@@ -46,6 +74,7 @@ function formatDateTimeLabel(value: string | null | undefined) {
   if (Number.isNaN(date.getTime())) return value;
 
   return new Intl.DateTimeFormat('ko-KR', {
+    year: 'numeric',
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
@@ -54,23 +83,74 @@ function formatDateTimeLabel(value: string | null | undefined) {
   }).format(date);
 }
 
-function getStatusLabel(status?: 'draft' | 'completed') {
-  if (status === 'completed') return '완료';
-  if (status === 'draft') return '작성 중';
-  return '미작성';
+function getSortTime(value: string) {
+  const parsed = value ? new Date(value).getTime() : 0;
+  return Number.isNaN(parsed) ? 0 : parsed;
 }
 
-function getStatusOrder(status: string) {
-  if (status === '완료') return 0;
-  if (status === '작성 중') return 1;
-  return 2;
+function compareQuarterlyCreationOrder(
+  left: { createdAt: string; updatedAt: string; reportId: string },
+  right: { createdAt: string; updatedAt: string; reportId: string },
+) {
+  const createdDiff = getSortTime(left.createdAt) - getSortTime(right.createdAt);
+  if (createdDiff !== 0) return createdDiff;
+
+  const updatedDiff = getSortTime(left.updatedAt) - getSortTime(right.updatedAt);
+  if (updatedDiff !== 0) return updatedDiff;
+
+  return left.reportId.localeCompare(right.reportId, 'ko');
 }
 
-export function SiteQuarterlyReportsScreen({ siteKey }: SiteQuarterlyReportsScreenProps) {
+function buildUniqueQuarterlyReportTitle(baseTitle: string, existingTitles: string[]) {
+  const trimmedBase = baseTitle.trim();
+  if (!trimmedBase) return '';
+
+  const normalizedBase = trimmedBase.toLowerCase();
+  const normalizedTitles = new Set(
+    existingTitles.map((title) => title.trim().toLowerCase()).filter(Boolean),
+  );
+
+  if (!normalizedTitles.has(normalizedBase)) {
+    return trimmedBase;
+  }
+
+  let suffix = 2;
+  while (normalizedTitles.has(`${trimmedBase} (${suffix})`.toLowerCase())) {
+    suffix += 1;
+  }
+
+  return `${trimmedBase} (${suffix})`;
+}
+
+function getCreateTitleSuggestion(
+  startDate: string,
+  endDate: string,
+  existingTitles: string[],
+) {
+  if (!startDate || !endDate || startDate > endDate) {
+    return '';
+  }
+
+  return buildUniqueQuarterlyReportTitle(
+    buildQuarterlyTitleForPeriod(startDate, endDate),
+    existingTitles,
+  );
+}
+
+export function SiteQuarterlyReportsScreen({
+  siteKey,
+}: SiteQuarterlyReportsScreenProps) {
+  const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const [sortMode, setSortMode] = useState<QuarterlyListSortMode>('recent');
+  const [sortMode, setSortMode] = useState<QuarterlyListSortMode>('number');
   const [dialogReportId, setDialogReportId] = useState<string | null>(null);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [createForm, setCreateForm] =
+    useState<CreateQuarterlyReportForm>(EMPTY_CREATE_FORM);
+  const [hasEditedCreateTitle, setHasEditedCreateTitle] = useState(false);
+  const [createDialogError, setCreateDialogError] = useState<string | null>(null);
+  const [isCreatingReport, setIsCreatingReport] = useState(false);
   const deferredQuery = useDeferredValue(query);
   const decodedSiteKey = decodeURIComponent(siteKey);
   const {
@@ -81,12 +161,17 @@ export function SiteQuarterlyReportsScreen({ siteKey }: SiteQuarterlyReportsScre
     isReady,
     login,
     logout,
+    sessions,
     sites,
   } = useInspectionSessions();
 
   const currentSite = useMemo(
     () => sites.find((site) => site.id === decodedSiteKey) ?? null,
     [decodedSiteKey, sites],
+  );
+  const siteSessions = useMemo(
+    () => sessions.filter((session) => session.siteKey === decodedSiteKey),
+    [decodedSiteKey, sessions],
   );
   const isAdminView = Boolean(currentUser && isAdminUserRole(currentUser.role));
   const {
@@ -95,95 +180,83 @@ export function SiteQuarterlyReportsScreen({ siteKey }: SiteQuarterlyReportsScre
     isLoading,
     isSaving,
     error,
-  } = useSiteOperationalReports(currentSite, isAuthenticated && isReady && Boolean(currentSite));
-
-  const quarterTargets = useMemo(() => {
-    if (!currentSite) return [];
-    return getQuarterTargetsForConstructionPeriod(
-      currentSite.adminSiteSnapshot.constructionPeriod || '',
-    );
-  }, [currentSite]);
-
-  const currentQuarterTarget = useMemo(() => {
-    const currentQuarterKey = getQuarterKeyForDate(new Date());
-    return currentQuarterKey ? parseQuarterKey(currentQuarterKey) : null;
-  }, []);
-
-  const availableTargets = useMemo(() => {
-    const byKey = new Map<string, NonNullable<typeof currentQuarterTarget>>();
-
-    quarterTargets.forEach((target) => {
-      byKey.set(target.quarterKey, target);
-    });
-
-    quarterlyReports.forEach((report) => {
-      const parsed = parseQuarterKey(report.quarterKey);
-      if (parsed) {
-        byKey.set(parsed.quarterKey, parsed);
-      }
-    });
-
-    if (currentQuarterTarget) {
-      byKey.set(currentQuarterTarget.quarterKey, currentQuarterTarget);
-    }
-
-    return [...byKey.values()];
-  }, [currentQuarterTarget, quarterTargets, quarterlyReports]);
+    saveQuarterlyReport,
+  } = useSiteOperationalReports(
+    currentSite,
+    isAuthenticated && isReady && Boolean(currentSite),
+  );
 
   const rows = useMemo<QuarterlyListRow[]>(() => {
     if (!currentSite) return [];
 
-    const reportByKey = new Map(quarterlyReports.map((report) => [report.quarterKey, report]));
-
-    return availableTargets.map((target) => {
-      const report = reportByKey.get(target.quarterKey);
-      return {
-        href: buildSiteQuarterlyHref(currentSite.id, target.quarterKey),
-        reportId: report?.id || null,
-        quarterKey: target.quarterKey,
-        reportTitle: report?.title || `${formatQuarterLabel(target)} 종합보고서`,
-        status: getStatusLabel(report?.status),
-        selectedCount: report ? report.generatedFromSessionIds.length : null,
-        calculatedAt: report?.lastCalculatedAt || report?.updatedAt || '',
-        periodLabel: `${target.startDate} ~ ${target.endDate}`,
-      };
-    });
-  }, [availableTargets, currentSite, quarterlyReports]);
+    return [...quarterlyReports]
+      .sort((left, right) =>
+        compareQuarterlyCreationOrder(
+          {
+            createdAt: left.createdAt,
+            updatedAt: left.updatedAt || left.lastCalculatedAt || left.createdAt,
+            reportId: left.id,
+          },
+          {
+            createdAt: right.createdAt,
+            updatedAt: right.updatedAt || right.lastCalculatedAt || right.createdAt,
+            reportId: right.id,
+          },
+        ),
+      )
+      .map((report, index) => ({
+        sequenceNumber: index + 1,
+        href: buildSiteQuarterlyHref(currentSite.id, report.id),
+        reportId: report.id,
+        reportTitle: report.title || '분기 종합보고서',
+        selectedCount: report.generatedFromSessionIds.length,
+        updatedAt: report.updatedAt || report.lastCalculatedAt || report.createdAt,
+        periodStartDate: report.periodStartDate,
+        periodEndDate: report.periodEndDate,
+        periodLabel: formatPeriodRangeLabel(
+          report.periodStartDate,
+          report.periodEndDate,
+        ),
+      }));
+  }, [currentSite, quarterlyReports]);
 
   const filteredRows = useMemo(() => {
     const normalizedQuery = deferredQuery.trim().toLowerCase();
     const matchingRows = !normalizedQuery
       ? rows
       : rows.filter((row) =>
-          [row.reportTitle, row.status, row.periodLabel, row.quarterKey]
+          [row.reportTitle, row.periodLabel]
             .join(' ')
             .toLowerCase()
             .includes(normalizedQuery),
         );
 
     return [...matchingRows].sort((left, right) => {
+      if (sortMode === 'number') {
+        return left.sequenceNumber - right.sequenceNumber;
+      }
+
       if (sortMode === 'name') {
         return left.reportTitle.localeCompare(right.reportTitle, 'ko');
       }
 
-      if (sortMode === 'status') {
+      if (sortMode === 'period') {
+        const rightKey = `${right.periodEndDate}|${right.periodStartDate}`;
+        const leftKey = `${left.periodEndDate}|${left.periodStartDate}`;
         return (
-          getStatusOrder(left.status) - getStatusOrder(right.status) ||
-          right.quarterKey.localeCompare(left.quarterKey)
+          rightKey.localeCompare(leftKey, 'ko') ||
+          getSortTime(right.updatedAt) - getSortTime(left.updatedAt)
         );
       }
 
-      const leftTime = left.calculatedAt ? new Date(left.calculatedAt).getTime() : 0;
-      const rightTime = right.calculatedAt ? new Date(right.calculatedAt).getTime() : 0;
-      return rightTime - leftTime || right.quarterKey.localeCompare(left.quarterKey);
+      return getSortTime(right.updatedAt) - getSortTime(left.updatedAt);
     });
   }, [deferredQuery, rows, sortMode]);
 
-  const currentQuarterHref = useMemo(() => {
-    if (!currentSite) return null;
-    const fallbackTarget = currentQuarterTarget || availableTargets[0];
-    return fallbackTarget ? buildSiteQuarterlyHref(currentSite.id, fallbackTarget.quarterKey) : null;
-  }, [availableTargets, currentQuarterTarget, currentSite]);
+  const existingReportTitles = useMemo(
+    () => rows.map((row) => row.reportTitle),
+    [rows],
+  );
 
   const backHref = !isAdminView
     ? currentSite
@@ -198,12 +271,133 @@ export function SiteQuarterlyReportsScreen({ siteKey }: SiteQuarterlyReportsScre
   const backLabel = isAdminView ? '현장 메인' : '현장 메뉴';
 
   const snapshot = currentSite?.adminSiteSnapshot;
-  const siteNameDisplay = currentSite?.siteName?.trim() || snapshot?.siteName?.trim() || '-';
+  const siteNameDisplay =
+    currentSite?.siteName?.trim() || snapshot?.siteName?.trim() || '-';
   const addressDisplay = snapshot?.siteAddress?.trim() || '-';
   const periodDisplay = snapshot?.constructionPeriod?.trim() || '-';
   const amountDisplay = snapshot?.constructionAmount?.trim() || '-';
-  const deletingRow =
-    dialogReportId ? rows.find((row) => row.reportId === dialogReportId) ?? null : null;
+  const deletingRow = dialogReportId
+    ? rows.find((row) => row.reportId === dialogReportId) ?? null
+    : null;
+  const isBusy = isSaving || isCreatingReport;
+  const isCreateRangeInvalid =
+    Boolean(createForm.periodStartDate) &&
+    Boolean(createForm.periodEndDate) &&
+    createForm.periodStartDate > createForm.periodEndDate;
+  const isCreateDisabled =
+    isBusy ||
+    !createForm.title.trim() ||
+    !createForm.periodStartDate ||
+    !createForm.periodEndDate ||
+    isCreateRangeInvalid;
+
+  const resetCreateDialog = () => {
+    setCreateForm(EMPTY_CREATE_FORM);
+    setHasEditedCreateTitle(false);
+    setCreateDialogError(null);
+  };
+
+  const openCreateDialog = () => {
+    if (!currentSite || isBusy) return;
+    resetCreateDialog();
+    setIsCreateDialogOpen(true);
+  };
+
+  const closeCreateDialog = () => {
+    if (isCreatingReport) return;
+    setIsCreateDialogOpen(false);
+    resetCreateDialog();
+  };
+
+  const handleCreatePeriodChange = (
+    field: 'periodStartDate' | 'periodEndDate',
+    value: string,
+  ) => {
+    setCreateDialogError(null);
+    setCreateForm((current) => {
+      const next = {
+        ...current,
+        [field]: value,
+      };
+
+      if (hasEditedCreateTitle) {
+        return next;
+      }
+
+      return {
+        ...next,
+        title: getCreateTitleSuggestion(
+          next.periodStartDate,
+          next.periodEndDate,
+          existingReportTitles,
+        ),
+      };
+    });
+  };
+
+  const handleCreateTitleChange = (value: string) => {
+    setCreateDialogError(null);
+    setCreateForm((current) => ({
+      ...current,
+      title: value,
+    }));
+    setHasEditedCreateTitle(value.trim().length > 0);
+  };
+
+  const handleCreateReport = async () => {
+    if (!currentSite || isBusy) return;
+
+    const title = createForm.title.trim();
+    const { periodStartDate, periodEndDate } = createForm;
+
+    if (!title || !periodStartDate || !periodEndDate) {
+      setCreateDialogError('제목과 기간을 입력해 주세요.');
+      return;
+    }
+
+    if (periodStartDate > periodEndDate) {
+      setCreateDialogError('기간을 다시 확인해 주세요.');
+      return;
+    }
+
+    const nextDraftBase = createQuarterlySummaryDraft(
+      currentSite,
+      currentUser?.name || currentSite.assigneeName,
+      periodStartDate,
+    );
+    const matchedSessions = getQuarterlySourceSessions(siteSessions, {
+      periodStartDate,
+      periodEndDate,
+    });
+    const nextDraft = syncQuarterlySummaryReportSources(
+      {
+        ...nextDraftBase,
+        title,
+        periodStartDate,
+        periodEndDate,
+      },
+      currentSite,
+      siteSessions,
+      matchedSessions.map((session) => session.id),
+      matchedSessions,
+    );
+
+    setIsCreatingReport(true);
+    setCreateDialogError(null);
+
+    try {
+      await saveQuarterlyReport(nextDraft);
+      setIsCreateDialogOpen(false);
+      resetCreateDialog();
+      router.push(buildSiteQuarterlyHref(currentSite.id, nextDraft.id));
+    } catch {
+      setCreateDialogError(
+        '보고서를 생성하지 못했습니다. 잠시 후 다시 시도해 주세요.',
+      );
+    } finally {
+      setIsCreatingReport(false);
+    }
+  };
 
   if (!isReady) {
     return (
@@ -211,7 +405,9 @@ export function SiteQuarterlyReportsScreen({ siteKey }: SiteQuarterlyReportsScre
         <div className="app-container">
           <section className={styles.panel}>
             <div className={styles.emptyState}>
-              <p className={styles.emptyTitle}>분기 종합보고서 목록을 불러오는 중입니다.</p>
+              <p className={styles.emptyTitle}>
+                분기 종합 보고서 목록을 불러오는 중입니다.
+              </p>
             </div>
           </section>
         </div>
@@ -224,8 +420,8 @@ export function SiteQuarterlyReportsScreen({ siteKey }: SiteQuarterlyReportsScre
       <LoginPanel
         error={authError}
         onSubmit={login}
-        title="분기 종합보고서 로그인"
-        description="분기 종합보고서 목록을 보려면 다시 로그인해 주세요."
+        title="분기 종합 보고서 로그인"
+        description="분기 종합 보고서 목록을 보려면 다시 로그인해 주세요."
       />
     );
   }
@@ -257,7 +453,10 @@ export function SiteQuarterlyReportsScreen({ siteKey }: SiteQuarterlyReportsScre
           <WorkerShellBody>
             <WorkerMenuSidebar>
               {isAdminView ? (
-                <AdminMenuPanel activeSection="headquarters" currentSiteKey={currentSite.id} />
+                <AdminMenuPanel
+                  activeSection="headquarters"
+                  currentSiteKey={currentSite.id}
+                />
               ) : (
                 <WorkerMenuPanel currentSiteKey={currentSite.id} />
               )}
@@ -270,7 +469,7 @@ export function SiteQuarterlyReportsScreen({ siteKey }: SiteQuarterlyReportsScre
                     {'<'} {backLabel}
                   </Link>
                   <div className={styles.heroMain}>
-                    <h1 className={styles.heroTitle}>분기 종합보고서 목록</h1>
+                    <h1 className={styles.heroTitle}>분기 종합 보고서 목록</h1>
                   </div>
                 </div>
               </header>
@@ -287,29 +486,32 @@ export function SiteQuarterlyReportsScreen({ siteKey }: SiteQuarterlyReportsScre
                   <div className={styles.tableTools}>
                     <input
                       className={`app-input ${styles.tableSearch}`}
-                      placeholder="보고서명, 상태, 기간 검색"
+                      placeholder="보고서명, 기간 검색"
                       value={query}
                       onChange={(event) => setQuery(event.target.value)}
-                      aria-label="분기 종합보고서 검색"
+                      aria-label="분기 종합 보고서 검색"
                     />
                     <select
                       className={`app-select ${styles.tableSort}`}
                       value={sortMode}
-                      onChange={(event) => setSortMode(event.target.value as QuarterlyListSortMode)}
-                      aria-label="분기 종합보고서 정렬"
+                      onChange={(event) =>
+                        setSortMode(event.target.value as QuarterlyListSortMode)
+                      }
+                      aria-label="분기 종합 보고서 정렬"
                     >
-                      <option value="recent">최근 재계산순</option>
+                      <option value="number">번호순</option>
+                      <option value="recent">최근 수정일순</option>
                       <option value="name">보고서명순</option>
-                      <option value="status">상태순</option>
+                      <option value="period">기간순</option>
                     </select>
-                    {currentQuarterHref ? (
-                      <Link
-                        href={currentQuarterHref}
-                        className={`app-button app-button-primary ${styles.tableCreateButton}`}
-                      >
-                        보고서 추가
-                      </Link>
-                    ) : null}
+                    <button
+                      type="button"
+                      className={`app-button app-button-primary ${styles.tableCreateButton}`}
+                      onClick={openCreateDialog}
+                      disabled={isBusy}
+                    >
+                      보고서 작성
+                    </button>
                   </div>
 
                   {error ? (
@@ -322,30 +524,53 @@ export function SiteQuarterlyReportsScreen({ siteKey }: SiteQuarterlyReportsScre
                     <div className={styles.emptyState}>
                       <p className={styles.emptyTitle}>
                         {isLoading
-                          ? '분기 종합보고서 목록을 불러오는 중입니다.'
-                          : '아직 작성된 분기 종합보고서가 없습니다.'}
+                          ? '분기 종합 보고서 목록을 불러오는 중입니다.'
+                          : '아직 작성한 분기 종합 보고서가 없습니다.'}
                       </p>
                     </div>
                   ) : filteredRows.length === 0 ? (
                     <div className={styles.emptyState}>
-                      <p className={styles.emptyTitle}>검색 조건에 맞는 분기 보고서가 없습니다.</p>
-                      <p className={styles.emptySearchHint}>검색어나 정렬을 바꿔 다시 확인해 보세요.</p>
+                      <p className={styles.emptyTitle}>
+                        검색 조건에 맞는 분기 보고서가 없습니다.
+                      </p>
                     </div>
                   ) : (
                     <div className={styles.listViewport}>
                       <div className={styles.listTrack}>
-                        <div className={styles.listHead} aria-hidden="true">
+                        <div
+                          className={`${styles.listHead} ${styles.quarterlyListHead}`}
+                          aria-hidden="true"
+                        >
+                          <span>번호</span>
                           <span>보고서명</span>
-                          <span>상태</span>
                           <span>선택 보고서</span>
-                          <span className={styles.desktopOnly}>마지막 재계산</span>
-                          <span className={styles.desktopOnly}>대상 기간</span>
+                          <span className={styles.desktopOnly}>수정일</span>
+                          <span className={styles.desktopOnly}>기간</span>
                           <span>메뉴</span>
                         </div>
 
                         <div className={styles.reportList}>
                           {filteredRows.map((row) => (
-                            <article key={row.quarterKey} className={styles.reportRow}>
+                            <article
+                              key={row.reportId}
+                              className={`${styles.reportRow} ${styles.quarterlyReportRow} ${styles.reportRowClickable}`}
+                              tabIndex={0}
+                              role="link"
+                              onClick={(event) => {
+                                if (shouldIgnoreRowClick(event.target)) return;
+                                router.push(row.href);
+                              }}
+                              onKeyDown={(event) => {
+                                if (shouldIgnoreRowClick(event.target)) return;
+                                if (event.key !== 'Enter' && event.key !== ' ') return;
+                                event.preventDefault();
+                                router.push(row.href);
+                              }}
+                            >
+                              <div className={`${styles.dataCell} ${styles.sequenceCell}`}>
+                                <span className={styles.dataValue}>{row.sequenceNumber}</span>
+                              </div>
+
                               <div className={`${styles.primaryCell} ${styles.titleCell}`}>
                                 <Link href={row.href} className={styles.reportLink}>
                                   {row.reportTitle}
@@ -353,18 +578,14 @@ export function SiteQuarterlyReportsScreen({ siteKey }: SiteQuarterlyReportsScre
                               </div>
 
                               <div className={styles.dataCell}>
-                                <span className={styles.dataValue}>{row.status}</span>
-                              </div>
-
-                              <div className={styles.dataCell}>
                                 <span className={styles.dataValue}>
-                                  {row.selectedCount === null ? '-' : `${row.selectedCount}건`}
+                                  {row.selectedCount}건
                                 </span>
                               </div>
 
                               <div className={`${styles.dataCell} ${styles.desktopOnly}`}>
                                 <span className={styles.dataValue}>
-                                  {formatDateTimeLabel(row.calculatedAt)}
+                                  {formatDateTimeLabel(row.updatedAt)}
                                 </span>
                               </div>
 
@@ -372,18 +593,22 @@ export function SiteQuarterlyReportsScreen({ siteKey }: SiteQuarterlyReportsScre
                                 <span className={styles.dataValue}>{row.periodLabel}</span>
                               </div>
 
-                              <div className={`${styles.actionCell} ${styles.actionsCell}`}>
+                              <div
+                                className={`${styles.actionCell} ${styles.actionsCell}`}
+                                onClick={(event) => event.stopPropagation()}
+                                onKeyDown={(event) => event.stopPropagation()}
+                              >
                                 <ActionMenu
                                   label={`${row.reportTitle} 작업 메뉴 열기`}
                                   items={[
                                     {
-                                      label: row.selectedCount === null ? '작성 시작' : '열기',
+                                      label: '열기',
                                       href: row.href,
                                     },
-                                    ...(canArchiveReports && row.reportId
+                                    ...(canArchiveReports
                                       ? [
                                           {
-                                            label: '??젣',
+                                            label: '삭제',
                                             tone: 'danger' as const,
                                             onSelect: () => setDialogReportId(row.reportId),
                                           },
@@ -421,8 +646,80 @@ export function SiteQuarterlyReportsScreen({ siteKey }: SiteQuarterlyReportsScre
       )}
 
       <AppModal
+        open={isCreateDialogOpen}
+        title="분기 종합 보고서 생성"
+        size="large"
+        onClose={closeCreateDialog}
+        actions={
+          <>
+            <button
+              type="button"
+              className="app-button app-button-secondary"
+              onClick={closeCreateDialog}
+              disabled={isBusy}
+            >
+              취소
+            </button>
+            <button
+              type="button"
+              className="app-button app-button-primary"
+              onClick={() => void handleCreateReport()}
+              disabled={isCreateDisabled}
+            >
+              {isCreatingReport ? '생성 중...' : '생성'}
+            </button>
+          </>
+        }
+      >
+        <div className={styles.createDialogBody}>
+          <label className={styles.createDialogField}>
+            <span className={styles.createDialogLabel}>제목</span>
+            <input
+              className="app-input"
+              value={createForm.title}
+              onChange={(event) => handleCreateTitleChange(event.target.value)}
+              placeholder="예: 2026년 2분기 종합보고서"
+              disabled={isBusy}
+            />
+          </label>
+
+          <div className={styles.createDialogPeriodGrid}>
+            <label className={styles.createDialogField}>
+              <span className={styles.createDialogLabel}>시작일</span>
+              <input
+                className="app-input"
+                type="date"
+                value={createForm.periodStartDate}
+                onChange={(event) =>
+                  handleCreatePeriodChange('periodStartDate', event.target.value)
+                }
+                disabled={isBusy}
+              />
+            </label>
+
+            <label className={styles.createDialogField}>
+              <span className={styles.createDialogLabel}>종료일</span>
+              <input
+                className="app-input"
+                type="date"
+                value={createForm.periodEndDate}
+                onChange={(event) =>
+                  handleCreatePeriodChange('periodEndDate', event.target.value)
+                }
+                disabled={isBusy}
+              />
+            </label>
+          </div>
+
+          {createDialogError ? (
+            <p className={styles.createDialogError}>{createDialogError}</p>
+          ) : null}
+        </div>
+      </AppModal>
+
+      <AppModal
         open={canArchiveReports && Boolean(dialogReportId)}
-        title="遺꾧린 醫낇빀蹂닿퀬????젣"
+        title="분기 종합 보고서 삭제"
         onClose={() => setDialogReportId(null)}
         actions={
           <>
@@ -432,7 +729,7 @@ export function SiteQuarterlyReportsScreen({ siteKey }: SiteQuarterlyReportsScre
               onClick={() => setDialogReportId(null)}
               disabled={isSaving}
             >
-              痍⑥냼
+              취소
             </button>
             <button
               type="button"
@@ -444,15 +741,15 @@ export function SiteQuarterlyReportsScreen({ siteKey }: SiteQuarterlyReportsScre
                 setDialogReportId(null);
               }}
             >
-              ??젣
+              삭제
             </button>
           </>
         }
       >
         <p>
           {deletingRow
-            ? `"${deletingRow.reportTitle}" 遺꾧린 醫낇빀蹂닿퀬?쒕? ??젣?⑸땲??`
-            : '?좏깮??遺꾧린 醫낇빀蹂닿퀬?쒕? ??젣?⑸땲??'}
+            ? `"${deletingRow.reportTitle}" 보고서를 삭제합니다.`
+            : '선택한 분기 종합 보고서를 삭제합니다.'}
         </p>
       </AppModal>
     </main>

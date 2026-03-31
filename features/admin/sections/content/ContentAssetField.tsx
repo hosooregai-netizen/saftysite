@@ -59,7 +59,7 @@ export function ContentAssetField(props: ContentAssetFieldProps) {
             }}
             disabled={isDisabled}
           >
-            鍮꾩슦湲?
+            선택 해제
           </button>
         ) : null}
       </div>
@@ -69,8 +69,8 @@ export function ContentAssetField(props: ContentAssetFieldProps) {
             <img src={value} alt={label} className={styles.assetPreviewImage} />
           ) : (
             <div className={styles.assetFilePreview}>
-              <strong>{fileName || '泥⑤? ?뚯씪'}</strong>
-              <span>?낅줈?쒕맂 ?뚯씪???곌껐?섏뼱 ?덉뒿?덈떎.</span>
+              <strong>{fileName || '연결된 파일'}</strong>
+              <span>업로드한 파일이 연결되어 있습니다.</span>
             </div>
           )
         ) : (
@@ -87,7 +87,7 @@ export function ContentAssetField(props: ContentAssetFieldProps) {
                 <span className={styles.assetUploadLabelWide}>{IMAGE_UPLOAD_LABEL_DESKTOP}</span>
               </>
             ) : (
-              '?뚯씪???낅줈?쒗빐 二쇱꽭??'
+              '파일을 업로드해 주세요.'
             )}
           </div>
         )}
@@ -97,12 +97,12 @@ export function ContentAssetField(props: ContentAssetFieldProps) {
           <div className={styles.assetActions}>
             <label htmlFor={inputId} className="app-button app-button-secondary">
               {isProcessing
-                ? '?낅줈??以?..'
+                ? '업로드 중...'
                 : value
-                  ? '援먯껜'
+                  ? '파일 변경'
                   : mode === 'image'
-                    ? '?대?吏 ?좏깮'
-                    : '?뚯씪 ?좏깮'}
+                    ? '이미지 업로드'
+                    : '파일 업로드'}
             </label>
           </div>
           <input
@@ -139,7 +139,7 @@ export function ContentAssetField(props: ContentAssetFieldProps) {
                   setError(
                     readError instanceof Error
                       ? readError.message
-                      : '?뚯씪???쎈뒗 以??ㅻ쪟媛 諛쒖깮?덉뒿?덈떎.',
+                      : '파일을 읽는 중 오류가 발생했습니다.',
                   ),
                 )
                 .finally(() => setIsProcessing(false));

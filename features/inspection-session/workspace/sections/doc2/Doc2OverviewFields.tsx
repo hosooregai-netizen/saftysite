@@ -38,12 +38,16 @@ export function Doc2OverviewFields({ props }: Doc2OverviewFieldsProps) {
             <label key={key} className={styles.field}>
               <span className={styles.fieldLabel}>{label}</span>
               <input
-                type="text"
+                type={key === 'visitCount' ? 'number' : 'text'}
+                min={key === 'visitCount' ? 1 : undefined}
+                step={key === 'visitCount' ? 1 : undefined}
                 className="app-input"
                 value={
-                  session.document2Overview[
-                    key as 'progressRate' | 'visitCount' | 'totalVisitCount'
-                  ]
+                  key === 'visitCount'
+                    ? String(session.reportNumber || '')
+                    : session.document2Overview[
+                        key as 'progressRate' | 'visitCount' | 'totalVisitCount'
+                      ]
                 }
                 placeholder={placeholder}
                 onChange={(event) =>

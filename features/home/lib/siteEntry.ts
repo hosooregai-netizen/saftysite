@@ -1,5 +1,6 @@
 export type WorkerSiteEntryIntent = 'site' | 'quarterly' | 'bad-workplace';
 export type WorkerSitePickerIntent = Exclude<WorkerSiteEntryIntent, 'site'>;
+export type SiteNavView = 'site-home' | 'reports' | 'quarterly' | 'bad-workplace' | null;
 
 export function buildSiteReportsHref(siteId: string): string {
   return `/sites/${encodeURIComponent(siteId)}`;
@@ -40,6 +41,57 @@ export function parseWorkerSiteEntryIntent(
 ): WorkerSitePickerIntent | null {
   if (value === 'quarterly' || value === 'bad-workplace') {
     return value;
+  }
+
+  return null;
+}
+
+export function getSiteKeyFromPath(pathname: string | null): string | null {
+  if (!pathname) return null;
+  const matched = pathname.match(/^\/sites\/([^/]+)/);
+  return matched ? decodeURIComponent(matched[1]) : null;
+}
+
+export function resolveSiteNavView({
+  pathname,
+  siteKey,
+  activeAdminSection = null,
+  selectedAdminSiteId = null,
+}: {
+  pathname: string | null;
+  siteKey?: string | null;
+  activeAdminSection?: string | null;
+  selectedAdminSiteId?: string | null;
+}): SiteNavView {
+  if (!pathname || !siteKey) return null;
+
+  const encodedSiteKey = encodeURIComponent(siteKey);
+
+  if (pathname.startsWith(`/sites/${encodedSiteKey}/bad-workplace/`)) {
+    return 'bad-workplace';
+  }
+
+  if (
+    pathname === buildSiteQuarterlyListHref(siteKey) ||
+    pathname.startsWith(`/sites/${encodedSiteKey}/quarterly/`)
+  ) {
+    return 'quarterly';
+  }
+
+  if (pathname === buildSiteReportsHref(siteKey) || pathname.startsWith('/sessions/')) {
+    return 'reports';
+  }
+
+  if (pathname === buildSiteHubHref(siteKey)) {
+    return 'site-home';
+  }
+
+  if (
+    pathname === '/admin' &&
+    activeAdminSection === 'headquarters' &&
+    selectedAdminSiteId === siteKey
+  ) {
+    return 'site-home';
   }
 
   return null;

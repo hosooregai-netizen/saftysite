@@ -4,9 +4,9 @@ import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import {
   buildSiteBadWorkplaceHref,
-  buildSiteHubHref,
   buildSiteQuarterlyListHref,
   buildSiteReportsHref,
+  resolveSiteNavView,
 } from '@/features/home/lib/siteEntry';
 import { getCurrentReportMonth } from '@/lib/erpReports/shared';
 import styles from './AdminMenu.module.css';
@@ -15,49 +15,6 @@ import {
   getAdminSectionHref,
   type AdminSectionKey,
 } from '@/lib/admin/adminSections';
-
-function isSiteReportsPath(
-  pathname: string | null,
-  siteKey: string,
-  selectedEntry: string | null,
-  selectedAdminSiteId: string | null,
-  activeSection: AdminSectionKey,
-): boolean {
-  if (!pathname) return false;
-  return (
-    pathname === buildSiteReportsHref(siteKey) ||
-    pathname.startsWith('/sessions/') ||
-    (pathname === '/admin' &&
-      activeSection === 'headquarters' &&
-      selectedAdminSiteId === siteKey &&
-      selectedEntry !== 'quarterly' &&
-      selectedEntry !== 'bad-workplace') ||
-    (pathname === buildSiteHubHref(siteKey) &&
-      selectedEntry !== 'quarterly' &&
-      selectedEntry !== 'bad-workplace')
-  );
-}
-
-function isQuarterlyPath(pathname: string | null, siteKey: string, selectedEntry: string | null) {
-  if (!pathname) return false;
-  return (
-    pathname.startsWith(`/sites/${encodeURIComponent(siteKey)}/quarterly/`) ||
-    pathname === buildSiteQuarterlyListHref(siteKey) ||
-    (pathname === buildSiteHubHref(siteKey) && selectedEntry === 'quarterly')
-  );
-}
-
-function isBadWorkplacePath(
-  pathname: string | null,
-  siteKey: string,
-  selectedEntry: string | null,
-) {
-  if (!pathname) return false;
-  return (
-    pathname.startsWith(`/sites/${encodeURIComponent(siteKey)}/bad-workplace/`) ||
-    (pathname === buildSiteHubHref(siteKey) && selectedEntry === 'bad-workplace')
-  );
-}
 
 interface AdminMenuPanelProps {
   activeSection: AdminSectionKey;
@@ -73,6 +30,13 @@ interface AdminMenuDrawerProps extends AdminMenuPanelProps {
   onClose: () => void;
 }
 
+const ADMIN_MENU_LABELS: Record<AdminSectionKey, string> = {
+  overview: '메인',
+  users: '사용자 관리',
+  headquarters: '사업장 관리',
+  content: '콘텐츠 관리',
+};
+
 export function AdminMenuPanel({
   activeSection,
   currentSiteKey = null,
@@ -83,8 +47,14 @@ export function AdminMenuPanel({
 }: AdminMenuPanelProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const selectedEntry = searchParams.get('entry');
   const selectedAdminSiteId = searchParams.get('siteId');
+  const selectedAdminHeadquarterId = searchParams.get('headquarterId');
+  const siteNavView = resolveSiteNavView({
+    pathname,
+    siteKey: currentSiteKey,
+    activeAdminSection: activeSection,
+    selectedAdminSiteId,
+  });
 
   const handleSelect = (section: AdminSectionKey) => {
     if (onSelectSection) {
@@ -94,31 +64,35 @@ export function AdminMenuPanel({
 
     onNavClick?.();
   };
+
   const siteMenuItems = currentSiteKey
     ? [
+        {
+          label: '현장 메인',
+          description: '선택한 현장 개요와 작업 진입 화면',
+          href: getAdminSectionHref('headquarters', {
+            headquarterId: selectedAdminHeadquarterId,
+            siteId: currentSiteKey,
+          }),
+          active: siteNavView === 'site-home',
+        },
         {
           label: '기술지도 보고서',
           description: '이 현장의 보고서 목록과 작성 화면',
           href: buildSiteReportsHref(currentSiteKey),
-          active: isSiteReportsPath(
-            pathname,
-            currentSiteKey,
-            selectedEntry,
-            selectedAdminSiteId,
-            activeSection,
-          ),
+          active: siteNavView === 'reports',
         },
         {
           label: '분기 종합 보고서',
           description: '현장 기준 분기 보고서 작성',
           href: buildSiteQuarterlyListHref(currentSiteKey),
-          active: isQuarterlyPath(pathname, currentSiteKey, selectedEntry),
+          active: siteNavView === 'quarterly',
         },
         {
           label: '불량사업장 신고',
           description: '최근 보고서를 바탕으로 신고서 작성',
           href: buildSiteBadWorkplaceHref(currentSiteKey, getCurrentReportMonth()),
-          active: isBadWorkplacePath(pathname, currentSiteKey, selectedEntry),
+          active: siteNavView === 'bad-workplace',
         },
       ]
     : [];
@@ -140,8 +114,9 @@ export function AdminMenuPanel({
                 }`}
                 onClick={() => handleSelect(section.key)}
               >
-                <span className={styles.menuLabel}>{section.label}</span>
-                <span className={styles.menuDescription}>{section.description}</span>
+                <span className={styles.menuLabel}>
+                  {ADMIN_MENU_LABELS[section.key] ?? section.label}
+                </span>
               </button>
             ) : (
               <Link
@@ -154,11 +129,12 @@ export function AdminMenuPanel({
                 title={
                   forceExpanded
                     ? undefined
-                    : `${section.label}${section.description ? ` - ${section.description}` : ''}`
+                    : ADMIN_MENU_LABELS[section.key] ?? section.label
                 }
               >
-                <span className={styles.menuLabel}>{section.label}</span>
-                <span className={styles.menuDescription}>{section.description}</span>
+                <span className={styles.menuLabel}>
+                  {ADMIN_MENU_LABELS[section.key] ?? section.label}
+                </span>
               </Link>
             ),
           )}
@@ -179,16 +155,9 @@ export function AdminMenuPanel({
                   item.active ? styles.menuButtonActive : ''
                 }`}
                 onClick={() => onNavClick?.()}
-                title={
-                  forceExpanded
-                    ? undefined
-                    : `${item.label}${item.description ? ` - ${item.description}` : ''}`
-                }
+                title={forceExpanded ? undefined : item.label}
               >
                 <span className={styles.menuLabel}>{item.label}</span>
-                {item.description ? (
-                  <span className={styles.menuDescription}>{item.description}</span>
-                ) : null}
               </Link>
             ))}
           </div>
@@ -227,4 +196,3 @@ export function AdminMenuDrawer({
     </>
   );
 }
-

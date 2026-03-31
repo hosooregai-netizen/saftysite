@@ -124,14 +124,14 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
   const isDisasterCase = form.content_type === 'disaster_case';
   const isDisasterCaseBatchCreate = editingId === 'create' && isDisasterCase;
   const titleLabel = isMeasurementTemplate ? '장비명' : '제목';
-  const titlePlaceholder = isMeasurementTemplate ? '예: 조도계' : '';
+  const titlePlaceholder = isMeasurementTemplate ? '예: 조도계' : ''; 
   const usesSafetyProxy = usesSafetyProxyUpload();
   const uploadPermissionHelperText = canUploadAssets
-    ? '이미지는 업로드 API에 저장됩니다.'
-    : '이 역할에서는 콘텐츠 자산 업로드와 교체를 할 수 없습니다.';
+    ? '이미지 파일 업로드 API를 사용할 수 없습니다.'
+    : '현재 권한에서는 콘텐츠 자산 업로드나 교체를 할 수 없습니다.';
   const fileUploadHelperText = canUploadAssets
     ? usesSafetyProxy
-      ? '현재 앱 기준 허용 용량은 50MB이며, 배포 프록시 제한이 더 작으면 업로드가 실패할 수 있습니다.'
+      ? '현재는 기본 업로드 용량이 50MB이며, 배포 환경의 제한이 더 작으면 업로드가 실패할 수 있습니다.'
       : undefined
     : uploadPermissionHelperText;
 
@@ -176,7 +176,7 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
         effective_from: toNullableText(form.effective_from),
         effective_to: toNullableText(form.effective_to),
         is_active: form.is_active,
-      };
+      }; 
       const entries = disasterCaseBatchItems
         .map((item, index) => ({
           item,
@@ -263,30 +263,30 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
       </div>
 
       <div className={styles.sectionBody}>
-        <div className={styles.filterRow}>
+        <div className={`${styles.filterRow} ${styles.contentFilterRow}`}>
           <input
             className={`app-input ${styles.filterSearch}`}
             placeholder="제목, 코드, 미리보기 내용으로 검색"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
-          <button
-            type="button"
-            className={`${styles.filterButton} ${activeType === 'all' ? styles.filterButtonActive : ''}`}
-            onClick={() => setActiveType('all')}
+          <select
+            className={`app-select ${styles.contentFilterSelect}`}
+            aria-label="콘텐츠 분류 필터"
+            value={activeType}
+            onChange={(event) =>
+              setActiveType(
+                event.target.value as SafetyContentItem['content_type'] | 'all',
+              )
+            }
           >
-            전체
-          </button>
-          {CONTENT_TYPE_OPTIONS.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              className={`${styles.filterButton} ${activeType === option.value ? styles.filterButtonActive : ''}`}
-              onClick={() => setActiveType(option.value)}
-            >
-              {option.label}
-            </button>
-          ))}
+            <option value="all">전체 분류</option>
+            {CONTENT_TYPE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className={styles.tableShell}>
@@ -495,7 +495,7 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
                   <textarea
                     className="app-textarea"
                     rows={8}
-                    placeholder={'예:\n1. 초정밀작업 : 750 Lux 이상\n2. 정밀작업 : 300 Lux 이상'}
+                    placeholder={'예시\n1. 초정밀작업 : 750 Lux 이상\n2. 정밀작업 : 300 Lux 이상'}
                     value={form.text_body}
                     onChange={(e) => setForm({ ...form, text_body: e.target.value })}
                     disabled={busy}
@@ -509,7 +509,7 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
                   <textarea
                     className="app-textarea"
                     rows={4}
-                    placeholder="문서 14 하단에 함께 보여줄 짧은 안내 문구가 있으면 입력"
+                    placeholder="문서 14 하단에 추가로 보여줄 안내 문구가 있으면 입력"
                     value={form.text_body}
                     onChange={(e) => setForm({ ...form, text_body: e.target.value })}
                     disabled={busy}

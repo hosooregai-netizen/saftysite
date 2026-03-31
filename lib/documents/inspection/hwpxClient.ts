@@ -2,6 +2,7 @@
 
 import JSZip from 'jszip';
 
+import { getSessionGuidanceDate } from '@/constants/inspectionSession';
 import { FIXED_SCENE_COUNT } from '@/constants/inspectionSession/catalog';
 import { CAUSATIVE_AGENT_LABELS } from '@/constants/inspectionSession/doc7Catalog';
 import { getExtraSceneTitle } from '@/constants/inspectionSession/scenePhotos';
@@ -997,7 +998,8 @@ function fileNameForSession(session: InspectionSession): string {
   const site = (session.meta.siteName || session.adminSiteSnapshot.siteName || 'inspection')
     .replace(/[\\/:*?"<>|]/g, '-')
     .trim();
-  const date = formatDateText(session.meta.reportDate).replace(/\./g, '') || 'report';
+  const date =
+    formatDateText(getSessionGuidanceDate(session)).replace(/\./g, '') || 'report';
   return `${site || 'inspection'}-${date}-${session.reportNumber}.hwpx`;
 }
 
@@ -1126,7 +1128,9 @@ function mapSessionToTemplateBinding(session: InspectionSession): TemplateBindin
   const overview = session.document2Overview;
 
   text['cover.site_name'] = valueOrDash(session.meta.siteName || site.siteName);
-  text['cover.report_date'] = valueOrDash(formatDateText(session.meta.reportDate));
+  text['cover.report_date'] = valueOrDash(
+    formatDateText(getSessionGuidanceDate(session)),
+  );
   text['cover.drafter'] = valueOrDash(session.meta.drafter);
   text['cover.reviewer'] = valueOrDash(session.meta.reviewer);
   text['cover.approver'] = valueOrDash(session.meta.approver);

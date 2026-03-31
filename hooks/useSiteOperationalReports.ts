@@ -21,7 +21,18 @@ function getErrorMessage(error: unknown) {
   if (error instanceof SafetyApiError || error instanceof Error) {
     return error.message;
   }
+
   return '운영 보고서를 불러오는 중 오류가 발생했습니다.';
+}
+
+function getExpiredLoginMessage() {
+  return '로그인이 만료되었습니다. 다시 로그인해 주세요.';
+}
+
+function getQuarterlyReportSortTime(report: QuarterlySummaryReport) {
+  const value = report.updatedAt || report.lastCalculatedAt || report.createdAt;
+  const parsed = value ? new Date(value).getTime() : 0;
+  return Number.isNaN(parsed) ? 0 : parsed;
 }
 
 export function useSiteOperationalReports(site: InspectionSite | null, enabled = true) {
@@ -47,7 +58,7 @@ export function useSiteOperationalReports(site: InspectionSite | null, enabled =
     if (!token) {
       setQuarterlyReports([]);
       setBadWorkplaceReports([]);
-      setError('로그인이 만료되었습니다. 다시 로그인해 주세요.');
+      setError(getExpiredLoginMessage());
       return;
     }
 
@@ -71,13 +82,17 @@ export function useSiteOperationalReports(site: InspectionSite | null, enabled =
         }
       });
 
-      nextQuarterly.sort((left, right) => right.quarterKey.localeCompare(left.quarterKey));
+      nextQuarterly.sort((left, right) => {
+        const timeDelta = getQuarterlyReportSortTime(right) - getQuarterlyReportSortTime(left);
+        if (timeDelta !== 0) return timeDelta;
+        return right.createdAt.localeCompare(left.createdAt);
+      });
       nextBadWorkplace.sort((left, right) => right.reportMonth.localeCompare(left.reportMonth));
 
       setQuarterlyReports(nextQuarterly);
       setBadWorkplaceReports(nextBadWorkplace);
-    } catch (error) {
-      setError(getErrorMessage(error));
+    } catch (nextError) {
+      setError(getErrorMessage(nextError));
     } finally {
       setIsLoading(false);
     }
@@ -92,44 +107,44 @@ export function useSiteOperationalReports(site: InspectionSite | null, enabled =
     async (report: QuarterlySummaryReport) => {
       if (!site) return;
       const token = readSafetyAuthToken();
-      if (!token) throw new SafetyApiError('로그인이 만료되었습니다. 다시 로그인해 주세요.', 401);
+      if (!token) throw new SafetyApiError(getExpiredLoginMessage(), 401);
 
       setIsSaving(true);
       setError(null);
       try {
         await upsertSafetyReport(token, buildQuarterlySummaryUpsertInput(report, site));
         await reload();
-      } catch (error) {
-        const message = getErrorMessage(error);
+      } catch (nextError) {
+        const message = getErrorMessage(nextError);
         setError(message);
-        throw error;
+        throw nextError;
       } finally {
         setIsSaving(false);
       }
     },
-    [reload, site]
+    [reload, site],
   );
 
   const saveBadWorkplaceReport = useCallback(
     async (report: BadWorkplaceReport) => {
       if (!site) return;
       const token = readSafetyAuthToken();
-      if (!token) throw new SafetyApiError('로그인이 만료되었습니다. 다시 로그인해 주세요.', 401);
+      if (!token) throw new SafetyApiError(getExpiredLoginMessage(), 401);
 
       setIsSaving(true);
       setError(null);
       try {
         await upsertSafetyReport(token, buildBadWorkplaceUpsertInput(report, site));
         await reload();
-      } catch (error) {
-        const message = getErrorMessage(error);
+      } catch (nextError) {
+        const message = getErrorMessage(nextError);
         setError(message);
-        throw error;
+        throw nextError;
       } finally {
         setIsSaving(false);
       }
     },
-    [reload, site]
+    [reload, site],
   );
 
   const deleteOperationalReport = useCallback(
@@ -137,10 +152,7 @@ export function useSiteOperationalReports(site: InspectionSite | null, enabled =
       if (!site) return;
       const token = readSafetyAuthToken();
       if (!token) {
-        throw new SafetyApiError(
-          '濡쒓렇?몄씠 留뚮즺?섏뿀?듬땲?? ?ㅼ떆 濡쒓렇?명빐 二쇱꽭??',
-          401,
-        );
+        throw new SafetyApiError(getExpiredLoginMessage(), 401);
       }
 
       setIsSaving(true);
@@ -148,10 +160,10 @@ export function useSiteOperationalReports(site: InspectionSite | null, enabled =
       try {
         await archiveSafetyReportByKey(token, reportId);
         await reload();
-      } catch (error) {
-        const message = getErrorMessage(error);
+      } catch (nextError) {
+        const message = getErrorMessage(nextError);
         setError(message);
-        throw error;
+        throw nextError;
       } finally {
         setIsSaving(false);
       }

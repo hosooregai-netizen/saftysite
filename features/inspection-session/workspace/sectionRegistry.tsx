@@ -3,6 +3,7 @@ import {
   createFutureProcessRiskPlan,
   createMeasurementCheckItem,
   createPreviousGuidanceFollowUpItem,
+  getSessionGuidanceDate,
 } from '@/constants/inspectionSession';
 import Doc10Section from '@/components/session/workspace/sections/Doc10Section';
 import Doc11Section from '@/components/session/workspace/sections/Doc11Section';
@@ -64,7 +65,9 @@ const inspectionSectionRegistry: Record<
           ...current,
           document4FollowUps: [
             ...current.document4FollowUps,
-            createPreviousGuidanceFollowUpItem({ confirmationDate: current.meta.reportDate }),
+            createPreviousGuidanceFollowUpItem({
+              confirmationDate: getSessionGuidanceDate(current),
+            }),
           ],
         })),
       ),

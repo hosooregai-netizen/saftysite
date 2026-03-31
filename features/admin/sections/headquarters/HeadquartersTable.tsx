@@ -17,6 +17,17 @@ interface HeadquartersTableProps {
   totalHeadquarterCount: number;
 }
 
+function shouldIgnoreRowClick(target: EventTarget | null) {
+  return (
+    target instanceof HTMLElement &&
+    Boolean(
+      target.closest(
+        'a, button, input, select, textarea, [role="button"], [role="menu"], [role="menuitem"]',
+      ),
+    )
+  );
+}
+
 export function HeadquartersTable({
   busy,
   canDelete,
@@ -81,17 +92,24 @@ export function HeadquartersTable({
                 </thead>
                 <tbody>
                   {filteredHeadquarters.map((item) => (
-                    <tr key={item.id}>
+                    <tr
+                      key={item.id}
+                      className={styles.tableClickableRow}
+                      tabIndex={busy ? -1 : 0}
+                      role="link"
+                      onClick={(event) => {
+                        if (busy || shouldIgnoreRowClick(event.target)) return;
+                        onOpenSitesRequest(item);
+                      }}
+                      onKeyDown={(event) => {
+                        if (busy || shouldIgnoreRowClick(event.target)) return;
+                        if (event.key !== 'Enter' && event.key !== ' ') return;
+                        event.preventDefault();
+                        onOpenSitesRequest(item);
+                      }}
+                    >
                       <td>
-                        <button
-                          type="button"
-                          className={styles.tableButtonLink}
-                          onClick={() => {
-                            if (!busy) onOpenSitesRequest(item);
-                          }}
-                        >
-                          {item.name}
-                        </button>
+                        <div className={styles.tablePrimary}>{item.name}</div>
                         <div className={styles.tableSecondary}>면허번호 {item.license_no || '-'}</div>
                       </td>
                       <td>
@@ -105,7 +123,11 @@ export function HeadquartersTable({
                       <td>{item.address || '-'}</td>
                       <td>{formatTimestamp(item.updated_at)}</td>
                       <td>
-                        <div className={styles.tableActionMenuWrap}>
+                        <div
+                          className={styles.tableActionMenuWrap}
+                          onClick={(event) => event.stopPropagation()}
+                          onKeyDown={(event) => event.stopPropagation()}
+                        >
                           <ActionMenu
                             label={`${item.name} 작업 메뉴 열기`}
                             items={[

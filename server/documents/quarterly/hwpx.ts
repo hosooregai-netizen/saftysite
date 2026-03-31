@@ -35,7 +35,13 @@ function fileNameForQuarterlyReport(report: QuarterlySummaryReport, site: Inspec
     report.siteSnapshot.siteName || site.siteName || report.siteId || 'quarterly-report',
     'quarterly-report',
   );
-  return `${siteName}-${report.quarterKey}-quarterly-report.hwpx`;
+  const periodToken = sanitizeWordFileName(
+    report.periodStartDate && report.periodEndDate
+      ? `${report.periodStartDate}_${report.periodEndDate}`
+      : report.quarterKey || report.id,
+    'quarterly-report',
+  );
+  return `${siteName}-${periodToken}-quarterly-report.hwpx`;
 }
 
 export function createHwpxDownloadResponse(document: GeneratedHwpxDocument): Response {

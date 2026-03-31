@@ -2,6 +2,7 @@ import 'server-only';
 
 import {
   DEFAULT_GUIDANCE_AGENCY,
+  getSessionGuidanceDate,
   WORK_PLAN_ITEMS,
 } from '@/constants/inspectionSession';
 import { FIXED_SCENE_COUNT } from '@/constants/inspectionSession/catalog';
@@ -27,7 +28,7 @@ function buildCover(session: InspectionSession): ReportPageDraft {
       <div class="cover-wrap">
         <div class="cover-title">건설재해예방 기술지도결과보고서</div>
         <div class="cover-site">현장명 : ${valueText(session.meta.siteName || snapshot.siteName)}</div>
-        <div class="cover-date">${formatDate(session.meta.reportDate)}</div>
+        <div class="cover-date">${formatDate(getSessionGuidanceDate(session))}</div>
         <table class="sign-table">
           <tr><th>담 당</th><th>검 토</th><th>승 인</th></tr>
           <tr><td>${valueText(session.meta.drafter)}</td><td>${valueText(session.meta.reviewer)}</td><td>${valueText(session.meta.approver)}</td></tr>

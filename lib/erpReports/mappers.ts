@@ -6,10 +6,7 @@ import {
   normalizeText,
 } from '@/constants/inspectionSession/shared';
 import { asMapperRecord, normalizeMapperText } from '@/lib/safetyApiMappers/utils';
-import type {
-  SafetyReport,
-  SafetyUpsertReportInput,
-} from '@/types/backend';
+import type { SafetyReport, SafetyUpsertReportInput } from '@/types/backend';
 import type {
   BadWorkplaceReport,
   BadWorkplaceViolation,
@@ -20,16 +17,16 @@ import type {
 import type { InspectionSite } from '@/types/inspectionSession';
 import {
   BAD_WORKPLACE_REPORT_KIND,
-  formatQuarterLabel,
+  buildQuarterlyDefaultTitle,
   formatReportMonthLabel,
   getStoredReportKind,
-  parseQuarterKey,
+  normalizeQuarterlyReportPeriod,
   QUARTERLY_SUMMARY_REPORT_KIND,
 } from './shared';
 
 function normalizeOperationalStatus(
   value: unknown,
-  fallbackStatus?: SafetyReport['status']
+  fallbackStatus?: SafetyReport['status'],
 ): OperationalReportStatus {
   const normalized = normalizeMapperText(value);
   if (normalized === 'completed') return 'completed';
@@ -37,9 +34,7 @@ function normalizeOperationalStatus(
   return 'draft';
 }
 
-function normalizeQuarterlyImplementationRows(
-  value: unknown
-): QuarterlyImplementationRow[] {
+function normalizeQuarterlyImplementationRows(value: unknown): QuarterlyImplementationRow[] {
   if (!Array.isArray(value)) return [];
 
   return value.map((item) => {
@@ -98,13 +93,19 @@ function normalizeBadWorkplaceViolations(value: unknown): BadWorkplaceViolation[
       nonCompliance: normalizeText(record.nonCompliance),
       confirmationDate: normalizeText(record.confirmationDate),
       accidentType: normalizeText(record.accidentType),
-      causativeAgentKey: normalizeText(record.causativeAgentKey) as BadWorkplaceViolation['causativeAgentKey'],
+      causativeAgentKey: normalizeText(
+        record.causativeAgentKey,
+      ) as BadWorkplaceViolation['causativeAgentKey'],
     };
   });
 }
 
+function normalizePositiveNumber(value: unknown) {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : 0;
+}
+
 export function mapSafetyReportToQuarterlySummaryReport(
-  report: SafetyReport
+  report: SafetyReport,
 ): QuarterlySummaryReport | null {
   if (getStoredReportKind(report) !== QUARTERLY_SUMMARY_REPORT_KIND) {
     return null;
@@ -112,11 +113,27 @@ export function mapSafetyReportToQuarterlySummaryReport(
 
   const payload = asMapperRecord(report.payload);
   const meta = asMapperRecord(report.meta);
-  const quarterKey =
-    normalizeMapperText(payload.quarterKey) ||
-    normalizeMapperText(meta.quarterKey);
-  const target = parseQuarterKey(quarterKey);
-  if (!target) return null;
+  const normalizedPeriod = normalizeQuarterlyReportPeriod({
+    periodStartDate:
+      normalizeMapperText(payload.periodStartDate) ||
+      normalizeMapperText(meta.periodStartDate),
+    periodEndDate:
+      normalizeMapperText(payload.periodEndDate) ||
+      normalizeMapperText(meta.periodEndDate),
+    quarterKey:
+      normalizeMapperText(payload.quarterKey) ||
+      normalizeMapperText(meta.quarterKey),
+    year:
+      normalizePositiveNumber(payload.year) ||
+      normalizePositiveNumber(meta.year),
+    quarter:
+      normalizePositiveNumber(payload.quarter) ||
+      normalizePositiveNumber(meta.quarter),
+  });
+
+  if (!normalizedPeriod.periodStartDate && !normalizedPeriod.periodEndDate && !normalizedPeriod.quarterKey) {
+    return null;
+  }
 
   const nextReport: QuarterlySummaryReport = {
     id: report.report_key,
@@ -124,11 +141,13 @@ export function mapSafetyReportToQuarterlySummaryReport(
     title:
       normalizeMapperText(payload.title) ||
       normalizeMapperText(report.report_title) ||
-      `${formatQuarterLabel(target)} 종합보고서`,
+      buildQuarterlyDefaultTitle(report.created_at),
     reportKind: QUARTERLY_SUMMARY_REPORT_KIND,
-    quarterKey: target.quarterKey,
-    year: target.year,
-    quarter: target.quarter,
+    periodStartDate: normalizedPeriod.periodStartDate,
+    periodEndDate: normalizedPeriod.periodEndDate,
+    quarterKey: normalizedPeriod.quarterKey,
+    year: normalizedPeriod.year,
+    quarter: normalizedPeriod.quarter,
     status: normalizeOperationalStatus(payload.status ?? meta.status, report.status),
     drafter:
       normalizeMapperText(payload.drafter) ||
@@ -157,7 +176,9 @@ export function mapSafetyReportToQuarterlySummaryReport(
     opsAssetPreviewUrl: normalizeMapperText(payload.opsAssetPreviewUrl),
     opsAssetFileUrl: normalizeMapperText(payload.opsAssetFileUrl),
     opsAssetFileName: normalizeMapperText(payload.opsAssetFileName),
-    opsAssetType: normalizeMapperText(payload.opsAssetType) as QuarterlySummaryReport['opsAssetType'],
+    opsAssetType: normalizeMapperText(
+      payload.opsAssetType,
+    ) as QuarterlySummaryReport['opsAssetType'],
     opsAssignedBy: normalizeMapperText(payload.opsAssignedBy),
     opsAssignedAt: normalizeMapperText(payload.opsAssignedAt),
     createdAt: normalizeMapperText(payload.createdAt) || report.created_at,
@@ -168,7 +189,7 @@ export function mapSafetyReportToQuarterlySummaryReport(
 }
 
 export function mapSafetyReportToBadWorkplaceReport(
-  report: SafetyReport
+  report: SafetyReport,
 ): BadWorkplaceReport | null {
   if (getStoredReportKind(report) !== BAD_WORKPLACE_REPORT_KIND) {
     return null;
@@ -186,7 +207,7 @@ export function mapSafetyReportToBadWorkplaceReport(
     title:
       normalizeMapperText(payload.title) ||
       normalizeMapperText(report.report_title) ||
-      `${formatReportMonthLabel(reportMonth)} 불량사업장 신고서`,
+      `${formatReportMonthLabel(reportMonth)} 불량사업장 신고`,
     reportKind: BAD_WORKPLACE_REPORT_KIND,
     reportMonth,
     status: normalizeOperationalStatus(payload.status ?? meta.status, report.status),
@@ -219,8 +240,10 @@ export function mapSafetyReportToBadWorkplaceReport(
 
 export function buildQuarterlySummaryUpsertInput(
   report: QuarterlySummaryReport,
-  site: InspectionSite
+  site: InspectionSite,
 ): SafetyUpsertReportInput {
+  const normalizedPeriod = normalizeQuarterlyReportPeriod(report);
+
   return {
     report_key: report.id,
     report_title: report.title,
@@ -228,14 +251,17 @@ export function buildQuarterlySummaryUpsertInput(
     visit_date: report.updatedAt.slice(0, 10) || null,
     payload: {
       ...report,
+      ...normalizedPeriod,
       reportKind: QUARTERLY_SUMMARY_REPORT_KIND,
       updatedAt: report.updatedAt,
     },
     meta: {
       reportKind: QUARTERLY_SUMMARY_REPORT_KIND,
-      quarterKey: report.quarterKey,
-      year: report.year,
-      quarter: report.quarter,
+      periodStartDate: normalizedPeriod.periodStartDate,
+      periodEndDate: normalizedPeriod.periodEndDate,
+      quarterKey: normalizedPeriod.quarterKey,
+      year: normalizedPeriod.year,
+      quarter: normalizedPeriod.quarter,
       status: report.status,
       drafter: report.drafter,
     },
@@ -247,7 +273,7 @@ export function buildQuarterlySummaryUpsertInput(
 
 export function buildBadWorkplaceUpsertInput(
   report: BadWorkplaceReport,
-  site: InspectionSite
+  site: InspectionSite,
 ): SafetyUpsertReportInput {
   return {
     report_key: report.id,

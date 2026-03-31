@@ -4,6 +4,7 @@ import {
   DEFAULT_SAFETY_INFOS,
   LEGAL_REFERENCE_LIBRARY,
   finalizeInspectionSession,
+  getSessionGuidanceDate,
 } from '@/constants/inspectionSession';
 import type {
   SafetyCaseCatalogItem,
@@ -331,10 +332,12 @@ export function mergeMasterDataIntoSession(
   session: InspectionSession,
   masterData: SafetyMasterData,
 ): InspectionSession {
+  const reportDate = getSessionGuidanceDate(session);
+
   return finalizeInspectionSession({
     ...session,
-    document13Cases: getCaseFeedForReportDate(masterData, session.meta.reportDate),
-    document14SafetyInfos: getSafetyInfosForReportDate(masterData, session.meta.reportDate),
+    document13Cases: getCaseFeedForReportDate(masterData, reportDate),
+    document14SafetyInfos: getSafetyInfosForReportDate(masterData, reportDate),
   });
 }
 

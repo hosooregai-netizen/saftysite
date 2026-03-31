@@ -1,6 +1,9 @@
 import 'server-only';
 
-import { WORK_PLAN_ITEMS } from '@/constants/inspectionSession';
+import {
+  WORK_PLAN_ITEMS,
+  getSessionGuidanceDate,
+} from '@/constants/inspectionSession';
 import { padDocument12Activities } from '@/constants/inspectionSession/itemFactory';
 import { getSceneSlotTitle } from '@/constants/inspectionSession/scenePhotos';
 import type { InspectionSession } from '@/types/inspectionSession';
@@ -110,7 +113,7 @@ function followUpBlock(session: InspectionSession, context: InspectionDocContext
           textCell('지도일', { bold: true, shaded: true }),
           textCell(formatDate(item.guidanceDate)),
           textCell('확인일', { bold: true, shaded: true }),
-          textCell(formatDate(item.confirmationDate || session.meta.reportDate)),
+          textCell(formatDate(item.confirmationDate || getSessionGuidanceDate(session))),
         ],
         [
           textCell('시정 전 사진', { bold: true, shaded: true, colSpan: 2, align: 'center' }),
@@ -362,7 +365,10 @@ export function buildInspectionDocumentBody(
     paragraph(' ', { spacingAfter: 700 }),
     titleBox('건설재해예방 기술지도결과보고서'),
     paragraph(`현장명 : ${session.meta.siteName || site.siteName || '-'}`, { align: 'center', spacingBefore: 120, spacingAfter: 1200 }),
-    paragraph(formatDate(session.meta.reportDate), { align: 'center', spacingAfter: 1200 }),
+    paragraph(formatDate(getSessionGuidanceDate(session)), {
+      align: 'center',
+      spacingAfter: 1200,
+    }),
     gridTable(
       [
         ['담 당', '검 토', '승 인'],

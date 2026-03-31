@@ -182,6 +182,18 @@ export async function fetchQuarterlyHwpxDocument(
 
 export const fetchQuarterlyWordDocument = fetchQuarterlyHwpxDocument;
 
+export async function fetchQuarterlyPdfDocument(
+  report: QuarterlySummaryReport,
+  site: InspectionSite
+): Promise<{ blob: Blob; filename: string }> {
+  const body: GenerateQuarterlyWordRequest = { report, site };
+  return fetchWordDocument(
+    '/documents/quarterly/pdf',
+    body,
+    '분기 보고서 PDF 다운로드 실패'
+  );
+}
+
 export async function fetchBadWorkplaceWordDocument(
   report: BadWorkplaceReport,
   site: InspectionSite

@@ -1,10 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import AppModal from '@/components/ui/AppModal';
 import { ReportList } from '@/features/site-reports/components/ReportList';
 import { SiteReportsSummaryBar } from '@/features/site-reports/components/SiteReportsSummaryBar';
-import type { SiteReportSortMode } from '@/features/site-reports/hooks/useSiteReportListState';
+import type {
+  CreateSiteReportInput,
+  SiteReportSortMode,
+} from '@/features/site-reports/hooks/useSiteReportListState';
 import type {
   InspectionReportListItem,
   InspectionSite,
@@ -16,10 +19,11 @@ interface SiteReportListPanelProps {
   assignedUserDisplay?: string;
   canArchiveReports: boolean;
   canCreateReport: boolean;
-  createReport: () => void;
+  createReport: (input: CreateSiteReportInput) => void;
   currentSite: InspectionSite;
   deleteSession: (sessionId: string) => Promise<void>;
   filteredReportItems: InspectionReportListItem[];
+  getCreateReportTitleSuggestion: (reportDate: string) => string;
   reloadReportIndex: () => void;
   reportIndexError: string | null;
   reportIndexStatus: ReportIndexStatus;
@@ -31,6 +35,16 @@ interface SiteReportListPanelProps {
   showSummaryBar?: boolean;
 }
 
+interface CreateReportFormState {
+  reportDate: string;
+  reportTitle: string;
+}
+
+const EMPTY_CREATE_FORM: CreateReportFormState = {
+  reportDate: '',
+  reportTitle: '',
+};
+
 export function SiteReportListPanel({
   assignedUserDisplay,
   canArchiveReports,
@@ -39,6 +53,7 @@ export function SiteReportListPanel({
   currentSite,
   deleteSession,
   filteredReportItems,
+  getCreateReportTitleSuggestion,
   reloadReportIndex,
   reportIndexError,
   reportIndexStatus,
@@ -50,23 +65,105 @@ export function SiteReportListPanel({
   showSummaryBar = true,
 }: SiteReportListPanelProps) {
   const [dialogSessionId, setDialogSessionId] = useState<string | null>(null);
-  const deletingSession =
-    dialogSessionId
-      ? reportItems.find((item) => item.reportKey === dialogSessionId) ?? null
-      : null;
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [createForm, setCreateForm] =
+    useState<CreateReportFormState>(EMPTY_CREATE_FORM);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [hasEditedCreateTitle, setHasEditedCreateTitle] = useState(false);
+
+  const deletingSession = dialogSessionId
+    ? reportItems.find((item) => item.reportKey === dialogSessionId) ?? null
+    : null;
   const snapshot = currentSite.adminSiteSnapshot;
   const siteNameDisplay = currentSite.siteName?.trim() || snapshot.siteName?.trim() || '-';
   const addressDisplay = snapshot.siteAddress?.trim() || '-';
   const periodDisplay = snapshot.constructionPeriod?.trim() || '-';
   const amountDisplay = snapshot.constructionAmount?.trim() || '-';
   const showTableTools = reportIndexStatus === 'loaded' && reportItems.length > 0;
+  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+
+  const resetCreateDialog = () => {
+    setCreateForm(EMPTY_CREATE_FORM);
+    setCreateError(null);
+    setHasEditedCreateTitle(false);
+  };
+
+  const openCreateDialog = () => {
+    if (!canCreateReport) {
+      return;
+    }
+
+    const nextDate = today;
+    setCreateForm({
+      reportDate: nextDate,
+      reportTitle: getCreateReportTitleSuggestion(nextDate),
+    });
+    setCreateError(null);
+    setHasEditedCreateTitle(false);
+    setIsCreateDialogOpen(true);
+  };
+
+  const closeCreateDialog = () => {
+    setIsCreateDialogOpen(false);
+    resetCreateDialog();
+  };
+
+  const handleCreateDateChange = (value: string) => {
+    setCreateError(null);
+    setCreateForm((current) => {
+      const next = {
+        ...current,
+        reportDate: value,
+      };
+
+      if (hasEditedCreateTitle) {
+        return next;
+      }
+
+      return {
+        ...next,
+        reportTitle: value ? getCreateReportTitleSuggestion(value) : '',
+      };
+    });
+  };
+
+  const handleCreateTitleChange = (value: string) => {
+    setCreateError(null);
+    setCreateForm((current) => ({
+      ...current,
+      reportTitle: value,
+    }));
+    setHasEditedCreateTitle(value.trim().length > 0);
+  };
+
+  const handleCreateSubmit = () => {
+    const reportDate = createForm.reportDate.trim();
+    const reportTitle = createForm.reportTitle.trim();
+
+    if (!reportDate) {
+      setCreateError('지도일을 입력해 주세요.');
+      return;
+    }
+
+    if (!reportTitle) {
+      setCreateError('제목을 입력해 주세요.');
+      return;
+    }
+
+    createReport({
+      reportDate,
+      reportTitle,
+    });
+    closeCreateDialog();
+  };
+
   const panelBody = (
     <>
       {showTableTools ? (
         <div className={styles.tableTools}>
           <input
             className={`app-input ${styles.tableSearch}`}
-            placeholder="보고서명, 작성일, 작성자로 검색"
+            placeholder="차수, 보고서명, 지도일, 작성자로 검색"
             value={reportQuery}
             onChange={(event) => setReportQuery(event.target.value)}
             aria-label="보고서 검색"
@@ -79,14 +176,14 @@ export function SiteReportListPanel({
             }
             aria-label="보고서 정렬"
           >
-            <option value="recent">최근 저장순</option>
+            <option value="round">차수순</option>
             <option value="name">보고서명순</option>
-            <option value="progress">진행률 높은 순</option>
+            <option value="progress">진행률순</option>
           </select>
           <button
             type="button"
             className={`app-button app-button-primary ${styles.tableCreateButton}`}
-            onClick={createReport}
+            onClick={openCreateDialog}
             disabled={!canCreateReport}
           >
             보고서 추가
@@ -113,7 +210,7 @@ export function SiteReportListPanel({
         canArchiveReports={canArchiveReports}
         canCreateReport={canCreateReport}
         currentSite={currentSite}
-        onCreateReport={createReport}
+        onCreateReport={openCreateDialog}
         onDeleteRequest={setDialogSessionId}
         reportIndexStatus={reportIndexStatus}
         reportItems={reportIndexStatus === 'loaded' ? filteredReportItems : []}
@@ -134,6 +231,58 @@ export function SiteReportListPanel({
       ) : null}
 
       <section className={styles.panel}>{panelBody}</section>
+
+      <AppModal
+        open={isCreateDialogOpen}
+        title="기술지도 보고서 생성"
+        size="large"
+        onClose={closeCreateDialog}
+        actions={
+          <>
+            <button
+              type="button"
+              className="app-button app-button-secondary"
+              onClick={closeCreateDialog}
+            >
+              취소
+            </button>
+            <button
+              type="button"
+              className="app-button app-button-primary"
+              onClick={handleCreateSubmit}
+              disabled={!createForm.reportDate || !createForm.reportTitle.trim()}
+            >
+              생성
+            </button>
+          </>
+        }
+      >
+        <div className={styles.createDialogBody}>
+          <label className={styles.createDialogField}>
+            <span className={styles.createDialogLabel}>지도일</span>
+            <input
+              className="app-input"
+              type="date"
+              value={createForm.reportDate}
+              onChange={(event) => handleCreateDateChange(event.target.value)}
+            />
+          </label>
+
+          <label className={styles.createDialogField}>
+            <span className={styles.createDialogLabel}>제목</span>
+            <input
+              className="app-input"
+              value={createForm.reportTitle}
+              onChange={(event) => handleCreateTitleChange(event.target.value)}
+              placeholder="예: 2026-04-01 보고서 3"
+            />
+          </label>
+
+          {createError ? (
+            <p className={styles.createDialogError}>{createError}</p>
+          ) : null}
+        </div>
+      </AppModal>
 
       <AppModal
         open={canArchiveReports && Boolean(dialogSessionId)}

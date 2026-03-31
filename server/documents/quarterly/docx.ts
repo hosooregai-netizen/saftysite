@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { getQuarterlyReportPeriodLabel } from '@/lib/erpReports/shared';
 import type { QuarterlySummaryReport } from '@/types/erpReports';
 import type { InspectionSite } from '@/types/inspectionSession';
 import {
@@ -19,12 +20,25 @@ import {
 } from '@/server/documents/inspection/ooxml';
 import { formatDate } from '@/server/documents/inspection/format';
 
+function getQuarterlyReportFileToken(report: QuarterlySummaryReport) {
+  if (report.periodStartDate && report.periodEndDate) {
+    return `${report.periodStartDate}_${report.periodEndDate}`;
+  }
+
+  if (report.quarterKey) {
+    return report.quarterKey;
+  }
+
+  return report.id;
+}
+
 function fileNameForQuarterlyReport(report: QuarterlySummaryReport, site: InspectionSite) {
   const siteName = sanitizeWordFileName(
     report.siteSnapshot.siteName || site.siteName || report.siteId || 'quarterly-report',
     'quarterly-report',
   );
-  return `${siteName}-${report.quarterKey}-분기종합보고서.docx`;
+  const periodToken = sanitizeWordFileName(getQuarterlyReportFileToken(report), 'quarterly-report');
+  return `${siteName}-${periodToken}-분기종합보고서.docx`;
 }
 
 function countTable(title: string, rows: Array<{ label: string; count: number }>) {
@@ -84,7 +98,9 @@ function implementationTable(report: QuarterlySummaryReport) {
 
 function opsSection(report: QuarterlySummaryReport) {
   if (!report.opsAssetId) {
-    return noteBox('관리자 보완 대기 중입니다. 연결된 OPS / One Point Sheet 자료가 없습니다.');
+    return noteBox(
+      '관리자가 OPS / One Point Sheet 자료를 아직 연결하지 않았습니다.',
+    );
   }
 
   return [
@@ -100,7 +116,7 @@ function opsSection(report: QuarterlySummaryReport) {
     ),
     paragraph(
       report.opsAssignedBy
-        ? `연결자 ${report.opsAssignedBy} / 연결 시각: ${report.opsAssignedAt || '-'}`
+        ? `연결자: ${report.opsAssignedBy} / 연결 시각: ${report.opsAssignedAt || '-'}`
         : '연결 정보 없음',
     ),
   ].join('');
@@ -108,6 +124,7 @@ function opsSection(report: QuarterlySummaryReport) {
 
 function buildQuarterlyWordBody(report: QuarterlySummaryReport, site: InspectionSite) {
   const snapshot = report.siteSnapshot;
+  const periodLabel = getQuarterlyReportPeriodLabel(report);
 
   return buildDocumentXml(
     [
@@ -118,11 +135,11 @@ function buildQuarterlyWordBody(report: QuarterlySummaryReport, site: Inspection
         align: 'center',
         spacingAfter: 80,
       }),
-      paragraph(`${report.year}년 ${report.quarter}분기`, {
+      paragraph(periodLabel, {
         align: 'center',
         spacingAfter: 160,
       }),
-      paragraph(`작성자 ${report.drafter || '-'}`, { align: 'center' }),
+      paragraph(`작성자: ${report.drafter || '-'}`, { align: 'center' }),
       pageBreak(),
       sectionHeading('1. 기술지도 대상사업장'),
       twoColTable([
@@ -143,11 +160,11 @@ function buildQuarterlyWordBody(report: QuarterlySummaryReport, site: Inspection
         { label: '본사 주소', value: snapshot.headquartersAddress || '-' },
       ]),
       sectionHeading('2. 통계분석(누계)'),
-      countTable('지적유형별 분석', report.accidentStats),
+      countTable('지적유형별 종합', report.accidentStats),
       paragraph(' ', { spacingAfter: 80 }),
-      countTable('기인물별 분석', report.causativeStats),
+      countTable('기인물별 종합', report.causativeStats),
       sectionHeading('3. 기술지도 총평'),
-      noteBox(report.overallComment || '총평이 아직 없습니다.'),
+      noteBox(report.overallComment || '총평이 아직 작성되지 않았습니다.'),
       sectionHeading('4. 기술지도 이행현황'),
       implementationTable(report),
       sectionHeading('5. 향후 공정 유해위험요인 및 대책'),

@@ -189,6 +189,7 @@
 .listHead {
   display: grid;
   grid-template-columns:
+    56px
     minmax(220px, 1.45fr)
     minmax(110px, 0.8fr)
     minmax(118px, 0.72fr)
@@ -212,6 +213,7 @@
 .reportRow {
   display: grid;
   grid-template-columns:
+    56px
     minmax(220px, 1.45fr)
     minmax(110px, 0.8fr)
     minmax(118px, 0.72fr)
@@ -228,6 +230,19 @@
   border-bottom: 0;
 }
 
+.reportRowClickable {
+  cursor: pointer;
+}
+
+.reportRowClickable:hover {
+  background: #f8fbff;
+}
+
+.reportRowClickable:focus-visible {
+  outline: 2px solid var(--erp-mid);
+  outline-offset: -2px;
+}
+
 .primaryCell,
 .dataCell,
 .progressCell,
@@ -236,6 +251,7 @@
 }
 
 .titleCell,
+.roundCell,
 .reportDateCell,
 .drafterCell,
 .progressArea,
@@ -247,6 +263,34 @@
 /* 진행률(막대·분수)과 메뉴 버튼 사이 시각적 간격 */
 .progressArea {
   padding-right: 20px;
+}
+
+.roundCell {
+  text-align: left;
+}
+
+.quarterlyListHead {
+  grid-template-columns:
+    56px
+    minmax(220px, 1.45fr)
+    minmax(110px, 0.8fr)
+    minmax(150px, 0.95fr)
+    minmax(170px, 1.02fr)
+    40px;
+}
+
+.quarterlyReportRow {
+  grid-template-columns:
+    56px
+    minmax(220px, 1.45fr)
+    minmax(110px, 0.8fr)
+    minmax(150px, 0.95fr)
+    minmax(170px, 1.02fr)
+    40px;
+}
+
+.sequenceCell {
+  text-align: left;
 }
 
 .reportLink {
@@ -346,6 +390,36 @@
   color: var(--erp-text-muted);
 }
 
+.createDialogBody {
+  display: grid;
+  gap: 14px;
+}
+
+.createDialogPeriodGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.createDialogField {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.createDialogLabel {
+  font-size: var(--text-ui-sm);
+  font-weight: 700;
+  color: var(--erp-dark);
+}
+
+.createDialogError {
+  margin: 0;
+  font-size: var(--text-ui-sm);
+  line-height: 1.5;
+  color: #b42318;
+}
+
 @media (max-width: 767px) {
   .hero {
     padding: 15px 21px 14px;
@@ -398,9 +472,14 @@
     flex: 1 1 100%;
   }
 
+  .createDialogPeriodGrid {
+    gap: 8px;
+  }
+
   .listHead,
   .reportRow {
     grid-template-columns:
+      42px
       minmax(0, 1.24fr)
       minmax(0, 0.8fr)
       minmax(68px, 0.74fr)
@@ -412,6 +491,15 @@
 
   .listHead {
     font-size: var(--text-nano);
+  }
+
+  .quarterlyListHead,
+  .quarterlyReportRow {
+    grid-template-columns:
+      42px
+      minmax(0, 1.3fr)
+      minmax(68px, 0.8fr)
+      36px;
   }
 
   .desktopOnly {
@@ -464,6 +552,7 @@
   .listHead,
   .reportRow {
     grid-template-columns:
+      48px
       minmax(0, 1.4fr)
       minmax(0, 0.92fr)
       minmax(92px, 0.96fr)
@@ -479,6 +568,15 @@
 
   .desktopProgressSuffix {
     display: none;
+  }
+
+  .quarterlyListHead,
+  .quarterlyReportRow {
+    grid-template-columns:
+      48px
+      minmax(0, 1.4fr)
+      minmax(92px, 0.96fr)
+      40px;
   }
 }
 

@@ -75,14 +75,22 @@ export function normalizeInspectionSession(raw: unknown): InspectionSession {
   }
 
   const doc2Partial = asRecord(source.document2Overview) as Partial<TechnicalGuidanceOverview>;
+  const normalizedVisitCount = normalizeReportNumber(
+    Number.parseInt(normalizeText(doc2Partial.visitCount), 10),
+  );
+  const normalizedSourceReportNumber = normalizeReportNumber(source.reportNumber);
+  const normalizedReportNumber = normalizedVisitCount || normalizedSourceReportNumber || 1;
 
   const normalizedSession: InspectionSession = {
     ...session,
     id: normalizeText(source.id) || session.id,
     currentSection: normalizeSectionKey(source.currentSection),
+    reportNumber: normalizedReportNumber,
     meta: {
       siteName: normalizeText(asRecord(source.meta).siteName) || session.meta.siteName,
       reportDate: normalizeText(asRecord(source.meta).reportDate) || session.meta.reportDate,
+      reportTitle:
+        normalizeText(asRecord(source.meta).reportTitle) || session.meta.reportTitle,
       drafter: normalizeText(asRecord(source.meta).drafter) || session.meta.drafter,
       reviewer: normalizeText(asRecord(source.meta).reviewer) || '',
       approver: normalizeText(asRecord(source.meta).approver) || '',
@@ -92,6 +100,7 @@ export function normalizeInspectionSession(raw: unknown): InspectionSession {
     document2Overview: {
       ...session.document2Overview,
       ...doc2Partial,
+      visitCount: normalizeText(doc2Partial.visitCount) || String(normalizedReportNumber),
       accidentOccurred: normalizeAccidentOccurred(
         doc2Partial.accidentOccurred ?? session.document2Overview.accidentOccurred
       ),

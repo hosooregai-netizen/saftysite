@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useDeferredValue, useMemo, useState } from 'react';
 import AppModal from '@/components/ui/AppModal';
 import ActionMenu from '@/components/ui/ActionMenu';
@@ -87,6 +88,17 @@ function formatAssignedUserDetails(users: SafetyUser[]) {
     .join(' / ');
 }
 
+function shouldIgnoreRowClick(target: EventTarget | null) {
+  return (
+    target instanceof HTMLElement &&
+    Boolean(
+      target.closest(
+        'a, button, input, select, textarea, [role="button"], [role="menu"], [role="menuitem"]',
+      ),
+    )
+  );
+}
+
 export function SitesSection(props: SitesSectionProps) {
   const {
     assignments,
@@ -107,6 +119,7 @@ export function SitesSection(props: SitesSectionProps) {
     lockedHeadquarterId = null,
     onSelectSiteEntry,
   } = props;
+  const router = useRouter();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [assignmentSiteId, setAssignmentSiteId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
@@ -227,6 +240,15 @@ export function SitesSection(props: SitesSectionProps) {
     await onDelete(site.id);
   };
 
+  const handleOpenSiteEntry = (site: SafetySite) => {
+    if (onSelectSiteEntry) {
+      onSelectSiteEntry(site);
+      return;
+    }
+
+    router.push(`/sites/${encodeURIComponent(site.id)}`);
+  };
+
   return (
     <section className={`${styles.sectionCard} ${styles.listSectionCard}`}>
       <div className={styles.sectionHeader}>
@@ -313,19 +335,24 @@ export function SitesSection(props: SitesSectionProps) {
                         : [];
 
                     return (
-                      <tr key={site.id}>
+                      <tr
+                        key={site.id}
+                        className={styles.tableClickableRow}
+                        tabIndex={busy ? -1 : 0}
+                        role="link"
+                        onClick={(event) => {
+                          if (busy || shouldIgnoreRowClick(event.target)) return;
+                          handleOpenSiteEntry(site);
+                        }}
+                        onKeyDown={(event) => {
+                          if (busy || shouldIgnoreRowClick(event.target)) return;
+                          if (event.key !== 'Enter' && event.key !== ' ') return;
+                          event.preventDefault();
+                          handleOpenSiteEntry(site);
+                        }}
+                      >
                         <td>
-                          {onSelectSiteEntry ? (
-                            <button
-                              type="button"
-                              className={styles.tableButtonLink}
-                              onClick={() => onSelectSiteEntry(site)}
-                            >
-                              {site.site_name}
-                            </button>
-                          ) : (
-                            <div className={styles.tablePrimary}>{site.site_name}</div>
-                          )}
+                          <div className={styles.tablePrimary}>{site.site_name}</div>
                           <div className={styles.tableSecondary}>
                             {site.site_address || '주소 미입력'}
                           </div>
@@ -362,7 +389,11 @@ export function SitesSection(props: SitesSectionProps) {
                             site.status}
                         </td>
                         <td>
-                          <div className={styles.tableActionMenuWrap}>
+                          <div
+                            className={styles.tableActionMenuWrap}
+                            onClick={(event) => event.stopPropagation()}
+                            onKeyDown={(event) => event.stopPropagation()}
+                          >
                             <ActionMenu
                               label={`${site.site_name} 현장 작업 메뉴 열기`}
                               items={[
@@ -370,7 +401,7 @@ export function SitesSection(props: SitesSectionProps) {
                                   ? [
                                       {
                                         label: '현장 메인',
-                                        onSelect: () => onSelectSiteEntry(site),
+                                        onSelect: () => handleOpenSiteEntry(site),
                                       },
                                     ]
                                   : [

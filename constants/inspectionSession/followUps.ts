@@ -1,5 +1,8 @@
 import { createPreviousGuidanceFollowUpItem } from '@/constants/inspectionSession/itemFactory';
-import { getSessionSiteKey } from '@/constants/inspectionSession/sessionIdentity';
+import {
+  getSessionGuidanceDate,
+  getSessionSiteKey,
+} from '@/constants/inspectionSession/sessionIdentity';
 import { normalizeText } from '@/constants/inspectionSession/shared';
 import type {
   CurrentHazardFinding,
@@ -119,8 +122,9 @@ export function buildDerivedFollowUpItems(
             sourceSessionId: previousSession.id,
             sourceFindingId: item.id,
             location: item.location,
-            guidanceDate: previousSession.meta.reportDate,
-            confirmationDate: existing?.confirmationDate || session.meta.reportDate,
+            guidanceDate: getSessionGuidanceDate(previousSession),
+            confirmationDate:
+              existing?.confirmationDate || getSessionGuidanceDate(session),
             beforePhotoUrl: item.photoUrl,
             afterPhotoUrl: existing?.afterPhotoUrl || '',
             result: existing?.result || '',

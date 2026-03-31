@@ -1,6 +1,10 @@
 import { asMapperRecord, normalizeMapperText } from '@/lib/safetyApiMappers/utils';
 import type { SafetyReport } from '@/types/backend';
-import type { QuarterTarget, StoredReportKind } from '@/types/erpReports';
+import type {
+  QuarterTarget,
+  QuarterlySummaryReport,
+  StoredReportKind,
+} from '@/types/erpReports';
 
 export const TECHNICAL_GUIDANCE_REPORT_KIND = 'technical_guidance' as const;
 export const QUARTERLY_SUMMARY_REPORT_KIND = 'quarterly_summary' as const;
@@ -105,7 +109,7 @@ export function buildQuarterlyReportKey(siteId: string, quarterKey: string) {
 export function buildBadWorkplaceReportKey(
   siteId: string,
   reportMonth: string,
-  reporterUserId: string
+  reporterUserId: string,
 ) {
   return `bad-workplace:${siteId}:${reportMonth}:${reporterUserId}`;
 }
@@ -116,7 +120,7 @@ function getNextQuarter(year: number, quarter: number) {
 }
 
 export function getQuarterTargetsForConstructionPeriod(
-  constructionPeriod: string
+  constructionPeriod: string,
 ): QuarterTarget[] {
   const [rawStart, rawEnd] = constructionPeriod.split('~').map((value) => value.trim());
   const start = parseDateValue(rawStart);
@@ -127,7 +131,8 @@ export function getQuarterTargetsForConstructionPeriod(
   }
 
   const minimumDurationDays = 90;
-  const durationDays = Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  const durationDays =
+    Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
   if (durationDays < minimumDurationDays) {
     return [];
   }
@@ -163,7 +168,7 @@ export function getQuarterTargetsForConstructionPeriod(
 export function isDateWithinRange(
   value: string | null | undefined,
   startDate: string,
-  endDate: string
+  endDate: string,
 ) {
   const date = parseDateValue(value);
   const start = parseDateValue(startDate);
@@ -172,11 +177,134 @@ export function isDateWithinRange(
   return date.getTime() >= start.getTime() && date.getTime() <= end.getTime();
 }
 
+export function formatPeriodRangeLabel(
+  startDate: string | null | undefined,
+  endDate: string | null | undefined,
+) {
+  const normalizedStart = normalizeMapperText(startDate);
+  const normalizedEnd = normalizeMapperText(endDate);
+
+  if (normalizedStart && normalizedEnd) return `${normalizedStart} ~ ${normalizedEnd}`;
+  if (normalizedStart) return `${normalizedStart} ~ -`;
+  if (normalizedEnd) return `- ~ ${normalizedEnd}`;
+  return '-';
+}
+
+export function getQuarterTargetForExactPeriod(
+  startDate: string | null | undefined,
+  endDate: string | null | undefined,
+) {
+  const normalizedStart = normalizeMapperText(startDate);
+  const normalizedEnd = normalizeMapperText(endDate);
+  if (!normalizedStart || !normalizedEnd) return null;
+
+  const quarterKey = getQuarterKeyForDate(normalizedStart);
+  if (!quarterKey || quarterKey !== getQuarterKeyForDate(normalizedEnd)) {
+    return null;
+  }
+
+  const target = parseQuarterKey(quarterKey);
+  if (!target) return null;
+
+  return target.startDate === normalizedStart && target.endDate === normalizedEnd
+    ? target
+    : null;
+}
+
+export function normalizeQuarterlyReportPeriod(
+  report: Pick<
+    QuarterlySummaryReport,
+    'periodStartDate' | 'periodEndDate' | 'quarterKey' | 'year' | 'quarter'
+  >,
+) {
+  const periodStartDate = normalizeMapperText(report.periodStartDate);
+  const periodEndDate = normalizeMapperText(report.periodEndDate);
+
+  if (periodStartDate || periodEndDate) {
+    const target = getQuarterTargetForExactPeriod(periodStartDate, periodEndDate);
+    return {
+      periodStartDate,
+      periodEndDate,
+      quarterKey: target?.quarterKey || '',
+      year: target?.year || 0,
+      quarter: target?.quarter || 0,
+    };
+  }
+
+  const fallbackTarget = parseQuarterKey(normalizeMapperText(report.quarterKey));
+  if (fallbackTarget) {
+    return {
+      periodStartDate: fallbackTarget.startDate,
+      periodEndDate: fallbackTarget.endDate,
+      quarterKey: fallbackTarget.quarterKey,
+      year: fallbackTarget.year,
+      quarter: fallbackTarget.quarter,
+    };
+  }
+
+  return {
+    periodStartDate: '',
+    periodEndDate: '',
+    quarterKey: '',
+    year: 0,
+    quarter: 0,
+  };
+}
+
+export function getQuarterlyReportPeriodLabel(
+  report: Pick<
+    QuarterlySummaryReport,
+    'periodStartDate' | 'periodEndDate' | 'quarterKey' | 'year' | 'quarter'
+  >,
+) {
+  const normalized = normalizeQuarterlyReportPeriod(report);
+  const exactTarget = getQuarterTargetForExactPeriod(
+    normalized.periodStartDate,
+    normalized.periodEndDate,
+  );
+
+  if (exactTarget) {
+    return formatQuarterLabel(exactTarget);
+  }
+
+  if (normalized.periodStartDate || normalized.periodEndDate) {
+    return formatPeriodRangeLabel(normalized.periodStartDate, normalized.periodEndDate);
+  }
+
+  if (normalized.quarterKey) {
+    return formatQuarterLabel(normalized);
+  }
+
+  return '기간 미설정';
+}
+
+export function buildQuarterlyTitleForPeriod(
+  startDate: string | null | undefined,
+  endDate: string | null | undefined,
+) {
+  const exactTarget = getQuarterTargetForExactPeriod(startDate, endDate);
+  if (exactTarget) {
+    return `${formatQuarterLabel(exactTarget)} 종합보고서`;
+  }
+
+  const periodLabel = formatPeriodRangeLabel(startDate, endDate);
+  return periodLabel === '-' ? '분기 종합보고서' : `${periodLabel} 종합보고서`;
+}
+
+export function buildQuarterlyDefaultTitle(referenceDate: string | Date = new Date()) {
+  const quarterKey = getQuarterKeyForDate(referenceDate);
+  const target = quarterKey ? parseQuarterKey(quarterKey) : null;
+  return target
+    ? buildQuarterlyTitleForPeriod(target.startDate, target.endDate)
+    : '분기 종합보고서';
+}
+
 export function getStoredReportKind(
-  report: Pick<SafetyReport, 'meta' | 'payload'>
+  report: Pick<SafetyReport, 'meta' | 'payload'>,
 ): StoredReportKind {
   const payload = asMapperRecord(report.payload);
   const meta = asMapperRecord(report.meta);
-  const reportKind = normalizeMapperText(payload.reportKind) || normalizeMapperText(meta.reportKind);
+  const reportKind =
+    normalizeMapperText(payload.reportKind) || normalizeMapperText(meta.reportKind);
   return normalizeStoredReportKind(reportKind);
 }
