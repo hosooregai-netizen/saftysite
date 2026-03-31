@@ -10,16 +10,12 @@ import WorkerShellBody from '@/components/worker/WorkerShellBody';
 import { WorkerMenuDrawer, WorkerMenuPanel } from '@/components/worker/WorkerMenu';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import {
-  buildSiteBadWorkplaceHref,
-  buildSiteQuarterlyListHref,
-  buildSiteReportsHref,
   buildWorkerPickerHref,
   getWorkerSiteEntryTitle,
   parseWorkerSiteEntryIntent,
 } from '@/features/home/lib/siteEntry';
-import { SiteReportsSummaryBar } from '@/features/site-reports/components/SiteReportsSummaryBar';
-import { getCurrentReportMonth } from '@/lib/erpReports/shared';
 import { getAdminSectionHref, isAdminUserRole } from '@/lib/admin';
+import { SiteEntryHubPanel } from './SiteEntryHubPanel';
 import homeStyles from './HomeScreen.module.css';
 import entryStyles from './SiteEntryScreens.module.css';
 
@@ -65,14 +61,6 @@ export function SiteEntryHubScreen({
   }, [currentSite]);
   const reportIndexState = currentSite ? getReportIndexBySiteId(currentSite.id) : null;
   const reportCount = reportIndexState?.items.length ?? 0;
-  const snapshot = currentSite?.adminSiteSnapshot;
-  const siteNameDisplay = currentSite?.siteName?.trim() || snapshot?.siteName?.trim() || '-';
-  const addressDisplay = snapshot?.siteAddress?.trim() || '-';
-  const periodDisplay = snapshot?.constructionPeriod?.trim() || '-';
-  const amountDisplay = snapshot?.constructionAmount?.trim() || '-';
-  const badWorkplaceHref = currentSite
-    ? buildSiteBadWorkplaceHref(currentSite.id, getCurrentReportMonth())
-    : null;
   const backHref = selectedEntryIntent ? buildWorkerPickerHref(selectedEntryIntent) : '/';
   const backLabel = selectedEntryIntent
     ? getWorkerSiteEntryTitle(selectedEntryIntent)
@@ -167,88 +155,12 @@ export function SiteEntryHubScreen({
               </header>
 
               <div className={homeStyles.pageGrid}>
-                <SiteReportsSummaryBar
-                  addressDisplay={addressDisplay}
-                  amountDisplay={amountDisplay}
-                  periodDisplay={periodDisplay}
-                  siteNameDisplay={siteNameDisplay}
+                <SiteEntryHubPanel
+                  currentSite={currentSite}
+                  reportCount={reportCount}
+                  reportIndexStatus={reportIndexState?.status ?? null}
+                  selectedEntryIntent={selectedEntryIntent}
                 />
-
-                <section className={entryStyles.entryGrid}>
-                  <article
-                    className={`${entryStyles.entryCard} ${
-                      !selectedEntryIntent ? entryStyles.entryCardActive : ''
-                    }`}
-                  >
-                    <div className={entryStyles.entryBody}>
-                      <h2 className={entryStyles.entryTitle}>기술지도 보고서</h2>
-                      <p className={entryStyles.entryDescription}>
-                        이 현장의 기술지도 보고서 목록을 확인하고 새 보고서를 작성합니다.
-                      </p>
-                      <p className={entryStyles.entryMeta}>
-                        {reportIndexState?.status === 'loading'
-                          ? '보고서 목록을 불러오고 있습니다.'
-                          : reportCount > 0
-                            ? `등록된 기술지도 보고서 ${reportCount}건`
-                            : '아직 등록된 기술지도 보고서가 없습니다.'}
-                      </p>
-                    </div>
-                    <div className={entryStyles.entryActions}>
-                      <Link
-                        href={buildSiteReportsHref(currentSite.id)}
-                        className="app-button app-button-primary"
-                      >
-                        보고서 목록 열기
-                      </Link>
-                    </div>
-                  </article>
-
-                  <article
-                    className={`${entryStyles.entryCard} ${
-                      selectedEntryIntent === 'quarterly' ? entryStyles.entryCardActive : ''
-                    }`}
-                  >
-                    <div className={entryStyles.entryBody}>
-                      <h2 className={entryStyles.entryTitle}>분기 종합 보고서</h2>
-                      <p className={entryStyles.entryDescription}>
-                        공사기간을 기준으로 대상 분기를 고른 뒤 기술지도 보고서를 묶어 분기 종합보고서를 작성합니다.
-                      </p>
-                    </div>
-                    <div className={entryStyles.entryActions}>
-                      <Link
-                        href={buildSiteQuarterlyListHref(currentSite.id)}
-                        className="app-button app-button-primary"
-                      >
-                        분기 종합 보고서 목록
-                      </Link>
-                    </div>
-                  </article>
-
-                  <article
-                    className={`${entryStyles.entryCard} ${
-                      selectedEntryIntent === 'bad-workplace'
-                        ? entryStyles.entryCardActive
-                        : ''
-                    }`}
-                  >
-                    <div className={entryStyles.entryBody}>
-                      <h2 className={entryStyles.entryTitle}>불량사업장 신고</h2>
-                      <p className={entryStyles.entryDescription}>
-                        최근 기술지도 보고서의 지적사항을 바탕으로 이번 달 신고 초안을 작성합니다.
-                      </p>
-                      <p className={entryStyles.entryMeta}>
-                        기술지도 보고서를 먼저 확인한 뒤 필요한 지적사항을 이어서 가져올 수 있습니다.
-                      </p>
-                    </div>
-                    <div className={entryStyles.entryActions}>
-                      {badWorkplaceHref ? (
-                        <Link href={badWorkplaceHref} className="app-button app-button-primary">
-                          이번 달 신고 작성
-                        </Link>
-                      ) : null}
-                    </div>
-                  </article>
-                </section>
               </div>
             </div>
           </WorkerShellBody>

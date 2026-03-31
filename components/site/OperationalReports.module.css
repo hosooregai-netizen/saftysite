@@ -157,6 +157,48 @@
   gap: 12px;
 }
 
+.toolbarHeading {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.toolbarIconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--erp-line);
+  border-radius: 999px;
+  background: #f8fbff;
+  color: var(--erp-text-muted);
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.toolbarIconButton:hover,
+.toolbarIconButton:focus-visible {
+  border-color: var(--erp-mid);
+  background: #eef5ff;
+  color: var(--erp-dark);
+  outline: none;
+}
+
+.toolbarIconButtonActive {
+  border-color: var(--erp-mid);
+  background: #e8f1ff;
+  color: var(--erp-navy);
+}
+
+.toolbarIcon {
+  width: 15px;
+  height: 15px;
+}
+
 .toolbarActions {
   display: flex;
   flex-wrap: wrap;
@@ -209,6 +251,12 @@
 
 .fieldWide {
   grid-column: 1 / -1;
+}
+
+.readOnlyField {
+  background: #fbfcfe !important;
+  color: var(--erp-dark);
+  cursor: default;
 }
 
 .snapshotSectionGrid {

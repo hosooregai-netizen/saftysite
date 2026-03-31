@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useDeferredValue, useMemo, useState } from 'react';
 import LoginPanel from '@/components/auth/LoginPanel';
 import { AdminMenuDrawer, AdminMenuPanel } from '@/components/admin/AdminMenu';
+import AppModal from '@/components/ui/AppModal';
 import ActionMenu from '@/components/ui/ActionMenu';
 import WorkerAppHeader from '@/components/worker/WorkerAppHeader';
 import WorkerMenuSidebar from '@/components/worker/WorkerMenuSidebar';
@@ -30,6 +31,7 @@ type QuarterlyListSortMode = 'recent' | 'name' | 'status';
 
 interface QuarterlyListRow {
   href: string;
+  reportId: string | null;
   quarterKey: string;
   reportTitle: string;
   status: string;
@@ -68,20 +70,32 @@ export function SiteQuarterlyReportsScreen({ siteKey }: SiteQuarterlyReportsScre
   const [menuOpen, setMenuOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [sortMode, setSortMode] = useState<QuarterlyListSortMode>('recent');
+  const [dialogReportId, setDialogReportId] = useState<string | null>(null);
   const deferredQuery = useDeferredValue(query);
   const decodedSiteKey = decodeURIComponent(siteKey);
-  const { authError, currentUser, isAuthenticated, isReady, login, logout, sites } =
-    useInspectionSessions();
+  const {
+    authError,
+    canArchiveReports,
+    currentUser,
+    isAuthenticated,
+    isReady,
+    login,
+    logout,
+    sites,
+  } = useInspectionSessions();
 
   const currentSite = useMemo(
     () => sites.find((site) => site.id === decodedSiteKey) ?? null,
     [decodedSiteKey, sites],
   );
   const isAdminView = Boolean(currentUser && isAdminUserRole(currentUser.role));
-  const { quarterlyReports, isLoading, error } = useSiteOperationalReports(
-    currentSite,
-    isAuthenticated && isReady && Boolean(currentSite),
-  );
+  const {
+    deleteOperationalReport,
+    quarterlyReports,
+    isLoading,
+    isSaving,
+    error,
+  } = useSiteOperationalReports(currentSite, isAuthenticated && isReady && Boolean(currentSite));
 
   const quarterTargets = useMemo(() => {
     if (!currentSite) return [];
@@ -125,6 +139,7 @@ export function SiteQuarterlyReportsScreen({ siteKey }: SiteQuarterlyReportsScre
       const report = reportByKey.get(target.quarterKey);
       return {
         href: buildSiteQuarterlyHref(currentSite.id, target.quarterKey),
+        reportId: report?.id || null,
         quarterKey: target.quarterKey,
         reportTitle: report?.title || `${formatQuarterLabel(target)} 종합보고서`,
         status: getStatusLabel(report?.status),
@@ -180,13 +195,15 @@ export function SiteQuarterlyReportsScreen({ siteKey }: SiteQuarterlyReportsScre
           siteId: currentSite.id,
         })
       : getAdminSectionHref('headquarters');
-  const backLabel = isAdminView ? '본사 상세' : '현장 메뉴';
+  const backLabel = isAdminView ? '현장 메인' : '현장 메뉴';
 
   const snapshot = currentSite?.adminSiteSnapshot;
   const siteNameDisplay = currentSite?.siteName?.trim() || snapshot?.siteName?.trim() || '-';
   const addressDisplay = snapshot?.siteAddress?.trim() || '-';
   const periodDisplay = snapshot?.constructionPeriod?.trim() || '-';
   const amountDisplay = snapshot?.constructionAmount?.trim() || '-';
+  const deletingRow =
+    dialogReportId ? rows.find((row) => row.reportId === dialogReportId) ?? null : null;
 
   if (!isReady) {
     return (
@@ -240,7 +257,7 @@ export function SiteQuarterlyReportsScreen({ siteKey }: SiteQuarterlyReportsScre
           <WorkerShellBody>
             <WorkerMenuSidebar>
               {isAdminView ? (
-                <AdminMenuPanel activeSection="headquarters" />
+                <AdminMenuPanel activeSection="headquarters" currentSiteKey={currentSite.id} />
               ) : (
                 <WorkerMenuPanel currentSiteKey={currentSite.id} />
               )}
@@ -363,6 +380,15 @@ export function SiteQuarterlyReportsScreen({ siteKey }: SiteQuarterlyReportsScre
                                       label: row.selectedCount === null ? '작성 시작' : '열기',
                                       href: row.href,
                                     },
+                                    ...(canArchiveReports && row.reportId
+                                      ? [
+                                          {
+                                            label: '??젣',
+                                            tone: 'danger' as const,
+                                            onSelect: () => setDialogReportId(row.reportId),
+                                          },
+                                        ]
+                                      : []),
                                   ]}
                                 />
                               </div>
@@ -384,6 +410,7 @@ export function SiteQuarterlyReportsScreen({ siteKey }: SiteQuarterlyReportsScre
           open={menuOpen}
           onClose={() => setMenuOpen(false)}
           activeSection="headquarters"
+          currentSiteKey={currentSite.id}
         />
       ) : (
         <WorkerMenuDrawer
@@ -392,6 +419,42 @@ export function SiteQuarterlyReportsScreen({ siteKey }: SiteQuarterlyReportsScre
           currentSiteKey={currentSite.id}
         />
       )}
+
+      <AppModal
+        open={canArchiveReports && Boolean(dialogReportId)}
+        title="遺꾧린 醫낇빀蹂닿퀬????젣"
+        onClose={() => setDialogReportId(null)}
+        actions={
+          <>
+            <button
+              type="button"
+              className="app-button app-button-secondary"
+              onClick={() => setDialogReportId(null)}
+              disabled={isSaving}
+            >
+              痍⑥냼
+            </button>
+            <button
+              type="button"
+              className="app-button app-button-danger"
+              disabled={isSaving || !dialogReportId}
+              onClick={() => {
+                if (!dialogReportId) return;
+                void deleteOperationalReport(dialogReportId);
+                setDialogReportId(null);
+              }}
+            >
+              ??젣
+            </button>
+          </>
+        }
+      >
+        <p>
+          {deletingRow
+            ? `"${deletingRow.reportTitle}" 遺꾧린 醫낇빀蹂닿퀬?쒕? ??젣?⑸땲??`
+            : '?좏깮??遺꾧린 醫낇빀蹂닿퀬?쒕? ??젣?⑸땲??'}
+        </p>
+      </AppModal>
     </main>
   );
 }

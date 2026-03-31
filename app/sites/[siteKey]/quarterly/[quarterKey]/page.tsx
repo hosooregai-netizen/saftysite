@@ -115,7 +115,7 @@ export default function QuarterlyReportPage({ params }: QuarterlyReportPageProps
     : isAdminView
       ? getAdminSectionHref('headquarters')
       : '/';
-  const backLabel = isAdminView ? '본사 상세' : '분기 종합보고서 목록';
+  const backLabel = isAdminView ? '현장 메인' : '분기 종합보고서 목록';
   const existing = useMemo(
     () => quarterlyReports.find((item) => item.quarterKey === decodedQuarterKey) || null,
     [decodedQuarterKey, quarterlyReports],
@@ -200,7 +200,7 @@ export default function QuarterlyReportPage({ params }: QuarterlyReportPageProps
           <WorkerShellBody>
             <WorkerMenuSidebar>
               {isAdminView ? (
-                <AdminMenuPanel activeSection="headquarters" />
+                <AdminMenuPanel activeSection="headquarters" currentSiteKey={currentSite.id} />
               ) : (
                 <WorkerMenuPanel currentSiteKey={currentSite.id} />
               )}
@@ -247,6 +247,7 @@ export default function QuarterlyReportPage({ params }: QuarterlyReportPageProps
           open={menuOpen}
           onClose={() => setMenuOpen(false)}
           activeSection="headquarters"
+          currentSiteKey={currentSite.id}
         />
       ) : (
         <WorkerMenuDrawer
@@ -356,6 +357,7 @@ function QuarterlyReportEditor({
   const [notice, setNotice] = useState<string | null>(null);
   const [documentError, setDocumentError] = useState<string | null>(null);
   const [isGeneratingDocument, setIsGeneratingDocument] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [sourceModalOpen, setSourceModalOpen] = useState(false);
   const [opsAssets, setOpsAssets] = useState<OpsAssetOption[]>([]);
   const [opsLoading, setOpsLoading] = useState(false);
@@ -423,6 +425,12 @@ function QuarterlyReportEditor({
       cancelled = true;
     };
   }, [isAdminView]);
+
+  useEffect(() => {
+    if (isEditing) return;
+    setSourceModalOpen(false);
+    setOpsModalOpen(false);
+  }, [isEditing]);
 
   const selectedSourceSet = useMemo(
     () => new Set(selectedSourceSessionIds),
@@ -562,10 +570,12 @@ function QuarterlyReportEditor({
     <section className={`${operationalStyles.sectionCard} ${operationalStyles.editorShell}`}>
       <QuarterlySummaryToolbar
         draft={draft}
+        isEditing={isEditing}
         isGeneratingDocument={isGeneratingDocument}
         isSaving={isSaving}
         onDownloadWord={handleDownloadWord}
         onSave={handleSave}
+        onToggleEditing={() => setIsEditing((current) => !current)}
       />
       <QuarterlySummaryCards
         draft={draft}
@@ -574,6 +584,7 @@ function QuarterlyReportEditor({
         notice={notice}
       />
       <QuarterlySourceSelectionSection
+        isEditing={isEditing}
         sourceSessions={sourceSessions}
         loading={sourceReportsLoading}
         selectedSourceSet={selectedSourceSet}
@@ -587,6 +598,7 @@ function QuarterlyReportEditor({
         onRecalculate={handleApplySourceSelection}
       />
       <QuarterlySourceSelectionModal
+        isEditing={isEditing}
         open={sourceModalOpen}
         sourceSessions={sourceSessions}
         loading={sourceReportsLoading}
@@ -603,13 +615,19 @@ function QuarterlyReportEditor({
           setSourceModalOpen(false);
         }}
       />
-      <QuarterlySiteSnapshotSection draft={draft} onChange={updateSiteSnapshotField} />
+      <QuarterlySiteSnapshotSection
+        draft={draft}
+        onChange={updateSiteSnapshotField}
+        readOnly={!isEditing}
+      />
       <QuarterlyStatsSection draft={draft} />
       <QuarterlyOverallCommentSection
+        readOnly={!isEditing}
         value={draft.overallComment}
         onChange={(value) => setDraft((current) => ({ ...current, overallComment: value }))}
       />
       <QuarterlyImplementationSection
+        readOnly={!isEditing}
         rows={draft.implementationRows}
         onChange={handleImplementationRowChange}
         onAdd={() =>
@@ -626,6 +644,7 @@ function QuarterlyReportEditor({
         }
       />
       <QuarterlyFuturePlansSection
+        readOnly={!isEditing}
         plans={draft.futurePlans}
         onAdd={() =>
           setDraft((current) => ({
@@ -637,11 +656,13 @@ function QuarterlyReportEditor({
       />
       <QuarterlyOpsSection
         draft={draft}
+        isEditing={isEditing}
         isAdminView={isAdminView}
         onOpenSelector={() => setOpsModalOpen(true)}
         onClear={handleClearOpsAsset}
       />
       <QuarterlyOpsAssetModal
+        isEditing={isEditing}
         open={opsModalOpen}
         query={opsQuery}
         loading={opsLoading}
@@ -680,17 +701,48 @@ function SectionHeader(props: { title: string; chips?: string[]; description?: s
 
 function QuarterlySummaryToolbar(props: {
   draft: QuarterlySummaryReport;
+  isEditing: boolean;
   isGeneratingDocument: boolean;
   isSaving: boolean;
   onDownloadWord: () => Promise<void>;
   onSave: (status: QuarterlySummaryReport['status']) => Promise<void>;
+  onToggleEditing: () => void;
 }) {
-  const { draft, isGeneratingDocument, isSaving, onDownloadWord, onSave } = props;
+  const {
+    draft,
+    isEditing,
+    isGeneratingDocument,
+    isSaving,
+    onDownloadWord,
+    onSave,
+    onToggleEditing,
+  } = props;
 
   return (
     <div className={operationalStyles.toolbar}>
-      <div>
+      <div className={operationalStyles.toolbarHeading}>
         <h1 className={operationalStyles.sectionTitle}>{draft.title}</h1>
+        <button
+          type="button"
+          className={`${operationalStyles.toolbarIconButton} ${
+            isEditing ? operationalStyles.toolbarIconButtonActive : ''
+          }`}
+          onClick={onToggleEditing}
+          aria-label={isEditing ? '수정 종료' : '수정 시작'}
+          aria-pressed={isEditing}
+          title={isEditing ? '수정 종료' : '수정 시작'}
+        >
+          <svg
+            viewBox="0 0 20 20"
+            aria-hidden="true"
+            className={operationalStyles.toolbarIcon}
+          >
+            <path
+              d="M13.8 3.2a2 2 0 0 1 2.9 2.7l-.1.1-8 8a1 1 0 0 1-.5.3l-3 .7a.8.8 0 0 1-1-.9l.7-3a1 1 0 0 1 .2-.4l.1-.1 8-8Zm-7.7 8.6-.4 1.7 1.7-.4 7.7-7.7-1.3-1.3-7.7 7.7Z"
+              fill="currentColor"
+            />
+          </svg>
+        </button>
       </div>
       <div className={operationalStyles.toolbarActions}>
         <button
@@ -811,6 +863,7 @@ function QuarterlySummaryCards(props: {
 }
 
 function QuarterlySourceSelectionSection(props: {
+  isEditing: boolean;
   sourceSessions: InspectionSession[];
   loading: boolean;
   selectedSourceSet: Set<string>;
@@ -824,6 +877,7 @@ function QuarterlySourceSelectionSection(props: {
   onRecalculate: () => void;
 }) {
   const {
+    isEditing,
     sourceSessions,
     loading,
     selectedSourceSet,
@@ -860,14 +914,19 @@ function QuarterlySourceSelectionSection(props: {
               <div className={operationalStyles.muted}>선택된 보고서가 없습니다.</div>
             )}
             <div className={operationalStyles.inlineEditorActions}>
-              <button type="button" className="app-button app-button-secondary" onClick={onOpenSelector}>
+              <button
+                type="button"
+                className="app-button app-button-secondary"
+                onClick={onOpenSelector}
+                disabled={!isEditing}
+              >
                 보고서 선택
               </button>
               <button
                 type="button"
                 className="app-button app-button-primary"
                 onClick={onRecalculate}
-                disabled={!hasPendingSelectionChanges}
+                disabled={!isEditing || !hasPendingSelectionChanges}
               >
                 재계산
               </button>
@@ -1009,6 +1068,7 @@ function QuarterlySourceSelectionSection(props: {
 }
 
 function QuarterlySourceSelectionModal(props: {
+  isEditing: boolean;
   open: boolean;
   sourceSessions: InspectionSession[];
   loading: boolean;
@@ -1023,6 +1083,7 @@ function QuarterlySourceSelectionModal(props: {
   onRecalculate: () => void;
 }) {
   const {
+    isEditing,
     open,
     sourceSessions,
     loading,
@@ -1045,17 +1106,27 @@ function QuarterlySourceSelectionModal(props: {
       onClose={onClose}
       actions={
         <>
-          <button type="button" className="app-button app-button-secondary" onClick={onSelectAll}>
-            전체 선택
-          </button>
-          <button type="button" className="app-button app-button-secondary" onClick={onClearSelection}>
-            선택 해제
-          </button>
+            <button
+              type="button"
+              className="app-button app-button-secondary"
+              onClick={onSelectAll}
+              disabled={!isEditing}
+            >
+              전체 선택
+            </button>
+            <button
+              type="button"
+              className="app-button app-button-secondary"
+              onClick={onClearSelection}
+              disabled={!isEditing}
+            >
+              선택 해제
+            </button>
           <button
             type="button"
             className="app-button app-button-primary"
             onClick={onRecalculate}
-            disabled={!hasPendingSelectionChanges}
+            disabled={!isEditing || !hasPendingSelectionChanges}
           >
             재계산
           </button>
@@ -1082,6 +1153,7 @@ function QuarterlySourceSelectionModal(props: {
                     type="checkbox"
                     className={`app-checkbox ${operationalStyles.sourceCheckbox}`}
                     checked={isSelected}
+                    disabled={!isEditing}
                     onChange={(event) => onToggleSourceSession(session.id, event.target.checked)}
                   />
                   <div className={operationalStyles.sourceCardBody}>
@@ -1192,8 +1264,9 @@ function QuarterlySourceSelectionModal(props: {
 function QuarterlySiteSnapshotSection(props: {
   draft: QuarterlySummaryReport;
   onChange: (field: keyof QuarterlySummaryReport['siteSnapshot'], value: string) => void;
+  readOnly: boolean;
 }) {
-  const { draft, onChange } = props;
+  const { draft, onChange, readOnly } = props;
   const handleSiteManagementNumberChange = (value: string) => {
     onChange('siteManagementNumber', value);
     onChange('businessStartNumber', value);
@@ -1224,6 +1297,7 @@ function QuarterlySiteSnapshotSection(props: {
                   </th>
                   <SnapshotInputCell
                     label="현장명"
+                    readOnly={readOnly}
                     value={draft.siteSnapshot.siteName}
                     onChange={(value) => onChange('siteName', value)}
                   />
@@ -1232,6 +1306,7 @@ function QuarterlySiteSnapshotSection(props: {
                   </th>
                   <SnapshotInputCell
                     label="사업장관리번호"
+                    readOnly={readOnly}
                     value={draft.siteSnapshot.siteManagementNumber || draft.siteSnapshot.businessStartNumber}
                     onChange={handleSiteManagementNumberChange}
                   />
@@ -1242,6 +1317,7 @@ function QuarterlySiteSnapshotSection(props: {
                   </th>
                   <SnapshotInputCell
                     label="공사기간"
+                    readOnly={readOnly}
                     value={draft.siteSnapshot.constructionPeriod}
                     onChange={(value) => onChange('constructionPeriod', value)}
                   />
@@ -1250,6 +1326,7 @@ function QuarterlySiteSnapshotSection(props: {
                   </th>
                   <SnapshotInputCell
                     label="공사금액"
+                    readOnly={readOnly}
                     value={draft.siteSnapshot.constructionAmount}
                     onChange={(value) => onChange('constructionAmount', value)}
                   />
@@ -1260,6 +1337,7 @@ function QuarterlySiteSnapshotSection(props: {
                   </th>
                   <SnapshotInputCell
                     label="책임자"
+                    readOnly={readOnly}
                     value={draft.siteSnapshot.siteManagerName}
                     onChange={(value) => onChange('siteManagerName', value)}
                   />
@@ -1268,6 +1346,7 @@ function QuarterlySiteSnapshotSection(props: {
                   </th>
                   <SnapshotInputCell
                     label="연락처(이메일)"
+                    readOnly={readOnly}
                     value={draft.siteSnapshot.siteContactEmail}
                     onChange={(value) => onChange('siteContactEmail', value)}
                   />
@@ -1278,6 +1357,7 @@ function QuarterlySiteSnapshotSection(props: {
                   </th>
                   <SnapshotInputCell
                     label="현장주소"
+                    readOnly={readOnly}
                     value={draft.siteSnapshot.siteAddress}
                     onChange={(value) => onChange('siteAddress', value)}
                     colSpan={3}
@@ -1289,6 +1369,7 @@ function QuarterlySiteSnapshotSection(props: {
                   </th>
                   <SnapshotInputCell
                     label="고객사"
+                    readOnly={readOnly}
                     value={draft.siteSnapshot.customerName}
                     onChange={(value) => onChange('customerName', value)}
                     colSpan={3}
@@ -1315,6 +1396,7 @@ function QuarterlySiteSnapshotSection(props: {
                   </th>
                   <SnapshotInputCell
                     label="회사명"
+                    readOnly={readOnly}
                     value={draft.siteSnapshot.companyName}
                     onChange={(value) => onChange('companyName', value)}
                   />
@@ -1323,6 +1405,7 @@ function QuarterlySiteSnapshotSection(props: {
                   </th>
                   <SnapshotInputCell
                     label="법인등록번호"
+                    readOnly={readOnly}
                     value={draft.siteSnapshot.corporationRegistrationNumber || draft.siteSnapshot.businessRegistrationNumber}
                     onChange={handleCorporationNumberChange}
                   />
@@ -1333,6 +1416,7 @@ function QuarterlySiteSnapshotSection(props: {
                   </th>
                   <SnapshotInputCell
                     label="면허번호"
+                    readOnly={readOnly}
                     value={draft.siteSnapshot.licenseNumber}
                     onChange={(value) => onChange('licenseNumber', value)}
                   />
@@ -1341,6 +1425,7 @@ function QuarterlySiteSnapshotSection(props: {
                   </th>
                   <SnapshotInputCell
                     label="본사 연락처"
+                    readOnly={readOnly}
                     value={draft.siteSnapshot.headquartersContact}
                     onChange={(value) => onChange('headquartersContact', value)}
                   />
@@ -1351,6 +1436,7 @@ function QuarterlySiteSnapshotSection(props: {
                   </th>
                   <SnapshotInputCell
                     label="본사주소"
+                    readOnly={readOnly}
                     value={draft.siteSnapshot.headquartersAddress}
                     onChange={(value) => onChange('headquartersAddress', value)}
                     colSpan={3}
@@ -1377,16 +1463,26 @@ function QuarterlyStatsSection(props: { draft: QuarterlySummaryReport }) {
   );
 }
 
-function QuarterlyOverallCommentSection(props: { value: string; onChange: (value: string) => void }) {
+function QuarterlyOverallCommentSection(props: {
+  readOnly: boolean;
+  value: string;
+  onChange: (value: string) => void;
+}) {
   return (
     <article className={operationalStyles.reportCard}>
       <SectionHeader title="3. 기술지도 총평" />
-      <FieldTextarea label="총평" value={props.value} onChange={props.onChange} />
+      <FieldTextarea
+        label="총평"
+        readOnly={props.readOnly}
+        value={props.value}
+        onChange={props.onChange}
+      />
     </article>
   );
 }
 
 function QuarterlyImplementationSection(props: {
+  readOnly: boolean;
   rows: QuarterlySummaryReport['implementationRows'];
   onChange: (
     index: number,
@@ -1396,7 +1492,7 @@ function QuarterlyImplementationSection(props: {
   onAdd: () => void;
   onRemove: (index: number) => void;
 }) {
-  const { rows, onChange, onAdd, onRemove } = props;
+  const { readOnly, rows, onChange, onAdd, onRemove } = props;
   return (
     <article className={operationalStyles.reportCard}>
       <SectionHeader title="4. 기술지도 이행현황" />
@@ -1424,7 +1520,12 @@ function QuarterlyImplementationSection(props: {
               <th className={operationalStyles.implementationHeaderCell}>개선 건수</th>
               <th className={operationalStyles.implementationHeaderCell}>비고</th>
               <th className={`${operationalStyles.implementationHeaderCell} ${operationalStyles.implementationHeaderActionCell}`}>
-                <button type="button" className={`app-button app-button-secondary ${operationalStyles.implementationAddButton}`} onClick={onAdd}>
+                <button
+                  type="button"
+                  className={`app-button app-button-secondary ${operationalStyles.implementationAddButton}`}
+                  onClick={onAdd}
+                  disabled={readOnly}
+                >
                   행 추가
                 </button>
               </th>
@@ -1434,16 +1535,16 @@ function QuarterlyImplementationSection(props: {
             {rows.length > 0 ? (
               rows.map((item, index) => (
                 <tr key={item.sessionId || index}>
-                  <ImplementationInputCell value={item.reportTitle} onChange={(value) => onChange(index, 'reportTitle', value)} />
-                  <ImplementationInputCell type="number" min={0} value={item.reportNumber} onChange={(value) => onChange(index, 'reportNumber', value)} />
-                  <ImplementationInputCell value={item.drafter} onChange={(value) => onChange(index, 'drafter', value)} />
-                  <ImplementationInputCell value={item.reportDate} onChange={(value) => onChange(index, 'reportDate', value)} />
-                  <ImplementationInputCell value={item.progressRate} onChange={(value) => onChange(index, 'progressRate', value)} />
-                  <ImplementationInputCell type="number" min={0} value={item.findingCount} onChange={(value) => onChange(index, 'findingCount', value)} />
-                  <ImplementationInputCell type="number" min={0} value={item.improvedCount} onChange={(value) => onChange(index, 'improvedCount', value)} />
-                  <ImplementationInputCell value={item.note} onChange={(value) => onChange(index, 'note', value)} />
+                  <ImplementationInputCell readOnly={readOnly} value={item.reportTitle} onChange={(value) => onChange(index, 'reportTitle', value)} />
+                  <ImplementationInputCell readOnly={readOnly} type="number" min={0} value={item.reportNumber} onChange={(value) => onChange(index, 'reportNumber', value)} />
+                  <ImplementationInputCell readOnly={readOnly} value={item.drafter} onChange={(value) => onChange(index, 'drafter', value)} />
+                  <ImplementationInputCell readOnly={readOnly} value={item.reportDate} onChange={(value) => onChange(index, 'reportDate', value)} />
+                  <ImplementationInputCell readOnly={readOnly} value={item.progressRate} onChange={(value) => onChange(index, 'progressRate', value)} />
+                  <ImplementationInputCell readOnly={readOnly} type="number" min={0} value={item.findingCount} onChange={(value) => onChange(index, 'findingCount', value)} />
+                  <ImplementationInputCell readOnly={readOnly} type="number" min={0} value={item.improvedCount} onChange={(value) => onChange(index, 'improvedCount', value)} />
+                  <ImplementationInputCell readOnly={readOnly} value={item.note} onChange={(value) => onChange(index, 'note', value)} />
                   <td className={operationalStyles.implementationActionCell}>
-                    <button type="button" className={`app-button app-button-secondary ${operationalStyles.implementationActionButton}`} onClick={() => onRemove(index)}>
+                    <button type="button" className={`app-button app-button-secondary ${operationalStyles.implementationActionButton}`} onClick={() => onRemove(index)} disabled={readOnly}>
                       삭제
                     </button>
                   </td>
@@ -1462,11 +1563,12 @@ function QuarterlyImplementationSection(props: {
 }
 
 function QuarterlyFuturePlansSection(props: {
+  readOnly: boolean;
   plans: QuarterlySummaryReport['futurePlans'];
   onAdd: () => void;
   onChange: (plans: QuarterlySummaryReport['futurePlans']) => void;
 }) {
-  const { plans, onAdd, onChange } = props;
+  const { readOnly, plans, onAdd, onChange } = props;
   return (
     <article className={operationalStyles.reportCard}>
       <SectionHeader title="5. 향후 공정 유해위험요인 및 대책" />
@@ -1488,6 +1590,7 @@ function QuarterlyFuturePlansSection(props: {
                   type="button"
                   className={`app-button app-button-secondary ${operationalStyles.implementationAddButton}`}
                   onClick={onAdd}
+                  disabled={readOnly}
                 >
                   행 추가
                 </button>
@@ -1499,6 +1602,7 @@ function QuarterlyFuturePlansSection(props: {
               plans.map((item) => (
                 <tr key={item.id}>
                   <FuturePlanInputCell
+                    readOnly={readOnly}
                     value={item.hazard}
                     onChange={(value) =>
                       onChange(
@@ -1511,6 +1615,7 @@ function QuarterlyFuturePlansSection(props: {
                     }
                   />
                   <FuturePlanInputCell
+                    readOnly={readOnly}
                     value={item.countermeasure}
                     onChange={(value) =>
                       onChange(
@@ -1527,6 +1632,7 @@ function QuarterlyFuturePlansSection(props: {
                       type="button"
                       className={`app-button app-button-secondary ${operationalStyles.implementationActionButton}`}
                       onClick={() => onChange(plans.filter((plan) => plan.id !== item.id))}
+                      disabled={readOnly}
                     >
                       삭제
                     </button>
@@ -1549,11 +1655,12 @@ function QuarterlyFuturePlansSection(props: {
 
 function QuarterlyOpsSection(props: {
   draft: QuarterlySummaryReport;
+  isEditing: boolean;
   isAdminView: boolean;
   onOpenSelector: () => void;
   onClear: () => void;
 }) {
-  const { draft, isAdminView, onOpenSelector, onClear } = props;
+  const { draft, isAdminView, isEditing, onOpenSelector, onClear } = props;
   return (
     <article className={operationalStyles.reportCard}>
       <SectionHeader
@@ -1581,8 +1688,8 @@ function QuarterlyOpsSection(props: {
       )}
       {isAdminView ? (
         <div className={operationalStyles.reportActions}>
-          <button type="button" className="app-button app-button-primary" onClick={onOpenSelector}>라이브러리에서 선택</button>
-          {draft.opsAssetId ? <button type="button" className="app-button app-button-secondary" onClick={onClear}>연결 해제</button> : null}
+          <button type="button" className="app-button app-button-primary" onClick={onOpenSelector} disabled={!isEditing}>라이브러리에서 선택</button>
+          {draft.opsAssetId ? <button type="button" className="app-button app-button-secondary" onClick={onClear} disabled={!isEditing}>연결 해제</button> : null}
         </div>
       ) : null}
     </article>
@@ -1590,6 +1697,7 @@ function QuarterlyOpsSection(props: {
 }
 
 function QuarterlyOpsAssetModal(props: {
+  isEditing: boolean;
   open: boolean;
   query: string;
   loading: boolean;
@@ -1600,10 +1708,10 @@ function QuarterlyOpsAssetModal(props: {
   onClose: () => void;
   onSelect: (asset: OpsAssetOption) => void;
 }) {
-  const { open, query, loading, error, items, selectedId, onChangeQuery, onClose, onSelect } = props;
+  const { isEditing, open, query, loading, error, items, selectedId, onChangeQuery, onClose, onSelect } = props;
   return (
     <AppModal open={open} title="OPS 자료 선택" size="large" onClose={onClose} actions={<button type="button" className="app-button app-button-secondary" onClick={onClose}>닫기</button>}>
-      <FieldInput label="검색" value={query} onChange={onChangeQuery} placeholder="제목이나 설명으로 검색" />
+      <FieldInput label="검색" value={query} onChange={onChangeQuery} placeholder="제목이나 설명으로 검색" readOnly={!isEditing} />
       {error ? <div className={operationalStyles.bannerError}>{error}</div> : null}
       {loading ? (
         <div className={operationalStyles.emptyState}>OPS 자료를 불러오는 중입니다.</div>
@@ -1625,7 +1733,7 @@ function QuarterlyOpsAssetModal(props: {
                   {asset.fileName ? <span className={operationalStyles.muted}>{asset.fileName}</span> : null}
                 </div>
                 <div className={operationalStyles.sourceCardActions}>
-                  <button type="button" className="app-button app-button-primary" onClick={() => onSelect(asset)}>{isSelected ? '다시 선택' : '이 자료 연결'}</button>
+                  <button type="button" className="app-button app-button-primary" onClick={() => onSelect(asset)} disabled={!isEditing}>{isSelected ? '다시 선택' : '이 자료 연결'}</button>
                 </div>
               </article>
             );
@@ -1638,26 +1746,49 @@ function QuarterlyOpsAssetModal(props: {
   );
 }
 
-function FieldInput(props: { label: string; value: string | number; onChange: (value: string) => void; placeholder?: string }) {
+function FieldInput(props: {
+  label: string;
+  readOnly?: boolean;
+  value: string | number;
+  onChange: (value: string) => void;
+  placeholder?: string;
+}) {
   return (
     <label className={operationalStyles.field}>
       <span className={operationalStyles.fieldLabel}>{props.label}</span>
-      <input className="app-input" value={props.value} placeholder={props.placeholder} onChange={(event) => props.onChange(event.target.value)} />
+      <input
+        className={`app-input ${props.readOnly ? operationalStyles.readOnlyField : ''}`}
+        value={props.value}
+        placeholder={props.placeholder}
+        readOnly={props.readOnly}
+        onChange={(event) => props.onChange(event.target.value)}
+      />
     </label>
   );
 }
 
-function FieldTextarea(props: { label: string; value: string; onChange: (value: string) => void }) {
+function FieldTextarea(props: {
+  label: string;
+  readOnly?: boolean;
+  value: string;
+  onChange: (value: string) => void;
+}) {
   return (
     <label className={`${operationalStyles.field} ${operationalStyles.fieldWide}`}>
       <span className={operationalStyles.fieldLabel}>{props.label}</span>
-      <textarea className="app-textarea" value={props.value} onChange={(event) => props.onChange(event.target.value)} />
+      <textarea
+        className={`app-textarea ${props.readOnly ? operationalStyles.readOnlyField : ''}`}
+        value={props.value}
+        readOnly={props.readOnly}
+        onChange={(event) => props.onChange(event.target.value)}
+      />
     </label>
   );
 }
 
 function SnapshotInputCell(props: {
   label: string;
+  readOnly?: boolean;
   value: string | number;
   onChange: (value: string) => void;
   colSpan?: number;
@@ -1666,8 +1797,11 @@ function SnapshotInputCell(props: {
     <td className={operationalStyles.snapshotValueCell} colSpan={props.colSpan}>
       <input
         aria-label={props.label}
-        className={`app-input ${operationalStyles.snapshotControl}`}
+        className={`app-input ${operationalStyles.snapshotControl} ${
+          props.readOnly ? operationalStyles.readOnlyField : ''
+        }`}
         value={props.value}
+        readOnly={props.readOnly}
         onChange={(event) => props.onChange(event.target.value)}
       />
     </td>
@@ -1675,6 +1809,7 @@ function SnapshotInputCell(props: {
 }
 
 function ImplementationInputCell(props: {
+  readOnly?: boolean;
   value: string | number;
   onChange: (value: string) => void;
   type?: 'text' | 'number';
@@ -1683,10 +1818,13 @@ function ImplementationInputCell(props: {
   return (
     <td className={operationalStyles.implementationValueCell}>
       <input
-        className={`app-input ${operationalStyles.implementationControl}`}
+        className={`app-input ${operationalStyles.implementationControl} ${
+          props.readOnly ? operationalStyles.readOnlyField : ''
+        }`}
         type={props.type}
         min={props.min}
         value={props.value}
+        readOnly={props.readOnly}
         onChange={(event) => props.onChange(event.target.value)}
       />
     </td>
@@ -1694,14 +1832,18 @@ function ImplementationInputCell(props: {
 }
 
 function FuturePlanInputCell(props: {
+  readOnly?: boolean;
   value: string;
   onChange: (value: string) => void;
 }) {
   return (
     <td className={operationalStyles.implementationValueCell}>
       <textarea
-        className={`app-textarea ${operationalStyles.futurePlanControl}`}
+        className={`app-textarea ${operationalStyles.futurePlanControl} ${
+          props.readOnly ? operationalStyles.readOnlyField : ''
+        }`}
         value={props.value}
+        readOnly={props.readOnly}
         onChange={(event) => props.onChange(event.target.value)}
       />
     </td>

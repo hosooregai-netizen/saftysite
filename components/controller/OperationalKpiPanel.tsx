@@ -2,7 +2,19 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { SafetyApiError, fetchSafetyReportsBySite, readSafetyAuthToken } from '@/lib/safetyApi';
+import {
+  buildDonutSlices,
+  fullDonutRing,
+} from '@/components/session/workspace/chartDonutUtils';
+import {
+  buildOverviewSiteQuickLink,
+  type AdminOverviewAsyncKpiState,
+  type AdminOverviewChartEntry,
+  type AdminOverviewPendingAgentRow,
+  type AdminOverviewSiteLink,
+  type AdminOverviewUrgentSiteRow,
+} from '@/features/admin/lib/buildAdminOverviewModel';
+import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import { getControllerSectionHref, isFieldAgentUserRole } from '@/lib/admin/adminShared';
 import {
   mapSafetyReportToBadWorkplaceReport,
@@ -13,75 +25,49 @@ import {
   getCurrentReportMonth,
   getQuarterTargetsForConstructionPeriod,
 } from '@/lib/erpReports/shared';
+import { SafetyApiError, fetchSafetyReportsBySite, readSafetyAuthToken } from '@/lib/safetyApi';
 import type { SafetySite, SafetyUser } from '@/types/backend';
 
 const FETCH_CONCURRENCY = 6;
 const KPI_CACHE_TTL_MS = 1000 * 60 * 5;
+const EMPTY_DONUT_RING = fullDonutRing(0, 0, 22, 40);
 
 interface OperationalKpiPanelProps {
+  coverageEntries: AdminOverviewChartEntry[];
+  onDataChange?: (state: AdminOverviewAsyncKpiState) => void;
+  reportProgressEntries: AdminOverviewChartEntry[];
   sites: SafetySite[];
-  styles: Record<string, string>;
   users: SafetyUser[];
 }
 
-interface SiteQuickLink {
-  siteId: string;
-  siteName: string;
-  headquarterName: string | null;
-  href: string;
-}
-
 interface QuarterlyStatusRow {
+  detailHref: string;
+  headquarterName: string | null;
+  missingCount: number;
+  missingLabels: string[];
   siteId: string;
   siteName: string;
-  headquarterName: string | null;
-  targetCount: number;
-  completedCount: number;
-  draftCount: number;
-  missingLabels: string[];
-  detailHref: string;
-}
-
-interface BadWorkplaceStatusRow {
-  userId: string;
-  userName: string;
-  reportCount: number;
-  achieved: boolean;
-  assignedSites: SiteQuickLink[];
-  reportedSites: SiteQuickLink[];
 }
 
 interface OperationalKpiCacheEntry {
   key: string;
   loadedAt: number;
-  quarterlyRows: QuarterlyStatusRow[];
-  badWorkplaceRows: BadWorkplaceStatusRow[];
+  pendingAgentRows: AdminOverviewPendingAgentRow[];
+  urgentSiteRows: AdminOverviewUrgentSiteRow[];
 }
 
 let operationalKpiCache: OperationalKpiCacheEntry | null = null;
 
-function isQuarterlyStatusRow(
-  value: QuarterlyStatusRow | null
-): value is QuarterlyStatusRow {
-  return Boolean(value);
-}
-
 function isQuarterlyReport(
-  value: ReturnType<typeof mapSafetyReportToQuarterlySummaryReport>
+  value: ReturnType<typeof mapSafetyReportToQuarterlySummaryReport>,
 ): value is NonNullable<ReturnType<typeof mapSafetyReportToQuarterlySummaryReport>> {
   return Boolean(value);
 }
 
 function isBadWorkplaceReport(
-  value: ReturnType<typeof mapSafetyReportToBadWorkplaceReport>
+  value: ReturnType<typeof mapSafetyReportToBadWorkplaceReport>,
 ): value is NonNullable<ReturnType<typeof mapSafetyReportToBadWorkplaceReport>> {
   return Boolean(value);
-}
-
-function pushUniqueValue(values: string[], value: string) {
-  if (!values.includes(value)) {
-    values.push(value);
-  }
 }
 
 function getErrorMessage(error: unknown) {
@@ -92,11 +78,7 @@ function getErrorMessage(error: unknown) {
   return '운영 현황 데이터를 불러오지 못했습니다.';
 }
 
-function buildKpiCacheKey(
-  sites: SafetySite[],
-  users: SafetyUser[],
-  reportMonth: string
-) {
+function buildKpiCacheKey(sites: SafetySite[], users: SafetyUser[], reportMonth: string) {
   const siteKey = sites
     .map((site) => site.id)
     .sort()
@@ -109,72 +91,232 @@ function buildKpiCacheKey(
   return `${reportMonth}::${siteKey}::${userKey}`;
 }
 
-function buildSiteQuickLink(site: SafetySite): SiteQuickLink {
-  return {
-    siteId: site.id,
-    siteName: site.site_name,
-    headquarterName:
-      site.headquarter_detail?.name ??
-      site.headquarter?.name ??
-      null,
-    href: getControllerSectionHref('headquarters', {
-      headquarterId: site.headquarter_id,
-      siteId: site.id,
-    }),
-  };
+function pushUniqueValue(values: string[], value: string) {
+  if (!values.includes(value)) {
+    values.push(value);
+  }
 }
 
-function renderSiteLinks(
-  siteLinks: SiteQuickLink[],
-  styles: Record<string, string>,
-  emptyLabel = '-'
-) {
+function renderSiteLinks(siteLinks: AdminOverviewSiteLink[], emptyLabel = '-') {
   if (siteLinks.length === 0) {
     return emptyLabel;
   }
 
-  const visibleLinks = siteLinks.slice(0, 3);
-  const remainingCount = siteLinks.length - visibleLinks.length;
-
   return (
     <div className={styles.tableInlineLinks}>
-      {visibleLinks.map((site) => (
+      {siteLinks.map((site) => (
         <Link key={site.siteId} href={site.href} className={styles.tableChipLink}>
           {site.siteName}
         </Link>
       ))}
-      {remainingCount > 0 ? (
-        <span className="app-chip">외 {remainingCount}개</span>
-      ) : null}
     </div>
   );
 }
 
+function DonutChartCard({
+  description,
+  entries,
+  title,
+}: {
+  description: string;
+  entries: AdminOverviewChartEntry[];
+  title: string;
+}) {
+  const total = entries.reduce((sum, item) => sum + item.count, 0);
+  const populatedEntries = entries.filter((item) => item.count > 0);
+  const slices = total > 0 ? buildDonutSlices(populatedEntries, total) : [];
+  const colorByLabel = new Map(slices.map((slice) => [slice.label, slice.color]));
+
+  return (
+    <article className={styles.kpiVisualCard}>
+      <div className={styles.kpiVisualHeader}>
+        <div>
+          <h3 className={styles.kpiVisualTitle}>{title}</h3>
+          <p className={styles.kpiVisualDescription}>{description}</p>
+        </div>
+      </div>
+
+      <div className={styles.kpiDonutLayout}>
+        <div className={styles.kpiDonutFigure}>
+          <svg
+            className={styles.kpiDonutSvg}
+            viewBox="-50 -50 100 100"
+            role="img"
+            aria-label={`${title}: 총 ${total}건`}
+          >
+            <title>{`${title}: 총 ${total}건`}</title>
+            <path d={EMPTY_DONUT_RING} fill="#e8edf3" />
+            {slices.map((slice) => (
+              <path key={slice.label} d={slice.path} fill={slice.color} stroke="none" />
+            ))}
+          </svg>
+          <div className={styles.kpiDonutCenter} aria-hidden="true">
+            <strong>{total}</strong>
+            <span>건</span>
+          </div>
+        </div>
+
+        <ul className={styles.kpiLegend}>
+          {entries.map((item) => (
+            <li key={item.label} className={styles.kpiLegendItem}>
+              <span
+                className={styles.kpiLegendSwatch}
+                style={{
+                  backgroundColor:
+                    total > 0 && item.count > 0
+                      ? colorByLabel.get(item.label) ?? '#4f8ae8'
+                      : '#d7e0e8',
+                }}
+                aria-hidden="true"
+              />
+              <span className={styles.kpiLegendLabel}>{item.label}</span>
+              <span className={styles.kpiLegendValue}>{item.count}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </article>
+  );
+}
+
+function MissingSitesBarCard({
+  isLoading,
+  rows,
+}: {
+  isLoading: boolean;
+  rows: AdminOverviewUrgentSiteRow[];
+}) {
+  const topRows = rows.slice(0, 5);
+  const maxValue = topRows.reduce((currentMax, row) => Math.max(currentMax, row.missingCount), 0);
+
+  return (
+    <article className={styles.kpiVisualCard}>
+      <div className={styles.kpiVisualHeader}>
+        <div>
+          <h3 className={styles.kpiVisualTitle}>분기 누락 현장 Top 5</h3>
+          <p className={styles.kpiVisualDescription}>누락 분기가 많은 현장을 우선순위로 정리했습니다.</p>
+        </div>
+      </div>
+
+      {topRows.length > 0 ? (
+        <div className={styles.kpiBarList}>
+          {topRows.map((row) => {
+            const width = maxValue > 0 ? `${(row.missingCount / maxValue) * 100}%` : '0%';
+
+            return (
+              <div key={row.siteId} className={styles.kpiBarItem}>
+                <div className={styles.kpiBarHeader}>
+                  <div className={styles.kpiBarHeading}>
+                    <Link href={row.detailHref} className={styles.kpiBarTitleLink}>
+                      {row.siteName}
+                    </Link>
+                    <span className={styles.kpiBarMeta}>
+                      {row.headquarterName ?? '본사 정보 없음'}
+                    </span>
+                  </div>
+                  <strong className={styles.kpiBarValue}>{row.missingCount}</strong>
+                </div>
+                <div className={styles.kpiBarTrack} aria-hidden="true">
+                  <span className={styles.kpiBarFill} style={{ width }} />
+                </div>
+                <p className={styles.kpiBarDescription}>{row.missingLabels.join(', ')}</p>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className={styles.empty}>
+          {isLoading
+            ? '분기 누락 현장을 집계하고 있습니다.'
+            : '지금 확인이 필요한 분기 누락 현장이 없습니다.'}
+        </div>
+      )}
+    </article>
+  );
+}
+
+function PendingAgentsPanel({
+  currentMonthLabel,
+  isLoading,
+  rows,
+}: {
+  currentMonthLabel: string;
+  isLoading: boolean;
+  rows: AdminOverviewPendingAgentRow[];
+}) {
+  return (
+    <article className={styles.kpiAlertPanel}>
+      <div className={styles.kpiAlertHeader}>
+        <div>
+          <h3 className={styles.kpiAlertTitle}>{currentMonthLabel} 신고 미달 지도요원</h3>
+          <p className={styles.kpiAlertDescription}>
+            이번 달 신고가 없는 지도요원만 추려서 보여줍니다.
+          </p>
+        </div>
+        <Link href={getControllerSectionHref('users')} className="app-button app-button-secondary">
+          사용자 관리
+        </Link>
+      </div>
+
+      {rows.length > 0 ? (
+        <div className={styles.kpiAlertList}>
+          {rows.map((row) => (
+            <div key={row.userId} className={styles.kpiAlertItem}>
+              <div className={styles.kpiAlertItemHeader}>
+                <strong className={styles.kpiAlertItemTitle}>{row.userName}</strong>
+                <span className="app-chip">신고 {row.reportCount}건</span>
+              </div>
+              <p className={styles.kpiAlertItemText}>
+                담당 현장 {row.assignedSites.length}개. 우선 배정 현장을 확인해 주세요.
+              </p>
+              {row.assignedSites.length > 0 ? renderSiteLinks(row.assignedSites) : null}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className={styles.empty}>
+          {isLoading
+            ? '월간 신고 현황을 집계하고 있습니다.'
+            : '이번 달 신고 기준 미달인 지도요원이 없습니다.'}
+        </div>
+      )}
+    </article>
+  );
+}
+
 export default function OperationalKpiPanel({
+  coverageEntries,
+  onDataChange,
+  reportProgressEntries,
   sites,
-  styles,
   users,
 }: OperationalKpiPanelProps) {
-  const [quarterlyRows, setQuarterlyRows] = useState<QuarterlyStatusRow[]>([]);
-  const [badWorkplaceRows, setBadWorkplaceRows] = useState<BadWorkplaceStatusRow[]>([]);
+  const [urgentSiteRows, setUrgentSiteRows] = useState<AdminOverviewUrgentSiteRow[]>([]);
+  const [pendingAgentRows, setPendingAgentRows] = useState<AdminOverviewPendingAgentRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const activeSites = useMemo(
-    () => sites.filter((site) => site.status === 'active'),
-    [sites]
-  );
+  const activeSites = useMemo(() => sites.filter((site) => site.status === 'active'), [sites]);
   const activeFieldAgents = useMemo(
     () => users.filter((user) => user.is_active && isFieldAgentUserRole(user.role)),
-    [users]
+    [users],
   );
   const currentReportMonth = getCurrentReportMonth();
   const currentMonthLabel = formatReportMonthLabel(currentReportMonth);
   const cacheKey = useMemo(
     () => buildKpiCacheKey(activeSites, activeFieldAgents, currentReportMonth),
-    [activeFieldAgents, activeSites, currentReportMonth]
+    [activeFieldAgents, activeSites, currentReportMonth],
   );
+
+  useEffect(() => {
+    if (!onDataChange) return;
+
+    onDataChange({
+      pendingAgentRows,
+      urgentSiteRows,
+    });
+  }, [onDataChange, pendingAgentRows, urgentSiteRows]);
 
   useEffect(() => {
     if (
@@ -182,23 +324,26 @@ export default function OperationalKpiPanel({
       operationalKpiCache.key === cacheKey &&
       Date.now() - operationalKpiCache.loadedAt < KPI_CACHE_TTL_MS
     ) {
-      setQuarterlyRows(operationalKpiCache.quarterlyRows);
-      setBadWorkplaceRows(operationalKpiCache.badWorkplaceRows);
+      setUrgentSiteRows(operationalKpiCache.urgentSiteRows);
+      setPendingAgentRows(operationalKpiCache.pendingAgentRows);
       setHasLoaded(true);
+      setError(null);
       return;
     }
 
-    setQuarterlyRows([]);
-    setBadWorkplaceRows([]);
+    setUrgentSiteRows([]);
+    setPendingAgentRows([]);
     setHasLoaded(false);
+    setError(null);
   }, [cacheKey]);
 
   const loadKpi = useCallback(async () => {
     const token = readSafetyAuthToken();
     if (!token || activeSites.length === 0) {
-      setQuarterlyRows([]);
-      setBadWorkplaceRows([]);
+      setUrgentSiteRows([]);
+      setPendingAgentRows([]);
       setHasLoaded(true);
+      setError(null);
       return;
     }
 
@@ -207,7 +352,9 @@ export default function OperationalKpiPanel({
 
     try {
       const pendingSites = [...activeSites];
-      const siteQuickLinkById = new Map(activeSites.map((site) => [site.id, buildSiteQuickLink(site)]));
+      const siteQuickLinkById = new Map(
+        activeSites.map((site) => [site.id, buildOverviewSiteQuickLink(site)]),
+      );
       const assignedSiteIdsByUserId = activeSites.reduce((accumulator, site) => {
         const linkedUsers = site.assigned_users?.length
           ? site.assigned_users
@@ -225,9 +372,9 @@ export default function OperationalKpiPanel({
       }, new Map<string, Set<string>>());
 
       const siteReports: Array<{
-        site: SafetySite;
-        quarterlyReports: NonNullable<ReturnType<typeof mapSafetyReportToQuarterlySummaryReport>>[];
         badWorkplaceReports: NonNullable<ReturnType<typeof mapSafetyReportToBadWorkplaceReport>>[];
+        quarterlyReports: NonNullable<ReturnType<typeof mapSafetyReportToQuarterlySummaryReport>>[];
+        site: SafetySite;
       }> = [];
 
       const workerCount = Math.min(FETCH_CONCURRENCY, pendingSites.length);
@@ -239,20 +386,20 @@ export default function OperationalKpiPanel({
 
             const reports = await fetchSafetyReportsBySite(token, site.id);
             siteReports.push({
-              site,
-              quarterlyReports: reports
-                .map(mapSafetyReportToQuarterlySummaryReport)
-                .filter(isQuarterlyReport),
               badWorkplaceReports: reports
                 .map(mapSafetyReportToBadWorkplaceReport)
                 .filter(isBadWorkplaceReport),
+              quarterlyReports: reports
+                .map(mapSafetyReportToQuarterlySummaryReport)
+                .filter(isQuarterlyReport),
+              site,
             });
           }
-        })
+        }),
       );
 
-      const nextQuarterlyRows = siteReports
-        .map(({ site, quarterlyReports }) => {
+      const nextUrgentSiteRows = siteReports
+        .map(({ quarterlyReports, site }): QuarterlyStatusRow | null => {
           const periodText = [site.project_start_date, site.project_end_date]
             .filter(Boolean)
             .join(' ~ ');
@@ -261,98 +408,95 @@ export default function OperationalKpiPanel({
 
           const targetQuarterKeys = new Set(targets.map((target) => target.quarterKey));
           const targetQuarterlyReports = quarterlyReports.filter((report) =>
-            targetQuarterKeys.has(report.quarterKey)
+            targetQuarterKeys.has(report.quarterKey),
           );
           const missingLabels = targets
             .filter(
               (target) =>
-                !targetQuarterlyReports.some((report) => report.quarterKey === target.quarterKey)
+                !targetQuarterlyReports.some((report) => report.quarterKey === target.quarterKey),
             )
             .map((target) => target.label);
 
+          if (missingLabels.length === 0) {
+            return null;
+          }
+
           return {
-            siteId: site.id,
-            siteName: site.site_name,
-            headquarterName:
-              site.headquarter_detail?.name ??
-              site.headquarter?.name ??
-              null,
-            targetCount: targets.length,
-            completedCount: targetQuarterlyReports.filter((report) => report.status === 'completed')
-              .length,
-            draftCount: targetQuarterlyReports.filter((report) => report.status === 'draft').length,
-            missingLabels,
             detailHref: getControllerSectionHref('headquarters', {
               headquarterId: site.headquarter_id,
               siteId: site.id,
             }),
+            headquarterName: site.headquarter_detail?.name ?? site.headquarter?.name ?? null,
+            missingCount: missingLabels.length,
+            missingLabels,
+            siteId: site.id,
+            siteName: site.site_name,
           };
         })
-        .filter(isQuarterlyStatusRow)
+        .filter((row): row is QuarterlyStatusRow => Boolean(row))
         .sort(
           (left, right) =>
-            right.missingLabels.length - left.missingLabels.length ||
-            right.draftCount - left.draftCount ||
-            left.siteName.localeCompare(right.siteName, 'ko')
+            right.missingCount - left.missingCount ||
+            left.siteName.localeCompare(right.siteName, 'ko'),
         );
 
-      const allBadReports = siteReports.flatMap((item) => item.badWorkplaceReports);
-      const monthlyBadReportSummaryByUserId = allBadReports.reduce(
-        (accumulator, report) => {
-          if (report.reportMonth !== currentReportMonth) {
+      const monthlyBadReportSummaryByUserId = siteReports
+        .flatMap((item) => item.badWorkplaceReports)
+        .reduce(
+          (accumulator, report) => {
+            if (report.reportMonth !== currentReportMonth) {
+              return accumulator;
+            }
+
+            const current = accumulator.get(report.reporterUserId) ?? {
+              reportCount: 0,
+              siteIds: [] as string[],
+            };
+
+            current.reportCount += 1;
+            pushUniqueValue(current.siteIds, report.siteId);
+            accumulator.set(report.reporterUserId, current);
             return accumulator;
-          }
+          },
+          new Map<string, { reportCount: number; siteIds: string[] }>(),
+        );
 
-          const current = accumulator.get(report.reporterUserId) ?? {
-            reportCount: 0,
-            siteIds: [] as string[],
-          };
-
-          current.reportCount += 1;
-          pushUniqueValue(current.siteIds, report.siteId);
-          accumulator.set(report.reporterUserId, current);
-          return accumulator;
-        },
-        new Map<string, { reportCount: number; siteIds: string[] }>()
-      );
-
-      const nextBadRows = activeFieldAgents
+      const nextPendingAgentRows = activeFieldAgents
         .map((user) => {
           const monthlySummary = monthlyBadReportSummaryByUserId.get(user.id);
           const reportCount = monthlySummary?.reportCount ?? 0;
           const assignedSites = Array.from(assignedSiteIdsByUserId.get(user.id) ?? [])
             .map((siteId) => siteQuickLinkById.get(siteId))
-            .filter((site): site is SiteQuickLink => Boolean(site))
+            .filter((site): site is AdminOverviewSiteLink => Boolean(site))
             .sort((left, right) => left.siteName.localeCompare(right.siteName, 'ko'));
           const reportedSites = (monthlySummary?.siteIds ?? [])
             .map((siteId) => siteQuickLinkById.get(siteId))
-            .filter((site): site is SiteQuickLink => Boolean(site))
+            .filter((site): site is AdminOverviewSiteLink => Boolean(site))
             .sort((left, right) => left.siteName.localeCompare(right.siteName, 'ko'));
 
+          if (reportCount >= 1) {
+            return null;
+          }
+
           return {
+            assignedSites,
+            reportCount,
+            reportedSites,
             userId: user.id,
             userName: user.name,
-            reportCount,
-            achieved: reportCount >= 1,
-            assignedSites,
-            reportedSites,
           };
         })
-        .sort(
-          (left, right) =>
-            Number(left.achieved) - Number(right.achieved) ||
-            left.reportCount - right.reportCount ||
-            left.userName.localeCompare(right.userName, 'ko')
-        );
+        .filter((row): row is AdminOverviewPendingAgentRow => Boolean(row))
+        .sort((left, right) => left.userName.localeCompare(right.userName, 'ko'));
 
       operationalKpiCache = {
         key: cacheKey,
         loadedAt: Date.now(),
-        quarterlyRows: nextQuarterlyRows,
-        badWorkplaceRows: nextBadRows,
+        pendingAgentRows: nextPendingAgentRows,
+        urgentSiteRows: nextUrgentSiteRows,
       };
-      setQuarterlyRows(nextQuarterlyRows);
-      setBadWorkplaceRows(nextBadRows);
+      setUrgentSiteRows(nextUrgentSiteRows);
+      setPendingAgentRows(nextPendingAgentRows);
       setHasLoaded(true);
     } catch (nextError) {
       setError(getErrorMessage(nextError));
@@ -373,48 +517,13 @@ export default function OperationalKpiPanel({
     return () => window.clearTimeout(timerId);
   }, [error, hasLoaded, isLoading, loadKpi]);
 
-  const quarterlyMissingSiteCount = useMemo(
-    () => quarterlyRows.filter((row) => row.missingLabels.length > 0).length,
-    [quarterlyRows]
-  );
-  const quarterlyMissingQuarterCount = useMemo(
-    () => quarterlyRows.reduce((total, row) => total + row.missingLabels.length, 0),
-    [quarterlyRows]
-  );
-  const completedQuarterlySiteCount = useMemo(
-    () =>
-      quarterlyRows.filter(
-        (row) => row.targetCount > 0 && row.completedCount === row.targetCount
-      ).length,
-    [quarterlyRows]
-  );
-  const badWorkplaceAchievedCount = useMemo(
-    () => badWorkplaceRows.filter((row) => row.achieved).length,
-    [badWorkplaceRows]
-  );
-  const badWorkplacePendingRows = useMemo(
-    () => badWorkplaceRows.filter((row) => !row.achieved),
-    [badWorkplaceRows]
-  );
-  const quarterlyUrgentRows = useMemo(
-    () => quarterlyRows.filter((row) => row.missingLabels.length > 0).slice(0, 3),
-    [quarterlyRows]
-  );
-  const badWorkplaceUrgentRows = useMemo(
-    () => badWorkplacePendingRows.slice(0, 3),
-    [badWorkplacePendingRows]
-  );
-  const showContent =
-    hasLoaded || isLoading || quarterlyRows.length > 0 || badWorkplaceRows.length > 0;
-
   return (
     <section className={styles.sectionCard}>
       <div className={styles.sectionHeader}>
         <div>
           <h2 className={styles.sectionTitle}>ERP 운영 현황</h2>
           <p className={styles.hint}>
-            현장별 분기 보고서 진행 상태와 지도요원별 이번 달 불량사업장 신고 실적을
-            빠르게 확인할 수 있습니다.
+            도표 중심으로 분기 누락과 월간 신고 미달 항목만 빠르게 확인할 수 있습니다.
           </p>
         </div>
         <div className={styles.sectionHeaderActions}>
@@ -426,267 +535,33 @@ export default function OperationalKpiPanel({
             onClick={() => void loadKpi()}
             disabled={isLoading}
           >
-            {hasLoaded ? '운영 현황 새로고침' : '운영 현황 불러오기'}
+            운영 현황 새로고침
           </button>
         </div>
       </div>
 
-      <div className={styles.sectionBody}>
+      <div className={`${styles.sectionBody} ${styles.kpiPanelBody}`}>
         {error ? <div className={styles.bannerError}>{error}</div> : null}
 
-        {!showContent ? (
-          <div className={styles.empty}>
-            운영 현황을 준비하고 있습니다. 첫 집계는 현장별 보고서를 순차적으로 확인하므로
-            잠시 시간이 걸릴 수 있습니다.
-          </div>
-        ) : (
-          <div className={styles.contentStack}>
-            <div className={styles.kpiSummaryGrid}>
-              <article className={styles.kpiSummaryCard}>
-                <p className={styles.kpiSummaryLabel}>분기 대상 현장</p>
-                <p className={styles.kpiSummaryValue}>{quarterlyRows.length}</p>
-                <p className={styles.kpiSummaryMeta}>
-                  완료 {completedQuarterlySiteCount}개 / 미작성 현장 {quarterlyMissingSiteCount}개
-                </p>
-              </article>
+        <div className={styles.kpiVisualGrid}>
+          <DonutChartCard
+            title="현장 배정 커버리지"
+            description="운영 중인 현장 기준 배정 완료/미배정 비율"
+            entries={coverageEntries}
+          />
+          <DonutChartCard
+            title="보고서 진행률"
+            description="점검 세션 기준 완료, 작성 중, 미착수 현황"
+            entries={reportProgressEntries}
+          />
+          <MissingSitesBarCard isLoading={isLoading && !hasLoaded} rows={urgentSiteRows} />
+        </div>
 
-              <article className={styles.kpiSummaryCard}>
-                <p className={styles.kpiSummaryLabel}>미작성 분기</p>
-                <p className={styles.kpiSummaryValue}>{quarterlyMissingQuarterCount}</p>
-                <p className={styles.kpiSummaryMeta}>
-                  미작성 분기가 있는 현장 {quarterlyMissingSiteCount}개
-                </p>
-              </article>
-
-              <article className={styles.kpiSummaryCard}>
-                <p className={styles.kpiSummaryLabel}>불량사업장 신고 달성</p>
-                <p className={styles.kpiSummaryValue}>
-                  {badWorkplaceAchievedCount}/{activeFieldAgents.length}
-                </p>
-                <p className={styles.kpiSummaryMeta}>
-                  이번 달 신고 기준을 채운 지도요원 수
-                </p>
-              </article>
-
-              <article className={styles.kpiSummaryCard}>
-                <p className={styles.kpiSummaryLabel}>즉시 확인 필요</p>
-                <p className={styles.kpiSummaryValue}>
-                  {quarterlyMissingSiteCount + badWorkplacePendingRows.length}
-                </p>
-                <p className={styles.kpiSummaryMeta}>
-                  분기 미작성 현장과 신고 미달 요원을 함께 집계
-                </p>
-              </article>
-            </div>
-
-            <div className={styles.kpiHighlightGrid}>
-              <article className={styles.recordCard}>
-                <div className={styles.recordTop}>
-                  <strong className={styles.recordTitle}>분기 점검 우선 현장</strong>
-                  <button
-                    type="button"
-                    className="app-button app-button-secondary"
-                    onClick={() => void loadKpi()}
-                    disabled={isLoading}
-                  >
-                    다시 집계
-                  </button>
-                </div>
-                {quarterlyUrgentRows.length > 0 ? (
-                  <div className={styles.kpiQuickList}>
-                    {quarterlyUrgentRows.map((row) => (
-                      <div key={row.siteId} className={styles.kpiQuickItem}>
-                        <div className={styles.kpiQuickMeta}>
-                          <strong className={styles.kpiQuickTitle}>{row.siteName}</strong>
-                          <p className={styles.kpiQuickText}>
-                            {row.headquarterName ? `${row.headquarterName} · ` : ''}
-                            미작성 {row.missingLabels.length}개
-                            {row.missingLabels.length > 0
-                              ? ` (${row.missingLabels.join(', ')})`
-                              : ''}
-                          </p>
-                        </div>
-                        <Link href={row.detailHref} className="app-button app-button-secondary">
-                          보고서 목록
-                        </Link>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className={styles.empty}>
-                    현재 확인이 급한 분기 누락 현장이 없습니다.
-                  </div>
-                )}
-              </article>
-
-              <article className={styles.recordCard}>
-                <div className={styles.recordTop}>
-                  <strong className={styles.recordTitle}>{currentMonthLabel} 신고 미달 요원</strong>
-                  <Link
-                    href={getControllerSectionHref('users')}
-                    className="app-button app-button-secondary"
-                  >
-                    사용자 관리
-                  </Link>
-                </div>
-                {badWorkplaceUrgentRows.length > 0 ? (
-                  <div className={styles.kpiQuickList}>
-                    {badWorkplaceUrgentRows.map((row) => (
-                      <div key={row.userId} className={styles.kpiQuickItem}>
-                        <div className={styles.kpiQuickMeta}>
-                          <strong className={styles.kpiQuickTitle}>{row.userName}</strong>
-                          <p className={styles.kpiQuickText}>
-                            이번 달 신고 {row.reportCount}건 · 담당 현장 {row.assignedSites.length}개
-                          </p>
-                          {row.assignedSites.length > 0 ? (
-                            <div className={styles.tableInlineLinks}>
-                              {row.assignedSites.slice(0, 2).map((site) => (
-                                <Link
-                                  key={`${row.userId}-${site.siteId}`}
-                                  href={site.href}
-                                  className={styles.tableChipLink}
-                                >
-                                  {site.siteName}
-                                </Link>
-                              ))}
-                              {row.assignedSites.length > 2 ? (
-                                <span className="app-chip">
-                                  외 {row.assignedSites.length - 2}개
-                                </span>
-                              ) : null}
-                            </div>
-                          ) : null}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className={styles.empty}>
-                    이번 달 신고 실적이 기준에 미달한 지도요원이 없습니다.
-                  </div>
-                )}
-              </article>
-            </div>
-
-            <div className={styles.kpiTableStack}>
-              <div>
-                <div className={styles.kpiTableHeader}>
-                  <div>
-                    <h3 className={styles.kpiTableTitle}>현장별 분기 작성 현황</h3>
-                    <p className={styles.kpiTableDescription}>
-                      공사기간 기준으로 분기 대상이 계산된 현장만 표시합니다.
-                    </p>
-                  </div>
-                </div>
-                <div className={styles.tableShell}>
-                  <div className={styles.tableWrap}>
-                    <table className={styles.table}>
-                      <thead>
-                        <tr>
-                          <th>현장</th>
-                          <th>대상 분기</th>
-                          <th>완료</th>
-                          <th>작성 중</th>
-                          <th>미작성 분기</th>
-                          <th>바로가기</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {quarterlyRows.length > 0 ? (
-                          quarterlyRows.map((row) => (
-                            <tr key={row.siteId}>
-                              <td>
-                                <div className={styles.tablePrimary}>{row.siteName}</div>
-                                <div className={styles.tableSecondary}>
-                                  {row.headquarterName ?? '본사 정보 없음'}
-                                </div>
-                              </td>
-                              <td>{row.targetCount}</td>
-                              <td>{row.completedCount}</td>
-                              <td>{row.draftCount}</td>
-                              <td>
-                                {row.missingLabels.length > 0
-                                  ? row.missingLabels.join(', ')
-                                  : '없음'}
-                              </td>
-                              <td>
-                                <div className={styles.tableActions}>
-                                  <Link
-                                    href={row.detailHref}
-                                    className="app-button app-button-secondary"
-                                  >
-                                    이동
-                                  </Link>
-                                </div>
-                              </td>
-                            </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td colSpan={6} className={styles.tableEmpty}>
-                              {isLoading
-                                ? '분기 현황을 집계하는 중입니다.'
-                                : '분기 대상 현장 또는 분기 보고서 데이터가 없습니다.'}
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <div className={styles.kpiTableHeader}>
-                  <div>
-                    <h3 className={styles.kpiTableTitle}>지도요원별 불량사업장 신고 실적</h3>
-                    <p className={styles.kpiTableDescription}>
-                      {currentMonthLabel} 기준 신고 작성 건수와 관련 현장을 함께 확인합니다.
-                    </p>
-                  </div>
-                </div>
-                <div className={styles.tableShell}>
-                  <div className={styles.tableWrap}>
-                    <table className={styles.table}>
-                      <thead>
-                        <tr>
-                          <th>지도요원</th>
-                          <th>이번 달 신고</th>
-                          <th>달성 상태</th>
-                          <th>신고한 현장</th>
-                          <th>담당 현장</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {badWorkplaceRows.length > 0 ? (
-                          badWorkplaceRows.map((row) => (
-                            <tr key={row.userId}>
-                              <td>
-                                <div className={styles.tablePrimary}>{row.userName}</div>
-                              </td>
-                              <td>{row.reportCount}</td>
-                              <td>{row.achieved ? '달성' : '미달'}</td>
-                              <td>{renderSiteLinks(row.reportedSites, styles, '-')}</td>
-                              <td>{renderSiteLinks(row.assignedSites, styles, '-')}</td>
-                            </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td colSpan={5} className={styles.tableEmpty}>
-                              {isLoading
-                                ? '불량사업장 신고 실적을 집계하는 중입니다.'
-                                : '이번 달 불량사업장 신고 실적 데이터가 없습니다.'}
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        <PendingAgentsPanel
+          currentMonthLabel={currentMonthLabel}
+          isLoading={isLoading && !hasLoaded}
+          rows={pendingAgentRows}
+        />
       </div>
     </section>
   );

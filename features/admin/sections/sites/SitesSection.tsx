@@ -57,7 +57,7 @@ interface SitesSectionProps {
   showHeader?: boolean;
   showHeadquarterColumn?: boolean;
   lockedHeadquarterId?: string | null;
-  onSelectSiteReports?: (site: SafetySite) => void;
+  onSelectSiteEntry?: (site: SafetySite) => void;
 }
 
 const EMPTY_FORM = {
@@ -105,7 +105,7 @@ export function SitesSection(props: SitesSectionProps) {
     emptyMessage = '등록된 현장이 없습니다.',
     showHeadquarterColumn = true,
     lockedHeadquarterId = null,
-    onSelectSiteReports,
+    onSelectSiteEntry,
   } = props;
   const [editingId, setEditingId] = useState<string | null>(null);
   const [assignmentSiteId, setAssignmentSiteId] = useState<string | null>(null);
@@ -315,11 +315,11 @@ export function SitesSection(props: SitesSectionProps) {
                     return (
                       <tr key={site.id}>
                         <td>
-                          {onSelectSiteReports ? (
+                          {onSelectSiteEntry ? (
                             <button
                               type="button"
                               className={styles.tableButtonLink}
-                              onClick={() => onSelectSiteReports(site)}
+                              onClick={() => onSelectSiteEntry(site)}
                             >
                               {site.site_name}
                             </button>
@@ -366,11 +366,11 @@ export function SitesSection(props: SitesSectionProps) {
                             <ActionMenu
                               label={`${site.site_name} 현장 작업 메뉴 열기`}
                               items={[
-                                ...(onSelectSiteReports
+                                ...(onSelectSiteEntry
                                   ? [
                                       {
-                                        label: '보고서 보기',
-                                        onSelect: () => onSelectSiteReports(site),
+                                        label: '현장 메인',
+                                        onSelect: () => onSelectSiteEntry(site),
                                       },
                                     ]
                                   : [

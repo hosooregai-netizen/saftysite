@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import {
+  archiveSafetyReportByKey,
   fetchSafetyReportsBySite,
   readSafetyAuthToken,
   SafetyApiError,
@@ -131,6 +132,33 @@ export function useSiteOperationalReports(site: InspectionSite | null, enabled =
     [reload, site]
   );
 
+  const deleteOperationalReport = useCallback(
+    async (reportId: string) => {
+      if (!site) return;
+      const token = readSafetyAuthToken();
+      if (!token) {
+        throw new SafetyApiError(
+          '濡쒓렇?몄씠 留뚮즺?섏뿀?듬땲?? ?ㅼ떆 濡쒓렇?명빐 二쇱꽭??',
+          401,
+        );
+      }
+
+      setIsSaving(true);
+      setError(null);
+      try {
+        await archiveSafetyReportByKey(token, reportId);
+        await reload();
+      } catch (error) {
+        const message = getErrorMessage(error);
+        setError(message);
+        throw error;
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [reload, site],
+  );
+
   return {
     quarterlyReports,
     badWorkplaceReports,
@@ -140,5 +168,6 @@ export function useSiteOperationalReports(site: InspectionSite | null, enabled =
     reload,
     saveQuarterlyReport,
     saveBadWorkplaceReport,
+    deleteOperationalReport,
   };
 }

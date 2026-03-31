@@ -64,7 +64,7 @@ export default function BadWorkplaceReportPage({
     : isAdminView
       ? getAdminSectionHref('headquarters')
       : '/';
-  const backLabel = isAdminView ? '본사 상세' : '현장 메뉴';
+  const backLabel = isAdminView ? '현장 메인' : '현장 메뉴';
   const siteSessions = useMemo(
     () =>
       getBadWorkplaceSourceSessions(
@@ -140,7 +140,7 @@ export default function BadWorkplaceReportPage({
           <WorkerShellBody>
             <WorkerMenuSidebar>
               {isAdminView ? (
-                <AdminMenuPanel activeSection="headquarters" />
+                <AdminMenuPanel activeSection="headquarters" currentSiteKey={currentSite.id} />
               ) : (
                 <WorkerMenuPanel currentSiteKey={currentSite.id} />
               )}
@@ -183,6 +183,7 @@ export default function BadWorkplaceReportPage({
           open={menuOpen}
           onClose={() => setMenuOpen(false)}
           activeSection="headquarters"
+          currentSiteKey={currentSite.id}
         />
       ) : (
         <WorkerMenuDrawer

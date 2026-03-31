@@ -102,7 +102,6 @@ function renderAdminSection(
       return (
         <AdminOverviewSection
           data={dashboard.data}
-          onSelectSection={dashboard.selectSection}
           sessions={sessions}
         />
       );
@@ -125,14 +124,14 @@ export function AdminDashboardScreen({
     dashboard.selectedHeadquarter?.name?.trim() ||
     '사업장 목록';
   const headquartersDescription = dashboard.selectedSite
-    ? '보고서 및 추가 업무'
+    ? '현장 메인'
     : dashboard.selectedHeadquarter
       ? '현장 목록'
       : undefined;
   const shellBackLabel =
     dashboard.activeSection === 'headquarters'
       ? dashboard.selectedSiteId
-        ? dashboard.selectedHeadquarter?.name?.trim() || '현장 목록'
+        ? '현장 목록'
         : dashboard.selectedHeadquarterId
           ? '사업장 목록'
           : undefined
@@ -161,6 +160,7 @@ export function AdminDashboardScreen({
       banners={
         <AdminDashboardStateBanners error={dashboard.error} notice={dashboard.notice} />
       }
+      currentSiteKey={dashboard.selectedSiteId}
       currentUserName={currentUser.name}
       onBack={shellBackAction}
       onLogout={onLogout}

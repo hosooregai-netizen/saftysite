@@ -3,8 +3,7 @@
 import { useMemo } from 'react';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import { SitesSection } from '@/features/admin/sections/sites/SitesSection';
-import { SiteReportListPanel } from '@/features/site-reports/components/SiteReportListPanel';
-import { useSiteReportListState } from '@/features/site-reports/hooks/useSiteReportListState';
+import { SiteEntryHubPanel } from '@/features/home/components/SiteEntryHubPanel';
 import { mapSafetySiteToInspectionSite } from '@/lib/safetyApiMappers/sites';
 import type { SafetySite, SafetyUser } from '@/types/backend';
 import type { SafetyAssignment, SafetyHeadquarter } from '@/types/controller';
@@ -130,9 +129,10 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
         : [],
     [selectedHeadquarter, sites],
   );
-  const reportListState = useSiteReportListState(selectedSite?.id ?? null, {
-    siteOverride: selectedSite ? mapSafetySiteToInspectionSite(selectedSite) : null,
-  });
+  const selectedInspectionSite = useMemo(
+    () => (selectedSite ? mapSafetySiteToInspectionSite(selectedSite) : null),
+    [selectedSite],
+  );
 
   const submit = async () => {
     if (!state.form.name.trim()) return;
@@ -174,36 +174,19 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
           />
         </section>
       ) : selectedSite ? (
-        <>
-          {reportListState.currentSite ? (
-            <>
-              <SiteReportListPanel
-                assignedUserDisplay={reportListState.assignedUserDisplay}
-                canArchiveReports={reportListState.canArchiveReports}
-                canCreateReport={reportListState.canCreateReport}
-                createReport={reportListState.createReport}
-                currentSite={reportListState.currentSite}
-                deleteSession={reportListState.deleteSession}
-                filteredReportItems={reportListState.filteredReportItems}
-                reloadReportIndex={reportListState.reloadReportIndex}
-                reportIndexError={reportListState.reportIndexError}
-                reportIndexStatus={reportListState.reportIndexStatus}
-                reportItems={reportListState.reportItems}
-                reportQuery={reportListState.reportQuery}
-                reportSortMode={reportListState.reportSortMode}
-                setReportQuery={reportListState.setReportQuery}
-                setReportSortMode={reportListState.setReportSortMode}
-                showSummaryBar={false}
-              />
-            </>
-          ) : (
-            <section className={styles.sectionCard}>
-              <div className={styles.sectionBody}>
-                <div className={styles.empty}>현장 보고서 정보를 불러오는 중입니다.</div>
-              </div>
-            </section>
-          )}
-        </>
+        selectedInspectionSite ? (
+          <SiteEntryHubPanel
+            className={styles.contentStack}
+            currentSite={selectedInspectionSite}
+            reportMetaText="현장 메인에서 기술지도 보고서 목록과 추가 업무 문서로 이동할 수 있습니다."
+          />
+        ) : (
+          <section className={styles.sectionCard}>
+            <div className={styles.sectionBody}>
+              <div className={styles.empty}>현장 정보를 불러오는 중입니다.</div>
+            </div>
+          </section>
+        )
       ) : (
         <SitesSection
           assignments={assignments}
@@ -214,7 +197,7 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
           onAssignFieldAgent={onAssignFieldAgent}
           onCreate={onCreateSite}
           onDelete={onDeleteSite}
-          onSelectSiteReports={(site) => onSelectSite(selectedHeadquarter.id, site.id)}
+          onSelectSiteEntry={(site) => onSelectSite(selectedHeadquarter.id, site.id)}
           onUnassignFieldAgent={onUnassignFieldAgent}
           onUpdate={onUpdateSite}
           showHeadquarterColumn={false}

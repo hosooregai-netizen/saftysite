@@ -80,7 +80,7 @@ export function SiteReportsScreen({ siteKey }: SiteReportsScreenProps) {
           <WorkerShellBody>
             <WorkerMenuSidebar>
               {isAdminView ? (
-                <AdminMenuPanel activeSection="headquarters" />
+                <AdminMenuPanel activeSection="headquarters" currentSiteKey={currentSite.id} />
               ) : (
                 <WorkerMenuPanel currentSiteKey={currentSite.id} />
               )}
@@ -127,6 +127,7 @@ export function SiteReportsScreen({ siteKey }: SiteReportsScreenProps) {
           open={menuOpen}
           onClose={() => setMenuOpen(false)}
           activeSection="headquarters"
+          currentSiteKey={currentSite.id}
         />
       ) : (
         <WorkerMenuDrawer
