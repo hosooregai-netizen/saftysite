@@ -12,6 +12,8 @@ interface WorkerAppHeaderProps {
   accountLabel?: string;
   logoutLabel?: string;
   actions?: ReactNode;
+  /** false: 본문 열(예: HomeScreen contentColumn) 안 — 뷰포트 full-bleed 없음 */
+  fullBleed?: boolean;
 }
 
 export default function WorkerAppHeader({
@@ -22,9 +24,15 @@ export default function WorkerAppHeader({
   accountLabel = '로그인 계정',
   logoutLabel = '로그아웃',
   actions,
+  fullBleed = true,
 }: WorkerAppHeaderProps) {
   return (
-    <header className={styles.appHeader}>
+    <header
+      className={[
+        styles.appHeader,
+        fullBleed ? styles.appHeaderBleed : styles.appHeaderColumn,
+      ].join(' ')}
+    >
       <div className={styles.appHeaderBar}>
         <div className={styles.headerLeft}>
           <div className={styles.menuButtonWrap}>
@@ -47,4 +55,3 @@ export default function WorkerAppHeader({
     </header>
   );
 }
-

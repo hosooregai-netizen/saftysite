@@ -9,6 +9,7 @@ import {
   getCurrentReportMonth,
   getQuarterKeyForDate,
   getQuarterTargetsForConstructionPeriod,
+  normalizeQuarterlyReportPeriod,
 } from '@/lib/erpReports/shared';
 import type { SafetyUser } from '@/types/backend';
 import type { InspectionSite } from '@/types/inspectionSession';
@@ -44,7 +45,13 @@ export default function OperationalReportsPanel({
   );
   const manualQuarterKey = useMemo(() => getQuarterKeyForDate(new Date()), []);
   const quarterlyByKey = useMemo(
-    () => new Map(quarterlyReports.map((item) => [item.quarterKey, item])),
+    () =>
+      new Map(
+        quarterlyReports.flatMap((item) => {
+          const normalized = normalizeQuarterlyReportPeriod(item);
+          return normalized.quarterKey ? [[normalized.quarterKey, item] as const] : [];
+        }),
+      ),
     [quarterlyReports],
   );
   const currentReportMonth = getCurrentReportMonth();

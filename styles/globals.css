@@ -29,6 +29,8 @@
     --hazard-input-focus: 1px solid #1f3045;
     --hazard-input-shadow: 0 0 0 2px rgba(31, 48, 69, 0.14);
     --app-header-min-height: 118px;
+    --app-main-max-width: 1320px;
+    --app-main-inline-padding: 18px;
 
     /* Typography scale (rem = html 16px) */
     --text-display: 1.75rem; /* 28px — route title */
@@ -104,23 +106,62 @@
 }
 
 @layer components {
+  /*
+   * 메인 컬럼 본문 폭(1320 + 좌우 패딩). 네이비 WorkerAppHeader는 .app-page-root 직계(main 밖).
+   * 여기엔 회색 히어로 + pageGrid(에디터·표 등)만.
+   */
+  .app-main-frame {
+    width: 100%;
+    max-width: var(--app-main-max-width);
+    margin-inline: auto;
+    padding-inline: var(--app-main-inline-padding);
+    box-sizing: border-box;
+    min-width: 0;
+  }
+
+  /* 히어로 회색 띠를 프레임 전체 너비로 — 텍스트 시작선은 본문(요약/표)과 동일 */
+  .app-main-frame > header:first-child {
+    margin-inline: calc(-1 * var(--app-main-inline-padding));
+    padding-inline: var(--app-main-inline-padding);
+  }
+
+  /* 단독 main 또는 app-page-root 안의 본문 영역 */
   .app-page {
-    @apply min-h-screen print:bg-white print:p-0;
+    @apply flex min-h-screen min-h-[100dvh] flex-col print:bg-white print:p-0;
+  }
+
+  /* 네이비 탑바를 main 밖에 둘 때: 뷰포트 전체 열 + 탑바 + 본문 높이 분배 */
+  .app-page-root {
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+    min-height: 100vh;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-x: clip;
+  }
+
+  .app-page-root > .app-page {
+    min-height: 0;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
   }
 
   .app-container {
-    @apply w-full max-w-none;
+    @apply flex w-full max-w-none flex-1 flex-col min-h-0;
   }
 
   .app-shell {
-    @apply flex min-h-screen min-h-[100dvh] flex-col bg-white print:min-h-0 print:overflow-visible print:rounded-none print:border-0 print:shadow-none;
+    @apply flex min-h-0 flex-1 flex-col bg-white print:min-h-0 print:overflow-visible print:rounded-none print:border-0 print:shadow-none;
     border: 0;
     border-radius: 0;
     box-shadow: none;
   }
 
   .app-page-header {
-    @apply flex flex-col gap-4 border-b px-5 py-5 md:px-8 print:hidden md:flex-row md:items-start md:justify-between;
+    @apply flex flex-col gap-4 border-b py-5 print:hidden md:flex-row md:items-start md:justify-between;
+    padding-inline: var(--app-main-inline-padding);
     border-color: var(--erp-line);
   }
 

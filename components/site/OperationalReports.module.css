@@ -141,8 +141,8 @@
   display: grid;
   gap: 18px;
   width: 100%;
-  max-width: 1320px;
-  margin-inline: auto;
+  max-width: none;
+  margin-inline: 0;
   padding: 0;
   border: 0;
   background: transparent;
@@ -240,19 +240,13 @@
 
 .periodFieldGrid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(96px, 116px) repeat(2, minmax(0, 1fr));
   gap: 12px;
-}
-
-.periodFieldInline {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 72px;
-  gap: 10px;
-  align-items: center;
 }
 
 .periodQuarterSelect {
   min-width: 0;
+  width: 100%;
 }
 
 .field {
@@ -444,10 +438,6 @@
   width: 11%;
 }
 
-.implementationColTitle {
-  width: 21%;
-}
-
 .implementationColCompact {
   width: 8%;
 }
@@ -457,7 +447,7 @@
 }
 
 .implementationColNote {
-  width: 19%;
+  width: 28%;
 }
 
 .implementationColAction {
@@ -651,9 +641,8 @@
     grid-template-columns: 1fr;
   }
 
-  .periodFieldInline {
-    grid-template-columns: minmax(0, 1fr) 64px;
-    gap: 8px;
+  .periodFieldGrid {
+    grid-template-columns: 1fr;
   }
 
   .inlineEditorActions {
