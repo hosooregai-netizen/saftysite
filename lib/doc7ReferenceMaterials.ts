@@ -17,7 +17,7 @@ import type { CausativeAgentKey } from '@/types/siteOverview';
 export interface Doc7ReferenceMaterialBodyValue {
   accidentType: string;
   body: string;
-  causativeAgentKey: CausativeAgentKey | '';
+  causativeAgentKey: string;
   imageName: string;
   imageUrl: string;
   referenceTitle1: string;
@@ -30,7 +30,7 @@ export function readDoc7ReferenceMaterialBody(
   const record = asMapperRecord(body);
   const normalizedCausativeKey = normalizeMapperText(
     record.causativeAgentKey ?? record.causative_agent_key,
-  ) as CausativeAgentKey | '';
+  );
 
   return {
     accidentType: normalizeMapperText(record.accidentType ?? record.accident_type),
@@ -51,12 +51,13 @@ export function readDoc7ReferenceMaterialBody(
 
 export function buildDoc7ReferenceMaterialTitle(
   accidentType: string,
-  causativeAgentKey: CausativeAgentKey | '',
+  causativeAgentKey: string,
 ): string {
   const normalizedAccidentType = normalizeMapperText(accidentType);
   const normalizedCausativeKey = normalizeDoc7CausativeAgentKey(causativeAgentKey);
   const causativeLabel = normalizedCausativeKey
-    ? CAUSATIVE_AGENT_LABELS[normalizedCausativeKey] ?? normalizedCausativeKey
+    ? CAUSATIVE_AGENT_LABELS[normalizedCausativeKey as CausativeAgentKey] ??
+      normalizedCausativeKey
     : '';
 
   const segments = [normalizedAccidentType, causativeLabel].filter(Boolean);
@@ -66,7 +67,7 @@ export function buildDoc7ReferenceMaterialTitle(
 export function matchDoc7ReferenceMaterial(
   items: SafetyDoc7ReferenceMaterialCatalogItem[],
   accidentType: string,
-  causativeAgentKey: CausativeAgentKey | '',
+  causativeAgentKey: string,
 ): SafetyDoc7ReferenceMaterialCatalogItem | null {
   const normalizedAccidentType = normalizeMapperText(accidentType);
   const normalizedCausativeKey = normalizeDoc7CausativeAgentKey(causativeAgentKey);
@@ -75,11 +76,11 @@ export function matchDoc7ReferenceMaterial(
     return null;
   }
 
-  const compatibleCausativeKeys = new Set<CausativeAgentKey | ''>(
-    CATALOG_COMPATIBLE_CAUSATIVE_KEYS[normalizedCausativeKey] ?? [
+  const compatibleList =
+    CATALOG_COMPATIBLE_CAUSATIVE_KEYS[normalizedCausativeKey as CausativeAgentKey] ?? [
       normalizedCausativeKey,
-    ],
-  );
+    ];
+  const compatibleCausativeKeys = new Set<string>(compatibleList);
 
   return (
     items.find(
@@ -90,15 +91,25 @@ export function matchDoc7ReferenceMaterial(
   );
 }
 
+export function getDoc7ReferenceMatchKeys(finding: CurrentHazardFinding): {
+  accidentType: string;
+  causativeAgentKey: string;
+} {
+  const refAccidentType = normalizeMapperText(finding.referenceCatalogAccidentType);
+  const refCausativeKey = normalizeDoc7CausativeAgentKey(finding.referenceCatalogCausativeAgentKey);
+
+  return {
+    accidentType: refAccidentType || finding.accidentType,
+    causativeAgentKey: refCausativeKey || finding.causativeAgentKey,
+  };
+}
+
 export function applyDoc7ReferenceMaterialMatch<T extends CurrentHazardFinding>(
   finding: T,
   items: SafetyDoc7ReferenceMaterialCatalogItem[],
 ): T {
-  const matched = matchDoc7ReferenceMaterial(
-    items,
-    finding.accidentType,
-    finding.causativeAgentKey,
-  );
+  const { accidentType, causativeAgentKey } = getDoc7ReferenceMatchKeys(finding);
+  const matched = matchDoc7ReferenceMaterial(items, accidentType, causativeAgentKey);
 
   return {
     ...finding,

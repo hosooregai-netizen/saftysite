@@ -87,9 +87,7 @@ export function normalizeHazardFinding(raw: unknown, fallbackInspector: string) 
     severity,
     riskLevel: normalizeRiskLevel(likelihood, severity, normalizeText(source.riskLevel || source.riskAssessmentResult)),
     accidentType: normalizeText(source.accidentType) || normalizeText(source.location),
-    causativeAgentKey: normalizeDoc7CausativeAgentKey(
-      (normalizeText(source.causativeAgentKey) as CausativeAgentKey) || '',
-    ),
+    causativeAgentKey: normalizeDoc7CausativeAgentKey(normalizeText(source.causativeAgentKey)) as CausativeAgentKey | '',
     inspector: normalizeText(source.inspector) || fallbackInspector,
     emphasis: normalizeText(source.emphasis) || normalizeText(source.hazardFactors),
     improvementPlan: normalizeText(source.improvementPlan) || normalizeText(source.improvementItems),
@@ -97,6 +95,10 @@ export function normalizeHazardFinding(raw: unknown, fallbackInspector: string) 
     legalReferenceTitle: normalizeText(source.legalReferenceTitle) || normalizeText(source.legalInfo) || matchedReference?.title || '',
     referenceMaterial1: normalizeText(source.referenceMaterial1) || matchedReference?.referenceMaterial1 || '',
     referenceMaterial2: normalizeText(source.referenceMaterial2) || matchedReference?.referenceMaterial2 || '',
+    referenceCatalogAccidentType: normalizeText(source.referenceCatalogAccidentType),
+    referenceCatalogCausativeAgentKey: normalizeDoc7CausativeAgentKey(
+      normalizeText(source.referenceCatalogCausativeAgentKey),
+    ),
     carryForward: normalizeBoolean(source.carryForward),
     metadata: normalizeText(source.metadata) || undefined,
   });

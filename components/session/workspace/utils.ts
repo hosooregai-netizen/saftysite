@@ -292,3 +292,26 @@ export function buildCountEntries(
       return left.label.localeCompare(right.label, 'ko-KR');
     });
 }
+
+/** 건수 기준 상위 topN개만 두고, 나머지는 otherLabel(기본 '기타')로 합산 */
+export function collapseChartEntriesToTopOther(
+  entries: ChartEntry[],
+  topN: number,
+  otherLabel = '기타',
+): ChartEntry[] {
+  if (entries.length <= topN) {
+    return entries.slice();
+  }
+  const head = entries.slice(0, topN).map((entry) => ({ ...entry }));
+  const tailSum = entries.slice(topN).reduce((sum, entry) => sum + entry.count, 0);
+  if (tailSum <= 0) {
+    return head;
+  }
+  const otherIndex = head.findIndex((entry) => entry.label === otherLabel);
+  if (otherIndex >= 0) {
+    const target = head[otherIndex];
+    head[otherIndex] = { ...target, count: target.count + tailSum };
+    return head;
+  }
+  return [...head, { label: otherLabel, count: tailSum }];
+}

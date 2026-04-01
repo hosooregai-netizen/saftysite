@@ -4,7 +4,13 @@ import {
   getSessionSiteKey,
 } from '@/constants/inspectionSession';
 import { CAUSATIVE_AGENT_LABELS } from '@/constants/inspectionSession/doc7Catalog';
-import { buildCountEntries, hasFindingContent } from '@/components/session/workspace/utils';
+import {
+  buildCountEntries,
+  collapseChartEntriesToTopOther,
+  hasFindingContent,
+} from '@/components/session/workspace/utils';
+
+const DOC5_CHART_TOP_N = 5;
 import {
   getDoc7ReferenceMaterialsForReportDate,
   getMeasurementTemplatesForReportDate,
@@ -26,20 +32,29 @@ export function buildInspectionSessionDerivedData(
     .flatMap((item) => item.document7Findings.filter((finding) => hasFindingContent(finding)));
 
   return {
-    currentAccidentEntries: buildCountEntries(currentFindings, (item) => item.accidentType),
-    currentAgentEntries: buildCountEntries(currentFindings, (item) =>
-      item.causativeAgentKey
-        ? CAUSATIVE_AGENT_LABELS[item.causativeAgentKey] ?? item.causativeAgentKey
-        : '',
+    currentAccidentEntries: collapseChartEntriesToTopOther(
+      buildCountEntries(currentFindings, (item) => item.accidentType),
+      DOC5_CHART_TOP_N,
     ),
-    cumulativeAccidentEntries: buildCountEntries(
-      cumulativeFindings,
-      (item) => item.accidentType,
+    currentAgentEntries: collapseChartEntriesToTopOther(
+      buildCountEntries(currentFindings, (item) =>
+        item.causativeAgentKey
+          ? CAUSATIVE_AGENT_LABELS[item.causativeAgentKey] ?? item.causativeAgentKey
+          : '',
+      ),
+      DOC5_CHART_TOP_N,
     ),
-    cumulativeAgentEntries: buildCountEntries(cumulativeFindings, (item) =>
-      item.causativeAgentKey
-        ? CAUSATIVE_AGENT_LABELS[item.causativeAgentKey] ?? item.causativeAgentKey
-        : '',
+    cumulativeAccidentEntries: collapseChartEntriesToTopOther(
+      buildCountEntries(cumulativeFindings, (item) => item.accidentType),
+      DOC5_CHART_TOP_N,
+    ),
+    cumulativeAgentEntries: collapseChartEntriesToTopOther(
+      buildCountEntries(cumulativeFindings, (item) =>
+        item.causativeAgentKey
+          ? CAUSATIVE_AGENT_LABELS[item.causativeAgentKey] ?? item.causativeAgentKey
+          : '',
+      ),
+      DOC5_CHART_TOP_N,
     ),
     measurementTemplates: getMeasurementTemplatesForReportDate(
       masterData,

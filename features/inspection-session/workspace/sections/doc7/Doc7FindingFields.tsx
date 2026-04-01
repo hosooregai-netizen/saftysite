@@ -8,10 +8,12 @@ import {
   CAUSATIVE_AGENT_OPTIONS,
 } from '@/constants/inspectionSession/doc7Catalog';
 import styles from '@/components/session/InspectionSessionWorkspace.module.css';
+import type { SafetyDoc7ReferenceMaterialCatalogItem } from '@/types/backend';
 import type { CurrentHazardFinding } from '@/types/inspectionSession';
 import type { CausativeAgentKey } from '@/types/siteOverview';
 
 interface Doc7FindingFieldsProps {
+  doc7ReferenceMaterials: SafetyDoc7ReferenceMaterialCatalogItem[];
   item: CurrentHazardFinding;
   onAccidentTypeChange: (value: string) => void;
   onCausativeAgentChange: (value: CausativeAgentKey | '') => void;
@@ -19,6 +21,9 @@ interface Doc7FindingFieldsProps {
   referenceMaterial2Title: string;
   selectValueForRiskLevel: (stored: string) => string;
   updateFinding: (updater: (finding: CurrentHazardFinding) => CurrentHazardFinding) => void;
+  updateFindingWithReferenceMaterial: (
+    updater: (finding: CurrentHazardFinding) => CurrentHazardFinding,
+  ) => void;
 }
 
 type ReferencePreviewKind = 'reference1' | 'reference2' | null;
@@ -58,6 +63,7 @@ function PicturePreviewIcon() {
 }
 
 export function Doc7FindingFields({
+  doc7ReferenceMaterials,
   item,
   onAccidentTypeChange,
   onCausativeAgentChange,
@@ -65,8 +71,39 @@ export function Doc7FindingFields({
   referenceMaterial2Title,
   selectValueForRiskLevel,
   updateFinding,
+  updateFindingWithReferenceMaterial,
 }: Doc7FindingFieldsProps) {
   const [previewKind, setPreviewKind] = useState<ReferencePreviewKind>(null);
+  const activeCatalog = useMemo(
+    () => doc7ReferenceMaterials.filter((row) => row.isActive),
+    [doc7ReferenceMaterials],
+  );
+  const catalogAccidentTypes = useMemo(() => {
+    const set = new Set<string>();
+    for (const row of activeCatalog) {
+      const t = row.accidentType?.trim();
+      if (t) {
+        set.add(t);
+      }
+    }
+    return [...set].sort((a, b) => a.localeCompare(b, 'ko'));
+  }, [activeCatalog]);
+  const causativeKeysForRefAccident = useMemo(() => {
+    const selected = (item.referenceCatalogAccidentType ?? '').trim();
+    if (!selected) {
+      return [];
+    }
+    const set = new Set<string>();
+    for (const row of activeCatalog) {
+      if (row.accidentType === selected && row.causativeAgentKey) {
+        set.add(row.causativeAgentKey);
+      }
+    }
+    const keys = [...set];
+    const order = new Map(CAUSATIVE_AGENT_OPTIONS.map((o, i) => [o.key, i]));
+    keys.sort((a, b) => (order.get(a as CausativeAgentKey) ?? 999) - (order.get(b as CausativeAgentKey) ?? 999));
+    return keys;
+  }, [activeCatalog, item.referenceCatalogAccidentType ?? '']);
   const hasReferenceImage = isImageValue(item.referenceMaterial1);
   const reference1Label = useMemo(() => {
     if (!item.referenceMaterial1.trim()) {
@@ -197,6 +234,77 @@ export function Doc7FindingFields({
               }
             />
           </label>
+          <div className={styles.doc7PairRow}>
+            <label className={styles.field}>
+              <span className={styles.fieldLabel}>참고자료-재해유형</span>
+              <select
+                className="app-select"
+                value={item.referenceCatalogAccidentType ?? ''}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  updateFindingWithReferenceMaterial((finding) => {
+                    if (!value.trim()) {
+                      return {
+                        ...finding,
+                        referenceCatalogAccidentType: '',
+                        referenceCatalogCausativeAgentKey: '',
+                      };
+                    }
+                    const allowed = new Set(
+                      activeCatalog
+                        .filter(
+                          (row) =>
+                            row.accidentType === value &&
+                            row.causativeAgentKey,
+                        )
+                        .map((row) => row.causativeAgentKey),
+                    );
+                    const cur = finding.referenceCatalogCausativeAgentKey;
+                    const nextCausative =
+                      cur && allowed.has(cur) ? cur : '';
+                    return {
+                      ...finding,
+                      referenceCatalogAccidentType: value,
+                      referenceCatalogCausativeAgentKey: nextCausative,
+                    };
+                  });
+                }}
+              >
+                <option value="">선택</option>
+                {catalogAccidentTypes.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className={styles.field}>
+              <span className={styles.fieldLabel}>참고자료 - 기인물</span>
+              <select
+                className="app-select"
+                value={item.referenceCatalogCausativeAgentKey ?? ''}
+                disabled={!(item.referenceCatalogAccidentType ?? '').trim()}
+                onChange={(event) =>
+                  updateFindingWithReferenceMaterial((finding) => ({
+                    ...finding,
+                    referenceCatalogCausativeAgentKey: event.target.value,
+                  }))
+                }
+              >
+                <option value="">선택</option>
+                {causativeKeysForRefAccident.map((key) => {
+                  const opt = CAUSATIVE_AGENT_OPTIONS.find((o) => o.key === key);
+                  return (
+                    <option key={key} value={key}>
+                      {opt
+                        ? `${opt.number}. ${CAUSATIVE_AGENT_LABELS[key as CausativeAgentKey] ?? opt.label}`
+                        : key}
+                    </option>
+                  );
+                })}
+              </select>
+            </label>
+          </div>
           <div className={styles.doc7ReferenceGrid}>
             <label className={styles.field}>
               <span className={styles.fieldLabel}>참고자료 1</span>

@@ -19,7 +19,11 @@ interface WorkspaceShellProps {
   currentSectionIndex: number;
   currentUserName?: string;
   documentError: string | null;
+  generateHwpxDocument: () => Promise<void>;
+  generatePdfDocument: () => Promise<void>;
   isAdminView: boolean;
+  isGeneratingHwpx: boolean;
+  isGeneratingPdf: boolean;
   moveSection: (direction: -1 | 1) => void;
   onLogout: () => void;
   onMetaChange: (field: keyof InspectionSession['meta'], value: string) => void;
@@ -38,7 +42,11 @@ export function WorkspaceShell({
   currentSectionIndex,
   currentUserName,
   documentError,
+  generateHwpxDocument,
+  generatePdfDocument,
   isAdminView,
+  isGeneratingHwpx,
+  isGeneratingPdf,
   moveSection,
   onLogout,
   onMetaChange,
@@ -59,15 +67,16 @@ export function WorkspaceShell({
     INSPECTION_SECTIONS[0];
 
   return (
-    <main className="app-page">
+    <div className="app-page-root">
+      <WorkerAppHeader
+        currentUserName={currentUserName}
+        onLogout={onLogout}
+        onOpenMenu={() => setMenuOpen(true)}
+      />
+
+      <main className="app-page">
       <div className="app-container">
         <section className={`app-shell ${styles.shell}`}>
-          <WorkerAppHeader
-            currentUserName={currentUserName}
-            onLogout={onLogout}
-            onOpenMenu={() => setMenuOpen(true)}
-          />
-
           <WorkerShellBody>
             <WorkerMenuSidebar>
               {isAdminView ? (
@@ -78,9 +87,9 @@ export function WorkspaceShell({
             </WorkerMenuSidebar>
 
             <div className={styles.workspacePanel}>
-              <WorkspaceHeader backHref={backHref} session={session} />
-
               <div className={styles.workspaceContentFrame}>
+                <WorkspaceHeader backHref={backHref} session={session} />
+
                 <div className={styles.workspace}>
                   <WorkspaceToolbar
                     canMoveNext={canMoveNext}
@@ -97,9 +106,27 @@ export function WorkspaceShell({
                     <div className={styles.editorCard}>
                       <div className={styles.editorHeader}>
                         <h2 className={styles.editorTitle}>{currentSectionInfo.label}</h2>
-                        {sectionToolbar ? (
-                          <div className={styles.editorHeaderToolbar}>{sectionToolbar}</div>
-                        ) : null}
+                        <div className={styles.editorHeaderToolbar}>
+                          {sectionToolbar}
+                          <div className={styles.editorDocumentActions}>
+                            <button
+                              type="button"
+                              className="app-button app-button-secondary"
+                              disabled={isGeneratingHwpx || isGeneratingPdf}
+                              onClick={() => void generateHwpxDocument()}
+                            >
+                              {isGeneratingHwpx ? 'HWPX 생성 중...' : 'HWPX 다운로드'}
+                            </button>
+                            <button
+                              type="button"
+                              className="app-button app-button-secondary"
+                              disabled={isGeneratingHwpx || isGeneratingPdf}
+                              onClick={() => void generatePdfDocument()}
+                            >
+                              {isGeneratingPdf ? 'PDF 생성 중...' : 'PDF 다운로드'}
+                            </button>
+                          </div>
+                        </div>
                       </div>
                       <div className={styles.editorBody}>{renderSection}</div>
                     </div>
@@ -110,6 +137,7 @@ export function WorkspaceShell({
           </WorkerShellBody>
         </section>
       </div>
+      </main>
 
       <WorkspaceMetaModal
         meta={session.meta}
@@ -132,6 +160,6 @@ export function WorkspaceShell({
           currentSiteKey={session.siteKey}
         />
       )}
-    </main>
+    </div>
   );
 }

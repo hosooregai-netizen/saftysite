@@ -83,9 +83,9 @@ function pickAccidentType(report?: Awaited<ReturnType<typeof normalizeHazardResp
 
 function pickCausativeAgentKey(
   raw: Awaited<ReturnType<typeof normalizeCausativeAgentResponse>>,
-) {
+): CausativeAgentKey | '' {
   const activeEntry = Object.entries(raw.agents).find(([, checked]) => checked);
-  return normalizeDoc7CausativeAgentKey((activeEntry?.[0] ?? '') as CausativeAgentKey | '');
+  return normalizeDoc7CausativeAgentKey((activeEntry?.[0] ?? '') as CausativeAgentKey | '') as CausativeAgentKey | '';
 }
 
 function mergeImprovementPlan(aiPlan: string, catalogPlan: string) {

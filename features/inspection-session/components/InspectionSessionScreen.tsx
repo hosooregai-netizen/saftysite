@@ -55,7 +55,11 @@ export function InspectionSessionScreen({ sessionId }: InspectionSessionScreenPr
       currentSectionIndex={screen.currentSectionIndex}
       currentUserName={screen.currentUserName}
       documentError={screen.documentError}
+      generateHwpxDocument={screen.generateHwpxDocument}
+      generatePdfDocument={screen.generatePdfDocument}
       isAdminView={screen.isAdminView}
+      isGeneratingHwpx={screen.isGeneratingHwpx}
+      isGeneratingPdf={screen.isGeneratingPdf}
       moveSection={screen.moveSection}
       onLogout={screen.logout}
       onMetaChange={screen.changeMetaField}

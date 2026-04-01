@@ -10,6 +10,7 @@ import {
 import styles from '@/components/session/InspectionSessionWorkspace.module.css';
 import {
   applyDoc7ReferenceMaterialMatch,
+  getDoc7ReferenceMatchKeys,
   matchDoc7ReferenceMaterial,
 } from '@/lib/doc7ReferenceMaterials';
 import { Doc7FindingFields } from '@/features/inspection-session/workspace/sections/doc7/Doc7FindingFields';
@@ -45,10 +46,11 @@ export default function Doc7FindingCard({
 }: Doc7FindingCardProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [aiError, setAiError] = useState('');
+  const referenceMatchKeys = getDoc7ReferenceMatchKeys(item);
   const matchedReferenceMaterial = matchDoc7ReferenceMaterial(
     doc7ReferenceMaterials,
-    item.accidentType,
-    item.causativeAgentKey,
+    referenceMatchKeys.accidentType,
+    referenceMatchKeys.causativeAgentKey,
   );
 
   const updateFinding = useCallback(
@@ -71,7 +73,8 @@ export default function Doc7FindingCard({
   );
 
   useEffect(() => {
-    if (!item.accidentType || !item.causativeAgentKey) {
+    const { accidentType, causativeAgentKey } = getDoc7ReferenceMatchKeys(item);
+    if (!accidentType.trim() || !causativeAgentKey) {
       return;
     }
 
@@ -93,6 +96,8 @@ export default function Doc7FindingCard({
     item,
     item.accidentType,
     item.causativeAgentKey,
+    item.referenceCatalogAccidentType,
+    item.referenceCatalogCausativeAgentKey,
     item.referenceMaterial1,
     item.referenceMaterial2,
     updateFinding,
@@ -155,6 +160,7 @@ export default function Doc7FindingCard({
           <span className={styles.cardEyebrow}>{`위험요인 ${index + 1}`}</span>
         </div>
         <Doc7FindingFields
+          doc7ReferenceMaterials={doc7ReferenceMaterials}
           item={item}
           referenceMaterial1Title={
             matchedReferenceMaterial?.referenceTitle1 || matchedReferenceMaterial?.title || ''
@@ -164,6 +170,7 @@ export default function Doc7FindingCard({
           }
           selectValueForRiskLevel={selectValueForRiskLevel}
           updateFinding={updateFinding}
+          updateFindingWithReferenceMaterial={updateFindingWithReferenceMaterial}
           onAccidentTypeChange={(value) =>
             updateFindingWithReferenceMaterial((finding) => ({
               ...finding,

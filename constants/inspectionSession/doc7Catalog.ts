@@ -93,11 +93,11 @@ export const CAUSATIVE_AGENT_LABELS = {
 } as Record<CausativeAgentKey, string>;
 
 export function normalizeDoc7CausativeAgentKey(
-  value: CausativeAgentKey | '' | null | undefined,
-): CausativeAgentKey | '' {
+  value: string | null | undefined,
+): string {
   if (!value) {
     return '';
   }
 
-  return LEGACY_CAUSATIVE_AGENT_KEY_MAP[value] ?? value;
+  return (LEGACY_CAUSATIVE_AGENT_KEY_MAP[value as CausativeAgentKey] ?? value) as string;
 }

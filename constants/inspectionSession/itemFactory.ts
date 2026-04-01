@@ -73,6 +73,8 @@ export function createCurrentHazardFinding(
     legalReferenceTitle: '',
     referenceMaterial1: '',
     referenceMaterial2: '',
+    referenceCatalogAccidentType: '',
+    referenceCatalogCausativeAgentKey: '',
     carryForward: false,
     metadata: undefined,
     ...initial,

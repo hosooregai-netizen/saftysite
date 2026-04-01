@@ -80,6 +80,9 @@ export interface CurrentHazardFinding {
   legalReferenceTitle: string;
   referenceMaterial1: string;
   referenceMaterial2: string;
+  /** 참고자료 매칭용(콘텐츠 CRUD doc7). 비어 있으면 accidentType/causativeAgentKey로 폴백 */
+  referenceCatalogAccidentType: string;
+  referenceCatalogCausativeAgentKey: string;
   carryForward: boolean;
   metadata?: string;
 }
