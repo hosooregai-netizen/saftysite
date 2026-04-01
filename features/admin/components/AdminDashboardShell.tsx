@@ -41,17 +41,18 @@ export function AdminDashboardShell({
   const shouldCenterContent = activeSection !== 'overview';
 
   return (
-    <main className="app-page">
+    <div className="app-page-root">
+      <WorkerAppHeader
+        currentUserName={currentUserName}
+        onLogout={onLogout}
+        onOpenMenu={() => setMenuOpen(true)}
+        brand="산업 종합 안전"
+        accountLabel="관리자 계정"
+      />
+
+      <main className="app-page">
       <div className="app-container">
         <section className={`app-shell ${styles.shell}`}>
-          <WorkerAppHeader
-            currentUserName={currentUserName}
-            onLogout={onLogout}
-            onOpenMenu={() => setMenuOpen(true)}
-            brand="산업 종합 안전"
-            accountLabel="관리자 계정"
-          />
-
           <WorkerShellBody>
             <WorkerMenuSidebar>
               <AdminMenuPanel
@@ -65,61 +66,64 @@ export function AdminDashboardShell({
             </WorkerMenuSidebar>
 
             <div className={styles.contentColumn}>
-              <header className={styles.hero}>
-                <div
-                  className={`${styles.heroBody} ${
-                    hasHeroDescription ? styles.heroBodyCompact : ''
-                  }`}
-                >
-                  {backLabel && onBack ? (
-                    <button
-                      type="button"
-                      className={styles.heroBackButton}
-                      onClick={onBack}
-                      aria-label={`${backLabel}으로 돌아가기`}
-                    >
-                      {'<'} {backLabel}
-                    </button>
-                  ) : null}
+              <div className="app-main-frame">
+                <header className={styles.hero}>
                   <div
-                    className={`${styles.heroMain} ${
-                      hasHeroDescription ? styles.heroMainCompact : ''
+                    className={`${styles.heroBody} ${
+                      hasHeroDescription ? styles.heroBodyCompact : ''
                     }`}
                   >
-                    <h1
-                      className={`${styles.heroTitle} ${
-                        hasHeroDescription ? styles.heroTitleCompact : ''
+                    {backLabel && onBack ? (
+                      <button
+                        type="button"
+                        className={styles.heroBackButton}
+                        onClick={onBack}
+                        aria-label={`${backLabel}으로 돌아가기`}
+                      >
+                        {'<'} {backLabel}
+                      </button>
+                    ) : null}
+                    <div
+                      className={`${styles.heroMain} ${
+                        hasHeroDescription ? styles.heroMainCompact : ''
                       }`}
                     >
-                      {activeSectionLabel}
-                    </h1>
-                    {activeSectionDescription ? (
-                      <p
-                        className={`${styles.heroDescription} ${
-                          hasHeroDescription ? styles.heroDescriptionCompact : ''
+                      <h1
+                        className={`${styles.heroTitle} ${
+                          hasHeroDescription ? styles.heroTitleCompact : ''
                         }`}
                       >
-                        {activeSectionDescription}
-                      </p>
-                    ) : null}
+                        {activeSectionLabel}
+                      </h1>
+                      {activeSectionDescription ? (
+                        <p
+                          className={`${styles.heroDescription} ${
+                            hasHeroDescription ? styles.heroDescriptionCompact : ''
+                          }`}
+                        >
+                          {activeSectionDescription}
+                        </p>
+                      ) : null}
+                    </div>
                   </div>
-                </div>
-              </header>
+                </header>
 
-              <div className={styles.pageGrid}>
-                <section
-                  className={`${styles.contentStack} ${
-                    shouldCenterContent ? styles.contentStackCentered : ''
-                  }`}
-                >
-                  {banners}
-                  {children}
-                </section>
+                <div className={styles.pageGrid}>
+                  <section
+                    className={`${styles.contentStack} ${
+                      shouldCenterContent ? styles.contentStackCentered : ''
+                    }`}
+                  >
+                    {banners}
+                    {children}
+                  </section>
+                </div>
               </div>
             </div>
           </WorkerShellBody>
         </section>
       </div>
+      </main>
 
       <AdminMenuDrawer
         open={menuOpen}
@@ -131,6 +135,6 @@ export function AdminDashboardShell({
           onSelectSection(section);
         }}
       />
-    </main>
+    </div>
   );
 }

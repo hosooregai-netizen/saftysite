@@ -12,11 +12,11 @@ import {
 } from '@/lib/safetyApiMappers/utils';
 import { CONTENT_TYPE_META, type ContentEditorMode } from '@/lib/admin';
 import type { SafetyContentItem, SafetyContentType } from '@/types/backend';
-import type { CausativeAgentKey } from '@/types/siteOverview';
 
 export interface ContentFormState {
   accident_type: string;
-  causative_agent_key: CausativeAgentKey | '';
+  /** 표준 키(예: ladder) 또는 직접 입력 문자열 */
+  causative_agent_key: string;
   content_type: SafetyContentType;
   effective_from: string;
   effective_to: string;
@@ -197,6 +197,10 @@ export function getContentPreview(item: SafetyContentItem): string {
     return text || '안전 기준 없음';
   }
 
+  if (!meta) {
+    return text || normalizeMapperText(item.title) || '-';
+  }
+
   if (meta.editorMode === 'image') {
     if (item.content_type === 'safety_news') {
       return contentBodyToAssetUrl(item.body)
@@ -221,7 +225,12 @@ export function getContentAttachmentSummary(item: SafetyContentItem): string {
     return contentBodyToAssetUrl(item.body) ? 'PDF/이미지 업로드' : 'PDF/이미지 없음';
   }
 
-  const mode: ContentEditorMode = CONTENT_TYPE_META[item.content_type].editorMode;
+  const meta = CONTENT_TYPE_META[item.content_type];
+  if (!meta) {
+    return '-';
+  }
+
+  const mode: ContentEditorMode = meta.editorMode;
   if (mode === 'image') {
     return contentBodyToImageUrl(item.body) ? '이미지 업로드' : '이미지 없음';
   }

@@ -3,11 +3,6 @@
 import { useDeferredValue, useMemo, useState } from 'react';
 import AppModal from '@/components/ui/AppModal';
 import ActionMenu from '@/components/ui/ActionMenu';
-import {
-  ACCIDENT_TYPE_OPTIONS,
-  CAUSATIVE_AGENT_LABELS,
-  CAUSATIVE_AGENT_OPTIONS,
-} from '@/constants/inspectionSession/doc7Catalog';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import {
   uploadSafetyAssetFile,
@@ -546,16 +541,41 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
                     ))}
                   </div>
                 ) : (
-                  <label className={styles.modalFieldWide}>
-                    <span className={styles.label}>{titleLabel}</span>
-                    <input
-                      className="app-input"
-                      value={form.title}
-                      placeholder={titlePlaceholder}
-                      onChange={(e) => setForm({ ...form, title: e.target.value })}
-                      disabled={busy}
-                    />
-                  </label>
+                  <div className={styles.batchCaseGrid}>
+                    <article
+                      className={`${styles.batchCaseCard} ${styles.batchCaseCardSingle}`}
+                    >
+                      <div className={styles.batchCaseHeader}>
+                        <strong>재해 사례</strong>
+                      </div>
+                      <label className={styles.modalField}>
+                        <span className={styles.label}>{titleLabel}</span>
+                        <input
+                          className="app-input"
+                          value={form.title}
+                          placeholder={titlePlaceholder}
+                          onChange={(e) => setForm({ ...form, title: e.target.value })}
+                          disabled={busy}
+                        />
+                      </label>
+                      <ContentAssetField
+                        accept="image/*"
+                        disabled={busy || !canUploadAssets}
+                        helperText={uploadPermissionHelperText}
+                        label="대표 이미지"
+                        mode="image"
+                        readOnly={!canUploadAssets}
+                        value={form.image_url}
+                        fileName={form.image_name}
+                        onChange={({ value, fileName }) =>
+                          setForm({ ...form, image_url: value, image_name: fileName })
+                        }
+                        onClear={() => setForm({ ...form, image_url: '', image_name: '' })}
+                        resolveFile={uploadFileAsset}
+                        validateFile={validateLargeFile}
+                      />
+                    </article>
+                  </div>
                 )
               ) : null}
 
@@ -564,42 +584,29 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
                   <div className={styles.modalGrid}>
                     <label className={styles.modalField}>
                       <span className={styles.label}>재해유형</span>
-                      <select
-                        className="app-select"
+                      <input
+                        className="app-input"
+                        type="text"
                         value={form.accident_type}
-                        onChange={(e) =>
-                          setForm({ ...form, accident_type: e.target.value })
-                        }
+                        placeholder="재해유형 직접 입력"
+                        onChange={(e) => setForm({ ...form, accident_type: e.target.value })}
                         disabled={busy}
-                      >
-                        <option value="">선택</option>
-                        {ACCIDENT_TYPE_OPTIONS.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
+                        autoComplete="off"
+                      />
                     </label>
                     <label className={styles.modalField}>
                       <span className={styles.label}>기인물 유형</span>
-                      <select
-                        className="app-select"
+                      <input
+                        className="app-input"
+                        type="text"
                         value={form.causative_agent_key}
+                        placeholder="기인물 직접 입력 (표준 키 또는 문구)"
                         onChange={(e) =>
-                          setForm({
-                            ...form,
-                            causative_agent_key: e.target.value as typeof form.causative_agent_key,
-                          })
+                          setForm({ ...form, causative_agent_key: e.target.value })
                         }
                         disabled={busy}
-                      >
-                        <option value="">선택</option>
-                        {CAUSATIVE_AGENT_OPTIONS.map((option) => (
-                          <option key={option.key} value={option.key}>
-                            {option.number}. {CAUSATIVE_AGENT_LABELS[option.key] ?? option.label}
-                          </option>
-                        ))}
-                      </select>
+                        autoComplete="off"
+                      />
                     </label>
                   </div>
                   <div className={styles.referenceMaterialEditorGrid}>
@@ -675,7 +682,8 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
 
               {activeTypeMeta.editorMode === 'image' &&
               !isDisasterCaseBatchCreate &&
-              !isDoc7ReferenceMaterial ? (
+              !isDoc7ReferenceMaterial &&
+              !isDisasterCase ? (
                 <ContentAssetField
                   accept={isSafetyNews ? '.pdf,.png,.jpg,.jpeg,.gif,.webp' : 'image/*'}
                   disabled={busy || !canUploadAssets}

@@ -7,7 +7,7 @@
 .hero {
   flex-shrink: 0;
   min-height: 0;
-  padding: 18px 27px 17px;
+  padding: 18px 0 17px;
   border-bottom: 1px solid var(--erp-line);
   background: #f6f9fc;
   color: var(--erp-dark);
@@ -113,7 +113,7 @@
   gap: 16px;
   flex: 1 1 auto;
   min-height: 0;
-  padding: 20px 28px 24px;
+  padding: 18px 0 24px;
 }
 
 .summaryBar {
