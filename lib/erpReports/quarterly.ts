@@ -2,9 +2,9 @@ import {
   createFutureProcessRiskPlan,
   getSessionGuidanceDate,
   getSessionProgress,
-  getSessionTitle,
   isImplementedFollowUpResult,
 } from '@/constants/inspectionSession';
+import { isMeaningfulDocument7Finding } from '@/lib/erpReports/document7FindingCount';
 import {
   createTimestamp,
   generateId,
@@ -21,17 +21,6 @@ import {
   normalizeQuarterlyReportPeriod,
   QUARTERLY_SUMMARY_REPORT_KIND,
 } from './shared';
-
-function hasMeaningfulFinding(finding: InspectionSession['document7Findings'][number]) {
-  return Boolean(
-    finding.location ||
-      finding.emphasis ||
-      finding.improvementPlan ||
-      finding.accidentType ||
-      finding.causativeAgentKey ||
-      finding.metadata,
-  );
-}
 
 function normalizeMeasureText(value: string) {
   return value
@@ -148,7 +137,7 @@ function buildDerivedQuarterlyContent(
   const majorMeasures: string[] = [];
 
   selectedSessions.forEach((session) => {
-    session.document7Findings.filter(hasMeaningfulFinding).forEach((finding) => {
+    session.document7Findings.filter(isMeaningfulDocument7Finding).forEach((finding) => {
       const accidentLabel = finding.accidentType || '기타';
       accidentCounter.set(accidentLabel, (accidentCounter.get(accidentLabel) || 0) + 1);
 
@@ -169,12 +158,12 @@ function buildDerivedQuarterlyContent(
 
   const implementationRows = selectedSessionsByReportNumber.map((session) => ({
     sessionId: session.id,
-    reportTitle: getSessionTitle(session),
+    reportTitle: '',
     reportDate: getSessionGuidanceDate(session),
     reportNumber: session.reportNumber,
     drafter: session.meta.drafter,
     progressRate: session.document2Overview.progressRate || '',
-    findingCount: session.document7Findings.filter(hasMeaningfulFinding).length,
+    findingCount: session.document7Findings.filter(isMeaningfulDocument7Finding).length,
     improvedCount: session.document4FollowUps.filter((item) => isImplementedFollowUpResult(item.result))
       .length,
     note: '',

@@ -1,25 +1,17 @@
 import {
   DEFAULT_GUIDANCE_AGENCY,
   getSessionGuidanceDate,
+  getSessionProgress,
 } from '@/constants/inspectionSession';
 import { createTimestamp, generateId } from '@/constants/inspectionSession/shared';
+import {
+  countMeaningfulDocument7Findings,
+  isMeaningfulDocument7Finding,
+} from '@/lib/erpReports/document7FindingCount';
 import type { SafetyUser } from '@/types/backend';
 import type { BadWorkplaceReport, BadWorkplaceViolation } from '@/types/erpReports';
 import type { InspectionSession, InspectionSite } from '@/types/inspectionSession';
 import { BAD_WORKPLACE_REPORT_KIND, buildBadWorkplaceReportKey } from './shared';
-
-function hasMeaningfulFinding(
-  finding: InspectionSession['document7Findings'][number],
-) {
-  return Boolean(
-    finding.location ||
-      finding.emphasis ||
-      finding.improvementPlan ||
-      finding.legalReferenceTitle ||
-      finding.referenceMaterial1 ||
-      finding.referenceMaterial2,
-  );
-}
 
 function sortSessionsByDateDesc(sessions: InspectionSession[]) {
   return [...sessions].sort((left, right) => {
@@ -35,7 +27,24 @@ export function getBadWorkplaceSourceSessions(siteSessions: InspectionSession[])
 
 export function getBadWorkplaceSelectableFindings(session: InspectionSession | null) {
   if (!session) return [];
-  return session.document7Findings.filter((finding) => hasMeaningfulFinding(finding));
+  return session.document7Findings.filter((finding) => isMeaningfulDocument7Finding(finding));
+}
+
+/** 요약·목록에 표시할 문서7 지적 건수 (분기 보고서 이행현황과 동일한 실질 내용 기준) */
+export function countDocument7FindingsForDisplay(session: InspectionSession | null): number {
+  if (!session) return 0;
+  return countMeaningfulDocument7Findings(session);
+}
+
+/** 개요에 입력된 진행률이 없으면 섹션 완료율(%)을 사용 */
+export function formatSessionProgressRateDisplay(session: InspectionSession | null): string {
+  if (!session) return '-';
+  const raw = session.document2Overview.progressRate?.trim();
+  if (raw) {
+    return /%$/.test(raw) ? raw : `${raw}%`;
+  }
+  const pct = getSessionProgress(session).percentage;
+  return `${pct}%`;
 }
 
 export function buildBadWorkplaceViolations(

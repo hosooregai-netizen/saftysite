@@ -211,6 +211,17 @@ export function getQuarterTargetForExactPeriod(
     : null;
 }
 
+/** 기간이 한 분기와 정확히 일치하지 않을 때(예: 2월~4월) 시작일이 속한 분기로 식별 */
+function getQuarterTargetFromPeriodAnchor(
+  periodStartDate: string,
+  periodEndDate: string,
+): ReturnType<typeof parseQuarterKey> {
+  const anchor = normalizeMapperText(periodStartDate) || normalizeMapperText(periodEndDate);
+  if (!anchor) return null;
+  const key = getQuarterKeyForDate(anchor);
+  return key ? parseQuarterKey(key) : null;
+}
+
 function getStoredQuarterTarget(
   report: Pick<QuarterlySummaryReport, 'quarterKey' | 'year' | 'quarter'>,
 ) {
@@ -239,13 +250,26 @@ export function normalizeQuarterlyReportPeriod(
   const storedTarget = getStoredQuarterTarget(report);
 
   if (periodStartDate || periodEndDate) {
-    const target = getQuarterTargetForExactPeriod(periodStartDate, periodEndDate);
+    const exactTarget = getQuarterTargetForExactPeriod(periodStartDate, periodEndDate);
+    if (exactTarget) {
+      return {
+        periodStartDate,
+        periodEndDate,
+        quarterKey: exactTarget.quarterKey,
+        year: exactTarget.year,
+        quarter: exactTarget.quarter,
+      };
+    }
+
+    const anchorTarget = getQuarterTargetFromPeriodAnchor(periodStartDate, periodEndDate);
+    const merged = storedTarget ?? anchorTarget;
+
     return {
       periodStartDate,
       periodEndDate,
-      quarterKey: target?.quarterKey || storedTarget?.quarterKey || '',
-      year: target?.year || storedTarget?.year || 0,
-      quarter: target?.quarter || storedTarget?.quarter || 0,
+      quarterKey: merged?.quarterKey || '',
+      year: merged?.year || 0,
+      quarter: merged?.quarter || 0,
     };
   }
 
