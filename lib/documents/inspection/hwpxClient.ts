@@ -2,11 +2,14 @@
 
 import JSZip from 'jszip';
 
+import { collapseChartEntriesToTopOther } from '@/components/session/workspace/utils';
 import { getSessionGuidanceDate } from '@/constants/inspectionSession';
 import { FIXED_SCENE_COUNT } from '@/constants/inspectionSession/catalog';
 import { CAUSATIVE_AGENT_LABELS } from '@/constants/inspectionSession/doc7Catalog';
 import { getExtraSceneTitle } from '@/constants/inspectionSession/scenePhotos';
 import type { ChecklistRating, InspectionSession } from '@/types/inspectionSession';
+
+const DOC5_CHART_TOP_N = 5;
 
 type RepeatBlockPath =
   | 'sec4.follow_ups'
@@ -953,21 +956,33 @@ function buildDoc5ChartImages(
     .filter((item) => item.reportNumber <= session.reportNumber)
     .flatMap((item) => item.document7Findings.filter((finding) => hasDoc5FindingContent(finding)));
 
-  const currentAccidentEntries = buildDoc5ChartEntries(currentFindings, (item) => item.accidentType);
-  const cumulativeAccidentEntries = buildDoc5ChartEntries(cumulativeFindings, (item) => item.accidentType);
-  const currentAgentEntries = buildDoc5ChartEntries(
-    currentFindings,
-    (item) => {
-      const key = item.causativeAgentKey;
-      return key ? DOC5_CAUSATIVE_AGENT_LABELS.get(key) ?? key : '';
-    },
+  const currentAccidentEntries: Doc5ChartEntry[] = collapseChartEntriesToTopOther(
+    buildDoc5ChartEntries(currentFindings, (item) => item.accidentType),
+    DOC5_CHART_TOP_N,
   );
-  const cumulativeAgentEntries = buildDoc5ChartEntries(
-    cumulativeFindings,
-    (item) => {
-      const key = item.causativeAgentKey;
-      return key ? DOC5_CAUSATIVE_AGENT_LABELS.get(key) ?? key : '';
-    },
+  const cumulativeAccidentEntries: Doc5ChartEntry[] = collapseChartEntriesToTopOther(
+    buildDoc5ChartEntries(cumulativeFindings, (item) => item.accidentType),
+    DOC5_CHART_TOP_N,
+  );
+  const currentAgentEntries: Doc5ChartEntry[] = collapseChartEntriesToTopOther(
+    buildDoc5ChartEntries(
+      currentFindings,
+      (item) => {
+        const key = item.causativeAgentKey;
+        return key ? DOC5_CAUSATIVE_AGENT_LABELS.get(key) ?? key : '';
+      },
+    ),
+    DOC5_CHART_TOP_N,
+  );
+  const cumulativeAgentEntries: Doc5ChartEntry[] = collapseChartEntriesToTopOther(
+    buildDoc5ChartEntries(
+      cumulativeFindings,
+      (item) => {
+        const key = item.causativeAgentKey;
+        return key ? DOC5_CAUSATIVE_AGENT_LABELS.get(key) ?? key : '';
+      },
+    ),
+    DOC5_CHART_TOP_N,
   );
 
   return {
@@ -1053,6 +1068,8 @@ function createEmptyFinding() {
     legalReferenceTitle: '',
     referenceMaterial1: '',
     referenceMaterial2: '',
+    referenceCatalogAccidentType: '',
+    referenceCatalogCausativeAgentKey: '' as const,
     carryForward: false,
   };
 }

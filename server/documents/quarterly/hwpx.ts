@@ -286,12 +286,6 @@ async function resolveOpsImageAsset(
   return null;
 }
 
-function combineDistinctValues(values: Array<string | null | undefined>) {
-  const normalized = values.map((item) => formatOptionalText(item)).filter(Boolean);
-  const unique = normalized.filter((item, index) => normalized.indexOf(item) === index);
-  return unique.join(' / ');
-}
-
 function normalizeHwpxPlainText(value: string) {
   return value.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 }
@@ -680,25 +674,17 @@ function buildOpsDetailLines(report: QuarterlySummaryReport) {
 
 function updateSnapshotTable(tableXml: string, report: QuarterlySummaryReport, site: InspectionSite) {
   const snapshot = report.siteSnapshot;
-  const siteManagement = combineDistinctValues([
-    snapshot.siteManagementNumber,
-    snapshot.businessStartNumber,
-  ]);
-  const corporationRegistration = combineDistinctValues([
-    snapshot.corporationRegistrationNumber,
-    snapshot.businessRegistrationNumber,
-  ]);
 
   let nextTable = tableXml;
   nextTable = replaceCellText(nextTable, 1, 2, formatText(snapshot.siteName || site.siteName));
-  nextTable = replaceCellText(nextTable, 1, 4, formatText(siteManagement));
+  nextTable = replaceCellText(nextTable, 1, 4, formatText(snapshot.siteManagementNumber));
   nextTable = replaceCellText(nextTable, 2, 2, formatText(snapshot.constructionPeriod));
   nextTable = replaceCellText(nextTable, 2, 4, formatText(snapshot.constructionAmount));
   nextTable = replaceCellText(nextTable, 3, 2, formatText(snapshot.siteManagerName));
   nextTable = replaceCellText(nextTable, 3, 4, formatText(snapshot.siteContactEmail));
   nextTable = replaceCellText(nextTable, 4, 2, formatText(snapshot.siteAddress));
   nextTable = replaceCellText(nextTable, 6, 2, formatText(snapshot.companyName));
-  nextTable = replaceCellText(nextTable, 6, 4, formatText(corporationRegistration));
+  nextTable = replaceCellText(nextTable, 6, 4, formatText(snapshot.corporationRegistrationNumber));
   nextTable = replaceCellText(nextTable, 7, 2, formatText(snapshot.licenseNumber));
   nextTable = replaceCellText(nextTable, 7, 4, formatText(snapshot.headquartersContact));
   nextTable = replaceCellText(nextTable, 8, 2, formatText(snapshot.headquartersAddress));
@@ -745,12 +731,7 @@ function updateImplementationTable(tableXml: string, report: QuarterlySummaryRep
     nextTable = replaceCellText(nextTable, rowAddr, 3, formatText(item.progressRate));
     nextTable = replaceCellText(nextTable, rowAddr, 4, String(item.findingCount));
     nextTable = replaceCellText(nextTable, rowAddr, 5, String(item.improvedCount));
-    nextTable = replaceCellText(
-      nextTable,
-      rowAddr,
-      6,
-      formatText(item.note || item.reportTitle, NO_DATA_VALUE),
-    );
+    nextTable = replaceCellText(nextTable, rowAddr, 6, formatText(item.note, NO_DATA_VALUE));
   });
 
   return nextTable;
