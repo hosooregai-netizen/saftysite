@@ -6,6 +6,11 @@ import { IMAGE_UPLOAD_LABEL_DESKTOP, IMAGE_UPLOAD_LABEL_MOBILE } from '@/constan
 import { useImageSourcePicker } from '@/hooks/useImageSourcePicker';
 import styles from '@/components/session/InspectionSessionWorkspace.module.css';
 import { isImageValue } from '@/components/session/workspace/utils';
+import {
+  getSafetyAssetTransportWarning,
+  shouldOpenSafetyAssetInNewTab,
+  shouldUseSafetyAssetDownloadAttribute,
+} from '@/lib/safetyApi/assetUrls';
 
 interface UploadBoxProps {
   accept?: string;
@@ -37,6 +42,9 @@ export function UploadBox({
   const { cameraInputRef, galleryInputRef, pickerModal, requestPick } = useImageSourcePicker({
     title: '사진 불러오기',
   });
+  const shouldUseDownload = shouldUseSafetyAssetDownloadAttribute(value);
+  const shouldOpenInNewTab = shouldOpenSafetyAssetInNewTab(value);
+  const assetWarning = getSafetyAssetTransportWarning(value, 'https:');
 
   const handleFileInputChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.currentTarget.files?.[0];
@@ -69,12 +77,15 @@ export function UploadBox({
                   <p className={styles.filePreviewText}>자료 파일이 연결되어 있습니다.</p>
                   <a
                     href={value}
-                    download={fileName || 'material'}
+                    download={shouldUseDownload ? fileName || 'material' : undefined}
+                    target={shouldOpenInNewTab ? '_blank' : undefined}
+                    rel={shouldOpenInNewTab ? 'noreferrer' : undefined}
                     className={styles.fileLink}
                     onClick={(event) => event.stopPropagation()}
                   >
                     파일 열기
                   </a>
+                  {assetWarning ? <p className={styles.filePreviewText}>{assetWarning}</p> : null}
                 </div>
               </label>
             )
@@ -101,12 +112,15 @@ export function UploadBox({
                 <p className={styles.filePreviewText}>자료 파일이 연결되어 있습니다.</p>
                 <a
                   href={value}
-                  download={fileName || 'material'}
+                  download={shouldUseDownload ? fileName || 'material' : undefined}
+                  target={shouldOpenInNewTab ? '_blank' : undefined}
+                  rel={shouldOpenInNewTab ? 'noreferrer' : undefined}
                   className={styles.fileLink}
                   onClick={(event) => event.stopPropagation()}
                 >
                   파일 열기
                 </a>
+                {assetWarning ? <p className={styles.filePreviewText}>{assetWarning}</p> : null}
               </div>
             </label>
           )
@@ -199,4 +213,3 @@ export function UploadBox({
     </div>
   );
 }
-

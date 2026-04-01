@@ -1,3 +1,5 @@
+import { normalizeSafetyAssetUrl } from '@/lib/safetyApi/assetUrls';
+
 export function normalizeMapperText(value: unknown): string {
   return typeof value === 'string' ? value.trim() : '';
 }
@@ -31,7 +33,7 @@ export function contentBodyToText(body: unknown): string {
 
 export function contentBodyToImageUrl(body: unknown): string {
   const record = asMapperRecord(body);
-  return (
+  return normalizeSafetyAssetUrl(
     normalizeMapperText(record.image_url) ||
     normalizeMapperText(record.imageUrl) ||
     normalizeMapperText(record.file_url) ||
@@ -45,7 +47,7 @@ export function contentBodyToImageUrl(body: unknown): string {
 
 export function contentBodyToAssetUrl(body: unknown): string {
   const record = asMapperRecord(body);
-  return (
+  return normalizeSafetyAssetUrl(
     normalizeMapperText(record.file_url) ||
     normalizeMapperText(record.fileUrl) ||
     normalizeMapperText(record.asset_url) ||
@@ -83,4 +85,3 @@ export function parsePositiveInteger(value: string): number | null {
   if (!Number.isInteger(parsed) || parsed <= 0) return null;
   return parsed;
 }
-

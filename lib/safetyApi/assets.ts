@@ -2,8 +2,9 @@
 
 import type { SafetyContentAssetUpload } from './adminEndpoints';
 import { uploadSafetyContentAsset } from './adminEndpoints';
+import { buildSafetyAssetUrl } from './assetUrls';
 import { readSafetyAuthToken } from './authStorage';
-import { buildSafetyApiUrl, getSafetyApiBaseUrl } from './config';
+import { getSafetyApiBaseUrl } from './config';
 
 export const MAX_SAFETY_ASSET_BYTES = 50 * 1024 * 1024;
 export const MAX_SAFETY_PROXY_FILE_BYTES = 50 * 1024 * 1024;
@@ -54,6 +55,6 @@ export async function uploadSafetyAssetFile(file: File): Promise<UploadedSafetyA
   const uploaded = await uploadSafetyContentAsset(token, file);
   return {
     ...uploaded,
-    url: buildSafetyApiUrl(uploaded.path),
+    url: buildSafetyAssetUrl(uploaded.path),
   };
 }

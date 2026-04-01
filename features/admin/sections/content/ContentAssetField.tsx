@@ -8,6 +8,11 @@ import {
 } from '@/constants/imageUploadLabels';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import { readFileAsDataUrl } from '@/features/admin/sections/content/lib/contentItems';
+import {
+  getSafetyAssetTransportWarning,
+  shouldOpenSafetyAssetInNewTab,
+  shouldUseSafetyAssetDownloadAttribute,
+} from '@/lib/safetyApi/assetUrls';
 
 interface ContentAssetFieldProps {
   accept: string;
@@ -53,6 +58,9 @@ export function ContentAssetField(props: ContentAssetFieldProps) {
   const supportsPdf = accept.includes('.pdf');
   const isImage = mode === 'image' && Boolean(value) && !isPdfSource(value);
   const isDisabled = disabled || isProcessing;
+  const shouldUseDownload = shouldUseSafetyAssetDownloadAttribute(value);
+  const shouldOpenInNewTab = shouldOpenSafetyAssetInNewTab(value);
+  const assetWarning = getSafetyAssetTransportWarning(value, 'https:');
 
   return (
     <div className={styles.assetField}>
@@ -104,6 +112,17 @@ export function ContentAssetField(props: ContentAssetFieldProps) {
       {!readOnly ? (
         <>
           <div className={styles.assetActions}>
+            {value ? (
+              <a
+                href={value}
+                download={shouldUseDownload ? fileName || 'material' : undefined}
+                target={shouldOpenInNewTab ? '_blank' : undefined}
+                rel={shouldOpenInNewTab ? 'noreferrer' : undefined}
+                className="app-button app-button-secondary"
+              >
+                파일 열기
+              </a>
+            ) : null}
             <label htmlFor={inputId} className="app-button app-button-secondary">
               {isProcessing
                 ? '업로드 중...'
@@ -161,6 +180,7 @@ export function ContentAssetField(props: ContentAssetFieldProps) {
         </>
       ) : null}
       {helperText ? <p className={styles.modalHint}>{helperText}</p> : null}
+      {assetWarning ? <p className={styles.modalHint}>{assetWarning}</p> : null}
       {error ? <p className={styles.modalError}>{error}</p> : null}
     </div>
   );
