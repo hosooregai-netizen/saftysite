@@ -24,6 +24,14 @@ interface ContentAssetFieldProps {
   validateFile?: (file: File) => string | null;
 }
 
+function isPdfSource(value: string): boolean {
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) return false;
+  if (normalized.startsWith('data:application/pdf')) return true;
+  const pathOnly = normalized.split(/[?#]/)[0] ?? normalized;
+  return /\.pdf$/i.test(pathOnly);
+}
+
 export function ContentAssetField(props: ContentAssetFieldProps) {
   const {
     accept,
@@ -42,7 +50,8 @@ export function ContentAssetField(props: ContentAssetFieldProps) {
   const inputId = useId();
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const isImage = mode === 'image' && Boolean(value);
+  const supportsPdf = accept.includes('.pdf');
+  const isImage = mode === 'image' && Boolean(value) && !isPdfSource(value);
   const isDisabled = disabled || isProcessing;
 
   return (
@@ -101,7 +110,9 @@ export function ContentAssetField(props: ContentAssetFieldProps) {
                 : value
                   ? '파일 변경'
                   : mode === 'image'
-                    ? '이미지 업로드'
+                    ? supportsPdf
+                      ? 'PDF/이미지 업로드'
+                      : '이미지 업로드'
                     : '파일 업로드'}
             </label>
           </div>

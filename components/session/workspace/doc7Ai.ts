@@ -21,20 +21,20 @@ const ACCIDENT_KEYWORD_MAP: Array<{
   type: (typeof ACCIDENT_TYPE_OPTIONS)[number];
 }> = [
   { type: '떨어짐', keywords: ['추락', '떨어짐', '단부', '개구부', '고소', '난간', '발판'] },
-  { type: '넘어짐', keywords: ['넘어짐', '전도'] },
-  { type: '깔림/뒤집힘', keywords: ['깔림', '뒤집힘', '전복', '무너짐'] },
+  { type: '전도', keywords: ['넘어짐', '전도'] },
+  { type: '깔림', keywords: ['깔림', '뒤집힘', '전복'] },
   { type: '부딪힘', keywords: ['부딪힘', '충돌'] },
-  { type: '물체에 맞음', keywords: ['낙하', '물체에 맞음', '맞음', '비래'] },
-  { type: '무너짐', keywords: ['붕괴', '무너짐'] },
+  { type: '맞음', keywords: ['낙하', '물체에 맞음', '맞음', '비래'] },
+  { type: '붕괴', keywords: ['붕괴', '무너짐'] },
   { type: '끼임', keywords: ['끼임'] },
-  { type: '절단/베임/찔림', keywords: ['절단', '베임', '찔림'] },
-  { type: '화재/폭발', keywords: ['화재', '폭발', '화상', '용접'] },
-  { type: '산소결핍', keywords: ['산소결핍'] },
+  { type: '찔림', keywords: ['절단', '베임', '찔림'] },
+  { type: '화재·폭발', keywords: ['화재', '폭발', '화상', '용접'] },
+  { type: '기타', keywords: ['산소결핍'] },
   { type: '감전', keywords: ['감전', '전기', '배선', '누전'] },
-  { type: '교통사고', keywords: ['교통사고', '차량', '트럭', '지게차'] },
-  { type: '불균형 및 무리한 동작', keywords: ['불균형', '무리한 동작', '근골격'] },
-  { type: '이상 기온', keywords: ['이상기온', '폭염', '한랭'] },
-  { type: '업무상 질병', keywords: ['질병', '직업병'] },
+  { type: '충돌', keywords: ['교통사고', '차량', '트럭', '지게차'] },
+  { type: '기타', keywords: ['불균형', '무리한 동작', '근골격'] },
+  { type: '기타', keywords: ['이상기온', '폭염', '한랭'] },
+  { type: '기타', keywords: ['질병', '직업병'] },
 ];
 
 function normalizeLine(value: string): string {
@@ -88,13 +88,6 @@ function pickCausativeAgentKey(
   return normalizeDoc7CausativeAgentKey((activeEntry?.[0] ?? '') as CausativeAgentKey | '');
 }
 
-function splitLegalInfo(value: string) {
-  return value
-    .split(/\n+/)
-    .map((line) => normalizeLine(line))
-    .filter(Boolean);
-}
-
 function mergeImprovementPlan(aiPlan: string, catalogPlan: string) {
   const segments = [aiPlan, catalogPlan].map((value) => value.trim()).filter(Boolean);
   return segments.filter((value, index) => segments.indexOf(value) === index).join('\n');
@@ -140,7 +133,6 @@ export async function buildHazardFindingAutoFill(
   const report = hazardReports[0];
   const likelihood = report?.likelihood ?? '';
   const severity = report?.severity ?? '';
-  const laws = splitLegalInfo(report?.legalInfo ?? '');
   const accidentType = pickAccidentType(report);
   const causativeAgentKey = pickCausativeAgentKey(causativeReport);
   const queryText = [
@@ -191,8 +183,6 @@ export async function buildHazardFindingAutoFill(
     metadata: [normalizeLine(report?.metadata ?? ''), relatedCaseSummary]
       .filter(Boolean)
       .join('\n'),
-    referenceMaterial1: laws[0] ?? recommendedLegalReference?.referenceMaterial1 ?? '',
-    referenceMaterial2: laws[1] ?? recommendedLegalReference?.referenceMaterial2 ?? '',
   };
 }
 

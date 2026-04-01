@@ -706,6 +706,96 @@
   min-width: 0;
 }
 
+.doc7ReferenceGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+  min-width: 0;
+  width: 100%;
+}
+
+.doc7ReferenceInputRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.doc7ReferenceInput {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.doc7ReferencePreviewButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-control);
+  background: var(--erp-white);
+  color: var(--erp-mid);
+  transition:
+    border-color 0.18s ease,
+    color 0.18s ease,
+    background-color 0.18s ease;
+}
+
+.doc7ReferencePreviewButton:hover:not(:disabled) {
+  border-color: #96a4b4;
+  background: #f8fafc;
+  color: var(--erp-dark);
+}
+
+.doc7ReferencePreviewButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.doc7ReferenceIcon {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.doc7ReferencePreviewModal {
+  display: grid;
+  gap: 12px;
+}
+
+.doc7ReferencePreviewImage {
+  display: block;
+  width: 100%;
+  max-height: min(72vh, 820px);
+  height: auto;
+  object-fit: contain;
+  background: #f8fafc;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-sm);
+}
+
+.doc7ReferencePreviewText {
+  min-height: 220px;
+  padding: 16px 18px;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-sm);
+  background: #fbfcfe;
+  font-size: var(--text-body);
+  line-height: 1.8;
+  color: var(--erp-dark);
+  white-space: pre-wrap;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
 /* 모바일·태블릿: 현장 사진을 폼보다 위에 */
 @media (max-width: 899px) {
   .doc7Eyebrow {
@@ -718,6 +808,10 @@
 
   .doc7FormColumn {
     order: 2;
+  }
+
+  .doc7ReferenceGrid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

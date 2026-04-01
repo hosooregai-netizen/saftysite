@@ -3,6 +3,7 @@ import {
   getSessionGuidanceDate,
   getSessionProgress,
   getSessionTitle,
+  isImplementedFollowUpResult,
 } from '@/constants/inspectionSession';
 import {
   createTimestamp,
@@ -174,7 +175,7 @@ function buildDerivedQuarterlyContent(
     drafter: session.meta.drafter,
     progressRate: session.document2Overview.progressRate || '',
     findingCount: session.document7Findings.filter(hasMeaningfulFinding).length,
-    improvedCount: session.document4FollowUps.filter((item) => item.result === 'implemented')
+    improvedCount: session.document4FollowUps.filter((item) => isImplementedFollowUpResult(item.result))
       .length,
     note: '',
   }));

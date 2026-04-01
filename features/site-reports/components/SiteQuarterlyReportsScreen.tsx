@@ -38,6 +38,7 @@ interface QuarterlyListRow {
   href: string;
   reportId: string;
   reportTitle: string;
+  quarterLabel: string;
   selectedCount: number;
   updatedAt: string;
   periodStartDate: string;
@@ -86,6 +87,10 @@ function formatDateTimeLabel(value: string | null | undefined) {
 function getSortTime(value: string) {
   const parsed = value ? new Date(value).getTime() : 0;
   return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+function getQuarterLabel(year: number, quarter: number) {
+  return year > 0 && quarter >= 1 && quarter <= 4 ? `${quarter}분기` : '-';
 }
 
 function compareQuarterlyCreationOrder(
@@ -209,6 +214,7 @@ export function SiteQuarterlyReportsScreen({
         href: buildSiteQuarterlyHref(currentSite.id, report.id),
         reportId: report.id,
         reportTitle: report.title || '분기 종합보고서',
+        quarterLabel: getQuarterLabel(report.year, report.quarter),
         selectedCount: report.generatedFromSessionIds.length,
         updatedAt: report.updatedAt || report.lastCalculatedAt || report.createdAt,
         periodStartDate: report.periodStartDate,
@@ -225,7 +231,7 @@ export function SiteQuarterlyReportsScreen({
     const matchingRows = !normalizedQuery
       ? rows
       : rows.filter((row) =>
-          [row.reportTitle, row.periodLabel]
+          [row.reportTitle, row.quarterLabel, row.periodLabel]
             .join(' ')
             .toLowerCase()
             .includes(normalizedQuery),
@@ -590,7 +596,9 @@ export function SiteQuarterlyReportsScreen({
                               </div>
 
                               <div className={`${styles.dataCell} ${styles.desktopOnly}`}>
-                                <span className={styles.dataValue}>{row.periodLabel}</span>
+                                <span className={styles.dataValue}>
+                                  {row.quarterLabel} {row.periodLabel}
+                                </span>
                               </div>
 
                               <div

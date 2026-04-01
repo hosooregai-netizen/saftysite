@@ -10,7 +10,6 @@ function buildHeadquarterContact(site: SafetySite): string {
   const contactName = normalizeMapperText(site.headquarter_detail?.contact_name);
   const contactPhone = normalizeMapperText(site.headquarter_detail?.contact_phone);
 
-  if (contactName && contactPhone) return `${contactName} / ${contactPhone}`;
   return contactPhone || contactName;
 }
 

@@ -1,10 +1,6 @@
-import type {
-  GenerateBadWorkplaceWordRequest,
-  GenerateInspectionWordRequest,
-  GenerateQuarterlyWordRequest,
-} from '@/types/documents';
-import type { BadWorkplaceReport, QuarterlySummaryReport } from '@/types/erpReports';
-import type { InspectionSession, InspectionSite } from '@/types/inspectionSession';
+import type { GenerateQuarterlyHwpxRequest } from '@/types/documents';
+import type { QuarterlySummaryReport } from '@/types/erpReports';
+import type { InspectionSite } from '@/types/inspectionSession';
 
 const API_BASE = '/api';
 const VERCEL_FUNCTION_BODY_LIMIT_MB = 4.5;
@@ -50,7 +46,7 @@ export function checkCausativeAgents(files: File[]): Promise<unknown> {
 }
 
 function getDownloadFilenameFromDisposition(header: string | null): string {
-  if (!header) return 'inspection-report.docx';
+  if (!header) return 'download.bin';
 
   const encodedMatch = header.match(/filename\*=UTF-8''([^;]+)/i);
   if (encodedMatch) {
@@ -65,13 +61,13 @@ function getDownloadFilenameFromDisposition(header: string | null): string {
   if (match?.[1]) return match[1];
 
   const bareMatch = header.match(/filename=([^;]+)/i);
-  return bareMatch?.[1]?.trim() ?? 'inspection-report.docx';
+  return bareMatch?.[1]?.trim() ?? 'download.bin';
 }
 
-async function fetchWordDocument<TBody>(
+async function fetchDocumentFile<TBody>(
   path: string,
   body: TBody,
-  errorLabel: string
+  errorLabel: string,
 ): Promise<{ blob: Blob; filename: string }> {
   const res = await fetch(`${API_BASE}${path}`, {
     method: 'POST',
@@ -94,7 +90,7 @@ async function fetchWordDocument<TBody>(
   return {
     blob: await res.blob(),
     filename: getDownloadFilenameFromDisposition(
-      res.headers.get('content-disposition')
+      res.headers.get('content-disposition'),
     ),
   };
 }
@@ -104,7 +100,7 @@ export function saveBlobAsFile(blob: Blob, filename: string): void {
   const link = document.createElement('a');
 
   link.href = blobUrl;
-  link.download = filename || 'inspection-report.docx';
+  link.download = filename || 'download.bin';
   document.body.appendChild(link);
   link.click();
 
@@ -133,8 +129,8 @@ export async function convertHwpxBlobToPdf(
       throw new Error(
         [
           `PDF 변환 요청 크기가 너무 큽니다. 현재 HWPX는 ${formatBlobSizeMb(hwpxBlob.size)}입니다.`,
-          `Vercel Functions 요청 본문 제한은 ${VERCEL_FUNCTION_BODY_LIMIT_MB}MB라서 이 배포 환경에서는 프런트만으로 처리할 수 없습니다.`,
-          'HWPX로 다운로드하거나, 별도의 Windows PDF 변환 서버로 보내는 구조가 필요합니다.',
+          `Vercel Functions 요청 본문 제한은 ${VERCEL_FUNCTION_BODY_LIMIT_MB}MB여서 현 배포 환경에서는 처리할 수 없습니다.`,
+          'HWPX로 다운로드하거나 별도 Windows PDF 변환 서버로 보내는 구조가 필요합니다.',
         ].join(' '),
       );
     }
@@ -151,57 +147,31 @@ export async function convertHwpxBlobToPdf(
   return {
     blob: await res.blob(),
     filename: getDownloadFilenameFromDisposition(
-      res.headers.get('content-disposition')
+      res.headers.get('content-disposition'),
     ),
   };
 }
 
-export async function fetchInspectionWordDocument(
-  session: InspectionSession,
-  siteSessions: InspectionSession[] = [session]
-): Promise<{ blob: Blob; filename: string }> {
-  const body: GenerateInspectionWordRequest = {
-    session,
-    siteSessions,
-    templateId: 'default-inspection',
-  };
-  return fetchWordDocument('/documents/inspection/word', body, '워드 다운로드 실패');
-}
-
 export async function fetchQuarterlyHwpxDocument(
   report: QuarterlySummaryReport,
-  site: InspectionSite
+  site: InspectionSite,
 ): Promise<{ blob: Blob; filename: string }> {
-  const body: GenerateQuarterlyWordRequest = { report, site };
-  return fetchWordDocument(
-    '/documents/quarterly/word',
+  const body: GenerateQuarterlyHwpxRequest = { report, site };
+  return fetchDocumentFile(
+    '/documents/quarterly/hwpx',
     body,
-    '분기 보고서 다운로드 실패'
+    '분기 보고서 HWPX 다운로드 실패',
   );
 }
-
-export const fetchQuarterlyWordDocument = fetchQuarterlyHwpxDocument;
 
 export async function fetchQuarterlyPdfDocument(
   report: QuarterlySummaryReport,
-  site: InspectionSite
+  site: InspectionSite,
 ): Promise<{ blob: Blob; filename: string }> {
-  const body: GenerateQuarterlyWordRequest = { report, site };
-  return fetchWordDocument(
+  const body: GenerateQuarterlyHwpxRequest = { report, site };
+  return fetchDocumentFile(
     '/documents/quarterly/pdf',
     body,
-    '분기 보고서 PDF 다운로드 실패'
-  );
-}
-
-export async function fetchBadWorkplaceWordDocument(
-  report: BadWorkplaceReport,
-  site: InspectionSite
-): Promise<{ blob: Blob; filename: string }> {
-  const body: GenerateBadWorkplaceWordRequest = { report, site };
-  return fetchWordDocument(
-    '/documents/bad-workplace/word',
-    body,
-    '불량사업장 신고서 다운로드 실패'
+    '분기 보고서 PDF 다운로드 실패',
   );
 }

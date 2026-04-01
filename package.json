@@ -13,7 +13,6 @@
     "seed:measurement-templates": "node --experimental-strip-types scripts/seed_measurement_templates.ts"
   },
   "dependencies": {
-    "easy-template-x": "^7.2.2",
     "image-size": "^2.0.2",
     "jszip": "^3.10.1",
     "next": "16.1.6",
@@ -34,4 +33,3 @@
     "typescript": "^5"
   }
 }
-

@@ -3,6 +3,11 @@
 import { useDeferredValue, useMemo, useState } from 'react';
 import AppModal from '@/components/ui/AppModal';
 import ActionMenu from '@/components/ui/ActionMenu';
+import {
+  ACCIDENT_TYPE_OPTIONS,
+  CAUSATIVE_AGENT_LABELS,
+  CAUSATIVE_AGENT_OPTIONS,
+} from '@/constants/inspectionSession/doc7Catalog';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import {
   uploadSafetyAssetFile,
@@ -10,17 +15,17 @@ import {
   validateSafetyAssetFile,
 } from '@/lib/safetyApi/assets';
 import {
-  CONTENT_EDITOR_MODE_LABELS,
   CONTENT_TYPE_LABELS,
   CONTENT_TYPE_META,
   CONTENT_TYPE_OPTIONS,
-  formatTimestamp,
   toNullableText,
 } from '@/lib/admin';
+import { formatDateRange } from '@/lib/safetyApiMappers/utils';
 import type { SafetyContentItem } from '@/types/backend';
 import { ContentAssetField } from './ContentAssetField';
 import {
   buildContentBody,
+  buildContentTitle,
   createEmptyContentForm,
   getContentAttachmentSummary,
   getContentPreview,
@@ -57,9 +62,7 @@ interface ContentItemsSectionProps {
   onCreate: (input: {
     content_type: SafetyContentItem['content_type'];
     title: string;
-    code?: string | null;
     body: Record<string, unknown> | string;
-    tags?: string[];
     sort_order?: number;
     effective_from?: string | null;
     effective_to?: string | null;
@@ -67,9 +70,7 @@ interface ContentItemsSectionProps {
   }) => Promise<void>;
   onUpdate: (id: string, input: Partial<{
     title: string;
-    code?: string | null;
     body: Record<string, unknown> | string;
-    tags?: string[];
     sort_order?: number;
     effective_from?: string | null;
     effective_to?: string | null;
@@ -100,7 +101,6 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
         if (!normalizedQuery) return true;
         return [
           item.title,
-          item.code ?? '',
           getContentPreview(item),
           getContentAttachmentSummary(item),
         ]
@@ -122,6 +122,12 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
   const isMeasurementTemplate = form.content_type === 'measurement_template';
   const isSafetyNews = form.content_type === 'safety_news';
   const isDisasterCase = form.content_type === 'disaster_case';
+  const isDoc7ReferenceMaterial = form.content_type === 'doc7_reference_material';
+  const isGenericTitleType =
+    !isMeasurementTemplate &&
+    !isSafetyNews &&
+    !isDisasterCase &&
+    !isDoc7ReferenceMaterial;
   const isDisasterCaseBatchCreate = editingId === 'create' && isDisasterCase;
   const titleLabel = isMeasurementTemplate ? '장비명' : '제목';
   const titlePlaceholder = isMeasurementTemplate ? '예: 조도계' : ''; 
@@ -168,10 +174,6 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
   const submit = async () => {
     if (isDisasterCaseBatchCreate) {
       const sharedPayload = {
-        tags: form.tags
-          .split(',')
-          .map((tag) => tag.trim())
-          .filter(Boolean),
         sort_order: Number(form.sort_order || 0),
         effective_from: toNullableText(form.effective_from),
         effective_to: toNullableText(form.effective_to),
@@ -192,14 +194,12 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
         await onCreate({
           content_type: 'disaster_case',
           title: title || `재해 사례 ${index + 1}`,
-          code: null,
           body: {
             body: summary,
             summary,
             imageUrl: item.image_url || '',
             imageName: item.image_name || '',
           },
-          tags: sharedPayload.tags,
           sort_order: sharedPayload.sort_order + index,
           effective_from: sharedPayload.effective_from,
           effective_to: sharedPayload.effective_to,
@@ -211,15 +211,11 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
       return;
     }
 
-    if (!form.title.trim()) return;
+    const nextTitle = buildContentTitle(form);
+    if (!nextTitle) return;
     const payload = {
-      title: form.title.trim(),
-      code: toNullableText(form.code),
+      title: nextTitle,
       body: buildContentBody(form),
-      tags: form.tags
-        .split(',')
-        .map((tag) => tag.trim())
-        .filter(Boolean),
       sort_order: Number(form.sort_order || 0),
       effective_from: toNullableText(form.effective_from),
       effective_to: toNullableText(form.effective_to),
@@ -236,7 +232,7 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
 
   const handleDeleteContentItem = async (item: SafetyContentItem) => {
     const confirmed = window.confirm(
-      `'${item.title}' 콘텐츠를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`,
+      `'${item.title}' 콘텐츠를 비활성화하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`,
     );
 
     if (!confirmed) return;
@@ -266,7 +262,7 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
         <div className={`${styles.filterRow} ${styles.contentFilterRow}`}>
           <input
             className={`app-input ${styles.filterSearch}`}
-            placeholder="제목, 코드, 미리보기 내용으로 검색"
+            placeholder="제목, 미리보기 내용으로 검색"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
@@ -296,7 +292,7 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
             <div className={styles.tableWrap}>
               <table className={styles.table}>
                 <thead>
-                  <tr>
+                  <tr style={{ display: 'none' }}>
                     <th>유형</th>
                     <th>입력 방식</th>
                     <th>제목</th>
@@ -305,21 +301,26 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
                     <th>수정일</th>
                     <th>메뉴</th>
                   </tr>
+                  <tr>
+                    <th>유형</th>
+                    <th>제목</th>
+                    <th>내용 미리보기</th>
+                    <th>시작일 ~ 종료일</th>
+                    <th>메뉴</th>
+                  </tr>
                 </thead>
                 <tbody>
                   {filteredItems.map((item) => (
                     <tr key={item.id}>
                       <td>{CONTENT_TYPE_LABELS[item.content_type]}</td>
-                      <td>{CONTENT_EDITOR_MODE_LABELS[CONTENT_TYPE_META[item.content_type].editorMode]}</td>
                       <td>
                         <div className={styles.tablePrimary}>{item.title}</div>
                         <div className={styles.tableSecondary}>
-                          {`${item.code || '코드 없음'} · ${item.is_active ? '활성' : '비활성'}`}
+                          {item.is_active ? '활성' : '비활성'}
                         </div>
                       </td>
                       <td>{getContentPreview(item)}</td>
-                      <td>{getContentAttachmentSummary(item)}</td>
-                      <td>{formatTimestamp(item.updated_at)}</td>
+                      <td>{formatDateRange(item.effective_from, item.effective_to) || '-'}</td>
                       <td>
                         <div className={styles.tableActionMenuWrap}>
                           <ActionMenu
@@ -333,7 +334,7 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
                               },
                               ...(canDelete
                                 ? [{
-                                    label: '삭제',
+                                    label: '비활성화',
                                     tone: 'danger' as const,
                                     onSelect: () => {
                                       if (!busy) void handleDeleteContentItem(item);
@@ -407,32 +408,6 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
               </select>
             </label>
 
-            {!isDisasterCaseBatchCreate ? (
-              <label className={styles.modalField}>
-                <span className={styles.label}>{titleLabel}</span>
-                <input
-                  className="app-input"
-                  value={form.title}
-                  placeholder={titlePlaceholder}
-                  onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  disabled={busy}
-                />
-              </label>
-            ) : null}
-
-            {!isDisasterCaseBatchCreate ? (
-              <label className={styles.modalField}>
-                <span className={styles.label}>코드</span>
-                <input
-                  className="app-input"
-                  placeholder="선택 입력"
-                  value={form.code}
-                  onChange={(e) => setForm({ ...form, code: e.target.value })}
-                  disabled={busy}
-                />
-              </label>
-            ) : null}
-
             <label className={styles.modalField}>
               <span className={styles.label}>정렬 순서</span>
               <input
@@ -464,16 +439,6 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
                 disabled={busy}
               />
             </label>
-
-            <label className={styles.modalFieldWide}>
-              <span className={styles.label}>태그</span>
-              <input
-                className="app-input"
-                value={form.tags}
-                onChange={(e) => setForm({ ...form, tags: e.target.value })}
-                disabled={busy}
-              />
-            </label>
           </div>
 
           {activeTypeMeta ? (
@@ -481,37 +446,43 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
               <div className={styles.contentTypeHeader}>
                 <div>
                   <strong>{activeTypeMeta.label}</strong>
-                  <p className={styles.modalHint}>{activeTypeMeta.description}</p>
-                  {activeTypeMeta.usageHint ? (
-                    <p className={styles.modalHintStrong}>{activeTypeMeta.usageHint}</p>
-                  ) : null}
                 </div>
-                <span className="app-chip">{CONTENT_EDITOR_MODE_LABELS[activeTypeMeta.editorMode]}</span>
               </div>
 
               {isMeasurementTemplate ? (
-                <label className={styles.modalFieldWide}>
-                  <span className={styles.label}>안전 기준</span>
-                  <textarea
-                    className="app-textarea"
-                    rows={8}
-                    placeholder={'예시\n1. 초정밀작업 : 750 Lux 이상\n2. 정밀작업 : 300 Lux 이상'}
-                    value={form.text_body}
-                    onChange={(e) => setForm({ ...form, text_body: e.target.value })}
-                    disabled={busy}
-                  />
-                </label>
+                <>
+                  <label className={styles.modalFieldWide}>
+                    <span className={styles.label}>{titleLabel}</span>
+                    <input
+                      className="app-input"
+                      value={form.title}
+                      placeholder={titlePlaceholder}
+                      onChange={(e) => setForm({ ...form, title: e.target.value })}
+                      disabled={busy}
+                    />
+                  </label>
+                  <label className={styles.modalFieldWide}>
+                    <span className={styles.label}>안전 기준</span>
+                    <textarea
+                      className="app-textarea"
+                      rows={8}
+                      placeholder={'예시\n1. 초정밀작업 : 750 Lux 이상\n2. 정밀작업 : 300 Lux 이상'}
+                      value={form.text_body}
+                      onChange={(e) => setForm({ ...form, text_body: e.target.value })}
+                      disabled={busy}
+                    />
+                  </label>
+                </>
               ) : null}
 
               {isSafetyNews ? (
                 <label className={styles.modalFieldWide}>
-                  <span className={styles.label}>안내 문구(선택)</span>
-                  <textarea
-                    className="app-textarea"
-                    rows={4}
-                    placeholder="문서 14 하단에 추가로 보여줄 안내 문구가 있으면 입력"
-                    value={form.text_body}
-                    onChange={(e) => setForm({ ...form, text_body: e.target.value })}
+                  <span className={styles.label}>{titleLabel}</span>
+                  <input
+                    className="app-input"
+                    value={form.title}
+                    placeholder={titlePlaceholder}
+                    onChange={(e) => setForm({ ...form, title: e.target.value })}
                     disabled={busy}
                   />
                 </label>
@@ -535,23 +506,6 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
                               setDisasterCaseBatchItems((current) =>
                                 current.map((entry, entryIndex) =>
                                   entryIndex === index ? { ...entry, title: e.target.value } : entry,
-                                ),
-                              )
-                            }
-                            disabled={busy}
-                          />
-                        </label>
-                        <label className={styles.modalField}>
-                          <span className={styles.label}>사례 요약(선택)</span>
-                          <textarea
-                            className="app-textarea"
-                            rows={4}
-                            placeholder="문서 13 카드 하단에 보여줄 사례 요약"
-                            value={item.summary}
-                            onChange={(e) =>
-                              setDisasterCaseBatchItems((current) =>
-                                current.map((entry, entryIndex) =>
-                                  entryIndex === index ? { ...entry, summary: e.target.value } : entry,
                                 ),
                               )
                             }
@@ -593,36 +547,139 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
                   </div>
                 ) : (
                   <label className={styles.modalFieldWide}>
-                    <span className={styles.label}>사례 요약(선택)</span>
-                    <textarea
-                      className="app-textarea"
-                      rows={4}
-                      placeholder="문서 13 카드 하단에 보여줄 사례 요약이 있으면 입력"
-                      value={form.text_body}
-                      onChange={(e) => setForm({ ...form, text_body: e.target.value })}
+                    <span className={styles.label}>{titleLabel}</span>
+                    <input
+                      className="app-input"
+                      value={form.title}
+                      placeholder={titlePlaceholder}
+                      onChange={(e) => setForm({ ...form, title: e.target.value })}
                       disabled={busy}
                     />
                   </label>
                 )
               ) : null}
 
-              {!isMeasurementTemplate && !isSafetyNews && !isDisasterCase ? (
+              {isDoc7ReferenceMaterial ? (
+                <>
+                  <div className={styles.modalGrid}>
+                    <label className={styles.modalField}>
+                      <span className={styles.label}>재해유형</span>
+                      <select
+                        className="app-select"
+                        value={form.accident_type}
+                        onChange={(e) =>
+                          setForm({ ...form, accident_type: e.target.value })
+                        }
+                        disabled={busy}
+                      >
+                        <option value="">선택</option>
+                        {ACCIDENT_TYPE_OPTIONS.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className={styles.modalField}>
+                      <span className={styles.label}>기인물 유형</span>
+                      <select
+                        className="app-select"
+                        value={form.causative_agent_key}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            causative_agent_key: e.target.value as typeof form.causative_agent_key,
+                          })
+                        }
+                        disabled={busy}
+                      >
+                        <option value="">선택</option>
+                        {CAUSATIVE_AGENT_OPTIONS.map((option) => (
+                          <option key={option.key} value={option.key}>
+                            {option.number}. {CAUSATIVE_AGENT_LABELS[option.key] ?? option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                  <div className={styles.referenceMaterialEditorGrid}>
+                    <div className={styles.referenceMaterialTextField}>
+                      <label className={styles.modalField}>
+                        <span className={styles.label}>참고자료 1 제목</span>
+                        <input
+                          className="app-input"
+                          value={form.reference_title_1}
+                          placeholder="예: 추락 재해사례"
+                          onChange={(e) =>
+                            setForm({ ...form, reference_title_1: e.target.value })
+                          }
+                          disabled={busy}
+                        />
+                      </label>
+                    <ContentAssetField
+                      accept="image/*"
+                      disabled={busy || !canUploadAssets}
+                      label="참고자료 이미지"
+                      mode="image"
+                      readOnly={!canUploadAssets}
+                      value={form.image_url}
+                      fileName={form.image_name}
+                      onChange={({ value, fileName }) =>
+                        setForm({ ...form, image_url: value, image_name: fileName })
+                      }
+                      onClear={() => setForm({ ...form, image_url: '', image_name: '' })}
+                      resolveFile={uploadFileAsset}
+                      validateFile={validateLargeFile}
+                    />
+                    </div>
+                    <label className={styles.referenceMaterialTextField}>
+                      <span className={styles.label}>참고자료 2 제목</span>
+                      <input
+                        className="app-input"
+                        value={form.reference_title_2}
+                        placeholder="예: 재해 개요 및 원인"
+                        onChange={(e) =>
+                          setForm({ ...form, reference_title_2: e.target.value })
+                        }
+                        disabled={busy}
+                      />
+                      <span className={styles.label}>{activeTypeMeta.bodyLabel}</span>
+                      <div className={styles.referenceMaterialTextBox}>
+                        <textarea
+                          className={styles.referenceMaterialTextArea}
+                          value={form.text_body}
+                          placeholder="참고자료 내용을 입력"
+                          onChange={(e) =>
+                            setForm({ ...form, text_body: e.target.value })
+                          }
+                          disabled={busy}
+                        />
+                      </div>
+                    </label>
+                  </div>
+                </>
+              ) : null}
+
+              {isGenericTitleType ? (
                 <label className={styles.modalFieldWide}>
-                  <span className={styles.label}>{activeTypeMeta.bodyLabel}</span>
-                  <textarea
-                    className="app-textarea"
-                    value={form.text_body}
-                    onChange={(e) => setForm({ ...form, text_body: e.target.value })}
+                  <span className={styles.label}>{titleLabel}</span>
+                  <input
+                    className="app-input"
+                    value={form.title}
+                    placeholder={titlePlaceholder}
+                    onChange={(e) => setForm({ ...form, title: e.target.value })}
                     disabled={busy}
                   />
                 </label>
               ) : null}
 
-              {activeTypeMeta.editorMode === 'image' && !isDisasterCaseBatchCreate ? (
+              {activeTypeMeta.editorMode === 'image' &&
+              !isDisasterCaseBatchCreate &&
+              !isDoc7ReferenceMaterial ? (
                 <ContentAssetField
-                  accept="image/*"
+                  accept={isSafetyNews ? '.pdf,.png,.jpg,.jpeg,.gif,.webp' : 'image/*'}
                   disabled={busy || !canUploadAssets}
-                  helperText={uploadPermissionHelperText}
+                  helperText={isSafetyNews ? fileUploadHelperText : uploadPermissionHelperText}
                   label="대표 이미지"
                   mode="image"
                   readOnly={!canUploadAssets}
@@ -635,43 +692,6 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
                   resolveFile={uploadFileAsset}
                   validateFile={validateLargeFile}
                 />
-              ) : null}
-
-              {activeTypeMeta.editorMode === 'file' && !isSafetyNews ? (
-                <div className={styles.assetGrid}>
-                  <ContentAssetField
-                    accept=".pdf,.doc,.docx,.hwp,.png,.jpg,.jpeg,.gif,.webp"
-                    disabled={busy || !canUploadAssets}
-                    helperText={fileUploadHelperText}
-                    label={activeTypeMeta.fileLabels?.[0] || '파일 1'}
-                    mode="file"
-                    readOnly={!canUploadAssets}
-                    value={form.file_url_1}
-                    fileName={form.file_name_1}
-                    onChange={({ value, fileName }) =>
-                      setForm({ ...form, file_url_1: value, file_name_1: fileName })
-                    }
-                    onClear={() => setForm({ ...form, file_url_1: '', file_name_1: '' })}
-                    resolveFile={uploadFileAsset}
-                    validateFile={validateLargeFile}
-                  />
-                  <ContentAssetField
-                    accept=".pdf,.doc,.docx,.hwp,.png,.jpg,.jpeg,.gif,.webp"
-                    disabled={busy || !canUploadAssets}
-                    helperText={fileUploadHelperText}
-                    label={activeTypeMeta.fileLabels?.[1] || '파일 2'}
-                    mode="file"
-                    readOnly={!canUploadAssets}
-                    value={form.file_url_2}
-                    fileName={form.file_name_2}
-                    onChange={({ value, fileName }) =>
-                      setForm({ ...form, file_url_2: value, file_name_2: fileName })
-                    }
-                    onClear={() => setForm({ ...form, file_url_2: '', file_name_2: '' })}
-                    resolveFile={uploadFileAsset}
-                    validateFile={validateLargeFile}
-                  />
-                </div>
               ) : null}
             </div>
           ) : null}

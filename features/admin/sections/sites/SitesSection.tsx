@@ -34,7 +34,6 @@ interface SitesSectionProps {
     manager_phone?: string | null;
     site_address?: string | null;
     status?: 'planned' | 'active' | 'closed';
-    memo?: string | null;
   }) => Promise<void>;
   onUpdate: (id: string, input: Partial<{
     headquarter_id: string;
@@ -47,8 +46,6 @@ interface SitesSectionProps {
     manager_name?: string | null;
     manager_phone?: string | null;
     site_address?: string | null;
-    status?: 'planned' | 'active' | 'closed';
-    memo?: string | null;
   }>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onAssignFieldAgent: (siteId: string, userId: string) => Promise<void>;
@@ -64,16 +61,13 @@ interface SitesSectionProps {
 const EMPTY_FORM = {
   headquarter_id: '',
   site_name: '',
-  site_code: '',
-  management_number: '',
   project_start_date: '',
   project_end_date: '',
   project_amount: '',
   manager_name: '',
   manager_phone: '',
+  site_number: '',
   site_address: '',
-  status: 'active' as const,
-  memo: '',
 };
 
 function formatAssignedUsers(users: SafetyUser[]) {
@@ -189,16 +183,13 @@ export function SitesSection(props: SitesSectionProps) {
     setForm({
       headquarter_id: site.headquarter_id,
       site_name: site.site_name,
-      site_code: site.site_code ?? '',
-      management_number: site.management_number ?? '',
       project_start_date: site.project_start_date ?? '',
       project_end_date: site.project_end_date ?? '',
       project_amount: site.project_amount ? String(site.project_amount) : '',
       manager_name: site.manager_name ?? '',
       manager_phone: site.manager_phone ?? '',
+      site_number: site.management_number ?? site.site_code ?? '',
       site_address: site.site_address ?? '',
-      status: site.status as typeof EMPTY_FORM.status,
-      memo: site.memo ?? '',
     });
   };
 
@@ -211,29 +202,40 @@ export function SitesSection(props: SitesSectionProps) {
   const buildPayload = () => ({
     headquarter_id: lockedHeadquarterId ?? form.headquarter_id,
     site_name: form.site_name.trim(),
-    site_code: toNullableText(form.site_code),
-    management_number: toNullableText(form.management_number),
+    site_code: toNullableText(form.site_number),
+    management_number: toNullableText(form.site_number),
     project_start_date: toNullableText(form.project_start_date),
     project_end_date: toNullableText(form.project_end_date),
     project_amount: parseOptionalNumber(form.project_amount),
     manager_name: toNullableText(form.manager_name),
     manager_phone: toNullableText(form.manager_phone),
     site_address: toNullableText(form.site_address),
-    status: form.status,
-    memo: toNullableText(form.memo),
   });
+
+  const isCreateReady = Boolean(
+    (lockedHeadquarterId ?? form.headquarter_id).trim() &&
+      form.site_name.trim() &&
+      form.site_number.trim() &&
+      form.project_start_date.trim() &&
+      form.project_amount.trim() &&
+      form.project_end_date.trim() &&
+      form.manager_name.trim() &&
+      form.manager_phone.trim() &&
+      form.site_address.trim(),
+  );
 
   const submit = async () => {
     const payload = buildPayload();
-    if (!payload.headquarter_id || !payload.site_name) return;
-    if (editingId === 'create') await onCreate(payload);
+    if (editingId === 'create' && !isCreateReady) return;
+    if (editingId !== 'create' && (!payload.headquarter_id || !payload.site_name)) return;
+    if (editingId === 'create') await onCreate({ ...payload, status: 'active' });
     else if (editingId) await onUpdate(editingId, payload);
     closeModal();
   };
 
   const handleDeleteSite = async (site: SafetySite) => {
     const confirmed = window.confirm(
-      `'${site.site_name}' 현장을 삭제하시겠습니까?\n연결된 현장 배정은 함께 정리되며, 이 작업은 되돌릴 수 없습니다.`,
+      `'${site.site_name}' 현장을 삭제하시겠습니까?\n연결된 현장 배정 정보도 함께 정리되며, 이 작업은 되돌릴 수 없습니다.`,
     );
 
     if (!confirmed) return;
@@ -315,7 +317,6 @@ export function SitesSection(props: SitesSectionProps) {
                   <tr>
                     <th>현장명</th>
                     {showHeadquarterColumn ? <th>사업장</th> : null}
-                    <th>관리번호</th>
                     <th>책임자</th>
                     <th>배정 요원</th>
                     <th>기간</th>
@@ -360,7 +361,6 @@ export function SitesSection(props: SitesSectionProps) {
                         {showHeadquarterColumn ? (
                           <td>{site.headquarter_detail?.name || site.headquarter?.name || '-'}</td>
                         ) : null}
-                        <td>{site.management_number || '-'}</td>
                         <td>
                           <div className={styles.tablePrimary}>{site.manager_name || '-'}</div>
                           <div className={styles.tableSecondary}>
@@ -466,7 +466,7 @@ export function SitesSection(props: SitesSectionProps) {
               type="button"
               className="app-button app-button-primary"
               onClick={() => void submit()}
-              disabled={busy}
+              disabled={busy || (editingId === 'create' && !isCreateReady)}
             >
               {editingId === 'create' ? '생성' : '저장'}
             </button>
@@ -499,24 +499,15 @@ export function SitesSection(props: SitesSectionProps) {
               disabled={busy}
             />
           </label>
-          <label className={styles.modalField}>
-            <span className={styles.label}>현장 코드</span>
-            <input
-              className="app-input"
-              value={form.site_code}
-              onChange={(e) => setForm({ ...form, site_code: e.target.value })}
-              disabled={busy}
-            />
-          </label>
-          <label className={styles.modalField}>
-            <span className={styles.label}>관리번호</span>
-            <input
-              className="app-input"
-              value={form.management_number}
-              onChange={(e) => setForm({ ...form, management_number: e.target.value })}
-              disabled={busy}
-            />
-          </label>
+        <label className={styles.modalField}>
+          <span className={styles.label}>사업장관리번호(사업개시번호)</span>
+          <input
+            className="app-input"
+            value={form.site_number}
+            onChange={(e) => setForm({ ...form, site_number: e.target.value })}
+            disabled={busy}
+          />
+        </label>
           <label className={styles.modalField}>
             <span className={styles.label}>공사 시작일</span>
             <input
@@ -524,16 +515,6 @@ export function SitesSection(props: SitesSectionProps) {
               type="date"
               value={form.project_start_date}
               onChange={(e) => setForm({ ...form, project_start_date: e.target.value })}
-              disabled={busy}
-            />
-          </label>
-          <label className={styles.modalField}>
-            <span className={styles.label}>공사 종료일</span>
-            <input
-              className="app-input"
-              type="date"
-              value={form.project_end_date}
-              onChange={(e) => setForm({ ...form, project_end_date: e.target.value })}
               disabled={busy}
             />
           </label>
@@ -547,19 +528,14 @@ export function SitesSection(props: SitesSectionProps) {
             />
           </label>
           <label className={styles.modalField}>
-            <span className={styles.label}>상태</span>
-            <select
-              className="app-select"
-              value={form.status}
-              onChange={(e) => setForm({ ...form, status: e.target.value as typeof form.status })}
+            <span className={styles.label}>공사 종료일</span>
+            <input
+              className="app-input"
+              type="date"
+              value={form.project_end_date}
+              onChange={(e) => setForm({ ...form, project_end_date: e.target.value })}
               disabled={busy}
-            >
-              {SITE_STATUS_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+            />
           </label>
           <label className={styles.modalField}>
             <span className={styles.label}>현장 책임자</span>
@@ -585,15 +561,6 @@ export function SitesSection(props: SitesSectionProps) {
               className="app-input"
               value={form.site_address}
               onChange={(e) => setForm({ ...form, site_address: e.target.value })}
-              disabled={busy}
-            />
-          </label>
-          <label className={styles.modalFieldWide}>
-            <span className={styles.label}>메모</span>
-            <textarea
-              className="app-textarea"
-              value={form.memo}
-              onChange={(e) => setForm({ ...form, memo: e.target.value })}
               disabled={busy}
             />
           </label>

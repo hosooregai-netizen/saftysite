@@ -1,9 +1,10 @@
+import { FOLLOW_UP_RESULT_OPTIONS } from '@/constants/inspectionSession';
 import styles from '@/components/session/InspectionSessionWorkspace.module.css';
 import type { OverviewSectionProps } from '@/components/session/workspace/types';
 import { UploadBox } from '@/components/session/workspace/widgets';
 
 export default function Doc4Section(props: OverviewSectionProps) {
-  const { applyDocumentUpdate, correctionResultOptions, session, withFileData } = props;
+  const { applyDocumentUpdate, session, withFileData } = props;
 
   return (
     <div className={`${styles.sectionStack} ${styles.doc4SectionStack}`}>
@@ -42,8 +43,17 @@ export default function Doc4Section(props: OverviewSectionProps) {
                 </div>
                 <label className={`${styles.field} ${styles.doc4ResultField}`}>
                   <span className={styles.fieldLabel}>시정조치 결과</span>
-                  <input type="text" list={`correction-result-options-${item.id}`} className="app-input" value={item.result} onChange={(event) => updateField('result', event.target.value)} />
-                  {correctionResultOptions.length > 0 ? <datalist id={`correction-result-options-${item.id}`}>{correctionResultOptions.map((option) => <option key={option} value={option} />)}</datalist> : null}
+                  <select
+                    className="app-select"
+                    value={item.result}
+                    onChange={(event) => updateField('result', event.target.value)}
+                  >
+                    {FOLLOW_UP_RESULT_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
                 </label>
               </div>
               <div className={styles.doc4PhotoRow}>

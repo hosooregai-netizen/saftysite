@@ -1,15 +1,27 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
+import { imageSize } from 'image-size';
 import JSZip from 'jszip';
 
-import { sanitizeWordFileName } from '@/server/documents/sharedDocx';
 import type { QuarterlyCounter, QuarterlySummaryReport } from '@/types/erpReports';
 import type { InspectionSite } from '@/types/inspectionSession';
 
 export interface GeneratedHwpxDocument {
   buffer: Buffer;
   filename: string;
+}
+
+interface QuarterlyHwpxBuildOptions {
+  assetBaseUrl?: string;
+}
+
+interface ResolvedHwpxImageAsset {
+  buffer: Uint8Array;
+  extension: string;
+  height: number;
+  mediaType: string;
+  width: number;
 }
 
 const TEMPLATE_FILENAME = '\uBD84\uAE30 \uC885\uD569\uBCF4\uACE0\uC11C2.hwpx';
@@ -25,17 +37,29 @@ const EMPTY_CHART_LABEL = '\uC790\uB8CC \uC5C6\uC74C';
 const EMPTY_COMMENT = '\uCD1D\uD3C9\uC774 \uC544\uC9C1 \uC791\uC131\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.';
 const OPS_PENDING_TITLE = '\uAD00\uB9AC\uC790 \uBCF4\uC644 \uB300\uAE30';
 const OPS_PENDING_BODY = '\uAD00\uB9AC\uC790\uAC00 OPS \uC790\uB8CC\uB97C \uC544\uC9C1 \uC5F0\uACB0\uD558\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.';
-const OPS_FILE_LABEL = '\uCCA8\uBD80\uC790\uB8CC';
-const OPS_ASSIGNED_BY_LABEL = '\uC5F0\uACB0\uC790';
+const OPS_IMAGE_ITEM_ID = 'opsAssetImage';
 const NO_DATA_VALUE = '-';
 const SECTION_TITLE_INDEX = 1;
+const IMAGE_EXTENSION_TO_MEDIA_TYPE: Record<string, string> = {
+  bmp: 'image/bmp',
+  gif: 'image/gif',
+  jpeg: 'image/jpeg',
+  jpg: 'image/jpeg',
+  png: 'image/png',
+  webp: 'image/webp',
+};
+
+function sanitizeDocumentFileName(value: string | null | undefined, fallback: string) {
+  const normalized = (value ?? '').replace(/[\\/:*?"<>|]/g, '-').trim();
+  return normalized || fallback;
+}
 
 function fileNameForQuarterlyReport(report: QuarterlySummaryReport, site: InspectionSite) {
-  const siteName = sanitizeWordFileName(
+  const siteName = sanitizeDocumentFileName(
     report.siteSnapshot.siteName || site.siteName || report.siteId || 'quarterly-report',
     'quarterly-report',
   );
-  const periodToken = sanitizeWordFileName(
+  const periodToken = sanitizeDocumentFileName(
     report.periodStartDate && report.periodEndDate
       ? `${report.periodStartDate}_${report.periodEndDate}`
       : report.quarterKey || report.id,
@@ -52,6 +76,10 @@ export function createHwpxDownloadResponse(document: GeneratedHwpxDocument): Res
       'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(document.filename)}`,
     },
   });
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function escapeXmlText(value: string) {
@@ -74,6 +102,188 @@ function formatText(value: string | null | undefined, fallback = NO_DATA_VALUE) 
 
 function formatOptionalText(value: string | null | undefined) {
   return normalizeLineBreaks(value ?? '').trim();
+}
+
+function parseDataUrl(value: string) {
+  const match = value.match(/^data:([^;,]+);base64,(.+)$/);
+  if (!match) return null;
+  return {
+    buffer: Buffer.from(match[2], 'base64'),
+    mediaType: match[1].toLowerCase(),
+  };
+}
+
+function normalizeHwpxMediaType(mediaType: string, href: string) {
+  const normalized = mediaType.toLowerCase();
+  const extension = href.split(/[?#]/)[0].split('.').pop()?.toLowerCase() ?? '';
+  if (normalized === 'image/jpeg' || normalized === 'image/jpg' || extension === 'jpg' || extension === 'jpeg') {
+    return 'image/jpg';
+  }
+  return normalized;
+}
+
+function upsertManifestItem(contentHpf: string, itemId: string, href: string, mediaType: string) {
+  const manifestItem = `<opf:item id="${itemId}" href="${href}" media-type="${mediaType}" isEmbeded="1" />`;
+  const itemPattern = new RegExp(`<opf:item\\b[^>]*\\bid="${escapeRegExp(itemId)}"[^>]*/>`, 'g');
+  const withoutExisting = contentHpf.replace(itemPattern, '');
+  return withoutExisting.replace('</opf:manifest>', `${manifestItem}</opf:manifest>`);
+}
+
+function ensureUniquePictureObjectIds(sectionXml: string) {
+  const pictureTagPattern = /<hp:pic\b[^>]*>/g;
+  const currentPictureIds = Array.from(
+    sectionXml.matchAll(/<hp:pic\b[^>]*\bid="(\d+)"/g),
+    (match) => Number.parseInt(match[1], 10),
+  ).filter(Number.isFinite);
+  const currentInstanceIds = Array.from(
+    sectionXml.matchAll(/<hp:pic\b[^>]*\binstid="(\d+)"/g),
+    (match) => Number.parseInt(match[1], 10),
+  ).filter(Number.isFinite);
+  let nextPictureId = Math.max(2110926000, ...currentPictureIds, 0);
+  let nextInstanceId = Math.max(1037185000, ...currentInstanceIds, 0);
+
+  return sectionXml.replace(pictureTagPattern, (pictureTag) => {
+    nextPictureId += 1;
+    nextInstanceId += 1;
+
+    return pictureTag
+      .replace(/\bid="\d+"/, `id="${nextPictureId}"`)
+      .replace(/\binstid="\d+"/, `instid="${nextInstanceId}"`);
+  });
+}
+
+function resolveDocumentAssetUrl(value: string | null | undefined, baseUrl?: string) {
+  const normalized = formatOptionalText(value);
+  if (!normalized) {
+    return null;
+  }
+
+  if (normalized.startsWith('data:')) {
+    return normalized;
+  }
+
+  try {
+    return new URL(normalized).toString();
+  } catch {
+    if (!baseUrl) {
+      return null;
+    }
+
+    try {
+      return new URL(normalized, baseUrl).toString();
+    } catch {
+      return null;
+    }
+  }
+}
+
+function fitImageToBounds(
+  sourceWidth: number,
+  sourceHeight: number,
+  maxWidth: number,
+  maxHeight: number,
+) {
+  if (sourceWidth <= 0 || sourceHeight <= 0) {
+    return {
+      height: Math.max(1, maxHeight),
+      width: Math.max(1, maxWidth),
+    };
+  }
+
+  let width = Math.max(1, maxWidth);
+  let height = Math.max(1, Math.round((width * sourceHeight) / sourceWidth));
+
+  if (height > maxHeight) {
+    height = Math.max(1, maxHeight);
+    width = Math.max(1, Math.round((height * sourceWidth) / sourceHeight));
+  }
+
+  return { height, width };
+}
+
+async function fetchImageAssetFromUrl(url: string): Promise<ResolvedHwpxImageAsset | null> {
+  if (url.startsWith('data:')) {
+    const parsed = parseDataUrl(url);
+    if (!parsed) {
+      return null;
+    }
+
+    const extension = IMAGE_EXTENSION_TO_MEDIA_TYPE[parsed.mediaType.split('/')[1] ?? ''] ? parsed.mediaType.split('/')[1] : '';
+    const normalizedExtension =
+      extension && extension in IMAGE_EXTENSION_TO_MEDIA_TYPE
+        ? extension === 'jpeg'
+          ? 'jpg'
+          : extension
+        : '';
+    if (!normalizedExtension) {
+      return null;
+    }
+
+    const size = imageSize(parsed.buffer);
+    if (!size.width || !size.height) {
+      return null;
+    }
+
+    return {
+      buffer: new Uint8Array(parsed.buffer),
+      extension: normalizedExtension,
+      height: size.height,
+      mediaType: parsed.mediaType,
+      width: size.width,
+    };
+  }
+
+  const response = await fetch(url, { cache: 'no-store' });
+  if (!response.ok) {
+    return null;
+  }
+
+  const contentType = response.headers.get('content-type')?.split(';')[0].trim().toLowerCase() ?? '';
+  if (!contentType.startsWith('image/')) {
+    return null;
+  }
+
+  const extensionFromType = Object.entries(IMAGE_EXTENSION_TO_MEDIA_TYPE).find(
+    ([, mediaType]) => mediaType === contentType,
+  )?.[0];
+  const extensionFromUrl = url.split(/[?#]/)[0].split('.').pop()?.toLowerCase() ?? '';
+  const extension =
+    (extensionFromType || extensionFromUrl || '').replace('jpeg', 'jpg');
+  if (!(extension in IMAGE_EXTENSION_TO_MEDIA_TYPE)) {
+    return null;
+  }
+
+  const buffer = Buffer.from(await response.arrayBuffer());
+  const size = imageSize(buffer);
+  if (!size.width || !size.height) {
+    return null;
+  }
+
+  return {
+    buffer: new Uint8Array(buffer),
+    extension,
+    height: size.height,
+    mediaType: contentType,
+    width: size.width,
+  };
+}
+
+async function resolveOpsImageAsset(
+  report: QuarterlySummaryReport,
+  options?: QuarterlyHwpxBuildOptions,
+) {
+  const candidates = [report.opsAssetFileUrl, report.opsAssetPreviewUrl]
+    .map((value) => resolveDocumentAssetUrl(value, options?.assetBaseUrl))
+    .filter((value, index, array): value is string => Boolean(value) && array.indexOf(value) === index);
+
+  for (const candidate of candidates) {
+    const resolved = await fetchImageAssetFromUrl(candidate);
+    if (resolved) {
+      return resolved;
+    }
+  }
+
+  return null;
 }
 
 function combineDistinctValues(values: Array<string | null | undefined>) {
@@ -255,6 +465,99 @@ function replaceCellText(
   return tableXml.replace(cellBlock, nextCell);
 }
 
+function extractCellImageBounds(cellXml: string) {
+  const sizeMatch = cellXml.match(/<hp:cellSz\b[^>]*width="(\d+)"[^>]*height="(\d+)"/);
+  if (!sizeMatch) {
+    return null;
+  }
+
+  const marginMatch = cellXml.match(
+    /<hp:cellMargin\b[^>]*left="(\d+)"[^>]*right="(\d+)"[^>]*top="(\d+)"[^>]*bottom="(\d+)"/,
+  );
+  const left = Number.parseInt(marginMatch?.[1] ?? '0', 10);
+  const right = Number.parseInt(marginMatch?.[2] ?? '0', 10);
+  const top = Number.parseInt(marginMatch?.[3] ?? '0', 10);
+  const bottom = Number.parseInt(marginMatch?.[4] ?? '0', 10);
+  const width = Number.parseInt(sizeMatch[1], 10);
+  const height = Number.parseInt(sizeMatch[2], 10);
+
+  return {
+    height: Math.max(1200, height - top - bottom),
+    width: Math.max(1200, width - left - right),
+  };
+}
+
+function buildHwpxImageRun(
+  charPrIDRef: string,
+  binaryItemId: string,
+  width: number,
+  height: number,
+) {
+  return (
+    `<hp:run charPrIDRef="${charPrIDRef}">` +
+    '<hp:pic id="2110926001" zOrder="0" numberingType="PICTURE" textWrap="TOP_AND_BOTTOM" textFlow="BOTH_SIDES" lock="0" dropcapstyle="None" href="" groupLevel="0" instid="1037185001" reverse="0">' +
+    '<hp:offset x="0" y="0"/>' +
+    `<hp:orgSz width="${width}" height="${height}"/>` +
+    `<hp:curSz width="${width}" height="${height}"/>` +
+    '<hp:flip horizontal="0" vertical="0"/>' +
+    `<hp:rotationInfo angle="0" centerX="${Math.floor(width / 2)}" centerY="${Math.floor(height / 2)}" rotateimage="1"/>` +
+    '<hp:renderingInfo>' +
+    '<hc:transMatrix e1="1" e2="0" e3="0" e4="0" e5="1" e6="0"/>' +
+    '<hc:scaMatrix e1="1" e2="0" e3="0" e4="0" e5="1" e6="0"/>' +
+    '<hc:rotMatrix e1="1" e2="0" e3="0" e4="0" e5="1" e6="0"/>' +
+    '</hp:renderingInfo>' +
+    `<hp:imgRect><hc:pt0 x="0" y="0"/><hc:pt1 x="${width}" y="0"/><hc:pt2 x="${width}" y="${height}"/><hc:pt3 x="0" y="${height}"/></hp:imgRect>` +
+    '<hp:imgClip left="0" right="0" top="0" bottom="0"/>' +
+    '<hp:inMargin left="0" right="0" top="0" bottom="0"/>' +
+    '<hp:imgDim dimwidth="0" dimheight="0"/>' +
+    `<hc:img binaryItemIDRef="${binaryItemId}" bright="0" contrast="0" effect="REAL_PIC" alpha="0"/>` +
+    '<hp:effects/>' +
+    `<hp:sz width="${width}" widthRelTo="ABSOLUTE" height="${height}" heightRelTo="ABSOLUTE" protect="0"/>` +
+    '<hp:pos treatAsChar="1" affectLSpacing="0" flowWithText="1" allowOverlap="0" holdAnchorAndSO="0" vertRelTo="PARA" horzRelTo="COLUMN" vertAlign="CENTER" horzAlign="CENTER" vertOffset="0" horzOffset="0"/>' +
+    '<hp:outMargin left="0" right="0" top="0" bottom="0"/>' +
+    `<hp:shapeComment>${binaryItemId}</hp:shapeComment>` +
+    '</hp:pic><hp:t/></hp:run>'
+  );
+}
+
+function replaceCellImage(
+  tableXml: string,
+  rowAddr: number,
+  colAddr: number,
+  binaryItemId: string,
+  image: ResolvedHwpxImageAsset,
+) {
+  const targetMarker = `<hp:cellAddr colAddr="${colAddr}" rowAddr="${rowAddr}"/>`;
+  const cellBlock = [...tableXml.matchAll(/<hp:tc\b[\s\S]*?<\/hp:tc>/g)]
+    .map((match) => match[0])
+    .find((candidate) => candidate.includes(targetMarker));
+  if (!cellBlock) return tableXml;
+
+  const paragraphTemplate = cellBlock.match(/<hp:p\b[\s\S]*?<\/hp:p>/)?.[0];
+  if (!paragraphTemplate) return tableXml;
+
+  const paragraphMatch = paragraphTemplate.match(
+    /^(<hp:p\b[^>]*>)([\s\S]*?)(<hp:linesegarray>[\s\S]*?<\/hp:linesegarray>)<\/hp:p>$/,
+  );
+  if (!paragraphMatch) return tableXml;
+
+  const bounds = extractCellImageBounds(cellBlock);
+  if (!bounds) return tableXml;
+
+  const [, paragraphOpen, , lineSegArrayXml] = paragraphMatch;
+  const charPrIDRef = paragraphTemplate.match(/<hp:run\b[^>]*charPrIDRef="(\d+)"/)?.[1] ?? '1';
+  const fittedSize = fitImageToBounds(image.width, image.height, bounds.width, bounds.height);
+  const nextParagraph = `${paragraphOpen}${buildHwpxImageRun(
+    charPrIDRef,
+    binaryItemId,
+    fittedSize.width,
+    fittedSize.height,
+  )}${lineSegArrayXml}</hp:p>`;
+  const nextCell = cellBlock.replace(/<hp:p\b[\s\S]*?<\/hp:p>/, nextParagraph);
+
+  return tableXml.replace(cellBlock, nextCell);
+}
+
 function getTableRows(tableXml: string) {
   return [...tableXml.matchAll(/<hp:tr>[\s\S]*?<\/hp:tr>/g)].map((match) => match[0]);
 }
@@ -361,22 +664,11 @@ function updateChartXml(chartXml: string, rows: QuarterlyCounter[]) {
 function buildOpsDetailLines(report: QuarterlySummaryReport) {
   const lines: string[] = [];
 
-  if (report.majorMeasures.length > 0) {
-    lines.push(...report.majorMeasures.map((item) => `- ${item}`));
+  if (report.majorMeasures.length > 1) {
+    lines.push(...report.majorMeasures.slice(1).map((item) => `- ${item}`));
   }
   if (formatOptionalText(report.opsAssetDescription)) {
     lines.push(report.opsAssetDescription.trim());
-  }
-  if (formatOptionalText(report.opsAssetFileName)) {
-    lines.push(`${OPS_FILE_LABEL}: ${report.opsAssetFileName.trim()}`);
-  }
-  if (formatOptionalText(report.opsAssetFileUrl)) {
-    lines.push(report.opsAssetFileUrl.trim());
-  }
-  if (formatOptionalText(report.opsAssignedBy)) {
-    lines.push(
-      `${OPS_ASSIGNED_BY_LABEL}: ${report.opsAssignedBy.trim()}${report.opsAssignedAt ? ` / ${report.opsAssignedAt}` : ''}`,
-    );
   }
 
   if (lines.length === 0) {
@@ -490,7 +782,11 @@ function updateFuturePlanTable(tableXml: string, report: QuarterlySummaryReport)
   return nextTable;
 }
 
-function updateOpsTable(tableXml: string, report: QuarterlySummaryReport) {
+function updateOpsTable(
+  tableXml: string,
+  report: QuarterlySummaryReport,
+  opsImageAsset: ResolvedHwpxImageAsset | null,
+) {
   const opsTitle =
     formatOptionalText(report.opsAssetTitle) ||
     report.majorMeasures[0] ||
@@ -498,14 +794,21 @@ function updateOpsTable(tableXml: string, report: QuarterlySummaryReport) {
 
   let nextTable = tableXml;
   nextTable = replaceCellText(nextTable, 1, 0, `\u25A0${opsTitle}`);
-  nextTable = replaceCellText(nextTable, 2, 0, buildOpsDetailLines(report), {
-    multiline: true,
-    wrapAt: 42,
-  });
+  nextTable = opsImageAsset
+    ? replaceCellImage(nextTable, 2, 0, OPS_IMAGE_ITEM_ID, opsImageAsset)
+    : replaceCellText(nextTable, 2, 0, buildOpsDetailLines(report), {
+        multiline: true,
+        wrapAt: 42,
+      });
   return nextTable;
 }
 
-function updateSectionXml(sectionXml: string, report: QuarterlySummaryReport, site: InspectionSite) {
+function updateSectionXml(
+  sectionXml: string,
+  report: QuarterlySummaryReport,
+  site: InspectionSite,
+  opsImageAsset: ResolvedHwpxImageAsset | null,
+) {
   const tableBlocks = matchTableBlocks(sectionXml);
   if (tableBlocks.length < 6) {
     throw new Error('Quarterly HWPX template table structure was not detected.');
@@ -516,32 +819,50 @@ function updateSectionXml(sectionXml: string, report: QuarterlySummaryReport, si
   tables[2] = updateOverallCommentTable(tables[2], report);
   tables[3] = updateImplementationTable(tables[3], report);
   tables[4] = updateFuturePlanTable(tables[4], report);
-  tables[5] = updateOpsTable(tables[5], report);
+  tables[5] = updateOpsTable(tables[5], report, opsImageAsset);
 
   const rebuilt = rebuildSectionXml(sectionXml, tableBlocks, tables);
-  return replaceNthTextNode(rebuilt, SECTION_TITLE_INDEX, report.title);
+  return ensureUniquePictureObjectIds(
+    replaceNthTextNode(rebuilt, SECTION_TITLE_INDEX, report.title),
+  );
 }
 
 export async function buildQuarterlyHwpxDocument(
   report: QuarterlySummaryReport,
   site: InspectionSite,
+  options?: QuarterlyHwpxBuildOptions,
 ): Promise<GeneratedHwpxDocument> {
   const templateBuffer = await fs.readFile(TEMPLATE_PATH);
   const zip = await JSZip.loadAsync(templateBuffer);
 
   const sectionXmlFile = zip.file('Contents/section0.xml');
+  const contentHpfFile = zip.file('Contents/content.hpf');
   const accidentChartFile = zip.file('Chart/chart1.xml');
   const causativeChartFile = zip.file('Chart/chart2.xml');
 
-  if (!sectionXmlFile || !accidentChartFile || !causativeChartFile) {
+  if (!sectionXmlFile || !contentHpfFile || !accidentChartFile || !causativeChartFile) {
     throw new Error('Quarterly HWPX template is missing required assets.');
   }
 
   const sectionXml = await sectionXmlFile.async('string');
+  let contentHpf = await contentHpfFile.async('string');
   const accidentChartXml = await accidentChartFile.async('string');
   const causativeChartXml = await causativeChartFile.async('string');
+  const opsImageAsset = await resolveOpsImageAsset(report, options);
 
-  zip.file('Contents/section0.xml', updateSectionXml(sectionXml, report, site));
+  if (opsImageAsset) {
+    const href = `BinData/${OPS_IMAGE_ITEM_ID}.${opsImageAsset.extension}`;
+    zip.file(href, opsImageAsset.buffer, { compression: 'STORE' });
+    contentHpf = upsertManifestItem(
+      contentHpf,
+      OPS_IMAGE_ITEM_ID,
+      href,
+      normalizeHwpxMediaType(opsImageAsset.mediaType, href),
+    );
+  }
+
+  zip.file('Contents/section0.xml', updateSectionXml(sectionXml, report, site, opsImageAsset));
+  zip.file('Contents/content.hpf', contentHpf);
   zip.file('Chart/chart1.xml', updateChartXml(accidentChartXml, report.accidentStats));
   zip.file('Chart/chart2.xml', updateChartXml(causativeChartXml, report.causativeStats));
 

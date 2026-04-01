@@ -14,7 +14,7 @@ export default function Doc10Section({
   return (
     <div className={styles.sectionStack}>
       <p className={styles.fieldAssist}>
-        관리자 콘텐츠의 `계측 장비 템플릿`을 등록해 두면 장비명을 선택할 때 안전 기준이
+        관리자 콘텐츠의 `계측 점검 템플릿`을 등록해 두면 장비명을 선택할 때 안전 기준이
         자동으로 채워지고, 이후에는 직접 수정할 수 있습니다.
       </p>
       {session.document10Measurements.map((item, index) => (

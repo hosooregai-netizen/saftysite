@@ -10,6 +10,11 @@ import type {
   PreviousGuidanceFollowUpItem,
 } from '@/types/inspectionSession';
 
+export const FOLLOW_UP_RESULT_OPTIONS = [
+  { value: '이행', label: '이행' },
+  { value: '미이행', label: '미이행' },
+] as const;
+
 function hasFindingContent(item: CurrentHazardFinding): boolean {
   return Boolean(
     normalizeText(item.photoUrl) ||
@@ -32,6 +37,24 @@ function createDerivedFollowUpKey(sourceSessionId: string, sourceFindingId: stri
 
 function normalizeResultText(value: string): string {
   return normalizeText(value).replace(/\s+/g, '').toLowerCase();
+}
+
+export function normalizeFollowUpResult(value: string): '이행' | '미이행' {
+  const normalized = normalizeResultText(value);
+
+  if (
+    normalized.includes('미이행') ||
+    normalized.includes('불이행') ||
+    normalized === 'not_implemented'
+  ) {
+    return '미이행';
+  }
+
+  return '이행';
+}
+
+export function isImplementedFollowUpResult(result: string): boolean {
+  return normalizeFollowUpResult(result) === '이행';
 }
 
 function isCompletedFollowUpResult(result: string): boolean {
@@ -58,7 +81,7 @@ function isCompletedFollowUpResult(result: string): boolean {
     normalized.includes('조치완료') ||
     normalized.includes('개선완료') ||
     normalized === '완료' ||
-    normalized === '이행'
+    isImplementedFollowUpResult(result)
   );
 }
 
@@ -127,7 +150,7 @@ export function buildDerivedFollowUpItems(
               existing?.confirmationDate || getSessionGuidanceDate(session),
             beforePhotoUrl: item.photoUrl,
             afterPhotoUrl: existing?.afterPhotoUrl || '',
-            result: existing?.result || '',
+            result: existing?.result || '미이행',
           });
         })
     )

@@ -244,6 +244,17 @@
   gap: 12px;
 }
 
+.periodFieldInline {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 72px;
+  gap: 10px;
+  align-items: center;
+}
+
+.periodQuarterSelect {
+  min-width: 0;
+}
+
 .field {
   display: grid;
   gap: 6px;
@@ -638,6 +649,11 @@
 @media (max-width: 767px) {
   .inlineEditorRow {
     grid-template-columns: 1fr;
+  }
+
+  .periodFieldInline {
+    grid-template-columns: minmax(0, 1fr) 64px;
+    gap: 8px;
   }
 
   .inlineEditorActions {

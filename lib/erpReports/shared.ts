@@ -211,6 +211,23 @@ export function getQuarterTargetForExactPeriod(
     : null;
 }
 
+function getStoredQuarterTarget(
+  report: Pick<QuarterlySummaryReport, 'quarterKey' | 'year' | 'quarter'>,
+) {
+  if (report.year > 0 && report.quarter >= 1 && report.quarter <= 4) {
+    const range = getQuarterRange(report.year, report.quarter);
+    return {
+      quarterKey: createQuarterKey(report.year, report.quarter),
+      year: report.year,
+      quarter: report.quarter,
+      startDate: range.startDate,
+      endDate: range.endDate,
+    };
+  }
+
+  return parseQuarterKey(normalizeMapperText(report.quarterKey));
+}
+
 export function normalizeQuarterlyReportPeriod(
   report: Pick<
     QuarterlySummaryReport,
@@ -219,19 +236,20 @@ export function normalizeQuarterlyReportPeriod(
 ) {
   const periodStartDate = normalizeMapperText(report.periodStartDate);
   const periodEndDate = normalizeMapperText(report.periodEndDate);
+  const storedTarget = getStoredQuarterTarget(report);
 
   if (periodStartDate || periodEndDate) {
     const target = getQuarterTargetForExactPeriod(periodStartDate, periodEndDate);
     return {
       periodStartDate,
       periodEndDate,
-      quarterKey: target?.quarterKey || '',
-      year: target?.year || 0,
-      quarter: target?.quarter || 0,
+      quarterKey: target?.quarterKey || storedTarget?.quarterKey || '',
+      year: target?.year || storedTarget?.year || 0,
+      quarter: target?.quarter || storedTarget?.quarter || 0,
     };
   }
 
-  const fallbackTarget = parseQuarterKey(normalizeMapperText(report.quarterKey));
+  const fallbackTarget = storedTarget;
   if (fallbackTarget) {
     return {
       periodStartDate: fallbackTarget.startDate,

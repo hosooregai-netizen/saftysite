@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { ApplyDocumentUpdate, WithFileData } from '@/components/session/workspace/types';
 import {
   assetUrlToFile,
@@ -8,9 +8,15 @@ import {
   isFindingEmptyForAiAutofill,
 } from '@/components/session/workspace/doc7Ai';
 import styles from '@/components/session/InspectionSessionWorkspace.module.css';
+import {
+  applyDoc7ReferenceMaterialMatch,
+  matchDoc7ReferenceMaterial,
+} from '@/lib/doc7ReferenceMaterials';
 import { Doc7FindingFields } from '@/features/inspection-session/workspace/sections/doc7/Doc7FindingFields';
 import { Doc7FindingPhotoPanel } from '@/features/inspection-session/workspace/sections/doc7/Doc7FindingPhotoPanel';
+import type { SafetyDoc7ReferenceMaterialCatalogItem } from '@/types/backend';
 import type { CurrentHazardFinding } from '@/types/inspectionSession';
+import type { CausativeAgentKey } from '@/types/siteOverview';
 
 function selectValueForRiskLevel(stored: string): string {
   if (stored === '상' || stored === '중' || stored === '하') return stored;
@@ -22,53 +28,75 @@ function selectValueForRiskLevel(stored: string): string {
 
 interface Doc7FindingCardProps {
   applyDocumentUpdate: ApplyDocumentUpdate;
+  doc7ReferenceMaterials: SafetyDoc7ReferenceMaterialCatalogItem[];
   item: CurrentHazardFinding;
   index: number;
-  legalReferenceLibrary: Array<{
-    id: string;
-    title: string;
-    body: string;
-    referenceMaterial1: string;
-    referenceMaterial2: string;
-  }>;
   removable: boolean;
   withFileData: WithFileData;
 }
 
 export default function Doc7FindingCard({
   applyDocumentUpdate,
+  doc7ReferenceMaterials,
   item,
   index,
-  legalReferenceLibrary,
   removable,
   withFileData,
 }: Doc7FindingCardProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [aiError, setAiError] = useState('');
+  const matchedReferenceMaterial = matchDoc7ReferenceMaterial(
+    doc7ReferenceMaterials,
+    item.accidentType,
+    item.causativeAgentKey,
+  );
 
-  const updateFinding = (updater: (finding: CurrentHazardFinding) => CurrentHazardFinding) =>
-    applyDocumentUpdate('doc7', 'manual', (current) => ({
-      ...current,
-      document7Findings: current.document7Findings.map((finding) =>
-        finding.id === item.id ? updater(finding) : finding,
+  const updateFinding = useCallback(
+    (updater: (finding: CurrentHazardFinding) => CurrentHazardFinding) =>
+      applyDocumentUpdate('doc7', 'manual', (current) => ({
+        ...current,
+        document7Findings: current.document7Findings.map((finding) =>
+          finding.id === item.id ? updater(finding) : finding,
+        ),
+      })),
+    [applyDocumentUpdate, item.id],
+  );
+
+  const updateFindingWithReferenceMaterial = useCallback(
+    (updater: (finding: CurrentHazardFinding) => CurrentHazardFinding) =>
+      updateFinding((finding) =>
+        applyDoc7ReferenceMaterialMatch(updater(finding), doc7ReferenceMaterials),
       ),
-    }));
+    [doc7ReferenceMaterials, updateFinding],
+  );
 
-  const applyLegalTitleInput = (raw: string) => {
-    const reference = legalReferenceLibrary.find((library) => library.title === raw);
+  useEffect(() => {
+    if (!item.accidentType || !item.causativeAgentKey) {
+      return;
+    }
 
-    updateFinding((finding) => ({
-      ...finding,
-      legalReferenceTitle: raw,
-      legalReferenceId: reference?.id ?? '',
-      ...(reference
-        ? {
-            referenceMaterial1: reference.referenceMaterial1,
-            referenceMaterial2: reference.referenceMaterial2,
-          }
-        : {}),
-    }));
-  };
+    if (item.referenceMaterial1 || item.referenceMaterial2) {
+      return;
+    }
+
+    const nextFinding = applyDoc7ReferenceMaterialMatch(item, doc7ReferenceMaterials);
+    if (
+      nextFinding.referenceMaterial1 === item.referenceMaterial1 &&
+      nextFinding.referenceMaterial2 === item.referenceMaterial2
+    ) {
+      return;
+    }
+
+    updateFinding(() => nextFinding);
+  }, [
+    doc7ReferenceMaterials,
+    item,
+    item.accidentType,
+    item.causativeAgentKey,
+    item.referenceMaterial1,
+    item.referenceMaterial2,
+    updateFinding,
+  ]);
 
   const runAiAutofill = async (file: File) => {
     setIsAnalyzing(true);
@@ -76,7 +104,7 @@ export default function Doc7FindingCard({
 
     try {
       const patch = await buildHazardFindingAutoFill(file);
-      updateFinding((finding) => ({ ...finding, ...patch }));
+      updateFindingWithReferenceMaterial((finding) => ({ ...finding, ...patch }));
     } catch (error) {
       setAiError(
         error instanceof Error
@@ -116,8 +144,6 @@ export default function Doc7FindingCard({
     await runAiAutofill(file);
   };
 
-  const legalTitleListId = `doc7-legal-title-${item.id}`;
-
   return (
     <article className={`${styles.card} ${styles.doc4Card}`}>
       <div className={styles.doc7CardInner}>
@@ -129,12 +155,27 @@ export default function Doc7FindingCard({
           <span className={styles.cardEyebrow}>{`위험요인 ${index + 1}`}</span>
         </div>
         <Doc7FindingFields
-          applyLegalTitleInput={applyLegalTitleInput}
           item={item}
-          legalReferenceLibrary={legalReferenceLibrary}
-          legalTitleListId={legalTitleListId}
+          referenceMaterial1Title={
+            matchedReferenceMaterial?.referenceTitle1 || matchedReferenceMaterial?.title || ''
+          }
+          referenceMaterial2Title={
+            matchedReferenceMaterial?.referenceTitle2 || matchedReferenceMaterial?.title || ''
+          }
           selectValueForRiskLevel={selectValueForRiskLevel}
           updateFinding={updateFinding}
+          onAccidentTypeChange={(value) =>
+            updateFindingWithReferenceMaterial((finding) => ({
+              ...finding,
+              accidentType: value,
+            }))
+          }
+          onCausativeAgentChange={(value) =>
+            updateFindingWithReferenceMaterial((finding) => ({
+              ...finding,
+              causativeAgentKey: value as CausativeAgentKey | '',
+            }))
+          }
         />
         <Doc7FindingPhotoPanel
           aiError={aiError}

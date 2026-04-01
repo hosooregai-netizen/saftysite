@@ -1,7 +1,17 @@
 import { INSPECTION_SECTIONS, UNTITLED_SITE_KEY } from '@/constants/inspectionSession/catalog';
 import { normalizeText } from '@/constants/inspectionSession/shared';
-import type { InspectionSession, InspectionSite } from '@/types/inspectionSession';
+import type {
+  ChecklistQuestion,
+  CurrentHazardFinding,
+  InspectionSectionKey,
+  InspectionSession,
+  InspectionSite,
+  PreviousGuidanceFollowUpItem,
+} from '@/types/inspectionSession';
 import { finalizeInspectionSession } from './sessionState';
+
+const DEFAULT_CHECKLIST_RATING = 'good';
+const EXCLUDED_PROGRESS_SECTION_KEYS = new Set<InspectionSectionKey>(['doc13', 'doc14']);
 
 export function getSessionSiteKey(
   session: Pick<InspectionSession, 'siteKey' | 'adminSiteSnapshot' | 'meta'>,
@@ -101,17 +111,192 @@ export function getSessionSortTime(session: InspectionSession): number {
   ).getTime();
 }
 
+function hasChecklistResponse(questions: ChecklistQuestion[]): boolean {
+  return questions.some(
+    (question) =>
+      normalizeText(question.note) ||
+      normalizeText(question.rating) !== DEFAULT_CHECKLIST_RATING,
+  );
+}
+
+function hasMeaningfulFindingContent(
+  item: CurrentHazardFinding,
+  defaultInspector: string,
+): boolean {
+  const inspector = normalizeText(item.inspector);
+
+  return Boolean(
+    normalizeText(item.photoUrl) ||
+      normalizeText(item.photoUrl2) ||
+      normalizeText(item.location) ||
+      normalizeText(item.likelihood) ||
+      normalizeText(item.severity) ||
+      normalizeText(item.accidentType) ||
+      normalizeText(item.causativeAgentKey) ||
+      (inspector && inspector !== defaultInspector) ||
+      normalizeText(item.emphasis) ||
+      normalizeText(item.improvementPlan) ||
+      normalizeText(item.legalReferenceTitle),
+  );
+}
+
+function hasFuturePlanContent(session: InspectionSession): boolean {
+  return session.document8Plans.some((item) =>
+    Boolean(
+      normalizeText(item.processName) ||
+        normalizeText(item.hazard) ||
+        normalizeText(item.countermeasure) ||
+        normalizeText(item.note),
+    ),
+  );
+}
+
+function hasMeasurementContent(session: InspectionSession): boolean {
+  return session.document10Measurements.some((item) =>
+    Boolean(
+      normalizeText(item.photoUrl) ||
+        normalizeText(item.measurementLocation) ||
+        normalizeText(item.measuredValue) ||
+        normalizeText(item.actionTaken),
+    ),
+  );
+}
+
+function hasEducationContent(session: InspectionSession): boolean {
+  return session.document11EducationRecords.some((item) =>
+    Boolean(
+      normalizeText(item.photoUrl) ||
+        normalizeText(item.materialUrl) ||
+        normalizeText(item.materialName) ||
+        normalizeText(item.attendeeCount) ||
+        normalizeText(item.topic) ||
+        normalizeText(item.content),
+    ),
+  );
+}
+
+function hasActivityContent(session: InspectionSession): boolean {
+  return session.document12Activities.some((item) =>
+    Boolean(
+      normalizeText(item.photoUrl) ||
+        normalizeText(item.photoUrl2) ||
+        normalizeText(item.activityType) ||
+        normalizeText(item.content),
+    ),
+  );
+}
+
+function hasMeaningfulFollowUpChange(item: PreviousGuidanceFollowUpItem): boolean {
+  const normalizedResult = normalizeText(item.result);
+  const defaultResult =
+    item.sourceSessionId && item.sourceFindingId ? '미이행' : '이행';
+
+  return Boolean(
+    normalizeText(item.afterPhotoUrl) ||
+      (!item.sourceSessionId && normalizeText(item.beforePhotoUrl)) ||
+      (!item.sourceSessionId && normalizeText(item.location)) ||
+      (normalizedResult && normalizedResult !== defaultResult),
+  );
+}
+
+function hasFollowUpProgress(session: InspectionSession): boolean {
+  return session.document4FollowUps.some((item) => hasMeaningfulFollowUpChange(item));
+}
+
+function isProgressTrackedSection(
+  session: InspectionSession,
+  key: InspectionSectionKey,
+): boolean {
+  if (EXCLUDED_PROGRESS_SECTION_KEYS.has(key)) {
+    return false;
+  }
+
+  if (key === 'doc4') {
+    return hasFollowUpProgress(session);
+  }
+
+  if (key === 'doc9') {
+    return (
+      hasChecklistResponse(session.document9SafetyChecks.tbm) ||
+      hasChecklistResponse(session.document9SafetyChecks.riskAssessment)
+    );
+  }
+
+  return true;
+}
+
+function isProgressCompletedSection(
+  session: InspectionSession,
+  key: InspectionSectionKey,
+): boolean {
+  switch (key) {
+    case 'doc1': {
+      const siteName = normalizeText(session.adminSiteSnapshot.siteName);
+      const companyName =
+        normalizeText(session.adminSiteSnapshot.companyName) ||
+        normalizeText(session.adminSiteSnapshot.customerName);
+      return Boolean(siteName && companyName);
+    }
+    case 'doc2':
+      return Boolean(
+        normalizeText(session.document2Overview.guidanceDate) &&
+          normalizeText(session.document2Overview.assignee) &&
+          normalizeText(session.document2Overview.processAndNotes),
+      );
+    case 'doc3':
+      return session.document3Scenes.every((item) => Boolean(normalizeText(item.photoUrl)));
+    case 'doc4':
+      return hasFollowUpProgress(session);
+    case 'doc5':
+      return Boolean(normalizeText(session.document5Summary.summaryText));
+    case 'doc6':
+      return (
+        Boolean(session.documentsMeta.doc6.lastEditedAt) ||
+        session.document6Measures.some((item) => item.checked)
+      );
+    case 'doc7': {
+      const defaultInspector = normalizeText(session.meta.drafter);
+      return session.document7Findings.some((item) =>
+        hasMeaningfulFindingContent(item, defaultInspector),
+      );
+    }
+    case 'doc8':
+      return hasFuturePlanContent(session);
+    case 'doc9':
+      return (
+        hasChecklistResponse(session.document9SafetyChecks.tbm) &&
+        hasChecklistResponse(session.document9SafetyChecks.riskAssessment)
+      );
+    case 'doc10':
+      return hasMeasurementContent(session);
+    case 'doc11':
+      return hasEducationContent(session);
+    case 'doc12':
+      return hasActivityContent(session);
+    case 'doc13':
+    case 'doc14':
+      return false;
+    default:
+      return false;
+  }
+}
+
 export function getSessionProgress(session: InspectionSession): {
   completed: number;
   total: number;
   percentage: number;
 } {
-  const total = INSPECTION_SECTIONS.length;
-  const completed = INSPECTION_SECTIONS.filter(
-    (section) =>
-      section.key in session.documentsMeta &&
-      session.documentsMeta[section.key].status === 'completed',
+  const trackedSections = INSPECTION_SECTIONS.filter((section) =>
+    isProgressTrackedSection(session, section.key),
+  );
+  const total = trackedSections.length;
+  const completed = trackedSections.filter((section) =>
+    isProgressCompletedSection(session, section.key),
   ).length;
 
-  return { completed, total, percentage: Math.round((completed / total) * 100) };
+  return {
+    completed,
+    total,
+    percentage: total > 0 ? Math.round((completed / total) * 100) : 0,
+  };
 }

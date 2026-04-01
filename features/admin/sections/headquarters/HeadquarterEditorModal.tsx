@@ -3,18 +3,16 @@ import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 
 interface HeadquarterFormState {
   address: string;
-  business_registration_no: string;
-  contact_name: string;
   contact_phone: string;
-  corporate_registration_no: string;
   is_active: boolean;
   license_no: string;
-  memo: string;
   name: string;
+  registration_number: string;
 }
 
 interface HeadquarterEditorModalProps {
   busy: boolean;
+  canSubmit: boolean;
   editingId: string | null;
   form: HeadquarterFormState;
   onClose: () => void;
@@ -25,6 +23,7 @@ interface HeadquarterEditorModalProps {
 
 export function HeadquarterEditorModal({
   busy,
+  canSubmit,
   editingId,
   form,
   onClose,
@@ -52,7 +51,7 @@ export function HeadquarterEditorModal({
             type="button"
             className="app-button app-button-primary"
             onClick={() => void onSubmit()}
-            disabled={busy}
+            disabled={busy || !canSubmit}
           >
             {editingId === 'create' ? '생성' : '저장'}
           </button>
@@ -70,32 +69,12 @@ export function HeadquarterEditorModal({
           />
         </label>
         <label className={styles.modalField}>
-          <span className={styles.label}>담당자</span>
+          <span className={styles.label}>법인등록번호(사업자등록번호)</span>
           <input
             className="app-input"
-            value={form.contact_name}
-            onChange={(event) => onFormChange({ ...form, contact_name: event.target.value })}
-            disabled={busy}
-          />
-        </label>
-        <label className={styles.modalField}>
-          <span className={styles.label}>사업자등록번호</span>
-          <input
-            className="app-input"
-            value={form.business_registration_no}
+            value={form.registration_number}
             onChange={(event) =>
-              onFormChange({ ...form, business_registration_no: event.target.value })
-            }
-            disabled={busy}
-          />
-        </label>
-        <label className={styles.modalField}>
-          <span className={styles.label}>법인등록번호</span>
-          <input
-            className="app-input"
-            value={form.corporate_registration_no}
-            onChange={(event) =>
-              onFormChange({ ...form, corporate_registration_no: event.target.value })
+              onFormChange({ ...form, registration_number: event.target.value })
             }
             disabled={busy}
           />
@@ -127,17 +106,7 @@ export function HeadquarterEditorModal({
             disabled={busy}
           />
         </label>
-        <label className={styles.modalFieldWide}>
-          <span className={styles.label}>메모</span>
-          <textarea
-            className="app-textarea"
-            value={form.memo}
-            onChange={(event) => onFormChange({ ...form, memo: event.target.value })}
-            disabled={busy}
-          />
-        </label>
       </div>
     </AppModal>
   );
 }
-

@@ -3,6 +3,7 @@ import {
   getSessionGuidanceDate,
   getSessionProgress,
   getSessionTitle,
+  normalizeInspectionSite,
   normalizeInspectionSession,
 } from '@/constants/inspectionSession';
 import { TECHNICAL_GUIDANCE_REPORT_KIND } from '@/lib/erpReports/shared';
@@ -15,6 +16,7 @@ import type {
 } from '@/types/backend';
 import type {
   InspectionReportListItem,
+  AdminSiteSnapshot,
   InspectionSession,
   InspectionSite,
 } from '@/types/inspectionSession';
@@ -26,6 +28,30 @@ import {
 } from './utils';
 
 const ADMIN_ROLES = new Set(['super_admin', 'admin', 'controller']);
+
+function mergeAdminSiteSnapshot(
+  primary: Partial<AdminSiteSnapshot> | null | undefined,
+  fallback: Partial<AdminSiteSnapshot> | null | undefined,
+): AdminSiteSnapshot {
+  const normalizedPrimary = normalizeInspectionSite({
+    id: 'snapshot-primary',
+    adminSiteSnapshot: primary ?? {},
+  }).adminSiteSnapshot;
+  const normalizedFallback = normalizeInspectionSite({
+    id: 'snapshot-fallback',
+    adminSiteSnapshot: fallback ?? {},
+  }).adminSiteSnapshot;
+
+  return {
+    ...normalizedFallback,
+    ...Object.fromEntries(
+      Object.entries(normalizedPrimary).map(([key, value]) => [
+        key,
+        typeof value === 'string' && value.trim() ? value : normalizedFallback[key as keyof AdminSiteSnapshot],
+      ]),
+    ),
+  } as AdminSiteSnapshot;
+}
 
 export function mapSafetyReportListItem(
   report: SafetyReportListItem,
@@ -112,7 +138,10 @@ export function mapSafetyReportToInspectionSession(
       report.last_autosaved_at ||
       normalizeMapperText(payload.lastSavedAt) ||
       report.updated_at,
-    adminSiteSnapshot: payload.adminSiteSnapshot || site.adminSiteSnapshot,
+    adminSiteSnapshot: mergeAdminSiteSnapshot(
+      payload.adminSiteSnapshot as Partial<AdminSiteSnapshot> | undefined,
+      site.adminSiteSnapshot,
+    ),
     meta: {
       ...payloadMeta,
       siteName:

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   INSPECTION_SECTIONS,
-  LEGAL_REFERENCE_LIBRARY,
+  createEmptyAdminSiteSnapshot,
   areFollowUpItemsEqual,
   buildDerivedFollowUpItems,
   getSessionSiteKey,
@@ -15,7 +15,6 @@ import { convertHwpxBlobToPdf, saveBlobAsFile } from '@/lib/api';
 import { generateInspectionHwpxBlob } from '@/lib/documents/inspection/hwpxClient';
 import {
   canUploadContentAssets,
-  getAdminSectionHref,
   isAdminUserRole,
 } from '@/lib/admin';
 import { SafetyApiError } from '@/lib/safetyApi';
@@ -32,6 +31,36 @@ import type {
 import { applyInspectionSessionMetaFieldChange } from '@/features/inspection-session/lib/applyInspectionSessionMetaFieldChange';
 import { buildInspectionSessionDerivedData } from '@/features/inspection-session/lib/buildInspectionSessionDerivedData';
 import { getMetaTouchSection } from '@/components/session/workspace/utils';
+
+function mergeMissingSnapshotFields(
+  currentSnapshot: InspectionSession['adminSiteSnapshot'],
+  siteSnapshot: InspectionSession['adminSiteSnapshot'],
+) {
+  const base = createEmptyAdminSiteSnapshot(currentSnapshot);
+  let changed = false;
+
+  const merged = createEmptyAdminSiteSnapshot();
+  const keys = Object.keys(base) as Array<keyof InspectionSession['adminSiteSnapshot']>;
+
+  for (const typedKey of keys) {
+    const value = base[typedKey];
+    const fallback = siteSnapshot[typedKey];
+    const nextValue =
+      typeof value === 'string' && value.trim()
+        ? value
+        : typeof fallback === 'string' && fallback.trim()
+          ? fallback
+          : value;
+
+    if (nextValue !== value) {
+      changed = true;
+    }
+
+    merged[typedKey] = nextValue;
+  }
+
+  return { changed, merged };
+}
 
 export function useInspectionSessionScreen(sessionId: string) {
   const {
@@ -68,12 +97,11 @@ export function useInspectionSessionScreen(sessionId: string) {
       session
         ? buildInspectionSessionDerivedData(masterData, session, sessions)
         : {
-            correctionResultOptions: [],
             currentAccidentEntries: [],
             currentAgentEntries: [],
             cumulativeAccidentEntries: [],
             cumulativeAgentEntries: [],
-            legalReferenceLibrary: LEGAL_REFERENCE_LIBRARY,
+            doc7ReferenceMaterials: [],
             measurementTemplates: [],
             progress: null,
             siteSessions: [],
@@ -81,16 +109,7 @@ export function useInspectionSessionScreen(sessionId: string) {
     [masterData, session, sessions],
   );
   const site = session ? getSiteById(getSessionSiteKey(session)) : null;
-  const backHref = site
-    ? isAdminView
-      ? getAdminSectionHref('headquarters', {
-          headquarterId: site.headquarterId,
-          siteId: site.id,
-        })
-      : `/sites/${encodeURIComponent(site.id)}`
-    : isAdminView
-      ? getAdminSectionHref('headquarters')
-      : '/';
+  const backHref = site ? `/sites/${encodeURIComponent(site.id)}` : '/';
 
   useEffect(() => () => void saveNow(), [saveNow]);
 
@@ -129,6 +148,21 @@ export function useInspectionSessionScreen(sessionId: string) {
       }));
     }
   }, [session, sessions, updateSession]);
+
+  useEffect(() => {
+    if (!session || !site) return;
+
+    const { changed, merged } = mergeMissingSnapshotFields(
+      session.adminSiteSnapshot,
+      site.adminSiteSnapshot,
+    );
+    if (!changed) return;
+
+    updateSession(session.id, (current) => ({
+      ...current,
+      adminSiteSnapshot: merged,
+    }));
+  }, [session, site, updateSession]);
 
   const applyDocumentUpdate = (
     key: InspectionSectionKey,

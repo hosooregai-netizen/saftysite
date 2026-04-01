@@ -27,10 +27,8 @@ interface HeadquartersSectionProps {
     business_registration_no?: string | null;
     corporate_registration_no?: string | null;
     license_no?: string | null;
-    contact_name?: string | null;
     contact_phone?: string | null;
     address?: string | null;
-    memo?: string | null;
     is_active?: boolean;
   }) => Promise<void>;
   onCreateSite: (input: {
@@ -45,7 +43,6 @@ interface HeadquartersSectionProps {
     manager_phone?: string | null;
     site_address?: string | null;
     status?: 'planned' | 'active' | 'closed';
-    memo?: string | null;
   }) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onDeleteSite: (id: string) => Promise<void>;
@@ -58,10 +55,8 @@ interface HeadquartersSectionProps {
       business_registration_no?: string | null;
       corporate_registration_no?: string | null;
       license_no?: string | null;
-      contact_name?: string | null;
       contact_phone?: string | null;
       address?: string | null;
-      memo?: string | null;
       is_active?: boolean;
     }>,
   ) => Promise<void>;
@@ -78,8 +73,6 @@ interface HeadquartersSectionProps {
       manager_name?: string | null;
       manager_phone?: string | null;
       site_address?: string | null;
-      status?: 'planned' | 'active' | 'closed';
-      memo?: string | null;
     }>,
   ) => Promise<void>;
   onAssignFieldAgent: (siteId: string, userId: string) => Promise<void>;
@@ -135,7 +128,8 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
   );
 
   const submit = async () => {
-    if (!state.form.name.trim()) return;
+    if (state.editingId === 'create' && !state.isCreateReady) return;
+    if (state.editingId !== 'create' && !state.form.name.trim()) return;
     const payload = state.buildPayload();
 
     if (state.editingId === 'create') {
@@ -209,6 +203,7 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
 
       <HeadquarterEditorModal
         busy={busy}
+        canSubmit={state.editingId !== 'create' || state.isCreateReady}
         editingId={state.editingId}
         form={state.form}
         onClose={state.closeModal}

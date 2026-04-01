@@ -8,6 +8,7 @@ import {
   TBM_QUESTION_PROMPTS,
 } from '@/constants/inspectionSession/catalog';
 import { normalizeDoc7CausativeAgentKey } from '@/constants/inspectionSession/doc7Catalog';
+import { normalizeFollowUpResult } from '@/constants/inspectionSession/followUps';
 import {
   createActivityRecord,
   createCurrentHazardFinding,
@@ -65,7 +66,9 @@ export function normalizeFollowUpItem(raw: unknown, fallbackDate: string): Previ
     confirmationDate: normalizeText(source.confirmationDate) || normalizeText(fallbackDate),
     beforePhotoUrl: normalizeText(source.beforePhotoUrl) || normalizeText(source.photoUrl) || normalizeText(source.previousPhotoUrl),
     afterPhotoUrl: normalizeText(source.afterPhotoUrl) || normalizeText(source.currentPhotoUrl),
-    result: normalizeText(source.result) || normalizeText(source.implementationResult),
+    result: normalizeFollowUpResult(
+      normalizeText(source.result) || normalizeText(source.implementationResult),
+    ),
   });
 }
 export function normalizeHazardFinding(raw: unknown, fallbackInspector: string) {

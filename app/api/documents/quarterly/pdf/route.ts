@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { buildQuarterlyHwpxDocument } from '@/server/documents/quarterly/hwpx';
 import { convertHwpxBufferToPdf } from '@/server/documents/inspection/hwpxToPdf';
-import type { GenerateQuarterlyWordRequest } from '@/types/documents';
+import type { GenerateQuarterlyHwpxRequest } from '@/types/documents';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
@@ -19,7 +19,7 @@ export async function POST(request: Request): Promise<Response> {
       );
     }
 
-    const body = (await request.json()) as GenerateQuarterlyWordRequest;
+    const body = (await request.json()) as GenerateQuarterlyHwpxRequest;
     if (!body?.report || !body?.site) {
       return NextResponse.json(
         { error: 'PDF 생성에 필요한 분기 보고서 데이터가 없습니다.' },
@@ -27,7 +27,9 @@ export async function POST(request: Request): Promise<Response> {
       );
     }
 
-    const document = await buildQuarterlyHwpxDocument(body.report, body.site);
+    const document = await buildQuarterlyHwpxDocument(body.report, body.site, {
+      assetBaseUrl: new URL(request.url).origin,
+    });
     const { buffer, filename } = await convertHwpxBufferToPdf(
       document.buffer,
       document.filename,

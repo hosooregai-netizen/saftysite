@@ -235,11 +235,15 @@ function createInitialState(): RouteState {
     contentItems: [
       {
         id: 'content-1',
-        content_type: 'ai_prompt',
-        title: '기본 AI 프롬프트',
-        code: 'PROMPT-001',
-        body: '기본 프롬프트 예시',
-        tags: ['ai'],
+        content_type: 'campaign_template',
+        title: '기본 OPS 자료',
+        code: null,
+        body: {
+          body: '기본 OPS 설명',
+          imageUrl: '',
+          imageName: '',
+        },
+        tags: [],
         sort_order: 0,
         effective_from: null,
         effective_to: null,
@@ -959,30 +963,32 @@ async function runBrowserCrudSmoke() {
   await openSection('콘텐츠');
   await page.getByRole('button', { name: '콘텐츠 추가' }).click();
   const contentCreateDialog = page.getByRole('dialog', { name: '콘텐츠 추가' });
-  await contentCreateDialog.getByLabel('콘텐츠 유형').selectOption('legal_reference');
-  await contentCreateDialog.getByLabel('제목').fill('테스트 법령');
-  await contentCreateDialog.getByLabel('코드').fill('LAW-TEST');
-  await contentCreateDialog.getByLabel('법령 본문').fill('현장 점검용 법령 본문 테스트');
+  await contentCreateDialog.getByLabel('콘텐츠 유형').selectOption('campaign_template');
+  await contentCreateDialog.getByLabel('제목').fill('테스트 OPS');
+  await contentCreateDialog.getByLabel('OPS 설명').fill('현장 점검용 OPS 설명 테스트');
   await contentCreateDialog
     .locator('input[type="file"]')
     .first()
     .setInputFiles({
-      name: 'guide.pdf',
-      mimeType: 'application/pdf',
-      buffer: Buffer.from('%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF'),
+      name: 'ops.png',
+      mimeType: 'image/png',
+      buffer: Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO7Z0n8AAAAASUVORK5CYII=',
+        'base64',
+      ),
     });
-  await contentCreateDialog.getByText('guide.pdf').waitFor({ state: 'visible' });
+  await contentCreateDialog.getByText('ops.png').waitFor({ state: 'visible' });
   await contentCreateDialog.getByRole('button', { name: '생성' }).click();
-  await expectRowText('테스트 법령');
+  await expectRowText('테스트 OPS');
 
-  row = page.locator('tr', { hasText: '테스트 법령' }).first();
+  row = page.locator('tr', { hasText: '테스트 OPS' }).first();
   await row.getByRole('button', { name: '수정' }).click();
   const contentEditDialog = page.getByRole('dialog', { name: '콘텐츠 수정' });
-  await contentEditDialog.getByLabel('제목').fill('테스트 법령 수정');
+  await contentEditDialog.getByLabel('제목').fill('테스트 OPS 수정');
   await contentEditDialog.getByRole('button', { name: '저장' }).click();
-  await expectRowText('테스트 법령 수정');
+  await expectRowText('테스트 OPS 수정');
 
-  row = page.locator('tr', { hasText: '테스트 법령 수정' }).first();
+  row = page.locator('tr', { hasText: '테스트 OPS 수정' }).first();
   await row.getByRole('button', { name: '비활성화' }).click();
 
   console.log('Step: admin report archive');
@@ -1074,7 +1080,7 @@ async function runBrowserCrudSmoke() {
     '현장 종료가 반영되지 않았습니다.'
   );
   assert.equal(
-    state.contentItems.find((item) => item.title === '테스트 법령 수정')?.is_active,
+    state.contentItems.find((item) => item.title === '테스트 OPS 수정')?.is_active,
     false,
     '콘텐츠 비활성화가 반영되지 않았습니다.'
   );
@@ -1454,7 +1460,7 @@ async function runDocumentSmoke() {
   session.document7Findings[0].accidentType = '추락';
   session.document7Findings[0].causativeAgentKey = '4_비계_작업발판';
   session.document7Findings[0].legalReferenceTitle = '산업안전보건기준에 관한 규칙';
-  session.document4FollowUps[0].result = 'implemented';
+  session.document4FollowUps[0].result = '이행';
 
   const quarterTargets = getQuarterTargetsForConstructionPeriod(
     site.adminSiteSnapshot.constructionPeriod
@@ -1467,7 +1473,7 @@ async function runDocumentSmoke() {
     quarterTargets[0],
     '김요원'
   );
-  const badWorkplaceReport = buildInitialBadWorkplaceReport(
+  void buildInitialBadWorkplaceReport(
     site,
     [session],
     {
@@ -1479,17 +1485,8 @@ async function runDocumentSmoke() {
     '2026-03'
   );
 
-  await assertDocumentResponse('/api/documents/inspection/word', {
-    session,
-    siteSessions: [session],
-    templateId: 'default-inspection',
-  });
-  await assertDocumentResponse('/api/documents/quarterly/word', {
+  await assertDocumentResponse('/api/documents/quarterly/hwpx', {
     report: quarterlyReport,
-    site,
-  });
-  await assertDocumentResponse('/api/documents/bad-workplace/word', {
-    report: badWorkplaceReport,
     site,
   });
 }

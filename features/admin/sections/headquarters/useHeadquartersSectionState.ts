@@ -6,14 +6,11 @@ import { toNullableText } from '@/lib/admin';
 
 const EMPTY_FORM = {
   name: '',
-  business_registration_no: '',
-  corporate_registration_no: '',
   license_no: '',
-  contact_name: '',
   contact_phone: '',
   address: '',
-  memo: '',
   is_active: true,
+  registration_number: '',
 };
 
 export function useHeadquartersSectionState(
@@ -31,7 +28,6 @@ export function useHeadquartersSectionState(
     return headquarters.filter((item) =>
       [
         item.name,
-        item.contact_name ?? '',
         item.contact_phone ?? '',
         item.business_registration_no ?? '',
         item.corporate_registration_no ?? '',
@@ -52,14 +48,14 @@ export function useHeadquartersSectionState(
     setEditingId(item.id);
     setForm({
       name: item.name,
-      business_registration_no: item.business_registration_no ?? '',
-      corporate_registration_no: item.corporate_registration_no ?? '',
       license_no: item.license_no ?? '',
-      contact_name: item.contact_name ?? '',
       contact_phone: item.contact_phone ?? '',
       address: item.address ?? '',
-      memo: item.memo ?? '',
       is_active: item.is_active,
+      registration_number:
+        item.corporate_registration_no ??
+        item.business_registration_no ??
+        '',
     });
   };
 
@@ -69,15 +65,21 @@ export function useHeadquartersSectionState(
     setForm(EMPTY_FORM);
   };
 
+  const isCreateReady = Boolean(
+    form.name.trim() &&
+      form.registration_number.trim() &&
+      form.license_no.trim() &&
+      form.contact_phone.trim() &&
+      form.address.trim(),
+  );
+
   const buildPayload = () => ({
     name: form.name.trim(),
-    business_registration_no: toNullableText(form.business_registration_no),
-    corporate_registration_no: toNullableText(form.corporate_registration_no),
+    business_registration_no: toNullableText(form.registration_number),
+    corporate_registration_no: toNullableText(form.registration_number),
     license_no: toNullableText(form.license_no),
-    contact_name: toNullableText(form.contact_name),
     contact_phone: toNullableText(form.contact_phone),
     address: toNullableText(form.address),
-    memo: toNullableText(form.memo),
     is_active: form.is_active,
   });
 
@@ -87,6 +89,7 @@ export function useHeadquartersSectionState(
     editingId,
     filteredHeadquarters,
     form,
+    isCreateReady,
     isOpen,
     openCreate,
     openEdit,
@@ -95,4 +98,3 @@ export function useHeadquartersSectionState(
     setQuery,
   };
 }
-

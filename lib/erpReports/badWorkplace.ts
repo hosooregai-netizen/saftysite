@@ -54,8 +54,8 @@ export function buildBadWorkplaceViolations(
     sourceFindingId: finding.id,
     legalReference:
       finding.legalReferenceTitle ||
-      finding.referenceMaterial1 ||
-      finding.referenceMaterial2,
+      finding.referenceMaterial2 ||
+      finding.referenceMaterial1,
     hazardFactor:
       finding.emphasis ||
       finding.metadata ||

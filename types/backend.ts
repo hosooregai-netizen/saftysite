@@ -4,6 +4,7 @@ import type {
   InspectionSite,
   SafetyInfoItem,
 } from '@/types/inspectionSession';
+import type { CausativeAgentKey } from '@/types/siteOverview';
 
 export interface SafetyMeasurementTemplate {
   id: string;
@@ -30,6 +31,21 @@ export interface SafetyInfoCatalogItem extends SafetyInfoItem {
   sortOrder: number;
 }
 
+export interface SafetyDoc7ReferenceMaterialCatalogItem {
+  id: string;
+  title: string;
+  accidentType: string;
+  causativeAgentKey: CausativeAgentKey | '';
+  body: string;
+  imageUrl: string;
+  referenceTitle1: string;
+  referenceTitle2: string;
+  effectiveFrom: string | null;
+  effectiveTo: string | null;
+  isActive: boolean;
+  sortOrder: number;
+}
+
 export type SafetyUserRole =
   | 'super_admin'
   | 'admin'
@@ -40,15 +56,11 @@ export type SafetyUserRole =
 export type SafetyReportStatus = 'draft' | 'submitted' | 'published' | 'archived';
 
 export type SafetyContentType =
-  | 'hazard_category'
-  | 'accident_type'
   | 'measurement_template'
   | 'safety_news'
   | 'disaster_case'
   | 'campaign_template'
-  | 'ai_prompt'
-  | 'legal_reference'
-  | 'correction_result_option';
+  | 'doc7_reference_material';
 
 export interface SafetyTokenResponse {
   access_token: string;
@@ -177,20 +189,11 @@ export interface SafetyReportListItem {
   updated_at: string;
 }
 
-export interface SafetyLegalReference {
-  id: string;
-  title: string;
-  body: string;
-  referenceMaterial1: string;
-  referenceMaterial2: string;
-}
-
 export interface SafetyMasterData {
   caseFeed: SafetyCaseCatalogItem[];
   safetyInfos: SafetyInfoCatalogItem[];
-  legalReferences: SafetyLegalReference[];
-  correctionResultOptions: string[];
   measurementTemplates: SafetyMeasurementTemplate[];
+  doc7ReferenceMaterials: SafetyDoc7ReferenceMaterialCatalogItem[];
 }
 
 export interface SafetyHydratedData {

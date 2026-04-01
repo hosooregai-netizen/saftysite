@@ -18,17 +18,20 @@ export default function Doc13Section({
   }
 
   return (
-    <div className={styles.caseGrid}>
-      {cards.slice(0, 4).map((item) => (
-        <article key={item.id} className={styles.caseCard}>
-          {item.imageUrl ? <img src={item.imageUrl} alt={item.title} className={styles.caseImage} /> : <div className={styles.casePlaceholder}>자료 없음</div>}
-          <div className={styles.caseBody}>
-            <h3 className={styles.caseTitle}>{item.title}</h3>
-            <p className={styles.caseSummary}>{item.summary}</p>
-          </div>
-        </article>
-      ))}
-    </div>
+    <>
+      <p className={styles.fieldAssist}>관리자 콘텐츠의 재해 사례 중 정렬순 상위 4건만 표시됩니다.</p>
+      <div className={styles.caseGrid}>
+        {cards.slice(0, 4).map((item) => (
+          <article key={item.id} className={styles.caseCard}>
+            {item.imageUrl ? <img src={item.imageUrl} alt={item.title} className={styles.caseImage} /> : <div className={styles.casePlaceholder}>자료 없음</div>}
+            <div className={styles.caseBody}>
+              <h3 className={styles.caseTitle}>{item.title}</h3>
+              <p className={styles.caseSummary}>{item.summary}</p>
+            </div>
+          </article>
+        ))}
+      </div>
+    </>
   );
 }
 

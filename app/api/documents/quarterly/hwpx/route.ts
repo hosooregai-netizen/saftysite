@@ -4,13 +4,13 @@ import {
   buildQuarterlyHwpxDocument,
   createHwpxDownloadResponse,
 } from '@/server/documents/quarterly/hwpx';
-import type { GenerateQuarterlyWordRequest } from '@/types/documents';
+import type { GenerateQuarterlyHwpxRequest } from '@/types/documents';
 
 export const runtime = 'nodejs';
 
 export async function POST(request: Request): Promise<Response> {
   try {
-    const body = (await request.json()) as GenerateQuarterlyWordRequest;
+    const body = (await request.json()) as GenerateQuarterlyHwpxRequest;
     if (!body?.report || !body?.site) {
       return NextResponse.json(
         { error: '문서 생성에 필요한 분기 보고서 데이터가 없습니다.' },
@@ -18,7 +18,9 @@ export async function POST(request: Request): Promise<Response> {
       );
     }
 
-    const document = await buildQuarterlyHwpxDocument(body.report, body.site);
+    const document = await buildQuarterlyHwpxDocument(body.report, body.site, {
+      assetBaseUrl: new URL(request.url).origin,
+    });
     return createHwpxDownloadResponse(document);
   } catch (error) {
     return NextResponse.json(

@@ -345,6 +345,30 @@
   min-height: 36px;
 }
 
+.headquartersTable {
+  table-layout: fixed;
+}
+
+.headquartersNameCol {
+  width: 28%;
+}
+
+.headquartersAddressCol {
+  width: 36%;
+}
+
+.headquartersContactCol {
+  width: 16%;
+}
+
+.headquartersUpdatedCol {
+  width: 14%;
+}
+
+.headquartersMenuCol {
+  width: 56px;
+}
+
 /* 인라인 링크·칩을 한 줄로 (가로 스크롤) */
 .tableInlineLinks {
   display: flex;
@@ -675,6 +699,46 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+
+.referenceMaterialEditorGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+
+.referenceMaterialTextField {
+  display: grid;
+  gap: 8px;
+}
+
+.referenceMaterialTextBox {
+  box-sizing: border-box;
+  min-height: 300px;
+  height: 300px;
+  max-height: 300px;
+  overflow: hidden;
+  border: 1px solid var(--erp-line-strong);
+  border-radius: 1px;
+  background: var(--erp-panel-muted);
+}
+
+.referenceMaterialTextArea {
+  width: 100%;
+  height: 100%;
+  min-height: 300px;
+  padding: 14px 16px;
+  border: 0;
+  background: transparent;
+  resize: none;
+  font: inherit;
+  line-height: 1.6;
+  color: var(--erp-dark);
+}
+
+.referenceMaterialTextArea:focus {
+  outline: none;
 }
 
 .batchCaseGrid {
@@ -1276,7 +1340,8 @@
   .formGrid,
   .modalGrid,
   .assetGrid,
-  .batchCaseGrid {
+  .batchCaseGrid,
+  .referenceMaterialEditorGrid {
     grid-template-columns: minmax(0, 1fr);
   }
 

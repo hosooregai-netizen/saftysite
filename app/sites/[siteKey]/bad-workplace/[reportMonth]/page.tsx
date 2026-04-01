@@ -16,7 +16,6 @@ import {
 import { createTimestamp } from '@/constants/inspectionSession/shared';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { useSiteOperationalReports } from '@/hooks/useSiteOperationalReports';
-import { fetchBadWorkplaceWordDocument, saveBlobAsFile } from '@/lib/api';
 import { getAdminSectionHref, isAdminUserRole } from '@/lib/admin';
 import {
   buildInitialBadWorkplaceReport,
@@ -218,8 +217,6 @@ function BadWorkplaceReportEditor({
 }: BadWorkplaceReportEditorProps) {
   const [draft, setDraft] = useState(initialDraft);
   const [notice, setNotice] = useState<string | null>(null);
-  const [documentError, setDocumentError] = useState<string | null>(null);
-  const [isGeneratingDocument, setIsGeneratingDocument] = useState(false);
 
   const selectedSession = useMemo(
     () => siteSessions.find((session) => session.id === draft.sourceSessionId) || siteSessions[0] || null,
@@ -257,21 +254,6 @@ function BadWorkplaceReportEditor({
     setNotice('불량사업장 신고서를 저장했습니다.');
   };
 
-  const handleDownloadWord = async () => {
-    try {
-      setDocumentError(null);
-      setIsGeneratingDocument(true);
-      const { blob, filename } = await fetchBadWorkplaceWordDocument(draft, currentSite);
-      saveBlobAsFile(blob, filename);
-    } catch (error) {
-      setDocumentError(
-        error instanceof Error ? error.message : '문서를 다운로드하는 중 오류가 발생했습니다.',
-      );
-    } finally {
-      setIsGeneratingDocument(false);
-    }
-  };
-
   return (
     <section className={`${operationalStyles.sectionCard} ${operationalStyles.editorShell}`}>
       <div className={operationalStyles.toolbar}>
@@ -281,14 +263,6 @@ function BadWorkplaceReportEditor({
           </h1>
         </div>
         <div className={operationalStyles.toolbarActions}>
-          <button
-            type="button"
-            className="app-button app-button-secondary"
-            onClick={() => void handleDownloadWord()}
-            disabled={isGeneratingDocument}
-          >
-            {isGeneratingDocument ? '문서 생성 중...' : '문서 다운로드 (.docx)'}
-          </button>
           <button
             type="button"
             className="app-button app-button-primary"
@@ -301,7 +275,6 @@ function BadWorkplaceReportEditor({
       </div>
 
       {error ? <div className={operationalStyles.bannerError}>{error}</div> : null}
-      {documentError ? <div className={operationalStyles.bannerError}>{documentError}</div> : null}
       {notice ? <div className={operationalStyles.bannerInfo}>{notice}</div> : null}
 
       <article className={operationalStyles.reportCard}>
@@ -386,7 +359,7 @@ function BadWorkplaceReportEditor({
                 <span className={operationalStyles.checkboxText}>
                   <strong>{finding.location || finding.emphasis || '지적사항'}</strong>
                   <span className={operationalStyles.muted}>
-                    법적 근거: {finding.legalReferenceTitle || finding.referenceMaterial1 || finding.referenceMaterial2 || '-'}
+                    법적 근거: {finding.legalReferenceTitle || finding.referenceMaterial2 || finding.referenceMaterial1 || '-'}
                   </span>
                   <span className={operationalStyles.muted}>
                     개선 요청: {finding.improvementPlan || '-'}

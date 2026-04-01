@@ -8,6 +8,13 @@ import {
 } from '@/constants/inspectionSession/shared';
 import type { InspectionSite } from '@/types/inspectionSession';
 
+function formatNormalizedDateRange(start: unknown, end: unknown): string {
+  const normalizedStart = normalizeText(start);
+  const normalizedEnd = normalizeText(end);
+  if (normalizedStart && normalizedEnd) return `${normalizedStart} ~ ${normalizedEnd}`;
+  return normalizedStart || normalizedEnd;
+}
+
 export function normalizeInspectionSite(raw: unknown): InspectionSite {
   const source = asRecord(raw);
   const snapshotSource =
@@ -18,7 +25,16 @@ export function normalizeInspectionSite(raw: unknown): InspectionSite {
     assigneeName: normalizeText(snapshotSource.assigneeName) || normalizeText(source.assigneeName),
     siteManagementNumber: normalizeText(snapshotSource.siteManagementNumber),
     businessStartNumber: normalizeText(snapshotSource.businessStartNumber),
-    constructionPeriod: normalizeText(snapshotSource.constructionPeriod),
+    constructionPeriod:
+      normalizeText(snapshotSource.constructionPeriod) ||
+      formatNormalizedDateRange(
+        snapshotSource.project_start_date ?? snapshotSource.projectStartDate,
+        snapshotSource.project_end_date ?? snapshotSource.projectEndDate,
+      ) ||
+      formatNormalizedDateRange(
+        source.project_start_date ?? source.projectStartDate,
+        source.project_end_date ?? source.projectEndDate,
+      ),
     constructionAmount: normalizeText(snapshotSource.constructionAmount),
     siteManagerName: normalizeText(snapshotSource.siteManagerName),
     siteContactEmail: normalizeText(snapshotSource.siteContactEmail),

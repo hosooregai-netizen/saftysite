@@ -1,23 +1,6 @@
-import type { CausativeAgentKey } from '@/types/siteOverview';
+export { ACCIDENT_TYPE_OPTIONS } from '@/constants/inspectionSession/catalog';
 
-export const ACCIDENT_TYPE_OPTIONS = [
-  '떨어짐',
-  '넘어짐',
-  '깔림/뒤집힘',
-  '부딪힘',
-  '물체에 맞음',
-  '무너짐',
-  '끼임',
-  '절단/베임/찔림',
-  '화재/폭발',
-  '산소결핍',
-  '감전',
-  '교통사고',
-  '불균형 및 무리한 동작',
-  '이상 기온',
-  '업무상 질병',
-  '기타',
-] as const;
+import type { CausativeAgentKey } from '@/types/siteOverview';
 
 export const CAUSATIVE_AGENT_OPTIONS: Array<{
   key: CausativeAgentKey;

@@ -68,7 +68,7 @@ export function HeadquartersTable({
         <div className={styles.filterRow}>
           <input
             className={`app-input ${styles.filterSearch}`}
-            placeholder="사업장명, 담당자, 등록번호, 주소로 검색"
+            placeholder="사업장명, 연락처, 주소로 검색"
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
           />
@@ -78,14 +78,19 @@ export function HeadquartersTable({
             <div className={styles.tableEmpty}>등록된 사업장이 없습니다.</div>
           ) : (
             <div className={styles.tableWrap}>
-              <table className={styles.table}>
+              <table className={`${styles.table} ${styles.headquartersTable}`}>
+                <colgroup>
+                  <col className={styles.headquartersNameCol} />
+                  <col className={styles.headquartersAddressCol} />
+                  <col className={styles.headquartersContactCol} />
+                  <col className={styles.headquartersUpdatedCol} />
+                  <col className={styles.headquartersMenuCol} />
+                </colgroup>
                 <thead>
                   <tr>
                     <th>사업장명</th>
-                    <th>담당자</th>
-                    <th>사업자등록번호</th>
-                    <th>법인등록번호</th>
                     <th>주소</th>
+                    <th>연락처</th>
                     <th>수정일</th>
                     <th>메뉴</th>
                   </tr>
@@ -110,17 +115,11 @@ export function HeadquartersTable({
                     >
                       <td>
                         <div className={styles.tablePrimary}>{item.name}</div>
-                        <div className={styles.tableSecondary}>면허번호 {item.license_no || '-'}</div>
                       </td>
-                      <td>
-                        <div className={styles.tablePrimary}>{item.contact_name || '-'}</div>
-                        <div className={styles.tableSecondary}>
-                          {item.contact_phone || '연락처 미입력'}
-                        </div>
-                      </td>
-                      <td>{item.business_registration_no || '-'}</td>
-                      <td>{item.corporate_registration_no || '-'}</td>
                       <td>{item.address || '-'}</td>
+                      <td>
+                        <div className={styles.tablePrimary}>{item.contact_phone || '-'}</div>
+                      </td>
                       <td>{formatTimestamp(item.updated_at)}</td>
                       <td>
                         <div

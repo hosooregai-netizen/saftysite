@@ -1,4 +1,13 @@
 .entryPanel {
+  --entry-accent: #4f86e6;
+  --entry-accent-strong: #3d73d5;
+  --entry-accent-soft: #edf4ff;
+  --entry-panel-line: #d7e3f2;
+  --entry-panel-fill: linear-gradient(
+    180deg,
+    rgba(246, 249, 252, 0.88) 0%,
+    rgba(255, 255, 255, 1) 100%
+  );
   display: grid;
   gap: 16px;
 }
@@ -23,18 +32,24 @@
 
 .entryCard {
   display: grid;
-  gap: 14px;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 16px;
   align-content: start;
-  padding: 20px;
+  min-height: 292px;
+  padding: 18px;
   border: 1px solid var(--erp-line);
   border-radius: var(--erp-radius-surface);
-  background: var(--erp-white);
+  background: var(--entry-panel-fill);
+  box-shadow: 0 1px 0 rgba(16, 24, 43, 0.04);
+  overflow: hidden;
 }
 
 .entryCardActive {
-  border-color: var(--erp-line-strong);
-  box-shadow: inset 3px 0 0 var(--erp-navy);
-  background: #fbfcfe;
+  border-color: #c6d8f1;
+  box-shadow:
+    inset 3px 0 0 var(--entry-accent),
+    0 1px 0 rgba(16, 24, 43, 0.04);
+  background: linear-gradient(180deg, #f9fbff 0%, #ffffff 100%);
 }
 
 .entryHeader {
@@ -47,14 +62,191 @@
 
 .entryBody {
   display: grid;
-  gap: 8px;
+  align-content: start;
+  gap: 10px;
 }
 
 .entryTitle {
   margin: 0;
-  font-size: var(--text-title);
+  font-size: clamp(1.38rem, 2.2vw, 1.72rem);
   font-weight: 700;
+  letter-spacing: -0.02em;
   color: var(--erp-dark);
+}
+
+.entryMetricLead {
+  margin: 0;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--erp-text-muted);
+}
+
+.entryMetricRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  min-height: 156px;
+  padding: 20px 18px;
+  border: 1px solid var(--entry-panel-line);
+  border-radius: var(--erp-radius-surface);
+  background:
+    radial-gradient(circle at top left, rgba(79, 134, 230, 0.1), transparent 42%),
+    linear-gradient(180deg, #f6faff 0%, #edf4ff 58%, #f8fbff 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+.entryMetricCopy {
+  display: grid;
+  align-content: center;
+  gap: 8px;
+  min-height: 100%;
+}
+
+.entryMetricValue {
+  font-size: clamp(2.45rem, 4.2vw, 3.1rem);
+  line-height: 0.9;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  color: var(--erp-dark);
+}
+
+.entryMetricUnit {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--erp-text-muted);
+}
+
+.entryMetricHint {
+  margin: 0;
+  font-size: var(--text-ui);
+  line-height: 1.6;
+  color: var(--erp-text-muted);
+}
+
+.metricVisual {
+  display: grid;
+  place-items: center;
+  min-width: 156px;
+  min-height: 108px;
+}
+
+.barChart {
+  position: relative;
+  display: flex;
+  align-items: end;
+  gap: 7px;
+  height: 96px;
+  padding-bottom: 4px;
+}
+
+.barChart::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 1px;
+  border-radius: 999px;
+  background: rgba(27, 54, 97, 0.12);
+}
+
+.barChartBar {
+  width: 13px;
+  border-radius: 999px 999px 3px 3px;
+  background: #dbe5f2;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 4px 10px rgba(18, 37, 69, 0.05);
+}
+
+.barChartBarActive {
+  background: linear-gradient(180deg, var(--entry-accent) 0%, var(--entry-accent-strong) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    0 8px 16px rgba(61, 115, 213, 0.18);
+}
+
+.quarterRingWrap {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+}
+
+.quarterRing {
+  display: grid;
+  place-items: center;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  box-shadow: 0 8px 20px rgba(61, 115, 213, 0.12);
+}
+
+.quarterRingCenter {
+  display: grid;
+  place-items: center;
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: #fff;
+  text-align: center;
+  box-shadow: 0 6px 16px rgba(34, 63, 115, 0.1);
+}
+
+.quarterRingCenter strong {
+  font-size: 1.1rem;
+  line-height: 1;
+  color: var(--erp-dark);
+}
+
+.quarterRingCenter span {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--erp-text-muted);
+}
+
+.quarterLabels {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.quarterLabel {
+  min-width: 38px;
+  padding: 5px 0;
+  border-radius: 999px;
+  border: 1px solid #d5e0ef;
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: center;
+  color: var(--erp-text-muted);
+}
+
+.quarterLabelActive {
+  border-color: transparent;
+  background: var(--entry-accent);
+  color: #fff;
+}
+
+.badgePanel {
+  display: grid;
+  gap: 6px;
+  min-width: 120px;
+  padding: 18px 18px;
+  border: 1px solid var(--entry-panel-line);
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 8px 18px rgba(61, 115, 213, 0.08);
+  text-align: center;
+}
+
+.badgePanelLabel {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--erp-text-muted);
 }
 
 .entryDescription {
@@ -75,6 +267,13 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  margin-top: auto;
+}
+
+.entryActions :global(.app-button) {
+  min-width: 144px;
+  min-height: 42px;
+  box-shadow: 0 8px 16px rgba(61, 115, 213, 0.12);
 }
 
 .subLinkList {
@@ -119,11 +318,30 @@
 
   .entryCard {
     padding: 16px;
+    min-height: auto;
   }
 
   .entryGrid {
     grid-template-columns: minmax(0, 1fr);
     gap: 12px;
+  }
+
+  .entryMetricRow {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: stretch;
+    min-height: auto;
+    gap: 14px;
+    padding: 16px;
+  }
+
+  .metricVisual {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .barChart,
+  .quarterRingWrap {
+    justify-self: center;
   }
 
   .subLink,

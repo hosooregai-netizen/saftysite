@@ -34,7 +34,7 @@ export function createPreviousGuidanceFollowUpItem(
     confirmationDate: '',
     beforePhotoUrl: '',
     afterPhotoUrl: '',
-    result: '',
+    result: '이행',
     ...initial,
   };
 }

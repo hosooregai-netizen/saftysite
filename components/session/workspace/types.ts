@@ -4,7 +4,10 @@ import type {
   InspectionSectionKey,
   InspectionSession,
 } from '@/types/inspectionSession';
-import type { SafetyMeasurementTemplate } from '@/types/backend';
+import type {
+  SafetyDoc7ReferenceMaterialCatalogItem,
+  SafetyMeasurementTemplate,
+} from '@/types/backend';
 import type { ChartEntry } from './utils';
 
 export type ApplyDocumentUpdate = (
@@ -21,7 +24,6 @@ export type WithFileData = (
 
 export interface OverviewSectionProps {
   applyDocumentUpdate: ApplyDocumentUpdate;
-  correctionResultOptions: string[];
   session: InspectionSession;
   withFileData: WithFileData;
 }
@@ -32,21 +34,14 @@ export interface HazardStatsSectionProps {
   currentAgentEntries: ChartEntry[];
   cumulativeAccidentEntries: ChartEntry[];
   cumulativeAgentEntries: ChartEntry[];
+  doc7ReferenceMaterials: SafetyDoc7ReferenceMaterialCatalogItem[];
   measurementTemplates: SafetyMeasurementTemplate[];
   session: InspectionSession;
   withFileData: WithFileData;
-  legalReferenceLibrary: Array<{
-    id: string;
-    title: string;
-    body: string;
-    referenceMaterial1: string;
-    referenceMaterial2: string;
-  }>;
 }
 
 export interface SupportSectionProps {
   applyDocumentUpdate: ApplyDocumentUpdate;
-  legalReferenceLibrary: Array<{ id: string; title: string; body: string }>;
   session: InspectionSession;
   withFileData: WithFileData;
 }

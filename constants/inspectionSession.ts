@@ -6,4 +6,5 @@ export * from '@/constants/inspectionSession/normalizeSite';
 export * from '@/constants/inspectionSession/sessionFactory';
 export * from '@/constants/inspectionSession/sessionIdentity';
 export * from '@/constants/inspectionSession/sessionState';
+export * from '@/constants/inspectionSession/shared';
 

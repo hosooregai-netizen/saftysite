@@ -1,7 +1,7 @@
 ﻿'use client';
 
 import Link from 'next/link';
-import { use, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import { use, useEffect, useMemo, useRef, useState } from 'react';
 import { AdminMenuDrawer, AdminMenuPanel } from '@/components/admin/AdminMenu';
 import LoginPanel from '@/components/auth/LoginPanel';
 import operationalStyles from '@/components/site/OperationalReports.module.css';
@@ -18,7 +18,6 @@ import {
   getSessionTitle,
 } from '@/constants/inspectionSession';
 import { createTimestamp, generateId } from '@/constants/inspectionSession/shared';
-import { primeControllerDashboardContentItems } from '@/hooks/controller/useControllerDashboard';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { useSiteOperationalReports } from '@/hooks/useSiteOperationalReports';
 import {
@@ -26,16 +25,21 @@ import {
   fetchQuarterlyPdfDocument,
   saveBlobAsFile,
 } from '@/lib/api';
-import { getAdminSectionHref, isAdminUserRole } from '@/lib/admin';
+import { isAdminUserRole } from '@/lib/admin';
 import {
   buildInitialQuarterlySummaryReport,
   createQuarterlySummaryDraft,
   getQuarterlySourceSessions,
   syncQuarterlySummaryReportSources,
 } from '@/lib/erpReports/quarterly';
-import { formatPeriodRangeLabel } from '@/lib/erpReports/shared';
-import { readSafetyAuthToken } from '@/lib/safetyApi';
-import { buildSiteQuarterlyListHref } from '@/features/home/lib/siteEntry';
+import {
+  createQuarterKey,
+  formatPeriodRangeLabel,
+  getQuarterFromDate,
+  getQuarterRange,
+  parseDateValue,
+} from '@/lib/erpReports/shared';
+import { fetchSafetyContentItems, readSafetyAuthToken } from '@/lib/safetyApi';
 import {
   contentBodyToAssetName,
   contentBodyToAssetUrl,
@@ -62,8 +66,6 @@ interface QuarterlyReportEditorProps {
   onSave: (report: QuarterlySummaryReport) => Promise<void>;
   siteSessions: InspectionSession[];
   sourceReportsLoading: boolean;
-  currentUserName: string;
-  isAdminView: boolean;
 }
 
 interface OpsAssetOption {
@@ -74,6 +76,10 @@ interface OpsAssetOption {
   fileUrl: string;
   fileName: string;
   type: SafetyContentItem['content_type'];
+  sortOrder: number;
+  effectiveFrom: string | null;
+  effectiveTo: string | null;
+  isActive: boolean;
 }
 
 export default function QuarterlyReportPage({ params }: QuarterlyReportPageProps) {
@@ -110,17 +116,8 @@ export default function QuarterlyReportPage({ params }: QuarterlyReportPageProps
   const { quarterlyReports, isSaving, error, saveQuarterlyReport } =
     useSiteOperationalReports(currentSite);
   const isAdminView = Boolean(currentUser && isAdminUserRole(currentUser.role));
-  const backHref = currentSite
-    ? isAdminView
-      ? getAdminSectionHref('headquarters', {
-          headquarterId: currentSite.headquarterId,
-          siteId: currentSite.id,
-        })
-      : buildSiteQuarterlyListHref(currentSite.id)
-    : isAdminView
-      ? getAdminSectionHref('headquarters')
-      : '/';
-  const backLabel = isAdminView ? '현장 메인' : '분기 종합보고서 목록';
+  const backHref = currentSite ? `/sites/${encodeURIComponent(currentSite.id)}` : '/';
+  const backLabel = '현장 메인';
   const existing = useMemo(
     () =>
       quarterlyReports.find(
@@ -242,7 +239,7 @@ export default function QuarterlyReportPage({ params }: QuarterlyReportPageProps
 
               <div className={shellStyles.pageGrid}>
                 <QuarterlyReportEditor
-                  key={`${initialDraft.id}:${initialDraft.updatedAt}:${initialDraft.opsAssignedAt}`}
+                  key={`${initialDraft.id}:${initialDraft.updatedAt}`}
                   currentSite={currentSite}
                   initialDraft={initialDraft}
                   isSaving={isSaving}
@@ -250,8 +247,6 @@ export default function QuarterlyReportPage({ params }: QuarterlyReportPageProps
                   onSave={saveQuarterlyReport}
                   siteSessions={siteSessions}
                   sourceReportsLoading={sourceReportsLoading}
-                  currentUserName={currentUser?.name || ''}
-                  isAdminView={isAdminView}
                 />
               </div>
             </div>
@@ -328,6 +323,52 @@ function formatDateTimeLabel(value: string) {
   });
 }
 
+function getQuarterSelectionTarget(
+  report: Pick<
+    QuarterlySummaryReport,
+    'periodStartDate' | 'periodEndDate' | 'quarterKey' | 'year' | 'quarter'
+  >,
+) {
+  if (report.year > 0 && report.quarter >= 1 && report.quarter <= 4) {
+    return {
+      year: report.year,
+      quarter: report.quarter,
+    };
+  }
+
+  const startDate = parseDateValue(report.periodStartDate);
+  if (startDate) {
+    return {
+      year: startDate.getFullYear(),
+      quarter: getQuarterFromDate(startDate),
+    };
+  }
+
+  const today = new Date();
+  return {
+    year: today.getFullYear(),
+    quarter: getQuarterFromDate(today),
+  };
+}
+
+function normalizeOpsDateValue(value: string | null | undefined): string {
+  if (!value) return '';
+  const normalized = value.trim();
+  if (!normalized) return '';
+
+  const directMatch = normalized.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (directMatch) {
+    return directMatch[1];
+  }
+
+  const parsed = new Date(normalized);
+  if (Number.isNaN(parsed.getTime())) {
+    return '';
+  }
+
+  return parsed.toISOString().slice(0, 10);
+}
+
 function getQuarterlyDraftFingerprint(report: QuarterlySummaryReport) {
   return JSON.stringify({
     ...report,
@@ -358,7 +399,122 @@ function mapContentItemToOpsAsset(item: SafetyContentItem): OpsAssetOption {
     fileUrl: contentBodyToAssetUrl(item.body),
     fileName: contentBodyToAssetName(item.body),
     type: item.content_type,
+    sortOrder: item.sort_order,
+    effectiveFrom: item.effective_from,
+    effectiveTo: item.effective_to,
+    isActive: item.is_active,
   };
+}
+
+function isOpsAssetEffectiveForDate(asset: OpsAssetOption, reportDate: string): boolean {
+  if (!asset.isActive) {
+    return false;
+  }
+
+  const target = normalizeOpsDateValue(reportDate);
+  if (!target) {
+    return true;
+  }
+
+  const start = normalizeOpsDateValue(asset.effectiveFrom);
+  const end = normalizeOpsDateValue(asset.effectiveTo);
+
+  if (start && target < start) {
+    return false;
+  }
+  if (end && target > end) {
+    return false;
+  }
+
+  return true;
+}
+
+function getQuarterlyOpsMatchDate(report: QuarterlySummaryReport): string {
+  return report.periodEndDate || report.periodStartDate || report.updatedAt || '';
+}
+
+function getAutoMatchedOpsAsset(
+  items: OpsAssetOption[],
+  report: QuarterlySummaryReport,
+): OpsAssetOption | null {
+  const reportDate = getQuarterlyOpsMatchDate(report);
+
+  return (
+    [...items]
+      .filter((item) => isOpsAssetEffectiveForDate(item, reportDate))
+      .sort(
+        (left, right) =>
+          left.sortOrder - right.sortOrder || left.title.localeCompare(right.title, 'ko'),
+      )[0] ?? null
+  );
+}
+
+function clearQuarterlyOpsAsset(report: QuarterlySummaryReport): QuarterlySummaryReport {
+  return {
+    ...report,
+    opsAssetId: '',
+    opsAssetTitle: '',
+    opsAssetDescription: '',
+    opsAssetPreviewUrl: '',
+    opsAssetFileUrl: '',
+    opsAssetFileName: '',
+    opsAssetType: '',
+    opsAssignedBy: '',
+    opsAssignedAt: '',
+  };
+}
+
+function applyQuarterlyOpsAsset(
+  report: QuarterlySummaryReport,
+  asset: OpsAssetOption | null,
+): QuarterlySummaryReport {
+  if (!asset) {
+    return clearQuarterlyOpsAsset(report);
+  }
+
+  return {
+    ...report,
+    opsAssetId: asset.id,
+    opsAssetTitle: asset.title,
+    opsAssetDescription: asset.description,
+    opsAssetPreviewUrl: asset.previewUrl,
+    opsAssetFileUrl: asset.fileUrl,
+    opsAssetFileName: asset.fileName,
+    opsAssetType: asset.type,
+    opsAssignedBy: '',
+    opsAssignedAt: '',
+  };
+}
+
+function hasSameQuarterlyOpsAsset(
+  report: QuarterlySummaryReport,
+  asset: OpsAssetOption | null,
+): boolean {
+  if (!asset) {
+    return !(
+      report.opsAssetId ||
+      report.opsAssetTitle ||
+      report.opsAssetDescription ||
+      report.opsAssetPreviewUrl ||
+      report.opsAssetFileUrl ||
+      report.opsAssetFileName ||
+      report.opsAssetType ||
+      report.opsAssignedBy ||
+      report.opsAssignedAt
+    );
+  }
+
+  return (
+    report.opsAssetId === asset.id &&
+    report.opsAssetTitle === asset.title &&
+    report.opsAssetDescription === asset.description &&
+    report.opsAssetPreviewUrl === asset.previewUrl &&
+    report.opsAssetFileUrl === asset.fileUrl &&
+    report.opsAssetFileName === asset.fileName &&
+    report.opsAssetType === asset.type &&
+    report.opsAssignedBy === '' &&
+    report.opsAssignedAt === ''
+  );
 }
 
 function QuarterlyReportEditor({
@@ -369,8 +525,6 @@ function QuarterlyReportEditor({
   onSave,
   siteSessions,
   sourceReportsLoading,
-  currentUserName,
-  isAdminView,
 }: QuarterlyReportEditorProps) {
   const sourceSessions = useMemo(
     () => sortSourceSessionsByDateDesc(siteSessions),
@@ -388,11 +542,9 @@ function QuarterlyReportEditor({
   const [titleDraft, setTitleDraft] = useState(initialDraft.title);
   const [sourceModalOpen, setSourceModalOpen] = useState(false);
   const [opsAssets, setOpsAssets] = useState<OpsAssetOption[]>([]);
+  const [opsLoaded, setOpsLoaded] = useState(false);
   const [opsLoading, setOpsLoading] = useState(false);
   const [opsError, setOpsError] = useState<string | null>(null);
-  const [opsModalOpen, setOpsModalOpen] = useState(false);
-  const [opsQuery, setOpsQuery] = useState('');
-  const deferredOpsQuery = useDeferredValue(opsQuery);
   const lastPersistedDraftFingerprintRef = useRef(getQuarterlyDraftFingerprint(initialDraft));
   const draftFingerprint = useMemo(() => getQuarterlyDraftFingerprint(draft), [draft]);
   const isGeneratingDocument = isGeneratingHwpx || isGeneratingPdf;
@@ -415,7 +567,6 @@ function QuarterlyReportEditor({
   }, [initialDraft, sourceSessions]);
 
   useEffect(() => {
-    if (!isAdminView) return;
     let cancelled = false;
 
     const loadOpsAssets = async () => {
@@ -424,11 +575,15 @@ function QuarterlyReportEditor({
       try {
         const token = readSafetyAuthToken();
         if (!token) throw new Error('콘텐츠를 불러오려면 다시 로그인해 주세요.');
-        const contentItems = await primeControllerDashboardContentItems(token);
+        const contentItems = await fetchSafetyContentItems(token);
         if (cancelled) return;
         setOpsAssets(
           contentItems
-            .filter((item) => item.content_type === 'campaign_template' && item.is_active)
+            .filter((item) => item.content_type === 'campaign_template')
+            .sort(
+              (left, right) =>
+                left.sort_order - right.sort_order || left.title.localeCompare(right.title, 'ko'),
+            )
             .map(mapContentItemToOpsAsset),
         );
       } catch (nextError) {
@@ -439,7 +594,10 @@ function QuarterlyReportEditor({
             : 'OPS 자료를 불러오는 중 오류가 발생했습니다.',
         );
       } finally {
-        if (!cancelled) setOpsLoading(false);
+        if (!cancelled) {
+          setOpsLoading(false);
+          setOpsLoaded(true);
+        }
       }
     };
 
@@ -448,7 +606,7 @@ function QuarterlyReportEditor({
     return () => {
       cancelled = true;
     };
-  }, [isAdminView]);
+  }, []);
 
   const selectedSourceSet = useMemo(
     () => new Set(selectedSourceSessionIds),
@@ -456,13 +614,26 @@ function QuarterlyReportEditor({
   );
   const hasPendingSelectionChanges =
     normalizeIds(selectedSourceSessionIds) !== normalizeIds(draft.generatedFromSessionIds);
-  const filteredOpsAssets = useMemo(() => {
-    const normalizedQuery = deferredOpsQuery.trim().toLowerCase();
-    if (!normalizedQuery) return opsAssets;
-    return opsAssets.filter((item) =>
-      [item.title, item.description, item.fileName].join(' ').toLowerCase().includes(normalizedQuery),
-    );
-  }, [deferredOpsQuery, opsAssets]);
+  const autoMatchedOpsAsset = useMemo(() => {
+    if (!opsLoaded || opsError) {
+      return null;
+    }
+    return getAutoMatchedOpsAsset(opsAssets, draft);
+  }, [draft, opsAssets, opsError, opsLoaded]);
+
+  useEffect(() => {
+    if (!opsLoaded || opsError) {
+      return;
+    }
+
+    setDraft((current) => {
+      if (hasSameQuarterlyOpsAsset(current, autoMatchedOpsAsset)) {
+        return current;
+      }
+
+      return applyQuarterlyOpsAsset(current, autoMatchedOpsAsset);
+    });
+  }, [autoMatchedOpsAsset, opsError, opsLoaded]);
 
   useEffect(() => {
     if (draftFingerprint === lastPersistedDraftFingerprintRef.current || isSaving) {
@@ -565,6 +736,40 @@ function QuarterlyReportEditor({
     setNotice(null);
   };
 
+  const handleQuarterChange = (value: string) => {
+    const nextQuarter = Number.parseInt(value, 10);
+    if (nextQuarter < 1 || nextQuarter > 4) {
+      return;
+    }
+
+    const currentQuarterTarget = getQuarterSelectionTarget(draft);
+    const nextRange = getQuarterRange(currentQuarterTarget.year, nextQuarter);
+    const nextDraft = {
+      ...draft,
+      periodStartDate: nextRange.startDate,
+      periodEndDate: nextRange.endDate,
+      quarterKey: createQuarterKey(currentQuarterTarget.year, nextQuarter),
+      year: currentQuarterTarget.year,
+      quarter: nextQuarter,
+    };
+    const nextAvailableSourceSessions = sortSourceSessionsByDateDesc(
+      getQuarterlySourceSessions(siteSessions, nextDraft),
+    );
+    const nextSelectedSourceSessionIds = nextAvailableSourceSessions.map((session) => session.id);
+
+    setSelectedSourceSessionIds(nextSelectedSourceSessionIds);
+    setDraft(
+      syncQuarterlySummaryReportSources(
+        nextDraft,
+        currentSite,
+        siteSessions,
+        nextSelectedSourceSessionIds,
+        nextAvailableSourceSessions,
+      ),
+    );
+    setNotice(null);
+  };
+
   const handleOpenTitleEditor = () => {
     setTitleDraft(draft.title);
     setTitleEditorOpen(true);
@@ -624,39 +829,6 @@ function QuarterlyReportEditor({
     }));
   };
 
-  const handleSelectOpsAsset = (asset: OpsAssetOption) => {
-    setDraft((current) => ({
-      ...current,
-      opsAssetId: asset.id,
-      opsAssetTitle: asset.title,
-      opsAssetDescription: asset.description,
-      opsAssetPreviewUrl: asset.previewUrl,
-      opsAssetFileUrl: asset.fileUrl,
-      opsAssetFileName: asset.fileName,
-      opsAssetType: asset.type,
-      opsAssignedBy: currentUserName || current.opsAssignedBy,
-      opsAssignedAt: createTimestamp(),
-    }));
-    setOpsModalOpen(false);
-    setNotice('6번 OPS 자료를 연결했습니다.');
-  };
-
-  const handleClearOpsAsset = () => {
-    setDraft((current) => ({
-      ...current,
-      opsAssetId: '',
-      opsAssetTitle: '',
-      opsAssetDescription: '',
-      opsAssetPreviewUrl: '',
-      opsAssetFileUrl: '',
-      opsAssetFileName: '',
-      opsAssetType: '',
-      opsAssignedBy: '',
-      opsAssignedAt: '',
-    }));
-    setNotice('6번 OPS 자료 연결을 해제했습니다.');
-  };
-
   return (
     <section className={`${operationalStyles.sectionCard} ${operationalStyles.editorShell}`}>
       <QuarterlySummaryToolbar
@@ -677,11 +849,13 @@ function QuarterlyReportEditor({
       <QuarterlySourceSelectionSection
         periodStartDate={draft.periodStartDate}
         periodEndDate={draft.periodEndDate}
+        selectedQuarter={String(getQuarterSelectionTarget(draft).quarter)}
         sourceSessions={availableSourceSessions}
         loading={sourceReportsLoading}
         selectedSourceSet={selectedSourceSet}
         hasPendingSelectionChanges={hasPendingSelectionChanges}
         onChangePeriod={handlePeriodChange}
+        onChangeQuarter={handleQuarterChange}
         onOpenSelector={() => setSourceModalOpen(true)}
         onRecalculate={handleApplySourceSelection}
       />
@@ -740,20 +914,8 @@ function QuarterlyReportEditor({
       />
       <QuarterlyOpsSection
         draft={draft}
-        isAdminView={isAdminView}
-        onOpenSelector={() => setOpsModalOpen(true)}
-        onClear={handleClearOpsAsset}
-      />
-      <QuarterlyOpsAssetModal
-        open={opsModalOpen}
-        query={opsQuery}
         loading={opsLoading}
         error={opsError}
-        items={filteredOpsAssets}
-        selectedId={draft.opsAssetId}
-        onChangeQuery={setOpsQuery}
-        onClose={() => setOpsModalOpen(false)}
-        onSelect={handleSelectOpsAsset}
       />
       <AppModal
         open={titleEditorOpen}
@@ -920,22 +1082,26 @@ function QuarterlySummaryCards(props: {
 function QuarterlySourceSelectionSection(props: {
   periodStartDate: string;
   periodEndDate: string;
+  selectedQuarter: string;
   sourceSessions: InspectionSession[];
   loading: boolean;
   selectedSourceSet: Set<string>;
   hasPendingSelectionChanges: boolean;
   onChangePeriod: (field: 'periodStartDate' | 'periodEndDate', value: string) => void;
+  onChangeQuarter: (value: string) => void;
   onOpenSelector: () => void;
   onRecalculate: () => void;
 }) {
   const {
     periodStartDate,
     periodEndDate,
+    selectedQuarter,
     sourceSessions,
     loading,
     selectedSourceSet,
     hasPendingSelectionChanges,
     onChangePeriod,
+    onChangeQuarter,
     onOpenSelector,
     onRecalculate,
   } = props;
@@ -946,12 +1112,28 @@ function QuarterlySourceSelectionSection(props: {
     <article className={operationalStyles.reportCard}>
       <SectionHeader title="지도 보고서 선택" />
       <div className={operationalStyles.periodFieldGrid}>
-        <FieldInput
-          label="시작일"
-          type="date"
-          value={periodStartDate}
-          onChange={(value) => onChangePeriod('periodStartDate', value)}
-        />
+        <label className={operationalStyles.field}>
+          <span className={operationalStyles.fieldLabel}>시작일</span>
+          <div className={operationalStyles.periodFieldInline}>
+            <input
+              className="app-input"
+              type="date"
+              value={periodStartDate}
+              onChange={(event) => onChangePeriod('periodStartDate', event.target.value)}
+            />
+            <select
+              className={`app-select ${operationalStyles.periodQuarterSelect}`}
+              value={selectedQuarter}
+              onChange={(event) => onChangeQuarter(event.target.value)}
+              aria-label="분기"
+            >
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+            </select>
+          </div>
+        </label>
         <FieldInput
           label="종료일"
           type="date"
@@ -1479,18 +1661,14 @@ function QuarterlyFuturePlansSection(props: {
 
 function QuarterlyOpsSection(props: {
   draft: QuarterlySummaryReport;
-  isAdminView: boolean;
-  onOpenSelector: () => void;
-  onClear: () => void;
+  loading: boolean;
+  error: string | null;
 }) {
-  const { draft, isAdminView, onOpenSelector, onClear } = props;
+  const { draft, loading, error } = props;
   return (
     <article className={operationalStyles.reportCard}>
-      <SectionHeader
-        title="6. OPS / One Point Sheet"
-        chips={draft.opsAssetId ? ['관리자 전용', '자료 연결됨'] : ['관리자 전용']}
-        description="작성자는 연결 결과만 확인할 수 있습니다. 관리자는 콘텐츠의 캠페인 자료를 선택해 이 섹션을 보완합니다."
-      />
+      <SectionHeader title="6. OPS / One Point Sheet" />
+      {error ? <div className={operationalStyles.bannerError}>{error}</div> : null}
       {draft.opsAssetId ? (
         <div className={operationalStyles.opsAssetCard}>
           {draft.opsAssetPreviewUrl ? (
@@ -1502,69 +1680,14 @@ function QuarterlyOpsSection(props: {
           <div className={operationalStyles.field}>
             <strong className={operationalStyles.reportCardTitle}>{draft.opsAssetTitle || '제목 없음'}</strong>
             {draft.opsAssetDescription ? <p className={operationalStyles.reportCardDescription}>{draft.opsAssetDescription}</p> : null}
-            <p className={operationalStyles.muted}>{draft.opsAssignedBy ? `연결자 ${draft.opsAssignedBy} / ${formatDateTimeLabel(draft.opsAssignedAt)}` : '연결 정보 없음'}</p>
-            {draft.opsAssetFileUrl ? <a href={draft.opsAssetFileUrl} target="_blank" rel="noreferrer" className={operationalStyles.linkButton}>원본 자료 열기</a> : null}
           </div>
         </div>
-      ) : (
-        <div className={operationalStyles.emptyState}>아직 연결된 OPS 자료가 없습니다. 관리자가 이후 자료를 연결할 수 있습니다.</div>
-      )}
-      {isAdminView ? (
-        <div className={operationalStyles.reportActions}>
-          <button type="button" className="app-button app-button-primary" onClick={onOpenSelector}>라이브러리에서 선택</button>
-          {draft.opsAssetId ? <button type="button" className="app-button app-button-secondary" onClick={onClear}>연결 해제</button> : null}
-        </div>
-      ) : null}
-    </article>
-  );
-}
-
-function QuarterlyOpsAssetModal(props: {
-  open: boolean;
-  query: string;
-  loading: boolean;
-  error: string | null;
-  items: OpsAssetOption[];
-  selectedId: string;
-  onChangeQuery: (value: string) => void;
-  onClose: () => void;
-  onSelect: (asset: OpsAssetOption) => void;
-}) {
-  const { open, query, loading, error, items, selectedId, onChangeQuery, onClose, onSelect } = props;
-  return (
-    <AppModal open={open} title="OPS 자료 선택" size="large" onClose={onClose} actions={<button type="button" className="app-button app-button-secondary" onClick={onClose}>닫기</button>}>
-      <FieldInput label="검색" value={query} onChange={onChangeQuery} placeholder="제목이나 설명으로 검색" />
-      {error ? <div className={operationalStyles.bannerError}>{error}</div> : null}
-      {loading ? (
+      ) : loading ? (
         <div className={operationalStyles.emptyState}>OPS 자료를 불러오는 중입니다.</div>
-      ) : items.length > 0 ? (
-        <div className={operationalStyles.opsAssetGrid}>
-          {items.map((asset) => {
-            const isSelected = selectedId === asset.id;
-            return (
-              <article key={asset.id} className={`${operationalStyles.sourceCard} ${isSelected ? operationalStyles.sourceCardActive : ''}`}>
-                {asset.previewUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={asset.previewUrl} alt={asset.title} className={operationalStyles.opsAssetPreview} />
-                ) : (
-                  <div className={operationalStyles.emptyState}>미리보기 없음</div>
-                )}
-                <div className={operationalStyles.sourceCardBody}>
-                  <strong className={operationalStyles.sourceCardTitle}>{asset.title}</strong>
-                  <span className={operationalStyles.sourceCardMeta}>{asset.description || '설명 없음'}</span>
-                  {asset.fileName ? <span className={operationalStyles.muted}>{asset.fileName}</span> : null}
-                </div>
-                <div className={operationalStyles.sourceCardActions}>
-                  <button type="button" className="app-button app-button-primary" onClick={() => onSelect(asset)}>{isSelected ? '다시 선택' : '이 자료 연결'}</button>
-                </div>
-              </article>
-            );
-          })}
-        </div>
       ) : (
-        <div className={operationalStyles.emptyState}>선택 가능한 캠페인 자료가 없습니다. 관리자 콘텐츠에서 자료를 먼저 등록해 주세요.</div>
+        <div className={operationalStyles.emptyState}>연결 가능한 OPS 자료가 없습니다. 콘텐츠 CRUD에 OPS를 등록하면 이 영역에 자동 반영됩니다.</div>
       )}
-    </AppModal>
+    </article>
   );
 }
 

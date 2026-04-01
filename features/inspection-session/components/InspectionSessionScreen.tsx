@@ -37,13 +37,12 @@ export function InspectionSessionScreen({ sessionId }: InspectionSessionScreenPr
 
   const sectionProps = {
     applyDocumentUpdate: screen.applyDocumentUpdate,
-    correctionResultOptions: screen.derivedData.correctionResultOptions,
     currentAccidentEntries: screen.derivedData.currentAccidentEntries,
     currentAgentEntries: screen.derivedData.currentAgentEntries,
     currentSection: screen.currentSection,
     cumulativeAccidentEntries: screen.derivedData.cumulativeAccidentEntries,
     cumulativeAgentEntries: screen.derivedData.cumulativeAgentEntries,
-    legalReferenceLibrary: screen.derivedData.legalReferenceLibrary,
+    doc7ReferenceMaterials: screen.derivedData.doc7ReferenceMaterials,
     measurementTemplates: screen.derivedData.measurementTemplates,
     session: screen.sectionSession,
     withFileData: screen.withFileData,

@@ -2,15 +2,18 @@ import {
   DEFAULT_CASE_FEED,
   DEFAULT_MEASUREMENT_CRITERIA,
   DEFAULT_SAFETY_INFOS,
-  LEGAL_REFERENCE_LIBRARY,
   finalizeInspectionSession,
   getSessionGuidanceDate,
 } from '@/constants/inspectionSession';
+import {
+  buildDoc7ReferenceMaterialTitle,
+  readDoc7ReferenceMaterialBody,
+} from '@/lib/doc7ReferenceMaterials';
 import type {
   SafetyCaseCatalogItem,
   SafetyContentItem,
+  SafetyDoc7ReferenceMaterialCatalogItem,
   SafetyInfoCatalogItem,
-  SafetyLegalReference,
   SafetyMasterData,
   SafetyMeasurementTemplate,
 } from '@/types/backend';
@@ -130,24 +133,6 @@ function mapSafetyInfoItem(
   };
 }
 
-function mapLegalReferenceItem(item: SafetyContentItem): SafetyLegalReference {
-  const body = asMapperRecord(item.body);
-
-  return {
-    id: item.id,
-    title: normalizeMapperText(item.title),
-    body: contentBodyToText(item.body),
-    referenceMaterial1:
-      normalizeMapperText(body.referenceMaterial1) ||
-      normalizeMapperText(body.reference_material_1) ||
-      normalizeMapperText(body.material1),
-    referenceMaterial2:
-      normalizeMapperText(body.referenceMaterial2) ||
-      normalizeMapperText(body.reference_material_2) ||
-      normalizeMapperText(body.material2),
-  };
-}
-
 function mapMeasurementTemplateItem(item: SafetyContentItem): SafetyMeasurementTemplate | null {
   const body = asMapperRecord(item.body);
   const title = normalizeMapperText(item.title);
@@ -175,11 +160,9 @@ function mapMeasurementTemplateItem(item: SafetyContentItem): SafetyMeasurementT
     return null;
   }
 
-  const codeLabel = normalizeMapperText(item.code);
   const fallbackInstrument =
     instrumentName ||
     title ||
-    codeLabel ||
     `계측 템플릿 ${item.sort_order + 1}`;
 
   return {
@@ -187,6 +170,34 @@ function mapMeasurementTemplateItem(item: SafetyContentItem): SafetyMeasurementT
     title: title || instrumentName || 'measurement-template',
     instrumentName: fallbackInstrument,
     safetyCriteria: safetyCriteria || DEFAULT_MEASUREMENT_CRITERIA,
+    effectiveFrom: normalizeContentDate(item.effective_from),
+    effectiveTo: normalizeContentDate(item.effective_to),
+    isActive: item.is_active,
+    sortOrder: item.sort_order,
+  };
+}
+
+function mapDoc7ReferenceMaterialItem(
+  item: SafetyContentItem,
+): SafetyDoc7ReferenceMaterialCatalogItem | null {
+  const body = readDoc7ReferenceMaterialBody(item.body);
+  const title =
+    normalizeMapperText(item.title) ||
+    buildDoc7ReferenceMaterialTitle(body.accidentType, body.causativeAgentKey);
+
+  if (!body.accidentType || !body.causativeAgentKey || (!body.body && !body.imageUrl)) {
+    return null;
+  }
+
+  return {
+    id: item.id,
+    title,
+    accidentType: body.accidentType,
+    causativeAgentKey: body.causativeAgentKey,
+    body: body.body,
+    imageUrl: body.imageUrl,
+    referenceTitle1: body.referenceTitle1,
+    referenceTitle2: body.referenceTitle2,
     effectiveFrom: normalizeContentDate(item.effective_from),
     effectiveTo: normalizeContentDate(item.effective_to),
     isActive: item.is_active,
@@ -217,7 +228,7 @@ export function getSafetyInfosForReportDate(
   reportDate: string,
 ): SafetyInfoItem[] {
   const filtered = filterCatalogItemsByDate(masterData.safetyInfos, reportDate);
-  const source = filtered.length > 0 ? filtered : DEFAULT_SAFETY_INFOS;
+  const source = filtered.length > 0 ? filtered.slice(0, 1) : DEFAULT_SAFETY_INFOS.slice(0, 1);
   return source.map(copySafetyInfoItem);
 }
 
@@ -244,6 +255,13 @@ export function getMeasurementTemplatesForReportDate(
 ): SafetyMeasurementTemplate[] {
   const fromServer = filterCatalogItemsByDate(masterData.measurementTemplates, reportDate);
   return dedupeMeasurementTemplatesByName(fromServer);
+}
+
+export function getDoc7ReferenceMaterialsForReportDate(
+  masterData: SafetyMasterData,
+  reportDate: string,
+): SafetyDoc7ReferenceMaterialCatalogItem[] {
+  return filterCatalogItemsByDate(masterData.doc7ReferenceMaterials, reportDate);
 }
 
 export function resolveMeasurementTemplate(
@@ -274,23 +292,17 @@ export function buildSafetyMasterData(items: SafetyContentItem[]): SafetyMasterD
     .sort((left, right) => left.sort_order - right.sort_order)
     .map((item, index) => mapSafetyInfoItem(item, DEFAULT_SAFETY_INFOS[index]));
 
-  const legalReferences = items
-    .filter((item) => item.content_type === 'legal_reference')
-    .sort((left, right) => left.sort_order - right.sort_order)
-    .map(mapLegalReferenceItem)
-    .filter((item) => item.title || item.body);
-
-  const correctionResultOptions = items
-    .filter((item) => item.content_type === 'correction_result_option')
-    .sort((left, right) => left.sort_order - right.sort_order)
-    .map((item) => normalizeMapperText(item.title))
-    .filter(Boolean);
-
   const measurementTemplates = items
     .filter((item) => item.content_type === 'measurement_template')
     .sort((left, right) => left.sort_order - right.sort_order)
     .map(mapMeasurementTemplateItem)
     .filter((item): item is SafetyMeasurementTemplate => Boolean(item));
+
+  const doc7ReferenceMaterials = items
+    .filter((item) => item.content_type === 'doc7_reference_material')
+    .sort((left, right) => left.sort_order - right.sort_order)
+    .map(mapDoc7ReferenceMaterialItem)
+    .filter((item): item is SafetyDoc7ReferenceMaterialCatalogItem => Boolean(item));
 
   return {
     caseFeed:
@@ -313,18 +325,8 @@ export function buildSafetyMasterData(items: SafetyContentItem[]): SafetyMasterD
             isActive: true,
             sortOrder: index,
           })),
-    legalReferences:
-      legalReferences.length > 0
-        ? legalReferences
-        : LEGAL_REFERENCE_LIBRARY.map((item) => ({
-            id: item.id,
-            title: item.title,
-            body: item.body,
-            referenceMaterial1: item.referenceMaterial1,
-            referenceMaterial2: item.referenceMaterial2,
-          })),
-    correctionResultOptions,
     measurementTemplates,
+    doc7ReferenceMaterials,
   };
 }
 
