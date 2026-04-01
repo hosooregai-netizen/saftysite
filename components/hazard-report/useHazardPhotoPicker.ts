@@ -2,7 +2,7 @@
 
 import { type ChangeEvent, useCallback, useState } from 'react';
 import { useImageSourcePicker } from '@/hooks/useImageSourcePicker';
-import { analyzeHazardPhotos } from '@/lib/api';
+import { analyzeHazardPhotos } from '@/lib/safetyApi/ai';
 import { normalizeHazardResponse } from '@/lib/normalizeHazardResponse';
 import type { HazardReportItem } from '@/types/hazard';
 import { readFileAsDataUrl, syncRiskAssessmentResult } from './shared';

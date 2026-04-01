@@ -23,4 +23,10 @@ export {
   loginSafetyApi,
   upsertSafetyReport,
 } from '@/lib/safetyApi/endpoints';
+export {
+  analyzeHazardPhotos,
+  checkCausativeAgents,
+  generateDoc11EducationContent,
+  generateDoc5Summary,
+} from '@/lib/safetyApi/ai';
 

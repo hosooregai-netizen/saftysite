@@ -68,6 +68,7 @@ export function useInspectionSessionScreen(sessionId: string) {
     currentUser,
     ensureMasterDataLoaded,
     ensureSessionLoaded,
+    ensureSiteReportsLoaded,
     getSessionById,
     getSiteById,
     isAuthenticated,
@@ -109,6 +110,7 @@ export function useInspectionSessionScreen(sessionId: string) {
     [masterData, session, sessions],
   );
   const site = session ? getSiteById(getSessionSiteKey(session)) : null;
+  const siteId = site?.id ?? null;
   const backHref = site ? `/sites/${encodeURIComponent(site.id)}` : '/';
 
   useEffect(() => () => void saveNow(), [saveNow]);
@@ -163,6 +165,14 @@ export function useInspectionSessionScreen(sessionId: string) {
       adminSiteSnapshot: merged,
     }));
   }, [session, site, updateSession]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !isReady || !siteId) {
+      return;
+    }
+
+    void ensureSiteReportsLoaded(siteId);
+  }, [ensureSiteReportsLoaded, isAuthenticated, isReady, siteId]);
 
   const applyDocumentUpdate = (
     key: InspectionSectionKey,

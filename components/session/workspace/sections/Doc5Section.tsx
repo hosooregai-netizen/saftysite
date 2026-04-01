@@ -6,9 +6,8 @@ import type { OverviewSectionProps } from '@/components/session/workspace/types'
 import type { ChartEntry } from '@/components/session/workspace/utils';
 import { hasFindingContent } from '@/components/session/workspace/utils';
 import { ChartCard } from '@/components/session/workspace/widgets';
-import { generateDoc5SummaryWithOpenAi } from '@/lib/openai/generateDoc5Summary';
 import { buildLocalDoc5SummaryDraft } from '@/lib/openai/doc5SummaryLocalDraft';
-import { resolveOpenAiApiKey } from '@/lib/openai/browserClient';
+import { generateDoc5Summary } from '@/lib/safetyApi/ai';
 
 export default function Doc5Section(props: {
   applyDocumentUpdate: OverviewSectionProps['applyDocumentUpdate'];
@@ -18,7 +17,14 @@ export default function Doc5Section(props: {
   cumulativeAgentEntries: ChartEntry[];
   session: OverviewSectionProps['session'];
 }) {
-  const { applyDocumentUpdate, currentAccidentEntries, currentAgentEntries, cumulativeAccidentEntries, cumulativeAgentEntries, session } = props;
+  const {
+    applyDocumentUpdate,
+    currentAccidentEntries,
+    currentAgentEntries,
+    cumulativeAccidentEntries,
+    cumulativeAgentEntries,
+    session,
+  } = props;
 
   const [draftLoading, setDraftLoading] = useState(false);
   const [draftError, setDraftError] = useState<string | null>(null);
@@ -37,21 +43,13 @@ export default function Doc5Section(props: {
 
     const findings = session.document7Findings.filter(hasFindingContent);
     if (findings.length === 0) {
-      applySummary('문서 7에 분석된 위험요인이 아직 없어 기술지도 총평 초안을 만들 수 없습니다.');
+      applySummary('문서 7 분석 위험요인이 아직 없어 기술지도 총평 초안을 만들 수 없습니다.');
       return;
     }
 
     setDraftLoading(true);
     try {
-      if (!resolveOpenAiApiKey()) {
-        applySummary(buildLocalDoc5SummaryDraft(session, currentAccidentEntries, currentAgentEntries));
-        setDraftNotice(
-          'OpenAI API 키가 없어 규칙 기반 초안을 넣었습니다. .env에 NEXT_PUBLIC_OPENAI_API_KEY를 설정하면 AI 총평을 사용할 수 있습니다.'
-        );
-        return;
-      }
-
-      const text = await generateDoc5SummaryWithOpenAi({
+      const text = await generateDoc5Summary({
         currentAccidentEntries,
         cumulativeAccidentEntries,
         currentAgentEntries,
@@ -62,8 +60,14 @@ export default function Doc5Section(props: {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       setDraftError(message);
-      applySummary(buildLocalDoc5SummaryDraft(session, currentAccidentEntries, currentAgentEntries));
-      setDraftNotice('AI 호출에 실패해 규칙 기반 초안으로 대체했습니다.');
+      applySummary(
+        buildLocalDoc5SummaryDraft(
+          session,
+          currentAccidentEntries,
+          currentAgentEntries,
+        ),
+      );
+      setDraftNotice('AI 생성에 실패해 규칙 기반 초안으로 대체했습니다.');
     } finally {
       setDraftLoading(false);
     }
@@ -72,10 +76,10 @@ export default function Doc5Section(props: {
   return (
     <div className={styles.sectionStack}>
       <div className={styles.chartGrid}>
-        <ChartCard title="지적유형별 금회" entries={currentAccidentEntries} />
-        <ChartCard title="지적유형별 누적" entries={cumulativeAccidentEntries} />
-        <ChartCard title="기인물별 금회" entries={currentAgentEntries} />
-        <ChartCard title="기인물별 누적" entries={cumulativeAgentEntries} />
+        <ChartCard title="지적유형 통계 금회" entries={currentAccidentEntries} />
+        <ChartCard title="지적유형 통계 누적" entries={cumulativeAccidentEntries} />
+        <ChartCard title="기인물 통계 금회" entries={currentAgentEntries} />
+        <ChartCard title="기인물 통계 누적" entries={cumulativeAgentEntries} />
       </div>
       <label className={styles.field}>
         <div className={styles.doc5SummaryFieldHeader}>
@@ -97,9 +101,20 @@ export default function Doc5Section(props: {
         </div>
         {draftError ? <p className={styles.fieldAssistError}>{draftError}</p> : null}
         {draftNotice ? <p className={styles.fieldAssist}>{draftNotice}</p> : null}
-        <textarea className="app-textarea" value={session.document5Summary.summaryText} onChange={(event) => applyDocumentUpdate('doc5', 'manual', (current) => ({ ...current, document5Summary: { ...current.document5Summary, summaryText: event.target.value } }))} />
+        <textarea
+          className="app-textarea"
+          value={session.document5Summary.summaryText}
+          onChange={(event) =>
+            applyDocumentUpdate('doc5', 'manual', (current) => ({
+              ...current,
+              document5Summary: {
+                ...current.document5Summary,
+                summaryText: event.target.value,
+              },
+            }))
+          }
+        />
       </label>
     </div>
   );
 }
-

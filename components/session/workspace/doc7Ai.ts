@@ -4,7 +4,7 @@ import {
   ACCIDENT_TYPE_OPTIONS,
   normalizeDoc7CausativeAgentKey,
 } from '@/constants/inspectionSession/doc7Catalog';
-import { analyzeHazardPhotos, checkCausativeAgents } from '@/lib/api';
+import { analyzeHazardPhotos, checkCausativeAgents } from '@/lib/safetyApi/ai';
 import {
   buildCatalogImprovementPlan,
   getRecommendedDisasterCases,

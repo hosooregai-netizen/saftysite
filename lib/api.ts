@@ -18,33 +18,6 @@ async function parseApiResponse(res: Response): Promise<unknown> {
   return res.text();
 }
 
-async function postFiles(path: string, files: File[]): Promise<unknown> {
-  const formData = new FormData();
-  files.forEach((file) => {
-    formData.append('files', file);
-  });
-
-  const res = await fetch(`${API_BASE}${path}`, {
-    method: 'POST',
-    body: formData,
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`API 오류 (${res.status}): ${text || res.statusText}`);
-  }
-
-  return parseApiResponse(res);
-}
-
-export function analyzeHazardPhotos(files: File[]): Promise<unknown> {
-  return postFiles('/vision/analyze-hazard-photos', files);
-}
-
-export function checkCausativeAgents(files: File[]): Promise<unknown> {
-  return postFiles('/vision/check-causative-agents', files);
-}
-
 function getDownloadFilenameFromDisposition(header: string | null): string {
   if (!header) return 'download.bin';
 
@@ -129,7 +102,7 @@ export async function convertHwpxBlobToPdf(
       throw new Error(
         [
           `PDF 변환 요청 크기가 너무 큽니다. 현재 HWPX는 ${formatBlobSizeMb(hwpxBlob.size)}입니다.`,
-          `Vercel Functions 요청 본문 제한은 ${VERCEL_FUNCTION_BODY_LIMIT_MB}MB여서 현 배포 환경에서는 처리할 수 없습니다.`,
+          `Vercel Functions 요청 본문 제한은 ${VERCEL_FUNCTION_BODY_LIMIT_MB}MB라서 현 배포 환경에서는 처리할 수 없습니다.`,
           'HWPX로 다운로드하거나 별도 Windows PDF 변환 서버로 보내는 구조가 필요합니다.',
         ].join(' '),
       );

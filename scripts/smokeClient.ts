@@ -1491,9 +1491,36 @@ async function runDocumentSmoke() {
   });
 }
 
+async function issueSafetyApiToken(
+  email = 'admin@example.com',
+  password = 'smoke-password'
+) {
+  const body = new URLSearchParams();
+  body.set('username', email);
+  body.set('password', password);
+
+  const response = await fetch(`${BASE_URL}/api/safety/auth/token`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body,
+    signal: AbortSignal.timeout(7000),
+  });
+
+  assert.equal(response.status, 200, 'AI smoke login should return 200.');
+  const payload = (await response.json()) as {
+    access_token?: string;
+    token_type?: string;
+  };
+  assert.ok(payload.access_token, 'AI smoke login must return an access token.');
+  return payload.access_token!;
+}
+
 async function assertVisionResponse(
   path: string,
-  validator: (payload: unknown) => void
+  validator: (payload: unknown) => void,
+  token: string
 ) {
   const file = new File(
     [
@@ -1510,6 +1537,9 @@ async function assertVisionResponse(
 
   const response = await fetch(`${BASE_URL}${path}`, {
     method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
     body,
     signal: AbortSignal.timeout(7000),
   });
@@ -1521,23 +1551,32 @@ async function assertVisionResponse(
 
 async function runVisionSmoke() {
   console.log('Step: vision routes');
+  const token = await issueSafetyApiToken();
 
-  await assertVisionResponse('/api/vision/analyze-hazard-photos', (payload) => {
-    assert.ok(Array.isArray(payload), '사진 분석 응답은 배열이어야 합니다.');
-    assert.equal(payload.length, 1, '사진 분석 응답 개수가 예상과 다릅니다.');
-    assert.ok(
-      Array.isArray(payload[0]?.risk_factor),
-      '사진 분석 응답에 risk_factor 배열이 없습니다.'
-    );
-  });
+  await assertVisionResponse(
+    '/api/safety/ai/vision/hazard-analysis',
+    (payload) => {
+      assert.ok(Array.isArray(payload), '사진 분석 응답은 배열이어야 합니다.');
+      assert.equal(payload.length, 1, '사진 분석 응답 개수가 예상과 다릅니다.');
+      assert.ok(
+        Array.isArray(payload[0]?.risk_factor),
+        '사진 분석 응답에 risk_factor 배열이 없습니다.'
+      );
+    },
+    token
+  );
 
-  await assertVisionResponse('/api/vision/check-causative-agents', (payload) => {
-    assert.ok(payload && typeof payload === 'object', '기인물 분석 응답이 객체가 아닙니다.');
-    assert.ok(
-      payload.agents && typeof payload.agents === 'object',
-      '기인물 분석 응답에 agents 객체가 없습니다.'
-    );
-  });
+  await assertVisionResponse(
+    '/api/safety/ai/vision/causative-agents',
+    (payload) => {
+      assert.ok(payload && typeof payload === 'object', '기인물 분석 응답이 객체가 아닙니다.');
+      assert.ok(
+        payload.agents && typeof payload.agents === 'object',
+        '기인물 분석 응답에 agents 객체가 없습니다.'
+      );
+    },
+    token
+  );
 }
 
 async function main() {

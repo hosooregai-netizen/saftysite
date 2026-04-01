@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { IMAGE_UPLOAD_LABEL_DESKTOP, IMAGE_UPLOAD_LABEL_MOBILE } from '@/constants/imageUploadLabels';
 import { useImageSourcePicker } from '@/hooks/useImageSourcePicker';
-import { checkCausativeAgents } from '@/lib/api';
+import { checkCausativeAgents } from '@/lib/safetyApi/ai';
 import { normalizeCausativeAgentResponse } from '@/lib/normalizeCausativeAgentResponse';
 import type { CausativeAgentReport } from '@/types/siteOverview';
 import styles from './SiteOverviewUploadPanel.module.css';

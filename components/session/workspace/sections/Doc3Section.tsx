@@ -5,7 +5,7 @@ import { FIXED_SCENE_COUNT, TOTAL_SCENE_COUNT } from '@/constants/inspectionSess
 import { isExtraScenePlaceholderTitle } from '@/constants/inspectionSession/scenePhotos';
 import styles from '@/components/session/InspectionSessionWorkspace.module.css';
 import type { OverviewSectionProps } from '@/components/session/workspace/types';
-import { analyzeHazardPhotos } from '@/lib/api';
+import { analyzeHazardPhotos } from '@/lib/safetyApi/ai';
 import { normalizeHazardResponse } from '@/lib/normalizeHazardResponse';
 import type { HazardReportItem } from '@/types/hazard';
 import type { SiteScenePhoto } from '@/types/inspectionSession';

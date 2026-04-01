@@ -103,7 +103,7 @@ export function buildDerivedFollowUpItems(
   );
 
   if (previousSessions.length === 0) {
-    return [...manualItems];
+    return [...session.document4FollowUps];
   }
 
   const existingByKey = new Map(
@@ -125,6 +125,12 @@ export function buildDerivedFollowUpItems(
       );
     });
   });
+  const loadedPreviousSessionIds = new Set(previousSessions.map((item) => item.id));
+  const preservedDerivedItems = session.document4FollowUps.filter(
+    (item) =>
+      Boolean(item.sourceSessionId && item.sourceFindingId) &&
+      !loadedPreviousSessionIds.has(item.sourceSessionId!),
+  );
 
   const derivedItems = previousSessions
     .slice()
@@ -155,7 +161,7 @@ export function buildDerivedFollowUpItems(
         })
     )
 
-  return [...derivedItems, ...manualItems];
+  return [...derivedItems, ...preservedDerivedItems, ...manualItems];
 }
 
 export function areFollowUpItemsEqual(

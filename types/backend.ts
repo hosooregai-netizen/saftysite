@@ -207,6 +207,64 @@ export interface SafetyLoginInput {
   password: string;
 }
 
+export interface SafetyAiChartEntry {
+  label: string;
+  count: number;
+}
+
+export interface SafetyAiHazardFindingInput {
+  location: string;
+  likelihood: string;
+  severity: string;
+  riskLevel: string;
+  accidentType: string;
+  causativeAgentKey: string;
+  inspector: string;
+  emphasis: string;
+  improvementPlan: string;
+  legalReferenceId: string;
+  legalReferenceTitle: string;
+  referenceMaterial1: string;
+  referenceMaterial2: string;
+  referenceCatalogAccidentType: string;
+  referenceCatalogCausativeAgentKey: string;
+  carryForward: boolean;
+  metadata?: string;
+}
+
+export interface SafetyDoc5SummaryRequest {
+  currentAccidentEntries: SafetyAiChartEntry[];
+  cumulativeAccidentEntries: SafetyAiChartEntry[];
+  currentAgentEntries: SafetyAiChartEntry[];
+  cumulativeAgentEntries: SafetyAiChartEntry[];
+  findings: SafetyAiHazardFindingInput[];
+}
+
+export interface SafetyDoc11EducationRequest {
+  topic: string;
+  attendeeCount: string;
+  materialName: string;
+}
+
+export interface SafetyAiTextResponse {
+  text: string;
+}
+
+export interface SafetyHazardAnalysisItem {
+  metadata: string;
+  objects: string[];
+  risk_factor: string[];
+  improvements: string[];
+  laws: string[];
+  likelihood: number;
+  severity: number;
+}
+
+export interface SafetyCausativeAgentsResponse {
+  agents: Record<string, boolean>;
+  reasoning: string;
+}
+
 export interface SafetyUpsertReportInput {
   report_key: string;
   report_title: string;

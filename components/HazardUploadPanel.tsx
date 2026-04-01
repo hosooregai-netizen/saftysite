@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { IMAGE_UPLOAD_LABEL_DESKTOP, IMAGE_UPLOAD_LABEL_MOBILE } from '@/constants/imageUploadLabels';
 import { useImageSourcePicker } from '@/hooks/useImageSourcePicker';
 import type { HazardReportItem } from '@/types/hazard';
-import { analyzeHazardPhotos } from '@/lib/api';
+import { analyzeHazardPhotos } from '@/lib/safetyApi/ai';
 import { normalizeHazardResponse } from '@/lib/normalizeHazardResponse';
 import styles from './HazardUploadPanel.module.css';
 
