@@ -72,11 +72,11 @@ export function isAdminUserRole(role: SafetyUserRole | null | undefined): boolea
 }
 
 export function canDeleteControllerCrud(role: SafetyUserRole | null | undefined): boolean {
-  return role === 'super_admin' || role === 'admin';
+  return isAdminUserRole(role);
 }
 
 export function canUploadContentAssets(role: SafetyUserRole | null | undefined): boolean {
-  return role === 'super_admin' || role === 'admin';
+  return isAdminUserRole(role);
 }
 
 export function isFieldAgentUserRole(role: SafetyUserRole | null | undefined): boolean {

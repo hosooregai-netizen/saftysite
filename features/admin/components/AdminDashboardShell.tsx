@@ -48,7 +48,6 @@ export function AdminDashboardShell({
             currentUserName={currentUserName}
             onLogout={onLogout}
             onOpenMenu={() => setMenuOpen(true)}
-            brand="산업 종합 안전"
             accountLabel="관리자 계정"
           />
 
