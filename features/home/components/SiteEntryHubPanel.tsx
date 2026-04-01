@@ -6,13 +6,13 @@ import {
   buildSiteBadWorkplaceHref,
   buildSiteQuarterlyListHref,
   buildSiteReportsHref,
-  type WorkerSitePickerIntent,
 } from '@/features/home/lib/siteEntry';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { useSiteOperationalReports } from '@/hooks/useSiteOperationalReports';
 import {
   createQuarterKey,
   getCurrentReportMonth,
+  normalizeQuarterlyReportPeriod,
 } from '@/lib/erpReports/shared';
 import { SiteReportsSummaryBar } from '@/features/site-reports/components/SiteReportsSummaryBar';
 import type { InspectionSite } from '@/types/inspectionSession';
@@ -22,7 +22,6 @@ interface SiteEntryHubPanelProps {
   className?: string;
   currentSite: InspectionSite;
   reportMetaText?: string | null;
-  selectedEntryIntent?: WorkerSitePickerIntent | null;
 }
 
 function TechnicalGuidanceMiniChart({ count }: { count: number }) {
@@ -50,13 +49,16 @@ function TechnicalGuidanceMiniChart({ count }: { count: number }) {
 function QuarterlyRingChart({
   completedQuarters,
   displayYear,
+  isLoading,
 }: {
   completedQuarters: number[];
   displayYear: number;
+  isLoading?: boolean;
 }) {
-  const segmentColors = [1, 2, 3, 4].map((quarter) =>
-    completedQuarters.includes(quarter) ? 'var(--entry-accent)' : '#dbe5f2',
-  );
+  const segmentColors = [1, 2, 3, 4].map((quarter) => {
+    if (isLoading) return 'var(--erp-line)';
+    return completedQuarters.includes(quarter) ? 'var(--entry-accent)' : 'var(--erp-line)';
+  });
   const background = `conic-gradient(${segmentColors[0]} 0deg 90deg, ${segmentColors[1]} 90deg 180deg, ${segmentColors[2]} 180deg 270deg, ${segmentColors[3]} 270deg 360deg)`;
 
   return (
@@ -69,7 +71,7 @@ function QuarterlyRingChart({
           aria-label={`${displayYear}년 분기 종합 보고서 작성 현황`}
         >
           <div className={styles.quarterRingCenter}>
-            <strong>{completedQuarters.length}/4</strong>
+            <strong>{isLoading ? '…' : `${completedQuarters.length}/4`}</strong>
             <span>{displayYear}</span>
           </div>
         </div>
@@ -78,7 +80,7 @@ function QuarterlyRingChart({
             <span
               key={`quarter-${quarter}`}
               className={`${styles.quarterLabel} ${
-                completedQuarters.includes(quarter) ? styles.quarterLabelActive : ''
+                !isLoading && completedQuarters.includes(quarter) ? styles.quarterLabelActive : ''
               }`}
             >
               {quarter}Q
@@ -94,13 +96,13 @@ export function SiteEntryHubPanel({
   className,
   currentSite,
   reportMetaText: _reportMetaText = null,
-  selectedEntryIntent = null,
 }: SiteEntryHubPanelProps) {
   void _reportMetaText;
 
   const { ensureSiteReportIndexLoaded, getReportIndexBySiteId, sessions } =
     useInspectionSessions();
-  const { quarterlyReports } = useSiteOperationalReports(currentSite);
+  const { quarterlyReports, isLoading: operationalReportsLoading } =
+    useSiteOperationalReports(currentSite);
 
   const snapshot = currentSite.adminSiteSnapshot;
   const siteNameDisplay = currentSite.siteName?.trim() || snapshot.siteName?.trim() || '-';
@@ -129,8 +131,9 @@ export function SiteEntryHubPanel({
     () =>
       new Set(
         quarterlyReports
-          .filter((report) => report.year === currentYear)
-          .map((report) => createQuarterKey(report.year, report.quarter)),
+          .map((report) => normalizeQuarterlyReportPeriod(report))
+          .filter((report) => report.year === currentYear && report.quarterKey)
+          .map((report) => report.quarterKey || createQuarterKey(report.year, report.quarter)),
       ),
     [currentYear, quarterlyReports],
   );
@@ -153,11 +156,7 @@ export function SiteEntryHubPanel({
       />
 
       <section className={styles.entryGrid}>
-        <article
-          className={`${styles.entryCard} ${
-            !selectedEntryIntent ? styles.entryCardActive : ''
-          }`}
-        >
+        <article className={styles.entryCard}>
           <div className={styles.entryBody}>
             <h2 className={styles.entryTitle}>기술지도 보고서</h2>
             <p className={styles.entryMetricLead}>작성된 보고서 수</p>
@@ -179,22 +178,21 @@ export function SiteEntryHubPanel({
           </div>
         </article>
 
-        <article
-          className={`${styles.entryCard} ${
-            selectedEntryIntent === 'quarterly' ? styles.entryCardActive : ''
-          }`}
-        >
+        <article className={styles.entryCard}>
           <div className={styles.entryBody}>
             <h2 className={styles.entryTitle}>분기 종합 보고서</h2>
             <p className={styles.entryMetricLead}>분기 작성 현황</p>
             <div className={styles.entryMetricRow}>
               <div className={styles.entryMetricCopy}>
-                <strong className={styles.entryMetricValue}>{completedQuarters.length}</strong>
+                <strong className={styles.entryMetricValue}>
+                  {operationalReportsLoading ? '…' : completedQuarters.length}
+                </strong>
                 <span className={styles.entryMetricUnit}>/ 4분기</span>
               </div>
               <QuarterlyRingChart
                 completedQuarters={completedQuarters}
                 displayYear={currentYear}
+                isLoading={operationalReportsLoading}
               />
             </div>
           </div>
@@ -208,11 +206,7 @@ export function SiteEntryHubPanel({
           </div>
         </article>
 
-        <article
-          className={`${styles.entryCard} ${
-            selectedEntryIntent === 'bad-workplace' ? styles.entryCardActive : ''
-          }`}
-        >
+        <article className={styles.entryCard}>
           <div className={styles.entryBody}>
             <h2 className={styles.entryTitle}>불량사업장 신고</h2>
             <p className={styles.entryMetricLead}>이번 달 신고 진입</p>

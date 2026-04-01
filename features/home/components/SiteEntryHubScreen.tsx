@@ -120,48 +120,49 @@ export function SiteEntryHubScreen({
   }
 
   return (
-    <main className="app-page">
+    <div className="app-page-root">
+      <WorkerAppHeader
+        currentUserName={currentUser?.name}
+        onLogout={logout}
+        onOpenMenu={() => setMenuOpen(true)}
+      />
+
+      <main className="app-page">
       <div className="app-container">
         <section className={`app-shell ${homeStyles.shell}`}>
-          <WorkerAppHeader
-            currentUserName={currentUser?.name}
-            onLogout={logout}
-            onOpenMenu={() => setMenuOpen(true)}
-          />
-
           <WorkerShellBody>
             <WorkerMenuSidebar>
               <WorkerMenuPanel currentSiteKey={currentSite.id} />
             </WorkerMenuSidebar>
 
             <div className={homeStyles.contentColumn}>
-              <header className={homeStyles.hero}>
-                <div className={homeStyles.heroBody}>
-                  <Link href={backHref} className={entryStyles.heroBackLink}>
-                    {'<'} {backLabel}
-                  </Link>
-                  <div className={homeStyles.heroMain}>
-                    <h1 className={homeStyles.heroTitle}>{currentSite.siteName}</h1>
+              <div className="app-main-frame">
+                <header className={homeStyles.hero}>
+                  <div className={homeStyles.heroBody}>
+                    <Link href={backHref} className={entryStyles.heroBackLink}>
+                      {'<'} {backLabel}
+                    </Link>
+                    <div className={homeStyles.heroMain}>
+                      <h1 className={homeStyles.heroTitle}>{currentSite.siteName}</h1>
+                    </div>
                   </div>
-                </div>
-              </header>
+                </header>
 
-              <div className={homeStyles.pageGrid}>
-                <SiteEntryHubPanel
-                  currentSite={currentSite}
-                  selectedEntryIntent={selectedEntryIntent}
-                />
+                <div className={homeStyles.pageGrid}>
+                  <SiteEntryHubPanel currentSite={currentSite} />
+                </div>
               </div>
             </div>
           </WorkerShellBody>
         </section>
       </div>
+      </main>
 
       <WorkerMenuDrawer
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
         currentSiteKey={currentSite.id}
       />
-    </main>
+    </div>
   );
 }
