@@ -115,8 +115,8 @@ export function fetchSafetyReportByKey(
 export function upsertSafetyReport(
   token: string,
   payload: SafetyUpsertReportInput
-): Promise<SafetyReport> {
-  return requestSafetyApi<SafetyReport>(
+): Promise<SafetyReportListItem> {
+  return requestSafetyApi<SafetyReportListItem>(
     '/reports/upsert',
     {
       method: 'POST',

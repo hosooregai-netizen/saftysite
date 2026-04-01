@@ -4,8 +4,6 @@ import type {
   InspectionSite,
   SafetyInfoItem,
 } from '@/types/inspectionSession';
-import type { CausativeAgentKey } from '@/types/siteOverview';
-
 export interface SafetyMeasurementTemplate {
   id: string;
   title: string;
@@ -35,7 +33,8 @@ export interface SafetyDoc7ReferenceMaterialCatalogItem {
   id: string;
   title: string;
   accidentType: string;
-  causativeAgentKey: CausativeAgentKey | '';
+  /** 표준 키 또는 CRUD에서 직접 입력한 문자열 */
+  causativeAgentKey: string;
   body: string;
   imageUrl: string;
   referenceTitle1: string;
