@@ -133,16 +133,15 @@ export default function BadWorkplaceReportPage({
   }
 
   return (
-    <div className="app-page-root">
-      <WorkerAppHeader
-        currentUserName={currentUser?.name}
-        onLogout={logout}
-        onOpenMenu={() => setMenuOpen(true)}
-      />
-
-      <main className="app-page">
+    <main className="app-page">
       <div className="app-container">
         <section className={`app-shell ${shellStyles.shell}`}>
+          <WorkerAppHeader
+            currentUserName={currentUser?.name}
+            onLogout={logout}
+            onOpenMenu={() => setMenuOpen(true)}
+          />
+
           <WorkerShellBody>
             <WorkerMenuSidebar>
               {isAdminView ? (
@@ -153,23 +152,22 @@ export default function BadWorkplaceReportPage({
             </WorkerMenuSidebar>
 
             <div className={shellStyles.contentColumn}>
-              <div className="app-main-frame">
-                <header className={shellStyles.hero}>
-                  <div className={shellStyles.heroBody}>
-                    <Link
-                      href={backHref}
-                      className={shellStyles.heroBackLink}
-                      aria-label="이전 화면으로 돌아가기"
-                    >
-                      {'<'} {backLabel}
-                    </Link>
-                    <div className={shellStyles.heroMain}>
-                      <h1 className={shellStyles.heroTitle}>{initialDraft.title}</h1>
-                    </div>
+              <header className={shellStyles.hero}>
+                <div className={shellStyles.heroBody}>
+                  <Link
+                    href={backHref}
+                    className={shellStyles.heroBackLink}
+                    aria-label="이전 화면으로 돌아가기"
+                  >
+                    {'<'} {backLabel}
+                  </Link>
+                  <div className={shellStyles.heroMain}>
+                    <h1 className={shellStyles.heroTitle}>{initialDraft.title}</h1>
                   </div>
-                </header>
+                </div>
+              </header>
 
-                <div className={shellStyles.pageGrid}>
+              <div className={shellStyles.pageGrid}>
                 <BadWorkplaceReportEditor
                   key={`${initialDraft.id}:${initialDraft.updatedAt}`}
                   currentSite={currentSite}
@@ -179,13 +177,11 @@ export default function BadWorkplaceReportPage({
                   error={error}
                   onSave={saveBadWorkplaceReport}
                 />
-                </div>
               </div>
             </div>
           </WorkerShellBody>
         </section>
       </div>
-      </main>
 
       {isAdminView ? (
         <AdminMenuDrawer
@@ -201,7 +197,7 @@ export default function BadWorkplaceReportPage({
           currentSiteKey={currentSite.id}
         />
       )}
-    </div>
+    </main>
   );
 }
 

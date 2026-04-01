@@ -7,7 +7,7 @@
   min-height: 0;
   border-bottom: 1px solid var(--erp-line);
   background: #f6f9fc;
-  padding: 18px 0 17px;
+  padding: 18px 27px 17px;
   color: var(--erp-dark);
 }
 
@@ -131,8 +131,10 @@
   gap: 16px;
   flex: 1 1 auto;
   width: 100%;
+  max-width: 1320px;
+  margin-inline: auto;
   min-height: 0;
-  padding: 18px 0;
+  padding: 18px;
 }
 
 .contentColumn {
@@ -156,7 +158,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  padding: 15px 18px;
+  padding: 16px;
   border-bottom: 1px solid var(--erp-line);
   background: #fbfcfe;
 }
@@ -195,7 +197,7 @@
     minmax(150px, 0.95fr)
     40px;
   gap: 10px;
-  padding: 9px 18px 8px;
+  padding: 9px 16px 8px;
   border-bottom: 1px solid var(--erp-line);
   background-color: var(--erp-panel-muted);
   font-size: var(--text-micro);
@@ -220,7 +222,7 @@
     40px;
   gap: 10px;
   align-items: center;
-  padding: 11px 18px;
+  padding: 11px 16px;
   border-bottom: 1px solid var(--erp-line);
 }
 
@@ -461,7 +463,7 @@
 
   .tableTools {
     gap: 8px;
-    padding: 12px 14px;
+    padding: 12px 10px;
   }
 
   .tableSearch,

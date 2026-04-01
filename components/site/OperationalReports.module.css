@@ -141,8 +141,8 @@
   display: grid;
   gap: 18px;
   width: 100%;
-  max-width: none;
-  margin-inline: 0;
+  max-width: 1320px;
+  margin-inline: auto;
   padding: 0;
   border: 0;
   background: transparent;
@@ -438,6 +438,10 @@
   width: 11%;
 }
 
+.implementationColTitle {
+  width: 21%;
+}
+
 .implementationColCompact {
   width: 8%;
 }
@@ -447,7 +451,7 @@
 }
 
 .implementationColNote {
-  width: 28%;
+  width: 19%;
 }
 
 .implementationColAction {

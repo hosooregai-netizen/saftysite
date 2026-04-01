@@ -1,8 +1,11 @@
-/* 부모 app-page 플렉스 체인에서 남는 높이를 쓰고, 본문만 스크롤 */
+/* 뷰포트 높이에 고정해 본문 스크롤만 두고 하단 바가 항상 보이게 함 (app-shell의 min-h-screen 무시) */
 :global(.app-shell).shell {
   display: flex;
   flex-direction: column;
-  flex: 1 1 auto;
+  height: 100vh;
+  max-height: 100vh;
+  height: 100dvh;
+  max-height: 100dvh;
   min-height: 0;
   overflow: hidden;
 }
@@ -10,7 +13,7 @@
 .header {
   flex-shrink: 0;
   min-height: 0;
-  padding: 18px 0 17px;
+  padding: 18px 27px 17px;
   border-bottom: 1px solid var(--erp-line);
   background: #f6f9fc;
   color: var(--erp-dark);
@@ -940,7 +943,7 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
-  padding: 18px 0;
+  padding: 20px;
   flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
@@ -1138,23 +1141,15 @@
   background-color: transparent;
 }
 
-/* app-main-frame과 동일 역할; WorkerAppHeader는 main 직계( app-container 밖 ) */
 .workspaceContentFrame {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
   width: 100%;
-  max-width: var(--app-main-max-width);
+  max-width: 1320px;
   margin-inline: auto;
-  padding-inline: var(--app-main-inline-padding);
-  box-sizing: border-box;
   min-width: 0;
   min-height: 0;
-}
-
-.workspaceContentFrame > header:first-child {
-  margin-inline: calc(-1 * var(--app-main-inline-padding));
-  padding-inline: var(--app-main-inline-padding);
 }
 
 .topRailHeader,

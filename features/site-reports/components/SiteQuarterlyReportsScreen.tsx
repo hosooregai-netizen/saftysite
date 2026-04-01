@@ -489,16 +489,15 @@ export function SiteQuarterlyReportsScreen({
   }
 
   return (
-    <div className="app-page-root">
-      <WorkerAppHeader
-        currentUserName={currentUser?.name}
-        onLogout={logout}
-        onOpenMenu={() => setMenuOpen(true)}
-      />
-
-      <main className="app-page">
+    <main className="app-page">
       <div className="app-container">
         <section className={`app-shell ${styles.shell}`}>
+          <WorkerAppHeader
+            currentUserName={currentUser?.name}
+            onLogout={logout}
+            onOpenMenu={() => setMenuOpen(true)}
+          />
+
           <WorkerShellBody>
             <WorkerMenuSidebar>
               {isAdminView ? (
@@ -512,19 +511,18 @@ export function SiteQuarterlyReportsScreen({
             </WorkerMenuSidebar>
 
             <div className={styles.contentColumn}>
-              <div className="app-main-frame">
-                <header className={styles.hero}>
-                  <div className={styles.heroBody}>
-                    <Link href={backHref} className={styles.heroBackLink}>
-                      {'<'} {backLabel}
-                    </Link>
-                    <div className={styles.heroMain}>
-                      <h1 className={styles.heroTitle}>분기 종합 보고서 목록</h1>
-                    </div>
+              <header className={styles.hero}>
+                <div className={styles.heroBody}>
+                  <Link href={backHref} className={styles.heroBackLink}>
+                    {'<'} {backLabel}
+                  </Link>
+                  <div className={styles.heroMain}>
+                    <h1 className={styles.heroTitle}>분기 종합 보고서 목록</h1>
                   </div>
-                </header>
+                </div>
+              </header>
 
-                <div className={styles.pageGrid}>
+              <div className={styles.pageGrid}>
                 <SiteReportsSummaryBar
                   addressDisplay={addressDisplay}
                   amountDisplay={amountDisplay}
@@ -677,12 +675,10 @@ export function SiteQuarterlyReportsScreen({
                   )}
                 </section>
               </div>
-              </div>
             </div>
           </WorkerShellBody>
         </section>
       </div>
-      </main>
 
       {isAdminView ? (
         <AdminMenuDrawer
@@ -824,6 +820,6 @@ export function SiteQuarterlyReportsScreen({
             : '선택한 분기 종합 보고서를 삭제합니다.'}
         </p>
       </AppModal>
-    </div>
+    </main>
   );
 }

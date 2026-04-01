@@ -60,16 +60,15 @@ export function WorkerSitePickerScreen({
   }
 
   return (
-    <div className="app-page-root">
-      <WorkerAppHeader
-        currentUserName={currentUserName}
-        onLogout={logout}
-        onOpenMenu={() => setMenuOpen(true)}
-      />
-
-      <main className="app-page">
+    <main className="app-page">
       <div className="app-container">
         <section className={`app-shell ${homeStyles.shell}`}>
+          <WorkerAppHeader
+            currentUserName={currentUserName}
+            onLogout={logout}
+            onOpenMenu={() => setMenuOpen(true)}
+          />
+
           <WorkerShellBody>
             <WorkerMenuSidebar>
               <WorkerMenuPanel />
@@ -82,7 +81,7 @@ export function WorkerSitePickerScreen({
                   <p className={homeStyles.emptyDescription}>{dataError}</p>
                 </div>
               ) : (
-                <div className="app-main-frame">
+                <>
                   <header className={homeStyles.hero}>
                     <div className={homeStyles.heroBody}>
                       <Link href="/" className={entryStyles.heroBackLink}>
@@ -150,15 +149,14 @@ export function WorkerSitePickerScreen({
                       />
                     </section>
                   </div>
-                </div>
+                </>
               )}
             </div>
           </WorkerShellBody>
         </section>
       </div>
-      </main>
 
       <WorkerMenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} />
-    </div>
+    </main>
   );
 }

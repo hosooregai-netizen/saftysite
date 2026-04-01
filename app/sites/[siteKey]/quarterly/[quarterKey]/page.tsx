@@ -26,7 +26,6 @@ import {
   saveBlobAsFile,
 } from '@/lib/api';
 import { isAdminUserRole } from '@/lib/admin';
-import { countMeaningfulDocument7Findings } from '@/lib/erpReports/document7FindingCount';
 import {
   buildInitialQuarterlySummaryReport,
   createQuarterlySummaryDraft,
@@ -206,16 +205,15 @@ export default function QuarterlyReportPage({ params }: QuarterlyReportPageProps
   }
 
   return (
-    <div className="app-page-root">
-      <WorkerAppHeader
-        currentUserName={currentUser?.name}
-        onLogout={logout}
-        onOpenMenu={() => setMenuOpen(true)}
-      />
-
-      <main className="app-page">
+    <main className="app-page">
       <div className="app-container">
         <section className={`app-shell ${shellStyles.shell}`}>
+          <WorkerAppHeader
+            currentUserName={currentUser?.name}
+            onLogout={logout}
+            onOpenMenu={() => setMenuOpen(true)}
+          />
+
           <WorkerShellBody>
             <WorkerMenuSidebar>
               {isAdminView ? (
@@ -226,23 +224,22 @@ export default function QuarterlyReportPage({ params }: QuarterlyReportPageProps
             </WorkerMenuSidebar>
 
             <div className={shellStyles.contentColumn}>
-              <div className="app-main-frame">
-                <header className={shellStyles.hero}>
-                  <div className={shellStyles.heroBody}>
-                    <Link
-                      href={backHref}
-                      className={shellStyles.heroBackLink}
-                      aria-label="이전 페이지로"
-                    >
-                      {'<'} {backLabel}
-                    </Link>
-                    <div className={shellStyles.heroMain}>
-                      <h1 className={shellStyles.heroTitle}>{initialDraft.title}</h1>
-                    </div>
+              <header className={shellStyles.hero}>
+                <div className={shellStyles.heroBody}>
+                  <Link
+                    href={backHref}
+                    className={shellStyles.heroBackLink}
+                    aria-label="이전 페이지로"
+                  >
+                    {'<'} {backLabel}
+                  </Link>
+                  <div className={shellStyles.heroMain}>
+                    <h1 className={shellStyles.heroTitle}>{initialDraft.title}</h1>
                   </div>
-                </header>
+                </div>
+              </header>
 
-                <div className={shellStyles.pageGrid}>
+              <div className={shellStyles.pageGrid}>
                 <QuarterlyReportEditor
                   key={`${initialDraft.id}:${initialDraft.updatedAt}`}
                   currentSite={currentSite}
@@ -253,13 +250,11 @@ export default function QuarterlyReportPage({ params }: QuarterlyReportPageProps
                   siteSessions={siteSessions}
                   sourceReportsLoading={sourceReportsLoading}
                 />
-                </div>
               </div>
             </div>
           </WorkerShellBody>
         </section>
       </div>
-      </main>
 
       {isAdminView ? (
         <AdminMenuDrawer
@@ -275,7 +270,7 @@ export default function QuarterlyReportPage({ params }: QuarterlyReportPageProps
           currentSiteKey={currentSite.id}
         />
       )}
-    </div>
+    </main>
   );
 }
 
@@ -298,6 +293,18 @@ function sortSourceSessionsByDateDesc(sessions: InspectionSession[]) {
     const rightTime = new Date(getSessionGuidanceDate(right) || right.updatedAt).getTime();
     return rightTime - leftTime;
   });
+}
+
+function countMeaningfulFindings(session: InspectionSession) {
+  return session.document7Findings.filter(
+    (item) =>
+      item.location ||
+      item.emphasis ||
+      item.improvementPlan ||
+      item.accidentType ||
+      item.causativeAgentKey ||
+      item.metadata,
+  ).length;
 }
 
 function normalizeIds(value: string[]) {
@@ -1257,7 +1264,7 @@ function QuarterlySourceSelectionModal(props: {
           {sourceSessions.map((session) => {
             const isSelected = selectedSourceSet.has(session.id);
             const progress = getSessionProgress(session).percentage;
-            const findingCount = countMeaningfulDocument7Findings(session);
+            const findingCount = countMeaningfulFindings(session);
 
             return (
               <article
@@ -1306,6 +1313,14 @@ function QuarterlySiteSnapshotSection(props: {
   onChange: (field: keyof QuarterlySummaryReport['siteSnapshot'], value: string) => void;
 }) {
   const { draft, onChange } = props;
+  const handleSiteManagementNumberChange = (value: string) => {
+    onChange('siteManagementNumber', value);
+    onChange('businessStartNumber', value);
+  };
+  const handleCorporationNumberChange = (value: string) => {
+    onChange('corporationRegistrationNumber', value);
+    onChange('businessRegistrationNumber', value);
+  };
 
   return (
     <article className={operationalStyles.reportCard}>
@@ -1336,8 +1351,8 @@ function QuarterlySiteSnapshotSection(props: {
                   </th>
                   <SnapshotInputCell
                     label="사업장관리번호"
-                    value={draft.siteSnapshot.siteManagementNumber}
-                    onChange={(value) => onChange('siteManagementNumber', value)}
+                    value={draft.siteSnapshot.siteManagementNumber || draft.siteSnapshot.businessStartNumber}
+                    onChange={handleSiteManagementNumberChange}
                   />
                 </tr>
                 <tr>
@@ -1427,8 +1442,8 @@ function QuarterlySiteSnapshotSection(props: {
                   </th>
                   <SnapshotInputCell
                     label="법인등록번호"
-                    value={draft.siteSnapshot.corporationRegistrationNumber}
-                    onChange={(value) => onChange('corporationRegistrationNumber', value)}
+                    value={draft.siteSnapshot.corporationRegistrationNumber || draft.siteSnapshot.businessRegistrationNumber}
+                    onChange={handleCorporationNumberChange}
                   />
                 </tr>
                 <tr>
@@ -1504,14 +1519,10 @@ function QuarterlyImplementationSection(props: {
   return (
     <article className={operationalStyles.reportCard}>
       <SectionHeader title="4. 기술지도 이행현황" />
-      <p className={operationalStyles.bannerInfo}>
-        지적 건수는 해당 차수 보고서 문서 7(세부 지적) 기준이고, 개선 건수는 문서 4(이전 지도 사항 이행)에서
-        「이행」으로 처리된 항목 수입니다. 두 값은 서로 다른 문서에서 집계되므로 당회 지적이 없어도 이전
-        지도 이행만 반영된 경우 개선 건만 클 수 있습니다. 재계산 시 보고서 원본에서 다시 채웁니다.
-      </p>
       <div className={operationalStyles.implementationTableWrap}>
         <table className={operationalStyles.implementationTable}>
           <colgroup>
+            <col className={operationalStyles.implementationColTitle} />
             <col className={operationalStyles.implementationColCompact} />
             <col className={operationalStyles.implementationColPerson} />
             <col className={operationalStyles.implementationColDate} />
@@ -1523,22 +1534,13 @@ function QuarterlyImplementationSection(props: {
           </colgroup>
           <thead>
             <tr>
+              <th className={operationalStyles.implementationHeaderCell}>보고서명</th>
               <th className={operationalStyles.implementationHeaderCell}>차수</th>
               <th className={operationalStyles.implementationHeaderCell}>담당자</th>
               <th className={operationalStyles.implementationHeaderCell}>실시일</th>
               <th className={operationalStyles.implementationHeaderCell}>공정률</th>
-              <th
-                className={operationalStyles.implementationHeaderCell}
-                title="문서 7 세부 지적 중 실질 내용이 있는 건수"
-              >
-                지적 건수
-              </th>
-              <th
-                className={operationalStyles.implementationHeaderCell}
-                title="문서 4 이전 지도 사항 중 이행 처리된 건수(문서 7과 별개)"
-              >
-                개선 건수
-              </th>
+              <th className={operationalStyles.implementationHeaderCell}>지적 건수</th>
+              <th className={operationalStyles.implementationHeaderCell}>개선 건수</th>
               <th className={operationalStyles.implementationHeaderCell}>비고</th>
               <th className={`${operationalStyles.implementationHeaderCell} ${operationalStyles.implementationHeaderActionCell}`}>
                 <button
@@ -1555,6 +1557,7 @@ function QuarterlyImplementationSection(props: {
             {rows.length > 0 ? (
               rows.map((item, index) => (
                 <tr key={item.sessionId || index}>
+                  <ImplementationInputCell value={item.reportTitle} onChange={(value) => onChange(index, 'reportTitle', value)} />
                   <ImplementationInputCell type="number" min={0} value={item.reportNumber} onChange={(value) => onChange(index, 'reportNumber', value)} />
                   <ImplementationInputCell value={item.drafter} onChange={(value) => onChange(index, 'drafter', value)} />
                   <ImplementationInputCell value={item.reportDate} onChange={(value) => onChange(index, 'reportDate', value)} />
@@ -1571,7 +1574,7 @@ function QuarterlyImplementationSection(props: {
               ))
             ) : (
               <tr>
-                <td colSpan={8} className={operationalStyles.implementationEmptyCell}>선택한 기술지도 보고서가 없습니다.</td>
+                <td colSpan={9} className={operationalStyles.implementationEmptyCell}>선택한 기술지도 보고서가 없습니다.</td>
               </tr>
             )}
           </tbody>

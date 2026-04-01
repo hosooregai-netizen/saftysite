@@ -7,7 +7,7 @@
   min-height: 0;
   border-bottom: 1px solid var(--erp-line);
   background: #f6f9fc;
-  padding: 18px 0 17px;
+  padding: 18px 27px 17px;
   color: var(--erp-dark);
 }
 
@@ -54,8 +54,10 @@
   gap: 16px;
   flex: 1 1 auto;
   width: 100%;
+  max-width: 1320px;
+  margin-inline: auto;
   min-height: 0;
-  padding: 18px 0;
+  padding: 18px;
 }
 
 .contentColumn {
@@ -106,7 +108,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  padding: 15px 18px;
+  padding: 16px;
   border-bottom: 1px solid var(--erp-line);
   background: #fbfcfe;
 }

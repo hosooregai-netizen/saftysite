@@ -67,16 +67,15 @@ export function WorkspaceShell({
     INSPECTION_SECTIONS[0];
 
   return (
-    <div className="app-page-root">
-      <WorkerAppHeader
-        currentUserName={currentUserName}
-        onLogout={onLogout}
-        onOpenMenu={() => setMenuOpen(true)}
-      />
-
-      <main className="app-page">
+    <main className="app-page">
       <div className="app-container">
         <section className={`app-shell ${styles.shell}`}>
+          <WorkerAppHeader
+            currentUserName={currentUserName}
+            onLogout={onLogout}
+            onOpenMenu={() => setMenuOpen(true)}
+          />
+
           <WorkerShellBody>
             <WorkerMenuSidebar>
               {isAdminView ? (
@@ -87,9 +86,9 @@ export function WorkspaceShell({
             </WorkerMenuSidebar>
 
             <div className={styles.workspacePanel}>
-              <div className={styles.workspaceContentFrame}>
-                <WorkspaceHeader backHref={backHref} session={session} />
+              <WorkspaceHeader backHref={backHref} session={session} />
 
+              <div className={styles.workspaceContentFrame}>
                 <div className={styles.workspace}>
                   <WorkspaceToolbar
                     canMoveNext={canMoveNext}
@@ -137,7 +136,6 @@ export function WorkspaceShell({
           </WorkerShellBody>
         </section>
       </div>
-      </main>
 
       <WorkspaceMetaModal
         meta={session.meta}
@@ -160,6 +158,6 @@ export function WorkspaceShell({
           currentSiteKey={session.siteKey}
         />
       )}
-    </div>
+    </main>
   );
 }

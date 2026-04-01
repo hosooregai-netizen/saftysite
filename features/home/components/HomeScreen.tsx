@@ -47,30 +47,28 @@ export function HomeScreen() {
   }
 
   return (
-    <div className="app-page-root">
-      <main className="app-page">
+    <main className="app-page">
       <div className="app-container">
         <section className={`app-shell ${styles.shell}`}>
+          <WorkerAppHeader
+            currentUserName={currentUserName}
+            onLogout={logout}
+            onOpenMenu={() => setMenuOpen(true)}
+          />
+
           <WorkerShellBody>
             <WorkerMenuSidebar>
               <WorkerMenuPanel />
             </WorkerMenuSidebar>
 
             <div className={styles.contentColumn}>
-              <WorkerAppHeader
-                currentUserName={currentUserName}
-                fullBleed={false}
-                onLogout={logout}
-                onOpenMenu={() => setMenuOpen(true)}
-              />
-
               {dataError ? (
                 <div className={styles.emptyState}>
                   <p className={styles.emptyTitle}>데이터를 불러오지 못했습니다.</p>
                   <p className={styles.emptyDescription}>{dataError}</p>
                 </div>
               ) : (
-                <div className="app-main-frame">
+                <>
                   <header className={styles.hero}>
                     <div className={styles.heroBody}>
                       <div className={styles.heroMain}>
@@ -151,15 +149,14 @@ export function HomeScreen() {
                       />
                     </section>
                   </div>
-                </div>
+                </>
               )}
             </div>
           </WorkerShellBody>
         </section>
       </div>
-      </main>
 
       <WorkerMenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} />
-    </div>
+    </main>
   );
 }
