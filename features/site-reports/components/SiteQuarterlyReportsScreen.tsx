@@ -23,6 +23,9 @@ import {
 import {
   buildQuarterlyTitleForPeriod,
   formatPeriodRangeLabel,
+  getQuarterFromDate,
+  getQuarterRange,
+  parseDateValue,
 } from '@/lib/erpReports/shared';
 import { SiteReportsSummaryBar } from './SiteReportsSummaryBar';
 import styles from './SiteReportsScreen.module.css';
@@ -140,6 +143,32 @@ function getCreateTitleSuggestion(
     buildQuarterlyTitleForPeriod(startDate, endDate),
     existingTitles,
   );
+}
+
+function getCreateQuarterSelectionTarget(
+  form: Pick<CreateQuarterlyReportForm, 'periodStartDate' | 'periodEndDate'>,
+) {
+  const startDate = parseDateValue(form.periodStartDate);
+  if (startDate) {
+    return {
+      year: startDate.getFullYear(),
+      quarter: getQuarterFromDate(startDate),
+    };
+  }
+
+  const endDate = parseDateValue(form.periodEndDate);
+  if (endDate) {
+    return {
+      year: endDate.getFullYear(),
+      quarter: getQuarterFromDate(endDate),
+    };
+  }
+
+  const today = new Date();
+  return {
+    year: today.getFullYear(),
+    quarter: getQuarterFromDate(today),
+  };
 }
 
 export function SiteQuarterlyReportsScreen({
@@ -296,6 +325,9 @@ export function SiteQuarterlyReportsScreen({
     !createForm.periodStartDate ||
     !createForm.periodEndDate ||
     isCreateRangeInvalid;
+  const createQuarterSelection = String(
+    getCreateQuarterSelectionTarget(createForm).quarter,
+  );
 
   const resetCreateDialog = () => {
     setCreateForm(EMPTY_CREATE_FORM);
@@ -320,25 +352,35 @@ export function SiteQuarterlyReportsScreen({
     value: string,
   ) => {
     setCreateDialogError(null);
-    setCreateForm((current) => {
-      const next = {
-        ...current,
-        [field]: value,
-      };
+    setCreateForm((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  };
 
-      if (hasEditedCreateTitle) {
-        return next;
-      }
+  const handleCreateQuarterChange = (value: string) => {
+    const nextQuarter = Number.parseInt(value, 10);
+    if (nextQuarter < 1 || nextQuarter > 4) {
+      return;
+    }
 
-      return {
-        ...next,
-        title: getCreateTitleSuggestion(
-          next.periodStartDate,
-          next.periodEndDate,
-          existingReportTitles,
-        ),
-      };
-    });
+    setCreateDialogError(null);
+
+    const currentTarget = getCreateQuarterSelectionTarget(createForm);
+    const nextRange = getQuarterRange(currentTarget.year, nextQuarter);
+
+    setCreateForm((current) => ({
+      ...current,
+      periodStartDate: nextRange.startDate,
+      periodEndDate: nextRange.endDate,
+      title: hasEditedCreateTitle
+        ? current.title
+        : getCreateTitleSuggestion(
+            nextRange.startDate,
+            nextRange.endDate,
+            existingReportTitles,
+          ),
+    }));
   };
 
   const handleCreateTitleChange = (value: string) => {
@@ -447,15 +489,16 @@ export function SiteQuarterlyReportsScreen({
   }
 
   return (
-    <main className="app-page">
+    <div className="app-page-root">
+      <WorkerAppHeader
+        currentUserName={currentUser?.name}
+        onLogout={logout}
+        onOpenMenu={() => setMenuOpen(true)}
+      />
+
+      <main className="app-page">
       <div className="app-container">
         <section className={`app-shell ${styles.shell}`}>
-          <WorkerAppHeader
-            currentUserName={currentUser?.name}
-            onLogout={logout}
-            onOpenMenu={() => setMenuOpen(true)}
-          />
-
           <WorkerShellBody>
             <WorkerMenuSidebar>
               {isAdminView ? (
@@ -469,18 +512,19 @@ export function SiteQuarterlyReportsScreen({
             </WorkerMenuSidebar>
 
             <div className={styles.contentColumn}>
-              <header className={styles.hero}>
-                <div className={styles.heroBody}>
-                  <Link href={backHref} className={styles.heroBackLink}>
-                    {'<'} {backLabel}
-                  </Link>
-                  <div className={styles.heroMain}>
-                    <h1 className={styles.heroTitle}>분기 종합 보고서 목록</h1>
+              <div className="app-main-frame">
+                <header className={styles.hero}>
+                  <div className={styles.heroBody}>
+                    <Link href={backHref} className={styles.heroBackLink}>
+                      {'<'} {backLabel}
+                    </Link>
+                    <div className={styles.heroMain}>
+                      <h1 className={styles.heroTitle}>분기 종합 보고서 목록</h1>
+                    </div>
                   </div>
-                </div>
-              </header>
+                </header>
 
-              <div className={styles.pageGrid}>
+                <div className={styles.pageGrid}>
                 <SiteReportsSummaryBar
                   addressDisplay={addressDisplay}
                   amountDisplay={amountDisplay}
@@ -633,10 +677,12 @@ export function SiteQuarterlyReportsScreen({
                   )}
                 </section>
               </div>
+              </div>
             </div>
           </WorkerShellBody>
         </section>
       </div>
+      </main>
 
       {isAdminView ? (
         <AdminMenuDrawer
@@ -692,6 +738,24 @@ export function SiteQuarterlyReportsScreen({
           </label>
 
           <div className={styles.createDialogPeriodGrid}>
+            <label
+              className={`${styles.createDialogField} ${styles.createDialogQuarterField}`}
+            >
+              <span className={styles.createDialogLabel}>분기</span>
+              <select
+                className="app-select"
+                value={createQuarterSelection}
+                onChange={(event) => handleCreateQuarterChange(event.target.value)}
+                disabled={isBusy}
+                aria-label="분기"
+              >
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+              </select>
+            </label>
+
             <label className={styles.createDialogField}>
               <span className={styles.createDialogLabel}>시작일</span>
               <input
@@ -760,6 +824,6 @@ export function SiteQuarterlyReportsScreen({
             : '선택한 분기 종합 보고서를 삭제합니다.'}
         </p>
       </AppModal>
-    </main>
+    </div>
   );
 }

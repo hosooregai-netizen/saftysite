@@ -7,7 +7,7 @@
   min-height: 0;
   border-bottom: 1px solid var(--erp-line);
   background: #f6f9fc;
-  padding: 18px 27px 17px;
+  padding: 18px 0 17px;
   color: var(--erp-dark);
 }
 
@@ -131,10 +131,8 @@
   gap: 16px;
   flex: 1 1 auto;
   width: 100%;
-  max-width: 1320px;
-  margin-inline: auto;
   min-height: 0;
-  padding: 18px;
+  padding: 18px 0;
 }
 
 .contentColumn {
@@ -158,7 +156,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  padding: 16px;
+  padding: 15px 18px;
   border-bottom: 1px solid var(--erp-line);
   background: #fbfcfe;
 }
@@ -197,7 +195,7 @@
     minmax(150px, 0.95fr)
     40px;
   gap: 10px;
-  padding: 9px 16px 8px;
+  padding: 9px 18px 8px;
   border-bottom: 1px solid var(--erp-line);
   background-color: var(--erp-panel-muted);
   font-size: var(--text-micro);
@@ -222,7 +220,7 @@
     40px;
   gap: 10px;
   align-items: center;
-  padding: 11px 16px;
+  padding: 11px 18px;
   border-bottom: 1px solid var(--erp-line);
 }
 
@@ -397,7 +395,7 @@
 
 .createDialogPeriodGrid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(96px, 116px) repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -411,6 +409,10 @@
   font-size: var(--text-ui-sm);
   font-weight: 700;
   color: var(--erp-dark);
+}
+
+.createDialogQuarterField {
+  max-width: 116px;
 }
 
 .createDialogError {
@@ -459,7 +461,7 @@
 
   .tableTools {
     gap: 8px;
-    padding: 12px 10px;
+    padding: 12px 14px;
   }
 
   .tableSearch,
@@ -473,6 +475,7 @@
   }
 
   .createDialogPeriodGrid {
+    grid-template-columns: 1fr;
     gap: 8px;
   }
 

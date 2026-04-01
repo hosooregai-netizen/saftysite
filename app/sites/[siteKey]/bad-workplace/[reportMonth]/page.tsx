@@ -1,10 +1,11 @@
-﻿'use client';
+'use client';
 
 import Link from 'next/link';
 import { use, useMemo, useState } from 'react';
 import { AdminMenuDrawer, AdminMenuPanel } from '@/components/admin/AdminMenu';
 import LoginPanel from '@/components/auth/LoginPanel';
 import operationalStyles from '@/components/site/OperationalReports.module.css';
+import AppModal from '@/components/ui/AppModal';
 import WorkerAppHeader from '@/components/worker/WorkerAppHeader';
 import WorkerMenuSidebar from '@/components/worker/WorkerMenuSidebar';
 import WorkerShellBody from '@/components/worker/WorkerShellBody';
@@ -19,6 +20,8 @@ import { useSiteOperationalReports } from '@/hooks/useSiteOperationalReports';
 import { getAdminSectionHref, isAdminUserRole } from '@/lib/admin';
 import {
   buildInitialBadWorkplaceReport,
+  countDocument7FindingsForDisplay,
+  formatSessionProgressRateDisplay,
   getBadWorkplaceSelectableFindings,
   getBadWorkplaceSourceSessions,
   syncBadWorkplaceReportSource,
@@ -130,15 +133,16 @@ export default function BadWorkplaceReportPage({
   }
 
   return (
-    <main className="app-page">
+    <div className="app-page-root">
+      <WorkerAppHeader
+        currentUserName={currentUser?.name}
+        onLogout={logout}
+        onOpenMenu={() => setMenuOpen(true)}
+      />
+
+      <main className="app-page">
       <div className="app-container">
         <section className={`app-shell ${shellStyles.shell}`}>
-          <WorkerAppHeader
-            currentUserName={currentUser?.name}
-            onLogout={logout}
-            onOpenMenu={() => setMenuOpen(true)}
-          />
-
           <WorkerShellBody>
             <WorkerMenuSidebar>
               {isAdminView ? (
@@ -149,22 +153,23 @@ export default function BadWorkplaceReportPage({
             </WorkerMenuSidebar>
 
             <div className={shellStyles.contentColumn}>
-              <header className={shellStyles.hero}>
-                <div className={shellStyles.heroBody}>
-                  <Link
-                    href={backHref}
-                    className={shellStyles.heroBackLink}
-                    aria-label="이전 화면으로 돌아가기"
-                  >
-                    {'<'} {backLabel}
-                  </Link>
-                  <div className={shellStyles.heroMain}>
-                    <h1 className={shellStyles.heroTitle}>{initialDraft.title}</h1>
+              <div className="app-main-frame">
+                <header className={shellStyles.hero}>
+                  <div className={shellStyles.heroBody}>
+                    <Link
+                      href={backHref}
+                      className={shellStyles.heroBackLink}
+                      aria-label="이전 화면으로 돌아가기"
+                    >
+                      {'<'} {backLabel}
+                    </Link>
+                    <div className={shellStyles.heroMain}>
+                      <h1 className={shellStyles.heroTitle}>{initialDraft.title}</h1>
+                    </div>
                   </div>
-                </div>
-              </header>
+                </header>
 
-              <div className={shellStyles.pageGrid}>
+                <div className={shellStyles.pageGrid}>
                 <BadWorkplaceReportEditor
                   key={`${initialDraft.id}:${initialDraft.updatedAt}`}
                   currentSite={currentSite}
@@ -174,11 +179,13 @@ export default function BadWorkplaceReportPage({
                   error={error}
                   onSave={saveBadWorkplaceReport}
                 />
+                </div>
               </div>
             </div>
           </WorkerShellBody>
         </section>
       </div>
+      </main>
 
       {isAdminView ? (
         <AdminMenuDrawer
@@ -194,7 +201,7 @@ export default function BadWorkplaceReportPage({
           currentSiteKey={currentSite.id}
         />
       )}
-    </main>
+    </div>
   );
 }
 
@@ -217,6 +224,7 @@ function BadWorkplaceReportEditor({
 }: BadWorkplaceReportEditorProps) {
   const [draft, setDraft] = useState(initialDraft);
   const [notice, setNotice] = useState<string | null>(null);
+  const [sourceModalOpen, setSourceModalOpen] = useState(false);
 
   const selectedSession = useMemo(
     () => siteSessions.find((session) => session.id === draft.sourceSessionId) || siteSessions[0] || null,
@@ -232,9 +240,10 @@ function BadWorkplaceReportEditor({
     setDraft((current) => syncBadWorkplaceReportSource(current, nextSession));
     setNotice(
       nextSession
-        ? `${getSessionGuidanceDate(nextSession) || '-'} 기술지도 보고서를 원본으로 선택했습니다.`
+        ? `${getSessionGuidanceDate(nextSession) || '-'} 기술지도 보고서를 선택했습니다.`
         : null,
     );
+    setSourceModalOpen(false);
   };
 
   const handleToggleFinding = (findingId: string, checked: boolean) => {
@@ -279,70 +288,60 @@ function BadWorkplaceReportEditor({
 
       <article className={operationalStyles.reportCard}>
         <div className={operationalStyles.reportCardHeader}>
-          <strong className={operationalStyles.reportCardTitle}>1. 원본 기술지도 보고서 선택</strong>
+          <strong className={operationalStyles.reportCardTitle}>기술지도 보고서 선택</strong>
         </div>
         {siteSessions.length > 0 ? (
-          <div className={operationalStyles.sourceList}>
-            {siteSessions.map((session) => {
-              const isSelected = session.id === selectedSession?.id;
-              const findingCount = getBadWorkplaceSelectableFindings(session).length;
-
-              return (
-                <article
-                  key={session.id}
-                  className={`${operationalStyles.sourceCard} ${
-                    isSelected ? operationalStyles.sourceCardActive : ''
-                  }`}
-                >
-                  <div className={operationalStyles.sourceCardTop}>
-                    <div className={operationalStyles.sourceCardBody}>
-                      <strong className={operationalStyles.sourceCardTitle}>
-                        {getSessionTitle(session)}
-                      </strong>
-                      <span className={operationalStyles.sourceCardMeta}>
-                        지도일 {getSessionGuidanceDate(session) || '-'} / 작성자 {session.meta.drafter || '-'} / 지적사항 {findingCount}건 / 진행률 {session.document2Overview.progressRate || '-'}
-                      </span>
-                    </div>
-                  </div>
-                  <div className={operationalStyles.sourceCardActions}>
-                    <button
-                      type="button"
-                      className={`app-button ${
-                        isSelected ? 'app-button-primary' : 'app-button-secondary'
-                      }`}
-                      onClick={() => handleSourceSessionChange(session.id)}
-                    >
-                      {isSelected ? '현재 원본' : '이 보고서를 기준으로 불러오기'}
-                    </button>
-                    <Link
-                      href={`/sessions/${encodeURIComponent(session.id)}`}
-                      className={`${operationalStyles.linkButton} ${operationalStyles.linkButtonSecondary}`}
-                    >
-                      원본 보기
-                    </Link>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
+          <>
+            {selectedSession ? (
+              <div className={operationalStyles.bannerInfo}>
+                <div className={operationalStyles.sourceCardBody}>
+                  <strong className={operationalStyles.sourceCardTitle}>{getSessionTitle(selectedSession)}</strong>
+                  <span className={operationalStyles.sourceCardMeta}>
+                    지도일 {getSessionGuidanceDate(selectedSession) || '-'} / 작성자 {selectedSession.meta.drafter || '-'} / 지적사항{' '}
+                    {countDocument7FindingsForDisplay(selectedSession)}건 / 진행률{' '}
+                    {formatSessionProgressRateDisplay(selectedSession)}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <p className={operationalStyles.reportCardDescription}>기술지도 보고서를 선택해 주세요.</p>
+            )}
+            <div className={operationalStyles.reportActions}>
+              <button
+                type="button"
+                className="app-button app-button-primary"
+                onClick={() => setSourceModalOpen(true)}
+              >
+                {selectedSession ? '보고서 바꾸기' : '보고서 선택'}
+              </button>
+            </div>
+          </>
         ) : (
           <div className={operationalStyles.emptyState}>
-            원본으로 사용할 기술지도 보고서가 아직 없습니다.
+            등록된 기술지도 보고서가 아직 없습니다.
           </div>
         )}
       </article>
+
+      <BadWorkplaceSourceSessionModal
+        open={sourceModalOpen}
+        siteSessions={siteSessions}
+        selectedSessionId={selectedSession?.id ?? null}
+        onClose={() => setSourceModalOpen(false)}
+        onSelectSession={handleSourceSessionChange}
+      />
 
       <article className={operationalStyles.reportCard}>
         <div className={operationalStyles.reportCardHeader}>
           <strong className={operationalStyles.reportCardTitle}>2. 가져올 지적사항 선택</strong>
         </div>
         <p className={operationalStyles.reportCardDescription}>
-          선택한 원본 보고서에서 신고 초안으로 이어받을 지적사항을 고르세요. 체크를 바꾸면 아래 위반 사항 표도 함께 갱신됩니다.
+          선택한 보고서에서 신고 초안으로 이어받을 지적사항을 고르세요. 체크를 바꾸면 아래 위반 사항 표도 함께 갱신됩니다.
         </p>
 
         {selectedSession ? (
           <div className={operationalStyles.bannerInfo}>
-            원본 보고서 {getSessionTitle(selectedSession)} / 작성자 {selectedSession.meta.drafter || '-'}
+            선택한 보고서 {getSessionTitle(selectedSession)} / 작성자 {selectedSession.meta.drafter || '-'}
           </div>
         ) : null}
 
@@ -370,7 +369,7 @@ function BadWorkplaceReportEditor({
           </div>
         ) : (
           <div className={operationalStyles.emptyState}>
-            선택한 원본 보고서에 가져올 지적사항이 없습니다. 다른 보고서를 선택해 보세요.
+            선택한 보고서에 가져올 지적사항이 없습니다. 다른 보고서를 선택해 보세요.
           </div>
         )}
       </article>
@@ -385,8 +384,10 @@ function BadWorkplaceReportEditor({
           <strong className={operationalStyles.summaryValue}>{draft.reporterName || '-'}</strong>
         </article>
         <article className={operationalStyles.summaryCard}>
-          <span className={operationalStyles.summaryLabel}>원본 진행률</span>
-          <strong className={operationalStyles.summaryValue}>{draft.progressRate || '-'}</strong>
+          <span className={operationalStyles.summaryLabel}>진행률</span>
+          <strong className={operationalStyles.summaryValue}>
+            {selectedSession ? formatSessionProgressRateDisplay(selectedSession) : draft.progressRate || '-'}
+          </strong>
         </article>
         <article className={operationalStyles.summaryCard}>
           <span className={operationalStyles.summaryLabel}>기술지도 실시 횟수</span>
@@ -599,6 +600,70 @@ function BadWorkplaceReportEditor({
         />
       </label>
     </section>
+  );
+}
+
+interface BadWorkplaceSourceSessionModalProps {
+  open: boolean;
+  siteSessions: InspectionSession[];
+  selectedSessionId: string | null;
+  onClose: () => void;
+  onSelectSession: (sessionId: string) => void;
+}
+
+function BadWorkplaceSourceSessionModal({
+  open,
+  siteSessions,
+  selectedSessionId,
+  onClose,
+  onSelectSession,
+}: BadWorkplaceSourceSessionModalProps) {
+  return (
+    <AppModal
+      open={open}
+      title="기술지도 보고서 선택"
+      size="large"
+      onClose={onClose}
+      actions={
+        <button type="button" className="app-button app-button-secondary" onClick={onClose}>
+          닫기
+        </button>
+      }
+    >
+      <div className={operationalStyles.sourceList}>
+        {siteSessions.map((session) => {
+          const isSelected = session.id === selectedSessionId;
+          const findingCount = countDocument7FindingsForDisplay(session);
+
+          return (
+            <article
+              key={session.id}
+              className={`${operationalStyles.sourceCard} ${isSelected ? operationalStyles.sourceCardActive : ''}`}
+            >
+              <div className={operationalStyles.sourceCardTop}>
+                <div className={operationalStyles.sourceCardBody}>
+                  <strong className={operationalStyles.sourceCardTitle}>{getSessionTitle(session)}</strong>
+                  <span className={operationalStyles.sourceCardMeta}>
+                    지도일 {getSessionGuidanceDate(session) || '-'} / 작성자 {session.meta.drafter || '-'} / 지적사항 {findingCount}건 / 진행률{' '}
+                    {formatSessionProgressRateDisplay(session)}
+                  </span>
+                </div>
+              </div>
+              <div className={operationalStyles.sourceCardActions}>
+                <button
+                  type="button"
+                  className={`app-button ${isSelected ? 'app-button-primary' : 'app-button-secondary'}`}
+                  onClick={() => onSelectSession(session.id)}
+                  disabled={isSelected}
+                >
+                  {isSelected ? '선택됨' : '이 보고서를 기준으로 불러오기'}
+                </button>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </AppModal>
   );
 }
 

@@ -69,15 +69,16 @@ export function SiteReportsScreen({ siteKey }: SiteReportsScreenProps) {
   }
 
   return (
-    <main className="app-page">
+    <div className="app-page-root">
+      <WorkerAppHeader
+        currentUserName={currentUserName}
+        onLogout={logout}
+        onOpenMenu={() => setMenuOpen(true)}
+      />
+
+      <main className="app-page">
       <div className="app-container">
         <section className={`app-shell ${styles.shell}`}>
-          <WorkerAppHeader
-            currentUserName={currentUserName}
-            onLogout={logout}
-            onOpenMenu={() => setMenuOpen(true)}
-          />
-
           <WorkerShellBody>
             <WorkerMenuSidebar>
               {isAdminView ? (
@@ -91,47 +92,50 @@ export function SiteReportsScreen({ siteKey }: SiteReportsScreenProps) {
             </WorkerMenuSidebar>
 
             <div className={styles.contentColumn}>
-              <header className={styles.hero}>
-                <div className={styles.heroBody}>
-                  <Link
-                    href={workerBackHref}
-                    className={styles.heroBackLink}
-                    aria-label="이전 화면으로 돌아가기"
-                  >
-                    {'<'} 이전
-                  </Link>
-                  <div className={styles.heroMain}>
-                    <h1 className={styles.heroTitle}>
-                      기술지도 보고서 - {currentSite.siteName}
-                    </h1>
+              <div className="app-main-frame">
+                <header className={styles.hero}>
+                  <div className={styles.heroBody}>
+                    <Link
+                      href={workerBackHref}
+                      className={styles.heroBackLink}
+                      aria-label="이전 화면으로 돌아가기"
+                    >
+                      {'<'} 이전
+                    </Link>
+                    <div className={styles.heroMain}>
+                      <h1 className={styles.heroTitle}>
+                        기술지도 보고서 - {currentSite.siteName}
+                      </h1>
+                    </div>
                   </div>
-                </div>
-              </header>
+                </header>
 
-              <div className={styles.pageGrid}>
-                <SiteReportListPanel
-                  assignedUserDisplay={assignedUserDisplay}
-                  canArchiveReports={canArchiveReports}
-                  canCreateReport={canCreateReport}
-                  createReport={createReport}
-                  currentSite={currentSite}
-                  deleteSession={deleteSession}
-                  filteredReportItems={filteredReportItems}
-                  getCreateReportTitleSuggestion={getCreateReportTitleSuggestion}
-                  reloadReportIndex={reloadReportIndex}
-                  reportIndexError={reportIndexError}
-                  reportIndexStatus={reportIndexStatus}
-                  reportItems={reportItems}
-                  reportQuery={reportQuery}
-                  reportSortMode={reportSortMode}
-                  setReportQuery={setReportQuery}
-                  setReportSortMode={setReportSortMode}
-                />
+                <div className={styles.pageGrid}>
+                  <SiteReportListPanel
+                    assignedUserDisplay={assignedUserDisplay}
+                    canArchiveReports={canArchiveReports}
+                    canCreateReport={canCreateReport}
+                    createReport={createReport}
+                    currentSite={currentSite}
+                    deleteSession={deleteSession}
+                    filteredReportItems={filteredReportItems}
+                    getCreateReportTitleSuggestion={getCreateReportTitleSuggestion}
+                    reloadReportIndex={reloadReportIndex}
+                    reportIndexError={reportIndexError}
+                    reportIndexStatus={reportIndexStatus}
+                    reportItems={reportItems}
+                    reportQuery={reportQuery}
+                    reportSortMode={reportSortMode}
+                    setReportQuery={setReportQuery}
+                    setReportSortMode={setReportSortMode}
+                  />
+                </div>
               </div>
             </div>
           </WorkerShellBody>
         </section>
       </div>
+      </main>
 
       {isAdminView ? (
         <AdminMenuDrawer
@@ -147,6 +151,6 @@ export function SiteReportsScreen({ siteKey }: SiteReportsScreenProps) {
           currentSiteKey={currentSite.id}
         />
       )}
-    </main>
+    </div>
   );
 }
