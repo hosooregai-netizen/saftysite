@@ -18,7 +18,7 @@ export default function WorkerAppHeader({
   currentUserName,
   onLogout,
   onOpenMenu,
-  brand = '대한안전산업연구원',
+  brand = '한국종합안전',
   accountLabel = '로그인 계정',
   logoutLabel = '로그아웃',
   actions,
