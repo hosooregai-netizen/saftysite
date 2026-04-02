@@ -66,6 +66,18 @@ function normalizeSafetyPath(pathname: string): string {
     .replace(/\/content-items\/[^/]+$/, '/content-items/:id');
 }
 
+function extractMockedSafetyPath(pathname: string): string {
+  if (pathname.includes('/api/safety')) {
+    return pathname.replace(/.*\/api\/safety/, '') || '/';
+  }
+
+  if (pathname.includes('/api/v1')) {
+    return pathname.replace(/.*\/api\/v1/, '') || '/';
+  }
+
+  return pathname;
+}
+
 function toReportListItem(report: JsonRecord) {
   return {
     id: report.id,
@@ -1142,10 +1154,10 @@ async function runBrowserCrudSmoke() {
     }
   });
 
-  await context.route('**/api/safety/**', async (route) => {
+  const handleAdminSafetyRoute = async (route) => {
     const request = route.request();
     const url = new URL(request.url());
-    const pathname = url.pathname.replace('/api/safety', '') || '/';
+    const pathname = extractMockedSafetyPath(url.pathname);
     const normalizedPath = normalizeSafetyPath(pathname);
     const key = `${request.method()} ${normalizedPath}`;
     requestCounts.set(key, (requestCounts.get(key) || 0) + 1);
@@ -1467,7 +1479,10 @@ async function runBrowserCrudSmoke() {
     }
 
     throw new Error(`미처리된 Safety API 요청: ${request.method()} ${pathname}`);
-  });
+  };
+
+  await context.route('**/api/safety/**', handleAdminSafetyRoute);
+  await context.route('**/api/v1/**', handleAdminSafetyRoute);
 
   async function openSection(name: string) {
     console.log(`Open section: ${name}`);
@@ -1806,10 +1821,10 @@ async function runBrowserErpSmoke() {
     }
   });
 
-  await context.route('**/api/safety/**', async (route) => {
+  const handleErpSafetyRoute = async (route) => {
     const request = route.request();
     const url = new URL(request.url());
-    const pathname = url.pathname.replace('/api/safety', '') || '/';
+    const pathname = extractMockedSafetyPath(url.pathname);
     const normalizedPath = normalizeSafetyPath(pathname);
     const key = `${request.method()} ${normalizedPath}`;
     requestCounts.set(key, (requestCounts.get(key) || 0) + 1);
@@ -2083,7 +2098,10 @@ async function runBrowserErpSmoke() {
     }
 
     throw new Error(`Unhandled ERP smoke request: ${request.method()} ${pathname}`);
-  });
+  };
+
+  await context.route('**/api/safety/**', handleErpSafetyRoute);
+  await context.route('**/api/v1/**', handleErpSafetyRoute);
 
   async function waitForRequestCount(requestKey: string, minimumCount: number) {
     const deadline = Date.now() + 15000;

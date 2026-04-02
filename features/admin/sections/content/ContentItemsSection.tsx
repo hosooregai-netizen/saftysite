@@ -633,7 +633,7 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
                     disabled={busy}
                     helperText={
                       usesSafetyProxy
-                        ? '현재 앱 기준 허용 용량은 50MB이며, 배포 프록시 제한이 더 작으면 업로드가 실패할 수 있습니다.'
+                        ? '현재는 Vercel 프록시 경유 업로드라 4.5MB를 넘으면 실패할 수 있습니다. direct upload origin 설정을 확인해 주세요.'
                         : undefined
                     }
                     label={activeTypeMeta.fileLabels?.[0] || '파일 1'}
@@ -652,7 +652,7 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
                     disabled={busy}
                     helperText={
                       usesSafetyProxy
-                        ? '현재 앱 기준 허용 용량은 50MB이며, 배포 프록시 제한이 더 작으면 업로드가 실패할 수 있습니다.'
+                        ? '현재는 Vercel 프록시 경유 업로드라 4.5MB를 넘으면 실패할 수 있습니다. direct upload origin 설정을 확인해 주세요.'
                         : undefined
                     }
                     label={activeTypeMeta.fileLabels?.[1] || '파일 2'}

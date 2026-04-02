@@ -1,4 +1,5 @@
 import type { SafetyContentItem, SafetyContentType } from '@/types/backend';
+import { resolveSafetyAssetUrl } from '@/lib/safetyApi/assetUrls';
 import {
   asMapperRecord,
   contentBodyToAssetName,
@@ -56,14 +57,14 @@ function readMeasurementSafetyCriteria(body: unknown) {
 function readFileUrl(body: unknown, order: 1 | 2) {
   const record = bodyRecord(body);
   if (order === 1) {
-    return (
+    return resolveSafetyAssetUrl(
       normalizeMapperText(record.referenceMaterial1) ||
       normalizeMapperText(record.reference_material_1) ||
       normalizeMapperText(record.material1)
     );
   }
 
-  return (
+  return resolveSafetyAssetUrl(
     normalizeMapperText(record.referenceMaterial2) ||
     normalizeMapperText(record.reference_material_2) ||
     normalizeMapperText(record.material2)
@@ -251,4 +252,3 @@ export function readFileAsDataUrl(file: File): Promise<string> {
     reader.readAsDataURL(file);
   });
 }
-

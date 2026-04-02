@@ -25,6 +25,7 @@ import {
   contentBodyToText,
   normalizeMapperText,
 } from './utils';
+import { resolveSafetyAssetUrl } from '@/lib/safetyApi/assetUrls';
 
 function normalizeContentDate(value: unknown): string | null {
   const normalized = normalizeMapperText(value);
@@ -136,14 +137,16 @@ function mapLegalReferenceItem(item: SafetyContentItem): SafetyLegalReference {
     id: item.id,
     title: normalizeMapperText(item.title),
     body: contentBodyToText(item.body),
-    referenceMaterial1:
+    referenceMaterial1: resolveSafetyAssetUrl(
       normalizeMapperText(body.referenceMaterial1) ||
       normalizeMapperText(body.reference_material_1) ||
-      normalizeMapperText(body.material1),
-    referenceMaterial2:
+      normalizeMapperText(body.material1)
+    ),
+    referenceMaterial2: resolveSafetyAssetUrl(
       normalizeMapperText(body.referenceMaterial2) ||
       normalizeMapperText(body.reference_material_2) ||
-      normalizeMapperText(body.material2),
+      normalizeMapperText(body.material2)
+    ),
   };
 }
 
@@ -337,4 +340,3 @@ export function mergeMasterDataIntoSession(
     document14SafetyInfos: getSafetyInfosForReportDate(masterData, session.meta.reportDate),
   });
 }
-
