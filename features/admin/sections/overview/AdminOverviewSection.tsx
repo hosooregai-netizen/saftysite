@@ -1,4 +1,3 @@
-import OperationalKpiPanel from '@/components/controller/OperationalKpiPanel';
 import { buildAdminOverviewModel } from '@/features/admin/lib/buildAdminOverviewModel';
 import { formatTimestamp } from '@/lib/admin';
 import type { AdminSectionKey } from '@/lib/admin';
@@ -84,6 +83,30 @@ export function AdminOverviewSection({
       target: 'overview' as const,
     },
   ];
+  const operationalHighlights = [
+    {
+      label: '미배정 현장',
+      value: unassignedActiveSiteCount,
+      meta: '담당자 배정 확인',
+    },
+    {
+      label: '진행 중 보고서',
+      value: reportStats.inProgress,
+      meta: '작성 흐름 점검',
+    },
+    {
+      label: '콘텐츠 점검',
+      value: expiringContentCount,
+      meta: '만료 예정 콘텐츠 확인',
+    },
+    {
+      label: '배정 편중',
+      value: overloadedAgents[0]?.siteCount ?? 0,
+      meta: overloadedAgents[0]
+        ? `${overloadedAgents[0].name}님 기준`
+        : '운영 여유 상태',
+    },
+  ];
 
   return (
     <section className={`${styles.sectionCard} ${styles.overviewCard}`}>
@@ -112,7 +135,18 @@ export function AdminOverviewSection({
           ))}
         </div>
 
-        <OperationalKpiPanel sites={data.sites} styles={styles} users={data.users} />
+        <div className={`${styles.stats} ${styles.overviewStats}`}>
+          {operationalHighlights.map((item) => (
+            <article
+              key={item.label}
+              className={`${styles.statCard} ${styles.overviewStatButton}`}
+            >
+              <p className={`${styles.statLabel} ${styles.overviewStatLabel}`}>{item.label}</p>
+              <p className={`${styles.statValue} ${styles.overviewStatValue}`}>{item.value}</p>
+              <p className={`${styles.statMeta} ${styles.overviewStatMeta}`}>{item.meta}</p>
+            </article>
+          ))}
+        </div>
 
         <div className={`${styles.insightGrid} ${styles.overviewInsights}`}>
           {(insights.length > 0 ? insights : fallbackInsights).map((insight) => (
@@ -172,7 +206,7 @@ export function AdminOverviewSection({
             </div>
             <p className={`${styles.recordDescription} ${styles.overviewRecordDescription}`}>
               사업장 탭에서는 사업장, 현장, 보고서를 단계적으로 확인할 수 있고, overview에서는
-              우선 조치가 필요한 분기 누락 현장과 월간 신고 미달 요원을 먼저 확인할 수 있도록
+              운영 인원 배정, 진행 중 보고서, 콘텐츠 정비 상태를 한 번에 점검할 수 있도록
               구성했습니다.
             </p>
           </article>

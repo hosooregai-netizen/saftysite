@@ -25,7 +25,7 @@ import { requestSafetyApi, SafetyApiError } from './client';
 
 const CLIENT_SITE_LIST_LIMIT = 500;
 const CLIENT_CONTENT_ITEM_LIMIT = 1000;
-const ERP_UNSUPPORTED_STATUSES = new Set([404, 405, 501]);
+const ERP_UNSUPPORTED_STATUSES = new Set([405, 501]);
 const ERP_TEMPLATE_CONTENT_TYPES: Record<ErpDocumentKind, SafetyContentType[]> = {
   tbm: ['tbm_template'],
   hazard_notice: ['notice_template'],
@@ -45,7 +45,10 @@ function isUnsupportedErpError(error: unknown): error is SafetyApiError {
 }
 
 function buildUnsupportedFeatureError(feature: string): SafetyApiError {
-  return new SafetyApiError(`${feature} 기능은 현재 연결된 safety-server에서 지원되지 않아 복구중입니다.`, 501);
+  return new SafetyApiError(
+    `${feature} 기능은 현재 연결된 safety-server 버전에서 지원되지 않습니다.`,
+    501
+  );
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
