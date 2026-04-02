@@ -1383,7 +1383,7 @@ async function runBrowserCrudSmoke() {
 
     if (normalizedPath === '/content-items/assets/upload' && request.method() === 'POST') {
       await fulfillJson({
-        path: '/uploads/mock-guide.pdf',
+        path: '/uploads/content-items/mock-guide.pdf',
         file_name: 'guide.pdf',
         content_type: 'application/pdf',
         size: 2048,
@@ -1925,7 +1925,7 @@ async function runBrowserErpSmoke() {
 
     if (normalizedPath === '/content-items/assets/upload' && request.method() === 'POST') {
       await fulfillJson({
-        path: '/content-items/assets/mock-photo.png',
+        path: '/uploads/content-items/mock-photo.png',
         file_name: 'mock-photo.png',
         content_type: 'image/png',
         size: 1024,
