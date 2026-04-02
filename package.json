@@ -8,6 +8,7 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint .",
+    "smoke:erp": "tsx scripts/smokeClient.ts",
     "generate:hwpx": "node --experimental-strip-types scripts/generate_hwpx_report.ts",
     "bootstrap:hwpx-template": "node --experimental-strip-types scripts/bootstrap_inspection_hwpx_template.ts",
     "seed:measurement-templates": "node --experimental-strip-types scripts/seed_measurement_templates.ts"
@@ -34,4 +35,3 @@
     "typescript": "^5"
   }
 }
-

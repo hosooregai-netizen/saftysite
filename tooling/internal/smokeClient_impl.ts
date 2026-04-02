@@ -2177,7 +2177,7 @@ async function runBrowserErpSmoke() {
 
   await loginAs('agent@example.com');
   await waitForRequestCount('GET /assignments/me/sites', fieldAssignmentsBefore + 1);
-  await page.getByText('현장 허브').waitFor({ state: 'visible' });
+  await page.getByRole('heading', { name: '현장 허브' }).waitFor({ state: 'visible' });
   await page.locator('a[href="/sites/site-1"]').first().click();
   await page.waitForURL(/\/sites\/site-1$/);
   await page.getByText('기존 현장').first().waitFor({ state: 'visible' });
