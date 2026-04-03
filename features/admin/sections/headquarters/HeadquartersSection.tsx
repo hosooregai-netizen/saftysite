@@ -38,11 +38,12 @@ interface HeadquartersSectionProps {
     management_number?: string | null;
     project_start_date?: string | null;
     project_end_date?: string | null;
-    project_amount?: number | null;
-    manager_name?: string | null;
-    manager_phone?: string | null;
-    site_address?: string | null;
-    status?: 'planned' | 'active' | 'closed';
+      project_amount?: number | null;
+      manager_name?: string | null;
+      manager_phone?: string | null;
+      site_address?: string | null;
+      memo?: string | null;
+      status?: 'planned' | 'active' | 'closed';
   }) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onDeleteSite: (id: string) => Promise<void>;
@@ -73,6 +74,7 @@ interface HeadquartersSectionProps {
       manager_name?: string | null;
       manager_phone?: string | null;
       site_address?: string | null;
+      memo?: string | null;
     }>,
   ) => Promise<void>;
   onAssignFieldAgent: (siteId: string, userId: string) => Promise<void>;
@@ -157,13 +159,15 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
           <HeadquartersTable
             busy={busy}
             canDelete={canDelete}
-            filteredHeadquarters={state.filteredHeadquarters}
+            filteredHeadquarters={state.sortedHeadquarters}
             onCreateRequest={state.openCreate}
             onDeleteRequest={handleDeleteHeadquarter}
             onEditRequest={state.openEdit}
             onOpenSitesRequest={(item) => onSelectHeadquarter(item.id)}
             onQueryChange={state.setQuery}
+            onSortChange={state.setSort}
             query={state.query}
+            sort={state.sort}
             totalHeadquarterCount={headquarters.length}
           />
         </section>

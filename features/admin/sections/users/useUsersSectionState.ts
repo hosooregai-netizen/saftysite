@@ -2,6 +2,7 @@
 
 import { useDeferredValue, useMemo, useState } from 'react';
 import { getSessionTitle } from '@/constants/inspectionSession';
+import type { TableSortState } from '@/types/admin';
 import type { SafetySite, SafetyUser } from '@/types/backend';
 import type { InspectionSession } from '@/types/inspectionSession';
 import type { SafetyAssignment } from '@/types/controller';
@@ -34,6 +35,10 @@ export function useUsersSectionState(
   const [query, setQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | UserRoleView>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [sort, setSort] = useState<TableSortState>({
+    direction: 'asc',
+    key: 'name',
+  });
   const [form, setForm] = useState(EMPTY_FORM);
   const [initialForm, setInitialForm] = useState(EMPTY_FORM);
   const [editingRoleSource, setEditingRoleSource] =
@@ -112,6 +117,27 @@ export function useUsersSectionState(
       return haystack.includes(normalizedQuery);
     });
   }, [deferredQuery, roleFilter, statusFilter, users]);
+  const sortedUsers = useMemo(() => {
+    const direction = sort.direction === 'asc' ? 1 : -1;
+
+    return [...filteredUsers].sort((left, right) => {
+      if (sort.key === 'role') {
+        return toUserRoleView(left.role).localeCompare(toUserRoleView(right.role), 'ko') * direction;
+      }
+
+      if (sort.key === 'last_login_at') {
+        return (left.last_login_at ?? '').localeCompare(right.last_login_at ?? '') * direction;
+      }
+
+      if (sort.key === 'reportCount') {
+        const leftCount = userOverviewById.get(left.id)?.reportCount ?? 0;
+        const rightCount = userOverviewById.get(right.id)?.reportCount ?? 0;
+        return (leftCount - rightCount) * direction;
+      }
+
+      return left.name.localeCompare(right.name, 'ko') * direction;
+    });
+  }, [filteredUsers, sort.direction, sort.key, userOverviewById]);
 
   const openCreate = () => {
     setEditingId('create');
@@ -198,9 +224,11 @@ export function useUsersSectionState(
     setForm,
     setQuery,
     setRoleFilter,
+    setSort,
     setStatusFilter,
+    sort,
     statusFilter,
+    sortedUsers,
     userOverviewById,
   };
 }
-

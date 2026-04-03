@@ -1,6 +1,9 @@
 import Link from 'next/link';
 import ActionMenu from '@/components/ui/ActionMenu';
+import { TableToolbar } from '@/features/admin/components/TableToolbar';
+import { exportAdminWorkbook } from '@/lib/admin/exportClient';
 import { formatTimestamp, getUserRoleLabel } from '@/lib/admin';
+import type { TableSortState } from '@/types/admin';
 import type { SafetySite, SafetyUser } from '@/types/backend';
 import type { InspectionSession } from '@/types/inspectionSession';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
@@ -22,7 +25,9 @@ interface UsersTableProps {
   roleFilter: 'all' | 'admin' | 'field_agent';
   setQuery: (value: string) => void;
   setRoleFilter: (value: 'all' | 'admin' | 'field_agent') => void;
+  setSort: (value: TableSortState) => void;
   setStatusFilter: (value: 'all' | 'active' | 'inactive') => void;
+  sort: TableSortState;
   statusFilter: 'all' | 'active' | 'inactive';
   totalUserCount: number;
   userOverviewById: Map<string, UserOverview>;
@@ -39,7 +44,9 @@ export function UsersTable({
   roleFilter,
   setQuery,
   setRoleFilter,
+  setSort,
   setStatusFilter,
+  sort,
   statusFilter,
   totalUserCount,
   userOverviewById,
@@ -77,46 +84,89 @@ export function UsersTable({
       </div>
 
       <div className={styles.sectionBody}>
-        <div className={`${styles.filterRow} ${styles.usersFilterRow}`}>
-          <input
-            className={`app-input ${styles.filterSearch}`}
-            type="search"
-            name="user-search"
-            autoComplete="off"
-            spellCheck={false}
-            placeholder="이름, 이메일, 직책, 소속으로 검색"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-          <select
-            className={`app-select ${styles.usersFilterSelect}`}
-            aria-label="권한 필터"
-            value={roleFilter}
-            onChange={(event) =>
-              setRoleFilter(event.target.value as UsersTableProps['roleFilter'])
-            }
-          >
-            {roleOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <select
-            className={`app-select ${styles.usersFilterSelect}`}
-            aria-label="활성 상태 필터"
-            value={statusFilter}
-            onChange={(event) =>
-              setStatusFilter(event.target.value as UsersTableProps['statusFilter'])
-            }
-          >
-            {statusOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
+        <TableToolbar
+          countLabel={`표시 ${filteredUsers.length} / 전체 ${totalUserCount}명`}
+          filters={
+            <>
+              <select
+                className={`app-select ${styles.usersFilterSelect}`}
+                aria-label="권한 필터"
+                value={roleFilter}
+                onChange={(event) =>
+                  setRoleFilter(event.target.value as UsersTableProps['roleFilter'])
+                }
+              >
+                {roleOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <select
+                className={`app-select ${styles.usersFilterSelect}`}
+                aria-label="활성 상태 필터"
+                value={statusFilter}
+                onChange={(event) =>
+                  setStatusFilter(event.target.value as UsersTableProps['statusFilter'])
+                }
+              >
+                {statusOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </>
+          }
+          onExport={() =>
+            void exportAdminWorkbook('users', [
+              {
+                name: '사용자',
+                columns: [
+                  { key: 'name', label: '이름' },
+                  { key: 'email', label: '이메일' },
+                  { key: 'role', label: '권한' },
+                  { key: 'assignedSites', label: '담당 현장' },
+                  { key: 'reportCount', label: '보고서 수' },
+                  { key: 'phone', label: '연락처' },
+                  { key: 'status', label: '상태' },
+                  { key: 'lastLoginAt', label: '최근 로그인' },
+                ],
+                rows: filteredUsers.map((user) => {
+                  const overview = userOverviewById.get(user.id) ?? {
+                    assignedSites: [],
+                    latestSession: null,
+                    reportCount: 0,
+                  };
+
+                  return {
+                    assignedSites: overview.assignedSites.map((site) => site.site_name).join(', '),
+                    email: user.email,
+                    lastLoginAt: formatTimestamp(user.last_login_at),
+                    name: user.name,
+                    phone: user.phone || '',
+                    reportCount: overview.reportCount,
+                    role: getUserRoleLabel(user.role),
+                    status: user.is_active ? '활성' : '비활성',
+                  };
+                }),
+              },
+            ])
+          }
+          onQueryChange={setQuery}
+          onSortDirectionChange={(direction) => setSort({ ...sort, direction })}
+          onSortKeyChange={(key) => setSort({ ...sort, key })}
+          query={query}
+          queryPlaceholder="이름, 이메일, 직책, 소속으로 검색"
+          sortDirection={sort.direction}
+          sortKey={sort.key}
+          sortOptions={[
+            { value: 'name', label: '이름' },
+            { value: 'role', label: '권한' },
+            { value: 'reportCount', label: '보고서 수' },
+            { value: 'last_login_at', label: '최근 로그인' },
+          ]}
+        />
 
         <div className={styles.tableShell}>
           {filteredUsers.length === 0 ? (

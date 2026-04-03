@@ -1,6 +1,7 @@
 'use client';
 
 import { useDeferredValue, useMemo, useState } from 'react';
+import type { TableSortState } from '@/types/admin';
 import type { SafetyHeadquarter } from '@/types/controller';
 import { toNullableText } from '@/lib/admin';
 
@@ -19,6 +20,10 @@ export function useHeadquartersSectionState(
 ) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
+  const [sort, setSort] = useState<TableSortState>({
+    direction: 'asc',
+    key: 'name',
+  });
   const [form, setForm] = useState(EMPTY_FORM);
   const isOpen = editingId !== null;
   const deferredQuery = useDeferredValue(query);
@@ -38,6 +43,21 @@ export function useHeadquartersSectionState(
         .includes(normalizedQuery),
     );
   }, [deferredQuery, headquarters]);
+  const sortedHeadquarters = useMemo(() => {
+    const direction = sort.direction === 'asc' ? 1 : -1;
+
+    return [...filteredHeadquarters].sort((left, right) => {
+      if (sort.key === 'updated_at') {
+        return left.updated_at.localeCompare(right.updated_at) * direction;
+      }
+
+      if (sort.key === 'contact_phone') {
+        return (left.contact_phone ?? '').localeCompare(right.contact_phone ?? '', 'ko') * direction;
+      }
+
+      return left.name.localeCompare(right.name, 'ko') * direction;
+    });
+  }, [filteredHeadquarters, sort.direction, sort.key]);
 
   const openCreate = () => {
     setEditingId('create');
@@ -96,5 +116,8 @@ export function useHeadquartersSectionState(
     query,
     setForm,
     setQuery,
+    setSort,
+    sort,
+    sortedHeadquarters,
   };
 }

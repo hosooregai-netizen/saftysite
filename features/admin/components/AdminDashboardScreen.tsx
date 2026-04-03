@@ -10,9 +10,13 @@ import type { SafetyUser } from '@/types/backend';
 import { AdminDashboardShell } from '@/features/admin/components/AdminDashboardShell';
 import { AdminDashboardStateBanners } from '@/features/admin/components/AdminDashboardStateBanners';
 import { useAdminDashboardState } from '@/features/admin/hooks/useAdminDashboardState';
+import { AnalyticsSection } from '@/features/admin/sections/analytics/AnalyticsSection';
 import { ContentItemsSection } from '@/features/admin/sections/content/ContentItemsSection';
 import { HeadquartersSection } from '@/features/admin/sections/headquarters/HeadquartersSection';
 import { AdminOverviewSection } from '@/features/admin/sections/overview/AdminOverviewSection';
+import { PhotosSection } from '@/features/admin/sections/photos/PhotosSection';
+import { ReportsSection } from '@/features/admin/sections/reports/ReportsSection';
+import { SchedulesSection } from '@/features/admin/sections/schedules/SchedulesSection';
 import { UsersSection } from '@/features/admin/sections/users/UsersSection';
 
 interface AdminDashboardScreenProps {
@@ -26,7 +30,10 @@ function renderAdminSection(
     assignments: ReturnType<typeof useAdminDashboardState>['data']['assignments'];
     canDelete: boolean;
     canUploadAssets: boolean;
+    currentUser: SafetyUser;
     dashboard: ReturnType<typeof useAdminDashboardState>;
+    ensureSessionLoaded: ReturnType<typeof useInspectionSessions>['ensureSessionLoaded'];
+    getSessionById: ReturnType<typeof useInspectionSessions>['getSessionById'];
     headquarters: ReturnType<typeof useAdminDashboardState>['data']['headquarters'];
     sessions: ReturnType<typeof useInspectionSessions>['sessions'];
     sites: ReturnType<typeof useAdminDashboardState>['data']['sites'];
@@ -37,7 +44,10 @@ function renderAdminSection(
     assignments,
     canDelete,
     canUploadAssets,
+    currentUser,
     dashboard,
+    ensureSessionLoaded,
+    getSessionById,
     headquarters,
     sessions,
     sites,
@@ -98,11 +108,40 @@ function renderAdminSection(
           onUpdate={dashboard.updateContentItem}
         />
       );
+    case 'reports':
+      return (
+        <ReportsSection
+          currentUser={currentUser}
+          ensureSessionLoaded={ensureSessionLoaded}
+          getSessionById={getSessionById}
+          isLoading={dashboard.isLoading || dashboard.isReportsLoading || dashboard.isMutating}
+          sessions={sessions}
+          sites={sites}
+          users={users}
+        />
+      );
+    case 'analytics':
+      return (
+        <AnalyticsSection
+          data={dashboard.data}
+          reports={dashboard.reportList}
+        />
+      );
+    case 'photos':
+      return <PhotosSection sites={sites} />;
+    case 'schedules':
+      return (
+        <SchedulesSection
+          currentUser={currentUser}
+          sites={sites}
+          users={users}
+        />
+      );
     default:
       return (
         <AdminOverviewSection
           data={dashboard.data}
-          sessions={sessions}
+          reports={dashboard.reportList}
         />
       );
   }
@@ -112,7 +151,12 @@ export function AdminDashboardScreen({
   currentUser,
   onLogout,
 }: AdminDashboardScreenProps) {
-  const { sessions, refreshMasterData } = useInspectionSessions();
+  const {
+    ensureSessionLoaded,
+    getSessionById,
+    sessions,
+    refreshMasterData,
+  } = useInspectionSessions();
   const dashboard = useAdminDashboardState({
     enabled: true,
     refreshMasterData,
@@ -170,7 +214,10 @@ export function AdminDashboardScreen({
         assignments: dashboard.data.assignments,
         canDelete: canDeleteCrud,
         canUploadAssets,
+        currentUser,
         dashboard,
+        ensureSessionLoaded,
+        getSessionById,
         headquarters: dashboard.data.headquarters,
         sessions,
         sites: dashboard.data.sites,

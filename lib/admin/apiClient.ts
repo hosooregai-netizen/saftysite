@@ -1,0 +1,210 @@
+'use client';
+
+import { readSafetyAuthToken, SafetyApiError } from '@/lib/safetyApi';
+import type {
+  ReportControllerReview,
+  ReportDispatchHistoryEntry,
+  ReportDispatchMeta,
+  SafetyAdminAlert,
+  SafetyAdminAnalyticsResponse,
+  SafetyAdminOverviewResponse,
+  SafetyAdminReportsResponse,
+  SafetyAdminScheduleListResponse,
+  SafetyInspectionSchedule,
+  TableSortDirection,
+} from '@/types/admin';
+
+function buildQueryString(params: Record<string, string | number | null | undefined>) {
+  const searchParams = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === null || value === undefined || value === '') return;
+    searchParams.set(key, String(value));
+  });
+
+  const query = searchParams.toString();
+  return query ? `?${query}` : '';
+}
+
+async function parseErrorMessage(response: Response) {
+  try {
+    const payload = (await response.json()) as Record<string, unknown>;
+    if (typeof payload.error === 'string' && payload.error.trim()) return payload.error;
+    if (typeof payload.detail === 'string' && payload.detail.trim()) return payload.detail;
+  } catch {
+    // ignore
+  }
+
+  return response.statusText || '요청 처리 중 오류가 발생했습니다.';
+}
+
+export async function requestAdminApi<T>(
+  path: string,
+  options: RequestInit = {},
+): Promise<T> {
+  const token = readSafetyAuthToken();
+  if (!token) {
+    throw new SafetyApiError('로그인이 만료되었습니다. 다시 로그인해 주세요.', 401);
+  }
+
+  const headers = new Headers(options.headers);
+  headers.set('Authorization', `Bearer ${token}`);
+
+  if (!headers.has('Content-Type') && options.body && !(options.body instanceof FormData)) {
+    headers.set('Content-Type', 'application/json');
+  }
+
+  const response = await fetch(`/api/admin${path}`, {
+    ...options,
+    headers,
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    throw new SafetyApiError(await parseErrorMessage(response), response.status);
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
+  return (await response.json()) as T;
+}
+
+export function fetchAdminReports(input: {
+  assigneeUserId?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  dispatchStatus?: string;
+  headquarterId?: string;
+  limit?: number;
+  offset?: number;
+  qualityStatus?: string;
+  query?: string;
+  reportType?: string;
+  siteId?: string;
+  sortDir?: TableSortDirection;
+  sortBy?: string;
+  status?: string;
+}) {
+  return requestAdminApi<SafetyAdminReportsResponse>(
+    `/reports${buildQueryString({
+      assignee_user_id: input.assigneeUserId,
+      date_from: input.dateFrom,
+      date_to: input.dateTo,
+      dispatch_status: input.dispatchStatus,
+      headquarter_id: input.headquarterId,
+      limit: input.limit,
+      offset: input.offset,
+      quality_status: input.qualityStatus,
+      query: input.query,
+      report_type: input.reportType,
+      site_id: input.siteId,
+      sort_by: input.sortBy,
+      sort_dir: input.sortDir,
+      status: input.status,
+    })}`,
+  );
+}
+
+export function updateAdminReportReview(
+  reportKey: string,
+  review: ReportControllerReview,
+) {
+  return requestAdminApi(`/reports/${encodeURIComponent(reportKey)}/review`, {
+    method: 'PATCH',
+    body: JSON.stringify(review),
+  });
+}
+
+export function updateAdminReportDispatch(
+  reportKey: string,
+  dispatch: ReportDispatchMeta,
+) {
+  return requestAdminApi(`/reports/${encodeURIComponent(reportKey)}/dispatch`, {
+    method: 'PATCH',
+    body: JSON.stringify(dispatch),
+  });
+}
+
+export function appendAdminDispatchEvent(
+  reportKey: string,
+  event: ReportDispatchHistoryEntry,
+) {
+  return requestAdminApi(`/reports/${encodeURIComponent(reportKey)}/dispatch-events`, {
+    method: 'POST',
+    body: JSON.stringify(event),
+  });
+}
+
+export function fetchAdminOverview() {
+  return requestAdminApi<SafetyAdminOverviewResponse>('/dashboard/overview');
+}
+
+export function fetchAdminAnalytics(input: {
+  contractType?: string;
+  headquarterId?: string;
+  period?: string;
+  query?: string;
+  userId?: string;
+}) {
+  return requestAdminApi<SafetyAdminAnalyticsResponse>(
+    `/dashboard/analytics${buildQueryString({
+      contract_type: input.contractType,
+      headquarter_id: input.headquarterId,
+      period: input.period,
+      query: input.query,
+      user_id: input.userId,
+    })}`,
+  );
+}
+
+export function fetchAdminAlerts() {
+  return requestAdminApi<SafetyAdminAlert[]>('/alerts');
+}
+
+export function fetchAdminSchedules(input: {
+  assigneeUserId?: string;
+  limit?: number;
+  month?: string;
+  offset?: number;
+  plannedDate?: string;
+  query?: string;
+  siteId?: string;
+  status?: string;
+}) {
+  return requestAdminApi<SafetyAdminScheduleListResponse>(
+    `/schedules${buildQueryString({
+      assignee_user_id: input.assigneeUserId,
+      limit: input.limit,
+      month: input.month,
+      offset: input.offset,
+      planned_date: input.plannedDate,
+      query: input.query,
+      site_id: input.siteId,
+      status: input.status,
+    })}`,
+  );
+}
+
+export function generateAdminSchedules(siteId: string) {
+  return requestAdminApi<{ rows: SafetyInspectionSchedule[] }>(
+    `/sites/${encodeURIComponent(siteId)}/schedules/generate`,
+    {
+      method: 'POST',
+    },
+  );
+}
+
+export function updateAdminSchedule(
+  scheduleId: string,
+  payload: Partial<SafetyInspectionSchedule>,
+) {
+  return requestAdminApi<SafetyInspectionSchedule>(
+    `/schedules/${encodeURIComponent(scheduleId)}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    },
+  );
+}

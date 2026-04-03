@@ -3,6 +3,7 @@
 import { useDeferredValue, useMemo, useState } from 'react';
 import AppModal from '@/components/ui/AppModal';
 import ActionMenu from '@/components/ui/ActionMenu';
+import { TableToolbar } from '@/features/admin/components/TableToolbar';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import {
   uploadSafetyAssetFile,
@@ -15,7 +16,9 @@ import {
   CONTENT_TYPE_OPTIONS,
   toNullableText,
 } from '@/lib/admin';
+import { exportAdminWorkbook } from '@/lib/admin/exportClient';
 import { formatDateRange } from '@/lib/safetyApiMappers/utils';
+import type { TableSortState } from '@/types/admin';
 import type { SafetyContentItem } from '@/types/backend';
 import { ContentAssetField } from './ContentAssetField';
 import {
@@ -79,6 +82,10 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [activeType, setActiveType] = useState<SafetyContentItem['content_type'] | 'all'>('all');
   const [query, setQuery] = useState('');
+  const [sort, setSort] = useState<TableSortState>({
+    direction: 'asc',
+    key: 'title',
+  });
   const [form, setForm] = useState(createEmptyContentForm());
   const [disasterCaseBatchItems, setDisasterCaseBatchItems] = useState<DisasterCaseBatchItem[]>(
     createEmptyDisasterCaseBatchItems(),
@@ -105,6 +112,25 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
       }),
     [activeType, deferredQuery, items],
   );
+  const sortedItems = useMemo(() => {
+    const direction = sort.direction === 'asc' ? 1 : -1;
+
+    return [...filteredItems].sort((left, right) => {
+      if (sort.key === 'content_type') {
+        return left.content_type.localeCompare(right.content_type, 'ko') * direction;
+      }
+
+      if (sort.key === 'sort_order') {
+        return (left.sort_order - right.sort_order) * direction;
+      }
+
+      if (sort.key === 'updated_at') {
+        return left.updated_at.localeCompare(right.updated_at) * direction;
+      }
+
+      return left.title.localeCompare(right.title, 'ko') * direction;
+    });
+  }, [filteredItems, sort.direction, sort.key]);
   const createContentType =
     activeType === 'all' ? createEmptyContentForm().content_type : activeType;
   const createButtonLabel =
@@ -254,34 +280,69 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
       </div>
 
       <div className={styles.sectionBody}>
-        <div className={`${styles.filterRow} ${styles.contentFilterRow}`}>
-          <input
-            className={`app-input ${styles.filterSearch}`}
-            placeholder="제목, 미리보기 내용으로 검색"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-          <select
-            className={`app-select ${styles.contentFilterSelect}`}
-            aria-label="콘텐츠 분류 필터"
-            value={activeType}
-            onChange={(event) =>
-              setActiveType(
-                event.target.value as SafetyContentItem['content_type'] | 'all',
-              )
-            }
-          >
-            <option value="all">전체 분류</option>
-            {CONTENT_TYPE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
+        <TableToolbar
+          countLabel={`표시 ${sortedItems.length} / 전체 ${items.length}개`}
+          filters={
+            <select
+              className={`app-select ${styles.contentFilterSelect}`}
+              aria-label="콘텐츠 분류 필터"
+              value={activeType}
+              onChange={(event) =>
+                setActiveType(
+                  event.target.value as SafetyContentItem['content_type'] | 'all',
+                )
+              }
+            >
+              <option value="all">전체 분류</option>
+              {CONTENT_TYPE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          }
+          onExport={() =>
+            void exportAdminWorkbook('content', [
+              {
+                name: '콘텐츠',
+                columns: [
+                  { key: 'content_type', label: '유형' },
+                  { key: 'title', label: '제목' },
+                  { key: 'preview', label: '내용 미리보기' },
+                  { key: 'attachment', label: '첨부 요약' },
+                  { key: 'period', label: '시작일 ~ 종료일' },
+                  { key: 'sort_order', label: '정렬순서' },
+                  { key: 'updated_at', label: '수정일' },
+                ],
+                rows: sortedItems.map((item) => ({
+                  attachment: getContentAttachmentSummary(item),
+                  content_type: CONTENT_TYPE_LABELS[item.content_type],
+                  period: formatDateRange(item.effective_from, item.effective_to) || '',
+                  preview: getContentPreview(item),
+                  sort_order: item.sort_order,
+                  title: item.title,
+                  updated_at: item.updated_at,
+                })),
+              },
+            ])
+          }
+          onQueryChange={setQuery}
+          onSortDirectionChange={(direction) => setSort({ ...sort, direction })}
+          onSortKeyChange={(key) => setSort({ ...sort, key })}
+          query={query}
+          queryPlaceholder="제목, 미리보기 내용으로 검색"
+          sortDirection={sort.direction}
+          sortKey={sort.key}
+          sortOptions={[
+            { value: 'title', label: '제목' },
+            { value: 'content_type', label: '유형' },
+            { value: 'sort_order', label: '정렬 순서' },
+            { value: 'updated_at', label: '수정일' },
+          ]}
+        />
 
         <div className={styles.tableShell}>
-          {filteredItems.length === 0 ? (
+          {sortedItems.length === 0 ? (
             <div className={styles.tableEmpty}>등록된 콘텐츠 데이터가 없습니다.</div>
           ) : (
             <div className={styles.tableWrap}>
@@ -305,7 +366,7 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredItems.map((item) => (
+                  {sortedItems.map((item) => (
                     <tr key={item.id}>
                       <td>{CONTENT_TYPE_LABELS[item.content_type]}</td>
                       <td>
