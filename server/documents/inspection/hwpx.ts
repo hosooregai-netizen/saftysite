@@ -1,4 +1,7 @@
-'use client';
+'server-only';
+
+import fs from 'node:fs/promises';
+import path from 'node:path';
 
 import JSZip from 'jszip';
 
@@ -10,6 +13,7 @@ import { getExtraSceneTitle } from '@/constants/inspectionSession/scenePhotos';
 import type { ChecklistRating, InspectionSession } from '@/types/inspectionSession';
 
 const DOC5_CHART_TOP_N = 5;
+const HWPX_CONTENT_TYPE = 'application/haansofthwpx';
 
 type RepeatBlockPath =
   | 'sec4.follow_ups'
@@ -66,12 +70,35 @@ interface Doc5ChartEntry {
   count: number;
 }
 
+export interface GeneratedInspectionHwpxDocument {
+  buffer: Buffer;
+  deferred: string[];
+  filename: string;
+  warnings: string[];
+}
+
+interface InspectionHwpxBuildOptions {
+  assetBaseUrl?: string;
+}
+
 const HWPX_GENERATION_MODE: 'template_native' | 'advanced' = 'advanced';
 const IMAGE_BINDING_MODE: 'embedded' | 'text_only' = 'embedded';
 const TEMPLATE_FILENAME = '\uAE30\uC220\uC9C0\uB3C4 \uC218\uB3D9\uBCF4\uACE0\uC11C \uC571 - \uC11C\uC2DD_4.annotated.v7.hwpx';
-const TEMPLATE_URL = `/templates/inspection/${encodeURIComponent(TEMPLATE_FILENAME)}`;
 const TEMPLATE_IMAGE_DONOR_FILENAME = '\uAE30\uC220\uC9C0\uB3C4 \uC218\uB3D9\uBCF4\uACE0\uC11C \uC571 - \uC11C\uC2DD_4.annotated.v6.hwpx';
-const TEMPLATE_IMAGE_DONOR_URL = `/templates/inspection/${encodeURIComponent(TEMPLATE_IMAGE_DONOR_FILENAME)}`;
+const TEMPLATE_PATH = path.resolve(
+  process.cwd(),
+  'public',
+  'templates',
+  'inspection',
+  TEMPLATE_FILENAME,
+);
+const TEMPLATE_IMAGE_DONOR_PATH = path.resolve(
+  process.cwd(),
+  'public',
+  'templates',
+  'inspection',
+  TEMPLATE_IMAGE_DONOR_FILENAME,
+);
 const BLANK_PNG_BASE64 =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5cH7QAAAAASUVORK5CYII=';
 const BLANK_JPEG_BASE64 =
@@ -174,12 +201,7 @@ const INVALID_XML_CHAR_PATTERN = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\uD800-
 const HWPX_BALANCE_TAGS = ['hp:subList', 'hp:p', 'hp:tbl', 'hp:tr', 'hp:tc', 'hp:t'] as const;
 
 function decodeBase64ToBytes(base64: string): Uint8Array {
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index += 1) {
-    bytes[index] = binary.charCodeAt(index);
-  }
-  return bytes;
+  return Uint8Array.from(Buffer.from(base64, 'base64'));
 }
 
 const BLANK_PNG_ASSET: ResolvedImageAsset = {
@@ -1024,6 +1046,18 @@ function fileNameForSession(session: InspectionSession): string {
   const date =
     formatDateText(getSessionGuidanceDate(session)).replace(/\./g, '') || 'report';
   return `${site || 'inspection'}-${date}-${session.reportNumber}.hwpx`;
+}
+
+export function createInspectionHwpxDownloadResponse(
+  document: GeneratedInspectionHwpxDocument,
+): Response {
+  return new Response(new Uint8Array(document.buffer), {
+    status: 200,
+    headers: {
+      'Content-Type': HWPX_CONTENT_TYPE,
+      'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(document.filename)}`,
+    },
+  });
 }
 
 function padFixedSlots<T>(items: T[], size: number, emptyFactory: () => T): T[] {
@@ -2233,6 +2267,7 @@ async function normalizeTemplateImageSlots(
 
 async function resolveImageAsset(
   source: string,
+  assetBaseUrl: string | undefined,
   cache: Map<string, Promise<ResolvedImageAsset | null>>,
   warnings: string[],
 ): Promise<ResolvedImageAsset | null> {
@@ -2268,14 +2303,18 @@ async function resolveImageAsset(
     }
 
     if (/^[a-zA-Z]:\\/.test(normalized)) {
-      warnings.push(`Local file path images are not supported in browser generation: ${normalized}`);
+      warnings.push(`Local file path images are not supported in server generation: ${normalized}`);
       return null;
     }
 
     try {
-      const response = await fetch(normalized);
+      const requestUrl =
+        normalized.startsWith('/') && assetBaseUrl
+          ? new URL(normalized, assetBaseUrl).toString()
+          : normalized;
+      const response = await fetch(requestUrl, { cache: 'no-store' });
       if (!response.ok) {
-        warnings.push(`Failed to fetch image URL: ${normalized} (${response.status})`);
+        warnings.push(`Failed to fetch image URL: ${requestUrl} (${response.status})`);
         return null;
       }
 
@@ -2287,7 +2326,7 @@ async function resolveImageAsset(
         '';
       const mediaType = IMAGE_EXTENSION_TO_MEDIA_TYPE[extension] || contentType;
       if (!mediaType || !IMAGE_EXTENSION_TO_MEDIA_TYPE[extension]) {
-        warnings.push(`Unsupported fetched image content type for HWPX embedding: ${normalized}`);
+        warnings.push(`Unsupported fetched image content type for HWPX embedding: ${requestUrl}`);
         return null;
       }
 
@@ -2311,6 +2350,7 @@ async function bindImagesIntoZip(
   contentHpf: string,
   imagePlaceholders: TemplateImagePlaceholder[],
   binding: TemplateBindingData,
+  assetBaseUrl: string | undefined,
   warnings: string[],
 ): Promise<string> {
   const cache = new Map<string, Promise<ResolvedImageAsset | null>>();
@@ -2318,7 +2358,7 @@ async function bindImagesIntoZip(
 
   for (const imagePlaceholder of imagePlaceholders) {
     const source = binding.images[imagePlaceholder.placeholderPath] ?? '';
-    const resolvedAsset = await resolveImageAsset(source, cache, warnings);
+    const resolvedAsset = await resolveImageAsset(source, assetBaseUrl, cache, warnings);
     if (!resolvedAsset) {
       if (imagePlaceholder.deferred || imagePlaceholder.optional) {
         continue;
@@ -2548,27 +2588,20 @@ function repairLegacyContentHpfMetadata(contentHpf: string): string {
 }
 
 async function loadTemplateBuffer(): Promise<ArrayBuffer> {
-  const response = await fetch(`${TEMPLATE_URL}?ts=${Date.now()}`, { cache: 'no-store' });
-  if (!response.ok) {
-    throw new Error(`HWPX template download failed: ${response.status} ${response.statusText}`);
-  }
-
-  return response.arrayBuffer();
+  const buffer = await fs.readFile(TEMPLATE_PATH);
+  return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer;
 }
 
 async function loadTemplateImageDonorBuffer(): Promise<ArrayBuffer> {
-  const response = await fetch(`${TEMPLATE_IMAGE_DONOR_URL}?ts=${Date.now()}`, { cache: 'no-store' });
-  if (!response.ok) {
-    throw new Error(`HWPX image donor template download failed: ${response.status} ${response.statusText}`);
-  }
-
-  return response.arrayBuffer();
+  const buffer = await fs.readFile(TEMPLATE_IMAGE_DONOR_PATH);
+  return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer;
 }
 
-export async function generateInspectionHwpxBlob(
+export async function buildInspectionHwpxDocument(
   session: InspectionSession,
   _siteSessions: InspectionSession[] = [session],
-): Promise<{ blob: Blob; filename: string; warnings: string[]; deferred: string[] }> {
+  options: InspectionHwpxBuildOptions = {},
+): Promise<GeneratedInspectionHwpxDocument> {
   const binding = mapSessionToTemplateBinding(session);
   Object.assign(binding.images, buildDoc5ChartImages(session, _siteSessions));
   const templateBuffer = await loadTemplateBuffer();
@@ -2653,6 +2686,7 @@ export async function generateInspectionHwpxBlob(
           binaryItemId: item.binaryItemId,
         }))],
         binding,
+        options.assetBaseUrl,
         binding.warnings,
       );
     }
@@ -2674,12 +2708,8 @@ export async function generateInspectionHwpxBlob(
     await zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' }),
     new Uint8Array(templateBuffer),
   );
-  const blobBuffer = generatedBuffer.buffer.slice(
-    generatedBuffer.byteOffset,
-    generatedBuffer.byteOffset + generatedBuffer.byteLength,
-  ) as ArrayBuffer;
   return {
-    blob: new Blob([blobBuffer], { type: 'application/haansofthwpx' }),
+    buffer: Buffer.from(generatedBuffer),
     filename: fileNameForSession(session),
     warnings: Array.from(new Set(binding.warnings)),
     deferred: binding.deferred,

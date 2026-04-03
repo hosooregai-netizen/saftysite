@@ -19,7 +19,7 @@ interface SiteReportListPanelProps {
   assignedUserDisplay?: string;
   canArchiveReports: boolean;
   canCreateReport: boolean;
-  createReport: (input: CreateSiteReportInput) => void;
+  createReport: (input: CreateSiteReportInput) => Promise<void>;
   currentSite: InspectionSite;
   deleteSession: (sessionId: string) => Promise<void>;
   filteredReportItems: InspectionReportListItem[];
@@ -69,6 +69,7 @@ export function SiteReportListPanel({
   const [createForm, setCreateForm] =
     useState<CreateReportFormState>(EMPTY_CREATE_FORM);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [isCreatingReport, setIsCreatingReport] = useState(false);
   const [hasEditedCreateTitle, setHasEditedCreateTitle] = useState(false);
 
   const deletingSession = dialogSessionId
@@ -136,7 +137,7 @@ export function SiteReportListPanel({
     setHasEditedCreateTitle(value.trim().length > 0);
   };
 
-  const handleCreateSubmit = () => {
+  const handleCreateSubmit = async () => {
     const reportDate = createForm.reportDate.trim();
     const reportTitle = createForm.reportTitle.trim();
 
@@ -150,11 +151,18 @@ export function SiteReportListPanel({
       return;
     }
 
-    createReport({
-      reportDate,
-      reportTitle,
-    });
-    closeCreateDialog();
+    try {
+      setIsCreatingReport(true);
+      await createReport({
+        reportDate,
+        reportTitle,
+      });
+      closeCreateDialog();
+    } catch (error) {
+      setCreateError(error instanceof Error ? error.message : '보고서 생성 중 오류가 발생했습니다.');
+    } finally {
+      setIsCreatingReport(false);
+    }
   };
 
   const panelBody = (
@@ -249,8 +257,10 @@ export function SiteReportListPanel({
             <button
               type="button"
               className="app-button app-button-primary"
-              onClick={handleCreateSubmit}
-              disabled={!createForm.reportDate || !createForm.reportTitle.trim()}
+              onClick={() => void handleCreateSubmit()}
+              disabled={
+                isCreatingReport || !createForm.reportDate || !createForm.reportTitle.trim()
+              }
             >
               생성
             </button>

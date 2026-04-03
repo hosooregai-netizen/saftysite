@@ -29,6 +29,7 @@ interface WorkspaceShellProps {
   onMetaChange: (field: keyof InspectionSession['meta'], value: string) => void;
   onSectionSelect: (key: InspectionSectionKey) => void;
   progress: { completed: number; total: number; percentage: number };
+  relationNotice?: string | null;
   renderSection: React.ReactNode;
   sectionToolbar?: React.ReactNode;
   session: InspectionSession;
@@ -52,6 +53,7 @@ export function WorkspaceShell({
   onMetaChange,
   onSectionSelect,
   progress,
+  relationNotice,
   renderSection,
   sectionToolbar,
   session,
@@ -127,6 +129,11 @@ export function WorkspaceShell({
                           </div>
                         </div>
                       </div>
+                      {relationNotice ? (
+                        <div className={styles.relationNotice} role="status">
+                          {relationNotice}
+                        </div>
+                      ) : null}
                       <div className={styles.editorBody}>{renderSection}</div>
                     </div>
                   </section>

@@ -331,6 +331,53 @@
   gap: 10px;
 }
 
+.relationNotice {
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-card);
+  padding: 12px 14px;
+  background: var(--erp-panel-muted);
+  color: var(--erp-text-muted);
+  font-size: var(--text-ui);
+  line-height: 1.6;
+}
+
+.relationNoticeError {
+  border-color: #f0b2aa;
+  background: #fef3f2;
+  color: #b42318;
+}
+
+.relationSkeletonCard {
+  display: grid;
+  gap: 10px;
+  min-height: 120px;
+  align-content: start;
+}
+
+.relationSkeletonLine,
+.relationSkeletonLineShort {
+  display: block;
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #e5ebf2 0%, #f4f7fb 50%, #e5ebf2 100%);
+  background-size: 200% 100%;
+  animation: relationSkeletonPulse 1.6s ease-in-out infinite;
+}
+
+.relationSkeletonLineShort {
+  width: 56%;
+}
+
+@keyframes relationSkeletonPulse {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
+}
+
 /* doc4 메타: 유해·위험장소 전체 너비 → 지도일·확인일은 한 행에서 1:1로 컨테이너 가로 fill */
 .doc4MetaBundle {
   display: flex;
@@ -2661,4 +2708,3 @@ button.uploadPreviewHit {
     overflow: visible;
   }
 }
-

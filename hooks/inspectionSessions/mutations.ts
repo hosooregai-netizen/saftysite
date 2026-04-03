@@ -70,12 +70,22 @@ export function useInspectionSessionsMutations(
     });
   }, [sessionsRef, setReportIndexBySiteId, setSessionState, setSiteState, sitesRef]);
 
-  const createSession = useCallback((site: InspectionSite, initial?: { meta?: Partial<InspectionReportMeta> }) => {
+  const createSession = useCallback((site: InspectionSite, initial?: {
+    meta?: Partial<InspectionReportMeta>;
+    reportNumber?: number;
+    document4FollowUps?: InspectionSession['document4FollowUps'];
+    technicalGuidanceRelations?: Partial<InspectionSession['technicalGuidanceRelations']>;
+  }) => {
     const nextSession = createNewSafetySession(
       site,
-      sessionsRef.current.filter((session) => session.siteKey === site.id).length + 1,
+      initial?.reportNumber ??
+        sessionsRef.current.filter((session) => session.siteKey === site.id).length + 1,
       masterDataRef.current,
-      { meta: initial?.meta }
+      {
+        meta: initial?.meta,
+        document4FollowUps: initial?.document4FollowUps,
+        technicalGuidanceRelations: initial?.technicalGuidanceRelations,
+      }
     );
     setSessionState([nextSession, ...sessionsRef.current]);
     setReportIndexBySiteId((current) => ({

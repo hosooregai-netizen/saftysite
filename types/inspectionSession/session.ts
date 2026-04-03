@@ -22,6 +22,21 @@ import type {
   TechnicalGuidanceOverview,
 } from './documents';
 
+export interface TechnicalGuidanceChartEntry {
+  label: string;
+  count: number;
+}
+
+export interface TechnicalGuidanceRelations {
+  computedAt: string | null;
+  projectionVersion: number;
+  stale: boolean;
+  recomputeStatus: 'fresh' | 'pending';
+  sourceReportKeys: string[];
+  cumulativeAccidentEntries: TechnicalGuidanceChartEntry[];
+  cumulativeAgentEntries: TechnicalGuidanceChartEntry[];
+}
+
 export interface InspectionSession {
   id: string;
   siteKey: string;
@@ -44,6 +59,7 @@ export interface InspectionSession {
   document12Activities: ActivityRecord[];
   document13Cases: CaseFeedItem[];
   document14SafetyInfos: SafetyInfoItem[];
+  technicalGuidanceRelations: TechnicalGuidanceRelations;
   createdAt: string;
   updatedAt: string;
   lastSavedAt: string | null;

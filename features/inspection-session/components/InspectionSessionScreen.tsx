@@ -43,7 +43,10 @@ export function InspectionSessionScreen({ sessionId }: InspectionSessionScreenPr
     cumulativeAccidentEntries: screen.derivedData.cumulativeAccidentEntries,
     cumulativeAgentEntries: screen.derivedData.cumulativeAgentEntries,
     doc7ReferenceMaterials: screen.derivedData.doc7ReferenceMaterials,
+    isRelationHydrating: screen.isRelationHydrating,
+    isRelationReady: screen.isRelationReady,
     measurementTemplates: screen.derivedData.measurementTemplates,
+    relationStatus: screen.relationStatus,
     session: screen.sectionSession,
     withFileData: screen.withFileData,
   };
@@ -65,6 +68,7 @@ export function InspectionSessionScreen({ sessionId }: InspectionSessionScreenPr
       onMetaChange={screen.changeMetaField}
       onSectionSelect={screen.selectSection}
       progress={screen.derivedData.progress}
+      relationNotice={screen.relationNotice}
       renderSection={getInspectionSectionContent(sectionProps)}
       sectionToolbar={getInspectionSectionToolbar(sectionProps)}
       session={screen.sectionSession}

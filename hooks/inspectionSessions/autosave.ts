@@ -14,6 +14,7 @@ import {
   buildSafetyReportUpsertInput,
   isSafetyAdmin,
   mapInspectionSessionToReportListItem,
+  mapSafetyReportToInspectionSession,
   mapSafetyReportListItem,
 } from '@/lib/safetyApiMappers';
 import { getErrorMessage, isAuthFailure } from './helpers';
@@ -48,10 +49,10 @@ export function useInspectionSessionsAutosave(store: InspectionSessionsStore) {
       (sessionVersionsRef.current[sessionId] ?? 0) + 1;
   }, [dirtySessionIdsRef, sessionVersionsRef]);
 
-  const updateSavedTimestamp = useCallback((sessionId: string, savedAt: string) => {
+  const replaceSavedSession = useCallback((sessionId: string, nextSession: typeof sessions[number]) => {
     setSessions((current) => {
       const nextSessions = current.map((session) =>
-        session.id === sessionId ? { ...session, updatedAt: savedAt, lastSavedAt: savedAt } : session
+        session.id === sessionId ? nextSession : session
       );
       sessionsRef.current = nextSessions;
       return nextSessions;
@@ -100,9 +101,13 @@ export function useInspectionSessionsAutosave(store: InspectionSessionsStore) {
 
         if ((sessionVersionsRef.current[sessionId] ?? 0) === versionAtSync) {
           dirtySessionIdsRef.current.delete(sessionId);
-          updateSavedTimestamp(
+          replaceSavedSession(
             sessionId,
-            savedReport.last_autosaved_at || savedReport.updated_at || new Date().toISOString()
+            mapSafetyReportToInspectionSession(
+              savedReport,
+              site,
+              store.masterDataRef.current,
+            ),
           );
         }
       }
@@ -130,7 +135,8 @@ export function useInspectionSessionsAutosave(store: InspectionSessionsStore) {
     setReportIndexBySiteId,
     setSyncError,
     sitesRef,
-    updateSavedTimestamp,
+    replaceSavedSession,
+    store.masterDataRef,
   ]);
 
   const saveNow = useCallback(async () => {

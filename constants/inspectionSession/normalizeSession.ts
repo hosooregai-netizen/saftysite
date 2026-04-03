@@ -21,6 +21,7 @@ import {
 } from '@/constants/inspectionSession/normalizeParts';
 import { getSceneSlotTitle } from '@/constants/inspectionSession/scenePhotos';
 import { createInspectionSession } from '@/constants/inspectionSession/sessionFactory';
+import { createEmptyTechnicalGuidanceRelations } from '@/constants/inspectionSession/sessionFactory';
 import { finalizeInspectionSession } from '@/constants/inspectionSession/sessionState';
 import {
   asRecord,
@@ -40,8 +41,38 @@ import type {
   CurrentHazardSummaryDocument,
   InspectionReportMeta,
   InspectionSession,
+  TechnicalGuidanceRelations,
   TechnicalGuidanceOverview,
 } from '@/types/inspectionSession';
+
+function normalizeTechnicalGuidanceRelations(
+  raw: unknown,
+): TechnicalGuidanceRelations {
+  const source = asRecord(raw);
+  const normalizeEntries = (value: unknown) =>
+    Array.isArray(value)
+      ? value
+          .map((item) => asRecord(item))
+          .map((item) => ({
+            label: normalizeText(item.label),
+            count: Number(item.count) || 0,
+          }))
+          .filter((item) => item.label && item.count > 0)
+      : [];
+
+  return createEmptyTechnicalGuidanceRelations({
+    computedAt: normalizeText(source.computedAt) || null,
+    projectionVersion: Number(source.projectionVersion) || 0,
+    stale: normalizeBoolean(source.stale),
+    recomputeStatus:
+      normalizeText(source.recomputeStatus) === 'pending' ? 'pending' : 'fresh',
+    sourceReportKeys: Array.isArray(source.sourceReportKeys)
+      ? source.sourceReportKeys.map((item) => normalizeText(item)).filter(Boolean)
+      : [],
+    cumulativeAccidentEntries: normalizeEntries(source.cumulativeAccidentEntries),
+    cumulativeAgentEntries: normalizeEntries(source.cumulativeAgentEntries),
+  });
+}
 
 function normalizeAccidentOccurred(value: unknown): 'yes' | 'no' {
   return value === 'yes' ? 'yes' : 'no';
@@ -143,6 +174,9 @@ export function normalizeInspectionSession(raw: unknown): InspectionSession {
       : session.document12Activities,
     document13Cases: normalizeCases(Array.isArray(source.document13Cases) ? source.document13Cases : []),
     document14SafetyInfos: normalizeSafetyInfos(Array.isArray(source.document14SafetyInfos) ? source.document14SafetyInfos : []),
+    technicalGuidanceRelations: normalizeTechnicalGuidanceRelations(
+      source.technicalGuidanceRelations,
+    ),
     createdAt: normalizeTimestamp(source.createdAt, timestamp),
     updatedAt: normalizeTimestamp(source.updatedAt, timestamp),
     lastSavedAt: normalizeText(source.lastSavedAt) || null,

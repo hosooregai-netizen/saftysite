@@ -199,6 +199,7 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
     setIsReady,
     setMasterData,
     setReportIndexBySiteId,
+    setSiteRelationsStatusBySiteId,
     setSessionState,
     setSiteState,
     setSyncError,
@@ -449,13 +450,13 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
   );
 
   const ensureSessionLoaded = useCallback(
-    async (reportKey: string) => {
+    async (reportKey: string, options?: { force?: boolean }) => {
       const token = authTokenRef.current;
       if (!token) {
         return;
       }
 
-      if (sessionsRef.current.some((session) => session.id === reportKey)) {
+      if (!options?.force && sessionsRef.current.some((session) => session.id === reportKey)) {
         return;
       }
 
@@ -553,6 +554,10 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
       }
 
       if (!options?.force && loadedSiteReportsRef.current.has(siteId)) {
+        setSiteRelationsStatusBySiteId((current) => ({
+          ...current,
+          [siteId]: 'loaded',
+        }));
         return;
       }
 
@@ -567,6 +572,10 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
           status: 'loading',
           error: null,
         }),
+      }));
+      setSiteRelationsStatusBySiteId((current) => ({
+        ...current,
+        [siteId]: 'loading',
       }));
       setIsHydratingReports(true);
 
@@ -632,6 +641,10 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
               error: null,
             }),
           }));
+          setSiteRelationsStatusBySiteId((current) => ({
+            ...current,
+            [siteId]: 'loaded',
+          }));
         } catch (error) {
           if (isAuthFailure(error)) {
             syncRequestIdRef.current += 1;
@@ -646,6 +659,10 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
                 status: 'error',
                 error: message,
               }),
+            }));
+            setSiteRelationsStatusBySiteId((current) => ({
+              ...current,
+              [siteId]: 'error',
             }));
           }
         } finally {
@@ -673,6 +690,7 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
       setDataError,
       setIsHydratingReports,
       setReportIndexBySiteId,
+      setSiteRelationsStatusBySiteId,
       setSiteState,
       sitesRef,
     ],
@@ -740,6 +758,8 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
         return;
       }
 
+      await applyImmediateUserState(user, token);
+
       const siteState = await hydrateRemoteSiteState(token, user);
 
       if (
@@ -756,15 +776,6 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
         },
         token,
       );
-
-      if (
-        syncRequestIdRef.current !== requestId ||
-        authTokenRef.current !== token
-      ) {
-        return;
-      }
-
-      setIsReady(true);
     },
     [
       applyHydratedBaseState,
@@ -774,7 +785,6 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
       hydrateRemoteSiteState,
       setAuthError,
       setDataError,
-      setIsReady,
     ],
   );
 
@@ -816,6 +826,7 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
     sessionLoadRequestsRef.current.clear();
     siteReportsLoadRequestsRef.current.clear();
     loadedSiteReportsRef.current.clear();
+    setSiteRelationsStatusBySiteId({});
 
     try {
       await hydrateAndSync(token);
@@ -829,6 +840,7 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
     setDataError,
     setHasAuthToken,
     setIsHydrating,
+    setSiteRelationsStatusBySiteId,
     setIsReady,
   ]);
 
@@ -844,6 +856,7 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
         sessionLoadRequestsRef.current.clear();
         siteReportsLoadRequestsRef.current.clear();
         loadedSiteReportsRef.current.clear();
+        setSiteRelationsStatusBySiteId({});
         setHasAuthToken(false);
         setIsReady(true);
         return;
@@ -910,6 +923,7 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
     setIsHydrating,
     setIsReady,
     setSessionState,
+    setSiteRelationsStatusBySiteId,
     setSiteState,
   ]);
 
@@ -929,6 +943,7 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
       siteReportsLoadRequestsRef.current.clear();
       loadedSiteReportsRef.current.clear();
       setReportIndexBySiteId({});
+      setSiteRelationsStatusBySiteId({});
 
       try {
         const token = await loginSafetyApi(input);
@@ -960,6 +975,7 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
       setIsHydratingReports,
       setIsReady,
       setReportIndexBySiteId,
+      setSiteRelationsStatusBySiteId,
       setSyncError,
     ],
   );
@@ -972,13 +988,22 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
     sessionLoadRequestsRef.current.clear();
     siteReportsLoadRequestsRef.current.clear();
     loadedSiteReportsRef.current.clear();
+    setSiteRelationsStatusBySiteId({});
     clearAuthState();
     setReportIndexBySiteId({});
     setAuthError(null);
     setDataError(null);
     setSyncError(null);
     setIsReady(true);
-  }, [clearAuthState, setAuthError, setDataError, setIsReady, setReportIndexBySiteId, setSyncError]);
+  }, [
+    clearAuthState,
+    setAuthError,
+    setDataError,
+    setIsReady,
+    setReportIndexBySiteId,
+    setSiteRelationsStatusBySiteId,
+    setSyncError,
+  ]);
 
   return {
     ensureMasterDataLoaded,

@@ -7,6 +7,7 @@ import type { SafetyMasterData, SafetyUser } from '@/types/backend';
 import type {
   InspectionSite,
   InspectionSession,
+  ReportIndexStatus,
   SiteReportIndexState,
 } from '@/types/inspectionSession';
 import {
@@ -27,6 +28,9 @@ export function useInspectionSessionsStore() {
   const [reportIndexBySiteId, setReportIndexBySiteIdState] = useState<
     Record<string, SiteReportIndexState>
   >({});
+  const [siteRelationsStatusBySiteId, setSiteRelationsStatusBySiteIdState] = useState<
+    Record<string, ReportIndexStatus>
+  >({});
   const [hasAuthToken, setHasAuthToken] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const [isHydrating, setIsHydrating] = useState(false);
@@ -40,6 +44,7 @@ export function useInspectionSessionsStore() {
   const sitesRef = useRef<InspectionSite[]>([]);
   const masterDataRef = useRef<SafetyMasterData>(EMPTY_MASTER_DATA);
   const reportIndexBySiteIdRef = useRef<Record<string, SiteReportIndexState>>({});
+  const siteRelationsStatusBySiteIdRef = useRef<Record<string, ReportIndexStatus>>({});
   const authTokenRef = useRef<string | null>(null);
   const dirtySessionIdsRef = useRef<Set<string>>(new Set());
   const sessionVersionsRef = useRef<Record<string, number>>({});
@@ -58,6 +63,22 @@ export function useInspectionSessionsStore() {
       setReportIndexBySiteIdState((current) => {
         const next = typeof updater === 'function' ? updater(current) : updater;
         reportIndexBySiteIdRef.current = next;
+        return next;
+      });
+    },
+    [],
+  );
+  const setSiteRelationsStatusBySiteId = useCallback(
+    (
+      updater:
+        | Record<string, ReportIndexStatus>
+        | ((
+            current: Record<string, ReportIndexStatus>
+          ) => Record<string, ReportIndexStatus>),
+    ) => {
+      setSiteRelationsStatusBySiteIdState((current) => {
+        const next = typeof updater === 'function' ? updater(current) : updater;
+        siteRelationsStatusBySiteIdRef.current = next;
         return next;
       });
     },
@@ -104,10 +125,12 @@ export function useInspectionSessionsStore() {
     sitesRef.current = [];
     masterDataRef.current = EMPTY_MASTER_DATA;
     reportIndexBySiteIdRef.current = {};
+    siteRelationsStatusBySiteIdRef.current = {};
     setSessions([]);
     setSites([]);
     setMasterData(EMPTY_MASTER_DATA);
     setReportIndexBySiteIdState({});
+    setSiteRelationsStatusBySiteIdState({});
     setCurrentUser(null);
     setHasAuthToken(false);
     setIsHydrating(false);
@@ -150,6 +173,7 @@ export function useInspectionSessionsStore() {
     setIsSaving,
     setMasterData,
     setReportIndexBySiteId,
+    setSiteRelationsStatusBySiteId,
     setSessionState,
     setSessions,
     setSiteState,
@@ -157,6 +181,8 @@ export function useInspectionSessionsStore() {
     setSyncError,
     sites,
     sitesRef,
+    siteRelationsStatusBySiteId,
+    siteRelationsStatusBySiteIdRef,
     syncError,
   };
 }

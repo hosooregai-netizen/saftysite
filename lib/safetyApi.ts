@@ -20,6 +20,7 @@ export {
   fetchSafetyReportByKey,
   fetchSafetyReportList,
   fetchSafetyReportsBySite,
+  fetchTechnicalGuidanceSeed,
   loginSafetyApi,
   upsertSafetyReport,
 } from '@/lib/safetyApi/endpoints';

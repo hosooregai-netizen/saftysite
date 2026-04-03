@@ -44,13 +44,25 @@ export function InspectionSessionsProvider({
   } = useInspectionSessionsMutations(store, markSessionDirty);
 
   const getSessionById = useCallback(
-    (sessionId: string) => store.sessions.find((session) => session.id === sessionId) || null,
-    [store.sessions],
+    (sessionId: string) =>
+      store.sessionsRef.current.find((session) => session.id === sessionId) || null,
+    [store.sessionsRef],
+  );
+
+  const getSessionsBySiteId = useCallback(
+    (siteId: string) =>
+      store.sessionsRef.current.filter((session) => session.siteKey === siteId),
+    [store.sessionsRef],
   );
 
   const getSiteById = useCallback(
-    (siteId: string) => store.sites.find((site) => site.id === siteId) || null,
-    [store.sites],
+    (siteId: string) => store.sitesRef.current.find((site) => site.id === siteId) || null,
+    [store.sitesRef],
+  );
+
+  const getSiteRelationsStatus = useCallback(
+    (siteId: string) => store.siteRelationsStatusBySiteId[siteId] || 'idle',
+    [store.siteRelationsStatusBySiteId],
   );
 
   const getReportIndexBySiteId = useCallback(
@@ -98,6 +110,7 @@ export function InspectionSessionsProvider({
       ensureSessionLoaded,
       ensureSiteReportIndexLoaded,
       ensureSiteReportsLoaded,
+      getSiteRelationsStatus,
       getReportIndexBySiteId,
       login,
       logout,
@@ -113,6 +126,7 @@ export function InspectionSessionsProvider({
       deleteSessions,
       saveNow,
       getSessionById,
+      getSessionsBySiteId,
       getSiteById,
       upsertReportIndexItems,
     }),
@@ -126,8 +140,10 @@ export function InspectionSessionsProvider({
       ensureSessionLoaded,
       ensureSiteReportIndexLoaded,
       ensureSiteReportsLoaded,
+      getSiteRelationsStatus,
       getReportIndexBySiteId,
       getSessionById,
+      getSessionsBySiteId,
       getSiteById,
       login,
       logout,

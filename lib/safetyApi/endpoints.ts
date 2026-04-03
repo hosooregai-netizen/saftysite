@@ -4,6 +4,7 @@ import type {
   SafetyReport,
   SafetyReportListItem,
   SafetySite,
+  SafetyTechnicalGuidanceSeed,
   SafetyTokenResponse,
   SafetyUpsertReportInput,
   SafetyUser,
@@ -112,11 +113,22 @@ export function fetchSafetyReportByKey(
   );
 }
 
+export function fetchTechnicalGuidanceSeed(
+  token: string,
+  siteId: string,
+): Promise<SafetyTechnicalGuidanceSeed> {
+  return requestSafetyApi<SafetyTechnicalGuidanceSeed>(
+    `/reports/site/${siteId}/technical-guidance-seed`,
+    {},
+    token,
+  );
+}
+
 export function upsertSafetyReport(
   token: string,
   payload: SafetyUpsertReportInput
-): Promise<SafetyReportListItem> {
-  return requestSafetyApi<SafetyReportListItem>(
+): Promise<SafetyReport> {
+  return requestSafetyApi<SafetyReport>(
     '/reports/upsert',
     {
       method: 'POST',

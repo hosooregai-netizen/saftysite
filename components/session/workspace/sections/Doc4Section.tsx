@@ -4,23 +4,76 @@ import type { OverviewSectionProps } from '@/components/session/workspace/types'
 import { UploadBox } from '@/components/session/workspace/widgets';
 
 export default function Doc4Section(props: OverviewSectionProps) {
-  const { applyDocumentUpdate, session, withFileData } = props;
+  const {
+    applyDocumentUpdate,
+    isRelationHydrating,
+    relationStatus,
+    session,
+    withFileData,
+  } = props;
+  const showRelationSkeleton = isRelationHydrating && session.document4FollowUps.length === 0;
+  const showEmptyState =
+    !showRelationSkeleton &&
+    relationStatus !== 'error' &&
+    session.document4FollowUps.length === 0;
 
   return (
     <div className={`${styles.sectionStack} ${styles.doc4SectionStack}`}>
-      {session.document4FollowUps.length === 0 ? (
-        <div className={styles.doc4EmptyState} role="status">
-          이전 기술지도 사항이 없습니다
+      {isRelationHydrating ? (
+        <div className={styles.relationNotice} role="status">
+          이전 보고서 연동값을 계산 중입니다.
         </div>
       ) : null}
+      {relationStatus === 'error' ? (
+        <div className={`${styles.relationNotice} ${styles.relationNoticeError}`} role="status">
+          이전 보고서 연동값을 아직 불러오지 못했습니다.
+        </div>
+      ) : null}
+      {showEmptyState ? (
+        <div className={styles.doc4EmptyState} role="status">
+          이전 기술지도 이행 항목이 없습니다.
+        </div>
+      ) : null}
+      {showRelationSkeleton
+        ? Array.from({ length: 2 }).map((_, index) => (
+            <article
+              key={`doc4-skeleton-${index + 1}`}
+              className={`${styles.card} ${styles.doc4Card} ${styles.relationSkeletonCard}`}
+              aria-hidden="true"
+            >
+              <div className={styles.relationSkeletonLine} />
+              <div className={styles.relationSkeletonLine} />
+              <div className={styles.relationSkeletonLineShort} />
+            </article>
+          ))
+        : null}
       {session.document4FollowUps.map((item) => {
         const isDerived = Boolean(item.sourceSessionId && item.sourceFindingId);
         const canRemove = !isDerived;
-        const updateField = (key: 'location' | 'guidanceDate' | 'confirmationDate' | 'result' | 'beforePhotoUrl' | 'afterPhotoUrl', value: string) => applyDocumentUpdate('doc4', 'manual', (current) => ({ ...current, document4FollowUps: current.document4FollowUps.map((followUp) => followUp.id === item.id ? { ...followUp, [key]: value } : followUp) }));
+        const updateField = (
+          key:
+            | 'location'
+            | 'guidanceDate'
+            | 'confirmationDate'
+            | 'result'
+            | 'beforePhotoUrl'
+            | 'afterPhotoUrl',
+          value: string,
+        ) =>
+          applyDocumentUpdate('doc4', 'manual', (current) => ({
+            ...current,
+            document4FollowUps: current.document4FollowUps.map((followUp) =>
+              followUp.id === item.id ? { ...followUp, [key]: value } : followUp,
+            ),
+          }));
 
         return (
           <article key={item.id} className={`${styles.card} ${styles.doc4Card}`}>
-            <div className={`${styles.doc4CardInner} ${isDerived ? styles.doc4CardInnerWithEyebrow : ''}`}>
+            <div
+              className={`${styles.doc4CardInner} ${
+                isDerived ? styles.doc4CardInnerWithEyebrow : ''
+              }`}
+            >
               {isDerived ? (
                 <div className={styles.doc4DerivedEyebrow}>
                   <span className={styles.cardEyebrow}>이전 보고서 연동</span>
@@ -28,17 +81,33 @@ export default function Doc4Section(props: OverviewSectionProps) {
               ) : null}
               <div className={styles.doc4MetaBundle}>
                 <label className={styles.field}>
-                  <span className={styles.fieldLabel}>유해·위험장소</span>
-                  <input type="text" className="app-input" value={item.location} onChange={(event) => updateField('location', event.target.value)} />
+                  <span className={styles.fieldLabel}>유해·위험요소</span>
+                  <input
+                    type="text"
+                    className="app-input"
+                    value={item.location}
+                    onChange={(event) => updateField('location', event.target.value)}
+                  />
                 </label>
                 <div className={styles.doc4MetaBundleRow2}>
                   <label className={styles.field}>
-                    <span className={styles.fieldLabel}>지도일</span>
-                    <input type="date" className="app-input" value={item.guidanceDate} readOnly={isDerived} onChange={(event) => updateField('guidanceDate', event.target.value)} />
+                    <span className={styles.fieldLabel}>지도일자</span>
+                    <input
+                      type="date"
+                      className="app-input"
+                      value={item.guidanceDate}
+                      readOnly={isDerived}
+                      onChange={(event) => updateField('guidanceDate', event.target.value)}
+                    />
                   </label>
                   <label className={styles.field}>
                     <span className={styles.fieldLabel}>확인일</span>
-                    <input type="date" className="app-input" value={item.confirmationDate} onChange={(event) => updateField('confirmationDate', event.target.value)} />
+                    <input
+                      type="date"
+                      className="app-input"
+                      value={item.confirmationDate}
+                      onChange={(event) => updateField('confirmationDate', event.target.value)}
+                    />
                   </label>
                 </div>
                 <label className={`${styles.field} ${styles.doc4ResultField}`}>
@@ -57,12 +126,47 @@ export default function Doc4Section(props: OverviewSectionProps) {
                 </label>
               </div>
               <div className={styles.doc4PhotoRow}>
-                <UploadBox id={`follow-up-before-${item.id}`} label="시정 전 사진" labelLayout="field" value={item.beforePhotoUrl} onClear={isDerived ? undefined : () => updateField('beforePhotoUrl', '')} onSelect={async (file) => { if (!isDerived) await withFileData(file, (dataUrl) => updateField('beforePhotoUrl', dataUrl)); }} />
-                <UploadBox id={`follow-up-after-${item.id}`} label="시정 후 사진" labelLayout="field" value={item.afterPhotoUrl} onClear={() => updateField('afterPhotoUrl', '')} onSelect={async (file) => withFileData(file, (dataUrl) => updateField('afterPhotoUrl', dataUrl))} />
+                <UploadBox
+                  id={`follow-up-before-${item.id}`}
+                  label="시정 전 사진"
+                  labelLayout="field"
+                  value={item.beforePhotoUrl}
+                  onClear={
+                    isDerived ? undefined : () => updateField('beforePhotoUrl', '')
+                  }
+                  onSelect={async (file) => {
+                    if (!isDerived) {
+                      await withFileData(file, (dataUrl) =>
+                        updateField('beforePhotoUrl', dataUrl),
+                      );
+                    }
+                  }}
+                />
+                <UploadBox
+                  id={`follow-up-after-${item.id}`}
+                  label="시정 후 사진"
+                  labelLayout="field"
+                  value={item.afterPhotoUrl}
+                  onClear={() => updateField('afterPhotoUrl', '')}
+                  onSelect={async (file) =>
+                    withFileData(file, (dataUrl) => updateField('afterPhotoUrl', dataUrl))
+                  }
+                />
               </div>
             </div>
             {canRemove ? (
-              <button type="button" className={`${styles.inlineDangerButton} ${styles.doc4CardDeleteOverlay}`} onClick={() => applyDocumentUpdate('doc4', 'manual', (current) => ({ ...current, document4FollowUps: current.document4FollowUps.filter((followUp) => followUp.id !== item.id) }))}>
+              <button
+                type="button"
+                className={`${styles.inlineDangerButton} ${styles.doc4CardDeleteOverlay}`}
+                onClick={() =>
+                  applyDocumentUpdate('doc4', 'manual', (current) => ({
+                    ...current,
+                    document4FollowUps: current.document4FollowUps.filter(
+                      (followUp) => followUp.id !== item.id,
+                    ),
+                  }))
+                }
+              >
                 삭제
               </button>
             ) : null}
@@ -72,4 +176,3 @@ export default function Doc4Section(props: OverviewSectionProps) {
     </div>
   );
 }
-

@@ -2,8 +2,14 @@
 
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { createEmptyTechnicalGuidanceRelations } from '@/constants/inspectionSession/sessionFactory';
 import { compareReportIndexItemsByRound } from '@/hooks/inspectionSessions/helpers';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
+import {
+  fetchTechnicalGuidanceSeed,
+  readSafetyAuthToken,
+  SafetyApiError,
+} from '@/lib/safetyApi';
 import type {
   InspectionReportListItem,
   InspectionSite,
@@ -132,7 +138,7 @@ export function useSiteReportListState(
   const getCreateReportTitleSuggestion = (reportDate: string) =>
     buildDefaultReportTitle(reportDate, nextReportNumber);
 
-  const createReport = ({ reportDate, reportTitle }: CreateSiteReportInput) => {
+  const createReport = async ({ reportDate, reportTitle }: CreateSiteReportInput) => {
     if (!currentSite || reportIndexStatus !== 'loaded') return;
 
     const normalizedReportDate = reportDate.trim();
@@ -143,13 +149,43 @@ export function useSiteReportListState(
       return;
     }
 
+    const token = readSafetyAuthToken();
+    if (!token) {
+      throw new SafetyApiError('로그인이 만료되었습니다. 다시 로그인해 주세요.', 401);
+    }
+
+    const seed = await fetchTechnicalGuidanceSeed(token, currentSite.id);
+    const seedReportNumber = seed.next_visit_round || nextReportNumber;
     const nextSession = createSession(currentSite, {
+      reportNumber: seedReportNumber,
       meta: {
         siteName: currentSite.siteName,
         reportDate: normalizedReportDate,
         reportTitle: normalizedReportTitle,
         drafter: currentUser?.name || currentSite.assigneeName,
       },
+      document4FollowUps: seed.open_followups.map((item) => ({
+        id: item.id,
+        sourceSessionId: item.source_session_id ?? undefined,
+        sourceFindingId: item.source_finding_id ?? undefined,
+        location: item.location,
+        guidanceDate: item.guidance_date,
+        confirmationDate: item.confirmation_date || normalizedReportDate,
+        beforePhotoUrl: item.before_photo_url,
+        afterPhotoUrl: item.after_photo_url,
+        result: item.result,
+      })),
+      technicalGuidanceRelations: createEmptyTechnicalGuidanceRelations({
+        computedAt: new Date().toISOString(),
+        projectionVersion: seed.projection_version,
+        stale: false,
+        recomputeStatus: 'fresh',
+        sourceReportKeys: seed.previous_authoritative_report?.report_key
+          ? [seed.previous_authoritative_report.report_key]
+          : [],
+        cumulativeAccidentEntries: seed.cumulative_accident_entries,
+        cumulativeAgentEntries: seed.cumulative_agent_entries,
+      }),
     });
 
     router.push(`/sessions/${nextSession.id}`);

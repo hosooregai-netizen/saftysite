@@ -1,17 +1,20 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  INSPECTION_SECTIONS,
   createEmptyAdminSiteSnapshot,
-  areFollowUpItemsEqual,
-  buildDerivedFollowUpItems,
   getSessionSiteKey,
+  INSPECTION_SECTIONS,
   touchDocumentMeta,
 } from '@/constants/inspectionSession';
 import { readFileAsDataUrl } from '@/components/session/workspace/utils';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
-import { convertHwpxBlobToPdf, saveBlobAsFile } from '@/lib/api';
+import {
+  convertHwpxBlobToPdf,
+  fetchInspectionHwpxDocument,
+  fetchInspectionPdfDocument,
+  saveBlobAsFile,
+} from '@/lib/api';
 import { generateInspectionHwpxBlob } from '@/lib/documents/inspection/hwpxClient';
 import {
   canUploadContentAssets,
@@ -27,6 +30,7 @@ import type {
   InspectionDocumentSource,
   InspectionSectionKey,
   InspectionSession,
+  ReportIndexStatus,
 } from '@/types/inspectionSession';
 import { applyInspectionSessionMetaFieldChange } from '@/features/inspection-session/lib/applyInspectionSessionMetaFieldChange';
 import { buildInspectionSessionDerivedData } from '@/features/inspection-session/lib/buildInspectionSessionDerivedData';
@@ -68,7 +72,6 @@ export function useInspectionSessionScreen(sessionId: string) {
     currentUser,
     ensureMasterDataLoaded,
     ensureSessionLoaded,
-    ensureSiteReportsLoaded,
     getSessionById,
     getSiteById,
     isAuthenticated,
@@ -78,7 +81,6 @@ export function useInspectionSessionScreen(sessionId: string) {
     logout,
     masterData,
     saveNow,
-    sessions,
     syncError,
     updateSession,
   } = useInspectionSessions();
@@ -87,16 +89,38 @@ export function useInspectionSessionScreen(sessionId: string) {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isLoadingSession, setIsLoadingSession] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const forcedRelationRefreshIdsRef = useRef<Set<string>>(new Set());
   const session = getSessionById(sessionId);
   const isAdminView = Boolean(currentUser && isAdminUserRole(currentUser.role));
   const currentSection = session?.currentSection ?? 'doc1';
   const currentSectionIndex = session
     ? INSPECTION_SECTIONS.findIndex((item) => item.key === currentSection)
     : -1;
+  const site = session ? getSiteById(getSessionSiteKey(session)) : null;
+  const storedRelations = session?.technicalGuidanceRelations ?? null;
+  const hasStoredRelations = Boolean(
+    storedRelations &&
+      (storedRelations.computedAt ||
+        storedRelations.cumulativeAccidentEntries.length > 0 ||
+        storedRelations.cumulativeAgentEntries.length > 0),
+  );
+  const relationStatus: ReportIndexStatus = !session
+    ? 'idle'
+    : hasStoredRelations
+      ? storedRelations?.stale
+        ? 'loading'
+        : 'loaded'
+      : 'idle';
+  const isRelationReady = Boolean(session) && hasStoredRelations;
+  const isRelationHydrating = Boolean(session) && !hasStoredRelations;
+  const relationNotice =
+    session && storedRelations?.stale
+      ? '이전 요인과 누적 통계를 서버에서 다시 계산하고 있습니다. 저장된 값을 먼저 보여주고 있어요.'
+      : null;
   const derivedData = useMemo(
     () =>
       session
-        ? buildInspectionSessionDerivedData(masterData, session, sessions)
+        ? buildInspectionSessionDerivedData(masterData, session, [session])
         : {
             currentAccidentEntries: [],
             currentAgentEntries: [],
@@ -107,17 +131,52 @@ export function useInspectionSessionScreen(sessionId: string) {
             progress: null,
             siteSessions: [],
           },
-    [masterData, session, sessions],
+    [masterData, session],
   );
-  const site = session ? getSiteById(getSessionSiteKey(session)) : null;
-  const siteId = site?.id ?? null;
   const backHref = site ? `/sites/${encodeURIComponent(site.id)}` : '/';
 
   useEffect(() => () => void saveNow(), [saveNow]);
 
   useEffect(() => {
-    void ensureMasterDataLoaded();
-  }, [ensureMasterDataLoaded]);
+    if (!session) {
+      return;
+    }
+
+    const shouldLoadImmediately = ['doc7', 'doc10', 'doc13', 'doc14'].includes(currentSection);
+    if (shouldLoadImmediately) {
+      void ensureMasterDataLoaded();
+      return;
+    }
+
+    let cancelled = false;
+    const idleApi = window as Window & {
+      requestIdleCallback?: (
+        callback: IdleRequestCallback,
+        options?: IdleRequestOptions,
+      ) => number;
+      cancelIdleCallback?: (handle: number) => void;
+    };
+
+    const runLoad = () => {
+      if (!cancelled) {
+        void ensureMasterDataLoaded();
+      }
+    };
+
+    if (typeof idleApi.requestIdleCallback === 'function') {
+      const handle = idleApi.requestIdleCallback(runLoad, { timeout: 1500 });
+      return () => {
+        cancelled = true;
+        idleApi.cancelIdleCallback?.(handle);
+      };
+    }
+
+    const timeoutId = window.setTimeout(runLoad, 1200);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [currentSection, ensureMasterDataLoaded, session]);
 
   useEffect(() => {
     if (!isAuthenticated || !isReady || session) {
@@ -140,16 +199,19 @@ export function useInspectionSessionScreen(sessionId: string) {
   }, [ensureSessionLoaded, isAuthenticated, isReady, session, sessionId]);
 
   useEffect(() => {
-    if (!session) return;
-
-    const nextFollowUps = buildDerivedFollowUpItems(session, sessions);
-    if (!areFollowUpItemsEqual(session.document4FollowUps, nextFollowUps)) {
-      updateSession(session.id, (current) => ({
-        ...current,
-        document4FollowUps: nextFollowUps,
-      }));
+    if (!session || !isAuthenticated || !isReady || hasStoredRelations) {
+      return;
     }
-  }, [session, sessions, updateSession]);
+
+    if (forcedRelationRefreshIdsRef.current.has(session.id)) {
+      return;
+    }
+
+    forcedRelationRefreshIdsRef.current.add(session.id);
+    void ensureSessionLoaded(session.id, { force: true }).catch(() => {
+      forcedRelationRefreshIdsRef.current.delete(session.id);
+    });
+  }, [ensureSessionLoaded, hasStoredRelations, isAuthenticated, isReady, session]);
 
   useEffect(() => {
     if (!session || !site) return;
@@ -165,14 +227,6 @@ export function useInspectionSessionScreen(sessionId: string) {
       adminSiteSnapshot: merged,
     }));
   }, [session, site, updateSession]);
-
-  useEffect(() => {
-    if (!isAuthenticated || !isReady || !siteId) {
-      return;
-    }
-
-    void ensureSiteReportsLoaded(siteId);
-  }, [ensureSiteReportsLoaded, isAuthenticated, isReady, siteId]);
 
   const applyDocumentUpdate = (
     key: InspectionSectionKey,
@@ -267,7 +321,17 @@ export function useInspectionSessionScreen(sessionId: string) {
     if (!session) return null;
 
     await saveNow();
-    const generation = await generateInspectionHwpxBlob(session, derivedData.siteSessions);
+    const latestSession = getSessionById(session.id) ?? session;
+    try {
+      return await fetchInspectionHwpxDocument(latestSession);
+    } catch (serverError) {
+      console.warn('Inspection HWPX server generation failed; falling back to browser generation.', {
+        error: serverError instanceof Error ? serverError.message : String(serverError),
+        sessionId: session.id,
+      });
+    }
+
+    const generation = await generateInspectionHwpxBlob(latestSession);
 
     if (generation.warnings.length > 0 || generation.deferred.length > 0) {
       console.warn('HWPX generation warnings', {
@@ -305,10 +369,23 @@ export function useInspectionSessionScreen(sessionId: string) {
     try {
       setDocumentError(null);
       setIsGeneratingPdf(true);
-      const generation = await buildHwpxDocument();
-      if (!generation) return;
+      await saveNow();
+      const latestSession = getSessionById(session.id) ?? session;
+      let pdf;
 
-      const pdf = await convertHwpxBlobToPdf(generation.blob, generation.filename);
+      try {
+        pdf = await fetchInspectionPdfDocument(latestSession);
+      } catch (serverError) {
+        console.warn('Inspection PDF server generation failed; falling back to browser HWPX generation.', {
+          error: serverError instanceof Error ? serverError.message : String(serverError),
+          sessionId: session.id,
+        });
+
+        const generation = await buildHwpxDocument();
+        if (!generation) return;
+        pdf = await convertHwpxBlobToPdf(generation.blob, generation.filename);
+      }
+
       saveBlobAsFile(pdf.blob, pdf.filename);
     } catch (error) {
       setDocumentError(
@@ -337,6 +414,8 @@ export function useInspectionSessionScreen(sessionId: string) {
     isGeneratingHwpx,
     isGeneratingPdf,
     isLoadingSession,
+    isRelationHydrating,
+    isRelationReady,
     isReady,
     isSaving,
     login,
@@ -345,6 +424,8 @@ export function useInspectionSessionScreen(sessionId: string) {
     sectionSession: session,
     selectSection,
     site,
+    relationStatus,
+    relationNotice,
     syncError,
     uploadError,
     withFileData,

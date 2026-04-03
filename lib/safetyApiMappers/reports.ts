@@ -1,5 +1,6 @@
 import {
   createInspectionSession,
+  createEmptyTechnicalGuidanceRelations,
   getSessionGuidanceDate,
   getSessionProgress,
   getSessionTitle,
@@ -20,6 +21,7 @@ import type {
   AdminSiteSnapshot,
   InspectionSession,
   InspectionSite,
+  TechnicalGuidanceRelations,
 } from '@/types/inspectionSession';
 import { mergeMasterDataIntoSession } from './masterData';
 import {
@@ -52,6 +54,38 @@ function mergeAdminSiteSnapshot(
       ]),
     ),
   } as AdminSiteSnapshot;
+}
+
+function mapTechnicalGuidanceRelations(
+  value: unknown,
+): TechnicalGuidanceRelations {
+  const source = asMapperRecord(value);
+  const normalizeEntries = (entries: unknown) =>
+    Array.isArray(entries)
+      ? entries
+          .map((item) => asMapperRecord(item))
+          .map((item) => ({
+            label: normalizeMapperText(item.label),
+            count: Number(item.count) || 0,
+          }))
+          .filter((item) => item.label && item.count > 0)
+      : [];
+
+  return createEmptyTechnicalGuidanceRelations({
+    computedAt: normalizeMapperText(source.computedAt) || null,
+    projectionVersion:
+      typeof source.projectionVersion === 'number'
+        ? source.projectionVersion
+        : Number(source.projectionVersion) || 0,
+    stale: Boolean(source.stale),
+    recomputeStatus:
+      normalizeMapperText(source.recomputeStatus) === 'pending' ? 'pending' : 'fresh',
+    sourceReportKeys: Array.isArray(source.sourceReportKeys)
+      ? source.sourceReportKeys.map((item) => normalizeMapperText(item)).filter(Boolean)
+      : [],
+    cumulativeAccidentEntries: normalizeEntries(source.cumulativeAccidentEntries),
+    cumulativeAgentEntries: normalizeEntries(source.cumulativeAgentEntries),
+  });
 }
 
 export function mapSafetyReportListItem(
@@ -170,6 +204,9 @@ export function mapSafetyReportToInspectionSession(
     controllerReview: normalizeControllerReview(
       payload.controllerReview ?? payloadMeta.controllerReview ?? reportMeta.controllerReview,
     ),
+    technicalGuidanceRelations: mapTechnicalGuidanceRelations(
+      payload.technicalGuidanceRelations,
+    ),
   });
 
   return mergeMasterDataIntoSession(normalized, masterData);
@@ -218,6 +255,8 @@ export function createNewSafetySession(
   masterData: SafetyMasterData,
   initial?: {
     meta?: Partial<InspectionSession['meta']>;
+    document4FollowUps?: InspectionSession['document4FollowUps'];
+    technicalGuidanceRelations?: Partial<InspectionSession['technicalGuidanceRelations']>;
   }
 ): InspectionSession {
   return mergeMasterDataIntoSession(
@@ -231,6 +270,8 @@ export function createNewSafetySession(
         },
         document13Cases: masterData.caseFeed,
         document14SafetyInfos: masterData.safetyInfos,
+        document4FollowUps: initial?.document4FollowUps,
+        technicalGuidanceRelations: initial?.technicalGuidanceRelations,
       },
       site.id,
       reportNumber

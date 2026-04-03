@@ -36,6 +36,7 @@ import type {
   InspectionSite,
   SafetyCheckDocument,
   SafetyInfoItem,
+  TechnicalGuidanceRelations,
   TechnicalGuidanceOverview,
 } from '@/types/inspectionSession';
 import { finalizeInspectionSession } from './sessionState';
@@ -93,6 +94,21 @@ function createHazardSummaryDocument(
   return { summaryText: '', ...initial };
 }
 
+export function createEmptyTechnicalGuidanceRelations(
+  initial: Partial<TechnicalGuidanceRelations> = {},
+): TechnicalGuidanceRelations {
+  return {
+    computedAt: null,
+    projectionVersion: 0,
+    stale: false,
+    recomputeStatus: 'fresh',
+    sourceReportKeys: [],
+    cumulativeAccidentEntries: [],
+    cumulativeAgentEntries: [],
+    ...initial,
+  };
+}
+
 export function createInspectionSite(
   input: string | Partial<AdminSiteSnapshot> = {}
 ): InspectionSite {
@@ -121,6 +137,8 @@ export function createInspectionSession(
     adminSiteSnapshot?: Partial<AdminSiteSnapshot>;
     document13Cases?: CaseFeedItem[];
     document14SafetyInfos?: SafetyInfoItem[];
+    document4FollowUps?: InspectionSession['document4FollowUps'];
+    technicalGuidanceRelations?: Partial<TechnicalGuidanceRelations>;
   } = {},
   siteKey = UNTITLED_SITE_KEY,
   reportNumber = 1
@@ -154,7 +172,7 @@ export function createInspectionSession(
       adminSiteSnapshot
     ),
     document3Scenes: createDefaultScenePhotos(),
-    document4FollowUps: [],
+    document4FollowUps: options.document4FollowUps?.map((item) => ({ ...item })) ?? [],
     document5Summary: createHazardSummaryDocument(),
     document6Measures: FATAL_ACCIDENT_MEASURE_LIBRARY.map((item) =>
       createFatalAccidentMeasureItem(item.key)
@@ -167,6 +185,9 @@ export function createInspectionSession(
     document12Activities: Array.from({ length: 4 }, () => createActivityRecord()),
     document13Cases: (options.document13Cases ?? DEFAULT_CASE_FEED).map((item) => ({ ...item })),
     document14SafetyInfos: (options.document14SafetyInfos ?? DEFAULT_SAFETY_INFOS).map((item) => ({ ...item })),
+    technicalGuidanceRelations: createEmptyTechnicalGuidanceRelations(
+      options.technicalGuidanceRelations,
+    ),
     createdAt: timestamp,
     updatedAt: timestamp,
     lastSavedAt: null,

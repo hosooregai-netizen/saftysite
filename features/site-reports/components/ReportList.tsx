@@ -1,8 +1,10 @@
 'use client';
 
+import { useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import ActionMenu from '@/components/ui/ActionMenu';
+import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { formatDateTime } from '@/lib/formatDateTime';
 import type {
   InspectionReportListItem,
@@ -59,6 +61,22 @@ export function ReportList({
   totalReportCount,
 }: ReportListProps) {
   const router = useRouter();
+  const { ensureSessionLoaded } = useInspectionSessions();
+  const prefetchedReportKeysRef = useRef<Set<string>>(new Set());
+
+  const warmSession = useCallback(
+    (reportKey: string) => {
+      if (prefetchedReportKeysRef.current.has(reportKey)) {
+        return;
+      }
+
+      prefetchedReportKeysRef.current.add(reportKey);
+      void ensureSessionLoaded(reportKey).catch(() => {
+        prefetchedReportKeysRef.current.delete(reportKey);
+      });
+    },
+    [ensureSessionLoaded],
+  );
 
   if (
     (reportIndexStatus === 'idle' || reportIndexStatus === 'loading') &&
@@ -146,14 +164,24 @@ export function ReportList({
                 className={`${styles.reportRow} ${styles.reportRowClickable}`}
                 tabIndex={0}
                 role="link"
+                onPointerEnter={() => {
+                  router.prefetch(sessionHref);
+                  warmSession(item.reportKey);
+                }}
+                onFocus={() => {
+                  router.prefetch(sessionHref);
+                  warmSession(item.reportKey);
+                }}
                 onClick={(event) => {
                   if (shouldIgnoreRowClick(event.target)) return;
+                  warmSession(item.reportKey);
                   router.push(sessionHref);
                 }}
                 onKeyDown={(event) => {
                   if (shouldIgnoreRowClick(event.target)) return;
                   if (event.key !== 'Enter' && event.key !== ' ') return;
                   event.preventDefault();
+                  warmSession(item.reportKey);
                   router.push(sessionHref);
                 }}
               >
@@ -162,7 +190,18 @@ export function ReportList({
                 </div>
 
                 <div className={`${styles.primaryCell} ${styles.titleCell}`}>
-                  <Link href={sessionHref} className={styles.reportLink}>
+                  <Link
+                    href={sessionHref}
+                    className={styles.reportLink}
+                    onMouseEnter={() => {
+                      router.prefetch(sessionHref);
+                      warmSession(item.reportKey);
+                    }}
+                    onFocus={() => {
+                      router.prefetch(sessionHref);
+                      warmSession(item.reportKey);
+                    }}
+                  >
                     {item.reportTitle}
                   </Link>
                 </div>

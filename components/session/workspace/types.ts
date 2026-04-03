@@ -3,6 +3,7 @@ import type {
   InspectionDocumentSource,
   InspectionSectionKey,
   InspectionSession,
+  ReportIndexStatus,
 } from '@/types/inspectionSession';
 import type {
   SafetyDoc7ReferenceMaterialCatalogItem,
@@ -24,6 +25,9 @@ export type WithFileData = (
 
 export interface OverviewSectionProps {
   applyDocumentUpdate: ApplyDocumentUpdate;
+  isRelationHydrating: boolean;
+  isRelationReady: boolean;
+  relationStatus: ReportIndexStatus;
   session: InspectionSession;
   withFileData: WithFileData;
 }
@@ -35,6 +39,9 @@ export interface HazardStatsSectionProps {
   cumulativeAccidentEntries: ChartEntry[];
   cumulativeAgentEntries: ChartEntry[];
   doc7ReferenceMaterials: SafetyDoc7ReferenceMaterialCatalogItem[];
+  isRelationHydrating: boolean;
+  isRelationReady: boolean;
+  relationStatus: ReportIndexStatus;
   measurementTemplates: SafetyMeasurementTemplate[];
   session: InspectionSession;
   withFileData: WithFileData;

@@ -9,20 +9,28 @@ import { ChartCard } from '@/components/session/workspace/widgets';
 import { buildLocalDoc5SummaryDraft } from '@/lib/openai/doc5SummaryLocalDraft';
 import { generateDoc5Summary } from '@/lib/safetyApi/ai';
 
-export default function Doc5Section(props: {
+interface Doc5SectionProps {
   applyDocumentUpdate: OverviewSectionProps['applyDocumentUpdate'];
   currentAccidentEntries: ChartEntry[];
   currentAgentEntries: ChartEntry[];
   cumulativeAccidentEntries: ChartEntry[];
   cumulativeAgentEntries: ChartEntry[];
+  isRelationHydrating: boolean;
+  isRelationReady: boolean;
+  relationStatus: OverviewSectionProps['relationStatus'];
   session: OverviewSectionProps['session'];
-}) {
+}
+
+export default function Doc5Section(props: Doc5SectionProps) {
   const {
     applyDocumentUpdate,
     currentAccidentEntries,
     currentAgentEntries,
     cumulativeAccidentEntries,
     cumulativeAgentEntries,
+    isRelationHydrating,
+    isRelationReady,
+    relationStatus,
     session,
   } = props;
 
@@ -41,9 +49,16 @@ export default function Doc5Section(props: {
     setDraftError(null);
     setDraftNotice(null);
 
+    if (!isRelationReady) {
+      setDraftNotice('누적 통계 계산이 끝난 뒤 총평 초안을 만들 수 있습니다.');
+      return;
+    }
+
     const findings = session.document7Findings.filter(hasFindingContent);
     if (findings.length === 0) {
-      applySummary('문서 7 분석 위험요인이 아직 없어 기술지도 총평 초안을 만들 수 없습니다.');
+      applySummary(
+        '문서 7 분석 위험요인이 아직 없어 기술지도 총평 초안을 만들 수 없습니다.',
+      );
       return;
     }
 
@@ -67,7 +82,7 @@ export default function Doc5Section(props: {
           currentAgentEntries,
         ),
       );
-      setDraftNotice('AI 생성에 실패해 규칙 기반 초안으로 대체했습니다.');
+      setDraftNotice('AI 생성이 실패해 규칙 기반 초안으로 대체했습니다.');
     } finally {
       setDraftLoading(false);
     }
@@ -77,9 +92,32 @@ export default function Doc5Section(props: {
     <div className={styles.sectionStack}>
       <div className={styles.chartGrid}>
         <ChartCard title="지적유형 통계 금회" entries={currentAccidentEntries} />
-        <ChartCard title="지적유형 통계 누적" entries={cumulativeAccidentEntries} />
         <ChartCard title="기인물 통계 금회" entries={currentAgentEntries} />
-        <ChartCard title="기인물 통계 누적" entries={cumulativeAgentEntries} />
+        {isRelationReady ? (
+          <>
+            <ChartCard title="지적유형 통계 누적" entries={cumulativeAccidentEntries} />
+            <ChartCard title="기인물 통계 누적" entries={cumulativeAgentEntries} />
+          </>
+        ) : (
+          <>
+            <div className={`${styles.card} ${styles.relationSkeletonCard}`} role="status">
+              <strong className={styles.chartTitle}>지적유형 통계 누적</strong>
+              <p className={styles.relationNotice}>
+                {relationStatus === 'error'
+                  ? '누적 통계를 아직 불러오지 못했습니다.'
+                  : '누적 통계를 계산 중입니다.'}
+              </p>
+            </div>
+            <div className={`${styles.card} ${styles.relationSkeletonCard}`} role="status">
+              <strong className={styles.chartTitle}>기인물 통계 누적</strong>
+              <p className={styles.relationNotice}>
+                {relationStatus === 'error'
+                  ? '누적 통계를 아직 불러오지 못했습니다.'
+                  : '누적 통계를 계산 중입니다.'}
+              </p>
+            </div>
+          </>
+        )}
       </div>
       <label className={styles.field}>
         <div className={styles.doc5SummaryFieldHeader}>
@@ -93,7 +131,7 @@ export default function Doc5Section(props: {
           <button
             type="button"
             className={styles.doc5SummaryDraftBtn}
-            disabled={draftLoading}
+            disabled={draftLoading || !isRelationReady}
             onClick={() => void handleGenerateDraft()}
           >
             총평 초안 생성
@@ -101,6 +139,11 @@ export default function Doc5Section(props: {
         </div>
         {draftError ? <p className={styles.fieldAssistError}>{draftError}</p> : null}
         {draftNotice ? <p className={styles.fieldAssist}>{draftNotice}</p> : null}
+        {isRelationHydrating ? (
+          <p className={styles.fieldAssist}>
+            누적 통계 계산이 끝나면 총평 초안 생성이 활성화됩니다.
+          </p>
+        ) : null}
         <textarea
           className="app-textarea"
           value={session.document5Summary.summaryText}

@@ -1,6 +1,7 @@
 import type { GenerateQuarterlyHwpxRequest } from '@/types/documents';
+import type { GenerateInspectionHwpxRequest } from '@/types/documents';
 import type { QuarterlySummaryReport } from '@/types/erpReports';
-import type { InspectionSite } from '@/types/inspectionSession';
+import type { InspectionSession, InspectionSite } from '@/types/inspectionSession';
 
 const API_BASE = '/api';
 const VERCEL_FUNCTION_BODY_LIMIT_MB = 4.5;
@@ -123,6 +124,34 @@ export async function convertHwpxBlobToPdf(
       res.headers.get('content-disposition'),
     ),
   };
+}
+
+export async function fetchInspectionHwpxDocument(
+  session: InspectionSession,
+  siteSessions?: InspectionSession[],
+): Promise<{ blob: Blob; filename: string }> {
+  const body: GenerateInspectionHwpxRequest = siteSessions?.length
+    ? { session, siteSessions }
+    : { session };
+  return fetchDocumentFile(
+    '/documents/inspection/hwpx',
+    body,
+    '기술지도 HWPX 다운로드 실패',
+  );
+}
+
+export async function fetchInspectionPdfDocument(
+  session: InspectionSession,
+  siteSessions?: InspectionSession[],
+): Promise<{ blob: Blob; filename: string }> {
+  const body: GenerateInspectionHwpxRequest = siteSessions?.length
+    ? { session, siteSessions }
+    : { session };
+  return fetchDocumentFile(
+    '/documents/inspection/pdf',
+    body,
+    '기술지도 PDF 다운로드 실패',
+  );
 }
 
 export async function fetchQuarterlyHwpxDocument(

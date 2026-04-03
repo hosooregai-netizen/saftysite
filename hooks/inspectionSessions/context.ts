@@ -7,6 +7,7 @@ import type {
   InspectionReportMeta,
   InspectionSite,
   InspectionSession,
+  ReportIndexStatus,
   SiteReportIndexState,
 } from '@/types/inspectionSession';
 import type {
@@ -31,7 +32,7 @@ export interface InspectionSessionsContextValue {
   syncError: string | null;
   canArchiveReports: boolean;
   ensureMasterDataLoaded: () => Promise<void>;
-  ensureSessionLoaded: (reportKey: string) => Promise<void>;
+  ensureSessionLoaded: (reportKey: string, options?: { force?: boolean }) => Promise<void>;
   ensureSiteReportIndexLoaded: (
     siteId: string,
     options?: { force?: boolean }
@@ -40,6 +41,7 @@ export interface InspectionSessionsContextValue {
     siteId: string,
     options?: { force?: boolean }
   ) => Promise<void>;
+  getSiteRelationsStatus: (siteId: string) => ReportIndexStatus;
   getReportIndexBySiteId: (siteId: string) => SiteReportIndexState | null;
   login: (input: SafetyLoginInput) => Promise<void>;
   logout: () => void;
@@ -50,7 +52,12 @@ export interface InspectionSessionsContextValue {
   deleteSite: (siteId: string) => void;
   createSession: (
     site: InspectionSite,
-    initial?: { meta?: Partial<InspectionReportMeta> }
+    initial?: {
+      meta?: Partial<InspectionReportMeta>;
+      reportNumber?: number;
+      document4FollowUps?: InspectionSession['document4FollowUps'];
+      technicalGuidanceRelations?: Partial<InspectionSession['technicalGuidanceRelations']>;
+    }
   ) => InspectionSession;
   updateSession: (
     sessionId: string,
@@ -64,6 +71,7 @@ export interface InspectionSessionsContextValue {
   deleteSessions: (predicate: (session: InspectionSession) => boolean) => void;
   saveNow: () => Promise<void>;
   getSessionById: (sessionId: string) => InspectionSession | null;
+  getSessionsBySiteId: (siteId: string) => InspectionSession[];
   getSiteById: (siteId: string) => InspectionSite | null;
   upsertReportIndexItems: (siteId: string, items: InspectionReportListItem[]) => void;
 }

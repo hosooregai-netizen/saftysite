@@ -229,6 +229,27 @@ export interface SafetyAiChartEntry {
   count: number;
 }
 
+export interface SafetyTechnicalGuidanceSeedFollowUp {
+  id: string;
+  source_session_id: string | null;
+  source_finding_id: string | null;
+  location: string;
+  guidance_date: string;
+  confirmation_date: string;
+  before_photo_url: string;
+  after_photo_url: string;
+  result: string;
+}
+
+export interface SafetyTechnicalGuidanceSeed {
+  next_visit_round: number;
+  projection_version: number;
+  open_followups: SafetyTechnicalGuidanceSeedFollowUp[];
+  cumulative_accident_entries: SafetyAiChartEntry[];
+  cumulative_agent_entries: SafetyAiChartEntry[];
+  previous_authoritative_report: SafetyReportListItem | null;
+}
+
 export interface SafetyAiHazardFindingInput {
   location: string;
   likelihood: string;

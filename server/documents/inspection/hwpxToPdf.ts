@@ -10,6 +10,10 @@ const execFileAsync = promisify(execFile);
 const POWERSHELL_PATH = 'powershell.exe';
 const HWP_AUTOMATION_MODULE = 'FilePathCheckerModuleExample';
 const CONVERSION_TIMEOUT_MS = 120000;
+const REMOTE_CONVERTER_URL_ENV_KEYS = [
+  'HWPX_PDF_CONVERTER_URL',
+  'WINDOWS_HWPX_PDF_CONVERTER_URL',
+] as const;
 
 let conversionQueue: Promise<unknown> = Promise.resolve();
 
@@ -24,6 +28,56 @@ function toPdfFilename(filename: string): string {
   const ext = path.extname(trimmed);
   const stem = ext ? trimmed.slice(0, -ext.length) : trimmed;
   return `${stem || 'inspection-report'}.pdf`;
+}
+
+function getRemoteConverterUrl(): string | null {
+  for (const envKey of REMOTE_CONVERTER_URL_ENV_KEYS) {
+    const configured = process.env[envKey]?.trim();
+    if (configured) {
+      return configured.replace(/\/+$/, '');
+    }
+  }
+
+  return null;
+}
+
+async function parseRemoteConverterError(response: Response): Promise<string> {
+  const contentType = response.headers.get('content-type') ?? '';
+
+  if (contentType.includes('application/json')) {
+    try {
+      const payload = (await response.json()) as { error?: unknown; detail?: unknown };
+      if (typeof payload.error === 'string' && payload.error.trim()) {
+        return payload.error;
+      }
+      if (typeof payload.detail === 'string' && payload.detail.trim()) {
+        return payload.detail;
+      }
+    } catch {
+      return response.statusText || 'Remote converter request failed.';
+    }
+  }
+
+  const text = await response.text();
+  return text || response.statusText || 'Remote converter request failed.';
+}
+
+function getFilenameFromDisposition(header: string | null, fallback: string): string {
+  if (!header) {
+    return fallback;
+  }
+
+  const encodedMatch = header.match(/filename\*=UTF-8''([^;]+)/i);
+  if (encodedMatch) {
+    try {
+      return decodeURIComponent(encodedMatch[1]);
+    } catch {
+      return fallback;
+    }
+  }
+
+  const match = header.match(/filename=\"([^\"]+)\"/i);
+  return match?.[1]?.trim() || fallback;
 }
 
 function buildConversionScript(inputPath: string, outputPath: string): string {
@@ -139,10 +193,49 @@ async function convertHwpxBufferToPdfInternal(
   }
 }
 
+async function convertHwpxBufferToPdfRemotely(
+  remoteUrl: string,
+  hwpxBuffer: Buffer,
+  originalFilename: string,
+): Promise<{ buffer: Buffer; filename: string }> {
+  const formData = new FormData();
+  formData.append(
+    'file',
+    new File([new Uint8Array(hwpxBuffer)], originalFilename || 'inspection-report.hwpx', {
+      type: 'application/haansofthwpx',
+    }),
+  );
+  formData.append('filename', originalFilename || 'inspection-report.hwpx');
+
+  const response = await fetch(remoteUrl, {
+    method: 'POST',
+    body: formData,
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    const message = await parseRemoteConverterError(response);
+    throw new Error(`HWPX PDF conversion failed: ${message}`);
+  }
+
+  return {
+    buffer: Buffer.from(await response.arrayBuffer()),
+    filename: getFilenameFromDisposition(
+      response.headers.get('content-disposition'),
+      toPdfFilename(originalFilename),
+    ),
+  };
+}
+
 export async function convertHwpxBufferToPdf(
   hwpxBuffer: Buffer,
   originalFilename: string,
 ): Promise<{ buffer: Buffer; filename: string }> {
+  const remoteUrl = getRemoteConverterUrl();
+  if (remoteUrl) {
+    return convertHwpxBufferToPdfRemotely(remoteUrl, hwpxBuffer, originalFilename);
+  }
+
   const task = conversionQueue.then(() =>
     convertHwpxBufferToPdfInternal(hwpxBuffer, originalFilename),
   );
