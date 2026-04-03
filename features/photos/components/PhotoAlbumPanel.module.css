@@ -1,0 +1,210 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.card {
+  position: relative;
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--erp-line);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 1px 0 rgba(16, 24, 43, 0.04);
+}
+
+.cardPreviewButton {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cardImage,
+.modalImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cardImage {
+  aspect-ratio: 4 / 3;
+  border-radius: 10px;
+  background: #eef3f8;
+}
+
+.cardImageFallback {
+  display: grid;
+  place-items: center;
+  min-height: 220px;
+  border-radius: 10px;
+  background: linear-gradient(145deg, #eef3f8, #f9fbfd);
+  color: var(--erp-text-muted);
+  font-size: var(--text-ui);
+}
+
+.cardCheckbox {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 4px 12px rgba(17, 29, 44, 0.14);
+}
+
+.cardBody {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.cardMetaRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.sourceBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(31, 48, 69, 0.08);
+  color: var(--erp-dark);
+  font-size: var(--text-ui-sm);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.cardTitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-body);
+  font-weight: 700;
+  color: var(--erp-dark);
+}
+
+.cardMetaText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-ui);
+  color: var(--erp-text-muted);
+}
+
+.cardActions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.emptyState {
+  display: grid;
+  place-items: center;
+  min-height: 280px;
+  border: 1px dashed #c7d4e2;
+  border-radius: 12px;
+  background: #fbfcfe;
+  color: var(--erp-text-muted);
+  font-size: var(--text-body);
+}
+
+.bulkBar,
+.paginationBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.selectAll {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-ui);
+  color: var(--erp-dark);
+}
+
+.paginationMeta {
+  font-size: var(--text-ui);
+  color: var(--erp-text-muted);
+}
+
+.paginationActions {
+  display: flex;
+  gap: 8px;
+}
+
+.modalGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.9fr);
+  gap: 18px;
+}
+
+.modalPreview {
+  overflow: hidden;
+  border-radius: 12px;
+  background: #eef3f8;
+}
+
+.modalImage {
+  display: block;
+  aspect-ratio: 4 / 3;
+}
+
+.modalMeta {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+.modalMetaRow {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--erp-line);
+  font-size: var(--text-ui);
+  color: var(--erp-dark);
+}
+
+.modalMetaLabel {
+  color: var(--erp-text-muted);
+  font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  .modalGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  }
+
+  .bulkBar,
+  .paginationBar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .paginationActions {
+    justify-content: flex-end;
+  }
+}

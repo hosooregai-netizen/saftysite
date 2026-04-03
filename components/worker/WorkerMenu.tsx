@@ -6,6 +6,7 @@ import { useWorkerShellSidebarOptional } from '@/components/worker/WorkerShellSi
 import {
   buildSiteBadWorkplaceHref,
   buildSiteHubHref,
+  buildSitePhotoAlbumHref,
   buildSiteQuarterlyListHref,
   buildSiteReportsHref,
   getSiteKeyFromPath,
@@ -113,6 +114,12 @@ export function WorkerMenuPanel({
           description: '현장 기준 분기 보고서 작성',
           href: buildSiteQuarterlyListHref(currentSiteKey),
           active: siteNavView === 'quarterly',
+        },
+        {
+          label: '현장 사진첩',
+          description: '이 현장의 사진 보기와 업로드',
+          href: buildSitePhotoAlbumHref(currentSiteKey),
+          active: siteNavView === 'photos',
         },
         {
           label: '불량사업장 신고',

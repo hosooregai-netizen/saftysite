@@ -1,6 +1,6 @@
 export type WorkerSiteEntryIntent = 'site' | 'quarterly' | 'bad-workplace';
 export type WorkerSitePickerIntent = Exclude<WorkerSiteEntryIntent, 'site'>;
-export type SiteNavView = 'site-home' | 'reports' | 'quarterly' | 'bad-workplace' | null;
+export type SiteNavView = 'site-home' | 'reports' | 'quarterly' | 'photos' | 'bad-workplace' | null;
 
 export function buildSiteReportsHref(siteId: string): string {
   return `/sites/${encodeURIComponent(siteId)}`;
@@ -30,6 +30,10 @@ export function buildSiteQuarterlyListHref(siteId: string): string {
 
 export function buildSiteBadWorkplaceHref(siteId: string, reportMonth: string): string {
   return `/sites/${encodeURIComponent(siteId)}/bad-workplace/${encodeURIComponent(reportMonth)}`;
+}
+
+export function buildSitePhotoAlbumHref(siteId: string): string {
+  return `/sites/${encodeURIComponent(siteId)}/photos`;
 }
 
 export function buildWorkerPickerHref(intent: WorkerSitePickerIntent): string {
@@ -78,12 +82,24 @@ export function resolveSiteNavView({
     return 'quarterly';
   }
 
+  if (pathname === buildSitePhotoAlbumHref(siteKey)) {
+    return 'photos';
+  }
+
   if (pathname === buildSiteReportsHref(siteKey) || pathname.startsWith('/sessions/')) {
     return 'reports';
   }
 
   if (pathname === buildSiteHubHref(siteKey)) {
     return 'site-home';
+  }
+
+  if (
+    pathname === '/admin' &&
+    activeAdminSection === 'photos' &&
+    selectedAdminSiteId === siteKey
+  ) {
+    return 'photos';
   }
 
   if (
