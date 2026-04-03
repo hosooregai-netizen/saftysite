@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server';
-import { buildAdminAnalyticsResponse } from '@/server/admin/automation';
 import {
-  fetchAdminCoreData,
-  fetchAdminReports,
+  fetchAdminAnalyticsServer,
   readRequiredAdminToken,
   SafetyServerApiError,
 } from '@/server/admin/safetyApiServer';
+import { mapBackendAnalyticsResponse } from '@/server/admin/upstreamMappers';
 
 export const runtime = 'nodejs';
 
@@ -13,19 +12,20 @@ export async function GET(request: Request): Promise<Response> {
   try {
     const token = readRequiredAdminToken(request);
     const url = new URL(request.url);
-    const [data, reports] = await Promise.all([
-      fetchAdminCoreData(token, request),
-      fetchAdminReports(token, request),
-    ]);
-
     return NextResponse.json(
-      buildAdminAnalyticsResponse(data, reports, {
-        contractType: url.searchParams.get('contract_type') || '',
-        headquarterId: url.searchParams.get('headquarter_id') || '',
-        period: url.searchParams.get('period') || 'month',
-        query: url.searchParams.get('query') || '',
-        userId: url.searchParams.get('user_id') || '',
-      }),
+      mapBackendAnalyticsResponse(
+        await fetchAdminAnalyticsServer(
+          token,
+          {
+            contract_type: url.searchParams.get('contract_type') || '',
+            headquarter_id: url.searchParams.get('headquarter_id') || '',
+            period: url.searchParams.get('period') || 'month',
+            query: url.searchParams.get('query') || '',
+            user_id: url.searchParams.get('user_id') || '',
+          },
+          request,
+        ),
+      ),
     );
   } catch (error) {
     if (error instanceof SafetyServerApiError) {

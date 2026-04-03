@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server';
 import {
-  fetchAdminReportByKey,
+  updateAdminReportReviewServer,
   readRequiredAdminToken,
   SafetyServerApiError,
-  updateAdminReport,
 } from '@/server/admin/safetyApiServer';
 import type { ReportControllerReview } from '@/types/admin';
 
@@ -17,18 +16,15 @@ export async function PATCH(
     const token = readRequiredAdminToken(request);
     const { reportKey } = await context.params;
     const review = (await request.json()) as ReportControllerReview;
-    const report = await fetchAdminReportByKey(token, reportKey, request);
-
-    const updated = await updateAdminReport(
+    const updated = await updateAdminReportReviewServer(
       token,
+      reportKey,
       {
-        ...report,
-        meta: {
-          ...report.meta,
-          controllerReview: review,
-        },
-        create_revision: false,
-        revision_reason: 'manual_save',
+        checked_at: review.checkedAt || null,
+        checker_user_id: review.checkerUserId || null,
+        note: review.note || null,
+        owner_user_id: review.ownerUserId || null,
+        quality_status: review.qualityStatus || 'unchecked',
       },
       request,
     );

@@ -3,9 +3,14 @@ import 'server-only';
 import {
   fetchAssignedSafetySitesServer,
   fetchCurrentSafetyUserServer,
+  fetchSafetyPhotoAssetsServer,
   fetchSafetyReportsBySiteFullServer,
   fetchSafetySitesServer,
 } from '@/server/admin/safetyApiServer';
+import {
+  buildPhotoAlbumItemFromAsset,
+  mapBackendPhotoAsset,
+} from '@/server/admin/upstreamMappers';
 import type { SafetyReport, SafetySite, SafetyUser } from '@/types/backend';
 import type { PhotoAlbumItem, PhotoAlbumListResponse } from '@/types/photos';
 import {
@@ -70,12 +75,44 @@ export async function loadPhotoAlbumCollection(
 ): Promise<PhotoAlbumCollectionResult> {
   const context = await resolvePhotoAlbumAccessContext(token, request);
   const sites = filterAccessibleSites(context.accessibleSites, query);
-  const albumItems = buildPhotoAlbumItemsFromSites(sites);
+  const fallbackAlbumItems = buildPhotoAlbumItemsFromSites(sites);
+
+  const albumItems =
+    query.source === 'report_legacy'
+      ? []
+      : (
+          await fetchSafetyPhotoAssetsServer(
+            token,
+            {
+              headquarter_id: query.headquarterId || '',
+              limit: 5000,
+              offset: 0,
+              site_id: query.siteId || '',
+            },
+            request,
+          )
+        ).rows
+          .map((asset) => mapBackendPhotoAsset(asset))
+          .map((asset) => buildPhotoAlbumItemFromAsset(asset, sites.find((site) => site.id === asset.siteId)))
+          .filter((item) => {
+            if (query.siteId && item.siteId !== query.siteId) return false;
+            if (query.headquarterId && item.headquarterId !== query.headquarterId) return false;
+            return true;
+          });
+
+  const mergedAlbumItems = [...albumItems];
+  const knownIds = new Set(albumItems.map((item) => item.id));
+  fallbackAlbumItems.forEach((item) => {
+    if (!knownIds.has(item.id)) {
+      mergedAlbumItems.push(item);
+      knownIds.add(item.id);
+    }
+  });
 
   if (query.source === 'album_upload') {
     return {
       context,
-      items: albumItems,
+      items: mergedAlbumItems,
       reportsBySiteId: new Map<string, SafetyReport[]>(),
       sites,
     };
@@ -88,7 +125,7 @@ export async function loadPhotoAlbumCollection(
 
   return {
     context,
-    items: mergePhotoAlbumItems(albumItems, legacyItems),
+    items: mergePhotoAlbumItems(mergedAlbumItems, legacyItems),
     reportsBySiteId,
     sites,
   };

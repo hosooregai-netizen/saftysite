@@ -205,6 +205,227 @@ export interface SafetyReportListItem {
   updated_at: string;
 }
 
+export interface SafetyBackendAdminReportRow {
+  assignee_name: string;
+  assignee_user_id: string;
+  checker_user_id: string;
+  controller_review: {
+    checked_at?: string | null;
+    checker_user_id?: string | null;
+    note?: string | null;
+    owner_user_id?: string | null;
+    quality_status?: string | null;
+  } | null;
+  deadline_date: string;
+  dispatch: {
+    deadline_date?: string | null;
+    dispatch_status?: string | null;
+    sent_completed_at?: string | null;
+    sent_history?: Array<{
+      id: string;
+      memo?: string | null;
+      sent_at: string;
+      sent_by_user_id?: string | null;
+    }>;
+  } | null;
+  dispatch_status: string | null;
+  headquarter_id: string;
+  headquarter_name: string;
+  period_label: string;
+  progress_rate: number | null;
+  quality_status: string;
+  report_key: string;
+  report_month: string;
+  report_title: string;
+  report_type: string;
+  route_param: string;
+  site_id: string;
+  site_name: string;
+  sort_label: string;
+  status: string;
+  updated_at: string;
+  visit_date: string;
+}
+
+export interface SafetyBackendAdminReportsResponse {
+  limit: number;
+  offset: number;
+  rows: SafetyBackendAdminReportRow[];
+  total: number;
+}
+
+export interface SafetyBackendInspectionSchedule {
+  assignee_name: string;
+  assignee_user_id: string;
+  exception_memo: string;
+  exception_reason_code: string;
+  headquarter_id: string;
+  headquarter_name: string;
+  id: string;
+  is_conflicted: boolean;
+  is_out_of_window: boolean;
+  is_overdue: boolean;
+  linked_report_key: string;
+  planned_date: string;
+  round_no: number;
+  site_id: string;
+  site_name: string;
+  status: string;
+  window_end: string;
+  window_start: string;
+}
+
+export interface SafetyBackendScheduleListResponse {
+  limit: number;
+  month: string;
+  offset: number;
+  rows: SafetyBackendInspectionSchedule[];
+  total: number;
+}
+
+export interface SafetyBackendAdminAlert {
+  created_at: string;
+  description: string;
+  href: string;
+  id: string;
+  report_key: string;
+  schedule_id: string;
+  severity: string;
+  site_id: string;
+  title: string;
+  type: string;
+}
+
+export interface SafetyBackendAdminOverviewResponse {
+  alerts: SafetyBackendAdminAlert[];
+  completion_rows: Array<{
+    href: string;
+    headquarter_name: string;
+    missing_items: string[];
+    site_id: string;
+    site_name: string;
+  }>;
+  coverage_rows: Array<{
+    item_count: number;
+    label: string;
+    missing_site_count: number;
+  }>;
+  deadline_rows: Array<{
+    deadline_date: string;
+    deadline_label: string;
+    href: string;
+    report_title: string;
+    report_type_label: string;
+    site_name: string;
+    status_label: string;
+  }>;
+  metric_cards: Array<{
+    href: string;
+    label: string;
+    meta: string;
+    tone: 'default' | 'warning' | 'danger' | string;
+    value: string;
+  }>;
+  overdue_site_rows: Array<{
+    bad_workplace_overdue_count: number;
+    headquarter_name: string;
+    href: string;
+    overdue_count: number;
+    quarterly_overdue_count: number;
+    report_kinds_label: string;
+    site_name: string;
+  }>;
+  pending_review_rows: Array<{
+    assignee_name: string;
+    headquarter_name: string;
+    href: string;
+    quality_label: string;
+    report_title: string;
+    report_type_label: string;
+    site_name: string;
+    updated_at: string;
+  }>;
+  schedule_rows: SafetyBackendInspectionSchedule[];
+  summary_rows: Array<{ label: string; meta: string; value: string }>;
+  worker_load_rows: Array<{
+    assigned_site_count: number;
+    href: string;
+    load_label: string;
+    overdue_count: number;
+    user_name: string;
+  }>;
+}
+
+export interface SafetyBackendAdminAnalyticsResponse {
+  contract_type_rows: Array<{
+    avg_per_visit_amount: number;
+    label: string;
+    site_count: number;
+    total_contract_amount: number;
+  }>;
+  employee_rows: Array<{
+    assigned_site_count: number;
+    bad_workplace_submitted_count: number;
+    completed_report_count: number;
+    contract_contribution_revenue: number;
+    overdue_count: number;
+    quarterly_completed_count: number;
+    total_assigned_rounds: number;
+    user_id: string;
+    user_name: string;
+    visit_revenue: number;
+    executed_rounds: number;
+  }>;
+  site_revenue_rows: Array<{
+    contract_contribution_revenue: number;
+    contract_type_label: string;
+    executed_rounds: number;
+    headquarter_name: string;
+    href: string;
+    site_name: string;
+    visit_revenue: number;
+  }>;
+  stats: {
+    average_per_visit_amount: number;
+    completion_rate: number;
+    counted_site_count: number;
+    delay_rate: number;
+    excluded_site_count: number;
+  };
+  summary_cards: Array<{
+    label: string;
+    meta: string;
+    value: string;
+  }>;
+}
+
+export interface SafetyBackendPhotoAsset {
+  captured_at: string | null;
+  content_type: string;
+  created_at: string;
+  exif_json: Record<string, unknown>;
+  file_name: string;
+  gps_latitude: number | null;
+  gps_longitude: number | null;
+  headquarter_id: string;
+  id: string;
+  original_path: string;
+  size_bytes: number;
+  site_id: string;
+  source_kind: 'album_upload';
+  thumbnail_path: string;
+  updated_at: string;
+  uploaded_by_name: string;
+  uploaded_by_user_id: string;
+}
+
+export interface SafetyBackendPhotoAssetListResponse {
+  limit: number;
+  offset: number;
+  rows: SafetyBackendPhotoAsset[];
+  total: number;
+}
+
 export interface SafetyMasterData {
   caseFeed: SafetyCaseCatalogItem[];
   safetyInfos: SafetyInfoCatalogItem[];

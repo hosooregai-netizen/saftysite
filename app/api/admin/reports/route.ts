@@ -1,12 +1,10 @@
 import { NextResponse } from 'next/server';
-import { buildControllerReportRows } from '@/lib/admin/controllerReports';
 import {
-  fetchAdminCoreData,
-  fetchAdminReports,
+  fetchAdminReportsViewServer,
   readRequiredAdminToken,
   SafetyServerApiError,
 } from '@/server/admin/safetyApiServer';
-import { queryAdminReportRows } from '@/server/admin/reportRows';
+import { mapBackendAdminReportsResponse } from '@/server/admin/upstreamMappers';
 
 export const runtime = 'nodejs';
 
@@ -19,36 +17,28 @@ export async function GET(request: Request): Promise<Response> {
     const sortBy = url.searchParams.get('sort_by') || 'updatedAt';
     const sortDir = url.searchParams.get('sort_dir') || 'desc';
     const query = (url.searchParams.get('query') || '').trim().toLowerCase();
-
-    const [data, reports] = await Promise.all([
-      fetchAdminCoreData(token, request),
-      fetchAdminReports(token, request),
-    ]);
-
-    const sortedRows = queryAdminReportRows(
-      buildControllerReportRows(reports, data.sites, data.users),
+    const response = await fetchAdminReportsViewServer(
+      token,
       {
-        assigneeUserId: url.searchParams.get('assignee_user_id') || '',
-        dateFrom: url.searchParams.get('date_from') || '',
-        dateTo: url.searchParams.get('date_to') || '',
-        dispatchStatus: url.searchParams.get('dispatch_status') || '',
-        headquarterId: url.searchParams.get('headquarter_id') || '',
-        qualityStatus: url.searchParams.get('quality_status') || '',
+        assignee_user_id: url.searchParams.get('assignee_user_id') || '',
+        date_from: url.searchParams.get('date_from') || '',
+        date_to: url.searchParams.get('date_to') || '',
+        dispatch_status: url.searchParams.get('dispatch_status') || '',
+        headquarter_id: url.searchParams.get('headquarter_id') || '',
+        limit,
+        offset,
+        quality_status: url.searchParams.get('quality_status') || '',
         query,
-        reportType: url.searchParams.get('report_type') || '',
-        siteId: url.searchParams.get('site_id') || '',
-        sortBy,
-        sortDir,
+        report_type: url.searchParams.get('report_type') || '',
+        site_id: url.searchParams.get('site_id') || '',
+        sort_by: sortBy,
+        sort_dir: sortDir,
         status: url.searchParams.get('status') || '',
       },
+      request,
     );
 
-    return NextResponse.json({
-      limit,
-      offset,
-      rows: sortedRows.slice(offset, offset + limit),
-      total: sortedRows.length,
-    });
+    return NextResponse.json(mapBackendAdminReportsResponse(response));
   } catch (error) {
     if (error instanceof SafetyServerApiError) {
       return NextResponse.json({ error: error.message }, { status: error.status });

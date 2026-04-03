@@ -67,7 +67,7 @@ const EMPTY_DATA: ControllerDashboardData = {
   contentItems: [],
 };
 
-const ADMIN_REPORT_LIST_LIMIT = 2000;
+const ADMIN_REPORT_LIST_LIMIT = 500;
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof SafetyApiError || error instanceof Error) {

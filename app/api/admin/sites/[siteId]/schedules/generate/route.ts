@@ -1,14 +1,10 @@
 import { NextResponse } from 'next/server';
 import {
-  generateSchedulesForSite,
-  updateSiteSchedules,
-} from '@/server/admin/automation';
-import {
-  fetchAdminCoreData,
+  generateAdminSchedulesServer,
   readRequiredAdminToken,
   SafetyServerApiError,
-  updateAdminSite,
 } from '@/server/admin/safetyApiServer';
+import { mapBackendSchedule } from '@/server/admin/upstreamMappers';
 
 export const runtime = 'nodejs';
 
@@ -19,26 +15,8 @@ export async function POST(
   try {
     const token = readRequiredAdminToken(request);
     const { siteId } = await context.params;
-    const data = await fetchAdminCoreData(token, request);
-    const site = data.sites.find((item) => item.id === siteId);
-
-    if (!site) {
-      return NextResponse.json({ error: '현장을 찾지 못했습니다.' }, { status: 404 });
-    }
-
-    const rows = generateSchedulesForSite(site, data.users);
-    const memo = updateSiteSchedules(site, rows);
-
-    await updateAdminSite(
-      token,
-      site.id,
-      {
-        memo,
-      },
-      request,
-    );
-
-    return NextResponse.json({ rows });
+    const response = await generateAdminSchedulesServer(token, siteId, request);
+    return NextResponse.json({ rows: response.rows.map((row) => mapBackendSchedule(row)) });
   } catch (error) {
     if (error instanceof SafetyServerApiError) {
       return NextResponse.json({ error: error.message }, { status: error.status });

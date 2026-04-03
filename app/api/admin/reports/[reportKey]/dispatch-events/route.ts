@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server';
 import {
-  fetchAdminReportByKey,
+  appendAdminDispatchEventServer,
   readRequiredAdminToken,
   SafetyServerApiError,
-  updateAdminReport,
 } from '@/server/admin/safetyApiServer';
-import type { ReportDispatchHistoryEntry, ReportDispatchMeta } from '@/types/admin';
+import type { ReportDispatchHistoryEntry } from '@/types/admin';
 
 export const runtime = 'nodejs';
 
@@ -17,34 +16,14 @@ export async function POST(
     const token = readRequiredAdminToken(request);
     const { reportKey } = await context.params;
     const event = (await request.json()) as ReportDispatchHistoryEntry;
-    const report = await fetchAdminReportByKey(token, reportKey, request);
-    const currentDispatch = (report.meta.dispatch || {
-      deadlineDate: '',
-      dispatchStatus: '',
-      sentCompletedAt: '',
-      sentHistory: [],
-    }) as ReportDispatchMeta;
-
-    const updatedDispatch: ReportDispatchMeta = {
-      ...currentDispatch,
-      dispatchStatus:
-        currentDispatch.dispatchStatus === 'sent' || event.memo.includes('발송')
-          ? 'sent'
-          : currentDispatch.dispatchStatus,
-      sentCompletedAt: currentDispatch.sentCompletedAt || event.sentAt,
-      sentHistory: [...(currentDispatch.sentHistory || []), event],
-    };
-
-    const updated = await updateAdminReport(
+    const updated = await appendAdminDispatchEventServer(
       token,
+      reportKey,
       {
-        ...report,
-        meta: {
-          ...report.meta,
-          dispatch: updatedDispatch,
-        },
-        create_revision: false,
-        revision_reason: 'manual_save',
+        id: event.id,
+        memo: event.memo || null,
+        sent_at: event.sentAt,
+        sent_by_user_id: event.sentByUserId || null,
       },
       request,
     );
