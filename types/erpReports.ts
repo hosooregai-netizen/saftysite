@@ -1,3 +1,7 @@
+import type {
+  ReportControllerReview,
+  ReportDispatchMeta,
+} from '@/types/admin';
 import type { SafetyContentType } from '@/types/backend';
 import type { AdminSiteSnapshot, FutureProcessRiskPlan } from '@/types/inspectionSession';
 import type { CausativeAgentKey } from '@/types/siteOverview';
@@ -46,6 +50,8 @@ export interface QuarterlySummaryReport {
   year: number;
   quarter: number;
   status: OperationalReportStatus;
+  controllerReview: ReportControllerReview | null;
+  dispatch: ReportDispatchMeta | null;
   drafter: string;
   siteSnapshot: AdminSiteSnapshot;
   generatedFromSessionIds: string[];
@@ -88,6 +94,7 @@ export interface BadWorkplaceReport {
   reportKind: 'bad_workplace';
   reportMonth: string;
   status: OperationalReportStatus;
+  controllerReview: ReportControllerReview | null;
   reporterUserId: string;
   reporterName: string;
   receiverName: string;

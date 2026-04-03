@@ -242,6 +242,8 @@ export function createQuarterlySummaryDraft(
     year: 0,
     quarter: 0,
     status: 'draft',
+    controllerReview: null,
+    dispatch: null,
     drafter,
     siteSnapshot: createQuarterlySiteSnapshot(site),
     generatedFromSessionIds: [],
@@ -283,6 +285,8 @@ export function buildInitialQuarterlySummaryReport(
       ...existing,
       ...normalizedPeriod,
       drafter: existing.drafter || drafter,
+      controllerReview: existing.controllerReview ?? null,
+      dispatch: existing.dispatch ?? null,
       siteSnapshot:
         existing.siteSnapshot && Object.values(existing.siteSnapshot).some(Boolean)
           ? existing.siteSnapshot

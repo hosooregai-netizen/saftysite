@@ -6,7 +6,13 @@ import {
   primeControllerDashboardContentItems,
   primeControllerDashboardData,
 } from '@/hooks/controller/useControllerDashboard';
-import { readSafetyAuthToken, SafetyApiError } from '@/lib/safetyApi';
+import {
+  fetchSafetyReportByKey,
+  fetchSafetyReportList,
+  readSafetyAuthToken,
+  SafetyApiError,
+  upsertSafetyReport,
+} from '@/lib/safetyApi';
 import {
   createSafetyAssignment,
   createSafetyContentItem,
@@ -51,6 +57,7 @@ import type {
   SafetyUserCreateInput,
   SafetyUserUpdateInput,
 } from '@/types/controller';
+import type { SafetyReportListItem } from '@/types/backend';
 
 const EMPTY_DATA: ControllerDashboardData = {
   users: [],
@@ -59,6 +66,8 @@ const EMPTY_DATA: ControllerDashboardData = {
   assignments: [],
   contentItems: [],
 };
+
+const ADMIN_REPORT_LIST_LIMIT = 2000;
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof SafetyApiError || error instanceof Error) {
@@ -93,8 +102,10 @@ export function useAdminDashboardState({
   const [data, setData] = useState<ControllerDashboardData>(EMPTY_DATA);
   const [isLoading, setIsLoading] = useState(false);
   const [isContentLoading, setIsContentLoading] = useState(false);
+  const [isReportsLoading, setIsReportsLoading] = useState(false);
   const [isMutating, setIsMutating] = useState(false);
   const [hasLoadedCoreData, setHasLoadedCoreData] = useState(false);
+  const [reportList, setReportList] = useState<SafetyReportListItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -108,6 +119,7 @@ export function useAdminDashboardState({
     () => ADMIN_SECTIONS.find((section) => section.key === activeSection) ?? ADMIN_SECTIONS[0],
     [activeSection],
   );
+  const shouldLoadContent = activeSection === 'content' || activeSection === 'overview';
   const selectedHeadquarter = useMemo(
     () =>
       selectedHeadquarterId
@@ -119,6 +131,7 @@ export function useAdminDashboardState({
     () => (selectedSiteId ? data.sites.find((item) => item.id === selectedSiteId) ?? null : null),
     [data.sites, selectedSiteId],
   );
+  const shouldLoadReports = activeSection === 'overview' || activeSection === 'reports' || activeSection === 'analytics';
 
   const replaceRoute = useCallback(
     (section: AdminSectionKey, query: AdminSectionQuery = {}) => {
@@ -136,7 +149,7 @@ export function useAdminDashboardState({
   }, []);
 
   const reload = useCallback(
-    async (options?: { includeContent?: boolean; force?: boolean }) => {
+    async (options?: { includeContent?: boolean; includeReports?: boolean; force?: boolean }) => {
       if (!enabled) return;
 
       setIsLoading(true);
@@ -166,12 +179,22 @@ export function useAdminDashboardState({
           });
           setData((current) => ({ ...current, contentItems }));
         }
+
+        if (options?.includeReports) {
+          setIsReportsLoading(true);
+          const reports = await fetchSafetyReportList(token, {
+            activeOnly: true,
+            limit: ADMIN_REPORT_LIST_LIMIT,
+          });
+          setReportList(reports);
+        }
       } catch (nextError) {
         setError(getErrorMessage(nextError));
       } finally {
         setHasLoadedCoreData(true);
         setIsLoading(false);
         setIsContentLoading(false);
+        setIsReportsLoading(false);
       }
     },
     [enabled, getToken],
@@ -179,9 +202,12 @@ export function useAdminDashboardState({
 
   useEffect(() => {
     if (enabled) {
-      void reload({ includeContent: activeSection === 'content' });
+      void reload({
+        includeContent: shouldLoadContent,
+        includeReports: shouldLoadReports,
+      });
     }
-  }, [activeSection, enabled, reload]);
+  }, [enabled, reload, shouldLoadContent, shouldLoadReports]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -272,7 +298,11 @@ export function useAdminDashboardState({
         }
 
         try {
-          await reload({ includeContent: activeSection === 'content', force: true });
+          await reload({
+            includeContent: shouldLoadContent,
+            includeReports: shouldLoadReports,
+            force: true,
+          });
           setNotice(successMessage);
         } catch (reloadError) {
           console.error('Admin dashboard reload failed after mutation', reloadError);
@@ -286,7 +316,7 @@ export function useAdminDashboardState({
         setIsMutating(false);
       }
     },
-    [activeSection, getToken, reload],
+    [getToken, reload, shouldLoadContent, shouldLoadReports],
   );
 
   const runContentMutation = useCallback(
@@ -311,7 +341,9 @@ export function useAdminDashboardState({
     isContentLoading,
     isLoading,
     isMutating,
+    isReportsLoading,
     notice,
+    reportList,
     reload,
     selectedHeadquarter,
     selectedHeadquarterId,
@@ -584,5 +616,35 @@ export function useAdminDashboardState({
       runContentMutation((token) => updateSafetyContentItem(token, id, input), '콘텐츠 데이터를 수정했습니다.'),
     deleteContentItem: (id: string) =>
       runContentMutation((token) => deleteSafetyContentItem(token, id), '콘텐츠 데이터를 삭제했습니다.'),
+    saveReportMeta: (
+      reportKey: string,
+      metaPatch: Record<string, unknown>,
+      successMessage = '보고서 관리 정보를 저장했습니다.',
+    ) =>
+      runMutation(
+        async (token) => {
+          const report = await fetchSafetyReportByKey(token, reportKey);
+          return upsertSafetyReport(token, {
+            report_key: report.report_key,
+            report_title: report.report_title,
+            site_id: report.site_id,
+            headquarter_id: report.headquarter_id,
+            assigned_user_id: report.assigned_user_id,
+            visit_date: report.visit_date,
+            visit_round: report.visit_round,
+            total_round: report.total_round,
+            progress_rate: report.progress_rate,
+            payload: report.payload,
+            meta: {
+              ...report.meta,
+              ...metaPatch,
+            },
+            status: report.status,
+            create_revision: false,
+            revision_reason: 'manual_save',
+          });
+        },
+        successMessage,
+      ),
   };
 }

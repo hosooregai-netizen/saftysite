@@ -31,10 +31,14 @@ interface AdminMenuDrawerProps extends AdminMenuPanelProps {
 }
 
 const ADMIN_MENU_LABELS: Record<AdminSectionKey, string> = {
-  overview: '메인',
-  users: '사용자 관리',
-  headquarters: '사업장 관리',
-  content: '콘텐츠 관리',
+  overview: '관제 대시보드',
+  reports: '전체 보고서',
+  analytics: '실적/매출',
+  photos: '사진첩',
+  schedules: '일정/캘린더',
+  users: '사용자',
+  headquarters: '사업장/현장',
+  content: '콘텐츠',
 };
 
 export function AdminMenuPanel({
@@ -87,6 +91,15 @@ export function AdminMenuPanel({
           description: '현장 기준 분기 보고서 작성',
           href: buildSiteQuarterlyListHref(currentSiteKey),
           active: siteNavView === 'quarterly',
+        },
+        {
+          label: '현장 사진첩',
+          description: '이 현장의 전체 사진과 legacy 사진 보기',
+          href: getAdminSectionHref('photos', {
+            headquarterId: selectedAdminHeadquarterId,
+            siteId: currentSiteKey,
+          }),
+          active: siteNavView === 'photos',
         },
         {
           label: '불량사업장 신고',

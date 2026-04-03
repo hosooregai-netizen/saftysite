@@ -33,6 +33,7 @@ import {
   normalizeText,
   normalizeTimestamp,
 } from '@/constants/inspectionSession/shared';
+import { normalizeControllerReview } from '@/lib/admin/reportMeta';
 import type { CausativeAgentKey } from '@/types/siteOverview';
 import type {
   AdminSiteSnapshot,
@@ -95,6 +96,7 @@ export function normalizeInspectionSession(raw: unknown): InspectionSession {
       reviewer: normalizeText(asRecord(source.meta).reviewer) || '',
       approver: normalizeText(asRecord(source.meta).approver) || '',
     },
+    controllerReview: normalizeControllerReview(source.controllerReview),
     adminSiteSnapshot,
     documentsMeta: normalizeDocumentMetaMap(source.documentsMeta),
     document2Overview: {
@@ -148,4 +150,3 @@ export function normalizeInspectionSession(raw: unknown): InspectionSession {
 
   return finalizeInspectionSession(normalizedSession);
 }
-

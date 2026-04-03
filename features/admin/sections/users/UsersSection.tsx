@@ -88,14 +88,16 @@ export function UsersSection(props: UsersSectionProps) {
       <UsersTable
         busy={busy}
         canDelete={canDelete}
-        filteredUsers={state.filteredUsers}
+        filteredUsers={state.sortedUsers}
         onCreateRequest={state.openCreate}
         onDeleteRequest={handleDeleteUser}
         onEditRequest={state.openEdit}
         roleFilter={state.roleFilter}
         setRoleFilter={state.setRoleFilter}
+        setSort={state.setSort}
         setStatusFilter={state.setStatusFilter}
         setQuery={state.setQuery}
+        sort={state.sort}
         statusFilter={state.statusFilter}
         totalUserCount={users.length}
         userOverviewById={state.userOverviewById}
@@ -114,4 +116,3 @@ export function UsersSection(props: UsersSectionProps) {
     </section>
   );
 }
-

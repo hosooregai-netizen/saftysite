@@ -142,6 +142,7 @@ export function createInspectionSession(
     reportNumber,
     currentSection: 'doc1',
     meta,
+    controllerReview: null,
     adminSiteSnapshot,
     documentsMeta: createDocumentMetaMap(),
     document2Overview: createTechnicalGuidanceOverview(
@@ -171,4 +172,3 @@ export function createInspectionSession(
     lastSavedAt: null,
   });
 }
-

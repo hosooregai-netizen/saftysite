@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useMemo } from 'react';
 import {
   buildSiteBadWorkplaceHref,
+  buildSitePhotoAlbumHref,
   buildSiteQuarterlyListHref,
   buildSiteReportsHref,
 } from '@/features/home/lib/siteEntry';
@@ -111,6 +112,7 @@ export function SiteEntryHubPanel({
   const amountDisplay = snapshot.constructionAmount?.trim() || '-';
   const currentReportMonth = getCurrentReportMonth();
   const badWorkplaceHref = buildSiteBadWorkplaceHref(currentSite.id, currentReportMonth);
+  const photoAlbumHref = buildSitePhotoAlbumHref(currentSite.id);
   const currentYear = new Date().getFullYear();
   const reportIndexState = getReportIndexBySiteId(currentSite.id);
 
@@ -228,6 +230,30 @@ export function SiteEntryHubPanel({
           <div className={styles.entryActions}>
             <Link href={badWorkplaceHref} className="app-button app-button-primary">
               이번 달 신고 작성
+            </Link>
+          </div>
+        </article>
+
+        <article className={styles.entryCard}>
+          <div className={styles.entryBody}>
+            <h2 className={styles.entryTitle}>현장 사진첩</h2>
+            <p className={styles.entryMetricLead}>원본 보존 업로드와 이전 사진 확인</p>
+            <div className={styles.entryMetricRow}>
+              <div className={styles.entryMetricCopy}>
+                <strong className={styles.entryMetricValue}>PHOTO</strong>
+                <span className={styles.entryMetricUnit}>ALBUM</span>
+              </div>
+              <div className={styles.metricVisual}>
+                <div className={styles.badgePanel}>
+                  <span className={styles.badgePanelLabel}>업로드</span>
+                  <strong>원본 + legacy</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className={styles.entryActions}>
+            <Link href={photoAlbumHref} className="app-button app-button-primary">
+              사진첩 열기
             </Link>
           </div>
         </article>

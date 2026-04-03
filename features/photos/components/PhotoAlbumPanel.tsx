@@ -1,0 +1,638 @@
+'use client';
+
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import AppModal from '@/components/ui/AppModal';
+import { TableToolbar } from '@/features/admin/components/TableToolbar';
+import adminStyles from '@/features/admin/sections/AdminSectionShared.module.css';
+import { exportAdminWorkbook } from '@/lib/admin/exportClient';
+import {
+  downloadPhotoAlbumSelection,
+  fetchPhotoAlbum,
+  uploadPhotoAlbumAsset,
+} from '@/lib/photos/apiClient';
+import { createPhotoThumbnail } from '@/lib/photos/thumbnail';
+import type { TableSortState } from '@/types/admin';
+import type { PhotoAlbumItem, PhotoAlbumSourceFilter } from '@/types/photos';
+import styles from './PhotoAlbumPanel.module.css';
+
+interface PhotoAlbumSiteOption {
+  headquarterId: string;
+  headquarterName: string;
+  id: string;
+  siteName: string;
+}
+
+interface PhotoAlbumPanelProps {
+  initialHeadquarterId?: string | null;
+  initialSiteId?: string | null;
+  lockedHeadquarterId?: string | null;
+  lockedSiteId?: string | null;
+  mode: 'admin' | 'worker';
+  sites: PhotoAlbumSiteOption[];
+}
+
+const PAGE_SIZE = 60;
+
+function formatDateLabel(value: string) {
+  if (!value) return '-';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleString('ko-KR', {
+    hour12: false,
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function formatFileSize(value: number) {
+  if (!value) return '-';
+  if (value >= 1024 * 1024) return `${(value / (1024 * 1024)).toFixed(1)}MB`;
+  if (value >= 1024) return `${Math.round(value / 1024)}KB`;
+  return `${value}B`;
+}
+
+function formatGpsLabel(item: PhotoAlbumItem) {
+  if (item.gpsLatitude == null || item.gpsLongitude == null) {
+    return 'GPS 없음';
+  }
+
+  return `${item.gpsLatitude.toFixed(5)}, ${item.gpsLongitude.toFixed(5)}`;
+}
+
+function getSourceBadgeLabel(sourceKind: PhotoAlbumItem['sourceKind']) {
+  return sourceKind === 'album_upload' ? 'album' : 'legacy';
+}
+
+function matchesContext(
+  item: PhotoAlbumItem,
+  headquarterId: string,
+  siteId: string,
+  source: PhotoAlbumSourceFilter,
+  query: string,
+) {
+  if (headquarterId && item.headquarterId !== headquarterId) return false;
+  if (siteId && item.siteId !== siteId) return false;
+  if (source !== 'all' && item.sourceKind !== source) return false;
+  if (!query) return true;
+
+  return [
+    item.fileName,
+    item.headquarterName,
+    item.siteName,
+    item.sourceReportTitle,
+    item.uploadedByName,
+  ]
+    .join(' ')
+    .toLowerCase()
+    .includes(query);
+}
+
+export function PhotoAlbumPanel({
+  initialHeadquarterId = null,
+  initialSiteId = null,
+  lockedHeadquarterId = null,
+  lockedSiteId = null,
+  mode,
+  sites,
+}: PhotoAlbumPanelProps) {
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [query, setQuery] = useState('');
+  const [source, setSource] = useState<PhotoAlbumSourceFilter>('all');
+  const [sort, setSort] = useState<TableSortState>({
+    direction: 'desc',
+    key: 'capturedAt',
+  });
+  const [headquarterId, setHeadquarterId] = useState(() => lockedHeadquarterId || initialHeadquarterId || '');
+  const [siteId, setSiteId] = useState(() => lockedSiteId || initialSiteId || '');
+  const [offset, setOffset] = useState(0);
+  const [rows, setRows] = useState<PhotoAlbumItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [activeItem, setActiveItem] = useState<PhotoAlbumItem | null>(null);
+  const deferredQuery = useDeferredValue(query.trim().toLowerCase());
+
+  useEffect(() => {
+    setHeadquarterId(lockedHeadquarterId || initialHeadquarterId || '');
+  }, [initialHeadquarterId, lockedHeadquarterId]);
+
+  useEffect(() => {
+    setSiteId(lockedSiteId || initialSiteId || '');
+  }, [initialSiteId, lockedSiteId]);
+
+  useEffect(() => {
+    setOffset(0);
+  }, [deferredQuery, headquarterId, siteId, sort.direction, sort.key, source]);
+
+  const headquarterOptions = useMemo(
+    () =>
+      Array.from(
+        new Map(sites.map((site) => [site.headquarterId, site.headquarterName])).entries(),
+      ).map(([id, name]) => ({ id, name })),
+    [sites],
+  );
+  const visibleSiteOptions = useMemo(
+    () =>
+      sites.filter((site) => {
+        if (lockedSiteId && site.id !== lockedSiteId) return false;
+        if (lockedHeadquarterId && site.headquarterId !== lockedHeadquarterId) return false;
+        if (headquarterId && site.headquarterId !== headquarterId) return false;
+        return true;
+      }),
+    [headquarterId, lockedHeadquarterId, lockedSiteId, sites],
+  );
+  const canUpload = Boolean(lockedSiteId || siteId);
+
+  useEffect(() => {
+    if (!siteId || lockedSiteId) return;
+    if (visibleSiteOptions.some((option) => option.id === siteId)) return;
+    setSiteId('');
+  }, [lockedSiteId, siteId, visibleSiteOptions]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const run = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await fetchPhotoAlbum({
+          headquarterId: lockedHeadquarterId || headquarterId || '',
+          limit: PAGE_SIZE,
+          offset,
+          query: deferredQuery,
+          siteId: lockedSiteId || siteId || '',
+          sortBy: (sort.key as 'capturedAt' | 'createdAt' | 'fileName' | 'siteName') || 'capturedAt',
+          sortDir: sort.direction,
+          source,
+        });
+        if (cancelled) return;
+        setRows(response.rows);
+        setTotal(response.total);
+        setSelectedIds((current) => current.filter((itemId) => response.rows.some((row) => row.id === itemId)));
+      } catch (nextError) {
+        if (cancelled) return;
+        setError(nextError instanceof Error ? nextError.message : '사진첩을 불러오지 못했습니다.');
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [deferredQuery, headquarterId, lockedHeadquarterId, lockedSiteId, offset, siteId, sort.direction, sort.key, source]);
+
+  const handleToggleAll = () => {
+    setSelectedIds((current) =>
+      current.length === rows.length ? [] : rows.map((row) => row.id),
+    );
+  };
+
+  const handleToggleRow = (itemId: string) => {
+    setSelectedIds((current) =>
+      current.includes(itemId)
+        ? current.filter((value) => value !== itemId)
+        : [...current, itemId],
+    );
+  };
+
+  const handleDownload = async (itemIds: string[]) => {
+    try {
+      setError(null);
+      await downloadPhotoAlbumSelection(itemIds);
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : '사진 다운로드에 실패했습니다.');
+    }
+  };
+
+  const handleFilesSelected = async (files: FileList | null) => {
+    const uploadSiteId = lockedSiteId || siteId;
+    if (!uploadSiteId) {
+      setError('업로드할 현장을 먼저 선택해 주세요.');
+      return;
+    }
+
+    const nextFiles = Array.from(files ?? []).filter((file) => file.size > 0);
+    if (nextFiles.length === 0) return;
+
+    try {
+      setUploading(true);
+      setError(null);
+      setNotice(null);
+
+      for (const file of nextFiles) {
+        const thumbnail = await createPhotoThumbnail(file).catch(() => null);
+        await uploadPhotoAlbumAsset({
+          file,
+          siteId: uploadSiteId,
+          thumbnail,
+        });
+      }
+
+      const refreshed = await fetchPhotoAlbum({
+        headquarterId: lockedHeadquarterId || headquarterId || '',
+        limit: PAGE_SIZE,
+        offset: 0,
+        query: deferredQuery,
+        siteId: uploadSiteId,
+        sortBy: (sort.key as 'capturedAt' | 'createdAt' | 'fileName' | 'siteName') || 'capturedAt',
+        sortDir: sort.direction,
+        source,
+      });
+      setOffset(0);
+      setRows(refreshed.rows);
+      setTotal(refreshed.total);
+      setSelectedIds([]);
+      setNotice(`${nextFiles.length}건의 사진을 업로드했습니다.`);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : '사진 업로드에 실패했습니다.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleExport = async () => {
+    try {
+      setError(null);
+      await exportAdminWorkbook('photos', [
+        {
+          columns: [
+            { key: 'headquarterName', label: '사업장' },
+            { key: 'siteName', label: '현장' },
+            { key: 'fileName', label: '파일명' },
+            { key: 'sourceKind', label: '출처' },
+            { key: 'sourceReportTitle', label: '원본 보고서' },
+            { key: 'capturedAt', label: '촬영일' },
+            { key: 'uploadedByName', label: '업로더' },
+            { key: 'gps', label: 'GPS' },
+            { key: 'createdAt', label: '등록일' },
+          ],
+          name: '사진첩',
+          rows: rows.map((item) => ({
+            capturedAt: item.capturedAt ? formatDateLabel(item.capturedAt) : '-',
+            createdAt: formatDateLabel(item.createdAt),
+            fileName: item.fileName,
+            gps: formatGpsLabel(item),
+            headquarterName: item.headquarterName,
+            siteName: item.siteName,
+            sourceKind: getSourceBadgeLabel(item.sourceKind),
+            sourceReportTitle: item.sourceReportTitle || '-',
+            uploadedByName: item.uploadedByName || '-',
+          })),
+        },
+      ]);
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : '사진 메타데이터 내보내기에 실패했습니다.');
+    }
+  };
+
+  const itemCounts = useMemo(
+    () =>
+      rows.reduce(
+        (accumulator, item) => {
+          if (item.sourceKind === 'album_upload') {
+            accumulator.album += 1;
+          } else {
+            accumulator.legacy += 1;
+          }
+          return accumulator;
+        },
+        { album: 0, legacy: 0 },
+      ),
+    [rows],
+  );
+
+  const activeItemMatchesContext =
+    activeItem &&
+    matchesContext(
+      activeItem,
+      lockedHeadquarterId || headquarterId || '',
+      lockedSiteId || siteId || '',
+      source,
+      deferredQuery,
+    );
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const currentPage = Math.floor(offset / PAGE_SIZE) + 1;
+
+  return (
+    <div className={adminStyles.dashboardStack}>
+      <section className={adminStyles.sectionCard}>
+        <div className={adminStyles.sectionHeader}>
+          <div>
+            <h2 className={adminStyles.sectionTitle}>
+              {mode === 'admin' ? '사진첩' : '현장 사진첩'}
+            </h2>
+          </div>
+          <div className={adminStyles.sectionHeaderActions}>
+            <span className="app-chip">album {itemCounts.album} / legacy {itemCounts.legacy}</span>
+            <button
+              type="button"
+              className="app-button app-button-secondary"
+              onClick={() => void handleDownload(selectedIds)}
+              disabled={selectedIds.length === 0 || loading}
+            >
+              선택 다운로드
+            </button>
+            <button
+              type="button"
+              className="app-button app-button-primary"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={!canUpload || uploading}
+            >
+              {uploading ? '업로드 중...' : '사진 업로드'}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*,.heic,.heif"
+              multiple
+              hidden
+              onChange={(event) => {
+                void handleFilesSelected(event.target.files);
+              }}
+            />
+          </div>
+        </div>
+        <div className={adminStyles.sectionBody}>
+          {error ? <div className={adminStyles.bannerError}>{error}</div> : null}
+          {notice ? <div className={adminStyles.bannerNotice}>{notice}</div> : null}
+
+          <TableToolbar
+            countLabel={`표시 ${rows.length} / 전체 ${total}건`}
+            exportLabel="메타데이터 엑셀"
+            filters={
+              <>
+                {mode === 'admin' && !lockedHeadquarterId ? (
+                  <select
+                    className={`app-select ${adminStyles.toolbarSelect}`}
+                    value={headquarterId}
+                    onChange={(event) => {
+                      setHeadquarterId(event.target.value);
+                      setSiteId('');
+                    }}
+                  >
+                    <option value="">전체 사업장</option>
+                    {headquarterOptions.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.name}
+                      </option>
+                    ))}
+                  </select>
+                ) : null}
+                {!lockedSiteId ? (
+                  <select
+                    className={`app-select ${adminStyles.toolbarSelect}`}
+                    value={siteId}
+                    onChange={(event) => setSiteId(event.target.value)}
+                  >
+                    <option value="">{mode === 'admin' ? '전체 현장' : '현장 선택'}</option>
+                    {visibleSiteOptions.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.siteName}
+                      </option>
+                    ))}
+                  </select>
+                ) : null}
+                <select
+                  className={`app-select ${adminStyles.toolbarSelect}`}
+                  value={source}
+                  onChange={(event) => setSource(event.target.value as PhotoAlbumSourceFilter)}
+                >
+                  <option value="all">전체 출처</option>
+                  <option value="album_upload">album</option>
+                  <option value="report_legacy">legacy</option>
+                </select>
+              </>
+            }
+            onExport={mode === 'admin' ? () => void handleExport() : undefined}
+          onQueryChange={setQuery}
+          onSortDirectionChange={(direction) => setSort((current) => ({ ...current, direction }))}
+          onSortKeyChange={(key) => setSort((current) => ({ ...current, key }))}
+          query={query}
+          queryPlaceholder="파일명, 현장명, 보고서명, 업로더 검색"
+          sortDirection={sort.direction}
+          sortKey={sort.key}
+          sortOptions={[
+            { value: 'capturedAt', label: '촬영일' },
+            { value: 'createdAt', label: '등록일' },
+            { value: 'fileName', label: '파일명' },
+            { value: 'siteName', label: '현장명' },
+          ]}
+        />
+
+          {loading ? (
+            <div className={styles.emptyState}>사진첩을 불러오는 중입니다.</div>
+          ) : rows.length === 0 ? (
+            <div className={styles.emptyState}>
+              {canUpload ? '표시할 사진이 없습니다.' : '현장을 선택하면 사진첩을 볼 수 있습니다.'}
+            </div>
+          ) : (
+            <>
+              <div className={styles.bulkBar}>
+                <label className={styles.selectAll}>
+                  <input
+                    type="checkbox"
+                    checked={rows.length > 0 && selectedIds.length === rows.length}
+                    onChange={handleToggleAll}
+                  />
+                  <span>현재 페이지 전체 선택</span>
+                </label>
+                <span className="app-chip">선택 {selectedIds.length}건</span>
+              </div>
+
+              <div className={styles.grid}>
+                {rows.map((item) => (
+                  <article key={item.id} className={styles.card}>
+                    <button
+                      type="button"
+                      className={styles.cardPreviewButton}
+                      onClick={() => setActiveItem(item)}
+                    >
+                      {item.previewUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={item.previewUrl}
+                          alt={item.fileName}
+                          className={styles.cardImage}
+                        />
+                      ) : (
+                        <div className={styles.cardImageFallback}>미리보기 없음</div>
+                      )}
+                    </button>
+                    <label className={styles.cardCheckbox}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(item.id)}
+                        onChange={() => handleToggleRow(item.id)}
+                      />
+                    </label>
+                    <div className={styles.cardBody}>
+                      <div className={styles.cardMetaRow}>
+                        <span className={styles.sourceBadge}>{getSourceBadgeLabel(item.sourceKind)}</span>
+                        <span className={styles.cardMetaText}>{formatFileSize(item.sizeBytes)}</span>
+                      </div>
+                      <div className={styles.cardTitle} title={item.fileName}>
+                        {item.fileName}
+                      </div>
+                      <div className={styles.cardMetaText}>{item.siteName}</div>
+                      {mode === 'admin' ? (
+                        <div className={styles.cardMetaText}>{item.headquarterName}</div>
+                      ) : null}
+                      <div className={styles.cardMetaText}>
+                        {item.capturedAt ? `촬영 ${formatDateLabel(item.capturedAt)}` : `등록 ${formatDateLabel(item.createdAt)}`}
+                      </div>
+                      <div className={styles.cardMetaText}>
+                        {item.uploadedByName ? `업로더 ${item.uploadedByName}` : '업로더 미상'}
+                      </div>
+                      {item.sourceKind === 'report_legacy' && item.sourceReportTitle ? (
+                        <div className={styles.cardMetaText} title={item.sourceReportTitle}>
+                          {item.sourceReportTitle}
+                        </div>
+                      ) : null}
+                    </div>
+                    <div className={styles.cardActions}>
+                      <button
+                        type="button"
+                        className="app-button app-button-secondary"
+                        onClick={() => void handleDownload([item.id])}
+                      >
+                        다운로드
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+
+              <div className={styles.paginationBar}>
+                <span className={styles.paginationMeta}>
+                  {currentPage} / {totalPages} 페이지
+                </span>
+                <div className={styles.paginationActions}>
+                  <button
+                    type="button"
+                    className="app-button app-button-secondary"
+                    disabled={offset === 0}
+                    onClick={() => setOffset((current) => Math.max(0, current - PAGE_SIZE))}
+                  >
+                    이전
+                  </button>
+                  <button
+                    type="button"
+                    className="app-button app-button-secondary"
+                    disabled={offset + PAGE_SIZE >= total}
+                    onClick={() => setOffset((current) => current + PAGE_SIZE)}
+                  >
+                    다음
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </section>
+
+      <AppModal
+        open={Boolean(activeItem && activeItemMatchesContext)}
+        title={activeItem?.fileName || '사진 상세'}
+        size="large"
+        onClose={() => setActiveItem(null)}
+        actions={
+          <>
+            <button
+              type="button"
+              className="app-button app-button-secondary"
+              onClick={() => setActiveItem(null)}
+            >
+              닫기
+            </button>
+            {activeItem ? (
+              <button
+                type="button"
+                className="app-button app-button-primary"
+                onClick={() => void handleDownload([activeItem.id])}
+              >
+                원본 다운로드
+              </button>
+            ) : null}
+          </>
+        }
+      >
+        {activeItem ? (
+          <div className={styles.modalGrid}>
+            <div className={styles.modalPreview}>
+              {activeItem.previewUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={activeItem.previewUrl}
+                  alt={activeItem.fileName}
+                  className={styles.modalImage}
+                />
+              ) : (
+                <div className={styles.cardImageFallback}>미리보기 없음</div>
+              )}
+            </div>
+            <div className={styles.modalMeta}>
+              <div className={styles.modalMetaRow}>
+                <span className={styles.modalMetaLabel}>출처</span>
+                <span>{getSourceBadgeLabel(activeItem.sourceKind)}</span>
+              </div>
+              <div className={styles.modalMetaRow}>
+                <span className={styles.modalMetaLabel}>사업장</span>
+                <span>{activeItem.headquarterName}</span>
+              </div>
+              <div className={styles.modalMetaRow}>
+                <span className={styles.modalMetaLabel}>현장</span>
+                <span>{activeItem.siteName}</span>
+              </div>
+              <div className={styles.modalMetaRow}>
+                <span className={styles.modalMetaLabel}>촬영일</span>
+                <span>{activeItem.capturedAt ? formatDateLabel(activeItem.capturedAt) : '-'}</span>
+              </div>
+              <div className={styles.modalMetaRow}>
+                <span className={styles.modalMetaLabel}>등록일</span>
+                <span>{formatDateLabel(activeItem.createdAt)}</span>
+              </div>
+              <div className={styles.modalMetaRow}>
+                <span className={styles.modalMetaLabel}>업로더</span>
+                <span>{activeItem.uploadedByName || '-'}</span>
+              </div>
+              <div className={styles.modalMetaRow}>
+                <span className={styles.modalMetaLabel}>크기</span>
+                <span>{formatFileSize(activeItem.sizeBytes)}</span>
+              </div>
+              <div className={styles.modalMetaRow}>
+                <span className={styles.modalMetaLabel}>GPS</span>
+                <span>{formatGpsLabel(activeItem)}</span>
+              </div>
+              {activeItem.sourceKind === 'report_legacy' ? (
+                <>
+                  <div className={styles.modalMetaRow}>
+                    <span className={styles.modalMetaLabel}>원본 보고서</span>
+                    <span>{activeItem.sourceReportTitle || '-'}</span>
+                  </div>
+                  <div className={styles.modalMetaRow}>
+                    <span className={styles.modalMetaLabel}>문서 슬롯</span>
+                    <span>{`${activeItem.sourceDocumentKey} / ${activeItem.sourceSlotKey}`}</span>
+                  </div>
+                </>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+      </AppModal>
+    </div>
+  );
+}

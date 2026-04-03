@@ -281,6 +281,137 @@
   padding: 18px;
 }
 
+.dashboardStack {
+  display: grid;
+  gap: 16px;
+}
+
+.dashboardGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(320px, 1fr);
+  gap: 16px;
+}
+
+.metricGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.metricLinkCard,
+.metricStatCard {
+  display: grid;
+  gap: 8px;
+  padding: 16px 18px;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-surface);
+  background: #fff;
+  box-shadow: 0 1px 0 rgba(16, 24, 43, 0.04);
+}
+
+.metricLinkCard {
+  text-decoration: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.metricLinkCard:hover {
+  border-color: #b9c9da;
+  box-shadow: 0 8px 20px rgba(18, 35, 58, 0.08);
+  transform: translateY(-1px);
+}
+
+.metricLinkCardWarning {
+  border-color: #e7d2a5;
+  background: #fffaf0;
+}
+
+.metricLinkCardDanger {
+  border-color: #e5b4b4;
+  background: #fff5f5;
+}
+
+.metricLinkLabel {
+  font-size: var(--text-ui-sm);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--erp-text-muted);
+}
+
+.metricLinkValue {
+  font-size: var(--text-title);
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--erp-dark);
+}
+
+.metricLinkMeta {
+  font-size: var(--text-ui);
+  line-height: 1.5;
+  color: var(--erp-text-muted);
+}
+
+.coverageGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.coverageCard {
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-surface);
+  background: #fcfdff;
+}
+
+.coverageCardLabel {
+  font-size: var(--text-ui-sm);
+  font-weight: 700;
+  color: var(--erp-text-muted);
+}
+
+.coverageCardValue {
+  font-size: var(--text-lead);
+  font-weight: 700;
+  color: var(--erp-dark);
+}
+
+.coverageCardMeta {
+  font-size: var(--text-ui);
+  color: var(--erp-text-muted);
+}
+
+.compactList {
+  display: grid;
+  gap: 10px;
+}
+
+.compactListRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--erp-line);
+}
+
+.compactListRow:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.compactListValue {
+  flex: 0 0 auto;
+  font-size: var(--text-ui);
+  font-weight: 700;
+  text-align: right;
+  color: var(--erp-dark);
+}
+
 .listSectionCard .sectionBody {
   padding: 0;
 }
@@ -557,9 +688,146 @@
   margin-bottom: 14px;
 }
 
+.tableToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.tableToolbarMain {
+  display: flex;
+  flex: 1 1 560px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.tableToolbarActions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.toolbarSelect {
+  min-width: 132px;
+  flex: 0 0 132px;
+}
+
+.bulkActionBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 0 18px 16px;
+}
+
+.paginationRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 18px 18px;
+  border-top: 1px solid var(--erp-line);
+}
+
+.paginationLabel {
+  min-width: 120px;
+  font-size: var(--text-ui-sm);
+  text-align: center;
+  color: var(--erp-text-muted);
+}
+
 .filterSearch {
   min-width: min(100%, 280px);
   flex: 1 1 280px;
+}
+
+.calendarGrid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.calendarCell,
+.calendarCellEmpty {
+  min-height: 96px;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-surface);
+  background: #fff;
+}
+
+.calendarCell {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  padding: 12px;
+  color: var(--erp-dark);
+  text-align: left;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+.calendarCell:hover,
+.calendarCell:focus-visible {
+  border-color: var(--erp-mid);
+  box-shadow: 0 10px 20px rgba(18, 45, 71, 0.08);
+  transform: translateY(-1px);
+}
+
+.calendarCellActive {
+  border-color: var(--erp-mid);
+  background: #f5f9fc;
+  box-shadow: 0 0 0 1px rgba(79, 108, 140, 0.12);
+}
+
+.calendarCellEmpty {
+  border-style: dashed;
+  background: #f8fafc;
+}
+
+.calendarCellDate {
+  font-size: var(--text-body-md);
+  font-weight: 700;
+  color: var(--erp-dark);
+}
+
+.calendarCellCount {
+  font-size: var(--text-ui-sm);
+  color: var(--erp-text-muted);
+}
+
+.calendarCellFlag {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #fff2d9;
+  color: #946200;
+  font-size: var(--text-micro);
+  font-weight: 700;
+}
+
+@media (max-width: 960px) {
+  .calendarGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .calendarGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .usersFilterRow {
@@ -1591,6 +1859,12 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .dashboardGrid,
+  .metricGrid,
+  .coverageGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .mobileSectionRail {
     display: flex;
     gap: 10px;
@@ -1653,6 +1927,12 @@
     gap: 8px;
   }
 
+  .dashboardGrid,
+  .metricGrid,
+  .coverageGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .summaryCard {
     padding: 12px 14px;
   }
@@ -1684,4 +1964,3 @@
     gap: 12px;
   }
 }
-

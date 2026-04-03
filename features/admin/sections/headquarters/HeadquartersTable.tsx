@@ -1,5 +1,8 @@
 import ActionMenu from '@/components/ui/ActionMenu';
-import { formatTimestamp } from '@/lib/admin';
+import { TableToolbar } from '@/features/admin/components/TableToolbar';
+import { exportAdminWorkbook } from '@/lib/admin/exportClient';
+import { formatTimestamp, getAdminSectionHref } from '@/lib/admin';
+import type { TableSortState } from '@/types/admin';
 import type { SafetyHeadquarter } from '@/types/controller';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 
@@ -12,7 +15,9 @@ interface HeadquartersTableProps {
   onEditRequest: (item: SafetyHeadquarter) => void;
   onOpenSitesRequest: (item: SafetyHeadquarter) => void;
   onQueryChange: (value: string) => void;
+  onSortChange: (value: TableSortState) => void;
   query: string;
+  sort: TableSortState;
   showHeader?: boolean;
   totalHeadquarterCount: number;
 }
@@ -37,7 +42,9 @@ export function HeadquartersTable({
   onEditRequest,
   onOpenSitesRequest,
   onQueryChange,
+  onSortChange,
   query,
+  sort,
   showHeader = true,
   totalHeadquarterCount,
 }: HeadquartersTableProps) {
@@ -65,14 +72,48 @@ export function HeadquartersTable({
       </div>
 
       <div className={styles.sectionBody}>
-        <div className={styles.filterRow}>
-          <input
-            className={`app-input ${styles.filterSearch}`}
-            placeholder="사업장명, 연락처, 주소로 검색"
-            value={query}
-            onChange={(event) => onQueryChange(event.target.value)}
-          />
-        </div>
+        <TableToolbar
+          countLabel={`표시 ${filteredHeadquarters.length} / 전체 ${totalHeadquarterCount}개`}
+          onExport={() =>
+            void exportAdminWorkbook('headquarters', [
+              {
+                name: '사업장',
+                columns: [
+                  { key: 'name', label: '사업장명' },
+                  { key: 'address', label: '주소' },
+                  { key: 'contact_phone', label: '연락처' },
+                  { key: 'business_registration_no', label: '사업자등록번호' },
+                  { key: 'corporate_registration_no', label: '법인등록번호' },
+                  { key: 'license_no', label: '면허번호' },
+                  { key: 'updated_at', label: '수정일' },
+                ],
+                rows: filteredHeadquarters.map((item) => ({
+                  address: item.address || '',
+                  business_registration_no: item.business_registration_no || '',
+                  contact_phone: item.contact_phone || '',
+                  corporate_registration_no: item.corporate_registration_no || '',
+                  license_no: item.license_no || '',
+                  name: item.name,
+                  updated_at: formatTimestamp(item.updated_at),
+                })),
+              },
+            ])
+          }
+          onQueryChange={onQueryChange}
+          onSortDirectionChange={(direction) =>
+            onSortChange({ ...sort, direction })
+          }
+          onSortKeyChange={(key) => onSortChange({ ...sort, key })}
+          query={query}
+          queryPlaceholder="사업장명, 연락처, 주소로 검색"
+          sortDirection={sort.direction}
+          sortKey={sort.key}
+          sortOptions={[
+            { value: 'name', label: '사업장명' },
+            { value: 'updated_at', label: '수정일' },
+            { value: 'contact_phone', label: '연락처' },
+          ]}
+        />
         <div className={styles.tableShell}>
           {filteredHeadquarters.length === 0 ? (
             <div className={styles.tableEmpty}>등록된 사업장이 없습니다.</div>
@@ -135,6 +176,12 @@ export function HeadquartersTable({
                                 onSelect: () => {
                                   if (!busy) onOpenSitesRequest(item);
                                 },
+                              },
+                              {
+                                label: '사진첩 보기',
+                                href: getAdminSectionHref('photos', {
+                                  headquarterId: item.id,
+                                }),
                               },
                               {
                                 label: '수정',

@@ -1,3 +1,7 @@
+import type {
+  SiteContractStatus,
+  SiteContractType,
+} from '@/types/admin';
 import type { SafetyContentType, SafetyUserRole } from '@/types/backend';
 import type { SafetySiteStatus } from '@/types/controller';
 
@@ -6,6 +10,10 @@ export type UserRoleView = 'admin' | 'field_agent';
 
 export type ControllerSectionKey =
   | 'overview'
+  | 'reports'
+  | 'analytics'
+  | 'photos'
+  | 'schedules'
   | 'users'
   | 'headquarters'
   | 'content';
@@ -13,6 +21,7 @@ export type ControllerSectionKey =
 type LegacyControllerSectionKey = ControllerSectionKey | 'sites';
 
 export interface ControllerSectionQuery {
+  [key: string]: string | null | undefined;
   headquarterId?: string | null;
   siteId?: string | null;
 }
@@ -22,9 +31,13 @@ export const CONTROLLER_SECTIONS: Array<{
   label: string;
   description: string;
 }> = [
-  { key: 'overview', label: '개요', description: '운영 현황' },
+  { key: 'overview', label: '관제 대시보드', description: '운영 모니터링' },
+  { key: 'reports', label: '전체 보고서', description: '보고서 통합 조회' },
+  { key: 'analytics', label: '실적/매출', description: '성과 분석' },
+  { key: 'photos', label: '사진첩', description: '현장 사진 통합 조회' },
+  { key: 'schedules', label: '일정/캘린더', description: '방문 일정 관리' },
   { key: 'users', label: '사용자', description: '계정 관리' },
-  { key: 'headquarters', label: '사업장', description: '본사 정보' },
+  { key: 'headquarters', label: '사업장/현장', description: '현장 관리' },
   { key: 'content', label: '콘텐츠', description: '콘텐츠 관리' },
 ];
 
@@ -43,13 +56,13 @@ export function getControllerSectionHref(
   const searchParams = new URLSearchParams();
   searchParams.set('section', section);
 
-  if (query.headquarterId) {
-    searchParams.set('headquarterId', query.headquarterId);
-  }
+  Object.entries(query).forEach(([key, value]) => {
+    if (key === 'section') return;
 
-  if (query.siteId) {
-    searchParams.set('siteId', query.siteId);
-  }
+    if (typeof value === 'string' && value.trim()) {
+      searchParams.set(key, value);
+    }
+  });
 
   return `/admin?${searchParams.toString()}`;
 }
@@ -184,6 +197,42 @@ export function parseOptionalNumber(value: string): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+export function formatCurrencyValue(value: number | null | undefined): string {
+  if (typeof value !== 'number' || Number.isNaN(value)) return '-';
+  return `${value.toLocaleString('ko-KR')}원`;
+}
+
+export const SITE_CONTRACT_TYPE_OPTIONS: Array<{
+  label: string;
+  value: SiteContractType;
+}> = [
+  { value: '', label: '선택' },
+  { value: 'private', label: '민간계약' },
+  { value: 'negotiated', label: '수의계약' },
+  { value: 'bid', label: '입찰계약' },
+  { value: 'maintenance', label: '유지보수' },
+  { value: 'other', label: '기타' },
+];
+
+export const SITE_CONTRACT_STATUS_OPTIONS: Array<{
+  label: string;
+  value: SiteContractStatus;
+}> = [
+  { value: '', label: '선택' },
+  { value: 'ready', label: '준비중' },
+  { value: 'active', label: '진행중' },
+  { value: 'paused', label: '중지' },
+  { value: 'completed', label: '완료' },
+];
+
+export const SITE_CONTRACT_TYPE_LABELS = Object.fromEntries(
+  SITE_CONTRACT_TYPE_OPTIONS.map((option) => [option.value, option.label]),
+) as Record<SiteContractType, string>;
+
+export const SITE_CONTRACT_STATUS_LABELS = Object.fromEntries(
+  SITE_CONTRACT_STATUS_OPTIONS.map((option) => [option.value, option.label]),
+) as Record<SiteContractStatus, string>;
+
 export function parseContentBody(value: string): Record<string, unknown> | string {
   const normalized = value.trim();
   if (!normalized) return '';
@@ -210,4 +259,3 @@ export function formatTimestamp(value: string | null): string {
     minute: '2-digit',
   });
 }
-
