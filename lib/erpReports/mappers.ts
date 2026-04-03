@@ -5,6 +5,10 @@ import {
   generateId,
   normalizeText,
 } from '@/constants/inspectionSession/shared';
+import {
+  normalizeControllerReview,
+  normalizeDispatchMeta,
+} from '@/lib/admin/reportMeta';
 import { asMapperRecord, normalizeMapperText } from '@/lib/safetyApiMappers/utils';
 import type { SafetyReport, SafetyUpsertReportInput } from '@/types/backend';
 import type {
@@ -149,6 +153,10 @@ export function mapSafetyReportToQuarterlySummaryReport(
     year: normalizedPeriod.year,
     quarter: normalizedPeriod.quarter,
     status: normalizeOperationalStatus(payload.status ?? meta.status, report.status),
+    controllerReview: normalizeControllerReview(
+      payload.controllerReview ?? meta.controllerReview,
+    ),
+    dispatch: normalizeDispatchMeta(payload.dispatch ?? meta.dispatch),
     drafter:
       normalizeMapperText(payload.drafter) ||
       normalizeMapperText(meta.drafter),
@@ -211,6 +219,9 @@ export function mapSafetyReportToBadWorkplaceReport(
     reportKind: BAD_WORKPLACE_REPORT_KIND,
     reportMonth,
     status: normalizeOperationalStatus(payload.status ?? meta.status, report.status),
+    controllerReview: normalizeControllerReview(
+      payload.controllerReview ?? meta.controllerReview,
+    ),
     reporterUserId:
       normalizeMapperText(payload.reporterUserId) ||
       normalizeMapperText(meta.reporterUserId),
@@ -264,6 +275,8 @@ export function buildQuarterlySummaryUpsertInput(
       quarter: normalizedPeriod.quarter,
       status: report.status,
       drafter: report.drafter,
+      controllerReview: report.controllerReview,
+      dispatch: report.dispatch,
     },
     status: report.status === 'completed' ? 'submitted' : 'draft',
     create_revision: false,
@@ -294,6 +307,7 @@ export function buildBadWorkplaceUpsertInput(
       reporterUserId: report.reporterUserId,
       reporterName: report.reporterName,
       status: report.status,
+      controllerReview: report.controllerReview,
     },
     status: report.status === 'completed' ? 'submitted' : 'draft',
     create_revision: false,

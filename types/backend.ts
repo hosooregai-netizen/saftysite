@@ -4,6 +4,11 @@ import type {
   InspectionSite,
   SafetyInfoItem,
 } from '@/types/inspectionSession';
+import type {
+  ControllerReportType,
+  ReportControllerReview,
+  ReportDispatchMeta,
+} from '@/types/admin';
 export interface SafetyMeasurementTemplate {
   id: string;
   title: string;
@@ -124,6 +129,12 @@ export interface SafetySite {
   site_address: string | null;
   status: string;
   memo: string | null;
+  contract_date?: string | null;
+  contract_type?: string | null;
+  contract_status?: string | null;
+  total_rounds?: number | null;
+  per_visit_amount?: number | null;
+  total_contract_amount?: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -160,6 +171,9 @@ export interface SafetyReport {
   submitted_at: string | null;
   published_at: string | null;
   last_autosaved_at: string | null;
+  report_type?: ControllerReportType | null;
+  review?: ReportControllerReview | null;
+  dispatch?: ReportDispatchMeta | null;
   meta: Record<string, unknown>;
   created_at: string;
   updated_at: string;
@@ -183,6 +197,9 @@ export interface SafetyReportListItem {
   submitted_at: string | null;
   published_at: string | null;
   last_autosaved_at: string | null;
+  report_type?: ControllerReportType | null;
+  review?: ReportControllerReview | null;
+  dispatch?: ReportDispatchMeta | null;
   meta: Record<string, unknown>;
   created_at: string;
   updated_at: string;
@@ -281,4 +298,3 @@ export interface SafetyUpsertReportInput {
   create_revision?: boolean;
   revision_reason?: 'autosave' | 'manual_save' | 'submit' | 'publish';
 }
-

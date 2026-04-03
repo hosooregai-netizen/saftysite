@@ -119,6 +119,7 @@ export function buildInitialBadWorkplaceReport(
     reportKind: BAD_WORKPLACE_REPORT_KIND,
     reportMonth,
     status: 'draft',
+    controllerReview: null,
     reporterUserId: reporter?.id || '',
     reporterName: reporter?.name || '',
     receiverName: site.adminSiteSnapshot.siteManagerName,

@@ -4,6 +4,7 @@ import type {
   InspectionReportMeta,
   InspectionSectionKey,
 } from './base';
+import type { ReportControllerReview } from '@/types/admin';
 import type { SafetyReportStatus } from '@/types/backend';
 import type {
   ActivityRecord,
@@ -27,6 +28,7 @@ export interface InspectionSession {
   reportNumber: number;
   currentSection: InspectionSectionKey;
   meta: InspectionReportMeta;
+  controllerReview: ReportControllerReview | null;
   adminSiteSnapshot: AdminSiteSnapshot;
   documentsMeta: Record<InspectionSectionKey, InspectionDocumentMeta>;
   document2Overview: TechnicalGuidanceOverview;
@@ -97,4 +99,3 @@ export interface SiteReportIndexState {
   fetchedAt: string | null;
   error: string | null;
 }
-

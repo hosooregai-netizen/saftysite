@@ -6,6 +6,7 @@ import {
   normalizeInspectionSite,
   normalizeInspectionSession,
 } from '@/constants/inspectionSession';
+import { normalizeControllerReview } from '@/lib/admin/reportMeta';
 import { TECHNICAL_GUIDANCE_REPORT_KIND } from '@/lib/erpReports/shared';
 import type {
   SafetyMasterData,
@@ -166,6 +167,9 @@ export function mapSafetyReportToInspectionSession(
         normalizeMapperText(payloadMeta.approver) ||
         normalizeMapperText(reportMeta.approver),
     },
+    controllerReview: normalizeControllerReview(
+      payload.controllerReview ?? payloadMeta.controllerReview ?? reportMeta.controllerReview,
+    ),
   });
 
   return mergeMasterDataIntoSession(normalized, masterData);
@@ -200,6 +204,7 @@ export function buildSafetyReportUpsertInput(
       approver: session.meta.approver,
       currentSection: session.currentSection,
       reportNumber: session.reportNumber,
+      controllerReview: session.controllerReview,
     },
     status: 'draft',
     create_revision: false,
@@ -237,4 +242,3 @@ export function createNewSafetySession(
 export function isSafetyAdmin(user: Pick<SafetyUser, 'role'> | null): boolean {
   return Boolean(user && ADMIN_ROLES.has(user.role));
 }
-
