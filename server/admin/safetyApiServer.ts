@@ -1,6 +1,14 @@
 import { getSafetyApiUpstreamBaseUrl } from '@/lib/safetyApi/upstream';
 import type { SafetyContentAssetUpload } from '@/lib/safetyApi/adminEndpoints';
 import type {
+  SafetyBackendAdminAlert,
+  SafetyBackendAdminAnalyticsResponse,
+  SafetyBackendAdminOverviewResponse,
+  SafetyBackendAdminReportsResponse,
+  SafetyBackendInspectionSchedule,
+  SafetyBackendPhotoAsset,
+  SafetyBackendPhotoAssetListResponse,
+  SafetyBackendScheduleListResponse,
   SafetyContentItem,
   SafetyReport,
   SafetyReportListItem,
@@ -15,9 +23,9 @@ import type {
   SafetySiteUpdateInput,
 } from '@/types/controller';
 
-const ADMIN_LIST_LIMIT = 1000;
+const ADMIN_LIST_LIMIT = 500;
 const CONTENT_LIST_LIMIT = 1000;
-const REPORT_LIST_LIMIT = 2000;
+const REPORT_LIST_LIMIT = 500;
 
 export class SafetyServerApiError extends Error {
   status: number;
@@ -49,24 +57,31 @@ function buildUpstreamUrl(path: string) {
   return `${getSafetyApiUpstreamBaseUrl()}${normalizedPath}`;
 }
 
+export function buildSafetyAdminUpstreamUrl(path: string) {
+  return buildUpstreamUrl(path);
+}
+
 async function parseErrorMessage(response: Response) {
   const contentType = response.headers.get('content-type') || '';
+  const text = await response.text();
 
-  if (contentType.includes('application/json')) {
+  if (contentType.includes('application/json') && text) {
     try {
-      const payload = (await response.json()) as Record<string, unknown>;
+      const payload = JSON.parse(text) as Record<string, unknown>;
       if (typeof payload.detail === 'string' && payload.detail.trim()) {
         return payload.detail;
+      }
+      if (Array.isArray(payload.detail) && payload.detail.length > 0) {
+        return JSON.stringify(payload.detail);
       }
       if (typeof payload.error === 'string' && payload.error.trim()) {
         return payload.error;
       }
     } catch {
-      return response.statusText || '요청 처리 중 오류가 발생했습니다.';
+      return text || response.statusText || '요청 처리 중 오류가 발생했습니다.';
     }
   }
 
-  const text = await response.text();
   return text || response.statusText || '요청 처리 중 오류가 발생했습니다.';
 }
 
@@ -113,6 +128,25 @@ export async function requestSafetyAdminServer<T>(
   }
 
   return (await response.json()) as T;
+}
+
+export async function requestSafetyAdminServerRaw(
+  path: string,
+  options: RequestInit = {},
+  token: string,
+  request: Request | null = null,
+): Promise<Response> {
+  const response = await fetch(buildUpstreamUrl(path), {
+    ...options,
+    headers: buildHeaders(request, token, options.headers),
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    throw new SafetyServerApiError(await parseErrorMessage(response), response.status);
+  }
+
+  return response;
 }
 
 export async function fetchAdminCoreData(
@@ -263,6 +297,206 @@ export function uploadSafetyAssetServer(
       method: 'POST',
       body: formData,
     },
+    token,
+    request,
+  );
+}
+
+export function fetchAdminReportsViewServer(
+  token: string,
+  params: Record<string, string | number | boolean | null | undefined>,
+  request: Request | null = null,
+): Promise<SafetyBackendAdminReportsResponse> {
+  return requestSafetyAdminServer<SafetyBackendAdminReportsResponse>(
+    withQuery('/admin/reports', params),
+    {},
+    token,
+    request,
+  );
+}
+
+export function updateAdminReportReviewServer(
+  token: string,
+  reportKey: string,
+  payload: Record<string, unknown>,
+  request: Request | null = null,
+) {
+  return requestSafetyAdminServer<SafetyReport>(
+    `/admin/reports/${encodeURIComponent(reportKey)}/review`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    },
+    token,
+    request,
+  );
+}
+
+export function updateAdminReportDispatchServer(
+  token: string,
+  reportKey: string,
+  payload: Record<string, unknown>,
+  request: Request | null = null,
+) {
+  return requestSafetyAdminServer<SafetyReport>(
+    `/admin/reports/${encodeURIComponent(reportKey)}/dispatch`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    },
+    token,
+    request,
+  );
+}
+
+export function appendAdminDispatchEventServer(
+  token: string,
+  reportKey: string,
+  payload: Record<string, unknown>,
+  request: Request | null = null,
+) {
+  return requestSafetyAdminServer<SafetyReport>(
+    `/admin/reports/${encodeURIComponent(reportKey)}/dispatch-events`,
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    },
+    token,
+    request,
+  );
+}
+
+export function fetchAdminOverviewServer(
+  token: string,
+  request: Request | null = null,
+): Promise<SafetyBackendAdminOverviewResponse> {
+  return requestSafetyAdminServer<SafetyBackendAdminOverviewResponse>(
+    '/admin/dashboard/overview',
+    {},
+    token,
+    request,
+  );
+}
+
+export function fetchAdminAnalyticsServer(
+  token: string,
+  params: Record<string, string | number | boolean | null | undefined>,
+  request: Request | null = null,
+): Promise<SafetyBackendAdminAnalyticsResponse> {
+  return requestSafetyAdminServer<SafetyBackendAdminAnalyticsResponse>(
+    withQuery('/admin/dashboard/analytics', params),
+    {},
+    token,
+    request,
+  );
+}
+
+export function fetchAdminAlertsServer(
+  token: string,
+  request: Request | null = null,
+): Promise<SafetyBackendAdminAlert[]> {
+  return requestSafetyAdminServer<SafetyBackendAdminAlert[]>(
+    '/admin/alerts',
+    {},
+    token,
+    request,
+  );
+}
+
+export function fetchAdminSchedulesServer(
+  token: string,
+  params: Record<string, string | number | boolean | null | undefined>,
+  request: Request | null = null,
+): Promise<SafetyBackendScheduleListResponse> {
+  return requestSafetyAdminServer<SafetyBackendScheduleListResponse>(
+    withQuery('/admin/schedules', params),
+    {},
+    token,
+    request,
+  );
+}
+
+export function generateAdminSchedulesServer(
+  token: string,
+  siteId: string,
+  request: Request | null = null,
+): Promise<{ rows: SafetyBackendInspectionSchedule[] }> {
+  return requestSafetyAdminServer<{ rows: SafetyBackendInspectionSchedule[] }>(
+    `/admin/sites/${encodeURIComponent(siteId)}/schedules/generate`,
+    {
+      method: 'POST',
+    },
+    token,
+    request,
+  );
+}
+
+export function updateAdminScheduleServer(
+  token: string,
+  scheduleId: string,
+  payload: Record<string, unknown>,
+  request: Request | null = null,
+): Promise<SafetyBackendInspectionSchedule> {
+  return requestSafetyAdminServer<SafetyBackendInspectionSchedule>(
+    `/admin/schedules/${encodeURIComponent(scheduleId)}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    },
+    token,
+    request,
+  );
+}
+
+export function fetchSafetyPhotoAssetsServer(
+  token: string,
+  params: Record<string, string | number | boolean | null | undefined>,
+  request: Request | null = null,
+): Promise<SafetyBackendPhotoAssetListResponse> {
+  return requestSafetyAdminServer<SafetyBackendPhotoAssetListResponse>(
+    withQuery('/photo-assets', params),
+    {},
+    token,
+    request,
+  );
+}
+
+export function uploadSafetyPhotoAssetServer(
+  token: string,
+  formData: FormData,
+  request: Request | null = null,
+): Promise<SafetyBackendPhotoAsset> {
+  return requestSafetyAdminServer<SafetyBackendPhotoAsset>(
+    '/photo-assets/upload',
+    {
+      method: 'POST',
+      body: formData,
+    },
+    token,
+    request,
+  );
+}
+
+export function downloadSafetyPhotoAssetServer(
+  token: string,
+  assetId: string,
+  request: Request | null = null,
+) {
+  return requestSafetyAdminServerRaw(
+    `/photo-assets/${encodeURIComponent(assetId)}/download`,
+    {},
     token,
     request,
   );

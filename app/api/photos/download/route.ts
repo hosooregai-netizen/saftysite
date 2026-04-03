@@ -4,11 +4,14 @@ import { NextResponse } from 'next/server';
 import {
   assertDownloadItemLimit,
   buildDownloadZipEntryName,
-  buildPhotoAlbumItemsFromSites,
   getPhotoAlbumItemById,
   resolvePhotoAlbumItemBinary,
 } from '@/server/photos/album';
-import { readRequiredAdminToken, SafetyServerApiError } from '@/server/admin/safetyApiServer';
+import {
+  downloadSafetyPhotoAssetServer,
+  readRequiredAdminToken,
+  SafetyServerApiError,
+} from '@/server/admin/safetyApiServer';
 import { loadPhotoAlbumCollection, resolvePhotoAlbumAccessContext } from '@/server/photos/service';
 
 export const runtime = 'nodejs';
@@ -44,19 +47,8 @@ function makeUniqueEntryName(name: string, taken: Set<string>) {
 async function resolveDownloadItems(
   token: string,
   request: Request,
-  itemIds: string[],
 ) {
-  const access = await resolvePhotoAlbumAccessContext(token, request);
-  const hasLegacy = itemIds.some((itemId) => itemId.startsWith('legacy:'));
-
-  if (!hasLegacy) {
-    return {
-      items: buildPhotoAlbumItemsFromSites(access.accessibleSites),
-      reportsBySiteId: new Map(),
-      sites: access.accessibleSites,
-    };
-  }
-
+  await resolvePhotoAlbumAccessContext(token, request);
   return loadPhotoAlbumCollection(token, request, { source: 'all' });
 }
 
@@ -89,7 +81,7 @@ async function buildDownloadResponse(
 ): Promise<Response> {
   assertDownloadItemLimit(itemIds);
 
-  const collection = await resolveDownloadItems(token, request, itemIds);
+  const collection = await resolveDownloadItems(token, request);
   const selectedItems = itemIds
     .map((itemId) => getPhotoAlbumItemById(collection.items, itemId))
     .filter((item): item is NonNullable<typeof item> => Boolean(item));
@@ -103,11 +95,22 @@ async function buildDownloadResponse(
 
   if (selectedItems.length === 1) {
     const item = selectedItems[0];
-    const binary = await resolvePhotoAlbumItemBinary(
-      item,
-      collection.sites,
-      collection.reportsBySiteId,
-    );
+    const binary =
+      item.sourceKind === 'album_upload'
+        ? await (async () => {
+            const response = await downloadSafetyPhotoAssetServer(token, item.id, request);
+            const arrayBuffer = await response.arrayBuffer();
+            return {
+              buffer: Buffer.from(arrayBuffer),
+              contentType: response.headers.get('content-type') || item.contentType || 'application/octet-stream',
+              fileName: item.fileName || 'photo.jpg',
+            };
+          })()
+        : await resolvePhotoAlbumItemBinary(
+            item,
+            collection.sites,
+            collection.reportsBySiteId,
+          );
 
     return new Response(new Uint8Array(binary.buffer), {
       headers: {
@@ -122,11 +125,22 @@ async function buildDownloadResponse(
   const takenNames = new Set<string>();
 
   for (const item of selectedItems) {
-    const binary = await resolvePhotoAlbumItemBinary(
-      item,
-      collection.sites,
-      collection.reportsBySiteId,
-    );
+    const binary =
+      item.sourceKind === 'album_upload'
+        ? await (async () => {
+            const response = await downloadSafetyPhotoAssetServer(token, item.id, request);
+            const arrayBuffer = await response.arrayBuffer();
+            return {
+              buffer: Buffer.from(arrayBuffer),
+              contentType: response.headers.get('content-type') || item.contentType || 'application/octet-stream',
+              fileName: item.fileName || 'photo.jpg',
+            };
+          })()
+        : await resolvePhotoAlbumItemBinary(
+            item,
+            collection.sites,
+            collection.reportsBySiteId,
+          );
     zip.file(
       makeUniqueEntryName(buildDownloadZipEntryName(item), takenNames),
       binary.buffer,

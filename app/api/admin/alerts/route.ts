@@ -1,23 +1,19 @@
 import { NextResponse } from 'next/server';
-import { buildAdminOverviewResponse } from '@/server/admin/automation';
 import {
-  fetchAdminCoreData,
-  fetchAdminReports,
+  fetchAdminAlertsServer,
   readRequiredAdminToken,
   SafetyServerApiError,
 } from '@/server/admin/safetyApiServer';
+import { mapBackendAlert } from '@/server/admin/upstreamMappers';
 
 export const runtime = 'nodejs';
 
 export async function GET(request: Request): Promise<Response> {
   try {
     const token = readRequiredAdminToken(request);
-    const [data, reports] = await Promise.all([
-      fetchAdminCoreData(token, request),
-      fetchAdminReports(token, request),
-    ]);
-
-    return NextResponse.json(buildAdminOverviewResponse(data, reports).alerts);
+    return NextResponse.json(
+      (await fetchAdminAlertsServer(token, request)).map((item) => mapBackendAlert(item)),
+    );
   } catch (error) {
     if (error instanceof SafetyServerApiError) {
       return NextResponse.json({ error: error.message }, { status: error.status });

@@ -8,16 +8,18 @@ import {
 } from '@/lib/admin/controllerReports';
 import { getQualityStatusLabel } from '@/lib/admin/reportMeta';
 import {
-  buildAdminAnalyticsResponse,
-  buildAdminOverviewResponse,
-  buildAdminSchedules,
-} from '@/server/admin/automation';
-import { queryAdminReportRows } from '@/server/admin/reportRows';
-import {
+  fetchAdminAnalyticsServer,
   fetchAdminCoreData,
-  fetchAdminReports,
+  fetchAdminOverviewServer,
+  fetchAdminReportsViewServer,
+  fetchAdminSchedulesServer,
 } from '@/server/admin/safetyApiServer';
-import { buildControllerReportRows } from '@/lib/admin/controllerReports';
+import {
+  mapBackendAnalyticsResponse,
+  mapBackendAdminReportsResponse,
+  mapBackendOverviewResponse,
+  mapBackendScheduleListResponse,
+} from '@/server/admin/upstreamMappers';
 import type { TableExportColumn } from '@/types/admin';
 
 export interface ServerWorkbookSheet {
@@ -63,45 +65,55 @@ export async function buildAdminServerExportSheets(
   token: string,
   request: Request,
 ): Promise<ServerWorkbookSheet[]> {
-  const [data, reports] = await Promise.all([
-    fetchAdminCoreData(token, request),
-    fetchAdminReports(token, request),
-  ]);
-
   if (section === 'overview') {
-    const overview = buildAdminOverviewResponse(data, reports);
+    const overview = mapBackendOverviewResponse(
+      await fetchAdminOverviewServer(token, request),
+    );
     return getOverviewExportSheets(overview);
   }
 
   if (section === 'analytics') {
-    const analytics = buildAdminAnalyticsResponse(data, reports, {
-      contractType: asText(filters.contract_type),
-      headquarterId: asText(filters.headquarter_id),
-      period: asText(filters.period),
-      query: asText(filters.query),
-      userId: asText(filters.user_id),
-    });
+    const analytics = mapBackendAnalyticsResponse(
+      await fetchAdminAnalyticsServer(
+        token,
+        {
+          contract_type: asText(filters.contract_type),
+          headquarter_id: asText(filters.headquarter_id),
+          period: asText(filters.period) || 'month',
+          query: asText(filters.query),
+          user_id: asText(filters.user_id),
+        },
+        request,
+      ),
+    );
     return getAnalyticsExportSheets(analytics);
   }
 
   if (section === 'reports') {
-    const rows = queryAdminReportRows(
-      buildControllerReportRows(reports, data.sites, data.users),
-      {
-        assigneeUserId: asText(filters.assignee_user_id),
-        dateFrom: asText(filters.date_from),
-        dateTo: asText(filters.date_to),
-        dispatchStatus: asText(filters.dispatch_status),
-        headquarterId: asText(filters.headquarter_id),
-        qualityStatus: asText(filters.quality_status),
-        query: asText(filters.query),
-        reportType: asText(filters.report_type),
-        siteId: asText(filters.site_id),
-        sortBy: asText(filters.sort_by) || 'updatedAt',
-        sortDir: asText(filters.sort_dir) || 'desc',
-        status: asText(filters.status),
-      },
-    );
+    const [data, reportsResponse] = await Promise.all([
+      fetchAdminCoreData(token, request),
+      fetchAdminReportsViewServer(
+        token,
+        {
+          assignee_user_id: asText(filters.assignee_user_id),
+          date_from: asText(filters.date_from),
+          date_to: asText(filters.date_to),
+          dispatch_status: asText(filters.dispatch_status),
+          headquarter_id: asText(filters.headquarter_id),
+          limit: 500,
+          offset: 0,
+          quality_status: asText(filters.quality_status),
+          query: asText(filters.query),
+          report_type: asText(filters.report_type),
+          site_id: asText(filters.site_id),
+          sort_by: asText(filters.sort_by) || 'updatedAt',
+          sort_dir: asText(filters.sort_dir) || 'desc',
+          status: asText(filters.status),
+        },
+        request,
+      ),
+    ]);
+    const rows = mapBackendAdminReportsResponse(reportsResponse).rows;
 
     return [
       {
@@ -139,14 +151,22 @@ export async function buildAdminServerExportSheets(
   }
 
   if (section === 'schedules') {
-    const rows = buildAdminSchedules(data, {
-      assigneeUserId: asText(filters.assignee_user_id),
-      month: asText(filters.month),
-      plannedDate: asText(filters.planned_date),
-      query: asText(filters.query),
-      siteId: asText(filters.site_id),
-      status: asText(filters.status),
-    });
+    const rows = mapBackendScheduleListResponse(
+      await fetchAdminSchedulesServer(
+        token,
+        {
+          assignee_user_id: asText(filters.assignee_user_id),
+          limit: 1000,
+          month: asText(filters.month),
+          offset: 0,
+          planned_date: asText(filters.planned_date),
+          query: asText(filters.query),
+          site_id: asText(filters.site_id),
+          status: asText(filters.status),
+        },
+        request,
+      ),
+    ).rows;
 
     return [
       {

@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
-import { buildAdminSchedules } from '@/server/admin/automation';
 import {
-  fetchAdminCoreData,
+  fetchAdminSchedulesServer,
   readRequiredAdminToken,
   SafetyServerApiError,
 } from '@/server/admin/safetyApiServer';
+import { mapBackendScheduleListResponse } from '@/server/admin/upstreamMappers';
 
 export const runtime = 'nodejs';
 
@@ -15,23 +15,22 @@ export async function GET(request: Request): Promise<Response> {
     const limit = Math.max(1, Math.min(300, Number(url.searchParams.get('limit') || '200')));
     const offset = Math.max(0, Number(url.searchParams.get('offset') || '0'));
     const month = url.searchParams.get('month') || '';
-    const data = await fetchAdminCoreData(token, request);
-    const rows = buildAdminSchedules(data, {
-      assigneeUserId: url.searchParams.get('assignee_user_id') || '',
-      month,
-      plannedDate: url.searchParams.get('planned_date') || '',
-      query: url.searchParams.get('query') || '',
-      siteId: url.searchParams.get('site_id') || '',
-      status: url.searchParams.get('status') || '',
-    });
+    const response = await fetchAdminSchedulesServer(
+      token,
+      {
+        assignee_user_id: url.searchParams.get('assignee_user_id') || '',
+        limit,
+        month,
+        offset,
+        planned_date: url.searchParams.get('planned_date') || '',
+        query: url.searchParams.get('query') || '',
+        site_id: url.searchParams.get('site_id') || '',
+        status: url.searchParams.get('status') || '',
+      },
+      request,
+    );
 
-    return NextResponse.json({
-      limit,
-      month,
-      offset,
-      rows: rows.slice(offset, offset + limit),
-      total: rows.length,
-    });
+    return NextResponse.json(mapBackendScheduleListResponse(response));
   } catch (error) {
     if (error instanceof SafetyServerApiError) {
       return NextResponse.json({ error: error.message }, { status: error.status });

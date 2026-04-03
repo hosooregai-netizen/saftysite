@@ -1,13 +1,10 @@
 import { NextResponse } from 'next/server';
 import {
-  updateSingleSchedule,
-} from '@/server/admin/automation';
-import {
-  fetchAdminCoreData,
   readRequiredAdminToken,
   SafetyServerApiError,
-  updateAdminSite,
+  updateAdminScheduleServer,
 } from '@/server/admin/safetyApiServer';
+import { mapBackendSchedule } from '@/server/admin/upstreamMappers';
 import type { SafetyInspectionSchedule } from '@/types/admin';
 
 export const runtime = 'nodejs';
@@ -20,19 +17,22 @@ export async function PATCH(
     const token = readRequiredAdminToken(request);
     const { scheduleId } = await context.params;
     const payload = (await request.json()) as Partial<SafetyInspectionSchedule>;
-    const data = await fetchAdminCoreData(token, request);
-    const result = updateSingleSchedule(data, scheduleId, payload);
-
-    await updateAdminSite(
+    const updated = await updateAdminScheduleServer(
       token,
-      result.site.id,
+      scheduleId,
       {
-        memo: result.memo,
+        assignee_name: payload.assigneeName || undefined,
+        assignee_user_id: payload.assigneeUserId || undefined,
+        exception_memo: payload.exceptionMemo || undefined,
+        exception_reason_code: payload.exceptionReasonCode || undefined,
+        linked_report_key: payload.linkedReportKey || undefined,
+        planned_date: payload.plannedDate || undefined,
+        status: payload.status || undefined,
       },
       request,
     );
 
-    return NextResponse.json(result.schedule);
+    return NextResponse.json(mapBackendSchedule(updated));
   } catch (error) {
     if (error instanceof SafetyServerApiError) {
       return NextResponse.json({ error: error.message }, { status: error.status });

@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server';
 import {
-  fetchAdminReportByKey,
   readRequiredAdminToken,
   SafetyServerApiError,
-  updateAdminReport,
+  updateAdminReportDispatchServer,
 } from '@/server/admin/safetyApiServer';
 import type { ReportDispatchMeta } from '@/types/admin';
 
@@ -17,18 +16,19 @@ export async function PATCH(
     const token = readRequiredAdminToken(request);
     const { reportKey } = await context.params;
     const dispatch = (await request.json()) as ReportDispatchMeta;
-    const report = await fetchAdminReportByKey(token, reportKey, request);
-
-    const updated = await updateAdminReport(
+    const updated = await updateAdminReportDispatchServer(
       token,
+      reportKey,
       {
-        ...report,
-        meta: {
-          ...report.meta,
-          dispatch,
-        },
-        create_revision: false,
-        revision_reason: 'manual_save',
+        deadline_date: dispatch.deadlineDate || null,
+        dispatch_status: dispatch.dispatchStatus || null,
+        sent_completed_at: dispatch.sentCompletedAt || null,
+        sent_history: (dispatch.sentHistory || []).map((item) => ({
+          id: item.id,
+          memo: item.memo || null,
+          sent_at: item.sentAt,
+          sent_by_user_id: item.sentByUserId || null,
+        })),
       },
       request,
     );
