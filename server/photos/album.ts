@@ -22,11 +22,12 @@ import type {
 const DOWNLOAD_ROUTE_PREFIX = '/api/photos/download?item_id=';
 const MAX_DOWNLOAD_ITEMS = 200;
 
-interface PhotoAlbumQuery {
+export interface PhotoAlbumQuery {
   headquarterId?: string;
   limit?: number;
   offset?: number;
   query?: string;
+  reportKey?: string;
   siteId?: string;
   sortBy?: 'capturedAt' | 'createdAt' | 'fileName' | 'siteName';
   sortDir?: 'asc' | 'desc';
@@ -390,12 +391,20 @@ export function queryPhotoAlbumItems(
       if (query.siteId && item.siteId !== query.siteId) return false;
       if (query.headquarterId && item.headquarterId !== query.headquarterId) return false;
       if (query.source && query.source !== 'all' && item.sourceKind !== query.source) return false;
+      if (
+        query.reportKey &&
+        item.sourceKind === 'report_legacy' &&
+        item.sourceReportKey !== query.reportKey
+      ) {
+        return false;
+      }
       if (!normalizedQuery) return true;
 
       return [
         item.fileName,
         item.siteName,
         item.headquarterName,
+        item.sourceReportKey,
         item.sourceReportTitle,
         item.uploadedByName,
       ]

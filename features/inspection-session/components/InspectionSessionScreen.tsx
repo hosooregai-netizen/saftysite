@@ -67,6 +67,7 @@ export function InspectionSessionScreen({ sessionId }: InspectionSessionScreenPr
       onLogout={screen.logout}
       onMetaChange={screen.changeMetaField}
       onSectionSelect={screen.selectSection}
+      photoAlbumHref={screen.photoAlbumHref}
       progress={screen.derivedData.progress}
       relationNotice={screen.relationNotice}
       renderSection={getInspectionSectionContent(sectionProps)}

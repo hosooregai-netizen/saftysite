@@ -15,6 +15,10 @@ import { getAdminSectionHref, isAdminUserRole } from '@/lib/admin';
 import styles from '@/features/site-reports/components/SiteReportsScreen.module.css';
 
 interface SitePhotoAlbumScreenProps {
+  backHref?: string;
+  backLabel?: string;
+  reportKey?: string;
+  reportTitle?: string;
   siteKey: string;
 }
 
@@ -49,7 +53,13 @@ function MissingState() {
   );
 }
 
-export function SitePhotoAlbumScreen({ siteKey }: SitePhotoAlbumScreenProps) {
+export function SitePhotoAlbumScreen({
+  backHref,
+  backLabel,
+  reportKey,
+  reportTitle,
+  siteKey,
+}: SitePhotoAlbumScreenProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const decodedSiteKey = decodeURIComponent(siteKey);
   const {
@@ -67,7 +77,7 @@ export function SitePhotoAlbumScreen({ siteKey }: SitePhotoAlbumScreenProps) {
     [decodedSiteKey, sites],
   );
   const isAdminView = Boolean(currentUser && isAdminUserRole(currentUser.role));
-  const backHref = currentSite
+  const defaultBackHref = currentSite
     ? isAdminView
       ? getAdminSectionHref('photos', {
           headquarterId: currentSite.headquarterId,
@@ -118,11 +128,11 @@ export function SitePhotoAlbumScreen({ siteKey }: SitePhotoAlbumScreenProps) {
               <header className={styles.hero}>
                 <div className={styles.heroBody}>
                   <Link
-                    href={backHref}
+                    href={backHref || defaultBackHref}
                     className={styles.heroBackLink}
-                    aria-label="이전 화면으로 돌아가기"
+                    aria-label={backLabel || '이전 화면으로 돌아가기'}
                   >
-                    {'<'} 이전
+                    {'<'} {backLabel || '이전'}
                   </Link>
                   <div className={styles.heroMain}>
                     <h1 className={styles.heroTitle}>현장 사진첩 - {currentSite.siteName}</h1>
@@ -135,7 +145,11 @@ export function SitePhotoAlbumScreen({ siteKey }: SitePhotoAlbumScreenProps) {
 
               <div className={styles.pageGrid}>
                 <PhotoAlbumPanel
+                  backHref={backHref || defaultBackHref}
+                  backLabel={backLabel || '이전 화면으로 돌아가기'}
                   initialHeadquarterId={currentSite.headquarterId}
+                  initialReportKey={reportKey || null}
+                  initialReportTitle={reportTitle || null}
                   initialSiteId={currentSite.id}
                   lockedHeadquarterId={currentSite.headquarterId}
                   lockedSiteId={currentSite.id}

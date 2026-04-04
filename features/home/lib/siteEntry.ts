@@ -32,8 +32,19 @@ export function buildSiteBadWorkplaceHref(siteId: string, reportMonth: string): 
   return `/sites/${encodeURIComponent(siteId)}/bad-workplace/${encodeURIComponent(reportMonth)}`;
 }
 
-export function buildSitePhotoAlbumHref(siteId: string): string {
-  return `/sites/${encodeURIComponent(siteId)}/photos`;
+export function buildSitePhotoAlbumHref(
+  siteId: string,
+  query: Record<string, string | null | undefined> = {},
+): string {
+  const searchParams = new URLSearchParams();
+  Object.entries(query).forEach(([key, value]) => {
+    if (typeof value === 'string' && value.trim()) {
+      searchParams.set(key, value);
+    }
+  });
+  const queryString = searchParams.toString();
+  const basePath = `/sites/${encodeURIComponent(siteId)}/photos`;
+  return queryString ? `${basePath}?${queryString}` : basePath;
 }
 
 export function buildWorkerCalendarHref(siteId?: string | null): string {

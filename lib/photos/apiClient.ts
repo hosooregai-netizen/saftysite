@@ -64,6 +64,7 @@ export async function fetchPhotoAlbum(input: {
   limit?: number;
   offset?: number;
   query?: string;
+  reportKey?: string;
   siteId?: string;
   sortBy?: 'capturedAt' | 'createdAt' | 'fileName' | 'siteName';
   sortDir?: TableSortDirection;
@@ -76,6 +77,7 @@ export async function fetchPhotoAlbum(input: {
       limit: input.limit,
       offset: input.offset,
       query: input.query,
+      report_key: input.reportKey,
       site_id: input.siteId,
       sort_by: input.sortBy,
       sort_dir: input.sortDir,

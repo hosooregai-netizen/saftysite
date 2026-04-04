@@ -51,3 +51,10 @@ export interface PhotoAlbumListResponse {
   rows: PhotoAlbumItem[];
   total: number;
 }
+
+export interface PhotoAlbumContext {
+  backHref?: string | null;
+  backLabel?: string | null;
+  reportKey?: string | null;
+  reportTitle?: string | null;
+}

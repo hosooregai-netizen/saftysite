@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import AppModal from '@/components/ui/AppModal';
 import { buildNextTableSort } from '@/features/admin/components/SortableHeaderCell';
@@ -24,7 +25,11 @@ interface PhotoAlbumSiteOption {
 }
 
 interface PhotoAlbumPanelProps {
+  backHref?: string | null;
+  backLabel?: string | null;
   initialHeadquarterId?: string | null;
+  initialReportKey?: string | null;
+  initialReportTitle?: string | null;
   initialSiteId?: string | null;
   lockedHeadquarterId?: string | null;
   lockedSiteId?: string | null;
@@ -91,7 +96,11 @@ function matchesContext(
 }
 
 export function PhotoAlbumPanel({
+  backHref = null,
+  backLabel = null,
   initialHeadquarterId = null,
+  initialReportKey = null,
+  initialReportTitle = null,
   initialSiteId = null,
   lockedHeadquarterId = null,
   lockedSiteId = null,
@@ -167,6 +176,7 @@ export function PhotoAlbumPanel({
           limit: PAGE_SIZE,
           offset,
           query: deferredQuery,
+          reportKey: initialReportKey || '',
           siteId: lockedSiteId || siteId || '',
           sortBy: (sort.key as 'capturedAt' | 'createdAt' | 'fileName' | 'siteName') || 'capturedAt',
           sortDir: sort.direction,
@@ -191,7 +201,18 @@ export function PhotoAlbumPanel({
     return () => {
       cancelled = true;
     };
-  }, [deferredQuery, headquarterId, lockedHeadquarterId, lockedSiteId, offset, siteId, sort.direction, sort.key, source]);
+  }, [
+    deferredQuery,
+    headquarterId,
+    initialReportKey,
+    lockedHeadquarterId,
+    lockedSiteId,
+    offset,
+    siteId,
+    sort.direction,
+    sort.key,
+    source,
+  ]);
 
   const handleToggleAll = () => {
     setSelectedIds((current) =>
@@ -245,6 +266,7 @@ export function PhotoAlbumPanel({
         limit: PAGE_SIZE,
         offset: 0,
         query: deferredQuery,
+        reportKey: initialReportKey || '',
         siteId: uploadSiteId,
         sortBy: (sort.key as 'capturedAt' | 'createdAt' | 'fileName' | 'siteName') || 'capturedAt',
         sortDir: sort.direction,
@@ -342,8 +364,20 @@ export function PhotoAlbumPanel({
             <h2 className={adminStyles.sectionTitle}>
               {mode === 'admin' ? '사진첩' : '현장 사진첩'}
             </h2>
+            {initialReportKey ? (
+              <p className={adminStyles.sectionDescription}>
+                {initialReportTitle
+                  ? `보고서 컨텍스트: ${initialReportTitle}`
+                  : `보고서 컨텍스트: ${initialReportKey}`}
+              </p>
+            ) : null}
           </div>
           <div className={adminStyles.sectionHeaderActions}>
+            {backHref ? (
+              <Link href={backHref} className="app-button app-button-secondary">
+                {backLabel || '이전 화면으로'}
+              </Link>
+            ) : null}
             <span className="app-chip">album {itemCounts.album} / legacy {itemCounts.legacy}</span>
             <button
               type="button"

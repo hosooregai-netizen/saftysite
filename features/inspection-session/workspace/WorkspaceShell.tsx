@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { AdminMenuDrawer, AdminMenuPanel } from '@/components/admin/AdminMenu';
 import { INSPECTION_SECTIONS } from '@/constants/inspectionSession';
@@ -28,6 +29,7 @@ interface WorkspaceShellProps {
   onLogout: () => void;
   onMetaChange: (field: keyof InspectionSession['meta'], value: string) => void;
   onSectionSelect: (key: InspectionSectionKey) => void;
+  photoAlbumHref?: string | null;
   progress: { completed: number; total: number; percentage: number };
   relationNotice?: string | null;
   renderSection: React.ReactNode;
@@ -52,6 +54,7 @@ export function WorkspaceShell({
   onLogout,
   onMetaChange,
   onSectionSelect,
+  photoAlbumHref,
   progress,
   relationNotice,
   renderSection,
@@ -110,6 +113,14 @@ export function WorkspaceShell({
                         <div className={styles.editorHeaderToolbar}>
                           {sectionToolbar}
                           <div className={styles.editorDocumentActions}>
+                            {photoAlbumHref ? (
+                              <Link
+                                href={photoAlbumHref}
+                                className="app-button app-button-secondary"
+                              >
+                                사진첩 열기
+                              </Link>
+                            ) : null}
                             <button
                               type="button"
                               className="app-button app-button-secondary"

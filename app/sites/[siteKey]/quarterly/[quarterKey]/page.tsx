@@ -47,7 +47,7 @@ import {
   contentBodyToImageUrl,
   contentBodyToText,
 } from '@/lib/safetyApiMappers/utils';
-import { buildSiteQuarterlyListHref } from '@/features/home/lib/siteEntry';
+import { buildSitePhotoAlbumHref, buildSiteQuarterlyListHref } from '@/features/home/lib/siteEntry';
 import shellStyles from '@/features/site-reports/components/SiteReportsScreen.module.css';
 import type { SafetyContentItem } from '@/types/backend';
 import type { QuarterlySummaryReport } from '@/types/erpReports';
@@ -147,6 +147,13 @@ export default function QuarterlyReportPage({ params }: QuarterlyReportPageProps
       id: decodedReportId,
     };
   }, [currentSite, currentUser?.name, decodedReportId, existing, siteSessions]);
+  const photoAlbumHref = currentSite
+    ? buildSitePhotoAlbumHref(currentSite.id, {
+        backHref: `/sites/${encodeURIComponent(currentSite.id)}/quarterly/${encodeURIComponent(decodedReportId)}`,
+        backLabel: '분기 보고서로 돌아가기',
+        reportTitle: initialDraft?.title || existing?.title || '',
+      })
+    : null;
 
   useEffect(() => {
     if (!currentSite || !isAuthenticated || !isReady) return;
@@ -235,6 +242,11 @@ export default function QuarterlyReportPage({ params }: QuarterlyReportPageProps
                   </Link>
                   <div className={shellStyles.heroMain}>
                     <h1 className={shellStyles.heroTitle}>{initialDraft.title}</h1>
+                    {photoAlbumHref ? (
+                      <Link href={photoAlbumHref} className="app-button app-button-secondary">
+                        사진첩 열기
+                      </Link>
+                    ) : null}
                   </div>
                 </div>
               </header>

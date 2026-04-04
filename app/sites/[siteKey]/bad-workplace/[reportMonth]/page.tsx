@@ -26,6 +26,7 @@ import {
   getBadWorkplaceSourceSessions,
   syncBadWorkplaceReportSource,
 } from '@/lib/erpReports/badWorkplace';
+import { buildSitePhotoAlbumHref } from '@/features/home/lib/siteEntry';
 import shellStyles from '@/features/site-reports/components/SiteReportsScreen.module.css';
 import type { BadWorkplaceReport } from '@/types/erpReports';
 import type { InspectionSession, InspectionSite } from '@/types/inspectionSession';
@@ -98,6 +99,13 @@ export default function BadWorkplaceReportPage({
       existing,
     );
   }, [currentSite, currentUser, decodedReportMonth, existing, siteSessions]);
+  const photoAlbumHref = currentSite
+    ? buildSitePhotoAlbumHref(currentSite.id, {
+        backHref: `/sites/${encodeURIComponent(currentSite.id)}/bad-workplace/${encodeURIComponent(decodedReportMonth)}`,
+        backLabel: '불량사업장 신고로 돌아가기',
+        reportTitle: initialDraft?.title || '',
+      })
+    : null;
 
   if (!isReady) {
     return (
@@ -163,6 +171,11 @@ export default function BadWorkplaceReportPage({
                   </Link>
                   <div className={shellStyles.heroMain}>
                     <h1 className={shellStyles.heroTitle}>{initialDraft.title}</h1>
+                    {photoAlbumHref ? (
+                      <Link href={photoAlbumHref} className="app-button app-button-secondary">
+                        사진첩 열기
+                      </Link>
+                    ) : null}
                   </div>
                 </div>
               </header>

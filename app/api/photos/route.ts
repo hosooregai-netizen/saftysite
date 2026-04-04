@@ -35,6 +35,7 @@ export async function GET(request: Request): Promise<Response> {
       limit: parseLimit(url.searchParams.get('limit')),
       offset: parseOffset(url.searchParams.get('offset')),
       query: (url.searchParams.get('query') || '').trim(),
+      reportKey: (url.searchParams.get('report_key') || '').trim(),
       siteId: (url.searchParams.get('site_id') || '').trim(),
       sortBy:
         (url.searchParams.get('sort_by') || '').trim() === 'fileName' ||

@@ -34,6 +34,7 @@ import type {
 } from '@/types/inspectionSession';
 import { applyInspectionSessionMetaFieldChange } from '@/features/inspection-session/lib/applyInspectionSessionMetaFieldChange';
 import { buildInspectionSessionDerivedData } from '@/features/inspection-session/lib/buildInspectionSessionDerivedData';
+import { buildSitePhotoAlbumHref } from '@/features/home/lib/siteEntry';
 import { getMetaTouchSection } from '@/components/session/workspace/utils';
 
 function mergeMissingSnapshotFields(
@@ -134,6 +135,14 @@ export function useInspectionSessionScreen(sessionId: string) {
     [masterData, session],
   );
   const backHref = site ? `/sites/${encodeURIComponent(site.id)}` : '/';
+  const photoAlbumHref = site
+    ? buildSitePhotoAlbumHref(site.id, {
+        backHref: `/sessions/${encodeURIComponent(sessionId)}`,
+        backLabel: '보고서로 돌아가기',
+        reportKey: sessionId,
+        reportTitle: session?.meta.reportTitle || '',
+      })
+    : null;
 
   useEffect(() => () => void saveNow(), [saveNow]);
 
@@ -421,6 +430,7 @@ export function useInspectionSessionScreen(sessionId: string) {
     login,
     logout,
     moveSection,
+    photoAlbumHref,
     sectionSession: session,
     selectSection,
     site,

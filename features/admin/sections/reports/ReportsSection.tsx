@@ -825,6 +825,11 @@ export function ReportsSection({
                                 label: '사진첩 열기',
                                 href: getAdminSectionHref('photos', {
                                   headquarterId: row.headquarterId || null,
+                                  reportKey:
+                                    row.reportType === 'technical_guidance' ? row.reportKey : null,
+                                  reportTitle: row.reportTitle || row.periodLabel || row.reportKey,
+                                  returnLabel: '보고서로 돌아가기',
+                                  returnTo: buildControllerReportHref(row),
                                   siteId: row.siteId,
                                 }),
                               },

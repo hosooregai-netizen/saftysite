@@ -13,7 +13,11 @@ export function PhotosSection({ sites }: PhotosSectionProps) {
 
   return (
     <PhotoAlbumPanel
+      backHref={searchParams.get('returnTo')}
+      backLabel={searchParams.get('returnLabel') || '보고서로 돌아가기'}
       initialHeadquarterId={searchParams.get('headquarterId')}
+      initialReportKey={searchParams.get('reportKey')}
+      initialReportTitle={searchParams.get('reportTitle')}
       initialSiteId={searchParams.get('siteId')}
       mode="admin"
       sites={sites.map((site) => ({
