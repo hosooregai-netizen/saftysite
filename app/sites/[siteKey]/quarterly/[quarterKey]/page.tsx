@@ -1601,7 +1601,7 @@ function QuarterlyFuturePlansSection(props: {
           </colgroup>
           <thead>
             <tr>
-              <th className={operationalStyles.implementationHeaderCell}>위험요인</th>
+              <th className={operationalStyles.implementationHeaderCell}>작업공정</th>
               <th className={operationalStyles.implementationHeaderCell}>안전대책</th>
               <th
                 className={`${operationalStyles.implementationHeaderCell} ${operationalStyles.implementationHeaderActionCell}`}
@@ -1621,12 +1621,12 @@ function QuarterlyFuturePlansSection(props: {
               plans.map((item) => (
                 <tr key={item.id}>
                   <FuturePlanInputCell
-                    value={item.hazard}
+                    value={item.processName}
                     onChange={(value) =>
                       onChange(
                         plans.map((plan) =>
                           plan.id === item.id
-                            ? { ...plan, processName: '', hazard: value }
+                            ? { ...plan, processName: value }
                             : plan,
                         ),
                       )

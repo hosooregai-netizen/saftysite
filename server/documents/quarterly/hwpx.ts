@@ -747,7 +747,7 @@ function updateFuturePlanTable(tableXml: string, report: QuarterlySummaryReport)
 
   rows.forEach((item, index) => {
     const rowAddr = 2 + index;
-    const leftText = formatOptionalText(item.hazard);
+    const leftText = formatOptionalText(item.processName || item.hazard);
     const rightText = formatOptionalText(item.countermeasure);
 
     nextTable = replaceCellText(nextTable, rowAddr, 0, formatText(leftText), {
