@@ -66,6 +66,15 @@ interface Doc5ChartEntry {
   count: number;
 }
 
+function formatDoc5ChartPercent(count: number, total: number) {
+  if (total <= 0) {
+    return '0%';
+  }
+  const percent = (count / total) * 100;
+  const rounded = Math.round(percent * 10) / 10;
+  return Number.isInteger(rounded) ? `${rounded}%` : `${rounded.toFixed(1)}%`;
+}
+
 const HWPX_GENERATION_MODE: 'template_native' | 'advanced' = 'advanced';
 const IMAGE_BINDING_MODE: 'embedded' | 'text_only' = 'embedded';
 const TEMPLATE_FILENAME = '\uAE30\uC220\uC9C0\uB3C4 \uC218\uB3D9\uBCF4\uACE0\uC11C \uC571 - \uC11C\uC2DD_4.annotated.v7.hwpx';
@@ -940,6 +949,7 @@ function renderDoc5ChartCardDataUrl(
   for (let index = 0; index < entries.length; index += 1) {
     const item = entries[index];
     const y = legendStartY + index * lineHeight;
+    const percentText = formatDoc5ChartPercent(item.count, total);
 
     context.fillStyle = DOC5_CHART_SEGMENT_COLORS[index % DOC5_CHART_SEGMENT_COLORS.length];
     context.fillRect(legendX, y + 8, markerSize, markerSize);
@@ -950,7 +960,7 @@ function renderDoc5ChartCardDataUrl(
 
     context.font = `600 ${legendFontSize}px "Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-serif`;
     context.textAlign = 'right';
-    context.fillText(String(item.count), countX, y);
+    context.fillText(percentText, countX, y);
     context.font = `500 ${legendFontSize}px "Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-serif`;
   }
 
