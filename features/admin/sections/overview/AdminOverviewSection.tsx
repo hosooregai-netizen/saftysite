@@ -240,13 +240,12 @@ export function AdminOverviewSection({
     exportAdminWorkbook(
       'overview',
       getOverviewExportSheets({
-        ...overview,
-        alerts,
-        completionRows,
+        coverageRows: overview.coverageRows,
         deadlineRows,
+        metricCards: overview.metricCards,
         overdueSiteRows,
         pendingReviewRows,
-        scheduleRows,
+        summaryRows: overview.summaryRows,
         workerLoadRows,
       }),
     );

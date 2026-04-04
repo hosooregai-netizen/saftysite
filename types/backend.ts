@@ -626,6 +626,7 @@ export interface SafetyTechnicalGuidanceSeed {
 
 export interface SafetyAiHazardFindingInput {
   location: string;
+  hazardDescription?: string;
   likelihood: string;
   severity: string;
   riskLevel: string;

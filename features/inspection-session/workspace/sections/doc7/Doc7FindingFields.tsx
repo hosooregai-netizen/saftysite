@@ -105,9 +105,11 @@ export function Doc7FindingFields({
     keys.sort((a, b) => (order.get(a as CausativeAgentKey) ?? 999) - (order.get(b as CausativeAgentKey) ?? 999));
     return keys;
   }, [activeCatalog, referenceCatalogAccidentType]);
-  const hasReferenceImage = isImageValue(item.referenceMaterial1);
+  const referenceImageValue = item.referenceMaterialImage || item.referenceMaterial1;
+  const referenceDescriptionValue =
+    item.referenceMaterialDescription || item.referenceMaterial2;
   const reference1Label = useMemo(() => {
-    if (!item.referenceMaterial1.trim()) {
+    if (!referenceImageValue.trim()) {
       return '';
     }
 
@@ -116,13 +118,13 @@ export function Doc7FindingFields({
     }
 
     return (
-      decodeReferenceFileName(item.referenceMaterial1) ||
-      buildShortReferenceLabel(item.referenceMaterial1, '참고자료 이미지') ||
+      decodeReferenceFileName(referenceImageValue) ||
+      buildShortReferenceLabel(referenceImageValue, '참고자료 이미지') ||
       '참고자료 이미지'
     );
-  }, [item.referenceMaterial1, referenceMaterial1Title]);
+  }, [referenceImageValue, referenceMaterial1Title]);
   const reference2Label = useMemo(() => {
-    if (!item.referenceMaterial2.trim()) {
+    if (!referenceDescriptionValue.trim()) {
       return '';
     }
 
@@ -130,8 +132,12 @@ export function Doc7FindingFields({
       return referenceMaterial2Title;
     }
 
-    return buildShortReferenceLabel(item.referenceMaterial2, '참고자료 내용') || '참고자료 내용';
-  }, [item.referenceMaterial2, referenceMaterial2Title]);
+    return (
+      buildShortReferenceLabel(referenceDescriptionValue, '참고자료 설명') ||
+      '참고자료 설명'
+    );
+  }, [referenceDescriptionValue, referenceMaterial2Title]);
+  const hasReferencePreviewImage = isImageValue(referenceImageValue);
 
   return (
     <>
@@ -139,7 +145,7 @@ export function Doc7FindingFields({
         <div className={styles.doc7FieldStack}>
           <div className={styles.doc7PairRow}>
             <label className={styles.field}>
-              <span className={styles.fieldLabel}>장소 / 유해·위험요인</span>
+              <span className={styles.fieldLabel}>장소</span>
               <input
                 type="text"
                 className="app-input"
@@ -148,41 +154,6 @@ export function Doc7FindingFields({
                   updateFinding((finding) => ({ ...finding, location: event.target.value }))
                 }
               />
-            </label>
-            <label className={styles.field}>
-              <span className={styles.fieldLabel}>위험도</span>
-              <select
-                className="app-select"
-                value={selectValueForRiskLevel(item.riskLevel)}
-                onChange={(event) =>
-                  updateFinding((finding) => ({ ...finding, riskLevel: event.target.value }))
-                }
-              >
-                {RISK_TRI_LEVEL_OPTIONS.map((option) => (
-                  <option key={option.value || 'empty'} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          <div className={styles.doc7PairRow}>
-            <label className={styles.field}>
-              <span className={styles.fieldLabel}>기인물</span>
-              <select
-                className="app-select"
-                value={item.causativeAgentKey}
-                onChange={(event) =>
-                  onCausativeAgentChange(event.target.value as CausativeAgentKey | '')
-                }
-              >
-                <option value="">선택</option>
-                {CAUSATIVE_AGENT_OPTIONS.map((option) => (
-                  <option key={option.key} value={option.key}>
-                    {option.number}. {CAUSATIVE_AGENT_LABELS[option.key] ?? option.label}
-                  </option>
-                ))}
-              </select>
             </label>
             <label className={styles.field}>
               <span className={styles.fieldLabel}>재해유형</span>
@@ -200,6 +171,55 @@ export function Doc7FindingFields({
               </select>
             </label>
           </div>
+          <div className={styles.doc7PairRow}>
+            <label className={styles.field}>
+              <span className={styles.fieldLabel}>위험도</span>
+              <select
+                className="app-select"
+                value={selectValueForRiskLevel(item.riskLevel)}
+                onChange={(event) =>
+                  updateFinding((finding) => ({ ...finding, riskLevel: event.target.value }))
+                }
+              >
+                {RISK_TRI_LEVEL_OPTIONS.map((option) => (
+                  <option key={option.value || 'empty'} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className={styles.field}>
+              <span className={styles.fieldLabel}>기인물</span>
+              <select
+                className="app-select"
+                value={item.causativeAgentKey}
+                onChange={(event) =>
+                  onCausativeAgentChange(event.target.value as CausativeAgentKey | '')
+                }
+              >
+                <option value="">선택</option>
+                {CAUSATIVE_AGENT_OPTIONS.map((option) => (
+                  <option key={option.key} value={option.key}>
+                    {option.number}. {CAUSATIVE_AGENT_LABELS[option.key] ?? option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <label className={`${styles.field} ${styles.fieldWide}`}>
+            <span className={styles.fieldLabel}>유해위험요인</span>
+            <textarea
+              className="app-textarea"
+              rows={2}
+              value={item.hazardDescription ?? ''}
+              onChange={(event) =>
+                updateFinding((finding) => ({
+                  ...finding,
+                  hazardDescription: event.target.value,
+                }))
+              }
+            />
+          </label>
           <label className={`${styles.field} ${styles.fieldWide}`}>
             <span className={styles.fieldLabel}>중점관리 위험요인 및 관리대책</span>
             <textarea
@@ -248,7 +268,7 @@ export function Doc7FindingFields({
           </label>
           <div className={styles.doc7PairRow}>
             <label className={styles.field}>
-              <span className={styles.fieldLabel}>참고자료-재해유형</span>
+              <span className={styles.fieldLabel}>참고자료 매칭 재해유형</span>
               <select
                 className="app-select"
                 value={item.referenceCatalogAccidentType ?? ''}
@@ -291,7 +311,7 @@ export function Doc7FindingFields({
               </select>
             </label>
             <label className={styles.field}>
-              <span className={styles.fieldLabel}>참고자료-기인물</span>
+              <span className={styles.fieldLabel}>참고자료 매칭 기인물</span>
               <select
                 className="app-select"
                 value={item.referenceCatalogCausativeAgentKey ?? ''}
@@ -332,7 +352,7 @@ export function Doc7FindingFields({
                   type="button"
                   className={styles.doc7ReferencePreviewButton}
                   onClick={() => setPreviewKind('reference1')}
-                  disabled={!item.referenceMaterial1.trim()}
+                  disabled={!referenceImageValue.trim()}
                   aria-label="참고자료 이미지 미리보기"
                 >
                   <PicturePreviewIcon />
@@ -340,7 +360,7 @@ export function Doc7FindingFields({
               </div>
             </label>
             <label className={styles.field}>
-              <span className={styles.fieldLabel}>참고자료 설명</span>
+              <span className={styles.fieldLabel}>참고자료 부연설명</span>
               <div className={styles.doc7ReferenceInputRow}>
                 <input
                   type="text"
@@ -353,7 +373,7 @@ export function Doc7FindingFields({
                   type="button"
                   className={styles.doc7ReferencePreviewButton}
                   onClick={() => setPreviewKind('reference2')}
-                  disabled={!item.referenceMaterial2.trim()}
+                  disabled={!referenceDescriptionValue.trim()}
                   aria-label="참고자료 설명 미리보기"
                 >
                   <PicturePreviewIcon />
@@ -385,23 +405,23 @@ export function Doc7FindingFields({
       >
         {previewKind === 'reference1' ? (
           <div className={styles.doc7ReferencePreviewModal}>
-            {hasReferenceImage ? (
+            {hasReferencePreviewImage ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={item.referenceMaterial1}
+                src={referenceImageValue}
                 alt={reference1Label || '참고자료 이미지'}
                 className={styles.doc7ReferencePreviewImage}
               />
             ) : (
               <div className={styles.doc7ReferencePreviewText}>
-                {item.referenceMaterial1 || '표시할 참고자료가 없습니다.'}
+                {referenceImageValue || '표시할 참고자료가 없습니다.'}
               </div>
             )}
           </div>
         ) : (
           <div className={styles.doc7ReferencePreviewModal}>
             <div className={styles.doc7ReferencePreviewText}>
-              {item.referenceMaterial2 || '표시할 참고자료가 없습니다.'}
+              {referenceDescriptionValue || '표시할 참고자료가 없습니다.'}
             </div>
           </div>
         )}

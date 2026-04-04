@@ -48,6 +48,7 @@ function formatFindingBlock(findings: CurrentHazardFinding[]): string {
       const agent = causativeLabel(f.causativeAgentKey);
       const parts = [
         f.location?.trim() && `위치: ${f.location.trim()}`,
+        f.hazardDescription?.trim() && `유해위험요인: ${f.hazardDescription.trim()}`,
         f.accidentType?.trim() && `지적유형(재해형태): ${f.accidentType.trim()}`,
         agent && `기인물: ${agent}`,
         f.riskLevel?.trim() && `위험등급: ${f.riskLevel.trim()}`,
@@ -98,4 +99,3 @@ export function normalizeDoc5SummaryOutput(text: string): string {
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
-

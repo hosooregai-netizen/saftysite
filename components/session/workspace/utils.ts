@@ -262,6 +262,7 @@ export function hasFindingContent(item: CurrentHazardFinding): boolean {
     normalizeText(item.photoUrl) ||
       normalizeText(item.photoUrl2) ||
       normalizeText(item.location) ||
+      normalizeText(item.hazardDescription) ||
       normalizeText(item.likelihood) ||
       normalizeText(item.severity) ||
       normalizeText(item.accidentType) ||
@@ -269,7 +270,9 @@ export function hasFindingContent(item: CurrentHazardFinding): boolean {
       normalizeText(item.inspector) ||
       normalizeText(item.emphasis) ||
       normalizeText(item.improvementPlan) ||
-      normalizeText(item.legalReferenceTitle)
+      normalizeText(item.legalReferenceTitle) ||
+      normalizeText(item.referenceMaterialImage || item.referenceMaterial1) ||
+      normalizeText(item.referenceMaterialDescription || item.referenceMaterial2)
   );
 }
 

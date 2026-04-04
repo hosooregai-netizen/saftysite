@@ -9,6 +9,7 @@ export function isMeaningfulDocument7Finding(
 ): boolean {
   return Boolean(
     finding.location ||
+      finding.hazardDescription ||
       finding.emphasis ||
       finding.improvementPlan ||
       finding.accidentType ||

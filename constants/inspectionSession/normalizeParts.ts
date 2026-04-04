@@ -83,13 +83,19 @@ export function normalizeHazardFinding(raw: unknown, fallbackInspector: string) 
     photoUrl: normalizeText(source.photoUrl),
     photoUrl2: normalizeText(source.photoUrl2),
     location: normalizeText(source.location) || normalizeText(source.locationDetail) || normalizeText(source.title),
+    hazardDescription:
+      normalizeText(source.hazardDescription) ||
+      normalizeText(source.hazard_description) ||
+      normalizeText(source.hazard) ||
+      normalizeText(source.hazardFactors) ||
+      normalizeText(source.riskFactor),
     likelihood,
     severity,
     riskLevel: normalizeRiskLevel(likelihood, severity, normalizeText(source.riskLevel || source.riskAssessmentResult)),
     accidentType: normalizeText(source.accidentType) || normalizeText(source.location),
     causativeAgentKey: normalizeDoc7CausativeAgentKey(normalizeText(source.causativeAgentKey)) as CausativeAgentKey | '',
     inspector: normalizeText(source.inspector) || fallbackInspector,
-    emphasis: normalizeText(source.emphasis) || normalizeText(source.hazardFactors),
+    emphasis: normalizeText(source.emphasis) || normalizeText(source.managementMeasure),
     improvementPlan:
       normalizeText(source.improvementRequest) ||
       normalizeText(source.improvementPlan) ||

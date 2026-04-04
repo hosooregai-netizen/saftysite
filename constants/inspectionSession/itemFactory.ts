@@ -61,6 +61,7 @@ export function createCurrentHazardFinding(
     photoUrl: '',
     photoUrl2: '',
     location: '',
+    hazardDescription: '',
     likelihood: '',
     severity: '',
     riskLevel: '',

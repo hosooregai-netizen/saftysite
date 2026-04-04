@@ -68,6 +68,7 @@ export interface CurrentHazardFinding {
   /** 현장 사진 2 */
   photoUrl2: string;
   location: string;
+  hazardDescription?: string;
   likelihood: string;
   severity: string;
   riskLevel: string;

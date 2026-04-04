@@ -66,11 +66,12 @@ export function buildBadWorkplaceViolations(
       finding.referenceMaterial2 ||
       finding.referenceMaterial1,
     hazardFactor:
+      finding.hazardDescription ||
       finding.emphasis ||
       finding.metadata ||
       finding.location ||
       finding.accidentType,
-    improvementMeasure: finding.improvementPlan,
+    improvementMeasure: finding.improvementRequest || finding.improvementPlan,
     nonCompliance:
       '기술지도 이후에도 동일 유해위험요인이 개선되지 않아 후속 조치가 필요합니다.',
     confirmationDate: getSessionGuidanceDate(session),

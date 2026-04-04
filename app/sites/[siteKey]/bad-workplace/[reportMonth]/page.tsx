@@ -352,12 +352,17 @@ function BadWorkplaceReportEditor({
                   onChange={(event) => handleToggleFinding(finding.id, event.target.checked)}
                 />
                 <span className={operationalStyles.checkboxText}>
-                  <strong>{finding.location || finding.emphasis || '지적사항'}</strong>
+                  <strong>
+                    {finding.location ||
+                      finding.hazardDescription ||
+                      finding.emphasis ||
+                      '지적사항'}
+                  </strong>
                   <span className={operationalStyles.muted}>
                     법적 근거: {finding.legalReferenceTitle || finding.referenceMaterial2 || finding.referenceMaterial1 || '-'}
                   </span>
                   <span className={operationalStyles.muted}>
-                    개선 요청: {finding.improvementPlan || '-'}
+                    개선 요청: {finding.improvementRequest || finding.improvementPlan || '-'}
                   </span>
                 </span>
               </label>
@@ -662,4 +667,3 @@ function BadWorkplaceSourceSessionModal({
     </AppModal>
   );
 }
-

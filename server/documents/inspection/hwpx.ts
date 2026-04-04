@@ -775,6 +775,15 @@ function mapRiskText(finding: InspectionSession['document7Findings'][number]): s
   return [valueOrBlank(finding.likelihood), valueOrBlank(finding.severity)].filter(Boolean).join(' / ');
 }
 
+function buildFindingLocationText(finding: InspectionSession['document7Findings'][number]): string {
+  const location = valueOrBlank(finding.location);
+  const hazardDescription = valueOrBlank(finding.hazardDescription);
+  if (location && hazardDescription) {
+    return `${location} / ${hazardDescription}`;
+  }
+  return location || hazardDescription;
+}
+
 function isFilledObject(value: object): boolean {
   return Object.values(value).some((item) => valueOrBlank(item) !== '');
 }
@@ -840,6 +849,7 @@ function hasDoc5FindingContent(item: InspectionSession['document7Findings'][numb
     valueOrBlank(item.photoUrl) ||
       valueOrBlank(item.photoUrl2) ||
       valueOrBlank(item.location) ||
+      valueOrBlank(item.hazardDescription) ||
       valueOrBlank(item.likelihood) ||
       valueOrBlank(item.severity) ||
       valueOrBlank(item.riskLevel) ||
@@ -848,7 +858,9 @@ function hasDoc5FindingContent(item: InspectionSession['document7Findings'][numb
       valueOrBlank(item.inspector) ||
       valueOrBlank(item.emphasis) ||
       valueOrBlank(item.improvementPlan) ||
-      valueOrBlank(item.legalReferenceTitle),
+      valueOrBlank(item.legalReferenceTitle) ||
+      valueOrBlank(item.referenceMaterialImage || item.referenceMaterial1) ||
+      valueOrBlank(item.referenceMaterialDescription || item.referenceMaterial2),
   );
 }
 
@@ -1098,6 +1110,7 @@ function createEmptyFinding() {
     photoUrl: '',
     photoUrl2: '',
     location: '',
+    hazardDescription: '',
     likelihood: '',
     severity: '',
     riskLevel: '',
@@ -1309,7 +1322,7 @@ function mapSessionToTemplateBinding(session: InspectionSession): TemplateBindin
     const improvementRequest = item.improvementRequest || item.improvementPlan;
     const referenceMaterialImage = item.referenceMaterialImage || item.referenceMaterial1;
     const referenceMaterialDescription = item.referenceMaterialDescription || item.referenceMaterial2;
-    text[`sec7.findings[${index}].location`] = valueOrDash(item.location);
+    text[`sec7.findings[${index}].location`] = valueOrDash(buildFindingLocationText(item));
     text[`sec7.findings[${index}].risk_text`] = valueOrDash(mapRiskText(item));
     text[`sec7.findings[${index}].accident_type`] = valueOrDash(item.accidentType);
     text[`sec7.findings[${index}].causative_agent`] = valueOrDash(toCausativeLabel(item.causativeAgentKey, measureLabelMap));
