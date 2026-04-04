@@ -14,7 +14,6 @@ import {
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import { fetchAdminAnalytics } from '@/lib/admin/apiClient';
 import {
-  exportAdminServerWorkbook,
   exportAdminWorkbook,
 } from '@/lib/admin/exportClient';
 import type { SafetyAdminAnalyticsResponse, TableSortState } from '@/types/admin';
@@ -160,7 +159,7 @@ export function AnalyticsSection({
       }
       return (Number(getSortValue(left)) - Number(getSortValue(right))) * direction;
     });
-  }, [analytics.siteRevenueRows, siteRevenueSort.direction, siteRevenueSort.key]);
+  }, [analytics, siteRevenueSort.direction, siteRevenueSort.key]);
 
   const handleExport = () =>
     exportAdminWorkbook(

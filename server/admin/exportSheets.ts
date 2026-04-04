@@ -162,6 +162,8 @@ export async function buildAdminServerExportSheets(
           planned_date: asText(filters.planned_date),
           query: asText(filters.query),
           site_id: asText(filters.site_id),
+          sort_by: asText(filters.sort_by) || 'plannedDate',
+          sort_dir: asText(filters.sort_dir) || 'asc',
           status: asText(filters.status),
         },
         request,

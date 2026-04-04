@@ -122,6 +122,33 @@
   font-size: var(--text-body);
 }
 
+.sortBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.sortChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--erp-line);
+  border-radius: 999px;
+  background: #fff;
+  font-size: var(--text-ui);
+  font-weight: 700;
+  color: var(--erp-dark);
+}
+
+.sortChipActive {
+  border-color: rgba(31, 48, 69, 0.28);
+  background: rgba(31, 48, 69, 0.06);
+  color: var(--erp-navy);
+}
+
 .bulkBar,
 .paginationBar {
   display: flex;

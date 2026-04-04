@@ -4,10 +4,7 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'rea
 import { useSearchParams } from 'next/navigation';
 import ActionMenu from '@/components/ui/ActionMenu';
 import AppModal from '@/components/ui/AppModal';
-import {
-  SortableHeaderCell,
-  buildNextTableSort,
-} from '@/features/admin/components/SortableHeaderCell';
+import { SortableHeaderCell } from '@/features/admin/components/SortableHeaderCell';
 import { TableToolbar } from '@/features/admin/components/TableToolbar';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import {
@@ -243,9 +240,9 @@ export function ReportsSection({
     [users],
   );
 
-  const handleSortChange = (key: TableSortState['key'], defaultDirection: 'asc' | 'desc' = 'asc') => {
+  const handleSortChange = (next: TableSortState) => {
     setOffset(0);
-    setSort((current) => buildNextTableSort(current, key, defaultDirection));
+    setSort(next);
   };
 
   const openReviewModal = (row: ControllerReportRow) => {
@@ -702,59 +699,59 @@ export function ReportsSection({
                       column={{ key: 'reportType' }}
                       current={sort}
                       label="유형"
-                      onChange={setSort}
+                      onChange={handleSortChange}
                     />
                     <SortableHeaderCell
                       column={{ key: 'reportTitle' }}
                       current={sort}
                       label="보고서"
-                      onChange={setSort}
+                      onChange={handleSortChange}
                     />
                     <SortableHeaderCell
                       column={{ key: 'siteName' }}
                       current={sort}
                       label="현장"
-                      onChange={setSort}
+                      onChange={handleSortChange}
                     />
                     <SortableHeaderCell
                       column={{ key: 'assigneeName' }}
                       current={sort}
                       label="담당자"
-                      onChange={setSort}
+                      onChange={handleSortChange}
                     />
                     <SortableHeaderCell
                       column={{ key: 'status' }}
                       current={sort}
                       label="상태"
-                      onChange={setSort}
+                      onChange={handleSortChange}
                     />
                     <SortableHeaderCell
                       column={{ key: 'dispatchStatus' }}
                       current={sort}
                       defaultDirection="desc"
                       label="발송"
-                      onChange={setSort}
+                      onChange={handleSortChange}
                     />
                     <SortableHeaderCell
                       column={{ key: 'qualityStatus' }}
                       current={sort}
                       defaultDirection="desc"
                       label="품질체크"
-                      onChange={setSort}
+                      onChange={handleSortChange}
                     />
                     <SortableHeaderCell
                       column={{ key: 'visitDate' }}
                       current={sort}
                       defaultDirection="desc"
                       label="기준일"
-                      onChange={setSort}
+                      onChange={handleSortChange}
                     />
                     <SortableHeaderCell
                       column={{ key: 'updatedAt' }}
                       current={sort}
                       defaultDirection="desc"
                       label="수정일"
-                      onChange={setSort}
+                      onChange={handleSortChange}
                     />
                     <th>메뉴</th>
                   </tr>

@@ -15,6 +15,8 @@ export async function GET(request: Request): Promise<Response> {
     const limit = Math.max(1, Math.min(300, Number(url.searchParams.get('limit') || '200')));
     const offset = Math.max(0, Number(url.searchParams.get('offset') || '0'));
     const month = url.searchParams.get('month') || '';
+    const sortBy = url.searchParams.get('sort_by') || 'plannedDate';
+    const sortDir = url.searchParams.get('sort_dir') === 'desc' ? 'desc' : 'asc';
     const response = await fetchAdminSchedulesServer(
       token,
       {
@@ -25,6 +27,8 @@ export async function GET(request: Request): Promise<Response> {
         planned_date: url.searchParams.get('planned_date') || '',
         query: url.searchParams.get('query') || '',
         site_id: url.searchParams.get('site_id') || '',
+        sort_by: sortBy,
+        sort_dir: sortDir,
         status: url.searchParams.get('status') || '',
       },
       request,

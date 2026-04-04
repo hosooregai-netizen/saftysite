@@ -171,6 +171,8 @@ export function fetchAdminSchedules(input: {
   plannedDate?: string;
   query?: string;
   siteId?: string;
+  sortDir?: TableSortDirection;
+  sortBy?: string;
   status?: string;
 }) {
   return requestAdminApi<SafetyAdminScheduleListResponse>(
@@ -182,6 +184,8 @@ export function fetchAdminSchedules(input: {
       planned_date: input.plannedDate,
       query: input.query,
       site_id: input.siteId,
+      sort_by: input.sortBy,
+      sort_dir: input.sortDir,
       status: input.status,
     })}`,
   );

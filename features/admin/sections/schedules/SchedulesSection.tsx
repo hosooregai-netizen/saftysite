@@ -184,7 +184,7 @@ export function SchedulesSection({
 
     try {
       setError(null);
-      const updated = await updateAdminSchedule(editingSchedule.id, {
+      await updateAdminSchedule(editingSchedule.id, {
         assigneeUserId: form.assigneeUserId,
         exceptionMemo: form.exceptionMemo,
         exceptionReasonCode: form.exceptionReasonCode,
@@ -192,9 +192,16 @@ export function SchedulesSection({
         status: form.status,
       });
 
-      setRows((current) =>
-        current.map((row) => (row.id === updated.id ? updated : row)),
-      );
+      const response = await fetchAdminSchedules({
+        assigneeUserId: scope === 'mine' ? currentUser.id : assigneeUserId,
+        month,
+        query,
+        siteId,
+        sortBy: sort.key,
+        sortDir: sort.direction,
+        status,
+      });
+      setRows(response.rows);
       setNotice('일정을 저장했습니다.');
       setEditingSchedule(null);
     } catch (nextError) {

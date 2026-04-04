@@ -2,6 +2,7 @@
 
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import AppModal from '@/components/ui/AppModal';
+import { buildNextTableSort } from '@/features/admin/components/SortableHeaderCell';
 import { TableToolbar } from '@/features/admin/components/TableToolbar';
 import adminStyles from '@/features/admin/sections/AdminSectionShared.module.css';
 import { exportAdminWorkbook } from '@/lib/admin/exportClient';
@@ -326,6 +327,12 @@ export function PhotoAlbumPanel({
     );
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const currentPage = Math.floor(offset / PAGE_SIZE) + 1;
+  const sortOptions: Array<{ defaultDirection: TableSortState['direction']; key: typeof sort.key; label: string }> = [
+    { defaultDirection: 'desc', key: 'capturedAt', label: '촬영일' },
+    { defaultDirection: 'desc', key: 'createdAt', label: '등록일' },
+    { defaultDirection: 'asc', key: 'fileName', label: '파일명' },
+    { defaultDirection: 'asc', key: 'siteName', label: '현장명' },
+  ];
 
   return (
     <div className={adminStyles.dashboardStack}>
@@ -418,20 +425,32 @@ export function PhotoAlbumPanel({
               </>
             }
             onExport={mode === 'admin' ? () => void handleExport() : undefined}
-          onQueryChange={setQuery}
-          onSortDirectionChange={(direction) => setSort((current) => ({ ...current, direction }))}
-          onSortKeyChange={(key) => setSort((current) => ({ ...current, key }))}
-          query={query}
-          queryPlaceholder="파일명, 현장명, 보고서명, 업로더 검색"
-          sortDirection={sort.direction}
-          sortKey={sort.key}
-          sortOptions={[
-            { value: 'capturedAt', label: '촬영일' },
-            { value: 'createdAt', label: '등록일' },
-            { value: 'fileName', label: '파일명' },
-            { value: 'siteName', label: '현장명' },
-          ]}
-        />
+            onQueryChange={setQuery}
+            query={query}
+            queryPlaceholder="파일명, 현장명, 보고서명, 업로더 검색"
+          />
+
+          <div className={styles.sortBar} role="toolbar" aria-label="사진첩 정렬">
+            {sortOptions.map((option) => {
+              const active = sort.key === option.key;
+              const arrow = active ? (sort.direction === 'asc' ? '↑' : '↓') : '↕';
+              return (
+                <button
+                  key={option.key}
+                  type="button"
+                  className={`${styles.sortChip} ${active ? styles.sortChipActive : ''}`}
+                  onClick={() =>
+                    setSort((current) =>
+                      buildNextTableSort(current, option.key, option.defaultDirection),
+                    )
+                  }
+                >
+                  <span>{option.label}</span>
+                  <span>{arrow}</span>
+                </button>
+              );
+            })}
+          </div>
 
           {loading ? (
             <div className={styles.emptyState}>사진첩을 불러오는 중입니다.</div>
