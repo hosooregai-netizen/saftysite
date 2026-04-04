@@ -495,7 +495,9 @@ export function AdminOverviewSection({
             {overview.coverageRows.map((row) => (
               <div key={row.label} className={styles.coverageCard}>
                 <div className={styles.coverageCardLabel}>{row.label}</div>
-                <strong className={styles.coverageCardValue}>{row.itemCount}건 등록</strong>
+                <strong className={styles.coverageCardValue}>
+                  {row.itemCount.toLocaleString('ko-KR')}개 현장 충족
+                </strong>
                 <div className={styles.coverageCardMeta}>
                   부족 현장 {row.missingSiteCount.toLocaleString('ko-KR')}개
                 </div>

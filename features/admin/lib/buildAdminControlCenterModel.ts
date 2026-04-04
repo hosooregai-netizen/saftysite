@@ -1095,7 +1095,7 @@ export function getOverviewExportSheets(model: AdminOverviewModel) {
       name: 'coverage',
       columns: [
         { key: 'label', label: '구분' },
-        { key: 'itemCount', label: '등록 수' },
+        { key: 'itemCount', label: '충족 현장 수' },
         { key: 'missingSiteCount', label: '부족 현장 수' },
       ],
       rows: model.coverageRows.map((row) => ({

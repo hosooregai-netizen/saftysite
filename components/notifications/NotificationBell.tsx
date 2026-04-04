@@ -31,6 +31,7 @@ export function NotificationBell() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const wrapRef = useRef<HTMLDivElement | null>(null);
+  const hasUserInteractedRef = useRef(false);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,6 +70,21 @@ export function NotificationBell() {
   }, []);
 
   useEffect(() => {
+    const markInteracted = () => {
+      hasUserInteractedRef.current = true;
+    };
+
+    window.addEventListener('pointerdown', markInteracted, { passive: true });
+    window.addEventListener('keydown', markInteracted);
+    window.addEventListener('touchstart', markInteracted, { passive: true });
+    return () => {
+      window.removeEventListener('pointerdown', markInteracted);
+      window.removeEventListener('keydown', markInteracted);
+      window.removeEventListener('touchstart', markInteracted);
+    };
+  }, []);
+
+  useEffect(() => {
     if (typeof window === 'undefined') return;
     const importantIds = feed.rows
       .filter((item) => item.isImportant && !item.isRead)
@@ -78,9 +94,16 @@ export function NotificationBell() {
     const marker = importantIds.join('|');
     const seenMarker = window.sessionStorage.getItem(IMPORTANT_MODAL_STORAGE_KEY);
     if (seenMarker === marker) return;
-    window.sessionStorage.setItem(IMPORTANT_MODAL_STORAGE_KEY, marker);
-    setImportantModalOpen(true);
-  }, [feed.rows, shouldSuppressImportantModal]);
+    const timer = window.setTimeout(() => {
+      if (hasUserInteractedRef.current || open) {
+        window.sessionStorage.setItem(IMPORTANT_MODAL_STORAGE_KEY, marker);
+        return;
+      }
+      window.sessionStorage.setItem(IMPORTANT_MODAL_STORAGE_KEY, marker);
+      setImportantModalOpen(true);
+    }, 1800);
+    return () => window.clearTimeout(timer);
+  }, [feed.rows, open, shouldSuppressImportantModal]);
 
   useEffect(() => {
     if (!open) return;
