@@ -78,14 +78,21 @@ export default function Doc7FindingCard({
       return;
     }
 
-    if (item.referenceMaterial1 || item.referenceMaterial2) {
+    if (
+      item.referenceMaterial1 ||
+      item.referenceMaterial2 ||
+      item.referenceMaterialImage ||
+      item.referenceMaterialDescription
+    ) {
       return;
     }
 
     const nextFinding = applyDoc7ReferenceMaterialMatch(item, doc7ReferenceMaterials);
     if (
       nextFinding.referenceMaterial1 === item.referenceMaterial1 &&
-      nextFinding.referenceMaterial2 === item.referenceMaterial2
+      nextFinding.referenceMaterial2 === item.referenceMaterial2 &&
+      nextFinding.referenceMaterialImage === item.referenceMaterialImage &&
+      nextFinding.referenceMaterialDescription === item.referenceMaterialDescription
     ) {
       return;
     }
@@ -100,6 +107,8 @@ export default function Doc7FindingCard({
     item.referenceCatalogCausativeAgentKey,
     item.referenceMaterial1,
     item.referenceMaterial2,
+    item.referenceMaterialImage,
+    item.referenceMaterialDescription,
     updateFinding,
   ]);
 

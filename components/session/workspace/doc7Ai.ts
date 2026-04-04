@@ -117,8 +117,8 @@ export function isFindingEmptyForAiAutofill(item: CurrentHazardFinding): boolean
   if (normalize(item.improvementPlan)) return false;
   if (normalize(item.legalReferenceId)) return false;
   if (normalize(item.legalReferenceTitle)) return false;
-  if (normalize(item.referenceMaterial1)) return false;
-  if (normalize(item.referenceMaterial2)) return false;
+  if (normalize(item.referenceMaterialImage || item.referenceMaterial1)) return false;
+  if (normalize(item.referenceMaterialDescription || item.referenceMaterial2)) return false;
   if (normalize(item.metadata)) return false;
   return true;
 }
@@ -165,6 +165,10 @@ export async function buildHazardFindingAutoFill(
     recommendedCases.length > 0
       ? `재해사례 추천: ${recommendedCases.map((item) => item.title).join(', ')}`
       : '';
+  const mergedImprovementPlan = mergeImprovementPlan(
+    normalizeLine(report?.improvementItems ?? ''),
+    catalogPlan,
+  );
 
   return {
     location: buildLocation(report),
@@ -174,10 +178,8 @@ export async function buildHazardFindingAutoFill(
     accidentType,
     causativeAgentKey,
     emphasis: normalizeLine(report?.hazardFactors ?? report?.metadata ?? ''),
-    improvementPlan: mergeImprovementPlan(
-      normalizeLine(report?.improvementItems ?? ''),
-      catalogPlan,
-    ),
+    improvementPlan: mergedImprovementPlan,
+    improvementRequest: mergedImprovementPlan,
     legalReferenceId: recommendedLegalReference?.id ?? '',
     legalReferenceTitle: recommendedLegalReference?.title ?? '',
     metadata: [normalizeLine(report?.metadata ?? ''), relatedCaseSummary]
