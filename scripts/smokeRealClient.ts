@@ -97,6 +97,12 @@ async function main() {
   await page.getByText('실적/매출 요약').first().waitFor();
   await page.getByText('직원별 실적/매출').first().waitFor();
 
+  await page.goto(`${baseUrl}/admin?section=mailbox`, { waitUntil: 'load' });
+  await waitHeading('메일함');
+  await page.getByRole('button', { name: '연결 계정' }).click();
+  await page.getByRole('button', { name: /구글 로그인으로 연결/ }).first().waitFor();
+  await page.getByRole('button', { name: /네이버 로그인으로 연결/ }).first().waitFor();
+
   await page.goto(`${baseUrl}/admin?section=reports`, { waitUntil: 'load' });
   await waitHeading('전체 보고서');
   await page.getByText('1차 기술지도 보고서').first().waitFor();
@@ -150,6 +156,11 @@ async function main() {
   await page.getByText('회차별 일정 선택').first().waitFor();
   await dismissImportantModalIfPresent();
   await page.waitForTimeout(1_000);
+
+  await page.goto(`${baseUrl}/mailbox`, { waitUntil: 'load' });
+  await waitHeading('메일함');
+  await page.getByRole('button', { name: '연결 계정' }).click();
+  await page.getByRole('button', { name: /구글 로그인으로 연결/ }).first().waitFor();
 
   await page.goto(`${baseUrl}/sites/${seed.site1Id}/photos`, { waitUntil: 'load' });
   await page.getByText('현장 사진첩 - 테스트 현장 A').first().waitFor();

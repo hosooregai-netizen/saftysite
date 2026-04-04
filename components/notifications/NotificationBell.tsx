@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import AppModal from '@/components/ui/AppModal';
 import {
   acknowledgeAllNotifications,
@@ -27,7 +27,9 @@ function formatDateTime(value: string) {
 }
 
 export function NotificationBell() {
+  const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -38,6 +40,10 @@ export function NotificationBell() {
     unreadImportantCount: 0,
   });
   const [importantModalOpen, setImportantModalOpen] = useState(false);
+  const adminSection = searchParams.get('section') || 'overview';
+  const shouldShowImportantModal =
+    pathname === '/' || (pathname === '/admin' && adminSection === 'overview');
+  const shouldSuppressImportantModal = !shouldShowImportantModal;
 
   const refresh = async () => {
     try {
@@ -68,13 +74,13 @@ export function NotificationBell() {
       .filter((item) => item.isImportant && !item.isRead)
       .map((item) => item.id)
       .slice(0, 5);
-    if (importantIds.length === 0) return;
+    if (importantIds.length === 0 || shouldSuppressImportantModal) return;
     const marker = importantIds.join('|');
     const seenMarker = window.sessionStorage.getItem(IMPORTANT_MODAL_STORAGE_KEY);
     if (seenMarker === marker) return;
     window.sessionStorage.setItem(IMPORTANT_MODAL_STORAGE_KEY, marker);
     setImportantModalOpen(true);
-  }, [feed.rows]);
+  }, [feed.rows, shouldSuppressImportantModal]);
 
   useEffect(() => {
     if (!open) return;
