@@ -155,6 +155,7 @@ async function main() {
   await page.getByText('내 일정').first().waitFor();
   await page.getByText('회차별 일정 선택').first().waitFor();
   await dismissImportantModalIfPresent();
+  await page.getByRole('button', { name: '이 날짜로 선택' }).first().waitFor();
   await page.waitForTimeout(1_000);
 
   await page.goto(`${baseUrl}/mailbox`, { waitUntil: 'load' });
