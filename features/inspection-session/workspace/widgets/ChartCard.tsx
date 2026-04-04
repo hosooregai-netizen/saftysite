@@ -12,6 +12,12 @@ export function ChartCard({ entries, title }: ChartCardProps) {
   const total = list.reduce((sum, item) => sum + item.count, 0);
   const slices = total > 0 ? buildDonutSlices(list, total) : [];
   const summaryLabel = `${title}: 총 ${total}건`;
+  const formatPercent = (count: number) => {
+    if (total <= 0) return '0%';
+    const percent = (count / total) * 100;
+    const rounded = Math.round(percent * 10) / 10;
+    return Number.isInteger(rounded) ? `${rounded}%` : `${rounded.toFixed(1)}%`;
+  };
 
   return (
     <article className={styles.chartCard}>
@@ -40,7 +46,9 @@ export function ChartCard({ entries, title }: ChartCardProps) {
                   aria-hidden="true"
                 />
                 <span className={styles.chartDonutLegendLabel}>{item.label}</span>
-                <span className={styles.chartDonutLegendCount}>{item.count}</span>
+                <span className={styles.chartDonutLegendCount}>
+                  {item.count}건 · {formatPercent(item.count)}
+                </span>
               </li>
             ))}
           </ul>
@@ -51,4 +59,3 @@ export function ChartCard({ entries, title }: ChartCardProps) {
     </article>
   );
 }
-
