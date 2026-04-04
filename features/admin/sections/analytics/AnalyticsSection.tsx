@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { SortableHeaderCell } from '@/features/admin/components/SortableHeaderCell';
 import { TableToolbar } from '@/features/admin/components/TableToolbar';
 import {
   buildAdminAnalyticsModel,
@@ -43,7 +44,11 @@ export function AnalyticsSection({
   const [headquarterId, setHeadquarterId] = useState(() => searchParams.get('headquarterId') || '');
   const [userId, setUserId] = useState(() => searchParams.get('userId') || '');
   const [contractType, setContractType] = useState(() => searchParams.get('contractType') || '');
-  const [sort, setSort] = useState<TableSortState>({
+  const [employeeSort, setEmployeeSort] = useState<TableSortState>({
+    direction: 'desc',
+    key: 'visitRevenue',
+  });
+  const [siteRevenueSort, setSiteRevenueSort] = useState<TableSortState>({
     direction: 'desc',
     key: 'visitRevenue',
   });
@@ -97,9 +102,9 @@ export function AnalyticsSection({
   const analytics = remoteAnalytics ?? fallbackAnalytics;
 
   const sortedEmployeeRows = useMemo(() => {
-    const direction = sort.direction === 'asc' ? 1 : -1;
+    const direction = employeeSort.direction === 'asc' ? 1 : -1;
     const getSortValue = (row: (typeof analytics.employeeRows)[number]) => {
-      switch (sort.key) {
+      switch (employeeSort.key) {
         case 'userName':
           return row.userName;
         case 'assignedSiteCount':
@@ -117,32 +122,55 @@ export function AnalyticsSection({
     };
 
     return [...analytics.employeeRows].sort((left, right) => {
-      if (sort.key === 'userName') {
+      if (employeeSort.key === 'userName') {
         return String(getSortValue(left)).localeCompare(String(getSortValue(right)), 'ko') * direction;
       }
 
       return (Number(getSortValue(left)) - Number(getSortValue(right))) * direction;
     });
-  }, [analytics, sort.direction, sort.key]);
+  }, [analytics, employeeSort.direction, employeeSort.key]);
 
-  const sortedSiteRevenueRows = useMemo(
-    () =>
-      [...analytics.siteRevenueRows].sort(
-        (left, right) =>
-          right.visitRevenue - left.visitRevenue ||
-          right.contractContributionRevenue - left.contractContributionRevenue,
-      ),
-    [analytics.siteRevenueRows],
-  );
+  const sortedSiteRevenueRows = useMemo(() => {
+    const direction = siteRevenueSort.direction === 'asc' ? 1 : -1;
+    const getSortValue = (row: (typeof analytics.siteRevenueRows)[number]) => {
+      switch (siteRevenueSort.key) {
+        case 'siteName':
+          return row.siteName;
+        case 'headquarterName':
+          return row.headquarterName;
+        case 'contractTypeLabel':
+          return row.contractTypeLabel;
+        case 'executedRounds':
+          return row.executedRounds;
+        case 'contractContributionRevenue':
+          return row.contractContributionRevenue;
+        case 'visitRevenue':
+        default:
+          return row.visitRevenue;
+      }
+    };
+
+    return [...analytics.siteRevenueRows].sort((left, right) => {
+      if (
+        siteRevenueSort.key === 'siteName' ||
+        siteRevenueSort.key === 'headquarterName' ||
+        siteRevenueSort.key === 'contractTypeLabel'
+      ) {
+        return String(getSortValue(left)).localeCompare(String(getSortValue(right)), 'ko') * direction;
+      }
+      return (Number(getSortValue(left)) - Number(getSortValue(right))) * direction;
+    });
+  }, [analytics.siteRevenueRows, siteRevenueSort.direction, siteRevenueSort.key]);
 
   const handleExport = () =>
-    exportAdminServerWorkbook('analytics', {
-      contract_type: contractType,
-      headquarter_id: headquarterId,
-      period,
-      query,
-      user_id: userId,
-    }).catch(() => exportAdminWorkbook('analytics', getAnalyticsExportSheets(analytics)));
+    exportAdminWorkbook(
+      'analytics',
+      getAnalyticsExportSheets({
+        ...analytics,
+        employeeRows: sortedEmployeeRows,
+        siteRevenueRows: sortedSiteRevenueRows,
+      }),
+    );
 
   return (
     <div className={styles.dashboardStack}>
@@ -236,24 +264,12 @@ export function AnalyticsSection({
                   <option value="other">기타</option>
                 </select>
               </>
-            }
-            onExport={() => void handleExport()}
-            onQueryChange={setQuery}
-            onSortDirectionChange={(direction) => setSort((current) => ({ ...current, direction }))}
-            onSortKeyChange={(key) => setSort((current) => ({ ...current, key }))}
-            query={query}
-            queryPlaceholder="직원명, 현장명, 사업장명으로 검색"
-            sortDirection={sort.direction}
-            sortKey={sort.key}
-            sortOptions={[
-              { value: 'visitRevenue', label: '회차 매출' },
-              { value: 'contractContributionRevenue', label: '총 계약 기여 매출' },
-              { value: 'completedReportCount', label: '완료 보고서 수' },
-              { value: 'overdueCount', label: '지연 건수' },
-              { value: 'assignedSiteCount', label: '배정 현장 수' },
-              { value: 'userName', label: '직원명' },
-            ]}
-          />
+          }
+          onExport={() => void handleExport()}
+          onQueryChange={setQuery}
+          query={query}
+          queryPlaceholder="직원명, 현장명, 사업장명으로 검색"
+        />
 
           {sortedEmployeeRows.length === 0 ? (
             <div className={styles.tableEmpty}>조건에 맞는 실적 데이터가 없습니다.</div>
@@ -263,16 +279,51 @@ export function AnalyticsSection({
                 <table className={styles.table}>
                   <thead>
                     <tr>
-                      <th>직원명</th>
-                      <th>배정 현장 수</th>
-                      <th>완료 보고서 수</th>
+                      <SortableHeaderCell
+                        column={{ key: 'userName' }}
+                        current={employeeSort}
+                        label="직원명"
+                        onChange={setEmployeeSort}
+                      />
+                      <SortableHeaderCell
+                        column={{ key: 'assignedSiteCount' }}
+                        current={employeeSort}
+                        defaultDirection="desc"
+                        label="배정 현장 수"
+                        onChange={setEmployeeSort}
+                      />
+                      <SortableHeaderCell
+                        column={{ key: 'completedReportCount' }}
+                        current={employeeSort}
+                        defaultDirection="desc"
+                        label="완료 보고서 수"
+                        onChange={setEmployeeSort}
+                      />
                       <th>분기 보고 완료 수</th>
                       <th>불량사업장 제출 수</th>
                       <th>총 회차 배정</th>
                       <th>실행 회차</th>
-                      <th>회차 매출</th>
-                      <th>총 계약 기여 매출</th>
-                      <th>지연 건수</th>
+                      <SortableHeaderCell
+                        column={{ key: 'visitRevenue' }}
+                        current={employeeSort}
+                        defaultDirection="desc"
+                        label="회차 매출"
+                        onChange={setEmployeeSort}
+                      />
+                      <SortableHeaderCell
+                        column={{ key: 'contractContributionRevenue' }}
+                        current={employeeSort}
+                        defaultDirection="desc"
+                        label="총 계약 기여 매출"
+                        onChange={setEmployeeSort}
+                      />
+                      <SortableHeaderCell
+                        column={{ key: 'overdueCount' }}
+                        current={employeeSort}
+                        defaultDirection="desc"
+                        label="지연 건수"
+                        onChange={setEmployeeSort}
+                      />
                     </tr>
                   </thead>
                   <tbody>
@@ -314,12 +365,45 @@ export function AnalyticsSection({
                   <table className={styles.table}>
                     <thead>
                       <tr>
-                        <th>현장</th>
-                        <th>사업장</th>
-                        <th>계약유형</th>
-                        <th>실행 회차</th>
-                        <th>회차 매출</th>
-                        <th>총 계약 기여 매출</th>
+                        <SortableHeaderCell
+                          column={{ key: 'siteName' }}
+                          current={siteRevenueSort}
+                          label="현장"
+                          onChange={setSiteRevenueSort}
+                        />
+                        <SortableHeaderCell
+                          column={{ key: 'headquarterName' }}
+                          current={siteRevenueSort}
+                          label="사업장"
+                          onChange={setSiteRevenueSort}
+                        />
+                        <SortableHeaderCell
+                          column={{ key: 'contractTypeLabel' }}
+                          current={siteRevenueSort}
+                          label="계약유형"
+                          onChange={setSiteRevenueSort}
+                        />
+                        <SortableHeaderCell
+                          column={{ key: 'executedRounds' }}
+                          current={siteRevenueSort}
+                          defaultDirection="desc"
+                          label="실행 회차"
+                          onChange={setSiteRevenueSort}
+                        />
+                        <SortableHeaderCell
+                          column={{ key: 'visitRevenue' }}
+                          current={siteRevenueSort}
+                          defaultDirection="desc"
+                          label="회차 매출"
+                          onChange={setSiteRevenueSort}
+                        />
+                        <SortableHeaderCell
+                          column={{ key: 'contractContributionRevenue' }}
+                          current={siteRevenueSort}
+                          defaultDirection="desc"
+                          label="총 계약 기여 매출"
+                          onChange={setSiteRevenueSort}
+                        />
                       </tr>
                     </thead>
                     <tbody>
