@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import AppModal from '@/components/ui/AppModal';
+import { SortableHeaderCell } from '@/features/admin/components/SortableHeaderCell';
 import { TableToolbar } from '@/features/admin/components/TableToolbar';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import {
@@ -10,7 +11,7 @@ import {
   updateAdminSchedule,
 } from '@/lib/admin/apiClient';
 import { exportAdminServerWorkbook } from '@/lib/admin/exportClient';
-import type { SafetyInspectionSchedule } from '@/types/admin';
+import type { SafetyInspectionSchedule, TableSortState } from '@/types/admin';
 import type { SafetySite, SafetyUser } from '@/types/backend';
 
 interface SchedulesSectionProps {
@@ -73,6 +74,10 @@ export function SchedulesSection({
   const [assigneeUserId, setAssigneeUserId] = useState('');
   const [status, setStatus] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
+  const [sort, setSort] = useState<TableSortState>({
+    direction: 'asc',
+    key: 'plannedDate',
+  });
   const [rows, setRows] = useState<SafetyInspectionSchedule[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -97,6 +102,8 @@ export function SchedulesSection({
         const response = await fetchAdminSchedules({
           assigneeUserId: scope === 'mine' ? currentUser.id : assigneeUserId,
           month,
+          sortBy: sort.key,
+          sortDir: sort.direction,
           query,
           siteId,
           status,
@@ -120,11 +127,15 @@ export function SchedulesSection({
     return () => {
       cancelled = true;
     };
-  }, [assigneeUserId, currentUser.id, month, query, scope, siteId, status]);
+  }, [assigneeUserId, currentUser.id, month, query, scope, siteId, sort.direction, sort.key, status]);
 
   const visibleRows = useMemo(
     () => (selectedDate ? rows.filter((row) => row.plannedDate === selectedDate) : rows),
     [rows, selectedDate],
+  );
+  const unselectedRows = useMemo(
+    () => rows.filter((row) => !row.plannedDate),
+    [rows],
   );
   const calendar = useMemo(() => buildCalendarDays(month), [month]);
   const rowsByDate = useMemo(() => {
@@ -156,6 +167,8 @@ export function SchedulesSection({
       const response = await fetchAdminSchedules({
         assigneeUserId: scope === 'mine' ? currentUser.id : assigneeUserId,
         month,
+        sortBy: sort.key,
+        sortDir: sort.direction,
         query,
         siteId,
         status,
@@ -198,6 +211,8 @@ export function SchedulesSection({
         planned_date: selectedDate,
         query,
         site_id: siteId,
+        sort_by: sort.key,
+        sort_dir: sort.direction,
         status,
       });
     } catch (nextError) {
@@ -328,6 +343,87 @@ export function SchedulesSection({
               );
             })}
           </div>
+
+          <div className={styles.tableShell}>
+            <div className={styles.sectionHeader}>
+              <div>
+                <h3 className={styles.sectionTitle}>미선택 일정 큐</h3>
+                <div className={styles.tableSecondary}>요원이 아직 날짜를 고르지 않은 회차를 먼저 확인합니다.</div>
+              </div>
+            </div>
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                    <tr>
+                      <SortableHeaderCell
+                        column={{ key: 'siteName' }}
+                        current={sort}
+                        label="미선택 회차"
+                        onChange={setSort}
+                      />
+                      <SortableHeaderCell
+                        column={{ key: 'roundNo' }}
+                        current={sort}
+                        defaultDirection="desc"
+                        label="회차"
+                        onChange={setSort}
+                      />
+                      <SortableHeaderCell
+                        column={{ key: 'windowStart' }}
+                        current={sort}
+                        defaultDirection="asc"
+                        label="허용 구간"
+                        onChange={setSort}
+                      />
+                      <SortableHeaderCell
+                        column={{ key: 'assigneeName' }}
+                        current={sort}
+                        label="담당자"
+                        onChange={setSort}
+                      />
+                      <SortableHeaderCell
+                        column={{ key: 'status' }}
+                        current={sort}
+                        label="상태"
+                        onChange={setSort}
+                      />
+                      <th>메뉴</th>
+                    </tr>
+                </thead>
+                <tbody>
+                  {unselectedRows.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className={styles.tableEmpty}>
+                        아직 날짜를 선택하지 않은 회차가 없습니다.
+                      </td>
+                    </tr>
+                  ) : (
+                    unselectedRows.map((row) => (
+                      <tr key={`unselected-${row.id}`}>
+                        <td>
+                          <div className={styles.tablePrimary}>{row.siteName}</div>
+                          <div className={styles.tableSecondary}>{row.headquarterName || '-'}</div>
+                        </td>
+                        <td>{row.roundNo}회차</td>
+                        <td>{row.windowStart} ~ {row.windowEnd}</td>
+                        <td>{row.assigneeName || '-'}</td>
+                        <td>{row.status}</td>
+                        <td>
+                          <button
+                            type="button"
+                            className="app-button app-button-secondary"
+                            onClick={() => openEdit(row)}
+                          >
+                            일정 지정
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -351,12 +447,45 @@ export function SchedulesSection({
                 <table className={styles.table}>
                   <thead>
                     <tr>
-                      <th>현장</th>
-                      <th>회차</th>
-                      <th>방문일</th>
-                      <th>허용 구간</th>
-                      <th>담당자</th>
-                      <th>상태</th>
+                      <SortableHeaderCell
+                        column={{ key: 'siteName' }}
+                        current={sort}
+                        label="현장"
+                        onChange={setSort}
+                      />
+                      <SortableHeaderCell
+                        column={{ key: 'roundNo' }}
+                        current={sort}
+                        defaultDirection="desc"
+                        label="회차"
+                        onChange={setSort}
+                      />
+                      <SortableHeaderCell
+                        column={{ key: 'plannedDate' }}
+                        current={sort}
+                        defaultDirection="asc"
+                        label="방문일"
+                        onChange={setSort}
+                      />
+                      <SortableHeaderCell
+                        column={{ key: 'windowStart' }}
+                        current={sort}
+                        defaultDirection="asc"
+                        label="허용 구간"
+                        onChange={setSort}
+                      />
+                      <SortableHeaderCell
+                        column={{ key: 'assigneeName' }}
+                        current={sort}
+                        label="담당자"
+                        onChange={setSort}
+                      />
+                      <SortableHeaderCell
+                        column={{ key: 'status' }}
+                        current={sort}
+                        label="상태"
+                        onChange={setSort}
+                      />
                       <th>이슈</th>
                       <th>메뉴</th>
                     </tr>

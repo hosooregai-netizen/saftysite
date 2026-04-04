@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useDeferredValue, useMemo, useState } from 'react';
 import AppModal from '@/components/ui/AppModal';
 import ActionMenu from '@/components/ui/ActionMenu';
+import { SortableHeaderCell } from '@/features/admin/components/SortableHeaderCell';
 import { TableToolbar } from '@/features/admin/components/TableToolbar';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import {
@@ -223,6 +224,34 @@ export function SitesSection(props: SitesSectionProps) {
     const direction = sort.direction === 'asc' ? 1 : -1;
 
     return [...filteredSites].sort((left, right) => {
+      if (sort.key === 'headquarter_name') {
+        return (
+          (left.headquarter_detail?.name || left.headquarter?.name || '').localeCompare(
+            right.headquarter_detail?.name || right.headquarter?.name || '',
+            'ko',
+          ) * direction
+        );
+      }
+
+      if (sort.key === 'manager_name') {
+        return (left.manager_name ?? '').localeCompare(right.manager_name ?? '', 'ko') * direction;
+      }
+
+      if (sort.key === 'assigned_users') {
+        const getAssignedLabel = (site: SafetySite) => {
+          const assignmentsForSite = activeAssignmentsBySiteId.get(site.id) ?? [];
+          const assignedUsers = assignmentsForSite
+            .map((assignment) => usersById.get(assignment.user_id)?.name || '')
+            .filter(Boolean)
+            .sort((a, b) => a.localeCompare(b, 'ko'));
+          if (assignedUsers.length > 0) {
+            return assignedUsers.join(', ');
+          }
+          return site.assigned_user?.name || '';
+        };
+        return getAssignedLabel(left).localeCompare(getAssignedLabel(right), 'ko') * direction;
+      }
+
       if (sort.key === 'status') {
         return left.status.localeCompare(right.status, 'ko') * direction;
       }
@@ -237,7 +266,7 @@ export function SitesSection(props: SitesSectionProps) {
 
       return left.site_name.localeCompare(right.site_name, 'ko') * direction;
     });
-  }, [filteredSites, sort.direction, sort.key]);
+  }, [activeAssignmentsBySiteId, filteredSites, sort.direction, sort.key, usersById]);
 
   const openCreate = () => {
     setEditingId('create');
@@ -470,18 +499,8 @@ export function SitesSection(props: SitesSectionProps) {
             ])
           }
           onQueryChange={setQuery}
-          onSortDirectionChange={(direction) => setSort({ ...sort, direction })}
-          onSortKeyChange={(key) => setSort({ ...sort, key })}
           query={query}
           queryPlaceholder="현장명, 사업장명, 책임자, 배정 요원으로 검색"
-          sortDirection={sort.direction}
-          sortKey={sort.key}
-          sortOptions={[
-            { value: 'site_name', label: '현장명' },
-            { value: 'status', label: '상태' },
-            { value: 'project_end_date', label: '공사 종료일' },
-            { value: 'project_amount', label: '공사 금액' },
-          ]}
         />
         <div className={styles.tableShell}>
           {sortedSites.length === 0 ? (
@@ -491,12 +510,45 @@ export function SitesSection(props: SitesSectionProps) {
               <table className={styles.table}>
                 <thead>
                   <tr>
-                    <th>현장명</th>
-                    {showHeadquarterColumn ? <th>사업장</th> : null}
-                    <th>책임자</th>
-                    <th>배정 요원</th>
-                    <th>기간</th>
-                    <th>상태</th>
+                    <SortableHeaderCell
+                      column={{ key: 'site_name' }}
+                      current={sort}
+                      label="현장명"
+                      onChange={setSort}
+                    />
+                    {showHeadquarterColumn ? (
+                      <SortableHeaderCell
+                        column={{ key: 'headquarter_name' }}
+                        current={sort}
+                        label="사업장"
+                        onChange={setSort}
+                      />
+                    ) : null}
+                    <SortableHeaderCell
+                      column={{ key: 'manager_name' }}
+                      current={sort}
+                      label="책임자"
+                      onChange={setSort}
+                    />
+                    <SortableHeaderCell
+                      column={{ key: 'assigned_users' }}
+                      current={sort}
+                      label="배정 요원"
+                      onChange={setSort}
+                    />
+                    <SortableHeaderCell
+                      column={{ key: 'project_end_date' }}
+                      current={sort}
+                      defaultDirection="desc"
+                      label="기간"
+                      onChange={setSort}
+                    />
+                    <SortableHeaderCell
+                      column={{ key: 'status' }}
+                      current={sort}
+                      label="상태"
+                      onChange={setSort}
+                    />
                     <th>메뉴</th>
                   </tr>
                 </thead>

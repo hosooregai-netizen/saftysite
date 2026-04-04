@@ -15,10 +15,23 @@ import type {
   SafetyBackendAdminReportRow,
   SafetyBackendAdminReportsResponse,
   SafetyBackendInspectionSchedule,
+  SafetyBackendMailAccount,
+  SafetyBackendMailProviderStatus,
+  SafetyBackendMailMessage,
+  SafetyBackendMailThread,
+  SafetyBackendMailThreadDetail,
+  SafetyBackendNotificationFeedResponse,
+  SafetyBackendNotificationItem,
   SafetyBackendPhotoAsset,
   SafetyBackendScheduleListResponse,
+  SafetyBackendSmsMessage,
+  SafetyBackendSmsProviderStatus,
+  SafetyBackendSmsSendResponse,
   SafetySite,
 } from '@/types/backend';
+import type { MailAccount, MailMessage, MailProviderStatus, MailThread, MailThreadDetail } from '@/types/mail';
+import type { SmsMessage, SmsProviderStatus, SmsSendResult } from '@/types/messages';
+import type { NotificationFeedResponse, NotificationItem } from '@/types/notifications';
 import type { PhotoAlbumItem, SafetyPhotoAsset } from '@/types/photos';
 import { buildSafetyAdminUpstreamUrl } from './safetyApiServer';
 
@@ -269,6 +282,175 @@ export function mapBackendPhotoAsset(asset: SafetyBackendPhotoAsset): SafetyPhot
     thumbnailPath: buildSafetyAdminUpstreamUrl(normalizeText(asset.thumbnail_path || asset.original_path)),
     uploadedByName: normalizeText(asset.uploaded_by_name),
     uploadedByUserId: normalizeText(asset.uploaded_by_user_id),
+  };
+}
+
+function mapMailParticipant(
+  participant: { email?: string | null; name?: string | null } | null | undefined,
+) {
+  return {
+    email: normalizeText(participant?.email),
+    name: normalizeText(participant?.name) || null,
+  };
+}
+
+export function mapBackendMailAccount(account: SafetyBackendMailAccount): MailAccount {
+  return {
+    connectionStatus: normalizeText(account.connection_status) as MailAccount['connectionStatus'],
+    createdAt: normalizeText(account.created_at),
+    displayName: normalizeText(account.display_name),
+    email: normalizeText(account.email),
+    id: normalizeText(account.id),
+    isActive: Boolean(account.is_active),
+    isDefault: Boolean(account.is_default),
+    lastSyncedAt: normalizeText(account.last_synced_at) || null,
+    mailboxLabel: normalizeText(account.mailbox_label),
+    metadata: account.metadata ?? {},
+    provider: (normalizeText(account.provider) || 'naver_mail') as MailAccount['provider'],
+    scope: (normalizeText(account.scope) || 'personal') as MailAccount['scope'],
+    updatedAt: normalizeText(account.updated_at),
+    userId: normalizeText(account.user_id) || null,
+  };
+}
+
+export function mapBackendMailProviderStatus(status: SafetyBackendMailProviderStatus): MailProviderStatus {
+  return {
+    provider: (normalizeText(status.provider) || 'google') as MailProviderStatus['provider'],
+    enabled: Boolean(status.enabled),
+    defaultRedirectUri: normalizeText(status.default_redirect_uri),
+    allowedRedirectUris: Array.isArray(status.allowed_redirect_uris)
+      ? status.allowed_redirect_uris.map((item) => normalizeText(item)).filter(Boolean)
+      : [],
+    requestedRedirectUri: normalizeText(status.requested_redirect_uri),
+    isRedirectAllowed: Boolean(status.is_redirect_allowed),
+    missingFields: Array.isArray(status.missing_fields)
+      ? status.missing_fields.map((item) => normalizeText(item)).filter(Boolean)
+      : [],
+    message: normalizeText(status.message),
+  };
+}
+
+export function mapBackendMailThread(thread: SafetyBackendMailThread): MailThread {
+  return {
+    accountDisplayName: normalizeText(thread.account_display_name),
+    accountEmail: normalizeText(thread.account_email),
+    accountId: normalizeText(thread.account_id),
+    headquarterId: normalizeText(thread.headquarter_id) || null,
+    id: normalizeText(thread.id),
+    lastDirection: (normalizeText(thread.last_direction) || null) as MailThread['lastDirection'],
+    lastMessageAt: normalizeText(thread.last_message_at) || null,
+    messageCount: thread.message_count,
+    participants: Array.isArray(thread.participants) ? thread.participants.map((item) => mapMailParticipant(item)) : [],
+    provider: (normalizeText(thread.provider) || 'naver_mail') as MailThread['provider'],
+    reportKey: normalizeText(thread.report_key) || null,
+    scope: (normalizeText(thread.scope) || 'personal') as MailThread['scope'],
+    siteId: normalizeText(thread.site_id) || null,
+    snippet: normalizeText(thread.snippet),
+    status: (normalizeText(thread.status) || 'draft') as MailThread['status'],
+    subject: normalizeText(thread.subject),
+    unreadCount: thread.unread_count,
+  };
+}
+
+export function mapBackendMailMessage(message: SafetyBackendMailMessage): MailMessage {
+  return {
+    accountId: normalizeText(message.account_id),
+    body: normalizeText(message.body),
+    bodyPreview: normalizeText(message.body_preview),
+    createdAt: normalizeText(message.created_at),
+    deliveredAt: normalizeText(message.delivered_at) || null,
+    direction: (normalizeText(message.direction) || 'outgoing') as MailMessage['direction'],
+    fromEmail: normalizeText(message.from_email),
+    fromName: normalizeText(message.from_name) || null,
+    headquarterId: normalizeText(message.headquarter_id) || null,
+    id: normalizeText(message.id),
+    readAt: normalizeText(message.read_at) || null,
+    reportKey: normalizeText(message.report_key) || null,
+    sentAt: normalizeText(message.sent_at) || null,
+    siteId: normalizeText(message.site_id) || null,
+    subject: normalizeText(message.subject),
+    threadId: normalizeText(message.thread_id),
+    to: Array.isArray(message.to) ? message.to.map((item) => mapMailParticipant(item)) : [],
+    updatedAt: normalizeText(message.updated_at),
+  };
+}
+
+export function mapBackendMailThreadDetail(detail: SafetyBackendMailThreadDetail): MailThreadDetail {
+  return {
+    messages: detail.messages.map((message) => mapBackendMailMessage(message)),
+    thread: mapBackendMailThread(detail.thread),
+  };
+}
+
+export function mapBackendNotificationItem(item: SafetyBackendNotificationItem): NotificationItem {
+  return {
+    category: normalizeText(item.category) as NotificationItem['category'],
+    createdAt: normalizeText(item.created_at),
+    description: normalizeText(item.description),
+    href: normalizeText(item.href),
+    id: normalizeText(item.id),
+    isImportant: Boolean(item.is_important),
+    isRead: Boolean(item.is_read),
+    messageId: normalizeText(item.message_id),
+    reportKey: normalizeText(item.report_key),
+    severity: (normalizeText(item.severity) || 'info') as NotificationItem['severity'],
+    siteId: normalizeText(item.site_id),
+    sourceId: normalizeText(item.source_id),
+    sourceType: normalizeText(item.source_type),
+    threadId: normalizeText(item.thread_id),
+    title: normalizeText(item.title),
+  };
+}
+
+export function mapBackendNotificationFeed(
+  response: SafetyBackendNotificationFeedResponse,
+): NotificationFeedResponse {
+  return {
+    rows: response.rows.map((item) => mapBackendNotificationItem(item)),
+    unreadCount: response.unread_count,
+    unreadImportantCount: response.unread_important_count,
+  };
+}
+
+export function mapBackendSmsProviderStatus(status: SafetyBackendSmsProviderStatus): SmsProviderStatus {
+  return {
+    provider: normalizeText(status.provider),
+    enabled: Boolean(status.enabled),
+    sendEnabled: Boolean(status.send_enabled),
+    missingFields: Array.isArray(status.missing_fields)
+      ? status.missing_fields.map((item) => normalizeText(item)).filter(Boolean)
+      : [],
+    sender: normalizeText(status.sender),
+    serviceId: normalizeText(status.service_id),
+    message: normalizeText(status.message),
+  };
+}
+
+export function mapBackendSmsMessage(message: SafetyBackendSmsMessage): SmsMessage {
+  return {
+    id: normalizeText(message.id),
+    provider: normalizeText(message.provider),
+    phoneNumber: normalizeText(message.phone_number),
+    content: normalizeText(message.content),
+    subject: normalizeText(message.subject),
+    reportKey: normalizeText(message.report_key) || null,
+    siteId: normalizeText(message.site_id) || null,
+    headquarterId: normalizeText(message.headquarter_id) || null,
+    sentByUserId: normalizeText(message.sent_by_user_id) || null,
+    status: normalizeText(message.status),
+    providerMessageId: normalizeText(message.provider_message_id) || null,
+    providerResponse: message.provider_response ?? {},
+    metadata: message.metadata ?? {},
+    createdAt: normalizeText(message.created_at),
+    updatedAt: normalizeText(message.updated_at),
+  };
+}
+
+export function mapBackendSmsSendResult(response: SafetyBackendSmsSendResponse): SmsSendResult {
+  return {
+    ok: Boolean(response.ok),
+    message: normalizeText(response.message),
+    sms: mapBackendSmsMessage(response.sms),
   };
 }
 

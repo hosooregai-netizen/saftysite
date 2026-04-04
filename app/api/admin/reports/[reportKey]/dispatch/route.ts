@@ -22,6 +22,13 @@ export async function PATCH(
       {
         deadline_date: dispatch.deadlineDate || null,
         dispatch_status: dispatch.dispatchStatus || null,
+        mailbox_account_id: dispatch.mailboxAccountId || null,
+        mail_thread_id: dispatch.mailThreadId || null,
+        message_id: dispatch.messageId || null,
+        recipient: dispatch.recipient || null,
+        read_at: dispatch.readAt || null,
+        reply_at: dispatch.replyAt || null,
+        reply_summary: dispatch.replySummary || null,
         sent_completed_at: dispatch.sentCompletedAt || null,
         sent_history: (dispatch.sentHistory || []).map((item) => ({
           id: item.id,

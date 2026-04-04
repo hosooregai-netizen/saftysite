@@ -217,6 +217,42 @@
   color: var(--erp-mid);
 }
 
+.sortHeaderButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-weight: 700;
+  color: inherit;
+  cursor: pointer;
+}
+
+.sortHeaderButton:hover {
+  color: var(--erp-navy);
+}
+
+.sortHeaderIndicatorActive,
+.sortHeaderIndicatorMuted {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 12px;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.sortHeaderIndicatorActive {
+  color: var(--erp-navy);
+}
+
+.sortHeaderIndicatorMuted {
+  color: #8c98a8;
+}
+
 .drawerBackdrop {
   position: fixed;
   inset: 0;

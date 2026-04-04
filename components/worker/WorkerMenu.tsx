@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useWorkerShellSidebarOptional } from '@/components/worker/WorkerShellSidebarContext';
 import {
+  buildWorkerCalendarHref,
   buildSiteBadWorkplaceHref,
   buildSiteHubHref,
   buildSitePhotoAlbumHref,
@@ -92,6 +93,18 @@ export function WorkerMenuPanel({
       description: '배정된 현장 목록으로 이동',
       href: '/',
       active: isWorkerListPath(pathname),
+    },
+    {
+      label: '내 일정',
+      description: '배정 현장의 회차별 방문 일정을 선택',
+      href: buildWorkerCalendarHref(),
+      active: pathname === '/calendar',
+    },
+    {
+      label: '메일함',
+      description: '개인 연결 메일 수신/발신 확인',
+      href: '/mailbox',
+      active: pathname === '/mailbox',
     },
   ];
 

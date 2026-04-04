@@ -3,6 +3,7 @@
 import { useDeferredValue, useMemo, useState } from 'react';
 import AppModal from '@/components/ui/AppModal';
 import ActionMenu from '@/components/ui/ActionMenu';
+import { SortableHeaderCell } from '@/features/admin/components/SortableHeaderCell';
 import { TableToolbar } from '@/features/admin/components/TableToolbar';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import {
@@ -126,6 +127,10 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
 
       if (sort.key === 'updated_at') {
         return left.updated_at.localeCompare(right.updated_at) * direction;
+      }
+
+      if (sort.key === 'effective_from') {
+        return (left.effective_from ?? '').localeCompare(right.effective_from ?? '') * direction;
       }
 
       return left.title.localeCompare(right.title, 'ko') * direction;
@@ -327,18 +332,8 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
             ])
           }
           onQueryChange={setQuery}
-          onSortDirectionChange={(direction) => setSort({ ...sort, direction })}
-          onSortKeyChange={(key) => setSort({ ...sort, key })}
           query={query}
           queryPlaceholder="제목, 미리보기 내용으로 검색"
-          sortDirection={sort.direction}
-          sortKey={sort.key}
-          sortOptions={[
-            { value: 'title', label: '제목' },
-            { value: 'content_type', label: '유형' },
-            { value: 'sort_order', label: '정렬 순서' },
-            { value: 'updated_at', label: '수정일' },
-          ]}
         />
 
         <div className={styles.tableShell}>
@@ -358,10 +353,27 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
                     <th>메뉴</th>
                   </tr>
                   <tr>
-                    <th>유형</th>
-                    <th>제목</th>
+                    <SortableHeaderCell
+                      column={{ key: 'content_type' }}
+                      current={sort}
+                      label="유형"
+                      onChange={setSort}
+                    />
+                    <SortableHeaderCell
+                      column={{ key: 'title' }}
+                      current={sort}
+                      label="제목"
+                      onChange={setSort}
+                    />
                     <th>내용 미리보기</th>
-                    <th>시작일 ~ 종료일</th>
+                    <SortableHeaderCell
+                      column={{ key: 'effective_from' }}
+                      current={sort}
+                      defaultDirection="desc"
+                      label="시작일 ~ 종료일"
+                      onChange={setSort}
+                      title="시작일 정렬"
+                    />
                     <th>메뉴</th>
                   </tr>
                 </thead>

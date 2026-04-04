@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import ActionMenu from '@/components/ui/ActionMenu';
+import { SortableHeaderCell } from '@/features/admin/components/SortableHeaderCell';
 import { TableToolbar } from '@/features/admin/components/TableToolbar';
 import { exportAdminWorkbook } from '@/lib/admin/exportClient';
 import { formatTimestamp, getUserRoleLabel } from '@/lib/admin';
@@ -154,18 +155,8 @@ export function UsersTable({
             ])
           }
           onQueryChange={setQuery}
-          onSortDirectionChange={(direction) => setSort({ ...sort, direction })}
-          onSortKeyChange={(key) => setSort({ ...sort, key })}
           query={query}
           queryPlaceholder="이름, 이메일, 직책, 소속으로 검색"
-          sortDirection={sort.direction}
-          sortKey={sort.key}
-          sortOptions={[
-            { value: 'name', label: '이름' },
-            { value: 'role', label: '권한' },
-            { value: 'reportCount', label: '보고서 수' },
-            { value: 'last_login_at', label: '최근 로그인' },
-          ]}
         />
 
         <div className={styles.tableShell}>
@@ -176,14 +167,36 @@ export function UsersTable({
               <table className={styles.table}>
                 <thead>
                   <tr>
-                    <th>이름</th>
+                    <SortableHeaderCell
+                      column={{ key: 'name' }}
+                      current={sort}
+                      label="이름"
+                      onChange={setSort}
+                    />
                     <th>이메일</th>
-                    <th>권한</th>
+                    <SortableHeaderCell
+                      column={{ key: 'role' }}
+                      current={sort}
+                      label="권한"
+                      onChange={setSort}
+                    />
                     <th>담당 현장</th>
-                    <th>보고서</th>
+                    <SortableHeaderCell
+                      column={{ key: 'reportCount' }}
+                      current={sort}
+                      defaultDirection="desc"
+                      label="보고서"
+                      onChange={setSort}
+                    />
                     <th>연락처</th>
                     <th>상태</th>
-                    <th>최근 로그인</th>
+                    <SortableHeaderCell
+                      column={{ key: 'last_login_at' }}
+                      current={sort}
+                      defaultDirection="desc"
+                      label="최근 로그인"
+                      onChange={setSort}
+                    />
                     <th>메뉴</th>
                   </tr>
                 </thead>

@@ -6,9 +6,17 @@ import type {
   SafetyBackendAdminOverviewResponse,
   SafetyBackendAdminReportsResponse,
   SafetyBackendInspectionSchedule,
+  SafetyBackendMailAccount,
+  SafetyBackendMailProviderStatusResponse,
+  SafetyBackendMailMessage,
+  SafetyBackendMailThread,
+  SafetyBackendMailThreadDetail,
+  SafetyBackendNotificationFeedResponse,
   SafetyBackendPhotoAsset,
   SafetyBackendPhotoAssetListResponse,
   SafetyBackendScheduleListResponse,
+  SafetyBackendSmsProviderStatusResponse,
+  SafetyBackendSmsSendResponse,
   SafetyContentItem,
   SafetyReport,
   SafetyReportListItem,
@@ -95,7 +103,7 @@ function buildHeaders(
   return nextHeaders;
 }
 
-export function readRequiredAdminToken(request: Request) {
+export function readRequiredSafetyAuthToken(request: Request) {
   const authorization = request.headers.get('authorization') || '';
   const matched = authorization.match(/^Bearer\s+(.+)$/i);
   const token = matched?.[1]?.trim() || '';
@@ -106,6 +114,8 @@ export function readRequiredAdminToken(request: Request) {
 
   return token;
 }
+
+export const readRequiredAdminToken = readRequiredSafetyAuthToken;
 
 export async function requestSafetyAdminServer<T>(
   path: string,
@@ -515,6 +525,304 @@ export function updateAdminReport(
       headers: {
         'Content-Type': 'application/json',
       },
+    },
+    token,
+    request,
+  );
+}
+
+export function fetchSafetyMailAccountsServer(
+  token: string,
+  request: Request | null = null,
+): Promise<{ rows: SafetyBackendMailAccount[] }> {
+  return requestSafetyAdminServer<{ rows: SafetyBackendMailAccount[] }>(
+    '/mail/accounts',
+    {},
+    token,
+    request,
+  );
+}
+
+export function fetchMailProviderStatusServer(
+  token: string,
+  params: Record<string, string | number | boolean | null | undefined>,
+  request: Request | null = null,
+): Promise<SafetyBackendMailProviderStatusResponse> {
+  return requestSafetyAdminServer<SafetyBackendMailProviderStatusResponse>(
+    withQuery('/mail/providers/status', params),
+    {},
+    token,
+    request,
+  );
+}
+
+export function startGoogleMailConnectionServer(
+  token: string,
+  payload: Record<string, unknown>,
+  request: Request | null = null,
+): Promise<{ authorization_url: string; provider?: string; state: string }> {
+  return requestSafetyAdminServer<{ authorization_url: string; provider?: string; state: string }>(
+    '/mail/accounts/connect/google/start',
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      headers: { 'Content-Type': 'application/json' },
+    },
+    token,
+    request,
+  );
+}
+
+export function completeGoogleMailConnectionServer(
+  token: string,
+  payload: Record<string, unknown>,
+  request: Request | null = null,
+): Promise<SafetyBackendMailAccount> {
+  return requestSafetyAdminServer<SafetyBackendMailAccount>(
+    '/mail/accounts/connect/google/complete',
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      headers: { 'Content-Type': 'application/json' },
+    },
+    token,
+    request,
+  );
+}
+
+export function startNaverMailConnectionServer(
+  token: string,
+  payload: Record<string, unknown>,
+  request: Request | null = null,
+): Promise<{ authorization_url: string; provider?: string; state: string }> {
+  return requestSafetyAdminServer<{ authorization_url: string; provider?: string; state: string }>(
+    '/mail/accounts/connect/naver/start',
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      headers: { 'Content-Type': 'application/json' },
+    },
+    token,
+    request,
+  );
+}
+
+export function completeNaverMailConnectionServer(
+  token: string,
+  payload: Record<string, unknown>,
+  request: Request | null = null,
+): Promise<SafetyBackendMailAccount> {
+  return requestSafetyAdminServer<SafetyBackendMailAccount>(
+    '/mail/accounts/connect/naver/complete',
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      headers: { 'Content-Type': 'application/json' },
+    },
+    token,
+    request,
+  );
+}
+
+export function connectNaverMailServer(
+  token: string,
+  payload: Record<string, unknown>,
+  request: Request | null = null,
+): Promise<SafetyBackendMailAccount> {
+  return requestSafetyAdminServer<SafetyBackendMailAccount>(
+    '/mail/accounts/connect/naver',
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      headers: { 'Content-Type': 'application/json' },
+    },
+    token,
+    request,
+  );
+}
+
+export function disconnectMailAccountServer(
+  token: string,
+  accountId: string,
+  request: Request | null = null,
+) {
+  return requestSafetyAdminServer<void>(
+    `/mail/accounts/${encodeURIComponent(accountId)}`,
+    {
+      method: 'DELETE',
+    },
+    token,
+    request,
+  );
+}
+
+export function fetchSafetyMailThreadsServer(
+  token: string,
+  params: Record<string, string | number | boolean | null | undefined>,
+  request: Request | null = null,
+): Promise<{ rows: SafetyBackendMailThread[]; total: number }> {
+  return requestSafetyAdminServer<{ rows: SafetyBackendMailThread[]; total: number }>(
+    withQuery('/mail/threads', params),
+    {},
+    token,
+    request,
+  );
+}
+
+export function fetchSafetyMailThreadDetailServer(
+  token: string,
+  threadId: string,
+  request: Request | null = null,
+): Promise<SafetyBackendMailThreadDetail> {
+  return requestSafetyAdminServer<SafetyBackendMailThreadDetail>(
+    `/mail/threads/${encodeURIComponent(threadId)}`,
+    {},
+    token,
+    request,
+  );
+}
+
+export function fetchSafetyMailMessageServer(
+  token: string,
+  messageId: string,
+  request: Request | null = null,
+): Promise<SafetyBackendMailMessage> {
+  return requestSafetyAdminServer<SafetyBackendMailMessage>(
+    `/mail/messages/${encodeURIComponent(messageId)}`,
+    {},
+    token,
+    request,
+  );
+}
+
+export function sendSafetyMailServer(
+  token: string,
+  payload: Record<string, unknown>,
+  request: Request | null = null,
+): Promise<SafetyBackendMailMessage> {
+  return requestSafetyAdminServer<SafetyBackendMailMessage>(
+    '/mail/send',
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      headers: { 'Content-Type': 'application/json' },
+    },
+    token,
+    request,
+  );
+}
+
+export function syncSafetyMailServer(
+  token: string,
+  request: Request | null = null,
+): Promise<{ synced_account_count: number; thread_count: number; message_count: number }> {
+  return requestSafetyAdminServer<{ synced_account_count: number; thread_count: number; message_count: number }>(
+    '/mail/sync',
+    {
+      method: 'POST',
+    },
+    token,
+    request,
+  );
+}
+
+export function fetchSmsProviderStatusServer(
+  token: string,
+  request: Request | null = null,
+): Promise<SafetyBackendSmsProviderStatusResponse> {
+  return requestSafetyAdminServer<SafetyBackendSmsProviderStatusResponse>(
+    '/messages/providers/status',
+    {},
+    token,
+    request,
+  );
+}
+
+export function sendSafetySmsServer(
+  token: string,
+  payload: Record<string, unknown>,
+  request: Request | null = null,
+): Promise<SafetyBackendSmsSendResponse> {
+  return requestSafetyAdminServer<SafetyBackendSmsSendResponse>(
+    '/messages/sms/send',
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      headers: { 'Content-Type': 'application/json' },
+    },
+    token,
+    request,
+  );
+}
+
+export function fetchNotificationsServer(
+  token: string,
+  request: Request | null = null,
+): Promise<SafetyBackendNotificationFeedResponse> {
+  return requestSafetyAdminServer<SafetyBackendNotificationFeedResponse>(
+    '/notifications',
+    {},
+    token,
+    request,
+  );
+}
+
+export function fetchWorkerSchedulesServer(
+  token: string,
+  params: Record<string, string | number | boolean | null | undefined>,
+  request: Request | null = null,
+): Promise<SafetyBackendScheduleListResponse> {
+  return requestSafetyAdminServer<SafetyBackendScheduleListResponse>(
+    withQuery('/me/schedules', params),
+    {},
+    token,
+    request,
+  );
+}
+
+export function updateWorkerScheduleServer(
+  token: string,
+  scheduleId: string,
+  payload: Record<string, unknown>,
+  request: Request | null = null,
+): Promise<SafetyBackendInspectionSchedule> {
+  return requestSafetyAdminServer<SafetyBackendInspectionSchedule>(
+    `/me/schedules/${encodeURIComponent(scheduleId)}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    },
+    token,
+    request,
+  );
+}
+
+export function acknowledgeNotificationServer(
+  token: string,
+  notificationId: string,
+  request: Request | null = null,
+): Promise<{ acknowledged_ids: string[] }> {
+  return requestSafetyAdminServer<{ acknowledged_ids: string[] }>(
+    `/notifications/${encodeURIComponent(notificationId)}/ack`,
+    {
+      method: 'POST',
+    },
+    token,
+    request,
+  );
+}
+
+export function acknowledgeAllNotificationsServer(
+  token: string,
+  request: Request | null = null,
+): Promise<{ acknowledged_ids: string[] }> {
+  return requestSafetyAdminServer<{ acknowledged_ids: string[] }>(
+    '/notifications/ack-all',
+    {
+      method: 'POST',
     },
     token,
     request,

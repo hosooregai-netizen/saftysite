@@ -99,6 +99,13 @@ export function normalizeDispatchMeta(value: unknown): ReportDispatchMeta | null
     dispatchStatus: normalizeDispatchStatus(record.dispatchStatus),
     sentCompletedAt: normalizeMapperText(record.sentCompletedAt),
     sentHistory,
+    mailboxAccountId: normalizeMapperText(record.mailboxAccountId || record.mailbox_account_id),
+    mailThreadId: normalizeMapperText(record.mailThreadId || record.mail_thread_id),
+    messageId: normalizeMapperText(record.messageId || record.message_id),
+    recipient: normalizeMapperText(record.recipient),
+    readAt: normalizeMapperText(record.readAt || record.read_at),
+    replyAt: normalizeMapperText(record.replyAt || record.reply_at),
+    replySummary: normalizeMapperText(record.replySummary || record.reply_summary),
   };
 }
 

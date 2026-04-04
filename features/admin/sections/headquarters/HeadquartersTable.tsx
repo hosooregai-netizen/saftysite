@@ -1,4 +1,5 @@
 import ActionMenu from '@/components/ui/ActionMenu';
+import { SortableHeaderCell } from '@/features/admin/components/SortableHeaderCell';
 import { TableToolbar } from '@/features/admin/components/TableToolbar';
 import { exportAdminWorkbook } from '@/lib/admin/exportClient';
 import { formatTimestamp, getAdminSectionHref } from '@/lib/admin';
@@ -100,19 +101,8 @@ export function HeadquartersTable({
             ])
           }
           onQueryChange={onQueryChange}
-          onSortDirectionChange={(direction) =>
-            onSortChange({ ...sort, direction })
-          }
-          onSortKeyChange={(key) => onSortChange({ ...sort, key })}
           query={query}
           queryPlaceholder="사업장명, 연락처, 주소로 검색"
-          sortDirection={sort.direction}
-          sortKey={sort.key}
-          sortOptions={[
-            { value: 'name', label: '사업장명' },
-            { value: 'updated_at', label: '수정일' },
-            { value: 'contact_phone', label: '연락처' },
-          ]}
         />
         <div className={styles.tableShell}>
           {filteredHeadquarters.length === 0 ? (
@@ -129,10 +119,26 @@ export function HeadquartersTable({
                 </colgroup>
                 <thead>
                   <tr>
-                    <th>사업장명</th>
+                    <SortableHeaderCell
+                      column={{ key: 'name' }}
+                      current={sort}
+                      label="사업장명"
+                      onChange={onSortChange}
+                    />
                     <th>주소</th>
-                    <th>연락처</th>
-                    <th>수정일</th>
+                    <SortableHeaderCell
+                      column={{ key: 'contact_phone' }}
+                      current={sort}
+                      label="연락처"
+                      onChange={onSortChange}
+                    />
+                    <SortableHeaderCell
+                      column={{ key: 'updated_at' }}
+                      current={sort}
+                      defaultDirection="desc"
+                      label="수정일"
+                      onChange={onSortChange}
+                    />
                     <th>메뉴</th>
                   </tr>
                 </thead>

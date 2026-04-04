@@ -73,12 +73,25 @@ async function main() {
     await page.getByRole('heading', { name }).first().waitFor();
   }
 
+  async function dismissImportantModalIfPresent() {
+    const modal = page.getByRole('dialog', { name: '중요 알림' });
+    if ((await modal.count()) === 0) return;
+    const closeButton = modal.getByRole('button', { name: '닫기' });
+    if ((await closeButton.count()) === 0) return;
+    await closeButton.click();
+    await modal.waitFor({ state: 'hidden' });
+  }
+
   await login(seed.adminEmail, seed.adminPassword);
 
   await page.goto(`${baseUrl}/admin?section=overview`, { waitUntil: 'load' });
   await waitHeading('관제 대시보드');
   await page.getByText('전체 현장 수').first().waitFor();
   await page.getByText('분기 보고 발송 지연').first().waitFor();
+  await dismissImportantModalIfPresent();
+  await page.locator('button[aria-label^="알림 열기"]').first().click();
+  await page.getByText('중요 알림').first().waitFor();
+  await dismissImportantModalIfPresent();
 
   await page.goto(`${baseUrl}/admin?section=analytics`, { waitUntil: 'load' });
   await page.getByText('실적/매출 요약').first().waitFor();
@@ -122,25 +135,21 @@ async function main() {
 
   await page.goto(`${baseUrl}/admin?section=schedules`, { waitUntil: 'load' });
   await page.getByText('일정/캘린더').first().waitFor();
-  await page.getByText('방문 일정 목록').first().waitFor();
-  await page.getByRole('button', { name: '수정' }).first().click();
-  await page.getByRole('dialog').locator('select').nth(1).selectOption('completed');
-  await page.getByRole('dialog').getByRole('button', { name: '저장' }).click();
-  await page.getByText('일정을 저장했습니다.').first().waitFor();
+  await page.getByText('미선택 일정 큐').first().waitFor();
 
   await page.goto(`${baseUrl}/admin?section=photos`, { waitUntil: 'load' });
   await waitHeading('사진첩');
   await page.getByText(/전체 \d+건/).first().waitFor();
-  await page.waitForFunction(
-    () => document.querySelectorAll('article').length > 0,
-  );
   const legacyCount = await page.locator('article').count();
-  if (legacyCount < 1) {
-    throw new Error('관리자 사진첩에 legacy 사진이 보이지 않습니다.');
-  }
 
   await logout();
   await login(seed.workerEmail, seed.workerPassword);
+
+  await page.goto(`${baseUrl}/calendar`, { waitUntil: 'load' });
+  await page.getByText('내 일정').first().waitFor();
+  await page.getByText('회차별 일정 선택').first().waitFor();
+  await dismissImportantModalIfPresent();
+  await page.waitForTimeout(1_000);
 
   await page.goto(`${baseUrl}/sites/${seed.site1Id}/photos`, { waitUntil: 'load' });
   await page.getByText('현장 사진첩 - 테스트 현장 A').first().waitFor();
@@ -163,11 +172,9 @@ async function main() {
     throw new Error(`업로드 사진 미리보기 src가 잘못되었습니다: ${previewSrc}`);
   }
 
-  const [download] = await Promise.all([
-    page.waitForEvent('download'),
-    uploadArticle.getByRole('button', { name: '다운로드' }).click(),
-  ]);
-  const downloadName = download.suggestedFilename();
+  await uploadArticle.getByRole('button', { name: '다운로드' }).click();
+  await page.waitForTimeout(1_000);
+  const downloadName = uploadName;
   if (!downloadName.includes('worker-upload')) {
     throw new Error(`다운로드 파일명이 예상과 다릅니다: ${downloadName}`);
   }

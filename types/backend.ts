@@ -221,6 +221,13 @@ export interface SafetyBackendAdminReportRow {
     deadline_date?: string | null;
     dispatch_status?: string | null;
     sent_completed_at?: string | null;
+    mailbox_account_id?: string | null;
+    mail_thread_id?: string | null;
+    message_id?: string | null;
+    recipient?: string | null;
+    read_at?: string | null;
+    reply_at?: string | null;
+    reply_summary?: string | null;
     sent_history?: Array<{
       id: string;
       memo?: string | null;
@@ -294,6 +301,152 @@ export interface SafetyBackendAdminAlert {
   site_id: string;
   title: string;
   type: string;
+}
+
+export interface SafetyBackendMailAccount {
+  id: string;
+  provider: string;
+  scope: string;
+  connection_status: string;
+  email: string;
+  display_name: string;
+  mailbox_label: string;
+  is_active: boolean;
+  is_default: boolean;
+  user_id: string | null;
+  last_synced_at: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SafetyBackendMailProviderStatus {
+  provider: string;
+  enabled: boolean;
+  default_redirect_uri: string;
+  allowed_redirect_uris: string[];
+  requested_redirect_uri: string;
+  is_redirect_allowed: boolean;
+  missing_fields: string[];
+  message: string;
+}
+
+export interface SafetyBackendMailProviderStatusResponse {
+  rows: SafetyBackendMailProviderStatus[];
+}
+
+export interface SafetyBackendMailThread {
+  id: string;
+  account_id: string;
+  account_email: string;
+  account_display_name: string;
+  provider: string;
+  scope: string;
+  subject: string;
+  snippet: string;
+  participants: Array<{
+    email: string;
+    name?: string | null;
+  }>;
+  report_key: string | null;
+  site_id: string | null;
+  headquarter_id: string | null;
+  last_message_at: string | null;
+  unread_count: number;
+  message_count: number;
+  status: string;
+  last_direction: string | null;
+}
+
+export interface SafetyBackendMailMessage {
+  id: string;
+  thread_id: string;
+  account_id: string;
+  direction: string;
+  subject: string;
+  body: string;
+  body_preview: string;
+  from_email: string;
+  from_name: string | null;
+  to: Array<{
+    email: string;
+    name?: string | null;
+  }>;
+  sent_at: string | null;
+  delivered_at: string | null;
+  read_at: string | null;
+  report_key: string | null;
+  site_id: string | null;
+  headquarter_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SafetyBackendMailThreadDetail {
+  thread: SafetyBackendMailThread;
+  messages: SafetyBackendMailMessage[];
+}
+
+export interface SafetyBackendNotificationItem {
+  id: string;
+  severity: string;
+  category: string;
+  title: string;
+  description: string;
+  href: string;
+  is_read: boolean;
+  is_important: boolean;
+  source_type: string;
+  source_id: string;
+  created_at: string;
+  site_id: string;
+  report_key: string;
+  thread_id: string;
+  message_id: string;
+}
+
+export interface SafetyBackendNotificationFeedResponse {
+  unread_count: number;
+  unread_important_count: number;
+  rows: SafetyBackendNotificationItem[];
+}
+
+export interface SafetyBackendSmsProviderStatus {
+  provider: string;
+  enabled: boolean;
+  send_enabled: boolean;
+  missing_fields: string[];
+  sender: string;
+  service_id: string;
+  message: string;
+}
+
+export interface SafetyBackendSmsProviderStatusResponse {
+  rows: SafetyBackendSmsProviderStatus[];
+}
+
+export interface SafetyBackendSmsMessage {
+  id: string;
+  provider: string;
+  phone_number: string;
+  content: string;
+  subject: string;
+  report_key: string | null;
+  site_id: string | null;
+  headquarter_id: string | null;
+  sent_by_user_id: string | null;
+  status: string;
+  provider_message_id: string | null;
+  provider_response: Record<string, unknown>;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SafetyBackendSmsSendResponse {
+  ok: boolean;
+  message: string;
+  sms: SafetyBackendSmsMessage;
 }
 
 export interface SafetyBackendAdminOverviewResponse {
@@ -481,10 +634,14 @@ export interface SafetyAiHazardFindingInput {
   inspector: string;
   emphasis: string;
   improvementPlan: string;
+  improvementRequest?: string;
   legalReferenceId: string;
   legalReferenceTitle: string;
+  referenceLawTitles?: string[];
   referenceMaterial1: string;
   referenceMaterial2: string;
+  referenceMaterialImage?: string;
+  referenceMaterialDescription?: string;
   referenceCatalogAccidentType: string;
   referenceCatalogCausativeAgentKey: string;
   carryForward: boolean;

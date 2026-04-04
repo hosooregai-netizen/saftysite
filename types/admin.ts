@@ -5,6 +5,13 @@ export interface TableSortState {
   key: string;
 }
 
+export interface SortableColumnConfig<Key extends string = string> {
+  defaultDirection?: TableSortDirection;
+  key: Key;
+  label: string;
+  serverDriven?: boolean;
+}
+
 export type TableFilterState = Record<
   string,
   string | number | boolean | null | undefined
@@ -76,6 +83,13 @@ export interface ReportDispatchMeta {
   dispatchStatus: ReportDispatchStatus;
   sentCompletedAt: string;
   sentHistory: ReportDispatchHistoryEntry[];
+  mailboxAccountId: string;
+  mailThreadId: string;
+  messageId: string;
+  recipient: string;
+  readAt: string;
+  replyAt: string;
+  replySummary: string;
 }
 
 export interface ControllerReportRow {

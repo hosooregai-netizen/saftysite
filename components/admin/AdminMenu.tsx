@@ -34,6 +34,7 @@ const ADMIN_MENU_LABELS: Record<AdminSectionKey, string> = {
   overview: '관제 대시보드',
   reports: '전체 보고서',
   analytics: '실적/매출',
+  mailbox: '메일함',
   photos: '사진첩',
   schedules: '일정/캘린더',
   users: '사용자',

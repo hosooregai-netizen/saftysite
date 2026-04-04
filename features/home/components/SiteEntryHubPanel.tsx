@@ -7,6 +7,7 @@ import {
   buildSitePhotoAlbumHref,
   buildSiteQuarterlyListHref,
   buildSiteReportsHref,
+  buildWorkerCalendarHref,
 } from '@/features/home/lib/siteEntry';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { useSiteOperationalReports } from '@/hooks/useSiteOperationalReports';
@@ -112,6 +113,7 @@ export function SiteEntryHubPanel({
   const amountDisplay = snapshot.constructionAmount?.trim() || '-';
   const currentReportMonth = getCurrentReportMonth();
   const badWorkplaceHref = buildSiteBadWorkplaceHref(currentSite.id, currentReportMonth);
+  const calendarHref = buildWorkerCalendarHref(currentSite.id);
   const photoAlbumHref = buildSitePhotoAlbumHref(currentSite.id);
   const currentYear = new Date().getFullYear();
   const reportIndexState = getReportIndexBySiteId(currentSite.id);
@@ -230,6 +232,30 @@ export function SiteEntryHubPanel({
           <div className={styles.entryActions}>
             <Link href={badWorkplaceHref} className="app-button app-button-primary">
               이번 달 신고 작성
+            </Link>
+          </div>
+        </article>
+
+        <article className={styles.entryCard}>
+          <div className={styles.entryBody}>
+            <h2 className={styles.entryTitle}>내 일정</h2>
+            <p className={styles.entryMetricLead}>회차별 허용 구간 안에서 방문 일정을 선택</p>
+            <div className={styles.entryMetricRow}>
+              <div className={styles.entryMetricCopy}>
+                <strong className={styles.entryMetricValue}>15</strong>
+                <span className={styles.entryMetricUnit}>일 구간</span>
+              </div>
+              <div className={styles.metricVisual}>
+                <div className={styles.badgePanel}>
+                  <span className={styles.badgePanelLabel}>일정 선택</span>
+                  <strong>1회차부터 순서대로</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className={styles.entryActions}>
+            <Link href={calendarHref} className="app-button app-button-primary">
+              내 일정 열기
             </Link>
           </div>
         </article>

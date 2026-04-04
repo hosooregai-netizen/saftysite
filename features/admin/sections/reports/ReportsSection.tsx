@@ -4,6 +4,10 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'rea
 import { useSearchParams } from 'next/navigation';
 import ActionMenu from '@/components/ui/ActionMenu';
 import AppModal from '@/components/ui/AppModal';
+import {
+  SortableHeaderCell,
+  buildNextTableSort,
+} from '@/features/admin/components/SortableHeaderCell';
 import { TableToolbar } from '@/features/admin/components/TableToolbar';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import {
@@ -34,6 +38,7 @@ import {
 } from '@/lib/api';
 import { generateInspectionHwpxBlob } from '@/lib/documents/inspection/hwpxClient';
 import { mapSafetyReportToQuarterlySummaryReport } from '@/lib/erpReports/mappers';
+import { fetchSmsProviderStatuses, sendSms } from '@/lib/messages/apiClient';
 import {
   fetchSafetyReportByKey,
   readSafetyAuthToken,
@@ -48,6 +53,7 @@ import type {
 } from '@/types/admin';
 import type { SafetySite, SafetyUser } from '@/types/backend';
 import type { InspectionSession } from '@/types/inspectionSession';
+import type { SmsProviderStatus } from '@/types/messages';
 
 interface ReportsSectionProps {
   currentUser: SafetyUser;
@@ -95,6 +101,13 @@ function buildDispatchMeta(row: ControllerReportRow): ReportDispatchMeta {
   return row.dispatch ?? {
     deadlineDate: row.deadlineDate || addDays(row.visitDate || row.updatedAt.slice(0, 10), 7),
     dispatchStatus: row.dispatchStatus || '',
+    mailboxAccountId: '',
+    mailThreadId: '',
+    messageId: '',
+    readAt: '',
+    recipient: '',
+    replyAt: '',
+    replySummary: '',
     sentCompletedAt: '',
     sentHistory: [],
   };
@@ -138,6 +151,10 @@ export function ReportsSection({
   const [reviewRow, setReviewRow] = useState<ControllerReportRow | null>(null);
   const [reviewForm, setReviewForm] = useState(EMPTY_REVIEW_FORM);
   const [dispatchRow, setDispatchRow] = useState<ControllerReportRow | null>(null);
+  const [dispatchSmsPhone, setDispatchSmsPhone] = useState('');
+  const [dispatchSmsMessage, setDispatchSmsMessage] = useState('');
+  const [dispatchSmsSending, setDispatchSmsSending] = useState(false);
+  const [smsProviderStatuses, setSmsProviderStatuses] = useState<SmsProviderStatus[]>([]);
   const deferredQuery = useDeferredValue(query);
 
   const fetchRows = useCallback(async () => {
@@ -188,6 +205,17 @@ export function ReportsSection({
     void fetchRows();
   }, [fetchRows]);
 
+  useEffect(() => {
+    if (!dispatchRow || smsProviderStatuses.length > 0) return;
+    void (async () => {
+      try {
+        setSmsProviderStatuses(await fetchSmsProviderStatuses());
+      } catch (nextError) {
+        setError(nextError instanceof Error ? nextError.message : '문자 공급자 상태를 불러오지 못했습니다.');
+      }
+    })();
+  }, [dispatchRow, smsProviderStatuses.length]);
+
   const selectedRows = useMemo(
     () => rows.filter((row) => selectedKeys.includes(row.reportKey)),
     [rows, selectedKeys],
@@ -215,6 +243,11 @@ export function ReportsSection({
     [users],
   );
 
+  const handleSortChange = (key: TableSortState['key'], defaultDirection: 'asc' | 'desc' = 'asc') => {
+    setOffset(0);
+    setSort((current) => buildNextTableSort(current, key, defaultDirection));
+  };
+
   const openReviewModal = (row: ControllerReportRow) => {
     setReviewRow(row);
     setReviewForm({
@@ -222,6 +255,19 @@ export function ReportsSection({
       ownerUserId: row.controllerReview?.ownerUserId || row.assigneeUserId || '',
       qualityStatus: row.controllerReview?.qualityStatus || 'unchecked',
     });
+  };
+
+  const openDispatchModal = (row: ControllerReportRow) => {
+    const site = sites.find((item) => item.id === row.siteId);
+    setDispatchRow(row);
+    setDispatchSmsPhone(site?.manager_phone || '');
+    setDispatchSmsMessage(
+      [
+        `[분기보고서] ${row.siteName}`,
+        `${row.periodLabel || row.reportTitle || row.reportKey} 발송 관련 안내입니다.`,
+        '메일함에서 첨부 보고서를 함께 확인해 주세요.',
+      ].join('\n'),
+    );
   };
 
   const handleSaveReview = async () => {
@@ -251,6 +297,29 @@ export function ReportsSection({
       await fetchRows();
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : '발송 정보 저장에 실패했습니다.');
+    }
+  };
+
+  const handleSendSms = async () => {
+    if (!dispatchRow) return;
+    try {
+      setDispatchSmsSending(true);
+      setError(null);
+      const result = await sendSms({
+        content: dispatchSmsMessage,
+        headquarterId: dispatchRow.headquarterId,
+        phoneNumber: dispatchSmsPhone,
+        reportKey: dispatchRow.reportKey,
+        siteId: dispatchRow.siteId,
+        subject: dispatchRow.reportTitle || dispatchRow.periodLabel || dispatchRow.reportKey,
+      });
+      setNotice(result.message || '문자를 발송했습니다.');
+      setDispatchRow(null);
+      await fetchRows();
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : '문자 발송에 실패했습니다.');
+    } finally {
+      setDispatchSmsSending(false);
     }
   };
 
@@ -572,18 +641,8 @@ export function ReportsSection({
             setOffset(0);
             setQuery(value);
           }}
-          onSortDirectionChange={(direction) => setSort((current) => ({ ...current, direction }))}
-          onSortKeyChange={(key) => setSort((current) => ({ ...current, key }))}
           query={query}
           queryPlaceholder="보고서명, 현장명, 사업장명, 담당자로 검색"
-          sortDirection={sort.direction}
-          sortKey={sort.key}
-          sortOptions={[
-            { value: 'updatedAt', label: '최근 수정일' },
-            { value: 'visitDate', label: '기준일' },
-            { value: 'siteName', label: '현장명' },
-            { value: 'reportType', label: '유형' },
-          ]}
         />
 
         {selectedRows.length > 0 ? (
@@ -639,15 +698,64 @@ export function ReportsSection({
                         }
                       />
                     </th>
-                    <th>유형</th>
-                    <th>보고서</th>
-                    <th>현장</th>
-                    <th>담당자</th>
-                    <th>상태</th>
-                    <th>발송</th>
-                    <th>품질체크</th>
-                    <th>기준일</th>
-                    <th>수정일</th>
+                    <SortableHeaderCell
+                      column={{ key: 'reportType' }}
+                      current={sort}
+                      label="유형"
+                      onChange={setSort}
+                    />
+                    <SortableHeaderCell
+                      column={{ key: 'reportTitle' }}
+                      current={sort}
+                      label="보고서"
+                      onChange={setSort}
+                    />
+                    <SortableHeaderCell
+                      column={{ key: 'siteName' }}
+                      current={sort}
+                      label="현장"
+                      onChange={setSort}
+                    />
+                    <SortableHeaderCell
+                      column={{ key: 'assigneeName' }}
+                      current={sort}
+                      label="담당자"
+                      onChange={setSort}
+                    />
+                    <SortableHeaderCell
+                      column={{ key: 'status' }}
+                      current={sort}
+                      label="상태"
+                      onChange={setSort}
+                    />
+                    <SortableHeaderCell
+                      column={{ key: 'dispatchStatus' }}
+                      current={sort}
+                      defaultDirection="desc"
+                      label="발송"
+                      onChange={setSort}
+                    />
+                    <SortableHeaderCell
+                      column={{ key: 'qualityStatus' }}
+                      current={sort}
+                      defaultDirection="desc"
+                      label="품질체크"
+                      onChange={setSort}
+                    />
+                    <SortableHeaderCell
+                      column={{ key: 'visitDate' }}
+                      current={sort}
+                      defaultDirection="desc"
+                      label="기준일"
+                      onChange={setSort}
+                    />
+                    <SortableHeaderCell
+                      column={{ key: 'updatedAt' }}
+                      current={sort}
+                      defaultDirection="desc"
+                      label="수정일"
+                      onChange={setSort}
+                    />
                     <th>메뉴</th>
                   </tr>
                 </thead>
@@ -684,7 +792,13 @@ export function ReportsSection({
                       <td>{row.status}</td>
                       <td>
                         <div className={styles.tablePrimary}>{getControllerReportDispatchLabel(row)}</div>
-                        <div className={styles.tableSecondary}>마감 {row.deadlineDate || '-'}</div>
+                        <div className={styles.tableSecondary}>
+                          {buildDispatchMeta(row).replyAt
+                            ? `회신 ${formatDateTime(buildDispatchMeta(row).replyAt)}`
+                            : buildDispatchMeta(row).readAt
+                              ? `열람 ${formatDateTime(buildDispatchMeta(row).readAt)}`
+                              : `마감 ${row.deadlineDate || '-'}`}
+                        </div>
                       </td>
                       <td>
                         <div className={styles.tablePrimary}>{getQualityStatusLabel(row.qualityStatus)}</div>
@@ -706,6 +820,13 @@ export function ReportsSection({
                               {
                                 label: '원본 현장으로 이동',
                                 href: getAdminSectionHref('headquarters', {
+                                  headquarterId: row.headquarterId || null,
+                                  siteId: row.siteId,
+                                }),
+                              },
+                              {
+                                label: '사진첩 열기',
+                                href: getAdminSectionHref('photos', {
                                   headquarterId: row.headquarterId || null,
                                   siteId: row.siteId,
                                 }),
@@ -737,8 +858,18 @@ export function ReportsSection({
                               ...(row.reportType === 'quarterly_report'
                                 ? [
                                     {
+                                      label: '메일 스레드 보기',
+                                      href: getAdminSectionHref('mailbox', {
+                                        box: row.dispatch?.mailThreadId ? 'inbox' : 'reports',
+                                        headquarterId: row.headquarterId || null,
+                                        reportKey: row.reportKey,
+                                        siteId: row.siteId,
+                                        threadId: row.dispatch?.mailThreadId || null,
+                                      }),
+                                    },
+                                    {
                                       label: '발송이력 보기',
-                                      onSelect: () => setDispatchRow(row),
+                                      onSelect: () => openDispatchModal(row),
                                     },
                                   ]
                                 : []),
@@ -902,6 +1033,50 @@ export function ReportsSection({
               현재 상태: {getDispatchStatusLabel(buildDispatchMeta(dispatchRow).dispatchStatus)} / 마감일{' '}
               {buildDispatchMeta(dispatchRow).deadlineDate || '-'}
             </p>
+            <div className={styles.modalGrid}>
+              <label className={styles.modalFieldWide}>
+                <span className={styles.label}>문자 발송 상태</span>
+                <div className={styles.tableSecondary}>
+                  {smsProviderStatuses.length === 0
+                    ? '문자 공급자 상태를 불러오는 중입니다.'
+                    : smsProviderStatuses.map((provider) => provider.message).join(' / ')}
+                </div>
+              </label>
+              <label className={styles.modalField}>
+                <span className={styles.label}>수신 번호</span>
+                <input
+                  className="app-input"
+                  type="tel"
+                  value={dispatchSmsPhone}
+                  onChange={(event) => setDispatchSmsPhone(event.target.value)}
+                  placeholder="01012345678"
+                />
+              </label>
+              <label className={styles.modalFieldWide}>
+                <span className={styles.label}>문자 내용</span>
+                <textarea
+                  className="app-textarea"
+                  rows={5}
+                  value={dispatchSmsMessage}
+                  onChange={(event) => setDispatchSmsMessage(event.target.value)}
+                />
+              </label>
+              <div className={styles.sectionActions}>
+                <button
+                  type="button"
+                  className="app-button app-button-secondary"
+                  onClick={() => void handleSendSms()}
+                  disabled={
+                    dispatchSmsSending ||
+                    !dispatchSmsPhone.trim() ||
+                    !dispatchSmsMessage.trim() ||
+                    smsProviderStatuses.some((provider) => !provider.sendEnabled)
+                  }
+                >
+                  {dispatchSmsSending ? '문자 발송 중...' : '문자 발송'}
+                </button>
+              </div>
+            </div>
             {buildDispatchMeta(dispatchRow).sentHistory.length === 0 ? (
               <div className={styles.tableEmpty}>기록된 발송 이력이 없습니다.</div>
             ) : (

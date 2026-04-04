@@ -1,0 +1,198 @@
+.summaryBar {
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.summaryCard {
+  border: 1px solid var(--erp-line);
+  border-radius: 18px;
+  background: var(--app-panel, #fff);
+  padding: 1rem 1.1rem;
+}
+
+.summaryLabel {
+  display: block;
+  color: var(--erp-text-subtle);
+  font-size: 0.86rem;
+}
+
+.summaryValue {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+.summaryMeta {
+  display: block;
+  margin-top: 0.35rem;
+  color: var(--erp-text-subtle);
+  font-size: 0.82rem;
+}
+
+.sectionCard {
+  border: 1px solid var(--erp-line);
+  border-radius: 20px;
+  background: var(--app-panel, #fff);
+  padding: 1.1rem;
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.8rem;
+  align-items: center;
+  margin-bottom: 0.9rem;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.sectionMeta {
+  color: var(--erp-text-subtle);
+  font-size: 0.86rem;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 180px;
+}
+
+.fieldLabel {
+  color: var(--erp-text-subtle);
+  font-size: 0.82rem;
+}
+
+.layout {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+}
+
+.list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.rowCard {
+  border: 1px solid var(--erp-line);
+  border-radius: 16px;
+  padding: 0.95rem;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.rowTitle {
+  font-weight: 700;
+}
+
+.rowMeta {
+  color: var(--erp-text-subtle);
+  font-size: 0.86rem;
+}
+
+.rowActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: end;
+}
+
+.inlineField {
+  display: grid;
+  gap: 0.3rem;
+  min-width: 150px;
+  flex: 1 1 150px;
+}
+
+.calendarGrid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.weekday {
+  text-align: center;
+  color: var(--erp-text-subtle);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.calendarCell,
+.calendarCellEmpty {
+  min-height: 108px;
+  border-radius: 16px;
+  border: 1px solid var(--erp-line);
+  padding: 0.7rem;
+  background: var(--app-panel, #fff);
+}
+
+.calendarCellEmpty {
+  opacity: 0.45;
+}
+
+.calendarCellActive {
+  border-color: var(--app-accent, #0f766e);
+  box-shadow: inset 0 0 0 1px rgba(15, 118, 110, 0.12);
+}
+
+.calendarDay {
+  font-weight: 700;
+  margin-bottom: 0.45rem;
+}
+
+.calendarEvents {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.calendarEvent {
+  border-radius: 999px;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.78rem;
+  background: rgba(15, 118, 110, 0.1);
+  color: var(--app-accent, #0f766e);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.selectedList {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.emptyState {
+  border: 1px dashed var(--erp-line);
+  border-radius: 16px;
+  padding: 1.1rem;
+  color: var(--erp-text-subtle);
+  text-align: center;
+}
+
+.noticeBox {
+  border: 1px solid rgba(15, 118, 110, 0.18);
+  background: rgba(15, 118, 110, 0.08);
+  color: #115e59;
+  border-radius: 14px;
+  padding: 0.8rem 0.9rem;
+  margin-bottom: 0.9rem;
+}
+
+@media (max-width: 920px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}

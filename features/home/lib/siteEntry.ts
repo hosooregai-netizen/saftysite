@@ -36,6 +36,12 @@ export function buildSitePhotoAlbumHref(siteId: string): string {
   return `/sites/${encodeURIComponent(siteId)}/photos`;
 }
 
+export function buildWorkerCalendarHref(siteId?: string | null): string {
+  if (!siteId) return '/calendar';
+  const searchParams = new URLSearchParams({ siteId });
+  return `/calendar?${searchParams.toString()}`;
+}
+
 export function buildWorkerPickerHref(intent: WorkerSitePickerIntent): string {
   return intent === 'quarterly' ? '/quarterly' : '/bad-workplace';
 }
