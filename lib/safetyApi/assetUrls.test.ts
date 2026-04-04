@@ -106,11 +106,11 @@ test('falls back to the proxy download path when no asset base is configured', (
   withSafetyAssetBaseUrl(undefined, () => {
     assert.equal(
       buildSafetyAssetUrl('/uploads/mock-guide.pdf'),
-      'http://127.0.0.1:8011/uploads/mock-guide.pdf',
+      'http://35.76.230.177:8011/uploads/mock-guide.pdf',
     );
     assert.equal(
       normalizeSafetyAssetUrl('/api/safety/uploads/mock-guide.pdf'),
-      'http://127.0.0.1:8011/uploads/mock-guide.pdf',
+      'http://35.76.230.177:8011/uploads/mock-guide.pdf',
     );
   });
 });
@@ -147,7 +147,7 @@ test('prefers new-tab navigation for absolute asset URLs and download attribute 
 test('warns when a secure page points to an insecure asset URL', () => {
   assert.equal(
     getSafetyAssetTransportWarning(
-      'http://127.0.0.1:8011/uploads/mock-guide.pdf',
+      'http://35.76.230.177:8011/uploads/mock-guide.pdf',
       'https:',
     ),
     'HTTPS 배포에서는 이 파일이 브라우저에서 차단될 수 있습니다. HTTPS 자산 도메인을 연결하면 가장 안정적입니다.',
