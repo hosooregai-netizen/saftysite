@@ -17,6 +17,7 @@ import {
   getSessionProgress,
   getSessionTitle,
 } from '@/constants/inspectionSession';
+import { FUTURE_PROCESS_LIBRARY } from '@/constants/inspectionSession/catalog';
 import { createTimestamp, generateId } from '@/constants/inspectionSession/shared';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { useSiteOperationalReports } from '@/hooks/useSiteOperationalReports';
@@ -1595,6 +1596,7 @@ function QuarterlyFuturePlansSection(props: {
       <div className={operationalStyles.implementationTableWrap}>
         <table className={operationalStyles.implementationTable}>
           <colgroup>
+            <col className={operationalStyles.futurePlanColProcess} />
             <col className={operationalStyles.futurePlanColHazard} />
             <col className={operationalStyles.futurePlanColMeasure} />
             <col className={operationalStyles.futurePlanColAction} />
@@ -1602,6 +1604,7 @@ function QuarterlyFuturePlansSection(props: {
           <thead>
             <tr>
               <th className={operationalStyles.implementationHeaderCell}>작업공정</th>
+              <th className={operationalStyles.implementationHeaderCell}>유해위험요인</th>
               <th className={operationalStyles.implementationHeaderCell}>안전대책</th>
               <th
                 className={`${operationalStyles.implementationHeaderCell} ${operationalStyles.implementationHeaderActionCell}`}
@@ -1620,13 +1623,40 @@ function QuarterlyFuturePlansSection(props: {
             {plans.length > 0 ? (
               plans.map((item) => (
                 <tr key={item.id}>
-                  <FuturePlanInputCell
-                    value={item.processName}
+                  <FuturePlanProcessCell
+                    item={item}
+                    onApplyRecommendation={(recommended) =>
+                      onChange(
+                        plans.map((plan) =>
+                          plan.id === item.id
+                            ? {
+                                ...plan,
+                                countermeasure: recommended.countermeasure,
+                                hazard: recommended.hazard,
+                                processName: recommended.processName,
+                                source: 'api',
+                              }
+                            : plan,
+                        ),
+                      )
+                    }
                     onChange={(value) =>
                       onChange(
                         plans.map((plan) =>
                           plan.id === item.id
-                            ? { ...plan, processName: value }
+                            ? { ...plan, processName: value, source: 'manual' }
+                            : plan,
+                        ),
+                      )
+                    }
+                  />
+                  <FuturePlanInputCell
+                    value={item.hazard}
+                    onChange={(value) =>
+                      onChange(
+                        plans.map((plan) =>
+                          plan.id === item.id
+                            ? { ...plan, hazard: value, source: 'manual' }
                             : plan,
                         ),
                       )
@@ -1638,7 +1668,7 @@ function QuarterlyFuturePlansSection(props: {
                       onChange(
                         plans.map((plan) =>
                           plan.id === item.id
-                            ? { ...plan, note: '', countermeasure: value }
+                            ? { ...plan, note: '', countermeasure: value, source: 'manual' }
                             : plan,
                         ),
                       )
@@ -1657,7 +1687,7 @@ function QuarterlyFuturePlansSection(props: {
               ))
             ) : (
               <tr>
-                <td colSpan={3} className={operationalStyles.implementationEmptyCell}>
+                <td colSpan={4} className={operationalStyles.implementationEmptyCell}>
                   등록된 향후 공정 항목이 없습니다.
                 </td>
               </tr>
@@ -1784,6 +1814,75 @@ function FuturePlanInputCell(props: {
         readOnly={props.readOnly}
         onChange={(event) => props.onChange(event.target.value)}
       />
+    </td>
+  );
+}
+
+function normalizeRecommendationText(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function getFuturePlanRecommendations(query: string) {
+  const normalizedQuery = normalizeRecommendationText(query);
+  if (!normalizedQuery) {
+    return [];
+  }
+  const scored = FUTURE_PROCESS_LIBRARY.map((item) => {
+    const haystack = `${item.processName} ${item.hazard} ${item.countermeasure}`.toLowerCase();
+    let score = 0;
+
+    if (normalizeRecommendationText(item.processName) === normalizedQuery) {
+      score = 100;
+    } else if (item.processName.toLowerCase().includes(normalizedQuery)) {
+      score = 80;
+    } else if (haystack.includes(normalizedQuery)) {
+      score = 50;
+    } else {
+      const tokens = normalizedQuery.split(/\s+/).filter(Boolean);
+      score = tokens.reduce((total, token) => total + (haystack.includes(token) ? 10 : 0), 0);
+    }
+
+    return { item, score };
+  })
+    .filter((entry) => entry.score > 0)
+    .sort(
+      (left, right) =>
+        right.score - left.score ||
+        left.item.processName.localeCompare(right.item.processName, 'ko'),
+    );
+
+  return scored.slice(0, 3).map((entry) => entry.item);
+}
+
+function FuturePlanProcessCell(props: {
+  item: QuarterlySummaryReport['futurePlans'][number];
+  onApplyRecommendation: (item: (typeof FUTURE_PROCESS_LIBRARY)[number]) => void;
+  onChange: (value: string) => void;
+}) {
+  const recommendations = getFuturePlanRecommendations(props.item.processName);
+
+  return (
+    <td className={operationalStyles.implementationValueCell}>
+      <div className={operationalStyles.futurePlanCellStack}>
+        <textarea
+          className={`app-textarea ${operationalStyles.futurePlanControl}`}
+          value={props.item.processName}
+          placeholder="작업공정을 검색하면 추천 3개가 표시됩니다."
+          onChange={(event) => props.onChange(event.target.value)}
+        />
+        <div className={operationalStyles.futurePlanRecommendationList}>
+          {recommendations.map((recommended) => (
+            <button
+              key={recommended.processName}
+              type="button"
+              className={operationalStyles.futurePlanRecommendationButton}
+              onClick={() => props.onApplyRecommendation(recommended)}
+            >
+              {recommended.processName}
+            </button>
+          ))}
+        </div>
+      </div>
     </td>
   );
 }
