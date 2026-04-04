@@ -9,6 +9,7 @@ import {
   generateId,
 } from '@/constants/inspectionSession/shared';
 import { CAUSATIVE_AGENT_LABELS } from '@/constants/inspectionSession/doc7Catalog';
+import type { SafetyQuarterlySummarySeed } from '@/types/backend';
 import type { QuarterTarget, QuarterlyCounter, QuarterlySummaryReport } from '@/types/erpReports';
 import type { InspectionSession, InspectionSite } from '@/types/inspectionSession';
 import {
@@ -189,6 +190,47 @@ export function syncQuarterlySummaryReportSources(
     ...report,
     ...normalizedPeriod,
     ...derived,
+  };
+}
+
+export function applyQuarterlySummarySeed(
+  report: QuarterlySummaryReport,
+  seed: SafetyQuarterlySummarySeed,
+): QuarterlySummaryReport {
+  const noteBySessionId = new Map(
+    report.implementationRows.map((row) => [row.sessionId, row.note]),
+  );
+
+  return {
+    ...report,
+    periodStartDate: seed.period_start_date || report.periodStartDate,
+    periodEndDate: seed.period_end_date || report.periodEndDate,
+    generatedFromSessionIds: [...seed.selected_report_keys],
+    lastCalculatedAt: seed.last_calculated_at || report.lastCalculatedAt,
+    implementationRows: seed.implementation_rows.map((row) => ({
+      sessionId: row.session_id,
+      reportTitle: row.report_title,
+      reportDate: row.report_date,
+      reportNumber: row.report_number,
+      drafter: row.drafter,
+      progressRate: row.progress_rate,
+      findingCount: row.finding_count,
+      improvedCount: row.improved_count,
+      note: noteBySessionId.get(row.session_id) ?? row.note ?? '',
+    })),
+    accidentStats: seed.accident_stats.map((item) => ({ ...item })),
+    causativeStats: seed.causative_stats.map((item) => ({ ...item })),
+    futurePlans: seed.future_plans.map((item) =>
+      createFutureProcessRiskPlan({
+        id: item.id,
+        processName: item.process_name,
+        hazard: item.hazard,
+        countermeasure: item.countermeasure,
+        note: item.note,
+        source: item.source === 'api' ? 'api' : 'manual',
+      }),
+    ),
+    majorMeasures: [...seed.major_measures],
   };
 }
 

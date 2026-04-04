@@ -37,6 +37,10 @@ export default function Doc5Section(props: Doc5SectionProps) {
   const [draftLoading, setDraftLoading] = useState(false);
   const [draftError, setDraftError] = useState<string | null>(null);
   const [draftNotice, setDraftNotice] = useState<string | null>(null);
+  const showRelationSkeleton = relationStatus === 'loading' && !isRelationReady;
+  const showRelationError = relationStatus === 'error' && !isRelationReady;
+  const showRelationEmpty =
+    !isRelationReady && !showRelationSkeleton && !showRelationError;
 
   const applySummary = (text: string) => {
     applyDocumentUpdate('doc5', 'derived', (current) => ({
@@ -50,7 +54,13 @@ export default function Doc5Section(props: Doc5SectionProps) {
     setDraftNotice(null);
 
     if (!isRelationReady) {
-      setDraftNotice('누적 통계 계산이 끝난 뒤 총평 초안을 만들 수 있습니다.');
+      setDraftNotice(
+        relationStatus === 'loading'
+          ? '누적 통계 계산이 끝난 뒤 초안 생성이 가능합니다.'
+          : relationStatus === 'error'
+            ? '누적 통계를 불러오지 못해 초안 생성을 잠시 사용할 수 없습니다.'
+            : '이전 보고서가 없어 누적 통계가 없습니다.',
+      );
       return;
     }
 
@@ -91,30 +101,44 @@ export default function Doc5Section(props: Doc5SectionProps) {
   return (
     <div className={styles.sectionStack}>
       <div className={styles.chartGrid}>
-        <ChartCard title="지적유형 통계 금회" entries={currentAccidentEntries} />
-        <ChartCard title="기인물 통계 금회" entries={currentAgentEntries} />
+        <ChartCard title="지적유형별 통계 금회" entries={currentAccidentEntries} />
+        <ChartCard title="기인물별 통계 금회" entries={currentAgentEntries} />
         {isRelationReady ? (
           <>
-            <ChartCard title="지적유형 통계 누적" entries={cumulativeAccidentEntries} />
-            <ChartCard title="기인물 통계 누적" entries={cumulativeAgentEntries} />
+            <ChartCard title="지적유형별 통계 누적" entries={cumulativeAccidentEntries} />
+            <ChartCard title="기인물별 통계 누적" entries={cumulativeAgentEntries} />
+          </>
+        ) : showRelationSkeleton ? (
+          <>
+            <div className={`${styles.card} ${styles.relationSkeletonCard}`} role="status">
+              <strong className={styles.chartTitle}>지적유형별 통계 누적</strong>
+              <p className={styles.relationNotice}>누적 통계를 계산 중입니다.</p>
+            </div>
+            <div className={`${styles.card} ${styles.relationSkeletonCard}`} role="status">
+              <strong className={styles.chartTitle}>기인물별 통계 누적</strong>
+              <p className={styles.relationNotice}>누적 통계를 계산 중입니다.</p>
+            </div>
+          </>
+        ) : showRelationError ? (
+          <>
+            <div className={`${styles.card} ${styles.relationSkeletonCard}`} role="status">
+              <strong className={styles.chartTitle}>지적유형별 통계 누적</strong>
+              <p className={styles.relationNotice}>누적 통계를 아직 불러오지 못했습니다.</p>
+            </div>
+            <div className={`${styles.card} ${styles.relationSkeletonCard}`} role="status">
+              <strong className={styles.chartTitle}>기인물별 통계 누적</strong>
+              <p className={styles.relationNotice}>누적 통계를 아직 불러오지 못했습니다.</p>
+            </div>
           </>
         ) : (
           <>
             <div className={`${styles.card} ${styles.relationSkeletonCard}`} role="status">
-              <strong className={styles.chartTitle}>지적유형 통계 누적</strong>
-              <p className={styles.relationNotice}>
-                {relationStatus === 'error'
-                  ? '누적 통계를 아직 불러오지 못했습니다.'
-                  : '누적 통계를 계산 중입니다.'}
-              </p>
+              <strong className={styles.chartTitle}>지적유형별 통계 누적</strong>
+              <p className={styles.relationNotice}>이전 보고서가 없어 누적 통계가 없습니다.</p>
             </div>
             <div className={`${styles.card} ${styles.relationSkeletonCard}`} role="status">
-              <strong className={styles.chartTitle}>기인물 통계 누적</strong>
-              <p className={styles.relationNotice}>
-                {relationStatus === 'error'
-                  ? '누적 통계를 아직 불러오지 못했습니다.'
-                  : '누적 통계를 계산 중입니다.'}
-              </p>
+              <strong className={styles.chartTitle}>기인물별 통계 누적</strong>
+              <p className={styles.relationNotice}>이전 보고서가 없어 누적 통계가 없습니다.</p>
             </div>
           </>
         )}
@@ -141,7 +165,12 @@ export default function Doc5Section(props: Doc5SectionProps) {
         {draftNotice ? <p className={styles.fieldAssist}>{draftNotice}</p> : null}
         {isRelationHydrating ? (
           <p className={styles.fieldAssist}>
-            누적 통계 계산이 끝나면 총평 초안 생성이 활성화됩니다.
+            누적 통계 계산이 끝나면 초안 생성이 활성화됩니다.
+          </p>
+        ) : null}
+        {showRelationEmpty ? (
+          <p className={styles.fieldAssist}>
+            첫 보고서라면 누적 통계 없이 현재 지적사항부터 먼저 작성하면 됩니다.
           </p>
         ) : null}
         <textarea

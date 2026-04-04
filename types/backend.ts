@@ -624,6 +624,50 @@ export interface SafetyTechnicalGuidanceSeed {
   previous_authoritative_report: SafetyReportListItem | null;
 }
 
+export interface SafetyQuarterlySummarySeedSourceReport {
+  report_key: string;
+  report_title: string;
+  guidance_date: string;
+  drafter: string;
+  progress_rate: string;
+  finding_count: number;
+  improved_count: number;
+}
+
+export interface SafetyQuarterlySummarySeedImplementationRow {
+  session_id: string;
+  report_title: string;
+  report_date: string;
+  report_number: number;
+  drafter: string;
+  progress_rate: string;
+  finding_count: number;
+  improved_count: number;
+  note: string;
+}
+
+export interface SafetyQuarterlySummarySeedFuturePlan {
+  id: string;
+  process_name: string;
+  hazard: string;
+  countermeasure: string;
+  note: string;
+  source: string;
+}
+
+export interface SafetyQuarterlySummarySeed {
+  period_start_date: string;
+  period_end_date: string;
+  selected_report_keys: string[];
+  source_reports: SafetyQuarterlySummarySeedSourceReport[];
+  last_calculated_at: string;
+  implementation_rows: SafetyQuarterlySummarySeedImplementationRow[];
+  accident_stats: SafetyAiChartEntry[];
+  causative_stats: SafetyAiChartEntry[];
+  future_plans: SafetyQuarterlySummarySeedFuturePlan[];
+  major_measures: string[];
+}
+
 export interface SafetyAiHazardFindingInput {
   location: string;
   hazardDescription?: string;

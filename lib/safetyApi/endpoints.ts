@@ -4,6 +4,7 @@ import type {
   SafetyReport,
   SafetyReportListItem,
   SafetySite,
+  SafetyQuarterlySummarySeed,
   SafetyTechnicalGuidanceSeed,
   SafetyTokenResponse,
   SafetyUpsertReportInput,
@@ -65,10 +66,18 @@ export function fetchSafetyContentItems(token: string): Promise<SafetyContentIte
 
 export function fetchSafetyReportsBySite(
   token: string,
-  siteId: string
+  siteId: string,
+  options?: {
+    reportKinds?: string[];
+  },
 ): Promise<SafetyReport[]> {
   const searchParams = new URLSearchParams({
     active_only: 'true',
+  });
+  options?.reportKinds?.forEach((reportKind) => {
+    if (reportKind.trim()) {
+      searchParams.append('report_kind', reportKind);
+    }
   });
 
   return requestSafetyApi<SafetyReport[]>(
@@ -119,6 +128,34 @@ export function fetchTechnicalGuidanceSeed(
 ): Promise<SafetyTechnicalGuidanceSeed> {
   return requestSafetyApi<SafetyTechnicalGuidanceSeed>(
     `/reports/site/${siteId}/technical-guidance-seed`,
+    {},
+    token,
+  );
+}
+
+export function fetchQuarterlySummarySeed(
+  token: string,
+  siteId: string,
+  options: {
+    periodStartDate: string;
+    periodEndDate: string;
+    selectedReportKeys?: string[];
+    explicitSelection?: boolean;
+  },
+): Promise<SafetyQuarterlySummarySeed> {
+  const searchParams = new URLSearchParams({
+    period_start_date: options.periodStartDate,
+    period_end_date: options.periodEndDate,
+    explicit_selection: String(options.explicitSelection ?? false),
+  });
+  options.selectedReportKeys?.forEach((reportKey) => {
+    if (reportKey.trim()) {
+      searchParams.append('selected_report_keys', reportKey);
+    }
+  });
+
+  return requestSafetyApi<SafetyQuarterlySummarySeed>(
+    `/reports/site/${siteId}/quarterly-summary-seed?${searchParams.toString()}`,
     {},
     token,
   );

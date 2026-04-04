@@ -20,6 +20,7 @@ export {
   fetchSafetyReportByKey,
   fetchSafetyReportList,
   fetchSafetyReportsBySite,
+  fetchQuarterlySummarySeed,
   fetchTechnicalGuidanceSeed,
   loginSafetyApi,
   upsertSafetyReport,

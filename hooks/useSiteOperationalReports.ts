@@ -66,7 +66,9 @@ export function useSiteOperationalReports(site: InspectionSite | null, enabled =
     setError(null);
 
     try {
-      const reports = await fetchSafetyReportsBySite(token, site.id);
+      const reports = await fetchSafetyReportsBySite(token, site.id, {
+        reportKinds: ['quarterly_summary', 'bad_workplace'],
+      });
       const nextQuarterly: QuarterlySummaryReport[] = [];
       const nextBadWorkplace: BadWorkplaceReport[] = [];
 

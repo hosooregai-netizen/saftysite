@@ -89,6 +89,8 @@ export function useInspectionSessionScreen(sessionId: string) {
   const [isGeneratingHwpx, setIsGeneratingHwpx] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isLoadingSession, setIsLoadingSession] = useState(false);
+  const [missingRelationsStatus, setMissingRelationsStatus] =
+    useState<ReportIndexStatus>('idle');
   const [uploadError, setUploadError] = useState<string | null>(null);
   const forcedRelationRefreshIdsRef = useRef<Set<string>>(new Set());
   const session = getSessionById(sessionId);
@@ -105,17 +107,24 @@ export function useInspectionSessionScreen(sessionId: string) {
         storedRelations.cumulativeAccidentEntries.length > 0 ||
         storedRelations.cumulativeAgentEntries.length > 0),
   );
+  const needsRelationRefresh =
+    Boolean(session) && (!hasStoredRelations || Boolean(storedRelations?.stale));
   const relationStatus: ReportIndexStatus = !session
     ? 'idle'
-    : hasStoredRelations
-      ? storedRelations?.stale
-        ? 'loading'
-        : 'loaded'
-      : 'idle';
+    : needsRelationRefresh
+      ? missingRelationsStatus === 'error'
+        ? 'error'
+        : 'loading'
+      : hasStoredRelations
+        ? 'loaded'
+        : 'idle';
   const isRelationReady = Boolean(session) && hasStoredRelations;
-  const isRelationHydrating = Boolean(session) && !hasStoredRelations;
+  const isRelationHydrating =
+    Boolean(session) &&
+    needsRelationRefresh &&
+    missingRelationsStatus === 'loading';
   const relationNotice =
-    session && storedRelations?.stale
+    storedRelations?.stale
       ? '이전 요인과 누적 통계를 서버에서 다시 계산하고 있습니다. 저장된 값을 먼저 보여주고 있어요.'
       : null;
   const derivedData = useMemo(
@@ -208,7 +217,19 @@ export function useInspectionSessionScreen(sessionId: string) {
   }, [ensureSessionLoaded, isAuthenticated, isReady, session, sessionId]);
 
   useEffect(() => {
-    if (!session || !isAuthenticated || !isReady || hasStoredRelations) {
+    if (!session) {
+      forcedRelationRefreshIdsRef.current.clear();
+      setMissingRelationsStatus('idle');
+      return;
+    }
+
+    if (!needsRelationRefresh) {
+      forcedRelationRefreshIdsRef.current.delete(session.id);
+      setMissingRelationsStatus('idle');
+      return;
+    }
+
+    if (!isAuthenticated || !isReady) {
       return;
     }
 
@@ -216,11 +237,27 @@ export function useInspectionSessionScreen(sessionId: string) {
       return;
     }
 
+    let cancelled = false;
     forcedRelationRefreshIdsRef.current.add(session.id);
-    void ensureSessionLoaded(session.id, { force: true }).catch(() => {
-      forcedRelationRefreshIdsRef.current.delete(session.id);
-    });
-  }, [ensureSessionLoaded, hasStoredRelations, isAuthenticated, isReady, session]);
+    setMissingRelationsStatus('loading');
+    void ensureSessionLoaded(session.id, { force: true })
+      .then(() => {
+        forcedRelationRefreshIdsRef.current.delete(session.id);
+        if (!cancelled) {
+          setMissingRelationsStatus('idle');
+        }
+      })
+      .catch(() => {
+        forcedRelationRefreshIdsRef.current.delete(session.id);
+        if (!cancelled) {
+          setMissingRelationsStatus('error');
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ensureSessionLoaded, isAuthenticated, isReady, needsRelationRefresh, session]);
 
   useEffect(() => {
     if (!session || !site) return;

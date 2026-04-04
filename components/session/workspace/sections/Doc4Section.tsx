@@ -6,25 +6,27 @@ import { UploadBox } from '@/components/session/workspace/widgets';
 export default function Doc4Section(props: OverviewSectionProps) {
   const {
     applyDocumentUpdate,
-    isRelationHydrating,
     relationStatus,
     session,
     withFileData,
   } = props;
-  const showRelationSkeleton = isRelationHydrating && session.document4FollowUps.length === 0;
+  const showRelationSkeleton =
+    relationStatus === 'loading' && session.document4FollowUps.length === 0;
+  const showRelationError =
+    relationStatus === 'error' && session.document4FollowUps.length === 0;
   const showEmptyState =
     !showRelationSkeleton &&
-    relationStatus !== 'error' &&
+    !showRelationError &&
     session.document4FollowUps.length === 0;
 
   return (
     <div className={`${styles.sectionStack} ${styles.doc4SectionStack}`}>
-      {isRelationHydrating ? (
+      {showRelationSkeleton ? (
         <div className={styles.relationNotice} role="status">
           이전 보고서 연동값을 계산 중입니다.
         </div>
       ) : null}
-      {relationStatus === 'error' ? (
+      {showRelationError ? (
         <div className={`${styles.relationNotice} ${styles.relationNoticeError}`} role="status">
           이전 보고서 연동값을 아직 불러오지 못했습니다.
         </div>

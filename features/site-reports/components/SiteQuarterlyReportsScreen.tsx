@@ -16,17 +16,18 @@ import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { useSiteOperationalReports } from '@/hooks/useSiteOperationalReports';
 import { getAdminSectionHref, isAdminUserRole } from '@/lib/admin';
 import {
+  applyQuarterlySummarySeed,
   createQuarterlySummaryDraft,
-  getQuarterlySourceSessions,
-  syncQuarterlySummaryReportSources,
 } from '@/lib/erpReports/quarterly';
 import {
   buildQuarterlyTitleForPeriod,
+  createQuarterKey,
   formatPeriodRangeLabel,
   getQuarterFromDate,
   getQuarterRange,
   parseDateValue,
 } from '@/lib/erpReports/shared';
+import { fetchQuarterlySummarySeed, readSafetyAuthToken } from '@/lib/safetyApi';
 import { SiteReportsSummaryBar } from './SiteReportsSummaryBar';
 import styles from './SiteReportsScreen.module.css';
 
@@ -195,17 +196,12 @@ export function SiteQuarterlyReportsScreen({
     isReady,
     login,
     logout,
-    sessions,
     sites,
   } = useInspectionSessions();
 
   const currentSite = useMemo(
     () => sites.find((site) => site.id === decodedSiteKey) ?? null,
     [decodedSiteKey, sites],
-  );
-  const siteSessions = useMemo(
-    () => sessions.filter((session) => session.siteKey === decodedSiteKey),
-    [decodedSiteKey, sessions],
   );
   const isAdminView = Boolean(currentUser && isAdminUserRole(currentUser.role));
   const {
@@ -408,32 +404,34 @@ export function SiteQuarterlyReportsScreen({
       return;
     }
 
-    const nextDraftBase = createQuarterlySummaryDraft(
-      currentSite,
-      currentUser?.name || currentSite.assigneeName,
-      periodStartDate,
-    );
-    const matchedSessions = getQuarterlySourceSessions(siteSessions, {
-      periodStartDate,
-      periodEndDate,
-    });
-    const nextDraft = syncQuarterlySummaryReportSources(
-      {
-        ...nextDraftBase,
-        title,
-        periodStartDate,
-        periodEndDate,
-      },
-      currentSite,
-      siteSessions,
-      matchedSessions.map((session) => session.id),
-      matchedSessions,
-    );
-
     setIsCreatingReport(true);
     setCreateDialogError(null);
 
     try {
+      const token = readSafetyAuthToken();
+      if (!token) {
+        throw new Error('로그인이 만료되었습니다. 다시 로그인해 주세요.');
+      }
+
+      const quarterTarget = getCreateQuarterSelectionTarget(createForm);
+      const nextDraftBase = {
+        ...createQuarterlySummaryDraft(
+          currentSite,
+          currentUser?.name || currentSite.assigneeName,
+          periodStartDate,
+        ),
+        title,
+        periodStartDate,
+        periodEndDate,
+        year: quarterTarget.year,
+        quarter: quarterTarget.quarter,
+        quarterKey: createQuarterKey(quarterTarget.year, quarterTarget.quarter),
+      };
+      const seed = await fetchQuarterlySummarySeed(token, currentSite.id, {
+        periodStartDate,
+        periodEndDate,
+      });
+      const nextDraft = applyQuarterlySummarySeed(nextDraftBase, seed);
       await saveQuarterlyReport(nextDraft);
       setIsCreateDialogOpen(false);
       resetCreateDialog();
