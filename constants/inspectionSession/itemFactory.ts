@@ -69,10 +69,14 @@ export function createCurrentHazardFinding(
     inspector: '',
     emphasis: '',
     improvementPlan: '',
+    improvementRequest: '',
     legalReferenceId: '',
     legalReferenceTitle: '',
+    referenceLawTitles: [],
     referenceMaterial1: '',
     referenceMaterial2: '',
+    referenceMaterialImage: '',
+    referenceMaterialDescription: '',
     referenceCatalogAccidentType: '',
     referenceCatalogCausativeAgentKey: '',
     carryForward: false,
@@ -148,4 +152,3 @@ export function padDocument12Activities(items: ActivityRecord[]): ActivityRecord
   }
   return list.slice(0, DOC12_ACTIVITY_GRID_SLOTS);
 }
-

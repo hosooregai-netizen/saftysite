@@ -692,8 +692,8 @@ function updateSnapshotTable(tableXml: string, report: QuarterlySummaryReport, s
   return nextTable;
 }
 
-function updateOverallCommentTable(tableXml: string, report: QuarterlySummaryReport) {
-  return replaceCellText(tableXml, 1, 0, formatText(report.overallComment, EMPTY_COMMENT), {
+function clearRemovedCommentTable(tableXml: string) {
+  return replaceCellText(tableXml, 1, 0, formatText('', EMPTY_COMMENT), {
     stripLineSeg: true,
   });
 }
@@ -797,7 +797,7 @@ function updateSectionXml(
 
   const tables = tableBlocks.map((block) => block.xml);
   tables[0] = updateSnapshotTable(tables[0], report, site);
-  tables[2] = updateOverallCommentTable(tables[2], report);
+  tables[2] = clearRemovedCommentTable(tables[2]);
   tables[3] = updateImplementationTable(tables[3], report);
   tables[4] = updateFuturePlanTable(tables[4], report);
   tables[5] = updateOpsTable(tables[5], report, opsImageAsset);

@@ -115,5 +115,7 @@ export function applyDoc7ReferenceMaterialMatch<T extends CurrentHazardFinding>(
     ...finding,
     referenceMaterial1: matched?.imageUrl ?? '',
     referenceMaterial2: matched?.body ?? '',
+    referenceMaterialImage: matched?.imageUrl ?? '',
+    referenceMaterialDescription: matched?.body ?? '',
   };
 }

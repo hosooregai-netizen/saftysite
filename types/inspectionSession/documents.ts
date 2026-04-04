@@ -76,10 +76,14 @@ export interface CurrentHazardFinding {
   inspector: string;
   emphasis: string;
   improvementPlan: string;
+  improvementRequest?: string;
   legalReferenceId: string;
   legalReferenceTitle: string;
+  referenceLawTitles?: string[];
   referenceMaterial1: string;
   referenceMaterial2: string;
+  referenceMaterialImage?: string;
+  referenceMaterialDescription?: string;
   /** 참고자료 매칭용(콘텐츠 CRUD doc7). 비어 있으면 accidentType/causativeAgentKey로 폴백 */
   referenceCatalogAccidentType: string;
   referenceCatalogCausativeAgentKey: string;
@@ -151,4 +155,3 @@ export interface SafetyInfoItem {
   body: string;
   imageUrl: string;
 }
-

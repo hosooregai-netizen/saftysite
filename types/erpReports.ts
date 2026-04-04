@@ -56,7 +56,6 @@ export interface QuarterlySummaryReport {
   siteSnapshot: AdminSiteSnapshot;
   generatedFromSessionIds: string[];
   lastCalculatedAt: string;
-  overallComment: string;
   implementationRows: QuarterlyImplementationRow[];
   accidentStats: QuarterlyCounter[];
   causativeStats: QuarterlyCounter[];

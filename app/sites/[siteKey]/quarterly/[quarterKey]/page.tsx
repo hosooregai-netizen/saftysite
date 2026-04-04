@@ -892,10 +892,6 @@ function QuarterlyReportEditor({
         onChange={updateSiteSnapshotField}
       />
       <QuarterlyStatsSection draft={draft} />
-      <QuarterlyOverallCommentSection
-        value={draft.overallComment}
-        onChange={(value) => setDraft((current) => ({ ...current, overallComment: value }))}
-      />
       <QuarterlyImplementationSection
         rows={draft.implementationRows}
         onChange={handleImplementationRowChange}
@@ -1496,15 +1492,6 @@ function QuarterlyStatsSection(props: { draft: QuarterlySummaryReport }) {
   );
 }
 
-function QuarterlyOverallCommentSection(props: { value: string; onChange: (value: string) => void }) {
-  return (
-    <article className={operationalStyles.reportCard}>
-      <SectionHeader title="3. 기술지도 총평" />
-      <FieldTextarea label="총평" value={props.value} onChange={props.onChange} />
-    </article>
-  );
-}
-
 function QuarterlyImplementationSection(props: {
   rows: QuarterlySummaryReport['implementationRows'];
   onChange: (
@@ -1518,7 +1505,7 @@ function QuarterlyImplementationSection(props: {
   const { rows, onChange, onAdd, onRemove } = props;
   return (
     <article className={operationalStyles.reportCard}>
-      <SectionHeader title="4. 기술지도 이행현황" />
+      <SectionHeader title="3. 기술지도 이행현황" />
       <div className={operationalStyles.implementationTableWrap}>
         <table className={operationalStyles.implementationTable}>
           <colgroup>
@@ -1592,7 +1579,7 @@ function QuarterlyFuturePlansSection(props: {
   const { plans, onAdd, onChange } = props;
   return (
     <article className={operationalStyles.reportCard}>
-      <SectionHeader title="5. 향후 공정 유해위험요인 및 대책" />
+      <SectionHeader title="4. 향후 공정 유해·위험작업 안전대책" />
       <div className={operationalStyles.implementationTableWrap}>
         <table className={operationalStyles.implementationTable}>
           <colgroup>
@@ -1678,7 +1665,7 @@ function QuarterlyOpsSection(props: {
   const { draft, loading, error } = props;
   return (
     <article className={operationalStyles.reportCard}>
-      <SectionHeader title="6. OPS / One Point Sheet" />
+      <SectionHeader title="5. 건설현장 12대 사망사고 기인물 핵심 안전조치" />
       {error ? <div className={operationalStyles.bannerError}>{error}</div> : null}
       {draft.opsAssetId ? (
         <div className={operationalStyles.opsAssetCard}>
@@ -1718,25 +1705,6 @@ function FieldInput(props: {
         type={props.type}
         value={props.value}
         placeholder={props.placeholder}
-        readOnly={props.readOnly}
-        onChange={(event) => props.onChange(event.target.value)}
-      />
-    </label>
-  );
-}
-
-function FieldTextarea(props: {
-  label: string;
-  readOnly?: boolean;
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <label className={`${operationalStyles.field} ${operationalStyles.fieldWide}`}>
-      <span className={operationalStyles.fieldLabel}>{props.label}</span>
-      <textarea
-        className={`app-textarea ${props.readOnly ? operationalStyles.readOnlyField : ''}`}
-        value={props.value}
         readOnly={props.readOnly}
         onChange={(event) => props.onChange(event.target.value)}
       />

@@ -78,6 +78,7 @@ export function Doc7FindingFields({
     () => doc7ReferenceMaterials.filter((row) => row.isActive),
     [doc7ReferenceMaterials],
   );
+  const referenceCatalogAccidentType = item.referenceCatalogAccidentType ?? '';
   const catalogAccidentTypes = useMemo(() => {
     const set = new Set<string>();
     for (const row of activeCatalog) {
@@ -89,7 +90,7 @@ export function Doc7FindingFields({
     return [...set].sort((a, b) => a.localeCompare(b, 'ko'));
   }, [activeCatalog]);
   const causativeKeysForRefAccident = useMemo(() => {
-    const selected = (item.referenceCatalogAccidentType ?? '').trim();
+    const selected = referenceCatalogAccidentType.trim();
     if (!selected) {
       return [];
     }
@@ -103,7 +104,7 @@ export function Doc7FindingFields({
     const order = new Map(CAUSATIVE_AGENT_OPTIONS.map((o, i) => [o.key, i]));
     keys.sort((a, b) => (order.get(a as CausativeAgentKey) ?? 999) - (order.get(b as CausativeAgentKey) ?? 999));
     return keys;
-  }, [activeCatalog, item.referenceCatalogAccidentType ?? '']);
+  }, [activeCatalog, referenceCatalogAccidentType]);
   const hasReferenceImage = isImageValue(item.referenceMaterial1);
   const reference1Label = useMemo(() => {
     if (!item.referenceMaterial1.trim()) {
@@ -138,7 +139,7 @@ export function Doc7FindingFields({
         <div className={styles.doc7FieldStack}>
           <div className={styles.doc7PairRow}>
             <label className={styles.field}>
-              <span className={styles.fieldLabel}>위치/위험요인</span>
+              <span className={styles.fieldLabel}>장소 / 유해·위험요인</span>
               <input
                 type="text"
                 className="app-input"
@@ -200,7 +201,7 @@ export function Doc7FindingFields({
             </label>
           </div>
           <label className={`${styles.field} ${styles.fieldWide}`}>
-            <span className={styles.fieldLabel}>강조사항</span>
+            <span className={styles.fieldLabel}>중점관리 위험요인 및 관리대책</span>
             <textarea
               className="app-textarea"
               value={item.emphasis}
@@ -210,26 +211,37 @@ export function Doc7FindingFields({
             />
           </label>
           <label className={`${styles.field} ${styles.fieldWide}`}>
-            <span className={styles.fieldLabel}>개선대책</span>
+            <span className={styles.fieldLabel}>개선요구사항</span>
             <textarea
               className="app-textarea"
-              value={item.improvementPlan}
+              rows={2}
+              maxLength={120}
+              value={item.improvementRequest || item.improvementPlan}
               onChange={(event) =>
-                updateFinding((finding) => ({ ...finding, improvementPlan: event.target.value }))
+                updateFinding((finding) => ({
+                  ...finding,
+                  improvementPlan: event.target.value,
+                  improvementRequest: event.target.value,
+                }))
               }
             />
           </label>
           <label className={`${styles.field} ${styles.fieldWide}`}>
-            <span className={styles.fieldLabel}>관련법령</span>
+            <span className={styles.fieldLabel}>참고법령</span>
             <input
               type="text"
               className="app-input"
               value={item.legalReferenceTitle}
+              placeholder="법령 제목을 쉼표 또는 줄바꿈으로 구분해 입력"
               onChange={(event) =>
                 updateFinding((finding) => ({
                   ...finding,
                   legalReferenceId: '',
                   legalReferenceTitle: event.target.value,
+                  referenceLawTitles: event.target.value
+                    .split(/[\n,]+/)
+                    .map((entry) => entry.trim())
+                    .filter(Boolean),
                 }))
               }
             />
@@ -279,7 +291,7 @@ export function Doc7FindingFields({
               </select>
             </label>
             <label className={styles.field}>
-              <span className={styles.fieldLabel}>참고자료 - 기인물</span>
+              <span className={styles.fieldLabel}>참고자료-기인물</span>
               <select
                 className="app-select"
                 value={item.referenceCatalogCausativeAgentKey ?? ''}
@@ -307,7 +319,7 @@ export function Doc7FindingFields({
           </div>
           <div className={styles.doc7ReferenceGrid}>
             <label className={styles.field}>
-              <span className={styles.fieldLabel}>참고자료 1</span>
+              <span className={styles.fieldLabel}>참고자료 이미지</span>
               <div className={styles.doc7ReferenceInputRow}>
                 <input
                   type="text"
@@ -321,14 +333,14 @@ export function Doc7FindingFields({
                   className={styles.doc7ReferencePreviewButton}
                   onClick={() => setPreviewKind('reference1')}
                   disabled={!item.referenceMaterial1.trim()}
-                  aria-label="참고자료 1 미리보기"
+                  aria-label="참고자료 이미지 미리보기"
                 >
                   <PicturePreviewIcon />
                 </button>
               </div>
             </label>
             <label className={styles.field}>
-              <span className={styles.fieldLabel}>참고자료 2</span>
+              <span className={styles.fieldLabel}>참고자료 설명</span>
               <div className={styles.doc7ReferenceInputRow}>
                 <input
                   type="text"
@@ -342,7 +354,7 @@ export function Doc7FindingFields({
                   className={styles.doc7ReferencePreviewButton}
                   onClick={() => setPreviewKind('reference2')}
                   disabled={!item.referenceMaterial2.trim()}
-                  aria-label="참고자료 2 미리보기"
+                  aria-label="참고자료 설명 미리보기"
                 >
                   <PicturePreviewIcon />
                 </button>
@@ -356,8 +368,8 @@ export function Doc7FindingFields({
         open={previewKind !== null}
         title={
           previewKind === 'reference1'
-            ? reference1Label || '참고자료 1'
-            : reference2Label || '참고자료 2'
+            ? reference1Label || '참고자료 이미지'
+            : reference2Label || '참고자료 설명'
         }
         size="large"
         onClose={() => setPreviewKind(null)}
@@ -377,7 +389,7 @@ export function Doc7FindingFields({
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={item.referenceMaterial1}
-                alt={reference1Label || '참고자료 1'}
+                alt={reference1Label || '참고자료 이미지'}
                 className={styles.doc7ReferencePreviewImage}
               />
             ) : (

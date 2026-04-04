@@ -1,7 +1,6 @@
 import {
   createFutureProcessRiskPlan,
   getSessionGuidanceDate,
-  getSessionProgress,
   isImplementedFollowUpResult,
 } from '@/constants/inspectionSession';
 import { isMeaningfulDocument7Finding } from '@/lib/erpReports/document7FindingCount';
@@ -16,7 +15,6 @@ import {
   buildQuarterlyTitleForPeriod,
   buildQuarterlyDefaultTitle,
   formatPeriodRangeLabel,
-  getQuarterlyReportPeriodLabel,
   isDateWithinRange,
   normalizeQuarterlyReportPeriod,
   QUARTERLY_SUMMARY_REPORT_KIND,
@@ -63,29 +61,6 @@ function sortSessionsByReportNumberAsc(sessions: InspectionSession[]) {
 
     return new Date(left.updatedAt).getTime() - new Date(right.updatedAt).getTime();
   });
-}
-
-function buildOverallComment(
-  periodLabel: string,
-  sessions: InspectionSession[],
-  accidentStats: QuarterlyCounter[],
-  causativeStats: QuarterlyCounter[],
-) {
-  if (sessions.length === 0) {
-    return `${periodLabel} 기준으로 연결된 기술지도 보고서가 없습니다. 기간을 다시 설정하거나 보고서를 선택하면 종합 총평과 통계가 반영됩니다.`;
-  }
-
-  const completedReports = sessions.filter(
-    (session) => getSessionProgress(session).percentage >= 100,
-  ).length;
-  const topAccident = accidentStats[0]?.label || '주요 지적유형 없음';
-  const topCause = causativeStats[0]?.label || '주요 기인물 없음';
-
-  return [
-    `${periodLabel} 기준으로 총 ${sessions.length}건의 기술지도 보고서를 반영했습니다.`,
-    `완료 처리된 보고서는 ${completedReports}건이며 가장 많이 확인된 지적유형은 ${topAccident}입니다.`,
-    `주요 기인물은 ${topCause}로 집계되어 해당 영역을 우선 관리할 필요가 있습니다.`,
-  ].join(' ');
 }
 
 function createQuarterlySiteSnapshot(site: InspectionSite): QuarterlySummaryReport['siteSnapshot'] {
@@ -178,18 +153,11 @@ function buildDerivedQuarterlyContent(
 
   const accidentStats = buildQuarterlyCounters(accidentCounter);
   const causativeStats = buildQuarterlyCounters(causativeCounter);
-  const periodLabel = getQuarterlyReportPeriodLabel(normalizedPeriod);
 
   return {
     siteSnapshot: createQuarterlySiteSnapshot(site),
-    generatedFromSessionIds: selectedSessions.map((session) => session.id),
+    generatedFromSessionIds: selectedSessionsByReportNumber.map((session) => session.id),
     lastCalculatedAt: createTimestamp(),
-    overallComment: buildOverallComment(
-      periodLabel,
-      selectedSessions,
-      accidentStats,
-      causativeStats,
-    ),
     implementationRows,
     accidentStats,
     causativeStats,
@@ -248,7 +216,6 @@ export function createQuarterlySummaryDraft(
     siteSnapshot: createQuarterlySiteSnapshot(site),
     generatedFromSessionIds: [],
     lastCalculatedAt: timestamp,
-    overallComment: '',
     implementationRows: [],
     accidentStats: [],
     causativeStats: [],

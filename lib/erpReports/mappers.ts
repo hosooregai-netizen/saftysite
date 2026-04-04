@@ -168,7 +168,6 @@ export function mapSafetyReportToQuarterlySummaryReport(
       normalizeMapperText(payload.lastCalculatedAt) ||
       normalizeMapperText(payload.updatedAt) ||
       report.updated_at,
-    overallComment: normalizeMapperText(payload.overallComment),
     implementationRows: normalizeQuarterlyImplementationRows(payload.implementationRows),
     accidentStats: normalizeCounterItems(payload.accidentStats),
     causativeStats: normalizeCounterItems(payload.causativeStats),

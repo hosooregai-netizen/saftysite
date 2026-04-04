@@ -1106,10 +1106,14 @@ function createEmptyFinding() {
     inspector: '',
     emphasis: '',
     improvementPlan: '',
+    improvementRequest: '',
     legalReferenceId: '',
     legalReferenceTitle: '',
+    referenceLawTitles: [] as string[],
     referenceMaterial1: '',
     referenceMaterial2: '',
+    referenceMaterialImage: '',
+    referenceMaterialDescription: '',
     referenceCatalogAccidentType: '',
     referenceCatalogCausativeAgentKey: '' as const,
     carryForward: false,
@@ -1295,27 +1299,37 @@ function mapSessionToTemplateBinding(session: InspectionSession): TemplateBindin
   const findings = ensureRepeatItems(session.document7Findings.filter((item) => isFilledObject(item)), createEmptyFinding);
   repeatCounts['sec7.findings'] = findings.length;
   findings.forEach((item, index) => {
+    const legalTitles = Array.isArray(item.referenceLawTitles) && item.referenceLawTitles.length > 0
+      ? item.referenceLawTitles
+      : item.legalReferenceTitle
+          .split(/[\n,]+/)
+          .map((entry) => entry.trim())
+          .filter(Boolean);
+    const legalReferenceText = legalTitles.length > 0 ? legalTitles.map((entry) => `- ${entry}`).join('\n') : item.legalReferenceTitle;
+    const improvementRequest = item.improvementRequest || item.improvementPlan;
+    const referenceMaterialImage = item.referenceMaterialImage || item.referenceMaterial1;
+    const referenceMaterialDescription = item.referenceMaterialDescription || item.referenceMaterial2;
     text[`sec7.findings[${index}].location`] = valueOrDash(item.location);
     text[`sec7.findings[${index}].risk_text`] = valueOrDash(mapRiskText(item));
     text[`sec7.findings[${index}].accident_type`] = valueOrDash(item.accidentType);
     text[`sec7.findings[${index}].causative_agent`] = valueOrDash(toCausativeLabel(item.causativeAgentKey, measureLabelMap));
     text[`sec7.findings[${index}].inspector`] = valueOrDash(item.inspector || session.meta.drafter);
     text[`sec7.findings[${index}].emphasis`] = valueOrDash(item.emphasis);
-    text[`sec7.findings[${index}].improvement_plan`] = valueOrDash(item.improvementPlan);
-    text[`sec7.findings[${index}].legal_reference_title`] = valueOrDash(item.legalReferenceTitle);
-    text[`sec7.findings[${index}].reference_material_1`] = looksLikeImageSource(item.referenceMaterial1)
+    text[`sec7.findings[${index}].improvement_plan`] = valueOrDash(improvementRequest);
+    text[`sec7.findings[${index}].legal_reference_title`] = valueOrDash(legalReferenceText);
+    text[`sec7.findings[${index}].reference_material_1`] = looksLikeImageSource(referenceMaterialImage)
       ? ''
-      : valueOrBlank(item.referenceMaterial1);
-    text[`sec7.findings[${index}].reference_material_2`] = looksLikeImageSource(item.referenceMaterial2)
+      : valueOrBlank(referenceMaterialImage);
+    text[`sec7.findings[${index}].reference_material_2`] = looksLikeImageSource(referenceMaterialDescription)
       ? ''
-      : valueOrBlank(item.referenceMaterial2);
+      : valueOrBlank(referenceMaterialDescription);
     images[`sec7.findings[${index}].photo_image`] = valueOrBlank(item.photoUrl);
     images[`sec7.findings[${index}].photo_image_2`] = valueOrBlank(item.photoUrl2);
-    images[`sec7.findings[${index}].reference_material_1_image`] = looksLikeImageSource(item.referenceMaterial1)
-      ? valueOrBlank(item.referenceMaterial1)
+    images[`sec7.findings[${index}].reference_material_1_image`] = looksLikeImageSource(referenceMaterialImage)
+      ? valueOrBlank(referenceMaterialImage)
       : '';
-    images[`sec7.findings[${index}].reference_material_2_image`] = looksLikeImageSource(item.referenceMaterial2)
-      ? valueOrBlank(item.referenceMaterial2)
+    images[`sec7.findings[${index}].reference_material_2_image`] = looksLikeImageSource(referenceMaterialDescription)
+      ? valueOrBlank(referenceMaterialDescription)
       : '';
   });
 
@@ -2715,4 +2729,3 @@ export async function buildInspectionHwpxDocument(
     deferred: binding.deferred,
   };
 }
-

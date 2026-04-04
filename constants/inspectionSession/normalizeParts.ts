@@ -90,11 +90,42 @@ export function normalizeHazardFinding(raw: unknown, fallbackInspector: string) 
     causativeAgentKey: normalizeDoc7CausativeAgentKey(normalizeText(source.causativeAgentKey)) as CausativeAgentKey | '',
     inspector: normalizeText(source.inspector) || fallbackInspector,
     emphasis: normalizeText(source.emphasis) || normalizeText(source.hazardFactors),
-    improvementPlan: normalizeText(source.improvementPlan) || normalizeText(source.improvementItems),
+    improvementPlan:
+      normalizeText(source.improvementRequest) ||
+      normalizeText(source.improvementPlan) ||
+      normalizeText(source.improvementItems),
+    improvementRequest:
+      normalizeText(source.improvementRequest) ||
+      normalizeText(source.improvementPlan) ||
+      normalizeText(source.improvementItems),
     legalReferenceId,
     legalReferenceTitle: normalizeText(source.legalReferenceTitle) || normalizeText(source.legalInfo) || matchedReference?.title || '',
-    referenceMaterial1: normalizeText(source.referenceMaterial1) || matchedReference?.referenceMaterial1 || '',
-    referenceMaterial2: normalizeText(source.referenceMaterial2) || matchedReference?.referenceMaterial2 || '',
+    referenceLawTitles: (
+      normalizeText(source.legalReferenceTitle) || normalizeText(source.legalInfo) || matchedReference?.title || ''
+    )
+      .split(/[\n,]+/)
+      .map((item) => normalizeText(item))
+      .filter(Boolean),
+    referenceMaterial1:
+      normalizeText(source.referenceMaterialImage) ||
+      normalizeText(source.referenceMaterial1) ||
+      matchedReference?.referenceMaterial1 ||
+      '',
+    referenceMaterial2:
+      normalizeText(source.referenceMaterialDescription) ||
+      normalizeText(source.referenceMaterial2) ||
+      matchedReference?.referenceMaterial2 ||
+      '',
+    referenceMaterialImage:
+      normalizeText(source.referenceMaterialImage) ||
+      normalizeText(source.referenceMaterial1) ||
+      matchedReference?.referenceMaterial1 ||
+      '',
+    referenceMaterialDescription:
+      normalizeText(source.referenceMaterialDescription) ||
+      normalizeText(source.referenceMaterial2) ||
+      matchedReference?.referenceMaterial2 ||
+      '',
     referenceCatalogAccidentType: normalizeText(source.referenceCatalogAccidentType),
     referenceCatalogCausativeAgentKey: normalizeDoc7CausativeAgentKey(
       normalizeText(source.referenceCatalogCausativeAgentKey),
@@ -213,4 +244,3 @@ export function normalizeSafetyInfos(source: unknown[]) {
     ? DEFAULT_SAFETY_INFOS.map((fallback, index) => normalizeSafetyInfoItem(source[index], fallback))
     : DEFAULT_SAFETY_INFOS.map((item) => ({ ...item }));
 }
-
