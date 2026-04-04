@@ -46,6 +46,15 @@ function formatDateLabel(value: string) {
   return parsed.toLocaleDateString('ko-KR');
 }
 
+function isDateWithinWindow(value: string, windowStart: string, windowEnd: string) {
+  if (!value || !windowStart || !windowEnd) return false;
+  return value >= windowStart && value <= windowEnd;
+}
+
+function buildWindowErrorMessage(schedule: Pick<SafetyInspectionSchedule, 'roundNo' | 'siteName' | 'windowEnd' | 'windowStart'>) {
+  return `${schedule.siteName} ${schedule.roundNo}회차는 ${schedule.windowStart} ~ ${schedule.windowEnd} 안에서만 선택할 수 있습니다.`;
+}
+
 export function WorkerCalendarScreen() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [month, setMonth] = useState(getMonthToken());
@@ -144,11 +153,16 @@ export function WorkerCalendarScreen() {
       setError('선택할 방문 날짜를 먼저 입력해 주세요.');
       return;
     }
+    if (!isDateWithinWindow(plannedDate, schedule.windowStart, schedule.windowEnd)) {
+      setError(buildWindowErrorMessage(schedule));
+      return;
+    }
     try {
       setError(null);
       const updated = await updateMySchedule(schedule.id, { plannedDate });
       setRows((current) => current.map((row) => (row.id === updated.id ? updated : row)));
       setPendingDates((current) => ({ ...current, [schedule.id]: '' }));
+      setSelectedDate(updated.plannedDate || '');
       setNotice(`${schedule.siteName} ${schedule.roundNo}회차 일정을 저장했습니다.`);
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : '일정을 저장하지 못했습니다.');
@@ -303,6 +317,16 @@ export function WorkerCalendarScreen() {
                                 <div className={styles.rowMeta}>
                                   허용 구간 {row.windowStart} ~ {row.windowEnd}
                                 </div>
+                                {pendingDates[row.id] &&
+                                !isDateWithinWindow(
+                                  pendingDates[row.id] || '',
+                                  row.windowStart,
+                                  row.windowEnd,
+                                ) ? (
+                                  <div className={styles.rowMeta}>
+                                    {buildWindowErrorMessage(row)}
+                                  </div>
+                                ) : null}
                                 <div className={styles.rowActions}>
                                   <label className={styles.inlineField}>
                                     <span className={styles.fieldLabel}>방문 날짜</span>
@@ -324,6 +348,14 @@ export function WorkerCalendarScreen() {
                                     type="button"
                                     className="app-button app-button-primary"
                                     onClick={() => void handleSaveSchedule(row, pendingDates[row.id] || '')}
+                                    disabled={
+                                      !pendingDates[row.id] ||
+                                      !isDateWithinWindow(
+                                        pendingDates[row.id] || '',
+                                        row.windowStart,
+                                        row.windowEnd,
+                                      )
+                                    }
                                   >
                                     이 날짜로 선택
                                   </button>
@@ -443,7 +475,15 @@ export function WorkerCalendarScreen() {
               type="button"
               className="app-button app-button-primary"
               onClick={() => void handleSaveEdit()}
-              disabled={!editPlannedDate}
+              disabled={
+                !editingSchedule ||
+                !editPlannedDate ||
+                !isDateWithinWindow(
+                  editPlannedDate,
+                  editingSchedule.windowStart,
+                  editingSchedule.windowEnd,
+                )
+              }
             >
               이 날짜로 변경
             </button>
@@ -451,19 +491,32 @@ export function WorkerCalendarScreen() {
         }
       >
         {editingSchedule ? (
-          <label className={styles.field}>
-            <span className={styles.fieldLabel}>
-              {editingSchedule.siteName} {editingSchedule.roundNo}회차 날짜
-            </span>
-            <input
-              className="app-input"
-              type="date"
-              min={editingSchedule.windowStart}
-              max={editingSchedule.windowEnd}
-              value={editPlannedDate}
-              onChange={(event) => setEditPlannedDate(event.target.value)}
-            />
-          </label>
+          <div className={styles.list}>
+            <label className={styles.field}>
+              <span className={styles.fieldLabel}>
+                {editingSchedule.siteName} {editingSchedule.roundNo}회차 날짜
+              </span>
+              <input
+                className="app-input"
+                type="date"
+                min={editingSchedule.windowStart}
+                max={editingSchedule.windowEnd}
+                value={editPlannedDate}
+                onChange={(event) => setEditPlannedDate(event.target.value)}
+              />
+            </label>
+            <div className={styles.rowMeta}>
+              허용 구간 {editingSchedule.windowStart} ~ {editingSchedule.windowEnd}
+            </div>
+            {editPlannedDate &&
+            !isDateWithinWindow(
+              editPlannedDate,
+              editingSchedule.windowStart,
+              editingSchedule.windowEnd,
+            ) ? (
+              <div className={styles.rowMeta}>{buildWindowErrorMessage(editingSchedule)}</div>
+            ) : null}
+          </div>
         ) : null}
       </AppModal>
     </main>
