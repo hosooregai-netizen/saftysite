@@ -1790,11 +1790,41 @@
   padding: 8px 10px;
 }
 
+.doc8ProcessCellStack {
+  display: grid;
+  gap: 8px;
+}
+
 .doc8ProcessInput {
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
   font-size: var(--text-ui-sm);
+}
+
+.doc8RecommendationList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.doc8RecommendationButton {
+  min-height: 28px;
+  border: 1px solid var(--erp-line);
+  border-radius: 999px;
+  background: var(--erp-panel-muted);
+  padding: 0 10px;
+  font-size: var(--text-ui-xs);
+  line-height: 1.4;
+  color: var(--erp-dark);
+}
+
+.doc8RecommendationButton:hover,
+.doc8RecommendationButton:focus,
+.doc8RecommendationButton:focus-visible {
+  border-color: #8fb5dd;
+  background: #edf5ff;
+  outline: none;
 }
 
 .doc8TdArea {

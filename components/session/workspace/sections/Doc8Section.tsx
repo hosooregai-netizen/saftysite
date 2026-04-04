@@ -2,6 +2,47 @@ import { FUTURE_PROCESS_LIBRARY } from '@/components/session/workspace/constants
 import styles from '@/components/session/InspectionSessionWorkspace.module.css';
 import type { HazardStatsSectionProps } from '@/components/session/workspace/types';
 
+function normalizeFutureProcessQuery(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function getFutureProcessRecommendations(query: string) {
+  const normalizedQuery = normalizeFutureProcessQuery(query);
+  if (!normalizedQuery) {
+    return [];
+  }
+
+  return FUTURE_PROCESS_LIBRARY
+    .map((item) => {
+      const haystack = `${item.processName} ${item.hazard} ${item.countermeasure}`.toLowerCase();
+      let score = 0;
+
+      if (normalizeFutureProcessQuery(item.processName) === normalizedQuery) {
+        score = 100;
+      } else if (item.processName.toLowerCase().includes(normalizedQuery)) {
+        score = 80;
+      } else if (haystack.includes(normalizedQuery)) {
+        score = 50;
+      } else {
+        const tokens = normalizedQuery.split(/\s+/).filter(Boolean);
+        score = tokens.reduce(
+          (total, token) => total + (haystack.includes(token) ? 10 : 0),
+          0,
+        );
+      }
+
+      return { item, score };
+    })
+    .filter((entry) => entry.score > 0)
+    .sort(
+      (left, right) =>
+        right.score - left.score ||
+        left.item.processName.localeCompare(right.item.processName, 'ko'),
+    )
+    .slice(0, 3)
+    .map((entry) => entry.item);
+}
+
 export default function Doc8Section({
   applyDocumentUpdate,
   session,
@@ -35,28 +76,57 @@ export default function Doc8Section({
             {session.document8Plans.map((item) => (
               <tr key={item.id}>
                 <td className={styles.doc8TdProcess}>
-                  <input
-                    list="future-process-library"
-                    className={`${styles.doc8ProcessInput} app-input`}
-                    value={item.processName}
-                    onChange={(event) => {
-                      const matched = FUTURE_PROCESS_LIBRARY.find((libraryItem) => libraryItem.processName === event.target.value);
-                      applyDocumentUpdate('doc8', matched ? 'api' : 'manual', (current) => ({
-                        ...current,
-                        document8Plans: current.document8Plans.map((plan) =>
-                          plan.id === item.id
-                            ? {
-                                ...plan,
-                                processName: event.target.value,
-                                hazard: matched?.hazard ?? plan.hazard,
-                                countermeasure: matched?.countermeasure ?? plan.countermeasure,
-                                source: matched ? 'api' : 'manual',
-                              }
-                            : plan,
-                        ),
-                      }));
-                    }}
-                  />
+                  <div className={styles.doc8ProcessCellStack}>
+                    <input
+                      list="future-process-library"
+                      className={`${styles.doc8ProcessInput} app-input`}
+                      value={item.processName}
+                      onChange={(event) => {
+                        const matched = FUTURE_PROCESS_LIBRARY.find((libraryItem) => libraryItem.processName === event.target.value);
+                        applyDocumentUpdate('doc8', matched ? 'api' : 'manual', (current) => ({
+                          ...current,
+                          document8Plans: current.document8Plans.map((plan) =>
+                            plan.id === item.id
+                              ? {
+                                  ...plan,
+                                  processName: event.target.value,
+                                  hazard: matched?.hazard ?? plan.hazard,
+                                  countermeasure: matched?.countermeasure ?? plan.countermeasure,
+                                  source: matched ? 'api' : 'manual',
+                                }
+                              : plan,
+                          ),
+                        }));
+                      }}
+                    />
+                    <div className={styles.doc8RecommendationList}>
+                      {getFutureProcessRecommendations(item.processName).map((recommended) => (
+                        <button
+                          key={recommended.processName}
+                          type="button"
+                          className={styles.doc8RecommendationButton}
+                          onClick={() =>
+                            applyDocumentUpdate('doc8', 'api', (current) => ({
+                              ...current,
+                              document8Plans: current.document8Plans.map((plan) =>
+                                plan.id === item.id
+                                  ? {
+                                      ...plan,
+                                      processName: recommended.processName,
+                                      hazard: recommended.hazard,
+                                      countermeasure: recommended.countermeasure,
+                                      source: 'api',
+                                    }
+                                  : plan,
+                              ),
+                            }))
+                          }
+                        >
+                          {recommended.processName}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </td>
                 <td className={styles.doc8TdArea}>
                   <textarea
@@ -100,4 +170,3 @@ export default function Doc8Section({
     </div>
   );
 }
-
