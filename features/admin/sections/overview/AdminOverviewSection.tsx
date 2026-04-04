@@ -21,6 +21,15 @@ interface AdminOverviewSectionProps {
   reports: SafetyReportListItem[];
 }
 
+interface CoverageIssueRow {
+  category: '교육자료' | '계측자료';
+  headquarterName: string;
+  href: string;
+  missingItems: string[];
+  siteId: string;
+  siteName: string;
+}
+
 function renderEmptyRow(label: string) {
   return (
     <div className={styles.tableEmpty}>
@@ -70,6 +79,10 @@ export function AdminOverviewSection({
     key: 'deadlineDate',
   });
   const [completionSort, setCompletionSort] = useState<TableSortState>({
+    direction: 'desc',
+    key: 'missingItems',
+  });
+  const [coverageIssueSort, setCoverageIssueSort] = useState<TableSortState>({
     direction: 'desc',
     key: 'missingItems',
   });
@@ -200,6 +213,50 @@ export function AdminOverviewSection({
     });
   }, [completionSort.direction, completionSort.key, overview.completionRows]);
 
+  const coverageIssueRows = useMemo(() => {
+    const rows: CoverageIssueRow[] = [];
+
+    overview.completionRows.forEach((row) => {
+      const trainingMissingItems = row.missingItems.filter((item) => item.includes('교육자료'));
+      if (trainingMissingItems.length > 0) {
+        rows.push({
+          category: '교육자료',
+          headquarterName: row.headquarterName,
+          href: row.href,
+          missingItems: trainingMissingItems,
+          siteId: `${row.siteId}:training`,
+          siteName: row.siteName,
+        });
+      }
+
+      const measurementMissingItems = row.missingItems.filter((item) => item.includes('계측자료'));
+      if (measurementMissingItems.length > 0) {
+        rows.push({
+          category: '계측자료',
+          headquarterName: row.headquarterName,
+          href: row.href,
+          missingItems: measurementMissingItems,
+          siteId: `${row.siteId}:measurement`,
+          siteName: row.siteName,
+        });
+      }
+    });
+
+    return rows.sort((left, right) => {
+      switch (coverageIssueSort.key) {
+        case 'siteName':
+          return compareText(left.siteName, right.siteName, coverageIssueSort.direction);
+        case 'headquarterName':
+          return compareText(left.headquarterName, right.headquarterName, coverageIssueSort.direction);
+        case 'category':
+          return compareText(left.category, right.category, coverageIssueSort.direction);
+        case 'missingItems':
+        default:
+          return compareNumber(left.missingItems.length, right.missingItems.length, coverageIssueSort.direction);
+      }
+    });
+  }, [coverageIssueSort.direction, coverageIssueSort.key, overview.completionRows]);
+
   const scheduleRows = useMemo(() => {
     return [...overview.scheduleRows].sort((left, right) => {
       switch (scheduleSort.key) {
@@ -239,15 +296,32 @@ export function AdminOverviewSection({
   const exportOverview = () =>
     exportAdminWorkbook(
       'overview',
-      getOverviewExportSheets({
-        coverageRows: overview.coverageRows,
-        deadlineRows,
-        metricCards: overview.metricCards,
-        overdueSiteRows,
-        pendingReviewRows,
-        summaryRows: overview.summaryRows,
-        workerLoadRows,
-      }),
+      [
+        ...getOverviewExportSheets({
+          coverageRows: overview.coverageRows,
+          deadlineRows,
+          metricCards: overview.metricCards,
+          overdueSiteRows,
+          pendingReviewRows,
+          summaryRows: overview.summaryRows,
+          workerLoadRows,
+        }),
+        {
+          name: 'coverage-details',
+          columns: [
+            { key: 'category', label: '구분' },
+            { key: 'siteName', label: '현장' },
+            { key: 'headquarterName', label: '사업장' },
+            { key: 'missingReason', label: '부족 사유' },
+          ],
+          rows: coverageIssueRows.map((row) => ({
+            category: row.category,
+            headquarterName: row.headquarterName,
+            missingReason: row.missingItems.join(', '),
+            siteName: row.siteName,
+          })),
+        },
+      ],
     );
 
   return (
@@ -504,6 +578,51 @@ export function AdminOverviewSection({
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      <section className={`${styles.sectionCard} ${styles.listSectionCard}`}>
+        <div className={styles.sectionHeader}>
+          <div>
+            <h2 className={styles.sectionTitle}>자료 확보 부족 상세</h2>
+          </div>
+          <div className={styles.sectionHeaderActions}>
+            <span className="app-chip">{coverageIssueRows.length}건</span>
+          </div>
+        </div>
+        <div className={styles.sectionBody}>
+          {coverageIssueRows.length === 0 ? (
+            renderEmptyRow('교육자료 또는 계측자료가 부족한 현장이 없습니다.')
+          ) : (
+            <div className={styles.tableShell}>
+              <div className={styles.tableWrap}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <SortableHeaderCell column={{ key: 'category' }} current={coverageIssueSort} label="구분" onChange={setCoverageIssueSort} />
+                      <SortableHeaderCell column={{ key: 'siteName' }} current={coverageIssueSort} label="현장" onChange={setCoverageIssueSort} />
+                      <SortableHeaderCell column={{ key: 'headquarterName' }} current={coverageIssueSort} label="사업장" onChange={setCoverageIssueSort} />
+                      <SortableHeaderCell column={{ key: 'missingItems' }} current={coverageIssueSort} defaultDirection="desc" label="부족 사유" onChange={setCoverageIssueSort} />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {coverageIssueRows.map((row) => (
+                      <tr key={row.siteId}>
+                        <td>{row.category}</td>
+                        <td>
+                          <Link href={row.href} className={styles.tableInlineLink}>
+                            {row.siteName}
+                          </Link>
+                        </td>
+                        <td>{row.headquarterName}</td>
+                        <td>{row.missingItems.join(', ')}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
