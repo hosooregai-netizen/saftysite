@@ -432,11 +432,7 @@ export function MailboxPanel({ mode }: MailboxPanelProps) {
                 type="button"
                 className="app-button app-button-primary"
                 onClick={() => void handleConnectGoogle()}
-                disabled={
-                  oauthProvider === 'google' ||
-                  !providerStatusMap.get('google')?.enabled ||
-                  !providerStatusMap.get('google')?.isRedirectAllowed
-                }
+                disabled={oauthProvider === 'google'}
               >
                 {oauthProvider === 'google' ? '구글 로그인으로 이동 중...' : '구글 로그인으로 연결'}
               </button>
@@ -455,11 +451,7 @@ export function MailboxPanel({ mode }: MailboxPanelProps) {
                   type="button"
                   className="app-button app-button-primary"
                   onClick={() => void handleConnectNaverOauth()}
-                  disabled={
-                    oauthProvider === 'naver_mail' ||
-                    !providerStatusMap.get('naver_mail')?.enabled ||
-                    !providerStatusMap.get('naver_mail')?.isRedirectAllowed
-                  }
+                  disabled={oauthProvider === 'naver_mail'}
                 >
                   {oauthProvider === 'naver_mail' ? '네이버 로그인으로 이동 중...' : '네이버 로그인으로 연결'}
                 </button>
