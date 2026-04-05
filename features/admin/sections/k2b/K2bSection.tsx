@@ -37,6 +37,12 @@ const K2B_MAPPING_FIELDS: Array<{ key: keyof K2bColumnMapping; label: string }> 
   { key: 'contract_type', label: '계약유형' },
 ];
 
+const ACTION_LABELS: Record<K2bRowActionType, string> = {
+  create: '신규 생성',
+  update_headquarter: '기존 사업장 갱신',
+  update_site: '기존 현장 갱신',
+};
+
 function normalizeCandidateAction(
   row: K2bImportPreviewRow,
 ): K2bRowActionType | '' {
@@ -105,6 +111,7 @@ export function K2bSection({ onReload }: K2bSectionProps) {
     () => preview?.sheets.find((sheet) => sheet.name === selectedSheetName) ?? preview?.sheets[0] ?? null,
     [preview, selectedSheetName],
   );
+  const hasDataRows = (selectedSheet?.rowCount ?? 0) > 0;
 
   const unresolvedRows = useMemo(() => {
     if (!selectedSheet) return [];
@@ -137,6 +144,19 @@ export function K2bSection({ onReload }: K2bSectionProps) {
       ),
     );
     setResult(null);
+    setError(null);
+    setNotice(null);
+  };
+
+  const handleFileChange = (file: File | null) => {
+    setSelectedFile(file);
+    setPreview(null);
+    setSelectedSheetName('');
+    setMapping({});
+    setRowActions({});
+    setResult(null);
+    setError(null);
+    setNotice(file ? null : '업로드할 .xlsx 파일을 먼저 선택해 주세요.');
   };
 
   const handleParse = async () => {
@@ -169,6 +189,10 @@ export function K2bSection({ onReload }: K2bSectionProps) {
 
   const handleApply = async () => {
     if (!preview || !selectedSheet) return;
+    if (!hasDataRows) {
+      setError('선택한 시트에 반영할 데이터 행이 없습니다.');
+      return;
+    }
     if (unresolvedRows.length > 0) {
       setError('중복 후보 선택이 필요한 행이 있습니다. 처리 방식을 먼저 정해 주세요.');
       return;
@@ -217,13 +241,14 @@ export function K2bSection({ onReload }: K2bSectionProps) {
             <input
               type="file"
               accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-              onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
+              onChange={(event) => handleFileChange(event.target.files?.[0] ?? null)}
             />
+            {selectedFile ? <span className="app-chip">{selectedFile.name}</span> : null}
             <button
               type="button"
               className="app-button app-button-primary"
               onClick={() => void handleParse()}
-              disabled={!selectedFile || loading}
+              disabled={!selectedFile || loading || applying}
             >
               {loading ? '파싱 중...' : '파일 파싱'}
             </button>
@@ -256,28 +281,33 @@ export function K2bSection({ onReload }: K2bSectionProps) {
                   </select>
                 </label>
                 <span className="app-chip">총 {selectedSheet.rowCount}행</span>
+                <span className="app-chip">미해결 {unresolvedRows.length}건</span>
                 <span className="app-chip">{preview.fileName}</span>
               </div>
-              <div className={styles.previewGrid}>
-                <table className={styles.rowTable}>
-                  <thead>
-                    <tr>
-                      {selectedSheet.headers.map((header) => (
-                        <th key={header}>{header}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selectedSheet.sampleRows.map((row, index) => (
-                      <tr key={`sample-${index + 1}`}>
+              {hasDataRows ? (
+                <div className={styles.previewGrid}>
+                  <table className={styles.rowTable}>
+                    <thead>
+                      <tr>
                         {selectedSheet.headers.map((header) => (
-                          <td key={`${index + 1}-${header}`}>{row[header] || '-'}</td>
+                          <th key={header}>{header}</th>
                         ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {selectedSheet.sampleRows.map((row, index) => (
+                        <tr key={`sample-${index + 1}`}>
+                          {selectedSheet.headers.map((header) => (
+                            <td key={`${index + 1}-${header}`}>{row[header] || '-'}</td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className={styles.emptyState}>선택한 시트에 반영할 데이터 행이 없습니다.</div>
+              )}
             </div>
           </section>
 
@@ -295,12 +325,14 @@ export function K2bSection({ onReload }: K2bSectionProps) {
                     <select
                       className="app-select"
                       value={mapping[field.key] || ''}
-                      onChange={(event) =>
+                      onChange={(event) => {
+                        setResult(null);
+                        setNotice(null);
                         setMapping((current) => ({
                           ...current,
                           [field.key]: event.target.value,
-                        }))
-                      }
+                        }));
+                      }}
                     >
                       <option value="">매핑 안 함</option>
                       {selectedSheet.headers.map((header) => (
@@ -360,7 +392,9 @@ export function K2bSection({ onReload }: K2bSectionProps) {
                             <select
                               className="app-select"
                               value={currentAction}
-                              onChange={(event) =>
+                              onChange={(event) => {
+                                setResult(null);
+                                setNotice(null);
                                 setRowActions((current) => ({
                                   ...current,
                                   [row.rowIndex]: {
@@ -368,8 +402,8 @@ export function K2bSection({ onReload }: K2bSectionProps) {
                                     rowIndex: row.rowIndex,
                                     action: event.target.value as K2bRowActionType,
                                   },
-                                }))
-                              }
+                                }));
+                              }}
                             >
                               <option value="">선택 필요</option>
                               <option value="create">신규 생성</option>
@@ -380,7 +414,9 @@ export function K2bSection({ onReload }: K2bSectionProps) {
                               <select
                                 className="app-select"
                                 value={rowActions[row.rowIndex]?.headquarterId || actionCandidates[0]?.headquarterId || ''}
-                                onChange={(event) =>
+                                onChange={(event) => {
+                                  setResult(null);
+                                  setNotice(null);
                                   setRowActions((current) => ({
                                     ...current,
                                     [row.rowIndex]: {
@@ -389,8 +425,8 @@ export function K2bSection({ onReload }: K2bSectionProps) {
                                       action: 'update_headquarter',
                                       headquarterId: event.target.value || null,
                                     },
-                                  }))
-                                }
+                                  }));
+                                }}
                               >
                                 <option value="">사업장 선택</option>
                                 {actionCandidates.map((candidate) => (
@@ -404,7 +440,9 @@ export function K2bSection({ onReload }: K2bSectionProps) {
                               <select
                                 className="app-select"
                                 value={rowActions[row.rowIndex]?.siteId || actionCandidates[0]?.siteId || ''}
-                                onChange={(event) =>
+                                onChange={(event) => {
+                                  setResult(null);
+                                  setNotice(null);
                                   setRowActions((current) => ({
                                     ...current,
                                     [row.rowIndex]: {
@@ -413,8 +451,8 @@ export function K2bSection({ onReload }: K2bSectionProps) {
                                       action: 'update_site',
                                       siteId: event.target.value || null,
                                     },
-                                  }))
-                                }
+                                  }));
+                                }}
                               >
                                 <option value="">현장 선택</option>
                                 {actionCandidates.map((candidate) => (
@@ -444,7 +482,7 @@ export function K2bSection({ onReload }: K2bSectionProps) {
                   type="button"
                   className="app-button app-button-primary"
                   onClick={() => void handleApply()}
-                  disabled={applying || unresolvedRows.length > 0}
+                  disabled={applying || unresolvedRows.length > 0 || !hasDataRows}
                 >
                   {applying ? '적용 중...' : 'DB에 반영'}
                 </button>
@@ -495,7 +533,7 @@ export function K2bSection({ onReload }: K2bSectionProps) {
                       {result.rows.map((row) => (
                         <tr key={`result-${row.rowIndex}`}>
                           <td>{row.rowIndex}</td>
-                          <td>{row.action}</td>
+                          <td>{ACTION_LABELS[row.action as K2bRowActionType] || row.action}</td>
                           <td>{row.headquarterName || '-'}</td>
                           <td>{row.siteName || '-'}</td>
                           <td>{row.requiredCompletionFields.join(', ') || '-'}</td>
