@@ -13,7 +13,6 @@ import { useAdminDashboardState } from '@/features/admin/hooks/useAdminDashboard
 import { AnalyticsSection } from '@/features/admin/sections/analytics/AnalyticsSection';
 import { ContentItemsSection } from '@/features/admin/sections/content/ContentItemsSection';
 import { HeadquartersSection } from '@/features/admin/sections/headquarters/HeadquartersSection';
-import { K2bSection } from '@/features/admin/sections/k2b/K2bSection';
 import { MailboxSection } from '@/features/admin/sections/mailbox/MailboxSection';
 import { AdminOverviewSection } from '@/features/admin/sections/overview/AdminOverviewSection';
 import { PhotosSection } from '@/features/admin/sections/photos/PhotosSection';
@@ -80,6 +79,7 @@ function renderAdminSection(
           busy={busy}
           canDelete={canDelete}
           headquarters={headquarters}
+          onReload={dashboard.reload}
           onAssignFieldAgent={dashboard.assignFieldAgentToSite}
           onClearHeadquarterSelection={dashboard.clearHeadquarterSelection}
           onClearSiteSelection={dashboard.clearSiteSelection}
@@ -117,6 +117,7 @@ function renderAdminSection(
           ensureSessionLoaded={ensureSessionLoaded}
           getSessionById={getSessionById}
           isLoading={dashboard.isLoading || dashboard.isReportsLoading || dashboard.isMutating}
+          onReloadData={dashboard.reload}
           sessions={sessions}
           sites={sites}
           users={users}
@@ -131,8 +132,6 @@ function renderAdminSection(
       );
     case 'mailbox':
       return <MailboxSection />;
-    case 'k2b':
-      return <K2bSection onReload={dashboard.reload} />;
     case 'photos':
       return <PhotosSection sites={sites} />;
     case 'schedules':

@@ -16,6 +16,7 @@ import {
   getAdminSectionHref,
   type AdminSectionKey,
 } from '@/lib/admin/adminSections';
+import { buildAdminK2bUploadHref } from '@/lib/admin/k2bUpload';
 
 interface AdminMenuPanelProps {
   activeSection: AdminSectionKey;
@@ -31,12 +32,11 @@ interface AdminMenuDrawerProps extends AdminMenuPanelProps {
   onClose: () => void;
 }
 
-const ADMIN_MENU_LABELS: Record<AdminSectionKey, string> = {
+const ADMIN_MENU_LABELS: Partial<Record<AdminSectionKey, string>> = {
   overview: '관제 대시보드',
   reports: '전체 보고서',
   analytics: '실적/매출',
   mailbox: '메일함',
-  k2b: 'K2B 업로드',
   photos: '사진첩',
   schedules: '일정/캘린더',
   users: '사용자',
@@ -100,6 +100,15 @@ export function AdminMenuPanel({
           description: '현장 사진, 사인, 연락처 확인',
           href: buildSiteAssistHref(currentSiteKey),
           active: siteNavView === 'assist',
+        },
+        {
+          label: '엑셀 업로드',
+          description: 'K2B 엑셀로 사업장/현장 초기등록',
+          href: buildAdminK2bUploadHref(searchParams, {
+            headquarterId: selectedAdminHeadquarterId,
+            siteId: currentSiteKey,
+          }),
+          active: false,
         },
         {
           label: '현장 사진첩',

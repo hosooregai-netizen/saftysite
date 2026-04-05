@@ -1,12 +1,13 @@
 'use client';
 
 import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import ActionMenu from '@/components/ui/ActionMenu';
 import AppModal from '@/components/ui/AppModal';
 import { SortableHeaderCell } from '@/features/admin/components/SortableHeaderCell';
 import { TableToolbar } from '@/features/admin/components/TableToolbar';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
+import { K2bImportModal } from '@/features/admin/sections/k2b/K2bImportModal';
 import {
   appendAdminDispatchEvent,
   fetchAdminReports,
@@ -27,6 +28,11 @@ import {
   getQualityStatusLabel,
 } from '@/lib/admin/reportMeta';
 import { getAdminSectionHref } from '@/lib/admin';
+import {
+  buildAdminK2bUploadCloseHref,
+  buildAdminK2bUploadHref,
+  isK2bUploadOpen,
+} from '@/lib/admin/k2bUpload';
 import {
   convertHwpxBlobToPdf,
   fetchQuarterlyHwpxDocument,
@@ -57,6 +63,11 @@ interface ReportsSectionProps {
   ensureSessionLoaded: (reportKey: string) => Promise<void>;
   getSessionById: (sessionId: string) => InspectionSession | null;
   isLoading: boolean;
+  onReloadData: (options?: {
+    force?: boolean;
+    includeContent?: boolean;
+    includeReports?: boolean;
+  }) => Promise<void>;
   sessions: InspectionSession[];
   sites: SafetySite[];
   users: SafetyUser[];
@@ -115,10 +126,12 @@ export function ReportsSection({
   ensureSessionLoaded,
   getSessionById,
   isLoading,
+  onReloadData,
   sessions,
   sites,
   users,
 }: ReportsSectionProps) {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [query, setQuery] = useState(() => searchParams.get('query') || '');
   const [sort, setSort] = useState<TableSortState>({ direction: 'desc', key: 'updatedAt' });
@@ -153,6 +166,7 @@ export function ReportsSection({
   const [dispatchSmsSending, setDispatchSmsSending] = useState(false);
   const [smsProviderStatuses, setSmsProviderStatuses] = useState<SmsProviderStatus[]>([]);
   const deferredQuery = useDeferredValue(query);
+  const k2bOpen = isK2bUploadOpen(searchParams);
 
   const fetchRows = useCallback(async () => {
     try {
@@ -495,6 +509,31 @@ export function ReportsSection({
       ]),
     );
 
+  const openExcelUpload = () => {
+    router.replace(
+      buildAdminK2bUploadHref(searchParams, {
+        headquarterId: headquarterFilter === 'all' ? null : headquarterFilter,
+        section: 'reports',
+        siteId: siteFilter === 'all' ? null : siteFilter,
+      }),
+    );
+  };
+
+  const closeExcelUpload = () => {
+    router.replace(
+      buildAdminK2bUploadCloseHref(searchParams, {
+        headquarterId: headquarterFilter === 'all' ? null : headquarterFilter,
+        section: 'reports',
+        siteId: siteFilter === 'all' ? null : siteFilter,
+      }),
+    );
+  };
+
+  const handleReloadAfterK2b = async () => {
+    await onReloadData({ force: true, includeReports: true });
+    await fetchRows();
+  };
+
   return (
     <section className={`${styles.sectionCard} ${styles.listSectionCard}`}>
       <div className={styles.sectionHeader}>
@@ -503,6 +542,13 @@ export function ReportsSection({
         </div>
         <div className={styles.sectionHeaderActions}>
           <span className="app-chip">전체 {total}건</span>
+          <button
+            type="button"
+            className="app-button app-button-secondary"
+            onClick={openExcelUpload}
+          >
+            엑셀 업로드
+          </button>
         </div>
       </div>
 
@@ -1110,6 +1156,15 @@ export function ReportsSection({
           </div>
         ) : null}
       </AppModal>
+
+      <K2bImportModal
+        contextHeadquarterId={headquarterFilter === 'all' ? null : headquarterFilter}
+        contextSiteId={siteFilter === 'all' ? null : siteFilter}
+        onClose={closeExcelUpload}
+        onReload={handleReloadAfterK2b}
+        open={k2bOpen}
+        originSection="reports"
+      />
     </section>
   );
 }

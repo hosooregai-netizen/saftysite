@@ -14,6 +14,7 @@ interface HeadquartersTableProps {
   onCreateRequest: () => void;
   onDeleteRequest: (item: SafetyHeadquarter) => void;
   onEditRequest: (item: SafetyHeadquarter) => void;
+  onExcelUploadRequest: (item?: SafetyHeadquarter | null) => void;
   onOpenSitesRequest: (item: SafetyHeadquarter) => void;
   onQueryChange: (value: string) => void;
   onSortChange: (value: TableSortState) => void;
@@ -41,6 +42,7 @@ export function HeadquartersTable({
   onCreateRequest,
   onDeleteRequest,
   onEditRequest,
+  onExcelUploadRequest,
   onOpenSitesRequest,
   onQueryChange,
   onSortChange,
@@ -61,6 +63,14 @@ export function HeadquartersTable({
         )}
         <div className={styles.sectionHeaderActions}>
           <span className="app-chip">표시 {filteredHeadquarters.length} / 전체 {totalHeadquarterCount}개</span>
+          <button
+            type="button"
+            className="app-button app-button-secondary"
+            onClick={() => onExcelUploadRequest(null)}
+            disabled={busy}
+          >
+            엑셀 업로드
+          </button>
           <button
             type="button"
             className="app-button app-button-primary"
@@ -188,6 +198,12 @@ export function HeadquartersTable({
                                 href: getAdminSectionHref('photos', {
                                   headquarterId: item.id,
                                 }),
+                              },
+                              {
+                                label: '엑셀 업로드',
+                                onSelect: () => {
+                                  if (!busy) onExcelUploadRequest(null);
+                                },
                               },
                               {
                                 label: '수정',
