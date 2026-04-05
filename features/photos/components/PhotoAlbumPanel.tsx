@@ -501,11 +501,8 @@ export function PhotoAlbumPanel({
                     </label>
                     <div className={styles.cardBody}>
                       <div className={styles.cardMetaRow}>
-                      {item.sourceKind === 'legacy_import' ? (
-                        <span className={styles.cardMetaText}>이관된 보고서 사진</span>
-                      ) : null}
-                      <span className={styles.cardMetaText}>{formatFileSize(item.sizeBytes)}</span>
-                    </div>
+                        <span className={styles.cardMetaText}>{formatFileSize(item.sizeBytes)}</span>
+                      </div>
                       <div className={styles.cardTitle} title={item.fileName}>
                         {item.fileName}
                       </div>

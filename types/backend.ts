@@ -637,10 +637,12 @@ export interface SafetyBackendPhotoAsset {
   gps_latitude: number | null;
   gps_longitude: number | null;
   headquarter_id: string;
+  headquarter_name: string;
   id: string;
   original_path: string;
   size_bytes: number;
   site_id: string;
+  site_name: string;
   source_kind: 'album_upload' | 'legacy_import';
   source_report_key: string;
   source_document_key: string;

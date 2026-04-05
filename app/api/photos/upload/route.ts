@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
 
-import { findAccessibleSite } from '@/server/photos/album';
-import { resolvePhotoAlbumAccessContext } from '@/server/photos/service';
 import {
   uploadSafetyPhotoAssetServer,
   readRequiredAdminToken,
@@ -61,22 +59,13 @@ export async function POST(request: Request): Promise<Response> {
       return NextResponse.json({ error: '썸네일 파일 크기가 너무 큽니다.' }, { status: 400 });
     }
 
-    const access = await resolvePhotoAlbumAccessContext(token, request);
-    const site = findAccessibleSite(access.accessibleSites, siteId);
-    if (!site) {
-      return NextResponse.json(
-        { error: '이 현장 사진첩에 접근할 권한이 없습니다.' },
-        { status: 403 },
-      );
-    }
-
     const uploadFormData = new FormData();
     uploadFormData.set(
       'file',
       originalFile,
       sanitizeFileName(originalFile.name || 'photo-original.jpg', 'photo-original.jpg'),
     );
-    uploadFormData.set('site_id', site.id);
+    uploadFormData.set('site_id', siteId);
     if (thumbnailFile instanceof File && thumbnailFile.size > 0) {
       uploadFormData.set(
         'thumbnail',
@@ -88,7 +77,7 @@ export async function POST(request: Request): Promise<Response> {
     const uploadedAsset = mapBackendPhotoAsset(
       await uploadSafetyPhotoAssetServer(token, uploadFormData, request),
     );
-    const nextItem = buildPhotoAlbumItemFromAsset(uploadedAsset, site);
+    const nextItem = buildPhotoAlbumItemFromAsset(uploadedAsset, null);
 
     return NextResponse.json({
       item: nextItem,

@@ -50,12 +50,19 @@ export class SafetyServerApiError extends Error {
 
 function withQuery(
   path: string,
-  params: Record<string, string | number | boolean | null | undefined>,
+  params: Record<string, string | number | boolean | Array<string | number | boolean> | null | undefined>,
 ) {
   const searchParams = new URLSearchParams();
 
   Object.entries(params).forEach(([key, value]) => {
     if (value === null || value === undefined || value === '') return;
+    if (Array.isArray(value)) {
+      value.forEach((entry) => {
+        if (entry === null || entry === undefined || entry === '') return;
+        searchParams.append(key, String(entry));
+      });
+      return;
+    }
     searchParams.set(key, String(value));
   });
 
@@ -475,7 +482,7 @@ export function updateAdminScheduleServer(
 
 export function fetchSafetyPhotoAssetsServer(
   token: string,
-  params: Record<string, string | number | boolean | null | undefined>,
+  params: Record<string, string | number | boolean | Array<string | number | boolean> | null | undefined>,
   request: Request | null = null,
 ): Promise<SafetyBackendPhotoAssetListResponse> {
   return requestSafetyAdminServer<SafetyBackendPhotoAssetListResponse>(
@@ -745,8 +752,8 @@ export function fetchSafetyMailThreadsServer(
   token: string,
   params: Record<string, string | number | boolean | null | undefined>,
   request: Request | null = null,
-): Promise<{ rows: SafetyBackendMailThread[]; total: number }> {
-  return requestSafetyAdminServer<{ rows: SafetyBackendMailThread[]; total: number }>(
+): Promise<{ rows: SafetyBackendMailThread[]; total: number; limit: number; offset: number }> {
+  return requestSafetyAdminServer<{ rows: SafetyBackendMailThread[]; total: number; limit: number; offset: number }>(
     withQuery('/mail/threads', params),
     {},
     token,

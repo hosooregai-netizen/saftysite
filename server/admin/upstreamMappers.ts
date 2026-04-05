@@ -283,10 +283,12 @@ export function mapBackendPhotoAsset(asset: SafetyBackendPhotoAsset): SafetyPhot
         ? asset.gps_longitude
         : null,
     headquarterId: normalizeText(asset.headquarter_id),
+    headquarterName: normalizeText(asset.headquarter_name),
     id: normalizeText(asset.id),
     originalPath: buildSafetyAdminUpstreamUrl(normalizeText(asset.original_path)),
     sizeBytes: typeof asset.size_bytes === 'number' ? asset.size_bytes : 0,
     siteId: normalizeText(asset.site_id),
+    siteName: normalizeText(asset.site_name),
     sourceKind:
       normalizeText(asset.source_kind) === 'legacy_import' ? 'legacy_import' : 'album_upload',
     thumbnailPath: buildSafetyAdminUpstreamUrl(normalizeText(asset.thumbnail_path || asset.original_path)),
@@ -596,10 +598,11 @@ export function buildPhotoAlbumItemFromAsset(
   site: SafetySite | null | undefined,
 ): PhotoAlbumItem {
   const headquarterName =
+    normalizeText(asset.headquarterName) ||
     normalizeText(site?.headquarter_detail?.name) ||
     normalizeText(site?.headquarter?.name) ||
     '사업장';
-  const siteName = normalizeText(site?.site_name) || '현장';
+  const siteName = normalizeText(asset.siteName) || normalizeText(site?.site_name) || '현장';
 
   return {
     capturedAt: asset.capturedAt,

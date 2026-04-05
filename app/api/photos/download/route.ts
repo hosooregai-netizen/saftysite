@@ -4,14 +4,13 @@ import { NextResponse } from 'next/server';
 import {
   assertDownloadItemLimit,
   buildDownloadZipEntryName,
-  getPhotoAlbumItemById,
 } from '@/server/photos/album';
 import {
   downloadSafetyPhotoAssetServer,
   readRequiredAdminToken,
   SafetyServerApiError,
 } from '@/server/admin/safetyApiServer';
-import { loadPhotoAlbumCollection } from '@/server/photos/service';
+import { loadPhotoAlbumItemsByIds } from '@/server/photos/service';
 
 export const runtime = 'nodejs';
 
@@ -43,13 +42,6 @@ function makeUniqueEntryName(name: string, taken: Set<string>) {
   return nextName;
 }
 
-async function resolveDownloadItems(
-  token: string,
-  request: Request,
-) {
-  return loadPhotoAlbumCollection(token, request, { source: 'all' });
-}
-
 function parseItemIdsFromRequest(request: Request, body?: unknown) {
   if (request.method === 'GET') {
     const url = new URL(request.url);
@@ -79,10 +71,7 @@ async function buildDownloadResponse(
 ): Promise<Response> {
   assertDownloadItemLimit(itemIds);
 
-  const collection = await resolveDownloadItems(token, request);
-  const selectedItems = itemIds
-    .map((itemId) => getPhotoAlbumItemById(collection.items, itemId))
-    .filter((item): item is NonNullable<typeof item> => Boolean(item));
+  const selectedItems = await loadPhotoAlbumItemsByIds(token, request, itemIds);
 
   if (selectedItems.length !== itemIds.length) {
     return NextResponse.json(

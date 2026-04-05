@@ -1,88 +1,25 @@
 import 'server-only';
 
 import {
-  fetchAssignedSafetySitesServer,
-  fetchCurrentSafetyUserServer,
   fetchSafetyPhotoAssetsServer,
-  fetchSafetySitesServer,
 } from '@/server/admin/safetyApiServer';
 import {
   buildPhotoAlbumItemFromAsset,
   mapBackendPhotoAsset,
 } from '@/server/admin/upstreamMappers';
-import type { SafetySite, SafetyUser } from '@/types/backend';
 import type { PhotoAlbumItem, PhotoAlbumListResponse } from '@/types/photos';
-import {
-  filterAccessibleSites,
-  isAdminPhotoViewer,
-  queryPhotoAlbumItems,
-  type PhotoAlbumQuery,
-} from './album';
+import type { PhotoAlbumQuery } from './album';
 
-export interface PhotoAlbumAccessContext {
-  accessibleSites: SafetySite[];
-  currentUser: SafetyUser;
-  isAdmin: boolean;
+function normalizeSource(value: PhotoAlbumQuery['source']) {
+  return value && value !== 'all' ? value : '';
 }
 
-export interface PhotoAlbumCollectionResult {
-  context: PhotoAlbumAccessContext;
-  items: PhotoAlbumItem[];
-  sites: SafetySite[];
+function normalizeSortKey(value: PhotoAlbumQuery['sortBy']) {
+  return value || 'capturedAt';
 }
 
-export async function resolvePhotoAlbumAccessContext(
-  token: string,
-  request: Request,
-): Promise<PhotoAlbumAccessContext> {
-  const currentUser = await fetchCurrentSafetyUserServer(token, request);
-  const isAdmin = isAdminPhotoViewer(currentUser);
-  const accessibleSites = isAdmin
-    ? await fetchSafetySitesServer(token, request)
-    : await fetchAssignedSafetySitesServer(token, request);
-
-  return {
-    accessibleSites,
-    currentUser,
-    isAdmin,
-  };
-}
-
-export async function loadPhotoAlbumCollection(
-  token: string,
-  request: Request,
-  query: PhotoAlbumQuery,
-): Promise<PhotoAlbumCollectionResult> {
-  const context = await resolvePhotoAlbumAccessContext(token, request);
-  const sites = filterAccessibleSites(context.accessibleSites, query);
-  const assetRows = (
-    await fetchSafetyPhotoAssetsServer(
-      token,
-      {
-        headquarter_id: query.headquarterId || '',
-        limit: 5000,
-        offset: 0,
-        site_id: query.siteId || '',
-        source_kind: query.source && query.source !== 'all' ? query.source : '',
-      },
-      request,
-    )
-  ).rows;
-
-  return {
-    context,
-    items: assetRows
-      .map((asset) => mapBackendPhotoAsset(asset))
-      .map((asset) =>
-        buildPhotoAlbumItemFromAsset(asset, sites.find((site) => site.id === asset.siteId)),
-      )
-      .filter((item) => {
-        if (query.siteId && item.siteId !== query.siteId) return false;
-        if (query.headquarterId && item.headquarterId !== query.headquarterId) return false;
-        return true;
-      }),
-    sites,
-  };
+function normalizeSortDir(value: PhotoAlbumQuery['sortDir']) {
+  return value === 'asc' ? 'asc' : 'desc';
 }
 
 export async function loadPhotoAlbumList(
@@ -90,6 +27,58 @@ export async function loadPhotoAlbumList(
   request: Request,
   query: PhotoAlbumQuery,
 ): Promise<PhotoAlbumListResponse> {
-  const collection = await loadPhotoAlbumCollection(token, request, query);
-  return queryPhotoAlbumItems(collection.items, query);
+  const response = await fetchSafetyPhotoAssetsServer(
+    token,
+    {
+      headquarter_id: query.headquarterId || '',
+      limit: Math.max(1, Math.min(200, query.limit ?? 60)),
+      offset: Math.max(0, query.offset ?? 0),
+      query: query.query || '',
+      report_key: query.reportKey || '',
+      site_id: query.siteId || '',
+      sort_by: normalizeSortKey(query.sortBy),
+      sort_dir: normalizeSortDir(query.sortDir),
+      source_kind: normalizeSource(query.source),
+    },
+    request,
+  );
+
+  return {
+    limit: response.limit,
+    offset: response.offset,
+    rows: response.rows
+      .map((asset) => mapBackendPhotoAsset(asset))
+      .map((asset) => buildPhotoAlbumItemFromAsset(asset, null)),
+    total: response.total,
+  };
+}
+
+export async function loadPhotoAlbumItemsByIds(
+  token: string,
+  request: Request,
+  itemIds: string[],
+): Promise<PhotoAlbumItem[]> {
+  if (itemIds.length === 0) {
+    return [];
+  }
+
+  const response = await fetchSafetyPhotoAssetsServer(
+    token,
+    {
+      item_ids: itemIds,
+      limit: itemIds.length,
+      offset: 0,
+    },
+    request,
+  );
+  const byId = new Map(
+    response.rows
+      .map((asset) => mapBackendPhotoAsset(asset))
+      .map((asset) => buildPhotoAlbumItemFromAsset(asset, null))
+      .map((item) => [item.id, item] as const),
+  );
+
+  return itemIds
+    .map((itemId) => byId.get(itemId) || null)
+    .filter((item): item is PhotoAlbumItem => Boolean(item));
 }

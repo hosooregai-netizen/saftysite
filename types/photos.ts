@@ -6,6 +6,8 @@ export interface SafetyPhotoAsset {
   id: string;
   siteId: string;
   headquarterId: string;
+  siteName: string;
+  headquarterName: string;
   originalPath: string;
   thumbnailPath: string;
   fileName: string;

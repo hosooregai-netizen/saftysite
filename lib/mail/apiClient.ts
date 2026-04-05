@@ -174,6 +174,8 @@ export async function fetchMailThreads(input: {
   accountId?: string;
   box?: string;
   headquarterId?: string;
+  limit?: number;
+  offset?: number;
   query?: string;
   reportKey?: string;
   siteId?: string;
@@ -183,6 +185,8 @@ export async function fetchMailThreads(input: {
       accountId: input.accountId || '',
       box: input.box || '',
       headquarterId: input.headquarterId || '',
+      limit: input.limit ? String(input.limit) : '',
+      offset: input.offset ? String(input.offset) : '0',
       query: input.query || '',
       reportKey: input.reportKey || '',
       siteId: input.siteId || '',
