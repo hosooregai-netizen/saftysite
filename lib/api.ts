@@ -238,7 +238,7 @@ export async function fetchQuarterlyPdfDocumentWithFallback(
     console.warn('Quarterly PDF generation failed; falling back to HWPX download.', {
       error: error instanceof Error ? error.message : String(error),
       reportId: report.id,
-      siteKey: site.siteKey,
+      siteId: site.id,
     });
     const hwpx = await fetchQuarterlyHwpxDocument(report, site);
     return {
