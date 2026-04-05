@@ -191,23 +191,34 @@ async function main() {
   await page.getByText('메일 계정과 공급자 상태를 새로고침했습니다.').first().waitFor();
 
   await page.goto(`${baseUrl}/admin?section=k2b`, { waitUntil: 'load' });
-  await waitHeading('K2B 업로드');
-  await page.locator('input[type="file"]').first().setInputFiles({
+  let k2bDialog = page.getByRole('dialog', { name: '엑셀 업로드' });
+  await k2bDialog.waitFor();
+  await k2bDialog.getByRole('button', { name: '닫기' }).click();
+  await k2bDialog.waitFor({ state: 'hidden' });
+  await page.waitForURL(/section=headquarters/);
+  await waitHeading('사업장 목록');
+
+  await page.getByRole('button', { name: '엑셀 업로드' }).first().click();
+  k2bDialog = page.getByRole('dialog', { name: '엑셀 업로드' });
+  await k2bDialog.waitFor();
+  await k2bDialog.locator('input[type="file"]').first().setInputFiles({
     buffer: k2bWorkbookBuffer,
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     name: 'k2b-smoke.xlsx',
   });
-  await page.getByRole('button', { name: '파일 파싱' }).click();
-  await page
+  await k2bDialog.getByRole('button', { name: '파일 파싱' }).click();
+  await k2bDialog
     .getByText('K2B 업로드 파일을 파싱했습니다. 매핑과 중복 후보를 확인해 주세요.')
     .first()
     .waitFor({ timeout: 30_000 });
-  await page.getByText('중복 판정').first().waitFor();
-  await page.getByRole('button', { name: 'DB에 반영' }).click();
-  await page.getByText('K2B 데이터를 사업장/현장에 반영했습니다.').first().waitFor({
+  await k2bDialog.getByText('중복 판정').first().waitFor();
+  await k2bDialog.getByRole('button', { name: 'DB에 반영' }).click();
+  await k2bDialog.getByText('K2B 데이터를 사업장/현장에 반영했습니다.').first().waitFor({
     timeout: 30_000,
   });
-  await page.getByText('보완 필요').first().waitFor();
+  await k2bDialog.getByText('보완 필요').first().waitFor();
+  await k2bDialog.getByRole('button', { name: '닫기' }).click();
+  await k2bDialog.waitFor({ state: 'hidden' });
 
   await page.goto(`${baseUrl}/admin?section=headquarters`, { waitUntil: 'load' });
   await page.getByPlaceholder('사업장명, 연락처, 주소로 검색').fill(k2bHeadquarterName);
@@ -219,6 +230,11 @@ async function main() {
 
   await page.goto(`${baseUrl}/admin?section=reports`, { waitUntil: 'load' });
   await waitHeading('전체 보고서');
+  await page.getByRole('button', { name: '엑셀 업로드' }).first().click();
+  k2bDialog = page.getByRole('dialog', { name: '엑셀 업로드' });
+  await k2bDialog.waitFor();
+  await k2bDialog.getByRole('button', { name: '닫기' }).click();
+  await k2bDialog.waitFor({ state: 'hidden' });
   await page.getByText('1차 기술지도 보고서').first().waitFor();
   await page.getByText('2026년 1분기 종합 보고서').first().waitFor();
 
