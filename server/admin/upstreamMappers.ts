@@ -361,6 +361,12 @@ export function mapBackendK2bImportPreview(
                   : [],
               }))
             : [],
+          summary: {
+            ambiguousCreateCount: sheet.summary?.ambiguous_create_count ?? 0,
+            createCount: sheet.summary?.create_count ?? 0,
+            updateHeadquarterCount: sheet.summary?.update_headquarter_count ?? 0,
+            updateSiteCount: sheet.summary?.update_site_count ?? 0,
+          },
         }))
       : [],
   };

@@ -416,7 +416,7 @@ export function SitesSection(props: SitesSectionProps) {
               }
               disabled={busy}
             >
-              엑셀 업로드
+              업로드
             </button>
           ) : null}
           <button
@@ -687,7 +687,7 @@ export function SitesSection(props: SitesSectionProps) {
                                 ...(onExcelUploadRequest
                                   ? [
                                       {
-                                        label: '엑셀 업로드',
+                                        label: '업로드',
                                         onSelect: () =>
                                           onExcelUploadRequest({
                                             headquarterId: lockedHeadquarterId,

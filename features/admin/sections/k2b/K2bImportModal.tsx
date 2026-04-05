@@ -28,7 +28,7 @@ export function K2bImportModal({
   return (
     <AppModal
       open={open}
-      title="엑셀 업로드"
+      title="업로드"
       size="large"
       onClose={onClose}
       actions={
@@ -44,8 +44,8 @@ export function K2bImportModal({
       <div className={styles.stepStack}>
         <div className={styles.noticeBox}>
           {originSection === 'reports'
-            ? '전체 보고서 화면에서 여는 K2B 업로드입니다. 반영 후 사업장/현장 기준 데이터가 함께 갱신됩니다.'
-            : '사업장/현장 화면에서 여는 K2B 업로드입니다. 반영 후 현재 목록의 보완 필요 상태가 즉시 갱신됩니다.'}
+            ? '전체 보고서 화면에서 여는 업로드입니다. 반영 후 연결된 사업장/현장 데이터가 함께 갱신됩니다.'
+            : '사업장/현장 화면에서 여는 업로드입니다. 반영 후 현재 목록의 보완 필요 상태가 즉시 갱신됩니다.'}
           {contextSiteId
             ? ' 현재 현장 컨텍스트를 유지한 채 업로드합니다.'
             : contextHeadquarterId

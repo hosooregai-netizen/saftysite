@@ -315,6 +315,12 @@ export interface SafetyBackendK2bSheetPreview {
   sample_rows: Record<string, string>[];
   suggested_mapping: Record<string, string>;
   row_previews: SafetyBackendK2bPreviewRow[];
+  summary: {
+    create_count: number;
+    update_headquarter_count: number;
+    update_site_count: number;
+    ambiguous_create_count: number;
+  };
 }
 
 export interface SafetyBackendK2bImportPreview {

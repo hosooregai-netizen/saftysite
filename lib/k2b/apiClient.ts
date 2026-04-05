@@ -1,12 +1,7 @@
 'use client';
 
 import { readSafetyAuthToken, SafetyApiError } from '@/lib/safetyApi';
-import type {
-  K2bApplyResult,
-  K2bColumnMapping,
-  K2bImportPreview,
-  K2bRowAction,
-} from '@/types/k2b';
+import type { K2bApplyResult, K2bImportPreview } from '@/types/k2b';
 
 async function parseErrorMessage(response: Response) {
   try {
@@ -62,8 +57,6 @@ export async function fetchK2bImportPreview(jobId: string): Promise<K2bImportPre
 export async function applyK2bWorkbook(input: {
   jobId: string;
   sheetName: string;
-  mapping: K2bColumnMapping;
-  rowActions: K2bRowAction[];
 }): Promise<K2bApplyResult> {
   const headers = createAuthHeaders({ json: true });
   const response = await fetch('/api/k2b/imports/apply', {
@@ -71,13 +64,6 @@ export async function applyK2bWorkbook(input: {
     headers,
     body: JSON.stringify({
       job_id: input.jobId,
-      mapping: input.mapping,
-      row_actions: input.rowActions.map((item) => ({
-        row_index: item.rowIndex,
-        action: item.action,
-        headquarter_id: item.headquarterId || undefined,
-        site_id: item.siteId || undefined,
-      })),
       sheet_name: input.sheetName,
     }),
   });

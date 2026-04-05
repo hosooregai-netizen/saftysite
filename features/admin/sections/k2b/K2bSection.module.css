@@ -127,6 +127,15 @@
   align-items: center;
 }
 
+.hiddenInput {
+  display: none;
+}
+
+.selectLabel {
+  display: grid;
+  gap: 6px;
+}
+
 @media (max-width: 1200px) {
   .summaryGrid,
   .mappingGrid {

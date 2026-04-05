@@ -17,6 +17,13 @@ export interface K2bImportPreviewRow {
   duplicateCandidates: K2bMatchCandidate[];
 }
 
+export interface K2bImportSheetSummary {
+  createCount: number;
+  updateHeadquarterCount: number;
+  updateSiteCount: number;
+  ambiguousCreateCount: number;
+}
+
 export interface K2bImportSheetPreview {
   name: string;
   headers: string[];
@@ -24,6 +31,7 @@ export interface K2bImportSheetPreview {
   sampleRows: Record<string, string>[];
   suggestedMapping: Record<string, string>;
   rowPreviews: K2bImportPreviewRow[];
+  summary: K2bImportSheetSummary;
 }
 
 export interface K2bImportPreview {
