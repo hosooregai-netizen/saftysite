@@ -13,11 +13,11 @@ import {
   deactivateSafetyHeadquarter,
   deactivateSafetySite,
   deactivateSafetyUser,
-  fetchSafetyAssignments,
-  fetchSafetyContentItemsAdmin,
-  fetchSafetyHeadquarters,
-  fetchSafetySitesAdmin,
-  fetchSafetyUsers,
+  fetchSafetyAssignmentsPage,
+  fetchSafetyContentItemsAdminPage,
+  fetchSafetyHeadquartersPage,
+  fetchSafetySitesAdminPage,
+  fetchSafetyUsersPage,
   updateSafetyAssignment,
   updateSafetyContentItem,
   updateSafetyHeadquarter,
@@ -41,6 +41,7 @@ import type {
 } from '@/types/controller';
 
 const CONTROLLER_DASHBOARD_CACHE_TTL_MS = 1000 * 60;
+const CONTROLLER_DASHBOARD_PAGE_LIMIT = 200;
 
 const EMPTY_DATA: ControllerDashboardData = {
   users: [],
@@ -139,10 +140,10 @@ function ensureControllerDashboardCoreData(
   }
 
   const nextPromise = Promise.all([
-    fetchSafetyUsers(token),
-    fetchSafetyHeadquarters(token),
-    fetchSafetySitesAdmin(token),
-    fetchSafetyAssignments(token),
+    fetchAllDashboardPages((limit, offset) => fetchSafetyUsersPage(token, { limit, offset })),
+    fetchAllDashboardPages((limit, offset) => fetchSafetyHeadquartersPage(token, { limit, offset })),
+    fetchAllDashboardPages((limit, offset) => fetchSafetySitesAdminPage(token, { limit, offset })),
+    fetchAllDashboardPages((limit, offset) => fetchSafetyAssignmentsPage(token, { limit, offset })),
   ])
     .then(([users, headquarters, sites, assignments]) => {
       ensureControllerDashboardCacheToken(token);
@@ -180,7 +181,9 @@ function ensureControllerDashboardContentItems(
     return Promise.resolve([...controllerDashboardCache.data.contentItems]);
   }
 
-  const nextPromise = fetchSafetyContentItemsAdmin(token)
+  const nextPromise = fetchAllDashboardPages((limit, offset) =>
+    fetchSafetyContentItemsAdminPage(token, { limit, offset })
+  )
     .then((contentItems) => {
       ensureControllerDashboardCacheToken(token);
       controllerDashboardCache.data = {
@@ -198,6 +201,24 @@ function ensureControllerDashboardContentItems(
 
   controllerDashboardCache.contentPromise = nextPromise;
   return nextPromise;
+}
+
+async function fetchAllDashboardPages<T>(
+  fetchPage: (limit: number, offset: number) => Promise<T[]>,
+): Promise<T[]> {
+  const rows: T[] = [];
+  let offset = 0;
+
+  while (true) {
+    const page = await fetchPage(CONTROLLER_DASHBOARD_PAGE_LIMIT, offset);
+    rows.push(...page);
+
+    if (page.length < CONTROLLER_DASHBOARD_PAGE_LIMIT) {
+      return rows;
+    }
+
+    offset += page.length;
+  }
 }
 
 function hasValues(input: object): boolean {
