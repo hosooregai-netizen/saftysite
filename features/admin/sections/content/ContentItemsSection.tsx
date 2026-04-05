@@ -14,6 +14,7 @@ import {
   validateSafetyAssetFile,
 } from '@/lib/safetyApi/assets';
 import {
+  CONTENT_EDITOR_MODE_LABELS,
   CONTENT_TYPE_LABELS,
   CONTENT_TYPE_META,
   CONTENT_TYPE_OPTIONS,
@@ -63,7 +64,9 @@ interface ContentItemsSectionProps {
   onCreate: (input: {
     content_type: SafetyContentItem['content_type'];
     title: string;
+    code?: string | null;
     body: Record<string, unknown> | string;
+    tags?: string[];
     sort_order?: number;
     effective_from?: string | null;
     effective_to?: string | null;
@@ -71,7 +74,9 @@ interface ContentItemsSectionProps {
   }) => Promise<void>;
   onUpdate: (id: string, input: Partial<{
     title: string;
+    code?: string | null;
     body: Record<string, unknown> | string;
+    tags?: string[];
     sort_order?: number;
     effective_from?: string | null;
     effective_to?: string | null;
@@ -106,6 +111,7 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
         if (!normalizedQuery) return true;
         return [
           item.title,
+          item.code ?? '',
           getContentPreview(item),
           getContentAttachmentSummary(item),
         ]
@@ -202,11 +208,16 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
   const submit = async () => {
     if (isDisasterCaseBatchCreate) {
       const sharedPayload = {
+        code: toNullableText(form.code),
+        tags: form.tags
+          .split(',')
+          .map((tag) => tag.trim())
+          .filter(Boolean),
         sort_order: Number(form.sort_order || 0),
         effective_from: toNullableText(form.effective_from),
         effective_to: toNullableText(form.effective_to),
         is_active: form.is_active,
-      }; 
+      };
       const entries = disasterCaseBatchItems
         .map((item, index) => ({
           item,
@@ -221,6 +232,7 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
       for (const { item, index, title, summary } of entries) {
         await onCreate({
           content_type: 'disaster_case',
+          code: sharedPayload.code,
           title: title || `재해 사례 ${index + 1}`,
           body: {
             body: summary,
@@ -228,6 +240,7 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
             imageUrl: item.image_url || '',
             imageName: item.image_name || '',
           },
+          tags: sharedPayload.tags,
           sort_order: sharedPayload.sort_order + index,
           effective_from: sharedPayload.effective_from,
           effective_to: sharedPayload.effective_to,
@@ -243,7 +256,12 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
     if (!nextTitle) return;
     const payload = {
       title: nextTitle,
+      code: toNullableText(form.code),
       body: buildContentBody(form),
+      tags: form.tags
+        .split(',')
+        .map((tag) => tag.trim())
+        .filter(Boolean),
       sort_order: Number(form.sort_order || 0),
       effective_from: toNullableText(form.effective_from),
       effective_to: toNullableText(form.effective_to),
@@ -459,6 +477,18 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
       >
         <div className={styles.modalForm}>
           <div className={styles.modalGrid}>
+            {!isDisasterCaseBatchCreate ? (
+              <label className={styles.modalField}>
+                <span className={styles.label}>코드</span>
+                <input
+                  className="app-input"
+                  placeholder="선택 입력"
+                  value={form.code}
+                  onChange={(e) => setForm({ ...form, code: e.target.value })}
+                  disabled={busy}
+                />
+              </label>
+            ) : null}
             <label className={styles.modalField}>
               <span className={styles.label}>콘텐츠 유형</span>
               <select
@@ -518,12 +548,23 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
             </label>
           </div>
 
+          <label className={styles.modalFieldWide}>
+            <span className={styles.label}>태그</span>
+            <input
+              className="app-input"
+              value={form.tags}
+              onChange={(e) => setForm({ ...form, tags: e.target.value })}
+              disabled={busy}
+            />
+          </label>
+
           {activeTypeMeta ? (
             <div className={styles.contentTypePanel}>
               <div className={styles.contentTypeHeader}>
                 <div>
                   <strong>{activeTypeMeta.label}</strong>
                 </div>
+                <span className="app-chip">{CONTENT_EDITOR_MODE_LABELS[activeTypeMeta.editorMode]}</span>
               </div>
 
               {isMeasurementTemplate ? (
@@ -553,16 +594,28 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
               ) : null}
 
               {isSafetyNews ? (
-                <label className={styles.modalFieldWide}>
-                  <span className={styles.label}>{titleLabel}</span>
-                  <input
-                    className="app-input"
-                    value={form.title}
-                    placeholder={titlePlaceholder}
-                    onChange={(e) => setForm({ ...form, title: e.target.value })}
-                    disabled={busy}
-                  />
-                </label>
+                <>
+                  <label className={styles.modalFieldWide}>
+                    <span className={styles.label}>{titleLabel}</span>
+                    <input
+                      className="app-input"
+                      value={form.title}
+                      placeholder={titlePlaceholder}
+                      onChange={(e) => setForm({ ...form, title: e.target.value })}
+                      disabled={busy}
+                    />
+                  </label>
+                  <label className={styles.modalFieldWide}>
+                    <span className={styles.label}>안내 문구(선택)</span>
+                    <textarea
+                      className="app-textarea"
+                      rows={4}
+                      value={form.text_body}
+                      onChange={(e) => setForm({ ...form, text_body: e.target.value })}
+                      disabled={busy}
+                    />
+                  </label>
+                </>
               ) : null}
 
               {isDisasterCase ? (
@@ -637,6 +690,16 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
                           value={form.title}
                           placeholder={titlePlaceholder}
                           onChange={(e) => setForm({ ...form, title: e.target.value })}
+                          disabled={busy}
+                        />
+                      </label>
+                      <label className={styles.modalField}>
+                        <span className={styles.label}>사례 요약(선택)</span>
+                        <textarea
+                          className="app-textarea"
+                          rows={4}
+                          value={form.text_body}
+                          onChange={(e) => setForm({ ...form, text_body: e.target.value })}
                           disabled={busy}
                         />
                       </label>
@@ -762,6 +825,21 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
                 </label>
               ) : null}
 
+              {!isMeasurementTemplate &&
+              !isSafetyNews &&
+              !isDisasterCase &&
+              !isDoc7ReferenceMaterial ? (
+                <label className={styles.modalFieldWide}>
+                  <span className={styles.label}>{activeTypeMeta.bodyLabel}</span>
+                  <textarea
+                    className="app-textarea"
+                    value={form.text_body}
+                    onChange={(e) => setForm({ ...form, text_body: e.target.value })}
+                    disabled={busy}
+                  />
+                </label>
+              ) : null}
+
               {activeTypeMeta.editorMode === 'image' &&
               !isDisasterCaseBatchCreate &&
               !isDoc7ReferenceMaterial &&
@@ -782,6 +860,51 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
                   resolveFile={uploadFileAsset}
                   validateFile={validateLargeFile}
                 />
+              ) : null}
+
+              {activeTypeMeta.editorMode === 'file' && !isSafetyNews ? (
+                <div className={styles.assetGrid}>
+                  <ContentAssetField
+                    accept=".pdf,.doc,.docx,.hwp,.png,.jpg,.jpeg,.gif,.webp"
+                    disabled={busy || !canUploadAssets}
+                    helperText={
+                      usesSafetyProxy
+                        ? '현재는 Vercel 프록시 경유 업로드라 4.5MB를 넘으면 실패할 수 있습니다. direct upload origin 설정을 확인해 주세요.'
+                        : undefined
+                    }
+                    label={activeTypeMeta.fileLabels?.[0] || '파일 1'}
+                    mode="file"
+                    readOnly={!canUploadAssets}
+                    value={form.file_url_1}
+                    fileName={form.file_name_1}
+                    onChange={({ value, fileName }) =>
+                      setForm({ ...form, file_url_1: value, file_name_1: fileName })
+                    }
+                    onClear={() => setForm({ ...form, file_url_1: '', file_name_1: '' })}
+                    resolveFile={uploadFileAsset}
+                    validateFile={validateLargeFile}
+                  />
+                  <ContentAssetField
+                    accept=".pdf,.doc,.docx,.hwp,.png,.jpg,.jpeg,.gif,.webp"
+                    disabled={busy || !canUploadAssets}
+                    helperText={
+                      usesSafetyProxy
+                        ? '현재는 Vercel 프록시 경유 업로드라 4.5MB를 넘으면 실패할 수 있습니다. direct upload origin 설정을 확인해 주세요.'
+                        : undefined
+                    }
+                    label={activeTypeMeta.fileLabels?.[1] || '파일 2'}
+                    mode="file"
+                    readOnly={!canUploadAssets}
+                    value={form.file_url_2}
+                    fileName={form.file_name_2}
+                    onChange={({ value, fileName }) =>
+                      setForm({ ...form, file_url_2: value, file_name_2: fileName })
+                    }
+                    onClear={() => setForm({ ...form, file_url_2: '', file_name_2: '' })}
+                    resolveFile={uploadFileAsset}
+                    validateFile={validateLargeFile}
+                  />
+                </div>
               ) : null}
             </div>
           ) : null}

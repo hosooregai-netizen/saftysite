@@ -1,4 +1,4 @@
-import { normalizeSafetyAssetUrl } from '@/lib/safetyApi/assetUrls';
+import { resolveSafetyAssetUrl } from '@/lib/safetyApi/assetUrls';
 
 export function normalizeMapperText(value: unknown): string {
   return typeof value === 'string' ? value.trim() : '';
@@ -33,26 +33,26 @@ export function contentBodyToText(body: unknown): string {
 
 export function contentBodyToImageUrl(body: unknown): string {
   const record = asMapperRecord(body);
-  return normalizeSafetyAssetUrl(
+  return resolveSafetyAssetUrl(
     normalizeMapperText(record.image_url) ||
-    normalizeMapperText(record.imageUrl) ||
-    normalizeMapperText(record.file_url) ||
-    normalizeMapperText(record.fileUrl) ||
-    normalizeMapperText(record.asset_url) ||
-    normalizeMapperText(record.assetUrl) ||
-    normalizeMapperText(record.thumbnail_url) ||
-    normalizeMapperText(record.thumbnailUrl)
+      normalizeMapperText(record.imageUrl) ||
+      normalizeMapperText(record.file_url) ||
+      normalizeMapperText(record.fileUrl) ||
+      normalizeMapperText(record.asset_url) ||
+      normalizeMapperText(record.assetUrl) ||
+      normalizeMapperText(record.thumbnail_url) ||
+      normalizeMapperText(record.thumbnailUrl),
   );
 }
 
 export function contentBodyToAssetUrl(body: unknown): string {
   const record = asMapperRecord(body);
-  return normalizeSafetyAssetUrl(
+  return resolveSafetyAssetUrl(
     normalizeMapperText(record.file_url) ||
-    normalizeMapperText(record.fileUrl) ||
-    normalizeMapperText(record.asset_url) ||
-    normalizeMapperText(record.assetUrl) ||
-    contentBodyToImageUrl(body)
+      normalizeMapperText(record.fileUrl) ||
+      normalizeMapperText(record.asset_url) ||
+      normalizeMapperText(record.assetUrl) ||
+      contentBodyToImageUrl(body),
   );
 }
 

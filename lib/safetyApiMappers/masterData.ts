@@ -1,5 +1,6 @@
 import {
   DEFAULT_CASE_FEED,
+  LEGAL_REFERENCE_LIBRARY,
   DEFAULT_MEASUREMENT_CRITERIA,
   DEFAULT_SAFETY_INFOS,
   finalizeInspectionSession,
@@ -14,6 +15,7 @@ import type {
   SafetyContentItem,
   SafetyDoc7ReferenceMaterialCatalogItem,
   SafetyInfoCatalogItem,
+  SafetyLegalReference,
   SafetyMasterData,
   SafetyMeasurementTemplate,
 } from '@/types/backend';
@@ -29,6 +31,7 @@ import {
   contentBodyToText,
   normalizeMapperText,
 } from './utils';
+import { resolveSafetyAssetUrl } from '@/lib/safetyApi/assetUrls';
 
 function normalizeContentDate(value: unknown): string | null {
   const normalized = normalizeMapperText(value);
@@ -133,6 +136,26 @@ function mapSafetyInfoItem(
   };
 }
 
+function mapLegalReferenceItem(item: SafetyContentItem): SafetyLegalReference {
+  const body = asMapperRecord(item.body);
+
+  return {
+    id: item.id,
+    title: normalizeMapperText(item.title),
+    body: contentBodyToText(item.body),
+    referenceMaterial1: resolveSafetyAssetUrl(
+      normalizeMapperText(body.referenceMaterial1) ||
+      normalizeMapperText(body.reference_material_1) ||
+      normalizeMapperText(body.material1)
+    ),
+    referenceMaterial2: resolveSafetyAssetUrl(
+      normalizeMapperText(body.referenceMaterial2) ||
+      normalizeMapperText(body.reference_material_2) ||
+      normalizeMapperText(body.material2)
+    ),
+  };
+}
+
 function mapMeasurementTemplateItem(item: SafetyContentItem): SafetyMeasurementTemplate | null {
   const body = asMapperRecord(item.body);
   const title = normalizeMapperText(item.title);
@@ -163,6 +186,7 @@ function mapMeasurementTemplateItem(item: SafetyContentItem): SafetyMeasurementT
   const fallbackInstrument =
     instrumentName ||
     title ||
+    normalizeMapperText(item.code) ||
     `계측 템플릿 ${item.sort_order + 1}`;
 
   return {
@@ -292,6 +316,18 @@ export function buildSafetyMasterData(items: SafetyContentItem[]): SafetyMasterD
     .sort((left, right) => left.sort_order - right.sort_order)
     .map((item, index) => mapSafetyInfoItem(item, DEFAULT_SAFETY_INFOS[index]));
 
+  const legalReferences = items
+    .filter((item) => item.content_type === 'legal_reference')
+    .sort((left, right) => left.sort_order - right.sort_order)
+    .map(mapLegalReferenceItem)
+    .filter((item) => item.title || item.body);
+
+  const correctionResultOptions = items
+    .filter((item) => item.content_type === 'correction_result_option')
+    .sort((left, right) => left.sort_order - right.sort_order)
+    .map((item) => normalizeMapperText(item.title) || contentBodyToText(item.body))
+    .filter(Boolean);
+
   const measurementTemplates = items
     .filter((item) => item.content_type === 'measurement_template')
     .sort((left, right) => left.sort_order - right.sort_order)
@@ -325,6 +361,17 @@ export function buildSafetyMasterData(items: SafetyContentItem[]): SafetyMasterD
             isActive: true,
             sortOrder: index,
           })),
+    legalReferences:
+      legalReferences.length > 0
+        ? legalReferences
+        : LEGAL_REFERENCE_LIBRARY.map((item) => ({
+            id: item.id,
+            title: item.title,
+            body: item.body,
+            referenceMaterial1: item.referenceMaterial1,
+            referenceMaterial2: item.referenceMaterial2,
+          })),
+    correctionResultOptions,
     measurementTemplates,
     doc7ReferenceMaterials,
   };
@@ -342,4 +389,3 @@ export function mergeMasterDataIntoSession(
     document14SafetyInfos: getSafetyInfosForReportDate(masterData, reportDate),
   });
 }
-

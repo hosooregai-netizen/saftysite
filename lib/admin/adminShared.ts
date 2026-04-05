@@ -1,7 +1,4 @@
-import type {
-  SiteContractStatus,
-  SiteContractType,
-} from '@/types/admin';
+import type { SiteContractStatus, SiteContractType } from '@/types/admin';
 import type { SafetyContentType, SafetyUserRole } from '@/types/backend';
 import type { SafetySiteStatus } from '@/types/controller';
 
@@ -33,7 +30,7 @@ export const CONTROLLER_SECTIONS: Array<{
   label: string;
   description: string;
 }> = [
-  { key: 'overview', label: '관제 대시보드', description: '운영 모니터링' },
+  { key: 'overview', label: '관리 대시보드', description: '운영 모니터링' },
   { key: 'reports', label: '전체 보고서', description: '보고서 통합 조회' },
   { key: 'analytics', label: '실적/매출', description: '성과 분석' },
   { key: 'mailbox', label: '메일함', description: '발송·수신·회신 관리' },
@@ -54,7 +51,7 @@ export function parseControllerSectionKey(value: string | null | undefined): Con
 
 export function getControllerSectionHref(
   section: ControllerSectionKey,
-  query: ControllerSectionQuery = {}
+  query: ControllerSectionQuery = {},
 ): string {
   const searchParams = new URLSearchParams();
   searchParams.set('section', section);
@@ -71,7 +68,7 @@ export function getControllerSectionHref(
 }
 
 export function isLegacyControllerSectionKey(
-  value: string | null | undefined
+  value: string | null | undefined,
 ): value is LegacyControllerSectionKey {
   return value === 'sites' || value === 'k2b' || CONTROLLER_SECTIONS.some((section) => section.key === value);
 }
@@ -80,7 +77,7 @@ const ADMIN_USER_ROLES = new Set<SafetyUserRole>(['super_admin', 'admin', 'contr
 
 export const USER_ROLE_OPTIONS: Array<{ value: UserRoleView; label: string }> = [
   { value: 'admin', label: '관리자' },
-  { value: 'field_agent', label: '지도요원' },
+  { value: 'field_agent', label: '현장 담당자' },
 ];
 
 export function isAdminUserRole(role: SafetyUserRole | null | undefined): boolean {
@@ -105,7 +102,7 @@ export function toUserRoleView(role: SafetyUserRole): UserRoleView {
 
 export function toBackendUserRole(
   roleView: UserRoleView,
-  currentRole?: SafetyUserRole
+  currentRole?: SafetyUserRole,
 ): SafetyUserRole {
   if (roleView === 'field_agent') return 'field_agent';
   if (currentRole && isAdminUserRole(currentRole)) return currentRole;
@@ -113,7 +110,7 @@ export function toBackendUserRole(
 }
 
 export function getUserRoleLabel(role: SafetyUserRole): string {
-  return toUserRoleView(role) === 'admin' ? '관리자' : '지도요원';
+  return toUserRoleView(role) === 'admin' ? '관리자' : '현장 담당자';
 }
 
 export const SITE_STATUS_OPTIONS: Array<{ value: SafetySiteStatus; label: string }> = [
@@ -121,8 +118,9 @@ export const SITE_STATUS_OPTIONS: Array<{ value: SafetySiteStatus; label: string
   { value: 'active', label: '운영중' },
   { value: 'closed', label: '종료' },
 ];
+
 export const SITE_STATUS_LABELS = Object.fromEntries(
-  SITE_STATUS_OPTIONS.map((option) => [option.value, option.label])
+  SITE_STATUS_OPTIONS.map((option) => [option.value, option.label]),
 ) as Record<SafetySiteStatus, string>;
 
 export const CONTENT_TYPE_OPTIONS: Array<{
@@ -132,30 +130,31 @@ export const CONTENT_TYPE_OPTIONS: Array<{
   editorMode: ContentEditorMode;
   bodyLabel: string;
   usageHint?: string;
+  fileLabels?: [string, string?];
 }> = [
   {
     value: 'measurement_template',
-    label: '계측 점검 템플릿',
-    description: '작성자 화면 doc10 장비 선택 시 기준이 자동 입력됩니다.',
+    label: '계측 기준 템플릿',
+    description: '문서 작성 시 장비 선택 후 안전 기준을 자동으로 채웁니다.',
     editorMode: 'text',
     bodyLabel: '안전 기준',
-    usageHint: '장비명과 안전 기준만 입력하면 작성자 화면의 계측 점검 카드에서 바로 자동 채워집니다.',
+    usageHint: '장비명과 안전 기준만 입력하면 작성 화면에서 자동 반영됩니다.',
   },
   {
     value: 'safety_news',
     label: '안전 정보',
-    description: '작성자 화면 doc14에 제목과 자산이 보고일 기준으로 자동 연결됩니다.',
+    description: '문서 14의 제목과 첨부 자료로 연결되는 공지형 콘텐츠입니다.',
     editorMode: 'image',
-    bodyLabel: '안내 문구(선택)',
-    usageHint: '정렬순 최상위 1건만 문서 14에 반영됩니다. 제목, 안내 문구, PDF/이미지만 등록해 주세요.',
+    bodyLabel: '안내 문구',
+    usageHint: '제목, 안내 문구, PDF 또는 이미지 자료를 함께 등록해 주세요.',
   },
   {
     value: 'disaster_case',
     label: '재해 사례',
-    description: '작성자 화면 doc13에 제목, 사례 요약, 대표 이미지가 카드로 반영됩니다.',
+    description: '문서 13에 반영되는 사례형 콘텐츠입니다.',
     editorMode: 'image',
-    bodyLabel: '사례 요약(선택)',
-    usageHint: '정렬순 상위 4건만 문서 13에 반영됩니다. 제목, 사례 요약, 대표 이미지만 등록해 주세요.',
+    bodyLabel: '사례 요약',
+    usageHint: '제목, 요약, 대표 이미지를 등록하면 사례 카드로 노출됩니다.',
   },
   {
     value: 'campaign_template',
@@ -163,14 +162,71 @@ export const CONTENT_TYPE_OPTIONS: Array<{
     description: 'OPS(One Point Sheet) 설명과 대표 이미지를 관리합니다.',
     editorMode: 'image',
     bodyLabel: 'OPS 설명',
-    usageHint: '분기 보고서의 OPS 섹션에서 선택할 자료입니다. 제목, 설명, 대표 이미지만 등록해 주세요.',
+    usageHint: '분기 보고서의 OPS 섹션에서 사용할 자료입니다.',
   },
   {
     value: 'doc7_reference_material',
     label: 'DOC7 참고자료',
-    description: '재해유형과 기인물 조합으로 DOC7 참고자료를 자동 매칭합니다.',
+    description: '사고 유형과 기인물 조합으로 DOC7 참고자료를 자동 매핑합니다.',
     editorMode: 'image',
     bodyLabel: '참고자료 내용',
+  },
+  {
+    value: 'legal_reference',
+    label: '법령 참고자료',
+    description: 'ERP 문서 작성 시 참고할 법령 자료를 관리합니다.',
+    editorMode: 'file',
+    bodyLabel: '설명',
+    fileLabels: ['참고자료 1', '참고자료 2'],
+  },
+  {
+    value: 'correction_result_option',
+    label: '시정 결과 옵션',
+    description: '시정 결과 선택지에 노출되는 목록형 값입니다.',
+    editorMode: 'list',
+    bodyLabel: '옵션 값',
+  },
+  {
+    value: 'tbm_template',
+    label: 'TBM 템플릿',
+    description: 'TBM 문서 작성에 쓰는 텍스트 템플릿입니다.',
+    editorMode: 'text',
+    bodyLabel: '템플릿 내용',
+  },
+  {
+    value: 'notice_template',
+    label: '공지 템플릿',
+    description: '공지 및 작업일지 계열 문서에 공통으로 쓰는 템플릿입니다.',
+    editorMode: 'text',
+    bodyLabel: '템플릿 내용',
+  },
+  {
+    value: 'education_template',
+    label: '교육 템플릿',
+    description: '안전교육 문서용 템플릿입니다.',
+    editorMode: 'text',
+    bodyLabel: '템플릿 내용',
+  },
+  {
+    value: 'ai_prompt',
+    label: 'AI 프롬프트',
+    description: 'AI 보조 작성용 프롬프트를 관리합니다.',
+    editorMode: 'text',
+    bodyLabel: '프롬프트',
+  },
+  {
+    value: 'ppe_catalog',
+    label: '보호구 카탈로그',
+    description: '보호구 선택에 사용하는 목록형 콘텐츠입니다.',
+    editorMode: 'list',
+    bodyLabel: '목록 값',
+  },
+  {
+    value: 'worker_trade',
+    label: '직종 목록',
+    description: '작업자 직종 선택에 사용하는 목록형 콘텐츠입니다.',
+    editorMode: 'list',
+    bodyLabel: '목록 값',
   },
 ];
 
@@ -181,6 +237,7 @@ export const CONTENT_TYPE_LABELS = {
 export const CONTENT_TYPE_META = {
   ...Object.fromEntries(CONTENT_TYPE_OPTIONS.map((option) => [option.value, option])),
 } as Record<SafetyContentType, (typeof CONTENT_TYPE_OPTIONS)[number]>;
+
 export const CONTENT_EDITOR_MODE_LABELS: Record<ContentEditorMode, string> = {
   list: '목록값',
   text: '텍스트',

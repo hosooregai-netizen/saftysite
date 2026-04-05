@@ -1,14 +1,13 @@
-import { SiteReportsScreen } from '@/features/site-reports/components/SiteReportsScreen';
+import { SiteDashboardScreen } from '@/features/erp/components/SiteDashboardScreen';
 
-interface SiteReportsPageProps {
+interface SiteDashboardPageProps {
   params: Promise<{
     siteKey: string;
   }>;
 }
 
-export default async function SiteReportsPage({ params }: SiteReportsPageProps) {
+export default async function SiteDashboardPage({ params }: SiteDashboardPageProps) {
   const { siteKey } = await params;
 
-  return <SiteReportsScreen siteKey={siteKey} />;
+  return <SiteDashboardScreen siteKey={siteKey} />;
 }
-
