@@ -110,7 +110,7 @@ export function K2bSection({ onReload }: K2bSectionProps) {
               onClick={() => inputRef.current?.click()}
               disabled={loading || applying}
             >
-              {loading ? '업로드 중...' : '파일 선택'}
+              {loading ? '엑셀 업로드 중...' : '엑셀 업로드'}
             </button>
           </div>
         </div>

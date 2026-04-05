@@ -1,11 +1,9 @@
 import { NextResponse } from 'next/server';
 import {
-  applyK2bImportServer,
   readRequiredAdminToken,
   SafetyServerApiError,
 } from '@/server/admin/safetyApiServer';
 import { applyLocalK2bWorkbook, LocalK2bImportError } from '@/server/k2b/localImport';
-import { mapBackendK2bApplyResult } from '@/server/admin/upstreamMappers';
 
 export const runtime = 'nodejs';
 
@@ -13,26 +11,30 @@ export async function POST(request: Request): Promise<Response> {
   try {
     const token = readRequiredAdminToken(request);
     const payload = (await request.json()) as Record<string, unknown>;
-    try {
+    const jobId =
+      typeof payload.job_id === 'string'
+        ? payload.job_id
+        : typeof payload.jobId === 'string'
+          ? payload.jobId
+          : '';
+    const sheetName =
+      typeof payload.sheet_name === 'string'
+        ? payload.sheet_name
+        : typeof payload.sheetName === 'string'
+          ? payload.sheetName
+          : '';
+    if (!jobId || !sheetName) {
       return NextResponse.json(
-        mapBackendK2bApplyResult(await applyK2bImportServer(token, payload, request)),
+        { error: 'K2B 작업 ID와 시트 이름이 필요합니다.' },
+        { status: 400 },
       );
-    } catch (error) {
-      if (
-        error instanceof SafetyServerApiError &&
-        error.status === 404 &&
-        typeof payload.job_id === 'string' &&
-        typeof payload.sheet_name === 'string'
-      ) {
-        return NextResponse.json(
-          await applyLocalK2bWorkbook(token, request, {
-            jobId: payload.job_id,
-            sheetName: payload.sheet_name,
-          }),
-        );
-      }
-      throw error;
     }
+    return NextResponse.json(
+      await applyLocalK2bWorkbook(token, request, {
+        jobId,
+        sheetName,
+      }),
+    );
   } catch (error) {
     if (error instanceof SafetyServerApiError) {
       return NextResponse.json({ error: error.message }, { status: error.status });

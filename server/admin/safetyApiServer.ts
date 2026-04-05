@@ -30,6 +30,8 @@ import type {
   ControllerDashboardData,
   SafetyAssignment,
   SafetyHeadquarter,
+  SafetyHeadquarterInput,
+  SafetyHeadquarterUpdateInput,
   SafetySiteInput,
   SafetySiteUpdateInput,
 } from '@/types/controller';

@@ -1,11 +1,9 @@
 import { NextResponse } from 'next/server';
 import {
-  parseK2bImportServer,
   readRequiredAdminToken,
   SafetyServerApiError,
 } from '@/server/admin/safetyApiServer';
 import { LocalK2bImportError, parseLocalK2bWorkbook } from '@/server/k2b/localImport';
-import { mapBackendK2bImportPreview } from '@/server/admin/upstreamMappers';
 
 export const runtime = 'nodejs';
 
@@ -18,18 +16,7 @@ export async function POST(request: Request): Promise<Response> {
       return NextResponse.json({ error: '업로드할 .xlsx 파일을 선택해 주세요.' }, { status: 400 });
     }
 
-    const nextFormData = new FormData();
-    nextFormData.set('file', file, file.name);
-    try {
-      return NextResponse.json(
-        mapBackendK2bImportPreview(await parseK2bImportServer(token, nextFormData, request)),
-      );
-    } catch (error) {
-      if (error instanceof SafetyServerApiError && error.status === 404) {
-        return NextResponse.json(await parseLocalK2bWorkbook(token, file, request));
-      }
-      throw error;
-    }
+    return NextResponse.json(await parseLocalK2bWorkbook(token, file, request));
   } catch (error) {
     if (error instanceof SafetyServerApiError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
