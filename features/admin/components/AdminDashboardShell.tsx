@@ -11,7 +11,6 @@ import styles from './AdminDashboardShell.module.css';
 
 interface AdminDashboardShellProps {
   activeSection: AdminSectionKey;
-  activeSectionDescription?: string;
   activeSectionLabel: string;
   backLabel?: string;
   banners: ReactNode;
@@ -25,7 +24,6 @@ interface AdminDashboardShellProps {
 
 export function AdminDashboardShell({
   activeSection,
-  activeSectionDescription,
   activeSectionLabel,
   backLabel,
   banners,
@@ -37,7 +35,6 @@ export function AdminDashboardShell({
   onSelectSection,
 }: AdminDashboardShellProps) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const hasHeroDescription = Boolean(activeSectionDescription);
   const shouldCenterContent = activeSection !== 'overview';
 
   return (
@@ -66,11 +63,7 @@ export function AdminDashboardShell({
 
             <div className={styles.contentColumn}>
               <header className={styles.hero}>
-                <div
-                  className={`${styles.heroBody} ${
-                    hasHeroDescription ? styles.heroBodyCompact : ''
-                  }`}
-                >
+                <div className={styles.heroBody}>
                   {backLabel && onBack ? (
                     <button
                       type="button"
@@ -81,27 +74,8 @@ export function AdminDashboardShell({
                       {'<'} {backLabel}
                     </button>
                   ) : null}
-                  <div
-                    className={`${styles.heroMain} ${
-                      hasHeroDescription ? styles.heroMainCompact : ''
-                    }`}
-                  >
-                    <h1
-                      className={`${styles.heroTitle} ${
-                        hasHeroDescription ? styles.heroTitleCompact : ''
-                      }`}
-                    >
-                      {activeSectionLabel}
-                    </h1>
-                    {activeSectionDescription ? (
-                      <p
-                        className={`${styles.heroDescription} ${
-                          hasHeroDescription ? styles.heroDescriptionCompact : ''
-                        }`}
-                      >
-                        {activeSectionDescription}
-                      </p>
-                    ) : null}
+                  <div className={styles.heroMain}>
+                    <h1 className={styles.heroTitle}>{activeSectionLabel}</h1>
                   </div>
                 </div>
               </header>

@@ -22,7 +22,7 @@ export async function runAdminFlow(page: Page) {
   await dismissImportantModalIfPresent(page);
 
   await page.goto(`${baseUrl}/admin?section=analytics`, { waitUntil: 'load' });
-  await page.getByText('실적/매출 요약').first().waitFor();
+  await page.getByText('매출/실적 집계').first().waitFor();
   await page.getByText('직원별 회차 매출').first().waitFor();
   await page.getByText('현장별 매출').first().waitFor();
   await page.getByText('계약유형별 계약금액').first().waitFor();

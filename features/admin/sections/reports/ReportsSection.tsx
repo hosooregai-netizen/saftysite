@@ -4,8 +4,8 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'rea
 import { useRouter, useSearchParams } from 'next/navigation';
 import ActionMenu from '@/components/ui/ActionMenu';
 import AppModal from '@/components/ui/AppModal';
+import { SectionHeaderFilterMenu } from '@/features/admin/components/SectionHeaderFilterMenu';
 import { SortableHeaderCell } from '@/features/admin/components/SortableHeaderCell';
-import { TableToolbar } from '@/features/admin/components/TableToolbar';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import { K2bImportModal } from '@/features/admin/sections/k2b/K2bImportModal';
 import {
@@ -16,7 +16,6 @@ import {
 } from '@/lib/admin/apiClient';
 import {
   buildControllerReportHref,
-  getControllerReportDispatchLabel,
   getControllerReportTypeLabel,
 } from '@/lib/admin/controllerReports';
 import {
@@ -74,11 +73,13 @@ interface ReportsSectionProps {
 }
 
 const REPORT_PAGE_SIZE = 100;
+const REPORT_PRESET_PAGE_SIZE = 500;
 const EMPTY_REVIEW_FORM = {
   note: '',
   ownerUserId: '',
   qualityStatus: 'unchecked' as ControllerQualityStatus,
 };
+type OverviewReportsPreset = 'badWorkplaceOverdue' | 'issueBundle' | 'siteOverdueBundle';
 
 function formatDateTime(value: string) {
   if (!value) return '-';
@@ -105,6 +106,58 @@ function addDays(value: string, days: number) {
   return parsed.toISOString().slice(0, 10);
 }
 
+function isCompletedReportStatus(row: ControllerReportRow) {
+  return (
+    row.status === 'submitted' ||
+    row.status === 'published' ||
+    row.status === 'archived' ||
+    (typeof row.progressRate === 'number' && row.progressRate >= 100)
+  );
+}
+
+function isBadWorkplaceOverdue(row: ControllerReportRow, today = new Date()) {
+  if (row.reportType !== 'bad_workplace' || isCompletedReportStatus(row)) return false;
+  const monthToken = row.reportMonth || row.updatedAt.slice(0, 7);
+  const matched = monthToken.match(/^(\d{4})-(\d{2})$/);
+  if (!matched) return false;
+  const deadline = new Date(Number(matched[1]), Number(matched[2]), 0);
+  deadline.setHours(0, 0, 0, 0);
+  deadline.setDate(deadline.getDate() + 7);
+  const todayStart = new Date(today);
+  todayStart.setHours(0, 0, 0, 0);
+  return deadline.getTime() < todayStart.getTime();
+}
+
+function isOverviewOverdue(row: ControllerReportRow, today = new Date()) {
+  if (row.reportType === 'quarterly_report') {
+    return row.dispatchStatus === 'overdue';
+  }
+
+  if (row.reportType === 'bad_workplace') {
+    return isBadWorkplaceOverdue(row, today);
+  }
+
+  return false;
+}
+
+function filterRowsForOverviewPreset(
+  rows: ControllerReportRow[],
+  preset: OverviewReportsPreset | null,
+  today = new Date(),
+) {
+  if (!preset) return rows;
+
+  if (preset === 'badWorkplaceOverdue') {
+    return rows.filter((row) => isBadWorkplaceOverdue(row, today));
+  }
+
+  if (preset === 'issueBundle') {
+    return rows.filter((row) => row.qualityStatus === 'issue' || isOverviewOverdue(row, today));
+  }
+
+  return rows.filter((row) => isOverviewOverdue(row, today));
+}
+
 function buildDispatchMeta(row: ControllerReportRow): ReportDispatchMeta {
   return row.dispatch ?? {
     deadlineDate: row.deadlineDate || addDays(row.visitDate || row.updatedAt.slice(0, 10), 7),
@@ -121,6 +174,163 @@ function buildDispatchMeta(row: ControllerReportRow): ReportDispatchMeta {
   };
 }
 
+interface ReportsFilterMenuProps {
+  activeCount: number;
+  assigneeFilter: string;
+  assigneeOptions: ReadonlyArray<readonly [string, string]>;
+  dateFrom: string;
+  dateTo: string;
+  headquarterFilter: string;
+  headquarterOptions: ReadonlyArray<readonly [string, string]>;
+  onAssigneeFilterChange: (value: string) => void;
+  onDateFromChange: (value: string) => void;
+  onDateToChange: (value: string) => void;
+  onHeadquarterFilterChange: (value: string) => void;
+  onQualityFilterChange: (value: string) => void;
+  onReportTypeChange: (value: 'all' | ControllerReportRow['reportType']) => void;
+  onReset: () => void;
+  onSiteFilterChange: (value: string) => void;
+  qualityFilter: string;
+  reportType: 'all' | ControllerReportRow['reportType'];
+  siteFilter: string;
+  siteOptions: ReadonlyArray<readonly [string, string]>;
+}
+
+function ReportsFilterMenu({
+  activeCount,
+  assigneeFilter,
+  assigneeOptions,
+  dateFrom,
+  dateTo,
+  headquarterFilter,
+  headquarterOptions,
+  onAssigneeFilterChange,
+  onDateFromChange,
+  onDateToChange,
+  onHeadquarterFilterChange,
+  onQualityFilterChange,
+  onReportTypeChange,
+  onReset,
+  onSiteFilterChange,
+  qualityFilter,
+  reportType,
+  siteFilter,
+  siteOptions,
+}: ReportsFilterMenuProps) {
+  return (
+    <SectionHeaderFilterMenu activeCount={activeCount} ariaLabel="전체 보고서 필터" onReset={onReset}>
+      <div className={styles.sectionHeaderMenuGrid}>
+        <div className={styles.sectionHeaderMenuField}>
+          <label htmlFor="reports-filter-type">유형</label>
+              <select
+                id="reports-filter-type"
+                className="app-select"
+                value={reportType}
+                onChange={(event) =>
+                  onReportTypeChange(event.target.value as 'all' | ControllerReportRow['reportType'])
+                }
+              >
+                <option value="all">전체 유형</option>
+                <option value="technical_guidance">지도보고서</option>
+                <option value="quarterly_report">분기 보고서</option>
+                <option value="bad_workplace">불량사업장</option>
+              </select>
+            </div>
+
+            <div className={styles.sectionHeaderMenuField}>
+              <label htmlFor="reports-filter-headquarter">사업장</label>
+              <select
+                id="reports-filter-headquarter"
+                className="app-select"
+                value={headquarterFilter}
+                onChange={(event) => onHeadquarterFilterChange(event.target.value)}
+              >
+                <option value="all">전체 사업장</option>
+                {headquarterOptions.map(([id, label]) => (
+                  <option key={id} value={id}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className={styles.sectionHeaderMenuField}>
+              <label htmlFor="reports-filter-site">현장</label>
+              <select
+                id="reports-filter-site"
+                className="app-select"
+                value={siteFilter}
+                onChange={(event) => onSiteFilterChange(event.target.value)}
+              >
+                <option value="all">전체 현장</option>
+                {siteOptions.map(([id, label]) => (
+                  <option key={id} value={id}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className={styles.sectionHeaderMenuField}>
+              <label htmlFor="reports-filter-assignee">담당자</label>
+              <select
+                id="reports-filter-assignee"
+                className="app-select"
+                value={assigneeFilter}
+                onChange={(event) => onAssigneeFilterChange(event.target.value)}
+              >
+                <option value="all">전체 담당자</option>
+                {assigneeOptions.map(([id, label]) => (
+                  <option key={id} value={id}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className={styles.sectionHeaderMenuField}>
+              <label htmlFor="reports-filter-quality">품질 체크</label>
+              <select
+                id="reports-filter-quality"
+                className="app-select"
+                value={qualityFilter}
+                onChange={(event) => onQualityFilterChange(event.target.value)}
+              >
+                <option value="all">전체 품질체크</option>
+                <option value="unchecked">미확인</option>
+                <option value="ok">확인완료</option>
+                <option value="issue">이슈</option>
+              </select>
+            </div>
+
+            <div className={styles.sectionHeaderMenuDateRange}>
+              <div className={styles.sectionHeaderMenuField}>
+                <label htmlFor="reports-filter-date-from">기준일 시작</label>
+                <input
+                  id="reports-filter-date-from"
+                  className="app-input"
+                  type="date"
+                  value={dateFrom}
+                  onChange={(event) => onDateFromChange(event.target.value)}
+                />
+              </div>
+
+              <div className={styles.sectionHeaderMenuField}>
+                <label htmlFor="reports-filter-date-to">기준일 종료</label>
+                <input
+                  id="reports-filter-date-to"
+                  className="app-input"
+                  type="date"
+                  value={dateTo}
+                  onChange={(event) => onDateToChange(event.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+    </SectionHeaderFilterMenu>
+  );
+}
+
 export function ReportsSection({
   currentUser,
   ensureSessionLoaded,
@@ -133,6 +343,12 @@ export function ReportsSection({
 }: ReportsSectionProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const overviewPreset = useMemo<OverviewReportsPreset | null>(() => {
+    const value = searchParams.get('overviewPreset');
+    return value === 'badWorkplaceOverdue' || value === 'issueBundle' || value === 'siteOverdueBundle'
+      ? value
+      : null;
+  }, [searchParams]);
   const [query, setQuery] = useState(() => searchParams.get('query') || '');
   const [sort, setSort] = useState<TableSortState>({ direction: 'desc', key: 'updatedAt' });
   const [reportType, setReportType] = useState<'all' | ControllerReportRow['reportType']>(() => {
@@ -143,11 +359,9 @@ export function ReportsSection({
       ? value
       : 'all';
   });
-  const [statusFilter, setStatusFilter] = useState<'all' | string>(() => searchParams.get('status') || 'all');
   const [headquarterFilter, setHeadquarterFilter] = useState(() => searchParams.get('headquarterId') || 'all');
   const [siteFilter, setSiteFilter] = useState(() => searchParams.get('siteId') || 'all');
   const [assigneeFilter, setAssigneeFilter] = useState(() => searchParams.get('assigneeUserId') || 'all');
-  const [dispatchFilter, setDispatchFilter] = useState<'all' | string>(() => searchParams.get('dispatchStatus') || 'all');
   const [qualityFilter, setQualityFilter] = useState<'all' | string>(() => searchParams.get('qualityStatus') || 'all');
   const [dateFrom, setDateFrom] = useState(() => searchParams.get('dateFrom') || '');
   const [dateTo, setDateTo] = useState(() => searchParams.get('dateTo') || '');
@@ -176,20 +390,24 @@ export function ReportsSection({
         assigneeUserId: assigneeFilter === 'all' ? '' : assigneeFilter,
         dateFrom,
         dateTo,
-        dispatchStatus: dispatchFilter === 'all' ? '' : dispatchFilter,
         headquarterId: headquarterFilter === 'all' ? '' : headquarterFilter,
-        limit: REPORT_PAGE_SIZE,
+        limit: overviewPreset ? REPORT_PRESET_PAGE_SIZE : REPORT_PAGE_SIZE,
         offset,
         qualityStatus: qualityFilter === 'all' ? '' : qualityFilter,
         query: deferredQuery,
-        reportType: reportType === 'all' ? '' : reportType,
+        reportType:
+          overviewPreset === 'badWorkplaceOverdue' && reportType === 'all'
+            ? 'bad_workplace'
+            : reportType === 'all'
+              ? ''
+              : reportType,
         siteId: siteFilter === 'all' ? '' : siteFilter,
         sortBy: sort.key,
         sortDir: sort.direction,
-        status: statusFilter === 'all' ? '' : statusFilter,
       });
-      setRows(response.rows);
-      setTotal(response.total);
+      const filteredRows = filterRowsForOverviewPreset(response.rows, overviewPreset);
+      setRows(filteredRows);
+      setTotal(overviewPreset ? filteredRows.length : response.total);
       setSelectedKeys([]);
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : '보고서 목록을 불러오지 못했습니다.');
@@ -201,7 +419,6 @@ export function ReportsSection({
     dateFrom,
     dateTo,
     deferredQuery,
-    dispatchFilter,
     headquarterFilter,
     offset,
     qualityFilter,
@@ -209,7 +426,7 @@ export function ReportsSection({
     siteFilter,
     sort.direction,
     sort.key,
-    statusFilter,
+    overviewPreset,
   ]);
 
   useEffect(() => {
@@ -253,10 +470,79 @@ export function ReportsSection({
     () => users.map((user) => [user.id, user.name] as const),
     [users],
   );
+  const activeFilterCount = useMemo(
+    () =>
+      [
+        Boolean(overviewPreset),
+        reportType !== 'all',
+        headquarterFilter !== 'all',
+        siteFilter !== 'all',
+        assigneeFilter !== 'all',
+        qualityFilter !== 'all',
+        Boolean(dateFrom),
+        Boolean(dateTo),
+      ].filter(Boolean).length,
+    [
+      assigneeFilter,
+      dateFrom,
+      dateTo,
+      headquarterFilter,
+      overviewPreset,
+      qualityFilter,
+      reportType,
+      siteFilter,
+    ],
+  );
 
   const handleSortChange = (next: TableSortState) => {
     setOffset(0);
     setSort(next);
+  };
+
+  const handleReportTypeFilterChange = (value: 'all' | ControllerReportRow['reportType']) => {
+    setOffset(0);
+    setReportType(value);
+  };
+
+  const handleHeadquarterFilterChange = (value: string) => {
+    setOffset(0);
+    setHeadquarterFilter(value);
+  };
+
+  const handleSiteFilterChange = (value: string) => {
+    setOffset(0);
+    setSiteFilter(value);
+  };
+
+  const handleAssigneeFilterChange = (value: string) => {
+    setOffset(0);
+    setAssigneeFilter(value);
+  };
+
+  const handleQualityFilterChange = (value: string) => {
+    setOffset(0);
+    setQualityFilter(value);
+  };
+
+  const handleDateFromChange = (value: string) => {
+    setOffset(0);
+    setDateFrom(value);
+  };
+
+  const handleDateToChange = (value: string) => {
+    setOffset(0);
+    setDateTo(value);
+  };
+
+  const resetHeaderFilters = () => {
+    setOffset(0);
+    setReportType('all');
+    setHeadquarterFilter('all');
+    setSiteFilter('all');
+    setAssigneeFilter('all');
+    setQualityFilter('all');
+    setDateFrom('');
+    setDateTo('');
   };
 
   const openReviewModal = (row: ControllerReportRow) => {
@@ -479,7 +765,6 @@ export function ReportsSection({
       assignee_user_id: assigneeFilter === 'all' ? '' : assigneeFilter,
       date_from: dateFrom,
       date_to: dateTo,
-      dispatch_status: dispatchFilter === 'all' ? '' : dispatchFilter,
       headquarter_id: headquarterFilter === 'all' ? '' : headquarterFilter,
       quality_status: qualityFilter === 'all' ? '' : qualityFilter,
       query,
@@ -487,7 +772,6 @@ export function ReportsSection({
       site_id: siteFilter === 'all' ? '' : siteFilter,
       sort_by: sort.key,
       sort_dir: sort.direction,
-      status: statusFilter === 'all' ? '' : statusFilter,
     }).catch(() =>
       exportAdminWorkbook('reports', [
         {
@@ -498,10 +782,8 @@ export function ReportsSection({
             { key: 'siteName', label: '현장' },
             { key: 'headquarterName', label: '사업장' },
             { key: 'assigneeName', label: '담당자' },
-            { key: 'status', label: '상태' },
             { key: 'visitDate', label: '기준일' },
             { key: 'updatedAt', label: '수정일' },
-            { key: 'dispatchStatus', label: '발송상태' },
             { key: 'deadlineDate', label: '마감일' },
             { key: 'qualityStatus', label: '품질체크' },
             { key: 'checkerUserId', label: '체크 담당자' },
@@ -510,13 +792,11 @@ export function ReportsSection({
             assigneeName: row.assigneeName,
             checkerUserId: users.find((user) => user.id === row.checkerUserId)?.name || '',
             deadlineDate: row.deadlineDate,
-            dispatchStatus: getControllerReportDispatchLabel(row),
             headquarterName: row.headquarterName,
             qualityStatus: getQualityStatusLabel(row.qualityStatus),
             reportTitle: row.reportTitle || row.periodLabel || row.reportKey,
             reportType: getControllerReportTypeLabel(row.reportType),
             siteName: row.siteName,
-            status: row.status,
             updatedAt: formatDateTime(row.updatedAt),
             visitDate: formatDateOnly(row.visitDate),
           })),
@@ -549,14 +829,54 @@ export function ReportsSection({
     await fetchRows();
   };
 
+  const openReportRow = (row: ControllerReportRow) => {
+    router.push(buildControllerReportHref(row));
+  };
+
   return (
-    <section className={`${styles.sectionCard} ${styles.listSectionCard}`}>
-      <div className={styles.sectionHeader}>
-        <div>
+    <section className={`${styles.sectionCard} ${styles.listSectionCard} ${styles.reportsSectionCard}`}>
+      <div className={`${styles.sectionHeader} ${styles.reportsSectionHeader}`}>
+        <div className={styles.reportsSectionHeaderTitle}>
           <h2 className={styles.sectionTitle}>전체 보고서</h2>
         </div>
-        <div className={styles.sectionHeaderActions}>
-          <span className="app-chip">전체 {total}건</span>
+        <div className={`${styles.sectionHeaderActions} ${styles.reportsSectionHeaderActions}`}>
+          <input
+            className={`app-input ${styles.sectionHeaderSearch} ${styles.reportsSectionSearch}`}
+            placeholder="보고서명, 현장명, 사업장명, 담당자로 검색"
+            value={query}
+            onChange={(event) => {
+              setOffset(0);
+              setQuery(event.target.value);
+            }}
+          />
+          <ReportsFilterMenu
+            activeCount={activeFilterCount}
+            assigneeFilter={assigneeFilter}
+            assigneeOptions={assigneeOptions}
+            dateFrom={dateFrom}
+            dateTo={dateTo}
+            headquarterFilter={headquarterFilter}
+            headquarterOptions={headquarterOptions}
+            onAssigneeFilterChange={handleAssigneeFilterChange}
+            onDateFromChange={handleDateFromChange}
+            onDateToChange={handleDateToChange}
+            onHeadquarterFilterChange={handleHeadquarterFilterChange}
+            onQualityFilterChange={handleQualityFilterChange}
+            onReportTypeChange={handleReportTypeFilterChange}
+            onReset={resetHeaderFilters}
+            onSiteFilterChange={handleSiteFilterChange}
+            qualityFilter={qualityFilter}
+            reportType={reportType}
+            siteFilter={siteFilter}
+            siteOptions={siteOptions}
+          />
+          <button
+            type="button"
+            className="app-button app-button-secondary"
+            onClick={() => void handleExportList()}
+          >
+            엑셀 내보내기
+          </button>
           <button
             type="button"
             className="app-button app-button-secondary"
@@ -571,141 +891,9 @@ export function ReportsSection({
         {error ? <div className={styles.bannerError}>{error}</div> : null}
         {notice ? <div className={styles.bannerNotice}>{notice}</div> : null}
 
-        <TableToolbar
-          countLabel={`표시 ${rows.length} / 전체 ${total}건`}
-          filters={
-            <>
-              <select
-                className={`app-select ${styles.toolbarSelect}`}
-                value={reportType}
-                onChange={(event) => {
-                  setOffset(0);
-                  setReportType(event.target.value as 'all' | ControllerReportRow['reportType']);
-                }}
-              >
-                <option value="all">전체 유형</option>
-                <option value="technical_guidance">지도보고서</option>
-                <option value="quarterly_report">분기 보고서</option>
-                <option value="bad_workplace">불량사업장</option>
-              </select>
-              <select
-                className={`app-select ${styles.toolbarSelect}`}
-                value={statusFilter}
-                onChange={(event) => {
-                  setOffset(0);
-                  setStatusFilter(event.target.value);
-                }}
-              >
-                <option value="all">전체 상태</option>
-                <option value="draft">작성중</option>
-                <option value="submitted">제출</option>
-                <option value="published">발행</option>
-                <option value="archived">보관</option>
-              </select>
-              <select
-                className={`app-select ${styles.toolbarSelect}`}
-                value={headquarterFilter}
-                onChange={(event) => {
-                  setOffset(0);
-                  setHeadquarterFilter(event.target.value);
-                }}
-              >
-                <option value="all">전체 사업장</option>
-                {headquarterOptions.map(([id, label]) => (
-                  <option key={id} value={id}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-              <select
-                className={`app-select ${styles.toolbarSelect}`}
-                value={siteFilter}
-                onChange={(event) => {
-                  setOffset(0);
-                  setSiteFilter(event.target.value);
-                }}
-              >
-                <option value="all">전체 현장</option>
-                {siteOptions.map(([id, label]) => (
-                  <option key={id} value={id}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-              <select
-                className={`app-select ${styles.toolbarSelect}`}
-                value={assigneeFilter}
-                onChange={(event) => {
-                  setOffset(0);
-                  setAssigneeFilter(event.target.value);
-                }}
-              >
-                <option value="all">전체 담당자</option>
-                {assigneeOptions.map(([id, label]) => (
-                  <option key={id} value={id}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-              <select
-                className={`app-select ${styles.toolbarSelect}`}
-                value={dispatchFilter}
-                onChange={(event) => {
-                  setOffset(0);
-                  setDispatchFilter(event.target.value);
-                }}
-              >
-                <option value="all">전체 발송상태</option>
-                <option value="normal">정상</option>
-                <option value="warning">경고</option>
-                <option value="overdue">지연</option>
-                <option value="sent">발송완료</option>
-              </select>
-              <select
-                className={`app-select ${styles.toolbarSelect}`}
-                value={qualityFilter}
-                onChange={(event) => {
-                  setOffset(0);
-                  setQualityFilter(event.target.value);
-                }}
-              >
-                <option value="all">전체 품질체크</option>
-                <option value="unchecked">미확인</option>
-                <option value="ok">확인완료</option>
-                <option value="issue">이슈</option>
-              </select>
-              <input
-                className={`app-input ${styles.toolbarSelect}`}
-                type="date"
-                value={dateFrom}
-                onChange={(event) => {
-                  setOffset(0);
-                  setDateFrom(event.target.value);
-                }}
-              />
-              <input
-                className={`app-input ${styles.toolbarSelect}`}
-                type="date"
-                value={dateTo}
-                onChange={(event) => {
-                  setOffset(0);
-                  setDateTo(event.target.value);
-                }}
-              />
-            </>
-          }
-          onExport={() => void handleExportList()}
-          onQueryChange={(value) => {
-            setOffset(0);
-            setQuery(value);
-          }}
-          query={query}
-          queryPlaceholder="보고서명, 현장명, 사업장명, 담당자로 검색"
-        />
-
         {selectedRows.length > 0 ? (
           <div className={styles.bulkActionBar}>
-            <span className="app-chip">선택 {selectedRows.length}건</span>
+            <span className={styles.reportsSectionHeaderCount}>선택 {selectedRows.length}건</span>
             <button
               type="button"
               className="app-button app-button-secondary"
@@ -756,50 +944,16 @@ export function ReportsSection({
                         }
                       />
                     </th>
-                    <SortableHeaderCell
-                      column={{ key: 'reportType' }}
-                      current={sort}
-                      label="유형"
-                      onChange={handleSortChange}
-                    />
+                    <th>유형</th>
                     <SortableHeaderCell
                       column={{ key: 'reportTitle' }}
                       current={sort}
                       label="보고서"
                       onChange={handleSortChange}
                     />
-                    <SortableHeaderCell
-                      column={{ key: 'siteName' }}
-                      current={sort}
-                      label="현장"
-                      onChange={handleSortChange}
-                    />
-                    <SortableHeaderCell
-                      column={{ key: 'assigneeName' }}
-                      current={sort}
-                      label="담당자"
-                      onChange={handleSortChange}
-                    />
-                    <SortableHeaderCell
-                      column={{ key: 'status' }}
-                      current={sort}
-                      label="상태"
-                      onChange={handleSortChange}
-                    />
-                    <SortableHeaderCell
-                      column={{ key: 'dispatchStatus' }}
-                      current={sort}
-                      defaultDirection="desc"
-                      label="발송"
-                      onChange={handleSortChange}
-                    />
-                    <SortableHeaderCell
-                      column={{ key: 'qualityStatus' }}
-                      current={sort}
-                      defaultDirection="desc"
-                      label="품질체크"
-                      onChange={handleSortChange}
-                    />
+                    <th>현장</th>
+                    <th>담당자</th>
+                    <th>품질체크</th>
                     <SortableHeaderCell
                       column={{ key: 'visitDate' }}
                       current={sort}
@@ -819,8 +973,18 @@ export function ReportsSection({
                 </thead>
                 <tbody>
                   {rows.map((row) => (
-                    <tr key={row.reportKey}>
-                      <td>
+                    <tr
+                      key={row.reportKey}
+                      className={styles.tableClickableRow}
+                      tabIndex={0}
+                      onClick={() => openReportRow(row)}
+                      onKeyDown={(event) => {
+                        if (event.key !== 'Enter' && event.key !== ' ') return;
+                        event.preventDefault();
+                        openReportRow(row);
+                      }}
+                    >
+                      <td onClick={(event) => event.stopPropagation()}>
                         <input
                           type="checkbox"
                           checked={selectedKeys.includes(row.reportKey)}
@@ -838,35 +1002,13 @@ export function ReportsSection({
                         <div className={styles.tablePrimary}>
                           {row.reportTitle || row.periodLabel || row.reportKey}
                         </div>
-                        <div className={styles.tableSecondary}>
-                          {row.periodLabel || row.reportMonth || row.reportKey}
-                        </div>
                       </td>
-                      <td>
-                        <div className={styles.tablePrimary}>{row.siteName}</div>
-                        <div className={styles.tableSecondary}>{row.headquarterName || '-'}</div>
-                      </td>
+                      <td>{row.siteName}</td>
                       <td>{row.assigneeName || '-'}</td>
-                      <td>{row.status}</td>
-                      <td>
-                        <div className={styles.tablePrimary}>{getControllerReportDispatchLabel(row)}</div>
-                        <div className={styles.tableSecondary}>
-                          {buildDispatchMeta(row).replyAt
-                            ? `회신 ${formatDateTime(buildDispatchMeta(row).replyAt)}`
-                            : buildDispatchMeta(row).readAt
-                              ? `열람 ${formatDateTime(buildDispatchMeta(row).readAt)}`
-                              : `마감 ${row.deadlineDate || '-'}`}
-                        </div>
-                      </td>
-                      <td>
-                        <div className={styles.tablePrimary}>{getQualityStatusLabel(row.qualityStatus)}</div>
-                        <div className={styles.tableSecondary}>
-                          {users.find((user) => user.id === row.checkerUserId)?.name || '-'}
-                        </div>
-                      </td>
+                      <td>{getQualityStatusLabel(row.qualityStatus)}</td>
                       <td>{formatDateOnly(row.visitDate)}</td>
                       <td>{formatDateTime(row.updatedAt)}</td>
-                      <td>
+                      <td onClick={(event) => event.stopPropagation()}>
                         <div className={styles.tableActionMenuWrap}>
                           <ActionMenu
                             label={`${row.reportTitle || row.reportKey} 메뉴 열기`}

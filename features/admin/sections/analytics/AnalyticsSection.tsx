@@ -3,8 +3,11 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { SortableHeaderCell } from '@/features/admin/components/SortableHeaderCell';
-import { TableToolbar } from '@/features/admin/components/TableToolbar';
+import {
+  buildSortMenuOptions,
+  SortableHeaderCell,
+} from '@/features/admin/components/SortableHeaderCell';
+import { SectionHeaderFilterMenu } from '@/features/admin/components/SectionHeaderFilterMenu';
 import { AnalyticsCharts } from '@/features/admin/sections/analytics/AnalyticsCharts';
 import {
   buildAdminAnalyticsModel,
@@ -99,6 +102,11 @@ export function AnalyticsSection({
   }, [contractType, headquarterId, period, query, userId]);
 
   const analytics = remoteAnalytics ?? fallbackAnalytics;
+  const activeFilterCount =
+    (period !== 'month' ? 1 : 0) +
+    (headquarterId ? 1 : 0) +
+    (userId ? 1 : 0) +
+    (contractType ? 1 : 0);
 
   const sortedEmployeeRows = useMemo(() => {
     const direction = employeeSort.direction === 'asc' ? 1 : -1;
@@ -171,14 +179,97 @@ export function AnalyticsSection({
       }),
     );
 
+  const resetHeaderFilters = () => {
+    setPeriod('month');
+    setHeadquarterId('');
+    setUserId('');
+    setContractType('');
+  };
+
   return (
     <div className={styles.dashboardStack}>
       <section className={styles.sectionCard}>
         <div className={styles.sectionHeader}>
-          <div>
-            <h2 className={styles.sectionTitle}>실적/매출 요약</h2>
+          <div className={styles.sectionHeaderTitleBlock}>
+            <h2 className={styles.sectionTitle}>매출/실적 집계</h2>
           </div>
-          <div className={styles.sectionHeaderActions}>
+          <div className={`${styles.sectionHeaderActions} ${styles.sectionHeaderToolbarActions}`}>
+            <input
+              className={`app-input ${styles.sectionHeaderSearch} ${styles.sectionHeaderToolbarSearch}`}
+              placeholder="직원명, 현장명, 사업장명으로 검색"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+            <SectionHeaderFilterMenu
+              activeCount={activeFilterCount}
+              ariaLabel="실적 집계 필터"
+              onReset={resetHeaderFilters}
+            >
+              <div className={styles.sectionHeaderMenuGrid}>
+                <div className={styles.sectionHeaderMenuField}>
+                  <label htmlFor="analytics-filter-period">집계 기간</label>
+                  <select
+                    id="analytics-filter-period"
+                    className="app-select"
+                    value={period}
+                    onChange={(event) => setPeriod(event.target.value as AdminAnalyticsPeriod)}
+                  >
+                    <option value="month">월</option>
+                    <option value="quarter">분기</option>
+                    <option value="year">연</option>
+                    <option value="all">전체</option>
+                  </select>
+                </div>
+                <div className={styles.sectionHeaderMenuField}>
+                  <label htmlFor="analytics-filter-headquarter">사업장</label>
+                  <select
+                    id="analytics-filter-headquarter"
+                    className="app-select"
+                    value={headquarterId}
+                    onChange={(event) => setHeadquarterId(event.target.value)}
+                  >
+                    <option value="">전체 사업장</option>
+                    {data.headquarters.map((headquarter) => (
+                      <option key={headquarter.id} value={headquarter.id}>
+                        {headquarter.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className={styles.sectionHeaderMenuField}>
+                  <label htmlFor="analytics-filter-user">직원</label>
+                  <select
+                    id="analytics-filter-user"
+                    className="app-select"
+                    value={userId}
+                    onChange={(event) => setUserId(event.target.value)}
+                  >
+                    <option value="">전체 직원</option>
+                    {data.users.map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className={styles.sectionHeaderMenuField}>
+                  <label htmlFor="analytics-filter-contract-type">계약유형</label>
+                  <select
+                    id="analytics-filter-contract-type"
+                    className="app-select"
+                    value={contractType}
+                    onChange={(event) => setContractType(event.target.value)}
+                  >
+                    <option value="">전체 계약유형</option>
+                    <option value="private">민간계약</option>
+                    <option value="negotiated">수의계약</option>
+                    <option value="bid">입찰계약</option>
+                    <option value="maintenance">유지보수</option>
+                    <option value="other">기타</option>
+                  </select>
+                </div>
+              </div>
+            </SectionHeaderFilterMenu>
             <button
               type="button"
               className="app-button app-button-secondary"
@@ -198,64 +289,6 @@ export function AnalyticsSection({
                 <span className={styles.metricLinkMeta}>{card.meta}</span>
               </div>
             ))}
-          </div>
-          <div className={styles.filterRow} style={{ marginTop: 18 }}>
-            <TableToolbar
-              countLabel={`직원 ${sortedEmployeeRows.length}명 · 현장 ${sortedSiteRevenueRows.length}곳`}
-              filters={
-                <>
-                  <select
-                    className={`app-select ${styles.toolbarSelect}`}
-                    value={period}
-                    onChange={(event) => setPeriod(event.target.value as AdminAnalyticsPeriod)}
-                  >
-                    <option value="month">월</option>
-                    <option value="quarter">분기</option>
-                    <option value="year">연</option>
-                    <option value="all">전체</option>
-                  </select>
-                  <select
-                    className={`app-select ${styles.toolbarSelect}`}
-                    value={headquarterId}
-                    onChange={(event) => setHeadquarterId(event.target.value)}
-                  >
-                    <option value="">전체 사업장</option>
-                    {data.headquarters.map((headquarter) => (
-                      <option key={headquarter.id} value={headquarter.id}>
-                        {headquarter.name}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    className={`app-select ${styles.toolbarSelect}`}
-                    value={userId}
-                    onChange={(event) => setUserId(event.target.value)}
-                  >
-                    <option value="">전체 직원</option>
-                    {data.users.map((user) => (
-                      <option key={user.id} value={user.id}>
-                        {user.name}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    className={`app-select ${styles.toolbarSelect}`}
-                    value={contractType}
-                    onChange={(event) => setContractType(event.target.value)}
-                  >
-                    <option value="">전체 계약유형</option>
-                    <option value="private">민간계약</option>
-                    <option value="negotiated">수의계약</option>
-                    <option value="bid">입찰계약</option>
-                    <option value="maintenance">유지보수</option>
-                    <option value="other">기타</option>
-                  </select>
-                </>
-              }
-              onQueryChange={setQuery}
-              query={query}
-              queryPlaceholder="직원명, 현장명, 사업장명으로 검색"
-            />
           </div>
         </div>
       </section>
@@ -281,9 +314,7 @@ export function AnalyticsSection({
           <div>
             <h2 className={styles.sectionTitle}>직원별 실적/매출</h2>
           </div>
-          <div className={styles.sectionHeaderActions}>
-            <span className="app-chip">표시 {sortedEmployeeRows.length}명</span>
-          </div>
+          <div className={styles.sectionHeaderActions} />
         </div>
         <div className={styles.sectionBody}>
           {sortedEmployeeRows.length === 0 ? (
@@ -384,18 +415,30 @@ export function AnalyticsSection({
                         current={siteRevenueSort}
                         label="현장"
                         onChange={setSiteRevenueSort}
+                        sortMenuOptions={buildSortMenuOptions('siteName', {
+                          asc: '현장 가나다순',
+                          desc: '현장 역순',
+                        })}
                       />
                       <SortableHeaderCell
                         column={{ key: 'headquarterName' }}
                         current={siteRevenueSort}
                         label="사업장"
                         onChange={setSiteRevenueSort}
+                        sortMenuOptions={buildSortMenuOptions('headquarterName', {
+                          asc: '사업장 가나다순',
+                          desc: '사업장 역순',
+                        })}
                       />
                       <SortableHeaderCell
                         column={{ key: 'contractTypeLabel' }}
                         current={siteRevenueSort}
                         label="계약유형"
                         onChange={setSiteRevenueSort}
+                        sortMenuOptions={buildSortMenuOptions('contractTypeLabel', {
+                          asc: '계약유형 오름차순',
+                          desc: '계약유형 내림차순',
+                        })}
                       />
                       <SortableHeaderCell
                         column={{ key: 'executedRounds' }}

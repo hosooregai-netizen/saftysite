@@ -3,8 +3,10 @@
 import { useDeferredValue, useMemo, useState } from 'react';
 import AppModal from '@/components/ui/AppModal';
 import ActionMenu from '@/components/ui/ActionMenu';
-import { SortableHeaderCell } from '@/features/admin/components/SortableHeaderCell';
-import { TableToolbar } from '@/features/admin/components/TableToolbar';
+import {
+  buildSortMenuOptions,
+  SortableHeaderCell,
+} from '@/features/admin/components/SortableHeaderCell';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import {
   uploadSafetyAssetFile,
@@ -264,15 +266,69 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
     if (!confirmed) return;
     await onDelete(item.id);
   };
+  const handleExport = () =>
+    void exportAdminWorkbook('content', [
+      {
+        name: '콘텐츠',
+        columns: [
+          { key: 'content_type', label: '유형' },
+          { key: 'title', label: '제목' },
+          { key: 'preview', label: '내용 미리보기' },
+          { key: 'attachment', label: '첨부 요약' },
+          { key: 'period', label: '시작일 ~ 종료일' },
+          { key: 'sort_order', label: '정렬순서' },
+          { key: 'updated_at', label: '수정일' },
+        ],
+        rows: sortedItems.map((item) => ({
+          attachment: getContentAttachmentSummary(item),
+          content_type: CONTENT_TYPE_LABELS[item.content_type],
+          period: formatDateRange(item.effective_from, item.effective_to) || '',
+          preview: getContentPreview(item),
+          sort_order: item.sort_order,
+          title: item.title,
+          updated_at: item.updated_at,
+        })),
+      },
+    ]);
 
   return (
     <section className={`${styles.sectionCard} ${styles.listSectionCard}`}>
       <div className={styles.sectionHeader}>
-        <div>
+        <div className={styles.sectionHeaderTitleBlock}>
           <h2 className={styles.sectionTitle}>콘텐츠 데이터 CRUD</h2>
         </div>
-        <div className={styles.sectionHeaderActions}>
-          <span className="app-chip">총 {filteredItems.length}개</span>
+        <div className={`${styles.sectionHeaderActions} ${styles.sectionHeaderToolbarActions}`}>
+          <input
+            className={`app-input ${styles.sectionHeaderSearch} ${styles.sectionHeaderToolbarSearch}`}
+            placeholder="제목, 미리보기 내용으로 검색"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+          <select
+            className={`app-select ${styles.sectionHeaderSelect}`}
+            aria-label="콘텐츠 분류 필터"
+            value={activeType}
+            onChange={(event) =>
+              setActiveType(
+                event.target.value as SafetyContentItem['content_type'] | 'all',
+              )
+            }
+          >
+            <option value="all">전체 분류</option>
+            {CONTENT_TYPE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            className="app-button app-button-secondary"
+            onClick={handleExport}
+            disabled={busy}
+          >
+            엑셀 내보내기
+          </button>
           <button
             type="button"
             className="app-button app-button-primary"
@@ -285,57 +341,6 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
       </div>
 
       <div className={styles.sectionBody}>
-        <TableToolbar
-          countLabel={`표시 ${sortedItems.length} / 전체 ${items.length}개`}
-          filters={
-            <select
-              className={`app-select ${styles.contentFilterSelect}`}
-              aria-label="콘텐츠 분류 필터"
-              value={activeType}
-              onChange={(event) =>
-                setActiveType(
-                  event.target.value as SafetyContentItem['content_type'] | 'all',
-                )
-              }
-            >
-              <option value="all">전체 분류</option>
-              {CONTENT_TYPE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          }
-          onExport={() =>
-            void exportAdminWorkbook('content', [
-              {
-                name: '콘텐츠',
-                columns: [
-                  { key: 'content_type', label: '유형' },
-                  { key: 'title', label: '제목' },
-                  { key: 'preview', label: '내용 미리보기' },
-                  { key: 'attachment', label: '첨부 요약' },
-                  { key: 'period', label: '시작일 ~ 종료일' },
-                  { key: 'sort_order', label: '정렬순서' },
-                  { key: 'updated_at', label: '수정일' },
-                ],
-                rows: sortedItems.map((item) => ({
-                  attachment: getContentAttachmentSummary(item),
-                  content_type: CONTENT_TYPE_LABELS[item.content_type],
-                  period: formatDateRange(item.effective_from, item.effective_to) || '',
-                  preview: getContentPreview(item),
-                  sort_order: item.sort_order,
-                  title: item.title,
-                  updated_at: item.updated_at,
-                })),
-              },
-            ])
-          }
-          onQueryChange={setQuery}
-          query={query}
-          queryPlaceholder="제목, 미리보기 내용으로 검색"
-        />
-
         <div className={styles.tableShell}>
           {sortedItems.length === 0 ? (
             <div className={styles.tableEmpty}>등록된 콘텐츠 데이터가 없습니다.</div>
@@ -358,6 +363,10 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
                       current={sort}
                       label="유형"
                       onChange={setSort}
+                      sortMenuOptions={buildSortMenuOptions('content_type', {
+                        asc: '유형 오름차순',
+                        desc: '유형 내림차순',
+                      })}
                     />
                     <SortableHeaderCell
                       column={{ key: 'title' }}

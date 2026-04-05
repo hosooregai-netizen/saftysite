@@ -131,7 +131,7 @@ function renderAdminSection(
         />
       );
     case 'mailbox':
-      return <MailboxSection />;
+      return <MailboxSection currentUserName={currentUser.name} />;
     case 'photos':
       return <PhotosSection sites={sites} />;
     case 'schedules':
@@ -172,11 +172,6 @@ export function AdminDashboardScreen({
     dashboard.selectedSite?.site_name?.trim() ||
     dashboard.selectedHeadquarter?.name?.trim() ||
     '사업장 목록';
-  const headquartersDescription = dashboard.selectedSite
-    ? '현장 메인'
-    : dashboard.selectedHeadquarter
-      ? '현장 목록'
-      : undefined;
   const shellBackLabel =
     dashboard.activeSection === 'headquarters'
       ? dashboard.selectedSiteId
@@ -197,9 +192,6 @@ export function AdminDashboardScreen({
   return (
     <AdminDashboardShell
       activeSection={dashboard.activeSection}
-      activeSectionDescription={
-        dashboard.activeSection === 'headquarters' ? headquartersDescription : undefined
-      }
       activeSectionLabel={
         dashboard.activeSection === 'headquarters'
           ? headquartersTitle

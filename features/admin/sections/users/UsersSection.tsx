@@ -99,7 +99,6 @@ export function UsersSection(props: UsersSectionProps) {
         setQuery={state.setQuery}
         sort={state.sort}
         statusFilter={state.statusFilter}
-        totalUserCount={users.length}
         userOverviewById={state.userOverviewById}
         query={state.query}
       />

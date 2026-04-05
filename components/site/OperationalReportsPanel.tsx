@@ -70,9 +70,6 @@ export default function OperationalReportsPanel({
       <div className={styles.sectionHeader}>
         <div>
           <h2 className={styles.sectionTitle}>추가 업무 문서</h2>
-          <p className={styles.sectionDescription}>
-            기술지도 보고서 흐름 안에서 분기 종합보고서와 불량사업장 신고서를 이어서 작성할 수 있습니다.
-          </p>
         </div>
         <div className={styles.statusRow}>
           <span className="app-chip">기술지도 {siteReportCount}건</span>
@@ -92,9 +89,6 @@ export default function OperationalReportsPanel({
               <strong className={styles.reportCardTitle}>분기 종합보고서</strong>
               <span className="app-chip">대상 분기 {quarterTargets.length}개</span>
             </div>
-            <p className={styles.reportCardDescription}>
-              현장이 이미 선택된 상태이므로, 대상 분기를 고른 뒤 기준 기술지도 보고서를 확인하면서 분기 초안을 바로 이어서 작성할 수 있습니다.
-            </p>
 
             {quarterTargets.length === 0 ? (
               <>
@@ -152,9 +146,6 @@ export default function OperationalReportsPanel({
               <strong className={styles.reportCardTitle}>불량사업장 신고</strong>
               <span className="app-chip">{formatReportMonthLabel(currentReportMonth)}</span>
             </div>
-            <p className={styles.reportCardDescription}>
-              최신 기술지도 보고서를 자동으로 제안하고, 필요하면 다른 원본 보고서와 지적사항을 직접 골라 신고 초안을 작성할 수 있습니다.
-            </p>
             <div className={styles.reportActions}>
               <Link
                 href={`/sites/${encodeURIComponent(currentSite.id)}/bad-workplace/${encodeURIComponent(currentReportMonth)}`}

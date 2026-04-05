@@ -137,9 +137,6 @@ export function SitePhotoAlbumScreen({
                   </Link>
                   <div className={styles.heroMain}>
                     <h1 className={styles.heroTitle}>현장 사진첩 - {currentSite.siteName}</h1>
-                    <p className={styles.heroDescription}>
-                      원본 메타데이터를 보존한 업로드와 legacy 보고서 사진 통합 조회를 지원합니다.
-                    </p>
                   </div>
                 </div>
               </header>

@@ -1,5 +1,6 @@
 'use client';
 
+import { useSearchParams } from 'next/navigation';
 import { useDeferredValue, useMemo, useState } from 'react';
 import { getSessionTitle } from '@/constants/inspectionSession';
 import type { TableSortState } from '@/types/admin';
@@ -31,10 +32,17 @@ export function useUsersSectionState(
   sessions: InspectionSession[],
   busy: boolean,
 ) {
+  const searchParams = useSearchParams();
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [query, setQuery] = useState('');
-  const [roleFilter, setRoleFilter] = useState<'all' | UserRoleView>('all');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [query, setQuery] = useState(() => searchParams.get('query') || '');
+  const [roleFilter, setRoleFilter] = useState<'all' | UserRoleView>(() => {
+    const value = searchParams.get('role');
+    return value === 'admin' || value === 'field_agent' ? value : 'all';
+  });
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>(() => {
+    const value = searchParams.get('status');
+    return value === 'active' || value === 'inactive' ? value : 'all';
+  });
   const [sort, setSort] = useState<TableSortState>({
     direction: 'asc',
     key: 'name',

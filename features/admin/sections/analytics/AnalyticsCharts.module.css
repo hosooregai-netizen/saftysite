@@ -77,13 +77,13 @@
 .barTrack {
   overflow: hidden;
   height: 10px;
-  border-radius: 999px;
+  border-radius: 2px;
   background: #eaf0f7;
 }
 
 .barFill {
   height: 100%;
-  border-radius: 999px;
+  border-radius: 2px;
   background: linear-gradient(90deg, #1b3048 0%, #f7b019 100%);
 }
 
@@ -91,7 +91,7 @@
   display: flex;
   overflow: hidden;
   min-height: 16px;
-  border-radius: 999px;
+  border-radius: 2px;
   background: #eaf0f7;
 }
 
@@ -134,7 +134,7 @@
   gap: 10px;
   padding: 14px;
   border: 1px solid var(--erp-line);
-  border-radius: 14px;
+  border-radius: 2px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 250, 255, 0.96));
 }
 
@@ -153,13 +153,13 @@
 .metricTrack {
   overflow: hidden;
   height: 8px;
-  border-radius: 999px;
+  border-radius: 2px;
   background: #eaf0f7;
 }
 
 .metricFill {
   height: 100%;
-  border-radius: 999px;
+  border-radius: 2px;
   background: linear-gradient(90deg, #1b3048 0%, #f7b019 100%);
 }
 
@@ -171,7 +171,7 @@
 .emptyState {
   padding: 20px;
   border: 1px dashed #c7d4e2;
-  border-radius: 14px;
+  border-radius: 2px;
   background: #fbfcfe;
   font-size: var(--text-body);
   color: var(--erp-text-muted);

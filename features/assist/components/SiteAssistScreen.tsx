@@ -274,9 +274,6 @@ export function SiteAssistScreen({ scheduleId, siteKey }: SiteAssistScreenProps)
                   </Link>
                   <div className={shellStyles.heroMain}>
                     <h1 className={shellStyles.heroTitle}>현장 보조 - {currentSite.siteName}</h1>
-                    <p className={shellStyles.heroDescription}>
-                      이전 기술지도 사진 확인, 현장 사진 업로드, 현장 사인, 현장소장 연락처를 한 화면에서 처리합니다.
-                    </p>
                   </div>
                 </div>
               </header>
@@ -348,9 +345,6 @@ export function SiteAssistScreen({ scheduleId, siteKey }: SiteAssistScreenProps)
                     <div className={styles.sectionHeader}>
                       <div>
                         <h2 className={styles.sectionTitle}>이전 기술지도 사진</h2>
-                        <p className={styles.summaryMeta}>
-                          최근 사진을 바로 확인하고, 같은 화면에서 원본 사진을 업로드할 수 있습니다.
-                        </p>
                       </div>
                       <div className={styles.inlineActions}>
                         <input
@@ -412,9 +406,6 @@ export function SiteAssistScreen({ scheduleId, siteKey }: SiteAssistScreenProps)
                     <div className={styles.sectionHeader}>
                       <div>
                         <h2 className={styles.sectionTitle}>현장 사인</h2>
-                        <p className={styles.summaryMeta}>
-                          저장하면 가장 최근 사인을 바로 다시 확인할 수 있습니다.
-                        </p>
                       </div>
                     </div>
                     <div className={styles.sectionBody}>

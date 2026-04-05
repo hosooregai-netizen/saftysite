@@ -1,12 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
-import { SortableHeaderCell } from '@/features/admin/components/SortableHeaderCell';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  buildSortMenuOptions,
+  SortableHeaderCell,
+} from '@/features/admin/components/SortableHeaderCell';
 import {
   buildAdminOverviewModel,
   getOverviewExportSheets,
 } from '@/features/admin/lib/buildAdminControlCenterModel';
+import { getAdminSectionHref } from '@/lib/admin';
 import { fetchAdminOverview } from '@/lib/admin/apiClient';
 import {
   exportAdminWorkbook,
@@ -55,6 +59,54 @@ function compareSeverity(
   return compareNumber(weight[left], weight[right], direction);
 }
 
+function compareQualityLabel(
+  left: string,
+  right: string,
+  direction: TableSortState['direction'],
+) {
+  const weight: Record<string, number> = {
+    이슈: 0,
+    미확인: 1,
+    확인완료: 2,
+  };
+  return compareNumber(weight[left] ?? 99, weight[right] ?? 99, direction);
+}
+
+function compareDeadlineStatus(
+  left: string,
+  right: string,
+  direction: TableSortState['direction'],
+) {
+  const weight: Record<string, number> = {
+    지연: 0,
+    경고: 1,
+    정상: 2,
+    발송완료: 3,
+    '-': 4,
+  };
+  return compareNumber(weight[left] ?? 99, weight[right] ?? 99, direction);
+}
+
+function formatSyncTimestamp(value: Date | null) {
+  if (!value) return '서버 동기화 전';
+  return value.toLocaleString('ko-KR', {
+    hour12: false,
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function buildScheduleIssueLabel(row: SafetyAdminOverviewResponse['scheduleRows'][number]) {
+  const labels = [
+    row.isConflicted ? '충돌' : '',
+    row.isOutOfWindow ? '구간 밖' : '',
+    row.isOverdue ? '지연' : '',
+  ].filter(Boolean);
+  return labels.length > 0 ? labels.join(', ') : '미선택';
+}
+
 export function AdminOverviewSection({
   data,
   reports,
@@ -62,6 +114,8 @@ export function AdminOverviewSection({
   const fallbackOverview = useMemo(() => buildAdminOverviewModel(data, reports), [data, reports]);
   const [overviewResponse, setOverviewResponse] = useState<SafetyAdminOverviewResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const [overdueSort, setOverdueSort] = useState<TableSortState>({
     direction: 'desc',
     key: 'overdueCount',
@@ -95,31 +149,25 @@ export function AdminOverviewSection({
     key: 'severity',
   });
 
-  useEffect(() => {
-    let cancelled = false;
-
-    const run = async () => {
-      try {
-        setError(null);
-        const nextOverview = await fetchAdminOverview();
-        if (!cancelled) {
-          setOverviewResponse(nextOverview);
-        }
-      } catch (nextError) {
-        if (!cancelled) {
-          setError(
-            nextError instanceof Error ? nextError.message : '관제 대시보드를 불러오지 못했습니다.',
-          );
-        }
-      }
-    };
-
-    void run();
-
-    return () => {
-      cancelled = true;
-    };
+  const refreshOverview = useCallback(async () => {
+    try {
+      setIsRefreshing(true);
+      setError(null);
+      const nextOverview = await fetchAdminOverview();
+      setOverviewResponse(nextOverview);
+      setLastSyncedAt(new Date());
+    } catch (nextError) {
+      setError(
+        nextError instanceof Error ? nextError.message : '관제 대시보드를 불러오지 못했습니다.',
+      );
+    } finally {
+      setIsRefreshing(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void refreshOverview();
+  }, [refreshOverview]);
 
   const overview =
     overviewResponse ??
@@ -129,9 +177,85 @@ export function AdminOverviewSection({
       completionRows: [],
       scheduleRows: [],
     } satisfies SafetyAdminOverviewResponse);
+  const sitesById = useMemo(() => new Map(data.sites.map((site) => [site.id, site])), [data.sites]);
+  const usersByName = useMemo(() => new Map(data.users.map((user) => [user.name, user])), [data.users]);
+
+  const metricCards = useMemo(() => {
+    return overview.metricCards.map((card) => {
+      if (card.label === '전체 현장 수') {
+        return { ...card, href: getAdminSectionHref('headquarters', { siteStatus: 'all' }) };
+      }
+
+      if (card.label === '진행중') {
+        return { ...card, href: getAdminSectionHref('headquarters', { siteStatus: 'active' }) };
+      }
+
+      if (card.label === '미착수') {
+        return { ...card, href: getAdminSectionHref('headquarters', { siteStatus: 'planned' }) };
+      }
+
+      if (card.label === '종료') {
+        return { ...card, href: getAdminSectionHref('headquarters', { siteStatus: 'closed' }) };
+      }
+
+      if (card.label === '불량사업장 지연') {
+        return {
+          ...card,
+          href: getAdminSectionHref('reports', {
+            overviewPreset: 'badWorkplaceOverdue',
+            reportType: 'bad_workplace',
+          }),
+        };
+      }
+
+      if (card.label === '이슈 보고서 수') {
+        return {
+          ...card,
+          href: getAdminSectionHref('reports', {
+            overviewPreset: 'issueBundle',
+          }),
+        };
+      }
+
+      return card;
+    });
+  }, [overview.metricCards]);
+
+  const completionRowsBase = useMemo(() => {
+    return overview.completionRows.map((row) => {
+      const matchedSite = sitesById.get(row.siteId);
+      return {
+        ...row,
+        href: matchedSite
+          ? getAdminSectionHref('headquarters', {
+              editSiteId: matchedSite.id,
+              headquarterId: matchedSite.headquarter_id,
+            })
+          : row.href,
+      };
+    });
+  }, [overview.completionRows, sitesById]);
 
   const overdueSiteRows = useMemo(() => {
-    return [...overview.overdueSiteRows].sort((left, right) => {
+    return overview.overdueSiteRows
+      .map((row) => {
+        const matchedSite = data.sites.find(
+          (site) =>
+            site.site_name === row.siteName &&
+            (site.headquarter_detail?.name || site.headquarter?.name || '-') === row.headquarterName,
+        );
+
+        return {
+          ...row,
+          href: matchedSite
+            ? getAdminSectionHref('reports', {
+                overviewPreset: 'siteOverdueBundle',
+                siteId: matchedSite.id,
+              })
+            : row.href,
+        };
+      })
+      .sort((left, right) => {
       switch (overdueSort.key) {
         case 'siteName':
           return compareText(left.siteName, right.siteName, overdueSort.direction);
@@ -144,7 +268,7 @@ export function AdminOverviewSection({
           return compareNumber(left.overdueCount, right.overdueCount, overdueSort.direction);
       }
     });
-  }, [overview.overdueSiteRows, overdueSort.direction, overdueSort.key]);
+  }, [data.sites, overview.overdueSiteRows, overdueSort.direction, overdueSort.key]);
 
   const pendingReviewRows = useMemo(() => {
     return [...overview.pendingReviewRows].sort((left, right) => {
@@ -154,7 +278,7 @@ export function AdminOverviewSection({
         case 'assigneeName':
           return compareText(left.assigneeName, right.assigneeName, reviewSort.direction);
         case 'qualityLabel':
-          return compareText(left.qualityLabel, right.qualityLabel, reviewSort.direction);
+          return compareQualityLabel(left.qualityLabel, right.qualityLabel, reviewSort.direction);
         case 'reportTitle':
         default:
           if (reviewSort.key === 'updatedAt') {
@@ -166,7 +290,30 @@ export function AdminOverviewSection({
   }, [overview.pendingReviewRows, reviewSort.direction, reviewSort.key]);
 
   const workerLoadRows = useMemo(() => {
-    return [...overview.workerLoadRows].sort((left, right) => {
+    return overview.workerLoadRows
+      .map((row) => {
+        const matchedUser = usersByName.get(row.userName);
+
+        if (row.loadLabel === '지연 집중' && matchedUser) {
+          return {
+            ...row,
+            href: getAdminSectionHref('reports', { assigneeUserId: matchedUser.id }),
+          };
+        }
+
+        if (matchedUser) {
+          return {
+            ...row,
+            href: getAdminSectionHref('users', {
+              query: matchedUser.name,
+              status: 'active',
+            }),
+          };
+        }
+
+        return row;
+      })
+      .sort((left, right) => {
       switch (workerSort.key) {
         case 'userName':
           return compareText(left.userName, right.userName, workerSort.direction);
@@ -179,7 +326,7 @@ export function AdminOverviewSection({
           return compareNumber(left.overdueCount, right.overdueCount, workerSort.direction);
       }
     });
-  }, [overview.workerLoadRows, workerSort.direction, workerSort.key]);
+  }, [overview.workerLoadRows, usersByName, workerSort.direction, workerSort.key]);
 
   const deadlineRows = useMemo(() => {
     return [...overview.deadlineRows].sort((left, right) => {
@@ -191,7 +338,7 @@ export function AdminOverviewSection({
         case 'deadlineLabel':
           return compareText(left.deadlineLabel, right.deadlineLabel, deadlineSort.direction);
         case 'statusLabel':
-          return compareText(left.statusLabel, right.statusLabel, deadlineSort.direction);
+          return compareDeadlineStatus(left.statusLabel, right.statusLabel, deadlineSort.direction);
         case 'deadlineDate':
         default:
           return compareText(left.deadlineDate, right.deadlineDate, deadlineSort.direction);
@@ -200,7 +347,7 @@ export function AdminOverviewSection({
   }, [deadlineSort.direction, deadlineSort.key, overview.deadlineRows]);
 
   const completionRows = useMemo(() => {
-    return [...overview.completionRows].sort((left, right) => {
+    return [...completionRowsBase].sort((left, right) => {
       switch (completionSort.key) {
         case 'siteName':
           return compareText(left.siteName, right.siteName, completionSort.direction);
@@ -211,12 +358,12 @@ export function AdminOverviewSection({
           return compareNumber(left.missingItems.length, right.missingItems.length, completionSort.direction);
       }
     });
-  }, [completionSort.direction, completionSort.key, overview.completionRows]);
+  }, [completionRowsBase, completionSort.direction, completionSort.key]);
 
   const coverageIssueRows = useMemo(() => {
     const rows: CoverageIssueRow[] = [];
 
-    overview.completionRows.forEach((row) => {
+    completionRowsBase.forEach((row) => {
       const trainingMissingItems = row.missingItems.filter((item) => item.includes('교육자료'));
       if (trainingMissingItems.length > 0) {
         rows.push({
@@ -255,10 +402,20 @@ export function AdminOverviewSection({
           return compareNumber(left.missingItems.length, right.missingItems.length, coverageIssueSort.direction);
       }
     });
-  }, [coverageIssueSort.direction, coverageIssueSort.key, overview.completionRows]);
+  }, [completionRowsBase, coverageIssueSort.direction, coverageIssueSort.key]);
 
   const scheduleRows = useMemo(() => {
-    return [...overview.scheduleRows].sort((left, right) => {
+    return overview.scheduleRows
+      .map((row) => ({
+        ...row,
+        href: getAdminSectionHref('schedules', {
+          month: (row.plannedDate || row.windowStart || row.windowEnd || '').slice(0, 7),
+          plannedDate: row.plannedDate || null,
+          siteId: row.siteId,
+        }),
+        issueLabel: buildScheduleIssueLabel(row),
+      }))
+      .sort((left, right) => {
       switch (scheduleSort.key) {
         case 'siteName':
           return compareText(left.siteName, right.siteName, scheduleSort.direction);
@@ -300,7 +457,7 @@ export function AdminOverviewSection({
         ...getOverviewExportSheets({
           coverageRows: overview.coverageRows,
           deadlineRows,
-          metricCards: overview.metricCards,
+          metricCards,
           overdueSiteRows,
           pendingReviewRows,
           summaryRows: overview.summaryRows,
@@ -330,8 +487,19 @@ export function AdminOverviewSection({
         <div className={styles.sectionHeader}>
           <div>
             <h2 className={styles.sectionTitle}>실시간 관제 요약</h2>
+            {overviewResponse && lastSyncedAt ? (
+              <div className={styles.sectionHeaderMeta}>마지막 갱신 {formatSyncTimestamp(lastSyncedAt)}</div>
+            ) : null}
           </div>
           <div className={styles.sectionHeaderActions}>
+            <button
+              type="button"
+              className="app-button app-button-secondary"
+              onClick={() => void refreshOverview()}
+              disabled={isRefreshing}
+            >
+              {isRefreshing ? '새로고침 중...' : '새로고침'}
+            </button>
             <button
               type="button"
               className="app-button app-button-secondary"
@@ -344,7 +512,7 @@ export function AdminOverviewSection({
         <div className={styles.sectionBody}>
           {error ? <div className={styles.bannerError}>{error}</div> : null}
           <div className={styles.metricGrid}>
-            {overview.metricCards.map((card) => (
+            {metricCards.map((card) => (
               <Link
                 key={card.label}
                 href={card.href}
@@ -372,7 +540,7 @@ export function AdminOverviewSection({
               <h2 className={styles.sectionTitle}>발송 지연 현장 Top</h2>
             </div>
             <div className={styles.sectionHeaderActions}>
-              <span className="app-chip">{overdueSiteRows.length}건</span>
+              <span className={styles.sectionHeaderMeta}>{overdueSiteRows.length}건</span>
             </div>
           </div>
           <div className={styles.sectionBody}>
@@ -384,10 +552,37 @@ export function AdminOverviewSection({
                   <table className={styles.table}>
                     <thead>
                       <tr>
-                        <SortableHeaderCell column={{ key: 'siteName' }} current={overdueSort} label="현장" onChange={setOverdueSort} />
-                        <SortableHeaderCell column={{ key: 'headquarterName' }} current={overdueSort} label="사업장" onChange={setOverdueSort} />
+                        <SortableHeaderCell
+                          column={{ key: 'siteName' }}
+                          current={overdueSort}
+                          label="현장"
+                          onChange={setOverdueSort}
+                          sortMenuOptions={buildSortMenuOptions('siteName', {
+                            asc: '현장 가나다순',
+                            desc: '현장 역순',
+                          })}
+                        />
+                        <SortableHeaderCell
+                          column={{ key: 'headquarterName' }}
+                          current={overdueSort}
+                          label="사업장"
+                          onChange={setOverdueSort}
+                          sortMenuOptions={buildSortMenuOptions('headquarterName', {
+                            asc: '사업장 가나다순',
+                            desc: '사업장 역순',
+                          })}
+                        />
                         <SortableHeaderCell column={{ key: 'overdueCount' }} current={overdueSort} defaultDirection="desc" label="지연 건수" onChange={setOverdueSort} />
-                        <SortableHeaderCell column={{ key: 'reportKindsLabel' }} current={overdueSort} label="구분" onChange={setOverdueSort} />
+                        <SortableHeaderCell
+                          column={{ key: 'reportKindsLabel' }}
+                          current={overdueSort}
+                          label="구분"
+                          onChange={setOverdueSort}
+                          sortMenuOptions={buildSortMenuOptions('reportKindsLabel', {
+                            asc: '구분 오름차순',
+                            desc: '구분 내림차순',
+                          })}
+                        />
                       </tr>
                     </thead>
                     <tbody>
@@ -417,7 +612,7 @@ export function AdminOverviewSection({
               <h2 className={styles.sectionTitle}>품질 체크 필요 보고서</h2>
             </div>
             <div className={styles.sectionHeaderActions}>
-              <span className="app-chip">{pendingReviewRows.length}건</span>
+              <span className={styles.sectionHeaderMeta}>{pendingReviewRows.length}건</span>
             </div>
           </div>
           <div className={styles.sectionBody}>
@@ -430,9 +625,37 @@ export function AdminOverviewSection({
                     <thead>
                       <tr>
                         <SortableHeaderCell column={{ key: 'reportTitle' }} current={reviewSort} label="보고서" onChange={setReviewSort} />
-                        <SortableHeaderCell column={{ key: 'siteName' }} current={reviewSort} label="현장" onChange={setReviewSort} />
-                        <SortableHeaderCell column={{ key: 'assigneeName' }} current={reviewSort} label="담당자" onChange={setReviewSort} />
-                        <SortableHeaderCell column={{ key: 'qualityLabel' }} current={reviewSort} defaultDirection="desc" label="품질 상태" onChange={setReviewSort} />
+                        <SortableHeaderCell
+                          column={{ key: 'siteName' }}
+                          current={reviewSort}
+                          label="현장"
+                          onChange={setReviewSort}
+                          sortMenuOptions={buildSortMenuOptions('siteName', {
+                            asc: '현장 가나다순',
+                            desc: '현장 역순',
+                          })}
+                        />
+                        <SortableHeaderCell
+                          column={{ key: 'assigneeName' }}
+                          current={reviewSort}
+                          label="담당자"
+                          onChange={setReviewSort}
+                          sortMenuOptions={buildSortMenuOptions('assigneeName', {
+                            asc: '담당자 가나다순',
+                            desc: '담당자 역순',
+                          })}
+                        />
+                        <SortableHeaderCell
+                          column={{ key: 'qualityLabel' }}
+                          current={reviewSort}
+                          defaultDirection="desc"
+                          label="품질 상태"
+                          onChange={setReviewSort}
+                          sortMenuOptions={buildSortMenuOptions('qualityLabel', {
+                            asc: '이슈/미확인 우선',
+                            desc: '확인완료 우선',
+                          })}
+                        />
                         <SortableHeaderCell column={{ key: 'updatedAt' }} current={reviewSort} defaultDirection="desc" label="수정일" onChange={setReviewSort} />
                       </tr>
                     </thead>
@@ -443,12 +666,8 @@ export function AdminOverviewSection({
                             <Link href={row.href} className={styles.tableInlineLink}>
                               {row.reportTitle}
                             </Link>
-                            <div className={styles.tableSecondary}>{row.reportTypeLabel}</div>
                           </td>
-                          <td>
-                            <div className={styles.tablePrimary}>{row.siteName}</div>
-                            <div className={styles.tableSecondary}>{row.headquarterName}</div>
-                          </td>
+                          <td>{row.siteName}</td>
                           <td>{row.assigneeName}</td>
                           <td>{row.qualityLabel}</td>
                           <td>{row.updatedAt}</td>
@@ -470,7 +689,7 @@ export function AdminOverviewSection({
               <h2 className={styles.sectionTitle}>미배정/과부하 요원</h2>
             </div>
             <div className={styles.sectionHeaderActions}>
-              <span className="app-chip">{workerLoadRows.length}명</span>
+              <span className={styles.sectionHeaderMeta}>{workerLoadRows.length}명</span>
             </div>
           </div>
           <div className={styles.sectionBody}>
@@ -515,7 +734,7 @@ export function AdminOverviewSection({
               <h2 className={styles.sectionTitle}>당일/주간 마감 예정</h2>
             </div>
             <div className={styles.sectionHeaderActions}>
-              <span className="app-chip">{deadlineRows.length}건</span>
+              <span className={styles.sectionHeaderMeta}>{deadlineRows.length}건</span>
             </div>
           </div>
           <div className={styles.sectionBody}>
@@ -528,10 +747,28 @@ export function AdminOverviewSection({
                     <thead>
                       <tr>
                         <SortableHeaderCell column={{ key: 'reportTitle' }} current={deadlineSort} label="보고서" onChange={setDeadlineSort} />
-                        <SortableHeaderCell column={{ key: 'siteName' }} current={deadlineSort} label="현장" onChange={setDeadlineSort} />
+                        <SortableHeaderCell
+                          column={{ key: 'siteName' }}
+                          current={deadlineSort}
+                          label="현장"
+                          onChange={setDeadlineSort}
+                          sortMenuOptions={buildSortMenuOptions('siteName', {
+                            asc: '현장 가나다순',
+                            desc: '현장 역순',
+                          })}
+                        />
                         <SortableHeaderCell column={{ key: 'deadlineDate' }} current={deadlineSort} defaultDirection="asc" label="마감일" onChange={setDeadlineSort} />
                         <SortableHeaderCell column={{ key: 'deadlineLabel' }} current={deadlineSort} defaultDirection="asc" label="남은 기간" onChange={setDeadlineSort} />
-                        <SortableHeaderCell column={{ key: 'statusLabel' }} current={deadlineSort} label="상태" onChange={setDeadlineSort} />
+                        <SortableHeaderCell
+                          column={{ key: 'statusLabel' }}
+                          current={deadlineSort}
+                          label="상태"
+                          onChange={setDeadlineSort}
+                          sortMenuOptions={buildSortMenuOptions('statusLabel', {
+                            asc: '지연/경고 우선',
+                            desc: '정상/발송완료 우선',
+                          })}
+                        />
                       </tr>
                     </thead>
                     <tbody>
@@ -541,7 +778,6 @@ export function AdminOverviewSection({
                             <Link href={row.href} className={styles.tableInlineLink}>
                               {row.reportTitle}
                             </Link>
-                            <div className={styles.tableSecondary}>{row.reportTypeLabel}</div>
                           </td>
                           <td>{row.siteName}</td>
                           <td>{row.deadlineDate}</td>
@@ -587,7 +823,7 @@ export function AdminOverviewSection({
             <h2 className={styles.sectionTitle}>자료 확보 부족 상세</h2>
           </div>
           <div className={styles.sectionHeaderActions}>
-            <span className="app-chip">{coverageIssueRows.length}건</span>
+            <span className={styles.sectionHeaderMeta}>{coverageIssueRows.length}건</span>
           </div>
         </div>
         <div className={styles.sectionBody}>
@@ -599,9 +835,36 @@ export function AdminOverviewSection({
                 <table className={styles.table}>
                   <thead>
                     <tr>
-                      <SortableHeaderCell column={{ key: 'category' }} current={coverageIssueSort} label="구분" onChange={setCoverageIssueSort} />
-                      <SortableHeaderCell column={{ key: 'siteName' }} current={coverageIssueSort} label="현장" onChange={setCoverageIssueSort} />
-                      <SortableHeaderCell column={{ key: 'headquarterName' }} current={coverageIssueSort} label="사업장" onChange={setCoverageIssueSort} />
+                      <SortableHeaderCell
+                        column={{ key: 'category' }}
+                        current={coverageIssueSort}
+                        label="구분"
+                        onChange={setCoverageIssueSort}
+                        sortMenuOptions={buildSortMenuOptions('category', {
+                          asc: '구분 오름차순',
+                          desc: '구분 내림차순',
+                        })}
+                      />
+                      <SortableHeaderCell
+                        column={{ key: 'siteName' }}
+                        current={coverageIssueSort}
+                        label="현장"
+                        onChange={setCoverageIssueSort}
+                        sortMenuOptions={buildSortMenuOptions('siteName', {
+                          asc: '현장 가나다순',
+                          desc: '현장 역순',
+                        })}
+                      />
+                      <SortableHeaderCell
+                        column={{ key: 'headquarterName' }}
+                        current={coverageIssueSort}
+                        label="사업장"
+                        onChange={setCoverageIssueSort}
+                        sortMenuOptions={buildSortMenuOptions('headquarterName', {
+                          asc: '사업장 가나다순',
+                          desc: '사업장 역순',
+                        })}
+                      />
                       <SortableHeaderCell column={{ key: 'missingItems' }} current={coverageIssueSort} defaultDirection="desc" label="부족 사유" onChange={setCoverageIssueSort} />
                     </tr>
                   </thead>
@@ -642,8 +905,26 @@ export function AdminOverviewSection({
                   <table className={styles.table}>
                     <thead>
                       <tr>
-                        <SortableHeaderCell column={{ key: 'siteName' }} current={completionSort} label="현장" onChange={setCompletionSort} />
-                        <SortableHeaderCell column={{ key: 'headquarterName' }} current={completionSort} label="사업장" onChange={setCompletionSort} />
+                        <SortableHeaderCell
+                          column={{ key: 'siteName' }}
+                          current={completionSort}
+                          label="현장"
+                          onChange={setCompletionSort}
+                          sortMenuOptions={buildSortMenuOptions('siteName', {
+                            asc: '현장 가나다순',
+                            desc: '현장 역순',
+                          })}
+                        />
+                        <SortableHeaderCell
+                          column={{ key: 'headquarterName' }}
+                          current={completionSort}
+                          label="사업장"
+                          onChange={setCompletionSort}
+                          sortMenuOptions={buildSortMenuOptions('headquarterName', {
+                            asc: '사업장 가나다순',
+                            desc: '사업장 역순',
+                          })}
+                        />
                         <SortableHeaderCell column={{ key: 'missingItems' }} current={completionSort} defaultDirection="desc" label="누락 항목" onChange={setCompletionSort} />
                       </tr>
                     </thead>
@@ -675,36 +956,50 @@ export function AdminOverviewSection({
           </div>
           <div className={styles.sectionBody}>
             {scheduleRows.length === 0 ? (
-              renderEmptyRow('일정 충돌 또는 구간 밖 일정이 없습니다.')
+              renderEmptyRow('일정 충돌, 지연 또는 구간 밖 일정이 없습니다.')
             ) : (
               <div className={styles.tableShell}>
                 <div className={styles.tableWrap}>
                   <table className={styles.table}>
                     <thead>
                       <tr>
-                        <SortableHeaderCell column={{ key: 'siteName' }} current={scheduleSort} label="현장" onChange={setScheduleSort} />
+                        <SortableHeaderCell
+                          column={{ key: 'siteName' }}
+                          current={scheduleSort}
+                          label="현장"
+                          onChange={setScheduleSort}
+                          sortMenuOptions={buildSortMenuOptions('siteName', {
+                            asc: '현장 가나다순',
+                            desc: '현장 역순',
+                          })}
+                        />
                         <SortableHeaderCell column={{ key: 'roundNo' }} current={scheduleSort} defaultDirection="desc" label="회차" onChange={setScheduleSort} />
                         <SortableHeaderCell column={{ key: 'plannedDate' }} current={scheduleSort} defaultDirection="asc" label="방문일" onChange={setScheduleSort} />
-                        <SortableHeaderCell column={{ key: 'assigneeName' }} current={scheduleSort} label="담당자" onChange={setScheduleSort} />
+                        <SortableHeaderCell
+                          column={{ key: 'assigneeName' }}
+                          current={scheduleSort}
+                          label="담당자"
+                          onChange={setScheduleSort}
+                          sortMenuOptions={buildSortMenuOptions('assigneeName', {
+                            asc: '담당자 가나다순',
+                            desc: '담당자 역순',
+                          })}
+                        />
                         <th>이슈</th>
                       </tr>
                     </thead>
                     <tbody>
                       {scheduleRows.map((row) => (
                         <tr key={row.id}>
-                          <td>{row.siteName}</td>
-                          <td>{row.roundNo}회차</td>
-                          <td>{row.plannedDate}</td>
-                          <td>{row.assigneeName || '-'}</td>
                           <td>
-                            {[
-                              row.isConflicted ? '충돌' : '',
-                              row.isOutOfWindow ? '구간 밖' : '',
-                              row.isOverdue ? '지연' : '',
-                            ]
-                              .filter(Boolean)
-                              .join(', ')}
+                            <Link href={row.href} className={styles.tableInlineLink}>
+                              {row.siteName}
+                            </Link>
                           </td>
+                          <td>{row.roundNo}회차</td>
+                          <td>{row.plannedDate || '-'}</td>
+                          <td>{row.assigneeName || '-'}</td>
+                          <td>{row.issueLabel}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -730,12 +1025,22 @@ export function AdminOverviewSection({
               <div className={styles.tableWrap}>
                 <table className={styles.table}>
                   <thead>
-                    <tr>
-                      <SortableHeaderCell column={{ key: 'title' }} current={alertSort} label="유형" onChange={setAlertSort} />
-                      <SortableHeaderCell column={{ key: 'description' }} current={alertSort} label="내용" onChange={setAlertSort} />
-                      <SortableHeaderCell column={{ key: 'severity' }} current={alertSort} defaultDirection="asc" label="심각도" onChange={setAlertSort} />
-                    </tr>
-                  </thead>
+                      <tr>
+                        <SortableHeaderCell column={{ key: 'title' }} current={alertSort} label="유형" onChange={setAlertSort} />
+                        <SortableHeaderCell column={{ key: 'description' }} current={alertSort} label="내용" onChange={setAlertSort} />
+                        <SortableHeaderCell
+                          column={{ key: 'severity' }}
+                          current={alertSort}
+                          defaultDirection="asc"
+                          label="심각도"
+                          onChange={setAlertSort}
+                          sortMenuOptions={buildSortMenuOptions('severity', {
+                            asc: '높은 심각도 우선',
+                            desc: '낮은 심각도 우선',
+                          })}
+                        />
+                      </tr>
+                    </thead>
                   <tbody>
                     {alerts.slice(0, 12).map((alert) => (
                       <tr key={alert.id}>

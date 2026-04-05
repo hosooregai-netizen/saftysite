@@ -80,7 +80,7 @@
   align-items: center;
   gap: 6px;
   padding: 6px 10px;
-  border-radius: 999px;
+  border-radius: 2px;
   border: 1px solid var(--erp-line);
   background: #f8fafc;
   font-size: var(--text-ui-sm);
@@ -103,7 +103,7 @@
 .noticeBox,
 .errorBox {
   padding: 12px 14px;
-  border-radius: 8px;
+  border-radius: 2px;
   font-size: var(--text-body);
   line-height: 1.6;
 }

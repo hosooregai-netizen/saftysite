@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import AppModal from '@/components/ui/AppModal';
 import { buildNextTableSort } from '@/features/admin/components/SortableHeaderCell';
-import { TableToolbar } from '@/features/admin/components/TableToolbar';
+import { SectionHeaderFilterMenu } from '@/features/admin/components/SectionHeaderFilterMenu';
 import adminStyles from '@/features/admin/sections/AdminSectionShared.module.css';
 import { exportAdminWorkbook } from '@/lib/admin/exportClient';
 import {
@@ -98,7 +98,6 @@ export function PhotoAlbumPanel({
   backLabel = null,
   initialHeadquarterId = null,
   initialReportKey = null,
-  initialReportTitle = null,
   initialSiteId = null,
   lockedHeadquarterId = null,
   lockedSiteId = null,
@@ -107,16 +106,17 @@ export function PhotoAlbumPanel({
 }: PhotoAlbumPanelProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const defaultHeadquarterId = lockedHeadquarterId || initialHeadquarterId || '';
+  const defaultSiteId = lockedSiteId || initialSiteId || '';
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<TableSortState>({
     direction: 'desc',
     key: 'capturedAt',
   });
-  const [headquarterId, setHeadquarterId] = useState(() => lockedHeadquarterId || initialHeadquarterId || '');
-  const [siteId, setSiteId] = useState(() => lockedSiteId || initialSiteId || '');
+  const [headquarterId, setHeadquarterId] = useState(() => defaultHeadquarterId);
+  const [siteId, setSiteId] = useState(() => defaultSiteId);
   const [rows, setRows] = useState<PhotoAlbumItem[]>([]);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -126,12 +126,12 @@ export function PhotoAlbumPanel({
   const deferredQuery = useDeferredValue(query.trim().toLowerCase());
 
   useEffect(() => {
-    setHeadquarterId(lockedHeadquarterId || initialHeadquarterId || '');
-  }, [initialHeadquarterId, lockedHeadquarterId]);
+    setHeadquarterId(defaultHeadquarterId);
+  }, [defaultHeadquarterId]);
 
   useEffect(() => {
-    setSiteId(lockedSiteId || initialSiteId || '');
-  }, [initialSiteId, lockedSiteId]);
+    setSiteId(defaultSiteId);
+  }, [defaultSiteId]);
 
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
@@ -155,6 +155,12 @@ export function PhotoAlbumPanel({
     [headquarterId, lockedHeadquarterId, lockedSiteId, sites],
   );
   const canUpload = Boolean(lockedSiteId || siteId);
+  const showHeaderFilter =
+    (mode === 'admin' && !lockedHeadquarterId) ||
+    !lockedSiteId;
+  const activeFilterCount =
+    (mode === 'admin' && !lockedHeadquarterId && headquarterId ? 1 : 0) +
+    (!lockedSiteId && siteId ? 1 : 0);
 
   useEffect(() => {
     if (!siteId || lockedSiteId) return;
@@ -180,7 +186,6 @@ export function PhotoAlbumPanel({
         });
         if (cancelled) return;
         setRows(response.rows);
-        setTotal(response.total);
         setSelectedIds((current) => current.filter((itemId) => response.rows.some((row) => row.id === itemId)));
       } catch (nextError) {
         if (cancelled) return;
@@ -299,7 +304,6 @@ export function PhotoAlbumPanel({
       });
       setVisibleCount(PAGE_SIZE);
       setRows(refreshed.rows);
-      setTotal(refreshed.total);
       setSelectedIds([]);
       setNotice(`${nextFiles.length}건의 사진을 업로드했습니다.`);
       if (fileInputRef.current) {
@@ -361,31 +365,93 @@ export function PhotoAlbumPanel({
     { defaultDirection: 'asc', key: 'fileName', label: '파일명' },
     { defaultDirection: 'asc', key: 'siteName', label: '현장명' },
   ];
+  const resetHeaderFilters = () => {
+    if (!lockedHeadquarterId) {
+      setHeadquarterId(defaultHeadquarterId);
+    }
+    if (!lockedSiteId) {
+      setSiteId(defaultSiteId);
+    }
+  };
 
   return (
     <div className={adminStyles.dashboardStack}>
       <section className={adminStyles.sectionCard}>
         <div className={adminStyles.sectionHeader}>
-          <div>
+          <div className={adminStyles.sectionHeaderTitleBlock}>
             <h2 className={adminStyles.sectionTitle}>
               {mode === 'admin' ? '사진첩' : '현장 사진첩'}
             </h2>
-            <p className={adminStyles.sectionDescription}>
-              현재 필터 범위의 사진을 한 번에 불러오고 아래로 내려가며 이어서 볼 수 있습니다.
-            </p>
-            {initialReportKey ? (
-              <p className={adminStyles.sectionDescription}>
-                {initialReportTitle
-                  ? `보고서 컨텍스트: ${initialReportTitle}`
-                  : `보고서 컨텍스트: ${initialReportKey}`}
-              </p>
-            ) : null}
           </div>
-          <div className={adminStyles.sectionHeaderActions}>
+          <div className={`${adminStyles.sectionHeaderActions} ${adminStyles.sectionHeaderToolbarActions}`}>
             {backHref ? (
               <Link href={backHref} className="app-button app-button-secondary">
                 {backLabel || '이전 화면으로'}
               </Link>
+            ) : null}
+            <input
+              className={`app-input ${adminStyles.sectionHeaderSearch} ${adminStyles.sectionHeaderToolbarSearch}`}
+              placeholder="파일명, 현장명, 보고서명, 업로더 검색"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+            {showHeaderFilter ? (
+              <SectionHeaderFilterMenu
+                activeCount={activeFilterCount}
+                ariaLabel="사진첩 필터"
+                onReset={resetHeaderFilters}
+              >
+                <div className={adminStyles.sectionHeaderMenuGrid}>
+                  {mode === 'admin' && !lockedHeadquarterId ? (
+                    <div className={adminStyles.sectionHeaderMenuField}>
+                      <label htmlFor="photo-filter-headquarter">사업장</label>
+                      <select
+                        id="photo-filter-headquarter"
+                        className="app-select"
+                        value={headquarterId}
+                        onChange={(event) => {
+                          setHeadquarterId(event.target.value);
+                          setSiteId('');
+                        }}
+                      >
+                        <option value="">전체 사업장</option>
+                        {headquarterOptions.map((option) => (
+                          <option key={option.id} value={option.id}>
+                            {option.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : null}
+                  {!lockedSiteId ? (
+                    <div className={adminStyles.sectionHeaderMenuField}>
+                      <label htmlFor="photo-filter-site">현장</label>
+                      <select
+                        id="photo-filter-site"
+                        className="app-select"
+                        value={siteId}
+                        onChange={(event) => setSiteId(event.target.value)}
+                      >
+                        <option value="">{mode === 'admin' ? '전체 현장' : '현장 선택'}</option>
+                        {visibleSiteOptions.map((option) => (
+                          <option key={option.id} value={option.id}>
+                            {option.siteName}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : null}
+                </div>
+              </SectionHeaderFilterMenu>
+            ) : null}
+            {mode === 'admin' ? (
+              <button
+                type="button"
+                className="app-button app-button-secondary"
+                onClick={() => void handleExport()}
+              >
+                메타데이터 엑셀
+              </button>
             ) : null}
             <button
               type="button"
@@ -418,50 +484,6 @@ export function PhotoAlbumPanel({
         <div className={adminStyles.sectionBody}>
           {error ? <div className={adminStyles.bannerError}>{error}</div> : null}
           {notice ? <div className={adminStyles.bannerNotice}>{notice}</div> : null}
-
-          <TableToolbar
-            countLabel={`표시 ${visibleRows.length} / 전체 ${total}건`}
-            exportLabel="메타데이터 엑셀"
-            filters={
-              <>
-                {mode === 'admin' && !lockedHeadquarterId ? (
-                  <select
-                    className={`app-select ${adminStyles.toolbarSelect}`}
-                    value={headquarterId}
-                    onChange={(event) => {
-                      setHeadquarterId(event.target.value);
-                      setSiteId('');
-                    }}
-                  >
-                    <option value="">전체 사업장</option>
-                    {headquarterOptions.map((option) => (
-                      <option key={option.id} value={option.id}>
-                        {option.name}
-                      </option>
-                    ))}
-                  </select>
-                ) : null}
-                {!lockedSiteId ? (
-                  <select
-                    className={`app-select ${adminStyles.toolbarSelect}`}
-                    value={siteId}
-                    onChange={(event) => setSiteId(event.target.value)}
-                  >
-                    <option value="">{mode === 'admin' ? '전체 현장' : '현장 선택'}</option>
-                    {visibleSiteOptions.map((option) => (
-                      <option key={option.id} value={option.id}>
-                        {option.siteName}
-                      </option>
-                    ))}
-                  </select>
-                ) : null}
-              </>
-            }
-            onExport={mode === 'admin' ? () => void handleExport() : undefined}
-            onQueryChange={setQuery}
-            query={query}
-            queryPlaceholder="파일명, 현장명, 보고서명, 업로더 검색"
-          />
 
           <div className={styles.sortBar} role="toolbar" aria-label="사진첩 정렬">
             {sortOptions.map((option) => {
@@ -502,7 +524,7 @@ export function PhotoAlbumPanel({
                   />
                   <span>현재 보이는 사진 전체 선택</span>
                 </label>
-                <span className="app-chip">선택 {selectedIds.length}건</span>
+                <span className={adminStyles.sectionHeaderMeta}>선택 {selectedIds.length}건</span>
               </div>
 
               <div className={styles.grid}>
