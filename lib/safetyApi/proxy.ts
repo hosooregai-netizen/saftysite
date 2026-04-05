@@ -7,6 +7,8 @@ const RESPONSE_HEADERS_TO_SKIP = new Set([
   'content-length',
   'transfer-encoding',
 ]);
+const DEFAULT_PROXY_TIMEOUT_MS = 15000;
+const FILE_PROXY_TIMEOUT_MS = 45000;
 
 function copyHeaders(source: Headers, blocked: Set<string>): Headers {
   const headers = new Headers();
@@ -32,6 +34,23 @@ function requiresRequestBody(method: string): boolean {
   return method !== 'GET' && method !== 'HEAD';
 }
 
+function getProxyTimeoutMs(request: Request): number {
+  const contentType = request.headers.get('content-type') || '';
+  if (contentType.includes('multipart/form-data')) {
+    return FILE_PROXY_TIMEOUT_MS;
+  }
+
+  return DEFAULT_PROXY_TIMEOUT_MS;
+}
+
+function isAbortError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  return (
+    (error instanceof DOMException && error.name === 'AbortError') ||
+    ('name' in error && error.name === 'AbortError')
+  );
+}
+
 export function createSafetyApiOptionsResponse(): Response {
   return new Response(null, {
     status: 204,
@@ -45,6 +64,14 @@ export async function proxySafetyApiRequest(
   request: Request,
   pathParts: string[]
 ): Promise<Response> {
+  const abortController = new AbortController();
+  const timeoutMs = getProxyTimeoutMs(request);
+  const timeoutId = setTimeout(() => {
+    abortController.abort(
+      new Error(`안전 API 프록시 요청이 ${timeoutMs}ms 안에 완료되지 않았습니다.`)
+    );
+  }, timeoutMs);
+
   try {
     const upstreamResponse = await fetch(buildUpstreamUrl(request, pathParts), {
       method: request.method,
@@ -52,6 +79,7 @@ export async function proxySafetyApiRequest(
       body: requiresRequestBody(request.method) ? await request.arrayBuffer() : undefined,
       cache: 'no-store',
       redirect: 'manual',
+      signal: abortController.signal,
     });
 
     return new Response(upstreamResponse.body, {
@@ -59,6 +87,7 @@ export async function proxySafetyApiRequest(
       headers: copyHeaders(upstreamResponse.headers, RESPONSE_HEADERS_TO_SKIP),
     });
   } catch (error) {
+    const status = isAbortError(error) ? 504 : 503;
     return Response.json(
       {
         detail:
@@ -66,8 +95,9 @@ export async function proxySafetyApiRequest(
             ? `안전 API 서버에 연결하지 못했습니다: ${error.message}`
             : '안전 API 서버에 연결하지 못했습니다.',
       },
-      { status: 502 }
+      { status }
     );
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
-

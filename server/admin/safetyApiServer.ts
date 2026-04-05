@@ -37,6 +37,8 @@ import type {
 const ADMIN_LIST_LIMIT = 500;
 const CONTENT_LIST_LIMIT = 1000;
 const REPORT_LIST_LIMIT = 500;
+const DEFAULT_SERVER_TIMEOUT_MS = 15000;
+const LONG_RUNNING_SERVER_TIMEOUT_MS = 45000;
 
 export class SafetyServerApiError extends Error {
   status: number;
@@ -127,17 +129,85 @@ export function readRequiredSafetyAuthToken(request: Request) {
 
 export const readRequiredAdminToken = readRequiredSafetyAuthToken;
 
+function isAbortError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  return (
+    (error instanceof DOMException && error.name === 'AbortError') ||
+    ('name' in error && error.name === 'AbortError')
+  );
+}
+
+function getServerRequestTimeoutMs(path: string, options: RequestInit) {
+  if (options.body instanceof FormData) {
+    return LONG_RUNNING_SERVER_TIMEOUT_MS;
+  }
+
+  if (
+    path.includes('/dashboard/') ||
+    path.includes('/reports/upsert') ||
+    path.includes('/content-items/assets/upload') ||
+    path.includes('/photo-assets/upload') ||
+    path.includes('/k2b/imports/')
+  ) {
+    return LONG_RUNNING_SERVER_TIMEOUT_MS;
+  }
+
+  return DEFAULT_SERVER_TIMEOUT_MS;
+}
+
+async function performSafetyServerRequest(
+  path: string,
+  options: RequestInit,
+  token: string,
+  request: Request | null,
+): Promise<Response> {
+  const timeoutMs = getServerRequestTimeoutMs(path, options);
+  const abortController = new AbortController();
+  const timeoutId = setTimeout(() => {
+    abortController.abort(
+      new Error(`안전 API 요청이 ${timeoutMs}ms 안에 완료되지 않았습니다.`)
+    );
+  }, timeoutMs);
+  const originalSignal = options.signal;
+
+  if (originalSignal) {
+    if (originalSignal.aborted) {
+      abortController.abort(originalSignal.reason);
+    } else {
+      originalSignal.addEventListener(
+        'abort',
+        () => abortController.abort(originalSignal.reason),
+        { once: true }
+      );
+    }
+  }
+
+  try {
+    return await fetch(buildUpstreamUrl(path), {
+      ...options,
+      headers: buildHeaders(request, token, options.headers),
+      cache: 'no-store',
+      signal: abortController.signal,
+    });
+  } catch (error) {
+    const status = isAbortError(error) ? 504 : 503;
+    const message =
+      error instanceof Error
+        ? error.message
+        : '안전 API 서버에 연결하지 못했습니다.';
+    throw new SafetyServerApiError(message, status);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 export async function requestSafetyAdminServer<T>(
   path: string,
   options: RequestInit = {},
   token: string,
   request: Request | null = null,
 ): Promise<T> {
-  const response = await fetch(buildUpstreamUrl(path), {
-    ...options,
-    headers: buildHeaders(request, token, options.headers),
-    cache: 'no-store',
-  });
+  const response = await performSafetyServerRequest(path, options, token, request);
 
   if (!response.ok) {
     throw new SafetyServerApiError(await parseErrorMessage(response), response.status);
@@ -156,11 +226,7 @@ export async function requestSafetyAdminServerRaw(
   token: string,
   request: Request | null = null,
 ): Promise<Response> {
-  const response = await fetch(buildUpstreamUrl(path), {
-    ...options,
-    headers: buildHeaders(request, token, options.headers),
-    cache: 'no-store',
-  });
+  const response = await performSafetyServerRequest(path, options, token, request);
 
   if (!response.ok) {
     throw new SafetyServerApiError(await parseErrorMessage(response), response.status);
