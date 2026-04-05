@@ -4,15 +4,13 @@ import { NextResponse } from 'next/server';
 import {
   assertDownloadItemLimit,
   buildDownloadZipEntryName,
-  getPhotoAlbumItemById,
-  resolvePhotoAlbumItemBinary,
 } from '@/server/photos/album';
 import {
   downloadSafetyPhotoAssetServer,
   readRequiredAdminToken,
   SafetyServerApiError,
 } from '@/server/admin/safetyApiServer';
-import { loadPhotoAlbumCollection, resolvePhotoAlbumAccessContext } from '@/server/photos/service';
+import { loadPhotoAlbumItemsByIds } from '@/server/photos/service';
 
 export const runtime = 'nodejs';
 
@@ -44,14 +42,6 @@ function makeUniqueEntryName(name: string, taken: Set<string>) {
   return nextName;
 }
 
-async function resolveDownloadItems(
-  token: string,
-  request: Request,
-) {
-  await resolvePhotoAlbumAccessContext(token, request);
-  return loadPhotoAlbumCollection(token, request, { source: 'all' });
-}
-
 function parseItemIdsFromRequest(request: Request, body?: unknown) {
   if (request.method === 'GET') {
     const url = new URL(request.url);
@@ -81,10 +71,7 @@ async function buildDownloadResponse(
 ): Promise<Response> {
   assertDownloadItemLimit(itemIds);
 
-  const collection = await resolveDownloadItems(token, request);
-  const selectedItems = itemIds
-    .map((itemId) => getPhotoAlbumItemById(collection.items, itemId))
-    .filter((item): item is NonNullable<typeof item> => Boolean(item));
+  const selectedItems = await loadPhotoAlbumItemsByIds(token, request, itemIds);
 
   if (selectedItems.length !== itemIds.length) {
     return NextResponse.json(
@@ -95,22 +82,15 @@ async function buildDownloadResponse(
 
   if (selectedItems.length === 1) {
     const item = selectedItems[0];
-    const binary =
-      item.sourceKind === 'album_upload'
-        ? await (async () => {
-            const response = await downloadSafetyPhotoAssetServer(token, item.id, request);
-            const arrayBuffer = await response.arrayBuffer();
-            return {
-              buffer: Buffer.from(arrayBuffer),
-              contentType: response.headers.get('content-type') || item.contentType || 'application/octet-stream',
-              fileName: item.fileName || 'photo.jpg',
-            };
-          })()
-        : await resolvePhotoAlbumItemBinary(
-            item,
-            collection.sites,
-            collection.reportsBySiteId,
-          );
+    const binary = await (async () => {
+      const response = await downloadSafetyPhotoAssetServer(token, item.id, request);
+      const arrayBuffer = await response.arrayBuffer();
+      return {
+        buffer: Buffer.from(arrayBuffer),
+        contentType: response.headers.get('content-type') || item.contentType || 'application/octet-stream',
+        fileName: item.fileName || 'photo.jpg',
+      };
+    })();
 
     return new Response(new Uint8Array(binary.buffer), {
       headers: {
@@ -125,22 +105,15 @@ async function buildDownloadResponse(
   const takenNames = new Set<string>();
 
   for (const item of selectedItems) {
-    const binary =
-      item.sourceKind === 'album_upload'
-        ? await (async () => {
-            const response = await downloadSafetyPhotoAssetServer(token, item.id, request);
-            const arrayBuffer = await response.arrayBuffer();
-            return {
-              buffer: Buffer.from(arrayBuffer),
-              contentType: response.headers.get('content-type') || item.contentType || 'application/octet-stream',
-              fileName: item.fileName || 'photo.jpg',
-            };
-          })()
-        : await resolvePhotoAlbumItemBinary(
-            item,
-            collection.sites,
-            collection.reportsBySiteId,
-          );
+    const binary = await (async () => {
+      const response = await downloadSafetyPhotoAssetServer(token, item.id, request);
+      const arrayBuffer = await response.arrayBuffer();
+      return {
+        buffer: Buffer.from(arrayBuffer),
+        contentType: response.headers.get('content-type') || item.contentType || 'application/octet-stream',
+        fileName: item.fileName || 'photo.jpg',
+      };
+    })();
     zip.file(
       makeUniqueEntryName(buildDownloadZipEntryName(item), takenNames),
       binary.buffer,

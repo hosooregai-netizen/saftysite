@@ -14,7 +14,7 @@ import {
 } from '@/lib/photos/apiClient';
 import { createPhotoThumbnail } from '@/lib/photos/thumbnail';
 import type { TableSortState } from '@/types/admin';
-import type { PhotoAlbumItem, PhotoAlbumSourceFilter } from '@/types/photos';
+import type { PhotoAlbumItem } from '@/types/photos';
 import styles from './PhotoAlbumPanel.module.css';
 
 interface PhotoAlbumSiteOption {
@@ -67,20 +67,18 @@ function formatGpsLabel(item: PhotoAlbumItem) {
   return `${item.gpsLatitude.toFixed(5)}, ${item.gpsLongitude.toFixed(5)}`;
 }
 
-function getSourceBadgeLabel(sourceKind: PhotoAlbumItem['sourceKind']) {
-  return sourceKind === 'album_upload' ? 'album' : 'legacy';
+function getSourceLabel(sourceKind: PhotoAlbumItem['sourceKind']) {
+  return sourceKind === 'legacy_import' ? '이관된 보고서 사진' : '업로드 사진';
 }
 
 function matchesContext(
   item: PhotoAlbumItem,
   headquarterId: string,
   siteId: string,
-  source: PhotoAlbumSourceFilter,
   query: string,
 ) {
   if (headquarterId && item.headquarterId !== headquarterId) return false;
   if (siteId && item.siteId !== siteId) return false;
-  if (source !== 'all' && item.sourceKind !== source) return false;
   if (!query) return true;
 
   return [
@@ -108,16 +106,16 @@ export function PhotoAlbumPanel({
   sites,
 }: PhotoAlbumPanelProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const [query, setQuery] = useState('');
-  const [source, setSource] = useState<PhotoAlbumSourceFilter>('all');
   const [sort, setSort] = useState<TableSortState>({
     direction: 'desc',
     key: 'capturedAt',
   });
   const [headquarterId, setHeadquarterId] = useState(() => lockedHeadquarterId || initialHeadquarterId || '');
   const [siteId, setSiteId] = useState(() => lockedSiteId || initialSiteId || '');
-  const [offset, setOffset] = useState(0);
   const [rows, setRows] = useState<PhotoAlbumItem[]>([]);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -136,8 +134,8 @@ export function PhotoAlbumPanel({
   }, [initialSiteId, lockedSiteId]);
 
   useEffect(() => {
-    setOffset(0);
-  }, [deferredQuery, headquarterId, siteId, sort.direction, sort.key, source]);
+    setVisibleCount(PAGE_SIZE);
+  }, [deferredQuery, headquarterId, siteId, sort.direction, sort.key]);
 
   const headquarterOptions = useMemo(
     () =>
@@ -172,15 +170,13 @@ export function PhotoAlbumPanel({
         setLoading(true);
         setError(null);
         const response = await fetchPhotoAlbum({
+          all: true,
           headquarterId: lockedHeadquarterId || headquarterId || '',
-          limit: PAGE_SIZE,
-          offset,
           query: deferredQuery,
           reportKey: initialReportKey || '',
           siteId: lockedSiteId || siteId || '',
           sortBy: (sort.key as 'capturedAt' | 'createdAt' | 'fileName' | 'siteName') || 'capturedAt',
           sortDir: sort.direction,
-          source,
         });
         if (cancelled) return;
         setRows(response.rows);
@@ -207,16 +203,47 @@ export function PhotoAlbumPanel({
     initialReportKey,
     lockedHeadquarterId,
     lockedSiteId,
-    offset,
     siteId,
     sort.direction,
     sort.key,
-    source,
   ]);
 
+  useEffect(() => {
+    if (!loadMoreRef.current || visibleCount >= rows.length) {
+      return;
+    }
+
+    const target = loadMoreRef.current;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) {
+          return;
+        }
+        setVisibleCount((current) => Math.min(rows.length, current + PAGE_SIZE));
+      },
+      { rootMargin: '320px 0px' },
+    );
+
+    observer.observe(target);
+    return () => {
+      observer.disconnect();
+    };
+  }, [rows.length, visibleCount]);
+
+  const visibleRows = useMemo(
+    () => rows.slice(0, Math.min(rows.length, visibleCount)),
+    [rows, visibleCount],
+  );
+  const hasMoreRows = visibleRows.length < rows.length;
+  const allVisibleSelected =
+    visibleRows.length > 0 && visibleRows.every((row) => selectedIds.includes(row.id));
+
   const handleToggleAll = () => {
+    const visibleRowIds = visibleRows.map((row) => row.id);
     setSelectedIds((current) =>
-      current.length === rows.length ? [] : rows.map((row) => row.id),
+      allVisibleSelected
+        ? current.filter((itemId) => !visibleRowIds.includes(itemId))
+        : Array.from(new Set([...current, ...visibleRowIds])),
     );
   };
 
@@ -262,17 +289,15 @@ export function PhotoAlbumPanel({
       }
 
       const refreshed = await fetchPhotoAlbum({
+        all: true,
         headquarterId: lockedHeadquarterId || headquarterId || '',
-        limit: PAGE_SIZE,
-        offset: 0,
         query: deferredQuery,
         reportKey: initialReportKey || '',
         siteId: uploadSiteId,
         sortBy: (sort.key as 'capturedAt' | 'createdAt' | 'fileName' | 'siteName') || 'capturedAt',
         sortDir: sort.direction,
-        source,
       });
-      setOffset(0);
+      setVisibleCount(PAGE_SIZE);
       setRows(refreshed.rows);
       setTotal(refreshed.total);
       setSelectedIds([]);
@@ -311,7 +336,7 @@ export function PhotoAlbumPanel({
             gps: formatGpsLabel(item),
             headquarterName: item.headquarterName,
             siteName: item.siteName,
-            sourceKind: getSourceBadgeLabel(item.sourceKind),
+            sourceKind: getSourceLabel(item.sourceKind),
             sourceReportTitle: item.sourceReportTitle || '-',
             uploadedByName: item.uploadedByName || '-',
           })),
@@ -322,33 +347,14 @@ export function PhotoAlbumPanel({
     }
   };
 
-  const itemCounts = useMemo(
-    () =>
-      rows.reduce(
-        (accumulator, item) => {
-          if (item.sourceKind === 'album_upload') {
-            accumulator.album += 1;
-          } else {
-            accumulator.legacy += 1;
-          }
-          return accumulator;
-        },
-        { album: 0, legacy: 0 },
-      ),
-    [rows],
-  );
-
   const activeItemMatchesContext =
     activeItem &&
     matchesContext(
       activeItem,
       lockedHeadquarterId || headquarterId || '',
       lockedSiteId || siteId || '',
-      source,
       deferredQuery,
     );
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const currentPage = Math.floor(offset / PAGE_SIZE) + 1;
   const sortOptions: Array<{ defaultDirection: TableSortState['direction']; key: typeof sort.key; label: string }> = [
     { defaultDirection: 'desc', key: 'capturedAt', label: '촬영일' },
     { defaultDirection: 'desc', key: 'createdAt', label: '등록일' },
@@ -364,6 +370,9 @@ export function PhotoAlbumPanel({
             <h2 className={adminStyles.sectionTitle}>
               {mode === 'admin' ? '사진첩' : '현장 사진첩'}
             </h2>
+            <p className={adminStyles.sectionDescription}>
+              현재 필터 범위의 사진을 한 번에 불러오고 아래로 내려가며 이어서 볼 수 있습니다.
+            </p>
             {initialReportKey ? (
               <p className={adminStyles.sectionDescription}>
                 {initialReportTitle
@@ -378,7 +387,6 @@ export function PhotoAlbumPanel({
                 {backLabel || '이전 화면으로'}
               </Link>
             ) : null}
-            <span className="app-chip">album {itemCounts.album} / legacy {itemCounts.legacy}</span>
             <button
               type="button"
               className="app-button app-button-secondary"
@@ -412,7 +420,7 @@ export function PhotoAlbumPanel({
           {notice ? <div className={adminStyles.bannerNotice}>{notice}</div> : null}
 
           <TableToolbar
-            countLabel={`표시 ${rows.length} / 전체 ${total}건`}
+            countLabel={`표시 ${visibleRows.length} / 전체 ${total}건`}
             exportLabel="메타데이터 엑셀"
             filters={
               <>
@@ -447,15 +455,6 @@ export function PhotoAlbumPanel({
                     ))}
                   </select>
                 ) : null}
-                <select
-                  className={`app-select ${adminStyles.toolbarSelect}`}
-                  value={source}
-                  onChange={(event) => setSource(event.target.value as PhotoAlbumSourceFilter)}
-                >
-                  <option value="all">전체 출처</option>
-                  <option value="album_upload">album</option>
-                  <option value="report_legacy">legacy</option>
-                </select>
               </>
             }
             onExport={mode === 'admin' ? () => void handleExport() : undefined}
@@ -498,16 +497,16 @@ export function PhotoAlbumPanel({
                 <label className={styles.selectAll}>
                   <input
                     type="checkbox"
-                    checked={rows.length > 0 && selectedIds.length === rows.length}
+                    checked={allVisibleSelected}
                     onChange={handleToggleAll}
                   />
-                  <span>현재 페이지 전체 선택</span>
+                  <span>현재 보이는 사진 전체 선택</span>
                 </label>
                 <span className="app-chip">선택 {selectedIds.length}건</span>
               </div>
 
               <div className={styles.grid}>
-                {rows.map((item) => (
+                {visibleRows.map((item) => (
                   <article key={item.id} className={styles.card}>
                     <button
                       type="button"
@@ -534,7 +533,6 @@ export function PhotoAlbumPanel({
                     </label>
                     <div className={styles.cardBody}>
                       <div className={styles.cardMetaRow}>
-                        <span className={styles.sourceBadge}>{getSourceBadgeLabel(item.sourceKind)}</span>
                         <span className={styles.cardMetaText}>{formatFileSize(item.sizeBytes)}</span>
                       </div>
                       <div className={styles.cardTitle} title={item.fileName}>
@@ -550,7 +548,7 @@ export function PhotoAlbumPanel({
                       <div className={styles.cardMetaText}>
                         {item.uploadedByName ? `업로더 ${item.uploadedByName}` : '업로더 미상'}
                       </div>
-                      {item.sourceKind === 'report_legacy' && item.sourceReportTitle ? (
+                      {item.sourceReportTitle ? (
                         <div className={styles.cardMetaText} title={item.sourceReportTitle}>
                           {item.sourceReportTitle}
                         </div>
@@ -569,29 +567,22 @@ export function PhotoAlbumPanel({
                 ))}
               </div>
 
-              <div className={styles.paginationBar}>
-                <span className={styles.paginationMeta}>
-                  {currentPage} / {totalPages} 페이지
-                </span>
-                <div className={styles.paginationActions}>
+              {hasMoreRows ? (
+                <div ref={loadMoreRef} className={styles.loadMoreRow}>
+                  <span className={styles.paginationMeta}>
+                    아래로 내려 나머지 {rows.length - visibleRows.length}건을 이어서 볼 수 있습니다.
+                  </span>
                   <button
                     type="button"
                     className="app-button app-button-secondary"
-                    disabled={offset === 0}
-                    onClick={() => setOffset((current) => Math.max(0, current - PAGE_SIZE))}
+                    onClick={() =>
+                      setVisibleCount((current) => Math.min(rows.length, current + PAGE_SIZE))
+                    }
                   >
-                    이전
-                  </button>
-                  <button
-                    type="button"
-                    className="app-button app-button-secondary"
-                    disabled={offset + PAGE_SIZE >= total}
-                    onClick={() => setOffset((current) => current + PAGE_SIZE)}
-                  >
-                    다음
+                    사진 더 보기
                   </button>
                 </div>
-              </div>
+              ) : null}
             </>
           )}
         </div>
@@ -640,7 +631,7 @@ export function PhotoAlbumPanel({
             <div className={styles.modalMeta}>
               <div className={styles.modalMetaRow}>
                 <span className={styles.modalMetaLabel}>출처</span>
-                <span>{getSourceBadgeLabel(activeItem.sourceKind)}</span>
+                <span>{getSourceLabel(activeItem.sourceKind)}</span>
               </div>
               <div className={styles.modalMetaRow}>
                 <span className={styles.modalMetaLabel}>사업장</span>
@@ -670,7 +661,7 @@ export function PhotoAlbumPanel({
                 <span className={styles.modalMetaLabel}>GPS</span>
                 <span>{formatGpsLabel(activeItem)}</span>
               </div>
-              {activeItem.sourceKind === 'report_legacy' ? (
+              {activeItem.sourceReportTitle ? (
                 <>
                   <div className={styles.modalMetaRow}>
                     <span className={styles.modalMetaLabel}>원본 보고서</span>

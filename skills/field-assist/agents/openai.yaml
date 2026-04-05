@@ -1,0 +1,4 @@
+interface:
+  display_name: "Field Assist"
+  short_description: "Help with Field Assist tasks"
+  default_prompt: "Use $field-assist to inspect worker site assist flows and fix mobile issues."

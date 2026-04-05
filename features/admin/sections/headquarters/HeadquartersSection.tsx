@@ -1,14 +1,21 @@
 'use client';
 
 import { useMemo } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import { SitesSection } from '@/features/admin/sections/sites/SitesSection';
 import { SiteEntryHubPanel } from '@/features/home/components/SiteEntryHubPanel';
+import {
+  buildAdminK2bUploadCloseHref,
+  buildAdminK2bUploadHref,
+  isK2bUploadOpen,
+} from '@/lib/admin/k2bUpload';
 import { mapSafetySiteToInspectionSite } from '@/lib/safetyApiMappers/sites';
 import type { SafetySite, SafetyUser } from '@/types/backend';
 import type { SafetyAssignment, SafetyHeadquarter } from '@/types/controller';
 import { HeadquartersTable } from './HeadquartersTable';
 import { HeadquarterEditorModal } from './HeadquarterEditorModal';
+import { K2bImportModal } from '../k2b/K2bImportModal';
 import { useHeadquartersSectionState } from './useHeadquartersSectionState';
 
 interface HeadquartersSectionProps {
@@ -79,6 +86,11 @@ interface HeadquartersSectionProps {
   ) => Promise<void>;
   onAssignFieldAgent: (siteId: string, userId: string) => Promise<void>;
   onUnassignFieldAgent: (siteId: string, userId: string) => Promise<void>;
+  onReload: (options?: {
+    force?: boolean;
+    includeContent?: boolean;
+    includeReports?: boolean;
+  }) => Promise<void>;
 }
 
 export function HeadquartersSection(props: HeadquartersSectionProps) {
@@ -101,8 +113,11 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
     onUnassignFieldAgent,
     onUpdate,
     onUpdateSite,
+    onReload,
   } = props;
 
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const state = useHeadquartersSectionState(headquarters, busy);
   const selectedHeadquarter = useMemo(
     () => headquarters.find((item) => item.id === selectedHeadquarterId) ?? null,
@@ -128,6 +143,27 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
     () => (selectedSite ? mapSafetySiteToInspectionSite(selectedSite) : null),
     [selectedSite],
   );
+  const k2bOpen = isK2bUploadOpen(searchParams) || searchParams.get('section') === 'k2b';
+
+  const openExcelUpload = (context?: { headquarterId?: string | null; siteId?: string | null }) => {
+    router.replace(
+      buildAdminK2bUploadHref(searchParams, {
+        headquarterId: context?.headquarterId ?? selectedHeadquarter?.id ?? null,
+        section: 'headquarters',
+        siteId: context?.siteId ?? selectedSite?.id ?? null,
+      }),
+    );
+  };
+
+  const closeExcelUpload = () => {
+    router.replace(
+      buildAdminK2bUploadCloseHref(searchParams, {
+        headquarterId: selectedHeadquarter?.id ?? null,
+        section: 'headquarters',
+        siteId: selectedSite?.id ?? null,
+      }),
+    );
+  };
 
   const submit = async () => {
     if (state.editingId === 'create' && !state.isCreateReady) return;
@@ -163,6 +199,7 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
             onCreateRequest={state.openCreate}
             onDeleteRequest={handleDeleteHeadquarter}
             onEditRequest={state.openEdit}
+            onExcelUploadRequest={(item) => openExcelUpload({ headquarterId: item?.id ?? null, siteId: null })}
             onOpenSitesRequest={(item) => onSelectHeadquarter(item.id)}
             onQueryChange={state.setQuery}
             onSortChange={state.setSort}
@@ -198,6 +235,12 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
           onSelectSiteEntry={(site) => onSelectSite(selectedHeadquarter.id, site.id)}
           onUnassignFieldAgent={onUnassignFieldAgent}
           onUpdate={onUpdateSite}
+          onExcelUploadRequest={(context) =>
+            openExcelUpload({
+              headquarterId: context?.headquarterId ?? selectedHeadquarter.id,
+              siteId: context?.siteId ?? null,
+            })
+          }
           showHeadquarterColumn={false}
           sites={headquarterSites}
           title="현장 목록"
@@ -214,6 +257,15 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
         onFormChange={state.setForm}
         onSubmit={submit}
         open={state.isOpen}
+      />
+
+      <K2bImportModal
+        contextHeadquarterId={selectedHeadquarter?.id ?? null}
+        contextSiteId={selectedSite?.id ?? null}
+        onClose={closeExcelUpload}
+        onReload={onReload}
+        open={k2bOpen}
+        originSection="headquarters"
       />
     </div>
   );

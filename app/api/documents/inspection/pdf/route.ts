@@ -14,6 +14,13 @@ function hasRemoteConverterConfigured(): boolean {
   );
 }
 
+function hasRemoteConverterApiKeyConfigured(): boolean {
+  return Boolean(
+    process.env.HWPX_PDF_API_KEY?.trim() ||
+      process.env.WINDOWS_HWPX_PDF_API_KEY?.trim(),
+  );
+}
+
 async function readHwpxFromRequest(
   request: Request,
 ): Promise<{ buffer: Buffer; filename: string } | Response> {
@@ -61,12 +68,21 @@ async function readHwpxFromRequest(
 
 export async function POST(request: Request): Promise<Response> {
   try {
-    if (process.platform !== 'win32' && !hasRemoteConverterConfigured()) {
+    if (!hasRemoteConverterConfigured()) {
       return NextResponse.json(
         {
-          error: 'PDF 변환은 Windows 서버 또는 별도 HWPX PDF 변환 서버 설정이 필요합니다.',
+          error: 'PDF 변환용 Windows FastAPI 서버 URL이 필요합니다.',
         },
-        { status: 501 },
+        { status: 500 },
+      );
+    }
+
+    if (!hasRemoteConverterApiKeyConfigured()) {
+      return NextResponse.json(
+        {
+          error: 'PDF 변환용 Windows FastAPI 서버 API 키가 필요합니다.',
+        },
+        { status: 500 },
       );
     }
 

@@ -30,9 +30,41 @@ function normalizeMeasureText(value: string) {
 }
 
 function buildQuarterlyCounters(counterMap: Map<string, number>): QuarterlyCounter[] {
-  return [...counterMap.entries()]
+  const entries = [...counterMap.entries()]
     .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0], 'ko'))
     .map(([label, count]) => ({ label, count }));
+
+  return collapseQuarterlyCounters(entries);
+}
+
+function collapseQuarterlyCounters(
+  counters: QuarterlyCounter[],
+  topN = 5,
+  otherLabel = '기타',
+) {
+  if (counters.length <= topN) {
+    return counters;
+  }
+
+  const head = counters.slice(0, topN).map((item) => ({ ...item }));
+  const otherCount = counters
+    .slice(topN)
+    .reduce((total, item) => total + item.count, 0);
+
+  if (otherCount <= 0) {
+    return head;
+  }
+
+  const existingOtherIndex = head.findIndex((item) => item.label === otherLabel);
+  if (existingOtherIndex >= 0) {
+    head[existingOtherIndex] = {
+      ...head[existingOtherIndex],
+      count: head[existingOtherIndex].count + otherCount,
+    };
+    return head;
+  }
+
+  return [...head, { label: otherLabel, count: otherCount }];
 }
 
 function sortSessionsByDateDesc(sessions: InspectionSession[]) {
@@ -302,6 +334,8 @@ export function buildInitialQuarterlySummaryReport(
           : createQuarterlySiteSnapshot(site),
       lastCalculatedAt: existing.lastCalculatedAt || existing.updatedAt || createTimestamp(),
       updatedAt: existing.updatedAt || createTimestamp(),
+      accidentStats: collapseQuarterlyCounters(existing.accidentStats || []),
+      causativeStats: collapseQuarterlyCounters(existing.causativeStats || []),
       futurePlans: existing.futurePlans,
       opsAssetId: existing.opsAssetId || '',
       opsAssetTitle: existing.opsAssetTitle || '',

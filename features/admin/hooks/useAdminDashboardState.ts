@@ -112,9 +112,15 @@ export function useAdminDashboardState({
   const router = useRouter();
   const searchParams = useSearchParams();
   const rawSection = searchParams.get('section');
+  const requestedSection =
+    rawSection ??
+    (typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search).get('section')
+      : null);
+  const excelUpload = searchParams.get('excelUpload');
   const selectedHeadquarterId = searchParams.get('headquarterId');
   const selectedSiteId = searchParams.get('siteId');
-  const activeSection = parseAdminSectionKey(rawSection) ?? 'headquarters';
+  const activeSection = parseAdminSectionKey(requestedSection) ?? 'headquarters';
   const activeSectionMeta = useMemo(
     () => ADMIN_SECTIONS.find((section) => section.key === activeSection) ?? ADMIN_SECTIONS[0],
     [activeSection],
@@ -212,19 +218,20 @@ export function useAdminDashboardState({
   useEffect(() => {
     if (!enabled) return;
 
-    if (!rawSection || !isLegacyAdminSectionKey(rawSection)) {
+    if (!requestedSection || !isLegacyAdminSectionKey(requestedSection)) {
       replaceRoute('headquarters', {
+        excelUpload,
         headquarterId: selectedHeadquarterId,
         siteId: selectedSiteId,
       });
     }
-  }, [enabled, rawSection, replaceRoute, selectedHeadquarterId, selectedSiteId]);
+  }, [enabled, excelUpload, replaceRoute, requestedSection, selectedHeadquarterId, selectedSiteId]);
 
   useEffect(() => {
     if (!enabled || !hasLoadedCoreData) return;
-    if (!rawSection || !isLegacyAdminSectionKey(rawSection)) return;
+    if (!requestedSection || !isLegacyAdminSectionKey(requestedSection)) return;
 
-    if (rawSection === 'sites') {
+    if (requestedSection === 'sites') {
       const matchedSite = selectedSiteId
         ? data.sites.find((site) => site.id === selectedSiteId) ?? null
         : null;
@@ -263,8 +270,8 @@ export function useAdminDashboardState({
     data.sites,
     enabled,
     hasLoadedCoreData,
-    rawSection,
     replaceRoute,
+    requestedSection,
     selectedHeadquarter,
     selectedHeadquarterId,
     selectedSite,

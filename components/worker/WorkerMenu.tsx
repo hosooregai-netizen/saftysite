@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useWorkerShellSidebarOptional } from '@/components/worker/WorkerShellSidebarContext';
 import {
   buildWorkerCalendarHref,
+  buildSiteAssistHref,
   buildSiteBadWorkplaceHref,
   buildSiteHubHref,
   buildSitePhotoAlbumHref,
@@ -129,6 +130,12 @@ export function WorkerMenuPanel({
           active: siteNavView === 'quarterly',
         },
         {
+          label: '현장 보조',
+          description: '이전 사진, 현장 사진 업로드, 사인, 연락처 확인',
+          href: buildSiteAssistHref(currentSiteKey),
+          active: siteNavView === 'assist',
+        },
+        {
           label: '현장 사진첩',
           description: '이 현장의 사진 보기와 업로드',
           href: buildSitePhotoAlbumHref(currentSiteKey),
@@ -201,7 +208,12 @@ export function WorkerMenuPanel({
                     <span className={styles.srOnly}>{item.label}</span>
                   </>
                 ) : (
-                  <span className={styles.menuItemLabel}>{item.label}</span>
+                  <>
+                    <span className={styles.menuItemLabel}>{item.label}</span>
+                    {item.description ? (
+                      <span className={styles.menuItemDescription}>{item.description}</span>
+                    ) : null}
+                  </>
                 )}
               </Link>
             ))}

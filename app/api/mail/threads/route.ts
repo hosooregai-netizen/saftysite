@@ -18,6 +18,8 @@ export async function GET(request: Request): Promise<Response> {
         account_id: searchParams.get('accountId') || '',
         box: searchParams.get('box') || '',
         headquarter_id: searchParams.get('headquarterId') || '',
+        limit: Math.max(1, Math.min(200, Number(searchParams.get('limit') || '100'))),
+        offset: Math.max(0, Number(searchParams.get('offset') || '0')),
         query: searchParams.get('query') || '',
         report_key: searchParams.get('reportKey') || '',
         site_id: searchParams.get('siteId') || '',
@@ -25,6 +27,8 @@ export async function GET(request: Request): Promise<Response> {
       request,
     );
     return NextResponse.json({
+      limit: response.limit,
+      offset: response.offset,
       rows: response.rows.map((item) => mapBackendMailThread(item)),
       total: response.total,
     });

@@ -79,6 +79,7 @@ function renderAdminSection(
           busy={busy}
           canDelete={canDelete}
           headquarters={headquarters}
+          onReload={dashboard.reload}
           onAssignFieldAgent={dashboard.assignFieldAgentToSite}
           onClearHeadquarterSelection={dashboard.clearHeadquarterSelection}
           onClearSiteSelection={dashboard.clearSiteSelection}
@@ -116,6 +117,7 @@ function renderAdminSection(
           ensureSessionLoaded={ensureSessionLoaded}
           getSessionById={getSessionById}
           isLoading={dashboard.isLoading || dashboard.isReportsLoading || dashboard.isMutating}
+          onReloadData={dashboard.reload}
           sessions={sessions}
           sites={sites}
           users={users}

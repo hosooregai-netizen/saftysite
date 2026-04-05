@@ -16,8 +16,11 @@
 - `server/documents/inspection/hwpx`
   - 기존 클라이언트 HWPX 생성기를 서버용으로 분리
 - `server/documents/inspection/hwpxToPdf`
-  - 로컬 Windows COM 변환 유지
-  - `HWPX_PDF_CONVERTER_URL` 또는 `WINDOWS_HWPX_PDF_CONVERTER_URL` 설정 시 원격 Windows 변환 서버로 위임 가능
+  - 로컬 Windows COM 변환 코드는 유지하지만 운영 기준은 원격 Windows FastAPI 변환 서버 사용
+  - `HWPX_PDF_CONVERTER_URL` 또는 `WINDOWS_HWPX_PDF_CONVERTER_URL` 필수
+  - `HWPX_PDF_API_KEY` 또는 `WINDOWS_HWPX_PDF_API_KEY` 필수
+  - 요청 헤더 `X-Internal-Api-Key` 로 서버 간 인증
+  - 응답 헤더 `X-Inspection-Pdf-Warnings` 가 오면 Next 서버 로그에 남김
 - `features/inspection-session/hooks/useInspectionSessionScreen`
   - HWPX/PDF 다운로드를 서버 API 우선으로 호출
   - 이행 기간 동안 브라우저 생성은 폴백으로 유지
@@ -56,4 +59,5 @@
 ## 운영 메모
 
 - 별도 Windows 변환 서버를 붙일 때는 Next 서버가 Windows일 필요가 없다.
+- 권장 운영값은 `HWPX_PDF_CONVERTER_URL=http://<windows-host>/api/v1/documents/inspection/pdf` 와 동일한 `HWPX_PDF_API_KEY` 조합이다.
 - `inspection` 세션에 data URL 이미지가 많으면 요청 본문이 커질 수 있으므로, 업로드 자산 URL 사용 비율을 높이는 편이 좋다.

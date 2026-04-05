@@ -12,6 +12,9 @@ import type {
   SafetyBackendMailThread,
   SafetyBackendMailThreadDetail,
   SafetyBackendNotificationFeedResponse,
+  SafetyBackendK2bApplyResult,
+  SafetyBackendK2bImportPreview,
+  SafetyBackendFieldSignatureRecord,
   SafetyBackendPhotoAsset,
   SafetyBackendPhotoAssetListResponse,
   SafetyBackendScheduleListResponse,
@@ -27,6 +30,8 @@ import type {
   ControllerDashboardData,
   SafetyAssignment,
   SafetyHeadquarter,
+  SafetyHeadquarterInput,
+  SafetyHeadquarterUpdateInput,
   SafetySiteInput,
   SafetySiteUpdateInput,
 } from '@/types/controller';
@@ -34,6 +39,8 @@ import type {
 const ADMIN_LIST_LIMIT = 500;
 const CONTENT_LIST_LIMIT = 1000;
 const REPORT_LIST_LIMIT = 500;
+const DEFAULT_SERVER_TIMEOUT_MS = 15000;
+const LONG_RUNNING_SERVER_TIMEOUT_MS = 45000;
 
 export class SafetyServerApiError extends Error {
   status: number;
@@ -47,12 +54,19 @@ export class SafetyServerApiError extends Error {
 
 function withQuery(
   path: string,
-  params: Record<string, string | number | boolean | null | undefined>,
+  params: Record<string, string | number | boolean | Array<string | number | boolean> | null | undefined>,
 ) {
   const searchParams = new URLSearchParams();
 
   Object.entries(params).forEach(([key, value]) => {
     if (value === null || value === undefined || value === '') return;
+    if (Array.isArray(value)) {
+      value.forEach((entry) => {
+        if (entry === null || entry === undefined || entry === '') return;
+        searchParams.append(key, String(entry));
+      });
+      return;
+    }
     searchParams.set(key, String(value));
   });
 
@@ -117,17 +131,85 @@ export function readRequiredSafetyAuthToken(request: Request) {
 
 export const readRequiredAdminToken = readRequiredSafetyAuthToken;
 
+function isAbortError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  return (
+    (error instanceof DOMException && error.name === 'AbortError') ||
+    ('name' in error && error.name === 'AbortError')
+  );
+}
+
+function getServerRequestTimeoutMs(path: string, options: RequestInit) {
+  if (options.body instanceof FormData) {
+    return LONG_RUNNING_SERVER_TIMEOUT_MS;
+  }
+
+  if (
+    path.includes('/dashboard/') ||
+    path.includes('/reports/upsert') ||
+    path.includes('/content-items/assets/upload') ||
+    path.includes('/photo-assets/upload') ||
+    path.includes('/k2b/imports/')
+  ) {
+    return LONG_RUNNING_SERVER_TIMEOUT_MS;
+  }
+
+  return DEFAULT_SERVER_TIMEOUT_MS;
+}
+
+async function performSafetyServerRequest(
+  path: string,
+  options: RequestInit,
+  token: string,
+  request: Request | null,
+): Promise<Response> {
+  const timeoutMs = getServerRequestTimeoutMs(path, options);
+  const abortController = new AbortController();
+  const timeoutId = setTimeout(() => {
+    abortController.abort(
+      new Error(`안전 API 요청이 ${timeoutMs}ms 안에 완료되지 않았습니다.`)
+    );
+  }, timeoutMs);
+  const originalSignal = options.signal;
+
+  if (originalSignal) {
+    if (originalSignal.aborted) {
+      abortController.abort(originalSignal.reason);
+    } else {
+      originalSignal.addEventListener(
+        'abort',
+        () => abortController.abort(originalSignal.reason),
+        { once: true }
+      );
+    }
+  }
+
+  try {
+    return await fetch(buildUpstreamUrl(path), {
+      ...options,
+      headers: buildHeaders(request, token, options.headers),
+      cache: 'no-store',
+      signal: abortController.signal,
+    });
+  } catch (error) {
+    const status = isAbortError(error) ? 504 : 503;
+    const message =
+      error instanceof Error
+        ? error.message
+        : '안전 API 서버에 연결하지 못했습니다.';
+    throw new SafetyServerApiError(message, status);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 export async function requestSafetyAdminServer<T>(
   path: string,
   options: RequestInit = {},
   token: string,
   request: Request | null = null,
 ): Promise<T> {
-  const response = await fetch(buildUpstreamUrl(path), {
-    ...options,
-    headers: buildHeaders(request, token, options.headers),
-    cache: 'no-store',
-  });
+  const response = await performSafetyServerRequest(path, options, token, request);
 
   if (!response.ok) {
     throw new SafetyServerApiError(await parseErrorMessage(response), response.status);
@@ -146,11 +228,7 @@ export async function requestSafetyAdminServerRaw(
   token: string,
   request: Request | null = null,
 ): Promise<Response> {
-  const response = await fetch(buildUpstreamUrl(path), {
-    ...options,
-    headers: buildHeaders(request, token, options.headers),
-    cache: 'no-store',
-  });
+  const response = await performSafetyServerRequest(path, options, token, request);
 
   if (!response.ok) {
     throw new SafetyServerApiError(await parseErrorMessage(response), response.status);
@@ -219,6 +297,21 @@ export function fetchSafetySitesServer(
       active_only: true,
       include_headquarter_detail: true,
       include_assigned_user: true,
+      limit: ADMIN_LIST_LIMIT,
+    }),
+    {},
+    token,
+    request,
+  );
+}
+
+export function fetchSafetyHeadquartersServer(
+  token: string,
+  request: Request | null = null,
+): Promise<SafetyHeadquarter[]> {
+  return requestSafetyAdminServer<SafetyHeadquarter[]>(
+    withQuery('/headquarters', {
+      active_only: true,
       limit: ADMIN_LIST_LIMIT,
     }),
     {},
@@ -472,12 +565,94 @@ export function updateAdminScheduleServer(
 
 export function fetchSafetyPhotoAssetsServer(
   token: string,
-  params: Record<string, string | number | boolean | null | undefined>,
+  params: Record<string, string | number | boolean | Array<string | number | boolean> | null | undefined>,
   request: Request | null = null,
 ): Promise<SafetyBackendPhotoAssetListResponse> {
   return requestSafetyAdminServer<SafetyBackendPhotoAssetListResponse>(
     withQuery('/photo-assets', params),
     {},
+    token,
+    request,
+  );
+}
+
+export function parseK2bImportServer(
+  token: string,
+  formData: FormData,
+  request: Request | null = null,
+): Promise<SafetyBackendK2bImportPreview> {
+  return requestSafetyAdminServer<SafetyBackendK2bImportPreview>(
+    '/k2b/imports/parse',
+    {
+      method: 'POST',
+      body: formData,
+    },
+    token,
+    request,
+  );
+}
+
+export function fetchK2bImportPreviewServer(
+  token: string,
+  jobId: string,
+  request: Request | null = null,
+): Promise<SafetyBackendK2bImportPreview> {
+  return requestSafetyAdminServer<SafetyBackendK2bImportPreview>(
+    `/k2b/imports/${encodeURIComponent(jobId)}`,
+    {},
+    token,
+    request,
+  );
+}
+
+export function applyK2bImportServer(
+  token: string,
+  payload: Record<string, unknown>,
+  request: Request | null = null,
+): Promise<SafetyBackendK2bApplyResult> {
+  return requestSafetyAdminServer<SafetyBackendK2bApplyResult>(
+    '/k2b/imports/apply',
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    },
+    token,
+    request,
+  );
+}
+
+export function fetchSiteFieldSignaturesServer(
+  token: string,
+  siteId: string,
+  params: Record<string, string | number | boolean | null | undefined>,
+  request: Request | null = null,
+): Promise<SafetyBackendFieldSignatureRecord[]> {
+  return requestSafetyAdminServer<SafetyBackendFieldSignatureRecord[]>(
+    withQuery(`/sites/${encodeURIComponent(siteId)}/field-signatures`, params),
+    {},
+    token,
+    request,
+  );
+}
+
+export function createSiteFieldSignatureServer(
+  token: string,
+  siteId: string,
+  payload: Record<string, unknown>,
+  request: Request | null = null,
+): Promise<SafetyBackendFieldSignatureRecord> {
+  return requestSafetyAdminServer<SafetyBackendFieldSignatureRecord>(
+    `/sites/${encodeURIComponent(siteId)}/field-signatures`,
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    },
     token,
     request,
   );
@@ -660,8 +835,8 @@ export function fetchSafetyMailThreadsServer(
   token: string,
   params: Record<string, string | number | boolean | null | undefined>,
   request: Request | null = null,
-): Promise<{ rows: SafetyBackendMailThread[]; total: number }> {
-  return requestSafetyAdminServer<{ rows: SafetyBackendMailThread[]; total: number }>(
+): Promise<{ rows: SafetyBackendMailThread[]; total: number; limit: number; offset: number }> {
+  return requestSafetyAdminServer<{ rows: SafetyBackendMailThread[]; total: number; limit: number; offset: number }>(
     withQuery('/mail/threads', params),
     {},
     token,
@@ -839,6 +1014,64 @@ export function updateAdminSite(
     `/sites/${encodeURIComponent(siteId)}`,
     {
       method: 'PATCH',
+      body: JSON.stringify(payload),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    },
+    token,
+    request,
+  );
+}
+
+export function createAdminHeadquarter(
+  token: string,
+  payload: SafetyHeadquarterInput | SafetyHeadquarterUpdateInput,
+  request: Request | null = null,
+): Promise<SafetyHeadquarter> {
+  return requestSafetyAdminServer<SafetyHeadquarter>(
+    '/headquarters',
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    },
+    token,
+    request,
+  );
+}
+
+export function updateAdminHeadquarter(
+  token: string,
+  headquarterId: string,
+  payload: SafetyHeadquarterInput | SafetyHeadquarterUpdateInput,
+  request: Request | null = null,
+): Promise<SafetyHeadquarter> {
+  return requestSafetyAdminServer<SafetyHeadquarter>(
+    `/headquarters/${encodeURIComponent(headquarterId)}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    },
+    token,
+    request,
+  );
+}
+
+export function createAdminSite(
+  token: string,
+  payload: SafetySiteInput | SafetySiteUpdateInput,
+  request: Request | null = null,
+): Promise<SafetySite> {
+  return requestSafetyAdminServer<SafetySite>(
+    '/sites',
+    {
+      method: 'POST',
       body: JSON.stringify(payload),
       headers: {
         'Content-Type': 'application/json',

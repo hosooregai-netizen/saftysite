@@ -1,0 +1,151 @@
+.stepStack {
+  display: grid;
+  gap: 16px;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.summaryCard {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-card);
+  background: #fff;
+}
+
+.summaryLabel {
+  font-size: var(--text-ui-sm);
+  font-weight: 700;
+  color: var(--erp-text-muted);
+}
+
+.summaryValue {
+  font-size: var(--text-lead);
+  font-weight: 700;
+  color: var(--erp-dark);
+}
+
+.summaryMeta {
+  font-size: var(--text-ui-sm);
+  color: var(--erp-text-muted);
+}
+
+.mappingGrid,
+.previewGrid {
+  display: grid;
+  gap: 12px;
+}
+
+.mappingGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.mappingRow {
+  display: grid;
+  gap: 6px;
+}
+
+.rowTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.rowTable th,
+.rowTable td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--erp-line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.rowTable th {
+  font-size: var(--text-ui-sm);
+  font-weight: 700;
+  color: var(--erp-text-muted);
+  background: #fbfcfe;
+}
+
+.candidateList {
+  display: grid;
+  gap: 6px;
+}
+
+.candidateChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--erp-line);
+  background: #f8fafc;
+  font-size: var(--text-ui-sm);
+  color: var(--erp-dark);
+}
+
+.stepDescription {
+  margin-top: 4px;
+  font-size: var(--text-body);
+  line-height: 1.6;
+  color: var(--erp-text-muted);
+}
+
+.emptyState {
+  padding: 20px 0;
+  font-size: var(--text-body);
+  color: var(--erp-text-muted);
+}
+
+.noticeBox,
+.errorBox {
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: var(--text-body);
+  line-height: 1.6;
+}
+
+.noticeBox {
+  border: 1px solid #b8cbe0;
+  background: #eef5fc;
+  color: var(--erp-mid);
+}
+
+.errorBox {
+  border: 1px solid var(--erp-danger-line);
+  background: var(--erp-danger-soft);
+  color: var(--erp-danger-text);
+}
+
+.inlineActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.selectLabel {
+  display: grid;
+  gap: 6px;
+}
+
+@media (max-width: 1200px) {
+  .summaryGrid,
+  .mappingGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .summaryGrid,
+  .mappingGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

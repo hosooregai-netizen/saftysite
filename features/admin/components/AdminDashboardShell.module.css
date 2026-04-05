@@ -7,9 +7,11 @@
 .hero {
   flex-shrink: 0;
   min-height: 0;
-  padding: 18px 27px 17px;
+  padding: 22px 30px 18px;
   border-bottom: 1px solid var(--erp-line);
-  background: #f6f9fc;
+  background:
+    radial-gradient(circle at top right, rgba(247, 176, 25, 0.08), transparent 20%),
+    linear-gradient(180deg, #f7fbff 0%, #f2f7fc 100%);
   color: var(--erp-dark);
 }
 
@@ -29,18 +31,18 @@
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  min-height: 32px;
-  padding: 4px 6px;
+  min-height: 36px;
+  padding: 6px 10px;
   margin: 0 -2px;
-  border: none;
-  background: transparent;
+  border: 1px solid rgba(188, 199, 211, 0.78);
+  background: rgba(255, 255, 255, 0.82);
   font-size: var(--text-ui-sm);
   font-weight: 600;
   line-height: 1.2;
   letter-spacing: -0.02em;
   color: var(--erp-mid);
   cursor: pointer;
-  border-radius: var(--erp-radius-control);
+  border-radius: 999px;
   transition:
     color 0.12s ease,
     text-decoration-color 0.12s ease;
@@ -110,10 +112,10 @@
 .pageGrid {
   display: grid;
   align-content: start;
-  gap: 16px;
+  gap: 18px;
   flex: 1 1 auto;
   min-height: 0;
-  padding: 20px 28px 24px;
+  padding: 24px 30px 30px;
 }
 
 .summaryBar {
@@ -125,11 +127,12 @@
 .summaryCard {
   display: grid;
   gap: 6px;
-  padding: 15px 18px;
+  padding: 18px 20px;
   border: 1px solid var(--erp-line);
   border-radius: var(--erp-radius-card);
-  background: var(--erp-white);
-  box-shadow: 0 1px 0 rgba(16, 24, 43, 0.04);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 251, 255, 0.96));
+  box-shadow: var(--erp-shadow-soft);
 }
 
 .summaryCardLabel {
@@ -235,7 +238,7 @@
 .bannerError,
 .bannerNotice {
   padding: 12px 14px;
-  border-radius: 1px;
+  border-radius: 14px;
   font-size: var(--text-body);
   line-height: 1.6;
 }
@@ -270,7 +273,7 @@
   width: min(84vw, 320px);
   padding: 20px 16px;
   border-right: 1px solid var(--erp-line);
-  background: #f6f9fc;
+  background: linear-gradient(180deg, rgba(248, 251, 255, 0.98), rgba(240, 246, 253, 0.98));
   overflow: hidden;
   min-height: 0;
 }
@@ -278,8 +281,9 @@
 .sectionCard {
   border: 1px solid var(--erp-line);
   border-radius: var(--erp-radius-surface);
-  background: var(--erp-white);
-  box-shadow: 0 1px 0 rgba(16, 24, 43, 0.04);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(249, 251, 255, 0.96));
+  box-shadow: var(--erp-shadow-soft);
   overflow: hidden;
 }
 
@@ -289,9 +293,9 @@
   justify-content: space-between;
   align-items: flex-start;
   gap: 12px;
-  padding: 18px;
+  padding: 20px;
   border-bottom: 1px solid var(--erp-line);
-  background: #fbfcfe;
+  background: linear-gradient(180deg, rgba(248, 251, 255, 0.95), rgba(255, 255, 255, 0.98));
 }
 
 .sectionHeaderActions {
@@ -308,7 +312,7 @@
 }
 
 .sectionBody {
-  padding: 18px;
+  padding: 20px;
 }
 
 .listSectionCard .sectionBody {
@@ -1442,4 +1446,3 @@
     gap: 12px;
   }
 }
-

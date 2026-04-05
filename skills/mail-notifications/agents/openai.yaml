@@ -1,0 +1,4 @@
+interface:
+  display_name: "Mail Notifications"
+  short_description: "Help with Mail Notifications tasks"
+  default_prompt: "Use $mail-notifications to inspect mailbox, SMS, and notification flows."

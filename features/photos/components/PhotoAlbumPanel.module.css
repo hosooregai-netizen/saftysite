@@ -150,7 +150,7 @@
 }
 
 .bulkBar,
-.paginationBar {
+.loadMoreRow {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -171,9 +171,11 @@
   color: var(--erp-text-muted);
 }
 
-.paginationActions {
-  display: flex;
-  gap: 8px;
+.loadMoreRow {
+  padding: 14px 16px;
+  border: 1px dashed #c7d4e2;
+  border-radius: 14px;
+  background: #fbfcfe;
 }
 
 .modalGrid {
@@ -226,12 +228,8 @@
   }
 
   .bulkBar,
-  .paginationBar {
+  .loadMoreRow {
     flex-direction: column;
     align-items: stretch;
-  }
-
-  .paginationActions {
-    justify-content: flex-end;
   }
 }

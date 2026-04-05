@@ -30,6 +30,7 @@ export function NotificationBell() {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const searchToken = searchParams.toString();
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const hasUserInteractedRef = useRef(false);
   const [open, setOpen] = useState(false);
@@ -68,6 +69,15 @@ export function NotificationBell() {
     }, 60_000);
     return () => window.clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    void refresh();
+  }, [open]);
+
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname, searchToken]);
 
   useEffect(() => {
     const markInteracted = () => {
@@ -146,9 +156,14 @@ export function NotificationBell() {
   };
 
   const handleAckAll = async () => {
-    await acknowledgeAllNotifications();
-    await refresh();
-    setImportantModalOpen(false);
+    try {
+      setError(null);
+      await acknowledgeAllNotifications();
+      await refresh();
+      setImportantModalOpen(false);
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : '알림을 확인 처리하지 못했습니다.');
+    }
   };
 
   return (

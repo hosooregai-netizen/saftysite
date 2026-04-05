@@ -19,10 +19,11 @@ export type ControllerSectionKey =
   | 'headquarters'
   | 'content';
 
-type LegacyControllerSectionKey = ControllerSectionKey | 'sites';
+type LegacyControllerSectionKey = ControllerSectionKey | 'sites' | 'k2b';
 
 export interface ControllerSectionQuery {
   [key: string]: string | null | undefined;
+  excelUpload?: string | null;
   headquarterId?: string | null;
   siteId?: string | null;
 }
@@ -45,7 +46,7 @@ export const CONTROLLER_SECTIONS: Array<{
 
 export function parseControllerSectionKey(value: string | null | undefined): ControllerSectionKey | null {
   if (!value) return null;
-  if (value === 'sites') return 'headquarters';
+  if (value === 'sites' || value === 'k2b') return 'headquarters';
   return CONTROLLER_SECTIONS.some((section) => section.key === value)
     ? (value as ControllerSectionKey)
     : null;
@@ -72,7 +73,7 @@ export function getControllerSectionHref(
 export function isLegacyControllerSectionKey(
   value: string | null | undefined
 ): value is LegacyControllerSectionKey {
-  return value === 'sites' || CONTROLLER_SECTIONS.some((section) => section.key === value);
+  return value === 'sites' || value === 'k2b' || CONTROLLER_SECTIONS.some((section) => section.key === value);
 }
 
 const ADMIN_USER_ROLES = new Set<SafetyUserRole>(['super_admin', 'admin', 'controller']);

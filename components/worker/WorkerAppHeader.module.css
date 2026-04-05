@@ -1,9 +1,12 @@
 .appHeader {
   flex-shrink: 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-  background: linear-gradient(135deg, #112035 0%, #1b3048 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  background:
+    radial-gradient(circle at top right, rgba(247, 176, 25, 0.16), transparent 22%),
+    linear-gradient(135deg, #112035 0%, #1b3048 55%, #243d5c 100%);
   color: var(--erp-white);
-  padding: 12px 18px;
+  padding: 14px 20px;
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .appHeaderBar {
@@ -39,6 +42,7 @@
   font-weight: 700;
   letter-spacing: -0.02em;
   white-space: nowrap;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.18);
 }
 
 .brandLink {
@@ -84,6 +88,11 @@
   align-items: center;
   gap: 6px;
   min-width: 0;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(14px);
 }
 
 .accountLabel {
@@ -112,24 +121,29 @@
   align-items: center;
   justify-content: center;
   min-height: 36px;
-  padding: 8px 10px;
-  border: none;
-  border-radius: var(--erp-radius-control);
-  background: transparent;
-  color: rgba(232, 238, 245, 0.92);
+  min-height: 38px;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(232, 238, 245, 0.96);
   font-size: var(--text-ui);
   font-weight: 600;
   letter-spacing: -0.01em;
   text-decoration: none;
   text-underline-offset: 3px;
   cursor: pointer;
-  transition: color 0.12s ease, text-decoration-color 0.12s ease;
+  transition:
+    color 0.12s ease,
+    text-decoration-color 0.12s ease,
+    background-color 0.12s ease,
+    border-color 0.12s ease;
 }
 
 .logoutButton:hover {
   color: var(--erp-white);
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.18);
 }
 
 .logoutButton:focus-visible {
@@ -143,7 +157,7 @@
 
 @media (max-width: 767px) {
   .appHeader {
-    padding: 10px 12px;
+    padding: 12px;
   }
 
   .brand {

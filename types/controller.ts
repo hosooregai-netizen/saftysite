@@ -88,6 +88,13 @@ export interface SafetySiteInput {
   manager_name?: string | null;
   manager_phone?: string | null;
   site_address?: string | null;
+  contract_date?: string | null;
+  contract_type?: string | null;
+  contract_status?: string | null;
+  total_rounds?: number | null;
+  per_visit_amount?: number | null;
+  total_contract_amount?: number | null;
+  required_completion_fields?: string[] | null;
   status?: SafetySiteStatus;
   memo?: string | null;
 }

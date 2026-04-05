@@ -1,0 +1,4 @@
+interface:
+  display_name: "Report Rules"
+  short_description: "Help with Report Rules tasks"
+  default_prompt: "Use $report-rules to adjust technical guidance or quarterly report rendering rules."

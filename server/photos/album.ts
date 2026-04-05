@@ -23,6 +23,7 @@ const DOWNLOAD_ROUTE_PREFIX = '/api/photos/download?item_id=';
 const MAX_DOWNLOAD_ITEMS = 200;
 
 export interface PhotoAlbumQuery {
+  all?: boolean;
   headquarterId?: string;
   limit?: number;
   offset?: number;
@@ -176,7 +177,7 @@ function buildLegacyItem(input: {
     siteName: getSiteName(input.site),
     sizeBytes: 0,
     sourceDocumentKey: input.documentKey,
-    sourceKind: 'report_legacy',
+    sourceKind: 'legacy_import',
     sourceReportKey: input.reportKey,
     sourceReportTitle: input.reportTitle,
     sourceSlotKey: input.slotKey,
@@ -391,11 +392,7 @@ export function queryPhotoAlbumItems(
       if (query.siteId && item.siteId !== query.siteId) return false;
       if (query.headquarterId && item.headquarterId !== query.headquarterId) return false;
       if (query.source && query.source !== 'all' && item.sourceKind !== query.source) return false;
-      if (
-        query.reportKey &&
-        item.sourceKind === 'report_legacy' &&
-        item.sourceReportKey !== query.reportKey
-      ) {
+      if (query.reportKey && item.sourceReportKey && item.sourceReportKey !== query.reportKey) {
         return false;
       }
       if (!normalizedQuery) return true;

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import {
+  buildSiteAssistHref,
   buildSiteBadWorkplaceHref,
   buildSiteQuarterlyListHref,
   buildSiteReportsHref,
@@ -15,6 +16,7 @@ import {
   getAdminSectionHref,
   type AdminSectionKey,
 } from '@/lib/admin/adminSections';
+import { buildAdminK2bUploadHref } from '@/lib/admin/k2bUpload';
 
 interface AdminMenuPanelProps {
   activeSection: AdminSectionKey;
@@ -30,7 +32,7 @@ interface AdminMenuDrawerProps extends AdminMenuPanelProps {
   onClose: () => void;
 }
 
-const ADMIN_MENU_LABELS: Record<AdminSectionKey, string> = {
+const ADMIN_MENU_LABELS: Partial<Record<AdminSectionKey, string>> = {
   overview: '관제 대시보드',
   reports: '전체 보고서',
   analytics: '실적/매출',
@@ -94,6 +96,21 @@ export function AdminMenuPanel({
           active: siteNavView === 'quarterly',
         },
         {
+          label: '현장 보조',
+          description: '현장 사진, 사인, 연락처 확인',
+          href: buildSiteAssistHref(currentSiteKey),
+          active: siteNavView === 'assist',
+        },
+        {
+          label: '엑셀 업로드',
+          description: '엑셀 파일로 사업장/현장 정보를 반영',
+          href: buildAdminK2bUploadHref(searchParams, {
+            headquarterId: selectedAdminHeadquarterId,
+            siteId: currentSiteKey,
+          }),
+          active: false,
+        },
+        {
           label: '현장 사진첩',
           description: '이 현장의 전체 사진과 legacy 사진 보기',
           href: getAdminSectionHref('photos', {
@@ -131,6 +148,7 @@ export function AdminMenuPanel({
                 <span className={styles.menuLabel}>
                   {ADMIN_MENU_LABELS[section.key] ?? section.label}
                 </span>
+                <span className={styles.menuDescription}>{section.description}</span>
               </button>
             ) : (
               <Link
@@ -149,6 +167,7 @@ export function AdminMenuPanel({
                 <span className={styles.menuLabel}>
                   {ADMIN_MENU_LABELS[section.key] ?? section.label}
                 </span>
+                <span className={styles.menuDescription}>{section.description}</span>
               </Link>
             ),
           )}
@@ -172,6 +191,7 @@ export function AdminMenuPanel({
                 title={forceExpanded ? undefined : item.label}
               >
                 <span className={styles.menuLabel}>{item.label}</span>
+                <span className={styles.menuDescription}>{item.description}</span>
               </Link>
             ))}
           </div>

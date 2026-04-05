@@ -24,6 +24,8 @@ interface MailboxPanelProps {
   mode: 'admin' | 'worker';
 }
 
+const THREAD_PAGE_SIZE = 50;
+
 function formatDateTime(value: string | null) {
   if (!value) return '-';
   const parsed = new Date(value);
@@ -63,9 +65,12 @@ export function MailboxPanel({ mode }: MailboxPanelProps) {
   const [providerStatuses, setProviderStatuses] = useState<MailProviderStatus[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState('');
   const [threads, setThreads] = useState<MailThread[]>([]);
+  const [threadOffset, setThreadOffset] = useState(0);
+  const [threadTotal, setThreadTotal] = useState(0);
   const [selectedThreadId, setSelectedThreadId] = useState(() => searchParams.get('threadId') || '');
   const [threadDetail, setThreadDetail] = useState<MailThreadDetail | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [threadLoading, setThreadLoading] = useState(false);
+  const [accountStateLoading, setAccountStateLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [naverForm, setNaverForm] = useState({ appPassword: '', displayName: '', email: '' });
@@ -129,7 +134,7 @@ export function MailboxPanel({ mode }: MailboxPanelProps) {
   useEffect(() => {
     void (async () => {
       try {
-        setLoading(true);
+        setAccountStateLoading(true);
         const [response, providerResponse] = await Promise.all([
           fetchMailAccounts(),
           fetchMailProviderStatuses(),
@@ -140,34 +145,67 @@ export function MailboxPanel({ mode }: MailboxPanelProps) {
       } catch (nextError) {
         setError(nextError instanceof Error ? nextError.message : '메일 계정을 불러오지 못했습니다.');
       } finally {
-        setLoading(false);
+        setAccountStateLoading(false);
       }
     })();
   }, []);
 
   useEffect(() => {
+    if (tab !== 'accounts') return;
+    void (async () => {
+      try {
+        setAccountStateLoading(true);
+        const [response, providerResponse] = await Promise.all([
+          fetchMailAccounts(),
+          fetchMailProviderStatuses(),
+        ]);
+        setAccounts(response.rows);
+        setProviderStatuses(providerResponse.rows);
+        setSelectedAccountId((current) =>
+          current && response.rows.some((item) => item.id === current) ? current : response.rows[0]?.id || '',
+        );
+      } catch (nextError) {
+        setError(nextError instanceof Error ? nextError.message : '메일 계정 상태를 새로고침하지 못했습니다.');
+      } finally {
+        setAccountStateLoading(false);
+      }
+    })();
+  }, [tab]);
+
+  useEffect(() => {
+    setThreadOffset(0);
+  }, [headquarterId, query, reportKey, selectedAccountId, siteId, tab]);
+
+  useEffect(() => {
     if (tab === 'accounts') return;
     void (async () => {
       try {
-        setLoading(true);
+        setThreadLoading(true);
         setError(null);
         const response = await fetchMailThreads({
           accountId: selectedAccountId,
           box: tab,
           headquarterId,
+          limit: THREAD_PAGE_SIZE,
+          offset: threadOffset,
           query,
           reportKey: tab === 'reports' ? reportKey : '',
           siteId,
         });
         setThreads(response.rows);
-        setSelectedThreadId((current) => current || response.rows[0]?.id || '');
+        setThreadTotal(response.total);
+        setSelectedThreadId((current) =>
+          current && response.rows.some((item) => item.id === current)
+            ? current
+            : response.rows[0]?.id || '',
+        );
       } catch (nextError) {
         setError(nextError instanceof Error ? nextError.message : '메일 스레드를 불러오지 못했습니다.');
       } finally {
-        setLoading(false);
+        setThreadLoading(false);
       }
     })();
-  }, [headquarterId, query, reportKey, selectedAccountId, siteId, tab]);
+  }, [headquarterId, query, reportKey, selectedAccountId, siteId, tab, threadOffset]);
 
   useEffect(() => {
     if (!selectedThreadId || tab === 'accounts') {
@@ -176,7 +214,7 @@ export function MailboxPanel({ mode }: MailboxPanelProps) {
     }
     void (async () => {
       try {
-        setLoading(true);
+        setThreadLoading(true);
         const detail = await fetchMailThreadDetail(selectedThreadId);
         setThreadDetail(detail);
         if (!compose.subject) {
@@ -189,7 +227,7 @@ export function MailboxPanel({ mode }: MailboxPanelProps) {
       } catch (nextError) {
         setError(nextError instanceof Error ? nextError.message : '메일 스레드 상세를 불러오지 못했습니다.');
       } finally {
-        setLoading(false);
+        setThreadLoading(false);
       }
     })();
   }, [compose.subject, selectedAccount, selectedThreadId, tab]);
@@ -208,6 +246,27 @@ export function MailboxPanel({ mode }: MailboxPanelProps) {
       setNotice(`메일 동기화를 완료했습니다. 계정 ${synced.synced_account_count}개 / 스레드 ${synced.thread_count}건`);
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : '메일 동기화에 실패했습니다.');
+    }
+  };
+
+  const handleRefreshAccountState = async () => {
+    try {
+      setAccountStateLoading(true);
+      setError(null);
+      const [response, providerResponse] = await Promise.all([
+        fetchMailAccounts(),
+        fetchMailProviderStatuses(),
+      ]);
+      setAccounts(response.rows);
+      setProviderStatuses(providerResponse.rows);
+      setSelectedAccountId((current) =>
+        current && response.rows.some((item) => item.id === current) ? current : response.rows[0]?.id || '',
+      );
+      setNotice('메일 계정과 공급자 상태를 새로고침했습니다.');
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : '메일 계정 상태를 새로고침하지 못했습니다.');
+    } finally {
+      setAccountStateLoading(false);
     }
   };
 
@@ -231,11 +290,14 @@ export function MailboxPanel({ mode }: MailboxPanelProps) {
         accountId: selectedAccount.id,
         box: tab,
         headquarterId,
+        limit: THREAD_PAGE_SIZE,
+        offset: threadOffset,
         query,
         reportKey: tab === 'reports' ? reportKey : '',
         siteId,
       });
       setThreads(nextThreads.rows);
+      setThreadTotal(nextThreads.total);
       if (selectedThreadId) {
         setThreadDetail(await fetchMailThreadDetail(selectedThreadId));
       }
@@ -292,6 +354,9 @@ export function MailboxPanel({ mode }: MailboxPanelProps) {
       setError(nextError instanceof Error ? nextError.message : '메일 계정 연결 해제에 실패했습니다.');
     }
   };
+
+  const threadPage = Math.floor(threadOffset / THREAD_PAGE_SIZE) + 1;
+  const threadPageCount = Math.max(1, Math.ceil(threadTotal / THREAD_PAGE_SIZE));
 
   return (
     <section className={`${styles.sectionCard} ${styles.listSectionCard}`}>
@@ -357,6 +422,11 @@ export function MailboxPanel({ mode }: MailboxPanelProps) {
                 <strong className={localStyles.accountTitle}>연결된 계정</strong>
                 <span className="app-chip">{accounts.length}개</span>
               </div>
+              {mode === 'worker' ? (
+                <p className={localStyles.accountMeta}>
+                  공용 네이버웍스 메일함은 관리자/관제만 사용하고, 지도요원은 개인 연결 계정만 확인할 수 있습니다.
+                </p>
+              ) : null}
               {accounts.length === 0 ? (
                 <div className={localStyles.emptyState}>연결된 메일 계정이 없습니다.</div>
               ) : (
@@ -392,6 +462,16 @@ export function MailboxPanel({ mode }: MailboxPanelProps) {
               <div className={localStyles.accountTitleRow}>
                 <strong className={localStyles.accountTitle}>OAuth 연결 상태</strong>
                 <span className="app-chip">{providerStatuses.length}개 공급자</span>
+              </div>
+              <div className={localStyles.sectionActions}>
+                <button
+                  type="button"
+                  className="app-button app-button-secondary"
+                  onClick={() => void handleRefreshAccountState()}
+                  disabled={accountStateLoading}
+                >
+                  상태 새로고침
+                </button>
               </div>
               <div className={localStyles.sectionActions}>
                 {providerStatuses.map((provider) => (
@@ -502,10 +582,38 @@ export function MailboxPanel({ mode }: MailboxPanelProps) {
         ) : (
           <div className={localStyles.workspace}>
             <div className={localStyles.threadColumn}>
+              <div className={localStyles.sectionActions}>
+                <span className={localStyles.accountMeta}>
+                  표시 {threads.length} / 전체 {threadTotal}건
+                </span>
+                <button
+                  type="button"
+                  className="app-button app-button-secondary"
+                  onClick={() => setThreadOffset((current) => Math.max(0, current - THREAD_PAGE_SIZE))}
+                  disabled={threadOffset === 0}
+                >
+                  이전
+                </button>
+                <span className={localStyles.accountMeta}>
+                  {threadPage} / {threadPageCount}
+                </span>
+                <button
+                  type="button"
+                  className="app-button app-button-secondary"
+                  onClick={() =>
+                    setThreadOffset((current) =>
+                      current + THREAD_PAGE_SIZE >= threadTotal ? current : current + THREAD_PAGE_SIZE,
+                    )
+                  }
+                  disabled={threadOffset + THREAD_PAGE_SIZE >= threadTotal}
+                >
+                  다음
+                </button>
+              </div>
               <div className={localStyles.threadList}>
                 {threads.length === 0 ? (
                   <div className={localStyles.emptyState}>
-                    {loading ? '메일을 불러오는 중입니다.' : '조건에 맞는 메일 스레드가 없습니다.'}
+                    {threadLoading ? '메일을 불러오는 중입니다.' : '조건에 맞는 메일 스레드가 없습니다.'}
                   </div>
                 ) : (
                   threads.map((thread) => (

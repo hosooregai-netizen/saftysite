@@ -11,20 +11,26 @@
     --erp-slate: #354e65;
     --erp-gold: #f7b019;
     --erp-white: #ffffff;
-    --erp-surface: #f5f7fa;
-    --erp-surface-strong: #eef2f5;
-    --erp-panel-muted: #f7f9fb;
-    --erp-line: #dbe2ea;
-    --erp-line-strong: #bcc7d3;
+    --erp-surface: #f3f6fb;
+    --erp-surface-strong: #eaf0f7;
+    --erp-panel-muted: #f7faff;
+    --erp-line: #d7e0eb;
+    --erp-line-strong: #aebac8;
     --erp-text-muted: #5f6b7a;
     --erp-gold-soft: #fff4d7;
     --erp-danger-soft: #fbefef;
     --erp-danger-line: #d7a6a6;
     --erp-danger-text: #8f2d2d;
     --erp-focus-ring: 0 0 0 3px rgba(31, 48, 69, 0.16);
-    --erp-radius-control: 1px;
-    --erp-radius-surface: 1px;
-    --erp-radius-card: 1px;
+    --erp-radius-control: 10px;
+    --erp-radius-surface: 18px;
+    --erp-radius-card: 16px;
+    --erp-shadow-panel:
+      0 20px 48px rgba(16, 24, 43, 0.08),
+      0 4px 14px rgba(16, 24, 43, 0.04);
+    --erp-shadow-soft:
+      0 10px 24px rgba(16, 24, 43, 0.06),
+      0 1px 4px rgba(16, 24, 43, 0.04);
     --hazard-border: 1px solid #000;
     --hazard-input-focus: 1px solid #1f3045;
     --hazard-input-shadow: 0 0 0 2px rgba(31, 48, 69, 0.14);
@@ -55,7 +61,9 @@
   body {
     min-height: 100vh;
     font-size: var(--text-body);
-    background: var(--erp-white);
+    background:
+      radial-gradient(circle at top left, rgba(247, 176, 25, 0.08), transparent 26%),
+      linear-gradient(180deg, #f7faff 0%, #f2f5fa 100%);
     color: var(--erp-dark);
     font-family:
       "Noto Sans KR",
@@ -113,15 +121,18 @@
   }
 
   .app-shell {
-    @apply flex min-h-screen min-h-[100dvh] flex-col bg-white print:min-h-0 print:overflow-visible print:rounded-none print:border-0 print:shadow-none;
-    border: 0;
-    border-radius: 0;
-    box-shadow: none;
+    @apply flex min-h-screen min-h-[100dvh] flex-col print:min-h-0 print:overflow-visible print:rounded-none print:border-0 print:shadow-none;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(250, 252, 255, 0.98));
+    border: 1px solid rgba(215, 224, 235, 0.88);
+    border-radius: 28px;
+    box-shadow: var(--erp-shadow-panel);
+    overflow: hidden;
   }
 
   .app-page-header {
     @apply flex flex-col gap-4 border-b px-5 py-5 md:px-8 print:hidden md:flex-row md:items-start md:justify-between;
     border-color: var(--erp-line);
+    background: linear-gradient(180deg, rgba(247, 250, 255, 0.95), rgba(255, 255, 255, 0.98));
   }
 
   .app-breadcrumb {
@@ -142,6 +153,7 @@
   .app-panel {
     @apply rounded-panel border bg-white p-5 shadow-panel;
     border-color: var(--erp-line);
+    box-shadow: var(--erp-shadow-soft);
   }
 
   .app-panel-header {
@@ -162,7 +174,9 @@
   .app-subpanel {
     @apply rounded-panel border p-4;
     border-color: var(--erp-line);
-    background-color: var(--erp-panel-muted);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(247, 250, 255, 0.94));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
   }
 
   .app-section-kicker {
@@ -173,17 +187,20 @@
   .app-button {
     @apply inline-flex items-center justify-center border px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50;
     min-width: 0;
+    min-height: 42px;
     white-space: normal;
     text-align: center;
     word-break: keep-all;
     overflow-wrap: anywhere;
     border-radius: var(--erp-radius-control);
+    letter-spacing: -0.01em;
   }
 
   .app-button-primary {
     border-color: var(--erp-navy);
-    background-color: var(--erp-navy);
+    background: linear-gradient(180deg, #1b2b44 0%, #121c2f 100%);
     color: var(--erp-white);
+    box-shadow: 0 10px 22px rgba(18, 28, 47, 0.18);
   }
 
   .app-button-primary:hover {
@@ -198,7 +215,8 @@
 
   .app-button-secondary {
     border-color: var(--erp-line-strong);
-    background-color: var(--erp-white);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 1), rgba(247, 250, 255, 0.94));
     color: var(--erp-dark);
   }
 
@@ -235,9 +253,10 @@
     white-space: normal;
     word-break: keep-all;
     overflow-wrap: anywhere;
-    border-radius: var(--erp-radius-control);
+    border-radius: 999px;
     border-color: var(--erp-line-strong);
-    background-color: var(--erp-panel-muted);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(247, 250, 255, 0.9));
     color: var(--erp-light);
   }
 
@@ -246,6 +265,8 @@
   .app-select {
     @apply w-full rounded-field border bg-white px-3 py-2 text-sm text-slate-900 outline-none transition;
     border-color: var(--erp-line-strong);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 1), rgba(249, 251, 255, 0.98));
   }
 
   .app-input:focus,
@@ -280,7 +301,8 @@
     height: 300px;
     max-height: 300px;
     border-color: var(--erp-line-strong);
-    background-color: var(--erp-panel-muted);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(245, 249, 255, 0.96));
   }
 
   .app-dropzone-active {
@@ -291,11 +313,14 @@
   .app-table-shell {
     @apply overflow-hidden rounded-panel border bg-white shadow-panel print:overflow-visible print:rounded-none print:border-0 print:shadow-none;
     border-color: var(--erp-line);
+    box-shadow: var(--erp-shadow-soft);
   }
 
   .app-empty-state {
     @apply rounded-panel border border-dashed bg-white px-6 py-10 text-center text-sm;
     color: var(--erp-text-muted);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 250, 255, 0.96));
   }
 }
 
@@ -325,4 +350,3 @@
     box-shadow: none !important;
   }
 }
-

@@ -3,6 +3,7 @@
 import { startTransition, useCallback, useEffect, useRef } from 'react';
 import { normalizeInspectionSite } from '@/constants/inspectionSession/normalizeSite';
 import { readPersistedValue } from '@/lib/clientPersistence';
+import { SafetyApiError } from '@/lib/safetyApi';
 import {
   fetchAssignedSafetySites,
   fetchCurrentSafetyUser,
@@ -722,7 +723,7 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
           if (isAuthFailure(error)) {
             syncRequestIdRef.current += 1;
             clearAuthState();
-            setAuthError('濡쒓렇?몄씠 留뚮즺?섏뿀?듬땲?? ?ㅼ떆 濡쒓렇?명빐 二쇱꽭??');
+            setAuthError('로그인이 만료되었습니다. 다시 로그인해 주세요.');
           } else {
             const message = getErrorMessage(error);
             setDataError(message);

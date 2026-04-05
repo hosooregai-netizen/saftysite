@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import AppModal from '@/components/ui/AppModal';
@@ -8,6 +9,7 @@ import WorkerAppHeader from '@/components/worker/WorkerAppHeader';
 import WorkerMenuSidebar from '@/components/worker/WorkerMenuSidebar';
 import WorkerShellBody from '@/components/worker/WorkerShellBody';
 import { WorkerMenuDrawer, WorkerMenuPanel } from '@/components/worker/WorkerMenu';
+import { buildSiteAssistHref } from '@/features/home/lib/siteEntry';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { isAdminUserRole, getAdminSectionHref } from '@/lib/admin';
 import { fetchMySchedules, updateMySchedule } from '@/lib/calendar/apiClient';
@@ -328,6 +330,12 @@ export function WorkerCalendarScreen() {
                                   </div>
                                 ) : null}
                                 <div className={styles.rowActions}>
+                                  <Link
+                                    href={buildSiteAssistHref(row.siteId, { scheduleId: row.id })}
+                                    className="app-button app-button-secondary"
+                                  >
+                                    현장 보조
+                                  </Link>
                                   <label className={styles.inlineField}>
                                     <span className={styles.fieldLabel}>방문 날짜</span>
                                     <input
@@ -434,6 +442,12 @@ export function WorkerCalendarScreen() {
                                 </div>
                                 <div className={styles.rowMeta}>상태 {row.status}</div>
                                 <div className={styles.rowActions}>
+                                  <Link
+                                    href={buildSiteAssistHref(row.siteId, { scheduleId: row.id })}
+                                    className="app-button app-button-secondary"
+                                  >
+                                    현장 보조
+                                  </Link>
                                   <button
                                     type="button"
                                     className="app-button app-button-secondary"

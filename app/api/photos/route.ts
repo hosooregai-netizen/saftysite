@@ -19,11 +19,15 @@ function parseOffset(value: string | null) {
 }
 
 function parseSource(value: string | null): PhotoAlbumSourceFilter {
-  if (value === 'album_upload' || value === 'report_legacy') {
+  if (value === 'album_upload' || value === 'legacy_import') {
     return value;
   }
 
   return 'all';
+}
+
+function parseAll(value: string | null) {
+  return value === 'true';
 }
 
 export async function GET(request: Request): Promise<Response> {
@@ -32,6 +36,7 @@ export async function GET(request: Request): Promise<Response> {
     const url = new URL(request.url);
     const response = await loadPhotoAlbumList(token, request, {
       headquarterId: (url.searchParams.get('headquarter_id') || '').trim(),
+      all: parseAll(url.searchParams.get('all')),
       limit: parseLimit(url.searchParams.get('limit')),
       offset: parseOffset(url.searchParams.get('offset')),
       query: (url.searchParams.get('query') || '').trim(),

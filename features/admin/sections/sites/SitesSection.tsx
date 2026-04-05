@@ -23,6 +23,7 @@ import { exportAdminWorkbook } from '@/lib/admin/exportClient';
 import {
   buildSiteMemoWithContractProfile,
   parseSiteContractProfile,
+  parseSiteRequiredCompletionFields,
   parseSiteMemoNote,
 } from '@/lib/admin/siteContractProfile';
 import type {
@@ -71,6 +72,10 @@ interface SitesSectionProps {
   onDelete: (id: string) => Promise<void>;
   onAssignFieldAgent: (siteId: string, userId: string) => Promise<void>;
   onUnassignFieldAgent: (siteId: string, userId: string) => Promise<void>;
+  onExcelUploadRequest?: (context?: {
+    headquarterId?: string | null;
+    siteId?: string | null;
+  }) => void;
   title?: string;
   emptyMessage?: string;
   showHeader?: boolean;
@@ -153,6 +158,7 @@ export function SitesSection(props: SitesSectionProps) {
     onDelete,
     onAssignFieldAgent,
     onUnassignFieldAgent,
+    onExcelUploadRequest,
     showHeader = true,
     title = '현장 목록',
     emptyMessage = '등록된 현장이 없습니다.',
@@ -399,6 +405,21 @@ export function SitesSection(props: SitesSectionProps) {
         )}
         <div className={styles.sectionHeaderActions}>
           <span className="app-chip">표시 {filteredSites.length} / 전체 {sites.length}개</span>
+          {onExcelUploadRequest ? (
+            <button
+              type="button"
+              className="app-button app-button-secondary"
+              onClick={() =>
+                onExcelUploadRequest({
+                  headquarterId: lockedHeadquarterId,
+                  siteId: null,
+                })
+              }
+              disabled={busy}
+            >
+              엑셀 업로드
+            </button>
+          ) : null}
           <button
             type="button"
             className="app-button app-button-primary"
@@ -556,6 +577,10 @@ export function SitesSection(props: SitesSectionProps) {
                   {sortedSites.map((site) => {
                     const siteAssignments = activeAssignmentsBySiteId.get(site.id) ?? [];
                     const contractProfile = parseSiteContractProfile(site);
+                    const requiredCompletionFields =
+                      site.required_completion_fields?.length
+                        ? site.required_completion_fields
+                        : parseSiteRequiredCompletionFields(site);
                     const assignedUsers = siteAssignments
                       .map((assignment) => usersById.get(assignment.user_id))
                       .filter((user): user is SafetyUser => Boolean(user));
@@ -586,6 +611,15 @@ export function SitesSection(props: SitesSectionProps) {
                           <div className={styles.tableSecondary}>
                             {site.site_address || '주소 미입력'}
                           </div>
+                          {requiredCompletionFields.length ? (
+                            <div className={styles.tableSecondary}>
+                              <span className="app-chip">
+                                보완 필요 {requiredCompletionFields.length}건
+                              </span>
+                              {' '}
+                              {requiredCompletionFields.join(', ')}
+                            </div>
+                          ) : null}
                         </td>
                         {showHeadquarterColumn ? (
                           <td>{site.headquarter_detail?.name || site.headquarter?.name || '-'}</td>
@@ -655,6 +689,18 @@ export function SitesSection(props: SitesSectionProps) {
                                     siteId: site.id,
                                   }),
                                 },
+                                ...(onExcelUploadRequest
+                                  ? [
+                                      {
+                                        label: '엑셀 업로드',
+                                        onSelect: () =>
+                                          onExcelUploadRequest({
+                                            headquarterId: lockedHeadquarterId,
+                                            siteId: null,
+                                          }),
+                                      },
+                                    ]
+                                  : []),
                                 {
                                   label: '수정',
                                   onSelect: () => {

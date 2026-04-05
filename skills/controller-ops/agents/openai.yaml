@@ -1,0 +1,4 @@
+interface:
+  display_name: "Controller Ops"
+  short_description: "Help with Controller Ops tasks"
+  default_prompt: "Use $controller-ops to inspect the admin control center and fix controller workflow issues."
