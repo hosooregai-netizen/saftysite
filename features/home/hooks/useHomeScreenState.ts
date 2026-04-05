@@ -81,7 +81,7 @@ export function useHomeScreenState(): HomeScreenState {
   const isControllerView = Boolean(currentUser && isAdminUserRole(currentUser.role));
   const isInitialHydration =
     (isHydrating || (hasAuthToken && !currentUser)) && siteSummaries.length === 0;
-  const shouldShowLogin = isReady && !hasAuthToken && !currentUser;
+  const shouldShowLogin = !hasAuthToken && !currentUser;
 
   useEffect(() => {
     if (
@@ -183,4 +183,3 @@ export function useHomeScreenState(): HomeScreenState {
     setSortMode,
   };
 }
-
