@@ -23,7 +23,7 @@ import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { useSiteOperationalReports } from '@/hooks/useSiteOperationalReports';
 import {
   fetchQuarterlyHwpxDocument,
-  fetchQuarterlyPdfDocument,
+  fetchQuarterlyPdfDocumentWithFallback,
   saveBlobAsFile,
 } from '@/lib/api';
 import { isAdminUserRole } from '@/lib/admin';
@@ -689,9 +689,16 @@ function QuarterlyReportEditor({
   const handleDownloadPdf = async () => {
     try {
       setDocumentError(null);
+      setNotice(null);
       setIsGeneratingPdf(true);
-      const { blob, filename } = await fetchQuarterlyPdfDocument(draft, currentSite);
+      const { blob, fallbackToHwpx, filename } = await fetchQuarterlyPdfDocumentWithFallback(
+        draft,
+        currentSite,
+      );
       saveBlobAsFile(blob, filename);
+      if (fallbackToHwpx) {
+        setNotice('PDF 변환에 실패해 HWPX로 다운로드했습니다.');
+      }
     } catch (nextError) {
       setDocumentError(
         nextError instanceof Error ? nextError.message : 'PDF를 다운로드하는 중 오류가 발생했습니다.',

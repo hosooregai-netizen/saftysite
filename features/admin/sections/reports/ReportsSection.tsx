@@ -34,9 +34,9 @@ import {
   isK2bUploadOpen,
 } from '@/lib/admin/k2bUpload';
 import {
-  convertHwpxBlobToPdf,
+  convertHwpxBlobToPdfWithFallback,
   fetchQuarterlyHwpxDocument,
-  fetchQuarterlyPdfDocument,
+  fetchQuarterlyPdfDocumentWithFallback,
   saveBlobAsFile,
 } from '@/lib/api';
 import { generateInspectionHwpxBlob } from '@/lib/documents/inspection/hwpxClient';
@@ -422,11 +422,16 @@ export function ReportsSection({
 
         if (format === 'hwpx') {
           saveBlobAsFile(document.blob, document.filename);
+          setNotice('지도보고서를 내보냈습니다.');
         } else {
-          const pdf = await convertHwpxBlobToPdf(document.blob, document.filename);
+          const pdf = await convertHwpxBlobToPdfWithFallback(document.blob, document.filename);
           saveBlobAsFile(pdf.blob, pdf.filename);
+          setNotice(
+            pdf.fallbackToHwpx
+              ? 'PDF 변환에 실패해 HWPX로 내보냈습니다.'
+              : '지도보고서를 내보냈습니다.',
+          );
         }
-        setNotice('지도보고서를 내보냈습니다.');
         return;
       }
 
@@ -444,12 +449,22 @@ export function ReportsSection({
         }
 
         const mappedSite = mapSafetySiteToInspectionSite(site);
-        const exported =
-          format === 'hwpx'
-            ? await fetchQuarterlyHwpxDocument(quarterlyReport, mappedSite)
-            : await fetchQuarterlyPdfDocument(quarterlyReport, mappedSite);
-        saveBlobAsFile(exported.blob, exported.filename);
-        setNotice('분기 보고서를 내보냈습니다.');
+        if (format === 'hwpx') {
+          const exported = await fetchQuarterlyHwpxDocument(quarterlyReport, mappedSite);
+          saveBlobAsFile(exported.blob, exported.filename);
+          setNotice('분기 보고서를 내보냈습니다.');
+        } else {
+          const exported = await fetchQuarterlyPdfDocumentWithFallback(
+            quarterlyReport,
+            mappedSite,
+          );
+          saveBlobAsFile(exported.blob, exported.filename);
+          setNotice(
+            exported.fallbackToHwpx
+              ? 'PDF 변환에 실패해 HWPX로 내보냈습니다.'
+              : '분기 보고서를 내보냈습니다.',
+          );
+        }
         return;
       }
 

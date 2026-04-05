@@ -10,9 +10,8 @@ import {
 import { readFileAsDataUrl } from '@/components/session/workspace/utils';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import {
-  convertHwpxBlobToPdf,
   fetchInspectionHwpxDocument,
-  fetchInspectionPdfDocument,
+  fetchInspectionPdfDocumentWithFallback,
   saveBlobAsFile,
 } from '@/lib/api';
 import { generateInspectionHwpxBlob } from '@/lib/documents/inspection/hwpxClient';
@@ -380,20 +379,7 @@ export function useInspectionSessionScreen(sessionId: string) {
       setIsGeneratingPdf(true);
       await saveNow();
       const latestSession = getSessionById(session.id) ?? session;
-      let pdf;
-
-      try {
-        pdf = await fetchInspectionPdfDocument(latestSession);
-      } catch (serverError) {
-        console.warn('Inspection PDF server generation failed; falling back to browser HWPX generation.', {
-          error: serverError instanceof Error ? serverError.message : String(serverError),
-          sessionId: session.id,
-        });
-
-        const generation = await buildHwpxDocument();
-        if (!generation) return;
-        pdf = await convertHwpxBlobToPdf(generation.blob, generation.filename);
-      }
+      const pdf = await fetchInspectionPdfDocumentWithFallback(latestSession);
 
       saveBlobAsFile(pdf.blob, pdf.filename);
     } catch (error) {

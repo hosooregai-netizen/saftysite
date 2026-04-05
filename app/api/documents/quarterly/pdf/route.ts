@@ -7,18 +7,27 @@ import type { GenerateQuarterlyHwpxRequest } from '@/types/documents';
 export const runtime = 'nodejs';
 export const maxDuration = 300;
 
+function getPdfRouteStatus(message: string): number {
+  if (
+    message.includes('must be configured') ||
+    message.includes('required outside Windows') ||
+    message.includes('Internal API key') ||
+    message.includes('Invalid internal API key') ||
+    message.includes('header is required') ||
+    message.includes('Not authenticated')
+  ) {
+    return 503;
+  }
+
+  if (message.startsWith('HWPX PDF conversion failed:')) {
+    return 502;
+  }
+
+  return 500;
+}
+
 export async function POST(request: Request): Promise<Response> {
   try {
-    if (process.platform !== 'win32') {
-      return NextResponse.json(
-        {
-          error:
-            '현재 PDF 변환은 Windows와 한컴 자동화 환경이 필요하여 이 배포 환경에서는 실행할 수 없습니다.',
-        },
-        { status: 501 },
-      );
-    }
-
     const body = (await request.json()) as GenerateQuarterlyHwpxRequest;
     if (!body?.report || !body?.site) {
       return NextResponse.json(
@@ -43,14 +52,15 @@ export async function POST(request: Request): Promise<Response> {
       },
     });
   } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : 'PDF 변환 중 알 수 없는 오류가 발생했습니다.';
+    const status = getPdfRouteStatus(message);
+
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : 'PDF 변환 중 알 수 없는 오류가 발생했습니다.',
-      },
-      { status: 500 },
+      { error: message },
+      { status },
     );
   }
 }
