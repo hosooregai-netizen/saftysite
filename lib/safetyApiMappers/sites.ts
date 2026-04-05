@@ -34,6 +34,7 @@ export function mapSafetySiteToAdminSnapshot(site: SafetySite): AdminSiteSnapsho
     constructionPeriod: formatDateRange(site.project_start_date, site.project_end_date),
     constructionAmount: formatProjectAmount(site.project_amount),
     siteManagerName: normalizeMapperText(site.manager_name),
+    siteManagerPhone: normalizeMapperText(site.manager_phone),
     siteContactEmail: normalizeMapperText(site.manager_phone),
     siteAddress: normalizeMapperText(site.site_address),
     companyName: headquarterName,
@@ -64,4 +65,3 @@ export function mapSafetySiteToInspectionSite(site: SafetySite): InspectionSite 
     updatedAt: site.updated_at,
   };
 }
-

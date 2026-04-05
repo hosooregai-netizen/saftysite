@@ -50,6 +50,7 @@ export interface AdminSiteSnapshot {
   constructionPeriod: string;
   constructionAmount: string;
   siteManagerName: string;
+  siteManagerPhone: string;
   siteContactEmail: string;
   siteAddress: string;
   companyName: string;
@@ -93,4 +94,3 @@ export type NotificationMethod =
 export type AccidentOccurrence = 'yes' | 'no' | '';
 
 export type ChecklistRating = 'good' | 'average' | 'poor' | '';
-

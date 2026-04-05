@@ -59,6 +59,11 @@ function formatTimestamp(value: string | null | undefined) {
   return parsed.toLocaleString('ko-KR');
 }
 
+function toDialablePhone(value: string | null | undefined) {
+  if (!value) return '';
+  return value.replace(/[^0-9+]/g, '');
+}
+
 export function SiteAssistScreen({ scheduleId, siteKey }: SiteAssistScreenProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [photos, setPhotos] = useState<PhotoAlbumItem[]>([]);
@@ -144,7 +149,11 @@ export function SiteAssistScreen({ scheduleId, siteKey }: SiteAssistScreenProps)
   }, [currentSite, isAuthenticated]);
 
   const managerName = currentSite?.adminSiteSnapshot.siteManagerName || '';
-  const managerPhone = currentSite?.adminSiteSnapshot.siteContactEmail || '';
+  const managerPhone =
+    currentSite?.adminSiteSnapshot.siteManagerPhone ||
+    currentSite?.adminSiteSnapshot.siteContactEmail ||
+    '';
+  const dialableManagerPhone = toDialablePhone(managerPhone);
   const latestSignature = signatures[0] ?? null;
 
   const handleUpload = async (files: FileList | null) => {
@@ -270,8 +279,10 @@ export function SiteAssistScreen({ scheduleId, siteKey }: SiteAssistScreenProps)
                     <span className={styles.summaryLabel}>현장소장</span>
                     <strong className={styles.summaryValue}>{managerName || '미입력'}</strong>
                     <span className={styles.summaryMeta}>
-                      {managerPhone ? (
-                        <a href={`tel:${managerPhone}`}>{managerPhone}</a>
+                      {dialableManagerPhone ? (
+                        <a href={`tel:${dialableManagerPhone}`}>{managerPhone}</a>
+                      ) : managerPhone ? (
+                        managerPhone
                       ) : (
                         '연락처 미입력'
                       )}

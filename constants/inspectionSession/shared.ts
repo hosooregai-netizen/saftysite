@@ -118,6 +118,7 @@ export function createEmptyAdminSiteSnapshot(
     constructionPeriod: '',
     constructionAmount: '',
     siteManagerName: '',
+    siteManagerPhone: '',
     siteContactEmail: '',
     siteAddress: '',
     companyName: '',
@@ -154,4 +155,3 @@ export function createChecklistQuestions(
     note: initial[index]?.note ?? '',
   }));
 }
-

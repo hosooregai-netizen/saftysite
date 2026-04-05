@@ -37,6 +37,9 @@ export function normalizeInspectionSite(raw: unknown): InspectionSite {
       ),
     constructionAmount: normalizeText(snapshotSource.constructionAmount),
     siteManagerName: normalizeText(snapshotSource.siteManagerName),
+    siteManagerPhone:
+      normalizeText(snapshotSource.siteManagerPhone) ||
+      normalizeText(snapshotSource.siteContactEmail),
     siteContactEmail: normalizeText(snapshotSource.siteContactEmail),
     siteAddress: normalizeText(snapshotSource.siteAddress),
     companyName: normalizeText(snapshotSource.companyName),
@@ -60,4 +63,3 @@ export function normalizeInspectionSite(raw: unknown): InspectionSite {
     updatedAt: normalizeTimestamp(source.updatedAt, timestamp),
   };
 }
-
