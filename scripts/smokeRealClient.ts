@@ -191,32 +191,30 @@ async function main() {
   await page.getByText('메일 계정과 공급자 상태를 새로고침했습니다.').first().waitFor();
 
   await page.goto(`${baseUrl}/admin?section=k2b`, { waitUntil: 'load' });
-  let k2bDialog = page.getByRole('dialog', { name: '엑셀 업로드' });
+  let k2bDialog = page.getByRole('dialog', { name: '업로드' });
   await k2bDialog.waitFor();
   await k2bDialog.getByRole('button', { name: '닫기' }).click();
   await k2bDialog.waitFor({ state: 'hidden' });
   await page.waitForURL(/section=headquarters/);
   await waitHeading('사업장 목록');
 
-  await page.getByRole('button', { name: '엑셀 업로드' }).first().click();
-  k2bDialog = page.getByRole('dialog', { name: '엑셀 업로드' });
+  await page.getByRole('button', { name: '업로드' }).first().click();
+  k2bDialog = page.getByRole('dialog', { name: '업로드' });
   await k2bDialog.waitFor();
   await k2bDialog.locator('input[type="file"]').first().setInputFiles({
     buffer: k2bWorkbookBuffer,
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     name: 'k2b-smoke.xlsx',
   });
-  await k2bDialog.getByRole('button', { name: '파일 파싱' }).click();
   await k2bDialog
-    .getByText('K2B 업로드 파일을 파싱했습니다. 매핑과 중복 후보를 확인해 주세요.')
+    .getByText('엑셀 파일을 읽었습니다. 미리보기 내용을 확인한 뒤 업데이트할 수 있습니다.')
     .first()
     .waitFor({ timeout: 30_000 });
-  await k2bDialog.getByText('중복 판정').first().waitFor();
-  await k2bDialog.getByRole('button', { name: 'DB에 반영' }).click();
-  await k2bDialog.getByText('K2B 데이터를 사업장/현장에 반영했습니다.').first().waitFor({
+  await k2bDialog.getByText('엑셀 미리보기').first().waitFor();
+  await k2bDialog.getByRole('button', { name: '업데이트' }).click();
+  await k2bDialog.getByText('반영이 완료되었습니다.').first().waitFor({
     timeout: 30_000,
   });
-  await k2bDialog.getByText('보완 필요').first().waitFor();
   await k2bDialog.getByRole('button', { name: '닫기' }).click();
   await k2bDialog.waitFor({ state: 'hidden' });
 
@@ -230,8 +228,8 @@ async function main() {
 
   await page.goto(`${baseUrl}/admin?section=reports`, { waitUntil: 'load' });
   await waitHeading('전체 보고서');
-  await page.getByRole('button', { name: '엑셀 업로드' }).first().click();
-  k2bDialog = page.getByRole('dialog', { name: '엑셀 업로드' });
+  await page.getByRole('button', { name: '업로드' }).first().click();
+  k2bDialog = page.getByRole('dialog', { name: '업로드' });
   await k2bDialog.waitFor();
   await k2bDialog.getByRole('button', { name: '닫기' }).click();
   await k2bDialog.waitFor({ state: 'hidden' });
