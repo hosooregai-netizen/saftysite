@@ -1,4 +1,4 @@
-export type PhotoAlbumSourceKind = 'album_upload' | 'report_legacy';
+export type PhotoAlbumSourceKind = 'album_upload' | 'legacy_import';
 
 export type PhotoAlbumSourceFilter = 'all' | PhotoAlbumSourceKind;
 
@@ -18,7 +18,11 @@ export interface SafetyPhotoAsset {
   gpsLatitude: number | null;
   gpsLongitude: number | null;
   exifJson: Record<string, unknown> | null;
-  sourceKind: 'album_upload';
+  sourceKind: PhotoAlbumSourceKind;
+  sourceReportKey: string;
+  sourceDocumentKey: string;
+  sourceSlotKey: string;
+  sourceReportTitle: string;
 }
 
 export interface PhotoAlbumItem {

@@ -288,7 +288,7 @@ async function main() {
   await page.goto(`${baseUrl}/admin?section=photos`, { waitUntil: 'load' });
   await waitHeading('사진첩');
   await page.getByText(/전체 \d+건/).first().waitFor();
-  const legacyCount = await page.locator('article').count();
+  const initialPhotoCount = await page.locator('article').count();
 
   await logout();
   await login(seed.workerEmail, seed.workerPassword, '/calendar');
@@ -398,11 +398,6 @@ async function main() {
   await login(seed.adminEmail, seed.adminPassword, '/admin?section=photos');
   await page.goto(`${baseUrl}/admin?section=photos`, { waitUntil: 'load' });
   await waitHeading('사진첩');
-  await page
-    .locator('select')
-    .filter({ has: page.locator('option[value="album_upload"]') })
-    .first()
-    .selectOption('album_upload');
   await page.getByText(uploadName).first().waitFor({ timeout: 30_000 });
 
   await browser.close();
@@ -424,7 +419,7 @@ async function main() {
   console.log(
     JSON.stringify(
       {
-        counts: { afterCount, beforeCount, legacyCount },
+        counts: { afterCount, beforeCount, initialPhotoCount },
         downloadName,
         status: 'ok',
         uploadedPreviewSrc: previewSrc,

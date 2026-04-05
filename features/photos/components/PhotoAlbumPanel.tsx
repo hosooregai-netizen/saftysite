@@ -14,7 +14,7 @@ import {
 } from '@/lib/photos/apiClient';
 import { createPhotoThumbnail } from '@/lib/photos/thumbnail';
 import type { TableSortState } from '@/types/admin';
-import type { PhotoAlbumItem, PhotoAlbumSourceFilter } from '@/types/photos';
+import type { PhotoAlbumItem } from '@/types/photos';
 import styles from './PhotoAlbumPanel.module.css';
 
 interface PhotoAlbumSiteOption {
@@ -67,20 +67,18 @@ function formatGpsLabel(item: PhotoAlbumItem) {
   return `${item.gpsLatitude.toFixed(5)}, ${item.gpsLongitude.toFixed(5)}`;
 }
 
-function getSourceBadgeLabel(sourceKind: PhotoAlbumItem['sourceKind']) {
-  return sourceKind === 'album_upload' ? 'album' : 'legacy';
+function getSourceLabel(sourceKind: PhotoAlbumItem['sourceKind']) {
+  return sourceKind === 'legacy_import' ? '이관된 보고서 사진' : '업로드 사진';
 }
 
 function matchesContext(
   item: PhotoAlbumItem,
   headquarterId: string,
   siteId: string,
-  source: PhotoAlbumSourceFilter,
   query: string,
 ) {
   if (headquarterId && item.headquarterId !== headquarterId) return false;
   if (siteId && item.siteId !== siteId) return false;
-  if (source !== 'all' && item.sourceKind !== source) return false;
   if (!query) return true;
 
   return [
@@ -109,7 +107,6 @@ export function PhotoAlbumPanel({
 }: PhotoAlbumPanelProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [query, setQuery] = useState('');
-  const [source, setSource] = useState<PhotoAlbumSourceFilter>('all');
   const [sort, setSort] = useState<TableSortState>({
     direction: 'desc',
     key: 'capturedAt',
@@ -137,7 +134,7 @@ export function PhotoAlbumPanel({
 
   useEffect(() => {
     setOffset(0);
-  }, [deferredQuery, headquarterId, siteId, sort.direction, sort.key, source]);
+  }, [deferredQuery, headquarterId, siteId, sort.direction, sort.key]);
 
   const headquarterOptions = useMemo(
     () =>
@@ -180,7 +177,6 @@ export function PhotoAlbumPanel({
           siteId: lockedSiteId || siteId || '',
           sortBy: (sort.key as 'capturedAt' | 'createdAt' | 'fileName' | 'siteName') || 'capturedAt',
           sortDir: sort.direction,
-          source,
         });
         if (cancelled) return;
         setRows(response.rows);
@@ -211,7 +207,6 @@ export function PhotoAlbumPanel({
     siteId,
     sort.direction,
     sort.key,
-    source,
   ]);
 
   const handleToggleAll = () => {
@@ -270,7 +265,6 @@ export function PhotoAlbumPanel({
         siteId: uploadSiteId,
         sortBy: (sort.key as 'capturedAt' | 'createdAt' | 'fileName' | 'siteName') || 'capturedAt',
         sortDir: sort.direction,
-        source,
       });
       setOffset(0);
       setRows(refreshed.rows);
@@ -311,7 +305,7 @@ export function PhotoAlbumPanel({
             gps: formatGpsLabel(item),
             headquarterName: item.headquarterName,
             siteName: item.siteName,
-            sourceKind: getSourceBadgeLabel(item.sourceKind),
+            sourceKind: getSourceLabel(item.sourceKind),
             sourceReportTitle: item.sourceReportTitle || '-',
             uploadedByName: item.uploadedByName || '-',
           })),
@@ -322,29 +316,12 @@ export function PhotoAlbumPanel({
     }
   };
 
-  const itemCounts = useMemo(
-    () =>
-      rows.reduce(
-        (accumulator, item) => {
-          if (item.sourceKind === 'album_upload') {
-            accumulator.album += 1;
-          } else {
-            accumulator.legacy += 1;
-          }
-          return accumulator;
-        },
-        { album: 0, legacy: 0 },
-      ),
-    [rows],
-  );
-
   const activeItemMatchesContext =
     activeItem &&
     matchesContext(
       activeItem,
       lockedHeadquarterId || headquarterId || '',
       lockedSiteId || siteId || '',
-      source,
       deferredQuery,
     );
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -378,7 +355,6 @@ export function PhotoAlbumPanel({
                 {backLabel || '이전 화면으로'}
               </Link>
             ) : null}
-            <span className="app-chip">album {itemCounts.album} / legacy {itemCounts.legacy}</span>
             <button
               type="button"
               className="app-button app-button-secondary"
@@ -447,15 +423,6 @@ export function PhotoAlbumPanel({
                     ))}
                   </select>
                 ) : null}
-                <select
-                  className={`app-select ${adminStyles.toolbarSelect}`}
-                  value={source}
-                  onChange={(event) => setSource(event.target.value as PhotoAlbumSourceFilter)}
-                >
-                  <option value="all">전체 출처</option>
-                  <option value="album_upload">album</option>
-                  <option value="report_legacy">legacy</option>
-                </select>
               </>
             }
             onExport={mode === 'admin' ? () => void handleExport() : undefined}
@@ -534,9 +501,11 @@ export function PhotoAlbumPanel({
                     </label>
                     <div className={styles.cardBody}>
                       <div className={styles.cardMetaRow}>
-                        <span className={styles.sourceBadge}>{getSourceBadgeLabel(item.sourceKind)}</span>
-                        <span className={styles.cardMetaText}>{formatFileSize(item.sizeBytes)}</span>
-                      </div>
+                      {item.sourceKind === 'legacy_import' ? (
+                        <span className={styles.cardMetaText}>이관된 보고서 사진</span>
+                      ) : null}
+                      <span className={styles.cardMetaText}>{formatFileSize(item.sizeBytes)}</span>
+                    </div>
                       <div className={styles.cardTitle} title={item.fileName}>
                         {item.fileName}
                       </div>
@@ -550,7 +519,7 @@ export function PhotoAlbumPanel({
                       <div className={styles.cardMetaText}>
                         {item.uploadedByName ? `업로더 ${item.uploadedByName}` : '업로더 미상'}
                       </div>
-                      {item.sourceKind === 'report_legacy' && item.sourceReportTitle ? (
+                      {item.sourceReportTitle ? (
                         <div className={styles.cardMetaText} title={item.sourceReportTitle}>
                           {item.sourceReportTitle}
                         </div>
@@ -640,7 +609,7 @@ export function PhotoAlbumPanel({
             <div className={styles.modalMeta}>
               <div className={styles.modalMetaRow}>
                 <span className={styles.modalMetaLabel}>출처</span>
-                <span>{getSourceBadgeLabel(activeItem.sourceKind)}</span>
+                <span>{getSourceLabel(activeItem.sourceKind)}</span>
               </div>
               <div className={styles.modalMetaRow}>
                 <span className={styles.modalMetaLabel}>사업장</span>
@@ -670,7 +639,7 @@ export function PhotoAlbumPanel({
                 <span className={styles.modalMetaLabel}>GPS</span>
                 <span>{formatGpsLabel(activeItem)}</span>
               </div>
-              {activeItem.sourceKind === 'report_legacy' ? (
+              {activeItem.sourceReportTitle ? (
                 <>
                   <div className={styles.modalMetaRow}>
                     <span className={styles.modalMetaLabel}>원본 보고서</span>

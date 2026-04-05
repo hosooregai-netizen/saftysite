@@ -287,10 +287,15 @@ export function mapBackendPhotoAsset(asset: SafetyBackendPhotoAsset): SafetyPhot
     originalPath: buildSafetyAdminUpstreamUrl(normalizeText(asset.original_path)),
     sizeBytes: typeof asset.size_bytes === 'number' ? asset.size_bytes : 0,
     siteId: normalizeText(asset.site_id),
-    sourceKind: 'album_upload',
+    sourceKind:
+      normalizeText(asset.source_kind) === 'legacy_import' ? 'legacy_import' : 'album_upload',
     thumbnailPath: buildSafetyAdminUpstreamUrl(normalizeText(asset.thumbnail_path || asset.original_path)),
     uploadedByName: normalizeText(asset.uploaded_by_name),
     uploadedByUserId: normalizeText(asset.uploaded_by_user_id),
+    sourceDocumentKey: normalizeText(asset.source_document_key),
+    sourceReportKey: normalizeText(asset.source_report_key),
+    sourceReportTitle: normalizeText(asset.source_report_title),
+    sourceSlotKey: normalizeText(asset.source_slot_key),
   };
 }
 
@@ -611,11 +616,11 @@ export function buildPhotoAlbumItemFromAsset(
     siteId: asset.siteId,
     siteName,
     sizeBytes: asset.sizeBytes,
-    sourceDocumentKey: '',
-    sourceKind: 'album_upload',
-    sourceReportKey: '',
-    sourceReportTitle: '',
-    sourceSlotKey: '',
+    sourceDocumentKey: asset.sourceDocumentKey || '',
+    sourceKind: asset.sourceKind,
+    sourceReportKey: asset.sourceReportKey || '',
+    sourceReportTitle: asset.sourceReportTitle || '',
+    sourceSlotKey: asset.sourceSlotKey || '',
     uploadedByName: asset.uploadedByName,
     uploadedByUserId: asset.uploadedByUserId,
   };

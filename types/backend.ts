@@ -641,7 +641,11 @@ export interface SafetyBackendPhotoAsset {
   original_path: string;
   size_bytes: number;
   site_id: string;
-  source_kind: 'album_upload';
+  source_kind: 'album_upload' | 'legacy_import';
+  source_report_key: string;
+  source_document_key: string;
+  source_slot_key: string;
+  source_report_title: string;
   thumbnail_path: string;
   updated_at: string;
   uploaded_by_name: string;

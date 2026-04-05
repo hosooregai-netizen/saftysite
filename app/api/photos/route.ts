@@ -19,7 +19,7 @@ function parseOffset(value: string | null) {
 }
 
 function parseSource(value: string | null): PhotoAlbumSourceFilter {
-  if (value === 'album_upload' || value === 'report_legacy') {
+  if (value === 'album_upload' || value === 'legacy_import') {
     return value;
   }
 

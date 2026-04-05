@@ -1,9 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import {
-  buildPhotoAlbumItemsFromSites,
-  findAccessibleSite,
-} from '@/server/photos/album';
+import { findAccessibleSite } from '@/server/photos/album';
 import { resolvePhotoAlbumAccessContext } from '@/server/photos/service';
 import {
   uploadSafetyPhotoAssetServer,
@@ -91,10 +88,7 @@ export async function POST(request: Request): Promise<Response> {
     const uploadedAsset = mapBackendPhotoAsset(
       await uploadSafetyPhotoAssetServer(token, uploadFormData, request),
     );
-    const nextItem =
-      buildPhotoAlbumItemFromAsset(uploadedAsset, site) ??
-      buildPhotoAlbumItemsFromSites([site]).find((item) => item.id === uploadedAsset.id) ??
-      null;
+    const nextItem = buildPhotoAlbumItemFromAsset(uploadedAsset, site);
 
     return NextResponse.json({
       item: nextItem,

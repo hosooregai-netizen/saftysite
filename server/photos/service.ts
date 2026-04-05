@@ -4,21 +4,17 @@ import {
   fetchAssignedSafetySitesServer,
   fetchCurrentSafetyUserServer,
   fetchSafetyPhotoAssetsServer,
-  fetchSafetyReportsBySiteFullServer,
   fetchSafetySitesServer,
 } from '@/server/admin/safetyApiServer';
 import {
   buildPhotoAlbumItemFromAsset,
   mapBackendPhotoAsset,
 } from '@/server/admin/upstreamMappers';
-import type { SafetyReport, SafetySite, SafetyUser } from '@/types/backend';
+import type { SafetySite, SafetyUser } from '@/types/backend';
 import type { PhotoAlbumItem, PhotoAlbumListResponse } from '@/types/photos';
 import {
-  buildLegacyPhotoAlbumItemsFromReports,
-  buildPhotoAlbumItemsFromSites,
   filterAccessibleSites,
   isAdminPhotoViewer,
-  mergePhotoAlbumItems,
   queryPhotoAlbumItems,
   type PhotoAlbumQuery,
 } from './album';
@@ -32,7 +28,6 @@ export interface PhotoAlbumAccessContext {
 export interface PhotoAlbumCollectionResult {
   context: PhotoAlbumAccessContext;
   items: PhotoAlbumItem[];
-  reportsBySiteId: Map<string, SafetyReport[]>;
   sites: SafetySite[];
 }
 
@@ -53,21 +48,6 @@ export async function resolvePhotoAlbumAccessContext(
   };
 }
 
-async function buildReportsBySiteId(
-  token: string,
-  request: Request,
-  sites: SafetySite[],
-) {
-  const entries = await Promise.all(
-    sites.map(async (site) => [
-      site.id,
-      await fetchSafetyReportsBySiteFullServer(token, site.id, request),
-    ] as const),
-  );
-
-  return new Map<string, SafetyReport[]>(entries);
-}
-
 export async function loadPhotoAlbumCollection(
   token: string,
   request: Request,
@@ -75,58 +55,32 @@ export async function loadPhotoAlbumCollection(
 ): Promise<PhotoAlbumCollectionResult> {
   const context = await resolvePhotoAlbumAccessContext(token, request);
   const sites = filterAccessibleSites(context.accessibleSites, query);
-  const fallbackAlbumItems = buildPhotoAlbumItemsFromSites(sites);
-
-  const albumItems =
-    query.source === 'report_legacy'
-      ? []
-      : (
-          await fetchSafetyPhotoAssetsServer(
-            token,
-            {
-              headquarter_id: query.headquarterId || '',
-              limit: 5000,
-              offset: 0,
-              site_id: query.siteId || '',
-            },
-            request,
-          )
-        ).rows
-          .map((asset) => mapBackendPhotoAsset(asset))
-          .map((asset) => buildPhotoAlbumItemFromAsset(asset, sites.find((site) => site.id === asset.siteId)))
-          .filter((item) => {
-            if (query.siteId && item.siteId !== query.siteId) return false;
-            if (query.headquarterId && item.headquarterId !== query.headquarterId) return false;
-            return true;
-          });
-
-  const mergedAlbumItems = [...albumItems];
-  const knownIds = new Set(albumItems.map((item) => item.id));
-  fallbackAlbumItems.forEach((item) => {
-    if (!knownIds.has(item.id)) {
-      mergedAlbumItems.push(item);
-      knownIds.add(item.id);
-    }
-  });
-
-  if (query.source === 'album_upload') {
-    return {
-      context,
-      items: mergedAlbumItems,
-      reportsBySiteId: new Map<string, SafetyReport[]>(),
-      sites,
-    };
-  }
-
-  const reportsBySiteId = await buildReportsBySiteId(token, request, sites);
-  const legacyItems = sites.flatMap((site) =>
-    buildLegacyPhotoAlbumItemsFromReports(site, reportsBySiteId.get(site.id) ?? []),
-  );
+  const assetRows = (
+    await fetchSafetyPhotoAssetsServer(
+      token,
+      {
+        headquarter_id: query.headquarterId || '',
+        limit: 5000,
+        offset: 0,
+        site_id: query.siteId || '',
+        source_kind: query.source && query.source !== 'all' ? query.source : '',
+      },
+      request,
+    )
+  ).rows;
 
   return {
     context,
-    items: mergePhotoAlbumItems(mergedAlbumItems, legacyItems),
-    reportsBySiteId,
+    items: assetRows
+      .map((asset) => mapBackendPhotoAsset(asset))
+      .map((asset) =>
+        buildPhotoAlbumItemFromAsset(asset, sites.find((site) => site.id === asset.siteId)),
+      )
+      .filter((item) => {
+        if (query.siteId && item.siteId !== query.siteId) return false;
+        if (query.headquarterId && item.headquarterId !== query.headquarterId) return false;
+        return true;
+      }),
     sites,
   };
 }
