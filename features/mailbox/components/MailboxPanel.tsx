@@ -146,6 +146,25 @@ export function MailboxPanel({ mode }: MailboxPanelProps) {
   }, []);
 
   useEffect(() => {
+    if (tab !== 'accounts') return;
+    void (async () => {
+      try {
+        const [response, providerResponse] = await Promise.all([
+          fetchMailAccounts(),
+          fetchMailProviderStatuses(),
+        ]);
+        setAccounts(response.rows);
+        setProviderStatuses(providerResponse.rows);
+        setSelectedAccountId((current) =>
+          current && response.rows.some((item) => item.id === current) ? current : response.rows[0]?.id || '',
+        );
+      } catch (nextError) {
+        setError(nextError instanceof Error ? nextError.message : '메일 계정 상태를 새로고침하지 못했습니다.');
+      }
+    })();
+  }, [tab]);
+
+  useEffect(() => {
     if (tab === 'accounts') return;
     void (async () => {
       try {
@@ -208,6 +227,27 @@ export function MailboxPanel({ mode }: MailboxPanelProps) {
       setNotice(`메일 동기화를 완료했습니다. 계정 ${synced.synced_account_count}개 / 스레드 ${synced.thread_count}건`);
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : '메일 동기화에 실패했습니다.');
+    }
+  };
+
+  const handleRefreshAccountState = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const [response, providerResponse] = await Promise.all([
+        fetchMailAccounts(),
+        fetchMailProviderStatuses(),
+      ]);
+      setAccounts(response.rows);
+      setProviderStatuses(providerResponse.rows);
+      setSelectedAccountId((current) =>
+        current && response.rows.some((item) => item.id === current) ? current : response.rows[0]?.id || '',
+      );
+      setNotice('메일 계정과 공급자 상태를 새로고침했습니다.');
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : '메일 계정 상태를 새로고침하지 못했습니다.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -357,6 +397,11 @@ export function MailboxPanel({ mode }: MailboxPanelProps) {
                 <strong className={localStyles.accountTitle}>연결된 계정</strong>
                 <span className="app-chip">{accounts.length}개</span>
               </div>
+              {mode === 'worker' ? (
+                <p className={localStyles.accountMeta}>
+                  공용 네이버웍스 메일함은 관리자/관제만 사용하고, 지도요원은 개인 연결 계정만 확인할 수 있습니다.
+                </p>
+              ) : null}
               {accounts.length === 0 ? (
                 <div className={localStyles.emptyState}>연결된 메일 계정이 없습니다.</div>
               ) : (
@@ -392,6 +437,16 @@ export function MailboxPanel({ mode }: MailboxPanelProps) {
               <div className={localStyles.accountTitleRow}>
                 <strong className={localStyles.accountTitle}>OAuth 연결 상태</strong>
                 <span className="app-chip">{providerStatuses.length}개 공급자</span>
+              </div>
+              <div className={localStyles.sectionActions}>
+                <button
+                  type="button"
+                  className="app-button app-button-secondary"
+                  onClick={() => void handleRefreshAccountState()}
+                  disabled={loading}
+                >
+                  상태 새로고침
+                </button>
               </div>
               <div className={localStyles.sectionActions}>
                 {providerStatuses.map((provider) => (
