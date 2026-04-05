@@ -142,6 +142,8 @@ export function useInspectionSessionScreen(sessionId: string) {
     useState<ReportIndexStatus>('idle');
   const [uploadError, setUploadError] = useState<string | null>(null);
   const forcedRelationRefreshIdsRef = useRef<Set<string>>(new Set());
+  const saveNowRef = useRef(saveNow);
+  const relationRefreshAttemptKeysRef = useRef<Set<string>>(new Set());
   const session = getSessionById(sessionId);
   const shellReportItem = useMemo(() => {
     if (session) {
@@ -236,6 +238,16 @@ export function useInspectionSessionScreen(sessionId: string) {
           },
     [masterData, session],
   );
+  const relationRefreshAttemptKey = session
+    ? [
+        session.id,
+        session.updatedAt,
+        session.lastSavedAt ?? '',
+        storedRelations?.computedAt ?? '',
+        storedRelations?.stale ? 'stale' : 'fresh',
+        hasStoredRelations ? 'present' : 'missing',
+      ].join(':')
+    : '';
   const backHref = site ? `/sites/${encodeURIComponent(site.id)}` : '/';
   const photoAlbumHref = site
     ? buildSitePhotoAlbumHref(site.id, {
@@ -272,6 +284,7 @@ export function useInspectionSessionScreen(sessionId: string) {
       percentage,
     };
   }, [shellReportItem, shellSession]);
+  const hasDisplaySession = Boolean(displaySession);
   const displayProgress = derivedData.progress ?? shellProgress;
   const displayBackHref = displaySite
     ? `/sites/${encodeURIComponent(displaySite.id)}`
@@ -285,7 +298,15 @@ export function useInspectionSessionScreen(sessionId: string) {
       })
     : photoAlbumHref;
 
-  useEffect(() => () => void saveNow(), [saveNow]);
+  useEffect(() => {
+    saveNowRef.current = saveNow;
+  }, [saveNow]);
+
+  useEffect(() => {
+    return () => {
+      void saveNowRef.current();
+    };
+  }, []);
 
   useEffect(() => {
     if (!session) {
@@ -335,7 +356,7 @@ export function useInspectionSessionScreen(sessionId: string) {
     }
 
     let cancelled = false;
-    setIsLoadingSession(!displaySession);
+    setIsLoadingSession(!hasDisplaySession);
 
     void ensureSessionLoaded(sessionId).finally(() => {
       if (!cancelled) {
@@ -346,17 +367,19 @@ export function useInspectionSessionScreen(sessionId: string) {
     return () => {
       cancelled = true;
     };
-  }, [displaySession, ensureSessionLoaded, isAuthenticated, isReady, sessionId]);
+  }, [ensureSessionLoaded, hasDisplaySession, isAuthenticated, isReady, sessionId]);
 
   useEffect(() => {
     if (!session) {
       forcedRelationRefreshIdsRef.current.clear();
+      relationRefreshAttemptKeysRef.current.clear();
       setMissingRelationsStatus('idle');
       return;
     }
 
     if (!needsRelationRefresh) {
       forcedRelationRefreshIdsRef.current.delete(session.id);
+      relationRefreshAttemptKeysRef.current.delete(relationRefreshAttemptKey);
       setMissingRelationsStatus('idle');
       return;
     }
@@ -368,9 +391,13 @@ export function useInspectionSessionScreen(sessionId: string) {
     if (forcedRelationRefreshIdsRef.current.has(session.id)) {
       return;
     }
+    if (relationRefreshAttemptKeysRef.current.has(relationRefreshAttemptKey)) {
+      return;
+    }
 
     let cancelled = false;
     forcedRelationRefreshIdsRef.current.add(session.id);
+    relationRefreshAttemptKeysRef.current.add(relationRefreshAttemptKey);
     setMissingRelationsStatus('loading');
     void ensureSessionLoaded(session.id, { force: true })
       .then(() => {
@@ -389,7 +416,14 @@ export function useInspectionSessionScreen(sessionId: string) {
     return () => {
       cancelled = true;
     };
-  }, [ensureSessionLoaded, isAuthenticated, isReady, needsRelationRefresh, session]);
+  }, [
+    ensureSessionLoaded,
+    isAuthenticated,
+    isReady,
+    needsRelationRefresh,
+    relationRefreshAttemptKey,
+    session,
+  ]);
 
   useEffect(() => {
     if (!session || !site) return;
