@@ -1,0 +1,4 @@
+interface:
+  display_name: "K2b Import"
+  short_description: "Help with K2b Import tasks"
+  default_prompt: "Use $k2b-import to verify K2B parse/apply flows and fix import issues."
