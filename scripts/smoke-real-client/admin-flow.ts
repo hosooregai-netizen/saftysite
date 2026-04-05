@@ -38,14 +38,14 @@ export async function runAdminFlow(page: Page) {
   await page.getByText('메일 계정과 공급자 상태를 새로고침했습니다.').first().waitFor();
 
   await page.goto(`${baseUrl}/admin?section=k2b`, { waitUntil: 'load' });
-  let k2bDialog = page.getByRole('dialog', { name: '업로드' });
+  let k2bDialog = page.getByRole('dialog', { name: '엑셀 업로드' });
   await k2bDialog.waitFor();
   await k2bDialog.getByRole('button', { name: '닫기' }).click();
   await k2bDialog.waitFor({ state: 'hidden' });
   await page.waitForURL(/section=headquarters/);
   await waitHeading(page, '사업장 목록');
-  await page.getByRole('button', { name: '업로드' }).first().click();
-  k2bDialog = page.getByRole('dialog', { name: '업로드' });
+  await page.getByRole('button', { name: '엑셀 업로드' }).first().click();
+  k2bDialog = page.getByRole('dialog', { name: '엑셀 업로드' });
   await k2bDialog.waitFor();
   await k2bDialog.locator('input[type="file"]').first().setInputFiles({
     buffer: k2bWorkbookBuffer,
@@ -67,8 +67,8 @@ export async function runAdminFlow(page: Page) {
 
   await page.goto(`${baseUrl}/admin?section=reports`, { waitUntil: 'load' });
   await waitHeading(page, '전체 보고서');
-  await page.getByRole('button', { name: '업로드' }).first().click();
-  k2bDialog = page.getByRole('dialog', { name: '업로드' });
+  await page.getByRole('button', { name: '엑셀 업로드' }).first().click();
+  k2bDialog = page.getByRole('dialog', { name: '엑셀 업로드' });
   await k2bDialog.waitFor();
   await k2bDialog.getByRole('button', { name: '닫기' }).click();
   await page.getByText('1차 기술지도 보고서').first().waitFor();

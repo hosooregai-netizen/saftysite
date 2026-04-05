@@ -547,7 +547,7 @@ export function ReportsSection({
             className="app-button app-button-secondary"
             onClick={openExcelUpload}
           >
-            업로드
+            엑셀 업로드
           </button>
         </div>
       </div>

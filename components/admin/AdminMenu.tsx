@@ -102,7 +102,7 @@ export function AdminMenuPanel({
           active: siteNavView === 'assist',
         },
         {
-          label: '업로드',
+          label: '엑셀 업로드',
           description: '엑셀 파일로 사업장/현장 정보를 반영',
           href: buildAdminK2bUploadHref(searchParams, {
             headquarterId: selectedAdminHeadquarterId,

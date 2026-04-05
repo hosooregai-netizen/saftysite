@@ -69,7 +69,7 @@ export function HeadquartersTable({
             onClick={() => onExcelUploadRequest(null)}
             disabled={busy}
           >
-            업로드
+            엑셀 업로드
           </button>
           <button
             type="button"
@@ -200,7 +200,7 @@ export function HeadquartersTable({
                                 }),
                               },
                               {
-                                label: '업로드',
+                                label: '엑셀 업로드',
                                 onSelect: () => {
                                   if (!busy) onExcelUploadRequest(null);
                                 },

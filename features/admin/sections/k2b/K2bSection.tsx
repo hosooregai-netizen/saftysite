@@ -98,7 +98,7 @@ export function K2bSection({ onReload }: K2bSectionProps) {
       <section className={sharedStyles.sectionCard}>
         <div className={sharedStyles.sectionHeader}>
           <div>
-            <h2 className={sharedStyles.sectionTitle}>업로드</h2>
+            <h2 className={sharedStyles.sectionTitle}>엑셀 업로드</h2>
             <p className={styles.stepDescription}>
               엑셀 파일을 업로드하면 전체 행을 미리 보여주고, 확인 후 바로 업데이트할 수 있습니다.
             </p>
