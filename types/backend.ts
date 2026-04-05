@@ -539,6 +539,15 @@ export interface SafetyBackendAdminOverviewResponse {
     label: string;
     missing_site_count: number;
   }>;
+  deadline_signal_summary: {
+    entries: Array<{
+      count: number;
+      href: string;
+      key: string;
+      label: string;
+    }>;
+    total_report_count: number;
+  };
   deadline_rows: Array<{
     deadline_date: string;
     deadline_label: string;
@@ -574,8 +583,62 @@ export interface SafetyBackendAdminOverviewResponse {
     site_name: string;
     updated_at: string;
   }>;
+  quarterly_material_summary: {
+    entries: Array<{
+      count: number;
+      href: string;
+      key: string;
+      label: string;
+    }>;
+    missing_site_rows: Array<{
+      education: {
+        filled_count: number;
+        missing_count: number;
+        required_count: number;
+      };
+      headquarter_name: string;
+      href: string;
+      measurement: {
+        filled_count: number;
+        missing_count: number;
+        required_count: number;
+      };
+      missing_labels: string[];
+      quarter_key: string;
+      quarter_label: string;
+      site_id: string;
+      site_name: string;
+    }>;
+    quarter_key: string;
+    quarter_label: string;
+    total_site_count: number;
+  };
   schedule_rows: SafetyBackendInspectionSchedule[];
+  site_status_summary: {
+    entries: Array<{
+      count: number;
+      href: string;
+      key: string;
+      label: string;
+    }>;
+    total_site_count: number;
+  };
   summary_rows: Array<{ label: string; meta: string; value: string }>;
+  unsent_report_rows: Array<{
+    assignee_name?: string;
+    deadline_date: string;
+    dispatch_status: string;
+    headquarter_name: string;
+    href: string;
+    reference_date: string;
+    report_key: string;
+    report_title: string;
+    report_type_label: string;
+    site_id: string;
+    site_name: string;
+    unsent_days: number;
+    visit_date: string;
+  }>;
   worker_load_rows: Array<{
     assigned_site_count: number;
     href: string;

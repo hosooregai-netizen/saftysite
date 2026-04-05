@@ -1,9 +1,9 @@
 'use client';
 
-import Link from 'next/link';
 import { useState } from 'react';
 import LoginPanel from '@/components/auth/LoginPanel';
 import { AdminMenuDrawer, AdminMenuPanel } from '@/components/admin/AdminMenu';
+import { PageBackControl } from '@/components/navigation/PageBackControl';
 import WorkerAppHeader from '@/components/worker/WorkerAppHeader';
 import WorkerMenuSidebar from '@/components/worker/WorkerMenuSidebar';
 import WorkerShellBody from '@/components/worker/WorkerShellBody';
@@ -94,13 +94,11 @@ export function SiteReportsScreen({ siteKey }: SiteReportsScreenProps) {
             <div className={styles.contentColumn}>
               <header className={styles.hero}>
                 <div className={styles.heroBody}>
-                  <Link
+                  <PageBackControl
                     href={workerBackHref}
-                    className={styles.heroBackLink}
-                    aria-label="이전 화면으로 돌아가기"
-                  >
-                    {'<'} 이전
-                  </Link>
+                    label="이전"
+                    ariaLabel="이전 화면으로 돌아가기"
+                  />
                   <div className={styles.heroMain}>
                     <h1 className={styles.heroTitle}>
                       기술지도 보고서 - {currentSite.siteName}

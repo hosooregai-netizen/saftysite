@@ -11,7 +11,7 @@
   gap: 10px;
   padding: 12px;
   border: 1px solid var(--erp-line);
-  border-radius: 12px;
+  border-radius: 2px;
   background: #fff;
   box-shadow: 0 1px 0 rgba(16, 24, 43, 0.04);
 }
@@ -34,7 +34,7 @@
 
 .cardImage {
   aspect-ratio: 4 / 3;
-  border-radius: 10px;
+  border-radius: 2px;
   background: #eef3f8;
 }
 
@@ -42,7 +42,7 @@
   display: grid;
   place-items: center;
   min-height: 220px;
-  border-radius: 10px;
+  border-radius: 2px;
   background: linear-gradient(145deg, #eef3f8, #f9fbfd);
   color: var(--erp-text-muted);
   font-size: var(--text-ui);
@@ -57,7 +57,7 @@
   justify-content: center;
   width: 28px;
   height: 28px;
-  border-radius: 999px;
+  border-radius: 2px;
   background: rgba(255, 255, 255, 0.94);
   box-shadow: 0 4px 12px rgba(17, 29, 44, 0.14);
 }
@@ -81,7 +81,7 @@
   justify-content: center;
   min-height: 24px;
   padding: 0 10px;
-  border-radius: 999px;
+  border-radius: 2px;
   background: rgba(31, 48, 69, 0.08);
   color: var(--erp-dark);
   font-size: var(--text-ui-sm);
@@ -116,7 +116,7 @@
   place-items: center;
   min-height: 280px;
   border: 1px dashed #c7d4e2;
-  border-radius: 12px;
+  border-radius: 2px;
   background: #fbfcfe;
   color: var(--erp-text-muted);
   font-size: var(--text-body);
@@ -136,7 +136,7 @@
   min-height: 34px;
   padding: 0 12px;
   border: 1px solid var(--erp-line);
-  border-radius: 999px;
+  border-radius: 2px;
   background: #fff;
   font-size: var(--text-ui);
   font-weight: 700;
@@ -174,7 +174,7 @@
 .loadMoreRow {
   padding: 14px 16px;
   border: 1px dashed #c7d4e2;
-  border-radius: 14px;
+  border-radius: 2px;
   background: #fbfcfe;
 }
 
@@ -186,7 +186,7 @@
 
 .modalPreview {
   overflow: hidden;
-  border-radius: 12px;
+  border-radius: 2px;
   background: #eef3f8;
 }
 

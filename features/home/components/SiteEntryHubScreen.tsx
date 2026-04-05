@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import LoginPanel from '@/components/auth/LoginPanel';
+import { PageBackControl } from '@/components/navigation/PageBackControl';
 import WorkerAppHeader from '@/components/worker/WorkerAppHeader';
 import WorkerMenuSidebar from '@/components/worker/WorkerMenuSidebar';
 import WorkerShellBody from '@/components/worker/WorkerShellBody';
@@ -17,7 +18,6 @@ import {
 import { getAdminSectionHref, isAdminUserRole } from '@/lib/admin';
 import { SiteEntryHubPanel } from './SiteEntryHubPanel';
 import homeStyles from './HomeScreen.module.css';
-import entryStyles from './SiteEntryScreens.module.css';
 
 interface SiteEntryHubScreenProps {
   initialEntry?: string | null;
@@ -137,9 +137,7 @@ export function SiteEntryHubScreen({
             <div className={homeStyles.contentColumn}>
               <header className={homeStyles.hero}>
                 <div className={homeStyles.heroBody}>
-                  <Link href={backHref} className={entryStyles.heroBackLink}>
-                    {'<'} {backLabel}
-                  </Link>
+                  <PageBackControl href={backHref} label={backLabel} />
                   <div className={homeStyles.heroMain}>
                     <h1 className={homeStyles.heroTitle}>{currentSite.siteName}</h1>
                   </div>

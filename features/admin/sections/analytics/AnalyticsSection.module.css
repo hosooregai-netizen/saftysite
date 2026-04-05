@@ -1,0 +1,313 @@
+.summaryBody {
+  display: grid;
+  gap: 16px;
+}
+
+.scopeBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.scopeChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--erp-line);
+  border-radius: 999px;
+  background: #f7fafc;
+}
+
+.scopeChipLabel {
+  font-size: var(--text-ui-sm);
+  font-weight: 700;
+  color: var(--erp-text-muted);
+}
+
+.scopeChipValue {
+  font-size: var(--text-ui);
+  font-weight: 700;
+  color: var(--erp-dark);
+}
+
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.kpiCard {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-surface);
+  background: #fff;
+  box-shadow: 0 1px 0 rgba(16, 24, 43, 0.04);
+}
+
+.kpiLabel {
+  font-size: var(--text-ui-sm);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--erp-text-muted);
+}
+
+.kpiValue {
+  font-size: clamp(24px, 2vw, 32px);
+  font-weight: 700;
+  line-height: 1.08;
+  color: var(--erp-dark);
+}
+
+.kpiDeltaRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 2px;
+}
+
+.kpiDeltaLabel {
+  font-size: var(--text-ui-sm);
+  font-weight: 600;
+  color: var(--erp-text-muted);
+}
+
+.kpiDeltaValue {
+  font-size: var(--text-ui);
+  font-weight: 700;
+}
+
+.deltaPositive {
+  color: #027a48;
+}
+
+.deltaNegative {
+  color: var(--erp-danger-text);
+}
+
+.deltaNeutral {
+  color: var(--erp-dark);
+}
+
+.kpiMeta {
+  font-size: var(--text-ui-sm);
+  line-height: 1.5;
+  color: var(--erp-text-muted);
+}
+
+.supportStrip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-surface);
+  background: #fbfcfe;
+}
+
+.supportItem {
+  display: grid;
+  gap: 4px;
+}
+
+.supportLabel {
+  font-size: var(--text-ui-sm);
+  font-weight: 700;
+  color: var(--erp-text-muted);
+}
+
+.supportValue {
+  font-size: var(--text-body-md);
+  font-weight: 700;
+  color: var(--erp-dark);
+}
+
+.supportMeta {
+  font-size: var(--text-ui-sm);
+  color: var(--erp-text-muted);
+}
+
+.detailTabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid var(--erp-line);
+  border-radius: 999px;
+  background: #f8fafc;
+}
+
+.detailTabButton {
+  min-height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  font: inherit;
+  font-size: var(--text-ui);
+  font-weight: 700;
+  color: var(--erp-text-muted);
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.detailTabButton:hover {
+  color: var(--erp-dark);
+}
+
+.detailTabButtonActive {
+  background: var(--erp-white);
+  color: var(--erp-dark);
+  box-shadow: 0 1px 3px rgba(18, 35, 58, 0.08);
+}
+
+.detailTable {
+  width: 100%;
+  min-width: 0;
+  table-layout: fixed;
+}
+
+.detailTableWrap {
+  overflow-x: hidden;
+}
+
+.detailTable th,
+.detailTable td {
+  padding: 10px 12px;
+}
+
+.detailTable th:last-child,
+.detailTable td:last-child {
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  padding-left: 12px;
+  text-align: left;
+  white-space: normal;
+}
+
+.detailTable th {
+  letter-spacing: 0;
+}
+
+.employeeNameCol {
+  width: 22%;
+}
+
+.employeeCountCol {
+  width: 10%;
+}
+
+.employeeMoneyCol {
+  width: 13%;
+}
+
+.employeeDeltaCol {
+  width: 12%;
+}
+
+.employeeRateCol {
+  width: 14%;
+}
+
+.siteNameCol {
+  width: 28%;
+}
+
+.siteBusinessCol {
+  width: 22%;
+}
+
+.siteTypeCol {
+  width: 14%;
+}
+
+.siteCountCol {
+  width: 10%;
+}
+
+.siteMoneyCol {
+  width: 13%;
+}
+
+.textCell {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+  white-space: normal;
+}
+
+.numberCell {
+  white-space: nowrap;
+}
+
+.overdueCell {
+  background: #fff1f1;
+  color: var(--erp-danger-text);
+  font-weight: 700;
+}
+
+.rateCell {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.rateValue {
+  font-size: var(--text-ui-sm);
+  font-weight: 700;
+  color: var(--erp-dark);
+}
+
+.rateTrack {
+  overflow: hidden;
+  height: 8px;
+  border-radius: 999px;
+  background: #e6edf5;
+}
+
+.rateFill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #1b3048 0%, #5d90cf 100%);
+}
+
+@media (max-width: 1279px) {
+  .kpiGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .supportStrip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .detailTable th,
+  .detailTable td {
+    padding: 10px;
+  }
+}
+
+@media (max-width: 767px) {
+  .kpiGrid,
+  .supportStrip {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .detailTabs {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .detailTabButton {
+    flex: 1 1 50%;
+  }
+}

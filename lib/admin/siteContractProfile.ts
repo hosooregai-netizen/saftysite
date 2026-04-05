@@ -9,6 +9,7 @@ import type { SafetyPhotoAsset } from '@/types/photos';
 import type { SafetySite } from '@/types/backend';
 
 const SITE_META_MARKER = '[SAFETY_SITE_META]';
+export const QUARTERLY_MATERIAL_REQUIRED_COUNT = 4;
 
 type SiteContractFieldSource = Pick<
   SafetySite,
@@ -25,9 +26,16 @@ type SiteMemoWithContractFields = Pick<SafetySite, 'memo'> & Partial<SiteContrac
 interface StoredSiteMetaEnvelope {
   contractProfile?: Partial<SiteContractProfile>;
   photoAssets?: Array<Partial<SafetyPhotoAsset>>;
+  quarterlyMaterialTracking?: Array<Partial<SiteQuarterlyMaterialRecord>>;
   requiredCompletionFields?: string[];
   schedules?: Array<Partial<SafetyInspectionSchedule>>;
   note?: string;
+}
+
+export interface SiteQuarterlyMaterialRecord {
+  educationMaterials: string[];
+  measurementMaterials: string[];
+  quarterKey: string;
 }
 
 const EMPTY_CONTRACT_PROFILE: SiteContractProfile = {
@@ -76,6 +84,41 @@ function normalizeContractStatus(value: unknown): SiteContractStatus {
     default:
       return '';
   }
+}
+
+function normalizeQuarterKey(value: unknown): string {
+  const normalized = normalizeText(value).toUpperCase();
+  const matched = normalized.match(/^(\d{4})-Q([1-4])$/);
+  return matched ? `${matched[1]}-Q${matched[2]}` : '';
+}
+
+function normalizeQuarterlyMaterialValues(value: unknown): string[] {
+  const normalizedValues = Array.isArray(value)
+    ? value
+        .slice(0, QUARTERLY_MATERIAL_REQUIRED_COUNT)
+        .map((item) => normalizeText(item))
+    : [];
+
+  while (normalizedValues.length < QUARTERLY_MATERIAL_REQUIRED_COUNT) {
+    normalizedValues.push('');
+  }
+
+  return normalizedValues;
+}
+
+function normalizeQuarterlyMaterialRecord(
+  value: Partial<SiteQuarterlyMaterialRecord> | null | undefined,
+): SiteQuarterlyMaterialRecord | null {
+  if (!value) return null;
+
+  const quarterKey = normalizeQuarterKey(value.quarterKey);
+  if (!quarterKey) return null;
+
+  return {
+    educationMaterials: normalizeQuarterlyMaterialValues(value.educationMaterials),
+    measurementMaterials: normalizeQuarterlyMaterialValues(value.measurementMaterials),
+    quarterKey,
+  };
 }
 
 function normalizeScheduleStatus(value: unknown): SafetyInspectionScheduleStatus {
@@ -300,6 +343,42 @@ export function parseSiteRequiredCompletionFields(
   return envelope.requiredCompletionFields.map((item) => normalizeText(item)).filter(Boolean);
 }
 
+export function parseSiteQuarterlyMaterialTracking(
+  siteOrMemo: SiteMemoWithContractFields | string | null | undefined,
+): SiteQuarterlyMaterialRecord[] {
+  const memo = typeof siteOrMemo === 'string' || siteOrMemo == null ? siteOrMemo : siteOrMemo.memo;
+  const envelope = parseEnvelope(memo);
+  if (!Array.isArray(envelope?.quarterlyMaterialTracking)) {
+    return [];
+  }
+
+  return envelope.quarterlyMaterialTracking
+    .map((item) => normalizeQuarterlyMaterialRecord(item))
+    .filter((item): item is SiteQuarterlyMaterialRecord => Boolean(item));
+}
+
+export function getSiteQuarterlyMaterialRecord(
+  siteOrMemo: SiteMemoWithContractFields | string | null | undefined,
+  quarterKey: string,
+): SiteQuarterlyMaterialRecord {
+  const normalizedQuarterKey = normalizeQuarterKey(quarterKey);
+  const matchedRecord = parseSiteQuarterlyMaterialTracking(siteOrMemo).find(
+    (item) => item.quarterKey === normalizedQuarterKey,
+  );
+
+  return (
+    matchedRecord ?? {
+      educationMaterials: Array.from({ length: QUARTERLY_MATERIAL_REQUIRED_COUNT }, () => ''),
+      measurementMaterials: Array.from({ length: QUARTERLY_MATERIAL_REQUIRED_COUNT }, () => ''),
+      quarterKey: normalizedQuarterKey,
+    }
+  );
+}
+
+export function countFilledQuarterlyMaterials(values: string[]): number {
+  return values.reduce((count, item) => (normalizeText(item) ? count + 1 : count), 0);
+}
+
 export function hasSiteContractProfile(profile: SiteContractProfile | null | undefined): boolean {
   return Boolean(
     profile &&
@@ -318,6 +397,7 @@ export function buildSiteMemoWithContractProfile(
   options?: {
     existingMemo?: string | null;
     photoAssets?: SafetyPhotoAsset[];
+    quarterlyMaterialTracking?: SiteQuarterlyMaterialRecord[];
     requiredCompletionFields?: string[];
     schedules?: SafetyInspectionSchedule[];
   },
@@ -338,6 +418,11 @@ export function buildSiteMemoWithContractProfile(
   const normalizedRequiredCompletionFields = Array.isArray(options?.requiredCompletionFields)
     ? options.requiredCompletionFields.map((item) => normalizeText(item)).filter(Boolean)
     : parseSiteRequiredCompletionFields(options?.existingMemo);
+  const normalizedQuarterlyMaterialTracking = Array.isArray(options?.quarterlyMaterialTracking)
+    ? options.quarterlyMaterialTracking
+        .map((item) => normalizeQuarterlyMaterialRecord(item))
+        .filter((item): item is SiteQuarterlyMaterialRecord => Boolean(item))
+    : parseSiteQuarterlyMaterialTracking(options?.existingMemo);
   const hasProfile = hasSiteContractProfile(normalizedProfile);
 
   if (
@@ -345,6 +430,7 @@ export function buildSiteMemoWithContractProfile(
     !hasProfile &&
     normalizedSchedules.length === 0 &&
     normalizedPhotoAssets.length === 0 &&
+    normalizedQuarterlyMaterialTracking.length === 0 &&
     normalizedRequiredCompletionFields.length === 0
   ) {
     return null;
@@ -354,6 +440,7 @@ export function buildSiteMemoWithContractProfile(
     !hasProfile &&
     normalizedSchedules.length === 0 &&
     normalizedPhotoAssets.length === 0 &&
+    normalizedQuarterlyMaterialTracking.length === 0 &&
     normalizedRequiredCompletionFields.length === 0
   ) {
     return normalizedNote || null;
@@ -363,6 +450,10 @@ export function buildSiteMemoWithContractProfile(
     ...existingEnvelope,
     contractProfile: hasProfile ? normalizedProfile : undefined,
     photoAssets: normalizedPhotoAssets.length > 0 ? normalizedPhotoAssets : undefined,
+    quarterlyMaterialTracking:
+      normalizedQuarterlyMaterialTracking.length > 0
+        ? normalizedQuarterlyMaterialTracking
+        : undefined,
     requiredCompletionFields:
       normalizedRequiredCompletionFields.length > 0 ? normalizedRequiredCompletionFields : undefined,
     schedules: normalizedSchedules.length > 0 ? normalizedSchedules : undefined,

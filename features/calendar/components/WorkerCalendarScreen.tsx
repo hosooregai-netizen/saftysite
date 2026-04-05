@@ -240,19 +240,16 @@ export function WorkerCalendarScreen() {
                   <article className={styles.summaryCard}>
                     <span className={styles.summaryLabel}>미선택 회차</span>
                     <strong className={styles.summaryValue}>{unselectedRows.length}</strong>
-                    <span className={styles.summaryMeta}>먼저 날짜를 선택해야 하는 일정</span>
                   </article>
                   <article className={styles.summaryCard}>
                     <span className={styles.summaryLabel}>선택 완료 일정</span>
                     <strong className={styles.summaryValue}>{selectedRows.length}</strong>
-                    <span className={styles.summaryMeta}>관제 캘린더에도 바로 반영됩니다.</span>
                   </article>
                   <article className={styles.summaryCard}>
                     <span className={styles.summaryLabel}>배정 현장</span>
                     <strong className={styles.summaryValue}>
                       {selectedSiteId ? 1 : sites.length}
                     </strong>
-                    <span className={styles.summaryMeta}>계약일 기준 15일 구간 안에서만 선택 가능</span>
                   </article>
                 </section>
 
@@ -260,7 +257,6 @@ export function WorkerCalendarScreen() {
                   <div className={styles.sectionHeader}>
                     <div>
                       <h2 className={styles.sectionTitle}>회차별 일정 선택</h2>
-                      <div className={styles.sectionMeta}>계약일 기준 15일씩 구간이 나뉘며, 구간 밖 일정은 작업자 화면에서 저장할 수 없습니다.</div>
                     </div>
                   </div>
                   {error ? <div className={homeStyles.emptyState}>{error}</div> : null}
@@ -302,7 +298,6 @@ export function WorkerCalendarScreen() {
                         <div className={styles.sectionHeader}>
                           <div>
                             <h3 className={styles.sectionTitle}>미선택 회차</h3>
-                            <div className={styles.sectionMeta}>배정 직후 생성된 회차입니다.</div>
                           </div>
                         </div>
                         {loading ? (
@@ -380,7 +375,6 @@ export function WorkerCalendarScreen() {
                         <div className={styles.sectionHeader}>
                           <div>
                             <h3 className={styles.sectionTitle}>월간 캘린더</h3>
-                            <div className={styles.sectionMeta}>날짜를 누르면 아래 선택 완료 일정이 해당 일자로 좁혀집니다.</div>
                           </div>
                         </div>
                         <div className={styles.calendarGrid}>

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useDeferredValue, useMemo, useState } from 'react';
 import LoginPanel from '@/components/auth/LoginPanel';
 import { AdminMenuDrawer, AdminMenuPanel } from '@/components/admin/AdminMenu';
+import { PageBackControl } from '@/components/navigation/PageBackControl';
 import AppModal from '@/components/ui/AppModal';
 import ActionMenu from '@/components/ui/ActionMenu';
 import WorkerAppHeader from '@/components/worker/WorkerAppHeader';
@@ -512,9 +513,7 @@ export function SiteQuarterlyReportsScreen({
             <div className={styles.contentColumn}>
               <header className={styles.hero}>
                 <div className={styles.heroBody}>
-                  <Link href={backHref} className={styles.heroBackLink}>
-                    {'<'} {backLabel}
-                  </Link>
+                  <PageBackControl href={backHref} label={backLabel} />
                   <div className={styles.heroMain}>
                     <h1 className={styles.heroTitle}>분기 종합 보고서 목록</h1>
                   </div>

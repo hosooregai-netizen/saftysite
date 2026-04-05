@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { use, useMemo, useState } from 'react';
 import { AdminMenuDrawer, AdminMenuPanel } from '@/components/admin/AdminMenu';
 import LoginPanel from '@/components/auth/LoginPanel';
+import { PageBackControl } from '@/components/navigation/PageBackControl';
 import operationalStyles from '@/components/site/OperationalReports.module.css';
 import AppModal from '@/components/ui/AppModal';
 import WorkerAppHeader from '@/components/worker/WorkerAppHeader';
@@ -163,13 +164,11 @@ export default function BadWorkplaceReportPage({
             <div className={shellStyles.contentColumn}>
               <header className={shellStyles.hero}>
                 <div className={shellStyles.heroBody}>
-                  <Link
+                  <PageBackControl
                     href={backHref}
-                    className={shellStyles.heroBackLink}
-                    aria-label="이전 화면으로 돌아가기"
-                  >
-                    {'<'} {backLabel}
-                  </Link>
+                    label={backLabel}
+                    ariaLabel="이전 화면으로 돌아가기"
+                  />
                   <div className={shellStyles.heroMain}>
                     <h1 className={shellStyles.heroTitle}>{initialDraft.title}</h1>
                     {photoAlbumHref ? (

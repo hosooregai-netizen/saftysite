@@ -31,6 +31,7 @@ import {
   updateSafetyUser,
   updateSafetyUserPassword,
 } from '@/lib/safetyApi/adminEndpoints';
+import { filterVisibleAdminReportListItems } from '@/lib/admin/reportVisibility';
 import {
   buildAssignmentPayload,
   deleteAssignmentsById,
@@ -137,7 +138,11 @@ export function useAdminDashboardState({
     () => (selectedSiteId ? data.sites.find((item) => item.id === selectedSiteId) ?? null : null),
     [data.sites, selectedSiteId],
   );
-  const shouldLoadReports = activeSection === 'overview' || activeSection === 'reports' || activeSection === 'analytics';
+  const shouldLoadReports =
+    activeSection === 'overview' ||
+    activeSection === 'reports' ||
+    activeSection === 'analytics' ||
+    activeSection === 'mailbox';
 
   const replaceRoute = useCallback(
     (section: AdminSectionKey, query: AdminSectionQuery = {}) => {
@@ -192,7 +197,7 @@ export function useAdminDashboardState({
             activeOnly: true,
             limit: ADMIN_REPORT_LIST_LIMIT,
           });
-          setReportList(reports);
+          setReportList(filterVisibleAdminReportListItems(reports, sites, headquarters));
         }
       } catch (nextError) {
         setError(getErrorMessage(nextError));

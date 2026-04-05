@@ -99,7 +99,7 @@
   min-height: 38px;
   padding: 0 14px;
   border: 1px solid var(--erp-line);
-  border-radius: 6px;
+  border-radius: 2px;
   background: var(--erp-white);
   font-size: var(--text-ui);
   font-weight: 700;
@@ -163,7 +163,7 @@
   gap: 4px;
   padding: 12px 12px 12px 14px;
   border: none;
-  border-radius: 6px;
+  border-radius: 2px;
   background: rgba(255, 255, 255, 0.95);
   text-align: left;
   color: var(--erp-dark);
@@ -217,10 +217,14 @@
   color: var(--erp-mid);
 }
 
+.sortHeaderCell {
+  position: relative;
+}
+
 .sortHeaderButton {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   min-height: 28px;
   padding: 0;
   border: none;
@@ -235,13 +239,32 @@
   color: var(--erp-navy);
 }
 
+.sortHeaderButtonMenuOpen {
+  color: var(--erp-navy);
+}
+
+.sortHeaderLabel {
+  display: inline-flex;
+  align-items: center;
+}
+
+.sortHeaderIcons {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.sortHeaderIndicatorSvg {
+  width: 12px;
+  height: 12px;
+}
+
 .sortHeaderIndicatorActive,
 .sortHeaderIndicatorMuted {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-width: 12px;
-  font-size: 12px;
   line-height: 1;
 }
 
@@ -251,6 +274,68 @@
 
 .sortHeaderIndicatorMuted {
   color: #8c98a8;
+}
+
+.sortHeaderMenuCaret {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 14px;
+  color: #8c98a8;
+}
+
+.sortHeaderMenu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 6;
+  display: grid;
+  min-width: 176px;
+  padding: 6px;
+  border: 1px solid var(--erp-line);
+  border-radius: 2px;
+  background: var(--erp-white);
+  box-shadow: 0 18px 36px rgba(17, 32, 53, 0.14);
+}
+
+.sortHeaderMenuItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--erp-dark);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--text-ui);
+  font-weight: 600;
+  text-align: left;
+}
+
+.sortHeaderMenuItem:hover {
+  background: #f5f8fc;
+}
+
+.sortHeaderMenuItemActive {
+  background: #eef3f8;
+  color: var(--erp-navy);
+}
+
+.sortHeaderMenuItemLabel {
+  flex: 1 1 auto;
+}
+
+.sortHeaderMenuItemCheck {
+  flex: 0 0 auto;
+  min-width: 32px;
+  font-size: var(--text-kicker);
+  font-weight: 700;
+  color: inherit;
 }
 
 .drawerBackdrop {
@@ -300,6 +385,216 @@
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
+}
+
+.sectionHeaderTitleBlock {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.sectionHeaderToolbarActions {
+  flex: 1 1 auto;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  min-width: 0;
+  margin-left: 24px;
+}
+
+.sectionHeaderMeta {
+  flex: 0 0 auto;
+  font-size: var(--text-ui-sm);
+  font-weight: 600;
+  color: var(--erp-text-muted);
+  white-space: nowrap;
+}
+
+.reportsSectionHeader {
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+.reportsSectionCard {
+  border-radius: 1px;
+}
+
+.reportsSectionCard .tableShell,
+.reportsSectionCard .sectionHeaderMenu {
+  border-radius: 1px;
+}
+
+.reportsSectionCard :global(.app-button) {
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 1px;
+}
+
+.reportsSectionCard :global(.app-input),
+.reportsSectionCard :global(.app-select) {
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 1px;
+}
+
+.reportsSectionHeaderTitle {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.reportsSectionHeaderActions {
+  flex: 1 1 auto;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  min-width: 0;
+  margin-left: 32px;
+}
+
+.reportsSectionHeaderCount {
+  flex: 0 0 auto;
+  font-size: var(--text-ui-sm);
+  font-weight: 600;
+  color: var(--erp-text-muted);
+  white-space: nowrap;
+}
+
+.reportsSectionCard .sectionHeaderMenuButtonMeta {
+  min-width: 0;
+  height: auto;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: var(--text-ui-sm);
+  color: var(--erp-text-muted);
+}
+
+.sectionHeaderSearch {
+  flex: 1 1 320px;
+  min-width: min(100%, 320px);
+  width: min(320px, 100%);
+}
+
+.sectionHeaderToolbarSearch {
+  flex: 0 1 320px;
+  min-width: 220px;
+  width: 320px;
+}
+
+.reportsSectionSearch {
+  flex: 0 1 320px;
+  min-width: 220px;
+  width: 320px;
+}
+
+.sectionHeaderMenuWrap {
+  position: relative;
+}
+
+.sectionHeaderMenuButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--erp-line);
+  border-radius: 1px;
+  background: var(--erp-white);
+  font: inherit;
+  font-size: var(--text-ui);
+  font-weight: 700;
+  color: var(--erp-dark);
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.sectionHeaderMenuButton:hover {
+  border-color: #96a4b4;
+  background: #f8fafc;
+}
+
+.sectionHeaderMenuButtonActive,
+.sectionHeaderMenuButtonOpen {
+  border-color: var(--erp-mid);
+  background: #eef3f8;
+  color: var(--erp-navy);
+}
+
+.sectionHeaderMenuButtonLabel {
+  display: inline-flex;
+  align-items: center;
+}
+
+.sectionHeaderMenuButtonMeta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-width: 0;
+  height: auto;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: var(--text-ui-sm);
+  font-weight: 700;
+  line-height: 1;
+  color: inherit;
+}
+
+.sectionHeaderMenuButtonIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  color: inherit;
+}
+
+.sectionHeaderMenu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 6;
+  display: grid;
+  gap: 14px;
+  min-width: min(100vw - 48px, 760px);
+  padding: 14px;
+  border: 1px solid var(--erp-line);
+  border-radius: 2px;
+  background: var(--erp-white);
+  box-shadow: 0 18px 36px rgba(17, 32, 53, 0.14);
+}
+
+.sectionHeaderMenuGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.sectionHeaderMenuField {
+  display: grid;
+  gap: 6px;
+}
+
+.sectionHeaderMenuField label {
+  font-size: var(--text-ui-sm);
+  font-weight: 700;
+  color: var(--erp-text-muted);
+}
+
+.sectionHeaderMenuDateRange {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.sectionHeaderMenuFooter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 2px;
 }
 
 .sectionHeaderSpacer {
@@ -614,6 +909,128 @@
   padding: 28px 24px;
 }
 
+.overviewTableCard .sectionHeader {
+  padding-block: 16px;
+  background: linear-gradient(180deg, #fbfcfe 0%, #ffffff 100%);
+}
+
+.overviewTableHeaderBlock {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.overviewTableScope {
+  font-size: var(--text-ui-sm);
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--erp-text-muted);
+}
+
+.overviewTableCount {
+  font-size: var(--text-body-md);
+  font-weight: 700;
+  color: var(--erp-dark);
+}
+
+.overviewTableCard .table th:last-child,
+.overviewTableCard .table td:last-child {
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  padding-left: 16px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.overviewUnsentTable,
+.overviewMaterialTable {
+  min-width: 0;
+  table-layout: fixed;
+}
+
+.overviewColSite {
+  width: 15%;
+}
+
+.overviewColHeadquarter {
+  width: 15%;
+}
+
+.overviewColReport {
+  width: 21%;
+}
+
+.overviewColType {
+  width: 10%;
+}
+
+.overviewColAssignee {
+  width: 11%;
+}
+
+.overviewColDate {
+  width: 11%;
+}
+
+.overviewColElapsed {
+  width: 9%;
+}
+
+.overviewColStatus {
+  width: 8%;
+}
+
+.overviewColSiteWide {
+  width: 22%;
+}
+
+.overviewColHeadquarterWide {
+  width: 20%;
+}
+
+.overviewColMetric {
+  width: 11.6%;
+}
+
+.overviewTableWrapLink {
+  white-space: normal;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+}
+
+.overviewTableMuted {
+  color: var(--erp-text-muted);
+}
+
+.overviewTableMetric {
+  font-weight: 700;
+  color: var(--erp-dark);
+  white-space: nowrap;
+}
+
+.overviewTableStatus {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.overviewTableStatusDanger {
+  color: var(--erp-danger-text);
+}
+
+.overviewTableStatusWarning {
+  color: #b54708;
+}
+
+.overviewTableStatusNeutral {
+  color: var(--erp-dark);
+}
+
+.overviewTableStatusSuccess {
+  color: #027a48;
+}
+
 .tableShell {
   overflow: hidden;
   border: 1px solid var(--erp-line);
@@ -751,9 +1168,21 @@
   gap: 8px;
 }
 
+.tableToolbarCount {
+  font-size: var(--text-ui-sm);
+  font-weight: 600;
+  color: var(--erp-text-muted);
+  white-space: nowrap;
+}
+
 .toolbarSelect {
   min-width: 132px;
   flex: 0 0 132px;
+}
+
+.sectionHeaderSelect {
+  min-width: 176px;
+  flex: 0 0 176px;
 }
 
 .bulkActionBar {
@@ -761,7 +1190,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  padding: 0 18px 16px;
+  padding: 0 18px 12px;
 }
 
 .paginationRow {
@@ -769,13 +1198,18 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
-  gap: 10px;
-  padding: 16px 18px 18px;
+  gap: 8px;
+  padding: 10px 18px 12px;
   border-top: 1px solid var(--erp-line);
 }
 
+.paginationRow :global(.app-button) {
+  min-height: 34px;
+  padding: 0 14px;
+}
+
 .paginationLabel {
-  min-width: 120px;
+  min-width: 96px;
   font-size: var(--text-ui-sm);
   text-align: center;
   color: var(--erp-text-muted);
@@ -847,7 +1281,7 @@
   align-items: center;
   width: fit-content;
   padding: 2px 7px;
-  border-radius: 999px;
+  border-radius: 2px;
   background: #fff2d9;
   color: #946200;
   font-size: var(--text-micro);
@@ -1499,6 +1933,7 @@
   display: grid;
   place-content: center;
   gap: 2px;
+  padding-inline: 16px;
   text-align: center;
 }
 
@@ -1511,7 +1946,11 @@
 
 .kpiDonutCenter span {
   font-size: var(--text-kicker);
+  line-height: 1.3;
   color: var(--erp-text-muted);
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 
 .kpiLegend {
@@ -1526,7 +1965,7 @@
 
 .kpiLegendItem {
   display: grid;
-  grid-template-columns: auto auto auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
   justify-content: start;
@@ -1546,11 +1985,75 @@
 
 .kpiLegendLabel {
   min-width: 0;
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 
 .kpiLegendValue {
   font-weight: 700;
   min-width: 2ch;
+  text-align: right;
+}
+
+.kpiSignalTotal {
+  font-size: var(--text-ui);
+  font-weight: 700;
+  color: var(--erp-dark);
+}
+
+.kpiSignalSummary {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
+.kpiSignalTrack {
+  display: flex;
+  inline-size: 100%;
+  min-block-size: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(151, 167, 186, 0.38);
+  border-radius: 4px;
+  background: linear-gradient(180deg, rgba(240, 244, 249, 0.92) 0%, rgba(232, 237, 243, 1) 100%);
+}
+
+.kpiSignalSegment {
+  display: block;
+  block-size: 100%;
+  min-inline-size: 0;
+}
+
+.kpiSignalLegend {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kpiSignalLegendItem {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.kpiSignalLegendLabel,
+.kpiSignalLegendValue {
+  font-size: var(--text-ui);
+  color: var(--erp-dark);
+}
+
+.kpiSignalLegendLabel {
+  min-width: 0;
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.kpiSignalLegendValue {
+  font-weight: 700;
   text-align: right;
 }
 
@@ -1618,7 +2121,7 @@
   overflow: hidden;
   inline-size: 100%;
   block-size: 8px;
-  border-radius: 999px;
+  border-radius: 2px;
   background: #e7edf4;
 }
 
@@ -1630,6 +2133,14 @@
 }
 
 @media (max-width: 1199px) {
+  .sectionHeaderMenu {
+    min-width: min(100vw - 40px, 640px);
+  }
+
+  .sectionHeaderMenuGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .workspace {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -1701,6 +2212,65 @@
 }
 
 @media (max-width: 767px) {
+  .sectionHeaderToolbarActions {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    margin-left: 0;
+  }
+
+  .sectionHeaderToolbarSearch {
+    min-width: 0;
+    width: 100%;
+    flex: 1 1 100%;
+  }
+
+  .reportsSectionHeader {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .reportsSectionHeaderTitle,
+  .reportsSectionHeaderActions {
+    flex: 1 1 100%;
+  }
+
+  .reportsSectionHeaderActions {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    margin-left: 0;
+  }
+
+  .reportsSectionSearch {
+    min-width: 0;
+    width: 100%;
+    flex: 1 1 100%;
+  }
+
+  .sectionHeaderSearch {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .sectionHeaderMenuWrap {
+    width: 100%;
+  }
+
+  .sectionHeaderMenuButton {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .sectionHeaderMenu {
+    left: 0;
+    right: auto;
+    min-width: 100%;
+  }
+
+  .sectionHeaderMenuGrid,
+  .sectionHeaderMenuDateRange {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .hero {
     padding: 14px 12px 12px;
   }

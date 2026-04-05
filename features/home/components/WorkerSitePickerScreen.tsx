@@ -1,8 +1,8 @@
 'use client';
 
-import Link from 'next/link';
 import { useState } from 'react';
 import LoginPanel from '@/components/auth/LoginPanel';
+import { PageBackControl } from '@/components/navigation/PageBackControl';
 import WorkerAppHeader from '@/components/worker/WorkerAppHeader';
 import WorkerMenuSidebar from '@/components/worker/WorkerMenuSidebar';
 import WorkerShellBody from '@/components/worker/WorkerShellBody';
@@ -84,9 +84,7 @@ export function WorkerSitePickerScreen({
                 <>
                   <header className={homeStyles.hero}>
                     <div className={homeStyles.heroBody}>
-                      <Link href="/" className={entryStyles.heroBackLink}>
-                        {'<'} 현장 목록
-                      </Link>
+                      <PageBackControl href="/" label="현장 목록" />
                       <div className={homeStyles.heroMain}>
                         <h1 className={homeStyles.heroTitle}>{getWorkerSiteEntryTitle(intent)}</h1>
                       </div>

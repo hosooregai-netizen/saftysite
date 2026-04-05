@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import LoginPanel from '@/components/auth/LoginPanel';
 import { AdminMenuDrawer, AdminMenuPanel } from '@/components/admin/AdminMenu';
+import { PageBackControl } from '@/components/navigation/PageBackControl';
 import WorkerAppHeader from '@/components/worker/WorkerAppHeader';
 import WorkerMenuSidebar from '@/components/worker/WorkerMenuSidebar';
 import WorkerShellBody from '@/components/worker/WorkerShellBody';
@@ -128,18 +129,13 @@ export function SitePhotoAlbumScreen({
             <div className={styles.contentColumn}>
               <header className={styles.hero}>
                 <div className={styles.heroBody}>
-                  <Link
+                  <PageBackControl
                     href={backHref || defaultBackHref}
-                    className={styles.heroBackLink}
-                    aria-label={backLabel || '이전 화면으로 돌아가기'}
-                  >
-                    {'<'} {backLabel || '이전'}
-                  </Link>
+                    label={backLabel || '이전'}
+                    ariaLabel={backLabel || '이전 화면으로 돌아가기'}
+                  />
                   <div className={styles.heroMain}>
                     <h1 className={styles.heroTitle}>현장 사진첩 - {currentSite.siteName}</h1>
-                    <p className={styles.heroDescription}>
-                      원본 메타데이터를 보존한 업로드와 legacy 보고서 사진 통합 조회를 지원합니다.
-                    </p>
                   </div>
                 </div>
               </header>

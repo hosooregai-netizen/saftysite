@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useWorkerShellSidebarOptional } from '@/components/worker/WorkerShellSidebarContext';
 import {
   buildWorkerCalendarHref,
@@ -27,6 +27,7 @@ export interface WorkerMenuItem {
   description?: string;
   href: string;
   active?: boolean;
+  children?: WorkerMenuItem[];
 }
 
 interface WorkerMenuSection {
@@ -80,13 +81,35 @@ export function WorkerMenuPanel({
   forceExpanded = false,
 }: WorkerMenuPanelProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const shell = useWorkerShellSidebarOptional();
   const collapsed = forceExpanded ? false : Boolean(shell?.collapsed);
   const currentSiteKey = currentSiteKeyOverride ?? getSiteKeyFromPath(pathname);
+  const mailboxBox = searchParams.get('box');
+  const resolvedMailboxBox =
+    mailboxBox === 'sent' || mailboxBox === 'accounts' ? mailboxBox : 'inbox';
   const siteNavView = resolveSiteNavView({
     pathname,
     siteKey: currentSiteKey,
   });
+
+  const mailboxMenuItems: WorkerMenuItem[] = [
+    {
+      label: '받은편지함',
+      href: '/mailbox?box=inbox',
+      active: pathname === '/mailbox' && resolvedMailboxBox === 'inbox',
+    },
+    {
+      label: '보낸편지함',
+      href: '/mailbox?box=sent',
+      active: pathname === '/mailbox' && resolvedMailboxBox === 'sent',
+    },
+    {
+      label: '연결 계정',
+      href: '/mailbox?box=accounts',
+      active: pathname === '/mailbox' && resolvedMailboxBox === 'accounts',
+    },
+  ];
 
   const workerMenuItems: WorkerMenuItem[] = [
     {
@@ -104,8 +127,9 @@ export function WorkerMenuPanel({
     {
       label: '메일함',
       description: '개인 연결 메일 수신/발신 확인',
-      href: '/mailbox',
+      href: '/mailbox?box=inbox',
       active: pathname === '/mailbox',
+      children: mailboxMenuItems,
     },
   ];
 
@@ -193,29 +217,52 @@ export function WorkerMenuPanel({
           </h2>
           <nav className={styles.menuList} aria-label={section.ariaLabel}>
             {section.items.map((item) => (
-              <Link
+              <div
                 key={`${section.id}-${item.label}-${item.href}`}
-                href={item.href}
-                className={itemClass(item.active ? styles.menuItemActive : undefined)}
-                onClick={handleNav}
-                title={collapsed ? item.label : undefined}
+                className={item.children?.length && item.active && !collapsed ? styles.menuTreeItem : undefined}
               >
-                {collapsed ? (
-                  <>
-                    <span className={styles.menuItemGlyph} aria-hidden="true">
-                      {item.label.trim().charAt(0) || '메'}
-                    </span>
-                    <span className={styles.srOnly}>{item.label}</span>
-                  </>
-                ) : (
-                  <>
-                    <span className={styles.menuItemLabel}>{item.label}</span>
-                    {item.description ? (
-                      <span className={styles.menuItemDescription}>{item.description}</span>
-                    ) : null}
-                  </>
-                )}
-              </Link>
+                <Link
+                  href={item.href}
+                  className={itemClass(item.active ? styles.menuItemActive : undefined)}
+                  onClick={handleNav}
+                  title={collapsed ? item.label : undefined}
+                >
+                  {collapsed ? (
+                    <>
+                      <span className={styles.menuItemGlyph} aria-hidden="true">
+                        {item.label.trim().charAt(0) || '메'}
+                      </span>
+                      <span className={styles.srOnly}>{item.label}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className={styles.menuItemLabel}>{item.label}</span>
+                      {item.description ? (
+                        <span className={styles.menuItemDescription}>{item.description}</span>
+                      ) : null}
+                    </>
+                  )}
+                </Link>
+                {item.children?.length && item.active && !collapsed ? (
+                  <div className={styles.menuTreeChildren} role="group" aria-label={`${item.label} 하위 메뉴`}>
+                    {item.children.map((child) => (
+                      <Link
+                        key={`${section.id}-${item.label}-${child.href}`}
+                        href={child.href}
+                        className={[
+                          styles.subMenuButton,
+                          child.active ? styles.subMenuButtonActive : '',
+                        ]
+                          .filter(Boolean)
+                          .join(' ')}
+                        onClick={handleNav}
+                      >
+                        <span className={styles.subMenuLabel}>{child.label}</span>
+                      </Link>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
             ))}
           </nav>
         </section>

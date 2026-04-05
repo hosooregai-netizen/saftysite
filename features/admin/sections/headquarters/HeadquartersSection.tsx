@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import { SitesSection } from '@/features/admin/sections/sites/SitesSection';
 import { SiteEntryHubPanel } from '@/features/home/components/SiteEntryHubPanel';
+import { SITE_STATUS_LABELS } from '@/lib/admin';
 import {
   buildAdminK2bUploadCloseHref,
   buildAdminK2bUploadHref,
@@ -12,7 +13,7 @@ import {
 } from '@/lib/admin/k2bUpload';
 import { mapSafetySiteToInspectionSite } from '@/lib/safetyApiMappers/sites';
 import type { SafetySite, SafetyUser } from '@/types/backend';
-import type { SafetyAssignment, SafetyHeadquarter } from '@/types/controller';
+import type { SafetyAssignment, SafetyHeadquarter, SafetySiteStatus } from '@/types/controller';
 import { HeadquartersTable } from './HeadquartersTable';
 import { HeadquarterEditorModal } from './HeadquarterEditorModal';
 import { K2bImportModal } from '../k2b/K2bImportModal';
@@ -82,6 +83,7 @@ interface HeadquartersSectionProps {
       manager_phone?: string | null;
       site_address?: string | null;
       memo?: string | null;
+      status?: SafetySiteStatus;
     }>,
   ) => Promise<void>;
   onAssignFieldAgent: (siteId: string, userId: string) => Promise<void>;
@@ -139,6 +141,16 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
         : [],
     [selectedHeadquarter, sites],
   );
+  const siteStatusFilter = useMemo(() => {
+    const value = searchParams.get('siteStatus');
+    return value === 'all' || value === 'planned' || value === 'active' || value === 'closed'
+      ? (value as 'all' | SafetySiteStatus)
+      : 'all';
+  }, [searchParams]);
+  const hasSiteStatusScope = searchParams.has('siteStatus');
+  const autoEditSiteId = searchParams.get('editSiteId');
+  const siteStatusTitle =
+    siteStatusFilter === 'all' ? '현장 목록' : `${SITE_STATUS_LABELS[siteStatusFilter]} 현장`;
   const selectedInspectionSite = useMemo(
     () => (selectedSite ? mapSafetySiteToInspectionSite(selectedSite) : null),
     [selectedSite],
@@ -190,7 +202,7 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
 
   return (
     <div className={styles.drilldownStack}>
-      {!selectedHeadquarter ? (
+      {!selectedHeadquarter && !hasSiteStatusScope ? (
         <section className={`${styles.sectionCard} ${styles.listSectionCard}`}>
           <HeadquartersTable
             busy={busy}
@@ -205,9 +217,33 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
             onSortChange={state.setSort}
             query={state.query}
             sort={state.sort}
-            totalHeadquarterCount={headquarters.length}
           />
         </section>
+      ) : !selectedHeadquarter ? (
+        <SitesSection
+          assignments={assignments}
+          autoEditSiteId={autoEditSiteId}
+          busy={busy}
+          canDelete={canDelete}
+          headquarters={headquarters}
+          initialStatusFilter={siteStatusFilter}
+          onAssignFieldAgent={onAssignFieldAgent}
+          onCreate={onCreateSite}
+          onDelete={onDeleteSite}
+          onSelectSiteEntry={(site) => onSelectSite(site.headquarter_id, site.id)}
+          onUnassignFieldAgent={onUnassignFieldAgent}
+          onUpdate={onUpdateSite}
+          onExcelUploadRequest={(context) =>
+            openExcelUpload({
+              headquarterId: context?.headquarterId ?? null,
+              siteId: context?.siteId ?? null,
+            })
+          }
+          showHeadquarterColumn
+          sites={sites}
+          title={siteStatusTitle}
+          users={users}
+        />
       ) : selectedSite ? (
         selectedInspectionSite ? (
           <SiteEntryHubPanel
@@ -225,9 +261,11 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
       ) : (
         <SitesSection
           assignments={assignments}
+          autoEditSiteId={autoEditSiteId}
           busy={busy}
           canDelete={canDelete}
           headquarters={headquarters}
+          initialStatusFilter={siteStatusFilter}
           lockedHeadquarterId={selectedHeadquarter.id}
           onAssignFieldAgent={onAssignFieldAgent}
           onCreate={onCreateSite}
@@ -243,7 +281,7 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
           }
           showHeadquarterColumn={false}
           sites={headquarterSites}
-          title="현장 목록"
+          title={siteStatusTitle}
           users={users}
         />
       )}

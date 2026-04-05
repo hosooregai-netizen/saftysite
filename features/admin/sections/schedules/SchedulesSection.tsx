@@ -1,9 +1,13 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import AppModal from '@/components/ui/AppModal';
-import { SortableHeaderCell } from '@/features/admin/components/SortableHeaderCell';
-import { TableToolbar } from '@/features/admin/components/TableToolbar';
+import {
+  buildSortMenuOptions,
+  SortableHeaderCell,
+} from '@/features/admin/components/SortableHeaderCell';
+import { SectionHeaderFilterMenu } from '@/features/admin/components/SectionHeaderFilterMenu';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import {
   fetchAdminSchedules,
@@ -67,13 +71,16 @@ export function SchedulesSection({
   sites,
   users,
 }: SchedulesSectionProps) {
-  const [scope, setScope] = useState<'all' | 'mine'>('all');
-  const [month, setMonth] = useState(getMonthToken());
-  const [query, setQuery] = useState('');
-  const [siteId, setSiteId] = useState('');
-  const [assigneeUserId, setAssigneeUserId] = useState('');
-  const [status, setStatus] = useState('');
-  const [selectedDate, setSelectedDate] = useState('');
+  const searchParams = useSearchParams();
+  const [scope, setScope] = useState<'all' | 'mine'>(() =>
+    searchParams.get('scope') === 'mine' ? 'mine' : 'all',
+  );
+  const [month, setMonth] = useState(() => searchParams.get('month') || getMonthToken());
+  const [query, setQuery] = useState(() => searchParams.get('query') || '');
+  const [siteId, setSiteId] = useState(() => searchParams.get('siteId') || '');
+  const [assigneeUserId, setAssigneeUserId] = useState(() => searchParams.get('assigneeUserId') || '');
+  const [status, setStatus] = useState(() => searchParams.get('status') || '');
+  const [selectedDate, setSelectedDate] = useState(() => searchParams.get('plannedDate') || '');
   const [sort, setSort] = useState<TableSortState>({
     direction: 'asc',
     key: 'plannedDate',
@@ -91,6 +98,7 @@ export function SchedulesSection({
     plannedDate: '',
     status: 'planned',
   });
+  const defaultMonth = getMonthToken();
 
   useEffect(() => {
     let cancelled = false;
@@ -148,6 +156,11 @@ export function SchedulesSection({
     });
     return map;
   }, [rows]);
+  const activeFilterCount =
+    (month !== defaultMonth ? 1 : 0) +
+    (siteId ? 1 : 0) +
+    (scope === 'all' && assigneeUserId ? 1 : 0) +
+    (status ? 1 : 0);
 
   const openEdit = (schedule: SafetyInspectionSchedule) => {
     setEditingSchedule(schedule);
@@ -227,14 +240,21 @@ export function SchedulesSection({
     }
   };
 
+  const resetHeaderFilters = () => {
+    setMonth(defaultMonth);
+    setSiteId('');
+    setAssigneeUserId('');
+    setStatus('');
+  };
+
   return (
     <div className={styles.dashboardStack}>
       <section className={styles.sectionCard}>
         <div className={styles.sectionHeader}>
-          <div>
+          <div className={styles.sectionHeaderTitleBlock}>
             <h2 className={styles.sectionTitle}>일정/캘린더</h2>
           </div>
-          <div className={styles.sectionHeaderActions}>
+          <div className={`${styles.sectionHeaderActions} ${styles.sectionHeaderToolbarActions}`}>
             <button
               type="button"
               className={`${styles.filterButton} ${scope === 'all' ? styles.filterButtonActive : ''}`}
@@ -249,83 +269,108 @@ export function SchedulesSection({
             >
               내 일정
             </button>
+            <input
+              className={`app-input ${styles.sectionHeaderSearch} ${styles.sectionHeaderToolbarSearch}`}
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="현장명, 사업장명, 담당자로 검색"
+            />
+            <SectionHeaderFilterMenu
+              activeCount={activeFilterCount}
+              ariaLabel="일정 필터"
+              onReset={resetHeaderFilters}
+            >
+              <div className={styles.sectionHeaderMenuGrid}>
+                <div className={styles.sectionHeaderMenuField}>
+                  <label htmlFor="schedule-filter-month">대상 월</label>
+                  <input
+                    id="schedule-filter-month"
+                    className="app-input"
+                    type="month"
+                    value={month}
+                    onChange={(event) => setMonth(event.target.value || defaultMonth)}
+                  />
+                </div>
+                <div className={styles.sectionHeaderMenuField}>
+                  <label htmlFor="schedule-filter-site">현장</label>
+                  <select
+                    id="schedule-filter-site"
+                    className="app-select"
+                    value={siteId}
+                    onChange={(event) => setSiteId(event.target.value)}
+                  >
+                    <option value="">전체 현장</option>
+                    {sites.map((site) => (
+                      <option key={site.id} value={site.id}>
+                        {site.site_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className={styles.sectionHeaderMenuField}>
+                  <label htmlFor="schedule-filter-assignee">담당자</label>
+                  <select
+                    id="schedule-filter-assignee"
+                    className="app-select"
+                    value={assigneeUserId}
+                    onChange={(event) => setAssigneeUserId(event.target.value)}
+                    disabled={scope === 'mine'}
+                  >
+                    <option value="">전체 담당자</option>
+                    {users.map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className={styles.sectionHeaderMenuField}>
+                  <label htmlFor="schedule-filter-status">상태</label>
+                  <select
+                    id="schedule-filter-status"
+                    className="app-select"
+                    value={status}
+                    onChange={(event) => setStatus(event.target.value)}
+                  >
+                    <option value="">전체 상태</option>
+                    <option value="planned">예정</option>
+                    <option value="completed">완료</option>
+                    <option value="canceled">취소</option>
+                  </select>
+                </div>
+              </div>
+            </SectionHeaderFilterMenu>
+            <select
+              className={`app-select ${styles.sectionHeaderSelect}`}
+              value={generatorSiteId}
+              onChange={(event) => setGeneratorSiteId(event.target.value)}
+            >
+              <option value="">자동생성 현장</option>
+              {sites.map((site) => (
+                <option key={site.id} value={site.id}>
+                  {site.site_name}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="app-button app-button-secondary"
+              onClick={() => void handleGenerate()}
+            >
+              회차 자동생성
+            </button>
+            <button
+              type="button"
+              className="app-button app-button-secondary"
+              onClick={() => void handleExport()}
+            >
+              엑셀 내보내기
+            </button>
           </div>
         </div>
         <div className={styles.sectionBody}>
           {error ? <div className={styles.bannerError}>{error}</div> : null}
           {notice ? <div className={styles.bannerNotice}>{notice}</div> : null}
-
-          <TableToolbar
-            countLabel={`표시 ${visibleRows.length}건`}
-            filters={
-              <>
-                <input
-                  className={`app-input ${styles.toolbarSelect}`}
-                  type="month"
-                  value={month}
-                  onChange={(event) => setMonth(event.target.value || getMonthToken())}
-                />
-                <select
-                  className={`app-select ${styles.toolbarSelect}`}
-                  value={siteId}
-                  onChange={(event) => setSiteId(event.target.value)}
-                >
-                  <option value="">전체 현장</option>
-                  {sites.map((site) => (
-                    <option key={site.id} value={site.id}>
-                      {site.site_name}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  className={`app-select ${styles.toolbarSelect}`}
-                  value={assigneeUserId}
-                  onChange={(event) => setAssigneeUserId(event.target.value)}
-                  disabled={scope === 'mine'}
-                >
-                  <option value="">전체 담당자</option>
-                  {users.map((user) => (
-                    <option key={user.id} value={user.id}>
-                      {user.name}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  className={`app-select ${styles.toolbarSelect}`}
-                  value={status}
-                  onChange={(event) => setStatus(event.target.value)}
-                >
-                  <option value="">전체 상태</option>
-                  <option value="planned">예정</option>
-                  <option value="completed">완료</option>
-                  <option value="canceled">취소</option>
-                </select>
-                <select
-                  className={`app-select ${styles.toolbarSelect}`}
-                  value={generatorSiteId}
-                  onChange={(event) => setGeneratorSiteId(event.target.value)}
-                >
-                  <option value="">자동생성 현장 선택</option>
-                  {sites.map((site) => (
-                    <option key={site.id} value={site.id}>
-                      {site.site_name}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  className="app-button app-button-secondary"
-                  onClick={() => void handleGenerate()}
-                >
-                  회차 자동생성
-                </button>
-              </>
-            }
-            onExport={() => void handleExport()}
-            onQueryChange={setQuery}
-            query={query}
-            queryPlaceholder="현장명, 사업장명, 담당자로 검색"
-          />
 
           <div className={styles.calendarGrid}>
             {Array.from({ length: calendar.leadingEmptyCount }).map((_, index) => (
@@ -355,7 +400,9 @@ export function SchedulesSection({
             <div className={styles.sectionHeader}>
               <div>
                 <h3 className={styles.sectionTitle}>미선택 일정 큐</h3>
-                <div className={styles.tableSecondary}>요원이 아직 날짜를 고르지 않은 회차를 먼저 확인합니다.</div>
+              </div>
+              <div className={styles.sectionHeaderActions}>
+              <span className={styles.sectionHeaderMeta}>{unselectedRows.length}건</span>
               </div>
             </div>
             <div className={styles.tableWrap}>
@@ -367,6 +414,10 @@ export function SchedulesSection({
                         current={sort}
                         label="미선택 회차"
                         onChange={setSort}
+                        sortMenuOptions={buildSortMenuOptions('siteName', {
+                          asc: '현장 가나다순',
+                          desc: '현장 역순',
+                        })}
                       />
                       <SortableHeaderCell
                         column={{ key: 'roundNo' }}
@@ -387,12 +438,20 @@ export function SchedulesSection({
                         current={sort}
                         label="담당자"
                         onChange={setSort}
+                        sortMenuOptions={buildSortMenuOptions('assigneeName', {
+                          asc: '담당자 가나다순',
+                          desc: '담당자 역순',
+                        })}
                       />
                       <SortableHeaderCell
                         column={{ key: 'status' }}
                         current={sort}
                         label="상태"
                         onChange={setSort}
+                        sortMenuOptions={buildSortMenuOptions('status', {
+                          asc: '상태 오름차순',
+                          desc: '상태 내림차순',
+                        })}
                       />
                       <th>메뉴</th>
                     </tr>
@@ -407,10 +466,7 @@ export function SchedulesSection({
                   ) : (
                     unselectedRows.map((row) => (
                       <tr key={`unselected-${row.id}`}>
-                        <td>
-                          <div className={styles.tablePrimary}>{row.siteName}</div>
-                          <div className={styles.tableSecondary}>{row.headquarterName || '-'}</div>
-                        </td>
+                        <td>{row.siteName}</td>
                         <td>{row.roundNo}회차</td>
                         <td>{row.windowStart} ~ {row.windowEnd}</td>
                         <td>{row.assigneeName || '-'}</td>
@@ -440,7 +496,9 @@ export function SchedulesSection({
             <h2 className={styles.sectionTitle}>방문 일정 목록</h2>
           </div>
           <div className={styles.sectionHeaderActions}>
-            <span className="app-chip">{loading ? '불러오는 중' : `${visibleRows.length}건`}</span>
+            <span className={styles.sectionHeaderMeta}>
+              {loading ? '불러오는 중' : `${visibleRows.length}건`}
+            </span>
           </div>
         </div>
         <div className={styles.sectionBody}>
@@ -459,6 +517,10 @@ export function SchedulesSection({
                         current={sort}
                         label="현장"
                         onChange={setSort}
+                        sortMenuOptions={buildSortMenuOptions('siteName', {
+                          asc: '현장 가나다순',
+                          desc: '현장 역순',
+                        })}
                       />
                       <SortableHeaderCell
                         column={{ key: 'roundNo' }}
@@ -486,12 +548,20 @@ export function SchedulesSection({
                         current={sort}
                         label="담당자"
                         onChange={setSort}
+                        sortMenuOptions={buildSortMenuOptions('assigneeName', {
+                          asc: '담당자 가나다순',
+                          desc: '담당자 역순',
+                        })}
                       />
                       <SortableHeaderCell
                         column={{ key: 'status' }}
                         current={sort}
                         label="상태"
                         onChange={setSort}
+                        sortMenuOptions={buildSortMenuOptions('status', {
+                          asc: '상태 오름차순',
+                          desc: '상태 내림차순',
+                        })}
                       />
                       <th>이슈</th>
                       <th>메뉴</th>
@@ -500,10 +570,7 @@ export function SchedulesSection({
                   <tbody>
                     {visibleRows.map((row) => (
                       <tr key={row.id}>
-                        <td>
-                          <div className={styles.tablePrimary}>{row.siteName}</div>
-                          <div className={styles.tableSecondary}>{row.headquarterName || '-'}</div>
-                        </td>
+                        <td>{row.siteName}</td>
                         <td>{row.roundNo}회차</td>
                         <td>{row.plannedDate || '-'}</td>
                         <td>{row.windowStart} ~ {row.windowEnd}</td>

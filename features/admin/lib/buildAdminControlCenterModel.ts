@@ -13,8 +13,11 @@ import {
   getQualityStatusLabel,
 } from '@/lib/admin/reportMeta';
 import {
+  countFilledQuarterlyMaterials,
+  getSiteQuarterlyMaterialRecord,
   hasSiteContractProfile,
   parseSiteContractProfile,
+  QUARTERLY_MATERIAL_REQUIRED_COUNT,
 } from '@/lib/admin/siteContractProfile';
 import type {
   ReportDispatchStatus,
@@ -24,7 +27,6 @@ import type { SafetyReportListItem } from '@/types/backend';
 import type { ControllerDashboardData } from '@/types/controller';
 
 const DAY_IN_MS = 1000 * 60 * 60 * 24;
-const TRAINING_CONTENT_TYPES = new Set(['safety_news', 'disaster_case', 'campaign_template']);
 
 export type AdminAnalyticsPeriod = 'month' | 'quarter' | 'year' | 'all';
 
@@ -52,6 +54,7 @@ interface EnrichedControllerReportRow {
   siteName: string;
   status: string;
   updatedAt: string;
+  visitDate: string;
   visitRound: number | null;
   totalRound: number | null;
   contractProfile: SiteContractProfile;
@@ -110,29 +113,103 @@ export interface AdminCoverageRow {
   missingSiteCount: number;
 }
 
+export interface AdminOverviewChartEntry {
+  count: number;
+  href: string;
+  key: string;
+  label: string;
+}
+
+export interface AdminOverviewSiteStatusSummary {
+  entries: AdminOverviewChartEntry[];
+  totalSiteCount: number;
+}
+
+export interface AdminOverviewQuarterlyMaterialRequirement {
+  filledCount: number;
+  missingCount: number;
+  requiredCount: number;
+}
+
+export interface AdminOverviewQuarterlyMaterialSiteRow {
+  education: AdminOverviewQuarterlyMaterialRequirement;
+  headquarterName: string;
+  href: string;
+  measurement: AdminOverviewQuarterlyMaterialRequirement;
+  missingLabels: string[];
+  quarterKey: string;
+  quarterLabel: string;
+  siteId: string;
+  siteName: string;
+}
+
+export interface AdminOverviewQuarterlyMaterialSummary {
+  entries: AdminOverviewChartEntry[];
+  missingSiteRows: AdminOverviewQuarterlyMaterialSiteRow[];
+  quarterKey: string;
+  quarterLabel: string;
+  totalSiteCount: number;
+}
+
+export interface AdminOverviewDeadlineSignalSummary {
+  entries: AdminOverviewChartEntry[];
+  totalReportCount: number;
+}
+
+export interface AdminOverviewUnsentReportRow {
+  assigneeName: string;
+  deadlineDate: string;
+  dispatchStatus: ReportDispatchStatus;
+  headquarterName: string;
+  href: string;
+  referenceDate: string;
+  reportKey: string;
+  reportTitle: string;
+  reportTypeLabel: string;
+  siteId: string;
+  siteName: string;
+  unsentDays: number;
+  visitDate: string;
+}
+
 export interface AdminOverviewModel {
   coverageRows: AdminCoverageRow[];
+  deadlineSignalSummary: AdminOverviewDeadlineSignalSummary;
   deadlineRows: AdminOverviewDeadlineRow[];
   metricCards: AdminOverviewMetricCard[];
   overdueSiteRows: AdminOverviewSiteAlertRow[];
   pendingReviewRows: AdminOverviewReviewRow[];
+  quarterlyMaterialSummary: AdminOverviewQuarterlyMaterialSummary;
+  siteStatusSummary: AdminOverviewSiteStatusSummary;
   summaryRows: Array<{ label: string; meta: string; value: string }>;
+  unsentReportRows: AdminOverviewUnsentReportRow[];
   workerLoadRows: AdminOverviewAgentRow[];
 }
 
 export interface AdminAnalyticsSummaryCard {
+  deltaLabel: string;
+  deltaTone: 'negative' | 'neutral' | 'positive';
+  deltaValue: string;
   label: string;
   meta: string;
   value: string;
 }
 
+export interface AdminAnalyticsTrendRow {
+  avgPerVisitAmount: number;
+  executedRounds: number;
+  label: string;
+  monthKey: string;
+  revenue: number;
+}
+
 export interface AdminAnalyticsEmployeeRow {
   assignedSiteCount: number;
-  badWorkplaceSubmittedCount: number;
-  completedReportCount: number;
-  contractContributionRevenue: number;
+  avgPerVisitAmount: number;
+  completionRate: number;
   overdueCount: number;
-  quarterlyCompletedCount: number;
+  primaryContractTypeLabel: string;
+  revenueChangeRate: number | null;
   totalAssignedRounds: number;
   userId: string;
   userName: string;
@@ -141,20 +218,24 @@ export interface AdminAnalyticsEmployeeRow {
 }
 
 export interface AdminAnalyticsSiteRevenueRow {
-  contractContributionRevenue: number;
+  avgPerVisitAmount: number;
   contractTypeLabel: string;
   executedRounds: number;
   headquarterName: string;
   href: string;
+  siteId: string;
   siteName: string;
   visitRevenue: number;
 }
 
 export interface AdminAnalyticsContractTypeRow {
   avgPerVisitAmount: number;
+  executedRounds: number;
   label: string;
   siteCount: number;
+  shareRate: number;
   totalContractAmount: number;
+  visitRevenue: number;
 }
 
 export interface AdminAnalyticsStats {
@@ -163,6 +244,10 @@ export interface AdminAnalyticsStats {
   countedSiteCount: number;
   delayRate: number;
   excludedSiteCount: number;
+  includedEmployeeCount: number;
+  overdueCount: number;
+  totalExecutedRounds: number;
+  totalVisitRevenue: number;
 }
 
 export interface AdminAnalyticsModel {
@@ -171,6 +256,7 @@ export interface AdminAnalyticsModel {
   siteRevenueRows: AdminAnalyticsSiteRevenueRow[];
   stats: AdminAnalyticsStats;
   summaryCards: AdminAnalyticsSummaryCard[];
+  trendRows: AdminAnalyticsTrendRow[];
 }
 
 function parseDateValue(value: string | null | undefined): Date | null {
@@ -280,7 +366,7 @@ function resolveBadWorkplaceDeadline(reportMonth: string, updatedAt: string) {
   return addDaysToDate(endOfMonth, 7);
 }
 
-function resolveQuarterlyDispatchState(
+function resolveVisitDispatchState(
   visitDate: string,
   deadlineDate: string,
   dispatchStatus: ReportDispatchStatus,
@@ -351,7 +437,7 @@ function buildEnrichedRows(
     const contractProfile = parseSiteContractProfile(siteById.get(row.siteId) ?? null);
     const quarterlyDispatch =
       row.reportType === 'quarterly_report'
-        ? resolveQuarterlyDispatchState(
+        ? resolveVisitDispatchState(
             row.visitDate,
             row.deadlineDate,
             row.dispatchStatus,
@@ -397,6 +483,7 @@ function buildEnrichedRows(
       siteName: row.siteName,
       status: row.status,
       updatedAt: row.updatedAt,
+      visitDate: row.visitDate,
       visitRound: sourceReport?.visit_round ?? null,
       totalRound: sourceReport?.total_round ?? contractProfile.totalRounds ?? null,
       contractProfile,
@@ -414,6 +501,14 @@ function startOfQuarter(today: Date) {
 
 function startOfYear(today: Date) {
   return new Date(today.getFullYear(), 0, 1);
+}
+
+function formatQuarterKey(today: Date) {
+  return `${today.getFullYear()}-Q${Math.floor(today.getMonth() / 3) + 1}`;
+}
+
+function formatQuarterLabel(today: Date) {
+  return `${today.getFullYear()}년 ${Math.floor(today.getMonth() / 3) + 1}분기`;
 }
 
 function isWithinPeriod(value: string, period: AdminAnalyticsPeriod, today: Date) {
@@ -449,6 +544,257 @@ function buildCompletedRoundKeys(rows: EnrichedControllerReportRow[]) {
   );
 }
 
+interface AnalyticsDateRange {
+  end: Date;
+  label: string;
+  start: Date;
+}
+
+interface AnalyticsComparisonWindow {
+  changeLabel: string;
+  current: AnalyticsDateRange | null;
+  periodLabel: string;
+  previous: AnalyticsDateRange | null;
+}
+
+function endOfMonth(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth() + 1, 0);
+}
+
+function formatMonthKey(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function formatMonthLabel(date: Date) {
+  return `${String(date.getFullYear()).slice(-2)}.${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function isWithinDateRange(value: string, range: AnalyticsDateRange | null) {
+  if (!range) return false;
+  const parsed = parseDateValue(value);
+  if (!parsed) return false;
+  return parsed.getTime() >= range.start.getTime() && parsed.getTime() <= range.end.getTime();
+}
+
+function sumVisitRevenue(rows: EnrichedControllerReportRow[]) {
+  return rows.reduce((sum, row) => sum + (hasRevenueProfile(row.contractProfile) ? row.contractProfile.perVisitAmount ?? 0 : 0), 0);
+}
+
+function countExecutedRounds(rows: EnrichedControllerReportRow[]) {
+  return buildCompletedRoundKeys(rows).size;
+}
+
+function calculateAveragePerVisitAmount(revenue: number, executedRounds: number) {
+  return executedRounds > 0 ? revenue / executedRounds : 0;
+}
+
+function calculateChangeRate(current: number, previous: number) {
+  if (previous === 0) {
+    return current === 0 ? 0 : null;
+  }
+
+  return (current - previous) / previous;
+}
+
+function formatDeltaValue(value: number | null) {
+  if (value == null || Number.isNaN(value)) return '비교 없음';
+  if (Math.abs(value) < 0.0005) return '0.0%';
+  const sign = value > 0 ? '+' : '';
+  return `${sign}${(value * 100).toFixed(1)}%`;
+}
+
+function getDeltaTone(value: number | null) {
+  if (value == null || Number.isNaN(value) || Math.abs(value) < 0.0005) {
+    return 'neutral' as const;
+  }
+
+  return value > 0 ? ('positive' as const) : ('negative' as const);
+}
+
+function buildComparisonRange(
+  label: string,
+  changeLabel: string,
+  currentStart: Date,
+  currentEnd: Date,
+  previousStart: Date,
+  previousLimit: Date,
+) {
+  const normalizedCurrentStart = startOfToday(currentStart);
+  const normalizedCurrentEnd = startOfToday(currentEnd);
+  const normalizedPreviousStart = startOfToday(previousStart);
+  const normalizedPreviousLimit = startOfToday(previousLimit);
+  const elapsedDays = Math.max(
+    0,
+    Math.floor((normalizedCurrentEnd.getTime() - normalizedCurrentStart.getTime()) / DAY_IN_MS),
+  );
+  const previousEnd = new Date(normalizedPreviousStart);
+  previousEnd.setDate(previousEnd.getDate() + elapsedDays);
+  if (previousEnd.getTime() > normalizedPreviousLimit.getTime()) {
+    previousEnd.setTime(normalizedPreviousLimit.getTime());
+  }
+
+  return {
+    changeLabel,
+    current: {
+      end: normalizedCurrentEnd,
+      label,
+      start: normalizedCurrentStart,
+    },
+    periodLabel: label,
+    previous: {
+      end: previousEnd,
+      label,
+      start: normalizedPreviousStart,
+    },
+  } satisfies AnalyticsComparisonWindow;
+}
+
+function buildAnalyticsComparisonWindow(
+  period: AdminAnalyticsPeriod,
+  today: Date,
+): AnalyticsComparisonWindow {
+  const todayStart = startOfToday(today);
+  if (period === 'month') {
+    const currentStart = startOfMonth(todayStart);
+    const previousStart = new Date(currentStart.getFullYear(), currentStart.getMonth() - 1, 1);
+    return buildComparisonRange(
+      '이번 달',
+      '전월 대비',
+      currentStart,
+      todayStart,
+      previousStart,
+      endOfMonth(previousStart),
+    );
+  }
+
+  if (period === 'quarter') {
+    const currentStart = startOfQuarter(todayStart);
+    const previousStart = new Date(currentStart.getFullYear(), currentStart.getMonth() - 3, 1);
+    return buildComparisonRange(
+      '이번 분기',
+      '전분기 대비',
+      currentStart,
+      todayStart,
+      previousStart,
+      new Date(currentStart.getFullYear(), currentStart.getMonth(), 0),
+    );
+  }
+
+  if (period === 'year') {
+    const currentStart = startOfYear(todayStart);
+    const previousStart = new Date(currentStart.getFullYear() - 1, 0, 1);
+    return buildComparisonRange(
+      '올해 누적',
+      '전년 동기 대비',
+      currentStart,
+      todayStart,
+      previousStart,
+      new Date(currentStart.getFullYear(), 0, 0),
+    );
+  }
+
+  return {
+    changeLabel: '비교 구간 없음',
+    current: null,
+    periodLabel: '전체 기간',
+    previous: null,
+  };
+}
+
+function getCurrentWindowLabel(period: AdminAnalyticsPeriod) {
+  switch (period) {
+    case 'quarter':
+      return '이번 분기';
+    case 'year':
+      return '올해 누적';
+    case 'all':
+      return '전체 기간';
+    case 'month':
+    default:
+      return '이번 달';
+  }
+}
+
+function resolvePrimaryContractTypeLabel(
+  siteIds: string[],
+  sitesById: Map<string, ControllerDashboardData['sites'][number]>,
+) {
+  const counts = new Map<string, number>();
+  siteIds.forEach((siteId) => {
+    const profile = parseSiteContractProfile(sitesById.get(siteId) ?? null);
+    const key = profile.contractType || '';
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  });
+
+  const topEntry = Array.from(counts.entries()).sort((left, right) => {
+    if (right[1] !== left[1]) return right[1] - left[1];
+    const leftLabel = getContractTypeDisplayLabel(left[0]);
+    const rightLabel = getContractTypeDisplayLabel(right[0]);
+    return leftLabel.localeCompare(rightLabel, 'ko');
+  })[0];
+
+  return getContractTypeDisplayLabel(topEntry?.[0]);
+}
+
+function getContractTypeDisplayLabel(value: string | null | undefined) {
+  const normalized = value?.trim() || '';
+  if (!normalized) return '미입력';
+  return SITE_CONTRACT_TYPE_LABELS[normalized as keyof typeof SITE_CONTRACT_TYPE_LABELS] || '미입력';
+}
+
+function matchesAnalyticsQuery(
+  row: {
+    assigneeName?: string;
+    contractTypeLabel?: string;
+    headquarterName?: string;
+    periodLabel?: string;
+    reportTitle?: string;
+    siteName?: string;
+    userName?: string;
+  },
+  query: string,
+) {
+  const normalizedQuery = query.trim().toLowerCase();
+  if (!normalizedQuery) return true;
+
+  return [
+    row.assigneeName,
+    row.contractTypeLabel,
+    row.headquarterName,
+    row.periodLabel,
+    row.reportTitle,
+    row.siteName,
+    row.userName,
+  ]
+    .join(' ')
+    .toLowerCase()
+    .includes(normalizedQuery);
+}
+
+function buildTrendRows(rows: EnrichedControllerReportRow[], today: Date): AdminAnalyticsTrendRow[] {
+  const currentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+  return Array.from({ length: 12 }, (_, index) => {
+    const monthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - (11 - index), 1);
+    const monthEnd = endOfMonth(monthStart);
+    const monthRows = rows.filter((row) => isWithinDateRange(row.reportDate, {
+      end: monthEnd,
+      label: formatMonthLabel(monthStart),
+      start: monthStart,
+    }));
+    const executedRounds = countExecutedRounds(monthRows);
+    const revenue = sumVisitRevenue(monthRows);
+
+    return {
+      avgPerVisitAmount: calculateAveragePerVisitAmount(revenue, executedRounds),
+      executedRounds,
+      label: formatMonthLabel(monthStart),
+      monthKey: formatMonthKey(monthStart),
+      revenue,
+    };
+  });
+}
+
 export function buildAdminOverviewModel(
   data: ControllerDashboardData,
   reports: SafetyReportListItem[],
@@ -456,32 +802,157 @@ export function buildAdminOverviewModel(
 ): AdminOverviewModel {
   const overviewRows = buildEnrichedRows(data, reports, today);
   const activeSites = data.sites.filter((site) => site.status === 'active');
+  const quarterKey = formatQuarterKey(today);
+  const quarterLabel = formatQuarterLabel(today);
   const quarterlyOverdueRows = overviewRows.filter(
     (row) => row.reportType === 'quarterly_report' && row.dispatchStatus === 'overdue',
   );
   const badWorkplaceOverdueRows = overviewRows.filter((row) => row.isBadWorkplaceOverdue);
-  const issueRows = overviewRows.filter(
-    (row) => row.qualityStatus === 'issue' || row.isOverdue,
+  const siteStatusSummary: AdminOverviewSiteStatusSummary = {
+    entries: [
+      {
+        count: data.sites.filter((site) => site.status === 'active').length,
+        href: getAdminSectionHref('headquarters', { siteStatus: 'active' }),
+        key: 'active',
+        label: '진행중',
+      },
+      {
+        count: data.sites.filter((site) => site.status === 'planned').length,
+        href: getAdminSectionHref('headquarters', { siteStatus: 'planned' }),
+        key: 'planned',
+        label: '미착수',
+      },
+      {
+        count: data.sites.filter((site) => site.status === 'closed').length,
+        href: getAdminSectionHref('headquarters', { siteStatus: 'closed' }),
+        key: 'closed',
+        label: '종료',
+      },
+    ],
+    totalSiteCount: data.sites.length,
+  };
+
+  const materialBucketCounts = {
+    both_missing: 0,
+    complete: 0,
+    education_missing: 0,
+    measurement_missing: 0,
+  };
+  const materialMissingSiteRows: AdminOverviewQuarterlyMaterialSiteRow[] = [];
+  let educationReadyCount = 0;
+  let measurementReadyCount = 0;
+  activeSites.forEach((site) => {
+    const materialRecord = getSiteQuarterlyMaterialRecord(site, quarterKey);
+    const educationFilledCount = countFilledQuarterlyMaterials(materialRecord.educationMaterials);
+    const measurementFilledCount = countFilledQuarterlyMaterials(materialRecord.measurementMaterials);
+    const educationMissingCount = Math.max(
+      0,
+      QUARTERLY_MATERIAL_REQUIRED_COUNT - educationFilledCount,
+    );
+    const measurementMissingCount = Math.max(
+      0,
+      QUARTERLY_MATERIAL_REQUIRED_COUNT - measurementFilledCount,
+    );
+
+    if (educationMissingCount === 0) educationReadyCount += 1;
+    if (measurementMissingCount === 0) measurementReadyCount += 1;
+
+    if (educationMissingCount === 0 && measurementMissingCount === 0) {
+      materialBucketCounts.complete += 1;
+    } else if (educationMissingCount > 0 && measurementMissingCount > 0) {
+      materialBucketCounts.both_missing += 1;
+    } else if (educationMissingCount > 0) {
+      materialBucketCounts.education_missing += 1;
+    } else {
+      materialBucketCounts.measurement_missing += 1;
+    }
+
+    if (educationMissingCount === 0 && measurementMissingCount === 0) return;
+
+    materialMissingSiteRows.push({
+      education: {
+        filledCount: educationFilledCount,
+        missingCount: educationMissingCount,
+        requiredCount: QUARTERLY_MATERIAL_REQUIRED_COUNT,
+      },
+      headquarterName: site.headquarter_detail?.name || site.headquarter?.name || '-',
+      href: getAdminSectionHref('headquarters', {
+        editSiteId: site.id,
+        headquarterId: site.headquarter_id,
+      }),
+      measurement: {
+        filledCount: measurementFilledCount,
+        missingCount: measurementMissingCount,
+        requiredCount: QUARTERLY_MATERIAL_REQUIRED_COUNT,
+      },
+      missingLabels: [
+        educationMissingCount > 0
+          ? `교육자료 ${educationFilledCount}/${QUARTERLY_MATERIAL_REQUIRED_COUNT}`
+          : '',
+        measurementMissingCount > 0
+          ? `계측자료 ${measurementFilledCount}/${QUARTERLY_MATERIAL_REQUIRED_COUNT}`
+          : '',
+      ].filter(Boolean),
+      quarterKey,
+      quarterLabel,
+      siteId: site.id,
+      siteName: site.site_name,
+    });
+  });
+  materialMissingSiteRows.sort(
+    (left, right) =>
+      right.education.missingCount +
+        right.measurement.missingCount -
+        (left.education.missingCount + left.measurement.missingCount) ||
+      left.siteName.localeCompare(right.siteName, 'ko'),
   );
-  const activeTrainingCount = data.contentItems.filter((item) =>
-    TRAINING_CONTENT_TYPES.has(item.content_type),
-  ).length;
-  const activeMeasurementCount = data.contentItems.filter(
-    (item) => item.content_type === 'measurement_template',
-  ).length;
+
+  const quarterlyMaterialSummary: AdminOverviewQuarterlyMaterialSummary = {
+    entries: [
+      {
+        count: materialBucketCounts.complete,
+        href: getAdminSectionHref('headquarters', { siteStatus: 'active' }),
+        key: 'complete',
+        label: '모두 충족',
+      },
+      {
+        count: materialBucketCounts.education_missing,
+        href: getAdminSectionHref('headquarters', { siteStatus: 'active' }),
+        key: 'education_missing',
+        label: '교육자료 부족',
+      },
+      {
+        count: materialBucketCounts.measurement_missing,
+        href: getAdminSectionHref('headquarters', { siteStatus: 'active' }),
+        key: 'measurement_missing',
+        label: '계측자료 부족',
+      },
+      {
+        count: materialBucketCounts.both_missing,
+        href: getAdminSectionHref('headquarters', { siteStatus: 'active' }),
+        key: 'both_missing',
+        label: '교육/계측 모두 부족',
+      },
+    ],
+    missingSiteRows: materialMissingSiteRows,
+    quarterKey,
+    quarterLabel,
+    totalSiteCount: activeSites.length,
+  };
+
   const missingContractCount = activeSites.filter(
     (site) => !hasSiteContractProfile(parseSiteContractProfile(site)),
   ).length;
   const coverageRows: AdminCoverageRow[] = [
     {
-      itemCount: activeTrainingCount,
+      itemCount: educationReadyCount,
       label: '교육자료',
-      missingSiteCount: activeTrainingCount > 0 ? 0 : activeSites.length,
+      missingSiteCount: Math.max(0, activeSites.length - educationReadyCount),
     },
     {
-      itemCount: activeMeasurementCount,
+      itemCount: measurementReadyCount,
       label: '계측자료',
-      missingSiteCount: activeMeasurementCount > 0 ? 0 : activeSites.length,
+      missingSiteCount: Math.max(0, activeSites.length - measurementReadyCount),
     },
     {
       itemCount: activeSites.length - missingContractCount,
@@ -621,86 +1092,134 @@ export function buildAdminOverviewModel(
       statusLabel: getDispatchStatusLabel(row.dispatchStatus),
     }));
 
+  const allUnsentReportRows: AdminOverviewUnsentReportRow[] = overviewRows
+    .filter(
+      (row) =>
+        (row.reportType === 'quarterly_report' || row.reportType === 'technical_guidance') &&
+        row.dispatchStatus !== 'sent',
+    )
+    .map((row) => {
+      const referenceDate = row.visitDate || row.updatedAt.slice(0, 10);
+      const visitDispatch = resolveVisitDispatchState(
+        row.visitDate,
+        row.deadlineDate,
+        row.dispatchStatus,
+        row.updatedAt,
+        today,
+      );
+      return {
+        assigneeName: row.assigneeName || '-',
+        deadlineDate: formatDateOnly(visitDispatch.deadlineDate),
+        dispatchStatus: visitDispatch.dispatchStatus,
+        headquarterName: row.headquarterName || '-',
+        href: row.href,
+        referenceDate: formatDateOnly(referenceDate),
+        reportKey: row.reportKey,
+        reportTitle: row.reportTitle || row.periodLabel || row.reportKey,
+        reportTypeLabel: getControllerReportTypeLabel(row.reportType),
+        siteId: row.siteId,
+        siteName: row.siteName,
+        unsentDays: Math.max(0, getDaysDiff(referenceDate, today) ?? 0),
+        visitDate: formatDateOnly(row.visitDate || referenceDate),
+      };
+    })
+    .sort(
+      (left, right) =>
+        right.unsentDays - left.unsentDays ||
+        left.siteName.localeCompare(right.siteName, 'ko') ||
+        left.reportTitle.localeCompare(right.reportTitle, 'ko'),
+    )
+  ;
+
+  const deadlineSignalSummary: AdminOverviewDeadlineSignalSummary = {
+    entries: [
+      {
+        count: allUnsentReportRows.filter((row) => row.unsentDays <= 3).length,
+        href: getAdminSectionHref('reports', { dispatchStatus: 'normal' }),
+        key: 'd_plus_0_3',
+        label: 'D+0~3',
+      },
+      {
+        count: allUnsentReportRows.filter((row) => row.unsentDays >= 4 && row.unsentDays <= 6).length,
+        href: getAdminSectionHref('reports', { dispatchStatus: 'warning' }),
+        key: 'd_plus_4_6',
+        label: 'D+4~6',
+      },
+      {
+        count: allUnsentReportRows.filter((row) => row.unsentDays >= 7).length,
+        href: getAdminSectionHref('reports', { dispatchStatus: 'overdue' }),
+        key: 'd_plus_7_plus',
+        label: 'D+7 이상',
+      },
+    ],
+    totalReportCount: allUnsentReportRows.length,
+  };
+
+  const actionableUnsentReportRows = allUnsentReportRows.filter(
+    (row) => row.dispatchStatus === 'warning' || row.dispatchStatus === 'overdue',
+  );
+  const unsentReportRows = actionableUnsentReportRows.slice(0, 12);
+
   const metricCards: AdminOverviewMetricCard[] = [
     {
-      href: getAdminSectionHref('headquarters'),
+      href: getAdminSectionHref('headquarters', { siteStatus: 'all' }),
       label: '전체 현장 수',
       meta: '관리 대상 전체 현장',
       tone: 'default',
       value: `${data.sites.length}건`,
     },
     {
-      href: getAdminSectionHref('headquarters'),
+      href: getAdminSectionHref('headquarters', { siteStatus: 'active' }),
       label: '진행중',
       meta: '운영중 현장',
       tone: 'default',
-      value: `${data.sites.filter((site) => site.status === 'active').length}건`,
+      value: `${siteStatusSummary.entries[0]?.count ?? 0}건`,
     },
     {
-      href: getAdminSectionHref('headquarters'),
+      href: getAdminSectionHref('headquarters', { siteStatus: 'planned' }),
       label: '미착수',
       meta: '준비중 현장',
       tone: 'default',
-      value: `${data.sites.filter((site) => site.status === 'planned').length}건`,
+      value: `${siteStatusSummary.entries[1]?.count ?? 0}건`,
     },
     {
-      href: getAdminSectionHref('headquarters'),
+      href: getAdminSectionHref('headquarters', { siteStatus: 'closed' }),
       label: '종료',
       meta: '종료된 현장',
       tone: 'default',
-      value: `${data.sites.filter((site) => site.status === 'closed').length}건`,
+      value: `${siteStatusSummary.entries[2]?.count ?? 0}건`,
     },
     {
-      href: getAdminSectionHref('reports', {
-        dispatchStatus: 'overdue',
-        reportType: 'quarterly_report',
-      }),
-      label: '분기 보고 발송 지연',
-      meta: 'D+7 이상 미발송',
-      tone: quarterlyOverdueRows.length > 0 ? 'danger' : 'default',
-      value: `${quarterlyOverdueRows.length}건`,
+      href: getAdminSectionHref('headquarters', { siteStatus: 'active' }),
+      label: '교육/계측 자료 부족 현장',
+      meta: `${quarterLabel} 교육/계측 각 4건 기준`,
+      tone: materialMissingSiteRows.length > 0 ? 'warning' : 'default',
+      value: `${materialMissingSiteRows.length}개 현장`,
     },
     {
-      href: getAdminSectionHref('reports', { reportType: 'bad_workplace' }),
-      label: '불량사업장 지연',
-      meta: '월말 기준 지연 건',
-      tone: badWorkplaceOverdueRows.length > 0 ? 'warning' : 'default',
-      value: `${badWorkplaceOverdueRows.length}건`,
-    },
-    {
-      href: getAdminSectionHref('reports', { qualityStatus: 'issue' }),
-      label: '이슈 보고서 수',
-      meta: '품질 이슈 또는 지연 포함',
-      tone: issueRows.length > 0 ? 'warning' : 'default',
-      value: `${issueRows.length}건`,
-    },
-    {
-      href: getAdminSectionHref('content'),
-      label: '교육자료 확보 부족',
-      meta: `등록 ${activeTrainingCount}건`,
-      tone: coverageRows[0]?.missingSiteCount ? 'warning' : 'default',
-      value: `${coverageRows[0]?.missingSiteCount ?? 0}개 현장`,
-    },
-    {
-      href: getAdminSectionHref('content'),
-      label: '계측자료 확보 부족',
-      meta: `등록 ${activeMeasurementCount}건`,
-      tone: coverageRows[1]?.missingSiteCount ? 'warning' : 'default',
-      value: `${coverageRows[1]?.missingSiteCount ?? 0}개 현장`,
+      href: getAdminSectionHref('reports'),
+      label: '발송 관리 대상',
+      meta: '지도 실시일 기준',
+      tone: actionableUnsentReportRows.length > 0 ? 'danger' : 'default',
+      value: `${actionableUnsentReportRows.length}건`,
     },
   ];
 
   return {
     coverageRows,
+    deadlineSignalSummary,
     deadlineRows,
     metricCards,
     overdueSiteRows,
     pendingReviewRows,
+    quarterlyMaterialSummary,
+    siteStatusSummary,
     summaryRows: metricCards.map((card) => ({
       label: card.label,
       meta: card.meta,
       value: card.value,
     })),
+    unsentReportRows,
     workerLoadRows,
   };
 }
@@ -720,7 +1239,6 @@ export function buildAdminAnalyticsModel(
   const analyticsRows = buildEnrichedRows(data, reports, today);
   const assignedSiteIdsByUser = buildAssignedSiteIdsByUser(data);
   const sitesById = new Map(data.sites.map((site) => [site.id, site]));
-  const normalizedQuery = filters.query.trim().toLowerCase();
   const userScopedSiteIds = new Set(
     filters.userId
       ? [
@@ -744,245 +1262,385 @@ export function buildAdminAnalyticsModel(
       .map((site) => site.id),
   );
 
-  const filteredRows = analyticsRows.filter((row) => {
-    if (!visibleSiteIds.has(row.siteId)) return false;
-    if (filters.userId && row.assigneeUserId !== filters.userId) return false;
-    if (!isWithinPeriod(row.reportDate, filters.period, today)) return false;
-
-    if (!normalizedQuery) return true;
-    return [
-      row.assigneeName,
-      row.siteName,
-      row.headquarterName,
-      row.reportTitle,
-      row.periodLabel,
-    ]
-      .join(' ')
-      .toLowerCase()
-      .includes(normalizedQuery);
-  });
-
-  const fixedWindowGuidanceRows = analyticsRows.filter(
+  const visibleSites = data.sites.filter((site) => visibleSiteIds.has(site.id));
+  const scopedRows = analyticsRows.filter(
     (row) =>
-      row.reportType === 'technical_guidance' &&
-      row.isCompleted &&
       visibleSiteIds.has(row.siteId) &&
       (!filters.userId || row.assigneeUserId === filters.userId),
   );
-  const monthRevenue = fixedWindowGuidanceRows
-    .filter((row) => isWithinPeriod(row.reportDate, 'month', today) && hasRevenueProfile(row.contractProfile))
-    .reduce((sum, row) => sum + (row.contractProfile.perVisitAmount ?? 0), 0);
-  const quarterRevenue = fixedWindowGuidanceRows
-    .filter((row) => isWithinPeriod(row.reportDate, 'quarter', today) && hasRevenueProfile(row.contractProfile))
-    .reduce((sum, row) => sum + (row.contractProfile.perVisitAmount ?? 0), 0);
-  const yearRevenue = fixedWindowGuidanceRows
-    .filter((row) => isWithinPeriod(row.reportDate, 'year', today) && hasRevenueProfile(row.contractProfile))
-    .reduce((sum, row) => sum + (row.contractProfile.perVisitAmount ?? 0), 0);
+  const scopedGuidanceRows = scopedRows.filter(
+    (row) =>
+      row.reportType === 'technical_guidance' &&
+      row.isCompleted &&
+      hasRevenueProfile(row.contractProfile),
+  );
+  const detailRows = scopedRows.filter((row) => isWithinPeriod(row.reportDate, filters.period, today));
+  const detailGuidanceRows = detailRows.filter(
+    (row) =>
+      row.reportType === 'technical_guidance' &&
+      row.isCompleted &&
+      hasRevenueProfile(row.contractProfile),
+  );
+  const comparisonWindow = buildAnalyticsComparisonWindow(filters.period, today);
+  const previousRows = comparisonWindow.previous
+    ? scopedRows.filter((row) => isWithinDateRange(row.reportDate, comparisonWindow.previous))
+    : [];
+  const previousGuidanceRows = previousRows.filter(
+    (row) =>
+      row.reportType === 'technical_guidance' &&
+      row.isCompleted &&
+      hasRevenueProfile(row.contractProfile),
+  );
+  const normalizedQuery = filters.query.trim();
+  const queriedDetailRows = normalizedQuery
+    ? detailRows.filter((row) =>
+        matchesAnalyticsQuery(
+          {
+            assigneeName: row.assigneeName,
+            headquarterName: row.headquarterName,
+            periodLabel: row.periodLabel,
+            reportTitle: row.reportTitle,
+            siteName: row.siteName,
+          },
+          normalizedQuery,
+        ),
+      )
+    : detailRows;
+  const queriedDetailGuidanceRows = normalizedQuery
+    ? detailGuidanceRows.filter((row) =>
+        matchesAnalyticsQuery(
+          {
+            assigneeName: row.assigneeName,
+            headquarterName: row.headquarterName,
+            periodLabel: row.periodLabel,
+            reportTitle: row.reportTitle,
+            siteName: row.siteName,
+          },
+          normalizedQuery,
+        ),
+      )
+    : detailGuidanceRows;
+  const queriedPreviousGuidanceRows = normalizedQuery
+    ? previousGuidanceRows.filter((row) =>
+        matchesAnalyticsQuery(
+          {
+            assigneeName: row.assigneeName,
+            headquarterName: row.headquarterName,
+            periodLabel: row.periodLabel,
+            reportTitle: row.reportTitle,
+            siteName: row.siteName,
+          },
+          normalizedQuery,
+        ),
+      )
+    : previousGuidanceRows;
 
-  const employeeRows: AdminAnalyticsEmployeeRow[] = data.users
+  const userLoadRows = data.users
     .map((user) => {
-      const userRows = filteredRows.filter((row) => row.assigneeUserId === user.id);
-      const assignedSiteIds = Array.from(
-        assignedSiteIdsByUser.get(user.id) ?? new Set<string>(),
-      ).filter(
+      const assignedSiteIds = Array.from(assignedSiteIdsByUser.get(user.id) ?? new Set<string>()).filter(
         (siteId) => visibleSiteIds.has(siteId),
       );
-      const completedGuidanceRows = userRows.filter(
-        (row) => row.reportType === 'technical_guidance' && row.isCompleted,
-      );
-      const completedRoundKeys = buildCompletedRoundKeys(completedGuidanceRows);
-      const visitRevenue = completedGuidanceRows.reduce(
-        (sum, row) =>
-          sum + (hasRevenueProfile(row.contractProfile) ? row.contractProfile.perVisitAmount ?? 0 : 0),
-        0,
-      );
-
-      const contributionBySite = completedGuidanceRows.reduce((accumulator, row) => {
-        const key = row.siteId;
-        const current = accumulator.get(key) ?? 0;
-        accumulator.set(key, current + 1);
-        return accumulator;
-      }, new Map<string, number>());
-
-      const contractContributionRevenue = Array.from(contributionBySite.entries()).reduce(
-        (sum, [siteId, completedRounds]) => {
-          const site = sitesById.get(siteId);
-          const profile = parseSiteContractProfile(site ?? null);
-          if (!site || !profile.totalContractAmount || !profile.totalRounds) return sum;
-          return sum + profile.totalContractAmount * (completedRounds / profile.totalRounds);
-        },
-        0,
-      );
-
       const totalAssignedRounds = assignedSiteIds.reduce((sum, siteId) => {
         const profile = parseSiteContractProfile(sitesById.get(siteId) ?? null);
         return sum + (profile.totalRounds ?? 0);
       }, 0);
 
       return {
-        assignedSiteCount: assignedSiteIds.length,
-        badWorkplaceSubmittedCount: userRows.filter(
-          (row) => row.reportType === 'bad_workplace' && row.isCompleted,
-        ).length,
-        completedReportCount: userRows.filter((row) => row.isCompleted).length,
-        contractContributionRevenue,
-        overdueCount: userRows.filter((row) => row.isOverdue).length,
-        quarterlyCompletedCount: userRows.filter(
-          (row) => row.reportType === 'quarterly_report' && row.isCompleted,
-        ).length,
+        assignedSiteIds,
         totalAssignedRounds,
         userId: user.id,
         userName: user.name,
-        visitRevenue,
-        executedRounds: completedRoundKeys.size,
       };
     })
     .filter((row) => {
-      if (!filters.userId) return true;
-      return row.userId === filters.userId;
+      if (filters.userId) return row.userId === filters.userId;
+      return row.assignedSiteIds.length > 0 || scopedRows.some((item) => item.assigneeUserId === row.userId);
     });
 
-  const visibleSites = data.sites.filter((site) => visibleSiteIds.has(site.id));
+  const totalAssignedRounds = userLoadRows.reduce((sum, row) => sum + row.totalAssignedRounds, 0);
+  const totalVisitRevenue = sumVisitRevenue(detailGuidanceRows);
+  const totalExecutedRounds = countExecutedRounds(detailGuidanceRows);
+  const totalOverdueCount = detailRows.filter((row) => row.isOverdue).length;
+  const currentPeriodRevenue = sumVisitRevenue(detailGuidanceRows);
+  const previousPeriodRevenue = sumVisitRevenue(previousGuidanceRows);
+  const currentPeriodAveragePerVisitAmount = calculateAveragePerVisitAmount(
+    currentPeriodRevenue,
+    totalExecutedRounds,
+  );
+  const previousPeriodAveragePerVisitAmount = calculateAveragePerVisitAmount(
+    previousPeriodRevenue,
+    countExecutedRounds(previousGuidanceRows),
+  );
+  const currentPeriodRevenuePerEmployee =
+    userLoadRows.length > 0 ? currentPeriodRevenue / userLoadRows.length : 0;
+  const previousPeriodRevenuePerEmployee =
+    userLoadRows.length > 0 ? previousPeriodRevenue / userLoadRows.length : 0;
+
+  const monthWindow = buildAnalyticsComparisonWindow('month', today);
+  const quarterWindow = buildAnalyticsComparisonWindow('quarter', today);
+  const yearWindow = buildAnalyticsComparisonWindow('year', today);
+
+  const monthRevenue = sumVisitRevenue(
+    scopedGuidanceRows.filter((row) => isWithinDateRange(row.reportDate, monthWindow.current)),
+  );
+  const previousMonthRevenue = sumVisitRevenue(
+    scopedGuidanceRows.filter((row) => isWithinDateRange(row.reportDate, monthWindow.previous)),
+  );
+  const quarterRevenue = sumVisitRevenue(
+    scopedGuidanceRows.filter((row) => isWithinDateRange(row.reportDate, quarterWindow.current)),
+  );
+  const previousQuarterRevenue = sumVisitRevenue(
+    scopedGuidanceRows.filter((row) => isWithinDateRange(row.reportDate, quarterWindow.previous)),
+  );
+  const yearRevenue = sumVisitRevenue(
+    scopedGuidanceRows.filter((row) => isWithinDateRange(row.reportDate, yearWindow.current)),
+  );
+  const previousYearRevenue = sumVisitRevenue(
+    scopedGuidanceRows.filter((row) => isWithinDateRange(row.reportDate, yearWindow.previous)),
+  );
+
+  const employeeRows: AdminAnalyticsEmployeeRow[] = data.users
+    .map((user) => {
+      const userCurrentRows = queriedDetailRows.filter((row) => row.assigneeUserId === user.id);
+      const userCurrentGuidanceRows = queriedDetailGuidanceRows.filter(
+        (row) => row.assigneeUserId === user.id,
+      );
+      const userPreviousGuidanceRows = queriedPreviousGuidanceRows.filter(
+        (row) => row.assigneeUserId === user.id,
+      );
+      const fallbackAssignedSiteIds = Array.from(
+        assignedSiteIdsByUser.get(user.id) ?? new Set<string>(),
+      ).filter((siteId) => visibleSiteIds.has(siteId));
+      const queriedSiteIds = Array.from(new Set(userCurrentRows.map((row) => row.siteId)));
+      const assignedSiteIds =
+        normalizedQuery && queriedSiteIds.length > 0 ? queriedSiteIds : fallbackAssignedSiteIds;
+      const totalAssignedRoundsForUser = assignedSiteIds.reduce((sum, siteId) => {
+        const profile = parseSiteContractProfile(sitesById.get(siteId) ?? null);
+        return sum + (profile.totalRounds ?? 0);
+      }, 0);
+      const visitRevenue = sumVisitRevenue(userCurrentGuidanceRows);
+      const executedRounds = countExecutedRounds(userCurrentGuidanceRows);
+      const previousRevenue = sumVisitRevenue(userPreviousGuidanceRows);
+      const shouldInclude =
+        filters.userId === user.id ||
+        assignedSiteIds.length > 0 ||
+        userCurrentRows.length > 0 ||
+        userCurrentGuidanceRows.length > 0 ||
+        userCurrentRows.some((row) => row.isOverdue);
+
+      return shouldInclude
+        ? {
+            assignedSiteCount: assignedSiteIds.length,
+            avgPerVisitAmount: calculateAveragePerVisitAmount(visitRevenue, executedRounds),
+            completionRate:
+              totalAssignedRoundsForUser > 0 ? executedRounds / totalAssignedRoundsForUser : 0,
+            overdueCount: userCurrentRows.filter((row) => row.isOverdue).length,
+            primaryContractTypeLabel: resolvePrimaryContractTypeLabel(
+              assignedSiteIds.length > 0
+                ? assignedSiteIds
+                : Array.from(new Set(userCurrentRows.map((row) => row.siteId))),
+              sitesById,
+            ),
+            revenueChangeRate: comparisonWindow.previous
+              ? calculateChangeRate(visitRevenue, previousRevenue)
+              : null,
+            totalAssignedRounds: totalAssignedRoundsForUser,
+            userId: user.id,
+            userName: user.name,
+            visitRevenue,
+            executedRounds,
+          }
+        : null;
+    })
+    .filter((row): row is AdminAnalyticsEmployeeRow => Boolean(row));
+
   const siteRevenueRows: AdminAnalyticsSiteRevenueRow[] = visibleSites
     .map((site) => {
-      const siteRows = filteredRows.filter(
-        (row) => row.siteId === site.id && row.reportType === 'technical_guidance' && row.isCompleted,
-      );
-      const completedRoundKeys = buildCompletedRoundKeys(siteRows);
+      const currentGuidanceRows = queriedDetailGuidanceRows.filter((row) => row.siteId === site.id);
       const profile = parseSiteContractProfile(site);
-      const visitRevenue =
-        hasRevenueProfile(profile) && profile.perVisitAmount
-          ? profile.perVisitAmount * completedRoundKeys.size
-          : 0;
-      const contractContributionRevenue =
-        profile.totalContractAmount && profile.totalRounds
-          ? profile.totalContractAmount * (completedRoundKeys.size / profile.totalRounds)
-          : 0;
+      const visitRevenue = sumVisitRevenue(currentGuidanceRows);
+      const executedRounds = countExecutedRounds(currentGuidanceRows);
+      const contractTypeLabel = getContractTypeDisplayLabel(profile.contractType);
+      const matchesQuery = normalizedQuery
+        ? matchesAnalyticsQuery(
+            {
+              contractTypeLabel,
+              headquarterName: site.headquarter_detail?.name || site.headquarter?.name || '-',
+              siteName: site.site_name,
+            },
+            normalizedQuery,
+          )
+        : true;
 
       return {
-        contractContributionRevenue,
-        contractTypeLabel: SITE_CONTRACT_TYPE_LABELS[profile.contractType] || '미입력',
-        executedRounds: completedRoundKeys.size,
+        avgPerVisitAmount: calculateAveragePerVisitAmount(visitRevenue, executedRounds),
+        contractTypeLabel,
+        executedRounds,
         headquarterName: site.headquarter_detail?.name || site.headquarter?.name || '-',
         href: getAdminSectionHref('headquarters', {
           headquarterId: site.headquarter_id,
           siteId: site.id,
         }),
+        matchesQuery,
+        siteId: site.id,
         siteName: site.site_name,
         visitRevenue,
       };
     })
-    .filter(
-      (row) =>
-        !normalizedQuery ||
-        [row.siteName, row.headquarterName, row.contractTypeLabel]
-          .join(' ')
-          .toLowerCase()
-          .includes(normalizedQuery),
+    .filter((row) => {
+      if (normalizedQuery) {
+        return row.matchesQuery || queriedDetailRows.some((item) => item.siteId === row.siteId);
+      }
+      return row.executedRounds > 0 || row.visitRevenue > 0;
+    })
+    .map((row) => ({
+      avgPerVisitAmount: row.avgPerVisitAmount,
+      contractTypeLabel: row.contractTypeLabel,
+      executedRounds: row.executedRounds,
+      headquarterName: row.headquarterName,
+      href: row.href,
+      siteId: row.siteId,
+      siteName: row.siteName,
+      visitRevenue: row.visitRevenue,
+    }));
+
+  const contractTypeRows = visibleSites
+    .reduce((accumulator, site) => {
+      const profile = parseSiteContractProfile(site);
+      const key = profile.contractType || '';
+      if (!accumulator.has(key)) {
+        accumulator.set(key, []);
+      }
+      accumulator.get(key)?.push(site);
+      return accumulator;
+    }, new Map<string, typeof visibleSites>())
+    .entries();
+
+  const totalContractTypeRevenue = sumVisitRevenue(detailGuidanceRows);
+  const normalizedContractTypeRows: AdminAnalyticsContractTypeRow[] = Array.from(contractTypeRows)
+    .map(([key, sites]) => {
+      const guidanceRows = detailGuidanceRows.filter(
+        (row) => (row.contractProfile.contractType || '') === key,
+      );
+      const visitRevenue = sumVisitRevenue(guidanceRows);
+      const executedRounds = countExecutedRounds(guidanceRows);
+      const perVisitAmounts = sites
+        .map((site) => parseSiteContractProfile(site).perVisitAmount)
+        .filter((value): value is number => typeof value === 'number' && value > 0);
+
+      return {
+        avgPerVisitAmount:
+          perVisitAmounts.length > 0
+            ? perVisitAmounts.reduce((sum, value) => sum + value, 0) / perVisitAmounts.length
+            : 0,
+        executedRounds,
+        label: getContractTypeDisplayLabel(key),
+        siteCount: sites.length,
+        shareRate: totalContractTypeRevenue > 0 ? visitRevenue / totalContractTypeRevenue : 0,
+        totalContractAmount: sites.reduce((sum, site) => {
+          const profile = parseSiteContractProfile(site);
+          return sum + (profile.totalContractAmount ?? 0);
+        }, 0),
+        visitRevenue,
+      };
+    })
+    .filter((row) => row.siteCount > 0)
+    .sort(
+      (left, right) =>
+        right.visitRevenue - left.visitRevenue ||
+        right.executedRounds - left.executedRounds ||
+        left.label.localeCompare(right.label, 'ko'),
     );
 
-  const contractTypeMap = new Map<
-    string,
-    { perVisitAmounts: number[]; siteCount: number; totalContractAmount: number }
-  >();
-  visibleSites.forEach((site) => {
-    const profile = parseSiteContractProfile(site);
-    const key = profile.contractType || '';
-    const current = contractTypeMap.get(key) ?? {
-      perVisitAmounts: [],
-      siteCount: 0,
-      totalContractAmount: 0,
-    };
-
-    current.siteCount += 1;
-    current.totalContractAmount += profile.totalContractAmount ?? 0;
-    if (profile.perVisitAmount != null) {
-      current.perVisitAmounts.push(profile.perVisitAmount);
-    }
-    contractTypeMap.set(key, current);
-  });
-
-  const contractTypeRows: AdminAnalyticsContractTypeRow[] = Array.from(contractTypeMap.entries())
-    .map(([key, value]) => ({
-      avgPerVisitAmount:
-        value.perVisitAmounts.length > 0
-          ? value.perVisitAmounts.reduce((sum, amount) => sum + amount, 0) /
-            value.perVisitAmounts.length
-          : 0,
-      label: SITE_CONTRACT_TYPE_LABELS[key as keyof typeof SITE_CONTRACT_TYPE_LABELS] || '미입력',
-      siteCount: value.siteCount,
-      totalContractAmount: value.totalContractAmount,
-    }))
-    .sort((left, right) => right.totalContractAmount - left.totalContractAmount);
-
-  const includedRevenueSites = visibleSites.filter((site) =>
-    hasRevenueProfile(parseSiteContractProfile(site)),
-  );
-  const summaryRows = employeeRows.filter(
-    (row) => !filters.userId || row.userId === filters.userId,
-  );
-  const totalVisitRevenue = summaryRows.reduce((sum, row) => sum + row.visitRevenue, 0);
-  const totalAssignedRounds = summaryRows.reduce((sum, row) => sum + row.totalAssignedRounds, 0);
-  const totalExecutedRounds = summaryRows.reduce((sum, row) => sum + row.executedRounds, 0);
-  const totalOverdueCount = summaryRows.reduce((sum, row) => sum + row.overdueCount, 0);
-  const totalCompletedReportCount = summaryRows.reduce(
-    (sum, row) => sum + row.completedReportCount,
-    0,
-  );
-
+  const includedRevenueSites = visibleSites.filter((site) => hasRevenueProfile(parseSiteContractProfile(site)));
   const stats: AdminAnalyticsStats = {
-    averagePerVisitAmount:
-      includedRevenueSites.length > 0
-        ? includedRevenueSites.reduce((sum, site) => {
-            const profile = parseSiteContractProfile(site);
-            return sum + (profile.perVisitAmount ?? 0);
-          }, 0) / includedRevenueSites.length
-        : 0,
+    averagePerVisitAmount: currentPeriodAveragePerVisitAmount,
     completionRate: totalAssignedRounds > 0 ? totalExecutedRounds / totalAssignedRounds : 0,
     countedSiteCount: includedRevenueSites.length,
-    delayRate: filteredRows.length > 0 ? totalOverdueCount / filteredRows.length : 0,
+    delayRate: detailRows.length > 0 ? totalOverdueCount / detailRows.length : 0,
     excludedSiteCount: visibleSites.length - includedRevenueSites.length,
+    includedEmployeeCount: userLoadRows.length,
+    overdueCount: totalOverdueCount,
+    totalExecutedRounds,
+    totalVisitRevenue,
   };
 
   return {
-    contractTypeRows,
+    contractTypeRows: normalizedContractTypeRows,
     employeeRows,
     siteRevenueRows,
     stats,
     summaryCards: [
       {
+        deltaLabel: monthWindow.changeLabel,
+        deltaTone: getDeltaTone(calculateChangeRate(monthRevenue, previousMonthRevenue)),
+        deltaValue: formatDeltaValue(calculateChangeRate(monthRevenue, previousMonthRevenue)),
         label: '이번 달 매출',
         meta: '완료 회차 기준',
         value: formatCurrencyValue(monthRevenue),
       },
       {
+        deltaLabel: quarterWindow.changeLabel,
+        deltaTone: getDeltaTone(calculateChangeRate(quarterRevenue, previousQuarterRevenue)),
+        deltaValue: formatDeltaValue(calculateChangeRate(quarterRevenue, previousQuarterRevenue)),
         label: '이번 분기 매출',
         meta: '완료 회차 기준',
         value: formatCurrencyValue(quarterRevenue),
       },
       {
+        deltaLabel: yearWindow.changeLabel,
+        deltaTone: getDeltaTone(calculateChangeRate(yearRevenue, previousYearRevenue)),
+        deltaValue: formatDeltaValue(calculateChangeRate(yearRevenue, previousYearRevenue)),
         label: '올해 누적 매출',
         meta: '완료 회차 기준',
         value: formatCurrencyValue(yearRevenue),
       },
       {
-        label: '직원 1인당 평균 매출',
-        meta: filters.userId ? '선택 요원 기준' : '현재 필터 기준',
-        value: formatCurrencyValue(
-          summaryRows.length > 0 ? totalVisitRevenue / summaryRows.length : 0,
+        deltaLabel: comparisonWindow.changeLabel,
+        deltaTone: getDeltaTone(
+          comparisonWindow.previous
+            ? calculateChangeRate(
+                currentPeriodAveragePerVisitAmount,
+                previousPeriodAveragePerVisitAmount,
+              )
+            : null,
         ),
+        deltaValue: formatDeltaValue(
+          comparisonWindow.previous
+            ? calculateChangeRate(
+                currentPeriodAveragePerVisitAmount,
+                previousPeriodAveragePerVisitAmount,
+              )
+            : null,
+        ),
+        label: '평균 회차 단가',
+        meta: `${getCurrentWindowLabel(filters.period)} · 완료 회차 기준`,
+        value: formatCurrencyValue(currentPeriodAveragePerVisitAmount),
       },
       {
-        label: '완료 보고서 수',
-        meta: '현재 필터 기준',
-        value: `${totalCompletedReportCount}건`,
-      },
-      {
-        label: '지연 보고서 수',
-        meta: '현재 필터 기준',
-        value: `${totalOverdueCount}건`,
+        deltaLabel: comparisonWindow.changeLabel,
+        deltaTone: getDeltaTone(
+          comparisonWindow.previous
+            ? calculateChangeRate(
+                currentPeriodRevenuePerEmployee,
+                previousPeriodRevenuePerEmployee,
+              )
+            : null,
+        ),
+        deltaValue: formatDeltaValue(
+          comparisonWindow.previous
+            ? calculateChangeRate(
+                currentPeriodRevenuePerEmployee,
+                previousPeriodRevenuePerEmployee,
+              )
+            : null,
+        ),
+        label: '직원 1인당 매출',
+        meta: `${getCurrentWindowLabel(filters.period)} · 완료 회차 기준`,
+        value: formatCurrencyValue(currentPeriodRevenuePerEmployee),
       },
     ],
+    trendRows: buildTrendRows(scopedGuidanceRows, today),
   };
 }
 
@@ -994,36 +1652,53 @@ export function getAnalyticsExportSheets(model: AdminAnalyticsModel) {
         { key: 'label', label: '항목' },
         { key: 'value', label: '값' },
         { key: 'meta', label: '기준' },
+        { key: 'deltaLabel', label: '비교 기준' },
+        { key: 'deltaValue', label: '증감' },
       ],
       rows: model.summaryCards.map((card) => ({
+        deltaLabel: card.deltaLabel,
+        deltaValue: card.deltaValue,
         label: card.label,
         meta: card.meta,
         value: card.value,
       })),
     },
     {
-      name: '직원별 실적',
+      name: '월별 추이',
+      columns: [
+        { key: 'monthKey', label: '월' },
+        { key: 'visitRevenue', label: '매출' },
+        { key: 'avgPerVisitAmount', label: '평균 회차 단가' },
+        { key: 'executedRounds', label: '실행 회차' },
+      ],
+      rows: model.trendRows.map((row) => ({
+        avgPerVisitAmount: formatCurrencyValue(row.avgPerVisitAmount),
+        executedRounds: `${row.executedRounds}회`,
+        monthKey: row.monthKey,
+        visitRevenue: formatCurrencyValue(row.revenue),
+      })),
+    },
+    {
+      name: '직원별 매출',
       columns: [
         { key: 'userName', label: '직원명' },
-        { key: 'assignedSiteCount', label: '배정 현장 수' },
-        { key: 'completedReportCount', label: '완료 보고서 수' },
-        { key: 'quarterlyCompletedCount', label: '분기 보고 완료 수' },
-        { key: 'badWorkplaceSubmittedCount', label: '불량사업장 제출 수' },
-        { key: 'totalAssignedRounds', label: '총 회차 배정' },
+        { key: 'assignedSiteCount', label: '운영 현장 수' },
         { key: 'executedRounds', label: '실행 회차' },
-        { key: 'visitRevenue', label: '회차 매출' },
-        { key: 'contractContributionRevenue', label: '총 계약 기여 매출' },
+        { key: 'visitRevenue', label: '매출' },
+        { key: 'avgPerVisitAmount', label: '평균 회차 단가' },
         { key: 'overdueCount', label: '지연 건수' },
+        { key: 'completionRate', label: '완료율' },
+        { key: 'revenueChangeRate', label: '전기 대비' },
+        { key: 'primaryContractTypeLabel', label: '대표 계약유형' },
       ],
       rows: model.employeeRows.map((row) => ({
         assignedSiteCount: row.assignedSiteCount,
-        badWorkplaceSubmittedCount: row.badWorkplaceSubmittedCount,
-        completedReportCount: row.completedReportCount,
-        contractContributionRevenue: formatCurrencyValue(row.contractContributionRevenue),
+        avgPerVisitAmount: formatCurrencyValue(row.avgPerVisitAmount),
+        completionRate: formatAnalyticsStatValue('percent', row.completionRate),
         executedRounds: row.executedRounds,
         overdueCount: row.overdueCount,
-        quarterlyCompletedCount: row.quarterlyCompletedCount,
-        totalAssignedRounds: row.totalAssignedRounds,
+        primaryContractTypeLabel: row.primaryContractTypeLabel,
+        revenueChangeRate: formatDeltaValue(row.revenueChangeRate),
         userName: row.userName,
         visitRevenue: formatCurrencyValue(row.visitRevenue),
       })),
@@ -1035,11 +1710,11 @@ export function getAnalyticsExportSheets(model: AdminAnalyticsModel) {
         { key: 'headquarterName', label: '사업장' },
         { key: 'contractTypeLabel', label: '계약유형' },
         { key: 'executedRounds', label: '실행 회차' },
-        { key: 'visitRevenue', label: '회차 매출' },
-        { key: 'contractContributionRevenue', label: '총 계약 기여 매출' },
+        { key: 'visitRevenue', label: '매출' },
+        { key: 'avgPerVisitAmount', label: '평균 회차 단가' },
       ],
       rows: model.siteRevenueRows.map((row) => ({
-        contractContributionRevenue: formatCurrencyValue(row.contractContributionRevenue),
+        avgPerVisitAmount: formatCurrencyValue(row.avgPerVisitAmount),
         contractTypeLabel: row.contractTypeLabel,
         executedRounds: row.executedRounds,
         headquarterName: row.headquarterName,
@@ -1052,14 +1727,20 @@ export function getAnalyticsExportSheets(model: AdminAnalyticsModel) {
       columns: [
         { key: 'label', label: '계약유형' },
         { key: 'siteCount', label: '현장 수' },
+        { key: 'executedRounds', label: '회차 수' },
+        { key: 'visitRevenue', label: '매출' },
         { key: 'totalContractAmount', label: '총 계약금액' },
         { key: 'avgPerVisitAmount', label: '평균 회차 단가' },
+        { key: 'shareRate', label: '매출 비중' },
       ],
       rows: model.contractTypeRows.map((row) => ({
         avgPerVisitAmount: formatCurrencyValue(row.avgPerVisitAmount),
+        executedRounds: `${row.executedRounds}회`,
         label: row.label,
+        shareRate: formatAnalyticsStatValue('percent', row.shareRate),
         siteCount: row.siteCount,
         totalContractAmount: formatCurrencyValue(row.totalContractAmount),
+        visitRevenue: formatCurrencyValue(row.visitRevenue),
       })),
     },
   ];
@@ -1077,50 +1758,84 @@ export function getOverviewExportSheets(model: AdminOverviewModel) {
       rows: model.summaryRows,
     },
     {
-      name: 'alerts',
+      name: 'site-status',
+      columns: [
+        { key: 'label', label: '구분' },
+        { key: 'count', label: '현장 수' },
+      ],
+      rows: model.siteStatusSummary.entries.map((entry) => ({
+        count: entry.count,
+        label: entry.label,
+      })),
+    },
+    {
+      name: 'deadline-signal-status',
+      columns: [
+        { key: 'label', label: '구분' },
+        { key: 'count', label: '보고서 수' },
+      ],
+      rows: model.deadlineSignalSummary.entries.map((entry) => ({
+        count: entry.count,
+        label: entry.label,
+      })),
+    },
+    {
+      name: 'quarterly-material-status',
+      columns: [
+        { key: 'label', label: '구분' },
+        { key: 'count', label: '현장 수' },
+      ],
+      rows: model.quarterlyMaterialSummary.entries.map((entry) => ({
+        count: entry.count,
+        label: entry.label,
+      })),
+    },
+    {
+      name: 'quarterly-material-missing-sites',
       columns: [
         { key: 'siteName', label: '현장' },
         { key: 'headquarterName', label: '사업장' },
-        { key: 'overdueCount', label: '지연 건수' },
-        { key: 'reportKindsLabel', label: '지연 유형' },
+        { key: 'quarterLabel', label: '분기' },
+        { key: 'educationStatus', label: '교육 현황' },
+        { key: 'measurementStatus', label: '계측 현황' },
+        { key: 'educationMissing', label: '교육 부족' },
+        { key: 'measurementMissing', label: '계측 부족' },
+        { key: 'missingTotal', label: '총 부족' },
       ],
-      rows: model.overdueSiteRows.map((row) => ({
+      rows: model.quarterlyMaterialSummary.missingSiteRows.map((row) => ({
+        educationStatus: `${row.education.filledCount}/${row.education.requiredCount}`,
+        educationMissing: `${row.education.missingCount}건`,
         headquarterName: row.headquarterName,
-        overdueCount: row.overdueCount,
-        reportKindsLabel: row.reportKindsLabel,
+        measurementStatus: `${row.measurement.filledCount}/${row.measurement.requiredCount}`,
+        measurementMissing: `${row.measurement.missingCount}건`,
+        missingTotal: `${row.education.missingCount + row.measurement.missingCount}건`,
+        quarterLabel: row.quarterLabel,
         siteName: row.siteName,
       })),
     },
     {
-      name: 'coverage',
-      columns: [
-        { key: 'label', label: '구분' },
-        { key: 'itemCount', label: '충족 현장 수' },
-        { key: 'missingSiteCount', label: '부족 현장 수' },
-      ],
-      rows: model.coverageRows.map((row) => ({
-        itemCount: row.itemCount,
-        label: row.label,
-        missingSiteCount: row.missingSiteCount,
-      })),
-    },
-    {
-      name: 'deadlines',
+      name: 'unsent-reports',
       columns: [
         { key: 'siteName', label: '현장' },
+        { key: 'headquarterName', label: '사업장' },
         { key: 'reportTitle', label: '보고서' },
         { key: 'reportTypeLabel', label: '유형' },
-        { key: 'deadlineDate', label: '마감일' },
-        { key: 'deadlineLabel', label: '남은 기간' },
-        { key: 'statusLabel', label: '상태' },
+        { key: 'assigneeName', label: '담당자' },
+        { key: 'visitDate', label: '지도 실시일' },
+        { key: 'unsentDays', label: '미발송 경과일' },
+        { key: 'deadlineDate', label: '발송 기준일' },
+        { key: 'dispatchStatus', label: '상태' },
       ],
-      rows: model.deadlineRows.map((row) => ({
+      rows: model.unsentReportRows.map((row) => ({
+        assigneeName: row.assigneeName,
         deadlineDate: row.deadlineDate,
-        deadlineLabel: row.deadlineLabel,
+        dispatchStatus: getDispatchStatusLabel(row.dispatchStatus),
+        headquarterName: row.headquarterName,
         reportTitle: row.reportTitle,
         reportTypeLabel: row.reportTypeLabel,
         siteName: row.siteName,
-        statusLabel: row.statusLabel,
+        unsentDays: `D+${row.unsentDays}`,
+        visitDate: row.visitDate,
       })),
     },
   ];

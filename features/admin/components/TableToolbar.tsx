@@ -36,7 +36,7 @@ export function TableToolbar({
         {filters}
       </div>
       <div className={styles.tableToolbarActions}>
-        {countLabel ? <span className="app-chip">{countLabel}</span> : null}
+        {countLabel ? <span className={styles.tableToolbarCount}>{countLabel}</span> : null}
         {onExport ? (
           <button
             type="button"

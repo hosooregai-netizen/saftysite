@@ -26,39 +26,6 @@
   min-height: 36px;
 }
 
-.heroBackButton {
-  display: inline-flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  min-height: 36px;
-  padding: 6px 10px;
-  margin: 0 -2px;
-  border: 1px solid rgba(188, 199, 211, 0.78);
-  background: rgba(255, 255, 255, 0.82);
-  font-size: var(--text-ui-sm);
-  font-weight: 600;
-  line-height: 1.2;
-  letter-spacing: -0.02em;
-  color: var(--erp-mid);
-  cursor: pointer;
-  border-radius: 999px;
-  transition:
-    color 0.12s ease,
-    text-decoration-color 0.12s ease;
-}
-
-.heroBackButton:hover {
-  color: var(--erp-dark);
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-}
-
-.heroBackButton:focus-visible {
-  outline: 2px solid var(--erp-mid);
-  outline-offset: 2px;
-}
-
 .heroMain {
   display: grid;
   align-content: center;
@@ -238,7 +205,7 @@
 .bannerError,
 .bannerNotice {
   padding: 12px 14px;
-  border-radius: 14px;
+  border-radius: 2px;
   font-size: var(--text-body);
   line-height: 1.6;
 }

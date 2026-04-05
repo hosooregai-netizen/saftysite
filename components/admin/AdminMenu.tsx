@@ -9,14 +9,14 @@ import {
   buildSiteReportsHref,
   resolveSiteNavView,
 } from '@/features/home/lib/siteEntry';
-import { getCurrentReportMonth } from '@/lib/erpReports/shared';
-import styles from './AdminMenu.module.css';
 import {
   ADMIN_SECTIONS,
   getAdminSectionHref,
   type AdminSectionKey,
 } from '@/lib/admin/adminSections';
 import { buildAdminK2bUploadHref } from '@/lib/admin/k2bUpload';
+import { getCurrentReportMonth } from '@/lib/erpReports/shared';
+import styles from './AdminMenu.module.css';
 
 interface AdminMenuPanelProps {
   activeSection: AdminSectionKey;
@@ -32,17 +32,38 @@ interface AdminMenuDrawerProps extends AdminMenuPanelProps {
   onClose: () => void;
 }
 
-const ADMIN_MENU_LABELS: Partial<Record<AdminSectionKey, string>> = {
-  overview: '관제 대시보드',
-  reports: '전체 보고서',
-  analytics: '실적/매출',
-  mailbox: '메일함',
-  photos: '사진첩',
-  schedules: '일정/캘린더',
-  users: '사용자',
-  headquarters: '사업장/현장',
-  content: '콘텐츠',
+interface SiteMenuItem {
+  active: boolean;
+  href: string;
+  label: string;
+}
+
+interface AdminSubMenuItem {
+  active: boolean;
+  href: string;
+  label: string;
+}
+
+const ADMIN_MENU_TITLE = '\uAD00\uB9AC \uBA54\uB274';
+const ADMIN_MENU_CLOSE_LABEL = '\uAD00\uB9AC\uC790 \uBA54\uB274 \uB2EB\uAE30';
+const SITE_MENU_GROUP_LABEL = '\uD604\uC7A5 \uBA54\uB274';
+const SITE_MENU_PARENT_SECTION: AdminSectionKey = 'headquarters';
+
+const ADMIN_MENU_LABELS: Record<AdminSectionKey, string> = {
+  overview: '\uAD00\uB9AC \uB300\uC2DC\uBCF4\uB4DC',
+  reports: '\uC804\uCCB4 \uBCF4\uACE0\uC11C',
+  analytics: '\uC2E4\uC801 / \uB9E4\uCD9C',
+  mailbox: '\uBA54\uC77C\uD568',
+  photos: '\uC0AC\uC9C4\uCCA9',
+  schedules: '\uC77C\uC815 / \uCE98\uB9B0\uB354',
+  users: '\uC0AC\uC6A9\uC790',
+  headquarters: '\uC0AC\uC5C5\uC7A5 / \uD604\uC7A5',
+  content: '\uCF58\uD150\uCE20',
 };
+
+function joinClassNames(...tokens: Array<string | false | null | undefined>) {
+  return tokens.filter(Boolean).join(' ');
+}
 
 export function AdminMenuPanel({
   activeSection,
@@ -72,11 +93,10 @@ export function AdminMenuPanel({
     onNavClick?.();
   };
 
-  const siteMenuItems = currentSiteKey
+  const siteMenuItems: SiteMenuItem[] = currentSiteKey
     ? [
         {
-          label: '현장 메인',
-          description: '선택한 현장 개요와 작업 진입 화면',
+          label: '\uD604\uC7A5 \uBA54\uC778',
           href: getAdminSectionHref('headquarters', {
             headquarterId: selectedAdminHeadquarterId,
             siteId: currentSiteKey,
@@ -84,26 +104,22 @@ export function AdminMenuPanel({
           active: siteNavView === 'site-home',
         },
         {
-          label: '기술지도 보고서',
-          description: '이 현장의 보고서 목록과 작성 화면',
+          label: '\uAE30\uC220\uC9C0\uB3C4 \uBCF4\uACE0\uC11C',
           href: buildSiteReportsHref(currentSiteKey),
           active: siteNavView === 'reports',
         },
         {
-          label: '분기 종합 보고서',
-          description: '현장 기준 분기 보고서 작성',
+          label: '\uBD84\uAE30 \uC885\uD569 \uBCF4\uACE0\uC11C',
           href: buildSiteQuarterlyListHref(currentSiteKey),
           active: siteNavView === 'quarterly',
         },
         {
-          label: '현장 보조',
-          description: '현장 사진, 사인, 연락처 확인',
+          label: '\uD604\uC7A5 \uBCF4\uC870',
           href: buildSiteAssistHref(currentSiteKey),
           active: siteNavView === 'assist',
         },
         {
-          label: '엑셀 업로드',
-          description: '엑셀 파일로 사업장/현장 정보를 반영',
+          label: 'K2B \uC5C5\uB85C\uB4DC',
           href: buildAdminK2bUploadHref(searchParams, {
             headquarterId: selectedAdminHeadquarterId,
             siteId: currentSiteKey,
@@ -111,8 +127,7 @@ export function AdminMenuPanel({
           active: false,
         },
         {
-          label: '현장 사진첩',
-          description: '이 현장의 전체 사진과 legacy 사진 보기',
+          label: '\uD604\uC7A5 \uC0AC\uC9C4\uCCA9',
           href: getAdminSectionHref('photos', {
             headquarterId: selectedAdminHeadquarterId,
             siteId: currentSiteKey,
@@ -120,83 +135,114 @@ export function AdminMenuPanel({
           active: siteNavView === 'photos',
         },
         {
-          label: '불량사업장 신고',
-          description: '최근 보고서를 바탕으로 신고서 작성',
+          label: '\uBD88\uB7C9\uC0AC\uC5C5\uC7A5 \uC2E0\uACE0',
           href: buildSiteBadWorkplaceHref(currentSiteKey, getCurrentReportMonth()),
           active: siteNavView === 'bad-workplace',
         },
       ]
     : [];
+  const mailboxBox = searchParams.get('box');
+  const resolvedMailboxBox =
+    mailboxBox === 'sent' || mailboxBox === 'accounts' ? mailboxBox : 'inbox';
+  const mailboxMenuItems: AdminSubMenuItem[] = [
+    {
+      label: '받은편지함',
+      href: getAdminSectionHref('mailbox', { box: 'inbox' }),
+      active: activeSection === 'mailbox' && resolvedMailboxBox === 'inbox',
+    },
+    {
+      label: '보낸편지함',
+      href: getAdminSectionHref('mailbox', { box: 'sent' }),
+      active: activeSection === 'mailbox' && resolvedMailboxBox === 'sent',
+    },
+    {
+      label: '연결 계정',
+      href: getAdminSectionHref('mailbox', { box: 'accounts' }),
+      active: activeSection === 'mailbox' && resolvedMailboxBox === 'accounts',
+    },
+  ];
 
   return (
     <div className={styles.menuPanel} id={panelId}>
       <section className={styles.menuSection} aria-labelledby="controller-menu-heading">
         <h2 id="controller-menu-heading" className={styles.menuTitle}>
-          관리자 메뉴
+          {ADMIN_MENU_TITLE}
         </h2>
+
         <div className={styles.menuList}>
-          {ADMIN_SECTIONS.map((section) =>
-            onSelectSection ? (
-              <button
+          {ADMIN_SECTIONS.map((section) => {
+            const menuLabel = ADMIN_MENU_LABELS[section.key] ?? section.label;
+            const hasSiteChildren =
+              section.key === SITE_MENU_PARENT_SECTION && siteMenuItems.length > 0;
+            const hasMailboxChildren = section.key === 'mailbox';
+            const isSectionActive = activeSection === section.key;
+            const isParentActive =
+              hasSiteChildren &&
+              (isSectionActive || siteNavView === 'site-home');
+            const topLevelActive = hasSiteChildren ? isParentActive : isSectionActive;
+            const hasChildren = hasSiteChildren || hasMailboxChildren;
+            const childItems = hasSiteChildren ? siteMenuItems : hasMailboxChildren ? mailboxMenuItems : [];
+            const showChildren = hasSiteChildren || (hasMailboxChildren && isSectionActive);
+            const menuButtonClassName = joinClassNames(
+              styles.menuButton,
+              hasChildren && styles.menuButtonGrouped,
+              topLevelActive && styles.menuButtonActive,
+            );
+
+            return (
+              <div
                 key={section.key}
-                type="button"
-                className={`${styles.menuButton} ${
-                  activeSection === section.key ? styles.menuButtonActive : ''
-                }`}
-                onClick={() => handleSelect(section.key)}
+                className={joinClassNames(
+                  styles.menuTreeItem,
+                  showChildren && styles.menuTreeItemExpanded,
+                )}
               >
-                <span className={styles.menuLabel}>
-                  {ADMIN_MENU_LABELS[section.key] ?? section.label}
-                </span>
-                <span className={styles.menuDescription}>{section.description}</span>
-              </button>
-            ) : (
-              <Link
-                key={section.key}
-                href={getAdminSectionHref(section.key)}
-                className={`${styles.menuButton} ${
-                  activeSection === section.key ? styles.menuButtonActive : ''
-                }`}
-                onClick={() => handleSelect(section.key)}
-                title={
-                  forceExpanded
-                    ? undefined
-                    : ADMIN_MENU_LABELS[section.key] ?? section.label
-                }
-              >
-                <span className={styles.menuLabel}>
-                  {ADMIN_MENU_LABELS[section.key] ?? section.label}
-                </span>
-                <span className={styles.menuDescription}>{section.description}</span>
-              </Link>
-            ),
-          )}
+                {onSelectSection ? (
+                  <button
+                    type="button"
+                    className={menuButtonClassName}
+                    onClick={() => handleSelect(section.key)}
+                  >
+                    <span className={styles.menuLabel}>{menuLabel}</span>
+                  </button>
+                ) : (
+                  <Link
+                    href={getAdminSectionHref(section.key)}
+                    className={menuButtonClassName}
+                    onClick={() => handleSelect(section.key)}
+                    title={forceExpanded ? undefined : menuLabel}
+                  >
+                    <span className={styles.menuLabel}>{menuLabel}</span>
+                  </Link>
+                )}
+
+                {showChildren ? (
+                  <div
+                    className={styles.menuTreeChildren}
+                    role="group"
+                    aria-label={hasSiteChildren ? SITE_MENU_GROUP_LABEL : `${menuLabel} 하위 메뉴`}
+                  >
+                    {childItems.map((item) => (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={joinClassNames(
+                          styles.subMenuButton,
+                          item.active && styles.subMenuButtonActive,
+                        )}
+                        onClick={() => onNavClick?.()}
+                        title={forceExpanded ? undefined : item.label}
+                      >
+                        <span className={styles.subMenuLabel}>{item.label}</span>
+                      </Link>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
         </div>
       </section>
-
-      {siteMenuItems.length > 0 ? (
-        <section className={styles.menuSection} aria-labelledby="controller-site-menu-heading">
-          <h2 id="controller-site-menu-heading" className={styles.menuTitle}>
-            현장 메뉴
-          </h2>
-          <div className={styles.menuList}>
-            {siteMenuItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`${styles.menuButton} ${
-                  item.active ? styles.menuButtonActive : ''
-                }`}
-                onClick={() => onNavClick?.()}
-                title={forceExpanded ? undefined : item.label}
-              >
-                <span className={styles.menuLabel}>{item.label}</span>
-                <span className={styles.menuDescription}>{item.description}</span>
-              </Link>
-            ))}
-          </div>
-        </section>
-      ) : null}
     </div>
   );
 }
@@ -216,7 +262,7 @@ export function AdminMenuDrawer({
         type="button"
         className={styles.drawerBackdrop}
         onClick={onClose}
-        aria-label="관리자 메뉴 닫기"
+        aria-label={ADMIN_MENU_CLOSE_LABEL}
       />
       <aside className={styles.drawer}>
         <AdminMenuPanel

@@ -137,7 +137,7 @@
   gap: 8px;
   align-items: center;
   padding: 6px 8px;
-  border-radius: 999px;
+  border-radius: 2px;
   background-color: rgba(255, 255, 255, 0.92);
   box-shadow: 0 6px 16px rgba(15, 23, 42, 0.12);
 }
@@ -254,7 +254,7 @@
   min-width: min(100%, 240px);
   padding: 14px 16px;
   border: 1px solid rgba(184, 195, 208, 0.92);
-  border-radius: var(--erp-radius-surface);
+  border-radius: 2px;
   background-color: rgba(255, 255, 255, 0.94);
   box-shadow: 0 10px 24px rgba(16, 24, 43, 0.12);
   text-align: center;

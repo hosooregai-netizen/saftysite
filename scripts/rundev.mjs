@@ -10,6 +10,42 @@ const MAX_PORT_SCAN = 10;
 
 const projectRoot = process.cwd();
 const lockPath = path.join(projectRoot, '.next', 'dev', 'lock');
+const nextCliPath = path.join(projectRoot, 'node_modules', 'next', 'dist', 'bin', 'next');
+
+function loadDotEnvFile(filename) {
+  const filePath = path.join(projectRoot, filename);
+  if (!fs.existsSync(filePath)) {
+    return;
+  }
+
+  const source = fs.readFileSync(filePath, 'utf8');
+  for (const line of source.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) {
+      continue;
+    }
+
+    const separatorIndex = trimmed.indexOf('=');
+    if (separatorIndex <= 0) {
+      continue;
+    }
+
+    const key = trimmed.slice(0, separatorIndex).trim();
+    if (!key || process.env[key] !== undefined) {
+      continue;
+    }
+
+    let value = trimmed.slice(separatorIndex + 1);
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+
+    process.env[key] = value;
+  }
+}
 
 function isBusyLock(filePath) {
   try {
@@ -126,6 +162,8 @@ function buildChildEnv(port) {
   };
 }
 
+loadDotEnvFile('.env');
+loadDotEnvFile('.env.local');
 prepareLockFile();
 const port = resolvePort();
 const env = buildChildEnv(port);
@@ -135,12 +173,19 @@ console.log(`[dev] Safety API upstream: ${env.SAFETY_API_UPSTREAM_BASE_URL}`);
 console.log('[dev] To use a local safety-server instead, set SAFETY_API_UPSTREAM_BASE_URL=http://127.0.0.1:8011/api/v1');
 console.log(`[dev] K2B parse check: http://${DEFAULT_HOST}:${port}/api/k2b/imports/parse`);
 
-const command = process.platform === 'win32' ? 'npx.cmd' : 'npx';
-const child = spawn(command, ['next', 'dev', '--hostname', DEFAULT_HOST, '--port', String(port), '--webpack'], {
-  cwd: projectRoot,
-  env,
-  stdio: 'inherit',
-});
+if (!fs.existsSync(nextCliPath)) {
+  throw new Error(`[dev] Next CLI not found at ${nextCliPath}. Run npm install first.`);
+}
+
+const child = spawn(
+  process.execPath,
+  [nextCliPath, 'dev', '--hostname', DEFAULT_HOST, '--port', String(port), '--webpack'],
+  {
+    cwd: projectRoot,
+    env,
+    stdio: 'inherit',
+  },
+);
 
 child.on('exit', (code, signal) => {
   if (signal) {

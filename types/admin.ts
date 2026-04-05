@@ -221,6 +221,65 @@ export interface AdminCoverageRow {
   missingSiteCount: number;
 }
 
+export interface SafetyAdminOverviewChartEntry {
+  count: number;
+  href: string;
+  key: string;
+  label: string;
+}
+
+export interface SafetyAdminSiteStatusSummary {
+  entries: SafetyAdminOverviewChartEntry[];
+  totalSiteCount: number;
+}
+
+export interface SafetyAdminQuarterlyMaterialRequirement {
+  filledCount: number;
+  missingCount: number;
+  requiredCount: number;
+}
+
+export interface SafetyAdminQuarterlyMaterialSiteRow {
+  education: SafetyAdminQuarterlyMaterialRequirement;
+  headquarterName: string;
+  href: string;
+  measurement: SafetyAdminQuarterlyMaterialRequirement;
+  missingLabels: string[];
+  quarterKey: string;
+  quarterLabel: string;
+  siteId: string;
+  siteName: string;
+}
+
+export interface SafetyAdminQuarterlyMaterialSummary {
+  entries: SafetyAdminOverviewChartEntry[];
+  missingSiteRows: SafetyAdminQuarterlyMaterialSiteRow[];
+  quarterKey: string;
+  quarterLabel: string;
+  totalSiteCount: number;
+}
+
+export interface SafetyAdminDeadlineSignalSummary {
+  entries: SafetyAdminOverviewChartEntry[];
+  totalReportCount: number;
+}
+
+export interface SafetyAdminUnsentReportRow {
+  assigneeName: string;
+  deadlineDate: string;
+  dispatchStatus: ReportDispatchStatus;
+  headquarterName: string;
+  href: string;
+  referenceDate: string;
+  reportKey: string;
+  reportTitle: string;
+  reportTypeLabel: string;
+  siteId: string;
+  siteName: string;
+  unsentDays: number;
+  visitDate: string;
+}
+
 export interface SafetyAdminDataCompletionRow {
   href: string;
   headquarterName: string;
@@ -233,28 +292,43 @@ export interface SafetyAdminOverviewResponse {
   alerts: SafetyAdminAlert[];
   completionRows: SafetyAdminDataCompletionRow[];
   coverageRows: AdminCoverageRow[];
+  deadlineSignalSummary: SafetyAdminDeadlineSignalSummary;
   deadlineRows: AdminOverviewDeadlineRow[];
   metricCards: AdminOverviewMetricCard[];
   overdueSiteRows: AdminOverviewSiteAlertRow[];
   pendingReviewRows: AdminOverviewReviewRow[];
+  quarterlyMaterialSummary: SafetyAdminQuarterlyMaterialSummary;
   scheduleRows: SafetyInspectionSchedule[];
+  siteStatusSummary: SafetyAdminSiteStatusSummary;
   summaryRows: Array<{ label: string; meta: string; value: string }>;
+  unsentReportRows: SafetyAdminUnsentReportRow[];
   workerLoadRows: AdminOverviewAgentRow[];
 }
 
 export interface AdminAnalyticsSummaryCard {
+  deltaLabel: string;
+  deltaTone: 'negative' | 'neutral' | 'positive';
+  deltaValue: string;
   label: string;
   meta: string;
   value: string;
 }
 
+export interface AdminAnalyticsTrendRow {
+  avgPerVisitAmount: number;
+  executedRounds: number;
+  label: string;
+  monthKey: string;
+  revenue: number;
+}
+
 export interface AdminAnalyticsEmployeeRow {
   assignedSiteCount: number;
-  badWorkplaceSubmittedCount: number;
-  completedReportCount: number;
-  contractContributionRevenue: number;
+  avgPerVisitAmount: number;
+  completionRate: number;
   overdueCount: number;
-  quarterlyCompletedCount: number;
+  primaryContractTypeLabel: string;
+  revenueChangeRate: number | null;
   totalAssignedRounds: number;
   userId: string;
   userName: string;
@@ -263,20 +337,24 @@ export interface AdminAnalyticsEmployeeRow {
 }
 
 export interface AdminAnalyticsSiteRevenueRow {
-  contractContributionRevenue: number;
+  avgPerVisitAmount: number;
   contractTypeLabel: string;
   executedRounds: number;
   headquarterName: string;
   href: string;
+  siteId: string;
   siteName: string;
   visitRevenue: number;
 }
 
 export interface AdminAnalyticsContractTypeRow {
   avgPerVisitAmount: number;
+  executedRounds: number;
   label: string;
   siteCount: number;
+  shareRate: number;
   totalContractAmount: number;
+  visitRevenue: number;
 }
 
 export interface AdminAnalyticsStats {
@@ -285,6 +363,10 @@ export interface AdminAnalyticsStats {
   countedSiteCount: number;
   delayRate: number;
   excludedSiteCount: number;
+  includedEmployeeCount: number;
+  overdueCount: number;
+  totalExecutedRounds: number;
+  totalVisitRevenue: number;
 }
 
 export interface SafetyAdminAnalyticsResponse {
@@ -293,6 +375,7 @@ export interface SafetyAdminAnalyticsResponse {
   siteRevenueRows: AdminAnalyticsSiteRevenueRow[];
   stats: AdminAnalyticsStats;
   summaryCards: AdminAnalyticsSummaryCard[];
+  trendRows: AdminAnalyticsTrendRow[];
 }
 
 export interface SafetyAdminReportsResponse {

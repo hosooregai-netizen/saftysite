@@ -1,11 +1,14 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useDeferredValue, useMemo, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import AppModal from '@/components/ui/AppModal';
 import ActionMenu from '@/components/ui/ActionMenu';
-import { SortableHeaderCell } from '@/features/admin/components/SortableHeaderCell';
-import { TableToolbar } from '@/features/admin/components/TableToolbar';
+import {
+  buildSortMenuOptions,
+  SortableHeaderCell,
+} from '@/features/admin/components/SortableHeaderCell';
+import { SectionHeaderFilterMenu } from '@/features/admin/components/SectionHeaderFilterMenu';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import {
   SITE_CONTRACT_STATUS_LABELS,
@@ -32,7 +35,7 @@ import type {
   TableSortState,
 } from '@/types/admin';
 import type { SafetySite, SafetyUser } from '@/types/backend';
-import type { SafetyAssignment, SafetyHeadquarter } from '@/types/controller';
+import type { SafetyAssignment, SafetyHeadquarter, SafetySiteStatus } from '@/types/controller';
 import { SiteAssignmentModal } from './SiteAssignmentModal';
 
 interface SitesSectionProps {
@@ -68,6 +71,7 @@ interface SitesSectionProps {
     manager_phone?: string | null;
     site_address?: string | null;
     memo?: string | null;
+    status?: SafetySiteStatus;
   }>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onAssignFieldAgent: (siteId: string, userId: string) => Promise<void>;
@@ -82,11 +86,14 @@ interface SitesSectionProps {
   showHeadquarterColumn?: boolean;
   lockedHeadquarterId?: string | null;
   onSelectSiteEntry?: (site: SafetySite) => void;
+  initialStatusFilter?: 'all' | SafetySiteStatus;
+  autoEditSiteId?: string | null;
 }
 
 interface SiteFormState {
   headquarter_id: string;
   site_name: string;
+  status: SafetySiteStatus;
   project_start_date: string;
   project_end_date: string;
   project_amount: string;
@@ -106,6 +113,7 @@ interface SiteFormState {
 const EMPTY_FORM: SiteFormState = {
   headquarter_id: '',
   site_name: '',
+  status: 'planned',
   project_start_date: '',
   project_end_date: '',
   project_amount: '',
@@ -145,6 +153,12 @@ function shouldIgnoreRowClick(target: EventTarget | null) {
   );
 }
 
+function normalizeSiteStatus(value: string | null | undefined): SafetySiteStatus {
+  return value === 'planned' || value === 'active' || value === 'closed' ? value : 'active';
+}
+
+type SiteAssignmentFilter = 'all' | 'unassigned';
+
 export function SitesSection(props: SitesSectionProps) {
   const {
     assignments,
@@ -165,18 +179,21 @@ export function SitesSection(props: SitesSectionProps) {
     showHeadquarterColumn = true,
     lockedHeadquarterId = null,
     onSelectSiteEntry,
+    initialStatusFilter = 'all',
+    autoEditSiteId = null,
   } = props;
   const router = useRouter();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [assignmentSiteId, setAssignmentSiteId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'planned' | 'active' | 'closed'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | SafetySiteStatus>(initialStatusFilter);
   const [sort, setSort] = useState<TableSortState>({
     direction: 'asc',
     key: 'site_name',
   });
-  const [showUnassignedOnly, setShowUnassignedOnly] = useState(false);
+  const [assignmentFilter, setAssignmentFilter] = useState<SiteAssignmentFilter>('all');
   const [form, setForm] = useState(EMPTY_FORM);
+  const [lastAutoEditSiteId, setLastAutoEditSiteId] = useState<string | null>(null);
   const isOpen = editingId !== null;
   const assignmentSite = sites.find((site) => site.id === assignmentSiteId) || null;
   const usersById = useMemo(() => new Map(users.map((user) => [user.id, user])), [users]);
@@ -194,6 +211,13 @@ export function SitesSection(props: SitesSectionProps) {
     ? activeAssignmentsBySiteId.get(assignmentSiteId) ?? []
     : [];
   const deferredQuery = useDeferredValue(query);
+
+  useEffect(() => {
+    setStatusFilter(initialStatusFilter);
+  }, [initialStatusFilter]);
+  const activeFilterCount =
+    (statusFilter !== 'all' ? 1 : 0) +
+    (assignmentFilter !== 'all' ? 1 : 0);
   const filteredSites = useMemo(() => {
     const normalizedQuery = deferredQuery.trim().toLowerCase();
     return sites.filter((site) => {
@@ -209,7 +233,7 @@ export function SitesSection(props: SitesSectionProps) {
 
       if (fallbackAssignedUser) allAssignedNames.push(fallbackAssignedUser.name);
       if (statusFilter !== 'all' && site.status !== statusFilter) return false;
-      if (showUnassignedOnly && siteAssignments.length > 0) return false;
+      if (assignmentFilter === 'unassigned' && siteAssignments.length > 0) return false;
       if (!normalizedQuery) return true;
 
       const haystack = [
@@ -225,7 +249,7 @@ export function SitesSection(props: SitesSectionProps) {
         .toLowerCase();
       return haystack.includes(normalizedQuery);
     });
-  }, [activeAssignmentsBySiteId, deferredQuery, showUnassignedOnly, sites, statusFilter, usersById]);
+  }, [activeAssignmentsBySiteId, assignmentFilter, deferredQuery, sites, statusFilter, usersById]);
   const sortedSites = useMemo(() => {
     const direction = sort.direction === 'asc' ? 1 : -1;
 
@@ -288,6 +312,7 @@ export function SitesSection(props: SitesSectionProps) {
     setForm({
       headquarter_id: site.headquarter_id,
       site_name: site.site_name,
+      status: normalizeSiteStatus(site.status),
       project_start_date: site.project_start_date ?? '',
       project_end_date: site.project_end_date ?? '',
       project_amount: site.project_amount ? String(site.project_amount) : '',
@@ -318,12 +343,21 @@ export function SitesSection(props: SitesSectionProps) {
     setForm(EMPTY_FORM);
   };
 
+  useEffect(() => {
+    if (!autoEditSiteId || busy || lastAutoEditSiteId === autoEditSiteId) return;
+    const matchedSite = sites.find((site) => site.id === autoEditSiteId);
+    if (!matchedSite) return;
+    openEdit(matchedSite);
+    setLastAutoEditSiteId(autoEditSiteId);
+  }, [autoEditSiteId, busy, lastAutoEditSiteId, sites]);
+
   const buildPayload = () => {
     const currentSite = editingId ? sites.find((site) => site.id === editingId) ?? null : null;
 
     return {
       headquarter_id: lockedHeadquarterId ?? form.headquarter_id,
       site_name: form.site_name.trim(),
+      status: form.status,
       site_code: toNullableText(form.site_number),
       management_number: toNullableText(form.site_number),
       project_start_date: toNullableText(form.project_start_date),
@@ -370,7 +404,7 @@ export function SitesSection(props: SitesSectionProps) {
     const payload = buildPayload();
     if (editingId === 'create' && !isCreateReady) return;
     if (editingId !== 'create' && (!payload.headquarter_id || !payload.site_name)) return;
-    if (editingId === 'create') await onCreate({ ...payload, status: 'active' });
+    if (editingId === 'create') await onCreate(payload);
     else if (editingId) await onUpdate(editingId, payload);
     closeModal();
   };
@@ -392,19 +426,130 @@ export function SitesSection(props: SitesSectionProps) {
 
     router.push(`/sites/${encodeURIComponent(site.id)}`);
   };
+  const handleExport = () =>
+    void exportAdminWorkbook('sites', [
+      {
+        name: '현장',
+        columns: [
+          { key: 'site_name', label: '현장명' },
+          { key: 'headquarter_name', label: '사업장' },
+          { key: 'manager_name', label: '책임자' },
+          { key: 'manager_phone', label: '책임자 연락처' },
+          { key: 'assigned_users', label: '배정 요원' },
+          { key: 'project_period', label: '공사기간' },
+          { key: 'project_amount', label: '공사금액' },
+          { key: 'contract_type', label: '계약유형' },
+          { key: 'contract_status', label: '계약상태' },
+          { key: 'contract_date', label: '계약일' },
+          { key: 'total_rounds', label: '총 회차' },
+          { key: 'per_visit_amount', label: '회차당 단가' },
+          { key: 'total_contract_amount', label: '총 계약금액' },
+          { key: 'status', label: '현장 상태' },
+        ],
+        rows: sortedSites.map((site) => {
+          const contractProfile = parseSiteContractProfile(site);
+          const siteAssignments = activeAssignmentsBySiteId.get(site.id) ?? [];
+          const assignedUsers = siteAssignments
+            .map((assignment) => usersById.get(assignment.user_id))
+            .filter((user): user is SafetyUser => Boolean(user));
+
+          return {
+            assigned_users:
+              assignedUsers.length > 0
+                ? assignedUsers.map((user) => user.name).join(', ')
+                : site.assigned_user?.name || '',
+            contract_date: contractProfile.contractDate,
+            contract_status:
+              SITE_CONTRACT_STATUS_LABELS[contractProfile.contractStatus] || '',
+            contract_type:
+              SITE_CONTRACT_TYPE_LABELS[contractProfile.contractType] || '',
+            headquarter_name:
+              site.headquarter_detail?.name || site.headquarter?.name || '',
+            manager_name: site.manager_name || '',
+            manager_phone: site.manager_phone || '',
+            per_visit_amount: formatCurrencyValue(contractProfile.perVisitAmount),
+            project_amount: formatCurrencyValue(site.project_amount),
+            project_period: `${site.project_start_date || '-'} ~ ${site.project_end_date || '-'}`,
+            site_name: site.site_name,
+            status:
+              SITE_STATUS_LABELS[site.status as keyof typeof SITE_STATUS_LABELS] ||
+              site.status,
+            total_contract_amount: formatCurrencyValue(
+              contractProfile.totalContractAmount,
+            ),
+            total_rounds: contractProfile.totalRounds ?? '',
+          };
+        }),
+      },
+    ]);
+  const resetHeaderFilters = () => {
+    setStatusFilter(initialStatusFilter);
+    setAssignmentFilter('all');
+  };
 
   return (
     <section className={`${styles.sectionCard} ${styles.listSectionCard}`}>
       <div className={styles.sectionHeader}>
         {showHeader ? (
-          <div>
+          <div className={styles.sectionHeaderTitleBlock}>
             <h2 className={styles.sectionTitle}>{title}</h2>
           </div>
         ) : (
           <div className={styles.sectionHeaderSpacer} />
         )}
-        <div className={styles.sectionHeaderActions}>
-          <span className="app-chip">표시 {filteredSites.length} / 전체 {sites.length}개</span>
+        <div className={`${styles.sectionHeaderActions} ${styles.sectionHeaderToolbarActions}`}>
+          <input
+            className={`app-input ${styles.sectionHeaderSearch} ${styles.sectionHeaderToolbarSearch}`}
+            placeholder="현장명, 사업장명, 책임자, 배정 요원으로 검색"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+          <SectionHeaderFilterMenu
+            activeCount={activeFilterCount}
+            ariaLabel="현장 목록 필터"
+            onReset={resetHeaderFilters}
+          >
+            <div className={styles.sectionHeaderMenuGrid}>
+              <div className={styles.sectionHeaderMenuField}>
+                <label htmlFor="site-filter-status">현장 상태</label>
+                <select
+                  id="site-filter-status"
+                  className="app-select"
+                  value={statusFilter}
+                  onChange={(event) => setStatusFilter(event.target.value as 'all' | SafetySiteStatus)}
+                >
+                  <option value="all">전체 상태</option>
+                  {SITE_STATUS_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className={styles.sectionHeaderMenuField}>
+                <label htmlFor="site-filter-assignment">배정 상태</label>
+                <select
+                  id="site-filter-assignment"
+                  className="app-select"
+                  value={assignmentFilter}
+                  onChange={(event) =>
+                    setAssignmentFilter(event.target.value as SiteAssignmentFilter)
+                  }
+                >
+                  <option value="all">전체 배정</option>
+                  <option value="unassigned">미배정만</option>
+                </select>
+              </div>
+            </div>
+          </SectionHeaderFilterMenu>
+          <button
+            type="button"
+            className="app-button app-button-secondary"
+            onClick={handleExport}
+            disabled={busy}
+          >
+            엑셀 내보내기
+          </button>
           {onExcelUploadRequest ? (
             <button
               type="button"
@@ -432,97 +577,6 @@ export function SitesSection(props: SitesSectionProps) {
       </div>
 
       <div className={styles.sectionBody}>
-        <TableToolbar
-          countLabel={`표시 ${sortedSites.length} / 전체 ${sites.length}개`}
-          filters={
-            <>
-              <button
-                type="button"
-                className={`${styles.filterButton} ${statusFilter === 'all' ? styles.filterButtonActive : ''}`}
-                onClick={() => setStatusFilter('all')}
-              >
-                전체 상태
-              </button>
-              {SITE_STATUS_OPTIONS.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  className={`${styles.filterButton} ${statusFilter === option.value ? styles.filterButtonActive : ''}`}
-                  onClick={() => setStatusFilter(option.value)}
-                >
-                  {option.label}
-                </button>
-              ))}
-              <button
-                type="button"
-                className={`${styles.filterButton} ${showUnassignedOnly ? styles.filterButtonActive : ''}`}
-                onClick={() => setShowUnassignedOnly((current) => !current)}
-              >
-                미배정만
-              </button>
-            </>
-          }
-          onExport={() =>
-            void exportAdminWorkbook('sites', [
-              {
-                name: '현장',
-                columns: [
-                  { key: 'site_name', label: '현장명' },
-                  { key: 'headquarter_name', label: '사업장' },
-                  { key: 'manager_name', label: '책임자' },
-                  { key: 'manager_phone', label: '책임자 연락처' },
-                  { key: 'assigned_users', label: '배정 요원' },
-                  { key: 'project_period', label: '공사기간' },
-                  { key: 'project_amount', label: '공사금액' },
-                  { key: 'contract_type', label: '계약유형' },
-                  { key: 'contract_status', label: '계약상태' },
-                  { key: 'contract_date', label: '계약일' },
-                  { key: 'total_rounds', label: '총 회차' },
-                  { key: 'per_visit_amount', label: '회차당 단가' },
-                  { key: 'total_contract_amount', label: '총 계약금액' },
-                  { key: 'status', label: '현장 상태' },
-                ],
-                rows: sortedSites.map((site) => {
-                  const contractProfile = parseSiteContractProfile(site);
-                  const siteAssignments = activeAssignmentsBySiteId.get(site.id) ?? [];
-                  const assignedUsers = siteAssignments
-                    .map((assignment) => usersById.get(assignment.user_id))
-                    .filter((user): user is SafetyUser => Boolean(user));
-
-                  return {
-                    assigned_users:
-                      assignedUsers.length > 0
-                        ? assignedUsers.map((user) => user.name).join(', ')
-                        : site.assigned_user?.name || '',
-                    contract_date: contractProfile.contractDate,
-                    contract_status:
-                      SITE_CONTRACT_STATUS_LABELS[contractProfile.contractStatus] || '',
-                    contract_type:
-                      SITE_CONTRACT_TYPE_LABELS[contractProfile.contractType] || '',
-                    headquarter_name:
-                      site.headquarter_detail?.name || site.headquarter?.name || '',
-                    manager_name: site.manager_name || '',
-                    manager_phone: site.manager_phone || '',
-                    per_visit_amount: formatCurrencyValue(contractProfile.perVisitAmount),
-                    project_amount: formatCurrencyValue(site.project_amount),
-                    project_period: `${site.project_start_date || '-'} ~ ${site.project_end_date || '-'}`,
-                    site_name: site.site_name,
-                    status:
-                      SITE_STATUS_LABELS[site.status as keyof typeof SITE_STATUS_LABELS] ||
-                      site.status,
-                    total_contract_amount: formatCurrencyValue(
-                      contractProfile.totalContractAmount,
-                    ),
-                    total_rounds: contractProfile.totalRounds ?? '',
-                  };
-                }),
-              },
-            ])
-          }
-          onQueryChange={setQuery}
-          query={query}
-          queryPlaceholder="현장명, 사업장명, 책임자, 배정 요원으로 검색"
-        />
         <div className={styles.tableShell}>
           {sortedSites.length === 0 ? (
             <div className={styles.tableEmpty}>{emptyMessage}</div>
@@ -536,6 +590,10 @@ export function SitesSection(props: SitesSectionProps) {
                       current={sort}
                       label="현장명"
                       onChange={setSort}
+                      sortMenuOptions={buildSortMenuOptions('site_name', {
+                        asc: '현장 가나다순',
+                        desc: '현장 역순',
+                      })}
                     />
                     {showHeadquarterColumn ? (
                       <SortableHeaderCell
@@ -543,6 +601,10 @@ export function SitesSection(props: SitesSectionProps) {
                         current={sort}
                         label="사업장"
                         onChange={setSort}
+                        sortMenuOptions={buildSortMenuOptions('headquarter_name', {
+                          asc: '사업장 가나다순',
+                          desc: '사업장 역순',
+                        })}
                       />
                     ) : null}
                     <SortableHeaderCell
@@ -550,12 +612,20 @@ export function SitesSection(props: SitesSectionProps) {
                       current={sort}
                       label="책임자"
                       onChange={setSort}
+                      sortMenuOptions={buildSortMenuOptions('manager_name', {
+                        asc: '책임자 가나다순',
+                        desc: '책임자 역순',
+                      })}
                     />
                     <SortableHeaderCell
                       column={{ key: 'assigned_users' }}
                       current={sort}
                       label="배정 요원"
                       onChange={setSort}
+                      sortMenuOptions={buildSortMenuOptions('assigned_users', {
+                        asc: '배정 요원 가나다순',
+                        desc: '배정 요원 역순',
+                      })}
                     />
                     <SortableHeaderCell
                       column={{ key: 'project_end_date' }}
@@ -569,6 +639,10 @@ export function SitesSection(props: SitesSectionProps) {
                       current={sort}
                       label="상태"
                       onChange={setSort}
+                      sortMenuOptions={buildSortMenuOptions('status', {
+                        asc: '상태 오름차순',
+                        desc: '상태 내림차순',
+                      })}
                     />
                     <th>메뉴</th>
                   </tr>
@@ -707,6 +781,12 @@ export function SitesSection(props: SitesSectionProps) {
                                     if (!busy) openEdit(site);
                                   },
                                 },
+                                ...SITE_STATUS_OPTIONS.filter((option) => option.value !== site.status).map((option) => ({
+                                  label: `상태 변경: ${option.label}`,
+                                  onSelect: () => {
+                                    if (!busy) void onUpdate(site.id, { status: option.value });
+                                  },
+                                })),
                                 ...(canDelete
                                   ? [
                                       {
@@ -783,6 +863,23 @@ export function SitesSection(props: SitesSectionProps) {
               onChange={(e) => setForm({ ...form, site_name: e.target.value })}
               disabled={busy}
             />
+          </label>
+          <label className={styles.modalField}>
+            <span className={styles.label}>현장 상태</span>
+            <select
+              className="app-select"
+              value={form.status}
+              onChange={(e) =>
+                setForm({ ...form, status: e.target.value as SafetySiteStatus })
+              }
+              disabled={busy}
+            >
+              {SITE_STATUS_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
           </label>
         <label className={styles.modalField}>
           <span className={styles.label}>사업장관리번호(사업개시번호)</span>

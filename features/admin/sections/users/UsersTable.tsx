@@ -1,7 +1,10 @@
 import Link from 'next/link';
 import ActionMenu from '@/components/ui/ActionMenu';
-import { SortableHeaderCell } from '@/features/admin/components/SortableHeaderCell';
-import { TableToolbar } from '@/features/admin/components/TableToolbar';
+import {
+  buildSortMenuOptions,
+  SortableHeaderCell,
+} from '@/features/admin/components/SortableHeaderCell';
+import { SectionHeaderFilterMenu } from '@/features/admin/components/SectionHeaderFilterMenu';
 import { exportAdminWorkbook } from '@/lib/admin/exportClient';
 import { formatTimestamp, getUserRoleLabel } from '@/lib/admin';
 import type { TableSortState } from '@/types/admin';
@@ -30,7 +33,6 @@ interface UsersTableProps {
   setStatusFilter: (value: 'all' | 'active' | 'inactive') => void;
   sort: TableSortState;
   statusFilter: 'all' | 'active' | 'inactive';
-  totalUserCount: number;
   userOverviewById: Map<string, UserOverview>;
 }
 
@@ -49,7 +51,6 @@ export function UsersTable({
   setStatusFilter,
   sort,
   statusFilter,
-  totalUserCount,
   userOverviewById,
 }: UsersTableProps) {
   const roleOptions: Array<{ label: string; value: UsersTableProps['roleFilter'] }> = [
@@ -62,17 +63,110 @@ export function UsersTable({
     { label: '활성', value: 'active' },
     { label: '비활성', value: 'inactive' },
   ];
+  const activeFilterCount =
+    (roleFilter !== 'all' ? 1 : 0) +
+    (statusFilter !== 'all' ? 1 : 0);
+  const handleExport = () =>
+    void exportAdminWorkbook('users', [
+      {
+        name: '사용자',
+        columns: [
+          { key: 'name', label: '이름' },
+          { key: 'email', label: '이메일' },
+          { key: 'role', label: '권한' },
+          { key: 'assignedSites', label: '담당 현장' },
+          { key: 'reportCount', label: '보고서 수' },
+          { key: 'phone', label: '연락처' },
+          { key: 'status', label: '상태' },
+          { key: 'lastLoginAt', label: '최근 로그인' },
+        ],
+        rows: filteredUsers.map((user) => {
+          const overview = userOverviewById.get(user.id) ?? {
+            assignedSites: [],
+            latestSession: null,
+            reportCount: 0,
+          };
+
+          return {
+            assignedSites: overview.assignedSites.map((site) => site.site_name).join(', '),
+            email: user.email,
+            lastLoginAt: formatTimestamp(user.last_login_at),
+            name: user.name,
+            phone: user.phone || '',
+            reportCount: overview.reportCount,
+            role: getUserRoleLabel(user.role),
+            status: user.is_active ? '활성' : '비활성',
+          };
+        }),
+      },
+    ]);
+  const resetHeaderFilters = () => {
+    setRoleFilter('all');
+    setStatusFilter('all');
+  };
 
   return (
     <>
       <div className={styles.sectionHeader}>
-        <div>
+        <div className={styles.sectionHeaderTitleBlock}>
           <h2 className={styles.sectionTitle}>사용자 CRUD</h2>
         </div>
-        <div className={styles.sectionHeaderActions}>
-          <span className="app-chip">
-            표시 {filteredUsers.length} / 전체 {totalUserCount}명
-          </span>
+        <div className={`${styles.sectionHeaderActions} ${styles.sectionHeaderToolbarActions}`}>
+          <input
+            className={`app-input ${styles.sectionHeaderSearch} ${styles.sectionHeaderToolbarSearch}`}
+            placeholder="이름, 이메일, 직책, 소속으로 검색"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+          <SectionHeaderFilterMenu
+            activeCount={activeFilterCount}
+            ariaLabel="사용자 필터"
+            onReset={resetHeaderFilters}
+          >
+            <div className={styles.sectionHeaderMenuGrid}>
+              <div className={styles.sectionHeaderMenuField}>
+                <label htmlFor="users-filter-role">권한</label>
+                <select
+                  id="users-filter-role"
+                  className="app-select"
+                  value={roleFilter}
+                  onChange={(event) =>
+                    setRoleFilter(event.target.value as UsersTableProps['roleFilter'])
+                  }
+                >
+                  {roleOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className={styles.sectionHeaderMenuField}>
+                <label htmlFor="users-filter-status">상태</label>
+                <select
+                  id="users-filter-status"
+                  className="app-select"
+                  value={statusFilter}
+                  onChange={(event) =>
+                    setStatusFilter(event.target.value as UsersTableProps['statusFilter'])
+                  }
+                >
+                  {statusOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </SectionHeaderFilterMenu>
+          <button
+            type="button"
+            className="app-button app-button-secondary"
+            onClick={handleExport}
+          >
+            엑셀 내보내기
+          </button>
           <button
             type="button"
             className="app-button app-button-primary"
@@ -85,80 +179,6 @@ export function UsersTable({
       </div>
 
       <div className={styles.sectionBody}>
-        <TableToolbar
-          countLabel={`표시 ${filteredUsers.length} / 전체 ${totalUserCount}명`}
-          filters={
-            <>
-              <select
-                className={`app-select ${styles.usersFilterSelect}`}
-                aria-label="권한 필터"
-                value={roleFilter}
-                onChange={(event) =>
-                  setRoleFilter(event.target.value as UsersTableProps['roleFilter'])
-                }
-              >
-                {roleOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <select
-                className={`app-select ${styles.usersFilterSelect}`}
-                aria-label="활성 상태 필터"
-                value={statusFilter}
-                onChange={(event) =>
-                  setStatusFilter(event.target.value as UsersTableProps['statusFilter'])
-                }
-              >
-                {statusOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </>
-          }
-          onExport={() =>
-            void exportAdminWorkbook('users', [
-              {
-                name: '사용자',
-                columns: [
-                  { key: 'name', label: '이름' },
-                  { key: 'email', label: '이메일' },
-                  { key: 'role', label: '권한' },
-                  { key: 'assignedSites', label: '담당 현장' },
-                  { key: 'reportCount', label: '보고서 수' },
-                  { key: 'phone', label: '연락처' },
-                  { key: 'status', label: '상태' },
-                  { key: 'lastLoginAt', label: '최근 로그인' },
-                ],
-                rows: filteredUsers.map((user) => {
-                  const overview = userOverviewById.get(user.id) ?? {
-                    assignedSites: [],
-                    latestSession: null,
-                    reportCount: 0,
-                  };
-
-                  return {
-                    assignedSites: overview.assignedSites.map((site) => site.site_name).join(', '),
-                    email: user.email,
-                    lastLoginAt: formatTimestamp(user.last_login_at),
-                    name: user.name,
-                    phone: user.phone || '',
-                    reportCount: overview.reportCount,
-                    role: getUserRoleLabel(user.role),
-                    status: user.is_active ? '활성' : '비활성',
-                  };
-                }),
-              },
-            ])
-          }
-          onQueryChange={setQuery}
-          query={query}
-          queryPlaceholder="이름, 이메일, 직책, 소속으로 검색"
-        />
-
         <div className={styles.tableShell}>
           {filteredUsers.length === 0 ? (
             <div className={styles.tableEmpty}>등록된 사용자가 없습니다.</div>
@@ -179,6 +199,10 @@ export function UsersTable({
                       current={sort}
                       label="권한"
                       onChange={setSort}
+                      sortMenuOptions={buildSortMenuOptions('role', {
+                        asc: '권한 오름차순',
+                        desc: '권한 내림차순',
+                      })}
                     />
                     <th>담당 현장</th>
                     <SortableHeaderCell

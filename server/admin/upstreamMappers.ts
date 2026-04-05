@@ -155,6 +155,45 @@ export function mapBackendAlert(alert: SafetyBackendAdminAlert): SafetyAdminAler
 export function mapBackendOverviewResponse(
   response: SafetyBackendAdminOverviewResponse,
 ): SafetyAdminOverviewResponse {
+  const quarterlyMaterialSummary =
+    (response.quarterly_material_summary as
+      | SafetyBackendAdminOverviewResponse['quarterly_material_summary']
+      | null
+      | undefined) ?? {
+      entries: [],
+      missing_site_rows: [],
+      quarter_key: '',
+      quarter_label: '',
+      total_site_count: 0,
+    };
+  const quarterlyMaterialEntries = Array.isArray(quarterlyMaterialSummary.entries)
+    ? quarterlyMaterialSummary.entries
+    : [];
+  const quarterlyMaterialMissingSiteRows = Array.isArray(quarterlyMaterialSummary.missing_site_rows)
+    ? quarterlyMaterialSummary.missing_site_rows
+    : [];
+  const siteStatusSummary =
+    (response.site_status_summary as
+      | SafetyBackendAdminOverviewResponse['site_status_summary']
+      | null
+      | undefined) ?? {
+      entries: [],
+      total_site_count: 0,
+    };
+  const siteStatusEntries = Array.isArray(siteStatusSummary.entries) ? siteStatusSummary.entries : [];
+  const deadlineSignalSummary =
+    (response.deadline_signal_summary as
+      | SafetyBackendAdminOverviewResponse['deadline_signal_summary']
+      | null
+      | undefined) ?? {
+      entries: [],
+      total_report_count: 0,
+    };
+  const deadlineSignalEntries = Array.isArray(deadlineSignalSummary.entries)
+    ? deadlineSignalSummary.entries
+    : [];
+  const unsentReportRows = Array.isArray(response.unsent_report_rows) ? response.unsent_report_rows : [];
+
   return {
     alerts: response.alerts.map((item) => mapBackendAlert(item)),
     completionRows: response.completion_rows.map((row) => ({
@@ -169,6 +208,18 @@ export function mapBackendOverviewResponse(
       label: normalizeText(row.label),
       missingSiteCount: row.missing_site_count,
     })),
+    deadlineSignalSummary: {
+      entries: deadlineSignalEntries.map((entry) => ({
+        count: entry.count,
+        href: normalizeText(entry.href),
+        key: normalizeText(entry.key),
+        label: normalizeText(entry.label),
+      })),
+      totalReportCount:
+        typeof deadlineSignalSummary.total_report_count === 'number'
+          ? deadlineSignalSummary.total_report_count
+          : 0,
+    },
     deadlineRows: response.deadline_rows.map((row) => ({
       deadlineDate: normalizeText(row.deadline_date),
       deadlineLabel: normalizeText(row.deadline_label),
@@ -204,11 +255,71 @@ export function mapBackendOverviewResponse(
       siteName: normalizeText(row.site_name),
       updatedAt: normalizeText(row.updated_at),
     })),
+    quarterlyMaterialSummary: {
+      entries: quarterlyMaterialEntries.map((entry) => ({
+        count: entry.count,
+        href: normalizeText(entry.href),
+        key: normalizeText(entry.key),
+        label: normalizeText(entry.label),
+      })),
+      missingSiteRows: quarterlyMaterialMissingSiteRows.map((row) => ({
+        education: {
+          filledCount: row.education.filled_count,
+          missingCount: row.education.missing_count,
+          requiredCount: row.education.required_count,
+        },
+        headquarterName: normalizeText(row.headquarter_name),
+        href: normalizeText(row.href),
+        measurement: {
+          filledCount: row.measurement.filled_count,
+          missingCount: row.measurement.missing_count,
+          requiredCount: row.measurement.required_count,
+        },
+        missingLabels: Array.isArray(row.missing_labels)
+          ? row.missing_labels.map((item) => normalizeText(item))
+          : [],
+        quarterKey: normalizeText(row.quarter_key),
+        quarterLabel: normalizeText(row.quarter_label),
+        siteId: normalizeText(row.site_id),
+        siteName: normalizeText(row.site_name),
+      })),
+      quarterKey: normalizeText(quarterlyMaterialSummary.quarter_key),
+      quarterLabel: normalizeText(quarterlyMaterialSummary.quarter_label),
+      totalSiteCount:
+        typeof quarterlyMaterialSummary.total_site_count === 'number'
+          ? quarterlyMaterialSummary.total_site_count
+          : 0,
+    },
     scheduleRows: response.schedule_rows.map((row) => mapBackendSchedule(row)),
+    siteStatusSummary: {
+      entries: siteStatusEntries.map((entry) => ({
+        count: entry.count,
+        href: normalizeText(entry.href),
+        key: normalizeText(entry.key),
+        label: normalizeText(entry.label),
+      })),
+      totalSiteCount:
+        typeof siteStatusSummary.total_site_count === 'number' ? siteStatusSummary.total_site_count : 0,
+    },
     summaryRows: response.summary_rows.map((row) => ({
       label: normalizeText(row.label),
       meta: normalizeText(row.meta),
       value: normalizeText(row.value),
+    })),
+    unsentReportRows: unsentReportRows.map((row) => ({
+      assigneeName: normalizeText(row.assignee_name),
+      deadlineDate: normalizeText(row.deadline_date),
+      dispatchStatus: (normalizeText(row.dispatch_status) || '') as SafetyAdminOverviewResponse['unsentReportRows'][number]['dispatchStatus'],
+      headquarterName: normalizeText(row.headquarter_name),
+      href: normalizeText(row.href),
+      referenceDate: normalizeText(row.reference_date),
+      reportKey: normalizeText(row.report_key),
+      reportTitle: normalizeText(row.report_title),
+      reportTypeLabel: normalizeText(row.report_type_label),
+      siteId: normalizeText(row.site_id),
+      siteName: normalizeText(row.site_name),
+      unsentDays: typeof row.unsent_days === 'number' ? row.unsent_days : 0,
+      visitDate: normalizeText(row.visit_date),
     })),
     workerLoadRows: response.worker_load_rows.map((row) => ({
       assignedSiteCount: row.assigned_site_count,
@@ -223,20 +334,42 @@ export function mapBackendOverviewResponse(
 export function mapBackendAnalyticsResponse(
   response: SafetyBackendAdminAnalyticsResponse,
 ): SafetyAdminAnalyticsResponse {
+  const totalContractAmount = response.contract_type_rows.reduce(
+    (sum, row) => sum + row.total_contract_amount,
+    0,
+  );
+  const totalOverdueCount = response.employee_rows.reduce(
+    (sum, row) => sum + row.overdue_count,
+    0,
+  );
+  const totalExecutedRounds = response.employee_rows.reduce(
+    (sum, row) => sum + row.executed_rounds,
+    0,
+  );
+  const totalVisitRevenue = response.employee_rows.reduce(
+    (sum, row) => sum + row.visit_revenue,
+    0,
+  );
+
   return {
     contractTypeRows: response.contract_type_rows.map((row) => ({
       avgPerVisitAmount: row.avg_per_visit_amount,
+      executedRounds: 0,
       label: normalizeText(row.label),
       siteCount: row.site_count,
+      shareRate: totalContractAmount > 0 ? row.total_contract_amount / totalContractAmount : 0,
       totalContractAmount: row.total_contract_amount,
+      visitRevenue: 0,
     })),
     employeeRows: response.employee_rows.map((row) => ({
       assignedSiteCount: row.assigned_site_count,
-      badWorkplaceSubmittedCount: row.bad_workplace_submitted_count,
-      completedReportCount: row.completed_report_count,
-      contractContributionRevenue: row.contract_contribution_revenue,
+      avgPerVisitAmount:
+        row.executed_rounds > 0 ? row.visit_revenue / row.executed_rounds : 0,
+      completionRate:
+        row.total_assigned_rounds > 0 ? row.executed_rounds / row.total_assigned_rounds : 0,
       overdueCount: row.overdue_count,
-      quarterlyCompletedCount: row.quarterly_completed_count,
+      primaryContractTypeLabel: '',
+      revenueChangeRate: null,
       totalAssignedRounds: row.total_assigned_rounds,
       userId: normalizeText(row.user_id),
       userName: normalizeText(row.user_name),
@@ -244,11 +377,13 @@ export function mapBackendAnalyticsResponse(
       executedRounds: row.executed_rounds,
     })),
     siteRevenueRows: response.site_revenue_rows.map((row) => ({
-      contractContributionRevenue: row.contract_contribution_revenue,
+      avgPerVisitAmount:
+        row.executed_rounds > 0 ? row.visit_revenue / row.executed_rounds : 0,
       contractTypeLabel: normalizeText(row.contract_type_label),
       executedRounds: row.executed_rounds,
       headquarterName: normalizeText(row.headquarter_name),
       href: normalizeText(row.href),
+      siteId: normalizeText(row.href) || normalizeText(row.site_name),
       siteName: normalizeText(row.site_name),
       visitRevenue: row.visit_revenue,
     })),
@@ -258,12 +393,20 @@ export function mapBackendAnalyticsResponse(
       countedSiteCount: response.stats.counted_site_count,
       delayRate: response.stats.delay_rate,
       excludedSiteCount: response.stats.excluded_site_count,
+      includedEmployeeCount: response.employee_rows.length,
+      overdueCount: totalOverdueCount,
+      totalExecutedRounds,
+      totalVisitRevenue,
     },
     summaryCards: response.summary_cards.map((card) => ({
+      deltaLabel: '비교 구간 없음',
+      deltaTone: 'neutral',
+      deltaValue: '비교 없음',
       label: normalizeText(card.label),
       meta: normalizeText(card.meta),
       value: normalizeText(card.value),
     })),
+    trendRows: [],
   };
 }
 

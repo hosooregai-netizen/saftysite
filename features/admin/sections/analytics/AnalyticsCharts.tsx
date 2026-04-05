@@ -1,208 +1,262 @@
 'use client';
 
-import { formatAnalyticsStatValue } from '@/features/admin/lib/buildAdminControlCenterModel';
+import {
+  type AdminAnalyticsEmployeeRow,
+  type AdminAnalyticsSiteRevenueRow,
+  type AdminAnalyticsTrendRow,
+} from '@/features/admin/lib/buildAdminControlCenterModel';
+import { formatCurrencyValue } from '@/lib/admin';
 import styles from './AnalyticsCharts.module.css';
-import type {
-  AdminAnalyticsContractTypeRow,
-  AdminAnalyticsEmployeeRow,
-  AdminAnalyticsSiteRevenueRow,
-  AdminAnalyticsStats,
-} from '@/types/admin';
 
 interface AnalyticsChartsProps {
-  contractTypeRows: AdminAnalyticsContractTypeRow[];
   employeeRows: AdminAnalyticsEmployeeRow[];
   siteRevenueRows: AdminAnalyticsSiteRevenueRow[];
-  stats: AdminAnalyticsStats;
+  trendRows: AdminAnalyticsTrendRow[];
 }
 
-const CONTRACT_COLORS = ['#1b3048', '#4d7098', '#f7b019', '#84a59d', '#d38b5d', '#8b95c9'];
+const CHART_WIDTH = 820;
+const CHART_HEIGHT = 300;
+const CHART_PADDING = { bottom: 44, left: 28, right: 28, top: 24 };
 
 function formatCompactCurrency(value: number) {
   if (value >= 100_000_000) {
     return `${(value / 100_000_000).toFixed(value >= 1_000_000_000 ? 0 : 1)}억`;
   }
   if (value >= 10_000) {
-    return `${Math.round(value / 10_000).toLocaleString('ko-KR')}만`;
+    return `${(value / 10_000).toFixed(value >= 1_000_000 ? 0 : 1)}만`;
   }
   return value.toLocaleString('ko-KR');
 }
 
-function clampPercent(value: number) {
-  return Math.max(0, Math.min(100, value * 100));
+function formatDelta(value: number | null) {
+  if (value == null || Number.isNaN(value)) return '비교 없음';
+  if (Math.abs(value) < 0.0005) return '0.0%';
+  const sign = value > 0 ? '+' : '';
+  return `${sign}${(value * 100).toFixed(1)}%`;
 }
 
-function HorizontalBarChart({
-  rows,
-  title,
-  valueLabel,
-}: {
-  rows: Array<{ label: string; meta: string; value: number }>;
-  title: string;
-  valueLabel: string;
-}) {
+function TrendCard({ rows }: { rows: AdminAnalyticsTrendRow[] }) {
   if (rows.length === 0) {
-    return <div className={styles.emptyState}>표시할 차트 데이터가 없습니다.</div>;
+    return <div className={styles.emptyState}>표시할 추이 데이터가 없습니다.</div>;
   }
 
-  const maxValue = Math.max(...rows.map((row) => row.value), 1);
+  const maxRevenue = Math.max(...rows.map((row) => row.revenue), 1);
+  const maxAvgPerVisitAmount = Math.max(...rows.map((row) => row.avgPerVisitAmount), 1);
+  const innerWidth = CHART_WIDTH - CHART_PADDING.left - CHART_PADDING.right;
+  const innerHeight = CHART_HEIGHT - CHART_PADDING.top - CHART_PADDING.bottom;
+  const step = innerWidth / rows.length;
+  const barWidth = Math.max(14, step * 0.46);
+  const latestRow = rows[rows.length - 1];
+
+  const linePoints = rows
+    .map((row, index) => {
+      const x = CHART_PADDING.left + step * index + step / 2;
+      const y =
+        CHART_PADDING.top + innerHeight - (row.avgPerVisitAmount / maxAvgPerVisitAmount) * innerHeight;
+      return `${x},${y}`;
+    })
+    .join(' ');
 
   return (
-    <div className={styles.card}>
-      <div className={styles.cardHeader}>
-        <h3 className={styles.cardTitle}>{title}</h3>
-        <span className={styles.cardMeta}>상위 {rows.length}개 기준</span>
+    <section className={`${styles.surface} ${styles.surfaceWide}`}>
+      <div className={styles.surfaceHeader}>
+        <div className={styles.surfaceHeaderText}>
+          <h3 className={styles.surfaceTitle}>월별 매출 추이</h3>
+          <p className={styles.surfaceMeta}>최근 12개월 기준</p>
+        </div>
+        <div className={styles.legend}>
+          <span className={styles.legendItem}>
+            <span className={styles.legendBar} aria-hidden="true" />
+            월별 매출
+          </span>
+          <span className={styles.legendItem}>
+            <span className={styles.legendLine} aria-hidden="true" />
+            평균 회차 단가
+          </span>
+        </div>
       </div>
-      <div className={styles.barList}>
-        {rows.map((row) => {
-          const width = `${Math.max(8, (row.value / maxValue) * 100)}%`;
-          return (
-            <div key={`${title}-${row.label}`} className={styles.barRow}>
-              <div className={styles.barHeader}>
-                <div className={styles.barLabelWrap}>
-                  <span className={styles.barLabel}>{row.label}</span>
-                  <span className={styles.barSubLabel}>{row.meta}</span>
-                </div>
-                <span className={styles.barValue}>
-                  {formatCompactCurrency(row.value)}
-                  {valueLabel}
-                </span>
-              </div>
-              <div className={styles.barTrack}>
-                <div className={styles.barFill} style={{ width }} />
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
 
-function ContractTypeDistribution({
-  rows,
-}: {
-  rows: AdminAnalyticsContractTypeRow[];
-}) {
-  if (rows.length === 0) {
-    return <div className={styles.emptyState}>표시할 계약유형 데이터가 없습니다.</div>;
-  }
-
-  const total = rows.reduce((sum, row) => sum + row.totalContractAmount, 0);
-
-  return (
-    <div className={styles.card}>
-      <div className={styles.cardHeader}>
-        <h3 className={styles.cardTitle}>계약유형별 계약금액</h3>
-        <span className={styles.cardMeta}>총 {rows.length}개 유형</span>
+      <div className={styles.trendSummary}>
+        <div className={styles.trendSummaryItem}>
+          <span className={styles.trendSummaryLabel}>최근 월 매출</span>
+          <strong className={styles.trendSummaryValue}>{formatCurrencyValue(latestRow.revenue)}</strong>
+        </div>
+        <div className={styles.trendSummaryItem}>
+          <span className={styles.trendSummaryLabel}>최근 월 평균 단가</span>
+          <strong className={styles.trendSummaryValue}>
+            {formatCurrencyValue(latestRow.avgPerVisitAmount)}
+          </strong>
+        </div>
+        <div className={styles.trendSummaryItem}>
+          <span className={styles.trendSummaryLabel}>최근 월 실행 회차</span>
+          <strong className={styles.trendSummaryValue}>{latestRow.executedRounds}회</strong>
+        </div>
       </div>
-      <div className={styles.contractSegments} aria-hidden="true">
-        {rows.map((row, index) => (
-          <div
-            key={row.label}
-            className={styles.contractSegment}
-            style={{
-              backgroundColor: CONTRACT_COLORS[index % CONTRACT_COLORS.length],
-              width: `${total > 0 ? Math.max(6, (row.totalContractAmount / total) * 100) : 0}%`,
-            }}
-          />
-        ))}
-      </div>
-      <div className={styles.contractLegend}>
-        {rows.map((row, index) => {
-          const percent = total > 0 ? (row.totalContractAmount / total) * 100 : 0;
-          return (
-            <div key={row.label} className={styles.contractLegendRow}>
-              <span
-                className={styles.contractSwatch}
-                style={{ backgroundColor: CONTRACT_COLORS[index % CONTRACT_COLORS.length] }}
+
+      <div className={styles.chartWrap}>
+        <svg
+          className={styles.chartSvg}
+          viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
+          role="img"
+          aria-label="최근 12개월 월별 매출과 평균 회차 단가 추이"
+        >
+          <defs>
+            <linearGradient id="analyticsRevenueBar" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#1f4f8f" />
+              <stop offset="100%" stopColor="#8eb4dc" />
+            </linearGradient>
+          </defs>
+
+          {Array.from({ length: 4 }, (_, index) => {
+            const y = CHART_PADDING.top + (innerHeight / 3) * index;
+            return (
+              <line
+                key={`grid-${index}`}
+                x1={CHART_PADDING.left}
+                x2={CHART_WIDTH - CHART_PADDING.right}
+                y1={y}
+                y2={y}
+                className={styles.chartGridLine}
               />
-              <div className={styles.contractLegendText}>
-                <span className={styles.barLabel}>{row.label}</span>
-                <span className={styles.barSubLabel}>
-                  {row.siteCount}개 현장 · 평균 회차 단가 {formatCompactCurrency(row.avgPerVisitAmount)}원
-                </span>
-              </div>
-              <span className={styles.barValue}>
-                {percent.toFixed(1)}% · {formatCompactCurrency(row.totalContractAmount)}원
-              </span>
-            </div>
-          );
-        })}
+            );
+          })}
+
+          {rows.map((row, index) => {
+            const x = CHART_PADDING.left + step * index + (step - barWidth) / 2;
+            const barHeight = (row.revenue / maxRevenue) * innerHeight;
+            const y = CHART_PADDING.top + innerHeight - barHeight;
+            return (
+              <g key={row.monthKey}>
+                <rect
+                  x={x}
+                  y={y}
+                  width={barWidth}
+                  height={Math.max(2, barHeight)}
+                  rx="4"
+                  fill="url(#analyticsRevenueBar)"
+                />
+                <text
+                  x={x + barWidth / 2}
+                  y={CHART_HEIGHT - 14}
+                  textAnchor="middle"
+                  className={styles.chartAxisLabel}
+                >
+                  {row.label}
+                </text>
+              </g>
+            );
+          })}
+
+          <polyline points={linePoints} fill="none" className={styles.chartLinePath} />
+          {rows.map((row, index) => {
+            const x = CHART_PADDING.left + step * index + step / 2;
+            const y =
+              CHART_PADDING.top + innerHeight - (row.avgPerVisitAmount / maxAvgPerVisitAmount) * innerHeight;
+            return <circle key={`point-${row.monthKey}`} cx={x} cy={y} r="4.5" className={styles.chartLinePoint} />;
+          })}
+        </svg>
       </div>
-    </div>
+    </section>
   );
 }
 
-function MetricCards({ stats }: { stats: AdminAnalyticsStats }) {
-  const metrics = [
-    {
-      label: '완료율',
-      meta: `${stats.countedSiteCount.toLocaleString('ko-KR')}개 현장 기준`,
-      percent: clampPercent(stats.completionRate),
-      value: formatAnalyticsStatValue('percent', stats.completionRate),
-    },
-    {
-      label: '지연율',
-      meta: `지연 현황 반영`,
-      percent: clampPercent(stats.delayRate),
-      value: formatAnalyticsStatValue('percent', stats.delayRate),
-    },
-    {
-      label: '평균 회차 단가',
-      meta: `집계 제외 ${stats.excludedSiteCount.toLocaleString('ko-KR')}개 현장`,
-      percent: stats.countedSiteCount + stats.excludedSiteCount > 0
-        ? (stats.countedSiteCount / (stats.countedSiteCount + stats.excludedSiteCount)) * 100
-        : 0,
-      value: formatAnalyticsStatValue('currency', stats.averagePerVisitAmount),
-    },
-  ];
+function EmployeeContributionCard({ rows }: { rows: AdminAnalyticsEmployeeRow[] }) {
+  const topRows = [...rows]
+    .filter((row) => row.visitRevenue > 0 || row.executedRounds > 0)
+    .sort(
+      (left, right) =>
+        right.visitRevenue - left.visitRevenue ||
+        right.executedRounds - left.executedRounds ||
+        left.userName.localeCompare(right.userName, 'ko'),
+    )
+    .slice(0, 10);
+
+  if (topRows.length === 0) {
+    return <div className={styles.emptyState}>표시할 직원 기여도 데이터가 없습니다.</div>;
+  }
 
   return (
-    <div className={styles.card}>
-      <div className={styles.cardHeader}>
-        <h3 className={styles.cardTitle}>운영 지표 시각화</h3>
-        <span className={styles.cardMeta}>현재 필터 기준</span>
+    <section className={styles.surface}>
+      <div className={styles.surfaceHeader}>
+        <div className={styles.surfaceHeaderText}>
+          <h3 className={styles.surfaceTitle}>직원별 매출 기여도 Top 10</h3>
+          <p className={styles.surfaceMeta}>매출, 회차 수, 평균 단가, 전기 대비</p>
+        </div>
       </div>
-      <div className={styles.metricGrid}>
-        {metrics.map((metric) => (
-          <div key={metric.label} className={styles.metricCard}>
-            <span className={styles.metricLabel}>{metric.label}</span>
-            <strong className={styles.metricValue}>{metric.value}</strong>
-            <div className={styles.metricTrack}>
-              <div className={styles.metricFill} style={{ width: `${Math.max(6, metric.percent)}%` }} />
+
+      <div className={styles.list}>
+        {topRows.map((row) => (
+          <article key={row.userId} className={styles.listRow}>
+            <div className={styles.listRowHeader}>
+              <div className={styles.listRowTitleWrap}>
+                <strong className={styles.listRowTitle}>{row.userName}</strong>
+                <span className={styles.listRowMeta}>
+                  {row.executedRounds}회 · 회당 {formatCompactCurrency(row.avgPerVisitAmount)}원 ·{' '}
+                  {formatDelta(row.revenueChangeRate)}
+                </span>
+              </div>
+              <strong className={styles.listRowValue}>{formatCurrencyValue(row.visitRevenue)}</strong>
             </div>
-            <span className={styles.metricMeta}>{metric.meta}</span>
-          </div>
+          </article>
         ))}
       </div>
-    </div>
+    </section>
+  );
+}
+
+function SiteContributionCard({ rows }: { rows: AdminAnalyticsSiteRevenueRow[] }) {
+  const topRows = [...rows]
+    .filter((row) => row.visitRevenue > 0 || row.executedRounds > 0)
+    .sort(
+      (left, right) =>
+        right.visitRevenue - left.visitRevenue ||
+        right.executedRounds - left.executedRounds ||
+        left.siteName.localeCompare(right.siteName, 'ko'),
+    )
+    .slice(0, 10);
+
+  if (topRows.length === 0) {
+    return <div className={styles.emptyState}>표시할 현장 매출 데이터가 없습니다.</div>;
+  }
+
+  return (
+    <section className={styles.surface}>
+      <div className={styles.surfaceHeader}>
+        <div className={styles.surfaceHeaderText}>
+          <h3 className={styles.surfaceTitle}>현장별 매출 상위 Top 10</h3>
+          <p className={styles.surfaceMeta}>사업장, 회차 수, 계약유형 중심</p>
+        </div>
+      </div>
+
+      <div className={styles.list}>
+        {topRows.map((row) => (
+          <article key={row.siteId} className={styles.listRow}>
+            <div className={styles.listRowHeader}>
+              <div className={styles.listRowTitleWrap}>
+                <strong className={styles.listRowTitle}>{row.siteName}</strong>
+                <span className={styles.listRowMeta}>
+                  {row.headquarterName} · {row.executedRounds}회 · {row.contractTypeLabel}
+                </span>
+              </div>
+              <strong className={styles.listRowValue}>{formatCurrencyValue(row.visitRevenue)}</strong>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
   );
 }
 
 export function AnalyticsCharts({
-  contractTypeRows,
   employeeRows,
   siteRevenueRows,
-  stats,
+  trendRows,
 }: AnalyticsChartsProps) {
-  const employeeChartRows = employeeRows.slice(0, 8).map((row) => ({
-    label: row.userName,
-    meta: `실행 ${row.executedRounds}회 · 배정 ${row.assignedSiteCount}개 현장`,
-    value: row.visitRevenue,
-  }));
-  const siteChartRows = siteRevenueRows.slice(0, 8).map((row) => ({
-    label: row.siteName,
-    meta: `${row.headquarterName} · ${row.executedRounds}회`,
-    value: row.visitRevenue,
-  }));
-
   return (
-    <div className={styles.grid}>
-      <HorizontalBarChart rows={employeeChartRows} title="직원별 회차 매출" valueLabel="원" />
-      <HorizontalBarChart rows={siteChartRows} title="현장별 매출" valueLabel="원" />
-      <ContractTypeDistribution rows={contractTypeRows} />
-      <MetricCards stats={stats} />
+    <div className={styles.layout}>
+      <TrendCard rows={trendRows} />
+      <EmployeeContributionCard rows={employeeRows} />
+      <SiteContributionCard rows={siteRevenueRows} />
     </div>
   );
 }

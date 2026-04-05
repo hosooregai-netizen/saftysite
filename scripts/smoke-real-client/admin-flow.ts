@@ -12,8 +12,8 @@ import { dismissImportantModalIfPresent, waitHeading } from './helpers';
 export async function runAdminFlow(page: Page) {
   await page.goto(`${baseUrl}/admin?section=overview`, { waitUntil: 'load' });
   await waitHeading(page, '관제 대시보드');
-  await page.getByText('전체 현장 수').first().waitFor();
-  await page.getByText('분기 보고 발송 지연').first().waitFor();
+  await page.getByText('현장 상태').first().waitFor();
+  await page.getByText('발송 관리 대상').first().waitFor();
   await dismissImportantModalIfPresent(page);
   await page.waitForTimeout(2_000);
   await dismissImportantModalIfPresent(page);
@@ -22,12 +22,11 @@ export async function runAdminFlow(page: Page) {
   await dismissImportantModalIfPresent(page);
 
   await page.goto(`${baseUrl}/admin?section=analytics`, { waitUntil: 'load' });
-  await page.getByText('실적/매출 요약').first().waitFor();
-  await page.getByText('직원별 회차 매출').first().waitFor();
-  await page.getByText('현장별 매출').first().waitFor();
-  await page.getByText('계약유형별 계약금액').first().waitFor();
-  await page.getByText('운영 지표 시각화').first().waitFor();
-  await page.getByText('직원별 실적/매출').first().waitFor();
+  await page.getByText('매출/실적 집계').first().waitFor();
+  await page.getByText('월별 매출 추이').first().waitFor();
+  await page.getByText('직원별 매출 기여도 Top 10').first().waitFor();
+  await page.getByText('현장별 매출 상위 Top 10').first().waitFor();
+  await page.getByText('상세 표').first().waitFor();
 
   await page.goto(`${baseUrl}/admin?section=mailbox`, { waitUntil: 'load' });
   await waitHeading(page, '메일함');
