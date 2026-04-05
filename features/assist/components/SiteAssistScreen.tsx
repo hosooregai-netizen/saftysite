@@ -17,8 +17,10 @@ import {
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { createFieldSignature, fetchFieldSignatures } from '@/lib/assist/apiClient';
 import { getAdminSectionHref, isAdminUserRole } from '@/lib/admin';
+import { fetchMySchedules } from '@/lib/calendar/apiClient';
 import { fetchPhotoAlbum, uploadPhotoAlbumAsset } from '@/lib/photos/apiClient';
 import type { FieldSignatureRecord } from '@/types/assist';
+import type { SafetyInspectionSchedule } from '@/types/admin';
 import type { PhotoAlbumItem } from '@/types/photos';
 import shellStyles from '@/features/site-reports/components/SiteReportsScreen.module.css';
 import styles from './SiteAssistScreen.module.css';
@@ -68,6 +70,7 @@ export function SiteAssistScreen({ scheduleId, siteKey }: SiteAssistScreenProps)
   const [menuOpen, setMenuOpen] = useState(false);
   const [photos, setPhotos] = useState<PhotoAlbumItem[]>([]);
   const [signatures, setSignatures] = useState<FieldSignatureRecord[]>([]);
+  const [linkedSchedule, setLinkedSchedule] = useState<SafetyInspectionSchedule | null>(null);
   const [signatureValue, setSignatureValue] = useState('');
   const [signatureNote, setSignatureNote] = useState('');
   const [loading, setLoading] = useState(false);
@@ -105,6 +108,7 @@ export function SiteAssistScreen({ scheduleId, siteKey }: SiteAssistScreenProps)
         backLabel: '현장 보조로 돌아가기',
       })
     : '/';
+  const calendarHref = currentSite ? `/calendar?siteId=${encodeURIComponent(currentSite.id)}` : '/calendar';
 
   useEffect(() => {
     if (!isAuthenticated || !currentSite) return;
@@ -123,9 +127,16 @@ export function SiteAssistScreen({ scheduleId, siteKey }: SiteAssistScreenProps)
           }),
           fetchFieldSignatures(currentSite.id, 10),
         ]);
+        const scheduleResponse = scheduleId
+          ? await fetchMySchedules({
+              limit: 200,
+              siteId: currentSite.id,
+            }).catch(() => null)
+          : null;
         if (cancelled) return;
         setPhotos(photoResponse.rows);
         setSignatures(signatureResponse);
+        setLinkedSchedule(scheduleResponse?.rows.find((row) => row.id === scheduleId) ?? null);
         if (signatureResponse[0]?.imageDataUrl) {
           setSignatureValue(signatureResponse[0].imageDataUrl);
           setSignatureNote(signatureResponse[0].note || '');
@@ -146,7 +157,7 @@ export function SiteAssistScreen({ scheduleId, siteKey }: SiteAssistScreenProps)
     return () => {
       cancelled = true;
     };
-  }, [currentSite, isAuthenticated]);
+  }, [currentSite, isAuthenticated, scheduleId]);
 
   const managerName = currentSite?.adminSiteSnapshot.siteManagerName || '';
   const managerPhone =
@@ -291,11 +302,37 @@ export function SiteAssistScreen({ scheduleId, siteKey }: SiteAssistScreenProps)
                   <article className={styles.summaryCard}>
                     <span className={styles.summaryLabel}>연결 회차</span>
                     <strong className={styles.summaryValue}>
-                      {scheduleId ? '일정 연결됨' : '현장 단위'}
+                      {linkedSchedule
+                        ? `${linkedSchedule.roundNo}회차`
+                        : scheduleId
+                          ? '일정 확인 필요'
+                          : '현장 단위'}
                     </strong>
                     <span className={styles.summaryMeta}>
-                      {scheduleId || 'scheduleId 없음'}
+                      {linkedSchedule
+                        ? `허용 구간 ${linkedSchedule.windowStart} ~ ${linkedSchedule.windowEnd}`
+                        : scheduleId
+                          ? '연결된 회차 정보를 다시 확인해 주세요.'
+                          : 'scheduleId 없음'}
                     </span>
+                  </article>
+                  <article className={styles.summaryCard}>
+                    <span className={styles.summaryLabel}>일정 상태</span>
+                    <strong className={styles.summaryValue}>
+                      {linkedSchedule?.plannedDate
+                        ? formatDateLabel(linkedSchedule.plannedDate)
+                        : scheduleId
+                          ? '방문일 미선택'
+                          : '현장 단위'}
+                    </strong>
+                    <span className={styles.summaryMeta}>
+                      {linkedSchedule
+                        ? `상태 ${linkedSchedule.status}`
+                        : '일정 화면에서 회차별 날짜를 다시 확인할 수 있습니다.'}
+                    </span>
+                    <Link href={calendarHref} className={styles.summaryMeta}>
+                      내 일정으로 돌아가기
+                    </Link>
                   </article>
                 </section>
 
