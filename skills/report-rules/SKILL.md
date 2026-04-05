@@ -29,6 +29,7 @@ Use this skill when the request changes how reports are edited or rendered.
 2. Keep quarterly bundle ordering deterministic: lower visit round first.
 3. Prefer merged reference material fields over legacy split fields.
 4. When rules affect exports, verify both screen rendering and server builders.
+5. If the task touches `scripts/`, keep each touched script file at `<= 200` lines by splitting helpers into sibling files instead of growing one long script.
 
 ## Validation
 

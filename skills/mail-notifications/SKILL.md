@@ -28,6 +28,7 @@ Use this skill when the task affects mailbox, notifications, or outbound message
 2. Keep admin-only shared mailbox behavior separate from personal linked accounts.
 3. Make top-right alert UX non-blocking for task screens.
 4. When adding status fields, wire them through reports and alerts consistently.
+5. If the task touches `scripts/`, keep each touched script file at `<= 200` lines by splitting helpers into sibling files instead of growing one long script.
 
 ## Validation
 

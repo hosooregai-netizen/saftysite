@@ -27,6 +27,7 @@ Use this skill when the task primarily touches the admin control center.
 2. Keep controller actions server-validated even if the UI already hides them.
 3. For list screens, preserve shared `TableToolbar` behavior: search, filter, sort, export.
 4. Re-run the real-client smoke path for the affected `/admin` section.
+5. If the task touches `scripts/`, keep each touched script file at `<= 200` lines by splitting helpers into sibling files instead of growing one long script.
 
 ## Validation
 

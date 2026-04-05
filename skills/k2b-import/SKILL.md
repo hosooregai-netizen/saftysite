@@ -29,6 +29,7 @@ Use this skill when the task touches the admin K2B wizard or upstream K2B import
    - site name + start/end dates
 3. Never blank existing DB values when K2B omits them.
 4. Surface missing required fields as follow-up work, not as hard failure.
+5. If the task touches `scripts/`, keep each touched script file at `<= 200` lines by splitting helpers into sibling files instead of growing one long script.
 
 ## Validation
 

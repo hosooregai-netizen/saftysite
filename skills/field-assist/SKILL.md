@@ -33,6 +33,7 @@ Use this skill when the task affects mobile-first worker flows.
    - manager contact
 3. Prefer the real `manager_phone` field; use legacy contact snapshots only as fallback.
 4. When entering from schedule context, preserve `schedule_id`.
+5. If the task touches `scripts/`, keep each touched script file at `<= 200` lines by splitting helpers into sibling files instead of growing one long script.
 
 ## Validation
 
