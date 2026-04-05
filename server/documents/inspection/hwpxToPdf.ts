@@ -14,6 +14,11 @@ const REMOTE_CONVERTER_URL_ENV_KEYS = [
   'HWPX_PDF_CONVERTER_URL',
   'WINDOWS_HWPX_PDF_CONVERTER_URL',
 ] as const;
+const REMOTE_CONVERTER_API_KEY_ENV_KEYS = [
+  'HWPX_PDF_API_KEY',
+  'WINDOWS_HWPX_PDF_API_KEY',
+] as const;
+const REMOTE_WARNING_HEADER = 'x-inspection-pdf-warnings';
 
 let conversionQueue: Promise<unknown> = Promise.resolve();
 
@@ -35,6 +40,17 @@ function getRemoteConverterUrl(): string | null {
     const configured = process.env[envKey]?.trim();
     if (configured) {
       return configured.replace(/\/+$/, '');
+    }
+  }
+
+  return null;
+}
+
+function getRemoteConverterApiKey(): string | null {
+  for (const envKey of REMOTE_CONVERTER_API_KEY_ENV_KEYS) {
+    const configured = process.env[envKey]?.trim();
+    if (configured) {
+      return configured;
     }
   }
 
@@ -195,6 +211,7 @@ async function convertHwpxBufferToPdfInternal(
 
 async function convertHwpxBufferToPdfRemotely(
   remoteUrl: string,
+  apiKey: string,
   hwpxBuffer: Buffer,
   originalFilename: string,
 ): Promise<{ buffer: Buffer; filename: string }> {
@@ -209,6 +226,9 @@ async function convertHwpxBufferToPdfRemotely(
 
   const response = await fetch(remoteUrl, {
     method: 'POST',
+    headers: {
+      'X-Internal-Api-Key': apiKey,
+    },
     body: formData,
     cache: 'no-store',
   });
@@ -216,6 +236,18 @@ async function convertHwpxBufferToPdfRemotely(
   if (!response.ok) {
     const message = await parseRemoteConverterError(response);
     throw new Error(`HWPX PDF conversion failed: ${message}`);
+  }
+
+  const warningHeader = response.headers.get(REMOTE_WARNING_HEADER);
+  if (warningHeader) {
+    try {
+      console.warn(
+        '[inspection/pdf] remote converter warnings:',
+        decodeURIComponent(warningHeader),
+      );
+    } catch {
+      console.warn('[inspection/pdf] remote converter warnings:', warningHeader);
+    }
   }
 
   return {
@@ -233,7 +265,19 @@ export async function convertHwpxBufferToPdf(
 ): Promise<{ buffer: Buffer; filename: string }> {
   const remoteUrl = getRemoteConverterUrl();
   if (remoteUrl) {
-    return convertHwpxBufferToPdfRemotely(remoteUrl, hwpxBuffer, originalFilename);
+    const apiKey = getRemoteConverterApiKey();
+    if (!apiKey) {
+      throw new Error(
+        'HWPX_PDF_API_KEY or WINDOWS_HWPX_PDF_API_KEY must be configured for the remote converter.',
+      );
+    }
+    return convertHwpxBufferToPdfRemotely(remoteUrl, apiKey, hwpxBuffer, originalFilename);
+  }
+
+  if (process.platform !== 'win32') {
+    throw new Error(
+      'Remote HWPX PDF converter is required outside Windows. Set HWPX_PDF_CONVERTER_URL and HWPX_PDF_API_KEY.',
+    );
   }
 
   const task = conversionQueue.then(() =>
