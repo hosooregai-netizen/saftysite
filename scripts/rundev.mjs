@@ -4,8 +4,8 @@ import { execFileSync, spawn } from 'node:child_process';
 
 const DEFAULT_PORT = 3100;
 const DEFAULT_HOST = '127.0.0.1';
-const DEFAULT_UPSTREAM_BASE_URL = 'http://127.0.0.1:8011/api/v1';
-const DEFAULT_ASSET_BASE_URL = 'http://127.0.0.1:8011';
+const DEFAULT_UPSTREAM_BASE_URL = 'http://35.76.230.177:8011/api/v1';
+const DEFAULT_ASSET_BASE_URL = 'http://35.76.230.177:8011';
 const MAX_PORT_SCAN = 10;
 
 const projectRoot = process.cwd();
@@ -132,6 +132,7 @@ const env = buildChildEnv(port);
 
 console.log(`[dev] Starting safetysite on http://${DEFAULT_HOST}:${port}`);
 console.log(`[dev] Safety API upstream: ${env.SAFETY_API_UPSTREAM_BASE_URL}`);
+console.log('[dev] To use a local safety-server instead, set SAFETY_API_UPSTREAM_BASE_URL=http://127.0.0.1:8011/api/v1');
 console.log(`[dev] K2B parse check: http://${DEFAULT_HOST}:${port}/api/k2b/imports/parse`);
 
 const command = process.platform === 'win32' ? 'npx.cmd' : 'npx';
