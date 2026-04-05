@@ -187,6 +187,8 @@ async function main() {
   await page.getByRole('button', { name: '연결 계정' }).click();
   await page.getByRole('button', { name: /구글 로그인으로 연결/ }).first().waitFor();
   await page.getByRole('button', { name: /네이버 로그인으로 연결/ }).first().waitFor();
+  await page.getByRole('button', { name: '상태 새로고침' }).click();
+  await page.getByText('메일 계정과 공급자 상태를 새로고침했습니다.').first().waitFor();
 
   await page.goto(`${baseUrl}/admin?section=k2b`, { waitUntil: 'load' });
   await waitHeading('K2B 업로드');
@@ -289,6 +291,8 @@ async function main() {
   await assistLink.click();
   await page.waitForURL(/\/sites\/.*\/assist\?scheduleId=/);
   await page.getByText('현장 보조 - 테스트 현장 A').first().waitFor();
+  await page.getByRole('link', { name: '내 일정으로 돌아가기' }).first().waitFor();
+  await page.getByText('허용 구간').first().waitFor();
   await page.locator('a[href^="tel:"]').first().waitFor();
   await page.locator('input[type="file"]').first().setInputFiles({
     buffer: uploadBuffer,
