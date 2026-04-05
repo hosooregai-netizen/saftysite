@@ -69,7 +69,8 @@ export function MailboxPanel({ mode }: MailboxPanelProps) {
   const [threadTotal, setThreadTotal] = useState(0);
   const [selectedThreadId, setSelectedThreadId] = useState(() => searchParams.get('threadId') || '');
   const [threadDetail, setThreadDetail] = useState<MailThreadDetail | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [threadLoading, setThreadLoading] = useState(false);
+  const [accountStateLoading, setAccountStateLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [naverForm, setNaverForm] = useState({ appPassword: '', displayName: '', email: '' });
@@ -133,7 +134,7 @@ export function MailboxPanel({ mode }: MailboxPanelProps) {
   useEffect(() => {
     void (async () => {
       try {
-        setLoading(true);
+        setAccountStateLoading(true);
         const [response, providerResponse] = await Promise.all([
           fetchMailAccounts(),
           fetchMailProviderStatuses(),
@@ -144,7 +145,7 @@ export function MailboxPanel({ mode }: MailboxPanelProps) {
       } catch (nextError) {
         setError(nextError instanceof Error ? nextError.message : '메일 계정을 불러오지 못했습니다.');
       } finally {
-        setLoading(false);
+        setAccountStateLoading(false);
       }
     })();
   }, []);
@@ -153,6 +154,7 @@ export function MailboxPanel({ mode }: MailboxPanelProps) {
     if (tab !== 'accounts') return;
     void (async () => {
       try {
+        setAccountStateLoading(true);
         const [response, providerResponse] = await Promise.all([
           fetchMailAccounts(),
           fetchMailProviderStatuses(),
@@ -164,6 +166,8 @@ export function MailboxPanel({ mode }: MailboxPanelProps) {
         );
       } catch (nextError) {
         setError(nextError instanceof Error ? nextError.message : '메일 계정 상태를 새로고침하지 못했습니다.');
+      } finally {
+        setAccountStateLoading(false);
       }
     })();
   }, [tab]);
@@ -176,7 +180,7 @@ export function MailboxPanel({ mode }: MailboxPanelProps) {
     if (tab === 'accounts') return;
     void (async () => {
       try {
-        setLoading(true);
+        setThreadLoading(true);
         setError(null);
         const response = await fetchMailThreads({
           accountId: selectedAccountId,
@@ -198,7 +202,7 @@ export function MailboxPanel({ mode }: MailboxPanelProps) {
       } catch (nextError) {
         setError(nextError instanceof Error ? nextError.message : '메일 스레드를 불러오지 못했습니다.');
       } finally {
-        setLoading(false);
+        setThreadLoading(false);
       }
     })();
   }, [headquarterId, query, reportKey, selectedAccountId, siteId, tab, threadOffset]);
@@ -210,7 +214,7 @@ export function MailboxPanel({ mode }: MailboxPanelProps) {
     }
     void (async () => {
       try {
-        setLoading(true);
+        setThreadLoading(true);
         const detail = await fetchMailThreadDetail(selectedThreadId);
         setThreadDetail(detail);
         if (!compose.subject) {
@@ -223,7 +227,7 @@ export function MailboxPanel({ mode }: MailboxPanelProps) {
       } catch (nextError) {
         setError(nextError instanceof Error ? nextError.message : '메일 스레드 상세를 불러오지 못했습니다.');
       } finally {
-        setLoading(false);
+        setThreadLoading(false);
       }
     })();
   }, [compose.subject, selectedAccount, selectedThreadId, tab]);
@@ -247,7 +251,7 @@ export function MailboxPanel({ mode }: MailboxPanelProps) {
 
   const handleRefreshAccountState = async () => {
     try {
-      setLoading(true);
+      setAccountStateLoading(true);
       setError(null);
       const [response, providerResponse] = await Promise.all([
         fetchMailAccounts(),
@@ -262,7 +266,7 @@ export function MailboxPanel({ mode }: MailboxPanelProps) {
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : '메일 계정 상태를 새로고침하지 못했습니다.');
     } finally {
-      setLoading(false);
+      setAccountStateLoading(false);
     }
   };
 
@@ -464,7 +468,7 @@ export function MailboxPanel({ mode }: MailboxPanelProps) {
                   type="button"
                   className="app-button app-button-secondary"
                   onClick={() => void handleRefreshAccountState()}
-                  disabled={loading}
+                  disabled={accountStateLoading}
                 >
                   상태 새로고침
                 </button>
@@ -609,7 +613,7 @@ export function MailboxPanel({ mode }: MailboxPanelProps) {
               <div className={localStyles.threadList}>
                 {threads.length === 0 ? (
                   <div className={localStyles.emptyState}>
-                    {loading ? '메일을 불러오는 중입니다.' : '조건에 맞는 메일 스레드가 없습니다.'}
+                    {threadLoading ? '메일을 불러오는 중입니다.' : '조건에 맞는 메일 스레드가 없습니다.'}
                   </div>
                 ) : (
                   threads.map((thread) => (
