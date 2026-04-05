@@ -18,7 +18,7 @@ import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { useSiteOperationalReports } from '@/hooks/useSiteOperationalReports';
 import {
   fetchQuarterlyHwpxDocument,
-  fetchQuarterlyPdfDocument,
+  fetchQuarterlyPdfDocumentWithFallback,
   saveBlobAsFile,
 } from '@/lib/api';
 import { isAdminUserRole } from '@/lib/admin';
@@ -854,9 +854,16 @@ function QuarterlyReportEditor({
   const handleDownloadPdf = async () => {
     try {
       setDocumentError(null);
+      setNotice(null);
       setIsGeneratingPdf(true);
-      const { blob, filename } = await fetchQuarterlyPdfDocument(draft, currentSite);
+      const { blob, fallbackToHwpx, filename } = await fetchQuarterlyPdfDocumentWithFallback(
+        draft,
+        currentSite,
+      );
       saveBlobAsFile(blob, filename);
+      if (fallbackToHwpx) {
+        setNotice('PDF 변환에 실패해 HWPX로 다운로드했습니다.');
+      }
     } catch (nextError) {
       setDocumentError(
         nextError instanceof Error ? nextError.message : 'PDF瑜??ㅼ슫濡쒕뱶?섎뒗 以??ㅻ쪟媛 諛쒖깮?덉뒿?덈떎.',

@@ -6,6 +6,8 @@ import path from 'path';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 
+import { getSafetyApiUpstreamBaseUrl } from '@/lib/safetyApi/upstream';
+
 const execFileAsync = promisify(execFile);
 const POWERSHELL_PATH = 'powershell.exe';
 const HWP_AUTOMATION_MODULE = 'FilePathCheckerModuleExample';
@@ -14,9 +16,15 @@ const REMOTE_CONVERTER_URL_ENV_KEYS = [
   'HWPX_PDF_CONVERTER_URL',
   'WINDOWS_HWPX_PDF_CONVERTER_URL',
 ] as const;
+const REMOTE_CONVERTER_UPSTREAM_ENV_KEYS = [
+  'INSPECTION_PDF_UPSTREAM_BASE_URL',
+  'NEXT_PUBLIC_INSPECTION_PDF_UPSTREAM_BASE_URL',
+] as const;
 const REMOTE_CONVERTER_API_KEY_ENV_KEYS = [
   'HWPX_PDF_API_KEY',
   'WINDOWS_HWPX_PDF_API_KEY',
+  'SAFETY_INTERNAL_API_KEY',
+  'INTERNAL_API_KEY',
 ] as const;
 const REMOTE_WARNING_HEADER = 'x-inspection-pdf-warnings';
 
@@ -35,15 +43,38 @@ function toPdfFilename(filename: string): string {
   return `${stem || 'inspection-report'}.pdf`;
 }
 
+function normalizeUrl(value: string): string {
+  return value.replace(/\/+$/, '');
+}
+
+function buildRemoteConverterUrl(baseUrl: string): string | null {
+  try {
+    const origin = new URL(baseUrl).origin;
+    return `${origin}/api/v1/documents/inspection/pdf`;
+  } catch {
+    return null;
+  }
+}
+
 function getRemoteConverterUrl(): string | null {
   for (const envKey of REMOTE_CONVERTER_URL_ENV_KEYS) {
     const configured = process.env[envKey]?.trim();
     if (configured) {
-      return configured.replace(/\/+$/, '');
+      return normalizeUrl(configured);
     }
   }
 
-  return null;
+  for (const envKey of REMOTE_CONVERTER_UPSTREAM_ENV_KEYS) {
+    const configured = process.env[envKey]?.trim();
+    if (configured) {
+      const derived = buildRemoteConverterUrl(configured);
+      if (derived) {
+        return derived;
+      }
+    }
+  }
+
+  return buildRemoteConverterUrl(getSafetyApiUpstreamBaseUrl());
 }
 
 function getRemoteConverterApiKey(): string | null {

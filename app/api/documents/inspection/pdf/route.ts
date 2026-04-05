@@ -7,18 +7,23 @@ import type { GenerateInspectionHwpxRequest } from '@/types/documents';
 export const runtime = 'nodejs';
 export const maxDuration = 300;
 
-function hasRemoteConverterConfigured(): boolean {
-  return Boolean(
-    process.env.HWPX_PDF_CONVERTER_URL?.trim() ||
-      process.env.WINDOWS_HWPX_PDF_CONVERTER_URL?.trim(),
-  );
-}
+function getPdfRouteStatus(message: string): number {
+  if (
+    message.includes('must be configured') ||
+    message.includes('required outside Windows') ||
+    message.includes('Internal API key') ||
+    message.includes('Invalid internal API key') ||
+    message.includes('header is required') ||
+    message.includes('Not authenticated')
+  ) {
+    return 503;
+  }
 
-function hasRemoteConverterApiKeyConfigured(): boolean {
-  return Boolean(
-    process.env.HWPX_PDF_API_KEY?.trim() ||
-      process.env.WINDOWS_HWPX_PDF_API_KEY?.trim(),
-  );
+  if (message.startsWith('HWPX PDF conversion failed:')) {
+    return 502;
+  }
+
+  return 500;
 }
 
 async function readHwpxFromRequest(
@@ -68,24 +73,6 @@ async function readHwpxFromRequest(
 
 export async function POST(request: Request): Promise<Response> {
   try {
-    if (!hasRemoteConverterConfigured()) {
-      return NextResponse.json(
-        {
-          error: 'PDF 변환용 Windows FastAPI 서버 URL이 필요합니다.',
-        },
-        { status: 500 },
-      );
-    }
-
-    if (!hasRemoteConverterApiKeyConfigured()) {
-      return NextResponse.json(
-        {
-          error: 'PDF 변환용 Windows FastAPI 서버 API 키가 필요합니다.',
-        },
-        { status: 500 },
-      );
-    }
-
     const payload = await readHwpxFromRequest(request);
     if (payload instanceof Response) {
       return payload;
@@ -104,14 +91,15 @@ export async function POST(request: Request): Promise<Response> {
       },
     });
   } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : 'PDF 생성 중 알 수 없는 오류가 발생했습니다.';
+    const status = getPdfRouteStatus(message);
+
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : 'PDF 생성 중 알 수 없는 오류가 발생했습니다.',
-      },
-      { status: 500 },
+      { error: message },
+      { status },
     );
   }
 }

@@ -69,6 +69,13 @@ async function fetchDocumentFile<TBody>(
   };
 }
 
+export interface PdfDocumentResult {
+  blob: Blob;
+  filename: string;
+  fallbackToHwpx: boolean;
+  fallbackReason?: string;
+}
+
 export function saveBlobAsFile(blob: Blob, filename: string): void {
   const blobUrl = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -126,6 +133,27 @@ export async function convertHwpxBlobToPdf(
   };
 }
 
+export async function convertHwpxBlobToPdfWithFallback(
+  hwpxBlob: Blob,
+  hwpxFilename: string,
+): Promise<PdfDocumentResult> {
+  try {
+    const converted = await convertHwpxBlobToPdf(hwpxBlob, hwpxFilename);
+    return { ...converted, fallbackToHwpx: false };
+  } catch (error) {
+    console.warn('Inspection PDF generation failed; falling back to HWPX download.', {
+      error: error instanceof Error ? error.message : String(error),
+      filename: hwpxFilename,
+    });
+    return {
+      blob: hwpxBlob,
+      fallbackReason: error instanceof Error ? error.message : 'PDF 변환에 실패했습니다.',
+      fallbackToHwpx: true,
+      filename: hwpxFilename || 'inspection-report.hwpx',
+    };
+  }
+}
+
 export async function fetchInspectionHwpxDocument(
   session: InspectionSession,
   siteSessions?: InspectionSession[],
@@ -154,6 +182,27 @@ export async function fetchInspectionPdfDocument(
   );
 }
 
+export async function fetchInspectionPdfDocumentWithFallback(
+  session: InspectionSession,
+  siteSessions?: InspectionSession[],
+): Promise<PdfDocumentResult> {
+  try {
+    const pdf = await fetchInspectionPdfDocument(session, siteSessions);
+    return { ...pdf, fallbackToHwpx: false };
+  } catch (error) {
+    console.warn('Inspection PDF server generation failed; falling back to HWPX generation.', {
+      error: error instanceof Error ? error.message : String(error),
+      sessionId: session.id,
+    });
+    const hwpx = await fetchInspectionHwpxDocument(session, siteSessions);
+    return {
+      ...hwpx,
+      fallbackReason: error instanceof Error ? error.message : 'PDF 생성에 실패했습니다.',
+      fallbackToHwpx: true,
+    };
+  }
+}
+
 export async function fetchQuarterlyHwpxDocument(
   report: QuarterlySummaryReport,
   site: InspectionSite,
@@ -176,4 +225,26 @@ export async function fetchQuarterlyPdfDocument(
     body,
     '분기 보고서 PDF 다운로드 실패',
   );
+}
+
+export async function fetchQuarterlyPdfDocumentWithFallback(
+  report: QuarterlySummaryReport,
+  site: InspectionSite,
+): Promise<PdfDocumentResult> {
+  try {
+    const pdf = await fetchQuarterlyPdfDocument(report, site);
+    return { ...pdf, fallbackToHwpx: false };
+  } catch (error) {
+    console.warn('Quarterly PDF generation failed; falling back to HWPX download.', {
+      error: error instanceof Error ? error.message : String(error),
+      reportId: report.id,
+      siteKey: site.siteKey,
+    });
+    const hwpx = await fetchQuarterlyHwpxDocument(report, site);
+    return {
+      ...hwpx,
+      fallbackReason: error instanceof Error ? error.message : 'PDF 생성에 실패했습니다.',
+      fallbackToHwpx: true,
+    };
+  }
 }
