@@ -23,6 +23,7 @@ import { exportAdminWorkbook } from '@/lib/admin/exportClient';
 import {
   buildSiteMemoWithContractProfile,
   parseSiteContractProfile,
+  parseSiteRequiredCompletionFields,
   parseSiteMemoNote,
 } from '@/lib/admin/siteContractProfile';
 import type {
@@ -416,7 +417,7 @@ export function SitesSection(props: SitesSectionProps) {
               }
               disabled={busy}
             >
-              업로드
+              엑셀 업로드
             </button>
           ) : null}
           <button
@@ -576,6 +577,10 @@ export function SitesSection(props: SitesSectionProps) {
                   {sortedSites.map((site) => {
                     const siteAssignments = activeAssignmentsBySiteId.get(site.id) ?? [];
                     const contractProfile = parseSiteContractProfile(site);
+                    const requiredCompletionFields =
+                      site.required_completion_fields?.length
+                        ? site.required_completion_fields
+                        : parseSiteRequiredCompletionFields(site);
                     const assignedUsers = siteAssignments
                       .map((assignment) => usersById.get(assignment.user_id))
                       .filter((user): user is SafetyUser => Boolean(user));
@@ -606,13 +611,13 @@ export function SitesSection(props: SitesSectionProps) {
                           <div className={styles.tableSecondary}>
                             {site.site_address || '주소 미입력'}
                           </div>
-                          {site.required_completion_fields?.length ? (
+                          {requiredCompletionFields.length ? (
                             <div className={styles.tableSecondary}>
                               <span className="app-chip">
-                                보완 필요 {site.required_completion_fields.length}건
+                                보완 필요 {requiredCompletionFields.length}건
                               </span>
                               {' '}
-                              {site.required_completion_fields.join(', ')}
+                              {requiredCompletionFields.join(', ')}
                             </div>
                           ) : null}
                         </td>
@@ -687,7 +692,7 @@ export function SitesSection(props: SitesSectionProps) {
                                 ...(onExcelUploadRequest
                                   ? [
                                       {
-                                        label: '업로드',
+                                        label: '엑셀 업로드',
                                         onSelect: () =>
                                           onExcelUploadRequest({
                                             headquarterId: lockedHeadquarterId,

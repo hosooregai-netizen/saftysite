@@ -4,6 +4,7 @@ import {
   readRequiredAdminToken,
   SafetyServerApiError,
 } from '@/server/admin/safetyApiServer';
+import { fetchLocalK2bPreview, LocalK2bImportError } from '@/server/k2b/localImport';
 import { mapBackendK2bImportPreview } from '@/server/admin/upstreamMappers';
 
 export const runtime = 'nodejs';
@@ -15,11 +16,21 @@ export async function GET(
   try {
     const token = readRequiredAdminToken(request);
     const { jobId } = await context.params;
-    return NextResponse.json(
-      mapBackendK2bImportPreview(await fetchK2bImportPreviewServer(token, jobId, request)),
-    );
+    try {
+      return NextResponse.json(
+        mapBackendK2bImportPreview(await fetchK2bImportPreviewServer(token, jobId, request)),
+      );
+    } catch (error) {
+      if (error instanceof SafetyServerApiError && error.status === 404) {
+        return NextResponse.json(await fetchLocalK2bPreview(jobId));
+      }
+      throw error;
+    }
   } catch (error) {
     if (error instanceof SafetyServerApiError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    if (error instanceof LocalK2bImportError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
     return NextResponse.json(

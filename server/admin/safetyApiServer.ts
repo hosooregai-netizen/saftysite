@@ -303,6 +303,21 @@ export function fetchSafetySitesServer(
   );
 }
 
+export function fetchSafetyHeadquartersServer(
+  token: string,
+  request: Request | null = null,
+): Promise<SafetyHeadquarter[]> {
+  return requestSafetyAdminServer<SafetyHeadquarter[]>(
+    withQuery('/headquarters', {
+      active_only: true,
+      limit: ADMIN_LIST_LIMIT,
+    }),
+    {},
+    token,
+    request,
+  );
+}
+
 export function fetchCurrentSafetyUserServer(
   token: string,
   request: Request | null = null,
@@ -997,6 +1012,64 @@ export function updateAdminSite(
     `/sites/${encodeURIComponent(siteId)}`,
     {
       method: 'PATCH',
+      body: JSON.stringify(payload),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    },
+    token,
+    request,
+  );
+}
+
+export function createAdminHeadquarter(
+  token: string,
+  payload: SafetyHeadquarterInput | SafetyHeadquarterUpdateInput,
+  request: Request | null = null,
+): Promise<SafetyHeadquarter> {
+  return requestSafetyAdminServer<SafetyHeadquarter>(
+    '/headquarters',
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    },
+    token,
+    request,
+  );
+}
+
+export function updateAdminHeadquarter(
+  token: string,
+  headquarterId: string,
+  payload: SafetyHeadquarterInput | SafetyHeadquarterUpdateInput,
+  request: Request | null = null,
+): Promise<SafetyHeadquarter> {
+  return requestSafetyAdminServer<SafetyHeadquarter>(
+    `/headquarters/${encodeURIComponent(headquarterId)}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    },
+    token,
+    request,
+  );
+}
+
+export function createAdminSite(
+  token: string,
+  payload: SafetySiteInput | SafetySiteUpdateInput,
+  request: Request | null = null,
+): Promise<SafetySite> {
+  return requestSafetyAdminServer<SafetySite>(
+    '/sites',
+    {
+      method: 'POST',
       body: JSON.stringify(payload),
       headers: {
         'Content-Type': 'application/json',

@@ -25,6 +25,7 @@ type SiteMemoWithContractFields = Pick<SafetySite, 'memo'> & Partial<SiteContrac
 interface StoredSiteMetaEnvelope {
   contractProfile?: Partial<SiteContractProfile>;
   photoAssets?: Array<Partial<SafetyPhotoAsset>>;
+  requiredCompletionFields?: string[];
   schedules?: Array<Partial<SafetyInspectionSchedule>>;
   note?: string;
 }
@@ -281,6 +282,18 @@ export function parseSitePhotoAssets(
     .filter((item): item is SafetyPhotoAsset => Boolean(item));
 }
 
+export function parseSiteRequiredCompletionFields(
+  siteOrMemo: SiteMemoWithContractFields | string | null | undefined,
+): string[] {
+  const memo = typeof siteOrMemo === 'string' || siteOrMemo == null ? siteOrMemo : siteOrMemo.memo;
+  const envelope = parseEnvelope(memo);
+  if (!Array.isArray(envelope?.requiredCompletionFields)) {
+    return [];
+  }
+
+  return envelope.requiredCompletionFields.map((item) => normalizeText(item)).filter(Boolean);
+}
+
 export function hasSiteContractProfile(profile: SiteContractProfile | null | undefined): boolean {
   return Boolean(
     profile &&
@@ -299,6 +312,7 @@ export function buildSiteMemoWithContractProfile(
   options?: {
     existingMemo?: string | null;
     photoAssets?: SafetyPhotoAsset[];
+    requiredCompletionFields?: string[];
     schedules?: SafetyInspectionSchedule[];
   },
 ): string | null {
@@ -315,18 +329,27 @@ export function buildSiteMemoWithContractProfile(
         .map((item) => normalizeSiteInspectionSchedule(item))
         .filter((item): item is SafetyInspectionSchedule => Boolean(item))
     : parseSiteInspectionSchedules(options?.existingMemo);
+  const normalizedRequiredCompletionFields = Array.isArray(options?.requiredCompletionFields)
+    ? options.requiredCompletionFields.map((item) => normalizeText(item)).filter(Boolean)
+    : parseSiteRequiredCompletionFields(options?.existingMemo);
   const hasProfile = hasSiteContractProfile(normalizedProfile);
 
   if (
     !normalizedNote &&
     !hasProfile &&
     normalizedSchedules.length === 0 &&
-    normalizedPhotoAssets.length === 0
+    normalizedPhotoAssets.length === 0 &&
+    normalizedRequiredCompletionFields.length === 0
   ) {
     return null;
   }
 
-  if (!hasProfile && normalizedSchedules.length === 0 && normalizedPhotoAssets.length === 0) {
+  if (
+    !hasProfile &&
+    normalizedSchedules.length === 0 &&
+    normalizedPhotoAssets.length === 0 &&
+    normalizedRequiredCompletionFields.length === 0
+  ) {
     return normalizedNote || null;
   }
 
@@ -334,6 +357,8 @@ export function buildSiteMemoWithContractProfile(
     ...existingEnvelope,
     contractProfile: hasProfile ? normalizedProfile : undefined,
     photoAssets: normalizedPhotoAssets.length > 0 ? normalizedPhotoAssets : undefined,
+    requiredCompletionFields:
+      normalizedRequiredCompletionFields.length > 0 ? normalizedRequiredCompletionFields : undefined,
     schedules: normalizedSchedules.length > 0 ? normalizedSchedules : undefined,
   };
 
@@ -351,6 +376,24 @@ export function buildSiteMemoWithPhotoAssets(
     {
       existingMemo,
       photoAssets,
+      requiredCompletionFields: parseSiteRequiredCompletionFields(siteOrMemo),
+      schedules: parseSiteInspectionSchedules(siteOrMemo),
+    },
+  );
+}
+
+export function buildSiteMemoWithRequiredCompletionFields(
+  siteOrMemo: SiteMemoWithContractFields | string | null | undefined,
+  requiredCompletionFields: string[],
+): string | null {
+  const existingMemo = typeof siteOrMemo === 'string' || siteOrMemo == null ? siteOrMemo : siteOrMemo.memo;
+  return buildSiteMemoWithContractProfile(
+    parseSiteMemoNote(existingMemo),
+    parseSiteContractProfile(siteOrMemo),
+    {
+      existingMemo,
+      photoAssets: parseSitePhotoAssets(siteOrMemo),
+      requiredCompletionFields,
       schedules: parseSiteInspectionSchedules(siteOrMemo),
     },
   );
