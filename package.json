@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "rundev": "node scripts/rundev.mjs",
-    "dev": "next dev --webpack",
+    "dev": "node scripts/rundev.mjs",
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint .",
