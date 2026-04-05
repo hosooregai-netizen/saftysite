@@ -148,6 +148,7 @@ export function AdminMenuPanel({
                 <span className={styles.menuLabel}>
                   {ADMIN_MENU_LABELS[section.key] ?? section.label}
                 </span>
+                <span className={styles.menuDescription}>{section.description}</span>
               </button>
             ) : (
               <Link
@@ -166,6 +167,7 @@ export function AdminMenuPanel({
                 <span className={styles.menuLabel}>
                   {ADMIN_MENU_LABELS[section.key] ?? section.label}
                 </span>
+                <span className={styles.menuDescription}>{section.description}</span>
               </Link>
             ),
           )}
@@ -189,6 +191,7 @@ export function AdminMenuPanel({
                 title={forceExpanded ? undefined : item.label}
               >
                 <span className={styles.menuLabel}>{item.label}</span>
+                <span className={styles.menuDescription}>{item.description}</span>
               </Link>
             ))}
           </div>

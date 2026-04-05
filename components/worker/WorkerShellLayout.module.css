@@ -8,6 +8,8 @@
   align-items: stretch;
   overflow: hidden;
   transition: grid-template-columns 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  background:
+    linear-gradient(180deg, rgba(247, 250, 255, 0.9), rgba(255, 255, 255, 0.98));
 }
 
 .workerShellBodyCollapsed {
@@ -26,9 +28,9 @@
   .workerShellBodyGradient {
     background: linear-gradient(
       90deg,
-      #f6f9fc 0,
-      #f6f9fc 248px,
-      var(--erp-white) 248px
+      #f3f7fd 0,
+      #f3f7fd 248px,
+      rgba(255, 255, 255, 0.98) 248px
     );
     transition: background 0.28s cubic-bezier(0.4, 0, 0.2, 1);
   }
@@ -36,9 +38,9 @@
   .workerShellBodyGradient.workerShellBodyCollapsed {
     background: linear-gradient(
       90deg,
-      #f6f9fc 0,
-      #f6f9fc 56px,
-      var(--erp-white) 56px
+      #f3f7fd 0,
+      #f3f7fd 56px,
+      rgba(255, 255, 255, 0.98) 56px
     );
   }
 }
@@ -54,8 +56,10 @@
   max-height: 100dvh;
   overflow: hidden;
   border-right: 1px solid var(--erp-line);
-  background: #f6f9fc;
-  padding: 12px 10px 18px;
+  background:
+    linear-gradient(180deg, rgba(248, 251, 255, 0.98), rgba(240, 246, 253, 0.98));
+  padding: 14px 12px 20px;
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.8);
   transition: padding 0.28s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -88,8 +92,8 @@
   margin-bottom: 8px;
   padding: 0 8px;
   border: none;
-  border-radius: 6px;
-  background: transparent;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.75);
   color: var(--erp-mid);
   line-height: 0;
   cursor: pointer;
@@ -108,7 +112,7 @@
 }
 
 .sidebarToggle:hover {
-  background: rgba(31, 48, 69, 0.07);
+  background: rgba(255, 255, 255, 0.96);
   color: var(--erp-dark);
 }
 
@@ -129,4 +133,3 @@
   outline: 2px solid var(--erp-mid);
   outline-offset: 2px;
 }
-

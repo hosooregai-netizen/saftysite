@@ -208,7 +208,12 @@ export function WorkerMenuPanel({
                     <span className={styles.srOnly}>{item.label}</span>
                   </>
                 ) : (
-                  <span className={styles.menuItemLabel}>{item.label}</span>
+                  <>
+                    <span className={styles.menuItemLabel}>{item.label}</span>
+                    {item.description ? (
+                      <span className={styles.menuItemDescription}>{item.description}</span>
+                    ) : null}
+                  </>
                 )}
               </Link>
             ))}

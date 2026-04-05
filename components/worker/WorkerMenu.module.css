@@ -39,30 +39,38 @@
 .menuItem {
   display: grid;
   gap: 4px;
-  padding: 12px 12px 12px 14px;
+  padding: 13px 14px 13px 16px;
   border: none;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.95);
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(247, 250, 255, 0.92));
   text-align: left;
   color: var(--erp-dark);
   text-decoration: none;
-  box-shadow: inset 0 0 0 1px rgba(219, 226, 234, 0.65);
+  box-shadow:
+    inset 0 0 0 1px rgba(215, 224, 235, 0.75),
+    0 8px 16px rgba(16, 24, 43, 0.03);
   transition:
     background-color 0.2s ease,
-    box-shadow 0.2s ease;
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
 }
 
 .menuItem:hover {
   background: rgba(255, 255, 255, 1);
-  box-shadow: inset 0 0 0 1px rgba(188, 199, 211, 0.9);
+  box-shadow:
+    inset 0 0 0 1px rgba(188, 199, 211, 0.92),
+    0 12px 24px rgba(16, 24, 43, 0.06);
+  transform: translateY(-1px);
 }
 
 .menuItemActive {
-  border-radius: 4px;
-  background: rgba(31, 48, 69, 0.06);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(31, 48, 69, 0.08), rgba(31, 48, 69, 0.06));
   box-shadow:
     inset 4px 0 0 var(--erp-navy),
-    inset 0 0 0 1px rgba(219, 226, 234, 0.35);
+    inset 0 0 0 1px rgba(219, 226, 234, 0.35),
+    0 10px 20px rgba(16, 24, 43, 0.05);
 }
 
 .menuItemActive:hover {
@@ -79,6 +87,8 @@
   font-size: var(--text-ui-sm);
   line-height: 1.5;
   color: var(--erp-text-muted);
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 
 /* 확장: 기술 지도 — 제목·부제 한 줄 (가로 배치) */
@@ -145,7 +155,7 @@
   justify-content: center;
   width: 28px;
   height: 28px;
-  border-radius: 1px;
+  border-radius: 999px;
   background: rgba(31, 48, 69, 0.08);
   font-size: var(--text-body);
   font-weight: 800;
@@ -153,7 +163,7 @@
 }
 
 .menuItemActive .menuItemGlyph {
-  border-radius: 0;
+  border-radius: 999px;
   background: rgba(31, 48, 69, 0.16);
   color: var(--erp-navy);
 }
@@ -218,4 +228,3 @@
   overflow: hidden;
   min-height: 0;
 }
-
