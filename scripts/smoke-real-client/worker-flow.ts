@@ -77,7 +77,16 @@ export async function runWorkerFlow(page: Page): Promise<WorkerFlowResult> {
   await page.getByRole('button', { name: '연결 계정' }).click();
   await page.getByRole('button', { name: /구글 로그인으로 연결/ }).first().waitFor();
 
-  await page.goto(`${baseUrl}/sites/${seed.site1Id}/photos`, { waitUntil: 'load' });
+  await Promise.all([
+    page.waitForResponse((response) => {
+      return (
+        response.url().includes('/api/photos') &&
+        response.url().includes('all=true') &&
+        response.ok()
+      );
+    }),
+    page.goto(`${baseUrl}/sites/${seed.site1Id}/photos`, { waitUntil: 'load' }),
+  ]);
   await page.getByText('현장 사진첩 - 테스트 현장 A').first().waitFor();
   const beforeCount = await page.locator('article').count();
   await page.locator('input[type="file"]').setInputFiles({
