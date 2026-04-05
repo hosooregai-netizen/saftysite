@@ -27,6 +27,7 @@ import {
   buildInitialQuarterlySummaryReport,
   createQuarterlySummaryDraft,
 } from '@/lib/erpReports/quarterly';
+import { mapSafetyReportToQuarterlySummaryReport } from '@/lib/erpReports/mappers';
 import {
   buildQuarterlyTitleForPeriod,
   createQuarterKey,
@@ -38,7 +39,9 @@ import {
 import {
   fetchQuarterlySummarySeed,
   fetchSafetyContentItems,
+  fetchSafetyReportByKey,
   readSafetyAuthToken,
+  SafetyApiError,
 } from '@/lib/safetyApi';
 import {
   contentBodyToAssetName,
@@ -103,27 +106,85 @@ export default function QuarterlyReportPage({ params }: QuarterlyReportPageProps
     () => sites.find((site) => site.id === decodedSiteKey) ?? null,
     [decodedSiteKey, sites],
   );
-  const { quarterlyReports, isSaving, error, saveQuarterlyReport } =
-    useSiteOperationalReports(currentSite);
+  const { isSaving, error, saveQuarterlyReport } =
+    useSiteOperationalReports(currentSite, false);
+  const [existingReport, setExistingReport] = useState<QuarterlySummaryReport | null>(null);
+  const [existingReportLoading, setExistingReportLoading] = useState(false);
+  const [existingReportError, setExistingReportError] = useState<string | null>(null);
   const isAdminView = Boolean(currentUser && isAdminUserRole(currentUser.role));
   const backHref = currentSite ? buildSiteQuarterlyListHref(currentSite.id) : '/';
   const backLabel = '遺꾧린 醫낇빀 蹂닿퀬??紐⑸줉';
-  const existing = useMemo(
-    () =>
-      quarterlyReports.find(
-        (item) => item.id === decodedReportId || item.quarterKey === decodedReportId,
-      ) || null,
-    [decodedReportId, quarterlyReports],
-  );
-  const initialDraft = useMemo(() => {
-    if (!currentSite) return null;
+  useEffect(() => {
+    if (!isReady || !isAuthenticated || !currentSite) {
+      queueMicrotask(() => {
+        setExistingReport(null);
+        setExistingReportLoading(false);
+        setExistingReportError(null);
+      });
+      return;
+    }
 
-    if (existing) {
+    const token = readSafetyAuthToken();
+    if (!token) {
+      queueMicrotask(() => {
+        setExistingReport(null);
+        setExistingReportLoading(false);
+        setExistingReportError('로그인이 만료되었습니다. 다시 로그인해 주세요.');
+      });
+      return;
+    }
+
+    let cancelled = false;
+    queueMicrotask(() => {
+      setExistingReportLoading(true);
+      setExistingReportError(null);
+    });
+
+    void fetchSafetyReportByKey(token, decodedReportId)
+      .then((report) => {
+        if (cancelled) {
+          return;
+        }
+
+        const mappedReport = mapSafetyReportToQuarterlySummaryReport(report);
+        setExistingReport(
+          mappedReport && mappedReport.siteId === currentSite.id ? mappedReport : null,
+        );
+      })
+      .catch((nextError) => {
+        if (cancelled) {
+          return;
+        }
+
+        if (nextError instanceof SafetyApiError && nextError.status === 404) {
+          setExistingReport(null);
+          setExistingReportError(null);
+          return;
+        }
+
+        setExistingReport(null);
+        setExistingReportError(getSeedLoadErrorMessage(nextError));
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setExistingReportLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentSite, decodedReportId, isAuthenticated, isReady]);
+
+  const initialDraft = useMemo(() => {
+    if (!currentSite || existingReportLoading || existingReportError) return null;
+
+    if (existingReport) {
       return buildInitialQuarterlySummaryReport(
         currentSite,
         [],
         currentUser?.name || currentSite.assigneeName,
-        existing,
+        existingReport,
       );
     }
 
@@ -134,12 +195,19 @@ export default function QuarterlyReportPage({ params }: QuarterlyReportPageProps
       ),
       id: decodedReportId,
     };
-  }, [currentSite, currentUser?.name, decodedReportId, existing]);
+  }, [
+    currentSite,
+    currentUser?.name,
+    decodedReportId,
+    existingReport,
+    existingReportError,
+    existingReportLoading,
+  ]);
   const photoAlbumHref = currentSite
     ? buildSitePhotoAlbumHref(currentSite.id, {
         backHref: `/sites/${encodeURIComponent(currentSite.id)}/quarterly/${encodeURIComponent(decodedReportId)}`,
         backLabel: '분기 보고서로 돌아가기',
-        reportTitle: initialDraft?.title || existing?.title || '',
+        reportTitle: initialDraft?.title || existingReport?.title || '',
       })
     : null;
 
@@ -164,6 +232,26 @@ export default function QuarterlyReportPage({ params }: QuarterlyReportPageProps
     );
   }
 
+  if (existingReportLoading) {
+    return (
+      <main className="app-page">
+        <div className="app-container">
+          <section className={operationalStyles.sectionCard}>분기 보고서를 불러오는 중입니다.</section>
+        </div>
+      </main>
+    );
+  }
+
+  if (existingReportError) {
+    return (
+      <main className="app-page">
+        <div className="app-container">
+          <section className={operationalStyles.sectionCard}>{existingReportError}</section>
+        </div>
+      </main>
+    );
+  }
+
   if (!currentSite || !initialDraft) {
     return (
       <main className="app-page">
@@ -181,6 +269,7 @@ export default function QuarterlyReportPage({ params }: QuarterlyReportPageProps
       <div className="app-container">
         <section className={`app-shell ${shellStyles.shell}`}>
           <WorkerAppHeader
+            brandHref={isAdminView ? '/admin' : '/'}
             currentUserName={currentUser?.name}
             onLogout={logout}
             onOpenMenu={() => setMenuOpen(true)}
@@ -221,7 +310,7 @@ export default function QuarterlyReportPage({ params }: QuarterlyReportPageProps
                   key={`${initialDraft.id}:${initialDraft.updatedAt}`}
                   currentSite={currentSite}
                   initialDraft={initialDraft}
-                  isExistingReport={Boolean(existing)}
+                  isExistingReport={Boolean(existingReport)}
                   isSaving={isSaving}
                   error={error}
                   onSave={saveQuarterlyReport}

@@ -104,6 +104,7 @@ function buildLocalReportIndexItems(
   siteId: string,
   sessions: InspectionSession[],
   sites: InspectionSite[],
+  dirtySessionIds: Set<string>,
 ) {
   const site = sites.find((item) => item.id === siteId);
   if (!site) {
@@ -111,7 +112,7 @@ function buildLocalReportIndexItems(
   }
 
   return sessions
-    .filter((session) => session.siteKey === siteId)
+    .filter((session) => session.siteKey === siteId && dirtySessionIds.has(session.id))
     .map((session) => mapInspectionSessionToReportListItem(session, site));
 }
 
@@ -168,7 +169,7 @@ function mergeFetchedSiteSessions(
   });
 
   currentSiteSessions.forEach((session) => {
-    if (!fetchedSessionIds.has(session.id)) {
+    if (!fetchedSessionIds.has(session.id) && dirtySessionIds.has(session.id)) {
       mergedSiteSessions.push(session);
     }
   });
@@ -190,6 +191,7 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
     persistSites,
     reportIndexBySiteIdRef,
     resetSessionVersions,
+    sessionVersionsRef,
     setAuthError,
     setCurrentUser,
     setDataError,
@@ -296,15 +298,72 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
 
   const applyHydratedSessions = useCallback(
     async (sessions: InspectionSession[]) => {
+      const nextSessionIds = new Set(sessions.map((session) => session.id));
+      dirtySessionIdsRef.current = new Set(
+        Array.from(dirtySessionIdsRef.current).filter((sessionId) =>
+          nextSessionIds.has(sessionId),
+        ),
+      );
+      sessionVersionsRef.current = sessions.reduce<Record<string, number>>(
+        (accumulator, session) => {
+          accumulator[session.id] = sessionVersionsRef.current[session.id] ?? 0;
+          return accumulator;
+        },
+        {},
+      );
       startTransition(() => {
         setSessionState(sessions);
-        resetSessionVersions(sessions);
       });
       void persistSessions(sessions).catch(() => {
         // Ignore cache persistence failures during optimistic sync.
       });
     },
-    [persistSessions, resetSessionVersions, setSessionState],
+    [
+      dirtySessionIdsRef,
+      persistSessions,
+      sessionVersionsRef,
+      setSessionState,
+    ],
+  );
+
+  const removeSessionFromLocalState = useCallback(
+    async (reportKey: string) => {
+      const nextSessions = normalizeSessions(
+        sessionsRef.current.filter((session) => session.id !== reportKey),
+      );
+      dirtySessionIdsRef.current.delete(reportKey);
+      delete sessionVersionsRef.current[reportKey];
+      await applyHydratedSessions(nextSessions);
+      setReportIndexBySiteId((current) => {
+        let changed = false;
+        const nextState = Object.fromEntries(
+          Object.entries(current).map(([siteId, state]) => {
+            const nextItems = state.items.filter((item) => item.reportKey !== reportKey);
+            const hasRemovedItem = nextItems.length !== state.items.length;
+            if (hasRemovedItem) {
+              changed = true;
+            }
+            return [
+              siteId,
+              hasRemovedItem
+                ? {
+                    ...state,
+                    items: nextItems,
+                  }
+                : state,
+            ];
+          }),
+        );
+        return changed ? nextState : current;
+      });
+    },
+    [
+      applyHydratedSessions,
+      dirtySessionIdsRef,
+      sessionVersionsRef,
+      sessionsRef,
+      setReportIndexBySiteId,
+    ],
   );
 
   const refreshMasterData = useCallback(async () => {
@@ -396,6 +455,7 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
             siteId,
             sessionsRef.current,
             sitesRef.current,
+            dirtySessionIdsRef.current,
           );
 
           setReportIndexBySiteId((current) => ({
@@ -439,6 +499,7 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
     [
       authTokenRef,
       clearAuthState,
+      dirtySessionIdsRef,
       reportIndexBySiteIdRef,
       sessionsRef,
       setAuthError,
@@ -456,7 +517,10 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
         return;
       }
 
-      if (!options?.force && sessionsRef.current.some((session) => session.id === reportKey)) {
+      const hasLocalSession = sessionsRef.current.some((session) => session.id === reportKey);
+      const hasDirtyLocalSession = dirtySessionIdsRef.current.has(reportKey);
+
+      if (!options?.force && hasLocalSession && hasDirtyLocalSession) {
         return;
       }
 
@@ -514,6 +578,8 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
             syncRequestIdRef.current += 1;
             clearAuthState();
             setAuthError('로그인이 만료되었습니다. 다시 로그인해 주세요.');
+          } else if (error instanceof SafetyApiError && error.status === 404) {
+            await removeSessionFromLocalState(reportKey);
           } else {
             setDataError(getErrorMessage(error));
           }
@@ -534,8 +600,10 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
       applyHydratedSessions,
       authTokenRef,
       clearAuthState,
+      dirtySessionIdsRef,
       masterDataRef,
       persistSites,
+      removeSessionFromLocalState,
       sessionsRef,
       setAuthError,
       setDataError,
@@ -627,7 +695,12 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
           const nextSites = site && !sitesRef.current.some((item) => item.id === site.id)
             ? [...sitesRef.current, site]
             : sitesRef.current;
-          const localItems = buildLocalReportIndexItems(siteId, nextSessions, nextSites);
+          const localItems = buildLocalReportIndexItems(
+            siteId,
+            nextSessions,
+            nextSites,
+            dirtySessionIdsRef.current,
+          );
 
           setReportIndexBySiteId((current) => ({
             ...current,

@@ -1,18 +1,19 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { AdminMenuDrawer, AdminMenuPanel } from '@/components/admin/AdminMenu';
-import { INSPECTION_SECTIONS } from '@/constants/inspectionSession';
+import styles from '@/components/session/InspectionSessionWorkspace.module.css';
 import WorkerAppHeader from '@/components/worker/WorkerAppHeader';
-import WorkerMenuSidebar from '@/components/worker/WorkerMenuSidebar';
 import WorkerShellBody from '@/components/worker/WorkerShellBody';
 import { WorkerMenuDrawer, WorkerMenuPanel } from '@/components/worker/WorkerMenu';
-import type { InspectionSectionKey, InspectionSession } from '@/types/inspectionSession';
-import styles from '@/components/session/InspectionSessionWorkspace.module.css';
+import WorkerMenuSidebar from '@/components/worker/WorkerMenuSidebar';
+import { INSPECTION_SECTIONS } from '@/constants/inspectionSession';
 import { WorkspaceHeader } from '@/features/inspection-session/workspace/components/WorkspaceHeader';
 import { WorkspaceMetaModal } from '@/features/inspection-session/workspace/components/WorkspaceMetaModal';
 import { WorkspaceToolbar } from '@/features/inspection-session/workspace/components/WorkspaceToolbar';
+import type { InspectionSectionKey, InspectionSession } from '@/types/inspectionSession';
 
 interface WorkspaceShellProps {
   backHref: string;
@@ -25,6 +26,7 @@ interface WorkspaceShellProps {
   isAdminView: boolean;
   isGeneratingHwpx: boolean;
   isGeneratingPdf: boolean;
+  isInteractive?: boolean;
   moveSection: (direction: -1 | 1) => void;
   onLogout: () => void;
   onMetaChange: (field: keyof InspectionSession['meta'], value: string) => void;
@@ -32,8 +34,8 @@ interface WorkspaceShellProps {
   photoAlbumHref?: string | null;
   progress: { completed: number; total: number; percentage: number };
   relationNotice?: string | null;
-  renderSection: React.ReactNode;
-  sectionToolbar?: React.ReactNode;
+  renderSection: ReactNode;
+  sectionToolbar?: ReactNode;
   session: InspectionSession;
   syncError: string | null;
   uploadError: string | null;
@@ -50,6 +52,7 @@ export function WorkspaceShell({
   isAdminView,
   isGeneratingHwpx,
   isGeneratingPdf,
+  isInteractive = true,
   moveSection,
   onLogout,
   onMetaChange,
@@ -76,6 +79,7 @@ export function WorkspaceShell({
       <div className="app-container">
         <section className={`app-shell ${styles.shell}`}>
           <WorkerAppHeader
+            brandHref={isAdminView ? '/admin' : '/'}
             currentUserName={currentUserName}
             onLogout={onLogout}
             onOpenMenu={() => setMenuOpen(true)}
@@ -99,6 +103,7 @@ export function WorkspaceShell({
                     canMoveNext={canMoveNext}
                     canMovePrev={canMovePrev}
                     currentSection={currentSection}
+                    disabled={!isInteractive}
                     errors={[uploadError, syncError, documentError]}
                     moveSection={moveSection}
                     onOpenMeta={() => setMetaModalOpen(true)}
@@ -124,18 +129,18 @@ export function WorkspaceShell({
                             <button
                               type="button"
                               className="app-button app-button-secondary"
-                              disabled={isGeneratingHwpx || isGeneratingPdf}
+                              disabled={!isInteractive || isGeneratingHwpx || isGeneratingPdf}
                               onClick={() => void generateHwpxDocument()}
                             >
-                              {isGeneratingHwpx ? 'HWPX 생성 중...' : 'HWPX 다운로드'}
+                              {isGeneratingHwpx ? 'HWPX 생성 중..' : 'HWPX 다운로드'}
                             </button>
                             <button
                               type="button"
                               className="app-button app-button-secondary"
-                              disabled={isGeneratingHwpx || isGeneratingPdf}
+                              disabled={!isInteractive || isGeneratingHwpx || isGeneratingPdf}
                               onClick={() => void generatePdfDocument()}
                             >
-                              {isGeneratingPdf ? 'PDF 생성 중...' : 'PDF 다운로드'}
+                              {isGeneratingPdf ? 'PDF 생성 중..' : 'PDF 다운로드'}
                             </button>
                           </div>
                         </div>

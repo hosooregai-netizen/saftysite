@@ -3,9 +3,15 @@
 import { useCallback, useEffect } from 'react';
 import { getSessionSiteKey } from '@/constants/inspectionSession';
 import {
+  applyInspectionSessionInlineImageReplacements,
+  createInspectionSessionInlineImageReplacements,
+  hasInspectionSessionInlineImages,
+} from '@/features/inspection-session/lib/sessionInlineImages';
+import {
   createEmptyReportIndexState,
   mergeReportIndexItems,
 } from '@/hooks/inspectionSessions/helpers';
+import { uploadPhotoAlbumAsset } from '@/lib/photos/apiClient';
 import {
   archiveSafetyReportByKey,
   upsertSafetyReport,
@@ -59,6 +65,43 @@ export function useInspectionSessionsAutosave(store: InspectionSessionsStore) {
     });
   }, [sessionsRef, setSessions]);
 
+  const promoteInlineImages = useCallback(
+    async (session: typeof sessions[number], siteId: string) => {
+      if (!hasInspectionSessionInlineImages(session)) {
+        return session;
+      }
+
+      const replacements = await createInspectionSessionInlineImageReplacements(
+        session,
+        async (file) => {
+          const uploaded = await uploadPhotoAlbumAsset({
+            file,
+            siteId,
+          });
+          return uploaded.previewUrl;
+        },
+      );
+
+      if (replacements.length === 0) {
+        return session;
+      }
+
+      const latestSession =
+        sessionsRef.current.find((item) => item.id === session.id) ?? session;
+      const nextSession = applyInspectionSessionInlineImageReplacements(
+        latestSession,
+        replacements,
+      );
+
+      if (nextSession !== latestSession) {
+        replaceSavedSession(session.id, nextSession);
+      }
+
+      return nextSession;
+    },
+    [replaceSavedSession, sessionsRef],
+  );
+
   const flushDirtySessions = useCallback(async () => {
     if (isFlushingRef.current || !authTokenRef.current || !currentUser) return;
     const pendingSessionIds = Array.from(dirtySessionIdsRef.current);
@@ -79,9 +122,10 @@ export function useInspectionSessionsAutosave(store: InspectionSessionsStore) {
         if (!site) continue;
 
         const versionAtSync = sessionVersionsRef.current[sessionId] ?? 0;
+        const sessionForSave = await promoteInlineImages(session, site.id);
         const savedReport = await upsertSafetyReport(
           authTokenRef.current,
-          buildSafetyReportUpsertInput(session, site)
+          buildSafetyReportUpsertInput(sessionForSave, site)
         );
 
         setReportIndexBySiteId((current) => ({
@@ -135,6 +179,7 @@ export function useInspectionSessionsAutosave(store: InspectionSessionsStore) {
     setReportIndexBySiteId,
     setSyncError,
     sitesRef,
+    promoteInlineImages,
     replaceSavedSession,
     store.masterDataRef,
   ]);

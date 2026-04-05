@@ -110,6 +110,7 @@ export function SitePhotoAlbumScreen({
       <div className="app-container">
         <section className={`app-shell ${styles.shell}`}>
           <WorkerAppHeader
+            brandHref={isAdminView ? '/admin' : '/'}
             currentUserName={currentUser?.name}
             onLogout={logout}
             onOpenMenu={() => setMenuOpen(true)}

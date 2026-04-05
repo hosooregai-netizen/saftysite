@@ -145,6 +145,7 @@ export default function BadWorkplaceReportPage({
       <div className="app-container">
         <section className={`app-shell ${shellStyles.shell}`}>
           <WorkerAppHeader
+            brandHref={isAdminView ? '/admin' : '/'}
             currentUserName={currentUser?.name}
             onLogout={logout}
             onOpenMenu={() => setMenuOpen(true)}

@@ -604,4 +604,4 @@ export function mergePhotoAlbumItems(
   return [...albumItems, ...legacyItems];
 }
 
-export type { AlbumAccessContext, PhotoAlbumQuery };
+export type { AlbumAccessContext };

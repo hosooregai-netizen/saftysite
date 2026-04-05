@@ -45,6 +45,7 @@ export function AdminDashboardShell({
       <div className="app-container">
         <section className={`app-shell ${styles.shell}`}>
           <WorkerAppHeader
+            brandHref="/admin"
             currentUserName={currentUserName}
             onLogout={onLogout}
             onOpenMenu={() => setMenuOpen(true)}

@@ -17,6 +17,20 @@ import {
 import type { BadWorkplaceReport, QuarterlySummaryReport } from '@/types/erpReports';
 import type { InspectionSite } from '@/types/inspectionSession';
 
+const OPERATIONAL_REPORTS_CACHE_TTL_MS = 60_000;
+
+interface SiteOperationalReportsCacheEntry {
+  quarterlyReports: QuarterlySummaryReport[];
+  badWorkplaceReports: BadWorkplaceReport[];
+  fetchedAt: number;
+}
+
+const siteOperationalReportsCache = new Map<string, SiteOperationalReportsCacheEntry>();
+const siteOperationalReportsRequests = new Map<
+  string,
+  Promise<SiteOperationalReportsCacheEntry>
+>();
+
 function getErrorMessage(error: unknown) {
   if (error instanceof SafetyApiError || error instanceof Error) {
     return error.message;
@@ -35,18 +49,94 @@ function getQuarterlyReportSortTime(report: QuarterlySummaryReport) {
   return Number.isNaN(parsed) ? 0 : parsed;
 }
 
+function getCachedOperationalReports(siteId: string | null | undefined) {
+  if (!siteId) {
+    return null;
+  }
+
+  return siteOperationalReportsCache.get(siteId) ?? null;
+}
+
+function isOperationalReportsCacheFresh(cache: SiteOperationalReportsCacheEntry | null) {
+  return Boolean(cache && Date.now() - cache.fetchedAt < OPERATIONAL_REPORTS_CACHE_TTL_MS);
+}
+
+async function fetchAndCacheOperationalReports(
+  token: string,
+  siteId: string,
+): Promise<SiteOperationalReportsCacheEntry> {
+  const inFlightRequest = siteOperationalReportsRequests.get(siteId);
+  if (inFlightRequest) {
+    return inFlightRequest;
+  }
+
+  const request = (async () => {
+    const reports = await fetchSafetyReportsBySite(token, siteId, {
+      reportKinds: ['quarterly_summary', 'bad_workplace'],
+    });
+    const quarterlyReports: QuarterlySummaryReport[] = [];
+    const badWorkplaceReports: BadWorkplaceReport[] = [];
+
+    reports.forEach((report) => {
+      const quarterlyReport = mapSafetyReportToQuarterlySummaryReport(report);
+      if (quarterlyReport) {
+        quarterlyReports.push(quarterlyReport);
+      }
+
+      const badWorkplaceReport = mapSafetyReportToBadWorkplaceReport(report);
+      if (badWorkplaceReport) {
+        badWorkplaceReports.push(badWorkplaceReport);
+      }
+    });
+
+    quarterlyReports.sort((left, right) => {
+      const timeDelta = getQuarterlyReportSortTime(right) - getQuarterlyReportSortTime(left);
+      if (timeDelta !== 0) return timeDelta;
+      return right.createdAt.localeCompare(left.createdAt);
+    });
+    badWorkplaceReports.sort((left, right) => right.reportMonth.localeCompare(left.reportMonth));
+
+    const nextCache: SiteOperationalReportsCacheEntry = {
+      quarterlyReports,
+      badWorkplaceReports,
+      fetchedAt: Date.now(),
+    };
+    siteOperationalReportsCache.set(siteId, nextCache);
+    return nextCache;
+  })().finally(() => {
+    siteOperationalReportsRequests.delete(siteId);
+  });
+
+  siteOperationalReportsRequests.set(siteId, request);
+  return request;
+}
+
 export function useSiteOperationalReports(site: InspectionSite | null, enabled = true) {
-  const [quarterlyReports, setQuarterlyReports] = useState<QuarterlySummaryReport[]>([]);
-  const [badWorkplaceReports, setBadWorkplaceReports] = useState<BadWorkplaceReport[]>([]);
+  const [quarterlyReports, setQuarterlyReports] = useState<QuarterlySummaryReport[]>(
+    () => getCachedOperationalReports(site?.id)?.quarterlyReports ?? [],
+  );
+  const [badWorkplaceReports, setBadWorkplaceReports] = useState<BadWorkplaceReport[]>(
+    () => getCachedOperationalReports(site?.id)?.badWorkplaceReports ?? [],
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const reload = useCallback(async () => {
-    if (!enabled) {
+  useEffect(() => {
+    const cache = getCachedOperationalReports(site?.id);
+    if (!site || !cache) {
+      if (!site) {
+        setQuarterlyReports([]);
+        setBadWorkplaceReports([]);
+      }
       return;
     }
 
+    setQuarterlyReports(cache.quarterlyReports);
+    setBadWorkplaceReports(cache.badWorkplaceReports);
+  }, [site]);
+
+  const reload = useCallback(async (options?: { force?: boolean }) => {
     if (!site) {
       setQuarterlyReports([]);
       setBadWorkplaceReports([]);
@@ -62,43 +152,31 @@ export function useSiteOperationalReports(site: InspectionSite | null, enabled =
       return;
     }
 
-    setIsLoading(true);
+    const cachedReports = getCachedOperationalReports(site.id);
+    if (cachedReports) {
+      setQuarterlyReports(cachedReports.quarterlyReports);
+      setBadWorkplaceReports(cachedReports.badWorkplaceReports);
+    }
+
+    if (!options?.force && isOperationalReportsCacheFresh(cachedReports)) {
+      setIsLoading(false);
+      setError(null);
+      return;
+    }
+
+    setIsLoading(!cachedReports);
     setError(null);
 
     try {
-      const reports = await fetchSafetyReportsBySite(token, site.id, {
-        reportKinds: ['quarterly_summary', 'bad_workplace'],
-      });
-      const nextQuarterly: QuarterlySummaryReport[] = [];
-      const nextBadWorkplace: BadWorkplaceReport[] = [];
-
-      reports.forEach((report) => {
-        const quarterlyReport = mapSafetyReportToQuarterlySummaryReport(report);
-        if (quarterlyReport) {
-          nextQuarterly.push(quarterlyReport);
-        }
-
-        const badWorkplaceReport = mapSafetyReportToBadWorkplaceReport(report);
-        if (badWorkplaceReport) {
-          nextBadWorkplace.push(badWorkplaceReport);
-        }
-      });
-
-      nextQuarterly.sort((left, right) => {
-        const timeDelta = getQuarterlyReportSortTime(right) - getQuarterlyReportSortTime(left);
-        if (timeDelta !== 0) return timeDelta;
-        return right.createdAt.localeCompare(left.createdAt);
-      });
-      nextBadWorkplace.sort((left, right) => right.reportMonth.localeCompare(left.reportMonth));
-
-      setQuarterlyReports(nextQuarterly);
-      setBadWorkplaceReports(nextBadWorkplace);
+      const nextCache = await fetchAndCacheOperationalReports(token, site.id);
+      setQuarterlyReports(nextCache.quarterlyReports);
+      setBadWorkplaceReports(nextCache.badWorkplaceReports);
     } catch (nextError) {
       setError(getErrorMessage(nextError));
     } finally {
       setIsLoading(false);
     }
-  }, [enabled, site]);
+  }, [site]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -115,7 +193,7 @@ export function useSiteOperationalReports(site: InspectionSite | null, enabled =
       setError(null);
       try {
         await upsertSafetyReport(token, buildQuarterlySummaryUpsertInput(report, site));
-        await reload();
+        await reload({ force: true });
       } catch (nextError) {
         const message = getErrorMessage(nextError);
         setError(message);
@@ -137,7 +215,7 @@ export function useSiteOperationalReports(site: InspectionSite | null, enabled =
       setError(null);
       try {
         await upsertSafetyReport(token, buildBadWorkplaceUpsertInput(report, site));
-        await reload();
+        await reload({ force: true });
       } catch (nextError) {
         const message = getErrorMessage(nextError);
         setError(message);
@@ -161,7 +239,7 @@ export function useSiteOperationalReports(site: InspectionSite | null, enabled =
       setError(null);
       try {
         await archiveSafetyReportByKey(token, reportId);
-        await reload();
+        await reload({ force: true });
       } catch (nextError) {
         const message = getErrorMessage(nextError);
         setError(message);

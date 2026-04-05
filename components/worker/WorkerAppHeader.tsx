@@ -1,6 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import Link from 'next/link';
 import NotificationBell from '@/components/notifications/NotificationBell';
 import { WorkerMenuButton } from '@/components/worker/WorkerMenu';
 import styles from './WorkerAppHeader.module.css';
@@ -10,6 +11,7 @@ interface WorkerAppHeaderProps {
   onLogout: () => void;
   onOpenMenu: () => void;
   brand?: string;
+  brandHref?: string;
   accountLabel?: string;
   logoutLabel?: string;
   actions?: ReactNode;
@@ -20,6 +22,7 @@ export default function WorkerAppHeader({
   onLogout,
   onOpenMenu,
   brand = '한국종합안전',
+  brandHref = '/',
   accountLabel = '로그인 계정',
   logoutLabel = '로그아웃',
   actions,
@@ -31,7 +34,9 @@ export default function WorkerAppHeader({
           <div className={styles.menuButtonWrap}>
             <WorkerMenuButton onClick={onOpenMenu} />
           </div>
-          <span className={styles.brand}>{brand}</span>
+          <Link href={brandHref} className={styles.brandLink} aria-label={`${brand} 홈으로 이동`}>
+            <span className={styles.brand}>{brand}</span>
+          </Link>
         </div>
 
         <div className={styles.headerRight}>

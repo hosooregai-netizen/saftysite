@@ -73,6 +73,7 @@ export function SiteReportsScreen({ siteKey }: SiteReportsScreenProps) {
       <div className="app-container">
         <section className={`app-shell ${styles.shell}`}>
           <WorkerAppHeader
+            brandHref={isAdminView ? '/admin' : '/'}
             currentUserName={currentUserName}
             onLogout={logout}
             onOpenMenu={() => setMenuOpen(true)}

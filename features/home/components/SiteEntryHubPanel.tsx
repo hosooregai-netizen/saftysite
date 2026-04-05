@@ -10,11 +10,10 @@ import {
   buildWorkerCalendarHref,
 } from '@/features/home/lib/siteEntry';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
-import { useSiteOperationalReports } from '@/hooks/useSiteOperationalReports';
+import { useSiteOperationalReportSummary } from '@/hooks/useSiteOperationalReportSummary';
 import {
   createQuarterKey,
   getCurrentReportMonth,
-  normalizeQuarterlyReportPeriod,
 } from '@/lib/erpReports/shared';
 import { SiteReportsSummaryBar } from '@/features/site-reports/components/SiteReportsSummaryBar';
 import type { InspectionSite } from '@/types/inspectionSession';
@@ -103,8 +102,8 @@ export function SiteEntryHubPanel({
 
   const { ensureSiteReportIndexLoaded, getReportIndexBySiteId, sessions } =
     useInspectionSessions();
-  const { quarterlyReports, isLoading: operationalReportsLoading } =
-    useSiteOperationalReports(currentSite);
+  const { completedQuarterKeys, isLoading: operationalReportsLoading } =
+    useSiteOperationalReportSummary(currentSite);
 
   const snapshot = currentSite.adminSiteSnapshot;
   const siteNameDisplay = currentSite.siteName?.trim() || snapshot.siteName?.trim() || '-';
@@ -130,17 +129,6 @@ export function SiteEntryHubPanel({
       ...localSessions.map((item) => item.id),
     ]).size;
   }, [currentSite.id, reportIndexState?.items, sessions]);
-
-  const completedQuarterKeys = useMemo(
-    () =>
-      new Set(
-        quarterlyReports
-          .map((report) => normalizeQuarterlyReportPeriod(report))
-          .filter((report) => report.year === currentYear && report.quarterKey)
-          .map((report) => report.quarterKey || createQuarterKey(report.year, report.quarter)),
-      ),
-    [currentYear, quarterlyReports],
-  );
 
   const completedQuarters = useMemo(
     () =>

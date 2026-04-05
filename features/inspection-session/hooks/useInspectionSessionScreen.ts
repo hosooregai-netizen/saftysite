@@ -2,9 +2,12 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  createInspectionSession,
   createEmptyAdminSiteSnapshot,
   getSessionSiteKey,
+  getSessionProgress,
   INSPECTION_SECTIONS,
+  normalizeSectionKey,
   touchDocumentMeta,
 } from '@/constants/inspectionSession';
 import { readFileAsDataUrl } from '@/components/session/workspace/utils';
@@ -20,7 +23,7 @@ import {
   canUploadContentAssets,
   isAdminUserRole,
 } from '@/lib/admin';
-import { SafetyApiError } from '@/lib/safetyApi';
+import { uploadPhotoAlbumAsset } from '@/lib/photos/apiClient';
 import {
   uploadSafetyAssetFile,
   validateSafetyAssetFile,
@@ -28,8 +31,10 @@ import {
 import { mergeMasterDataIntoSession } from '@/lib/safetyApiMappers/masterData';
 import type {
   InspectionDocumentSource,
+  InspectionReportListItem,
   InspectionSectionKey,
   InspectionSession,
+  InspectionSite,
   ReportIndexStatus,
 } from '@/types/inspectionSession';
 import { applyInspectionSessionMetaFieldChange } from '@/features/inspection-session/lib/applyInspectionSessionMetaFieldChange';
@@ -67,12 +72,55 @@ function mergeMissingSnapshotFields(
   return { changed, merged };
 }
 
+function getReportMetaText(meta: Record<string, unknown>, key: string) {
+  const value = meta[key];
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function buildShellSessionFromReportIndexItem(
+  item: InspectionReportListItem,
+  site: InspectionSite,
+) {
+  const reportDate =
+    item.visitDate ||
+    getReportMetaText(item.meta, 'reportDate') ||
+    new Date().toISOString().slice(0, 10);
+  const base = createInspectionSession(
+    {
+      adminSiteSnapshot: site.adminSiteSnapshot,
+      meta: {
+        siteName: getReportMetaText(item.meta, 'siteName') || site.siteName,
+        reportDate,
+        reportTitle:
+          getReportMetaText(item.meta, 'reportTitle') || item.reportTitle || '',
+        drafter: getReportMetaText(item.meta, 'drafter') || site.assigneeName,
+        reviewer: getReportMetaText(item.meta, 'reviewer'),
+        approver: getReportMetaText(item.meta, 'approver'),
+      },
+    },
+    site.id,
+    item.visitRound || 1,
+  );
+
+  return {
+    ...base,
+    id: item.reportKey,
+    siteKey: site.id,
+    reportNumber: item.visitRound || 1,
+    currentSection: normalizeSectionKey(item.meta.currentSection),
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+    lastSavedAt: item.lastAutosavedAt || item.updatedAt,
+  };
+}
+
 export function useInspectionSessionScreen(sessionId: string) {
   const {
     authError,
     currentUser,
     ensureMasterDataLoaded,
     ensureSessionLoaded,
+    getReportIndexBySiteId,
     getSessionById,
     getSiteById,
     isAuthenticated,
@@ -82,6 +130,7 @@ export function useInspectionSessionScreen(sessionId: string) {
     logout,
     masterData,
     saveNow,
+    sites,
     syncError,
     updateSession,
   } = useInspectionSessions();
@@ -94,12 +143,47 @@ export function useInspectionSessionScreen(sessionId: string) {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const forcedRelationRefreshIdsRef = useRef<Set<string>>(new Set());
   const session = getSessionById(sessionId);
+  const shellReportItem = useMemo(() => {
+    if (session) {
+      return null;
+    }
+
+    for (const candidateSite of sites) {
+      const reportIndexState = getReportIndexBySiteId(candidateSite.id);
+      const matchedItem = reportIndexState?.items.find((item) => item.reportKey === sessionId);
+      if (matchedItem) {
+        return matchedItem;
+      }
+    }
+
+    return null;
+  }, [getReportIndexBySiteId, session, sessionId, sites]);
+  const shellSite = useMemo(() => {
+    if (!shellReportItem) {
+      return null;
+    }
+
+    return (
+      getSiteById(shellReportItem.siteId) ||
+      sites.find((candidateSite) => candidateSite.id === shellReportItem.siteId) ||
+      null
+    );
+  }, [getSiteById, shellReportItem, sites]);
+  const shellSession = useMemo(
+    () =>
+      session || !shellReportItem || !shellSite
+        ? null
+        : buildShellSessionFromReportIndexItem(shellReportItem, shellSite),
+    [session, shellReportItem, shellSite],
+  );
   const isAdminView = Boolean(currentUser && isAdminUserRole(currentUser.role));
-  const currentSection = session?.currentSection ?? 'doc1';
-  const currentSectionIndex = session
+  const displaySession = session ?? shellSession;
+  const currentSection = displaySession?.currentSection ?? 'doc1';
+  const currentSectionIndex = displaySession
     ? INSPECTION_SECTIONS.findIndex((item) => item.key === currentSection)
     : -1;
   const site = session ? getSiteById(getSessionSiteKey(session)) : null;
+  const displaySite = site ?? shellSite;
   const storedRelations = session?.technicalGuidanceRelations ?? null;
   const hasStoredRelations = Boolean(
     storedRelations &&
@@ -107,11 +191,20 @@ export function useInspectionSessionScreen(sessionId: string) {
         storedRelations.cumulativeAccidentEntries.length > 0 ||
         storedRelations.cumulativeAgentEntries.length > 0),
   );
+  const shouldTreatInitialRelationsAsEmpty =
+    Boolean(session) &&
+    (session?.reportNumber ?? 0) <= 1 &&
+    !Boolean(storedRelations?.stale) &&
+    !hasStoredRelations;
   const needsRelationRefresh =
-    Boolean(session) && (!hasStoredRelations || Boolean(storedRelations?.stale));
+    Boolean(session) &&
+    (Boolean(storedRelations?.stale) ||
+      (!hasStoredRelations && !shouldTreatInitialRelationsAsEmpty));
   const relationStatus: ReportIndexStatus = !session
     ? 'idle'
-    : needsRelationRefresh
+    : shouldTreatInitialRelationsAsEmpty
+      ? 'idle'
+      : needsRelationRefresh
       ? missingRelationsStatus === 'error'
         ? 'error'
         : 'loading'
@@ -124,8 +217,8 @@ export function useInspectionSessionScreen(sessionId: string) {
     needsRelationRefresh &&
     missingRelationsStatus === 'loading';
   const relationNotice =
-    storedRelations?.stale
-      ? '이전 요인과 누적 통계를 서버에서 다시 계산하고 있습니다. 저장된 값을 먼저 보여주고 있어요.'
+    storedRelations?.stale && missingRelationsStatus === 'error'
+      ? '최신 연동값을 다시 불러오지 못해 저장된 값을 표시하고 있습니다.'
       : null;
   const derivedData = useMemo(
     () =>
@@ -152,6 +245,45 @@ export function useInspectionSessionScreen(sessionId: string) {
         reportTitle: session?.meta.reportTitle || '',
       })
     : null;
+
+  const shellProgress = useMemo(() => {
+    if (!shellSession || !shellReportItem) {
+      return null;
+    }
+
+    const baseProgress = getSessionProgress(shellSession);
+    const percentage =
+      typeof shellReportItem.progressRate === 'number'
+        ? Math.max(0, Math.min(100, Math.round(shellReportItem.progressRate)))
+        : baseProgress.percentage;
+
+    return {
+      completed:
+        baseProgress.total > 0
+          ? Math.max(
+              0,
+              Math.min(
+                baseProgress.total,
+                Math.round((percentage / 100) * baseProgress.total),
+              ),
+            )
+          : 0,
+      total: baseProgress.total,
+      percentage,
+    };
+  }, [shellReportItem, shellSession]);
+  const displayProgress = derivedData.progress ?? shellProgress;
+  const displayBackHref = displaySite
+    ? `/sites/${encodeURIComponent(displaySite.id)}`
+    : backHref;
+  const displayPhotoAlbumHref = displaySite
+    ? buildSitePhotoAlbumHref(displaySite.id, {
+        backHref: `/sessions/${encodeURIComponent(sessionId)}`,
+        backLabel: '보고서로 돌아가기',
+        reportKey: sessionId,
+        reportTitle: displaySession?.meta.reportTitle || '',
+      })
+    : photoAlbumHref;
 
   useEffect(() => () => void saveNow(), [saveNow]);
 
@@ -197,13 +329,13 @@ export function useInspectionSessionScreen(sessionId: string) {
   }, [currentSection, ensureMasterDataLoaded, session]);
 
   useEffect(() => {
-    if (!isAuthenticated || !isReady || session) {
+    if (!isAuthenticated || !isReady) {
       setIsLoadingSession(false);
       return;
     }
 
     let cancelled = false;
-    setIsLoadingSession(true);
+    setIsLoadingSession(!displaySession);
 
     void ensureSessionLoaded(sessionId).finally(() => {
       if (!cancelled) {
@@ -214,7 +346,7 @@ export function useInspectionSessionScreen(sessionId: string) {
     return () => {
       cancelled = true;
     };
-  }, [ensureSessionLoaded, isAuthenticated, isReady, session, sessionId]);
+  }, [displaySession, ensureSessionLoaded, isAuthenticated, isReady, sessionId]);
 
   useEffect(() => {
     if (!session) {
@@ -305,23 +437,20 @@ export function useInspectionSessionScreen(sessionId: string) {
       }
 
       const canUploadAssets = canUploadContentAssets(currentUser?.role);
+      const isImageFile =
+        file.type.startsWith('image/') ||
+        /\.(png|jpe?g|gif|bmp|webp|heic|heif)$/i.test(file.name);
       let value = '';
 
-      if (canUploadAssets) {
-        try {
-          const uploaded = await uploadSafetyAssetFile(file);
-          value = uploaded.url;
-        } catch (error) {
-          if (
-            error instanceof SafetyApiError &&
-            error.status === 403 &&
-            file.type.startsWith('image/')
-          ) {
-            value = await readFileAsDataUrl(file);
-          } else {
-            throw error;
-          }
-        }
+      if (isImageFile && site?.id) {
+        const uploaded = await uploadPhotoAlbumAsset({
+          file,
+          siteId: site.id,
+        });
+        value = uploaded.previewUrl;
+      } else if (canUploadAssets) {
+        const uploaded = await uploadSafetyAssetFile(file);
+        value = uploaded.url;
       } else {
         value = await readFileAsDataUrl(file);
       }
@@ -445,12 +574,14 @@ export function useInspectionSessionScreen(sessionId: string) {
   return {
     applyDocumentUpdate,
     authError,
-    backHref,
+    backHref: displayBackHref,
     changeMetaField,
     currentSection,
     currentSectionIndex,
     currentUserName: currentUser?.name,
     derivedData,
+    displayProgress,
+    displaySession,
     documentError,
     generateHwpxDocument,
     generatePdfDocument,
@@ -467,10 +598,10 @@ export function useInspectionSessionScreen(sessionId: string) {
     login,
     logout,
     moveSection,
-    photoAlbumHref,
+    photoAlbumHref: displayPhotoAlbumHref,
     sectionSession: session,
     selectSection,
-    site,
+    site: displaySite,
     relationStatus,
     relationNotice,
     syncError,

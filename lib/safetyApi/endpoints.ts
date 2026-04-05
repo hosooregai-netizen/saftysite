@@ -93,6 +93,7 @@ export function fetchSafetyReportList(
     siteId?: string;
     activeOnly?: boolean;
     limit?: number;
+    reportKinds?: string[];
   }
 ): Promise<SafetyReportListItem[]> {
   const searchParams = new URLSearchParams({
@@ -103,6 +104,11 @@ export function fetchSafetyReportList(
   if (options?.siteId) {
     searchParams.set('site_id', options.siteId);
   }
+  options?.reportKinds?.forEach((reportKind) => {
+    if (reportKind.trim()) {
+      searchParams.append('report_kind', reportKind);
+    }
+  });
 
   return requestSafetyApi<SafetyReportListItem[]>(
     `/reports?${searchParams.toString()}`,

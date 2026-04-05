@@ -1,11 +1,12 @@
+import styles from '@/components/session/InspectionSessionWorkspace.module.css';
 import { INSPECTION_SECTIONS } from '@/constants/inspectionSession';
 import type { InspectionSectionKey } from '@/types/inspectionSession';
-import styles from '@/components/session/InspectionSessionWorkspace.module.css';
 
 interface WorkspaceToolbarProps {
   canMoveNext: boolean;
   canMovePrev: boolean;
   currentSection: InspectionSectionKey;
+  disabled?: boolean;
   errors: Array<string | null>;
   moveSection: (direction: -1 | 1) => void;
   onOpenMeta: () => void;
@@ -17,6 +18,7 @@ export function WorkspaceToolbar({
   canMoveNext,
   canMovePrev,
   currentSection,
+  disabled = false,
   errors,
   moveSection,
   onOpenMeta,
@@ -28,7 +30,7 @@ export function WorkspaceToolbar({
       <div
         className={styles.workspaceToolbarMain}
         role="group"
-        aria-label="문서 선택, 기본 정보, 진행률, 문서 이동 정보"
+        aria-label="문서 선택, 기본 정보, 진행률과 문서 이동 도구"
       >
         <span className={styles.toolbarAxisLabel} id="workspace-toolbar-doc-heading">
           문서 선택
@@ -36,6 +38,7 @@ export function WorkspaceToolbar({
         <div className={styles.toolbarCellSelect}>
           <select
             className="app-select"
+            disabled={disabled}
             value={currentSection}
             onChange={(event) => onSectionSelect(event.target.value as InspectionSectionKey)}
             aria-labelledby="workspace-toolbar-doc-heading"
@@ -51,6 +54,7 @@ export function WorkspaceToolbar({
         <button
           type="button"
           className={`app-button app-button-secondary ${styles.toolbarMetaButton}`}
+          disabled={disabled}
           onClick={onOpenMeta}
         >
           기본 정보
@@ -82,7 +86,7 @@ export function WorkspaceToolbar({
           <button
             type="button"
             className="app-button app-button-secondary"
-            disabled={!canMovePrev}
+            disabled={disabled || !canMovePrev}
             onClick={() => moveSection(-1)}
           >
             이전
@@ -90,7 +94,7 @@ export function WorkspaceToolbar({
           <button
             type="button"
             className="app-button app-button-primary"
-            disabled={!canMoveNext}
+            disabled={disabled || !canMoveNext}
             onClick={() => moveSection(1)}
           >
             다음
