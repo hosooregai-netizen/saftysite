@@ -13,6 +13,7 @@ export type ControllerSectionKey =
   | 'reports'
   | 'analytics'
   | 'mailbox'
+  | 'k2b'
   | 'photos'
   | 'schedules'
   | 'users'
@@ -36,6 +37,7 @@ export const CONTROLLER_SECTIONS: Array<{
   { key: 'reports', label: '전체 보고서', description: '보고서 통합 조회' },
   { key: 'analytics', label: '실적/매출', description: '성과 분석' },
   { key: 'mailbox', label: '메일함', description: '발송·수신·회신 관리' },
+  { key: 'k2b', label: 'K2B 업로드', description: '엑셀 초기등록 자동화' },
   { key: 'photos', label: '사진첩', description: '현장 사진 통합 조회' },
   { key: 'schedules', label: '일정/캘린더', description: '방문 일정 관리' },
   { key: 'users', label: '사용자', description: '계정 관리' },

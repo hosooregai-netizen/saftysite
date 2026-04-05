@@ -13,6 +13,7 @@ import { useAdminDashboardState } from '@/features/admin/hooks/useAdminDashboard
 import { AnalyticsSection } from '@/features/admin/sections/analytics/AnalyticsSection';
 import { ContentItemsSection } from '@/features/admin/sections/content/ContentItemsSection';
 import { HeadquartersSection } from '@/features/admin/sections/headquarters/HeadquartersSection';
+import { K2bSection } from '@/features/admin/sections/k2b/K2bSection';
 import { MailboxSection } from '@/features/admin/sections/mailbox/MailboxSection';
 import { AdminOverviewSection } from '@/features/admin/sections/overview/AdminOverviewSection';
 import { PhotosSection } from '@/features/admin/sections/photos/PhotosSection';
@@ -130,6 +131,8 @@ function renderAdminSection(
       );
     case 'mailbox':
       return <MailboxSection />;
+    case 'k2b':
+      return <K2bSection onReload={dashboard.reload} />;
     case 'photos':
       return <PhotosSection sites={sites} />;
     case 'schedules':

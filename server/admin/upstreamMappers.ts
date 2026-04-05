@@ -14,7 +14,10 @@ import type {
   SafetyBackendAdminOverviewResponse,
   SafetyBackendAdminReportRow,
   SafetyBackendAdminReportsResponse,
+  SafetyBackendFieldSignatureRecord,
   SafetyBackendInspectionSchedule,
+  SafetyBackendK2bApplyResult,
+  SafetyBackendK2bImportPreview,
   SafetyBackendMailAccount,
   SafetyBackendMailProviderStatus,
   SafetyBackendMailMessage,
@@ -33,6 +36,12 @@ import type { MailAccount, MailMessage, MailProviderStatus, MailThread, MailThre
 import type { SmsMessage, SmsProviderStatus, SmsSendResult } from '@/types/messages';
 import type { NotificationFeedResponse, NotificationItem } from '@/types/notifications';
 import type { PhotoAlbumItem, SafetyPhotoAsset } from '@/types/photos';
+import type { FieldSignatureRecord } from '@/types/assist';
+import type {
+  K2bApplyResult,
+  K2bImportPreview,
+  K2bMatchCandidate,
+} from '@/types/k2b';
 import { buildSafetyAdminUpstreamUrl } from './safetyApiServer';
 
 function normalizeText(value: unknown) {
@@ -282,6 +291,123 @@ export function mapBackendPhotoAsset(asset: SafetyBackendPhotoAsset): SafetyPhot
     thumbnailPath: buildSafetyAdminUpstreamUrl(normalizeText(asset.thumbnail_path || asset.original_path)),
     uploadedByName: normalizeText(asset.uploaded_by_name),
     uploadedByUserId: normalizeText(asset.uploaded_by_user_id),
+  };
+}
+
+function mapBackendK2bCandidate(candidate: {
+  id?: string | null;
+  kind?: string | null;
+  label?: string | null;
+  reason?: string | null;
+  headquarter_id?: string | null;
+  site_id?: string | null;
+}): K2bMatchCandidate {
+  return {
+    id: normalizeText(candidate.id),
+    kind: (normalizeText(candidate.kind) || 'site') as K2bMatchCandidate['kind'],
+    label: normalizeText(candidate.label),
+    reason: normalizeText(candidate.reason),
+    headquarterId: normalizeText(candidate.headquarter_id) || null,
+    siteId: normalizeText(candidate.site_id) || null,
+  };
+}
+
+export function mapBackendK2bImportPreview(
+  preview: SafetyBackendK2bImportPreview,
+): K2bImportPreview {
+  return {
+    jobId: normalizeText(preview.job_id),
+    fileName: normalizeText(preview.file_name),
+    createdAt: normalizeText(preview.created_at),
+    sheetNames: Array.isArray(preview.sheet_names)
+      ? preview.sheet_names.map((item) => normalizeText(item)).filter(Boolean)
+      : [],
+    sheets: Array.isArray(preview.sheets)
+      ? preview.sheets.map((sheet) => ({
+          name: normalizeText(sheet.name),
+          headers: Array.isArray(sheet.headers)
+            ? sheet.headers.map((item) => normalizeText(item)).filter(Boolean)
+            : [],
+          rowCount: typeof sheet.row_count === 'number' ? sheet.row_count : 0,
+          sampleRows: Array.isArray(sheet.sample_rows)
+            ? sheet.sample_rows.map((row) =>
+                Object.fromEntries(
+                  Object.entries(row || {}).map(([key, value]) => [normalizeText(key), normalizeText(value)]),
+                ),
+              )
+            : [],
+          suggestedMapping:
+            sheet.suggested_mapping && typeof sheet.suggested_mapping === 'object'
+              ? Object.fromEntries(
+                  Object.entries(sheet.suggested_mapping).map(([key, value]) => [
+                    normalizeText(key),
+                    normalizeText(value),
+                  ]),
+                )
+              : {},
+          rowPreviews: Array.isArray(sheet.row_previews)
+            ? sheet.row_previews.map((row) => ({
+                rowIndex: typeof row.row_index === 'number' ? row.row_index : 0,
+                values:
+                  row.values && typeof row.values === 'object'
+                    ? Object.fromEntries(
+                        Object.entries(row.values).map(([key, value]) => [normalizeText(key), normalizeText(value)]),
+                      )
+                    : {},
+                summary: normalizeText(row.summary),
+                suggestedAction: normalizeText(row.suggested_action),
+                duplicateCandidates: Array.isArray(row.duplicate_candidates)
+                  ? row.duplicate_candidates.map((candidate) => mapBackendK2bCandidate(candidate))
+                  : [],
+              }))
+            : [],
+        }))
+      : [],
+  };
+}
+
+export function mapBackendK2bApplyResult(
+  response: SafetyBackendK2bApplyResult,
+): K2bApplyResult {
+  return {
+    summary: {
+      createdHeadquarterCount: response.summary?.created_headquarter_count ?? 0,
+      updatedHeadquarterCount: response.summary?.updated_headquarter_count ?? 0,
+      createdSiteCount: response.summary?.created_site_count ?? 0,
+      updatedSiteCount: response.summary?.updated_site_count ?? 0,
+      completionRequiredCount: response.summary?.completion_required_count ?? 0,
+    },
+    rows: Array.isArray(response.rows)
+      ? response.rows.map((row) => ({
+          rowIndex: typeof row.row_index === 'number' ? row.row_index : 0,
+          action: (normalizeText(row.action) || 'create') as K2bApplyResult['rows'][number]['action'],
+          headquarterId: normalizeText(row.headquarter_id),
+          headquarterName: normalizeText(row.headquarter_name),
+          siteId: normalizeText(row.site_id),
+          siteName: normalizeText(row.site_name),
+          requiredCompletionFields: Array.isArray(row.required_completion_fields)
+            ? row.required_completion_fields.map((item) => normalizeText(item)).filter(Boolean)
+            : [],
+          message: normalizeText(row.message),
+        }))
+      : [],
+  };
+}
+
+export function mapBackendFieldSignatureRecord(
+  record: SafetyBackendFieldSignatureRecord,
+): FieldSignatureRecord {
+  return {
+    id: normalizeText(record.id),
+    siteId: normalizeText(record.site_id),
+    scheduleId: normalizeText(record.schedule_id) || null,
+    signedByUserId: normalizeText(record.signed_by_user_id),
+    signedByName: normalizeText(record.signed_by_name),
+    signedAt: normalizeText(record.signed_at),
+    imageDataUrl: normalizeText(record.image_data_url),
+    note: normalizeText(record.note) || null,
+    createdAt: normalizeText(record.created_at),
+    updatedAt: normalizeText(record.updated_at),
   };
 }
 

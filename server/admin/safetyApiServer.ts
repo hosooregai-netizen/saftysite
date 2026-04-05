@@ -12,6 +12,9 @@ import type {
   SafetyBackendMailThread,
   SafetyBackendMailThreadDetail,
   SafetyBackendNotificationFeedResponse,
+  SafetyBackendK2bApplyResult,
+  SafetyBackendK2bImportPreview,
+  SafetyBackendFieldSignatureRecord,
   SafetyBackendPhotoAsset,
   SafetyBackendPhotoAssetListResponse,
   SafetyBackendScheduleListResponse,
@@ -478,6 +481,88 @@ export function fetchSafetyPhotoAssetsServer(
   return requestSafetyAdminServer<SafetyBackendPhotoAssetListResponse>(
     withQuery('/photo-assets', params),
     {},
+    token,
+    request,
+  );
+}
+
+export function parseK2bImportServer(
+  token: string,
+  formData: FormData,
+  request: Request | null = null,
+): Promise<SafetyBackendK2bImportPreview> {
+  return requestSafetyAdminServer<SafetyBackendK2bImportPreview>(
+    '/k2b/imports/parse',
+    {
+      method: 'POST',
+      body: formData,
+    },
+    token,
+    request,
+  );
+}
+
+export function fetchK2bImportPreviewServer(
+  token: string,
+  jobId: string,
+  request: Request | null = null,
+): Promise<SafetyBackendK2bImportPreview> {
+  return requestSafetyAdminServer<SafetyBackendK2bImportPreview>(
+    `/k2b/imports/${encodeURIComponent(jobId)}`,
+    {},
+    token,
+    request,
+  );
+}
+
+export function applyK2bImportServer(
+  token: string,
+  payload: Record<string, unknown>,
+  request: Request | null = null,
+): Promise<SafetyBackendK2bApplyResult> {
+  return requestSafetyAdminServer<SafetyBackendK2bApplyResult>(
+    '/k2b/imports/apply',
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    },
+    token,
+    request,
+  );
+}
+
+export function fetchSiteFieldSignaturesServer(
+  token: string,
+  siteId: string,
+  params: Record<string, string | number | boolean | null | undefined>,
+  request: Request | null = null,
+): Promise<SafetyBackendFieldSignatureRecord[]> {
+  return requestSafetyAdminServer<SafetyBackendFieldSignatureRecord[]>(
+    withQuery(`/sites/${encodeURIComponent(siteId)}/field-signatures`, params),
+    {},
+    token,
+    request,
+  );
+}
+
+export function createSiteFieldSignatureServer(
+  token: string,
+  siteId: string,
+  payload: Record<string, unknown>,
+  request: Request | null = null,
+): Promise<SafetyBackendFieldSignatureRecord> {
+  return requestSafetyAdminServer<SafetyBackendFieldSignatureRecord>(
+    `/sites/${encodeURIComponent(siteId)}/field-signatures`,
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    },
     token,
     request,
   );

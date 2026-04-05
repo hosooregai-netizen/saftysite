@@ -586,6 +586,15 @@ export function SitesSection(props: SitesSectionProps) {
                           <div className={styles.tableSecondary}>
                             {site.site_address || '주소 미입력'}
                           </div>
+                          {site.required_completion_fields?.length ? (
+                            <div className={styles.tableSecondary}>
+                              <span className="app-chip">
+                                보완 필요 {site.required_completion_fields.length}건
+                              </span>
+                              {' '}
+                              {site.required_completion_fields.join(', ')}
+                            </div>
+                          ) : null}
                         </td>
                         {showHeadquarterColumn ? (
                           <td>{site.headquarter_detail?.name || site.headquarter?.name || '-'}</td>

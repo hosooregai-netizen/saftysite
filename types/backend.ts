@@ -135,6 +135,7 @@ export interface SafetySite {
   total_rounds?: number | null;
   per_visit_amount?: number | null;
   total_contract_amount?: number | null;
+  required_completion_fields?: string[] | null;
   created_at: string;
   updated_at: string;
 }
@@ -288,6 +289,75 @@ export interface SafetyBackendScheduleListResponse {
   offset: number;
   rows: SafetyBackendInspectionSchedule[];
   total: number;
+}
+
+export interface SafetyBackendK2bMatchCandidate {
+  id: string;
+  kind: 'headquarter' | 'site';
+  label: string;
+  reason: string;
+  headquarter_id?: string | null;
+  site_id?: string | null;
+}
+
+export interface SafetyBackendK2bPreviewRow {
+  row_index: number;
+  values: Record<string, string>;
+  summary: string;
+  suggested_action: string;
+  duplicate_candidates: SafetyBackendK2bMatchCandidate[];
+}
+
+export interface SafetyBackendK2bSheetPreview {
+  name: string;
+  headers: string[];
+  row_count: number;
+  sample_rows: Record<string, string>[];
+  suggested_mapping: Record<string, string>;
+  row_previews: SafetyBackendK2bPreviewRow[];
+}
+
+export interface SafetyBackendK2bImportPreview {
+  job_id: string;
+  file_name: string;
+  created_at: string;
+  sheet_names: string[];
+  sheets: SafetyBackendK2bSheetPreview[];
+}
+
+export interface SafetyBackendK2bApplyRowResult {
+  row_index: number;
+  action: 'create' | 'update_headquarter' | 'update_site';
+  headquarter_id: string;
+  headquarter_name: string;
+  site_id: string;
+  site_name: string;
+  required_completion_fields: string[];
+  message: string;
+}
+
+export interface SafetyBackendK2bApplyResult {
+  summary: {
+    created_headquarter_count: number;
+    updated_headquarter_count: number;
+    created_site_count: number;
+    updated_site_count: number;
+    completion_required_count: number;
+  };
+  rows: SafetyBackendK2bApplyRowResult[];
+}
+
+export interface SafetyBackendFieldSignatureRecord {
+  id: string;
+  site_id: string;
+  schedule_id?: string | null;
+  signed_by_user_id: string;
+  signed_by_name: string;
+  signed_at: string;
+  image_data_url: string;
+  note?: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface SafetyBackendAdminAlert {

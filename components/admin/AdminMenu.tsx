@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import {
+  buildSiteAssistHref,
   buildSiteBadWorkplaceHref,
   buildSiteQuarterlyListHref,
   buildSiteReportsHref,
@@ -35,6 +36,7 @@ const ADMIN_MENU_LABELS: Record<AdminSectionKey, string> = {
   reports: '전체 보고서',
   analytics: '실적/매출',
   mailbox: '메일함',
+  k2b: 'K2B 업로드',
   photos: '사진첩',
   schedules: '일정/캘린더',
   users: '사용자',
@@ -92,6 +94,12 @@ export function AdminMenuPanel({
           description: '현장 기준 분기 보고서 작성',
           href: buildSiteQuarterlyListHref(currentSiteKey),
           active: siteNavView === 'quarterly',
+        },
+        {
+          label: '현장 보조',
+          description: '현장 사진, 사인, 연락처 확인',
+          href: buildSiteAssistHref(currentSiteKey),
+          active: siteNavView === 'assist',
         },
         {
           label: '현장 사진첩',
