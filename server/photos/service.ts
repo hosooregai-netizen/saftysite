@@ -30,6 +30,7 @@ export async function loadPhotoAlbumList(
   const response = await fetchSafetyPhotoAssetsServer(
     token,
     {
+      all: Boolean(query.all),
       headquarter_id: query.headquarterId || '',
       limit: Math.max(1, Math.min(200, query.limit ?? 60)),
       offset: Math.max(0, query.offset ?? 0),

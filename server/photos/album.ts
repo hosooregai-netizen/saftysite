@@ -23,6 +23,7 @@ const DOWNLOAD_ROUTE_PREFIX = '/api/photos/download?item_id=';
 const MAX_DOWNLOAD_ITEMS = 200;
 
 export interface PhotoAlbumQuery {
+  all?: boolean;
   headquarterId?: string;
   limit?: number;
   offset?: number;

@@ -60,6 +60,7 @@ function createAuthorizedHeaders(options?: { json?: boolean }) {
 }
 
 export async function fetchPhotoAlbum(input: {
+  all?: boolean;
   headquarterId?: string;
   limit?: number;
   offset?: number;
@@ -73,6 +74,7 @@ export async function fetchPhotoAlbum(input: {
   const headers = createAuthorizedHeaders();
   const response = await fetch(
     `/api/photos${buildQueryString({
+      all: input.all ? 'true' : '',
       headquarter_id: input.headquarterId,
       limit: input.limit,
       offset: input.offset,

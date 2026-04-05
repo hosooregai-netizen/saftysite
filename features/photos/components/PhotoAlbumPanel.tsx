@@ -106,6 +106,7 @@ export function PhotoAlbumPanel({
   sites,
 }: PhotoAlbumPanelProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<TableSortState>({
     direction: 'desc',
@@ -113,8 +114,8 @@ export function PhotoAlbumPanel({
   });
   const [headquarterId, setHeadquarterId] = useState(() => lockedHeadquarterId || initialHeadquarterId || '');
   const [siteId, setSiteId] = useState(() => lockedSiteId || initialSiteId || '');
-  const [offset, setOffset] = useState(0);
   const [rows, setRows] = useState<PhotoAlbumItem[]>([]);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -133,7 +134,7 @@ export function PhotoAlbumPanel({
   }, [initialSiteId, lockedSiteId]);
 
   useEffect(() => {
-    setOffset(0);
+    setVisibleCount(PAGE_SIZE);
   }, [deferredQuery, headquarterId, siteId, sort.direction, sort.key]);
 
   const headquarterOptions = useMemo(
@@ -169,9 +170,8 @@ export function PhotoAlbumPanel({
         setLoading(true);
         setError(null);
         const response = await fetchPhotoAlbum({
+          all: true,
           headquarterId: lockedHeadquarterId || headquarterId || '',
-          limit: PAGE_SIZE,
-          offset,
           query: deferredQuery,
           reportKey: initialReportKey || '',
           siteId: lockedSiteId || siteId || '',
@@ -203,15 +203,47 @@ export function PhotoAlbumPanel({
     initialReportKey,
     lockedHeadquarterId,
     lockedSiteId,
-    offset,
     siteId,
     sort.direction,
     sort.key,
   ]);
 
+  useEffect(() => {
+    if (!loadMoreRef.current || visibleCount >= rows.length) {
+      return;
+    }
+
+    const target = loadMoreRef.current;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) {
+          return;
+        }
+        setVisibleCount((current) => Math.min(rows.length, current + PAGE_SIZE));
+      },
+      { rootMargin: '320px 0px' },
+    );
+
+    observer.observe(target);
+    return () => {
+      observer.disconnect();
+    };
+  }, [rows.length, visibleCount]);
+
+  const visibleRows = useMemo(
+    () => rows.slice(0, Math.min(rows.length, visibleCount)),
+    [rows, visibleCount],
+  );
+  const hasMoreRows = visibleRows.length < rows.length;
+  const allVisibleSelected =
+    visibleRows.length > 0 && visibleRows.every((row) => selectedIds.includes(row.id));
+
   const handleToggleAll = () => {
+    const visibleRowIds = visibleRows.map((row) => row.id);
     setSelectedIds((current) =>
-      current.length === rows.length ? [] : rows.map((row) => row.id),
+      allVisibleSelected
+        ? current.filter((itemId) => !visibleRowIds.includes(itemId))
+        : Array.from(new Set([...current, ...visibleRowIds])),
     );
   };
 
@@ -257,16 +289,15 @@ export function PhotoAlbumPanel({
       }
 
       const refreshed = await fetchPhotoAlbum({
+        all: true,
         headquarterId: lockedHeadquarterId || headquarterId || '',
-        limit: PAGE_SIZE,
-        offset: 0,
         query: deferredQuery,
         reportKey: initialReportKey || '',
         siteId: uploadSiteId,
         sortBy: (sort.key as 'capturedAt' | 'createdAt' | 'fileName' | 'siteName') || 'capturedAt',
         sortDir: sort.direction,
       });
-      setOffset(0);
+      setVisibleCount(PAGE_SIZE);
       setRows(refreshed.rows);
       setTotal(refreshed.total);
       setSelectedIds([]);
@@ -324,8 +355,6 @@ export function PhotoAlbumPanel({
       lockedSiteId || siteId || '',
       deferredQuery,
     );
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const currentPage = Math.floor(offset / PAGE_SIZE) + 1;
   const sortOptions: Array<{ defaultDirection: TableSortState['direction']; key: typeof sort.key; label: string }> = [
     { defaultDirection: 'desc', key: 'capturedAt', label: '촬영일' },
     { defaultDirection: 'desc', key: 'createdAt', label: '등록일' },
@@ -341,6 +370,9 @@ export function PhotoAlbumPanel({
             <h2 className={adminStyles.sectionTitle}>
               {mode === 'admin' ? '사진첩' : '현장 사진첩'}
             </h2>
+            <p className={adminStyles.sectionDescription}>
+              현재 필터 범위의 사진을 한 번에 불러오고 아래로 내려가며 이어서 볼 수 있습니다.
+            </p>
             {initialReportKey ? (
               <p className={adminStyles.sectionDescription}>
                 {initialReportTitle
@@ -388,7 +420,7 @@ export function PhotoAlbumPanel({
           {notice ? <div className={adminStyles.bannerNotice}>{notice}</div> : null}
 
           <TableToolbar
-            countLabel={`표시 ${rows.length} / 전체 ${total}건`}
+            countLabel={`표시 ${visibleRows.length} / 전체 ${total}건`}
             exportLabel="메타데이터 엑셀"
             filters={
               <>
@@ -465,16 +497,16 @@ export function PhotoAlbumPanel({
                 <label className={styles.selectAll}>
                   <input
                     type="checkbox"
-                    checked={rows.length > 0 && selectedIds.length === rows.length}
+                    checked={allVisibleSelected}
                     onChange={handleToggleAll}
                   />
-                  <span>현재 페이지 전체 선택</span>
+                  <span>현재 보이는 사진 전체 선택</span>
                 </label>
                 <span className="app-chip">선택 {selectedIds.length}건</span>
               </div>
 
               <div className={styles.grid}>
-                {rows.map((item) => (
+                {visibleRows.map((item) => (
                   <article key={item.id} className={styles.card}>
                     <button
                       type="button"
@@ -535,29 +567,22 @@ export function PhotoAlbumPanel({
                 ))}
               </div>
 
-              <div className={styles.paginationBar}>
-                <span className={styles.paginationMeta}>
-                  {currentPage} / {totalPages} 페이지
-                </span>
-                <div className={styles.paginationActions}>
+              {hasMoreRows ? (
+                <div ref={loadMoreRef} className={styles.loadMoreRow}>
+                  <span className={styles.paginationMeta}>
+                    아래로 내려 나머지 {rows.length - visibleRows.length}건을 이어서 볼 수 있습니다.
+                  </span>
                   <button
                     type="button"
                     className="app-button app-button-secondary"
-                    disabled={offset === 0}
-                    onClick={() => setOffset((current) => Math.max(0, current - PAGE_SIZE))}
+                    onClick={() =>
+                      setVisibleCount((current) => Math.min(rows.length, current + PAGE_SIZE))
+                    }
                   >
-                    이전
-                  </button>
-                  <button
-                    type="button"
-                    className="app-button app-button-secondary"
-                    disabled={offset + PAGE_SIZE >= total}
-                    onClick={() => setOffset((current) => current + PAGE_SIZE)}
-                  >
-                    다음
+                    사진 더 보기
                   </button>
                 </div>
-              </div>
+              ) : null}
             </>
           )}
         </div>

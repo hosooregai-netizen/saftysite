@@ -26,12 +26,17 @@ function parseSource(value: string | null): PhotoAlbumSourceFilter {
   return 'all';
 }
 
+function parseAll(value: string | null) {
+  return value === 'true';
+}
+
 export async function GET(request: Request): Promise<Response> {
   try {
     const token = readRequiredAdminToken(request);
     const url = new URL(request.url);
     const response = await loadPhotoAlbumList(token, request, {
       headquarterId: (url.searchParams.get('headquarter_id') || '').trim(),
+      all: parseAll(url.searchParams.get('all')),
       limit: parseLimit(url.searchParams.get('limit')),
       offset: parseOffset(url.searchParams.get('offset')),
       query: (url.searchParams.get('query') || '').trim(),
