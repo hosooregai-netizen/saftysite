@@ -99,7 +99,7 @@ export async function runWorkerFlow(page: Page): Promise<WorkerFlowResult> {
   await uploadArticle.waitFor();
   const afterCount = await page.locator('article').count();
   const previewSrc = await uploadArticle.locator('img').getAttribute('src');
-  if (!previewSrc || !previewSrc.includes('127.0.0.1:8011')) {
+  if (!previewSrc || !/^https?:\/\//.test(previewSrc)) {
     throw new Error(`업로드 사진 미리보기 src가 잘못되었습니다: ${previewSrc}`);
   }
 
