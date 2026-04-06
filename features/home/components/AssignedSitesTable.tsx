@@ -145,7 +145,7 @@ export function AssignedSitesTable({
             const progressLabel =
               latestProgress >= 100 ? '완료' : latestProgress > 0 ? '진행중' : '미작성';
             const actionItems =
-              buildActionMenuItems?.(summary) ?? [{ label: '보고서 보기', href: siteHref }];
+              buildActionMenuItems?.(summary) ?? [{ label: '보고서 목록', href: siteHref }];
 
             return (
               <article key={site.id} className={styles.siteRow}>

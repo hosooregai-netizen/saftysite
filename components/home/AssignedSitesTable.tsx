@@ -169,7 +169,7 @@ export default function AssignedSitesTable({
 
                 <div className={`${styles.actionCell} ${styles.actionsCell}`}>
                   <ActionMenu
-                    items={[{ label: '보고서 보기', href: siteHref }]}
+                    items={[{ label: '보고서 목록', href: siteHref }]}
                     label={`${site.siteName || '현장'} 작업 메뉴 열기`}
                   />
                 </div>
@@ -181,4 +181,3 @@ export default function AssignedSitesTable({
     </div>
   );
 }
-
