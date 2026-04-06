@@ -1391,6 +1391,9 @@ export function MailboxPanel({
                 {googleProviderStatus ? (
                   <span className={localStyles.accountMeta}>{buildProviderStatusDetail(googleProviderStatus)}</span>
                 ) : null}
+                <span className={localStyles.accountMeta}>
+                  로그인 버튼을 누르면 팝업이 아니라 현재 탭이 구글 로그인 화면으로 이동합니다.
+                </span>
                 <div className={localStyles.sectionActions}>
                   <button
                     type="button"
@@ -1444,6 +1447,9 @@ export function MailboxPanel({
                 {naverProviderStatus ? (
                   <span className={localStyles.accountMeta}>{buildProviderStatusDetail(naverProviderStatus)}</span>
                 ) : null}
+                <span className={localStyles.accountMeta}>
+                  로그인 버튼을 누르면 현재 탭이 네이버 로그인 화면으로 이동합니다.
+                </span>
                 <div className={localStyles.sectionActions}>
                   <button
                     type="button"
