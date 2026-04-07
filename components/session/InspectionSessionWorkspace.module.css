@@ -133,6 +133,24 @@
   background-color: inherit;
 }
 
+.chartCardErp {
+  border: 0;
+  border-radius: 0;
+  background: var(--erp-white);
+  overflow: hidden;
+}
+
+.chartTitleErp {
+  margin: 0;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--erp-line);
+  background: var(--erp-panel-muted);
+  font-size: var(--text-ui-sm);
+  font-weight: 700;
+  color: var(--erp-dark);
+  text-align: center;
+}
+
 .chartDonutBody {
   display: flex;
   flex-wrap: wrap;
@@ -140,6 +158,12 @@
   gap: 14px 20px;
   min-height: 250px;
   background-color: inherit;
+}
+
+.chartDonutBodyErp {
+  min-height: 232px;
+  padding: 16px 18px;
+  background: var(--erp-white);
 }
 
 .chartDonutFigure {
@@ -282,10 +306,212 @@
   text-decoration: none;
 }
 
+.doc5StatsGrid {
+  display: grid;
+  gap: 0;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: stretch;
+  border: 1px solid var(--erp-line);
+  border-radius: 0;
+  background: var(--erp-white);
+  overflow: hidden;
+}
+
+.doc5StatsGrid > * {
+  min-width: 0;
+  border-left: 1px solid var(--erp-line);
+}
+
+.doc5StatsGrid > *:first-child {
+  border-left: 0;
+}
+
+.doc5ChartPanel {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--erp-white);
+}
+
+.doc5ChartPanelTitle {
+  margin: 0;
+  min-height: 40px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--erp-line);
+  background: var(--erp-panel-muted);
+  text-align: center;
+}
+
+.doc5ChartPanelBody {
+  display: flex;
+  align-items: center;
+  min-height: 232px;
+  padding: 16px 18px;
+  background: var(--erp-white);
+}
+
+.doc5ChartPanelBody .relationNotice {
+  width: 100%;
+}
+
+.doc5StatsGrid .chartDonutBodyErp,
+.doc5StatsGrid .doc5ChartPanelBody {
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  min-height: 196px;
+  padding: 14px 12px;
+}
+
+.doc5StatsGrid .chartDonutFigure {
+  width: 132px;
+  height: 132px;
+}
+
+.doc5StatsGrid .chartDonutLegend {
+  width: 100%;
+  min-width: 0;
+  flex: 1 1 auto;
+  gap: 6px;
+}
+
+.doc5StatsGrid .chartDonutLegendItem {
+  grid-template-columns: 12px minmax(0, 1fr) auto;
+  gap: 6px;
+}
+
+.doc5StatsGrid .chartDonutLegendLabel,
+.doc5StatsGrid .chartDonutLegendCount {
+  font-size: var(--text-ui-sm);
+}
+
+.doc5SummaryTableWrap {
+  width: 100%;
+  border: 1px solid var(--erp-line);
+  border-radius: 0;
+  background: var(--erp-white);
+}
+
+.doc5SummaryTableRow {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr);
+  min-width: 0;
+}
+
+.doc5SummaryLabelCell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border-right: 1px solid var(--erp-line);
+  background: var(--erp-panel-muted);
+  text-align: center;
+}
+
+.doc5SummaryValueCell {
+  min-width: 0;
+  padding: 0;
+  background: var(--erp-white);
+}
+
+.doc5SummaryEditorCell {
+  position: relative;
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  min-height: 152px;
+  padding: 12px 12px 40px;
+  background: var(--erp-white);
+}
+
+.doc5SummaryEditorCell:focus-within {
+  background: #f8fbff;
+  box-shadow: inset 0 0 0 2px #9ab8d8;
+}
+
+.doc5SummaryEditorCell .fieldAssist,
+.doc5SummaryEditorCell .fieldAssistError {
+  margin: 0;
+}
+
+.doc5SummaryTextarea:global(.app-textarea) {
+  width: 100%;
+  min-width: 0;
+  min-height: 104px !important;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  resize: vertical;
+}
+
+.doc5SummaryTextarea:global(.app-textarea:focus),
+.doc5SummaryTextarea:global(.app-textarea:focus-visible) {
+  outline: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.doc5SummaryActionRow {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px 12px;
+  min-height: 24px;
+}
+
+@media (max-width: 899px) {
+  .doc5StatsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .doc5StatsGrid > *:nth-child(2n + 1) {
+    border-left: 0;
+  }
+
+  .doc5StatsGrid > *:nth-child(n + 3) {
+    border-top: 1px solid var(--erp-line);
+  }
+
+  .doc5SummaryTableRow {
+    grid-template-columns: 1fr;
+  }
+
+  .doc5SummaryLabelCell {
+    justify-content: center;
+    border-right: 0;
+    border-bottom: 1px solid var(--erp-line);
+    text-align: center;
+  }
+}
+
+@media (max-width: 639px) {
+  .doc5StatsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .doc5StatsGrid > * {
+    border-left: 0;
+    border-top: 1px solid var(--erp-line);
+  }
+
+  .doc5StatsGrid > *:first-child {
+    border-top: 0;
+  }
+}
+
 .doc4EmptyState {
   padding: 20px 16px;
   border: 1px dashed var(--erp-line);
-  border-radius: var(--erp-radius-card);
+  border-radius: 0;
   background: var(--erp-panel-muted);
   color: var(--erp-text-muted);
   font-size: var(--text-body);
@@ -298,7 +524,7 @@
 
 .relationNotice {
   border: 1px solid var(--erp-line);
-  border-radius: var(--erp-radius-card);
+  border-radius: 0;
   padding: 12px 14px;
   background: var(--erp-panel-muted);
   color: var(--erp-text-muted);
@@ -343,51 +569,156 @@
   }
 }
 
-/* doc4 메타: 유해·위험장소 전체 너비 → 지도일·확인일은 한 행에서 1:1로 컨테이너 가로 fill */
+/* doc4 메타: 왼쪽 입력군은 ERP 표형 셀로 정리 */
 .doc4MetaBundle {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  align-items: stretch;
-  min-width: 0;
-  width: 100%;
-}
-
-.doc4MetaBundleRow2 {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 10px;
   width: 100%;
   min-width: 0;
-  align-items: start;
 }
 
-.doc4MetaBundle > .field,
-.doc4MetaBundleRow2 .field {
-  min-width: 0;
+.doc4MetaTableWrap {
   width: 100%;
-}
-
-.doc4MetaBundle :global(.app-input),
-.doc4MetaBundleRow2 :global(.app-input) {
-  box-sizing: border-box;
   min-width: 0;
-  width: 100%;
-  max-width: 100%;
+  border: 1px solid var(--erp-line);
+  background: var(--erp-white);
+  overflow: hidden;
 }
 
-/* doc4: 시정 전·후 사진 = 1:1, 라벨은 상단 메타 행과 동일(field + fieldLabel) */
+.doc4MetaTable {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.doc4MetaTable tbody tr + tr th,
+.doc4MetaTable tbody tr + tr td {
+  border-top: 1px solid var(--erp-line);
+}
+
+.doc4MetaLabelCell {
+  width: 112px;
+  padding: 0 12px;
+  border-right: 1px solid var(--erp-line);
+  background: var(--erp-panel-muted);
+  text-align: center;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.doc4MetaValueCell {
+  padding: 0;
+  background: var(--erp-white);
+  vertical-align: middle;
+}
+
+.doc4MetaValueCell + .doc4MetaLabelCell {
+  border-left: 1px solid var(--erp-line);
+}
+
+.doc4MetaValueCell:focus-within {
+  background: #f8fbff;
+  box-shadow: inset 0 0 0 2px #9ab8d8;
+}
+
+.doc4MetaControl {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0 14px;
+  font: inherit;
+  color: var(--erp-dark);
+}
+
+.doc4MetaControl:focus,
+.doc4MetaControl:focus-visible {
+  outline: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.doc4MetaControl::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+}
+
+.doc4MetaControl:disabled,
+.doc4MetaControl[readonly] {
+  color: var(--erp-dark);
+  opacity: 1;
+}
+
+/* doc4 사진: 한 표 안에서 제목 1행 + 사진 1행 */
 .doc4PhotoRow {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  align-items: start;
-  min-width: 0;
   width: 100%;
+  min-width: 0;
 }
 
-.doc4PhotoRow .field {
+.doc4PhotoTableWrap {
+  width: 100%;
   min-width: 0;
+  border: 1px solid var(--erp-line);
+  background: var(--erp-white);
+  overflow: hidden;
+}
+
+.doc4PhotoTable {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.doc4PhotoTitleCell,
+.doc4PhotoValueCell {
+  border: 1px solid var(--erp-line);
+}
+
+.doc4PhotoTitleCell {
+  height: 40px;
+  padding: 8px 12px;
+  background: var(--erp-panel-muted);
+  text-align: center;
+  vertical-align: middle;
+}
+
+.doc4PhotoValueCell {
+  padding: 0;
+  height: 220px;
+  background: var(--erp-white);
+}
+
+.doc4PhotoValueCell .field {
+  min-width: 0;
+  display: block;
+  gap: 0;
+}
+
+.doc4PhotoValueCell .uploadFieldLabelRow {
+  display: none;
+}
+
+.doc4PhotoValueCell .uploadBody.uploadBodyField,
+.doc4PhotoValueCell .uploadBody.uploadBodyField:has(.uploadPreviewHit) {
+  min-height: 220px;
+  height: 220px;
+  max-height: 220px;
+  border: 0;
+  border-radius: 0;
+  background: var(--erp-white);
+}
+
+.doc4PhotoValueCell .uploadPreviewHit,
+.doc4PhotoValueCell .uploadPlaceholder {
+  background: var(--erp-white);
+}
+
+.doc4PhotoValueCell .uploadPreview {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  object-fit: cover;
 }
 
 /* doc11 안전교육: 교육 사진·교육 자료 2열 — doc4 시정 전·후와 동일한 필드형 업로드 높이·미리보기 고정 */
@@ -516,78 +847,77 @@
 /* doc4 이행여부 카드: 본문은 doc4CardInner 그리드, 삭제는 카드에만 겹침(그리드 밖 → 빈 열 없음) */
 .card.doc4Card {
   position: relative;
-  padding: 12px 14px 14px;
-  border-color: var(--erp-line-strong);
-  box-shadow:
-    0 1px 2px rgba(22, 36, 59, 0.05),
-    0 3px 10px rgba(22, 36, 59, 0.05);
+  padding: 10px 12px 12px;
+  border: 1px solid var(--erp-line);
+  border-radius: 0;
+  background: var(--erp-white);
+  box-shadow: none;
 }
 
 .doc4CardInner {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   min-width: 0;
+}
+
+.card.doc4Card .fieldLabel {
+  font-size: var(--text-ui-sm);
+  font-weight: 700;
+  color: var(--erp-dark);
+}
+
+.card.doc4Card :global(.app-input),
+.card.doc4Card :global(.app-select) {
+  border-color: var(--erp-line);
+  border-radius: 0;
+  background: var(--erp-white);
+  box-shadow: none;
+}
+
+.card.doc4Card :global(.app-input:focus),
+.card.doc4Card :global(.app-input:focus-visible),
+.card.doc4Card :global(.app-select:focus),
+.card.doc4Card :global(.app-select:focus-visible) {
+  outline: none;
+  background: #f8fbff;
+  box-shadow: inset 0 0 0 2px #9ab8d8;
+}
+
+.doc4MetaValueCell .doc4MetaControl,
+.doc4MetaValueCell .doc4MetaControl:focus,
+.doc4MetaValueCell .doc4MetaControl:focus-visible {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.card.doc4Card .uploadBody.uploadBodyField {
+  border-radius: 0;
 }
 
 @media (min-width: 900px) {
   .doc4CardInner {
     display: grid;
-    /* 데스크톱: 텍스트(좌·메타+시정결과) : 사진(우) = 1 : 1 */
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 14px 28px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+    gap: 14px;
     align-items: start;
   }
 
   .doc4MetaBundle {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    grid-column: 1;
-    grid-row: 1 / span 2;
+    grid-column: 2;
+    grid-row: 1;
     width: 100%;
     min-width: 0;
     align-self: stretch;
   }
 
-  /* 오른쪽 고정 높이 업로드와 하단 정렬: 남는 세로는 지도일·확인일 행과 시정결과 사이로만 흡수 */
-  .doc4MetaBundle .doc4ResultField {
-    margin-top: auto;
-  }
-
-  .doc4MetaBundle > .field,
-  .doc4MetaBundleRow2 .field {
-    width: 100%;
-    max-width: 100%;
-  }
-
-  .doc4MetaBundleRow2 {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-  }
-
-  .doc4ResultField :global(.app-input) {
-    box-sizing: border-box;
-    width: 100%;
-    min-width: 0;
-  }
-
   .doc4PhotoRow {
-    grid-column: 2;
-    grid-row: 1 / span 2;
+    grid-column: 1;
+    grid-row: 1;
     align-self: start;
     min-width: 0;
-    padding-left: 22px;
-    margin-left: 2px;
-    border-left: 1px solid var(--erp-line);
-  }
-
-  /* 데스크톱: 좌측 폼과 시각적 균형 — doc4 업로드 높이 */
-  .doc4PhotoRow .uploadBody.uploadBodyField {
-    min-height: 300px;
-    height: 300px;
-    max-height: 300px;
   }
 
   .doc4CardInnerWithEyebrow .doc4DerivedEyebrow {
@@ -596,15 +926,15 @@
   }
 
   .doc4CardInnerWithEyebrow .doc4MetaBundle {
-    grid-row: 2 / span 2;
+    grid-row: 2;
   }
 
   .doc4CardInnerWithEyebrow .doc4PhotoRow {
-    grid-row: 2 / span 2;
+    grid-row: 2;
   }
 
   .card.doc4Card {
-    padding: 14px 18px 16px;
+    padding: 12px 14px 14px;
   }
 
   .doc4CardDeleteOverlay {
@@ -643,6 +973,27 @@
   .doc4CardDeleteOverlay {
     top: 9px;
     right: 10px;
+  }
+
+  .doc4MetaLabelCell {
+    width: 92px;
+    padding: 0 10px;
+  }
+
+  .doc4MetaControl {
+    padding: 0 10px;
+    font-size: var(--text-ui-sm);
+  }
+
+  .doc4PhotoValueCell {
+    height: 180px;
+  }
+
+  .doc4PhotoValueCell .uploadBody.uploadBodyField,
+  .doc4PhotoValueCell .uploadBody.uploadBodyField:has(.uploadPreviewHit) {
+    min-height: 180px;
+    height: 180px;
+    max-height: 180px;
   }
 }
 
@@ -1196,6 +1547,35 @@
   color: var(--erp-dark);
 }
 
+.combinedOverviewSectionTitle,
+.doc2SubsectionTitle,
+.workPlanCaption,
+.doc8CaptionTitle,
+.doc3SectionHeader .cardTitle {
+  font-size: var(--text-title);
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  color: var(--erp-dark);
+}
+
+.doc1GroupCell,
+.doc1LabelCell,
+.doc2OverviewLabelCell,
+.doc2AccidentLabelCell,
+.workPlanTable thead th,
+.doc3TitleCell,
+.doc3SubLabelCell,
+.doc4MetaLabelCell,
+.doc5ChartPanelTitle,
+.doc5SummaryLabelCell {
+  font-size: var(--text-ui-sm);
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: 0;
+  color: var(--erp-dark);
+}
+
 .summaryGrid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -1414,13 +1794,13 @@
   min-width: 0;
 }
 
+.combinedOverviewSectionBlock > .tableCard {
+  border-radius: 0;
+}
+
 .combinedOverviewSectionTitle {
   margin: 0;
   padding-left: 2px;
-  font-size: var(--text-title);
-  font-weight: 700;
-  line-height: 1.3;
-  color: var(--erp-dark);
 }
 
 .doc1TableGroup {
@@ -1469,13 +1849,10 @@
 
 .doc1GroupCell,
 .doc1LabelCell {
-  font-size: var(--text-ui);
-  font-weight: 700;
-  color: var(--erp-dark);
 }
 
 .doc1GroupCell {
-  background: #fbfcfe;
+  background: var(--erp-panel-muted);
   text-align: center;
   letter-spacing: -0.01em;
 }
@@ -1488,8 +1865,8 @@
 }
 
 .doc1ValueCell {
-  font-size: var(--text-body);
-  line-height: 1.7;
+  font-size: var(--text-ui);
+  line-height: 1.6;
   color: var(--erp-text-muted);
   background: var(--erp-white);
   word-break: keep-all;
@@ -1544,6 +1921,7 @@
   border-collapse: collapse;
   table-layout: fixed;
   background: var(--erp-white);
+  border: 1px solid var(--erp-line);
 }
 
 .doc2OverviewLabelCol {
@@ -1563,11 +1941,7 @@
 
 .doc2OverviewLabelCell {
   background: var(--erp-panel-muted);
-  font-size: var(--text-ui-sm);
-  font-weight: 700;
-  line-height: 1.45;
   text-align: center;
-  color: var(--erp-dark);
   white-space: nowrap;
 }
 
@@ -1729,12 +2103,30 @@
   -webkit-overflow-scrolling: touch;
 }
 
+.doc2AccidentSections {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.doc2AccidentSectionBlock {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.doc2SubsectionTitle {
+  margin: 0;
+  padding-left: 2px;
+}
+
 .doc2AccidentTable {
   width: 100%;
   min-width: 1080px;
   border-collapse: collapse;
   table-layout: fixed;
   background: var(--erp-white);
+  border: 1px solid var(--erp-line);
 }
 
 .doc2AccidentLabelCol {
@@ -1754,11 +2146,7 @@
 .doc2AccidentLabelCell {
   padding: 10px 12px;
   background: var(--erp-panel-muted);
-  font-size: var(--text-ui-sm);
-  font-weight: 700;
-  line-height: 1.45;
   text-align: center;
-  color: var(--erp-dark);
   white-space: nowrap;
 }
 
@@ -1805,6 +2193,14 @@
   background: transparent;
   box-shadow: none;
   resize: vertical;
+}
+
+.doc2AccidentNotesTable {
+  min-width: 100%;
+}
+
+.doc2AccidentNotesTable .doc2AccidentValueCell {
+  padding: 0;
 }
 
 @media (max-width: 899px) {
@@ -1905,9 +2301,6 @@
   caption-side: top;
   margin: 0 0 10px;
   padding: 0;
-  font-size: var(--text-title);
-  font-weight: 700;
-  color: var(--erp-dark);
   text-align: left;
 }
 
@@ -1934,10 +2327,6 @@
   margin: 0;
   min-width: 0;
   flex: 1 1 auto;
-  font-size: var(--text-title);
-  font-weight: 700;
-  color: var(--erp-dark);
-  line-height: 1.25;
   word-break: keep-all;
   overflow-wrap: anywhere;
 }
@@ -1951,10 +2340,6 @@
   padding: 6px 14px;
   border: 1px solid var(--erp-line);
   background: var(--erp-panel-muted);
-  font-size: var(--text-ui-sm);
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  color: var(--erp-mid);
   text-align: center;
 }
 
@@ -2798,6 +3183,7 @@ button.uploadPreviewHit {
 
 .doc3SceneStack {
   min-width: 0;
+  gap: 18px;
 }
 
 .doc3SceneIntro {
@@ -2810,28 +3196,256 @@ button.uploadPreviewHit {
 
 .doc3Section {
   display: grid;
-  gap: 14px;
+  gap: 12px;
+}
+
+.doc3SceneOverviewSection,
+.doc3ProcessSection {
+  gap: 10px;
 }
 
 .doc3SectionHeader {
   display: flex;
   flex-wrap: wrap;
-  align-items: end;
+  align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 8px 12px;
+  padding: 0 2px;
+}
+
+.doc3SceneOverviewSection .cardTitle,
+.doc3ProcessSection .cardTitle {
+  font-size: var(--text-title);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--erp-dark);
 }
 
 .doc3SectionGrid {
   display: grid;
-  gap: 14px;
+  gap: 16px;
   align-items: start;
+}
+
+.doc3TableWrap {
+  width: 100%;
+  overflow-x: hidden;
+}
+
+.doc3UnifiedTable {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  border: 1px solid var(--erp-line);
+  background: var(--erp-white);
+}
+
+.doc3TitleCol {
+  width: 10%;
+}
+
+.doc3ImageColWide {
+  width: 40%;
+}
+
+.doc3ImageCol {
+  width: 15%;
+}
+
+.doc3TitleCell,
+.doc3SubLabelCell,
+.doc3ImageCell,
+.doc3ImageCellCompact,
+.doc3InputValueCell {
+  border: 1px solid var(--erp-line);
+  vertical-align: middle;
+}
+
+.doc3TitleCell,
+.doc3SubLabelCell {
+  padding: 8px 10px;
+  background: var(--erp-panel-muted);
+}
+
+.doc3TitleCell {
+  text-align: center;
+}
+
+.doc3SubLabelCell {
+  text-align: center;
+}
+
+.doc3TitleCellInner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+
+.doc3TitleCellText {
+  min-width: 0;
+}
+
+.doc3ImageCell,
+.doc3ImageCellCompact,
+.doc3InputValueCell {
+  padding: 0;
+  background: var(--erp-white);
+}
+
+.doc3ImageCell .field,
+.doc3ImageCellCompact .field {
+  display: block;
+  position: relative;
+}
+
+.doc3ImageCell .uploadFieldLabelRow,
+.doc3ImageCellCompact .uploadFieldLabelRow {
+  display: none;
+}
+
+.doc3ImageCell .uploadBody.uploadBodyField,
+.doc3ImageCellCompact .uploadBody.uploadBodyField,
+.doc3ImageCell .uploadBody.uploadBodyField:has(.uploadPreviewHit),
+.doc3ImageCellCompact .uploadBody.uploadBodyField:has(.uploadPreviewHit) {
+  min-height: 180px;
+  height: 180px;
+  max-height: 180px;
+  border: 0;
+  border-radius: 0;
+  background: var(--erp-white);
+}
+
+.doc3ImageCellCompact .uploadBody.uploadBodyField,
+.doc3ImageCellCompact .uploadBody.uploadBodyField:has(.uploadPreviewHit) {
+  min-height: 148px;
+  height: 148px;
+  max-height: 148px;
+}
+
+.doc3ImageCell .uploadPreviewHit,
+.doc3ImageCellCompact .uploadPreviewHit,
+.doc3ImageCell .uploadPlaceholder,
+.doc3ImageCellCompact .uploadPlaceholder {
+  background: var(--erp-white);
+}
+
+.doc3ImageCell .uploadPreview,
+.doc3ImageCellCompact .uploadPreview {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  object-fit: cover;
+}
+
+.doc3ImageCell .uploadFieldClearOverlay,
+.doc3ImageCellCompact .uploadFieldClearOverlay {
+  top: 8px;
+  right: 8px;
+  bottom: auto;
+}
+
+.doc3InputValueCell {
+  position: relative;
+}
+
+.doc3InputValueCell:focus-within {
+  background: #f8fbff;
+  box-shadow: inset 0 0 0 2px #9ab8d8;
+}
+
+.doc3InputValueCell .doc3SceneTitleInput:global(.app-input) {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.doc3InputValueCell .doc3SceneTitleInput:global(.app-input:focus),
+.doc3InputValueCell .doc3SceneTitleInput:global(.app-input:focus-visible) {
+  outline: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.doc3SceneOverviewSection .doc3SceneOverviewGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.doc3ProcessSection .doc3ProcessGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .doc3SlotCard {
   display: grid;
-  gap: 14px;
-  padding: 16px;
+  gap: 0;
+  padding: 0;
   min-width: 0;
+  border: 1px solid var(--erp-line);
+  background: var(--erp-white);
+  box-shadow: none;
+  overflow: hidden;
+}
+
+.doc3ScenePhotoCard,
+.doc3ProcessCard {
+  align-content: start;
+}
+
+.doc3SlotCard .field {
+  gap: 0;
+}
+
+.doc3SlotCard .uploadFieldLabelRow {
+  align-items: baseline;
+  gap: 6px 12px;
+  padding: 10px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--erp-line);
+  border-radius: 0;
+  background: var(--erp-panel-muted);
+}
+
+.doc3SlotCard .uploadFieldLabelRow .fieldLabel,
+.doc3ProcessNameLabelRow .fieldLabel {
+  font-size: var(--text-ui-sm);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--erp-dark);
+}
+
+.doc3SlotCard .inlineDangerButton {
+  padding: 0;
+  color: #b42318;
+  font-size: var(--text-ui-sm);
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.doc3SlotCard .uploadBody.uploadBodyField,
+.doc3SlotCard .uploadBody.uploadBodyField:has(.uploadPreviewHit) {
+  min-height: 164px;
+  height: 164px;
+  max-height: 164px;
+  border: 0;
+  border-radius: 0;
+  background: var(--erp-white);
+}
+
+.doc3SlotCard .uploadPreviewHit {
+  background: var(--erp-white);
+}
+
+.doc3SlotCard .uploadPreview {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  object-fit: contain;
 }
 
 .doc3ProcessNameLabelRow {
@@ -2839,15 +3453,29 @@ button.uploadPreviewHit {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 6px 12px;
   width: 100%;
+}
+
+.doc3ProcessField {
+  padding: 0;
+  border: 0;
+  border-top: 1px solid var(--erp-line);
+  border-radius: 0;
+  background: var(--erp-white);
+}
+
+.doc3ProcessNameLabelRow {
+  padding: 10px 12px;
+  background: var(--erp-panel-muted);
+  border-bottom: 1px solid var(--erp-line);
 }
 
 .doc3AiInline {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: var(--text-ui-sm);
+  font-size: var(--text-ui-xs);
   color: var(--erp-text-muted);
 }
 
@@ -2865,10 +3493,34 @@ button.uploadPreviewHit {
   font-weight: 600;
 }
 
+.doc3AiStatusNotice {
+  padding: 0 2px;
+}
+
 @keyframes doc3-ai-spin {
   to {
     transform: rotate(360deg);
   }
+}
+
+.doc3SceneTitleInput:global(.app-input) {
+  min-height: 38px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 0;
+  background: var(--erp-white);
+  box-shadow: none;
+  font-size: var(--text-ui);
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--erp-dark);
+}
+
+.doc3SceneTitleInput:global(.app-input:focus),
+.doc3SceneTitleInput:global(.app-input:focus-visible) {
+  outline: none;
+  background: #f8fbff;
+  box-shadow: inset 0 0 0 2px #9ab8d8;
 }
 
 .doc3SceneTitleInput:placeholder-shown:not(:focus) {
@@ -2891,6 +3543,45 @@ button.uploadPreviewHit {
   .doc3SceneStack {
     grid-template-columns: minmax(0, 1fr);
   }
+
+  .doc3ProcessCard {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .doc3SceneOverviewSection .doc3SceneOverviewGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .doc3ProcessSection .doc3ProcessGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 899px) {
+  .doc3SectionGrid {
+    gap: 12px;
+  }
+
+  .doc3SceneOverviewSection .doc3SceneOverviewGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .doc3ProcessSection .doc3ProcessGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .doc3SlotCard {
+    gap: 0;
+    padding: 0;
+  }
+
+  .doc3SlotCard .uploadBody.uploadBodyField,
+  .doc3SlotCard .uploadBody.uploadBodyField:has(.uploadPreviewHit) {
+    min-height: 176px;
+    height: 176px;
+    max-height: 176px;
+  }
+
 }
 
 .doc3FullRow {

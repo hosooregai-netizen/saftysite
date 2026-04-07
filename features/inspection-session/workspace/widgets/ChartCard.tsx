@@ -5,9 +5,14 @@ import type { ChartEntry } from '@/components/session/workspace/utils';
 interface ChartCardProps {
   entries: ChartEntry[];
   title: string;
+  variant?: 'default' | 'erp';
 }
 
-export function ChartCard({ entries, title }: ChartCardProps) {
+export function ChartCard({
+  entries,
+  title,
+  variant = 'default',
+}: ChartCardProps) {
   const list = Array.isArray(entries) ? entries : [];
   const total = list.reduce((sum, item) => sum + item.count, 0);
   const slices = total > 0 ? buildDonutSlices(list, total) : [];
@@ -19,11 +24,22 @@ export function ChartCard({ entries, title }: ChartCardProps) {
     return Number.isInteger(rounded) ? `${rounded}%` : `${rounded.toFixed(1)}%`;
   };
 
+  const isErp = variant === 'erp';
+  const cardClassName = isErp
+    ? `${styles.chartCard} ${styles.chartCardErp}`
+    : styles.chartCard;
+  const titleClassName = isErp
+    ? `${styles.chartTitle} ${styles.chartTitleErp}`
+    : styles.chartTitle;
+  const bodyClassName = isErp
+    ? `${styles.chartDonutBody} ${styles.chartDonutBodyErp}`
+    : styles.chartDonutBody;
+
   return (
-    <article className={styles.chartCard}>
-      <h3 className={styles.chartTitle}>{title}</h3>
+    <article className={cardClassName}>
+      <h3 className={titleClassName}>{title}</h3>
       {list.length > 0 && total > 0 ? (
-        <div className={styles.chartDonutBody}>
+        <div className={bodyClassName}>
           <div className={styles.chartDonutFigure}>
             <svg
               className={styles.chartDonutSvg}

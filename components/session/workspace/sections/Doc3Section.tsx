@@ -13,10 +13,24 @@ import Doc3ExtraScenes from './Doc3ExtraScenes';
 import Doc3FixedScenes from './Doc3FixedScenes';
 
 function compactSceneTitle(report?: HazardReportItem) {
-  const candidates = [report?.metadata, report?.locationDetail, report?.objects?.slice(0, 2).join(' ')];
+  const candidates = [
+    report?.metadata,
+    report?.locationDetail,
+    report?.objects?.slice(0, 2).join(' '),
+  ];
 
   for (const candidate of candidates) {
-    const value = candidate?.replace(/[.!?。]+$/g, '').replace(/^(사진|이미지)\s*(은|는)?\s*/g, '').replace(/\b현장\b/g, '').replace(/\b전경\b/g, '').replace(/\b모습\b/g, '').replace(/\b상태\b/g, '').replace(/\b입니다\b/g, '').replace(/[,:/]/g, ' ').replace(/\s+/g, ' ').trim();
+    const value = candidate
+      ?.replace(/[.!?]+$/g, '')
+      .replace(/^(사진|이미지)\s*(은|는)?\s*/g, '')
+      .replace(/\b현장\b/g, '')
+      .replace(/\b전경\b/g, '')
+      .replace(/\b모습\b/g, '')
+      .replace(/\b상태\b/g, '')
+      .replace(/\b입니다\b/g, '')
+      .replace(/[,:/]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
     if (value) return value.slice(0, 24);
   }
 
@@ -53,7 +67,9 @@ export default function Doc3Section({
 
   const toggleAnalyzing = (sceneIds: string[], active: boolean) =>
     setAnalyzingSceneIds((current) =>
-      active ? Array.from(new Set([...current, ...sceneIds])) : current.filter((sceneId) => !sceneIds.includes(sceneId))
+      active
+        ? Array.from(new Set([...current, ...sceneIds]))
+        : current.filter((sceneId) => !sceneIds.includes(sceneId)),
     );
 
   const handleFixedUpload = async (sceneId: string, file: File) => {
@@ -62,7 +78,7 @@ export default function Doc3Section({
   };
 
   const handleExtraUpload = async (sceneId: string, file: File, fallbackTitle: string) => {
-    const priorTitle = session.document3Scenes.find((s) => s.id === sceneId)?.title;
+    const priorTitle = session.document3Scenes.find((scene) => scene.id === sceneId)?.title;
     const useAutoTitle = isExtraScenePlaceholderTitle(priorTitle, fallbackTitle);
 
     const dataUrl = await withFileData(file);
@@ -86,10 +102,16 @@ export default function Doc3Section({
   return (
     <div className={`${styles.sectionStack} ${styles.doc3SceneStack}`}>
       {analyzingSceneIds.length > 0 ? (
-        <p className={`${styles.fieldAssist} ${styles.doc3FullRow}`}>{`AI가 ${analyzingSceneIds.length}개 이미지 제목을 정리 중입니다.`}</p>
+        <p className={`${styles.fieldAssist} ${styles.doc3FullRow} ${styles.doc3AiStatusNotice}`}>
+          {`AI가 ${analyzingSceneIds.length}개 이미지의 공정명을 정리하고 있습니다.`}
+        </p>
       ) : null}
 
-      <Doc3FixedScenes items={fixedScenes} onClear={(sceneId) => updateScene(sceneId, { photoUrl: '', title: '' })} onUpload={handleFixedUpload} />
+      <Doc3FixedScenes
+        items={fixedScenes}
+        onClear={(sceneId) => updateScene(sceneId, { photoUrl: '', title: '' })}
+        onUpload={handleFixedUpload}
+      />
       <Doc3ExtraScenes
         items={extraScenes}
         isAnalyzing={(sceneId) => analyzingSceneIds.includes(sceneId)}
@@ -100,4 +122,3 @@ export default function Doc3Section({
     </div>
   );
 }
-

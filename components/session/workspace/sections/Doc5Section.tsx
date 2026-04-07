@@ -21,6 +21,23 @@ interface Doc5SectionProps {
   session: OverviewSectionProps['session'];
 }
 
+function RelationChartPlaceholder({
+  message,
+  title,
+}: {
+  message: string;
+  title: string;
+}) {
+  return (
+    <article className={styles.doc5ChartPanel}>
+      <h3 className={styles.doc5ChartPanelTitle}>{title}</h3>
+      <div className={styles.doc5ChartPanelBody}>
+        <div className={styles.relationNotice}>{message}</div>
+      </div>
+    </article>
+  );
+}
+
 export default function Doc5Section(props: Doc5SectionProps) {
   const {
     applyDocumentUpdate,
@@ -100,93 +117,108 @@ export default function Doc5Section(props: Doc5SectionProps) {
 
   return (
     <div className={styles.sectionStack}>
-      <div className={styles.chartGrid}>
-        <ChartCard title="지적유형별 통계 금회" entries={currentAccidentEntries} />
-        <ChartCard title="기인물별 통계 금회" entries={currentAgentEntries} />
+      <div className={styles.doc5StatsGrid}>
+        <ChartCard title="지적유형별 통계 금회" entries={currentAccidentEntries} variant="erp" />
+        <ChartCard title="기인물별 통계 금회" entries={currentAgentEntries} variant="erp" />
         {isRelationReady ? (
           <>
-            <ChartCard title="지적유형별 통계 누적" entries={cumulativeAccidentEntries} />
-            <ChartCard title="기인물별 통계 누적" entries={cumulativeAgentEntries} />
+            <ChartCard
+              title="지적유형별 통계 누적"
+              entries={cumulativeAccidentEntries}
+              variant="erp"
+            />
+            <ChartCard
+              title="기인물별 통계 누적"
+              entries={cumulativeAgentEntries}
+              variant="erp"
+            />
           </>
         ) : showRelationSkeleton ? (
           <>
-            <div className={`${styles.card} ${styles.relationSkeletonCard}`} role="status">
-              <strong className={styles.chartTitle}>지적유형별 통계 누적</strong>
-              <p className={styles.relationNotice}>누적 통계를 계산 중입니다.</p>
-            </div>
-            <div className={`${styles.card} ${styles.relationSkeletonCard}`} role="status">
-              <strong className={styles.chartTitle}>기인물별 통계 누적</strong>
-              <p className={styles.relationNotice}>누적 통계를 계산 중입니다.</p>
-            </div>
+            <RelationChartPlaceholder
+              title="지적유형별 통계 누적"
+              message="누적 통계를 계산 중입니다."
+            />
+            <RelationChartPlaceholder
+              title="기인물별 통계 누적"
+              message="누적 통계를 계산 중입니다."
+            />
           </>
         ) : showRelationError ? (
           <>
-            <div className={`${styles.card} ${styles.relationSkeletonCard}`} role="status">
-              <strong className={styles.chartTitle}>지적유형별 통계 누적</strong>
-              <p className={styles.relationNotice}>누적 통계를 아직 불러오지 못했습니다.</p>
-            </div>
-            <div className={`${styles.card} ${styles.relationSkeletonCard}`} role="status">
-              <strong className={styles.chartTitle}>기인물별 통계 누적</strong>
-              <p className={styles.relationNotice}>누적 통계를 아직 불러오지 못했습니다.</p>
-            </div>
+            <RelationChartPlaceholder
+              title="지적유형별 통계 누적"
+              message="누적 통계를 아직 불러오지 못했습니다."
+            />
+            <RelationChartPlaceholder
+              title="기인물별 통계 누적"
+              message="누적 통계를 아직 불러오지 못했습니다."
+            />
           </>
         ) : (
           <>
-            <div className={`${styles.card} ${styles.relationSkeletonCard}`} role="status">
-              <strong className={styles.chartTitle}>지적유형별 통계 누적</strong>
-              <p className={styles.relationNotice}>이전 보고서가 없어 누적 통계가 없습니다.</p>
-            </div>
-            <div className={`${styles.card} ${styles.relationSkeletonCard}`} role="status">
-              <strong className={styles.chartTitle}>기인물별 통계 누적</strong>
-              <p className={styles.relationNotice}>이전 보고서가 없어 누적 통계가 없습니다.</p>
-            </div>
+            <RelationChartPlaceholder
+              title="지적유형별 통계 누적"
+              message="이전 보고서가 없어 누적 통계가 없습니다."
+            />
+            <RelationChartPlaceholder
+              title="기인물별 통계 누적"
+              message="이전 보고서가 없어 누적 통계가 없습니다."
+            />
           </>
         )}
       </div>
-      <label className={styles.field}>
-        <div className={styles.doc5SummaryFieldHeader}>
-          <span className={styles.fieldLabel}>기술지도 총평</span>
-          {draftLoading ? (
-            <span className={styles.doc3AiInline} role="status" aria-live="polite">
-              <span className={styles.doc3AiSpinner} aria-hidden />
-              <span className={styles.doc3AiCaption}>(ai 생성중)</span>
-            </span>
-          ) : null}
-          <button
-            type="button"
-            className={styles.doc5SummaryDraftBtn}
-            disabled={draftLoading || !isRelationReady}
-            onClick={() => void handleGenerateDraft()}
-          >
-            총평 초안 생성
-          </button>
+
+      <div className={styles.doc5SummaryTableWrap}>
+        <div className={styles.doc5SummaryTableRow}>
+          <div className={styles.doc5SummaryLabelCell}>기술지도 총평</div>
+          <div className={styles.doc5SummaryValueCell}>
+            <div className={styles.doc5SummaryEditorCell}>
+              {draftError ? <p className={styles.fieldAssistError}>{draftError}</p> : null}
+              {draftNotice ? <p className={styles.fieldAssist}>{draftNotice}</p> : null}
+              {isRelationHydrating ? (
+                <p className={styles.fieldAssist}>
+                  누적 통계 계산이 끝나면 초안 생성이 활성화됩니다.
+                </p>
+              ) : null}
+              {showRelationEmpty ? (
+                <p className={styles.fieldAssist}>
+                  첫 보고서라면 누적 통계 없이 현재 지적사항만 먼저 작성하면 됩니다.
+                </p>
+              ) : null}
+              <textarea
+                className={`app-textarea ${styles.doc5SummaryTextarea}`}
+                value={session.document5Summary.summaryText}
+                onChange={(event) =>
+                  applyDocumentUpdate('doc5', 'manual', (current) => ({
+                    ...current,
+                    document5Summary: {
+                      ...current.document5Summary,
+                      summaryText: event.target.value,
+                    },
+                  }))
+                }
+              />
+              <div className={styles.doc5SummaryActionRow}>
+                {draftLoading ? (
+                  <span className={styles.doc3AiInline} role="status" aria-live="polite">
+                    <span className={styles.doc3AiSpinner} aria-hidden />
+                    <span className={styles.doc3AiCaption}>AI 생성 중</span>
+                  </span>
+                ) : null}
+                <button
+                  type="button"
+                  className={styles.doc5SummaryDraftBtn}
+                  disabled={draftLoading || !isRelationReady}
+                  onClick={() => void handleGenerateDraft()}
+                >
+                  총평 초안 생성
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
-        {draftError ? <p className={styles.fieldAssistError}>{draftError}</p> : null}
-        {draftNotice ? <p className={styles.fieldAssist}>{draftNotice}</p> : null}
-        {isRelationHydrating ? (
-          <p className={styles.fieldAssist}>
-            누적 통계 계산이 끝나면 초안 생성이 활성화됩니다.
-          </p>
-        ) : null}
-        {showRelationEmpty ? (
-          <p className={styles.fieldAssist}>
-            첫 보고서라면 누적 통계 없이 현재 지적사항부터 먼저 작성하면 됩니다.
-          </p>
-        ) : null}
-        <textarea
-          className="app-textarea"
-          value={session.document5Summary.summaryText}
-          onChange={(event) =>
-            applyDocumentUpdate('doc5', 'manual', (current) => ({
-              ...current,
-              document5Summary: {
-                ...current.document5Summary,
-                summaryText: event.target.value,
-              },
-            }))
-          }
-        />
-      </label>
+      </div>
     </div>
   );
 }

@@ -82,79 +82,119 @@ export default function Doc4Section(props: OverviewSectionProps) {
                   <span className={styles.cardEyebrow}>이전 보고서 연동</span>
                 </div>
               ) : null}
-              <div className={styles.doc4MetaBundle}>
-                <label className={styles.field}>
-                  <span className={styles.fieldLabel}>유해·위험요소</span>
-                  <input
-                    type="text"
-                    className="app-input"
-                    value={item.location}
-                    onChange={(event) => updateField('location', event.target.value)}
-                  />
-                </label>
-                <div className={styles.doc4MetaBundleRow2}>
-                  <label className={styles.field}>
-                    <span className={styles.fieldLabel}>지도일자</span>
-                    <input
-                      type="date"
-                      className="app-input"
-                      value={item.guidanceDate}
-                      readOnly={isDerived}
-                      onChange={(event) => updateField('guidanceDate', event.target.value)}
-                    />
-                  </label>
-                  <label className={styles.field}>
-                    <span className={styles.fieldLabel}>확인일</span>
-                    <input
-                      type="date"
-                      className="app-input"
-                      value={item.confirmationDate}
-                      onChange={(event) => updateField('confirmationDate', event.target.value)}
-                    />
-                  </label>
-                </div>
-                <label className={`${styles.field} ${styles.doc4ResultField}`}>
-                  <span className={styles.fieldLabel}>시정조치 결과</span>
-                  <select
-                    className="app-select"
-                    value={item.result}
-                    onChange={(event) => updateField('result', event.target.value)}
-                  >
-                    {FOLLOW_UP_RESULT_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
               <div className={styles.doc4PhotoRow}>
-                <UploadBox
-                  id={`follow-up-before-${item.id}`}
-                  label="시정 전 사진"
-                  labelLayout="field"
-                  value={item.beforePhotoUrl}
-                  onClear={
-                    isDerived ? undefined : () => updateField('beforePhotoUrl', '')
-                  }
-                  onSelect={async (file) => {
-                    if (!isDerived) {
-                      await withFileData(file, (dataUrl) =>
-                        updateField('beforePhotoUrl', dataUrl),
-                      );
-                    }
-                  }}
-                />
-                <UploadBox
-                  id={`follow-up-after-${item.id}`}
-                  label="시정 후 사진"
-                  labelLayout="field"
-                  value={item.afterPhotoUrl}
-                  onClear={() => updateField('afterPhotoUrl', '')}
-                  onSelect={async (file) =>
-                    withFileData(file, (dataUrl) => updateField('afterPhotoUrl', dataUrl))
-                  }
-                />
+                <div className={styles.doc4PhotoTableWrap}>
+                  <table className={styles.doc4PhotoTable}>
+                    <tbody>
+                      <tr>
+                        <th scope="col" className={styles.doc4PhotoTitleCell}>
+                          시정 전 사진
+                        </th>
+                        <th scope="col" className={styles.doc4PhotoTitleCell}>
+                          시정 후 사진
+                        </th>
+                      </tr>
+                      <tr>
+                        <td className={styles.doc4PhotoValueCell}>
+                          <UploadBox
+                            id={`follow-up-before-${item.id}`}
+                            label="시정 전 사진"
+                            labelLayout="field"
+                            value={item.beforePhotoUrl}
+                            onClear={
+                              isDerived ? undefined : () => updateField('beforePhotoUrl', '')
+                            }
+                            onSelect={async (file) => {
+                              if (!isDerived) {
+                                await withFileData(file, (dataUrl) =>
+                                  updateField('beforePhotoUrl', dataUrl),
+                                );
+                              }
+                            }}
+                          />
+                        </td>
+                        <td className={styles.doc4PhotoValueCell}>
+                          <UploadBox
+                            id={`follow-up-after-${item.id}`}
+                            label="시정 후 사진"
+                            labelLayout="field"
+                            value={item.afterPhotoUrl}
+                            onClear={() => updateField('afterPhotoUrl', '')}
+                            onSelect={async (file) =>
+                              withFileData(file, (dataUrl) =>
+                                updateField('afterPhotoUrl', dataUrl),
+                              )
+                            }
+                          />
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div className={styles.doc4MetaBundle}>
+                <div className={styles.doc4MetaTableWrap}>
+                  <table className={styles.doc4MetaTable}>
+                    <tbody>
+                      <tr>
+                        <th scope="row" className={styles.doc4MetaLabelCell}>
+                          유해·위험요소
+                        </th>
+                        <td className={styles.doc4MetaValueCell}>
+                          <input
+                            type="text"
+                            className={`app-input ${styles.doc4MetaControl}`}
+                            value={item.location}
+                            onChange={(event) => updateField('location', event.target.value)}
+                          />
+                        </td>
+                        <th scope="row" className={styles.doc4MetaLabelCell}>
+                          시정조치 결과
+                        </th>
+                        <td className={styles.doc4MetaValueCell}>
+                          <select
+                            className={`app-select ${styles.doc4MetaControl}`}
+                            value={item.result}
+                            onChange={(event) => updateField('result', event.target.value)}
+                          >
+                            {FOLLOW_UP_RESULT_OPTIONS.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                      </tr>
+                      <tr>
+                        <th scope="row" className={styles.doc4MetaLabelCell}>
+                          지도일자
+                        </th>
+                        <td className={styles.doc4MetaValueCell}>
+                          <input
+                            type="date"
+                            className={`app-input ${styles.doc4MetaControl}`}
+                            value={item.guidanceDate}
+                            readOnly={isDerived}
+                            onChange={(event) => updateField('guidanceDate', event.target.value)}
+                          />
+                        </td>
+                        <th scope="row" className={styles.doc4MetaLabelCell}>
+                          확인일
+                        </th>
+                        <td className={styles.doc4MetaValueCell}>
+                          <input
+                            type="date"
+                            className={`app-input ${styles.doc4MetaControl}`}
+                            value={item.confirmationDate}
+                            onChange={(event) =>
+                              updateField('confirmationDate', event.target.value)
+                            }
+                          />
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
             {canRemove ? (

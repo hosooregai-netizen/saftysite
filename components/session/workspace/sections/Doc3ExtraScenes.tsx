@@ -23,45 +23,82 @@ export default function Doc3ExtraScenes({
         <h3 className={styles.cardTitle}>주요 진행공정</h3>
       </div>
 
-      <div className={styles.doc3SectionGrid}>
-        {items.map((item, index) => {
-          const sceneIndex = index + FIXED_SCENE_COUNT;
-          const defaultTitle = getExtraSceneTitle(sceneIndex);
-          const analyzing = isAnalyzing(item.id);
+      <div className={styles.doc3TableWrap}>
+        <table className={styles.doc3UnifiedTable}>
+          <colgroup>
+            <col className={styles.doc3TitleCol} />
+            <col className={styles.doc3ImageCol} />
+            <col className={styles.doc3TitleCol} />
+            <col className={styles.doc3ImageCol} />
+            <col className={styles.doc3TitleCol} />
+            <col className={styles.doc3ImageCol} />
+            <col className={styles.doc3TitleCol} />
+            <col className={styles.doc3ImageCol} />
+          </colgroup>
+          <tbody>
+            <tr>
+              {items.flatMap((item, index) => {
+                const sceneIndex = index + FIXED_SCENE_COUNT;
+                const defaultTitle = getExtraSceneTitle(sceneIndex);
 
-          return (
-            <article key={item.id} className={`${styles.card} ${styles.doc3SlotCard}`}>
-              <UploadBox
-                id={`scene-extra-photo-${item.id}`}
-                label={`공정 사진 ${index + 1}`}
-                labelLayout="field"
-                value={item.photoUrl}
-                onClear={() => onClear(item.id)}
-                onSelect={async (file) => onUpload(item.id, file, defaultTitle)}
-              />
-              <label className={styles.field}>
-                <span className={styles.doc3ProcessNameLabelRow}>
-                  <span className={styles.fieldLabel}>공정명</span>
-                  {analyzing ? (
-                    <span className={styles.doc3AiInline} role="status" aria-live="polite">
-                      <span className={styles.doc3AiSpinner} aria-hidden />
-                      <span className={styles.doc3AiCaption}>(ai 생성중)</span>
-                    </span>
-                  ) : null}
-                </span>
-                <input
-                  type="text"
-                  className={`app-input ${styles.doc3SceneTitleInput}`}
-                  placeholder={`${defaultTitle} · 예: 철근 배근 작업, 거푸집 설치 작업`}
-                  value={item.title}
-                  onChange={(event) => onTitleChange(item.id, event.target.value)}
-                />
-              </label>
-            </article>
-          );
-        })}
+                return [
+                  <th
+                    key={`photo-title-${item.id}`}
+                    scope="col"
+                    className={styles.doc3TitleCell}
+                  >
+                    <span className={styles.doc3TitleCellText}>{`공정 사진 ${index + 1}`}</span>
+                  </th>,
+                  <td key={`photo-cell-${item.id}`} className={styles.doc3ImageCellCompact}>
+                    <UploadBox
+                      id={`scene-extra-photo-${item.id}`}
+                      label={`공정 사진 ${index + 1}`}
+                      labelLayout="field"
+                      value={item.photoUrl}
+                      fieldClearOverlay
+                      onClear={() => onClear(item.id)}
+                      onSelect={async (file) => onUpload(item.id, file, defaultTitle)}
+                    />
+                  </td>,
+                ];
+              })}
+            </tr>
+            <tr>
+              {items.flatMap((item, index) => {
+                const sceneIndex = index + FIXED_SCENE_COUNT;
+                const defaultTitle = getExtraSceneTitle(sceneIndex);
+
+                return [
+                  <th
+                    key={`name-title-${item.id}`}
+                    scope="row"
+                    className={styles.doc3SubLabelCell}
+                  >
+                    <div className={styles.doc3TitleCellInner}>
+                      <span className={styles.doc3TitleCellText}>공정명</span>
+                      {isAnalyzing(item.id) ? (
+                        <span className={styles.doc3AiInline} role="status" aria-live="polite">
+                          <span className={styles.doc3AiSpinner} aria-hidden />
+                          <span className={styles.doc3AiCaption}>AI 정리 중</span>
+                        </span>
+                      ) : null}
+                    </div>
+                  </th>,
+                  <td key={`name-cell-${item.id}`} className={styles.doc3InputValueCell}>
+                    <input
+                      type="text"
+                      className={`app-input ${styles.doc3SceneTitleInput}`}
+                      placeholder={`${defaultTitle} 예: 천장 배관 설치, 거푸집 해체 작업`}
+                      value={item.title}
+                      onChange={(event) => onTitleChange(item.id, event.target.value)}
+                    />
+                  </td>,
+                ];
+              })}
+            </tr>
+          </tbody>
+        </table>
       </div>
     </section>
   );
 }
-

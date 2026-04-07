@@ -17,21 +17,36 @@ export default function Doc3FixedScenes({
         <h3 className={styles.cardTitle}>현장 전경</h3>
       </div>
 
-      <div className={styles.doc3SectionGrid}>
-        {items.map((item, index) => (
-          <article key={item.id} className={`${styles.card} ${styles.doc3SlotCard}`}>
-            <UploadBox
-              id={`scene-photo-${item.id}`}
-              label={`전경 사진 ${index + 1}`}
-              labelLayout="field"
-              value={item.photoUrl}
-              onClear={() => onClear(item.id)}
-              onSelect={async (file) => onUpload(item.id, file)}
-            />
-          </article>
-        ))}
+      <div className={styles.doc3TableWrap}>
+        <table className={styles.doc3UnifiedTable}>
+          <colgroup>
+            <col className={styles.doc3TitleCol} />
+            <col className={styles.doc3ImageColWide} />
+            <col className={styles.doc3TitleCol} />
+            <col className={styles.doc3ImageColWide} />
+          </colgroup>
+          <tbody>
+            <tr>
+              {items.flatMap((item, index) => [
+                <th key={`title-${item.id}`} scope="col" className={styles.doc3TitleCell}>
+                  <span className={styles.doc3TitleCellText}>{`전경 사진 ${index + 1}`}</span>
+                </th>,
+                <td key={`image-${item.id}`} className={styles.doc3ImageCell}>
+                  <UploadBox
+                    id={`scene-photo-${item.id}`}
+                    label={`전경 사진 ${index + 1}`}
+                    labelLayout="field"
+                    value={item.photoUrl}
+                    fieldClearOverlay
+                    onClear={() => onClear(item.id)}
+                    onSelect={async (file) => onUpload(item.id, file)}
+                  />
+                </td>,
+              ])}
+            </tr>
+          </tbody>
+        </table>
       </div>
     </section>
   );
 }
-
