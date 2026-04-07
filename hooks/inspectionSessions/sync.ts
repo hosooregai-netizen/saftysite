@@ -43,6 +43,8 @@ import {
   getErrorMessage,
   isAuthFailure,
   mergeReportIndexItems,
+  normalizeReportIndexBySiteId,
+  REPORT_INDEX_STORAGE_KEY,
   normalizeSessions,
   SITE_STORAGE_KEY,
   STORAGE_KEY,
@@ -940,28 +942,33 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
         readPersistedValue<InspectionSession[]>(STORAGE_KEY),
         readPersistedValue<InspectionSite[]>(SITE_STORAGE_KEY),
         readPersistedValue<SafetyUser>(USER_STORAGE_KEY),
+        readPersistedValue<Record<string, SiteReportIndexState>>(REPORT_INDEX_STORAGE_KEY),
       ]);
       const cachedBootstrapResult = await Promise.race([
         cachedBootstrapPromise.then((value) => ({ timedOut: false, value })),
         new Promise<{
           timedOut: true;
-          value: [null, null, null];
+          value: [null, null, null, null];
         }>((resolve) =>
           window.setTimeout(
-            () => resolve({ timedOut: true, value: [null, null, null] }),
+            () => resolve({ timedOut: true, value: [null, null, null, null] }),
             PERSISTED_BOOTSTRAP_TIMEOUT_MS,
           ),
         ),
       ]);
       if (cancelled) return;
 
-      const [cachedSessions, cachedSites, cachedUser] = cachedBootstrapResult.value;
+      const [cachedSessions, cachedSites, cachedUser, cachedReportIndex] =
+        cachedBootstrapResult.value;
       if (cachedSites?.length) {
         setSiteState(cachedSites);
       }
       if (cachedSessions?.length) {
         setSessionState(cachedSessions);
         resetSessionVersions(cachedSessions);
+      }
+      if (cachedReportIndex && Object.keys(cachedReportIndex).length > 0) {
+        setReportIndexBySiteId(normalizeReportIndexBySiteId(cachedReportIndex));
       }
 
       authTokenRef.current = token;
@@ -996,6 +1003,7 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
     setHasAuthToken,
     setIsHydrating,
     setIsReady,
+    setReportIndexBySiteId,
     setSessionState,
     setSiteRelationsStatusBySiteId,
     setSiteState,

@@ -4,7 +4,6 @@ import { useCallback } from 'react';
 import {
   createInspectionSite,
   getSessionSiteKey,
-  normalizeInspectionSession,
   normalizeInspectionSite,
 } from '@/constants/inspectionSession';
 import {
@@ -112,7 +111,7 @@ export function useInspectionSessionsMutations(
     if (!currentSession) return;
 
     const updatedSession = {
-      ...normalizeInspectionSession(updater(currentSession)),
+      ...updater(currentSession),
       updatedAt,
     };
 
@@ -152,7 +151,7 @@ export function useInspectionSessionsMutations(
       const nextSessions = current.map((session) => {
         if (!predicate(session)) return session;
         touchedIds.push(session.id);
-        return { ...normalizeInspectionSession(updater(session)), updatedAt };
+        return { ...updater(session), updatedAt };
       });
       sessionsRef.current = nextSessions;
       return nextSessions;

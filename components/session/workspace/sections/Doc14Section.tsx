@@ -18,31 +18,29 @@ export default function Doc14Section({
   const isPdf = url ? isPdfSource(url) : false;
 
   return (
-    <article className={`${styles.noticeCard} ${styles.doc14ViewerCard}`}>
-      {url ? (
-        <div className={styles.doc14Viewer}>
-          <div className={styles.doc14Caption}>
-            {info?.title ? <h3 className={styles.doc14CaptionTitle}>{info.title}</h3> : null}
-          </div>
-          {isPdf ? (
+    <article className={`${styles.tableCard} ${styles.doc14SimpleCard}`}>
+      <div className={styles.doc14SimpleBody}>
+        <strong className={styles.doc14TitleText}>{info?.title || '안전 정보'}</strong>
+        {url ? (
+          isPdf ? (
             <iframe
               title={info?.title || '안전 정보 PDF'}
               src={url}
               className={styles.doc14PdfFrame}
             />
           ) : (
-            <img
-              src={url}
-              alt={info?.title || '안전 정보'}
-              className={styles.doc14FullImage}
-            />
-          )}
-        </div>
-      ) : (
-        <div className={styles.noticeBody}>
-          <h3 className={styles.noticeTitle}>{info?.title || '안전 정보'}</h3>
-        </div>
-      )}
+            <div className={styles.doc14ImageFrame}>
+              <img
+                src={url}
+                alt={info?.title || '안전 정보'}
+                className={styles.doc14PreviewImage}
+              />
+            </div>
+          )
+        ) : (
+          <div className={styles.doc14EmptyState}>표시할 안전 정보가 없습니다.</div>
+        )}
+      </div>
     </article>
   );
 }

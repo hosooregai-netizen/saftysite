@@ -12,7 +12,10 @@ import WorkerMenuSidebar from '@/components/worker/WorkerMenuSidebar';
 import WorkerShellBody from '@/components/worker/WorkerShellBody';
 import { WorkerMenuDrawer, WorkerMenuPanel } from '@/components/worker/WorkerMenu';
 import { ChartCard } from '@/components/session/workspace/widgets';
-import { createFutureProcessRiskPlan } from '@/constants/inspectionSession';
+import {
+  createFutureProcessRiskPlan,
+  getSessionGuidanceDate,
+} from '@/constants/inspectionSession';
 import { FUTURE_PROCESS_LIBRARY } from '@/constants/inspectionSession/catalog';
 import { createTimestamp, generateId } from '@/constants/inspectionSession/shared';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
@@ -27,6 +30,7 @@ import {
   applyQuarterlySummarySeed,
   buildInitialQuarterlySummaryReport,
   createQuarterlySummaryDraft,
+  syncQuarterlySummaryReportSources,
 } from '@/lib/erpReports/quarterly';
 import { mapSafetyReportToQuarterlySummaryReport } from '@/lib/erpReports/mappers';
 import {
@@ -50,14 +54,15 @@ import {
   contentBodyToImageUrl,
   contentBodyToText,
 } from '@/lib/safetyApiMappers/utils';
-import { buildSitePhotoAlbumHref, buildSiteQuarterlyListHref } from '@/features/home/lib/siteEntry';
+import { buildSiteQuarterlyListHref } from '@/features/home/lib/siteEntry';
 import shellStyles from '@/features/site-reports/components/SiteReportsScreen.module.css';
 import type {
   SafetyContentItem,
+  SafetyQuarterlySummarySeed,
   SafetyQuarterlySummarySeedSourceReport,
 } from '@/types/backend';
 import type { QuarterlySummaryReport } from '@/types/erpReports';
-import type { InspectionSite } from '@/types/inspectionSession';
+import type { InspectionSession, InspectionSite } from '@/types/inspectionSession';
 
 interface QuarterlyReportPageProps {
   params: Promise<{
@@ -114,7 +119,7 @@ export default function QuarterlyReportPage({ params }: QuarterlyReportPageProps
   const [existingReportError, setExistingReportError] = useState<string | null>(null);
   const isAdminView = Boolean(currentUser && isAdminUserRole(currentUser.role));
   const backHref = currentSite ? buildSiteQuarterlyListHref(currentSite.id) : '/';
-  const backLabel = '遺꾧린 醫낇빀 蹂닿퀬??紐⑸줉';
+  const backLabel = '분기 종합 보고서 목록';
   useEffect(() => {
     if (!isReady || !isAuthenticated || !currentSite) {
       queueMicrotask(() => {
@@ -164,7 +169,7 @@ export default function QuarterlyReportPage({ params }: QuarterlyReportPageProps
         }
 
         setExistingReport(null);
-        setExistingReportError(getSeedLoadErrorMessage(nextError));
+        setExistingReportError(getQuarterlyPageErrorMessage(nextError));
       })
       .finally(() => {
         if (!cancelled) {
@@ -204,19 +209,13 @@ export default function QuarterlyReportPage({ params }: QuarterlyReportPageProps
     existingReportError,
     existingReportLoading,
   ]);
-  const photoAlbumHref = currentSite
-    ? buildSitePhotoAlbumHref(currentSite.id, {
-        backHref: `/sites/${encodeURIComponent(currentSite.id)}/quarterly/${encodeURIComponent(decodedReportId)}`,
-        backLabel: '분기 보고서로 돌아가기',
-        reportTitle: initialDraft?.title || existingReport?.title || '',
-      })
-    : null;
-
   if (!isReady) {
     return (
       <main className="app-page">
         <div className="app-container">
-          <section className={operationalStyles.sectionCard}>遺꾧린 蹂닿퀬??珥덉븞??遺덈윭?ㅻ뒗 以묒엯?덈떎.</section>
+          <section className={operationalStyles.sectionCard}>
+            분기 보고서 초안을 불러오는 중입니다.
+          </section>
         </div>
       </main>
     );
@@ -258,7 +257,9 @@ export default function QuarterlyReportPage({ params }: QuarterlyReportPageProps
       <main className="app-page">
         <div className="app-container">
           <section className={operationalStyles.sectionCard}>
-            <div className={operationalStyles.emptyState}>?꾩옣 ?먮뒗 蹂닿퀬???뺣낫瑜??뺤씤?섏? 紐삵뻽?듬땲??</div>
+            <div className={operationalStyles.emptyState}>
+              현장 또는 보고서 정보를 확인하지 못했습니다.
+            </div>
           </section>
         </div>
       </main>
@@ -291,11 +292,6 @@ export default function QuarterlyReportPage({ params }: QuarterlyReportPageProps
                   <PageBackControl href={backHref} label={backLabel} ariaLabel="이전 페이지로" />
                   <div className={shellStyles.heroMain}>
                     <h1 className={shellStyles.heroTitle}>{initialDraft.title}</h1>
-                    {photoAlbumHref ? (
-                      <Link href={photoAlbumHref} className="app-button app-button-secondary">
-                        사진첩 열기
-                      </Link>
-                    ) : null}
                   </div>
                 </div>
               </header>
@@ -350,12 +346,130 @@ function getQuarterlySourceReportTitle(
   return report.report_title || report.guidance_date || report.report_key;
 }
 
+function getQuarterlySessionReportTitle(session: InspectionSession) {
+  if (session.meta.reportTitle?.trim()) {
+    return session.meta.reportTitle.trim();
+  }
+
+  const guidanceDate = getSessionGuidanceDate(session);
+  if (guidanceDate && Number.isFinite(session.reportNumber) && session.reportNumber > 0) {
+    return `${guidanceDate} 보고서 ${session.reportNumber}`;
+  }
+
+  if (guidanceDate) {
+    return guidanceDate;
+  }
+
+  if (Number.isFinite(session.reportNumber) && session.reportNumber > 0) {
+    return `보고서 ${session.reportNumber}`;
+  }
+
+  return session.id;
+}
+
+function mapSessionToQuarterlySourceReport(
+  session: InspectionSession,
+): SafetyQuarterlySummarySeedSourceReport {
+  return {
+    report_key: session.id,
+    report_title: getQuarterlySessionReportTitle(session),
+    guidance_date: getSessionGuidanceDate(session),
+    drafter: session.meta.drafter || '',
+    progress_rate: session.document2Overview.progressRate || '',
+    finding_count: session.document7Findings.length,
+    improved_count: session.document4FollowUps.filter((item) => item.result === 'completed').length,
+  };
+}
+
+function shouldUseLocalQuarterlySeedFallback(error: unknown) {
+  return error instanceof SafetyApiError && [404, 405, 501].includes(error.status ?? -1);
+}
+
+function buildLocalQuarterlySummarySeed(
+  report: QuarterlySummaryReport,
+  site: InspectionSite,
+  siteSessions: InspectionSession[],
+  options?: {
+    selectedReportKeys?: string[];
+    explicitSelection?: boolean;
+  },
+): SafetyQuarterlySummarySeed {
+  const normalizedSelectedKeys = Array.from(
+    new Set((options?.selectedReportKeys ?? []).map((value) => value.trim()).filter(Boolean)),
+  );
+  const sourceSessions = [...siteSessions]
+    .filter(
+      (session) =>
+        getSessionGuidanceDate(session) &&
+        session.reportKind !== 'quarterly_summary' &&
+        session.reportKind !== 'bad_workplace',
+    )
+    .filter((session) => {
+      const guidanceDate = getSessionGuidanceDate(session);
+      return guidanceDate >= report.periodStartDate && guidanceDate <= report.periodEndDate;
+    })
+    .sort((left, right) => {
+      const leftTime = new Date(getSessionGuidanceDate(left) || left.updatedAt).getTime();
+      const rightTime = new Date(getSessionGuidanceDate(right) || right.updatedAt).getTime();
+      return rightTime - leftTime;
+    });
+  const selectedReportKeys =
+    options?.explicitSelection || normalizedSelectedKeys.length > 0
+      ? normalizedSelectedKeys
+      : sourceSessions.map((session) => session.id);
+  const derivedReport = syncQuarterlySummaryReportSources(
+    report,
+    site,
+    siteSessions,
+    selectedReportKeys,
+    sourceSessions,
+  );
+
+  return {
+    period_start_date: derivedReport.periodStartDate,
+    period_end_date: derivedReport.periodEndDate,
+    selected_report_keys: [...derivedReport.generatedFromSessionIds],
+    source_reports: sourceSessions.map(mapSessionToQuarterlySourceReport),
+    last_calculated_at: derivedReport.lastCalculatedAt,
+    implementation_rows: derivedReport.implementationRows.map((row) => ({
+      session_id: row.sessionId,
+      report_title: row.reportTitle,
+      report_date: row.reportDate,
+      report_number: row.reportNumber,
+      drafter: row.drafter,
+      progress_rate: row.progressRate,
+      finding_count: row.findingCount,
+      improved_count: row.improvedCount,
+      note: row.note,
+    })),
+    accident_stats: derivedReport.accidentStats.map((item) => ({ ...item })),
+    causative_stats: derivedReport.causativeStats.map((item) => ({ ...item })),
+    future_plans: derivedReport.futurePlans.map((item) => ({
+      id: item.id,
+      process_name: item.processName,
+      hazard: item.hazard,
+      countermeasure: item.countermeasure,
+      note: item.note,
+      source: item.source,
+    })),
+    major_measures: [...derivedReport.majorMeasures],
+  };
+}
+
+function getQuarterlyPageErrorMessage(error: unknown) {
+  if (!(error instanceof Error)) {
+    return '분기 원본 보고서를 불러오는 중 오류가 발생했습니다.';
+  }
+
+  return getSeedLoadErrorMessage(error);
+}
+
 function getSeedLoadErrorMessage(error: unknown) {
   if (error instanceof Error) {
     return error.message;
   }
 
-  return '遺꾧린 ?먮낯 蹂닿퀬?쒕? 遺덈윭?ㅻ뒗 以??ㅻ쪟媛 諛쒖깮?덉뒿?덈떎.';
+  return '분기 원본 보고서를 불러오는 중 오류가 발생했습니다.';
 }
 
 function normalizeIds(value: string[]) {
@@ -578,6 +692,7 @@ function QuarterlyReportEditor({
   error,
   onSave,
 }: QuarterlyReportEditorProps) {
+  const { getSessionsBySiteId, ensureSiteReportsLoaded } = useInspectionSessions();
   const [draft, setDraft] = useState(initialDraft);
   const [sourceReports, setSourceReports] = useState<
     SafetyQuarterlySummarySeedSourceReport[]
@@ -669,12 +784,30 @@ function QuarterlyReportEditor({
       setSourceReportsError(null);
 
       try {
-        const seed = await fetchQuarterlySummarySeed(token, currentSite.id, {
-          periodStartDate: nextDraft.periodStartDate,
-          periodEndDate: nextDraft.periodEndDate,
-          selectedReportKeys: options?.selectedReportKeys,
-          explicitSelection: options?.explicitSelection,
-        });
+        let seed: SafetyQuarterlySummarySeed;
+        try {
+          seed = await fetchQuarterlySummarySeed(token, currentSite.id, {
+            periodStartDate: nextDraft.periodStartDate,
+            periodEndDate: nextDraft.periodEndDate,
+            selectedReportKeys: options?.selectedReportKeys,
+            explicitSelection: options?.explicitSelection,
+          });
+        } catch (seedError) {
+          if (!shouldUseLocalQuarterlySeedFallback(seedError)) {
+            throw seedError;
+          }
+
+          await ensureSiteReportsLoaded(currentSite.id);
+          seed = buildLocalQuarterlySummarySeed(
+            nextDraft,
+            currentSite,
+            getSessionsBySiteId(currentSite.id),
+            {
+              selectedReportKeys: options?.selectedReportKeys,
+              explicitSelection: options?.explicitSelection,
+            },
+          );
+        }
 
         setSourceReports(seed.source_reports);
         setSelectedSourceReportKeys(seed.selected_report_keys);
@@ -702,13 +835,13 @@ function QuarterlyReportEditor({
           setSourceReports(previousSourceReports);
           setSelectedSourceReportKeys(previousSelectedSourceReportKeys);
         }
-        setSourceReportsError(getSeedLoadErrorMessage(nextError));
+        setSourceReportsError(getQuarterlyPageErrorMessage(nextError));
         return false;
       } finally {
         setSourceReportsLoading(false);
       }
     },
-    [currentSite.id],
+    [currentSite, ensureSiteReportsLoaded, getSessionsBySiteId],
   );
 
   useEffect(() => {
@@ -759,7 +892,7 @@ function QuarterlyReportEditor({
         setOpsError(
           nextError instanceof Error
             ? nextError.message
-            : 'OPS ?먮즺瑜?遺덈윭?ㅻ뒗 以??ㅻ쪟媛 諛쒖깮?덉뒿?덈떎.',
+            : 'OPS 자료를 불러오는 중 오류가 발생했습니다.',
         );
       } finally {
         if (!cancelled) {
@@ -839,7 +972,7 @@ function QuarterlyReportEditor({
       saveBlobAsFile(blob, filename);
     } catch (nextError) {
       setDocumentError(
-        nextError instanceof Error ? nextError.message : '臾몄꽌瑜??ㅼ슫濡쒕뱶?섎뒗 以??ㅻ쪟媛 諛쒖깮?덉뒿?덈떎.',
+        nextError instanceof Error ? nextError.message : '문서를 다운로드하는 중 오류가 발생했습니다.',
       );
     } finally {
       setIsGeneratingHwpx(false);
@@ -861,7 +994,7 @@ function QuarterlyReportEditor({
       }
     } catch (nextError) {
       setDocumentError(
-        nextError instanceof Error ? nextError.message : 'PDF瑜??ㅼ슫濡쒕뱶?섎뒗 以??ㅻ쪟媛 諛쒖깮?덉뒿?덈떎.',
+        nextError instanceof Error ? nextError.message : 'PDF를 다운로드하는 중 오류가 발생했습니다.',
       );
     } finally {
       setIsGeneratingPdf(false);
@@ -966,7 +1099,7 @@ function QuarterlyReportEditor({
     }
 
     setDraft((current) => ({ ...current, title: nextTitle }));
-    setNotice('蹂닿퀬???쒕ぉ???섏젙?덉뒿?덈떎.');
+    setNotice('보고서 제목을 수정했습니다.');
     setTitleEditorOpen(false);
   };
 
@@ -1180,8 +1313,8 @@ function QuarterlySummaryToolbar(props: {
           type="button"
           className={operationalStyles.toolbarIconButton}
           onClick={onOpenTitleEditor}
-          aria-label="蹂닿퀬???쒕ぉ ?섏젙"
-          title="蹂닿퀬???쒕ぉ ?섏젙"
+          aria-label="보고서 제목 수정"
+          title="보고서 제목 수정"
         >
           <svg
             viewBox="0 0 20 20"
@@ -1202,7 +1335,7 @@ function QuarterlySummaryToolbar(props: {
           onClick={() => void onDownloadWord()}
           disabled={isGeneratingDocument}
         >
-          {isGeneratingHwpx ? '臾몄꽌 ?앹꽦 以?..' : '臾몄꽌 ?ㅼ슫濡쒕뱶 (.hwpx)'}
+          {isGeneratingHwpx ? 'HWPX 생성 중...' : '문서 다운로드 (.hwpx)'}
         </button>
         <button
           type="button"
@@ -1210,7 +1343,7 @@ function QuarterlySummaryToolbar(props: {
           onClick={() => void onDownloadPdf()}
           disabled={isGeneratingDocument}
         >
-          {isGeneratingPdf ? 'PDF ?앹꽦 以?..' : '臾몄꽌 ?ㅼ슫濡쒕뱶 (.pdf)'}
+          {isGeneratingPdf ? 'PDF 생성 중...' : '문서 다운로드 (.pdf)'}
         </button>
       </div>
     </div>
@@ -1227,32 +1360,34 @@ function QuarterlySummaryCards(props: {
 
   return (
     <>
-      <div className={operationalStyles.summaryGrid}>
-        <article className={operationalStyles.summaryCard}>
-          <span className={operationalStyles.summaryLabel}>현장</span>
-          <strong className={operationalStyles.summaryValue}>
-            {draft.siteSnapshot.siteName || '-'}
-          </strong>
-        </article>
-        <article className={operationalStyles.summaryCard}>
-          <span className={operationalStyles.summaryLabel}>선택 보고서</span>
-          <strong className={operationalStyles.summaryValue}>
-            {draft.generatedFromSessionIds.length}건
-          </strong>
-        </article>
-        <article className={operationalStyles.summaryCard}>
-          <span className={operationalStyles.summaryLabel}>수정일</span>
-          <strong className={operationalStyles.summaryValue}>
-            {formatDateTimeLabel(draft.updatedAt || draft.lastCalculatedAt)}
-          </strong>
-        </article>
-        <article className={operationalStyles.summaryCard}>
-          <span className={operationalStyles.summaryLabel}>기간</span>
-          <strong className={operationalStyles.summaryValue}>
-            {formatPeriodRangeLabel(draft.periodStartDate, draft.periodEndDate)}
-          </strong>
-        </article>
-      </div>
+      <section className={operationalStyles.summaryListPanel} aria-label="분기 종합 보고서 요약">
+        <dl className={operationalStyles.summaryList}>
+          <div className={operationalStyles.summaryListItem}>
+            <dt className={operationalStyles.summaryListTerm}>현장</dt>
+            <dd className={operationalStyles.summaryListValue}>
+              {draft.siteSnapshot.siteName || '-'}
+            </dd>
+          </div>
+          <div className={operationalStyles.summaryListItem}>
+            <dt className={operationalStyles.summaryListTerm}>선택 보고서</dt>
+            <dd className={operationalStyles.summaryListValue}>
+              {draft.generatedFromSessionIds.length}건
+            </dd>
+          </div>
+          <div className={operationalStyles.summaryListItem}>
+            <dt className={operationalStyles.summaryListTerm}>수정일</dt>
+            <dd className={operationalStyles.summaryListValue}>
+              {formatDateTimeLabel(draft.updatedAt || draft.lastCalculatedAt)}
+            </dd>
+          </div>
+          <div className={operationalStyles.summaryListItem}>
+            <dt className={operationalStyles.summaryListTerm}>기간</dt>
+            <dd className={operationalStyles.summaryListValue}>
+              {formatPeriodRangeLabel(draft.periodStartDate, draft.periodEndDate)}
+            </dd>
+          </div>
+        </dl>
+      </section>
       {error ? <div className={operationalStyles.bannerError}>{error}</div> : null}
       {documentError ? <div className={operationalStyles.bannerError}>{documentError}</div> : null}
       {notice ? <div className={operationalStyles.bannerInfo}>{notice}</div> : null}
@@ -1352,7 +1487,7 @@ function QuarterlySourceSelectionSection(props: {
               ) : null}
             </div>
           ) : (
-            <div className={operationalStyles.muted}>선택한 원본 보고서가 없습니다.</div>
+            <div className={operationalStyles.muted}>선택된 원본 보고서가 없습니다.</div>
           )}
           <div className={operationalStyles.inlineEditorActions}>
             <button
@@ -1450,7 +1585,7 @@ function QuarterlySourceSelectionModal(props: {
     >
       {error ? <div className={operationalStyles.bannerError}>{error}</div> : null}
       {selectedSourceReportKeys.length === 0 ? (
-        <div className={operationalStyles.bannerInfo}>선택한 원본 보고서가 없습니다.</div>
+        <div className={operationalStyles.bannerInfo}>선택된 원본 보고서가 없습니다.</div>
       ) : null}
       {sourceReports.length > 0 ? (
         <div className={operationalStyles.sourceModalList}>
@@ -1525,10 +1660,10 @@ function QuarterlySiteSnapshotSection(props: {
 
   return (
     <article className={operationalStyles.reportCard}>
-      <SectionHeader title="1. 湲곗닠吏????곸궗?낆옣" />
+      <SectionHeader title="1. 기술지도 사업장 개요" />
       <div className={operationalStyles.snapshotSectionGrid}>
         <section className={operationalStyles.snapshotPanel}>
-          <h3 className={operationalStyles.snapshotPanelTitle}>?꾩옣</h3>
+          <h3 className={operationalStyles.snapshotPanelTitle}>현장</h3>
           <div className={operationalStyles.snapshotTableWrap}>
             <table className={operationalStyles.snapshotTable}>
               <colgroup>
@@ -1548,28 +1683,28 @@ function QuarterlySiteSnapshotSection(props: {
                     onChange={(value) => onChange('siteName', value)}
                   />
                   <th scope="row" className={operationalStyles.snapshotLabelCell}>
-                    사업자관리번호
+                    사업장관리번호
                   </th>
                   <SnapshotInputCell
-                    label="사업자관리번호"
+                    label="사업장관리번호"
                     value={draft.siteSnapshot.siteManagementNumber || draft.siteSnapshot.businessStartNumber}
                     onChange={handleSiteManagementNumberChange}
                   />
                 </tr>
                 <tr>
                   <th scope="row" className={operationalStyles.snapshotLabelCell}>
-                    怨듭궗湲곌컙
+                    공사기간
                   </th>
                   <SnapshotInputCell
-                    label="怨듭궗湲곌컙"
+                    label="공사기간"
                     value={draft.siteSnapshot.constructionPeriod}
                     onChange={(value) => onChange('constructionPeriod', value)}
                   />
                   <th scope="row" className={operationalStyles.snapshotLabelCell}>
-                    怨듭궗湲덉븸
+                    공사금액
                   </th>
                   <SnapshotInputCell
-                    label="怨듭궗湲덉븸"
+                    label="공사금액"
                     value={draft.siteSnapshot.constructionAmount}
                     onChange={(value) => onChange('constructionAmount', value)}
                   />
@@ -1584,20 +1719,20 @@ function QuarterlySiteSnapshotSection(props: {
                     onChange={(value) => onChange('siteManagerName', value)}
                   />
                   <th scope="row" className={operationalStyles.snapshotLabelCell}>
-                    ?곕씫泥??대찓??
+                    연락처(이메일)
                   </th>
                   <SnapshotInputCell
-                    label="?곕씫泥??대찓??"
+                    label="연락처(이메일)"
                     value={draft.siteSnapshot.siteContactEmail}
                     onChange={(value) => onChange('siteContactEmail', value)}
                   />
                 </tr>
                 <tr>
                   <th scope="row" className={operationalStyles.snapshotLabelCell}>
-                    ?꾩옣二쇱냼
+                    현장 주소
                   </th>
                   <SnapshotInputCell
-                    label="?꾩옣二쇱냼"
+                    label="현장 주소"
                     value={draft.siteSnapshot.siteAddress}
                     onChange={(value) => onChange('siteAddress', value)}
                     colSpan={3}
@@ -1619,7 +1754,7 @@ function QuarterlySiteSnapshotSection(props: {
           </div>
         </section>
         <section className={operationalStyles.snapshotPanel}>
-          <h3 className={operationalStyles.snapshotPanelTitle}>蹂몄궗</h3>
+          <h3 className={operationalStyles.snapshotPanelTitle}>본사</h3>
           <div className={operationalStyles.snapshotTableWrap}>
             <table className={operationalStyles.snapshotTable}>
               <colgroup>
@@ -1639,20 +1774,20 @@ function QuarterlySiteSnapshotSection(props: {
                     onChange={(value) => onChange('companyName', value)}
                   />
                   <th scope="row" className={operationalStyles.snapshotLabelCell}>
-                    踰뺤씤?깅줉踰덊샇
+                    법인등록번호
                   </th>
                   <SnapshotInputCell
-                    label="踰뺤씤?깅줉踰덊샇"
+                    label="법인등록번호"
                     value={draft.siteSnapshot.corporationRegistrationNumber || draft.siteSnapshot.businessRegistrationNumber}
                     onChange={handleCorporationNumberChange}
                   />
                 </tr>
                 <tr>
                   <th scope="row" className={operationalStyles.snapshotLabelCell}>
-                    硫댄뿀踰덊샇
+                    면허번호
                   </th>
                   <SnapshotInputCell
-                    label="硫댄뿀踰덊샇"
+                    label="면허번호"
                     value={draft.siteSnapshot.licenseNumber}
                     onChange={(value) => onChange('licenseNumber', value)}
                   />
@@ -1667,10 +1802,10 @@ function QuarterlySiteSnapshotSection(props: {
                 </tr>
                 <tr>
                   <th scope="row" className={operationalStyles.snapshotLabelCell}>
-                    蹂몄궗二쇱냼
+                    본사 주소
                   </th>
                   <SnapshotInputCell
-                    label="蹂몄궗二쇱냼"
+                    label="본사 주소"
                     value={draft.siteSnapshot.headquartersAddress}
                     onChange={(value) => onChange('headquartersAddress', value)}
                     colSpan={3}
@@ -1688,10 +1823,10 @@ function QuarterlySiteSnapshotSection(props: {
 function QuarterlyStatsSection(props: { draft: QuarterlySummaryReport }) {
   return (
     <article className={operationalStyles.reportCard}>
-      <SectionHeader title="2. ?듦퀎遺꾩꽍(?꾧퀎)" />
+      <SectionHeader title="2. 재해유형 분석" />
       <div className={operationalStyles.cardGrid}>
-        <ChartCard title="吏?곸쑀?뺣퀎 醫낇빀" entries={props.draft.accidentStats} />
-        <ChartCard title="湲곗씤臾쇰퀎 醫낇빀" entries={props.draft.causativeStats} />
+        <ChartCard title="재해유형별 종합" entries={props.draft.accidentStats} />
+        <ChartCard title="기인물별 종합" entries={props.draft.causativeStats} />
       </div>
     </article>
   );
@@ -1710,7 +1845,7 @@ function QuarterlyImplementationSection(props: {
   const { rows, onChange, onAdd, onRemove } = props;
   return (
     <article className={operationalStyles.reportCard}>
-      <SectionHeader title="3. 湲곗닠吏???댄뻾?꾪솴" />
+      <SectionHeader title="3. 기술지도 이행현황" />
       <div className={operationalStyles.implementationTableWrap}>
         <table className={operationalStyles.implementationTable}>
           <colgroup>
@@ -1740,7 +1875,7 @@ function QuarterlyImplementationSection(props: {
                   className={`app-button app-button-secondary ${operationalStyles.implementationAddButton}`}
                   onClick={onAdd}
                 >
-                  ??異붽?
+                  행 추가
                 </button>
               </th>
             </tr>
@@ -1759,14 +1894,14 @@ function QuarterlyImplementationSection(props: {
                   <ImplementationInputCell value={item.note} onChange={(value) => onChange(index, 'note', value)} />
                   <td className={operationalStyles.implementationActionCell}>
                     <button type="button" className={`app-button app-button-secondary ${operationalStyles.implementationActionButton}`} onClick={() => onRemove(index)}>
-                      ??젣
+                      삭제
                     </button>
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={9} className={operationalStyles.implementationEmptyCell}>?좏깮??湲곗닠吏??蹂닿퀬?쒓? ?놁뒿?덈떎.</td>
+                <td colSpan={9} className={operationalStyles.implementationEmptyCell}>선택된 기술지도 보고서가 없습니다.</td>
               </tr>
             )}
           </tbody>
@@ -1806,7 +1941,7 @@ function QuarterlyFuturePlansSection(props: {
                   className={`app-button app-button-secondary ${operationalStyles.implementationAddButton}`}
                   onClick={onAdd}
                 >
-                  ??異붽?
+                  행 추가
                 </button>
               </th>
             </tr>
@@ -1872,7 +2007,7 @@ function QuarterlyFuturePlansSection(props: {
                       className={`app-button app-button-secondary ${operationalStyles.implementationActionButton}`}
                       onClick={() => onChange(plans.filter((plan) => plan.id !== item.id))}
                     >
-                      ??젣
+                      삭제
                     </button>
                   </td>
                 </tr>
@@ -1880,7 +2015,7 @@ function QuarterlyFuturePlansSection(props: {
             ) : (
               <tr>
                 <td colSpan={4} className={operationalStyles.implementationEmptyCell}>
-                  ?깅줉???ν썑 怨듭젙 ??ぉ???놁뒿?덈떎.
+                  등록된 향후 공정 계획이 없습니다.
                 </td>
               </tr>
             )}
@@ -1899,25 +2034,25 @@ function QuarterlyOpsSection(props: {
   const { draft, loading, error } = props;
   return (
     <article className={operationalStyles.reportCard}>
-      <SectionHeader title="5. 嫄댁꽕?꾩옣 12? ?щ쭩?ш퀬 湲곗씤臾??듭떖 ?덉쟾議곗튂" />
+      <SectionHeader title="5. 건설현장 12대 사망사고 기인물별 핵심 안전조치" />
       {error ? <div className={operationalStyles.bannerError}>{error}</div> : null}
       {draft.opsAssetId ? (
         <div className={operationalStyles.opsAssetCard}>
           {draft.opsAssetPreviewUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={draft.opsAssetPreviewUrl} alt={draft.opsAssetTitle || 'OPS ?먮즺'} className={operationalStyles.opsAssetPreview} />
+            <img src={draft.opsAssetPreviewUrl} alt={draft.opsAssetTitle || 'OPS 자료'} className={operationalStyles.opsAssetPreview} />
           ) : (
-            <div className={operationalStyles.emptyState}>誘몃━蹂닿린 ?대?吏媛 ?놁뒿?덈떎.</div>
+            <div className={operationalStyles.emptyState}>미리보기 이미지를 표시할 수 없습니다.</div>
           )}
           <div className={operationalStyles.field}>
-            <strong className={operationalStyles.reportCardTitle}>{draft.opsAssetTitle || '?쒕ぉ ?놁쓬'}</strong>
+            <strong className={operationalStyles.reportCardTitle}>{draft.opsAssetTitle || '미지정 자료'}</strong>
             {draft.opsAssetDescription ? <p className={operationalStyles.reportCardDescription}>{draft.opsAssetDescription}</p> : null}
           </div>
         </div>
       ) : loading ? (
-        <div className={operationalStyles.emptyState}>OPS ?먮즺瑜?遺덈윭?ㅻ뒗 以묒엯?덈떎.</div>
+        <div className={operationalStyles.emptyState}>OPS 자료를 불러오는 중입니다.</div>
       ) : (
-        <div className={operationalStyles.emptyState}>?곌껐 媛?ν븳 OPS ?먮즺媛 ?놁뒿?덈떎. 肄섑뀗痢?CRUD??OPS瑜??깅줉?섎㈃ ???곸뿭???먮룞 諛섏쁺?⑸땲??</div>
+        <div className={operationalStyles.emptyState}>현재 배정된 OPS 자료가 없습니다. 관리자에서 OPS 자료를 등록하면 이 영역에 함께 표시됩니다.</div>
       )}
     </article>
   );
@@ -2059,7 +2194,7 @@ function FuturePlanProcessCell(props: {
         <textarea
           className={`app-textarea ${operationalStyles.futurePlanControl}`}
           value={props.item.processName}
-          placeholder="?묒뾽怨듭젙??寃?됲븯硫?異붿쿇 3媛쒓? ?쒖떆?⑸땲??"
+          placeholder="예: 철골 작업, 거푸집 해체 등 공정을 입력하세요"
           onChange={(event) => props.onChange(event.target.value)}
         />
         <div className={operationalStyles.futurePlanRecommendationList}>

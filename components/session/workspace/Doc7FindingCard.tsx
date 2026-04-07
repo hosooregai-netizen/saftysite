@@ -169,7 +169,6 @@ export default function Doc7FindingCard({
           <span className={styles.cardEyebrow}>{`위험요인 ${index + 1}`}</span>
         </div>
         <Doc7FindingFields
-          doc7ReferenceMaterials={doc7ReferenceMaterials}
           item={item}
           referenceMaterial1Title={
             matchedReferenceMaterial?.referenceTitle1 || matchedReferenceMaterial?.title || ''

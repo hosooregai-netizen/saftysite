@@ -12,6 +12,8 @@ import type {
 } from '@/types/inspectionSession';
 import {
   EMPTY_MASTER_DATA,
+  normalizeReportIndexBySiteId,
+  REPORT_INDEX_STORAGE_KEY,
   normalizeSessions,
   normalizeSites,
   SITE_STORAGE_KEY,
@@ -116,6 +118,20 @@ export function useInspectionSessionsStore() {
     await writePersistedValue(USER_STORAGE_KEY, nextUser);
   }, []);
 
+  const persistReportIndexBySiteId = useCallback(
+    async (nextReportIndexBySiteId: Record<string, SiteReportIndexState>) => {
+      const normalized = normalizeReportIndexBySiteId(nextReportIndexBySiteId);
+
+      if (Object.keys(normalized).length === 0) {
+        await deletePersistedValue(REPORT_INDEX_STORAGE_KEY);
+        return;
+      }
+
+      await writePersistedValue(REPORT_INDEX_STORAGE_KEY, normalized);
+    },
+    [],
+  );
+
   const clearAuthState = useCallback(() => {
     clearSafetyAuthToken();
     authTokenRef.current = null;
@@ -137,6 +153,7 @@ export function useInspectionSessionsStore() {
     setIsHydratingReports(false);
     setIsSaving(false);
     void deletePersistedValue(USER_STORAGE_KEY);
+    void deletePersistedValue(REPORT_INDEX_STORAGE_KEY);
   }, []);
 
   return {
@@ -155,6 +172,7 @@ export function useInspectionSessionsStore() {
     masterData,
     masterDataRef,
     persistCurrentUser,
+    persistReportIndexBySiteId,
     persistSessions,
     persistSites,
     reportIndexBySiteId,

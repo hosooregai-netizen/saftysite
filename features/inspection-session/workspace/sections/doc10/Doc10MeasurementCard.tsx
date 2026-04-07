@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
+
 import styles from '@/components/session/InspectionSessionWorkspace.module.css';
-import type { HazardStatsSectionProps } from '@/components/session/workspace/types';
 import { UploadBox } from '@/components/session/workspace/widgets';
+import type { HazardStatsSectionProps } from '@/components/session/workspace/types';
 import type { InspectionSession } from '@/types/inspectionSession';
 
 interface Doc10MeasurementCardProps {
@@ -64,110 +65,143 @@ export function Doc10MeasurementCard({
           <h3 className={styles.cardTitle}>{`계측 결과 ${index + 1}`}</h3>
         </div>
         <div className={styles.measurementCardBody}>
-          <div className={`${styles.formGrid} ${styles.measurementMetaRow}`}>
-            <label className={styles.field}>
-              <span className={styles.fieldLabel}>계측 장비</span>
-              <select
-                className="app-input"
-                value={item.instrumentType}
-                onChange={(event) => {
-                  const nextInstrumentType = event.target.value;
-                  const matchedTemplate = findMeasurementTemplate(nextInstrumentType);
-
-                  updateMeasurement((measurement) => ({
-                    ...measurement,
-                    instrumentType: nextInstrumentType,
-                    safetyCriteria:
-                      matchedTemplate?.safetyCriteria ?? measurement.safetyCriteria,
-                  }));
-                }}
-              >
-                <option value="">선택</option>
-                {item.instrumentType && !inTemplateList ? (
-                  <option value={item.instrumentType}>{item.instrumentType}</option>
-                ) : null}
-                {templateOptions.map((template) => (
-                  <option key={template.id} value={template.instrumentName}>
-                    {template.instrumentName}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className={styles.field}>
-              <span className={styles.fieldLabel}>측정 위치</span>
-              <input
-                type="text"
-                className="app-input"
-                value={item.measurementLocation}
-                onChange={(event) =>
-                  updateMeasurement((measurement) => ({
-                    ...measurement,
-                    measurementLocation: event.target.value,
-                  }))
-                }
-              />
-            </label>
-          </div>
           <div className={styles.measurementSplit}>
-            <div className={styles.measurementPhotoSlot}>
-              <UploadBox
-                id={`measurement-photo-${item.id}`}
-                label="계측 사진"
-                labelLayout="field"
-                fieldClearOverlay
-                value={item.photoUrl}
-                onClear={() =>
-                  updateMeasurement((measurement) => ({ ...measurement, photoUrl: '' }))
-                }
-                onSelect={async (file) =>
-                  withFileData(file, (dataUrl) =>
-                    updateMeasurement((measurement) => ({ ...measurement, photoUrl: dataUrl })),
-                  )
-                }
-              />
+            <div className={`${styles.tableCard} ${styles.doc10PhotoTableWrap}`}>
+              <table className={styles.doc10PhotoTable}>
+                <thead>
+                  <tr>
+                    <th scope="col">계측 사진</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td className={styles.doc10PhotoCell}>
+                      <div className={styles.doc10PhotoUpload}>
+                        <UploadBox
+                          id={`measurement-photo-${item.id}`}
+                          label=""
+                          labelLayout="field"
+                          fieldClearOverlay
+                          value={item.photoUrl}
+                          onClear={() =>
+                            updateMeasurement((measurement) => ({ ...measurement, photoUrl: '' }))
+                          }
+                          onSelect={async (file) =>
+                            withFileData(file, (dataUrl) =>
+                              updateMeasurement((measurement) => ({
+                                ...measurement,
+                                photoUrl: dataUrl,
+                              })),
+                            )
+                          }
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
-            <div className={styles.measurementFieldsCol}>
-              <label className={styles.field}>
-                <span className={styles.fieldLabel}>측정치</span>
-                <input
-                  type="text"
-                  className="app-input"
-                  value={item.measuredValue}
-                  onChange={(event) =>
-                    updateMeasurement((measurement) => ({
-                      ...measurement,
-                      measuredValue: event.target.value,
-                    }))
-                  }
-                />
-              </label>
-              <label className={styles.field}>
-                <span className={styles.fieldLabel}>안전기준</span>
-                <textarea
-                  className={`${styles.tableTextarea} app-textarea`}
-                  value={item.safetyCriteria}
-                  onChange={(event) =>
-                    updateMeasurement((measurement) => ({
-                      ...measurement,
-                      safetyCriteria: event.target.value,
-                    }))
-                  }
-                />
-              </label>
-              <label className={styles.field}>
-                <span className={styles.fieldLabel}>조치 여부</span>
-                <input
-                  type="text"
-                  className="app-input"
-                  value={item.actionTaken}
-                  onChange={(event) =>
-                    updateMeasurement((measurement) => ({
-                      ...measurement,
-                      actionTaken: event.target.value,
-                    }))
-                  }
-                />
-              </label>
+
+            <div className={`${styles.tableCard} ${styles.doc10InfoTableWrap}`}>
+              <table className={styles.doc10InfoTable}>
+                <colgroup>
+                  <col className={styles.doc10InfoLabelCol} />
+                  <col className={styles.doc10InfoValueCol} />
+                  <col className={styles.doc10InfoLabelCol} />
+                  <col className={styles.doc10InfoValueCol} />
+                </colgroup>
+                <tbody>
+                  <tr>
+                    <th scope="row">계측 장비</th>
+                    <td>
+                      <select
+                        className={`${styles.doc10CellControl} app-input`}
+                        value={item.instrumentType}
+                        onChange={(event) => {
+                          const nextInstrumentType = event.target.value;
+                          const matchedTemplate = findMeasurementTemplate(nextInstrumentType);
+
+                          updateMeasurement((measurement) => ({
+                            ...measurement,
+                            instrumentType: nextInstrumentType,
+                            safetyCriteria:
+                              matchedTemplate?.safetyCriteria ?? measurement.safetyCriteria,
+                          }));
+                        }}
+                      >
+                        <option value="">선택</option>
+                        {item.instrumentType && !inTemplateList ? (
+                          <option value={item.instrumentType}>{item.instrumentType}</option>
+                        ) : null}
+                        {templateOptions.map((template) => (
+                          <option key={template.id} value={template.instrumentName}>
+                            {template.instrumentName}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <th scope="row">측정 위치</th>
+                    <td>
+                      <input
+                        type="text"
+                        className={`${styles.doc10CellControl} app-input`}
+                        value={item.measurementLocation}
+                        onChange={(event) =>
+                          updateMeasurement((measurement) => ({
+                            ...measurement,
+                            measurementLocation: event.target.value,
+                          }))
+                        }
+                      />
+                    </td>
+                  </tr>
+                  <tr>
+                    <th scope="row">측정치</th>
+                    <td>
+                      <input
+                        type="text"
+                        className={`${styles.doc10CellControl} app-input`}
+                        value={item.measuredValue}
+                        onChange={(event) =>
+                          updateMeasurement((measurement) => ({
+                            ...measurement,
+                            measuredValue: event.target.value,
+                          }))
+                        }
+                      />
+                    </td>
+                    <th scope="row">조치 여부</th>
+                    <td>
+                      <input
+                        type="text"
+                        className={`${styles.doc10CellControl} app-input`}
+                        value={item.actionTaken}
+                        onChange={(event) =>
+                          updateMeasurement((measurement) => ({
+                            ...measurement,
+                            actionTaken: event.target.value,
+                          }))
+                        }
+                      />
+                    </td>
+                  </tr>
+                  <tr>
+                    <th scope="row">안전기준</th>
+                    <td colSpan={3} className={styles.doc10SafetyCell}>
+                      <textarea
+                        className={`${styles.doc10CellTextarea} app-textarea`}
+                        value={item.safetyCriteria}
+                        onChange={(event) =>
+                          updateMeasurement((measurement) => ({
+                            ...measurement,
+                            safetyCriteria: event.target.value,
+                          }))
+                        }
+                      />
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -191,4 +225,3 @@ export function Doc10MeasurementCard({
     </article>
   );
 }
-

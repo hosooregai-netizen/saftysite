@@ -148,6 +148,8 @@ export default function Doc4Section(props: OverviewSectionProps) {
                             onChange={(event) => updateField('location', event.target.value)}
                           />
                         </td>
+                      </tr>
+                      <tr>
                         <th scope="row" className={styles.doc4MetaLabelCell}>
                           시정조치 결과
                         </th>
@@ -178,6 +180,8 @@ export default function Doc4Section(props: OverviewSectionProps) {
                             onChange={(event) => updateField('guidanceDate', event.target.value)}
                           />
                         </td>
+                      </tr>
+                      <tr>
                         <th scope="row" className={styles.doc4MetaLabelCell}>
                           확인일
                         </th>

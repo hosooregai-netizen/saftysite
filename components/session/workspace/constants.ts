@@ -81,8 +81,8 @@ export const SECTION_DESCRIPTIONS: Record<InspectionSectionKey, string> = {
   doc10: '조도계 중심 계측점검 3행을 기본 제공하고 행을 추가할 수 있습니다.',
   doc11: '교육 사진·자료, 참석인원, 교육 주제를 바탕으로 교육내용을 기록하며, 형식 맞춤 자동 생성을 사용할 수 있습니다.',
   doc12: '활동 1·2 사진과 활동 1·2 내용을 한 카드에서 입력합니다.',
-  doc13: '관리자 재해 사례 중 정렬순 상위 4건을 2x2 카드로 읽기 전용 표시합니다.',
-  doc14: '관제실 마스터 안전 정보 중 정렬순 최상위 1건의 PDF·이미지를 읽기 전용 표시합니다.',
+  doc13: '관리자 재해 사례 중 정렬순 상위 4건을 표형 4행으로 읽기 전용 표시합니다.',
+  doc14: '관제실 마스터 안전 정보 중 정렬순 최상위 1건을 표형 읽기 전용 미리보기로 표시합니다.',
 };
 
 export const CAUSATIVE_AGENT_OPTIONS = CAUSATIVE_AGENT_SECTIONS.flatMap((section) =>

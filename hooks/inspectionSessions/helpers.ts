@@ -18,6 +18,7 @@ import type {
 export const STORAGE_KEY = 'inspection-sessions-v8';
 export const SITE_STORAGE_KEY = 'inspection-sites-v8';
 export const USER_STORAGE_KEY = 'inspection-user-v1';
+export const REPORT_INDEX_STORAGE_KEY = 'inspection-report-index-v1';
 export const EMPTY_MASTER_DATA = buildSafetyMasterData([]);
 
 function getReportIndexRound(item: InspectionReportListItem) {
@@ -123,6 +124,32 @@ export function createEmptyReportIndexState(): SiteReportIndexState {
     fetchedAt: null,
     error: null,
   };
+}
+
+export function normalizeReportIndexBySiteId(
+  value: Record<string, SiteReportIndexState> | null | undefined,
+): Record<string, SiteReportIndexState> {
+  if (!value) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(value)
+      .map(([siteId, state]) => {
+        const items = Array.isArray(state?.items) ? sortReportIndexItems(state.items) : [];
+        const hasItems = items.length > 0;
+        const isErrorState = state?.status === 'error' && !hasItems;
+        const nextState: SiteReportIndexState = {
+          status: isErrorState ? 'error' : hasItems ? 'loaded' : 'idle',
+          items,
+          fetchedAt: typeof state?.fetchedAt === 'string' ? state.fetchedAt : null,
+          error: isErrorState && typeof state?.error === 'string' ? state.error : null,
+        };
+
+        return [siteId, nextState] as const;
+      })
+      .filter(([, state]) => state.status !== 'idle' || state.items.length > 0),
+  );
 }
 
 export function getErrorMessage(error: unknown): string {

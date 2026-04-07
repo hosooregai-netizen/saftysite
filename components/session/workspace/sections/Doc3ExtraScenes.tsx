@@ -26,29 +26,29 @@ export default function Doc3ExtraScenes({
       <div className={styles.doc3TableWrap}>
         <table className={styles.doc3UnifiedTable}>
           <colgroup>
-            <col className={styles.doc3TitleCol} />
-            <col className={styles.doc3ImageCol} />
-            <col className={styles.doc3TitleCol} />
-            <col className={styles.doc3ImageCol} />
-            <col className={styles.doc3TitleCol} />
-            <col className={styles.doc3ImageCol} />
-            <col className={styles.doc3TitleCol} />
-            <col className={styles.doc3ImageCol} />
+            <col className={styles.doc3QuarterCol} />
+            <col className={styles.doc3QuarterCol} />
+            <col className={styles.doc3QuarterCol} />
+            <col className={styles.doc3QuarterCol} />
           </colgroup>
           <tbody>
             <tr>
-              {items.flatMap((item, index) => {
+              {items.map((item, index) => (
+                <th
+                  key={`photo-title-${item.id}`}
+                  scope="col"
+                  className={styles.doc3TitleCell}
+                >
+                  <span className={styles.doc3TitleCellText}>{`공정 사진 ${index + 1}`}</span>
+                </th>
+              ))}
+            </tr>
+            <tr>
+              {items.map((item, index) => {
                 const sceneIndex = index + FIXED_SCENE_COUNT;
                 const defaultTitle = getExtraSceneTitle(sceneIndex);
 
-                return [
-                  <th
-                    key={`photo-title-${item.id}`}
-                    scope="col"
-                    className={styles.doc3TitleCell}
-                  >
-                    <span className={styles.doc3TitleCellText}>{`공정 사진 ${index + 1}`}</span>
-                  </th>,
+                return (
                   <td key={`photo-cell-${item.id}`} className={styles.doc3ImageCellCompact}>
                     <UploadBox
                       id={`scene-extra-photo-${item.id}`}
@@ -59,31 +59,35 @@ export default function Doc3ExtraScenes({
                       onClear={() => onClear(item.id)}
                       onSelect={async (file) => onUpload(item.id, file, defaultTitle)}
                     />
-                  </td>,
-                ];
+                  </td>
+                );
               })}
             </tr>
             <tr>
-              {items.flatMap((item, index) => {
+              {items.map((item) => (
+                <th
+                  key={`name-title-${item.id}`}
+                  scope="col"
+                  className={styles.doc3SubLabelCell}
+                >
+                  <div className={styles.doc3TitleCellInner}>
+                    <span className={styles.doc3TitleCellText}>공정명</span>
+                    {isAnalyzing(item.id) ? (
+                      <span className={styles.doc3AiInline} role="status" aria-live="polite">
+                        <span className={styles.doc3AiSpinner} aria-hidden />
+                        <span className={styles.doc3AiCaption}>AI 정리 중</span>
+                      </span>
+                    ) : null}
+                  </div>
+                </th>
+              ))}
+            </tr>
+            <tr>
+              {items.map((item, index) => {
                 const sceneIndex = index + FIXED_SCENE_COUNT;
                 const defaultTitle = getExtraSceneTitle(sceneIndex);
 
-                return [
-                  <th
-                    key={`name-title-${item.id}`}
-                    scope="row"
-                    className={styles.doc3SubLabelCell}
-                  >
-                    <div className={styles.doc3TitleCellInner}>
-                      <span className={styles.doc3TitleCellText}>공정명</span>
-                      {isAnalyzing(item.id) ? (
-                        <span className={styles.doc3AiInline} role="status" aria-live="polite">
-                          <span className={styles.doc3AiSpinner} aria-hidden />
-                          <span className={styles.doc3AiCaption}>AI 정리 중</span>
-                        </span>
-                      ) : null}
-                    </div>
-                  </th>,
+                return (
                   <td key={`name-cell-${item.id}`} className={styles.doc3InputValueCell}>
                     <input
                       type="text"
@@ -92,8 +96,8 @@ export default function Doc3ExtraScenes({
                       value={item.title}
                       onChange={(event) => onTitleChange(item.id, event.target.value)}
                     />
-                  </td>,
-                ];
+                  </td>
+                );
               })}
             </tr>
           </tbody>

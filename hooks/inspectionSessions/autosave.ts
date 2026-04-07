@@ -31,6 +31,7 @@ export function useInspectionSessionsAutosave(store: InspectionSessionsStore) {
     authTokenRef,
     clearAuthState,
     currentUser,
+    persistReportIndexBySiteId,
     dirtySessionIdsRef,
     isFlushingRef,
     isReady,
@@ -39,6 +40,8 @@ export function useInspectionSessionsAutosave(store: InspectionSessionsStore) {
     sessionVersionsRef,
     sessions,
     sessionsRef,
+    reportIndexBySiteId,
+    reportIndexBySiteIdRef,
     setAuthError,
     setIsSaving,
     setReportIndexBySiteId,
@@ -186,11 +189,20 @@ export function useInspectionSessionsAutosave(store: InspectionSessionsStore) {
 
   const saveNow = useCallback(async () => {
     await Promise.all([
+      persistReportIndexBySiteId(reportIndexBySiteIdRef.current),
       persistSessions(sessionsRef.current),
       persistSites(sitesRef.current),
     ]);
     await flushDirtySessions();
-  }, [flushDirtySessions, persistSessions, persistSites, sessionsRef, sitesRef]);
+  }, [
+    flushDirtySessions,
+    persistReportIndexBySiteId,
+    persistSessions,
+    persistSites,
+    reportIndexBySiteIdRef,
+    sessionsRef,
+    sitesRef,
+  ]);
 
   const deleteSessionRemotely = useCallback(async (sessionId: string) => {
     const targetSession = sessionsRef.current.find((session) => session.id === sessionId);
@@ -259,6 +271,11 @@ export function useInspectionSessionsAutosave(store: InspectionSessionsStore) {
     const timeout = window.setTimeout(() => void persistSites(sitesRef.current), 300);
     return () => window.clearTimeout(timeout);
   }, [isReady, persistSites, sites, sitesRef]);
+
+  useEffect(() => {
+    if (!isReady) return;
+    void persistReportIndexBySiteId(reportIndexBySiteIdRef.current);
+  }, [isReady, persistReportIndexBySiteId, reportIndexBySiteId, reportIndexBySiteIdRef]);
 
   useEffect(() => {
     if (!isReady || !currentUser || !authTokenRef.current) return;

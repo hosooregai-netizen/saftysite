@@ -20,17 +20,19 @@ export default function Doc3FixedScenes({
       <div className={styles.doc3TableWrap}>
         <table className={styles.doc3UnifiedTable}>
           <colgroup>
-            <col className={styles.doc3TitleCol} />
-            <col className={styles.doc3ImageColWide} />
-            <col className={styles.doc3TitleCol} />
-            <col className={styles.doc3ImageColWide} />
+            <col className={styles.doc3HalfCol} />
+            <col className={styles.doc3HalfCol} />
           </colgroup>
           <tbody>
             <tr>
-              {items.flatMap((item, index) => [
+              {items.map((item, index) => (
                 <th key={`title-${item.id}`} scope="col" className={styles.doc3TitleCell}>
                   <span className={styles.doc3TitleCellText}>{`전경 사진 ${index + 1}`}</span>
-                </th>,
+                </th>
+              ))}
+            </tr>
+            <tr>
+              {items.map((item, index) => (
                 <td key={`image-${item.id}`} className={styles.doc3ImageCell}>
                   <UploadBox
                     id={`scene-photo-${item.id}`}
@@ -41,8 +43,8 @@ export default function Doc3FixedScenes({
                     onClear={() => onClear(item.id)}
                     onSelect={async (file) => onUpload(item.id, file)}
                   />
-                </td>,
-              ])}
+                </td>
+              ))}
             </tr>
           </tbody>
         </table>

@@ -233,6 +233,50 @@
   color: var(--erp-dark);
 }
 
+.summaryListPanel {
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-control);
+  background: #fbfcfe;
+  padding: 4px 20px;
+}
+
+.summaryList {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 24px;
+  margin: 0;
+}
+
+.summaryListItem {
+  display: grid;
+  grid-template-columns: minmax(88px, 112px) minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+  margin: 0;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--erp-line);
+}
+
+.summaryListItem:nth-last-child(-n + 2) {
+  border-bottom: none;
+}
+
+.summaryListTerm {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--erp-text-muted);
+}
+
+.summaryListValue {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.5;
+  color: var(--erp-dark);
+  word-break: break-word;
+}
+
 .formGrid {
   display: grid;
   gap: 12px;
@@ -863,6 +907,23 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .summaryList {
+    grid-template-columns: minmax(0, 1fr);
+    column-gap: 0;
+  }
+
+  .summaryListItem {
+    grid-template-columns: minmax(76px, 96px) minmax(0, 1fr);
+  }
+
+  .summaryListItem:nth-last-child(-n + 2) {
+    border-bottom: 1px solid var(--erp-line);
+  }
+
+  .summaryListItem:last-child {
+    border-bottom: none;
+  }
+
   .snapshotPanelTitle {
     font-size: 14px;
     min-height: 40px;
@@ -900,6 +961,7 @@
   }
 
   .sectionCard,
+  .summaryListPanel,
   .summaryCard,
   .reportCard,
   .tableWrap,

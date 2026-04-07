@@ -1,6 +1,5 @@
 import {
   createCurrentHazardFinding,
-  createFutureProcessRiskPlan,
   createMeasurementCheckItem,
   createPreviousGuidanceFollowUpItem,
   getSessionGuidanceDate,
@@ -116,13 +115,6 @@ const inspectionSectionRegistry: Record<
   },
   doc8: {
     render: (props) => <Doc8Section {...props} />,
-    renderToolbar: (props) =>
-      renderToolbarButton('행 추가', () =>
-        props.applyDocumentUpdate('doc8', 'manual', (current) => ({
-          ...current,
-          document8Plans: [...current.document8Plans, createFutureProcessRiskPlan()],
-        })),
-      ),
     title: '문서 8',
   },
   doc9: { render: (props) => <Doc9Section {...props} />, title: '문서 9' },

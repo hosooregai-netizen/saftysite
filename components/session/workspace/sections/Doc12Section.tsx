@@ -22,57 +22,80 @@ export default function Doc12Section(props: SupportSectionProps) {
     <div className={styles.sectionStack}>
       <article key={item.id} className={`${styles.card} ${styles.doc4Card}`}>
         <div className={styles.doc10CardInner}>
-          <div className={styles.doc12Activities}>
-            <div className={styles.doc12ActivityBlock}>
-              <UploadBox
-                id={`activity-photo-${item.id}`}
-                label="활동 1 사진"
-                labelLayout="field"
-                fieldClearOverlay
-                value={item.photoUrl}
-                onClear={() => patchFirst({ photoUrl: '' })}
-                onSelect={async (file) =>
-                  withFileData(file, (dataUrl) => patchFirst({ photoUrl: dataUrl }))
-                }
-              />
-              <label className={styles.field}>
-                <span className={styles.fieldLabel}>활동 1 내용</span>
-                <input
-                  type="text"
-                  className="app-input"
-                  value={item.activityType}
-                  placeholder="예: 순회점검, TBM, 비상훈련"
-                  onChange={(event) => patchFirst({ activityType: event.target.value })}
-                />
-              </label>
-            </div>
-            <div className={styles.doc12ActivityBlock}>
-              <UploadBox
-                id={`activity-photo2-${item.id}`}
-                label="활동 2 사진"
-                labelLayout="field"
-                fieldClearOverlay
-                value={item.photoUrl2}
-                onClear={() => patchFirst({ photoUrl2: '' })}
-                onSelect={async (file) =>
-                  withFileData(file, (dataUrl) => patchFirst({ photoUrl2: dataUrl }))
-                }
-              />
-              <label className={styles.field}>
-                <span className={styles.fieldLabel}>활동 2 내용</span>
-                <input
-                  type="text"
-                  className="app-input"
-                  value={item.content}
-                  placeholder="활동 요약·비고"
-                  onChange={(event) => patchFirst({ content: event.target.value })}
-                />
-              </label>
-            </div>
+          <div className={`${styles.tableCard} ${styles.doc12TableWrap}`}>
+            <table className={styles.doc12Table}>
+              <colgroup>
+                <col />
+                <col />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th scope="col">활동 1 사진</th>
+                  <th scope="col">활동 2 사진</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className={styles.doc12PhotoCell}>
+                    <div className={styles.doc12PhotoUpload}>
+                      <UploadBox
+                        id={`activity-photo-${item.id}`}
+                        label=""
+                        labelLayout="field"
+                        fieldClearOverlay
+                        value={item.photoUrl}
+                        onClear={() => patchFirst({ photoUrl: '' })}
+                        onSelect={async (file) =>
+                          withFileData(file, (dataUrl) => patchFirst({ photoUrl: dataUrl }))
+                        }
+                      />
+                    </div>
+                  </td>
+                  <td className={styles.doc12PhotoCell}>
+                    <div className={styles.doc12PhotoUpload}>
+                      <UploadBox
+                        id={`activity-photo2-${item.id}`}
+                        label=""
+                        labelLayout="field"
+                        fieldClearOverlay
+                        value={item.photoUrl2}
+                        onClear={() => patchFirst({ photoUrl2: '' })}
+                        onSelect={async (file) =>
+                          withFileData(file, (dataUrl) => patchFirst({ photoUrl2: dataUrl }))
+                        }
+                      />
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <th scope="row">활동 1 내용</th>
+                  <th scope="row">활동 2 내용</th>
+                </tr>
+                <tr>
+                  <td className={styles.doc12ContentCell}>
+                    <input
+                      type="text"
+                      className={`${styles.doc10CellControl} app-input`}
+                      value={item.activityType}
+                      placeholder="예: 조회, TBM, 비상훈련"
+                      onChange={(event) => patchFirst({ activityType: event.target.value })}
+                    />
+                  </td>
+                  <td className={styles.doc12ContentCell}>
+                    <input
+                      type="text"
+                      className={`${styles.doc10CellControl} app-input`}
+                      value={item.content}
+                      placeholder="활동 요약 및 비고"
+                      onChange={(event) => patchFirst({ content: event.target.value })}
+                    />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </article>
     </div>
   );
 }
-

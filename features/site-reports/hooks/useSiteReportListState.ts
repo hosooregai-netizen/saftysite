@@ -70,29 +70,52 @@ export function useSiteReportListState(
   } = useInspectionSessions();
   const [reportQuery, setReportQuery] = useState('');
   const [reportSortMode, setReportSortMode] = useState<SiteReportSortMode>('round');
-  const hasReloadedRef = useRef(false);
   const currentSite = useMemo(() => {
     if (!decodedSiteKey) return null;
     return sites.find((site) => site.id === decodedSiteKey) ?? options.siteOverride ?? null;
   }, [decodedSiteKey, options.siteOverride, sites]);
-
-  useEffect(() => {
-    hasReloadedRef.current = false;
-  }, [decodedSiteKey]);
-
-  useEffect(() => {
-    if (!decodedSiteKey || !currentSite || !isAuthenticated || !isReady || hasReloadedRef.current) {
-      return;
-    }
-
-    hasReloadedRef.current = true;
-    void ensureSiteReportIndexLoaded(decodedSiteKey);
-  }, [currentSite, decodedSiteKey, ensureSiteReportIndexLoaded, isAuthenticated, isReady]);
-
   const reportIndexState = useMemo(() => {
     if (!decodedSiteKey) return null;
     return getReportIndexBySiteId(decodedSiteKey);
   }, [decodedSiteKey, getReportIndexBySiteId]);
+  const hasAttemptedLoadRef = useRef(false);
+
+  useEffect(() => {
+    hasAttemptedLoadRef.current = false;
+  }, [decodedSiteKey]);
+
+  useEffect(() => {
+    if (!decodedSiteKey || !currentSite || !isAuthenticated || !isReady) {
+      return;
+    }
+
+    if (reportIndexState?.status === 'loading') {
+      return;
+    }
+
+    const needsInitialLoad =
+      !reportIndexState ||
+      reportIndexState.status === 'idle' ||
+      reportIndexState.status === 'error';
+
+    if (!needsInitialLoad) {
+      return;
+    }
+
+    if (hasAttemptedLoadRef.current && reportIndexState?.status !== 'error') {
+      return;
+    }
+
+    hasAttemptedLoadRef.current = true;
+    void ensureSiteReportIndexLoaded(decodedSiteKey);
+  }, [
+    currentSite,
+    decodedSiteKey,
+    ensureSiteReportIndexLoaded,
+    isAuthenticated,
+    isReady,
+    reportIndexState,
+  ]);
   const reportItems = useMemo(() => reportIndexState?.items ?? [], [reportIndexState]);
   const reportIndexStatus: ReportIndexStatus = reportIndexState?.status ?? 'idle';
   const deferredReportQuery = useDeferredValue(reportQuery);
@@ -197,7 +220,7 @@ export function useSiteReportListState(
       return;
     }
 
-    hasReloadedRef.current = true;
+    hasAttemptedLoadRef.current = true;
     void ensureSiteReportIndexLoaded(decodedSiteKey, { force: true });
   };
 
