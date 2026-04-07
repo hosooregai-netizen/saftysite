@@ -349,6 +349,21 @@ export function fetchAssignedSafetySitesServer(
   );
 }
 
+export function fetchSafetyContentItemsServer(
+  token: string,
+  request: Request | null = null,
+): Promise<SafetyContentItem[]> {
+  return requestSafetyAdminServer<SafetyContentItem[]>(
+    withQuery('/content-items', {
+      active_only: true,
+      limit: CONTENT_LIST_LIMIT,
+    }),
+    {},
+    token,
+    request,
+  );
+}
+
 export function fetchAdminReports(
   token: string,
   request: Request | null = null,

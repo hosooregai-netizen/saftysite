@@ -35,6 +35,8 @@ import {
 } from '@/lib/admin/k2bUpload';
 import {
   convertHwpxBlobToPdfWithFallback,
+  fetchInspectionHwpxDocumentByReportKey,
+  fetchInspectionPdfDocumentByReportKeyWithFallback,
   fetchQuarterlyHwpxDocument,
   fetchQuarterlyPdfDocumentWithFallback,
   saveBlobAsFile,
@@ -707,12 +709,43 @@ export function ReportsSection({
       setError(null);
 
       if (row.reportType === 'technical_guidance') {
+        const authToken = readSafetyAuthToken();
+
+        if (authToken) {
+          try {
+            if (format === 'hwpx') {
+              const exported = await fetchInspectionHwpxDocumentByReportKey(
+                row.reportKey,
+                authToken,
+              );
+              saveBlobAsFile(exported.blob, exported.filename);
+              setNotice('지도보고서를 내보냈습니다.');
+            } else {
+              const exported = await fetchInspectionPdfDocumentByReportKeyWithFallback(
+                row.reportKey,
+                authToken,
+              );
+              saveBlobAsFile(exported.blob, exported.filename);
+              setNotice(
+                exported.fallbackToHwpx
+                  ? 'PDF 변환에 실패해 HWPX로 내보냈습니다.'
+                  : '지도보고서를 내보냈습니다.',
+              );
+            }
+            return;
+          } catch (serverError) {
+            console.warn('Inspection report server export failed; falling back to browser generation.', {
+              error: serverError instanceof Error ? serverError.message : String(serverError),
+              reportKey: row.reportKey,
+            });
+          }
+        }
+
         await ensureSessionLoaded(row.reportKey);
         const session = getSessionById(row.reportKey);
         if (!session) {
           throw new Error('지도보고서를 불러오지 못했습니다.');
         }
-
         const siteSessions = sessions.filter((item) => item.siteKey === session.siteKey);
         const document = await generateInspectionHwpxBlob(session, siteSessions);
 
