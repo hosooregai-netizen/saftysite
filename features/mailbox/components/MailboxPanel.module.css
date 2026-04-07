@@ -36,18 +36,21 @@
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
+  justify-content: space-between;
   gap: 10px;
+  width: 100%;
   min-width: 0;
 }
 
 .headerUtilityGroup {
-  display: inline-flex;
-  flex: 0 0 auto;
+  display: flex;
+  flex: 1 1 auto;
   flex-wrap: nowrap;
   align-items: center;
+  justify-content: flex-end;
   gap: 10px;
   min-width: 0;
-  margin-left: auto;
+  margin-left: clamp(12px, 2vw, 24px);
 }
 
 .headerPrimaryActions {
@@ -82,9 +85,9 @@
 }
 
 .searchField {
-  flex: 0 0 clamp(180px, 18vw, 240px);
-  min-width: 180px;
-  max-width: 240px;
+  flex: 1 1 clamp(220px, 24vw, 360px);
+  min-width: 220px;
+  max-width: 360px;
 }
 
 .accountFilter {
@@ -864,9 +867,9 @@
   }
 
   .searchField {
-    flex-basis: clamp(160px, 17vw, 200px);
-    min-width: 160px;
-    max-width: 200px;
+    flex-basis: clamp(180px, 22vw, 280px);
+    min-width: 180px;
+    max-width: 280px;
   }
 
   .headerScope {
@@ -903,9 +906,9 @@
   }
 
   .searchField {
-    flex-basis: 152px;
-    min-width: 152px;
-    max-width: 152px;
+    flex-basis: 168px;
+    min-width: 168px;
+    max-width: 220px;
   }
 
   .composeSupportArea {
