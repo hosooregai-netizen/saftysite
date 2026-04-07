@@ -27,6 +27,7 @@ import {
 } from '@/constants/inspectionSession/shared';
 import { getSceneSlotTitle, normalizeSceneTitle } from '@/constants/inspectionSession/scenePhotos';
 import { calculateRiskAssessmentResult } from '@/lib/riskAssessment';
+import { resolveSafetyAssetUrl } from '@/lib/safetyApi/assetUrls';
 import type { CausativeAgentKey } from '@/types/siteOverview';
 import type {
   CaseFeedItem,
@@ -46,12 +47,16 @@ function normalizeRiskLevel(likelihood: string, severity: string, existing: stri
   return calculateRiskAssessmentResult(likelihood, severity) || normalizeText(existing);
 }
 
+function normalizeAssetValue(value: unknown) {
+  return resolveSafetyAssetUrl(normalizeText(value));
+}
+
 export function normalizeScenePhoto(raw: unknown, index: number): SiteScenePhoto {
   const source = asRecord(raw);
   return createSiteScenePhoto(getSceneSlotTitle(index), {
     id: normalizeText(source.id) || generateId('scene'),
     title: normalizeSceneTitle(index, normalizeText(source.title)),
-    photoUrl: normalizeText(source.photoUrl),
+    photoUrl: normalizeAssetValue(source.photoUrl),
     description: normalizeText(source.description),
   });
 }
@@ -64,8 +69,8 @@ export function normalizeFollowUpItem(raw: unknown, fallbackDate: string): Previ
     location: normalizeText(source.location) || normalizeText(source.locationDetail) || normalizeText(source.title),
     guidanceDate: normalizeText(source.guidanceDate) || normalizeText(source.inspectionDate) || '',
     confirmationDate: normalizeText(source.confirmationDate) || normalizeText(fallbackDate),
-    beforePhotoUrl: normalizeText(source.beforePhotoUrl) || normalizeText(source.photoUrl) || normalizeText(source.previousPhotoUrl),
-    afterPhotoUrl: normalizeText(source.afterPhotoUrl) || normalizeText(source.currentPhotoUrl),
+    beforePhotoUrl: normalizeAssetValue(source.beforePhotoUrl) || normalizeAssetValue(source.photoUrl) || normalizeAssetValue(source.previousPhotoUrl),
+    afterPhotoUrl: normalizeAssetValue(source.afterPhotoUrl) || normalizeAssetValue(source.currentPhotoUrl),
     result: normalizeFollowUpResult(
       normalizeText(source.result) || normalizeText(source.implementationResult),
     ),
@@ -80,8 +85,8 @@ export function normalizeHazardFinding(raw: unknown, fallbackInspector: string) 
 
   return createCurrentHazardFinding({
     id: normalizeText(source.id) || generateId('finding'),
-    photoUrl: normalizeText(source.photoUrl),
-    photoUrl2: normalizeText(source.photoUrl2),
+    photoUrl: normalizeAssetValue(source.photoUrl),
+    photoUrl2: normalizeAssetValue(source.photoUrl2),
     location: normalizeText(source.location) || normalizeText(source.locationDetail) || normalizeText(source.title),
     hazardDescription:
       normalizeText(source.hazardDescription) ||
@@ -113,9 +118,9 @@ export function normalizeHazardFinding(raw: unknown, fallbackInspector: string) 
       .map((item) => normalizeText(item))
       .filter(Boolean),
     referenceMaterial1:
-      normalizeText(source.referenceMaterialImage) ||
-      normalizeText(source.referenceMaterial1) ||
-      matchedReference?.referenceMaterial1 ||
+      normalizeAssetValue(source.referenceMaterialImage) ||
+      normalizeAssetValue(source.referenceMaterial1) ||
+      normalizeAssetValue(matchedReference?.referenceMaterial1) ||
       '',
     referenceMaterial2:
       normalizeText(source.referenceMaterialDescription) ||
@@ -123,9 +128,9 @@ export function normalizeHazardFinding(raw: unknown, fallbackInspector: string) 
       matchedReference?.referenceMaterial2 ||
       '',
     referenceMaterialImage:
-      normalizeText(source.referenceMaterialImage) ||
-      normalizeText(source.referenceMaterial1) ||
-      matchedReference?.referenceMaterial1 ||
+      normalizeAssetValue(source.referenceMaterialImage) ||
+      normalizeAssetValue(source.referenceMaterial1) ||
+      normalizeAssetValue(matchedReference?.referenceMaterial1) ||
       '',
     referenceMaterialDescription:
       normalizeText(source.referenceMaterialDescription) ||
@@ -179,7 +184,7 @@ export function normalizeMeasurement(raw: unknown): MeasurementCheckItem {
     id: normalizeText(source.id) || generateId('measurement'),
     instrumentType: normalizeText(source.instrumentType) || '조도계',
     measurementLocation: normalizeText(source.measurementLocation) || normalizeText(source.measurementLocationDetail) || normalizeText(source.measurementLocationValue) || normalizeText(source.measurementLocationName),
-    photoUrl: normalizeText(source.photoUrl),
+    photoUrl: normalizeAssetValue(source.photoUrl),
     measuredValue: normalizeText(source.measuredValue) || normalizeText(source.measurementValue),
     safetyCriteria: normalizeText(source.safetyCriteria) || normalizeText(source.measurementCriteria) || DEFAULT_MEASUREMENT_CRITERIA,
     actionTaken: normalizeText(source.actionTaken) || normalizeText(source.actionStatus) || normalizeText(source.suitability),
@@ -190,8 +195,8 @@ export function normalizeEducationRecord(raw: unknown): SafetyEducationRecord {
   const source = asRecord(raw);
   return createSafetyEducationRecord({
     id: normalizeText(source.id) || generateId('education'),
-    photoUrl: normalizeText(source.photoUrl),
-    materialUrl: normalizeText(source.materialUrl),
+    photoUrl: normalizeAssetValue(source.photoUrl),
+    materialUrl: normalizeAssetValue(source.materialUrl),
     materialName: normalizeText(source.materialName) || normalizeText(source.providedKinds) || normalizeText(source.supportItem),
     attendeeCount: normalizeText(source.attendeeCount) || normalizeText(source.participantCount),
     topic:
@@ -207,8 +212,8 @@ export function normalizeActivity(raw: unknown) {
   const source = asRecord(raw);
   return createActivityRecord({
     id: normalizeText(source.id) || generateId('activity'),
-    photoUrl: normalizeText(source.photoUrl),
-    photoUrl2: normalizeText(source.photoUrl2),
+    photoUrl: normalizeAssetValue(source.photoUrl),
+    photoUrl2: normalizeAssetValue(source.photoUrl2),
     activityType: normalizeText(source.activityType) || normalizeText(source.supportItem),
     content: normalizeText(source.content) || normalizeText(source.details),
   });
@@ -216,12 +221,12 @@ export function normalizeActivity(raw: unknown) {
 
 export function normalizeCaseFeedItem(raw: unknown, fallback: CaseFeedItem): CaseFeedItem {
   const source = asRecord(raw);
-  return { id: normalizeText(source.id) || fallback.id, title: normalizeText(source.title) || fallback.title, summary: normalizeText(source.summary) || fallback.summary, imageUrl: normalizeText(source.imageUrl) || fallback.imageUrl };
+  return { id: normalizeText(source.id) || fallback.id, title: normalizeText(source.title) || fallback.title, summary: normalizeText(source.summary) || fallback.summary, imageUrl: normalizeAssetValue(source.imageUrl) || normalizeAssetValue(fallback.imageUrl) };
 }
 
 export function normalizeSafetyInfoItem(raw: unknown, fallback: SafetyInfoItem): SafetyInfoItem {
   const source = asRecord(raw);
-  return { id: normalizeText(source.id) || fallback.id, title: normalizeText(source.title) || fallback.title, body: normalizeText(source.body) || fallback.body, imageUrl: normalizeText(source.imageUrl) || fallback.imageUrl };
+  return { id: normalizeText(source.id) || fallback.id, title: normalizeText(source.title) || fallback.title, body: normalizeText(source.body) || fallback.body, imageUrl: normalizeAssetValue(source.imageUrl) || normalizeAssetValue(fallback.imageUrl) };
 }
 
 export function normalizeDocumentMetaMap(raw: unknown): Record<InspectionSectionKey, InspectionDocumentMeta> {

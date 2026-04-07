@@ -8,6 +8,7 @@ import styles from '@/components/session/InspectionSessionWorkspace.module.css';
 import { isImageValue } from '@/components/session/workspace/utils';
 import {
   getSafetyAssetTransportWarning,
+  resolveSafetyAssetUrl,
   shouldOpenSafetyAssetInNewTab,
   shouldUseSafetyAssetDownloadAttribute,
 } from '@/lib/safetyApi/assetUrls';
@@ -37,14 +38,15 @@ export function UploadBox({
   onSelect,
   value,
 }: UploadBoxProps) {
-  const hasValue = Boolean(value);
-  const isImage = mode === 'image' && isImageValue(value);
+  const resolvedValue = resolveSafetyAssetUrl(value);
+  const hasValue = Boolean(resolvedValue);
+  const isImage = mode === 'image' && isImageValue(resolvedValue);
   const { cameraInputRef, galleryInputRef, pickerModal, requestPick } = useImageSourcePicker({
     title: '사진 불러오기',
   });
-  const shouldUseDownload = shouldUseSafetyAssetDownloadAttribute(value);
-  const shouldOpenInNewTab = shouldOpenSafetyAssetInNewTab(value);
-  const assetWarning = getSafetyAssetTransportWarning(value, 'https:');
+  const shouldUseDownload = shouldUseSafetyAssetDownloadAttribute(resolvedValue);
+  const shouldOpenInNewTab = shouldOpenSafetyAssetInNewTab(resolvedValue);
+  const assetWarning = getSafetyAssetTransportWarning(resolvedValue, 'https:');
 
   const handleFileInputChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.currentTarget.files?.[0];
@@ -65,7 +67,7 @@ export function UploadBox({
                 onClick={() => requestPick()}
                 aria-label={`${label} 바꾸기`}
               >
-                <img src={value} alt={label} className={styles.uploadPreview} />
+                <img src={resolvedValue} alt={label} className={styles.uploadPreview} />
               </button>
             )
           : (
@@ -76,7 +78,7 @@ export function UploadBox({
                   </strong>
                   <p className={styles.filePreviewText}>자료 파일이 연결되어 있습니다.</p>
                   <a
-                    href={value}
+                    href={resolvedValue}
                     download={shouldUseDownload ? fileName || 'material' : undefined}
                     target={shouldOpenInNewTab ? '_blank' : undefined}
                     rel={shouldOpenInNewTab ? 'noreferrer' : undefined}
@@ -111,7 +113,7 @@ export function UploadBox({
                 </strong>
                 <p className={styles.filePreviewText}>자료 파일이 연결되어 있습니다.</p>
                 <a
-                  href={value}
+                  href={resolvedValue}
                   download={shouldUseDownload ? fileName || 'material' : undefined}
                   target={shouldOpenInNewTab ? '_blank' : undefined}
                   rel={shouldOpenInNewTab ? 'noreferrer' : undefined}
