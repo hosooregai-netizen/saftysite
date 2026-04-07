@@ -22,10 +22,28 @@ function copyHeaders(source: Headers, blocked: Set<string>): Headers {
   return headers;
 }
 
-function buildUpstreamUrl(request: Request, pathParts: string[]): string {
+function buildUploadUpstreamBaseUrl(apiUpstreamBaseUrl: string): string {
+  try {
+    return new URL(apiUpstreamBaseUrl).origin;
+  } catch {
+    return apiUpstreamBaseUrl.replace(/\/api\/v1\/?$/i, '');
+  }
+}
+
+export function resolveSafetyProxyUpstreamBaseUrl(pathParts: string[]): string {
+  const apiUpstreamBaseUrl = getSafetyApiUpstreamBaseUrl();
+  if (pathParts[0] !== 'uploads') {
+    return apiUpstreamBaseUrl;
+  }
+
+  // Uploaded asset files are served from the upstream origin root, not the API prefix.
+  return buildUploadUpstreamBaseUrl(apiUpstreamBaseUrl);
+}
+
+export function buildSafetyProxyUpstreamUrl(request: Request, pathParts: string[]): string {
   const incomingUrl = new URL(request.url);
   const path = pathParts.map((segment) => encodeURIComponent(segment)).join('/');
-  const upstreamUrl = new URL(`${getSafetyApiUpstreamBaseUrl()}/${path}`);
+  const upstreamUrl = new URL(`${resolveSafetyProxyUpstreamBaseUrl(pathParts)}/${path}`);
   upstreamUrl.search = incomingUrl.search;
   return upstreamUrl.toString();
 }
@@ -73,7 +91,7 @@ export async function proxySafetyApiRequest(
   }, timeoutMs);
 
   try {
-    const upstreamResponse = await fetch(buildUpstreamUrl(request, pathParts), {
+    const upstreamResponse = await fetch(buildSafetyProxyUpstreamUrl(request, pathParts), {
       method: request.method,
       headers: copyHeaders(request.headers, REQUEST_HEADERS_TO_SKIP),
       body: requiresRequestBody(request.method) ? await request.arrayBuffer() : undefined,
