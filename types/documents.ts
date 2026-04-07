@@ -10,3 +10,11 @@ export interface GenerateInspectionHwpxRequest {
   session: InspectionSession;
   siteSessions?: InspectionSession[];
 }
+
+export interface GenerateInspectionDocumentByReportKeyRequest {
+  reportKey: string;
+}
+
+export type GenerateInspectionDocumentRequest =
+  | GenerateInspectionHwpxRequest
+  | GenerateInspectionDocumentByReportKeyRequest;

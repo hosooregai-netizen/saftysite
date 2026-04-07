@@ -1,5 +1,8 @@
 import type { GenerateQuarterlyHwpxRequest } from '@/types/documents';
-import type { GenerateInspectionHwpxRequest } from '@/types/documents';
+import type {
+  GenerateInspectionDocumentByReportKeyRequest,
+  GenerateInspectionHwpxRequest,
+} from '@/types/documents';
 import type { QuarterlySummaryReport } from '@/types/erpReports';
 import type { InspectionSession, InspectionSite } from '@/types/inspectionSession';
 
@@ -42,12 +45,15 @@ async function fetchDocumentFile<TBody>(
   path: string,
   body: TBody,
   errorLabel: string,
+  headers?: HeadersInit,
 ): Promise<{ blob: Blob; filename: string }> {
   const res = await fetch(`${API_BASE}${path}`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers:
+      headers ??
+      {
+        'Content-Type': 'application/json',
+      },
     body: JSON.stringify(body),
   });
 
@@ -67,6 +73,19 @@ async function fetchDocumentFile<TBody>(
       res.headers.get('content-disposition'),
     ),
   };
+}
+
+function buildInspectionDocumentHeaders(authToken?: string | null): HeadersInit {
+  const headers = new Headers({
+    'Content-Type': 'application/json',
+  });
+  const normalizedToken = authToken?.trim();
+
+  if (normalizedToken) {
+    headers.set('Authorization', `Bearer ${normalizedToken}`);
+  }
+
+  return headers;
 }
 
 export interface PdfDocumentResult {
@@ -168,6 +187,19 @@ export async function fetchInspectionHwpxDocument(
   );
 }
 
+export async function fetchInspectionHwpxDocumentByReportKey(
+  reportKey: string,
+  authToken?: string | null,
+): Promise<{ blob: Blob; filename: string }> {
+  const body: GenerateInspectionDocumentByReportKeyRequest = { reportKey };
+  return fetchDocumentFile(
+    '/documents/inspection/hwpx',
+    body,
+    '기술지도 HWPX 다운로드 실패',
+    buildInspectionDocumentHeaders(authToken),
+  );
+}
+
 export async function fetchInspectionPdfDocument(
   session: InspectionSession,
   siteSessions?: InspectionSession[],
@@ -179,6 +211,19 @@ export async function fetchInspectionPdfDocument(
     '/documents/inspection/pdf',
     body,
     '기술지도 PDF 다운로드 실패',
+  );
+}
+
+export async function fetchInspectionPdfDocumentByReportKey(
+  reportKey: string,
+  authToken?: string | null,
+): Promise<{ blob: Blob; filename: string }> {
+  const body: GenerateInspectionDocumentByReportKeyRequest = { reportKey };
+  return fetchDocumentFile(
+    '/documents/inspection/pdf',
+    body,
+    '기술지도 PDF 다운로드 실패',
+    buildInspectionDocumentHeaders(authToken),
   );
 }
 
@@ -195,6 +240,27 @@ export async function fetchInspectionPdfDocumentWithFallback(
       sessionId: session.id,
     });
     const hwpx = await fetchInspectionHwpxDocument(session, siteSessions);
+    return {
+      ...hwpx,
+      fallbackReason: error instanceof Error ? error.message : 'PDF 생성에 실패했습니다.',
+      fallbackToHwpx: true,
+    };
+  }
+}
+
+export async function fetchInspectionPdfDocumentByReportKeyWithFallback(
+  reportKey: string,
+  authToken?: string | null,
+): Promise<PdfDocumentResult> {
+  try {
+    const pdf = await fetchInspectionPdfDocumentByReportKey(reportKey, authToken);
+    return { ...pdf, fallbackToHwpx: false };
+  } catch (error) {
+    console.warn('Inspection PDF server generation failed; falling back to HWPX download.', {
+      error: error instanceof Error ? error.message : String(error),
+      reportKey,
+    });
+    const hwpx = await fetchInspectionHwpxDocumentByReportKey(reportKey, authToken);
     return {
       ...hwpx,
       fallbackReason: error instanceof Error ? error.message : 'PDF 생성에 실패했습니다.',

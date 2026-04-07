@@ -1,13 +1,19 @@
 import { NextResponse } from 'next/server';
 
+import { SafetyServerApiError } from '@/server/admin/safetyApiServer';
 import { buildInspectionHwpxDocument } from '@/server/documents/inspection/hwpx';
 import { convertHwpxBufferToPdf } from '@/server/documents/inspection/hwpxToPdf';
-import type { GenerateInspectionHwpxRequest } from '@/types/documents';
+import { resolveInspectionDocumentRequest } from '@/server/documents/inspection/requestResolver';
+import type { GenerateInspectionDocumentRequest } from '@/types/documents';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
 
-function getPdfRouteStatus(message: string): number {
+function getPdfRouteStatus(error: unknown, message: string): number {
+  if (error instanceof SafetyServerApiError) {
+    return error.status;
+  }
+
   if (
     message.includes('must be configured') ||
     message.includes('required outside Windows') ||
@@ -32,21 +38,11 @@ async function readHwpxFromRequest(
   const contentType = request.headers.get('content-type') ?? '';
 
   if (contentType.includes('application/json')) {
-    const body = (await request.json()) as GenerateInspectionHwpxRequest;
-    if (!body?.session) {
-      return NextResponse.json(
-        { error: 'PDF 생성에 필요한 기술지도 보고서 데이터가 없습니다.' },
-        { status: 400 },
-      );
-    }
-
-    const document = await buildInspectionHwpxDocument(
-      body.session,
-      body.siteSessions?.length ? body.siteSessions : [body.session],
-      {
-        assetBaseUrl: new URL(request.url).origin,
-      },
-    );
+    const body = (await request.json()) as GenerateInspectionDocumentRequest;
+    const payload = await resolveInspectionDocumentRequest(request, body);
+    const document = await buildInspectionHwpxDocument(payload.session, payload.siteSessions, {
+      assetBaseUrl: new URL(request.url).origin,
+    });
 
     return {
       buffer: document.buffer,
@@ -95,7 +91,7 @@ export async function POST(request: Request): Promise<Response> {
       error instanceof Error
         ? error.message
         : 'PDF 생성 중 알 수 없는 오류가 발생했습니다.';
-    const status = getPdfRouteStatus(message);
+    const status = getPdfRouteStatus(error, message);
 
     return NextResponse.json(
       { error: message },
