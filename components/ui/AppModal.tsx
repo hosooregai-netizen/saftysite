@@ -11,6 +11,7 @@ interface AppModalProps {
   onClose: () => void;
   closeOnBackdrop?: boolean;
   size?: 'default' | 'large';
+  verticalAlign?: 'top' | 'center';
 }
 
 export default function AppModal({
@@ -21,6 +22,7 @@ export default function AppModal({
   onClose,
   closeOnBackdrop = true,
   size = 'default',
+  verticalAlign = 'top',
 }: AppModalProps) {
   useEffect(() => {
     if (!open) return;
@@ -45,7 +47,12 @@ export default function AppModal({
 
   return (
     <div
-      className={styles.overlay}
+      className={[
+        styles.overlay,
+        verticalAlign === 'center' ? styles.overlayCentered : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
       onMouseDown={(event) => {
         if (!closeOnBackdrop) return;
         if (event.target === event.currentTarget) {

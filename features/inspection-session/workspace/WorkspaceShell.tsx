@@ -9,10 +9,10 @@ import WorkerAppHeader from '@/components/worker/WorkerAppHeader';
 import WorkerShellBody from '@/components/worker/WorkerShellBody';
 import { WorkerMenuDrawer, WorkerMenuPanel } from '@/components/worker/WorkerMenu';
 import WorkerMenuSidebar from '@/components/worker/WorkerMenuSidebar';
-import { INSPECTION_SECTIONS } from '@/constants/inspectionSession';
 import { WorkspaceHeader } from '@/features/inspection-session/workspace/components/WorkspaceHeader';
 import { WorkspaceMetaModal } from '@/features/inspection-session/workspace/components/WorkspaceMetaModal';
 import { WorkspaceToolbar } from '@/features/inspection-session/workspace/components/WorkspaceToolbar';
+import { INSPECTION_WORKSPACE_SECTIONS } from '@/features/inspection-session/workspace/workspaceSections';
 import type { InspectionSectionKey, InspectionSession } from '@/types/inspectionSession';
 
 interface WorkspaceShellProps {
@@ -69,10 +69,10 @@ export function WorkspaceShell({
   const [menuOpen, setMenuOpen] = useState(false);
   const [metaModalOpen, setMetaModalOpen] = useState(false);
   const canMovePrev = currentSectionIndex > 0;
-  const canMoveNext = currentSectionIndex < INSPECTION_SECTIONS.length - 1;
+  const canMoveNext = currentSectionIndex < INSPECTION_WORKSPACE_SECTIONS.length - 1;
   const currentSectionInfo =
-    INSPECTION_SECTIONS.find((section) => section.key === currentSection) ??
-    INSPECTION_SECTIONS[0];
+    INSPECTION_WORKSPACE_SECTIONS.find((section) => section.key === currentSection) ??
+    INSPECTION_WORKSPACE_SECTIONS[0];
 
   return (
     <main className="app-page">

@@ -1402,6 +1402,125 @@
   align-items: start;
 }
 
+.combinedOverviewSectionStack {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+
+.combinedOverviewSectionBlock {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.combinedOverviewSectionTitle {
+  margin: 0;
+  padding-left: 2px;
+  font-size: var(--text-title);
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--erp-dark);
+}
+
+.doc1TableGroup {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.doc1TableWrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.doc1SnapshotTable {
+  width: 100%;
+  min-width: 860px;
+  border-collapse: collapse;
+  background: var(--erp-white);
+  table-layout: fixed;
+}
+
+.doc1ColGroup {
+  width: 82px;
+}
+
+.doc1ColLabel {
+  width: 15%;
+}
+
+.doc1ColLabelWide {
+  width: 19%;
+}
+
+.doc1ColValue {
+  width: auto;
+}
+
+.doc1GroupCell,
+.doc1LabelCell,
+.doc1ValueCell {
+  padding: 12px 14px;
+  border: 1px solid var(--erp-line);
+  vertical-align: middle;
+}
+
+.doc1GroupCell,
+.doc1LabelCell {
+  font-size: var(--text-ui);
+  font-weight: 700;
+  color: var(--erp-dark);
+}
+
+.doc1GroupCell {
+  background: #fbfcfe;
+  text-align: center;
+  letter-spacing: -0.01em;
+}
+
+.doc1LabelCell {
+  background: var(--erp-panel-muted);
+  line-height: 1.45;
+  text-align: center;
+  word-break: keep-all;
+}
+
+.doc1ValueCell {
+  font-size: var(--text-body);
+  line-height: 1.7;
+  color: var(--erp-text-muted);
+  background: var(--erp-white);
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.doc1AddressCell {
+  text-align: left;
+}
+
+.doc1SectionStartRow > th,
+.doc1SectionStartRow > td {
+  border-top: 3px double var(--erp-line-strong);
+}
+
+@media (max-width: 899px) {
+  .doc1TableGroup {
+    gap: 10px;
+  }
+
+  .doc1SnapshotTable {
+    min-width: 760px;
+  }
+
+  .doc1GroupCell,
+  .doc1LabelCell,
+  .doc1ValueCell {
+    padding: 10px 12px;
+  }
+}
+
 /* 기술지도 개요(doc2) 상단: 한 줄당 한 행, fr 비율 = 가로 폭 비율 (모든 뷰포트 동일) */
 .doc2OverviewForm {
   display: flex;
@@ -1411,6 +1530,116 @@
   width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+.doc2OverviewTableWrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.doc2OverviewTable {
+  width: 100%;
+  min-width: 1180px;
+  border-collapse: collapse;
+  table-layout: fixed;
+  background: var(--erp-white);
+}
+
+.doc2OverviewLabelCol {
+  width: 14%;
+}
+
+.doc2OverviewValueCol {
+  width: 11%;
+}
+
+.doc2OverviewLabelCell,
+.doc2OverviewValueCell {
+  padding: 10px 12px;
+  border: 1px solid var(--erp-line);
+  vertical-align: middle;
+}
+
+.doc2OverviewLabelCell {
+  background: var(--erp-panel-muted);
+  font-size: var(--text-ui-sm);
+  font-weight: 700;
+  line-height: 1.45;
+  text-align: center;
+  color: var(--erp-dark);
+  white-space: nowrap;
+}
+
+.doc2OverviewValueCell {
+  padding: 0;
+  background: var(--erp-white);
+}
+
+.doc2OverviewValueCell :global(.app-input),
+.doc2OverviewValueCell :global(.app-select) {
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.doc2OverviewValueCell :global(.app-input:focus),
+.doc2OverviewValueCell :global(.app-select:focus),
+.doc2OverviewValueCell :global(.app-input:focus-visible),
+.doc2OverviewValueCell :global(.app-select:focus-visible) {
+  outline: none;
+}
+
+.doc2OverviewValueCell:focus-within {
+  background: #f8fbff;
+  box-shadow: inset 0 0 0 2px #9ab8d8;
+}
+
+.doc2OverviewInlineAction {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 10px;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 12px 0 0;
+}
+
+.doc2OverviewReadonlyInput:global(.app-input) {
+  background: transparent;
+  cursor: default;
+}
+
+.doc2OverviewStatusDone,
+.doc2OverviewStatusPending {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: var(--text-ui-sm);
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.doc2OverviewStatusDone {
+  background: #edf7ee;
+  color: #216e39;
+}
+
+.doc2OverviewStatusPending {
+  background: #f6f8fb;
+  color: var(--erp-text-muted);
+}
+
+.doc2SignatureModalBody {
+  display: grid;
+  gap: 14px;
 }
 
 .doc2OverviewRow {
@@ -1472,6 +1701,116 @@
 
 .doc2OverviewOtherField {
   max-width: 100%;
+}
+
+@media (max-width: 899px) {
+  .doc2OverviewTable {
+    min-width: 1040px;
+  }
+
+  .doc2OverviewLabelCell,
+  .doc2OverviewValueCell {
+    padding: 10px 12px;
+  }
+
+  .doc2OverviewValueCell {
+    padding: 0;
+  }
+
+  .doc2OverviewInlineAction {
+    grid-template-columns: 1fr;
+    padding: 10px 12px;
+  }
+}
+
+.doc2AccidentTableWrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.doc2AccidentTable {
+  width: 100%;
+  min-width: 1080px;
+  border-collapse: collapse;
+  table-layout: fixed;
+  background: var(--erp-white);
+}
+
+.doc2AccidentLabelCol {
+  width: 12%;
+}
+
+.doc2AccidentValueCol {
+  width: 21.3333%;
+}
+
+.doc2AccidentLabelCell,
+.doc2AccidentValueCell {
+  border: 1px solid var(--erp-line);
+  vertical-align: middle;
+}
+
+.doc2AccidentLabelCell {
+  padding: 10px 12px;
+  background: var(--erp-panel-muted);
+  font-size: var(--text-ui-sm);
+  font-weight: 700;
+  line-height: 1.45;
+  text-align: center;
+  color: var(--erp-dark);
+  white-space: nowrap;
+}
+
+.doc2AccidentValueCell {
+  padding: 0;
+  background: var(--erp-white);
+}
+
+.doc2AccidentValueCell :global(.app-input),
+.doc2AccidentValueCell :global(.app-select),
+.doc2AccidentValueCell button:global(.app-input) {
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  text-align: left;
+}
+
+.doc2AccidentValueCell :global(.app-input:focus),
+.doc2AccidentValueCell :global(.app-select:focus),
+.doc2AccidentValueCell button:global(.app-input:focus),
+.doc2AccidentValueCell :global(.app-input:focus-visible),
+.doc2AccidentValueCell :global(.app-select:focus-visible),
+.doc2AccidentValueCell button:global(.app-input:focus-visible) {
+  outline: none;
+}
+
+.doc2AccidentValueCell:focus-within {
+  background: #f8fbff;
+  box-shadow: inset 0 0 0 2px #9ab8d8;
+}
+
+.doc2AccidentTextarea:global(.app-textarea) {
+  width: 100%;
+  min-width: 0;
+  min-height: 96px !important;
+  padding: 12px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  resize: vertical;
+}
+
+@media (max-width: 899px) {
+  .doc2AccidentTable {
+    min-width: 980px;
+  }
 }
 
 /* 산업재해: 발생유무·최근일자·재해형태 — 모든 뷰포트 1:1:1 */
@@ -1608,18 +1947,20 @@
 }
 
 .workPlanTable thead th {
-  padding: 8px 10px;
+  height: 38px;
+  padding: 6px 14px;
   border: 1px solid var(--erp-line);
   background: var(--erp-panel-muted);
   font-size: var(--text-ui-sm);
   font-weight: 700;
   letter-spacing: 0.04em;
   color: var(--erp-mid);
-  text-align: left;
+  text-align: center;
 }
 
 .workPlanThTitle {
   vertical-align: middle;
+  text-align: center;
 }
 
 .workPlanThNarrow {
@@ -1629,29 +1970,52 @@
 }
 
 .workPlanTable tbody td {
-  padding: 8px 10px;
+  height: 44px;
+  padding: 0;
   border: 1px solid var(--erp-line);
   vertical-align: middle;
 }
 
 .workPlanTdLabel {
+  padding: 8px 18px;
   font-size: var(--text-ui);
   font-weight: 600;
   line-height: 1.4;
   color: var(--erp-text-muted);
   word-break: keep-all;
   overflow-wrap: anywhere;
+  text-align: center;
+  vertical-align: middle;
 }
 
 .workPlanTdSelect {
-  padding: 6px 8px;
+  padding: 0;
 }
 
 .workPlanTdSelect :global(.app-select) {
   width: 100%;
   min-width: 0;
   max-width: 100%;
+  min-height: 44px;
+  height: 44px;
+  padding: 8px 18px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
   font-size: var(--text-ui-sm);
+  text-align: center;
+  text-align-last: center;
+}
+
+.workPlanTdSelect :global(.app-select:focus),
+.workPlanTdSelect :global(.app-select:focus-visible) {
+  outline: none;
+}
+
+.workPlanTdSelect:focus-within {
+  background: #f8fbff;
+  box-shadow: inset 0 0 0 2px #9ab8d8;
 }
 
 .workPlanTdSelect :global(.app-checkbox) {

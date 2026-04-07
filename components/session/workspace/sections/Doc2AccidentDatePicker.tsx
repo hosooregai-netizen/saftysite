@@ -1,6 +1,7 @@
 'use client';
 
-import { useId, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
+import AppModal from '@/components/ui/AppModal';
 import styles from '@/components/session/InspectionSessionWorkspace.module.css';
 
 function daysInMonth(year: number, month1Based: number): number {
@@ -37,8 +38,7 @@ export default function Doc2AccidentDatePicker({
   disabled: boolean;
   onChange: (next: string) => void;
 }) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  const titleId = useId();
+  const [isOpen, setIsOpen] = useState(false);
   const [y, setY] = useState(() => new Date().getFullYear());
   const [m, setM] = useState(() => new Date().getMonth() + 1);
   const [d, setD] = useState(() => new Date().getDate());
@@ -67,7 +67,7 @@ export default function Doc2AccidentDatePicker({
     setY(base.y);
     setM(base.m);
     setD(Math.min(base.d, daysInMonth(base.y, base.m)));
-    dialogRef.current?.showModal();
+    setIsOpen(true);
   };
 
   return (
@@ -80,10 +80,33 @@ export default function Doc2AccidentDatePicker({
       >
         {formatButtonLabel(value)}
       </button>
-      <dialog ref={dialogRef} className={styles.doc2DateDialog} aria-labelledby={titleId}>
-        <h2 id={titleId} className={styles.doc2DateDialogTitle}>
-          최근 발생일자
-        </h2>
+      <AppModal
+        open={isOpen}
+        title="최근 발생일자"
+        onClose={() => setIsOpen(false)}
+        verticalAlign="center"
+        actions={
+          <>
+            <button
+              type="button"
+              className="app-button app-button-secondary"
+              onClick={() => setIsOpen(false)}
+            >
+              취소
+            </button>
+            <button
+              type="button"
+              className="app-button app-button-primary"
+              onClick={() => {
+                onChange(toIsoDate(y, m, safeDay));
+                setIsOpen(false);
+              }}
+            >
+              확인
+            </button>
+          </>
+        }
+      >
         <div className={styles.doc2DateDialogPickers}>
           <label className={styles.doc2DateDialogField}>
             <span className={styles.fieldLabel}>년</span>
@@ -116,22 +139,7 @@ export default function Doc2AccidentDatePicker({
             </select>
           </label>
         </div>
-        <div className={styles.doc2DateDialogActions}>
-          <button type="button" className="app-button app-button-secondary" onClick={() => dialogRef.current?.close()}>
-            취소
-          </button>
-          <button
-            type="button"
-            className="app-button app-button-primary"
-            onClick={() => {
-              onChange(toIsoDate(y, m, safeDay));
-              dialogRef.current?.close();
-            }}
-          >
-            확인
-          </button>
-        </div>
-      </dialog>
+      </AppModal>
     </>
   );
 }

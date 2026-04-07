@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import AppModal from '@/components/ui/AppModal';
 import SignaturePad from '@/components/ui/SignaturePad';
 import { DEFAULT_CONSTRUCTION_TYPE } from '@/constants/inspectionSession/catalog';
 import {
@@ -14,120 +16,202 @@ interface Doc2OverviewFieldsProps {
 
 export function Doc2OverviewFields({ props }: Doc2OverviewFieldsProps) {
   const { session } = props;
+  const [isDirectDeliveryModalOpen, setIsDirectDeliveryModalOpen] = useState(false);
   const constructionDisplay =
     session.document2Overview.constructionType?.trim() || DEFAULT_CONSTRUCTION_TYPE;
+  const hasDirectSignature = session.document2Overview.notificationRecipientSignature.trim().length > 0;
+  const recipientName = session.document2Overview.notificationRecipientName;
 
   return (
-    <div className={styles.doc2OverviewForm}>
-      <div className={`${styles.doc2OverviewRow} ${styles.doc2OverviewRowDates}`}>
-        <label className={styles.field}>
-          <span className={styles.fieldLabel}>지도일</span>
-          <input
-            type="date"
-            className="app-input"
-            value={session.document2Overview.guidanceDate}
-            onChange={(event) => updateOverviewField(props, 'guidanceDate', event.target.value)}
-          />
-        </label>
-        <div className={styles.doc2OverviewDatesRight}>
-          {[
-            ['공정률', 'progressRate', '예: 45%'],
-            ['회차', 'visitCount', ''],
-            ['총회차', 'totalVisitCount', ''],
-          ].map(([label, key, placeholder]) => (
-            <label key={key} className={styles.field}>
-              <span className={styles.fieldLabel}>{label}</span>
-              <input
-                type={key === 'visitCount' ? 'number' : 'text'}
-                min={key === 'visitCount' ? 1 : undefined}
-                step={key === 'visitCount' ? 1 : undefined}
-                className="app-input"
-                value={
-                  key === 'visitCount'
-                    ? String(session.reportNumber || '')
-                    : session.document2Overview[
-                        key as 'progressRate' | 'visitCount' | 'totalVisitCount'
-                      ]
-                }
-                placeholder={placeholder}
-                onChange={(event) =>
-                  updateOverviewField(
-                    props,
-                    key as 'progressRate' | 'visitCount' | 'totalVisitCount',
-                    event.target.value,
-                  )
-                }
-              />
-            </label>
-          ))}
+    <>
+      <article className={styles.tableCard}>
+        <div className={styles.doc2OverviewTableWrap}>
+          <table className={styles.doc2OverviewTable}>
+            <colgroup>
+              <col className={styles.doc2OverviewLabelCol} />
+              <col className={styles.doc2OverviewValueCol} />
+              <col className={styles.doc2OverviewLabelCol} />
+              <col className={styles.doc2OverviewValueCol} />
+              <col className={styles.doc2OverviewLabelCol} />
+              <col className={styles.doc2OverviewValueCol} />
+              <col className={styles.doc2OverviewLabelCol} />
+              <col className={styles.doc2OverviewValueCol} />
+            </colgroup>
+            <tbody>
+              <tr>
+                <th scope="row" className={styles.doc2OverviewLabelCell}>지도일</th>
+                <td className={styles.doc2OverviewValueCell}>
+                  <input
+                    type="date"
+                    className="app-input"
+                    value={session.document2Overview.guidanceDate}
+                    onChange={(event) => updateOverviewField(props, 'guidanceDate', event.target.value)}
+                  />
+                </td>
+                <th scope="row" className={styles.doc2OverviewLabelCell}>공정률</th>
+                <td className={styles.doc2OverviewValueCell}>
+                  <input
+                    type="text"
+                    className="app-input"
+                    value={session.document2Overview.progressRate}
+                    placeholder="예: 45%"
+                    onChange={(event) => updateOverviewField(props, 'progressRate', event.target.value)}
+                  />
+                </td>
+                <th scope="row" className={styles.doc2OverviewLabelCell}>회차</th>
+                <td className={styles.doc2OverviewValueCell}>
+                  <input
+                    type="number"
+                    min={1}
+                    step={1}
+                    className="app-input"
+                    value={String(session.reportNumber || '')}
+                    onChange={(event) => updateOverviewField(props, 'visitCount', event.target.value)}
+                  />
+                </td>
+                <th scope="row" className={styles.doc2OverviewLabelCell}>총회차</th>
+                <td className={styles.doc2OverviewValueCell}>
+                  <input
+                    type="text"
+                    className="app-input"
+                    value={session.document2Overview.totalVisitCount}
+                    onChange={(event) =>
+                      updateOverviewField(props, 'totalVisitCount', event.target.value)
+                    }
+                  />
+                </td>
+              </tr>
+              <tr>
+                <th scope="row" className={styles.doc2OverviewLabelCell}>이전기술지도 이행여부</th>
+                <td className={styles.doc2OverviewValueCell}>
+                  <select
+                    className="app-select"
+                    value={session.document2Overview.previousImplementationStatus}
+                    onChange={(event) =>
+                      updateOverviewField(props, 'previousImplementationStatus', event.target.value)
+                    }
+                  >
+                    {PREVIOUS_IMPLEMENTATION_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </td>
+                <th scope="row" className={styles.doc2OverviewLabelCell}>담당요원</th>
+                <td className={styles.doc2OverviewValueCell}>
+                  <input
+                    type="text"
+                    className="app-input"
+                    value={session.document2Overview.assignee}
+                    onChange={(event) => updateOverviewField(props, 'assignee', event.target.value)}
+                  />
+                </td>
+                <th scope="row" className={styles.doc2OverviewLabelCell}>연락처</th>
+                <td colSpan={3} className={styles.doc2OverviewValueCell}>
+                  <input
+                    type="text"
+                    className="app-input"
+                    value={session.document2Overview.contact}
+                    onChange={(event) => updateOverviewField(props, 'contact', event.target.value)}
+                  />
+                </td>
+              </tr>
+              <tr>
+                <th scope="row" className={styles.doc2OverviewLabelCell}>공사구분</th>
+                <td colSpan={3} className={styles.doc2OverviewValueCell}>
+                  <input type="text" className="app-input" value={constructionDisplay} readOnly />
+                </td>
+                <th scope="row" className={styles.doc2OverviewLabelCell}>현장 책임자 통보방법</th>
+                <td colSpan={3} className={styles.doc2OverviewValueCell}>
+                  <select
+                    className="app-select"
+                    value={session.document2Overview.notificationMethod}
+                    onChange={(event) =>
+                      updateOverviewField(props, 'notificationMethod', event.target.value)
+                    }
+                  >
+                    <option value="">선택</option>
+                    {NOTIFICATION_METHOD_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </td>
+              </tr>
+
+              {session.document2Overview.notificationMethod === 'direct' ? (
+                <tr>
+                  <th scope="row" className={styles.doc2OverviewLabelCell}>직접전달 수령자 성함</th>
+                  <td colSpan={7} className={styles.doc2OverviewValueCell}>
+                    <div className={styles.doc2OverviewInlineAction}>
+                      <input
+                        type="text"
+                        className={`app-input ${styles.doc2OverviewReadonlyInput}`}
+                        value={recipientName}
+                        placeholder="수령자 성함 입력"
+                        readOnly
+                      />
+                      <span
+                        className={
+                          hasDirectSignature
+                            ? styles.doc2OverviewStatusDone
+                            : styles.doc2OverviewStatusPending
+                        }
+                      >
+                        {hasDirectSignature ? '서명 작성됨' : '서명 미작성'}
+                      </span>
+                      <button
+                        type="button"
+                        className="app-button app-button-secondary"
+                        onClick={() => setIsDirectDeliveryModalOpen(true)}
+                      >
+                        서명 작성
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ) : null}
+
+              {session.document2Overview.notificationMethod === 'other' ? (
+                <tr>
+                  <th scope="row" className={styles.doc2OverviewLabelCell}>기타 통보방법</th>
+                  <td colSpan={7} className={styles.doc2OverviewValueCell}>
+                    <input
+                      type="text"
+                      className="app-input"
+                      value={session.document2Overview.otherNotificationMethod}
+                      onChange={(event) =>
+                        updateOverviewField(props, 'otherNotificationMethod', event.target.value)
+                      }
+                    />
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
         </div>
-      </div>
+      </article>
 
-      <div className={`${styles.doc2OverviewRow} ${styles.doc2OverviewRowFollow}`}>
-        <label className={styles.field}>
-          <span className={styles.fieldLabel}>이전기술지도 이행여부</span>
-          <select
-            className="app-select"
-            value={session.document2Overview.previousImplementationStatus}
-            onChange={(event) =>
-              updateOverviewField(props, 'previousImplementationStatus', event.target.value)
-            }
+      <AppModal
+        open={isDirectDeliveryModalOpen}
+        title="직접전달 수령자/서명"
+        onClose={() => setIsDirectDeliveryModalOpen(false)}
+        verticalAlign="center"
+        actions={
+          <button
+            type="button"
+            className="app-button app-button-primary"
+            onClick={() => setIsDirectDeliveryModalOpen(false)}
           >
-            {PREVIOUS_IMPLEMENTATION_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className={styles.field}>
-          <span className={styles.fieldLabel}>담당요원</span>
-          <input
-            type="text"
-            className="app-input"
-            value={session.document2Overview.assignee}
-            onChange={(event) => updateOverviewField(props, 'assignee', event.target.value)}
-          />
-        </label>
-        <label className={styles.field}>
-          <span className={styles.fieldLabel}>연락처</span>
-          <input
-            type="text"
-            className="app-input"
-            value={session.document2Overview.contact}
-            onChange={(event) => updateOverviewField(props, 'contact', event.target.value)}
-          />
-        </label>
-      </div>
-
-      <div className={`${styles.doc2OverviewRow} ${styles.doc2OverviewRowNotify}`}>
-        <label className={styles.field}>
-          <span className={styles.fieldLabel}>공사구분</span>
-          <input type="text" className="app-input" value={constructionDisplay} readOnly />
-        </label>
-        <label className={styles.field}>
-          <span className={styles.fieldLabel}>현장 책임자 통보방법</span>
-          <select
-            className="app-select"
-            value={session.document2Overview.notificationMethod}
-            onChange={(event) =>
-              updateOverviewField(props, 'notificationMethod', event.target.value)
-            }
-          >
-            <option value="">선택</option>
-            {NOTIFICATION_METHOD_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-
-      {session.document2Overview.notificationMethod === 'direct' ? (
-        <div className={styles.doc2OverviewSignatureWrap}>
+            완료
+          </button>
+        }
+      >
+        <div className={styles.doc2SignatureModalBody}>
           <label className={styles.field}>
-            <span className={styles.fieldLabel}>직접전달 수령자 성함</span>
+            <span className={styles.fieldLabel}>수령자 성함</span>
             <input
               type="text"
               className="app-input"
@@ -139,29 +223,15 @@ export function Doc2OverviewFields({ props }: Doc2OverviewFieldsProps) {
             />
           </label>
           <SignaturePad
-            label="직접전달 서명"
+            label="수령자 서명"
             value={session.document2Overview.notificationRecipientSignature}
             onChange={(nextValue) =>
               updateOverviewField(props, 'notificationRecipientSignature', nextValue)
             }
           />
         </div>
-      ) : null}
-
-      {session.document2Overview.notificationMethod === 'other' ? (
-        <label className={`${styles.field} ${styles.doc2OverviewOtherField}`}>
-          <span className={styles.fieldLabel}>기타 통보방법</span>
-          <input
-            type="text"
-            className="app-input"
-            value={session.document2Overview.otherNotificationMethod}
-            onChange={(event) =>
-              updateOverviewField(props, 'otherNotificationMethod', event.target.value)
-            }
-          />
-        </label>
-      ) : null}
-    </div>
+      </AppModal>
+    </>
   );
 }
 

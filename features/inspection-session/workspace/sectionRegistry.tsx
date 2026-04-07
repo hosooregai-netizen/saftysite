@@ -46,6 +46,25 @@ function renderToolbarButton(
   );
 }
 
+function renderCombinedOverviewSections(props: InspectionWorkspaceSectionProps) {
+  return (
+    <div className={styles.combinedOverviewSectionStack}>
+      <section className={styles.combinedOverviewSectionBlock} aria-labelledby="doc1-section-title">
+        <h2 id="doc1-section-title" className={styles.combinedOverviewSectionTitle}>
+          1. 기술지도 대상사업장
+        </h2>
+        <Doc1Section session={props.session} />
+      </section>
+      <section className={styles.combinedOverviewSectionBlock} aria-labelledby="doc2-section-title">
+        <h2 id="doc2-section-title" className={styles.combinedOverviewSectionTitle}>
+          2. 기술지도 개요
+        </h2>
+        <Doc2Section {...props} />
+      </section>
+    </div>
+  );
+}
+
 const inspectionSectionRegistry: Record<
   InspectionSectionKey,
   {
@@ -54,8 +73,14 @@ const inspectionSectionRegistry: Record<
     title: string;
   }
 > = {
-  doc1: { render: (props) => <Doc1Section session={props.session} />, title: '문서 1' },
-  doc2: { render: (props) => <Doc2Section {...props} />, title: '문서 2' },
+  doc1: {
+    render: renderCombinedOverviewSections,
+    title: '1. 기술지도 대상사업장 / 2. 기술지도 개요',
+  },
+  doc2: {
+    render: renderCombinedOverviewSections,
+    title: '1. 기술지도 대상사업장 / 2. 기술지도 개요',
+  },
   doc3: { render: (props) => <Doc3Section {...props} />, title: '문서 3' },
   doc4: {
     render: (props) => <Doc4Section {...props} />,

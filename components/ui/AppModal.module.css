@@ -11,6 +11,10 @@
   backdrop-filter: blur(4px);
 }
 
+.overlayCentered {
+  align-items: center;
+}
+
 .dialog {
   width: min(100%, 420px);
   max-height: calc(100dvh - 40px);

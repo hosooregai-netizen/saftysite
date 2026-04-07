@@ -693,13 +693,13 @@ function formatDateText(value: string): string {
 function mapPreviousImplementationStatus(value: string): string {
   switch (value) {
     case 'implemented':
-      return '\uC774\uD589';
+      return `${checkbox(true)}\uC774\uD589 / ${checkbox(false)}\uBD88\uC774\uD589`;
     case 'partial':
-      return '\uBD80\uBD84 \uC774\uD589';
+      return `${checkbox(true)}\uC774\uD589 / ${checkbox(true)}\uBD88\uC774\uD589`;
     case 'not_implemented':
-      return '\uBBF8\uC774\uD589';
+      return `${checkbox(false)}\uC774\uD589 / ${checkbox(true)}\uBD88\uC774\uD589`;
     default:
-      return '';
+      return `${checkbox(false)}\uC774\uD589 / ${checkbox(false)}\uBD88\uC774\uD589`;
   }
 }
 

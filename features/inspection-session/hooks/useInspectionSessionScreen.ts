@@ -6,7 +6,6 @@ import {
   createEmptyAdminSiteSnapshot,
   getSessionSiteKey,
   getSessionProgress,
-  INSPECTION_SECTIONS,
   normalizeSectionKey,
   touchDocumentMeta,
 } from '@/constants/inspectionSession';
@@ -38,6 +37,10 @@ import type {
 } from '@/types/inspectionSession';
 import { applyInspectionSessionMetaFieldChange } from '@/features/inspection-session/lib/applyInspectionSessionMetaFieldChange';
 import { buildInspectionSessionDerivedData } from '@/features/inspection-session/lib/buildInspectionSessionDerivedData';
+import {
+  INSPECTION_WORKSPACE_SECTIONS,
+  resolveWorkspaceSectionKey,
+} from '@/features/inspection-session/workspace/workspaceSections';
 import { buildSitePhotoAlbumHref } from '@/features/home/lib/siteEntry';
 import { getMetaTouchSection } from '@/components/session/workspace/utils';
 
@@ -180,8 +183,11 @@ export function useInspectionSessionScreen(sessionId: string) {
   const isAdminView = Boolean(currentUser && isAdminUserRole(currentUser.role));
   const displaySession = session ?? shellSession;
   const currentSection = displaySession?.currentSection ?? 'doc1';
+  const workspaceCurrentSection = resolveWorkspaceSectionKey(currentSection);
   const currentSectionIndex = displaySession
-    ? INSPECTION_SECTIONS.findIndex((item) => item.key === currentSection)
+    ? INSPECTION_WORKSPACE_SECTIONS.findIndex(
+        (item) => item.key === workspaceCurrentSection,
+      )
     : -1;
   const site = session ? getSiteById(getSessionSiteKey(session)) : null;
   const displaySite = site ?? shellSite;
@@ -513,16 +519,19 @@ export function useInspectionSessionScreen(sessionId: string) {
 
   const moveSection = (direction: -1 | 1) => {
     const nextIndex = currentSectionIndex + direction;
-    if (nextIndex < 0 || nextIndex >= INSPECTION_SECTIONS.length) return;
+    if (nextIndex < 0 || nextIndex >= INSPECTION_WORKSPACE_SECTIONS.length) return;
 
     updateSession(sessionId, (current) => ({
       ...current,
-      currentSection: INSPECTION_SECTIONS[nextIndex].key,
+      currentSection: INSPECTION_WORKSPACE_SECTIONS[nextIndex].key,
     }));
   };
 
   const selectSection = (key: InspectionSectionKey) => {
-    updateSession(sessionId, (current) => ({ ...current, currentSection: key }));
+    updateSession(sessionId, (current) => ({
+      ...current,
+      currentSection: resolveWorkspaceSectionKey(key),
+    }));
   };
 
   const buildHwpxDocument = async () => {
@@ -596,7 +605,7 @@ export function useInspectionSessionScreen(sessionId: string) {
     authError,
     backHref: displayBackHref,
     changeMetaField,
-    currentSection,
+    currentSection: workspaceCurrentSection,
     currentSectionIndex,
     currentUserName: currentUser?.name,
     derivedData,

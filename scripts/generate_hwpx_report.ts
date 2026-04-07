@@ -835,13 +835,13 @@ function formatDateText(value: string): string {
 function mapPreviousImplementationStatus(value: PreviousImplementationStatus): string {
   switch (value) {
     case 'implemented':
-      return '이행';
+      return `${checkbox(true)}이행 / ${checkbox(false)}불이행`;
     case 'partial':
-      return '부분 이행';
+      return `${checkbox(true)}이행 / ${checkbox(true)}불이행`;
     case 'not_implemented':
-      return '미이행';
+      return `${checkbox(false)}이행 / ${checkbox(true)}불이행`;
     default:
-      return '';
+      return `${checkbox(false)}이행 / ${checkbox(false)}불이행`;
   }
 }
 

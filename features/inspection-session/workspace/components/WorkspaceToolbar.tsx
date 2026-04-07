@@ -1,5 +1,5 @@
 import styles from '@/components/session/InspectionSessionWorkspace.module.css';
-import { INSPECTION_SECTIONS } from '@/constants/inspectionSession';
+import { INSPECTION_WORKSPACE_SECTIONS } from '@/features/inspection-session/workspace/workspaceSections';
 import type { InspectionSectionKey } from '@/types/inspectionSession';
 
 interface WorkspaceToolbarProps {
@@ -43,7 +43,7 @@ export function WorkspaceToolbar({
             onChange={(event) => onSectionSelect(event.target.value as InspectionSectionKey)}
             aria-labelledby="workspace-toolbar-doc-heading"
           >
-            {INSPECTION_SECTIONS.map((section) => (
+            {INSPECTION_WORKSPACE_SECTIONS.map((section) => (
               <option key={section.key} value={section.key}>
                 {`${section.compactLabel}. ${section.shortLabel}`}
               </option>
