@@ -178,7 +178,6 @@ export default function Doc7FindingCard({
           }
           selectValueForRiskLevel={selectValueForRiskLevel}
           updateFinding={updateFinding}
-          updateFindingWithReferenceMaterial={updateFindingWithReferenceMaterial}
           onAccidentTypeChange={(value) =>
             updateFindingWithReferenceMaterial((finding) => ({
               ...finding,

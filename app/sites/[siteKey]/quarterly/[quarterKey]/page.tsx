@@ -398,12 +398,7 @@ function buildLocalQuarterlySummarySeed(
     new Set((options?.selectedReportKeys ?? []).map((value) => value.trim()).filter(Boolean)),
   );
   const sourceSessions = [...siteSessions]
-    .filter(
-      (session) =>
-        getSessionGuidanceDate(session) &&
-        session.reportKind !== 'quarterly_summary' &&
-        session.reportKind !== 'bad_workplace',
-    )
+    .filter((session) => getSessionGuidanceDate(session))
     .filter((session) => {
       const guidanceDate = getSessionGuidanceDate(session);
       return guidanceDate >= report.periodStartDate && guidanceDate <= report.periodEndDate;
