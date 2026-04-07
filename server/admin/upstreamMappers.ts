@@ -42,6 +42,7 @@ import type {
   K2bImportPreview,
   K2bMatchCandidate,
 } from '@/types/k2b';
+import { normalizeSafetyAssetUrl } from '@/lib/safetyApi/assetUrls';
 import { buildSafetyAdminUpstreamUrl } from './safetyApiServer';
 
 function normalizeText(value: unknown) {
@@ -758,7 +759,7 @@ export function buildPhotoAlbumItemFromAsset(
     headquarterId: asset.headquarterId,
     headquarterName,
     id: asset.id,
-    previewUrl: asset.thumbnailPath || asset.originalPath,
+    previewUrl: normalizeSafetyAssetUrl(asset.thumbnailPath || asset.originalPath),
     siteId: asset.siteId,
     siteName,
     sizeBytes: asset.sizeBytes,

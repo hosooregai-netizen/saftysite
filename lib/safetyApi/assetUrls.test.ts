@@ -82,6 +82,12 @@ test('normalizes proxied and relative upload URLs to the configured asset base',
       ),
       'https://assets.example.com/uploads/mock-guide.pdf?download=1#page=2',
     );
+    assert.equal(
+      normalizeSafetyAssetUrl(
+        'http://52.64.85.49:8011/api/v1/photo-assets/files/thumbnails/mock-guide.jpg',
+      ),
+      '/api/safety/photo-assets/files/thumbnails/mock-guide.jpg',
+    );
   });
 });
 

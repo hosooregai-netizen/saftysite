@@ -12,6 +12,7 @@ const SAFETY_PUBLIC_UPSTREAM_BASE_URL_ENV_KEYS = [
 const ABSOLUTE_HTTP_URL_PATTERN = /^https?:\/\//i;
 const PASSTHROUGH_URL_PATTERN = /^(?:data|blob):/i;
 const SAFETY_UPLOADS_PATH_PREFIX = '/uploads/';
+const SAFETY_PHOTO_ASSET_FILES_PATH_PREFIX = '/photo-assets/files/';
 const SAFETY_PROXY_UPLOADS_PATH_PREFIX = `${DEFAULT_SAFETY_API_BASE_URL}${SAFETY_UPLOADS_PATH_PREFIX}`;
 const SAFETY_PATH_PREFIXES = ['/api/safety', '/api/v1'] as const;
 
@@ -108,6 +109,10 @@ function extractCanonicalAssetPath(value: string): string | null {
     return `${toPublicContentAssetPath(normalizedPath)}${suffix}`;
   }
 
+  if (normalizedPath.startsWith(SAFETY_PHOTO_ASSET_FILES_PATH_PREFIX)) {
+    return `${normalizedPath}${suffix}`;
+  }
+
   return null;
 }
 
@@ -201,6 +206,10 @@ export function normalizeSafetyAssetUrl(value: string): string {
     return normalized;
   }
 
+  if (assetPath.startsWith(SAFETY_PHOTO_ASSET_FILES_PATH_PREFIX)) {
+    return buildSafetyApiUrl(assetPath);
+  }
+
   return buildSafetyAssetUrl(assetPath);
 }
 
@@ -233,6 +242,9 @@ export function resolveSafetyAssetUrl(value: string): string {
 
   const assetPath = extractCanonicalAssetPath(normalizedValue) ?? getSafetyAssetPath(normalizedValue);
   if (assetPath) {
+    if (assetPath.startsWith(SAFETY_PHOTO_ASSET_FILES_PATH_PREFIX)) {
+      return buildSafetyApiUrl(assetPath);
+    }
     return buildSafetyAssetUrl(assetPath);
   }
 
