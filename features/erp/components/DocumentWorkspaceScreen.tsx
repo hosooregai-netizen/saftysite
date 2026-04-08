@@ -260,6 +260,17 @@ function normalizeMobileAcknowledgements(value: unknown): MobileAcknowledgementR
     .filter((item) => item.worker_name || item.signature_name || item.acknowledged_at);
 }
 
+function buildReportPayloadForSave(payload: Record<string, unknown>): Record<string, unknown> {
+  const nextPayload = { ...payload };
+
+  // Mobile acknowledgements are appended by the worker flow and can grow large
+  // enough to trip the proxy body limit, so preserve them on the server instead
+  // of resending them on every ERP save.
+  delete nextPayload.mobileAcknowledgements;
+
+  return nextPayload;
+}
+
 function normalizePayloadForKind(
   kind: 'tbm',
   payload: object
@@ -745,7 +756,7 @@ export function DocumentWorkspaceScreen({ documentId }: DocumentWorkspaceScreenP
           progress_rate: report.progress_rate,
           document_kind: documentKind,
           payload: {
-            ...draftPayload,
+            ...buildReportPayloadForSave(draftPayload),
             meta: {
               savedFrom: 'erp_workspace',
             },
