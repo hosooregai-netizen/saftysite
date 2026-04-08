@@ -575,6 +575,13 @@ export function DocumentWorkspaceScreen({ documentId }: DocumentWorkspaceScreenP
       setDraftTitle(reportResponse.report_title);
       setDraftVisitDate(reportResponse.visit_date ?? '');
       setDraftPayload(reportResponse.payload ?? {});
+      setLastAutosavedAt(reportResponse.last_autosaved_at ?? reportResponse.updated_at ?? null);
+      setLastManualSavedAt(
+        reportResponse.status !== 'draft' ? reportResponse.updated_at ?? null : null
+      );
+      setReissuedPendingLinks([]);
+      setSaveActivity(null);
+      setIsDirty(false);
 
       const draftContextPromise = reportResponse.document_kind
         ? fetchSafetyReportDraftContext(
@@ -589,26 +596,27 @@ export function DocumentWorkspaceScreen({ documentId }: DocumentWorkspaceScreenP
         limit: 1000,
       }).catch(() => []);
 
-      const [dashboardResponse, contentResponse, draftContextResponse, siteWorkersResponse] = await Promise.all([
+      const [dashboardResult, contentResult, draftContextResult, siteWorkersResult] = await Promise.allSettled([
         fetchSafetySiteDashboard(authToken, reportResponse.site_id),
         fetchSafetyContentItems(authToken),
         draftContextPromise,
         siteWorkersPromise,
       ]);
 
-      setDashboard(dashboardResponse);
-      setContentItems(
-        contentResponse.filter((item) => getTemplateTypesForDocuments().includes(item.content_type))
-      );
-      setDraftContext(draftContextResponse);
-      setSiteWorkers(siteWorkersResponse);
-      setLastAutosavedAt(reportResponse.last_autosaved_at ?? reportResponse.updated_at ?? null);
-      setLastManualSavedAt(
-        reportResponse.status !== 'draft' ? reportResponse.updated_at ?? null : null
-      );
-      setReissuedPendingLinks([]);
-      setSaveActivity(null);
-      setIsDirty(false);
+      if (dashboardResult.status === 'fulfilled') {
+        setDashboard(dashboardResult.value);
+      }
+      if (contentResult.status === 'fulfilled') {
+        setContentItems(
+          contentResult.value.filter((item) => getTemplateTypesForDocuments().includes(item.content_type))
+        );
+      }
+      if (draftContextResult.status === 'fulfilled') {
+        setDraftContext(draftContextResult.value);
+      }
+      if (siteWorkersResult.status === 'fulfilled') {
+        setSiteWorkers(siteWorkersResult.value);
+      }
     },
     [documentId]
   );

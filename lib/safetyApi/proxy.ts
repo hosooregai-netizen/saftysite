@@ -9,6 +9,7 @@ const RESPONSE_HEADERS_TO_SKIP = new Set([
 ]);
 const DEFAULT_PROXY_TIMEOUT_MS = 15000;
 const FILE_PROXY_TIMEOUT_MS = 45000;
+const ERP_CONTEXT_PROXY_TIMEOUT_MS = 30000;
 
 function copyHeaders(source: Headers, blocked: Set<string>): Headers {
   const headers = new Headers();
@@ -54,8 +55,17 @@ function requiresRequestBody(method: string): boolean {
 
 function getProxyTimeoutMs(request: Request): number {
   const contentType = request.headers.get('content-type') || '';
+  const pathname = new URL(request.url).pathname;
   if (contentType.includes('multipart/form-data')) {
     return FILE_PROXY_TIMEOUT_MS;
+  }
+
+  if (
+    pathname.includes('/dashboard') ||
+    pathname.includes('/draft-context') ||
+    pathname.includes('/reports/upsert')
+  ) {
+    return ERP_CONTEXT_PROXY_TIMEOUT_MS;
   }
 
   return DEFAULT_PROXY_TIMEOUT_MS;

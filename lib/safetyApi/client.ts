@@ -3,10 +3,13 @@ import { buildSafetyApiUrl } from './config';
 const DEFAULT_SAFETY_API_TIMEOUT_MS = 12000;
 const UPLOAD_SAFETY_API_TIMEOUT_MS = 45000;
 const REPORT_UPSERT_SAFETY_API_TIMEOUT_MS = 45000;
+const ERP_CONTEXT_SAFETY_API_TIMEOUT_MS = 30000;
 const DEFAULT_GET_CACHE_TTL_MS = 5000;
 const CONTENT_ITEMS_CACHE_TTL_MS = 60000;
 const REPORTS_BY_SITE_CACHE_TTL_MS = 15000;
 const AUTH_ME_CACHE_TTL_MS = 3000;
+const ERP_DASHBOARD_CACHE_TTL_MS = 15000;
+const ERP_DRAFT_CONTEXT_CACHE_TTL_MS = 15000;
 
 type JsonLike =
   | undefined
@@ -59,6 +62,14 @@ function getGetCacheTtlMs(path: string, method?: string): number {
 
   if (path.includes('/content-items')) {
     return CONTENT_ITEMS_CACHE_TTL_MS;
+  }
+
+  if (path.includes('/dashboard')) {
+    return ERP_DASHBOARD_CACHE_TTL_MS;
+  }
+
+  if (path.includes('/draft-context')) {
+    return ERP_DRAFT_CONTEXT_CACHE_TTL_MS;
   }
 
   if (path.includes('/reports/site/') && path.endsWith('/full')) {
@@ -115,6 +126,10 @@ function getSafetyApiTimeoutMs(path: string, options: RequestInit): number {
 
   if (path === '/reports/upsert') {
     return REPORT_UPSERT_SAFETY_API_TIMEOUT_MS;
+  }
+
+  if (path.includes('/dashboard') || path.includes('/draft-context')) {
+    return ERP_CONTEXT_SAFETY_API_TIMEOUT_MS;
   }
 
   return DEFAULT_SAFETY_API_TIMEOUT_MS;
@@ -230,4 +245,3 @@ export async function requestSafetyApi<T>(
 
   return (await executeRequest()) as T;
 }
-
