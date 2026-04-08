@@ -69,6 +69,9 @@ interface ReissuedPendingWorkerLink {
 }
 
 type SaveActivity = 'autosave' | 'manual_save' | 'status' | 'upload' | null;
+type SaveDocumentOptions = {
+  background?: boolean;
+};
 type WorkerAckField =
   | 'latest_hazard_notice_ack_at'
   | 'latest_tbm_ack_at'
@@ -84,6 +87,7 @@ const WORKER_ACK_FIELD_BY_KIND: Partial<Record<ErpDocumentKind, WorkerAckField>>
   tbm: 'latest_tbm_ack_at',
   safety_education: 'latest_education_ack_at',
 };
+const ERP_AUTOSAVE_DEBOUNCE_MS = 8000;
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof SafetyApiError || error instanceof Error) {
@@ -545,6 +549,16 @@ export function DocumentWorkspaceScreen({ documentId }: DocumentWorkspaceScreenP
   const { authError, currentUser, isAuthenticated, isReady, login, logout, shouldShowLogin, token } =
     useErpProtectedScreen();
   const photoInputRef = useRef<HTMLInputElement | null>(null);
+  const isMountedRef = useRef(true);
+  const tokenRef = useRef<string | null>(token ?? null);
+  const reportRef = useRef<SafetyReport | null>(null);
+  const isDirtyRef = useRef(false);
+  const isSavingRef = useRef(false);
+  const pendingAutosaveRef = useRef(false);
+  const draftVersionRef = useRef(0);
+  const saveDocumentRef = useRef<
+    ((reason?: 'autosave' | 'manual_save', options?: SaveDocumentOptions) => Promise<SafetyReport | null>) | null
+  >(null);
   const [report, setReport] = useState<SafetyReport | null>(null);
   const [dashboard, setDashboard] = useState<SafetySiteDashboard | null>(null);
   const [contentItems, setContentItems] = useState<SafetyContentItem[]>([]);
@@ -568,9 +582,32 @@ export function DocumentWorkspaceScreen({ documentId }: DocumentWorkspaceScreenP
   const [isFinalizeWarningOpen, setIsFinalizeWarningOpen] = useState(false);
   const [reissuedPendingLinks, setReissuedPendingLinks] = useState<ReissuedPendingWorkerLink[]>([]);
 
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    tokenRef.current = token ?? null;
+  }, [token]);
+
+  useEffect(() => {
+    reportRef.current = report;
+  }, [report]);
+
+  useEffect(() => {
+    isDirtyRef.current = isDirty;
+  }, [isDirty]);
+
+  useEffect(() => {
+    isSavingRef.current = isSaving;
+  }, [isSaving]);
+
   const load = useCallback(
     async (authToken: string) => {
       const reportResponse = await fetchSafetyReportById(authToken, documentId);
+      reportRef.current = reportResponse;
       setReport(reportResponse);
       setDraftTitle(reportResponse.report_title);
       setDraftVisitDate(reportResponse.visit_date ?? '');
@@ -581,6 +618,9 @@ export function DocumentWorkspaceScreen({ documentId }: DocumentWorkspaceScreenP
       );
       setReissuedPendingLinks([]);
       setSaveActivity(null);
+      draftVersionRef.current = 0;
+      isDirtyRef.current = false;
+      pendingAutosaveRef.current = false;
       setIsDirty(false);
 
       const draftContextPromise = reportResponse.document_kind
@@ -740,16 +780,37 @@ export function DocumentWorkspaceScreen({ documentId }: DocumentWorkspaceScreenP
       const next = updater(current as T);
       return next as Record<string, unknown>;
     });
+    draftVersionRef.current += 1;
+    isDirtyRef.current = true;
     setIsDirty(true);
   };
 
-  const saveDocument = useCallback(
-    async (reason: 'autosave' | 'manual_save' = 'manual_save') => {
-      if (!token || !report || !documentKind || isReadOnly) return null;
+  const markDraftDirty = useCallback(() => {
+    draftVersionRef.current += 1;
+    isDirtyRef.current = true;
+    setIsDirty(true);
+  }, []);
 
-      setIsSaving(true);
-      setSaveActivity(reason);
-      setError(null);
+  const saveDocument = useCallback(
+    async (
+      reason: 'autosave' | 'manual_save' = 'manual_save',
+      options: SaveDocumentOptions = {}
+    ) => {
+      if (!token || !report || !documentKind || isReadOnly) return null;
+      if (reason === 'autosave' && isSavingRef.current) {
+        pendingAutosaveRef.current = true;
+        return null;
+      }
+
+      const draftVersionAtSaveStart = draftVersionRef.current;
+      const shouldUpdateUi = isMountedRef.current && !options.background;
+      isSavingRef.current = true;
+
+      if (shouldUpdateUi) {
+        setIsSaving(true);
+        setSaveActivity(reason);
+        setError(null);
+      }
 
       try {
         const saved = await upsertSafetyReport(token, {
@@ -779,38 +840,96 @@ export function DocumentWorkspaceScreen({ documentId }: DocumentWorkspaceScreenP
           revision_reason: reason,
         });
 
-        setReport(saved);
-        setDraftTitle(saved.report_title);
-        setDraftVisitDate(saved.visit_date ?? '');
-        setDraftPayload(saved.payload ?? {});
-        setIsDirty(false);
-        if (reason === 'autosave') {
-          setLastAutosavedAt(saved.last_autosaved_at ?? saved.updated_at ?? null);
-        } else {
-          setLastManualSavedAt(saved.updated_at ?? null);
+        reportRef.current = saved;
+        const draftChangedDuringSave = draftVersionRef.current !== draftVersionAtSaveStart;
+        if (isMountedRef.current) {
+          setReport(saved);
+          if (!draftChangedDuringSave) {
+            setDraftTitle(saved.report_title);
+            setDraftVisitDate(saved.visit_date ?? '');
+            setDraftPayload(saved.payload ?? {});
+            isDirtyRef.current = false;
+            setIsDirty(false);
+          }
+          if (reason === 'autosave') {
+            setLastAutosavedAt(saved.last_autosaved_at ?? saved.updated_at ?? null);
+          } else {
+            setLastManualSavedAt(saved.updated_at ?? null);
+          }
+        } else if (!draftChangedDuringSave) {
+          isDirtyRef.current = false;
+        }
+        if (!shouldUpdateUi) {
+          return saved;
         }
         setNotice(reason === 'autosave' ? '자동저장되었습니다.' : '문서를 저장했습니다.');
         return saved;
       } catch (nextError) {
-        setError(getErrorMessage(nextError));
+        if (shouldUpdateUi && isMountedRef.current) {
+          setError(getErrorMessage(nextError));
+        }
         return null;
       } finally {
-        setIsSaving(false);
-        setSaveActivity(null);
+        isSavingRef.current = false;
+        if (shouldUpdateUi && isMountedRef.current) {
+          setIsSaving(false);
+          setSaveActivity(null);
+        }
+        if (pendingAutosaveRef.current && isDirtyRef.current && tokenRef.current && reportRef.current) {
+          pendingAutosaveRef.current = false;
+          void saveDocumentRef.current?.('autosave', options);
+        }
       }
     },
     [dashboard?.site.site_name, documentKind, draftPayload, draftTitle, draftVisitDate, isReadOnly, report, token]
   );
 
   useEffect(() => {
-    if (!isDirty || !report || !documentKind || isReadOnly) return;
+    saveDocumentRef.current = saveDocument;
+  }, [saveDocument]);
+
+  useEffect(() => {
+    if (!isDirty || !report || !documentKind || isReadOnly || isSaving) return;
 
     const timeoutId = window.setTimeout(() => {
       void saveDocument('autosave');
-    }, 1200);
+    }, ERP_AUTOSAVE_DEBOUNCE_MS);
 
     return () => window.clearTimeout(timeoutId);
-  }, [documentKind, isDirty, isReadOnly, report, saveDocument]);
+  }, [documentKind, isDirty, isReadOnly, isSaving, report, saveDocument]);
+
+  useEffect(() => {
+    const flushAutosave = () => {
+      if (!isDirtyRef.current || !tokenRef.current || !reportRef.current) return;
+      if (isSavingRef.current) {
+        pendingAutosaveRef.current = true;
+        return;
+      }
+      void saveDocumentRef.current?.('autosave', { background: true });
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        flushAutosave();
+      }
+    };
+
+    const handlePageHide = () => {
+      flushAutosave();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('pagehide', handlePageHide);
+    window.addEventListener('beforeunload', handlePageHide);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pagehide', handlePageHide);
+      window.removeEventListener('beforeunload', handlePageHide);
+      flushAutosave();
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const finalizeDocument = async () => {
     if (!token || !report || isReadOnly) return;
@@ -1589,7 +1708,7 @@ export function DocumentWorkspaceScreen({ documentId }: DocumentWorkspaceScreenP
                   value={draftTitle}
                   onChange={(event) => {
                     setDraftTitle(event.target.value);
-                    setIsDirty(true);
+                    markDraftDirty();
                   }}
                 />
               </label>
@@ -1601,7 +1720,7 @@ export function DocumentWorkspaceScreen({ documentId }: DocumentWorkspaceScreenP
                   value={draftVisitDate}
                   onChange={(event) => {
                     setDraftVisitDate(event.target.value);
-                    setIsDirty(true);
+                    markDraftDirty();
                   }}
                 />
               </label>
