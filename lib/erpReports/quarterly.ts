@@ -225,6 +225,102 @@ export function syncQuarterlySummaryReportSources(
   };
 }
 
+export function getQuarterlySessionReportTitle(session: InspectionSession) {
+  if (session.meta.reportTitle?.trim()) {
+    return session.meta.reportTitle.trim();
+  }
+
+  const guidanceDate = getSessionGuidanceDate(session);
+  if (guidanceDate && Number.isFinite(session.reportNumber) && session.reportNumber > 0) {
+    return `${guidanceDate} 보고서 ${session.reportNumber}`;
+  }
+
+  if (guidanceDate) {
+    return guidanceDate;
+  }
+
+  if (Number.isFinite(session.reportNumber) && session.reportNumber > 0) {
+    return `보고서 ${session.reportNumber}`;
+  }
+
+  return session.id;
+}
+
+export function buildLocalQuarterlySummarySeed(
+  report: QuarterlySummaryReport,
+  site: InspectionSite,
+  siteSessions: InspectionSession[],
+  options?: {
+    selectedReportKeys?: string[];
+    explicitSelection?: boolean;
+  },
+): SafetyQuarterlySummarySeed {
+  const normalizedSelectedKeys = Array.from(
+    new Set((options?.selectedReportKeys ?? []).map((value) => value.trim()).filter(Boolean)),
+  );
+  const sourceSessions = [...siteSessions]
+    .filter((session) => getSessionGuidanceDate(session))
+    .filter((session) => {
+      const guidanceDate = getSessionGuidanceDate(session);
+      return guidanceDate >= report.periodStartDate && guidanceDate <= report.periodEndDate;
+    })
+    .sort((left, right) => {
+      const leftTime = new Date(getSessionGuidanceDate(left) || left.updatedAt).getTime();
+      const rightTime = new Date(getSessionGuidanceDate(right) || right.updatedAt).getTime();
+      return rightTime - leftTime;
+    });
+  const selectedReportKeys =
+    options?.explicitSelection || normalizedSelectedKeys.length > 0
+      ? normalizedSelectedKeys
+      : sourceSessions.map((session) => session.id);
+  const derivedReport = syncQuarterlySummaryReportSources(
+    report,
+    site,
+    siteSessions,
+    selectedReportKeys,
+    sourceSessions,
+  );
+
+  return {
+    period_start_date: report.periodStartDate,
+    period_end_date: report.periodEndDate,
+    selected_report_keys: [...derivedReport.generatedFromSessionIds],
+    source_reports: sourceSessions.map((session) => ({
+      report_key: session.id,
+      report_title: getQuarterlySessionReportTitle(session),
+      guidance_date: getSessionGuidanceDate(session),
+      drafter: session.meta.drafter || '',
+      progress_rate: session.document2Overview.progressRate || '',
+      finding_count: session.document7Findings.length,
+      improved_count: session.document4FollowUps.filter((item) => item.result === 'completed')
+        .length,
+    })),
+    last_calculated_at: createTimestamp(),
+    implementation_rows: derivedReport.implementationRows.map((row) => ({
+      session_id: row.sessionId,
+      report_title: row.reportTitle,
+      report_date: row.reportDate,
+      report_number: row.reportNumber,
+      drafter: row.drafter,
+      progress_rate: row.progressRate,
+      finding_count: row.findingCount,
+      improved_count: row.improvedCount,
+      note: row.note,
+    })),
+    accident_stats: derivedReport.accidentStats.map((item) => ({ ...item })),
+    causative_stats: derivedReport.causativeStats.map((item) => ({ ...item })),
+    future_plans: derivedReport.futurePlans.map((plan) => ({
+      id: plan.id,
+      process_name: plan.processName,
+      hazard: plan.hazard,
+      countermeasure: plan.countermeasure,
+      note: plan.note,
+      source: plan.source,
+    })),
+    major_measures: [...derivedReport.majorMeasures],
+  };
+}
+
 export function applyQuarterlySummarySeed(
   report: QuarterlySummaryReport,
   seed: SafetyQuarterlySummarySeed,

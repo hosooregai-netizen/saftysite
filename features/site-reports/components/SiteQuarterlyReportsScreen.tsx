@@ -18,6 +18,7 @@ import { useSiteOperationalReports } from '@/hooks/useSiteOperationalReports';
 import { getAdminSectionHref, isAdminUserRole } from '@/lib/admin';
 import {
   applyQuarterlySummarySeed,
+  buildLocalQuarterlySummarySeed,
   createQuarterlySummaryDraft,
 } from '@/lib/erpReports/quarterly';
 import {
@@ -28,7 +29,11 @@ import {
   getQuarterRange,
   parseDateValue,
 } from '@/lib/erpReports/shared';
-import { fetchQuarterlySummarySeed, readSafetyAuthToken } from '@/lib/safetyApi';
+import {
+  fetchQuarterlySummarySeed,
+  readSafetyAuthToken,
+  SafetyApiError,
+} from '@/lib/safetyApi';
 import { SiteReportsSummaryBar } from './SiteReportsSummaryBar';
 import styles from './SiteReportsScreen.module.css';
 
@@ -173,6 +178,10 @@ function getCreateQuarterSelectionTarget(
   };
 }
 
+function shouldUseLocalQuarterlySeedFallback(error: unknown) {
+  return error instanceof SafetyApiError && [404, 405, 501].includes(error.status ?? -1);
+}
+
 export function SiteQuarterlyReportsScreen({
   siteKey,
 }: SiteQuarterlyReportsScreenProps) {
@@ -193,6 +202,8 @@ export function SiteQuarterlyReportsScreen({
     authError,
     canArchiveReports,
     currentUser,
+    ensureSiteReportsLoaded,
+    getSessionsBySiteId,
     isAuthenticated,
     isReady,
     login,
@@ -428,10 +439,24 @@ export function SiteQuarterlyReportsScreen({
         quarter: quarterTarget.quarter,
         quarterKey: createQuarterKey(quarterTarget.year, quarterTarget.quarter),
       };
-      const seed = await fetchQuarterlySummarySeed(token, currentSite.id, {
-        periodStartDate,
-        periodEndDate,
-      });
+      let seed;
+      try {
+        seed = await fetchQuarterlySummarySeed(token, currentSite.id, {
+          periodStartDate,
+          periodEndDate,
+        });
+      } catch (seedError) {
+        if (!shouldUseLocalQuarterlySeedFallback(seedError)) {
+          throw seedError;
+        }
+
+        await ensureSiteReportsLoaded(currentSite.id);
+        seed = buildLocalQuarterlySummarySeed(
+          nextDraftBase,
+          currentSite,
+          getSessionsBySiteId(currentSite.id),
+        );
+      }
       const nextDraft = applyQuarterlySummarySeed(nextDraftBase, seed);
       await saveQuarterlyReport(nextDraft);
       setIsCreateDialogOpen(false);
