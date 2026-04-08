@@ -1,4 +1,5 @@
 import { buildSafetyApiUrl } from './config';
+import { buildPublicSafetyApiUpstreamUrl } from './upstream';
 
 const DEFAULT_SAFETY_API_TIMEOUT_MS = 12000;
 const UPLOAD_SAFETY_API_TIMEOUT_MS = 45000;
@@ -139,6 +140,21 @@ function getSafetyApiTimeoutMs(path: string, options: RequestInit): number {
   return DEFAULT_SAFETY_API_TIMEOUT_MS;
 }
 
+export function buildPreferredSafetyApiRequestUrls(path: string): string[] {
+  const proxiedUrl = buildSafetyApiUrl(path);
+
+  if (path !== '/reports/upsert') {
+    return [proxiedUrl];
+  }
+
+  const directUrl = buildPublicSafetyApiUpstreamUrl(path);
+  if (!directUrl || directUrl === proxiedUrl) {
+    return [proxiedUrl];
+  }
+
+  return [directUrl, proxiedUrl];
+}
+
 export async function requestSafetyApi<T>(
   path: string,
   options: RequestInit = {},
@@ -195,15 +211,29 @@ export async function requestSafetyApi<T>(
   }
 
   const executeRequest = async (): Promise<JsonLike> => {
-    let response: Response;
+    let response: Response | null = null;
 
     try {
-      response = await fetch(buildSafetyApiUrl(path), {
-        ...options,
-        headers,
-        cache: 'no-store',
-        signal: abortController.signal,
-      });
+      let lastNetworkError: unknown = null;
+
+      for (const requestUrl of buildPreferredSafetyApiRequestUrls(path)) {
+        try {
+          response = await fetch(requestUrl, {
+            ...options,
+            headers,
+            cache: 'no-store',
+            signal: abortController.signal,
+          });
+          lastNetworkError = null;
+          break;
+        } catch (error) {
+          lastNetworkError = error;
+        }
+      }
+
+      if (!response) {
+        throw lastNetworkError ?? new Error(`${requestLabel} request failed before receiving a response.`);
+      }
     } catch (error) {
       throw new SafetyApiError(
         error instanceof Error
