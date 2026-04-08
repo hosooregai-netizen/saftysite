@@ -277,9 +277,17 @@ function buildProviderStatusDetail(provider: MailProviderStatus | undefined) {
     return '필수값을 확인하세요.';
   }
   if (!provider.isRedirectAllowed) {
-    return '리디렉션 주소를 확인하세요.';
+    const requested = provider.requestedRedirectUri?.trim();
+    return requested
+      ? `리디렉션 주소를 확인하세요. 현재 요청 주소: ${requested}`
+      : '리디렉션 주소를 확인하세요.';
   }
   return '연결 가능';
+}
+
+function canStartProviderOauth(provider: MailProviderStatus | undefined) {
+  if (!provider) return true;
+  return provider.enabled && provider.isRedirectAllowed;
 }
 
 function formatProviderLabel(provider: MailAccount['provider'] | MailProviderStatus['provider']) {
@@ -459,6 +467,8 @@ export function MailboxPanel({
   );
   const googleProviderStatus = providerStatusMap.get('google');
   const naverProviderStatus = providerStatusMap.get('naver_mail');
+  const canStartGoogleOauth = canStartProviderOauth(googleProviderStatus);
+  const canStartNaverOauth = canStartProviderOauth(naverProviderStatus);
   const hasMultipleAccounts = accounts.length > 1;
   const adminSiteById = useMemo(
     () => new Map(adminSites.map((item) => [item.id, item])),
@@ -1399,9 +1409,13 @@ export function MailboxPanel({
                     type="button"
                     className={`app-button app-button-primary ${localStyles.primaryActionButton}`}
                     onClick={() => void handleConnectGoogle()}
-                    disabled={oauthProvider === 'google'}
+                    disabled={oauthProvider === 'google' || !canStartGoogleOauth}
                   >
-                    {oauthProvider === 'google' ? '이동 중...' : '구글 로그인으로 연결'}
+                    {oauthProvider === 'google'
+                      ? '이동 중...'
+                      : canStartGoogleOauth
+                        ? '구글 로그인으로 연결'
+                        : '구글 설정 확인 필요'}
                   </button>
                 </div>
               </article>
@@ -1455,9 +1469,13 @@ export function MailboxPanel({
                     type="button"
                     className={`app-button app-button-primary ${localStyles.primaryActionButton}`}
                     onClick={() => void handleConnectNaverOauth()}
-                    disabled={oauthProvider === 'naver_mail'}
+                    disabled={oauthProvider === 'naver_mail' || !canStartNaverOauth}
                   >
-                    {oauthProvider === 'naver_mail' ? '이동 중...' : '네이버 로그인으로 연결'}
+                    {oauthProvider === 'naver_mail'
+                      ? '이동 중...'
+                      : canStartNaverOauth
+                        ? '네이버 로그인으로 연결'
+                        : '네이버 설정 확인 필요'}
                   </button>
                 </div>
                 <div className={localStyles.formDivider} />
