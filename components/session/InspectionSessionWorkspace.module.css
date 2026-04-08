@@ -1069,6 +1069,9 @@
 
 .doc12PhotoCell {
   height: 256px;
+  min-height: 256px;
+  max-height: 256px;
+  overflow: hidden;
 }
 
 .doc12PhotoUpload {
@@ -1093,8 +1096,13 @@
 
 .doc12PhotoUpload .uploadPreviewHit,
 .doc12PhotoUpload .uploadPlaceholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
   height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .doc12PhotoUpload .uploadPreview {
@@ -1261,6 +1269,7 @@
 }
 
 .doc7PhotoColumn {
+  --doc7-photo-slot-height: 256px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1530,6 +1539,7 @@
   }
 
   .doc7PhotoColumn {
+    --doc7-photo-slot-height: 220px;
     order: 1;
   }
 
@@ -1567,10 +1577,10 @@
   .doc7PhotoColumn {
     grid-column: 2;
     grid-row: 2;
-    align-self: stretch;
+    align-self: start;
     min-width: 0;
     min-height: 0;
-    height: 100%;
+    height: auto;
     order: unset;
   }
 
@@ -1578,44 +1588,41 @@
 
 /* 세부 지적 현장 사진: 표형 1열 */
 .doc7PhotoTableWrap {
-  display: flex;
+  display: block;
   width: 100%;
   min-width: 0;
-  flex: 1 1 auto;
-  min-height: 0;
   border: 1px solid var(--erp-line);
   background: var(--erp-white);
   overflow: hidden;
 }
 
-.doc7PhotoTable {
-  flex: 1 1 auto;
+.doc7PhotoStack {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   width: 100%;
-  border-collapse: collapse;
-  table-layout: fixed;
-  height: 100%;
+  min-width: 0;
   background: var(--erp-white);
 }
 
-.doc7PhotoTable > tbody {
+.doc7PhotoSlot {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto minmax(0, 1fr);
-  width: 100%;
-  height: 100%;
+  grid-template-rows: auto var(--doc7-photo-slot-height);
+  min-width: 0;
 }
 
-.doc7PhotoTable > tbody > tr {
-  display: contents;
+.doc7PhotoSlot + .doc7PhotoSlot {
+  border-top: 1px solid var(--erp-line);
 }
 
 .doc7PhotoLabelCell,
 .doc7PhotoValueCell {
-  border: 1px solid var(--erp-line);
+  min-width: 0;
 }
 
 .doc7PhotoLabelCell {
   position: relative;
   padding: 10px 12px;
+  border-bottom: 1px solid var(--erp-line);
   background: var(--erp-panel-muted);
   text-align: center;
   vertical-align: middle;
@@ -1671,10 +1678,13 @@
 }
 
 .doc7PhotoValueCell {
+  position: relative;
   padding: 0;
-  height: auto;
-  min-height: 0;
+  height: var(--doc7-photo-slot-height);
+  min-height: var(--doc7-photo-slot-height);
+  max-height: var(--doc7-photo-slot-height);
   background: var(--erp-white);
+  overflow: hidden;
 }
 
 .doc7PhotoValueCell .field {
@@ -1683,6 +1693,7 @@
   height: 100%;
   min-width: 0;
   min-height: 0;
+  overflow: hidden;
 }
 
 .doc7PhotoValueCell .uploadFieldLabelRow {
@@ -1693,16 +1704,24 @@
 .doc7PhotoValueCell .uploadBody.uploadBodyField:has(.uploadPreviewHit) {
   display: flex;
   flex: 1 1 auto;
-  min-height: 0;
-  height: 100%;
-  max-height: none;
+  width: 100%;
+  min-height: var(--doc7-photo-slot-height);
+  height: var(--doc7-photo-slot-height);
+  max-height: var(--doc7-photo-slot-height);
+  align-items: center;
+  justify-content: center;
   border: 0;
   border-radius: 0;
   background: var(--erp-white);
+  overflow: hidden;
 }
 
 .doc7PhotoValueCell .uploadPreviewHit,
 .doc7PhotoValueCell .uploadPlaceholder {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
   width: 100%;
   height: 100%;
   min-height: 0;
@@ -1710,13 +1729,20 @@
   margin: 0;
   border: 0;
   background: var(--erp-white);
+  overflow: hidden;
 }
 
 .doc7PhotoValueCell .uploadPreview {
-  width: 100%;
-  height: 100%;
-  max-height: none;
+  display: block;
+  flex: 0 1 auto;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  min-width: 0;
+  min-height: 0;
   object-fit: contain;
+  object-position: center;
 }
 
 .doc7PhotoValueCell .uploadFieldClearOverlay {
@@ -3542,6 +3568,9 @@ button.uploadPreviewHit {
 
 .doc11PhotoCell {
   height: 264px;
+  min-height: 264px;
+  max-height: 264px;
+  overflow: hidden;
 }
 
 .doc11PhotoUpload {
@@ -3550,6 +3579,8 @@ button.uploadPreviewHit {
 
 .doc11PhotoUpload .field,
 .doc11PhotoUpload .uploadBody.uploadBodyField {
+  display: flex;
+  flex-direction: column;
   height: 100%;
   min-height: 0;
 }
@@ -3566,8 +3597,13 @@ button.uploadPreviewHit {
 
 .doc11PhotoUpload .uploadPreviewHit,
 .doc11PhotoUpload .uploadPlaceholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
   height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .doc11PhotoUpload .uploadPreview {

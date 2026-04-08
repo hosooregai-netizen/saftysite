@@ -1,7 +1,7 @@
 'use client';
 /* eslint-disable @next/next/no-img-element */
 
-import type { ChangeEvent } from 'react';
+import type { CSSProperties, ChangeEvent } from 'react';
 import { IMAGE_UPLOAD_LABEL_DESKTOP, IMAGE_UPLOAD_LABEL_MOBILE } from '@/constants/imageUploadLabels';
 import { useImageSourcePicker } from '@/hooks/useImageSourcePicker';
 import styles from '@/components/session/InspectionSessionWorkspace.module.css';
@@ -16,10 +16,13 @@ import {
 interface UploadBoxProps {
   accept?: string;
   fileName?: string;
+  fieldBodyHeight?: number;
+  fieldClearOverlay?: boolean;
+  fieldLabelMode?: 'show' | 'omit';
+  fitImageToBox?: boolean;
   id: string;
   label: string;
   labelLayout?: 'panel' | 'field';
-  fieldClearOverlay?: boolean;
   mode?: 'image' | 'file';
   onClear?: () => void;
   onSelect: (file: File) => Promise<unknown> | void;
@@ -29,10 +32,13 @@ interface UploadBoxProps {
 export function UploadBox({
   accept = 'image/*',
   fileName,
+  fieldBodyHeight,
+  fieldClearOverlay = false,
+  fieldLabelMode = 'show',
+  fitImageToBox = false,
   id,
   label,
   labelLayout = 'panel',
-  fieldClearOverlay = false,
   mode = 'image',
   onClear,
   onSelect,
@@ -47,6 +53,34 @@ export function UploadBox({
   const shouldUseDownload = shouldUseSafetyAssetDownloadAttribute(resolvedValue);
   const shouldOpenInNewTab = shouldOpenSafetyAssetInNewTab(resolvedValue);
   const assetWarning = getSafetyAssetTransportWarning(resolvedValue, 'https:');
+
+  const fieldBodyStyle: CSSProperties | undefined = fieldBodyHeight
+    ? {
+        height: `${fieldBodyHeight}px`,
+        minHeight: `${fieldBodyHeight}px`,
+        maxHeight: `${fieldBodyHeight}px`,
+      }
+    : undefined;
+  const containViewportStyle: CSSProperties | undefined = fitImageToBox
+    ? {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '100%',
+        height: '100%',
+        minHeight: 0,
+        overflow: 'hidden',
+      }
+    : undefined;
+  const containImageStyle: CSSProperties | undefined = fitImageToBox
+    ? {
+        width: 'auto',
+        height: 'auto',
+        maxWidth: '100%',
+        maxHeight: '100%',
+        objectFit: 'contain',
+      }
+    : undefined;
 
   const handleFileInputChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.currentTarget.files?.[0];
@@ -64,10 +98,16 @@ export function UploadBox({
               <button
                 type="button"
                 className={styles.uploadPreviewHit}
+                style={containViewportStyle}
                 onClick={() => requestPick()}
                 aria-label={`${label} 바꾸기`}
               >
-                <img src={resolvedValue} alt={label} className={styles.uploadPreview} />
+                <img
+                  src={resolvedValue}
+                  alt={label}
+                  className={styles.uploadPreview}
+                  style={containImageStyle}
+                />
               </button>
             )
           : (
@@ -95,6 +135,7 @@ export function UploadBox({
             <button
               type="button"
               className={styles.uploadPlaceholder}
+              style={containViewportStyle}
               onClick={() => requestPick()}
               aria-label={`${label} 선택`}
             >
@@ -171,18 +212,21 @@ export function UploadBox({
 
     return (
       <div className={styles.field}>
-        <div className={styles.uploadFieldLabelRow}>
-          <span className={styles.fieldLabel}>{label}</span>
-          {clearInLabel ? (
-            <button type="button" className={styles.inlineDangerButton} onClick={onClear}>
-              삭제
-            </button>
-          ) : null}
-        </div>
+        {fieldLabelMode === 'show' ? (
+          <div className={styles.uploadFieldLabelRow}>
+            <span className={styles.fieldLabel}>{label}</span>
+            {clearInLabel ? (
+              <button type="button" className={styles.inlineDangerButton} onClick={onClear}>
+                삭제
+              </button>
+            ) : null}
+          </div>
+        ) : null}
         <div
           className={`${styles.uploadBody} ${styles.uploadBodyField} ${
             clearOverlay ? styles.uploadBodyFieldOverlayClear : ''
           }`}
+          style={fieldBodyStyle}
         >
           {bodyInner}
           {clearOverlay ? (
