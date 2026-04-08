@@ -1,7 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
+import {
+  clearRememberedLoginCredentials,
+  readRememberedLoginCredentials,
+  writeRememberedLoginCredentials,
+} from '@/lib/auth/loginCredentialsStorage';
 import styles from './LoginPanel.module.css';
 
 interface LoginPanelProps {
@@ -21,8 +26,22 @@ export default function LoginPanel({
 }: LoginPanelProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberCredentials, setRememberCredentials] = useState(false);
+  const [credentialsLoaded, setCredentialsLoaded] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [savedAtLabel, setSavedAtLabel] = useState<string | null>(null);
+
+  useEffect(() => {
+    const remembered = readRememberedLoginCredentials();
+    if (remembered) {
+      setEmail(remembered.email);
+      setPassword(remembered.password);
+      setRememberCredentials(remembered.rememberCredentials);
+      setSavedAtLabel(new Date(remembered.savedAt).toLocaleString('ko-KR'));
+    }
+    setCredentialsLoaded(true);
+  }, []);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -36,9 +55,29 @@ export default function LoginPanel({
 
     try {
       await onSubmit({ email, password });
+      if (rememberCredentials) {
+        writeRememberedLoginCredentials({
+          email: email.trim(),
+          password,
+          rememberCredentials: true,
+        });
+        setSavedAtLabel(new Date().toLocaleString('ko-KR'));
+      } else {
+        clearRememberedLoginCredentials();
+        setSavedAtLabel(null);
+      }
     } catch {
       // 상위 상태에서 오류를 표시합니다.
     }
+  };
+
+  const handleClearSavedCredentials = () => {
+    clearRememberedLoginCredentials();
+    setRememberCredentials(false);
+    setEmail('');
+    setPassword('');
+    setSavedAtLabel(null);
+    setLocalError(null);
   };
 
   return (
@@ -93,6 +132,38 @@ export default function LoginPanel({
                 </label>
               </div>
 
+              <div className={styles.preferences}>
+                <label className={styles.checkboxRow}>
+                  <input
+                    type="checkbox"
+                    checked={rememberCredentials}
+                    onChange={(event) => setRememberCredentials(event.target.checked)}
+                    disabled={busy}
+                  />
+                  <span>로그인 정보 기억</span>
+                </label>
+                {credentialsLoaded && savedAtLabel ? (
+                  <button
+                    type="button"
+                    className={`app-button app-button-secondary ${styles.clearSavedButton}`}
+                    onClick={handleClearSavedCredentials}
+                    disabled={busy}
+                  >
+                    저장값 삭제
+                  </button>
+                ) : null}
+              </div>
+
+              {credentialsLoaded && savedAtLabel ? (
+                <p className={styles.savedHint}>
+                  저장된 로그인 정보가 자동 입력되었습니다. 마지막 저장: {savedAtLabel}
+                </p>
+              ) : null}
+
+              <p className={styles.securityHint}>
+                공유 PC에서는 로그인 정보 기억을 켜지 않는 것을 권장합니다.
+              </p>
+
               {localError || error ? (
                 <p className={styles.error}>{localError || error}</p>
               ) : null}
@@ -113,4 +184,3 @@ export default function LoginPanel({
     </main>
   );
 }
-

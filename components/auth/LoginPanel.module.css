@@ -130,6 +130,46 @@
   line-height: 1.6;
 }
 
+.preferences {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.checkboxRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--erp-dark);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.checkboxRow input {
+  margin: 0;
+}
+
+.clearSavedButton {
+  min-height: 38px;
+  padding-inline: 12px;
+}
+
+.savedHint {
+  margin: 0;
+  color: var(--erp-text-muted);
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+.securityHint {
+  margin: -4px 0 0;
+  color: #8a5a12;
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
 .formActions {
   display: grid;
   gap: 10px;
@@ -154,4 +194,3 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
-
