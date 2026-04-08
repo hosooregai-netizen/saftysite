@@ -83,6 +83,7 @@ export interface BadWorkplaceViolation {
   hazardFactor: string;
   improvementMeasure: string;
   nonCompliance: string;
+  guidanceDate: string;
   confirmationDate: string;
   accidentType: string;
   causativeAgentKey: CausativeAgentKey | '';
@@ -96,6 +97,7 @@ export interface BadWorkplaceReport {
   reportMonth: string;
   status: OperationalReportStatus;
   controllerReview: ReportControllerReview | null;
+  siteSnapshot: AdminSiteSnapshot;
   reporterUserId: string;
   reporterName: string;
   receiverName: string;
@@ -106,6 +108,12 @@ export interface BadWorkplaceReport {
   agencyRepresentative: string;
   agencyAddress: string;
   agencyContact: string;
+  guidanceDate: string;
+  confirmationDate: string;
+  assigneeContact: string;
+  notificationDate: string;
+  recipientOfficeName: string;
+  attachmentDescription: string;
   sourceSessionId: string;
   sourceFindingIds: string[];
   violations: BadWorkplaceViolation[];

@@ -2137,6 +2137,23 @@ function replaceLocatedTemplateCell(
   return `${xml.slice(0, located.tableSpan.start)}${patchedTableXml}${xml.slice(located.tableSpan.end)}`;
 }
 
+function normalizeNotificationSignatureTextRun(cellXml: string): string {
+  return cellXml.replace(
+    /<hp:run\b[^>]*charPrIDRef="(\d+)"[^>]*><hp:t>([^<]*?\{sec2\.notification_recipient_name\}[^<]*?)(\s*\/서명)(\s*)\{sec2\.notification_recipient_signature\}([^<]*)<\/hp:t><\/hp:run>/,
+    (
+      _match,
+      underlinedCharPrIDRef: string,
+      beforeSignatureLabel: string,
+      signatureLabel: string,
+      signatureGap: string,
+      afterPlaceholder: string,
+    ) =>
+      `<hp:run charPrIDRef="${underlinedCharPrIDRef}"><hp:t>${beforeSignatureLabel}</hp:t></hp:run>` +
+      `<hp:run charPrIDRef="1"><hp:t>${signatureLabel}</hp:t></hp:run>` +
+      `<hp:run charPrIDRef="${underlinedCharPrIDRef}"><hp:t>${signatureGap}{sec2.notification_recipient_signature}${afterPlaceholder}</hp:t></hp:run>`,
+  );
+}
+
 function ensureNotificationSignatureImageSlot(sectionXml: string): string {
   const signatureCell = locateTemplateCell(sectionXml, { table: 1, row: 14, col: 2 });
   if (!signatureCell) {
@@ -2150,13 +2167,25 @@ function ensureNotificationSignatureImageSlot(sectionXml: string): string {
     return sectionXml;
   }
 
-  const patchedCellXml = signatureCell.cellXml.replace(
-    /<hp:run\b[^>]*charPrIDRef="(\d+)"[^>]*><hp:t>\s*\{sec2\.notification_recipient_signature\}\s*<\/hp:t><\/hp:run>/,
-    (_match, charPrIDRef: string) =>
-      `${buildNotificationSignatureImageRun(charPrIDRef)}<hp:run charPrIDRef="${charPrIDRef}"><hp:t>{sec2.notification_recipient_signature}</hp:t></hp:run>`,
+  const normalizedCellXml = normalizeNotificationSignatureTextRun(signatureCell.cellXml);
+
+  let patchedCellXml = normalizedCellXml.replace(
+    /<hp:run\b[^>]*charPrIDRef="(\d+)"[^>]*><hp:t>(\s*)\{sec2\.notification_recipient_signature\}(\s*)<\/hp:t><\/hp:run>/,
+    (_match, charPrIDRef: string, leadingSpace: string, trailingSpace: string) =>
+      `${buildNotificationSignatureImageRun(charPrIDRef)}<hp:run charPrIDRef="${charPrIDRef}"><hp:t>${leadingSpace}{sec2.notification_recipient_signature}${trailingSpace}</hp:t></hp:run>`,
   );
 
-  if (patchedCellXml === signatureCell.cellXml) {
+  if (patchedCellXml === normalizedCellXml) {
+    patchedCellXml = normalizedCellXml.replace(
+      /<hp:run\b[^>]*charPrIDRef="(\d+)"[^>]*><hp:t>([\s\S]*?)\{sec2\.notification_recipient_signature\}([\s\S]*?)<\/hp:t><\/hp:run>/,
+      (_match, charPrIDRef: string, beforePlaceholder: string, afterPlaceholder: string) =>
+        `<hp:run charPrIDRef="${charPrIDRef}"><hp:t>${beforePlaceholder}</hp:t></hp:run>` +
+        buildNotificationSignatureImageRun(charPrIDRef) +
+        `<hp:run charPrIDRef="${charPrIDRef}"><hp:t>{sec2.notification_recipient_signature}${afterPlaceholder}</hp:t></hp:run>`,
+    );
+  }
+
+  if (patchedCellXml === normalizedCellXml) {
     return sectionXml;
   }
 

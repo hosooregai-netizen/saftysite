@@ -75,6 +75,10 @@ function formatDoc5ChartPercent(count: number, total: number) {
   return Number.isInteger(rounded) ? `${rounded}%` : `${rounded.toFixed(1)}%`;
 }
 
+function formatDoc5ChartStatText(count: number, total: number) {
+  return `${count}건 · ${formatDoc5ChartPercent(count, total)}`;
+}
+
 const HWPX_GENERATION_MODE: 'template_native' | 'advanced' = 'advanced';
 const IMAGE_BINDING_MODE: 'embedded' | 'text_only' = 'embedded';
 const TEMPLATE_FILENAME = '\uAE30\uC220\uC9C0\uB3C4 \uC218\uB3D9\uBCF4\uACE0\uC11C \uC571 - \uC11C\uC2DD_4.annotated.v7.hwpx';
@@ -887,11 +891,7 @@ function renderDoc5ChartCardDataUrl(
 
   context.fillStyle = '#ffffff';
   context.fillRect(0, 0, canvas.width, canvas.height);
-  context.strokeStyle = '#dbe3ea';
-  context.lineWidth = 2;
-  context.strokeRect(8, 8, canvas.width - 16, canvas.height - 16);
-
-  context.textBaseline = 'top';
+  context.textBaseline = 'middle';
 
   const total = entries.reduce((sum, item) => sum + item.count, 0);
   if (entries.length === 0 || total === 0) {
@@ -901,10 +901,10 @@ function renderDoc5ChartCardDataUrl(
     return canvas.toDataURL('image/png');
   }
 
-  const centerX = 280;
+  const centerX = 250;
   const centerY = 360;
-  const outerRadius = 210;
-  const innerRadius = 116;
+  const outerRadius = 192;
+  const innerRadius = 104;
   let angle = -Math.PI / 2;
 
   for (let index = 0; index < entries.length; index += 1) {
@@ -928,34 +928,38 @@ function renderDoc5ChartCardDataUrl(
   context.fillStyle = '#ffffff';
   context.fill();
 
-  const legendFontSize = entries.length >= 6 ? 28 : entries.length >= 4 ? 31 : 34;
-  const markerSize = entries.length >= 6 ? 22 : 26;
-  const legendX = 560;
-  const countX = 1138;
-  const lineHeight = legendFontSize + 22;
-  const legendStartY = Math.max(110, 360 - ((entries.length - 1) * lineHeight) / 2);
-  const legendTextMaxWidth = countX - legendX - 84;
+  const legendX = 470;
+  const countX = 1158;
+  const legendTop = 58;
+  const legendBottom = 662;
+  const availableLegendHeight = legendBottom - legendTop;
+  const lineHeight = Math.max(76, Math.min(138, Math.floor(availableLegendHeight / Math.max(entries.length, 1))));
+  const legendStartY = legendTop + Math.max(0, Math.floor((availableLegendHeight - lineHeight * entries.length) / 2));
+  const legendFontSize = Math.max(30, Math.min(42, Math.floor(lineHeight * 0.4)));
+  const markerSize = Math.max(20, Math.min(30, Math.floor(legendFontSize * 0.82)));
+  const legendTextMaxWidth = countX - legendX - markerSize - 240;
 
   context.font = `500 ${legendFontSize}px "Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-serif`;
   for (let index = 0; index < entries.length; index += 1) {
     const item = entries[index];
-    const y = legendStartY + index * lineHeight;
-    const percentText = formatDoc5ChartPercent(item.count, total);
+    const y = legendStartY + index * lineHeight + lineHeight / 2;
+    const statText = formatDoc5ChartStatText(item.count, total);
 
     context.fillStyle = DOC5_CHART_SEGMENT_COLORS[index % DOC5_CHART_SEGMENT_COLORS.length];
-    context.fillRect(legendX, y + 8, markerSize, markerSize);
+    context.fillRect(legendX, y - markerSize / 2, markerSize, markerSize);
 
     context.fillStyle = '#1f2937';
     context.textAlign = 'left';
-    context.fillText(item.label, legendX + markerSize + 22, y, legendTextMaxWidth);
+    context.fillText(item.label, legendX + markerSize + 24, y, legendTextMaxWidth);
 
     context.font = `600 ${legendFontSize}px "Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-serif`;
     context.textAlign = 'right';
-    context.fillText(percentText, countX, y);
+    context.fillText(statText, countX, y);
     context.font = `500 ${legendFontSize}px "Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-serif`;
   }
 
   context.textAlign = 'left';
+  context.textBaseline = 'alphabetic';
   return canvas.toDataURL('image/png');
 }
 
@@ -2104,6 +2108,23 @@ function replaceLocatedTemplateCell(
   return `${xml.slice(0, located.tableSpan.start)}${patchedTableXml}${xml.slice(located.tableSpan.end)}`;
 }
 
+function normalizeNotificationSignatureTextRun(cellXml: string): string {
+  return cellXml.replace(
+    /<hp:run\b[^>]*charPrIDRef="(\d+)"[^>]*><hp:t>([^<]*?\{sec2\.notification_recipient_name\}[^<]*?)(\s*\/서명)(\s*)\{sec2\.notification_recipient_signature\}([^<]*)<\/hp:t><\/hp:run>/,
+    (
+      _match,
+      underlinedCharPrIDRef: string,
+      beforeSignatureLabel: string,
+      signatureLabel: string,
+      signatureGap: string,
+      afterPlaceholder: string,
+    ) =>
+      `<hp:run charPrIDRef="${underlinedCharPrIDRef}"><hp:t>${beforeSignatureLabel}</hp:t></hp:run>` +
+      `<hp:run charPrIDRef="1"><hp:t>${signatureLabel}</hp:t></hp:run>` +
+      `<hp:run charPrIDRef="${underlinedCharPrIDRef}"><hp:t>${signatureGap}{sec2.notification_recipient_signature}${afterPlaceholder}</hp:t></hp:run>`,
+  );
+}
+
 function ensureNotificationSignatureImageSlot(sectionXml: string): string {
   const signatureCell = locateTemplateCell(sectionXml, { table: 1, row: 14, col: 2 });
   if (!signatureCell) {
@@ -2117,14 +2138,16 @@ function ensureNotificationSignatureImageSlot(sectionXml: string): string {
     return sectionXml;
   }
 
-  let patchedCellXml = signatureCell.cellXml.replace(
-    /<hp:run\b[^>]*charPrIDRef="(\d+)"[^>]*><hp:t>\s*\{sec2\.notification_recipient_signature\}\s*<\/hp:t><\/hp:run>/,
-    (_match, charPrIDRef: string) =>
-      `${buildNotificationSignatureImageRun(charPrIDRef)}<hp:run charPrIDRef="${charPrIDRef}"><hp:t>{sec2.notification_recipient_signature}</hp:t></hp:run>`,
+  const normalizedCellXml = normalizeNotificationSignatureTextRun(signatureCell.cellXml);
+
+  let patchedCellXml = normalizedCellXml.replace(
+    /<hp:run\b[^>]*charPrIDRef="(\d+)"[^>]*><hp:t>(\s*)\{sec2\.notification_recipient_signature\}(\s*)<\/hp:t><\/hp:run>/,
+    (_match, charPrIDRef: string, leadingSpace: string, trailingSpace: string) =>
+      `${buildNotificationSignatureImageRun(charPrIDRef)}<hp:run charPrIDRef="${charPrIDRef}"><hp:t>${leadingSpace}{sec2.notification_recipient_signature}${trailingSpace}</hp:t></hp:run>`,
   );
 
-  if (patchedCellXml === signatureCell.cellXml) {
-    patchedCellXml = signatureCell.cellXml.replace(
+  if (patchedCellXml === normalizedCellXml) {
+    patchedCellXml = normalizedCellXml.replace(
       /<hp:run\b[^>]*charPrIDRef="(\d+)"[^>]*><hp:t>([\s\S]*?)\{sec2\.notification_recipient_signature\}([\s\S]*?)<\/hp:t><\/hp:run>/,
       (_match, charPrIDRef: string, beforePlaceholder: string, afterPlaceholder: string) =>
         `<hp:run charPrIDRef="${charPrIDRef}"><hp:t>${beforePlaceholder}</hp:t></hp:run>` +
@@ -2133,7 +2156,7 @@ function ensureNotificationSignatureImageSlot(sectionXml: string): string {
     );
   }
 
-  if (patchedCellXml === signatureCell.cellXml) {
+  if (patchedCellXml === normalizedCellXml) {
     return sectionXml;
   }
 

@@ -95,6 +95,7 @@ function normalizeBadWorkplaceViolations(value: unknown): BadWorkplaceViolation[
       hazardFactor: normalizeText(record.hazardFactor),
       improvementMeasure: normalizeText(record.improvementMeasure),
       nonCompliance: normalizeText(record.nonCompliance),
+      guidanceDate: normalizeText(record.guidanceDate),
       confirmationDate: normalizeText(record.confirmationDate),
       accidentType: normalizeText(record.accidentType),
       causativeAgentKey: normalizeText(
@@ -227,6 +228,7 @@ export function mapSafetyReportToBadWorkplaceReport(
     controllerReview: normalizeControllerReview(
       payload.controllerReview ?? meta.controllerReview,
     ),
+    siteSnapshot: createEmptyAdminSiteSnapshot(asRecord(payload.siteSnapshot)),
     reporterUserId:
       normalizeMapperText(payload.reporterUserId) ||
       normalizeMapperText(meta.reporterUserId),
@@ -241,6 +243,12 @@ export function mapSafetyReportToBadWorkplaceReport(
     agencyRepresentative: normalizeMapperText(payload.agencyRepresentative),
     agencyAddress: normalizeMapperText(payload.agencyAddress),
     agencyContact: normalizeMapperText(payload.agencyContact),
+    guidanceDate: normalizeMapperText(payload.guidanceDate),
+    confirmationDate: normalizeMapperText(payload.confirmationDate),
+    assigneeContact: normalizeMapperText(payload.assigneeContact),
+    notificationDate: normalizeMapperText(payload.notificationDate),
+    recipientOfficeName: normalizeMapperText(payload.recipientOfficeName),
+    attachmentDescription: normalizeMapperText(payload.attachmentDescription),
     sourceSessionId: normalizeMapperText(payload.sourceSessionId),
     sourceFindingIds: Array.isArray(payload.sourceFindingIds)
       ? payload.sourceFindingIds.map((item) => normalizeMapperText(item)).filter(Boolean)

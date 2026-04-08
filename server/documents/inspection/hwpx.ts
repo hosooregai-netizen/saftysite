@@ -79,6 +79,10 @@ function formatDoc5ChartPercent(count: number, total: number) {
   return Number.isInteger(rounded) ? `${rounded}%` : `${rounded.toFixed(1)}%`;
 }
 
+function formatDoc5ChartStatText(count: number, total: number) {
+  return `${count}건 · ${formatDoc5ChartPercent(count, total)}`;
+}
+
 export interface GeneratedInspectionHwpxDocument {
   buffer: Buffer;
   deferred: string[];
@@ -888,6 +892,7 @@ function buildDoc5ChartEntries(
     });
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function renderDoc5ChartCardDataUrl(
   titleOrEntries: string | Doc5ChartEntry[],
   maybeEntries?: Doc5ChartEntry[],
@@ -981,10 +986,133 @@ function renderDoc5ChartCardDataUrl(
   return canvas.toDataURL('image/png');
 }
 
-function buildDoc5ChartImages(
+function escapeDoc5ChartSvgText(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function truncateDoc5ChartLabel(label: string, maxLength: number): string {
+  return label.length > maxLength ? `${label.slice(0, Math.max(1, maxLength - 3))}...` : label;
+}
+
+function doc5ChartPolarPoint(centerX: number, centerY: number, radius: number, angle: number) {
+  return {
+    x: centerX + Math.cos(angle) * radius,
+    y: centerY + Math.sin(angle) * radius,
+  };
+}
+
+function buildDoc5ChartSlicePath(
+  centerX: number,
+  centerY: number,
+  outerRadius: number,
+  innerRadius: number,
+  startAngle: number,
+  endAngle: number,
+): string {
+  const outerStart = doc5ChartPolarPoint(centerX, centerY, outerRadius, startAngle);
+  const outerEnd = doc5ChartPolarPoint(centerX, centerY, outerRadius, endAngle);
+  const innerEnd = doc5ChartPolarPoint(centerX, centerY, innerRadius, endAngle);
+  const innerStart = doc5ChartPolarPoint(centerX, centerY, innerRadius, startAngle);
+  const largeArcFlag = endAngle - startAngle > Math.PI ? 1 : 0;
+
+  return [
+    `M ${outerStart.x.toFixed(2)} ${outerStart.y.toFixed(2)}`,
+    `A ${outerRadius} ${outerRadius} 0 ${largeArcFlag} 1 ${outerEnd.x.toFixed(2)} ${outerEnd.y.toFixed(2)}`,
+    `L ${innerEnd.x.toFixed(2)} ${innerEnd.y.toFixed(2)}`,
+    `A ${innerRadius} ${innerRadius} 0 ${largeArcFlag} 0 ${innerStart.x.toFixed(2)} ${innerStart.y.toFixed(2)}`,
+    'Z',
+  ].join(' ');
+}
+
+function buildDoc5ChartSvg(entries: Doc5ChartEntry[]): string {
+  const width = 1200;
+  const height = 720;
+  const total = entries.reduce((sum, item) => sum + item.count, 0);
+  const centerX = 250;
+  const centerY = 360;
+  const outerRadius = 192;
+  const innerRadius = 104;
+  const legendLeft = 470;
+  const legendRight = 1158;
+  const legendTop = 58;
+  const legendBottom = 662;
+  const availableLegendHeight = legendBottom - legendTop;
+  const rowHeight = Math.max(76, Math.min(138, Math.floor(availableLegendHeight / Math.max(entries.length, 1))));
+  const legendBlockHeight = rowHeight * Math.max(entries.length, 1);
+  const legendStartY = legendTop + Math.max(0, Math.floor((availableLegendHeight - legendBlockHeight) / 2));
+  const fontSize = Math.max(30, Math.min(42, Math.floor(rowHeight * 0.4)));
+  const markerSize = Math.max(20, Math.min(30, Math.floor(fontSize * 0.82)));
+  const labelX = legendLeft + markerSize + 24;
+  const countX = legendRight;
+  const labelMaxChars = entries.length >= 5 ? 18 : 22;
+  const svgParts = [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
+    `<rect width="${width}" height="${height}" fill="#ffffff"/>`,
+  ];
+
+  if (entries.length === 0 || total === 0) {
+    svgParts.push(
+      '<text x="58" y="140" fill="#6b7280" font-size="34" font-family="Malgun Gothic, Apple SD Gothic Neo, Noto Sans KR, sans-serif">No data</text>',
+    );
+    svgParts.push('</svg>');
+    return svgParts.join('');
+  }
+
+  let angle = -Math.PI / 2;
+  for (let index = 0; index < entries.length; index += 1) {
+    const item = entries[index];
+    const sliceAngle = (item.count / total) * Math.PI * 2;
+    const nextAngle = angle + sliceAngle;
+    svgParts.push(
+      `<path d="${buildDoc5ChartSlicePath(centerX, centerY, outerRadius, innerRadius, angle, nextAngle)}" fill="${DOC5_CHART_SEGMENT_COLORS[index % DOC5_CHART_SEGMENT_COLORS.length]}"/>`,
+    );
+    angle = nextAngle;
+  }
+
+  svgParts.push(`<circle cx="${centerX}" cy="${centerY}" r="${innerRadius}" fill="#ffffff"/>`);
+
+  for (let index = 0; index < entries.length; index += 1) {
+    const item = entries[index];
+    const rowCenterY = legendStartY + rowHeight * index + rowHeight / 2;
+    const safeLabel = escapeDoc5ChartSvgText(truncateDoc5ChartLabel(item.label, labelMaxChars));
+    const safeStat = escapeDoc5ChartSvgText(formatDoc5ChartStatText(item.count, total));
+    const color = DOC5_CHART_SEGMENT_COLORS[index % DOC5_CHART_SEGMENT_COLORS.length];
+
+    svgParts.push(
+      `<rect x="${legendLeft}" y="${(rowCenterY - markerSize / 2).toFixed(1)}" width="${markerSize}" height="${markerSize}" rx="4" ry="4" fill="${color}"/>`,
+    );
+    svgParts.push(
+      `<text x="${labelX}" y="${rowCenterY}" fill="#1f2937" font-size="${fontSize}" font-weight="500" dominant-baseline="middle" font-family="Malgun Gothic, Apple SD Gothic Neo, Noto Sans KR, sans-serif">${safeLabel}</text>`,
+    );
+    svgParts.push(
+      `<text x="${countX}" y="${rowCenterY}" fill="#111827" font-size="${fontSize}" font-weight="700" text-anchor="end" dominant-baseline="middle" font-family="Malgun Gothic, Apple SD Gothic Neo, Noto Sans KR, sans-serif">${safeStat}</text>`,
+    );
+  }
+
+  svgParts.push('</svg>');
+  return svgParts.join('');
+}
+
+async function renderDoc5ChartCardDataUrlEmbedded(
+  titleOrEntries: string | Doc5ChartEntry[],
+  maybeEntries?: Doc5ChartEntry[],
+): Promise<string> {
+  const rawEntries = Array.isArray(titleOrEntries) ? titleOrEntries : maybeEntries ?? [];
+  const entries: Doc5ChartEntry[] = Array.isArray(rawEntries) ? rawEntries : [];
+  const sharp = (await import('sharp')).default;
+  const pngBuffer = await sharp(Buffer.from(buildDoc5ChartSvg(entries))).png().toBuffer();
+  return `data:image/png;base64,${pngBuffer.toString('base64')}`;
+}
+
+async function buildDoc5ChartImages(
   session: InspectionSession,
   siteSessions: InspectionSession[],
-): Record<string, string> {
+): Promise<Record<string, string>> {
   const relevantSiteSessions = siteSessions.length > 0 ? siteSessions : [session];
   const currentFindings = session.document7Findings.filter((item) => hasDoc5FindingContent(item));
   const hasStoredCumulativeEntries =
@@ -1028,11 +1156,23 @@ function buildDoc5ChartImages(
         DOC5_CHART_TOP_N,
       );
 
+  const [
+    currentAccidentChartImage,
+    cumulativeAccidentChartImage,
+    currentAgentChartImage,
+    cumulativeAgentChartImage,
+  ] = await Promise.all([
+    renderDoc5ChartCardDataUrlEmbedded('지적유형별 금회', currentAccidentEntries),
+    renderDoc5ChartCardDataUrlEmbedded('지적유형별 누적', cumulativeAccidentEntries),
+    renderDoc5ChartCardDataUrlEmbedded('기인물별 금회', currentAgentEntries),
+    renderDoc5ChartCardDataUrlEmbedded('기인물별 누적', cumulativeAgentEntries),
+  ]);
+
   return {
-    'sec5.current_accident_chart_image': renderDoc5ChartCardDataUrl('지적유형별 금회', currentAccidentEntries),
-    'sec5.cumulative_accident_chart_image': renderDoc5ChartCardDataUrl('지적유형별 누적', cumulativeAccidentEntries),
-    'sec5.current_agent_chart_image': renderDoc5ChartCardDataUrl('기인물별 금회', currentAgentEntries),
-    'sec5.cumulative_agent_chart_image': renderDoc5ChartCardDataUrl('기인물별 누적', cumulativeAgentEntries),
+    'sec5.current_accident_chart_image': currentAccidentChartImage,
+    'sec5.cumulative_accident_chart_image': cumulativeAccidentChartImage,
+    'sec5.current_agent_chart_image': currentAgentChartImage,
+    'sec5.cumulative_agent_chart_image': cumulativeAgentChartImage,
   };
 }
 
@@ -2138,6 +2278,23 @@ function replaceLocatedTemplateCell(
   return `${xml.slice(0, located.tableSpan.start)}${patchedTableXml}${xml.slice(located.tableSpan.end)}`;
 }
 
+function normalizeNotificationSignatureTextRun(cellXml: string): string {
+  return cellXml.replace(
+    /<hp:run\b[^>]*charPrIDRef="(\d+)"[^>]*><hp:t>([^<]*?\{sec2\.notification_recipient_name\}[^<]*?)(\s*\/서명)(\s*)\{sec2\.notification_recipient_signature\}([^<]*)<\/hp:t><\/hp:run>/,
+    (
+      _match,
+      underlinedCharPrIDRef: string,
+      beforeSignatureLabel: string,
+      signatureLabel: string,
+      signatureGap: string,
+      afterPlaceholder: string,
+    ) =>
+      `<hp:run charPrIDRef="${underlinedCharPrIDRef}"><hp:t>${beforeSignatureLabel}</hp:t></hp:run>` +
+      `<hp:run charPrIDRef="1"><hp:t>${signatureLabel}</hp:t></hp:run>` +
+      `<hp:run charPrIDRef="${underlinedCharPrIDRef}"><hp:t>${signatureGap}{sec2.notification_recipient_signature}${afterPlaceholder}</hp:t></hp:run>`,
+  );
+}
+
 function ensureNotificationSignatureImageSlot(sectionXml: string): string {
   const signatureCell = locateTemplateCell(sectionXml, { table: 1, row: 14, col: 2 });
   if (!signatureCell) {
@@ -2151,14 +2308,16 @@ function ensureNotificationSignatureImageSlot(sectionXml: string): string {
     return sectionXml;
   }
 
-  let patchedCellXml = signatureCell.cellXml.replace(
-    /<hp:run\b[^>]*charPrIDRef="(\d+)"[^>]*><hp:t>\s*\{sec2\.notification_recipient_signature\}\s*<\/hp:t><\/hp:run>/,
-    (_match, charPrIDRef: string) =>
-      `${buildNotificationSignatureImageRun(charPrIDRef)}<hp:run charPrIDRef="${charPrIDRef}"><hp:t>{sec2.notification_recipient_signature}</hp:t></hp:run>`,
+  const normalizedCellXml = normalizeNotificationSignatureTextRun(signatureCell.cellXml);
+
+  let patchedCellXml = normalizedCellXml.replace(
+    /<hp:run\b[^>]*charPrIDRef="(\d+)"[^>]*><hp:t>(\s*)\{sec2\.notification_recipient_signature\}(\s*)<\/hp:t><\/hp:run>/,
+    (_match, charPrIDRef: string, leadingSpace: string, trailingSpace: string) =>
+      `${buildNotificationSignatureImageRun(charPrIDRef)}<hp:run charPrIDRef="${charPrIDRef}"><hp:t>${leadingSpace}{sec2.notification_recipient_signature}${trailingSpace}</hp:t></hp:run>`,
   );
 
-  if (patchedCellXml === signatureCell.cellXml) {
-    patchedCellXml = signatureCell.cellXml.replace(
+  if (patchedCellXml === normalizedCellXml) {
+    patchedCellXml = normalizedCellXml.replace(
       /<hp:run\b[^>]*charPrIDRef="(\d+)"[^>]*><hp:t>([\s\S]*?)\{sec2\.notification_recipient_signature\}([\s\S]*?)<\/hp:t><\/hp:run>/,
       (_match, charPrIDRef: string, beforePlaceholder: string, afterPlaceholder: string) =>
         `<hp:run charPrIDRef="${charPrIDRef}"><hp:t>${beforePlaceholder}</hp:t></hp:run>` +
@@ -2167,7 +2326,7 @@ function ensureNotificationSignatureImageSlot(sectionXml: string): string {
     );
   }
 
-  if (patchedCellXml === signatureCell.cellXml) {
+  if (patchedCellXml === normalizedCellXml) {
     return sectionXml;
   }
 
@@ -2655,7 +2814,7 @@ export async function buildInspectionHwpxDocument(
   options: InspectionHwpxBuildOptions = {},
 ): Promise<GeneratedInspectionHwpxDocument> {
   const binding = mapSessionToTemplateBinding(session);
-  Object.assign(binding.images, buildDoc5ChartImages(session, _siteSessions));
+  Object.assign(binding.images, await buildDoc5ChartImages(session, _siteSessions));
   const templateBuffer = await loadTemplateBuffer();
   const zip = await JSZip.loadAsync(templateBuffer);
   const sectionEntry = zip.file('Contents/section0.xml');
