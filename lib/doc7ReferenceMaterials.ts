@@ -1,6 +1,7 @@
 import {
   CATALOG_COMPATIBLE_CAUSATIVE_KEYS,
   CAUSATIVE_AGENT_LABELS,
+  getCompatibleDoc7AccidentTypes,
   normalizeDoc7CausativeAgentKey,
 } from '@/constants/inspectionSession/doc7Catalog';
 import {
@@ -81,11 +82,12 @@ export function matchDoc7ReferenceMaterial(
       normalizedCausativeKey,
     ];
   const compatibleCausativeKeys = new Set<string>(compatibleList);
+  const compatibleAccidentTypes = new Set(getCompatibleDoc7AccidentTypes(normalizedAccidentType));
 
   return (
     items.find(
       (item) =>
-        item.accidentType === normalizedAccidentType &&
+        compatibleAccidentTypes.has(item.accidentType) &&
         compatibleCausativeKeys.has(item.causativeAgentKey),
     ) ?? null
   );

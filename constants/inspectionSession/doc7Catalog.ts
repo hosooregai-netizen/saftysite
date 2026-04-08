@@ -1,4 +1,6 @@
-export { ACCIDENT_TYPE_OPTIONS } from '@/constants/inspectionSession/catalog';
+import { ACCIDENT_TYPE_OPTIONS } from '@/constants/inspectionSession/catalog';
+
+export { ACCIDENT_TYPE_OPTIONS };
 
 import type { CausativeAgentKey } from '@/types/siteOverview';
 
@@ -91,6 +93,74 @@ export const CAUSATIVE_AGENT_LABELS = {
   ...LEGACY_CAUSATIVE_AGENT_LABELS,
   ...Object.fromEntries(CAUSATIVE_AGENT_OPTIONS.map((item) => [item.key, item.label])),
 } as Record<CausativeAgentKey, string>;
+
+const ACCIDENT_TYPE_COMPATIBILITY_MAP: Record<string, string[]> = {
+  '\uB5A8\uC5B4\uC9D0': ['\uB5A8\uC5B4\uC9D0', '\uCD94\uB77D'],
+  '\uB118\uC5B4\uC9D0': ['\uB118\uC5B4\uC9D0', '\uBBF8\uB044\uB7EC\uC9D0'],
+  '\uAE54\uB9BC/\uB4A4\uC9D1\uD798': [
+    '\uAE54\uB9BC/\uB4A4\uC9D1\uD798',
+    '\uAE54\uB9BC',
+    '\uB4A4\uC9D1\uD798',
+    '\uC804\uB3C4',
+    '\uB9E4\uBAB0',
+    '\uB9E4\uBAB02',
+  ],
+  '\uBD80\uB51B\uD798': ['\uBD80\uB51B\uD798', '\uCDA9\uB3CC'],
+  '\uBB3C\uCCB4\uC5D0 \uB9DE\uC74C': [
+    '\uBB3C\uCCB4\uC5D0 \uB9DE\uC74C',
+    '\uB9DE\uC74C',
+    '\uB099\uD558',
+  ],
+  '\uBB34\uB108\uC9D0': ['\uBB34\uB108\uC9D0', '\uBD95\uAD34'],
+  '\uB07C\uC784': ['\uB07C\uC784'],
+  '\uC808\uB2E8/\uBCA0\uC784/\uCC14\uB9BC': [
+    '\uC808\uB2E8/\uBCA0\uC784/\uCC14\uB9BC',
+    '\uC808\uB2E8',
+    '\uBCA0\uC784',
+    '\uCC14\uB9BC',
+  ],
+  '\uD654\uC7AC/\uD3ED\uBC1C': [
+    '\uD654\uC7AC/\uD3ED\uBC1C',
+    '\uD654\uC7AC\u00B7\uD3ED\uBC1C',
+    '\uD654\uC0C1',
+  ],
+  '\uC0B0\uC18C\uACB0\uD54D': ['\uC0B0\uC18C\uACB0\uD54D'],
+  '\uAC10\uC804': ['\uAC10\uC804'],
+  '\uAD50\uD1B5\uC0AC\uACE0': ['\uAD50\uD1B5\uC0AC\uACE0'],
+  '\uBD88\uADE0\uD615 \uBC0F \uBB34\uB9AC\uD55C \uB3D9\uC791': [
+    '\uBD88\uADE0\uD615 \uBC0F \uBB34\uB9AC\uD55C \uB3D9\uC791',
+    '\uBD88\uADE0\uD615',
+    '\uBB34\uB9AC\uD55C \uB3D9\uC791',
+    '\uADFC\uACE8\uACA9',
+  ],
+  '\uC774\uC0C1 \uAE30\uC628': [
+    '\uC774\uC0C1 \uAE30\uC628',
+    '\uC774\uC0C1\uAE30\uC628',
+    '\uD3ED\uC5FC',
+    '\uD55C\uB7AD',
+  ],
+  '\uC5C5\uBB34\uC0C1 \uC9C8\uBCD1': [
+    '\uC5C5\uBB34\uC0C1 \uC9C8\uBCD1',
+    '\uC9C8\uBCD1',
+    '\uC9C1\uC5C5\uBCD1',
+  ],
+  '\uAE30\uD0C0': ['\uAE30\uD0C0'],
+};
+
+export function getCompatibleDoc7AccidentTypes(value: string | null | undefined): string[] {
+  const normalized = String(value ?? '').trim();
+  if (!normalized) {
+    return [];
+  }
+
+  for (const aliases of Object.values(ACCIDENT_TYPE_COMPATIBILITY_MAP)) {
+    if (aliases.includes(normalized)) {
+      return aliases;
+    }
+  }
+
+  return [normalized];
+}
 
 export function normalizeDoc7CausativeAgentKey(
   value: string | null | undefined,

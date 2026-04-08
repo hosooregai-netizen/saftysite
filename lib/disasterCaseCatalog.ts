@@ -1,6 +1,8 @@
 import disasterCaseCatalogRaw from '@/data/disaster-case-catalog.json';
 import { LEGAL_REFERENCE_LIBRARY } from '@/constants/inspectionSession';
-import { CATALOG_COMPATIBLE_CAUSATIVE_KEYS } from '@/constants/inspectionSession/doc7Catalog';
+import { CATALOG_COMPATIBLE_CAUSATIVE_KEYS,
+  getCompatibleDoc7AccidentTypes,
+} from '@/constants/inspectionSession/doc7Catalog';
 import type { CausativeAgentKey } from '@/types/siteOverview';
 
 export interface DisasterCaseCatalogEntry {
@@ -43,25 +45,6 @@ const STOPWORDS = new Set([
   '근로자',
   '시설',
 ]);
-
-const ACCIDENT_CATEGORY_ALIASES: Record<string, string[]> = {
-  떨어짐: ['떨어짐', '추락', '넘어짐'],
-  넘어짐: ['넘어짐', '추락', '떨어짐'],
-  '깔림/뒤집힘': ['깔림/뒤집힘', '깔림', '전도', '무너짐'],
-  부딪힘: ['부딪힘', '충돌'],
-  '물체에 맞음': ['물체에 맞음', '낙하', '맞음'],
-  무너짐: ['무너짐', '붕괴', '깔림/뒤집힘'],
-  끼임: ['끼임'],
-  '절단/베임/찔림': ['절단/베임/찔림', '찔림', '베임'],
-  '화재/폭발': ['화재/폭발', '화상'],
-  산소결핍: ['산소결핍'],
-  감전: ['감전'],
-  교통사고: ['교통사고', '충돌'],
-  '불균형 및 무리한 동작': ['불균형 및 무리한 동작', '불균형'],
-  '이상 기온': ['이상 기온', '이상기온', '폭염', '한랭'],
-  '업무상 질병': ['업무상 질병', '질병'],
-  기타: ['기타'],
-};
 
 const CAUSATIVE_TO_LEGAL_REFERENCE_ID: Partial<Record<CausativeAgentKey, string>> = {
   '1_단부_개구부': 'rule-43',
@@ -112,8 +95,7 @@ function tokenize(value: string | undefined | null): string[] {
 }
 
 function getAccidentAliases(accidentType?: string): string[] {
-  if (!accidentType) return [];
-  return ACCIDENT_CATEGORY_ALIASES[accidentType] || [accidentType];
+  return getCompatibleDoc7AccidentTypes(accidentType);
 }
 
 function getCompatibleCausativeKeys(value?: CausativeAgentKey | ''): CausativeAgentKey[] {

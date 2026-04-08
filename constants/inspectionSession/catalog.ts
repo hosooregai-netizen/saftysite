@@ -102,22 +102,22 @@ export const NOTIFICATION_METHOD_OPTIONS: Array<{ value: NotificationMethod; lab
 ];
 
 export const ACCIDENT_TYPE_OPTIONS = [
-  '추락',
-  '떨어짐',
-  '낙하',
-  '맞음',
-  '부딪힘',
-  '충돌',
-  '끼임',
-  '깔림',
-  '매몰',
-  '감전',
-  '화재·폭발',
-  '화상',
-  '붕괴',
-  '전도',
-  '찔림',
-  '기타',
+  '\uB5A8\uC5B4\uC9D0',
+  '\uB118\uC5B4\uC9D0',
+  '\uAE54\uB9BC/\uB4A4\uC9D1\uD798',
+  '\uBD80\uB51B\uD798',
+  '\uBB3C\uCCB4\uC5D0 \uB9DE\uC74C',
+  '\uBB34\uB108\uC9D0',
+  '\uB07C\uC784',
+  '\uC808\uB2E8/\uBCA0\uC784/\uCC14\uB9BC',
+  '\uD654\uC7AC/\uD3ED\uBC1C',
+  '\uC0B0\uC18C\uACB0\uD54D',
+  '\uAC10\uC804',
+  '\uAD50\uD1B5\uC0AC\uACE0',
+  '\uBD88\uADE0\uD615 \uBC0F \uBB34\uB9AC\uD55C \uB3D9\uC791',
+  '\uC774\uC0C1 \uAE30\uC628',
+  '\uC5C5\uBB34\uC0C1 \uC9C8\uBCD1',
+  '\uAE30\uD0C0',
 ] as const;
 
 export const LEGAL_REFERENCE_LIBRARY = [

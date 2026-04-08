@@ -20,21 +20,51 @@ const ACCIDENT_KEYWORD_MAP: Array<{
   keywords: string[];
   type: (typeof ACCIDENT_TYPE_OPTIONS)[number];
 }> = [
-  { type: '떨어짐', keywords: ['추락', '떨어짐', '단부', '개구부', '고소', '난간', '발판'] },
-  { type: '전도', keywords: ['넘어짐', '전도'] },
-  { type: '깔림', keywords: ['깔림', '뒤집힘', '전복'] },
-  { type: '부딪힘', keywords: ['부딪힘', '충돌'] },
-  { type: '맞음', keywords: ['낙하', '물체에 맞음', '맞음', '비래'] },
-  { type: '붕괴', keywords: ['붕괴', '무너짐'] },
-  { type: '끼임', keywords: ['끼임'] },
-  { type: '찔림', keywords: ['절단', '베임', '찔림'] },
-  { type: '화재·폭발', keywords: ['화재', '폭발', '화상', '용접'] },
-  { type: '기타', keywords: ['산소결핍'] },
-  { type: '감전', keywords: ['감전', '전기', '배선', '누전'] },
-  { type: '충돌', keywords: ['교통사고', '차량', '트럭', '지게차'] },
-  { type: '기타', keywords: ['불균형', '무리한 동작', '근골격'] },
-  { type: '기타', keywords: ['이상기온', '폭염', '한랭'] },
-  { type: '기타', keywords: ['질병', '직업병'] },
+  {
+    type: '\uB5A8\uC5B4\uC9D0',
+    keywords: ['\uCD94\uB77D', '\uB5A8\uC5B4\uC9D0', '\uB2E8\uBD80', '\uAC1C\uAD6C\uBD80', '\uACE0\uC18C', '\uB09C\uAC04', '\uBC1C\uD310'],
+  },
+  {
+    type: '\uB118\uC5B4\uC9D0',
+    keywords: ['\uB118\uC5B4\uC9D0', '\uBBF8\uB044\uB7EC\uC9D0', '\uBBF8\uB044\uB7EC\uC838', '\uD5DB\uB514\uB518'],
+  },
+  {
+    type: '\uAE54\uB9BC/\uB4A4\uC9D1\uD798',
+    keywords: ['\uAE54\uB9BC', '\uC555\uCC29', '\uC804\uB3C4', '\uC804\uBCF5', '\uB9E4\uBAB0', '\uB4A4\uC9D1\uD798'],
+  },
+  { type: '\uBD80\uB51B\uD798', keywords: ['\uBD80\uB51B\uD798', '\uCDA9\uB3CC'] },
+  {
+    type: '\uBB3C\uCCB4\uC5D0 \uB9DE\uC74C',
+    keywords: ['\uB099\uD558', '\uBB3C\uCCB4\uC5D0 \uB9DE\uC74C', '\uB9DE\uC74C', '\uBE44\uB798'],
+  },
+  { type: '\uBB34\uB108\uC9D0', keywords: ['\uBD95\uAD34', '\uBB34\uB108\uC9D0'] },
+  { type: '\uB07C\uC784', keywords: ['\uB07C\uC784'] },
+  {
+    type: '\uC808\uB2E8/\uBCA0\uC784/\uCC14\uB9BC',
+    keywords: ['\uC808\uB2E8', '\uBCA0\uC784', '\uCC14\uB9BC'],
+  },
+  {
+    type: '\uD654\uC7AC/\uD3ED\uBC1C',
+    keywords: ['\uD654\uC7AC', '\uD3ED\uBC1C', '\uD654\uC0C1', '\uC811\uCD09'],
+  },
+  { type: '\uC0B0\uC18C\uACB0\uD54D', keywords: ['\uC0B0\uC18C\uACB0\uD54D'] },
+  { type: '\uAC10\uC804', keywords: ['\uAC10\uC804', '\uC804\uAE30', '\uBC30\uC120', '\uCDA9\uC804'] },
+  {
+    type: '\uAD50\uD1B5\uC0AC\uACE0',
+    keywords: ['\uAD50\uD1B5\uC0AC\uACE0', '\uCC28\uB7C9', '\uD2B8\uB7ED', '\uC9C0\uAC8C\uCC28'],
+  },
+  {
+    type: '\uBD88\uADE0\uD615 \uBC0F \uBB34\uB9AC\uD55C \uB3D9\uC791',
+    keywords: ['\uBD88\uADE0\uD615', '\uBB34\uB9AC\uD55C \uB3D9\uC791', '\uADFC\uACE8\uACA9'],
+  },
+  {
+    type: '\uC774\uC0C1 \uAE30\uC628',
+    keywords: ['\uC774\uC0C1 \uAE30\uC628', '\uC774\uC0C1\uAE30\uC628', '\uD3ED\uC5FC', '\uD55C\uB7AD'],
+  },
+  {
+    type: '\uC5C5\uBB34\uC0C1 \uC9C8\uBCD1',
+    keywords: ['\uC5C5\uBB34\uC0C1 \uC9C8\uBCD1', '\uC9C8\uBCD1', '\uC9C1\uC5C5\uBCD1'],
+  },
 ];
 
 function normalizeLine(value: string): string {

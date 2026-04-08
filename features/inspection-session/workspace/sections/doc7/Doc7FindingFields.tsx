@@ -189,7 +189,6 @@ export function Doc7FindingFields({
                       <option value="">선택</option>
                       {CAUSATIVE_AGENT_OPTIONS.map((option) => (
                         <option key={option.key} value={option.key}>
-                          {option.number}.{' '}
                           {CAUSATIVE_AGENT_LABELS[option.key] ?? option.label}
                         </option>
                       ))}
