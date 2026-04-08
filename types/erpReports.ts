@@ -53,6 +53,8 @@ export interface QuarterlySummaryReport {
   controllerReview: ReportControllerReview | null;
   dispatch: ReportDispatchMeta | null;
   drafter: string;
+  reviewer: string;
+  approver: string;
   siteSnapshot: AdminSiteSnapshot;
   generatedFromSessionIds: string[];
   lastCalculatedAt: string;

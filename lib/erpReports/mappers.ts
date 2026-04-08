@@ -160,6 +160,12 @@ export function mapSafetyReportToQuarterlySummaryReport(
     drafter:
       normalizeMapperText(payload.drafter) ||
       normalizeMapperText(meta.drafter),
+    reviewer:
+      normalizeMapperText(payload.reviewer) ||
+      normalizeMapperText(meta.reviewer),
+    approver:
+      normalizeMapperText(payload.approver) ||
+      normalizeMapperText(meta.approver),
     siteSnapshot: createEmptyAdminSiteSnapshot(asRecord(payload.siteSnapshot)),
     generatedFromSessionIds: Array.isArray(payload.generatedFromSessionIds)
       ? payload.generatedFromSessionIds.map((item) => normalizeMapperText(item)).filter(Boolean)
@@ -274,6 +280,8 @@ export function buildQuarterlySummaryUpsertInput(
       quarter: normalizedPeriod.quarter,
       status: report.status,
       drafter: report.drafter,
+      reviewer: report.reviewer,
+      approver: report.approver,
       controllerReview: report.controllerReview,
       dispatch: report.dispatch,
     },

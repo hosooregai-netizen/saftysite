@@ -1,8 +1,16 @@
-import type { QuarterlySummaryReport } from '@/types/erpReports';
+import type {
+  BadWorkplaceReport,
+  QuarterlySummaryReport,
+} from '@/types/erpReports';
 import type { InspectionSession, InspectionSite } from '@/types/inspectionSession';
 
 export interface GenerateQuarterlyHwpxRequest {
   report: QuarterlySummaryReport;
+  site: InspectionSite;
+}
+
+export interface GenerateBadWorkplaceHwpxRequest {
+  report: BadWorkplaceReport;
   site: InspectionSite;
 }
 

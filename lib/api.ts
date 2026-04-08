@@ -1,9 +1,15 @@
-import type { GenerateQuarterlyHwpxRequest } from '@/types/documents';
+import type {
+  GenerateBadWorkplaceHwpxRequest,
+  GenerateQuarterlyHwpxRequest,
+} from '@/types/documents';
 import type {
   GenerateInspectionDocumentByReportKeyRequest,
   GenerateInspectionHwpxRequest,
 } from '@/types/documents';
-import type { QuarterlySummaryReport } from '@/types/erpReports';
+import type {
+  BadWorkplaceReport,
+  QuarterlySummaryReport,
+} from '@/types/erpReports';
 import type { InspectionSession, InspectionSite } from '@/types/inspectionSession';
 
 const API_BASE = '/api';
@@ -313,4 +319,16 @@ export async function fetchQuarterlyPdfDocumentWithFallback(
       fallbackToHwpx: true,
     };
   }
+}
+
+export async function fetchBadWorkplaceHwpxDocument(
+  report: BadWorkplaceReport,
+  site: InspectionSite,
+): Promise<{ blob: Blob; filename: string }> {
+  const body: GenerateBadWorkplaceHwpxRequest = { report, site };
+  return fetchDocumentFile(
+    '/documents/bad-workplace/hwpx',
+    body,
+    '불량사업장 신고서 HWPX 다운로드 실패',
+  );
 }

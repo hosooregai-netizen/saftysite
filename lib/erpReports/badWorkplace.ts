@@ -2,16 +2,34 @@ import {
   DEFAULT_GUIDANCE_AGENCY,
   getSessionGuidanceDate,
   getSessionProgress,
+  normalizeFollowUpResult,
 } from '@/constants/inspectionSession';
-import { createTimestamp, generateId } from '@/constants/inspectionSession/shared';
+import {
+  createTimestamp,
+  generateId,
+  normalizeText,
+} from '@/constants/inspectionSession/shared';
 import {
   countMeaningfulDocument7Findings,
   isMeaningfulDocument7Finding,
 } from '@/lib/erpReports/document7FindingCount';
 import type { SafetyUser } from '@/types/backend';
 import type { BadWorkplaceReport, BadWorkplaceViolation } from '@/types/erpReports';
-import type { InspectionSession, InspectionSite } from '@/types/inspectionSession';
+import type {
+  InspectionSession,
+  InspectionSite,
+  PreviousGuidanceFollowUpItem,
+} from '@/types/inspectionSession';
 import { BAD_WORKPLACE_REPORT_KIND, buildBadWorkplaceReportKey } from './shared';
+
+export const BAD_WORKPLACE_NOTICE_TITLE =
+  '기술지도 미이행 등 사망사고 고위험 취약 현장 통보서';
+export const BAD_WORKPLACE_NOTICE_SUBTITLE =
+  '<재해예방전문지도기관 → 지방관서 통보>';
+export const BAD_WORKPLACE_ATTACHMENT_DESCRIPTION =
+  '기술지도 미이행 등 사망사고 고위험 취약 사항 1부';
+const BAD_WORKPLACE_DEFAULT_NON_COMPLIANCE =
+  '기술지도 이후에도 동일 유해·위험요인이 개선되지 않아 지속 조치가 필요합니다.';
 
 function sortSessionsByDateDesc(sessions: InspectionSession[]) {
   return [...sessions].sort((left, right) => {
@@ -19,6 +37,35 @@ function sortSessionsByDateDesc(sessions: InspectionSession[]) {
     const leftTime = new Date(getSessionGuidanceDate(left) || left.updatedAt).getTime();
     return rightTime - leftTime;
   });
+}
+
+function normalizePersonName(value: string | null | undefined) {
+  return normalizeText(value).replace(/\s+/g, '');
+}
+
+function buildAssigneeContact(
+  reporter: Pick<SafetyUser, 'name' | 'phone'> | null,
+  session: InspectionSession | null,
+) {
+  const phone = reporter?.phone?.trim() || '';
+  if (!phone) return '';
+
+  const sessionDrafter = normalizePersonName(session?.meta.drafter);
+  const reporterName = normalizePersonName(reporter?.name);
+
+  if (!sessionDrafter || (reporterName && reporterName === sessionDrafter)) {
+    return phone;
+  }
+
+  return '';
+}
+
+function buildReporterName(
+  session: InspectionSession | null,
+  reporter: Pick<SafetyUser, 'name'> | null,
+  site: InspectionSite,
+) {
+  return normalizeText(session?.meta.drafter) || reporter?.name?.trim() || site.assigneeName || '';
 }
 
 export function getBadWorkplaceSourceSessions(siteSessions: InspectionSession[]) {
@@ -30,21 +77,99 @@ export function getBadWorkplaceSelectableFindings(session: InspectionSession | n
   return session.document7Findings.filter((finding) => isMeaningfulDocument7Finding(finding));
 }
 
-/** 요약·목록에 표시할 문서7 지적 건수 (분기 보고서 이행현황과 동일한 실질 내용 기준) */
+/** 요약 카드와 표기에서 공통으로 쓰는 문서 7 지적 건수 */
 export function countDocument7FindingsForDisplay(session: InspectionSession | null): number {
   if (!session) return 0;
   return countMeaningfulDocument7Findings(session);
 }
 
-/** 개요에 입력된 진행률이 없으면 섹션 완료율(%)을 사용 */
+/** 개요 입력의 진행률이 없으면 섹션 완료율(%)을 사용 */
 export function formatSessionProgressRateDisplay(session: InspectionSession | null): string {
   if (!session) return '-';
-  const raw = session.document2Overview.progressRate?.trim();
+  const raw = normalizeText(session.document2Overview.progressRate);
   if (raw) {
     return /%$/.test(raw) ? raw : `${raw}%`;
   }
   const pct = getSessionProgress(session).percentage;
   return `${pct}%`;
+}
+
+function getSessionProgressRateValue(session: InspectionSession | null): string {
+  if (!session) return '';
+  return formatSessionProgressRateDisplay(session);
+}
+
+function isPendingFollowUpResult(result: string) {
+  const normalized = normalizeText(result).replace(/\s+/g, '').toLowerCase();
+  if (!normalized) return false;
+
+  return (
+    normalized.includes('미이행') ||
+    normalized.includes('불이행') ||
+    normalized.includes('부분이행') ||
+    normalized.includes('조치중') ||
+    normalized.includes('진행중') ||
+    normalized.includes('예정') ||
+    normalized.includes('보완중') ||
+    normalized.includes('대기') ||
+    normalized === 'not_implemented'
+  );
+}
+
+function shouldPreferFollowUp(
+  candidate: PreviousGuidanceFollowUpItem,
+  current: PreviousGuidanceFollowUpItem | null,
+) {
+  if (!current) return true;
+
+  const confirmationDelta = normalizeText(candidate.confirmationDate).localeCompare(
+    normalizeText(current.confirmationDate),
+  );
+  if (confirmationDelta !== 0) {
+    return confirmationDelta > 0;
+  }
+
+  const guidanceDelta = normalizeText(candidate.guidanceDate).localeCompare(
+    normalizeText(current.guidanceDate),
+  );
+  if (guidanceDelta !== 0) {
+    return guidanceDelta > 0;
+  }
+
+  return normalizeText(candidate.result).length > normalizeText(current.result).length;
+}
+
+export function getBadWorkplaceFollowUpForFinding(
+  session: InspectionSession | null,
+  findingId: string,
+): PreviousGuidanceFollowUpItem | null {
+  if (!session || !findingId) return null;
+
+  return session.document4FollowUps.reduce<PreviousGuidanceFollowUpItem | null>((best, item) => {
+    if (item.sourceFindingId !== findingId) {
+      return best;
+    }
+
+    return shouldPreferFollowUp(item, best) ? item : best;
+  }, null);
+}
+
+function buildViolationNonCompliance(result: string) {
+  const normalized = normalizeText(result);
+  if (!normalized) {
+    return BAD_WORKPLACE_DEFAULT_NON_COMPLIANCE;
+  }
+
+  if (isPendingFollowUpResult(normalized) || normalizeFollowUpResult(normalized) === '미이행') {
+    return normalized.length <= 8 ? BAD_WORKPLACE_DEFAULT_NON_COMPLIANCE : normalized;
+  }
+
+  return '';
+}
+
+function deriveBadWorkplaceConfirmationDate(violations: BadWorkplaceViolation[]) {
+  const uniqueDates = [...new Set(violations.map((item) => normalizeText(item.confirmationDate)).filter(Boolean))];
+  return uniqueDates.length === 1 ? uniqueDates[0] : '';
 }
 
 export function buildBadWorkplaceViolations(
@@ -54,30 +179,35 @@ export function buildBadWorkplaceViolations(
   if (!session) return [];
   if (findingIds && findingIds.length === 0) return [];
 
+  const guidanceDate = getSessionGuidanceDate(session);
   const findings = getBadWorkplaceSelectableFindings(session).filter(
     (finding) => !findingIds || findingIds.includes(finding.id),
   );
 
-  return findings.map((finding) => ({
-    id: generateId('bad-workplace-item'),
-    sourceFindingId: finding.id,
-    legalReference:
-      finding.legalReferenceTitle ||
-      finding.referenceMaterial2 ||
-      finding.referenceMaterial1,
-    hazardFactor:
-      finding.hazardDescription ||
-      finding.emphasis ||
-      finding.metadata ||
-      finding.location ||
-      finding.accidentType,
-    improvementMeasure: finding.improvementRequest || finding.improvementPlan,
-    nonCompliance:
-      '기술지도 이후에도 동일 유해위험요인이 개선되지 않아 후속 조치가 필요합니다.',
-    confirmationDate: getSessionGuidanceDate(session),
-    accidentType: finding.accidentType,
-    causativeAgentKey: finding.causativeAgentKey,
-  }));
+  return findings.map((finding) => {
+    const followUp = getBadWorkplaceFollowUpForFinding(session, finding.id);
+
+    return {
+      id: generateId('bad-workplace-item'),
+      sourceFindingId: finding.id,
+      legalReference:
+        finding.legalReferenceTitle ||
+        finding.referenceMaterial2 ||
+        finding.referenceMaterial1,
+      hazardFactor:
+        finding.hazardDescription ||
+        finding.emphasis ||
+        finding.metadata ||
+        finding.location ||
+        finding.accidentType,
+      improvementMeasure: finding.improvementRequest || finding.improvementPlan,
+      guidanceDate: normalizeText(followUp?.guidanceDate) || guidanceDate,
+      nonCompliance: buildViolationNonCompliance(followUp?.result || ''),
+      confirmationDate: normalizeText(followUp?.confirmationDate),
+      accidentType: finding.accidentType,
+      causativeAgentKey: finding.causativeAgentKey,
+    };
+  });
 }
 
 export function syncBadWorkplaceReportSource(
@@ -86,12 +216,21 @@ export function syncBadWorkplaceReportSource(
   selectedFindingIds?: string[],
 ): BadWorkplaceReport {
   const violations = buildBadWorkplaceViolations(session, selectedFindingIds);
+  const guidanceDate = (session ? getSessionGuidanceDate(session) : '') || report.guidanceDate;
+  const nextReporterName = normalizeText(session?.meta.drafter) || report.reporterName;
+  const shouldResetAssigneeContact =
+    Boolean(normalizeText(session?.meta.drafter)) &&
+    normalizePersonName(nextReporterName) !== normalizePersonName(report.reporterName);
 
   return {
     ...report,
-    progressRate: session?.document2Overview.progressRate || '',
+    progressRate: getSessionProgressRateValue(session),
     implementationCount:
       session?.document2Overview.visitCount || report.implementationCount,
+    guidanceDate,
+    confirmationDate: session ? deriveBadWorkplaceConfirmationDate(violations) : report.confirmationDate,
+    reporterName: nextReporterName,
+    assigneeContact: shouldResetAssigneeContact ? '' : report.assigneeContact,
     sourceSessionId: session?.id || '',
     sourceFindingIds: violations.map((item) => item.sourceFindingId),
     violations,
@@ -105,13 +244,48 @@ export function buildInitialBadWorkplaceReport(
   reportMonth: string,
   existing?: BadWorkplaceReport | null,
 ): BadWorkplaceReport {
-  if (existing) {
-    return existing;
-  }
-
   const timestamp = createTimestamp();
   const sourceSession = getBadWorkplaceSourceSessions(siteSessions)[0] || null;
   const violations = buildBadWorkplaceViolations(sourceSession);
+  const guidanceDate = sourceSession ? getSessionGuidanceDate(sourceSession) : '';
+  const reporterName = buildReporterName(sourceSession, reporter, site);
+
+  if (existing) {
+    const persistedSnapshot = Object.fromEntries(
+      Object.entries(existing.siteSnapshot ?? {}).filter(([, value]) =>
+        typeof value === 'string' ? value.trim().length > 0 : Boolean(value),
+      ),
+    );
+
+    return {
+      ...existing,
+      siteSnapshot: {
+        ...site.adminSiteSnapshot,
+        ...persistedSnapshot,
+      },
+      receiverName:
+        existing.receiverName ||
+        existing.siteSnapshot?.siteManagerName ||
+        site.adminSiteSnapshot.siteManagerName,
+      progressRate: existing.progressRate || getSessionProgressRateValue(sourceSession),
+      implementationCount:
+        existing.implementationCount ||
+        sourceSession?.document2Overview.visitCount ||
+        String(siteSessions.length || ''),
+      guidanceDate: existing.guidanceDate || guidanceDate,
+      confirmationDate:
+        existing.confirmationDate ||
+        deriveBadWorkplaceConfirmationDate(existing.violations) ||
+        deriveBadWorkplaceConfirmationDate(violations),
+      reporterName: existing.reporterName || reporterName,
+      assigneeContact: existing.assigneeContact || buildAssigneeContact(reporter, sourceSession),
+      agencyRepresentative: existing.agencyRepresentative || '',
+      notificationDate:
+        existing.notificationDate || existing.updatedAt.slice(0, 10) || timestamp.slice(0, 10),
+      attachmentDescription:
+        existing.attachmentDescription || BAD_WORKPLACE_ATTACHMENT_DESCRIPTION,
+    };
+  }
 
   return {
     id: buildBadWorkplaceReportKey(site.id, reportMonth, reporter?.id || 'anonymous'),
@@ -121,17 +295,24 @@ export function buildInitialBadWorkplaceReport(
     reportMonth,
     status: 'draft',
     controllerReview: null,
+    siteSnapshot: { ...site.adminSiteSnapshot },
     reporterUserId: reporter?.id || '',
-    reporterName: reporter?.name || '',
+    reporterName,
     receiverName: site.adminSiteSnapshot.siteManagerName,
-    progressRate: sourceSession?.document2Overview.progressRate || '',
+    progressRate: getSessionProgressRateValue(sourceSession),
     implementationCount:
       sourceSession?.document2Overview.visitCount || String(siteSessions.length || ''),
     contractPeriod: site.adminSiteSnapshot.constructionPeriod,
     agencyName: reporter?.organization_name || DEFAULT_GUIDANCE_AGENCY,
-    agencyRepresentative: reporter?.name || '',
+    agencyRepresentative: '',
     agencyAddress: site.adminSiteSnapshot.headquartersAddress,
     agencyContact: reporter?.phone || site.adminSiteSnapshot.headquartersContact,
+    guidanceDate,
+    confirmationDate: deriveBadWorkplaceConfirmationDate(violations),
+    assigneeContact: buildAssigneeContact(reporter, sourceSession),
+    notificationDate: timestamp.slice(0, 10),
+    recipientOfficeName: '',
+    attachmentDescription: BAD_WORKPLACE_ATTACHMENT_DESCRIPTION,
     sourceSessionId: sourceSession?.id || '',
     sourceFindingIds: violations.map((item) => item.sourceFindingId),
     violations,
