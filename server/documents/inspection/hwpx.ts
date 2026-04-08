@@ -41,6 +41,9 @@ interface TemplateImagePlaceholder {
   table: number;
   row: number;
   col: number;
+  donorTable?: number;
+  donorRow?: number;
+  donorCol?: number;
   placeholderPath: string;
   binaryItemId: string;
   repeatBlockPath?: RepeatBlockPath;
@@ -82,6 +85,24 @@ function formatDoc5ChartPercent(count: number, total: number) {
 function formatDoc5ChartStatText(count: number, total: number) {
   return `${count}건 · ${formatDoc5ChartPercent(count, total)}`;
 }
+
+const DOC5_CHART_SLOT_WIDTH_MM = 81.05;
+const DOC5_CHART_SLOT_HEIGHT_MM = 35.79;
+const DOC5_CHART_CONTENT_WIDTH = 1480;
+const DOC5_CHART_CONTENT_HEIGHT = 720;
+const DOC5_CHART_IMAGE_HEIGHT = DOC5_CHART_CONTENT_HEIGHT;
+const DOC5_CHART_IMAGE_WIDTH = Math.round((DOC5_CHART_IMAGE_HEIGHT * DOC5_CHART_SLOT_WIDTH_MM) / DOC5_CHART_SLOT_HEIGHT_MM);
+const DOC5_CHART_CONTENT_OFFSET_X = Math.round((DOC5_CHART_IMAGE_WIDTH - DOC5_CHART_CONTENT_WIDTH) / 2);
+const DOC5_CHART_CONTENT_OFFSET_Y = 0;
+const DOC5_CHART_CENTER_X = 300;
+const DOC5_CHART_CENTER_Y = 340;
+const DOC5_CHART_OUTER_RADIUS = 270;
+const DOC5_CHART_INNER_RADIUS = 148;
+const DOC5_CHART_LEGEND_LEFT = 684;
+const DOC5_CHART_LEGEND_RIGHT = 1456;
+const DOC5_CHART_LEGEND_TOP = 8;
+const DOC5_CHART_LEGEND_BOTTOM = 680;
+const DOC5_CHART_LEGEND_LABEL_GAP = 30;
 
 export interface GeneratedInspectionHwpxDocument {
   buffer: Buffer;
@@ -349,7 +370,16 @@ const TEMPLATE_IMAGE_PLACEHOLDERS: TemplateImagePlaceholder[] = [
   { table: 2, row: 4, col: 0, placeholderPath: 'sec3.extra[0].photo_image', binaryItemId: 'tplimg03' },
   { table: 2, row: 4, col: 1, placeholderPath: 'sec3.extra[1].photo_image', binaryItemId: 'tplimg04' },
   { table: 2, row: 6, col: 0, placeholderPath: 'sec3.extra[2].photo_image', binaryItemId: 'tplimg05' },
-  { table: 2, row: 6, col: 2, placeholderPath: 'sec3.extra[3].photo_image', binaryItemId: 'tplimg06' },
+  {
+    table: 2,
+    row: 6,
+    col: 1,
+    donorTable: 2,
+    donorRow: 6,
+    donorCol: 2,
+    placeholderPath: 'sec3.extra[3].photo_image',
+    binaryItemId: 'tplimg06',
+  },
   {
     table: 3,
     row: 2,
@@ -825,23 +855,23 @@ function buildNotificationSignatureImageRun(charPrIDRef: string): string {
     `<hp:run charPrIDRef="${charPrIDRef}">` +
     '<hp:pic id="2110926222" zOrder="0" numberingType="PICTURE" textWrap="TOP_AND_BOTTOM" textFlow="BOTH_SIDES" lock="0" dropcapstyle="None" href="" groupLevel="0" instid="1037185222" reverse="0">' +
     '<hp:offset x="0" y="0"/>' +
-    '<hp:orgSz width="3200" height="1500"/>' +
-    '<hp:curSz width="3200" height="1500"/>' +
+    '<hp:orgSz width="2500" height="1172"/>' +
+    '<hp:curSz width="2500" height="1172"/>' +
     '<hp:flip horizontal="0" vertical="0"/>' +
-    '<hp:rotationInfo angle="0" centerX="1600" centerY="750" rotateimage="1"/>' +
+    '<hp:rotationInfo angle="0" centerX="1250" centerY="586" rotateimage="1"/>' +
     '<hp:renderingInfo>' +
     '<hc:transMatrix e1="1" e2="0" e3="0" e4="0" e5="1" e6="0"/>' +
     '<hc:scaMatrix e1="1" e2="0" e3="0" e4="0" e5="1" e6="0"/>' +
     '<hc:rotMatrix e1="1" e2="0" e3="0" e4="0" e5="1" e6="0"/>' +
     '</hp:renderingInfo>' +
-    '<hp:imgRect><hc:pt0 x="0" y="0"/><hc:pt1 x="3200" y="0"/><hc:pt2 x="3200" y="1500"/><hc:pt3 x="0" y="1500"/></hp:imgRect>' +
+    '<hp:imgRect><hc:pt0 x="0" y="0"/><hc:pt1 x="2500" y="0"/><hc:pt2 x="2500" y="1172"/><hc:pt3 x="0" y="1172"/></hp:imgRect>' +
     '<hp:imgClip left="0" right="0" top="0" bottom="0"/>' +
     '<hp:inMargin left="0" right="0" top="0" bottom="0"/>' +
     '<hp:imgDim dimwidth="0" dimheight="0"/>' +
     '<hc:img binaryItemIDRef="image22" bright="0" contrast="0" effect="REAL_PIC" alpha="0"/>' +
     '<hp:effects/>' +
-    '<hp:sz width="3200" widthRelTo="ABSOLUTE" height="1500" heightRelTo="ABSOLUTE" protect="0"/>' +
-    '<hp:pos treatAsChar="1" affectLSpacing="0" flowWithText="1" allowOverlap="0" holdAnchorAndSO="0" vertRelTo="PARA" horzRelTo="COLUMN" vertAlign="TOP" horzAlign="LEFT" vertOffset="0" horzOffset="0"/>' +
+    '<hp:sz width="2500" widthRelTo="ABSOLUTE" height="1172" heightRelTo="ABSOLUTE" protect="0"/>' +
+    '<hp:pos treatAsChar="1" affectLSpacing="0" flowWithText="1" allowOverlap="0" holdAnchorAndSO="0" vertRelTo="PARA" horzRelTo="COLUMN" vertAlign="CENTER" horzAlign="LEFT" vertOffset="0" horzOffset="0"/>' +
     '<hp:outMargin left="0" right="0" top="0" bottom="0"/>' +
     '<hp:shapeComment>통보방법 서명 이미지</hp:shapeComment>' +
     '</hp:pic><hp:t/></hp:run>'
@@ -905,8 +935,8 @@ function renderDoc5ChartCardDataUrl(
   const entries: Doc5ChartEntry[] = Array.isArray(rawEntries) ? rawEntries : [];
 
   const canvas = document.createElement('canvas');
-  canvas.width = 1200;
-  canvas.height = 720;
+  canvas.width = DOC5_CHART_IMAGE_WIDTH;
+  canvas.height = DOC5_CHART_IMAGE_HEIGHT;
   const context = canvas.getContext('2d');
   if (!context) {
     return '';
@@ -914,9 +944,8 @@ function renderDoc5ChartCardDataUrl(
 
   context.fillStyle = '#ffffff';
   context.fillRect(0, 0, canvas.width, canvas.height);
-  context.strokeStyle = '#dbe3ea';
-  context.lineWidth = 2;
-  context.strokeRect(8, 8, canvas.width - 16, canvas.height - 16);
+  context.save();
+  context.translate(DOC5_CHART_CONTENT_OFFSET_X, DOC5_CHART_CONTENT_OFFSET_Y);
 
   context.textBaseline = 'top';
 
@@ -925,13 +954,14 @@ function renderDoc5ChartCardDataUrl(
     context.fillStyle = '#6b7280';
     context.font = '400 34px "Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-serif';
     context.fillText('집계된 유해위험요인 데이터가 없습니다.', 42, 126);
+    context.restore();
     return canvas.toDataURL('image/png');
   }
 
-  const centerX = 280;
-  const centerY = 360;
-  const outerRadius = 210;
-  const innerRadius = 116;
+  const centerX = DOC5_CHART_CENTER_X;
+  const centerY = DOC5_CHART_CENTER_Y;
+  const outerRadius = DOC5_CHART_OUTER_RADIUS;
+  const innerRadius = DOC5_CHART_INNER_RADIUS;
   let angle = -Math.PI / 2;
 
   for (let index = 0; index < entries.length; index += 1) {
@@ -955,13 +985,13 @@ function renderDoc5ChartCardDataUrl(
   context.fillStyle = '#ffffff';
   context.fill();
 
-  const legendFontSize = entries.length >= 6 ? 28 : entries.length >= 4 ? 31 : 34;
-  const markerSize = entries.length >= 6 ? 22 : 26;
-  const legendX = 560;
-  const countX = 1138;
-  const lineHeight = legendFontSize + 22;
-  const legendStartY = Math.max(110, 360 - ((entries.length - 1) * lineHeight) / 2);
-  const legendTextMaxWidth = countX - legendX - 84;
+  const legendFontSize = entries.length >= 6 ? 31 : entries.length >= 4 ? 35 : 38;
+  const markerSize = entries.length >= 6 ? 24 : 28;
+  const legendX = DOC5_CHART_LEGEND_LEFT;
+  const countX = DOC5_CHART_LEGEND_RIGHT;
+  const lineHeight = legendFontSize + 24;
+  const legendStartY = Math.max(92, centerY - ((entries.length - 1) * lineHeight) / 2);
+  const legendTextMaxWidth = countX - legendX - markerSize - DOC5_CHART_LEGEND_LABEL_GAP - 220;
 
   context.font = `500 ${legendFontSize}px "Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-serif`;
   for (let index = 0; index < entries.length; index += 1) {
@@ -974,7 +1004,7 @@ function renderDoc5ChartCardDataUrl(
 
     context.fillStyle = '#1f2937';
     context.textAlign = 'left';
-    context.fillText(item.label, legendX + markerSize + 22, y, legendTextMaxWidth);
+    context.fillText(item.label, legendX + markerSize + DOC5_CHART_LEGEND_LABEL_GAP, y, legendTextMaxWidth);
 
     context.font = `600 ${legendFontSize}px "Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-serif`;
     context.textAlign = 'right';
@@ -983,6 +1013,7 @@ function renderDoc5ChartCardDataUrl(
   }
 
   context.textAlign = 'left';
+  context.restore();
   return canvas.toDataURL('image/png');
 }
 
@@ -1030,26 +1061,26 @@ function buildDoc5ChartSlicePath(
 }
 
 function buildDoc5ChartSvg(entries: Doc5ChartEntry[]): string {
-  const width = 1200;
-  const height = 720;
+  const width = DOC5_CHART_CONTENT_WIDTH;
+  const height = DOC5_CHART_CONTENT_HEIGHT;
   const total = entries.reduce((sum, item) => sum + item.count, 0);
-  const centerX = 250;
-  const centerY = 360;
-  const outerRadius = 192;
-  const innerRadius = 104;
-  const legendLeft = 470;
-  const legendRight = 1158;
-  const legendTop = 58;
-  const legendBottom = 662;
+  const centerX = DOC5_CHART_CENTER_X;
+  const centerY = DOC5_CHART_CENTER_Y;
+  const outerRadius = DOC5_CHART_OUTER_RADIUS;
+  const innerRadius = DOC5_CHART_INNER_RADIUS;
+  const legendLeft = DOC5_CHART_LEGEND_LEFT;
+  const legendRight = DOC5_CHART_LEGEND_RIGHT;
+  const legendTop = DOC5_CHART_LEGEND_TOP;
+  const legendBottom = DOC5_CHART_LEGEND_BOTTOM;
   const availableLegendHeight = legendBottom - legendTop;
-  const rowHeight = Math.max(76, Math.min(138, Math.floor(availableLegendHeight / Math.max(entries.length, 1))));
+  const rowHeight = Math.max(82, Math.min(150, Math.floor(availableLegendHeight / Math.max(entries.length, 1))));
   const legendBlockHeight = rowHeight * Math.max(entries.length, 1);
   const legendStartY = legendTop + Math.max(0, Math.floor((availableLegendHeight - legendBlockHeight) / 2));
-  const fontSize = Math.max(30, Math.min(42, Math.floor(rowHeight * 0.4)));
-  const markerSize = Math.max(20, Math.min(30, Math.floor(fontSize * 0.82)));
-  const labelX = legendLeft + markerSize + 24;
+  const fontSize = Math.max(34, Math.min(48, Math.floor(rowHeight * 0.42)));
+  const markerSize = Math.max(24, Math.min(34, Math.floor(fontSize * 0.84)));
+  const labelX = legendLeft + markerSize + DOC5_CHART_LEGEND_LABEL_GAP;
   const countX = legendRight;
-  const labelMaxChars = entries.length >= 5 ? 18 : 22;
+  const labelMaxChars = entries.length >= 5 ? 15 : entries.length >= 3 ? 16 : 18;
   const svgParts = [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
     `<rect width="${width}" height="${height}" fill="#ffffff"/>`,
@@ -1105,7 +1136,17 @@ async function renderDoc5ChartCardDataUrlEmbedded(
   const rawEntries = Array.isArray(titleOrEntries) ? titleOrEntries : maybeEntries ?? [];
   const entries: Doc5ChartEntry[] = Array.isArray(rawEntries) ? rawEntries : [];
   const sharp = (await import('sharp')).default;
-  const pngBuffer = await sharp(Buffer.from(buildDoc5ChartSvg(entries))).png().toBuffer();
+  const rightPadding = DOC5_CHART_IMAGE_WIDTH - DOC5_CHART_CONTENT_WIDTH - DOC5_CHART_CONTENT_OFFSET_X;
+  const pngBuffer = await sharp(Buffer.from(buildDoc5ChartSvg(entries)))
+    .extend({
+      top: DOC5_CHART_CONTENT_OFFSET_Y,
+      bottom: DOC5_CHART_IMAGE_HEIGHT - DOC5_CHART_CONTENT_HEIGHT - DOC5_CHART_CONTENT_OFFSET_Y,
+      left: DOC5_CHART_CONTENT_OFFSET_X,
+      right: rightPadding,
+      background: '#ffffff',
+    })
+    .png()
+    .toBuffer();
   return `data:image/png;base64,${pngBuffer.toString('base64')}`;
 }
 
@@ -2263,6 +2304,16 @@ function locateTemplateCell(
   return null;
 }
 
+function donorTemplateCellDescriptor(
+  descriptor: TemplateImagePlaceholder,
+): Pick<TemplateImagePlaceholder, 'table' | 'row' | 'col'> {
+  return {
+    table: descriptor.donorTable ?? descriptor.table,
+    row: descriptor.donorRow ?? descriptor.row,
+    col: descriptor.donorCol ?? descriptor.col,
+  };
+}
+
 function replaceLocatedTemplateCell(
   xml: string,
   located: {
@@ -2290,7 +2341,7 @@ function normalizeNotificationSignatureTextRun(cellXml: string): string {
       afterPlaceholder: string,
     ) =>
       `<hp:run charPrIDRef="${underlinedCharPrIDRef}"><hp:t>${beforeSignatureLabel}</hp:t></hp:run>` +
-      `<hp:run charPrIDRef="1"><hp:t>${signatureLabel}</hp:t></hp:run>` +
+      `<hp:run charPrIDRef="${underlinedCharPrIDRef}"><hp:t>${signatureLabel}</hp:t></hp:run>` +
       `<hp:run charPrIDRef="${underlinedCharPrIDRef}"><hp:t>${signatureGap}{sec2.notification_recipient_signature}${afterPlaceholder}</hp:t></hp:run>`,
   );
 }
@@ -2313,7 +2364,9 @@ function ensureNotificationSignatureImageSlot(sectionXml: string): string {
   let patchedCellXml = normalizedCellXml.replace(
     /<hp:run\b[^>]*charPrIDRef="(\d+)"[^>]*><hp:t>(\s*)\{sec2\.notification_recipient_signature\}(\s*)<\/hp:t><\/hp:run>/,
     (_match, charPrIDRef: string, leadingSpace: string, trailingSpace: string) =>
-      `${buildNotificationSignatureImageRun(charPrIDRef)}<hp:run charPrIDRef="${charPrIDRef}"><hp:t>${leadingSpace}{sec2.notification_recipient_signature}${trailingSpace}</hp:t></hp:run>`,
+      `<hp:run charPrIDRef="${charPrIDRef}"><hp:t>${leadingSpace}</hp:t></hp:run>` +
+      buildNotificationSignatureImageRun(charPrIDRef) +
+      `<hp:run charPrIDRef="${charPrIDRef}"><hp:t>{sec2.notification_recipient_signature}${trailingSpace}</hp:t></hp:run>`,
   );
 
   if (patchedCellXml === normalizedCellXml) {
@@ -2357,7 +2410,15 @@ function replaceCellImageBinaryRef(
     if (descriptor.optional) {
       return { xml, sourceBinaryItemId: null, found: false };
     }
-    throw new Error(`Template image table index not found: ${descriptor.table}`);
+    const tableExists = tableSpans(xml)[descriptor.table] != null;
+    if (!tableExists) {
+      throw new Error(
+        `Template image table not found for ${descriptor.placeholderPath} at table=${descriptor.table}.`,
+      );
+    }
+    throw new Error(
+      `Template image cell not found for ${descriptor.placeholderPath} at table=${descriptor.table}, row=${descriptor.row}, col=${descriptor.col}.`,
+    );
   }
 
   let sourceBinaryItemId: string | null = null;
@@ -2409,7 +2470,7 @@ function restoreMissingTemplateImageSlots(
       continue;
     }
 
-    const donorCell = locateTemplateCell(donorSectionXml, descriptor);
+    const donorCell = locateTemplateCell(donorSectionXml, donorTemplateCellDescriptor(descriptor));
     if (!donorCell || !donorCell.cellXml.includes('binaryItemIDRef="')) {
       continue;
     }
