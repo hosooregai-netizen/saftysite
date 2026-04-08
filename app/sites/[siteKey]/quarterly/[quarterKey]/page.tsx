@@ -1098,6 +1098,16 @@ function QuarterlyReportEditor({
     setTitleEditorOpen(false);
   };
 
+  const updateDocumentField = (
+    field: 'drafter' | 'reviewer' | 'approver',
+    value: string,
+  ) => {
+    setDraft((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  };
+
   const updateSiteSnapshotField = (
     field: keyof QuarterlySummaryReport['siteSnapshot'],
     value: string,
@@ -1185,6 +1195,10 @@ function QuarterlyReportEditor({
             setSourceModalOpen(false);
           }
         }}
+      />
+      <QuarterlyDocumentMetaSection
+        draft={draft}
+        onChange={updateDocumentField}
       />
       <QuarterlySiteSnapshotSection
         draft={draft}
@@ -1276,6 +1290,42 @@ function SectionHeader(props: { title: string; chips?: string[]; description?: s
         <p className={operationalStyles.reportCardDescription}>{props.description}</p>
       ) : null}
     </>
+  );
+}
+
+function QuarterlyDocumentMetaSection(props: {
+  draft: QuarterlySummaryReport;
+  onChange: (field: 'drafter' | 'reviewer' | 'approver', value: string) => void;
+}) {
+  const { draft, onChange } = props;
+
+  return (
+    <article className={operationalStyles.reportCard}>
+      <SectionHeader
+        title="문서 결재 정보"
+        description="표지 결재란에 들어갈 담당, 검토, 승인 정보를 입력합니다."
+      />
+      <div className={operationalStyles.periodFieldGrid}>
+        <FieldInput
+          label="담당"
+          value={draft.drafter}
+          onChange={(value) => onChange('drafter', value)}
+          placeholder="예: 홍길동"
+        />
+        <FieldInput
+          label="검토"
+          value={draft.reviewer}
+          onChange={(value) => onChange('reviewer', value)}
+          placeholder="예: 김검토"
+        />
+        <FieldInput
+          label="승인"
+          value={draft.approver}
+          onChange={(value) => onChange('approver', value)}
+          placeholder="예: 이승인"
+        />
+      </div>
+    </article>
   );
 }
 

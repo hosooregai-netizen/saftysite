@@ -4,6 +4,10 @@ import path from 'node:path';
 import { imageSize } from 'image-size';
 import JSZip from 'jszip';
 
+import {
+  buildQuarterlyTitleForPeriod,
+  normalizeQuarterlyReportPeriod,
+} from '@/lib/erpReports/shared';
 import type { QuarterlyCounter, QuarterlySummaryReport } from '@/types/erpReports';
 import type { InspectionSite } from '@/types/inspectionSession';
 
@@ -34,12 +38,14 @@ const TEMPLATE_PATH = path.resolve(
 );
 const HWPX_CONTENT_TYPE = 'application/haansofthwpx';
 const EMPTY_CHART_LABEL = '\uC790\uB8CC \uC5C6\uC74C';
-const EMPTY_COMMENT = '\uCD1D\uD3C9\uC774 \uC544\uC9C1 \uC791\uC131\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.';
 const OPS_PENDING_TITLE = '\uAD00\uB9AC\uC790 \uBCF4\uC644 \uB300\uAE30';
 const OPS_PENDING_BODY = '\uAD00\uB9AC\uC790\uAC00 OPS \uC790\uB8CC\uB97C \uC544\uC9C1 \uC5F0\uACB0\uD558\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.';
 const OPS_IMAGE_ITEM_ID = 'opsAssetImage';
 const NO_DATA_VALUE = '-';
-const SECTION_TITLE_INDEX = 1;
+const COVER_TITLE_TEXT_INDEX = 2;
+const COVER_SITE_NAME_TEXT_INDEX = 4;
+const COVER_REPORT_DATE_TEXT_INDEX = 5;
+const BODY_TITLE_TEXT_INDEX = 12;
 const IMAGE_EXTENSION_TO_MEDIA_TYPE: Record<string, string> = {
   bmp: 'image/bmp',
   gif: 'image/gif',
@@ -102,6 +108,50 @@ function formatText(value: string | null | undefined, fallback = NO_DATA_VALUE) 
 
 function formatOptionalText(value: string | null | undefined) {
   return normalizeLineBreaks(value ?? '').trim();
+}
+
+function formatQuarterlyCoverDate(value: Date = new Date()) {
+  const formatter = new Intl.DateTimeFormat('ko-KR', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  const parts = formatter.formatToParts(value);
+  const year = parts.find((part) => part.type === 'year')?.value ?? '0000';
+  const month = parts.find((part) => part.type === 'month')?.value ?? '00';
+  const day = parts.find((part) => part.type === 'day')?.value ?? '00';
+  return `${year}.${month}.${day}`;
+}
+
+function getQuarterlyDocumentTitle(report: QuarterlySummaryReport) {
+  const explicitTitle = formatOptionalText(report.title);
+  if (explicitTitle) {
+    return explicitTitle;
+  }
+
+  const normalizedPeriod = normalizeQuarterlyReportPeriod(report);
+  return buildQuarterlyTitleForPeriod(
+    normalizedPeriod.periodStartDate,
+    normalizedPeriod.periodEndDate,
+  );
+}
+
+function buildQuarterlyCoverTitle(report: QuarterlySummaryReport) {
+  const normalizedPeriod = normalizeQuarterlyReportPeriod(report);
+  if (normalizedPeriod.quarter >= 1 && normalizedPeriod.quarter <= 4) {
+    return `기술지도 (${normalizedPeriod.quarter}/4)분기 종합보고서`;
+  }
+
+  return '기술지도 분기 종합보고서';
+}
+
+function getQuarterlyCoverSiteName(report: QuarterlySummaryReport, site: InspectionSite) {
+  return formatOptionalText(report.siteSnapshot.siteName || site.siteName || report.siteId);
+}
+
+function getQuarterlyCoverReportDate() {
+  return formatQuarterlyCoverDate();
 }
 
 function parseDataUrl(value: string) {
@@ -692,10 +742,12 @@ function updateSnapshotTable(tableXml: string, report: QuarterlySummaryReport, s
   return nextTable;
 }
 
-function clearRemovedCommentTable(tableXml: string) {
-  return replaceCellText(tableXml, 1, 0, formatText('', EMPTY_COMMENT), {
-    stripLineSeg: true,
-  });
+function updateApprovalTable(tableXml: string, report: QuarterlySummaryReport) {
+  let nextTable = tableXml;
+  nextTable = replaceCellText(nextTable, 1, 0, formatOptionalText(report.drafter) || ' ');
+  nextTable = replaceCellText(nextTable, 1, 1, formatOptionalText(report.reviewer) || ' ');
+  nextTable = replaceCellText(nextTable, 1, 2, formatOptionalText(report.approver) || ' ');
+  return nextTable;
 }
 
 function updateImplementationTable(tableXml: string, report: QuarterlySummaryReport) {
@@ -784,27 +836,54 @@ function updateOpsTable(
   return nextTable;
 }
 
+function replaceQuarterlyCoverTextNodes(
+  sectionXml: string,
+  report: QuarterlySummaryReport,
+  site: InspectionSite,
+) {
+  let nextSection = replaceNthTextNode(
+    sectionXml,
+    COVER_TITLE_TEXT_INDEX,
+    buildQuarterlyCoverTitle(report),
+  );
+  nextSection = replaceNthTextNode(
+    nextSection,
+    COVER_SITE_NAME_TEXT_INDEX,
+    getQuarterlyCoverSiteName(report, site),
+  );
+  nextSection = replaceNthTextNode(
+    nextSection,
+    COVER_REPORT_DATE_TEXT_INDEX,
+    getQuarterlyCoverReportDate(),
+  );
+  return replaceNthTextNode(
+    nextSection,
+    BODY_TITLE_TEXT_INDEX,
+    getQuarterlyDocumentTitle(report),
+  );
+}
+
 function updateSectionXml(
   sectionXml: string,
   report: QuarterlySummaryReport,
   site: InspectionSite,
   opsImageAsset: ResolvedHwpxImageAsset | null,
 ) {
-  const tableBlocks = matchTableBlocks(sectionXml);
+  const textUpdatedSection = replaceQuarterlyCoverTextNodes(sectionXml, report, site);
+  const tableBlocks = matchTableBlocks(textUpdatedSection);
   if (tableBlocks.length < 6) {
     throw new Error('Quarterly HWPX template table structure was not detected.');
   }
 
   const tables = tableBlocks.map((block) => block.xml);
-  tables[0] = updateSnapshotTable(tables[0], report, site);
-  tables[2] = clearRemovedCommentTable(tables[2]);
+  tables[0] = updateApprovalTable(tables[0], report);
+  tables[1] = updateSnapshotTable(tables[1], report, site);
   tables[3] = updateImplementationTable(tables[3], report);
   tables[4] = updateFuturePlanTable(tables[4], report);
   tables[5] = updateOpsTable(tables[5], report, opsImageAsset);
 
-  const rebuilt = rebuildSectionXml(sectionXml, tableBlocks, tables);
   return ensureUniquePictureObjectIds(
-    replaceNthTextNode(rebuilt, SECTION_TITLE_INDEX, report.title),
+    rebuildSectionXml(textUpdatedSection, tableBlocks, tables),
   );
 }
 
@@ -821,14 +900,18 @@ export async function buildQuarterlyHwpxDocument(
   const accidentChartFile = zip.file('Chart/chart1.xml');
   const causativeChartFile = zip.file('Chart/chart2.xml');
 
-  if (!sectionXmlFile || !contentHpfFile || !accidentChartFile || !causativeChartFile) {
+  if (!sectionXmlFile || !contentHpfFile) {
     throw new Error('Quarterly HWPX template is missing required assets.');
   }
 
   const sectionXml = await sectionXmlFile.async('string');
   let contentHpf = await contentHpfFile.async('string');
-  const accidentChartXml = await accidentChartFile.async('string');
-  const causativeChartXml = await causativeChartFile.async('string');
+  const accidentChartXml = accidentChartFile
+    ? await accidentChartFile.async('string')
+    : null;
+  const causativeChartXml = causativeChartFile
+    ? await causativeChartFile.async('string')
+    : null;
   const opsImageAsset = await resolveOpsImageAsset(report, options);
 
   if (opsImageAsset) {
@@ -844,8 +927,12 @@ export async function buildQuarterlyHwpxDocument(
 
   zip.file('Contents/section0.xml', updateSectionXml(sectionXml, report, site, opsImageAsset));
   zip.file('Contents/content.hpf', contentHpf);
-  zip.file('Chart/chart1.xml', updateChartXml(accidentChartXml, report.accidentStats));
-  zip.file('Chart/chart2.xml', updateChartXml(causativeChartXml, report.causativeStats));
+  if (accidentChartFile && accidentChartXml) {
+    zip.file('Chart/chart1.xml', updateChartXml(accidentChartXml, report.accidentStats));
+  }
+  if (causativeChartFile && causativeChartXml) {
+    zip.file('Chart/chart2.xml', updateChartXml(causativeChartXml, report.causativeStats));
+  }
 
   return {
     buffer: await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' }),

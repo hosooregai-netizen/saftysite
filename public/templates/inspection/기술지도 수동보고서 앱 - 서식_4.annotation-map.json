@@ -770,19 +770,19 @@
         },
         {
           "kind": "text",
-          "placeholderPath": "sec7.findings[0].inspector",
-          "repeatBlockPath": "sec7.findings",
-          "note": ""
-        },
-        {
-          "kind": "text",
-          "placeholderPath": "sec7.findings[0].emphasis",
+          "placeholderPath": "sec7.findings[0].hazard_description",
           "repeatBlockPath": "sec7.findings",
           "note": ""
         },
         {
           "kind": "text",
           "placeholderPath": "sec7.findings[0].improvement_plan",
+          "repeatBlockPath": "sec7.findings",
+          "note": ""
+        },
+        {
+          "kind": "text",
+          "placeholderPath": "sec7.findings[0].emphasis",
           "repeatBlockPath": "sec7.findings",
           "note": ""
         },
@@ -823,7 +823,7 @@
           "repeatBlockPath": "sec7.findings",
           "table": 5,
           "row": 2,
-          "col": 2,
+          "col": 5,
           "binaryItemId": "tplimg08",
           "deferred": false,
           "optional": false
@@ -845,7 +845,7 @@
           "repeatBlockPath": "sec7.findings",
           "table": 5,
           "row": 8,
-          "col": 2,
+          "col": 5,
           "binaryItemId": "tplimg10",
           "deferred": false,
           "optional": false
@@ -914,60 +914,6 @@
         {
           "kind": "text",
           "placeholderPath": "sec8.plans[2].countermeasure",
-          "repeatBlockPath": "sec8.plans",
-          "note": ""
-        },
-        {
-          "kind": "text",
-          "placeholderPath": "sec8.plans[3].process_name",
-          "repeatBlockPath": "sec8.plans",
-          "note": ""
-        },
-        {
-          "kind": "text",
-          "placeholderPath": "sec8.plans[3].hazard",
-          "repeatBlockPath": "sec8.plans",
-          "note": ""
-        },
-        {
-          "kind": "text",
-          "placeholderPath": "sec8.plans[3].countermeasure",
-          "repeatBlockPath": "sec8.plans",
-          "note": ""
-        },
-        {
-          "kind": "text",
-          "placeholderPath": "sec8.plans[4].process_name",
-          "repeatBlockPath": "sec8.plans",
-          "note": ""
-        },
-        {
-          "kind": "text",
-          "placeholderPath": "sec8.plans[4].hazard",
-          "repeatBlockPath": "sec8.plans",
-          "note": ""
-        },
-        {
-          "kind": "text",
-          "placeholderPath": "sec8.plans[4].countermeasure",
-          "repeatBlockPath": "sec8.plans",
-          "note": ""
-        },
-        {
-          "kind": "text",
-          "placeholderPath": "sec8.plans[5].process_name",
-          "repeatBlockPath": "sec8.plans",
-          "note": ""
-        },
-        {
-          "kind": "text",
-          "placeholderPath": "sec8.plans[5].hazard",
-          "repeatBlockPath": "sec8.plans",
-          "note": ""
-        },
-        {
-          "kind": "text",
-          "placeholderPath": "sec8.plans[5].countermeasure",
           "repeatBlockPath": "sec8.plans",
           "note": ""
         }

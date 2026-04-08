@@ -152,7 +152,7 @@ const WORK_PLAN_PLACEHOLDERS = [
 const REPEAT_BLOCK_CONFIG: Record<RepeatBlockPath, RepeatBlockConfig> = {
   'sec4.follow_ups': { pageSize: 3, prototypeIndices: [0, 1, 2] },
   'sec7.findings': { pageSize: 1, prototypeIndices: [0] },
-  'sec8.plans': { pageSize: 6, prototypeIndices: [0, 1, 2, 3, 4, 5] },
+  'sec8.plans': { pageSize: 3, prototypeIndices: [0, 1, 2] },
   'sec10.measurements': { pageSize: 3, prototypeIndices: [0, 1, 2] },
   'sec11.education': { pageSize: 1, prototypeIndices: [0] },
   'sec12.activities': { pageSize: 1, prototypeIndices: [0] },
@@ -280,13 +280,13 @@ const TEXT_PLACEHOLDERS = [
   'sec7.findings[0].risk_text',
   'sec7.findings[0].accident_type',
   'sec7.findings[0].causative_agent',
-  'sec7.findings[0].inspector',
-  'sec7.findings[0].emphasis',
+  'sec7.findings[0].hazard_description',
   'sec7.findings[0].improvement_plan',
+  'sec7.findings[0].emphasis',
   'sec7.findings[0].legal_reference_title',
   'sec7.findings[0].reference_material_1',
   'sec7.findings[0].reference_material_2',
-  ...Array.from({ length: 6 }, (_, index) => [
+  ...Array.from({ length: 3 }, (_, index) => [
     `sec8.plans[${index}].process_name`,
     `sec8.plans[${index}].hazard`,
     `sec8.plans[${index}].countermeasure`,
@@ -351,7 +351,7 @@ const TEMPLATE_IMAGE_PLACEHOLDERS: TemplateImagePlaceholder[] = [
   {
     table: 5,
     row: 2,
-    col: 2,
+    col: 5,
     placeholderPath: 'sec7.findings[0].photo_image_2',
     binaryItemId: 'tplimg08',
     repeatBlockPath: 'sec7.findings',
@@ -367,7 +367,7 @@ const TEMPLATE_IMAGE_PLACEHOLDERS: TemplateImagePlaceholder[] = [
   {
     table: 5,
     row: 8,
-    col: 2,
+    col: 5,
     placeholderPath: 'sec7.findings[0].reference_material_2_image',
     binaryItemId: 'tplimg10',
     repeatBlockPath: 'sec7.findings',
@@ -760,15 +760,6 @@ function mapRiskText(finding: InspectionSession['document7Findings'][number]): s
   if (riskLevel) return riskLevel;
 
   return [valueOrBlank(finding.likelihood), valueOrBlank(finding.severity)].filter(Boolean).join(' / ');
-}
-
-function buildFindingLocationText(finding: InspectionSession['document7Findings'][number]): string {
-  const location = valueOrBlank(finding.location);
-  const hazardDescription = valueOrBlank(finding.hazardDescription);
-  if (location && hazardDescription) {
-    return `${location} / ${hazardDescription}`;
-  }
-  return location || hazardDescription;
 }
 
 function isFilledObject(value: object): boolean {
@@ -1298,13 +1289,13 @@ function mapSessionToTemplateBinding(session: InspectionSession): TemplateBindin
     const improvementRequest = item.improvementRequest || item.improvementPlan;
     const referenceMaterialImage = item.referenceMaterialImage || item.referenceMaterial1;
     const referenceMaterialDescription = item.referenceMaterialDescription || item.referenceMaterial2;
-    text[`sec7.findings[${index}].location`] = valueOrDash(buildFindingLocationText(item));
+    text[`sec7.findings[${index}].location`] = valueOrDash(item.location);
     text[`sec7.findings[${index}].risk_text`] = valueOrDash(mapRiskText(item));
     text[`sec7.findings[${index}].accident_type`] = valueOrDash(item.accidentType);
     text[`sec7.findings[${index}].causative_agent`] = valueOrDash(toCausativeLabel(item.causativeAgentKey, measureLabelMap));
-    text[`sec7.findings[${index}].inspector`] = valueOrDash(item.inspector || session.meta.drafter);
-    text[`sec7.findings[${index}].emphasis`] = valueOrDash(item.emphasis);
+    text[`sec7.findings[${index}].hazard_description`] = valueOrDash(item.hazardDescription);
     text[`sec7.findings[${index}].improvement_plan`] = valueOrDash(improvementRequest);
+    text[`sec7.findings[${index}].emphasis`] = valueOrDash(item.emphasis);
     text[`sec7.findings[${index}].legal_reference_title`] = valueOrDash(legalReferenceText);
     text[`sec7.findings[${index}].reference_material_1`] = looksLikeImageSource(referenceMaterialImage)
       ? ''
@@ -1493,6 +1484,12 @@ function expandRepeatBlocks(
         }
       }
 
+      if (repeatBlockPath === 'sec7.findings' && pageIndex > 0) {
+        // Section 7 finding tables reuse fixed line positions, so each additional
+        // finding must start on a fresh page to avoid overlapping section 8.
+        blockXml = forceFirstParagraphPageBreak(blockXml);
+      }
+
       return blockXml;
     }).join('');
 
@@ -1515,6 +1512,14 @@ function replaceTextPlaceholders(xml: string, textBindings: Record<string, strin
 
 function stripRepeatBlockMarkers(xml: string): string {
   return xml.replace(/\{#([^{}]+)\}|\{\/([^{}]+)\}/g, '');
+}
+
+function forceFirstParagraphPageBreak(xml: string): string {
+  return xml.replace(/<hp:p\b[^>]*>/, (paragraphTag) =>
+    /pageBreak=/.test(paragraphTag)
+      ? paragraphTag.replace(/pageBreak="[^"]*"/, 'pageBreak="1"')
+      : paragraphTag.replace(/>$/, ' pageBreak="1">'),
+  );
 }
 
 function repeatBlockSpan(
@@ -2112,11 +2117,21 @@ function ensureNotificationSignatureImageSlot(sectionXml: string): string {
     return sectionXml;
   }
 
-  const patchedCellXml = signatureCell.cellXml.replace(
+  let patchedCellXml = signatureCell.cellXml.replace(
     /<hp:run\b[^>]*charPrIDRef="(\d+)"[^>]*><hp:t>\s*\{sec2\.notification_recipient_signature\}\s*<\/hp:t><\/hp:run>/,
     (_match, charPrIDRef: string) =>
       `${buildNotificationSignatureImageRun(charPrIDRef)}<hp:run charPrIDRef="${charPrIDRef}"><hp:t>{sec2.notification_recipient_signature}</hp:t></hp:run>`,
   );
+
+  if (patchedCellXml === signatureCell.cellXml) {
+    patchedCellXml = signatureCell.cellXml.replace(
+      /<hp:run\b[^>]*charPrIDRef="(\d+)"[^>]*><hp:t>([\s\S]*?)\{sec2\.notification_recipient_signature\}([\s\S]*?)<\/hp:t><\/hp:run>/,
+      (_match, charPrIDRef: string, beforePlaceholder: string, afterPlaceholder: string) =>
+        `<hp:run charPrIDRef="${charPrIDRef}"><hp:t>${beforePlaceholder}</hp:t></hp:run>` +
+        buildNotificationSignatureImageRun(charPrIDRef) +
+        `<hp:run charPrIDRef="${charPrIDRef}"><hp:t>{sec2.notification_recipient_signature}${afterPlaceholder}</hp:t></hp:run>`,
+    );
+  }
 
   if (patchedCellXml === signatureCell.cellXml) {
     return sectionXml;

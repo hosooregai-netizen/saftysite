@@ -287,6 +287,8 @@ export function createQuarterlySummaryDraft(
     controllerReview: null,
     dispatch: null,
     drafter,
+    reviewer: '',
+    approver: '',
     siteSnapshot: createQuarterlySiteSnapshot(site),
     generatedFromSessionIds: [],
     lastCalculatedAt: timestamp,
@@ -326,6 +328,8 @@ export function buildInitialQuarterlySummaryReport(
       ...existing,
       ...normalizedPeriod,
       drafter: existing.drafter || drafter,
+      reviewer: existing.reviewer || '',
+      approver: existing.approver || '',
       controllerReview: existing.controllerReview ?? null,
       dispatch: existing.dispatch ?? null,
       siteSnapshot:

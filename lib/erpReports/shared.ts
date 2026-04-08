@@ -326,11 +326,13 @@ export function buildQuarterlyTitleForPeriod(
 ) {
   const exactTarget = getQuarterTargetForExactPeriod(startDate, endDate);
   if (exactTarget) {
-    return `${formatQuarterLabel(exactTarget)} 종합보고서`;
+    return `${formatQuarterLabel(exactTarget)} 기술지도 종합보고서`;
   }
 
   const periodLabel = formatPeriodRangeLabel(startDate, endDate);
-  return periodLabel === '-' ? '분기 종합보고서' : `${periodLabel} 종합보고서`;
+  return periodLabel === '-'
+    ? '분기 기술지도 종합보고서'
+    : `${periodLabel} 기술지도 종합보고서`;
 }
 
 export function buildQuarterlyDefaultTitle(referenceDate: string | Date = new Date()) {
@@ -338,7 +340,7 @@ export function buildQuarterlyDefaultTitle(referenceDate: string | Date = new Da
   const target = quarterKey ? parseQuarterKey(quarterKey) : null;
   return target
     ? buildQuarterlyTitleForPeriod(target.startDate, target.endDate)
-    : '분기 종합보고서';
+    : '분기 기술지도 종합보고서';
 }
 
 export function getStoredReportKind(
