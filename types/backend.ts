@@ -289,6 +289,41 @@ export interface SafetyReportListItem {
   updated_at: string;
 }
 
+export interface SafetyOperationalQuarterlyIndexItem {
+  report_key: string;
+  report_title: string;
+  site_id: string;
+  status: SafetyReportStatus;
+  period_start_date: string;
+  period_end_date: string;
+  quarter_key: string;
+  year: number;
+  quarter: number;
+  selected_report_count: number;
+  last_calculated_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SafetyOperationalBadWorkplaceIndexItem {
+  report_key: string;
+  report_title: string;
+  site_id: string;
+  status: SafetyReportStatus;
+  report_month: string;
+  reporter_user_id: string;
+  reporter_name: string;
+  source_finding_count: number;
+  violation_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SafetySiteOperationalReportIndexResponse {
+  quarterly_reports: SafetyOperationalQuarterlyIndexItem[];
+  bad_workplace_reports: SafetyOperationalBadWorkplaceIndexItem[];
+}
+
 export interface SafetyBackendAdminReportRow {
   assignee_name: string;
   assignee_user_id: string;

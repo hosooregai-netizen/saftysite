@@ -13,6 +13,38 @@ export type StoredReportKind =
 
 export type OperationalReportStatus = 'draft' | 'completed';
 
+export interface OperationalQuarterlyIndexItem {
+  id: string;
+  siteId: string;
+  title: string;
+  reportKind: 'quarterly_summary';
+  periodStartDate: string;
+  periodEndDate: string;
+  quarterKey: string;
+  year: number;
+  quarter: number;
+  status: OperationalReportStatus;
+  selectedReportCount: number;
+  lastCalculatedAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OperationalBadWorkplaceIndexItem {
+  id: string;
+  siteId: string;
+  title: string;
+  reportKind: 'bad_workplace';
+  reportMonth: string;
+  status: OperationalReportStatus;
+  reporterUserId: string;
+  reporterName: string;
+  sourceFindingCount: number;
+  violationCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface QuarterTarget {
   quarterKey: string;
   year: number;

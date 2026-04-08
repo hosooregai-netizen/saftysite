@@ -14,7 +14,9 @@ import type { SafetyReport, SafetyUpsertReportInput } from '@/types/backend';
 import type {
   BadWorkplaceReport,
   BadWorkplaceViolation,
+  OperationalBadWorkplaceIndexItem,
   OperationalReportStatus,
+  OperationalQuarterlyIndexItem,
   QuarterlyImplementationRow,
   QuarterlySummaryReport,
 } from '@/types/erpReports';
@@ -107,6 +109,10 @@ function normalizeBadWorkplaceViolations(value: unknown): BadWorkplaceViolation[
 
 function normalizePositiveNumber(value: unknown) {
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+function normalizeNonNegativeNumber(value: unknown) {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : 0;
 }
 
 export function mapSafetyReportToQuarterlySummaryReport(
@@ -260,6 +266,106 @@ export function mapSafetyReportToBadWorkplaceReport(
   };
 
   return nextReport;
+}
+
+export function mapSafetyOperationalQuarterlyIndexItem(
+  report: Pick<
+    SafetyReport,
+    | 'report_key'
+    | 'report_title'
+    | 'site_id'
+    | 'status'
+    | 'created_at'
+    | 'updated_at'
+    | 'meta'
+  > & {
+    selected_report_count?: number | null;
+    last_calculated_at?: string | null;
+  },
+): OperationalQuarterlyIndexItem | null {
+  const meta = asMapperRecord(report.meta);
+  const normalizedPeriod = normalizeQuarterlyReportPeriod({
+    periodStartDate: normalizeMapperText(meta.periodStartDate),
+    periodEndDate: normalizeMapperText(meta.periodEndDate),
+    quarterKey: normalizeMapperText(meta.quarterKey),
+    year: normalizePositiveNumber(meta.year),
+    quarter: normalizePositiveNumber(meta.quarter),
+  });
+
+  if (!normalizedPeriod.quarterKey && !normalizedPeriod.periodStartDate && !normalizedPeriod.periodEndDate) {
+    return null;
+  }
+
+  return {
+    id: report.report_key,
+    siteId: report.site_id,
+    title:
+      normalizeMapperText(report.report_title) ||
+      buildQuarterlyDefaultTitle(report.created_at),
+    reportKind: QUARTERLY_SUMMARY_REPORT_KIND,
+    periodStartDate: normalizedPeriod.periodStartDate,
+    periodEndDate: normalizedPeriod.periodEndDate,
+    quarterKey: normalizedPeriod.quarterKey,
+    year: normalizedPeriod.year,
+    quarter: normalizedPeriod.quarter,
+    status: normalizeOperationalStatus(meta.status, report.status),
+    selectedReportCount: normalizeNonNegativeNumber(report.selected_report_count),
+    lastCalculatedAt:
+      normalizeMapperText(report.last_calculated_at) ||
+      normalizeMapperText(meta.lastCalculatedAt) ||
+      report.updated_at,
+    createdAt: report.created_at,
+    updatedAt: report.updated_at,
+  };
+}
+
+export function mapSafetyOperationalBadWorkplaceIndexItem(
+  report: Pick<
+    SafetyReport,
+    | 'report_key'
+    | 'report_title'
+    | 'site_id'
+    | 'status'
+    | 'created_at'
+    | 'updated_at'
+    | 'meta'
+  > & {
+    report_month?: string | null;
+    reporter_user_id?: string | null;
+    reporter_name?: string | null;
+    source_finding_count?: number | null;
+    violation_count?: number | null;
+  },
+): OperationalBadWorkplaceIndexItem | null {
+  const meta = asMapperRecord(report.meta);
+  const reportMonth =
+    normalizeMapperText(report.report_month) ||
+    normalizeMapperText(meta.reportMonth);
+
+  if (!reportMonth) {
+    return null;
+  }
+
+  return {
+    id: report.report_key,
+    siteId: report.site_id,
+    title:
+      normalizeMapperText(report.report_title) ||
+      `${formatReportMonthLabel(reportMonth)} 遺덈웾?ъ뾽???좉퀬`,
+    reportKind: BAD_WORKPLACE_REPORT_KIND,
+    reportMonth,
+    status: normalizeOperationalStatus(meta.status, report.status),
+    reporterUserId:
+      normalizeMapperText(report.reporter_user_id) ||
+      normalizeMapperText(meta.reporterUserId),
+    reporterName:
+      normalizeMapperText(report.reporter_name) ||
+      normalizeMapperText(meta.reporterName),
+    sourceFindingCount: normalizeNonNegativeNumber(report.source_finding_count),
+    violationCount: normalizeNonNegativeNumber(report.violation_count),
+    createdAt: report.created_at,
+    updatedAt: report.updated_at,
+  };
 }
 
 export function buildQuarterlySummaryUpsertInput(

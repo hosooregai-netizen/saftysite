@@ -4,6 +4,7 @@ import type {
   SafetyContentItem,
   SafetyPendingMobileAckGroup,
   SafetyLoginInput,
+  SafetySiteOperationalReportIndexResponse,
   SafetyQuarterlySummarySeed,
   SafetyReport,
   SafetyReportDraftContext,
@@ -382,6 +383,17 @@ export function fetchSafetyReportsBySite(
     `/reports/site/${siteId}/full?${searchParams.toString()}`,
     {},
     token
+  );
+}
+
+export function fetchSafetyOperationalReportIndex(
+  token: string,
+  siteId: string,
+): Promise<SafetySiteOperationalReportIndexResponse> {
+  return requestSafetyApi<SafetySiteOperationalReportIndexResponse>(
+    `/reports/site/${siteId}/operational-index`,
+    {},
+    token,
   );
 }
 

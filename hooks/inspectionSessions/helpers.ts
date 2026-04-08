@@ -18,7 +18,7 @@ import type {
 export const STORAGE_KEY = 'inspection-sessions-v8';
 export const SITE_STORAGE_KEY = 'inspection-sites-v8';
 export const USER_STORAGE_KEY = 'inspection-user-v1';
-export const REPORT_INDEX_STORAGE_KEY = 'inspection-report-index-v1';
+export const REPORT_INDEX_STORAGE_KEY = 'inspection-report-index-v2';
 export const EMPTY_MASTER_DATA = buildSafetyMasterData([]);
 
 function getReportIndexRound(item: InspectionReportListItem) {

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { use, useMemo, useState } from 'react';
+import { use, useEffect, useMemo, useState } from 'react';
 import { AdminMenuDrawer, AdminMenuPanel } from '@/components/admin/AdminMenu';
 import LoginPanel from '@/components/auth/LoginPanel';
 import { PageBackControl } from '@/components/navigation/PageBackControl';
@@ -17,7 +17,7 @@ import {
 } from '@/constants/inspectionSession';
 import { createTimestamp } from '@/constants/inspectionSession/shared';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
-import { useSiteOperationalReports } from '@/hooks/useSiteOperationalReports';
+import { useSiteOperationalReportMutations } from '@/hooks/useSiteOperationalReportMutations';
 import { getAdminSectionHref, isAdminUserRole } from '@/lib/admin';
 import { fetchBadWorkplaceHwpxDocument, saveBlobAsFile } from '@/lib/api';
 import {
@@ -31,8 +31,15 @@ import {
   getBadWorkplaceSourceSessions,
   syncBadWorkplaceReportSource,
 } from '@/lib/erpReports/badWorkplace';
+import { mapSafetyReportToBadWorkplaceReport } from '@/lib/erpReports/mappers';
+import { buildBadWorkplaceReportKey } from '@/lib/erpReports/shared';
 import { buildSitePhotoAlbumHref } from '@/features/home/lib/siteEntry';
 import shellStyles from '@/features/site-reports/components/SiteReportsScreen.module.css';
+import {
+  fetchSafetyReportByKey,
+  readSafetyAuthToken,
+  SafetyApiError,
+} from '@/lib/safetyApi';
 import type { BadWorkplaceReport } from '@/types/erpReports';
 import type { InspectionSession, InspectionSite } from '@/types/inspectionSession';
 
@@ -83,27 +90,118 @@ export default function BadWorkplaceReportPage({
       ),
     [decodedSiteKey, sessions],
   );
-  const { badWorkplaceReports, isSaving, error, saveBadWorkplaceReport } =
-    useSiteOperationalReports(currentSite);
-  const existing = useMemo(
-    () =>
-      badWorkplaceReports.find(
-        (item) =>
-          item.reportMonth === decodedReportMonth &&
-          item.reporterUserId === currentUser?.id,
-      ) || null,
-    [badWorkplaceReports, currentUser?.id, decodedReportMonth],
-  );
+  const { isSaving, error, saveBadWorkplaceReport } =
+    useSiteOperationalReportMutations(currentSite);
+  const [existingReport, setExistingReport] = useState<BadWorkplaceReport | null>(null);
+  const [existingReportLoading, setExistingReportLoading] = useState(false);
+  const [existingReportError, setExistingReportError] = useState<string | null>(null);
+  const reportKey =
+    currentSite && currentUser?.id
+      ? buildBadWorkplaceReportKey(currentSite.id, decodedReportMonth, currentUser.id)
+      : '';
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!isReady || !isAuthenticated || !currentSite || !currentUser?.id || !reportKey) {
+      queueMicrotask(() => {
+        if (cancelled) {
+          return;
+        }
+
+        setExistingReport(null);
+        setExistingReportLoading(false);
+        setExistingReportError(null);
+      });
+
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const token = readSafetyAuthToken();
+    if (!token) {
+      queueMicrotask(() => {
+        if (cancelled) {
+          return;
+        }
+
+        setExistingReport(null);
+        setExistingReportLoading(false);
+        setExistingReportError('로그인이 만료되었습니다. 다시 로그인해 주세요.');
+      });
+
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    queueMicrotask(() => {
+      if (cancelled) {
+        return;
+      }
+
+      setExistingReportLoading(true);
+      setExistingReportError(null);
+    });
+
+    void fetchSafetyReportByKey(token, reportKey)
+      .then((report) => {
+        if (cancelled) {
+          return;
+        }
+
+        const mappedReport = mapSafetyReportToBadWorkplaceReport(report);
+        setExistingReport(
+          mappedReport && mappedReport.siteId === currentSite.id ? mappedReport : null,
+        );
+      })
+      .catch((nextError) => {
+        if (cancelled) {
+          return;
+        }
+
+        if (nextError instanceof SafetyApiError && nextError.status === 404) {
+          setExistingReport(null);
+          setExistingReportError(null);
+          return;
+        }
+
+        setExistingReport(null);
+        setExistingReportError(
+          nextError instanceof Error
+            ? nextError.message
+            : '불량사업장 신고서를 불러오는 중 오류가 발생했습니다.',
+        );
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setExistingReportLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentSite, currentUser?.id, isAuthenticated, isReady, reportKey]);
   const initialDraft = useMemo(() => {
-    if (!currentSite) return null;
+    if (!currentSite || existingReportLoading || existingReportError) return null;
     return buildInitialBadWorkplaceReport(
       currentSite,
       siteSessions,
       currentUser,
       decodedReportMonth,
-      existing,
+      existingReport,
     );
-  }, [currentSite, currentUser, decodedReportMonth, existing, siteSessions]);
+  }, [
+    currentSite,
+    currentUser,
+    decodedReportMonth,
+    existingReport,
+    existingReportError,
+    existingReportLoading,
+    siteSessions,
+  ]);
   const photoAlbumHref = currentSite
     ? buildSitePhotoAlbumHref(currentSite.id, {
         backHref: `/sites/${encodeURIComponent(currentSite.id)}/bad-workplace/${encodeURIComponent(decodedReportMonth)}`,
@@ -130,6 +228,26 @@ export default function BadWorkplaceReportPage({
         title="불량사업장 신고 로그인"
         description="신고서를 작성하려면 다시 로그인해 주세요."
       />
+    );
+  }
+
+  if (existingReportLoading) {
+    return (
+      <main className="app-page">
+        <div className="app-container">
+          <section className={operationalStyles.sectionCard}>불량사업장 신고서를 불러오는 중입니다.</section>
+        </div>
+      </main>
+    );
+  }
+
+  if (existingReportError) {
+    return (
+      <main className="app-page">
+        <div className="app-container">
+          <section className={operationalStyles.sectionCard}>{existingReportError}</section>
+        </div>
+      </main>
     );
   }
 

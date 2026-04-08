@@ -41,6 +41,7 @@ import type {
   K2bApplyResult,
   K2bImportPreview,
   K2bMatchCandidate,
+  K2bRowExclusionReasonCode,
 } from '@/types/k2b';
 import { normalizeSafetyAssetUrl } from '@/lib/safetyApi/assetUrls';
 import { buildSafetyAdminUpstreamUrl } from './safetyApiServer';
@@ -463,9 +464,44 @@ function mapBackendK2bCandidate(candidate: {
   };
 }
 
+function normalizeK2bExclusionReasonCode(
+  value: unknown,
+): K2bRowExclusionReasonCode | null {
+  const normalized = normalizeText(value);
+  switch (normalized) {
+    case 'different_headquarter':
+    case 'different_site':
+    case 'scope_unresolved':
+    case 'scope_ambiguous':
+      return normalized;
+    default:
+      return null;
+  }
+}
+
 export function mapBackendK2bImportPreview(
   preview: SafetyBackendK2bImportPreview,
 ): K2bImportPreview {
+  const mapPreviewRow = (
+    row: SafetyBackendK2bImportPreview['sheets'][number]['included_rows'][number],
+  ) => ({
+    rowIndex: typeof row.row_index === 'number' ? row.row_index : 0,
+    values:
+      row.values && typeof row.values === 'object'
+        ? Object.fromEntries(
+            Object.entries(row.values).map(([key, value]) => [normalizeText(key), normalizeText(value)]),
+          )
+        : {},
+    summary: normalizeText(row.summary),
+    suggestedAction: normalizeText(row.suggested_action),
+    exclusionReasonCode: normalizeK2bExclusionReasonCode(row.exclusion_reason_code),
+    exclusionReason: normalizeText(row.exclusion_reason) || null,
+    inScope: typeof row.in_scope === 'boolean' ? row.in_scope : undefined,
+    duplicateCandidates: Array.isArray(row.duplicate_candidates)
+      ? row.duplicate_candidates.map((candidate) => mapBackendK2bCandidate(candidate))
+      : [],
+  });
+
   return {
     jobId: normalizeText(preview.job_id),
     fileName: normalizeText(preview.file_name),
@@ -473,6 +509,12 @@ export function mapBackendK2bImportPreview(
     sheetNames: Array.isArray(preview.sheet_names)
       ? preview.sheet_names.map((item) => normalizeText(item)).filter(Boolean)
       : [],
+    scope: {
+      sourceSection: preview.scope?.source_section === 'sites' ? 'sites' : 'headquarters',
+      headquarterId: normalizeText(preview.scope?.headquarter_id) || null,
+      siteId: normalizeText(preview.scope?.site_id) || null,
+      label: normalizeText(preview.scope?.label),
+    },
     sheets: Array.isArray(preview.sheets)
       ? preview.sheets.map((sheet) => ({
           name: normalizeText(sheet.name),
@@ -480,6 +522,10 @@ export function mapBackendK2bImportPreview(
             ? sheet.headers.map((item) => normalizeText(item)).filter(Boolean)
             : [],
           rowCount: typeof sheet.row_count === 'number' ? sheet.row_count : 0,
+          includedRowCount:
+            typeof sheet.included_row_count === 'number' ? sheet.included_row_count : 0,
+          excludedRowCount:
+            typeof sheet.excluded_row_count === 'number' ? sheet.excluded_row_count : 0,
           sampleRows: Array.isArray(sheet.sample_rows)
             ? sheet.sample_rows.map((row) =>
                 Object.fromEntries(
@@ -496,21 +542,11 @@ export function mapBackendK2bImportPreview(
                   ]),
                 )
               : {},
-          rowPreviews: Array.isArray(sheet.row_previews)
-            ? sheet.row_previews.map((row) => ({
-                rowIndex: typeof row.row_index === 'number' ? row.row_index : 0,
-                values:
-                  row.values && typeof row.values === 'object'
-                    ? Object.fromEntries(
-                        Object.entries(row.values).map(([key, value]) => [normalizeText(key), normalizeText(value)]),
-                      )
-                    : {},
-                summary: normalizeText(row.summary),
-                suggestedAction: normalizeText(row.suggested_action),
-                duplicateCandidates: Array.isArray(row.duplicate_candidates)
-                  ? row.duplicate_candidates.map((candidate) => mapBackendK2bCandidate(candidate))
-                  : [],
-              }))
+          includedRows: Array.isArray(sheet.included_rows)
+            ? sheet.included_rows.map((row) => mapPreviewRow(row))
+            : [],
+          excludedRows: Array.isArray(sheet.excluded_rows)
+            ? sheet.excluded_rows.map((row) => mapPreviewRow(row))
             : [],
           summary: {
             ambiguousCreateCount: sheet.summary?.ambiguous_create_count ?? 0,

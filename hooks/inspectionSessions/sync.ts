@@ -3,6 +3,12 @@
 import { startTransition, useCallback, useEffect, useRef } from 'react';
 import { normalizeInspectionSite } from '@/constants/inspectionSession/normalizeSite';
 import { readPersistedValue } from '@/lib/clientPersistence';
+import { readOwnedPersistedValue } from '@/lib/ownedPersistence';
+import {
+  getReportCacheFreshness,
+  shouldSurfaceCacheError,
+  shouldUseBlockingReload,
+} from '@/lib/reportCachePolicy';
 import { SafetyApiError } from '@/lib/safetyApi';
 import {
   fetchAssignedSafetySites,
@@ -422,7 +428,15 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
       }
 
       const existingState = reportIndexBySiteIdRef.current[siteId];
-      if (!options?.force && existingState?.status === 'loaded') {
+      const freshness = getReportCacheFreshness(existingState?.fetchedAt);
+      const hasCachedItems = Boolean(existingState?.items.length);
+      const shouldBlock = shouldUseBlockingReload({
+        force: options?.force,
+        freshness,
+        hasVisibleData: hasCachedItems,
+      });
+
+      if (!options?.force && hasCachedItems && freshness === 'fresh') {
         return;
       }
 
@@ -431,13 +445,15 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
         return inFlightRequest;
       }
 
-      setReportIndexBySiteId((current) => ({
-        ...current,
-        [siteId]: buildReportIndexState(current[siteId], {
-          status: 'loading',
-          error: null,
-        }),
-      }));
+      if (shouldBlock) {
+        setReportIndexBySiteId((current) => ({
+          ...current,
+          [siteId]: buildReportIndexState(current[siteId], {
+            status: 'loading',
+            error: null,
+          }),
+        }));
+      }
       setIsHydratingReports(true);
 
       const request = (async () => {
@@ -445,6 +461,7 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
           const reports = await fetchSafetyReportList(token, {
             siteId,
             activeOnly: true,
+            reportKinds: [TECHNICAL_GUIDANCE_REPORT_KIND],
           });
 
           if (authTokenRef.current !== token) {
@@ -477,14 +494,32 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
             setAuthError('로그인이 만료되었습니다. 다시 로그인해 주세요.');
           } else {
             const message = getErrorMessage(error);
-            setDataError(message);
-            setReportIndexBySiteId((current) => ({
-              ...current,
-              [siteId]: buildReportIndexState(current[siteId], {
-                status: 'error',
-                error: message,
-              }),
-            }));
+            const shouldKeepVisibleCache =
+              hasCachedItems &&
+              !shouldBlock &&
+              !shouldSurfaceCacheError({
+                force: options?.force,
+                hasVisibleData: hasCachedItems,
+              });
+
+            if (shouldKeepVisibleCache) {
+              setReportIndexBySiteId((current) => ({
+                ...current,
+                [siteId]: buildReportIndexState(current[siteId], {
+                  status: 'loaded',
+                  error: null,
+                }),
+              }));
+            } else {
+              setDataError(message);
+              setReportIndexBySiteId((current) => ({
+                ...current,
+                [siteId]: buildReportIndexState(current[siteId], {
+                  status: 'error',
+                  error: message,
+                }),
+              }));
+            }
           }
         } finally {
           reportIndexRequestsRef.current.delete(siteId);
@@ -942,8 +977,13 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
         readPersistedValue<InspectionSession[]>(STORAGE_KEY),
         readPersistedValue<InspectionSite[]>(SITE_STORAGE_KEY),
         readPersistedValue<SafetyUser>(USER_STORAGE_KEY),
-        readPersistedValue<Record<string, SiteReportIndexState>>(REPORT_INDEX_STORAGE_KEY),
-      ]);
+      ]).then(async ([cachedSessions, cachedSites, cachedUser]) => {
+        const cachedReportIndex = await readOwnedPersistedValue<
+          Record<string, SiteReportIndexState>
+        >(REPORT_INDEX_STORAGE_KEY, cachedUser?.id ?? null);
+
+        return [cachedSessions, cachedSites, cachedUser, cachedReportIndex] as const;
+      });
       const cachedBootstrapResult = await Promise.race([
         cachedBootstrapPromise.then((value) => ({ timedOut: false, value })),
         new Promise<{

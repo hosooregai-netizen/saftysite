@@ -14,7 +14,8 @@ import WorkerShellBody from '@/components/worker/WorkerShellBody';
 import { WorkerMenuDrawer, WorkerMenuPanel } from '@/components/worker/WorkerMenu';
 import { buildSiteHubHref, buildSiteQuarterlyHref } from '@/features/home/lib/siteEntry';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
-import { useSiteOperationalReports } from '@/hooks/useSiteOperationalReports';
+import { useSiteOperationalReportIndex } from '@/hooks/useSiteOperationalReportIndex';
+import { useSiteOperationalReportMutations } from '@/hooks/useSiteOperationalReportMutations';
 import { getAdminSectionHref, isAdminUserRole } from '@/lib/admin';
 import {
   applyQuarterlySummarySeed,
@@ -216,17 +217,18 @@ export function SiteQuarterlyReportsScreen({
     [decodedSiteKey, sites],
   );
   const isAdminView = Boolean(currentUser && isAdminUserRole(currentUser.role));
-  const {
-    deleteOperationalReport,
-    quarterlyReports,
-    isLoading,
-    isSaving,
-    error,
-    saveQuarterlyReport,
-  } = useSiteOperationalReports(
+  const { quarterlyReports, isLoading, error } = useSiteOperationalReportIndex(
     currentSite,
     isAuthenticated && isReady && Boolean(currentSite),
   );
+  const {
+    deleteOperationalReport,
+    isSaving,
+    error: mutationError,
+    saveQuarterlyReport,
+  } =
+    useSiteOperationalReportMutations(currentSite);
+  const operationalError = mutationError ?? error;
 
   const rows = useMemo<QuarterlyListRow[]>(() => {
     if (!currentSite) return [];
@@ -252,7 +254,7 @@ export function SiteQuarterlyReportsScreen({
         reportId: report.id,
         reportTitle: report.title || '분기 종합보고서',
         quarterLabel: getQuarterLabel(report.year, report.quarter),
-        selectedCount: report.generatedFromSessionIds.length,
+        selectedCount: report.selectedReportCount,
         updatedAt: report.updatedAt || report.lastCalculatedAt || report.createdAt,
         periodStartDate: report.periodStartDate,
         periodEndDate: report.periodEndDate,
@@ -585,13 +587,13 @@ export function SiteQuarterlyReportsScreen({
                     </button>
                   </div>
 
-                  {error ? (
+                  {operationalError ? (
                     <div className={styles.tableTools}>
-                      <span>{error}</span>
+                      <span>{operationalError}</span>
                     </div>
                   ) : null}
 
-                  {(isLoading || (!error && rows.length === 0)) && rows.length === 0 ? (
+                  {(isLoading || (!operationalError && rows.length === 0)) && rows.length === 0 ? (
                     <div className={styles.emptyState}>
                       <p className={styles.emptyTitle}>
                         {isLoading

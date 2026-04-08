@@ -19,7 +19,7 @@ import {
 import { FUTURE_PROCESS_LIBRARY } from '@/constants/inspectionSession/catalog';
 import { createTimestamp, generateId } from '@/constants/inspectionSession/shared';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
-import { useSiteOperationalReports } from '@/hooks/useSiteOperationalReports';
+import { useSiteOperationalReportMutations } from '@/hooks/useSiteOperationalReportMutations';
 import {
   fetchQuarterlyHwpxDocument,
   fetchQuarterlyPdfDocumentWithFallback,
@@ -113,7 +113,7 @@ export default function QuarterlyReportPage({ params }: QuarterlyReportPageProps
     [decodedSiteKey, sites],
   );
   const { isSaving, error, saveQuarterlyReport } =
-    useSiteOperationalReports(currentSite, false);
+    useSiteOperationalReportMutations(currentSite);
   const [existingReport, setExistingReport] = useState<QuarterlySummaryReport | null>(null);
   const [existingReportLoading, setExistingReportLoading] = useState(false);
   const [existingReportError, setExistingReportError] = useState<string | null>(null);

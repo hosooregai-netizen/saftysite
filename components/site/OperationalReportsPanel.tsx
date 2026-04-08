@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useMemo } from 'react';
-import { useSiteOperationalReports } from '@/hooks/useSiteOperationalReports';
+import { useSiteOperationalReportIndex } from '@/hooks/useSiteOperationalReportIndex';
 import {
   formatQuarterLabel,
   formatReportMonthLabel,
@@ -35,7 +35,7 @@ export default function OperationalReportsPanel({
   siteReportCount,
 }: OperationalReportsPanelProps) {
   const { quarterlyReports, badWorkplaceReports, isLoading, error } =
-    useSiteOperationalReports(currentSite, enabled);
+    useSiteOperationalReportIndex(currentSite, enabled);
   const quarterTargets = useMemo(
     () =>
       getQuarterTargetsForConstructionPeriod(
@@ -92,19 +92,19 @@ export default function OperationalReportsPanel({
 
             {quarterTargets.length === 0 ? (
               <>
-              <div className={styles.emptyState}>
-                공사기간 정보가 3개월 미만이거나 기간 정보가 없어 대상 분기를 계산하지 못했습니다.
-              </div>
-              {manualQuarterKey ? (
-                <div className={styles.reportActions}>
-                  <Link
-                    href={`/sites/${encodeURIComponent(currentSite.id)}/quarterly/${encodeURIComponent(manualQuarterKey)}`}
-                    className={styles.linkButton}
-                  >
-                    보고서 직접 선택
-                  </Link>
+                <div className={styles.emptyState}>
+                  공사기간 정보가 부족해 대상 분기를 계산하지 못했습니다.
                 </div>
-              ) : null}
+                {manualQuarterKey ? (
+                  <div className={styles.reportActions}>
+                    <Link
+                      href={`/sites/${encodeURIComponent(currentSite.id)}/quarterly/${encodeURIComponent(manualQuarterKey)}`}
+                      className={styles.linkButton}
+                    >
+                      보고서 직접 선택
+                    </Link>
+                  </div>
+                ) : null}
               </>
             ) : (
               <div className={styles.cardGrid}>
@@ -126,12 +126,12 @@ export default function OperationalReportsPanel({
                       </p>
                       {existing ? (
                         <p className={styles.reportCardDescription}>
-                          현재 초안에 반영된 기준 보고서 {existing.generatedFromSessionIds.length}건
+                          현재 초안에 반영된 기준 보고서 {existing.selectedReportCount}건
                         </p>
                       ) : null}
                       <div className={styles.reportActions}>
                         <Link href={href} className={styles.linkButton}>
-                          {existing ? '기준 보고서 확인 후 이어서 작성' : '대상 보고서 고르고 초안 만들기'}
+                          {existing ? '기존 보고서 확인 후 이어서 작성' : '대상 보고서 고르고 초안 만들기'}
                         </Link>
                       </div>
                     </article>
@@ -151,7 +151,7 @@ export default function OperationalReportsPanel({
                 href={`/sites/${encodeURIComponent(currentSite.id)}/bad-workplace/${encodeURIComponent(currentReportMonth)}`}
                 className={styles.linkButton}
               >
-                {currentMonthReport ? '원본 보고서 다시 확인하고 이어서 작성' : '원본 보고서 고르고 초안 만들기'}
+                {currentMonthReport ? '작성 중인 신고서 이어서 작성' : '원본 보고서 고르고 초안 만들기'}
               </Link>
             </div>
 
@@ -166,7 +166,7 @@ export default function OperationalReportsPanel({
                       <span className="app-chip">{getOperationalStatusLabel(item.status)}</span>
                     </div>
                     <p className={styles.reportCardDescription}>
-                      원본 지적사항 {item.sourceFindingIds.length}건 / 신고 항목 {item.violations.length}건
+                      원본 지적사항 {item.sourceFindingCount}건 / 신고 항목 {item.violationCount}건
                       {item.reporterName ? ` / 작성자 ${item.reporterName}` : ''}
                     </p>
                     <div className={styles.reportActions}>
@@ -182,7 +182,7 @@ export default function OperationalReportsPanel({
               </div>
             ) : (
               <div className={styles.emptyState}>
-                아직 등록된 불량사업장 신고서가 없습니다. 원본 기술지도 보고서를 고른 뒤 바로 초안을 만들 수 있습니다.
+                아직 등록된 불량사업장 신고서가 없습니다. 원본 기술지도 보고서를 고르면 바로 초안을 만들 수 있습니다.
               </div>
             )}
           </article>

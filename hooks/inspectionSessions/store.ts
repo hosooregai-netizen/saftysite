@@ -1,8 +1,10 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
-import { clearSafetyAuthToken } from '@/lib/safetyApi';
 import { deletePersistedValue, writePersistedValue } from '@/lib/clientPersistence';
+import { clearOperationalReportIndexCaches } from '@/lib/operationalReportIndexCache';
+import { writeOwnedPersistedValue } from '@/lib/ownedPersistence';
+import { clearSafetyAuthToken } from '@/lib/safetyApi';
 import type { SafetyMasterData, SafetyUser } from '@/types/backend';
 import type {
   InspectionSite,
@@ -26,7 +28,7 @@ export function useInspectionSessionsStore() {
   const [sessions, setSessions] = useState<InspectionSession[]>([]);
   const [sites, setSites] = useState<InspectionSite[]>([]);
   const [masterData, setMasterData] = useState<SafetyMasterData>(EMPTY_MASTER_DATA);
-  const [currentUser, setCurrentUser] = useState<SafetyUser | null>(null);
+  const [currentUser, setCurrentUserState] = useState<SafetyUser | null>(null);
   const [reportIndexBySiteId, setReportIndexBySiteIdState] = useState<
     Record<string, SiteReportIndexState>
   >({});
@@ -47,6 +49,7 @@ export function useInspectionSessionsStore() {
   const masterDataRef = useRef<SafetyMasterData>(EMPTY_MASTER_DATA);
   const reportIndexBySiteIdRef = useRef<Record<string, SiteReportIndexState>>({});
   const siteRelationsStatusBySiteIdRef = useRef<Record<string, ReportIndexStatus>>({});
+  const currentUserRef = useRef<SafetyUser | null>(null);
   const authTokenRef = useRef<string | null>(null);
   const dirtySessionIdsRef = useRef<Set<string>>(new Set());
   const sessionVersionsRef = useRef<Record<string, number>>({});
@@ -121,16 +124,21 @@ export function useInspectionSessionsStore() {
   const persistReportIndexBySiteId = useCallback(
     async (nextReportIndexBySiteId: Record<string, SiteReportIndexState>) => {
       const normalized = normalizeReportIndexBySiteId(nextReportIndexBySiteId);
+      const ownerId = currentUserRef.current?.id?.trim() || '';
 
-      if (Object.keys(normalized).length === 0) {
+      if (!ownerId || Object.keys(normalized).length === 0) {
         await deletePersistedValue(REPORT_INDEX_STORAGE_KEY);
         return;
       }
 
-      await writePersistedValue(REPORT_INDEX_STORAGE_KEY, normalized);
+      await writeOwnedPersistedValue(REPORT_INDEX_STORAGE_KEY, ownerId, normalized);
     },
     [],
   );
+  const setCurrentUser = useCallback((nextUser: SafetyUser | null) => {
+    currentUserRef.current = nextUser;
+    setCurrentUserState(nextUser);
+  }, []);
 
   const clearAuthState = useCallback(() => {
     clearSafetyAuthToken();
@@ -154,13 +162,15 @@ export function useInspectionSessionsStore() {
     setIsSaving(false);
     void deletePersistedValue(USER_STORAGE_KEY);
     void deletePersistedValue(REPORT_INDEX_STORAGE_KEY);
-  }, []);
+    void clearOperationalReportIndexCaches();
+  }, [setCurrentUser]);
 
   return {
     authError,
     authTokenRef,
     clearAuthState,
     currentUser,
+    currentUserRef,
     dataError,
     dirtySessionIdsRef,
     hasAuthToken,

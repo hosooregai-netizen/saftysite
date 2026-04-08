@@ -93,15 +93,6 @@ export function useSiteReportListState(
       return;
     }
 
-    const needsInitialLoad =
-      !reportIndexState ||
-      reportIndexState.status === 'idle' ||
-      reportIndexState.status === 'error';
-
-    if (!needsInitialLoad) {
-      return;
-    }
-
     if (hasAttemptedLoadRef.current && reportIndexState?.status !== 'error') {
       return;
     }

@@ -12,16 +12,13 @@ export async function POST(request: Request): Promise<Response> {
     const token = readRequiredAdminToken(request);
     const formData = await request.formData();
     const file = formData.get('file');
+    const headquarterIdEntry = formData.get('headquarterId');
+    const siteIdEntry = formData.get('siteId');
     const sourceSection =
       formData.get('sourceSection') === 'sites' ? 'sites' : 'headquarters';
     const headquarterId =
-      typeof formData.get('headquarterId') === 'string'
-        ? formData.get('headquarterId')
-        : null;
-    const siteId =
-      typeof formData.get('siteId') === 'string'
-        ? formData.get('siteId')
-        : null;
+      typeof headquarterIdEntry === 'string' ? headquarterIdEntry : null;
+    const siteId = typeof siteIdEntry === 'string' ? siteIdEntry : null;
     if (!(file instanceof File) || !file.name) {
       return NextResponse.json({ error: '업로드할 .xlsx 파일을 선택해 주세요.' }, { status: 400 });
     }

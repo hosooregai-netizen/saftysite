@@ -111,6 +111,17 @@ type ScopeDecision = {
   siteId?: string | null;
   inScope: boolean;
 };
+
+function buildInScopeDecision(
+  partial: Omit<ScopeDecision, 'inScope' | 'exclusionReason' | 'exclusionReasonCode'> = {},
+): ScopeDecision {
+  return {
+    exclusionReason: null,
+    exclusionReasonCode: null,
+    inScope: true,
+    ...partial,
+  };
+}
 type ParsedXmlNode = Record<string, unknown>;
 type WorkbookSheetNode = {
   name?: unknown;
@@ -379,7 +390,7 @@ function resolveScopeDecision(args: {
     siteLookupById,
   } = args;
   if (!scope.headquarterId && !scope.siteId) {
-    return { inScope: true } satisfies ScopeDecision;
+    return buildInScopeDecision();
   }
 
   const targetSite = scope.siteId ? siteLookupById.get(scope.siteId) ?? null : null;
@@ -392,9 +403,10 @@ function resolveScopeDecision(args: {
       const siteCandidate = nextSiteCandidates[0];
       if (siteCandidate.siteId === scope.siteId) {
         return {
-          explicitAction: 'update_site',
-          headquarterId: targetHeadquarter?.id ?? null,
-          inScope: true,
+          ...buildInScopeDecision({
+            explicitAction: 'update_site',
+            headquarterId: targetHeadquarter?.id ?? null,
+          }),
           siteId: scope.siteId,
         } satisfies ScopeDecision;
       }
@@ -415,9 +427,10 @@ function resolveScopeDecision(args: {
 
     if (rowMatchesSite(rowData, targetSite, targetHeadquarter)) {
       return {
-        explicitAction: 'update_site',
-        headquarterId: targetHeadquarter?.id ?? null,
-        inScope: true,
+        ...buildInScopeDecision({
+          explicitAction: 'update_site',
+          headquarterId: targetHeadquarter?.id ?? null,
+        }),
         siteId: scope.siteId,
       } satisfies ScopeDecision;
     }
@@ -443,7 +456,7 @@ function resolveScopeDecision(args: {
   const siteHeadquarterIds = uniqueHeadquarterIds(nextSiteCandidates);
   if (siteHeadquarterIds.length === 1) {
     if (siteHeadquarterIds[0] === scope.headquarterId) {
-      return { inScope: true } satisfies ScopeDecision;
+      return buildInScopeDecision();
     }
     return {
       exclusionReason: '다른 사업장 데이터',
@@ -464,9 +477,10 @@ function resolveScopeDecision(args: {
   if (candidateHeadquarterIds.length === 1) {
     if (candidateHeadquarterIds[0] === scope.headquarterId) {
       return {
-        explicitAction: 'update_headquarter',
-        headquarterId: scope.headquarterId,
-        inScope: true,
+        ...buildInScopeDecision({
+          explicitAction: 'update_headquarter',
+          headquarterId: scope.headquarterId,
+        }),
       } satisfies ScopeDecision;
     }
     return {
@@ -486,9 +500,10 @@ function resolveScopeDecision(args: {
 
   if (rowMatchesHeadquarter(rowData, targetHeadquarter)) {
     return {
-      explicitAction: 'update_headquarter',
-      headquarterId: scope.headquarterId,
-      inScope: true,
+      ...buildInScopeDecision({
+        explicitAction: 'update_headquarter',
+        headquarterId: scope.headquarterId,
+      }),
     } satisfies ScopeDecision;
   }
 
@@ -902,13 +917,13 @@ export async function applyLocalK2bWorkbook(
   }
   if (
     input.scope &&
-    (input.scope.siteId ?? null) !== (job.scope.siteId ?? null || null)
+    (input.scope.siteId ?? null) !== ((job.scope.siteId ?? null) || null)
   ) {
     throw new LocalK2bImportError('현재 업로드 스코프가 변경되어 다시 미리보기가 필요합니다.');
   }
   if (
     input.scope &&
-    (input.scope.headquarterId ?? null) !== (job.scope.headquarterId ?? null || null)
+    (input.scope.headquarterId ?? null) !== ((job.scope.headquarterId ?? null) || null)
   ) {
     throw new LocalK2bImportError('현재 업로드 스코프가 변경되어 다시 미리보기가 필요합니다.');
   }
