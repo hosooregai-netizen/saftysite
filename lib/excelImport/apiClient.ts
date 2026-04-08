@@ -2,7 +2,11 @@
 
 import { readSafetyAuthToken, SafetyApiError } from '@/lib/safetyApi';
 import { buildPublicSafetyApiUpstreamUrl } from '@/lib/safetyApi/upstream';
-import type { K2bApplyResult, K2bImportPreview, K2bImportScope } from '@/types/k2b';
+import type {
+  ExcelApplyResult,
+  ExcelImportPreview,
+  ExcelImportScope,
+} from '@/types/excelImport';
 
 async function parseErrorMessage(response: Response) {
   try {
@@ -28,7 +32,7 @@ function createAuthHeaders(options?: { json?: boolean }) {
   return headers;
 }
 
-function appendScope(body: FormData, scope?: K2bImportScope) {
+function appendScope(body: FormData, scope?: ExcelImportScope) {
   if (!scope) return;
   body.set('sourceSection', scope.sourceSection);
   body.set('source_section', scope.sourceSection);
@@ -42,18 +46,18 @@ function appendScope(body: FormData, scope?: K2bImportScope) {
   }
 }
 
-function buildDirectK2bUrl(path: string) {
-  return buildPublicSafetyApiUpstreamUrl(`/k2b/imports${path}`);
+function buildDirectExcelImportUrl(path: string) {
+  return buildPublicSafetyApiUpstreamUrl(`/excel-imports${path}`);
 }
 
-async function requestK2b<T>(
+async function requestExcelImport<T>(
   path: string,
   init: RequestInit,
   options?: {
     fallbackPath?: string;
   },
 ): Promise<T> {
-  const directUrl = buildDirectK2bUrl(path);
+  const directUrl = buildDirectExcelImportUrl(path);
   const response = await fetch(directUrl ?? options?.fallbackPath ?? path, {
     ...init,
     headers: init.headers,
@@ -64,40 +68,40 @@ async function requestK2b<T>(
   return (await response.json()) as T;
 }
 
-export async function parseK2bWorkbook(
+export async function parseExcelWorkbook(
   file: File,
-  scope?: K2bImportScope,
-): Promise<K2bImportPreview> {
+  scope?: ExcelImportScope,
+): Promise<ExcelImportPreview> {
   const headers = createAuthHeaders();
   const body = new FormData();
   body.set('file', file, file.name);
   appendScope(body, scope);
-  return requestK2b<K2bImportPreview>('/parse', {
+  return requestExcelImport<ExcelImportPreview>('/parse', {
     method: 'POST',
     body,
     headers,
   }, {
-    fallbackPath: '/api/k2b/imports/parse',
+    fallbackPath: '/api/excel-imports/parse',
   });
 }
 
-export async function fetchK2bImportPreview(jobId: string): Promise<K2bImportPreview> {
+export async function fetchExcelImportPreview(jobId: string): Promise<ExcelImportPreview> {
   const headers = createAuthHeaders();
-  return requestK2b<K2bImportPreview>(`/${encodeURIComponent(jobId)}`, {
+  return requestExcelImport<ExcelImportPreview>(`/${encodeURIComponent(jobId)}`, {
     cache: 'no-store',
     headers,
   }, {
-    fallbackPath: `/api/k2b/imports/${encodeURIComponent(jobId)}`,
+    fallbackPath: `/api/excel-imports/${encodeURIComponent(jobId)}`,
   });
 }
 
-export async function applyK2bWorkbook(input: {
+export async function applyExcelWorkbook(input: {
   jobId: string;
   sheetName: string;
-  scope?: K2bImportScope;
-}): Promise<K2bApplyResult> {
+  scope?: ExcelImportScope;
+}): Promise<ExcelApplyResult> {
   const headers = createAuthHeaders({ json: true });
-  return requestK2b<K2bApplyResult>('/apply', {
+  return requestExcelImport<ExcelApplyResult>('/apply', {
     method: 'POST',
     headers,
     body: JSON.stringify({
@@ -116,6 +120,6 @@ export async function applyK2bWorkbook(input: {
       sourceSection: input.scope?.sourceSection,
     }),
   }, {
-    fallbackPath: '/api/k2b/imports/apply',
+    fallbackPath: '/api/excel-imports/apply',
   });
 }

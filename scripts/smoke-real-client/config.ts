@@ -18,38 +18,38 @@ export const baseUrl = process.env.SMOKE_BASE_URL || 'http://127.0.0.1:3100';
 
 export const uploadName = `worker-upload-${Date.now()}.png`;
 export const assistUploadName = `assist-upload-${Date.now()}.png`;
-const k2bSuffix = `${Date.now()}`;
-export const k2bHeadquarterName = `테스트 본사 ${k2bSuffix}`;
-export const k2bSiteName = `테스트 현장 ${k2bSuffix}`;
-export const k2bManagementNumber = `SMOKE-K2B-${k2bSuffix}`;
-const k2bBusinessNumber = `111-22-${k2bSuffix.slice(-5)}`;
+const excelImportSuffix = `${Date.now()}`;
+export const excelImportHeadquarterName = `테스트 본사 ${excelImportSuffix}`;
+export const excelImportSiteName = `테스트 현장 ${excelImportSuffix}`;
+export const excelImportManagementNumber = `SMOKE-EXCEL-${excelImportSuffix}`;
+const excelImportBusinessNumber = `111-22-${excelImportSuffix.slice(-5)}`;
 
 export const uploadBuffer = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAIAAACQKrqGAAAAGElEQVR42mP8z/CfAQgwYKShoYGJAQoA0CIAjF7Q4x8AAAAASUVORK5CYII=',
   'base64',
 );
 
-function buildK2bWorkbookBuffer() {
+function buildExcelImportWorkbookBuffer() {
   const pythonPath =
     process.env.SMOKE_PYTHON_PATH ||
     '/Users/mac_mini/Documents/GitHub/safety-server/.venv/bin/python';
-  const workbookPath = path.join(os.tmpdir(), `k2b-smoke-${k2bSuffix}.xlsx`);
+  const workbookPath = path.join(os.tmpdir(), `excel-import-smoke-${excelImportSuffix}.xlsx`);
   const workbookScript = `
 from openpyxl import Workbook
 
 path = ${JSON.stringify(workbookPath)}
 workbook = Workbook()
 sheet = workbook.active
-sheet.title = "K2B"
+sheet.title = "업로드"
 sheet.append([
     "사업장명", "사업자등록번호", "현장명", "관리번호", "착공일",
     "준공일", "계약일", "총회차", "회차당 금액", "총 계약금액",
 ])
 sheet.append([
-    ${JSON.stringify(k2bHeadquarterName)},
-    ${JSON.stringify(k2bBusinessNumber)},
-    ${JSON.stringify(k2bSiteName)},
-    ${JSON.stringify(k2bManagementNumber)},
+    ${JSON.stringify(excelImportHeadquarterName)},
+    ${JSON.stringify(excelImportBusinessNumber)},
+    ${JSON.stringify(excelImportSiteName)},
+    ${JSON.stringify(excelImportManagementNumber)},
     "2026-04-01", "2026-04-30", "2026-04-01", 3, 250000, 750000,
 ])
 workbook.save(path)
@@ -60,4 +60,4 @@ print(path)
   return fs.readFileSync(workbookPath);
 }
 
-export const k2bWorkbookBuffer = buildK2bWorkbookBuffer();
+export const excelImportWorkbookBuffer = buildExcelImportWorkbookBuffer();

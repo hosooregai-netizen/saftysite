@@ -14,6 +14,14 @@ export interface GenerateBadWorkplaceHwpxRequest {
   site: InspectionSite;
 }
 
+export interface GenerateQuarterlyDocumentByReportKeyRequest {
+  reportKey: string;
+}
+
+export interface GenerateBadWorkplaceDocumentByReportKeyRequest {
+  reportKey: string;
+}
+
 export interface GenerateInspectionHwpxRequest {
   session: InspectionSession;
   siteSessions?: InspectionSession[];
@@ -22,6 +30,14 @@ export interface GenerateInspectionHwpxRequest {
 export interface GenerateInspectionDocumentByReportKeyRequest {
   reportKey: string;
 }
+
+export type GenerateQuarterlyDocumentRequest =
+  | GenerateQuarterlyHwpxRequest
+  | GenerateQuarterlyDocumentByReportKeyRequest;
+
+export type GenerateBadWorkplaceDocumentRequest =
+  | GenerateBadWorkplaceHwpxRequest
+  | GenerateBadWorkplaceDocumentByReportKeyRequest;
 
 export type GenerateInspectionDocumentRequest =
   | GenerateInspectionHwpxRequest

@@ -1,11 +1,11 @@
 'use client';
 
 import AppModal from '@/components/ui/AppModal';
-import type { K2bImportScope, K2bScopeSourceSection } from '@/types/k2b';
-import { K2bSection } from './K2bSection';
-import styles from './K2bSection.module.css';
+import type { ExcelImportScope, ExcelScopeSourceSection } from '@/types/excelImport';
+import { ExcelImportSection } from './ExcelImportSection';
+import styles from './ExcelImportSection.module.css';
 
-interface K2bImportModalProps {
+interface ExcelImportModalProps {
   contextHeadquarterId?: string | null;
   contextSiteId?: string | null;
   onClose: () => void;
@@ -15,24 +15,24 @@ interface K2bImportModalProps {
     includeReports?: boolean;
   }) => Promise<void>;
   open: boolean;
-  originSection: K2bScopeSourceSection;
+  originSection: ExcelScopeSourceSection;
 }
 
-function buildScopeLabel(scope: K2bImportScope) {
+function buildScopeLabel(scope: ExcelImportScope) {
   if (scope.siteId) return '현장 1곳';
   if (scope.headquarterId) return '사업장 1곳';
   return '전체';
 }
 
-export function K2bImportModal({
+export function ExcelImportModal({
   contextHeadquarterId = null,
   contextSiteId = null,
   onClose,
   onReload,
   open,
   originSection,
-}: K2bImportModalProps) {
-  const scope: K2bImportScope = {
+}: ExcelImportModalProps) {
+  const scope: ExcelImportScope = {
     sourceSection: originSection,
     headquarterId: contextHeadquarterId,
     siteId: contextSiteId,
@@ -61,7 +61,7 @@ export function K2bImportModal({
           현재 페이지 스코프는 <strong>{scopeLabel}</strong>입니다. 업로드 후에는 스코프에 맞는
           행만 미리보기와 반영 대상에 포함되고, 제외된 행은 이유와 함께 별도로 확인할 수 있습니다.
         </div>
-        <K2bSection onReload={onReload} scope={scope} />
+        <ExcelImportSection onReload={onReload} scope={scope} />
       </div>
     </AppModal>
   );

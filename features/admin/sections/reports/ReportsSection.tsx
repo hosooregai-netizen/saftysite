@@ -28,22 +28,16 @@ import {
 } from '@/lib/admin/reportMeta';
 import { getAdminSectionHref } from '@/lib/admin';
 import {
-  convertHwpxBlobToPdfWithFallback,
+  fetchBadWorkplaceHwpxDocumentByReportKey,
+  fetchBadWorkplacePdfDocumentByReportKeyWithFallback,
   fetchInspectionHwpxDocumentByReportKey,
   fetchInspectionPdfDocumentByReportKeyWithFallback,
-  fetchQuarterlyHwpxDocument,
-  fetchQuarterlyPdfDocumentWithFallback,
+  fetchQuarterlyHwpxDocumentByReportKey,
+  fetchQuarterlyPdfDocumentByReportKeyWithFallback,
   saveBlobAsFile,
 } from '@/lib/api';
-import { generateInspectionHwpxBlob } from '@/lib/documents/inspection/hwpxClient';
-import { mapSafetyReportToQuarterlySummaryReport } from '@/lib/erpReports/mappers';
 import { fetchSmsProviderStatuses, sendSms } from '@/lib/messages/apiClient';
-import {
-  fetchSafetyReportByKey,
-  readSafetyAuthToken,
-  SafetyApiError,
-} from '@/lib/safetyApi';
-import { mapSafetySiteToInspectionSite } from '@/lib/safetyApiMappers/sites';
+import { readSafetyAuthToken } from '@/lib/safetyApi';
 import type {
   ControllerQualityStatus,
   ControllerReportRow,
@@ -332,12 +326,9 @@ function ReportsFilterMenu({
 
 export function ReportsSection({
   currentUser,
-  ensureSessionLoaded,
-  getSessionById,
   headquarters,
   isLoading,
   onReloadData,
-  sessions,
   sites,
   users,
 }: ReportsSectionProps) {
@@ -701,56 +692,24 @@ export function ReportsSection({
   const handleExportReport = async (row: ControllerReportRow, format: 'hwpx' | 'pdf') => {
     try {
       setError(null);
+      const authToken = readSafetyAuthToken();
+      if (authToken == null || authToken.trim().length === 0) {
+        throw new Error('로그인이 만료되었습니다. 다시 로그인해 주세요.');
+      }
 
       if (row.reportType === 'technical_guidance') {
-        const authToken = readSafetyAuthToken();
-
-        if (authToken) {
-          try {
-            if (format === 'hwpx') {
-              const exported = await fetchInspectionHwpxDocumentByReportKey(
-                row.reportKey,
-                authToken,
-              );
-              saveBlobAsFile(exported.blob, exported.filename);
-              setNotice('지도보고서를 내보냈습니다.');
-            } else {
-              const exported = await fetchInspectionPdfDocumentByReportKeyWithFallback(
-                row.reportKey,
-                authToken,
-              );
-              saveBlobAsFile(exported.blob, exported.filename);
-              setNotice(
-                exported.fallbackToHwpx
-                  ? 'PDF 변환에 실패해 HWPX로 내보냈습니다.'
-                  : '지도보고서를 내보냈습니다.',
-              );
-            }
-            return;
-          } catch (serverError) {
-            console.warn('Inspection report server export failed; falling back to browser generation.', {
-              error: serverError instanceof Error ? serverError.message : String(serverError),
-              reportKey: row.reportKey,
-            });
-          }
-        }
-
-        await ensureSessionLoaded(row.reportKey);
-        const session = getSessionById(row.reportKey);
-        if (!session) {
-          throw new Error('지도보고서를 불러오지 못했습니다.');
-        }
-        const siteSessions = sessions.filter((item) => item.siteKey === session.siteKey);
-        const document = await generateInspectionHwpxBlob(session, siteSessions);
-
         if (format === 'hwpx') {
-          saveBlobAsFile(document.blob, document.filename);
+          const exported = await fetchInspectionHwpxDocumentByReportKey(row.reportKey, authToken);
+          saveBlobAsFile(exported.blob, exported.filename);
           setNotice('지도보고서를 내보냈습니다.');
         } else {
-          const pdf = await convertHwpxBlobToPdfWithFallback(document.blob, document.filename);
-          saveBlobAsFile(pdf.blob, pdf.filename);
+          const exported = await fetchInspectionPdfDocumentByReportKeyWithFallback(
+            row.reportKey,
+            authToken,
+          );
+          saveBlobAsFile(exported.blob, exported.filename);
           setNotice(
-            pdf.fallbackToHwpx
+            exported.fallbackToHwpx
               ? 'PDF 변환에 실패해 HWPX로 내보냈습니다.'
               : '지도보고서를 내보냈습니다.',
           );
@@ -759,27 +718,14 @@ export function ReportsSection({
       }
 
       if (row.reportType === 'quarterly_report') {
-        const token = readSafetyAuthToken();
-        if (!token) {
-          throw new SafetyApiError('로그인이 만료되었습니다. 다시 로그인해 주세요.', 401);
-        }
-
-        const rawReport = await fetchSafetyReportByKey(token, row.reportKey);
-        const quarterlyReport = mapSafetyReportToQuarterlySummaryReport(rawReport);
-        const site = sites.find((item) => item.id === row.siteId);
-        if (!quarterlyReport || !site) {
-          throw new Error('분기 보고서 원본 데이터를 찾지 못했습니다.');
-        }
-
-        const mappedSite = mapSafetySiteToInspectionSite(site);
         if (format === 'hwpx') {
-          const exported = await fetchQuarterlyHwpxDocument(quarterlyReport, mappedSite);
+          const exported = await fetchQuarterlyHwpxDocumentByReportKey(row.reportKey, authToken);
           saveBlobAsFile(exported.blob, exported.filename);
           setNotice('분기 보고서를 내보냈습니다.');
         } else {
-          const exported = await fetchQuarterlyPdfDocumentWithFallback(
-            quarterlyReport,
-            mappedSite,
+          const exported = await fetchQuarterlyPdfDocumentByReportKeyWithFallback(
+            row.reportKey,
+            authToken,
           );
           saveBlobAsFile(exported.blob, exported.filename);
           setNotice(
@@ -791,7 +737,27 @@ export function ReportsSection({
         return;
       }
 
-      throw new Error('불량사업장 보고서 export는 아직 연결되지 않았습니다.');
+      if (row.reportType === 'bad_workplace') {
+        if (format === 'hwpx') {
+          const exported = await fetchBadWorkplaceHwpxDocumentByReportKey(row.reportKey, authToken);
+          saveBlobAsFile(exported.blob, exported.filename);
+          setNotice('불량사업장 신고서를 내보냈습니다.');
+        } else {
+          const exported = await fetchBadWorkplacePdfDocumentByReportKeyWithFallback(
+            row.reportKey,
+            authToken,
+          );
+          saveBlobAsFile(exported.blob, exported.filename);
+          setNotice(
+            exported.fallbackToHwpx
+              ? 'PDF 변환에 실패해 HWPX로 내보냈습니다.'
+              : '불량사업장 신고서를 내보냈습니다.',
+          );
+        }
+        return;
+      }
+
+      throw new Error('지원되지 않는 보고서 유형입니다.');
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : '보고서 내보내기에 실패했습니다.');
     }

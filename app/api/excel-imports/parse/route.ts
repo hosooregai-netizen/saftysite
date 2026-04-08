@@ -3,7 +3,10 @@ import {
   readRequiredAdminToken,
   SafetyServerApiError,
 } from '@/server/admin/safetyApiServer';
-import { LocalK2bImportError, parseLocalK2bWorkbook } from '@/server/k2b/localImport';
+import {
+  LocalExcelImportError,
+  parseLocalExcelWorkbook,
+} from '@/server/excelImport/localImport';
 
 export const runtime = 'nodejs';
 
@@ -24,7 +27,7 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     return NextResponse.json(
-      await parseLocalK2bWorkbook(token, file, request, {
+      await parseLocalExcelWorkbook(token, file, request, {
         headquarterId,
         siteId,
         sourceSection,
@@ -34,11 +37,11 @@ export async function POST(request: Request): Promise<Response> {
     if (error instanceof SafetyServerApiError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
-    if (error instanceof LocalK2bImportError) {
+    if (error instanceof LocalExcelImportError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'K2B 업로드 파싱에 실패했습니다.' },
+      { error: error instanceof Error ? error.message : '엑셀 업로드 파싱에 실패했습니다.' },
       { status: 500 },
     );
   }

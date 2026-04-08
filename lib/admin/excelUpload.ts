@@ -1,6 +1,7 @@
 import type { AdminSectionKey } from '@/lib/admin';
 
-export const K2B_EXCEL_UPLOAD_VALUE = 'k2b';
+export const EXCEL_UPLOAD_QUERY_VALUE = 'excel';
+export const LEGACY_EXCEL_UPLOAD_QUERY_VALUE = 'k2b';
 
 type SearchParamLike = {
   get(name: string): string | null;
@@ -38,7 +39,7 @@ export function buildAdminSearchHref({
   return `/admin?${searchParams.toString()}`;
 }
 
-export function buildAdminK2bUploadHref(
+export function buildAdminExcelUploadHref(
   currentSearchParams: SearchParamLike | null | undefined,
   options: {
     headquarterId?: string | null;
@@ -48,14 +49,14 @@ export function buildAdminK2bUploadHref(
 ): string {
   return buildAdminSearchHref({
     currentSearchParams,
-    excelUpload: K2B_EXCEL_UPLOAD_VALUE,
+    excelUpload: EXCEL_UPLOAD_QUERY_VALUE,
     headquarterId: options.headquarterId,
     section: options.section ?? 'headquarters',
     siteId: options.siteId,
   });
 }
 
-export function buildAdminK2bUploadCloseHref(
+export function buildAdminExcelUploadCloseHref(
   currentSearchParams: SearchParamLike | null | undefined,
   options: {
     headquarterId?: string | null;
@@ -72,6 +73,7 @@ export function buildAdminK2bUploadCloseHref(
   });
 }
 
-export function isK2bUploadOpen(currentSearchParams: SearchParamLike | null | undefined): boolean {
-  return currentSearchParams?.get('excelUpload') === K2B_EXCEL_UPLOAD_VALUE;
+export function isExcelUploadOpen(currentSearchParams: SearchParamLike | null | undefined): boolean {
+  const value = currentSearchParams?.get('excelUpload');
+  return value === EXCEL_UPLOAD_QUERY_VALUE || value === LEGACY_EXCEL_UPLOAD_QUERY_VALUE;
 }

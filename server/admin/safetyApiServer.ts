@@ -12,8 +12,8 @@ import type {
   SafetyBackendMailThread,
   SafetyBackendMailThreadDetail,
   SafetyBackendNotificationFeedResponse,
-  SafetyBackendK2bApplyResult,
-  SafetyBackendK2bImportPreview,
+  SafetyBackendExcelApplyResult,
+  SafetyBackendExcelImportPreview,
   SafetyBackendFieldSignatureRecord,
   SafetyBackendPhotoAsset,
   SafetyBackendPhotoAssetListResponse,
@@ -149,7 +149,7 @@ function getServerRequestTimeoutMs(path: string, options: RequestInit) {
     path.includes('/reports/upsert') ||
     path.includes('/content-items/assets/upload') ||
     path.includes('/photo-assets/upload') ||
-    path.includes('/k2b/imports/')
+    path.includes('/excel-imports/')
   ) {
     return LONG_RUNNING_SERVER_TIMEOUT_MS;
   }
@@ -591,13 +591,13 @@ export function fetchSafetyPhotoAssetsServer(
   );
 }
 
-export function parseK2bImportServer(
+export function parseExcelImportServer(
   token: string,
   formData: FormData,
   request: Request | null = null,
-): Promise<SafetyBackendK2bImportPreview> {
-  return requestSafetyAdminServer<SafetyBackendK2bImportPreview>(
-    '/k2b/imports/parse',
+): Promise<SafetyBackendExcelImportPreview> {
+  return requestSafetyAdminServer<SafetyBackendExcelImportPreview>(
+    '/excel-imports/parse',
     {
       method: 'POST',
       body: formData,
@@ -607,26 +607,26 @@ export function parseK2bImportServer(
   );
 }
 
-export function fetchK2bImportPreviewServer(
+export function fetchExcelImportPreviewServer(
   token: string,
   jobId: string,
   request: Request | null = null,
-): Promise<SafetyBackendK2bImportPreview> {
-  return requestSafetyAdminServer<SafetyBackendK2bImportPreview>(
-    `/k2b/imports/${encodeURIComponent(jobId)}`,
+): Promise<SafetyBackendExcelImportPreview> {
+  return requestSafetyAdminServer<SafetyBackendExcelImportPreview>(
+    `/excel-imports/${encodeURIComponent(jobId)}`,
     {},
     token,
     request,
   );
 }
 
-export function applyK2bImportServer(
+export function applyExcelImportServer(
   token: string,
   payload: Record<string, unknown>,
   request: Request | null = null,
-): Promise<SafetyBackendK2bApplyResult> {
-  return requestSafetyAdminServer<SafetyBackendK2bApplyResult>(
-    '/k2b/imports/apply',
+): Promise<SafetyBackendExcelApplyResult> {
+  return requestSafetyAdminServer<SafetyBackendExcelApplyResult>(
+    '/excel-imports/apply',
     {
       method: 'POST',
       body: JSON.stringify(payload),

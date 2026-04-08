@@ -332,3 +332,93 @@ export async function fetchBadWorkplaceHwpxDocument(
     '불량사업장 신고서 HWPX 다운로드 실패',
   );
 }
+
+export async function fetchQuarterlyHwpxDocumentByReportKey(
+  reportKey: string,
+  authToken?: string | null,
+): Promise<{ blob: Blob; filename: string }> {
+  return fetchDocumentFile(
+    '/documents/quarterly/hwpx',
+    { reportKey },
+    '분기 보고서 HWPX 다운로드 실패',
+    buildInspectionDocumentHeaders(authToken),
+  );
+}
+
+export async function fetchQuarterlyPdfDocumentByReportKey(
+  reportKey: string,
+  authToken?: string | null,
+): Promise<{ blob: Blob; filename: string }> {
+  return fetchDocumentFile(
+    '/documents/quarterly/pdf',
+    { reportKey },
+    '분기 보고서 PDF 다운로드 실패',
+    buildInspectionDocumentHeaders(authToken),
+  );
+}
+
+export async function fetchQuarterlyPdfDocumentByReportKeyWithFallback(
+  reportKey: string,
+  authToken?: string | null,
+): Promise<PdfDocumentResult> {
+  try {
+    const pdf = await fetchQuarterlyPdfDocumentByReportKey(reportKey, authToken);
+    return { ...pdf, fallbackToHwpx: false };
+  } catch (error) {
+    console.warn('Quarterly PDF server generation failed; falling back to HWPX download.', {
+      error: error instanceof Error ? error.message : String(error),
+      reportKey,
+    });
+    const hwpx = await fetchQuarterlyHwpxDocumentByReportKey(reportKey, authToken);
+    return {
+      ...hwpx,
+      fallbackReason: error instanceof Error ? error.message : 'PDF 생성에 실패했습니다.',
+      fallbackToHwpx: true,
+    };
+  }
+}
+
+export async function fetchBadWorkplaceHwpxDocumentByReportKey(
+  reportKey: string,
+  authToken?: string | null,
+): Promise<{ blob: Blob; filename: string }> {
+  return fetchDocumentFile(
+    '/documents/bad-workplace/hwpx',
+    { reportKey },
+    '불량사업장 신고서 HWPX 다운로드 실패',
+    buildInspectionDocumentHeaders(authToken),
+  );
+}
+
+export async function fetchBadWorkplacePdfDocumentByReportKey(
+  reportKey: string,
+  authToken?: string | null,
+): Promise<{ blob: Blob; filename: string }> {
+  return fetchDocumentFile(
+    '/documents/bad-workplace/pdf',
+    { reportKey },
+    '불량사업장 신고서 PDF 다운로드 실패',
+    buildInspectionDocumentHeaders(authToken),
+  );
+}
+
+export async function fetchBadWorkplacePdfDocumentByReportKeyWithFallback(
+  reportKey: string,
+  authToken?: string | null,
+): Promise<PdfDocumentResult> {
+  try {
+    const pdf = await fetchBadWorkplacePdfDocumentByReportKey(reportKey, authToken);
+    return { ...pdf, fallbackToHwpx: false };
+  } catch (error) {
+    console.warn('Bad workplace PDF server generation failed; falling back to HWPX download.', {
+      error: error instanceof Error ? error.message : String(error),
+      reportKey,
+    });
+    const hwpx = await fetchBadWorkplaceHwpxDocumentByReportKey(reportKey, authToken);
+    return {
+      ...hwpx,
+      fallbackReason: error instanceof Error ? error.message : 'PDF 생성에 실패했습니다.',
+      fallbackToHwpx: true,
+    };
+  }
+}

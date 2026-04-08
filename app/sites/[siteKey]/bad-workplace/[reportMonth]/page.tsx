@@ -19,7 +19,8 @@ import { createTimestamp } from '@/constants/inspectionSession/shared';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { useSiteOperationalReportMutations } from '@/hooks/useSiteOperationalReportMutations';
 import { getAdminSectionHref, isAdminUserRole } from '@/lib/admin';
-import { fetchBadWorkplaceHwpxDocument, saveBlobAsFile } from '@/lib/api';
+import { fetchBadWorkplaceHwpxDocumentByReportKey, saveBlobAsFile } from '@/lib/api';
+import { readSafetyAuthToken } from '@/lib/safetyApi';
 import {
   BAD_WORKPLACE_NOTICE_SUBTITLE,
   BAD_WORKPLACE_NOTICE_TITLE,
@@ -350,7 +351,6 @@ function getReportStatusLabel(status: BadWorkplaceReport['status']) {
 }
 
 function BadWorkplaceReportEditor({
-  site,
   siteSessions,
   initialDraft,
   isSaving,
@@ -458,12 +458,29 @@ function BadWorkplaceReportEditor({
     setNotice('불량사업장 신고서를 저장했습니다.');
   };
 
+  const persistDraftForDocumentExport = async () => {
+    const authToken = readSafetyAuthToken();
+    if (authToken == null || authToken.trim().length === 0) {
+      throw new Error('로그인이 만료되었습니다. 다시 로그인해 주세요.');
+    }
+
+    const nextDraft = { ...draft, updatedAt: createTimestamp() };
+    setDraft(nextDraft);
+    await onSave(nextDraft);
+
+    return {
+      authToken,
+      reportKey: nextDraft.id,
+    };
+  };
+
   const handleDownloadHwpx = async () => {
     try {
       setDocumentError(null);
       setNotice(null);
       setIsGeneratingHwpx(true);
-      const { blob, filename } = await fetchBadWorkplaceHwpxDocument(draft, site);
+      const { authToken, reportKey } = await persistDraftForDocumentExport();
+      const { blob, filename } = await fetchBadWorkplaceHwpxDocumentByReportKey(reportKey, authToken);
       saveBlobAsFile(blob, filename);
       setNotice('불량사업장 신고서 HWPX를 다운로드했습니다.');
     } catch (nextError) {

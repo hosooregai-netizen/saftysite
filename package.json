@@ -11,6 +11,7 @@
     "smoke:erp": "tsx scripts/smokeClient.ts",
     "verify:erp-live": "tsx scripts/verifyErpLiveContracts.ts",
     "probe:api-live": "tsx scripts/probeSafetyApiLive.ts",
+    "generate:service-intro": "tsx scripts/generateServiceIntro.ts",
     "generate:hwpx": "node --experimental-strip-types scripts/generate_hwpx_report.ts",
     "bootstrap:hwpx-template": "node --experimental-strip-types scripts/bootstrap_inspection_hwpx_template.ts",
     "seed:measurement-templates": "node --experimental-strip-types scripts/seed_measurement_templates.ts"
@@ -21,6 +22,7 @@
     "image-size": "^2.0.2",
     "jszip": "^3.10.1",
     "next": "16.1.6",
+    "pptxgenjs": "^4.0.1",
     "qrcode": "^1.5.4",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"

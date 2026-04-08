@@ -125,7 +125,7 @@ function resolvePort() {
     if (!owner) return candidatePort;
     if (isSameProject(owner.cwd)) {
       console.log(`[dev] safetysite is already running on port ${candidatePort} (pid ${owner.pid}).`);
-      console.log(`[dev] Use http://${DEFAULT_HOST}:${candidatePort} and confirm K2B API there.`);
+      console.log(`[dev] Use http://${DEFAULT_HOST}:${candidatePort} and confirm the Excel import API there.`);
       process.exit(0);
     }
     console.log(
@@ -171,7 +171,7 @@ const env = buildChildEnv(port);
 console.log(`[dev] Starting safetysite on http://${DEFAULT_HOST}:${port}`);
 console.log(`[dev] Safety API upstream: ${env.SAFETY_API_UPSTREAM_BASE_URL}`);
 console.log('[dev] To use a local safety-server instead, set SAFETY_API_UPSTREAM_BASE_URL=http://127.0.0.1:8011/api/v1');
-console.log(`[dev] K2B parse check: http://${DEFAULT_HOST}:${port}/api/k2b/imports/parse`);
+console.log(`[dev] Excel import parse check: http://${DEFAULT_HOST}:${port}/api/excel-imports/parse`);
 
 if (!fs.existsSync(nextCliPath)) {
   throw new Error(`[dev] Next CLI not found at ${nextCliPath}. Run npm install first.`);

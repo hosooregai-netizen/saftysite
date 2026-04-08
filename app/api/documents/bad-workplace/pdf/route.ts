@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 
 import { SafetyServerApiError } from '@/server/admin/safetyApiServer';
+import { buildBadWorkplaceHwpxDocument } from '@/server/documents/badWorkplace/hwpx';
 import { convertHwpxBufferToPdf } from '@/server/documents/inspection/hwpxToPdf';
-import { buildQuarterlyHwpxDocument } from '@/server/documents/quarterly/hwpx';
-import { resolveQuarterlyDocumentRequest } from '@/server/documents/quarterly/requestResolver';
-import type { GenerateQuarterlyDocumentRequest } from '@/types/documents';
+import { resolveBadWorkplaceDocumentRequest } from '@/server/documents/badWorkplace/requestResolver';
+import type { GenerateBadWorkplaceDocumentRequest } from '@/types/documents';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
@@ -34,11 +34,9 @@ function getPdfRouteStatus(error: unknown, message: string): number {
 
 export async function POST(request: Request): Promise<Response> {
   try {
-    const body = (await request.json()) as GenerateQuarterlyDocumentRequest;
-    const payload = await resolveQuarterlyDocumentRequest(request, body);
-    const document = await buildQuarterlyHwpxDocument(payload.report, payload.site, {
-      assetBaseUrl: new URL(request.url).origin,
-    });
+    const body = (await request.json()) as GenerateBadWorkplaceDocumentRequest;
+    const payload = await resolveBadWorkplaceDocumentRequest(request, body);
+    const document = await buildBadWorkplaceHwpxDocument(payload.report, payload.site);
     const { buffer, filename } = await convertHwpxBufferToPdf(
       document.buffer,
       document.filename,

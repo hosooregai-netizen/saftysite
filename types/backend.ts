@@ -562,7 +562,7 @@ export interface SafetyBackendScheduleListResponse {
   total: number;
 }
 
-export interface SafetyBackendK2bMatchCandidate {
+export interface SafetyBackendExcelImportMatchCandidate {
   id: string;
   kind: 'headquarter' | 'site';
   label: string;
@@ -571,7 +571,7 @@ export interface SafetyBackendK2bMatchCandidate {
   site_id?: string | null;
 }
 
-export interface SafetyBackendK2bPreviewRow {
+export interface SafetyBackendExcelImportPreviewRow {
   row_index: number;
   values: Record<string, string>;
   summary: string;
@@ -579,10 +579,10 @@ export interface SafetyBackendK2bPreviewRow {
   exclusion_reason_code?: string | null;
   exclusion_reason?: string | null;
   in_scope?: boolean;
-  duplicate_candidates: SafetyBackendK2bMatchCandidate[];
+  duplicate_candidates: SafetyBackendExcelImportMatchCandidate[];
 }
 
-export interface SafetyBackendK2bSheetPreview {
+export interface SafetyBackendExcelImportSheetPreview {
   name: string;
   headers: string[];
   row_count: number;
@@ -590,8 +590,8 @@ export interface SafetyBackendK2bSheetPreview {
   excluded_row_count: number;
   sample_rows: Record<string, string>[];
   suggested_mapping: Record<string, string>;
-  included_rows: SafetyBackendK2bPreviewRow[];
-  excluded_rows: SafetyBackendK2bPreviewRow[];
+  included_rows: SafetyBackendExcelImportPreviewRow[];
+  excluded_rows: SafetyBackendExcelImportPreviewRow[];
   summary: {
     create_count: number;
     update_headquarter_count: number;
@@ -600,7 +600,7 @@ export interface SafetyBackendK2bSheetPreview {
   };
 }
 
-export interface SafetyBackendK2bImportPreview {
+export interface SafetyBackendExcelImportPreview {
   job_id: string;
   file_name: string;
   created_at: string;
@@ -611,10 +611,10 @@ export interface SafetyBackendK2bImportPreview {
     site_id?: string | null;
     label: string;
   };
-  sheets: SafetyBackendK2bSheetPreview[];
+  sheets: SafetyBackendExcelImportSheetPreview[];
 }
 
-export interface SafetyBackendK2bApplyRowResult {
+export interface SafetyBackendExcelImportApplyRowResult {
   row_index: number;
   action: 'create' | 'update_headquarter' | 'update_site';
   headquarter_id: string;
@@ -625,7 +625,7 @@ export interface SafetyBackendK2bApplyRowResult {
   message: string;
 }
 
-export interface SafetyBackendK2bApplyResult {
+export interface SafetyBackendExcelApplyResult {
   summary: {
     created_headquarter_count: number;
     updated_headquarter_count: number;
@@ -633,7 +633,7 @@ export interface SafetyBackendK2bApplyResult {
     updated_site_count: number;
     completion_required_count: number;
   };
-  rows: SafetyBackendK2bApplyRowResult[];
+  rows: SafetyBackendExcelImportApplyRowResult[];
 }
 
 export interface SafetyBackendFieldSignatureRecord {

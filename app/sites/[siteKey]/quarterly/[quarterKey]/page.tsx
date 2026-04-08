@@ -21,8 +21,8 @@ import { createTimestamp, generateId } from '@/constants/inspectionSession/share
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { useSiteOperationalReportMutations } from '@/hooks/useSiteOperationalReportMutations';
 import {
-  fetchQuarterlyHwpxDocument,
-  fetchQuarterlyPdfDocumentWithFallback,
+  fetchQuarterlyHwpxDocumentByReportKey,
+  fetchQuarterlyPdfDocumentByReportKeyWithFallback,
   saveBlobAsFile,
 } from '@/lib/api';
 import { isAdminUserRole } from '@/lib/admin';
@@ -959,11 +959,28 @@ function QuarterlyReportEditor({
     };
   }, [draft, draftFingerprint, isSaving, onSave, sourceReportsLoading]);
 
+  const persistDraftForDocumentExport = async () => {
+    const authToken = readSafetyAuthToken();
+    if (authToken == null || authToken.trim().length === 0) {
+      throw new SafetyApiError('로그인이 만료되었습니다. 다시 로그인해 주세요.', 401);
+    }
+
+    const nextDraft = { ...draftRef.current, updatedAt: createTimestamp() };
+    setDraft(nextDraft);
+    await onSave(nextDraft);
+
+    return {
+      authToken,
+      reportKey: nextDraft.id,
+    };
+  };
+
   const handleDownloadWord = async () => {
     try {
       setDocumentError(null);
       setIsGeneratingHwpx(true);
-      const { blob, filename } = await fetchQuarterlyHwpxDocument(draft, currentSite);
+      const { authToken, reportKey } = await persistDraftForDocumentExport();
+      const { blob, filename } = await fetchQuarterlyHwpxDocumentByReportKey(reportKey, authToken);
       saveBlobAsFile(blob, filename);
     } catch (nextError) {
       setDocumentError(
@@ -979,10 +996,9 @@ function QuarterlyReportEditor({
       setDocumentError(null);
       setNotice(null);
       setIsGeneratingPdf(true);
-      const { blob, fallbackToHwpx, filename } = await fetchQuarterlyPdfDocumentWithFallback(
-        draft,
-        currentSite,
-      );
+      const { authToken, reportKey } = await persistDraftForDocumentExport();
+      const { blob, fallbackToHwpx, filename } =
+        await fetchQuarterlyPdfDocumentByReportKeyWithFallback(reportKey, authToken);
       saveBlobAsFile(blob, filename);
       if (fallbackToHwpx) {
         setNotice('PDF 변환에 실패해 HWPX로 다운로드했습니다.');

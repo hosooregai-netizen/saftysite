@@ -16,8 +16,8 @@ import type {
   SafetyBackendAdminReportsResponse,
   SafetyBackendFieldSignatureRecord,
   SafetyBackendInspectionSchedule,
-  SafetyBackendK2bApplyResult,
-  SafetyBackendK2bImportPreview,
+  SafetyBackendExcelApplyResult,
+  SafetyBackendExcelImportPreview,
   SafetyBackendMailAccount,
   SafetyBackendMailProviderStatus,
   SafetyBackendMailMessage,
@@ -38,11 +38,12 @@ import type { NotificationFeedResponse, NotificationItem } from '@/types/notific
 import type { PhotoAlbumItem, SafetyPhotoAsset } from '@/types/photos';
 import type { FieldSignatureRecord } from '@/types/assist';
 import type {
-  K2bApplyResult,
-  K2bImportPreview,
-  K2bMatchCandidate,
-  K2bRowExclusionReasonCode,
-} from '@/types/k2b';
+  ExcelApplyResult,
+  ExcelImportPreview,
+  ExcelImportPreviewRow,
+  ExcelImportScopeSummary,
+  ExcelMatchCandidate,
+} from '@/types/excelImport';
 import { normalizeSafetyAssetUrl } from '@/lib/safetyApi/assetUrls';
 import { buildSafetyAdminUpstreamUrl } from './safetyApiServer';
 
@@ -446,17 +447,17 @@ export function mapBackendPhotoAsset(asset: SafetyBackendPhotoAsset): SafetyPhot
   };
 }
 
-function mapBackendK2bCandidate(candidate: {
+function mapBackendExcelImportCandidate(candidate: {
   id?: string | null;
   kind?: string | null;
   label?: string | null;
   reason?: string | null;
   headquarter_id?: string | null;
   site_id?: string | null;
-}): K2bMatchCandidate {
+}): ExcelMatchCandidate {
   return {
     id: normalizeText(candidate.id),
-    kind: (normalizeText(candidate.kind) || 'site') as K2bMatchCandidate['kind'],
+    kind: (normalizeText(candidate.kind) || 'site') as ExcelMatchCandidate['kind'],
     label: normalizeText(candidate.label),
     reason: normalizeText(candidate.reason),
     headquarterId: normalizeText(candidate.headquarter_id) || null,
@@ -464,27 +465,24 @@ function mapBackendK2bCandidate(candidate: {
   };
 }
 
-function normalizeK2bExclusionReasonCode(
-  value: unknown,
-): K2bRowExclusionReasonCode | null {
-  const normalized = normalizeText(value);
-  switch (normalized) {
-    case 'different_headquarter':
-    case 'different_site':
-    case 'scope_unresolved':
-    case 'scope_ambiguous':
-      return normalized;
-    default:
-      return null;
-  }
-}
-
-export function mapBackendK2bImportPreview(
-  preview: SafetyBackendK2bImportPreview,
-): K2bImportPreview {
-  const mapPreviewRow = (
-    row: SafetyBackendK2bImportPreview['sheets'][number]['included_rows'][number],
-  ) => ({
+function mapBackendExcelImportPreviewRow(row: {
+  row_index?: number | null;
+  values?: Record<string, unknown> | null;
+  summary?: string | null;
+  suggested_action?: string | null;
+  exclusion_reason_code?: string | null;
+  exclusion_reason?: string | null;
+  in_scope?: boolean | null;
+  duplicate_candidates?: Array<{
+    id?: string | null;
+    kind?: string | null;
+    label?: string | null;
+    reason?: string | null;
+    headquarter_id?: string | null;
+    site_id?: string | null;
+  }> | null;
+}): ExcelImportPreviewRow {
+  return {
     rowIndex: typeof row.row_index === 'number' ? row.row_index : 0,
     values:
       row.values && typeof row.values === 'object'
@@ -494,14 +492,32 @@ export function mapBackendK2bImportPreview(
         : {},
     summary: normalizeText(row.summary),
     suggestedAction: normalizeText(row.suggested_action),
-    exclusionReasonCode: normalizeK2bExclusionReasonCode(row.exclusion_reason_code),
+    exclusionReasonCode: normalizeText(row.exclusion_reason_code) || null,
     exclusionReason: normalizeText(row.exclusion_reason) || null,
     inScope: typeof row.in_scope === 'boolean' ? row.in_scope : undefined,
     duplicateCandidates: Array.isArray(row.duplicate_candidates)
-      ? row.duplicate_candidates.map((candidate) => mapBackendK2bCandidate(candidate))
+      ? row.duplicate_candidates.map((candidate) => mapBackendExcelImportCandidate(candidate))
       : [],
-  });
+  };
+}
 
+function mapBackendExcelImportScopeSummary(scope: {
+  source_section?: string | null;
+  headquarter_id?: string | null;
+  site_id?: string | null;
+  label?: string | null;
+} | null | undefined): ExcelImportScopeSummary {
+  return {
+    sourceSection: normalizeText(scope?.source_section) === 'sites' ? 'sites' : 'headquarters',
+    headquarterId: normalizeText(scope?.headquarter_id) || null,
+    siteId: normalizeText(scope?.site_id) || null,
+    label: normalizeText(scope?.label) || '전체',
+  };
+}
+
+export function mapBackendExcelImportPreview(
+  preview: SafetyBackendExcelImportPreview,
+): ExcelImportPreview {
   return {
     jobId: normalizeText(preview.job_id),
     fileName: normalizeText(preview.file_name),
@@ -509,12 +525,7 @@ export function mapBackendK2bImportPreview(
     sheetNames: Array.isArray(preview.sheet_names)
       ? preview.sheet_names.map((item) => normalizeText(item)).filter(Boolean)
       : [],
-    scope: {
-      sourceSection: preview.scope?.source_section === 'sites' ? 'sites' : 'headquarters',
-      headquarterId: normalizeText(preview.scope?.headquarter_id) || null,
-      siteId: normalizeText(preview.scope?.site_id) || null,
-      label: normalizeText(preview.scope?.label),
-    },
+    scope: mapBackendExcelImportScopeSummary(preview.scope),
     sheets: Array.isArray(preview.sheets)
       ? preview.sheets.map((sheet) => ({
           name: normalizeText(sheet.name),
@@ -543,10 +554,10 @@ export function mapBackendK2bImportPreview(
                 )
               : {},
           includedRows: Array.isArray(sheet.included_rows)
-            ? sheet.included_rows.map((row) => mapPreviewRow(row))
+            ? sheet.included_rows.map((row) => mapBackendExcelImportPreviewRow(row))
             : [],
           excludedRows: Array.isArray(sheet.excluded_rows)
-            ? sheet.excluded_rows.map((row) => mapPreviewRow(row))
+            ? sheet.excluded_rows.map((row) => mapBackendExcelImportPreviewRow(row))
             : [],
           summary: {
             ambiguousCreateCount: sheet.summary?.ambiguous_create_count ?? 0,
@@ -559,9 +570,9 @@ export function mapBackendK2bImportPreview(
   };
 }
 
-export function mapBackendK2bApplyResult(
-  response: SafetyBackendK2bApplyResult,
-): K2bApplyResult {
+export function mapBackendExcelApplyResult(
+  response: SafetyBackendExcelApplyResult,
+): ExcelApplyResult {
   return {
     summary: {
       createdHeadquarterCount: response.summary?.created_headquarter_count ?? 0,
@@ -573,7 +584,7 @@ export function mapBackendK2bApplyResult(
     rows: Array.isArray(response.rows)
       ? response.rows.map((row) => ({
           rowIndex: typeof row.row_index === 'number' ? row.row_index : 0,
-          action: (normalizeText(row.action) || 'create') as K2bApplyResult['rows'][number]['action'],
+          action: (normalizeText(row.action) || 'create') as ExcelApplyResult['rows'][number]['action'],
           headquarterId: normalizeText(row.headquarter_id),
           headquarterName: normalizeText(row.headquarter_name),
           siteId: normalizeText(row.site_id),

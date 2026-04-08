@@ -1,22 +1,22 @@
-export type K2bRowActionType = 'create' | 'update_headquarter' | 'update_site';
-export type K2bScopeSourceSection = 'headquarters' | 'sites';
-export type K2bRowExclusionReasonCode =
+export type ExcelRowActionType = 'create' | 'update_headquarter' | 'update_site';
+export type ExcelScopeSourceSection = 'headquarters' | 'sites';
+export type ExcelRowExclusionReasonCode =
   | 'different_headquarter'
   | 'different_site'
   | 'scope_unresolved'
   | 'scope_ambiguous';
 
-export interface K2bImportScope {
-  sourceSection: K2bScopeSourceSection;
+export interface ExcelImportScope {
+  sourceSection: ExcelScopeSourceSection;
   headquarterId?: string | null;
   siteId?: string | null;
 }
 
-export interface K2bImportScopeSummary extends K2bImportScope {
+export interface ExcelImportScopeSummary extends ExcelImportScope {
   label: string;
 }
 
-export interface K2bMatchCandidate {
+export interface ExcelMatchCandidate {
   id: string;
   kind: 'headquarter' | 'site';
   label: string;
@@ -25,25 +25,25 @@ export interface K2bMatchCandidate {
   siteId: string | null;
 }
 
-export interface K2bImportPreviewRow {
+export interface ExcelImportPreviewRow {
   rowIndex: number;
   values: Record<string, string>;
   summary: string;
   suggestedAction: string;
-  duplicateCandidates: K2bMatchCandidate[];
-  exclusionReasonCode?: K2bRowExclusionReasonCode | null;
+  duplicateCandidates: ExcelMatchCandidate[];
+  exclusionReasonCode?: ExcelRowExclusionReasonCode | null;
   exclusionReason?: string | null;
   inScope?: boolean;
 }
 
-export interface K2bImportSheetSummary {
+export interface ExcelImportSheetSummary {
   createCount: number;
   updateHeadquarterCount: number;
   updateSiteCount: number;
   ambiguousCreateCount: number;
 }
 
-export interface K2bImportSheetPreview {
+export interface ExcelImportSheetPreview {
   name: string;
   headers: string[];
   rowCount: number;
@@ -51,34 +51,34 @@ export interface K2bImportSheetPreview {
   excludedRowCount: number;
   sampleRows: Record<string, string>[];
   suggestedMapping: Record<string, string>;
-  includedRows: K2bImportPreviewRow[];
-  excludedRows: K2bImportPreviewRow[];
-  summary: K2bImportSheetSummary;
+  includedRows: ExcelImportPreviewRow[];
+  excludedRows: ExcelImportPreviewRow[];
+  summary: ExcelImportSheetSummary;
 }
 
-export interface K2bImportPreview {
+export interface ExcelImportPreview {
   jobId: string;
   fileName: string;
   createdAt: string;
   sheetNames: string[];
-  scope: K2bImportScopeSummary;
-  sheets: K2bImportSheetPreview[];
+  scope: ExcelImportScopeSummary;
+  sheets: ExcelImportSheetPreview[];
 }
 
-export interface K2bColumnMapping {
+export interface ExcelColumnMapping {
   [field: string]: string;
 }
 
-export interface K2bRowAction {
+export interface ExcelRowAction {
   rowIndex: number;
-  action: K2bRowActionType;
+  action: ExcelRowActionType;
   headquarterId?: string | null;
   siteId?: string | null;
 }
 
-export interface K2bApplyResultRow {
+export interface ExcelApplyResultRow {
   rowIndex: number;
-  action: K2bRowActionType;
+  action: ExcelRowActionType;
   headquarterId: string;
   headquarterName: string;
   siteId: string;
@@ -87,7 +87,7 @@ export interface K2bApplyResultRow {
   message: string;
 }
 
-export interface K2bApplyResult {
+export interface ExcelApplyResult {
   summary: {
     createdHeadquarterCount: number;
     updatedHeadquarterCount: number;
@@ -95,5 +95,5 @@ export interface K2bApplyResult {
     updatedSiteCount: number;
     completionRequiredCount: number;
   };
-  rows: K2bApplyResultRow[];
+  rows: ExcelApplyResultRow[];
 }

@@ -2,23 +2,23 @@
 
 import { useMemo, useRef, useState } from 'react';
 import sharedStyles from '@/features/admin/sections/AdminSectionShared.module.css';
-import { applyK2bWorkbook, parseK2bWorkbook } from '@/lib/k2b/apiClient';
+import { applyExcelWorkbook, parseExcelWorkbook } from '@/lib/excelImport/apiClient';
 import type {
-  K2bApplyResult,
-  K2bImportPreview,
-  K2bImportPreviewRow,
-  K2bImportScope,
-  K2bImportScopeSummary,
-} from '@/types/k2b';
-import styles from './K2bSection.module.css';
+  ExcelApplyResult,
+  ExcelImportPreview,
+  ExcelImportPreviewRow,
+  ExcelImportScope,
+  ExcelImportScopeSummary,
+} from '@/types/excelImport';
+import styles from './ExcelImportSection.module.css';
 
-interface K2bSectionProps {
+interface ExcelImportSectionProps {
   onReload: (options?: {
     includeContent?: boolean;
     includeReports?: boolean;
     force?: boolean;
   }) => Promise<void>;
-  scope: K2bImportScope;
+  scope: ExcelImportScope;
 }
 
 const FIELD_LABELS: Record<string, string> = {
@@ -45,14 +45,14 @@ const FIELD_LABELS: Record<string, string> = {
   total_rounds: '총 회차',
 };
 
-function buildScopeSummary(scope: K2bImportScope): K2bImportScopeSummary {
+function buildScopeSummary(scope: ExcelImportScope): ExcelImportScopeSummary {
   return {
     ...scope,
     label: scope.siteId ? '현장 1곳' : scope.headquarterId ? '사업장 1곳' : '전체',
   };
 }
 
-function formatApplyNotice(preview: K2bImportPreview, result: K2bApplyResult) {
+function formatApplyNotice(preview: ExcelImportPreview, result: ExcelApplyResult) {
   return [
     `${preview.fileName} 반영이 완료되었습니다.`,
     `포함 행 ${result.rows.length}건`,
@@ -64,7 +64,7 @@ function formatApplyNotice(preview: K2bImportPreview, result: K2bApplyResult) {
   ].join(' · ');
 }
 
-function summarizeValues(row: K2bImportPreviewRow) {
+function summarizeValues(row: ExcelImportPreviewRow) {
   return Object.entries(row.values)
     .filter(([, value]) => value.trim())
     .slice(0, 4)
@@ -72,9 +72,9 @@ function summarizeValues(row: K2bImportPreviewRow) {
     .join(' / ');
 }
 
-export function K2bSection({ onReload, scope }: K2bSectionProps) {
+export function ExcelImportSection({ onReload, scope }: ExcelImportSectionProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const [preview, setPreview] = useState<K2bImportPreview | null>(null);
+  const [preview, setPreview] = useState<ExcelImportPreview | null>(null);
   const [selectedSheetName, setSelectedSheetName] = useState('');
   const [loading, setLoading] = useState(false);
   const [applying, setApplying] = useState(false);
@@ -89,11 +89,11 @@ export function K2bSection({ onReload, scope }: K2bSectionProps) {
     [preview, selectedSheetName],
   );
 
-  const includedRows = useMemo<K2bImportPreviewRow[]>(
+  const includedRows = useMemo<ExcelImportPreviewRow[]>(
     () => selectedSheet?.includedRows ?? [],
     [selectedSheet],
   );
-  const excludedRows = useMemo<K2bImportPreviewRow[]>(
+  const excludedRows = useMemo<ExcelImportPreviewRow[]>(
     () => selectedSheet?.excludedRows ?? [],
     [selectedSheet],
   );
@@ -120,7 +120,7 @@ export function K2bSection({ onReload, scope }: K2bSectionProps) {
       setError(null);
       setPreview(null);
       setSelectedSheetName('');
-      const nextPreview = await parseK2bWorkbook(file, scope);
+      const nextPreview = await parseExcelWorkbook(file, scope);
       setPreview(nextPreview);
       setSelectedSheetName(nextPreview.sheets[0]?.name || '');
       setNotice('엑셀 파일을 읽었습니다. 포함 행과 제외 행을 확인한 뒤 반영할 수 있습니다.');
@@ -140,7 +140,7 @@ export function K2bSection({ onReload, scope }: K2bSectionProps) {
     try {
       setApplying(true);
       setError(null);
-      const result = await applyK2bWorkbook({
+      const result = await applyExcelWorkbook({
         jobId: preview.jobId,
         scope,
         sheetName: selectedSheet.name,

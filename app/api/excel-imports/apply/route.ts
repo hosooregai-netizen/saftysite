@@ -3,7 +3,10 @@ import {
   readRequiredAdminToken,
   SafetyServerApiError,
 } from '@/server/admin/safetyApiServer';
-import { applyLocalK2bWorkbook, LocalK2bImportError } from '@/server/k2b/localImport';
+import {
+  applyLocalExcelWorkbook,
+  LocalExcelImportError,
+} from '@/server/excelImport/localImport';
 
 export const runtime = 'nodejs';
 
@@ -49,12 +52,12 @@ export async function POST(request: Request): Promise<Response> {
             : null;
     if (!jobId || !sheetName) {
       return NextResponse.json(
-        { error: 'K2B 작업 ID와 시트 이름이 필요합니다.' },
+        { error: '엑셀 업로드 작업 ID와 시트 이름이 필요합니다.' },
         { status: 400 },
       );
     }
     return NextResponse.json(
-      await applyLocalK2bWorkbook(token, request, {
+      await applyLocalExcelWorkbook(token, request, {
         jobId,
         scope: {
           headquarterId,
@@ -68,11 +71,11 @@ export async function POST(request: Request): Promise<Response> {
     if (error instanceof SafetyServerApiError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
-    if (error instanceof LocalK2bImportError) {
+    if (error instanceof LocalExcelImportError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'K2B 적용에 실패했습니다.' },
+      { error: error instanceof Error ? error.message : '엑셀 업로드 반영에 실패했습니다.' },
       { status: 500 },
     );
   }

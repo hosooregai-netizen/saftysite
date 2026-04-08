@@ -7,16 +7,16 @@ import { SitesSection } from '@/features/admin/sections/sites/SitesSection';
 import { SiteEntryHubPanel } from '@/features/home/components/SiteEntryHubPanel';
 import { SITE_STATUS_LABELS } from '@/lib/admin';
 import {
-  buildAdminK2bUploadCloseHref,
-  buildAdminK2bUploadHref,
-  isK2bUploadOpen,
-} from '@/lib/admin/k2bUpload';
+  buildAdminExcelUploadCloseHref,
+  buildAdminExcelUploadHref,
+  isExcelUploadOpen,
+} from '@/lib/admin/excelUpload';
 import { mapSafetySiteToInspectionSite } from '@/lib/safetyApiMappers/sites';
 import type { SafetySite, SafetyUser } from '@/types/backend';
 import type { SafetyAssignment, SafetyHeadquarter, SafetySiteStatus } from '@/types/controller';
 import { HeadquartersTable } from './HeadquartersTable';
 import { HeadquarterEditorModal } from './HeadquarterEditorModal';
-import { K2bImportModal } from '../k2b/K2bImportModal';
+import { ExcelImportModal } from '../excelImport/ExcelImportModal';
 import { useHeadquartersSectionState } from './useHeadquartersSectionState';
 
 interface HeadquartersSectionProps {
@@ -155,13 +155,13 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
     () => (selectedSite ? mapSafetySiteToInspectionSite(selectedSite) : null),
     [selectedSite],
   );
-  const k2bOpen = isK2bUploadOpen(searchParams);
-  const k2bOriginSection =
+  const excelUploadOpen = isExcelUploadOpen(searchParams);
+  const excelUploadOriginSection =
     !selectedHeadquarter && !hasSiteStatusScope ? 'headquarters' : 'sites';
 
   const openExcelUpload = (context?: { headquarterId?: string | null; siteId?: string | null }) => {
     router.replace(
-      buildAdminK2bUploadHref(searchParams, {
+      buildAdminExcelUploadHref(searchParams, {
         headquarterId: context?.headquarterId ?? selectedHeadquarter?.id ?? null,
         section: 'headquarters',
         siteId: context?.siteId ?? selectedSite?.id ?? null,
@@ -171,7 +171,7 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
 
   const closeExcelUpload = () => {
     router.replace(
-      buildAdminK2bUploadCloseHref(searchParams, {
+      buildAdminExcelUploadCloseHref(searchParams, {
         headquarterId: selectedHeadquarter?.id ?? null,
         section: 'headquarters',
         siteId: selectedSite?.id ?? null,
@@ -299,13 +299,13 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
         open={state.isOpen}
       />
 
-      <K2bImportModal
+      <ExcelImportModal
         contextHeadquarterId={selectedHeadquarter?.id ?? null}
         contextSiteId={selectedSite?.id ?? null}
         onClose={closeExcelUpload}
         onReload={onReload}
-        open={k2bOpen}
-        originSection={k2bOriginSection}
+        open={excelUploadOpen}
+        originSection={excelUploadOriginSection}
       />
     </div>
   );

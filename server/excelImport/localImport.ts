@@ -17,17 +17,17 @@ import { buildSiteMemoWithRequiredCompletionFields } from '@/lib/admin/siteContr
 import type { SafetySite } from '@/types/backend';
 import type { SafetyHeadquarter, SafetySiteInput, SafetySiteUpdateInput } from '@/types/controller';
 import type {
-  K2bApplyResult,
-  K2bApplyResultRow,
-  K2bImportPreview,
-  K2bImportPreviewRow,
-  K2bImportScope,
-  K2bImportScopeSummary,
-  K2bRowActionType,
-  K2bImportSheetPreview,
-} from '@/types/k2b';
+  ExcelApplyResult,
+  ExcelApplyResultRow,
+  ExcelImportPreview,
+  ExcelImportPreviewRow,
+  ExcelImportScope,
+  ExcelImportScopeSummary,
+  ExcelImportSheetPreview,
+  ExcelRowActionType,
+} from '@/types/excelImport';
 
-const JOB_DIR = path.join(os.tmpdir(), 'safetysite-k2b-jobs');
+const JOB_DIR = path.join(os.tmpdir(), 'safetysite-excel-import-jobs');
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const SAMPLE_ROW_COUNT = 5;
 const REQUIRED_FIELD_LABELS = {
@@ -70,7 +70,7 @@ const XML_PARSER = new XMLParser({
 type LocalRow = {
   rowIndex: number;
   values: Record<string, string>;
-  explicitAction?: K2bRowActionType;
+  explicitAction?: ExcelRowActionType;
   headquarterId?: string | null;
   siteId?: string | null;
   inScope?: boolean;
@@ -82,12 +82,12 @@ type LocalRow = {
     | 'scope_unresolved'
     | null;
 };
-type LocalSheet = K2bImportSheetPreview & { rows: LocalRow[] };
+type LocalSheet = ExcelImportSheetPreview & { rows: LocalRow[] };
 type LocalJob = {
   createdAt: string;
   fileName: string;
   jobId: string;
-  scope: K2bImportScopeSummary;
+  scope: ExcelImportScopeSummary;
   sheets: LocalSheet[];
 };
 type DuplicateCandidate = {
@@ -106,7 +106,7 @@ type ScopeDecision = {
     | 'scope_ambiguous'
     | 'scope_unresolved'
     | null;
-  explicitAction?: K2bRowActionType;
+  explicitAction?: ExcelRowActionType;
   headquarterId?: string | null;
   siteId?: string | null;
   inScope: boolean;
@@ -128,12 +128,12 @@ type WorkbookSheetNode = {
   'r:id'?: unknown;
 };
 
-export class LocalK2bImportError extends Error {
+export class LocalExcelImportError extends Error {
   status: number;
 
   constructor(message: string, status = 400) {
     super(message);
-    this.name = 'LocalK2bImportError';
+    this.name = 'LocalExcelImportError';
     this.status = status;
   }
 }
@@ -226,14 +226,14 @@ async function readJob(jobId: string): Promise<LocalJob> {
       'code' in error &&
       error.code === 'ENOENT'
     ) {
-      throw new LocalK2bImportError('K2B 업로드 작업을 찾을 수 없습니다.', 404);
+      throw new LocalExcelImportError('엑셀 업로드 작업을 찾을 수 없습니다.', 404);
     }
     throw error;
   }
 }
 
 function generateJobId() {
-  return `k2b-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  return `excel-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
 function buildSuggestedMapping(headers: string[]) {
@@ -304,10 +304,10 @@ function buildSiteLookup(sites: SafetySite[]) {
 }
 
 function buildScopeSummary(
-  scope: K2bImportScope | undefined,
+  scope: ExcelImportScope | undefined,
   headquartersById: Map<string, SafetyHeadquarter>,
   sitesById: Map<string, SafetySite>,
-): K2bImportScopeSummary {
+): ExcelImportScopeSummary {
   const sourceSection = scope?.sourceSection === 'sites' ? 'sites' : 'headquarters';
   const targetSite = scope?.siteId ? sitesById.get(scope.siteId) ?? null : null;
   const headquarterId = targetSite?.headquarter_id ?? scope?.headquarterId ?? null;
@@ -377,7 +377,7 @@ function resolveScopeDecision(args: {
   headquarterCandidates: DuplicateCandidate[];
   headquarterLookupById: Map<string, SafetyHeadquarter>;
   rowData: Record<string, string>;
-  scope: K2bImportScopeSummary;
+  scope: ExcelImportScopeSummary;
   siteCandidates: DuplicateCandidate[];
   siteLookupById: Map<string, SafetySite>;
 }) {
@@ -609,7 +609,7 @@ function buildRowSummary(rowData: Record<string, string>) {
   return parts.join(' / ') || '요약 불가';
 }
 
-function buildSheetSummary(rowPreviews: K2bImportPreviewRow[]) {
+function buildSheetSummary(rowPreviews: ExcelImportPreviewRow[]) {
   return rowPreviews.reduce(
     (summary, row) => {
       if (row.suggestedAction === 'update_site') {
@@ -653,20 +653,20 @@ function readCellValue(cell: Record<string, unknown>, sharedStrings: string[]) {
 
 async function parseWorkbook(fileName: string, fileBytes: Uint8Array) {
   if (!fileName.toLowerCase().endsWith('.xlsx')) {
-    throw new LocalK2bImportError('업로드할 .xlsx 파일을 선택해 주세요.');
+    throw new LocalExcelImportError('업로드할 .xlsx 파일을 선택해 주세요.');
   }
   if (fileBytes.byteLength === 0) {
-    throw new LocalK2bImportError('빈 파일은 업로드할 수 없습니다.');
+    throw new LocalExcelImportError('빈 파일은 업로드할 수 없습니다.');
   }
   if (fileBytes.byteLength > MAX_FILE_BYTES) {
-    throw new LocalK2bImportError('K2B 업로드 파일은 10MB를 초과할 수 없습니다.');
+    throw new LocalExcelImportError('엑셀 업로드 파일은 10MB를 초과할 수 없습니다.');
   }
 
   const zip = await JSZip.loadAsync(fileBytes);
   const workbookXml = await zip.file('xl/workbook.xml')?.async('string');
   const workbookRelsXml = await zip.file('xl/_rels/workbook.xml.rels')?.async('string');
   if (!workbookXml || !workbookRelsXml) {
-    throw new LocalK2bImportError('K2B 엑셀 파일을 읽지 못했습니다. .xlsx 파일인지 확인해 주세요.');
+    throw new LocalExcelImportError('엑셀 파일을 읽지 못했습니다. .xlsx 파일인지 확인해 주세요.');
   }
 
   const sharedStringsXml = await zip.file('xl/sharedStrings.xml')?.async('string');
@@ -781,7 +781,7 @@ function computeRequiredCompletionFields(headquarter: SafetyHeadquarter, site: S
   return fields;
 }
 
-function buildPreviewFromJob(job: LocalJob): K2bImportPreview {
+function buildPreviewFromJob(job: LocalJob): ExcelImportPreview {
   return {
     createdAt: job.createdAt,
     fileName: job.fileName,
@@ -795,12 +795,12 @@ function buildPreviewFromJob(job: LocalJob): K2bImportPreview {
   };
 }
 
-export async function parseLocalK2bWorkbook(
+export async function parseLocalExcelWorkbook(
   token: string,
   file: File,
   request: Request,
-  scope?: K2bImportScope,
-): Promise<K2bImportPreview> {
+  scope?: ExcelImportScope,
+): Promise<ExcelImportPreview> {
   const [headquarters, sites, parsedSheets] = await Promise.all([
     fetchSafetyHeadquartersServer(token, request),
     fetchSafetySitesServer(token, request),
@@ -854,7 +854,7 @@ export async function parseLocalK2bWorkbook(
               scopeDecision.explicitAction ?? suggestAction(nextSiteCandidates, nextHeadquarterCandidates),
             summary: buildRowSummary(rowData),
             values: row.values,
-          } satisfies K2bImportPreviewRow,
+          } satisfies ExcelImportPreviewRow,
           storedRow: {
             ...row,
             exclusionReason: scopeDecision.exclusionReason ?? null,
@@ -898,39 +898,39 @@ export async function parseLocalK2bWorkbook(
   return buildPreviewFromJob(job);
 }
 
-export async function fetchLocalK2bPreview(jobId: string): Promise<K2bImportPreview> {
+export async function fetchLocalExcelImportPreview(jobId: string): Promise<ExcelImportPreview> {
   return buildPreviewFromJob(await readJob(jobId));
 }
 
-export async function applyLocalK2bWorkbook(
+export async function applyLocalExcelWorkbook(
   token: string,
   request: Request,
-  input: { jobId: string; sheetName: string; scope?: K2bImportScope },
-): Promise<K2bApplyResult> {
+  input: { jobId: string; sheetName: string; scope?: ExcelImportScope },
+): Promise<ExcelApplyResult> {
   const job = await readJob(input.jobId);
   const selectedSheet = job.sheets.find((sheet) => sheet.name === input.sheetName) || job.sheets[0];
   if (!selectedSheet) {
-    throw new LocalK2bImportError('선택한 시트를 찾을 수 없습니다.', 404);
+    throw new LocalExcelImportError('선택한 시트를 찾을 수 없습니다.', 404);
   }
   if (selectedSheet.includedRowCount === 0) {
-    throw new LocalK2bImportError('현재 스코프에 반영할 데이터 행이 없습니다.');
+    throw new LocalExcelImportError('현재 스코프에 반영할 데이터 행이 없습니다.');
   }
   if (
     input.scope &&
     (input.scope.siteId ?? null) !== ((job.scope.siteId ?? null) || null)
   ) {
-    throw new LocalK2bImportError('현재 업로드 스코프가 변경되어 다시 미리보기가 필요합니다.');
+    throw new LocalExcelImportError('현재 업로드 스코프가 변경되어 다시 미리보기가 필요합니다.');
   }
   if (
     input.scope &&
     (input.scope.headquarterId ?? null) !== ((job.scope.headquarterId ?? null) || null)
   ) {
-    throw new LocalK2bImportError('현재 업로드 스코프가 변경되어 다시 미리보기가 필요합니다.');
+    throw new LocalExcelImportError('현재 업로드 스코프가 변경되어 다시 미리보기가 필요합니다.');
   }
 
   let headquarters = await fetchSafetyHeadquartersServer(token, request);
   let sites = await fetchSafetySitesServer(token, request);
-  const resultRows: K2bApplyResultRow[] = [];
+  const resultRows: ExcelApplyResultRow[] = [];
   const summary = {
     completionRequiredCount: 0,
     createdHeadquarterCount: 0,
@@ -994,7 +994,7 @@ export async function applyLocalK2bWorkbook(
           token,
           {
             headquarter_id: headquarter.id,
-            site_name: normalizeText(rowData.site_name) || 'K2B 현장',
+            site_name: normalizeText(rowData.site_name) || '엑셀 현장',
             status: 'active',
             ...buildSitePayload(rowData, headquarter.id),
           },
@@ -1024,7 +1024,7 @@ export async function applyLocalK2bWorkbook(
             contact_phone: normalizeText(rowData.contact_phone) || null,
             corporate_registration_no: normalizeText(rowData.corporate_registration_no) || null,
             license_no: normalizeText(rowData.license_no) || null,
-            name: normalizeText(rowData.headquarter_name) || normalizeText(rowData.site_name) || 'K2B 사업장',
+            name: normalizeText(rowData.headquarter_name) || normalizeText(rowData.site_name) || '엑셀 사업장',
           },
           request,
         );
@@ -1034,7 +1034,7 @@ export async function applyLocalK2bWorkbook(
         token,
         {
           headquarter_id: headquarter.id,
-          site_name: normalizeText(rowData.site_name) || 'K2B 현장',
+          site_name: normalizeText(rowData.site_name) || '엑셀 현장',
           status: 'active',
           ...buildSitePayload(rowData, headquarter.id),
         },
