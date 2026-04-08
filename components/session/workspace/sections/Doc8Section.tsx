@@ -1,12 +1,72 @@
+'use client';
+
+import { useState, type FocusEvent } from 'react';
 import styles from '@/components/session/InspectionSessionWorkspace.module.css';
 import { FUTURE_PROCESS_LIBRARY } from '@/components/session/workspace/constants';
 import type { HazardStatsSectionProps } from '@/components/session/workspace/types';
 import { createFutureProcessRiskPlan } from '@/constants/inspectionSession';
 
+const MAX_DOC8_RECOMMENDATIONS = 6;
+
+function normalizeProcessName(value: string) {
+  return value.replace(/\s+/g, '').toLowerCase();
+}
+
+function findProcessMatch(value: string) {
+  const normalizedValue = normalizeProcessName(value);
+  if (!normalizedValue) {
+    return null;
+  }
+
+  return (
+    FUTURE_PROCESS_LIBRARY.find(
+      (libraryItem) => normalizeProcessName(libraryItem.processName) === normalizedValue,
+    ) ?? null
+  );
+}
+
+function getProcessRecommendations(value: string) {
+  const normalizedValue = normalizeProcessName(value);
+  const matchingItems = normalizedValue
+    ? FUTURE_PROCESS_LIBRARY.filter((libraryItem) =>
+        normalizeProcessName(libraryItem.processName).includes(normalizedValue),
+      )
+    : FUTURE_PROCESS_LIBRARY;
+
+  return matchingItems.slice(0, MAX_DOC8_RECOMMENDATIONS);
+}
+
 export default function Doc8Section({
   applyDocumentUpdate,
   session,
 }: Pick<HazardStatsSectionProps, 'applyDocumentUpdate' | 'session'>) {
+  const [activePlanId, setActivePlanId] = useState<string | null>(null);
+
+  const updateProcessPlan = (planId: string, nextProcessName: string) => {
+    const matched = findProcessMatch(nextProcessName);
+
+    applyDocumentUpdate('doc8', matched ? 'api' : 'manual', (current) => ({
+      ...current,
+      document8Plans: current.document8Plans.map((plan) =>
+        plan.id === planId
+          ? {
+              ...plan,
+              processName: nextProcessName,
+              hazard: matched?.hazard ?? plan.hazard,
+              countermeasure: matched?.countermeasure ?? plan.countermeasure,
+              source: matched ? 'api' : 'manual',
+            }
+          : plan,
+      ),
+    }));
+  };
+
+  const handleProcessCellBlur = (planId: string, event: FocusEvent<HTMLDivElement>) => {
+    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+      setActivePlanId((current) => (current === planId ? null : current));
+    }
+  };
+
   return (
     <div className={styles.sectionStack}>
       <div className={styles.workPlanSection}>
@@ -39,37 +99,67 @@ export default function Doc8Section({
           <tbody>
             {session.document8Plans.map((item, index) => {
               const isLastRow = index === session.document8Plans.length - 1;
+              const recommendationListId = `doc8-process-recommendations-${item.id}`;
+              const recommendations =
+                activePlanId === item.id ? getProcessRecommendations(item.processName) : [];
 
               return (
                 <tr key={item.id}>
                   <td className={styles.doc8TdProcess}>
-                    <div className={styles.doc8ProcessCellStack}>
+                    <div
+                      className={styles.doc8ProcessCellStack}
+                      onBlur={(event) => handleProcessCellBlur(item.id, event)}
+                    >
                       <input
-                        list="future-process-library"
                         autoComplete="off"
+                        role="combobox"
+                        aria-autocomplete="list"
+                        aria-controls={recommendationListId}
+                        aria-expanded={activePlanId === item.id}
+                        aria-haspopup="listbox"
                         className={`${styles.doc8ProcessInput} app-input`}
                         value={item.processName}
+                        onFocus={() => setActivePlanId(item.id)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Escape') {
+                            setActivePlanId((current) => (current === item.id ? null : current));
+                          }
+                        }}
                         onChange={(event) => {
-                          const matched = FUTURE_PROCESS_LIBRARY.find(
-                            (libraryItem) => libraryItem.processName === event.target.value,
-                          );
-
-                          applyDocumentUpdate('doc8', matched ? 'api' : 'manual', (current) => ({
-                            ...current,
-                            document8Plans: current.document8Plans.map((plan) =>
-                              plan.id === item.id
-                                ? {
-                                    ...plan,
-                                    processName: event.target.value,
-                                    hazard: matched?.hazard ?? plan.hazard,
-                                    countermeasure: matched?.countermeasure ?? plan.countermeasure,
-                                    source: matched ? 'api' : 'manual',
-                                  }
-                                : plan,
-                            ),
-                          }));
+                          setActivePlanId(item.id);
+                          updateProcessPlan(item.id, event.target.value);
                         }}
                       />
+                      {activePlanId === item.id && recommendations.length > 0 ? (
+                        <div
+                          id={recommendationListId}
+                          className={styles.doc8RecommendationList}
+                          role="listbox"
+                        >
+                          {recommendations.map((libraryItem) => {
+                            const isSelected = libraryItem.processName === item.processName;
+
+                            return (
+                              <button
+                                key={libraryItem.processName}
+                                type="button"
+                                role="option"
+                                aria-selected={isSelected}
+                                className={`${styles.doc8RecommendationButton} ${
+                                  isSelected ? styles.doc8RecommendationButtonActive : ''
+                                }`}
+                                onMouseDown={(event) => event.preventDefault()}
+                                onClick={() => {
+                                  updateProcessPlan(item.id, libraryItem.processName);
+                                  setActivePlanId(null);
+                                }}
+                              >
+                                {libraryItem.processName}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : null}
                     </div>
                   </td>
                   <td className={styles.doc8TdArea}>
@@ -145,11 +235,6 @@ export default function Doc8Section({
             })}
           </tbody>
         </table>
-        <datalist id="future-process-library">
-          {FUTURE_PROCESS_LIBRARY.map((libraryItem) => (
-            <option key={libraryItem.processName} value={libraryItem.processName} />
-          ))}
-        </datalist>
       </div>
     </div>
   );
