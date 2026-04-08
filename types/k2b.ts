@@ -1,4 +1,20 @@
 export type K2bRowActionType = 'create' | 'update_headquarter' | 'update_site';
+export type K2bScopeSourceSection = 'headquarters' | 'sites';
+export type K2bRowExclusionReasonCode =
+  | 'different_headquarter'
+  | 'different_site'
+  | 'scope_unresolved'
+  | 'scope_ambiguous';
+
+export interface K2bImportScope {
+  sourceSection: K2bScopeSourceSection;
+  headquarterId?: string | null;
+  siteId?: string | null;
+}
+
+export interface K2bImportScopeSummary extends K2bImportScope {
+  label: string;
+}
 
 export interface K2bMatchCandidate {
   id: string;
@@ -15,6 +31,9 @@ export interface K2bImportPreviewRow {
   summary: string;
   suggestedAction: string;
   duplicateCandidates: K2bMatchCandidate[];
+  exclusionReasonCode?: K2bRowExclusionReasonCode | null;
+  exclusionReason?: string | null;
+  inScope?: boolean;
 }
 
 export interface K2bImportSheetSummary {
@@ -28,9 +47,12 @@ export interface K2bImportSheetPreview {
   name: string;
   headers: string[];
   rowCount: number;
+  includedRowCount: number;
+  excludedRowCount: number;
   sampleRows: Record<string, string>[];
   suggestedMapping: Record<string, string>;
-  rowPreviews: K2bImportPreviewRow[];
+  includedRows: K2bImportPreviewRow[];
+  excludedRows: K2bImportPreviewRow[];
   summary: K2bImportSheetSummary;
 }
 
@@ -39,6 +61,7 @@ export interface K2bImportPreview {
   fileName: string;
   createdAt: string;
   sheetNames: string[];
+  scope: K2bImportScopeSummary;
   sheets: K2bImportSheetPreview[];
 }
 

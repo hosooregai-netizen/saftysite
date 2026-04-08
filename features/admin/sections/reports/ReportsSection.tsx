@@ -7,7 +7,6 @@ import AppModal from '@/components/ui/AppModal';
 import { SectionHeaderFilterMenu } from '@/features/admin/components/SectionHeaderFilterMenu';
 import { SortableHeaderCell } from '@/features/admin/components/SortableHeaderCell';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
-import { K2bImportModal } from '@/features/admin/sections/k2b/K2bImportModal';
 import {
   appendAdminDispatchEvent,
   fetchAdminReports,
@@ -28,11 +27,6 @@ import {
   getQualityStatusLabel,
 } from '@/lib/admin/reportMeta';
 import { getAdminSectionHref } from '@/lib/admin';
-import {
-  buildAdminK2bUploadCloseHref,
-  buildAdminK2bUploadHref,
-  isK2bUploadOpen,
-} from '@/lib/admin/k2bUpload';
 import {
   convertHwpxBlobToPdfWithFallback,
   fetchInspectionHwpxDocumentByReportKey,
@@ -347,6 +341,7 @@ export function ReportsSection({
   sites,
   users,
 }: ReportsSectionProps) {
+  void onReloadData;
   const router = useRouter();
   const searchParams = useSearchParams();
   const overviewPreset = useMemo<OverviewReportsPreset | null>(() => {
@@ -386,7 +381,6 @@ export function ReportsSection({
   const [dispatchSmsSending, setDispatchSmsSending] = useState(false);
   const [smsProviderStatuses, setSmsProviderStatuses] = useState<SmsProviderStatus[]>([]);
   const deferredQuery = useDeferredValue(query);
-  const k2bOpen = isK2bUploadOpen(searchParams);
 
   const fetchRows = useCallback(async () => {
     try {
@@ -847,31 +841,6 @@ export function ReportsSection({
       ]),
     );
 
-  const openExcelUpload = () => {
-    router.replace(
-      buildAdminK2bUploadHref(searchParams, {
-        headquarterId: headquarterFilter === 'all' ? null : headquarterFilter,
-        section: 'reports',
-        siteId: siteFilter === 'all' ? null : siteFilter,
-      }),
-    );
-  };
-
-  const closeExcelUpload = () => {
-    router.replace(
-      buildAdminK2bUploadCloseHref(searchParams, {
-        headquarterId: headquarterFilter === 'all' ? null : headquarterFilter,
-        section: 'reports',
-        siteId: siteFilter === 'all' ? null : siteFilter,
-      }),
-    );
-  };
-
-  const handleReloadAfterK2b = async () => {
-    await onReloadData({ force: true, includeReports: true });
-    await fetchRows();
-  };
-
   const openReportRow = (row: ControllerReportRow) => {
     router.push(buildControllerReportHref(row));
   };
@@ -919,13 +888,6 @@ export function ReportsSection({
             onClick={() => void handleExportList()}
           >
             엑셀 내보내기
-          </button>
-          <button
-            type="button"
-            className="app-button app-button-secondary"
-            onClick={openExcelUpload}
-          >
-            엑셀 업로드
           </button>
         </div>
       </div>
@@ -1356,15 +1318,6 @@ export function ReportsSection({
           </div>
         ) : null}
       </AppModal>
-
-      <K2bImportModal
-        contextHeadquarterId={headquarterFilter === 'all' ? null : headquarterFilter}
-        contextSiteId={siteFilter === 'all' ? null : siteFilter}
-        onClose={closeExcelUpload}
-        onReload={handleReloadAfterK2b}
-        open={k2bOpen}
-        originSection="reports"
-      />
     </section>
   );
 }

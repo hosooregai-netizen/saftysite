@@ -14,7 +14,6 @@ import {
   getAdminSectionHref,
   type AdminSectionKey,
 } from '@/lib/admin/adminSections';
-import { buildAdminK2bUploadHref } from '@/lib/admin/k2bUpload';
 import { getCurrentReportMonth } from '@/lib/erpReports/shared';
 import styles from './AdminMenu.module.css';
 
@@ -117,14 +116,6 @@ export function AdminMenuPanel({
           label: '\uD604\uC7A5 \uBCF4\uC870',
           href: buildSiteAssistHref(currentSiteKey),
           active: siteNavView === 'assist',
-        },
-        {
-          label: 'K2B \uC5C5\uB85C\uB4DC',
-          href: buildAdminK2bUploadHref(searchParams, {
-            headquarterId: selectedAdminHeadquarterId,
-            siteId: currentSiteKey,
-          }),
-          active: false,
         },
         {
           label: '\uD604\uC7A5 \uC0AC\uC9C4\uCCA9',

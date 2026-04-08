@@ -769,8 +769,8 @@ export function SitesSection(props: SitesSectionProps) {
                                         label: '엑셀 업로드',
                                         onSelect: () =>
                                           onExcelUploadRequest({
-                                            headquarterId: lockedHeadquarterId,
-                                            siteId: null,
+                                            headquarterId: site.headquarter_id,
+                                            siteId: site.id,
                                           }),
                                       },
                                     ]

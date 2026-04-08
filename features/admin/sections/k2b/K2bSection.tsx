@@ -3,7 +3,13 @@
 import { useMemo, useRef, useState } from 'react';
 import sharedStyles from '@/features/admin/sections/AdminSectionShared.module.css';
 import { applyK2bWorkbook, parseK2bWorkbook } from '@/lib/k2b/apiClient';
-import type { K2bImportPreview, K2bImportPreviewRow } from '@/types/k2b';
+import type {
+  K2bApplyResult,
+  K2bImportPreview,
+  K2bImportPreviewRow,
+  K2bImportScope,
+  K2bImportScopeSummary,
+} from '@/types/k2b';
 import styles from './K2bSection.module.css';
 
 interface K2bSectionProps {
@@ -12,26 +18,61 @@ interface K2bSectionProps {
     includeReports?: boolean;
     force?: boolean;
   }) => Promise<void>;
+  scope: K2bImportScope;
 }
 
-function formatApplyNotice(preview: K2bImportPreview, summary: {
-  createdHeadquarterCount: number;
-  updatedHeadquarterCount: number;
-  createdSiteCount: number;
-  updatedSiteCount: number;
-  completionRequiredCount: number;
-}) {
+const FIELD_LABELS: Record<string, string> = {
+  business_registration_no: '사업자등록번호',
+  contact_name: '본사 담당자명',
+  contact_phone: '본사 연락처',
+  contract_date: '계약일',
+  contract_type: '계약유형',
+  corporate_registration_no: '법인등록번호',
+  headquarter_name: '사업장명',
+  license_no: '면허번호',
+  management_number: '사업장 관리번호',
+  manager_name: '현장소장명',
+  manager_phone: '현장소장 연락처',
+  per_visit_amount: '회당 단가',
+  project_amount: '공사금액',
+  project_end_date: '공사종료일',
+  project_start_date: '공사시작일',
+  road_address: '도로명주소',
+  site_address: '현장 주소',
+  site_code: '사업장개시번호',
+  site_name: '현장명',
+  total_contract_amount: '총 계약금액',
+  total_rounds: '총 회차',
+};
+
+function buildScopeSummary(scope: K2bImportScope): K2bImportScopeSummary {
+  return {
+    ...scope,
+    label: scope.siteId ? '현장 1곳' : scope.headquarterId ? '사업장 1곳' : '전체',
+  };
+}
+
+function formatApplyNotice(preview: K2bImportPreview, result: K2bApplyResult) {
   return [
     `${preview.fileName} 반영이 완료되었습니다.`,
-    `사업장 생성 ${summary.createdHeadquarterCount}건`,
-    `사업장 갱신 ${summary.updatedHeadquarterCount}건`,
-    `현장 생성 ${summary.createdSiteCount}건`,
-    `현장 갱신 ${summary.updatedSiteCount}건`,
-    `보완 필요 ${summary.completionRequiredCount}건`,
+    `포함 행 ${result.rows.length}건`,
+    `사업장 생성 ${result.summary.createdHeadquarterCount}건`,
+    `사업장 갱신 ${result.summary.updatedHeadquarterCount}건`,
+    `현장 생성 ${result.summary.createdSiteCount}건`,
+    `현장 갱신 ${result.summary.updatedSiteCount}건`,
+    `보완 필요 ${result.summary.completionRequiredCount}건`,
   ].join(' · ');
 }
 
-export function K2bSection({ onReload }: K2bSectionProps) {
+function summarizeValues(row: K2bImportPreviewRow) {
+  return Object.entries(row.values)
+    .filter(([, value]) => value.trim())
+    .slice(0, 4)
+    .map(([key, value]) => `${key}: ${value}`)
+    .join(' / ');
+}
+
+export function K2bSection({ onReload, scope }: K2bSectionProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [preview, setPreview] = useState<K2bImportPreview | null>(null);
   const [selectedSheetName, setSelectedSheetName] = useState('');
@@ -42,15 +83,34 @@ export function K2bSection({ onReload }: K2bSectionProps) {
     '업로드할 .xlsx 파일을 선택해 주세요.',
   );
 
+  const scopeSummary = preview?.scope ?? buildScopeSummary(scope);
   const selectedSheet = useMemo(
     () => preview?.sheets.find((sheet) => sheet.name === selectedSheetName) ?? preview?.sheets[0] ?? null,
     [preview, selectedSheetName],
   );
 
-  const rows = useMemo<K2bImportPreviewRow[]>(() => selectedSheet?.rowPreviews ?? [], [selectedSheet]);
+  const includedRows = useMemo<K2bImportPreviewRow[]>(
+    () => selectedSheet?.includedRows ?? [],
+    [selectedSheet],
+  );
+  const excludedRows = useMemo<K2bImportPreviewRow[]>(
+    () => selectedSheet?.excludedRows ?? [],
+    [selectedSheet],
+  );
   const headers = useMemo(
-    () => selectedSheet?.headers ?? Object.keys(rows[0]?.values ?? {}),
-    [rows, selectedSheet],
+    () =>
+      selectedSheet?.headers ??
+      Object.keys(includedRows[0]?.values ?? excludedRows[0]?.values ?? {}),
+    [excludedRows, includedRows, selectedSheet],
+  );
+  const missingFieldLabels = useMemo(
+    () =>
+      selectedSheet
+        ? Object.entries(FIELD_LABELS)
+            .filter(([field]) => !selectedSheet.suggestedMapping[field])
+            .map(([, label]) => label)
+        : [],
+    [selectedSheet],
   );
 
   const handleFileSelection = async (file: File | null) => {
@@ -60,10 +120,10 @@ export function K2bSection({ onReload }: K2bSectionProps) {
       setError(null);
       setPreview(null);
       setSelectedSheetName('');
-      const nextPreview = await parseK2bWorkbook(file);
+      const nextPreview = await parseK2bWorkbook(file, scope);
       setPreview(nextPreview);
       setSelectedSheetName(nextPreview.sheets[0]?.name || '');
-      setNotice('엑셀 파일을 읽었습니다. 미리보기 내용을 확인한 뒤 업데이트할 수 있습니다.');
+      setNotice('엑셀 파일을 읽었습니다. 포함 행과 제외 행을 확인한 뒤 반영할 수 있습니다.');
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : '엑셀 파일을 읽지 못했습니다.');
       setNotice(null);
@@ -82,9 +142,10 @@ export function K2bSection({ onReload }: K2bSectionProps) {
       setError(null);
       const result = await applyK2bWorkbook({
         jobId: preview.jobId,
+        scope,
         sheetName: selectedSheet.name,
       });
-      setNotice(formatApplyNotice(preview, result.summary));
+      setNotice(formatApplyNotice(preview, result));
       await onReload({ force: true });
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : '엑셀 내용을 반영하지 못했습니다.');
@@ -100,10 +161,12 @@ export function K2bSection({ onReload }: K2bSectionProps) {
           <div>
             <h2 className={sharedStyles.sectionTitle}>엑셀 업로드</h2>
             <p className={styles.stepDescription}>
-              엑셀 파일을 업로드하면 전체 행을 미리 보여주고, 확인 후 바로 업데이트할 수 있습니다.
+              현재 스코프 <strong>{scopeSummary.label}</strong>에 맞는 행만 메인 미리보기에 표시되고,
+              제외된 행은 별도 표에서 확인할 수 있습니다.
             </p>
           </div>
           <div className={sharedStyles.sectionHeaderActions}>
+            <span className="app-chip">{scopeSummary.label}</span>
             <button
               type="button"
               className="app-button app-button-primary"
@@ -135,7 +198,7 @@ export function K2bSection({ onReload }: K2bSectionProps) {
             <div>
               <h2 className={sharedStyles.sectionTitle}>엑셀 미리보기</h2>
               <p className={styles.stepDescription}>
-                자동 감지 결과를 확인한 뒤 현재 시트를 그대로 업데이트합니다.
+                포함 행만 반영됩니다. 제외된 행은 반영 대상에 포함되지 않습니다.
               </p>
             </div>
             <div className={sharedStyles.sectionHeaderActions}>
@@ -156,7 +219,7 @@ export function K2bSection({ onReload }: K2bSectionProps) {
                 type="button"
                 className="app-button app-button-primary"
                 onClick={() => void handleApply()}
-                disabled={applying || loading || selectedSheet.rowCount === 0}
+                disabled={applying || loading || selectedSheet.includedRowCount === 0}
               >
                 {applying ? '업데이트 중...' : '업데이트'}
               </button>
@@ -165,6 +228,7 @@ export function K2bSection({ onReload }: K2bSectionProps) {
           <div className={sharedStyles.sectionBody}>
             <div className={styles.inlineActions}>
               <span className="app-chip">{preview.fileName}</span>
+              <span className="app-chip">{scopeSummary.label}</span>
               {preview.sheets.length > 1 ? (
                 <label className={styles.selectLabel}>
                   <span className={styles.summaryLabel}>시트</span>
@@ -185,10 +249,25 @@ export function K2bSection({ onReload }: K2bSectionProps) {
               )}
             </div>
 
+            {missingFieldLabels.length > 0 ? (
+              <div className={styles.mappingHint}>
+                자동 감지되지 않은 필드: {missingFieldLabels.join(', ')}. 이 파일에서 값이 비어 있으면 기존
+                DB 값은 유지됩니다.
+              </div>
+            ) : null}
+
             <div className={styles.summaryGrid}>
               <article className={styles.summaryCard}>
-                <span className={styles.summaryLabel}>총 행 수</span>
+                <span className={styles.summaryLabel}>총 데이터 행</span>
                 <strong className={styles.summaryValue}>{selectedSheet.rowCount}</strong>
+              </article>
+              <article className={styles.summaryCard}>
+                <span className={styles.summaryLabel}>포함 행</span>
+                <strong className={styles.summaryValue}>{selectedSheet.includedRowCount}</strong>
+              </article>
+              <article className={styles.summaryCard}>
+                <span className={styles.summaryLabel}>제외 행</span>
+                <strong className={styles.summaryValue}>{selectedSheet.excludedRowCount}</strong>
               </article>
               <article className={styles.summaryCard}>
                 <span className={styles.summaryLabel}>자동 신규 생성</span>
@@ -202,29 +281,29 @@ export function K2bSection({ onReload }: K2bSectionProps) {
                 <span className={styles.summaryLabel}>자동 현장 갱신</span>
                 <strong className={styles.summaryValue}>{selectedSheet.summary.updateSiteCount}</strong>
               </article>
-              <article className={styles.summaryCard}>
-                <span className={styles.summaryLabel}>중복 후보로 신규 생성</span>
-                <strong className={styles.summaryValue}>{selectedSheet.summary.ambiguousCreateCount}</strong>
-              </article>
             </div>
 
-            {selectedSheet.rowCount === 0 ? (
-              <div className={styles.emptyState}>선택한 시트에 반영할 데이터 행이 없습니다.</div>
+            {selectedSheet.includedRowCount === 0 ? (
+              <div className={styles.emptyState}>현재 스코프에 맞는 반영 대상 행이 없습니다.</div>
             ) : (
               <div className={styles.previewGrid}>
                 <table className={styles.rowTable}>
                   <thead>
                     <tr>
                       <th>행</th>
+                      <th>요약</th>
+                      <th>자동 처리</th>
                       {headers.map((header) => (
                         <th key={header}>{header}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {rows.map((row) => (
+                    {includedRows.map((row) => (
                       <tr key={`preview-row-${row.rowIndex}`}>
                         <td>{row.rowIndex}</td>
+                        <td>{row.summary || '-'}</td>
+                        <td>{row.suggestedAction || '-'}</td>
                         {headers.map((header) => (
                           <td key={`${row.rowIndex}-${header}`}>{row.values[header] || '-'}</td>
                         ))}
@@ -234,6 +313,36 @@ export function K2bSection({ onReload }: K2bSectionProps) {
                 </table>
               </div>
             )}
+
+            {excludedRows.length > 0 ? (
+              <details className={styles.excludedPanel}>
+                <summary className={styles.excludedSummary}>
+                  제외된 행 {excludedRows.length}건 보기
+                </summary>
+                <div className={styles.previewGrid}>
+                  <table className={styles.rowTable}>
+                    <thead>
+                      <tr>
+                        <th>행</th>
+                        <th>제외 사유</th>
+                        <th>요약</th>
+                        <th>원본 값 일부</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {excludedRows.map((row) => (
+                        <tr key={`excluded-row-${row.rowIndex}`}>
+                          <td>{row.rowIndex}</td>
+                          <td>{row.exclusionReason || '-'}</td>
+                          <td>{row.summary || '-'}</td>
+                          <td>{summarizeValues(row) || '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </details>
+            ) : null}
           </div>
         </section>
       ) : null}

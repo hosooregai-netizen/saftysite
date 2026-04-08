@@ -155,7 +155,9 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
     () => (selectedSite ? mapSafetySiteToInspectionSite(selectedSite) : null),
     [selectedSite],
   );
-  const k2bOpen = isK2bUploadOpen(searchParams) || searchParams.get('section') === 'k2b';
+  const k2bOpen = isK2bUploadOpen(searchParams);
+  const k2bOriginSection =
+    !selectedHeadquarter && !hasSiteStatusScope ? 'headquarters' : 'sites';
 
   const openExcelUpload = (context?: { headquarterId?: string | null; siteId?: string | null }) => {
     router.replace(
@@ -303,7 +305,7 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
         onClose={closeExcelUpload}
         onReload={onReload}
         open={k2bOpen}
-        originSection="headquarters"
+        originSection={k2bOriginSection}
       />
     </div>
   );

@@ -23,6 +23,30 @@ export async function POST(request: Request): Promise<Response> {
         : typeof payload.sheetName === 'string'
           ? payload.sheetName
           : '';
+    const sourceSection =
+      payload.source_section === 'sites' || payload.sourceSection === 'sites'
+        ? 'sites'
+        : 'headquarters';
+    const headquarterId =
+      typeof payload.headquarter_id === 'string'
+        ? payload.headquarter_id
+        : typeof payload.headquarterId === 'string'
+          ? payload.headquarterId
+          : payload.scope && typeof payload.scope === 'object' && payload.scope
+            ? typeof (payload.scope as Record<string, unknown>).headquarterId === 'string'
+              ? ((payload.scope as Record<string, unknown>).headquarterId as string)
+              : null
+            : null;
+    const siteId =
+      typeof payload.site_id === 'string'
+        ? payload.site_id
+        : typeof payload.siteId === 'string'
+          ? payload.siteId
+          : payload.scope && typeof payload.scope === 'object' && payload.scope
+            ? typeof (payload.scope as Record<string, unknown>).siteId === 'string'
+              ? ((payload.scope as Record<string, unknown>).siteId as string)
+              : null
+            : null;
     if (!jobId || !sheetName) {
       return NextResponse.json(
         { error: 'K2B 작업 ID와 시트 이름이 필요합니다.' },
@@ -32,6 +56,11 @@ export async function POST(request: Request): Promise<Response> {
     return NextResponse.json(
       await applyLocalK2bWorkbook(token, request, {
         jobId,
+        scope: {
+          headquarterId,
+          siteId,
+          sourceSection,
+        },
         sheetName,
       }),
     );

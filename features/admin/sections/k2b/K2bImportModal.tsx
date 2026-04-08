@@ -1,6 +1,7 @@
 'use client';
 
 import AppModal from '@/components/ui/AppModal';
+import type { K2bImportScope, K2bScopeSourceSection } from '@/types/k2b';
 import { K2bSection } from './K2bSection';
 import styles from './K2bSection.module.css';
 
@@ -14,7 +15,13 @@ interface K2bImportModalProps {
     includeReports?: boolean;
   }) => Promise<void>;
   open: boolean;
-  originSection: 'headquarters' | 'reports';
+  originSection: K2bScopeSourceSection;
+}
+
+function buildScopeLabel(scope: K2bImportScope) {
+  if (scope.siteId) return '현장 1곳';
+  if (scope.headquarterId) return '사업장 1곳';
+  return '전체';
 }
 
 export function K2bImportModal({
@@ -25,10 +32,18 @@ export function K2bImportModal({
   open,
   originSection,
 }: K2bImportModalProps) {
+  const scope: K2bImportScope = {
+    sourceSection: originSection,
+    headquarterId: contextHeadquarterId,
+    siteId: contextSiteId,
+  };
+  const scopeLabel = buildScopeLabel(scope);
+  const title = originSection === 'sites' ? '현장 엑셀 업로드' : '사업장 엑셀 업로드';
+
   return (
     <AppModal
       open={open}
-      title="엑셀 업로드"
+      title={title}
       size="large"
       onClose={onClose}
       actions={
@@ -43,16 +58,10 @@ export function K2bImportModal({
     >
       <div className={styles.stepStack}>
         <div className={styles.noticeBox}>
-          {originSection === 'reports'
-            ? '전체 보고서 화면에서 여는 엑셀 업로드입니다. 반영 후 연결된 사업장/현장 데이터가 함께 갱신됩니다.'
-            : '사업장/현장 화면에서 여는 엑셀 업로드입니다. 반영 후 현재 목록의 보완 필요 상태가 즉시 갱신됩니다.'}
-          {contextSiteId
-            ? ' 현재 현장 컨텍스트를 유지한 채 엑셀 업로드합니다.'
-            : contextHeadquarterId
-              ? ' 현재 사업장 컨텍스트를 유지한 채 엑셀 업로드합니다.'
-              : ''}
+          현재 페이지 스코프는 <strong>{scopeLabel}</strong>입니다. 업로드 후에는 스코프에 맞는
+          행만 미리보기와 반영 대상에 포함되고, 제외된 행은 이유와 함께 별도로 확인할 수 있습니다.
         </div>
-        <K2bSection onReload={onReload} />
+        <K2bSection onReload={onReload} scope={scope} />
       </div>
     </AppModal>
   );

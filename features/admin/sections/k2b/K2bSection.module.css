@@ -5,7 +5,7 @@
 
 .summaryGrid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -127,6 +127,15 @@
   align-items: center;
 }
 
+.mappingHint {
+  padding: 12px 14px;
+  border: 1px dashed var(--erp-line);
+  border-radius: 2px;
+  background: #f9fbfd;
+  font-size: var(--text-body);
+  color: var(--erp-text-muted);
+}
+
 .hiddenInput {
   display: none;
 }
@@ -134,6 +143,26 @@
 .selectLabel {
   display: grid;
   gap: 6px;
+}
+
+.excludedPanel {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-card);
+  background: #fff;
+}
+
+.excludedSummary {
+  cursor: pointer;
+  padding: 14px 16px;
+  font-size: var(--text-body);
+  font-weight: 700;
+  color: var(--erp-dark);
+}
+
+.excludedPanel[open] .excludedSummary {
+  border-bottom: 1px solid var(--erp-line);
 }
 
 @media (max-width: 1200px) {

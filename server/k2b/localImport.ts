@@ -21,6 +21,9 @@ import type {
   K2bApplyResultRow,
   K2bImportPreview,
   K2bImportPreviewRow,
+  K2bImportScope,
+  K2bImportScopeSummary,
+  K2bRowActionType,
   K2bImportSheetPreview,
 } from '@/types/k2b';
 
@@ -37,7 +40,7 @@ const REQUIRED_FIELD_LABELS = {
 const FIELD_ALIASES: Record<string, string[]> = {
   business_registration_no: ['사업자등록번호', '사업자 등록번호', '사업자번호'],
   contact_name: ['본사담당자', '담당자', '연락담당자'],
-  contact_phone: ['본사연락처', '대표전화', '전화번호', '연락처'],
+  contact_phone: ['본사연락처', '대표전화', '전화번호', '연락처', '전화'],
   contract_date: ['계약일', '계약체결일'],
   contract_type: ['계약유형', '계약종류'],
   corporate_registration_no: ['법인등록번호', '법인 등록번호'],
@@ -51,8 +54,8 @@ const FIELD_ALIASES: Record<string, string[]> = {
   project_end_date: ['준공일', '공사종료일', '종료일'],
   project_start_date: ['착공일', '공사시작일', '시작일'],
   road_address: ['도로명주소'],
-  site_address: ['현장주소', '주소', '사업장주소'],
-  site_code: ['현장코드', '사업개시번호', '현장번호'],
+  site_address: ['현장주소', '주소', '사업장주소', '소재지'],
+  site_code: ['현장코드', '사업개시번호', '사업장개시번호', '현장번호'],
   site_name: ['현장명', '공사명', '현장', '사업장명'],
   total_contract_amount: ['총계약금액', '총계약액', '계약총액'],
   total_rounds: ['총회차', '총 회차', '회차수'],
@@ -64,12 +67,27 @@ const XML_PARSER = new XMLParser({
   trimValues: false,
 });
 
-type LocalRow = { rowIndex: number; values: Record<string, string> };
+type LocalRow = {
+  rowIndex: number;
+  values: Record<string, string>;
+  explicitAction?: K2bRowActionType;
+  headquarterId?: string | null;
+  siteId?: string | null;
+  inScope?: boolean;
+  exclusionReason?: string | null;
+  exclusionReasonCode?:
+    | 'different_headquarter'
+    | 'different_site'
+    | 'scope_ambiguous'
+    | 'scope_unresolved'
+    | null;
+};
 type LocalSheet = K2bImportSheetPreview & { rows: LocalRow[] };
 type LocalJob = {
   createdAt: string;
   fileName: string;
   jobId: string;
+  scope: K2bImportScopeSummary;
   sheets: LocalSheet[];
 };
 type DuplicateCandidate = {
@@ -79,6 +97,19 @@ type DuplicateCandidate = {
   label: string;
   reason: string;
   siteId: string | null;
+};
+type ScopeDecision = {
+  exclusionReason: string | null;
+  exclusionReasonCode:
+    | 'different_headquarter'
+    | 'different_site'
+    | 'scope_ambiguous'
+    | 'scope_unresolved'
+    | null;
+  explicitAction?: K2bRowActionType;
+  headquarterId?: string | null;
+  siteId?: string | null;
+  inScope: boolean;
 };
 type ParsedXmlNode = Record<string, unknown>;
 type WorkbookSheetNode = {
@@ -259,6 +290,213 @@ function buildSiteLookup(sites: SafetySite[]) {
     }
   }
   return { byHeadquarterAndName, byManagementNumber, byNameAndDates };
+}
+
+function buildScopeSummary(
+  scope: K2bImportScope | undefined,
+  headquartersById: Map<string, SafetyHeadquarter>,
+  sitesById: Map<string, SafetySite>,
+): K2bImportScopeSummary {
+  const sourceSection = scope?.sourceSection === 'sites' ? 'sites' : 'headquarters';
+  const targetSite = scope?.siteId ? sitesById.get(scope.siteId) ?? null : null;
+  const headquarterId = targetSite?.headquarter_id ?? scope?.headquarterId ?? null;
+  return {
+    sourceSection,
+    headquarterId,
+    label: targetSite ? '현장 1곳' : headquarterId ? '사업장 1곳' : '전체',
+    siteId: targetSite?.id ?? scope?.siteId ?? null,
+  };
+}
+
+function rowMatchesHeadquarter(rowData: Record<string, string>, targetHeadquarter: SafetyHeadquarter | null) {
+  if (!targetHeadquarter) return false;
+  const businessNumber = normalizeKey(rowData.business_registration_no);
+  if (businessNumber && businessNumber === normalizeKey(targetHeadquarter.business_registration_no)) {
+    return true;
+  }
+  const headquarterName = normalizeKey(rowData.headquarter_name);
+  return Boolean(headquarterName && headquarterName === normalizeKey(targetHeadquarter.name));
+}
+
+function rowMatchesSite(
+  rowData: Record<string, string>,
+  targetSite: SafetySite | null,
+  targetHeadquarter: SafetyHeadquarter | null,
+) {
+  if (!targetSite) return false;
+  const managementNumber = normalizeKey(rowData.management_number);
+  if (managementNumber && managementNumber === normalizeKey(targetSite.management_number)) {
+    return true;
+  }
+  const siteCode = normalizeKey(rowData.site_code);
+  if (siteCode && siteCode === normalizeKey(targetSite.site_code)) {
+    return true;
+  }
+  const siteName = normalizeKey(rowData.site_name);
+  const startDate = parseDateValue(rowData.project_start_date);
+  const endDate = parseDateValue(rowData.project_end_date);
+  if (
+    siteName &&
+    startDate &&
+    endDate &&
+    siteName === normalizeKey(targetSite.site_name) &&
+    startDate === parseDateValue(targetSite.project_start_date) &&
+    endDate === parseDateValue(targetSite.project_end_date)
+  ) {
+    return true;
+  }
+  return Boolean(
+    rowMatchesHeadquarter(rowData, targetHeadquarter) &&
+      siteName &&
+      siteName === normalizeKey(targetSite.site_name),
+  );
+}
+
+function uniqueHeadquarterIds(candidates: DuplicateCandidate[]) {
+  return Array.from(
+    new Set(
+      candidates
+        .map((candidate) => candidate.headquarterId)
+        .filter((value): value is string => Boolean(value)),
+    ),
+  );
+}
+
+function resolveScopeDecision(args: {
+  headquarterCandidates: DuplicateCandidate[];
+  headquarterLookupById: Map<string, SafetyHeadquarter>;
+  rowData: Record<string, string>;
+  scope: K2bImportScopeSummary;
+  siteCandidates: DuplicateCandidate[];
+  siteLookupById: Map<string, SafetySite>;
+}) {
+  const {
+    headquarterCandidates: nextHeadquarterCandidates,
+    headquarterLookupById,
+    rowData,
+    scope,
+    siteCandidates: nextSiteCandidates,
+    siteLookupById,
+  } = args;
+  if (!scope.headquarterId && !scope.siteId) {
+    return { inScope: true } satisfies ScopeDecision;
+  }
+
+  const targetSite = scope.siteId ? siteLookupById.get(scope.siteId) ?? null : null;
+  const targetHeadquarter =
+    (targetSite && headquarterLookupById.get(targetSite.headquarter_id)) ||
+    (scope.headquarterId ? headquarterLookupById.get(scope.headquarterId) ?? null : null);
+
+  if (scope.siteId) {
+    if (nextSiteCandidates.length === 1) {
+      const siteCandidate = nextSiteCandidates[0];
+      if (siteCandidate.siteId === scope.siteId) {
+        return {
+          explicitAction: 'update_site',
+          headquarterId: targetHeadquarter?.id ?? null,
+          inScope: true,
+          siteId: scope.siteId,
+        } satisfies ScopeDecision;
+      }
+      return {
+        exclusionReason: '다른 현장 데이터',
+        exclusionReasonCode: 'different_site',
+        inScope: false,
+      } satisfies ScopeDecision;
+    }
+
+    if (nextSiteCandidates.length > 1) {
+      return {
+        exclusionReason: '중복 후보가 여러 개라 스코프를 확정할 수 없음',
+        exclusionReasonCode: 'scope_ambiguous',
+        inScope: false,
+      } satisfies ScopeDecision;
+    }
+
+    if (rowMatchesSite(rowData, targetSite, targetHeadquarter)) {
+      return {
+        explicitAction: 'update_site',
+        headquarterId: targetHeadquarter?.id ?? null,
+        inScope: true,
+        siteId: scope.siteId,
+      } satisfies ScopeDecision;
+    }
+
+    if (
+      rowMatchesHeadquarter(rowData, targetHeadquarter) ||
+      uniqueHeadquarterIds(nextHeadquarterCandidates).includes(targetHeadquarter?.id ?? '')
+    ) {
+      return {
+        exclusionReason: '다른 현장 데이터',
+        exclusionReasonCode: 'different_site',
+        inScope: false,
+      } satisfies ScopeDecision;
+    }
+
+    return {
+      exclusionReason: '현재 스코프와 일치 판단 불가',
+      exclusionReasonCode: 'scope_unresolved',
+      inScope: false,
+    } satisfies ScopeDecision;
+  }
+
+  const siteHeadquarterIds = uniqueHeadquarterIds(nextSiteCandidates);
+  if (siteHeadquarterIds.length === 1) {
+    if (siteHeadquarterIds[0] === scope.headquarterId) {
+      return { inScope: true } satisfies ScopeDecision;
+    }
+    return {
+      exclusionReason: '다른 사업장 데이터',
+      exclusionReasonCode: 'different_headquarter',
+      inScope: false,
+    } satisfies ScopeDecision;
+  }
+
+  if (siteHeadquarterIds.length > 1) {
+    return {
+      exclusionReason: '중복 후보가 여러 개라 스코프를 확정할 수 없음',
+      exclusionReasonCode: 'scope_ambiguous',
+      inScope: false,
+    } satisfies ScopeDecision;
+  }
+
+  const candidateHeadquarterIds = uniqueHeadquarterIds(nextHeadquarterCandidates);
+  if (candidateHeadquarterIds.length === 1) {
+    if (candidateHeadquarterIds[0] === scope.headquarterId) {
+      return {
+        explicitAction: 'update_headquarter',
+        headquarterId: scope.headquarterId,
+        inScope: true,
+      } satisfies ScopeDecision;
+    }
+    return {
+      exclusionReason: '다른 사업장 데이터',
+      exclusionReasonCode: 'different_headquarter',
+      inScope: false,
+    } satisfies ScopeDecision;
+  }
+
+  if (candidateHeadquarterIds.length > 1) {
+    return {
+      exclusionReason: '중복 후보가 여러 개라 스코프를 확정할 수 없음',
+      exclusionReasonCode: 'scope_ambiguous',
+      inScope: false,
+    } satisfies ScopeDecision;
+  }
+
+  if (rowMatchesHeadquarter(rowData, targetHeadquarter)) {
+    return {
+      explicitAction: 'update_headquarter',
+      headquarterId: scope.headquarterId,
+      inScope: true,
+    } satisfies ScopeDecision;
+  }
+
+  return {
+    exclusionReason: '현재 스코프와 일치 판단 불가',
+    exclusionReasonCode: 'scope_unresolved',
+    inScope: false,
+  } satisfies ScopeDecision;
 }
 
 function headquarterCandidates(
@@ -534,6 +772,7 @@ function buildPreviewFromJob(job: LocalJob): K2bImportPreview {
     fileName: job.fileName,
     jobId: job.jobId,
     sheetNames: job.sheets.map((sheet) => sheet.name),
+    scope: job.scope,
     sheets: job.sheets.map((sheet) => {
       const { rows, ...previewSheet } = sheet;
       return rows ? previewSheet : previewSheet;
@@ -545,6 +784,7 @@ export async function parseLocalK2bWorkbook(
   token: string,
   file: File,
   request: Request,
+  scope?: K2bImportScope,
 ): Promise<K2bImportPreview> {
   const [headquarters, sites, parsedSheets] = await Promise.all([
     fetchSafetyHeadquartersServer(token, request),
@@ -554,6 +794,9 @@ export async function parseLocalK2bWorkbook(
 
   const headquarterLookup = buildHeadquarterLookup(headquarters);
   const siteLookup = buildSiteLookup(sites);
+  const headquartersById = new Map(headquarters.map((headquarter) => [headquarter.id, headquarter]));
+  const sitesById = new Map(sites.map((site) => [site.id, site]));
+  const scopeSummary = buildScopeSummary(scope, headquartersById, sitesById);
   const sheets = (await Promise.all(parsedSheets))
     .filter((sheet): sheet is { name: string; rows: Array<{ rowIndex: number; values: string[] }> } => Boolean(sheet))
     .map((sheet) => {
@@ -573,27 +816,59 @@ export async function parseLocalK2bWorkbook(
           })).filter((row) => Object.values(row.values).some((value) => normalizeText(value)))
         : [];
       const suggestedMapping = buildSuggestedMapping(headers);
-      const rowPreviews = dataRows.map((row) => {
+      const evaluatedRows = dataRows.map((row) => {
         const rowData = extractMappedRow(row.values, suggestedMapping);
         const nextSiteCandidates = siteCandidates(rowData, headquarterLookup, siteLookup);
         const nextHeadquarterCandidates = headquarterCandidates(rowData, headquarterLookup);
+        const scopeDecision = resolveScopeDecision({
+          headquarterCandidates: nextHeadquarterCandidates,
+          headquarterLookupById: headquartersById,
+          rowData,
+          scope: scopeSummary,
+          siteCandidates: nextSiteCandidates,
+          siteLookupById: sitesById,
+        });
         return {
-          duplicateCandidates: [...nextSiteCandidates, ...nextHeadquarterCandidates],
-          rowIndex: row.rowIndex,
-          suggestedAction: suggestAction(nextSiteCandidates, nextHeadquarterCandidates),
-          summary: buildRowSummary(rowData),
-          values: row.values,
-        } satisfies K2bImportPreviewRow;
+          previewRow: {
+            duplicateCandidates: [...nextSiteCandidates, ...nextHeadquarterCandidates],
+            exclusionReason: scopeDecision.exclusionReason ?? null,
+            exclusionReasonCode: scopeDecision.exclusionReasonCode ?? null,
+            inScope: scopeDecision.inScope,
+            rowIndex: row.rowIndex,
+            suggestedAction:
+              scopeDecision.explicitAction ?? suggestAction(nextSiteCandidates, nextHeadquarterCandidates),
+            summary: buildRowSummary(rowData),
+            values: row.values,
+          } satisfies K2bImportPreviewRow,
+          storedRow: {
+            ...row,
+            exclusionReason: scopeDecision.exclusionReason ?? null,
+            exclusionReasonCode: scopeDecision.exclusionReasonCode ?? null,
+            explicitAction: scopeDecision.explicitAction,
+            headquarterId: scopeDecision.headquarterId ?? null,
+            inScope: scopeDecision.inScope,
+            siteId: scopeDecision.siteId ?? null,
+          } satisfies LocalRow,
+        };
       });
+      const includedRows = evaluatedRows
+        .filter((row) => row.previewRow.inScope)
+        .map((row) => row.previewRow);
+      const excludedRows = evaluatedRows
+        .filter((row) => !row.previewRow.inScope)
+        .map((row) => row.previewRow);
       return {
         headers,
+        excludedRowCount: excludedRows.length,
+        excludedRows,
+        includedRowCount: includedRows.length,
+        includedRows,
         name: sheet.name,
         rowCount: dataRows.length,
-        rowPreviews,
-        rows: dataRows,
-        sampleRows: dataRows.slice(0, SAMPLE_ROW_COUNT).map((row) => row.values),
+        rows: evaluatedRows.map((row) => row.storedRow),
+        sampleRows: includedRows.slice(0, SAMPLE_ROW_COUNT).map((row) => row.values),
         suggestedMapping,
-        summary: buildSheetSummary(rowPreviews),
+        summary: buildSheetSummary(includedRows),
       } satisfies LocalSheet;
     });
 
@@ -601,6 +876,7 @@ export async function parseLocalK2bWorkbook(
     createdAt: new Date().toISOString(),
     fileName: file.name,
     jobId: generateJobId(),
+    scope: scopeSummary,
     sheets,
   };
   await saveJob(job);
@@ -614,15 +890,27 @@ export async function fetchLocalK2bPreview(jobId: string): Promise<K2bImportPrev
 export async function applyLocalK2bWorkbook(
   token: string,
   request: Request,
-  input: { jobId: string; sheetName: string },
+  input: { jobId: string; sheetName: string; scope?: K2bImportScope },
 ): Promise<K2bApplyResult> {
   const job = await readJob(input.jobId);
   const selectedSheet = job.sheets.find((sheet) => sheet.name === input.sheetName) || job.sheets[0];
   if (!selectedSheet) {
     throw new LocalK2bImportError('선택한 시트를 찾을 수 없습니다.', 404);
   }
-  if (selectedSheet.rowCount === 0) {
-    throw new LocalK2bImportError('선택한 시트에 반영할 데이터 행이 없습니다.');
+  if (selectedSheet.includedRowCount === 0) {
+    throw new LocalK2bImportError('현재 스코프에 반영할 데이터 행이 없습니다.');
+  }
+  if (
+    input.scope &&
+    (input.scope.siteId ?? null) !== (job.scope.siteId ?? null || null)
+  ) {
+    throw new LocalK2bImportError('현재 업로드 스코프가 변경되어 다시 미리보기가 필요합니다.');
+  }
+  if (
+    input.scope &&
+    (input.scope.headquarterId ?? null) !== (job.scope.headquarterId ?? null || null)
+  ) {
+    throw new LocalK2bImportError('현재 업로드 스코프가 변경되어 다시 미리보기가 필요합니다.');
   }
 
   let headquarters = await fetchSafetyHeadquartersServer(token, request);
@@ -637,6 +925,9 @@ export async function applyLocalK2bWorkbook(
   };
 
   for (const row of selectedSheet.rows) {
+    if (!row.inScope) {
+      continue;
+    }
     const rowData = extractMappedRow(row.values, selectedSheet.suggestedMapping);
     if (!Object.values(rowData).some((value) => normalizeText(value))) {
       continue;
@@ -646,32 +937,39 @@ export async function applyLocalK2bWorkbook(
     const nextSiteLookup = buildSiteLookup(sites);
     const siteMatches = siteCandidates(rowData, nextHeadquarterLookup, nextSiteLookup);
     const headquarterMatches = headquarterCandidates(rowData, nextHeadquarterLookup);
-    const action = suggestAction(siteMatches, headquarterMatches);
+    const action = row.explicitAction ?? suggestAction(siteMatches, headquarterMatches);
 
     let headquarter: SafetyHeadquarter | null = null;
     let site: SafetySite | null = null;
 
-    if (action === 'update_site' && siteMatches.length === 1) {
-      const match = siteMatches[0];
-      site = sites.find((item) => item.id === match.siteId) || null;
+    if (action === 'update_site') {
+      const targetSiteId =
+        row.siteId ??
+        (siteMatches.length === 1 ? siteMatches[0].siteId : null);
+      site = sites.find((item) => item.id === targetSiteId) || null;
       if (!site) {
         throw new Error(`${row.rowIndex}행의 현장 갱신 대상을 찾을 수 없습니다.`);
       }
       site = await updateAdminSite(token, site.id, buildSitePayload(rowData), request);
       headquarter = headquarters.find((item) => item.id === site!.headquarter_id) || null;
       summary.updatedSiteCount += 1;
-    } else if (action === 'update_headquarter' && headquarterMatches.length === 1) {
-      const match = headquarterMatches[0];
-      headquarter = headquarters.find((item) => item.id === match.headquarterId) || null;
+    } else if (action === 'update_headquarter') {
+      const targetHeadquarterId =
+        row.headquarterId ??
+        (headquarterMatches.length === 1 ? headquarterMatches[0].headquarterId : null);
+      headquarter = headquarters.find((item) => item.id === targetHeadquarterId) || null;
       if (!headquarter) {
         throw new Error(`${row.rowIndex}행의 사업장 갱신 대상을 찾을 수 없습니다.`);
       }
       headquarter = await updateAdminHeadquarter(token, headquarter.id, buildHeadquarterPayload(rowData), request);
       summary.updatedHeadquarterCount += 1;
-      if (siteMatches.length === 1 && siteMatches[0].siteId) {
+      const targetSiteId =
+        row.siteId ??
+        (siteMatches.length === 1 ? siteMatches[0].siteId : null);
+      if (targetSiteId) {
         site = await updateAdminSite(
           token,
-          siteMatches[0].siteId,
+          targetSiteId,
           buildSitePayload(rowData, headquarter.id),
           request,
         );

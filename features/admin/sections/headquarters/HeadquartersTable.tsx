@@ -206,7 +206,7 @@ export function HeadquartersTable({
                               {
                                 label: '엑셀 업로드',
                                 onSelect: () => {
-                                  if (!busy) onExcelUploadRequest(null);
+                                  if (!busy) onExcelUploadRequest(item);
                                 },
                               },
                               {

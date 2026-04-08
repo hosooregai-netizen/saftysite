@@ -541,6 +541,9 @@ export interface SafetyBackendK2bPreviewRow {
   values: Record<string, string>;
   summary: string;
   suggested_action: string;
+  exclusion_reason_code?: string | null;
+  exclusion_reason?: string | null;
+  in_scope?: boolean;
   duplicate_candidates: SafetyBackendK2bMatchCandidate[];
 }
 
@@ -548,9 +551,12 @@ export interface SafetyBackendK2bSheetPreview {
   name: string;
   headers: string[];
   row_count: number;
+  included_row_count: number;
+  excluded_row_count: number;
   sample_rows: Record<string, string>[];
   suggested_mapping: Record<string, string>;
-  row_previews: SafetyBackendK2bPreviewRow[];
+  included_rows: SafetyBackendK2bPreviewRow[];
+  excluded_rows: SafetyBackendK2bPreviewRow[];
   summary: {
     create_count: number;
     update_headquarter_count: number;
@@ -564,6 +570,12 @@ export interface SafetyBackendK2bImportPreview {
   file_name: string;
   created_at: string;
   sheet_names: string[];
+  scope: {
+    source_section: 'headquarters' | 'sites';
+    headquarter_id?: string | null;
+    site_id?: string | null;
+    label: string;
+  };
   sheets: SafetyBackendK2bSheetPreview[];
 }
 
