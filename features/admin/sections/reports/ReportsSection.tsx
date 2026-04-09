@@ -29,6 +29,7 @@ import {
 import { isClosedReport } from '@/lib/admin/lifecycleStatus';
 import { getAdminSectionHref } from '@/lib/admin';
 import {
+  convertHwpxBlobToPdfWithFallback,
   fetchBadWorkplaceHwpxDocumentByReportKey,
   fetchBadWorkplacePdfDocumentByReportKeyWithFallback,
   fetchInspectionHwpxDocumentByReportKey,
@@ -698,6 +699,39 @@ export function ReportsSection({
       }
 
       if (row.reportType === 'technical_guidance') {
+        await ensureSessionLoaded(row.reportKey);
+        const browserSession = getSessionById(row.reportKey);
+
+        if (browserSession) {
+          const siteSessions = sessions.filter((item) => item.siteKey === browserSession.siteKey);
+
+          try {
+            const document = await generateInspectionHwpxBlob(browserSession, siteSessions);
+
+            if (format === 'hwpx') {
+              saveBlobAsFile(document.blob, document.filename);
+              setNotice('吏?꾨낫怨좎꽌瑜??대낫?덉뒿?덈떎.');
+            } else {
+              const exported = await convertHwpxBlobToPdfWithFallback(
+                document.blob,
+                document.filename,
+              );
+              saveBlobAsFile(exported.blob, exported.filename);
+              setNotice(
+                exported.fallbackToHwpx
+                  ? 'PDF 蹂?섏뿉 ?ㅽ뙣??HWPX濡??대낫?덉뒿?덈떎.'
+                  : '吏?꾨낫怨좎꽌瑜??대낫?덉뒿?덈떎.',
+              );
+            }
+            return;
+          } catch (browserError) {
+            console.warn('Inspection report browser export failed; falling back to server generation.', {
+              error: browserError instanceof Error ? browserError.message : String(browserError),
+              reportKey: row.reportKey,
+            });
+          }
+        }
+
         try {
           if (format === 'hwpx') {
             const exported = await fetchInspectionHwpxDocumentByReportKey(row.reportKey, authToken);
