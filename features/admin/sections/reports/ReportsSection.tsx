@@ -32,7 +32,6 @@ import {
   fetchBadWorkplaceHwpxDocumentByReportKey,
   fetchBadWorkplacePdfDocumentByReportKeyWithFallback,
   fetchInspectionHwpxDocumentByReportKey,
-  fetchInspectionPdfDocumentWithFallback,
   fetchInspectionPdfDocumentByReportKeyWithFallback,
   fetchQuarterlyHwpxDocumentByReportKey,
   fetchQuarterlyPdfDocumentByReportKeyWithFallback,
@@ -737,16 +736,9 @@ export function ReportsSection({
           saveBlobAsFile(document.blob, document.filename);
           setNotice('지도보고서를 내보냈습니다.');
         } else {
-          const exported = await fetchInspectionPdfDocumentWithFallback(
-            session,
-            siteSessions,
-          );
-          saveBlobAsFile(exported.blob, exported.filename);
-          setNotice(
-            exported.fallbackToHwpx
-              ? 'PDF 변환에 실패해 HWPX로 내보냈습니다.'
-              : '지도보고서를 내보냈습니다.',
-          );
+          const document = await generateInspectionHwpxBlob(session, siteSessions);
+          saveBlobAsFile(document.blob, document.filename);
+          setNotice('PDF 변환에 실패해 HWPX로 내보냈습니다.');
         }
         return;
       }
