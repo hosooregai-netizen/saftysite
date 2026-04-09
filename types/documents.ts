@@ -38,7 +38,6 @@ export type GenerateQuarterlyDocumentRequest =
 export type GenerateBadWorkplaceDocumentRequest =
   | GenerateBadWorkplaceHwpxRequest
   | GenerateBadWorkplaceDocumentByReportKeyRequest;
-
 export type GenerateInspectionDocumentRequest =
   | GenerateInspectionHwpxRequest
   | GenerateInspectionDocumentByReportKeyRequest;
