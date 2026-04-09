@@ -23,7 +23,6 @@ import {
   saveBlobAsFile,
 } from '@/lib/api';
 import {
-  BAD_WORKPLACE_NOTICE_SUBTITLE,
   BAD_WORKPLACE_NOTICE_TITLE,
   buildInitialBadWorkplaceReport,
   countDocument7FindingsForDisplay,
@@ -551,7 +550,6 @@ export function MobileBadWorkplaceReportScreen({
               <strong style={{ display: 'block', marginBottom: '4px' }}>
                 {BAD_WORKPLACE_NOTICE_TITLE}
               </strong>
-              <span>{BAD_WORKPLACE_NOTICE_SUBTITLE}</span>
             </div>
 
             <div className={styles.mobileImplementationList}>
