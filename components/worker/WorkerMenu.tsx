@@ -86,8 +86,7 @@ export function WorkerMenuPanel({
   const collapsed = forceExpanded ? false : Boolean(shell?.collapsed);
   const currentSiteKey = currentSiteKeyOverride ?? getSiteKeyFromPath(pathname);
   const mailboxBox = searchParams.get('box');
-  const resolvedMailboxBox =
-    mailboxBox === 'sent' || mailboxBox === 'accounts' ? mailboxBox : 'inbox';
+  const resolvedMailboxBox = mailboxBox === 'sent' ? 'sent' : 'inbox';
   const siteNavView = resolveSiteNavView({
     pathname,
     siteKey: currentSiteKey,
@@ -103,11 +102,6 @@ export function WorkerMenuPanel({
       label: '보낸편지함',
       href: '/mailbox?box=sent',
       active: pathname === '/mailbox' && resolvedMailboxBox === 'sent',
-    },
-    {
-      label: '연결 계정',
-      href: '/mailbox?box=accounts',
-      active: pathname === '/mailbox' && resolvedMailboxBox === 'accounts',
     },
   ];
 

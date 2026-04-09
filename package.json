@@ -8,6 +8,7 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint .",
+    "capture:naver-review": "tsx scripts/captureNaverReview.ts",
     "smoke:erp": "tsx scripts/smokeClient.ts",
     "verify:erp-live": "tsx scripts/verifyErpLiveContracts.ts",
     "generate:hwpx": "node --experimental-strip-types scripts/generate_hwpx_report.ts",

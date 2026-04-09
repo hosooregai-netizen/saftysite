@@ -1,13 +1,11 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import AppModal from '@/components/ui/AppModal';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import {
-  connectNaverMail,
-  disconnectMailAccount,
   fetchMailAccounts,
   fetchMailProviderStatuses,
   fetchMailThreadDetail,
@@ -22,7 +20,7 @@ import type { SafetyReportListItem, SafetySite } from '@/types/backend';
 import type { MailAccount, MailProviderStatus, MailThread, MailThreadDetail } from '@/types/mail';
 import localStyles from './MailboxPanel.module.css';
 
-type MailboxTab = 'inbox' | 'sent' | 'accounts';
+type MailboxTab = 'inbox' | 'sent';
 type MailboxView = 'list' | 'thread' | 'compose';
 type ComposeMode = 'new' | 'reply' | 'report';
 
@@ -69,10 +67,6 @@ const MAILBOX_TAB_META: Record<MailboxTab, { empty: string; title: string }> = {
   sent: {
     title: '보낸편지함',
     empty: '연결된 계정이나 검색 조건에 맞는 발송 메일이 없습니다.',
-  },
-  accounts: {
-    title: '연결 계정',
-    empty: '연결된 메일 계정이 없습니다.',
   },
 };
 
@@ -254,14 +248,6 @@ function buildThreadRecipients(thread: MailThread, accountEmail: string): string
     .join(', ');
 }
 
-function buildAccountCardTitle(account: MailAccount, currentUserName?: string | null) {
-  const trimmedUserName = currentUserName?.trim();
-  if (isDefaultSharedMailbox(account)) {
-    return trimmedUserName ? `${trimmedUserName} 메일함` : '공용 메일함';
-  }
-  return account.displayName || account.mailboxLabel || account.email;
-}
-
 function buildProviderStatusLabel(provider: MailProviderStatus | undefined) {
   if (!provider) return '-';
   if (!provider.enabled) return '설정 필요';
@@ -280,19 +266,6 @@ function buildProviderStatusDetail(provider: MailProviderStatus | undefined) {
     return '리디렉션 주소를 확인하세요.';
   }
   return '연결 가능';
-}
-
-function formatProviderLabel(provider: MailAccount['provider'] | MailProviderStatus['provider']) {
-  switch (provider) {
-    case 'google':
-      return '구글';
-    case 'naver_mail':
-      return '네이버';
-    case 'naver_works':
-      return '네이버웍스';
-    default:
-      return provider;
-  }
 }
 
 function buildReplySubject(subject: string) {
@@ -317,7 +290,6 @@ function buildThreadTimestamp(thread: MailThread) {
 
 function deriveMailboxTab(rawBox: string | null): MailboxTab {
   if (rawBox === 'sent') return 'sent';
-  if (rawBox === 'accounts') return 'accounts';
   return 'inbox';
 }
 
@@ -332,19 +304,19 @@ function deriveInitialComposeMode(input: {
     : 'new';
 }
 
-function deriveInitialView(input: { box: string | null; tab: MailboxTab; threadId: string }) {
-  if (input.tab === 'accounts') return 'list' as const;
+function deriveInitialView(input: { box: string | null; threadId: string }) {
   if (input.box === 'reports') return 'compose' as const;
   if (input.threadId) return 'thread' as const;
   return 'list' as const;
 }
 
 export function MailboxPanel({
-  currentUserName,
   mode,
   adminReports = [],
   adminSites = [],
 }: MailboxPanelProps) {
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const {
     isAuthenticated,
@@ -353,27 +325,12 @@ export function MailboxPanel({
   } = useInspectionSessions();
   const composerRef = useRef<HTMLDivElement | null>(null);
   const attachmentInputRef = useRef<HTMLInputElement | null>(null);
-  const initialBox = searchParams.get('box');
-  const initialThreadId = searchParams.get('threadId') || '';
   const reportKey = searchParams.get('reportKey') || '';
   const siteId = searchParams.get('siteId') || '';
   const headquarterId = searchParams.get('headquarterId') || '';
-  const [tab, setTab] = useState<MailboxTab>(() => deriveMailboxTab(initialBox));
-  const [view, setView] = useState<MailboxView>(() =>
-    deriveInitialView({
-      box: initialBox,
-      tab: deriveMailboxTab(initialBox),
-      threadId: initialThreadId,
-    }),
-  );
-  const [composeMode, setComposeMode] = useState<ComposeMode>(() =>
-    deriveInitialComposeMode({
-      box: initialBox,
-      headquarterId,
-      reportKey,
-      siteId,
-    }),
-  );
+  const [tab, setTab] = useState<MailboxTab>('inbox');
+  const [view, setView] = useState<MailboxView>('list');
+  const [composeMode, setComposeMode] = useState<ComposeMode>('new');
   const [query, setQuery] = useState('');
   const [accounts, setAccounts] = useState<MailAccount[]>([]);
   const [providerStatuses, setProviderStatuses] = useState<MailProviderStatus[]>([]);
@@ -381,38 +338,30 @@ export function MailboxPanel({
   const [threads, setThreads] = useState<MailThread[]>([]);
   const [threadOffset, setThreadOffset] = useState(0);
   const [threadTotal, setThreadTotal] = useState(0);
-  const [selectedThreadId, setSelectedThreadId] = useState(initialThreadId);
+  const [selectedThreadId, setSelectedThreadId] = useState('');
   const [threadDetail, setThreadDetail] = useState<MailThreadDetail | null>(null);
   const [threadLoading, setThreadLoading] = useState(false);
   const [accountStateLoading, setAccountStateLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [naverForm, setNaverForm] = useState({ appPassword: '', displayName: '', email: '' });
   const [oauthProvider, setOauthProvider] = useState<'google' | 'naver_mail' | null>(null);
   const [compose, setCompose] = useState<ComposeState>(() => buildComposeState());
   const [attachments, setAttachments] = useState<ComposeAttachment[]>([]);
   const [reportPickerOpen, setReportPickerOpen] = useState(false);
   const [reportPickerLoading, setReportPickerLoading] = useState(false);
   const [reportSearch, setReportSearch] = useState('');
-  const [reportSiteFilter, setReportSiteFilter] = useState(siteId || '');
+  const [reportSiteFilter, setReportSiteFilter] = useState('');
   const [workerModalReports, setWorkerModalReports] = useState<MailboxReportOption[]>([]);
-  const [selectedReport, setSelectedReport] = useState<SelectedReportContext | null>(() =>
-    reportKey || siteId || headquarterId
-      ? {
-          headquarterId,
-          headquarterName: '',
-          reportKey,
-          reportTitle: reportKey || '보고서',
-          siteId,
-          siteName: '',
-          updatedAt: null,
-          visitDate: null,
-        }
-      : null,
-  );
+  const [selectedReport, setSelectedReport] = useState<SelectedReportContext | null>(null);
 
   useEffect(() => {
     const nextBox = searchParams.get('box');
+    if (nextBox === 'accounts') {
+      const nextSearchParams = new URLSearchParams(searchParams.toString());
+      nextSearchParams.set('box', 'inbox');
+      router.replace(`${pathname}?${nextSearchParams.toString()}`, { scroll: false });
+      return;
+    }
     const nextThreadId = searchParams.get('threadId') || '';
     const nextTab = deriveMailboxTab(nextBox);
     setTab(nextTab);
@@ -442,11 +391,11 @@ export function MailboxPanel({
     setView(
       deriveInitialView({
         box: nextBox,
-        tab: nextTab,
         threadId: nextThreadId,
       }),
     );
-  }, [headquarterId, reportKey, searchParams, siteId]);
+    setReportSiteFilter(siteId || '');
+  }, [headquarterId, pathname, reportKey, router, searchParams, siteId]);
 
   const selectedAccount = useMemo(
     () => accounts.find((item) => item.id === selectedAccountId) ?? accounts[0] ?? null,
@@ -460,6 +409,7 @@ export function MailboxPanel({
   const googleProviderStatus = providerStatusMap.get('google');
   const naverProviderStatus = providerStatusMap.get('naver_mail');
   const hasMultipleAccounts = accounts.length > 1;
+  const hasPersonalAccount = accounts.some((account) => account.scope === 'personal');
   const adminSiteById = useMemo(
     () => new Map(adminSites.map((item) => [item.id, item])),
     [adminSites],
@@ -558,7 +508,11 @@ export function MailboxPanel({
   }, [compose.body, view]);
 
   useEffect(() => {
-    if (!selectedAccountId && accounts[0]) {
+    if (accounts.length === 0) {
+      setSelectedAccountId('');
+      return;
+    }
+    if (!selectedAccountId) {
       setSelectedAccountId(accounts[0].id);
     }
   }, [accounts, selectedAccountId]);
@@ -606,39 +560,23 @@ export function MailboxPanel({
   }, []);
 
   useEffect(() => {
-    if (tab !== 'accounts') return;
-    void (async () => {
-      try {
-        setAccountStateLoading(true);
-        const [response, providerResponse] = await Promise.all([
-          fetchMailAccounts(),
-          fetchMailProviderStatuses(),
-        ]);
-        setAccounts(response.rows.map(normalizeMailAccountUi));
-        setProviderStatuses(providerResponse.rows);
-        setSelectedAccountId((current) =>
-          current && response.rows.some((item) => item.id === current) ? current : response.rows[0]?.id || '',
-        );
-      } catch (nextError) {
-        setError(nextError instanceof Error ? nextError.message : '메일 계정 상태를 새로고침하지 못했습니다.');
-      } finally {
-        setAccountStateLoading(false);
-      }
-    })();
-  }, [tab]);
-
-  useEffect(() => {
     setThreadOffset(0);
   }, [headquarterId, query, reportKey, selectedAccountId, siteId, tab]);
 
   useEffect(() => {
-    if (tab === 'accounts') return;
+    if (!selectedAccount) {
+      setThreads([]);
+      setThreadTotal(0);
+      setSelectedThreadId('');
+      setThreadLoading(false);
+      return;
+    }
     void (async () => {
       try {
         setThreadLoading(true);
         setError(null);
         const response = await fetchMailThreads({
-          accountId: selectedAccountId,
+          accountId: selectedAccount.id,
           box: tab,
           headquarterId,
           limit: THREAD_PAGE_SIZE,
@@ -660,11 +598,12 @@ export function MailboxPanel({
         setThreadLoading(false);
       }
     })();
-  }, [headquarterId, query, reportKey, selectedAccountId, siteId, tab, threadOffset]);
+  }, [headquarterId, query, reportKey, selectedAccount, siteId, tab, threadOffset]);
 
   useEffect(() => {
-    if (!selectedThreadId || tab === 'accounts' || view !== 'thread') {
+    if (!selectedThreadId || !selectedAccount || view !== 'thread') {
       setThreadDetail(null);
+      setThreadLoading(false);
       return;
     }
     void (async () => {
@@ -678,7 +617,7 @@ export function MailboxPanel({
         setThreadLoading(false);
       }
     })();
-  }, [selectedThreadId, tab, view]);
+  }, [selectedAccount, selectedThreadId, view]);
 
   useEffect(() => {
     if (composeMode !== 'report' || !selectedReport?.reportKey) return;
@@ -989,31 +928,6 @@ export function MailboxPanel({
     }
   };
 
-  const handleConnectNaverAppPassword = async () => {
-    try {
-      setError(null);
-      const connected = normalizeMailAccountUi(await connectNaverMail(naverForm));
-      setAccounts((current) => [connected, ...current.filter((item) => item.id !== connected.id)]);
-      setNaverForm({ appPassword: '', displayName: '', email: '' });
-      setNotice('네이버 메일 계정을 앱 비밀번호 방식으로 연결했습니다.');
-    } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : '네이버 메일 연결에 실패했습니다.');
-    }
-  };
-
-  const handleDisconnectAccount = async (accountId: string) => {
-    try {
-      await disconnectMailAccount(accountId);
-      setAccounts((current) => current.filter((item) => item.id !== accountId));
-      setNotice('메일 계정 연결을 해제했습니다.');
-      if (selectedAccountId === accountId) {
-        setSelectedAccountId('');
-      }
-    } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : '메일 계정 연결 해제에 실패했습니다.');
-    }
-  };
-
   const threadPage = Math.floor(threadOffset / THREAD_PAGE_SIZE) + 1;
   const threadPageCount = Math.max(1, Math.ceil(threadTotal / THREAD_PAGE_SIZE));
   const threadRangeStart = threadTotal === 0 ? 0 : threadOffset + 1;
@@ -1024,6 +938,8 @@ export function MailboxPanel({
   const threadEmptyMessage = threadLoading ? '메일을 불러오는 중입니다.' : activeTabMeta.empty;
   const detailEmptyMessage = '메일을 선택하면 상세 내용을 볼 수 있습니다.';
   const composePlainText = stripHtmlToText(compose.body);
+  const showMailboxConnectGate = accounts.length === 0;
+  const showMailboxConnectPrompt = !showMailboxConnectGate && !hasPersonalAccount;
   const filteredReportOptions = useMemo(() => {
     const normalizedQuery = reportSearch.trim().toLowerCase();
     return reportOptions
@@ -1044,6 +960,13 @@ export function MailboxPanel({
       .sort((left, right) => (right.updatedAt || '').localeCompare(left.updatedAt || ''));
   }, [mode, reportOptions, reportSearch, reportSiteFilter]);
 
+  useEffect(() => {
+    if (!showMailboxConnectGate) return;
+    setView('list');
+    setSelectedThreadId('');
+    setThreadDetail(null);
+  }, [showMailboxConnectGate]);
+
   return (
     <section className={`${styles.sectionCard} ${styles.listSectionCard}`}>
       <div className={styles.sectionHeader}>
@@ -1053,7 +976,7 @@ export function MailboxPanel({
               <h2 className={styles.sectionTitle}>{mode === 'admin' ? '통합 메일함' : '개인 메일함'}</h2>
             </div>
             <div className={localStyles.headerUtilityGroup}>
-              {tab !== 'accounts' && view === 'list' ? (
+              {!showMailboxConnectGate && view === 'list' ? (
                 <input
                   aria-label="메일 검색"
                   className={`app-input ${localStyles.searchField}`}
@@ -1070,17 +993,19 @@ export function MailboxPanel({
                 >
                   새로 고침
                 </button>
-                <button
-                  type="button"
-                  className={`app-button app-button-primary ${localStyles.composeHeaderButton}`}
-                  onClick={() => handleOpenCompose()}
-                >
-                  메일 보내기
-                </button>
+                {!showMailboxConnectGate ? (
+                  <button
+                    type="button"
+                    className={`app-button app-button-primary ${localStyles.composeHeaderButton}`}
+                    onClick={() => handleOpenCompose()}
+                  >
+                    메일 보내기
+                  </button>
+                ) : null}
               </div>
             </div>
           </div>
-          {tab !== 'accounts' && view === 'list' && (hasMultipleAccounts || listScopeMeta.length > 0) ? (
+          {!showMailboxConnectGate && view === 'list' && (hasMultipleAccounts || listScopeMeta.length > 0) ? (
             <div className={localStyles.headerSecondaryRow}>
               {hasMultipleAccounts ? (
                 <select
@@ -1108,18 +1033,162 @@ export function MailboxPanel({
         {error ? <div className={styles.bannerError}>{error}</div> : null}
         {notice ? <div className={styles.bannerNotice}>{notice}</div> : null}
         <div className={`${localStyles.workspace} ${localStyles.workspaceSingle}`}>
-          <div className={localStyles.mainColumn}>
+          <div
+            className={localStyles.mainColumn}
+            data-mailbox-workspace={showMailboxConnectGate ? undefined : 'true'}
+          >
+            {!showMailboxConnectGate && view === 'list' && listScopeMeta.length > 0 ? (
+              <div className={localStyles.scopeRow}>
+                <span className={localStyles.scopeKicker}>현재 범위</span>
+                <strong className={localStyles.scopeValue}>{activeTabMeta.title}</strong>
+                <span className={localStyles.scopeText}>{listScopeMeta.join(' · ')}</span>
+              </div>
+            ) : null}
 
-        {tab !== 'accounts' && view === 'list' && listScopeMeta.length > 0 ? (
-          <div className={localStyles.scopeRow}>
-            <span className={localStyles.scopeKicker}>현재 범위</span>
-            <strong className={localStyles.scopeValue}>{activeTabMeta.title}</strong>
-            <span className={localStyles.scopeText}>{listScopeMeta.join(' · ')}</span>
-          </div>
-        ) : null}
+            {showMailboxConnectPrompt ? (
+              <div className={localStyles.accountWorkspace} data-mailbox-connect-prompt="true">
+                <article className={localStyles.accountCard}>
+                  <div className={localStyles.panelHeader}>
+                    <div className={localStyles.panelHeading}>
+                      <strong className={localStyles.accountTitle}>개인 메일 계정 추가 연결</strong>
+                      <span className={localStyles.accountMeta}>
+                        현재는 공용 메일함만 연결되어 있습니다. 개인 지메일 또는 네이버 메일을 추가로 연결하면
+                        개인 수신/발신 흐름까지 함께 사용할 수 있습니다.
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className={`app-button app-button-secondary ${localStyles.inlineActionButton}`}
+                      onClick={() => void handleRefreshAccountState()}
+                      disabled={accountStateLoading}
+                    >
+                      상태 새로 고침
+                    </button>
+                  </div>
+                </article>
 
-        {view === 'compose' ? (
-          <section className={localStyles.stageCard}>
+                <article className={localStyles.accountCard}>
+                  <div className={localStyles.panelHeader}>
+                    <div className={localStyles.panelHeading}>
+                      <strong className={localStyles.accountTitle}>지메일 로그인</strong>
+                      <span className={localStyles.accountMeta}>개인 지메일 계정을 추가 연결합니다.</span>
+                    </div>
+                    <span className={localStyles.inlineMeta}>{buildProviderStatusLabel(googleProviderStatus)}</span>
+                  </div>
+                  {googleProviderStatus ? (
+                    <span className={localStyles.accountMeta}>{buildProviderStatusDetail(googleProviderStatus)}</span>
+                  ) : null}
+                  <div className={localStyles.sectionActions}>
+                    <button
+                      type="button"
+                      className={`app-button app-button-primary ${localStyles.primaryActionButton}`}
+                      onClick={() => void handleConnectGoogle()}
+                      disabled={oauthProvider === 'google'}
+                    >
+                      {oauthProvider === 'google' ? '이동 중...' : '지메일 로그인'}
+                    </button>
+                  </div>
+                </article>
+
+                <article className={localStyles.accountCard}>
+                  <div className={localStyles.panelHeader}>
+                    <div className={localStyles.panelHeading}>
+                      <strong className={localStyles.accountTitle}>네이버 로그인</strong>
+                      <span className={localStyles.accountMeta}>개인 네이버 메일 계정을 추가 연결합니다.</span>
+                    </div>
+                    <span className={localStyles.inlineMeta}>{buildProviderStatusLabel(naverProviderStatus)}</span>
+                  </div>
+                  {naverProviderStatus ? (
+                    <span className={localStyles.accountMeta}>{buildProviderStatusDetail(naverProviderStatus)}</span>
+                  ) : null}
+                  <div className={localStyles.sectionActions}>
+                    <button
+                      type="button"
+                      className={`app-button app-button-primary ${localStyles.primaryActionButton}`}
+                      onClick={() => void handleConnectNaverOauth()}
+                      disabled={oauthProvider === 'naver_mail'}
+                    >
+                      {oauthProvider === 'naver_mail' ? '이동 중...' : '네이버 로그인'}
+                    </button>
+                  </div>
+                </article>
+              </div>
+            ) : null}
+
+            {showMailboxConnectGate ? (
+              <div className={localStyles.accountWorkspace} data-mailbox-connect-gate="true">
+                <article className={localStyles.accountCard}>
+                  <div className={localStyles.panelHeader}>
+                    <div className={localStyles.panelHeading}>
+                      <strong className={localStyles.accountTitle}>메일 계정 로그인</strong>
+                      <span className={localStyles.accountMeta}>
+                        메일 계정을 연결하면 받은편지함, 보낸편지함, 보고서 발송까지 한 화면에서 이어서 사용할
+                        수 있습니다.
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className={`app-button app-button-secondary ${localStyles.inlineActionButton}`}
+                      onClick={() => void handleRefreshAccountState()}
+                      disabled={accountStateLoading}
+                    >
+                      상태 새로 고침
+                    </button>
+                  </div>
+                </article>
+
+                <article className={localStyles.accountCard}>
+                  <div className={localStyles.panelHeader}>
+                    <div className={localStyles.panelHeading}>
+                      <strong className={localStyles.accountTitle}>지메일 로그인</strong>
+                      <span className={localStyles.accountMeta}>
+                        구글 메일 계정을 연결해 받은편지함과 보고서 메일 발송 흐름을 바로 사용할 수 있습니다.
+                      </span>
+                    </div>
+                    <span className={localStyles.inlineMeta}>{buildProviderStatusLabel(googleProviderStatus)}</span>
+                  </div>
+                  {googleProviderStatus ? (
+                    <span className={localStyles.accountMeta}>{buildProviderStatusDetail(googleProviderStatus)}</span>
+                  ) : null}
+                  <div className={localStyles.sectionActions}>
+                    <button
+                      type="button"
+                      className={`app-button app-button-primary ${localStyles.primaryActionButton}`}
+                      onClick={() => void handleConnectGoogle()}
+                      disabled={oauthProvider === 'google'}
+                    >
+                      {oauthProvider === 'google' ? '이동 중...' : '지메일 로그인'}
+                    </button>
+                  </div>
+                </article>
+
+                <article className={localStyles.accountCard}>
+                  <div className={localStyles.panelHeader}>
+                    <div className={localStyles.panelHeading}>
+                      <strong className={localStyles.accountTitle}>네이버 로그인</strong>
+                      <span className={localStyles.accountMeta}>
+                        네이버 메일 계정을 연결해 수신 메일과 발송 이력을 같은 메일함에서 관리할 수 있습니다.
+                      </span>
+                    </div>
+                    <span className={localStyles.inlineMeta}>{buildProviderStatusLabel(naverProviderStatus)}</span>
+                  </div>
+                  {naverProviderStatus ? (
+                    <span className={localStyles.accountMeta}>{buildProviderStatusDetail(naverProviderStatus)}</span>
+                  ) : null}
+                  <div className={localStyles.sectionActions}>
+                    <button
+                      type="button"
+                      className={`app-button app-button-primary ${localStyles.primaryActionButton}`}
+                      onClick={() => void handleConnectNaverOauth()}
+                      disabled={oauthProvider === 'naver_mail'}
+                    >
+                      {oauthProvider === 'naver_mail' ? '이동 중...' : '네이버 로그인'}
+                    </button>
+                  </div>
+                </article>
+              </div>
+            ) : view === 'compose' ? (
+              <section className={localStyles.stageCard}>
             <div className={localStyles.composeSectionHeader}>
               <h3 className={localStyles.panelTitle}>{composeTitle}</h3>
               {hasMultipleAccounts ? (
@@ -1335,179 +1404,9 @@ export function MailboxPanel({
                 </div>
               </div>
             </div>
-          </section>
-        ) : tab === 'accounts' ? (
-          <div className={localStyles.accountWorkspace}>
-            <div className={localStyles.accountColumn}>
-              <article className={localStyles.accountCard}>
-                <div className={localStyles.panelHeader}>
-                  <div className={localStyles.panelHeading}>
-                    <strong className={localStyles.accountTitle}>연결된 계정</strong>
-                  </div>
-                </div>
-                {accounts.length === 0 ? (
-                  <div className={localStyles.emptyState}>연결된 메일 계정이 없습니다.</div>
-                ) : (
-                  <div className={localStyles.accountList}>
-                    {accounts.map((account) => (
-                      <div key={account.id} className={localStyles.accountRecord}>
-                        <div className={localStyles.accountTitleRow}>
-                          <strong className={localStyles.accountTitle}>
-                            {buildAccountCardTitle(account, currentUserName)}
-                          </strong>
-                          <span className={localStyles.inlineMeta}>
-                            {account.scope === 'shared' ? '공용 계정' : '개인 계정'}
-                          </span>
-                        </div>
-                        <div className={localStyles.accountMetaRow}>
-                          <span className={localStyles.accountMeta}>{account.email}</span>
-                          <span className={localStyles.accountMeta}>{formatProviderLabel(account.provider)}</span>
-                        </div>
-                        <span className={localStyles.accountMeta}>동기화 {formatDateTime(account.lastSyncedAt)}</span>
-                        {account.scope === 'personal' ? (
-                          <div className={localStyles.sectionActions}>
-                            <button
-                              type="button"
-                              className={`app-button app-button-secondary ${localStyles.inlineActionButton}`}
-                              onClick={() => void handleDisconnectAccount(account.id)}
-                            >
-                              연결 해제
-                            </button>
-                          </div>
-                        ) : null}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </article>
-
-              <article className={localStyles.accountCard}>
-                <div className={localStyles.panelHeader}>
-                  <div className={localStyles.panelHeading}>
-                    <strong className={localStyles.accountTitle}>구글 메일</strong>
-                  </div>
-                  <span className={localStyles.inlineMeta}>{buildProviderStatusLabel(googleProviderStatus)}</span>
-                </div>
-                {googleProviderStatus ? (
-                  <span className={localStyles.accountMeta}>{buildProviderStatusDetail(googleProviderStatus)}</span>
-                ) : null}
-                <span className={localStyles.accountMeta}>
-                  로그인 버튼을 누르면 팝업이 아니라 현재 탭이 구글 로그인 화면으로 이동합니다.
-                </span>
-                <div className={localStyles.sectionActions}>
-                  <button
-                    type="button"
-                    className={`app-button app-button-primary ${localStyles.primaryActionButton}`}
-                    onClick={() => void handleConnectGoogle()}
-                    disabled={oauthProvider === 'google'}
-                  >
-                    {oauthProvider === 'google' ? '이동 중...' : '구글 로그인으로 연결'}
-                  </button>
-                </div>
-              </article>
-            </div>
-
-            <div className={localStyles.accountColumn}>
-              <article className={localStyles.accountCard}>
-                <div className={localStyles.panelHeader}>
-                  <div className={localStyles.panelHeading}>
-                    <strong className={localStyles.accountTitle}>OAuth 연결 상태</strong>
-                  </div>
-                  <button
-                    type="button"
-                    className={`app-button app-button-secondary ${localStyles.inlineActionButton}`}
-                    onClick={() => void handleRefreshAccountState()}
-                    disabled={accountStateLoading}
-                  >
-                    새로 고침
-                  </button>
-                </div>
-                <div className={localStyles.providerStatusGrid}>
-                  {providerStatuses.map((provider) => (
-                    <div key={provider.provider} className={localStyles.providerStatusCard}>
-                      <div className={localStyles.accountTitleRow}>
-                        <strong className={localStyles.accountTitle}>
-                          {provider.provider === 'google' ? '구글 메일' : '네이버 메일'}
-                        </strong>
-                        <span className={localStyles.inlineMeta}>{buildProviderStatusLabel(provider)}</span>
-                      </div>
-                      <span className={localStyles.accountMeta}>{buildProviderStatusDetail(provider)}</span>
-                    </div>
-                  ))}
-                </div>
-              </article>
-
-              <article className={localStyles.accountCard}>
-                <div className={localStyles.panelHeader}>
-                  <div className={localStyles.panelHeading}>
-                    <strong className={localStyles.accountTitle}>네이버 메일</strong>
-                  </div>
-                  <span className={localStyles.inlineMeta}>{buildProviderStatusLabel(naverProviderStatus)}</span>
-                </div>
-                {naverProviderStatus ? (
-                  <span className={localStyles.accountMeta}>{buildProviderStatusDetail(naverProviderStatus)}</span>
-                ) : null}
-                <span className={localStyles.accountMeta}>
-                  로그인 버튼을 누르면 현재 탭이 네이버 로그인 화면으로 이동합니다.
-                </span>
-                <div className={localStyles.sectionActions}>
-                  <button
-                    type="button"
-                    className={`app-button app-button-primary ${localStyles.primaryActionButton}`}
-                    onClick={() => void handleConnectNaverOauth()}
-                    disabled={oauthProvider === 'naver_mail'}
-                  >
-                    {oauthProvider === 'naver_mail' ? '이동 중...' : '네이버 로그인으로 연결'}
-                  </button>
-                </div>
-                <div className={localStyles.formDivider} />
-                <strong className={localStyles.accountTitle}>앱 비밀번호</strong>
-                <div className={localStyles.fieldStack}>
-                  <label className={localStyles.field}>
-                    <span className={localStyles.fieldLabel}>이메일</span>
-                    <input
-                      className="app-input"
-                      value={naverForm.email}
-                      onChange={(event) => setNaverForm((current) => ({ ...current, email: event.target.value }))}
-                    />
-                  </label>
-                  <label className={localStyles.field}>
-                    <span className={localStyles.fieldLabel}>표시 이름</span>
-                    <input
-                      className="app-input"
-                      value={naverForm.displayName}
-                      onChange={(event) =>
-                        setNaverForm((current) => ({ ...current, displayName: event.target.value }))
-                      }
-                    />
-                  </label>
-                  <label className={localStyles.field}>
-                    <span className={localStyles.fieldLabel}>앱 비밀번호</span>
-                    <input
-                      className="app-input"
-                      type="password"
-                      value={naverForm.appPassword}
-                      onChange={(event) =>
-                        setNaverForm((current) => ({ ...current, appPassword: event.target.value }))
-                      }
-                    />
-                  </label>
-                </div>
-                <div className={localStyles.sectionActions}>
-                  <button
-                    type="button"
-                    className={`app-button app-button-primary ${localStyles.primaryActionButton}`}
-                    onClick={() => void handleConnectNaverAppPassword()}
-                    disabled={!naverForm.email.trim()}
-                  >
-                    앱 비밀번호로 연결
-                  </button>
-                </div>
-              </article>
-            </div>
-          </div>
-        ) : view === 'list' ? (
-          <section className={styles.tableShell}>
+              </section>
+            ) : view === 'list' ? (
+              <section className={styles.tableShell}>
             <div className={localStyles.mailTableHeader}>
               <strong className={localStyles.panelTitle}>{activeTabMeta.title}</strong>
               <span className={localStyles.inlineMeta}>
@@ -1586,9 +1485,9 @@ export function MailboxPanel({
                 </div>
               </>
             )}
-          </section>
-        ) : view === 'thread' ? (
-          <section className={localStyles.stageCard}>
+              </section>
+            ) : view === 'thread' ? (
+              <section className={localStyles.stageCard}>
             <div className={localStyles.stageHeader}>
               <div className={localStyles.stageHeading}>
                 <div className={localStyles.stageMetaRow}>
@@ -1659,8 +1558,8 @@ export function MailboxPanel({
             ) : (
               <div className={localStyles.emptyState}>{detailEmptyMessage}</div>
             )}
-          </section>
-        ) : null}
+              </section>
+            ) : null}
           </div>
         </div>
       </div>
