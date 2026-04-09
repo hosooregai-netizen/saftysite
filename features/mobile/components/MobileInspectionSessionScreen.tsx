@@ -22,16 +22,16 @@ interface MobileInspectionSessionScreenProps {
 }
 
 const STEPS = [
-  { id: 'step2', label: '2. 개요' },
-  { id: 'step3', label: '3. 현장 전경' },
-  { id: 'step4', label: '4. 이전 지적' },
-  { id: 'step6', label: '6. 사망 기인물' },
-  { id: 'step7', label: '7. 위험요인 지적' },
-  { id: 'step8', label: '8. 향후 진행공정' },
-  { id: 'step9', label: '9. 위험성평가 / TBM' },
-  { id: 'step10', label: '10. 계측점검' },
-  { id: 'step11', label: '11. 안전교육' },
-  { id: 'step12', label: '12. 활동 실적' },
+  { id: 'step2', label: '개요' },
+  { id: 'step3', label: '현장 전경' },
+  { id: 'step4', label: '이전 지적' },
+  { id: 'step6', label: '사망 기인물' },
+  { id: 'step7', label: '위험요인 지적' },
+  { id: 'step8', label: '향후 진행공정' },
+  { id: 'step9', label: '위험성평가 / TBM' },
+  { id: 'step10', label: '계측점검' },
+  { id: 'step11', label: '안전교육' },
+  { id: 'step12', label: '활동 실적' },
 ];
 
 function formatCompactDate(value: string | null | undefined) {
@@ -183,7 +183,7 @@ export function MobileInspectionSessionScreen({
               <section style={{ padding: '16px' }}>
                 <div className={styles.sectionHeader}>
                   <div className={styles.sectionTitleWrap}>
-                    <h2 className={styles.sectionTitle}>2단계: 기술지도 개요</h2>
+                    <h2 className={styles.sectionTitle}>기술지도 개요</h2>
                   </div>
                 </div>
                 <div className={styles.editorBody}>
@@ -309,7 +309,7 @@ export function MobileInspectionSessionScreen({
               <section style={{ padding: '16px' }}>
                 <div className={styles.sectionHeader}>
                   <div className={styles.sectionTitleWrap}>
-                    <h2 className={styles.sectionTitle}>3단계: 현장 전경 및 진행공정</h2>
+                    <h2 className={styles.sectionTitle}>현장 전경 및 진행공정</h2>
                   </div>
                 </div>
                 <div className={styles.editorBody}>
@@ -406,7 +406,7 @@ export function MobileInspectionSessionScreen({
               <section style={{ padding: '16px' }}>
                 <div className={styles.sectionHeader}>
                   <div className={styles.sectionTitleWrap}>
-                    <h2 className={styles.sectionTitle}>4단계: 이전 기술지도 사항 이행여부</h2>
+                    <h2 className={styles.sectionTitle}>이전 기술지도 사항 이행여부</h2>
                   </div>
                 </div>
                 <div className={styles.editorBody}>
@@ -485,7 +485,7 @@ export function MobileInspectionSessionScreen({
               <section style={{ padding: '16px' }}>
                 <div className={styles.sectionHeader}>
                   <div className={styles.sectionTitleWrap}>
-                    <h2 className={styles.sectionTitle}>6단계: 12대 사망사고 기인물</h2>
+                    <h2 className={styles.sectionTitle}>12대 사망사고 기인물</h2>
                   </div>
                 </div>
                 <div className={styles.editorBody}>
@@ -522,7 +522,7 @@ export function MobileInspectionSessionScreen({
               <section style={{ padding: '16px' }}>
                 <div className={styles.sectionHeader}>
                   <div className={styles.sectionTitleWrap}>
-                    <h2 className={styles.sectionTitle}>7단계: 현존 유해·위험요인 세부 지적</h2>
+                    <h2 className={styles.sectionTitle}>현존 유해·위험요인 세부 지적</h2>
                   </div>
                 </div>
                 <div className={styles.editorBody}>
@@ -681,7 +681,7 @@ export function MobileInspectionSessionScreen({
               <section style={{ padding: '16px' }}>
                 <div className={styles.sectionHeader}>
                   <div className={styles.sectionTitleWrap}>
-                    <h2 className={styles.sectionTitle}>8단계: 향후 진행공정 위험요인</h2>
+                    <h2 className={styles.sectionTitle}>향후 진행공정 위험요인</h2>
                   </div>
                 </div>
                 <div className={styles.editorBody}>
@@ -785,7 +785,7 @@ export function MobileInspectionSessionScreen({
               <section style={{ padding: '16px' }}>
                 <div className={styles.sectionHeader}>
                   <div className={styles.sectionTitleWrap}>
-                    <h2 className={styles.sectionTitle}>9단계: 위험성평가 / TBM</h2>
+                    <h2 className={styles.sectionTitle}>위험성평가 / TBM</h2>
                   </div>
                 </div>
                 <div className={styles.editorBody}>
@@ -863,7 +863,7 @@ export function MobileInspectionSessionScreen({
               <section style={{ padding: '16px' }}>
                 <div className={styles.sectionHeader}>
                   <div className={styles.sectionTitleWrap}>
-                    <h2 className={styles.sectionTitle}>10단계: 계측점검</h2>
+                    <h2 className={styles.sectionTitle}>계측점검</h2>
                   </div>
                 </div>
                 <div className={styles.editorBody}>
@@ -997,7 +997,7 @@ export function MobileInspectionSessionScreen({
               <section style={{ padding: '16px' }}>
                 <div className={styles.sectionHeader}>
                   <div className={styles.sectionTitleWrap}>
-                    <h2 className={styles.sectionTitle}>11단계: 안전교육</h2>
+                    <h2 className={styles.sectionTitle}>안전교육</h2>
                   </div>
                 </div>
                 <div className={styles.editorBody}>
@@ -1080,7 +1080,7 @@ export function MobileInspectionSessionScreen({
               <section style={{ padding: '16px' }}>
                 <div className={styles.sectionHeader}>
                   <div className={styles.sectionTitleWrap}>
-                    <h2 className={styles.sectionTitle}>12단계: 활동 실적</h2>
+                    <h2 className={styles.sectionTitle}>활동 실적</h2>
                   </div>
                 </div>
                 <div className={styles.editorBody}>

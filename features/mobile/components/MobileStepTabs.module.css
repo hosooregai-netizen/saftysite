@@ -9,6 +9,7 @@
     0 1px 0 rgba(16, 24, 43, 0.04),
     0 14px 28px rgba(16, 24, 43, 0.06);
   overflow: hidden;
+  height: calc(100vh - 160px); /* Adjust for header/tabbar */
 }
 
 .tabContainer {
@@ -21,10 +22,7 @@
   border-right: 1px solid rgba(215, 224, 235, 0.88);
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none; /* Firefox */
-  position: sticky;
-  top: 66px; /* Header height */
-  height: calc(100vh - 160px); /* Adjust for header/tabbar */
-  z-index: 10;
+  height: 100%;
 }
 
 .tabContainer::-webkit-scrollbar {
@@ -58,6 +56,9 @@
   flex: 1;
   min-width: 0;
   padding: 0;
+  height: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   animation: fadeIn 0.3s ease;
 }
 
