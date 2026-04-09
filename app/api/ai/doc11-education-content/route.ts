@@ -76,26 +76,54 @@ function normalizeCount(value: string) {
   return digits || value.trim();
 }
 
-function normalizeShortLine(value: string, prefix: string) {
-  const cleaned = value
-    .replace(/\r\n/g, ' ')
-    .replace(/\n/g, ' ')
-    .replace(/\s+/g, ' ')
-    .replace(new RegExp(`^${prefix}\\s*[:：-]?\\s*`), '')
-    .trim();
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function stripRepeatedLabelPrefix(value: string, label: string) {
+  if (!value.trim()) {
+    return '';
+  }
+
+  const escapedLabel = escapeRegExp(label).replace(/\\ /g, '\\s*');
+  const pattern = new RegExp(`^(?:[-•·ㆍ]\\s*)?(?:${escapedLabel})\\s*[:：-]?\\s*`, 'u');
+
+  let cleaned = value.trim();
+  while (pattern.test(cleaned)) {
+    cleaned = cleaned.replace(pattern, '').trim();
+  }
 
   return cleaned;
 }
 
+function normalizeShortLine(value: string, prefix: string) {
+  return stripRepeatedLabelPrefix(
+    value
+    .replace(/\r\n/g, ' ')
+    .replace(/\n/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim(),
+    prefix,
+  );
+}
+
 function sanitizeTopicLine(value: string, fallbackTopic: string) {
-  const cleaned = normalizeShortLine(value, '-');
-  const text = cleaned || fallbackTopic || '안전교육';
-  const withoutLeadingDash = text.replace(/^-+/, '').trim();
+  const normalized = value
+    .replace(/\r\n/g, ' ')
+    .replace(/\n/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const withoutTopicLabel = stripRepeatedLabelPrefix(
+    stripRepeatedLabelPrefix(normalized, '-'),
+    '교육주제',
+  );
+  const text = withoutTopicLabel || fallbackTopic || '안전교육';
+  const withoutLeadingDash = text.replace(/^(?:[-•·ㆍ]\s*)+/, '').trim();
   return `-${withoutLeadingDash}`;
 }
 
 function sanitizeDetailLine(value: string, label: string, fallback: string) {
-  const cleaned = normalizeShortLine(value, label);
+  const cleaned = normalizeShortLine(value, label).replace(/^(?:[-•·ㆍ]\s*)+/, '').trim();
   return `-${label} : ${cleaned || fallback}`;
 }
 
