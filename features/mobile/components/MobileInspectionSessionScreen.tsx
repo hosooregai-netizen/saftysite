@@ -11,7 +11,6 @@ import {
   buildMobileHomeHref,
   buildMobileSiteReportsHref,
 } from '@/features/home/lib/siteEntry';
-import { formatDateTime } from '@/lib/formatDateTime';
 import { MobileShell } from './MobileShell';
 import { MobileTabBar } from './MobileTabBar';
 import { buildSiteTabs } from '../lib/buildSiteTabs';
