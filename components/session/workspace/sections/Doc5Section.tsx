@@ -6,8 +6,10 @@ import type { OverviewSectionProps } from '@/components/session/workspace/types'
 import type { ChartEntry } from '@/components/session/workspace/utils';
 import { hasFindingContent } from '@/components/session/workspace/utils';
 import { ChartCard } from '@/components/session/workspace/widgets';
-import { buildLocalDoc5SummaryDraft } from '@/lib/openai/doc5SummaryLocalDraft';
-import { generateDoc5Summary } from '@/lib/safetyApi/ai';
+import {
+  buildDoc5StructuredSummaryPayload,
+  buildLocalDoc5SummaryDraft,
+} from '@/lib/openai/doc5SummaryLocalDraft';
 
 interface Doc5SectionProps {
   applyDocumentUpdate: OverviewSectionProps['applyDocumentUpdate'];
@@ -36,6 +38,29 @@ function RelationChartPlaceholder({
       </div>
     </article>
   );
+}
+
+async function generateStructuredDoc5Summary(
+  payload: ReturnType<typeof buildDoc5StructuredSummaryPayload>,
+) {
+  const response = await fetch('/api/ai/doc5-structured-summary', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const result = (await response.json().catch(() => ({}))) as {
+    text?: string;
+    error?: string;
+  };
+
+  if (!response.ok || !result.text?.trim()) {
+    throw new Error(result.error?.trim() || '총평 AI 생성에 실패했습니다.');
+  }
+
+  return result.text.trim();
 }
 
 export default function Doc5Section(props: Doc5SectionProps) {
@@ -68,36 +93,38 @@ export default function Doc5Section(props: Doc5SectionProps) {
 
   const handleGenerateDraft = async () => {
     setDraftError(null);
-    setDraftNotice(null);
-
-    if (!isRelationReady) {
-      setDraftNotice(
-        relationStatus === 'loading'
-          ? '누적 통계 계산이 끝난 뒤 초안 생성이 가능합니다.'
-          : relationStatus === 'error'
-            ? '누적 통계를 불러오지 못해 초안 생성을 잠시 사용할 수 없습니다.'
-            : '이전 보고서가 없어 누적 통계가 없습니다.',
-      );
-      return;
-    }
+    setDraftNotice(
+      !isRelationReady
+        ? '누적 통계가 없거나 아직 준비되지 않아 현재 보고서 중심으로 총평을 생성합니다.'
+        : null,
+    );
 
     const findings = session.document7Findings.filter(hasFindingContent);
     if (findings.length === 0) {
       applySummary(
-        '문서 7 분석 위험요인이 아직 없어 기술지도 총평 초안을 만들 수 없습니다.',
+        buildLocalDoc5SummaryDraft(
+          session,
+          currentAccidentEntries,
+          currentAgentEntries,
+          cumulativeAccidentEntries,
+          cumulativeAgentEntries,
+        ),
       );
+      setDraftNotice('문서7 지적사항이 적어 로컬 규칙 기반 총평으로 먼저 채웠습니다.');
       return;
     }
 
     setDraftLoading(true);
     try {
-      const text = await generateDoc5Summary({
-        currentAccidentEntries,
-        cumulativeAccidentEntries,
-        currentAgentEntries,
-        cumulativeAgentEntries,
-        findings,
-      });
+      const text = await generateStructuredDoc5Summary(
+        buildDoc5StructuredSummaryPayload(
+          session,
+          currentAccidentEntries,
+          currentAgentEntries,
+          cumulativeAccidentEntries,
+          cumulativeAgentEntries,
+        ),
+      );
       applySummary(text);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -107,9 +134,11 @@ export default function Doc5Section(props: Doc5SectionProps) {
           session,
           currentAccidentEntries,
           currentAgentEntries,
+          cumulativeAccidentEntries,
+          cumulativeAgentEntries,
         ),
       );
-      setDraftNotice('AI 생성이 실패해 규칙 기반 초안으로 대체했습니다.');
+      setDraftNotice('AI 생성이 실패해 5줄 구조의 로컬 총평으로 대체했습니다.');
     } finally {
       setDraftLoading(false);
     }
@@ -118,17 +147,17 @@ export default function Doc5Section(props: Doc5SectionProps) {
   return (
     <div className={styles.sectionStack}>
       <div className={styles.doc5StatsGrid}>
-        <ChartCard title="지적유형별 통계 금회" entries={currentAccidentEntries} variant="erp" />
-        <ChartCard title="기인물별 통계 금회" entries={currentAgentEntries} variant="erp" />
+        <ChartCard title="지적유형 통계 금회" entries={currentAccidentEntries} variant="erp" />
+        <ChartCard title="기인물 통계 금회" entries={currentAgentEntries} variant="erp" />
         {isRelationReady ? (
           <>
             <ChartCard
-              title="지적유형별 통계 누적"
+              title="지적유형 통계 누적"
               entries={cumulativeAccidentEntries}
               variant="erp"
             />
             <ChartCard
-              title="기인물별 통계 누적"
+              title="기인물 통계 누적"
               entries={cumulativeAgentEntries}
               variant="erp"
             />
@@ -136,33 +165,33 @@ export default function Doc5Section(props: Doc5SectionProps) {
         ) : showRelationSkeleton ? (
           <>
             <RelationChartPlaceholder
-              title="지적유형별 통계 누적"
-              message="누적 통계를 계산 중입니다."
+              title="지적유형 통계 누적"
+              message="누적 통계를 계산하고 있습니다."
             />
             <RelationChartPlaceholder
-              title="기인물별 통계 누적"
-              message="누적 통계를 계산 중입니다."
+              title="기인물 통계 누적"
+              message="누적 통계를 계산하고 있습니다."
             />
           </>
         ) : showRelationError ? (
           <>
             <RelationChartPlaceholder
-              title="지적유형별 통계 누적"
+              title="지적유형 통계 누적"
               message="누적 통계를 아직 불러오지 못했습니다."
             />
             <RelationChartPlaceholder
-              title="기인물별 통계 누적"
+              title="기인물 통계 누적"
               message="누적 통계를 아직 불러오지 못했습니다."
             />
           </>
         ) : (
           <>
             <RelationChartPlaceholder
-              title="지적유형별 통계 누적"
+              title="지적유형 통계 누적"
               message="이전 보고서가 없어 누적 통계가 없습니다."
             />
             <RelationChartPlaceholder
-              title="기인물별 통계 누적"
+              title="기인물 통계 누적"
               message="이전 보고서가 없어 누적 통계가 없습니다."
             />
           </>
@@ -178,12 +207,12 @@ export default function Doc5Section(props: Doc5SectionProps) {
               {draftNotice ? <p className={styles.fieldAssist}>{draftNotice}</p> : null}
               {isRelationHydrating ? (
                 <p className={styles.fieldAssist}>
-                  누적 통계 계산이 끝나면 초안 생성이 활성화됩니다.
+                  누적 통계 계산이 끝나면 다음 생성부터 추세 문장이 더 풍부해집니다.
                 </p>
               ) : null}
               {showRelationEmpty ? (
                 <p className={styles.fieldAssist}>
-                  첫 보고서라면 누적 통계 없이 현재 지적사항만 먼저 작성하면 됩니다.
+                  첫 보고서여도 현재 보고서 기준 5줄 총평 생성은 가능합니다.
                 </p>
               ) : null}
               <textarea
@@ -209,10 +238,10 @@ export default function Doc5Section(props: Doc5SectionProps) {
                 <button
                   type="button"
                   className={styles.doc5SummaryDraftBtn}
-                  disabled={draftLoading || !isRelationReady}
+                  disabled={draftLoading}
                   onClick={() => void handleGenerateDraft()}
                 >
-                  총평 초안 생성
+                  총평 AI 생성
                 </button>
               </div>
             </div>

@@ -1,9 +1,10 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 import styles from '@/components/session/InspectionSessionWorkspace.module.css';
 import { UploadBox } from '@/components/session/workspace/widgets';
 import type { HazardStatsSectionProps } from '@/components/session/workspace/types';
 import type { InspectionSession } from '@/types/inspectionSession';
+import { findMeasurementTemplateByName, matchMeasurementTemplateByPhoto } from './doc10Ai';
 
 interface Doc10MeasurementCardProps {
   applyDocumentUpdate: HazardStatsSectionProps['applyDocumentUpdate'];
@@ -22,6 +23,9 @@ export function Doc10MeasurementCard({
   totalCount,
   withFileData,
 }: Doc10MeasurementCardProps) {
+  const [isMatchingInstrument, setIsMatchingInstrument] = useState(false);
+  const [instrumentMatchError, setInstrumentMatchError] = useState('');
+
   const templateOptions = useMemo(
     () => [...measurementTemplates].sort((left, right) => left.sortOrder - right.sortOrder),
     [measurementTemplates],
@@ -43,15 +47,53 @@ export function Doc10MeasurementCard({
     }));
   };
 
-  const findMeasurementTemplate = (instrumentType: string) => {
-    const normalized = instrumentType.trim().toLowerCase();
-    if (!normalized) return null;
+  const applyMatchedTemplate = (instrumentType: string) => {
+    const matchedTemplate = findMeasurementTemplateByName(templateOptions, instrumentType);
 
-    return (
-      measurementTemplates.find(
-        (template) => template.instrumentName.trim().toLowerCase() === normalized,
-      ) ?? null
-    );
+    updateMeasurement((measurement) => ({
+      ...measurement,
+      instrumentType,
+      safetyCriteria: matchedTemplate?.safetyCriteria ?? measurement.safetyCriteria,
+    }));
+  };
+
+  const handlePhotoSelect = async (file: File) => {
+    setInstrumentMatchError('');
+
+    const dataUrl = await withFileData(file);
+    if (!dataUrl) return;
+
+    updateMeasurement((measurement) => ({
+      ...measurement,
+      photoUrl: dataUrl,
+    }));
+
+    if (templateOptions.length === 0) {
+      return;
+    }
+
+    setIsMatchingInstrument(true);
+    try {
+      const matchedTemplate = await matchMeasurementTemplateByPhoto(file, templateOptions);
+      if (!matchedTemplate) {
+        return;
+      }
+
+      updateMeasurement((measurement) => ({
+        ...measurement,
+        photoUrl: dataUrl,
+        instrumentType: matchedTemplate.instrumentName,
+        safetyCriteria: matchedTemplate.safetyCriteria || measurement.safetyCriteria,
+      }));
+    } catch (error) {
+      setInstrumentMatchError(
+        error instanceof Error
+          ? error.message
+          : '계측장비 자동 매칭 중 오류가 발생했습니다.',
+      );
+    } finally {
+      setIsMatchingInstrument(false);
+    }
   };
 
   return (
@@ -63,6 +105,12 @@ export function Doc10MeasurementCard({
           }`}
         >
           <h3 className={styles.cardTitle}>{`계측 결과 ${index + 1}`}</h3>
+          {isMatchingInstrument ? (
+            <span className={styles.doc3AiInline} role="status" aria-live="polite">
+              <span className={styles.doc3AiSpinner} aria-hidden />
+              <span className={styles.doc3AiCaption}>AI 생성 중</span>
+            </span>
+          ) : null}
         </div>
         <div className={styles.measurementCardBody}>
           <div className={styles.measurementSplit}>
@@ -86,14 +134,7 @@ export function Doc10MeasurementCard({
                           onClear={() =>
                             updateMeasurement((measurement) => ({ ...measurement, photoUrl: '' }))
                           }
-                          onSelect={async (file) =>
-                            withFileData(file, (dataUrl) =>
-                              updateMeasurement((measurement) => ({
-                                ...measurement,
-                                photoUrl: dataUrl,
-                              })),
-                            )
-                          }
+                          onSelect={handlePhotoSelect}
                         />
                       </div>
                     </td>
@@ -118,15 +159,7 @@ export function Doc10MeasurementCard({
                         className={`${styles.doc10CellControl} app-input`}
                         value={item.instrumentType}
                         onChange={(event) => {
-                          const nextInstrumentType = event.target.value;
-                          const matchedTemplate = findMeasurementTemplate(nextInstrumentType);
-
-                          updateMeasurement((measurement) => ({
-                            ...measurement,
-                            instrumentType: nextInstrumentType,
-                            safetyCriteria:
-                              matchedTemplate?.safetyCriteria ?? measurement.safetyCriteria,
-                          }));
+                          applyMatchedTemplate(event.target.value);
                         }}
                       >
                         <option value="">선택</option>
@@ -139,6 +172,9 @@ export function Doc10MeasurementCard({
                           </option>
                         ))}
                       </select>
+                      {instrumentMatchError ? (
+                        <p className={styles.fieldAssistError}>{instrumentMatchError}</p>
+                      ) : null}
                     </td>
                     <th scope="row">측정 위치</th>
                     <td>

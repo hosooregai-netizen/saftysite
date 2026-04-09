@@ -5,8 +5,10 @@ import { useState } from 'react';
 import styles from '@/components/session/InspectionSessionWorkspace.module.css';
 import type { SupportSectionProps } from '@/components/session/workspace/types';
 import { UploadBox } from '@/components/session/workspace/widgets';
-import { buildLocalDoc11EducationContent } from '@/lib/openai/generateDoc11EducationContent';
-import { generateDoc11EducationContent } from '@/lib/safetyApi/ai';
+import {
+  buildLocalDoc11EducationContent,
+  generateStructuredDoc11EducationContent,
+} from '@/lib/openai/generateDoc11EducationContent';
 
 export default function Doc11Section(props: SupportSectionProps) {
   const { applyDocumentUpdate, session, withFileData } = props;
@@ -40,10 +42,11 @@ export default function Doc11Section(props: SupportSectionProps) {
       topic: record.topic,
       attendeeCount: record.attendeeCount,
       materialName: record.materialName,
+      photoUrl: record.photoUrl,
     };
 
     try {
-      const text = await generateDoc11EducationContent(input);
+      const text = await generateStructuredDoc11EducationContent(input);
       patchRecord(recordId, text);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

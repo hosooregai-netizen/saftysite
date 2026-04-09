@@ -2634,6 +2634,14 @@
   padding-left: 2px;
 }
 
+.doc2SubsectionHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 .doc2AccidentTable {
   width: 100%;
   min-width: 1080px;
@@ -2717,9 +2725,52 @@
   padding: 0;
 }
 
+.doc2ProcessPromptStack {
+  display: grid;
+  gap: 14px;
+}
+
+.doc2ProcessPromptGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 14px;
+}
+
+.doc2ProcessPromptField {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.doc2ProcessPromptFieldWide {
+  grid-column: 1 / -1;
+}
+
+.doc2ProcessPreviewCard {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-card);
+  background: var(--erp-panel-muted);
+}
+
+.doc2ProcessPreviewText {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  font: inherit;
+  color: var(--erp-dark);
+}
+
 @media (max-width: 899px) {
   .doc2AccidentTable {
     min-width: 980px;
+  }
+
+  .doc2ProcessPromptGrid {
+    grid-template-columns: 1fr;
   }
 }
 

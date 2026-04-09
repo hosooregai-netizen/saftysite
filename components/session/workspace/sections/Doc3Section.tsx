@@ -5,45 +5,25 @@ import { FIXED_SCENE_COUNT, TOTAL_SCENE_COUNT } from '@/constants/inspectionSess
 import { isExtraScenePlaceholderTitle } from '@/constants/inspectionSession/scenePhotos';
 import styles from '@/components/session/InspectionSessionWorkspace.module.css';
 import type { OverviewSectionProps } from '@/components/session/workspace/types';
-import { analyzeHazardPhotos } from '@/lib/safetyApi/ai';
-import { normalizeHazardResponse } from '@/lib/normalizeHazardResponse';
-import type { HazardReportItem } from '@/types/hazard';
 import type { SiteScenePhoto } from '@/types/inspectionSession';
 import Doc3ExtraScenes from './Doc3ExtraScenes';
 import Doc3FixedScenes from './Doc3FixedScenes';
 
-function compactSceneTitle(report?: HazardReportItem) {
-  const candidates = [
-    report?.metadata,
-    report?.locationDetail,
-    report?.objects?.slice(0, 2).join(' '),
-  ];
+async function inferSceneTitle(file: File) {
+  const formData = new FormData();
+  formData.append('file', file);
 
-  for (const candidate of candidates) {
-    const value = candidate
-      ?.replace(/[.!?]+$/g, '')
-      .replace(/^(사진|이미지)\s*(은|는)?\s*/g, '')
-      .replace(/\b현장\b/g, '')
-      .replace(/\b전경\b/g, '')
-      .replace(/\b모습\b/g, '')
-      .replace(/\b상태\b/g, '')
-      .replace(/\b입니다\b/g, '')
-      .replace(/[,:/]/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-    if (value) return value.slice(0, 24);
+  const response = await fetch('/api/ai/doc3-scene-title', {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error('현장 전경 공정명 AI 생성에 실패했습니다.');
   }
 
-  return '';
-}
-
-async function inferSceneTitles(files: File[]) {
-  try {
-    const reports = await normalizeHazardResponse(await analyzeHazardPhotos(files), files);
-    return files.map((_, index) => compactSceneTitle(reports[index]));
-  } catch {
-    return files.map(() => '');
-  }
+  const payload = (await response.json()) as { title?: string };
+  return payload.title?.trim() || '';
 }
 
 function patchScene(scenes: SiteScenePhoto[], sceneId: string, patch: Partial<SiteScenePhoto>) {
@@ -92,7 +72,7 @@ export default function Doc3Section({
     updateScene(sceneId, { photoUrl: dataUrl, title: fallbackTitle });
     toggleAnalyzing([sceneId], true);
     try {
-      const [title] = await inferSceneTitles([file]);
+      const title = await inferSceneTitle(file);
       updateScene(sceneId, { title: title || fallbackTitle });
     } finally {
       toggleAnalyzing([sceneId], false);
@@ -101,12 +81,6 @@ export default function Doc3Section({
 
   return (
     <div className={`${styles.sectionStack} ${styles.doc3SceneStack}`}>
-      {analyzingSceneIds.length > 0 ? (
-        <p className={`${styles.fieldAssist} ${styles.doc3FullRow} ${styles.doc3AiStatusNotice}`}>
-          {`AI가 ${analyzingSceneIds.length}개 이미지의 공정명을 정리하고 있습니다.`}
-        </p>
-      ) : null}
-
       <Doc3FixedScenes
         items={fixedScenes}
         onClear={(sceneId) => updateScene(sceneId, { photoUrl: '', title: '' })}
