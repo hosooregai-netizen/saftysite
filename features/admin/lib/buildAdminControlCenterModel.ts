@@ -30,7 +30,7 @@ import type {
   ReportDispatchStatus,
   SiteContractProfile,
 } from '@/types/admin';
-import type { SafetyReportListItem } from '@/types/backend';
+import type { SafetyReport, SafetyReportListItem } from '@/types/backend';
 import type { ControllerDashboardData } from '@/types/controller';
 
 const DAY_IN_MS = 1000 * 60 * 60 * 24;
@@ -554,6 +554,157 @@ function formatQuarterLabel(today: Date) {
   return `${today.getFullYear()}년 ${Math.floor(today.getMonth() / 3) + 1}분기`;
 }
 
+function extractCurrentQuarterKey(value: string | null | undefined) {
+  const parsed = parseDateValue(value);
+  if (!parsed) return '';
+  return `${parsed.getFullYear()}-Q${Math.floor(parsed.getMonth() / 3) + 1}`;
+}
+
+function normalizeMaterialText(value: unknown) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function normalizeMaterialKeyPart(value: unknown) {
+  return normalizeMaterialText(value).toLocaleLowerCase('ko-KR').replace(/\s+/g, ' ');
+}
+
+function asRecordArray(value: unknown): Array<Record<string, unknown>> {
+  if (!Array.isArray(value)) return [];
+  return value.filter(
+    (item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object',
+  );
+}
+
+function hasMeasurementMaterialContent(item: Record<string, unknown>) {
+  return Boolean(
+    normalizeMaterialText(item.photoUrl) ||
+      normalizeMaterialText(item.instrumentType) ||
+      normalizeMaterialText(item.measurementLocation) ||
+      normalizeMaterialText(item.measuredValue) ||
+      normalizeMaterialText(item.actionTaken),
+  );
+}
+
+function hasEducationMaterialContent(item: Record<string, unknown>) {
+  return Boolean(
+    normalizeMaterialText(item.photoUrl) ||
+      normalizeMaterialText(item.materialUrl) ||
+      normalizeMaterialText(item.materialName) ||
+      normalizeMaterialText(item.attendeeCount) ||
+      normalizeMaterialText(item.topic) ||
+      normalizeMaterialText(item.content),
+  );
+}
+
+function buildMeasurementMaterialKey(
+  item: Record<string, unknown>,
+  fallbackKey: string,
+) {
+  const instrumentType = normalizeMaterialKeyPart(item.instrumentType);
+  const measurementLocation = normalizeMaterialKeyPart(item.measurementLocation);
+  const measuredValue = normalizeMaterialKeyPart(item.measuredValue);
+
+  if (instrumentType && measurementLocation) {
+    return `measurement:${instrumentType}:${measurementLocation}`;
+  }
+
+  if (instrumentType) {
+    return `measurement:${instrumentType}`;
+  }
+
+  if (measurementLocation) {
+    return `measurement-location:${measurementLocation}`;
+  }
+
+  if (measuredValue) {
+    return `measurement-value:${measuredValue}`;
+  }
+
+  return fallbackKey;
+}
+
+function buildEducationMaterialKey(
+  item: Record<string, unknown>,
+  fallbackKey: string,
+) {
+  const materialName = normalizeMaterialKeyPart(item.materialName);
+  const topic = normalizeMaterialKeyPart(item.topic);
+  const content = normalizeMaterialKeyPart(item.content);
+
+  if (materialName) {
+    return `education-material:${materialName}`;
+  }
+
+  if (topic) {
+    return `education-topic:${topic}`;
+  }
+
+  if (content) {
+    return `education-content:${content}`;
+  }
+
+  return fallbackKey;
+}
+
+function resolveReportKind(report: Pick<SafetyReport, 'meta' | 'report_type'>) {
+  if (report.report_type) return report.report_type;
+  if (!report.meta || typeof report.meta !== 'object') return '';
+  return normalizeMaterialText((report.meta as Record<string, unknown>).reportKind);
+}
+
+function buildQuarterlyMaterialCountsBySite(
+  reports: SafetyReport[],
+  quarterKey: string,
+) {
+  const countsBySite = new Map<
+    string,
+    {
+      educationKeys: Set<string>;
+      measurementKeys: Set<string>;
+    }
+  >();
+
+  reports.forEach((report) => {
+    const siteId = report.site_id?.trim() || '';
+    if (!siteId || resolveReportKind(report) !== 'technical_guidance') return;
+
+    const reportQuarterKey =
+      extractCurrentQuarterKey(report.visit_date) ||
+      extractCurrentQuarterKey(report.updated_at);
+    if (!reportQuarterKey || reportQuarterKey !== quarterKey) return;
+
+    const payload = report.payload && typeof report.payload === 'object' ? report.payload : {};
+    const measurements = asRecordArray((payload as Record<string, unknown>).document10Measurements);
+    const educationRecords = asRecordArray(
+      (payload as Record<string, unknown>).document11EducationRecords,
+    );
+    const bucket = countsBySite.get(siteId) ?? {
+      educationKeys: new Set<string>(),
+      measurementKeys: new Set<string>(),
+    };
+
+    measurements.forEach((item, index) => {
+      if (!hasMeasurementMaterialContent(item)) return;
+      if (bucket.measurementKeys.size >= QUARTERLY_MATERIAL_REQUIRED_COUNT) return;
+      bucket.measurementKeys.add(
+        buildMeasurementMaterialKey(item, `measurement-fallback:${report.report_key}:${index}`),
+      );
+    });
+
+    educationRecords.forEach((item, index) => {
+      if (!hasEducationMaterialContent(item)) return;
+      if (bucket.educationKeys.size >= QUARTERLY_MATERIAL_REQUIRED_COUNT) return;
+      bucket.educationKeys.add(
+        buildEducationMaterialKey(item, `education-fallback:${report.report_key}:${index}`),
+      );
+    });
+
+    countsBySite.set(siteId, bucket);
+  });
+
+  return countsBySite;
+}
+
 function isWithinPeriod(value: string, period: AdminAnalyticsPeriod, today: Date) {
   if (period === 'all') return true;
   const parsed = parseDateValue(value);
@@ -841,6 +992,7 @@ function buildTrendRows(rows: EnrichedControllerReportRow[], today: Date): Admin
 export function buildAdminOverviewModel(
   data: ControllerDashboardData,
   reports: SafetyReportListItem[],
+  materialSourceReports: SafetyReport[] = [],
   today = new Date(),
 ): AdminOverviewModel {
   const overviewRows = buildEnrichedRows(data, reports, today);
@@ -851,6 +1003,10 @@ export function buildAdminOverviewModel(
   const activeSites = data.sites.filter((site) => site.status === 'active');
   const quarterKey = formatQuarterKey(today);
   const quarterLabel = formatQuarterLabel(today);
+  const materialCountsBySite = buildQuarterlyMaterialCountsBySite(
+    materialSourceReports,
+    quarterKey,
+  );
   const quarterlyOverdueRows = overviewRows.filter(
     (row) => row.reportType === 'quarterly_report' && row.dispatchStatus === 'overdue',
   );
@@ -889,9 +1045,15 @@ export function buildAdminOverviewModel(
   let educationReadyCount = 0;
   let measurementReadyCount = 0;
   activeSites.forEach((site) => {
-    const materialRecord = getSiteQuarterlyMaterialRecord(site, quarterKey);
-    const educationFilledCount = countFilledQuarterlyMaterials(materialRecord.educationMaterials);
-    const measurementFilledCount = countFilledQuarterlyMaterials(materialRecord.measurementMaterials);
+    const reportMaterialCounts = materialCountsBySite.get(site.id);
+    const materialRecord =
+      reportMaterialCounts == null ? getSiteQuarterlyMaterialRecord(site, quarterKey) : null;
+    const educationFilledCount =
+      reportMaterialCounts?.educationKeys.size ??
+      countFilledQuarterlyMaterials(materialRecord?.educationMaterials ?? []);
+    const measurementFilledCount =
+      reportMaterialCounts?.measurementKeys.size ??
+      countFilledQuarterlyMaterials(materialRecord?.measurementMaterials ?? []);
     const educationMissingCount = Math.max(
       0,
       QUARTERLY_MATERIAL_REQUIRED_COUNT - educationFilledCount,

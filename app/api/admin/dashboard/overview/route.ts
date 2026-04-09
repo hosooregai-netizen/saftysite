@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import {
   fetchAdminCoreData,
+  fetchAdminReportByKey,
   fetchAdminReports,
   fetchAdminOverviewServer,
   readRequiredAdminToken,
@@ -8,8 +9,38 @@ import {
 } from '@/server/admin/safetyApiServer';
 import { buildAdminOverviewResponse } from '@/server/admin/automation';
 import { mapBackendOverviewResponse } from '@/server/admin/upstreamMappers';
+import type { SafetyReportListItem } from '@/types/backend';
 
 export const runtime = 'nodejs';
+
+function parseDateValue(value: string | null | undefined): Date | null {
+  const normalized = typeof value === 'string' ? value.trim() : '';
+  if (!normalized) return null;
+  const parsed = new Date(normalized);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed;
+}
+
+function formatQuarterKey(date: Date) {
+  return `${date.getFullYear()}-Q${Math.floor(date.getMonth() / 3) + 1}`;
+}
+
+function resolveReportKind(report: SafetyReportListItem) {
+  if (report.report_type) return report.report_type;
+  const meta = report.meta;
+  if (!meta || typeof meta !== 'object') return '';
+  const reportKind = (meta as Record<string, unknown>).reportKind;
+  return typeof reportKind === 'string' ? reportKind.trim() : '';
+}
+
+function isCurrentQuarterTechnicalGuidanceReport(
+  report: SafetyReportListItem,
+  quarterKey: string,
+) {
+  if (resolveReportKind(report) !== 'technical_guidance') return false;
+  const referenceDate = parseDateValue(report.visit_date) ?? parseDateValue(report.updated_at);
+  return Boolean(referenceDate && formatQuarterKey(referenceDate) === quarterKey);
+}
 
 export async function GET(request: Request): Promise<Response> {
   try {
@@ -20,7 +51,18 @@ export async function GET(request: Request): Promise<Response> {
       fetchAdminReports(token, request),
     ]);
     const upstreamOverview = mapBackendOverviewResponse(rawOverview);
-    const normalizedOverview = buildAdminOverviewResponse(data, reports);
+    const currentQuarterKey = formatQuarterKey(new Date());
+    const materialReportKeys = reports
+      .filter((report) => isCurrentQuarterTechnicalGuidanceReport(report, currentQuarterKey))
+      .map((report) => report.report_key);
+    const materialSourceReports = await Promise.all(
+      materialReportKeys.map((reportKey) => fetchAdminReportByKey(token, reportKey, request)),
+    );
+    const normalizedOverview = buildAdminOverviewResponse(
+      data,
+      reports,
+      materialSourceReports,
+    );
     const visibleSiteIds = new Set(data.sites.map((site) => site.id));
 
     return NextResponse.json({

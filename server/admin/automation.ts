@@ -19,7 +19,7 @@ import type {
   SafetyAdminOverviewResponse,
   SafetyInspectionSchedule,
 } from '@/types/admin';
-import type { SafetyReportListItem, SafetySite, SafetyUser } from '@/types/backend';
+import type { SafetyReport, SafetyReportListItem, SafetySite, SafetyUser } from '@/types/backend';
 import type { ControllerDashboardData } from '@/types/controller';
 
 const DAY_IN_MS = 1000 * 60 * 60 * 24;
@@ -377,9 +377,10 @@ export function buildAdminSchedules(
 export function buildAdminOverviewResponse(
   data: ControllerDashboardData,
   reports: SafetyReportListItem[],
+  materialSourceReports: SafetyReport[] = [],
   today = new Date(),
 ): SafetyAdminOverviewResponse {
-  const overview = buildAdminOverviewModel(data, reports, today);
+  const overview = buildAdminOverviewModel(data, reports, materialSourceReports, today);
   const reportRows = buildControllerReportRows(reports, data.sites, data.users);
   const schedules = buildAdminSchedules(data, undefined, today)
     .filter((row) => row.isConflicted || row.isOutOfWindow || row.isOverdue)
