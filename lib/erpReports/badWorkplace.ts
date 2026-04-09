@@ -27,7 +27,10 @@ export const BAD_WORKPLACE_NOTICE_TITLE =
   '기술지도 미이행 등 사망사고 고위험 취약 현장 통보서';
 export const BAD_WORKPLACE_ATTACHMENT_DESCRIPTION =
   '기술지도 미이행 등 사망사고 고위험 취약 사항 1부';
-export const BAD_WORKPLACE_DEFAULT_AGENCY_REPRESENTATIVE = '한국종합안전';
+export const BAD_WORKPLACE_DEFAULT_AGENCY_NAME = '한국종합안전';
+export const BAD_WORKPLACE_DEFAULT_AGENCY_REPRESENTATIVE = '장정규';
+const BAD_WORKPLACE_LEGACY_AGENCY_NAME = 'Safety Guidance API';
+const BAD_WORKPLACE_LEGACY_AGENCY_REPRESENTATIVE = '한국종합안전';
 const BAD_WORKPLACE_DEFAULT_NON_COMPLIANCE =
   '기술지도 이후에도 동일 유해·위험요인이 개선되지 않아 지속 조치가 필요합니다.';
 
@@ -66,6 +69,30 @@ function buildReporterName(
   site: InspectionSite,
 ) {
   return normalizeText(session?.meta.drafter) || reporter?.name?.trim() || site.assigneeName || '';
+}
+
+export function normalizeBadWorkplaceAgencyName(value: string | null | undefined) {
+  const normalized = normalizeText(value);
+  const collapsed = normalized.replace(/\s+/g, '').toLowerCase();
+
+  if (
+    !collapsed ||
+    collapsed === BAD_WORKPLACE_LEGACY_AGENCY_NAME.replace(/\s+/g, '').toLowerCase() ||
+    collapsed === normalizeText(DEFAULT_GUIDANCE_AGENCY).replace(/\s+/g, '').toLowerCase()
+  ) {
+    return BAD_WORKPLACE_DEFAULT_AGENCY_NAME;
+  }
+
+  return normalized;
+}
+
+export function normalizeBadWorkplaceAgencyRepresentative(value: string | null | undefined) {
+  const normalized = normalizeText(value);
+  if (!normalized || normalized === BAD_WORKPLACE_LEGACY_AGENCY_REPRESENTATIVE) {
+    return BAD_WORKPLACE_DEFAULT_AGENCY_REPRESENTATIVE;
+  }
+
+  return normalized;
 }
 
 export function getBadWorkplaceSourceSessions(siteSessions: InspectionSession[]) {
@@ -275,8 +302,12 @@ export function buildInitialBadWorkplaceReport(
       confirmationDate: existing.confirmationDate || getTodayDateValue(),
       reporterName: existing.reporterName || reporterName,
       assigneeContact: existing.assigneeContact || buildAssigneeContact(reporter, sourceSession),
-      agencyRepresentative:
-        existing.agencyRepresentative || BAD_WORKPLACE_DEFAULT_AGENCY_REPRESENTATIVE,
+      agencyName: normalizeBadWorkplaceAgencyName(
+        existing.agencyName || reporter?.organization_name || DEFAULT_GUIDANCE_AGENCY,
+      ),
+      agencyRepresentative: normalizeBadWorkplaceAgencyRepresentative(
+        existing.agencyRepresentative,
+      ),
       notificationDate:
         existing.notificationDate || existing.updatedAt.slice(0, 10) || timestamp.slice(0, 10),
       attachmentDescription:
@@ -300,8 +331,10 @@ export function buildInitialBadWorkplaceReport(
     implementationCount:
       sourceSession?.document2Overview.visitCount || String(siteSessions.length || ''),
     contractPeriod: site.adminSiteSnapshot.constructionPeriod,
-    agencyName: reporter?.organization_name || DEFAULT_GUIDANCE_AGENCY,
-    agencyRepresentative: BAD_WORKPLACE_DEFAULT_AGENCY_REPRESENTATIVE,
+    agencyName: normalizeBadWorkplaceAgencyName(
+      reporter?.organization_name || DEFAULT_GUIDANCE_AGENCY,
+    ),
+    agencyRepresentative: normalizeBadWorkplaceAgencyRepresentative(null),
     agencyAddress: site.adminSiteSnapshot.headquartersAddress,
     agencyContact: reporter?.phone || site.adminSiteSnapshot.headquartersContact,
     guidanceDate,

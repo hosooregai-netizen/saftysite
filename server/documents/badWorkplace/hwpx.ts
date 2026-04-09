@@ -5,6 +5,10 @@ import path from 'node:path';
 
 import JSZip from 'jszip';
 
+import {
+  normalizeBadWorkplaceAgencyName,
+  normalizeBadWorkplaceAgencyRepresentative,
+} from '@/lib/erpReports/badWorkplace';
 import type { BadWorkplaceReport } from '@/types/erpReports';
 import type { InspectionSite } from '@/types/inspectionSession';
 
@@ -107,7 +111,7 @@ function buildRecipientOfficeLine(value: string | null | undefined) {
 }
 
 function buildAgencyRepresentativeLabel(report: BadWorkplaceReport) {
-  const agencyName = formatOptionalText(report.agencyName);
+  const agencyName = formatOptionalText(normalizeBadWorkplaceAgencyName(report.agencyName));
   return `${agencyName || '건설재해예방전문지도기관'} 대표자`;
 }
 
@@ -492,9 +496,15 @@ function updateInfoTable(tableXml: string, report: BadWorkplaceReport, site: Ins
   nextTable = replaceCellText(nextTable, 18, 2, buildAgencyRepresentativeLabel(report), {
     reflow: true,
   });
-  nextTable = replaceCellText(nextTable, 18, 5, formatText(report.agencyRepresentative), {
-    reflow: true,
-  });
+  nextTable = replaceCellText(
+    nextTable,
+    18,
+    5,
+    formatText(normalizeBadWorkplaceAgencyRepresentative(report.agencyRepresentative)),
+    {
+      reflow: true,
+    },
+  );
   nextTable = replaceCellText(nextTable, 20, 0, buildRecipientOfficeLine(report.recipientOfficeName), {
     reflow: true,
   });
