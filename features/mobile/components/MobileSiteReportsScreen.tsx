@@ -10,6 +10,8 @@ import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { formatDateTime } from '@/lib/formatDateTime';
 import type { InspectionReportListItem } from '@/types/inspectionSession';
 import { MobileShell } from './MobileShell';
+import { MobileTabBar } from './MobileTabBar';
+import { buildSiteTabs } from '../lib/buildSiteTabs';
 import styles from './MobileShell.module.css';
 
 interface MobileSiteReportsScreenProps {
@@ -57,13 +59,11 @@ function getReportSortTime(item: InspectionReportListItem) {
 
 function getProgressLabel(progressRate: number) {
   if (progressRate >= 100) {
-    return '작성 완료';
+    return '완료';
   }
-
   if (progressRate > 0) {
-    return '작성 중';
+    return '작성중';
   }
-
   return '미작성';
 }
 
@@ -96,69 +96,47 @@ function ReportCard({
   const progressRate = clampProgress(item.progressRate);
 
   return (
-    <article className={styles.reportCard}>
-      <div className={styles.cardTop}>
-        <div className={styles.cardTitleWrap}>
-          <span className={styles.cardKicker}>기술지도 보고서</span>
-          <h2 className={styles.cardTitle}>{item.reportTitle}</h2>
-          <span className={styles.cardSubTitle}>
-            마지막 저장 {formatDateTime(item.lastAutosavedAt || item.updatedAt)}
+    <Link href={buildMobileSessionHref(item.reportKey)} style={{ textDecoration: 'none', color: 'inherit' }}>
+      <article className={styles.reportCard} style={{ cursor: 'pointer', padding: '12px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+            <span className={styles.roundBadge} style={{ minWidth: 'auto', height: '24px', minHeight: '24px', padding: '0 8px', fontSize: '12px', flexShrink: 0 }}>
+              {item.visitRound ? `${item.visitRound}차` : '-'}
+            </span>
+            <h2 className={styles.cardTitle} style={{ fontSize: '15px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {item.reportTitle}
+            </h2>
+          </div>
+          {canArchiveReports && (
+            <button
+              type="button"
+              style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '13px', padding: '4px', cursor: 'pointer', flexShrink: 0 }}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onDeleteRequest(item.reportKey);
+              }}
+            >
+              삭제
+            </button>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <span style={{ fontSize: '13px', color: '#475569' }}>
+              <strong style={{ fontWeight: 600, color: '#0f172a' }}>지도일</strong> {formatCompactDate(item.visitDate)}
+            </span>
+            <span style={{ fontSize: '13px', color: '#475569' }}>
+              <strong style={{ fontWeight: 600, color: '#0f172a' }}>작성</strong> {getDrafterDisplay(item, assignedUserDisplay, fallbackAssignee)}
+            </span>
+          </div>
+          <span style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a' }}>
+            {getProgressLabel(progressRate)}
           </span>
         </div>
-        <span className={styles.roundBadge}>{item.visitRound ? `${item.visitRound}차` : '-'}</span>
-      </div>
-
-      <div className={styles.metaGrid}>
-        <div className={styles.metaItem}>
-          <span className={styles.metaLabel}>지도일</span>
-          <strong className={styles.metaValue}>{formatCompactDate(item.visitDate)}</strong>
-        </div>
-        <div className={styles.metaItem}>
-          <span className={styles.metaLabel}>작성자</span>
-          <strong className={styles.metaValue}>
-            {getDrafterDisplay(item, assignedUserDisplay, fallbackAssignee)}
-          </strong>
-        </div>
-        <div className={styles.metaItem}>
-          <span className={styles.metaLabel}>진행 상태</span>
-          <strong className={styles.metaValue}>{getProgressLabel(progressRate)}</strong>
-        </div>
-        <div className={styles.metaItem}>
-          <span className={styles.metaLabel}>최종 갱신</span>
-          <strong className={styles.metaValue}>
-            {formatDateTime(item.lastAutosavedAt || item.updatedAt)}
-          </strong>
-        </div>
-      </div>
-
-      <div className={styles.progressBlock}>
-        <div className={styles.progressHeader}>
-          <span className={styles.progressLabel}>모바일 핵심 섹션 진행률</span>
-          <strong className={styles.progressValue}>{progressRate}%</strong>
-        </div>
-        <div className={styles.progressTrack} aria-hidden="true">
-          <span className={styles.progressFill} style={{ width: `${progressRate}%` }} />
-        </div>
-      </div>
-
-      <div className={styles.cardActions}>
-        <Link
-          href={buildMobileSessionHref(item.reportKey)}
-          className={`app-button app-button-primary ${styles.cardActionPrimary}`}
-        >
-          이어서 작성
-        </Link>
-        {canArchiveReports ? (
-          <button
-            type="button"
-            className={`app-button app-button-danger ${styles.cardActionSecondary}`}
-            onClick={() => onDeleteRequest(item.reportKey)}
-          >
-            삭제
-          </button>
-        ) : null}
-      </div>
-    </article>
+      </article>
+    </Link>
   );
 }
 
@@ -360,98 +338,59 @@ export function MobileSiteReportsScreen({ siteKey }: MobileSiteReportsScreenProp
 
   return (
     <>
-      <MobileShell
-        backHref={buildMobileSiteHomeHref(currentSite.id)}
-        backLabel="현장 홈"
-        currentUserName={currentUser?.name}
-        footer={
-          <>
-            <button
-              type="button"
-              className={`app-button app-button-primary ${styles.footerPrimary}`}
-              onClick={openCreateDialog}
-              disabled={!canCreateReport}
-            >
-              보고서 추가
-            </button>
-            <Link
-              href={buildMobileSiteHomeHref(currentSite.id)}
-              className={`app-button app-button-secondary ${styles.footerSecondary}`}
-            >
-              현장 홈
-            </Link>
-          </>
-        }
-        kicker="기술지도 보고서"
-        onLogout={logout}
-        subtitle="모바일에서는 핵심 섹션 중심으로 이어서 편집합니다."
-        title={currentSite.siteName}
-        webHref={`/sites/${encodeURIComponent(currentSite.id)}`}
-      >
-        <section className={styles.sectionCard}>
-          <div className={styles.sectionHeader}>
-            <div className={styles.sectionTitleWrap}>
-              <span className={styles.sectionEyebrow}>목록 요약</span>
-              <h2 className={styles.sectionTitle}>현장 보고서 인덱스</h2>
-            </div>
-            <span className={styles.sectionMeta}>
-              {reportIndexStatus === 'loading' ? '목록 동기화 중' : `${reportItems.length}건`}
-            </span>
+    <MobileShell
+      backHref={buildMobileSiteHomeHref(currentSite.id)}
+      backLabel="현장 홈"
+      currentUserName={currentUser?.name}
+      tabBar={<MobileTabBar tabs={buildSiteTabs(currentSite.id)} />}
+      onLogout={logout}
+      title={currentSite.siteName}
+      webHref={`/sites/${encodeURIComponent(currentSite.id)}`}
+    >
+      <section className={styles.sectionCard}>
+        <div className={styles.sectionHeader} style={{ paddingBottom: '12px' }}>
+          <div className={styles.sectionTitleWrap}>
+            <h2 className={styles.sectionTitle}>현장 보고서 요약</h2>
           </div>
+          <span className={styles.sectionMeta}>
+            {reportIndexStatus === 'loading' ? '목록 동기화 중' : `총 ${reportItems.length}건 / 검색 ${filteredReportItems.length}건`}
+          </span>
+        </div>
 
-          <div className={styles.statGrid}>
-            <article className={styles.statCard}>
-              <span className={styles.statLabel}>총 보고서</span>
-              <strong className={styles.statValue}>{reportItems.length}</strong>
-              <span className={styles.statMeta}>현장 기준 전체 문서</span>
-            </article>
-            <article className={styles.statCard}>
-              <span className={styles.statLabel}>최근 갱신</span>
-              <strong className={styles.statValue}>{formatCompactDate(latestUpdatedAt)}</strong>
-              <span className={styles.statMeta}>
-                {latestUpdatedAt ? formatDateTime(latestUpdatedAt) : '기록 없음'}
-              </span>
-            </article>
-          </div>
-        </section>
+        <div style={{ paddingBottom: '12px' }}>
+          <button
+            type="button"
+            className="app-button app-button-primary"
+            style={{ width: '100%' }}
+            onClick={openCreateDialog}
+            disabled={!canCreateReport}
+          >
+            + 보고서 추가
+          </button>
+        </div>
 
-        <section className={styles.sectionCard}>
-          <div className={styles.sectionHeader}>
-            <div className={styles.sectionTitleWrap}>
-              <span className={styles.sectionEyebrow}>목록 제어</span>
-              <h2 className={styles.sectionTitle}>검색과 정렬</h2>
-            </div>
-          </div>
+        <div className={styles.filterRow} style={{ marginTop: 0, borderTop: 'none', paddingTop: 0 }}>
+          <input
+            className="app-input"
+            placeholder="차수, 제목, 지도일, 작성자로 검색"
+            value={reportQuery}
+            onChange={(event) => setReportQuery(event.target.value)}
+          />
+          <select
+            className="app-select"
+            value={reportSortMode}
+            onChange={(event) =>
+              setReportSortMode(event.target.value as SiteReportSortMode)
+            }
+          >
+            <option value="round">차수순</option>
+            <option value="name">제목순</option>
+            <option value="progress">진행률순</option>
+          </select>
+        </div>
+      </section>
 
-          <div className={styles.filterRow}>
-            <input
-              className="app-input"
-              placeholder="차수, 제목, 지도일, 작성자로 검색"
-              value={reportQuery}
-              onChange={(event) => setReportQuery(event.target.value)}
-            />
-            <select
-              className="app-select"
-              value={reportSortMode}
-              onChange={(event) =>
-                setReportSortMode(event.target.value as SiteReportSortMode)
-              }
-            >
-              <option value="round">차수순</option>
-              <option value="name">제목순</option>
-              <option value="progress">진행률순</option>
-            </select>
-          </div>
-        </section>
-
-        <section className={styles.sectionCard}>
-          <div className={styles.sectionHeader}>
-            <div className={styles.sectionTitleWrap}>
-              <span className={styles.sectionEyebrow}>보고서 목록</span>
-              <h2 className={styles.sectionTitle}>모바일 편집 대상</h2>
-            </div>
-          </div>
-
+      <section className={styles.sectionCard} style={{ backgroundColor: 'transparent', boxShadow: 'none', padding: 0 }}>
           {reportIndexError ? (
             <div className={styles.errorNotice}>
               <p>{reportIndexError}</p>

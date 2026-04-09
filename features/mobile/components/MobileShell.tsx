@@ -13,6 +13,7 @@ interface MobileShellProps {
   kicker?: string;
   onLogout: () => void;
   subtitle?: string | null;
+  tabBar?: ReactNode;
   title: string;
   webHref: string;
   webLabel?: string;
@@ -24,9 +25,10 @@ export function MobileShell({
   children,
   currentUserName,
   footer,
-  kicker = '작업자 모바일',
+  kicker,
   onLogout,
   subtitle,
+  tabBar,
   title,
   webHref,
   webLabel = '웹에서 보기',
@@ -67,15 +69,9 @@ export function MobileShell({
           </div>
 
           <div className={styles.headerBody}>
-            <span className={styles.kicker}>{kicker}</span>
+            {kicker ? <span className={styles.kicker}>{kicker}</span> : null}
             <h1 className={styles.title}>{title}</h1>
             {subtitle ? <p className={styles.subtitle}>{subtitle}</p> : null}
-            <div className={styles.accountRow}>
-              <span className={styles.accountLabel}>로그인 계정</span>
-              <strong className={styles.accountValue}>
-                {currentUserName || '작업자'}
-              </strong>
-            </div>
           </div>
         </header>
 
@@ -83,6 +79,7 @@ export function MobileShell({
           className={[
             styles.content,
             footer ? styles.contentWithFooter : '',
+            tabBar ? styles.contentWithTabBar : '',
           ]
             .filter(Boolean)
             .join(' ')}
@@ -91,7 +88,11 @@ export function MobileShell({
         </div>
       </div>
 
-      {footer ? (
+      {tabBar ? (
+        <div className={styles.tabBarWrapper}>
+          {tabBar}
+        </div>
+      ) : footer ? (
         <div className={styles.footerBar}>
           <div className={styles.footerInner}>{footer}</div>
         </div>

@@ -158,6 +158,23 @@
   padding-bottom: 108px;
 }
 
+.contentWithTabBar {
+  padding-bottom: 90px;
+}
+
+.tabBarWrapper {
+  position: sticky;
+  bottom: 0;
+  z-index: 24;
+  width: min(100%, 760px);
+  margin: 0 auto;
+  background:
+    linear-gradient(180deg, rgba(246, 249, 253, 0.82), rgba(246, 249, 253, 0.98));
+  backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(174, 186, 200, 0.72);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
 .footerBar {
   position: sticky;
   bottom: 0;
@@ -593,7 +610,8 @@
 
 @media (max-width: 520px) {
   .pageShell,
-  .footerBar {
+  .footerBar,
+  .tabBarWrapper {
     width: 100%;
   }
 

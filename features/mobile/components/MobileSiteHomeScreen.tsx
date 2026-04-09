@@ -11,8 +11,10 @@ import {
 import { useSiteReportListState } from '@/features/site-reports/hooks/useSiteReportListState';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { formatDateTime } from '@/lib/formatDateTime';
-import { buildMobileHomeHref, buildMobileSiteReportsHref } from '@/features/home/lib/siteEntry';
+import { buildMobileHomeHref, buildMobileSiteReportsHref, buildMobileSessionHref } from '@/features/home/lib/siteEntry';
 import { MobileShell } from './MobileShell';
+import { MobileTabBar } from './MobileTabBar';
+import { buildSiteTabs } from '../lib/buildSiteTabs';
 import styles from './MobileShell.module.css';
 
 interface MobileSiteHomeScreenProps {
@@ -21,6 +23,16 @@ interface MobileSiteHomeScreenProps {
 
 function clampProgress(value: number | null | undefined) {
   return Math.max(0, Math.min(100, Math.round(value ?? 0)));
+}
+
+function getProgressLabel(progressRate: number) {
+  if (progressRate >= 100) {
+    return '완료';
+  }
+  if (progressRate > 0) {
+    return '작성중';
+  }
+  return '미작성';
 }
 
 function formatCompactDate(value: string | null | undefined) {
@@ -158,29 +170,7 @@ export function MobileSiteHomeScreen({ siteKey }: MobileSiteHomeScreenProps) {
       backHref={buildMobileHomeHref()}
       backLabel="현장 목록"
       currentUserName={currentUser?.name}
-      footer={
-        <>
-          <Link
-            href={buildMobileSiteReportsHref(currentSite.id)}
-            className={`app-button app-button-primary ${styles.footerPrimary}`}
-          >
-            보고서 목록 보기
-          </Link>
-          {managerPhoneHref ? (
-            <a
-              href={managerPhoneHref}
-              className={`app-button app-button-secondary ${styles.footerSecondary}`}
-            >
-              현장소장 전화
-            </a>
-          ) : (
-            <span className={`${styles.footerSecondary} ${styles.footerMeta}`}>
-              현장소장 연락처 미등록
-            </span>
-          )}
-        </>
-      }
-      kicker="현장 홈"
+      tabBar={<MobileTabBar tabs={buildSiteTabs(currentSite.id)} />}
       onLogout={logout}
       subtitle={snapshot.siteAddress || null}
       title={currentSite.siteName}
@@ -190,24 +180,21 @@ export function MobileSiteHomeScreen({ siteKey }: MobileSiteHomeScreenProps) {
       <section className={styles.sectionCard}>
         <div className={styles.sectionHeader}>
           <div className={styles.sectionTitleWrap}>
-            <span className={styles.sectionEyebrow}>현장 요약</span>
-            <h2 className={styles.sectionTitle}>보고서 중심 현장 홈</h2>
+            <h2 className={styles.sectionTitle}>현장 요약</h2>
           </div>
           <span className={styles.sectionMeta}>
-            {reportIndexStatus === 'loading' ? '목록 동기화 중' : '현장 수행 최소 기능'}
+            {reportIndexStatus === 'loading' ? '목록 동기화 중' : ''}
           </span>
         </div>
 
         <div className={styles.statGrid}>
           <article className={styles.statCard}>
-            <span className={styles.statLabel}>보고서</span>
+            <span className={styles.statLabel}>총 보고서</span>
             <strong className={styles.statValue}>{reportCount}</strong>
-            <span className={styles.statMeta}>기술지도 누적 보고서</span>
           </article>
           <article className={styles.statCard}>
             <span className={styles.statLabel}>최근 지도일</span>
             <strong className={styles.statValue}>{formatCompactDate(latestGuidanceDate)}</strong>
-            <span className={styles.statMeta}>최근 작업 기준</span>
           </article>
         </div>
       </section>
@@ -215,8 +202,7 @@ export function MobileSiteHomeScreen({ siteKey }: MobileSiteHomeScreenProps) {
       <section className={styles.sectionCard}>
         <div className={styles.sectionHeader}>
           <div className={styles.sectionTitleWrap}>
-            <span className={styles.sectionEyebrow}>현장 정보</span>
-            <h2 className={styles.sectionTitle}>현장 완료에 필요한 기본 정보</h2>
+            <h2 className={styles.sectionTitle}>현장 정보</h2>
           </div>
         </div>
 
@@ -251,46 +237,45 @@ export function MobileSiteHomeScreen({ siteKey }: MobileSiteHomeScreenProps) {
       <section className={styles.sectionCard}>
         <div className={styles.sectionHeader}>
           <div className={styles.sectionTitleWrap}>
-            <span className={styles.sectionEyebrow}>최근 보고 현황</span>
-            <h2 className={styles.sectionTitle}>이어 작성할 보고서</h2>
+            <h2 className={styles.sectionTitle}>최근 보고서</h2>
           </div>
         </div>
 
         {latestReportTitle ? (
-          <article className={styles.reportCard}>
-            <div className={styles.cardTop}>
-              <div className={styles.cardTitleWrap}>
-                <span className={styles.cardKicker}>최근 보고서</span>
-                <h3 className={styles.cardTitle}>{latestReportTitle}</h3>
-                <span className={styles.cardSubTitle}>
-                  마지막 저장 {formatDateTime(latestReportSavedAt)}
+          <Link
+            href={
+              latestSession?.id
+                ? buildMobileSessionHref(latestSession.id)
+                : latestRemoteReport?.reportKey
+                  ? buildMobileSessionHref(latestRemoteReport.reportKey)
+                  : buildMobileSiteReportsHref(currentSite.id)
+            }
+            style={{ textDecoration: 'none', color: 'inherit' }}
+          >
+            <article className={styles.reportCard} style={{ cursor: 'pointer', padding: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                  <h3 className={styles.cardTitle} style={{ fontSize: '15px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {latestReportTitle}
+                  </h3>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <span style={{ fontSize: '13px', color: '#475569' }}>
+                    <strong style={{ fontWeight: 600, color: '#0f172a' }}>지도일</strong> {formatCompactDate(latestGuidanceDate)}
+                  </span>
+                </div>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a' }}>
+                  {getProgressLabel(latestReportProgress)}
                 </span>
               </div>
-              <span className={styles.roundBadge}>{latestReportProgress}%</span>
-            </div>
-
-            <div className={styles.progressBlock}>
-              <div className={styles.progressHeader}>
-                <span className={styles.progressLabel}>작성 진행률</span>
-                <strong className={styles.progressValue}>{latestReportProgress}%</strong>
-              </div>
-              <div className={styles.progressTrack} aria-hidden="true">
-                <span
-                  className={styles.progressFill}
-                  style={{ width: `${latestReportProgress}%` }}
-                />
-              </div>
-            </div>
-
-            <p className={styles.inlineNotice}>
-              모바일 v1은 보고서 중심 흐름만 제공합니다. 일정, 사진첩, 기타 부가 기능은 웹에서
-              계속 사용할 수 있습니다.
-            </p>
-          </article>
+            </article>
+          </Link>
         ) : (
           <p className={styles.inlineNotice}>
-            아직 이 현장에 작성된 기술지도 보고서가 없습니다. 보고서 목록에서 첫 보고서를
-            추가해 주세요.
+            아직 이 현장에 작성된 기술지도 보고서가 없습니다. 보고서 목록에서 첫 보고서를 추가해 주세요.
           </p>
         )}
       </section>
