@@ -82,7 +82,7 @@ const STEPS = [
   { id: 'step9', label: '위험성평가 / TBM' },
   { id: 'step10', label: '계측점검' },
   { id: 'step11', label: '안전교육' },
-  { id: 'step12', label: '활동 지원' },
+  { id: 'step12', label: '활동 실적' },
 ];
 
 interface Doc2ProcessNotesResponse {
@@ -2674,45 +2674,26 @@ export function MobileInspectionSessionScreen({
               <section style={{ padding: '16px' }}>
                 <div className={styles.sectionHeader}>
                   <div className={styles.sectionTitleWrap}>
-                    <h2 className={styles.sectionTitle}>안전보건 활동 지원</h2>
+                    <h2 className={styles.sectionTitle}>안전보건 활동 실적</h2>
                   </div>
                 </div>
                 <div className={styles.editorBody}>
-                  {session.document12Activities.slice(0, 2).length > 0 ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      {session.document12Activities.slice(0, 2).map((activity, index) => (
-                        <article
-                          key={activity.id}
-                          style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px' }}
+                  {session.document12Activities[0] ? (
+                    <article
+                      style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px' }}
+                    >
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        <div
+                          style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                            gap: '12px',
+                          }}
                         >
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            <div style={{ fontSize: '14px', fontWeight: 600 }}>
-                              {`활동 지원 ${index + 1}`}
-                            </div>
-                            <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                              <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                                실적 이름
-                              </span>
-                              <input
-                                className="app-input"
-                                value={activity.activityType}
-                                onChange={(e) => {
-                                  const value = e.target.value;
-                                  screen.applyDocumentUpdate('doc12', 'manual', (current) => ({
-                                    ...current,
-                                    document12Activities: current.document12Activities.map((item, itemIndex) =>
-                                      itemIndex === index ? { ...item, activityType: value } : item,
-                                    ),
-                                  }));
-                                }}
-                                placeholder="예: 안전보건 캠페인"
-                              />
-                            </label>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                              <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                                활동 사진
-                              </span>
-                              {activity.photoUrl ? (
+                            <div style={{ fontSize: '14px', fontWeight: 600 }}>활동 1 사진</div>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', minHeight: '20px' }}>
+                              {session.document12Activities[0].photoUrl ? (
                                 <button
                                   type="button"
                                   className={workspaceStyles.doc5SummaryDraftBtn}
@@ -2720,7 +2701,7 @@ export function MobileInspectionSessionScreen({
                                     screen.applyDocumentUpdate('doc12', 'manual', (current) => ({
                                       ...current,
                                       document12Activities: current.document12Activities.map((item, itemIndex) =>
-                                        itemIndex === index ? { ...item, photoUrl: '' } : item,
+                                        itemIndex === 0 ? { ...item, photoUrl: '' } : item,
                                       ),
                                     }));
                                   }}
@@ -2742,10 +2723,10 @@ export function MobileInspectionSessionScreen({
                                 cursor: 'pointer',
                               }}
                             >
-                              {activity.photoUrl ? (
+                              {session.document12Activities[0].photoUrl ? (
                                 <img
-                                  src={activity.photoUrl}
-                                  alt={`활동 지원 사진 ${index + 1}`}
+                                  src={session.document12Activities[0].photoUrl}
+                                  alt="활동 1 사진"
                                   style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                                 />
                               ) : (
@@ -2774,7 +2755,7 @@ export function MobileInspectionSessionScreen({
                                       screen.applyDocumentUpdate('doc12', 'manual', (current) => ({
                                         ...current,
                                         document12Activities: current.document12Activities.map((item, itemIndex) =>
-                                          itemIndex === index ? { ...item, photoUrl: value } : item,
+                                          itemIndex === 0 ? { ...item, photoUrl: value } : item,
                                         ),
                                       }));
                                     });
@@ -2783,11 +2764,131 @@ export function MobileInspectionSessionScreen({
                               />
                             </label>
                           </div>
-                        </article>
-                      ))}
-                    </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            <div style={{ fontSize: '14px', fontWeight: 600 }}>활동 2 사진</div>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', minHeight: '20px' }}>
+                              {session.document12Activities[0].photoUrl2 ? (
+                                <button
+                                  type="button"
+                                  className={workspaceStyles.doc5SummaryDraftBtn}
+                                  onClick={() => {
+                                    screen.applyDocumentUpdate('doc12', 'manual', (current) => ({
+                                      ...current,
+                                      document12Activities: current.document12Activities.map((item, itemIndex) =>
+                                        itemIndex === 0 ? { ...item, photoUrl2: '' } : item,
+                                      ),
+                                    }));
+                                  }}
+                                >
+                                  사진 삭제
+                                </button>
+                              ) : null}
+                            </div>
+                            <label
+                              style={{
+                                display: 'block',
+                                width: '100%',
+                                height: '180px',
+                                backgroundColor: '#f8fafc',
+                                border: '1px solid rgba(215, 224, 235, 0.88)',
+                                borderRadius: '4px',
+                                overflow: 'hidden',
+                                position: 'relative',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              {session.document12Activities[0].photoUrl2 ? (
+                                <img
+                                  src={session.document12Activities[0].photoUrl2}
+                                  alt="활동 2 사진"
+                                  style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                                />
+                              ) : (
+                                <div
+                                  style={{
+                                    position: 'absolute',
+                                    inset: 0,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: '#64748b',
+                                    fontSize: '13px',
+                                  }}
+                                >
+                                  사진 업로드
+                                </div>
+                              )}
+                              <input
+                                type="file"
+                                accept="image/*"
+                                style={{ display: 'none' }}
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    void screen.withFileData(file, (value) => {
+                                      screen.applyDocumentUpdate('doc12', 'manual', (current) => ({
+                                        ...current,
+                                        document12Activities: current.document12Activities.map((item, itemIndex) =>
+                                          itemIndex === 0 ? { ...item, photoUrl2: value } : item,
+                                        ),
+                                      }));
+                                    });
+                                  }
+                                }}
+                              />
+                            </label>
+                          </div>
+                        </div>
+                        <div
+                          style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                            gap: '12px',
+                          }}
+                        >
+                          <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                              활동 1 내용
+                            </span>
+                            <input
+                              className="app-input"
+                              value={session.document12Activities[0].activityType}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                screen.applyDocumentUpdate('doc12', 'manual', (current) => ({
+                                  ...current,
+                                  document12Activities: current.document12Activities.map((item, itemIndex) =>
+                                    itemIndex === 0 ? { ...item, activityType: value } : item,
+                                  ),
+                                }));
+                              }}
+                              placeholder="예: 안전보건 캠페인"
+                            />
+                          </label>
+                          <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                              활동 2 내용
+                            </span>
+                            <input
+                              className="app-input"
+                              value={session.document12Activities[0].content}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                screen.applyDocumentUpdate('doc12', 'manual', (current) => ({
+                                  ...current,
+                                  document12Activities: current.document12Activities.map((item, itemIndex) =>
+                                    itemIndex === 0 ? { ...item, content: value } : item,
+                                  ),
+                                }));
+                              }}
+                              placeholder="활동 요약 및 비고"
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    </article>
                   ) : (
-                    <p className={styles.inlineNotice}>활동 지원 슬롯이 없습니다.</p>
+                    <p className={styles.inlineNotice}>활동 실적 항목이 없습니다.</p>
                   )}
                 </div>
               </section>
