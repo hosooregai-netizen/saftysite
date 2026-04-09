@@ -87,6 +87,10 @@ export function buildMobileSiteQuarterlyHref(siteId: string, quarterKey: string)
   return `${buildMobileSiteQuarterlyListHref(siteId)}/${encodeURIComponent(quarterKey)}`;
 }
 
+export function buildMobileSiteBadWorkplaceHref(siteId: string, reportMonth: string): string {
+  return `${buildMobileSiteHomeHref(siteId)}/bad-workplace/${encodeURIComponent(reportMonth)}`;
+}
+
 export function buildMobileSessionHref(
   sessionId: string,
   query: Record<string, string | null | undefined> = {},
@@ -123,6 +127,14 @@ export function resolveWorkerMobileSwitchHref({
     return buildMobileSiteQuarterlyHref(
       decodeURIComponent(quarterlyDetailMatch[1]),
       decodeURIComponent(quarterlyDetailMatch[2]),
+    );
+  }
+
+  const badWorkplaceDetailMatch = pathname.match(/^\/sites\/([^/]+)\/bad-workplace\/([^/]+)/);
+  if (badWorkplaceDetailMatch) {
+    return buildMobileSiteBadWorkplaceHref(
+      decodeURIComponent(badWorkplaceDetailMatch[1]),
+      decodeURIComponent(badWorkplaceDetailMatch[2]),
     );
   }
 

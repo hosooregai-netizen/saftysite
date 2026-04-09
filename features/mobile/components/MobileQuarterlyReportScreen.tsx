@@ -7,7 +7,6 @@ import LoginPanel from '@/components/auth/LoginPanel';
 import { ChartCard } from '@/components/session/workspace/widgets';
 import AppModal from '@/components/ui/AppModal';
 import { createFutureProcessRiskPlan } from '@/constants/inspectionSession';
-import { FUTURE_PROCESS_LIBRARY } from '@/constants/inspectionSession/catalog';
 import {
   buildMobileSiteQuarterlyHref,
   buildMobileSiteQuarterlyListHref,
@@ -33,7 +32,6 @@ import {
   buildQuarterlyTitleForPeriod,
   createQuarterKey,
   getQuarterFromDate,
-  getQuarterlyReportPeriodLabel,
   getQuarterRange,
   normalizeQuarterlyReportPeriod,
   parseDateValue,
@@ -101,43 +99,22 @@ function createEmptyImplementationRow(): QuarterlySummaryReport['implementationR
   };
 }
 
-function normalizeRecommendationText(value: string) {
-  return value.trim().toLowerCase();
-}
-
-function getFuturePlanRecommendations(query: string) {
-  const normalizedQuery = normalizeRecommendationText(query);
-  if (!normalizedQuery) return [];
-
-  const scored = FUTURE_PROCESS_LIBRARY.map((item) => {
-    const haystack = `${item.processName} ${item.hazard} ${item.countermeasure}`.toLowerCase();
-    let score = 0;
-
-    if (normalizeRecommendationText(item.processName) === normalizedQuery) {
-      score = 100;
-    } else if (item.processName.toLowerCase().includes(normalizedQuery)) {
-      score = 80;
-    } else if (haystack.includes(normalizedQuery)) {
-      score = 50;
-    } else {
-      const tokens = normalizedQuery.split(/\s+/).filter(Boolean);
-      score = tokens.reduce((total, token) => total + (haystack.includes(token) ? 10 : 0), 0);
-    }
-
-    return { item, score };
-  })
-    .filter((entry) => entry.score > 0)
-    .sort(
-      (left, right) =>
-        right.score - left.score ||
-        left.item.processName.localeCompare(right.item.processName, 'ko'),
-    );
-
-  return scored.slice(0, 3).map((entry) => entry.item);
-}
-
 function getMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
+}
+
+function getMobileQuarterLabel(
+  report: Pick<
+    QuarterlySummaryReport,
+    'periodStartDate' | 'periodEndDate' | 'quarterKey' | 'year' | 'quarter'
+  >,
+) {
+  const normalized = normalizeQuarterlyReportPeriod(report);
+  if (normalized.year > 0 && normalized.quarter >= 1 && normalized.quarter <= 4) {
+    return `${String(normalized.year).slice(-2)}년 ${normalized.quarter}분기`;
+  }
+
+  return '기간 미설정';
 }
 
 function getQuarterSelectionTarget(
@@ -603,7 +580,6 @@ export function MobileQuarterlyReportScreen({ quarterKey, siteKey }: MobileQuart
         backLabel="분기 목록"
         currentUserName={currentUser?.name}
         fullHeight
-        kicker="모바일 분기 보고"
         onLogout={logout}
         tabBar={<MobileTabBar tabs={buildSiteTabs(currentSite.id, 'quarterly')} />}
         title={draft.title || currentSite.siteName}
@@ -616,7 +592,7 @@ export function MobileQuarterlyReportScreen({ quarterKey, siteKey }: MobileQuart
           <div className={`${styles.statGrid} ${styles.mobileSummaryGrid}`}>
             <article className={styles.statCard}>
               <span className={styles.statLabel}>분기</span>
-              <strong className={styles.statValue}>{getQuarterlyReportPeriodLabel(draft)}</strong>
+              <strong className={styles.statValue}>{getMobileQuarterLabel(draft)}</strong>
             </article>
             <div className={styles.mobileSummaryActionStack}>
               <button
@@ -688,7 +664,106 @@ export function MobileQuarterlyReportScreen({ quarterKey, siteKey }: MobileQuart
 
               {activeStep === 'implementation' ? <section className={styles.mobileEditorCard}><div className={styles.mobileImplementationListHeader}><div className={styles.mobileImplementationListTitle}>기술지도 이행현황</div><button type="button" className={`app-button app-button-secondary ${styles.mobileImplementationAddButton}`} onClick={handleAddImplementationRow}>행 추가</button></div>{draft.implementationRows.length > 0 ? <div className={styles.mobileImplementationList}>{draft.implementationRows.map((row, index) => <article key={row.sessionId} className={styles.mobileImplementationItem}><div className={styles.mobileImplementationItemTop}><span className={styles.mobileImplementationItemBadge}>{row.reportNumber || index + 1}차</span><button type="button" className={`app-button app-button-secondary ${styles.mobileImplementationDeleteButton}`} onClick={() => handleRemoveImplementationRow(row.sessionId)}>삭제</button></div><label className={`${styles.mobileEditorFieldGroup} ${styles.mobileImplementationFieldWide}`}><span className={styles.mobileEditorFieldLabel}>보고서명</span><input className="app-input" value={row.reportTitle} placeholder="보고서명" onChange={(event) => updateImplementationRow(row.sessionId, 'reportTitle', event.target.value)} /></label><div className={styles.mobileImplementationFieldGrid}><label className={styles.mobileEditorFieldGroup}><span className={styles.mobileEditorFieldLabel}>차수</span><input type="number" min={0} className="app-input" value={row.reportNumber} onChange={(event) => updateImplementationRow(row.sessionId, 'reportNumber', event.target.value)} /></label><label className={styles.mobileEditorFieldGroup}><span className={styles.mobileEditorFieldLabel}>담당자</span><input className="app-input" value={row.drafter} placeholder="담당자" onChange={(event) => updateImplementationRow(row.sessionId, 'drafter', event.target.value)} /></label><label className={styles.mobileEditorFieldGroup}><span className={styles.mobileEditorFieldLabel}>지도일</span><input className="app-input" value={row.reportDate} placeholder="YYYY-MM-DD" onChange={(event) => updateImplementationRow(row.sessionId, 'reportDate', event.target.value)} /></label><label className={styles.mobileEditorFieldGroup}><span className={styles.mobileEditorFieldLabel}>공정률</span><input className="app-input" value={row.progressRate} placeholder="공정률" onChange={(event) => updateImplementationRow(row.sessionId, 'progressRate', event.target.value)} /></label><label className={styles.mobileEditorFieldGroup}><span className={styles.mobileEditorFieldLabel}>지적 건수</span><input type="number" min={0} className="app-input" value={row.findingCount} onChange={(event) => updateImplementationRow(row.sessionId, 'findingCount', event.target.value)} /></label><label className={styles.mobileEditorFieldGroup}><span className={styles.mobileEditorFieldLabel}>개선 건수</span><input type="number" min={0} className="app-input" value={row.improvedCount} onChange={(event) => updateImplementationRow(row.sessionId, 'improvedCount', event.target.value)} /></label><label className={`${styles.mobileEditorFieldGroup} ${styles.mobileImplementationFieldWide}`}><span className={styles.mobileEditorFieldLabel}>비고</span><input className="app-input" value={row.note} placeholder="비고" onChange={(event) => updateImplementationRow(row.sessionId, 'note', event.target.value)} /></label></div></article>)}</div> : <div className={styles.mobileImplementationEmpty}>선택된 기술지도 보고서가 없습니다.</div>}</section> : null}
 
-              {activeStep === 'countermeasures' ? <section className={styles.mobileEditorCard}><button type="button" className="app-button app-button-secondary" onClick={() => updateDraft((current) => ({ ...current, majorMeasures: [...current.majorMeasures, ''] }))}>주요 대책 추가</button><div style={{ display: 'grid', gap: '10px' }}>{draft.majorMeasures.map((measure, index) => <textarea key={`${index}-${measure.slice(0, 8)}`} className="app-textarea" rows={3} value={measure} onChange={(event) => updateDraft((current) => ({ ...current, majorMeasures: current.majorMeasures.map((item, itemIndex) => itemIndex === index ? event.target.value : item) }))} />)}</div><div className={styles.mobileFuturePlanTableShell}><div className={styles.mobileFuturePlanTable}><div className={styles.mobileFuturePlanHeader}><span>작업공정</span><span>유해위험요인</span><span>안전대책</span><button type="button" className={`app-button app-button-secondary ${styles.mobileFuturePlanHeaderButton}`} onClick={handleAddFuturePlan}>행 추가</button></div>{draft.futurePlans.length > 0 ? draft.futurePlans.map((plan) => <div key={plan.id} className={styles.mobileFuturePlanRow}><div className={styles.mobileFuturePlanProcessCell}><textarea className={`app-textarea ${styles.mobileFuturePlanTextarea}`} rows={3} value={plan.processName} placeholder="예: 철근 작업, 거푸집 해체 등 공정을 입력해 주세요." onChange={(event) => updateFuturePlan(plan.id, { processName: event.target.value, source: 'manual' })} /><div className={styles.mobileFuturePlanRecommendationList}>{getFuturePlanRecommendations(plan.processName).map((recommended) => <button key={recommended.processName} type="button" className={styles.mobileFuturePlanRecommendationButton} onClick={() => updateFuturePlan(plan.id, { processName: recommended.processName, hazard: recommended.hazard, countermeasure: recommended.countermeasure, note: '', source: 'api' })}>{recommended.processName}</button>)}</div></div><textarea className={`app-textarea ${styles.mobileFuturePlanTextarea}`} rows={4} value={plan.hazard} onChange={(event) => updateFuturePlan(plan.id, { hazard: event.target.value, source: 'manual' })} /><textarea className={`app-textarea ${styles.mobileFuturePlanTextarea}`} rows={4} value={plan.countermeasure} onChange={(event) => updateFuturePlan(plan.id, { countermeasure: event.target.value, note: '', source: 'manual' })} /><button type="button" className={`app-button app-button-secondary ${styles.mobileFuturePlanDeleteButton}`} onClick={() => handleRemoveFuturePlan(plan.id)}>삭제</button></div>) : <div className={styles.mobileFuturePlanEmpty}>등록된 향후 공정 계획이 없습니다.</div>}</div></div><select className="app-select" value={draft.opsAssetId} onChange={(event) => updateDraft((current) => applyOpsAsset(current, opsAssets.find((item) => item.id === event.target.value) ?? null))}><option value="">OPS 자료 없음</option>{opsAssets.map((asset) => <option key={asset.id} value={asset.id}>{asset.title}</option>)}</select>{draft.opsAssetFileUrl ? <a href={draft.opsAssetFileUrl} target="_blank" rel="noreferrer">OPS 자료 열기</a> : null}</section> : null}
+              {activeStep === 'countermeasures' ? (
+                <section className={styles.mobileEditorCard}>
+                  <div className={styles.mobileImplementationListHeader}>
+                    <div className={styles.mobileImplementationListTitle}>
+                      4. 향후 공정 유해위험작업 안전대책
+                    </div>
+                    <button
+                      type="button"
+                      className={`app-button app-button-secondary ${styles.mobileImplementationAddButton}`}
+                      onClick={handleAddFuturePlan}
+                    >
+                      행 추가
+                    </button>
+                  </div>
+                  {draft.futurePlans.length > 0 ? (
+                    <div className={styles.mobileFuturePlanCardList}>
+                      {draft.futurePlans.map((plan, index) => (
+                        <article key={plan.id} className={styles.mobileFuturePlanCard}>
+                          <div className={styles.mobileImplementationItemTop}>
+                            <span className={styles.mobileImplementationItemBadge}>{`행 ${index + 1}`}</span>
+                            <button
+                              type="button"
+                              className={`app-button app-button-secondary ${styles.mobileFuturePlanDeleteButton}`}
+                              onClick={() => handleRemoveFuturePlan(plan.id)}
+                            >
+                              삭제
+                            </button>
+                          </div>
+                          <div className={styles.mobileEditorFieldStack}>
+                            <label className={styles.mobileEditorFieldGroup}>
+                              <span className={styles.mobileEditorFieldLabel}>위험요인</span>
+                              <textarea
+                                className={`app-textarea ${styles.mobileFuturePlanTextarea}`}
+                                rows={4}
+                                value={plan.hazard || plan.processName}
+                                placeholder="위험요인을 입력해 주세요."
+                                onChange={(event) =>
+                                  updateFuturePlan(plan.id, {
+                                    hazard: event.target.value,
+                                    processName: '',
+                                    source: 'manual',
+                                  })
+                                }
+                              />
+                            </label>
+                            <label className={styles.mobileEditorFieldGroup}>
+                              <span className={styles.mobileEditorFieldLabel}>안전대책</span>
+                              <textarea
+                                className={`app-textarea ${styles.mobileFuturePlanTextarea}`}
+                                rows={4}
+                                value={plan.countermeasure}
+                                placeholder="안전대책을 입력해 주세요."
+                                onChange={(event) =>
+                                  updateFuturePlan(plan.id, {
+                                    countermeasure: event.target.value,
+                                    note: '',
+                                    source: 'manual',
+                                  })
+                                }
+                              />
+                            </label>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className={styles.mobileFuturePlanEmpty}>
+                      등록된 위험요인 및 안전대책이 없습니다.
+                    </div>
+                  )}
+
+                  <label className={styles.mobileEditorFieldGroup}>
+                    <span className={styles.mobileEditorFieldLabel}>OPS 자료</span>
+                    <select
+                      className="app-select"
+                      value={draft.opsAssetId}
+                      onChange={(event) =>
+                        updateDraft((current) =>
+                          applyOpsAsset(
+                            current,
+                            opsAssets.find((item) => item.id === event.target.value) ?? null,
+                          ),
+                        )
+                      }
+                    >
+                      <option value="">OPS 자료 없음</option>
+                      {opsAssets.map((asset) => (
+                        <option key={asset.id} value={asset.id}>
+                          {asset.title}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {draft.opsAssetFileUrl ? (
+                    <a href={draft.opsAssetFileUrl} target="_blank" rel="noreferrer">
+                      OPS 자료 열기
+                    </a>
+                  ) : null}
+                </section>
+              ) : null}
 
             </div>
           </div>

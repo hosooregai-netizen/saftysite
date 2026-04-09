@@ -1,8 +1,10 @@
 import {
+  buildMobileSiteBadWorkplaceHref,
   buildMobileSiteHomeHref,
   buildMobileSiteQuarterlyListHref,
   buildMobileSiteReportsHref,
 } from '@/features/home/lib/siteEntry';
+import { getCurrentReportMonth } from '@/lib/erpReports/shared';
 
 type MobileSiteTabKey =
   | 'site-home'
@@ -65,7 +67,7 @@ export function buildSiteTabs(siteId: string, activeTab: MobileSiteTabKey = null
     },
     {
       label: '불량신고',
-      href: '#',
+      href: buildMobileSiteBadWorkplaceHref(siteId, getCurrentReportMonth()),
       isActive: activeTab === 'bad-workplace' ? true : undefined,
       icon: (
         <svg viewBox="0 0 24 24">
