@@ -1057,14 +1057,20 @@
 .mobileSummaryActionStack {
   display: grid;
   gap: 8px;
+  grid-template-columns: minmax(0, 1fr) minmax(72px, 84px);
   min-width: 0;
   justify-self: start;
   width: 100%;
-  max-width: 116px;
+  max-width: 208px;
+}
+
+.mobileSummaryExportStack {
+  display: grid;
+  gap: 8px;
 }
 
 .mobileSummaryGrid {
-  grid-template-columns: minmax(0, 1.2fr) minmax(104px, 116px) minmax(76px, 88px);
+  grid-template-columns: minmax(0, 1.2fr) minmax(176px, 208px) minmax(76px, 88px);
   align-items: stretch;
 }
 

@@ -220,28 +220,7 @@ export function MobileSiteHomeScreen({ siteKey }: MobileSiteHomeScreenProps) {
   const completedQuarterCount = new Set(
     currentYearQuarterlyReports.map((report) => report.quarterKey).filter(Boolean),
   ).size;
-  const latestQuarterlyReport =
-    quarterlyReports.length > 0
-      ? [...quarterlyReports].sort(
-          (left, right) =>
-            getReportSortTime({
-              createdAt: right.createdAt,
-              lastAutosavedAt: null,
-              updatedAt: right.updatedAt || right.lastCalculatedAt || right.createdAt,
-              visitDate: right.periodEndDate || right.periodStartDate || '',
-            }) -
-            getReportSortTime({
-              createdAt: left.createdAt,
-              lastAutosavedAt: null,
-              updatedAt: left.updatedAt || left.lastCalculatedAt || left.createdAt,
-              visitDate: left.periodEndDate || left.periodStartDate || '',
-            }),
-        )[0]
-      : null;
   const quarterlyListHref = buildMobileSiteQuarterlyListHref(currentSite.id);
-  const latestQuarterlyHref = latestQuarterlyReport
-    ? buildMobileSiteQuarterlyHref(currentSite.id, latestQuarterlyReport.id)
-    : quarterlyListHref;
 
   const handlePhotoCapture = async (files: FileList | null) => {
     const file = Array.from(files ?? []).find((item) => item.size > 0);
@@ -479,7 +458,7 @@ export function MobileSiteHomeScreen({ siteKey }: MobileSiteHomeScreenProps) {
       <section className={styles.sectionCard}>
         <div className={styles.sectionHeader}>
           <div className={styles.sectionTitleWrap}>
-            <h2 className={styles.sectionTitle}>최근 보고서</h2>
+            <h2 className={styles.sectionTitle}>기술지도 보고서</h2>
           </div>
         </div>
 
@@ -533,7 +512,7 @@ export function MobileSiteHomeScreen({ siteKey }: MobileSiteHomeScreenProps) {
       <section className={styles.sectionCard}>
         <div className={styles.sectionHeader}>
           <div className={styles.sectionTitleWrap}>
-            <h2 className={styles.sectionTitle}>분기 보고</h2>
+            <h2 className={styles.sectionTitle}>분기보고서</h2>
           </div>
         </div>
 
@@ -564,47 +543,6 @@ export function MobileSiteHomeScreen({ siteKey }: MobileSiteHomeScreenProps) {
           </Link>
         </div>
 
-        {latestQuarterlyReport ? (
-          <Link href={latestQuarterlyHref} style={{ textDecoration: 'none', color: 'inherit' }}>
-            <article className={styles.reportCard} style={{ cursor: 'pointer', padding: '12px' }}>
-              <div style={{ display: 'grid', gap: '4px' }}>
-                <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 700 }}>
-                  {latestQuarterlyReport.year}년 {latestQuarterlyReport.quarter}분기
-                </span>
-                <h3
-                  className={styles.cardTitle}
-                  style={{
-                    fontSize: '15px',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}
-                >
-                  {latestQuarterlyReport.title || '분기 기술지도 종합보고서'}
-                </h3>
-              </div>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  gap: '12px',
-                  fontSize: '13px',
-                  color: '#475569',
-                }}
-              >
-                <span>
-                  원본 {latestQuarterlyReport.selectedReportCount}건
-                </span>
-                <span>{formatCompactDate(latestQuarterlyReport.periodEndDate)}</span>
-              </div>
-            </article>
-          </Link>
-        ) : (
-          <p className={styles.inlineNotice}>
-            아직 이 현장에 작성된 분기 보고가 없습니다. 분기 보고 탭에서 첫 보고서를 생성해
-            주세요.
-          </p>
-        )}
       </section>
     </MobileShell>
   );

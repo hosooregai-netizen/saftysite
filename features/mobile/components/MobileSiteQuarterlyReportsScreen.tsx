@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -87,7 +87,7 @@ function getSortTime(value: string) {
 }
 
 function getQuarterLabel(year: number, quarter: number) {
-  return year > 0 && quarter >= 1 && quarter <= 4 ? `${year}년 ${quarter}분기` : '기간 미설정';
+  return year > 0 && quarter >= 1 && quarter <= 4 ? `${year}??${quarter}遺꾧린` : '湲곌컙 誘몄꽕??;
 }
 
 function compareQuarterlyCreationOrder(
@@ -220,21 +220,20 @@ function QuarterlyReportCard({
                 onDeleteRequest(row.reportId);
               }}
             >
-              삭제
+              ??젣
             </button>
           ) : null}
         </div>
 
         <div style={{ color: '#475569', display: 'grid', fontSize: '13px', gap: '6px' }}>
           <span>
-            <strong style={{ color: '#0f172a', fontWeight: 700 }}>기간</strong> {row.periodLabel}
+            <strong style={{ color: '#0f172a', fontWeight: 700 }}>湲곌컙</strong> {row.periodLabel}
           </span>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
             <span>
-              <strong style={{ color: '#0f172a', fontWeight: 700 }}>원본</strong> {row.selectedCount}건
-            </span>
+              <strong style={{ color: '#0f172a', fontWeight: 700 }}>?먮낯</strong> {row.selectedCount}嫄?            </span>
             <span>
-              <strong style={{ color: '#0f172a', fontWeight: 700 }}>수정</strong> {formatDateTimeLabel(row.updatedAt)}
+              <strong style={{ color: '#0f172a', fontWeight: 700 }}>?섏젙</strong> {formatDateTimeLabel(row.updatedAt)}
             </span>
           </div>
         </div>
@@ -308,7 +307,7 @@ export function MobileSiteQuarterlyReportsScreen({
         periodLabel: formatPeriodRangeLabel(report.periodStartDate, report.periodEndDate),
         periodStartDate: report.periodStartDate,
         reportId: report.id,
-        reportTitle: report.title || '분기 종합보고서',
+        reportTitle: report.title || '遺꾧린 醫낇빀蹂닿퀬??,
         selectedCount: report.selectedReportCount,
         updatedAt: report.updatedAt || report.lastCalculatedAt || report.createdAt,
       }));
@@ -456,23 +455,23 @@ export function MobileSiteQuarterlyReportsScreen({
     const periodEndDate = createForm.periodEndDate.trim();
 
     if (!title) {
-      setCreateDialogError('제목을 입력해 주세요.');
+      setCreateDialogError('?쒕ぉ???낅젰??二쇱꽭??');
       return;
     }
 
     if (!periodStartDate || !periodEndDate) {
-      setCreateDialogError('기간 시작일과 종료일을 모두 입력해 주세요.');
+      setCreateDialogError('湲곌컙 ?쒖옉?쇨낵 醫낅즺?쇱쓣 紐⑤몢 ?낅젰??二쇱꽭??');
       return;
     }
 
     if (periodStartDate > periodEndDate) {
-      setCreateDialogError('종료일은 시작일보다 빠를 수 없습니다.');
+      setCreateDialogError('醫낅즺?쇱? ?쒖옉?쇰낫??鍮좊? ???놁뒿?덈떎.');
       return;
     }
 
     const token = readSafetyAuthToken();
     if (!token) {
-      setCreateDialogError('로그인이 만료되었습니다. 다시 로그인해 주세요.');
+      setCreateDialogError('濡쒓렇?몄씠 留뚮즺?섏뿀?듬땲?? ?ㅼ떆 濡쒓렇?명빐 二쇱꽭??');
       return;
     }
 
@@ -480,7 +479,7 @@ export function MobileSiteQuarterlyReportsScreen({
       periodEndDate,
       periodStartDate,
     });
-    const drafter = currentUser?.name?.trim() || currentSite.assigneeName || '담당자';
+    const drafter = currentUser?.name?.trim() || currentSite.assigneeName || '?대떦??;
     const siteSessions = getSessionsBySiteId(currentSite.id);
 
     let nextDraft = createQuarterlySummaryDraft(currentSite, drafter, periodStartDate);
@@ -517,7 +516,7 @@ export function MobileSiteQuarterlyReportsScreen({
       setCreateDialogError(
         error instanceof Error
           ? error.message
-          : '분기 보고서를 생성하는 중 오류가 발생했습니다.',
+          : '遺꾧린 蹂닿퀬?쒕? ?앹꽦?섎뒗 以??ㅻ쪟媛 諛쒖깮?덉뒿?덈떎.',
       );
     } finally {
       setIsCreatingReport(false);
@@ -546,7 +545,7 @@ export function MobileSiteQuarterlyReportsScreen({
       closeDeleteDialog();
     } catch (error) {
       setDeleteError(
-        error instanceof Error ? error.message : '분기 보고서를 삭제하지 못했습니다.',
+        error instanceof Error ? error.message : '遺꾧린 蹂닿퀬?쒕? ??젣?섏? 紐삵뻽?듬땲??',
       );
     } finally {
       setIsDeletingReport(false);
@@ -559,7 +558,7 @@ export function MobileSiteQuarterlyReportsScreen({
         <div className={styles.pageShell}>
           <div className={styles.content}>
             <section className={styles.stateCard}>
-              <h1 className={styles.sectionTitle}>분기 보고 목록을 준비하고 있습니다.</h1>
+              <h1 className={styles.sectionTitle}>遺꾧린 蹂닿퀬 紐⑸줉??以鍮꾪븯怨??덉뒿?덈떎.</h1>
             </section>
           </div>
         </div>
@@ -570,10 +569,10 @@ export function MobileSiteQuarterlyReportsScreen({
   if (!isAuthenticated) {
     return (
       <LoginPanel
-        description="모바일에서 분기 종합보고서를 만들고 수정할 수 있습니다."
+        description="紐⑤컮?쇱뿉??遺꾧린 醫낇빀蹂닿퀬?쒕? 留뚮뱾怨??섏젙?????덉뒿?덈떎."
         error={authError}
         onSubmit={login}
-        title="모바일 분기 보고 로그인"
+        title="紐⑤컮??遺꾧린 蹂닿퀬 濡쒓렇??
       />
     );
   }
@@ -584,10 +583,9 @@ export function MobileSiteQuarterlyReportsScreen({
         <div className={styles.pageShell}>
           <div className={styles.content}>
             <section className={styles.stateCard}>
-              <h1 className={styles.sectionTitle}>현장을 찾을 수 없습니다.</h1>
+              <h1 className={styles.sectionTitle}>?꾩옣??李얠쓣 ???놁뒿?덈떎.</h1>
               <Link href="/mobile" className="app-button app-button-secondary">
-                현장 목록으로 돌아가기
-              </Link>
+                ?꾩옣 紐⑸줉?쇰줈 ?뚯븘媛湲?              </Link>
             </section>
           </div>
         </div>
@@ -599,10 +597,9 @@ export function MobileSiteQuarterlyReportsScreen({
     <>
       <MobileShell
         backHref={buildMobileSiteHomeHref(currentSite.id)}
-        backLabel="현장 홈"
+        backLabel="?꾩옣 ??
         currentUserName={currentUser?.name}
         onLogout={logout}
-        subtitle={`${currentSite.customerName || currentSite.siteName} 현장의 분기 종합보고서를 관리합니다.`}
         tabBar={<MobileTabBar tabs={buildSiteTabs(currentSite.id, 'quarterly')} />}
         title={currentSite.siteName}
         webHref={`/sites/${encodeURIComponent(currentSite.id)}/quarterly`}
@@ -610,10 +607,10 @@ export function MobileSiteQuarterlyReportsScreen({
         <section className={styles.sectionCard} style={{ padding: '16px 12px' }}>
           <div className={styles.sectionHeader} style={{ paddingBottom: '12px' }}>
             <div className={styles.sectionTitleWrap}>
-              <h2 className={styles.sectionTitle}>분기 보고 목록</h2>
+              <h2 className={styles.sectionTitle}>遺꾧린 蹂닿퀬 紐⑸줉</h2>
             </div>
             <span className={styles.sectionMeta}>
-              {isLoading ? '불러오는 중' : `총 ${rows.length}건 / 검색 ${filteredRows.length}건`}
+              {isLoading ? '遺덈윭?ㅻ뒗 以? : `珥?${rows.length}嫄?/ 寃??${filteredRows.length}嫄?}
             </span>
           </div>
 
@@ -621,7 +618,7 @@ export function MobileSiteQuarterlyReportsScreen({
             <input
               className="app-input"
               style={{ flex: 1, fontSize: '13px', minWidth: 0 }}
-              placeholder="제목, 분기, 기간으로 검색"
+              placeholder="?쒕ぉ, 遺꾧린, 湲곌컙?쇰줈 寃??
               value={query}
               onChange={(event) => setQuery(event.target.value)}
             />
@@ -631,9 +628,9 @@ export function MobileSiteQuarterlyReportsScreen({
               value={sortMode}
               onChange={(event) => setSortMode(event.target.value as QuarterlyListSortMode)}
             >
-              <option value="recent">최근순</option>
-              <option value="period">기간순</option>
-              <option value="name">제목순</option>
+              <option value="recent">理쒓렐??/option>
+              <option value="period">湲곌컙??/option>
+              <option value="name">?쒕ぉ??/option>
             </select>
           </div>
 
@@ -646,19 +643,18 @@ export function MobileSiteQuarterlyReportsScreen({
           {rows.length === 0 ? (
             <div className={styles.cardStack}>
               <p className={styles.inlineNotice}>
-                아직 등록된 분기 보고서가 없습니다. 새 보고서를 만들면 모바일에서 바로 편집할 수 있습니다.
+                ?꾩쭅 ?깅줉??遺꾧린 蹂닿퀬?쒓? ?놁뒿?덈떎. ??蹂닿퀬?쒕? 留뚮뱾硫?紐⑤컮?쇱뿉??諛붾줈 ?몄쭛?????덉뒿?덈떎.
               </p>
               <button
                 type="button"
                 className="app-button app-button-primary"
                 onClick={openCreateDialog}
               >
-                새 분기 보고 만들기
-              </button>
+                ??遺꾧린 蹂닿퀬 留뚮뱾湲?              </button>
             </div>
           ) : filteredRows.length === 0 ? (
             <p className={styles.inlineNotice}>
-              검색 조건에 맞는 분기 보고서가 없습니다. 검색어 또는 정렬 기준을 바꿔 보세요.
+              寃??議곌굔??留욌뒗 遺꾧린 蹂닿퀬?쒓? ?놁뒿?덈떎. 寃?됱뼱 ?먮뒗 ?뺣젹 湲곗???諛붽퓭 蹂댁꽭??
             </p>
           ) : (
             <div className={styles.cardStack}>
@@ -680,15 +676,14 @@ export function MobileSiteQuarterlyReportsScreen({
               onClick={openCreateDialog}
               style={{ marginTop: '16px', width: '100%' }}
             >
-              새 분기 보고 만들기
-            </button>
+              ??遺꾧린 蹂닿퀬 留뚮뱾湲?            </button>
           ) : null}
         </section>
       </MobileShell>
 
       <AppModal
         open={isCreateDialogOpen}
-        title="분기 보고 만들기"
+        title="遺꾧린 蹂닿퀬 留뚮뱾湲?
         onClose={closeCreateDialog}
         actions={
           <>
@@ -697,7 +692,7 @@ export function MobileSiteQuarterlyReportsScreen({
               className="app-button app-button-secondary"
               onClick={closeCreateDialog}
             >
-              닫기
+              ?リ린
             </button>
             <button
               type="button"
@@ -705,14 +700,14 @@ export function MobileSiteQuarterlyReportsScreen({
               onClick={() => void handleCreateReport()}
               disabled={isCreateDisabled}
             >
-              {isCreatingReport ? '생성 중...' : '생성'}
+              {isCreatingReport ? '?앹꽦 以?..' : '?앹꽦'}
             </button>
           </>
         }
       >
         <div style={{ display: 'grid', gap: '12px' }}>
           <label className={styles.mobileEditorFieldGroup}>
-            <span className={styles.mobileEditorFieldLabel}>제목</span>
+            <span className={styles.mobileEditorFieldLabel}>?쒕ぉ</span>
             <input
               className="app-input"
               value={createForm.title}
@@ -721,22 +716,22 @@ export function MobileSiteQuarterlyReportsScreen({
           </label>
 
           <label className={styles.mobileEditorFieldGroup}>
-            <span className={styles.mobileEditorFieldLabel}>분기</span>
+            <span className={styles.mobileEditorFieldLabel}>遺꾧린</span>
             <select
               className="app-select"
               value={createQuarterSelection}
               onChange={(event) => handleQuarterSelectChange(event.target.value)}
             >
-              <option value="1">1분기</option>
-              <option value="2">2분기</option>
-              <option value="3">3분기</option>
-              <option value="4">4분기</option>
+              <option value="1">1遺꾧린</option>
+              <option value="2">2遺꾧린</option>
+              <option value="3">3遺꾧린</option>
+              <option value="4">4遺꾧린</option>
             </select>
           </label>
 
           <div style={{ display: 'grid', gap: '12px', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
             <label className={styles.mobileEditorFieldGroup}>
-              <span className={styles.mobileEditorFieldLabel}>시작일</span>
+              <span className={styles.mobileEditorFieldLabel}>?쒖옉??/span>
               <input
                 type="date"
                 className="app-input"
@@ -745,7 +740,7 @@ export function MobileSiteQuarterlyReportsScreen({
               />
             </label>
             <label className={styles.mobileEditorFieldGroup}>
-              <span className={styles.mobileEditorFieldLabel}>종료일</span>
+              <span className={styles.mobileEditorFieldLabel}>醫낅즺??/span>
               <input
                 type="date"
                 className="app-input"
@@ -756,7 +751,7 @@ export function MobileSiteQuarterlyReportsScreen({
           </div>
 
           {isCreateRangeInvalid ? (
-            <div className={styles.errorNotice}>종료일은 시작일보다 빠를 수 없습니다.</div>
+            <div className={styles.errorNotice}>醫낅즺?쇱? ?쒖옉?쇰낫??鍮좊? ???놁뒿?덈떎.</div>
           ) : null}
           {createDialogError ? <div className={styles.errorNotice}>{createDialogError}</div> : null}
         </div>
@@ -764,7 +759,7 @@ export function MobileSiteQuarterlyReportsScreen({
 
       <AppModal
         open={Boolean(dialogReportId)}
-        title="분기 보고 삭제"
+        title="遺꾧린 蹂닿퀬 ??젣"
         onClose={closeDeleteDialog}
         actions={
           <>
@@ -773,7 +768,7 @@ export function MobileSiteQuarterlyReportsScreen({
               className="app-button app-button-secondary"
               onClick={closeDeleteDialog}
             >
-              취소
+              痍⑥냼
             </button>
             <button
               type="button"
@@ -781,7 +776,7 @@ export function MobileSiteQuarterlyReportsScreen({
               onClick={() => void handleDeleteSubmit()}
               disabled={isDeletingReport}
             >
-              {isDeletingReport ? '삭제 중...' : '삭제'}
+              {isDeletingReport ? '??젣 以?..' : '??젣'}
             </button>
           </>
         }
@@ -789,8 +784,8 @@ export function MobileSiteQuarterlyReportsScreen({
         <div style={{ display: 'grid', gap: '12px' }}>
           <p style={{ margin: 0, lineHeight: 1.6 }}>
             {deletingRow
-              ? `"${deletingRow.reportTitle}" 보고서를 삭제할까요?`
-              : '선택한 보고서를 삭제할까요?'}
+              ? `"${deletingRow.reportTitle}" 蹂닿퀬?쒕? ??젣?좉퉴??`
+              : '?좏깮??蹂닿퀬?쒕? ??젣?좉퉴??'}
           </p>
           {deleteError ? <div className={styles.errorNotice}>{deleteError}</div> : null}
         </div>

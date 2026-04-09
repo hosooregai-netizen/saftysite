@@ -2,11 +2,12 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import LoginPanel from '@/components/auth/LoginPanel';
 import { ChartCard } from '@/components/session/workspace/widgets';
 import AppModal from '@/components/ui/AppModal';
 import { createFutureProcessRiskPlan } from '@/constants/inspectionSession';
+import { FUTURE_PROCESS_LIBRARY } from '@/constants/inspectionSession/catalog';
 import {
   buildMobileSiteQuarterlyHref,
   buildMobileSiteQuarterlyListHref,
@@ -30,8 +31,12 @@ import {
 } from '@/lib/erpReports/quarterly';
 import {
   buildQuarterlyTitleForPeriod,
+  createQuarterKey,
+  getQuarterFromDate,
   getQuarterlyReportPeriodLabel,
+  getQuarterRange,
   normalizeQuarterlyReportPeriod,
+  parseDateValue,
   parseQuarterKey,
 } from '@/lib/erpReports/shared';
 import {
@@ -56,16 +61,14 @@ interface MobileQuarterlyReportScreenProps {
   siteKey: string;
 }
 
-type StepId = 'overview' | 'sources' | 'snapshot' | 'analysis' | 'implementation' | 'countermeasures' | 'document';
+type StepId = 'overview' | 'snapshot' | 'analysis' | 'implementation' | 'countermeasures';
 
 const STEPS: Array<{ id: StepId; label: string }> = [
   { id: 'overview', label: '기본' },
-  { id: 'sources', label: '원본' },
   { id: 'snapshot', label: '사업장' },
   { id: 'analysis', label: '분석' },
   { id: 'implementation', label: '이행' },
   { id: 'countermeasures', label: '대책' },
-  { id: 'document', label: '문서' },
 ];
 
 const SNAPSHOT_FIELDS: Array<{ key: keyof QuarterlySummaryReport['siteSnapshot']; label: string }> = [
@@ -79,18 +82,102 @@ const SNAPSHOT_FIELDS: Array<{ key: keyof QuarterlySummaryReport['siteSnapshot']
   { key: 'siteAddress', label: '현장 주소' },
 ];
 
+const SNAPSHOT_WIDE_FIELDS = new Set<keyof QuarterlySummaryReport['siteSnapshot']>([
+  'constructionPeriod',
+  'siteAddress',
+]);
+
+function createEmptyImplementationRow(): QuarterlySummaryReport['implementationRows'][number] {
+  return {
+    sessionId: `manual-${Date.now()}`,
+    reportTitle: '',
+    reportDate: '',
+    reportNumber: 0,
+    drafter: '',
+    progressRate: '',
+    findingCount: 0,
+    improvedCount: 0,
+    note: '',
+  };
+}
+
+function normalizeRecommendationText(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function getFuturePlanRecommendations(query: string) {
+  const normalizedQuery = normalizeRecommendationText(query);
+  if (!normalizedQuery) return [];
+
+  const scored = FUTURE_PROCESS_LIBRARY.map((item) => {
+    const haystack = `${item.processName} ${item.hazard} ${item.countermeasure}`.toLowerCase();
+    let score = 0;
+
+    if (normalizeRecommendationText(item.processName) === normalizedQuery) {
+      score = 100;
+    } else if (item.processName.toLowerCase().includes(normalizedQuery)) {
+      score = 80;
+    } else if (haystack.includes(normalizedQuery)) {
+      score = 50;
+    } else {
+      const tokens = normalizedQuery.split(/\s+/).filter(Boolean);
+      score = tokens.reduce((total, token) => total + (haystack.includes(token) ? 10 : 0), 0);
+    }
+
+    return { item, score };
+  })
+    .filter((entry) => entry.score > 0)
+    .sort(
+      (left, right) =>
+        right.score - left.score ||
+        left.item.processName.localeCompare(right.item.processName, 'ko'),
+    );
+
+  return scored.slice(0, 3).map((entry) => entry.item);
+}
+
 function getMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
 }
 
-function shouldUseLocalSeed(error: unknown) {
-  return error instanceof SafetyApiError && [404, 405, 501].includes(error.status ?? -1);
+function getQuarterSelectionTarget(
+  report: Pick<
+    QuarterlySummaryReport,
+    'periodStartDate' | 'periodEndDate' | 'quarterKey' | 'year' | 'quarter'
+  >,
+) {
+  if (report.year > 0 && report.quarter >= 1 && report.quarter <= 4) {
+    return {
+      year: report.year,
+      quarter: report.quarter,
+    };
+  }
+
+  const startDate = parseDateValue(report.periodStartDate);
+  if (startDate) {
+    return {
+      year: startDate.getFullYear(),
+      quarter: getQuarterFromDate(startDate),
+    };
+  }
+
+  const endDate = parseDateValue(report.periodEndDate);
+  if (endDate) {
+    return {
+      year: endDate.getFullYear(),
+      quarter: getQuarterFromDate(endDate),
+    };
+  }
+
+  const today = new Date();
+  return {
+    year: today.getFullYear(),
+    quarter: getQuarterFromDate(today),
+  };
 }
 
-function formatDateTimeLabel(value: string | null | undefined) {
-  if (!value) return '-';
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString('ko-KR', { hour12: false });
+function shouldUseLocalSeed(error: unknown) {
+  return error instanceof SafetyApiError && [404, 405, 501].includes(error.status ?? -1);
 }
 
 function applyOpsAsset(
@@ -150,6 +237,7 @@ export function MobileQuarterlyReportScreen({ quarterKey, siteKey }: MobileQuart
   const [sourceNotice, setSourceNotice] = useState<string | null>(null);
   const [saveNotice, setSaveNotice] = useState<string | null>(null);
   const [documentNotice, setDocumentNotice] = useState<string | null>(null);
+  const [documentInfoOpen, setDocumentInfoOpen] = useState(false);
   const [selectedSourceKeys, setSelectedSourceKeys] = useState<string[]>([]);
   const [sourceReports, setSourceReports] = useState<SafetyQuarterlySummarySeedSourceReport[]>([]);
   const [opsAssets, setOpsAssets] = useState<Array<{ id: string; title: string; body: unknown }>>([]);
@@ -159,6 +247,7 @@ export function MobileQuarterlyReportScreen({ quarterKey, siteKey }: MobileQuart
   const [isGeneratingHwpx, setIsGeneratingHwpx] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isDraftRoute, setIsDraftRoute] = useState(false);
+  const sourceSyncRequestRef = useRef(0);
   const { authError, currentUser, ensureSiteReportsLoaded, getSessionsBySiteId, isAuthenticated, isReady, login, logout, sites } = useInspectionSessions();
   const currentSite = useMemo(() => sites.find((site) => site.id === decodedSiteKey) ?? null, [decodedSiteKey, sites]);
   const siteSessions = useMemo(() => (currentSite ? getSessionsBySiteId(currentSite.id) : []), [currentSite, getSessionsBySiteId]);
@@ -260,57 +349,203 @@ export function MobileQuarterlyReportScreen({ quarterKey, siteKey }: MobileQuart
     setDraft((current) => (current ? updater(current) : current));
   };
 
-  const handlePeriodFieldChange = (
-    key: 'periodStartDate' | 'periodEndDate',
+  const updateImplementationRow = (
+    sessionId: string,
+    field: keyof QuarterlySummaryReport['implementationRows'][number],
     value: string,
   ) => {
-    updateDraft((current) => {
-      const next = {
-        ...current,
-        [key]: value,
-      };
+    updateDraft((current) => ({
+      ...current,
+      implementationRows: current.implementationRows.map((item) => {
+        if (item.sessionId !== sessionId) return item;
 
-      return {
-        ...next,
-        ...normalizeQuarterlyReportPeriod(next),
-      };
-    });
+        if (field === 'reportNumber' || field === 'findingCount' || field === 'improvedCount') {
+          const parsed = Number.parseInt(value, 10);
+          return {
+            ...item,
+            [field]: Number.isNaN(parsed) ? 0 : parsed,
+          };
+        }
+
+        return {
+          ...item,
+          [field]: value,
+        };
+      }),
+    }));
   };
 
-  const handleApplySourceSelection = async () => {
-    if (!draft || !currentSite || !draft.periodStartDate || !draft.periodEndDate) return;
+  const handleAddImplementationRow = () => {
+    updateDraft((current) => ({
+      ...current,
+      implementationRows: [...current.implementationRows, createEmptyImplementationRow()],
+    }));
+  };
+
+  const handleRemoveImplementationRow = (sessionId: string) => {
+    updateDraft((current) => ({
+      ...current,
+      implementationRows: current.implementationRows.filter((item) => item.sessionId !== sessionId),
+    }));
+  };
+
+  const updateFuturePlan = (
+    planId: string,
+    patch: Partial<QuarterlySummaryReport['futurePlans'][number]>,
+  ) => {
+    updateDraft((current) => ({
+      ...current,
+      futurePlans: current.futurePlans.map((item) =>
+        item.id === planId ? { ...item, ...patch } : item,
+      ),
+    }));
+  };
+
+  const handleAddFuturePlan = () => {
+    updateDraft((current) => ({
+      ...current,
+      futurePlans: [...current.futurePlans, createFutureProcessRiskPlan()],
+    }));
+  };
+
+  const handleRemoveFuturePlan = (planId: string) => {
+    updateDraft((current) => ({
+      ...current,
+      futurePlans: current.futurePlans.filter((item) => item.id !== planId),
+    }));
+  };
+
+  const syncSourceReportsForDraft = async (
+    nextDraft: QuarterlySummaryReport,
+    options?: {
+      explicitSelection?: boolean;
+      selectedReportKeys?: string[];
+      sourceNotice?: string | null;
+    },
+  ) => {
+    if (!currentSite) {
+      setDraft(nextDraft);
+      return;
+    }
+
+    if (
+      !nextDraft.periodStartDate ||
+      !nextDraft.periodEndDate ||
+      nextDraft.periodStartDate > nextDraft.periodEndDate
+    ) {
+      setDraft(nextDraft);
+      setSourceReports([]);
+      setSelectedSourceKeys([]);
+      return;
+    }
+
     const token = readSafetyAuthToken();
     if (!token) {
+      setDraft(nextDraft);
       setSourceError('로그인이 만료되었습니다. 다시 로그인해 주세요.');
       return;
     }
 
+    const requestId = sourceSyncRequestRef.current + 1;
+    sourceSyncRequestRef.current = requestId;
     setIsSourceLoading(true);
     setSourceError(null);
+
     try {
       const seed = await fetchQuarterlySummarySeed(token, currentSite.id, {
-        explicitSelection: true,
-        periodEndDate: draft.periodEndDate,
-        periodStartDate: draft.periodStartDate,
-        selectedReportKeys: selectedSourceKeys,
+        explicitSelection: options?.explicitSelection,
+        periodEndDate: nextDraft.periodEndDate,
+        periodStartDate: nextDraft.periodStartDate,
+        selectedReportKeys: options?.selectedReportKeys,
       }).catch((error) => {
         if (shouldUseLocalSeed(error)) {
-          return buildLocalQuarterlySummarySeed(draft, currentSite, siteSessions, {
-            explicitSelection: true,
-            selectedReportKeys: selectedSourceKeys,
+          return buildLocalQuarterlySummarySeed(nextDraft, currentSite, siteSessions, {
+            explicitSelection: options?.explicitSelection,
+            selectedReportKeys: options?.selectedReportKeys,
           });
         }
         throw error;
       });
+
+      if (sourceSyncRequestRef.current !== requestId) return;
+
+      const draftWithSelection =
+        options?.explicitSelection && options.selectedReportKeys
+          ? { ...nextDraft, generatedFromSessionIds: options.selectedReportKeys }
+          : nextDraft;
+      const updatedDraft = applyQuarterlySummarySeed(draftWithSelection, seed);
+
+      setDraft(updatedDraft);
       setSourceReports(seed.source_reports);
-      setDraft((current) => (current ? applyQuarterlySummarySeed({ ...current, generatedFromSessionIds: selectedSourceKeys }, seed) : current));
-      setSourceNotice('원본 보고서 선택을 반영했습니다.');
-      setSourceModalOpen(false);
+      setSelectedSourceKeys(updatedDraft.generatedFromSessionIds);
+      setSourceNotice(options?.sourceNotice ?? null);
     } catch (error) {
+      if (sourceSyncRequestRef.current !== requestId) return;
+      setDraft(nextDraft);
       setSourceError(getMessage(error, '원본 보고서를 반영하지 못했습니다.'));
     } finally {
-      setIsSourceLoading(false);
+      if (sourceSyncRequestRef.current === requestId) {
+        setIsSourceLoading(false);
+      }
     }
+  };
+
+  const handlePeriodFieldChange = (
+    key: 'periodStartDate' | 'periodEndDate',
+    value: string,
+  ) => {
+    if (!draft) return;
+    setSaveNotice(null);
+    setDocumentNotice(null);
+    setSourceNotice(null);
+    const next = {
+      ...draft,
+      [key]: value,
+    };
+    const nextDraft = {
+      ...next,
+      ...normalizeQuarterlyReportPeriod(next),
+    };
+    void syncSourceReportsForDraft(nextDraft);
+  };
+
+  const handleQuarterChange = (value: string) => {
+    const nextQuarter = Number.parseInt(value, 10);
+    if (nextQuarter < 1 || nextQuarter > 4 || !draft) return;
+
+    const currentQuarterTarget = getQuarterSelectionTarget(draft);
+    const nextRange = getQuarterRange(currentQuarterTarget.year, nextQuarter);
+    const currentAutoTitle = buildQuarterlyTitleForPeriod(
+      draft.periodStartDate,
+      draft.periodEndDate,
+    );
+    const shouldSyncTitle = !draft.title.trim() || draft.title.trim() === currentAutoTitle;
+
+    setSaveNotice(null);
+    setDocumentNotice(null);
+    setSourceNotice(null);
+    const nextDraft = {
+      ...draft,
+      title: shouldSyncTitle
+        ? buildQuarterlyTitleForPeriod(nextRange.startDate, nextRange.endDate)
+        : draft.title,
+      periodStartDate: nextRange.startDate,
+      periodEndDate: nextRange.endDate,
+      quarterKey: createQuarterKey(currentQuarterTarget.year, nextQuarter),
+      year: currentQuarterTarget.year,
+      quarter: nextQuarter,
+    };
+    void syncSourceReportsForDraft(nextDraft);
+  };
+
+  const handleApplySourceSelection = async () => {
+    if (!draft) return;
+    await syncSourceReportsForDraft(draft, {
+      explicitSelection: true,
+      selectedReportKeys: selectedSourceKeys,
+      sourceNotice: '원본 보고서 선택을 반영했습니다.',
+    });
+    setSourceModalOpen(false);
   };
 
   const handleSave = async () => {
@@ -359,7 +594,7 @@ export function MobileQuarterlyReportScreen({ quarterKey, siteKey }: MobileQuart
   if (!draft) return <main className="app-page"><div className={styles.pageShell}><div className={styles.content}><section className={styles.stateCard}><h1 className={styles.sectionTitle}>분기 보고서를 열 수 없습니다.</h1><p className={styles.inlineNotice}>{loadError || '보고서를 찾지 못했습니다.'}</p></section></div></div></main>;
 
   const selectedSourceSet = new Set(selectedSourceKeys);
-  const subtitle = `${getQuarterlyReportPeriodLabel(draft)} · 원본 ${draft.generatedFromSessionIds.length}건`;
+  const selectedQuarter = String(getQuarterSelectionTarget(draft).quarter);
 
   return (
     <>
@@ -370,11 +605,65 @@ export function MobileQuarterlyReportScreen({ quarterKey, siteKey }: MobileQuart
         fullHeight
         kicker="모바일 분기 보고"
         onLogout={logout}
-        subtitle={subtitle}
         tabBar={<MobileTabBar tabs={buildSiteTabs(currentSite.id, 'quarterly')} />}
         title={draft.title || currentSite.siteName}
         webHref={buildSiteQuarterlyHref(currentSite.id, draft.id)}
       >
+        <section
+          className={styles.sectionCard}
+          style={{ marginBottom: 0, borderRadius: '0 0 8px 8px', borderBottom: 'none', flexShrink: 0 }}
+        >
+          <div className={`${styles.statGrid} ${styles.mobileSummaryGrid}`}>
+            <article className={styles.statCard}>
+              <span className={styles.statLabel}>분기</span>
+              <strong className={styles.statValue}>{getQuarterlyReportPeriodLabel(draft)}</strong>
+            </article>
+            <div className={styles.mobileSummaryActionStack}>
+              <button
+                type="button"
+                className="app-button app-button-secondary"
+                style={{ width: '100%', height: '100%', minHeight: '80px', padding: '0 8px' }}
+                onClick={() => setDocumentInfoOpen(true)}
+              >
+                문서정보
+              </button>
+              <div className={styles.mobileSummaryExportStack}>
+                <button
+                  type="button"
+                  className="app-button app-button-secondary"
+                  style={{ width: '100%', minHeight: '36px', padding: '0 8px' }}
+                  disabled={isGeneratingHwpx || isGeneratingPdf}
+                  onClick={() => void handleDownloadHwpx()}
+                >
+                  {isGeneratingHwpx ? '한글...' : '한글'}
+                </button>
+                <button
+                  type="button"
+                  className="app-button app-button-secondary"
+                  style={{ width: '100%', minHeight: '36px', padding: '0 8px' }}
+                  disabled={isGeneratingHwpx || isGeneratingPdf}
+                  onClick={() => void handleDownloadPdf()}
+                >
+                  {isGeneratingPdf ? 'PDF...' : 'PDF'}
+                </button>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="app-button app-button-secondary"
+              style={{ width: '100%', height: '100%', minHeight: '118px', padding: '0 8px' }}
+              disabled={isSaving || isGeneratingHwpx || isGeneratingPdf}
+              onClick={() =>
+                void handleSave().catch((error) =>
+                  setLoadError(getMessage(error, '저장하지 못했습니다.')),
+                )
+              }
+            >
+              {isSaving ? '저장 중' : '저장'}
+            </button>
+          </div>
+        </section>
+
         <div className={tabStyles.layoutWrapper}>
           <div className={tabStyles.tabContainer}>
             {STEPS.map((step) => (
@@ -391,19 +680,16 @@ export function MobileQuarterlyReportScreen({ quarterKey, siteKey }: MobileQuart
               {saveNotice ? <div className={styles.inlineNotice}>{saveNotice}</div> : null}
               {documentNotice ? <div className={styles.inlineNotice}>{documentNotice}</div> : null}
 
-              {activeStep === 'overview' ? <section className={styles.mobileEditorCard}><input className="app-input" value={draft.title} onChange={(event) => updateDraft((current) => ({ ...current, title: event.target.value }))} /><div style={{ display: 'grid', gap: '12px', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}><input type="date" className="app-input" value={draft.periodStartDate} onChange={(event) => handlePeriodFieldChange('periodStartDate', event.target.value)} /><input type="date" className="app-input" value={draft.periodEndDate} onChange={(event) => handlePeriodFieldChange('periodEndDate', event.target.value)} /></div><div className={styles.statGrid}><article className={styles.statCard}><span className={styles.statLabel}>분기</span><strong className={styles.statValue}>{getQuarterlyReportPeriodLabel(draft)}</strong></article><article className={styles.statCard}><span className={styles.statLabel}>마지막 계산</span><strong className={styles.statValue} style={{ fontSize: '15px' }}>{formatDateTimeLabel(draft.lastCalculatedAt)}</strong></article></div></section> : null}
+              {activeStep === 'overview' ? <section className={styles.mobileEditorCard}><input className="app-input" value={draft.title} onChange={(event) => updateDraft((current) => ({ ...current, title: event.target.value }))} /><div className={styles.mobileOverviewPeriodRow}><label className={styles.mobileEditorFieldGroup}><span className={styles.mobileEditorFieldLabel}>분기</span><select className="app-select" value={selectedQuarter} onChange={(event) => handleQuarterChange(event.target.value)}><option value="1">1분기</option><option value="2">2분기</option><option value="3">3분기</option><option value="4">4분기</option></select></label><label className={styles.mobileEditorFieldGroup}><span className={styles.mobileEditorFieldLabel}>시작일</span><input type="date" className="app-input" value={draft.periodStartDate} onChange={(event) => handlePeriodFieldChange('periodStartDate', event.target.value)} /></label><label className={styles.mobileEditorFieldGroup}><span className={styles.mobileEditorFieldLabel}>종료일</span><input type="date" className="app-input" value={draft.periodEndDate} onChange={(event) => handlePeriodFieldChange('periodEndDate', event.target.value)} /></label></div><div className={styles.mobileInlineActions}><button type="button" className={`app-button app-button-primary ${styles.mobileInlineAction}`} onClick={() => setSourceModalOpen(true)}>원본 보고서 선택</button><button type="button" className={`app-button app-button-secondary ${styles.mobileInlineAction}`} onClick={() => void handleApplySourceSelection()} disabled={isSourceLoading}>{isSourceLoading ? '반영 중...' : '선택 반영 / 재계산'}</button></div>{sourceNotice ? <div className={styles.inlineNotice}>{sourceNotice}</div> : null}<div style={{ display: 'grid', gap: '10px' }}>{sourceReports.filter((report) => selectedSourceSet.has(report.report_key)).map((report) => <article key={report.report_key} className={styles.reportCard} style={{ padding: '12px' }}><strong>{report.report_title || report.guidance_date || report.report_key}</strong><div style={{ color: '#475569', display: 'flex', flexWrap: 'wrap', fontSize: '13px', gap: '10px' }}><span>{report.guidance_date || '-'}</span><span>지적 {report.finding_count}건</span><span>개선 {report.improved_count}건</span></div></article>)}</div></section> : null}
 
-              {activeStep === 'sources' ? <section className={styles.mobileEditorCard}><button type="button" className="app-button app-button-primary" onClick={() => setSourceModalOpen(true)}>원본 보고서 선택</button><button type="button" className="app-button app-button-secondary" onClick={() => void handleApplySourceSelection()} disabled={isSourceLoading}>{isSourceLoading ? '반영 중...' : '선택 반영 / 재계산'}</button>{sourceNotice ? <div className={styles.inlineNotice}>{sourceNotice}</div> : null}<div style={{ display: 'grid', gap: '10px' }}>{sourceReports.filter((report) => selectedSourceSet.has(report.report_key)).map((report) => <article key={report.report_key} className={styles.reportCard} style={{ padding: '12px' }}><strong>{report.report_title || report.guidance_date || report.report_key}</strong><div style={{ color: '#475569', display: 'flex', flexWrap: 'wrap', fontSize: '13px', gap: '10px' }}><span>{report.guidance_date || '-'}</span><span>지적 {report.finding_count}건</span><span>개선 {report.improved_count}건</span></div></article>)}</div></section> : null}
-
-              {activeStep === 'snapshot' ? <section className={styles.mobileEditorCard}><div style={{ display: 'grid', gap: '10px' }}>{SNAPSHOT_FIELDS.map((field) => <label key={field.key} className={styles.mobileEditorFieldGroup}><span className={styles.mobileEditorFieldLabel}>{field.label}</span><input className="app-input" value={draft.siteSnapshot[field.key] || ''} onChange={(event) => updateDraft((current) => ({ ...current, siteSnapshot: { ...current.siteSnapshot, [field.key]: event.target.value } }))} /></label>)}</div></section> : null}
+              {activeStep === 'snapshot' ? <section className={styles.mobileEditorCard}><div className={styles.mobileCompactFieldGrid}>{SNAPSHOT_FIELDS.map((field) => <label key={field.key} className={`${styles.mobileEditorFieldGroup} ${SNAPSHOT_WIDE_FIELDS.has(field.key) ? styles.mobileCompactFieldWide : ''}`}><span className={styles.mobileEditorFieldLabel}>{field.label}</span><input className="app-input" value={draft.siteSnapshot[field.key] || ''} onChange={(event) => updateDraft((current) => ({ ...current, siteSnapshot: { ...current.siteSnapshot, [field.key]: event.target.value } }))} /></label>)}</div></section> : null}
 
               {activeStep === 'analysis' ? <section className={styles.mobileEditorCard}><ChartCard title="재해유형" entries={draft.accidentStats} variant="erp" /><ChartCard title="기인물" entries={draft.causativeStats} variant="erp" /></section> : null}
 
-              {activeStep === 'implementation' ? <section className={styles.mobileEditorCard}><button type="button" className="app-button app-button-secondary" onClick={() => updateDraft((current) => ({ ...current, implementationRows: [...current.implementationRows, { sessionId: `manual-${Date.now()}`, reportTitle: '', reportDate: '', reportNumber: 0, drafter: '', progressRate: '', findingCount: 0, improvedCount: 0, note: '' }] }))}>행 추가</button><div style={{ display: 'grid', gap: '10px' }}>{draft.implementationRows.map((row) => <article key={row.sessionId} className={styles.mobileEditorCard}><input className="app-input" value={row.reportTitle} placeholder="보고서 제목" onChange={(event) => updateDraft((current) => ({ ...current, implementationRows: current.implementationRows.map((item) => item.sessionId === row.sessionId ? { ...item, reportTitle: event.target.value } : item) }))} /><textarea className="app-textarea" rows={2} value={row.note} placeholder="비고" onChange={(event) => updateDraft((current) => ({ ...current, implementationRows: current.implementationRows.map((item) => item.sessionId === row.sessionId ? { ...item, note: event.target.value } : item) }))} /></article>)}</div></section> : null}
+              {activeStep === 'implementation' ? <section className={styles.mobileEditorCard}><div className={styles.mobileImplementationListHeader}><div className={styles.mobileImplementationListTitle}>기술지도 이행현황</div><button type="button" className={`app-button app-button-secondary ${styles.mobileImplementationAddButton}`} onClick={handleAddImplementationRow}>행 추가</button></div>{draft.implementationRows.length > 0 ? <div className={styles.mobileImplementationList}>{draft.implementationRows.map((row, index) => <article key={row.sessionId} className={styles.mobileImplementationItem}><div className={styles.mobileImplementationItemTop}><span className={styles.mobileImplementationItemBadge}>{row.reportNumber || index + 1}차</span><button type="button" className={`app-button app-button-secondary ${styles.mobileImplementationDeleteButton}`} onClick={() => handleRemoveImplementationRow(row.sessionId)}>삭제</button></div><label className={`${styles.mobileEditorFieldGroup} ${styles.mobileImplementationFieldWide}`}><span className={styles.mobileEditorFieldLabel}>보고서명</span><input className="app-input" value={row.reportTitle} placeholder="보고서명" onChange={(event) => updateImplementationRow(row.sessionId, 'reportTitle', event.target.value)} /></label><div className={styles.mobileImplementationFieldGrid}><label className={styles.mobileEditorFieldGroup}><span className={styles.mobileEditorFieldLabel}>차수</span><input type="number" min={0} className="app-input" value={row.reportNumber} onChange={(event) => updateImplementationRow(row.sessionId, 'reportNumber', event.target.value)} /></label><label className={styles.mobileEditorFieldGroup}><span className={styles.mobileEditorFieldLabel}>담당자</span><input className="app-input" value={row.drafter} placeholder="담당자" onChange={(event) => updateImplementationRow(row.sessionId, 'drafter', event.target.value)} /></label><label className={styles.mobileEditorFieldGroup}><span className={styles.mobileEditorFieldLabel}>지도일</span><input className="app-input" value={row.reportDate} placeholder="YYYY-MM-DD" onChange={(event) => updateImplementationRow(row.sessionId, 'reportDate', event.target.value)} /></label><label className={styles.mobileEditorFieldGroup}><span className={styles.mobileEditorFieldLabel}>공정률</span><input className="app-input" value={row.progressRate} placeholder="공정률" onChange={(event) => updateImplementationRow(row.sessionId, 'progressRate', event.target.value)} /></label><label className={styles.mobileEditorFieldGroup}><span className={styles.mobileEditorFieldLabel}>지적 건수</span><input type="number" min={0} className="app-input" value={row.findingCount} onChange={(event) => updateImplementationRow(row.sessionId, 'findingCount', event.target.value)} /></label><label className={styles.mobileEditorFieldGroup}><span className={styles.mobileEditorFieldLabel}>개선 건수</span><input type="number" min={0} className="app-input" value={row.improvedCount} onChange={(event) => updateImplementationRow(row.sessionId, 'improvedCount', event.target.value)} /></label><label className={`${styles.mobileEditorFieldGroup} ${styles.mobileImplementationFieldWide}`}><span className={styles.mobileEditorFieldLabel}>비고</span><input className="app-input" value={row.note} placeholder="비고" onChange={(event) => updateImplementationRow(row.sessionId, 'note', event.target.value)} /></label></div></article>)}</div> : <div className={styles.mobileImplementationEmpty}>선택된 기술지도 보고서가 없습니다.</div>}</section> : null}
 
-              {activeStep === 'countermeasures' ? <section className={styles.mobileEditorCard}><button type="button" className="app-button app-button-secondary" onClick={() => updateDraft((current) => ({ ...current, majorMeasures: [...current.majorMeasures, ''] }))}>주요 대책 추가</button><div style={{ display: 'grid', gap: '10px' }}>{draft.majorMeasures.map((measure, index) => <textarea key={`${index}-${measure.slice(0, 8)}`} className="app-textarea" rows={3} value={measure} onChange={(event) => updateDraft((current) => ({ ...current, majorMeasures: current.majorMeasures.map((item, itemIndex) => itemIndex === index ? event.target.value : item) }))} />)}</div><button type="button" className="app-button app-button-secondary" onClick={() => updateDraft((current) => ({ ...current, futurePlans: [...current.futurePlans, createFutureProcessRiskPlan()] }))}>향후 공정 추가</button><div style={{ display: 'grid', gap: '10px' }}>{draft.futurePlans.map((plan) => <article key={plan.id} className={styles.mobileEditorCard}><input className="app-input" value={plan.processName} placeholder="공정명" onChange={(event) => updateDraft((current) => ({ ...current, futurePlans: current.futurePlans.map((item) => item.id === plan.id ? { ...item, processName: event.target.value } : item) }))} /><textarea className="app-textarea" rows={2} value={plan.countermeasure} placeholder="안전대책" onChange={(event) => updateDraft((current) => ({ ...current, futurePlans: current.futurePlans.map((item) => item.id === plan.id ? { ...item, countermeasure: event.target.value } : item) }))} /></article>)}</div><select className="app-select" value={draft.opsAssetId} onChange={(event) => updateDraft((current) => applyOpsAsset(current, opsAssets.find((item) => item.id === event.target.value) ?? null))}><option value="">OPS 자료 없음</option>{opsAssets.map((asset) => <option key={asset.id} value={asset.id}>{asset.title}</option>)}</select>{draft.opsAssetFileUrl ? <a href={draft.opsAssetFileUrl} target="_blank" rel="noreferrer">OPS 자료 열기</a> : null}</section> : null}
+              {activeStep === 'countermeasures' ? <section className={styles.mobileEditorCard}><button type="button" className="app-button app-button-secondary" onClick={() => updateDraft((current) => ({ ...current, majorMeasures: [...current.majorMeasures, ''] }))}>주요 대책 추가</button><div style={{ display: 'grid', gap: '10px' }}>{draft.majorMeasures.map((measure, index) => <textarea key={`${index}-${measure.slice(0, 8)}`} className="app-textarea" rows={3} value={measure} onChange={(event) => updateDraft((current) => ({ ...current, majorMeasures: current.majorMeasures.map((item, itemIndex) => itemIndex === index ? event.target.value : item) }))} />)}</div><div className={styles.mobileFuturePlanTableShell}><div className={styles.mobileFuturePlanTable}><div className={styles.mobileFuturePlanHeader}><span>작업공정</span><span>유해위험요인</span><span>안전대책</span><button type="button" className={`app-button app-button-secondary ${styles.mobileFuturePlanHeaderButton}`} onClick={handleAddFuturePlan}>행 추가</button></div>{draft.futurePlans.length > 0 ? draft.futurePlans.map((plan) => <div key={plan.id} className={styles.mobileFuturePlanRow}><div className={styles.mobileFuturePlanProcessCell}><textarea className={`app-textarea ${styles.mobileFuturePlanTextarea}`} rows={3} value={plan.processName} placeholder="예: 철근 작업, 거푸집 해체 등 공정을 입력해 주세요." onChange={(event) => updateFuturePlan(plan.id, { processName: event.target.value, source: 'manual' })} /><div className={styles.mobileFuturePlanRecommendationList}>{getFuturePlanRecommendations(plan.processName).map((recommended) => <button key={recommended.processName} type="button" className={styles.mobileFuturePlanRecommendationButton} onClick={() => updateFuturePlan(plan.id, { processName: recommended.processName, hazard: recommended.hazard, countermeasure: recommended.countermeasure, note: '', source: 'api' })}>{recommended.processName}</button>)}</div></div><textarea className={`app-textarea ${styles.mobileFuturePlanTextarea}`} rows={4} value={plan.hazard} onChange={(event) => updateFuturePlan(plan.id, { hazard: event.target.value, source: 'manual' })} /><textarea className={`app-textarea ${styles.mobileFuturePlanTextarea}`} rows={4} value={plan.countermeasure} onChange={(event) => updateFuturePlan(plan.id, { countermeasure: event.target.value, note: '', source: 'manual' })} /><button type="button" className={`app-button app-button-secondary ${styles.mobileFuturePlanDeleteButton}`} onClick={() => handleRemoveFuturePlan(plan.id)}>삭제</button></div>) : <div className={styles.mobileFuturePlanEmpty}>등록된 향후 공정 계획이 없습니다.</div>}</div></div><select className="app-select" value={draft.opsAssetId} onChange={(event) => updateDraft((current) => applyOpsAsset(current, opsAssets.find((item) => item.id === event.target.value) ?? null))}><option value="">OPS 자료 없음</option>{opsAssets.map((asset) => <option key={asset.id} value={asset.id}>{asset.title}</option>)}</select>{draft.opsAssetFileUrl ? <a href={draft.opsAssetFileUrl} target="_blank" rel="noreferrer">OPS 자료 열기</a> : null}</section> : null}
 
-              {activeStep === 'document' ? <section className={styles.mobileEditorCard}><input className="app-input" value={draft.drafter} placeholder="작성자" onChange={(event) => updateDraft((current) => ({ ...current, drafter: event.target.value }))} /><input className="app-input" value={draft.reviewer} placeholder="검토자" onChange={(event) => updateDraft((current) => ({ ...current, reviewer: event.target.value }))} /><input className="app-input" value={draft.approver} placeholder="승인자" onChange={(event) => updateDraft((current) => ({ ...current, approver: event.target.value }))} /><button type="button" className="app-button app-button-primary" onClick={() => void handleSave().catch((error) => setLoadError(getMessage(error, '저장하지 못했습니다.')))} disabled={isSaving}>변경사항 저장</button><button type="button" className="app-button app-button-secondary" onClick={() => void handleDownloadHwpx()} disabled={isGeneratingHwpx || isGeneratingPdf}>{isGeneratingHwpx ? 'HWPX 생성 중...' : '문서 다운로드 (.hwpx)'}</button><button type="button" className="app-button app-button-secondary" onClick={() => void handleDownloadPdf()} disabled={isGeneratingHwpx || isGeneratingPdf}>{isGeneratingPdf ? 'PDF 생성 중...' : '문서 다운로드 (.pdf)'}</button></section> : null}
             </div>
           </div>
         </div>
@@ -412,6 +698,49 @@ export function MobileQuarterlyReportScreen({ quarterKey, siteKey }: MobileQuart
       <AppModal open={sourceModalOpen} title="원본 보고서 선택" size="large" onClose={() => setSourceModalOpen(false)} actions={<><button type="button" className="app-button app-button-secondary" onClick={() => setSourceModalOpen(false)}>닫기</button><button type="button" className="app-button app-button-primary" onClick={() => void handleApplySourceSelection()} disabled={isSourceLoading}>{isSourceLoading ? '반영 중...' : '선택 반영'}</button></>}>
         <div style={{ display: 'grid', gap: '10px' }}>
           {sourceReports.length > 0 ? sourceReports.map((report) => <label key={report.report_key} style={{ border: '1px solid rgba(215, 224, 235, 0.96)', borderRadius: '14px', display: 'grid', gap: '8px', padding: '14px' }}><div style={{ alignItems: 'flex-start', display: 'flex', justifyContent: 'space-between', gap: '12px' }}><div style={{ display: 'grid', gap: '4px' }}><strong>{report.report_title || report.guidance_date || report.report_key}</strong><span style={{ color: '#64748b', fontSize: '13px' }}>{report.guidance_date || '-'} · {report.drafter || '작성자 미상'}</span></div><input type="checkbox" checked={selectedSourceSet.has(report.report_key)} onChange={(event) => setSelectedSourceKeys((current) => event.target.checked ? [...new Set([...current, report.report_key])] : current.filter((item) => item !== report.report_key))} /></div></label>) : <div className={styles.inlineNotice}>선택 가능한 원본 보고서가 없습니다.</div>}
+        </div>
+      </AppModal>
+
+      <AppModal
+        open={documentInfoOpen}
+        title="문서정보 확인"
+        onClose={() => setDocumentInfoOpen(false)}
+        actions={
+          <>
+            <button type="button" className="app-button app-button-secondary" onClick={() => setDocumentInfoOpen(false)}>
+              닫기
+            </button>
+          </>
+        }
+      >
+        <div style={{ display: 'grid', gap: '12px' }}>
+          <label className={styles.mobileEditorFieldGroup}>
+            <span className={styles.mobileEditorFieldLabel}>작성자</span>
+            <input
+              className="app-input"
+              value={draft.drafter}
+              placeholder="작성자"
+              onChange={(event) => updateDraft((current) => ({ ...current, drafter: event.target.value }))}
+            />
+          </label>
+          <label className={styles.mobileEditorFieldGroup}>
+            <span className={styles.mobileEditorFieldLabel}>검토자</span>
+            <input
+              className="app-input"
+              value={draft.reviewer}
+              placeholder="검토자"
+              onChange={(event) => updateDraft((current) => ({ ...current, reviewer: event.target.value }))}
+            />
+          </label>
+          <label className={styles.mobileEditorFieldGroup}>
+            <span className={styles.mobileEditorFieldLabel}>승인자</span>
+            <input
+              className="app-input"
+              value={draft.approver}
+              placeholder="승인자"
+              onChange={(event) => updateDraft((current) => ({ ...current, approver: event.target.value }))}
+            />
+          </label>
         </div>
       </AppModal>
     </>
