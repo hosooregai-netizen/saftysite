@@ -813,10 +813,10 @@ export function MobileInspectionSessionScreen({
                             }}
                             style={{ width: '80px', padding: '4px 8px', fontSize: '13px', height: '32px' }}
                           >
-                            <option value="none">선택</option>
-                            <option value="O">양호</option>
-                            <option value="X">불량</option>
-                            <option value="-">해당없음</option>
+                            <option value="">선택</option>
+                            <option value="good">양호</option>
+                            <option value="poor">불량</option>
+                            <option value="average">보통</option>
                           </select>
                         </div>
                       ))}
@@ -845,10 +845,10 @@ export function MobileInspectionSessionScreen({
                             }}
                             style={{ width: '80px', padding: '4px 8px', fontSize: '13px', height: '32px' }}
                           >
-                            <option value="none">선택</option>
-                            <option value="O">양호</option>
-                            <option value="X">불량</option>
-                            <option value="-">해당없음</option>
+                            <option value="">선택</option>
+                            <option value="good">양호</option>
+                            <option value="poor">불량</option>
+                            <option value="average">보통</option>
                           </select>
                         </div>
                       ))}
