@@ -301,7 +301,17 @@ const TEXT_ONLY_IMAGE_FALLBACK_PLACEHOLDERS = [
 ];
 const INVALID_XML_CHAR_PATTERN = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\uD800-\uDFFF\uFFFE\uFFFF]/g;
 const HWPX_BALANCE_TAGS = ['hp:subList', 'hp:p', 'hp:tbl', 'hp:tr', 'hp:tc', 'hp:t'] as const;
+const LEGACY_PAGE_NUMBER_CONTROL = '<hp:ctrl><hp:pageNum pos="BOTTOM_RIGHT" formatType="DIGIT" sideChar="-"/></hp:ctrl>';
+const VISIT_COUNT_FOOTER_PARAGRAPH_TEMPLATE_ID = '22';
+const VISIT_COUNT_FOOTER_PARAGRAPH_ID_TOKEN = '{footer.visit_page_para_pr_id}';
+const VISIT_COUNT_PAGE_FOOTER_CONTROL =
+  `<hp:ctrl><hp:footer id="0" applyPageType="BOTH"><hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="TOP" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0"><hp:p id="0" paraPrIDRef="${VISIT_COUNT_FOOTER_PARAGRAPH_ID_TOKEN}" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0"><hp:run charPrIDRef="1"><hp:t>{footer.visit_page_prefix}</hp:t></hp:run><hp:run charPrIDRef="1"><hp:ctrl><hp:autoNum num="1" numType="PAGE"><hp:autoNumFormat type="DIGIT" supscript="0"/></hp:autoNum></hp:ctrl><hp:t/></hp:run></hp:p></hp:subList></hp:footer></hp:ctrl>`;
+const COVER_PAGE_NUMBER_HIDING_CONTROL =
+  '<hp:ctrl><hp:pageHiding hideHeader="0" hideFooter="0" hideMasterPage="0" hideBorder="0" hideFill="0" hidePageNum="1"/></hp:ctrl>';
+const COVER_FOOTER_HIDING_CONTROL =
+  '<hp:ctrl><hp:pageHiding hideHeader="0" hideFooter="1" hideMasterPage="0" hideBorder="0" hideFill="0" hidePageNum="0"/></hp:ctrl>';
 
+const FOOTER_TEXT_PLACEHOLDERS = ['footer.visit_page_prefix'];
 const COVER_TEXT_PLACEHOLDERS = [
   'cover.site_name',
   'cover.report_date',
@@ -407,6 +417,7 @@ const SEC12_TEXT_PLACEHOLDERS = ['sec12.activities[0].activity_type', 'sec12.act
 const SEC13_TEXT_PLACEHOLDERS = Array.from({ length: 4 }, (_, index) => `sec13.cases[${index}].title`);
 const SEC14_TEXT_PLACEHOLDERS: string[] = [];
 const TEMPLATE_TEXT_TOKEN_SET = new Set<string>([
+  ...FOOTER_TEXT_PLACEHOLDERS,
   ...COVER_TEXT_PLACEHOLDERS,
   ...SEC1_TEXT_PLACEHOLDERS,
   ...SEC2_TEXT_PLACEHOLDERS,
@@ -852,6 +863,13 @@ function valueOrDash(value: unknown): string {
   return normalized || '-';
 }
 
+function buildVisitPagePrefix(value: unknown): string {
+  const normalized = valueOrBlank(value)
+    .replace(/\s+/g, '')
+    .replace(/(차수|회차|차)$/u, '');
+  return normalized ? `${normalized}-` : '';
+}
+
 function documentContactValue(value: unknown): string {
   const normalized = valueOrBlank(value);
   if (!normalized) {
@@ -1284,6 +1302,7 @@ function mapWebDataToTemplateBinding(data: ExistingWebReportData): TemplateBindi
   text['sec2.progress_rate'] = valueOrDash(overview.progressRate);
   text['sec2.visit_count'] = valueOrDash(overview.visitCount);
   text['sec2.total_visit_count'] = valueOrDash(overview.totalVisitCount);
+  text['footer.visit_page_prefix'] = buildVisitPagePrefix(overview.visitCount);
   text['sec2.assignee'] = valueOrDash(overview.assignee || data.meta.drafter);
   text['sec2.previous_implementation_status'] = valueOrDash(
     mapPreviousImplementationStatus(overview.previousImplementationStatus),
@@ -1933,6 +1952,50 @@ function applyTemplateTextQuirks(xml: string): string {
       /\{sec2\.notification_method_text\}\s*\/\s*\{sec2\.notification_recipient_name\}\s*\/\s*\{sec2\.notification_recipient_signature\}\s*\/\s*\{sec2\.other_notification_method\}/g,
       '{sec2.notification_method_layout}',
     );
+}
+
+function ensureVisitCountFooterParagraphStyle(headerXml: string): { headerXml: string; paraPrId: string } {
+  const paraPropertiesMatch = headerXml.match(/<hh:paraProperties itemCnt="(\d+)">([\s\S]*?)<\/hh:paraProperties>/);
+  if (!paraPropertiesMatch) {
+    throw new Error('The HWPX template header is missing hh:paraProperties.');
+  }
+
+  const paraPropertiesXml = paraPropertiesMatch[2];
+  const sourceParaPrPattern = new RegExp(
+    `<hh:paraPr id="${VISIT_COUNT_FOOTER_PARAGRAPH_TEMPLATE_ID}"[^>]*>[\\s\\S]*?<\\/hh:paraPr>`,
+  );
+  const sourceParaPrMatch = paraPropertiesXml.match(sourceParaPrPattern);
+  if (!sourceParaPrMatch) {
+    throw new Error(
+      `The HWPX template header is missing hh:paraPr id="${VISIT_COUNT_FOOTER_PARAGRAPH_TEMPLATE_ID}".`,
+    );
+  }
+
+  const paraPrIds = Array.from(paraPropertiesXml.matchAll(/<hh:paraPr id="(\d+)"/g), (match) =>
+    Number.parseInt(match[1], 10),
+  ).filter((value) => Number.isFinite(value));
+  const nextParaPrId = String(Math.max(...paraPrIds, Number.parseInt(VISIT_COUNT_FOOTER_PARAGRAPH_TEMPLATE_ID, 10)) + 1);
+  const rightAlignedParaPr = sourceParaPrMatch[0]
+    .replace(/<hh:paraPr id="\d+"/, `<hh:paraPr id="${nextParaPrId}"`)
+    .replace(/<hh:align horizontal="[^"]+"/, '<hh:align horizontal="RIGHT"');
+  const nextParaProperties = paraPropertiesMatch[0]
+    .replace(/itemCnt="\d+"/, `itemCnt="${Number.parseInt(paraPropertiesMatch[1], 10) + 1}"`)
+    .replace('</hh:paraProperties>', `${rightAlignedParaPr}</hh:paraProperties>`);
+
+  return {
+    headerXml: headerXml.replace(paraPropertiesMatch[0], nextParaProperties),
+    paraPrId: nextParaPrId,
+  };
+}
+
+function applyVisitCountPageFooter(sectionXml: string, footerParaPrId: string): string {
+  const footerControl = VISIT_COUNT_PAGE_FOOTER_CONTROL.replace(
+    VISIT_COUNT_FOOTER_PARAGRAPH_ID_TOKEN,
+    footerParaPrId,
+  );
+  return sectionXml
+    .replace(LEGACY_PAGE_NUMBER_CONTROL, footerControl)
+    .replace(COVER_PAGE_NUMBER_HIDING_CONTROL, COVER_FOOTER_HIDING_CONTROL);
 }
 
 function stripLineSegArrays(xml: string): string {
@@ -2758,23 +2821,34 @@ async function generateHwpxReport(options: {
   const warnings: string[] = [];
 
   const sectionEntry = zip.file('Contents/section0.xml');
+  const headerEntry = zip.file('Contents/header.xml');
   const contentEntry = zip.file('Contents/content.hpf');
-  if (!sectionEntry || !contentEntry) {
-    throw new Error('The template-ready HWPX does not contain Contents/section0.xml or Contents/content.hpf.');
+  if (!sectionEntry || !headerEntry || !contentEntry) {
+    throw new Error('The template-ready HWPX does not contain Contents/section0.xml, Contents/header.xml, or Contents/content.hpf.');
   }
 
   const sectionXml = await sectionEntry.async('string');
+  const headerXml = await headerEntry.async('string');
+  const { headerXml: headerXmlWithVisitCountFooter, paraPrId: visitCountFooterParaPrId } =
+    ensureVisitCountFooterParagraphStyle(headerXml);
   const sectionXmlWithDoc5Summary = ensureDoc5SummaryPlaceholder(sectionXml);
   const sectionXmlWithTemplateOverlays =
     HWPX_GENERATION_MODE === 'advanced' && IMAGE_BINDING_MODE === 'embedded'
       ? ensureNotificationSignatureImageSlot(sectionXmlWithDoc5Summary)
       : sectionXmlWithDoc5Summary;
+  const sectionXmlWithVisitCountFooter = applyVisitCountPageFooter(
+    sectionXmlWithTemplateOverlays,
+    visitCountFooterParaPrId,
+  );
   const contentHpf = await contentEntry.async('string');
   let boundSectionXml = '';
 
   if (HWPX_GENERATION_MODE === 'template_native') {
     boundSectionXml = stripLineSegArrays(
-      replaceTextPlaceholdersPlain(applyTemplateTextQuirks(stripRepeatBlockMarkers(sectionXml)), options.binding.text),
+      replaceTextPlaceholdersPlain(
+        applyTemplateTextQuirks(stripRepeatBlockMarkers(sectionXmlWithVisitCountFooter)),
+        options.binding.text,
+      ),
     );
 
     for (const repeatBlockPath of REPEAT_BLOCKS) {
@@ -2792,13 +2866,13 @@ async function generateHwpxReport(options: {
     let boundContentHpf = contentHpfWithRepairs;
 
     if (IMAGE_BINDING_MODE === 'text_only') {
-      const expanded = expandRepeatBlocks(sectionXmlWithTemplateOverlays, options.binding.repeatCounts);
+      const expanded = expandRepeatBlocks(sectionXmlWithVisitCountFooter, options.binding.repeatCounts);
       boundSectionXml = stripLineSegArrays(
         replaceTextPlaceholders(applyTemplateTextQuirks(expanded.xml), options.binding.text),
       );
     } else {
       const donorSectionXml = await loadTemplateImageDonorSectionXml();
-      const restored = restoreMissingTemplateImageSlots(sectionXmlWithTemplateOverlays, donorSectionXml);
+      const restored = restoreMissingTemplateImageSlots(sectionXmlWithVisitCountFooter, donorSectionXml);
       if (restored.restoredCount > 0) {
         warnings.push(`Restored ${restored.restoredCount} missing image slot(s) from the v6 donor template.`);
       }
@@ -2833,6 +2907,7 @@ async function generateHwpxReport(options: {
     }
   }
 
+  zip.file('Contents/header.xml', headerXmlWithVisitCountFooter, buildZipWriteOptions(headerEntry, 'DEFLATE'));
   zip.file('Contents/section0.xml', boundSectionXml, buildZipWriteOptions(sectionEntry, 'DEFLATE'));
   removeDirectoryEntries(zip);
   await preserveStoredPackageEntries(zip);
