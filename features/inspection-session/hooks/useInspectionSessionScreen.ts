@@ -132,6 +132,7 @@ export function useInspectionSessionScreen(sessionId: string) {
     login,
     logout,
     masterData,
+    refreshMasterData,
     saveNow,
     sites,
     syncError,
@@ -537,6 +538,17 @@ export function useInspectionSessionScreen(sessionId: string) {
 
   const buildHwpxDocument = async () => {
     if (!session) return null;
+
+    if (isAuthenticated) {
+      try {
+        await refreshMasterData();
+      } catch (error) {
+        console.warn('Inspection master-data refresh before HWPX generation failed; using cached feed data.', {
+          error: error instanceof Error ? error.message : String(error),
+          sessionId: session.id,
+        });
+      }
+    }
 
     await saveNow();
     const latestSession = getSessionById(session.id) ?? session;
