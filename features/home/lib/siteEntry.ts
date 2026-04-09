@@ -8,6 +8,10 @@ export type SiteNavView =
   | 'bad-workplace'
   | null;
 
+type SearchParamsLike = {
+  get: (key: string) => string | null;
+};
+
 export function buildSiteReportsHref(siteId: string): string {
   return `/sites/${encodeURIComponent(siteId)}`;
 }
@@ -61,6 +65,60 @@ export function buildWorkerCalendarHref(siteId?: string | null): string {
 
 export function buildWorkerPickerHref(intent: WorkerSitePickerIntent): string {
   return intent === 'quarterly' ? '/quarterly' : '/bad-workplace';
+}
+
+export function buildMobileHomeHref(): string {
+  return '/mobile';
+}
+
+export function buildMobileSiteHomeHref(siteId: string): string {
+  return `/mobile/sites/${encodeURIComponent(siteId)}`;
+}
+
+export function buildMobileSiteReportsHref(siteId: string): string {
+  return `${buildMobileSiteHomeHref(siteId)}/reports`;
+}
+
+export function buildMobileSessionHref(sessionId: string): string {
+  return `/mobile/sessions/${encodeURIComponent(sessionId)}`;
+}
+
+export function resolveWorkerMobileSwitchHref({
+  pathname,
+  searchParams = null,
+}: {
+  pathname: string | null;
+  searchParams?: SearchParamsLike | null;
+}): string {
+  if (!pathname) {
+    return buildMobileHomeHref();
+  }
+
+  const sessionMatch = pathname.match(/^\/sessions\/([^/]+)/);
+  if (sessionMatch) {
+    return buildMobileSessionHref(decodeURIComponent(sessionMatch[1]));
+  }
+
+  if (pathname === '/' || pathname === '/quarterly' || pathname === '/bad-workplace') {
+    return buildMobileHomeHref();
+  }
+
+  const siteKey = getSiteKeyFromPath(pathname);
+  if (siteKey) {
+    const encodedSiteKey = encodeURIComponent(siteKey);
+    if (pathname === `/sites/${encodedSiteKey}`) {
+      return buildMobileSiteReportsHref(siteKey);
+    }
+
+    return buildMobileSiteHomeHref(siteKey);
+  }
+
+  const selectedSiteId = searchParams?.get('siteId');
+  if (selectedSiteId) {
+    return buildMobileSiteHomeHref(selectedSiteId);
+  }
+
+  return buildMobileHomeHref();
 }
 
 export function parseWorkerSiteEntryIntent(

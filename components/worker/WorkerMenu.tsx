@@ -11,6 +11,7 @@ import {
   buildSiteQuarterlyListHref,
   buildSiteReportsHref,
   getSiteKeyFromPath,
+  resolveWorkerMobileSwitchHref,
   resolveSiteNavView,
 } from '@/features/home/lib/siteEntry';
 import { getCurrentReportMonth } from '@/lib/erpReports/shared';
@@ -121,6 +122,10 @@ export function WorkerMenuPanel({
   const siteNavView = resolveSiteNavView({
     pathname,
     siteKey: currentSiteKey,
+  });
+  const mobileSwitchHref = resolveWorkerMobileSwitchHref({
+    pathname,
+    searchParams,
   });
 
   const mailboxMenuItems: WorkerMenuItem[] = [
@@ -293,6 +298,15 @@ export function WorkerMenuPanel({
           })}
         </div>
       </section>
+
+      {!collapsed ? (
+        <div className={styles.menuFooter}>
+          <Link href={mobileSwitchHref} className={styles.modeSwitchButton} onClick={handleNav}>
+            <span className={styles.modeSwitchLabel}>작업자 모바일</span>
+            <span className={styles.modeSwitchMeta}>모바일 전용 흐름으로 전환</span>
+          </Link>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -19,6 +19,7 @@ import type {
 export type SiteReportSortMode = 'round' | 'name' | 'progress';
 
 interface UseSiteReportListStateOptions {
+  buildReportHref?: (reportKey: string) => string;
   siteOverride?: InspectionSite | null;
 }
 
@@ -202,7 +203,10 @@ export function useSiteReportListState(
       }),
     });
 
-    router.push(`/sessions/${nextSession.id}`);
+    const nextHref = options.buildReportHref
+      ? options.buildReportHref(nextSession.id)
+      : `/sessions/${nextSession.id}`;
+    router.push(nextHref);
   };
 
   const canCreateReport = reportIndexStatus === 'loaded';
