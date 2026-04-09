@@ -178,6 +178,7 @@ function normalizeCausativeKey(value: string) {
 function normalizeHazardDescription(value: string, accidentType: string) {
   const cleaned = value
     .replace(/^유해위험요인\s*[:：-]?\s*/i, '')
+    .replace(/^-+\s*/, '')
     .replace(/\r\n/g, ' ')
     .replace(/\n/g, ' ')
     .replace(/\s+/g, ' ')
@@ -185,31 +186,91 @@ function normalizeHazardDescription(value: string, accidentType: string) {
     .trim();
 
   if (cleaned) {
-    return cleaned.slice(0, 80);
+    const normalized = cleaned
+      .replace(/위험이\s*존재한다$/g, '위험')
+      .replace(/위험이\s*있다$/g, '위험')
+      .replace(/존재하는\s*위험$/g, '위험')
+      .replace(/[.!?]+$/g, '')
+      .trim();
+
+    if (/(위험|우려)$/.test(normalized)) {
+      return normalized.slice(0, 110);
+    }
+
+    return `${normalized} 위험`.slice(0, 110);
   }
 
-  if (accidentType === '떨어짐') return '작업 중 추락 위험';
-  if (accidentType === '감전') return '노출 배선 접촉으로 인한 감전 위험';
-  if (accidentType === '화재/폭발') return '불티 및 가연물 접촉으로 인한 화재 위험';
-  if (accidentType === '절단/베임/찔림') return '공구 사용 중 절단 및 베임 위험';
-  return '사진 기준 주요 안전조치 미흡 위험';
+  if (accidentType === '떨어짐') return '안전난간 및 작업발판 관리 미흡에 따른 추락 위험';
+  if (accidentType === '감전') return '노출 배선 및 임시전원 관리 미흡에 따른 감전 위험';
+  if (accidentType === '화재/폭발') return '불티 비산 및 가연물 접촉에 따른 화재·폭발 위험';
+  if (accidentType === '절단/베임/찔림') return '전동공구 및 회전부 접촉에 따른 절단·베임 위험';
+  if (accidentType === '부딪힘') return '장비 작업반경 내 접근에 따른 충돌 위험';
+  if (accidentType === '깔림/뒤집힘') return '중장비 및 적재물 전도에 따른 깔림 위험';
+  return '주요 안전조치 미흡 상태에 따른 재해 위험';
 }
 
 function defaultImprovementSecondSentence(accidentType: string) {
   if (accidentType === '떨어짐') {
-    return '작업 전 안전난간과 작업발판 상태를 확인할 것.';
+    return '안전난간, 작업발판, 덮개 고정상태 등 추락방지 설비 점검 실시 필요.';
   }
   if (accidentType === '감전') {
-    return '작업 전 전원 차단과 배선 상태를 확인할 것.';
+    return '전원 차단 상태와 배선 피복 손상 여부 확인, 접지 및 누전차단기 점검 필요.';
   }
   if (accidentType === '화재/폭발') {
-    return '작업 전 가연물 제거와 소화기 비치 상태를 확인할 것.';
+    return '가연물 제거, 불티 비산방지 조치 및 소화기 비치상태 확인 필요.';
   }
   if (accidentType === '절단/베임/찔림') {
-    return '작업 전 방호장치와 공구 상태를 확인할 것.';
+    return '방호장치 설치상태와 공구 이상 유무 확인 후 필요 시 보수·교체 실시.';
+  }
+  if (accidentType === '부딪힘') {
+    return '작업반경 내 출입통제 및 신호수·유도자 배치 등 충돌방지 조치 필요.';
+  }
+  if (accidentType === '깔림/뒤집힘') {
+    return '장비 전도방지 조치와 적재물 고정상태 확인, 작업자 접근통제 필요.';
   }
 
-  return '작업 전 안전조치와 보호구 착용 상태를 확인할 것.';
+  return '해당 위험구간 안전조치 이행상태 점검 및 필요 부위 보강조치 실시.';
+}
+
+function normalizeImprovementSentence(sentence: string) {
+  let trimmed = sentence
+    .replace(/^-+\s*/, '')
+    .replace(/[.!?]+$/g, '')
+    .trim();
+
+  if (!trimmed) {
+    return '';
+  }
+
+  trimmed = trimmed
+    .replace(/필요함$/g, '필요')
+    .replace(/조치 필요함$/g, '조치 필요')
+    .replace(/실시 필요함$/g, '실시 필요')
+    .replace(/점검 필요함$/g, '점검 필요')
+    .replace(/확인 필요함$/g, '확인 필요')
+    .replace(/설치 필요함$/g, '설치 필요');
+
+  const imperativeMatch = trimmed.match(
+    /^(.*?)(?:을|를)?\s*(설치|점검|확인|보강|보수·교체|교체|정비|부착|준수|배치|제거|유지|보완|실시|시행)할 것$/,
+  );
+  if (imperativeMatch) {
+    const [, target, action] = imperativeMatch;
+    trimmed = `${target ? `${target.trim()} ` : ''}${action} 필요`.trim();
+  }
+
+  if (/할 것$/.test(trimmed)) {
+    trimmed = trimmed.replace(/할 것$/, '필요').trim();
+  }
+
+  if (
+    /(필요|실시|설치|점검|확인|보강|보수·교체|교체|정비|부착|준수|배치|제거|유지|보완|조치|시행)$/.test(
+      trimmed,
+    )
+  ) {
+    return `${trimmed}.`;
+  }
+
+  return `${trimmed} 조치.`;
 }
 
 function normalizeImprovementRequest(value: string, accidentType: string) {
@@ -229,22 +290,18 @@ function normalizeImprovementRequest(value: string, accidentType: string) {
   const sentences = rawSentences.slice(0, 2);
 
   if (sentences.length === 0) {
-    sentences.push('해당 위험요인 주변 안전조치를 보강할 것.');
+    sentences.push('해당 위험요인 구간 안전시설 보강 및 작업환경 개선조치 시행.');
   }
   if (sentences.length === 1) {
     sentences.push(defaultImprovementSecondSentence(accidentType));
   }
 
   return sentences
-    .map((sentence) => {
-      const trimmed = sentence.replace(/[.!?]+$/g, '').trim();
-      if (/것$/.test(trimmed)) {
-        return `${trimmed}.`;
-      }
-      return `${trimmed} 것.`;
-    })
-    .join(' ')
-    .slice(0, 140);
+    .map(normalizeImprovementSentence)
+    .filter(Boolean)
+    .map((sentence) => `- ${sentence.replace(/^-+\s*/, '')}`)
+    .join('\n')
+    .slice(0, 220);
 }
 
 function buildAllowedCausativeAgentLines() {
@@ -321,14 +378,21 @@ export async function POST(request: Request): Promise<Response> {
 - riskLevel은 반드시 제공된 allowedRiskLevels 중 하나만 선택한다.
 - causativeAgentKey는 반드시 제공된 allowedCausativeAgents의 key 중 하나만 선택한다.
 - hazardDescription은 사진을 근거로 한 한 문장만 작성한다.
+- hazardDescription은 보고서용 지적 문체로 작성하고, 문장 끝은 가급적 "위험"으로 마무리한다.
+- hazardDescription에는 "위험이 있다", "위험이 존재한다", "~입니다" 같은 설명형 표현을 쓰지 않는다.
+- hazardDescription은 불안전한 상태와 예상 재해를 함께 드러내는 전문적인 표현을 우선 사용한다.
 - improvementRequest는 정확히 2문장으로 작성한다.
-- improvementRequest는 시정조치와 예방조치 위주로 짧게 쓴다.
+- improvementRequest는 시정조치와 예방조치 위주로 작성하되, 현장 점검지적 보고서 문체로 구체적으로 쓴다.
+- improvementRequest의 각 문장은 동사형 종결 대신 명사형으로 마무리한다.
+- improvementRequest 끝맺음 예시: "설치 필요.", "점검 필요.", "조치 시행.", "보수·교체 실시.", "출입통제 필요."
+- improvementRequest에는 사진에 보이는 대상물 명칭을 직접 반영한다. 예: 덮개, 단차부, 안전난간, 작업발판, 아웃트리거, 방호장치, 전선, 배선, 소화기
+- improvementRequest에는 "안전수칙 준수", "주의 필요", "보호구 착용 철저" 같은 추상적 표현만 단독으로 쓰지 않는다.
 - 중점관리 위험요인 및 관리대책, 관계 법령, 참고자료는 생성하지 않는다.
 - 없는 내용을 지어내지 않는다.
 - 애매하면 가장 가까운 선택지 하나를 고른다.
 - "~입니다" 같은 설명형 종결은 쓰지 않는다.
-- hazardDescription은 짧고 직접적으로 쓴다.
-- improvementRequest는 "~할 것." 문체를 우선 사용한다.
+- hazardDescription 예시: 점검구 덮개 고정상태 미흡 및 주변 바닥면 단차 존재에 따른 전도·추락 위험
+- improvementRequest 예시: 점검구 덮개와 주변 바닥면의 단차 제거 조치 시행. 덮개 고정상태 및 수평상태 점검, 파손 여부 확인 후 필요 시 보수·교체 실시.
 
 판단 우선순위:
 - 개구부, 단부, 비계, 사다리, 고소작업대, 작업발판이 보이면 떨어짐 계열 우선 검토
@@ -351,8 +415,8 @@ export async function POST(request: Request): Promise<Response> {
                   '조건:',
                   '- location은 반드시 한 단어',
                   '- location 예시: 개구부, 단부, 비계, 사다리',
-                  '- hazardDescription은 한 문장',
-                  '- improvementRequest는 두 문장',
+                  '- hazardDescription은 한 문장, 전문적인 보고서 문체, 끝은 가급적 위험',
+                  '- improvementRequest는 두 문장, 각 문장 끝은 명사형',
                   '- JSON 외 텍스트 금지',
                 ].join('\n'),
               },

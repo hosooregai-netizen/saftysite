@@ -39,6 +39,15 @@ function normalizeLine(value: string | null | undefined): string {
     .trim();
 }
 
+function normalizeMultiline(value: string | null | undefined): string {
+  return String(value ?? '')
+    .replace(/\r\n/g, '\n')
+    .split('\n')
+    .map((line) => line.replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+    .join('\n');
+}
+
 export function isFindingEmptyForAiAutofill(item: CurrentHazardFinding): boolean {
   const normalize = (value: string | null | undefined) => String(value ?? '').trim();
 
@@ -67,7 +76,7 @@ export async function buildHazardFindingAutoFill(
   const riskLevel = normalizeLine(result.riskLevel);
   const causativeAgentKey = normalizeLine(result.causativeAgentKey) as CausativeAgentKey | '';
   const hazardDescription = normalizeLine(result.hazardDescription);
-  const improvementRequest = normalizeLine(result.improvementRequest);
+  const improvementRequest = normalizeMultiline(result.improvementRequest);
 
   return {
     location,

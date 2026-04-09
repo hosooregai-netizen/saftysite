@@ -102,6 +102,10 @@ export default function Doc8Section({
               const recommendationListId = `doc8-process-recommendations-${item.id}`;
               const recommendations =
                 activePlanId === item.id ? getProcessRecommendations(item.processName) : [];
+              const visibleRecommendations = recommendations.filter(
+                (libraryItem) => libraryItem.processName !== item.processName,
+              );
+              const showRecommendations = visibleRecommendations.length > 0;
 
               return (
                 <tr key={item.id}>
@@ -115,10 +119,11 @@ export default function Doc8Section({
                         role="combobox"
                         aria-autocomplete="list"
                         aria-controls={recommendationListId}
-                        aria-expanded={activePlanId === item.id}
+                        aria-expanded={showRecommendations}
                         aria-haspopup="listbox"
                         className={`${styles.doc8ProcessInput} app-input`}
                         value={item.processName}
+                        placeholder="향후 작업공정 입력"
                         onFocus={() => setActivePlanId(item.id)}
                         onKeyDown={(event) => {
                           if (event.key === 'Escape') {
@@ -130,24 +135,20 @@ export default function Doc8Section({
                           updateProcessPlan(item.id, event.target.value);
                         }}
                       />
-                      {activePlanId === item.id && recommendations.length > 0 ? (
+                      {activePlanId === item.id && showRecommendations ? (
                         <div
                           id={recommendationListId}
                           className={styles.doc8RecommendationList}
                           role="listbox"
                         >
-                          {recommendations.map((libraryItem) => {
-                            const isSelected = libraryItem.processName === item.processName;
-
+                          {visibleRecommendations.map((libraryItem) => {
                             return (
                               <button
                                 key={libraryItem.processName}
                                 type="button"
                                 role="option"
-                                aria-selected={isSelected}
-                                className={`${styles.doc8RecommendationButton} ${
-                                  isSelected ? styles.doc8RecommendationButtonActive : ''
-                                }`}
+                                aria-selected={false}
+                                className={styles.doc8RecommendationButton}
                                 onMouseDown={(event) => event.preventDefault()}
                                 onClick={() => {
                                   updateProcessPlan(item.id, libraryItem.processName);

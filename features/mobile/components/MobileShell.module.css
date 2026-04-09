@@ -59,6 +59,12 @@
   text-transform: uppercase;
 }
 
+.backLink,
+.homeLink,
+.headerActions {
+  min-width: 0;
+}
+
 .backLink:hover,
 .homeLink:hover {
   color: var(--erp-white);
@@ -74,7 +80,8 @@
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
 }
 
 .headerActionButton {
@@ -83,6 +90,7 @@
   border-color: rgba(255, 255, 255, 0.18);
   background: rgba(255, 255, 255, 0.08);
   color: var(--erp-white);
+  white-space: nowrap;
 }
 
 .headerActionButton:hover {
@@ -102,6 +110,7 @@
   font-size: var(--text-ui-sm);
   font-weight: 600;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .logoutButton:hover {
@@ -869,20 +878,44 @@
   }
 
   .headerTop {
-    flex-direction: column;
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .backLink,
+  .homeLink {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 11px;
+    letter-spacing: 0.04em;
   }
 
   .headerActions {
-    width: 100%;
-    justify-content: space-between;
+    width: auto;
+    min-width: fit-content;
+    flex: 0 0 auto;
+    justify-content: flex-end;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 6px;
   }
 
   .headerActionButton {
-    flex: 1 1 auto;
+    flex: 0 0 auto;
+    min-width: 0;
+    padding-inline: 10px;
+    font-size: 12px;
   }
 
   .logoutButton {
+    flex: 0 0 auto;
     padding-right: 0;
+    font-size: 12px;
   }
 
   .sectionRail {

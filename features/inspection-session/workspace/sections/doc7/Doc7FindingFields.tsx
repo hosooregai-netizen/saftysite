@@ -232,7 +232,7 @@ export function Doc7FindingFields({
                     <textarea
                       className={`app-textarea ${styles.doc7TextareaDouble}`}
                       rows={2}
-                      maxLength={120}
+                      maxLength={220}
                       value={item.improvementRequest || item.improvementPlan}
                       onChange={(event) =>
                         updateFinding((finding) => ({
