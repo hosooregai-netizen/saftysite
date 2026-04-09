@@ -331,7 +331,7 @@ export function MobileInspectionSessionScreen({
                             삭제
                           </button>
                         </div>
-                        <label style={{ display: 'block', width: '100%', height: '200px', backgroundColor: '#f1f5f9', borderRadius: '4px', overflow: 'hidden', position: 'relative', cursor: 'pointer', marginBottom: '8px' }}>
+                        <label style={{ display: 'block', width: '100%', height: '200px', backgroundColor: '#f8fafc', border: '1px solid rgba(215, 224, 235, 0.88)', borderRadius: '4px', overflow: 'hidden', position: 'relative', cursor: 'pointer', marginBottom: '8px' }}>
                           {scene.photoUrl ? (
                             <img src={scene.photoUrl} alt="현장 사진" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                           ) : (
@@ -419,14 +419,14 @@ export function MobileInspectionSessionScreen({
                             <div style={{ flex: 1 }}>
                               <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>이전 지적 사진</div>
                               {item.beforePhotoUrl ? (
-                                <img src={item.beforePhotoUrl} alt="지적 사진" style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '4px', backgroundColor: '#f1f5f9' }} />
+                                <img src={item.beforePhotoUrl} alt="지적 사진" style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '4px', backgroundColor: '#f8fafc' }} />
                               ) : (
-                                <div style={{ width: '100%', height: '120px', backgroundColor: '#f1f5f9', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: '#94a3b8' }}>사진 없음</div>
+                                <div style={{ width: '100%', height: '120px', backgroundColor: '#f8fafc', border: '1px solid rgba(215, 224, 235, 0.88)', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: '#94a3b8' }}>사진 없음</div>
                               )}
                             </div>
                             <div style={{ flex: 1 }}>
                               <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>개선 후 사진</div>
-                              <label style={{ display: 'block', width: '100%', height: '120px', backgroundColor: '#f1f5f9', borderRadius: '4px', overflow: 'hidden', position: 'relative', cursor: 'pointer' }}>
+                              <label style={{ display: 'block', width: '100%', height: '120px', backgroundColor: '#f8fafc', border: '1px solid rgba(215, 224, 235, 0.88)', borderRadius: '4px', overflow: 'hidden', position: 'relative', cursor: 'pointer' }}>
                                 {item.afterPhotoUrl ? (
                                   <img src={item.afterPhotoUrl} alt="개선 사진" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                 ) : (
@@ -576,7 +576,7 @@ export function MobileInspectionSessionScreen({
                             style={{ width: '100%', minHeight: '60px', resize: 'vertical' }}
                           />
                           <div style={{ display: 'flex', gap: '8px' }}>
-                            <label style={{ flex: 1, height: '120px', backgroundColor: '#f1f5f9', borderRadius: '4px', overflow: 'hidden', position: 'relative', cursor: 'pointer' }}>
+                            <label style={{ flex: 1, height: '120px', backgroundColor: '#f8fafc', border: '1px solid rgba(215, 224, 235, 0.88)', borderRadius: '4px', overflow: 'hidden', position: 'relative', cursor: 'pointer' }}>
                               {finding.photoUrl ? (
                                 <img src={finding.photoUrl} alt="지적 사진 1" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                               ) : (
@@ -603,7 +603,7 @@ export function MobileInspectionSessionScreen({
                                 }}
                               />
                             </label>
-                            <label style={{ flex: 1, height: '120px', backgroundColor: '#f1f5f9', borderRadius: '4px', overflow: 'hidden', position: 'relative', cursor: 'pointer' }}>
+                            <label style={{ flex: 1, height: '120px', backgroundColor: '#f8fafc', border: '1px solid rgba(215, 224, 235, 0.88)', borderRadius: '4px', overflow: 'hidden', position: 'relative', cursor: 'pointer' }}>
                               {finding.photoUrl2 ? (
                                 <img src={finding.photoUrl2} alt="지적 사진 2" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                               ) : (
@@ -933,7 +933,7 @@ export function MobileInspectionSessionScreen({
                             placeholder="측정 위치"
                             style={{ width: '100%' }}
                           />
-                          <label style={{ display: 'block', width: '100%', height: '160px', backgroundColor: '#f1f5f9', borderRadius: '4px', overflow: 'hidden', position: 'relative', cursor: 'pointer' }}>
+                          <label style={{ display: 'block', width: '100%', height: '160px', backgroundColor: '#f8fafc', border: '1px solid rgba(215, 224, 235, 0.88)', borderRadius: '4px', overflow: 'hidden', position: 'relative', cursor: 'pointer' }}>
                             {measurement.photoUrl ? (
                               <img src={measurement.photoUrl} alt="계측 사진" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                             ) : (
@@ -1118,7 +1118,7 @@ export function MobileInspectionSessionScreen({
                             placeholder="활동 종류 (예: 안전점검 보조)"
                             style={{ width: '100%' }}
                           />
-                          <label style={{ display: 'block', width: '100%', height: '160px', backgroundColor: '#f1f5f9', borderRadius: '4px', overflow: 'hidden', position: 'relative', cursor: 'pointer' }}>
+                          <label style={{ display: 'block', width: '100%', height: '160px', backgroundColor: '#f8fafc', border: '1px solid rgba(215, 224, 235, 0.88)', borderRadius: '4px', overflow: 'hidden', position: 'relative', cursor: 'pointer' }}>
                             {activity.photoUrl ? (
                               <img src={activity.photoUrl} alt="활동 사진" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                             ) : (
