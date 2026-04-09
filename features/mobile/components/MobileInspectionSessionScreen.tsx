@@ -140,7 +140,7 @@ export function MobileInspectionSessionScreen({
       webHref={`/sessions/${encodeURIComponent(sessionId)}`}
       webLabel="웹에서 전체 편집"
     >
-      <section className={styles.sectionCard} style={{ marginBottom: 0, borderRadius: '0 0 18px 18px', borderBottom: 'none' }}>
+      <section className={styles.sectionCard} style={{ marginBottom: 0, borderRadius: '0 0 8px 8px', borderBottom: 'none' }}>
         <div className={styles.sectionHeader}>
           <div className={styles.sectionTitleWrap}>
             <h2 className={styles.sectionTitle}>모바일 핵심 섹션 진행 현황</h2>
