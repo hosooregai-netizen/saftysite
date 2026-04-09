@@ -12,8 +12,8 @@ import {
 import { readFileAsDataUrl } from '@/components/session/workspace/utils';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import {
-  fetchInspectionHwpxDocumentByReportKey,
-  fetchInspectionPdfDocumentByReportKeyWithFallback,
+  fetchInspectionHwpxDocument,
+  convertHwpxBlobToPdfWithFallback,
   saveBlobAsFile,
 } from '@/lib/api';
 import { generateInspectionHwpxBlob } from '@/lib/documents/inspection/hwpxClient';
@@ -26,7 +26,6 @@ import {
   uploadSafetyAssetFile,
   validateSafetyAssetFile,
 } from '@/lib/safetyApi/assets';
-import { readSafetyAuthToken } from '@/lib/safetyApi';
 import { mergeMasterDataIntoSession } from '@/lib/safetyApiMappers/masterData';
 import type {
   InspectionDocumentSource,
@@ -125,6 +124,7 @@ export function useInspectionSessionScreen(sessionId: string) {
     ensureSessionLoaded,
     getReportIndexBySiteId,
     getSessionById,
+    getSessionsBySiteId,
     getSiteById,
     isAuthenticated,
     isReady,
@@ -540,27 +540,28 @@ export function useInspectionSessionScreen(sessionId: string) {
 
     await saveNow();
     const latestSession = getSessionById(session.id) ?? session;
-    const authToken = readSafetyAuthToken();
+    const latestSiteSessions = getSessionsBySiteId(latestSession.siteKey);
+
     try {
-      return await fetchInspectionHwpxDocumentByReportKey(latestSession.id, authToken);
-    } catch (serverError) {
-      console.warn('Inspection HWPX server generation failed; falling back to browser generation.', {
-        error: serverError instanceof Error ? serverError.message : String(serverError),
+      const generation = await generateInspectionHwpxBlob(latestSession, latestSiteSessions);
+
+      if (generation.warnings.length > 0 || generation.deferred.length > 0) {
+        console.warn('HWPX generation warnings', {
+          deferred: generation.deferred,
+          sessionId: session.id,
+          warnings: generation.warnings,
+        });
+      }
+
+      return generation;
+    } catch (browserError) {
+      console.warn('Inspection HWPX browser generation failed; falling back to server generation.', {
+        error: browserError instanceof Error ? browserError.message : String(browserError),
         sessionId: session.id,
       });
     }
 
-    const generation = await generateInspectionHwpxBlob(latestSession);
-
-    if (generation.warnings.length > 0 || generation.deferred.length > 0) {
-      console.warn('HWPX generation warnings', {
-        deferred: generation.deferred,
-        sessionId: session.id,
-        warnings: generation.warnings,
-      });
-    }
-
-    return generation;
+    return fetchInspectionHwpxDocument(latestSession, latestSiteSessions);
   };
 
   const generateHwpxDocument = async () => {
@@ -588,12 +589,12 @@ export function useInspectionSessionScreen(sessionId: string) {
     try {
       setDocumentError(null);
       setIsGeneratingPdf(true);
-      await saveNow();
-      const latestSession = getSessionById(session.id) ?? session;
-      const authToken = readSafetyAuthToken();
-      const pdf = await fetchInspectionPdfDocumentByReportKeyWithFallback(
-        latestSession.id,
-        authToken,
+      const generation = await buildHwpxDocument();
+      if (!generation) return;
+
+      const pdf = await convertHwpxBlobToPdfWithFallback(
+        generation.blob,
+        generation.filename,
       );
 
       saveBlobAsFile(pdf.blob, pdf.filename);

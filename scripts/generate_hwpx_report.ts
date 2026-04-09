@@ -537,6 +537,17 @@ const TEMPLATE_IMAGE_PLACEHOLDERS: TemplateImagePlaceholder[] = [
     binaryItemId: 'tplimg16',
     repeatBlockPath: 'sec12.activities',
   },
+  {
+    table: 9,
+    row: 6,
+    col: 1,
+    donorTable: 9,
+    donorRow: 6,
+    donorCol: 0,
+    placeholderPath: 'sec12.activities[0].photo_image_2',
+    binaryItemId: 'tplimg29',
+    repeatBlockPath: 'sec12.activities',
+  },
   { table: 10, row: 2, col: 0, placeholderPath: 'sec13.cases[0].image', binaryItemId: 'tplimg17' },
   { table: 10, row: 2, col: 1, placeholderPath: 'sec13.cases[1].image', binaryItemId: 'tplimg18' },
   { table: 10, row: 5, col: 0, placeholderPath: 'sec13.cases[2].image', binaryItemId: 'tplimg19' },
@@ -920,14 +931,83 @@ function normalizeCaseTitleForTemplate(title: string): string {
   return normalized.replace(/\s+/g, '') === '해당없음' ? '-' : normalized;
 }
 
+function stripParentheticalText(value: string): string {
+  const normalized = valueOrBlank(value);
+  if (!normalized) {
+    return '';
+  }
+
+  const stripped = normalized
+    .replace(/\s*[\(\uFF08][^()\uFF08\uFF09]*[\)\uFF09]\s*/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return stripped || normalized;
+}
+
+function mapRiskScoreToShortLabel(score: number | null): string {
+  if (score == null || !Number.isFinite(score) || score <= 0) {
+    return '';
+  }
+
+  if (score >= 5) {
+    return '상';
+  }
+  if (score >= 3) {
+    return '중';
+  }
+  return '하';
+}
+
+function extractRiskScore(value: string): number | null {
+  const match = valueOrBlank(value).match(/(\d+)/);
+  if (!match) {
+    return null;
+  }
+
+  const parsed = Number.parseInt(match[1], 10);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function normalizeRiskTextForReport(value: string): string {
+  const normalized = valueOrBlank(value);
+  if (!normalized) {
+    return '';
+  }
+
+  const stripped = stripParentheticalText(normalized).replace(/\s+/g, '');
+  if (stripped === '상' || stripped.includes('높')) {
+    return '상';
+  }
+  if (stripped === '중' || stripped.includes('보통')) {
+    return '중';
+  }
+  if (stripped === '하' || stripped.includes('낮')) {
+    return '하';
+  }
+
+  return mapRiskScoreToShortLabel(extractRiskScore(normalized)) || stripped;
+}
+
+function normalizeSec7DisplayText(value: string): string {
+  return stripParentheticalText(value);
+}
+
 function mapRiskText(finding: ExistingWebReportData['document7Findings'][number]): string {
-  const riskLevel = valueOrBlank(finding.riskLevel);
+  const riskLevel = normalizeRiskTextForReport(finding.riskLevel);
   if (riskLevel) {
     return riskLevel;
   }
 
-  const parts = [valueOrBlank(finding.likelihood), valueOrBlank(finding.severity)].filter(Boolean);
-  return parts.join(' / ');
+  const likelihood = Number.parseInt(valueOrBlank(finding.likelihood), 10);
+  const severity = Number.parseInt(valueOrBlank(finding.severity), 10);
+  if (Number.isFinite(likelihood) && Number.isFinite(severity)) {
+    return mapRiskScoreToShortLabel(likelihood * severity);
+  }
+
+  return normalizeRiskTextForReport(
+    [valueOrBlank(finding.likelihood), valueOrBlank(finding.severity)].filter(Boolean).join(' '),
+  );
 }
 
 function isFilledObject<T extends Record<string, unknown>>(value: T): boolean {
@@ -940,12 +1020,9 @@ function toCausativeLabel(key: string, measureLabelMap: Map<string, string>): st
     return '';
   }
 
-  const mapped = measureLabelMap.get(normalized);
-  if (mapped) {
-    return mapped;
-  }
-
-  return normalized.replace(/_/g, ' ');
+  return stripParentheticalText(
+    measureLabelMap.get(normalized) ?? normalized.replace(/_/g, ' '),
+  );
 }
 
 function looksLikeImageSource(source: string): boolean {
@@ -1252,7 +1329,7 @@ function mapWebDataToTemplateBinding(data: ExistingWebReportData): TemplateBindi
   findings.forEach((item, index) => {
     text[`sec7.findings[${index}].location`] = valueOrDash(item.location);
     text[`sec7.findings[${index}].risk_text`] = valueOrDash(mapRiskText(item));
-    text[`sec7.findings[${index}].accident_type`] = valueOrDash(item.accidentType);
+    text[`sec7.findings[${index}].accident_type`] = valueOrDash(normalizeSec7DisplayText(item.accidentType));
     text[`sec7.findings[${index}].causative_agent`] = valueOrDash(
       toCausativeLabel(item.causativeAgentKey, measureLabelMap),
     );
@@ -1559,7 +1636,10 @@ function replaceStructuredTextPlaceholders(xml: string, textBindings: Record<str
         .slice(1)
         .map((value, reservedIndex) => value - reservedVertPositions[reservedIndex])
         .filter((value) => value > 0);
-      const lineStep = reservedSteps[0] ?? vertSize + spacing;
+      const defaultLineStep = vertSize + spacing;
+      const lineStep = rawTextTemplate.includes('{sec5.summary_text}')
+        ? defaultLineStep
+        : reservedSteps[0] ?? defaultLineStep;
 
       const renderedText = replaceInlineTextPlaceholders(rawTextTemplate, textBindings).replace(
         /<hp:lineBreak\s*\/>/g,
@@ -1570,6 +1650,16 @@ function replaceStructuredTextPlaceholders(xml: string, textBindings: Record<str
         wrapHwpxLine(line, estimateHwpxMaxCharsPerLine(horzSize, textHeight)),
       );
       const finalLines = wrappedLines.length ? wrappedLines : [' '];
+      const useSingleParagraphLineBreaks = rawTextTemplate.includes('{sec5.summary_text}');
+
+      if (useSingleParagraphLineBreaks) {
+        rebuilt.push(
+          `${paragraphOpen}${textPrefix}${finalLines.map((line) => escapeXmlText(line)).join('<hp:lineBreak/>')}${textSuffix}${lineSegArrayOpen}${lineSegTemplate}${lineSegArrayClose}</hp:p>`,
+        );
+        changed = true;
+        index = lookaheadIndex - 1;
+        continue;
+      }
 
       rebuilt.push(
         ...finalLines.map((line, lineIndex) => {
