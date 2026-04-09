@@ -79,8 +79,19 @@ export function buildMobileSiteReportsHref(siteId: string): string {
   return `${buildMobileSiteHomeHref(siteId)}/reports`;
 }
 
-export function buildMobileSessionHref(sessionId: string): string {
-  return `/mobile/sessions/${encodeURIComponent(sessionId)}`;
+export function buildMobileSessionHref(
+  sessionId: string,
+  query: Record<string, string | null | undefined> = {},
+): string {
+  const searchParams = new URLSearchParams();
+  Object.entries(query).forEach(([key, value]) => {
+    if (typeof value === 'string' && value.trim()) {
+      searchParams.set(key, value);
+    }
+  });
+  const queryString = searchParams.toString();
+  const basePath = `/mobile/sessions/${encodeURIComponent(sessionId)}`;
+  return queryString ? `${basePath}?${queryString}` : basePath;
 }
 
 export function resolveWorkerMobileSwitchHref({

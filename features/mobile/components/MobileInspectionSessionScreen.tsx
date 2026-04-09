@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { FocusEvent, ReactNode } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import LoginPanel from '@/components/auth/LoginPanel';
 import AppModal from '@/components/ui/AppModal';
 import SignaturePad from '@/components/ui/SignaturePad';
@@ -243,9 +244,14 @@ function StandaloneState({
 export function MobileInspectionSessionScreen({
   sessionId,
 }: MobileInspectionSessionScreenProps) {
+  const searchParams = useSearchParams();
   const screen = useInspectionSessionScreen(sessionId);
   const displaySession = screen.displaySession;
+  const session = screen.sectionSession;
   const [activeStep, setActiveStep] = useState(STEPS[0].id);
+  const directSignatureSectionRef = useRef<HTMLDivElement | null>(null);
+  const handledDirectSignatureRef = useRef(false);
+  const scrolledDirectSignatureRef = useRef(false);
   const [isDoc2ProcessModalOpen, setIsDoc2ProcessModalOpen] = useState(false);
   const [isGeneratingDoc2ProcessNotes, setIsGeneratingDoc2ProcessNotes] = useState(false);
   const [doc2ProcessRiskLines, setDoc2ProcessRiskLines] = useState<string[] | null>(null);
@@ -269,6 +275,65 @@ export function MobileInspectionSessionScreen({
     id: string;
     message: string;
   } | null>(null);
+  const isDirectSignatureAction = searchParams.get('action') === 'direct-signature';
+
+  useEffect(() => {
+    handledDirectSignatureRef.current = false;
+    scrolledDirectSignatureRef.current = false;
+  }, [isDirectSignatureAction, sessionId]);
+
+  useEffect(() => {
+    if (!isDirectSignatureAction || !session) {
+      return;
+    }
+
+    if (handledDirectSignatureRef.current) {
+      return;
+    }
+
+    handledDirectSignatureRef.current = true;
+    setActiveStep('step2');
+
+    if (session.document2Overview.notificationMethod !== 'direct') {
+      screen.applyDocumentUpdate('doc2', 'manual', (current) => ({
+        ...current,
+        document2Overview: {
+          ...current.document2Overview,
+          notificationMethod: 'direct',
+        },
+      }));
+    }
+  }, [isDirectSignatureAction, screen, session]);
+
+  useEffect(() => {
+    if (!isDirectSignatureAction || !session) {
+      return;
+    }
+
+    if (scrolledDirectSignatureRef.current) {
+      return;
+    }
+
+    if (
+      activeStep !== 'step2' ||
+      session.document2Overview.notificationMethod !== 'direct' ||
+      !directSignatureSectionRef.current
+    ) {
+      return;
+    }
+
+    scrolledDirectSignatureRef.current = true;
+    const timeoutId = window.setTimeout(() => {
+      directSignatureSectionRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    }, 80);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [activeStep, isDirectSignatureAction, session]);
 
   if (!screen.isReady) {
     return <StandaloneState title="보고서를 준비하는 중입니다." />;
@@ -303,8 +368,7 @@ export function MobileInspectionSessionScreen({
     );
   }
 
-  const hasLoadedSessionPayload = Boolean(screen.sectionSession);
-  const session = screen.sectionSession;
+  const hasLoadedSessionPayload = Boolean(session);
   const fallbackDoc2RiskLines = session ? buildDoc2RiskFallback(session.document2Overview) : [];
   const previewDoc2RiskLines = doc2ProcessRiskLines ?? fallbackDoc2RiskLines;
   const doc2ProcessNoteDraft = session
@@ -994,6 +1058,7 @@ export function MobileInspectionSessionScreen({
                     ) : null}
                     {session.document2Overview.notificationMethod === 'direct' ? (
                       <div
+                        ref={directSignatureSectionRef}
                         style={{
                           borderTop: '1px solid #e2e8f0',
                           paddingTop: '12px',
