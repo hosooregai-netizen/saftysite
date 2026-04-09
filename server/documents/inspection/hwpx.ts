@@ -1734,8 +1734,18 @@ function expandRepeatBlocks(
     const endMarker = `{/${repeatBlockPath}}`;
     const startIndex = currentXml.indexOf(startMarker);
     const endIndex = currentXml.indexOf(endMarker, startIndex >= 0 ? startIndex : 0);
+    const repeatImagePlaceholders = TEMPLATE_IMAGE_PLACEHOLDERS.filter((item) => item.repeatBlockPath === repeatBlockPath);
 
     if (startIndex === -1 || endIndex === -1 || endIndex < startIndex) {
+      // v8 keeps sec11/sec12 as fixed single-page tables, so their image slots must
+      // still be registered even when the repeat markers are absent.
+      for (const imagePlaceholder of repeatImagePlaceholders) {
+        expandedImagePlaceholders.push({ ...imagePlaceholder });
+        const sourceBinaryItemId = sourceBinaryByPlaceholderPath[imagePlaceholder.placeholderPath];
+        if (sourceBinaryItemId) {
+          expandedSourceBinaryByPlaceholderPath[imagePlaceholder.placeholderPath] = sourceBinaryItemId;
+        }
+      }
       continue;
     }
 
@@ -1749,8 +1759,6 @@ function expandRepeatBlocks(
     const after = currentXml.slice(blockEnd);
     const config = REPEAT_BLOCK_CONFIG[repeatBlockPath];
     const repeatCount = repeatBlockPageCount(repeatBlockPath, repeatCounts[repeatBlockPath] ?? 1);
-    const repeatImagePlaceholders = TEMPLATE_IMAGE_PLACEHOLDERS.filter((item) => item.repeatBlockPath === repeatBlockPath);
-
     const repeatedXml = Array.from({ length: repeatCount }, (_, pageIndex) => {
       const indexMap = new Map<number, number>(
         config.prototypeIndices.map((prototypeIndex) => [
