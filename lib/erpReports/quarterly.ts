@@ -29,6 +29,49 @@ function normalizeMeasureText(value: string) {
     .join(' ');
 }
 
+function normalizeFuturePlanKeyText(value: string) {
+  return value.replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
+function normalizeFuturePlanHazardText(value: string) {
+  return value.replace(/\s+/g, ' ').trim();
+}
+
+function buildQuarterlyFuturePlans(selectedSessions: InspectionSession[]) {
+  const seenPlanKeys = new Set<string>();
+  const futurePlans: QuarterlySummaryReport['futurePlans'] = [];
+
+  sortSessionsByDateDesc(selectedSessions).forEach((session) => {
+    session.document8Plans.forEach((item) => {
+      const hazard = normalizeFuturePlanHazardText(item.hazard || item.processName);
+      const countermeasure = item.countermeasure.trim();
+      const note = item.note.trim();
+
+      if (!hazard && !countermeasure) {
+        return;
+      }
+
+      const dedupeKey = `${normalizeFuturePlanKeyText(hazard)}::${normalizeFuturePlanKeyText(countermeasure)}`;
+      if (seenPlanKeys.has(dedupeKey)) {
+        return;
+      }
+
+      seenPlanKeys.add(dedupeKey);
+      futurePlans.push(
+        createFutureProcessRiskPlan({
+          ...item,
+          processName: item.processName.trim(),
+          hazard,
+          countermeasure,
+          note,
+        }),
+      );
+    });
+  });
+
+  return futurePlans;
+}
+
 function buildQuarterlyCounters(counterMap: Map<string, number>): QuarterlyCounter[] {
   const entries = [...counterMap.entries()]
     .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0], 'ko'))
@@ -177,12 +220,7 @@ function buildDerivedQuarterlyContent(
     note: '',
   }));
 
-  const latestSelectedSession = sortSessionsByDateDesc(selectedSessions)[0] || null;
-
-  const futurePlans =
-    latestSelectedSession?.document8Plans
-      .filter((item) => item.processName || item.hazard || item.countermeasure || item.note)
-      .map((item) => createFutureProcessRiskPlan(item)) || [];
+  const futurePlans = buildQuarterlyFuturePlans(selectedSessions);
 
   const accidentStats = buildQuarterlyCounters(accidentCounter);
   const causativeStats = buildQuarterlyCounters(causativeCounter);
@@ -311,8 +349,8 @@ export function buildLocalQuarterlySummarySeed(
     causative_stats: derivedReport.causativeStats.map((item) => ({ ...item })),
     future_plans: derivedReport.futurePlans.map((plan) => ({
       id: plan.id,
-      process_name: plan.processName,
-      hazard: plan.hazard,
+      process_name: plan.hazard ? '' : plan.processName,
+      hazard: plan.hazard || plan.processName,
       countermeasure: plan.countermeasure,
       note: plan.note,
       source: plan.source,
