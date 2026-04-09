@@ -28,6 +28,11 @@ interface ResolvedHwpxImageAsset {
   width: number;
 }
 
+interface QuarterlyChartImageAssets {
+  accident: ResolvedHwpxImageAsset;
+  causative: ResolvedHwpxImageAsset;
+}
+
 const TEMPLATE_FILENAME = '\uBD84\uAE30 \uC885\uD569\uBCF4\uACE0\uC11C2.hwpx';
 const TEMPLATE_PATH = path.resolve(
   process.cwd(),
@@ -41,11 +46,36 @@ const EMPTY_CHART_LABEL = '\uC790\uB8CC \uC5C6\uC74C';
 const OPS_PENDING_TITLE = '\uAD00\uB9AC\uC790 \uBCF4\uC644 \uB300\uAE30';
 const OPS_PENDING_BODY = '\uAD00\uB9AC\uC790\uAC00 OPS \uC790\uB8CC\uB97C \uC544\uC9C1 \uC5F0\uACB0\uD558\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.';
 const OPS_IMAGE_ITEM_ID = 'opsAssetImage';
+const ACCIDENT_CHART_IMAGE_ITEM_ID = 'quarterlyAccidentChartImage';
+const CAUSATIVE_CHART_IMAGE_ITEM_ID = 'quarterlyCausativeChartImage';
 const NO_DATA_VALUE = '-';
 const COVER_TITLE_TEXT_INDEX = 2;
 const COVER_SITE_NAME_TEXT_INDEX = 4;
 const COVER_REPORT_DATE_TEXT_INDEX = 5;
 const BODY_TITLE_TEXT_INDEX = 12;
+const QUARTERLY_CHART_WIDTH = 1560;
+const QUARTERLY_CHART_HEIGHT = 640;
+const QUARTERLY_CHART_CENTER_X = 280;
+const QUARTERLY_CHART_CENTER_Y = 320;
+const QUARTERLY_CHART_OUTER_RADIUS = 210;
+const QUARTERLY_CHART_INNER_RADIUS = 118;
+const QUARTERLY_CHART_LEGEND_LEFT = 560;
+const QUARTERLY_CHART_LEGEND_RIGHT = 1504;
+const QUARTERLY_CHART_LEGEND_TOP = 48;
+const QUARTERLY_CHART_LEGEND_BOTTOM = 592;
+const QUARTERLY_CHART_LEGEND_LABEL_GAP = 26;
+const QUARTERLY_CHART_SEGMENT_COLORS = [
+  '#4f86df',
+  '#25a6c8',
+  '#2ea99e',
+  '#46b96a',
+  '#dcb227',
+  '#eb8f2d',
+  '#8c6de9',
+  '#d95b94',
+  '#6a7ae8',
+  '#40afd9',
+] as const;
 const IMAGE_EXTENSION_TO_MEDIA_TYPE: Record<string, string> = {
   bmp: 'image/bmp',
   gif: 'image/gif',
@@ -125,12 +155,16 @@ function formatQuarterlyCoverDate(value: Date = new Date()) {
 }
 
 function getQuarterlyDocumentTitle(report: QuarterlySummaryReport) {
+  const normalizedPeriod = normalizeQuarterlyReportPeriod(report);
+  if (normalizedPeriod.year > 0 && normalizedPeriod.quarter >= 1 && normalizedPeriod.quarter <= 4) {
+    return `${normalizedPeriod.year}년 ${normalizedPeriod.quarter}/4분기 기술지도 종합보고서`;
+  }
+
   const explicitTitle = formatOptionalText(report.title);
   if (explicitTitle) {
     return explicitTitle;
   }
 
-  const normalizedPeriod = normalizeQuarterlyReportPeriod(report);
   return buildQuarterlyTitleForPeriod(
     normalizedPeriod.periodStartDate,
     normalizedPeriod.periodEndDate,
@@ -679,6 +713,152 @@ function replaceNthTextNode(sectionXml: string, targetIndex: number, nextText: s
   });
 }
 
+function formatQuarterlyChartPercent(count: number, total: number) {
+  if (total <= 0) {
+    return '0%';
+  }
+
+  const percent = (count / total) * 100;
+  const rounded = Math.round(percent * 10) / 10;
+  return Number.isInteger(rounded) ? `${rounded}%` : `${rounded.toFixed(1)}%`;
+}
+
+function formatQuarterlyChartStatText(count: number, total: number) {
+  return `${count}건 · ${formatQuarterlyChartPercent(count, total)}`;
+}
+
+function escapeQuarterlyChartSvgText(value: string) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function truncateQuarterlyChartLabel(label: string, maxLength: number) {
+  return label.length > maxLength ? `${label.slice(0, Math.max(1, maxLength - 3))}...` : label;
+}
+
+function quarterlyChartPolarPoint(centerX: number, centerY: number, radius: number, angle: number) {
+  return {
+    x: centerX + Math.cos(angle) * radius,
+    y: centerY + Math.sin(angle) * radius,
+  };
+}
+
+function buildQuarterlyChartSlicePath(
+  centerX: number,
+  centerY: number,
+  outerRadius: number,
+  innerRadius: number,
+  startAngle: number,
+  endAngle: number,
+) {
+  const outerStart = quarterlyChartPolarPoint(centerX, centerY, outerRadius, startAngle);
+  const outerEnd = quarterlyChartPolarPoint(centerX, centerY, outerRadius, endAngle);
+  const innerEnd = quarterlyChartPolarPoint(centerX, centerY, innerRadius, endAngle);
+  const innerStart = quarterlyChartPolarPoint(centerX, centerY, innerRadius, startAngle);
+  const largeArcFlag = endAngle - startAngle > Math.PI ? 1 : 0;
+
+  return [
+    `M ${outerStart.x.toFixed(2)} ${outerStart.y.toFixed(2)}`,
+    `A ${outerRadius} ${outerRadius} 0 ${largeArcFlag} 1 ${outerEnd.x.toFixed(2)} ${outerEnd.y.toFixed(2)}`,
+    `L ${innerEnd.x.toFixed(2)} ${innerEnd.y.toFixed(2)}`,
+    `A ${innerRadius} ${innerRadius} 0 ${largeArcFlag} 0 ${innerStart.x.toFixed(2)} ${innerStart.y.toFixed(2)}`,
+    'Z',
+  ].join(' ');
+}
+
+function buildQuarterlyChartSvg(rows: QuarterlyCounter[]) {
+  const entries = formatChartRows(rows);
+  const total = entries.reduce((sum, item) => sum + item.count, 0);
+  const availableLegendHeight = QUARTERLY_CHART_LEGEND_BOTTOM - QUARTERLY_CHART_LEGEND_TOP;
+  const rowHeight = Math.max(76, Math.min(132, Math.floor(availableLegendHeight / Math.max(entries.length, 1))));
+  const legendBlockHeight = rowHeight * Math.max(entries.length, 1);
+  const legendStartY =
+    QUARTERLY_CHART_LEGEND_TOP + Math.max(0, Math.floor((availableLegendHeight - legendBlockHeight) / 2));
+  const fontSize = Math.max(30, Math.min(40, Math.floor(rowHeight * 0.4)));
+  const markerSize = Math.max(22, Math.min(30, Math.floor(fontSize * 0.82)));
+  const labelX = QUARTERLY_CHART_LEGEND_LEFT + markerSize + QUARTERLY_CHART_LEGEND_LABEL_GAP;
+  const countX = QUARTERLY_CHART_LEGEND_RIGHT;
+  const labelMaxChars = entries.length >= 5 ? 15 : entries.length >= 3 ? 16 : 18;
+  const svgParts = [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${QUARTERLY_CHART_WIDTH}" height="${QUARTERLY_CHART_HEIGHT}" viewBox="0 0 ${QUARTERLY_CHART_WIDTH} ${QUARTERLY_CHART_HEIGHT}">`,
+    `<rect width="${QUARTERLY_CHART_WIDTH}" height="${QUARTERLY_CHART_HEIGHT}" fill="#ffffff"/>`,
+  ];
+
+  if (entries.length === 0 || total === 0) {
+    svgParts.push(
+      '<text x="88" y="320" fill="#6b7280" font-size="34" font-family="Malgun Gothic, Apple SD Gothic Neo, Noto Sans KR, sans-serif">집계된 통계 데이터가 없습니다.</text>',
+    );
+    svgParts.push('</svg>');
+    return svgParts.join('');
+  }
+
+  let angle = -Math.PI / 2;
+  for (let index = 0; index < entries.length; index += 1) {
+    const item = entries[index];
+    const sliceAngle = (item.count / total) * Math.PI * 2;
+    const nextAngle = angle + sliceAngle;
+    svgParts.push(
+      `<path d="${buildQuarterlyChartSlicePath(
+        QUARTERLY_CHART_CENTER_X,
+        QUARTERLY_CHART_CENTER_Y,
+        QUARTERLY_CHART_OUTER_RADIUS,
+        QUARTERLY_CHART_INNER_RADIUS,
+        angle,
+        nextAngle,
+      )}" fill="${QUARTERLY_CHART_SEGMENT_COLORS[index % QUARTERLY_CHART_SEGMENT_COLORS.length]}"/>`,
+    );
+    angle = nextAngle;
+  }
+
+  svgParts.push(
+    `<circle cx="${QUARTERLY_CHART_CENTER_X}" cy="${QUARTERLY_CHART_CENTER_Y}" r="${QUARTERLY_CHART_INNER_RADIUS}" fill="#ffffff"/>`,
+  );
+
+  for (let index = 0; index < entries.length; index += 1) {
+    const item = entries[index];
+    const rowCenterY = legendStartY + rowHeight * index + rowHeight / 2;
+    const safeLabel = escapeQuarterlyChartSvgText(
+      truncateQuarterlyChartLabel(item.label, labelMaxChars),
+    );
+    const safeStat = escapeQuarterlyChartSvgText(
+      formatQuarterlyChartStatText(item.count, total),
+    );
+    const color = QUARTERLY_CHART_SEGMENT_COLORS[index % QUARTERLY_CHART_SEGMENT_COLORS.length];
+
+    svgParts.push(
+      `<rect x="${QUARTERLY_CHART_LEGEND_LEFT}" y="${(rowCenterY - markerSize / 2).toFixed(1)}" width="${markerSize}" height="${markerSize}" rx="4" ry="4" fill="${color}"/>`,
+    );
+    svgParts.push(
+      `<text x="${labelX}" y="${rowCenterY}" fill="#5b6a84" font-size="${fontSize}" font-weight="500" dominant-baseline="middle" font-family="Malgun Gothic, Apple SD Gothic Neo, Noto Sans KR, sans-serif">${safeLabel}</text>`,
+    );
+    svgParts.push(
+      `<text x="${countX}" y="${rowCenterY}" fill="#111827" font-size="${fontSize}" font-weight="700" text-anchor="end" dominant-baseline="middle" font-family="Malgun Gothic, Apple SD Gothic Neo, Noto Sans KR, sans-serif">${safeStat}</text>`,
+    );
+  }
+
+  svgParts.push('</svg>');
+  return svgParts.join('');
+}
+
+async function renderQuarterlyChartImageAsset(
+  rows: QuarterlyCounter[],
+): Promise<ResolvedHwpxImageAsset> {
+  const sharp = (await import('sharp')).default;
+  const pngBuffer = await sharp(Buffer.from(buildQuarterlyChartSvg(rows))).png().toBuffer();
+
+  return {
+    buffer: new Uint8Array(pngBuffer),
+    extension: 'png',
+    height: QUARTERLY_CHART_HEIGHT,
+    mediaType: 'image/png',
+    width: QUARTERLY_CHART_WIDTH,
+  };
+}
+
 function formatChartRows(rows: QuarterlyCounter[]) {
   if (rows.length > 0) return rows;
   return [{ label: EMPTY_CHART_LABEL, count: 0 }];
@@ -703,6 +883,13 @@ function updateChartXml(chartXml: string, rows: QuarterlyCounter[]) {
   return chartXml
     .replace(/<c:cat>[\s\S]*?<\/c:cat>/, nextCategories)
     .replace(/<c:val>[\s\S]*?<\/c:val>/, nextValues);
+}
+
+function updateStatsTable(tableXml: string, chartImages: QuarterlyChartImageAssets) {
+  let nextTable = tableXml;
+  nextTable = replaceCellImage(nextTable, 2, 0, ACCIDENT_CHART_IMAGE_ITEM_ID, chartImages.accident);
+  nextTable = replaceCellImage(nextTable, 2, 1, CAUSATIVE_CHART_IMAGE_ITEM_ID, chartImages.causative);
+  return nextTable;
 }
 
 function buildOpsDetailLines(report: QuarterlySummaryReport) {
@@ -868,6 +1055,7 @@ function updateSectionXml(
   report: QuarterlySummaryReport,
   site: InspectionSite,
   opsImageAsset: ResolvedHwpxImageAsset | null,
+  chartImages: QuarterlyChartImageAssets,
 ) {
   const textUpdatedSection = replaceQuarterlyCoverTextNodes(sectionXml, report, site);
   const tableBlocks = matchTableBlocks(textUpdatedSection);
@@ -878,6 +1066,7 @@ function updateSectionXml(
   const tables = tableBlocks.map((block) => block.xml);
   tables[0] = updateApprovalTable(tables[0], report);
   tables[1] = updateSnapshotTable(tables[1], report, site);
+  tables[2] = updateStatsTable(tables[2], chartImages);
   tables[3] = updateImplementationTable(tables[3], report);
   tables[4] = updateFuturePlanTable(tables[4], report);
   tables[5] = updateOpsTable(tables[5], report, opsImageAsset);
@@ -912,7 +1101,15 @@ export async function buildQuarterlyHwpxDocument(
   const causativeChartXml = causativeChartFile
     ? await causativeChartFile.async('string')
     : null;
-  const opsImageAsset = await resolveOpsImageAsset(report, options);
+  const [opsImageAsset, accidentChartImage, causativeChartImage] = await Promise.all([
+    resolveOpsImageAsset(report, options),
+    renderQuarterlyChartImageAsset(report.accidentStats),
+    renderQuarterlyChartImageAsset(report.causativeStats),
+  ]);
+  const chartImages: QuarterlyChartImageAssets = {
+    accident: accidentChartImage,
+    causative: causativeChartImage,
+  };
 
   if (opsImageAsset) {
     const href = `BinData/${OPS_IMAGE_ITEM_ID}.${opsImageAsset.extension}`;
@@ -925,7 +1122,24 @@ export async function buildQuarterlyHwpxDocument(
     );
   }
 
-  zip.file('Contents/section0.xml', updateSectionXml(sectionXml, report, site, opsImageAsset));
+  for (const [itemId, asset] of [
+    [ACCIDENT_CHART_IMAGE_ITEM_ID, chartImages.accident],
+    [CAUSATIVE_CHART_IMAGE_ITEM_ID, chartImages.causative],
+  ] as const) {
+    const href = `BinData/${itemId}.${asset.extension}`;
+    zip.file(href, asset.buffer, { compression: 'STORE' });
+    contentHpf = upsertManifestItem(
+      contentHpf,
+      itemId,
+      href,
+      normalizeHwpxMediaType(asset.mediaType, href),
+    );
+  }
+
+  zip.file(
+    'Contents/section0.xml',
+    updateSectionXml(sectionXml, report, site, opsImageAsset, chartImages),
+  );
   zip.file('Contents/content.hpf', contentHpf);
   if (accidentChartFile && accidentChartXml) {
     zip.file('Chart/chart1.xml', updateChartXml(accidentChartXml, report.accidentStats));
