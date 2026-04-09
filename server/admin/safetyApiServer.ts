@@ -649,6 +649,19 @@ export function generateAdminSchedulesServer(
   );
 }
 
+export function downloadAdminSiteBasicMaterialServer(
+  token: string,
+  siteId: string,
+  request: Request | null = null,
+) {
+  return requestSafetyAdminServerRaw(
+    `/admin/sites/${encodeURIComponent(siteId)}/basic-material`,
+    {},
+    token,
+    request,
+  );
+}
+
 export function updateAdminScheduleServer(
   token: string,
   scheduleId: string,

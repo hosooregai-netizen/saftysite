@@ -22,7 +22,10 @@ import {
   parseOptionalNumber,
   toNullableText,
 } from '@/lib/admin';
-import { exportAdminWorkbook } from '@/lib/admin/exportClient';
+import {
+  downloadAdminSiteBasicMaterial,
+  exportAdminWorkbook,
+} from '@/lib/admin/exportClient';
 import {
   buildSiteMemoWithContractProfile,
   parseSiteContractProfile,
@@ -492,6 +495,15 @@ export function SitesSection(props: SitesSectionProps) {
         }),
       },
     ]);
+
+  const handleDownloadBasicMaterial = async (site: SafetySite) => {
+    try {
+      await downloadAdminSiteBasicMaterial(site.id, `${site.site_name}-기초자료.xlsx`);
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : '기초자료 출력에 실패했습니다.');
+    }
+  };
+
   const resetHeaderFilters = () => {
     setStatusFilter(initialStatusFilter);
     setAssignmentFilter('all');
@@ -772,6 +784,12 @@ export function SitesSection(props: SitesSectionProps) {
                                     headquarterId: site.headquarter_id,
                                     siteId: site.id,
                                   }),
+                                },
+                                {
+                                  label: '기초자료 출력',
+                                  onSelect: () => {
+                                    if (!busy) void handleDownloadBasicMaterial(site);
+                                  },
                                 },
                                 ...(onExcelUploadRequest
                                   ? [

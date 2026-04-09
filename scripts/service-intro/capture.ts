@@ -16,36 +16,7 @@ import {
   type IntroCaptureItem,
   type IntroManifest,
 } from './config';
-
-async function applyMasking(page: Page) {
-  await page.addStyleTag({
-    content: `
-      tbody td, tbody th,
-      [class*="table"] td, [class*="table"] th,
-      [class*="detailValue"], [class*="person"], [class*="contact"] {
-        filter: blur(4px);
-      }
-    `,
-  });
-  await page.evaluate(() => {
-    const maskText = (value: string) =>
-      value
-        .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, 'masked@example.com')
-        .replace(/01[0-9][- ]?\d{3,4}[- ]?\d{4}/g, '010-****-****')
-        .replace(/\b\d{2,4}[- ]?\d{3,4}[- ]?\d{4}\b/g, '**-****-****');
-    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-    const textNodes: Text[] = [];
-    while (walker.nextNode()) {
-      const current = walker.currentNode;
-      if (current instanceof Text) {
-        textNodes.push(current);
-      }
-    }
-    for (const node of textNodes) {
-      node.textContent = maskText(node.textContent || '');
-    }
-  });
-}
+import { applyIntroMasking, prepareMailboxCapture, resolveMailboxCaptureItem } from './mailboxCapture';
 
 async function discoverFirstSiteId(page: Page, baseUrl: string): Promise<string | null> {
   return page.evaluate(async ({ targetBaseUrl }) => {
@@ -147,7 +118,7 @@ function buildCapturePlan(siteId: string | null): Array<Omit<IntroCaptureItem, '
 
 async function waitForPageReady(page: Page, id: string) {
   if (id === 'overview') await waitHeading(page, '관리 대시보드');
-  if (id === 'headquarters') await waitHeading(page, '사업장/현장');
+  if (id === 'headquarters') await waitHeading(page, '사업장 목록');
   if (id === 'excel-upload') await page.getByText('엑셀 업로드').first().waitFor();
   if (id === 'mailbox') await waitHeading(page, '메일함');
   if (id === 'reports') await page.waitForURL(/reports/);
@@ -182,9 +153,11 @@ export async function captureServiceIntroScreens(): Promise<IntroManifest> {
       const imagePath = path.join(getOutputRoot(), `${item.id}.png`);
       await page.goto(new URL(item.route, baseUrl).toString(), { waitUntil: 'load' });
       await waitForPageReady(page, item.id);
-      await applyMasking(page);
+      const resolvedItem =
+        item.id === 'mailbox' ? resolveMailboxCaptureItem(item, await prepareMailboxCapture(page)) : item;
+      await applyIntroMasking(page);
       await page.screenshot({ path: imagePath, fullPage: false });
-      captures.push({ ...item, imagePath });
+      captures.push({ ...resolvedItem, imagePath });
     }
 
     const manifest: IntroManifest = {

@@ -207,6 +207,8 @@ export async function buildAdminServerExportSheets(
           { key: 'window', label: '허용 구간' },
           { key: 'assigneeName', label: '담당자' },
           { key: 'status', label: '상태' },
+          { key: 'selectionReason', label: '선택 사유' },
+          { key: 'selectionConfirmed', label: '선택 확정' },
           { key: 'issues', label: '이슈' },
           { key: 'exceptionReasonCode', label: '사유코드' },
           { key: 'exceptionMemo', label: '사유 메모' },
@@ -219,6 +221,12 @@ export async function buildAdminServerExportSheets(
           issues: formatScheduleIssues(row) || '-',
           plannedDate: row.plannedDate || '-',
           roundNo: `${row.roundNo}회차`,
+          selectionConfirmed: row.selectionConfirmedAt
+            ? `${row.selectionConfirmedByName || row.assigneeName || '-'} / ${formatDateTime(row.selectionConfirmedAt)}`
+            : '-',
+          selectionReason: row.selectionReasonLabel
+            ? `${row.selectionReasonLabel}${row.selectionReasonMemo ? ` - ${row.selectionReasonMemo}` : ''}`
+            : '-',
           siteName: row.siteName,
           status: row.status,
           window: `${row.windowStart} ~ ${row.windowEnd}`,

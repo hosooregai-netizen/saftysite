@@ -22,6 +22,8 @@ import type {
   SafetySiteUpdateInput,
 } from '@/types/controller';
 import type {
+  ExcelDetectedMapping,
+  ExcelIgnoredHeader,
   ExcelApplyResult,
   ExcelApplyResultRow,
   ExcelImportPreview,
@@ -44,7 +46,7 @@ const REQUIRED_FIELD_LABELS = {
 } as const;
 const FIELD_ALIASES: Record<string, string[]> = {
   business_registration_no: ['사업자등록번호', '사업자 등록번호', '사업자번호'],
-  contact_name: ['본사담당자', '담당자', '연락담당자'],
+  contact_name: ['본사담당자', '담당자', '연락담당자', '계약담당자'],
   contact_phone: ['본사연락처', '대표전화', '전화번호', '연락처', '전화'],
   contract_date: ['계약일', '계약체결일'],
   contract_type: ['계약유형', '계약종류'],
@@ -52,7 +54,7 @@ const FIELD_ALIASES: Record<string, string[]> = {
   headquarter_name: ['사업장명', '본사명', '회사명', '본점명', '지점명', '업체명'],
   license_no: ['면허번호', '등록번호'],
   management_number: ['사업장관리번호', '관리번호', '관리 번호'],
-  manager_name: ['현장소장', '현장소장명', '현장담당자'],
+  manager_name: ['현장소장', '현장소장명', '현장담당자', '현장책임자명'],
   manager_phone: ['현장소장연락처', '현장연락처', '담당자연락처', '소장연락처'],
   per_visit_amount: ['회당단가', '회차당단가', '1회당단가'],
   project_amount: ['공사금액', '도급금액', '금액', '계약금액'],
@@ -61,9 +63,19 @@ const FIELD_ALIASES: Record<string, string[]> = {
   road_address: ['도로명주소'],
   site_address: ['현장주소', '주소', '사업장주소', '소재지'],
   site_code: ['현장코드', '사업개시번호', '사업장개시번호', '현장번호'],
-  site_name: ['현장명', '공사명', '현장', '사업장명'],
-  total_contract_amount: ['총계약금액', '총계약액', '계약총액'],
-  total_rounds: ['총회차', '총 회차', '회차수'],
+  site_name: ['현장명', '공사명', '현장'],
+  total_contract_amount: ['총계약금액', '총계약액', '계약총액', '기술지도대가', '기술지도 대가'],
+  total_rounds: ['총회차', '총 회차', '회차수', '기술지도횟수', '기술지도 횟수'],
+};
+const AUTO_IGNORED_HEADER_PREFIXES = ['발주자'];
+const MAPPING_NOTES: Record<string, Record<string, string>> = {
+  contact_name: {
+    계약담당자: '계약담당자 기준으로 본사 담당자명에 반영됩니다.',
+  },
+  total_contract_amount: {
+    '기술지도 대가': '기술지도 대가를 총 계약금액으로 반영합니다.',
+    기술지도대가: '기술지도 대가를 총 계약금액으로 반영합니다.',
+  },
 };
 const XML_PARSER = new XMLParser({
   attributeNamePrefix: '',
@@ -115,6 +127,13 @@ type ScopeDecision = {
   headquarterId?: string | null;
   siteId?: string | null;
   inScope: boolean;
+};
+type MappingAnalysis = {
+  detectedMappings: ExcelDetectedMapping[];
+  hasRiskyMapping: boolean;
+  ignoredHeaders: ExcelIgnoredHeader[];
+  mappingWarnings: string[];
+  suggestedMapping: Record<string, string>;
 };
 
 function buildInScopeDecision(
@@ -241,23 +260,100 @@ function generateJobId() {
   return `excel-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-function buildSuggestedMapping(headers: string[]) {
-  const normalizedHeaders = new Map(headers.map((header) => [header, normalizeKey(header)]));
-  return Object.fromEntries(
-    Object.entries(FIELD_ALIASES)
-      .map(([field, aliases]) => {
-        const matchedHeader = aliases
-          .map((alias) => normalizeKey(alias))
-          .flatMap((aliasKey) =>
-            headers.filter((header) => {
-              const normalizedHeader = normalizedHeaders.get(header) || '';
-              return aliasKey && normalizedHeader.includes(aliasKey);
-            }),
-          )[0];
-        return matchedHeader ? [field, matchedHeader] : null;
-      })
-      .filter((item): item is [string, string] => Boolean(item)),
-  );
+function isAutoIgnoredHeader(header: string) {
+  const normalizedHeader = normalizeKey(header);
+  return AUTO_IGNORED_HEADER_PREFIXES.some((prefix) => normalizedHeader.startsWith(normalizeKey(prefix)));
+}
+
+function findExactHeaderMatch(headers: string[], aliases: string[], usedHeaders: Set<string>) {
+  const aliasKeys = aliases.map((alias) => normalizeKey(alias)).filter(Boolean);
+  for (const header of headers) {
+    if (usedHeaders.has(header) || isAutoIgnoredHeader(header)) {
+      continue;
+    }
+    const normalizedHeader = normalizeKey(header);
+    if (aliasKeys.some((aliasKey) => aliasKey === normalizedHeader)) {
+      return header;
+    }
+  }
+  return null;
+}
+
+function buildIgnoredHeaders(headers: string[]): ExcelIgnoredHeader[] {
+  return headers
+    .filter((header) => isAutoIgnoredHeader(header))
+    .map((header) => ({
+      header,
+      reason: '발주자 정보 컬럼은 자동 반영 대상에서 제외됩니다.',
+    }));
+}
+
+function buildMappingWarnings(
+  suggestedMapping: Record<string, string>,
+  ignoredHeaders: ExcelIgnoredHeader[],
+) {
+  const warnings: string[] = [];
+  const ignoredHeaderSet = new Set(ignoredHeaders.map((item) => item.header));
+
+  if (
+    !suggestedMapping.business_registration_no &&
+    Array.from(ignoredHeaderSet).some((header) => normalizeKey(header).includes(normalizeKey('사업자등록번호')))
+  ) {
+    warnings.push(
+      '시공사 사업자등록번호 헤더가 없어 자동 매핑하지 않았습니다. 발주자 사업자등록번호는 자동 반영하지 않습니다.',
+    );
+  }
+
+  if (
+    !suggestedMapping.site_code &&
+    Array.from(ignoredHeaderSet).some((header) => normalizeKey(header).includes(normalizeKey('사업개시번호')))
+  ) {
+    warnings.push(
+      '사업장개시번호는 시공사 기준 컬럼만 자동 반영합니다. 발주자 사업개시번호는 제외되었습니다.',
+    );
+  }
+
+  if (
+    !suggestedMapping.corporate_registration_no &&
+    Array.from(ignoredHeaderSet).some((header) => normalizeKey(header).includes(normalizeKey('법인등록번호')))
+  ) {
+    warnings.push(
+      '법인등록번호는 시공사 기준 컬럼만 자동 반영합니다. 발주자 법인등록번호는 제외되었습니다.',
+    );
+  }
+
+  return warnings;
+}
+
+function buildSuggestedMapping(headers: string[]): MappingAnalysis {
+  const usedHeaders = new Set<string>();
+  const suggestedMapping: Record<string, string> = {};
+  const detectedMappings: ExcelDetectedMapping[] = [];
+
+  for (const [field, aliases] of Object.entries(FIELD_ALIASES)) {
+    const matchedHeader = findExactHeaderMatch(headers, aliases, usedHeaders);
+    if (!matchedHeader) {
+      continue;
+    }
+    usedHeaders.add(matchedHeader);
+    suggestedMapping[field] = matchedHeader;
+    detectedMappings.push({
+      field,
+      header: matchedHeader,
+      note: MAPPING_NOTES[field]?.[matchedHeader] ?? null,
+    });
+  }
+
+  const ignoredHeaders = buildIgnoredHeaders(headers);
+  const mappingWarnings = buildMappingWarnings(suggestedMapping, ignoredHeaders);
+
+  return {
+    detectedMappings,
+    hasRiskyMapping: detectedMappings.some((mapping) => isAutoIgnoredHeader(mapping.header)),
+    ignoredHeaders,
+    mappingWarnings,
+    suggestedMapping,
+  };
 }
 
 function extractMappedRow(values: Record<string, string>, mapping: Record<string, string>) {
@@ -796,8 +892,15 @@ function buildPreviewFromJob(job: LocalJob): ExcelImportPreview {
     sheetNames: job.sheets.map((sheet) => sheet.name),
     scope: job.scope,
     sheets: job.sheets.map((sheet) => {
-      const { rows, ...previewSheet } = sheet;
-      return rows ? previewSheet : previewSheet;
+      const { rows: _rows, ...previewSheet } = sheet;
+      void _rows;
+      return {
+        ...previewSheet,
+        detectedMappings: previewSheet.detectedMappings ?? [],
+        ignoredHeaders: previewSheet.ignoredHeaders ?? [],
+        mappingWarnings: previewSheet.mappingWarnings ?? [],
+        hasRiskyMapping: previewSheet.hasRiskyMapping ?? false,
+      };
     }),
   };
 }
@@ -837,9 +940,9 @@ export async function parseLocalExcelWorkbook(
             values: rowArrayToRecord(headers, row.values),
           })).filter((row) => Object.values(row.values).some((value) => normalizeText(value)))
         : [];
-      const suggestedMapping = buildSuggestedMapping(headers);
+      const mappingAnalysis = buildSuggestedMapping(headers);
       const evaluatedRows = dataRows.map((row) => {
-        const rowData = extractMappedRow(row.values, suggestedMapping);
+        const rowData = extractMappedRow(row.values, mappingAnalysis.suggestedMapping);
         const nextSiteCandidates = siteCandidates(rowData, headquarterLookup, siteLookup);
         const nextHeadquarterCandidates = headquarterCandidates(rowData, headquarterLookup);
         const scopeDecision = resolveScopeDecision({
@@ -881,15 +984,19 @@ export async function parseLocalExcelWorkbook(
         .map((row) => row.previewRow);
       return {
         headers,
+        detectedMappings: mappingAnalysis.detectedMappings,
         excludedRowCount: excludedRows.length,
         excludedRows,
+        hasRiskyMapping: mappingAnalysis.hasRiskyMapping,
+        ignoredHeaders: mappingAnalysis.ignoredHeaders,
         includedRowCount: includedRows.length,
         includedRows,
+        mappingWarnings: mappingAnalysis.mappingWarnings,
         name: sheet.name,
         rowCount: dataRows.length,
         rows: evaluatedRows.map((row) => row.storedRow),
         sampleRows: includedRows.slice(0, SAMPLE_ROW_COUNT).map((row) => row.values),
-        suggestedMapping,
+        suggestedMapping: mappingAnalysis.suggestedMapping,
         summary: buildSheetSummary(includedRows),
       } satisfies LocalSheet;
     });

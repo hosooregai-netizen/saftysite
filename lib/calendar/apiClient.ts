@@ -76,6 +76,8 @@ export function updateMySchedule(
   scheduleId: string,
   payload: {
     plannedDate?: string;
+    selectionReasonLabel?: string;
+    selectionReasonMemo?: string;
     status?: SafetyInspectionSchedule['status'];
   },
 ) {
@@ -83,6 +85,8 @@ export function updateMySchedule(
     method: 'PATCH',
     body: JSON.stringify({
       planned_date: payload.plannedDate || '',
+      selection_reason_label: payload.selectionReasonLabel || '',
+      selection_reason_memo: payload.selectionReasonMemo || '',
       status: payload.status || undefined,
     }),
   });

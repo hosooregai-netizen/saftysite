@@ -137,6 +137,11 @@ export interface SafetyInspectionSchedule {
   status: SafetyInspectionScheduleStatus;
   exceptionReasonCode: string;
   exceptionMemo: string;
+  selectionConfirmedAt: string;
+  selectionConfirmedByName: string;
+  selectionConfirmedByUserId: string;
+  selectionReasonLabel: string;
+  selectionReasonMemo: string;
   linkedReportKey: string;
   siteName: string;
   headquarterId: string;

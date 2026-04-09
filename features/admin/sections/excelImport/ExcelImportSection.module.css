@@ -101,6 +101,7 @@
 }
 
 .noticeBox,
+.warningBox,
 .errorBox {
   padding: 12px 14px;
   border-radius: 2px;
@@ -112,6 +113,12 @@
   border: 1px solid #b8cbe0;
   background: #eef5fc;
   color: var(--erp-mid);
+}
+
+.warningBox {
+  border: 1px solid #e5cf88;
+  background: #fff8df;
+  color: #765c15;
 }
 
 .errorBox {
@@ -133,6 +140,44 @@
   border-radius: 2px;
   background: #f9fbfd;
   font-size: var(--text-body);
+  color: var(--erp-text-muted);
+}
+
+.mappingCard {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-card);
+  background: #fff;
+}
+
+.mappingTitle {
+  margin: 0;
+  font-size: var(--text-body);
+  font-weight: 700;
+  color: var(--erp-dark);
+}
+
+.mappingList {
+  display: grid;
+  gap: 10px;
+}
+
+.mappingItem {
+  display: grid;
+  gap: 4px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--erp-line);
+}
+
+.mappingItem:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.mappingNote {
+  font-size: var(--text-ui-sm);
   color: var(--erp-text-muted);
 }
 

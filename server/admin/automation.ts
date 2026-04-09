@@ -457,8 +457,13 @@ export function generateSchedulesForSite(site: SafetySite, users: SafetyUser[]) 
       isOutOfWindow: false,
       isOverdue: false,
       linkedReportKey: existing?.linkedReportKey || '',
-      plannedDate: existing?.plannedDate || windowStart,
+      plannedDate: existing?.plannedDate || '',
       roundNo,
+      selectionConfirmedAt: existing?.selectionConfirmedAt || '',
+      selectionConfirmedByName: existing?.selectionConfirmedByName || '',
+      selectionConfirmedByUserId: existing?.selectionConfirmedByUserId || '',
+      selectionReasonLabel: existing?.selectionReasonLabel || '',
+      selectionReasonMemo: existing?.selectionReasonMemo || '',
       siteId: site.id,
       siteName: site.site_name,
       status: existing?.status || 'planned',
@@ -505,6 +510,12 @@ export function updateSingleSchedule(
       linkedReportKey: payload.linkedReportKey ?? current.linkedReportKey,
       plannedDate: payload.plannedDate ?? current.plannedDate,
       status: payload.status ?? current.status,
+      selectionConfirmedAt: payload.selectionConfirmedAt ?? current.selectionConfirmedAt,
+      selectionConfirmedByName: payload.selectionConfirmedByName ?? current.selectionConfirmedByName,
+      selectionConfirmedByUserId:
+        payload.selectionConfirmedByUserId ?? current.selectionConfirmedByUserId,
+      selectionReasonLabel: payload.selectionReasonLabel ?? current.selectionReasonLabel,
+      selectionReasonMemo: payload.selectionReasonMemo ?? current.selectionReasonMemo,
     };
 
     if (

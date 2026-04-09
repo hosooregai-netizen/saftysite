@@ -72,6 +72,10 @@ function summarizeValues(row: ExcelImportPreviewRow) {
     .join(' / ');
 }
 
+function getFieldLabel(field: string) {
+  return FIELD_LABELS[field] ?? field;
+}
+
 export function ExcelImportSection({ onReload, scope }: ExcelImportSectionProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [preview, setPreview] = useState<ExcelImportPreview | null>(null);
@@ -219,7 +223,12 @@ export function ExcelImportSection({ onReload, scope }: ExcelImportSectionProps)
                 type="button"
                 className="app-button app-button-primary"
                 onClick={() => void handleApply()}
-                disabled={applying || loading || selectedSheet.includedRowCount === 0}
+                disabled={
+                  applying ||
+                  loading ||
+                  selectedSheet.includedRowCount === 0 ||
+                  selectedSheet.hasRiskyMapping
+                }
               >
                 {applying ? '업데이트 중...' : '업데이트'}
               </button>
@@ -253,6 +262,49 @@ export function ExcelImportSection({ onReload, scope }: ExcelImportSectionProps)
               <div className={styles.mappingHint}>
                 자동 감지되지 않은 필드: {missingFieldLabels.join(', ')}. 이 파일에서 값이 비어 있으면 기존
                 DB 값은 유지됩니다.
+              </div>
+            ) : null}
+
+            {selectedSheet.mappingWarnings.length > 0 ? (
+              <div className={styles.warningBox}>{selectedSheet.mappingWarnings.join(' ')}</div>
+            ) : null}
+
+            {selectedSheet.detectedMappings.length > 0 || selectedSheet.ignoredHeaders.length > 0 ? (
+              <div className={styles.mappingGrid}>
+                <article className={styles.mappingCard}>
+                  <h3 className={styles.mappingTitle}>자동 감지된 매핑</h3>
+                  {selectedSheet.detectedMappings.length > 0 ? (
+                    <div className={styles.mappingList}>
+                      {selectedSheet.detectedMappings.map((mapping) => (
+                        <div key={`${mapping.field}-${mapping.header}`} className={styles.mappingItem}>
+                          <strong>{getFieldLabel(mapping.field)}</strong>
+                          <span>{mapping.header}</span>
+                          {mapping.note ? (
+                            <span className={styles.mappingNote}>{mapping.note}</span>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className={styles.summaryMeta}>자동 매핑된 컬럼이 없습니다.</div>
+                  )}
+                </article>
+
+                <article className={styles.mappingCard}>
+                  <h3 className={styles.mappingTitle}>자동 제외된 컬럼</h3>
+                  {selectedSheet.ignoredHeaders.length > 0 ? (
+                    <div className={styles.mappingList}>
+                      {selectedSheet.ignoredHeaders.map((ignored) => (
+                        <div key={ignored.header} className={styles.mappingItem}>
+                          <strong>{ignored.header}</strong>
+                          <span className={styles.mappingNote}>{ignored.reason}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className={styles.summaryMeta}>자동 제외된 컬럼이 없습니다.</div>
+                  )}
+                </article>
               </div>
             ) : null}
 

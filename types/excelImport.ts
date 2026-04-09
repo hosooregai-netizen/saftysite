@@ -25,6 +25,17 @@ export interface ExcelMatchCandidate {
   siteId: string | null;
 }
 
+export interface ExcelDetectedMapping {
+  field: string;
+  header: string;
+  note?: string | null;
+}
+
+export interface ExcelIgnoredHeader {
+  header: string;
+  reason: string;
+}
+
 export interface ExcelImportPreviewRow {
   rowIndex: number;
   values: Record<string, string>;
@@ -51,6 +62,10 @@ export interface ExcelImportSheetPreview {
   excludedRowCount: number;
   sampleRows: Record<string, string>[];
   suggestedMapping: Record<string, string>;
+  detectedMappings: ExcelDetectedMapping[];
+  ignoredHeaders: ExcelIgnoredHeader[];
+  mappingWarnings: string[];
+  hasRiskyMapping: boolean;
   includedRows: ExcelImportPreviewRow[];
   excludedRows: ExcelImportPreviewRow[];
   summary: ExcelImportSheetSummary;

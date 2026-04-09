@@ -14,6 +14,12 @@ import homeStyles from '@/features/home/components/HomeScreen.module.css';
 import type { SafetyInspectionSchedule } from '@/types/admin';
 import styles from './WorkerCalendarScreen.module.css';
 
+interface ScheduleSelectionDraft {
+  plannedDate: string;
+  selectionReasonLabel: string;
+  selectionReasonMemo: string;
+}
+
 function getMonthToken(date = new Date()) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 }
@@ -45,6 +51,13 @@ function formatDateLabel(value: string) {
   return parsed.toLocaleDateString('ko-KR');
 }
 
+function formatDateTimeLabel(value: string) {
+  if (!value) return '-';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleString('ko-KR');
+}
+
 function isDateWithinWindow(value: string, windowStart: string, windowEnd: string) {
   if (!value || !windowStart || !windowEnd) return false;
   return value >= windowStart && value <= windowEnd;
@@ -64,7 +77,9 @@ export function WorkerCalendarScreen() {
   const [selectedDate, setSelectedDate] = useState('');
   const [editingSchedule, setEditingSchedule] = useState<SafetyInspectionSchedule | null>(null);
   const [editPlannedDate, setEditPlannedDate] = useState('');
-  const [pendingDates, setPendingDates] = useState<Record<string, string>>({});
+  const [editReasonLabel, setEditReasonLabel] = useState('');
+  const [editReasonMemo, setEditReasonMemo] = useState('');
+  const [pendingSelections, setPendingSelections] = useState<Record<string, ScheduleSelectionDraft>>({});
   const router = useRouter();
   const searchParams = useSearchParams();
   const {
@@ -147,36 +162,83 @@ export function WorkerCalendarScreen() {
     return map;
   }, [selectedRows]);
 
-  const handleSaveSchedule = async (schedule: SafetyInspectionSchedule, plannedDate: string) => {
+  const updatePendingSelection = (scheduleId: string, patch: Partial<ScheduleSelectionDraft>) => {
+    setPendingSelections((current) => ({
+      ...current,
+      [scheduleId]: {
+        plannedDate: current[scheduleId]?.plannedDate || '',
+        selectionReasonLabel: current[scheduleId]?.selectionReasonLabel || '',
+        selectionReasonMemo: current[scheduleId]?.selectionReasonMemo || '',
+        ...patch,
+      },
+    }));
+  };
+
+  const getPendingSelection = (scheduleId: string): ScheduleSelectionDraft => ({
+    plannedDate: pendingSelections[scheduleId]?.plannedDate || '',
+    selectionReasonLabel: pendingSelections[scheduleId]?.selectionReasonLabel || '',
+    selectionReasonMemo: pendingSelections[scheduleId]?.selectionReasonMemo || '',
+  });
+
+  const handleSaveSchedule = async (
+    schedule: SafetyInspectionSchedule,
+    input: ScheduleSelectionDraft,
+  ) => {
+    const plannedDate = input.plannedDate;
+    const selectionReasonLabel = input.selectionReasonLabel.trim();
+    const selectionReasonMemo = input.selectionReasonMemo.trim();
+
     if (!plannedDate) {
       setError('선택할 방문 날짜를 먼저 입력해 주세요.');
-      return;
+      return false;
     }
     if (!isDateWithinWindow(plannedDate, schedule.windowStart, schedule.windowEnd)) {
       setError(buildWindowErrorMessage(schedule));
-      return;
+      return false;
+    }
+    if (!selectionReasonLabel || !selectionReasonMemo) {
+      setError('방문 일정을 선택할 때는 사유 분류와 상세 메모를 함께 입력해 주세요.');
+      return false;
     }
     try {
       setError(null);
-      const updated = await updateMySchedule(schedule.id, { plannedDate });
+      const updated = await updateMySchedule(schedule.id, {
+        plannedDate,
+        selectionReasonLabel,
+        selectionReasonMemo,
+      });
       setRows((current) => current.map((row) => (row.id === updated.id ? updated : row)));
-      setPendingDates((current) => ({ ...current, [schedule.id]: '' }));
+      setPendingSelections((current) => {
+        const next = { ...current };
+        delete next[schedule.id];
+        return next;
+      });
       setSelectedDate(updated.plannedDate || '');
       setNotice(`${schedule.siteName} ${schedule.roundNo}회차 일정을 저장했습니다.`);
+      return true;
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : '일정을 저장하지 못했습니다.');
+      return false;
     }
   };
 
   const openEditModal = (schedule: SafetyInspectionSchedule) => {
     setEditingSchedule(schedule);
     setEditPlannedDate(schedule.plannedDate || schedule.windowStart);
+    setEditReasonLabel(schedule.selectionReasonLabel || '');
+    setEditReasonMemo(schedule.selectionReasonMemo || '');
   };
 
   const handleSaveEdit = async () => {
     if (!editingSchedule) return;
-    await handleSaveSchedule(editingSchedule, editPlannedDate);
-    setEditingSchedule(null);
+    const saved = await handleSaveSchedule(editingSchedule, {
+      plannedDate: editPlannedDate,
+      selectionReasonLabel: editReasonLabel,
+      selectionReasonMemo: editReasonMemo,
+    });
+    if (saved) {
+      setEditingSchedule(null);
+    }
   };
 
   if (!isReady) {
@@ -303,59 +365,89 @@ export function WorkerCalendarScreen() {
                           <div className={styles.emptyState}>선택이 필요한 회차가 없습니다.</div>
                         ) : (
                           <div className={styles.list}>
-                            {unselectedRows.map((row) => (
-                              <article key={row.id} className={styles.rowCard}>
-                                <div className={styles.rowTitle}>
-                                  {row.siteName} · {row.roundNo}회차
-                                </div>
-                                <div className={styles.rowMeta}>
-                                  허용 구간 {row.windowStart} ~ {row.windowEnd}
-                                </div>
-                                {pendingDates[row.id] &&
+                            {unselectedRows.map((row) => {
+                              const draft = getPendingSelection(row.id);
+                              const hasDraftWindowError =
+                                Boolean(draft.plannedDate) &&
                                 !isDateWithinWindow(
-                                  pendingDates[row.id] || '',
+                                  draft.plannedDate,
                                   row.windowStart,
                                   row.windowEnd,
-                                ) ? (
-                                  <div className={styles.rowMeta}>
-                                    {buildWindowErrorMessage(row)}
+                                );
+
+                              return (
+                                <article key={row.id} className={styles.rowCard}>
+                                  <div className={styles.rowTitle}>
+                                    {row.siteName} · {row.roundNo}회차
                                   </div>
-                                ) : null}
-                                <div className={styles.rowActions}>
-                                  <label className={styles.inlineField}>
-                                    <span className={styles.fieldLabel}>방문 날짜</span>
-                                    <input
-                                      className="app-input"
-                                      type="date"
-                                      min={row.windowStart}
-                                      max={row.windowEnd}
-                                      value={pendingDates[row.id] ?? ''}
-                                      onChange={(event) =>
-                                        setPendingDates((current) => ({
-                                          ...current,
-                                          [row.id]: event.target.value,
-                                        }))
+                                  <div className={styles.rowMeta}>
+                                    허용 구간 {row.windowStart} ~ {row.windowEnd}
+                                  </div>
+                                  {hasDraftWindowError ? (
+                                    <div className={styles.rowMeta}>
+                                      {buildWindowErrorMessage(row)}
+                                    </div>
+                                  ) : null}
+                                  <div className={styles.rowActions}>
+                                    <label className={styles.inlineField}>
+                                      <span className={styles.fieldLabel}>방문 날짜</span>
+                                      <input
+                                        className="app-input"
+                                        type="date"
+                                        min={row.windowStart}
+                                        max={row.windowEnd}
+                                        value={draft.plannedDate}
+                                        onChange={(event) =>
+                                          updatePendingSelection(row.id, {
+                                            plannedDate: event.target.value,
+                                          })
+                                        }
+                                      />
+                                    </label>
+                                    <label className={styles.inlineField}>
+                                      <span className={styles.fieldLabel}>사유 분류</span>
+                                      <input
+                                        className="app-input"
+                                        value={draft.selectionReasonLabel}
+                                        onChange={(event) =>
+                                          updatePendingSelection(row.id, {
+                                            selectionReasonLabel: event.target.value,
+                                          })
+                                        }
+                                        placeholder="예: 현장 요청, 비상 작업"
+                                      />
+                                    </label>
+                                    <label className={`${styles.inlineField} ${styles.memoField}`}>
+                                      <span className={styles.fieldLabel}>상세 메모</span>
+                                      <textarea
+                                        className="app-textarea"
+                                        rows={2}
+                                        value={draft.selectionReasonMemo}
+                                        onChange={(event) =>
+                                          updatePendingSelection(row.id, {
+                                            selectionReasonMemo: event.target.value,
+                                          })
+                                        }
+                                        placeholder="방문일을 정한 배경이나 협의 내용을 남겨 주세요."
+                                      />
+                                    </label>
+                                    <button
+                                      type="button"
+                                      className="app-button app-button-primary"
+                                      onClick={() => void handleSaveSchedule(row, draft)}
+                                      disabled={
+                                        !draft.plannedDate ||
+                                        !draft.selectionReasonLabel.trim() ||
+                                        !draft.selectionReasonMemo.trim() ||
+                                        hasDraftWindowError
                                       }
-                                    />
-                                  </label>
-                                  <button
-                                    type="button"
-                                    className="app-button app-button-primary"
-                                    onClick={() => void handleSaveSchedule(row, pendingDates[row.id] || '')}
-                                    disabled={
-                                      !pendingDates[row.id] ||
-                                      !isDateWithinWindow(
-                                        pendingDates[row.id] || '',
-                                        row.windowStart,
-                                        row.windowEnd,
-                                      )
-                                    }
-                                  >
-                                    이 날짜로 선택
-                                  </button>
-                                </div>
-                              </article>
-                            ))}
+                                    >
+                                      이 일정으로 확정
+                                    </button>
+                                  </div>
+                                </article>
+                              );
+                            })}
                           </div>
                         )}
                       </section>
@@ -426,6 +518,15 @@ export function WorkerCalendarScreen() {
                                   방문일 {row.plannedDate} / 허용 구간 {row.windowStart} ~ {row.windowEnd}
                                 </div>
                                 <div className={styles.rowMeta}>상태 {row.status}</div>
+                                <div className={styles.rowMeta}>
+                                  사유 분류 {row.selectionReasonLabel || '-'}
+                                </div>
+                                <div className={styles.rowMeta}>
+                                  상세 메모 {row.selectionReasonMemo || '-'}
+                                </div>
+                                <div className={styles.rowMeta}>
+                                  확정 {formatDateTimeLabel(row.selectionConfirmedAt)} / {row.selectionConfirmedByName || row.assigneeName || '-'}
+                                </div>
                                 <div className={styles.rowActions}>
                                   <button
                                     type="button"
@@ -475,10 +576,12 @@ export function WorkerCalendarScreen() {
                   editPlannedDate,
                   editingSchedule.windowStart,
                   editingSchedule.windowEnd,
-                )
+                ) ||
+                !editReasonLabel.trim() ||
+                !editReasonMemo.trim()
               }
             >
-              이 날짜로 변경
+              일정 확정 변경
             </button>
           </>
         }
@@ -500,6 +603,28 @@ export function WorkerCalendarScreen() {
             </label>
             <div className={styles.rowMeta}>
               허용 구간 {editingSchedule.windowStart} ~ {editingSchedule.windowEnd}
+            </div>
+            <label className={styles.field}>
+              <span className={styles.fieldLabel}>사유 분류</span>
+              <input
+                className="app-input"
+                value={editReasonLabel}
+                onChange={(event) => setEditReasonLabel(event.target.value)}
+                placeholder="예: 현장 요청, 비상 작업"
+              />
+            </label>
+            <label className={styles.field}>
+              <span className={styles.fieldLabel}>상세 메모</span>
+              <textarea
+                className="app-textarea"
+                rows={3}
+                value={editReasonMemo}
+                onChange={(event) => setEditReasonMemo(event.target.value)}
+                placeholder="방문일을 조정한 상세 이유를 남겨 주세요."
+              />
+            </label>
+            <div className={styles.rowMeta}>
+              마지막 확정 {formatDateTimeLabel(editingSchedule.selectionConfirmedAt)} / {editingSchedule.selectionConfirmedByName || editingSchedule.assigneeName || '-'}
             </div>
             {editPlannedDate &&
             !isDateWithinWindow(

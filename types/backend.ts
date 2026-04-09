@@ -407,6 +407,11 @@ export interface SafetyBackendInspectionSchedule {
   linked_report_key: string;
   planned_date: string;
   round_no: number;
+  selection_confirmed_at: string;
+  selection_confirmed_by_name: string;
+  selection_confirmed_by_user_id: string;
+  selection_reason_label: string;
+  selection_reason_memo: string;
   site_id: string;
   site_name: string;
   status: string;
@@ -595,6 +600,17 @@ export interface SafetyBackendExcelImportPreviewRow {
   duplicate_candidates: SafetyBackendExcelImportMatchCandidate[];
 }
 
+export interface SafetyBackendExcelDetectedMapping {
+  field: string;
+  header: string;
+  note?: string | null;
+}
+
+export interface SafetyBackendExcelIgnoredHeader {
+  header: string;
+  reason: string;
+}
+
 export interface SafetyBackendExcelImportSheetPreview {
   name: string;
   headers: string[];
@@ -603,6 +619,10 @@ export interface SafetyBackendExcelImportSheetPreview {
   excluded_row_count: number;
   sample_rows: Record<string, string>[];
   suggested_mapping: Record<string, string>;
+  detected_mappings?: SafetyBackendExcelDetectedMapping[];
+  ignored_headers?: SafetyBackendExcelIgnoredHeader[];
+  mapping_warnings?: string[];
+  has_risky_mapping?: boolean;
   included_rows: SafetyBackendExcelImportPreviewRow[];
   excluded_rows: SafetyBackendExcelImportPreviewRow[];
   summary: {

@@ -24,10 +24,15 @@ const COLORS = {
 };
 
 const FEATURE_IMAGE_BOX = { x: 6.82, y: 1.32, w: 5.95, h: 4.72 };
+const SHAPES = {
+  ellipse: 'ellipse',
+  rect: 'rect',
+  roundRect: 'roundRect',
+} as const;
 
 function addSlideBase(slide: PptxGenJS.Slide) {
   slide.background = { color: COLORS.ivory };
-  slide.addShape(PptxGenJS.ShapeType.rect, {
+  slide.addShape(SHAPES.rect, {
     x: 0,
     y: 0,
     w: 13.333,
@@ -38,7 +43,7 @@ function addSlideBase(slide: PptxGenJS.Slide) {
 }
 
 function addCornerAccent(slide: PptxGenJS.Slide) {
-  slide.addShape(PptxGenJS.ShapeType.rect, {
+  slide.addShape(SHAPES.rect, {
     x: 0,
     y: 0,
     w: 13.333,
@@ -46,7 +51,7 @@ function addCornerAccent(slide: PptxGenJS.Slide) {
     fill: { color: COLORS.green },
     line: { color: COLORS.green, pt: 0 },
   });
-  slide.addShape(PptxGenJS.ShapeType.rect, {
+  slide.addShape(SHAPES.rect, {
     x: 12.22,
     y: 0.28,
     w: 1.113,
@@ -57,7 +62,7 @@ function addCornerAccent(slide: PptxGenJS.Slide) {
 }
 
 function addBadge(slide: PptxGenJS.Slide, text: string, x: number, y: number) {
-  slide.addShape(PptxGenJS.ShapeType.roundRect, {
+  slide.addShape(SHAPES.roundRect, {
     x,
     y,
     w: 1.28,
@@ -133,7 +138,7 @@ function addMetricCard(
     accent?: string;
   },
 ) {
-  slide.addShape(PptxGenJS.ShapeType.roundRect, {
+  slide.addShape(SHAPES.roundRect, {
     x: input.x,
     y: input.y,
     w: 2.85,
@@ -143,7 +148,7 @@ function addMetricCard(
     line: { color: COLORS.line, pt: 1 },
     shadow: { type: 'outer', color: 'CBBFA9', angle: 45, blur: 1.5, offset: 1, opacity: 0.08 },
   });
-  slide.addShape(PptxGenJS.ShapeType.rect, {
+  slide.addShape(SHAPES.rect, {
     x: input.x,
     y: input.y,
     w: 2.85,
@@ -176,7 +181,7 @@ function addMetricCard(
 function addHighlightList(slide: PptxGenJS.Slide, highlights: string[], x = 0.9, y = 3.28) {
   highlights.forEach((item, index) => {
     const itemY = y + index * 0.62;
-    slide.addShape(PptxGenJS.ShapeType.ellipse, {
+    slide.addShape(SHAPES.ellipse, {
       x,
       y: itemY + 0.05,
       w: 0.16,
@@ -197,7 +202,7 @@ function addHighlightList(slide: PptxGenJS.Slide, highlights: string[], x = 0.9,
 }
 
 function addImpactStrip(slide: PptxGenJS.Slide, text: string) {
-  slide.addShape(PptxGenJS.ShapeType.roundRect, {
+  slide.addShape(SHAPES.roundRect, {
     x: 0.76,
     y: 6.5,
     w: 12,
@@ -223,7 +228,7 @@ function addFeatureImage(slide: PptxGenJS.Slide, item: IntroCaptureItem) {
   const imageBox = isWide
     ? { x: 6.02, y: 1.16, w: 6.72, h: 5.18 }
     : FEATURE_IMAGE_BOX;
-  slide.addShape(PptxGenJS.ShapeType.roundRect, {
+  slide.addShape(SHAPES.roundRect, {
     x: imageBox.x - 0.14,
     y: imageBox.y - 0.14,
     w: imageBox.w + 0.28,
@@ -245,7 +250,7 @@ function addFeatureImage(slide: PptxGenJS.Slide, item: IntroCaptureItem) {
 function addCoverSlide(pptx: PptxGenJS, manifest: IntroManifest) {
   const slide = pptx.addSlide();
   addSlideBase(slide);
-  slide.addShape(PptxGenJS.ShapeType.rect, {
+  slide.addShape(SHAPES.rect, {
     x: 0,
     y: 0,
     w: 13.333,
@@ -253,7 +258,7 @@ function addCoverSlide(pptx: PptxGenJS, manifest: IntroManifest) {
     fill: { color: COLORS.ivory },
     line: { color: COLORS.ivory, pt: 0 },
   });
-  slide.addShape(PptxGenJS.ShapeType.roundRect, {
+  slide.addShape(SHAPES.roundRect, {
     x: 0.7,
     y: 0.66,
     w: 5.7,
@@ -263,7 +268,7 @@ function addCoverSlide(pptx: PptxGenJS, manifest: IntroManifest) {
     line: { color: COLORS.green, pt: 0 },
   });
   addBadge(slide, 'SERVICE', 0.96, 1.06);
-  slide.addText('RegAI 현장안전\n운영 플랫폼', {
+  slide.addText('대한안전산업연구원\n현장안전 운영 플랫폼', {
     x: 0.96,
     y: 1.62,
     w: 4.58,
@@ -324,7 +329,7 @@ function addCoverSlide(pptx: PptxGenJS, manifest: IntroManifest) {
     color: 'C3D0CA',
   });
   if (manifest.items[0]) {
-    slide.addShape(PptxGenJS.ShapeType.roundRect, {
+    slide.addShape(SHAPES.roundRect, {
       x: 6.55,
       y: 0.74,
       w: 5.98,
@@ -372,7 +377,7 @@ function addProblemSlide(pptx: PptxGenJS) {
     title: '발송 추적 어려움',
     body: '누가 어떤 문서를 언제 보냈는지 이력 확인이 번거로워집니다.',
   });
-  slide.addShape(PptxGenJS.ShapeType.roundRect, {
+  slide.addShape(SHAPES.roundRect, {
     x: 0.82,
     y: 4.42,
     w: 11.86,
@@ -381,7 +386,7 @@ function addProblemSlide(pptx: PptxGenJS) {
     fill: { color: COLORS.white },
     line: { color: COLORS.line, pt: 1.1 },
   });
-  slide.addText('RegAI는 이 분리된 흐름을 “데이터 입력 → 보고서 작성 → 문서 출력 → 발송/공유”로 연결해 운영 복잡도를 줄이는 데 초점을 맞춥니다.', {
+  slide.addText('대한안전산업연구원은 이 분리된 흐름을 “데이터 입력 → 보고서 작성 → 문서 출력 → 발송/공유”로 연결해 운영 복잡도를 줄이는 데 초점을 맞춥니다.', {
     x: 1.08,
     y: 4.9,
     w: 11.2,
@@ -431,7 +436,7 @@ function addOutcomesSlide(pptx: PptxGenJS) {
     body: '모바일/현장 흐름과 본사 운영 화면을 같은 체계로 정리합니다.',
     accent: COLORS.greenSoft,
   });
-  slide.addShape(PptxGenJS.ShapeType.roundRect, {
+  slide.addShape(SHAPES.roundRect, {
     x: 0.82,
     y: 4.48,
     w: 11.86,
@@ -463,7 +468,7 @@ function addFeatureSlide(pptx: PptxGenJS, item: IntroCaptureItem) {
     description: item.subhead || item.description,
   });
   addHighlightList(slide, item.highlights || [], 0.92, 2.55);
-  slide.addShape(PptxGenJS.ShapeType.roundRect, {
+  slide.addShape(SHAPES.roundRect, {
     x: 0.84,
     y: 4.82,
     w: 4.98,
@@ -498,7 +503,7 @@ function addFeatureSlide(pptx: PptxGenJS, item: IntroCaptureItem) {
 function addClosingSlide(pptx: PptxGenJS) {
   const slide = pptx.addSlide();
   slide.background = { color: COLORS.green };
-  slide.addShape(PptxGenJS.ShapeType.rect, {
+  slide.addShape(SHAPES.rect, {
     x: 0,
     y: 0,
     w: 13.333,
@@ -506,7 +511,7 @@ function addClosingSlide(pptx: PptxGenJS) {
     fill: { color: COLORS.green },
     line: { color: COLORS.green, pt: 0 },
   });
-  slide.addText('RegAI가 제안하는 운영 방식', {
+  slide.addText('대한안전산업연구원이 제안하는 운영 방식', {
     x: 0.8,
     y: 0.82,
     w: 4.6,
@@ -535,7 +540,7 @@ function addClosingSlide(pptx: PptxGenJS) {
       paraSpaceAfter: 18,
     },
   );
-  slide.addShape(PptxGenJS.ShapeType.roundRect, {
+  slide.addShape(SHAPES.roundRect, {
     x: 7.45,
     y: 1.15,
     w: 4.98,
@@ -602,9 +607,10 @@ export async function buildServiceIntroDeck(manifest?: IntroManifest) {
   const pptx = new PptxGenJS();
   pptx.layout = 'LAYOUT_WIDE';
   pptx.author = 'Codex';
-  pptx.company = 'RegAI';
-  pptx.subject = 'RegAI 외부형 서비스 소개';
-  pptx.title = 'RegAI 서비스 소개서';
+  pptx.company = '대한안전산업연구원';
+  pptx.subject = '대한안전산업연구원 외부형 서비스 소개';
+  pptx.title = '대한안전산업연구원 서비스 소개서';
+  pptx.lang = 'ko-KR';
   pptx.theme = {
     headFontFace: 'Pretendard',
     bodyFontFace: 'Pretendard',

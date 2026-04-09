@@ -14,7 +14,10 @@ import {
   generateAdminSchedules,
   updateAdminSchedule,
 } from '@/lib/admin/apiClient';
-import { exportAdminServerWorkbook } from '@/lib/admin/exportClient';
+import {
+  downloadAdminSiteBasicMaterial,
+  exportAdminServerWorkbook,
+} from '@/lib/admin/exportClient';
 import type { SafetyInspectionSchedule, TableSortState } from '@/types/admin';
 import type { SafetySite, SafetyUser } from '@/types/backend';
 
@@ -64,6 +67,13 @@ function buildInitialForm(schedule: SafetyInspectionSchedule): ScheduleFormState
     plannedDate: schedule.plannedDate,
     status: schedule.status,
   };
+}
+
+function formatDateTimeLabel(value: string) {
+  if (!value) return '-';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleString('ko-KR');
 }
 
 export function SchedulesSection({
@@ -194,10 +204,13 @@ export function SchedulesSection({
 
   const handleSave = async () => {
     if (!editingSchedule) return;
+    const nextAssigneeName =
+      users.find((user) => user.id === form.assigneeUserId)?.name || '';
 
     try {
       setError(null);
       await updateAdminSchedule(editingSchedule.id, {
+        assigneeName: nextAssigneeName,
         assigneeUserId: form.assigneeUserId,
         exceptionMemo: form.exceptionMemo,
         exceptionReasonCode: form.exceptionReasonCode,
@@ -237,6 +250,24 @@ export function SchedulesSection({
       });
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : '일정 엑셀 내보내기에 실패했습니다.');
+    }
+  };
+
+  const handleDownloadBasicMaterial = async () => {
+    if (!siteId) {
+      setError('기초자료는 특정 현장을 선택한 상태에서만 출력할 수 있습니다.');
+      return;
+    }
+
+    try {
+      setError(null);
+      const matchedSite = sites.find((site) => site.id === siteId);
+      await downloadAdminSiteBasicMaterial(
+        siteId,
+        matchedSite ? `${matchedSite.site_name}-기초자료.xlsx` : undefined,
+      );
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : '기초자료 출력에 실패했습니다.');
     }
   };
 
@@ -359,6 +390,15 @@ export function SchedulesSection({
             >
               회차 자동생성
             </button>
+            {siteId ? (
+              <button
+                type="button"
+                className="app-button app-button-secondary"
+                onClick={() => void handleDownloadBasicMaterial()}
+              >
+                기초자료 출력
+              </button>
+            ) : null}
             <button
               type="button"
               className="app-button app-button-secondary"
@@ -563,7 +603,9 @@ export function SchedulesSection({
                           desc: '상태 내림차순',
                         })}
                       />
+                      <th>선택 정보</th>
                       <th>이슈</th>
+                      <th>예외 사유</th>
                       <th>메뉴</th>
                     </tr>
                   </thead>
@@ -577,6 +619,21 @@ export function SchedulesSection({
                         <td>{row.assigneeName || '-'}</td>
                         <td>{row.status}</td>
                         <td>
+                          {row.selectionReasonLabel || row.selectionConfirmedAt ? (
+                            <>
+                              <div>{row.selectionReasonLabel || '-'}</div>
+                              <div className={styles.tableSecondary}>
+                                {row.selectionConfirmedByName || row.assigneeName || '-'} · {formatDateTimeLabel(row.selectionConfirmedAt)}
+                              </div>
+                              {row.selectionReasonMemo ? (
+                                <div className={styles.tableSecondary}>{row.selectionReasonMemo}</div>
+                              ) : null}
+                            </>
+                          ) : (
+                            '-'
+                          )}
+                        </td>
+                        <td>
                           {[
                             row.isConflicted ? '충돌' : '',
                             row.isOutOfWindow ? '구간 밖' : '',
@@ -584,6 +641,18 @@ export function SchedulesSection({
                           ]
                             .filter(Boolean)
                             .join(', ') || '-'}
+                        </td>
+                        <td>
+                          {row.exceptionReasonCode || row.exceptionMemo ? (
+                            <>
+                              <div>{row.exceptionReasonCode || '-'}</div>
+                              {row.exceptionMemo ? (
+                                <div className={styles.tableSecondary}>{row.exceptionMemo}</div>
+                              ) : null}
+                            </>
+                          ) : (
+                            '-'
+                          )}
                         </td>
                         <td>
                           <button
@@ -695,6 +764,15 @@ export function SchedulesSection({
             <div className={styles.modalFieldWide}>
               <div className={styles.modalHint}>
                 허용 구간: {editingSchedule.windowStart} ~ {editingSchedule.windowEnd}
+              </div>
+            </div>
+            <div className={styles.modalFieldWide}>
+              <div className={styles.modalHint}>
+                요원 확정: {editingSchedule.selectionConfirmedByName || editingSchedule.assigneeName || '-'} / {formatDateTimeLabel(editingSchedule.selectionConfirmedAt)}
+              </div>
+              <div className={styles.modalHint}>
+                선택 사유: {editingSchedule.selectionReasonLabel || '-'}
+                {editingSchedule.selectionReasonMemo ? ` · ${editingSchedule.selectionReasonMemo}` : ''}
               </div>
             </div>
           </div>

@@ -117,6 +117,10 @@
   flex: 1 1 150px;
 }
 
+.memoField {
+  flex-basis: 100%;
+}
+
 .calendarGrid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));

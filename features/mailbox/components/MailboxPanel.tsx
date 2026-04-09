@@ -275,6 +275,12 @@ function canStartProviderOauth(provider: MailProviderStatus | undefined) {
   return provider.enabled && provider.isRedirectAllowed;
 }
 
+function buildProviderStatusTone(provider: MailProviderStatus | undefined) {
+  if (!provider || !provider.enabled) return 'missing';
+  if (!provider.isRedirectAllowed) return 'warning';
+  return 'ready';
+}
+
 function buildReplySubject(subject: string) {
   const normalized = subject.trim();
   if (!normalized) return '';
@@ -315,6 +321,15 @@ function deriveInitialView(input: { box: string | null; tab: MailboxTab; threadI
   if (input.box === 'reports') return 'compose' as const;
   if (input.threadId) return 'thread' as const;
   return 'list' as const;
+}
+
+function isCompactMailboxViewport() {
+  return typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches;
+}
+
+function formatSyncMeta(value: string | null) {
+  if (!value) return '아직 동기화 이력이 없습니다.';
+  return `최근 동기화 ${formatDateTime(value)}`;
 }
 
 export function MailboxPanel({
@@ -626,7 +641,7 @@ export function MailboxPanel({
   }, [hasConnectedAccounts, headquarterId, query, reportKey, selectedAccountId, siteId, tab, threadOffset]);
 
   useEffect(() => {
-    if (!hasConnectedAccounts || !selectedThreadId || view !== 'thread') {
+    if (!hasConnectedAccounts || !selectedThreadId) {
       setThreadDetail(null);
       return;
     }
@@ -641,7 +656,7 @@ export function MailboxPanel({
         setThreadLoading(false);
       }
     })();
-  }, [hasConnectedAccounts, selectedThreadId, view]);
+  }, [hasConnectedAccounts, selectedThreadId]);
 
   useEffect(() => {
     if (composeMode !== 'report' || !selectedReport?.reportKey) return;
@@ -666,7 +681,7 @@ export function MailboxPanel({
   const handleOpenThread = (threadId: string) => {
     setSelectedThreadId(threadId);
     setThreadDetail(null);
-    setView('thread');
+    setView(isCompactMailboxViewport() ? 'thread' : 'list');
   };
 
   const handleBackToList = () => {
@@ -920,7 +935,7 @@ export function MailboxPanel({
       setThreadTotal(nextThreads.total);
       if (composeMode === 'reply' && selectedThreadId) {
         setThreadDetail(normalizeMailThreadDetailUi(await fetchMailThreadDetail(selectedThreadId)));
-        setView('thread');
+        setView(isCompactMailboxViewport() ? 'thread' : 'list');
       } else {
         setView('list');
       }
@@ -982,526 +997,690 @@ export function MailboxPanel({
       })
       .sort((left, right) => (right.updatedAt || '').localeCompare(left.updatedAt || ''));
   }, [mode, reportOptions, reportSearch, reportSiteFilter]);
+  const googleStatusTone = buildProviderStatusTone(googleProviderStatus);
+  const naverStatusTone = buildProviderStatusTone(naverProviderStatus);
+  const selectedThreadSummary =
+    threadDetail?.thread || threads.find((item) => item.id === selectedThreadId) || null;
+  const selectedThreadCounterparty = selectedThreadSummary
+    ? buildThreadCounterparty(selectedThreadSummary, selectedAccount?.email || '')
+    : '';
+  const canSendMessage =
+    !!selectedAccount &&
+    (compose.toRecipients.length > 0 || isLikelyEmail(compose.toInput.trim())) &&
+    !!compose.subject.trim() &&
+    !!composePlainText.trim();
+  const mailboxLead =
+    mode === 'admin'
+      ? '발송 계정과 메시지 이력을 한 화면에서 보고, 보고서 커뮤니케이션까지 이어집니다.'
+      : '개인 연동 메일 계정으로 수신·발신 흐름을 확인하고 현장 보고서 발송에 활용할 수 있습니다.';
+  const splitViewClassName = [
+    localStyles.mailSplit,
+    view === 'thread' ? localStyles.mailSplitThreadFocused : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
-    <section className={`${styles.sectionCard} ${styles.listSectionCard}`}>
+    <section
+      className={`${styles.sectionCard} ${styles.listSectionCard}`}
+      data-mailbox-panel={showMailboxConnectGate ? 'gate' : 'workspace'}
+    >
       <div className={styles.sectionHeader}>
-        <div className={`${styles.sectionHeaderActions} ${localStyles.headerToolbar}`}>
-          <div className={localStyles.headerPrimaryRow}>
-            <div className={localStyles.sectionHeaderMeta}>
-              <h2 className={styles.sectionTitle}>{mode === 'admin' ? '통합 메일함' : '개인 메일함'}</h2>
-            </div>
-            <div className={localStyles.headerUtilityGroup}>
-              {!showMailboxConnectGate && view === 'list' ? (
-                <input
-                  aria-label="메일 검색"
-                  className={`app-input ${localStyles.searchField}`}
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder="제목, 본문, 주소 검색"
-                />
-              ) : null}
-              {!showMailboxConnectGate ? (
-                <div className={localStyles.headerPrimaryActions}>
-                  <button
-                    type="button"
-                    className={`app-button app-button-secondary ${localStyles.headerActionButton}`}
-                    onClick={() => void handleSync()}
-                  >
-                    새로 고침
-                  </button>
-                  <button
-                    type="button"
-                    className={`app-button app-button-primary ${localStyles.composeHeaderButton}`}
-                    onClick={() => handleOpenCompose()}
-                  >
-                    메일 보내기
-                  </button>
-                </div>
-              ) : null}
-            </div>
-          </div>
-          {!showMailboxConnectGate && view === 'list' && (hasMultipleAccounts || listScopeMeta.length > 0) ? (
-            <div className={localStyles.headerSecondaryRow}>
-              {hasMultipleAccounts ? (
-                <select
-                  className={`app-select ${localStyles.accountFilter}`}
-                  value={selectedAccountId}
-                  onChange={(event) => setSelectedAccountId(event.target.value)}
-                >
-                  <option value="">전체 계정</option>
-                  {accounts.map((account) => (
-                    <option key={account.id} value={account.id}>
-                      {account.mailboxLabel}
-                    </option>
-                  ))}
-                </select>
-              ) : null}
-              {hasMultipleAccounts && listScopeMeta.length > 0 ? (
-                <span className={localStyles.headerScope}>{listScopeMeta.join(' · ')}</span>
-              ) : null}
-            </div>
-          ) : null}
+        <div className={localStyles.sectionHeaderMeta}>
+          <h2 className={styles.sectionTitle}>{mode === 'admin' ? '통합 메일함' : '개인 메일함'}</h2>
+          <p className={localStyles.sectionLead}>{mailboxLead}</p>
         </div>
       </div>
 
       <div className={`${styles.sectionBody} ${localStyles.shell}`}>
         {error ? <div className={styles.bannerError}>{error}</div> : null}
         {notice ? <div className={styles.bannerNotice}>{notice}</div> : null}
-        <div className={`${localStyles.workspace} ${localStyles.workspaceSingle}`}>
-          <div className={localStyles.mainColumn}>
-
-        {!showMailboxConnectGate && view === 'list' && listScopeMeta.length > 0 ? (
-          <div className={localStyles.scopeRow}>
-            <span className={localStyles.scopeKicker}>현재 범위</span>
-            <strong className={localStyles.scopeValue}>{activeTabMeta.title}</strong>
-            <span className={localStyles.scopeText}>{listScopeMeta.join(' · ')}</span>
-          </div>
-        ) : null}
 
         {showMailboxConnectGate ? (
-          <div className={localStyles.accountWorkspace}>
-            <article className={localStyles.accountCard}>
-              <div className={localStyles.panelHeader}>
-                <div className={localStyles.panelHeading}>
-                  <strong className={localStyles.accountTitle}>메일 계정 로그인</strong>
-                  <span className={localStyles.accountMeta}>
-                    메일함을 사용하려면 먼저 개인 메일 계정을 연결해 주세요.
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  className={`app-button app-button-secondary ${localStyles.inlineActionButton}`}
-                  onClick={() => void handleRefreshAccountState()}
-                  disabled={accountStateLoading}
-                >
-                  상태 새로 고침
-                </button>
-              </div>
-              <div className={localStyles.providerStatusGrid}>
-                <article className={localStyles.providerStatusCard}>
-                  <div className={localStyles.accountTitleRow}>
-                    <strong className={localStyles.accountTitle}>지메일 로그인</strong>
-                    <span className={localStyles.inlineMeta}>{buildProviderStatusLabel(googleProviderStatus)}</span>
-                  </div>
-                  <span className={localStyles.accountMeta}>{buildProviderStatusDetail(googleProviderStatus)}</span>
-                  <div className={localStyles.sectionActions}>
-                    <button
-                      type="button"
-                      className={`app-button app-button-primary ${localStyles.primaryActionButton}`}
-                      onClick={() => void handleConnectGoogle()}
-                      disabled={accountStateLoading || oauthProvider === 'google' || !canStartGoogleOauth}
-                    >
-                      {oauthProvider === 'google'
-                        ? '이동 중...'
-                        : canStartGoogleOauth
-                          ? '지메일 로그인'
-                          : '구글 설정 확인 필요'}
-                    </button>
-                  </div>
-                </article>
-                <article className={localStyles.providerStatusCard}>
-                  <div className={localStyles.accountTitleRow}>
-                    <strong className={localStyles.accountTitle}>네이버 로그인</strong>
-                    <span className={localStyles.inlineMeta}>{buildProviderStatusLabel(naverProviderStatus)}</span>
-                  </div>
-                  <span className={localStyles.accountMeta}>{buildProviderStatusDetail(naverProviderStatus)}</span>
-                  <div className={localStyles.sectionActions}>
-                    <button
-                      type="button"
-                      className={`app-button app-button-primary ${localStyles.primaryActionButton}`}
-                      onClick={() => void handleConnectNaverOauth()}
-                      disabled={accountStateLoading || oauthProvider === 'naver_mail' || !canStartNaverOauth}
-                    >
-                      {oauthProvider === 'naver_mail'
-                        ? '이동 중...'
-                        : canStartNaverOauth
-                          ? '네이버 로그인'
-                          : '네이버 설정 확인 필요'}
-                    </button>
-                  </div>
-                </article>
-              </div>
-              <span className={localStyles.accountMeta}>
-                로그인 완료 후 다시 메일함으로 돌아와 받은편지함과 발송 기능을 바로 사용할 수 있습니다.
-              </span>
-            </article>
-          </div>
-        ) : view === 'compose' ? (
-          <section className={localStyles.stageCard}>
-            <div className={localStyles.composeSectionHeader}>
-              <h3 className={localStyles.panelTitle}>{composeTitle}</h3>
-              {hasMultipleAccounts ? (
-                <label className={localStyles.composeAccountInline}>
-                  <span className={localStyles.fieldLabel}>보내는 계정</span>
-                  <select
-                    className="app-select"
-                    value={selectedAccountId}
-                    onChange={(event) => setSelectedAccountId(event.target.value)}
-                  >
-                    {accounts.map((account) => (
-                      <option key={account.id} value={account.id}>
-                        {account.mailboxLabel}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              ) : null}
-            </div>
-            <div className={localStyles.composeDivider} />
-            <div className={localStyles.composeGrid}>
-              <label className={localStyles.fieldWide}>
-                <span className={localStyles.fieldLabel}>받는 사람</span>
-                <div className={localStyles.recipientInputShell}>
-                  {compose.toRecipients.map((recipient) => (
-                    <span key={recipient} className={localStyles.recipientChip}>
-                      <span>{recipient}</span>
-                      <button
-                        type="button"
-                        className={localStyles.recipientChipRemove}
-                        onClick={() => handleRemoveRecipient(recipient)}
-                        aria-label={`${recipient} 제거`}
-                      >
-                        x
-                      </button>
-                    </span>
-                  ))}
-                  <input
-                    className={localStyles.recipientInput}
-                    value={compose.toInput}
-                    onBlur={handleRecipientBlur}
-                    onChange={(event) => handleRecipientInputChange(event.target.value)}
-                    onKeyDown={handleRecipientKeyDown}
-                    placeholder={compose.toRecipients.length === 0 ? 'example@domain.com 입력 후 띄어쓰기' : ''}
-                  />
-                </div>
-              </label>
-
-              <label className={localStyles.fieldWide}>
-                <span className={localStyles.fieldLabel}>제목</span>
-                <input
-                  className="app-input"
-                  value={compose.subject}
-                  onChange={(event) => setCompose((current) => ({ ...current, subject: event.target.value }))}
-                  placeholder="메일 제목을 입력하세요."
-                />
-              </label>
-
-              <div className={localStyles.fieldWide}>
-                <span className={localStyles.fieldLabel}>본문</span>
-                <div className={localStyles.composeToolbar}>
-                  <div className={localStyles.composeToolbarGroup}>
-                    <button
-                      type="button"
-                      className={localStyles.toolbarButton}
-                      onClick={() => handleComposerCommand('bold')}
-                    >
-                      B
-                    </button>
-                    <button
-                      type="button"
-                      className={localStyles.toolbarButton}
-                      onClick={() => handleComposerCommand('italic')}
-                    >
-                      I
-                    </button>
-                    <button
-                      type="button"
-                      className={localStyles.toolbarButton}
-                      onClick={() => handleComposerCommand('underline')}
-                    >
-                      U
-                    </button>
-                    <input
-                      type="color"
-                      className={localStyles.colorInput}
-                      aria-label="텍스트 색상"
-                      onChange={(event) => handleComposerCommand('foreColor', event.target.value)}
-                    />
-                  </div>
-                  <div className={localStyles.composeToolbarGroup}>
-                    <button
-                      type="button"
-                      className={localStyles.toolbarButton}
-                      onClick={() => handleComposerCommand('insertUnorderedList')}
-                    >
-                      글머리표
-                    </button>
-                    <button
-                      type="button"
-                      className={localStyles.toolbarButton}
-                      onClick={() => handleComposerCommand('formatBlock', 'blockquote')}
-                    >
-                      인용
-                    </button>
-                    <button
-                      type="button"
-                      className={localStyles.toolbarButton}
-                      onClick={handleComposerLink}
-                    >
-                      링크
-                    </button>
-                  </div>
-                </div>
-                <div
-                  ref={composerRef}
-                  className={localStyles.composeEditor}
-                  contentEditable
-                  suppressContentEditableWarning
-                  onInput={handleComposerInput}
-                  data-placeholder={composeMode === 'reply' ? '답장 내용을 입력하세요.' : '메일 내용을 입력하세요.'}
-                />
-                <div className={localStyles.composeSupportArea}>
-                  <div className={localStyles.composeSupportActions}>
-                    <button
-                      type="button"
-                      className={localStyles.toolbarButton}
-                      onClick={() => attachmentInputRef.current?.click()}
-                    >
-                      파일 첨부
-                    </button>
-                    <button
-                      type="button"
-                      className={`${localStyles.toolbarButton} ${localStyles.reportPickerButton}`}
-                      onClick={handleOpenReportPicker}
-                    >
-                      보고서 선택하기
-                    </button>
-                    <input
-                      ref={attachmentInputRef}
-                      type="file"
-                      multiple
-                      hidden
-                      onChange={handleAttachmentSelect}
-                    />
-                  </div>
-
-                  {composeMode === 'report' && selectedReport ? (
-                    <div className={localStyles.composeSupportBlock}>
-                      <span className={localStyles.fieldLabel}>선택 보고서</span>
-                      <div className={localStyles.reportSelectionCard}>
-                        <div className={localStyles.reportSelectionMain}>
-                          <strong className={localStyles.reportSelectionTitle}>
-                            {selectedReport.reportTitle || selectedReport.reportKey}
-                          </strong>
-                          <span className={localStyles.accountMeta}>
-                            {selectedReport.siteName || '-'}
-                            {selectedReport.headquarterName ? ` · ${selectedReport.headquarterName}` : ''}
-                            {selectedReport.visitDate ? ` · ${selectedReport.visitDate}` : ''}
-                          </span>
-                        </div>
-                        <button
-                          type="button"
-                          className={`app-button app-button-secondary ${localStyles.inlineActionButton}`}
-                          onClick={handleClearSelectedReport}
-                        >
-                          선택 해제
-                        </button>
-                      </div>
-                    </div>
-                  ) : null}
-
-                  {attachments.length > 0 ? (
-                    <div className={localStyles.composeSupportBlock}>
-                      <span className={localStyles.fieldLabel}>첨부 파일</span>
-                      <div className={localStyles.attachmentList}>
-                        {attachments.map((attachment) => (
-                          <div key={attachment.id} className={localStyles.attachmentChip}>
-                            <span>
-                              {attachment.file.name} · {formatFileSize(attachment.file.size)}
-                            </span>
-                            <button
-                              type="button"
-                              className={localStyles.recipientChipRemove}
-                              onClick={() => handleRemoveAttachment(attachment.id)}
-                              aria-label={`${attachment.file.name} 제거`}
-                            >
-                              x
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-
-              <div className={localStyles.composeFooter}>
-                <div className={localStyles.composeActions}>
-                  <button
-                    type="button"
-                    className={`app-button app-button-primary ${localStyles.submitButton}`}
-                    onClick={() => void handleSend()}
-                    disabled={
-                      !selectedAccount ||
-                      (compose.toRecipients.length === 0 && !isLikelyEmail(compose.toInput.trim())) ||
-                      !compose.subject.trim() ||
-                      !composePlainText.trim()
-                    }
-                  >
-                    메일 발송
-                  </button>
-                </div>
-              </div>
-            </div>
-          </section>
-        ) : view === 'list' ? (
-          <section className={styles.tableShell}>
-            <div className={localStyles.mailTableHeader}>
-              <strong className={localStyles.panelTitle}>{activeTabMeta.title}</strong>
-              <span className={localStyles.inlineMeta}>
-                표시 {threadRangeStart}-{threadRangeEnd} / 전체 {threadTotal}건
-              </span>
-            </div>
-            {threads.length === 0 ? (
-              <div className={styles.tableEmpty}>{threadEmptyMessage}</div>
-            ) : (
-              <>
-                <div className={styles.tableWrap}>
-                  <table className={styles.table}>
-                    <thead>
-                      <tr>
-                        <th>{listPrimaryColumnLabel}</th>
-                        <th>제목</th>
-                        <th>첨부</th>
-                        <th>일시</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {threads.map((thread) => {
-                        const partyLabel = buildThreadCounterparty(thread, selectedAccount?.email || '');
-                        const isUnread = tab === 'inbox' && thread.unreadCount > 0;
-                        return (
-                          <tr
-                            key={thread.id}
-                            className={`${styles.tableClickableRow} ${isUnread ? localStyles.mailRowUnread : ''}`}
-                            tabIndex={0}
-                            onClick={() => handleOpenThread(thread.id)}
-                            onKeyDown={(event) => {
-                              if (event.key === 'Enter' || event.key === ' ') {
-                                event.preventDefault();
-                                handleOpenThread(thread.id);
-                              }
-                            }}
-                          >
-                            <td>
-                              <span className={styles.tablePrimary}>{partyLabel}</span>
-                            </td>
-                            <td>
-                              <span className={styles.tablePrimary}>{thread.subject || '(제목 없음)'}</span>
-                            </td>
-                            <td className={localStyles.mailAttachmentCell}>-</td>
-                            <td className={localStyles.mailDateCell}>{buildThreadTimestamp(thread)}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-                <div className={styles.paginationRow}>
-                  <span className={localStyles.paginationMeta}>
-                    {threadPage} / {threadPageCount}
-                  </span>
-                  <button
-                    type="button"
-                    className={`app-button app-button-secondary ${localStyles.paginationButton}`}
-                    onClick={() => setThreadOffset((current) => Math.max(0, current - THREAD_PAGE_SIZE))}
-                    disabled={threadOffset === 0}
-                  >
-                    이전
-                  </button>
-                  <button
-                    type="button"
-                    className={`app-button app-button-secondary ${localStyles.paginationButton}`}
-                    onClick={() =>
-                      setThreadOffset((current) =>
-                        current + THREAD_PAGE_SIZE >= threadTotal ? current : current + THREAD_PAGE_SIZE,
-                      )
-                    }
-                    disabled={threadOffset + THREAD_PAGE_SIZE >= threadTotal}
-                  >
-                    다음
-                  </button>
-                </div>
-              </>
-            )}
-          </section>
-        ) : view === 'thread' ? (
-          <section className={localStyles.stageCard}>
-            <div className={localStyles.stageHeader}>
-              <div className={localStyles.stageHeading}>
-                <div className={localStyles.stageMetaRow}>
-                  <button
-                    type="button"
-                    className={`app-button app-button-secondary ${localStyles.backButton}`}
-                    onClick={handleBackToList}
-                  >
-                    목록
-                  </button>
-                  <span className={localStyles.inlineMeta}>{activeTabMeta.title}</span>
-                </div>
-                <h3 className={localStyles.panelTitle}>
-                  {threadDetail ? threadDetail.thread.subject || '(제목 없음)' : '메일 상세'}
-                </h3>
-                <p className={localStyles.panelDescription}>
-                  {threadDetail
-                    ? `${buildThreadCounterparty(threadDetail.thread, selectedAccount?.email || '')} · ${buildThreadTimestamp(threadDetail.thread)}`
-                    : detailEmptyMessage}
+          <div className={localStyles.connectGate} data-mailbox-connect-gate>
+            <div className={localStyles.connectHero}>
+              <div className={localStyles.connectHeroCopy}>
+                <span className={localStyles.connectEyebrow}>MAIL ACCESS</span>
+                <h3 className={localStyles.connectTitle}>메일 계정 로그인</h3>
+                <p className={localStyles.connectDescription}>
+                  메일 계정을 연결하면 받은편지함, 보낸편지함, 보고서 발송까지 한 화면에서 이어서 사용할 수 있습니다.
                 </p>
               </div>
-              {threadDetail ? (
-                <div className={localStyles.stageActions}>
+              <button
+                type="button"
+                className={`app-button app-button-secondary ${localStyles.inlineActionButton}`}
+                onClick={() => void handleRefreshAccountState()}
+                disabled={accountStateLoading}
+              >
+                상태 새로 고침
+              </button>
+            </div>
+
+            <div className={localStyles.connectHighlights}>
+              <div className={localStyles.connectHighlightCard}>
+                <strong>수신·발신 이력 통합</strong>
+                <span>보고서와 연결된 메일 스레드를 한 흐름으로 확인합니다.</span>
+              </div>
+              <div className={localStyles.connectHighlightCard}>
+                <strong>계정 상태 즉시 점검</strong>
+                <span>준비 완료, 설정 필요, 리디렉션 확인 상태를 바로 파악할 수 있습니다.</span>
+              </div>
+            </div>
+
+            <div className={localStyles.providerStatusGrid}>
+              <article className={localStyles.providerActionCard}>
+                <div className={localStyles.providerActionHeader}>
+                  <div className={localStyles.providerActionTitle}>
+                    <strong>지메일 로그인</strong>
+                    <span>Google 메일 계정을 연결해 현장 발송과 수신 확인에 사용합니다.</span>
+                  </div>
+                  <span
+                    className={`${localStyles.providerStatusBadge} ${
+                      googleStatusTone === 'ready'
+                        ? localStyles.providerStatusReady
+                        : googleStatusTone === 'warning'
+                          ? localStyles.providerStatusWarning
+                          : localStyles.providerStatusMissing
+                    }`}
+                  >
+                    {buildProviderStatusLabel(googleProviderStatus)}
+                  </span>
+                </div>
+                <p className={localStyles.providerActionDetail}>
+                  {buildProviderStatusDetail(googleProviderStatus)}
+                </p>
+                <button
+                  type="button"
+                  className={`app-button app-button-primary ${localStyles.providerActionButton}`}
+                  onClick={() => void handleConnectGoogle()}
+                  disabled={accountStateLoading || oauthProvider === 'google' || !canStartGoogleOauth}
+                >
+                  {oauthProvider === 'google'
+                    ? '이동 중...'
+                    : canStartGoogleOauth
+                      ? '지메일 로그인'
+                      : '구글 설정 확인 필요'}
+                </button>
+              </article>
+
+              <article className={localStyles.providerActionCard}>
+                <div className={localStyles.providerActionHeader}>
+                  <div className={localStyles.providerActionTitle}>
+                    <strong>네이버 로그인</strong>
+                    <span>네이버 메일 계정을 연결해 현장 보고서 발송 흐름을 이어갑니다.</span>
+                  </div>
+                  <span
+                    className={`${localStyles.providerStatusBadge} ${
+                      naverStatusTone === 'ready'
+                        ? localStyles.providerStatusReady
+                        : naverStatusTone === 'warning'
+                          ? localStyles.providerStatusWarning
+                          : localStyles.providerStatusMissing
+                    }`}
+                  >
+                    {buildProviderStatusLabel(naverProviderStatus)}
+                  </span>
+                </div>
+                <p className={localStyles.providerActionDetail}>
+                  {buildProviderStatusDetail(naverProviderStatus)}
+                </p>
+                <button
+                  type="button"
+                  className={`app-button app-button-primary ${localStyles.providerActionButton}`}
+                  onClick={() => void handleConnectNaverOauth()}
+                  disabled={accountStateLoading || oauthProvider === 'naver_mail' || !canStartNaverOauth}
+                >
+                  {oauthProvider === 'naver_mail'
+                    ? '이동 중...'
+                    : canStartNaverOauth
+                      ? '네이버 로그인'
+                      : '네이버 설정 확인 필요'}
+                </button>
+              </article>
+            </div>
+          </div>
+        ) : (
+          <div className={localStyles.mailWorkspace} data-mailbox-workspace>
+            <div className={localStyles.mailAppBar}>
+              <div className={localStyles.mailAppBarMain}>
+                <div className={localStyles.mailAppBarHeading}>
+                  <span className={localStyles.mailAppBarKicker}>{isComposeView ? 'Compose' : activeTabMeta.title}</span>
+                  <h3 className={localStyles.mailAppBarTitle}>
+                    {isComposeView
+                      ? composeTitle
+                      : selectedAccount?.mailboxLabel || (mode === 'admin' ? '통합 메일함' : '개인 메일함')}
+                  </h3>
+                  <p className={localStyles.mailAppBarDescription}>
+                    {selectedAccount
+                      ? formatSyncMeta(selectedAccount.lastSyncedAt)
+                      : '연결된 메일 계정이 없습니다.'}
+                  </p>
+                </div>
+
+                <div className={localStyles.mailAppBarActions}>
+                  {!isComposeView ? (
+                    <input
+                      aria-label="메일 검색"
+                      className={`app-input ${localStyles.searchField}`}
+                      value={query}
+                      onChange={(event) => setQuery(event.target.value)}
+                      placeholder="보낸 사람, 제목, 본문 검색"
+                    />
+                  ) : null}
                   <button
                     type="button"
-                    className={`app-button app-button-primary ${localStyles.submitButton}`}
-                    onClick={handleReply}
+                    className={`app-button app-button-secondary ${localStyles.headerActionButton}`}
+                    onClick={() => (isComposeView ? setView('list') : void handleSync())}
                   >
-                    답장
+                    {isComposeView ? '메일함으로 돌아가기' : '새로 고침'}
                   </button>
-                </div>
-              ) : null}
-            </div>
-            {threadDetail ? (
-              <>
-                <div className={localStyles.messageList}>
-                  {threadDetail.messages.map((message) => (
-                    <article
-                      key={message.id}
-                      className={`${localStyles.messageCard} ${
-                        message.direction === 'incoming'
-                          ? localStyles.messageIncoming
-                          : localStyles.messageOutgoing
-                      }`}
+                  {!isComposeView ? (
+                    <button
+                      type="button"
+                      className={`app-button app-button-primary ${localStyles.composeHeaderButton}`}
+                      onClick={() => handleOpenCompose()}
                     >
-                      <strong className={localStyles.threadSubject}>
-                        {message.direction === 'incoming' ? '수신' : '발신'} · {message.subject}
-                      </strong>
-                      <span className={localStyles.messageMeta}>
-                        {message.fromEmail} · {formatDateTime(message.sentAt || message.createdAt)}
-                      </span>
-                      <div
-                        className={localStyles.messageBody}
-                        dangerouslySetInnerHTML={{ __html: formatMailBodyHtml(message.body) }}
-                      />
-                    </article>
-                  ))}
-                </div>
-                <div className={localStyles.detailMetaRow}>
-                  <span className={localStyles.detailHint}>
-                    읽지 않은 메일 {threadDetail.thread.unreadCount}건
-                  </span>
-                  {threadDetail.thread.reportKey ? (
-                    <span className={localStyles.detailHint}>보고서 {threadDetail.thread.reportKey}</span>
+                      메일 보내기
+                    </button>
                   ) : null}
                 </div>
-              </>
-            ) : (
-              <div className={localStyles.emptyState}>{detailEmptyMessage}</div>
-            )}
-          </section>
-        ) : null}
+              </div>
+            </div>
+
+            <div className={localStyles.mailBody}>
+              <aside className={localStyles.mailRail}>
+                <div className={localStyles.railSection}>
+                  <button
+                    type="button"
+                    className={`app-button app-button-primary ${localStyles.railComposeButton}`}
+                    onClick={() => handleOpenCompose()}
+                  >
+                    새 메일 작성
+                  </button>
+                </div>
+
+                <div className={localStyles.railSection}>
+                  <span className={localStyles.railSectionTitle}>메일함</span>
+                  <div className={localStyles.railNavList}>
+                    {(['inbox', 'sent'] as MailboxTab[]).map((option) => (
+                      <button
+                        key={option}
+                        type="button"
+                        className={`${localStyles.railNavButton} ${
+                          tab === option ? localStyles.railNavButtonActive : ''
+                        }`}
+                        onClick={() => {
+                          setTab(option);
+                          setView('list');
+                        }}
+                      >
+                        <span>{MAILBOX_TAB_META[option].title}</span>
+                        <span className={localStyles.railNavMeta}>{tab === option ? threadTotal : ''}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className={localStyles.railSection}>
+                  <span className={localStyles.railSectionTitle}>연결 계정</span>
+                  {hasMultipleAccounts ? (
+                    <select
+                      className={`app-select ${localStyles.accountFilter}`}
+                      value={selectedAccountId}
+                      onChange={(event) => setSelectedAccountId(event.target.value)}
+                    >
+                      <option value="">전체 계정</option>
+                      {accounts.map((account) => (
+                        <option key={account.id} value={account.id}>
+                          {account.mailboxLabel}
+                        </option>
+                      ))}
+                    </select>
+                  ) : null}
+
+                  {selectedAccount ? (
+                    <div className={localStyles.railAccountCard}>
+                      <strong data-mailbox-sensitive>{selectedAccount.displayName || selectedAccount.mailboxLabel}</strong>
+                      <span data-mailbox-sensitive>{selectedAccount.email}</span>
+                      <span>{formatSyncMeta(selectedAccount.lastSyncedAt)}</span>
+                    </div>
+                  ) : null}
+
+                  {listScopeMeta.length > 0 ? (
+                    <div className={localStyles.railTagList}>
+                      {listScopeMeta.map((item) => (
+                        <span key={item} className={localStyles.railTag}>
+                          {item}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              </aside>
+
+              <div className={localStyles.mailStage}>
+                {isComposeView ? (
+                  <section className={localStyles.composeWorkspace} data-mailbox-compose>
+                    <div className={localStyles.composeSectionHeader}>
+                      <div className={localStyles.composeHeadingBlock}>
+                        <strong className={localStyles.panelTitle}>{composeTitle}</strong>
+                        <span className={localStyles.accountMeta}>
+                          {composeMode === 'reply'
+                            ? '기존 스레드에 이어서 답장을 보냅니다.'
+                            : composeMode === 'report'
+                              ? '보고서와 연결된 메일을 작성합니다.'
+                              : '수신자와 제목을 입력하고 바로 발송할 수 있습니다.'}
+                        </span>
+                      </div>
+
+                      {hasMultipleAccounts ? (
+                        <label className={localStyles.composeAccountInline}>
+                          <span className={localStyles.fieldLabel}>보내는 계정</span>
+                          <select
+                            className="app-select"
+                            value={selectedAccountId}
+                            onChange={(event) => setSelectedAccountId(event.target.value)}
+                          >
+                            {accounts.map((account) => (
+                              <option key={account.id} value={account.id}>
+                                {account.mailboxLabel}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      ) : null}
+                    </div>
+
+                    <div className={localStyles.composeGrid}>
+                      <label className={localStyles.fieldWide}>
+                        <span className={localStyles.fieldLabel}>받는 사람</span>
+                        <div className={localStyles.recipientInputShell}>
+                          {compose.toRecipients.map((recipient) => (
+                            <span key={recipient} className={localStyles.recipientChip}>
+                              <span data-mailbox-sensitive>{recipient}</span>
+                              <button
+                                type="button"
+                                className={localStyles.recipientChipRemove}
+                                onClick={() => handleRemoveRecipient(recipient)}
+                                aria-label={`${recipient} 제거`}
+                              >
+                                x
+                              </button>
+                            </span>
+                          ))}
+                          <input
+                            className={localStyles.recipientInput}
+                            value={compose.toInput}
+                            onBlur={handleRecipientBlur}
+                            onChange={(event) => handleRecipientInputChange(event.target.value)}
+                            onKeyDown={handleRecipientKeyDown}
+                            placeholder={
+                              compose.toRecipients.length === 0 ? 'example@domain.com 입력 후 띄어쓰기' : ''
+                            }
+                          />
+                        </div>
+                      </label>
+
+                      <label className={localStyles.fieldWide}>
+                        <span className={localStyles.fieldLabel}>제목</span>
+                        <input
+                          className="app-input"
+                          value={compose.subject}
+                          onChange={(event) => setCompose((current) => ({ ...current, subject: event.target.value }))}
+                          placeholder="메일 제목을 입력하세요."
+                        />
+                      </label>
+
+                      <div className={localStyles.fieldWide}>
+                        <span className={localStyles.fieldLabel}>본문</span>
+                        <div className={localStyles.composeToolbar}>
+                          <div className={localStyles.composeToolbarGroup}>
+                            <button
+                              type="button"
+                              className={localStyles.toolbarButton}
+                              onClick={() => handleComposerCommand('bold')}
+                            >
+                              B
+                            </button>
+                            <button
+                              type="button"
+                              className={localStyles.toolbarButton}
+                              onClick={() => handleComposerCommand('italic')}
+                            >
+                              I
+                            </button>
+                            <button
+                              type="button"
+                              className={localStyles.toolbarButton}
+                              onClick={() => handleComposerCommand('underline')}
+                            >
+                              U
+                            </button>
+                            <input
+                              type="color"
+                              className={localStyles.colorInput}
+                              aria-label="텍스트 색상"
+                              onChange={(event) => handleComposerCommand('foreColor', event.target.value)}
+                            />
+                          </div>
+                          <div className={localStyles.composeToolbarGroup}>
+                            <button
+                              type="button"
+                              className={localStyles.toolbarButton}
+                              onClick={() => handleComposerCommand('insertUnorderedList')}
+                            >
+                              글머리표
+                            </button>
+                            <button
+                              type="button"
+                              className={localStyles.toolbarButton}
+                              onClick={() => handleComposerCommand('formatBlock', 'blockquote')}
+                            >
+                              인용
+                            </button>
+                            <button
+                              type="button"
+                              className={localStyles.toolbarButton}
+                              onClick={handleComposerLink}
+                            >
+                              링크
+                            </button>
+                          </div>
+                        </div>
+
+                        <div
+                          ref={composerRef}
+                          className={localStyles.composeEditor}
+                          contentEditable
+                          suppressContentEditableWarning
+                          onInput={handleComposerInput}
+                          data-placeholder={
+                            composeMode === 'reply' ? '답장 내용을 입력하세요.' : '메일 내용을 입력하세요.'
+                          }
+                          data-mailbox-sensitive
+                        />
+
+                        <div className={localStyles.composeSupportArea}>
+                          <div className={localStyles.composeSupportActions}>
+                            <button
+                              type="button"
+                              className={localStyles.toolbarButton}
+                              onClick={() => attachmentInputRef.current?.click()}
+                            >
+                              파일 첨부
+                            </button>
+                            <button
+                              type="button"
+                              className={`${localStyles.toolbarButton} ${localStyles.reportPickerButton}`}
+                              onClick={handleOpenReportPicker}
+                            >
+                              보고서 선택하기
+                            </button>
+                            <input
+                              ref={attachmentInputRef}
+                              type="file"
+                              multiple
+                              hidden
+                              onChange={handleAttachmentSelect}
+                            />
+                          </div>
+
+                          {composeMode === 'report' && selectedReport ? (
+                            <div className={localStyles.composeSupportBlock}>
+                              <span className={localStyles.fieldLabel}>선택 보고서</span>
+                              <div className={localStyles.reportSelectionCard}>
+                                <div className={localStyles.reportSelectionMain}>
+                                  <strong className={localStyles.reportSelectionTitle}>
+                                    {selectedReport.reportTitle || selectedReport.reportKey}
+                                  </strong>
+                                  <span className={localStyles.accountMeta}>
+                                    {selectedReport.siteName || '-'}
+                                    {selectedReport.headquarterName ? ` · ${selectedReport.headquarterName}` : ''}
+                                    {selectedReport.visitDate ? ` · ${selectedReport.visitDate}` : ''}
+                                  </span>
+                                </div>
+                                <button
+                                  type="button"
+                                  className={`app-button app-button-secondary ${localStyles.inlineActionButton}`}
+                                  onClick={handleClearSelectedReport}
+                                >
+                                  선택 해제
+                                </button>
+                              </div>
+                            </div>
+                          ) : null}
+
+                          {attachments.length > 0 ? (
+                            <div className={localStyles.composeSupportBlock}>
+                              <span className={localStyles.fieldLabel}>첨부 파일</span>
+                              <div className={localStyles.attachmentList}>
+                                {attachments.map((attachment) => (
+                                  <div key={attachment.id} className={localStyles.attachmentChip}>
+                                    <span data-mailbox-sensitive>
+                                      {attachment.file.name} · {formatFileSize(attachment.file.size)}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      className={localStyles.recipientChipRemove}
+                                      onClick={() => handleRemoveAttachment(attachment.id)}
+                                      aria-label={`${attachment.file.name} 제거`}
+                                    >
+                                      x
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      <div className={localStyles.composeFooter}>
+                        <div className={localStyles.composeFooterMeta}>
+                          <span className={localStyles.inlineMeta}>
+                            {selectedAccount ? `${selectedAccount.mailboxLabel} 계정 사용` : '메일 계정 연결 필요'}
+                          </span>
+                        </div>
+                        <div className={localStyles.composeActions}>
+                          <button
+                            type="button"
+                            className={`app-button app-button-primary ${localStyles.submitButton}`}
+                            onClick={() => void handleSend()}
+                            disabled={!canSendMessage}
+                          >
+                            메일 발송
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+                ) : (
+                  <div className={splitViewClassName}>
+                    <section className={localStyles.mailListPane} data-mailbox-thread-list>
+                      <div className={localStyles.listPaneHeader}>
+                        <div className={localStyles.listPaneHeading}>
+                          <strong className={localStyles.panelTitle}>{activeTabMeta.title}</strong>
+                          <span className={localStyles.inlineMeta}>
+                            표시 {threadRangeStart}-{threadRangeEnd} / 전체 {threadTotal}건
+                          </span>
+                        </div>
+                      </div>
+
+                      {threads.length === 0 ? (
+                        <div className={localStyles.emptyState}>{threadEmptyMessage}</div>
+                      ) : (
+                        <>
+                          <div className={localStyles.threadList}>
+                            {threads.map((thread) => {
+                              const partyLabel = buildThreadCounterparty(thread, selectedAccount?.email || '');
+                              const isUnread = tab === 'inbox' && thread.unreadCount > 0;
+                              return (
+                                <button
+                                  key={thread.id}
+                                  type="button"
+                                  className={`${localStyles.threadRow} ${
+                                    thread.id === selectedThreadId ? localStyles.threadRowActive : ''
+                                  } ${isUnread ? localStyles.threadRowUnread : ''}`}
+                                  data-mailbox-thread-row
+                                  onClick={() => handleOpenThread(thread.id)}
+                                >
+                                  <div className={localStyles.threadRowHeader}>
+                                    <strong className={localStyles.threadCounterparty} data-mailbox-sensitive>
+                                      {partyLabel}
+                                    </strong>
+                                    <span className={localStyles.threadTime}>{buildThreadTimestamp(thread)}</span>
+                                  </div>
+                                  <div className={localStyles.threadRowBody}>
+                                    <strong className={localStyles.threadSubject} data-mailbox-sensitive>
+                                      {thread.subject || '(제목 없음)'}
+                                    </strong>
+                                    {thread.unreadCount > 0 ? (
+                                      <span className={localStyles.threadUnreadBadge}>{thread.unreadCount}</span>
+                                    ) : null}
+                                  </div>
+                                  <p className={localStyles.threadExcerpt} data-mailbox-sensitive>
+                                    {thread.snippet || '본문 미리보기가 없습니다.'}
+                                  </p>
+                                  <div className={localStyles.threadTagRow}>
+                                    <span className={localStyles.threadTag}>{listPrimaryColumnLabel}</span>
+                                    {thread.reportKey ? (
+                                      <span className={localStyles.threadTag}>보고서 연결</span>
+                                    ) : null}
+                                    {thread.messageCount > 1 ? (
+                                      <span className={localStyles.threadTag}>메시지 {thread.messageCount}건</span>
+                                    ) : null}
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          <div className={localStyles.paginationBar}>
+                            <span className={localStyles.paginationMeta}>
+                              {threadPage} / {threadPageCount}
+                            </span>
+                            <div className={localStyles.paginationActions}>
+                              <button
+                                type="button"
+                                className={`app-button app-button-secondary ${localStyles.paginationButton}`}
+                                onClick={() => setThreadOffset((current) => Math.max(0, current - THREAD_PAGE_SIZE))}
+                                disabled={threadOffset === 0}
+                              >
+                                이전
+                              </button>
+                              <button
+                                type="button"
+                                className={`app-button app-button-secondary ${localStyles.paginationButton}`}
+                                onClick={() =>
+                                  setThreadOffset((current) =>
+                                    current + THREAD_PAGE_SIZE >= threadTotal
+                                      ? current
+                                      : current + THREAD_PAGE_SIZE,
+                                  )
+                                }
+                                disabled={threadOffset + THREAD_PAGE_SIZE >= threadTotal}
+                              >
+                                다음
+                              </button>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </section>
+
+                    <section className={localStyles.mailDetailPane} data-mailbox-detail>
+                      <div className={localStyles.detailPaneHeader}>
+                        <div className={localStyles.detailPaneHeading}>
+                          <div className={localStyles.stageMetaRow}>
+                            <button
+                              type="button"
+                              className={`app-button app-button-secondary ${localStyles.backButton}`}
+                              onClick={handleBackToList}
+                            >
+                              목록
+                            </button>
+                            <span className={localStyles.inlineMeta}>{activeTabMeta.title}</span>
+                          </div>
+                          <h3 className={localStyles.detailSubject} data-mailbox-sensitive>
+                            {selectedThreadSummary ? selectedThreadSummary.subject || '(제목 없음)' : '메일 상세'}
+                          </h3>
+                          <p className={localStyles.detailParticipants}>
+                            {selectedThreadSummary
+                              ? `${selectedThreadCounterparty} · ${buildThreadTimestamp(selectedThreadSummary)}`
+                              : detailEmptyMessage}
+                          </p>
+                        </div>
+
+                        {threadDetail ? (
+                          <button
+                            type="button"
+                            className={`app-button app-button-primary ${localStyles.submitButton}`}
+                            onClick={handleReply}
+                          >
+                            답장
+                          </button>
+                        ) : null}
+                      </div>
+
+                      {threadDetail ? (
+                        <>
+                          <div className={localStyles.detailMetaPanel}>
+                            <span className={localStyles.detailMetaChip}>
+                              읽지 않은 메일 {threadDetail.thread.unreadCount}건
+                            </span>
+                            {threadDetail.thread.reportKey ? (
+                              <span className={localStyles.detailMetaChip}>
+                                보고서 {threadDetail.thread.reportKey}
+                              </span>
+                            ) : null}
+                            <span className={localStyles.detailMetaChip}>
+                              메시지 {threadDetail.messages.length}건
+                            </span>
+                          </div>
+
+                          <div className={localStyles.messageTimeline}>
+                            {threadDetail.messages.map((message) => (
+                              <article
+                                key={message.id}
+                                className={`${localStyles.messageBubble} ${
+                                  message.direction === 'incoming'
+                                    ? localStyles.messageIncoming
+                                    : localStyles.messageOutgoing
+                                }`}
+                              >
+                                <div className={localStyles.messageBubbleHeader}>
+                                  <div className={localStyles.messageBubbleHeading}>
+                                    <strong>{message.direction === 'incoming' ? '수신' : '발신'}</strong>
+                                    <span className={localStyles.messageMeta} data-mailbox-sensitive>
+                                      {message.fromName || message.fromEmail}
+                                    </span>
+                                  </div>
+                                  <span className={localStyles.messageMeta}>
+                                    {formatDateTime(message.sentAt || message.createdAt)}
+                                  </span>
+                                </div>
+                                <strong className={localStyles.messageSubject} data-mailbox-sensitive>
+                                  {message.subject}
+                                </strong>
+                                <div
+                                  className={localStyles.messageBody}
+                                  data-mailbox-sensitive
+                                  dangerouslySetInnerHTML={{ __html: formatMailBodyHtml(message.body) }}
+                                />
+                              </article>
+                            ))}
+                          </div>
+                        </>
+                      ) : (
+                        <div className={localStyles.emptyState}>{detailEmptyMessage}</div>
+                      )}
+                    </section>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       <AppModal

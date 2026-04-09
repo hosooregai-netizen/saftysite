@@ -156,6 +156,11 @@ export function mapBackendSchedule(
     linkedReportKey: normalizeText(row.linked_report_key),
     plannedDate: normalizeText(row.planned_date),
     roundNo: typeof row.round_no === 'number' ? row.round_no : 0,
+    selectionConfirmedAt: normalizeText(row.selection_confirmed_at),
+    selectionConfirmedByName: normalizeText(row.selection_confirmed_by_name),
+    selectionConfirmedByUserId: normalizeText(row.selection_confirmed_by_user_id),
+    selectionReasonLabel: normalizeText(row.selection_reason_label),
+    selectionReasonMemo: normalizeText(row.selection_reason_memo),
     siteId: normalizeText(row.site_id),
     siteName: normalizeText(row.site_name),
     status: (normalizeText(row.status) || 'planned') as SafetyInspectionSchedule['status'],
@@ -589,6 +594,23 @@ export function mapBackendExcelImportPreview(
                   ]),
                 )
               : {},
+          detectedMappings: Array.isArray(sheet.detected_mappings)
+            ? sheet.detected_mappings.map((mapping) => ({
+                field: normalizeText(mapping.field),
+                header: normalizeText(mapping.header),
+                note: normalizeText(mapping.note) || null,
+              }))
+            : [],
+          ignoredHeaders: Array.isArray(sheet.ignored_headers)
+            ? sheet.ignored_headers.map((ignored) => ({
+                header: normalizeText(ignored.header),
+                reason: normalizeText(ignored.reason),
+              }))
+            : [],
+          mappingWarnings: Array.isArray(sheet.mapping_warnings)
+            ? sheet.mapping_warnings.map((item) => normalizeText(item)).filter(Boolean)
+            : [],
+          hasRiskyMapping: Boolean(sheet.has_risky_mapping),
           includedRows: Array.isArray(sheet.included_rows)
             ? sheet.included_rows.map((row) => mapBackendExcelImportPreviewRow(row))
             : [],

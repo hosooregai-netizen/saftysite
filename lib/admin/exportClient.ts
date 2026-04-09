@@ -26,6 +26,24 @@ function getFilename(section: string) {
   return `admin-${section}-${getTimestampToken()}.xlsx`;
 }
 
+function getFilenameFromDisposition(header: string | null, fallback: string) {
+  if (!header) {
+    return fallback;
+  }
+
+  const encodedMatch = header.match(/filename\*=UTF-8''([^;]+)/i);
+  if (encodedMatch) {
+    try {
+      return decodeURIComponent(encodedMatch[1]);
+    } catch {
+      return fallback;
+    }
+  }
+
+  const plainMatch = header.match(/filename=\"?([^\";]+)\"?/i);
+  return plainMatch?.[1]?.trim() || fallback;
+}
+
 export async function exportAdminWorkbook(
   section: string,
   sheets: ExportSheetInput[],
@@ -93,5 +111,36 @@ export async function exportAdminServerWorkbook(
   }
 
   const blob = await response.blob();
+  saveBlobAsFile(blob, filename);
+}
+
+export async function downloadAdminSiteBasicMaterial(siteId: string, fallbackFilename?: string) {
+  const token = readSafetyAuthToken();
+  if (!token) {
+    throw new Error('로그인이 만료되었습니다. 다시 로그인해 주세요.');
+  }
+
+  const response = await fetch(`/api/admin/sites/${encodeURIComponent(siteId)}/basic-material`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => null);
+    const message =
+      errorBody && typeof errorBody === 'object' && 'error' in errorBody
+        ? String(errorBody.error)
+        : response.statusText;
+    throw new Error(message || '기초자료 다운로드에 실패했습니다.');
+  }
+
+  const blob = await response.blob();
+  const filename = getFilenameFromDisposition(
+    response.headers.get('content-disposition'),
+    fallbackFilename || `site-basic-material-${getTimestampToken()}.xlsx`,
+  );
   saveBlobAsFile(blob, filename);
 }
