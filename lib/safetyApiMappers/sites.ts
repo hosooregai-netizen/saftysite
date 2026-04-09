@@ -29,8 +29,12 @@ export function mapSafetySiteToAdminSnapshot(site: SafetySite): AdminSiteSnapsho
     customerName: headquarterName,
     siteName: normalizeMapperText(site.site_name),
     assigneeName,
-    siteManagementNumber: normalizeMapperText(site.management_number),
-    businessStartNumber: normalizeMapperText(site.site_code),
+    siteManagementNumber:
+      normalizeMapperText(site.headquarter_detail?.management_number) ||
+      normalizeMapperText(site.management_number),
+    businessStartNumber:
+      normalizeMapperText(site.headquarter_detail?.opening_number) ||
+      normalizeMapperText(site.site_code),
     constructionPeriod: formatDateRange(site.project_start_date, site.project_end_date),
     constructionAmount: formatProjectAmount(site.project_amount),
     siteManagerName: normalizeMapperText(site.manager_name),

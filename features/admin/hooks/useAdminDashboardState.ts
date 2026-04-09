@@ -118,7 +118,6 @@ export function useAdminDashboardState({
     (typeof window !== 'undefined'
       ? new URLSearchParams(window.location.search).get('section')
       : null);
-  const excelUpload = searchParams.get('excelUpload');
   const selectedHeadquarterId = searchParams.get('headquarterId');
   const selectedSiteId = searchParams.get('siteId');
   const activeSection = parseAdminSectionKey(requestedSection) ?? 'headquarters';
@@ -225,16 +224,23 @@ export function useAdminDashboardState({
 
     if (!requestedSection || !isLegacyAdminSectionKey(requestedSection)) {
       replaceRoute('headquarters', {
-        excelUpload,
         headquarterId: selectedHeadquarterId,
         siteId: selectedSiteId,
       });
     }
-  }, [enabled, excelUpload, replaceRoute, requestedSection, selectedHeadquarterId, selectedSiteId]);
+  }, [enabled, replaceRoute, requestedSection, selectedHeadquarterId, selectedSiteId]);
 
   useEffect(() => {
     if (!enabled || !hasLoadedCoreData) return;
     if (!requestedSection || !isLegacyAdminSectionKey(requestedSection)) return;
+
+    if (requestedSection === 'k2b') {
+      replaceRoute('headquarters', {
+        headquarterId: selectedHeadquarterId,
+        siteId: selectedSiteId,
+      });
+      return;
+    }
 
     if (requestedSection === 'sites') {
       const matchedSite = selectedSiteId

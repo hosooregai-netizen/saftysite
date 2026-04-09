@@ -6,12 +6,11 @@ import type { SafetyHeadquarter } from '@/types/controller';
 import { toNullableText } from '@/lib/admin';
 
 const EMPTY_FORM = {
+  management_number: '',
+  opening_number: '',
   name: '',
-  license_no: '',
   contact_phone: '',
-  address: '',
   is_active: true,
-  registration_number: '',
 };
 
 export function useHeadquartersSectionState(
@@ -33,10 +32,9 @@ export function useHeadquartersSectionState(
     return headquarters.filter((item) =>
       [
         item.name,
+        item.management_number ?? '',
+        item.opening_number ?? '',
         item.contact_phone ?? '',
-        item.business_registration_no ?? '',
-        item.corporate_registration_no ?? '',
-        item.address ?? '',
       ]
         .join(' ')
         .toLowerCase()
@@ -67,15 +65,11 @@ export function useHeadquartersSectionState(
   const openEdit = (item: SafetyHeadquarter) => {
     setEditingId(item.id);
     setForm({
+      management_number: item.management_number ?? '',
+      opening_number: item.opening_number ?? '',
       name: item.name,
-      license_no: item.license_no ?? '',
       contact_phone: item.contact_phone ?? '',
-      address: item.address ?? '',
       is_active: item.is_active,
-      registration_number:
-        item.corporate_registration_no ??
-        item.business_registration_no ??
-        '',
     });
   };
 
@@ -87,19 +81,17 @@ export function useHeadquartersSectionState(
 
   const isCreateReady = Boolean(
     form.name.trim() &&
-      form.registration_number.trim() &&
-      form.license_no.trim() &&
+      form.management_number.trim() &&
+      form.opening_number.trim() &&
       form.contact_phone.trim() &&
-      form.address.trim(),
+      true,
   );
 
   const buildPayload = () => ({
     name: form.name.trim(),
-    business_registration_no: toNullableText(form.registration_number),
-    corporate_registration_no: toNullableText(form.registration_number),
-    license_no: toNullableText(form.license_no),
+    management_number: toNullableText(form.management_number),
+    opening_number: toNullableText(form.opening_number),
     contact_phone: toNullableText(form.contact_phone),
-    address: toNullableText(form.address),
     is_active: form.is_active,
   });
 

@@ -11,13 +11,10 @@ import {
 import { SectionHeaderFilterMenu } from '@/features/admin/components/SectionHeaderFilterMenu';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import {
-  SITE_CONTRACT_STATUS_LABELS,
-  SITE_CONTRACT_STATUS_OPTIONS,
-  SITE_CONTRACT_TYPE_LABELS,
-  SITE_CONTRACT_TYPE_OPTIONS,
   SITE_STATUS_LABELS,
   SITE_STATUS_OPTIONS,
   formatCurrencyValue,
+  formatTimestamp,
   getAdminSectionHref,
   parseOptionalNumber,
   toNullableText,
@@ -26,19 +23,16 @@ import {
   downloadAdminSiteBasicMaterial,
   exportAdminWorkbook,
 } from '@/lib/admin/exportClient';
-import {
-  buildSiteMemoWithContractProfile,
-  parseSiteContractProfile,
-  parseSiteRequiredCompletionFields,
-  parseSiteMemoNote,
-} from '@/lib/admin/siteContractProfile';
-import type {
-  SiteContractStatus,
-  SiteContractType,
-  TableSortState,
-} from '@/types/admin';
+import { parseSiteRequiredCompletionFields } from '@/lib/admin/siteContractProfile';
+import type { TableSortState } from '@/types/admin';
 import type { SafetySite, SafetyUser } from '@/types/backend';
-import type { SafetyAssignment, SafetyHeadquarter, SafetySiteStatus } from '@/types/controller';
+import type {
+  SafetyAssignment,
+  SafetyHeadquarter,
+  SafetySiteInput,
+  SafetySiteStatus,
+  SafetySiteUpdateInput,
+} from '@/types/controller';
 import { SiteAssignmentModal } from './SiteAssignmentModal';
 
 interface SitesSectionProps {
@@ -48,41 +42,11 @@ interface SitesSectionProps {
   sites: SafetySite[];
   users: SafetyUser[];
   canDelete: boolean;
-  onCreate: (input: {
-    headquarter_id: string;
-    site_name: string;
-    site_code?: string | null;
-    management_number?: string | null;
-    project_start_date?: string | null;
-    project_end_date?: string | null;
-    project_amount?: number | null;
-    manager_name?: string | null;
-    manager_phone?: string | null;
-    site_address?: string | null;
-    memo?: string | null;
-    status?: 'planned' | 'active' | 'closed';
-  }) => Promise<void>;
-  onUpdate: (id: string, input: Partial<{
-    headquarter_id: string;
-    site_name: string;
-    site_code?: string | null;
-    management_number?: string | null;
-    project_start_date?: string | null;
-    project_end_date?: string | null;
-    project_amount?: number | null;
-    manager_name?: string | null;
-    manager_phone?: string | null;
-    site_address?: string | null;
-    memo?: string | null;
-    status?: SafetySiteStatus;
-  }>) => Promise<void>;
+  onCreate: (input: SafetySiteInput) => Promise<void>;
+  onUpdate: (id: string, input: SafetySiteUpdateInput) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onAssignFieldAgent: (siteId: string, userId: string) => Promise<void>;
   onUnassignFieldAgent: (siteId: string, userId: string) => Promise<void>;
-  onExcelUploadRequest?: (context?: {
-    headquarterId?: string | null;
-    siteId?: string | null;
-  }) => void;
   title?: string;
   emptyMessage?: string;
   showHeader?: boolean;
@@ -96,53 +60,64 @@ interface SitesSectionProps {
 interface SiteFormState {
   headquarter_id: string;
   site_name: string;
-  status: Exclude<SafetySiteStatus, 'deleted'>;
+  status: SafetySiteStatus;
+  labor_office: string;
+  guidance_officer_name: string;
+  site_address: string;
+  project_amount: string;
   project_start_date: string;
   project_end_date: string;
-  project_amount: string;
-  manager_name: string;
-  manager_phone: string;
-  memo_note: string;
-  contract_date: string;
-  contract_type: SiteContractType;
-  contract_status: SiteContractStatus;
-  total_rounds: string;
-  per_visit_amount: string;
+  project_scale: string;
+  project_kind: string;
+  client_management_number: string;
+  client_business_name: string;
+  client_representative_name: string;
+  client_corporate_registration_no: string;
+  client_business_registration_no: string;
+  order_type_division: string;
+  technical_guidance_kind: string;
   total_contract_amount: string;
-  site_number: string;
-  site_address: string;
+  total_rounds: string;
+  contract_start_date: string;
+  contract_end_date: string;
+  contract_signed_date: string;
+  contract_contact_name: string;
+  inspector_name: string;
+  manager_name: string;
 }
 
 const EMPTY_FORM: SiteFormState = {
   headquarter_id: '',
   site_name: '',
   status: 'planned',
+  labor_office: '',
+  guidance_officer_name: '',
+  site_address: '',
+  project_amount: '',
   project_start_date: '',
   project_end_date: '',
-  project_amount: '',
-  manager_name: '',
-  manager_phone: '',
-  memo_note: '',
-  contract_date: '',
-  contract_type: '',
-  contract_status: '',
-  total_rounds: '',
-  per_visit_amount: '',
+  project_scale: '',
+  project_kind: '',
+  client_management_number: '',
+  client_business_name: '',
+  client_representative_name: '',
+  client_corporate_registration_no: '',
+  client_business_registration_no: '',
+  order_type_division: '',
+  technical_guidance_kind: '',
   total_contract_amount: '',
-  site_number: '',
-  site_address: '',
+  total_rounds: '',
+  contract_start_date: '',
+  contract_end_date: '',
+  contract_signed_date: '',
+  contract_contact_name: '',
+  inspector_name: '',
+  manager_name: '',
 };
 
 function formatAssignedUsers(users: SafetyUser[]) {
   if (users.length === 0) return '-';
   return users.map((user) => user.name).join(', ');
-}
-
-function formatAssignedUserDetails(users: SafetyUser[]) {
-  if (users.length === 0) return '배정 정보 없음';
-  return users
-    .map((user) => [user.position || '직책 미입력', user.organization_name || '소속 미입력'].join(' · '))
-    .join(' / ');
 }
 
 function shouldIgnoreRowClick(target: EventTarget | null) {
@@ -157,14 +132,6 @@ function shouldIgnoreRowClick(target: EventTarget | null) {
 }
 
 function normalizeSiteStatus(value: string | null | undefined): SafetySiteStatus {
-  return value === 'planned' || value === 'active' || value === 'closed' || value === 'deleted'
-    ? value
-    : 'active';
-}
-
-function normalizeEditableSiteStatus(
-  value: string | null | undefined,
-): Exclude<SafetySiteStatus, 'deleted'> {
   return value === 'planned' || value === 'active' || value === 'closed' ? value : 'active';
 }
 
@@ -183,7 +150,6 @@ export function SitesSection(props: SitesSectionProps) {
     onDelete,
     onAssignFieldAgent,
     onUnassignFieldAgent,
-    onExcelUploadRequest,
     showHeader = true,
     title = '현장 목록',
     emptyMessage = '등록된 현장이 없습니다.',
@@ -232,7 +198,6 @@ export function SitesSection(props: SitesSectionProps) {
   const filteredSites = useMemo(() => {
     const normalizedQuery = deferredQuery.trim().toLowerCase();
     return sites.filter((site) => {
-      const normalizedStatus = normalizeSiteStatus(site.status);
       const siteAssignments = activeAssignmentsBySiteId.get(site.id) ?? [];
       const assignedUsers = siteAssignments
         .map((assignment) => usersById.get(assignment.user_id))
@@ -244,17 +209,20 @@ export function SitesSection(props: SitesSectionProps) {
       const allAssignedNames = assignedUsers.map((user) => user.name);
 
       if (fallbackAssignedUser) allAssignedNames.push(fallbackAssignedUser.name);
-      if (normalizedStatus === 'deleted') return false;
-      if (statusFilter !== 'all' && normalizedStatus !== statusFilter) return false;
+      if (statusFilter !== 'all' && site.status !== statusFilter) return false;
       if (assignmentFilter === 'unassigned' && siteAssignments.length > 0) return false;
       if (!normalizedQuery) return true;
 
       const haystack = [
         site.site_name,
-        site.site_code ?? '',
-        site.management_number ?? '',
+        site.headquarter_detail?.management_number ?? site.management_number ?? '',
+        site.headquarter_detail?.opening_number ?? site.site_code ?? '',
         site.site_address ?? '',
         site.manager_name ?? '',
+        site.labor_office ?? '',
+        site.guidance_officer_name ?? '',
+        site.client_management_number ?? '',
+        site.client_business_name ?? '',
         site.headquarter_detail?.name ?? site.headquarter?.name ?? '',
         allAssignedNames.join(' '),
       ]
@@ -303,6 +271,14 @@ export function SitesSection(props: SitesSectionProps) {
         return (left.project_end_date ?? '').localeCompare(right.project_end_date ?? '') * direction;
       }
 
+      if (sort.key === 'contract_end_date') {
+        return (left.contract_end_date ?? '').localeCompare(right.contract_end_date ?? '') * direction;
+      }
+
+      if (sort.key === 'updated_at') {
+        return (left.updated_at ?? '').localeCompare(right.updated_at ?? '') * direction;
+      }
+
       if (sort.key === 'project_amount') {
         return ((left.project_amount ?? 0) - (right.project_amount ?? 0)) * direction;
       }
@@ -320,33 +296,35 @@ export function SitesSection(props: SitesSectionProps) {
   };
 
   const openEdit = (site: SafetySite) => {
-    const contractProfile = parseSiteContractProfile(site);
     setEditingId(site.id);
     setForm({
       headquarter_id: site.headquarter_id,
       site_name: site.site_name,
-      status: normalizeEditableSiteStatus(site.status),
+      status: normalizeSiteStatus(site.status),
+      labor_office: site.labor_office ?? '',
+      guidance_officer_name: site.guidance_officer_name ?? '',
+      site_address: site.site_address ?? '',
+      project_amount: site.project_amount ? String(site.project_amount) : '',
       project_start_date: site.project_start_date ?? '',
       project_end_date: site.project_end_date ?? '',
-      project_amount: site.project_amount ? String(site.project_amount) : '',
-      manager_name: site.manager_name ?? '',
-      manager_phone: site.manager_phone ?? '',
-      memo_note: parseSiteMemoNote(site.memo),
-      contract_date: contractProfile.contractDate,
-      contract_type: contractProfile.contractType,
-      contract_status: contractProfile.contractStatus,
-      total_rounds:
-        contractProfile.totalRounds != null ? String(contractProfile.totalRounds) : '',
-      per_visit_amount:
-        contractProfile.perVisitAmount != null
-          ? String(contractProfile.perVisitAmount)
-          : '',
+      project_scale: site.project_scale ?? '',
+      project_kind: site.project_kind ?? '',
+      client_management_number: site.client_management_number ?? '',
+      client_business_name: site.client_business_name ?? '',
+      client_representative_name: site.client_representative_name ?? '',
+      client_corporate_registration_no: site.client_corporate_registration_no ?? '',
+      client_business_registration_no: site.client_business_registration_no ?? '',
+      order_type_division: site.order_type_division ?? '',
+      technical_guidance_kind: site.technical_guidance_kind ?? '',
       total_contract_amount:
-        contractProfile.totalContractAmount != null
-          ? String(contractProfile.totalContractAmount)
-          : '',
-      site_number: site.management_number ?? site.site_code ?? '',
-      site_address: site.site_address ?? '',
+        site.total_contract_amount != null ? String(site.total_contract_amount) : '',
+      total_rounds: site.total_rounds != null ? String(site.total_rounds) : '',
+      contract_start_date: site.contract_start_date ?? '',
+      contract_end_date: site.contract_end_date ?? '',
+      contract_signed_date: site.contract_signed_date ?? site.contract_date ?? '',
+      contract_contact_name: site.contract_contact_name ?? '',
+      inspector_name: site.inspector_name ?? '',
+      manager_name: site.manager_name ?? '',
     });
   };
 
@@ -365,52 +343,42 @@ export function SitesSection(props: SitesSectionProps) {
   }, [autoEditSiteId, busy, lastAutoEditSiteId, sites]);
 
   const buildPayload = () => {
-    const currentSite = editingId ? sites.find((site) => site.id === editingId) ?? null : null;
-
     return {
       headquarter_id: lockedHeadquarterId ?? form.headquarter_id,
       site_name: form.site_name.trim(),
       status: form.status,
-      site_code: toNullableText(form.site_number),
-      management_number: toNullableText(form.site_number),
+      labor_office: toNullableText(form.labor_office),
+      guidance_officer_name: toNullableText(form.guidance_officer_name),
+      site_address: toNullableText(form.site_address),
+      project_amount: parseOptionalNumber(form.project_amount),
       project_start_date: toNullableText(form.project_start_date),
       project_end_date: toNullableText(form.project_end_date),
-      project_amount: parseOptionalNumber(form.project_amount),
+      project_scale: toNullableText(form.project_scale),
+      project_kind: toNullableText(form.project_kind),
+      client_management_number: toNullableText(form.client_management_number),
+      client_business_name: toNullableText(form.client_business_name),
+      client_representative_name: toNullableText(form.client_representative_name),
+      client_corporate_registration_no: toNullableText(form.client_corporate_registration_no),
+      client_business_registration_no: toNullableText(form.client_business_registration_no),
+      order_type_division: toNullableText(form.order_type_division),
+      technical_guidance_kind: toNullableText(form.technical_guidance_kind),
       manager_name: toNullableText(form.manager_name),
-      manager_phone: toNullableText(form.manager_phone),
-      site_address: toNullableText(form.site_address),
-      memo: buildSiteMemoWithContractProfile(
-        form.memo_note,
-        {
-          contractDate: form.contract_date.trim(),
-          contractStatus: form.contract_status,
-          contractType: form.contract_type,
-          perVisitAmount: parseOptionalNumber(form.per_visit_amount),
-          totalContractAmount: parseOptionalNumber(form.total_contract_amount),
-          totalRounds: (() => {
-            const parsed = parseOptionalNumber(form.total_rounds);
-            return typeof parsed === 'number' && Number.isFinite(parsed) && parsed > 0
-              ? Math.trunc(parsed)
-              : null;
-          })(),
-        },
-        {
-          existingMemo: currentSite?.memo ?? null,
-        },
-      ),
+      inspector_name: toNullableText(form.inspector_name),
+      contract_contact_name: toNullableText(form.contract_contact_name),
+      contract_start_date: toNullableText(form.contract_start_date),
+      contract_end_date: toNullableText(form.contract_end_date),
+      contract_signed_date: toNullableText(form.contract_signed_date),
+      total_rounds: (() => {
+        const parsed = parseOptionalNumber(form.total_rounds);
+        return typeof parsed === 'number' && Number.isFinite(parsed) ? Math.trunc(parsed) : null;
+      })(),
+      total_contract_amount: parseOptionalNumber(form.total_contract_amount),
     };
   };
 
   const isCreateReady = Boolean(
     (lockedHeadquarterId ?? form.headquarter_id).trim() &&
-      form.site_name.trim() &&
-      form.site_number.trim() &&
-      form.project_start_date.trim() &&
-      form.project_amount.trim() &&
-      form.project_end_date.trim() &&
-      form.manager_name.trim() &&
-      form.manager_phone.trim() &&
-      form.site_address.trim(),
+      form.site_name.trim(),
   );
 
   const submit = async () => {
@@ -439,6 +407,13 @@ export function SitesSection(props: SitesSectionProps) {
 
     router.push(`/sites/${encodeURIComponent(site.id)}`);
   };
+  const handleDownloadBasicMaterial = async (site: SafetySite) => {
+    try {
+      await downloadAdminSiteBasicMaterial(site.id, `${site.site_name}-기초자료.xlsx`);
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : '기초자료 출력에 실패했습니다.');
+    }
+  };
   const handleExport = () =>
     void exportAdminWorkbook('sites', [
       {
@@ -446,21 +421,35 @@ export function SitesSection(props: SitesSectionProps) {
         columns: [
           { key: 'site_name', label: '현장명' },
           { key: 'headquarter_name', label: '사업장' },
-          { key: 'manager_name', label: '책임자' },
-          { key: 'manager_phone', label: '책임자 연락처' },
-          { key: 'assigned_users', label: '배정 요원' },
-          { key: 'project_period', label: '공사기간' },
+          { key: 'headquarter_management_number', label: '사업장관리번호' },
+          { key: 'headquarter_opening_number', label: '사업장개시번호' },
+          { key: 'labor_office', label: '노동관서' },
+          { key: 'guidance_officer_name', label: '지도원' },
+          { key: 'site_address', label: '소재지' },
           { key: 'project_amount', label: '공사금액' },
-          { key: 'contract_type', label: '계약유형' },
-          { key: 'contract_status', label: '계약상태' },
-          { key: 'contract_date', label: '계약일' },
-          { key: 'total_rounds', label: '총 회차' },
-          { key: 'per_visit_amount', label: '회차당 단가' },
-          { key: 'total_contract_amount', label: '총 계약금액' },
+          { key: 'project_start_date', label: '공사시작일' },
+          { key: 'project_end_date', label: '공사종료일' },
+          { key: 'project_scale', label: '공사규모' },
+          { key: 'project_kind', label: '공사종류' },
+          { key: 'client_management_number', label: '발주자 사업장관리번호' },
+          { key: 'client_business_name', label: '발주자 사업자명' },
+          { key: 'client_representative_name', label: '발주자 대표자' },
+          { key: 'client_corporate_registration_no', label: '발주자 법인등록번호' },
+          { key: 'client_business_registration_no', label: '발주자 사업자등록번호' },
+          { key: 'order_type_division', label: '발주유형구분' },
+          { key: 'technical_guidance_kind', label: '기술지도 구분' },
+          { key: 'total_contract_amount', label: '기술지도 대가' },
+          { key: 'total_rounds', label: '기술지도 횟수' },
+          { key: 'contract_start_date', label: '계약시작일' },
+          { key: 'contract_end_date', label: '계약종료일' },
+          { key: 'contract_signed_date', label: '계약 체결일' },
+          { key: 'contract_contact_name', label: '계약담당자' },
+          { key: 'inspector_name', label: '점검자' },
+          { key: 'manager_name', label: '현장책임자명' },
+          { key: 'assigned_users', label: '배정 요원' },
           { key: 'status', label: '현장 상태' },
         ],
         rows: sortedSites.map((site) => {
-          const contractProfile = parseSiteContractProfile(site);
           const siteAssignments = activeAssignmentsBySiteId.get(site.id) ?? [];
           const assignedUsers = siteAssignments
             .map((assignment) => usersById.get(assignment.user_id))
@@ -471,39 +460,43 @@ export function SitesSection(props: SitesSectionProps) {
               assignedUsers.length > 0
                 ? assignedUsers.map((user) => user.name).join(', ')
                 : site.assigned_user?.name || '',
-            contract_date: contractProfile.contractDate,
-            contract_status:
-              SITE_CONTRACT_STATUS_LABELS[contractProfile.contractStatus] || '',
-            contract_type:
-              SITE_CONTRACT_TYPE_LABELS[contractProfile.contractType] || '',
             headquarter_name:
               site.headquarter_detail?.name || site.headquarter?.name || '',
-            manager_name: site.manager_name || '',
-            manager_phone: site.manager_phone || '',
-            per_visit_amount: formatCurrencyValue(contractProfile.perVisitAmount),
+            headquarter_management_number:
+              site.headquarter_detail?.management_number || site.management_number || '',
+            headquarter_opening_number:
+              site.headquarter_detail?.opening_number || site.site_code || '',
+            labor_office: site.labor_office || '',
+            guidance_officer_name: site.guidance_officer_name || '',
+            site_address: site.site_address || '',
             project_amount: formatCurrencyValue(site.project_amount),
-            project_period: `${site.project_start_date || '-'} ~ ${site.project_end_date || '-'}`,
+            project_start_date: site.project_start_date || '',
+            project_end_date: site.project_end_date || '',
+            project_scale: site.project_scale || '',
+            project_kind: site.project_kind || '',
+            client_management_number: site.client_management_number || '',
+            client_business_name: site.client_business_name || '',
+            client_representative_name: site.client_representative_name || '',
+            client_corporate_registration_no: site.client_corporate_registration_no || '',
+            client_business_registration_no: site.client_business_registration_no || '',
+            order_type_division: site.order_type_division || '',
+            technical_guidance_kind: site.technical_guidance_kind || '',
+            total_contract_amount: formatCurrencyValue(site.total_contract_amount),
+            total_rounds: site.total_rounds ?? '',
+            contract_start_date: site.contract_start_date || '',
+            contract_end_date: site.contract_end_date || '',
+            contract_signed_date: site.contract_signed_date || site.contract_date || '',
+            contract_contact_name: site.contract_contact_name || '',
+            inspector_name: site.inspector_name || '',
+            manager_name: site.manager_name || '',
             site_name: site.site_name,
             status:
               SITE_STATUS_LABELS[site.status as keyof typeof SITE_STATUS_LABELS] ||
               site.status,
-            total_contract_amount: formatCurrencyValue(
-              contractProfile.totalContractAmount,
-            ),
-            total_rounds: contractProfile.totalRounds ?? '',
           };
         }),
       },
     ]);
-
-  const handleDownloadBasicMaterial = async (site: SafetySite) => {
-    try {
-      await downloadAdminSiteBasicMaterial(site.id, `${site.site_name}-기초자료.xlsx`);
-    } catch (error) {
-      window.alert(error instanceof Error ? error.message : '기초자료 출력에 실패했습니다.');
-    }
-  };
-
   const resetHeaderFilters = () => {
     setStatusFilter(initialStatusFilter);
     setAssignmentFilter('all');
@@ -522,7 +515,7 @@ export function SitesSection(props: SitesSectionProps) {
         <div className={`${styles.sectionHeaderActions} ${styles.sectionHeaderToolbarActions}`}>
           <input
             className={`app-input ${styles.sectionHeaderSearch} ${styles.sectionHeaderToolbarSearch}`}
-            placeholder="현장명, 사업장명, 책임자, 배정 요원으로 검색"
+            placeholder="현장명, 사업장명, 노동관서, 지도원, 발주자명, 계약담당자, 점검자로 검색"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
@@ -572,21 +565,6 @@ export function SitesSection(props: SitesSectionProps) {
           >
             엑셀 내보내기
           </button>
-          {onExcelUploadRequest ? (
-            <button
-              type="button"
-              className="app-button app-button-secondary"
-              onClick={() =>
-                onExcelUploadRequest({
-                  headquarterId: lockedHeadquarterId,
-                  siteId: null,
-                })
-              }
-              disabled={busy}
-            >
-              엑셀 업로드
-            </button>
-          ) : null}
           <button
             type="button"
             className="app-button app-button-primary"
@@ -630,30 +608,31 @@ export function SitesSection(props: SitesSectionProps) {
                       />
                     ) : null}
                     <SortableHeaderCell
-                      column={{ key: 'manager_name' }}
-                      current={sort}
-                      label="책임자"
-                      onChange={setSort}
-                      sortMenuOptions={buildSortMenuOptions('manager_name', {
-                        asc: '책임자 가나다순',
-                        desc: '책임자 역순',
-                      })}
-                    />
-                    <SortableHeaderCell
-                      column={{ key: 'assigned_users' }}
-                      current={sort}
-                      label="배정 요원"
-                      onChange={setSort}
-                      sortMenuOptions={buildSortMenuOptions('assigned_users', {
-                        asc: '배정 요원 가나다순',
-                        desc: '배정 요원 역순',
-                      })}
-                    />
-                    <SortableHeaderCell
-                      column={{ key: 'project_end_date' }}
+                      column={{ key: 'contract_end_date' }}
                       current={sort}
                       defaultDirection="desc"
-                      label="기간"
+                      label="계약 / 기술지도"
+                      onChange={setSort}
+                      sortMenuOptions={buildSortMenuOptions('contract_end_date', {
+                        asc: '계약 종료일 오름차순',
+                        desc: '계약 종료일 내림차순',
+                      })}
+                    />
+                    <SortableHeaderCell
+                      column={{ key: 'manager_name' }}
+                      current={sort}
+                      label="운영 담당"
+                      onChange={setSort}
+                      sortMenuOptions={buildSortMenuOptions('manager_name', {
+                        asc: '운영 담당 가나다순',
+                        desc: '운영 담당 역순',
+                      })}
+                    />
+                    <SortableHeaderCell
+                      column={{ key: 'updated_at' }}
+                      current={sort}
+                      defaultDirection="desc"
+                      label="수정일"
                       onChange={setSort}
                     />
                     <SortableHeaderCell
@@ -672,7 +651,6 @@ export function SitesSection(props: SitesSectionProps) {
                 <tbody>
                   {sortedSites.map((site) => {
                     const siteAssignments = activeAssignmentsBySiteId.get(site.id) ?? [];
-                    const contractProfile = parseSiteContractProfile(site);
                     const requiredCompletionFields =
                       site.required_completion_fields?.length
                         ? site.required_completion_fields
@@ -718,16 +696,41 @@ export function SitesSection(props: SitesSectionProps) {
                           ) : null}
                         </td>
                         {showHeadquarterColumn ? (
-                          <td>{site.headquarter_detail?.name || site.headquarter?.name || '-'}</td>
+                          <td>
+                            <div className={styles.tablePrimary}>
+                              {site.headquarter_detail?.name || site.headquarter?.name || '-'}
+                            </div>
+                            <div className={styles.tableSecondary}>
+                              관리번호 {site.headquarter_detail?.management_number || site.management_number || '-'}
+                            </div>
+                            <div className={styles.tableSecondary}>
+                              개시번호 {site.headquarter_detail?.opening_number || site.site_code || '-'}
+                            </div>
+                          </td>
                         ) : null}
                         <td>
-                          <div className={styles.tablePrimary}>{site.manager_name || '-'}</div>
+                          <div className={styles.tablePrimary}>
+                            계약 {site.contract_start_date || '-'} ~ {site.contract_end_date || '-'}
+                          </div>
                           <div className={styles.tableSecondary}>
-                            {site.manager_phone || '연락처 미입력'}
+                            체결일 {site.contract_signed_date || site.contract_date || '-'}
+                          </div>
+                          <div className={styles.tableSecondary}>
+                            기술지도 대가 {formatCurrencyValue(site.total_contract_amount)} / 횟수 {site.total_rounds ?? '-'}
+                          </div>
+                          <div className={styles.tableSecondary}>
+                            구분 {site.technical_guidance_kind || '-'} / 공사금액 {formatCurrencyValue(site.project_amount)}
                           </div>
                         </td>
                         <td>
                           <div className={styles.tablePrimary}>
+                            지도원 {site.guidance_officer_name || '-'} / 노동관서 {site.labor_office || '-'}
+                          </div>
+                          <div className={styles.tableSecondary}>
+                            점검자 {site.inspector_name || '-'} / 계약담당자 {site.contract_contact_name || '-'}
+                          </div>
+                          <div className={styles.tableSecondary}>
+                            현장책임자 {site.manager_name || '-'} / 배정요원{' '}
                             {assignedUsers.length > 0
                               ? formatAssignedUsers(assignedUsers)
                               : fallbackAssignedUsers.length > 0
@@ -735,16 +738,11 @@ export function SitesSection(props: SitesSectionProps) {
                                 : '-'}
                           </div>
                           <div className={styles.tableSecondary}>
-                            {assignedUsers.length > 0
-                              ? formatAssignedUserDetails(assignedUsers)
-                              : '배정 정보 없음'}
+                            발주자 {site.client_business_name || '-'} / 대표 {site.client_representative_name || '-'}
                           </div>
                         </td>
                         <td>
-                          {site.project_start_date || '-'} ~ {site.project_end_date || '-'}
-                          <div className={styles.tableSecondary}>
-                            계약 {SITE_CONTRACT_TYPE_LABELS[contractProfile.contractType] || '미입력'} / 회차 {contractProfile.totalRounds ?? '-'}
-                          </div>
+                          {formatTimestamp(site.updated_at)}
                         </td>
                         <td>
                           {SITE_STATUS_LABELS[site.status as keyof typeof SITE_STATUS_LABELS] ||
@@ -791,18 +789,6 @@ export function SitesSection(props: SitesSectionProps) {
                                     if (!busy) void handleDownloadBasicMaterial(site);
                                   },
                                 },
-                                ...(onExcelUploadRequest
-                                  ? [
-                                      {
-                                        label: '엑셀 업로드',
-                                        onSelect: () =>
-                                          onExcelUploadRequest({
-                                            headquarterId: site.headquarter_id,
-                                            siteId: site.id,
-                                          }),
-                                      },
-                                    ]
-                                  : []),
                                 {
                                   label: '수정',
                                   onSelect: () => {
@@ -898,10 +884,7 @@ export function SitesSection(props: SitesSectionProps) {
               className="app-select"
               value={form.status}
               onChange={(e) =>
-                setForm({
-                  ...form,
-                  status: e.target.value as Exclude<SafetySiteStatus, 'deleted'>,
-                })
+                setForm({ ...form, status: e.target.value as SafetySiteStatus })
               }
               disabled={busy}
             >
@@ -912,17 +895,44 @@ export function SitesSection(props: SitesSectionProps) {
               ))}
             </select>
           </label>
-        <label className={styles.modalField}>
-          <span className={styles.label}>사업장관리번호(사업개시번호)</span>
-          <input
-            className="app-input"
-            value={form.site_number}
-            onChange={(e) => setForm({ ...form, site_number: e.target.value })}
-            disabled={busy}
-          />
-        </label>
           <label className={styles.modalField}>
-            <span className={styles.label}>공사 시작일</span>
+            <span className={styles.label}>노동관서</span>
+            <input
+              className="app-input"
+              value={form.labor_office}
+              onChange={(e) => setForm({ ...form, labor_office: e.target.value })}
+              disabled={busy}
+            />
+          </label>
+          <label className={styles.modalField}>
+            <span className={styles.label}>지도원</span>
+            <input
+              className="app-input"
+              value={form.guidance_officer_name}
+              onChange={(e) => setForm({ ...form, guidance_officer_name: e.target.value })}
+              disabled={busy}
+            />
+          </label>
+          <label className={styles.modalFieldWide}>
+            <span className={styles.label}>소재지</span>
+            <input
+              className="app-input"
+              value={form.site_address}
+              onChange={(e) => setForm({ ...form, site_address: e.target.value })}
+              disabled={busy}
+            />
+          </label>
+          <label className={styles.modalField}>
+            <span className={styles.label}>공사금액</span>
+            <input
+              className="app-input"
+              value={form.project_amount}
+              onChange={(e) => setForm({ ...form, project_amount: e.target.value })}
+              disabled={busy}
+            />
+          </label>
+          <label className={styles.modalField}>
+            <span className={styles.label}>공사시작일</span>
             <input
               className="app-input"
               type="date"
@@ -932,26 +942,7 @@ export function SitesSection(props: SitesSectionProps) {
             />
           </label>
           <label className={styles.modalField}>
-            <span className={styles.label}>공사 금액</span>
-            <input
-              className="app-input"
-              value={form.project_amount}
-              onChange={(e) => setForm({ ...form, project_amount: e.target.value })}
-              disabled={busy}
-            />
-          </label>
-          <label className={styles.modalField}>
-            <span className={styles.label}>계약일</span>
-            <input
-              className="app-input"
-              type="date"
-              value={form.contract_date}
-              onChange={(e) => setForm({ ...form, contract_date: e.target.value })}
-              disabled={busy}
-            />
-          </label>
-          <label className={styles.modalField}>
-            <span className={styles.label}>공사 종료일</span>
+            <span className={styles.label}>공사종료일</span>
             <input
               className="app-input"
               type="date"
@@ -961,59 +952,101 @@ export function SitesSection(props: SitesSectionProps) {
             />
           </label>
           <label className={styles.modalField}>
-            <span className={styles.label}>계약유형</span>
-            <select
-              className="app-select"
-              value={form.contract_type}
-              onChange={(e) =>
-                setForm({ ...form, contract_type: e.target.value as SiteContractType })
-              }
-              disabled={busy}
-            >
-              {SITE_CONTRACT_TYPE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className={styles.modalField}>
-            <span className={styles.label}>현장 책임자</span>
+            <span className={styles.label}>공사규모</span>
             <input
               className="app-input"
-              value={form.manager_name}
-              onChange={(e) => setForm({ ...form, manager_name: e.target.value })}
+              value={form.project_scale}
+              onChange={(e) => setForm({ ...form, project_scale: e.target.value })}
               disabled={busy}
             />
           </label>
           <label className={styles.modalField}>
-            <span className={styles.label}>계약상태</span>
-            <select
-              className="app-select"
-              value={form.contract_status}
-              onChange={(e) =>
-                setForm({ ...form, contract_status: e.target.value as SiteContractStatus })
-              }
-              disabled={busy}
-            >
-              {SITE_CONTRACT_STATUS_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className={styles.modalField}>
-            <span className={styles.label}>책임자 연락처</span>
+            <span className={styles.label}>공사종류</span>
             <input
               className="app-input"
-              value={form.manager_phone}
-              onChange={(e) => setForm({ ...form, manager_phone: e.target.value })}
+              value={form.project_kind}
+              onChange={(e) => setForm({ ...form, project_kind: e.target.value })}
               disabled={busy}
             />
           </label>
           <label className={styles.modalField}>
-            <span className={styles.label}>총 회차</span>
+            <span className={styles.label}>발주자 사업장관리번호</span>
+            <input
+              className="app-input"
+              value={form.client_management_number}
+              onChange={(e) => setForm({ ...form, client_management_number: e.target.value })}
+              disabled={busy}
+            />
+          </label>
+          <label className={styles.modalField}>
+            <span className={styles.label}>발주자 사업자명</span>
+            <input
+              className="app-input"
+              value={form.client_business_name}
+              onChange={(e) => setForm({ ...form, client_business_name: e.target.value })}
+              disabled={busy}
+            />
+          </label>
+          <label className={styles.modalField}>
+            <span className={styles.label}>발주자 대표자</span>
+            <input
+              className="app-input"
+              value={form.client_representative_name}
+              onChange={(e) => setForm({ ...form, client_representative_name: e.target.value })}
+              disabled={busy}
+            />
+          </label>
+          <label className={styles.modalField}>
+            <span className={styles.label}>발주자법인등록번호</span>
+            <input
+              className="app-input"
+              value={form.client_corporate_registration_no}
+              onChange={(e) =>
+                setForm({ ...form, client_corporate_registration_no: e.target.value })
+              }
+              disabled={busy}
+            />
+          </label>
+          <label className={styles.modalField}>
+            <span className={styles.label}>발주자 사업자등록번호</span>
+            <input
+              className="app-input"
+              value={form.client_business_registration_no}
+              onChange={(e) =>
+                setForm({ ...form, client_business_registration_no: e.target.value })
+              }
+              disabled={busy}
+            />
+          </label>
+          <label className={styles.modalField}>
+            <span className={styles.label}>발주유형구분</span>
+            <input
+              className="app-input"
+              value={form.order_type_division}
+              onChange={(e) => setForm({ ...form, order_type_division: e.target.value })}
+              disabled={busy}
+            />
+          </label>
+          <label className={styles.modalField}>
+            <span className={styles.label}>기술지도 구분</span>
+            <input
+              className="app-input"
+              value={form.technical_guidance_kind}
+              onChange={(e) => setForm({ ...form, technical_guidance_kind: e.target.value })}
+              disabled={busy}
+            />
+          </label>
+          <label className={styles.modalField}>
+            <span className={styles.label}>기술지도 대가</span>
+            <input
+              className="app-input"
+              value={form.total_contract_amount}
+              onChange={(e) => setForm({ ...form, total_contract_amount: e.target.value })}
+              disabled={busy}
+            />
+          </label>
+          <label className={styles.modalField}>
+            <span className={styles.label}>기술지도 횟수</span>
             <input
               className="app-input"
               value={form.total_rounds}
@@ -1021,30 +1054,60 @@ export function SitesSection(props: SitesSectionProps) {
               disabled={busy}
             />
           </label>
-          <label className={styles.modalFieldWide}>
-            <span className={styles.label}>현장 주소</span>
+          <label className={styles.modalField}>
+            <span className={styles.label}>계약시작일</span>
             <input
               className="app-input"
-              value={form.site_address}
-              onChange={(e) => setForm({ ...form, site_address: e.target.value })}
+              type="date"
+              value={form.contract_start_date}
+              onChange={(e) => setForm({ ...form, contract_start_date: e.target.value })}
               disabled={busy}
             />
           </label>
           <label className={styles.modalField}>
-            <span className={styles.label}>회차당 단가</span>
+            <span className={styles.label}>계약종료일</span>
             <input
               className="app-input"
-              value={form.per_visit_amount}
-              onChange={(e) => setForm({ ...form, per_visit_amount: e.target.value })}
+              type="date"
+              value={form.contract_end_date}
+              onChange={(e) => setForm({ ...form, contract_end_date: e.target.value })}
               disabled={busy}
             />
           </label>
           <label className={styles.modalField}>
-            <span className={styles.label}>총 계약금액</span>
+            <span className={styles.label}>계약 체결일</span>
             <input
               className="app-input"
-              value={form.total_contract_amount}
-              onChange={(e) => setForm({ ...form, total_contract_amount: e.target.value })}
+              type="date"
+              value={form.contract_signed_date}
+              onChange={(e) => setForm({ ...form, contract_signed_date: e.target.value })}
+              disabled={busy}
+            />
+          </label>
+          <label className={styles.modalField}>
+            <span className={styles.label}>계약담당자</span>
+            <input
+              className="app-input"
+              value={form.contract_contact_name}
+              onChange={(e) => setForm({ ...form, contract_contact_name: e.target.value })}
+              disabled={busy}
+            />
+          </label>
+          <label className={styles.modalField}>
+            <span className={styles.label}>점검자</span>
+            <input
+              className="app-input"
+              value={form.inspector_name}
+              onChange={(e) => setForm({ ...form, inspector_name: e.target.value })}
+              disabled={busy}
+            />
+          </label>
+          <label className={styles.modalField}>
+            <span className={styles.label}>현장책임자명</span>
+            <input
+              className="app-input"
+              value={form.manager_name}
+              onChange={(e) => setForm({ ...form, manager_name: e.target.value })}
               disabled={busy}
             />
           </label>

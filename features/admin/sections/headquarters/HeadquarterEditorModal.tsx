@@ -2,12 +2,11 @@ import AppModal from '@/components/ui/AppModal';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 
 interface HeadquarterFormState {
-  address: string;
   contact_phone: string;
   is_active: boolean;
-  license_no: string;
+  management_number: string;
   name: string;
-  registration_number: string;
+  opening_number: string;
 }
 
 interface HeadquarterEditorModalProps {
@@ -60,7 +59,7 @@ export function HeadquarterEditorModal({
     >
       <div className={styles.modalGrid}>
         <label className={styles.modalField}>
-          <span className={styles.label}>사업장명</span>
+          <span className={styles.label}>회사명</span>
           <input
             className="app-input"
             value={form.name}
@@ -69,40 +68,31 @@ export function HeadquarterEditorModal({
           />
         </label>
         <label className={styles.modalField}>
-          <span className={styles.label}>법인등록번호(사업자등록번호)</span>
+          <span className={styles.label}>사업장관리번호</span>
           <input
             className="app-input"
-            value={form.registration_number}
+            value={form.management_number}
             onChange={(event) =>
-              onFormChange({ ...form, registration_number: event.target.value })
+              onFormChange({ ...form, management_number: event.target.value })
             }
             disabled={busy}
           />
         </label>
         <label className={styles.modalField}>
-          <span className={styles.label}>면허번호</span>
+          <span className={styles.label}>사업장개시번호</span>
           <input
             className="app-input"
-            value={form.license_no}
-            onChange={(event) => onFormChange({ ...form, license_no: event.target.value })}
+            value={form.opening_number}
+            onChange={(event) => onFormChange({ ...form, opening_number: event.target.value })}
             disabled={busy}
           />
         </label>
         <label className={styles.modalField}>
-          <span className={styles.label}>연락처</span>
+          <span className={styles.label}>전화</span>
           <input
             className="app-input"
             value={form.contact_phone}
             onChange={(event) => onFormChange({ ...form, contact_phone: event.target.value })}
-            disabled={busy}
-          />
-        </label>
-        <label className={styles.modalFieldWide}>
-          <span className={styles.label}>주소</span>
-          <input
-            className="app-input"
-            value={form.address}
-            onChange={(event) => onFormChange({ ...form, address: event.target.value })}
             disabled={busy}
           />
         </label>

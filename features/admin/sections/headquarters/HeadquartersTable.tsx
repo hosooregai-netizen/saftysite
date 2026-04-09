@@ -13,7 +13,6 @@ interface HeadquartersTableProps {
   onCreateRequest: () => void;
   onDeleteRequest: (item: SafetyHeadquarter) => void;
   onEditRequest: (item: SafetyHeadquarter) => void;
-  onExcelUploadRequest: (item?: SafetyHeadquarter | null) => void;
   onOpenSitesRequest: (item: SafetyHeadquarter) => void;
   onQueryChange: (value: string) => void;
   onSortChange: (value: TableSortState) => void;
@@ -40,7 +39,6 @@ export function HeadquartersTable({
   onCreateRequest,
   onDeleteRequest,
   onEditRequest,
-  onExcelUploadRequest,
   onOpenSitesRequest,
   onQueryChange,
   onSortChange,
@@ -53,20 +51,16 @@ export function HeadquartersTable({
       {
         name: '사업장',
         columns: [
-          { key: 'name', label: '사업장명' },
-          { key: 'address', label: '주소' },
-          { key: 'contact_phone', label: '연락처' },
-          { key: 'business_registration_no', label: '사업자등록번호' },
-          { key: 'corporate_registration_no', label: '법인등록번호' },
-          { key: 'license_no', label: '면허번호' },
+          { key: 'management_number', label: '사업장관리번호' },
+          { key: 'opening_number', label: '사업장개시번호' },
+          { key: 'name', label: '회사명' },
+          { key: 'contact_phone', label: '전화' },
           { key: 'updated_at', label: '수정일' },
         ],
         rows: filteredHeadquarters.map((item) => ({
-          address: item.address || '',
-          business_registration_no: item.business_registration_no || '',
+          management_number: item.management_number || '',
+          opening_number: item.opening_number || '',
           contact_phone: item.contact_phone || '',
-          corporate_registration_no: item.corporate_registration_no || '',
-          license_no: item.license_no || '',
           name: item.name,
           updated_at: formatTimestamp(item.updated_at),
         })),
@@ -86,7 +80,7 @@ export function HeadquartersTable({
         <div className={`${styles.sectionHeaderActions} ${styles.sectionHeaderToolbarActions}`}>
           <input
             className={`app-input ${styles.sectionHeaderSearch} ${styles.sectionHeaderToolbarSearch}`}
-            placeholder="사업장명, 연락처, 주소로 검색"
+            placeholder="회사명, 관리번호, 개시번호, 전화로 검색"
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
           />
@@ -97,14 +91,6 @@ export function HeadquartersTable({
             disabled={busy}
           >
             엑셀 내보내기
-          </button>
-          <button
-            type="button"
-            className="app-button app-button-secondary"
-            onClick={() => onExcelUploadRequest(null)}
-            disabled={busy}
-          >
-            엑셀 업로드
           </button>
           <button
             type="button"
@@ -127,6 +113,7 @@ export function HeadquartersTable({
                 <colgroup>
                   <col className={styles.headquartersNameCol} />
                   <col className={styles.headquartersAddressCol} />
+                  <col className={styles.headquartersAddressCol} />
                   <col className={styles.headquartersContactCol} />
                   <col className={styles.headquartersUpdatedCol} />
                   <col className={styles.headquartersMenuCol} />
@@ -136,14 +123,15 @@ export function HeadquartersTable({
                     <SortableHeaderCell
                       column={{ key: 'name' }}
                       current={sort}
-                      label="사업장명"
+                      label="회사명"
                       onChange={onSortChange}
                     />
-                    <th>주소</th>
+                    <th>사업장관리번호</th>
+                    <th>사업장개시번호</th>
                     <SortableHeaderCell
                       column={{ key: 'contact_phone' }}
                       current={sort}
-                      label="연락처"
+                      label="전화"
                       onChange={onSortChange}
                     />
                     <SortableHeaderCell
@@ -177,7 +165,8 @@ export function HeadquartersTable({
                       <td>
                         <div className={styles.tablePrimary}>{item.name}</div>
                       </td>
-                      <td>{item.address || '-'}</td>
+                      <td>{item.management_number || '-'}</td>
+                      <td>{item.opening_number || '-'}</td>
                       <td>
                         <div className={styles.tablePrimary}>{item.contact_phone || '-'}</div>
                       </td>
@@ -202,12 +191,6 @@ export function HeadquartersTable({
                                 href: getAdminSectionHref('photos', {
                                   headquarterId: item.id,
                                 }),
-                              },
-                              {
-                                label: '엑셀 업로드',
-                                onSelect: () => {
-                                  if (!busy) onExcelUploadRequest(item);
-                                },
                               },
                               {
                                 label: '수정',
