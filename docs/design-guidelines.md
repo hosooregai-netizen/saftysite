@@ -255,7 +255,6 @@
 대표 화면:
 
 - `/calendar`
-- `/sites/[siteKey]/assist`
 - `/sites/[siteKey]/photos`
 - `/mailbox`
 
@@ -541,7 +540,7 @@
 | 현장 진입/목록 | `/`, `/sites/[siteKey]` | 상단 요약 + 간결한 목록 + 빠른 다음 액션 |
 | 보고서 목록 | `/sites/[siteKey]`, `/admin?section=reports` | 검색 우선, 상태 정렬 제거, 행 전체 클릭, 메타 축소 |
 | 보고서 편집 | `/sessions/[sessionId]`, 분기/불량작업 에디터 | 워크스페이스 툴바, 섹션 탐색, 고정된 상태 피드백 |
-| 운영 도구 | `/calendar`, `/assist`, `/photos`, `/mailbox` | 분할 레이아웃, 현재 범위 표시, 빠른 보조 액션 |
+| 운영 도구 | `/calendar`, `/photos`, `/mailbox` | 분할 레이아웃, 현재 범위 표시, 빠른 보조 액션 |
 | 관리자 관제 | `/admin`, `overview`, `analytics` | KPI와 처리 목록 분리, 경고 우선순위 강조 |
 
 ### 14-1. `전체 보고서`에 우선 반영할 기준

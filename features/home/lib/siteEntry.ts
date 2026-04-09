@@ -4,7 +4,6 @@ export type SiteNavView =
   | 'site-home'
   | 'reports'
   | 'quarterly'
-  | 'assist'
   | 'photos'
   | 'bad-workplace'
   | null;
@@ -51,21 +50,6 @@ export function buildSitePhotoAlbumHref(
   });
   const queryString = searchParams.toString();
   const basePath = `/sites/${encodeURIComponent(siteId)}/photos`;
-  return queryString ? `${basePath}?${queryString}` : basePath;
-}
-
-export function buildSiteAssistHref(
-  siteId: string,
-  query: Record<string, string | null | undefined> = {},
-): string {
-  const searchParams = new URLSearchParams();
-  Object.entries(query).forEach(([key, value]) => {
-    if (typeof value === 'string' && value.trim()) {
-      searchParams.set(key, value);
-    }
-  });
-  const queryString = searchParams.toString();
-  const basePath = `/sites/${encodeURIComponent(siteId)}/assist`;
   return queryString ? `${basePath}?${queryString}` : basePath;
 }
 
@@ -123,10 +107,6 @@ export function resolveSiteNavView({
 
   if (pathname === buildSitePhotoAlbumHref(siteKey)) {
     return 'photos';
-  }
-
-  if (pathname === buildSiteAssistHref(siteKey)) {
-    return 'assist';
   }
 
   if (pathname === buildSiteReportsHref(siteKey) || pathname.startsWith('/sessions/')) {

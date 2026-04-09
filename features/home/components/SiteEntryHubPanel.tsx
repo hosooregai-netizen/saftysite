@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { useEffect, useMemo } from 'react';
 import {
-  buildSiteAssistHref,
   buildSiteBadWorkplaceHref,
   buildSitePhotoAlbumHref,
   buildSiteQuarterlyListHref,
@@ -114,7 +113,6 @@ export function SiteEntryHubPanel({
   const currentReportMonth = getCurrentReportMonth();
   const badWorkplaceHref = buildSiteBadWorkplaceHref(currentSite.id, currentReportMonth);
   const calendarHref = buildWorkerCalendarHref(currentSite.id);
-  const assistHref = buildSiteAssistHref(currentSite.id);
   const photoAlbumHref = buildSitePhotoAlbumHref(currentSite.id);
   const currentYear = new Date().getFullYear();
   const reportIndexState = getReportIndexBySiteId(currentSite.id);
@@ -274,29 +272,6 @@ export function SiteEntryHubPanel({
           </div>
         </article>
 
-        <article className={styles.entryCard}>
-          <div className={styles.entryBody}>
-            <h2 className={styles.entryTitle}>현장 보조</h2>
-            <p className={styles.entryMetricLead}>이전 사진, 현장 사진 업로드, 사인, 연락처 확인</p>
-            <div className={styles.entryMetricRow}>
-              <div className={styles.entryMetricCopy}>
-                <strong className={styles.entryMetricValue}>ASSIST</strong>
-                <span className={styles.entryMetricUnit}>MOBILE</span>
-              </div>
-              <div className={styles.metricVisual}>
-                <div className={styles.badgePanel}>
-                  <span className={styles.badgePanelLabel}>태블릿 우선</span>
-                  <strong>현장 최소 기능</strong>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className={styles.entryActions}>
-            <Link href={assistHref} className="app-button app-button-primary">
-              현장 보조 열기
-            </Link>
-          </div>
-        </article>
       </section>
     </div>
   );

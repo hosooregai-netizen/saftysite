@@ -14,7 +14,6 @@ import type {
   SafetyBackendNotificationFeedResponse,
   SafetyBackendK2bApplyResult,
   SafetyBackendK2bImportPreview,
-  SafetyBackendFieldSignatureRecord,
   SafetyBackendPhotoAsset,
   SafetyBackendPhotoAssetListResponse,
   SafetyBackendScheduleListResponse,
@@ -627,40 +626,6 @@ export function applyK2bImportServer(
 ): Promise<SafetyBackendK2bApplyResult> {
   return requestSafetyAdminServer<SafetyBackendK2bApplyResult>(
     '/k2b/imports/apply',
-    {
-      method: 'POST',
-      body: JSON.stringify(payload),
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    },
-    token,
-    request,
-  );
-}
-
-export function fetchSiteFieldSignaturesServer(
-  token: string,
-  siteId: string,
-  params: Record<string, string | number | boolean | null | undefined>,
-  request: Request | null = null,
-): Promise<SafetyBackendFieldSignatureRecord[]> {
-  return requestSafetyAdminServer<SafetyBackendFieldSignatureRecord[]>(
-    withQuery(`/sites/${encodeURIComponent(siteId)}/field-signatures`, params),
-    {},
-    token,
-    request,
-  );
-}
-
-export function createSiteFieldSignatureServer(
-  token: string,
-  siteId: string,
-  payload: Record<string, unknown>,
-  request: Request | null = null,
-): Promise<SafetyBackendFieldSignatureRecord> {
-  return requestSafetyAdminServer<SafetyBackendFieldSignatureRecord>(
-    `/sites/${encodeURIComponent(siteId)}/field-signatures`,
     {
       method: 'POST',
       body: JSON.stringify(payload),

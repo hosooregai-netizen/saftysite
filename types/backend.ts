@@ -636,19 +636,6 @@ export interface SafetyBackendK2bApplyResult {
   rows: SafetyBackendK2bApplyRowResult[];
 }
 
-export interface SafetyBackendFieldSignatureRecord {
-  id: string;
-  site_id: string;
-  schedule_id?: string | null;
-  signed_by_user_id: string;
-  signed_by_name: string;
-  signed_at: string;
-  image_data_url: string;
-  note?: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
 export interface SafetyBackendAdminAlert {
   created_at: string;
   description: string;

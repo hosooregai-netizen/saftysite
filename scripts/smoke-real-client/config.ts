@@ -17,7 +17,6 @@ export const seed = JSON.parse(fs.readFileSync(seedPath, 'utf8')) as SmokeSeed;
 export const baseUrl = process.env.SMOKE_BASE_URL || 'http://127.0.0.1:3100';
 
 export const uploadName = `worker-upload-${Date.now()}.png`;
-export const assistUploadName = `assist-upload-${Date.now()}.png`;
 const k2bSuffix = `${Date.now()}`;
 export const k2bHeadquarterName = `테스트 본사 ${k2bSuffix}`;
 export const k2bSiteName = `테스트 현장 ${k2bSuffix}`;
