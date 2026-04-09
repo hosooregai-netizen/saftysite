@@ -800,7 +800,7 @@ export function MobileInspectionSessionScreen({
                             className="app-select"
                             value={item.rating}
                             onChange={(e) => {
-                              const rating = e.target.value as 'O' | 'X' | '-' | 'none';
+                              const rating = e.target.value as 'good' | 'average' | 'poor' | '';
                               screen.applyDocumentUpdate('doc9', 'manual', (current) => ({
                                 ...current,
                                 document9SafetyChecks: {
@@ -832,7 +832,7 @@ export function MobileInspectionSessionScreen({
                             className="app-select"
                             value={item.rating}
                             onChange={(e) => {
-                              const rating = e.target.value as 'O' | 'X' | '-' | 'none';
+                              const rating = e.target.value as 'good' | 'average' | 'poor' | '';
                               screen.applyDocumentUpdate('doc9', 'manual', (current) => ({
                                 ...current,
                                 document9SafetyChecks: {
