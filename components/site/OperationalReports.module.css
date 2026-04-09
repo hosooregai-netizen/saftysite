@@ -573,86 +573,133 @@
 }
 
 .violationTableWrap {
-  overflow: visible;
-  border: 0;
-  border-radius: 0;
+  border-color: var(--erp-line-strong);
+  border-radius: 4px;
+  background: var(--erp-white);
 }
 
 .violationTable {
-  min-width: 0;
+  min-width: 980px;
+  table-layout: fixed;
 }
 
 .violationTable thead {
-  display: none;
+  display: table-header-group;
 }
 
-.violationTable tbody {
-  display: grid;
-  gap: 12px;
-  counter-reset: violation-item;
-}
-
-.violationTable tbody tr {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  padding: 14px;
-  border: 1px solid var(--erp-line);
-  border-radius: var(--erp-radius-control);
-  background: #fbfcfe;
-  counter-increment: violation-item;
-}
-
-.violationTable tbody tr::before {
-  content: counter(violation-item) "번 지적사항";
-  grid-column: 1 / -1;
+.violationTable th {
+  padding: 12px 14px;
+  background: color-mix(
+    in srgb,
+    var(--erp-panel-muted) 88%,
+    var(--erp-line) 12%
+  );
+  border-right: 1px solid var(--erp-line-strong);
+  border-bottom: 1px solid var(--erp-line-strong);
   font-size: 14px;
   font-weight: 700;
-  line-height: 1.5;
+  line-height: 1.45;
+  letter-spacing: 0;
+  text-align: center;
+  text-transform: none;
   color: var(--erp-dark);
 }
 
-.violationTable tbody td {
-  display: grid;
-  gap: 6px;
+.violationTable th:last-child,
+.violationTable td:last-child {
+  border-right: 0;
+}
+
+.violationTable td {
   padding: 0;
+  border-right: 1px solid var(--erp-line);
+  border-bottom: 1px solid var(--erp-line);
+  font-size: 15px;
+  line-height: 1.55;
+  background: var(--erp-white);
+}
+
+.violationTable tr:last-child td {
   border-bottom: 0;
 }
 
-.violationTable tbody td::before {
-  content: attr(data-label);
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--erp-dark);
-}
-
-.violationTable tbody td > .tableCellStack {
-  gap: 6px;
-}
-
 .violationEmptyRow {
-  grid-template-columns: 1fr !important;
-  background: transparent !important;
-  padding: 0 !important;
-  border: 0 !important;
-  counter-increment: none !important;
+  background: var(--erp-white);
 }
 
 .violationEmptyRow::before {
-  content: none !important;
+  content: none;
 }
 
 .violationEmptyRow td {
-  display: block !important;
-  padding: 18px !important;
-  border: 1px dashed var(--erp-line) !important;
-  border-radius: var(--erp-radius-control);
-  background: var(--erp-white);
+  padding: 18px 16px;
+  text-align: center;
   color: var(--erp-text-muted);
 }
 
 .violationEmptyRow td::before {
-  content: none !important;
+  content: none;
+}
+
+.violationEditor,
+.violationEditorInput {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--erp-dark);
+}
+
+.violationEditor {
+  min-height: 96px;
+  padding: 12px 14px;
+  resize: vertical;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.6;
+}
+
+.violationEditorInput {
+  min-height: 40px;
+  padding: 0 14px;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.violationEditor::placeholder,
+.violationEditorInput::placeholder {
+  color: var(--erp-text-muted);
+}
+
+.violationEditor:focus,
+.violationEditorInput:focus,
+.violationEditor:focus-visible,
+.violationEditorInput:focus-visible {
+  border: 0;
+  outline: none;
+  box-shadow: inset 0 0 0 1px
+    color-mix(in srgb, var(--erp-mid) 38%, var(--erp-line-strong));
+  background: color-mix(in srgb, var(--erp-panel-muted) 78%, var(--erp-white));
+}
+
+.violationTable .tableCellStack {
+  gap: 0;
+}
+
+.violationTable .tableDateField {
+  gap: 0;
+  border-top: 1px solid var(--erp-line);
+}
+
+.violationTable .tableDateLabel {
+  padding: 8px 14px 4px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: var(--erp-text-muted);
+  background: color-mix(in srgb, var(--erp-panel-muted) 72%, var(--erp-white));
 }
 
 .implementationTableWrap {
@@ -916,10 +963,6 @@
 
   .inlineEditorActions {
     justify-content: flex-start;
-  }
-
-  .violationTable tbody tr {
-    grid-template-columns: 1fr;
   }
 }
 
