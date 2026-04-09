@@ -7,6 +7,11 @@ export interface IntroCaptureItem {
   description: string;
   imagePath: string;
   route: string;
+  headline?: string;
+  subhead?: string;
+  highlights?: string[];
+  impactSummary?: string;
+  layoutVariant?: 'split' | 'wide';
 }
 
 export interface IntroManifest {
