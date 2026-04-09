@@ -26,7 +26,6 @@ import {
   saveBlobAsFile,
 } from "@/lib/api";
 import {
-  BAD_WORKPLACE_NOTICE_SUBTITLE,
   BAD_WORKPLACE_NOTICE_TITLE,
   buildInitialBadWorkplaceReport,
   countDocument7FindingsForDisplay,
@@ -388,16 +387,6 @@ function BadWorkplaceReportEditor({
       null,
     [draft.sourceSessionId, siteSessions],
   );
-  const confirmationDates = useMemo(
-    () => [
-      ...new Set(
-        draft.violations
-          .map((item) => item.confirmationDate.trim())
-          .filter(Boolean),
-      ),
-    ],
-    [draft.violations],
-  );
 
   const updateSiteSnapshot = (
     key: keyof BadWorkplaceReport["siteSnapshot"],
@@ -581,9 +570,6 @@ function BadWorkplaceReportEditor({
           <strong className={operationalStyles.documentTitle}>
             {BAD_WORKPLACE_NOTICE_TITLE}
           </strong>
-          <span className={operationalStyles.documentSubtitle}>
-            {BAD_WORKPLACE_NOTICE_SUBTITLE}
-          </span>
         </div>
 
         <div className={operationalStyles.snapshotSectionGrid}>
@@ -836,11 +822,7 @@ function BadWorkplaceReportEditor({
                     <SnapshotInputCell
                       label="이행 확인일"
                       value={draft.confirmationDate}
-                      placeholder={
-                        confirmationDates.length > 1
-                          ? "행별 확인일을 보고 직접 입력"
-                          : "행별 확인일이 하나면 자동 반영"
-                      }
+                      placeholder="오늘 날짜가 기본 입력됩니다"
                       onChange={(value) =>
                         setDraft((current) => ({
                           ...current,

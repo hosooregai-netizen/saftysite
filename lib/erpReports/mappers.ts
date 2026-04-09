@@ -414,6 +414,7 @@ export function buildBadWorkplaceUpsertInput(
     report_title: report.title,
     site_id: site.id,
     visit_date:
+      report.confirmationDate ||
       report.violations[0]?.confirmationDate ||
       report.updatedAt.slice(0, 10) ||
       null,

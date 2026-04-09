@@ -13,6 +13,7 @@ import {
   countMeaningfulDocument7Findings,
   isMeaningfulDocument7Finding,
 } from '@/lib/erpReports/document7FindingCount';
+import { formatDateValue } from '@/lib/erpReports/shared';
 import type { SafetyUser } from '@/types/backend';
 import type { BadWorkplaceReport, BadWorkplaceViolation } from '@/types/erpReports';
 import type {
@@ -24,10 +25,9 @@ import { BAD_WORKPLACE_REPORT_KIND, buildBadWorkplaceReportKey } from './shared'
 
 export const BAD_WORKPLACE_NOTICE_TITLE =
   '기술지도 미이행 등 사망사고 고위험 취약 현장 통보서';
-export const BAD_WORKPLACE_NOTICE_SUBTITLE =
-  '<재해예방전문지도기관 → 지방관서 통보>';
 export const BAD_WORKPLACE_ATTACHMENT_DESCRIPTION =
   '기술지도 미이행 등 사망사고 고위험 취약 사항 1부';
+export const BAD_WORKPLACE_DEFAULT_AGENCY_REPRESENTATIVE = '한국종합안전';
 const BAD_WORKPLACE_DEFAULT_NON_COMPLIANCE =
   '기술지도 이후에도 동일 유해·위험요인이 개선되지 않아 지속 조치가 필요합니다.';
 
@@ -167,9 +167,8 @@ function buildViolationNonCompliance(result: string) {
   return '';
 }
 
-function deriveBadWorkplaceConfirmationDate(violations: BadWorkplaceViolation[]) {
-  const uniqueDates = [...new Set(violations.map((item) => normalizeText(item.confirmationDate)).filter(Boolean))];
-  return uniqueDates.length === 1 ? uniqueDates[0] : '';
+function getTodayDateValue() {
+  return formatDateValue(new Date());
 }
 
 export function buildBadWorkplaceViolations(
@@ -228,7 +227,7 @@ export function syncBadWorkplaceReportSource(
     implementationCount:
       session?.document2Overview.visitCount || report.implementationCount,
     guidanceDate,
-    confirmationDate: session ? deriveBadWorkplaceConfirmationDate(violations) : report.confirmationDate,
+    confirmationDate: report.confirmationDate || getTodayDateValue(),
     reporterName: nextReporterName,
     assigneeContact: shouldResetAssigneeContact ? '' : report.assigneeContact,
     sourceSessionId: session?.id || '',
@@ -273,13 +272,11 @@ export function buildInitialBadWorkplaceReport(
         sourceSession?.document2Overview.visitCount ||
         String(siteSessions.length || ''),
       guidanceDate: existing.guidanceDate || guidanceDate,
-      confirmationDate:
-        existing.confirmationDate ||
-        deriveBadWorkplaceConfirmationDate(existing.violations) ||
-        deriveBadWorkplaceConfirmationDate(violations),
+      confirmationDate: existing.confirmationDate || getTodayDateValue(),
       reporterName: existing.reporterName || reporterName,
       assigneeContact: existing.assigneeContact || buildAssigneeContact(reporter, sourceSession),
-      agencyRepresentative: existing.agencyRepresentative || '',
+      agencyRepresentative:
+        existing.agencyRepresentative || BAD_WORKPLACE_DEFAULT_AGENCY_REPRESENTATIVE,
       notificationDate:
         existing.notificationDate || existing.updatedAt.slice(0, 10) || timestamp.slice(0, 10),
       attachmentDescription:
@@ -304,11 +301,11 @@ export function buildInitialBadWorkplaceReport(
       sourceSession?.document2Overview.visitCount || String(siteSessions.length || ''),
     contractPeriod: site.adminSiteSnapshot.constructionPeriod,
     agencyName: reporter?.organization_name || DEFAULT_GUIDANCE_AGENCY,
-    agencyRepresentative: '',
+    agencyRepresentative: BAD_WORKPLACE_DEFAULT_AGENCY_REPRESENTATIVE,
     agencyAddress: site.adminSiteSnapshot.headquartersAddress,
     agencyContact: reporter?.phone || site.adminSiteSnapshot.headquartersContact,
     guidanceDate,
-    confirmationDate: deriveBadWorkplaceConfirmationDate(violations),
+    confirmationDate: getTodayDateValue(),
     assigneeContact: buildAssigneeContact(reporter, sourceSession),
     notificationDate: timestamp.slice(0, 10),
     recipientOfficeName: '',
