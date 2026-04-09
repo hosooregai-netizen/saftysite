@@ -19,7 +19,6 @@ export default function Doc13Section({
 
   return (
     <>
-      <p className={styles.fieldAssist}>관리자 콘텐츠의 재해 사례 중 정렬순 상위 4건만 표시됩니다.</p>
       <div className={`${styles.tableCard} ${styles.doc13TableWrap}`}>
         <table className={styles.doc13Table}>
           <tbody>
@@ -40,13 +39,6 @@ export default function Doc13Section({
               {cases.slice(0, 4).map((item) => (
                 <td key={`${item.id}-title`} className={styles.doc13TitleCell}>
                   <strong className={styles.doc13CaseTitle}>{item.title}</strong>
-                </td>
-              ))}
-            </tr>
-            <tr>
-              {cases.slice(0, 4).map((item) => (
-                <td key={`${item.id}-summary`} className={styles.doc13SummaryCell}>
-                  <p className={styles.doc13CaseSummary}>{item.summary}</p>
                 </td>
               ))}
             </tr>
