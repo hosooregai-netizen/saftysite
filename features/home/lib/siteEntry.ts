@@ -79,6 +79,10 @@ export function buildMobileSiteReportsHref(siteId: string): string {
   return `${buildMobileSiteHomeHref(siteId)}/reports`;
 }
 
+export function buildMobileSitePhotoAlbumHref(siteId: string): string {
+  return `${buildMobileSiteHomeHref(siteId)}/photos`;
+}
+
 export function buildMobileSiteQuarterlyListHref(siteId: string): string {
   return `${buildMobileSiteHomeHref(siteId)}/quarterly`;
 }
@@ -141,6 +145,11 @@ export function resolveWorkerMobileSwitchHref({
   const quarterlyListMatch = pathname.match(/^\/sites\/([^/]+)\/quarterly$/);
   if (quarterlyListMatch) {
     return buildMobileSiteQuarterlyListHref(decodeURIComponent(quarterlyListMatch[1]));
+  }
+
+  const photoAlbumMatch = pathname.match(/^\/sites\/([^/]+)\/photos$/);
+  if (photoAlbumMatch) {
+    return buildMobileSitePhotoAlbumHref(decodeURIComponent(photoAlbumMatch[1]));
   }
 
   if (pathname === '/' || pathname === '/quarterly' || pathname === '/bad-workplace') {

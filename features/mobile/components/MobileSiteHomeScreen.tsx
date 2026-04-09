@@ -12,7 +12,7 @@ import {
 import {
   buildMobileHomeHref,
   buildMobileSessionHref,
-  buildMobileSiteQuarterlyHref,
+  buildMobileSitePhotoAlbumHref,
   buildMobileSiteQuarterlyListHref,
   buildMobileSiteReportsHref,
 } from '@/features/home/lib/siteEntry';
@@ -220,6 +220,7 @@ export function MobileSiteHomeScreen({ siteKey }: MobileSiteHomeScreenProps) {
   const completedQuarterCount = new Set(
     currentYearQuarterlyReports.map((report) => report.quarterKey).filter(Boolean),
   ).size;
+  const photoAlbumHref = buildMobileSitePhotoAlbumHref(currentSite.id);
   const quarterlyListHref = buildMobileSiteQuarterlyListHref(currentSite.id);
 
   const handlePhotoCapture = async (files: FileList | null) => {
@@ -343,6 +344,19 @@ export function MobileSiteHomeScreen({ siteKey }: MobileSiteHomeScreenProps) {
             void handlePhotoCapture(event.target.files);
           }}
         />
+        <Link
+          href={photoAlbumHref}
+          className="app-button app-button-secondary"
+          style={{
+            width: '100%',
+            display: 'flex',
+            justifyContent: 'center',
+            textAlign: 'center',
+            textDecoration: 'none',
+          }}
+        >
+          현장 사진첩 열기
+        </Link>
         {photoUploadNotice ? (
           <div
             style={{

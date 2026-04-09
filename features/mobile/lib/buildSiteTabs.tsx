@@ -1,6 +1,7 @@
 import {
   buildMobileSiteBadWorkplaceHref,
   buildMobileSiteHomeHref,
+  buildMobileSitePhotoAlbumHref,
   buildMobileSiteQuarterlyListHref,
   buildMobileSiteReportsHref,
 } from '@/features/home/lib/siteEntry';
@@ -55,7 +56,7 @@ export function buildSiteTabs(siteId: string, activeTab: MobileSiteTabKey = null
     },
     {
       label: '사진첩',
-      href: '#',
+      href: buildMobileSitePhotoAlbumHref(siteId),
       isActive: activeTab === 'photos' ? true : undefined,
       icon: (
         <svg viewBox="0 0 24 24">
