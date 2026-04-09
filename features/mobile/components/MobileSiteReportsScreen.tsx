@@ -347,7 +347,7 @@ export function MobileSiteReportsScreen({ siteKey }: MobileSiteReportsScreenProp
       title={currentSite.siteName}
       webHref={`/sites/${encodeURIComponent(currentSite.id)}`}
     >
-      <section className={styles.sectionCard}>
+      <section className={styles.sectionCard} style={{ padding: '16px 12px' }}>
         <div className={styles.sectionHeader} style={{ paddingBottom: '12px' }}>
           <div className={styles.sectionTitleWrap}>
             <h2 className={styles.sectionTitle}>현장 보고서 요약</h2>
@@ -369,15 +369,17 @@ export function MobileSiteReportsScreen({ siteKey }: MobileSiteReportsScreenProp
           </button>
         </div>
 
-        <div className={styles.filterRow} style={{ marginTop: 0, borderTop: 'none', paddingTop: 0 }}>
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
           <input
             className="app-input"
+            style={{ flex: 1, minWidth: 0, fontSize: '13px' }}
             placeholder="차수, 제목, 지도일, 작성자로 검색"
             value={reportQuery}
             onChange={(event) => setReportQuery(event.target.value)}
           />
           <select
             className="app-select"
+            style={{ width: '100px', flexShrink: 0, fontSize: '13px', padding: '0 8px' }}
             value={reportSortMode}
             onChange={(event) =>
               setReportSortMode(event.target.value as SiteReportSortMode)
@@ -388,58 +390,56 @@ export function MobileSiteReportsScreen({ siteKey }: MobileSiteReportsScreenProp
             <option value="progress">진행률순</option>
           </select>
         </div>
-      </section>
 
-      <section className={styles.sectionCard} style={{ backgroundColor: 'transparent', boxShadow: 'none', padding: 0 }}>
-          {reportIndexError ? (
-            <div className={styles.errorNotice}>
-              <p>{reportIndexError}</p>
-              <button
-                type="button"
-                className="app-button app-button-secondary"
-                onClick={reloadReportIndex}
-                disabled={reportIndexStatus === 'loading'}
-              >
-                다시 불러오기
-              </button>
-            </div>
-          ) : null}
+        {reportIndexError ? (
+          <div className={styles.errorNotice}>
+            <p>{reportIndexError}</p>
+            <button
+              type="button"
+              className="app-button app-button-secondary"
+              onClick={reloadReportIndex}
+              disabled={reportIndexStatus === 'loading'}
+            >
+              다시 불러오기
+            </button>
+          </div>
+        ) : null}
 
-          {reportIndexStatus === 'loading' && reportItems.length === 0 ? (
-            <p className={styles.inlineNotice}>보고서 목록을 불러오는 중입니다.</p>
-          ) : reportItems.length === 0 ? (
-            <div className={styles.cardStack}>
-              <p className={styles.inlineNotice}>
-                아직 작성된 보고서가 없습니다. 첫 보고서를 추가해 모바일 작성 흐름을 시작해 주세요.
-              </p>
-              <button
-                type="button"
-                className="app-button app-button-primary"
-                onClick={openCreateDialog}
-                disabled={!canCreateReport}
-              >
-                첫 보고서 추가
-              </button>
-            </div>
-          ) : filteredReportItems.length === 0 ? (
+        {reportIndexStatus === 'loading' && reportItems.length === 0 ? (
+          <p className={styles.inlineNotice}>보고서 목록을 불러오는 중입니다.</p>
+        ) : reportItems.length === 0 ? (
+          <div className={styles.cardStack}>
             <p className={styles.inlineNotice}>
-              검색 조건에 맞는 보고서가 없습니다. 검색어 또는 정렬을 바꿔 다시 확인해 주세요.
+              아직 작성된 보고서가 없습니다. 첫 보고서를 추가해 모바일 작성 흐름을 시작해 주세요.
             </p>
-          ) : (
-            <div className={styles.cardStack}>
-              {filteredReportItems.map((item) => (
-                <ReportCard
-                  key={item.reportKey}
-                  assignedUserDisplay={assignedUserDisplay}
-                  canArchiveReports={canArchiveReports}
-                  fallbackAssignee={currentSite.assigneeName}
-                  item={item}
-                  onDeleteRequest={setDialogSessionId}
-                />
-              ))}
-            </div>
-          )}
-        </section>
+            <button
+              type="button"
+              className="app-button app-button-primary"
+              onClick={openCreateDialog}
+              disabled={!canCreateReport}
+            >
+              첫 보고서 추가
+            </button>
+          </div>
+        ) : filteredReportItems.length === 0 ? (
+          <p className={styles.inlineNotice}>
+            검색 조건에 맞는 보고서가 없습니다. 검색어 또는 정렬을 바꿔 다시 확인해 주세요.
+          </p>
+        ) : (
+          <div className={styles.cardStack}>
+            {filteredReportItems.map((item) => (
+              <ReportCard
+                key={item.reportKey}
+                assignedUserDisplay={assignedUserDisplay}
+                canArchiveReports={canArchiveReports}
+                fallbackAssignee={currentSite.assigneeName}
+                item={item}
+                onDeleteRequest={setDialogSessionId}
+              />
+            ))}
+          </div>
+        )}
+      </section>
       </MobileShell>
 
       <AppModal

@@ -167,7 +167,7 @@ export function MobileSiteListScreen() {
         </section>
       ) : (
         <>
-          <section className={styles.sectionCard}>
+          <section className={styles.sectionCard} style={{ padding: '16px 12px' }}>
             <div className={styles.sectionHeader} style={{ paddingBottom: '12px' }}>
               <div className={styles.sectionTitleWrap}>
                 <h2 className={styles.sectionTitle}>현장 목록</h2>
@@ -177,9 +177,10 @@ export function MobileSiteListScreen() {
               </span>
             </div>
 
-            <div className={styles.filterRow} style={{ marginTop: 0, borderTop: 'none', paddingTop: 0 }}>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
               <input
                 className="app-input"
+                style={{ flex: 1, minWidth: 0, fontSize: '13px' }}
                 placeholder="고객명, 현장명, 담당자로 검색"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
@@ -187,6 +188,7 @@ export function MobileSiteListScreen() {
               />
               <select
                 className="app-select"
+                style={{ width: '110px', flexShrink: 0, fontSize: '13px', padding: '0 8px' }}
                 value={sortMode}
                 onChange={(event) => setSortMode(event.target.value as typeof sortMode)}
                 disabled={isInitialHydration}
@@ -196,9 +198,7 @@ export function MobileSiteListScreen() {
                 <option value="reports">보고서 많은 순</option>
               </select>
             </div>
-          </section>
 
-          <section className={styles.sectionCard} style={{ backgroundColor: 'transparent', boxShadow: 'none', padding: 0 }}>
             {isInitialHydration ? (
               <p className={styles.inlineNotice}>현장 정보를 불러오는 중입니다.</p>
             ) : filteredSiteSummaries.length === 0 ? (
