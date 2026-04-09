@@ -233,7 +233,7 @@ export const CONTENT_TYPE_OPTIONS: Array<{
   },
 ];
 
-const CONTENT_CRUD_LAST_VISIBLE_TYPE: SafetyContentType = 'legal_reference';
+const CONTENT_CRUD_LAST_VISIBLE_TYPE: SafetyContentType = 'doc7_reference_material';
 
 export const CONTENT_CRUD_TYPE_OPTIONS = CONTENT_TYPE_OPTIONS.slice(
   0,
