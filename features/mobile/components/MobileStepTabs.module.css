@@ -9,7 +9,8 @@
     0 1px 0 rgba(16, 24, 43, 0.04),
     0 14px 28px rgba(16, 24, 43, 0.06);
   overflow: hidden;
-  height: calc(100vh - 160px); /* Adjust for header/tabbar */
+  flex: 1;
+  min-height: 0;
 }
 
 .tabContainer {

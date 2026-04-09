@@ -27,6 +27,13 @@ export interface TechnicalGuidanceOverview {
   recentAccidentDate: string;
   accidentType: string;
   accidentSummary: string;
+  processWorkerCount: string;
+  processEquipment: string;
+  processTools: string;
+  processHazardousMaterials: string;
+  processWorkContent: string;
+  processWorkLocation: string;
+  processSurroundings: string;
   processAndNotes: string;
 }
 

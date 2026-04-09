@@ -10,6 +10,7 @@ interface MobileShellProps {
   children: ReactNode;
   currentUserName?: string | null;
   footer?: ReactNode;
+  fullHeight?: boolean;
   kicker?: string;
   onLogout: () => void;
   subtitle?: string | null;
@@ -25,6 +26,7 @@ export function MobileShell({
   children,
   currentUserName,
   footer,
+  fullHeight = false,
   kicker,
   onLogout,
   subtitle,
@@ -34,8 +36,8 @@ export function MobileShell({
   webLabel = '웹에서 보기',
 }: MobileShellProps) {
   return (
-    <main className={`app-page ${styles.page}`}>
-      <div className={styles.pageShell}>
+    <main className={`app-page ${styles.page} ${fullHeight ? styles.pageFullHeight : ''}`}>
+      <div className={`${styles.pageShell} ${fullHeight ? styles.pageShellFullHeight : ''}`}>
         <header className={styles.header}>
           <div className={styles.headerTop}>
             {backHref ? (
@@ -78,8 +80,9 @@ export function MobileShell({
         <div
           className={[
             styles.content,
-            footer ? styles.contentWithFooter : '',
-            tabBar ? styles.contentWithTabBar : '',
+            fullHeight ? styles.contentFullHeight : '',
+            footer && !fullHeight ? styles.contentWithFooter : '',
+            tabBar && !fullHeight ? styles.contentWithTabBar : '',
           ]
             .filter(Boolean)
             .join(' ')}
