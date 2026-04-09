@@ -54,7 +54,9 @@ export function filterAdminReportRows(
 
   return rows.filter((row) => {
     if (filters.reportType && row.reportType !== filters.reportType) return false;
-    if (filters.status && row.status !== filters.status) return false;
+    if (filters.status && row.status !== filters.status && row.lifecycleStatus !== filters.status) {
+      return false;
+    }
     if (filters.headquarterId && row.headquarterId !== filters.headquarterId) return false;
     if (filters.siteId && row.siteId !== filters.siteId) return false;
     if (filters.assigneeUserId && row.assigneeUserId !== filters.assigneeUserId) return false;

@@ -26,6 +26,7 @@ import {
   getDispatchStatusLabel,
   getQualityStatusLabel,
 } from '@/lib/admin/reportMeta';
+import { isClosedReport } from '@/lib/admin/lifecycleStatus';
 import { getAdminSectionHref } from '@/lib/admin';
 import {
   fetchBadWorkplaceHwpxDocumentByReportKey,
@@ -100,12 +101,7 @@ function addDays(value: string, days: number) {
 }
 
 function isCompletedReportStatus(row: ControllerReportRow) {
-  return (
-    row.status === 'submitted' ||
-    row.status === 'published' ||
-    row.status === 'archived' ||
-    (typeof row.progressRate === 'number' && row.progressRate >= 100)
-  );
+  return isClosedReport(row);
 }
 
 function isBadWorkplaceOverdue(row: ControllerReportRow, today = new Date()) {

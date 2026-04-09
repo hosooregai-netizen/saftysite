@@ -91,6 +91,8 @@ function toReportListItem(report: JsonRecord) {
     total_round: report.total_round ?? null,
     progress_rate: report.progress_rate ?? null,
     status: report.status,
+    workflow_status: report.workflow_status ?? report.status,
+    lifecycle_status: report.lifecycle_status ?? (report.status === 'archived' ? 'deleted' : null),
     payload_version: report.payload_version ?? 1,
     latest_revision_no: report.latest_revision_no ?? 1,
     submitted_at: report.submitted_at ?? null,
@@ -596,7 +598,12 @@ function createRouteHelpers(state: RouteState) {
     const headquarters = headquarterById();
     const users = userSummaryById();
 
-    return state.sites.map((site) => {
+    return state.sites
+      .filter(
+        (site) =>
+          String(site.lifecycle_status || site.status || '') !== 'deleted'
+      )
+      .map((site) => {
       const activeAssignments = state.assignments.filter(
         (assignment) =>
           assignment.site_id === site.id && assignment.is_active === true
@@ -606,7 +613,7 @@ function createRouteHelpers(state: RouteState) {
         .filter(Boolean);
       const headquarter = headquarters.get(String(site.headquarter_id)) || null;
 
-      return {
+        return {
         ...site,
         headquarter: headquarter
           ? { id: headquarter.id, name: headquarter.name }
@@ -615,8 +622,8 @@ function createRouteHelpers(state: RouteState) {
         assigned_user: assignedUsers[0] || null,
         assigned_users: assignedUsers,
         active_assignment_count: activeAssignments.length,
-      };
-    });
+        };
+      });
   }
 
   function assignedSitesForUser(userId: string) {
@@ -635,7 +642,9 @@ function createRouteHelpers(state: RouteState) {
   function visibleReportsForSite(siteId: string) {
     return state.reports.filter(
       (report) =>
-        String(report.site_id) === siteId && String(report.status) !== 'archived'
+        String(report.site_id) === siteId &&
+        String(report.status) !== 'archived' &&
+        String(report.lifecycle_status || '') !== 'deleted'
     );
   }
 
@@ -1103,6 +1112,8 @@ function createRouteHelpers(state: RouteState) {
     );
     assert(report, `삭제 대상 보고서를 찾을 수 없습니다: ${reportKey}`);
     Object.assign(report, {
+      lifecycle_status: 'deleted',
+      workflow_status: report.workflow_status ?? report.status ?? 'draft',
       status: 'archived',
       updated_at: NOW,
     });
@@ -1309,6 +1320,7 @@ async function runBrowserCrudSmoke() {
         manager_phone: body.manager_phone ?? null,
         site_address: body.site_address ?? null,
         status: body.status ?? 'active',
+        lifecycle_status: body.lifecycle_status ?? body.status ?? 'active',
         memo: body.memo ?? null,
         created_at: NOW,
         updated_at: NOW,
@@ -1330,8 +1342,12 @@ async function runBrowserCrudSmoke() {
     if (normalizedPath === '/sites/:id' && request.method() === 'DELETE') {
       const item = state.sites.find((value) => value.id === pathname.split('/').pop());
       assert(item, `현장 종료 대상이 없습니다: ${pathname}`);
-      Object.assign(item, { status: 'closed', updated_at: NOW });
-      await fulfillJson(clone(helpers.hydratedSites().find((site) => site.id === item.id)));
+      Object.assign(item, {
+        lifecycle_status: 'deleted',
+        status: 'deleted',
+        updated_at: NOW,
+      });
+      await fulfillJson(clone(item));
       return;
     }
 
@@ -1451,7 +1467,11 @@ async function runBrowserCrudSmoke() {
 
       const reports = siteId
         ? helpers.visibleReportsForSite(siteId)
-        : state.reports.filter((report) => String(report.status) !== 'archived');
+        : state.reports.filter(
+            (report) =>
+              String(report.status) !== 'archived' &&
+              String(report.lifecycle_status || '') !== 'deleted',
+          );
       await fulfillJson(clone(reports.map((report) => toReportListItem(report))));
       return;
     }
@@ -1465,7 +1485,10 @@ async function runBrowserCrudSmoke() {
     if (normalizedPath === '/reports/by-key/:id' && request.method() === 'GET') {
       const reportKey = pathname.split('/').pop() || '';
       const report = state.reports.find(
-        (item) => String(item.report_key) === reportKey && String(item.status) !== 'archived'
+        (item) =>
+          String(item.report_key) === reportKey &&
+          String(item.status) !== 'archived' &&
+          String(item.lifecycle_status || '') !== 'deleted'
       );
       assert(report, `상세 보고서를 찾을 수 없습니다: ${reportKey}`);
       await fulfillJson(clone(report));
@@ -1969,7 +1992,11 @@ async function runBrowserErpSmoke() {
 
       const reports = siteId
         ? helpers.visibleReportsForSite(siteId)
-        : state.reports.filter((report) => String(report.status) !== 'archived');
+        : state.reports.filter(
+            (report) =>
+              String(report.status) !== 'archived' &&
+              String(report.lifecycle_status || '') !== 'deleted',
+          );
       await fulfillJson(clone(reports.map((report) => toReportListItem(report))));
       return;
     }
@@ -1985,7 +2012,10 @@ async function runBrowserErpSmoke() {
     if (normalizedPath === '/reports/by-key/:id' && request.method() === 'GET') {
       const reportKey = decodeURIComponent(pathname.split('/').pop() || '');
       const report = state.reports.find(
-        (item) => String(item.report_key) === reportKey && String(item.status) !== 'archived',
+        (item) =>
+          String(item.report_key) === reportKey &&
+          String(item.status) !== 'archived' &&
+          String(item.lifecycle_status || '') !== 'deleted',
       );
       assert(report, `Missing detailed report fixture: ${reportKey}`);
       await fulfillJson(clone(report));

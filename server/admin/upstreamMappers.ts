@@ -1,4 +1,15 @@
 import { normalizeControllerReview, normalizeDispatchMeta } from '@/lib/admin/reportMeta';
+import {
+  applyControllerReportRowStatus,
+  applyHeadquarterLifecycleStatus,
+  applyReportLifecycleStatus,
+  applySiteLifecycleStatus,
+  isVisibleReport,
+  normalizeHeadquarterLifecycleStatus,
+  normalizeReportLifecycleStatus,
+  normalizeReportWorkflowStatus,
+  normalizeSiteLifecycleStatus,
+} from '@/lib/admin/lifecycleStatus';
 import type {
   ControllerReportRow,
   SafetyAdminAlert,
@@ -73,7 +84,7 @@ function mapBackendDispatch(row: SafetyBackendAdminReportRow) {
 export function mapBackendAdminReportRow(
   row: SafetyBackendAdminReportRow,
 ): ControllerReportRow {
-  return {
+  return applyControllerReportRowStatus({
     assigneeName: normalizeText(row.assignee_name),
     assigneeUserId: normalizeText(row.assignee_user_id),
     checkerUserId: normalizeText(row.checker_user_id),
@@ -97,10 +108,12 @@ export function mapBackendAdminReportRow(
     siteId: normalizeText(row.site_id),
     siteName: normalizeText(row.site_name),
     sortLabel: normalizeText(row.sort_label),
-    status: normalizeText(row.status),
+    status: normalizeText(row.workflow_status) || normalizeText(row.status),
     updatedAt: normalizeText(row.updated_at),
     visitDate: normalizeText(row.visit_date),
-  };
+    workflowStatus: normalizeText(row.workflow_status),
+    lifecycleStatus: normalizeText(row.lifecycle_status),
+  });
 }
 
 export function mapBackendAdminReportsResponse(
@@ -109,10 +122,22 @@ export function mapBackendAdminReportsResponse(
   return {
     limit: response.limit,
     offset: response.offset,
-    rows: response.rows.map((row) => mapBackendAdminReportRow(row)),
+    rows: response.rows
+      .map((row) => mapBackendAdminReportRow(row))
+      .filter((row) => isVisibleReport(row)),
     total: response.total,
   };
 }
+
+export {
+  applyHeadquarterLifecycleStatus,
+  applyReportLifecycleStatus,
+  applySiteLifecycleStatus,
+  normalizeHeadquarterLifecycleStatus,
+  normalizeReportLifecycleStatus,
+  normalizeReportWorkflowStatus,
+  normalizeSiteLifecycleStatus,
+};
 
 export function mapBackendSchedule(
   row: SafetyBackendInspectionSchedule,

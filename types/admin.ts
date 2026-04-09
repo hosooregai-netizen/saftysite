@@ -100,6 +100,7 @@ export interface ControllerReportRow {
   dispatchStatus: ReportDispatchStatus;
   headquarterId: string;
   headquarterName: string;
+  lifecycleStatus: import('@/types/backend').SafetyLifecycleStatus;
   qualityStatus: ControllerQualityStatus;
   reportKey: string;
   reportType: ControllerReportType;
@@ -116,6 +117,7 @@ export interface ControllerReportRow {
   reportTitle: string;
   routeParam: string;
   sortLabel: string;
+  workflowStatus: import('@/types/backend').SafetyReportWorkflowStatus;
 }
 
 export type SafetyInspectionScheduleStatus =

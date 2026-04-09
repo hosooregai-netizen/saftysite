@@ -2,6 +2,7 @@ import {
   getAnalyticsExportSheets,
   getOverviewExportSheets,
 } from '@/features/admin/lib/buildAdminControlCenterModel';
+import { buildAdminOverviewResponse } from '@/server/admin/automation';
 import {
   getControllerReportDispatchLabel,
   getControllerReportTypeLabel,
@@ -10,6 +11,7 @@ import { getQualityStatusLabel } from '@/lib/admin/reportMeta';
 import {
   fetchAdminAnalyticsServer,
   fetchAdminCoreData,
+  fetchAdminReports,
   fetchAdminOverviewServer,
   fetchAdminReportsViewServer,
   fetchAdminSchedulesServer,
@@ -66,9 +68,33 @@ export async function buildAdminServerExportSheets(
   request: Request,
 ): Promise<ServerWorkbookSheet[]> {
   if (section === 'overview') {
-    const overview = mapBackendOverviewResponse(
-      await fetchAdminOverviewServer(token, request),
-    );
+    const [rawOverview, data, reports] = await Promise.all([
+      fetchAdminOverviewServer(token, request),
+      fetchAdminCoreData(token, request),
+      fetchAdminReports(token, request),
+    ]);
+    const upstreamOverview = mapBackendOverviewResponse(rawOverview);
+    const normalizedOverview = buildAdminOverviewResponse(data, reports);
+    const visibleSiteIds = new Set(data.sites.map((site) => site.id));
+    const overview = {
+      ...upstreamOverview,
+      alerts: upstreamOverview.alerts.filter(
+        (alert) => !alert.siteId || visibleSiteIds.has(alert.siteId),
+      ),
+      completionRows: upstreamOverview.completionRows.filter((row) => visibleSiteIds.has(row.siteId)),
+      scheduleRows: upstreamOverview.scheduleRows.filter((row) => visibleSiteIds.has(row.siteId)),
+      coverageRows: normalizedOverview.coverageRows,
+      deadlineSignalSummary: normalizedOverview.deadlineSignalSummary,
+      deadlineRows: normalizedOverview.deadlineRows,
+      metricCards: normalizedOverview.metricCards,
+      overdueSiteRows: normalizedOverview.overdueSiteRows,
+      pendingReviewRows: normalizedOverview.pendingReviewRows,
+      quarterlyMaterialSummary: normalizedOverview.quarterlyMaterialSummary,
+      siteStatusSummary: normalizedOverview.siteStatusSummary,
+      summaryRows: normalizedOverview.summaryRows,
+      unsentReportRows: normalizedOverview.unsentReportRows,
+      workerLoadRows: normalizedOverview.workerLoadRows,
+    };
     return getOverviewExportSheets(overview);
   }
 

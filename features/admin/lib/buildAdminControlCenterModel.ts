@@ -13,6 +13,11 @@ import {
   getQualityStatusLabel,
 } from '@/lib/admin/reportMeta';
 import {
+  applyReportLifecycleStatus,
+  isClosedReport,
+  isVisibleReport,
+} from '@/lib/admin/lifecycleStatus';
+import {
   countFilledQuarterlyMaterials,
   getSiteQuarterlyMaterialRecord,
   hasSiteContractProfile,
@@ -42,6 +47,7 @@ interface EnrichedControllerReportRow {
   isBadWorkplaceOverdue: boolean;
   isCompleted: boolean;
   isOverdue: boolean;
+  lifecycleStatus: import('@/types/backend').SafetyLifecycleStatus;
   periodLabel: string;
   progressRate: number | null;
   qualityStatus: 'unchecked' | 'ok' | 'issue';
@@ -58,6 +64,7 @@ interface EnrichedControllerReportRow {
   visitRound: number | null;
   totalRound: number | null;
   contractProfile: SiteContractProfile;
+  workflowStatus: import('@/types/backend').SafetyReportWorkflowStatus;
 }
 
 export interface AdminOverviewMetricCard {
@@ -338,13 +345,13 @@ function formatDateTime(value: string): string {
   });
 }
 
-function isCompletedStatus(status: string, progressRate: number | null) {
-  return (
-    status === 'submitted' ||
-    status === 'published' ||
-    status === 'archived' ||
-    (typeof progressRate === 'number' && progressRate >= 100)
-  );
+function isCompletedStatus(row: {
+  lifecycleStatus?: string | null;
+  progressRate: number | null;
+  status: string;
+  workflowStatus?: string | null;
+}) {
+  return isClosedReport(row);
 }
 
 function buildReportDate(row: {
@@ -428,8 +435,12 @@ function buildEnrichedRows(
   reports: SafetyReportListItem[],
   today: Date,
 ): EnrichedControllerReportRow[] {
-  const rows = buildControllerReportRows(reports, data.sites, data.users);
-  const reportByKey = new Map(reports.map((report) => [report.report_key, report]));
+  const visibleReports = reports
+    .map((report) => applyReportLifecycleStatus(report))
+    .filter((report) => isVisibleReport(report));
+  const rows = buildControllerReportRows(visibleReports, data.sites, data.users)
+    .filter((row) => isVisibleReport(row));
+  const reportByKey = new Map(visibleReports.map((report) => [report.report_key, report]));
   const siteById = new Map(data.sites.map((site) => [site.id, site]));
 
   return rows.map((row) => {
@@ -449,7 +460,7 @@ function buildEnrichedRows(
       row.reportType === 'bad_workplace'
         ? resolveBadWorkplaceDeadline(row.reportMonth, row.updatedAt)
         : '';
-    const isCompleted = isCompletedStatus(row.status, row.progressRate);
+    const isCompleted = isCompletedStatus(row);
     const isBadWorkplaceOverdue =
       row.reportType === 'bad_workplace' &&
       !isCompleted &&
@@ -471,6 +482,7 @@ function buildEnrichedRows(
         row.reportType === 'quarterly_report'
           ? (quarterlyDispatch?.dispatchStatus || row.dispatchStatus) === 'overdue'
           : isBadWorkplaceOverdue,
+      lifecycleStatus: row.lifecycleStatus,
       periodLabel: row.periodLabel,
       progressRate: row.progressRate,
       qualityStatus: row.qualityStatus,
@@ -487,6 +499,7 @@ function buildEnrichedRows(
       visitRound: sourceReport?.visit_round ?? null,
       totalRound: sourceReport?.total_round ?? contractProfile.totalRounds ?? null,
       contractProfile,
+      workflowStatus: row.workflowStatus,
     };
   });
 }

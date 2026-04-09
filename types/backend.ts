@@ -57,6 +57,10 @@ export type SafetyUserRole =
   | 'field_agent'
   | 'client_viewer';
 
+export type SafetyLifecycleStatus = 'planned' | 'active' | 'closed' | 'deleted';
+export type SafetyHeadquarterLifecycleStatus = Exclude<SafetyLifecycleStatus, 'planned'>;
+export type SafetySiteLifecycleStatus = SafetyLifecycleStatus;
+export type SafetyReportWorkflowStatus = 'draft' | 'submitted' | 'published';
 export type SafetyReportStatus = 'draft' | 'submitted' | 'published' | 'archived';
 export type SafetyEmploymentType = 'daily' | 'regular' | 'partner' | 'other';
 export type WorkerAckDocumentKind = 'hazard_notice' | 'tbm' | 'safety_education';
@@ -129,6 +133,7 @@ export interface SafetyHeadquarterDetail extends SafetyHeadquarterSummary {
   address: string | null;
   memo: string | null;
   is_active: boolean;
+  lifecycle_status?: SafetyHeadquarterLifecycleStatus;
   created_at: string;
   updated_at: string;
 }
@@ -151,6 +156,8 @@ export interface SafetySite {
   manager_phone: string | null;
   site_address: string | null;
   status: string;
+  lifecycle_status?: SafetySiteLifecycleStatus;
+  is_active?: boolean | null;
   memo: string | null;
   contract_date?: string | null;
   contract_type?: string | null;
@@ -248,6 +255,8 @@ export interface SafetyReport {
   total_round: number | null;
   progress_rate: number | null;
   status: SafetyReportStatus;
+  workflow_status?: SafetyReportWorkflowStatus | null;
+  lifecycle_status?: SafetyLifecycleStatus;
   payload_version: number;
   latest_revision_no: number;
   submitted_at: string | null;
@@ -275,6 +284,8 @@ export interface SafetyReportListItem {
   total_round: number | null;
   progress_rate: number | null;
   status: SafetyReportStatus;
+  workflow_status?: SafetyReportWorkflowStatus | null;
+  lifecycle_status?: SafetyLifecycleStatus;
   payload_version: number;
   latest_revision_no: number;
   submitted_at: string | null;
@@ -369,6 +380,8 @@ export interface SafetyBackendAdminReportRow {
   site_name: string;
   sort_label: string;
   status: string;
+  workflow_status?: string | null;
+  lifecycle_status?: string | null;
   updated_at: string;
   visit_date: string;
 }

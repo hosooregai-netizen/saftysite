@@ -93,7 +93,7 @@ interface SitesSectionProps {
 interface SiteFormState {
   headquarter_id: string;
   site_name: string;
-  status: SafetySiteStatus;
+  status: Exclude<SafetySiteStatus, 'deleted'>;
   project_start_date: string;
   project_end_date: string;
   project_amount: string;
@@ -154,6 +154,14 @@ function shouldIgnoreRowClick(target: EventTarget | null) {
 }
 
 function normalizeSiteStatus(value: string | null | undefined): SafetySiteStatus {
+  return value === 'planned' || value === 'active' || value === 'closed' || value === 'deleted'
+    ? value
+    : 'active';
+}
+
+function normalizeEditableSiteStatus(
+  value: string | null | undefined,
+): Exclude<SafetySiteStatus, 'deleted'> {
   return value === 'planned' || value === 'active' || value === 'closed' ? value : 'active';
 }
 
@@ -221,6 +229,7 @@ export function SitesSection(props: SitesSectionProps) {
   const filteredSites = useMemo(() => {
     const normalizedQuery = deferredQuery.trim().toLowerCase();
     return sites.filter((site) => {
+      const normalizedStatus = normalizeSiteStatus(site.status);
       const siteAssignments = activeAssignmentsBySiteId.get(site.id) ?? [];
       const assignedUsers = siteAssignments
         .map((assignment) => usersById.get(assignment.user_id))
@@ -232,7 +241,8 @@ export function SitesSection(props: SitesSectionProps) {
       const allAssignedNames = assignedUsers.map((user) => user.name);
 
       if (fallbackAssignedUser) allAssignedNames.push(fallbackAssignedUser.name);
-      if (statusFilter !== 'all' && site.status !== statusFilter) return false;
+      if (normalizedStatus === 'deleted') return false;
+      if (statusFilter !== 'all' && normalizedStatus !== statusFilter) return false;
       if (assignmentFilter === 'unassigned' && siteAssignments.length > 0) return false;
       if (!normalizedQuery) return true;
 
@@ -312,7 +322,7 @@ export function SitesSection(props: SitesSectionProps) {
     setForm({
       headquarter_id: site.headquarter_id,
       site_name: site.site_name,
-      status: normalizeSiteStatus(site.status),
+      status: normalizeEditableSiteStatus(site.status),
       project_start_date: site.project_start_date ?? '',
       project_end_date: site.project_end_date ?? '',
       project_amount: site.project_amount ? String(site.project_amount) : '',
@@ -870,7 +880,10 @@ export function SitesSection(props: SitesSectionProps) {
               className="app-select"
               value={form.status}
               onChange={(e) =>
-                setForm({ ...form, status: e.target.value as SafetySiteStatus })
+                setForm({
+                  ...form,
+                  status: e.target.value as Exclude<SafetySiteStatus, 'deleted'>,
+                })
               }
               disabled={busy}
             >

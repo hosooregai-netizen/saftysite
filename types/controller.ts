@@ -1,4 +1,5 @@
 import type {
+  SafetyHeadquarterLifecycleStatus,
   SafetyContentItem,
   SafetyContentType,
   SafetySite,
@@ -6,7 +7,7 @@ import type {
   SafetyUserRole,
 } from '@/types/backend';
 
-export type SafetySiteStatus = 'planned' | 'active' | 'closed';
+export type SafetySiteStatus = 'planned' | 'active' | 'closed' | 'deleted';
 
 export interface SafetyHeadquarter {
   id: string;
@@ -19,6 +20,7 @@ export interface SafetyHeadquarter {
   address: string | null;
   memo: string | null;
   is_active: boolean;
+  lifecycle_status?: SafetyHeadquarterLifecycleStatus;
   created_at: string;
   updated_at: string;
 }
@@ -73,6 +75,7 @@ export interface SafetyHeadquarterInput {
   address?: string | null;
   memo?: string | null;
   is_active?: boolean;
+  lifecycle_status?: SafetyHeadquarterLifecycleStatus;
 }
 
 export type SafetyHeadquarterUpdateInput = Partial<SafetyHeadquarterInput>;
@@ -96,6 +99,7 @@ export interface SafetySiteInput {
   total_contract_amount?: number | null;
   required_completion_fields?: string[] | null;
   status?: SafetySiteStatus;
+  lifecycle_status?: SafetySiteStatus;
   memo?: string | null;
 }
 

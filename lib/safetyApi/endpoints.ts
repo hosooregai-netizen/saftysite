@@ -24,6 +24,12 @@ import type {
   WorkerMobileSessionDetail,
   WorkerMobileTaskAcknowledgeInput,
 } from '@/types/backend';
+import {
+  applyReportLifecycleStatus,
+  applySiteLifecycleStatus,
+  isVisibleReport,
+  isVisibleSite,
+} from '@/lib/admin/lifecycleStatus';
 import { requestSafetyApi, SafetyApiError } from './client';
 
 const CLIENT_SITE_LIST_LIMIT = 500;
@@ -346,6 +352,10 @@ export function fetchAssignedSafetySites(token: string): Promise<SafetySite[]> {
     `/assignments/me/sites?${searchParams.toString()}`,
     {},
     token
+  ).then((sites) =>
+    sites
+      .map((site) => applySiteLifecycleStatus(site))
+      .filter((site) => isVisibleSite(site))
   );
 }
 
@@ -383,6 +393,10 @@ export function fetchSafetyReportsBySite(
     `/reports/site/${siteId}/full?${searchParams.toString()}`,
     {},
     token
+  ).then((reports) =>
+    reports
+      .map((report) => applyReportLifecycleStatus(report))
+      .filter((report) => isVisibleReport(report))
   );
 }
 
@@ -424,6 +438,10 @@ export function fetchSafetyReportList(
     `/reports?${searchParams.toString()}`,
     {},
     token
+  ).then((reports) =>
+    reports
+      .map((report) => applyReportLifecycleStatus(report))
+      .filter((report) => isVisibleReport(report))
   );
 }
 
@@ -435,7 +453,7 @@ export function fetchSafetyReportByKey(
     `/reports/by-key/${reportKey}`,
     {},
     token
-  );
+  ).then((report) => applyReportLifecycleStatus(report));
 }
 
 export function fetchTechnicalGuidanceSeed(

@@ -113,15 +113,18 @@ export function getUserRoleLabel(role: SafetyUserRole): string {
   return toUserRoleView(role) === 'admin' ? '관리자' : '현장 담당자';
 }
 
-export const SITE_STATUS_OPTIONS: Array<{ value: SafetySiteStatus; label: string }> = [
+export const SITE_STATUS_OPTIONS: Array<{ value: Exclude<SafetySiteStatus, 'deleted'>; label: string }> = [
   { value: 'planned', label: '준비중' },
   { value: 'active', label: '운영중' },
   { value: 'closed', label: '종료' },
 ];
 
-export const SITE_STATUS_LABELS = Object.fromEntries(
-  SITE_STATUS_OPTIONS.map((option) => [option.value, option.label]),
-) as Record<SafetySiteStatus, string>;
+export const SITE_STATUS_LABELS: Record<SafetySiteStatus, string> = {
+  planned: '以鍮꾩쨷',
+  active: '?댁쁺以?',
+  closed: '醫낅즺',
+  deleted: '??젣',
+};
 
 export const CONTENT_TYPE_OPTIONS: Array<{
   value: SafetyContentType;

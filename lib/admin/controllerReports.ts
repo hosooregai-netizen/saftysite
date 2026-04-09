@@ -4,6 +4,11 @@ import {
   normalizeControllerReview,
   normalizeDispatchMeta,
 } from '@/lib/admin/reportMeta';
+import {
+  applyControllerReportRowStatus,
+  applyReportLifecycleStatus,
+  isVisibleReport,
+} from '@/lib/admin/lifecycleStatus';
 import { getQuarterlyReportPeriodLabel } from '@/lib/erpReports/shared';
 import { asMapperRecord, normalizeMapperText } from '@/lib/safetyApiMappers/utils';
 import type {
@@ -149,10 +154,13 @@ export function buildControllerReportRows(
   sites: SafetySite[],
   users: SafetyUser[],
 ): ControllerReportRow[] {
+  const normalizedReports = reports
+    .map((report) => applyReportLifecycleStatus(report))
+    .filter((report) => isVisibleReport(report));
   const siteById = new Map(sites.map((site) => [site.id, site]));
   const usersById = new Map(users.map((user) => [user.id, user]));
 
-  return reports.map((report) => {
+  return normalizedReports.map((report) => {
     const meta = asMapperRecord(report.meta);
     const type = normalizeControllerReportType(report.report_type || meta.reportKind);
     const site = siteById.get(report.site_id) ?? null;
@@ -182,7 +190,7 @@ export function buildControllerReportRows(
             dispatchStatus: dispatch?.dispatchStatus || '',
           };
 
-    return {
+    return applyControllerReportRowStatus({
       assigneeName: getAssigneeName(site, usersById, assigneeUserId, meta),
       assigneeUserId,
       checkerUserId: controllerReview?.checkerUserId || '',
@@ -190,6 +198,7 @@ export function buildControllerReportRows(
       dispatchStatus: effectiveDispatch.dispatchStatus,
       headquarterId: normalizeMapperText(site?.headquarter_id) || normalizeMapperText(report.headquarter_id),
       headquarterName,
+      lifecycleStatus: report.lifecycle_status,
       qualityStatus: controllerReview?.qualityStatus || 'unchecked',
       reportKey: report.report_key,
       reportType: type,
@@ -209,7 +218,8 @@ export function buildControllerReportRows(
         type === 'quarterly_report'
           ? `${siteName} ${periodLabel || report.report_key}`.trim()
           : `${siteName} ${report.report_title}`.trim(),
-    };
+      workflowStatus: report.workflow_status || report.status,
+    });
   });
 }
 

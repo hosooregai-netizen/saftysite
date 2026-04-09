@@ -15,7 +15,12 @@ import {
 } from '@/server/admin/safetyApiServer';
 import { buildSiteMemoWithRequiredCompletionFields } from '@/lib/admin/siteContractProfile';
 import type { SafetySite } from '@/types/backend';
-import type { SafetyHeadquarter, SafetySiteInput, SafetySiteUpdateInput } from '@/types/controller';
+import type {
+  SafetyHeadquarter,
+  SafetyHeadquarterUpdateInput,
+  SafetySiteInput,
+  SafetySiteUpdateInput,
+} from '@/types/controller';
 import type {
   ExcelApplyResult,
   ExcelApplyResultRow,
@@ -724,7 +729,9 @@ function rowArrayToRecord(headers: string[], rowValues: string[]) {
   return Object.fromEntries(headers.map((header, index) => [header, rowValues[index] || '']));
 }
 
-function buildHeadquarterPayload(rowData: Record<string, string>): SafetySiteUpdateInput & Record<string, unknown> {
+function buildHeadquarterPayload(
+  rowData: Record<string, string>,
+): SafetyHeadquarterUpdateInput & Record<string, unknown> {
   const payload: Record<string, unknown> = {};
   const headquarterName = normalizeText(rowData.headquarter_name);
   if (headquarterName) payload.name = headquarterName;

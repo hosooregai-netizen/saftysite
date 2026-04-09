@@ -1,4 +1,14 @@
 import { getSafetyApiUpstreamBaseUrl } from '@/lib/safetyApi/upstream';
+import { buildVisibleAdminSiteIdSet } from '@/lib/admin/reportVisibility';
+import {
+  applyHeadquarterLifecycleStatus,
+  applyReportLifecycleStatus,
+  applySiteLifecycleStatus,
+  isVisibleHeadquarter,
+  isVisibleReport,
+  isVisibleSite,
+  normalizeReportLifecycleStatus,
+} from '@/lib/admin/lifecycleStatus';
 import type { SafetyContentAssetUpload } from '@/lib/safetyApi/adminEndpoints';
 import type {
   SafetyBackendAdminAlert,
@@ -49,6 +59,37 @@ export class SafetyServerApiError extends Error {
     this.name = 'SafetyServerApiError';
     this.status = status;
   }
+}
+
+function normalizeText(value: unknown) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function normalizeHeadquarterList(headquarters: SafetyHeadquarter[]) {
+  return headquarters
+    .map((headquarter) => applyHeadquarterLifecycleStatus(headquarter))
+    .filter((headquarter) => isVisibleHeadquarter(headquarter));
+}
+
+function normalizeSiteList(
+  sites: SafetySite[],
+  headquarters: SafetyHeadquarter[] = [],
+) {
+  const normalizedSites = sites
+    .map((site) => applySiteLifecycleStatus(site))
+    .filter((site) => isVisibleSite(site));
+  if (headquarters.length === 0) {
+    return normalizedSites;
+  }
+
+  const visibleSiteIds = buildVisibleAdminSiteIdSet(normalizedSites, headquarters);
+  return normalizedSites.filter((site) => visibleSiteIds.has(normalizeText(site.id)));
+}
+
+function normalizeReportList<T extends SafetyReportListItem | SafetyReport>(reports: T[]) {
+  return reports
+    .map((report) => applyReportLifecycleStatus(report))
+    .filter((report) => isVisibleReport(report));
 }
 
 function withQuery(
@@ -240,7 +281,7 @@ export async function fetchAdminCoreData(
   token: string,
   request: Request | null = null,
 ): Promise<ControllerDashboardData> {
-  const [users, headquarters, sites, assignments, contentItems] = await Promise.all([
+  const [users, rawHeadquarters, rawSites, assignments, contentItems] = await Promise.all([
     requestSafetyAdminServer<SafetyUser[]>(
       withQuery('/users', { active_only: true, limit: ADMIN_LIST_LIMIT }),
       {},
@@ -277,9 +318,12 @@ export async function fetchAdminCoreData(
       request,
     ),
   ]);
+  const headquarters = normalizeHeadquarterList(rawHeadquarters);
+  const sites = normalizeSiteList(rawSites, headquarters);
+  const visibleSiteIds = new Set(sites.map((site) => normalizeText(site.id)));
 
   return {
-    assignments,
+    assignments: assignments.filter((assignment) => visibleSiteIds.has(normalizeText(assignment.site_id))),
     contentItems,
     headquarters,
     sites,
@@ -301,7 +345,7 @@ export function fetchSafetySitesServer(
     {},
     token,
     request,
-  );
+  ).then((sites) => normalizeSiteList(sites));
 }
 
 export function fetchSafetyHeadquartersServer(
@@ -316,7 +360,7 @@ export function fetchSafetyHeadquartersServer(
     {},
     token,
     request,
-  );
+  ).then((headquarters) => normalizeHeadquarterList(headquarters));
 }
 
 export function fetchCurrentSafetyUserServer(
@@ -345,7 +389,7 @@ export function fetchAssignedSafetySitesServer(
     {},
     token,
     request,
-  );
+  ).then((sites) => normalizeSiteList(sites));
 }
 
 export function fetchSafetyContentItemsServer(
@@ -372,7 +416,7 @@ export function fetchAdminReports(
     {},
     token,
     request,
-  );
+  ).then((reports) => normalizeReportList(reports));
 }
 
 export function fetchAdminReportByKey(
@@ -385,7 +429,13 @@ export function fetchAdminReportByKey(
     {},
     token,
     request,
-  );
+  ).then((report) => {
+    const normalized = applyReportLifecycleStatus(report);
+    if (!isVisibleReport(normalized)) {
+      throw new SafetyServerApiError('蹂닿퀬?쒕? 李얠쓣 ???놁뒿?덈떎.', 404);
+    }
+    return normalized;
+  });
 }
 
 export function fetchSafetyReportsBySiteFullServer(
@@ -400,7 +450,7 @@ export function fetchSafetyReportsBySiteFullServer(
     {},
     token,
     request,
-  );
+  ).then((reports) => normalizeReportList(reports));
 }
 
 export function uploadSafetyAssetServer(
@@ -424,12 +474,54 @@ export function fetchAdminReportsViewServer(
   params: Record<string, string | number | boolean | null | undefined>,
   request: Request | null = null,
 ): Promise<SafetyBackendAdminReportsResponse> {
-  return requestSafetyAdminServer<SafetyBackendAdminReportsResponse>(
-    withQuery('/admin/reports', params),
-    {},
-    token,
-    request,
+  const limit = Math.max(
+    1,
+    Math.min(
+      REPORT_LIST_LIMIT,
+      typeof params.limit === 'number' ? params.limit : Number(params.limit ?? 100) || 100,
+    ),
   );
+  const offset = Math.max(
+    0,
+    typeof params.offset === 'number' ? params.offset : Number(params.offset ?? 0) || 0,
+  );
+
+  return Promise.all([
+    fetchSafetyHeadquartersServer(token, request),
+    fetchSafetySitesServer(token, request),
+    requestSafetyAdminServer<SafetyBackendAdminReportsResponse>(
+      withQuery('/admin/reports', {
+        ...params,
+        limit: REPORT_LIST_LIMIT,
+        offset: 0,
+      }),
+      {},
+      token,
+      request,
+    ),
+  ]).then(([headquarters, sites, response]) => {
+    const visibleSiteIds = buildVisibleAdminSiteIdSet(sites, headquarters);
+    const rows = response.rows.filter((row) => {
+      const siteId = normalizeText(row.site_id);
+      if (!siteId || !visibleSiteIds.has(siteId)) {
+        return false;
+      }
+
+      return normalizeReportLifecycleStatus({
+        lifecycleStatus: row.lifecycle_status,
+        progressRate: row.progress_rate,
+        status: normalizeText(row.workflow_status) || normalizeText(row.status),
+        workflowStatus: row.workflow_status,
+      }) !== 'deleted';
+    });
+
+    return {
+      limit,
+      offset,
+      rows: rows.slice(offset, offset + limit),
+      total: rows.length,
+    };
+  });
 }
 
 export function updateAdminReportReviewServer(

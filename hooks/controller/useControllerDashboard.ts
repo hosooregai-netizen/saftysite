@@ -25,6 +25,13 @@ import {
   updateSafetyUser,
   updateSafetyUserPassword,
 } from '@/lib/safetyApi/adminEndpoints';
+import {
+  applyHeadquarterLifecycleStatus,
+  applySiteLifecycleStatus,
+  isVisibleHeadquarter,
+  isVisibleSite,
+} from '@/lib/admin/lifecycleStatus';
+import { buildVisibleAdminSiteIdSet } from '@/lib/admin/reportVisibility';
 import type {
   SafetyAssignmentInput,
   SafetyAssignment,
@@ -125,6 +132,23 @@ function hasControllerDashboardCriticalData(data: ControllerDashboardData): bool
   );
 }
 
+function normalizeControllerDashboardCoreData(data: ControllerDashboardCoreData): ControllerDashboardCoreData {
+  const headquarters = data.headquarters
+    .map((headquarter) => applyHeadquarterLifecycleStatus(headquarter))
+    .filter((headquarter) => isVisibleHeadquarter(headquarter));
+  const sites = data.sites
+    .map((site) => applySiteLifecycleStatus(site))
+    .filter((site) => isVisibleSite(site));
+  const visibleSiteIds = buildVisibleAdminSiteIdSet(sites, headquarters);
+
+  return {
+    assignments: data.assignments.filter((assignment) => visibleSiteIds.has(assignment.site_id)),
+    headquarters,
+    sites: sites.filter((site) => visibleSiteIds.has(site.id)),
+    users: data.users,
+  };
+}
+
 function ensureControllerDashboardCoreData(
   token: string,
   options?: { force?: boolean }
@@ -147,15 +171,18 @@ function ensureControllerDashboardCoreData(
   ])
     .then(([users, headquarters, sites, assignments]) => {
       ensureControllerDashboardCacheToken(token);
-      controllerDashboardCache.data = {
-        ...controllerDashboardCache.data,
-        users,
+      const normalized = normalizeControllerDashboardCoreData({
+        assignments,
         headquarters,
         sites,
-        assignments,
+        users,
+      });
+      controllerDashboardCache.data = {
+        ...controllerDashboardCache.data,
+        ...normalized,
       };
       controllerDashboardCache.coreLoadedAt = Date.now();
-      return { users, headquarters, sites, assignments };
+      return normalized;
     })
     .finally(() => {
       if (controllerDashboardCache.token === token) {
