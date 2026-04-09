@@ -17,6 +17,28 @@
   color: var(--erp-text-muted);
 }
 
+.demoBadge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(217, 119, 6, 0.12);
+  color: #b45309;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.demoBanner {
+  padding: 12px 14px;
+  border: 1px solid rgba(217, 119, 6, 0.18);
+  border-radius: var(--erp-radius-card);
+  background: linear-gradient(180deg, rgba(255, 247, 237, 0.96), rgba(255, 251, 235, 0.98));
+  color: #9a3412;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
 .headerScope {
   font-size: 12px;
   font-weight: 600;
@@ -36,21 +58,18 @@
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
-  justify-content: space-between;
   gap: 10px;
-  width: 100%;
   min-width: 0;
 }
 
 .headerUtilityGroup {
-  display: flex;
-  flex: 1 1 auto;
+  display: inline-flex;
+  flex: 0 0 auto;
   flex-wrap: nowrap;
   align-items: center;
-  justify-content: flex-end;
   gap: 10px;
   min-width: 0;
-  margin-left: clamp(12px, 2vw, 24px);
+  margin-left: auto;
 }
 
 .headerPrimaryActions {
@@ -85,9 +104,9 @@
 }
 
 .searchField {
-  flex: 1 1 clamp(220px, 24vw, 360px);
-  min-width: 220px;
-  max-width: 360px;
+  flex: 0 0 clamp(180px, 18vw, 240px);
+  min-width: 180px;
+  max-width: 240px;
 }
 
 .accountFilter {
@@ -840,540 +859,14 @@
   color: var(--erp-text-muted);
 }
 
-.connectGate {
-  display: grid;
-  gap: 18px;
-  padding: clamp(20px, 3vw, 28px);
-  border: 1px solid rgba(21, 39, 61, 0.08);
-  border-radius: 22px;
-  background:
-    radial-gradient(circle at top left, rgba(214, 180, 96, 0.16), transparent 34%),
-    linear-gradient(180deg, rgba(255, 252, 244, 0.98), rgba(248, 243, 232, 0.96));
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.72),
-    0 20px 40px rgba(18, 29, 45, 0.08);
-}
-
-.connectHero {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.connectHeroCopy {
-  display: grid;
-  gap: 8px;
-  max-width: 620px;
-}
-
-.connectEyebrow,
-.mailAppBarKicker {
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #8a6d2f;
-}
-
-.connectTitle,
-.mailAppBarTitle {
-  margin: 0;
-  font-size: clamp(24px, 3vw, 30px);
-  line-height: 1.15;
-  font-weight: 800;
-  color: #15273d;
-}
-
-.connectDescription,
-.mailAppBarDescription {
-  margin: 0;
-  font-size: 14px;
-  line-height: 1.7;
-  color: #5b6676;
-}
-
-.connectHighlights {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.connectHighlightCard,
-.providerActionCard,
-.railAccountCard {
-  display: grid;
-  gap: 8px;
-  padding: 16px 18px;
-  border: 1px solid rgba(25, 46, 69, 0.08);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.68),
-    0 12px 24px rgba(15, 23, 42, 0.05);
-}
-
-.connectHighlightCard strong,
-.providerActionTitle strong,
-.railAccountCard strong {
-  font-size: 14px;
-  color: #15273d;
-}
-
-.connectHighlightCard span,
-.providerActionTitle span,
-.providerActionDetail,
-.railAccountCard span {
-  font-size: 13px;
-  line-height: 1.6;
-  color: #5b6676;
-}
-
-.providerStatusGrid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.providerActionHeader {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.providerActionTitle {
-  display: grid;
-  gap: 5px;
-  min-width: 0;
-}
-
-.providerStatusBadge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 30px;
-  padding: 0 12px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 800;
-  white-space: nowrap;
-}
-
-.providerStatusReady {
-  background: rgba(25, 135, 84, 0.12);
-  color: #18734d;
-}
-
-.providerStatusWarning {
-  background: rgba(225, 138, 39, 0.14);
-  color: #9a5a09;
-}
-
-.providerStatusMissing {
-  background: rgba(205, 64, 64, 0.12);
-  color: #a43333;
-}
-
-.providerActionDetail {
-  min-height: 42px;
-}
-
-.providerActionButton {
-  min-width: 180px;
-}
-
-.mailWorkspace {
-  display: grid;
-  gap: 16px;
-}
-
-.mailAppBar {
-  padding: 18px 20px;
-  border: 1px solid rgba(21, 39, 61, 0.08);
-  border-radius: 22px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(249, 251, 253, 0.96)),
-    radial-gradient(circle at top right, rgba(208, 176, 90, 0.14), transparent 30%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.72),
-    0 16px 32px rgba(15, 23, 42, 0.06);
-}
-
-.mailAppBarMain {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.mailAppBarHeading {
-  display: grid;
-  gap: 6px;
-  max-width: 620px;
-}
-
-.mailAppBarActions {
-  display: flex;
-  flex: 1 1 320px;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
-.mailBody {
-  display: grid;
-  grid-template-columns: 260px minmax(0, 1fr);
-  gap: 16px;
-  min-width: 0;
-}
-
-.mailRail,
-.mailStage,
-.mailListPane,
-.mailDetailPane,
-.composeWorkspace {
-  min-width: 0;
-}
-
-.mailRail {
-  display: grid;
-  align-content: start;
-  gap: 14px;
-}
-
-.railSection {
-  display: grid;
-  gap: 10px;
-  padding: 16px;
-  border: 1px solid rgba(21, 39, 61, 0.08);
-  border-radius: 18px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(247, 250, 253, 0.94));
-  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.04);
-}
-
-.railSectionTitle {
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #6d7788;
-}
-
-.railComposeButton {
-  width: 100%;
-  min-height: 44px;
-}
-
-.railNavList,
-.railTagList {
-  display: grid;
-  gap: 8px;
-}
-
-.railNavButton {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  width: 100%;
-  min-height: 44px;
-  padding: 0 14px;
-  border: 1px solid rgba(21, 39, 61, 0.08);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.9);
-  font-size: 14px;
-  font-weight: 700;
-  color: #1d2b3d;
-  text-align: left;
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease,
-    border-color 0.2s ease;
-}
-
-.railNavButton:hover {
-  transform: translateY(-1px);
-  border-color: rgba(21, 39, 61, 0.14);
-  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.05);
-}
-
-.railNavButtonActive {
-  border-color: rgba(179, 135, 44, 0.35);
-  background: linear-gradient(180deg, rgba(255, 247, 225, 0.96), rgba(255, 253, 246, 0.96));
-  color: #7f5b18;
-}
-
-.railNavMeta,
-.railTag {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 26px;
-  padding: 0 10px;
-  border-radius: 999px;
-  background: rgba(23, 35, 51, 0.06);
-  font-size: 12px;
-  font-weight: 700;
-  color: #667181;
-}
-
-.railTagList {
-  grid-template-columns: repeat(auto-fit, minmax(0, max-content));
-}
-
-.mailStage {
-  display: grid;
-  min-width: 0;
-}
-
-.mailSplit {
-  display: grid;
-  grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
-  gap: 16px;
-  min-width: 0;
-}
-
-.mailListPane,
-.mailDetailPane,
-.composeWorkspace {
-  display: grid;
-  gap: 14px;
-  padding: 18px;
-  border: 1px solid rgba(21, 39, 61, 0.08);
-  border-radius: 22px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));
-  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.05);
-}
-
-.listPaneHeader,
-.detailPaneHeader {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.listPaneHeading,
-.detailPaneHeading,
-.composeHeadingBlock {
-  display: grid;
-  gap: 6px;
-}
-
-.threadList,
-.messageTimeline {
-  display: grid;
-  gap: 10px;
-  min-height: 0;
-}
-
-.threadList {
-  max-height: 680px;
-  overflow: auto;
-}
-
-.threadRow {
-  display: grid;
-  gap: 8px;
-  width: 100%;
-  padding: 14px 16px;
-  border: 1px solid rgba(21, 39, 61, 0.08);
-  border-radius: 16px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(245, 248, 252, 0.94));
-  text-align: left;
-  cursor: pointer;
-  transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease,
-    transform 0.2s ease,
-    background-color 0.2s ease;
-}
-
-.threadRow:hover {
-  transform: translateY(-1px);
-  border-color: rgba(21, 39, 61, 0.14);
-  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.05);
-}
-
-.threadRowActive {
-  border-color: rgba(179, 135, 44, 0.3);
-  background: linear-gradient(180deg, rgba(255, 249, 237, 0.96), rgba(255, 255, 255, 0.98));
-  box-shadow: 0 14px 28px rgba(148, 109, 33, 0.08);
-}
-
-.threadRowUnread {
-  border-color: rgba(29, 68, 117, 0.18);
-}
-
-.threadRowHeader,
-.threadRowBody,
-.threadTagRow,
-.paginationBar,
-.paginationActions,
-.messageBubbleHeader,
-.messageBubbleHeading,
-.detailMetaPanel,
-.composeFooter {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
-.threadRowHeader,
-.threadRowBody,
-.paginationBar,
-.detailPaneHeader,
-.messageBubbleHeader,
-.composeFooter {
-  justify-content: space-between;
-}
-
-.threadCounterparty,
-.detailSubject,
-.messageSubject {
-  font-size: 15px;
-  font-weight: 800;
-  color: #15273d;
-}
-
-.threadTime,
-.detailParticipants,
-.messageMeta,
-.composeFooterMeta {
-  font-size: 12px;
-  line-height: 1.6;
-  color: #687386;
-}
-
-.threadExcerpt {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.6;
-  color: #4f5d70;
-}
-
-.threadUnreadBadge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 24px;
-  min-height: 24px;
-  padding: 0 7px;
-  border-radius: 999px;
-  background: #d24747;
-  color: #fff;
-  font-size: 11px;
-  font-weight: 800;
-}
-
-.threadTag,
-.detailMetaChip {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 26px;
-  padding: 0 10px;
-  border-radius: 999px;
-  background: rgba(23, 35, 51, 0.06);
-  font-size: 12px;
-  font-weight: 700;
-  color: #556173;
-}
-
-.detailMetaPanel {
-  gap: 10px;
-}
-
-.messageTimeline {
-  max-height: 760px;
-  overflow: auto;
-}
-
-.messageBubble {
-  display: grid;
-  gap: 10px;
-  padding: 16px 18px;
-  border: 1px solid rgba(21, 39, 61, 0.08);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.96);
-}
-
-.messageIncoming {
-  background: linear-gradient(180deg, rgba(246, 251, 255, 0.98), rgba(255, 255, 255, 0.96));
-  border-color: rgba(41, 98, 157, 0.16);
-}
-
-.messageOutgoing {
-  background: linear-gradient(180deg, rgba(247, 255, 251, 0.98), rgba(255, 255, 255, 0.96));
-  border-color: rgba(24, 135, 84, 0.16);
-}
-
-.messageBody {
-  white-space: pre-wrap;
-  font-size: 14px;
-  line-height: 1.7;
-  color: #203043;
-}
-
-.composeWorkspace {
-  gap: 18px;
-}
-
-.composeSectionHeader {
-  align-items: flex-start;
-}
-
-.composeGrid {
-  gap: 14px;
-}
-
-.composeSupportArea {
-  border-radius: 16px;
-}
-
-.composeEditor {
-  border-radius: 0 0 16px 16px;
-}
-
-.composeToolbar {
-  border-radius: 16px 16px 0 0;
-}
-
-.composeFooter {
-  grid-column: 1 / -1;
-  padding-top: 8px;
-  border-top: 1px solid rgba(21, 39, 61, 0.08);
-}
-
 @media (max-width: 1023px) {
-  .connectHighlights,
-  .providerStatusGrid,
   .workspace,
   .accountWorkspace,
   .composeGrid,
   .accountGrid,
   .providerGrid,
-  .mailBody,
-  .mailSplit {
+  .providerStatusGrid {
     grid-template-columns: 1fr;
-  }
-
-  .mailSplit .mailDetailPane {
-    display: none;
-  }
-
-  .mailSplitThreadFocused .mailListPane {
-    display: none;
-  }
-
-  .mailSplitThreadFocused .mailDetailPane {
-    display: grid;
   }
 
   .headerToolbar {
@@ -1393,9 +886,9 @@
   }
 
   .searchField {
-    flex-basis: clamp(180px, 22vw, 280px);
-    min-width: 180px;
-    max-width: 280px;
+    flex-basis: clamp(160px, 17vw, 200px);
+    min-width: 160px;
+    max-width: 200px;
   }
 
   .headerScope {
@@ -1412,32 +905,9 @@
   .composeAccountInline {
     min-width: 0;
   }
-
-  .mailAppBarMain,
-  .connectHero,
-  .listPaneHeader,
-  .detailPaneHeader,
-  .messageBubbleHeader,
-  .composeFooter {
-    align-items: stretch;
-  }
-
-  .mailAppBarActions {
-    justify-content: flex-start;
-  }
 }
 
 @media (max-width: 767px) {
-  .connectGate,
-  .mailAppBar,
-  .mailListPane,
-  .mailDetailPane,
-  .composeWorkspace,
-  .railSection {
-    padding: 16px;
-    border-radius: 18px;
-  }
-
   .headerPrimaryRow {
     gap: 6px;
   }
@@ -1455,9 +925,9 @@
   }
 
   .searchField {
-    flex-basis: 168px;
-    min-width: 168px;
-    max-width: 220px;
+    flex-basis: 152px;
+    min-width: 152px;
+    max-width: 152px;
   }
 
   .composeSupportArea {
@@ -1466,18 +936,5 @@
 
   .composeSupportActions {
     justify-content: flex-start;
-  }
-
-  .threadRow,
-  .messageBubble {
-    padding: 14px;
-    border-radius: 14px;
-  }
-
-  .searchField,
-  .accountFilter {
-    min-width: 0;
-    width: 100%;
-    max-width: none;
   }
 }

@@ -27,6 +27,8 @@ export async function PATCH(
         exception_reason_code: payload.exceptionReasonCode || undefined,
         linked_report_key: payload.linkedReportKey || undefined,
         planned_date: payload.plannedDate || undefined,
+        selection_reason_label: payload.selectionReasonLabel || undefined,
+        selection_reason_memo: payload.selectionReasonMemo || undefined,
         status: payload.status || undefined,
       },
       request,

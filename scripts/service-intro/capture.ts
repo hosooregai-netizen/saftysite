@@ -58,17 +58,6 @@ function buildCapturePlan(siteId: string | null): Array<Omit<IntroCaptureItem, '
       layoutVariant: 'split',
     },
     {
-      id: 'excel-upload',
-      title: '엑셀 업로드',
-      description: '현재 화면 컨텍스트 기준으로 업로드를 시작할 수 있습니다.',
-      route: '/admin?section=headquarters&excelUpload=excel',
-      headline: '기존 엑셀 자산을 안전하게 미리보기 후 반영',
-      subhead: '업로드 전에 어떤 데이터가 포함되는지 확인하고, 필요한 범위만 검토해 반영할 수 있게 설계했습니다.',
-      highlights: ['업로드 전 미리보기', '사업장/현장 컨텍스트 반영', '기존 운영 자산 재활용'],
-      impactSummary: '반복 입력을 줄이고 데이터 반영 실수를 예방합니다.',
-      layoutVariant: 'wide',
-    },
-    {
       id: 'reports',
       title: '기술지도 보고서',
       description: '현장별 보고서와 문서 출력을 빠르게 확인합니다.',
@@ -119,7 +108,6 @@ function buildCapturePlan(siteId: string | null): Array<Omit<IntroCaptureItem, '
 async function waitForPageReady(page: Page, id: string) {
   if (id === 'overview') await waitHeading(page, '관리 대시보드');
   if (id === 'headquarters') await waitHeading(page, '사업장 목록');
-  if (id === 'excel-upload') await page.getByText('엑셀 업로드').first().waitFor();
   if (id === 'mailbox') await waitHeading(page, '메일함');
   if (id === 'reports') await page.waitForURL(/reports/);
   if (id === 'quarterly') await page.waitForURL(/quarterly|admin\?section=reports/);

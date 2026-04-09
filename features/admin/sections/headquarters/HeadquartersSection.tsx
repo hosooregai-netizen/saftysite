@@ -1,22 +1,24 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import { SitesSection } from '@/features/admin/sections/sites/SitesSection';
 import { SiteEntryHubPanel } from '@/features/home/components/SiteEntryHubPanel';
 import { SITE_STATUS_LABELS } from '@/lib/admin';
-import {
-  buildAdminExcelUploadCloseHref,
-  buildAdminExcelUploadHref,
-  isExcelUploadOpen,
-} from '@/lib/admin/excelUpload';
 import { mapSafetySiteToInspectionSite } from '@/lib/safetyApiMappers/sites';
 import type { SafetySite, SafetyUser } from '@/types/backend';
-import type { SafetyAssignment, SafetyHeadquarter, SafetySiteStatus } from '@/types/controller';
+import type {
+  SafetyAssignment,
+  SafetyHeadquarter,
+  SafetyHeadquarterInput,
+  SafetyHeadquarterUpdateInput,
+  SafetySiteInput,
+  SafetySiteStatus,
+  SafetySiteUpdateInput,
+} from '@/types/controller';
 import { HeadquartersTable } from './HeadquartersTable';
 import { HeadquarterEditorModal } from './HeadquarterEditorModal';
-import { ExcelImportModal } from '../excelImport/ExcelImportModal';
 import { useHeadquartersSectionState } from './useHeadquartersSectionState';
 
 interface HeadquartersSectionProps {
@@ -30,65 +32,17 @@ interface HeadquartersSectionProps {
   users: SafetyUser[];
   onClearHeadquarterSelection: () => void;
   onClearSiteSelection: () => void;
-  onCreate: (input: {
-    name: string;
-    business_registration_no?: string | null;
-    corporate_registration_no?: string | null;
-    license_no?: string | null;
-    contact_phone?: string | null;
-    address?: string | null;
-    is_active?: boolean;
-  }) => Promise<void>;
-  onCreateSite: (input: {
-    headquarter_id: string;
-    site_name: string;
-    site_code?: string | null;
-    management_number?: string | null;
-    project_start_date?: string | null;
-    project_end_date?: string | null;
-      project_amount?: number | null;
-      manager_name?: string | null;
-      manager_phone?: string | null;
-      site_address?: string | null;
-      memo?: string | null;
-      status?: 'planned' | 'active' | 'closed';
-  }) => Promise<void>;
+  onCreate: (input: SafetyHeadquarterInput) => Promise<void>;
+  onCreateSite: (input: SafetySiteInput) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onDeleteSite: (id: string) => Promise<void>;
   onSelectHeadquarter: (headquarterId: string) => void;
   onSelectSite: (headquarterId: string, siteId: string) => void;
-  onUpdate: (
-    id: string,
-    input: Partial<{
-      name: string;
-      business_registration_no?: string | null;
-      corporate_registration_no?: string | null;
-      license_no?: string | null;
-      contact_phone?: string | null;
-      address?: string | null;
-      is_active?: boolean;
-    }>,
-  ) => Promise<void>;
-  onUpdateSite: (
-    id: string,
-    input: Partial<{
-      headquarter_id: string;
-      site_name: string;
-      site_code?: string | null;
-      management_number?: string | null;
-      project_start_date?: string | null;
-      project_end_date?: string | null;
-      project_amount?: number | null;
-      manager_name?: string | null;
-      manager_phone?: string | null;
-      site_address?: string | null;
-      memo?: string | null;
-      status?: SafetySiteStatus;
-    }>,
-  ) => Promise<void>;
+  onUpdate: (id: string, input: SafetyHeadquarterUpdateInput) => Promise<void>;
+  onUpdateSite: (id: string, input: SafetySiteUpdateInput) => Promise<void>;
   onAssignFieldAgent: (siteId: string, userId: string) => Promise<void>;
   onUnassignFieldAgent: (siteId: string, userId: string) => Promise<void>;
-  onReload: (options?: {
+  onReload?: (options?: {
     force?: boolean;
     includeContent?: boolean;
     includeReports?: boolean;
@@ -115,10 +69,8 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
     onUnassignFieldAgent,
     onUpdate,
     onUpdateSite,
-    onReload,
   } = props;
 
-  const router = useRouter();
   const searchParams = useSearchParams();
   const state = useHeadquartersSectionState(headquarters, busy);
   const selectedHeadquarter = useMemo(
@@ -155,29 +107,6 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
     () => (selectedSite ? mapSafetySiteToInspectionSite(selectedSite) : null),
     [selectedSite],
   );
-  const excelUploadOpen = isExcelUploadOpen(searchParams);
-  const excelUploadOriginSection =
-    !selectedHeadquarter && !hasSiteStatusScope ? 'headquarters' : 'sites';
-
-  const openExcelUpload = (context?: { headquarterId?: string | null; siteId?: string | null }) => {
-    router.replace(
-      buildAdminExcelUploadHref(searchParams, {
-        headquarterId: context?.headquarterId ?? selectedHeadquarter?.id ?? null,
-        section: 'headquarters',
-        siteId: context?.siteId ?? selectedSite?.id ?? null,
-      }),
-    );
-  };
-
-  const closeExcelUpload = () => {
-    router.replace(
-      buildAdminExcelUploadCloseHref(searchParams, {
-        headquarterId: selectedHeadquarter?.id ?? null,
-        section: 'headquarters',
-        siteId: selectedSite?.id ?? null,
-      }),
-    );
-  };
 
   const submit = async () => {
     if (state.editingId === 'create' && !state.isCreateReady) return;
@@ -209,16 +138,19 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
           <HeadquartersTable
             busy={busy}
             canDelete={canDelete}
-            filteredHeadquarters={state.sortedHeadquarters}
+            filteredHeadquarters={state.pagedHeadquarters}
+            page={state.page}
             onCreateRequest={state.openCreate}
             onDeleteRequest={handleDeleteHeadquarter}
             onEditRequest={state.openEdit}
-            onExcelUploadRequest={(item) => openExcelUpload({ headquarterId: item?.id ?? null, siteId: null })}
             onOpenSitesRequest={(item) => onSelectHeadquarter(item.id)}
+            onPageChange={state.setPage}
             onQueryChange={state.setQuery}
             onSortChange={state.setSort}
             query={state.query}
             sort={state.sort}
+            totalCount={state.sortedHeadquarters.length}
+            totalPages={state.totalPages}
           />
         </section>
       ) : !selectedHeadquarter ? (
@@ -235,12 +167,6 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
           onSelectSiteEntry={(site) => onSelectSite(site.headquarter_id, site.id)}
           onUnassignFieldAgent={onUnassignFieldAgent}
           onUpdate={onUpdateSite}
-          onExcelUploadRequest={(context) =>
-            openExcelUpload({
-              headquarterId: context?.headquarterId ?? null,
-              siteId: context?.siteId ?? null,
-            })
-          }
           showHeadquarterColumn
           sites={sites}
           title={siteStatusTitle}
@@ -275,12 +201,6 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
           onSelectSiteEntry={(site) => onSelectSite(selectedHeadquarter.id, site.id)}
           onUnassignFieldAgent={onUnassignFieldAgent}
           onUpdate={onUpdateSite}
-          onExcelUploadRequest={(context) =>
-            openExcelUpload({
-              headquarterId: context?.headquarterId ?? selectedHeadquarter.id,
-              siteId: context?.siteId ?? null,
-            })
-          }
           showHeadquarterColumn={false}
           sites={headquarterSites}
           title={siteStatusTitle}
@@ -297,15 +217,6 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
         onFormChange={state.setForm}
         onSubmit={submit}
         open={state.isOpen}
-      />
-
-      <ExcelImportModal
-        contextHeadquarterId={selectedHeadquarter?.id ?? null}
-        contextSiteId={selectedSite?.id ?? null}
-        onClose={closeExcelUpload}
-        onReload={onReload}
-        open={excelUploadOpen}
-        originSection={excelUploadOriginSection}
       />
     </div>
   );

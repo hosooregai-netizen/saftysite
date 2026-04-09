@@ -1,12 +1,6 @@
 import type { Page } from 'playwright';
 
-import {
-  baseUrl,
-  excelImportHeadquarterName,
-  excelImportManagementNumber,
-  excelImportSiteName,
-  excelImportWorkbookBuffer,
-} from './config';
+import { baseUrl } from './config';
 import { dismissImportantModalIfPresent, waitHeading } from './helpers';
 
 export async function runAdminFlow(page: Page) {
@@ -30,46 +24,18 @@ export async function runAdminFlow(page: Page) {
 
   await page.goto(`${baseUrl}/admin?section=mailbox`, { waitUntil: 'load' });
   await waitHeading(page, '메일함');
-  await page.getByRole('button', { name: '연결 계정' }).click();
   await page.getByRole('button', { name: /구글 로그인으로 연결/ }).first().waitFor();
   await page.getByRole('button', { name: /네이버 로그인으로 연결/ }).first().waitFor();
   await page.getByRole('button', { name: '상태 새로고침' }).click();
   await page.getByText('메일 계정과 공급자 상태를 새로고침했습니다.').first().waitFor();
 
-  await page.goto(`${baseUrl}/admin?section=headquarters&excelUpload=excel`, { waitUntil: 'load' });
-  let excelDialog = page.getByRole('dialog', { name: '엑셀 업로드' });
-  await excelDialog.waitFor();
-  await excelDialog.getByRole('button', { name: '닫기' }).click();
-  await excelDialog.waitFor({ state: 'hidden' });
-  await page.waitForURL(/section=headquarters/);
-  await waitHeading(page, '사업장 목록');
-  await page.getByRole('button', { name: '엑셀 업로드' }).first().click();
-  excelDialog = page.getByRole('dialog', { name: '엑셀 업로드' });
-  await excelDialog.waitFor();
-  await excelDialog.locator('input[type="file"]').first().setInputFiles({
-    buffer: excelImportWorkbookBuffer,
-    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    name: 'excel-import-smoke.xlsx',
-  });
-  await excelDialog.getByText('엑셀 미리보기').first().waitFor();
-  await excelDialog.getByRole('button', { name: '업데이트' }).click();
-  await excelDialog.getByText('반영이 완료되었습니다.').first().waitFor({ timeout: 30_000 });
-  await excelDialog.getByRole('button', { name: '닫기' }).click();
-
   await page.goto(`${baseUrl}/admin?section=headquarters`, { waitUntil: 'load' });
-  await page.getByPlaceholder('사업장명, 연락처, 주소로 검색').fill(excelImportHeadquarterName);
-  await page.locator('tbody tr', { hasText: excelImportHeadquarterName }).first().click();
-  await page.getByText('현장 목록').first().waitFor();
-  await page.getByPlaceholder('현장명, 사업장명, 책임자, 배정 요원으로 검색').fill(excelImportManagementNumber);
-  await page.getByText(excelImportSiteName).first().waitFor({ timeout: 30_000 });
-  await page.getByText('보완 필요').first().waitFor({ timeout: 30_000 });
+  await waitHeading(page, '사업장 목록');
+  await page.getByRole('button', { name: '사업장 추가' }).first().waitFor();
+  await page.getByPlaceholder('회사명, 관리번호, 개시번호, 전화로 검색').fill('');
 
   await page.goto(`${baseUrl}/admin?section=reports`, { waitUntil: 'load' });
   await waitHeading(page, '전체 보고서');
-  await page.getByRole('button', { name: '엑셀 업로드' }).first().click();
-  excelDialog = page.getByRole('dialog', { name: '엑셀 업로드' });
-  await excelDialog.waitFor();
-  await excelDialog.getByRole('button', { name: '닫기' }).click();
   await page.getByText('1차 기술지도 보고서').first().waitFor();
   await page.getByText('2026년 1분기 종합 보고서').first().waitFor();
 

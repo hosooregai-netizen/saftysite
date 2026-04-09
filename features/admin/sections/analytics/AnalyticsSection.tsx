@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useDeferredValue, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { SITE_CONTRACT_TYPE_LABELS, formatCurrencyValue } from '@/lib/admin';
+import { parseSiteContractProfile } from '@/lib/admin/siteContractProfile';
 import {
   buildSortMenuOptions,
   SortableHeaderCell,
@@ -82,6 +83,30 @@ export function AnalyticsSection({
     key: 'visitRevenue',
   });
   const deferredQuery = useDeferredValue(query);
+  const contractTypeOptions = useMemo(() => {
+    const seen = new Set<string>();
+    return data.sites
+      .map((site) => {
+        const profile = parseSiteContractProfile(site);
+        return profile.technicalGuidanceKind || profile.contractType || '';
+      })
+      .filter((value): value is string => Boolean(value))
+      .filter((value) => {
+        if (seen.has(value)) return false;
+        seen.add(value);
+        return true;
+      })
+      .sort((left, right) => {
+        const leftLabel = SITE_CONTRACT_TYPE_LABELS[left as keyof typeof SITE_CONTRACT_TYPE_LABELS] || left;
+        const rightLabel =
+          SITE_CONTRACT_TYPE_LABELS[right as keyof typeof SITE_CONTRACT_TYPE_LABELS] || right;
+        return leftLabel.localeCompare(rightLabel, 'ko');
+      })
+      .map((value) => ({
+        label: SITE_CONTRACT_TYPE_LABELS[value as keyof typeof SITE_CONTRACT_TYPE_LABELS] || value,
+        value,
+      }));
+  }, [data.sites]);
 
   const analytics = useMemo(
     () =>
@@ -184,8 +209,8 @@ export function AnalyticsSection({
     }
     if (contractType) {
       chips.push({
-        label: '계약유형',
-        value: SITE_CONTRACT_TYPE_LABELS[contractType as keyof typeof SITE_CONTRACT_TYPE_LABELS] || '미입력',
+        label: '구분',
+        value: SITE_CONTRACT_TYPE_LABELS[contractType as keyof typeof SITE_CONTRACT_TYPE_LABELS] || contractType,
       });
     }
     if (query.trim()) {
@@ -262,19 +287,19 @@ export function AnalyticsSection({
                   </select>
                 </div>
                 <div className={sharedStyles.sectionHeaderMenuField}>
-                  <label htmlFor="analytics-filter-contract-type">계약유형</label>
+                  <label htmlFor="analytics-filter-contract-type">구분</label>
                   <select
                     id="analytics-filter-contract-type"
                     className="app-select"
                     value={contractType}
                     onChange={(event) => setContractType(event.target.value)}
                   >
-                    <option value="">전체 계약유형</option>
-                    <option value="private">민간계약</option>
-                    <option value="negotiated">수의계약</option>
-                    <option value="bid">입찰계약</option>
-                    <option value="maintenance">유지보수</option>
-                    <option value="other">기타</option>
+                    <option value="">전체 구분</option>
+                    {contractTypeOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>

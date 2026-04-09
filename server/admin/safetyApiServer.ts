@@ -45,7 +45,7 @@ import type {
   SafetySiteUpdateInput,
 } from '@/types/controller';
 
-const ADMIN_LIST_LIMIT = 500;
+const ADMIN_PAGE_LIMIT = 200;
 const CONTENT_LIST_LIMIT = 1000;
 const REPORT_LIST_LIMIT = 500;
 const DEFAULT_SERVER_TIMEOUT_MS = 15000;
@@ -277,45 +277,56 @@ export async function requestSafetyAdminServerRaw(
   return response;
 }
 
+async function fetchAllAdminPages<T>(
+  token: string,
+  request: Request | null,
+  buildPath: (limit: number, offset: number) => string,
+): Promise<T[]> {
+  const rows: T[] = [];
+  let offset = 0;
+
+  while (true) {
+    const page = await requestSafetyAdminServer<T[]>(
+      buildPath(ADMIN_PAGE_LIMIT, offset),
+      {},
+      token,
+      request,
+    );
+    rows.push(...page);
+
+    if (page.length < ADMIN_PAGE_LIMIT) {
+      return rows;
+    }
+
+    offset += page.length;
+  }
+}
+
 export async function fetchAdminCoreData(
   token: string,
   request: Request | null = null,
 ): Promise<ControllerDashboardData> {
   const [users, rawHeadquarters, rawSites, assignments, contentItems] = await Promise.all([
-    requestSafetyAdminServer<SafetyUser[]>(
-      withQuery('/users', { active_only: true, limit: ADMIN_LIST_LIMIT }),
-      {},
-      token,
-      request,
+    fetchAllAdminPages<SafetyUser>(token, request, (limit, offset) =>
+      withQuery('/users', { active_only: true, limit, offset }),
     ),
-    requestSafetyAdminServer<SafetyHeadquarter[]>(
-      withQuery('/headquarters', { active_only: true, limit: ADMIN_LIST_LIMIT }),
-      {},
-      token,
-      request,
+    fetchAllAdminPages<SafetyHeadquarter>(token, request, (limit, offset) =>
+      withQuery('/headquarters', { active_only: true, limit, offset }),
     ),
-    requestSafetyAdminServer<SafetySite[]>(
+    fetchAllAdminPages<SafetySite>(token, request, (limit, offset) =>
       withQuery('/sites', {
         active_only: true,
         include_headquarter_detail: true,
         include_assigned_user: true,
-        limit: ADMIN_LIST_LIMIT,
+        limit,
+        offset,
       }),
-      {},
-      token,
-      request,
     ),
-    requestSafetyAdminServer<SafetyAssignment[]>(
-      withQuery('/assignments', { active_only: true, limit: ADMIN_LIST_LIMIT }),
-      {},
-      token,
-      request,
+    fetchAllAdminPages<SafetyAssignment>(token, request, (limit, offset) =>
+      withQuery('/assignments', { active_only: true, limit, offset }),
     ),
-    requestSafetyAdminServer<SafetyContentItem[]>(
-      withQuery('/content-items', { active_only: true, limit: CONTENT_LIST_LIMIT }),
-      {},
-      token,
-      request,
+    fetchAllAdminPages<SafetyContentItem>(token, request, (limit, offset) =>
+      withQuery('/content-items', { active_only: true, limit: Math.min(limit, CONTENT_LIST_LIMIT), offset }),
     ),
   ]);
   const headquarters = normalizeHeadquarterList(rawHeadquarters);
@@ -335,16 +346,14 @@ export function fetchSafetySitesServer(
   token: string,
   request: Request | null = null,
 ): Promise<SafetySite[]> {
-  return requestSafetyAdminServer<SafetySite[]>(
+  return fetchAllAdminPages<SafetySite>(token, request, (limit, offset) =>
     withQuery('/sites', {
       active_only: true,
       include_headquarter_detail: true,
       include_assigned_user: true,
-      limit: ADMIN_LIST_LIMIT,
+      limit,
+      offset,
     }),
-    {},
-    token,
-    request,
   ).then((sites) => normalizeSiteList(sites));
 }
 
@@ -352,14 +361,12 @@ export function fetchSafetyHeadquartersServer(
   token: string,
   request: Request | null = null,
 ): Promise<SafetyHeadquarter[]> {
-  return requestSafetyAdminServer<SafetyHeadquarter[]>(
+  return fetchAllAdminPages<SafetyHeadquarter>(token, request, (limit, offset) =>
     withQuery('/headquarters', {
       active_only: true,
-      limit: ADMIN_LIST_LIMIT,
+      limit,
+      offset,
     }),
-    {},
-    token,
-    request,
   ).then((headquarters) => normalizeHeadquarterList(headquarters));
 }
 
@@ -379,16 +386,14 @@ export function fetchAssignedSafetySitesServer(
   token: string,
   request: Request | null = null,
 ): Promise<SafetySite[]> {
-  return requestSafetyAdminServer<SafetySite[]>(
+  return fetchAllAdminPages<SafetySite>(token, request, (limit, offset) =>
     withQuery('/assignments/me/sites', {
       active_only: true,
       include_headquarter_detail: true,
       include_assigned_user: true,
-      limit: ADMIN_LIST_LIMIT,
+      limit,
+      offset,
     }),
-    {},
-    token,
-    request,
   ).then((sites) => normalizeSiteList(sites));
 }
 
@@ -396,14 +401,12 @@ export function fetchSafetyContentItemsServer(
   token: string,
   request: Request | null = null,
 ): Promise<SafetyContentItem[]> {
-  return requestSafetyAdminServer<SafetyContentItem[]>(
+  return fetchAllAdminPages<SafetyContentItem>(token, request, (limit, offset) =>
     withQuery('/content-items', {
       active_only: true,
-      limit: CONTENT_LIST_LIMIT,
+      limit: Math.min(limit, CONTENT_LIST_LIMIT),
+      offset,
     }),
-    {},
-    token,
-    request,
   );
 }
 
