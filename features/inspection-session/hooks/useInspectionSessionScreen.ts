@@ -639,6 +639,7 @@ export function useInspectionSessionScreen(sessionId: string) {
     site: displaySite,
     relationStatus,
     relationNotice,
+    saveNow,
     syncError,
     uploadError,
     withFileData,

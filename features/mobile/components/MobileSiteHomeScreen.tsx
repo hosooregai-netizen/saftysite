@@ -8,14 +8,17 @@ import {
   getSessionSortTime,
   getSessionTitle,
 } from '@/constants/inspectionSession';
+import {
+  buildMobileHomeHref,
+  buildMobileSessionHref,
+  buildMobileSiteReportsHref,
+} from '@/features/home/lib/siteEntry';
 import { useSiteReportListState } from '@/features/site-reports/hooks/useSiteReportListState';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
-import { formatDateTime } from '@/lib/formatDateTime';
-import { buildMobileHomeHref, buildMobileSiteReportsHref, buildMobileSessionHref } from '@/features/home/lib/siteEntry';
 import { MobileShell } from './MobileShell';
+import styles from './MobileShell.module.css';
 import { MobileTabBar } from './MobileTabBar';
 import { buildSiteTabs } from '../lib/buildSiteTabs';
-import styles from './MobileShell.module.css';
 
 interface MobileSiteHomeScreenProps {
   siteKey: string;
@@ -58,6 +61,19 @@ function formatTelHref(value: string | null | undefined) {
 
   const digits = value.replace(/[^\d+]/g, '');
   return digits ? `tel:${digits}` : null;
+}
+
+function formatMailHref(value: string | null | undefined) {
+  const trimmed = value?.trim();
+  if (!trimmed || !trimmed.includes('@')) {
+    return null;
+  }
+
+  return `mailto:${trimmed}`;
+}
+
+function getDisplayValue(value: string | null | undefined) {
+  return value?.trim() || '-';
 }
 
 function getReportSortTime(value: {
@@ -109,8 +125,8 @@ export function MobileSiteHomeScreen({ siteKey }: MobileSiteHomeScreenProps) {
       <LoginPanel
         error={authError}
         onSubmit={login}
-        title="현장 홈 로그인"
-        description="현장별 최근 보고 상태를 확인하고 모바일 보고서 흐름으로 이동합니다."
+        title="현장 앱 로그인"
+        description="현장별 최신 보고 상태를 확인하고 모바일 보고서 흐름으로 이동합니다."
       />
     );
   }
@@ -159,11 +175,13 @@ export function MobileSiteHomeScreen({ siteKey }: MobileSiteHomeScreenProps) {
   const latestReportProgress = latestSession
     ? getSessionProgress(latestSession).percentage
     : clampProgress(latestRemoteReport?.progressRate);
-  const latestReportSavedAt = latestSession
-    ? latestSession.lastSavedAt || latestSession.updatedAt
-    : latestRemoteReport?.lastAutosavedAt || latestRemoteReport?.updatedAt || null;
   const managerPhone = snapshot.siteManagerPhone.trim();
   const managerPhoneHref = formatTelHref(managerPhone);
+  const siteContact = snapshot.siteContactEmail.trim();
+  const siteContactHref = formatMailHref(siteContact) ?? formatTelHref(siteContact);
+  const headquartersContact = snapshot.headquartersContact.trim();
+  const headquartersContactHref = formatTelHref(headquartersContact);
+  const showSiteContact = siteContact.length > 0 && siteContact !== managerPhone;
 
   return (
     <MobileShell
@@ -206,30 +224,83 @@ export function MobileSiteHomeScreen({ siteKey }: MobileSiteHomeScreenProps) {
           </div>
         </div>
 
+        <div className={styles.metaGrid}>
+          <div className={styles.metaItem}>
+            <span className={styles.metaLabel}>현장 관리번호</span>
+            <strong className={styles.metaValue}>{getDisplayValue(snapshot.siteManagementNumber)}</strong>
+          </div>
+          <div className={styles.metaItem}>
+            <span className={styles.metaLabel}>사업개시번호</span>
+            <strong className={styles.metaValue}>{getDisplayValue(snapshot.businessStartNumber)}</strong>
+          </div>
+        </div>
+
         <div className={styles.infoList}>
           <div className={styles.infoRow}>
             <span className={styles.infoLabel}>고객사</span>
-            <strong className={styles.infoValue}>{currentSite.customerName || '-'}</strong>
+            <strong className={styles.infoValue}>{getDisplayValue(currentSite.customerName)}</strong>
+          </div>
+          <div className={styles.infoRow}>
+            <span className={styles.infoLabel}>현장 주소</span>
+            <strong className={styles.infoValue}>{getDisplayValue(snapshot.siteAddress)}</strong>
           </div>
           <div className={styles.infoRow}>
             <span className={styles.infoLabel}>공사 기간</span>
-            <strong className={styles.infoValue}>{snapshot.constructionPeriod || '-'}</strong>
+            <strong className={styles.infoValue}>{getDisplayValue(snapshot.constructionPeriod)}</strong>
           </div>
           <div className={styles.infoRow}>
             <span className={styles.infoLabel}>공사 금액</span>
-            <strong className={styles.infoValue}>{snapshot.constructionAmount || '-'}</strong>
+            <strong className={styles.infoValue}>{getDisplayValue(snapshot.constructionAmount)}</strong>
           </div>
           <div className={styles.infoRow}>
             <span className={styles.infoLabel}>담당자</span>
-            <strong className={styles.infoValue}>{currentSite.assigneeName || '-'}</strong>
+            <strong className={styles.infoValue}>
+              {getDisplayValue(currentSite.assigneeName || snapshot.assigneeName)}
+            </strong>
           </div>
           <div className={styles.infoRow}>
             <span className={styles.infoLabel}>현장소장</span>
-            <strong className={styles.infoValue}>{snapshot.siteManagerName || '-'}</strong>
+            <strong className={styles.infoValue}>{getDisplayValue(snapshot.siteManagerName)}</strong>
           </div>
           <div className={styles.infoRow}>
             <span className={styles.infoLabel}>연락처</span>
-            <strong className={styles.infoValue}>{managerPhone || '-'}</strong>
+            {managerPhoneHref ? (
+              <a className={`${styles.infoValue} ${styles.infoValueLink}`} href={managerPhoneHref}>
+                {managerPhone}
+              </a>
+            ) : (
+              <strong className={styles.infoValue}>{getDisplayValue(managerPhone)}</strong>
+            )}
+          </div>
+          {showSiteContact ? (
+            <div className={styles.infoRow}>
+              <span className={styles.infoLabel}>현장 연락처</span>
+              {siteContactHref ? (
+                <a className={`${styles.infoValue} ${styles.infoValueLink}`} href={siteContactHref}>
+                  {siteContact}
+                </a>
+              ) : (
+                <strong className={styles.infoValue}>{siteContact}</strong>
+              )}
+            </div>
+          ) : null}
+          <div className={styles.infoRow}>
+            <span className={styles.infoLabel}>본사</span>
+            <strong className={styles.infoValue}>{getDisplayValue(snapshot.companyName)}</strong>
+          </div>
+          <div className={styles.infoRow}>
+            <span className={styles.infoLabel}>본사 연락처</span>
+            {headquartersContactHref ? (
+              <a className={`${styles.infoValue} ${styles.infoValueLink}`} href={headquartersContactHref}>
+                {headquartersContact}
+              </a>
+            ) : (
+              <strong className={styles.infoValue}>{getDisplayValue(headquartersContact)}</strong>
+            )}
+          </div>
+          <div className={styles.infoRow}>
+            <span className={styles.infoLabel}>본사 주소</span>
+            <strong className={styles.infoValue}>{getDisplayValue(snapshot.headquartersAddress)}</strong>
           </div>
         </div>
       </section>
@@ -255,16 +326,32 @@ export function MobileSiteHomeScreen({ siteKey }: MobileSiteHomeScreenProps) {
             <article className={styles.reportCard} style={{ cursor: 'pointer', padding: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-                  <h3 className={styles.cardTitle} style={{ fontSize: '15px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <h3
+                    className={styles.cardTitle}
+                    style={{
+                      fontSize: '15px',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
+                  >
                     {latestReportTitle}
                   </h3>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginTop: '8px',
+                }}
+              >
                 <div style={{ display: 'flex', gap: '12px' }}>
                   <span style={{ fontSize: '13px', color: '#475569' }}>
-                    <strong style={{ fontWeight: 600, color: '#0f172a' }}>지도일</strong> {formatCompactDate(latestGuidanceDate)}
+                    <strong style={{ fontWeight: 600, color: '#0f172a' }}>지도일</strong>{' '}
+                    {formatCompactDate(latestGuidanceDate)}
                   </span>
                 </div>
                 <span style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a' }}>
@@ -275,7 +362,8 @@ export function MobileSiteHomeScreen({ siteKey }: MobileSiteHomeScreenProps) {
           </Link>
         ) : (
           <p className={styles.inlineNotice}>
-            아직 이 현장에 작성된 기술지도 보고서가 없습니다. 보고서 목록에서 첫 보고서를 추가해 주세요.
+            아직 이 현장에 작성된 기술지도 보고서가 없습니다. 보고서 목록에서 첫 보고서를
+            추가해 주세요.
           </p>
         )}
       </section>

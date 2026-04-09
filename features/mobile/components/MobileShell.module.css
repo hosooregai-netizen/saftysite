@@ -246,6 +246,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+  margin-bottom: 14px;
 }
 
 .sectionTitleWrap {
@@ -607,6 +608,235 @@
 
 .editorBody {
   min-width: 0;
+}
+
+.mobileEditorCard {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid rgba(215, 224, 235, 0.96);
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 250, 255, 0.96));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+.mobileEditorCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mobileEditorCardTitle {
+  font-size: var(--text-ui);
+  font-weight: 800;
+  line-height: 1.35;
+  color: var(--erp-dark);
+}
+
+.mobileEditorCardAction {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #ef4444;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mobileEditorFieldStack {
+  display: grid;
+  gap: 10px;
+}
+
+.mobileEditorFieldGroup {
+  display: grid;
+  gap: 6px;
+}
+
+.mobileEditorFieldLabel {
+  font-size: var(--text-ui-sm);
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--erp-text-muted);
+}
+
+.mobileEditorTextareaCompact {
+  min-height: 72px;
+  resize: vertical;
+}
+
+.mobileDoc8ProcessStack {
+  position: relative;
+  display: grid;
+  gap: 8px;
+}
+
+.doc6SectionStack {
+  display: grid;
+  gap: 12px;
+}
+
+.doc6FlatList {
+  display: grid;
+  gap: 8px;
+}
+
+.doc6FlatItem {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(215, 224, 235, 0.96);
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.doc6FlatLabel {
+  min-width: 0;
+  font-size: var(--text-body);
+  font-weight: 700;
+  line-height: 1.45;
+  color: var(--erp-dark);
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.doc6FlatCheck {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+}
+
+.doc6SectionCard {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgba(215, 224, 235, 0.98);
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 250, 255, 0.96));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+.doc6SectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.doc6SectionKicker {
+  font-size: var(--text-kicker);
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--erp-text-muted);
+}
+
+.doc6SectionMeta {
+  font-size: var(--text-ui-sm);
+  font-weight: 700;
+  color: var(--erp-slate);
+}
+
+.doc6MeasureList {
+  display: grid;
+  gap: 8px;
+}
+
+.doc6MeasureCard {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 62px;
+  min-width: 0;
+  border: 1px solid rgba(215, 224, 235, 0.96);
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fff;
+  cursor: pointer;
+}
+
+.doc6MeasureBody {
+  min-width: 0;
+  padding: 11px 12px;
+}
+
+.doc6MeasureTop {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.doc6MeasureNumber {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--erp-gold-soft);
+  color: var(--erp-navy);
+  font-size: var(--text-ui-sm);
+  font-weight: 800;
+}
+
+.doc6MeasureTitleWrap {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.doc6MeasureTitle {
+  font-size: var(--text-body);
+  font-weight: 800;
+  line-height: 1.35;
+  color: var(--erp-dark);
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.infoValueLink {
+  color: inherit;
+  text-decoration: none;
+}
+
+.infoValueLink:hover {
+  color: var(--erp-mid);
+}
+
+.doc6MeasureGuide {
+  font-size: var(--text-ui);
+  line-height: 1.55;
+  color: var(--erp-text-muted);
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.doc6MeasureCheck {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 8px;
+  padding: 10px 8px;
+  border-left: 1px solid rgba(215, 224, 235, 0.96);
+  background:
+    linear-gradient(180deg, rgba(243, 246, 251, 0.94), rgba(234, 240, 247, 0.76));
+}
+
+.doc6MeasureCheckLabel {
+  font-size: var(--text-kicker);
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--erp-text-muted);
 }
 
 .statusPill {
