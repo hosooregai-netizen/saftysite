@@ -357,18 +357,6 @@ export function MobileSiteReportsScreen({ siteKey }: MobileSiteReportsScreenProp
           </span>
         </div>
 
-        <div style={{ paddingBottom: '12px' }}>
-          <button
-            type="button"
-            className="app-button app-button-primary"
-            style={{ width: '100%' }}
-            onClick={openCreateDialog}
-            disabled={!canCreateReport}
-          >
-            + 보고서 추가
-          </button>
-        </div>
-
         <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
           <input
             className="app-input"
@@ -437,6 +425,20 @@ export function MobileSiteReportsScreen({ siteKey }: MobileSiteReportsScreenProp
                 onDeleteRequest={setDialogSessionId}
               />
             ))}
+          </div>
+        )}
+
+        {reportItems.length > 0 && (
+          <div style={{ paddingTop: '16px' }}>
+            <button
+              type="button"
+              className="app-button app-button-primary"
+              style={{ width: '100%' }}
+              onClick={openCreateDialog}
+              disabled={!canCreateReport}
+            >
+              + 보고서 추가
+            </button>
           </div>
         )}
       </section>
