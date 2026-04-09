@@ -7,7 +7,6 @@ import LoginPanel from '@/components/auth/LoginPanel';
 import { useSiteReportListState, type SiteReportSortMode } from '@/features/site-reports/hooks/useSiteReportListState';
 import { buildMobileSessionHref, buildMobileSiteHomeHref } from '@/features/home/lib/siteEntry';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
-import { formatDateTime } from '@/lib/formatDateTime';
 import type { InspectionReportListItem } from '@/types/inspectionSession';
 import { MobileShell } from './MobileShell';
 import { MobileTabBar } from './MobileTabBar';
@@ -46,15 +45,6 @@ function formatCompactDate(value: string | null | undefined) {
     month: '2-digit',
     day: '2-digit',
   }).format(parsed);
-}
-
-function getReportSortTime(item: InspectionReportListItem) {
-  return Math.max(
-    item.lastAutosavedAt ? new Date(item.lastAutosavedAt).getTime() : 0,
-    item.updatedAt ? new Date(item.updatedAt).getTime() : 0,
-    item.createdAt ? new Date(item.createdAt).getTime() : 0,
-    item.visitDate ? new Date(item.visitDate).getTime() : 0,
-  );
 }
 
 function getProgressLabel(progressRate: number) {
@@ -178,14 +168,6 @@ export function MobileSiteReportsScreen({ siteKey }: MobileSiteReportsScreenProp
   const [isCreatingReport, setIsCreatingReport] = useState(false);
   const [isDeletingReport, setIsDeletingReport] = useState(false);
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
-  const latestUpdatedReport =
-    reportItems.length > 0
-      ? [...reportItems].sort(
-          (left, right) => getReportSortTime(right) - getReportSortTime(left),
-        )[0]
-      : null;
-  const latestUpdatedAt =
-    latestUpdatedReport?.lastAutosavedAt || latestUpdatedReport?.updatedAt || null;
   const deletingSession = dialogSessionId
     ? reportItems.find((item) => item.reportKey === dialogSessionId) ?? null
     : null;
@@ -342,7 +324,7 @@ export function MobileSiteReportsScreen({ siteKey }: MobileSiteReportsScreenProp
       backHref={buildMobileSiteHomeHref(currentSite.id)}
       backLabel="현장 홈"
       currentUserName={currentUser?.name}
-      tabBar={<MobileTabBar tabs={buildSiteTabs(currentSite.id)} />}
+      tabBar={<MobileTabBar tabs={buildSiteTabs(currentSite.id, 'reports')} />}
       onLogout={logout}
       title={currentSite.siteName}
       webHref={`/sites/${encodeURIComponent(currentSite.id)}`}

@@ -730,7 +730,7 @@ export function MobileInspectionSessionScreen({
       backHref={mobileReportsHref}
       backLabel="보고서 목록"
       currentUserName={screen.currentUserName}
-      tabBar={<MobileTabBar tabs={buildSiteTabs(displaySession.siteKey)} />}
+      tabBar={<MobileTabBar tabs={buildSiteTabs(displaySession.siteKey, 'reports')} />}
       onLogout={screen.logout}
       title={getSessionTitle(displaySession)}
       webHref={`/sessions/${encodeURIComponent(sessionId)}`}

@@ -213,9 +213,7 @@ export default function QuarterlyReportPage({ params }: QuarterlyReportPageProps
     return (
       <main className="app-page">
         <div className="app-container">
-          <section className={operationalStyles.sectionCard}>
-            분기 보고서 초안을 불러오는 중입니다.
-          </section>
+          <section className={operationalStyles.sectionCard}>분기 보고서를 불러오는 중입니다.</section>
         </div>
       </main>
     );
@@ -701,6 +699,7 @@ function QuarterlyReportEditor({
   const [documentError, setDocumentError] = useState<string | null>(null);
   const [isGeneratingHwpx, setIsGeneratingHwpx] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [documentInfoOpen, setDocumentInfoOpen] = useState(false);
   const [titleEditorOpen, setTitleEditorOpen] = useState(false);
   const [titleDraft, setTitleDraft] = useState(initialDraft.title);
   const [sourceModalOpen, setSourceModalOpen] = useState(false);
@@ -761,7 +760,7 @@ function QuarterlyReportEditor({
 
       const token = readSafetyAuthToken();
       if (!token) {
-        setSourceReportsError('濡쒓렇?몄씠 留뚮즺?섏뿀?듬땲?? ?ㅼ떆 濡쒓렇?명빐 二쇱꽭??');
+        setSourceReportsError('로그인이 만료되었습니다. 다시 로그인해 주세요.');
         return false;
       }
 
@@ -870,7 +869,7 @@ function QuarterlyReportEditor({
       setOpsError(null);
       try {
         const token = readSafetyAuthToken();
-        if (!token) throw new Error('肄섑뀗痢좊? 遺덈윭?ㅻ젮硫??ㅼ떆 濡쒓렇?명빐 二쇱꽭??');
+        if (!token) throw new Error('콘텐츠를 불러오려면 다시 로그인해 주세요.');
         const contentItems = await fetchSafetyContentItems(token);
         if (cancelled) return;
         setOpsAssets(
@@ -1114,16 +1113,6 @@ function QuarterlyReportEditor({
     setTitleEditorOpen(false);
   };
 
-  const updateDocumentField = (
-    field: 'drafter' | 'reviewer' | 'approver',
-    value: string,
-  ) => {
-    setDraft((current) => ({
-      ...current,
-      [field]: value,
-    }));
-  };
-
   const updateSiteSnapshotField = (
     field: keyof QuarterlySummaryReport['siteSnapshot'],
     value: string,
@@ -1169,6 +1158,7 @@ function QuarterlyReportEditor({
         isGeneratingPdf={isGeneratingPdf}
         onDownloadWord={handleDownloadWord}
         onDownloadPdf={handleDownloadPdf}
+        onOpenDocumentInfo={() => setDocumentInfoOpen(true)}
         onOpenTitleEditor={handleOpenTitleEditor}
       />
       <QuarterlySummaryCards
@@ -1212,10 +1202,6 @@ function QuarterlyReportEditor({
           }
         }}
       />
-      <QuarterlyDocumentMetaSection
-        draft={draft}
-        onChange={updateDocumentField}
-      />
       <QuarterlySiteSnapshotSection
         draft={draft}
         onChange={updateSiteSnapshotField}
@@ -1252,7 +1238,18 @@ function QuarterlyReportEditor({
         loading={opsLoading}
         error={opsError}
       />
-      <AppModal
+      <QuarterlyDocumentInfoModal
+        open={documentInfoOpen}
+        draft={draft}
+        onChange={(field, value) =>
+          setDraft((current) => ({
+            ...current,
+            [field]: value,
+          }))
+        }
+        onClose={() => setDocumentInfoOpen(false)}
+      />
+            <AppModal
         open={titleEditorOpen}
         title="보고서 제목 수정"
         onClose={handleCloseTitleEditor}
@@ -1309,39 +1306,59 @@ function SectionHeader(props: { title: string; chips?: string[]; description?: s
   );
 }
 
-function QuarterlyDocumentMetaSection(props: {
+function QuarterlyDocumentInfoModal(props: {
+  open: boolean;
   draft: QuarterlySummaryReport;
+  onClose: () => void;
   onChange: (field: 'drafter' | 'reviewer' | 'approver', value: string) => void;
 }) {
-  const { draft, onChange } = props;
+  const { draft, onChange, onClose, open } = props;
 
   return (
-    <article className={operationalStyles.reportCard}>
-      <SectionHeader
-        title="문서 결재 정보"
-        description="표지 결재란에 들어갈 담당, 검토, 승인 정보를 입력합니다."
-      />
-      <div className={operationalStyles.periodFieldGrid}>
-        <FieldInput
-          label="담당"
-          value={draft.drafter}
-          onChange={(value) => onChange('drafter', value)}
-          placeholder="예: 홍길동"
-        />
-        <FieldInput
-          label="검토"
-          value={draft.reviewer}
-          onChange={(value) => onChange('reviewer', value)}
-          placeholder="예: 김검토"
-        />
-        <FieldInput
-          label="승인"
-          value={draft.approver}
-          onChange={(value) => onChange('approver', value)}
-          placeholder="예: 이승인"
-        />
+    <AppModal
+      open={open}
+      title="문서 정보"
+      size="large"
+      onClose={onClose}
+      actions={
+        <button
+          type="button"
+          className="app-button app-button-primary"
+          onClick={onClose}
+        >
+          완료
+        </button>
+      }
+    >
+      <div className={operationalStyles.snapshotSectionGrid}>
+        <div className={operationalStyles.documentHeading}>
+          <strong className={operationalStyles.documentTitle}>{draft.title}</strong>
+          <p className={operationalStyles.documentSubtitle}>
+            표지 결재란에 들어갈 담당, 검토, 승인 정보를 관리합니다.
+          </p>
+        </div>
+        <div className={operationalStyles.periodFieldGrid}>
+          <FieldInput
+            label="담당"
+            value={draft.drafter}
+            onChange={(value) => onChange('drafter', value)}
+            placeholder="예: 홍길동"
+          />
+          <FieldInput
+            label="검토"
+            value={draft.reviewer}
+            onChange={(value) => onChange('reviewer', value)}
+            placeholder="예: 김검토"
+          />
+          <FieldInput
+            label="승인"
+            value={draft.approver}
+            onChange={(value) => onChange('approver', value)}
+            placeholder="예: 이승인"
+          />
+        </div>
       </div>
-    </article>
+    </AppModal>
   );
 }
 
@@ -1352,6 +1369,7 @@ function QuarterlySummaryToolbar(props: {
   isGeneratingPdf: boolean;
   onDownloadWord: () => Promise<void>;
   onDownloadPdf: () => Promise<void>;
+  onOpenDocumentInfo: () => void;
   onOpenTitleEditor: () => void;
 }) {
   const {
@@ -1361,6 +1379,7 @@ function QuarterlySummaryToolbar(props: {
     isGeneratingPdf,
     onDownloadWord,
     onDownloadPdf,
+    onOpenDocumentInfo,
     onOpenTitleEditor,
   } = props;
 
@@ -1370,24 +1389,33 @@ function QuarterlySummaryToolbar(props: {
         <div>
           <h1 className={operationalStyles.sectionTitle}>{draft.title}</h1>
         </div>
-        <button
-          type="button"
-          className={operationalStyles.toolbarIconButton}
-          onClick={onOpenTitleEditor}
-          aria-label="보고서 제목 수정"
-          title="보고서 제목 수정"
-        >
-          <svg
-            viewBox="0 0 20 20"
-            aria-hidden="true"
-            className={operationalStyles.toolbarIcon}
+        <div className={operationalStyles.toolbarActions}>
+          <button
+            type="button"
+            className="app-button app-button-secondary"
+            onClick={onOpenDocumentInfo}
           >
-            <path
-              d="M13.8 3.2a2 2 0 0 1 2.9 2.7l-.1.1-8 8a1 1 0 0 1-.5.3l-3 .7a.8.8 0 0 1-1-.9l.7-3a1 1 0 0 1 .2-.4l.1-.1 8-8Zm-7.7 8.6-.4 1.7 1.7-.4 7.7-7.7-1.3-1.3-7.7 7.7Z"
-              fill="currentColor"
-            />
-          </svg>
-        </button>
+            문서 정보
+          </button>
+          <button
+            type="button"
+            className={operationalStyles.toolbarIconButton}
+            onClick={onOpenTitleEditor}
+            aria-label="보고서 제목 수정"
+            title="보고서 제목 수정"
+          >
+            <svg
+              viewBox="0 0 20 20"
+              aria-hidden="true"
+              className={operationalStyles.toolbarIcon}
+            >
+              <path
+                d="M13.8 3.2a2 2 0 0 1 2.9 2.7l-.1.1-8 8a1 1 0 0 1-.5.3l-3 .7a.8.8 0 0 1-1-.9l.7-3a1 1 0 0 1 .2-.4l.1-.1 8-8Zm-7.7 8.6-.4 1.7 1.7-.4 7.7-7.7-1.3-1.3-7.7 7.7Z"
+                fill="currentColor"
+              />
+            </svg>
+          </button>
+        </div>
       </div>
       <div className={operationalStyles.toolbarActions}>
         <button
@@ -1994,9 +2022,7 @@ function QuarterlyFuturePlansSection(props: {
               <th className={operationalStyles.implementationHeaderCell}>작업공정</th>
               <th className={operationalStyles.implementationHeaderCell}>유해위험요인</th>
               <th className={operationalStyles.implementationHeaderCell}>안전대책</th>
-              <th
-                className={`${operationalStyles.implementationHeaderCell} ${operationalStyles.implementationHeaderActionCell}`}
-              >
+              <th className={`${operationalStyles.implementationHeaderCell} ${operationalStyles.implementationHeaderActionCell}`}>
                 <button
                   type="button"
                   className={`app-button app-button-secondary ${operationalStyles.implementationAddButton}`}
@@ -2255,7 +2281,7 @@ function FuturePlanProcessCell(props: {
         <textarea
           className={`app-textarea ${operationalStyles.futurePlanControl}`}
           value={props.item.processName}
-          placeholder="예: 철골 작업, 거푸집 해체 등 공정을 입력하세요"
+          placeholder="예: 철근 작업, 거푸집 해체 등 공정을 입력해 주세요."
           onChange={(event) => props.onChange(event.target.value)}
         />
         <div className={operationalStyles.futurePlanRecommendationList}>
@@ -2274,3 +2300,11 @@ function FuturePlanProcessCell(props: {
     </td>
   );
 }
+
+
+
+
+
+
+
+
