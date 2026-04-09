@@ -267,6 +267,7 @@ export function MobileInspectionSessionScreen({
   const [doc10MatchingMeasurementId, setDoc10MatchingMeasurementId] = useState<string | null>(null);
   const [doc10MatchErrors, setDoc10MatchErrors] = useState<Record<string, string>>({});
   const [doc11GeneratingId, setDoc11GeneratingId] = useState<string | null>(null);
+  const [documentInfoOpen, setDocumentInfoOpen] = useState(false);
   const [doc11ContentNotice, setDoc11ContentNotice] = useState<{
     id: string;
     message: string;
@@ -381,11 +382,6 @@ export function MobileInspectionSessionScreen({
     (left, right) => left.sortOrder - right.sortOrder,
   );
   const mobileReportsHref = buildMobileSiteReportsHref(displaySession.siteKey);
-  const saveStatusLabel = screen.isSaving
-    ? '자동 저장 중'
-    : hasLoadedSessionPayload
-      ? '저장됨'
-      : '본문 동기화 중';
 
   const resetDoc2ProcessState = () => {
     setDoc2ProcessRiskLines(null);
@@ -737,25 +733,7 @@ export function MobileInspectionSessionScreen({
       webLabel="웹에서 전체 편집"
     >
       <section className={styles.sectionCard} style={{ marginBottom: 0, borderRadius: '0 0 8px 8px', borderBottom: 'none', flexShrink: 0 }}>
-        <div className={styles.sectionHeader}>
-          <div className={styles.sectionTitleWrap}>
-            <h2 className={styles.sectionTitle}>모바일 핵심 섹션 진행 현황</h2>
-          </div>
-          <span className={styles.sectionMeta}>{saveStatusLabel}</span>
-        </div>
-
-        <div
-          className={styles.statGrid}
-          style={
-            hasLoadedSessionPayload
-              ? {
-                  gridTemplateColumns:
-                    'minmax(0, 1fr) minmax(0, 1fr) minmax(88px, 96px) minmax(76px, 84px)',
-                  alignItems: 'stretch',
-                }
-              : undefined
-          }
-        >
+        <div className={`${styles.statGrid} ${hasLoadedSessionPayload ? styles.mobileInspectionSummaryGrid : ''}`}>
           <article className={styles.statCard}>
             <span className={styles.statLabel}>진행률</span>
             <strong className={styles.statValue}>{screen.displayProgress.percentage}%</strong>
@@ -766,6 +744,16 @@ export function MobileInspectionSessionScreen({
               {formatCompactDate(getSessionGuidanceDate(displaySession))}
             </strong>
           </article>
+          {hasLoadedSessionPayload ? (
+            <button
+              type="button"
+              className="app-button app-button-secondary"
+              style={{ width: '100%', height: '100%', minHeight: '80px', padding: '0 8px' }}
+              onClick={() => setDocumentInfoOpen(true)}
+            >
+              문서정보
+            </button>
+          ) : null}
           {hasLoadedSessionPayload ? (
             <div style={{ display: 'grid', gap: '8px', minWidth: 0 }}>
               <button
@@ -2963,6 +2951,71 @@ export function MobileInspectionSessionScreen({
       ) : (
         <p className={styles.inlineNotice} style={{ margin: '16px' }}>보고서 본문을 동기화하는 중입니다.</p>
       )}
+
+      {hasLoadedSessionPayload && session ? (
+        <AppModal
+          open={documentInfoOpen}
+          title="문서정보 확인"
+          onClose={() => setDocumentInfoOpen(false)}
+          actions={
+            <button
+              type="button"
+              className="app-button app-button-secondary"
+              onClick={() => setDocumentInfoOpen(false)}
+            >
+              닫기
+            </button>
+          }
+        >
+          <div style={{ display: 'grid', gap: '12px' }}>
+            <label className={styles.mobileEditorFieldGroup}>
+              <span className={styles.mobileEditorFieldLabel}>현장명</span>
+              <input
+                className="app-input"
+                value={session.meta.siteName}
+                placeholder="현장명"
+                onChange={(event) => screen.changeMetaField('siteName', event.target.value)}
+              />
+            </label>
+            <label className={styles.mobileEditorFieldGroup}>
+              <span className={styles.mobileEditorFieldLabel}>작성일</span>
+              <input
+                type="date"
+                className="app-input"
+                value={session.meta.reportDate}
+                onChange={(event) => screen.changeMetaField('reportDate', event.target.value)}
+              />
+            </label>
+            <label className={styles.mobileEditorFieldGroup}>
+              <span className={styles.mobileEditorFieldLabel}>담당</span>
+              <input
+                className="app-input"
+                value={session.meta.drafter}
+                placeholder="담당"
+                onChange={(event) => screen.changeMetaField('drafter', event.target.value)}
+              />
+            </label>
+            <label className={styles.mobileEditorFieldGroup}>
+              <span className={styles.mobileEditorFieldLabel}>검토</span>
+              <input
+                className="app-input"
+                value={session.meta.reviewer}
+                placeholder="검토"
+                onChange={(event) => screen.changeMetaField('reviewer', event.target.value)}
+              />
+            </label>
+            <label className={styles.mobileEditorFieldGroup}>
+              <span className={styles.mobileEditorFieldLabel}>확인</span>
+              <input
+                className="app-input"
+                value={session.meta.approver}
+                placeholder="확인"
+                onChange={(event) => screen.changeMetaField('approver', event.target.value)}
+              />
+            </label>
+          </div>
+        </AppModal>
+      ) : null}
 
       {hasLoadedSessionPayload && session ? (
         <AppModal

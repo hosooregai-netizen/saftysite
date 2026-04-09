@@ -3,7 +3,7 @@ import {
   readDoc7ReferenceMaterialBody,
 } from '@/lib/doc7ReferenceMaterials';
 import { CONTENT_TYPE_META, type ContentEditorMode } from '@/lib/admin';
-import { resolveSafetyAssetUrl } from '@/lib/safetyApi/assetUrls';
+import { resolveSafetyAssetUrlIfPathLike } from '@/lib/safetyApi/assetUrls';
 import {
   asMapperRecord,
   contentBodyToAssetName,
@@ -65,7 +65,7 @@ function readMeasurementSafetyCriteria(body: unknown) {
 function readFileUrl(body: unknown, order: 1 | 2) {
   const record = bodyRecord(body);
   if (order === 1) {
-    return resolveSafetyAssetUrl(
+    return resolveSafetyAssetUrlIfPathLike(
       normalizeMapperText(record.referenceMaterial1) ||
         normalizeMapperText(record.reference_material_1) ||
         normalizeMapperText(record.file_url_1) ||
@@ -74,7 +74,7 @@ function readFileUrl(body: unknown, order: 1 | 2) {
     );
   }
 
-  return resolveSafetyAssetUrl(
+  return resolveSafetyAssetUrlIfPathLike(
     normalizeMapperText(record.referenceMaterial2) ||
       normalizeMapperText(record.reference_material_2) ||
       normalizeMapperText(record.file_url_2) ||

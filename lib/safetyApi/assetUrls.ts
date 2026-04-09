@@ -15,6 +15,16 @@ const SAFETY_UPLOADS_PATH_PREFIX = '/uploads/';
 const SAFETY_PHOTO_ASSET_FILES_PATH_PREFIX = '/photo-assets/files/';
 const SAFETY_PROXY_UPLOADS_PATH_PREFIX = `${DEFAULT_SAFETY_API_BASE_URL}${SAFETY_UPLOADS_PATH_PREFIX}`;
 const SAFETY_PATH_PREFIXES = ['/api/safety', '/api/v1'] as const;
+const LIKELY_SAFETY_ASSET_FILE_PATTERN =
+  /\.(?:png|jpe?g|gif|webp|svg|bmp|pdf|hwpx?|docx?|xlsx?|pptx?|zip)(?:$|[?#])/i;
+const LIKELY_SAFETY_ASSET_PATH_PREFIXES = [
+  SAFETY_UPLOADS_PATH_PREFIX,
+  SAFETY_PHOTO_ASSET_FILES_PATH_PREFIX,
+  '/content-items/assets/',
+  'uploads/',
+  'photo-assets/files/',
+  'content-items/assets/',
+] as const;
 
 function normalizeBaseUrl(value: string): string {
   return value.replace(/\/+$/, '');
@@ -234,6 +244,31 @@ export function getSafetyAssetTransportWarning(
     : null;
 }
 
+function looksLikeResolvableSafetyAssetValue(value: string): boolean {
+  const normalized = value.trim();
+  if (!normalized || hasNonProxyLocalScheme(normalized)) {
+    return false;
+  }
+
+  if (isAbsoluteHttpUrl(normalized) || normalized.startsWith(SAFETY_PROXY_UPLOADS_PATH_PREFIX)) {
+    return true;
+  }
+
+  if (getSafetyAssetPath(normalized) || extractCanonicalAssetPath(ensureLeadingSlash(normalized))) {
+    return true;
+  }
+
+  if (LIKELY_SAFETY_ASSET_FILE_PATTERN.test(normalized)) {
+    return true;
+  }
+
+  const withoutLeadingSlash = normalized.replace(/^\/+/, '');
+  return LIKELY_SAFETY_ASSET_PATH_PREFIXES.some((prefix) => {
+    const normalizedPrefix = prefix.replace(/^\/+/, '');
+    return normalized.startsWith(prefix) || withoutLeadingSlash.startsWith(normalizedPrefix);
+  });
+}
+
 export function resolveSafetyAssetUrl(value: string): string {
   const normalizedValue = value.trim();
   if (!normalizedValue || hasNonProxyLocalScheme(normalizedValue)) {
@@ -263,4 +298,24 @@ export function resolveSafetyAssetUrl(value: string): string {
   }
 
   return normalizedPath;
+}
+
+export function resolveSafetyAssetUrlIfPathLike(value: string): string {
+  const normalizedValue = value.trim();
+  if (!normalizedValue || hasNonProxyLocalScheme(normalizedValue)) {
+    return normalizedValue;
+  }
+
+  if (looksLikeResolvableSafetyAssetValue(normalizedValue)) {
+    return resolveSafetyAssetUrl(normalizedValue);
+  }
+
+  if (normalizedValue.startsWith('/')) {
+    const strippedValue = normalizedValue.replace(/^\/+/, '').trim();
+    if (strippedValue && !looksLikeResolvableSafetyAssetValue(strippedValue)) {
+      return strippedValue;
+    }
+  }
+
+  return normalizedValue;
 }

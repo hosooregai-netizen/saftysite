@@ -27,7 +27,7 @@ import {
 } from '@/constants/inspectionSession/shared';
 import { getSceneSlotTitle, normalizeSceneTitle } from '@/constants/inspectionSession/scenePhotos';
 import { calculateRiskAssessmentResult } from '@/lib/riskAssessment';
-import { resolveSafetyAssetUrl } from '@/lib/safetyApi/assetUrls';
+import { resolveSafetyAssetUrl, resolveSafetyAssetUrlIfPathLike } from '@/lib/safetyApi/assetUrls';
 import type { CausativeAgentKey } from '@/types/siteOverview';
 import type {
   CaseFeedItem,
@@ -49,6 +49,10 @@ function normalizeRiskLevel(likelihood: string, severity: string, existing: stri
 
 function normalizeAssetValue(value: unknown) {
   return resolveSafetyAssetUrl(normalizeText(value));
+}
+
+function normalizeReferenceMaterialValue(value: unknown) {
+  return resolveSafetyAssetUrlIfPathLike(normalizeText(value));
 }
 
 export function normalizeScenePhoto(raw: unknown, index: number): SiteScenePhoto {
@@ -118,24 +122,24 @@ export function normalizeHazardFinding(raw: unknown, fallbackInspector: string) 
       .map((item) => normalizeText(item))
       .filter(Boolean),
     referenceMaterial1:
-      normalizeAssetValue(source.referenceMaterialImage) ||
-      normalizeAssetValue(source.referenceMaterial1) ||
-      normalizeAssetValue(matchedReference?.referenceMaterial1) ||
+      normalizeReferenceMaterialValue(source.referenceMaterialImage) ||
+      normalizeReferenceMaterialValue(source.referenceMaterial1) ||
+      normalizeReferenceMaterialValue(matchedReference?.referenceMaterial1) ||
       '',
     referenceMaterial2:
-      normalizeText(source.referenceMaterialDescription) ||
-      normalizeText(source.referenceMaterial2) ||
-      matchedReference?.referenceMaterial2 ||
+      normalizeReferenceMaterialValue(source.referenceMaterialDescription) ||
+      normalizeReferenceMaterialValue(source.referenceMaterial2) ||
+      normalizeReferenceMaterialValue(matchedReference?.referenceMaterial2) ||
       '',
     referenceMaterialImage:
-      normalizeAssetValue(source.referenceMaterialImage) ||
-      normalizeAssetValue(source.referenceMaterial1) ||
-      normalizeAssetValue(matchedReference?.referenceMaterial1) ||
+      normalizeReferenceMaterialValue(source.referenceMaterialImage) ||
+      normalizeReferenceMaterialValue(source.referenceMaterial1) ||
+      normalizeReferenceMaterialValue(matchedReference?.referenceMaterial1) ||
       '',
     referenceMaterialDescription:
-      normalizeText(source.referenceMaterialDescription) ||
-      normalizeText(source.referenceMaterial2) ||
-      matchedReference?.referenceMaterial2 ||
+      normalizeReferenceMaterialValue(source.referenceMaterialDescription) ||
+      normalizeReferenceMaterialValue(source.referenceMaterial2) ||
+      normalizeReferenceMaterialValue(matchedReference?.referenceMaterial2) ||
       '',
     referenceCatalogAccidentType: normalizeText(source.referenceCatalogAccidentType),
     referenceCatalogCausativeAgentKey: normalizeDoc7CausativeAgentKey(

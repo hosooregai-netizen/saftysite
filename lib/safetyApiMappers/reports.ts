@@ -101,6 +101,7 @@ function buildTechnicalGuidancePayloadForSave(
     documentsMeta: session.documentsMeta,
     document2Overview: session.document2Overview,
     document3Scenes: session.document3Scenes,
+    document4FollowUps: session.document4FollowUps,
     document5Summary: session.document5Summary,
     document6Measures: session.document6Measures,
     document7Findings: session.document7Findings,

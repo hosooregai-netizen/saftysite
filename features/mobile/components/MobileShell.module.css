@@ -174,6 +174,10 @@
   padding: 14px 14px 18px;
 }
 
+.content > * {
+  min-width: 0;
+}
+
 .contentFullHeight {
   display: flex;
   flex-direction: column;
@@ -664,6 +668,16 @@
   gap: 6px;
 }
 
+.mobileCompactFieldGrid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.mobileCompactFieldWide {
+  grid-column: 1 / -1;
+}
+
 .mobileEditorFieldLabel {
   font-size: var(--text-ui-sm);
   font-weight: 700;
@@ -671,9 +685,188 @@
   color: var(--erp-text-muted);
 }
 
+.mobileInlineActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+.mobileInlineAction {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.mobileOverviewPeriodRow {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1fr) minmax(0, 1fr);
+}
+
 .mobileEditorTextareaCompact {
   min-height: 72px;
   resize: vertical;
+}
+
+.mobileImplementationListHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mobileImplementationListTitle {
+  font-size: var(--text-ui);
+  font-weight: 800;
+  color: var(--erp-dark);
+}
+
+.mobileImplementationAddButton,
+.mobileImplementationDeleteButton {
+  min-height: 36px;
+  padding-inline: 10px;
+}
+
+.mobileImplementationList {
+  display: grid;
+  gap: 10px;
+}
+
+.mobileImplementationItem {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgba(215, 224, 235, 0.96);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.mobileImplementationItemTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mobileImplementationItemBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--erp-gold-soft);
+  color: var(--erp-navy);
+  font-size: var(--text-ui-sm);
+  font-weight: 800;
+}
+
+.mobileImplementationFieldGrid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.mobileImplementationFieldWide {
+  grid-column: 1 / -1;
+}
+
+.mobileImplementationEmpty {
+  padding: 14px;
+  border: 1px dashed rgba(174, 186, 200, 0.92);
+  border-radius: 12px;
+  background: rgba(248, 250, 252, 0.72);
+  color: var(--erp-text-muted);
+  font-size: var(--text-ui);
+  text-align: center;
+}
+
+.mobileFuturePlanTableShell {
+  overflow-x: auto;
+  margin-inline: -2px;
+  padding-bottom: 4px;
+}
+
+.mobileFuturePlanTable {
+  display: grid;
+  gap: 8px;
+  min-width: 760px;
+}
+
+.mobileFuturePlanHeader,
+.mobileFuturePlanRow {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.15fr) minmax(210px, 1.15fr) minmax(280px, 1.5fr) 78px;
+  gap: 8px;
+  align-items: start;
+}
+
+.mobileFuturePlanHeader {
+  padding: 10px 12px;
+  border: 1px solid rgba(215, 224, 235, 0.98);
+  border-radius: 12px;
+  background: rgba(241, 245, 249, 0.84);
+}
+
+.mobileFuturePlanHeader span {
+  align-self: center;
+  font-size: var(--text-ui-sm);
+  font-weight: 800;
+  line-height: 1.35;
+  color: var(--erp-dark);
+}
+
+.mobileFuturePlanHeaderButton {
+  min-height: 36px;
+  padding-inline: 10px;
+}
+
+.mobileFuturePlanRow {
+  padding: 12px;
+  border: 1px solid rgba(215, 224, 235, 0.96);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.mobileFuturePlanProcessCell {
+  display: grid;
+  gap: 8px;
+}
+
+.mobileFuturePlanTextarea {
+  min-height: 120px;
+}
+
+.mobileFuturePlanRecommendationList {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.mobileFuturePlanRecommendationButton {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid rgba(174, 186, 200, 0.92);
+  border-radius: 999px;
+  background: rgba(248, 250, 252, 0.96);
+  color: var(--erp-slate);
+  font-size: var(--text-ui-sm);
+  font-weight: 700;
+}
+
+.mobileFuturePlanDeleteButton {
+  min-height: 36px;
+  padding-inline: 10px;
+}
+
+.mobileFuturePlanEmpty {
+  padding: 14px;
+  border: 1px dashed rgba(174, 186, 200, 0.92);
+  border-radius: 12px;
+  background: rgba(248, 250, 252, 0.72);
+  color: var(--erp-text-muted);
+  font-size: var(--text-ui);
+  text-align: center;
 }
 
 .mobileDoc8ProcessStack {
@@ -859,6 +1052,30 @@
   color: var(--erp-mid);
   font-size: var(--text-ui-sm);
   font-weight: 700;
+}
+
+.mobileSummaryActionStack {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  justify-self: start;
+  width: 100%;
+  max-width: 116px;
+}
+
+.mobileSummaryGrid {
+  grid-template-columns: minmax(0, 1.2fr) minmax(104px, 116px) minmax(76px, 88px);
+  align-items: stretch;
+}
+
+.mobileInspectionSummaryGrid {
+  grid-template-columns:
+    minmax(0, 1fr)
+    minmax(0, 1fr)
+    minmax(76px, 88px)
+    minmax(88px, 96px)
+    minmax(76px, 84px);
+  align-items: stretch;
 }
 
 @media (max-width: 520px) {
