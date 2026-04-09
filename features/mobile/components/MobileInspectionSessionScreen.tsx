@@ -72,17 +72,17 @@ interface MobileInspectionSessionScreenProps {
 }
 
 const STEPS = [
-  { id: 'step2', label: '媛쒖슂' },
-  { id: 'step3', label: '?꾩옣 ?꾧꼍' },
-  { id: 'step4', label: '?댁쟾 湲곗닠吏?? },
-  { id: 'step5', label: '珥앺룊' },
-  { id: 'step6', label: '?щ쭩 湲곗씤臾? },
-  { id: 'step7', label: '?꾪뿕?붿씤 吏?? },
-  { id: 'step8', label: '?ν썑 吏꾪뻾怨듭젙' },
-  { id: 'step9', label: '?꾪뿕?깊룊媛 / TBM' },
-  { id: 'step10', label: '怨꾩륫?먭?' },
-  { id: 'step11', label: '?덉쟾援먯쑁' },
-  { id: 'step12', label: '?쒕룞 吏?? },
+  { id: 'step2', label: '개요' },
+  { id: 'step3', label: '현장 전경' },
+  { id: 'step4', label: '이전 기술지도' },
+  { id: 'step5', label: '총평' },
+  { id: 'step6', label: '사망 기인물' },
+  { id: 'step7', label: '위험요인 지적' },
+  { id: 'step8', label: '향후 진행공정' },
+  { id: 'step9', label: '위험성평가 / TBM' },
+  { id: 'step10', label: '계측점검' },
+  { id: 'step11', label: '안전교육' },
+  { id: 'step12', label: '활동 지원' },
 ];
 
 interface Doc2ProcessNotesResponse {
@@ -94,7 +94,7 @@ const MAX_DOC8_RECOMMENDATIONS = 6;
 
 function formatCompactDate(value: string | null | undefined) {
   if (!value?.trim()) {
-    return '誘멸린濡?;
+    return '미기록';
   }
 
   const parsed = new Date(value);
@@ -119,7 +119,7 @@ function parsePositiveRound(value: string) {
 }
 
 function buildAutoReportTitle(reportDate: string, reportNumber: number) {
-  return reportDate ? `${reportDate} 蹂닿퀬??${reportNumber}` : `蹂닿퀬??${reportNumber}`;
+  return reportDate ? `${reportDate} 보고서 ${reportNumber}` : `보고서 ${reportNumber}`;
 }
 
 async function generateDoc2RiskLines(input: {
@@ -139,7 +139,7 @@ async function generateDoc2RiskLines(input: {
 
   const payload = (await response.json().catch(() => ({}))) as Doc2ProcessNotesResponse;
   if (!response.ok) {
-    throw new Error(payload.error || 'AI ?꾪뿕?붿씤 ?앹꽦???ㅽ뙣?덉뒿?덈떎.');
+    throw new Error(payload.error || 'AI 위험요인 생성에 실패했습니다.');
   }
 
   return Array.isArray(payload.riskLines) ? payload.riskLines.filter(Boolean).slice(0, 2) : [];
@@ -155,7 +155,7 @@ async function inferSceneTitle(file: File) {
   });
 
   if (!response.ok) {
-    throw new Error('?꾩옣 ?꾧꼍 怨듭젙紐?AI ?앹꽦???ㅽ뙣?덉뒿?덈떎.');
+    throw new Error('현장 전경 공정명 AI 생성에 실패했습니다.');
   }
 
   const payload = (await response.json().catch(() => ({}))) as { title?: string };
@@ -179,7 +179,7 @@ async function generateStructuredDoc5Summary(
   };
 
   if (!response.ok || !result.text?.trim()) {
-    throw new Error(result.error?.trim() || '珥앺룊 AI ?앹꽦???ㅽ뙣?덉뒿?덈떎.');
+    throw new Error(result.error?.trim() || '총평 AI 생성에 실패했습니다.');
   }
 
   return result.text.trim();
@@ -228,7 +228,7 @@ function StandaloneState({
         <div className={styles.content}>
           <section className={styles.stateCard}>
             <div className={styles.sectionTitleWrap}>
-              <span className={styles.sectionEyebrow}>紐⑤컮??蹂닿퀬??/span>
+              <span className={styles.sectionEyebrow}>모바일 보고서</span>
               <h1 className={styles.sectionTitle}>{title}</h1>
             </div>
             {description ? <p className={styles.inlineNotice}>{description}</p> : null}
@@ -271,7 +271,7 @@ export function MobileInspectionSessionScreen({
   } | null>(null);
 
   if (!screen.isReady) {
-    return <StandaloneState title="蹂닿퀬?쒕? 以鍮꾪븯??以묒엯?덈떎." />;
+    return <StandaloneState title="보고서를 준비하는 중입니다." />;
   }
 
   if (!screen.isAuthenticated) {
@@ -279,24 +279,24 @@ export function MobileInspectionSessionScreen({
       <LoginPanel
         error={screen.authError}
         onSubmit={screen.login}
-        title="紐⑤컮??蹂닿퀬??濡쒓렇??
-        description="?듭떖 ?뱀뀡 以묒떖?쇰줈 湲곗닠吏??蹂닿퀬?쒕? ?댁뼱???묒꽦?⑸땲??"
+        title="모바일 보고서 로그인"
+        description="핵심 섹션 중심으로 기술지도 보고서를 이어서 작성합니다."
       />
     );
   }
 
   if (screen.isLoadingSession && !displaySession) {
-    return <StandaloneState title="蹂닿퀬?쒕? 遺덈윭?ㅻ뒗 以묒엯?덈떎." />;
+    return <StandaloneState title="보고서를 불러오는 중입니다." />;
   }
 
   if (!displaySession || !screen.displayProgress) {
     return (
       <StandaloneState
-        title="蹂닿퀬?쒕? 李얠쓣 ???놁뒿?덈떎."
-        description="蹂닿퀬?쒓? ?꾩쭅 ?숆린?붾릺吏 ?딆븯嫄곕굹 ?묎렐 媛?ν븳 踰붿쐞瑜?踰쀬뼱?ъ뒿?덈떎."
+        title="보고서를 찾을 수 없습니다."
+        description="보고서가 아직 동기화되지 않았거나 접근 가능한 범위를 벗어났습니다."
         action={
           <Link href={buildMobileHomeHref()} className="app-button app-button-secondary">
-            ?꾩옣 紐⑸줉?쇰줈 ?뚯븘媛湲?
+            현장 목록으로 돌아가기
           </Link>
         }
       />
@@ -318,10 +318,10 @@ export function MobileInspectionSessionScreen({
   );
   const mobileReportsHref = buildMobileSiteReportsHref(displaySession.siteKey);
   const saveStatusLabel = screen.isSaving
-    ? '?먮룞 ???以?
+    ? '자동 저장 중'
     : hasLoadedSessionPayload
-      ? '??λ맖'
-      : '蹂몃Ц ?숆린??以?;
+      ? '저장됨'
+      : '본문 동기화 중';
 
   const resetDoc2ProcessState = () => {
     setDoc2ProcessRiskLines(null);
@@ -367,17 +367,17 @@ export function MobileInspectionSessionScreen({
       });
 
       if (generatedRiskLines.length === 0) {
-        throw new Error('AI ?꾪뿕?붿씤 ?앹꽦 寃곌낵媛 鍮꾩뼱 ?덉뒿?덈떎.');
+        throw new Error('AI 위험요인 생성 결과가 비어 있습니다.');
       }
 
       setDoc2ProcessRiskLines(generatedRiskLines);
-      setDoc2ProcessNotice('AI媛 二쇱슂 ?꾪뿕 ?붿씤 2以꾩쓣 ?앹꽦?덉뒿?덈떎.');
+      setDoc2ProcessNotice('AI가 주요 위험 요인 2줄을 생성했습니다.');
     } catch (error) {
       setDoc2ProcessRiskLines(null);
       setDoc2ProcessError(
-        error instanceof Error ? error.message : 'AI ?꾪뿕?붿씤 ?앹꽦???ㅽ뙣?덉뒿?덈떎.',
+        error instanceof Error ? error.message : 'AI 위험요인 생성에 실패했습니다.',
       );
-      setDoc2ProcessNotice('AI ?앹꽦???ㅽ뙣??洹쒖튃 湲곕컲 ?꾪뿕 ?붿씤?쇰줈 誘몃━蹂닿린瑜??좎??⑸땲??');
+      setDoc2ProcessNotice('AI 생성에 실패해 규칙 기반 위험 요인으로 미리보기를 유지합니다.');
     } finally {
       setIsGeneratingDoc2ProcessNotes(false);
     }
@@ -399,7 +399,9 @@ export function MobileInspectionSessionScreen({
 
   const toggleDoc3Analyzing = (sceneId: string, active: boolean) => {
     setDoc3AnalyzingSceneIds((current) =>
-      active ? Array.from(new Set([...current, sceneId])) : current.filter((item) => item !== sceneId),
+      active
+        ? Array.from(new Set([...current, sceneId]))
+        : current.filter((item) => item !== sceneId),
     );
   };
 
@@ -457,7 +459,7 @@ export function MobileInspectionSessionScreen({
     setDoc5DraftError(null);
     setDoc5DraftNotice(
       !screen.isRelationReady
-        ? '?꾩쟻 ?듦퀎媛 ?꾩쭅 以鍮꾨릺吏 ?딆븘 ?꾩옱 蹂닿퀬??湲곗??쇰줈 癒쇱? 珥앺룊???앹꽦?⑸땲??'
+        ? '누적 통계가 아직 준비되지 않아 현재 보고서 기준으로 먼저 총평을 생성합니다.'
         : null,
     );
 
@@ -481,8 +483,8 @@ export function MobileInspectionSessionScreen({
         },
       }));
     } catch (error) {
-      setDoc5DraftError(error instanceof Error ? error.message : '珥앺룊 AI ?앹꽦???ㅽ뙣?덉뒿?덈떎.');
-      setDoc5DraftNotice('AI ?앹꽦???ㅽ뙣??濡쒖뺄 珥덉븞?쇰줈 ?泥댄뻽?듬땲??');
+      setDoc5DraftError(error instanceof Error ? error.message : '총평 AI 생성에 실패했습니다.');
+      setDoc5DraftNotice('AI 생성이 실패해 로컬 규칙 기반 총평으로 대체했습니다.');
 
       screen.applyDocumentUpdate('doc5', 'derived', (current) => ({
         ...current,
@@ -534,7 +536,7 @@ export function MobileInspectionSessionScreen({
         [findingId]:
           error instanceof Error
             ? error.message
-            : 'AI 珥덉븞??留뚮뱶??以?臾몄젣媛 諛쒖깮?덉뒿?덈떎.',
+            : 'AI 초안을 만드는 중 문제가 발생했습니다.',
       }));
     } finally {
       setDoc7AiLoadingId((current) => (current === findingId ? null : current));
@@ -576,7 +578,7 @@ export function MobileInspectionSessionScreen({
       patchDoc11RecordContent(recordId, buildLocalDoc11EducationContent(input));
       setDoc11ContentNotice({
         id: recordId,
-        message: 'AI ?앹꽦???ㅽ뙣??洹쒖튃 湲곕컲 珥덉븞?쇰줈 ?泥댄뻽?듬땲??',
+        message: 'AI 생성이 실패해 규칙 기반 초안으로 대체했습니다.',
       });
     } finally {
       setDoc11GeneratingId(null);
@@ -651,7 +653,7 @@ export function MobileInspectionSessionScreen({
       setDoc10MatchErrors((current) => ({
         ...current,
         [measurementId]:
-          error instanceof Error ? error.message : '怨꾩륫?λ퉬 AI 留ㅼ묶???ㅽ뙣?덉뒿?덈떎.',
+          error instanceof Error ? error.message : '계측기 AI 매칭에 실패했습니다.',
       }));
     } finally {
       setDoc10MatchingMeasurementId((current) => (current === measurementId ? null : current));
@@ -662,18 +664,18 @@ export function MobileInspectionSessionScreen({
     <MobileShell
       fullHeight={true}
       backHref={mobileReportsHref}
-      backLabel="蹂닿퀬??紐⑸줉"
+      backLabel="보고서 목록"
       currentUserName={screen.currentUserName}
       tabBar={<MobileTabBar tabs={buildSiteTabs(displaySession.siteKey)} />}
       onLogout={screen.logout}
       title={getSessionTitle(displaySession)}
       webHref={`/sessions/${encodeURIComponent(sessionId)}`}
-      webLabel="?뱀뿉???꾩껜 ?몄쭛"
+      webLabel="웹에서 전체 편집"
     >
       <section className={styles.sectionCard} style={{ marginBottom: 0, borderRadius: '0 0 8px 8px', borderBottom: 'none', flexShrink: 0 }}>
         <div className={styles.sectionHeader}>
           <div className={styles.sectionTitleWrap}>
-            <h2 className={styles.sectionTitle}>紐⑤컮???듭떖 ?뱀뀡 吏꾪뻾 ?꾪솴</h2>
+            <h2 className={styles.sectionTitle}>모바일 핵심 섹션 진행 현황</h2>
           </div>
           <span className={styles.sectionMeta}>{saveStatusLabel}</span>
         </div>
@@ -691,11 +693,11 @@ export function MobileInspectionSessionScreen({
           }
         >
           <article className={styles.statCard}>
-            <span className={styles.statLabel}>吏꾪뻾瑜?/span>
+            <span className={styles.statLabel}>진행률</span>
             <strong className={styles.statValue}>{screen.displayProgress.percentage}%</strong>
           </article>
           <article className={styles.statCard}>
-            <span className={styles.statLabel}>吏?꾩씪</span>
+            <span className={styles.statLabel}>지도일</span>
             <strong className={styles.statValue}>
               {formatCompactDate(getSessionGuidanceDate(displaySession))}
             </strong>
@@ -709,7 +711,7 @@ export function MobileInspectionSessionScreen({
                 disabled={screen.isGeneratingHwpx || screen.isGeneratingPdf}
                 onClick={() => void screen.generateHwpxDocument()}
               >
-                {screen.isGeneratingHwpx ? '?쒓?...' : '?쒓?'}
+                {screen.isGeneratingHwpx ? '한글...' : '한글'}
               </button>
               <button
                 type="button"
@@ -730,7 +732,7 @@ export function MobileInspectionSessionScreen({
               disabled={screen.isSaving || screen.isGeneratingHwpx || screen.isGeneratingPdf}
               onClick={() => void screen.saveNow()}
             >
-              {screen.isSaving ? '???以? : '???}
+              {screen.isSaving ? '저장 중' : '저장'}
             </button>
           ) : null}
         </div>
@@ -752,19 +754,19 @@ export function MobileInspectionSessionScreen({
           </div>
 
           <div className={tabStyles.stepContent}>
-            {/* 2?④퀎: 湲곗닠吏??媛쒖슂 */}
+            {/* 2단계: 기술지도 개요 */}
             {activeStep === 'step2' && (
               <section style={{ padding: '16px' }}>
                 <div className={styles.sectionHeader}>
                   <div className={styles.sectionTitleWrap}>
-                    <h2 className={styles.sectionTitle}>湲곗닠吏??媛쒖슂</h2>
+                    <h2 className={styles.sectionTitle}>기술지도 개요</h2>
                   </div>
                 </div>
                 <div className={styles.editorBody}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
                       <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>吏?꾩씪</span>
+                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>지도일</span>
                         <input
                           className="app-input"
                           type="date"
@@ -782,7 +784,7 @@ export function MobileInspectionSessionScreen({
                         />
                       </label>
                       <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>怨듭젙瑜?(%)</span>
+                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>공정률 (%)</span>
                         <input
                           className="app-input"
                           type="number"
@@ -803,7 +805,7 @@ export function MobileInspectionSessionScreen({
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
                       <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>?뚯감</span>
+                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>회차</span>
                         <input
                           className="app-input"
                           type="number"
@@ -831,7 +833,7 @@ export function MobileInspectionSessionScreen({
                               const autoTitleCandidates = new Set([
                                 buildAutoReportTitle(preferredDate, current.reportNumber),
                                 buildAutoReportTitle(current.meta.reportDate.trim(), current.reportNumber),
-                                `蹂닿퀬??${current.reportNumber}`,
+                                `보고서 ${current.reportNumber}`,
                               ]);
 
                               return {
@@ -854,7 +856,7 @@ export function MobileInspectionSessionScreen({
                         />
                       </label>
                       <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>珥앺쉶李?/span>
+                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>총회차</span>
                         <input
                           className="app-input"
                           value={session.document2Overview.totalVisitCount}
@@ -868,14 +870,14 @@ export function MobileInspectionSessionScreen({
                               },
                             }));
                           }}
-                          placeholder="?? 12"
+                          placeholder="예: 12"
                         />
                       </label>
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
                       <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                          ?댁쟾湲곗닠吏???댄뻾
+                          이전기술지도 이행
                         </span>
                         <select
                           className="app-select"
@@ -900,7 +902,7 @@ export function MobileInspectionSessionScreen({
                         </select>
                       </label>
                       <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>?대떦??/span>
+                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>담당자</span>
                         <input
                           className="app-input"
                           value={session.document2Overview.assignee}
@@ -914,13 +916,13 @@ export function MobileInspectionSessionScreen({
                               },
                             }));
                           }}
-                          placeholder="?대떦???대쫫"
+                          placeholder="담당자 이름"
                         />
                       </label>
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
                       <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>?곕씫泥?/span>
+                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>연락처</span>
                         <input
                           className="app-input"
                           value={session.document2Overview.contact}
@@ -934,11 +936,11 @@ export function MobileInspectionSessionScreen({
                               },
                             }));
                           }}
-                          placeholder="?곕씫泥섎? ?낅젰?섏꽭??
+                          placeholder="연락처를 입력하세요"
                         />
                       </label>
                       <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>?듭? 諛⑸쾿</span>
+                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>통지 방법</span>
                         <select
                           className="app-select"
                           value={session.document2Overview.notificationMethod}
@@ -959,7 +961,7 @@ export function MobileInspectionSessionScreen({
                             }));
                           }}
                         >
-                          <option value="">?좏깮</option>
+                          <option value="">선택</option>
                           {NOTIFICATION_METHOD_OPTIONS.map((option) => (
                             <option key={option.value} value={option.value}>
                               {option.label}
@@ -971,7 +973,7 @@ export function MobileInspectionSessionScreen({
                     {session.document2Overview.notificationMethod === 'other' ? (
                       <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                          湲고? ?듬낫諛⑸쾿
+                          기타 통보방법
                         </span>
                         <input
                           className="app-input"
@@ -986,7 +988,7 @@ export function MobileInspectionSessionScreen({
                               },
                             }));
                           }}
-                          placeholder="湲고? ?듬낫諛⑸쾿 ?낅젰"
+                          placeholder="기타 통보방법 입력"
                         />
                       </label>
                     ) : null}
@@ -1002,7 +1004,7 @@ export function MobileInspectionSessionScreen({
                       >
                         <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                           <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                            吏곸젒?꾨떖 ?섎졊???깊븿
+                            직접전달 수령자 성함
                           </span>
                           <input
                             className="app-input"
@@ -1017,11 +1019,11 @@ export function MobileInspectionSessionScreen({
                                 },
                               }));
                             }}
-                            placeholder="?섎졊???깊븿 ?낅젰"
+                            placeholder="수령자 성함 입력"
                           />
                         </label>
                         <SignaturePad
-                          label="?섎졊???쒕챸"
+                          label="수령자 서명"
                           value={session.document2Overview.notificationRecipientSignature}
                           onChange={(value) => {
                             screen.applyDocumentUpdate('doc2', 'manual', (current) => ({
@@ -1037,11 +1039,11 @@ export function MobileInspectionSessionScreen({
                     ) : null}
                     <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                       <div style={{ fontSize: '14px', fontWeight: 700, color: '#334155' }}>
-                        ?ы빐 諛?怨듭젙 ?뱀씠?ы빆
+                        재해 및 공정 특이사항
                       </div>
                       <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                          理쒓렐 ?ш퀬 諛쒖깮 ?щ?
+                          최근 사고 발생 여부
                         </span>
                         <select
                           className="app-select"
@@ -1069,7 +1071,7 @@ export function MobileInspectionSessionScreen({
                           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
                             <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                               <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                                理쒓렐 ?ш퀬??
+                                최근 사고일
                               </span>
                               <input
                                 className="app-input"
@@ -1089,7 +1091,7 @@ export function MobileInspectionSessionScreen({
                             </label>
                             <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                               <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                                ?ш퀬 ?좏삎
+                                사고 유형
                               </span>
                               <input
                                 className="app-input"
@@ -1104,13 +1106,13 @@ export function MobileInspectionSessionScreen({
                                     },
                                   }));
                                 }}
-                                placeholder="?? ?⑥뼱吏?
+                                placeholder="예: 떨어짐"
                               />
                             </label>
                           </div>
                           <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                             <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                              ?ш퀬 媛쒖슂
+                              사고 개요
                             </span>
                             <textarea
                               className="app-input"
@@ -1125,7 +1127,7 @@ export function MobileInspectionSessionScreen({
                                   },
                                 }));
                               }}
-                              placeholder="?ш퀬 ?댁슜???낅젰?섏꽭??
+                              placeholder="사고 내용을 입력하세요"
                               style={{ width: '100%', minHeight: '72px', resize: 'vertical' }}
                             />
                           </label>
@@ -1133,7 +1135,7 @@ export function MobileInspectionSessionScreen({
                       ) : null}
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
                         <div style={{ fontSize: '14px', fontWeight: 700, color: '#334155' }}>
-                          吏꾪뻾怨듭젙 諛??뱀씠?ы빆
+                          진행공정 및 특이사항
                         </div>
                         <button
                           type="button"
@@ -1141,12 +1143,12 @@ export function MobileInspectionSessionScreen({
                           style={{ flexShrink: 0 }}
                           onClick={() => setIsDoc2ProcessModalOpen(true)}
                         >
-                          ?먮룞?앹꽦
+                          자동생성
                         </button>
                       </div>
                       <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                          蹂몃Ц
+                          본문
                         </span>
                         <textarea
                           className="app-input"
@@ -1161,7 +1163,7 @@ export function MobileInspectionSessionScreen({
                               },
                             }));
                           }}
-                          placeholder="怨듭젙 ?뱀씠?ы빆???낅젰?섏꽭??
+                          placeholder="공정 특이사항을 입력하세요"
                           style={{ width: '100%', minHeight: '96px', resize: 'vertical' }}
                         />
                       </label>
@@ -1171,12 +1173,12 @@ export function MobileInspectionSessionScreen({
               </section>
             )}
 
-            {/* 3?④퀎: ?꾩옣 ?꾧꼍 */}
+            {/* 3단계: 현장 전경 */}
             {activeStep === 'step3' && (
               <section style={{ padding: '16px' }}>
                 <div className={styles.sectionHeader}>
                   <div className={styles.sectionTitleWrap}>
-                    <h2 className={styles.sectionTitle}>?꾩옣 ?꾧꼍 諛?吏꾪뻾怨듭젙</h2>
+                    <h2 className={styles.sectionTitle}>현장 전경 및 진행공정</h2>
                   </div>
                 </div>
                 <div className={styles.editorBody}>
@@ -1199,10 +1201,10 @@ export function MobileInspectionSessionScreen({
                             <div style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>
                               {index < FIXED_SCENE_COUNT
                                 ? getFixedSceneTitle(index)
-                                : `怨듭젙 ?ъ쭊 ${index - FIXED_SCENE_COUNT + 1}`}
+                                : `공정 사진 ${index - FIXED_SCENE_COUNT + 1}`}
                             </div>
                             <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
-                              {index < FIXED_SCENE_COUNT ? '?꾩옣 ?꾧꼍 珥ъ쁺' : '二쇱슂 吏꾪뻾怨듭젙 珥ъ쁺'}
+                              {index < FIXED_SCENE_COUNT ? '현장 전경 촬영' : '주요 진행공정 촬영'}
                             </div>
                           </div>
                           {scene.photoUrl ? (
@@ -1218,7 +1220,7 @@ export function MobileInspectionSessionScreen({
                                 }));
                               }}
                             >
-                              ?ъ쭊 鍮꾩슦湲?
+                              사진 비우기
                             </button>
                           ) : null}
                         </div>
@@ -1236,10 +1238,10 @@ export function MobileInspectionSessionScreen({
                           }}
                         >
                           {scene.photoUrl ? (
-                            <img src={scene.photoUrl} alt="?꾩옣 ?ъ쭊" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                            <img src={scene.photoUrl} alt="현장 사진" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                           ) : (
                             <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: '14px' }}>
-                              ?곗튂?섏뿬 ?ъ쭊 ?좏깮
+                              터치하여 사진 선택
                             </div>
                           )}
                             <input
@@ -1267,13 +1269,13 @@ export function MobileInspectionSessionScreen({
                                 ),
                               }));
                             }}
-                            placeholder={`${getExtraSceneTitle(index)} ?? 泥쒖옣 諛곌? ?ㅼ튂`}
+                            placeholder={`${getExtraSceneTitle(index)} 예: 천장 배관 설치`}
                             style={{ width: '100%' }}
                           />
                         ) : (
                           <div style={{ fontSize: '12px', color: '#64748b', minHeight: '18px' }}>
                             {doc3AnalyzingSceneIds.includes(scene.id)
-                              ? 'AI ?뺣━ 以?
+                              ? 'AI 분석 중'
                               : scene.title?.trim() || getFixedSceneTitle(index)}
                           </div>
                         )}
@@ -1284,30 +1286,30 @@ export function MobileInspectionSessionScreen({
               </section>
             )}
 
-            {/* 4?④퀎: ?댁쟾 湲곗닠吏???ы빆 */}
+            {/* 4단계: 이전 기술지도 사항 */}
             {activeStep === 'step4' && (
               <section style={{ padding: '16px' }}>
                 <div className={styles.sectionHeader}>
                   <div className={styles.sectionTitleWrap}>
-                    <h2 className={styles.sectionTitle}>?댁쟾 湲곗닠吏???ы빆 ?댄뻾?щ?</h2>
+                    <h2 className={styles.sectionTitle}>이전 기술지도 사항 이행여부</h2>
                   </div>
                 </div>
                 <div className={styles.editorBody}>
                   {screen.isRelationHydrating ? (
                     <p className={styles.inlineNotice} style={{ marginBottom: '12px' }}>
-                      ?댁쟾 蹂닿퀬?쒖쓽 ?댄뻾 ??ぉ??遺덈윭?ㅻ뒗 以묒엯?덈떎.
+                      이전 보고서의 이행 항목을 불러오는 중입니다.
                     </p>
                   ) : null}
                   {screen.relationStatus === 'error' ? (
                     <p className={styles.errorNotice} style={{ marginBottom: '12px' }}>
-                      ?댁쟾 蹂닿퀬???곗씠?곕? ?꾩쭅 遺덈윭?ㅼ? 紐삵뻽?듬땲??
+                      이전 보고서 데이터를 아직 불러오지 못했습니다.
                     </p>
                   ) : null}
                   {session.document4FollowUps.length > 0 ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                       {session.document4FollowUps.map((item) => (
                         <article key={item.id} style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px' }}>
-                          <div style={{ marginBottom: '8px', fontSize: '14px', fontWeight: 600 }}>{item.location || '?꾩튂 誘몄???}</div>
+                          <div style={{ marginBottom: '8px', fontSize: '14px', fontWeight: 600 }}>{item.location || '위치 미지정'}</div>
                           <div
                             style={{
                               display: 'grid',
@@ -1317,7 +1319,7 @@ export function MobileInspectionSessionScreen({
                             }}
                           >
                             <label style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                              <span style={{ fontSize: '12px', color: '#64748b' }}>?쒖젙議곗튂 寃곌낵</span>
+                              <span style={{ fontSize: '12px', color: '#64748b' }}>시정조치 결과</span>
                               <select
                                 className="app-select"
                                 value={item.result}
@@ -1339,31 +1341,31 @@ export function MobileInspectionSessionScreen({
                               </select>
                             </label>
                             <label style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                              <span style={{ fontSize: '12px', color: '#64748b' }}>吏?꾩씪??/span>
+                              <span style={{ fontSize: '12px', color: '#64748b' }}>지도일자</span>
                               <input
                                 className="app-input"
-                                value={item.guidanceDate || '誘멸린濡?}
+                                value={item.guidanceDate || '미기록'}
                                 readOnly
                               />
                             </label>
                           </div>
                           <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                             <div style={{ flex: 1 }}>
-                              <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>?댁쟾 吏???ъ쭊</div>
+                              <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>이전 지적 사진</div>
                               {item.beforePhotoUrl ? (
-                                <img src={item.beforePhotoUrl} alt="吏???ъ쭊" style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '4px', backgroundColor: '#f8fafc' }} />
+                                <img src={item.beforePhotoUrl} alt="지적 사진" style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '4px', backgroundColor: '#f8fafc' }} />
                               ) : (
-                                <div style={{ width: '100%', height: '120px', backgroundColor: '#f8fafc', border: '1px solid rgba(215, 224, 235, 0.88)', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: '#94a3b8' }}>?ъ쭊 ?놁쓬</div>
+                                <div style={{ width: '100%', height: '120px', backgroundColor: '#f8fafc', border: '1px solid rgba(215, 224, 235, 0.88)', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: '#94a3b8' }}>사진 없음</div>
                               )}
                             </div>
                             <div style={{ flex: 1 }}>
-                              <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>媛쒖꽑 ???ъ쭊</div>
+                              <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>개선 후 사진</div>
                               <label style={{ display: 'block', width: '100%', height: '120px', backgroundColor: '#f8fafc', border: '1px solid rgba(215, 224, 235, 0.88)', borderRadius: '4px', overflow: 'hidden', position: 'relative', cursor: 'pointer' }}>
                                 {item.afterPhotoUrl ? (
-                                  <img src={item.afterPhotoUrl} alt="媛쒖꽑 ?ъ쭊" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                  <img src={item.afterPhotoUrl} alt="개선 사진" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                 ) : (
                                   <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: '12px' }}>
-                                    ?ъ쭊 ?좏깮
+                                    사진 선택
                                   </div>
                                 )}
                                 <input
@@ -1391,41 +1393,41 @@ export function MobileInspectionSessionScreen({
                       ))}
                     </div>
                   ) : (
-                    <p className={styles.inlineNotice}>?댁쟾 湲곗닠吏???ы빆???놁뒿?덈떎.</p>
+                    <p className={styles.inlineNotice}>이전 기술지도 사항이 없습니다.</p>
                   )}
                 </div>
               </section>
             )}
 
-            {/* 5?④퀎: 珥앺룊 */}
+            {/* 5단계: 총평 */}
             {activeStep === 'step5' && (
               <section style={{ padding: '16px' }}>
                 <div className={styles.sectionHeader}>
                   <div className={styles.sectionTitleWrap}>
-                    <h2 className={styles.sectionTitle}>湲곗닠吏??珥앺룊</h2>
+                    <h2 className={styles.sectionTitle}>기술지도 총평</h2>
                   </div>
                 </div>
                 <div className={styles.editorBody}>
                   <div className={workspaceStyles.doc5StatsGrid} style={{ marginBottom: '12px' }}>
                     <ChartCard
-                      title="吏?곸쑀???듦퀎 湲덊쉶"
+                      title="사고유형 통계"
                       entries={screen.derivedData.currentAccidentEntries}
                       variant="erp"
                     />
                     <ChartCard
-                      title="湲곗씤臾??듦퀎 湲덊쉶"
+                      title="기인물 통계"
                       entries={screen.derivedData.currentAgentEntries}
                       variant="erp"
                     />
                     {screen.isRelationReady ? (
                       <>
                         <ChartCard
-                          title="吏?곸쑀???듦퀎 ?꾩쟻"
+                          title="사고유형 누적"
                           entries={screen.derivedData.cumulativeAccidentEntries}
                           variant="erp"
                         />
                         <ChartCard
-                          title="湲곗씤臾??듦퀎 ?꾩쟻"
+                          title="기인물 누적"
                           entries={screen.derivedData.cumulativeAgentEntries}
                           variant="erp"
                         />
@@ -1433,26 +1435,26 @@ export function MobileInspectionSessionScreen({
                     ) : (
                       <>
                         <article className={workspaceStyles.doc5ChartPanel}>
-                          <h3 className={workspaceStyles.doc5ChartPanelTitle}>吏?곸쑀???듦퀎 ?꾩쟻</h3>
+                          <h3 className={workspaceStyles.doc5ChartPanelTitle}>사고유형 누적</h3>
                           <div className={workspaceStyles.doc5ChartPanelBody}>
                             <div className={styles.inlineNotice} style={{ margin: 0, textAlign: 'center' }}>
                               {screen.isRelationHydrating
-                                ? '?꾩쟻 ?듦퀎瑜?怨꾩궛?섎뒗 以묒엯?덈떎.'
+                                ? '누적 통계를 계산하는 중입니다.'
                                 : screen.relationStatus === 'error'
-                                  ? '?꾩쟻 ?듦퀎瑜??꾩쭅 遺덈윭?ㅼ? 紐삵뻽?듬땲??'
-                                  : '?댁쟾 蹂닿퀬?쒓? ?놁뼱 ?꾩쟻 ?듦퀎媛 ?놁뒿?덈떎.'}
+                                  ? '누적 통계를 아직 불러오지 못했습니다.'
+                                  : '이전 보고서가 없어 누적 통계가 없습니다.'}
                             </div>
                           </div>
                         </article>
                         <article className={workspaceStyles.doc5ChartPanel}>
-                          <h3 className={workspaceStyles.doc5ChartPanelTitle}>湲곗씤臾??듦퀎 ?꾩쟻</h3>
+                          <h3 className={workspaceStyles.doc5ChartPanelTitle}>기인물 누적</h3>
                           <div className={workspaceStyles.doc5ChartPanelBody}>
                             <div className={styles.inlineNotice} style={{ margin: 0, textAlign: 'center' }}>
                               {screen.isRelationHydrating
-                                ? '?꾩쟻 ?듦퀎瑜?怨꾩궛?섎뒗 以묒엯?덈떎.'
+                                ? '누적 통계를 계산하는 중입니다.'
                                 : screen.relationStatus === 'error'
-                                  ? '?꾩쟻 ?듦퀎瑜??꾩쭅 遺덈윭?ㅼ? 紐삵뻽?듬땲??'
-                                  : '?댁쟾 蹂닿퀬?쒓? ?놁뼱 ?꾩쟻 ?듦퀎媛 ?놁뒿?덈떎.'}
+                                  ? '누적 통계를 아직 불러오지 못했습니다.'
+                                  : '이전 보고서가 없어 누적 통계가 없습니다.'}
                             </div>
                           </div>
                         </article>
@@ -1462,7 +1464,7 @@ export function MobileInspectionSessionScreen({
                   <div className={styles.mobileEditorFieldStack}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
                       <div style={{ fontSize: '14px', fontWeight: 700, color: '#334155' }}>
-                        珥앺룊 蹂몃Ц
+                        총평 본문
                       </div>
                       <button
                         type="button"
@@ -1470,12 +1472,12 @@ export function MobileInspectionSessionScreen({
                         disabled={doc5DraftLoading}
                         onClick={() => void handleGenerateDoc5Draft()}
                       >
-                        珥앺룊 AI ?앹꽦
+                        총평 AI 생성
                       </button>
                     </div>
                     {doc5DraftLoading ? (
                       <span className={styles.inlineNotice} role="status" aria-live="polite">
-                        AI媛 珥앺룊???뺣━?섍퀬 ?덉뒿?덈떎.
+                        AI가 총평을 정리하고 있습니다.
                       </span>
                     ) : null}
                     {doc5DraftError ? (
@@ -1490,12 +1492,12 @@ export function MobileInspectionSessionScreen({
                     ) : null}
                     {screen.isRelationHydrating ? (
                       <p className={styles.inlineNotice} style={{ margin: 0 }}>
-                        ?꾩쟻 ?듦퀎瑜?怨꾩궛?섎뒗 以묒엯?덈떎. 吏湲??앹꽦?섎㈃ ?꾩옱 蹂닿퀬??湲곗??쇰줈 癒쇱? ?묒꽦?⑸땲??
+                        누적 통계를 계산하는 중입니다. 지금 생성하면 현재 보고서 기준으로 먼저 작성합니다.
                       </p>
                     ) : null}
                     {screen.relationStatus === 'error' ? (
                       <p className={styles.errorNotice} style={{ margin: 0 }}>
-                        ?꾩쟻 ?듦퀎瑜??꾩쭅 遺덈윭?ㅼ? 紐삵뻽?듬땲?? 珥앺룊? ?꾩옱 蹂닿퀬??湲곗??쇰줈???앹꽦?????덉뒿?덈떎.
+                        누적 통계를 아직 불러오지 못했습니다. 총평은 현재 보고서 기준으로만 생성됩니다.
                       </p>
                     ) : null}
                     <textarea
@@ -1511,7 +1513,7 @@ export function MobileInspectionSessionScreen({
                           },
                         }));
                       }}
-                      placeholder="珥앺룊???낅젰?섏꽭??
+                      placeholder="총평을 입력하세요"
                       style={{ width: '100%', minHeight: '200px', resize: 'vertical' }}
                     />
                   </div>
@@ -1519,12 +1521,12 @@ export function MobileInspectionSessionScreen({
               </section>
             )}
 
-            {/* 6?④퀎: 12? ?щ쭩?ш퀬 湲곗씤臾?*/}
+            {/* 6단계: 12대 사망사고 기인물 */}
             {activeStep === 'step6' && (
               <section style={{ padding: '16px' }}>
                 <div className={styles.sectionHeader}>
                   <div className={styles.sectionTitleWrap}>
-                    <h2 className={styles.sectionTitle}>12? ?щ쭩?ш퀬 湲곗씤臾?/h2>
+                    <h2 className={styles.sectionTitle}>12대 사망사고 기인물</h2>
                   </div>
                 </div>
                 <div className={styles.editorBody}>
@@ -1555,7 +1557,7 @@ export function MobileInspectionSessionScreen({
                                   ),
                                 }));
                               }}
-                              aria-label={`${measure.label} ?대떦`}
+                              aria-label={`${measure.label} 해당`}
                             />
                           </span>
                         </label>
@@ -1566,12 +1568,12 @@ export function MobileInspectionSessionScreen({
               </section>
             )}
 
-            {/* 7?④퀎: ?꾩〈 ?좏빐쨌?꾪뿕?붿씤 ?몃? 吏??*/}
+            {/* 7단계: 현존 유해·위험요인 세부 지적 */}
             {activeStep === 'step7' && (
               <section style={{ padding: '16px' }}>
                 <div className={styles.sectionHeader}>
                   <div className={styles.sectionTitleWrap}>
-                    <h2 className={styles.sectionTitle}>?꾩〈 ?좏빐쨌?꾪뿕?붿씤 ?몃? 吏??/h2>
+                    <h2 className={styles.sectionTitle}>현존 유해·위험요인 세부 지적</h2>
                   </div>
                 </div>
                 <div className={styles.editorBody}>
@@ -1581,7 +1583,7 @@ export function MobileInspectionSessionScreen({
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
                             <span style={{ fontSize: '14px', fontWeight: 600, flexShrink: 0 }}>
-                              吏???ы빆 {index + 1}
+                              지적 사항 {index + 1}
                             </span>
                             <button
                               type="button"
@@ -1589,7 +1591,7 @@ export function MobileInspectionSessionScreen({
                               disabled={!finding.photoUrl || doc7AiLoadingId === finding.id}
                               onClick={() => void handleDoc7AiRefill(finding.id, finding.photoUrl || '')}
                             >
-                              {doc7AiLoadingId === finding.id ? 'AI 梨꾩슦??以? : 'AI ?ㅼ떆 梨꾩슦湲?}
+                              {doc7AiLoadingId === finding.id ? 'AI 채우는 중' : 'AI 다시 채우기'}
                             </button>
                           </div>
                           <button
@@ -1602,17 +1604,17 @@ export function MobileInspectionSessionScreen({
                               }));
                             }}
                           >
-                            ??젣
+                            삭제
                           </button>
                         </div>
                         <div className={styles.mobileEditorFieldStack}>
                           <div style={{ display: 'flex', gap: '8px' }}>
                             <label style={{ flex: 1, height: '120px', backgroundColor: '#f8fafc', border: '1px solid rgba(215, 224, 235, 0.88)', borderRadius: '4px', overflow: 'hidden', position: 'relative', cursor: 'pointer' }}>
                               {finding.photoUrl ? (
-                                <img src={finding.photoUrl} alt="吏???ъ쭊 1" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                <img src={finding.photoUrl} alt="지적 사진 1" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                               ) : (
                                 <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: '12px' }}>
-                                  ?ъ쭊 1 異붽?
+                                  사진 1 추가
                                 </div>
                               )}
                               <input
@@ -1636,10 +1638,10 @@ export function MobileInspectionSessionScreen({
                             </label>
                             <label style={{ flex: 1, height: '120px', backgroundColor: '#f8fafc', border: '1px solid rgba(215, 224, 235, 0.88)', borderRadius: '4px', overflow: 'hidden', position: 'relative', cursor: 'pointer' }}>
                               {finding.photoUrl2 ? (
-                                <img src={finding.photoUrl2} alt="吏???ъ쭊 2" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                <img src={finding.photoUrl2} alt="지적 사진 2" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                               ) : (
                                 <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: '12px' }}>
-                                  ?ъ쭊 2 異붽?
+                                  사진 2 추가
                                 </div>
                               )}
                               <input
@@ -1868,19 +1870,19 @@ export function MobileInspectionSessionScreen({
                         }));
                       }}
                     >
-                      + 吏???ы빆 異붽?
+                      + 지적 사항 추가
                     </button>
                   </div>
                 </div>
               </section>
             )}
 
-            {/* 8?④퀎: ?ν썑 吏꾪뻾怨듭젙 */}
+            {/* 8단계: 향후 진행공정 */}
             {activeStep === 'step8' && (
               <section style={{ padding: '16px' }}>
                 <div className={styles.sectionHeader}>
                   <div className={styles.sectionTitleWrap}>
-                    <h2 className={styles.sectionTitle}>?ν썑 吏꾪뻾怨듭젙 ?꾪뿕?붿씤</h2>
+                    <h2 className={styles.sectionTitle}>향후 진행공정 위험요인</h2>
                   </div>
                 </div>
                 <div className={styles.editorBody}>
@@ -1888,7 +1890,7 @@ export function MobileInspectionSessionScreen({
                     {session.document8Plans.map((plan, index) => (
                       <article key={plan.id} className={styles.mobileEditorCard}>
                         <div className={styles.mobileEditorCardHeader}>
-                          <span className={styles.mobileEditorCardTitle}>{"吏꾪뻾怨듭젙"} {index + 1}</span>
+                          <span className={styles.mobileEditorCardTitle}>{"진행공정"} {index + 1}</span>
                           <button
                             type="button"
                             className={styles.mobileEditorCardAction}
@@ -1899,12 +1901,12 @@ export function MobileInspectionSessionScreen({
                               }));
                             }}
                           >
-                            {"??젣"}
+                            {"삭제"}
                           </button>
                         </div>
                         <div className={styles.mobileEditorFieldStack}>
                           <div className={styles.mobileEditorFieldGroup}>
-                            <span className={styles.mobileEditorFieldLabel}>{"怨듭젙紐?}</span>
+                            <span className={styles.mobileEditorFieldLabel}>{"공정명"}</span>
                             <div
                               className={styles.mobileDoc8ProcessStack}
                               onBlur={(event) => handleDoc8ProcessBlur(plan.id, event)}
@@ -1930,7 +1932,7 @@ export function MobileInspectionSessionScreen({
                                   setActiveDoc8PlanId(plan.id);
                                   updateDoc8ProcessPlan(plan.id, e.target.value);
                                 }}
-                                placeholder={"怨듭젙紐?(?? 泥좉낏 ?먯옱 諛섏엯)"}
+                                placeholder={"공정명 (예: 철골 자재 반입)"}
                                 style={{ width: '100%' }}
                               />
                               {activeDoc8PlanId === plan.id &&
@@ -1969,7 +1971,7 @@ export function MobileInspectionSessionScreen({
                             </div>
                           </div>
                           <div className={styles.mobileEditorFieldGroup}>
-                            <span className={styles.mobileEditorFieldLabel}>{"?꾪뿕?붿씤"}</span>
+                            <span className={styles.mobileEditorFieldLabel}>{"위험요인"}</span>
                             <textarea
                               className={`app-input ${styles.mobileEditorTextareaCompact}`}
                               value={plan.hazard}
@@ -1982,12 +1984,12 @@ export function MobileInspectionSessionScreen({
                                   ),
                                 }));
                               }}
-                              placeholder={"?꾪뿕?붿씤"}
+                              placeholder={"위험요인"}
                               style={{ width: '100%' }}
                             />
                           </div>
                           <div className={styles.mobileEditorFieldGroup}>
-                            <span className={styles.mobileEditorFieldLabel}>{"?덉쟾?梨?}</span>
+                            <span className={styles.mobileEditorFieldLabel}>{"안전대책"}</span>
                             <textarea
                               className={`app-input ${styles.mobileEditorTextareaCompact}`}
                               value={plan.countermeasure}
@@ -2000,7 +2002,7 @@ export function MobileInspectionSessionScreen({
                                   ),
                                 }));
                               }}
-                              placeholder={"?덉쟾?梨?}
+                              placeholder={"안전대책"}
                               style={{ width: '100%' }}
                             />
                           </div>
@@ -2021,26 +2023,26 @@ export function MobileInspectionSessionScreen({
                         }));
                       }}
                     >
-                      + 怨듭젙 異붽?
+                      + 공정 추가
                     </button>
                   </div>
                 </div>
               </section>
             )}
 
-            {/* 9?④퀎: ?꾪뿕?깊룊媛 / TBM */}
+            {/* 9단계: 위험성평가 / TBM */}
             {activeStep === 'step9' && (
               <section style={{ padding: '16px' }}>
                 <div className={styles.sectionHeader}>
                   <div className={styles.sectionTitleWrap}>
-                    <h2 className={styles.sectionTitle}>?꾪뿕?깊룊媛 / TBM</h2>
+                    <h2 className={styles.sectionTitle}>위험성평가 / TBM</h2>
                   </div>
                 </div>
                 <div className={styles.editorBody}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     {/* TBM */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <div style={{ fontSize: '14px', fontWeight: 600, color: '#475569', paddingBottom: '4px', borderBottom: '1px solid #e2e8f0' }}>TBM 泥댄겕由ъ뒪??/div>
+                      <div style={{ fontSize: '14px', fontWeight: 600, color: '#475569', paddingBottom: '4px', borderBottom: '1px solid #e2e8f0' }}>TBM 체크리스트</div>
                       {session.document9SafetyChecks.tbm.map((item) => (
                         <div key={item.id} style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '10px 0', borderBottom: '1px solid rgba(215, 224, 235, 0.72)' }}>
                           <span style={{ fontSize: '13px', lineHeight: 1.5, color: '#0f172a' }}>{item.prompt}</span>
@@ -2060,7 +2062,7 @@ export function MobileInspectionSessionScreen({
                                   },
                                 }));
                               }}
-                              placeholder="硫붾え"
+                              placeholder="메모"
                             />
                             <select
                               className="app-select"
@@ -2090,9 +2092,9 @@ export function MobileInspectionSessionScreen({
                       ))}
                     </div>
 
-                    {/* ?꾪뿕?깊룊媛 */}
+                    {/* 위험성평가 */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <div style={{ fontSize: '14px', fontWeight: 600, color: '#475569', paddingBottom: '4px', borderBottom: '1px solid #e2e8f0' }}>?꾪뿕?깊룊媛 泥댄겕由ъ뒪??/div>
+                      <div style={{ fontSize: '14px', fontWeight: 600, color: '#475569', paddingBottom: '4px', borderBottom: '1px solid #e2e8f0' }}>위험성평가 체크리스트</div>
                       {session.document9SafetyChecks.riskAssessment.map((item) => (
                         <div key={item.id} style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '10px 0', borderBottom: '1px solid rgba(215, 224, 235, 0.72)' }}>
                           <span style={{ fontSize: '13px', lineHeight: 1.5, color: '#0f172a' }}>{item.prompt}</span>
@@ -2112,7 +2114,7 @@ export function MobileInspectionSessionScreen({
                                   },
                                 }));
                               }}
-                              placeholder="硫붾え"
+                              placeholder="메모"
                             />
                             <select
                               className="app-select"
@@ -2146,12 +2148,12 @@ export function MobileInspectionSessionScreen({
               </section>
             )}
 
-            {/* 10?④퀎: 怨꾩륫?먭? */}
+            {/* 10단계: 계측점검 */}
             {activeStep === 'step10' && (
               <section style={{ padding: '16px' }}>
                 <div className={styles.sectionHeader}>
                   <div className={styles.sectionTitleWrap}>
-                    <h2 className={styles.sectionTitle}>怨꾩륫?먭?</h2>
+                    <h2 className={styles.sectionTitle}>계측점검</h2>
                   </div>
                 </div>
                 <div className={styles.editorBody}>
@@ -2159,7 +2161,7 @@ export function MobileInspectionSessionScreen({
                     {session.document10Measurements.map((measurement, index) => (
                       <article key={measurement.id} style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                          <span style={{ fontSize: '14px', fontWeight: 600 }}>怨꾩륫湲?{index + 1}</span>
+                          <span style={{ fontSize: '14px', fontWeight: 600 }}>계측기 {index + 1}</span>
                           <button
                             type="button"
                             style={{ color: '#ef4444', fontSize: '13px', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
@@ -2170,16 +2172,16 @@ export function MobileInspectionSessionScreen({
                               }));
                             }}
                           >
-                            ??젣
+                            삭제
                           </button>
                         </div>
                         <div className={styles.mobileEditorFieldStack}>
                           <label style={{ display: 'block', width: '100%', height: '160px', backgroundColor: '#f8fafc', border: '1px solid rgba(215, 224, 235, 0.88)', borderRadius: '4px', overflow: 'hidden', position: 'relative', cursor: 'pointer' }}>
                             {measurement.photoUrl ? (
-                              <img src={measurement.photoUrl} alt="怨꾩륫 ?ъ쭊" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                              <img src={measurement.photoUrl} alt="계측 사진" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                             ) : (
                               <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: '13px' }}>
-                                ?ъ쭊 ?낅줈??
+                                사진 업로드
                               </div>
                             )}
                             <input
@@ -2196,7 +2198,7 @@ export function MobileInspectionSessionScreen({
                           </label>
                           {doc10MatchingMeasurementId === measurement.id ? (
                             <p className={styles.inlineNotice} style={{ margin: 0 }}>
-                              AI媛 怨꾩륫?λ퉬瑜??뺤씤?섍퀬 ?덉뒿?덈떎.
+                              AI가 계측기 종류를 분석하는 중입니다.
                             </p>
                           ) : null}
                           {doc10MatchErrors[measurement.id] ? (
@@ -2232,7 +2234,7 @@ export function MobileInspectionSessionScreen({
                               }}
                               style={{ flex: 1 }}
                             >
-                              <option value="">?λ퉬 ?좏깮</option>
+                              <option value="">장비 선택</option>
                               {measurement.instrumentType &&
                               !measurementTemplateOptions.some(
                                 (template) => template.instrumentName === measurement.instrumentType,
@@ -2259,7 +2261,7 @@ export function MobileInspectionSessionScreen({
                                   ),
                                 }));
                               }}
-                              placeholder="痢≪젙媛?
+                              placeholder="측정값"
                               style={{ flex: 1 }}
                             />
                           </div>
@@ -2275,7 +2277,7 @@ export function MobileInspectionSessionScreen({
                                 ),
                               }));
                             }}
-                            placeholder="痢≪젙 ?꾩튂"
+                            placeholder="측정 위치"
                             style={{ width: '100%' }}
                           />
                           <input
@@ -2290,7 +2292,7 @@ export function MobileInspectionSessionScreen({
                                 ),
                               }));
                             }}
-                            placeholder="議곗튂 ?щ?"
+                            placeholder="조치 여부"
                             style={{ width: '100%' }}
                           />
                           <textarea
@@ -2305,7 +2307,7 @@ export function MobileInspectionSessionScreen({
                                 ),
                               }));
                             }}
-                            placeholder="?덉쟾湲곗?"
+                            placeholder="안전기준"
                             style={{ width: '100%', minHeight: '72px', resize: 'vertical' }}
                           />
                         </div>
@@ -2325,29 +2327,32 @@ export function MobileInspectionSessionScreen({
                         }));
                       }}
                     >
-                      + 怨꾩륫?먭? 異붽?
+                      + 계측점검 추가
                     </button>
                   </div>
                 </div>
               </section>
             )}
 
-            {/* 11?④퀎: ?덉쟾援먯쑁 */}
+            {/* 11단계: 안전교육 */}
             {activeStep === 'step11' && (
               <section style={{ padding: '16px' }}>
                 <div className={styles.sectionHeader}>
                   <div className={styles.sectionTitleWrap}>
-                    <h2 className={styles.sectionTitle}>?덉쟾援먯쑁</h2>
+                    <h2 className={styles.sectionTitle}>안전교육</h2>
                   </div>
                 </div>
                 <div className={styles.editorBody}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    {session.document11EducationRecords.map((record) => (
+                    {session.document11EducationRecords.map((record, index) => (
                       <article
                         key={record.id}
                         style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px' }}
                       >
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                          <div style={{ fontSize: '14px', fontWeight: 600 }}>
+                            {`교육 기록 ${index + 1}`}
+                          </div>
                           <div
                             style={{
                               display: 'grid',
@@ -2358,7 +2363,7 @@ export function MobileInspectionSessionScreen({
                             <label
                               style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}
                             >
-                              <span style={{ fontSize: '13px', fontWeight: 600 }}>援먯쑁 二쇱젣</span>
+                              <span style={{ fontSize: '13px', fontWeight: 600 }}>교육 주제</span>
                               <input
                                 className="app-input"
                                 value={record.topic}
@@ -2372,14 +2377,14 @@ export function MobileInspectionSessionScreen({
                                       ),
                                   }));
                                 }}
-                                placeholder="?? 異붾씫二쇱쓽"
+                                placeholder="예: 추락주의"
                               />
                             </label>
                             <label
                               style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}
                             >
                               <span style={{ fontSize: '13px', fontWeight: 600 }}>
-                                李몄꽍 ?몄썝 (紐?
+                                참석 인원 (명)
                               </span>
                               <input
                                 className="app-input"
@@ -2418,7 +2423,7 @@ export function MobileInspectionSessionScreen({
                                 }}
                               >
                                 <span style={{ fontSize: '13px', fontWeight: 600 }}>
-                                  援먯쑁 ?꾩옣 ?ъ쭊
+                                  교육 현장 사진
                                 </span>
                                 {record.photoUrl ? (
                                   <button
@@ -2436,7 +2441,7 @@ export function MobileInspectionSessionScreen({
                                       }));
                                     }}
                                   >
-                                    ?ъ쭊 ??젣
+                                    사진 삭제
                                   </button>
                                 ) : null}
                               </div>
@@ -2456,7 +2461,7 @@ export function MobileInspectionSessionScreen({
                                 {record.photoUrl ? (
                                   <img
                                     src={record.photoUrl}
-                                    alt="?덉쟾援먯쑁 ?ъ쭊"
+                                    alt="안전교육 사진"
                                     style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                                   />
                                 ) : (
@@ -2471,7 +2476,7 @@ export function MobileInspectionSessionScreen({
                                       fontSize: '13px',
                                     }}
                                   >
-                                    ?ъ쭊 ?낅줈??
+                                    사진 업로드
                                   </div>
                                 )}
                                 <input
@@ -2506,7 +2511,7 @@ export function MobileInspectionSessionScreen({
                                   gap: '8px',
                                 }}
                               >
-                                <span style={{ fontSize: '13px', fontWeight: 600 }}>援먯쑁 ?먮즺</span>
+                                <span style={{ fontSize: '13px', fontWeight: 600 }}>교육 자료</span>
                                 {record.materialUrl ? (
                                   <button
                                     type="button"
@@ -2523,7 +2528,7 @@ export function MobileInspectionSessionScreen({
                                       }));
                                     }}
                                   >
-                                    ?먮즺 ??젣
+                                    자료 삭제
                                   </button>
                                 ) : null}
                               </div>
@@ -2545,7 +2550,7 @@ export function MobileInspectionSessionScreen({
                                   /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(record.materialName)) ? (
                                   <img
                                     src={record.materialUrl}
-                                    alt={record.materialName || '援먯쑁 ?먮즺'}
+                                    alt={record.materialName || '교육 자료'}
                                     style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                                   />
                                 ) : record.materialUrl ? (
@@ -2563,7 +2568,7 @@ export function MobileInspectionSessionScreen({
                                       lineHeight: 1.5,
                                     }}
                                   >
-                                    {record.materialName || '?낅줈?쒕맂 ?먮즺'}
+                                    {record.materialName || '업로드된 자료'}
                                   </div>
                                 ) : (
                                   <div
@@ -2579,7 +2584,7 @@ export function MobileInspectionSessionScreen({
                                       padding: '12px',
                                     }}
                                   >
-                                    ?먮즺 ?낅줈??
+                                    자료 업로드
                                   </div>
                                 )}
                                 <input
@@ -2619,14 +2624,14 @@ export function MobileInspectionSessionScreen({
                                 gap: '8px',
                               }}
                             >
-                              <span style={{ fontSize: '13px', fontWeight: 600 }}>援먯쑁 ?댁슜</span>
+                              <span style={{ fontSize: '13px', fontWeight: 600 }}>교육 내용</span>
                               <button
                                 type="button"
                                 className={workspaceStyles.doc5SummaryDraftBtn}
                                 disabled={doc11GeneratingId === record.id}
                                 onClick={() => void handleGenerateDoc11Content(record.id)}
                               >
-                                {doc11GeneratingId === record.id ? 'AI ?앹꽦 以? : '?댁슜 ?먮룞 ?앹꽦'}
+                                {doc11GeneratingId === record.id ? 'AI 생성 중' : '내용 자동 생성'}
                               </button>
                             </div>
                             {doc11ContentError?.id === record.id ? (
@@ -2652,7 +2657,7 @@ export function MobileInspectionSessionScreen({
                                     ),
                                 }));
                               }}
-                              placeholder="援먯쑁 ?댁슜???낅젰?섏꽭??"
+                              placeholder="교육 내용을 입력하세요."
                               style={{ width: '100%', minHeight: '120px', resize: 'vertical' }}
                             />
                           </div>
@@ -2664,12 +2669,12 @@ export function MobileInspectionSessionScreen({
               </section>
             )}
 
-            {/* 12?④퀎: ?쒕룞 ?ㅼ쟻 */}
+            {/* 12단계: 활동 실적 */}
             {activeStep === 'step12' && (
               <section style={{ padding: '16px' }}>
                 <div className={styles.sectionHeader}>
                   <div className={styles.sectionTitleWrap}>
-                    <h2 className={styles.sectionTitle}>?덉쟾蹂닿굔 ?쒕룞 吏??/h2>
+                    <h2 className={styles.sectionTitle}>안전보건 활동 지원</h2>
                   </div>
                 </div>
                 <div className={styles.editorBody}>
@@ -2682,11 +2687,11 @@ export function MobileInspectionSessionScreen({
                         >
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             <div style={{ fontSize: '14px', fontWeight: 600 }}>
-                              {`?쒕룞 吏??${index + 1}`}
+                              {`활동 지원 ${index + 1}`}
                             </div>
                             <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                               <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                                ?ㅼ쟻 ?대쫫
+                                실적 이름
                               </span>
                               <input
                                 className="app-input"
@@ -2700,12 +2705,12 @@ export function MobileInspectionSessionScreen({
                                     ),
                                   }));
                                 }}
-                                placeholder="?? ?덉쟾蹂닿굔 罹좏럹??
+                                placeholder="예: 안전보건 캠페인"
                               />
                             </label>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                               <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                                ?쒕룞 ?ъ쭊
+                                활동 사진
                               </span>
                               {activity.photoUrl ? (
                                 <button
@@ -2720,7 +2725,7 @@ export function MobileInspectionSessionScreen({
                                     }));
                                   }}
                                 >
-                                  ?ъ쭊 ??젣
+                                  사진 삭제
                                 </button>
                               ) : null}
                             </div>
@@ -2740,7 +2745,7 @@ export function MobileInspectionSessionScreen({
                               {activity.photoUrl ? (
                                 <img
                                   src={activity.photoUrl}
-                                  alt={`?쒕룞 吏???ъ쭊 ${index + 1}`}
+                                  alt={`활동 지원 사진 ${index + 1}`}
                                   style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                                 />
                               ) : (
@@ -2755,7 +2760,7 @@ export function MobileInspectionSessionScreen({
                                     fontSize: '13px',
                                   }}
                                 >
-                                  ?ъ쭊 ?낅줈??
+                                  사진 업로드
                                 </div>
                               )}
                               <input
@@ -2782,7 +2787,7 @@ export function MobileInspectionSessionScreen({
                       ))}
                     </div>
                   ) : (
-                    <p className={styles.inlineNotice}>?쒕룞 吏???щ’???놁뒿?덈떎.</p>
+                    <p className={styles.inlineNotice}>활동 지원 슬롯이 없습니다.</p>
                   )}
                 </div>
               </section>
@@ -2790,13 +2795,13 @@ export function MobileInspectionSessionScreen({
           </div>
         </div>
       ) : (
-        <p className={styles.inlineNotice} style={{ margin: '16px' }}>蹂닿퀬??蹂몃Ц???숆린?뷀븯??以묒엯?덈떎.</p>
+        <p className={styles.inlineNotice} style={{ margin: '16px' }}>보고서 본문을 동기화하는 중입니다.</p>
       )}
 
       {hasLoadedSessionPayload && session ? (
         <AppModal
           open={isDoc2ProcessModalOpen}
-          title="吏꾪뻾怨듭젙 諛??뱀씠?ы빆 ?먮룞?앹꽦"
+          title="진행공정 및 특이사항 자동생성"
           onClose={() => setIsDoc2ProcessModalOpen(false)}
           size="large"
           verticalAlign="center"
@@ -2807,7 +2812,7 @@ export function MobileInspectionSessionScreen({
                 className="app-button app-button-secondary"
                 onClick={() => setIsDoc2ProcessModalOpen(false)}
               >
-                ?リ린
+                닫기
               </button>
               <button
                 type="button"
@@ -2815,7 +2820,7 @@ export function MobileInspectionSessionScreen({
                 onClick={() => void handleGenerateDoc2ProcessNotes()}
                 disabled={isGeneratingDoc2ProcessNotes}
               >
-                {isGeneratingDoc2ProcessNotes ? 'AI ?앹꽦 以? : 'AI ?앹꽦'}
+                {isGeneratingDoc2ProcessNotes ? 'AI 생성 중' : 'AI 생성'}
               </button>
               <button
                 type="button"
@@ -2823,15 +2828,15 @@ export function MobileInspectionSessionScreen({
                 onClick={applyDoc2ProcessNotesDraft}
                 disabled={isGeneratingDoc2ProcessNotes}
               >
-                蹂몃Ц??諛섏쁺
+                본문에 반영
               </button>
             </>
           }
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <p className={styles.inlineNotice} style={{ margin: 0 }}>
-              怨듭궗媛쒖슂???꾩슂??5媛???ぉ???낅젰?섎㈃, 媛쒖슂 2以꾩? 利됱떆 ?뺣━?섍퀬 二쇱슂 ?꾪뿕 ?붿씤
-              2以꾩? AI濡??앹꽦?⑸땲??
+              공사개요에 필요한 5개 항목을 입력하면, 개요 2줄은 즉시 정리되고 주요 위험 요인
+              2줄은 AI로 생성합니다.
             </p>
             {doc2ProcessError ? (
               <p className={styles.errorNotice} style={{ margin: 0 }}>
@@ -2846,7 +2851,7 @@ export function MobileInspectionSessionScreen({
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
               <label style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                  ?묒뾽?꾩옱 怨듭젙
+                  작업현재 공정
                 </span>
                 <input
                   type="text"
@@ -2855,12 +2860,12 @@ export function MobileInspectionSessionScreen({
                   onChange={(event) =>
                     handleDoc2ProcessFieldChange('processWorkContent', event.target.value)
                   }
-                  placeholder="?? 泥좉굅?묒뾽, 湲덉냽?묒뾽"
+                  placeholder="예: 철거작업, 금속작업"
                 />
               </label>
               <label style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                  ?묒뾽 ?몄썝
+                  작업 인원
                 </span>
                 <input
                   type="text"
@@ -2869,12 +2874,12 @@ export function MobileInspectionSessionScreen({
                   onChange={(event) =>
                     handleDoc2ProcessFieldChange('processWorkerCount', event.target.value)
                   }
-                  placeholder="?? 6"
+                  placeholder="예: 6"
                 />
               </label>
               <label style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                  嫄댁꽕湲곌퀎 ?λ퉬
+                  건설기계 장비
                 </span>
                 <input
                   type="text"
@@ -2883,12 +2888,12 @@ export function MobileInspectionSessionScreen({
                   onChange={(event) =>
                     handleDoc2ProcessFieldChange('processEquipment', event.target.value)
                   }
-                  placeholder="?? ?몃윮, 援댁갑湲?
+                  placeholder="예: 트럭, 굴착기"
                 />
               </label>
               <label style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                  ?좏빐?꾪뿕湲곌뎄
+                  유해위험기구
                 </span>
                 <input
                   type="text"
@@ -2897,13 +2902,13 @@ export function MobileInspectionSessionScreen({
                   onChange={(event) =>
                     handleDoc2ProcessFieldChange('processTools', event.target.value)
                   }
-                  placeholder="?? ?몃뱶釉뚮젅?댁빱, ?⑹젒湲?
+                  placeholder="예: 핸드브레이커, 용접기"
                 />
               </label>
             </div>
             <label style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                ?좏빐?꾪뿕臾쇱쭏
+                유해위험물질
               </span>
               <input
                 type="text"
@@ -2912,7 +2917,7 @@ export function MobileInspectionSessionScreen({
                 onChange={(event) =>
                   handleDoc2ProcessFieldChange('processHazardousMaterials', event.target.value)
                 }
-                placeholder="?? ?섏씤?? LPG, ?⑹젒遊?
+                placeholder="예: 페인트, LPG, 용접봉"
               />
             </label>
             <div
@@ -2924,7 +2929,7 @@ export function MobileInspectionSessionScreen({
               }}
             >
               <strong style={{ display: 'block', marginBottom: '8px', fontSize: '13px', color: '#334155' }}>
-                4以?誘몃━蹂닿린
+                4줄 미리보기
               </strong>
               <pre
                 style={{
