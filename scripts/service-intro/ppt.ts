@@ -610,7 +610,7 @@ export async function buildServiceIntroDeck(manifest?: IntroManifest) {
   pptx.company = '대한안전산업연구원';
   pptx.subject = '대한안전산업연구원 외부형 서비스 소개';
   pptx.title = '대한안전산업연구원 서비스 소개서';
-  pptx.lang = 'ko-KR';
+  // pptx.lang = 'ko-KR';
   pptx.theme = {
     headFontFace: 'Pretendard',
     bodyFontFace: 'Pretendard',

@@ -46,18 +46,18 @@ function mapExcelImportPreview(payload: unknown): ExcelImportPreview {
                         : {},
                     summary: toText(row.summary),
                     suggestedAction: toText(row.suggestedAction ?? row.suggested_action),
-                    exclusionReasonCode: toText(row.exclusionReasonCode ?? row.exclusion_reason_code) || null,
+                    exclusionReasonCode: (toText(row.exclusionReasonCode ?? row.exclusion_reason_code) as any) || null,
                     exclusionReason: toText(row.exclusionReason ?? row.exclusion_reason) || null,
                     inScope:
                       typeof (row.inScope ?? row.in_scope) === 'boolean'
                         ? Boolean(row.inScope ?? row.in_scope)
                         : undefined,
                     duplicateCandidates: Array.isArray(row.duplicateCandidates ?? row.duplicate_candidates)
-                      ? (row.duplicateCandidates ?? row.duplicate_candidates).map((candidateItem) => {
+                      ? ((row.duplicateCandidates ?? row.duplicate_candidates) as unknown[]).map((candidateItem) => {
                           const candidate = (candidateItem ?? {}) as Record<string, unknown>;
                           return {
                             id: toText(candidate.id),
-                            kind: toText(candidate.kind) === 'headquarter' ? 'headquarter' : 'site',
+                            kind: (toText(candidate.kind) === 'headquarter' ? 'headquarter' : 'site') as 'headquarter' | 'site',
                             label: toText(candidate.label),
                             reason: toText(candidate.reason),
                             headquarterId: toText(candidate.headquarterId ?? candidate.headquarter_id) || null,
@@ -82,7 +82,7 @@ function mapExcelImportPreview(payload: unknown): ExcelImportPreview {
                 ? Number(sheet.excludedRowCount ?? sheet.excluded_row_count)
                 : 0,
             sampleRows: Array.isArray(sheet.sampleRows ?? sheet.sample_rows)
-              ? (sheet.sampleRows ?? sheet.sample_rows).map((row) =>
+              ? ((sheet.sampleRows ?? sheet.sample_rows) as unknown[]).map((row) =>
                   Object.fromEntries(
                     Object.entries((row ?? {}) as Record<string, unknown>).map(([key, value]) => [toText(key), toText(value)]),
                   ),
@@ -92,7 +92,7 @@ function mapExcelImportPreview(payload: unknown): ExcelImportPreview {
               Object.entries(suggestedMappingSource).map(([key, value]) => [toText(key), toText(value)]),
             ),
             detectedMappings: Array.isArray(sheet.detectedMappings ?? sheet.detected_mappings)
-              ? (sheet.detectedMappings ?? sheet.detected_mappings).map((mappingItem) => {
+              ? ((sheet.detectedMappings ?? sheet.detected_mappings) as unknown[]).map((mappingItem) => {
                   const mapping = (mappingItem ?? {}) as Record<string, unknown>;
                   return {
                     field: toText(mapping.field),
@@ -102,7 +102,7 @@ function mapExcelImportPreview(payload: unknown): ExcelImportPreview {
                 })
               : [],
             ignoredHeaders: Array.isArray(sheet.ignoredHeaders ?? sheet.ignored_headers)
-              ? (sheet.ignoredHeaders ?? sheet.ignored_headers).map((ignoredItem) => {
+              ? ((sheet.ignoredHeaders ?? sheet.ignored_headers) as unknown[]).map((ignoredItem) => {
                   const ignored = (ignoredItem ?? {}) as Record<string, unknown>;
                   return {
                     header: toText(ignored.header),
@@ -111,7 +111,7 @@ function mapExcelImportPreview(payload: unknown): ExcelImportPreview {
                 })
               : [],
             mappingWarnings: Array.isArray(sheet.mappingWarnings ?? sheet.mapping_warnings)
-              ? (sheet.mappingWarnings ?? sheet.mapping_warnings).map((item) => toText(item)).filter(Boolean)
+              ? ((sheet.mappingWarnings ?? sheet.mapping_warnings) as unknown[]).map((item) => toText(item)).filter(Boolean)
               : [],
             hasRiskyMapping:
               typeof (sheet.hasRiskyMapping ?? sheet.has_risky_mapping) === 'boolean'
@@ -153,7 +153,7 @@ function mapExcelApplyResult(payload: unknown): ExcelApplyResult {
             siteId: toText(row.siteId ?? row.site_id),
             siteName: toText(row.siteName ?? row.site_name),
             requiredCompletionFields: Array.isArray(row.requiredCompletionFields ?? row.required_completion_fields)
-              ? (row.requiredCompletionFields ?? row.required_completion_fields).map((item) => toText(item)).filter(Boolean)
+              ? ((row.requiredCompletionFields ?? row.required_completion_fields) as unknown[]).map((item) => toText(item)).filter(Boolean)
               : [],
             message: toText(row.message),
           };
