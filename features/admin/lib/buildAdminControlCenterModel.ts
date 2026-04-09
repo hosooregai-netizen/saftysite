@@ -16,6 +16,8 @@ import {
   applyReportLifecycleStatus,
   isClosedReport,
   isVisibleReport,
+  normalizeHeadquarterLifecycleStatus,
+  normalizeSiteLifecycleStatus,
 } from '@/lib/admin/lifecycleStatus';
 import {
   countFilledQuarterlyMaterials,
@@ -430,6 +432,34 @@ function buildAssignedSiteIdsByUser(data: ControllerDashboardData) {
   return siteIdsByUser;
 }
 
+function buildDispatchActionableSiteIds(data: ControllerDashboardData) {
+  const actionableHeadquarterIds = new Set(
+    data.headquarters
+      .filter(
+        (headquarter) => normalizeHeadquarterLifecycleStatus(headquarter) === 'active',
+      )
+      .map((headquarter) => headquarter.id),
+  );
+
+  return new Set(
+    data.sites
+      .filter((site) => {
+        const lifecycleStatus = normalizeSiteLifecycleStatus(site);
+        if (lifecycleStatus === 'closed' || lifecycleStatus === 'deleted') {
+          return false;
+        }
+
+        const headquarterId = site.headquarter_id?.trim() || '';
+        if (!headquarterId) {
+          return true;
+        }
+
+        return actionableHeadquarterIds.has(headquarterId);
+      })
+      .map((site) => site.id),
+  );
+}
+
 function buildEnrichedRows(
   data: ControllerDashboardData,
   reports: SafetyReportListItem[],
@@ -814,6 +844,10 @@ export function buildAdminOverviewModel(
   today = new Date(),
 ): AdminOverviewModel {
   const overviewRows = buildEnrichedRows(data, reports, today);
+  const dispatchActionableSiteIds = buildDispatchActionableSiteIds(data);
+  const dispatchOverviewRows = overviewRows.filter(
+    (row) => dispatchActionableSiteIds.has(row.siteId) && !isClosedReport(row),
+  );
   const activeSites = data.sites.filter((site) => site.status === 'active');
   const quarterKey = formatQuarterKey(today);
   const quarterLabel = formatQuarterLabel(today);
@@ -1086,7 +1120,7 @@ export function buildAdminOverviewModel(
       userName: row.userName,
     }));
 
-  const deadlineRows = overviewRows
+  const deadlineRows = dispatchOverviewRows
     .filter((row) => row.reportType === 'quarterly_report' && row.dispatchStatus !== 'sent')
     .map((row) => ({
       daysUntil: getDaysUntil(today, row.deadlineDate),
@@ -1105,7 +1139,7 @@ export function buildAdminOverviewModel(
       statusLabel: getDispatchStatusLabel(row.dispatchStatus),
     }));
 
-  const allUnsentReportRows: AdminOverviewUnsentReportRow[] = overviewRows
+  const allUnsentReportRows: AdminOverviewUnsentReportRow[] = dispatchOverviewRows
     .filter(
       (row) =>
         (row.reportType === 'quarterly_report' || row.reportType === 'technical_guidance') &&
