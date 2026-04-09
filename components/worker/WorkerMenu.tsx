@@ -29,11 +29,12 @@ export interface WorkerMenuItem {
   children?: WorkerMenuItem[];
 }
 
-interface WorkerMenuSection {
-  id: string;
-  title: string;
-  ariaLabel: string;
-  items: WorkerMenuItem[];
+interface WorkerTopLevelMenuItem {
+  active: boolean;
+  children?: WorkerMenuItem[];
+  expandMode?: 'active' | 'always';
+  href?: string | null;
+  label: string;
 }
 
 interface WorkerMenuPanelProps {
@@ -53,6 +54,37 @@ interface WorkerMenuDrawerProps extends WorkerMenuPanelProps {
   onClose: () => void;
 }
 
+const WORKER_MENU_TITLE = '작업 메뉴';
+const WORKER_MENU_CLOSE_LABEL = '작업 메뉴 닫기';
+
+function joinClassNames(...tokens: Array<string | false | null | undefined>) {
+  return tokens.filter(Boolean).join(' ');
+}
+
+function resolveMenuItemActive(item: WorkerMenuItem, pathname: string | null): boolean {
+  if (typeof item.active === 'boolean') {
+    return item.active;
+  }
+
+  if (!pathname) {
+    return false;
+  }
+
+  try {
+    return new URL(item.href, 'https://worker-menu.local').pathname === pathname;
+  } catch {
+    return item.href === pathname;
+  }
+}
+
+function normalizeMenuItems(items: WorkerMenuItem[], pathname: string | null): WorkerMenuItem[] {
+  return items.map((item) => ({
+    ...item,
+    active: resolveMenuItemActive(item, pathname),
+    children: item.children ? normalizeMenuItems(item.children, pathname) : undefined,
+  }));
+}
+
 export function WorkerMenuButton({
   onClick,
   label = '작업 메뉴 열기',
@@ -60,11 +92,11 @@ export function WorkerMenuButton({
   return (
     <button
       type="button"
-      className={styles.menuButton}
+      className={styles.triggerButton}
       onClick={onClick}
       aria-label={label}
     >
-      <span className={styles.menuButtonBars} aria-hidden="true">
+      <span className={styles.triggerButtonBars} aria-hidden="true">
         <span />
         <span />
         <span />
@@ -110,78 +142,77 @@ export function WorkerMenuPanel({
     },
   ];
 
-  const workerMenuItems: WorkerMenuItem[] = [
-    {
-      label: '목록',
-      description: '배정된 현장 목록으로 이동',
-      href: '/',
-      active: isWorkerListPath(pathname),
-    },
-    {
-      label: '내 일정',
-      description: '배정 현장의 회차별 방문 일정을 선택',
-      href: buildWorkerCalendarHref(),
-      active: pathname === '/calendar',
-    },
-    {
-      label: '메일함',
-      description: '개인 연결 메일 수신/발신 확인',
-      href: '/mailbox?box=inbox',
-      active: pathname === '/mailbox',
-      children: mailboxMenuItems,
-    },
-  ];
-
   const siteMenuItems: WorkerMenuItem[] = currentSiteKey
     ? [
         {
           label: '현장 메인',
-          description: '선택한 현장 개요와 작업 진입 화면',
           href: buildSiteHubHref(currentSiteKey),
           active: siteNavView === 'site-home',
         },
         {
           label: '기술지도 보고서',
-          description: '이 현장의 보고서 목록과 작성 화면',
           href: buildSiteReportsHref(currentSiteKey),
           active: siteNavView === 'reports',
         },
         {
           label: '분기 종합 보고서',
-          description: '현장 기준 분기 보고서 작성',
           href: buildSiteQuarterlyListHref(currentSiteKey),
           active: siteNavView === 'quarterly',
         },
         {
           label: '현장 사진첩',
-          description: '이 현장의 사진 보기와 업로드',
           href: buildSitePhotoAlbumHref(currentSiteKey),
           active: siteNavView === 'photos',
         },
         {
           label: '불량사업장 신고',
-          description: '최근 보고서를 바탕으로 신고서 작성',
           href: buildSiteBadWorkplaceHref(currentSiteKey, getCurrentReportMonth()),
           active: siteNavView === 'bad-workplace',
         },
       ]
     : [];
 
-  const menuSections: WorkerMenuSection[] = [
+  const extraMenuItems = normalizeMenuItems(items, pathname);
+  const extraMenuActive = extraMenuItems.some(
+    (item) => item.active || item.children?.some((child) => child.active),
+  );
+
+  const topLevelItems: WorkerTopLevelMenuItem[] = [
     {
-      id: 'worker-menu-nav',
-      title: '작업 메뉴',
-      ariaLabel: '작업 메뉴 항목',
-      items: workerMenuItems,
+      label: '목록',
+      href: '/',
+      active: isWorkerListPath(pathname),
+    },
+    {
+      label: '내 일정',
+      href: buildWorkerCalendarHref(),
+      active: pathname === '/calendar',
+    },
+    {
+      label: '메일함',
+      href: '/mailbox?box=inbox',
+      active: pathname === '/mailbox',
+      children: mailboxMenuItems,
+      expandMode: 'active',
     },
   ];
 
-  if (siteMenuItems.length > 0 || items.length > 0) {
-    menuSections.push({
-      id: 'worker-site-nav',
-      title: currentSiteKey ? '현장 메뉴' : '추가 메뉴',
-      ariaLabel: currentSiteKey ? '현장 메뉴 항목' : '추가 메뉴 항목',
-      items: [...siteMenuItems, ...items],
+  if (currentSiteKey) {
+    topLevelItems.push({
+      label: '현장 메뉴',
+      href: buildSiteHubHref(currentSiteKey),
+      active: siteNavView === 'site-home' || siteMenuItems.some((item) => item.active),
+      children: siteMenuItems,
+      expandMode: 'always',
+    });
+  }
+
+  if (extraMenuItems.length > 0) {
+    topLevelItems.push({
+      label: '추가 메뉴',
+      active: extraMenuActive,
+      children: extraMenuItems,
+      expandMode: 'always',
     });
   }
 
@@ -189,65 +220,81 @@ export function WorkerMenuPanel({
     onNavClick?.();
   };
 
-  const itemClass = (activeClass?: string) =>
-    [styles.menuItem, activeClass, collapsed ? styles.menuItemCollapsed : '']
-      .filter(Boolean)
-      .join(' ');
-
   return (
-    <div className={styles.panelScroll} id="worker-menu-nav-panel">
-      {menuSections.map((section) => (
-        <section
-          key={section.id}
-          className={`${styles.section} ${collapsed ? styles.sectionCollapsed : ''}`}
-          aria-labelledby={`${section.id}-heading`}
+    <div className={styles.menuPanel} id="worker-menu-nav-panel">
+      <section
+        className={joinClassNames(styles.menuSection, collapsed && styles.menuSectionCollapsed)}
+        aria-labelledby="worker-menu-heading"
+      >
+        <h2
+          id="worker-menu-heading"
+          className={joinClassNames(styles.menuTitle, collapsed && styles.menuTitleHidden)}
         >
-          <h2
-            id={`${section.id}-heading`}
-            className={`${styles.sectionTitle} ${collapsed ? styles.sectionTitleHidden : ''}`}
-          >
-            {section.title}
-          </h2>
-          <nav className={styles.menuList} aria-label={section.ariaLabel}>
-            {section.items.map((item) => (
+          {WORKER_MENU_TITLE}
+        </h2>
+
+        <div className={styles.menuList}>
+          {topLevelItems.map((item) => {
+            const hasChildren = Boolean(item.children?.length);
+            const showChildren = !collapsed && hasChildren && item.expandMode === 'always'
+              ? true
+              : !collapsed && hasChildren && item.active;
+            const menuButtonClassName = joinClassNames(
+              styles.menuButton,
+              hasChildren && styles.menuButtonGrouped,
+              item.active && styles.menuButtonActive,
+              collapsed && styles.menuButtonCollapsed,
+              !item.href && styles.menuButtonStatic,
+            );
+
+            const menuButtonContent = collapsed ? (
+              <>
+                <span className={styles.menuGlyph} aria-hidden="true">
+                  {item.label.trim().charAt(0) || '메'}
+                </span>
+                <span className={styles.srOnly}>{item.label}</span>
+              </>
+            ) : (
+              <span className={styles.menuLabel}>{item.label}</span>
+            );
+
+            return (
               <div
-                key={`${section.id}-${item.label}-${item.href}`}
-                className={item.children?.length && item.active && !collapsed ? styles.menuTreeItem : undefined}
+                key={`${item.label}-${item.href ?? 'group'}`}
+                className={joinClassNames(
+                  styles.menuTreeItem,
+                  showChildren && styles.menuTreeItemExpanded,
+                )}
               >
-                <Link
-                  href={item.href}
-                  className={itemClass(item.active ? styles.menuItemActive : undefined)}
-                  onClick={handleNav}
-                  title={collapsed ? item.label : undefined}
-                >
-                  {collapsed ? (
-                    <>
-                      <span className={styles.menuItemGlyph} aria-hidden="true">
-                        {item.label.trim().charAt(0) || '메'}
-                      </span>
-                      <span className={styles.srOnly}>{item.label}</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className={styles.menuItemLabel}>{item.label}</span>
-                      {item.description ? (
-                        <span className={styles.menuItemDescription}>{item.description}</span>
-                      ) : null}
-                    </>
-                  )}
-                </Link>
-                {item.children?.length && item.active && !collapsed ? (
-                  <div className={styles.menuTreeChildren} role="group" aria-label={`${item.label} 하위 메뉴`}>
-                    {item.children.map((child) => (
+                {item.href ? (
+                  <Link
+                    href={item.href}
+                    className={menuButtonClassName}
+                    onClick={handleNav}
+                    title={collapsed ? item.label : undefined}
+                  >
+                    {menuButtonContent}
+                  </Link>
+                ) : (
+                  <div className={menuButtonClassName} title={collapsed ? item.label : undefined}>
+                    {menuButtonContent}
+                  </div>
+                )}
+
+                {showChildren ? (
+                  <div
+                    className={styles.menuTreeChildren}
+                    role="group"
+                    aria-label={`${item.label} 하위 메뉴`}
+                  >
+                    {item.children?.map((child) => (
                       <Link
-                        key={`${section.id}-${item.label}-${child.href}`}
+                        key={`${item.label}-${child.href}`}
                         href={child.href}
-                        className={[
+                        className={joinClassNames(
                           styles.subMenuButton,
-                          child.active ? styles.subMenuButtonActive : '',
-                        ]
-                          .filter(Boolean)
-                          .join(' ')}
+                          child.active && styles.subMenuButtonActive,
+                        )}
                         onClick={handleNav}
                       >
                         <span className={styles.subMenuLabel}>{child.label}</span>
@@ -256,10 +303,10 @@ export function WorkerMenuPanel({
                   </div>
                 ) : null}
               </div>
-            ))}
-          </nav>
-        </section>
-      ))}
+            );
+          })}
+        </div>
+      </section>
     </div>
   );
 }
@@ -278,7 +325,7 @@ export function WorkerMenuDrawer({
         type="button"
         className={styles.drawerBackdrop}
         onClick={onClose}
-        aria-label="작업 메뉴 닫기"
+        aria-label={WORKER_MENU_CLOSE_LABEL}
       />
       <aside className={styles.drawer}>
         <WorkerMenuPanel
