@@ -22,6 +22,9 @@ export const k2bHeadquarterName = `테스트 본사 ${k2bSuffix}`;
 export const k2bSiteName = `테스트 현장 ${k2bSuffix}`;
 export const k2bManagementNumber = `SMOKE-K2B-${k2bSuffix}`;
 const k2bBusinessNumber = `111-22-${k2bSuffix.slice(-5)}`;
+export const excelImportHeadquarterName = k2bHeadquarterName;
+export const excelImportSiteName = k2bSiteName;
+export const excelImportManagementNumber = k2bManagementNumber;
 
 export const uploadBuffer = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAIAAACQKrqGAAAAGElEQVR42mP8z/CfAQgwYKShoYGJAQoA0CIAjF7Q4x8AAAAASUVORK5CYII=',
@@ -60,3 +63,4 @@ print(path)
 }
 
 export const k2bWorkbookBuffer = buildK2bWorkbookBuffer();
+export const excelImportWorkbookBuffer = k2bWorkbookBuffer;

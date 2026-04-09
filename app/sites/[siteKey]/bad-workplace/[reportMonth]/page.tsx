@@ -20,7 +20,6 @@ import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { useSiteOperationalReportMutations } from '@/hooks/useSiteOperationalReportMutations';
 import { getAdminSectionHref, isAdminUserRole } from '@/lib/admin';
 import { fetchBadWorkplaceHwpxDocumentByReportKey, saveBlobAsFile } from '@/lib/api';
-import { readSafetyAuthToken } from '@/lib/safetyApi';
 import {
   BAD_WORKPLACE_NOTICE_SUBTITLE,
   BAD_WORKPLACE_NOTICE_TITLE,

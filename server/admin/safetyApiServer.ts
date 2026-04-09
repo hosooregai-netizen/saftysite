@@ -638,40 +638,6 @@ export function applyExcelImportServer(
   );
 }
 
-export function fetchSiteFieldSignaturesServer(
-  token: string,
-  siteId: string,
-  params: Record<string, string | number | boolean | null | undefined>,
-  request: Request | null = null,
-): Promise<SafetyBackendFieldSignatureRecord[]> {
-  return requestSafetyAdminServer<SafetyBackendFieldSignatureRecord[]>(
-    withQuery(`/sites/${encodeURIComponent(siteId)}/field-signatures`, params),
-    {},
-    token,
-    request,
-  );
-}
-
-export function createSiteFieldSignatureServer(
-  token: string,
-  siteId: string,
-  payload: Record<string, unknown>,
-  request: Request | null = null,
-): Promise<SafetyBackendFieldSignatureRecord> {
-  return requestSafetyAdminServer<SafetyBackendFieldSignatureRecord>(
-    `/sites/${encodeURIComponent(siteId)}/field-signatures`,
-    {
-      method: 'POST',
-      body: JSON.stringify(payload),
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    },
-    token,
-    request,
-  );
-}
-
 export function uploadSafetyPhotoAssetServer(
   token: string,
   formData: FormData,
