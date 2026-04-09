@@ -13,7 +13,7 @@ import { readFileAsDataUrl } from '@/components/session/workspace/utils';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import {
   fetchInspectionHwpxDocument,
-  convertHwpxBlobToPdfWithFallback,
+  fetchInspectionPdfDocumentWithFallback,
   saveBlobAsFile,
 } from '@/lib/api';
 import { generateInspectionHwpxBlob } from '@/lib/documents/inspection/hwpxClient';
@@ -601,12 +601,23 @@ export function useInspectionSessionScreen(sessionId: string) {
     try {
       setDocumentError(null);
       setIsGeneratingPdf(true);
-      const generation = await buildHwpxDocument();
-      if (!generation) return;
+      if (isAuthenticated) {
+        try {
+          await refreshMasterData();
+        } catch (error) {
+          console.warn('Inspection master-data refresh before PDF generation failed; using cached feed data.', {
+            error: error instanceof Error ? error.message : String(error),
+            sessionId: session.id,
+          });
+        }
+      }
 
-      const pdf = await convertHwpxBlobToPdfWithFallback(
-        generation.blob,
-        generation.filename,
+      await saveNow();
+      const latestSession = getSessionById(session.id) ?? session;
+      const latestSiteSessions = getSessionsBySiteId(latestSession.siteKey);
+      const pdf = await fetchInspectionPdfDocumentWithFallback(
+        latestSession,
+        latestSiteSessions,
       );
 
       saveBlobAsFile(pdf.blob, pdf.filename);

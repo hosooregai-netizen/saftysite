@@ -29,10 +29,10 @@ import {
 import { isClosedReport } from '@/lib/admin/lifecycleStatus';
 import { getAdminSectionHref } from '@/lib/admin';
 import {
-  convertHwpxBlobToPdfWithFallback,
   fetchBadWorkplaceHwpxDocumentByReportKey,
   fetchBadWorkplacePdfDocumentByReportKeyWithFallback,
   fetchInspectionHwpxDocumentByReportKey,
+  fetchInspectionPdfDocumentWithFallback,
   fetchInspectionPdfDocumentByReportKeyWithFallback,
   fetchQuarterlyHwpxDocumentByReportKey,
   fetchQuarterlyPdfDocumentByReportKeyWithFallback,
@@ -731,13 +731,16 @@ export function ReportsSection({
         }
 
         const siteSessions = sessions.filter((item) => item.siteKey === session.siteKey);
-        const document = await generateInspectionHwpxBlob(session, siteSessions);
 
         if (format === 'hwpx') {
+          const document = await generateInspectionHwpxBlob(session, siteSessions);
           saveBlobAsFile(document.blob, document.filename);
           setNotice('지도보고서를 내보냈습니다.');
         } else {
-          const exported = await convertHwpxBlobToPdfWithFallback(document.blob, document.filename);
+          const exported = await fetchInspectionPdfDocumentWithFallback(
+            session,
+            siteSessions,
+          );
           saveBlobAsFile(exported.blob, exported.filename);
           setNotice(
             exported.fallbackToHwpx
