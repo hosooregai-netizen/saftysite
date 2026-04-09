@@ -138,6 +138,7 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
           <HeadquartersTable
             busy={busy}
             canDelete={canDelete}
+            exportHeadquarters={state.sortedHeadquarters}
             filteredHeadquarters={state.pagedHeadquarters}
             page={state.page}
             onCreateRequest={state.openCreate}

@@ -30,6 +30,11 @@ interface AdminOverviewSectionProps {
 }
 
 const EMPTY_DONUT_RING = fullDonutRing(0, 0, 22, 40);
+const OVERVIEW_TABLE_PAGE_SIZE = 10;
+
+function clampPage(page: number, totalPages: number) {
+  return Math.max(1, Math.min(page, totalPages));
+}
 
 function renderEmptyRow(label: string) {
   return <div className={styles.tableEmpty}>{label}</div>;
@@ -264,10 +269,12 @@ export function AdminOverviewSection({
     direction: 'desc',
     key: 'missingTotal',
   });
+  const [materialPage, setMaterialPage] = useState(1);
   const [unsentSort, setUnsentSort] = useState<TableSortState>({
     direction: 'desc',
     key: 'unsentDays',
   });
+  const [unsentPage, setUnsentPage] = useState(1);
 
   const refreshOverview = useCallback(async () => {
     try {
@@ -385,6 +392,34 @@ export function AdminOverviewSection({
       }
     });
   }, [normalizedUnsentReportRows, unsentSort.direction, unsentSort.key]);
+
+  useEffect(() => {
+    setMaterialPage(1);
+  }, [materialSort.direction, materialSort.key]);
+
+  useEffect(() => {
+    setUnsentPage(1);
+  }, [unsentSort.direction, unsentSort.key]);
+
+  const materialTotalPages = Math.max(
+    1,
+    Math.ceil(sortedMaterialRows.length / OVERVIEW_TABLE_PAGE_SIZE),
+  );
+  const currentMaterialPage = clampPage(materialPage, materialTotalPages);
+  const pagedMaterialRows = useMemo(() => {
+    const offset = (currentMaterialPage - 1) * OVERVIEW_TABLE_PAGE_SIZE;
+    return sortedMaterialRows.slice(offset, offset + OVERVIEW_TABLE_PAGE_SIZE);
+  }, [currentMaterialPage, sortedMaterialRows]);
+
+  const unsentTotalPages = Math.max(
+    1,
+    Math.ceil(sortedUnsentReportRows.length / OVERVIEW_TABLE_PAGE_SIZE),
+  );
+  const currentUnsentPage = clampPage(unsentPage, unsentTotalPages);
+  const pagedUnsentReportRows = useMemo(() => {
+    const offset = (currentUnsentPage - 1) * OVERVIEW_TABLE_PAGE_SIZE;
+    return sortedUnsentReportRows.slice(offset, offset + OVERVIEW_TABLE_PAGE_SIZE);
+  }, [currentUnsentPage, sortedUnsentReportRows]);
 
   const exportOverview = useCallback(async () => {
     const exportModel: AdminOverviewModel = {
@@ -550,7 +585,7 @@ export function AdminOverviewSection({
                       </tr>
                     </thead>
                     <tbody>
-                      {sortedUnsentReportRows.map((row) => (
+                      {pagedUnsentReportRows.map((row) => (
                         <tr key={row.reportKey}>
                           <td>
                             <div className={styles.tablePrimary}>{row.siteName}</div>
@@ -593,6 +628,29 @@ export function AdminOverviewSection({
               </div>
             )}
           </div>
+          {sortedUnsentReportRows.length > 0 ? (
+            <div className={styles.paginationRow}>
+              <button
+                type="button"
+                className="app-button app-button-secondary"
+                onClick={() => setUnsentPage((current) => clampPage(current - 1, unsentTotalPages))}
+                disabled={isRefreshing || currentUnsentPage <= 1}
+              >
+                이전
+              </button>
+              <span className={styles.paginationLabel}>
+                {currentUnsentPage} / {unsentTotalPages} 페이지
+              </span>
+              <button
+                type="button"
+                className="app-button app-button-secondary"
+                onClick={() => setUnsentPage((current) => clampPage(current + 1, unsentTotalPages))}
+                disabled={isRefreshing || currentUnsentPage >= unsentTotalPages}
+              >
+                다음
+              </button>
+            </div>
+          ) : null}
         </section>
 
         <section className={`${styles.sectionCard} ${styles.listSectionCard} ${styles.overviewTableCard}`}>
@@ -683,7 +741,7 @@ export function AdminOverviewSection({
                       </tr>
                     </thead>
                     <tbody>
-                      {sortedMaterialRows.map((row) => {
+                      {pagedMaterialRows.map((row) => {
                         const missingTotal =
                           row.education.missingCount + row.measurement.missingCount;
                         return (
@@ -722,6 +780,29 @@ export function AdminOverviewSection({
               </div>
             )}
           </div>
+          {sortedMaterialRows.length > 0 ? (
+            <div className={styles.paginationRow}>
+              <button
+                type="button"
+                className="app-button app-button-secondary"
+                onClick={() => setMaterialPage((current) => clampPage(current - 1, materialTotalPages))}
+                disabled={isRefreshing || currentMaterialPage <= 1}
+              >
+                이전
+              </button>
+              <span className={styles.paginationLabel}>
+                {currentMaterialPage} / {materialTotalPages} 페이지
+              </span>
+              <button
+                type="button"
+                className="app-button app-button-secondary"
+                onClick={() => setMaterialPage((current) => clampPage(current + 1, materialTotalPages))}
+                disabled={isRefreshing || currentMaterialPage >= materialTotalPages}
+              >
+                다음
+              </button>
+            </div>
+          ) : null}
         </section>
       </div>
     </div>

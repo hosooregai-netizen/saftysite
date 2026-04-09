@@ -9,6 +9,7 @@ import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 interface HeadquartersTableProps {
   busy: boolean;
   canDelete: boolean;
+  exportHeadquarters: SafetyHeadquarter[];
   filteredHeadquarters: SafetyHeadquarter[];
   page: number;
   onCreateRequest: () => void;
@@ -39,6 +40,7 @@ function shouldIgnoreRowClick(target: EventTarget | null) {
 export function HeadquartersTable({
   busy,
   canDelete,
+  exportHeadquarters,
   filteredHeadquarters,
   page,
   onCreateRequest,
@@ -65,7 +67,7 @@ export function HeadquartersTable({
           { key: 'contact_phone', label: '전화' },
           { key: 'updated_at', label: '수정일' },
         ],
-        rows: filteredHeadquarters.map((item) => ({
+        rows: exportHeadquarters.map((item) => ({
           management_number: item.management_number || '',
           opening_number: item.opening_number || '',
           contact_phone: item.contact_phone || '',

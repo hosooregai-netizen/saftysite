@@ -13,7 +13,7 @@ const EMPTY_FORM = {
   is_active: true,
 };
 
-const HEADQUARTERS_PAGE_SIZE = 50;
+const HEADQUARTERS_PAGE_SIZE = 10;
 
 function isPinnedTestHeadquarter(item: SafetyHeadquarter) {
   return item.name.includes('테스트');
