@@ -773,6 +773,7 @@ function buildQuarterlyChartSlicePath(
 function buildQuarterlyChartSvg(rows: QuarterlyCounter[]) {
   const entries = formatChartRows(rows);
   const total = entries.reduce((sum, item) => sum + item.count, 0);
+  const visibleEntries = entries.filter((item) => item.count > 0);
   const availableLegendHeight = QUARTERLY_CHART_LEGEND_BOTTOM - QUARTERLY_CHART_LEGEND_TOP;
   const rowHeight = Math.max(76, Math.min(132, Math.floor(availableLegendHeight / Math.max(entries.length, 1))));
   const legendBlockHeight = rowHeight * Math.max(entries.length, 1);
@@ -796,22 +797,38 @@ function buildQuarterlyChartSvg(rows: QuarterlyCounter[]) {
     return svgParts.join('');
   }
 
-  let angle = -Math.PI / 2;
-  for (let index = 0; index < entries.length; index += 1) {
-    const item = entries[index];
-    const sliceAngle = (item.count / total) * Math.PI * 2;
-    const nextAngle = angle + sliceAngle;
-    svgParts.push(
-      `<path d="${buildQuarterlyChartSlicePath(
-        QUARTERLY_CHART_CENTER_X,
-        QUARTERLY_CHART_CENTER_Y,
-        QUARTERLY_CHART_OUTER_RADIUS,
-        QUARTERLY_CHART_INNER_RADIUS,
-        angle,
-        nextAngle,
-      )}" fill="${QUARTERLY_CHART_SEGMENT_COLORS[index % QUARTERLY_CHART_SEGMENT_COLORS.length]}"/>`,
+  if (visibleEntries.length <= 1) {
+    const firstVisibleIndex = Math.max(
+      0,
+      entries.findIndex((item) => item.count > 0),
     );
-    angle = nextAngle;
+    const fullSliceColor =
+      QUARTERLY_CHART_SEGMENT_COLORS[firstVisibleIndex % QUARTERLY_CHART_SEGMENT_COLORS.length];
+    svgParts.push(
+      `<circle cx="${QUARTERLY_CHART_CENTER_X}" cy="${QUARTERLY_CHART_CENTER_Y}" r="${QUARTERLY_CHART_OUTER_RADIUS}" fill="${fullSliceColor}"/>`,
+    );
+  } else {
+    let angle = -Math.PI / 2;
+    for (let index = 0; index < entries.length; index += 1) {
+      const item = entries[index];
+      if (item.count <= 0) {
+        continue;
+      }
+
+      const sliceAngle = (item.count / total) * Math.PI * 2;
+      const nextAngle = angle + sliceAngle;
+      svgParts.push(
+        `<path d="${buildQuarterlyChartSlicePath(
+          QUARTERLY_CHART_CENTER_X,
+          QUARTERLY_CHART_CENTER_Y,
+          QUARTERLY_CHART_OUTER_RADIUS,
+          QUARTERLY_CHART_INNER_RADIUS,
+          angle,
+          nextAngle,
+        )}" fill="${QUARTERLY_CHART_SEGMENT_COLORS[index % QUARTERLY_CHART_SEGMENT_COLORS.length]}"/>`,
+      );
+      angle = nextAngle;
+    }
   }
 
   svgParts.push(
