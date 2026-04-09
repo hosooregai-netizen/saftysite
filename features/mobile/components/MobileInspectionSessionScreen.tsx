@@ -163,7 +163,7 @@ export function MobileInspectionSessionScreen({
       </section>
 
       {hasLoadedSessionPayload && session ? (
-        <>
+        <div className={tabStyles.layoutWrapper}>
           <div className={tabStyles.tabContainer}>
             {STEPS.map((step) => (
               <button
@@ -180,7 +180,7 @@ export function MobileInspectionSessionScreen({
           <div className={tabStyles.stepContent}>
             {/* 2단계: 기술지도 개요 */}
             {activeStep === 'step2' && (
-              <section className={styles.sectionCard}>
+              <section style={{ padding: '16px' }}>
                 <div className={styles.sectionHeader}>
                   <div className={styles.sectionTitleWrap}>
                     <h2 className={styles.sectionTitle}>2단계: 기술지도 개요</h2>
@@ -306,7 +306,7 @@ export function MobileInspectionSessionScreen({
 
             {/* 3단계: 현장 전경 */}
             {activeStep === 'step3' && (
-              <section className={styles.sectionCard}>
+              <section style={{ padding: '16px' }}>
                 <div className={styles.sectionHeader}>
                   <div className={styles.sectionTitleWrap}>
                     <h2 className={styles.sectionTitle}>3단계: 현장 전경 및 진행공정</h2>
@@ -403,7 +403,7 @@ export function MobileInspectionSessionScreen({
 
             {/* 4단계: 이전 기술지도 사항 */}
             {activeStep === 'step4' && (
-              <section className={styles.sectionCard}>
+              <section style={{ padding: '16px' }}>
                 <div className={styles.sectionHeader}>
                   <div className={styles.sectionTitleWrap}>
                     <h2 className={styles.sectionTitle}>4단계: 이전 기술지도 사항 이행여부</h2>
@@ -482,7 +482,7 @@ export function MobileInspectionSessionScreen({
 
             {/* 6단계: 12대 사망사고 기인물 */}
             {activeStep === 'step6' && (
-              <section className={styles.sectionCard}>
+              <section style={{ padding: '16px' }}>
                 <div className={styles.sectionHeader}>
                   <div className={styles.sectionTitleWrap}>
                     <h2 className={styles.sectionTitle}>6단계: 12대 사망사고 기인물</h2>
@@ -519,7 +519,7 @@ export function MobileInspectionSessionScreen({
 
             {/* 7단계: 현존 유해·위험요인 세부 지적 */}
             {activeStep === 'step7' && (
-              <section className={styles.sectionCard}>
+              <section style={{ padding: '16px' }}>
                 <div className={styles.sectionHeader}>
                   <div className={styles.sectionTitleWrap}>
                     <h2 className={styles.sectionTitle}>7단계: 현존 유해·위험요인 세부 지적</h2>
@@ -678,7 +678,7 @@ export function MobileInspectionSessionScreen({
 
             {/* 8단계: 향후 진행공정 */}
             {activeStep === 'step8' && (
-              <section className={styles.sectionCard}>
+              <section style={{ padding: '16px' }}>
                 <div className={styles.sectionHeader}>
                   <div className={styles.sectionTitleWrap}>
                     <h2 className={styles.sectionTitle}>8단계: 향후 진행공정 위험요인</h2>
@@ -782,7 +782,7 @@ export function MobileInspectionSessionScreen({
 
             {/* 9단계: 위험성평가 / TBM */}
             {activeStep === 'step9' && (
-              <section className={styles.sectionCard}>
+              <section style={{ padding: '16px' }}>
                 <div className={styles.sectionHeader}>
                   <div className={styles.sectionTitleWrap}>
                     <h2 className={styles.sectionTitle}>9단계: 위험성평가 / TBM</h2>
@@ -860,7 +860,7 @@ export function MobileInspectionSessionScreen({
 
             {/* 10단계: 계측점검 */}
             {activeStep === 'step10' && (
-              <section className={styles.sectionCard}>
+              <section style={{ padding: '16px' }}>
                 <div className={styles.sectionHeader}>
                   <div className={styles.sectionTitleWrap}>
                     <h2 className={styles.sectionTitle}>10단계: 계측점검</h2>
@@ -994,7 +994,7 @@ export function MobileInspectionSessionScreen({
 
             {/* 11단계: 안전교육 */}
             {activeStep === 'step11' && session.document11EducationRecords && session.document11EducationRecords[0] && (
-              <section className={styles.sectionCard}>
+              <section style={{ padding: '16px' }}>
                 <div className={styles.sectionHeader}>
                   <div className={styles.sectionTitleWrap}>
                     <h2 className={styles.sectionTitle}>11단계: 안전교육</h2>
@@ -1077,7 +1077,7 @@ export function MobileInspectionSessionScreen({
 
             {/* 12단계: 활동 실적 */}
             {activeStep === 'step12' && (
-              <section className={styles.sectionCard}>
+              <section style={{ padding: '16px' }}>
                 <div className={styles.sectionHeader}>
                   <div className={styles.sectionTitleWrap}>
                     <h2 className={styles.sectionTitle}>12단계: 활동 실적</h2>
@@ -1175,7 +1175,7 @@ export function MobileInspectionSessionScreen({
               </section>
             )}
           </div>
-        </>
+        </div>
       ) : (
         <p className={styles.inlineNotice} style={{ margin: '16px' }}>보고서 본문을 동기화하는 중입니다.</p>
       )}
