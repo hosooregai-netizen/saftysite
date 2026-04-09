@@ -64,6 +64,25 @@ function renderCombinedOverviewSections(props: InspectionWorkspaceSectionProps) 
   );
 }
 
+function renderCombinedReadonlyFeedSections(props: InspectionWorkspaceSectionProps) {
+  return (
+    <div className={styles.combinedOverviewSectionStack}>
+      <section className={styles.combinedOverviewSectionBlock} aria-labelledby="doc13-section-title">
+        <h2 id="doc13-section-title" className={styles.combinedOverviewSectionTitle}>
+          13. 재해 사례
+        </h2>
+        <Doc13Section session={props.session} />
+      </section>
+      <section className={styles.combinedOverviewSectionBlock} aria-labelledby="doc14-section-title">
+        <h2 id="doc14-section-title" className={styles.combinedOverviewSectionTitle}>
+          14. 안전 정보
+        </h2>
+        <Doc14Section session={props.session} />
+      </section>
+    </div>
+  );
+}
+
 const inspectionSectionRegistry: Record<
   InspectionSectionKey,
   {
@@ -134,8 +153,14 @@ const inspectionSectionRegistry: Record<
   },
   doc11: { render: (props) => <Doc11Section {...props} />, title: '문서 11' },
   doc12: { render: (props) => <Doc12Section {...props} />, title: '문서 12' },
-  doc13: { render: (props) => <Doc13Section session={props.session} />, title: '문서 13' },
-  doc14: { render: (props) => <Doc14Section session={props.session} />, title: '문서 14' },
+  doc13: {
+    render: renderCombinedReadonlyFeedSections,
+    title: '문서 13 / 14',
+  },
+  doc14: {
+    render: renderCombinedReadonlyFeedSections,
+    title: '문서 13 / 14',
+  },
 };
 
 export function getInspectionSectionContent(props: InspectionWorkspaceSectionProps) {
