@@ -15,9 +15,9 @@ import {
 } from '@/lib/safetyApi/assets';
 import {
   CONTENT_EDITOR_MODE_LABELS,
+  CONTENT_CRUD_TYPE_OPTIONS,
   CONTENT_TYPE_LABELS,
   CONTENT_TYPE_META,
-  CONTENT_TYPE_OPTIONS,
   toNullableText,
 } from '@/lib/admin';
 import { exportAdminWorkbook } from '@/lib/admin/exportClient';
@@ -333,7 +333,7 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
             }
           >
             <option value="all">전체 분류</option>
-            {CONTENT_TYPE_OPTIONS.map((option) => (
+            {CONTENT_CRUD_TYPE_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
@@ -504,10 +504,10 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
                 disabled={busy || editingId !== 'create'}
               >
                 {editingId !== 'create' &&
-                !CONTENT_TYPE_OPTIONS.some((option) => option.value === form.content_type) ? (
+                !CONTENT_CRUD_TYPE_OPTIONS.some((option) => option.value === form.content_type) ? (
                   <option value={form.content_type}>{CONTENT_TYPE_LABELS[form.content_type]}</option>
                 ) : null}
-                {CONTENT_TYPE_OPTIONS.map((option) => (
+                {CONTENT_CRUD_TYPE_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>

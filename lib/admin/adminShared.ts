@@ -233,6 +233,13 @@ export const CONTENT_TYPE_OPTIONS: Array<{
   },
 ];
 
+const CONTENT_CRUD_LAST_VISIBLE_TYPE: SafetyContentType = 'legal_reference';
+
+export const CONTENT_CRUD_TYPE_OPTIONS = CONTENT_TYPE_OPTIONS.slice(
+  0,
+  CONTENT_TYPE_OPTIONS.findIndex((option) => option.value === CONTENT_CRUD_LAST_VISIBLE_TYPE) + 1,
+);
+
 export const CONTENT_TYPE_LABELS = {
   ...Object.fromEntries(CONTENT_TYPE_OPTIONS.map((option) => [option.value, option.label])),
 } as Record<SafetyContentType, string>;
