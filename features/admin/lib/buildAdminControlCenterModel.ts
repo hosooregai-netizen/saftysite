@@ -916,7 +916,7 @@ function resolvePrimaryContractTypeLabel(
   const counts = new Map<string, number>();
   siteIds.forEach((siteId) => {
     const profile = parseSiteContractProfile(sitesById.get(siteId) ?? null);
-    const key = profile.contractType || '';
+    const key = getContractBucketKey(profile);
     counts.set(key, (counts.get(key) ?? 0) + 1);
   });
 
@@ -930,10 +930,14 @@ function resolvePrimaryContractTypeLabel(
   return getContractTypeDisplayLabel(topEntry?.[0]);
 }
 
+function getContractBucketKey(profile: SiteContractProfile) {
+  return profile.technicalGuidanceKind || profile.contractType || '';
+}
+
 function getContractTypeDisplayLabel(value: string | null | undefined) {
   const normalized = value?.trim() || '';
   if (!normalized) return '미입력';
-  return SITE_CONTRACT_TYPE_LABELS[normalized as keyof typeof SITE_CONTRACT_TYPE_LABELS] || '미입력';
+  return SITE_CONTRACT_TYPE_LABELS[normalized as keyof typeof SITE_CONTRACT_TYPE_LABELS] || normalized;
 }
 
 function matchesAnalyticsQuery(
@@ -1464,7 +1468,7 @@ export function buildAdminAnalyticsModel(
       .filter((site) => {
         const profile = parseSiteContractProfile(site);
         if (filters.headquarterId && site.headquarter_id !== filters.headquarterId) return false;
-        if (filters.contractType && profile.contractType !== filters.contractType) return false;
+        if (filters.contractType && getContractBucketKey(profile) !== filters.contractType) return false;
         if (filters.userId && !userScopedSiteIds.has(site.id)) return false;
         return true;
       })
@@ -1669,7 +1673,7 @@ export function buildAdminAnalyticsModel(
       const profile = parseSiteContractProfile(site);
       const visitRevenue = sumVisitRevenue(currentGuidanceRows);
       const executedRounds = countExecutedRounds(currentGuidanceRows);
-      const contractTypeLabel = getContractTypeDisplayLabel(profile.contractType);
+      const contractTypeLabel = getContractTypeDisplayLabel(getContractBucketKey(profile));
       const matchesQuery = normalizedQuery
         ? matchesAnalyticsQuery(
             {
@@ -1716,7 +1720,7 @@ export function buildAdminAnalyticsModel(
   const contractTypeRows = visibleSites
     .reduce((accumulator, site) => {
       const profile = parseSiteContractProfile(site);
-      const key = profile.contractType || '';
+      const key = getContractBucketKey(profile);
       if (!accumulator.has(key)) {
         accumulator.set(key, []);
       }
@@ -1729,7 +1733,7 @@ export function buildAdminAnalyticsModel(
   const normalizedContractTypeRows: AdminAnalyticsContractTypeRow[] = Array.from(contractTypeRows)
     .map(([key, sites]) => {
       const guidanceRows = detailGuidanceRows.filter(
-        (row) => (row.contractProfile.contractType || '') === key,
+        (row) => getContractBucketKey(row.contractProfile) === key,
       );
       const visitRevenue = sumVisitRevenue(guidanceRows);
       const executedRounds = countExecutedRounds(guidanceRows);

@@ -138,15 +138,19 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
           <HeadquartersTable
             busy={busy}
             canDelete={canDelete}
-            filteredHeadquarters={state.sortedHeadquarters}
+            filteredHeadquarters={state.pagedHeadquarters}
+            page={state.page}
             onCreateRequest={state.openCreate}
             onDeleteRequest={handleDeleteHeadquarter}
             onEditRequest={state.openEdit}
             onOpenSitesRequest={(item) => onSelectHeadquarter(item.id)}
+            onPageChange={state.setPage}
             onQueryChange={state.setQuery}
             onSortChange={state.setSort}
             query={state.query}
             sort={state.sort}
+            totalCount={state.sortedHeadquarters.length}
+            totalPages={state.totalPages}
           />
         </section>
       ) : !selectedHeadquarter ? (

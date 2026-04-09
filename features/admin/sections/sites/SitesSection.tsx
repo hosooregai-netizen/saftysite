@@ -135,6 +135,17 @@ function normalizeSiteStatus(value: string | null | undefined): SafetySiteStatus
   return value === 'planned' || value === 'active' || value === 'closed' ? value : 'active';
 }
 
+function isPinnedTestSite(site: SafetySite) {
+  const labels = [
+    site.site_name,
+    site.headquarter_detail?.name,
+    site.headquarter?.name,
+  ]
+    .filter(Boolean)
+    .join(' ');
+  return labels.includes('테스트');
+}
+
 type SiteAssignmentFilter = 'all' | 'unassigned';
 
 export function SitesSection(props: SitesSectionProps) {
@@ -165,8 +176,8 @@ export function SitesSection(props: SitesSectionProps) {
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | SafetySiteStatus>(initialStatusFilter);
   const [sort, setSort] = useState<TableSortState>({
-    direction: 'asc',
-    key: 'site_name',
+    direction: 'desc',
+    key: 'contract_signed_date',
   });
   const [assignmentFilter, setAssignmentFilter] = useState<SiteAssignmentFilter>('all');
   const [form, setForm] = useState(EMPTY_FORM);
@@ -235,6 +246,12 @@ export function SitesSection(props: SitesSectionProps) {
     const direction = sort.direction === 'asc' ? 1 : -1;
 
     return [...filteredSites].sort((left, right) => {
+      const leftPinned = isPinnedTestSite(left);
+      const rightPinned = isPinnedTestSite(right);
+      if (leftPinned !== rightPinned) {
+        return leftPinned ? -1 : 1;
+      }
+
       if (sort.key === 'headquarter_name') {
         return (
           (left.headquarter_detail?.name || left.headquarter?.name || '').localeCompare(
@@ -273,6 +290,12 @@ export function SitesSection(props: SitesSectionProps) {
 
       if (sort.key === 'contract_end_date') {
         return (left.contract_end_date ?? '').localeCompare(right.contract_end_date ?? '') * direction;
+      }
+
+      if (sort.key === 'contract_signed_date') {
+        const leftValue = left.contract_signed_date ?? left.contract_date ?? '';
+        const rightValue = right.contract_signed_date ?? right.contract_date ?? '';
+        return leftValue.localeCompare(rightValue) * direction;
       }
 
       if (sort.key === 'updated_at') {
@@ -608,14 +631,14 @@ export function SitesSection(props: SitesSectionProps) {
                       />
                     ) : null}
                     <SortableHeaderCell
-                      column={{ key: 'contract_end_date' }}
+                      column={{ key: 'contract_signed_date' }}
                       current={sort}
                       defaultDirection="desc"
                       label="계약 / 기술지도"
                       onChange={setSort}
-                      sortMenuOptions={buildSortMenuOptions('contract_end_date', {
-                        asc: '계약 종료일 오름차순',
-                        desc: '계약 종료일 내림차순',
+                      sortMenuOptions={buildSortMenuOptions('contract_signed_date', {
+                        asc: '계약 체결일 오래된순',
+                        desc: '계약 체결일 최신순',
                       })}
                     />
                     <SortableHeaderCell

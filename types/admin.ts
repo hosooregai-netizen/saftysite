@@ -41,6 +41,7 @@ export interface SiteContractProfile {
   contractDate: string;
   contractStatus: SiteContractStatus;
   contractType: SiteContractType;
+  technicalGuidanceKind: string;
   perVisitAmount: number | null;
   totalContractAmount: number | null;
   totalRounds: number | null;

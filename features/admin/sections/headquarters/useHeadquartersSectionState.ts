@@ -13,11 +13,18 @@ const EMPTY_FORM = {
   is_active: true,
 };
 
+const HEADQUARTERS_PAGE_SIZE = 50;
+
+function isPinnedTestHeadquarter(item: SafetyHeadquarter) {
+  return item.name.includes('테스트');
+}
+
 export function useHeadquartersSectionState(
   headquarters: SafetyHeadquarter[],
   busy: boolean,
 ) {
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<TableSortState>({
     direction: 'asc',
@@ -45,6 +52,12 @@ export function useHeadquartersSectionState(
     const direction = sort.direction === 'asc' ? 1 : -1;
 
     return [...filteredHeadquarters].sort((left, right) => {
+      const leftPinned = isPinnedTestHeadquarter(left);
+      const rightPinned = isPinnedTestHeadquarter(right);
+      if (leftPinned !== rightPinned) {
+        return leftPinned ? -1 : 1;
+      }
+
       if (sort.key === 'updated_at') {
         return left.updated_at.localeCompare(right.updated_at) * direction;
       }
@@ -56,6 +69,12 @@ export function useHeadquartersSectionState(
       return left.name.localeCompare(right.name, 'ko') * direction;
     });
   }, [filteredHeadquarters, sort.direction, sort.key]);
+  const totalPages = Math.max(1, Math.ceil(sortedHeadquarters.length / HEADQUARTERS_PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pagedHeadquarters = useMemo(() => {
+    const offset = (currentPage - 1) * HEADQUARTERS_PAGE_SIZE;
+    return sortedHeadquarters.slice(offset, offset + HEADQUARTERS_PAGE_SIZE);
+  }, [currentPage, sortedHeadquarters]);
 
   const openCreate = () => {
     setEditingId('create');
@@ -105,11 +124,23 @@ export function useHeadquartersSectionState(
     isOpen,
     openCreate,
     openEdit,
+    page: currentPage,
+    pagedHeadquarters,
     query,
     setForm,
-    setQuery,
-    setSort,
+    setPage: (nextPage: number) => {
+      setPage(Math.max(1, Math.min(nextPage, totalPages)));
+    },
+    setQuery: (value: string) => {
+      setPage(1);
+      setQuery(value);
+    },
+    setSort: (value: TableSortState) => {
+      setPage(1);
+      setSort(value);
+    },
     sort,
     sortedHeadquarters,
+    totalPages,
   };
 }

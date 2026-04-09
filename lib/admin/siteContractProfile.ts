@@ -16,6 +16,7 @@ type SiteContractFieldSource = Pick<
   | 'contract_date'
   | 'contract_status'
   | 'contract_type'
+  | 'technical_guidance_kind'
   | 'per_visit_amount'
   | 'total_contract_amount'
   | 'total_rounds'
@@ -42,6 +43,7 @@ const EMPTY_CONTRACT_PROFILE: SiteContractProfile = {
   contractDate: '',
   contractStatus: '',
   contractType: '',
+  technicalGuidanceKind: '',
   perVisitAmount: null,
   totalContractAmount: null,
   totalRounds: null,
@@ -203,6 +205,7 @@ export function normalizeSiteContractProfile(
       ('contractDate' in record ||
         'contractStatus' in record ||
         'contractType' in record ||
+        'technicalGuidanceKind' in record ||
         'perVisitAmount' in record ||
         'totalContractAmount' in record ||
         'totalRounds' in record),
@@ -224,6 +227,11 @@ export function normalizeSiteContractProfile(
       hasCamelKeys
         ? (record as Partial<SiteContractProfile>)?.contractType
         : (record as Partial<SiteContractFieldSource> | null)?.contract_type,
+    ),
+    technicalGuidanceKind: normalizeText(
+      hasCamelKeys
+        ? (record as Partial<SiteContractProfile>)?.technicalGuidanceKind
+        : (record as Partial<SiteContractFieldSource> | null)?.technical_guidance_kind,
     ),
     perVisitAmount: normalizeNumber(
       hasCamelKeys
@@ -390,6 +398,7 @@ export function hasSiteContractProfile(profile: SiteContractProfile | null | und
       (profile.contractDate ||
         profile.contractStatus ||
         profile.contractType ||
+        profile.technicalGuidanceKind ||
         profile.perVisitAmount != null ||
         profile.totalContractAmount != null ||
         profile.totalRounds != null),

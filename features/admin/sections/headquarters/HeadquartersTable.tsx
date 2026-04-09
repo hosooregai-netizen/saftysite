@@ -10,15 +10,19 @@ interface HeadquartersTableProps {
   busy: boolean;
   canDelete: boolean;
   filteredHeadquarters: SafetyHeadquarter[];
+  page: number;
   onCreateRequest: () => void;
   onDeleteRequest: (item: SafetyHeadquarter) => void;
   onEditRequest: (item: SafetyHeadquarter) => void;
   onOpenSitesRequest: (item: SafetyHeadquarter) => void;
+  onPageChange: (page: number) => void;
   onQueryChange: (value: string) => void;
   onSortChange: (value: TableSortState) => void;
   query: string;
   sort: TableSortState;
   showHeader?: boolean;
+  totalCount: number;
+  totalPages: number;
 }
 
 function shouldIgnoreRowClick(target: EventTarget | null) {
@@ -36,15 +40,19 @@ export function HeadquartersTable({
   busy,
   canDelete,
   filteredHeadquarters,
+  page,
   onCreateRequest,
   onDeleteRequest,
   onEditRequest,
   onOpenSitesRequest,
+  onPageChange,
   onQueryChange,
   onSortChange,
   query,
   sort,
   showHeader = true,
+  totalCount,
+  totalPages,
 }: HeadquartersTableProps) {
   const handleExport = () =>
     void exportAdminWorkbook('headquarters', [
@@ -221,6 +229,29 @@ export function HeadquartersTable({
           )}
         </div>
       </div>
+      {totalCount > 0 ? (
+        <div className={styles.paginationRow}>
+          <button
+            type="button"
+            className="app-button app-button-secondary"
+            onClick={() => onPageChange(page - 1)}
+            disabled={busy || page <= 1}
+          >
+            이전
+          </button>
+          <span className={styles.paginationLabel}>
+            {page} / {totalPages} 페이지
+          </span>
+          <button
+            type="button"
+            className="app-button app-button-secondary"
+            onClick={() => onPageChange(page + 1)}
+            disabled={busy || page >= totalPages}
+          >
+            다음
+          </button>
+        </div>
+      ) : null}
     </>
   );
 }
