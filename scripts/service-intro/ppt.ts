@@ -141,7 +141,7 @@ function addMetricCard(
     rectRadius: 0.08,
     fill: { color: COLORS.white },
     line: { color: COLORS.line, pt: 1 },
-    shadow: { type: 'outer', color: 'CBBFA9', angle: 45, blur: 1.5, distance: 1, opacity: 0.08 },
+    shadow: { type: 'outer', color: 'CBBFA9', angle: 45, blur: 1.5, offset: 1, opacity: 0.08 },
   });
   slide.addShape(PptxGenJS.ShapeType.rect, {
     x: input.x,
@@ -231,7 +231,7 @@ function addFeatureImage(slide: PptxGenJS.Slide, item: IntroCaptureItem) {
     rectRadius: 0.08,
     fill: { color: COLORS.white },
     line: { color: COLORS.line, pt: 1.2 },
-    shadow: { type: 'outer', color: 'CBBFA9', angle: 45, blur: 2, distance: 1, opacity: 0.12 },
+    shadow: { type: 'outer', color: 'CBBFA9', angle: 45, blur: 2, offset: 1, opacity: 0.12 },
   });
   slide.addImage({
     path: item.imagePath,
@@ -332,7 +332,7 @@ function addCoverSlide(pptx: PptxGenJS, manifest: IntroManifest) {
       rectRadius: 0.1,
       fill: { color: COLORS.white },
       line: { color: COLORS.line, pt: 1.2 },
-      shadow: { type: 'outer', color: 'CBBFA9', angle: 45, blur: 2, distance: 1, opacity: 0.15 },
+      shadow: { type: 'outer', color: 'CBBFA9', angle: 45, blur: 2, offset: 1, opacity: 0.15 },
     });
     slide.addImage({ path: manifest.items[0].imagePath, x: 6.75, y: 0.94, w: 5.58, h: 5.58 });
   }
@@ -532,7 +532,7 @@ function addClosingSlide(pptx: PptxGenJS) {
       color: COLORS.white,
       breakLine: true,
       bullet: { indent: 16 },
-      paraSpaceAfterPt: 18,
+      paraSpaceAfter: 18,
     },
   );
   slide.addShape(PptxGenJS.ShapeType.roundRect, {
@@ -570,7 +570,7 @@ function addClosingSlide(pptx: PptxGenJS) {
       color: COLORS.white,
       breakLine: true,
       bullet: { indent: 14 },
-      paraSpaceAfterPt: 14,
+      paraSpaceAfter: 14,
     },
   );
   slide.addText('Next Step', {
@@ -605,11 +605,9 @@ export async function buildServiceIntroDeck(manifest?: IntroManifest) {
   pptx.company = 'RegAI';
   pptx.subject = 'RegAI 외부형 서비스 소개';
   pptx.title = 'RegAI 서비스 소개서';
-  pptx.lang = 'ko-KR';
   pptx.theme = {
     headFontFace: 'Pretendard',
     bodyFontFace: 'Pretendard',
-    lang: 'ko-KR',
   };
 
   addCoverSlide(pptx, resolvedManifest);
