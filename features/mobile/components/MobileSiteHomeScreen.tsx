@@ -12,8 +12,11 @@ import {
 import {
   buildMobileHomeHref,
   buildMobileSessionHref,
+  buildMobileSiteQuarterlyHref,
+  buildMobileSiteQuarterlyListHref,
   buildMobileSiteReportsHref,
 } from '@/features/home/lib/siteEntry';
+import { useSiteOperationalReportIndex } from '@/hooks/useSiteOperationalReportIndex';
 import { useSiteReportListState } from '@/features/site-reports/hooks/useSiteReportListState';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { uploadPhotoAlbumAsset } from '@/lib/photos/apiClient';
@@ -112,6 +115,10 @@ export function MobileSiteHomeScreen({ siteKey }: MobileSiteHomeScreenProps) {
     reportIndexStatus,
     reportItems,
   } = useSiteReportListState(siteKey);
+  const { quarterlyReports } = useSiteOperationalReportIndex(
+    currentSite,
+    isAuthenticated && isReady && Boolean(currentSite),
+  );
 
   useEffect(() => {
     if (!photoUploadNotice) {
@@ -206,6 +213,35 @@ export function MobileSiteHomeScreen({ siteKey }: MobileSiteHomeScreenProps) {
   const headquartersContact = snapshot.headquartersContact.trim();
   const headquartersContactHref = formatTelHref(headquartersContact);
   const showSiteContact = siteContact.length > 0 && siteContact !== managerPhone;
+  const currentYear = new Date().getFullYear();
+  const currentYearQuarterlyReports = quarterlyReports.filter(
+    (report) => report.year === currentYear,
+  );
+  const completedQuarterCount = new Set(
+    currentYearQuarterlyReports.map((report) => report.quarterKey).filter(Boolean),
+  ).size;
+  const latestQuarterlyReport =
+    quarterlyReports.length > 0
+      ? [...quarterlyReports].sort(
+          (left, right) =>
+            getReportSortTime({
+              createdAt: right.createdAt,
+              lastAutosavedAt: null,
+              updatedAt: right.updatedAt || right.lastCalculatedAt || right.createdAt,
+              visitDate: right.periodEndDate || right.periodStartDate || '',
+            }) -
+            getReportSortTime({
+              createdAt: left.createdAt,
+              lastAutosavedAt: null,
+              updatedAt: left.updatedAt || left.lastCalculatedAt || left.createdAt,
+              visitDate: left.periodEndDate || left.periodStartDate || '',
+            }),
+        )[0]
+      : null;
+  const quarterlyListHref = buildMobileSiteQuarterlyListHref(currentSite.id);
+  const latestQuarterlyHref = latestQuarterlyReport
+    ? buildMobileSiteQuarterlyHref(currentSite.id, latestQuarterlyReport.id)
+    : quarterlyListHref;
 
   const handlePhotoCapture = async (files: FileList | null) => {
     const file = Array.from(files ?? []).find((item) => item.size > 0);
@@ -244,7 +280,7 @@ export function MobileSiteHomeScreen({ siteKey }: MobileSiteHomeScreenProps) {
       backHref={buildMobileHomeHref()}
       backLabel="현장 목록"
       currentUserName={currentUser?.name}
-      tabBar={<MobileTabBar tabs={buildSiteTabs(currentSite.id)} />}
+      tabBar={<MobileTabBar tabs={buildSiteTabs(currentSite.id, 'site-home')} />}
       onLogout={logout}
       subtitle={snapshot.siteAddress || null}
       title={currentSite.siteName}
@@ -490,6 +526,83 @@ export function MobileSiteHomeScreen({ siteKey }: MobileSiteHomeScreenProps) {
           <p className={styles.inlineNotice}>
             아직 이 현장에 작성된 기술지도 보고서가 없습니다. 보고서 목록에서 첫 보고서를
             추가해 주세요.
+          </p>
+        )}
+      </section>
+
+      <section className={styles.sectionCard}>
+        <div className={styles.sectionHeader}>
+          <div className={styles.sectionTitleWrap}>
+            <h2 className={styles.sectionTitle}>분기 보고</h2>
+          </div>
+        </div>
+
+        <div
+          className={styles.statGrid}
+          style={{ gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)' }}
+        >
+          <article className={styles.statCard}>
+            <span className={styles.statLabel}>{currentYear}년 작성</span>
+            <strong className={styles.statValue}>{completedQuarterCount}/4</strong>
+            <span style={{ fontSize: '12px', color: '#64748b' }}>
+              등록된 분기 보고 기준
+            </span>
+          </article>
+          <Link
+            href={quarterlyListHref}
+            className="app-button app-button-primary"
+            style={{
+              minHeight: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              textDecoration: 'none',
+              textAlign: 'center',
+            }}
+          >
+            분기 보고 열기
+          </Link>
+        </div>
+
+        {latestQuarterlyReport ? (
+          <Link href={latestQuarterlyHref} style={{ textDecoration: 'none', color: 'inherit' }}>
+            <article className={styles.reportCard} style={{ cursor: 'pointer', padding: '12px' }}>
+              <div style={{ display: 'grid', gap: '4px' }}>
+                <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 700 }}>
+                  {latestQuarterlyReport.year}년 {latestQuarterlyReport.quarter}분기
+                </span>
+                <h3
+                  className={styles.cardTitle}
+                  style={{
+                    fontSize: '15px',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                >
+                  {latestQuarterlyReport.title || '분기 기술지도 종합보고서'}
+                </h3>
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  gap: '12px',
+                  fontSize: '13px',
+                  color: '#475569',
+                }}
+              >
+                <span>
+                  원본 {latestQuarterlyReport.selectedReportCount}건
+                </span>
+                <span>{formatCompactDate(latestQuarterlyReport.periodEndDate)}</span>
+              </div>
+            </article>
+          </Link>
+        ) : (
+          <p className={styles.inlineNotice}>
+            아직 이 현장에 작성된 분기 보고가 없습니다. 분기 보고 탭에서 첫 보고서를 생성해
+            주세요.
           </p>
         )}
       </section>

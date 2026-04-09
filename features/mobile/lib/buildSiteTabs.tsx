@@ -1,10 +1,23 @@
-import { buildMobileSiteHomeHref, buildMobileSiteReportsHref } from '@/features/home/lib/siteEntry';
+import {
+  buildMobileSiteHomeHref,
+  buildMobileSiteQuarterlyListHref,
+  buildMobileSiteReportsHref,
+} from '@/features/home/lib/siteEntry';
 
-export function buildSiteTabs(siteId: string) {
+type MobileSiteTabKey =
+  | 'site-home'
+  | 'reports'
+  | 'quarterly'
+  | 'photos'
+  | 'bad-workplace'
+  | null;
+
+export function buildSiteTabs(siteId: string, activeTab: MobileSiteTabKey = null) {
   return [
     {
       label: '현장 메인',
       href: buildMobileSiteHomeHref(siteId),
+      isActive: activeTab === 'site-home' ? true : undefined,
       icon: (
         <svg viewBox="0 0 24 24">
           <path d="m3 9 9-7 9 7v11a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-5a2 2 0 0 1 2-2h2" />
@@ -15,6 +28,7 @@ export function buildSiteTabs(siteId: string) {
     {
       label: '기술지도',
       href: buildMobileSiteReportsHref(siteId),
+      isActive: activeTab === 'reports' ? true : undefined,
       icon: (
         <svg viewBox="0 0 24 24">
           <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
@@ -27,7 +41,8 @@ export function buildSiteTabs(siteId: string) {
     },
     {
       label: '분기 보고',
-      href: '#',
+      href: buildMobileSiteQuarterlyListHref(siteId),
+      isActive: activeTab === 'quarterly' ? true : undefined,
       icon: (
         <svg viewBox="0 0 24 24">
           <rect width="20" height="5" x="2" y="4" rx="2" />
@@ -39,6 +54,7 @@ export function buildSiteTabs(siteId: string) {
     {
       label: '사진첩',
       href: '#',
+      isActive: activeTab === 'photos' ? true : undefined,
       icon: (
         <svg viewBox="0 0 24 24">
           <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
@@ -50,6 +66,7 @@ export function buildSiteTabs(siteId: string) {
     {
       label: '불량신고',
       href: '#',
+      isActive: activeTab === 'bad-workplace' ? true : undefined,
       icon: (
         <svg viewBox="0 0 24 24">
           <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
