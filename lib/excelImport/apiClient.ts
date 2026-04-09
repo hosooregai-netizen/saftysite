@@ -20,7 +20,7 @@ function mapExcelImportPreview(payload: unknown): ExcelImportPreview {
     fileName: toText(preview.fileName ?? preview.file_name),
     createdAt: toText(preview.createdAt ?? preview.created_at),
     sheetNames: Array.isArray(preview.sheetNames ?? preview.sheet_names)
-      ? (preview.sheetNames ?? preview.sheet_names).map((item) => toText(item)).filter(Boolean)
+      ? ((preview.sheetNames ?? preview.sheet_names) as unknown[]).map((item) => toText(item)).filter(Boolean)
       : [],
     scope: {
       sourceSection: toText(scope.sourceSection ?? scope.source_section) === 'sites' ? 'sites' : 'headquarters',

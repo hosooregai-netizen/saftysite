@@ -972,6 +972,7 @@ export function MailboxPanel({
   const threadPageCount = Math.max(1, Math.ceil(threadTotal / THREAD_PAGE_SIZE));
   const threadRangeStart = threadTotal === 0 ? 0 : threadOffset + 1;
   const threadRangeEnd = Math.min(threadOffset + threads.length, threadTotal);
+  const isComposeView = view === 'compose';
   const composeTitle =
     composeMode === 'reply' ? '답장 작성' : composeMode === 'report' ? '보고서 메일 보내기' : '메일 보내기';
   const listPrimaryColumnLabel = tab === 'sent' ? '받는 사람' : '보낸 사람';
