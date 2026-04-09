@@ -173,9 +173,11 @@ export function WorkerMenuPanel({
 
   const topLevelItems: WorkerTopLevelMenuItem[] = [
     {
-      label: '목록',
+      label: '사업장/현장',
       href: '/',
-      active: isWorkerListPath(pathname),
+      active: isWorkerListPath(pathname) || siteNavView === 'site-home' || siteMenuItems.some((item) => item.active),
+      children: siteMenuItems.length > 0 ? siteMenuItems : undefined,
+      expandMode: siteMenuItems.length > 0 ? 'always' : undefined,
     },
     {
       label: '내 일정',
@@ -190,16 +192,6 @@ export function WorkerMenuPanel({
       expandMode: 'active',
     },
   ];
-
-  if (currentSiteKey) {
-    topLevelItems.push({
-      label: '현장 메뉴',
-      href: buildSiteHubHref(currentSiteKey),
-      active: siteNavView === 'site-home' || siteMenuItems.some((item) => item.active),
-      children: siteMenuItems,
-      expandMode: 'always',
-    });
-  }
 
   if (extraMenuItems.length > 0) {
     topLevelItems.push({
