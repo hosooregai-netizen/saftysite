@@ -97,7 +97,6 @@ function addTitleBlock(
       fontSize: 10,
       bold: true,
       color: COLORS.gold,
-      charSpace: 0.4,
     });
   }
   slide.addText(input.title, {

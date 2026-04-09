@@ -39,6 +39,7 @@ import type {
   ExcelApplyResult,
   ExcelImportPreview,
   ExcelImportPreviewRow,
+  ExcelRowExclusionReasonCode,
   ExcelImportScopeSummary,
   ExcelMatchCandidate,
 } from '@/types/excelImport';
@@ -47,6 +48,18 @@ import { buildSafetyAdminUpstreamUrl } from './safetyApiServer';
 
 function normalizeText(value: unknown) {
   return typeof value === 'string' ? value.trim() : '';
+}
+
+function normalizeExcelRowExclusionReasonCode(
+  value: unknown,
+): ExcelRowExclusionReasonCode | null {
+  const normalized = normalizeText(value);
+  return normalized === 'different_headquarter' ||
+    normalized === 'different_site' ||
+    normalized === 'scope_unresolved' ||
+    normalized === 'scope_ambiguous'
+    ? normalized
+    : null;
 }
 
 function mapBackendReview(row: SafetyBackendAdminReportRow) {
@@ -490,7 +503,7 @@ function mapBackendExcelImportPreviewRow(row: {
         : {},
     summary: normalizeText(row.summary),
     suggestedAction: normalizeText(row.suggested_action),
-    exclusionReasonCode: normalizeText(row.exclusion_reason_code) || null,
+    exclusionReasonCode: normalizeExcelRowExclusionReasonCode(row.exclusion_reason_code),
     exclusionReason: normalizeText(row.exclusion_reason) || null,
     inScope: typeof row.in_scope === 'boolean' ? row.in_scope : undefined,
     duplicateCandidates: Array.isArray(row.duplicate_candidates)
