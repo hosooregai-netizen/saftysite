@@ -84,6 +84,7 @@ function SiteCard({ summary }: { summary: HomeSiteSummary }) {
   const latestGuidanceDate = summary.latestSession
     ? getSessionGuidanceDate(summary.latestSession)
     : '';
+  const siteAddress = summary.site.adminSiteSnapshot?.siteAddress;
 
   return (
     <Link href={buildMobileSiteHomeHref(summary.site.id)} style={{ textDecoration: 'none', color: 'inherit' }}>
@@ -101,6 +102,12 @@ function SiteCard({ summary }: { summary: HomeSiteSummary }) {
             {summary.sessionCount}건
           </span>
         </div>
+
+        {siteAddress && (
+          <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {siteAddress}
+          </div>
+        )}
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
           <div style={{ display: 'flex', gap: '12px' }}>
