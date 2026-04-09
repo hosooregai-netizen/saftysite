@@ -21,7 +21,7 @@ function buildMailboxRedirectUrl(input: {
   type: 'notice' | 'error';
   message: string;
 }) {
-  const searchParams = new URLSearchParams({ box: 'accounts' });
+  const searchParams = new URLSearchParams({ box: 'inbox' });
   searchParams.set(input.type === 'notice' ? 'oauthNotice' : 'oauthError', input.message);
   return `/mailbox?${searchParams.toString()}`;
 }

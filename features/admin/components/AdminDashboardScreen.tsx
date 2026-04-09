@@ -134,7 +134,6 @@ function renderAdminSection(
     case 'mailbox':
       return (
         <MailboxSection
-          currentUserName={currentUser.name}
           reports={dashboard.reportList}
           sites={sites}
         />

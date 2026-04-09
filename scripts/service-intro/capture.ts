@@ -69,7 +69,7 @@ function buildCapturePlan(siteId: string | null): Array<Omit<IntroCaptureItem, '
     { id: 'excel-upload', title: '엑셀 업로드', description: '현재 화면 컨텍스트 기준으로 업로드를 시작할 수 있습니다.', route: '/admin?section=headquarters&excelUpload=excel' },
     { id: 'reports', title: '기술지도 보고서', description: '현장별 보고서와 문서 출력을 빠르게 확인합니다.', route: siteId ? `/sites/${encodeURIComponent(siteId)}/reports` : '/admin?section=reports' },
     { id: 'quarterly', title: '분기 보고서', description: '분기 자료와 출력 흐름을 현장 단위로 관리합니다.', route: siteId ? `/sites/${encodeURIComponent(siteId)}/quarterly` : '/admin?section=reports' },
-    { id: 'mailbox', title: '메일·알림', description: '발송 계정과 메시지 흐름을 같은 화면에서 운영합니다.', route: '/admin?section=mailbox&box=accounts' },
+    { id: 'mailbox', title: '메일·알림', description: '발송 계정과 메시지 흐름을 같은 화면에서 운영합니다.', route: '/admin?section=mailbox&box=inbox' },
     { id: 'site-hub', title: '모바일·현장 흐름', description: '현장 허브에서 보고서와 현장 동선을 연결합니다.', route: siteId ? `/sites/${encodeURIComponent(siteId)}` : '/calendar' },
   ];
   return items;

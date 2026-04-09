@@ -93,10 +93,7 @@ export function MailboxScreen() {
               </header>
 
               <div className={homeStyles.pageGrid}>
-                <MailboxPanel
-                  currentUserName={currentUser?.name}
-                  mode="worker"
-                />
+                <MailboxPanel mode="worker" />
               </div>
             </div>
           </WorkerShellBody>

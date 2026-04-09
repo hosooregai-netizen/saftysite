@@ -133,8 +133,7 @@ export function AdminMenuPanel({
       ]
     : [];
   const mailboxBox = searchParams.get('box');
-  const resolvedMailboxBox =
-    mailboxBox === 'sent' || mailboxBox === 'accounts' ? mailboxBox : 'inbox';
+  const resolvedMailboxBox = mailboxBox === 'sent' ? 'sent' : 'inbox';
   const mailboxMenuItems: AdminSubMenuItem[] = [
     {
       label: '받은편지함',
@@ -145,11 +144,6 @@ export function AdminMenuPanel({
       label: '보낸편지함',
       href: getAdminSectionHref('mailbox', { box: 'sent' }),
       active: activeSection === 'mailbox' && resolvedMailboxBox === 'sent',
-    },
-    {
-      label: '연결 계정',
-      href: getAdminSectionHref('mailbox', { box: 'accounts' }),
-      active: activeSection === 'mailbox' && resolvedMailboxBox === 'accounts',
     },
   ];
 
