@@ -118,7 +118,6 @@ sequenceDiagram
 | `/sites/[siteKey]/quarterly/[quarterKey]` | 분기보고서 에디터 페이지 | 기존 보고서 조회 `/reports/by-key/{reportKey}`, seed 재계산 `/reports/site/{siteId}/quarterly-summary-seed`, 저장 `/reports/upsert`, 문서 출력 `/api/documents/quarterly/*`, 사진첩 이동 시 `/api/photos` | FastAPI `reports`; Next 문서 생성 API | `reports.find_one`, `reports.find`, `reports.insert_one/update_one`, `report_revisions.insert_one` | 분기보고서 편집, 원본 세션 집계 결과 반영, HWPX/PDF 다운로드 |
 | `/sites/[siteKey]/bad-workplace/[reportMonth]` | 불량작업 보고서 에디터 | `useSiteOperationalReports` -> `/reports/site/{siteId}/full?report_kind=...`, 저장 `/reports/upsert`, 사진첩 이동 시 `/api/photos` | FastAPI `reports`; Next 사진 API | `reports.find`, `reports.insert_one/update_one`, `report_revisions.insert_one` | 월간 불량작업 보고서 편집 |
 | `/calendar` | `WorkerCalendarScreen` | `/api/me/schedules`, 일정 저장 `/api/me/schedules/{id}`, 상단 `/notifications` | Next `app/api/me/*` -> FastAPI `me` -> `admin` service | `inspection_schedules.find/aggregate/update_one`, `assignments.find_one`, `sites.find_one` | 내 배정 현장 회차 일정 조회/선택 |
-| `/sites/[siteKey]/assist` | `SiteAssistScreen` | `/api/photos?siteId=...`, `/api/sites/{siteId}/field-signatures`, 선택 일정 확인용 `/api/me/schedules`, 업로드 `/api/photos/upload`, 사인 저장 `POST /api/sites/{siteId}/field-signatures` | Next `photos`, `sites`, `me` API -> FastAPI `photo_assets`, `sites`, `me` | `photo_assets.aggregate/find/insert_one`, `field_signatures.find/insert_one`, `inspection_schedules.find/update_one`, `sites.find_one`, `headquarters.find_one` | 현장 최근 사진, 사인, 회차 일정, 연락처 확인 |
 | `/sites/[siteKey]/photos` | `SitePhotoAlbumScreen` -> `PhotoAlbumPanel` | `/api/photos`, 선택 다운로드 `/api/photos/download`, 업로드 `/api/photos/upload`, 상단 `/notifications` | Next `photos/*` -> FastAPI `photo_assets` | `photo_assets.aggregate/count_documents/find_one/insert_one`, 조인용 `sites`, `headquarters`, 권한용 `assignments` | 사진첩 목록/필터/다운로드/업로드 |
 | `/mailbox` | `MailboxScreen` -> `MailboxPanel` | `/api/mail/accounts`, `/api/mail/providers/status`, `/api/mail/threads`, `/api/mail/threads/{id}`, `/api/mail/send`, `/api/mail/sync`, 계정 연결/해제 `/api/mail/accounts/connect/*`, 상단 `/notifications` | Next `mail/*` -> FastAPI `mail` / `notifications` | `mail_accounts.find/update_one/insert_one`, `mail_oauth_states.insert_one/find_one/update_one`, `mail_threads.find/find_one/update_one/insert_one`, `mail_messages.find/find_one/insert_one/update_many`, `reports.find_one/update_one`, `notification_reads.find/update_one` | 메일 계정 관리, 스레드 목록, 상세, 발송/동기화 |
 | `/mail/connect/google` | `MailConnectCallback(provider='google')` | `/api/mail/accounts/connect/google/complete` | Next `mail` API -> FastAPI `mail` | `mail_oauth_states.find_one/update_one`, `mail_accounts.find_one/update_one/insert_one` | OAuth 완료 후 `/mailbox`로 리다이렉트 |
@@ -163,7 +162,6 @@ sequenceDiagram
 | 컬렉션 | 주 용도 | 대표 진입 라우터/서비스 | 실제 쿼리 메서드 |
 | --- | --- | --- | --- |
 | `inspection_schedules` | 회차별 방문 일정 | `me`, `admin`, `sites(create/update)` | `find`, `find_one`, `aggregate`, `update_one`, `count_documents` |
-| `field_signatures` | 현장 서명 | `sites/{siteId}/field-signatures` | `find`, `insert_one` |
 | `photo_assets` | 업로드/legacy 사진 메타데이터 | `photo_assets`, `photo_assets.backfill_legacy_photo_assets()` | `aggregate`, `find`, `find_one`, `insert_one`, `count_documents` |
 | `mail_accounts` | 메일 계정 연결 상태 | `mail` | `find`, `find_one`, `insert_one`, `update_one`, `update_many` |
 | `mail_oauth_states` | OAuth state 저장 | `mail` | `insert_one`, `find_one`, `update_one` |
@@ -389,10 +387,9 @@ sequenceDiagram
 4. `/sessions/[sessionId]`에서 본문이 로드되고, 새로고침 후에도 `/reports/by-key/{reportKey}`로 복원되는지 확인
 5. `/calendar`에서 일정 저장 시 `inspection_schedules`가 업데이트되는지 확인
 6. `/sites/[siteKey]/photos`에서 업로드 후 즉시 목록에 반영되는지 확인
-7. `/sites/[siteKey]/assist`에서 사인 저장 후 `field_signatures` 최신 1건이 보이는지 확인
-8. `/sites/[siteKey]/quarterly` 및 상세 페이지에서 seed 계산 결과가 기술지도 보고서 수와 맞는지 확인
-9. `/mailbox` 또는 `/admin?section=mailbox`에서 계정/스레드/상세 흐름이 이어지는지 확인
-10. `/admin` 각 섹션에서 필터/수정 후 실제 컬렉션 변경이 반영되는지 확인
+7. `/sites/[siteKey]/quarterly` 및 상세 페이지에서 seed 계산 결과가 기술지도 보고서 수와 맞는지 확인
+8. `/mailbox` 또는 `/admin?section=mailbox`에서 계정/스레드/상세 흐름이 이어지는지 확인
+9. `/admin` 각 섹션에서 필터/수정 후 실제 컬렉션 변경이 반영되는지 확인
 
 ## 7. 핵심 코드 기준 위치
 

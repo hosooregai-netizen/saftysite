@@ -14,7 +14,6 @@ import type {
   SafetyBackendNotificationFeedResponse,
   SafetyBackendExcelApplyResult,
   SafetyBackendExcelImportPreview,
-  SafetyBackendFieldSignatureRecord,
   SafetyBackendPhotoAsset,
   SafetyBackendPhotoAssetListResponse,
   SafetyBackendScheduleListResponse,

@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import {
-  buildSiteAssistHref,
   buildSiteBadWorkplaceHref,
   buildSiteQuarterlyListHref,
   buildSiteReportsHref,
@@ -111,11 +110,6 @@ export function AdminMenuPanel({
           label: '\uBD84\uAE30 \uC885\uD569 \uBCF4\uACE0\uC11C',
           href: buildSiteQuarterlyListHref(currentSiteKey),
           active: siteNavView === 'quarterly',
-        },
-        {
-          label: '\uD604\uC7A5 \uBCF4\uC870',
-          href: buildSiteAssistHref(currentSiteKey),
-          active: siteNavView === 'assist',
         },
         {
           label: '\uD604\uC7A5 \uC0AC\uC9C4\uCCA9',

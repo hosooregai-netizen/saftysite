@@ -14,7 +14,6 @@ import type {
   SafetyBackendAdminOverviewResponse,
   SafetyBackendAdminReportRow,
   SafetyBackendAdminReportsResponse,
-  SafetyBackendFieldSignatureRecord,
   SafetyBackendInspectionSchedule,
   SafetyBackendExcelApplyResult,
   SafetyBackendExcelImportPreview,
@@ -36,7 +35,6 @@ import type { MailAccount, MailMessage, MailProviderStatus, MailThread, MailThre
 import type { SmsMessage, SmsProviderStatus, SmsSendResult } from '@/types/messages';
 import type { NotificationFeedResponse, NotificationItem } from '@/types/notifications';
 import type { PhotoAlbumItem, SafetyPhotoAsset } from '@/types/photos';
-import type { FieldSignatureRecord } from '@/types/assist';
 import type {
   ExcelApplyResult,
   ExcelImportPreview,
@@ -595,23 +593,6 @@ export function mapBackendExcelApplyResult(
           message: normalizeText(row.message),
         }))
       : [],
-  };
-}
-
-export function mapBackendFieldSignatureRecord(
-  record: SafetyBackendFieldSignatureRecord,
-): FieldSignatureRecord {
-  return {
-    id: normalizeText(record.id),
-    siteId: normalizeText(record.site_id),
-    scheduleId: normalizeText(record.schedule_id) || null,
-    signedByUserId: normalizeText(record.signed_by_user_id),
-    signedByName: normalizeText(record.signed_by_name),
-    signedAt: normalizeText(record.signed_at),
-    imageDataUrl: normalizeText(record.image_data_url),
-    note: normalizeText(record.note) || null,
-    createdAt: normalizeText(record.created_at),
-    updatedAt: normalizeText(record.updated_at),
   };
 }
 
