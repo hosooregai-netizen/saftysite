@@ -651,7 +651,7 @@ export function MobileQuarterlyReportScreen({ quarterKey, siteKey }: MobileQuart
             <button
               type="button"
               className="app-button app-button-secondary"
-              style={{ width: '100%', height: '100%', minHeight: '118px', padding: '0 8px' }}
+              style={{ width: '100%', height: '100%', minHeight: '80px', padding: '0 8px' }}
               disabled={isSaving || isGeneratingHwpx || isGeneratingPdf}
               onClick={() =>
                 void handleSave().catch((error) =>
