@@ -1,4 +1,4 @@
-import { buildSafetyApiUrl } from './config';
+import { buildSafetyApiProxyUrl, buildSafetyApiUrl } from './config';
 import { buildPublicSafetyApiUpstreamUrl } from './upstream';
 
 const DEFAULT_SAFETY_API_TIMEOUT_MS = 12000;
@@ -11,6 +11,11 @@ const REPORTS_BY_SITE_CACHE_TTL_MS = 15000;
 const AUTH_ME_CACHE_TTL_MS = 3000;
 const ERP_DASHBOARD_CACHE_TTL_MS = 15000;
 const ERP_DRAFT_CONTEXT_CACHE_TTL_MS = 15000;
+const DIRECT_WRITE_ENABLED =
+  typeof process.env.NEXT_PUBLIC_SAFETY_API_DIRECT_WRITE_ENABLED === 'string' &&
+  ['1', 'true', 'yes', 'on'].includes(
+    process.env.NEXT_PUBLIC_SAFETY_API_DIRECT_WRITE_ENABLED.trim().toLowerCase(),
+  );
 
 type JsonLike =
   | undefined
@@ -140,19 +145,32 @@ function getSafetyApiTimeoutMs(path: string, options: RequestInit): number {
   return DEFAULT_SAFETY_API_TIMEOUT_MS;
 }
 
-export function buildPreferredSafetyApiRequestUrls(path: string): string[] {
-  const proxiedUrl = buildSafetyApiUrl(path);
+interface SafetyApiRequestTarget {
+  label: 'default' | 'direct' | 'proxy';
+  url: string;
+}
+
+export function buildPreferredSafetyApiRequestTargets(path: string): SafetyApiRequestTarget[] {
+  const defaultUrl = buildSafetyApiUrl(path);
 
   if (path !== '/reports/upsert') {
-    return [proxiedUrl];
+    return [{ label: 'default', url: defaultUrl }];
+  }
+
+  const proxiedUrl = buildSafetyApiProxyUrl(path);
+  if (!DIRECT_WRITE_ENABLED) {
+    return [{ label: 'proxy', url: proxiedUrl }];
   }
 
   const directUrl = buildPublicSafetyApiUpstreamUrl(path);
   if (!directUrl || directUrl === proxiedUrl) {
-    return [proxiedUrl];
+    return [{ label: 'proxy', url: proxiedUrl }];
   }
 
-  return [directUrl, proxiedUrl];
+  return [
+    { label: 'direct', url: directUrl },
+    { label: 'proxy', url: proxiedUrl },
+  ];
 }
 
 export async function requestSafetyApi<T>(
@@ -212,21 +230,28 @@ export async function requestSafetyApi<T>(
 
   const executeRequest = async (): Promise<JsonLike> => {
     let response: Response | null = null;
+    let responseTarget: SafetyApiRequestTarget | null = null;
+    const failedTargets: Array<{ label: SafetyApiRequestTarget['label']; message: string }> = [];
 
     try {
       let lastNetworkError: unknown = null;
 
-      for (const requestUrl of buildPreferredSafetyApiRequestUrls(path)) {
+      for (const target of buildPreferredSafetyApiRequestTargets(path)) {
         try {
-          response = await fetch(requestUrl, {
+          response = await fetch(target.url, {
             ...options,
             headers,
             cache: 'no-store',
             signal: abortController.signal,
           });
+          responseTarget = target;
           lastNetworkError = null;
           break;
         } catch (error) {
+          failedTargets.push({
+            label: target.label,
+            message: error instanceof Error ? error.message : 'unknown network error',
+          });
           lastNetworkError = error;
         }
       }
@@ -235,9 +260,17 @@ export async function requestSafetyApi<T>(
         throw lastNetworkError ?? new Error(`${requestLabel} request failed before receiving a response.`);
       }
     } catch (error) {
+      const retryHint =
+        failedTargets.length > 1
+          ? ` 직접 경로와 프록시 경로를 모두 시도했습니다: ${failedTargets
+              .map((item) => `${item.label}=${item.message}`)
+              .join(', ')}`
+          : failedTargets.length === 1
+            ? ` 시도 경로(${failedTargets[0].label}) 오류: ${failedTargets[0].message}`
+            : '';
       throw new SafetyApiError(
         error instanceof Error
-          ? `${requestLabel} 요청 중 네트워크 오류가 발생했습니다. ${error.message}`
+          ? `${requestLabel} 요청 중 네트워크 오류가 발생했습니다. ${error.message}${retryHint}`
           : `${requestLabel} 요청 중 안전 API 서버에 연결하지 못했습니다.`,
         null
       );
@@ -246,7 +279,13 @@ export async function requestSafetyApi<T>(
     }
 
     if (!response.ok) {
-      const message = await parseErrorMessage(response);
+      let message = await parseErrorMessage(response);
+      if (responseTarget?.label === 'proxy') {
+        const directFailure = failedTargets.find((item) => item.label === 'direct');
+        if (directFailure) {
+          message = `${message} 직접 저장 경로 연결 실패 후 프록시로 재시도했습니다 (${directFailure.message}).`;
+        }
+      }
       throw new SafetyApiError(
         `${requestLabel} 요청이 실패했습니다 (${response.status}). ${message}`,
         response.status

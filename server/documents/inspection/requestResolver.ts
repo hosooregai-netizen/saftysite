@@ -1,18 +1,17 @@
-import { normalizeInspectionSite } from '@/constants/inspectionSession';
 import { TECHNICAL_GUIDANCE_REPORT_KIND } from '@/lib/erpReports/shared';
 import { buildSafetyMasterData, mapSafetyReportToInspectionSession } from '@/lib/safetyApiMappers';
 import {
-  fetchAdminReportByKey,
   fetchSafetyContentItemsServer,
   fetchSafetyReportsBySiteFullServer,
   readRequiredSafetyAuthToken,
 } from '@/server/admin/safetyApiServer';
+import { resolveReportSitePayloadByReportKey } from '@/server/documents/shared/reportKeyResolver';
 import type { SafetyReport } from '@/types/backend';
 import type {
   GenerateInspectionDocumentRequest,
   GenerateInspectionHwpxRequest,
 } from '@/types/documents';
-import type { InspectionSite, InspectionSession } from '@/types/inspectionSession';
+import type { InspectionSession } from '@/types/inspectionSession';
 
 function isTechnicalGuidanceReport(report: SafetyReport): boolean {
   const rawKind =
@@ -47,37 +46,6 @@ function compareTechnicalGuidanceReports(left: SafetyReport, right: SafetyReport
   return getReportSortCreatedAt(left).localeCompare(getReportSortCreatedAt(right));
 }
 
-function buildFallbackSiteFromReport(report: SafetyReport): InspectionSite {
-  const payload =
-    report.payload && typeof report.payload === 'object'
-      ? (report.payload as Record<string, unknown>)
-      : {};
-  const snapshot =
-    payload.adminSiteSnapshot && typeof payload.adminSiteSnapshot === 'object'
-      ? payload.adminSiteSnapshot
-      : {};
-  const meta = report.meta ?? {};
-
-  return normalizeInspectionSite({
-    id: report.site_id,
-    headquarterId: report.headquarter_id,
-    title:
-      (typeof payload.title === 'string' && payload.title) ||
-      (typeof meta.siteName === 'string' && meta.siteName) ||
-      report.report_title,
-    siteName:
-      (typeof meta.siteName === 'string' && meta.siteName) ||
-      (typeof payload.siteName === 'string' && payload.siteName) ||
-      report.report_title,
-    assigneeName:
-      (typeof meta.drafter === 'string' && meta.drafter) ||
-      (typeof payload.assigneeName === 'string' && payload.assigneeName),
-    adminSiteSnapshot: snapshot,
-    createdAt: report.created_at,
-    updatedAt: report.updated_at,
-  });
-}
-
 export async function resolveInspectionDocumentRequest(
   request: Request,
   body: GenerateInspectionDocumentRequest,
@@ -98,7 +66,10 @@ export async function resolveInspectionDocumentRequest(
   }
 
   const token = readRequiredSafetyAuthToken(request);
-  const targetReport = await fetchAdminReportByKey(token, reportKey, request);
+  const { report: targetReport, site } = await resolveReportSitePayloadByReportKey(
+    request,
+    reportKey,
+  );
   const [contentItems, rawSiteReports] = await Promise.all([
     fetchSafetyContentItemsServer(token, request),
     fetchSafetyReportsBySiteFullServer(token, targetReport.site_id, request),
@@ -111,18 +82,16 @@ export async function resolveInspectionDocumentRequest(
   const sessionsById = new Map<string, InspectionSession>();
 
   technicalReports.forEach((report) => {
-    const fallbackSite = buildFallbackSiteFromReport(report);
     sessionsById.set(
       report.report_key,
-      mapSafetyReportToInspectionSession(report, fallbackSite, masterData),
+      mapSafetyReportToInspectionSession(report, site, masterData),
     );
   });
 
   if (!sessionsById.has(targetReport.report_key)) {
-    const fallbackSite = buildFallbackSiteFromReport(targetReport);
     sessionsById.set(
       targetReport.report_key,
-      mapSafetyReportToInspectionSession(targetReport, fallbackSite, masterData),
+      mapSafetyReportToInspectionSession(targetReport, site, masterData),
     );
   }
 

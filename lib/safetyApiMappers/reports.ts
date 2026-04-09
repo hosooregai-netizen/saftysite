@@ -88,6 +88,34 @@ function mapTechnicalGuidanceRelations(
   });
 }
 
+function buildTechnicalGuidancePayloadForSave(
+  session: InspectionSession,
+  site: InspectionSite,
+): Record<string, unknown> {
+  return {
+    siteKey: site.id,
+    reportNumber: session.reportNumber,
+    currentSection: session.currentSection,
+    meta: session.meta,
+    controllerReview: session.controllerReview,
+    documentsMeta: session.documentsMeta,
+    document2Overview: session.document2Overview,
+    document3Scenes: session.document3Scenes,
+    document5Summary: session.document5Summary,
+    document6Measures: session.document6Measures,
+    document7Findings: session.document7Findings,
+    document8Plans: session.document8Plans,
+    document9SafetyChecks: session.document9SafetyChecks,
+    document10Measurements: session.document10Measurements,
+    document11EducationRecords: session.document11EducationRecords,
+    document12Activities: session.document12Activities,
+    createdAt: session.createdAt,
+    updatedAt: session.updatedAt,
+    lastSavedAt: session.lastSavedAt,
+    reportKind: TECHNICAL_GUIDANCE_REPORT_KIND,
+  };
+}
+
 export function mapSafetyReportListItem(
   report: SafetyReportListItem,
 ): InspectionReportListItem {
@@ -226,12 +254,7 @@ export function buildSafetyReportUpsertInput(
     visit_round: session.reportNumber || null,
     total_round: parsePositiveInteger(session.document2Overview.totalVisitCount),
     progress_rate: progress.percentage,
-    payload: {
-      ...session,
-      reportKind: TECHNICAL_GUIDANCE_REPORT_KIND,
-      siteKey: site.id,
-      adminSiteSnapshot: site.adminSiteSnapshot,
-    },
+    payload: buildTechnicalGuidancePayloadForSave(session, site),
     meta: {
       reportKind: TECHNICAL_GUIDANCE_REPORT_KIND,
       siteName: session.meta.siteName,
