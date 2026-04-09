@@ -11,3 +11,6 @@ coverage/
 .env.production.local
 tsconfig.tsbuildinfo
 .tmp-out/
+.tmp-ascii/
+.tmp-ui/generated/*.pdf
+.tmp-ui/generated/footer_*.hwpx
