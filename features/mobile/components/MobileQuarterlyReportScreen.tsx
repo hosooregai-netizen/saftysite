@@ -586,19 +586,18 @@ export function MobileQuarterlyReportScreen({ quarterKey, siteKey }: MobileQuart
         webHref={buildSiteQuarterlyHref(currentSite.id, draft.id)}
       >
         <section
-          className={styles.sectionCard}
+          className={`${styles.sectionCard} ${styles.mobileSummarySection}`}
           style={{ marginBottom: 0, borderRadius: '0 0 8px 8px', borderBottom: 'none', flexShrink: 0 }}
         >
           <div className={`${styles.statGrid} ${styles.mobileSummaryGrid}`}>
-            <article className={styles.statCard}>
-              <span className={styles.statLabel}>분기</span>
-              <strong className={styles.statValue}>{getMobileQuarterLabel(draft)}</strong>
+            <article className={`${styles.statCard} ${styles.mobileSummaryCard}`}>
+              <span className={`${styles.statLabel} ${styles.mobileSummaryLabel}`}>분기</span>
+              <strong className={`${styles.statValue} ${styles.mobileSummaryValue}`}>{getMobileQuarterLabel(draft)}</strong>
             </article>
             <div className={styles.mobileSummaryActionStack}>
               <button
                 type="button"
-                className="app-button app-button-secondary"
-                style={{ width: '100%', height: '100%', minHeight: '80px', padding: '0 8px' }}
+                className={`app-button app-button-secondary ${styles.mobileSummaryTallButton}`}
                 onClick={() => setDocumentInfoOpen(true)}
               >
                 문서정보
@@ -606,8 +605,7 @@ export function MobileQuarterlyReportScreen({ quarterKey, siteKey }: MobileQuart
               <div className={styles.mobileSummaryExportStack}>
                 <button
                   type="button"
-                  className="app-button app-button-secondary"
-                  style={{ width: '100%', minHeight: '36px', padding: '0 8px' }}
+                  className={`app-button app-button-secondary ${styles.mobileSummaryMiniButton}`}
                   disabled={isGeneratingHwpx || isGeneratingPdf}
                   onClick={() => void handleDownloadHwpx()}
                 >
@@ -615,8 +613,7 @@ export function MobileQuarterlyReportScreen({ quarterKey, siteKey }: MobileQuart
                 </button>
                 <button
                   type="button"
-                  className="app-button app-button-secondary"
-                  style={{ width: '100%', minHeight: '36px', padding: '0 8px' }}
+                  className={`app-button app-button-secondary ${styles.mobileSummaryMiniButton}`}
                   disabled={isGeneratingHwpx || isGeneratingPdf}
                   onClick={() => void handleDownloadPdf()}
                 >
@@ -626,8 +623,7 @@ export function MobileQuarterlyReportScreen({ quarterKey, siteKey }: MobileQuart
             </div>
             <button
               type="button"
-              className="app-button app-button-secondary"
-              style={{ width: '100%', height: '100%', minHeight: '80px', padding: '0 8px' }}
+              className={`app-button app-button-secondary ${styles.mobileSummaryTallButton}`}
               disabled={isSaving || isGeneratingHwpx || isGeneratingPdf}
               onClick={() =>
                 void handleSave().catch((error) =>

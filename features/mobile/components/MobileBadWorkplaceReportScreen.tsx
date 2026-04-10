@@ -430,7 +430,7 @@ export function MobileBadWorkplaceReportScreen({
         )}
       >
         <section
-          className={styles.sectionCard}
+          className={`${styles.sectionCard} ${styles.mobileSummarySection}`}
           style={{
             marginBottom: 0,
             borderRadius: '0 0 8px 8px',
@@ -439,17 +439,16 @@ export function MobileBadWorkplaceReportScreen({
           }}
         >
           <div className={`${styles.statGrid} ${styles.mobileSummaryGrid}`}>
-            <article className={styles.statCard}>
-              <span className={styles.statLabel}>신고월</span>
-              <strong className={styles.statValue}>
+            <article className={`${styles.statCard} ${styles.mobileSummaryCard}`}>
+              <span className={`${styles.statLabel} ${styles.mobileSummaryLabel}`}>신고월</span>
+              <strong className={`${styles.statValue} ${styles.mobileSummaryValue}`}>
                 {formatMobileReportMonth(draft.reportMonth)}
               </strong>
             </article>
             <div className={styles.mobileSummaryActionStack}>
               <button
                 type="button"
-                className="app-button app-button-secondary"
-                style={{ width: '100%', height: '100%', minHeight: '80px', padding: '0 8px' }}
+                className={`app-button app-button-secondary ${styles.mobileSummaryTallButton}`}
                 onClick={() => setDocumentInfoOpen(true)}
               >
                 문서정보
@@ -457,8 +456,7 @@ export function MobileBadWorkplaceReportScreen({
               <div className={styles.mobileSummaryExportStack}>
                 <button
                   type="button"
-                  className="app-button app-button-secondary"
-                  style={{ width: '100%', minHeight: '36px', padding: '0 8px' }}
+                  className={`app-button app-button-secondary ${styles.mobileSummaryMiniButton}`}
                   disabled={isGeneratingHwpx || isGeneratingPdf}
                   onClick={() => void handleDownloadHwpx()}
                 >
@@ -466,8 +464,7 @@ export function MobileBadWorkplaceReportScreen({
                 </button>
                 <button
                   type="button"
-                  className="app-button app-button-secondary"
-                  style={{ width: '100%', minHeight: '36px', padding: '0 8px' }}
+                  className={`app-button app-button-secondary ${styles.mobileSummaryMiniButton}`}
                   disabled={isGeneratingHwpx || isGeneratingPdf}
                   onClick={() => void handleDownloadPdf()}
                 >
@@ -477,8 +474,7 @@ export function MobileBadWorkplaceReportScreen({
             </div>
             <button
               type="button"
-              className="app-button app-button-secondary"
-              style={{ width: '100%', height: '100%', minHeight: '80px', padding: '0 8px' }}
+              className={`app-button app-button-secondary ${styles.mobileSummaryTallButton}`}
               disabled={isSaving || isGeneratingHwpx || isGeneratingPdf}
               onClick={() =>
                 void handleSave().catch((error) =>

@@ -732,34 +732,32 @@ export function MobileInspectionSessionScreen({
       webHref={`/sessions/${encodeURIComponent(sessionId)}`}
       webLabel="웹에서 전체 편집"
     >
-      <section className={styles.sectionCard} style={{ marginBottom: 0, borderRadius: '0 0 8px 8px', borderBottom: 'none', flexShrink: 0 }}>
+      <section className={`${styles.sectionCard} ${styles.mobileSummarySection}`} style={{ marginBottom: 0, borderRadius: '0 0 8px 8px', borderBottom: 'none', flexShrink: 0 }}>
         <div className={`${styles.statGrid} ${hasLoadedSessionPayload ? styles.mobileInspectionSummaryGrid : ''}`}>
-          <article className={styles.statCard}>
-            <span className={styles.statLabel}>진행률</span>
-            <strong className={styles.statValue}>{screen.displayProgress.percentage}%</strong>
+          <article className={`${styles.statCard} ${styles.mobileSummaryCard}`}>
+            <span className={`${styles.statLabel} ${styles.mobileSummaryLabel}`}>진행률</span>
+            <strong className={`${styles.statValue} ${styles.mobileSummaryValue}`}>{screen.displayProgress.percentage}%</strong>
           </article>
-          <article className={styles.statCard}>
-            <span className={styles.statLabel}>지도일</span>
-            <strong className={styles.statValue}>
+          <article className={`${styles.statCard} ${styles.mobileSummaryCard}`}>
+            <span className={`${styles.statLabel} ${styles.mobileSummaryLabel}`}>지도일</span>
+            <strong className={`${styles.statValue} ${styles.mobileSummaryValue}`}>
               {formatCompactDate(getSessionGuidanceDate(displaySession))}
             </strong>
           </article>
           {hasLoadedSessionPayload ? (
             <button
               type="button"
-              className="app-button app-button-secondary"
-              style={{ width: '100%', height: '100%', minHeight: '80px', padding: '0 8px' }}
+              className={`app-button app-button-secondary ${styles.mobileSummaryTallButton}`}
               onClick={() => setDocumentInfoOpen(true)}
             >
               문서정보
             </button>
           ) : null}
           {hasLoadedSessionPayload ? (
-            <div style={{ display: 'grid', gap: '8px', minWidth: 0 }}>
+            <div className={styles.mobileSummaryExportStack} style={{ minWidth: 0 }}>
               <button
                 type="button"
-                className="app-button app-button-secondary"
-                style={{ width: '100%', minHeight: '36px', padding: '0 8px' }}
+                className={`app-button app-button-secondary ${styles.mobileSummaryMiniButton}`}
                 disabled={screen.isGeneratingHwpx || screen.isGeneratingPdf}
                 onClick={() => void screen.generateHwpxDocument()}
               >
@@ -767,8 +765,7 @@ export function MobileInspectionSessionScreen({
               </button>
               <button
                 type="button"
-                className="app-button app-button-secondary"
-                style={{ width: '100%', minHeight: '36px', padding: '0 8px' }}
+                className={`app-button app-button-secondary ${styles.mobileSummaryMiniButton}`}
                 disabled={screen.isGeneratingHwpx || screen.isGeneratingPdf}
                 onClick={() => void screen.generatePdfDocument()}
               >
@@ -779,8 +776,7 @@ export function MobileInspectionSessionScreen({
           {hasLoadedSessionPayload ? (
             <button
               type="button"
-              className="app-button app-button-secondary"
-              style={{ width: '100%', height: '100%', minHeight: '80px', padding: '0 8px' }}
+              className={`app-button app-button-secondary ${styles.mobileSummaryTallButton}`}
               disabled={screen.isSaving || screen.isGeneratingHwpx || screen.isGeneratingPdf}
               onClick={() => void screen.saveNow()}
             >
