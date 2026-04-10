@@ -107,6 +107,7 @@ export interface SafetyUser {
   position: string | null;
   organization_name: string | null;
   is_active: boolean;
+  auto_provisioned_from_excel?: boolean;
   created_at: string;
   updated_at: string;
   last_login_at: string | null;
@@ -673,6 +674,10 @@ export interface SafetyBackendExcelImportApplyRowResult {
   site_id: string;
   site_name: string;
   required_completion_fields: string[];
+  worker_match_status?: string;
+  matched_user_id?: string;
+  matched_user_email?: string;
+  placeholder_created?: boolean;
   message: string;
 }
 
@@ -683,6 +688,10 @@ export interface SafetyBackendExcelApplyResult {
     created_site_count: number;
     updated_site_count: number;
     completion_required_count: number;
+    matched_existing_user_count?: number;
+    created_placeholder_user_count?: number;
+    ambiguous_worker_match_count?: number;
+    created_assignment_count?: number;
   };
   rows: SafetyBackendExcelImportApplyRowResult[];
 }
@@ -975,6 +984,8 @@ export interface SafetyBackendAdminAnalyticsResponse {
     label: string;
     site_count: number;
     total_contract_amount: number;
+    visit_revenue: number;
+    planned_rounds: number;
   }>;
   employee_rows: Array<{
     assigned_site_count: number;
@@ -982,6 +993,8 @@ export interface SafetyBackendAdminAnalyticsResponse {
     completed_report_count: number;
     contract_contribution_revenue: number;
     overdue_count: number;
+    planned_revenue: number;
+    planned_rounds: number;
     quarterly_completed_count: number;
     total_assigned_rounds: number;
     user_id: string;
@@ -993,8 +1006,11 @@ export interface SafetyBackendAdminAnalyticsResponse {
     contract_contribution_revenue: number;
     contract_type_label: string;
     executed_rounds: number;
+    execution_rate: number;
     headquarter_name: string;
     href: string;
+    planned_revenue: number;
+    planned_rounds: number;
     site_name: string;
     visit_revenue: number;
   }>;
@@ -1004,11 +1020,20 @@ export interface SafetyBackendAdminAnalyticsResponse {
     counted_site_count: number;
     delay_rate: number;
     excluded_site_count: number;
+    planned_contract_revenue: number;
+    planned_rounds: number;
   };
   summary_cards: Array<{
     label: string;
     meta: string;
     value: string;
+  }>;
+  trend_rows: Array<{
+    month_key: string;
+    label: string;
+    revenue: number;
+    avg_per_visit_amount: number;
+    executed_rounds: number;
   }>;
 }
 

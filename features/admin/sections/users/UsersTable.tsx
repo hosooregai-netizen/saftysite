@@ -240,6 +240,11 @@ export function UsersTable({
                             {user.position || '직책 미입력'} ·{' '}
                             {user.organization_name || '소속 미입력'}
                           </div>
+                          {user.auto_provisioned_from_excel ? (
+                            <div className={styles.tableMetaRow}>
+                              <span className="app-chip app-chip-warning">자동 생성</span>
+                            </div>
+                          ) : null}
                         </td>
                         <td>{user.email}</td>
                         <td>{getUserRoleLabel(user.role)}</td>

@@ -59,6 +59,7 @@ export interface SafetyUserCreateInput {
 }
 
 export interface SafetyUserUpdateInput {
+  email?: string | null;
   name?: string | null;
   phone?: string | null;
   role?: SafetyUserRole | null;

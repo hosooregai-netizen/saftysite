@@ -27,6 +27,7 @@ interface UsersSectionProps {
   onSaveEdit: (
     id: string,
     input: {
+      email?: string | null;
       name?: string | null;
       phone?: string | null;
       role?: SafetyUser['role'];
@@ -48,6 +49,7 @@ export function UsersSection(props: UsersSectionProps) {
 
   const submit = async () => {
     if (!state.form.name.trim()) return;
+    if (!state.form.email.trim()) return;
 
     if (state.editingId === 'create') {
       if (!state.form.email.trim() || !state.form.password.trim()) return;

@@ -101,12 +101,17 @@
 
 .supportStrip {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 12px;
   padding: 14px 16px;
   border: 1px solid var(--erp-line);
   border-radius: var(--erp-radius-surface);
   background: #fbfcfe;
+}
+
+.loadingHint {
+  font-size: var(--text-ui-sm);
+  color: var(--erp-text-muted);
 }
 
 .supportItem {
@@ -236,6 +241,10 @@
   width: 13%;
 }
 
+.siteRateCol {
+  width: 11%;
+}
+
 .textCell {
   min-width: 0;
   overflow-wrap: anywhere;
@@ -293,6 +302,10 @@
   .detailTable th,
   .detailTable td {
     padding: 10px;
+  }
+
+  .supportStrip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

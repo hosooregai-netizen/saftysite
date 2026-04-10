@@ -1,10 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { useDeferredValue, useMemo, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { SITE_CONTRACT_TYPE_LABELS, formatCurrencyValue } from '@/lib/admin';
 import { parseSiteContractProfile } from '@/lib/admin/siteContractProfile';
+import { fetchAdminAnalytics } from '@/lib/admin/apiClient';
 import {
   buildSortMenuOptions,
   SortableHeaderCell,
@@ -12,21 +13,19 @@ import {
 import { SectionHeaderFilterMenu } from '@/features/admin/components/SectionHeaderFilterMenu';
 import { AnalyticsCharts } from '@/features/admin/sections/analytics/AnalyticsCharts';
 import {
-  buildAdminAnalyticsModel,
-  formatAnalyticsStatValue,
   getAnalyticsExportSheets,
+  formatAnalyticsStatValue,
+  type AdminAnalyticsModel,
   type AdminAnalyticsPeriod,
 } from '@/features/admin/lib/buildAdminControlCenterModel';
 import sharedStyles from '@/features/admin/sections/AdminSectionShared.module.css';
 import localStyles from '@/features/admin/sections/analytics/AnalyticsSection.module.css';
 import { exportAdminWorkbook } from '@/lib/admin/exportClient';
-import type { TableSortState } from '@/types/admin';
-import type { SafetyReportListItem } from '@/types/backend';
+import type { SafetyAdminAnalyticsResponse, TableSortState } from '@/types/admin';
 import type { ControllerDashboardData } from '@/types/controller';
 
 interface AnalyticsSectionProps {
   data: ControllerDashboardData;
-  reports: SafetyReportListItem[];
 }
 
 const PERIOD_LABELS: Record<AdminAnalyticsPeriod, string> = {
@@ -55,10 +54,28 @@ function formatRevenueChange(value: number | null) {
   return `${sign}${(value * 100).toFixed(1)}%`;
 }
 
-export function AnalyticsSection({
-  data,
-  reports,
-}: AnalyticsSectionProps) {
+const EMPTY_ANALYTICS: SafetyAdminAnalyticsResponse = {
+  contractTypeRows: [],
+  employeeRows: [],
+  siteRevenueRows: [],
+  stats: {
+    averagePerVisitAmount: 0,
+    completionRate: 0,
+    countedSiteCount: 0,
+    delayRate: 0,
+    excludedSiteCount: 0,
+    includedEmployeeCount: 0,
+    overdueCount: 0,
+    plannedContractRevenue: 0,
+    plannedRounds: 0,
+    totalExecutedRounds: 0,
+    totalVisitRevenue: 0,
+  },
+  summaryCards: [],
+  trendRows: [],
+};
+
+export function AnalyticsSection({ data }: AnalyticsSectionProps) {
   const searchParams = useSearchParams();
   const [query, setQuery] = useState(() => searchParams.get('query') || '');
   const [period, setPeriod] = useState<AdminAnalyticsPeriod>(() => {
@@ -83,6 +100,26 @@ export function AnalyticsSection({
     key: 'visitRevenue',
   });
   const deferredQuery = useDeferredValue(query);
+  const analyticsRequest = useMemo(
+    () => ({
+      contractType,
+      headquarterId,
+      period,
+      query: deferredQuery,
+      userId,
+    }),
+    [contractType, deferredQuery, headquarterId, period, userId],
+  );
+  const requestKey = useMemo(() => JSON.stringify(analyticsRequest), [analyticsRequest]);
+  const [analyticsState, setAnalyticsState] = useState<{
+    analytics: SafetyAdminAnalyticsResponse;
+    error: string | null;
+    requestKey: string;
+  }>({
+    analytics: EMPTY_ANALYTICS,
+    error: null,
+    requestKey: '',
+  });
   const contractTypeOptions = useMemo(() => {
     const seen = new Set<string>();
     return data.sites
@@ -108,17 +145,33 @@ export function AnalyticsSection({
       }));
   }, [data.sites]);
 
-  const analytics = useMemo(
-    () =>
-      buildAdminAnalyticsModel(data, reports, {
-        contractType,
-        headquarterId,
-        period,
-        query: deferredQuery,
-        userId,
-      }),
-    [contractType, data, deferredQuery, headquarterId, period, reports, userId],
-  );
+  useEffect(() => {
+    let cancelled = false;
+    void fetchAdminAnalytics(analyticsRequest)
+      .then((response) => {
+        if (cancelled) return;
+        setAnalyticsState({
+          analytics: response,
+          error: null,
+          requestKey,
+        });
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setAnalyticsState({
+          analytics: EMPTY_ANALYTICS,
+          error: error instanceof Error ? error.message : '실적/매출 데이터를 불러오지 못했습니다.',
+          requestKey,
+        });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [analyticsRequest, requestKey]);
+
+  const analytics = analyticsState.requestKey === requestKey ? analyticsState.analytics : EMPTY_ANALYTICS;
+  const loadError = analyticsState.requestKey === requestKey ? analyticsState.error : null;
+  const isLoading = analyticsState.requestKey !== requestKey;
 
   const activeFilterCount =
     (period !== 'month' ? 1 : 0) +
@@ -143,6 +196,10 @@ export function AnalyticsSection({
           return (left.avgPerVisitAmount - right.avgPerVisitAmount) * direction;
         case 'overdueCount':
           return (left.overdueCount - right.overdueCount) * direction;
+        case 'plannedRounds':
+          return (left.plannedRounds - right.plannedRounds) * direction;
+        case 'plannedRevenue':
+          return (left.plannedRevenue - right.plannedRevenue) * direction;
         case 'completionRate':
           return (left.completionRate - right.completionRate) * direction;
         case 'revenueChangeRate':
@@ -167,6 +224,12 @@ export function AnalyticsSection({
           return left.contractTypeLabel.localeCompare(right.contractTypeLabel, 'ko') * direction;
         case 'executedRounds':
           return (left.executedRounds - right.executedRounds) * direction;
+        case 'plannedRounds':
+          return (left.plannedRounds - right.plannedRounds) * direction;
+        case 'plannedRevenue':
+          return (left.plannedRevenue - right.plannedRevenue) * direction;
+        case 'executionRate':
+          return (left.executionRate - right.executionRate) * direction;
         case 'avgPerVisitAmount':
           return (left.avgPerVisitAmount - right.avgPerVisitAmount) * direction;
         case 'visitRevenue':
@@ -180,7 +243,7 @@ export function AnalyticsSection({
     exportAdminWorkbook(
       'analytics',
       getAnalyticsExportSheets({
-        ...analytics,
+        ...(analytics as AdminAnalyticsModel),
         employeeRows: sortedEmployeeRows,
         siteRevenueRows: sortedSiteRevenueRows,
       }),
@@ -314,6 +377,9 @@ export function AnalyticsSection({
           </div>
         </div>
         <div className={`${sharedStyles.sectionBody} ${localStyles.summaryBody}`}>
+          {loadError ? (
+            <div className={sharedStyles.tableEmpty}>{loadError}</div>
+          ) : null}
           <div className={localStyles.scopeBar}>
             {scopeChips.map((chip) => (
               <div key={`${chip.label}-${chip.value}`} className={localStyles.scopeChip}>
@@ -344,6 +410,10 @@ export function AnalyticsSection({
               <strong className={localStyles.supportValue}>{analytics.stats.totalExecutedRounds}회</strong>
             </div>
             <div className={localStyles.supportItem}>
+              <span className={localStyles.supportLabel}>예정 회차</span>
+              <strong className={localStyles.supportValue}>{analytics.stats.plannedRounds}회</strong>
+            </div>
+            <div className={localStyles.supportItem}>
               <span className={localStyles.supportLabel}>완료율</span>
               <strong className={localStyles.supportValue}>
                 {formatAnalyticsStatValue('percent', analytics.stats.completionRate)}
@@ -363,6 +433,7 @@ export function AnalyticsSection({
               </span>
             </div>
           </div>
+          {isLoading ? <div className={localStyles.loadingHint}>실적/매출 데이터를 불러오는 중입니다.</div> : null}
         </div>
       </section>
 
@@ -417,6 +488,8 @@ export function AnalyticsSection({
                       <col className={localStyles.employeeCountCol} />
                       <col className={localStyles.employeeCountCol} />
                       <col className={localStyles.employeeMoneyCol} />
+                      <col className={localStyles.employeeCountCol} />
+                      <col className={localStyles.employeeMoneyCol} />
                       <col className={localStyles.employeeMoneyCol} />
                       <col className={localStyles.employeeDeltaCol} />
                       <col className={localStyles.employeeCountCol} />
@@ -438,10 +511,24 @@ export function AnalyticsSection({
                           onChange={setEmployeeSort}
                         />
                         <SortableHeaderCell
+                          column={{ key: 'plannedRounds' }}
+                          current={employeeSort}
+                          defaultDirection="desc"
+                          label="예정 회차"
+                          onChange={setEmployeeSort}
+                        />
+                        <SortableHeaderCell
                           column={{ key: 'executedRounds' }}
                           current={employeeSort}
                           defaultDirection="desc"
                           label="회차"
+                          onChange={setEmployeeSort}
+                        />
+                        <SortableHeaderCell
+                          column={{ key: 'plannedRevenue' }}
+                          current={employeeSort}
+                          defaultDirection="desc"
+                          label="예정 매출"
                           onChange={setEmployeeSort}
                         />
                         <SortableHeaderCell
@@ -488,7 +575,9 @@ export function AnalyticsSection({
                             <div className={sharedStyles.tablePrimary}>{row.userName}</div>
                           </td>
                           <td className={localStyles.numberCell}>{row.assignedSiteCount}개</td>
+                          <td className={localStyles.numberCell}>{row.plannedRounds}회</td>
                           <td className={localStyles.numberCell}>{row.executedRounds}회</td>
+                          <td className={localStyles.numberCell}>{formatCurrencyValue(row.plannedRevenue)}</td>
                           <td className={localStyles.numberCell}>{formatCurrencyValue(row.visitRevenue)}</td>
                           <td className={localStyles.numberCell}>{formatCurrencyValue(row.avgPerVisitAmount)}</td>
                           <td className={`${localStyles.numberCell} ${getDeltaClassName(
@@ -537,8 +626,11 @@ export function AnalyticsSection({
                       <col className={localStyles.siteBusinessCol} />
                       <col className={localStyles.siteTypeCol} />
                       <col className={localStyles.siteCountCol} />
+                      <col className={localStyles.siteCountCol} />
                       <col className={localStyles.siteMoneyCol} />
                       <col className={localStyles.siteMoneyCol} />
+                      <col className={localStyles.siteMoneyCol} />
+                      <col className={localStyles.siteRateCol} />
                     </colgroup>
                     <thead>
                       <tr>
@@ -573,6 +665,13 @@ export function AnalyticsSection({
                           })}
                         />
                         <SortableHeaderCell
+                          column={{ key: 'plannedRounds' }}
+                          current={siteRevenueSort}
+                          defaultDirection="desc"
+                          label="예정 회차"
+                          onChange={setSiteRevenueSort}
+                        />
+                        <SortableHeaderCell
                           column={{ key: 'executedRounds' }}
                           current={siteRevenueSort}
                           defaultDirection="desc"
@@ -580,10 +679,24 @@ export function AnalyticsSection({
                           onChange={setSiteRevenueSort}
                         />
                         <SortableHeaderCell
+                          column={{ key: 'plannedRevenue' }}
+                          current={siteRevenueSort}
+                          defaultDirection="desc"
+                          label="계약금액"
+                          onChange={setSiteRevenueSort}
+                        />
+                        <SortableHeaderCell
                           column={{ key: 'visitRevenue' }}
                           current={siteRevenueSort}
                           defaultDirection="desc"
                           label="매출"
+                          onChange={setSiteRevenueSort}
+                        />
+                        <SortableHeaderCell
+                          column={{ key: 'executionRate' }}
+                          current={siteRevenueSort}
+                          defaultDirection="desc"
+                          label="실행률"
                           onChange={setSiteRevenueSort}
                         />
                         <SortableHeaderCell
@@ -605,8 +718,13 @@ export function AnalyticsSection({
                           </td>
                           <td className={localStyles.textCell}>{row.headquarterName}</td>
                           <td className={localStyles.textCell}>{row.contractTypeLabel}</td>
+                          <td className={localStyles.numberCell}>{row.plannedRounds}회</td>
                           <td className={localStyles.numberCell}>{row.executedRounds}회</td>
+                          <td className={localStyles.numberCell}>{formatCurrencyValue(row.plannedRevenue)}</td>
                           <td className={localStyles.numberCell}>{formatCurrencyValue(row.visitRevenue)}</td>
+                          <td className={localStyles.numberCell}>
+                            {formatAnalyticsStatValue('percent', row.executionRate)}
+                          </td>
                           <td className={localStyles.numberCell}>{formatCurrencyValue(row.avgPerVisitAmount)}</td>
                         </tr>
                       ))}

@@ -128,7 +128,6 @@ function renderAdminSection(
       return (
         <AnalyticsSection
           data={dashboard.data}
-          reports={dashboard.reportList}
         />
       );
     case 'mailbox':

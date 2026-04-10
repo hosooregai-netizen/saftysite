@@ -217,6 +217,8 @@ export interface AdminAnalyticsEmployeeRow {
   avgPerVisitAmount: number;
   completionRate: number;
   overdueCount: number;
+  plannedRevenue: number;
+  plannedRounds: number;
   primaryContractTypeLabel: string;
   revenueChangeRate: number | null;
   totalAssignedRounds: number;
@@ -230,8 +232,11 @@ export interface AdminAnalyticsSiteRevenueRow {
   avgPerVisitAmount: number;
   contractTypeLabel: string;
   executedRounds: number;
+  executionRate: number;
   headquarterName: string;
   href: string;
+  plannedRevenue: number;
+  plannedRounds: number;
   siteId: string;
   siteName: string;
   visitRevenue: number;
@@ -241,6 +246,7 @@ export interface AdminAnalyticsContractTypeRow {
   avgPerVisitAmount: number;
   executedRounds: number;
   label: string;
+  plannedRounds: number;
   siteCount: number;
   shareRate: number;
   totalContractAmount: number;
@@ -255,6 +261,8 @@ export interface AdminAnalyticsStats {
   excludedSiteCount: number;
   includedEmployeeCount: number;
   overdueCount: number;
+  plannedContractRevenue: number;
+  plannedRounds: number;
   totalExecutedRounds: number;
   totalVisitRevenue: number;
 }
@@ -1631,6 +1639,10 @@ export function buildAdminAnalyticsModel(
         const profile = parseSiteContractProfile(sitesById.get(siteId) ?? null);
         return sum + (profile.totalRounds ?? 0);
       }, 0);
+      const plannedRevenue = assignedSiteIds.reduce((sum, siteId) => {
+        const profile = parseSiteContractProfile(sitesById.get(siteId) ?? null);
+        return sum + (profile.totalContractAmount ?? 0);
+      }, 0);
       const visitRevenue = sumVisitRevenue(userCurrentGuidanceRows);
       const executedRounds = countExecutedRounds(userCurrentGuidanceRows);
       const previousRevenue = sumVisitRevenue(userPreviousGuidanceRows);
@@ -1648,6 +1660,8 @@ export function buildAdminAnalyticsModel(
             completionRate:
               totalAssignedRoundsForUser > 0 ? executedRounds / totalAssignedRoundsForUser : 0,
             overdueCount: userCurrentRows.filter((row) => row.isOverdue).length,
+            plannedRevenue,
+            plannedRounds: totalAssignedRoundsForUser,
             primaryContractTypeLabel: resolvePrimaryContractTypeLabel(
               assignedSiteIds.length > 0
                 ? assignedSiteIds
@@ -1673,6 +1687,8 @@ export function buildAdminAnalyticsModel(
       const profile = parseSiteContractProfile(site);
       const visitRevenue = sumVisitRevenue(currentGuidanceRows);
       const executedRounds = countExecutedRounds(currentGuidanceRows);
+      const plannedRevenue = profile.totalContractAmount ?? 0;
+      const plannedRounds = profile.totalRounds ?? 0;
       const contractTypeLabel = getContractTypeDisplayLabel(getContractBucketKey(profile));
       const matchesQuery = normalizedQuery
         ? matchesAnalyticsQuery(
@@ -1689,12 +1705,15 @@ export function buildAdminAnalyticsModel(
         avgPerVisitAmount: calculateAveragePerVisitAmount(visitRevenue, executedRounds),
         contractTypeLabel,
         executedRounds,
+        executionRate: plannedRounds > 0 ? executedRounds / plannedRounds : 0,
         headquarterName: site.headquarter_detail?.name || site.headquarter?.name || '-',
         href: getAdminSectionHref('headquarters', {
           headquarterId: site.headquarter_id,
           siteId: site.id,
         }),
         matchesQuery,
+        plannedRevenue,
+        plannedRounds,
         siteId: site.id,
         siteName: site.site_name,
         visitRevenue,
@@ -1704,14 +1723,22 @@ export function buildAdminAnalyticsModel(
       if (normalizedQuery) {
         return row.matchesQuery || queriedDetailRows.some((item) => item.siteId === row.siteId);
       }
-      return row.executedRounds > 0 || row.visitRevenue > 0;
+      return (
+        row.executedRounds > 0 ||
+        row.visitRevenue > 0 ||
+        row.plannedRounds > 0 ||
+        row.plannedRevenue > 0
+      );
     })
     .map((row) => ({
       avgPerVisitAmount: row.avgPerVisitAmount,
       contractTypeLabel: row.contractTypeLabel,
       executedRounds: row.executedRounds,
+      executionRate: row.executionRate,
       headquarterName: row.headquarterName,
       href: row.href,
+      plannedRevenue: row.plannedRevenue,
+      plannedRounds: row.plannedRounds,
       siteId: row.siteId,
       siteName: row.siteName,
       visitRevenue: row.visitRevenue,
@@ -1748,6 +1775,7 @@ export function buildAdminAnalyticsModel(
             : 0,
         executedRounds,
         label: getContractTypeDisplayLabel(key),
+        plannedRounds: sites.reduce((sum, site) => sum + (parseSiteContractProfile(site).totalRounds ?? 0), 0),
         siteCount: sites.length,
         shareRate: totalContractTypeRevenue > 0 ? visitRevenue / totalContractTypeRevenue : 0,
         totalContractAmount: sites.reduce((sum, site) => {
@@ -1766,6 +1794,14 @@ export function buildAdminAnalyticsModel(
     );
 
   const includedRevenueSites = visibleSites.filter((site) => hasRevenueProfile(parseSiteContractProfile(site)));
+  const totalPlannedRevenue = visibleSites.reduce((sum, site) => {
+    const profile = parseSiteContractProfile(site);
+    return sum + (profile.totalContractAmount ?? 0);
+  }, 0);
+  const totalPlannedRounds = visibleSites.reduce((sum, site) => {
+    const profile = parseSiteContractProfile(site);
+    return sum + (profile.totalRounds ?? 0);
+  }, 0);
   const stats: AdminAnalyticsStats = {
     averagePerVisitAmount: currentPeriodAveragePerVisitAmount,
     completionRate: totalAssignedRounds > 0 ? totalExecutedRounds / totalAssignedRounds : 0,
@@ -1774,6 +1810,8 @@ export function buildAdminAnalyticsModel(
     excludedSiteCount: visibleSites.length - includedRevenueSites.length,
     includedEmployeeCount: userLoadRows.length,
     overdueCount: totalOverdueCount,
+    plannedContractRevenue: totalPlannedRevenue,
+    plannedRounds: totalPlannedRounds,
     totalExecutedRounds,
     totalVisitRevenue,
   };
@@ -1852,6 +1890,22 @@ export function buildAdminAnalyticsModel(
         meta: `${getCurrentWindowLabel(filters.period)} · 완료 회차 기준`,
         value: formatCurrencyValue(currentPeriodRevenuePerEmployee),
       },
+      {
+        deltaLabel: '계약 기준',
+        deltaTone: 'neutral',
+        deltaValue: '비교 없음',
+        label: '계약 예정 매출',
+        meta: '현장 계약 기준',
+        value: formatCurrencyValue(totalPlannedRevenue),
+      },
+      {
+        deltaLabel: '계약 기준',
+        deltaTone: 'neutral',
+        deltaValue: '비교 없음',
+        label: '예정 회차',
+        meta: '현장 계약 기준',
+        value: `${totalPlannedRounds}회`,
+      },
     ],
     trendRows: buildTrendRows(scopedGuidanceRows, today),
   };
@@ -1896,7 +1950,9 @@ export function getAnalyticsExportSheets(model: AdminAnalyticsModel) {
       columns: [
         { key: 'userName', label: '직원명' },
         { key: 'assignedSiteCount', label: '운영 현장 수' },
+        { key: 'plannedRounds', label: '예정 회차' },
         { key: 'executedRounds', label: '실행 회차' },
+        { key: 'plannedRevenue', label: '예정 매출' },
         { key: 'visitRevenue', label: '매출' },
         { key: 'avgPerVisitAmount', label: '평균 회차 단가' },
         { key: 'overdueCount', label: '지연 건수' },
@@ -1910,6 +1966,8 @@ export function getAnalyticsExportSheets(model: AdminAnalyticsModel) {
         completionRate: formatAnalyticsStatValue('percent', row.completionRate),
         executedRounds: row.executedRounds,
         overdueCount: row.overdueCount,
+        plannedRevenue: formatCurrencyValue(row.plannedRevenue),
+        plannedRounds: `${row.plannedRounds}회`,
         primaryContractTypeLabel: row.primaryContractTypeLabel,
         revenueChangeRate: formatDeltaValue(row.revenueChangeRate),
         userName: row.userName,
@@ -1922,15 +1980,21 @@ export function getAnalyticsExportSheets(model: AdminAnalyticsModel) {
         { key: 'siteName', label: '현장명' },
         { key: 'headquarterName', label: '사업장' },
         { key: 'contractTypeLabel', label: '계약유형' },
+        { key: 'plannedRounds', label: '예정 회차' },
         { key: 'executedRounds', label: '실행 회차' },
+        { key: 'plannedRevenue', label: '계약금액' },
         { key: 'visitRevenue', label: '매출' },
+        { key: 'executionRate', label: '실행률' },
         { key: 'avgPerVisitAmount', label: '평균 회차 단가' },
       ],
       rows: model.siteRevenueRows.map((row) => ({
         avgPerVisitAmount: formatCurrencyValue(row.avgPerVisitAmount),
         contractTypeLabel: row.contractTypeLabel,
         executedRounds: row.executedRounds,
+        executionRate: formatAnalyticsStatValue('percent', row.executionRate),
         headquarterName: row.headquarterName,
+        plannedRevenue: formatCurrencyValue(row.plannedRevenue),
+        plannedRounds: `${row.plannedRounds}회`,
         siteName: row.siteName,
         visitRevenue: formatCurrencyValue(row.visitRevenue),
       })),
@@ -1940,6 +2004,7 @@ export function getAnalyticsExportSheets(model: AdminAnalyticsModel) {
       columns: [
         { key: 'label', label: '계약유형' },
         { key: 'siteCount', label: '현장 수' },
+        { key: 'plannedRounds', label: '예정 회차' },
         { key: 'executedRounds', label: '회차 수' },
         { key: 'visitRevenue', label: '매출' },
         { key: 'totalContractAmount', label: '총 계약금액' },
@@ -1950,6 +2015,7 @@ export function getAnalyticsExportSheets(model: AdminAnalyticsModel) {
         avgPerVisitAmount: formatCurrencyValue(row.avgPerVisitAmount),
         executedRounds: `${row.executedRounds}회`,
         label: row.label,
+        plannedRounds: `${row.plannedRounds}회`,
         shareRate: formatAnalyticsStatValue('percent', row.shareRate),
         siteCount: row.siteCount,
         totalContractAmount: formatCurrencyValue(row.totalContractAmount),

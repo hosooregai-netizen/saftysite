@@ -400,10 +400,11 @@ export function mapBackendAnalyticsResponse(
       avgPerVisitAmount: row.avg_per_visit_amount,
       executedRounds: 0,
       label: normalizeText(row.label),
+      plannedRounds: row.planned_rounds ?? 0,
       siteCount: row.site_count,
       shareRate: totalContractAmount > 0 ? row.total_contract_amount / totalContractAmount : 0,
       totalContractAmount: row.total_contract_amount,
-      visitRevenue: 0,
+      visitRevenue: row.visit_revenue ?? 0,
     })),
     employeeRows: response.employee_rows.map((row) => ({
       assignedSiteCount: row.assigned_site_count,
@@ -412,6 +413,8 @@ export function mapBackendAnalyticsResponse(
       completionRate:
         row.total_assigned_rounds > 0 ? row.executed_rounds / row.total_assigned_rounds : 0,
       overdueCount: row.overdue_count,
+      plannedRevenue: row.planned_revenue ?? 0,
+      plannedRounds: row.planned_rounds ?? 0,
       primaryContractTypeLabel: '',
       revenueChangeRate: null,
       totalAssignedRounds: row.total_assigned_rounds,
@@ -425,8 +428,11 @@ export function mapBackendAnalyticsResponse(
         row.executed_rounds > 0 ? row.visit_revenue / row.executed_rounds : 0,
       contractTypeLabel: normalizeText(row.contract_type_label),
       executedRounds: row.executed_rounds,
+      executionRate: row.execution_rate ?? 0,
       headquarterName: normalizeText(row.headquarter_name),
       href: normalizeText(row.href),
+      plannedRevenue: row.planned_revenue ?? 0,
+      plannedRounds: row.planned_rounds ?? 0,
       siteId: normalizeText(row.href) || normalizeText(row.site_name),
       siteName: normalizeText(row.site_name),
       visitRevenue: row.visit_revenue,
@@ -439,6 +445,8 @@ export function mapBackendAnalyticsResponse(
       excludedSiteCount: response.stats.excluded_site_count,
       includedEmployeeCount: response.employee_rows.length,
       overdueCount: totalOverdueCount,
+      plannedContractRevenue: response.stats.planned_contract_revenue ?? 0,
+      plannedRounds: response.stats.planned_rounds ?? 0,
       totalExecutedRounds,
       totalVisitRevenue,
     },
@@ -450,7 +458,15 @@ export function mapBackendAnalyticsResponse(
       meta: normalizeText(card.meta),
       value: normalizeText(card.value),
     })),
-    trendRows: [],
+    trendRows: Array.isArray(response.trend_rows)
+      ? response.trend_rows.map((row) => ({
+          avgPerVisitAmount: row.avg_per_visit_amount,
+          executedRounds: row.executed_rounds,
+          label: normalizeText(row.label),
+          monthKey: normalizeText(row.month_key),
+          revenue: row.revenue,
+        }))
+      : [],
   };
 }
 
@@ -638,6 +654,10 @@ export function mapBackendExcelApplyResult(
       createdSiteCount: response.summary?.created_site_count ?? 0,
       updatedSiteCount: response.summary?.updated_site_count ?? 0,
       completionRequiredCount: response.summary?.completion_required_count ?? 0,
+      matchedExistingUserCount: response.summary?.matched_existing_user_count ?? 0,
+      createdPlaceholderUserCount: response.summary?.created_placeholder_user_count ?? 0,
+      ambiguousWorkerMatchCount: response.summary?.ambiguous_worker_match_count ?? 0,
+      createdAssignmentCount: response.summary?.created_assignment_count ?? 0,
     },
     rows: Array.isArray(response.rows)
       ? response.rows.map((row) => ({
@@ -650,6 +670,10 @@ export function mapBackendExcelApplyResult(
           requiredCompletionFields: Array.isArray(row.required_completion_fields)
             ? row.required_completion_fields.map((item) => normalizeText(item)).filter(Boolean)
             : [],
+          workerMatchStatus: normalizeText(row.worker_match_status),
+          matchedUserId: normalizeText(row.matched_user_id),
+          matchedUserEmail: normalizeText(row.matched_user_email),
+          placeholderCreated: Boolean(row.placeholder_created),
           message: normalizeText(row.message),
         }))
       : [],

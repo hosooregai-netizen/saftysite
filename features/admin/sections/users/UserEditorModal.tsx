@@ -70,7 +70,7 @@ export function UserEditorModal({
               autoComplete={editingId === 'create' ? 'username' : 'off'}
               value={form.email}
               onChange={(event) => onFormChange({ ...form, email: event.target.value })}
-              disabled={busy || editingId !== 'create'}
+              disabled={busy}
             />
           </label>
           <label className={styles.modalField}>
@@ -156,4 +156,3 @@ export function UserEditorModal({
     </AppModal>
   );
 }
-

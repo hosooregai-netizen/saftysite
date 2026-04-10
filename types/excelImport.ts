@@ -99,6 +99,10 @@ export interface ExcelApplyResultRow {
   siteId: string;
   siteName: string;
   requiredCompletionFields: string[];
+  workerMatchStatus?: string;
+  matchedUserId?: string;
+  matchedUserEmail?: string;
+  placeholderCreated?: boolean;
   message: string;
 }
 
@@ -109,6 +113,10 @@ export interface ExcelApplyResult {
     createdSiteCount: number;
     updatedSiteCount: number;
     completionRequiredCount: number;
+    matchedExistingUserCount?: number;
+    createdPlaceholderUserCount?: number;
+    ambiguousWorkerMatchCount?: number;
+    createdAssignmentCount?: number;
   };
   rows: ExcelApplyResultRow[];
 }

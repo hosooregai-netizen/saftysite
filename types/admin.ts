@@ -335,6 +335,8 @@ export interface AdminAnalyticsEmployeeRow {
   avgPerVisitAmount: number;
   completionRate: number;
   overdueCount: number;
+  plannedRevenue: number;
+  plannedRounds: number;
   primaryContractTypeLabel: string;
   revenueChangeRate: number | null;
   totalAssignedRounds: number;
@@ -348,8 +350,11 @@ export interface AdminAnalyticsSiteRevenueRow {
   avgPerVisitAmount: number;
   contractTypeLabel: string;
   executedRounds: number;
-  headquarterName: string;
+  executionRate: number;
+    headquarterName: string;
   href: string;
+  plannedRevenue: number;
+  plannedRounds: number;
   siteId: string;
   siteName: string;
   visitRevenue: number;
@@ -359,6 +364,7 @@ export interface AdminAnalyticsContractTypeRow {
   avgPerVisitAmount: number;
   executedRounds: number;
   label: string;
+  plannedRounds: number;
   siteCount: number;
   shareRate: number;
   totalContractAmount: number;
@@ -373,6 +379,8 @@ export interface AdminAnalyticsStats {
   excludedSiteCount: number;
   includedEmployeeCount: number;
   overdueCount: number;
+  plannedContractRevenue: number;
+  plannedRounds: number;
   totalExecutedRounds: number;
   totalVisitRevenue: number;
 }

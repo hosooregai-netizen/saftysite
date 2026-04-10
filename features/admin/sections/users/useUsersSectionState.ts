@@ -186,6 +186,7 @@ export function useUsersSectionState(
         ? toBackendUserRole(form.role, editingRoleSource)
         : undefined;
     const next = {
+      email: form.email.trim().toLowerCase(),
       name: form.name.trim(),
       phone: toNullableText(form.phone),
       role: nextRole,
@@ -194,6 +195,7 @@ export function useUsersSectionState(
       is_active: form.is_active,
     };
     const previous = {
+      email: initialForm.email.trim().toLowerCase(),
       name: initialForm.name.trim(),
       phone: toNullableText(initialForm.phone),
       role: initialForm.role,
@@ -208,6 +210,7 @@ export function useUsersSectionState(
           value !== undefined && previous[key as keyof typeof previous] !== value,
       ),
     ) as {
+      email?: string | null;
       name?: string | null;
       phone?: string | null;
       role?: SafetyUser['role'];
