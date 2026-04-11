@@ -9,6 +9,12 @@ export interface MailRecipient {
   name: string | null;
 }
 
+export interface MailAttachmentPayload {
+  filename: string;
+  contentType: string;
+  dataBase64: string;
+}
+
 export interface MailAccount {
   id: string;
   provider: MailProvider;

@@ -3,6 +3,7 @@
 import { readSafetyAuthToken, SafetyApiError } from '@/lib/safetyApi';
 import type {
   MailAccount,
+  MailAttachmentPayload,
   MailMessage,
   MailOAuthStartPayload,
   MailProviderStatus,
@@ -205,6 +206,7 @@ export async function fetchMailMessage(messageId: string) {
 
 export async function sendMail(input: {
   accountId: string;
+  attachments?: MailAttachmentPayload[];
   body: string;
   headquarterId?: string;
   reportKey?: string;
@@ -217,6 +219,11 @@ export async function sendMail(input: {
     method: 'POST',
     body: JSON.stringify({
       account_id: input.accountId,
+      attachments: (input.attachments || []).map((attachment) => ({
+        content_type: attachment.contentType,
+        data_base64: attachment.dataBase64,
+        filename: attachment.filename,
+      })),
       body: input.body,
       headquarter_id: input.headquarterId || '',
       report_key: input.reportKey || '',

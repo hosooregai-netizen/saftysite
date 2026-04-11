@@ -6,6 +6,12 @@ import AppModal from '@/components/ui/AppModal';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import {
+  fetchBadWorkplacePdfDocumentByReportKeyWithFallback,
+  fetchInspectionPdfDocumentByReportKeyWithFallback,
+  fetchQuarterlyPdfDocumentByReportKeyWithFallback,
+} from '@/lib/api';
+import { normalizeControllerReportType } from '@/lib/admin/reportMeta';
+import {
   disconnectMailAccount,
   fetchMailAccounts,
   fetchMailProviderStatuses,
@@ -21,6 +27,7 @@ import type { SafetyReportListItem, SafetySite } from '@/types/backend';
 import type {
   MailAccount,
   MailAccountSyncMetadata,
+  MailAttachmentPayload,
   MailProviderStatus,
   MailThread,
   MailThreadDetail,
@@ -45,10 +52,13 @@ interface MailboxPanelProps {
 }
 
 interface MailboxReportOption {
+  documentKind: SafetyReportListItem['document_kind'] | null;
   headquarterId: string;
   headquarterName: string;
+  meta: Record<string, unknown>;
   recipientEmail: string;
   reportKey: string;
+  reportType: SafetyReportListItem['report_type'] | null;
   reportTitle: string;
   siteId: string;
   siteName: string;
@@ -401,6 +411,51 @@ function persistDemoMailboxMode(nextValue: boolean) {
   window.sessionStorage.removeItem(MAILBOX_DEMO_SESSION_KEY);
 }
 
+function encodeByteArrayToBase64(bytes: Uint8Array) {
+  let binary = '';
+  const chunkSize = 0x8000;
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+  }
+  return btoa(binary);
+}
+
+async function blobToBase64(blob: Blob) {
+  return encodeByteArrayToBase64(new Uint8Array(await blob.arrayBuffer()));
+}
+
+function resolveSelectedReportType(report: Pick<MailboxReportOption, 'documentKind' | 'meta' | 'reportType'>) {
+  const metaReportKind =
+    report.meta && typeof report.meta.reportKind === 'string' ? report.meta.reportKind : report.documentKind || '';
+  return normalizeControllerReportType(report.reportType || metaReportKind);
+}
+
+async function buildReportAttachmentPayload(
+  report: SelectedReportContext,
+  authToken: string,
+): Promise<MailAttachmentPayload> {
+  const reportType = resolveSelectedReportType(report);
+  const exported =
+    reportType === 'bad_workplace'
+      ? await fetchBadWorkplacePdfDocumentByReportKeyWithFallback(report.reportKey, authToken)
+      : reportType === 'quarterly_report'
+        ? await fetchQuarterlyPdfDocumentByReportKeyWithFallback(report.reportKey, authToken)
+        : await fetchInspectionPdfDocumentByReportKeyWithFallback(report.reportKey, authToken);
+  return {
+    contentType: exported.blob.type || (exported.filename.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'application/octet-stream'),
+    dataBase64: await blobToBase64(exported.blob),
+    filename: exported.filename || `${report.reportKey || 'report'}.pdf`,
+  };
+}
+
+async function buildFileAttachmentPayload(file: File): Promise<MailAttachmentPayload> {
+  return {
+    contentType: file.type || 'application/octet-stream',
+    dataBase64: await blobToBase64(file),
+    filename: file.name,
+  };
+}
+
 export function MailboxPanel({
   mode,
   adminReports = [],
@@ -476,11 +531,14 @@ export function MailboxPanel({
         ? {
             headquarterId,
             headquarterName: '',
-            recipientEmail: '',
-            reportKey,
-            reportTitle: reportKey || '보고서',
-            siteId,
-            siteName: '',
+          recipientEmail: '',
+          documentKind: null,
+          meta: {},
+          reportKey,
+          reportType: null,
+          reportTitle: reportKey || '보고서',
+          siteId,
+          siteName: '',
             updatedAt: null,
             visitDate: null,
           }
@@ -531,7 +589,10 @@ export function MailboxPanel({
           headquarterName:
             matchedSite?.headquarter_detail?.name || matchedSite?.headquarter?.name || '',
           recipientEmail: matchedSite?.site_contact_email || '',
+          documentKind: item.document_kind ?? null,
+          meta: item.meta,
           reportKey: item.report_key,
+          reportType: item.report_type ?? null,
           reportTitle: item.report_title,
           siteId: item.site_id,
           siteName: matchedSite?.site_name || item.site_id,
@@ -588,7 +649,10 @@ export function MailboxPanel({
               headquarterId: item.headquarter_id || workerSite.headquarterId || '',
               headquarterName: workerSite.customerName || '',
               recipientEmail: workerSite.adminSiteSnapshot.siteContactEmail || '',
+              documentKind: item.document_kind ?? null,
+              meta: item.meta,
               reportKey: item.report_key,
+              reportType: item.report_type ?? null,
               reportTitle: item.report_title,
               siteId: item.site_id,
               siteName: workerSite.siteName,
@@ -1135,8 +1199,17 @@ export function MailboxPanel({
         : selectedReport?.headquarterId || '';
 
     try {
+      const authToken = readSafetyAuthToken();
+      const normalizedAttachments = await Promise.all(attachments.map((attachment) => buildFileAttachmentPayload(attachment.file)));
+      if (composeMode === 'report' && selectedReport?.reportKey) {
+        if (!authToken) {
+          throw new Error('보고서 첨부를 준비하려면 다시 로그인해 주세요.');
+        }
+        normalizedAttachments.unshift(await buildReportAttachmentPayload(selectedReport, authToken));
+      }
       await sendMail({
         accountId: selectedAccount.id,
+        attachments: normalizedAttachments,
         body: compose.body,
         headquarterId: selectedHeadquarterId,
         reportKey: selectedReportKey,
@@ -1146,8 +1219,8 @@ export function MailboxPanel({
         to: normalizedRecipients.map((email) => ({ email, name: null })),
       });
       setNotice(
-        attachments.length > 0
-          ? '메일을 발송했습니다. 첨부 파일은 아직 메일 API와 연결되지 않아 본 발송에는 포함되지 않았습니다.'
+        normalizedAttachments.length > 0
+          ? `메일을 발송했습니다. 첨부 ${normalizedAttachments.length}건을 함께 보냈습니다.`
           : '메일을 발송했습니다.',
       );
       if (composeMode === 'report') {
@@ -1702,6 +1775,7 @@ export function MailboxPanel({
                           <span className={localStyles.accountMeta}>
                             기본 수신자 {selectedReport.recipientEmail || '미등록'}
                           </span>
+                          <span className={localStyles.accountMeta}>발송 시 선택한 보고서 파일이 자동으로 첨부됩니다.</span>
                         </div>
                         <button
                           type="button"
