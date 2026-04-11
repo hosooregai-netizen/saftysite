@@ -119,12 +119,22 @@ export const SITE_STATUS_OPTIONS: Array<{ value: Exclude<SafetySiteStatus, 'dele
   { value: 'closed', label: '종료' },
 ];
 
+export function normalizeSiteStatusForDisplay(
+  value: string | null | undefined,
+): Exclude<SafetySiteStatus, 'deleted'> {
+  return value === 'planned' || value === 'active' || value === 'closed' ? value : 'active';
+}
+
 export const SITE_STATUS_LABELS: Record<SafetySiteStatus, string> = {
-  planned: '以鍮꾩쨷',
-  active: '?댁쁺以?',
-  closed: '醫낅즺',
-  deleted: '??젣',
+  planned: '준비중',
+  active: '운영중',
+  closed: '종료',
+  deleted: '삭제',
 };
+
+export function getSiteStatusLabel(value: string | null | undefined): string {
+  return SITE_STATUS_LABELS[normalizeSiteStatusForDisplay(value)];
+}
 
 export const CONTENT_TYPE_OPTIONS: Array<{
   value: SafetyContentType;

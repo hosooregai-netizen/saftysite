@@ -11,7 +11,8 @@ import {
 import { SectionHeaderFilterMenu } from '@/features/admin/components/SectionHeaderFilterMenu';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import {
-  SITE_STATUS_LABELS,
+  getSiteStatusLabel,
+  normalizeSiteStatusForDisplay,
   SITE_STATUS_OPTIONS,
   formatCurrencyValue,
   formatTimestamp,
@@ -135,10 +136,6 @@ function shouldIgnoreRowClick(target: EventTarget | null) {
   );
 }
 
-function normalizeSiteStatus(value: string | null | undefined): SafetySiteStatus {
-  return value === 'planned' || value === 'active' || value === 'closed' ? value : 'active';
-}
-
 function isPinnedTestSite(site: SafetySite) {
   const labels = [
     site.site_name,
@@ -224,7 +221,8 @@ export function SitesSection(props: SitesSectionProps) {
       const allAssignedNames = assignedUsers.map((user) => user.name);
 
       if (fallbackAssignedUser) allAssignedNames.push(fallbackAssignedUser.name);
-      if (statusFilter !== 'all' && site.status !== statusFilter) return false;
+      const normalizedStatus = normalizeSiteStatusForDisplay(site.status);
+      if (statusFilter !== 'all' && normalizedStatus !== statusFilter) return false;
       if (assignmentFilter === 'unassigned' && siteAssignments.length > 0) return false;
       if (!normalizedQuery) return true;
 
@@ -328,7 +326,7 @@ export function SitesSection(props: SitesSectionProps) {
     setForm({
       headquarter_id: site.headquarter_id,
       site_name: site.site_name,
-      status: normalizeSiteStatus(site.status),
+      status: normalizeSiteStatusForDisplay(site.status),
       labor_office: site.labor_office ?? '',
       guidance_officer_name: site.guidance_officer_name ?? '',
       site_address: site.site_address ?? '',
@@ -526,9 +524,7 @@ export function SitesSection(props: SitesSectionProps) {
             inspector_name: site.inspector_name || '',
             manager_name: site.manager_name || '',
             site_name: site.site_name,
-            status:
-              SITE_STATUS_LABELS[site.status as keyof typeof SITE_STATUS_LABELS] ||
-              site.status,
+            status: getSiteStatusLabel(site.status),
           };
         }),
       },
@@ -788,8 +784,7 @@ export function SitesSection(props: SitesSectionProps) {
                           {formatTimestamp(site.updated_at)}
                         </td>
                         <td>
-                          {SITE_STATUS_LABELS[site.status as keyof typeof SITE_STATUS_LABELS] ||
-                            site.status}
+                          {getSiteStatusLabel(site.status)}
                         </td>
                         <td>
                           <div
@@ -838,7 +833,10 @@ export function SitesSection(props: SitesSectionProps) {
                                     if (!busy) openEdit(site);
                                   },
                                 },
-                                ...SITE_STATUS_OPTIONS.filter((option) => option.value !== site.status).map((option) => ({
+                                ...SITE_STATUS_OPTIONS.filter(
+                                  (option) =>
+                                    option.value !== normalizeSiteStatusForDisplay(site.status),
+                                ).map((option) => ({
                                   label: `상태 변경: ${option.label}`,
                                   onSelect: () => {
                                     if (!busy) void onUpdate(site.id, { status: option.value });

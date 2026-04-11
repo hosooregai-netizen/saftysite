@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import { SitesSection } from '@/features/admin/sections/sites/SitesSection';
 import { SiteEntryHubPanel } from '@/features/home/components/SiteEntryHubPanel';
-import { SITE_STATUS_LABELS } from '@/lib/admin';
+import { getSiteStatusLabel } from '@/lib/admin';
 import { mapSafetySiteToInspectionSite } from '@/lib/safetyApiMappers/sites';
 import type { SafetySite, SafetyUser } from '@/types/backend';
 import type {
@@ -102,7 +102,7 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
   const hasSiteStatusScope = searchParams.has('siteStatus');
   const autoEditSiteId = searchParams.get('editSiteId');
   const siteStatusTitle =
-    siteStatusFilter === 'all' ? '현장 목록' : `${SITE_STATUS_LABELS[siteStatusFilter]} 현장`;
+    siteStatusFilter === 'all' ? '현장 목록' : `${getSiteStatusLabel(siteStatusFilter)} 현장`;
   const selectedInspectionSite = useMemo(
     () => (selectedSite ? mapSafetySiteToInspectionSite(selectedSite) : null),
     [selectedSite],
