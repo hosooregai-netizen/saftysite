@@ -1,6 +1,6 @@
 import type { MailAccount, MailMessage, MailThread, MailThreadDetail } from '@/types/mail';
 
-export type DemoMailboxTab = 'inbox' | 'sent';
+export type DemoMailboxTab = 'all' | 'inbox' | 'sent';
 
 export const MAILBOX_DEMO_SESSION_KEY = 'mailbox-demo-mode';
 
@@ -296,7 +296,8 @@ export function getDemoMailboxAccounts() {
 
 export function getDemoMailboxThreads(tab: DemoMailboxTab, query = '') {
   const normalizedQuery = query.trim().toLowerCase();
-  const source = tab === 'sent' ? sentThreads : [...inboxThreads, ...sentThreads];
+  const source =
+    tab === 'sent' ? sentThreads : tab === 'inbox' ? inboxThreads : [...inboxThreads, ...sentThreads];
   if (!normalizedQuery) {
     return source;
   }

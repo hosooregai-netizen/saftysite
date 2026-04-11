@@ -42,7 +42,7 @@ import {
 } from './demoMailboxData';
 import localStyles from './MailboxPanel.module.css';
 
-type MailboxTab = 'inbox' | 'sent';
+type MailboxTab = 'all' | 'inbox' | 'sent';
 type MailboxView = 'list' | 'thread' | 'compose';
 type ComposeMode = 'new' | 'reply' | 'report';
 
@@ -96,9 +96,13 @@ const THREAD_PAGE_SIZE = 50;
 const DEFAULT_SHARED_MAILBOX_EMAIL = 'safety-control@naverworks.local';
 const DEFAULT_SHARED_MAILBOX_NAME = '관제 공용 메일함';
 const MAILBOX_TAB_META: Record<MailboxTab, { empty: string; title: string }> = {
-  inbox: {
+  all: {
     title: '전체 메일함',
     empty: '연결된 계정이나 검색 조건에 맞는 메일이 없습니다.',
+  },
+  inbox: {
+    title: '받은편지함',
+    empty: '연결된 계정이나 검색 조건에 맞는 받은 메일이 없습니다.',
   },
   sent: {
     title: '보낸편지함',
@@ -393,8 +397,9 @@ function buildThreadTimestamp(thread: MailThread) {
 }
 
 function deriveMailboxTab(rawBox: string | null): MailboxTab {
+  if (rawBox === 'all') return 'all';
   if (rawBox === 'sent') return 'sent';
-  return 'inbox';
+  return 'inbox' === rawBox ? 'inbox' : 'all';
 }
 
 function deriveInitialComposeMode(input: {
@@ -486,7 +491,7 @@ export function MailboxPanel({
   const reportKey = searchParams.get('reportKey') || '';
   const siteId = searchParams.get('siteId') || '';
   const headquarterId = searchParams.get('headquarterId') || '';
-  const [tab, setTab] = useState<MailboxTab>('inbox');
+  const [tab, setTab] = useState<MailboxTab>('all');
   const [view, setView] = useState<MailboxView>('list');
   const [composeMode, setComposeMode] = useState<ComposeMode>('new');
   const [query, setQuery] = useState('');
@@ -528,7 +533,7 @@ export function MailboxPanel({
     const nextBox = searchParams.get('box');
     if (nextBox === 'accounts') {
       const nextSearchParams = new URLSearchParams(searchParams.toString());
-      nextSearchParams.set('box', 'inbox');
+      nextSearchParams.set('box', 'all');
       router.replace(`${pathname}?${nextSearchParams.toString()}`, { scroll: false });
       return;
     }
@@ -946,6 +951,18 @@ export function MailboxPanel({
     setSelectedThreadId(threadId);
     setThreadDetail(null);
     setView('thread');
+  };
+
+  const handleChangeMailboxTab = (nextTab: MailboxTab) => {
+    setTab(nextTab);
+    setSelectedThreadId('');
+    setThreadDetail(null);
+    setView('list');
+    setThreadOffset(0);
+    const nextSearchParams = new URLSearchParams(searchParams.toString());
+    nextSearchParams.set('box', nextTab);
+    nextSearchParams.delete('threadId');
+    router.replace(`${pathname}?${nextSearchParams.toString()}`, { scroll: false });
   };
 
   const handleBackToList = () => {
@@ -1553,6 +1570,21 @@ export function MailboxPanel({
                 <span className={localStyles.scopeText}>{listScopeMeta.join(' · ')}</span>
               </div>
             ) : null}
+            {!showMailboxConnectGate && view === 'list' ? (
+              <div className={localStyles.tabRail}>
+                {(['all', 'inbox', 'sent'] as MailboxTab[]).map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    className={`${localStyles.tabButton} ${tab === item ? localStyles.tabButtonActive : ''}`}
+                    onClick={() => handleChangeMailboxTab(item)}
+                  >
+                    <span className={localStyles.tabButtonBullet} aria-hidden="true" />
+                    <span className={localStyles.tabButtonLabel}>{MAILBOX_TAB_META[item].title}</span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
             {!showMailboxConnectGate && view === 'list' && syncStatusSummary ? (
               <div
                 className={`${localStyles.syncStatusBanner} ${
@@ -2058,7 +2090,7 @@ export function MailboxPanel({
                     <tbody>
                       {threads.map((thread) => {
                         const partyLabel = buildThreadCounterparty(thread, selectedAccount?.email || '');
-                        const isUnread = tab === 'inbox' && thread.unreadCount > 0;
+                        const isUnread = (tab === 'all' || tab === 'inbox') && thread.unreadCount > 0;
                         return (
                           <tr
                             key={thread.id}
