@@ -68,15 +68,16 @@ export function ServiceIntroScreen() {
         <section className={`app-shell ${styles.shell}`}>
           <div className={styles.hero}>
             <span className={styles.eyebrow}>서비스 소개 및 심사 확인용 페이지</span>
-            <h1 className={styles.title}>대한안전산업연구원 RegAI</h1>
+            <h1 className={styles.title}>한국종합안전 업무시스템</h1>
             <p className={styles.description}>
-              대한안전산업연구원 RegAI는 건설기술재해예방지도 운영을 위한 ERP형 서비스입니다. 사업장·현장
+              한국종합안전 업무시스템은 건설기술재해예방지도 운영을 위한 ERP형 서비스입니다. 사업장·현장
               관리, 보고서 작성, 문서 출력, 메일 연동, 모바일 현장 업무를 하나의 흐름으로 연결합니다.
             </p>
             <div className={styles.heroMeta}>
               <span className={styles.heroChip}>건설기술재해예방지도 운영 서비스</span>
               <span className={styles.heroChip}>문서·보고서·메일 연동</span>
               <span className={styles.heroChip}>관리자 · 관제 · 지도요원 사용</span>
+              <span className={styles.heroChip}>Google · Naver 메일 계정 연결</span>
             </div>
           </div>
 
@@ -89,7 +90,7 @@ export function ServiceIntroScreen() {
               <div className={styles.summaryGrid}>
                 <article className={styles.summaryCard}>
                   <strong className={styles.summaryLabel}>서비스 주체</strong>
-                  <span className={styles.summaryValue}>대한안전산업연구원 RegAI</span>
+                  <span className={styles.summaryValue}>한국종합안전 업무시스템</span>
                 </article>
                 <article className={styles.summaryCard}>
                   <strong className={styles.summaryLabel}>콘텐츠 형태</strong>
@@ -164,14 +165,14 @@ export function ServiceIntroScreen() {
 
             <section className={styles.section}>
               <div className={styles.sectionHeader}>
-                <span className={styles.sectionKicker}>네이버 로그인 적용 내용</span>
-                <h2 className={styles.sectionTitle}>네이버 로그인을 어디에 사용하나요?</h2>
+                <span className={styles.sectionKicker}>메일 계정 연동</span>
+                <h2 className={styles.sectionTitle}>구글·네이버 로그인을 어디에 사용하나요?</h2>
               </div>
               <article className={styles.noticeCard}>
                 <p className={styles.noticeBody}>
-                  네이버 로그인은 메일함 기능에서 네이버 메일 계정을 연결하고, 서비스 안에서 수신 메일 확인과
-                  보고서 메일 발송 흐름을 이어가기 위한 인증 수단으로 사용됩니다. 사용자는 로그인 후 메일함
-                  화면에서 네이버 로그인 버튼을 통해 네이버 인증 절차를 진행합니다.
+                  메일함 기능에서는 구글 또는 네이버 메일 계정을 연결해 서비스 안에서 수신 메일 확인과 보고서
+                  메일 발송 흐름을 이어갈 수 있습니다. 사용자는 로그인 후 메일함 화면에서 지메일 로그인 또는
+                  네이버 로그인 버튼을 통해 각 계정 인증 절차를 진행합니다.
                 </p>
                 <div className={styles.noticeList}>
                   <span>메일 계정 연결 후 받은편지함 / 보낸편지함 사용</span>
@@ -179,6 +180,20 @@ export function ServiceIntroScreen() {
                   <span>관리자 및 관제 메일 운영 흐름 연동</span>
                 </div>
               </article>
+            </section>
+
+            <section className={styles.section}>
+              <div className={styles.sectionHeader}>
+                <span className={styles.sectionKicker}>정책 문서</span>
+                <h2 className={styles.sectionTitle}>공개 정책 페이지</h2>
+                <p className={styles.sectionDescription}>
+                  인증 심사와 사용자 안내를 위해 개인정보처리방침과 이용약관을 공개합니다.
+                </p>
+              </div>
+              <div className={styles.noticeList}>
+                <a className={styles.heroChip} href="/privacy">개인정보처리방침</a>
+                <a className={styles.heroChip} href="/terms">이용약관</a>
+              </div>
             </section>
           </div>
         </section>

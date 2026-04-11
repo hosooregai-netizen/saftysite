@@ -1,0 +1,119 @@
+.page {
+  background:
+    radial-gradient(circle at top right, rgba(247, 176, 25, 0.12), transparent 28%),
+    linear-gradient(180deg, #f5f7fb 0%, #eef3f8 100%);
+}
+
+.container {
+  padding: 28px 22px 48px;
+}
+
+.shell {
+  min-height: auto;
+  border-radius: 18px;
+}
+
+.hero {
+  display: grid;
+  gap: 14px;
+  padding: 36px 38px 30px;
+  border-bottom: 1px solid var(--erp-line);
+  background:
+    radial-gradient(circle at top right, rgba(247, 176, 25, 0.14), transparent 24%),
+    linear-gradient(180deg, rgba(247, 250, 255, 0.98), rgba(255, 255, 255, 0.98));
+}
+
+.eyebrow {
+  font-size: var(--text-kicker);
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--erp-text-muted);
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(30px, 4vw, 42px);
+  line-height: 1.08;
+  letter-spacing: -0.04em;
+  color: var(--erp-dark);
+}
+
+.description {
+  margin: 0;
+  font-size: var(--text-body-lg);
+  line-height: 1.75;
+  color: var(--erp-text-muted);
+  word-break: keep-all;
+}
+
+.linkRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.linkButton {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid rgba(247, 176, 25, 0.55);
+  border-radius: 999px;
+  background: rgba(255, 244, 215, 0.8);
+  font-size: var(--text-ui);
+  font-weight: 700;
+  color: var(--erp-mid);
+  text-decoration: none;
+}
+
+.content {
+  display: grid;
+  gap: 18px;
+  padding: 28px 30px 34px;
+}
+
+.sectionCard {
+  display: grid;
+  gap: 12px;
+  padding: 22px 24px;
+  border: 1px solid var(--erp-line);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 250, 255, 0.94));
+  box-shadow: var(--erp-shadow-soft);
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: clamp(20px, 3vw, 26px);
+  line-height: 1.2;
+  color: var(--erp-dark);
+}
+
+.sectionBody {
+  display: grid;
+  gap: 10px;
+}
+
+.sectionBody p {
+  margin: 0;
+  font-size: var(--text-body-md);
+  line-height: 1.75;
+  color: var(--erp-text-muted);
+  word-break: keep-all;
+}
+
+@media (max-width: 720px) {
+  .container {
+    padding: 16px 12px 28px;
+  }
+
+  .hero,
+  .content {
+    padding: 20px 18px;
+  }
+
+  .sectionCard {
+    padding: 18px;
+  }
+}
