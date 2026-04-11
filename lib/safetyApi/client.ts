@@ -34,6 +34,15 @@ interface SafetyApiCacheEntry {
 const responseCache = new Map<string, SafetyApiCacheEntry>();
 const inFlightGetRequests = new Map<string, Promise<JsonLike>>();
 
+function parseCacheKey(cacheKey: string) {
+  const [method, rawToken, ...pathParts] = cacheKey.split('::');
+  return {
+    method,
+    path: pathParts.join('::'),
+    token: rawToken === 'anonymous' ? null : rawToken,
+  };
+}
+
 export class SafetyApiError extends Error {
   status: number | null;
 
@@ -41,6 +50,28 @@ export class SafetyApiError extends Error {
     super(message);
     this.name = 'SafetyApiError';
     this.status = status;
+  }
+}
+
+export function invalidateSafetyApiGetCache(pathPrefix: string, token?: string | null) {
+  for (const cacheKey of responseCache.keys()) {
+    const parsed = parseCacheKey(cacheKey);
+    const isGetLike = parsed.method === 'GET' || parsed.method === 'HEAD';
+    const matchesToken = token === undefined || parsed.token === token;
+
+    if (isGetLike && matchesToken && parsed.path.startsWith(pathPrefix)) {
+      responseCache.delete(cacheKey);
+    }
+  }
+
+  for (const cacheKey of inFlightGetRequests.keys()) {
+    const parsed = parseCacheKey(cacheKey);
+    const isGetLike = parsed.method === 'GET' || parsed.method === 'HEAD';
+    const matchesToken = token === undefined || parsed.token === token;
+
+    if (isGetLike && matchesToken && parsed.path.startsWith(pathPrefix)) {
+      inFlightGetRequests.delete(cacheKey);
+    }
   }
 }
 

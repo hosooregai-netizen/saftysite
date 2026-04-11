@@ -2,6 +2,7 @@
 
 import { startTransition, useCallback, useEffect, useRef } from 'react';
 import { normalizeInspectionSite } from '@/constants/inspectionSession/normalizeSite';
+import { suppressAutoLoginForSession } from '@/lib/auth/loginCredentialsStorage';
 import { readPersistedValue } from '@/lib/clientPersistence';
 import { readOwnedPersistedValue } from '@/lib/ownedPersistence';
 import {
@@ -1104,6 +1105,7 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
 
   const logout = useCallback(() => {
     syncRequestIdRef.current += 1;
+    suppressAutoLoginForSession();
     hasLoadedRemoteMasterDataRef.current = false;
     masterDataPromiseRef.current = null;
     reportIndexRequestsRef.current.clear();

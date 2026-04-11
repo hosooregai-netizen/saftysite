@@ -109,7 +109,7 @@ export function UsersTable({
     <>
       <div className={styles.sectionHeader}>
         <div className={styles.sectionHeaderTitleBlock}>
-          <h2 className={styles.sectionTitle}>사용자 CRUD</h2>
+          <h2 className={styles.sectionTitle}>사용자</h2>
         </div>
         <div className={`${styles.sectionHeaderActions} ${styles.sectionHeaderToolbarActions}`}>
           <input

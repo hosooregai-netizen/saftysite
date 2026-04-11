@@ -8,7 +8,10 @@ import { isAdminUserRole } from '@/lib/admin/adminRoles';
 interface AdminScreenState {
   authError: string | null;
   currentUser: ReturnType<typeof useInspectionSessions>['currentUser'];
+  hasAuthToken: boolean;
   isAdminView: boolean;
+  isHydrating: boolean;
+  isReady: boolean;
   login: ReturnType<typeof useInspectionSessions>['login'];
   logout: ReturnType<typeof useInspectionSessions>['logout'];
   shouldShowLogin: boolean;
@@ -17,6 +20,7 @@ interface AdminScreenState {
 export function useAdminScreenState(): AdminScreenState {
   const {
     hasAuthToken,
+    isHydrating,
     isReady,
     currentUser,
     authError,
@@ -36,10 +40,12 @@ export function useAdminScreenState(): AdminScreenState {
   return {
     authError,
     currentUser,
+    hasAuthToken,
     isAdminView,
+    isHydrating,
+    isReady,
     login,
     logout,
     shouldShowLogin,
   };
 }
-

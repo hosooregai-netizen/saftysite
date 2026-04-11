@@ -2,17 +2,19 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { primeControllerDashboardData } from '@/hooks/controller/useControllerDashboard';
 import {
-  primeControllerDashboardContentItems,
-  primeControllerDashboardData,
-} from '@/hooks/controller/useControllerDashboard';
-import {
+  fetchSafetyContentItems,
   fetchSafetyReportByKey,
   fetchSafetyReportList,
   readSafetyAuthToken,
   SafetyApiError,
   upsertSafetyReport,
 } from '@/lib/safetyApi';
+import {
+  readSafetyContentItemsSessionCache,
+  writeSafetyContentItemsSessionCache,
+} from '@/lib/safetyApi/contentItemsCache';
 import {
   createSafetyAssignment,
   createSafetyContentItem,
@@ -92,20 +94,24 @@ function removeRecordById<T extends { id: string }>(items: T[], targetId: string
 }
 
 interface UseAdminDashboardStateOptions {
+  contentCacheScope?: string | null;
   enabled: boolean;
   refreshMasterData?: () => Promise<void> | void;
 }
 
 export function useAdminDashboardState({
+  contentCacheScope = null,
   enabled,
   refreshMasterData,
 }: UseAdminDashboardStateOptions) {
   const [data, setData] = useState<ControllerDashboardData>(EMPTY_DATA);
   const [isLoading, setIsLoading] = useState(false);
   const [isContentLoading, setIsContentLoading] = useState(false);
+  const [isContentRefreshing, setIsContentRefreshing] = useState(false);
   const [isReportsLoading, setIsReportsLoading] = useState(false);
   const [isMutating, setIsMutating] = useState(false);
   const [hasLoadedCoreData, setHasLoadedCoreData] = useState(false);
+  const [hasLoadedContentData, setHasLoadedContentData] = useState(false);
   const [reportList, setReportList] = useState<SafetyReportListItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -125,7 +131,7 @@ export function useAdminDashboardState({
     () => ADMIN_SECTIONS.find((section) => section.key === activeSection) ?? ADMIN_SECTIONS[0],
     [activeSection],
   );
-  const shouldLoadContent = activeSection === 'content' || activeSection === 'overview';
+  const shouldLoadContent = activeSection === 'content';
   const selectedHeadquarter = useMemo(
     () =>
       selectedHeadquarterId
@@ -158,6 +164,83 @@ export function useAdminDashboardState({
     return token;
   }, []);
 
+  const reloadContent = useCallback(
+    async (options?: { force?: boolean }) => {
+      if (!enabled) return;
+
+      const force = options?.force === true;
+      const cachedContentItems =
+        !force && contentCacheScope ? readSafetyContentItemsSessionCache(contentCacheScope) : null;
+      const hasCachedContentItems = cachedContentItems !== null;
+      const hasVisibleContentItems = data.contentItems.length > 0;
+
+      setError(null);
+
+      if (hasCachedContentItems) {
+        setData((current) => ({ ...current, contentItems: cachedContentItems }));
+        setHasLoadedContentData(true);
+      }
+
+      if (hasCachedContentItems || hasVisibleContentItems || hasLoadedContentData) {
+        setIsContentLoading(false);
+        setIsContentRefreshing(true);
+      } else {
+        setIsContentLoading(true);
+        setIsContentRefreshing(false);
+      }
+
+      try {
+        const token = getToken();
+        const contentItems = await fetchSafetyContentItems(token, { force });
+        if (contentCacheScope) {
+          writeSafetyContentItemsSessionCache(contentCacheScope, contentItems);
+        }
+        setData((current) => ({ ...current, contentItems }));
+        setHasLoadedContentData(true);
+      } catch (nextError) {
+        setError(getErrorMessage(nextError));
+      } finally {
+        setIsContentLoading(false);
+        setIsContentRefreshing(false);
+      }
+    },
+    [
+      contentCacheScope,
+      data.contentItems.length,
+      enabled,
+      getToken,
+      hasLoadedContentData,
+    ],
+  );
+
+  const loadReports = useCallback(
+    async (options?: {
+      headquarters?: ControllerDashboardData['headquarters'];
+      sites?: ControllerDashboardData['sites'];
+    }) => {
+      if (!enabled) return;
+
+      setError(null);
+      setIsReportsLoading(true);
+
+      try {
+        const token = getToken();
+        const reports = await fetchSafetyReportList(token, {
+          activeOnly: true,
+          limit: ADMIN_REPORT_LIST_LIMIT,
+        });
+        const nextHeadquarters = options?.headquarters ?? data.headquarters;
+        const nextSites = options?.sites ?? data.sites;
+        setReportList(filterVisibleAdminReportListItems(reports, nextSites, nextHeadquarters));
+      } catch (nextError) {
+        setError(getErrorMessage(nextError));
+      } finally {
+        setIsReportsLoading(false);
+      }
+    },
+    [data.headquarters, data.sites, enabled, getToken],
+  );
+
   const reload = useCallback(
     async (options?: { includeContent?: boolean; includeReports?: boolean; force?: boolean }) => {
       if (!enabled) return;
@@ -182,42 +265,47 @@ export function useAdminDashboardState({
           users,
         }));
 
-        if (options?.includeContent) {
-          setIsContentLoading(true);
-          const contentItems = await primeControllerDashboardContentItems(token, {
-            force: options?.force,
-          });
-          setData((current) => ({ ...current, contentItems }));
-        }
+        const followUpTasks: Array<Promise<void>> = [];
 
         if (options?.includeReports) {
-          setIsReportsLoading(true);
-          const reports = await fetchSafetyReportList(token, {
-            activeOnly: true,
-            limit: ADMIN_REPORT_LIST_LIMIT,
-          });
-          setReportList(filterVisibleAdminReportListItems(reports, sites, headquarters));
+          followUpTasks.push(loadReports({ headquarters, sites }));
+        }
+
+        if (options?.includeContent) {
+          followUpTasks.push(reloadContent({ force: options?.force }));
+        }
+
+        if (followUpTasks.length > 0) {
+          await Promise.all(followUpTasks);
         }
       } catch (nextError) {
         setError(getErrorMessage(nextError));
       } finally {
         setHasLoadedCoreData(true);
         setIsLoading(false);
-        setIsContentLoading(false);
-        setIsReportsLoading(false);
       }
     },
-    [enabled, getToken],
+    [enabled, getToken, loadReports, reloadContent],
   );
 
   useEffect(() => {
-    if (enabled) {
+    if (enabled && !hasLoadedCoreData) {
       void reload({
-        includeContent: shouldLoadContent,
         includeReports: shouldLoadReports,
       });
     }
-  }, [enabled, reload, shouldLoadContent, shouldLoadReports]);
+  }, [enabled, hasLoadedCoreData, reload, shouldLoadReports]);
+
+  useEffect(() => {
+    if (!enabled || activeSection !== 'content') return;
+    void reloadContent();
+  }, [activeSection, enabled, reloadContent]);
+
+  useEffect(() => {
+    if (!enabled || !hasLoadedCoreData || !shouldLoadReports) return;
+    if (reportList.length > 0 || isReportsLoading) return;
+    void loadReports();
+  }, [enabled, hasLoadedCoreData, isReportsLoading, loadReports, reportList.length, shouldLoadReports]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -357,12 +445,14 @@ export function useAdminDashboardState({
     data,
     error,
     isContentLoading,
+    isContentRefreshing,
     isLoading,
     isMutating,
     isReportsLoading,
     notice,
     reportList,
     reload,
+    reloadContent,
     selectedHeadquarter,
     selectedHeadquarterId,
     selectedSite,

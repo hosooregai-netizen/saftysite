@@ -30,7 +30,7 @@ import {
   isVisibleReport,
   isVisibleSite,
 } from '@/lib/admin/lifecycleStatus';
-import { requestSafetyApi, SafetyApiError } from './client';
+import { invalidateSafetyApiGetCache, requestSafetyApi, SafetyApiError } from './client';
 
 const CLIENT_SITE_LIST_LIMIT = 500;
 const CLIENT_CONTENT_ITEM_LIMIT = 1000;
@@ -373,7 +373,16 @@ export function fetchAssignedSafetySites(token: string): Promise<SafetySite[]> {
 }
 
 /** 관리자 CRUD와 동일하게 전체·충분한 limit으로 조회. API 기본값(active_only·limit)에 의해 일부 유형만 잘리는 것을 방지. */
-export function fetchSafetyContentItems(token: string): Promise<SafetyContentItem[]> {
+export function fetchSafetyContentItems(
+  token: string,
+  options?: {
+    force?: boolean;
+  },
+): Promise<SafetyContentItem[]> {
+  if (options?.force) {
+    invalidateSafetyApiGetCache('/content-items', token);
+  }
+
   const searchParams = new URLSearchParams({
     active_only: 'true',
     limit: String(CLIENT_CONTENT_ITEM_LIMIT),

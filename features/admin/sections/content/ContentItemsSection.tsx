@@ -1,6 +1,6 @@
 'use client';
 
-import { useDeferredValue, useMemo, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import AppModal from '@/components/ui/AppModal';
 import ActionMenu from '@/components/ui/ActionMenu';
 import {
@@ -56,11 +56,34 @@ function createEmptyDisasterCaseBatchItems(): DisasterCaseBatchItem[] {
   }));
 }
 
+function ContentTableSkeleton() {
+  return (
+    <div className={styles.contentTableSkeleton} aria-hidden="true">
+      <div className={styles.contentTableSkeletonHeader}>
+        <span className={`${styles.contentTableSkeletonLine} ${styles.contentTableSkeletonLineShort}`} />
+        <span className={`${styles.contentTableSkeletonLine} ${styles.contentTableSkeletonLineMedium}`} />
+        <span className={styles.contentTableSkeletonLine} />
+        <span className={`${styles.contentTableSkeletonLine} ${styles.contentTableSkeletonLineShort}`} />
+      </div>
+      {Array.from({ length: 6 }).map((_, index) => (
+        <div key={`content-skeleton-${index + 1}`} className={styles.contentTableSkeletonRow}>
+          <span className={`${styles.contentTableSkeletonLine} ${styles.contentTableSkeletonLineShort}`} />
+          <span className={styles.contentTableSkeletonLine} />
+          <span className={styles.contentTableSkeletonLine} />
+          <span className={`${styles.contentTableSkeletonLine} ${styles.contentTableSkeletonLineShort}`} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 interface ContentItemsSectionProps {
   busy: boolean;
-  items: SafetyContentItem[];
   canDelete: boolean;
   canUploadAssets: boolean;
+  currentPage: number;
+  items: SafetyContentItem[];
+  loading: boolean;
   onCreate: (input: {
     content_type: SafetyContentItem['content_type'];
     title: string;
@@ -83,10 +106,28 @@ interface ContentItemsSectionProps {
     is_active?: boolean;
   }>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  onPageChange: (page: number) => void;
+  onRefresh: () => void;
+  pageSize: number;
+  refreshing: boolean;
 }
 
 export function ContentItemsSection(props: ContentItemsSectionProps) {
-  const { busy, items, canDelete, canUploadAssets, onCreate, onUpdate, onDelete } = props;
+  const {
+    busy,
+    canDelete,
+    canUploadAssets,
+    currentPage,
+    items,
+    loading,
+    onCreate,
+    onDelete,
+    onPageChange,
+    onRefresh,
+    onUpdate,
+    pageSize,
+    refreshing,
+  } = props;
   const [editingId, setEditingId] = useState<string | null>(null);
   const [activeType, setActiveType] = useState<SafetyContentItem['content_type'] | 'all'>('all');
   const [query, setQuery] = useState('');
@@ -144,6 +185,11 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
       return left.title.localeCompare(right.title, 'ko') * direction;
     });
   }, [filteredItems, sort.direction, sort.key]);
+  const totalPages = Math.max(1, Math.ceil(sortedItems.length / pageSize));
+  const pagedItems = useMemo(() => {
+    const offset = (currentPage - 1) * pageSize;
+    return sortedItems.slice(offset, offset + pageSize);
+  }, [currentPage, pageSize, sortedItems]);
   const createContentType =
     activeType === 'all' ? createEmptyContentForm().content_type : activeType;
   const createButtonLabel =
@@ -174,6 +220,11 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
       ? '현재는 기본 업로드 용량이 50MB이며, 배포 환경의 제한이 더 작으면 업로드가 실패할 수 있습니다.'
       : undefined
     : uploadPermissionHelperText;
+
+  useEffect(() => {
+    if (currentPage <= totalPages) return;
+    onPageChange(totalPages);
+  }, [currentPage, onPageChange, totalPages]);
 
   const validateLargeFile = (file: File) =>
     validateSafetyAssetFile(file, { usesProxy: usesSafetyProxy });
@@ -313,24 +364,35 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
     <section className={`${styles.sectionCard} ${styles.listSectionCard}`}>
       <div className={styles.sectionHeader}>
         <div className={styles.sectionHeaderTitleBlock}>
-          <h2 className={styles.sectionTitle}>콘텐츠 데이터 CRUD</h2>
+          <h2 className={styles.sectionTitle}>콘텐츠 데이터</h2>
+          <p className={styles.contentSectionMeta}>
+            {loading && items.length === 0
+              ? '콘텐츠를 불러오는 중입니다.'
+              : refreshing
+                ? `총 ${sortedItems.length}건 · 최신 데이터 확인 중`
+                : `총 ${sortedItems.length}건`}
+          </p>
         </div>
         <div className={`${styles.sectionHeaderActions} ${styles.sectionHeaderToolbarActions}`}>
           <input
             className={`app-input ${styles.sectionHeaderSearch} ${styles.sectionHeaderToolbarSearch}`}
             placeholder="제목, 미리보기 내용으로 검색"
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              onPageChange(1);
+            }}
           />
           <select
             className={`app-select ${styles.sectionHeaderSelect}`}
             aria-label="콘텐츠 분류 필터"
             value={activeType}
-            onChange={(event) =>
+            onChange={(event) => {
               setActiveType(
                 event.target.value as SafetyContentItem['content_type'] | 'all',
-              )
-            }
+              );
+              onPageChange(1);
+            }}
           >
             <option value="all">전체 분류</option>
             {CONTENT_CRUD_TYPE_OPTIONS.map((option) => (
@@ -349,6 +411,14 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
           </button>
           <button
             type="button"
+            className="app-button app-button-secondary"
+            onClick={onRefresh}
+            disabled={busy || loading || refreshing}
+          >
+            {refreshing ? '새로고침 중...' : '새로고침'}
+          </button>
+          <button
+            type="button"
             className="app-button app-button-primary"
             onClick={openCreate}
             disabled={busy}
@@ -360,91 +430,118 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
 
       <div className={styles.sectionBody}>
         <div className={styles.tableShell}>
-          {sortedItems.length === 0 ? (
+          {loading && items.length === 0 ? (
+            <ContentTableSkeleton />
+          ) : sortedItems.length === 0 ? (
             <div className={styles.tableEmpty}>등록된 콘텐츠 데이터가 없습니다.</div>
           ) : (
-            <div className={styles.tableWrap}>
-              <table className={styles.table}>
-                <thead>
-                  <tr style={{ display: 'none' }}>
-                    <th>유형</th>
-                    <th>입력 방식</th>
-                    <th>제목</th>
-                    <th>내용 미리보기</th>
-                    <th>첨부</th>
-                    <th>수정일</th>
-                    <th>메뉴</th>
-                  </tr>
-                  <tr>
-                    <SortableHeaderCell
-                      column={{ key: 'content_type' }}
-                      current={sort}
-                      label="유형"
-                      onChange={setSort}
-                      sortMenuOptions={buildSortMenuOptions('content_type', {
-                        asc: '유형 오름차순',
-                        desc: '유형 내림차순',
-                      })}
-                    />
-                    <SortableHeaderCell
-                      column={{ key: 'title' }}
-                      current={sort}
-                      label="제목"
-                      onChange={setSort}
-                    />
-                    <th>내용 미리보기</th>
-                    <SortableHeaderCell
-                      column={{ key: 'effective_from' }}
-                      current={sort}
-                      defaultDirection="desc"
-                      label="시작일 ~ 종료일"
-                      onChange={setSort}
-                      title="시작일 정렬"
-                    />
-                    <th>메뉴</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sortedItems.map((item) => (
-                    <tr key={item.id}>
-                      <td>{CONTENT_TYPE_LABELS[item.content_type]}</td>
-                      <td>
-                        <div className={styles.tablePrimary}>{item.title}</div>
-                        <div className={styles.tableSecondary}>
-                          {item.is_active ? '활성' : '비활성'}
-                        </div>
-                      </td>
-                      <td>{getContentPreview(item)}</td>
-                      <td>{formatDateRange(item.effective_from, item.effective_to) || '-'}</td>
-                      <td>
-                        <div className={styles.tableActionMenuWrap}>
-                          <ActionMenu
-                            label={`${item.title} 콘텐츠 작업 메뉴 열기`}
-                            items={[
-                              {
-                                label: '수정',
-                                onSelect: () => {
-                                  if (!busy) openEdit(item);
-                                },
-                              },
-                              ...(canDelete
-                                ? [{
-                                    label: '비활성화',
-                                    tone: 'danger' as const,
-                                    onSelect: () => {
-                                      if (!busy) void handleDeleteContentItem(item);
-                                    },
-                                  }]
-                                : []),
-                            ]}
-                          />
-                        </div>
-                      </td>
+            <>
+              <div className={styles.tableWrap}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr style={{ display: 'none' }}>
+                      <th>유형</th>
+                      <th>입력 방식</th>
+                      <th>제목</th>
+                      <th>내용 미리보기</th>
+                      <th>첨부</th>
+                      <th>수정일</th>
+                      <th>메뉴</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                    <tr>
+                      <SortableHeaderCell
+                        column={{ key: 'content_type' }}
+                        current={sort}
+                        label="유형"
+                        onChange={setSort}
+                        sortMenuOptions={buildSortMenuOptions('content_type', {
+                          asc: '유형 오름차순',
+                          desc: '유형 내림차순',
+                        })}
+                      />
+                      <SortableHeaderCell
+                        column={{ key: 'title' }}
+                        current={sort}
+                        label="제목"
+                        onChange={setSort}
+                      />
+                      <th>내용 미리보기</th>
+                      <SortableHeaderCell
+                        column={{ key: 'effective_from' }}
+                        current={sort}
+                        defaultDirection="desc"
+                        label="시작일 ~ 종료일"
+                        onChange={setSort}
+                        title="시작일 정렬"
+                      />
+                      <th>메뉴</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pagedItems.map((item) => (
+                      <tr key={item.id}>
+                        <td>{CONTENT_TYPE_LABELS[item.content_type]}</td>
+                        <td>
+                          <div className={styles.tablePrimary}>{item.title}</div>
+                          <div className={styles.tableSecondary}>
+                            {item.is_active ? '활성' : '비활성'}
+                          </div>
+                        </td>
+                        <td>{getContentPreview(item)}</td>
+                        <td>{formatDateRange(item.effective_from, item.effective_to) || '-'}</td>
+                        <td>
+                          <div className={styles.tableActionMenuWrap}>
+                            <ActionMenu
+                              label={`${item.title} 콘텐츠 작업 메뉴 열기`}
+                              items={[
+                                {
+                                  label: '수정',
+                                  onSelect: () => {
+                                    if (!busy) openEdit(item);
+                                  },
+                                },
+                                ...(canDelete
+                                  ? [{
+                                      label: '비활성화',
+                                      tone: 'danger' as const,
+                                      onSelect: () => {
+                                        if (!busy) void handleDeleteContentItem(item);
+                                      },
+                                    }]
+                                  : []),
+                              ]}
+                            />
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {totalPages > 1 ? (
+                <div className={styles.paginationRow}>
+                  <button
+                    type="button"
+                    className="app-button app-button-secondary"
+                    onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    이전
+                  </button>
+                  <span className={styles.paginationLabel}>
+                    {`${(currentPage - 1) * pageSize + 1}-${Math.min(currentPage * pageSize, sortedItems.length)} / ${sortedItems.length}건`}
+                  </span>
+                  <button
+                    type="button"
+                    className="app-button app-button-secondary"
+                    onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+                    disabled={currentPage >= totalPages}
+                  >
+                    다음
+                  </button>
+                </div>
+              ) : null}
+            </>
           )}
         </div>
       </div>

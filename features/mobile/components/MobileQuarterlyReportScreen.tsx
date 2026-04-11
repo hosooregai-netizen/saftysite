@@ -45,6 +45,12 @@ import {
   SafetyApiError,
 } from '@/lib/safetyApi';
 import {
+  pickCampaignTemplateContentItems,
+  readSafetyContentItemsSessionCache,
+  resolveSafetyContentItemsCacheScope,
+  writeSafetyContentItemsSessionCache,
+} from '@/lib/safetyApi/contentItemsCache';
+import {
   contentBodyToAssetUrl,
   contentBodyToImageUrl,
   contentBodyToText,
@@ -218,6 +224,8 @@ export function MobileQuarterlyReportScreen({ quarterKey, siteKey }: MobileQuart
   const [selectedSourceKeys, setSelectedSourceKeys] = useState<string[]>([]);
   const [sourceReports, setSourceReports] = useState<SafetyQuarterlySummarySeedSourceReport[]>([]);
   const [opsAssets, setOpsAssets] = useState<Array<{ id: string; title: string; body: unknown }>>([]);
+  const [isOpsAssetsLoading, setIsOpsAssetsLoading] = useState(false);
+  const [isOpsAssetsRefreshing, setIsOpsAssetsRefreshing] = useState(false);
   const [sourceModalOpen, setSourceModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSourceLoading, setIsSourceLoading] = useState(false);
@@ -228,6 +236,10 @@ export function MobileQuarterlyReportScreen({ quarterKey, siteKey }: MobileQuart
   const { authError, currentUser, ensureSiteReportsLoaded, getSessionsBySiteId, isAuthenticated, isReady, login, logout, sites } = useInspectionSessions();
   const currentSite = useMemo(() => sites.find((site) => site.id === decodedSiteKey) ?? null, [decodedSiteKey, sites]);
   const siteSessions = useMemo(() => (currentSite ? getSessionsBySiteId(currentSite.id) : []), [currentSite, getSessionsBySiteId]);
+  const contentCacheScope = useMemo(
+    () => resolveSafetyContentItemsCacheScope(currentUser?.id),
+    [currentUser?.id],
+  );
   const { error: mutationError, isSaving, saveQuarterlyReport } = useSiteOperationalReportMutations(currentSite);
 
   useEffect(() => {
@@ -310,10 +322,40 @@ export function MobileQuarterlyReportScreen({ quarterKey, siteKey }: MobileQuart
     if (!isAuthenticated || !isReady) return;
     const token = readSafetyAuthToken();
     if (!token) return;
+    const cachedItems = contentCacheScope
+      ? readSafetyContentItemsSessionCache(contentCacheScope)
+      : null;
+    const hasCachedItems = cachedItems !== null;
+
+    if (hasCachedItems) {
+      setOpsAssets(pickCampaignTemplateContentItems(cachedItems));
+      setIsOpsAssetsRefreshing(true);
+    } else {
+      setIsOpsAssetsLoading(true);
+      setIsOpsAssetsRefreshing(false);
+    }
+
+    let cancelled = false;
+
     void fetchSafetyContentItems(token)
-      .then((items) => setOpsAssets(items.filter((item) => item.content_type === 'campaign_template').map((item) => ({ id: item.id, title: item.title, body: item.body }))))
-      .catch(() => undefined);
-  }, [isAuthenticated, isReady]);
+      .then((items) => {
+        if (cancelled) return;
+        if (contentCacheScope) {
+          writeSafetyContentItemsSessionCache(contentCacheScope, items);
+        }
+        setOpsAssets(pickCampaignTemplateContentItems(items));
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (cancelled) return;
+        setIsOpsAssetsLoading(false);
+        setIsOpsAssetsRefreshing(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [contentCacheScope, isAuthenticated, isReady]);
 
   useEffect(() => {
     if (!draft || draft.opsAssetId || opsAssets.length === 0) return;
@@ -735,6 +777,7 @@ export function MobileQuarterlyReportScreen({ quarterKey, siteKey }: MobileQuart
                     <span className={styles.mobileEditorFieldLabel}>OPS 자료</span>
                     <select
                       className="app-select"
+                      disabled={isOpsAssetsLoading && opsAssets.length === 0}
                       value={draft.opsAssetId}
                       onChange={(event) =>
                         updateDraft((current) =>
@@ -745,7 +788,11 @@ export function MobileQuarterlyReportScreen({ quarterKey, siteKey }: MobileQuart
                         )
                       }
                     >
-                      <option value="">OPS 자료 없음</option>
+                      <option value="">
+                        {isOpsAssetsLoading && opsAssets.length === 0
+                          ? 'OPS 자료 불러오는 중...'
+                          : 'OPS 자료 없음'}
+                      </option>
                       {opsAssets.map((asset) => (
                         <option key={asset.id} value={asset.id}>
                           {asset.title}
@@ -753,6 +800,9 @@ export function MobileQuarterlyReportScreen({ quarterKey, siteKey }: MobileQuart
                       ))}
                     </select>
                   </label>
+                  {isOpsAssetsRefreshing ? (
+                    <p className={styles.inlineNotice}>OPS 자료 최신 데이터를 확인 중입니다.</p>
+                  ) : null}
                   {draft.opsAssetFileUrl ? (
                     <a href={draft.opsAssetFileUrl} target="_blank" rel="noreferrer">
                       OPS 자료 열기
