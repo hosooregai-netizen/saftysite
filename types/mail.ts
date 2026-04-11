@@ -9,6 +9,11 @@ export interface MailRecipient {
   name: string | null;
 }
 
+export interface MailRecipientSuggestion extends MailRecipient {
+  lastUsedAt: string | null;
+  usageCount: number;
+}
+
 export interface MailAttachmentPayload {
   filename: string;
   contentType: string;

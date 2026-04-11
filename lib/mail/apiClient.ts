@@ -8,6 +8,7 @@ import type {
   MailOAuthStartPayload,
   MailProviderStatus,
   MailRecipient,
+  MailRecipientSuggestion,
   MailSyncSummary,
   MailThread,
   MailThreadDetail,
@@ -202,6 +203,35 @@ export async function fetchMailThreadDetail(threadId: string) {
 
 export async function fetchMailMessage(messageId: string) {
   return requestMailApi<MailMessage>(`/messages/${encodeURIComponent(messageId)}`);
+}
+
+export async function fetchMailRecipientSuggestions(input: {
+  accountId?: string;
+  limit?: number;
+  query?: string;
+}) {
+  const response = await requestMailApi<{
+    rows: Array<{
+      email: string;
+      last_used_at: string | null;
+      name: string | null;
+      usage_count: number;
+    }>;
+  }>(
+    withQuery('/recipient-suggestions', {
+      accountId: input.accountId || '',
+      limit: input.limit ? String(input.limit) : '',
+      query: input.query || '',
+    }),
+  );
+  return {
+    rows: response.rows.map((row) => ({
+      email: row.email,
+      lastUsedAt: row.last_used_at,
+      name: row.name,
+      usageCount: row.usage_count,
+    })) satisfies MailRecipientSuggestion[],
+  };
 }
 
 export async function sendMail(input: {
