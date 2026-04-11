@@ -6,9 +6,9 @@ import AppModal from '@/components/ui/AppModal';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import {
-  fetchBadWorkplacePdfDocumentByReportKeyWithFallback,
-  fetchInspectionPdfDocumentByReportKeyWithFallback,
-  fetchQuarterlyPdfDocumentByReportKeyWithFallback,
+  fetchBadWorkplacePdfDocumentByReportKey,
+  fetchInspectionPdfDocumentByReportKey,
+  fetchQuarterlyPdfDocumentByReportKey,
 } from '@/lib/api';
 import { normalizeControllerReportType } from '@/lib/admin/reportMeta';
 import {
@@ -78,6 +78,12 @@ interface ComposeState {
   subject: string;
   toInput: string;
   toRecipients: string[];
+}
+
+interface MailSendProgressState {
+  detail: string;
+  percent: number;
+  title: string;
 }
 
 const THREAD_PAGE_SIZE = 50;
@@ -437,12 +443,12 @@ async function buildReportAttachmentPayload(
   const reportType = resolveSelectedReportType(report);
   const exported =
     reportType === 'bad_workplace'
-      ? await fetchBadWorkplacePdfDocumentByReportKeyWithFallback(report.reportKey, authToken)
+      ? await fetchBadWorkplacePdfDocumentByReportKey(report.reportKey, authToken)
       : reportType === 'quarterly_report'
-        ? await fetchQuarterlyPdfDocumentByReportKeyWithFallback(report.reportKey, authToken)
-        : await fetchInspectionPdfDocumentByReportKeyWithFallback(report.reportKey, authToken);
+        ? await fetchQuarterlyPdfDocumentByReportKey(report.reportKey, authToken)
+        : await fetchInspectionPdfDocumentByReportKey(report.reportKey, authToken);
   return {
-    contentType: exported.blob.type || (exported.filename.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'application/octet-stream'),
+    contentType: exported.blob.type || 'application/pdf',
     dataBase64: await blobToBase64(exported.blob),
     filename: exported.filename || `${report.reportKey || 'report'}.pdf`,
   };
@@ -500,6 +506,7 @@ export function MailboxPanel({
   const [workerModalReports, setWorkerModalReports] = useState<MailboxReportOption[]>([]);
   const [selectedReport, setSelectedReport] = useState<SelectedReportContext | null>(null);
   const [isDemoMode, setIsDemoMode] = useState(false);
+  const [mailSendProgress, setMailSendProgress] = useState<MailSendProgressState | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -1199,14 +1206,40 @@ export function MailboxPanel({
         : selectedReport?.headquarterId || '';
 
     try {
+      setError(null);
+      setMailSendProgress({
+        detail: '수신자와 본문을 정리하고 있습니다.',
+        percent: 8,
+        title: '메일 발송 준비 중',
+      });
       const authToken = readSafetyAuthToken();
-      const normalizedAttachments = await Promise.all(attachments.map((attachment) => buildFileAttachmentPayload(attachment.file)));
+      const normalizedAttachments: MailAttachmentPayload[] = [];
       if (composeMode === 'report' && selectedReport?.reportKey) {
         if (!authToken) {
           throw new Error('보고서 첨부를 준비하려면 다시 로그인해 주세요.');
         }
-        normalizedAttachments.unshift(await buildReportAttachmentPayload(selectedReport, authToken));
+        setMailSendProgress({
+          detail: '선택한 보고서를 PDF로 생성하고 있습니다.',
+          percent: 30,
+          title: '보고서 PDF 준비 중',
+        });
+        normalizedAttachments.push(await buildReportAttachmentPayload(selectedReport, authToken));
       }
+      if (attachments.length > 0) {
+        setMailSendProgress({
+          detail: `첨부 파일 ${attachments.length}건을 메일 전송 형식으로 준비하고 있습니다.`,
+          percent: 54,
+          title: '첨부 파일 정리 중',
+        });
+        for (const attachment of attachments) {
+          normalizedAttachments.push(await buildFileAttachmentPayload(attachment.file));
+        }
+      }
+      setMailSendProgress({
+        detail: '메일 서버로 발송 요청을 보내고 있습니다.',
+        percent: 78,
+        title: '메일 발송 중',
+      });
       await sendMail({
         accountId: selectedAccount.id,
         attachments: normalizedAttachments,
@@ -1217,6 +1250,11 @@ export function MailboxPanel({
         subject: compose.subject,
         threadId: composeMode === 'reply' ? threadDetail?.thread.id || '' : '',
         to: normalizedRecipients.map((email) => ({ email, name: null })),
+      });
+      setMailSendProgress({
+        detail: '발송 결과를 메일함 목록에 반영하고 있습니다.',
+        percent: 92,
+        title: '목록 새로고침 중',
       });
       setNotice(
         normalizedAttachments.length > 0
@@ -1246,8 +1284,17 @@ export function MailboxPanel({
       } else {
         setView('list');
       }
+      setMailSendProgress({
+        detail: '메일 발송이 완료되었습니다.',
+        percent: 100,
+        title: '발송 완료',
+      });
+      window.setTimeout(() => {
+        setMailSendProgress((current) => (current?.percent === 100 ? null : current));
+      }, 900);
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : '메일 발송에 실패했습니다.');
+      setMailSendProgress(null);
     }
   };
 
@@ -1291,6 +1338,15 @@ export function MailboxPanel({
   const composePlainText = stripHtmlToText(compose.body);
   const showMailboxConnectGate = !isDemoMode && accounts.length === 0;
   const showMailboxConnectPrompt = !isDemoMode && !showMailboxConnectGate && !hasPersonalAccount;
+  const isSendingMail = Boolean(mailSendProgress);
+  const activeAccountCount = accounts.filter((account) => account.isActive).length;
+  const personalAccountCount = accounts.filter((account) => account.scope === 'personal' && account.isActive).length;
+  const visibleUnreadCount = threads.reduce((sum, thread) => sum + Math.max(0, thread.unreadCount), 0);
+  const selectedAccountLabel = selectedAccount?.mailboxLabel || '전체 계정';
+  const mailboxLead =
+    mode === 'admin'
+      ? '보고서 발송, 실제 수신 메일 확인, 연결 계정 관리를 한 화면에서 이어서 처리합니다.'
+      : '개인 메일 계정으로 보고서 발송과 메일 확인을 같은 흐름에서 처리할 수 있습니다.';
   const filteredReportOptions = useMemo(() => {
     const normalizedQuery = reportSearch.trim().toLowerCase();
     return reportOptions
@@ -1327,11 +1383,12 @@ export function MailboxPanel({
     <section className={`${styles.sectionCard} ${styles.listSectionCard}`}>
       <div className={styles.sectionHeader}>
         <div className={`${styles.sectionHeaderActions} ${localStyles.headerToolbar}`}>
-          <div className={localStyles.headerPrimaryRow}>
-            <div className={localStyles.sectionHeaderMeta}>
-              <h2 className={styles.sectionTitle}>{mode === 'admin' ? '통합 메일함' : '개인 메일함'}</h2>
-              {isDemoMode ? <span className={localStyles.demoBadge}>데모 메일함</span> : null}
-            </div>
+            <div className={localStyles.headerPrimaryRow}>
+              <div className={localStyles.sectionHeaderMeta}>
+                <h2 className={styles.sectionTitle}>{mode === 'admin' ? '통합 메일함' : '개인 메일함'}</h2>
+                <p className={localStyles.sectionLead}>{mailboxLead}</p>
+                {isDemoMode ? <span className={localStyles.demoBadge}>데모 메일함</span> : null}
+              </div>
             <div className={localStyles.headerUtilityGroup}>
               {!showMailboxConnectGate && view === 'list' ? (
                 <input
@@ -1417,6 +1474,34 @@ export function MailboxPanel({
       <div className={`${styles.sectionBody} ${localStyles.shell}`}>
         {error ? <div className={styles.bannerError}>{error}</div> : null}
         {notice ? <div className={styles.bannerNotice}>{notice}</div> : null}
+        {!showMailboxConnectGate ? (
+          <div className={localStyles.overviewGrid}>
+            <article className={localStyles.overviewCard}>
+              <span className={localStyles.overviewKicker}>연결 계정</span>
+              <strong className={localStyles.overviewValue}>{activeAccountCount}개</strong>
+              <span className={localStyles.overviewText}>
+                개인 {personalAccountCount}개 · 공용 {Math.max(0, activeAccountCount - personalAccountCount)}개
+              </span>
+            </article>
+            <article className={localStyles.overviewCard}>
+              <span className={localStyles.overviewKicker}>현재 메일함</span>
+              <strong className={localStyles.overviewValue}>{threadTotal}건</strong>
+              <span className={localStyles.overviewText}>{activeTabMeta.title} 기준으로 저장된 스레드를 표시합니다.</span>
+            </article>
+            <article className={localStyles.overviewCard}>
+              <span className={localStyles.overviewKicker}>읽지 않음</span>
+              <strong className={localStyles.overviewValue}>{visibleUnreadCount}건</strong>
+              <span className={localStyles.overviewText}>현재 화면에 표시된 목록에서 즉시 확인이 필요한 메일 수입니다.</span>
+            </article>
+            <article className={localStyles.overviewCard}>
+              <span className={localStyles.overviewKicker}>작업 계정</span>
+              <strong className={localStyles.overviewValue}>{selectedAccountLabel}</strong>
+              <span className={localStyles.overviewText}>
+                {syncStatusSummary?.title || '메일 조회와 발송은 선택한 계정 기준으로 진행됩니다.'}
+              </span>
+            </article>
+          </div>
+        ) : null}
         <div className={`${localStyles.workspace} ${localStyles.workspaceSingle}`}>
           <div
             className={localStyles.mainColumn}
@@ -1775,12 +1860,13 @@ export function MailboxPanel({
                           <span className={localStyles.accountMeta}>
                             기본 수신자 {selectedReport.recipientEmail || '미등록'}
                           </span>
-                          <span className={localStyles.accountMeta}>발송 시 선택한 보고서 파일이 자동으로 첨부됩니다.</span>
+                          <span className={localStyles.accountMeta}>발송 시 선택한 보고서 PDF가 자동으로 첨부됩니다.</span>
                         </div>
                         <button
                           type="button"
                           className={`app-button app-button-secondary ${localStyles.inlineActionButton}`}
                           onClick={handleClearSelectedReport}
+                          disabled={isSendingMail}
                         >
                           선택 해제
                         </button>
@@ -1802,6 +1888,7 @@ export function MailboxPanel({
                               className={localStyles.recipientChipRemove}
                               onClick={() => handleRemoveAttachment(attachment.id)}
                               aria-label={`${attachment.file.name} 제거`}
+                              disabled={isSendingMail}
                             >
                               x
                             </button>
@@ -1822,6 +1909,24 @@ export function MailboxPanel({
               </div>
 
               <div className={localStyles.composeFooter}>
+                {mailSendProgress ? (
+                  <div className={localStyles.sendProgressCard} aria-live="polite">
+                    <div className={localStyles.sendProgressHeader}>
+                      <span className={localStyles.sendSpinner} aria-hidden="true" />
+                      <div className={localStyles.sendProgressMeta}>
+                        <strong className={localStyles.sendProgressTitle}>{mailSendProgress.title}</strong>
+                        <span className={localStyles.sendProgressText}>{mailSendProgress.detail}</span>
+                      </div>
+                      <span className={localStyles.sendProgressPercent}>{mailSendProgress.percent}%</span>
+                    </div>
+                    <div className={localStyles.sendProgressTrack}>
+                      <div
+                        className={localStyles.sendProgressBar}
+                        style={{ width: `${mailSendProgress.percent}%` }}
+                      />
+                    </div>
+                  </div>
+                ) : null}
                 <div className={localStyles.composeActions}>
                   <button
                     type="button"
@@ -1829,13 +1934,14 @@ export function MailboxPanel({
                     onClick={() => void handleSend()}
                     disabled={
                       isDemoMode ||
+                      isSendingMail ||
                       !selectedAccount ||
                       (compose.toRecipients.length === 0 && !isLikelyEmail(compose.toInput.trim())) ||
                       !compose.subject.trim() ||
                       !composePlainText.trim()
                     }
                   >
-                    메일 발송
+                    {isSendingMail ? `메일 발송 중... ${mailSendProgress?.percent ?? 0}%` : '메일 발송'}
                   </button>
                 </div>
               </div>
@@ -2038,6 +2144,12 @@ export function MailboxPanel({
                 <div className={localStyles.detailMetaRow}>
                   <span className={localStyles.detailHint}>
                     읽지 않은 메일 {threadDetail.thread.unreadCount}건
+                  </span>
+                  <span className={localStyles.detailHint}>
+                    메시지 {threadDetail.thread.messageCount}건
+                  </span>
+                  <span className={localStyles.detailHint}>
+                    계정 {threadDetail.thread.accountDisplayName}
                   </span>
                   {threadDetail.thread.reportKey ? (
                     <span className={localStyles.detailHint}>보고서 {threadDetail.thread.reportKey}</span>
