@@ -1339,10 +1339,6 @@ export function MailboxPanel({
   const showMailboxConnectGate = !isDemoMode && accounts.length === 0;
   const showMailboxConnectPrompt = !isDemoMode && !showMailboxConnectGate && !hasPersonalAccount;
   const isSendingMail = Boolean(mailSendProgress);
-  const activeAccountCount = accounts.filter((account) => account.isActive).length;
-  const personalAccountCount = accounts.filter((account) => account.scope === 'personal' && account.isActive).length;
-  const visibleUnreadCount = threads.reduce((sum, thread) => sum + Math.max(0, thread.unreadCount), 0);
-  const selectedAccountLabel = selectedAccount?.mailboxLabel || '전체 계정';
   const mailboxLead =
     mode === 'admin'
       ? '보고서 발송, 실제 수신 메일 확인, 연결 계정 관리를 한 화면에서 이어서 처리합니다.'
@@ -1474,34 +1470,6 @@ export function MailboxPanel({
       <div className={`${styles.sectionBody} ${localStyles.shell}`}>
         {error ? <div className={styles.bannerError}>{error}</div> : null}
         {notice ? <div className={styles.bannerNotice}>{notice}</div> : null}
-        {!showMailboxConnectGate ? (
-          <div className={localStyles.overviewGrid}>
-            <article className={localStyles.overviewCard}>
-              <span className={localStyles.overviewKicker}>연결 계정</span>
-              <strong className={localStyles.overviewValue}>{activeAccountCount}개</strong>
-              <span className={localStyles.overviewText}>
-                개인 {personalAccountCount}개 · 공용 {Math.max(0, activeAccountCount - personalAccountCount)}개
-              </span>
-            </article>
-            <article className={localStyles.overviewCard}>
-              <span className={localStyles.overviewKicker}>현재 메일함</span>
-              <strong className={localStyles.overviewValue}>{threadTotal}건</strong>
-              <span className={localStyles.overviewText}>{activeTabMeta.title} 기준으로 저장된 스레드를 표시합니다.</span>
-            </article>
-            <article className={localStyles.overviewCard}>
-              <span className={localStyles.overviewKicker}>읽지 않음</span>
-              <strong className={localStyles.overviewValue}>{visibleUnreadCount}건</strong>
-              <span className={localStyles.overviewText}>현재 화면에 표시된 목록에서 즉시 확인이 필요한 메일 수입니다.</span>
-            </article>
-            <article className={localStyles.overviewCard}>
-              <span className={localStyles.overviewKicker}>작업 계정</span>
-              <strong className={localStyles.overviewValue}>{selectedAccountLabel}</strong>
-              <span className={localStyles.overviewText}>
-                {syncStatusSummary?.title || '메일 조회와 발송은 선택한 계정 기준으로 진행됩니다.'}
-              </span>
-            </article>
-          </div>
-        ) : null}
         <div className={`${localStyles.workspace} ${localStyles.workspaceSingle}`}>
           <div
             className={localStyles.mainColumn}
