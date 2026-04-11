@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   completeGoogleMailConnect,
@@ -10,6 +10,14 @@ import {
 interface MailConnectCallbackProps {
   provider: 'google' | 'naver';
 }
+
+type OAuthCompletionResult = {
+  message: string;
+  type: 'notice' | 'error';
+};
+
+const OAUTH_RESULT_STORAGE_PREFIX = 'mailbox-oauth-result:';
+const oauthCompletionRequests = new Map<string, Promise<OAuthCompletionResult>>();
 
 function getRedirectUri(provider: 'google' | 'naver') {
   if (typeof window === 'undefined') return '';
@@ -26,9 +34,90 @@ function buildMailboxRedirectUrl(input: {
   return `/mailbox?${searchParams.toString()}`;
 }
 
+function buildCallbackKey(provider: 'google' | 'naver', state: string, authCode: string) {
+  return `${provider}:${state}:${authCode}`;
+}
+
+function buildOAuthResultStorageKey(callbackKey: string) {
+  return `${OAUTH_RESULT_STORAGE_PREFIX}${callbackKey}`;
+}
+
+function readStoredOAuthResult(callbackKey: string): OAuthCompletionResult | null {
+  if (typeof window === 'undefined') return null;
+  const rawValue = window.sessionStorage.getItem(buildOAuthResultStorageKey(callbackKey));
+  if (!rawValue) return null;
+  try {
+    const parsed = JSON.parse(rawValue) as OAuthCompletionResult | null;
+    if (!parsed) return null;
+    if (parsed.type !== 'notice' && parsed.type !== 'error') return null;
+    if (typeof parsed.message !== 'string' || !parsed.message.trim()) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredOAuthResult(callbackKey: string, result: OAuthCompletionResult) {
+  if (typeof window === 'undefined') return;
+  if (result.type !== 'notice') return;
+  window.sessionStorage.setItem(buildOAuthResultStorageKey(callbackKey), JSON.stringify(result));
+}
+
+function rememberMailboxRedirectResult(result: OAuthCompletionResult) {
+  if (typeof window === 'undefined') return;
+  window.sessionStorage.setItem(
+    result.type === 'notice' ? 'mailbox-oauth-notice' : 'mailbox-oauth-error',
+    result.message,
+  );
+}
+
+function getCompletionPromise(input: {
+  authCode: string;
+  callbackKey: string;
+  provider: 'google' | 'naver';
+  state: string;
+}): Promise<OAuthCompletionResult> {
+  const existing = oauthCompletionRequests.get(input.callbackKey);
+  if (existing) return existing;
+
+  const promise = (async () => {
+    try {
+      if (input.provider === 'google') {
+        await completeGoogleMailConnect({
+          authCode: input.authCode,
+          redirectUri: getRedirectUri('google'),
+          state: input.state,
+        });
+      } else {
+        await completeNaverMailConnect({
+          authCode: input.authCode,
+          redirectUri: getRedirectUri('naver'),
+          state: input.state,
+        });
+      }
+      return {
+        type: 'notice',
+        message: `${input.provider === 'google' ? '구글' : '네이버'} 메일 계정을 연결했습니다.`,
+      } satisfies OAuthCompletionResult;
+    } catch (errorValue) {
+      return {
+        type: 'error',
+        message:
+          errorValue instanceof Error ? errorValue.message : '메일 계정 연결을 완료하지 못했습니다.',
+      } satisfies OAuthCompletionResult;
+    } finally {
+      oauthCompletionRequests.delete(input.callbackKey);
+    }
+  })();
+
+  oauthCompletionRequests.set(input.callbackKey, promise);
+  return promise;
+}
+
 export function MailConnectCallback({ provider }: MailConnectCallbackProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const redirectedCallbackRef = useRef<string | null>(null);
 
   useEffect(() => {
     const authCode = searchParams.get('code') || '';
@@ -65,47 +154,34 @@ export function MailConnectCallback({ provider }: MailConnectCallbackProps) {
       return;
     }
 
+    const callbackKey = buildCallbackKey(provider, state, authCode);
+    const storedResult = readStoredOAuthResult(callbackKey);
+    if (storedResult) {
+      if (redirectedCallbackRef.current === callbackKey) {
+        return;
+      }
+      redirectedCallbackRef.current = callbackKey;
+      rememberMailboxRedirectResult(storedResult);
+      router.replace(buildMailboxRedirectUrl(storedResult));
+      return;
+    }
+
     let cancelled = false;
     void (async () => {
-      try {
-        if (provider === 'google') {
-          await completeGoogleMailConnect({
-            authCode,
-            redirectUri: getRedirectUri('google'),
-            state,
-          });
-        } else {
-          await completeNaverMailConnect({
-            authCode,
-            redirectUri: getRedirectUri('naver'),
-            state,
-          });
-        }
-        if (cancelled) return;
-        const nextMessage = `${provider === 'google' ? '구글' : '네이버'} 메일 계정을 연결했습니다.`;
-        if (typeof window !== 'undefined') {
-          window.sessionStorage.setItem('mailbox-oauth-notice', nextMessage);
-        }
-        router.replace(
-          buildMailboxRedirectUrl({
-            type: 'notice',
-            message: nextMessage,
-          }),
-        );
-      } catch (errorValue) {
-        if (cancelled) return;
-        const nextMessage =
-          errorValue instanceof Error ? errorValue.message : '메일 계정 연결을 완료하지 못했습니다.';
-        if (typeof window !== 'undefined') {
-          window.sessionStorage.setItem('mailbox-oauth-error', nextMessage);
-        }
-        router.replace(
-          buildMailboxRedirectUrl({
-            type: 'error',
-            message: nextMessage,
-          }),
-        );
+      const result = await getCompletionPromise({
+        authCode,
+        callbackKey,
+        provider,
+        state,
+      });
+      writeStoredOAuthResult(callbackKey, result);
+      if (cancelled) return;
+      if (redirectedCallbackRef.current === callbackKey) {
+        return;
       }
+      redirectedCallbackRef.current = callbackKey;
+      rememberMailboxRedirectResult(result);
+      router.replace(buildMailboxRedirectUrl(result));
     })();
 
     return () => {
