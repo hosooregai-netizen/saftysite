@@ -520,7 +520,8 @@ export function MailboxPanel({
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    setIsDemoMode(window.sessionStorage.getItem(MAILBOX_DEMO_SESSION_KEY) === 'true');
+    window.sessionStorage.removeItem(MAILBOX_DEMO_SESSION_KEY);
+    setIsDemoMode(false);
   }, []);
 
   useEffect(() => {
@@ -570,14 +571,14 @@ export function MailboxPanel({
     setReportSiteFilter(siteId || '');
   }, [headquarterId, pathname, reportKey, router, searchParams, siteId]);
 
-  const selectedAccount = useMemo(
-    () => accounts.find((item) => item.id === selectedAccountId) ?? null,
-    [accounts, selectedAccountId],
-  );
   const selectableAccounts = useMemo(() => {
     const personalAccounts = accounts.filter((account) => account.scope === 'personal');
     return personalAccounts.length > 0 ? personalAccounts : accounts;
   }, [accounts]);
+  const selectedAccount = useMemo(
+    () => selectableAccounts.find((item) => item.id === selectedAccountId) ?? null,
+    [selectableAccounts, selectedAccountId],
+  );
   const disconnectableAccount = useMemo(() => {
     if (accounts.length === 1) {
       return accounts[0]?.scope === 'personal' ? accounts[0] : null;
@@ -925,21 +926,6 @@ export function MailboxPanel({
     setAttachments([]);
   };
 
-  const handleEnableDemoMode = () => {
-    persistDemoMailboxMode(true);
-    setIsDemoMode(true);
-    setError(null);
-    setNotice('시연용 더미 메일함으로 전환했습니다.');
-    setTab('inbox');
-    setView('list');
-    setQuery('');
-    setThreadOffset(0);
-    setSelectedThreadId('');
-    setThreadDetail(null);
-    setSelectedReport(null);
-    resetCompose('new');
-  };
-
   const handleDisableDemoMode = (options?: { silent?: boolean }) => {
     persistDemoMailboxMode(false);
     setIsDemoMode(false);
@@ -1008,30 +994,26 @@ export function MailboxPanel({
       const [accountsResponse, providerResponse, threadsResponse] = await Promise.all([
         fetchMailAccounts(),
         fetchMailProviderStatuses(),
-        selectedAccount
-          ? fetchMailThreads({
-              accountId: selectedAccount.id,
-              box: tab,
-              headquarterId,
-              limit: THREAD_PAGE_SIZE,
-              offset: threadOffset,
-              query,
-              reportKey: '',
-              siteId,
-            })
-          : Promise.resolve(null),
+        fetchMailThreads({
+          accountId: selectedAccount?.id || '',
+          box: tab,
+          headquarterId,
+          limit: THREAD_PAGE_SIZE,
+          offset: threadOffset,
+          query,
+          reportKey: '',
+          siteId,
+        }),
       ]);
       setAccounts(accountsResponse.rows.map(normalizeMailAccountUi));
       setProviderStatuses(providerResponse.rows);
-      if (threadsResponse) {
-        setThreads(threadsResponse.rows.map(normalizeMailThreadUi));
-        setThreadTotal(threadsResponse.total);
-        setSelectedThreadId((current) =>
-          current && threadsResponse.rows.some((item) => item.id === current)
-            ? current
-            : threadsResponse.rows[0]?.id || '',
-        );
-      }
+      setThreads(threadsResponse.rows.map(normalizeMailThreadUi));
+      setThreadTotal(threadsResponse.total);
+      setSelectedThreadId((current) =>
+        current && threadsResponse.rows.some((item) => item.id === current)
+          ? current
+          : threadsResponse.rows[0]?.id || '',
+      );
       const summaryParts = [`계정 ${synced.syncedAccountCount}개`, `스레드 ${synced.threadCount}건`];
       if (synced.backfillAccountCount > 0) {
         summaryParts.push(`초기 백필 ${synced.backfillAccountCount}개`);
@@ -1490,7 +1472,6 @@ export function MailboxPanel({
               <div className={localStyles.sectionHeaderMeta}>
                 <h2 className={styles.sectionTitle}>{mode === 'admin' ? '통합 메일함' : '개인 메일함'}</h2>
                 <p className={localStyles.sectionLead}>{mailboxLead}</p>
-                {isDemoMode ? <span className={localStyles.demoBadge}>데모 메일함</span> : null}
               </div>
             <div className={localStyles.headerUtilityGroup}>
               {!showMailboxConnectGate && view === 'list' ? (
@@ -1511,23 +1492,6 @@ export function MailboxPanel({
                 >
                   새로 고침
                 </button>
-                {!isDemoMode ? (
-                  <button
-                    type="button"
-                    className={`app-button app-button-secondary ${localStyles.headerActionButton}`}
-                    onClick={handleEnableDemoMode}
-                  >
-                    시연용 더미 로그인
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className={`app-button app-button-secondary ${localStyles.headerActionButton}`}
-                    onClick={() => handleDisableDemoMode()}
-                  >
-                    데모 종료
-                  </button>
-                )}
                 {!showMailboxConnectGate ? (
                   <button
                     type="button"
@@ -1582,12 +1546,6 @@ export function MailboxPanel({
             className={localStyles.mainColumn}
             data-mailbox-workspace={showMailboxConnectGate ? undefined : 'true'}
           >
-            {isDemoMode ? (
-              <div className={localStyles.demoBanner}>
-                시연용 더미 메일함입니다. 받은편지함, 보낸편지함, 상세 보기와 작성 화면은 확인할 수 있지만
-                실제 로그인, 동기화, 발송은 실행되지 않습니다.
-              </div>
-            ) : null}
             {!showMailboxConnectGate && view === 'list' && listScopeMeta.length > 0 ? (
               <div className={localStyles.scopeRow}>
                 <span className={localStyles.scopeKicker}>현재 범위</span>
@@ -1628,15 +1586,6 @@ export function MailboxPanel({
                       disabled={accountStateLoading}
                     >
                       상태 새로 고침
-                    </button>
-                  </div>
-                  <div className={localStyles.sectionActions}>
-                    <button
-                      type="button"
-                      className={`app-button app-button-secondary ${localStyles.primaryActionButton}`}
-                      onClick={handleEnableDemoMode}
-                    >
-                      시연용 더미 로그인
                     </button>
                   </div>
                 </article>
@@ -1707,15 +1656,6 @@ export function MailboxPanel({
                       disabled={accountStateLoading}
                     >
                       상태 새로 고침
-                    </button>
-                  </div>
-                  <div className={localStyles.sectionActions}>
-                    <button
-                      type="button"
-                      className={`app-button app-button-secondary ${localStyles.primaryActionButton}`}
-                      onClick={handleEnableDemoMode}
-                    >
-                      시연용 더미 로그인
                     </button>
                   </div>
                 </article>
