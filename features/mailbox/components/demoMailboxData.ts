@@ -296,7 +296,7 @@ export function getDemoMailboxAccounts() {
 
 export function getDemoMailboxThreads(tab: DemoMailboxTab, query = '') {
   const normalizedQuery = query.trim().toLowerCase();
-  const source = tab === 'sent' ? sentThreads : inboxThreads;
+  const source = tab === 'sent' ? sentThreads : [...inboxThreads, ...sentThreads];
   if (!normalizedQuery) {
     return source;
   }

@@ -69,8 +69,8 @@ const DEFAULT_SHARED_MAILBOX_EMAIL = 'safety-control@naverworks.local';
 const DEFAULT_SHARED_MAILBOX_NAME = '관제 공용 메일함';
 const MAILBOX_TAB_META: Record<MailboxTab, { empty: string; title: string }> = {
   inbox: {
-    title: '받은편지함',
-    empty: '연결된 계정이나 검색 조건에 맞는 수신 메일이 없습니다.',
+    title: '전체 메일함',
+    empty: '연결된 계정이나 검색 조건에 맞는 메일이 없습니다.',
   },
   sent: {
     title: '보낸편지함',
@@ -1094,7 +1094,7 @@ export function MailboxPanel({
   const threadRangeEnd = Math.min(threadOffset + threads.length, threadTotal);
   const composeTitle =
     composeMode === 'reply' ? '답장 작성' : composeMode === 'report' ? '보고서 메일 보내기' : '메일 보내기';
-  const listPrimaryColumnLabel = tab === 'sent' ? '받는 사람' : '보낸 사람';
+  const listPrimaryColumnLabel = tab === 'sent' ? '받는 사람' : '상대방';
   const threadEmptyMessage = threadLoading ? '메일을 불러오는 중입니다.' : activeTabMeta.empty;
   const detailEmptyMessage = '메일을 선택하면 상세 내용을 볼 수 있습니다.';
   const composePlainText = stripHtmlToText(compose.body);
