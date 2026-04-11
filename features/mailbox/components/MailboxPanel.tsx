@@ -6,6 +6,7 @@ import AppModal from '@/components/ui/AppModal';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import {
+  disconnectMailAccount,
   fetchMailAccounts,
   fetchMailProviderStatuses,
   fetchMailThreadDetail,
@@ -424,6 +425,14 @@ export function MailboxPanel({
     () => accounts.find((item) => item.id === selectedAccountId) ?? accounts[0] ?? null,
     [accounts, selectedAccountId],
   );
+  const disconnectableAccount = useMemo(() => {
+    if (accounts.length === 1) {
+      return accounts[0]?.scope === 'personal' ? accounts[0] : null;
+    }
+    if (!selectedAccountId) return null;
+    const matched = accounts.find((item) => item.id === selectedAccountId) ?? null;
+    return matched?.scope === 'personal' ? matched : null;
+  }, [accounts, selectedAccountId]);
   const activeTabMeta = MAILBOX_TAB_META[tab];
   const providerStatusMap = useMemo(
     () => new Map(providerStatuses.map((provider) => [provider.provider, provider])),
@@ -817,6 +826,39 @@ export function MailboxPanel({
     }
   };
 
+  const handleDisconnectSelectedAccount = async () => {
+    if (isDemoMode || !disconnectableAccount) return;
+    const confirmed = window.confirm(
+      `${disconnectableAccount.mailboxLabel} 연결을 해제할까요?\n연결 해제 후에는 다시 로그인해야 메일을 확인하거나 발송할 수 있습니다.`,
+    );
+    if (!confirmed) return;
+    try {
+      setAccountStateLoading(true);
+      setError(null);
+      await disconnectMailAccount(disconnectableAccount.id);
+      const [response, providerResponse] = await Promise.all([
+        fetchMailAccounts(),
+        fetchMailProviderStatuses(),
+      ]);
+      const nextAccounts = response.rows.map(normalizeMailAccountUi);
+      setAccounts(nextAccounts);
+      setProviderStatuses(providerResponse.rows);
+      setSelectedAccountId(nextAccounts[0]?.id || '');
+      setThreads([]);
+      setThreadTotal(0);
+      setSelectedThreadId('');
+      setThreadDetail(null);
+      setSelectedReport(null);
+      resetCompose('new');
+      setView('list');
+      setNotice(`${disconnectableAccount.mailboxLabel} 연결을 해제했습니다.`);
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : '메일 로그아웃에 실패했습니다.');
+    } finally {
+      setAccountStateLoading(false);
+    }
+  };
+
   const commitRecipientTokens = (tokens: string[]) => {
     const nextTokens = dedupeRecipients([...compose.toRecipients, ...tokens.filter(isLikelyEmail)]);
     setCompose((current) => ({
@@ -1137,6 +1179,16 @@ export function MailboxPanel({
                     onClick={() => handleOpenCompose()}
                   >
                     메일 보내기
+                  </button>
+                ) : null}
+                {!showMailboxConnectGate && disconnectableAccount ? (
+                  <button
+                    type="button"
+                    className={`app-button app-button-secondary ${localStyles.headerActionButton}`}
+                    onClick={() => void handleDisconnectSelectedAccount()}
+                    disabled={accountStateLoading}
+                  >
+                    메일 로그아웃
                   </button>
                 ) : null}
               </div>
