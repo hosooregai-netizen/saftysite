@@ -26,6 +26,17 @@ export interface MailAccount {
   updatedAt: string;
 }
 
+export interface MailAccountSyncMetadata {
+  historyCursor: string | null;
+  initialBackfillCompleted: boolean;
+  lastFullSyncAt: string | null;
+  lastIncrementalSyncAt: string | null;
+  queuedPageToken: string | null;
+  syncError: string | null;
+  syncStartedAt: string | null;
+  syncStatus: 'idle' | 'backfilling' | 'incremental' | 'error' | string;
+}
+
 export interface MailThread {
   id: string;
   accountId: string;
@@ -92,4 +103,14 @@ export interface MailProviderStatus {
   isRedirectAllowed: boolean;
   missingFields: string[];
   message: string;
+}
+
+export interface MailSyncSummary {
+  syncedAccountCount: number;
+  threadCount: number;
+  messageCount: number;
+  backfillAccountCount: number;
+  incrementalAccountCount: number;
+  queuedMessageCount: number;
+  syncErrors: string[];
 }

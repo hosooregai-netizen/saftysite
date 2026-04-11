@@ -7,6 +7,7 @@ import type {
   MailOAuthStartPayload,
   MailProviderStatus,
   MailRecipient,
+  MailSyncSummary,
   MailThread,
   MailThreadDetail,
 } from '@/types/mail';
@@ -228,7 +229,24 @@ export async function sendMail(input: {
 }
 
 export async function syncMail() {
-  return requestMailApi<{ message_count: number; synced_account_count: number; thread_count: number }>('/sync', {
+  const response = await requestMailApi<{
+    backfill_account_count: number;
+    incremental_account_count: number;
+    message_count: number;
+    queued_message_count: number;
+    synced_account_count: number;
+    sync_errors: string[];
+    thread_count: number;
+  }>('/sync', {
     method: 'POST',
   });
+  return {
+    backfillAccountCount: response.backfill_account_count,
+    incrementalAccountCount: response.incremental_account_count,
+    messageCount: response.message_count,
+    queuedMessageCount: response.queued_message_count,
+    syncedAccountCount: response.synced_account_count,
+    syncErrors: Array.isArray(response.sync_errors) ? response.sync_errors : [],
+    threadCount: response.thread_count,
+  } satisfies MailSyncSummary;
 }

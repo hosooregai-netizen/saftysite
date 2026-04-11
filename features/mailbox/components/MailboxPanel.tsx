@@ -18,7 +18,13 @@ import {
 } from '@/lib/mail/apiClient';
 import { fetchSafetyReportList, readSafetyAuthToken } from '@/lib/safetyApi';
 import type { SafetyReportListItem, SafetySite } from '@/types/backend';
-import type { MailAccount, MailProviderStatus, MailThread, MailThreadDetail } from '@/types/mail';
+import type {
+  MailAccount,
+  MailAccountSyncMetadata,
+  MailProviderStatus,
+  MailThread,
+  MailThreadDetail,
+} from '@/types/mail';
 import {
   getDemoMailboxAccounts,
   getDemoMailboxThreadDetail,
@@ -150,6 +156,74 @@ function normalizeMailThreadDetailUi(detail: MailThreadDetail): MailThreadDetail
   return {
     ...detail,
     thread: normalizeMailThreadUi(detail.thread),
+  };
+}
+
+function readMailAccountSyncMetadata(account: MailAccount | null): MailAccountSyncMetadata | null {
+  if (!account || account.provider !== 'google' || account.scope !== 'personal') return null;
+  const metadata = account.metadata ?? {};
+  return {
+    historyCursor: typeof metadata.historyCursor === 'string' ? metadata.historyCursor : null,
+    initialBackfillCompleted: Boolean(metadata.initialBackfillCompleted),
+    lastFullSyncAt: typeof metadata.lastFullSyncAt === 'string' ? metadata.lastFullSyncAt : null,
+    lastIncrementalSyncAt: typeof metadata.lastIncrementalSyncAt === 'string' ? metadata.lastIncrementalSyncAt : null,
+    queuedPageToken: typeof metadata.queuedPageToken === 'string' ? metadata.queuedPageToken : null,
+    syncError: typeof metadata.syncError === 'string' ? metadata.syncError : null,
+    syncStartedAt: typeof metadata.syncStartedAt === 'string' ? metadata.syncStartedAt : null,
+    syncStatus: typeof metadata.syncStatus === 'string' ? metadata.syncStatus : 'idle',
+  };
+}
+
+function formatSyncDateTime(value: string | null) {
+  if (!value) return '';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleString('ko-KR', {
+    dateStyle: 'short',
+    timeStyle: 'short',
+  });
+}
+
+function buildSyncStatusSummary(syncMeta: MailAccountSyncMetadata | null) {
+  if (!syncMeta) return null;
+  if (syncMeta.syncStatus === 'backfilling') {
+    return {
+      tone: 'progress' as const,
+      title: '전체 메일함 초기 동기화 중',
+      description: syncMeta.queuedPageToken
+        ? '오래된 메일까지 순차적으로 저장하고 있습니다. 백그라운드 동기화가 계속 이어집니다.'
+        : '전체 메일함을 처음부터 저장하고 있습니다. 오래된 메일은 순차적으로 추가됩니다.',
+    };
+  }
+  if (syncMeta.syncStatus === 'incremental') {
+    return {
+      tone: 'progress' as const,
+      title: '메일 변경 사항 동기화 중',
+      description: '새로 들어온 메일과 변경된 스레드를 반영하고 있습니다.',
+    };
+  }
+  if (syncMeta.syncStatus === 'error') {
+    return {
+      tone: 'error' as const,
+      title: '메일 동기화 오류',
+      description: syncMeta.syncError || '다음 백그라운드 동기화나 새로 고침에서 다시 시도합니다.',
+    };
+  }
+  if (syncMeta.initialBackfillCompleted) {
+    const basis = formatSyncDateTime(syncMeta.lastIncrementalSyncAt || syncMeta.lastFullSyncAt);
+    return {
+      tone: 'ready' as const,
+      title: '전체 메일함이 저장되어 있습니다',
+      description: basis
+        ? `최근 동기화 ${basis}. 받은편지함, 보낸편지함, 보관 메일까지 DB 기준으로 표시합니다.`
+        : '받은편지함, 보낸편지함, 보관 메일까지 DB 기준으로 표시합니다.',
+    };
+  }
+  return {
+    tone: 'progress' as const,
+    title: '전체 메일함 초기 동기화 미완료',
+    description:
+      '오래된 메일 가져오기가 아직 끝나지 않았습니다. 현재 동기화가 실행 중이 아닐 수도 있으며, 새로 고침이나 백그라운드 동기화 때 이어집니다.',
   };
 }
 
@@ -433,6 +507,8 @@ export function MailboxPanel({
     const matched = accounts.find((item) => item.id === selectedAccountId) ?? null;
     return matched?.scope === 'personal' ? matched : null;
   }, [accounts, selectedAccountId]);
+  const selectedAccountSyncMeta = useMemo(() => readMailAccountSyncMetadata(selectedAccount), [selectedAccount]);
+  const syncStatusSummary = useMemo(() => buildSyncStatusSummary(selectedAccountSyncMeta), [selectedAccountSyncMeta]);
   const activeTabMeta = MAILBOX_TAB_META[tab];
   const providerStatusMap = useMemo(
     () => new Map(providerStatuses.map((provider) => [provider.provider, provider])),
@@ -795,7 +871,47 @@ export function MailboxPanel({
     }
     try {
       const synced = await syncMail();
-      setNotice(`메일 새로 고침을 완료했습니다. 계정 ${synced.synced_account_count}개 / 스레드 ${synced.thread_count}건`);
+      const [accountsResponse, providerResponse, threadsResponse] = await Promise.all([
+        fetchMailAccounts(),
+        fetchMailProviderStatuses(),
+        selectedAccount
+          ? fetchMailThreads({
+              accountId: selectedAccount.id,
+              box: tab,
+              headquarterId,
+              limit: THREAD_PAGE_SIZE,
+              offset: threadOffset,
+              query,
+              reportKey: '',
+              siteId,
+            })
+          : Promise.resolve(null),
+      ]);
+      setAccounts(accountsResponse.rows.map(normalizeMailAccountUi));
+      setProviderStatuses(providerResponse.rows);
+      if (threadsResponse) {
+        setThreads(threadsResponse.rows.map(normalizeMailThreadUi));
+        setThreadTotal(threadsResponse.total);
+        setSelectedThreadId((current) =>
+          current && threadsResponse.rows.some((item) => item.id === current)
+            ? current
+            : threadsResponse.rows[0]?.id || '',
+        );
+      }
+      const summaryParts = [`계정 ${synced.syncedAccountCount}개`, `스레드 ${synced.threadCount}건`];
+      if (synced.backfillAccountCount > 0) {
+        summaryParts.push(`초기 백필 ${synced.backfillAccountCount}개`);
+      }
+      if (synced.incrementalAccountCount > 0) {
+        summaryParts.push(`증분 동기화 ${synced.incrementalAccountCount}개`);
+      }
+      if (synced.queuedMessageCount > 0) {
+        summaryParts.push(`처리 메일 ${synced.queuedMessageCount}건`);
+      }
+      setNotice(`메일 새로 고침을 완료했습니다. ${summaryParts.join(' / ')}`);
+      if (synced.syncErrors.length > 0) {
+        setError(synced.syncErrors.join('\n'));
+      }
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : '메일 새로 고침에 실패했습니다.');
     }
@@ -1092,6 +1208,8 @@ export function MailboxPanel({
   const threadPageCount = Math.max(1, Math.ceil(threadTotal / THREAD_PAGE_SIZE));
   const threadRangeStart = threadTotal === 0 ? 0 : threadOffset + 1;
   const threadRangeEnd = Math.min(threadOffset + threads.length, threadTotal);
+  const canGoPrevThreadPage = threadOffset > 0;
+  const canGoNextThreadPage = threadOffset + THREAD_PAGE_SIZE < threadTotal;
   const composeTitle =
     composeMode === 'reply' ? '답장 작성' : composeMode === 'report' ? '보고서 메일 보내기' : '메일 보내기';
   const listPrimaryColumnLabel = tab === 'sent' ? '받는 사람' : '상대방';
@@ -1119,6 +1237,11 @@ export function MailboxPanel({
       })
       .sort((left, right) => (right.updatedAt || '').localeCompare(left.updatedAt || ''));
   }, [mode, reportOptions, reportSearch, reportSiteFilter]);
+
+  const moveThreadPage = (nextPage: number) => {
+    const boundedPage = Math.min(Math.max(1, nextPage), threadPageCount);
+    setThreadOffset((boundedPage - 1) * THREAD_PAGE_SIZE);
+  };
 
   useEffect(() => {
     if (!showMailboxConnectGate) return;
@@ -1237,6 +1360,20 @@ export function MailboxPanel({
                 <span className={localStyles.scopeKicker}>현재 범위</span>
                 <strong className={localStyles.scopeValue}>{activeTabMeta.title}</strong>
                 <span className={localStyles.scopeText}>{listScopeMeta.join(' · ')}</span>
+              </div>
+            ) : null}
+            {!showMailboxConnectGate && view === 'list' && syncStatusSummary ? (
+              <div
+                className={`${localStyles.syncStatusBanner} ${
+                  syncStatusSummary.tone === 'error'
+                    ? localStyles.syncStatusBannerError
+                    : syncStatusSummary.tone === 'ready'
+                      ? localStyles.syncStatusBannerReady
+                      : localStyles.syncStatusBannerProgress
+                }`}
+              >
+                <strong className={localStyles.syncStatusTitle}>{syncStatusSummary.title}</strong>
+                <span className={localStyles.syncStatusText}>{syncStatusSummary.description}</span>
               </div>
             ) : null}
 
@@ -1633,10 +1770,51 @@ export function MailboxPanel({
             ) : view === 'list' ? (
               <section className={styles.tableShell}>
             <div className={localStyles.mailTableHeader}>
-              <strong className={localStyles.panelTitle}>{activeTabMeta.title}</strong>
-              <span className={localStyles.inlineMeta}>
-                표시 {threadRangeStart}-{threadRangeEnd} / 전체 {threadTotal}건
-              </span>
+              <div className={localStyles.mailTableHeaderMeta}>
+                <strong className={localStyles.panelTitle}>{activeTabMeta.title}</strong>
+                <span className={localStyles.inlineMeta}>
+                  표시 {threadRangeStart}-{threadRangeEnd} / 전체 {threadTotal}건
+                </span>
+              </div>
+              {threadTotal > 0 ? (
+                <div className={localStyles.pagination}>
+                  <span className={localStyles.paginationMeta}>
+                    {threadPage} / {threadPageCount}
+                  </span>
+                  <button
+                    type="button"
+                    className={`app-button app-button-secondary ${localStyles.paginationButton}`}
+                    onClick={() => moveThreadPage(1)}
+                    disabled={!canGoPrevThreadPage}
+                  >
+                    처음
+                  </button>
+                  <button
+                    type="button"
+                    className={`app-button app-button-secondary ${localStyles.paginationButton}`}
+                    onClick={() => moveThreadPage(threadPage - 1)}
+                    disabled={!canGoPrevThreadPage}
+                  >
+                    이전
+                  </button>
+                  <button
+                    type="button"
+                    className={`app-button app-button-secondary ${localStyles.paginationButton}`}
+                    onClick={() => moveThreadPage(threadPage + 1)}
+                    disabled={!canGoNextThreadPage}
+                  >
+                    다음
+                  </button>
+                  <button
+                    type="button"
+                    className={`app-button app-button-secondary ${localStyles.paginationButton}`}
+                    onClick={() => moveThreadPage(threadPageCount)}
+                    disabled={!canGoNextThreadPage}
+                  >
+                    마지막
+                  </button>
+                </div>
+              ) : null}
             </div>
             {threads.length === 0 ? (
               <div className={styles.tableEmpty}>{threadEmptyMessage}</div>
@@ -1685,27 +1863,39 @@ export function MailboxPanel({
                 </div>
                 <div className={styles.paginationRow}>
                   <span className={localStyles.paginationMeta}>
-                    {threadPage} / {threadPageCount}
+                    {threadRangeStart}-{threadRangeEnd} / {threadTotal}건 · {threadPage} / {threadPageCount}
                   </span>
                   <button
                     type="button"
                     className={`app-button app-button-secondary ${localStyles.paginationButton}`}
-                    onClick={() => setThreadOffset((current) => Math.max(0, current - THREAD_PAGE_SIZE))}
-                    disabled={threadOffset === 0}
+                    onClick={() => moveThreadPage(1)}
+                    disabled={!canGoPrevThreadPage}
+                  >
+                    처음
+                  </button>
+                  <button
+                    type="button"
+                    className={`app-button app-button-secondary ${localStyles.paginationButton}`}
+                    onClick={() => moveThreadPage(threadPage - 1)}
+                    disabled={!canGoPrevThreadPage}
                   >
                     이전
                   </button>
                   <button
                     type="button"
                     className={`app-button app-button-secondary ${localStyles.paginationButton}`}
-                    onClick={() =>
-                      setThreadOffset((current) =>
-                        current + THREAD_PAGE_SIZE >= threadTotal ? current : current + THREAD_PAGE_SIZE,
-                      )
-                    }
-                    disabled={threadOffset + THREAD_PAGE_SIZE >= threadTotal}
+                    onClick={() => moveThreadPage(threadPage + 1)}
+                    disabled={!canGoNextThreadPage}
                   >
                     다음
+                  </button>
+                  <button
+                    type="button"
+                    className={`app-button app-button-secondary ${localStyles.paginationButton}`}
+                    onClick={() => moveThreadPage(threadPageCount)}
+                    disabled={!canGoNextThreadPage}
+                  >
+                    마지막
                   </button>
                 </div>
               </>

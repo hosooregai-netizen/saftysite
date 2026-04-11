@@ -156,6 +156,47 @@
   color: var(--erp-text-muted);
 }
 
+.mailTableHeaderMeta {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.syncStatusBanner {
+  display: grid;
+  gap: 4px;
+  padding: 11px 14px;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-card);
+}
+
+.syncStatusBannerProgress {
+  background: linear-gradient(180deg, rgba(239, 246, 255, 0.96), rgba(248, 250, 252, 0.98));
+  border-color: rgba(147, 197, 253, 0.55);
+}
+
+.syncStatusBannerReady {
+  background: linear-gradient(180deg, rgba(240, 253, 244, 0.96), rgba(248, 250, 252, 0.98));
+  border-color: rgba(74, 222, 128, 0.42);
+}
+
+.syncStatusBannerError {
+  background: linear-gradient(180deg, rgba(254, 242, 242, 0.98), rgba(255, 247, 247, 0.98));
+  border-color: rgba(248, 113, 113, 0.38);
+}
+
+.syncStatusTitle {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--erp-dark);
+}
+
+.syncStatusText {
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--erp-text-muted);
+}
+
 .tabButton {
   display: flex;
   align-items: center;
