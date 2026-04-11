@@ -15,6 +15,7 @@ import {
   disconnectMailAccount,
   fetchMailAccounts,
   fetchMailProviderStatuses,
+  fetchMailRecipientSuggestions,
   fetchMailThreadDetail,
   fetchMailThreads,
   sendMail,
@@ -29,6 +30,7 @@ import type {
   MailAccountSyncMetadata,
   MailAttachmentPayload,
   MailProviderStatus,
+  MailRecipientSuggestion,
   MailThread,
   MailThreadDetail,
 } from '@/types/mail';
@@ -84,6 +86,10 @@ interface MailSendProgressState {
   detail: string;
   percent: number;
   title: string;
+}
+
+interface RecipientSuggestionItem extends MailRecipientSuggestion {
+  label: string;
 }
 
 const THREAD_PAGE_SIZE = 50;
@@ -507,6 +513,10 @@ export function MailboxPanel({
   const [selectedReport, setSelectedReport] = useState<SelectedReportContext | null>(null);
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [mailSendProgress, setMailSendProgress] = useState<MailSendProgressState | null>(null);
+  const [recipientSuggestions, setRecipientSuggestions] = useState<RecipientSuggestionItem[]>([]);
+  const [recipientSuggestionsLoading, setRecipientSuggestionsLoading] = useState(false);
+  const [recipientSuggestionsOpen, setRecipientSuggestionsOpen] = useState(false);
+  const [recipientSuggestionIndex, setRecipientSuggestionIndex] = useState(0);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -561,9 +571,13 @@ export function MailboxPanel({
   }, [headquarterId, pathname, reportKey, router, searchParams, siteId]);
 
   const selectedAccount = useMemo(
-    () => accounts.find((item) => item.id === selectedAccountId) ?? accounts[0] ?? null,
+    () => accounts.find((item) => item.id === selectedAccountId) ?? null,
     [accounts, selectedAccountId],
   );
+  const selectableAccounts = useMemo(() => {
+    const personalAccounts = accounts.filter((account) => account.scope === 'personal');
+    return personalAccounts.length > 0 ? personalAccounts : accounts;
+  }, [accounts]);
   const disconnectableAccount = useMemo(() => {
     if (accounts.length === 1) {
       return accounts[0]?.scope === 'personal' ? accounts[0] : null;
@@ -581,7 +595,7 @@ export function MailboxPanel({
   );
   const googleProviderStatus = providerStatusMap.get('google');
   const naverProviderStatus = providerStatusMap.get('naver_mail');
-  const hasMultipleAccounts = accounts.length > 1;
+  const hasMultipleAccounts = selectableAccounts.length > 1;
   const hasPersonalAccount = accounts.some((account) => account.scope === 'personal');
   const adminSiteById = useMemo(
     () => new Map(adminSites.map((item) => [item.id, item])),
@@ -614,6 +628,14 @@ export function MailboxPanel({
   const listScopeMeta = useMemo(
     () => [hasMultipleAccounts && selectedAccount ? selectedAccount.mailboxLabel : ''].filter(Boolean),
     [hasMultipleAccounts, selectedAccount],
+  );
+  const visibleRecipientSuggestions = useMemo(
+    () =>
+      recipientSuggestions.filter(
+        (item) =>
+          !compose.toRecipients.some((recipient) => recipient.toLowerCase() === item.email.toLowerCase()),
+      ),
+    [compose.toRecipients, recipientSuggestions],
   );
 
   useEffect(() => {
@@ -693,10 +715,56 @@ export function MailboxPanel({
       setSelectedAccountId('');
       return;
     }
-    if (!selectedAccountId) {
-      setSelectedAccountId(accounts[0].id);
+    const selectedStillVisible = selectableAccounts.some((account) => account.id === selectedAccountId);
+    if (!selectedStillVisible) {
+      setSelectedAccountId(selectableAccounts[0]?.id || '');
     }
-  }, [accounts, selectedAccountId]);
+  }, [accounts, selectableAccounts, selectedAccountId]);
+
+  useEffect(() => {
+    if (isDemoMode || view !== 'compose' || !selectedAccountId) {
+      setRecipientSuggestions([]);
+      setRecipientSuggestionsLoading(false);
+      setRecipientSuggestionIndex(0);
+      return;
+    }
+
+    let cancelled = false;
+    const timeoutId = window.setTimeout(() => {
+      void (async () => {
+        try {
+          setRecipientSuggestionsLoading(true);
+          const response = await fetchMailRecipientSuggestions({
+            accountId: selectedAccountId,
+            limit: 8,
+            query: compose.toInput.trim(),
+          });
+          if (cancelled) return;
+          setRecipientSuggestions(
+            response.rows.map((item) => ({
+              ...item,
+              label: item.name ? `${item.name} <${item.email}>` : item.email,
+            })),
+          );
+          setRecipientSuggestionIndex(0);
+        } catch {
+          if (!cancelled) {
+            setRecipientSuggestions([]);
+            setRecipientSuggestionIndex(0);
+          }
+        } finally {
+          if (!cancelled) {
+            setRecipientSuggestionsLoading(false);
+          }
+        }
+      })();
+    }, compose.toInput.trim() ? 120 : 0);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [compose.toInput, isDemoMode, selectedAccountId, view]);
 
   useEffect(() => {
     const searchNotice = searchParams.get('oauthNotice') || '';
@@ -738,9 +806,11 @@ export function MailboxPanel({
           fetchMailAccounts(),
           fetchMailProviderStatuses(),
         ]);
-        setAccounts(response.rows.map(normalizeMailAccountUi));
+        const nextAccounts = response.rows.map(normalizeMailAccountUi);
+        const nextSelectableAccounts = nextAccounts.filter((account) => account.scope === 'personal');
+        setAccounts(nextAccounts);
         setProviderStatuses(providerResponse.rows);
-        setSelectedAccountId((current) => current || response.rows[0]?.id || '');
+        setSelectedAccountId((current) => current || nextSelectableAccounts[0]?.id || nextAccounts[0]?.id || '');
       } catch (nextError) {
         setError(nextError instanceof Error ? nextError.message : '메일 계정을 불러오지 못했습니다.');
       } finally {
@@ -769,19 +839,12 @@ export function MailboxPanel({
       return;
     }
 
-    if (!selectedAccount) {
-      setThreads([]);
-      setThreadTotal(0);
-      setSelectedThreadId('');
-      setThreadLoading(false);
-      return;
-    }
     void (async () => {
       try {
         setThreadLoading(true);
         setError(null);
         const response = await fetchMailThreads({
-          accountId: selectedAccount.id,
+          accountId: selectedAccount?.id || '',
           box: tab,
           headquarterId,
           limit: THREAD_PAGE_SIZE,
@@ -818,7 +881,7 @@ export function MailboxPanel({
       return;
     }
 
-    if (!selectedThreadId || !selectedAccount || view !== 'thread') {
+    if (!selectedThreadId || view !== 'thread') {
       setThreadDetail(null);
       setThreadLoading(false);
       return;
@@ -1053,6 +1116,12 @@ export function MailboxPanel({
       toInput: '',
       toRecipients: nextTokens,
     }));
+    setRecipientSuggestionIndex(0);
+  };
+
+  const handleRecipientSuggestionSelect = (suggestion: RecipientSuggestionItem) => {
+    commitRecipientTokens([suggestion.email]);
+    setRecipientSuggestionsOpen(false);
   };
 
   const handleRecipientInputChange = (value: string) => {
@@ -1061,6 +1130,8 @@ export function MailboxPanel({
         ...current,
         toInput: value,
       }));
+      setRecipientSuggestionsOpen(true);
+      setRecipientSuggestionIndex(0);
       return;
     }
     const tokens = extractRecipientTokens(value);
@@ -1081,6 +1152,41 @@ export function MailboxPanel({
   };
 
   const handleRecipientKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'ArrowDown') {
+      if (visibleRecipientSuggestions.length === 0) return;
+      event.preventDefault();
+      setRecipientSuggestionsOpen(true);
+      setRecipientSuggestionIndex((current) =>
+        recipientSuggestionsOpen ? (current + 1) % visibleRecipientSuggestions.length : 0,
+      );
+      return;
+    }
+    if (event.key === 'ArrowUp') {
+      if (visibleRecipientSuggestions.length === 0) return;
+      event.preventDefault();
+      setRecipientSuggestionsOpen(true);
+      setRecipientSuggestionIndex((current) =>
+        recipientSuggestionsOpen
+          ? current <= 0
+            ? visibleRecipientSuggestions.length - 1
+            : current - 1
+          : visibleRecipientSuggestions.length - 1,
+      );
+      return;
+    }
+    if (event.key === 'Escape') {
+      setRecipientSuggestionsOpen(false);
+      return;
+    }
+    if (
+      event.key === 'Enter' &&
+      recipientSuggestionsOpen &&
+      visibleRecipientSuggestions[recipientSuggestionIndex]
+    ) {
+      event.preventDefault();
+      handleRecipientSuggestionSelect(visibleRecipientSuggestions[recipientSuggestionIndex]);
+      return;
+    }
     if (
       event.key !== 'Enter' &&
       event.key !== 'Tab' &&
@@ -1097,6 +1203,7 @@ export function MailboxPanel({
   };
 
   const handleRecipientBlur = () => {
+    setRecipientSuggestionsOpen(false);
     if (!isLikelyEmail(compose.toInput.trim())) return;
     commitRecipientTokens([compose.toInput.trim()]);
   };
@@ -1452,7 +1559,7 @@ export function MailboxPanel({
                   onChange={(event) => setSelectedAccountId(event.target.value)}
                 >
                   <option value="">전체 계정</option>
-                  {accounts.map((account) => (
+                  {selectableAccounts.map((account) => (
                     <option key={account.id} value={account.id}>
                       {account.mailboxLabel}
                     </option>
@@ -1675,7 +1782,7 @@ export function MailboxPanel({
                     value={selectedAccountId}
                     onChange={(event) => setSelectedAccountId(event.target.value)}
                   >
-                    {accounts.map((account) => (
+                    {selectableAccounts.map((account) => (
                       <option key={account.id} value={account.id}>
                         {account.mailboxLabel}
                       </option>
@@ -1688,28 +1795,58 @@ export function MailboxPanel({
             <div className={localStyles.composeGrid}>
               <label className={localStyles.fieldWide}>
                 <span className={localStyles.fieldLabel}>받는 사람</span>
-                <div className={localStyles.recipientInputShell}>
-                  {compose.toRecipients.map((recipient) => (
-                    <span key={recipient} className={localStyles.recipientChip}>
-                      <span>{recipient}</span>
-                      <button
-                        type="button"
-                        className={localStyles.recipientChipRemove}
-                        onClick={() => handleRemoveRecipient(recipient)}
-                        aria-label={`${recipient} 제거`}
-                      >
-                        x
-                      </button>
-                    </span>
-                  ))}
-                  <input
-                    className={localStyles.recipientInput}
-                    value={compose.toInput}
-                    onBlur={handleRecipientBlur}
-                    onChange={(event) => handleRecipientInputChange(event.target.value)}
-                    onKeyDown={handleRecipientKeyDown}
-                    placeholder={compose.toRecipients.length === 0 ? 'example@domain.com 입력 후 띄어쓰기' : ''}
-                  />
+                <div className={localStyles.recipientField}>
+                  <div className={localStyles.recipientInputShell}>
+                    {compose.toRecipients.map((recipient) => (
+                      <span key={recipient} className={localStyles.recipientChip}>
+                        <span>{recipient}</span>
+                        <button
+                          type="button"
+                          className={localStyles.recipientChipRemove}
+                          onClick={() => handleRemoveRecipient(recipient)}
+                          aria-label={`${recipient} 제거`}
+                        >
+                          x
+                        </button>
+                      </span>
+                    ))}
+                    <input
+                      className={localStyles.recipientInput}
+                      value={compose.toInput}
+                      onBlur={handleRecipientBlur}
+                      onChange={(event) => handleRecipientInputChange(event.target.value)}
+                      onFocus={() => setRecipientSuggestionsOpen(true)}
+                      onKeyDown={handleRecipientKeyDown}
+                      placeholder={compose.toRecipients.length === 0 ? 'example@domain.com 입력 후 띄어쓰기' : ''}
+                    />
+                  </div>
+                  {recipientSuggestionsOpen && (recipientSuggestionsLoading || visibleRecipientSuggestions.length > 0) ? (
+                    <div className={localStyles.recipientSuggestionPanel}>
+                      {recipientSuggestionsLoading ? (
+                        <div className={localStyles.recipientSuggestionEmpty}>이전 발송 메일을 불러오는 중입니다.</div>
+                      ) : null}
+                      {!recipientSuggestionsLoading
+                        ? visibleRecipientSuggestions.map((suggestion, index) => (
+                            <button
+                              key={suggestion.email}
+                              type="button"
+                              className={`${localStyles.recipientSuggestionItem} ${
+                                index === recipientSuggestionIndex ? localStyles.recipientSuggestionItemActive : ''
+                              }`}
+                              onMouseDown={(event) => {
+                                event.preventDefault();
+                                handleRecipientSuggestionSelect(suggestion);
+                              }}
+                            >
+                              <span className={localStyles.recipientSuggestionPrimary}>{suggestion.label}</span>
+                              <span className={localStyles.recipientSuggestionMeta}>
+                                최근 발송 {suggestion.usageCount}회
+                              </span>
+                            </button>
+                          ))
+                        : null}
+                    </div>
+                  ) : null}
                 </div>
               </label>
 
