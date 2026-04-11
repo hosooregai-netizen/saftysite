@@ -3,6 +3,7 @@ import {
   createEmptyAdminSiteSnapshot,
   createTimestamp,
   generateId,
+  normalizeBoolean,
   normalizeText,
   normalizeTimestamp,
 } from '@/constants/inspectionSession/shared';
@@ -21,6 +22,9 @@ export function normalizeInspectionSite(raw: unknown): InspectionSite {
     'adminSiteSnapshot' in source ? asRecord(source.adminSiteSnapshot) : source;
   const snapshot = createEmptyAdminSiteSnapshot({
     customerName: normalizeText(snapshotSource.customerName) || normalizeText(source.customerName),
+    clientBusinessName:
+      normalizeText(snapshotSource.clientBusinessName) ||
+      normalizeText(source.clientBusinessName),
     siteName: normalizeText(snapshotSource.siteName) || normalizeText(source.siteName) || normalizeText(source.title),
     assigneeName: normalizeText(snapshotSource.assigneeName) || normalizeText(source.assigneeName),
     siteManagementNumber: normalizeText(snapshotSource.siteManagementNumber),
@@ -36,6 +40,7 @@ export function normalizeInspectionSite(raw: unknown): InspectionSite {
         source.project_end_date ?? source.projectEndDate,
       ),
     constructionAmount: normalizeText(snapshotSource.constructionAmount),
+    isHighRiskSite: normalizeBoolean(snapshotSource.isHighRiskSite ?? source.isHighRiskSite),
     siteManagerName: normalizeText(snapshotSource.siteManagerName),
     siteManagerPhone:
       normalizeText(snapshotSource.siteManagerPhone) ||

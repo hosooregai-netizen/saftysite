@@ -170,6 +170,8 @@ export interface SafetySite {
   inspector_name: string | null;
   contract_contact_name: string | null;
   manager_phone: string | null;
+  site_contact_email?: string | null;
+  is_high_risk_site?: boolean | null;
   site_address: string | null;
   status: string;
   lifecycle_status?: SafetySiteLifecycleStatus;
@@ -370,10 +372,12 @@ export interface SafetyBackendAdminReportRow {
     deadline_date?: string | null;
     dispatch_status?: string | null;
     sent_completed_at?: string | null;
+    actual_sent_at?: string | null;
     mailbox_account_id?: string | null;
     mail_thread_id?: string | null;
     message_id?: string | null;
     recipient?: string | null;
+    actual_recipient?: string | null;
     read_at?: string | null;
     reply_at?: string | null;
     reply_summary?: string | null;
@@ -878,6 +882,16 @@ export interface SafetyBackendAdminOverviewResponse {
     }>;
     total_report_count: number;
   };
+  dispatch_queue_rows?: Array<{
+    headquarter_name: string;
+    href: string;
+    open_report_count: number;
+    project_amount: number | null;
+    recipient_email: string;
+    site_id: string;
+    site_name: string;
+    total_contract_amount: number | null;
+  }>;
   deadline_rows: Array<{
     deadline_date: string;
     deadline_label: string;
@@ -943,6 +957,26 @@ export interface SafetyBackendAdminOverviewResponse {
     quarter_label: string;
     total_site_count: number;
   };
+  priority_target_site_rows?: Array<{
+    headquarter_name: string;
+    href: string;
+    open_report_count: number;
+    project_amount: number | null;
+    recipient_email: string;
+    site_id: string;
+    site_name: string;
+    total_contract_amount: number | null;
+  }>;
+  recipient_missing_site_rows?: Array<{
+    headquarter_name: string;
+    href: string;
+    open_report_count: number;
+    project_amount: number | null;
+    recipient_email: string;
+    site_id: string;
+    site_name: string;
+    total_contract_amount: number | null;
+  }>;
   schedule_rows: SafetyBackendInspectionSchedule[];
   site_status_summary: {
     entries: Array<{
@@ -968,6 +1002,10 @@ export interface SafetyBackendAdminOverviewResponse {
     site_name: string;
     unsent_days: number;
     visit_date: string;
+    mail_missing_reason?: string;
+    mail_ready?: boolean;
+    recipient_email?: string;
+    recipient_name?: string;
   }>;
   worker_load_rows: Array<{
     assigned_site_count: number;

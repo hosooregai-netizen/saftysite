@@ -111,12 +111,14 @@ export function createEmptyAdminSiteSnapshot(
 ): AdminSiteSnapshot {
   return {
     customerName: '',
+    clientBusinessName: '',
     siteName: '',
     assigneeName: '',
     siteManagementNumber: '',
     businessStartNumber: '',
     constructionPeriod: '',
     constructionAmount: '',
+    isHighRiskSite: false,
     siteManagerName: '',
     siteManagerPhone: '',
     siteContactEmail: '',

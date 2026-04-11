@@ -26,7 +26,10 @@ export function mapSafetySiteToAdminSnapshot(site: SafetySite): AdminSiteSnapsho
       : normalizeMapperText(site.assigned_user?.name);
 
   return {
-    customerName: headquarterName,
+    customerName:
+      normalizeMapperText(site.client_business_name) ||
+      headquarterName,
+    clientBusinessName: normalizeMapperText(site.client_business_name),
     siteName: normalizeMapperText(site.site_name),
     assigneeName,
     siteManagementNumber:
@@ -37,11 +40,14 @@ export function mapSafetySiteToAdminSnapshot(site: SafetySite): AdminSiteSnapsho
       normalizeMapperText(site.site_code),
     constructionPeriod: formatDateRange(site.project_start_date, site.project_end_date),
     constructionAmount: formatProjectAmount(site.project_amount),
+    isHighRiskSite: Boolean(site.is_high_risk_site),
     siteManagerName: normalizeMapperText(site.manager_name),
     siteManagerPhone: normalizeMapperText(site.manager_phone),
-    siteContactEmail: normalizeMapperText(site.manager_phone),
+    siteContactEmail: normalizeMapperText(site.site_contact_email),
     siteAddress: normalizeMapperText(site.site_address),
-    companyName: headquarterName,
+    companyName:
+      normalizeMapperText(site.client_business_name) ||
+      headquarterName,
     corporationRegistrationNumber: normalizeMapperText(
       site.headquarter_detail?.corporate_registration_no
     ),

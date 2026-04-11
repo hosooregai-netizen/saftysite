@@ -153,6 +153,8 @@ function buildDispatchMeta(row: ControllerReportRow): ReportDispatchMeta {
   return row.dispatch ?? {
     deadlineDate: row.deadlineDate || addDays(row.visitDate || row.updatedAt.slice(0, 10), 7),
     dispatchStatus: row.dispatchStatus || '',
+    actualRecipient: '',
+    actualSentAt: '',
     mailboxAccountId: '',
     mailThreadId: '',
     messageId: '',
@@ -464,6 +466,7 @@ export function ReportsSection({
     () => sites.map((site) => [site.id, site.site_name] as const),
     [sites],
   );
+  const siteById = useMemo(() => new Map(sites.map((site) => [site.id, site])), [sites]);
   const assigneeOptions = useMemo(
     () => users.map((user) => [user.id, user.name] as const),
     [users],
@@ -531,6 +534,10 @@ export function ReportsSection({
     setOffset(0);
     setDateTo(value);
   };
+  const dispatchSite = useMemo(
+    () => (dispatchRow ? siteById.get(dispatchRow.siteId) ?? null : null),
+    [dispatchRow, siteById],
+  );
 
   const resetHeaderFilters = () => {
     setOffset(0);
@@ -1257,7 +1264,7 @@ export function ReportsSection({
                   })
                 }
               >
-                발송완료 처리
+                관제 수동 완료 처리
               </button>
             </>
           ) : undefined
@@ -1270,6 +1277,46 @@ export function ReportsSection({
               {buildDispatchMeta(dispatchRow).deadlineDate || '-'}
             </p>
             <div className={styles.modalGrid}>
+              <label className={styles.modalFieldWide}>
+                <span className={styles.label}>기본 수신자 정보</span>
+                <div className={styles.tableSecondary}>
+                  {dispatchSite?.site_contact_email
+                    ? `${dispatchSite.manager_name || dispatchSite.contract_contact_name || '현장대리인'} · ${dispatchSite.site_contact_email}`
+                    : '현장대리인 메일이 등록되지 않았습니다.'}
+                </div>
+              </label>
+              <label className={styles.modalField}>
+                <span className={styles.label}>실제 메일 발송</span>
+                <div className={styles.tableSecondary}>
+                  {buildDispatchMeta(dispatchRow).actualSentAt
+                    ? `${formatDateTime(buildDispatchMeta(dispatchRow).actualSentAt || '')} / ${buildDispatchMeta(dispatchRow).actualRecipient || buildDispatchMeta(dispatchRow).recipient || '-'}`
+                    : '기록 없음'}
+                </div>
+              </label>
+              <label className={styles.modalField}>
+                <span className={styles.label}>관제 수동 완료</span>
+                <div className={styles.tableSecondary}>
+                  {buildDispatchMeta(dispatchRow).sentCompletedAt
+                    ? formatDateTime(buildDispatchMeta(dispatchRow).sentCompletedAt || '')
+                    : '기록 없음'}
+                </div>
+              </label>
+              <label className={styles.modalField}>
+                <span className={styles.label}>수신 확인</span>
+                <div className={styles.tableSecondary}>
+                  {buildDispatchMeta(dispatchRow).readAt
+                    ? formatDateTime(buildDispatchMeta(dispatchRow).readAt || '')
+                    : '아직 확인되지 않았습니다.'}
+                </div>
+              </label>
+              <label className={styles.modalFieldWide}>
+                <span className={styles.label}>회신 상태</span>
+                <div className={styles.tableSecondary}>
+                  {buildDispatchMeta(dispatchRow).replyAt
+                    ? `${formatDateTime(buildDispatchMeta(dispatchRow).replyAt || '')} / ${buildDispatchMeta(dispatchRow).replySummary || '요약 없음'}`
+                    : '아직 회신이 없습니다.'}
+                </div>
+              </label>
               <label className={styles.modalFieldWide}>
                 <span className={styles.label}>문자 발송 상태</span>
                 <div className={styles.tableSecondary}>

@@ -54,6 +54,10 @@ function mergeMissingSnapshotFields(
   let changed = false;
 
   const merged = createEmptyAdminSiteSnapshot();
+  const mutableMerged = merged as Record<
+    keyof InspectionSession['adminSiteSnapshot'],
+    string | boolean
+  >;
   const keys = Object.keys(base) as Array<keyof InspectionSession['adminSiteSnapshot']>;
 
   for (const typedKey of keys) {
@@ -64,13 +68,17 @@ function mergeMissingSnapshotFields(
         ? value
         : typeof fallback === 'string' && fallback.trim()
           ? fallback
+          : typeof value === 'boolean'
+            ? value || (typeof fallback === 'boolean' ? fallback : value)
+            : typeof fallback === 'boolean'
+              ? fallback
           : value;
 
     if (nextValue !== value) {
       changed = true;
     }
 
-    merged[typedKey] = nextValue;
+    mutableMerged[typedKey] = nextValue;
   }
 
   return { changed, merged };

@@ -82,6 +82,13 @@ function formatSyncTimestamp(value: Date | null) {
   });
 }
 
+function formatOverviewCurrency(value: number | null | undefined) {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+    return '-';
+  }
+  return `${new Intl.NumberFormat('ko-KR').format(Math.round(value))}원`;
+}
+
 function getDispatchStatusTone(
   status: SafetyAdminOverviewResponse['unsentReportRows'][number]['dispatchStatus'],
 ) {
@@ -95,12 +102,6 @@ function getDispatchStatusTone(
     default:
       return styles.overviewTableStatusNeutral;
   }
-}
-
-function isActionableDispatchStatus(
-  status: SafetyAdminOverviewResponse['unsentReportRows'][number]['dispatchStatus'],
-) {
-  return status === 'warning' || status === 'overdue';
 }
 
 const DEADLINE_SIGNAL_COLOR_BY_KEY: Record<string, string> = {
@@ -247,6 +248,65 @@ function DeadlineSignalOverviewCard({
   );
 }
 
+function DispatchQueueTable({
+  emptyLabel,
+  rows,
+  title,
+}: {
+  emptyLabel: string;
+  rows: NonNullable<SafetyAdminOverviewResponse['dispatchQueueRows']>;
+  title: string;
+}) {
+  return (
+    <section className={`${styles.sectionCard} ${styles.listSectionCard} ${styles.overviewTableCard}`}>
+      <div className={styles.sectionHeader}>
+        <div className={styles.overviewTableHeaderBlock}>
+          <h2 className={styles.sectionTitle}>{title}</h2>
+        </div>
+        <div className={styles.sectionHeaderActions}>
+          <span className={styles.overviewTableCount}>{rows.length.toLocaleString('ko-KR')}개 현장</span>
+        </div>
+      </div>
+      <div className={styles.sectionBody}>
+        {rows.length === 0 ? (
+          renderEmptyRow(emptyLabel)
+        ) : (
+          <div className={styles.tableShell}>
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>현장</th>
+                    <th>사업장</th>
+                    <th>공사금액</th>
+                    <th>기본 수신자</th>
+                    <th>미발송 보고서</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row) => (
+                    <tr key={`${title}-${row.siteId}`}>
+                      <td>
+                        <Link href={row.href} className={styles.tableInlineLink}>
+                          {row.siteName}
+                        </Link>
+                      </td>
+                      <td>{row.headquarterName}</td>
+                      <td>{formatOverviewCurrency(row.projectAmount)}</td>
+                      <td>{row.recipientEmail || '미등록'}</td>
+                      <td>{`${row.openReportCount}건`}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 export function AdminOverviewSection({
   data,
   reports,
@@ -257,6 +317,9 @@ export function AdminOverviewSection({
         ...buildAdminOverviewModel(data, reports),
         alerts: [],
         completionRows: [],
+        dispatchQueueRows: [],
+        priorityTargetSiteRows: [],
+        recipientMissingSiteRows: [],
         scheduleRows: [],
       } satisfies SafetyAdminOverviewResponse),
     [data, reports],
@@ -341,7 +404,7 @@ export function AdminOverviewSection({
           assigneeName: row.assigneeName || fallbackRow?.assigneeName || '-',
         };
       })
-      .filter((row) => isActionableDispatchStatus(row.dispatchStatus));
+      .filter((row) => Boolean(row.reportKey));
   }, [fallbackOverview.unsentReportRows, overview.unsentReportRows]);
 
   const sortedMaterialRows = useMemo(() => {
@@ -420,6 +483,9 @@ export function AdminOverviewSection({
     const offset = (currentUnsentPage - 1) * OVERVIEW_TABLE_PAGE_SIZE;
     return sortedUnsentReportRows.slice(offset, offset + OVERVIEW_TABLE_PAGE_SIZE);
   }, [currentUnsentPage, sortedUnsentReportRows]);
+  const priorityTargetRows = overview.priorityTargetSiteRows ?? [];
+  const recipientMissingRows = overview.recipientMissingSiteRows ?? [];
+  const dispatchQueueRows = overview.dispatchQueueRows ?? [];
 
   const exportOverview = useCallback(async () => {
     const exportModel: AdminOverviewModel = {
@@ -517,13 +583,15 @@ export function AdminOverviewSection({
                     <colgroup>
                       <col className={styles.overviewColSite} />
                       <col className={styles.overviewColHeadquarter} />
-                      <col className={styles.overviewColReport} />
-                      <col className={styles.overviewColType} />
-                      <col className={styles.overviewColAssignee} />
-                      <col className={styles.overviewColDate} />
-                      <col className={styles.overviewColElapsed} />
-                      <col className={styles.overviewColStatus} />
-                    </colgroup>
+                    <col className={styles.overviewColReport} />
+                    <col className={styles.overviewColType} />
+                    <col className={styles.overviewColAssignee} />
+                    <col className={styles.overviewColDate} />
+                    <col className={styles.overviewColElapsed} />
+                    <col className={styles.overviewColMetric} />
+                    <col className={styles.overviewColMetric} />
+                    <col className={styles.overviewColStatus} />
+                  </colgroup>
                     <thead>
                       <tr>
                         <SortableHeaderCell
@@ -581,6 +649,8 @@ export function AdminOverviewSection({
                             desc: '오래 미발송된 순',
                           })}
                         />
+                        <th>기본 수신자</th>
+                        <th>메일 상태</th>
                         <th>상태</th>
                       </tr>
                     </thead>
@@ -612,6 +682,14 @@ export function AdminOverviewSection({
                           </td>
                           <td>
                             <span className={styles.overviewTableMetric}>{`D+${row.unsentDays}`}</span>
+                          </td>
+                          <td>
+                            <span className={styles.overviewTableMetric}>{row.recipientEmail || '미등록'}</span>
+                          </td>
+                          <td>
+                            <span className={styles.overviewTableMetric}>
+                              {row.mailReady ? '발송 가능' : row.mailMissingReason || '보완 필요'}
+                            </span>
                           </td>
                           <td>
                             <span
@@ -652,6 +730,24 @@ export function AdminOverviewSection({
             </div>
           ) : null}
         </section>
+
+        <DispatchQueueTable
+          title="20억 이상 발송 대상 현장"
+          rows={priorityTargetRows}
+          emptyLabel="현재 우선 발송 대상으로 분류된 현장이 없습니다."
+        />
+
+        <DispatchQueueTable
+          title="현장대리인 메일 미등록 현장"
+          rows={recipientMissingRows}
+          emptyLabel="현재 메일 정보 보완이 필요한 현장이 없습니다."
+        />
+
+        <DispatchQueueTable
+          title="발송 필요하지만 아직 미발송인 현장"
+          rows={dispatchQueueRows}
+          emptyLabel="현재 미발송 보고서가 남아 있는 현장이 없습니다."
+        />
 
         <section className={`${styles.sectionCard} ${styles.listSectionCard} ${styles.overviewTableCard}`}>
           <div className={styles.sectionHeader}>

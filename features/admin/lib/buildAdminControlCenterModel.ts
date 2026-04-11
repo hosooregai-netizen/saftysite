@@ -179,16 +179,50 @@ export interface AdminOverviewUnsentReportRow {
   siteName: string;
   unsentDays: number;
   visitDate: string;
+  mailMissingReason?: string;
+  mailReady?: boolean;
+  recipientEmail?: string;
+  recipientName?: string;
 }
 
 export interface AdminOverviewModel {
   coverageRows: AdminCoverageRow[];
   deadlineSignalSummary: AdminOverviewDeadlineSignalSummary;
   deadlineRows: AdminOverviewDeadlineRow[];
+  dispatchQueueRows?: Array<{
+    headquarterName: string;
+    href: string;
+    openReportCount: number;
+    projectAmount: number | null;
+    recipientEmail: string;
+    siteId: string;
+    siteName: string;
+    totalContractAmount: number | null;
+  }>;
   metricCards: AdminOverviewMetricCard[];
   overdueSiteRows: AdminOverviewSiteAlertRow[];
   pendingReviewRows: AdminOverviewReviewRow[];
+  priorityTargetSiteRows?: Array<{
+    headquarterName: string;
+    href: string;
+    openReportCount: number;
+    projectAmount: number | null;
+    recipientEmail: string;
+    siteId: string;
+    siteName: string;
+    totalContractAmount: number | null;
+  }>;
   quarterlyMaterialSummary: AdminOverviewQuarterlyMaterialSummary;
+  recipientMissingSiteRows?: Array<{
+    headquarterName: string;
+    href: string;
+    openReportCount: number;
+    projectAmount: number | null;
+    recipientEmail: string;
+    siteId: string;
+    siteName: string;
+    totalContractAmount: number | null;
+  }>;
   siteStatusSummary: AdminOverviewSiteStatusSummary;
   summaryRows: Array<{ label: string; meta: string; value: string }>;
   unsentReportRows: AdminOverviewUnsentReportRow[];

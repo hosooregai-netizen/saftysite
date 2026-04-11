@@ -128,6 +128,7 @@ export interface BadWorkplaceReport {
   reportKind: 'bad_workplace';
   reportMonth: string;
   status: OperationalReportStatus;
+  sourceMode: 'previous_unresolved' | 'current_new_hazard';
   controllerReview: ReportControllerReview | null;
   siteSnapshot: AdminSiteSnapshot;
   reporterUserId: string;

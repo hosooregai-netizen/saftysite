@@ -1541,7 +1541,9 @@ function mapSessionToTemplateBinding(session: InspectionSession): TemplateBindin
   const site = session.adminSiteSnapshot;
   const overview = session.document2Overview;
 
-  text['cover.site_name'] = valueOrDash(session.meta.siteName || site.siteName);
+  text['cover.site_name'] = valueOrDash(
+    `${session.meta.siteName || site.siteName}${site.isHighRiskSite ? ' (고위험 사업장)' : ''}`.trim(),
+  );
   text['cover.report_date'] = valueOrDash(
     formatDateText(getSessionGuidanceDate(session)),
   );
@@ -1555,7 +1557,7 @@ function mapSessionToTemplateBinding(session: InspectionSession): TemplateBindin
   text['sec1.site_manager_name'] = valueOrDash(site.siteManagerName);
   text['sec1.site_contact'] = valueOrDash(site.siteContactEmail);
   text['sec1.site_address'] = valueOrDash(site.siteAddress);
-  text['sec1.company_name'] = valueOrDash(site.companyName);
+  text['sec1.company_name'] = valueOrDash(site.clientBusinessName || site.companyName);
   text['sec1.corporation_registration_number'] = valueOrDash(site.corporationRegistrationNumber);
   text['sec1.business_registration_number'] = valueOrDash(site.businessRegistrationNumber);
   text['sec1.license_number'] = valueOrDash(site.licenseNumber);

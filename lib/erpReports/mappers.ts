@@ -256,6 +256,13 @@ export function mapSafetyReportToBadWorkplaceReport(
     recipientOfficeName: normalizeMapperText(payload.recipientOfficeName),
     attachmentDescription: normalizeMapperText(payload.attachmentDescription),
     sourceSessionId: normalizeMapperText(payload.sourceSessionId),
+    sourceMode:
+      (
+        normalizeMapperText(payload.sourceMode) ||
+        normalizeMapperText(meta.sourceMode)
+      ) === 'previous_unresolved'
+        ? 'previous_unresolved'
+        : 'current_new_hazard',
     sourceFindingIds: Array.isArray(payload.sourceFindingIds)
       ? payload.sourceFindingIds.map((item) => normalizeMapperText(item)).filter(Boolean)
       : [],

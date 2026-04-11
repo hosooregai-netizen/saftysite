@@ -64,6 +64,8 @@ interface SiteFormState {
   labor_office: string;
   guidance_officer_name: string;
   site_address: string;
+  site_contact_email: string;
+  is_high_risk_site: boolean;
   project_amount: string;
   project_start_date: string;
   project_end_date: string;
@@ -93,6 +95,8 @@ const EMPTY_FORM: SiteFormState = {
   labor_office: '',
   guidance_officer_name: '',
   site_address: '',
+  site_contact_email: '',
+  is_high_risk_site: false,
   project_amount: '',
   project_start_date: '',
   project_end_date: '',
@@ -229,6 +233,7 @@ export function SitesSection(props: SitesSectionProps) {
         site.headquarter_detail?.management_number ?? site.management_number ?? '',
         site.headquarter_detail?.opening_number ?? site.site_code ?? '',
         site.site_address ?? '',
+        site.site_contact_email ?? '',
         site.manager_name ?? '',
         site.labor_office ?? '',
         site.guidance_officer_name ?? '',
@@ -332,6 +337,8 @@ export function SitesSection(props: SitesSectionProps) {
       project_end_date: site.project_end_date ?? '',
       project_scale: site.project_scale ?? '',
       project_kind: site.project_kind ?? '',
+      site_contact_email: site.site_contact_email ?? '',
+      is_high_risk_site: Boolean(site.is_high_risk_site),
       client_management_number: site.client_management_number ?? '',
       client_business_name: site.client_business_name ?? '',
       client_representative_name: site.client_representative_name ?? '',
@@ -373,6 +380,8 @@ export function SitesSection(props: SitesSectionProps) {
       labor_office: toNullableText(form.labor_office),
       guidance_officer_name: toNullableText(form.guidance_officer_name),
       site_address: toNullableText(form.site_address),
+      site_contact_email: toNullableText(form.site_contact_email),
+      is_high_risk_site: form.is_high_risk_site,
       project_amount: parseOptionalNumber(form.project_amount),
       project_start_date: toNullableText(form.project_start_date),
       project_end_date: toNullableText(form.project_end_date),
@@ -449,6 +458,8 @@ export function SitesSection(props: SitesSectionProps) {
           { key: 'labor_office', label: '노동관서' },
           { key: 'guidance_officer_name', label: '지도원' },
           { key: 'site_address', label: '소재지' },
+          { key: 'site_contact_email', label: '현장대리인 메일' },
+          { key: 'is_high_risk_site', label: '고위험 사업장' },
           { key: 'project_amount', label: '공사금액' },
           { key: 'project_start_date', label: '공사시작일' },
           { key: 'project_end_date', label: '공사종료일' },
@@ -492,6 +503,8 @@ export function SitesSection(props: SitesSectionProps) {
             labor_office: site.labor_office || '',
             guidance_officer_name: site.guidance_officer_name || '',
             site_address: site.site_address || '',
+            site_contact_email: site.site_contact_email || '',
+            is_high_risk_site: site.is_high_risk_site ? '예' : '아니오',
             project_amount: formatCurrencyValue(site.project_amount),
             project_start_date: site.project_start_date || '',
             project_end_date: site.project_end_date || '',
@@ -708,6 +721,10 @@ export function SitesSection(props: SitesSectionProps) {
                           <div className={styles.tableSecondary}>
                             {site.site_address || '주소 미입력'}
                           </div>
+                          <div className={styles.tableSecondary}>
+                            현장대리인 메일 {site.site_contact_email || '미등록'}
+                            {site.is_high_risk_site ? ' / 고위험 사업장' : ''}
+                          </div>
                           {requiredCompletionFields.length ? (
                             <div className={styles.tableSecondary}>
                               <span className="app-chip">
@@ -759,6 +776,9 @@ export function SitesSection(props: SitesSectionProps) {
                               : fallbackAssignedUsers.length > 0
                                 ? fallbackAssignedUsers.map((user) => user.name).join(', ')
                                 : '-'}
+                          </div>
+                          <div className={styles.tableSecondary}>
+                            현장대리인 메일 {site.site_contact_email || '미등록'}
                           </div>
                           <div className={styles.tableSecondary}>
                             발주자 {site.client_business_name || '-'} / 대표 {site.client_representative_name || '-'}
@@ -944,6 +964,31 @@ export function SitesSection(props: SitesSectionProps) {
               onChange={(e) => setForm({ ...form, site_address: e.target.value })}
               disabled={busy}
             />
+          </label>
+          <label className={styles.modalField}>
+            <span className={styles.label}>현장대리인 메일</span>
+            <input
+              className="app-input"
+              type="email"
+              value={form.site_contact_email}
+              onChange={(e) => setForm({ ...form, site_contact_email: e.target.value })}
+              disabled={busy}
+              placeholder="site@example.com"
+            />
+          </label>
+          <label className={styles.modalField}>
+            <span className={styles.label}>고위험 사업장</span>
+            <select
+              className="app-select"
+              value={form.is_high_risk_site ? 'yes' : 'no'}
+              onChange={(e) =>
+                setForm({ ...form, is_high_risk_site: e.target.value === 'yes' })
+              }
+              disabled={busy}
+            >
+              <option value="no">일반</option>
+              <option value="yes">고위험</option>
+            </select>
           </label>
           <label className={styles.modalField}>
             <span className={styles.label}>공사금액</span>

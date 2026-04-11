@@ -40,6 +40,7 @@ interface MailboxPanelProps {
 interface MailboxReportOption {
   headquarterId: string;
   headquarterName: string;
+  recipientEmail: string;
   reportKey: string;
   reportTitle: string;
   siteId: string;
@@ -400,6 +401,7 @@ export function MailboxPanel({
         ? {
             headquarterId,
             headquarterName: '',
+            recipientEmail: '',
             reportKey,
             reportTitle: reportKey || '보고서',
             siteId,
@@ -443,6 +445,7 @@ export function MailboxPanel({
           headquarterId: item.headquarter_id || '',
           headquarterName:
             matchedSite?.headquarter_detail?.name || matchedSite?.headquarter?.name || '',
+          recipientEmail: matchedSite?.site_contact_email || '',
           reportKey: item.report_key,
           reportTitle: item.report_title,
           siteId: item.site_id,
@@ -499,6 +502,7 @@ export function MailboxPanel({
             return reports.map((item) => ({
               headquarterId: item.headquarter_id || workerSite.headquarterId || '',
               headquarterName: workerSite.customerName || '',
+              recipientEmail: workerSite.adminSiteSnapshot.siteContactEmail || '',
               reportKey: item.report_key,
               reportTitle: item.report_title,
               siteId: item.site_id,
@@ -681,6 +685,12 @@ export function MailboxPanel({
     setCompose((current) => ({
       ...current,
       subject: current.subject || `[보고서] ${selectedReport.reportTitle || selectedReport.reportKey}`,
+      toRecipients:
+        current.toRecipients.length > 0
+          ? current.toRecipients
+          : selectedReport.recipientEmail && isLikelyEmail(selectedReport.recipientEmail)
+            ? [selectedReport.recipientEmail]
+            : current.toRecipients,
     }));
   }, [composeMode, selectedReport]);
 
@@ -929,6 +939,12 @@ export function MailboxPanel({
         current.subject.trim() && composeMode !== 'report'
           ? current.subject
           : `[보고서] ${option.reportTitle || option.reportKey}`,
+      toRecipients:
+        current.toRecipients.length > 0
+          ? current.toRecipients
+          : option.recipientEmail && isLikelyEmail(option.recipientEmail)
+            ? [option.recipientEmail]
+            : [],
     }));
     setReportPickerOpen(false);
   };
@@ -1493,6 +1509,9 @@ export function MailboxPanel({
                             {selectedReport.siteName || '-'}
                             {selectedReport.headquarterName ? ` · ${selectedReport.headquarterName}` : ''}
                             {selectedReport.visitDate ? ` · ${selectedReport.visitDate}` : ''}
+                          </span>
+                          <span className={localStyles.accountMeta}>
+                            기본 수신자 {selectedReport.recipientEmail || '미등록'}
                           </span>
                         </div>
                         <button

@@ -43,12 +43,14 @@ export interface InspectionReportMeta {
 
 export interface AdminSiteSnapshot {
   customerName: string;
+  clientBusinessName: string;
   siteName: string;
   assigneeName: string;
   siteManagementNumber: string;
   businessStartNumber: string;
   constructionPeriod: string;
   constructionAmount: string;
+  isHighRiskSite: boolean;
   siteManagerName: string;
   siteManagerPhone: string;
   siteContactEmail: string;

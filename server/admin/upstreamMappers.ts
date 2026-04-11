@@ -236,6 +236,15 @@ export function mapBackendOverviewResponse(
   const deadlineSignalEntries = Array.isArray(deadlineSignalSummary.entries)
     ? deadlineSignalSummary.entries
     : [];
+  const dispatchQueueRows = Array.isArray(response.dispatch_queue_rows)
+    ? response.dispatch_queue_rows
+    : [];
+  const priorityTargetSiteRows = Array.isArray(response.priority_target_site_rows)
+    ? response.priority_target_site_rows
+    : [];
+  const recipientMissingSiteRows = Array.isArray(response.recipient_missing_site_rows)
+    ? response.recipient_missing_site_rows
+    : [];
   const unsentReportRows = Array.isArray(response.unsent_report_rows) ? response.unsent_report_rows : [];
 
   return {
@@ -264,6 +273,23 @@ export function mapBackendOverviewResponse(
           ? deadlineSignalSummary.total_report_count
           : 0,
     },
+    dispatchQueueRows: dispatchQueueRows.map((row) => ({
+      headquarterName: normalizeText(row.headquarter_name),
+      href: normalizeText(row.href),
+      openReportCount: typeof row.open_report_count === 'number' ? row.open_report_count : 0,
+      projectAmount:
+        typeof row.project_amount === 'number' && Number.isFinite(row.project_amount)
+          ? row.project_amount
+          : null,
+      recipientEmail: normalizeText(row.recipient_email),
+      siteId: normalizeText(row.site_id),
+      siteName: normalizeText(row.site_name),
+      totalContractAmount:
+        typeof row.total_contract_amount === 'number' &&
+        Number.isFinite(row.total_contract_amount)
+          ? row.total_contract_amount
+          : null,
+    })),
     deadlineRows: response.deadline_rows.map((row) => ({
       deadlineDate: normalizeText(row.deadline_date),
       deadlineLabel: normalizeText(row.deadline_label),
@@ -298,6 +324,23 @@ export function mapBackendOverviewResponse(
       reportTypeLabel: normalizeText(row.report_type_label),
       siteName: normalizeText(row.site_name),
       updatedAt: normalizeText(row.updated_at),
+    })),
+    priorityTargetSiteRows: priorityTargetSiteRows.map((row) => ({
+      headquarterName: normalizeText(row.headquarter_name),
+      href: normalizeText(row.href),
+      openReportCount: typeof row.open_report_count === 'number' ? row.open_report_count : 0,
+      projectAmount:
+        typeof row.project_amount === 'number' && Number.isFinite(row.project_amount)
+          ? row.project_amount
+          : null,
+      recipientEmail: normalizeText(row.recipient_email),
+      siteId: normalizeText(row.site_id),
+      siteName: normalizeText(row.site_name),
+      totalContractAmount:
+        typeof row.total_contract_amount === 'number' &&
+        Number.isFinite(row.total_contract_amount)
+          ? row.total_contract_amount
+          : null,
     })),
     quarterlyMaterialSummary: {
       entries: quarterlyMaterialEntries.map((entry) => ({
@@ -334,6 +377,23 @@ export function mapBackendOverviewResponse(
           ? quarterlyMaterialSummary.total_site_count
           : 0,
     },
+    recipientMissingSiteRows: recipientMissingSiteRows.map((row) => ({
+      headquarterName: normalizeText(row.headquarter_name),
+      href: normalizeText(row.href),
+      openReportCount: typeof row.open_report_count === 'number' ? row.open_report_count : 0,
+      projectAmount:
+        typeof row.project_amount === 'number' && Number.isFinite(row.project_amount)
+          ? row.project_amount
+          : null,
+      recipientEmail: normalizeText(row.recipient_email),
+      siteId: normalizeText(row.site_id),
+      siteName: normalizeText(row.site_name),
+      totalContractAmount:
+        typeof row.total_contract_amount === 'number' &&
+        Number.isFinite(row.total_contract_amount)
+          ? row.total_contract_amount
+          : null,
+    })),
     scheduleRows: response.schedule_rows.map((row) => mapBackendSchedule(row)),
     siteStatusSummary: {
       entries: siteStatusEntries.map((entry) => ({
@@ -364,6 +424,10 @@ export function mapBackendOverviewResponse(
       siteName: normalizeText(row.site_name),
       unsentDays: typeof row.unsent_days === 'number' ? row.unsent_days : 0,
       visitDate: normalizeText(row.visit_date),
+      mailMissingReason: normalizeText(row.mail_missing_reason),
+      mailReady: Boolean(row.mail_ready),
+      recipientEmail: normalizeText(row.recipient_email),
+      recipientName: normalizeText(row.recipient_name),
     })),
     workerLoadRows: response.worker_load_rows.map((row) => ({
       assignedSiteCount: row.assigned_site_count,

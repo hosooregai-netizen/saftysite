@@ -200,6 +200,7 @@ function getTodayDateValue() {
 
 export function buildBadWorkplaceViolations(
   session: InspectionSession | null,
+  sourceMode: BadWorkplaceReport['sourceMode'],
   findingIds?: string[],
 ): BadWorkplaceViolation[] {
   if (!session) return [];
@@ -228,7 +229,11 @@ export function buildBadWorkplaceViolations(
         finding.accidentType,
       improvementMeasure: finding.improvementRequest || finding.improvementPlan,
       guidanceDate: normalizeText(followUp?.guidanceDate) || guidanceDate,
-      nonCompliance: buildViolationNonCompliance(followUp?.result || ''),
+      nonCompliance:
+        sourceMode === 'current_new_hazard'
+          ? '당회차 기술지도에서 신규 유해위험요인이 확인되어 즉시 조치가 필요합니다.'
+          : buildViolationNonCompliance(followUp?.result || '') ||
+            '이전 기술지도 지적사항이 아직 이행되지 않아 후속 조치가 필요합니다.',
       confirmationDate: normalizeText(followUp?.confirmationDate),
       accidentType: finding.accidentType,
       causativeAgentKey: finding.causativeAgentKey,
@@ -241,7 +246,11 @@ export function syncBadWorkplaceReportSource(
   session: InspectionSession | null,
   selectedFindingIds?: string[],
 ): BadWorkplaceReport {
-  const violations = buildBadWorkplaceViolations(session, selectedFindingIds);
+  const violations = buildBadWorkplaceViolations(
+    session,
+    report.sourceMode,
+    selectedFindingIds,
+  );
   const guidanceDate = (session ? getSessionGuidanceDate(session) : '') || report.guidanceDate;
   const nextReporterName = normalizeText(session?.meta.drafter) || report.reporterName;
   const shouldResetAssigneeContact =
@@ -272,7 +281,8 @@ export function buildInitialBadWorkplaceReport(
 ): BadWorkplaceReport {
   const timestamp = createTimestamp();
   const sourceSession = getBadWorkplaceSourceSessions(siteSessions)[0] || null;
-  const violations = buildBadWorkplaceViolations(sourceSession);
+  const sourceMode: BadWorkplaceReport['sourceMode'] = 'previous_unresolved';
+  const violations = buildBadWorkplaceViolations(sourceSession, sourceMode);
   const guidanceDate = sourceSession ? getSessionGuidanceDate(sourceSession) : '';
   const reporterName = buildReporterName(sourceSession, reporter, site);
 
@@ -344,6 +354,7 @@ export function buildInitialBadWorkplaceReport(
     recipientOfficeName: '',
     attachmentDescription: BAD_WORKPLACE_ATTACHMENT_DESCRIPTION,
     sourceSessionId: sourceSession?.id || '',
+    sourceMode,
     sourceFindingIds: violations.map((item) => item.sourceFindingId),
     violations,
     note: '',

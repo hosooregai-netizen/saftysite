@@ -108,6 +108,8 @@ export interface SafetySiteInput {
   inspector_name?: string | null;
   contract_contact_name?: string | null;
   manager_phone?: string | null;
+  site_contact_email?: string | null;
+  is_high_risk_site?: boolean | null;
   site_address?: string | null;
   contract_date?: string | null;
   contract_start_date?: string | null;

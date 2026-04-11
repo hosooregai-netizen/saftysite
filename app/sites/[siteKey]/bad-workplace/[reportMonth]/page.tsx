@@ -426,6 +426,24 @@ function BadWorkplaceReportEditor({
     setSourceModalOpen(false);
   };
 
+  const handleSourceModeChange = (sourceMode: BadWorkplaceReport["sourceMode"]) => {
+    setDraft((current) =>
+      syncBadWorkplaceReportSource(
+        {
+          ...current,
+          sourceMode,
+        },
+        selectedSession,
+        current.sourceFindingIds,
+      ),
+    );
+    setNotice(
+      sourceMode === "current_new_hazard"
+        ? "당회차 신규 위험 기준으로 신고 초안을 전환했습니다."
+        : "이전 지적사항 미이행 기준으로 신고 초안을 전환했습니다.",
+    );
+  };
+
   const handleSave = async () => {
     const nextDraft = { ...draft, updatedAt: createTimestamp() };
     setDraft(nextDraft);
@@ -511,6 +529,9 @@ function BadWorkplaceReportEditor({
       {notice ? (
         <div className={operationalStyles.bannerInfo}>{notice}</div>
       ) : null}
+      <p className={operationalStyles.reportCardDescription}>
+        현재 초안 기준은 {draft.sourceMode === "current_new_hazard" ? "당회차 신규 위험" : "이전 지적사항 미이행"}입니다.
+      </p>
 
       <article className={operationalStyles.reportCard}>
         <div className={operationalStyles.reportCardHeader}>
@@ -547,6 +568,33 @@ function BadWorkplaceReportEditor({
                 </div>
               </div>
             ) : null}
+            <div className={operationalStyles.reportActions}>
+              <button
+                type="button"
+                className={
+                  draft.sourceMode === "previous_unresolved"
+                    ? "app-button app-button-primary"
+                    : "app-button app-button-secondary"
+                }
+                onClick={() => handleSourceModeChange("previous_unresolved")}
+              >
+                이전 지적사항 미이행
+              </button>
+              <button
+                type="button"
+                className={
+                  draft.sourceMode === "current_new_hazard"
+                    ? "app-button app-button-primary"
+                    : "app-button app-button-secondary"
+                }
+                onClick={() => handleSourceModeChange("current_new_hazard")}
+              >
+                당회차 신규 위험
+              </button>
+            </div>
+            <p className={operationalStyles.reportCardDescription}>
+              현재 기준: {draft.sourceMode === "current_new_hazard" ? "당회차 신규 위험" : "이전 지적사항 미이행"}
+            </p>
           </>
         ) : (
           <div className={operationalStyles.emptyState}>

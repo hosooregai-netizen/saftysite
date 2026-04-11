@@ -83,11 +83,13 @@ export interface ReportDispatchMeta {
   deadlineDate: string;
   dispatchStatus: ReportDispatchStatus;
   sentCompletedAt: string;
+  actualSentAt: string;
   sentHistory: ReportDispatchHistoryEntry[];
   mailboxAccountId: string;
   mailThreadId: string;
   messageId: string;
   recipient: string;
+  actualRecipient: string;
   readAt: string;
   replyAt: string;
   replySummary: string;
@@ -272,6 +274,17 @@ export interface SafetyAdminDeadlineSignalSummary {
   totalReportCount: number;
 }
 
+export interface SafetyAdminDispatchQueueRow {
+  headquarterName: string;
+  href: string;
+  openReportCount: number;
+  projectAmount: number | null;
+  recipientEmail: string;
+  siteId: string;
+  siteName: string;
+  totalContractAmount: number | null;
+}
+
 export interface SafetyAdminUnsentReportRow {
   assigneeName: string;
   deadlineDate: string;
@@ -286,6 +299,10 @@ export interface SafetyAdminUnsentReportRow {
   siteName: string;
   unsentDays: number;
   visitDate: string;
+  mailMissingReason?: string;
+  mailReady?: boolean;
+  recipientEmail?: string;
+  recipientName?: string;
 }
 
 export interface SafetyAdminDataCompletionRow {
@@ -301,11 +318,14 @@ export interface SafetyAdminOverviewResponse {
   completionRows: SafetyAdminDataCompletionRow[];
   coverageRows: AdminCoverageRow[];
   deadlineSignalSummary: SafetyAdminDeadlineSignalSummary;
+  dispatchQueueRows?: SafetyAdminDispatchQueueRow[];
   deadlineRows: AdminOverviewDeadlineRow[];
   metricCards: AdminOverviewMetricCard[];
   overdueSiteRows: AdminOverviewSiteAlertRow[];
   pendingReviewRows: AdminOverviewReviewRow[];
+  priorityTargetSiteRows?: SafetyAdminDispatchQueueRow[];
   quarterlyMaterialSummary: SafetyAdminQuarterlyMaterialSummary;
+  recipientMissingSiteRows?: SafetyAdminDispatchQueueRow[];
   scheduleRows: SafetyInspectionSchedule[];
   siteStatusSummary: SafetyAdminSiteStatusSummary;
   summaryRows: Array<{ label: string; meta: string; value: string }>;
