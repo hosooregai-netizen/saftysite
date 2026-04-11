@@ -470,6 +470,35 @@
   background: linear-gradient(180deg, rgba(251, 253, 255, 0.98), rgba(245, 248, 252, 0.98));
 }
 
+.mailTable thead th {
+  background: rgba(247, 250, 255, 0.95);
+  border-bottom-color: rgba(221, 228, 237, 0.92);
+}
+
+.mailTableRow {
+  transition: background-color 0.16s ease;
+}
+
+.mailTableRow:hover {
+  background: rgba(241, 246, 252, 0.92);
+}
+
+.mailTableRow td {
+  border-bottom-color: rgba(227, 233, 240, 0.9);
+}
+
+.mailTableRow td:first-child {
+  padding-left: 16px;
+}
+
+.mailTableRow td:last-child {
+  padding-right: 16px;
+}
+
+.mailTablePrimary {
+  color: var(--erp-dark);
+}
+
 .mailRowUnread td {
   font-weight: 700;
   color: #132d4b;
@@ -1040,31 +1069,6 @@
 .headerActionButton,
 .composeHeaderButton {
   border-radius: 10px;
-}
-
-:global(.tableWrap table tbody tr) {
-  transition: background-color 0.16s ease;
-}
-
-:global(.tableWrap table tbody tr:hover) {
-  background: rgba(241, 246, 252, 0.92);
-}
-
-:global(.tableWrap table tbody tr td) {
-  border-bottom-color: rgba(227, 233, 240, 0.9);
-}
-
-:global(.tableWrap table tbody tr td:first-child) {
-  padding-left: 16px;
-}
-
-:global(.tableWrap table tbody tr td:last-child) {
-  padding-right: 16px;
-}
-
-:global(.tableWrap table thead th) {
-  background: rgba(247, 250, 255, 0.95);
-  border-bottom-color: rgba(221, 228, 237, 0.92);
 }
 
 .emptyState {

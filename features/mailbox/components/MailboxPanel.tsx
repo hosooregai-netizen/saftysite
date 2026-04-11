@@ -2000,8 +2000,8 @@ export function MailboxPanel({
               <div className={styles.tableEmpty}>{threadEmptyMessage}</div>
             ) : (
               <>
-                <div className={styles.tableWrap}>
-                  <table className={styles.table}>
+                <div className={`${styles.tableWrap} ${localStyles.mailTableWrap}`}>
+                  <table className={`${styles.table} ${localStyles.mailTable}`}>
                     <thead>
                       <tr>
                         <th>{listPrimaryColumnLabel}</th>
@@ -2017,7 +2017,7 @@ export function MailboxPanel({
                         return (
                           <tr
                             key={thread.id}
-                            className={`${styles.tableClickableRow} ${isUnread ? localStyles.mailRowUnread : ''}`}
+                            className={`${styles.tableClickableRow} ${localStyles.mailTableRow} ${isUnread ? localStyles.mailRowUnread : ''}`}
                             tabIndex={0}
                             onClick={() => handleOpenThread(thread.id)}
                             onKeyDown={(event) => {
@@ -2028,10 +2028,10 @@ export function MailboxPanel({
                             }}
                           >
                             <td>
-                              <span className={styles.tablePrimary}>{partyLabel}</span>
+                              <span className={`${styles.tablePrimary} ${localStyles.mailTablePrimary}`}>{partyLabel}</span>
                             </td>
                             <td>
-                              <span className={styles.tablePrimary}>{thread.subject || '(제목 없음)'}</span>
+                              <span className={`${styles.tablePrimary} ${localStyles.mailTablePrimary}`}>{thread.subject || '(제목 없음)'}</span>
                             </td>
                             <td className={localStyles.mailAttachmentCell}>-</td>
                             <td className={localStyles.mailDateCell}>{buildThreadTimestamp(thread)}</td>
