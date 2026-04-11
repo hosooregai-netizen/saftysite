@@ -18,7 +18,6 @@ import type { SafetySite } from '@/types/backend';
 import type {
   SafetyHeadquarter,
   SafetyHeadquarterUpdateInput,
-  SafetySiteInput,
   SafetySiteUpdateInput,
 } from '@/types/controller';
 import type {
@@ -38,39 +37,47 @@ const JOB_DIR = path.join(os.tmpdir(), 'safetysite-excel-import-jobs');
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const SAMPLE_ROW_COUNT = 5;
 const REQUIRED_FIELD_LABELS = {
-  contact_name: '본사 담당자명',
   contact_phone: '본사 연락처',
+  guidance_officer_name: '지도원',
+  labor_office: '노동관서',
   manager_name: '현장소장명',
-  manager_phone: '현장소장 연락처',
+  site_name: '현장명',
   site_address: '현장 주소',
 } as const;
 const FIELD_ALIASES: Record<string, string[]> = {
-  business_registration_no: ['사업자등록번호', '사업자 등록번호', '사업자번호'],
-  contact_name: ['본사담당자', '담당자', '연락담당자', '계약담당자'],
-  contact_phone: ['본사연락처', '대표전화', '전화번호', '연락처', '전화'],
-  contract_date: ['계약일', '계약체결일'],
-  contract_type: ['계약유형', '계약종류'],
-  corporate_registration_no: ['법인등록번호', '법인 등록번호'],
-  headquarter_name: ['사업장명', '본사명', '회사명', '본점명', '지점명', '업체명'],
-  license_no: ['면허번호', '등록번호'],
-  management_number: ['사업장관리번호', '관리번호', '관리 번호'],
+  headquarter_name: ['회사명', '사업장명', '본사명', '본점명', '지점명', '업체명'],
+  headquarter_management_number: ['사업장관리번호', '관리번호', '관리 번호'],
+  headquarter_opening_number: ['사업장개시번호', '사업개시번호'],
+  contact_phone: ['전화', '본사연락처', '대표전화', '전화번호', '연락처'],
+  site_name: ['현장명', '공사명', '현장'],
+  labor_office: ['노동관서'],
+  guidance_officer_name: ['지도원', '지도요원'],
+  project_start_date: ['착공일', '공사시작일', '시작일'],
+  project_end_date: ['준공일', '공사종료일', '종료일'],
+  project_amount: ['공사금액', '도급금액', '금액', '계약금액'],
+  project_scale: ['공사규모'],
+  project_kind: ['공사종류'],
+  client_management_number: ['발주자 사업장관리번호'],
+  client_business_name: ['발주자 사업자명', '발주자명'],
+  client_representative_name: ['발주자 대표자'],
+  client_corporate_registration_no: ['발주자법인등록번호', '발주자 법인등록번호'],
+  client_business_registration_no: ['발주자 사업자등록번호'],
+  order_type_division: ['발주유형구분'],
+  technical_guidance_kind: ['기술지도 구분'],
   manager_name: ['현장소장', '현장소장명', '현장담당자', '현장책임자명'],
   manager_phone: ['현장소장연락처', '현장연락처', '담당자연락처', '소장연락처'],
-  per_visit_amount: ['회당단가', '회차당단가', '1회당단가'],
-  project_amount: ['공사금액', '도급금액', '금액', '계약금액'],
-  project_end_date: ['준공일', '공사종료일', '종료일'],
-  project_start_date: ['착공일', '공사시작일', '시작일'],
-  road_address: ['도로명주소'],
-  site_address: ['현장주소', '주소', '사업장주소', '소재지'],
-  site_code: ['현장코드', '사업개시번호', '사업장개시번호', '현장번호'],
-  site_name: ['현장명', '공사명', '현장'],
+  inspector_name: ['점검자'],
+  contract_contact_name: ['계약담당자'],
+  site_address: ['소재지', '현장주소', '주소', '사업장주소'],
+  contract_start_date: ['계약시작일'],
+  contract_end_date: ['계약 종료일', '계약종료일'],
+  contract_signed_date: ['계약 체결일', '계약체결일', '계약일'],
   total_contract_amount: ['총계약금액', '총계약액', '계약총액', '기술지도대가', '기술지도 대가'],
   total_rounds: ['총회차', '총 회차', '회차수', '기술지도횟수', '기술지도 횟수'],
 };
-const AUTO_IGNORED_HEADER_PREFIXES = ['발주자'];
 const MAPPING_NOTES: Record<string, Record<string, string>> = {
-  contact_name: {
-    계약담당자: '계약담당자 기준으로 본사 담당자명에 반영됩니다.',
+  contract_contact_name: {
+    계약담당자: '계약담당자 기준으로 계약담당자명에 반영됩니다.',
   },
   total_contract_amount: {
     '기술지도 대가': '기술지도 대가를 총 계약금액으로 반영합니다.',
@@ -195,16 +202,6 @@ function parseIntValue(value: unknown) {
   return parsed == null ? null : Math.trunc(parsed);
 }
 
-function parseContractType(value: unknown): SafetySiteInput['contract_type'] | null {
-  const normalized = normalizeText(value);
-  if (!normalized) return null;
-  if (normalized.includes('민간')) return 'private';
-  if (normalized.includes('수의')) return 'negotiated';
-  if (normalized.includes('입찰')) return 'bid';
-  if (normalized.includes('유지')) return 'maintenance';
-  return 'other';
-}
-
 function arrayOf<T>(value: T | T[] | null | undefined): T[] {
   if (Array.isArray(value)) return value;
   return value == null ? [] : [value];
@@ -261,14 +258,13 @@ function generateJobId() {
 }
 
 function isAutoIgnoredHeader(header: string) {
-  const normalizedHeader = normalizeKey(header);
-  return AUTO_IGNORED_HEADER_PREFIXES.some((prefix) => normalizedHeader.startsWith(normalizeKey(prefix)));
+  return normalizeKey(header).startsWith(normalizeKey('발주자'));
 }
 
 function findExactHeaderMatch(headers: string[], aliases: string[], usedHeaders: Set<string>) {
   const aliasKeys = aliases.map((alias) => normalizeKey(alias)).filter(Boolean);
   for (const header of headers) {
-    if (usedHeaders.has(header) || isAutoIgnoredHeader(header)) {
+    if (usedHeaders.has(header)) {
       continue;
     }
     const normalizedHeader = normalizeKey(header);
@@ -279,12 +275,13 @@ function findExactHeaderMatch(headers: string[], aliases: string[], usedHeaders:
   return null;
 }
 
-function buildIgnoredHeaders(headers: string[]): ExcelIgnoredHeader[] {
+function buildIgnoredHeaders(headers: string[], suggestedMapping: Record<string, string>): ExcelIgnoredHeader[] {
+  const mappedHeaders = new Set(Object.values(suggestedMapping).map((header) => normalizeText(header)));
   return headers
-    .filter((header) => isAutoIgnoredHeader(header))
+    .filter((header) => !mappedHeaders.has(normalizeText(header)) && isAutoIgnoredHeader(header))
     .map((header) => ({
       header,
-      reason: '발주자 정보 컬럼은 자동 반영 대상에서 제외됩니다.',
+      reason: '현재 업로드 필드 세트에 포함되지 않은 발주자 컬럼입니다.',
     }));
 }
 
@@ -293,33 +290,15 @@ function buildMappingWarnings(
   ignoredHeaders: ExcelIgnoredHeader[],
 ) {
   const warnings: string[] = [];
-  const ignoredHeaderSet = new Set(ignoredHeaders.map((item) => item.header));
-
-  if (
-    !suggestedMapping.business_registration_no &&
-    Array.from(ignoredHeaderSet).some((header) => normalizeKey(header).includes(normalizeKey('사업자등록번호')))
-  ) {
-    warnings.push(
-      '시공사 사업자등록번호 헤더가 없어 자동 매핑하지 않았습니다. 발주자 사업자등록번호는 자동 반영하지 않습니다.',
-    );
+  void ignoredHeaders;
+  if (!suggestedMapping.headquarter_management_number) {
+    warnings.push('사업장관리번호가 없어 사업장 중복 판정은 사업장개시번호 또는 회사명 기준으로 진행합니다.');
   }
-
-  if (
-    !suggestedMapping.site_code &&
-    Array.from(ignoredHeaderSet).some((header) => normalizeKey(header).includes(normalizeKey('사업개시번호')))
-  ) {
-    warnings.push(
-      '사업장개시번호는 시공사 기준 컬럼만 자동 반영합니다. 발주자 사업개시번호는 제외되었습니다.',
-    );
+  if (!suggestedMapping.headquarter_opening_number) {
+    warnings.push('사업장개시번호가 없어 사업장 식별은 사업장관리번호 또는 회사명 기준으로 진행합니다.');
   }
-
-  if (
-    !suggestedMapping.corporate_registration_no &&
-    Array.from(ignoredHeaderSet).some((header) => normalizeKey(header).includes(normalizeKey('법인등록번호')))
-  ) {
-    warnings.push(
-      '법인등록번호는 시공사 기준 컬럼만 자동 반영합니다. 발주자 법인등록번호는 제외되었습니다.',
-    );
+  if (!suggestedMapping.site_name) {
+    warnings.push('현장명이 없어 현장 생성/갱신 정확도가 낮아질 수 있습니다.');
   }
 
   return warnings;
@@ -344,12 +323,12 @@ function buildSuggestedMapping(headers: string[]): MappingAnalysis {
     });
   }
 
-  const ignoredHeaders = buildIgnoredHeaders(headers);
+  const ignoredHeaders = buildIgnoredHeaders(headers, suggestedMapping);
   const mappingWarnings = buildMappingWarnings(suggestedMapping, ignoredHeaders);
 
   return {
     detectedMappings,
-    hasRiskyMapping: detectedMappings.some((mapping) => isAutoIgnoredHeader(mapping.header)),
+    hasRiskyMapping: false,
     ignoredHeaders,
     mappingWarnings,
     suggestedMapping,
@@ -365,34 +344,40 @@ function extractMappedRow(values: Record<string, string>, mapping: Record<string
 }
 
 function buildHeadquarterLookup(headquarters: SafetyHeadquarter[]) {
-  const byBusinessNumber = new Map<string, SafetyHeadquarter[]>();
+  const byManagementNumber = new Map<string, SafetyHeadquarter[]>();
+  const byOpeningNumber = new Map<string, SafetyHeadquarter[]>();
   const byName = new Map<string, SafetyHeadquarter[]>();
   for (const headquarter of headquarters) {
-    const businessNumber = normalizeKey(headquarter.business_registration_no);
-    if (businessNumber) {
-      byBusinessNumber.set(businessNumber, [...(byBusinessNumber.get(businessNumber) || []), headquarter]);
+    const managementNumber = normalizeKey(headquarter.management_number);
+    if (managementNumber) {
+      byManagementNumber.set(managementNumber, [...(byManagementNumber.get(managementNumber) || []), headquarter]);
+    }
+    const openingNumber = normalizeKey(headquarter.opening_number);
+    if (openingNumber) {
+      byOpeningNumber.set(openingNumber, [...(byOpeningNumber.get(openingNumber) || []), headquarter]);
     }
     const name = normalizeKey(headquarter.name);
     if (name) {
       byName.set(name, [...(byName.get(name) || []), headquarter]);
     }
   }
-  return { byBusinessNumber, byName };
+  return { byManagementNumber, byName, byOpeningNumber };
 }
 
 function buildSiteLookup(sites: SafetySite[]) {
-  const byManagementNumber = new Map<string, SafetySite[]>();
   const byHeadquarterAndName = new Map<string, SafetySite[]>();
   const byNameAndDates = new Map<string, SafetySite[]>();
+  const byClientManagementAndName = new Map<string, SafetySite[]>();
   for (const site of sites) {
-    const managementNumber = normalizeKey(site.management_number);
-    if (managementNumber) {
-      byManagementNumber.set(managementNumber, [...(byManagementNumber.get(managementNumber) || []), site]);
-    }
     const siteName = normalizeKey(site.site_name);
     if (site.headquarter_id && siteName) {
       const key = `${site.headquarter_id}::${siteName}`;
       byHeadquarterAndName.set(key, [...(byHeadquarterAndName.get(key) || []), site]);
+    }
+    const clientManagementNumber = normalizeKey(site.client_management_number);
+    if (clientManagementNumber && siteName) {
+      const key = `${clientManagementNumber}::${siteName}`;
+      byClientManagementAndName.set(key, [...(byClientManagementAndName.get(key) || []), site]);
     }
     const startDate = parseDateValue(site.project_start_date);
     const endDate = parseDateValue(site.project_end_date);
@@ -401,7 +386,7 @@ function buildSiteLookup(sites: SafetySite[]) {
       byNameAndDates.set(key, [...(byNameAndDates.get(key) || []), site]);
     }
   }
-  return { byHeadquarterAndName, byManagementNumber, byNameAndDates };
+  return { byClientManagementAndName, byHeadquarterAndName, byNameAndDates };
 }
 
 function buildScopeSummary(
@@ -422,8 +407,12 @@ function buildScopeSummary(
 
 function rowMatchesHeadquarter(rowData: Record<string, string>, targetHeadquarter: SafetyHeadquarter | null) {
   if (!targetHeadquarter) return false;
-  const businessNumber = normalizeKey(rowData.business_registration_no);
-  if (businessNumber && businessNumber === normalizeKey(targetHeadquarter.business_registration_no)) {
+  const managementNumber = normalizeKey(rowData.headquarter_management_number);
+  if (managementNumber && managementNumber === normalizeKey(targetHeadquarter.management_number)) {
+    return true;
+  }
+  const openingNumber = normalizeKey(rowData.headquarter_opening_number);
+  if (openingNumber && openingNumber === normalizeKey(targetHeadquarter.opening_number)) {
     return true;
   }
   const headquarterName = normalizeKey(rowData.headquarter_name);
@@ -436,14 +425,6 @@ function rowMatchesSite(
   targetHeadquarter: SafetyHeadquarter | null,
 ) {
   if (!targetSite) return false;
-  const managementNumber = normalizeKey(rowData.management_number);
-  if (managementNumber && managementNumber === normalizeKey(targetSite.management_number)) {
-    return true;
-  }
-  const siteCode = normalizeKey(rowData.site_code);
-  if (siteCode && siteCode === normalizeKey(targetSite.site_code)) {
-    return true;
-  }
   const siteName = normalizeKey(rowData.site_name);
   const startDate = parseDateValue(rowData.project_start_date);
   const endDate = parseDateValue(rowData.project_end_date);
@@ -454,6 +435,15 @@ function rowMatchesSite(
     siteName === normalizeKey(targetSite.site_name) &&
     startDate === parseDateValue(targetSite.project_start_date) &&
     endDate === parseDateValue(targetSite.project_end_date)
+  ) {
+    return true;
+  }
+  const clientManagementNumber = normalizeKey(rowData.client_management_number);
+  if (
+    clientManagementNumber &&
+    siteName &&
+    clientManagementNumber === normalizeKey(targetSite.client_management_number) &&
+    siteName === normalizeKey(targetSite.site_name)
   ) {
     return true;
   }
@@ -619,14 +609,26 @@ function headquarterCandidates(
   rowData: Record<string, string>,
   headquarterLookup: ReturnType<typeof buildHeadquarterLookup>,
 ): DuplicateCandidate[] {
-  const businessNo = normalizeKey(rowData.business_registration_no);
-  if (businessNo && headquarterLookup.byBusinessNumber.has(businessNo)) {
-    return (headquarterLookup.byBusinessNumber.get(businessNo) || []).map((headquarter) => ({
+  const managementNumber = normalizeKey(rowData.headquarter_management_number);
+  if (managementNumber && headquarterLookup.byManagementNumber.has(managementNumber)) {
+    return (headquarterLookup.byManagementNumber.get(managementNumber) || []).map((headquarter) => ({
       headquarterId: headquarter.id,
       id: headquarter.id,
       kind: 'headquarter',
       label: headquarter.name || '사업장',
-      reason: '사업자등록번호 일치',
+      reason: '사업장관리번호 일치',
+      siteId: null,
+    }));
+  }
+
+  const openingNumber = normalizeKey(rowData.headquarter_opening_number);
+  if (openingNumber && headquarterLookup.byOpeningNumber.has(openingNumber)) {
+    return (headquarterLookup.byOpeningNumber.get(openingNumber) || []).map((headquarter) => ({
+      headquarterId: headquarter.id,
+      id: headquarter.id,
+      kind: 'headquarter',
+      label: headquarter.name || '사업장',
+      reason: '사업장개시번호 일치',
       siteId: null,
     }));
   }
@@ -648,50 +650,64 @@ function siteCandidates(
   headquarterLookup: ReturnType<typeof buildHeadquarterLookup>,
   siteLookup: ReturnType<typeof buildSiteLookup>,
 ): DuplicateCandidate[] {
-  const managementNumber = normalizeKey(rowData.management_number);
-  if (managementNumber && siteLookup.byManagementNumber.has(managementNumber)) {
-    return (siteLookup.byManagementNumber.get(managementNumber) || []).map((site) => ({
-      headquarterId: site.headquarter_id,
-      id: site.id,
-      kind: 'site',
-      label: site.site_name || '현장',
-      reason: '사업장 관리번호 일치',
-      siteId: site.id,
-    }));
-  }
-
-  const businessNo = normalizeKey(rowData.business_registration_no);
   const siteName = normalizeKey(rowData.site_name);
-  if (businessNo && siteName) {
-    const headquarterIds = new Set(
-      (headquarterLookup.byBusinessNumber.get(businessNo) || []).map((headquarter) => headquarter.id),
-    );
-    const matches = Array.from(headquarterIds).flatMap((headquarterId) =>
-      siteLookup.byHeadquarterAndName.get(`${headquarterId}::${siteName}`) || [],
-    );
+  const startDate = parseDateValue(rowData.project_start_date);
+  const endDate = parseDateValue(rowData.project_end_date);
+  if (siteName && startDate && endDate) {
+    const matches = siteLookup.byNameAndDates.get(`${siteName}::${startDate}::${endDate}`) || [];
     if (matches.length > 0) {
       return matches.map((site) => ({
         headquarterId: site.headquarter_id,
         id: site.id,
         kind: 'site',
         label: site.site_name || '현장',
-        reason: '사업자등록번호 + 현장명 일치',
+        reason: '현장명 + 공사기간 일치',
         siteId: site.id,
       }));
     }
   }
 
-  const startDate = parseDateValue(rowData.project_start_date);
-  const endDate = parseDateValue(rowData.project_end_date);
-  if (!(siteName && startDate && endDate)) return [];
-  return (siteLookup.byNameAndDates.get(`${siteName}::${startDate}::${endDate}`) || []).map((site) => ({
-    headquarterId: site.headquarter_id,
-    id: site.id,
-    kind: 'site',
-    label: site.site_name || '현장',
-    reason: '현장명 + 공사기간 일치',
-    siteId: site.id,
-  }));
+  const clientManagementNumber = normalizeKey(rowData.client_management_number);
+  if (clientManagementNumber && siteName) {
+    const matches = siteLookup.byClientManagementAndName.get(`${clientManagementNumber}::${siteName}`) || [];
+    if (matches.length > 0) {
+      return matches.map((site) => ({
+        headquarterId: site.headquarter_id,
+        id: site.id,
+        kind: 'site',
+        label: site.site_name || '현장',
+        reason: '발주자 사업장관리번호 + 현장명 일치',
+        siteId: site.id,
+      }));
+    }
+  }
+
+  const matchedHeadquarterIds = new Set(
+    (headquarterLookup.byManagementNumber.get(normalizeKey(rowData.headquarter_management_number)) || []).map(
+      (headquarter) => headquarter.id,
+    ),
+  );
+  if (matchedHeadquarterIds.size === 0) {
+    for (const headquarter of headquarterLookup.byOpeningNumber.get(normalizeKey(rowData.headquarter_opening_number)) || []) {
+      matchedHeadquarterIds.add(headquarter.id);
+    }
+  }
+  if (matchedHeadquarterIds.size === 0) {
+    for (const headquarter of headquarterLookup.byName.get(normalizeKey(rowData.headquarter_name)) || []) {
+      matchedHeadquarterIds.add(headquarter.id);
+    }
+  }
+  if (!siteName) return [];
+  return Array.from(matchedHeadquarterIds).flatMap((headquarterId) =>
+    (siteLookup.byHeadquarterAndName.get(`${headquarterId}::${siteName}`) || []).map((site) => ({
+      headquarterId: site.headquarter_id,
+      id: site.id,
+      kind: 'site',
+      label: site.site_name || '현장',
+      reason: '사업장 + 현장명 일치',
+      siteId: site.id,
+    })),
+  );
 }
 
 function suggestAction(siteMatches: DuplicateCandidate[], headquarterMatches: DuplicateCandidate[]) {
@@ -704,8 +720,8 @@ function suggestAction(siteMatches: DuplicateCandidate[], headquarterMatches: Du
 
 function buildRowSummary(rowData: Record<string, string>) {
   const parts = [rowData.headquarter_name, rowData.site_name].filter(Boolean);
-  if (rowData.management_number) {
-    parts.push(`관리번호 ${rowData.management_number}`);
+  if (rowData.headquarter_management_number) {
+    parts.push(`관리번호 ${rowData.headquarter_management_number}`);
   }
   return parts.join(' / ') || '요약 불가';
 }
@@ -831,12 +847,12 @@ function buildHeadquarterPayload(
   const payload: Record<string, unknown> = {};
   const headquarterName = normalizeText(rowData.headquarter_name);
   if (headquarterName) payload.name = headquarterName;
-  for (const key of ['business_registration_no', 'corporate_registration_no', 'license_no', 'contact_name', 'contact_phone'] as const) {
-    const value = normalizeText(rowData[key]);
-    if (value) payload[key] = value;
-  }
-  const address = normalizeText(rowData.road_address) || normalizeText(rowData.site_address);
-  if (address) payload.address = address;
+  const managementNumber = normalizeText(rowData.headquarter_management_number);
+  if (managementNumber) payload.management_number = managementNumber;
+  const openingNumber = normalizeText(rowData.headquarter_opening_number);
+  if (openingNumber) payload.opening_number = openingNumber;
+  const contactPhone = normalizeText(rowData.contact_phone);
+  if (contactPhone) payload.contact_phone = contactPhone;
   return payload;
 }
 
@@ -844,15 +860,41 @@ function buildSitePayload(rowData: Record<string, string>, headquarterId?: strin
   const payload: SafetySiteUpdateInput = {};
   const siteName = normalizeText(rowData.site_name);
   if (siteName) payload.site_name = siteName;
-  const siteCode = normalizeText(rowData.site_code);
-  if (siteCode) payload.site_code = siteCode;
-  const managementNumber = normalizeText(rowData.management_number);
+  const managementNumber = normalizeText(rowData.headquarter_management_number);
   if (managementNumber) payload.management_number = managementNumber;
+  const siteCode = normalizeText(rowData.headquarter_opening_number);
+  if (siteCode) payload.site_code = siteCode;
+  const laborOffice = normalizeText(rowData.labor_office);
+  if (laborOffice) payload.labor_office = laborOffice;
+  const guidanceOfficerName = normalizeText(rowData.guidance_officer_name);
+  if (guidanceOfficerName) payload.guidance_officer_name = guidanceOfficerName;
+  const projectScale = normalizeText(rowData.project_scale);
+  if (projectScale) payload.project_scale = projectScale;
+  const projectKind = normalizeText(rowData.project_kind);
+  if (projectKind) payload.project_kind = projectKind;
+  const clientManagementNumber = normalizeText(rowData.client_management_number);
+  if (clientManagementNumber) payload.client_management_number = clientManagementNumber;
+  const clientBusinessName = normalizeText(rowData.client_business_name);
+  if (clientBusinessName) payload.client_business_name = clientBusinessName;
+  const clientRepresentativeName = normalizeText(rowData.client_representative_name);
+  if (clientRepresentativeName) payload.client_representative_name = clientRepresentativeName;
+  const clientCorporateRegistrationNo = normalizeText(rowData.client_corporate_registration_no);
+  if (clientCorporateRegistrationNo) payload.client_corporate_registration_no = clientCorporateRegistrationNo;
+  const clientBusinessRegistrationNo = normalizeText(rowData.client_business_registration_no);
+  if (clientBusinessRegistrationNo) payload.client_business_registration_no = clientBusinessRegistrationNo;
+  const orderTypeDivision = normalizeText(rowData.order_type_division);
+  if (orderTypeDivision) payload.order_type_division = orderTypeDivision;
+  const technicalGuidanceKind = normalizeText(rowData.technical_guidance_kind);
+  if (technicalGuidanceKind) payload.technical_guidance_kind = technicalGuidanceKind;
   const managerName = normalizeText(rowData.manager_name);
   if (managerName) payload.manager_name = managerName;
+  const inspectorName = normalizeText(rowData.inspector_name);
+  if (inspectorName) payload.inspector_name = inspectorName;
+  const contractContactName = normalizeText(rowData.contract_contact_name);
+  if (contractContactName) payload.contract_contact_name = contractContactName;
   const managerPhone = normalizeText(rowData.manager_phone);
   if (managerPhone) payload.manager_phone = managerPhone;
-  const siteAddress = normalizeText(rowData.road_address) || normalizeText(rowData.site_address);
+  const siteAddress = normalizeText(rowData.site_address);
   if (siteAddress) payload.site_address = siteAddress;
   const projectStartDate = parseDateValue(rowData.project_start_date);
   if (projectStartDate) payload.project_start_date = projectStartDate;
@@ -860,27 +902,31 @@ function buildSitePayload(rowData: Record<string, string>, headquarterId?: strin
   if (projectEndDate) payload.project_end_date = projectEndDate;
   const projectAmount = parseNumberValue(rowData.project_amount);
   if (projectAmount != null) payload.project_amount = projectAmount;
-  const contractDate = parseDateValue(rowData.contract_date);
-  if (contractDate) payload.contract_date = contractDate;
+  const contractStartDate = parseDateValue(rowData.contract_start_date);
+  if (contractStartDate) payload.contract_start_date = contractStartDate;
+  const contractEndDate = parseDateValue(rowData.contract_end_date);
+  if (contractEndDate) payload.contract_end_date = contractEndDate;
+  const contractSignedDate = parseDateValue(rowData.contract_signed_date);
+  if (contractSignedDate) {
+    payload.contract_signed_date = contractSignedDate;
+    payload.contract_date = contractSignedDate;
+  }
   const totalRounds = parseIntValue(rowData.total_rounds);
   if (totalRounds != null) payload.total_rounds = totalRounds;
-  const perVisitAmount = parseNumberValue(rowData.per_visit_amount);
-  if (perVisitAmount != null) payload.per_visit_amount = perVisitAmount;
   const totalContractAmount = parseNumberValue(rowData.total_contract_amount);
   if (totalContractAmount != null) payload.total_contract_amount = totalContractAmount;
-  const contractType = parseContractType(rowData.contract_type);
-  if (contractType) payload.contract_type = contractType;
   if (headquarterId) payload.headquarter_id = headquarterId;
   return payload;
 }
 
 function computeRequiredCompletionFields(headquarter: SafetyHeadquarter, site: SafetySite) {
   const fields: string[] = [];
+  if (!normalizeText(site.site_name)) fields.push(REQUIRED_FIELD_LABELS.site_name);
   if (!normalizeText(site.manager_name)) fields.push(REQUIRED_FIELD_LABELS.manager_name);
-  if (!normalizeText(site.manager_phone)) fields.push(REQUIRED_FIELD_LABELS.manager_phone);
-  if (!normalizeText(headquarter.contact_name)) fields.push(REQUIRED_FIELD_LABELS.contact_name);
   if (!normalizeText(headquarter.contact_phone)) fields.push(REQUIRED_FIELD_LABELS.contact_phone);
   if (!normalizeText(site.site_address)) fields.push(REQUIRED_FIELD_LABELS.site_address);
+  if (!normalizeText(site.labor_office)) fields.push(REQUIRED_FIELD_LABELS.labor_office);
+  if (!normalizeText(site.guidance_officer_name)) fields.push(REQUIRED_FIELD_LABELS.guidance_officer_name);
   return fields;
 }
 
@@ -1129,16 +1175,12 @@ export async function applyLocalExcelWorkbook(
         );
         summary.updatedHeadquarterCount += 1;
       } else {
+        const headquarterPayload = buildHeadquarterPayload(rowData);
         headquarter = await createAdminHeadquarter(
           token,
           {
-            address: normalizeText(rowData.road_address) || normalizeText(rowData.site_address) || null,
-            business_registration_no: normalizeText(rowData.business_registration_no) || null,
-            contact_name: normalizeText(rowData.contact_name) || null,
-            contact_phone: normalizeText(rowData.contact_phone) || null,
-            corporate_registration_no: normalizeText(rowData.corporate_registration_no) || null,
-            license_no: normalizeText(rowData.license_no) || null,
             name: normalizeText(rowData.headquarter_name) || normalizeText(rowData.site_name) || '엑셀 사업장',
+            ...headquarterPayload,
           },
           request,
         );
