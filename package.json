@@ -13,6 +13,7 @@
     "probe:api-live": "tsx scripts/probeSafetyApiLive.ts",
     "generate:service-intro": "tsx scripts/generateServiceIntro.ts",
     "capture:naver-review": "tsx scripts/captureNaverReview.ts",
+    "capture:google-review": "tsx scripts/captureGoogleReview.ts",
     "generate:hwpx": "node --experimental-strip-types scripts/generate_hwpx_report.ts",
     "bootstrap:hwpx-template": "node --experimental-strip-types scripts/bootstrap_inspection_hwpx_template.ts",
     "seed:measurement-templates": "node --experimental-strip-types scripts/seed_measurement_templates.ts"
