@@ -14,6 +14,7 @@ import type {
   SafetyHeadquarterUpdateInput,
   SafetySiteInput,
   SafetySiteUpdateInput,
+  SafetySiteStatus,
   SafetyUserCreateInput,
   SafetyUserUpdateInput,
 } from '@/types/controller';
@@ -42,6 +43,17 @@ function withQuery(path: string, params: Record<string, string | number | boolea
 
 function sendJson<T>(path: string, token: string, method: string, body?: unknown): Promise<T> {
   return requestSafetyApi<T>(path, { method, body: body ? JSON.stringify(body) : undefined }, token);
+}
+
+function normalizeSafetySiteStatus(value: string | null | undefined): SafetySiteStatus {
+  return value === 'planned' || value === 'active' || value === 'closed' ? value : 'active';
+}
+
+function normalizeSafetySite(site: SafetySite): SafetySite {
+  return {
+    ...site,
+    status: normalizeSafetySiteStatus(site.status),
+  };
 }
 
 export interface SafetyContentAssetUpload {
@@ -111,7 +123,7 @@ export const fetchSafetySitesAdmin = (token: string) =>
     }),
     {},
     token
-  );
+  ).then((sites) => sites.map((site) => normalizeSafetySite(site)));
 export const fetchSafetySitesAdminPage = (token: string, options: AdminListQueryOptions = {}) =>
   requestSafetyApi<SafetySite[]>(
     withQuery('/sites', {
@@ -123,13 +135,15 @@ export const fetchSafetySitesAdminPage = (token: string, options: AdminListQuery
     }),
     {},
     token
-  );
+  ).then((sites) => sites.map((site) => normalizeSafetySite(site)));
 export const createSafetySite = (token: string, body: SafetySiteInput) =>
-  sendJson<SafetySite>('/sites', token, 'POST', body);
+  sendJson<SafetySite>('/sites', token, 'POST', body).then((site) => normalizeSafetySite(site));
 export const updateSafetySite = (token: string, id: string, body: SafetySiteUpdateInput) =>
-  sendJson<SafetySite>(`/sites/${id}`, token, 'PATCH', body);
+  sendJson<SafetySite>(`/sites/${id}`, token, 'PATCH', body).then((site) => normalizeSafetySite(site));
 export const deactivateSafetySite = (token: string, id: string) =>
-  requestSafetyApi<SafetySite>(`/sites/${id}`, { method: 'DELETE' }, token);
+  requestSafetyApi<SafetySite>(`/sites/${id}`, { method: 'DELETE' }, token).then((site) =>
+    normalizeSafetySite(site)
+  );
 export const deleteSafetySite = deactivateSafetySite;
 
 export const fetchSafetyAssignments = (token: string) =>
