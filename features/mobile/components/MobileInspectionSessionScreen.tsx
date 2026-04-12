@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useDeferredValue, useEffect, useRef, useState } from 'react';
 import type { FocusEvent, ReactNode } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -51,10 +51,12 @@ import {
   buildDoc5StructuredSummaryPayload,
   buildLocalDoc5SummaryDraft,
 } from '@/lib/openai/doc5SummaryLocalDraft';
+import { fetchPhotoAlbum } from '@/lib/photos/apiClient';
 import {
   buildLocalDoc11EducationContent,
   generateStructuredDoc11EducationContent,
 } from '@/lib/openai/generateDoc11EducationContent';
+import type { PhotoAlbumItem } from '@/types/photos';
 import { ChartCard } from '@/components/session/workspace/widgets';
 import {
   buildMobileHomeHref,
@@ -90,6 +92,12 @@ interface Doc2ProcessNotesResponse {
   error?: string;
 }
 
+interface MobilePhotoSourceTarget {
+  fieldLabel: string;
+  onAlbumSelected?: (item: PhotoAlbumItem) => Promise<void> | void;
+  onFileSelected: (file: File) => Promise<void> | void;
+}
+
 const MAX_DOC8_RECOMMENDATIONS = 6;
 
 function getMobileDoc3SlotLabel(index: number) {
@@ -122,6 +130,25 @@ function parsePositiveRound(value: string) {
 
 function buildAutoReportTitle(reportDate: string, reportNumber: number) {
   return reportDate ? `${reportDate} 보고서 ${reportNumber}` : `보고서 ${reportNumber}`;
+}
+
+function formatMobilePhotoAlbumDate(value: string) {
+  if (!value?.trim()) {
+    return '';
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat('ko-KR', {
+    hour: '2-digit',
+    hour12: false,
+    minute: '2-digit',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(parsed);
 }
 
 async function generateDoc2RiskLines(input: {
@@ -277,6 +304,18 @@ export function MobileInspectionSessionScreen({
     id: string;
     message: string;
   } | null>(null);
+  const photoPickerGalleryInputRef = useRef<HTMLInputElement | null>(null);
+  const photoPickerCameraInputRef = useRef<HTMLInputElement | null>(null);
+  const photoSourceTargetRef = useRef<MobilePhotoSourceTarget | null>(null);
+  const [isPhotoSourceModalOpen, setIsPhotoSourceModalOpen] = useState(false);
+  const [isPhotoAlbumModalOpen, setIsPhotoAlbumModalOpen] = useState(false);
+  const [photoSourceTitle, setPhotoSourceTitle] = useState('사진 가져오기');
+  const [photoAlbumQuery, setPhotoAlbumQuery] = useState('');
+  const [photoAlbumRows, setPhotoAlbumRows] = useState<PhotoAlbumItem[]>([]);
+  const [photoAlbumLoading, setPhotoAlbumLoading] = useState(false);
+  const [photoAlbumError, setPhotoAlbumError] = useState<string | null>(null);
+  const [photoAlbumSelectingId, setPhotoAlbumSelectingId] = useState<string | null>(null);
+  const deferredPhotoAlbumQuery = useDeferredValue(photoAlbumQuery.trim());
   const isDirectSignatureAction = searchParams.get('action') === 'direct-signature';
 
   useEffect(() => {
@@ -337,6 +376,46 @@ export function MobileInspectionSessionScreen({
     };
   }, [activeStep, isDirectSignatureAction, session]);
 
+  useEffect(() => {
+    if (!isPhotoAlbumModalOpen || !displaySession?.siteKey) {
+      return;
+    }
+
+    let cancelled = false;
+    setPhotoAlbumLoading(true);
+    setPhotoAlbumError(null);
+
+    void fetchPhotoAlbum({
+      all: true,
+      query: deferredPhotoAlbumQuery,
+      siteId: displaySession.siteKey,
+      sortBy: 'capturedAt',
+      sortDir: 'desc',
+    })
+      .then((response) => {
+        if (!cancelled) {
+          setPhotoAlbumRows(response.rows);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setPhotoAlbumRows([]);
+          setPhotoAlbumError(
+            error instanceof Error ? error.message : '사진첩을 불러오지 못했습니다.',
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setPhotoAlbumLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [deferredPhotoAlbumQuery, displaySession?.siteKey, isPhotoAlbumModalOpen]);
+
   if (!screen.isReady) {
     return <StandaloneState title="보고서를 준비하는 중입니다." />;
   }
@@ -383,6 +462,156 @@ export function MobileInspectionSessionScreen({
     (left, right) => left.sortOrder - right.sortOrder,
   );
   const mobileReportsHref = buildMobileSiteReportsHref(displaySession.siteKey);
+
+  const resetPhotoSourceTarget = () => {
+    photoSourceTargetRef.current = null;
+  };
+
+  const closePhotoSourceModal = () => {
+    setIsPhotoSourceModalOpen(false);
+  };
+
+  const closePhotoAlbumModal = () => {
+    setIsPhotoAlbumModalOpen(false);
+    setPhotoAlbumQuery('');
+    setPhotoAlbumError(null);
+    setPhotoAlbumSelectingId(null);
+    resetPhotoSourceTarget();
+  };
+
+  const openPhotoSourcePicker = (target: MobilePhotoSourceTarget) => {
+    photoSourceTargetRef.current = target;
+    setPhotoSourceTitle(`${target.fieldLabel} 사진 가져오기`);
+    setPhotoAlbumError(null);
+    setPhotoAlbumQuery('');
+    setIsPhotoSourceModalOpen(true);
+  };
+
+  const handlePhotoSourceInputChange = async (
+    files: FileList | null,
+    input: HTMLInputElement | null,
+  ) => {
+    const file = Array.from(files ?? []).find((item) => item.size > 0);
+    if (!file) {
+      if (input) {
+        input.value = '';
+      }
+      resetPhotoSourceTarget();
+      return;
+    }
+
+    const target = photoSourceTargetRef.current;
+    if (!target) {
+      if (input) {
+        input.value = '';
+      }
+      return;
+    }
+
+    try {
+      await Promise.resolve(target.onFileSelected(file));
+    } finally {
+      if (input) {
+        input.value = '';
+      }
+      resetPhotoSourceTarget();
+    }
+  };
+
+  const openPhotoSourceCamera = () => {
+    setIsPhotoSourceModalOpen(false);
+    requestAnimationFrame(() => photoPickerCameraInputRef.current?.click());
+  };
+
+  const openPhotoSourceGallery = () => {
+    setIsPhotoSourceModalOpen(false);
+    requestAnimationFrame(() => photoPickerGalleryInputRef.current?.click());
+  };
+
+  const openPhotoAlbumPicker = () => {
+    setIsPhotoSourceModalOpen(false);
+    setPhotoAlbumError(null);
+    setPhotoAlbumQuery('');
+    setIsPhotoAlbumModalOpen(true);
+  };
+
+  const handlePhotoSlotKeyDown = (
+    event: React.KeyboardEvent<HTMLElement>,
+    action: () => void,
+  ) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      action();
+    }
+  };
+
+  /* useEffect(() => {
+    if (!isPhotoAlbumModalOpen) {
+      return;
+    }
+
+    let cancelled = false;
+    setPhotoAlbumLoading(true);
+    setPhotoAlbumError(null);
+
+    void fetchPhotoAlbum({
+      all: true,
+      query: deferredPhotoAlbumQuery,
+      siteId: displaySession.siteKey,
+      sortBy: 'capturedAt',
+      sortDir: 'desc',
+    })
+      .then((response) => {
+        if (!cancelled) {
+          setPhotoAlbumRows(response.rows);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setPhotoAlbumRows([]);
+          setPhotoAlbumError(
+            error instanceof Error ? error.message : '사진첩을 불러오지 못했습니다.',
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setPhotoAlbumLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [deferredPhotoAlbumQuery, displaySession.siteKey, isPhotoAlbumModalOpen]); */
+
+  const handlePhotoAlbumSelect = async (item: PhotoAlbumItem) => {
+    const target = photoSourceTargetRef.current;
+    if (!target) {
+      return;
+    }
+
+    try {
+      setPhotoAlbumSelectingId(item.id);
+      setPhotoAlbumError(null);
+      if (target.onAlbumSelected) {
+        await Promise.resolve(target.onAlbumSelected(item));
+      } else {
+        const file = await assetUrlToFile(item.previewUrl, item.fileName || 'photo.jpg');
+        await Promise.resolve(target.onFileSelected(file));
+      }
+      setIsPhotoAlbumModalOpen(false);
+      setPhotoAlbumQuery('');
+      setPhotoAlbumError(null);
+      resetPhotoSourceTarget();
+    } catch (error) {
+      setPhotoAlbumError(
+        error instanceof Error ? error.message : '사진을 반영하는 중 오류가 발생했습니다.',
+      );
+    } finally {
+      setPhotoAlbumSelectingId(null);
+    }
+  };
 
   const resetDoc2ProcessState = () => {
     setDoc2ProcessRiskLines(null);
@@ -466,12 +695,12 @@ export function MobileInspectionSessionScreen({
     );
   };
 
-  const handleDoc3SceneUpload = async (sceneId: string, index: number, file: File) => {
-    const dataUrl = await screen.withFileData(file);
-    if (!dataUrl) {
-      return;
-    }
-
+  const applyDoc3ScenePhoto = async (
+    sceneId: string,
+    index: number,
+    photoUrl: string,
+    fileForAi?: File | null,
+  ) => {
     const fallbackTitle =
       index >= FIXED_SCENE_COUNT ? getExtraSceneTitle(index) : getFixedSceneTitle(index);
     const currentScene = session?.document3Scenes.find((scene) => scene.id === sceneId);
@@ -481,26 +710,26 @@ export function MobileInspectionSessionScreen({
 
     screen.applyDocumentUpdate('doc3', 'manual', (current) => ({
       ...current,
-      document3Scenes: current.document3Scenes.map((scene) =>
-        scene.id === sceneId
-          ? {
-              ...scene,
-              photoUrl: dataUrl,
-              ...(index >= FIXED_SCENE_COUNT && !(scene.title || '').trim()
-                ? { title: fallbackTitle }
-                : {}),
-            }
-          : scene,
+        document3Scenes: current.document3Scenes.map((scene) =>
+          scene.id === sceneId
+            ? {
+                ...scene,
+                photoUrl,
+                ...(index >= FIXED_SCENE_COUNT && !(scene.title || '').trim()
+                  ? { title: fallbackTitle }
+                  : {}),
+              }
+            : scene,
       ),
     }));
 
-    if (!shouldRunAi) {
+    if (!shouldRunAi || !fileForAi) {
       return;
     }
 
     toggleDoc3Analyzing(sceneId, true);
     try {
-      const title = await inferSceneTitle(file);
+      const title = await inferSceneTitle(fileForAi);
       screen.applyDocumentUpdate('doc3', 'manual', (current) => ({
         ...current,
         document3Scenes: current.document3Scenes.map((scene) =>
@@ -510,6 +739,15 @@ export function MobileInspectionSessionScreen({
     } finally {
       toggleDoc3Analyzing(sceneId, false);
     }
+  };
+
+  const handleDoc3SceneUpload = async (sceneId: string, index: number, file: File) => {
+    const dataUrl = await screen.withFileData(file);
+    if (!dataUrl) {
+      return;
+    }
+
+    await applyDoc3ScenePhoto(sceneId, index, dataUrl, file);
   };
 
   const handleGenerateDoc5Draft = async () => {
@@ -668,6 +906,58 @@ export function MobileInspectionSessionScreen({
   const handleDoc8ProcessBlur = (planId: string, event: FocusEvent<HTMLDivElement>) => {
     if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
       setActiveDoc8PlanId((current) => (current === planId ? null : current));
+    }
+  };
+
+  const applyDoc10MeasurementPhoto = async (
+    measurementId: string,
+    photoUrl: string,
+    fileForMatch?: File | null,
+  ) => {
+    setDoc10MatchErrors((current) => ({ ...current, [measurementId]: '' }));
+
+    screen.applyDocumentUpdate('doc10', 'manual', (current) => ({
+      ...current,
+      document10Measurements: current.document10Measurements.map((measurement) =>
+        measurement.id === measurementId ? { ...measurement, photoUrl } : measurement,
+      ),
+    }));
+
+    if (measurementTemplateOptions.length === 0 || !fileForMatch) {
+      return;
+    }
+
+    setDoc10MatchingMeasurementId(measurementId);
+    try {
+      const matchedTemplate = await matchMeasurementTemplateByPhoto(
+        fileForMatch,
+        measurementTemplateOptions,
+      );
+      if (!matchedTemplate) {
+        return;
+      }
+
+      screen.applyDocumentUpdate('doc10', 'manual', (current) => ({
+        ...current,
+        document10Measurements: current.document10Measurements.map((measurement) =>
+          measurement.id === measurementId
+            ? {
+                ...measurement,
+                photoUrl,
+                instrumentType: matchedTemplate.instrumentName,
+                safetyCriteria: matchedTemplate.safetyCriteria || measurement.safetyCriteria,
+              }
+            : measurement,
+        ),
+      }));
+    } catch (error) {
+      setDoc10MatchErrors((current) => ({
+        ...current,
+        [measurementId]:
+          error instanceof Error ? error.message : '怨꾩륫湲?AI 留ㅼ묶???ㅽ뙣?덉뒿?덈떎.',
+      }));
+    } finally {
+      setDoc10MatchingMeasurementId((current) => (current === measurementId ? null : current));
     }
   };
 
@@ -1262,7 +1552,8 @@ export function MobileInspectionSessionScreen({
                             </button>
                           ) : null}
                         </div>
-                        <label
+                        <button
+                          type="button"
                           style={{
                             display: 'block',
                             width: '100%',
@@ -1282,18 +1573,7 @@ export function MobileInspectionSessionScreen({
                               터치하여 사진 선택
                             </div>
                           )}
-                            <input
-                              type="file"
-                              accept="image/*"
-                              style={{ display: 'none' }}
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) {
-                                  void handleDoc3SceneUpload(scene.id, index, file);
-                                }
-                              }}
-                            />
-                          </label>
+                        </button>
                         {index >= FIXED_SCENE_COUNT ? (
                           <input
                             className="app-input"
@@ -1398,7 +1678,33 @@ export function MobileInspectionSessionScreen({
                             </div>
                             <div style={{ flex: 1 }}>
                               <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>개선 후 사진</div>
-                              <label style={{ display: 'block', width: '100%', height: '120px', backgroundColor: '#f8fafc', border: '1px solid rgba(215, 224, 235, 0.88)', borderRadius: '4px', overflow: 'hidden', position: 'relative', cursor: 'pointer' }}>
+                              <button
+                                type="button"
+                                style={{ display: 'block', width: '100%', height: '120px', backgroundColor: '#f8fafc', border: '1px solid rgba(215, 224, 235, 0.88)', borderRadius: '4px', overflow: 'hidden', position: 'relative', cursor: 'pointer' }}
+                                onClick={() =>
+                                  openPhotoSourcePicker({
+                                    fieldLabel: '개선 후',
+                                    onAlbumSelected: (albumItem) => {
+                                      screen.applyDocumentUpdate('doc4', 'manual', (current) => ({
+                                        ...current,
+                                        document4FollowUps: current.document4FollowUps.map((f) =>
+                                          f.id === item.id ? { ...f, afterPhotoUrl: albumItem.previewUrl } : f,
+                                        ),
+                                      }));
+                                    },
+                                    onFileSelected: async (file) => {
+                                      await screen.withFileData(file, (value) => {
+                                        screen.applyDocumentUpdate('doc4', 'manual', (current) => ({
+                                          ...current,
+                                          document4FollowUps: current.document4FollowUps.map((f) =>
+                                            f.id === item.id ? { ...f, afterPhotoUrl: value } : f,
+                                          ),
+                                        }));
+                                      });
+                                    },
+                                  })
+                                }
+                              >
                                 {item.afterPhotoUrl ? (
                                   <img src={item.afterPhotoUrl} alt="개선 사진" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                 ) : (
@@ -1406,25 +1712,7 @@ export function MobileInspectionSessionScreen({
                                     사진 선택
                                   </div>
                                 )}
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  style={{ display: 'none' }}
-                                  onChange={(e) => {
-                                    const file = e.target.files?.[0];
-                                    if (file) {
-                                      void screen.withFileData(file, (value) => {
-                                        screen.applyDocumentUpdate('doc4', 'manual', (current) => ({
-                                          ...current,
-                                          document4FollowUps: current.document4FollowUps.map((f) =>
-                                            f.id === item.id ? { ...f, afterPhotoUrl: value } : f
-                                          ),
-                                        }));
-                                      });
-                                    }
-                                  }}
-                                />
-                              </label>
+                              </button>
                             </div>
                           </div>
                         </article>
@@ -1647,7 +1935,33 @@ export function MobileInspectionSessionScreen({
                         </div>
                         <div className={styles.mobileEditorFieldStack}>
                           <div style={{ display: 'flex', gap: '8px' }}>
-                            <label style={{ flex: 1, height: '120px', backgroundColor: '#f8fafc', border: '1px solid rgba(215, 224, 235, 0.88)', borderRadius: '4px', overflow: 'hidden', position: 'relative', cursor: 'pointer' }}>
+                            <button
+                              type="button"
+                              style={{ flex: 1, height: '120px', backgroundColor: '#f8fafc', border: '1px solid rgba(215, 224, 235, 0.88)', borderRadius: '4px', overflow: 'hidden', position: 'relative', cursor: 'pointer' }}
+                              onClick={() =>
+                                openPhotoSourcePicker({
+                                  fieldLabel: '지적 사진 1',
+                                  onAlbumSelected: (albumItem) => {
+                                    screen.applyDocumentUpdate('doc7', 'manual', (current) => ({
+                                      ...current,
+                                      document7Findings: current.document7Findings.map((f) =>
+                                        f.id === finding.id ? { ...f, photoUrl: albumItem.previewUrl } : f,
+                                      ),
+                                    }));
+                                  },
+                                  onFileSelected: async (file) => {
+                                    await screen.withFileData(file, (value) => {
+                                      screen.applyDocumentUpdate('doc7', 'manual', (current) => ({
+                                        ...current,
+                                        document7Findings: current.document7Findings.map((f) =>
+                                          f.id === finding.id ? { ...f, photoUrl: value } : f,
+                                        ),
+                                      }));
+                                    });
+                                  },
+                                })
+                              }
+                            >
                               {finding.photoUrl ? (
                                 <img src={finding.photoUrl} alt="지적 사진 1" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                               ) : (
@@ -1655,26 +1969,34 @@ export function MobileInspectionSessionScreen({
                                   사진 1 추가
                                 </div>
                               )}
-                              <input
-                                type="file"
-                                accept="image/*"
-                                style={{ display: 'none' }}
-                                onChange={(e) => {
-                                  const file = e.target.files?.[0];
-                                  if (file) {
-                                    void screen.withFileData(file, (value) => {
+                            </button>
+                            <button
+                              type="button"
+                              style={{ flex: 1, height: '120px', backgroundColor: '#f8fafc', border: '1px solid rgba(215, 224, 235, 0.88)', borderRadius: '4px', overflow: 'hidden', position: 'relative', cursor: 'pointer' }}
+                              onClick={() =>
+                                openPhotoSourcePicker({
+                                  fieldLabel: '지적 사진 2',
+                                  onAlbumSelected: (albumItem) => {
+                                    screen.applyDocumentUpdate('doc7', 'manual', (current) => ({
+                                      ...current,
+                                      document7Findings: current.document7Findings.map((f) =>
+                                        f.id === finding.id ? { ...f, photoUrl2: albumItem.previewUrl } : f,
+                                      ),
+                                    }));
+                                  },
+                                  onFileSelected: async (file) => {
+                                    await screen.withFileData(file, (value) => {
                                       screen.applyDocumentUpdate('doc7', 'manual', (current) => ({
                                         ...current,
                                         document7Findings: current.document7Findings.map((f) =>
-                                          f.id === finding.id ? { ...f, photoUrl: value } : f
+                                          f.id === finding.id ? { ...f, photoUrl2: value } : f,
                                         ),
                                       }));
                                     });
-                                  }
-                                }}
-                              />
-                            </label>
-                            <label style={{ flex: 1, height: '120px', backgroundColor: '#f8fafc', border: '1px solid rgba(215, 224, 235, 0.88)', borderRadius: '4px', overflow: 'hidden', position: 'relative', cursor: 'pointer' }}>
+                                  },
+                                })
+                              }
+                            >
                               {finding.photoUrl2 ? (
                                 <img src={finding.photoUrl2} alt="지적 사진 2" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                               ) : (
@@ -1682,25 +2004,7 @@ export function MobileInspectionSessionScreen({
                                   사진 2 추가
                                 </div>
                               )}
-                              <input
-                                type="file"
-                                accept="image/*"
-                                style={{ display: 'none' }}
-                                onChange={(e) => {
-                                  const file = e.target.files?.[0];
-                                  if (file) {
-                                    void screen.withFileData(file, (value) => {
-                                      screen.applyDocumentUpdate('doc7', 'manual', (current) => ({
-                                        ...current,
-                                        document7Findings: current.document7Findings.map((f) =>
-                                          f.id === finding.id ? { ...f, photoUrl2: value } : f
-                                        ),
-                                      }));
-                                    });
-                                  }
-                                }}
-                              />
-                            </label>
+                            </button>
                           </div>
                           {doc7AiErrors[finding.id] ? (
                             <p className={styles.errorNotice} style={{ margin: 0 }}>
@@ -2214,7 +2518,29 @@ export function MobileInspectionSessionScreen({
                           </button>
                         </div>
                         <div className={styles.mobileEditorFieldStack}>
-                          <label style={{ display: 'block', width: '100%', height: '160px', backgroundColor: '#f8fafc', border: '1px solid rgba(215, 224, 235, 0.88)', borderRadius: '4px', overflow: 'hidden', position: 'relative', cursor: 'pointer' }}>
+                          <button
+                            type="button"
+                            style={{ display: 'block', width: '100%', height: '160px', backgroundColor: '#f8fafc', border: '1px solid rgba(215, 224, 235, 0.88)', borderRadius: '4px', overflow: 'hidden', position: 'relative', cursor: 'pointer' }}
+                            onClick={() =>
+                              openPhotoSourcePicker({
+                                fieldLabel: '계측 사진',
+                                onAlbumSelected: async (albumItem) => {
+                                  const file = await assetUrlToFile(
+                                    albumItem.previewUrl,
+                                    albumItem.fileName || `${measurement.id}.jpg`,
+                                  );
+                                  await applyDoc10MeasurementPhoto(
+                                    measurement.id,
+                                    albumItem.previewUrl,
+                                    file,
+                                  );
+                                },
+                                onFileSelected: async (file) => {
+                                  await handleDoc10PhotoSelect(measurement.id, file);
+                                },
+                              })
+                            }
+                          >
                             {measurement.photoUrl ? (
                               <img src={measurement.photoUrl} alt="계측 사진" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                             ) : (
@@ -2222,18 +2548,7 @@ export function MobileInspectionSessionScreen({
                                 사진 업로드
                               </div>
                             )}
-                            <input
-                              type="file"
-                              accept="image/*"
-                              style={{ display: 'none' }}
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) {
-                                  void handleDoc10PhotoSelect(measurement.id, file);
-                                }
-                              }}
-                            />
-                          </label>
+                          </button>
                           {doc10MatchingMeasurementId === measurement.id ? (
                             <p className={styles.inlineNotice} style={{ margin: 0 }}>
                               AI가 계측기 종류를 분석하는 중입니다.
@@ -2483,7 +2798,8 @@ export function MobileInspectionSessionScreen({
                                   </button>
                                 ) : null}
                               </div>
-                              <label
+                              <button
+                                type="button"
                                 style={{
                                   display: 'block',
                                   width: '100%',
@@ -2495,6 +2811,35 @@ export function MobileInspectionSessionScreen({
                                   position: 'relative',
                                   cursor: 'pointer',
                                 }}
+                                onClick={() =>
+                                  openPhotoSourcePicker({
+                                    fieldLabel: '안전교육 사진',
+                                    onAlbumSelected: (albumItem) => {
+                                      screen.applyDocumentUpdate('doc11', 'manual', (current) => ({
+                                        ...current,
+                                        document11EducationRecords:
+                                          current.document11EducationRecords.map((item) =>
+                                            item.id === record.id
+                                              ? { ...item, photoUrl: albumItem.previewUrl }
+                                              : item,
+                                          ),
+                                      }));
+                                    },
+                                    onFileSelected: async (file) => {
+                                      await screen.withFileData(file, (value) => {
+                                        screen.applyDocumentUpdate('doc11', 'manual', (current) => ({
+                                          ...current,
+                                          document11EducationRecords:
+                                            current.document11EducationRecords.map((item) =>
+                                              item.id === record.id
+                                                ? { ...item, photoUrl: value }
+                                                : item,
+                                            ),
+                                        }));
+                                      });
+                                    },
+                                  })
+                                }
                               >
                                 {record.photoUrl ? (
                                   <img
@@ -2517,28 +2862,7 @@ export function MobileInspectionSessionScreen({
                                     사진 업로드
                                   </div>
                                 )}
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  style={{ display: 'none' }}
-                                  onChange={(e) => {
-                                    const file = e.target.files?.[0];
-                                    if (file) {
-                                      void screen.withFileData(file, (value) => {
-                                        screen.applyDocumentUpdate('doc11', 'manual', (current) => ({
-                                          ...current,
-                                          document11EducationRecords:
-                                            current.document11EducationRecords.map((item) =>
-                                              item.id === record.id
-                                                ? { ...item, photoUrl: value }
-                                                : item,
-                                            ),
-                                        }));
-                                      });
-                                    }
-                                  }}
-                                />
-                              </label>
+                              </button>
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                               <div
@@ -2727,10 +3051,27 @@ export function MobileInspectionSessionScreen({
                             gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
                             gap: '12px',
                           }}
+                          onClick={() =>
+                            openPhotoSourcePicker({
+                              fieldLabel: getMobileDoc3SlotLabel(index),
+                              onAlbumSelected: async (item) => {
+                                const file = await assetUrlToFile(
+                                  item.previewUrl,
+                                  item.fileName || `${scene.id}.jpg`,
+                                );
+                                await applyDoc3ScenePhoto(scene.id, index, item.previewUrl, file);
+                              },
+                              onFileSelected: async (file) => {
+                                await handleDoc3SceneUpload(scene.id, index, file);
+                              },
+                            })
+                          }
                         >
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             <div style={{ fontSize: '14px', fontWeight: 600 }}>활동 1 사진</div>
-                            <label
+                            <div
+                              role="button"
+                              tabIndex={0}
                               style={{
                                 display: 'block',
                                 width: '100%',
@@ -2742,6 +3083,54 @@ export function MobileInspectionSessionScreen({
                                 position: 'relative',
                                 cursor: 'pointer',
                               }}
+                              onClick={() =>
+                                openPhotoSourcePicker({
+                                  fieldLabel: '활동 1 사진',
+                                  onAlbumSelected: (albumItem) => {
+                                    screen.applyDocumentUpdate('doc12', 'manual', (current) => ({
+                                      ...current,
+                                      document12Activities: current.document12Activities.map((item, itemIndex) =>
+                                        itemIndex === 0 ? { ...item, photoUrl: albumItem.previewUrl } : item,
+                                      ),
+                                    }));
+                                  },
+                                  onFileSelected: async (file) => {
+                                    await screen.withFileData(file, (value) => {
+                                      screen.applyDocumentUpdate('doc12', 'manual', (current) => ({
+                                        ...current,
+                                        document12Activities: current.document12Activities.map((item, itemIndex) =>
+                                          itemIndex === 0 ? { ...item, photoUrl: value } : item,
+                                        ),
+                                      }));
+                                    });
+                                  },
+                                })
+                              }
+                              onKeyDown={(event) =>
+                                handlePhotoSlotKeyDown(event, () =>
+                                  openPhotoSourcePicker({
+                                    fieldLabel: '활동 1 사진',
+                                    onAlbumSelected: (albumItem) => {
+                                      screen.applyDocumentUpdate('doc12', 'manual', (current) => ({
+                                        ...current,
+                                        document12Activities: current.document12Activities.map((item, itemIndex) =>
+                                          itemIndex === 0 ? { ...item, photoUrl: albumItem.previewUrl } : item,
+                                        ),
+                                      }));
+                                    },
+                                    onFileSelected: async (file) => {
+                                      await screen.withFileData(file, (value) => {
+                                        screen.applyDocumentUpdate('doc12', 'manual', (current) => ({
+                                          ...current,
+                                          document12Activities: current.document12Activities.map((item, itemIndex) =>
+                                            itemIndex === 0 ? { ...item, photoUrl: value } : item,
+                                          ),
+                                        }));
+                                      });
+                                    },
+                                  }),
+                                )
+                              }
                             >
                               {session.document12Activities[0].photoUrl ? (
                                 <button
@@ -2783,29 +3172,13 @@ export function MobileInspectionSessionScreen({
                                   사진 업로드
                                 </div>
                               )}
-                              <input
-                                type="file"
-                                accept="image/*"
-                                style={{ display: 'none' }}
-                                onChange={(e) => {
-                                  const file = e.target.files?.[0];
-                                  if (file) {
-                                    void screen.withFileData(file, (value) => {
-                                      screen.applyDocumentUpdate('doc12', 'manual', (current) => ({
-                                        ...current,
-                                        document12Activities: current.document12Activities.map((item, itemIndex) =>
-                                          itemIndex === 0 ? { ...item, photoUrl: value } : item,
-                                        ),
-                                      }));
-                                    });
-                                  }
-                                }}
-                              />
-                            </label>
+                            </div>
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             <div style={{ fontSize: '14px', fontWeight: 600 }}>활동 2 사진</div>
-                            <label
+                            <div
+                              role="button"
+                              tabIndex={0}
                               style={{
                                 display: 'block',
                                 width: '100%',
@@ -2817,6 +3190,54 @@ export function MobileInspectionSessionScreen({
                                 position: 'relative',
                                 cursor: 'pointer',
                               }}
+                              onClick={() =>
+                                openPhotoSourcePicker({
+                                  fieldLabel: '활동 2 사진',
+                                  onAlbumSelected: (albumItem) => {
+                                    screen.applyDocumentUpdate('doc12', 'manual', (current) => ({
+                                      ...current,
+                                      document12Activities: current.document12Activities.map((item, itemIndex) =>
+                                        itemIndex === 0 ? { ...item, photoUrl2: albumItem.previewUrl } : item,
+                                      ),
+                                    }));
+                                  },
+                                  onFileSelected: async (file) => {
+                                    await screen.withFileData(file, (value) => {
+                                      screen.applyDocumentUpdate('doc12', 'manual', (current) => ({
+                                        ...current,
+                                        document12Activities: current.document12Activities.map((item, itemIndex) =>
+                                          itemIndex === 0 ? { ...item, photoUrl2: value } : item,
+                                        ),
+                                      }));
+                                    });
+                                  },
+                                })
+                              }
+                              onKeyDown={(event) =>
+                                handlePhotoSlotKeyDown(event, () =>
+                                  openPhotoSourcePicker({
+                                    fieldLabel: '활동 2 사진',
+                                    onAlbumSelected: (albumItem) => {
+                                      screen.applyDocumentUpdate('doc12', 'manual', (current) => ({
+                                        ...current,
+                                        document12Activities: current.document12Activities.map((item, itemIndex) =>
+                                          itemIndex === 0 ? { ...item, photoUrl2: albumItem.previewUrl } : item,
+                                        ),
+                                      }));
+                                    },
+                                    onFileSelected: async (file) => {
+                                      await screen.withFileData(file, (value) => {
+                                        screen.applyDocumentUpdate('doc12', 'manual', (current) => ({
+                                          ...current,
+                                          document12Activities: current.document12Activities.map((item, itemIndex) =>
+                                            itemIndex === 0 ? { ...item, photoUrl2: value } : item,
+                                          ),
+                                        }));
+                                      });
+                                    },
+                                  }),
+                                )
+                              }
                             >
                               {session.document12Activities[0].photoUrl2 ? (
                                 <button
@@ -2858,25 +3279,7 @@ export function MobileInspectionSessionScreen({
                                   사진 업로드
                                 </div>
                               )}
-                              <input
-                                type="file"
-                                accept="image/*"
-                                style={{ display: 'none' }}
-                                onChange={(e) => {
-                                  const file = e.target.files?.[0];
-                                  if (file) {
-                                    void screen.withFileData(file, (value) => {
-                                      screen.applyDocumentUpdate('doc12', 'manual', (current) => ({
-                                        ...current,
-                                        document12Activities: current.document12Activities.map((item, itemIndex) =>
-                                          itemIndex === 0 ? { ...item, photoUrl2: value } : item,
-                                        ),
-                                      }));
-                                    });
-                                  }
-                                }}
-                              />
-                            </label>
+                            </div>
                           </div>
                         </div>
                         <div
@@ -2938,6 +3341,205 @@ export function MobileInspectionSessionScreen({
       ) : (
         <p className={styles.inlineNotice} style={{ margin: '16px' }}>보고서 본문을 동기화하는 중입니다.</p>
       )}
+
+      <input
+        ref={photoPickerGalleryInputRef}
+        type="file"
+        accept="image/*,.heic,.heif"
+        hidden
+        onChange={(event) => {
+          void handlePhotoSourceInputChange(event.target.files, event.currentTarget);
+        }}
+      />
+      <input
+        ref={photoPickerCameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        hidden
+        onChange={(event) => {
+          void handlePhotoSourceInputChange(event.target.files, event.currentTarget);
+        }}
+      />
+
+      <AppModal
+        open={isPhotoSourceModalOpen}
+        title={photoSourceTitle}
+        onClose={() => {
+          closePhotoSourceModal();
+          resetPhotoSourceTarget();
+        }}
+        verticalAlign="center"
+        mobileActionsLayout="row"
+        actions={
+          <>
+            <button
+              type="button"
+              className="app-button app-button-primary"
+              onClick={openPhotoSourceCamera}
+            >
+              카메라
+            </button>
+            <button
+              type="button"
+              className="app-button app-button-secondary"
+              onClick={openPhotoAlbumPicker}
+            >
+              사진첩
+            </button>
+            <button
+              type="button"
+              className="app-button app-button-secondary"
+              onClick={openPhotoSourceGallery}
+            >
+              파일 선택
+            </button>
+          </>
+        }
+      >
+        <p className={styles.inlineNotice} style={{ margin: 0 }}>
+          사진을 가져올 방법을 선택하세요.
+        </p>
+      </AppModal>
+
+      <AppModal
+        open={isPhotoAlbumModalOpen}
+        title="사진첩에서 선택"
+        onClose={closePhotoAlbumModal}
+        size="large"
+        actions={
+          <button
+            type="button"
+            className="app-button app-button-secondary"
+            onClick={closePhotoAlbumModal}
+          >
+            닫기
+          </button>
+        }
+      >
+        <div style={{ display: 'grid', gap: '12px' }}>
+          <input
+            className="app-input"
+            value={photoAlbumQuery}
+            onChange={(event) => setPhotoAlbumQuery(event.target.value)}
+            placeholder="파일명, 현장명, 보고서명, 업로더 검색"
+          />
+          {photoAlbumError ? (
+            <p className={styles.errorNotice} style={{ margin: 0 }}>
+              {photoAlbumError}
+            </p>
+          ) : null}
+          {photoAlbumLoading ? (
+            <div
+              style={{
+                minHeight: '220px',
+                border: '1px dashed #cbd5e1',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#64748b',
+                fontSize: '14px',
+              }}
+            >
+              사진첩을 불러오는 중입니다.
+            </div>
+          ) : photoAlbumRows.length === 0 ? (
+            <div
+              style={{
+                minHeight: '220px',
+                border: '1px dashed #cbd5e1',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#64748b',
+                fontSize: '14px',
+                textAlign: 'center',
+                padding: '16px',
+              }}
+            >
+              선택할 사진이 없습니다.
+            </div>
+          ) : (
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                gap: '10px',
+              }}
+            >
+              {photoAlbumRows.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  disabled={photoAlbumSelectingId === item.id}
+                  onClick={() => {
+                    void handlePhotoAlbumSelect(item);
+                  }}
+                  style={{
+                    display: 'grid',
+                    gap: '6px',
+                    padding: '6px',
+                    border: '1px solid #d7e0eb',
+                    borderRadius: '8px',
+                    backgroundColor: '#fff',
+                    textAlign: 'left',
+                    cursor: photoAlbumSelectingId === item.id ? 'wait' : 'pointer',
+                    opacity: photoAlbumSelectingId === item.id ? 0.68 : 1,
+                  }}
+                >
+                  {item.previewUrl ? (
+                    <img
+                      src={item.previewUrl}
+                      alt={item.fileName}
+                      style={{
+                        width: '100%',
+                        aspectRatio: '1 / 1',
+                        objectFit: 'cover',
+                        borderRadius: '6px',
+                        backgroundColor: '#e2e8f0',
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: '100%',
+                        aspectRatio: '1 / 1',
+                        borderRadius: '6px',
+                        backgroundColor: '#f1f5f9',
+                        color: '#94a3b8',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '12px',
+                      }}
+                    >
+                      미리보기 없음
+                    </div>
+                  )}
+                  <div
+                    style={{
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      color: '#0f172a',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                    title={item.fileName}
+                  >
+                    {item.fileName}
+                  </div>
+                  <div style={{ fontSize: '10px', color: '#64748b' }}>
+                    {formatMobilePhotoAlbumDate(item.capturedAt || item.createdAt)}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </AppModal>
 
       {hasLoadedSessionPayload && session ? (
         <AppModal

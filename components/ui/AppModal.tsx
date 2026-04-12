@@ -10,6 +10,7 @@ interface AppModalProps {
   actions: ReactNode;
   onClose: () => void;
   closeOnBackdrop?: boolean;
+  mobileActionsLayout?: 'stack' | 'row';
   size?: 'default' | 'large';
   verticalAlign?: 'top' | 'center';
 }
@@ -21,6 +22,7 @@ export default function AppModal({
   actions,
   onClose,
   closeOnBackdrop = true,
+  mobileActionsLayout = 'stack',
   size = 'default',
   verticalAlign = 'top',
 }: AppModalProps) {
@@ -79,7 +81,16 @@ export default function AppModal({
             </h2>
           </div>
           {children ? <div className={styles.content}>{children}</div> : null}
-          <div className={styles.actions}>{actions}</div>
+          <div
+            className={[
+              styles.actions,
+              mobileActionsLayout === 'row' ? styles.actionsRowMobile : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+          >
+            {actions}
+          </div>
         </div>
       </div>
     </div>
