@@ -9,7 +9,6 @@ import AppModal from '@/components/ui/AppModal';
 import SignaturePad from '@/components/ui/SignaturePad';
 import {
   FOLLOW_UP_RESULT_OPTIONS,
-  getSessionGuidanceDate,
   getSessionTitle,
 } from '@/constants/inspectionSession';
 import { FIXED_SCENE_COUNT } from '@/constants/inspectionSession/catalog';
@@ -93,20 +92,22 @@ interface Doc2ProcessNotesResponse {
 
 const MAX_DOC8_RECOMMENDATIONS = 6;
 
-function formatCompactDate(value: string | null | undefined) {
-  if (!value?.trim()) {
-    return '미기록';
+function getMobileDoc3SlotLabel(index: number) {
+  return index < FIXED_SCENE_COUNT
+    ? `현장 ${index + 1}`
+    : `공정 ${index - FIXED_SCENE_COUNT + 1}`;
+}
+
+function getMobileDoc3DisplayTitle(index: number, title: string | null | undefined) {
+  const trimmed = title?.trim() ?? '';
+  if (!trimmed) {
+    return getMobileDoc3SlotLabel(index);
   }
 
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
+  const legacyTitle =
+    index < FIXED_SCENE_COUNT ? getFixedSceneTitle(index) : getExtraSceneTitle(index);
 
-  return new Intl.DateTimeFormat('ko-KR', {
-    month: '2-digit',
-    day: '2-digit',
-  }).format(parsed);
+  return trimmed === legacyTitle ? getMobileDoc3SlotLabel(index) : trimmed;
 }
 
 function parsePositiveRound(value: string) {
@@ -730,19 +731,12 @@ export function MobileInspectionSessionScreen({
       onLogout={screen.logout}
       title={getSessionTitle(displaySession)}
       webHref={`/sessions/${encodeURIComponent(sessionId)}`}
-      webLabel="웹에서 전체 편집"
     >
       <section className={`${styles.sectionCard} ${styles.mobileSummarySection}`} style={{ marginBottom: 0, borderRadius: '0 0 8px 8px', borderBottom: 'none', flexShrink: 0 }}>
         <div className={`${styles.statGrid} ${hasLoadedSessionPayload ? styles.mobileInspectionSummaryGrid : ''}`}>
           <article className={`${styles.statCard} ${styles.mobileSummaryCard}`}>
             <span className={`${styles.statLabel} ${styles.mobileSummaryLabel}`}>진행률</span>
             <strong className={`${styles.statValue} ${styles.mobileSummaryValue}`}>{screen.displayProgress.percentage}%</strong>
-          </article>
-          <article className={`${styles.statCard} ${styles.mobileSummaryCard}`}>
-            <span className={`${styles.statLabel} ${styles.mobileSummaryLabel}`}>지도일</span>
-            <strong className={`${styles.statValue} ${styles.mobileSummaryValue}`}>
-              {formatCompactDate(getSessionGuidanceDate(displaySession))}
-            </strong>
           </article>
           {hasLoadedSessionPayload ? (
             <button
@@ -1248,12 +1242,7 @@ export function MobileInspectionSessionScreen({
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
                           <div style={{ minWidth: 0 }}>
                             <div style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>
-                              {index < FIXED_SCENE_COUNT
-                                ? getFixedSceneTitle(index)
-                                : `공정 사진 ${index - FIXED_SCENE_COUNT + 1}`}
-                            </div>
-                            <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
-                              {index < FIXED_SCENE_COUNT ? '현장 전경 촬영' : '주요 진행공정 촬영'}
+                              {getMobileDoc3SlotLabel(index)}
                             </div>
                           </div>
                           {scene.photoUrl ? (
@@ -1269,7 +1258,7 @@ export function MobileInspectionSessionScreen({
                                 }));
                               }}
                             >
-                              사진 비우기
+                              비우기
                             </button>
                           ) : null}
                         </div>
@@ -1308,7 +1297,7 @@ export function MobileInspectionSessionScreen({
                         {index >= FIXED_SCENE_COUNT ? (
                           <input
                             className="app-input"
-                            value={scene.title}
+                            value={getMobileDoc3DisplayTitle(index, scene.title)}
                             onChange={(e) => {
                               const value = e.target.value;
                               screen.applyDocumentUpdate('doc3', 'manual', (current) => ({
@@ -1318,14 +1307,14 @@ export function MobileInspectionSessionScreen({
                                 ),
                               }));
                             }}
-                            placeholder={`${getExtraSceneTitle(index)} 예: 천장 배관 설치`}
+                            placeholder={`${getMobileDoc3SlotLabel(index)} 예: 천장 배관 설치`}
                             style={{ width: '100%' }}
                           />
                         ) : (
                           <div style={{ fontSize: '12px', color: '#64748b', minHeight: '18px' }}>
                             {doc3AnalyzingSceneIds.includes(scene.id)
                               ? 'AI 분석 중'
-                              : scene.title?.trim() || getFixedSceneTitle(index)}
+                              : getMobileDoc3DisplayTitle(index, scene.title)}
                           </div>
                         )}
                       </article>
@@ -2255,7 +2244,7 @@ export function MobileInspectionSessionScreen({
                               {doc10MatchErrors[measurement.id]}
                             </p>
                           ) : null}
-                          <div style={{ display: 'flex', gap: '8px' }}>
+                          <div className={styles.mobileCompactFieldGrid}>
                             <select
                               className="app-select"
                               value={measurement.instrumentType}
@@ -2281,7 +2270,7 @@ export function MobileInspectionSessionScreen({
                                   ),
                                 }));
                               }}
-                              style={{ flex: 1 }}
+                              style={{ width: '100%' }}
                             >
                               <option value="">장비 선택</option>
                               {measurement.instrumentType &&
@@ -2311,39 +2300,39 @@ export function MobileInspectionSessionScreen({
                                 }));
                               }}
                               placeholder="측정값"
-                              style={{ flex: 1 }}
+                              style={{ width: '100%' }}
+                            />
+                            <input
+                              className="app-input"
+                              value={measurement.measurementLocation}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                screen.applyDocumentUpdate('doc10', 'manual', (current) => ({
+                                  ...current,
+                                  document10Measurements: current.document10Measurements.map((m) =>
+                                    m.id === measurement.id ? { ...m, measurementLocation: value } : m
+                                  ),
+                                }));
+                              }}
+                              placeholder="측정 위치"
+                              style={{ width: '100%' }}
+                            />
+                            <input
+                              className="app-input"
+                              value={measurement.actionTaken}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                screen.applyDocumentUpdate('doc10', 'manual', (current) => ({
+                                  ...current,
+                                  document10Measurements: current.document10Measurements.map((m) =>
+                                    m.id === measurement.id ? { ...m, actionTaken: value } : m
+                                  ),
+                                }));
+                              }}
+                              placeholder="조치 여부"
+                              style={{ width: '100%' }}
                             />
                           </div>
-                          <input
-                            className="app-input"
-                            value={measurement.measurementLocation}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              screen.applyDocumentUpdate('doc10', 'manual', (current) => ({
-                                ...current,
-                                document10Measurements: current.document10Measurements.map((m) =>
-                                  m.id === measurement.id ? { ...m, measurementLocation: value } : m
-                                ),
-                              }));
-                            }}
-                            placeholder="측정 위치"
-                            style={{ width: '100%' }}
-                          />
-                          <input
-                            className="app-input"
-                            value={measurement.actionTaken}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              screen.applyDocumentUpdate('doc10', 'manual', (current) => ({
-                                ...current,
-                                document10Measurements: current.document10Measurements.map((m) =>
-                                  m.id === measurement.id ? { ...m, actionTaken: value } : m
-                                ),
-                              }));
-                            }}
-                            placeholder="조치 여부"
-                            style={{ width: '100%' }}
-                          />
                           <textarea
                             className="app-input"
                             value={measurement.safetyCriteria}
@@ -2741,24 +2730,6 @@ export function MobileInspectionSessionScreen({
                         >
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             <div style={{ fontSize: '14px', fontWeight: 600 }}>활동 1 사진</div>
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', minHeight: '20px' }}>
-                              {session.document12Activities[0].photoUrl ? (
-                                <button
-                                  type="button"
-                                  className={workspaceStyles.doc5SummaryDraftBtn}
-                                  onClick={() => {
-                                    screen.applyDocumentUpdate('doc12', 'manual', (current) => ({
-                                      ...current,
-                                      document12Activities: current.document12Activities.map((item, itemIndex) =>
-                                        itemIndex === 0 ? { ...item, photoUrl: '' } : item,
-                                      ),
-                                    }));
-                                  }}
-                                >
-                                  사진 삭제
-                                </button>
-                              ) : null}
-                            </div>
                             <label
                               style={{
                                 display: 'block',
@@ -2772,6 +2743,25 @@ export function MobileInspectionSessionScreen({
                                 cursor: 'pointer',
                               }}
                             >
+                              {session.document12Activities[0].photoUrl ? (
+                                <button
+                                  type="button"
+                                  className={workspaceStyles.doc5SummaryDraftBtn}
+                                  style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 1 }}
+                                  onClick={(event) => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    screen.applyDocumentUpdate('doc12', 'manual', (current) => ({
+                                      ...current,
+                                      document12Activities: current.document12Activities.map((item, itemIndex) =>
+                                        itemIndex === 0 ? { ...item, photoUrl: '' } : item,
+                                      ),
+                                    }));
+                                  }}
+                                >
+                                  사진 삭제
+                                </button>
+                              ) : null}
                               {session.document12Activities[0].photoUrl ? (
                                 <img
                                   src={session.document12Activities[0].photoUrl}
@@ -2815,24 +2805,6 @@ export function MobileInspectionSessionScreen({
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             <div style={{ fontSize: '14px', fontWeight: 600 }}>활동 2 사진</div>
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', minHeight: '20px' }}>
-                              {session.document12Activities[0].photoUrl2 ? (
-                                <button
-                                  type="button"
-                                  className={workspaceStyles.doc5SummaryDraftBtn}
-                                  onClick={() => {
-                                    screen.applyDocumentUpdate('doc12', 'manual', (current) => ({
-                                      ...current,
-                                      document12Activities: current.document12Activities.map((item, itemIndex) =>
-                                        itemIndex === 0 ? { ...item, photoUrl2: '' } : item,
-                                      ),
-                                    }));
-                                  }}
-                                >
-                                  사진 삭제
-                                </button>
-                              ) : null}
-                            </div>
                             <label
                               style={{
                                 display: 'block',
@@ -2846,6 +2818,25 @@ export function MobileInspectionSessionScreen({
                                 cursor: 'pointer',
                               }}
                             >
+                              {session.document12Activities[0].photoUrl2 ? (
+                                <button
+                                  type="button"
+                                  className={workspaceStyles.doc5SummaryDraftBtn}
+                                  style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 1 }}
+                                  onClick={(event) => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    screen.applyDocumentUpdate('doc12', 'manual', (current) => ({
+                                      ...current,
+                                      document12Activities: current.document12Activities.map((item, itemIndex) =>
+                                        itemIndex === 0 ? { ...item, photoUrl2: '' } : item,
+                                      ),
+                                    }));
+                                  }}
+                                >
+                                  사진 삭제
+                                </button>
+                              ) : null}
                               {session.document12Activities[0].photoUrl2 ? (
                                 <img
                                   src={session.document12Activities[0].photoUrl2}

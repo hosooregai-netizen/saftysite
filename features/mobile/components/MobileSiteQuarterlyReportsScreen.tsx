@@ -56,7 +56,6 @@ interface QuarterlyListRow {
   periodStartDate: string;
   reportId: string;
   reportTitle: string;
-  selectedCount: number;
   updatedAt: string;
 }
 
@@ -65,21 +64,6 @@ const EMPTY_CREATE_FORM: CreateQuarterlyReportForm = {
   periodStartDate: '',
   periodEndDate: '',
 };
-
-function formatDateTimeLabel(value: string | null | undefined) {
-  if (!value) return '-';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-
-  return new Intl.DateTimeFormat('ko-KR', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).format(date);
-}
 
 function getSortTime(value: string) {
   const parsed = value ? new Date(value).getTime() : 0;
@@ -231,15 +215,6 @@ function QuarterlyReportCard({
           <span>
             <strong style={{ color: '#0f172a', fontWeight: 700 }}>기간</strong> {row.periodLabel}
           </span>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-            <span>
-              <strong style={{ color: '#0f172a', fontWeight: 700 }}>원본</strong> {row.selectedCount}건
-            </span>
-            <span>
-              <strong style={{ color: '#0f172a', fontWeight: 700 }}>수정</strong>{' '}
-              {formatDateTimeLabel(row.updatedAt)}
-            </span>
-          </div>
         </div>
       </article>
     </Link>
@@ -312,7 +287,6 @@ export function MobileSiteQuarterlyReportsScreen({
         periodStartDate: report.periodStartDate,
         reportId: report.id,
         reportTitle: report.title || '분기 종합보고서',
-        selectedCount: report.selectedReportCount,
         updatedAt: report.updatedAt || report.lastCalculatedAt || report.createdAt,
       }));
   }, [currentSite, quarterlyReports]);

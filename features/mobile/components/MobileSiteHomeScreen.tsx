@@ -213,13 +213,15 @@ export function MobileSiteHomeScreen({ siteKey }: MobileSiteHomeScreenProps) {
   const headquartersContact = snapshot.headquartersContact.trim();
   const headquartersContactHref = formatTelHref(headquartersContact);
   const showSiteContact = siteContact.length > 0 && siteContact !== managerPhone;
-  const currentYear = new Date().getFullYear();
-  const currentYearQuarterlyReports = quarterlyReports.filter(
-    (report) => report.year === currentYear,
+  const today = new Date();
+  const currentYear = today.getFullYear();
+  const currentQuarter = Math.floor(today.getMonth() / 3) + 1;
+  const isCurrentQuarterReportCompleted = quarterlyReports.some(
+    (report) => report.year === currentYear && report.quarter === currentQuarter,
   );
-  const completedQuarterCount = new Set(
-    currentYearQuarterlyReports.map((report) => report.quarterKey).filter(Boolean),
-  ).size;
+  const currentQuarterStatusLabel = `${currentQuarter}분기 ${
+    isCurrentQuarterReportCompleted ? '작성 완료' : '작성 전'
+  }`;
   const photoAlbumHref = buildMobileSitePhotoAlbumHref(currentSite.id);
   const quarterlyListHref = buildMobileSiteQuarterlyListHref(currentSite.id);
 
@@ -262,72 +264,55 @@ export function MobileSiteHomeScreen({ siteKey }: MobileSiteHomeScreenProps) {
       currentUserName={currentUser?.name}
       tabBar={<MobileTabBar tabs={buildSiteTabs(currentSite.id, 'site-home')} />}
       onLogout={logout}
-      subtitle={snapshot.siteAddress || null}
       title={currentSite.siteName}
       webHref={`/sites/${encodeURIComponent(currentSite.id)}/entry`}
-      webLabel="웹에서 현장 보기"
     >
-      <section className={styles.sectionCard}>
-        <div className={styles.sectionHeader}>
-          <div className={styles.sectionTitleWrap}>
-            <h2 className={styles.sectionTitle}>현장 요약</h2>
-          </div>
-          <span className={styles.sectionMeta}>
-            {reportIndexStatus === 'loading' ? '목록 동기화 중' : ''}
-          </span>
-        </div>
-
-        <div
-          className={styles.statGrid}
-          style={{
-            gridTemplateColumns:
-              'minmax(0, 1.2fr) minmax(0, 0.9fr) minmax(0, 0.9fr)',
-            alignItems: 'stretch',
-          }}
-        >
-          <article className={styles.statCard}>
-            <span className={styles.statLabel}>방문 예정일</span>
-            <strong className={styles.statValue}>{formatCompactDate(latestGuidanceDate)}</strong>
+      <section className={`${styles.sectionCard} ${styles.mobileSummarySection}`}>
+        <div className={`${styles.statGrid} ${styles.mobileHomeSummaryGrid}`}>
+          <article className={`${styles.statCard} ${styles.mobileSummaryCard}`}>
+            <span className={`${styles.statLabel} ${styles.mobileSummaryLabel}`}>방문 예정일</span>
+            <strong className={`${styles.statValue} ${styles.mobileSummaryValue}`}>
+              {formatCompactDate(latestGuidanceDate)}
+            </strong>
             <span style={{ fontSize: '12px', color: '#64748b' }}>
               마지막 보고서 지도일 기준
             </span>
           </article>
           <button
             type="button"
-            className="app-button app-button-primary"
+            className={`app-button app-button-primary ${styles.mobileSummaryTallButton}`}
             onClick={() => photoCaptureInputRef.current?.click()}
             disabled={isUploadingPhoto}
-            style={{ minHeight: '100%', whiteSpace: 'normal' }}
+            style={{ whiteSpace: 'normal' }}
           >
-            {isUploadingPhoto ? '사진 업로드 중...' : '현장 사진 촬영'}
+            {isUploadingPhoto ? '업로드 중' : '사진 촬영'}
           </button>
-          {directSignatureHref ? (
+          <div className={styles.mobileSummaryExportStack}>
+            {directSignatureHref ? (
+              <Link
+                href={directSignatureHref}
+                className={`app-button app-button-secondary ${styles.mobileSummaryMiniButton} ${styles.mobileSummaryLinkButton}`}
+              >
+                직접수령 서명
+              </Link>
+            ) : (
+              <button
+                type="button"
+                className={`app-button app-button-secondary ${styles.mobileSummaryMiniButton}`}
+                disabled
+              >
+                직접수령 서명
+              </button>
+            )}
             <Link
-              href={directSignatureHref}
-              className="app-button app-button-secondary"
-              style={{
-                minHeight: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                textDecoration: 'none',
-                textAlign: 'center',
-                whiteSpace: 'normal',
-              }}
+              href={photoAlbumHref}
+              className={`app-button app-button-secondary ${styles.mobileSummaryMiniButton} ${styles.mobileSummaryLinkButton}`}
             >
-              현장 소장 서명(직접수령)
+              사진첩 열기
             </Link>
-          ) : (
-            <button
-              type="button"
-              className="app-button app-button-secondary"
-              disabled
-              style={{ minHeight: '100%', whiteSpace: 'normal' }}
-            >
-              현장 소장 서명(직접수령)
-            </button>
-          )}
+          </div>
         </div>
+        {reportIndexStatus === 'loading' ? <p className={styles.inlineNotice}>목록 동기화 중</p> : null}
         {!directSignatureHref ? (
           <p className={styles.inlineNotice}>
             마지막 보고서가 있어야 직접수령 서명을 시작할 수 있습니다.
@@ -344,19 +329,6 @@ export function MobileSiteHomeScreen({ siteKey }: MobileSiteHomeScreenProps) {
             void handlePhotoCapture(event.target.files);
           }}
         />
-        <Link
-          href={photoAlbumHref}
-          className="app-button app-button-secondary"
-          style={{
-            width: '100%',
-            display: 'flex',
-            justifyContent: 'center',
-            textAlign: 'center',
-            textDecoration: 'none',
-          }}
-        >
-          현장 사진첩 열기
-        </Link>
         {photoUploadNotice ? (
           <div
             style={{
@@ -534,24 +506,14 @@ export function MobileSiteHomeScreen({ siteKey }: MobileSiteHomeScreenProps) {
           className={styles.statGrid}
           style={{ gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)' }}
         >
-          <article className={styles.statCard}>
-            <span className={styles.statLabel}>{currentYear}년 작성</span>
-            <strong className={styles.statValue}>{completedQuarterCount}/4</strong>
-            <span style={{ fontSize: '12px', color: '#64748b' }}>
-              등록된 분기 보고 기준
-            </span>
+          <article className={`${styles.statCard} ${styles.mobileSummaryCard}`}>
+            <strong className={`${styles.statValue} ${styles.mobileSummaryValue}`}>
+              {currentQuarterStatusLabel}
+            </strong>
           </article>
           <Link
             href={quarterlyListHref}
-            className="app-button app-button-primary"
-            style={{
-              minHeight: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              textDecoration: 'none',
-              textAlign: 'center',
-            }}
+            className={`app-button app-button-primary ${styles.mobileSummaryTallButton} ${styles.mobileSummaryLinkButton}`}
           >
             분기 보고 열기
           </Link>

@@ -13,11 +13,9 @@ interface MobileShellProps {
   fullHeight?: boolean;
   kicker?: string;
   onLogout: () => void;
-  subtitle?: string | null;
   tabBar?: ReactNode;
   title: string;
   webHref: string;
-  webLabel?: string;
 }
 
 export function MobileShell({
@@ -29,11 +27,9 @@ export function MobileShell({
   fullHeight = false,
   kicker,
   onLogout,
-  subtitle,
   tabBar,
   title,
   webHref,
-  webLabel = '웹에서 보기',
 }: MobileShellProps) {
   return (
     <main className={`app-page ${styles.page} ${fullHeight ? styles.pageFullHeight : ''}`}>
@@ -58,7 +54,7 @@ export function MobileShell({
                 href={webHref}
                 className={`app-button app-button-secondary ${styles.headerActionButton}`}
               >
-                {webLabel}
+                웹에서 보기
               </Link>
               <button
                 type="button"
@@ -73,7 +69,6 @@ export function MobileShell({
           <div className={styles.headerBody}>
             {kicker ? <span className={styles.kicker}>{kicker}</span> : null}
             <h1 className={styles.title}>{title}</h1>
-            {subtitle ? <p className={styles.subtitle}>{subtitle}</p> : null}
           </div>
         </header>
 

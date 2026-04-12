@@ -88,11 +88,9 @@ export function MobileSitePhotoAlbumScreen({
       backLabel="현장 홈"
       currentUserName={currentUser?.name}
       onLogout={logout}
-      subtitle={currentSite.adminSiteSnapshot.siteAddress || null}
       tabBar={<MobileTabBar tabs={buildSiteTabs(currentSite.id, 'photos')} />}
       title={currentSite.siteName}
       webHref={buildSitePhotoAlbumHref(currentSite.id)}
-      webLabel="웹 사진첩"
     >
       <PhotoAlbumPanel
         backHref={mobileSiteHomeHref}

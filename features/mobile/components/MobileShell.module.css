@@ -141,15 +141,6 @@
   overflow-wrap: anywhere;
 }
 
-.subtitle {
-  margin: 0;
-  font-size: var(--text-ui);
-  line-height: 1.55;
-  color: rgba(255, 255, 255, 0.78);
-  word-break: keep-all;
-  overflow-wrap: anywhere;
-}
-
 .accountRow {
   display: flex;
   align-items: center;
@@ -707,7 +698,7 @@
 .mobileOverviewPeriodRow {
   display: grid;
   gap: 12px;
-  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(68px, 0.75fr) minmax(112px, 1fr) minmax(112px, 1fr);
 }
 
 .mobileEditorTextareaCompact {
@@ -1097,10 +1088,14 @@
   align-items: stretch;
 }
 
+.mobileHomeSummaryGrid {
+  grid-template-columns: minmax(0, 1fr) minmax(88px, 96px) minmax(118px, 140px);
+  align-items: stretch;
+}
+
 .mobileInspectionSummaryGrid {
   grid-template-columns:
-    minmax(0, 1fr)
-    minmax(0, 1fr)
+    minmax(0, 2fr)
     minmax(76px, 88px)
     minmax(88px, 96px)
     minmax(76px, 84px);
@@ -1142,6 +1137,14 @@
   padding: 0 8px;
   font-size: 12px;
   line-height: 1.15;
+}
+
+.mobileSummaryLinkButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  text-align: center;
 }
 
 @media (max-width: 520px) {
@@ -1214,11 +1217,15 @@
     grid-template-columns: minmax(0, 1fr) minmax(120px, 146px) 58px;
   }
 
+  .mobileHomeSummaryGrid {
+    gap: 6px;
+    grid-template-columns: minmax(0, 1fr) 84px minmax(112px, 126px);
+  }
+
   .mobileInspectionSummaryGrid {
     gap: 6px;
     grid-template-columns:
-      minmax(0, 1fr)
-      minmax(0, 1fr)
+      minmax(0, 2fr)
       64px
       56px
       56px;
