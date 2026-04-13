@@ -167,3 +167,18 @@ Admin uses a separate scope so we can grow coverage without destabilizing the ER
 ```bash
 npm run aidlc:audit:admin
 ```
+
+To make the workflow enforceable before commit, install the repo hook once:
+
+```bash
+npm run hooks:install
+```
+
+After that, `.githooks/pre-commit` runs:
+
+```bash
+npm run verify:aidlc
+```
+
+`verify:aidlc` checks staged file paths, requires matching contract-pack companions for guarded
+admin/ERP source edits, and runs the matching AIDLC audit plus `tsc` before the commit is allowed.
