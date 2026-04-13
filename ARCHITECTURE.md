@@ -182,3 +182,13 @@ npm run verify:aidlc
 
 `verify:aidlc` checks staged file paths, requires matching contract-pack companions for guarded
 admin/ERP source edits, and runs the matching AIDLC audit plus `tsc` before the commit is allowed.
+
+`.githooks/pre-push` adds smoke enforcement for guarded source pushes:
+
+```bash
+npm run verify:aidlc:push
+```
+
+`verify:aidlc:push` looks at the files being pushed, resolves the required mocked smoke features,
+checks that the local app is reachable at `PLAYWRIGHT_BASE_URL` (default `http://127.0.0.1:3211`),
+and blocks the push if the smoke run fails or if a guarded surface has no smoke mapping yet.

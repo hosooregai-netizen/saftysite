@@ -16,6 +16,7 @@
     "aidlc:audit:admin": "node scripts/aidlcAudit.mjs --scope admin",
     "aidlc:audit:admin:strict": "node scripts/aidlcAudit.mjs --scope admin --strict",
     "verify:aidlc": "node scripts/verifyAidlc.mjs",
+    "verify:aidlc:push": "node scripts/verifyAidlcPush.mjs",
     "hooks:install": "node scripts/installGitHooks.mjs",
     "smoke:erp": "tsx scripts/smokeClient.ts",
     "smoke:real:admin": "tsx scripts/smokeRealAdmin.ts",
