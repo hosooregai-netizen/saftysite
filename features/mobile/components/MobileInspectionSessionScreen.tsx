@@ -40,18 +40,9 @@ import { MobileTabBar } from './MobileTabBar';
 import { buildSiteTabs } from '../lib/buildSiteTabs';
 import { MobileInspectionSessionModals } from '../inspection-session/MobileInspectionSessionModals';
 import { MobileInspectionSessionStandaloneState } from '../inspection-session/MobileInspectionSessionStandaloneState';
-import { MobileInspectionSessionStep2 } from '../inspection-session/MobileInspectionSessionStep2';
-import { MobileInspectionSessionStep3 } from '../inspection-session/MobileInspectionSessionStep3';
-import { MobileInspectionSessionStep4 } from '../inspection-session/MobileInspectionSessionStep4';
-import { MobileInspectionSessionStep5 } from '../inspection-session/MobileInspectionSessionStep5';
-import { MobileInspectionSessionStep6 } from '../inspection-session/MobileInspectionSessionStep6';
-import { MobileInspectionSessionStep7 } from '../inspection-session/MobileInspectionSessionStep7';
-import { MobileInspectionSessionStep8 } from '../inspection-session/MobileInspectionSessionStep8';
-import { MobileInspectionSessionStep9 } from '../inspection-session/MobileInspectionSessionStep9';
-import { MobileInspectionSessionStep10 } from '../inspection-session/MobileInspectionSessionStep10';
-import { MobileInspectionSessionStep11 } from '../inspection-session/MobileInspectionSessionStep11';
-import { MobileInspectionSessionStep12 } from '../inspection-session/MobileInspectionSessionStep12';
+import { MobileInspectionSessionSummaryBar } from '../inspection-session/MobileInspectionSessionSummaryBar';
 import { useMobileInspectionPhotoPicker } from '../inspection-session/useMobileInspectionPhotoPicker';
+import { MobileInspectionSessionWorkspace } from '../inspection-session/MobileInspectionSessionWorkspace';
 import {
   MOBILE_INSPECTION_STEPS,
   MobileInspectionStepId,
@@ -61,7 +52,6 @@ import {
   inferSceneTitle,
 } from '../inspection-session/mobileInspectionSessionHelpers';
 import styles from './MobileShell.module.css';
-import tabStyles from './MobileStepTabs.module.css';
 
 interface MobileInspectionSessionScreenProps {
   sessionId: string;
@@ -636,187 +626,51 @@ export function MobileInspectionSessionScreen({
       title={getSessionTitle(displaySession)}
       webHref={`/sessions/${encodeURIComponent(sessionId)}`}
     >
-      <section className={`${styles.sectionCard} ${styles.mobileSummarySection}`} style={{ marginBottom: 0, borderRadius: '0 0 8px 8px', borderBottom: 'none', flexShrink: 0 }}>
-        <div className={`${styles.statGrid} ${hasLoadedSessionPayload ? styles.mobileInspectionSummaryGrid : ''}`}>
-          <article className={`${styles.statCard} ${styles.mobileSummaryCard}`}>
-            <span className={`${styles.statLabel} ${styles.mobileSummaryLabel}`}>진행률</span>
-            <strong className={`${styles.statValue} ${styles.mobileSummaryValue}`}>{screen.displayProgress.percentage}%</strong>
-          </article>
-          {hasLoadedSessionPayload ? (
-            <button
-              type="button"
-              className={`app-button app-button-secondary ${styles.mobileSummaryTallButton}`}
-              onClick={() => setDocumentInfoOpen(true)}
-            >
-              문서정보
-            </button>
-          ) : null}
-          {hasLoadedSessionPayload ? (
-            <div className={styles.mobileSummaryExportStack} style={{ minWidth: 0 }}>
-              <button
-                type="button"
-                className={`app-button app-button-secondary ${styles.mobileSummaryMiniButton}`}
-                disabled={screen.isGeneratingHwpx || screen.isGeneratingPdf}
-                onClick={() => void screen.generateHwpxDocument()}
-              >
-                {screen.isGeneratingHwpx ? '한글...' : '한글'}
-              </button>
-              <button
-                type="button"
-                className={`app-button app-button-secondary ${styles.mobileSummaryMiniButton}`}
-                disabled={screen.isGeneratingHwpx || screen.isGeneratingPdf}
-                onClick={() => void screen.generatePdfDocument()}
-              >
-                {screen.isGeneratingPdf ? 'PDF...' : 'PDF'}
-              </button>
-            </div>
-          ) : null}
-          {hasLoadedSessionPayload ? (
-            <button
-              type="button"
-              className={`app-button app-button-secondary ${styles.mobileSummaryTallButton}`}
-              disabled={screen.isSaving || screen.isGeneratingHwpx || screen.isGeneratingPdf}
-              onClick={() => void screen.saveNow()}
-            >
-              {screen.isSaving ? '저장 중' : '저장'}
-            </button>
-          ) : null}
-        </div>
-      </section>
+      <MobileInspectionSessionSummaryBar
+        hasLoadedSessionPayload={hasLoadedSessionPayload}
+        isGeneratingHwpx={screen.isGeneratingHwpx}
+        isGeneratingPdf={screen.isGeneratingPdf}
+        isSaving={screen.isSaving}
+        onGenerateHwpx={() => void screen.generateHwpxDocument()}
+        onGeneratePdf={() => void screen.generatePdfDocument()}
+        onOpenDocumentInfo={() => setDocumentInfoOpen(true)}
+        onSave={() => void screen.saveNow()}
+        progressPercentage={screen.displayProgress.percentage}
+      />
 
-      {hasLoadedSessionPayload && session ? (
-        <div className={tabStyles.layoutWrapper}>
-          <div className={tabStyles.tabContainer}>
-            {MOBILE_INSPECTION_STEPS.map((step) => (
-              <button
-                key={step.id}
-                type="button"
-                className={`${tabStyles.tabButton} ${activeStep === step.id ? tabStyles.tabButtonActive : ''}`}
-                onClick={() => setActiveStep(step.id)}
-              >
-                {step.label}
-              </button>
-            ))}
-          </div>
-
-          <div className={tabStyles.stepContent}>
-            {/* 2단계: 기술지도 개요 */}
-            {activeStep === 'step2' && (
-              <MobileInspectionSessionStep2
-                directSignatureSectionRef={directSignatureSectionRef}
-                onOpenDoc2ProcessModal={() => setIsDoc2ProcessModalOpen(true)}
-                screen={screen}
-                session={session}
-              />
-            )}
-
-            {/* 3단계: 현장 전경 */}
-            {activeStep === 'step3' && (
-              <MobileInspectionSessionStep3
-                applyDoc3ScenePhoto={applyDoc3ScenePhoto}
-                doc3AnalyzingSceneIds={doc3AnalyzingSceneIds}
-                openPhotoSourcePicker={openPhotoSourcePicker}
-                screen={screen}
-                session={session}
-              />
-            )}
-
-            {/* 4단계: 이전 기술지도 사항 */}
-            {activeStep === 'step4' && (
-              <MobileInspectionSessionStep4
-                openPhotoSourcePicker={openPhotoSourcePicker}
-                screen={screen}
-                session={session}
-              />
-            )}
-
-            {/* 5단계: 총평 */}
-            {activeStep === 'step5' && (
-              <MobileInspectionSessionStep5
-                doc5DraftError={doc5DraftError}
-                doc5DraftLoading={doc5DraftLoading}
-                doc5DraftNotice={doc5DraftNotice}
-                handleGenerateDoc5Draft={handleGenerateDoc5Draft}
-                screen={screen}
-                session={session}
-              />
-            )}
-
-            {/* 6단계: 12대 사망사고 기인물 */}
-            {activeStep === 'step6' && (
-              <MobileInspectionSessionStep6 screen={screen} session={session} />
-            )}
-
-            {/* 7단계: 현존 유해·위험요인 세부 지적 */}
-            {activeStep === 'step7' && (
-              <MobileInspectionSessionStep7
-                doc7AiErrors={doc7AiErrors}
-                doc7AiLoadingId={doc7AiLoadingId}
-                handleDoc7AiRefill={handleDoc7AiRefill}
-                openPhotoSourcePicker={openPhotoSourcePicker}
-                screen={screen}
-                session={session}
-              />
-            )}
-
-            {/* 8단계: 향후 진행공정 */}
-            {activeStep === 'step8' && (
-              <MobileInspectionSessionStep8
-                activeDoc8PlanId={activeDoc8PlanId}
-                handleDoc8ProcessBlur={handleDoc8ProcessBlur}
-                screen={screen}
-                session={session}
-                setActiveDoc8PlanId={setActiveDoc8PlanId}
-                updateDoc8ProcessPlan={updateDoc8ProcessPlan}
-              />
-            )}
-
-            {/* 9단계: 위험성평가 / TBM */}
-            {activeStep === 'step9' && (
-              <MobileInspectionSessionStep9 screen={screen} session={session} />
-            )}
-
-            {/* 10단계: 계측점검 */}
-            {activeStep === 'step10' && (
-              <MobileInspectionSessionStep10
-                applyDoc10MeasurementPhoto={applyDoc10MeasurementPhoto}
-                doc10MatchErrors={doc10MatchErrors}
-                doc10MatchingMeasurementId={doc10MatchingMeasurementId}
-                handleDoc10PhotoSelect={handleDoc10PhotoSelect}
-                measurementTemplateOptions={measurementTemplateOptions}
-                openPhotoSourcePicker={openPhotoSourcePicker}
-                screen={screen}
-                session={session}
-              />
-            )}
-
-            {/* 11단계: 안전교육 */}
-            {activeStep === 'step11' && (
-              <MobileInspectionSessionStep11
-                doc11ContentError={doc11ContentError}
-                doc11ContentNotice={doc11ContentNotice}
-                doc11GeneratingId={doc11GeneratingId}
-                handleGenerateDoc11Content={handleGenerateDoc11Content}
-                openPhotoSourcePicker={openPhotoSourcePicker}
-                screen={screen}
-                session={session}
-              />
-            )}
-
-            {/* 12단계: 활동 실적 */}
-            {activeStep === 'step12' && (
-              <MobileInspectionSessionStep12
-                handlePhotoSlotKeyDown={handlePhotoSlotKeyDown}
-                openPhotoSourcePicker={openPhotoSourcePicker}
-                screen={screen}
-                session={session}
-              />
-            )}
-          </div>
-        </div>
-      ) : (
-        <p className={styles.inlineNotice} style={{ margin: '16px' }}>보고서 본문을 동기화하는 중입니다.</p>
-      )}
+      <MobileInspectionSessionWorkspace
+        activeDoc8PlanId={activeDoc8PlanId}
+        activeStep={activeStep}
+        applyDoc10MeasurementPhoto={applyDoc10MeasurementPhoto}
+        applyDoc3ScenePhoto={applyDoc3ScenePhoto}
+        directSignatureSectionRef={directSignatureSectionRef}
+        doc10MatchErrors={doc10MatchErrors}
+        doc10MatchingMeasurementId={doc10MatchingMeasurementId}
+        doc11ContentError={doc11ContentError}
+        doc11ContentNotice={doc11ContentNotice}
+        doc11GeneratingId={doc11GeneratingId}
+        doc3AnalyzingSceneIds={doc3AnalyzingSceneIds}
+        doc5DraftError={doc5DraftError}
+        doc5DraftLoading={doc5DraftLoading}
+        doc5DraftNotice={doc5DraftNotice}
+        doc7AiErrors={doc7AiErrors}
+        doc7AiLoadingId={doc7AiLoadingId}
+        handleDoc10PhotoSelect={handleDoc10PhotoSelect}
+        handleDoc7AiRefill={handleDoc7AiRefill}
+        handleDoc8ProcessBlur={handleDoc8ProcessBlur}
+        handleGenerateDoc11Content={handleGenerateDoc11Content}
+        handleGenerateDoc5Draft={handleGenerateDoc5Draft}
+        handlePhotoSlotKeyDown={handlePhotoSlotKeyDown}
+        hasLoadedSessionPayload={hasLoadedSessionPayload}
+        measurementTemplateOptions={measurementTemplateOptions}
+        onOpenDoc2ProcessModal={() => setIsDoc2ProcessModalOpen(true)}
+        openPhotoSourcePicker={openPhotoSourcePicker}
+        screen={screen}
+        session={session}
+        setActiveDoc8PlanId={setActiveDoc8PlanId}
+        setActiveStep={setActiveStep}
+        updateDoc8ProcessPlan={updateDoc8ProcessPlan}
+      />
 
       <MobileInspectionSessionModals
         applyDoc2ProcessNotesDraft={applyDoc2ProcessNotesDraft}
