@@ -7,6 +7,9 @@ description: Use for ERP platform work that must preserve feature contracts, fol
 
 Use this skill when the task changes ERP client behavior, introduces a new ERP module, or risks regression from rapid iterative coding.
 
+For refactor or modularization work, pair this with `../aidlc-contract-pack/SKILL.md` so the
+feature contract, smoke, and batch record move with the code change.
+
 ## Focus
 
 - `features/home/**`

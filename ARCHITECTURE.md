@@ -114,6 +114,31 @@ For admin client work, treat the contract pack as the unit of change:
 4. change code in the smallest responsible file
 5. rerun mocked smoke, then real admin smoke when a local app is available
 
+## Skill Loading Strategy
+
+Do not force-load every repo skill on every task. That adds context noise and makes the model
+more likely to miss the active boundary.
+
+Use a layered skill strategy instead:
+
+1. `skills/aidlc-contract-pack/SKILL.md`
+   This is the thin default guardrail for modularization, refactor, and regression-sensitive
+   client work. It should be the broadest trigger.
+2. `skills/admin-contract-pack/SKILL.md`
+   Load this for `/admin` work that needs admin contracts, mocked smoke, real smoke, and
+   admin audit updates.
+3. `skills/erp-platform-guardrails/SKILL.md`
+   Load this for ERP platform and worker/client flows outside `/admin`.
+
+The rule of thumb is:
+
+- broad bootstrap skill first
+- one domain skill second
+- optional references only when the task needs them
+
+That gives us “nearly always loaded when relevant” behavior without paying the cost of always
+loading every skill body.
+
 ## File Size Audit
 
 Use the local AIDLC audit to spot oversized files in the ERP surface:
