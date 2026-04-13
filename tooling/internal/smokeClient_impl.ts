@@ -54,6 +54,7 @@ export function normalizeSafetyPath(pathname: string): string {
     .replace(/\/site-workers\/[^/]+\/block$/, '/site-workers/:id/block')
     .replace(/\/site-workers\/[^/]+$/, '/site-workers/:id')
     .replace(/\/reports\/site\/[^/]+\/operational-index$/, '/reports/site/:id/operational-index')
+    .replace(/\/reports\/site\/[^/]+\/technical-guidance-seed$/, '/reports/site/:id/technical-guidance-seed')
     .replace(/\/reports\/site\/[^/]+\/quarterly-summary-seed$/, '/reports/site/:id/quarterly-summary-seed')
     .replace(/\/reports\/site\/[^/]+\/draft-context$/, '/reports/site/:id/draft-context')
     .replace(/\/reports\/site\/[^/]+\/full$/, '/reports/site/:id/full')

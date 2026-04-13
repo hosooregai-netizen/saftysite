@@ -1,5 +1,6 @@
 export type FeatureContractId =
   | 'auth'
+  | 'mobile-site-reports'
   | 'mobile-quarterly-list'
   | 'mobile-quarterly-report'
   | 'site-hub'
@@ -23,6 +24,20 @@ export const FEATURE_CONTRACTS: Record<FeatureContractId, FeatureContract> = {
     markers: ['현장 목록 로그인', '현장 목록'],
     apis: ['POST /auth/token', 'GET /assignments/me/sites'],
     criticalActions: ['현장 요원 로그인', '로그아웃', '재로그인'],
+  },
+  'mobile-site-reports': {
+    id: 'mobile-site-reports',
+    description:
+      '모바일 보고서 목록에서 로그인 후 목록 조회, 새 보고서 생성, 모바일 작성 화면 진입 흐름을 유지한다.',
+    routes: ['/mobile/sites/site-1/reports'],
+    markers: ['모바일 보고서 로그인', '현장 보고서 요약', '기술지도 보고서 추가', '추가'],
+    apis: [
+      'POST /auth/token',
+      'GET /assignments/me/sites',
+      'GET /reports',
+      'GET /reports/site/:id/technical-guidance-seed',
+    ],
+    criticalActions: ['모바일 보고서 목록 로그인', '보고서 목록 조회', '새 보고서 생성', '모바일 작성 화면 진입'],
   },
   'mobile-quarterly-list': {
     id: 'mobile-quarterly-list',

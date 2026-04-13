@@ -278,6 +278,21 @@ async function installErpRoutes({
       return;
     }
 
+    if (normalizedPath === '/reports/site/:id/technical-guidance-seed' && request.method() === 'GET') {
+      const siteId = pathname.split('/')[3];
+      const visibleReports = helpers.visibleReportsForSite(siteId).map((report) => toReportListItem(report));
+      const previousAuthoritativeReport = visibleReports[0] ?? null;
+      await fulfillJson(route, {
+        next_visit_round: visibleReports.length + 1,
+        projection_version: 1,
+        open_followups: [],
+        cumulative_accident_entries: [],
+        cumulative_agent_entries: [],
+        previous_authoritative_report: previousAuthoritativeReport,
+      });
+      return;
+    }
+
     if (pathname === '/reports' && request.method() === 'GET') {
       const siteId = url.searchParams.get('site_id');
       const requestUserId = String(requestUser().id);
