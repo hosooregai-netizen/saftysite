@@ -1,4 +1,4 @@
-import { parseSiteContractProfile } from '@/lib/admin/siteContractProfile';
+import { parseSiteContractProfile, resolveSiteRevenueProfile } from '@/lib/admin/siteContractProfile';
 import type { ControllerDashboardData } from '@/types/controller';
 import { countExecutedRounds, getContractBucketKey, getContractTypeDisplayLabel, sumVisitRevenue } from './analyticsSupport';
 import { buildEnrichedRows } from './rowEnrichment';
@@ -23,7 +23,7 @@ export function buildContractTypeRows(
       const visitRevenue = sumVisitRevenue(guidanceRows);
       const executedRounds = countExecutedRounds(guidanceRows);
       const perVisitAmounts = sites
-        .map((site) => parseSiteContractProfile(site).perVisitAmount)
+        .map((site) => resolveSiteRevenueProfile(site).resolvedPerVisitAmount)
         .filter((value): value is number => typeof value === 'number' && value > 0);
       return {
         avgPerVisitAmount:
@@ -32,10 +32,10 @@ export function buildContractTypeRows(
             : 0,
         executedRounds,
         label: getContractTypeDisplayLabel(key),
-        plannedRounds: sites.reduce((sum, site) => sum + (parseSiteContractProfile(site).totalRounds ?? 0), 0),
+        plannedRounds: sites.reduce((sum, site) => sum + resolveSiteRevenueProfile(site).plannedRounds, 0),
         siteCount: sites.length,
         shareRate: totalRevenue > 0 ? visitRevenue / totalRevenue : 0,
-        totalContractAmount: sites.reduce((sum, site) => sum + (parseSiteContractProfile(site).totalContractAmount ?? 0), 0),
+        totalContractAmount: sites.reduce((sum, site) => sum + resolveSiteRevenueProfile(site).plannedRevenue, 0),
         visitRevenue,
       };
     })

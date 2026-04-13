@@ -7,6 +7,7 @@ import {
   exportAdminWorkbook,
 } from '@/lib/admin/exportClient';
 import { normalizeSiteStatusForDisplay, formatCurrencyValue, getSiteStatusLabel } from '@/lib/admin';
+import { resolveSiteRevenueProfile } from '@/lib/admin/siteContractProfile';
 import {
   EMPTY_FORM,
   buildSitePayload,
@@ -215,6 +216,7 @@ export function useSitesSectionState({
           { key: 'technical_guidance_kind', label: '기술지도 구분' },
           { key: 'total_contract_amount', label: '기술지도 대가' },
           { key: 'total_rounds', label: '기술지도 횟수' },
+          { key: 'per_visit_amount', label: '회차당 단가' },
           { key: 'contract_start_date', label: '계약시작일' },
           { key: 'contract_end_date', label: '계약종료일' },
           { key: 'contract_signed_date', label: '계약 체결일' },
@@ -226,6 +228,7 @@ export function useSitesSectionState({
         ],
         rows: sortedSites.map((site) => {
           const siteAssignments = activeAssignmentsBySiteId.get(site.id) ?? [];
+          const revenueProfile = resolveSiteRevenueProfile(site);
           const assignedUsers = siteAssignments
             .map((assignment) => usersById.get(assignment.user_id))
             .filter((user): user is SafetyUser => Boolean(user));
@@ -259,6 +262,12 @@ export function useSitesSectionState({
             technical_guidance_kind: site.technical_guidance_kind || '',
             total_contract_amount: formatCurrencyValue(site.total_contract_amount),
             total_rounds: site.total_rounds ?? '',
+            per_visit_amount:
+              revenueProfile.resolvedPerVisitAmount != null
+                ? `${formatCurrencyValue(revenueProfile.resolvedPerVisitAmount)}${
+                    revenueProfile.source === 'derived' ? ' (자동 계산)' : ''
+                  }`
+                : '',
             contract_start_date: site.contract_start_date || '',
             contract_end_date: site.contract_end_date || '',
             contract_signed_date: site.contract_signed_date || site.contract_date || '',

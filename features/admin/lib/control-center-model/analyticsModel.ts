@@ -1,5 +1,5 @@
 import { getAdminSectionHref } from '@/lib/admin';
-import { parseSiteContractProfile } from '@/lib/admin/siteContractProfile';
+import { parseSiteContractProfile, resolveSiteRevenueProfile } from '@/lib/admin/siteContractProfile';
 import type { ControllerDashboardData } from '@/types/controller';
 import type { SafetyReportListItem } from '@/types/backend';
 import {
@@ -52,12 +52,10 @@ function buildEmployeeRows(
       const assignedSiteIds =
         normalizedQuery && queriedSiteIds.length > 0 ? queriedSiteIds : fallbackAssignedSiteIds;
       const totalAssignedRounds = assignedSiteIds.reduce((sum, siteId) => {
-        const profile = parseSiteContractProfile(sitesById.get(siteId) ?? null);
-        return sum + (profile.totalRounds ?? 0);
+        return sum + resolveSiteRevenueProfile(sitesById.get(siteId) ?? null).plannedRounds;
       }, 0);
       const plannedRevenue = assignedSiteIds.reduce((sum, siteId) => {
-        const profile = parseSiteContractProfile(sitesById.get(siteId) ?? null);
-        return sum + (profile.totalContractAmount ?? 0);
+        return sum + resolveSiteRevenueProfile(sitesById.get(siteId) ?? null).plannedRevenue;
       }, 0);
       const visitRevenue = sumVisitRevenue(userCurrentGuidanceRows);
       const executedRounds = countExecutedRounds(userCurrentGuidanceRows);
@@ -103,10 +101,11 @@ function buildSiteRevenueRows(
     .map((site) => {
       const currentGuidanceRows = detailGuidanceRows.filter((row) => row.siteId === site.id);
       const profile = parseSiteContractProfile(site);
+      const revenueProfile = resolveSiteRevenueProfile(site);
       const visitRevenue = sumVisitRevenue(currentGuidanceRows);
       const executedRounds = countExecutedRounds(currentGuidanceRows);
-      const plannedRevenue = profile.totalContractAmount ?? 0;
-      const plannedRounds = profile.totalRounds ?? 0;
+      const plannedRevenue = revenueProfile.plannedRevenue;
+      const plannedRounds = revenueProfile.plannedRounds;
       const contractTypeLabel = getContractTypeDisplayLabel(getContractBucketKey(profile));
       const matchesQuery = normalizedQuery
         ? matchesAnalyticsQuery(
@@ -270,6 +269,7 @@ export function buildAdminAnalyticsModel(
       previousGuidanceRows,
       scopedGuidanceRows,
       { period: filters.period },
+      today,
     ),
     trendRows: buildTrendRows(scopedGuidanceRows, today),
   };

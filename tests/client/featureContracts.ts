@@ -27,11 +27,11 @@ export const FEATURE_CONTRACTS: Record<FeatureContractId, FeatureContract> = {
   'admin-control-center': {
     id: 'admin-control-center',
     description:
-      '관제 대시보드 overview/analytics가 KPI, 차트, 기간 전환, export 진입 흐름을 유지한다.',
+      '관제 대시보드 overview/analytics가 KPI, 차트, 기간 전환, site 계약 연동 매출, export 진입 흐름을 유지한다.',
     routes: ['/admin?section=overview', '/admin?section=analytics'],
-    markers: ['운영 개요', '현장 상태', '발송 관리 대상', '매출/실적 집계', '월별 매출 추이', '상세 표'],
+    markers: ['운영 개요', '현장 상태', '발송 관리 대상', '매출/실적 집계', '계약 예정 매출', '월별 매출 추이', '상세 표'],
     apis: ['GET /api/admin/dashboard/overview', 'GET /api/admin/dashboard/analytics', 'POST /api/admin/exports/:section'],
-    criticalActions: ['overview 진입', 'analytics 진입', '기간 전환', '엑셀 내보내기', '핵심 카드와 차트 확인'],
+    criticalActions: ['overview 진입', 'analytics 진입', '기간 전환', 'site 계약 수정 반영 확인', '엑셀 내보내기', '핵심 카드와 차트 확인'],
   },
   'admin-reports': {
     id: 'admin-reports',
@@ -55,11 +55,11 @@ export const FEATURE_CONTRACTS: Record<FeatureContractId, FeatureContract> = {
   'admin-sites': {
     id: 'admin-sites',
     description:
-      '사업장 목록에서 현장 목록 로드, 필터링, 편집, 배정 modal 진입 흐름을 유지한다.',
+      '사업장 목록에서 현장 목록 로드, 필터링, 계약 단가 편집, 배정 modal 진입 흐름을 유지한다.',
     routes: ['/admin?section=headquarters&siteStatus=all'],
-    markers: ['현장 목록', '현장 추가', '현장 수정', '지도요원 배정'],
+    markers: ['현장 목록', '현장 추가', '현장 수정', '회차당 단가', '지도요원 배정'],
     apis: ['GET /sites', 'GET /headquarters', 'POST /sites', 'PATCH /sites/:id'],
-    criticalActions: ['현장 목록 조회', '현장 생성/수정', '지도요원 배정 modal 진입'],
+    criticalActions: ['현장 목록 조회', '회차당 단가 포함 현장 생성/수정', '지도요원 배정 modal 진입'],
   },
   auth: {
     id: 'auth',

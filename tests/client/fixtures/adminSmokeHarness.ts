@@ -322,6 +322,78 @@ async function installAdminRoutes(harness: ErpSmokeHarness) {
 }
 
 function ensureAdminFixtureReports(harness: ErpSmokeHarness) {
+  const firstTechnicalGuidance = harness.state.reports.find(
+    (report) => String(report.report_key) === 'report-tech-1',
+  );
+  if (firstTechnicalGuidance) {
+    Object.assign(firstTechnicalGuidance, {
+      progress_rate: 100,
+      status: 'submitted',
+      workflow_status: 'submitted',
+      submitted_at: NOW,
+      updated_at: NOW,
+      visit_date: '2026-03-10',
+      visit_round: 1,
+      report_type: 'technical_guidance',
+    });
+  }
+
+  const technicalGuidanceFixtures = [
+    {
+      id: 'report-tech-2',
+      report_key: 'report-tech-2',
+      report_title: '2차 기술지도 보고서',
+      site_id: 'site-1',
+      headquarter_id: 'hq-1',
+      assigned_user_id: 'field-1',
+      visit_date: '2026-03-17',
+      visit_round: 2,
+    },
+    {
+      id: 'report-tech-3',
+      report_key: 'report-tech-3',
+      report_title: '3차 기술지도 보고서',
+      site_id: 'site-1',
+      headquarter_id: 'hq-1',
+      assigned_user_id: 'field-1',
+      visit_date: '2026-03-24',
+      visit_round: 3,
+    },
+  ];
+
+  technicalGuidanceFixtures.forEach((fixture) => {
+    if (harness.state.reports.some((report) => String(report.report_key) === fixture.report_key)) {
+      return;
+    }
+
+    harness.state.reports.push({
+      ...fixture,
+      total_round: 12,
+      progress_rate: 100,
+      status: 'submitted',
+      workflow_status: 'submitted',
+      payload_version: 1,
+      latest_revision_no: 1,
+      submitted_at: NOW,
+      published_at: null,
+      last_autosaved_at: NOW,
+      report_type: 'technical_guidance',
+      review: buildEmptyReview(),
+      dispatch: buildEmptyDispatch(),
+      meta: {
+        reportKind: 'technical_guidance',
+        reportNumber: fixture.visit_round,
+        siteName: '기존 현장',
+      },
+      created_at: NOW,
+      updated_at: NOW,
+      payload: {
+        reportKind: 'technical_guidance',
+        reportNumber: fixture.visit_round,
+      },
+    });
+  });
+
   if (!harness.state.reports.some((report) => String(report.report_key) === 'quarterly-2026-q1')) {
     harness.state.reports.push({
       id: 'quarterly-2026-q1',

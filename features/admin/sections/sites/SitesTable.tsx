@@ -14,7 +14,7 @@ import {
   normalizeSiteStatusForDisplay,
   SITE_STATUS_OPTIONS,
 } from '@/lib/admin';
-import { parseSiteRequiredCompletionFields } from '@/lib/admin/siteContractProfile';
+import { parseSiteRequiredCompletionFields, resolveSiteRevenueProfile } from '@/lib/admin/siteContractProfile';
 import type { TableSortState } from '@/types/admin';
 import type { SafetySite, SafetyUser } from '@/types/backend';
 import type { SafetyAssignment, SafetySiteStatus } from '@/types/controller';
@@ -129,6 +129,7 @@ export function SitesTable({
         <tbody>
           {sites.map((site) => {
             const siteAssignments = activeAssignmentsBySiteId.get(site.id) ?? [];
+            const revenueProfile = resolveSiteRevenueProfile(site);
             const requiredCompletionFields =
               site.required_completion_fields?.length
                 ? site.required_completion_fields
@@ -194,6 +195,14 @@ export function SitesTable({
                   </div>
                   <div className={styles.tableSecondary}>
                     기술지도 대가 {formatCurrencyValue(site.total_contract_amount)} / 횟수 {site.total_rounds ?? '-'}
+                  </div>
+                  <div className={styles.tableSecondary}>
+                    회차당 단가{' '}
+                    {revenueProfile.resolvedPerVisitAmount != null
+                      ? `${formatCurrencyValue(revenueProfile.resolvedPerVisitAmount)}${
+                          revenueProfile.source === 'derived' ? ' (자동 계산)' : ''
+                        }`
+                      : '-'}
                   </div>
                   <div className={styles.tableSecondary}>
                     구분 {site.technical_guidance_kind || '-'} / 공사금액 {formatCurrencyValue(site.project_amount)}

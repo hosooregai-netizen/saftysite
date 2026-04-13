@@ -18,6 +18,7 @@ export async function runAdminControlCenterSection(page: Page) {
 
   await page.goto(`${baseUrl}/admin?section=analytics`, { waitUntil: 'load' });
   await page.getByText('매출/실적 집계').first().waitFor();
+  await page.getByText('계약 예정 매출').first().waitFor();
   await page.getByText('월별 매출 추이').first().waitFor();
   await page.getByText('직원별 매출 기여도 Top 10').first().waitFor();
   await page.getByText('현장별 매출 상위 Top 10').first().waitFor();
