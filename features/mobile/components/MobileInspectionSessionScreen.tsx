@@ -1,36 +1,15 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import type { FocusEvent } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import LoginPanel from '@/components/auth/LoginPanel';
 import { getSessionTitle } from '@/constants/inspectionSession';
-import { FIXED_SCENE_COUNT } from '@/constants/inspectionSession/catalog';
-import {
-  assetUrlToFile,
-  buildHazardFindingAutoFill,
-} from '@/components/session/workspace/doc7Ai';
-import {
-  getExtraSceneTitle,
-  getFixedSceneTitle,
-  isExtraScenePlaceholderTitle,
-} from '@/constants/inspectionSession/scenePhotos';
 import {
   buildDoc2ProcessNotesDraft,
   buildDoc2RiskFallback,
 } from '@/features/inspection-session/workspace/sections/doc2/doc2ProcessNotes';
-import { matchMeasurementTemplateByPhoto } from '@/features/inspection-session/workspace/sections/doc10/doc10Ai';
 import { useInspectionSessionScreen } from '@/features/inspection-session/hooks/useInspectionSessionScreen';
-import { applyDoc7ReferenceMaterialMatch } from '@/lib/doc7ReferenceMaterials';
-import {
-  buildDoc5StructuredSummaryPayload,
-  buildLocalDoc5SummaryDraft,
-} from '@/lib/openai/doc5SummaryLocalDraft';
-import {
-  buildLocalDoc11EducationContent,
-  generateStructuredDoc11EducationContent,
-} from '@/lib/openai/generateDoc11EducationContent';
 import {
   buildMobileHomeHref,
   buildMobileSiteReportsHref,
@@ -41,15 +20,15 @@ import { buildSiteTabs } from '../lib/buildSiteTabs';
 import { MobileInspectionSessionModals } from '../inspection-session/MobileInspectionSessionModals';
 import { MobileInspectionSessionStandaloneState } from '../inspection-session/MobileInspectionSessionStandaloneState';
 import { MobileInspectionSessionSummaryBar } from '../inspection-session/MobileInspectionSessionSummaryBar';
+import { useMobileInspectionAiActions } from '../inspection-session/useMobileInspectionAiActions';
+import { useMobileInspectionMeasurementActions } from '../inspection-session/useMobileInspectionMeasurementActions';
 import { useMobileInspectionPhotoPicker } from '../inspection-session/useMobileInspectionPhotoPicker';
+import { useMobileInspectionScenePlanActions } from '../inspection-session/useMobileInspectionScenePlanActions';
 import { MobileInspectionSessionWorkspace } from '../inspection-session/MobileInspectionSessionWorkspace';
 import {
   MOBILE_INSPECTION_STEPS,
   MobileInspectionStepId,
-  findDoc8ProcessMatch,
   generateDoc2RiskLines,
-  generateStructuredDoc5Summary,
-  inferSceneTitle,
 } from '../inspection-session/mobileInspectionSessionHelpers';
 import styles from './MobileShell.module.css';
 
@@ -75,26 +54,11 @@ export function MobileInspectionSessionScreen({
   const [doc2ProcessRiskLines, setDoc2ProcessRiskLines] = useState<string[] | null>(null);
   const [doc2ProcessError, setDoc2ProcessError] = useState<string | null>(null);
   const [doc2ProcessNotice, setDoc2ProcessNotice] = useState<string | null>(null);
-  const [doc3AnalyzingSceneIds, setDoc3AnalyzingSceneIds] = useState<string[]>([]);
-  const [doc5DraftLoading, setDoc5DraftLoading] = useState(false);
-  const [doc5DraftError, setDoc5DraftError] = useState<string | null>(null);
-  const [doc5DraftNotice, setDoc5DraftNotice] = useState<string | null>(null);
-  const [doc7AiLoadingId, setDoc7AiLoadingId] = useState<string | null>(null);
-  const [doc7AiErrors, setDoc7AiErrors] = useState<Record<string, string>>({});
-  const [activeDoc8PlanId, setActiveDoc8PlanId] = useState<string | null>(null);
-  const [doc10MatchingMeasurementId, setDoc10MatchingMeasurementId] = useState<string | null>(null);
-  const [doc10MatchErrors, setDoc10MatchErrors] = useState<Record<string, string>>({});
-  const [doc11GeneratingId, setDoc11GeneratingId] = useState<string | null>(null);
   const [documentInfoOpen, setDocumentInfoOpen] = useState(false);
-  const [doc11ContentNotice, setDoc11ContentNotice] = useState<{
-    id: string;
-    message: string;
-  } | null>(null);
-  const [doc11ContentError, setDoc11ContentError] = useState<{
-    id: string;
-    message: string;
-  } | null>(null);
   const isDirectSignatureAction = searchParams.get('action') === 'direct-signature';
+  const measurementTemplateOptions = [...screen.derivedData.measurementTemplates].sort(
+    (left, right) => left.sortOrder - right.sortOrder,
+  );
   const {
     closePhotoAlbumModal,
     closePhotoSourceModal,
@@ -119,6 +83,42 @@ export function MobileInspectionSessionScreen({
     setPhotoAlbumQuery,
   } = useMobileInspectionPhotoPicker({
     siteId: displaySession?.siteKey,
+  });
+  const {
+    doc11ContentError,
+    doc11ContentNotice,
+    doc11GeneratingId,
+    doc5DraftError,
+    doc5DraftLoading,
+    doc5DraftNotice,
+    doc7AiErrors,
+    doc7AiLoadingId,
+    handleDoc7AiRefill,
+    handleGenerateDoc11Content,
+    handleGenerateDoc5Draft,
+  } = useMobileInspectionAiActions({
+    screen,
+    session,
+  });
+  const {
+    activeDoc8PlanId,
+    applyDoc3ScenePhoto,
+    doc3AnalyzingSceneIds,
+    handleDoc8ProcessBlur,
+    setActiveDoc8PlanId,
+    updateDoc8ProcessPlan,
+  } = useMobileInspectionScenePlanActions({
+    screen,
+    session,
+  });
+  const {
+    applyDoc10MeasurementPhoto,
+    doc10MatchErrors,
+    doc10MatchingMeasurementId,
+    handleDoc10PhotoSelect,
+  } = useMobileInspectionMeasurementActions({
+    measurementTemplateOptions,
+    screen,
   });
 
   useEffect(() => {
@@ -221,9 +221,6 @@ export function MobileInspectionSessionScreen({
   const errors = [screen.uploadError, screen.syncError, screen.documentError].filter(
     (message): message is string => Boolean(message),
   );
-  const measurementTemplateOptions = [...screen.derivedData.measurementTemplates].sort(
-    (left, right) => left.sortOrder - right.sortOrder,
-  );
   const mobileReportsHref = buildMobileSiteReportsHref(displaySession.siteKey);
 
   const resetDoc2ProcessState = () => {
@@ -298,321 +295,6 @@ export function MobileInspectionSessionScreen({
       },
     }));
     setIsDoc2ProcessModalOpen(false);
-  };
-
-  const toggleDoc3Analyzing = (sceneId: string, active: boolean) => {
-    setDoc3AnalyzingSceneIds((current) =>
-      active
-        ? Array.from(new Set([...current, sceneId]))
-        : current.filter((item) => item !== sceneId),
-    );
-  };
-
-  const applyDoc3ScenePhoto = async (
-    sceneId: string,
-    index: number,
-    photoUrl: string,
-    fileForAi?: File | null,
-  ) => {
-    const fallbackTitle =
-      index >= FIXED_SCENE_COUNT ? getExtraSceneTitle(index) : getFixedSceneTitle(index);
-    const currentScene = session?.document3Scenes.find((scene) => scene.id === sceneId);
-    const shouldRunAi =
-      index >= FIXED_SCENE_COUNT &&
-      isExtraScenePlaceholderTitle(currentScene?.title, getExtraSceneTitle(index));
-
-    screen.applyDocumentUpdate('doc3', 'manual', (current) => ({
-      ...current,
-        document3Scenes: current.document3Scenes.map((scene) =>
-          scene.id === sceneId
-            ? {
-                ...scene,
-                photoUrl,
-                ...(index >= FIXED_SCENE_COUNT && !(scene.title || '').trim()
-                  ? { title: fallbackTitle }
-                  : {}),
-              }
-            : scene,
-      ),
-    }));
-
-    if (!shouldRunAi || !fileForAi) {
-      return;
-    }
-
-    toggleDoc3Analyzing(sceneId, true);
-    try {
-      const title = await inferSceneTitle(fileForAi);
-      screen.applyDocumentUpdate('doc3', 'manual', (current) => ({
-        ...current,
-        document3Scenes: current.document3Scenes.map((scene) =>
-          scene.id === sceneId ? { ...scene, title: title || fallbackTitle } : scene,
-        ),
-      }));
-    } finally {
-      toggleDoc3Analyzing(sceneId, false);
-    }
-  };
-
-  const handleGenerateDoc5Draft = async () => {
-    if (!session) {
-      return;
-    }
-
-    setDoc5DraftError(null);
-    setDoc5DraftNotice(
-      !screen.isRelationReady
-        ? '누적 통계가 아직 준비되지 않아 현재 보고서 기준으로 먼저 총평을 생성합니다.'
-        : null,
-    );
-
-    setDoc5DraftLoading(true);
-    try {
-      const text = await generateStructuredDoc5Summary(
-        buildDoc5StructuredSummaryPayload(
-          session,
-          screen.derivedData.currentAccidentEntries,
-          screen.derivedData.currentAgentEntries,
-          screen.derivedData.cumulativeAccidentEntries,
-          screen.derivedData.cumulativeAgentEntries,
-        ),
-      );
-
-      screen.applyDocumentUpdate('doc5', 'derived', (current) => ({
-        ...current,
-        document5Summary: {
-          ...current.document5Summary,
-          summaryText: text,
-        },
-      }));
-    } catch (error) {
-      setDoc5DraftError(error instanceof Error ? error.message : '총평 AI 생성에 실패했습니다.');
-      setDoc5DraftNotice('AI 생성이 실패해 로컬 규칙 기반 총평으로 대체했습니다.');
-
-      screen.applyDocumentUpdate('doc5', 'derived', (current) => ({
-        ...current,
-        document5Summary: {
-          ...current.document5Summary,
-          summaryText: buildLocalDoc5SummaryDraft(
-            current,
-            screen.derivedData.currentAccidentEntries,
-            screen.derivedData.currentAgentEntries,
-            screen.derivedData.cumulativeAccidentEntries,
-            screen.derivedData.cumulativeAgentEntries,
-          ),
-        },
-      }));
-    } finally {
-      setDoc5DraftLoading(false);
-    }
-  };
-
-  const handleDoc7AiRefill = async (findingId: string, photoUrl: string) => {
-    if (!photoUrl.trim()) {
-      return;
-    }
-
-    setDoc7AiLoadingId(findingId);
-    setDoc7AiErrors((current) => ({ ...current, [findingId]: '' }));
-
-    try {
-      const file = await assetUrlToFile(photoUrl, `finding-${findingId}.jpg`);
-      const patch = await buildHazardFindingAutoFill(file);
-
-      screen.applyDocumentUpdate('doc7', 'manual', (current) => ({
-        ...current,
-        document7Findings: current.document7Findings.map((finding) =>
-          finding.id === findingId
-            ? applyDoc7ReferenceMaterialMatch(
-                {
-                  ...finding,
-                  ...patch,
-                },
-                screen.derivedData.doc7ReferenceMaterials,
-              )
-            : finding,
-        ),
-      }));
-    } catch (error) {
-      setDoc7AiErrors((current) => ({
-        ...current,
-        [findingId]:
-          error instanceof Error
-            ? error.message
-            : 'AI 초안을 만드는 중 문제가 발생했습니다.',
-      }));
-    } finally {
-      setDoc7AiLoadingId((current) => (current === findingId ? null : current));
-    }
-  };
-
-  const patchDoc11RecordContent = (recordId: string, content: string) => {
-    screen.applyDocumentUpdate('doc11', 'derived', (current) => ({
-      ...current,
-      document11EducationRecords: current.document11EducationRecords.map((record) =>
-        record.id === recordId ? { ...record, content } : record,
-      ),
-    }));
-  };
-
-  const handleGenerateDoc11Content = async (recordId: string) => {
-    const record = session?.document11EducationRecords.find((item) => item.id === recordId);
-    if (!record) {
-      return;
-    }
-
-    setDoc11ContentError(null);
-    setDoc11ContentNotice(null);
-    setDoc11GeneratingId(recordId);
-
-    const input = {
-      topic: record.topic,
-      attendeeCount: record.attendeeCount,
-      materialName: record.materialName,
-      photoUrl: record.photoUrl,
-    };
-
-    try {
-      const text = await generateStructuredDoc11EducationContent(input);
-      patchDoc11RecordContent(recordId, text);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      setDoc11ContentError({ id: recordId, message });
-      patchDoc11RecordContent(recordId, buildLocalDoc11EducationContent(input));
-      setDoc11ContentNotice({
-        id: recordId,
-        message: 'AI 생성이 실패해 규칙 기반 초안으로 대체했습니다.',
-      });
-    } finally {
-      setDoc11GeneratingId(null);
-    }
-  };
-
-  const updateDoc8ProcessPlan = (planId: string, nextProcessName: string) => {
-    const matched = findDoc8ProcessMatch(nextProcessName);
-
-    screen.applyDocumentUpdate('doc8', matched ? 'api' : 'manual', (current) => ({
-      ...current,
-      document8Plans: current.document8Plans.map((plan) =>
-        plan.id === planId
-          ? {
-              ...plan,
-              processName: nextProcessName,
-              hazard: matched?.hazard ?? plan.hazard,
-              countermeasure: matched?.countermeasure ?? plan.countermeasure,
-              source: matched ? 'api' : 'manual',
-            }
-          : plan,
-      ),
-    }));
-  };
-
-  const handleDoc8ProcessBlur = (planId: string, event: FocusEvent<HTMLDivElement>) => {
-    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-      setActiveDoc8PlanId((current) => (current === planId ? null : current));
-    }
-  };
-
-  const applyDoc10MeasurementPhoto = async (
-    measurementId: string,
-    photoUrl: string,
-    fileForMatch?: File | null,
-  ) => {
-    setDoc10MatchErrors((current) => ({ ...current, [measurementId]: '' }));
-
-    screen.applyDocumentUpdate('doc10', 'manual', (current) => ({
-      ...current,
-      document10Measurements: current.document10Measurements.map((measurement) =>
-        measurement.id === measurementId ? { ...measurement, photoUrl } : measurement,
-      ),
-    }));
-
-    if (measurementTemplateOptions.length === 0 || !fileForMatch) {
-      return;
-    }
-
-    setDoc10MatchingMeasurementId(measurementId);
-    try {
-      const matchedTemplate = await matchMeasurementTemplateByPhoto(
-        fileForMatch,
-        measurementTemplateOptions,
-      );
-      if (!matchedTemplate) {
-        return;
-      }
-
-      screen.applyDocumentUpdate('doc10', 'manual', (current) => ({
-        ...current,
-        document10Measurements: current.document10Measurements.map((measurement) =>
-          measurement.id === measurementId
-            ? {
-                ...measurement,
-                photoUrl,
-                instrumentType: matchedTemplate.instrumentName,
-                safetyCriteria: matchedTemplate.safetyCriteria || measurement.safetyCriteria,
-              }
-            : measurement,
-        ),
-      }));
-    } catch (error) {
-      setDoc10MatchErrors((current) => ({
-        ...current,
-        [measurementId]:
-          error instanceof Error ? error.message : '怨꾩륫湲?AI 留ㅼ묶???ㅽ뙣?덉뒿?덈떎.',
-      }));
-    } finally {
-      setDoc10MatchingMeasurementId((current) => (current === measurementId ? null : current));
-    }
-  };
-
-  const handleDoc10PhotoSelect = async (measurementId: string, file: File) => {
-    setDoc10MatchErrors((current) => ({ ...current, [measurementId]: '' }));
-
-    const dataUrl = await screen.withFileData(file);
-    if (!dataUrl) {
-      return;
-    }
-
-    screen.applyDocumentUpdate('doc10', 'manual', (current) => ({
-      ...current,
-      document10Measurements: current.document10Measurements.map((measurement) =>
-        measurement.id === measurementId ? { ...measurement, photoUrl: dataUrl } : measurement,
-      ),
-    }));
-
-    if (measurementTemplateOptions.length === 0) {
-      return;
-    }
-
-    setDoc10MatchingMeasurementId(measurementId);
-    try {
-      const matchedTemplate = await matchMeasurementTemplateByPhoto(file, measurementTemplateOptions);
-      if (!matchedTemplate) {
-        return;
-      }
-
-      screen.applyDocumentUpdate('doc10', 'manual', (current) => ({
-        ...current,
-        document10Measurements: current.document10Measurements.map((measurement) =>
-          measurement.id === measurementId
-            ? {
-                ...measurement,
-                photoUrl: dataUrl,
-                instrumentType: matchedTemplate.instrumentName,
-                safetyCriteria: matchedTemplate.safetyCriteria || measurement.safetyCriteria,
-              }
-            : measurement,
-        ),
-      }));
-    } catch (error) {
-      setDoc10MatchErrors((current) => ({
-        ...current,
-        [measurementId]:
-          error instanceof Error ? error.message : '계측기 AI 매칭에 실패했습니다.',
-      }));
-    } finally {
-      setDoc10MatchingMeasurementId((current) => (current === measurementId ? null : current));
-    }
   };
 
   return (
