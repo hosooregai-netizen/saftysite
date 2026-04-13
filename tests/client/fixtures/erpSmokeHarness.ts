@@ -471,9 +471,37 @@ async function installErpRoutes({
     );
   };
 
+  const handleBadWorkplaceDocumentRoute = async (route: Route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    const key = `${request.method()} ${url.pathname.replace(
+      /^.*?(\/api\/documents\/bad-workplace\/)/,
+      '/api/documents/bad-workplace/',
+    )}`;
+    requestCounts.set(key, (requestCounts.get(key) || 0) + 1);
+
+    if (url.pathname.endsWith('/pdf')) {
+      await fulfillBinary(
+        route,
+        Buffer.from('%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF'),
+        'application/pdf',
+        'bad-workplace-report.pdf',
+      );
+      return;
+    }
+
+    await fulfillBinary(
+      route,
+      Buffer.from('PK\x03\x04mock-hwpx', 'binary'),
+      'application/octet-stream',
+      'bad-workplace-report.hwpx',
+    );
+  };
+
   await context.route('**/api/safety/**', handleErpSafetyRoute);
   await context.route('**/api/v1/**', handleErpSafetyRoute);
   await context.route('**/api/documents/quarterly/**', handleQuarterlyDocumentRoute);
+  await context.route('**/api/documents/bad-workplace/**', handleBadWorkplaceDocumentRoute);
 }
 
 export async function createErpSmokeHarness(

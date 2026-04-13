@@ -1,5 +1,6 @@
 export type FeatureContractId =
   | 'auth'
+  | 'mobile-bad-workplace'
   | 'mobile-site-home'
   | 'mobile-site-reports'
   | 'mobile-quarterly-list'
@@ -25,6 +26,22 @@ export const FEATURE_CONTRACTS: Record<FeatureContractId, FeatureContract> = {
     markers: ['현장 목록 로그인', '현장 목록'],
     apis: ['POST /auth/token', 'GET /assignments/me/sites'],
     criticalActions: ['현장 요원 로그인', '로그아웃', '재로그인'],
+  },
+  'mobile-bad-workplace': {
+    id: 'mobile-bad-workplace',
+    description:
+      '모바일 불량사업장 신고서가 직접 진입, 원본 보고서 선택, 저장, 문서 다운로드 흐름을 유지한다.',
+    routes: ['/mobile/sites/site-1/bad-workplace/2026-03'],
+    markers: ['모바일 불량사업장 신고 로그인', '1. 원본 보고서 선택', '저장', '한글', 'PDF'],
+    apis: [
+      'POST /auth/token',
+      'GET /assignments/me/sites',
+      'GET /reports/by-key/:id',
+      'POST /reports/upsert',
+      'POST /api/documents/bad-workplace/hwpx',
+      'POST /api/documents/bad-workplace/pdf',
+    ],
+    criticalActions: ['모바일 불량사업장 로그인', '원본 보고서 선택', '저장', '문서 다운로드'],
   },
   'mobile-site-home': {
     id: 'mobile-site-home',
