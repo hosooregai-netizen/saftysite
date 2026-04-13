@@ -2,6 +2,7 @@ export type FeatureContractId =
   | 'auth'
   | 'bad-workplace-report'
   | 'mobile-bad-workplace'
+  | 'site-report-list'
   | 'mobile-site-home'
   | 'mobile-site-reports'
   | 'mobile-quarterly-list'
@@ -58,6 +59,20 @@ export const FEATURE_CONTRACTS: Record<FeatureContractId, FeatureContract> = {
       'POST /api/documents/bad-workplace/pdf',
     ],
     criticalActions: ['모바일 불량사업장 로그인', '원본 보고서 선택', '저장', '문서 다운로드'],
+  },
+  'site-report-list': {
+    id: 'site-report-list',
+    description:
+      '데스크톱 기술지도 보고서 목록에서 로그인 후 목록 조회, 새 보고서 생성, 작성 화면 진입 흐름을 유지한다.',
+    routes: ['/sites/site-1'],
+    markers: ['보고서 목록 로그인', '기술지도 보고서 - 기존 현장', '보고서 추가', '생성'],
+    apis: [
+      'POST /auth/token',
+      'GET /assignments/me/sites',
+      'GET /reports',
+      'GET /reports/site/:id/technical-guidance-seed',
+    ],
+    criticalActions: ['데스크톱 보고서 목록 로그인', '보고서 목록 조회', '새 보고서 생성', '작성 화면 진입'],
   },
   'mobile-site-home': {
     id: 'mobile-site-home',

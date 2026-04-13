@@ -1,55 +1,31 @@
 'use client';
 
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import { useDeferredValue, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createEmptyTechnicalGuidanceRelations } from '@/constants/inspectionSession/sessionFactory';
-import { compareReportIndexItemsByRound } from '@/hooks/inspectionSessions/helpers';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import {
   fetchTechnicalGuidanceSeed,
   readSafetyAuthToken,
   SafetyApiError,
 } from '@/lib/safetyApi';
-import type {
-  InspectionReportListItem,
-  InspectionSite,
-  ReportIndexStatus,
-} from '@/types/inspectionSession';
-
-export type SiteReportSortMode = 'round' | 'name' | 'progress';
+import type { InspectionSite } from '@/types/inspectionSession';
+import {
+  buildDefaultReportTitle,
+  getFilteredReportItems,
+} from '@/features/site-reports/report-list/reportListHelpers';
+import {
+  type CreateSiteReportInput,
+  type SiteReportSortMode,
+} from '@/features/site-reports/report-list/types';
+import { useSiteReportIndexLoader } from '@/features/site-reports/report-list/useSiteReportIndexLoader';
 
 interface UseSiteReportListStateOptions {
   buildReportHref?: (reportKey: string) => string;
   siteOverride?: InspectionSite | null;
 }
 
-export interface CreateSiteReportInput {
-  reportDate: string;
-  reportTitle: string;
-}
-
-function getDrafterFromReportItem(item: InspectionReportListItem) {
-  return typeof item.meta.drafter === 'string' ? item.meta.drafter : '';
-}
-
-function getReportSearchText(item: InspectionReportListItem, fallbackDrafter: string) {
-  return [
-    item.reportTitle,
-    item.visitRound?.toString() || '',
-    item.visitDate || '',
-    getDrafterFromReportItem(item) || fallbackDrafter,
-    item.lastAutosavedAt || '',
-    item.updatedAt || '',
-  ]
-    .join(' ')
-    .toLowerCase();
-}
-
-function buildDefaultReportTitle(reportDate: string, reportNumber: number) {
-  return reportDate
-    ? `${reportDate} 보고서 ${reportNumber}`
-    : `보고서 ${reportNumber}`;
-}
+export type { CreateSiteReportInput, SiteReportSortMode };
 
 export function useSiteReportListState(
   siteKey: string | null,
@@ -75,41 +51,15 @@ export function useSiteReportListState(
     if (!decodedSiteKey) return null;
     return sites.find((site) => site.id === decodedSiteKey) ?? options.siteOverride ?? null;
   }, [decodedSiteKey, options.siteOverride, sites]);
-  const reportIndexState = useMemo(() => {
-    if (!decodedSiteKey) return null;
-    return getReportIndexBySiteId(decodedSiteKey);
-  }, [decodedSiteKey, getReportIndexBySiteId]);
-  const hasAttemptedLoadRef = useRef(false);
-
-  useEffect(() => {
-    hasAttemptedLoadRef.current = false;
-  }, [decodedSiteKey]);
-
-  useEffect(() => {
-    if (!decodedSiteKey || !currentSite || !isAuthenticated || !isReady) {
-      return;
-    }
-
-    if (reportIndexState?.status === 'loading') {
-      return;
-    }
-
-    if (hasAttemptedLoadRef.current && reportIndexState?.status !== 'error') {
-      return;
-    }
-
-    hasAttemptedLoadRef.current = true;
-    void ensureSiteReportIndexLoaded(decodedSiteKey);
-  }, [
-    currentSite,
-    decodedSiteKey,
-    ensureSiteReportIndexLoaded,
-    isAuthenticated,
-    isReady,
-    reportIndexState,
-  ]);
-  const reportItems = useMemo(() => reportIndexState?.items ?? [], [reportIndexState]);
-  const reportIndexStatus: ReportIndexStatus = reportIndexState?.status ?? 'idle';
+  const { reloadReportIndex, reportIndexError, reportIndexStatus, reportItems } =
+    useSiteReportIndexLoader({
+      currentSite,
+      decodedSiteKey,
+      ensureSiteReportIndexLoaded,
+      getReportIndexBySiteId,
+      isAuthenticated,
+      isReady,
+    });
   const deferredReportQuery = useDeferredValue(reportQuery);
   const nextReportNumber = useMemo(() => {
     if (!currentSite) return 1;
@@ -118,40 +68,18 @@ export function useSiteReportListState(
   const assignedUserDisplay = [currentUser?.name, currentUser?.position]
     .filter(Boolean)
     .join(' / ');
-  const filteredReportItems = useMemo(() => {
-    const normalizedQuery = deferredReportQuery.trim().toLowerCase();
-    const drafterFallback = assignedUserDisplay || currentSite?.assigneeName || '';
-
-    const matchingItems = !normalizedQuery
-      ? reportItems
-      : reportItems.filter((item) =>
-          getReportSearchText(item, drafterFallback).includes(normalizedQuery),
-        );
-
-    return [...matchingItems].sort((left, right) => {
-      if (reportSortMode === 'name') {
-        return left.reportTitle.localeCompare(right.reportTitle, 'ko');
-      }
-
-      if (reportSortMode === 'progress') {
-        return (
-          (right.progressRate ?? 0) - (left.progressRate ?? 0) ||
-          right.reportTitle.localeCompare(left.reportTitle, 'ko') * -1
-        );
-      }
-
-      return compareReportIndexItemsByRound(left, right);
-    });
-  }, [
-    assignedUserDisplay,
-    currentSite?.assigneeName,
-    deferredReportQuery,
-    reportItems,
-    reportSortMode,
-  ]);
-
-  const getCreateReportTitleSuggestion = (reportDate: string) =>
-    buildDefaultReportTitle(reportDate, nextReportNumber);
+  const filteredReportItems = useMemo(
+    () =>
+      getFilteredReportItems({
+        assignedUserDisplay,
+        currentSiteAssigneeName: currentSite?.assigneeName,
+        reportItems,
+        reportQuery: deferredReportQuery,
+        reportSortMode,
+      }),
+    [assignedUserDisplay, currentSite?.assigneeName, deferredReportQuery, reportItems, reportSortMode],
+  );
+  const getCreateReportTitleSuggestion = (reportDate: string) => buildDefaultReportTitle(reportDate, nextReportNumber);
 
   const createReport = async ({ reportDate, reportTitle }: CreateSiteReportInput) => {
     if (!currentSite || reportIndexStatus !== 'loaded') return;
@@ -210,15 +138,6 @@ export function useSiteReportListState(
   };
 
   const canCreateReport = reportIndexStatus === 'loaded';
-  const reloadReportIndex = () => {
-    if (!decodedSiteKey || !currentSite || !isAuthenticated || !isReady) {
-      return;
-    }
-
-    hasAttemptedLoadRef.current = true;
-    void ensureSiteReportIndexLoaded(decodedSiteKey, { force: true });
-  };
-
   return {
     assignedUserDisplay,
     canArchiveReports,
@@ -229,7 +148,7 @@ export function useSiteReportListState(
     getCreateReportTitleSuggestion,
     deleteSession,
     filteredReportItems,
-    reportIndexError: reportIndexState?.error ?? null,
+    reportIndexError,
     reportIndexStatus,
     reportItems,
     reloadReportIndex,
