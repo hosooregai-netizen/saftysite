@@ -1,4 +1,7 @@
 export type FeatureContractId =
+  | 'admin-control-center'
+  | 'admin-reports'
+  | 'admin-sites'
   | 'auth'
   | 'bad-workplace-report'
   | 'mobile-bad-workplace'
@@ -21,6 +24,43 @@ export interface FeatureContract {
 }
 
 export const FEATURE_CONTRACTS: Record<FeatureContractId, FeatureContract> = {
+  'admin-control-center': {
+    id: 'admin-control-center',
+    description:
+      '관제 대시보드 overview/analytics가 핵심 KPI와 차트 마커를 유지한다.',
+    routes: ['/admin?section=overview', '/admin?section=analytics'],
+    markers: ['운영 개요', '현장 상태', '발송 관리 대상', '매출/실적 집계', '월별 매출 추이'],
+    apis: ['GET /api/admin/dashboard/overview', 'GET /api/admin/dashboard/analytics'],
+    criticalActions: ['overview 진입', 'analytics 진입', '핵심 카드와 차트 확인'],
+  },
+  'admin-reports': {
+    id: 'admin-reports',
+    description:
+      '전체 보고서 섹션이 목록 조회, 품질 체크 저장, 발송 이력 편집 흐름을 유지한다.',
+    routes: ['/admin?section=reports'],
+    markers: [
+      '전체 보고서',
+      '1차 기술지도 보고서',
+      '2026년 1분기 종합 보고서',
+      '보고서 품질 체크',
+      '분기 보고서 발송 이력',
+    ],
+    apis: [
+      'GET /api/admin/reports',
+      'PATCH /api/admin/reports/:id/review',
+      'PATCH /api/admin/reports/:id/dispatch',
+    ],
+    criticalActions: ['보고서 목록 조회', '품질 체크 저장', '발송 이력 저장'],
+  },
+  'admin-sites': {
+    id: 'admin-sites',
+    description:
+      '사업장 목록에서 현장 목록 로드, 필터링, 편집, 배정 modal 진입 흐름을 유지한다.',
+    routes: ['/admin?section=headquarters&siteStatus=all'],
+    markers: ['현장 목록', '현장 추가', '현장 수정', '지도요원 배정'],
+    apis: ['GET /sites', 'GET /headquarters', 'POST /sites', 'PATCH /sites/:id'],
+    criticalActions: ['현장 목록 조회', '현장 생성/수정', '지도요원 배정 modal 진입'],
+  },
   auth: {
     id: 'auth',
     description: '로그인 성공 후 현장 목록으로 진입하고 로그아웃 뒤 다시 로그인할 수 있다.',

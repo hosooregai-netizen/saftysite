@@ -43,6 +43,13 @@ Customer-specific differences should be configuration, not code forks:
 
 Use AIDLC here as a practical anti-regression workflow for AI-assisted coding.
 
+Admin work follows the same rules as ERP work. For `/admin`, the default validation stack is:
+
+1. feature contract in `tests/client/featureContracts.ts`
+2. mocked Playwright smoke for fast refactor loops
+3. real admin smoke for integrated `/admin` verification
+4. batch record in `docs/admin-aidlc/`
+
 ### Keep change units small
 
 - Target edited files under 200 lines when practical.
@@ -99,6 +106,14 @@ For ERP client work:
 
 If a behavior has no contract yet, treat it as unprotected until one exists.
 
+For admin client work, treat the contract pack as the unit of change:
+
+1. create or update the batch spec/record under `docs/admin-aidlc/`
+2. add or adjust the admin feature contract
+3. update mocked smoke
+4. change code in the smallest responsible file
+5. rerun mocked smoke, then real admin smoke when a local app is available
+
 ## File Size Audit
 
 Use the local AIDLC audit to spot oversized files in the ERP surface:
@@ -114,3 +129,9 @@ npm run aidlc:audit:strict
 ```
 
 The audit is a guide, not permission to split files mechanically. Preserve clear ownership first.
+
+Admin uses a separate scope so we can grow coverage without destabilizing the ERP baseline:
+
+```bash
+npm run aidlc:audit:admin
+```

@@ -13,7 +13,47 @@ export interface SmokeSeed {
 }
 
 const seedPath = process.env.SMOKE_SEED_PATH || '/tmp/safety-e2e-seed.json';
-export const seed = JSON.parse(fs.readFileSync(seedPath, 'utf8')) as SmokeSeed;
+
+function readSeedFromEnv(): SmokeSeed | null {
+  const adminEmail =
+    process.env.LIVE_SAFETY_EMAIL?.trim() ||
+    process.env.SAFETY_ADMIN_EMAIL?.trim() ||
+    '';
+  const adminPassword =
+    process.env.LIVE_SAFETY_PASSWORD?.trim() ||
+    process.env.SAFETY_ADMIN_PASSWORD?.trim() ||
+    '';
+
+  if (!adminEmail || !adminPassword) {
+    return null;
+  }
+
+  return {
+    adminEmail,
+    adminPassword,
+    workerEmail: process.env.LIVE_SAFETY_WORKER_EMAIL?.trim() || adminEmail,
+    workerPassword: process.env.LIVE_SAFETY_WORKER_PASSWORD?.trim() || adminPassword,
+    site1Id: process.env.LIVE_SAFETY_SITE1_ID?.trim() || 'site-1',
+    site2Id: process.env.LIVE_SAFETY_SITE2_ID?.trim() || 'site-2',
+  };
+}
+
+function loadSmokeSeed(): SmokeSeed {
+  if (fs.existsSync(seedPath)) {
+    return JSON.parse(fs.readFileSync(seedPath, 'utf8')) as SmokeSeed;
+  }
+
+  const fromEnv = readSeedFromEnv();
+  if (fromEnv) {
+    return fromEnv;
+  }
+
+  throw new Error(
+    `Missing smoke seed. Provide SMOKE_SEED_PATH (${seedPath}) or LIVE_SAFETY_EMAIL/LIVE_SAFETY_PASSWORD.`,
+  );
+}
+
+export const seed = loadSmokeSeed();
 export const baseUrl = process.env.SMOKE_BASE_URL || 'http://127.0.0.1:3100';
 
 export const uploadName = `worker-upload-${Date.now()}.png`;

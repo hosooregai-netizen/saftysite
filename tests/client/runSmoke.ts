@@ -6,6 +6,9 @@ import {
   isFeatureContractId,
   type FeatureContractId,
 } from './featureContracts';
+import { runAdminControlCenterSmoke } from './admin/admin-control-center.spec';
+import { runAdminReportsSmoke } from './admin/admin-reports.spec';
+import { runAdminSitesSmoke } from './admin/admin-sites.spec';
 import { runAuthSmoke } from './erp/auth.spec';
 import { runBadWorkplaceReportSmoke } from './erp/bad-workplace-report.spec';
 import { runMobileBadWorkplaceSmoke } from './erp/mobile-bad-workplace.spec';
@@ -21,6 +24,9 @@ import { runSiteHubSmoke } from './erp/site-hub.spec';
 type FeatureRunner = (config: ReturnType<typeof resolveClientSmokePlaywrightConfig>) => Promise<void>;
 
 const FEATURE_RUNNERS: Record<FeatureContractId, FeatureRunner> = {
+  'admin-control-center': runAdminControlCenterSmoke,
+  'admin-reports': runAdminReportsSmoke,
+  'admin-sites': runAdminSitesSmoke,
   auth: runAuthSmoke,
   'bad-workplace-report': runBadWorkplaceReportSmoke,
   'mobile-bad-workplace': runMobileBadWorkplaceSmoke,

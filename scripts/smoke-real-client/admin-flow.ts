@@ -1,26 +1,13 @@
 import type { Page } from 'playwright';
 
 import { baseUrl } from './config';
-import { dismissImportantModalIfPresent, waitHeading } from './helpers';
+import { waitHeading } from './helpers';
+import { runAdminControlCenterSection } from './admin-sections/control-center';
+import { runAdminReportsSection } from './admin-sections/reports';
+import { runAdminSitesSection } from './admin-sections/sites';
 
 export async function runAdminFlow(page: Page) {
-  await page.goto(`${baseUrl}/admin?section=overview`, { waitUntil: 'load' });
-  await waitHeading(page, '관제 대시보드');
-  await page.getByText('현장 상태').first().waitFor();
-  await page.getByText('발송 관리 대상').first().waitFor();
-  await dismissImportantModalIfPresent(page);
-  await page.waitForTimeout(2_000);
-  await dismissImportantModalIfPresent(page);
-  await page.locator('button[aria-label^="알림 열기"]').first().click();
-  await page.getByText('중요 알림').first().waitFor();
-  await dismissImportantModalIfPresent(page);
-
-  await page.goto(`${baseUrl}/admin?section=analytics`, { waitUntil: 'load' });
-  await page.getByText('매출/실적 집계').first().waitFor();
-  await page.getByText('월별 매출 추이').first().waitFor();
-  await page.getByText('직원별 매출 기여도 Top 10').first().waitFor();
-  await page.getByText('현장별 매출 상위 Top 10').first().waitFor();
-  await page.getByText('상세 표').first().waitFor();
+  await runAdminControlCenterSection(page);
 
   await page.goto(`${baseUrl}/admin?section=mailbox`, { waitUntil: 'load' });
   await waitHeading(page, '메일함');
@@ -29,40 +16,8 @@ export async function runAdminFlow(page: Page) {
   await page.getByRole('button', { name: '상태 새로고침' }).click();
   await page.getByText('메일 계정과 공급자 상태를 새로고침했습니다.').first().waitFor();
 
-  await page.goto(`${baseUrl}/admin?section=headquarters`, { waitUntil: 'load' });
-  await waitHeading(page, '사업장 목록');
-  await page.getByRole('button', { name: '사업장 추가' }).first().waitFor();
-  await page.getByPlaceholder('회사명, 관리번호, 개시번호, 전화로 검색').fill('');
-
-  await page.goto(`${baseUrl}/admin?section=reports`, { waitUntil: 'load' });
-  await waitHeading(page, '전체 보고서');
-  await page.getByText('1차 기술지도 보고서').first().waitFor();
-  await page.getByText('2026년 1분기 종합 보고서').first().waitFor();
-
-  await page.getByRole('button', { name: /1차 기술지도 보고서 메뉴 열기/ }).click();
-  await page.getByRole('menuitem', { name: '품질 체크' }).click();
-  await page.getByRole('dialog').locator('select').first().selectOption('ok');
-  await page.getByRole('dialog').locator('textarea').fill('클라이언트 E2E 확인 완료');
-  await page.getByRole('dialog').getByRole('button', { name: '저장' }).click();
-  await page.getByText('보고서 품질 체크를 저장했습니다.').first().waitFor();
-
-  await page.getByRole('button', { name: /1차 기술지도 보고서 메뉴 열기/ }).click();
-  await page.getByRole('menuitem', { name: '사진첩 열기' }).click();
-  await page.waitForURL(/section=photos/);
-  await page.getByText('보고서 컨텍스트: 1차 기술지도 보고서').first().waitFor();
-  await page.getByRole('link', { name: '보고서로 돌아가기' }).click();
-  await page.waitForURL(/\/sessions\//);
-  await page.getByRole('link', { name: '사진첩 열기' }).first().click();
-  await page.waitForURL(/\/sites\/.*\/photos/);
-  await page.getByText('보고서 컨텍스트: 1차 기술지도 보고서').first().waitFor();
-  await page.getByRole('link', { name: '보고서로 돌아가기' }).first().click();
-  await page.goto(`${baseUrl}/admin?section=reports`, { waitUntil: 'load' });
-
-  await page.getByRole('button', { name: /2026년 1분기 종합 보고서 메뉴 열기/ }).click();
-  await page.getByRole('menuitem', { name: '발송이력 보기' }).click();
-  const dispatchDialog = page.getByRole('dialog');
-  await dispatchDialog.locator('textarea').first().fill('클라이언트 E2E 발송');
-  await dispatchDialog.getByRole('button', { name: /(저장|추가|발송완료)/ }).first().click();
+  await runAdminSitesSection(page);
+  await runAdminReportsSection(page);
 
   await page.goto(`${baseUrl}/admin?section=schedules`, { waitUntil: 'load' });
   await page.getByText('일정/캘린더').first().waitFor();

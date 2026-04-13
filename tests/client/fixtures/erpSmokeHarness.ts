@@ -50,6 +50,14 @@ function isExpectedConsoleError(text: string) {
   );
 }
 
+function buildFixtureId(prefix: string, rawValue: unknown) {
+  const normalized = String(rawValue || Date.now())
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return `${prefix}-${normalized || Date.now()}`;
+}
+
 async function fulfillJson(route: Route, payload: unknown, status = 200) {
   await route.fulfill({
     status,
@@ -122,8 +130,87 @@ async function installErpRoutes({
       return;
     }
 
+    if (pathname === '/sites' && request.method() === 'POST') {
+      const body = (request.postDataJSON?.() as JsonRecord) || {};
+      const created = {
+        id: buildFixtureId('site', body.site_name),
+        headquarter_id: String(body.headquarter_id || ''),
+        site_name: String(body.site_name || '신규 현장'),
+        site_code: body.site_code ?? null,
+        management_number: body.management_number ?? null,
+        labor_office: body.labor_office ?? null,
+        guidance_officer_name: body.guidance_officer_name ?? null,
+        project_start_date: body.project_start_date ?? null,
+        project_end_date: body.project_end_date ?? null,
+        project_amount: body.project_amount ?? null,
+        project_scale: body.project_scale ?? null,
+        project_kind: body.project_kind ?? null,
+        client_management_number: body.client_management_number ?? null,
+        client_business_name: body.client_business_name ?? null,
+        client_representative_name: body.client_representative_name ?? null,
+        client_corporate_registration_no: body.client_corporate_registration_no ?? null,
+        client_business_registration_no: body.client_business_registration_no ?? null,
+        order_type_division: body.order_type_division ?? null,
+        technical_guidance_kind: body.technical_guidance_kind ?? null,
+        manager_name: body.manager_name ?? null,
+        inspector_name: body.inspector_name ?? null,
+        contract_contact_name: body.contract_contact_name ?? null,
+        manager_phone: body.manager_phone ?? null,
+        site_contact_email: body.site_contact_email ?? null,
+        is_high_risk_site: body.is_high_risk_site ?? null,
+        site_address: body.site_address ?? null,
+        status: body.status ?? 'active',
+        lifecycle_status: body.lifecycle_status ?? body.status ?? 'active',
+        contract_date: body.contract_date ?? null,
+        contract_start_date: body.contract_start_date ?? null,
+        contract_end_date: body.contract_end_date ?? null,
+        contract_signed_date: body.contract_signed_date ?? null,
+        total_rounds: body.total_rounds ?? null,
+        total_contract_amount: body.total_contract_amount ?? null,
+        memo: body.memo ?? null,
+        created_at: NOW,
+        updated_at: NOW,
+      };
+      state.sites.push(created);
+      await fulfillJson(
+        route,
+        clone(
+          (helpers.hydratedSites() as Array<JsonRecord & { id?: string }>).find(
+            (site) => String(site.id) === created.id,
+          ),
+        ),
+      );
+      return;
+    }
+
     if (pathname === '/assignments' && request.method() === 'GET') {
       await fulfillJson(route, clone(helpers.hydratedAssignments()));
+      return;
+    }
+
+    if (pathname === '/assignments' && request.method() === 'POST') {
+      const body = (request.postDataJSON?.() as JsonRecord) || {};
+      const created = {
+        id: buildFixtureId('assignment', `${body.site_id}-${body.user_id}`),
+        user_id: body.user_id,
+        site_id: body.site_id,
+        role_on_site: body.role_on_site ?? '담당 지도요원',
+        memo: body.memo ?? null,
+        is_active: true,
+        assigned_by: String(requestUser().id || 'admin-1'),
+        assigned_at: NOW,
+        created_at: NOW,
+        updated_at: NOW,
+      };
+      state.assignments.push(created);
+      await fulfillJson(
+        route,
+        clone(
+          (helpers.hydratedAssignments() as Array<JsonRecord & { id?: string }>).find(
+            (assignment) => String(assignment.id) === created.id,
+          ),
+        ),
+      );
       return;
     }
 
@@ -188,6 +275,65 @@ async function installErpRoutes({
       );
       assert(site, `Missing site fixture: ${siteId}`);
       await fulfillJson(route, clone(site));
+      return;
+    }
+
+    if (normalizedPath === '/sites/:id' && request.method() === 'PATCH') {
+      const siteId = pathname.split('/').pop() || '';
+      const body = (request.postDataJSON?.() as JsonRecord) || {};
+      const item = state.sites.find((site) => String(site.id) === siteId);
+      assert(item, `Missing site fixture for update: ${siteId}`);
+      Object.assign(item, body, { updated_at: NOW });
+      await fulfillJson(
+        route,
+        clone(
+          (helpers.hydratedSites() as Array<JsonRecord & { id?: string }>).find(
+            (site) => String(site.id) === siteId,
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (normalizedPath === '/sites/:id' && request.method() === 'DELETE') {
+      const siteId = pathname.split('/').pop() || '';
+      const item = state.sites.find((site) => String(site.id) === siteId);
+      assert(item, `Missing site fixture for delete: ${siteId}`);
+      Object.assign(item, { lifecycle_status: 'deleted', status: 'deleted', updated_at: NOW });
+      await fulfillJson(route, clone(item));
+      return;
+    }
+
+    if (normalizedPath === '/assignments/:id' && request.method() === 'PATCH') {
+      const assignmentId = pathname.split('/').pop() || '';
+      const body = (request.postDataJSON?.() as JsonRecord) || {};
+      const item = state.assignments.find((assignment) => String(assignment.id) === assignmentId);
+      assert(item, `Missing assignment fixture for update: ${assignmentId}`);
+      Object.assign(item, body, { updated_at: NOW });
+      await fulfillJson(
+        route,
+        clone(
+          (helpers.hydratedAssignments() as Array<JsonRecord & { id?: string }>).find(
+            (assignment) => String(assignment.id) === assignmentId,
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (normalizedPath === '/assignments/:id' && request.method() === 'DELETE') {
+      const assignmentId = pathname.split('/').pop() || '';
+      const item = state.assignments.find((assignment) => String(assignment.id) === assignmentId);
+      assert(item, `Missing assignment fixture for delete: ${assignmentId}`);
+      Object.assign(item, { is_active: false, updated_at: NOW });
+      await fulfillJson(
+        route,
+        clone(
+          (helpers.hydratedAssignments() as Array<JsonRecord & { id?: string }>).find(
+            (assignment) => String(assignment.id) === assignmentId,
+          ),
+        ),
+      );
       return;
     }
 

@@ -20,6 +20,17 @@ const scopes = {
     'skills/erp-platform-guardrails',
     'ARCHITECTURE.md',
   ],
+  admin: [
+    'app/admin',
+    'features/admin',
+    'scripts/smoke-real-client',
+    'scripts/smokeRealClient.ts',
+    'scripts/smokeRealAdmin.ts',
+    'tests/client/admin',
+    'tests/client/fixtures/adminSmokeHarness.ts',
+    'docs/admin-aidlc',
+    'ARCHITECTURE.md',
+  ],
 };
 
 const selectedScope = args.has('--scope')
