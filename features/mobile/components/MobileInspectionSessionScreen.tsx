@@ -1,18 +1,12 @@
 'use client';
 
-import { useDeferredValue, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { FocusEvent } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import LoginPanel from '@/components/auth/LoginPanel';
-import SignaturePad from '@/components/ui/SignaturePad';
 import { getSessionTitle } from '@/constants/inspectionSession';
 import { FIXED_SCENE_COUNT } from '@/constants/inspectionSession/catalog';
-import {
-  ACCIDENT_OCCURRENCE_OPTIONS,
-  NOTIFICATION_METHOD_OPTIONS,
-  PREVIOUS_IMPLEMENTATION_OPTIONS,
-} from '@/components/session/workspace/constants';
 import {
   assetUrlToFile,
   buildHazardFindingAutoFill,
@@ -33,12 +27,10 @@ import {
   buildDoc5StructuredSummaryPayload,
   buildLocalDoc5SummaryDraft,
 } from '@/lib/openai/doc5SummaryLocalDraft';
-import { fetchPhotoAlbum } from '@/lib/photos/apiClient';
 import {
   buildLocalDoc11EducationContent,
   generateStructuredDoc11EducationContent,
 } from '@/lib/openai/generateDoc11EducationContent';
-import type { PhotoAlbumItem } from '@/types/photos';
 import {
   buildMobileHomeHref,
   buildMobileSiteReportsHref,
@@ -48,6 +40,7 @@ import { MobileTabBar } from './MobileTabBar';
 import { buildSiteTabs } from '../lib/buildSiteTabs';
 import { MobileInspectionSessionModals } from '../inspection-session/MobileInspectionSessionModals';
 import { MobileInspectionSessionStandaloneState } from '../inspection-session/MobileInspectionSessionStandaloneState';
+import { MobileInspectionSessionStep2 } from '../inspection-session/MobileInspectionSessionStep2';
 import { MobileInspectionSessionStep3 } from '../inspection-session/MobileInspectionSessionStep3';
 import { MobileInspectionSessionStep4 } from '../inspection-session/MobileInspectionSessionStep4';
 import { MobileInspectionSessionStep5 } from '../inspection-session/MobileInspectionSessionStep5';
@@ -58,20 +51,17 @@ import { MobileInspectionSessionStep9 } from '../inspection-session/MobileInspec
 import { MobileInspectionSessionStep10 } from '../inspection-session/MobileInspectionSessionStep10';
 import { MobileInspectionSessionStep11 } from '../inspection-session/MobileInspectionSessionStep11';
 import { MobileInspectionSessionStep12 } from '../inspection-session/MobileInspectionSessionStep12';
+import { useMobileInspectionPhotoPicker } from '../inspection-session/useMobileInspectionPhotoPicker';
 import {
   MOBILE_INSPECTION_STEPS,
   MobileInspectionStepId,
-  MobilePhotoSourceTarget,
-  buildAutoReportTitle,
   findDoc8ProcessMatch,
   generateDoc2RiskLines,
   generateStructuredDoc5Summary,
   inferSceneTitle,
-  parsePositiveRound,
 } from '../inspection-session/mobileInspectionSessionHelpers';
 import styles from './MobileShell.module.css';
 import tabStyles from './MobileStepTabs.module.css';
-import workspaceStyles from '@/components/session/InspectionSessionWorkspace.module.css';
 
 interface MobileInspectionSessionScreenProps {
   sessionId: string;
@@ -114,19 +104,32 @@ export function MobileInspectionSessionScreen({
     id: string;
     message: string;
   } | null>(null);
-  const photoPickerGalleryInputRef = useRef<HTMLInputElement | null>(null);
-  const photoPickerCameraInputRef = useRef<HTMLInputElement | null>(null);
-  const photoSourceTargetRef = useRef<MobilePhotoSourceTarget | null>(null);
-  const [isPhotoSourceModalOpen, setIsPhotoSourceModalOpen] = useState(false);
-  const [isPhotoAlbumModalOpen, setIsPhotoAlbumModalOpen] = useState(false);
-  const [photoSourceTitle, setPhotoSourceTitle] = useState('사진 가져오기');
-  const [photoAlbumQuery, setPhotoAlbumQuery] = useState('');
-  const [photoAlbumRows, setPhotoAlbumRows] = useState<PhotoAlbumItem[]>([]);
-  const [photoAlbumLoading, setPhotoAlbumLoading] = useState(false);
-  const [photoAlbumError, setPhotoAlbumError] = useState<string | null>(null);
-  const [photoAlbumSelectingId, setPhotoAlbumSelectingId] = useState<string | null>(null);
-  const deferredPhotoAlbumQuery = useDeferredValue(photoAlbumQuery.trim());
   const isDirectSignatureAction = searchParams.get('action') === 'direct-signature';
+  const {
+    closePhotoAlbumModal,
+    closePhotoSourceModal,
+    handlePhotoAlbumSelect,
+    handlePhotoSlotKeyDown,
+    handlePhotoSourceInputChange,
+    isPhotoAlbumModalOpen,
+    isPhotoSourceModalOpen,
+    openPhotoAlbumPicker,
+    openPhotoSourceCamera,
+    openPhotoSourceGallery,
+    openPhotoSourcePicker,
+    photoAlbumError,
+    photoAlbumLoading,
+    photoAlbumQuery,
+    photoAlbumRows,
+    photoAlbumSelectingId,
+    photoPickerCameraInputRef,
+    photoPickerGalleryInputRef,
+    photoSourceTitle,
+    resetPhotoSourceTarget,
+    setPhotoAlbumQuery,
+  } = useMobileInspectionPhotoPicker({
+    siteId: displaySession?.siteKey,
+  });
 
   useEffect(() => {
     handledDirectSignatureRef.current = false;
@@ -186,46 +189,6 @@ export function MobileInspectionSessionScreen({
     };
   }, [activeStep, isDirectSignatureAction, session]);
 
-  useEffect(() => {
-    if (!isPhotoAlbumModalOpen || !displaySession?.siteKey) {
-      return;
-    }
-
-    let cancelled = false;
-    setPhotoAlbumLoading(true);
-    setPhotoAlbumError(null);
-
-    void fetchPhotoAlbum({
-      all: true,
-      query: deferredPhotoAlbumQuery,
-      siteId: displaySession.siteKey,
-      sortBy: 'capturedAt',
-      sortDir: 'desc',
-    })
-      .then((response) => {
-        if (!cancelled) {
-          setPhotoAlbumRows(response.rows);
-        }
-      })
-      .catch((error) => {
-        if (!cancelled) {
-          setPhotoAlbumRows([]);
-          setPhotoAlbumError(
-            error instanceof Error ? error.message : '사진첩을 불러오지 못했습니다.',
-          );
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setPhotoAlbumLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [deferredPhotoAlbumQuery, displaySession?.siteKey, isPhotoAlbumModalOpen]);
-
   if (!screen.isReady) {
     return <MobileInspectionSessionStandaloneState title="보고서를 준비하는 중입니다." />;
   }
@@ -272,156 +235,6 @@ export function MobileInspectionSessionScreen({
     (left, right) => left.sortOrder - right.sortOrder,
   );
   const mobileReportsHref = buildMobileSiteReportsHref(displaySession.siteKey);
-
-  const resetPhotoSourceTarget = () => {
-    photoSourceTargetRef.current = null;
-  };
-
-  const closePhotoSourceModal = () => {
-    setIsPhotoSourceModalOpen(false);
-  };
-
-  const closePhotoAlbumModal = () => {
-    setIsPhotoAlbumModalOpen(false);
-    setPhotoAlbumQuery('');
-    setPhotoAlbumError(null);
-    setPhotoAlbumSelectingId(null);
-    resetPhotoSourceTarget();
-  };
-
-  const openPhotoSourcePicker = (target: MobilePhotoSourceTarget) => {
-    photoSourceTargetRef.current = target;
-    setPhotoSourceTitle(`${target.fieldLabel} 사진 가져오기`);
-    setPhotoAlbumError(null);
-    setPhotoAlbumQuery('');
-    setIsPhotoSourceModalOpen(true);
-  };
-
-  const handlePhotoSourceInputChange = async (
-    files: FileList | null,
-    input: HTMLInputElement | null,
-  ) => {
-    const file = Array.from(files ?? []).find((item) => item.size > 0);
-    if (!file) {
-      if (input) {
-        input.value = '';
-      }
-      resetPhotoSourceTarget();
-      return;
-    }
-
-    const target = photoSourceTargetRef.current;
-    if (!target) {
-      if (input) {
-        input.value = '';
-      }
-      return;
-    }
-
-    try {
-      await Promise.resolve(target.onFileSelected(file));
-    } finally {
-      if (input) {
-        input.value = '';
-      }
-      resetPhotoSourceTarget();
-    }
-  };
-
-  const openPhotoSourceCamera = () => {
-    setIsPhotoSourceModalOpen(false);
-    requestAnimationFrame(() => photoPickerCameraInputRef.current?.click());
-  };
-
-  const openPhotoSourceGallery = () => {
-    setIsPhotoSourceModalOpen(false);
-    requestAnimationFrame(() => photoPickerGalleryInputRef.current?.click());
-  };
-
-  const openPhotoAlbumPicker = () => {
-    setIsPhotoSourceModalOpen(false);
-    setPhotoAlbumError(null);
-    setPhotoAlbumQuery('');
-    setIsPhotoAlbumModalOpen(true);
-  };
-
-  const handlePhotoSlotKeyDown = (
-    event: React.KeyboardEvent<HTMLElement>,
-    action: () => void,
-  ) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      action();
-    }
-  };
-
-  /* useEffect(() => {
-    if (!isPhotoAlbumModalOpen) {
-      return;
-    }
-
-    let cancelled = false;
-    setPhotoAlbumLoading(true);
-    setPhotoAlbumError(null);
-
-    void fetchPhotoAlbum({
-      all: true,
-      query: deferredPhotoAlbumQuery,
-      siteId: displaySession.siteKey,
-      sortBy: 'capturedAt',
-      sortDir: 'desc',
-    })
-      .then((response) => {
-        if (!cancelled) {
-          setPhotoAlbumRows(response.rows);
-        }
-      })
-      .catch((error) => {
-        if (!cancelled) {
-          setPhotoAlbumRows([]);
-          setPhotoAlbumError(
-            error instanceof Error ? error.message : '사진첩을 불러오지 못했습니다.',
-          );
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setPhotoAlbumLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [deferredPhotoAlbumQuery, displaySession.siteKey, isPhotoAlbumModalOpen]); */
-
-  const handlePhotoAlbumSelect = async (item: PhotoAlbumItem) => {
-    const target = photoSourceTargetRef.current;
-    if (!target) {
-      return;
-    }
-
-    try {
-      setPhotoAlbumSelectingId(item.id);
-      setPhotoAlbumError(null);
-      if (target.onAlbumSelected) {
-        await Promise.resolve(target.onAlbumSelected(item));
-      } else {
-        const file = await assetUrlToFile(item.previewUrl, item.fileName || 'photo.jpg');
-        await Promise.resolve(target.onFileSelected(file));
-      }
-      setIsPhotoAlbumModalOpen(false);
-      setPhotoAlbumQuery('');
-      setPhotoAlbumError(null);
-      resetPhotoSourceTarget();
-    } catch (error) {
-      setPhotoAlbumError(
-        error instanceof Error ? error.message : '사진을 반영하는 중 오류가 발생했습니다.',
-      );
-    } finally {
-      setPhotoAlbumSelectingId(null);
-    }
-  };
 
   const resetDoc2ProcessState = () => {
     setDoc2ProcessRiskLines(null);
@@ -889,422 +702,12 @@ export function MobileInspectionSessionScreen({
           <div className={tabStyles.stepContent}>
             {/* 2단계: 기술지도 개요 */}
             {activeStep === 'step2' && (
-              <section style={{ padding: '16px' }}>
-                <div className={styles.sectionHeader}>
-                  <div className={styles.sectionTitleWrap}>
-                    <h2 className={styles.sectionTitle}>기술지도 개요</h2>
-                  </div>
-                </div>
-                <div className={styles.editorBody}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
-                      <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>지도일</span>
-                        <input
-                          className="app-input"
-                          type="date"
-                          value={session.document2Overview.guidanceDate}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            screen.applyDocumentUpdate('doc2', 'manual', (current) => ({
-                              ...current,
-                              document2Overview: {
-                                ...current.document2Overview,
-                                guidanceDate: value,
-                              },
-                            }));
-                          }}
-                        />
-                      </label>
-                      <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>공정률 (%)</span>
-                        <input
-                          className="app-input"
-                          type="number"
-                          value={session.document2Overview.progressRate}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            screen.applyDocumentUpdate('doc2', 'manual', (current) => ({
-                              ...current,
-                              document2Overview: {
-                                ...current.document2Overview,
-                                progressRate: value,
-                              },
-                            }));
-                          }}
-                          placeholder="0"
-                        />
-                      </label>
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
-                      <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>회차</span>
-                        <input
-                          className="app-input"
-                          type="number"
-                          min={1}
-                          step={1}
-                          value={session.document2Overview.visitCount || String(session.reportNumber || '')}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            screen.applyDocumentUpdate('doc2', 'manual', (current) => {
-                              const nextRound = parsePositiveRound(value);
-                              if (!nextRound) {
-                                return {
-                                  ...current,
-                                  document2Overview: {
-                                    ...current.document2Overview,
-                                    visitCount: value,
-                                  },
-                                };
-                              }
-
-                              const preferredDate =
-                                current.document2Overview.guidanceDate.trim() ||
-                                current.meta.reportDate.trim();
-                              const currentTitle = current.meta.reportTitle.trim();
-                              const autoTitleCandidates = new Set([
-                                buildAutoReportTitle(preferredDate, current.reportNumber),
-                                buildAutoReportTitle(current.meta.reportDate.trim(), current.reportNumber),
-                                `보고서 ${current.reportNumber}`,
-                              ]);
-
-                              return {
-                                ...current,
-                                reportNumber: nextRound,
-                                meta: {
-                                  ...current.meta,
-                                  reportTitle: autoTitleCandidates.has(currentTitle)
-                                    ? buildAutoReportTitle(preferredDate, nextRound)
-                                    : current.meta.reportTitle,
-                                },
-                                document2Overview: {
-                                  ...current.document2Overview,
-                                  visitCount: String(nextRound),
-                                },
-                              };
-                            });
-                          }}
-                          placeholder="1"
-                        />
-                      </label>
-                      <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>총회차</span>
-                        <input
-                          className="app-input"
-                          value={session.document2Overview.totalVisitCount}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            screen.applyDocumentUpdate('doc2', 'manual', (current) => ({
-                              ...current,
-                              document2Overview: {
-                                ...current.document2Overview,
-                                totalVisitCount: value,
-                              },
-                            }));
-                          }}
-                          placeholder="예: 12"
-                        />
-                      </label>
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
-                      <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                          이전기술지도 이행
-                        </span>
-                        <select
-                          className="app-select"
-                          value={session.document2Overview.previousImplementationStatus}
-                          onChange={(e) => {
-                            const value =
-                              e.target.value as typeof session.document2Overview.previousImplementationStatus;
-                            screen.applyDocumentUpdate('doc2', 'manual', (current) => ({
-                              ...current,
-                              document2Overview: {
-                                ...current.document2Overview,
-                                previousImplementationStatus: value,
-                              },
-                            }));
-                          }}
-                        >
-                          {PREVIOUS_IMPLEMENTATION_OPTIONS.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>담당자</span>
-                        <input
-                          className="app-input"
-                          value={session.document2Overview.assignee}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            screen.applyDocumentUpdate('doc2', 'manual', (current) => ({
-                              ...current,
-                              document2Overview: {
-                                ...current.document2Overview,
-                                assignee: value,
-                              },
-                            }));
-                          }}
-                          placeholder="담당자 이름"
-                        />
-                      </label>
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
-                      <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>연락처</span>
-                        <input
-                          className="app-input"
-                          value={session.document2Overview.contact}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            screen.applyDocumentUpdate('doc2', 'manual', (current) => ({
-                              ...current,
-                              document2Overview: {
-                                ...current.document2Overview,
-                                contact: value,
-                              },
-                            }));
-                          }}
-                          placeholder="연락처를 입력하세요"
-                        />
-                      </label>
-                      <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>통지 방법</span>
-                        <select
-                          className="app-select"
-                          value={session.document2Overview.notificationMethod}
-                          onChange={(e) => {
-                            const value = e.target.value as
-                              | 'direct'
-                              | 'registered_mail'
-                              | 'email'
-                              | 'mobile'
-                              | 'other'
-                              | '';
-                            screen.applyDocumentUpdate('doc2', 'manual', (current) => ({
-                              ...current,
-                              document2Overview: {
-                                ...current.document2Overview,
-                                notificationMethod: value,
-                              },
-                            }));
-                          }}
-                        >
-                          <option value="">선택</option>
-                          {NOTIFICATION_METHOD_OPTIONS.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    </div>
-                    {session.document2Overview.notificationMethod === 'other' ? (
-                      <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                          기타 통보방법
-                        </span>
-                        <input
-                          className="app-input"
-                          value={session.document2Overview.otherNotificationMethod}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            screen.applyDocumentUpdate('doc2', 'manual', (current) => ({
-                              ...current,
-                              document2Overview: {
-                                ...current.document2Overview,
-                                otherNotificationMethod: value,
-                              },
-                            }));
-                          }}
-                          placeholder="기타 통보방법 입력"
-                        />
-                      </label>
-                    ) : null}
-                    {session.document2Overview.notificationMethod === 'direct' ? (
-                      <div
-                        ref={directSignatureSectionRef}
-                        style={{
-                          borderTop: '1px solid #e2e8f0',
-                          paddingTop: '12px',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '12px',
-                        }}
-                      >
-                        <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                            직접전달 수령자 성함
-                          </span>
-                          <input
-                            className="app-input"
-                            value={session.document2Overview.notificationRecipientName}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              screen.applyDocumentUpdate('doc2', 'manual', (current) => ({
-                                ...current,
-                                document2Overview: {
-                                  ...current.document2Overview,
-                                  notificationRecipientName: value,
-                                },
-                              }));
-                            }}
-                            placeholder="수령자 성함 입력"
-                          />
-                        </label>
-                        <SignaturePad
-                          label="수령자 서명"
-                          value={session.document2Overview.notificationRecipientSignature}
-                          onChange={(value) => {
-                            screen.applyDocumentUpdate('doc2', 'manual', (current) => ({
-                              ...current,
-                              document2Overview: {
-                                ...current.document2Overview,
-                                notificationRecipientSignature: value,
-                              },
-                            }));
-                          }}
-                        />
-                      </div>
-                    ) : null}
-                    <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      <div style={{ fontSize: '14px', fontWeight: 700, color: '#334155' }}>
-                        재해 및 공정 특이사항
-                      </div>
-                      <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                          최근 사고 발생 여부
-                        </span>
-                        <select
-                          className="app-select"
-                          value={session.document2Overview.accidentOccurred || 'no'}
-                          onChange={(e) => {
-                            const value = e.target.value as 'yes' | 'no';
-                            screen.applyDocumentUpdate('doc2', 'manual', (current) => ({
-                              ...current,
-                              document2Overview: {
-                                ...current.document2Overview,
-                                accidentOccurred: value,
-                              },
-                            }));
-                          }}
-                        >
-                          {ACCIDENT_OCCURRENCE_OPTIONS.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      {session.document2Overview.accidentOccurred === 'yes' ? (
-                        <>
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
-                            <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                              <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                                최근 사고일
-                              </span>
-                              <input
-                                className="app-input"
-                                type="date"
-                                value={session.document2Overview.recentAccidentDate}
-                                onChange={(e) => {
-                                  const value = e.target.value;
-                                  screen.applyDocumentUpdate('doc2', 'manual', (current) => ({
-                                    ...current,
-                                    document2Overview: {
-                                      ...current.document2Overview,
-                                      recentAccidentDate: value,
-                                    },
-                                  }));
-                                }}
-                              />
-                            </label>
-                            <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                              <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                                사고 유형
-                              </span>
-                              <input
-                                className="app-input"
-                                value={session.document2Overview.accidentType}
-                                onChange={(e) => {
-                                  const value = e.target.value;
-                                  screen.applyDocumentUpdate('doc2', 'manual', (current) => ({
-                                    ...current,
-                                    document2Overview: {
-                                      ...current.document2Overview,
-                                      accidentType: value,
-                                    },
-                                  }));
-                                }}
-                                placeholder="예: 떨어짐"
-                              />
-                            </label>
-                          </div>
-                          <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                            <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                              사고 개요
-                            </span>
-                            <textarea
-                              className="app-input"
-                              value={session.document2Overview.accidentSummary}
-                              onChange={(e) => {
-                                const value = e.target.value;
-                                screen.applyDocumentUpdate('doc2', 'manual', (current) => ({
-                                  ...current,
-                                  document2Overview: {
-                                    ...current.document2Overview,
-                                    accidentSummary: value,
-                                  },
-                                }));
-                              }}
-                              placeholder="사고 내용을 입력하세요"
-                              style={{ width: '100%', minHeight: '72px', resize: 'vertical' }}
-                            />
-                          </label>
-                        </>
-                      ) : null}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
-                        <div style={{ fontSize: '14px', fontWeight: 700, color: '#334155' }}>
-                          진행공정 및 특이사항
-                        </div>
-                        <button
-                          type="button"
-                          className={workspaceStyles.doc5SummaryDraftBtn}
-                          style={{ flexShrink: 0 }}
-                          onClick={() => setIsDoc2ProcessModalOpen(true)}
-                        >
-                          자동생성
-                        </button>
-                      </div>
-                      <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                          본문
-                        </span>
-                        <textarea
-                          className="app-input"
-                          value={session.document2Overview.processAndNotes}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            screen.applyDocumentUpdate('doc2', 'manual', (current) => ({
-                              ...current,
-                              document2Overview: {
-                                ...current.document2Overview,
-                                processAndNotes: value,
-                              },
-                            }));
-                          }}
-                          placeholder="공정 특이사항을 입력하세요"
-                          style={{ width: '100%', minHeight: '96px', resize: 'vertical' }}
-                        />
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              </section>
+              <MobileInspectionSessionStep2
+                directSignatureSectionRef={directSignatureSectionRef}
+                onOpenDoc2ProcessModal={() => setIsDoc2ProcessModalOpen(true)}
+                screen={screen}
+                session={session}
+              />
             )}
 
             {/* 3단계: 현장 전경 */}
