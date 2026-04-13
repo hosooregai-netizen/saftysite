@@ -27,6 +27,15 @@ Use this skill for `/admin` modularization, dashboard refactors, section splits,
 6. Refactor the admin section using shell/state/helper/dialog/table boundaries.
 7. Record pass/fail results and remaining debt in the batch doc.
 
+### Control-Center Checklist
+
+When the batch touches overview or analytics:
+
+1. update the active `docs/admin-aidlc/batch-*.md` record
+2. strengthen `admin-control-center` markers/actions if the visible flow changed
+3. rerun mocked control-center smoke
+4. rerun `smoke:real:admin -- --sections control-center` or record the exact blocker
+
 ## Default Validation
 
 ```bash

@@ -64,6 +64,7 @@ function buildEmptyDispatch(overrides: Partial<ReportDispatchMeta> = {}): Report
 
 function normalizeAdminApiPath(pathname: string) {
   return pathname
+    .replace(/^\/api\/admin\/exports\/[^/]+$/, '/api/admin/exports/:section')
     .replace(/^\/api\/admin\/reports\/[^/]+\/review$/, '/api/admin/reports/:id/review')
     .replace(/^\/api\/admin\/reports\/[^/]+\/dispatch$/, '/api/admin/reports/:id/dispatch')
     .replace(/^\/api\/admin\/reports\/[^/]+\/dispatch-events$/, '/api/admin/reports/:id/dispatch-events');
@@ -237,6 +238,16 @@ async function installAdminRoutes(harness: ErpSmokeHarness) {
 
     if (pathname === '/api/admin/dashboard/analytics' && request.method() === 'GET') {
       await fulfillJson(route, buildAnalyticsResponse(harness, url));
+      return;
+    }
+
+    if (/^\/api\/admin\/exports\/[^/]+$/.test(pathname) && request.method() === 'POST') {
+      await route.fulfill({
+        status: 200,
+        contentType:
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        body: 'mock-admin-export',
+      });
       return;
     }
 

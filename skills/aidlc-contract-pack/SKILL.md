@@ -20,6 +20,11 @@ we want spec, tests, and record to land together.
 6. Change the smallest responsible files.
 7. Record actual validation results and residual debt in the same batch doc.
 
+For admin control-center work, add one more checkpoint:
+
+8. Update the active batch doc, the `admin-control-center` contract, and both smoke layers as one unit.
+   If real smoke is blocked, write the blocker into the same batch doc before closing the task.
+
 ## Required Outputs
 
 - one batch spec/record doc

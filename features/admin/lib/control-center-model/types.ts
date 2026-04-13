@@ -1,24 +1,29 @@
 export type {
   AdminAnalyticsContractTypeRow,
   AdminAnalyticsEmployeeRow,
-  AdminAnalyticsModel,
-  AdminAnalyticsPeriod,
+  SafetyAdminAnalyticsResponse as AdminAnalyticsModel,
   AdminAnalyticsSiteRevenueRow,
   AdminAnalyticsStats,
   AdminAnalyticsSummaryCard,
   AdminAnalyticsTrendRow,
   AdminCoverageRow,
   AdminOverviewAgentRow,
-  AdminOverviewChartEntry,
+  SafetyAdminOverviewChartEntry as AdminOverviewChartEntry,
   AdminOverviewDeadlineRow,
-  AdminOverviewDeadlineSignalSummary,
+  SafetyAdminDeadlineSignalSummary as AdminOverviewDeadlineSignalSummary,
   AdminOverviewMetricCard,
-  AdminOverviewModel,
-  AdminOverviewQuarterlyMaterialRequirement,
-  AdminOverviewQuarterlyMaterialSiteRow,
-  AdminOverviewQuarterlyMaterialSummary,
+  SafetyAdminQuarterlyMaterialRequirement as AdminOverviewQuarterlyMaterialRequirement,
+  SafetyAdminQuarterlyMaterialSiteRow as AdminOverviewQuarterlyMaterialSiteRow,
+  SafetyAdminQuarterlyMaterialSummary as AdminOverviewQuarterlyMaterialSummary,
   AdminOverviewReviewRow,
   AdminOverviewSiteAlertRow,
-  AdminOverviewSiteStatusSummary,
-  AdminOverviewUnsentReportRow,
-} from './shared';
+  SafetyAdminSiteStatusSummary as AdminOverviewSiteStatusSummary,
+  SafetyAdminUnsentReportRow as AdminOverviewUnsentReportRow,
+} from '@/types/admin';
+
+export type AdminOverviewModel = Omit<
+  import('@/types/admin').SafetyAdminOverviewResponse,
+  'alerts' | 'completionRows' | 'scheduleRows'
+>;
+
+export type AdminAnalyticsPeriod = 'month' | 'quarter' | 'year' | 'all';

@@ -114,6 +114,13 @@ For admin client work, treat the contract pack as the unit of change:
 4. change code in the smallest responsible file
 5. rerun mocked smoke, then real admin smoke when a local app is available
 
+For control-center work, keep the batch record especially tight:
+
+1. update the active `docs/admin-aidlc/batch-*.md` record
+2. strengthen the `admin-control-center` contract when markers, export entry, or period filters move
+3. rerun mocked control-center smoke
+4. rerun real control-center smoke or record the exact blocker
+
 ## Skill Loading Strategy
 
 Do not force-load every repo skill on every task. That adds context noise and makes the model
