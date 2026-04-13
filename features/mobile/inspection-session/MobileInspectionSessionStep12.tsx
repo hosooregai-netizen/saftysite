@@ -1,100 +1,18 @@
 'use client';
 
-import type { KeyboardEventHandler } from 'react';
 import type { useInspectionSessionScreen } from '@/features/inspection-session/hooks/useInspectionSessionScreen';
 import type { MobilePhotoSourceTarget } from './mobileInspectionSessionHelpers';
 import styles from '@/features/mobile/components/MobileShell.module.css';
-import workspaceStyles from '@/components/session/InspectionSessionWorkspace.module.css';
+import { MobileInspectionSessionActivityPhotoField } from './MobileInspectionSessionActivityPhotoField';
 
 type InspectionScreenController = ReturnType<typeof useInspectionSessionScreen>;
 type InspectionSessionDraft = NonNullable<InspectionScreenController['sectionSession']>;
 
 interface MobileInspectionSessionStep12Props {
-  handlePhotoSlotKeyDown: (
-    event: React.KeyboardEvent<HTMLElement>,
-    action: () => void,
-  ) => void;
+  handlePhotoSlotKeyDown: (event: React.KeyboardEvent<HTMLElement>, action: () => void) => void;
   openPhotoSourcePicker: (target: MobilePhotoSourceTarget) => void;
   screen: InspectionScreenController;
   session: InspectionSessionDraft;
-}
-
-function ActivityPhotoField({
-  alt,
-  fieldLabel,
-  handlePhotoSlotKeyDown,
-  onOpen,
-  onRemove,
-  photoUrl,
-}: {
-  alt: string;
-  fieldLabel: string;
-  handlePhotoSlotKeyDown: MobileInspectionSessionStep12Props['handlePhotoSlotKeyDown'];
-  onOpen: () => void;
-  onRemove: () => void;
-  photoUrl: string;
-}) {
-  const onKeyDown: KeyboardEventHandler<HTMLDivElement> = (event) =>
-    handlePhotoSlotKeyDown(event, onOpen);
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-      <div style={{ fontSize: '14px', fontWeight: 600 }}>{fieldLabel}</div>
-      <div
-        role="button"
-        tabIndex={0}
-        style={{
-          display: 'block',
-          width: '100%',
-          height: '180px',
-          backgroundColor: '#f8fafc',
-          border: '1px solid rgba(215, 224, 235, 0.88)',
-          borderRadius: '4px',
-          overflow: 'hidden',
-          position: 'relative',
-          cursor: 'pointer',
-        }}
-        onClick={onOpen}
-        onKeyDown={onKeyDown}
-      >
-        {photoUrl ? (
-          <button
-            type="button"
-            className={workspaceStyles.doc5SummaryDraftBtn}
-            style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 1 }}
-            onClick={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              onRemove();
-            }}
-          >
-            사진 삭제
-          </button>
-        ) : null}
-        {photoUrl ? (
-          <img
-            src={photoUrl}
-            alt={alt}
-            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-          />
-        ) : (
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#64748b',
-              fontSize: '13px',
-            }}
-          >
-            사진 업로드
-          </div>
-        )}
-      </div>
-    </div>
-  );
 }
 
 export function MobileInspectionSessionStep12({
@@ -165,7 +83,7 @@ export function MobileInspectionSessionStep12({
                 gap: '12px',
               }}
             >
-              <ActivityPhotoField
+              <MobileInspectionSessionActivityPhotoField
                 alt="활동 1 사진"
                 fieldLabel="활동 1 사진"
                 handlePhotoSlotKeyDown={handlePhotoSlotKeyDown}
@@ -173,7 +91,7 @@ export function MobileInspectionSessionStep12({
                 onRemove={() => updateActivity({ photoUrl: '' })}
                 photoUrl={activity.photoUrl}
               />
-              <ActivityPhotoField
+              <MobileInspectionSessionActivityPhotoField
                 alt="활동 2 사진"
                 fieldLabel="활동 2 사진"
                 handlePhotoSlotKeyDown={handlePhotoSlotKeyDown}
