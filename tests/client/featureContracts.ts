@@ -1,5 +1,6 @@
 export type FeatureContractId =
   | 'auth'
+  | 'mobile-quarterly-report'
   | 'site-hub'
   | 'quarterly-report'
   | 'mobile-link';
@@ -34,6 +35,22 @@ export const FEATURE_CONTRACTS: Record<FeatureContractId, FeatureContract> = {
       'POST /reports/upsert',
     ],
     criticalActions: ['모바일 직접 링크 로그인', '모바일 보고서 진입', '모바일 저장'],
+  },
+  'mobile-quarterly-report': {
+    id: 'mobile-quarterly-report',
+    description:
+      '모바일 분기 보고서 화면이 직접 진입, 원본 보고서 반영, 저장, 문서 다운로드 흐름을 유지한다.',
+    routes: ['/mobile/sites/site-1/quarterly/{quarterKey}'],
+    markers: ['모바일 분기 보고 로그인', '보고서 선택', '저장', '한글', 'PDF'],
+    apis: [
+      'POST /auth/token',
+      'GET /reports/by-key/:id',
+      'GET /reports/site/:id/quarterly-summary-seed',
+      'POST /reports/upsert',
+      'POST /api/documents/quarterly/hwpx',
+      'POST /api/documents/quarterly/pdf',
+    ],
+    criticalActions: ['모바일 분기 보고 로그인', '원본 보고서 반영', '모바일 분기 저장', '문서 다운로드'],
   },
   'quarterly-report': {
     id: 'quarterly-report',
