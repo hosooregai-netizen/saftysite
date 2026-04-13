@@ -12,7 +12,7 @@ import {
 } from '../../lib/erpReports/shared.ts';
 
 const BASE_URL = process.env.SMOKE_BASE_URL || 'http://localhost:3100';
-const NOW = '2026-03-29T18:00:00+09:00';
+export const NOW = '2026-03-29T18:00:00+09:00';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -27,7 +27,7 @@ interface RouteState {
   workerMobileSessions: JsonRecord[];
 }
 
-function clone<T>(value: T): T {
+export function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
@@ -38,7 +38,7 @@ function slugify(value: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
-function normalizeSafetyPath(pathname: string): string {
+export function normalizeSafetyPath(pathname: string): string {
   if (pathname === '/reports/upsert') return '/reports/upsert';
   if (pathname === '/content-items/assets/upload') return '/content-items/assets/upload';
   if (pathname === '/site-workers/import') return '/site-workers/import';
@@ -53,6 +53,8 @@ function normalizeSafetyPath(pathname: string): string {
     .replace(/\/site-workers\/[^/]+\/mobile-session$/, '/site-workers/:id/mobile-session')
     .replace(/\/site-workers\/[^/]+\/block$/, '/site-workers/:id/block')
     .replace(/\/site-workers\/[^/]+$/, '/site-workers/:id')
+    .replace(/\/reports\/site\/[^/]+\/operational-index$/, '/reports/site/:id/operational-index')
+    .replace(/\/reports\/site\/[^/]+\/quarterly-summary-seed$/, '/reports/site/:id/quarterly-summary-seed')
     .replace(/\/reports\/site\/[^/]+\/draft-context$/, '/reports/site/:id/draft-context')
     .replace(/\/reports\/site\/[^/]+\/full$/, '/reports/site/:id/full')
     .replace(/\/reports\/by-key\/[^/]+$/, '/reports/by-key/:id')
@@ -66,7 +68,7 @@ function normalizeSafetyPath(pathname: string): string {
     .replace(/\/content-items\/[^/]+$/, '/content-items/:id');
 }
 
-function extractMockedSafetyPath(pathname: string): string {
+export function extractMockedSafetyPath(pathname: string): string {
   if (pathname.includes('/api/safety')) {
     return pathname.replace(/.*\/api\/safety/, '') || '/';
   }
@@ -78,7 +80,7 @@ function extractMockedSafetyPath(pathname: string): string {
   return pathname;
 }
 
-function toReportListItem(report: JsonRecord) {
+export function toReportListItem(report: JsonRecord) {
   return {
     id: report.id,
     report_key: report.report_key,
@@ -223,7 +225,7 @@ function createSeedErpReport(
   };
 }
 
-function getTokenForUser(userId: string): string {
+export function getTokenForUser(userId: string): string {
   return `token-${userId}`;
 }
 
@@ -245,7 +247,7 @@ function getWorkerAckExemptions(worker: JsonRecord): string[] {
     : [];
 }
 
-function createInitialState(): RouteState {
+export function createInitialState(): RouteState {
   return {
     users: [
       {
@@ -550,7 +552,7 @@ function createInitialState(): RouteState {
   };
 }
 
-function createRouteHelpers(state: RouteState) {
+export function createRouteHelpers(state: RouteState) {
   const userSummaryById = () =>
     new Map(
       state.users.map((user) => [

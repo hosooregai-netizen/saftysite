@@ -1,11 +1,10 @@
 'use client';
 
 import { useDeferredValue, useEffect, useRef, useState } from 'react';
-import type { FocusEvent, ReactNode } from 'react';
+import type { FocusEvent } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import LoginPanel from '@/components/auth/LoginPanel';
-import AppModal from '@/components/ui/AppModal';
 import SignaturePad from '@/components/ui/SignaturePad';
 import {
   FOLLOW_UP_RESULT_OPTIONS,
@@ -15,7 +14,6 @@ import { FIXED_SCENE_COUNT } from '@/constants/inspectionSession/catalog';
 import {
   ACCIDENT_OCCURRENCE_OPTIONS,
   CHECKLIST_RATING_OPTIONS,
-  FUTURE_PROCESS_LIBRARY,
   NOTIFICATION_METHOD_OPTIONS,
   PREVIOUS_IMPLEMENTATION_OPTIONS,
   RISK_TRI_LEVEL_OPTIONS,
@@ -65,208 +63,29 @@ import {
 import { MobileShell } from './MobileShell';
 import { MobileTabBar } from './MobileTabBar';
 import { buildSiteTabs } from '../lib/buildSiteTabs';
+import { MobileInspectionSessionModals } from '../inspection-session/MobileInspectionSessionModals';
+import { MobileInspectionSessionStandaloneState } from '../inspection-session/MobileInspectionSessionStandaloneState';
+import { MobileInspectionSessionStep12 } from '../inspection-session/MobileInspectionSessionStep12';
+import {
+  MOBILE_INSPECTION_STEPS,
+  MobileInspectionStepId,
+  MobilePhotoSourceTarget,
+  buildAutoReportTitle,
+  findDoc8ProcessMatch,
+  generateDoc2RiskLines,
+  generateStructuredDoc5Summary,
+  getDoc8ProcessRecommendations,
+  getMobileDoc3DisplayTitle,
+  getMobileDoc3SlotLabel,
+  inferSceneTitle,
+  parsePositiveRound,
+} from '../inspection-session/mobileInspectionSessionHelpers';
 import styles from './MobileShell.module.css';
 import tabStyles from './MobileStepTabs.module.css';
 import workspaceStyles from '@/components/session/InspectionSessionWorkspace.module.css';
 
 interface MobileInspectionSessionScreenProps {
   sessionId: string;
-}
-
-const STEPS = [
-  { id: 'step2', label: '개요' },
-  { id: 'step3', label: '현장 전경' },
-  { id: 'step4', label: '이전 기술지도' },
-  { id: 'step5', label: '총평' },
-  { id: 'step6', label: '사망 기인물' },
-  { id: 'step7', label: '위험요인 지적' },
-  { id: 'step8', label: '향후 진행공정' },
-  { id: 'step9', label: '위험성평가 / TBM' },
-  { id: 'step10', label: '계측점검' },
-  { id: 'step11', label: '안전교육' },
-  { id: 'step12', label: '활동 실적' },
-];
-
-interface Doc2ProcessNotesResponse {
-  riskLines?: string[];
-  error?: string;
-}
-
-interface MobilePhotoSourceTarget {
-  fieldLabel: string;
-  onAlbumSelected?: (item: PhotoAlbumItem) => Promise<void> | void;
-  onFileSelected: (file: File) => Promise<void> | void;
-}
-
-const MAX_DOC8_RECOMMENDATIONS = 6;
-
-function getMobileDoc3SlotLabel(index: number) {
-  return index < FIXED_SCENE_COUNT
-    ? `현장 ${index + 1}`
-    : `공정 ${index - FIXED_SCENE_COUNT + 1}`;
-}
-
-function getMobileDoc3DisplayTitle(index: number, title: string | null | undefined) {
-  const trimmed = title?.trim() ?? '';
-  if (!trimmed) {
-    return getMobileDoc3SlotLabel(index);
-  }
-
-  const legacyTitle =
-    index < FIXED_SCENE_COUNT ? getFixedSceneTitle(index) : getExtraSceneTitle(index);
-
-  return trimmed === legacyTitle ? getMobileDoc3SlotLabel(index) : trimmed;
-}
-
-function parsePositiveRound(value: string) {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return null;
-  }
-
-  const parsed = Number.parseInt(trimmed, 10);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
-}
-
-function buildAutoReportTitle(reportDate: string, reportNumber: number) {
-  return reportDate ? `${reportDate} 보고서 ${reportNumber}` : `보고서 ${reportNumber}`;
-}
-
-function formatMobilePhotoAlbumDate(value: string) {
-  if (!value?.trim()) {
-    return '';
-  }
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat('ko-KR', {
-    hour: '2-digit',
-    hour12: false,
-    minute: '2-digit',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(parsed);
-}
-
-async function generateDoc2RiskLines(input: {
-  processWorkContent: string;
-  processWorkerCount: string;
-  processEquipment: string;
-  processTools: string;
-  processHazardousMaterials: string;
-}) {
-  const response = await fetch('/api/ai/doc2-process-notes', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(input),
-  });
-
-  const payload = (await response.json().catch(() => ({}))) as Doc2ProcessNotesResponse;
-  if (!response.ok) {
-    throw new Error(payload.error || 'AI 위험요인 생성에 실패했습니다.');
-  }
-
-  return Array.isArray(payload.riskLines) ? payload.riskLines.filter(Boolean).slice(0, 2) : [];
-}
-
-async function inferSceneTitle(file: File) {
-  const formData = new FormData();
-  formData.append('file', file);
-
-  const response = await fetch('/api/ai/doc3-scene-title', {
-    method: 'POST',
-    body: formData,
-  });
-
-  if (!response.ok) {
-    throw new Error('현장 전경 공정명 AI 생성에 실패했습니다.');
-  }
-
-  const payload = (await response.json().catch(() => ({}))) as { title?: string };
-  return payload.title?.trim() || '';
-}
-
-async function generateStructuredDoc5Summary(
-  payload: ReturnType<typeof buildDoc5StructuredSummaryPayload>,
-) {
-  const response = await fetch('/api/ai/doc5-structured-summary', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload),
-  });
-
-  const result = (await response.json().catch(() => ({}))) as {
-    text?: string;
-    error?: string;
-  };
-
-  if (!response.ok || !result.text?.trim()) {
-    throw new Error(result.error?.trim() || '총평 AI 생성에 실패했습니다.');
-  }
-
-  return result.text.trim();
-}
-
-function normalizeDoc8ProcessName(value: string) {
-  return value.replace(/\s+/g, '').toLowerCase();
-}
-
-function findDoc8ProcessMatch(value: string) {
-  const normalizedValue = normalizeDoc8ProcessName(value);
-  if (!normalizedValue) {
-    return null;
-  }
-
-  return (
-    FUTURE_PROCESS_LIBRARY.find(
-      (libraryItem) => normalizeDoc8ProcessName(libraryItem.processName) === normalizedValue,
-    ) ?? null
-  );
-}
-
-function getDoc8ProcessRecommendations(value: string) {
-  const normalizedValue = normalizeDoc8ProcessName(value);
-  const matchingItems = normalizedValue
-    ? FUTURE_PROCESS_LIBRARY.filter((libraryItem) =>
-        normalizeDoc8ProcessName(libraryItem.processName).includes(normalizedValue),
-      )
-    : FUTURE_PROCESS_LIBRARY;
-
-  return matchingItems.slice(0, MAX_DOC8_RECOMMENDATIONS);
-}
-
-function StandaloneState({
-  action,
-  description,
-  title,
-}: {
-  action?: ReactNode;
-  description?: string;
-  title: string;
-}) {
-  return (
-    <main className="app-page">
-      <div className={styles.pageShell}>
-        <div className={styles.content}>
-          <section className={styles.stateCard}>
-            <div className={styles.sectionTitleWrap}>
-              <span className={styles.sectionEyebrow}>모바일 보고서</span>
-              <h1 className={styles.sectionTitle}>{title}</h1>
-            </div>
-            {description ? <p className={styles.inlineNotice}>{description}</p> : null}
-            {action}
-          </section>
-        </div>
-      </div>
-    </main>
-  );
 }
 
 export function MobileInspectionSessionScreen({
@@ -276,7 +95,9 @@ export function MobileInspectionSessionScreen({
   const screen = useInspectionSessionScreen(sessionId);
   const displaySession = screen.displaySession;
   const session = screen.sectionSession;
-  const [activeStep, setActiveStep] = useState(STEPS[0].id);
+  const [activeStep, setActiveStep] = useState<MobileInspectionStepId>(
+    MOBILE_INSPECTION_STEPS[0].id,
+  );
   const directSignatureSectionRef = useRef<HTMLDivElement | null>(null);
   const handledDirectSignatureRef = useRef(false);
   const scrolledDirectSignatureRef = useRef(false);
@@ -417,7 +238,7 @@ export function MobileInspectionSessionScreen({
   }, [deferredPhotoAlbumQuery, displaySession?.siteKey, isPhotoAlbumModalOpen]);
 
   if (!screen.isReady) {
-    return <StandaloneState title="보고서를 준비하는 중입니다." />;
+    return <MobileInspectionSessionStandaloneState title="보고서를 준비하는 중입니다." />;
   }
 
   if (!screen.isAuthenticated) {
@@ -432,12 +253,12 @@ export function MobileInspectionSessionScreen({
   }
 
   if (screen.isLoadingSession && !displaySession) {
-    return <StandaloneState title="보고서를 불러오는 중입니다." />;
+    return <MobileInspectionSessionStandaloneState title="보고서를 불러오는 중입니다." />;
   }
 
   if (!displaySession || !screen.displayProgress) {
     return (
-      <StandaloneState
+      <MobileInspectionSessionStandaloneState
         title="보고서를 찾을 수 없습니다."
         description="보고서가 아직 동기화되지 않았거나 접근 가능한 범위를 벗어났습니다."
         action={
@@ -739,15 +560,6 @@ export function MobileInspectionSessionScreen({
     } finally {
       toggleDoc3Analyzing(sceneId, false);
     }
-  };
-
-  const handleDoc3SceneUpload = async (sceneId: string, index: number, file: File) => {
-    const dataUrl = await screen.withFileData(file);
-    if (!dataUrl) {
-      return;
-    }
-
-    await applyDoc3ScenePhoto(sceneId, index, dataUrl, file);
   };
 
   const handleGenerateDoc5Draft = async () => {
@@ -1073,7 +885,7 @@ export function MobileInspectionSessionScreen({
       {hasLoadedSessionPayload && session ? (
         <div className={tabStyles.layoutWrapper}>
           <div className={tabStyles.tabContainer}>
-            {STEPS.map((step) => (
+            {MOBILE_INSPECTION_STEPS.map((step) => (
               <button
                 key={step.id}
                 type="button"
@@ -1565,6 +1377,26 @@ export function MobileInspectionSessionScreen({
                             position: 'relative',
                             cursor: 'pointer',
                           }}
+                          onClick={() =>
+                            openPhotoSourcePicker({
+                              fieldLabel: getMobileDoc3SlotLabel(index),
+                              onAlbumSelected: async (albumItem) => {
+                                const file = await assetUrlToFile(
+                                  albumItem.previewUrl,
+                                  albumItem.fileName || `${scene.id}.jpg`,
+                                );
+                                await applyDoc3ScenePhoto(scene.id, index, albumItem.previewUrl, file);
+                              },
+                              onFileSelected: async (file) => {
+                                const dataUrl = await screen.withFileData(file);
+                                if (!dataUrl) {
+                                  return;
+                                }
+
+                                await applyDoc3ScenePhoto(scene.id, index, dataUrl, file);
+                              },
+                            })
+                          }
                         >
                           {scene.photoUrl ? (
                             <img src={scene.photoUrl} alt="현장 사진" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
@@ -3033,308 +2865,12 @@ export function MobileInspectionSessionScreen({
 
             {/* 12단계: 활동 실적 */}
             {activeStep === 'step12' && (
-              <section style={{ padding: '16px' }}>
-                <div className={styles.sectionHeader}>
-                  <div className={styles.sectionTitleWrap}>
-                    <h2 className={styles.sectionTitle}>안전보건 활동 실적</h2>
-                  </div>
-                </div>
-                <div className={styles.editorBody}>
-                  {session.document12Activities[0] ? (
-                    <article
-                      style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px' }}
-                    >
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                        <div
-                          style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-                            gap: '12px',
-                          }}
-                          onClick={() =>
-                            openPhotoSourcePicker({
-                              fieldLabel: getMobileDoc3SlotLabel(index),
-                              onAlbumSelected: async (item) => {
-                                const file = await assetUrlToFile(
-                                  item.previewUrl,
-                                  item.fileName || `${scene.id}.jpg`,
-                                );
-                                await applyDoc3ScenePhoto(scene.id, index, item.previewUrl, file);
-                              },
-                              onFileSelected: async (file) => {
-                                await handleDoc3SceneUpload(scene.id, index, file);
-                              },
-                            })
-                          }
-                        >
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            <div style={{ fontSize: '14px', fontWeight: 600 }}>활동 1 사진</div>
-                            <div
-                              role="button"
-                              tabIndex={0}
-                              style={{
-                                display: 'block',
-                                width: '100%',
-                                height: '180px',
-                                backgroundColor: '#f8fafc',
-                                border: '1px solid rgba(215, 224, 235, 0.88)',
-                                borderRadius: '4px',
-                                overflow: 'hidden',
-                                position: 'relative',
-                                cursor: 'pointer',
-                              }}
-                              onClick={() =>
-                                openPhotoSourcePicker({
-                                  fieldLabel: '활동 1 사진',
-                                  onAlbumSelected: (albumItem) => {
-                                    screen.applyDocumentUpdate('doc12', 'manual', (current) => ({
-                                      ...current,
-                                      document12Activities: current.document12Activities.map((item, itemIndex) =>
-                                        itemIndex === 0 ? { ...item, photoUrl: albumItem.previewUrl } : item,
-                                      ),
-                                    }));
-                                  },
-                                  onFileSelected: async (file) => {
-                                    await screen.withFileData(file, (value) => {
-                                      screen.applyDocumentUpdate('doc12', 'manual', (current) => ({
-                                        ...current,
-                                        document12Activities: current.document12Activities.map((item, itemIndex) =>
-                                          itemIndex === 0 ? { ...item, photoUrl: value } : item,
-                                        ),
-                                      }));
-                                    });
-                                  },
-                                })
-                              }
-                              onKeyDown={(event) =>
-                                handlePhotoSlotKeyDown(event, () =>
-                                  openPhotoSourcePicker({
-                                    fieldLabel: '활동 1 사진',
-                                    onAlbumSelected: (albumItem) => {
-                                      screen.applyDocumentUpdate('doc12', 'manual', (current) => ({
-                                        ...current,
-                                        document12Activities: current.document12Activities.map((item, itemIndex) =>
-                                          itemIndex === 0 ? { ...item, photoUrl: albumItem.previewUrl } : item,
-                                        ),
-                                      }));
-                                    },
-                                    onFileSelected: async (file) => {
-                                      await screen.withFileData(file, (value) => {
-                                        screen.applyDocumentUpdate('doc12', 'manual', (current) => ({
-                                          ...current,
-                                          document12Activities: current.document12Activities.map((item, itemIndex) =>
-                                            itemIndex === 0 ? { ...item, photoUrl: value } : item,
-                                          ),
-                                        }));
-                                      });
-                                    },
-                                  }),
-                                )
-                              }
-                            >
-                              {session.document12Activities[0].photoUrl ? (
-                                <button
-                                  type="button"
-                                  className={workspaceStyles.doc5SummaryDraftBtn}
-                                  style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 1 }}
-                                  onClick={(event) => {
-                                    event.preventDefault();
-                                    event.stopPropagation();
-                                    screen.applyDocumentUpdate('doc12', 'manual', (current) => ({
-                                      ...current,
-                                      document12Activities: current.document12Activities.map((item, itemIndex) =>
-                                        itemIndex === 0 ? { ...item, photoUrl: '' } : item,
-                                      ),
-                                    }));
-                                  }}
-                                >
-                                  사진 삭제
-                                </button>
-                              ) : null}
-                              {session.document12Activities[0].photoUrl ? (
-                                <img
-                                  src={session.document12Activities[0].photoUrl}
-                                  alt="활동 1 사진"
-                                  style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                                />
-                              ) : (
-                                <div
-                                  style={{
-                                    position: 'absolute',
-                                    inset: 0,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    color: '#64748b',
-                                    fontSize: '13px',
-                                  }}
-                                >
-                                  사진 업로드
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            <div style={{ fontSize: '14px', fontWeight: 600 }}>활동 2 사진</div>
-                            <div
-                              role="button"
-                              tabIndex={0}
-                              style={{
-                                display: 'block',
-                                width: '100%',
-                                height: '180px',
-                                backgroundColor: '#f8fafc',
-                                border: '1px solid rgba(215, 224, 235, 0.88)',
-                                borderRadius: '4px',
-                                overflow: 'hidden',
-                                position: 'relative',
-                                cursor: 'pointer',
-                              }}
-                              onClick={() =>
-                                openPhotoSourcePicker({
-                                  fieldLabel: '활동 2 사진',
-                                  onAlbumSelected: (albumItem) => {
-                                    screen.applyDocumentUpdate('doc12', 'manual', (current) => ({
-                                      ...current,
-                                      document12Activities: current.document12Activities.map((item, itemIndex) =>
-                                        itemIndex === 0 ? { ...item, photoUrl2: albumItem.previewUrl } : item,
-                                      ),
-                                    }));
-                                  },
-                                  onFileSelected: async (file) => {
-                                    await screen.withFileData(file, (value) => {
-                                      screen.applyDocumentUpdate('doc12', 'manual', (current) => ({
-                                        ...current,
-                                        document12Activities: current.document12Activities.map((item, itemIndex) =>
-                                          itemIndex === 0 ? { ...item, photoUrl2: value } : item,
-                                        ),
-                                      }));
-                                    });
-                                  },
-                                })
-                              }
-                              onKeyDown={(event) =>
-                                handlePhotoSlotKeyDown(event, () =>
-                                  openPhotoSourcePicker({
-                                    fieldLabel: '활동 2 사진',
-                                    onAlbumSelected: (albumItem) => {
-                                      screen.applyDocumentUpdate('doc12', 'manual', (current) => ({
-                                        ...current,
-                                        document12Activities: current.document12Activities.map((item, itemIndex) =>
-                                          itemIndex === 0 ? { ...item, photoUrl2: albumItem.previewUrl } : item,
-                                        ),
-                                      }));
-                                    },
-                                    onFileSelected: async (file) => {
-                                      await screen.withFileData(file, (value) => {
-                                        screen.applyDocumentUpdate('doc12', 'manual', (current) => ({
-                                          ...current,
-                                          document12Activities: current.document12Activities.map((item, itemIndex) =>
-                                            itemIndex === 0 ? { ...item, photoUrl2: value } : item,
-                                          ),
-                                        }));
-                                      });
-                                    },
-                                  }),
-                                )
-                              }
-                            >
-                              {session.document12Activities[0].photoUrl2 ? (
-                                <button
-                                  type="button"
-                                  className={workspaceStyles.doc5SummaryDraftBtn}
-                                  style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 1 }}
-                                  onClick={(event) => {
-                                    event.preventDefault();
-                                    event.stopPropagation();
-                                    screen.applyDocumentUpdate('doc12', 'manual', (current) => ({
-                                      ...current,
-                                      document12Activities: current.document12Activities.map((item, itemIndex) =>
-                                        itemIndex === 0 ? { ...item, photoUrl2: '' } : item,
-                                      ),
-                                    }));
-                                  }}
-                                >
-                                  사진 삭제
-                                </button>
-                              ) : null}
-                              {session.document12Activities[0].photoUrl2 ? (
-                                <img
-                                  src={session.document12Activities[0].photoUrl2}
-                                  alt="활동 2 사진"
-                                  style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                                />
-                              ) : (
-                                <div
-                                  style={{
-                                    position: 'absolute',
-                                    inset: 0,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    color: '#64748b',
-                                    fontSize: '13px',
-                                  }}
-                                >
-                                  사진 업로드
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        <div
-                          style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-                            gap: '12px',
-                          }}
-                        >
-                          <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                            <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                              활동 1 내용
-                            </span>
-                            <input
-                              className="app-input"
-                              value={session.document12Activities[0].activityType}
-                              onChange={(e) => {
-                                const value = e.target.value;
-                                screen.applyDocumentUpdate('doc12', 'manual', (current) => ({
-                                  ...current,
-                                  document12Activities: current.document12Activities.map((item, itemIndex) =>
-                                    itemIndex === 0 ? { ...item, activityType: value } : item,
-                                  ),
-                                }));
-                              }}
-                              placeholder="예: 안전보건 캠페인"
-                            />
-                          </label>
-                          <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                            <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                              활동 2 내용
-                            </span>
-                            <input
-                              className="app-input"
-                              value={session.document12Activities[0].content}
-                              onChange={(e) => {
-                                const value = e.target.value;
-                                screen.applyDocumentUpdate('doc12', 'manual', (current) => ({
-                                  ...current,
-                                  document12Activities: current.document12Activities.map((item, itemIndex) =>
-                                    itemIndex === 0 ? { ...item, content: value } : item,
-                                  ),
-                                }));
-                              }}
-                              placeholder="활동 요약 및 비고"
-                            />
-                          </label>
-                        </div>
-                      </div>
-                    </article>
-                  ) : (
-                    <p className={styles.inlineNotice}>활동 실적 항목이 없습니다.</p>
-                  )}
-                </div>
-              </section>
+              <MobileInspectionSessionStep12
+                handlePhotoSlotKeyDown={handlePhotoSlotKeyDown}
+                openPhotoSourcePicker={openPhotoSourcePicker}
+                screen={screen}
+                session={session}
+              />
             )}
           </div>
         </div>
@@ -3342,420 +2878,41 @@ export function MobileInspectionSessionScreen({
         <p className={styles.inlineNotice} style={{ margin: '16px' }}>보고서 본문을 동기화하는 중입니다.</p>
       )}
 
-      <input
-        ref={photoPickerGalleryInputRef}
-        type="file"
-        accept="image/*,.heic,.heif"
-        hidden
-        onChange={(event) => {
-          void handlePhotoSourceInputChange(event.target.files, event.currentTarget);
-        }}
+      <MobileInspectionSessionModals
+        applyDoc2ProcessNotesDraft={applyDoc2ProcessNotesDraft}
+        closePhotoAlbumModal={closePhotoAlbumModal}
+        closePhotoSourceModal={closePhotoSourceModal}
+        doc2ProcessError={doc2ProcessError}
+        doc2ProcessNotice={doc2ProcessNotice}
+        doc2ProcessNoteDraft={doc2ProcessNoteDraft}
+        documentInfoOpen={documentInfoOpen}
+        handleDoc2ProcessFieldChange={handleDoc2ProcessFieldChange}
+        handleGenerateDoc2ProcessNotes={handleGenerateDoc2ProcessNotes}
+        handlePhotoAlbumSelect={handlePhotoAlbumSelect}
+        handlePhotoSourceInputChange={handlePhotoSourceInputChange}
+        hasLoadedSessionPayload={hasLoadedSessionPayload}
+        isDoc2ProcessModalOpen={isDoc2ProcessModalOpen}
+        isGeneratingDoc2ProcessNotes={isGeneratingDoc2ProcessNotes}
+        isPhotoAlbumModalOpen={isPhotoAlbumModalOpen}
+        isPhotoSourceModalOpen={isPhotoSourceModalOpen}
+        openPhotoAlbumPicker={openPhotoAlbumPicker}
+        openPhotoSourceCamera={openPhotoSourceCamera}
+        openPhotoSourceGallery={openPhotoSourceGallery}
+        photoAlbumError={photoAlbumError}
+        photoAlbumLoading={photoAlbumLoading}
+        photoAlbumQuery={photoAlbumQuery}
+        photoAlbumRows={photoAlbumRows}
+        photoAlbumSelectingId={photoAlbumSelectingId}
+        photoPickerCameraInputRef={photoPickerCameraInputRef}
+        photoPickerGalleryInputRef={photoPickerGalleryInputRef}
+        photoSourceTitle={photoSourceTitle}
+        resetPhotoSourceTarget={resetPhotoSourceTarget}
+        screen={screen}
+        session={session}
+        setDocumentInfoOpen={setDocumentInfoOpen}
+        setIsDoc2ProcessModalOpen={setIsDoc2ProcessModalOpen}
+        setPhotoAlbumQuery={setPhotoAlbumQuery}
       />
-      <input
-        ref={photoPickerCameraInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        hidden
-        onChange={(event) => {
-          void handlePhotoSourceInputChange(event.target.files, event.currentTarget);
-        }}
-      />
-
-      <AppModal
-        open={isPhotoSourceModalOpen}
-        title={photoSourceTitle}
-        onClose={() => {
-          closePhotoSourceModal();
-          resetPhotoSourceTarget();
-        }}
-        verticalAlign="center"
-        mobileActionsLayout="row"
-        actions={
-          <>
-            <button
-              type="button"
-              className="app-button app-button-primary"
-              onClick={openPhotoSourceCamera}
-            >
-              카메라
-            </button>
-            <button
-              type="button"
-              className="app-button app-button-secondary"
-              onClick={openPhotoAlbumPicker}
-            >
-              사진첩
-            </button>
-            <button
-              type="button"
-              className="app-button app-button-secondary"
-              onClick={openPhotoSourceGallery}
-            >
-              파일 선택
-            </button>
-          </>
-        }
-      >
-        <p className={styles.inlineNotice} style={{ margin: 0 }}>
-          사진을 가져올 방법을 선택하세요.
-        </p>
-      </AppModal>
-
-      <AppModal
-        open={isPhotoAlbumModalOpen}
-        title="사진첩에서 선택"
-        onClose={closePhotoAlbumModal}
-        size="large"
-        actions={
-          <button
-            type="button"
-            className="app-button app-button-secondary"
-            onClick={closePhotoAlbumModal}
-          >
-            닫기
-          </button>
-        }
-      >
-        <div style={{ display: 'grid', gap: '12px' }}>
-          <input
-            className="app-input"
-            value={photoAlbumQuery}
-            onChange={(event) => setPhotoAlbumQuery(event.target.value)}
-            placeholder="파일명, 현장명, 보고서명, 업로더 검색"
-          />
-          {photoAlbumError ? (
-            <p className={styles.errorNotice} style={{ margin: 0 }}>
-              {photoAlbumError}
-            </p>
-          ) : null}
-          {photoAlbumLoading ? (
-            <div
-              style={{
-                minHeight: '220px',
-                border: '1px dashed #cbd5e1',
-                borderRadius: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#64748b',
-                fontSize: '14px',
-              }}
-            >
-              사진첩을 불러오는 중입니다.
-            </div>
-          ) : photoAlbumRows.length === 0 ? (
-            <div
-              style={{
-                minHeight: '220px',
-                border: '1px dashed #cbd5e1',
-                borderRadius: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#64748b',
-                fontSize: '14px',
-                textAlign: 'center',
-                padding: '16px',
-              }}
-            >
-              선택할 사진이 없습니다.
-            </div>
-          ) : (
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-                gap: '10px',
-              }}
-            >
-              {photoAlbumRows.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  disabled={photoAlbumSelectingId === item.id}
-                  onClick={() => {
-                    void handlePhotoAlbumSelect(item);
-                  }}
-                  style={{
-                    display: 'grid',
-                    gap: '6px',
-                    padding: '6px',
-                    border: '1px solid #d7e0eb',
-                    borderRadius: '8px',
-                    backgroundColor: '#fff',
-                    textAlign: 'left',
-                    cursor: photoAlbumSelectingId === item.id ? 'wait' : 'pointer',
-                    opacity: photoAlbumSelectingId === item.id ? 0.68 : 1,
-                  }}
-                >
-                  {item.previewUrl ? (
-                    <img
-                      src={item.previewUrl}
-                      alt={item.fileName}
-                      style={{
-                        width: '100%',
-                        aspectRatio: '1 / 1',
-                        objectFit: 'cover',
-                        borderRadius: '6px',
-                        backgroundColor: '#e2e8f0',
-                      }}
-                    />
-                  ) : (
-                    <div
-                      style={{
-                        width: '100%',
-                        aspectRatio: '1 / 1',
-                        borderRadius: '6px',
-                        backgroundColor: '#f1f5f9',
-                        color: '#94a3b8',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '12px',
-                      }}
-                    >
-                      미리보기 없음
-                    </div>
-                  )}
-                  <div
-                    style={{
-                      fontSize: '11px',
-                      fontWeight: 700,
-                      color: '#0f172a',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                    title={item.fileName}
-                  >
-                    {item.fileName}
-                  </div>
-                  <div style={{ fontSize: '10px', color: '#64748b' }}>
-                    {formatMobilePhotoAlbumDate(item.capturedAt || item.createdAt)}
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </AppModal>
-
-      {hasLoadedSessionPayload && session ? (
-        <AppModal
-          open={documentInfoOpen}
-          title="문서정보 확인"
-          onClose={() => setDocumentInfoOpen(false)}
-          actions={
-            <button
-              type="button"
-              className="app-button app-button-secondary"
-              onClick={() => setDocumentInfoOpen(false)}
-            >
-              닫기
-            </button>
-          }
-        >
-          <div style={{ display: 'grid', gap: '12px' }}>
-            <label className={styles.mobileEditorFieldGroup}>
-              <span className={styles.mobileEditorFieldLabel}>현장명</span>
-              <input
-                className="app-input"
-                value={session.meta.siteName}
-                placeholder="현장명"
-                onChange={(event) => screen.changeMetaField('siteName', event.target.value)}
-              />
-            </label>
-            <label className={styles.mobileEditorFieldGroup}>
-              <span className={styles.mobileEditorFieldLabel}>작성일</span>
-              <input
-                type="date"
-                className="app-input"
-                value={session.meta.reportDate}
-                onChange={(event) => screen.changeMetaField('reportDate', event.target.value)}
-              />
-            </label>
-            <label className={styles.mobileEditorFieldGroup}>
-              <span className={styles.mobileEditorFieldLabel}>담당</span>
-              <input
-                className="app-input"
-                value={session.meta.drafter}
-                placeholder="담당"
-                onChange={(event) => screen.changeMetaField('drafter', event.target.value)}
-              />
-            </label>
-            <label className={styles.mobileEditorFieldGroup}>
-              <span className={styles.mobileEditorFieldLabel}>검토</span>
-              <input
-                className="app-input"
-                value={session.meta.reviewer}
-                placeholder="검토"
-                onChange={(event) => screen.changeMetaField('reviewer', event.target.value)}
-              />
-            </label>
-            <label className={styles.mobileEditorFieldGroup}>
-              <span className={styles.mobileEditorFieldLabel}>확인</span>
-              <input
-                className="app-input"
-                value={session.meta.approver}
-                placeholder="확인"
-                onChange={(event) => screen.changeMetaField('approver', event.target.value)}
-              />
-            </label>
-          </div>
-        </AppModal>
-      ) : null}
-
-      {hasLoadedSessionPayload && session ? (
-        <AppModal
-          open={isDoc2ProcessModalOpen}
-          title="진행공정 및 특이사항 자동생성"
-          onClose={() => setIsDoc2ProcessModalOpen(false)}
-          size="large"
-          verticalAlign="center"
-          actions={
-            <>
-              <button
-                type="button"
-                className="app-button app-button-secondary"
-                onClick={() => setIsDoc2ProcessModalOpen(false)}
-              >
-                닫기
-              </button>
-              <button
-                type="button"
-                className="app-button app-button-secondary"
-                onClick={() => void handleGenerateDoc2ProcessNotes()}
-                disabled={isGeneratingDoc2ProcessNotes}
-              >
-                {isGeneratingDoc2ProcessNotes ? 'AI 생성 중' : 'AI 생성'}
-              </button>
-              <button
-                type="button"
-                className="app-button app-button-primary"
-                onClick={applyDoc2ProcessNotesDraft}
-                disabled={isGeneratingDoc2ProcessNotes}
-              >
-                본문에 반영
-              </button>
-            </>
-          }
-        >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <p className={styles.inlineNotice} style={{ margin: 0 }}>
-              공사개요에 필요한 5개 항목을 입력하면, 개요 2줄은 즉시 정리되고 주요 위험 요인
-              2줄은 AI로 생성합니다.
-            </p>
-            {doc2ProcessError ? (
-              <p className={styles.errorNotice} style={{ margin: 0 }}>
-                {doc2ProcessError}
-              </p>
-            ) : null}
-            {doc2ProcessNotice ? (
-              <p className={styles.inlineNotice} style={{ margin: 0 }}>
-                {doc2ProcessNotice}
-              </p>
-            ) : null}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                  작업현재 공정
-                </span>
-                <input
-                  type="text"
-                  className="app-input"
-                  value={session.document2Overview.processWorkContent}
-                  onChange={(event) =>
-                    handleDoc2ProcessFieldChange('processWorkContent', event.target.value)
-                  }
-                  placeholder="예: 철거작업, 금속작업"
-                />
-              </label>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                  작업 인원
-                </span>
-                <input
-                  type="text"
-                  className="app-input"
-                  value={session.document2Overview.processWorkerCount}
-                  onChange={(event) =>
-                    handleDoc2ProcessFieldChange('processWorkerCount', event.target.value)
-                  }
-                  placeholder="예: 6"
-                />
-              </label>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                  건설기계 장비
-                </span>
-                <input
-                  type="text"
-                  className="app-input"
-                  value={session.document2Overview.processEquipment}
-                  onChange={(event) =>
-                    handleDoc2ProcessFieldChange('processEquipment', event.target.value)
-                  }
-                  placeholder="예: 트럭, 굴착기"
-                />
-              </label>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                  유해위험기구
-                </span>
-                <input
-                  type="text"
-                  className="app-input"
-                  value={session.document2Overview.processTools}
-                  onChange={(event) =>
-                    handleDoc2ProcessFieldChange('processTools', event.target.value)
-                  }
-                  placeholder="예: 핸드브레이커, 용접기"
-                />
-              </label>
-            </div>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                유해위험물질
-              </span>
-              <input
-                type="text"
-                className="app-input"
-                value={session.document2Overview.processHazardousMaterials}
-                onChange={(event) =>
-                  handleDoc2ProcessFieldChange('processHazardousMaterials', event.target.value)
-                }
-                placeholder="예: 페인트, LPG, 용접봉"
-              />
-            </label>
-            <div
-              style={{
-                border: '1px solid #e2e8f0',
-                borderRadius: '8px',
-                backgroundColor: '#f8fafc',
-                padding: '12px',
-              }}
-            >
-              <strong style={{ display: 'block', marginBottom: '8px', fontSize: '13px', color: '#334155' }}>
-                4줄 미리보기
-              </strong>
-              <pre
-                style={{
-                  margin: 0,
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word',
-                  fontFamily: 'inherit',
-                  fontSize: '13px',
-                  lineHeight: 1.6,
-                  color: '#475569',
-                }}
-              >
-                {doc2ProcessNoteDraft}
-              </pre>
-            </div>
-          </div>
-        </AppModal>
-      ) : null}
 
       {errors.length > 0 && (
         <div style={{ padding: '0 16px 16px' }}>

@@ -1,0 +1,604 @@
+import assert from 'node:assert/strict';
+import { chromium, type Browser, type BrowserContext, type Page, type Route } from 'playwright';
+import type { ClientSmokePlaywrightConfig } from '../../../playwright.config';
+import { getQuarterTargetsForConstructionPeriod } from '../../../lib/erpReports/shared';
+import { getFeatureContract, type FeatureContractId } from '../featureContracts';
+import {
+  clone,
+  createInitialState,
+  createRouteHelpers,
+  extractMockedSafetyPath,
+  getTokenForUser,
+  normalizeSafetyPath,
+  NOW,
+  toReportListItem,
+} from '../../../tooling/internal/smokeClient_impl';
+
+type JsonRecord = Record<string, unknown>;
+
+interface ErpSmokeFixtureContext {
+  browser: Browser;
+  context: BrowserContext;
+  page: Page;
+  helpers: ReturnType<typeof createRouteHelpers>;
+  pageErrors: string[];
+  consoleErrors: string[];
+  delayedReportListRequests: Set<string>;
+}
+
+export interface ErpSmokeHarness extends ErpSmokeFixtureContext {
+  baseURL: string;
+  config: ClientSmokePlaywrightConfig;
+  contract: ReturnType<typeof getFeatureContract>;
+  requestCounts: Map<string, number>;
+  state: ReturnType<typeof createInitialState>;
+  assertContractApisObserved: () => void;
+  assertNoClientErrors: () => void;
+  close: () => Promise<void>;
+  loginAs: (email: string, password?: string) => Promise<void>;
+  logoutToLoginPanel: () => Promise<void>;
+  waitForCondition: (check: () => Promise<boolean>, failureMessage: string) => Promise<void>;
+  waitForLoginPanel: () => Promise<void>;
+  waitForRequestCount: (requestKey: string, minimumCount: number) => Promise<void>;
+}
+
+function isExpectedConsoleError(text: string) {
+  return (
+    text.includes('status of 401') ||
+    text.includes('Failed to load resource') ||
+    text.includes('Encountered two children with the same key')
+  );
+}
+
+async function fulfillJson(route: Route, payload: unknown, status = 200) {
+  await route.fulfill({
+    status,
+    contentType: 'application/json',
+    body: JSON.stringify(payload),
+  });
+}
+
+async function fulfillBinary(
+  route: Route,
+  body: Buffer,
+  contentType: string,
+  filename: string,
+) {
+  await route.fulfill({
+    status: 200,
+    contentType,
+    headers: {
+      'content-disposition': `attachment; filename="${filename}"`,
+    },
+    body,
+  });
+}
+
+async function installErpRoutes({
+  context,
+  delayedReportListRequests,
+  helpers,
+  requestCounts,
+  state,
+}: Pick<ErpSmokeHarness, 'context' | 'delayedReportListRequests' | 'helpers' | 'requestCounts' | 'state'>) {
+  const handleErpSafetyRoute = async (route: Route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    const pathname = extractMockedSafetyPath(url.pathname);
+    const normalizedPath = normalizeSafetyPath(pathname);
+    const key = `${request.method()} ${normalizedPath}`;
+    requestCounts.set(key, (requestCounts.get(key) || 0) + 1);
+
+    const requestUser = () => helpers.getUserForToken(request.headers().authorization || null);
+
+    if (pathname === '/auth/token' && request.method() === 'POST') {
+      const username = new URLSearchParams(request.postData() || '').get('username')?.trim().toLowerCase();
+      const matchedUser =
+        state.users.find((user) => String(user.email).toLowerCase() === username) ?? state.users[0];
+      await fulfillJson(route, {
+        access_token: getTokenForUser(String(matchedUser.id)),
+        token_type: 'bearer',
+      });
+      return;
+    }
+
+    if (pathname === '/auth/me' && request.method() === 'GET') {
+      await fulfillJson(route, clone(requestUser()));
+      return;
+    }
+
+    if (pathname === '/users' && request.method() === 'GET') {
+      await fulfillJson(route, clone(state.users));
+      return;
+    }
+
+    if (pathname === '/headquarters' && request.method() === 'GET') {
+      await fulfillJson(route, clone(state.headquarters));
+      return;
+    }
+
+    if (pathname === '/sites' && request.method() === 'GET') {
+      await fulfillJson(route, clone(helpers.hydratedSites()));
+      return;
+    }
+
+    if (pathname === '/assignments' && request.method() === 'GET') {
+      await fulfillJson(route, clone(helpers.hydratedAssignments()));
+      return;
+    }
+
+    if (pathname === '/assignments/me/sites' && request.method() === 'GET') {
+      await fulfillJson(route, clone(helpers.assignedSitesForUser(String(requestUser().id))));
+      return;
+    }
+
+    if (pathname === '/content-items' && request.method() === 'GET') {
+      await fulfillJson(route, clone(state.contentItems));
+      return;
+    }
+
+    if (pathname === '/site-workers' && request.method() === 'GET') {
+      const siteId = url.searchParams.get('site_id');
+      const blockedOnly = url.searchParams.get('blocked_only') === 'true';
+      await fulfillJson(route, clone(helpers.listSiteWorkers(siteId, blockedOnly)));
+      return;
+    }
+
+    if (normalizedPath === '/site-workers/import' && request.method() === 'POST') {
+      const created = helpers.createSiteWorkerRecord('site-1');
+      await fulfillJson(route, {
+        processed_count: 2,
+        created_count: 1,
+        failed_count: 1,
+        created_workers: [created],
+        errors: [
+          {
+            row_number: 3,
+            name: '오류 근로자',
+            message: '이미 등록된 출입자와 중복되어 건너뛰었습니다.',
+            raw: {
+              name: '오류 근로자',
+              phone: '010-9999-0000',
+              company_name: '중복건설',
+              trade: '도장',
+              employment_type: 'daily',
+              special_access: '신규 교육 확인',
+              ppe_issues: '안전모 재지급',
+            },
+          },
+        ],
+      });
+      return;
+    }
+
+    if (normalizedPath === '/content-items/assets/upload' && request.method() === 'POST') {
+      await fulfillJson(route, {
+        path: '/uploads/content-items/mock-photo.png',
+        file_name: 'mock-photo.png',
+        content_type: 'image/png',
+        size: 1024,
+      });
+      return;
+    }
+
+    if (normalizedPath === '/sites/:id' && request.method() === 'GET') {
+      const siteId = pathname.split('/').pop() || '';
+      const site = (helpers.hydratedSites() as Array<JsonRecord & { id?: string }>).find(
+        (item) => String(item.id) === siteId,
+      );
+      assert(site, `Missing site fixture: ${siteId}`);
+      await fulfillJson(route, clone(site));
+      return;
+    }
+
+    if (normalizedPath === '/sites/:id/dashboard' && request.method() === 'GET') {
+      const siteId = pathname.split('/')[2];
+      await fulfillJson(route, clone(helpers.buildSiteDashboard(siteId)));
+      return;
+    }
+
+    if (normalizedPath === '/reports/site/:id/full' && request.method() === 'GET') {
+      const siteId = pathname.split('/')[3];
+      await fulfillJson(route, clone(helpers.visibleReportsForSite(siteId)));
+      return;
+    }
+
+    if (normalizedPath === '/reports/site/:id/operational-index' && request.method() === 'GET') {
+      const siteId = pathname.split('/')[3];
+      const visibleReports = helpers.visibleReportsForSite(siteId);
+      const quarterlyReports = visibleReports
+        .filter((report) => {
+          const meta =
+            report.meta && typeof report.meta === 'object'
+              ? (report.meta as JsonRecord)
+              : {};
+          return String(meta.reportKind || '') === 'quarterly_summary';
+        })
+        .map((report) => {
+          const meta =
+            report.meta && typeof report.meta === 'object'
+              ? (report.meta as JsonRecord)
+              : {};
+          return {
+          report_key: String(report.report_key),
+          report_title: String(report.report_title || ''),
+          site_id: String(report.site_id),
+          status: String(report.status),
+          period_start_date: String(meta.periodStartDate || ''),
+          period_end_date: String(meta.periodEndDate || ''),
+          quarter_key: String(meta.quarterKey || ''),
+          year: Number(meta.year || 0),
+          quarter: Number(meta.quarter || 0),
+          selected_report_count: Number(report.selected_report_count || 0),
+          last_calculated_at: String(report.last_calculated_at || report.updated_at || NOW),
+          created_at: String(report.created_at || NOW),
+          updated_at: String(report.updated_at || NOW),
+          };
+        });
+      const badWorkplaceReports = visibleReports
+        .filter((report) => {
+          const meta =
+            report.meta && typeof report.meta === 'object'
+              ? (report.meta as JsonRecord)
+              : {};
+          return String(meta.reportKind || '') === 'bad_workplace';
+        })
+        .map((report) => {
+          const meta =
+            report.meta && typeof report.meta === 'object'
+              ? (report.meta as JsonRecord)
+              : {};
+          return {
+          report_key: String(report.report_key),
+          report_title: String(report.report_title || ''),
+          site_id: String(report.site_id),
+          status: String(report.status),
+          report_month: String(meta.reportMonth || ''),
+          reporter_user_id: String(meta.reporterUserId || ''),
+          reporter_name: String(meta.reporterName || ''),
+          source_finding_count: Number(report.source_finding_count || 0),
+          violation_count: Number(report.violation_count || 0),
+          created_at: String(report.created_at || NOW),
+          updated_at: String(report.updated_at || NOW),
+          };
+        });
+      await fulfillJson(route, {
+        quarterly_reports: quarterlyReports,
+        bad_workplace_reports: badWorkplaceReports,
+      });
+      return;
+    }
+
+    if (normalizedPath === '/reports/site/:id/quarterly-summary-seed' && request.method() === 'GET') {
+      await fulfillJson(
+        route,
+        { detail: 'quarterly summary seed endpoint is intentionally unavailable in smoke.' },
+        404,
+      );
+      return;
+    }
+
+    if (pathname === '/reports' && request.method() === 'GET') {
+      const siteId = url.searchParams.get('site_id');
+      const requestUserId = String(requestUser().id);
+      const delayKey = `${requestUserId}:${siteId || 'all'}`;
+      const shouldDelay =
+        requestUserId === 'field-1' && siteId === 'site-1' && !delayedReportListRequests.has(delayKey);
+
+      if (shouldDelay) {
+        delayedReportListRequests.add(delayKey);
+        await new Promise((resolve) => setTimeout(resolve, 700));
+      }
+
+      const reports = siteId
+        ? helpers.visibleReportsForSite(siteId)
+        : state.reports.filter(
+            (report) =>
+              String(report.status) !== 'archived' &&
+              String(report.lifecycle_status || '') !== 'deleted',
+          );
+      await fulfillJson(route, clone(reports.map((report) => toReportListItem(report))));
+      return;
+    }
+
+    if (normalizedPath === '/reports/site/:id/draft-context' && request.method() === 'GET') {
+      const siteId = pathname.split('/')[3];
+      const documentKind = url.searchParams.get('document_kind') || 'tbm';
+      const excludeReportId = url.searchParams.get('exclude_report_id');
+      await fulfillJson(route, clone(helpers.buildDraftContext(siteId, documentKind, excludeReportId)));
+      return;
+    }
+
+    if (normalizedPath === '/reports/by-key/:id' && request.method() === 'GET') {
+      const reportKey = decodeURIComponent(pathname.split('/').pop() || '');
+      const report = state.reports.find(
+        (item) =>
+          String(item.report_key) === reportKey &&
+          String(item.status) !== 'archived' &&
+          String(item.lifecycle_status || '') !== 'deleted',
+      );
+      if (!report) {
+        await fulfillJson(route, { detail: 'report not found' }, 404);
+        return;
+      }
+      await fulfillJson(route, clone(report));
+      return;
+    }
+
+    if (normalizedPath === '/reports/:id' && request.method() === 'GET') {
+      const reportId = decodeURIComponent(pathname.split('/').pop() || '');
+      const report = helpers.getReportById(reportId);
+      assert(report, `Missing ERP report fixture: ${reportId}`);
+      await fulfillJson(route, clone(report));
+      return;
+    }
+
+    if (normalizedPath === '/site-workers/:id/mobile-sessions' && request.method() === 'GET') {
+      const workerId = pathname.split('/')[2] || '';
+      await fulfillJson(route, clone(helpers.listWorkerMobileSessions(workerId)));
+      return;
+    }
+
+    if (normalizedPath === '/site-workers/:id/mobile-session' && request.method() === 'POST') {
+      const workerId = pathname.split('/')[2] || '';
+      await fulfillJson(route, clone(helpers.createWorkerMobileSessionRecord(workerId)));
+      return;
+    }
+
+    if (normalizedPath === '/worker-mobile-sessions/:id/revoke' && request.method() === 'POST') {
+      const sessionId = pathname.split('/')[2] || '';
+      await fulfillJson(route, clone(helpers.revokeWorkerMobileSession(sessionId)));
+      return;
+    }
+
+    if (normalizedPath === '/site-workers/:id' && request.method() === 'PATCH') {
+      const workerId = pathname.split('/')[2] || '';
+      const body = (request.postDataJSON?.() as JsonRecord) || {};
+      const worker = state.siteWorkers.find((item) => String(item.id) === workerId) ?? null;
+      assert(worker, `Missing site worker fixture: ${workerId}`);
+      Object.assign(worker, body, { updated_at: NOW });
+      await fulfillJson(route, clone(worker));
+      return;
+    }
+
+    if (normalizedPath === '/site-workers/:id/block' && request.method() === 'POST') {
+      const workerId = pathname.split('/')[2] || '';
+      const body = (request.postDataJSON?.() as JsonRecord) || {};
+      const worker = state.siteWorkers.find((item) => String(item.id) === workerId) ?? null;
+      assert(worker, `Missing site worker fixture for block toggle: ${workerId}`);
+      worker.is_blocked = Boolean(body.is_blocked);
+      worker.updated_at = NOW;
+      await fulfillJson(route, clone(worker));
+      return;
+    }
+
+    if (pathname === '/reports/upsert' && request.method() === 'POST') {
+      const body = (request.postDataJSON?.() as JsonRecord) || {};
+      await fulfillJson(route, clone(helpers.upsertReport(body)));
+      return;
+    }
+
+    if (normalizedPath === '/reports/:id/status' && request.method() === 'POST') {
+      const reportId = decodeURIComponent(pathname.split('/')[2] || '');
+      const body = (request.postDataJSON?.() as JsonRecord) || {};
+      await fulfillJson(route, clone(helpers.updateReportStatus(reportId, body)));
+      return;
+    }
+
+    if (normalizedPath === '/mobile/session/:token' && request.method() === 'GET') {
+      const tokenValue = pathname.split('/').pop() || '';
+      const session = state.workerMobileSessions.find((item) => String(item.token) === tokenValue);
+      assert(session, `Missing mobile session fixture: ${tokenValue}`);
+      const worker =
+        state.siteWorkers.find((item) => String(item.id) === String(session.worker_id)) ?? null;
+      assert(worker, `Missing mobile worker fixture: ${tokenValue}`);
+      if (session.revoked_at) {
+        await fulfillJson(
+          route,
+          {
+            detail:
+              '모바일 링크가 관리자에 의해 만료되었습니다. 현장 관리직에게 다시 발급을 요청해 주세요.',
+          },
+          401,
+        );
+        return;
+      }
+      if (!session.expires_at || String(session.expires_at) <= NOW) {
+        await fulfillJson(
+          route,
+          {
+            detail:
+              '모바일 링크 사용 시간이 종료되었습니다. 현장 관리직에게 다시 발급을 요청해 주세요.',
+          },
+          401,
+        );
+        return;
+      }
+      if (worker.is_blocked) {
+        await fulfillJson(
+          route,
+          {
+            detail:
+              '차단된 출입자는 모바일 링크에 접근할 수 없습니다. 현장 관리직에게 확인해 주세요.',
+          },
+          403,
+        );
+        return;
+      }
+      await fulfillJson(route, clone(helpers.buildMobileSessionDetail(tokenValue)));
+      return;
+    }
+
+    throw new Error(`Unhandled ERP smoke request: ${request.method()} ${pathname}`);
+  };
+
+  const handleQuarterlyDocumentRoute = async (route: Route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    const key = `${request.method()} ${url.pathname.replace(/^.*?(\/api\/documents\/quarterly\/)/, '/api/documents/quarterly/')}`;
+    requestCounts.set(key, (requestCounts.get(key) || 0) + 1);
+
+    if (url.pathname.endsWith('/pdf')) {
+      await fulfillBinary(
+        route,
+        Buffer.from('%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF'),
+        'application/pdf',
+        'quarterly-report.pdf',
+      );
+      return;
+    }
+
+    await fulfillBinary(
+      route,
+      Buffer.from('PK\x03\x04mock-hwpx', 'binary'),
+      'application/octet-stream',
+      'quarterly-report.hwpx',
+    );
+  };
+
+  await context.route('**/api/safety/**', handleErpSafetyRoute);
+  await context.route('**/api/v1/**', handleErpSafetyRoute);
+  await context.route('**/api/documents/quarterly/**', handleQuarterlyDocumentRoute);
+}
+
+export async function createErpSmokeHarness(
+  featureId: FeatureContractId,
+  config: ClientSmokePlaywrightConfig,
+): Promise<ErpSmokeHarness> {
+  const state = createInitialState();
+  const helpers = createRouteHelpers(state);
+  const requestCounts = new Map<string, number>();
+  const delayedReportListRequests = new Set<string>();
+  const browser = await chromium.launch({
+    headless: config.headless,
+    slowMo: config.slowMoMs,
+  });
+  const context = await browser.newContext({ viewport: config.viewport });
+  const page = await context.newPage();
+  page.setDefaultTimeout(config.navigationTimeoutMs);
+
+  const pageErrors: string[] = [];
+  const consoleErrors: string[] = [];
+
+  page.on('pageerror', (error) => {
+    pageErrors.push(error.message);
+  });
+  page.on('console', (message) => {
+    if (message.type() === 'error' && !isExpectedConsoleError(message.text())) {
+      consoleErrors.push(message.text());
+    }
+  });
+
+  const harness: ErpSmokeHarness = {
+    baseURL: config.baseURL,
+    browser,
+    config,
+    consoleErrors,
+    context,
+    contract: getFeatureContract(featureId),
+    delayedReportListRequests,
+    helpers,
+    page,
+    pageErrors,
+    requestCounts,
+    state,
+    assertContractApisObserved() {
+      for (const requestKey of harness.contract.apis) {
+        assert.ok(
+          (requestCounts.get(requestKey) || 0) > 0,
+          `Expected contract API to be observed: ${requestKey}`,
+        );
+      }
+    },
+    assertNoClientErrors() {
+      assert.equal(pageErrors.length, 0, `Browser page errors: ${pageErrors.join(' | ')}`);
+      assert.equal(consoleErrors.length, 0, `Browser console errors: ${consoleErrors.join(' | ')}`);
+    },
+    async close() {
+      await browser.close();
+    },
+    async loginAs(email: string, password = 'smoke-password') {
+      await harness.waitForLoginPanel();
+      await page.evaluate(
+        ({ nextEmail, nextPassword }) => {
+          const emailInput = document.querySelector('input[type="email"]');
+          const passwordInput = document.querySelector('input[type="password"]');
+          if (!(emailInput instanceof HTMLInputElement) || !(passwordInput instanceof HTMLInputElement)) {
+            throw new Error('로그인 입력 필드를 찾지 못했습니다.');
+          }
+
+          const valueSetter = Object.getOwnPropertyDescriptor(
+            HTMLInputElement.prototype,
+            'value',
+          )?.set;
+          if (!valueSetter) {
+            throw new Error('로그인 입력 값 setter를 찾지 못했습니다.');
+          }
+
+          valueSetter.call(emailInput, nextEmail);
+          emailInput.dispatchEvent(new Event('input', { bubbles: true }));
+          emailInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+          valueSetter.call(passwordInput, nextPassword);
+          passwordInput.dispatchEvent(new Event('input', { bubbles: true }));
+          passwordInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+          const form = emailInput.form ?? passwordInput.form ?? document.querySelector('form');
+          if (!(form instanceof HTMLFormElement)) {
+            throw new Error('로그인 form을 찾지 못했습니다.');
+          }
+
+          form.requestSubmit();
+        },
+        { nextEmail: email, nextPassword: password },
+      );
+    },
+    async logoutToLoginPanel() {
+      await context.clearCookies();
+      await page.goto(config.baseURL, { waitUntil: 'load' });
+      await page.evaluate(() => {
+        localStorage.clear();
+        sessionStorage.clear();
+      });
+      await page.reload({ waitUntil: 'load' });
+      await harness.waitForLoginPanel();
+    },
+    async waitForCondition(check: () => Promise<boolean>, failureMessage: string) {
+      const deadline = Date.now() + config.testTimeoutMs;
+      while (Date.now() < deadline) {
+        if (await check()) {
+          return;
+        }
+        await page.waitForTimeout(100);
+      }
+
+      assert.fail(failureMessage);
+    },
+    async waitForLoginPanel() {
+      await page.locator('input[type="email"]').waitFor({ state: 'visible' });
+      await page.locator('input[type="password"]').waitFor({ state: 'visible' });
+      await page.locator('button[type="submit"]').waitFor({ state: 'visible' });
+    },
+    async waitForRequestCount(requestKey: string, minimumCount: number) {
+      const deadline = Date.now() + config.testTimeoutMs;
+      while (Date.now() < deadline) {
+        if ((requestCounts.get(requestKey) || 0) >= minimumCount) {
+          return;
+        }
+        await page.waitForTimeout(100);
+      }
+
+      assert.fail(`Expected at least ${minimumCount} request(s) for ${requestKey}.`);
+    },
+  };
+
+  await installErpRoutes(harness);
+  return harness;
+}
+
+export function getQuarterlySmokeQuarterKey() {
+  const quarterKey =
+    getQuarterTargetsForConstructionPeriod('2026-01-01 ~ 2026-06-30')[0]?.quarterKey ?? null;
+  assert.ok(quarterKey, '현장 분기 키를 계산하지 못했습니다.');
+  return quarterKey;
+}
