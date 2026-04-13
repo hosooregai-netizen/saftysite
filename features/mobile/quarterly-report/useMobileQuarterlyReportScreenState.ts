@@ -1,22 +1,11 @@
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { buildMobileSiteQuarterlyHref } from '@/features/home/lib/siteEntry';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { useSiteOperationalReportMutations } from '@/hooks/useSiteOperationalReportMutations';
-import {
-  fetchQuarterlyHwpxDocumentByReportKey,
-  fetchQuarterlyPdfDocumentByReportKeyWithFallback,
-  saveBlobAsFile,
-} from '@/lib/api';
 import { normalizeQuarterlyReportPeriod } from '@/lib/erpReports/shared';
-import { fetchSafetyContentItems, readSafetyAuthToken } from '@/lib/safetyApi';
-import {
-  pickCampaignTemplateContentItems,
-  readSafetyContentItemsSessionCache,
-  resolveSafetyContentItemsCacheScope,
-  writeSafetyContentItemsSessionCache,
-} from '@/lib/safetyApi/contentItemsCache';
-import { applyQuarterlySummarySeed } from '@/lib/erpReports/quarterly';
+import { readSafetyAuthToken } from '@/lib/safetyApi';
+import { resolveSafetyContentItemsCacheScope } from '@/lib/safetyApi/contentItemsCache';
 import type { QuarterlySummaryReport } from '@/types/erpReports';
 import {
   applyOpsAsset,
@@ -27,8 +16,11 @@ import {
   getMessage,
   getQuarterSelectionTarget,
 } from './mobileQuarterlyReportHelpers';
-import { fetchMobileQuarterlySeed, loadMobileQuarterlyDraft } from './mobileQuarterlyReportData';
-import type { MobileQuarterlyOpsAsset, MobileQuarterlySourceReport, MobileQuarterlyStepId } from './types';
+import { useMobileQuarterlyDraftLoader } from './useMobileQuarterlyDraftLoader';
+import { useMobileQuarterlyDocumentActions } from './useMobileQuarterlyDocumentActions';
+import { useMobileQuarterlyOpsAssets } from './useMobileQuarterlyOpsAssets';
+import { useMobileQuarterlySourceSync } from './useMobileQuarterlySourceSync';
+import type { MobileQuarterlyStepId } from './types';
 
 interface UseMobileQuarterlyReportScreenStateParams {
   quarterKey: string;
@@ -43,25 +35,9 @@ export function useMobileQuarterlyReportScreenState({
   const decodedSiteKey = decodeURIComponent(siteKey);
   const decodedQuarterKey = decodeURIComponent(quarterKey);
   const [activeStep, setActiveStep] = useState<MobileQuarterlyStepId>('overview');
-  const [draft, setDraft] = useState<QuarterlySummaryReport | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [sourceError, setSourceError] = useState<string | null>(null);
-  const [sourceNotice, setSourceNotice] = useState<string | null>(null);
-  const [saveNotice, setSaveNotice] = useState<string | null>(null);
-  const [documentNotice, setDocumentNotice] = useState<string | null>(null);
   const [documentInfoOpen, setDocumentInfoOpen] = useState(false);
-  const [selectedSourceKeys, setSelectedSourceKeys] = useState<string[]>([]);
-  const [sourceReports, setSourceReports] = useState<MobileQuarterlySourceReport[]>([]);
-  const [opsAssets, setOpsAssets] = useState<MobileQuarterlyOpsAsset[]>([]);
-  const [isOpsAssetsLoading, setIsOpsAssetsLoading] = useState(false);
-  const [isOpsAssetsRefreshing, setIsOpsAssetsRefreshing] = useState(false);
+  const [documentNotice, setDocumentNotice] = useState<string | null>(null);
   const [sourceModalOpen, setSourceModalOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSourceLoading, setIsSourceLoading] = useState(false);
-  const [isGeneratingHwpx, setIsGeneratingHwpx] = useState(false);
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
-  const [isDraftRoute, setIsDraftRoute] = useState(false);
-  const sourceSyncRequestRef = useRef(0);
   const {
     authError,
     currentUser,
@@ -77,6 +53,7 @@ export function useMobileQuarterlyReportScreenState({
     () => sites.find((site) => site.id === decodedSiteKey) ?? null,
     [decodedSiteKey, sites],
   );
+  const token = isAuthenticated && isReady ? readSafetyAuthToken() : null;
   const contentCacheScope = useMemo(
     () => resolveSafetyContentItemsCacheScope(currentUser?.id),
     [currentUser?.id],
@@ -84,176 +61,64 @@ export function useMobileQuarterlyReportScreenState({
   const { error: mutationError, isSaving, saveQuarterlyReport } =
     useSiteOperationalReportMutations(currentSite);
 
-  useEffect(() => {
-    if (!currentSite || !isAuthenticated || !isReady) return;
-    void ensureSiteReportsLoaded(currentSite.id).catch(() => undefined);
-  }, [currentSite, ensureSiteReportsLoaded, isAuthenticated, isReady]);
-
-  useEffect(() => {
-    if (!currentSite || !isAuthenticated || !isReady) return;
-    let cancelled = false;
-
-    void (async () => {
-      setIsLoading(true);
-      setLoadError(null);
-      const token = readSafetyAuthToken();
-      if (!token) {
-        setLoadError('로그인이 만료되었습니다. 다시 로그인해 주세요.');
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        await ensureSiteReportsLoaded(currentSite.id);
-        const nextState = await loadMobileQuarterlyDraft({
-          currentSite,
-          currentUserName: currentUser?.name,
-          decodedQuarterKey,
-          siteSessions: getSessionsBySiteId(currentSite.id),
-          token,
-        });
-
-        if (cancelled) return;
-        setDraft(nextState.draft);
-        setSelectedSourceKeys(nextState.draft.generatedFromSessionIds);
-        setSourceReports(nextState.sourceReports);
-        setIsDraftRoute(nextState.createdFromQuarter);
-        setSaveNotice(nextState.createdFromQuarter ? '새 초안을 만들었습니다.' : null);
-      } catch (error) {
-        if (!cancelled) {
-          setLoadError(getMessage(error, '분기 보고서를 불러오지 못했습니다.'));
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
+  const {
+    draft,
+    isDraftRoute,
+    isLoading,
+    loadError,
+    saveNotice,
+    selectedSourceKeys,
+    setDraft,
+    setIsDraftRoute,
+    setLoadError,
+    setSaveNotice,
+    setSelectedSourceKeys,
+    setSourceReports,
+    sourceReports,
+  } = useMobileQuarterlyDraftLoader({
     currentSite,
-    currentUser?.name,
+    currentUserName: currentUser?.name,
     decodedQuarterKey,
     ensureSiteReportsLoaded,
     getSessionsBySiteId,
     isAuthenticated,
     isReady,
-  ]);
+    token,
+  });
 
-  useEffect(() => {
-    if (!isAuthenticated || !isReady) return;
-    const token = readSafetyAuthToken();
-    if (!token) return;
-    const cachedItems = contentCacheScope
-      ? readSafetyContentItemsSessionCache(contentCacheScope)
-      : null;
-    const hasCachedItems = cachedItems !== null;
+  const { isOpsAssetsLoading, isOpsAssetsRefreshing, opsAssets } =
+    useMobileQuarterlyOpsAssets({
+      contentCacheScope,
+      isAuthenticated,
+      isReady,
+      token,
+    });
 
-    if (hasCachedItems) {
-      setOpsAssets(pickCampaignTemplateContentItems(cachedItems));
-      setIsOpsAssetsRefreshing(true);
-    } else {
-      setIsOpsAssetsLoading(true);
-      setIsOpsAssetsRefreshing(false);
-    }
-
-    let cancelled = false;
-    void fetchSafetyContentItems(token)
-      .then((items) => {
-        if (cancelled) return;
-        if (contentCacheScope) {
-          writeSafetyContentItemsSessionCache(contentCacheScope, items);
-        }
-        setOpsAssets(pickCampaignTemplateContentItems(items));
-      })
-      .catch(() => undefined)
-      .finally(() => {
-        if (cancelled) return;
-        setIsOpsAssetsLoading(false);
-        setIsOpsAssetsRefreshing(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [contentCacheScope, isAuthenticated, isReady]);
+  const {
+    isSourceLoading,
+    setSourceNotice,
+    sourceError,
+    sourceNotice,
+    syncSourceReportsForDraft,
+  } = useMobileQuarterlySourceSync({
+    currentSite,
+    ensureSiteReportsLoaded,
+    getSessionsBySiteId,
+    setDraft,
+    setSelectedSourceKeys,
+    setSourceReports,
+    token,
+  });
 
   useEffect(() => {
     if (!draft || draft.opsAssetId || opsAssets.length === 0) return;
     setDraft((current) => (current && !current.opsAssetId ? applyOpsAsset(current, opsAssets[0]) : current));
-  }, [draft, opsAssets]);
+  }, [draft, opsAssets, setDraft]);
 
   const updateDraft = (updater: (current: QuarterlySummaryReport) => QuarterlySummaryReport) => {
     setSaveNotice(null);
     setDocumentNotice(null);
     setDraft((current) => (current ? updater(current) : current));
-  };
-
-  const syncSourceReportsForDraft = async (
-    nextDraft: QuarterlySummaryReport,
-    options?: {
-      explicitSelection?: boolean;
-      selectedReportKeys?: string[];
-      sourceNotice?: string | null;
-    },
-  ) => {
-    if (!currentSite) {
-      setDraft(nextDraft);
-      return;
-    }
-    if (!nextDraft.periodStartDate || !nextDraft.periodEndDate || nextDraft.periodStartDate > nextDraft.periodEndDate) {
-      setDraft(nextDraft);
-      setSourceReports([]);
-      setSelectedSourceKeys([]);
-      return;
-    }
-
-    const token = readSafetyAuthToken();
-    if (!token) {
-      setDraft(nextDraft);
-      setSourceError('로그인이 만료되었습니다. 다시 로그인해 주세요.');
-      return;
-    }
-
-    const requestId = sourceSyncRequestRef.current + 1;
-    sourceSyncRequestRef.current = requestId;
-    setIsSourceLoading(true);
-    setSourceError(null);
-
-    try {
-      await ensureSiteReportsLoaded(currentSite.id);
-      const seed = await fetchMobileQuarterlySeed({
-        currentSite,
-        explicitSelection: options?.explicitSelection,
-        nextDraft,
-        selectedReportKeys: options?.selectedReportKeys,
-        siteSessions: getSessionsBySiteId(currentSite.id),
-        token,
-      });
-
-      if (sourceSyncRequestRef.current !== requestId) return;
-
-      const draftWithSelection =
-        options?.explicitSelection && options.selectedReportKeys
-          ? { ...nextDraft, generatedFromSessionIds: options.selectedReportKeys }
-          : nextDraft;
-      const updatedDraft = applyQuarterlySummarySeed(draftWithSelection, seed);
-      setDraft(updatedDraft);
-      setSourceReports(seed.source_reports);
-      setSelectedSourceKeys(updatedDraft.generatedFromSessionIds);
-      setSourceNotice(options?.sourceNotice ?? null);
-    } catch (error) {
-      if (sourceSyncRequestRef.current !== requestId) return;
-      setDraft(nextDraft);
-      setSourceError(getMessage(error, '원본 보고서를 반영하지 못했습니다.'));
-    } finally {
-      if (sourceSyncRequestRef.current === requestId) {
-        setIsSourceLoading(false);
-      }
-    }
   };
 
   const handleSave = async () => {
@@ -274,6 +139,12 @@ export function useMobileQuarterlyReportScreenState({
       return null;
     }
   };
+
+  const { isGeneratingHwpx, isGeneratingPdf, handleDownloadHwpx, handleDownloadPdf } =
+    useMobileQuarterlyDocumentActions({
+      onSave: handleSave,
+      setDocumentNotice,
+    });
 
   return {
     activeStep,
@@ -305,34 +176,8 @@ export function useMobileQuarterlyReportScreenState({
     handleChangeDocumentField: (field: 'drafter' | 'reviewer' | 'approver', value: string) =>
       updateDraft((current) => ({ ...current, [field]: value })),
     handleChangeTitle: (value: string) => updateDraft((current) => ({ ...current, title: value })),
-    handleDownloadHwpx: async () => {
-      const saved = await handleSave();
-      if (!saved) return;
-      setIsGeneratingHwpx(true);
-      try {
-        const result = await fetchQuarterlyHwpxDocumentByReportKey(saved.id, readSafetyAuthToken());
-        saveBlobAsFile(result.blob, result.filename);
-        setDocumentNotice('HWPX 문서를 다운로드했습니다.');
-      } finally {
-        setIsGeneratingHwpx(false);
-      }
-    },
-    handleDownloadPdf: async () => {
-      const saved = await handleSave();
-      if (!saved) return;
-      setIsGeneratingPdf(true);
-      try {
-        const result = await fetchQuarterlyPdfDocumentByReportKeyWithFallback(saved.id, readSafetyAuthToken());
-        saveBlobAsFile(result.blob, result.filename);
-        setDocumentNotice(
-          result.fallbackToHwpx
-            ? `PDF 대신 ${result.filename}을(를) 내려받았습니다.`
-            : 'PDF 문서를 다운로드했습니다.',
-        );
-      } finally {
-        setIsGeneratingPdf(false);
-      }
-    },
+    handleDownloadHwpx,
+    handleDownloadPdf,
     handlePeriodFieldChange: (key: 'periodStartDate' | 'periodEndDate', value: string) => {
       if (!draft) return;
       setSourceNotice(null);
