@@ -527,12 +527,17 @@ export function PhotoAlbumPanel({
                 <span className={adminStyles.sectionHeaderMeta}>선택 {selectedIds.length}건</span>
               </div>
 
-              <div className={styles.grid}>
+              <div
+                className={`${styles.grid} ${mode === 'worker' ? styles.workerCompactGrid : ''}`}
+              >
                 {visibleRows.map((item) => (
-                  <article key={item.id} className={styles.card}>
+                  <article
+                    key={item.id}
+                    className={`${styles.card} ${mode === 'worker' ? styles.workerCompactCard : ''}`}
+                  >
                     <button
                       type="button"
-                      className={styles.cardPreviewButton}
+                      className={`${styles.cardPreviewButton} ${mode === 'worker' ? styles.workerCompactPreviewButton : ''}`}
                       onClick={() => setActiveItem(item)}
                     >
                       {item.previewUrl ? (
@@ -540,20 +545,28 @@ export function PhotoAlbumPanel({
                         <img
                           src={item.previewUrl}
                           alt={item.fileName}
-                          className={styles.cardImage}
+                          className={`${styles.cardImage} ${mode === 'worker' ? styles.workerCompactImage : ''}`}
                         />
                       ) : (
-                        <div className={styles.cardImageFallback}>미리보기 없음</div>
+                        <div
+                          className={`${styles.cardImageFallback} ${mode === 'worker' ? styles.workerCompactImageFallback : ''}`}
+                        >
+                          미리보기 없음
+                        </div>
                       )}
                     </button>
-                    <label className={styles.cardCheckbox}>
+                    <label
+                      className={`${styles.cardCheckbox} ${mode === 'worker' ? styles.workerCompactCheckbox : ''}`}
+                    >
                       <input
                         type="checkbox"
                         checked={selectedIds.includes(item.id)}
                         onChange={() => handleToggleRow(item.id)}
                       />
                     </label>
-                    <div className={styles.cardBody}>
+                    <div
+                      className={`${styles.cardBody} ${mode === 'worker' ? styles.workerCompactBody : ''}`}
+                    >
                       <div className={styles.cardMetaRow}>
                         <span className={styles.cardMetaText}>{formatFileSize(item.sizeBytes)}</span>
                       </div>
@@ -576,7 +589,9 @@ export function PhotoAlbumPanel({
                         </div>
                       ) : null}
                     </div>
-                    <div className={styles.cardActions}>
+                    <div
+                      className={`${styles.cardActions} ${mode === 'worker' ? styles.workerCompactActions : ''}`}
+                    >
                       <button
                         type="button"
                         className="app-button app-button-secondary"

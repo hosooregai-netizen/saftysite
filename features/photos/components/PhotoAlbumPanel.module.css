@@ -216,6 +216,10 @@
   font-weight: 700;
 }
 
+.workerCompactGrid {
+  margin-top: 16px;
+}
+
 @media (max-width: 900px) {
   .modalGrid {
     grid-template-columns: 1fr;
@@ -225,6 +229,44 @@
 @media (max-width: 720px) {
   .grid {
     grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  }
+
+  .workerCompactGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .workerCompactCard {
+    gap: 0;
+    padding: 6px;
+  }
+
+  .workerCompactPreviewButton {
+    width: 100%;
+  }
+
+  .workerCompactImage {
+    aspect-ratio: 1 / 1;
+  }
+
+  .workerCompactImageFallback {
+    min-height: 0;
+    aspect-ratio: 1 / 1;
+    font-size: 11px;
+    text-align: center;
+    padding: 6px;
+  }
+
+  .workerCompactCheckbox {
+    top: 10px;
+    left: 10px;
+    width: 22px;
+    height: 22px;
+  }
+
+  .workerCompactBody,
+  .workerCompactActions {
+    display: none;
   }
 
   .bulkBar,

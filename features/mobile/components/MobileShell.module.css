@@ -698,7 +698,36 @@
 .mobileOverviewPeriodRow {
   display: grid;
   gap: 12px;
-  grid-template-columns: minmax(68px, 0.75fr) minmax(112px, 1fr) minmax(112px, 1fr);
+  grid-template-columns: minmax(64px, 0.7fr) minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.mobileCompactDateControl {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid rgba(195, 208, 224, 0.96);
+  border-radius: 2px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.mobileCompactDateValue {
+  font-size: var(--text-ui);
+  font-weight: 600;
+  color: var(--erp-dark);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.mobileCompactDateInput {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
 }
 
 .mobileEditorTextareaCompact {

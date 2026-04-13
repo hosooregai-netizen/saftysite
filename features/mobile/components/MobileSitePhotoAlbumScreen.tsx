@@ -93,8 +93,6 @@ export function MobileSitePhotoAlbumScreen({
       webHref={buildSitePhotoAlbumHref(currentSite.id)}
     >
       <PhotoAlbumPanel
-        backHref={mobileSiteHomeHref}
-        backLabel="현장 홈으로"
         initialHeadquarterId={currentSite.headquarterId}
         initialSiteId={currentSite.id}
         lockedHeadquarterId={currentSite.headquarterId}

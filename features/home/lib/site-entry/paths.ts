@@ -9,11 +9,11 @@ export function buildSiteHubHref(
   siteId: string,
   intent: WorkerSiteEntryIntent = 'site',
 ): string {
+  const basePath = `/sites/${encodeURIComponent(siteId)}/entry`;
   if (intent === 'site') {
-    return `/sites/${encodeURIComponent(siteId)}`;
+    return basePath;
   }
 
-  const basePath = `/sites/${encodeURIComponent(siteId)}/entry`;
   const searchParams = new URLSearchParams();
   searchParams.set('entry', intent);
   return `${basePath}?${searchParams.toString()}`;
