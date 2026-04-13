@@ -7,6 +7,7 @@ import {
   type FeatureContractId,
 } from './featureContracts';
 import { runAuthSmoke } from './erp/auth.spec';
+import { runMobileSiteHomeSmoke } from './erp/mobile-site-home.spec';
 import { runMobileSiteReportsSmoke } from './erp/mobile-site-reports.spec';
 import { runMobileQuarterlyListSmoke } from './erp/mobile-quarterly-list.spec';
 import { runMobileQuarterlyReportSmoke } from './erp/mobile-quarterly-report.spec';
@@ -18,6 +19,7 @@ type FeatureRunner = (config: ReturnType<typeof resolveClientSmokePlaywrightConf
 
 const FEATURE_RUNNERS: Record<FeatureContractId, FeatureRunner> = {
   auth: runAuthSmoke,
+  'mobile-site-home': runMobileSiteHomeSmoke,
   'mobile-site-reports': runMobileSiteReportsSmoke,
   'mobile-quarterly-list': runMobileQuarterlyListSmoke,
   'mobile-quarterly-report': runMobileQuarterlyReportSmoke,
