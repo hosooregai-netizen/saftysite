@@ -366,15 +366,16 @@ function ensureAdminFixtureReports(harness: ErpSmokeHarness) {
       return;
     }
 
+    const isPracticalCompletionFixture = fixture.report_key === 'report-tech-3';
     harness.state.reports.push({
       ...fixture,
       total_round: 12,
-      progress_rate: 100,
-      status: 'submitted',
-      workflow_status: 'submitted',
+      progress_rate: isPracticalCompletionFixture ? 40 : 100,
+      status: isPracticalCompletionFixture ? 'draft' : 'submitted',
+      workflow_status: isPracticalCompletionFixture ? 'draft' : 'submitted',
       payload_version: 1,
       latest_revision_no: 1,
-      submitted_at: NOW,
+      submitted_at: isPracticalCompletionFixture ? null : NOW,
       published_at: null,
       last_autosaved_at: NOW,
       report_type: 'technical_guidance',

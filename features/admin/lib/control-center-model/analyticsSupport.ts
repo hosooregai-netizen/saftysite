@@ -35,14 +35,9 @@ export interface AnalyticsComparisonWindow {
   previous: AnalyticsDateRange | null;
 }
 
-export function hasRevenueProfile(profile: SiteContractProfile) {
-  return resolveSiteRevenueProfile(profile).isRevenueReady;
-}
-
-function buildCompletedRoundKeys(rows: EnrichedControllerReportRow[]) {
+function buildExecutedRoundKeys(rows: EnrichedControllerReportRow[]) {
   return new Set(
     rows
-      .filter((row) => row.reportType === 'technical_guidance' && row.isCompleted)
       .map((row) => `${row.siteId}:${row.visitRound || row.reportKey}`),
   );
 }
@@ -71,7 +66,7 @@ export function sumVisitRevenue(rows: EnrichedControllerReportRow[]) {
 }
 
 export function countExecutedRounds(rows: EnrichedControllerReportRow[]) {
-  return buildCompletedRoundKeys(rows).size;
+  return buildExecutedRoundKeys(rows).size;
 }
 
 export function calculateAveragePerVisitAmount(revenue: number, executedRounds: number) {

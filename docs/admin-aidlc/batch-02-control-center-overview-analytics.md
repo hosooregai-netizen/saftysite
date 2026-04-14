@@ -96,6 +96,9 @@ contract pack around:
   snapshot before the server response returns, improving perceived load time on `/admin?section=analytics`.
 - Summary cards, charts, and detail tables now render fixed-height loading placeholders so the
   analytics surface no longer flashes or reflows while the first response is loading.
+- Analytics revenue aggregation now treats past `technical_guidance` visit dates as practically
+  completed even when the ERP workflow is still draft, matching the K2B Excel-style operational
+  reality where `기술지도일` is often available before a manual completion action is recorded.
 - `admin-control-center` contract was strengthened to require:
   - overview markers
   - analytics markers

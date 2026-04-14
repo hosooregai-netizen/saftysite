@@ -1,6 +1,9 @@
 'use client';
 
 import { SITE_CONTRACT_TYPE_LABELS } from '@/lib/admin';
+import {
+  ANALYTICS_REVENUE_COUNT_LABEL,
+} from '@/features/admin/lib/buildAdminControlCenterModel';
 import type {
   AdminAnalyticsEmployeeRow,
   AdminAnalyticsSiteRevenueRow,
@@ -94,7 +97,7 @@ export function buildScopeChips(
   },
 ) {
   const chips = [
-    { label: '집계 기준', value: '완료 회차 기준' },
+    { label: '집계 기준', value: ANALYTICS_REVENUE_COUNT_LABEL },
     { label: '기간', value: PERIOD_LABELS[input.period] },
   ];
   const headquarter = data.headquarters.find((item) => item.id === input.headquarterId);

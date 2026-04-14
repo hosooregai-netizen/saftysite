@@ -3,6 +3,10 @@ import { parseSiteContractProfile, resolveSiteRevenueProfile } from '@/lib/admin
 import type { ControllerDashboardData } from '@/types/controller';
 import type { SafetyReportListItem } from '@/types/backend';
 import {
+  ANALYTICS_REVENUE_COUNT_LABEL,
+  filterRevenueRecognizedGuidanceRows,
+} from './analyticsRevenueRules';
+import {
   buildAnalyticsComparisonWindow,
   buildTrendRows,
   calculateAveragePerVisitAmount,
@@ -11,7 +15,6 @@ import {
   formatAnalyticsStatValue,
   getContractBucketKey,
   getContractTypeDisplayLabel,
-  hasRevenueProfile,
   isWithinPeriod,
   matchesAnalyticsQuery,
   resolvePrimaryContractTypeLabel,
@@ -181,20 +184,14 @@ export function buildAdminAnalyticsModel(
   const scopedRows = analyticsRows.filter(
     (row) => visibleSiteIds.has(row.siteId) && (!filters.userId || row.assigneeUserId === filters.userId),
   );
-  const scopedGuidanceRows = scopedRows.filter(
-    (row) => row.reportType === 'technical_guidance' && row.isCompleted && hasRevenueProfile(row.contractProfile),
-  );
+  const scopedGuidanceRows = filterRevenueRecognizedGuidanceRows(scopedRows, today);
   const detailRows = scopedRows.filter((row) => isWithinPeriod(row.reportDate, filters.period, today));
-  const detailGuidanceRows = detailRows.filter(
-    (row) => row.reportType === 'technical_guidance' && row.isCompleted && hasRevenueProfile(row.contractProfile),
-  );
+  const detailGuidanceRows = filterRevenueRecognizedGuidanceRows(detailRows, today);
   const comparisonWindow = buildAnalyticsComparisonWindow(filters.period, today);
   const previousRows = comparisonWindow.previous
     ? scopedRows.filter((row) => isWithinDateRange(row.reportDate, comparisonWindow.previous))
     : [];
-  const previousGuidanceRows = previousRows.filter(
-    (row) => row.reportType === 'technical_guidance' && row.isCompleted && hasRevenueProfile(row.contractProfile),
-  );
+  const previousGuidanceRows = filterRevenueRecognizedGuidanceRows(previousRows, today);
   const normalizedQuery = filters.query.trim();
   const queriedDetailRows = normalizedQuery
     ? detailRows.filter((row) =>
@@ -276,3 +273,4 @@ export function buildAdminAnalyticsModel(
 }
 
 export { formatAnalyticsStatValue };
+export { ANALYTICS_REVENUE_COUNT_LABEL };

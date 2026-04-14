@@ -35,6 +35,7 @@ export async function runAdminControlCenterSmoke(config: ClientSmokePlaywrightCo
     await page.goto(`${harness.baseURL}/admin?section=analytics`, { waitUntil: 'load' });
     await page.getByText('매출/실적 집계').first().waitFor();
     await page.getByText('집계 기준').first().waitFor();
+    await page.getByText('방문일 경과 또는 완료 기준').first().waitFor();
     await harness.waitForRequestCount('GET /api/admin/dashboard/analytics', analyticsReadsBefore + 1);
     await page.getByText('월별 매출 추이').first().waitFor();
     await page.getByRole('button', { name: '필터' }).click();
