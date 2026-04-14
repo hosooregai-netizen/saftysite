@@ -23,13 +23,17 @@ export async function runAdminSitesSmoke(config: ClientSmokePlaywrightConfig) {
     const createDialog = page.getByRole('dialog', { name: '현장 추가' });
     await createDialog.locator('select').first().selectOption('hq-1');
     await createDialog.getByLabel('현장명').fill('mocked admin site');
+    await createDialog.getByLabel('기술지도 대가').fill('1200000');
+    await createDialog.getByLabel('기술지도 횟수').fill('12');
+    await createDialog.getByLabel('회차당 단가').fill('100000');
     await createDialog.getByRole('button', { name: '생성' }).click();
     await harness.waitForRequestCount('POST /sites', siteCreatesBefore + 1);
 
-    await page.getByRole('button', { name: /기존 현장 메뉴 열기|mocked admin site 현장 작업 메뉴 열기/ }).first().click();
+    await page.getByRole('button', { name: /mocked admin site 현장 작업 메뉴 열기/ }).click();
     await page.getByRole('menuitem', { name: '수정' }).click();
     const editDialog = page.getByRole('dialog', { name: '현장 수정' });
     await editDialog.getByLabel('현장명').fill('mocked admin site updated');
+    await editDialog.getByLabel('회차당 단가').fill('150000');
     await editDialog.getByRole('button', { name: '저장' }).click();
     await harness.waitForRequestCount('PATCH /sites/:id', siteUpdatesBefore + 1);
 

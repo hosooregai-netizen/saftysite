@@ -165,6 +165,7 @@ async function installErpRoutes({
         contract_start_date: body.contract_start_date ?? null,
         contract_end_date: body.contract_end_date ?? null,
         contract_signed_date: body.contract_signed_date ?? null,
+        per_visit_amount: body.per_visit_amount ?? null,
         total_rounds: body.total_rounds ?? null,
         total_contract_amount: body.total_contract_amount ?? null,
         memo: body.memo ?? null,

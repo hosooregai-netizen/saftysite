@@ -2,10 +2,10 @@
 
 import AppModal from '@/components/ui/AppModal';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
-import { SITE_STATUS_OPTIONS } from '@/lib/admin';
+import { formatCurrencyValue, SITE_STATUS_OPTIONS } from '@/lib/admin';
 import type { Dispatch, SetStateAction } from 'react';
 import type { SafetyHeadquarter, SafetySiteStatus } from '@/types/controller';
-import type { SiteFormState } from './siteSectionHelpers';
+import { getDerivedPerVisitAmount, type SiteFormState } from './siteSectionHelpers';
 
 interface SiteEditorModalProps {
   busy: boolean;
@@ -30,6 +30,8 @@ export function SiteEditorModal({
   onSubmit,
   setForm,
 }: SiteEditorModalProps) {
+  const resolvedPerVisitAmount = getDerivedPerVisitAmount(form);
+
   return (
     <AppModal
       open={editingId !== null}
@@ -166,6 +168,19 @@ export function SiteEditorModal({
         <label className={styles.modalField}>
           <span className={styles.label}>기술지도 횟수</span>
           <input className="app-input" value={form.total_rounds} onChange={(event) => setForm((current) => ({ ...current, total_rounds: event.target.value }))} disabled={busy} />
+        </label>
+        <label className={styles.modalField}>
+          <span className={styles.label}>회차당 단가</span>
+          <input className="app-input" value={form.per_visit_amount} onChange={(event) => setForm((current) => ({ ...current, per_visit_amount: event.target.value }))} disabled={busy} placeholder="비우면 총액/횟수로 자동 계산" />
+          {resolvedPerVisitAmount.source === 'explicit' ? (
+            <span className={styles.modalHint}>명시된 회차 단가를 매출 집계에 사용합니다.</span>
+          ) : resolvedPerVisitAmount.source === 'derived' ? (
+            <span className={styles.modalHint}>
+              자동 계산 단가 {formatCurrencyValue(resolvedPerVisitAmount.value)}를 매출 집계에 사용합니다.
+            </span>
+          ) : (
+            <span className={styles.modalHint}>총 계약금액과 총 회차를 입력하면 회차 단가를 자동 계산합니다.</span>
+          )}
         </label>
         <label className={styles.modalField}>
           <span className={styles.label}>계약시작일</span>

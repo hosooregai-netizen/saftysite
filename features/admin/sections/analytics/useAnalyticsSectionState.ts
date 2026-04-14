@@ -3,10 +3,8 @@
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { fetchAdminAnalytics } from '@/lib/admin/apiClient';
-import { exportAdminWorkbook } from '@/lib/admin/exportClient';
+import { exportAdminServerWorkbook } from '@/lib/admin/exportClient';
 import {
-  getAnalyticsExportSheets,
-  type AdminAnalyticsModel,
   type AdminAnalyticsPeriod,
 } from '@/features/admin/lib/buildAdminControlCenterModel';
 import type { SafetyAdminAnalyticsResponse, TableSortState } from '@/types/admin';
@@ -98,14 +96,13 @@ export function useAnalyticsSectionState(data: ControllerDashboardData) {
   };
 
   const exportAnalytics = async () => {
-    await exportAdminWorkbook(
-      'analytics',
-      getAnalyticsExportSheets({
-        ...(analytics as AdminAnalyticsModel),
-        employeeRows: sortedEmployeeRows,
-        siteRevenueRows: sortedSiteRevenueRows,
-      }),
-    );
+    await exportAdminServerWorkbook('analytics', {
+      contract_type: contractType,
+      headquarter_id: headquarterId,
+      period,
+      query,
+      user_id: userId,
+    });
   };
 
   return {

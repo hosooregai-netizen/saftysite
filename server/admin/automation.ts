@@ -10,6 +10,7 @@ import {
   parseSiteContractProfile,
   parseSiteInspectionSchedules,
   parseSiteMemoNote,
+  resolveSiteRevenueProfile,
 } from '@/lib/admin/siteContractProfile';
 import type {
   ControllerReportRow,
@@ -162,14 +163,17 @@ function buildCompletionRows(
   return data.sites
     .map((site) => {
       const profile = parseSiteContractProfile(site);
+      const revenueProfile = resolveSiteRevenueProfile(profile);
       const missingItems: string[] = [];
 
       if (!profile.contractDate) missingItems.push('계약일');
       if (!profile.contractType) missingItems.push('계약유형');
       if (!profile.contractStatus) missingItems.push('계약상태');
       if (profile.totalRounds == null) missingItems.push('총 회차');
-      if (profile.perVisitAmount == null) missingItems.push('회차당 단가');
       if (profile.totalContractAmount == null) missingItems.push('총 계약금액');
+      if (profile.perVisitAmount == null && !revenueProfile.isRevenueReady) {
+        missingItems.push('회차당 단가');
+      }
       if (!site.assigned_user?.id && !(site.assigned_users || []).length) {
         missingItems.push('담당자');
       }

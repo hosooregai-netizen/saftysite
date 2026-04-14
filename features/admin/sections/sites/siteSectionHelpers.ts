@@ -60,6 +60,7 @@ export interface SiteFormState {
   technical_guidance_kind: string;
   total_contract_amount: string;
   total_rounds: string;
+  per_visit_amount: string;
   contract_start_date: string;
   contract_end_date: string;
   contract_signed_date: string;
@@ -93,6 +94,7 @@ export const EMPTY_FORM: SiteFormState = {
   technical_guidance_kind: '',
   total_contract_amount: '',
   total_rounds: '',
+  per_visit_amount: '',
   contract_start_date: '',
   contract_end_date: '',
   contract_signed_date: '',
@@ -152,6 +154,7 @@ export function createEditForm(site: SafetySite): SiteFormState {
     technical_guidance_kind: site.technical_guidance_kind ?? '',
     total_contract_amount: site.total_contract_amount != null ? String(site.total_contract_amount) : '',
     total_rounds: site.total_rounds != null ? String(site.total_rounds) : '',
+    per_visit_amount: site.per_visit_amount != null ? String(site.per_visit_amount) : '',
     contract_start_date: site.contract_start_date ?? '',
     contract_end_date: site.contract_end_date ?? '',
     contract_signed_date: site.contract_signed_date ?? site.contract_date ?? '',
@@ -192,11 +195,38 @@ export function buildSitePayload(
     contract_start_date: toNullableText(form.contract_start_date),
     contract_end_date: toNullableText(form.contract_end_date),
     contract_signed_date: toNullableText(form.contract_signed_date),
+    per_visit_amount: parseOptionalNumber(form.per_visit_amount),
     total_rounds: (() => {
       const parsed = parseOptionalNumber(form.total_rounds);
       return typeof parsed === 'number' && Number.isFinite(parsed) ? Math.trunc(parsed) : null;
     })(),
     total_contract_amount: parseOptionalNumber(form.total_contract_amount),
+  };
+}
+
+export function getDerivedPerVisitAmount(form: Pick<SiteFormState, 'per_visit_amount' | 'total_contract_amount' | 'total_rounds'>) {
+  const explicitValue = parseOptionalNumber(form.per_visit_amount);
+  if (typeof explicitValue === 'number' && explicitValue > 0) {
+    return { source: 'explicit' as const, value: explicitValue };
+  }
+
+  const totalContractAmount = parseOptionalNumber(form.total_contract_amount);
+  const totalRounds = parseOptionalNumber(form.total_rounds);
+  if (
+    typeof totalContractAmount === 'number' &&
+    totalContractAmount > 0 &&
+    typeof totalRounds === 'number' &&
+    totalRounds > 0
+  ) {
+    return {
+      source: 'derived' as const,
+      value: totalContractAmount / Math.trunc(totalRounds),
+    };
+  }
+
+  return {
+    source: 'missing' as const,
+    value: null,
   };
 }
 

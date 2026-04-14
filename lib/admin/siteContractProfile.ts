@@ -39,6 +39,15 @@ export interface SiteQuarterlyMaterialRecord {
   quarterKey: string;
 }
 
+export interface SiteRevenueProfile {
+  isRevenueReady: boolean;
+  plannedRevenue: number;
+  plannedRounds: number;
+  profile: SiteContractProfile;
+  resolvedPerVisitAmount: number | null;
+  source: 'derived' | 'explicit' | 'missing';
+}
+
 const EMPTY_CONTRACT_PROFILE: SiteContractProfile = {
   contractDate: '',
   contractStatus: '',
@@ -314,6 +323,34 @@ export function parseSiteContractProfile(
   const memo = typeof siteOrMemo === 'string' || siteOrMemo == null ? siteOrMemo : siteOrMemo.memo;
   const envelope = parseEnvelope(memo);
   return normalizeSiteContractProfile(envelope?.contractProfile ?? EMPTY_CONTRACT_PROFILE);
+}
+
+export function resolveSiteRevenueProfile(
+  siteOrMemo: SiteMemoWithContractFields | Partial<SiteContractProfile> | string | null | undefined,
+): SiteRevenueProfile {
+  const profile = parseSiteContractProfile(siteOrMemo as SiteMemoWithContractFields | string | null | undefined);
+  const plannedRevenue =
+    typeof profile.totalContractAmount === 'number' && profile.totalContractAmount > 0
+      ? profile.totalContractAmount
+      : 0;
+  const plannedRounds =
+    typeof profile.totalRounds === 'number' && profile.totalRounds > 0 ? Math.trunc(profile.totalRounds) : 0;
+  const explicitPerVisitAmount =
+    typeof profile.perVisitAmount === 'number' && profile.perVisitAmount > 0 ? profile.perVisitAmount : null;
+  const derivedPerVisitAmount =
+    explicitPerVisitAmount == null && plannedRevenue > 0 && plannedRounds > 0
+      ? plannedRevenue / plannedRounds
+      : null;
+  const resolvedPerVisitAmount = explicitPerVisitAmount ?? derivedPerVisitAmount;
+
+  return {
+    isRevenueReady: resolvedPerVisitAmount != null && plannedRounds > 0,
+    plannedRevenue,
+    plannedRounds,
+    profile,
+    resolvedPerVisitAmount,
+    source: explicitPerVisitAmount != null ? 'explicit' : derivedPerVisitAmount != null ? 'derived' : 'missing',
+  };
 }
 
 export function parseSiteInspectionSchedules(

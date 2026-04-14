@@ -2,7 +2,7 @@ import {
   formatCurrencyValue,
   SITE_CONTRACT_TYPE_LABELS,
 } from '@/lib/admin';
-import { parseSiteContractProfile } from '@/lib/admin/siteContractProfile';
+import { parseSiteContractProfile, resolveSiteRevenueProfile } from '@/lib/admin/siteContractProfile';
 import type { SiteContractProfile } from '@/types/admin';
 import type { ControllerDashboardData } from '@/types/controller';
 import {
@@ -36,12 +36,7 @@ export interface AnalyticsComparisonWindow {
 }
 
 export function hasRevenueProfile(profile: SiteContractProfile) {
-  return (
-    profile.perVisitAmount != null &&
-    profile.perVisitAmount > 0 &&
-    profile.totalRounds != null &&
-    profile.totalRounds > 0
-  );
+  return resolveSiteRevenueProfile(profile).isRevenueReady;
 }
 
 function buildCompletedRoundKeys(rows: EnrichedControllerReportRow[]) {
@@ -70,7 +65,7 @@ export function isWithinPeriod(value: string, period: AdminAnalyticsPeriod, toda
 
 export function sumVisitRevenue(rows: EnrichedControllerReportRow[]) {
   return rows.reduce(
-    (sum, row) => sum + (hasRevenueProfile(row.contractProfile) ? row.contractProfile.perVisitAmount ?? 0 : 0),
+    (sum, row) => sum + (resolveSiteRevenueProfile(row.contractProfile).resolvedPerVisitAmount ?? 0),
     0,
   );
 }

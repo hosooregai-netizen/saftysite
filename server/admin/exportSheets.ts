@@ -9,7 +9,6 @@ import {
 } from '@/lib/admin/controllerReports';
 import { getQualityStatusLabel } from '@/lib/admin/reportMeta';
 import {
-  fetchAdminAnalyticsServer,
   fetchAdminCoreData,
   fetchAdminReports,
   fetchAdminOverviewServer,
@@ -17,11 +16,11 @@ import {
   fetchAdminSchedulesServer,
 } from '@/server/admin/safetyApiServer';
 import {
-  mapBackendAnalyticsResponse,
   mapBackendAdminReportsResponse,
   mapBackendOverviewResponse,
   mapBackendScheduleListResponse,
 } from '@/server/admin/upstreamMappers';
+import { buildAdminAnalyticsResponse } from '@/server/admin/automation';
 import type { TableExportColumn } from '@/types/admin';
 
 export interface ServerWorkbookSheet {
@@ -99,18 +98,21 @@ export async function buildAdminServerExportSheets(
   }
 
   if (section === 'analytics') {
-    const analytics = mapBackendAnalyticsResponse(
-      await fetchAdminAnalyticsServer(
-        token,
-        {
-          contract_type: asText(filters.contract_type),
-          headquarter_id: asText(filters.headquarter_id),
-          period: asText(filters.period) || 'month',
-          query: asText(filters.query),
-          user_id: asText(filters.user_id),
-        },
-        request,
-      ),
+    const [data, reports] = await Promise.all([
+      fetchAdminCoreData(token, request),
+      fetchAdminReports(token, request),
+    ]);
+    const analytics = buildAdminAnalyticsResponse(
+      data,
+      reports,
+      {
+        contractType: asText(filters.contract_type),
+        headquarterId: asText(filters.headquarter_id),
+        period: asText(filters.period) || 'month',
+        query: asText(filters.query),
+        userId: asText(filters.user_id),
+      },
+      new Date(),
     );
     return getAnalyticsExportSheets(analytics);
   }
