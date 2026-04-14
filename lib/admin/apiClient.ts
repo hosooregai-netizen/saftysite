@@ -160,6 +160,12 @@ export function fetchAdminAnalytics(input: {
   );
 }
 
+export function refreshAdminAnalyticsSnapshot() {
+  return requestAdminApi<{ ok: boolean; refreshedAt: string }>('/dashboard/analytics/refresh', {
+    method: 'POST',
+  });
+}
+
 export function fetchAdminAlerts() {
   return requestAdminApi<SafetyAdminAlert[]>('/alerts');
 }

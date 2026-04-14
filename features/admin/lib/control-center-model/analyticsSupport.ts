@@ -21,6 +21,7 @@ import type {
   AdminAnalyticsTrendRow,
 } from './types';
 import type { EnrichedControllerReportRow } from './rowEnrichment';
+import type { AnalyticsRevenueEvent } from './analyticsRevenueEvents';
 
 interface AnalyticsDateRange {
   end: Date;
@@ -245,20 +246,20 @@ export function matchesAnalyticsQuery(
     .includes(normalizedQuery);
 }
 
-export function buildTrendRows(rows: EnrichedControllerReportRow[], today: Date): AdminAnalyticsTrendRow[] {
+export function buildTrendRows(rows: AnalyticsRevenueEvent[], today: Date): AdminAnalyticsTrendRow[] {
   const currentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
   return Array.from({ length: 12 }, (_, index) => {
     const monthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - (11 - index), 1);
     const monthEnd = endOfMonth(monthStart);
     const monthRows = rows.filter((row) =>
-      isWithinDateRange(row.reportDate, {
+      isWithinDateRange(row.date, {
         end: monthEnd,
         start: monthStart,
       }),
     );
-    const executedRounds = countExecutedRounds(monthRows);
-    const revenue = sumVisitRevenue(monthRows);
+    const executedRounds = monthRows.length;
+    const revenue = monthRows.reduce((sum, row) => sum + row.revenue, 0);
 
     return {
       avgPerVisitAmount: calculateAveragePerVisitAmount(revenue, executedRounds),

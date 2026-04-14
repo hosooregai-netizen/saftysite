@@ -2,6 +2,7 @@ import {
   getAnalyticsExportSheets,
   getOverviewExportSheets,
 } from '@/features/admin/lib/buildAdminControlCenterModel';
+import { buildAdminAnalyticsSnapshotResponse } from '@/server/admin/analyticsSnapshot';
 import { buildAdminOverviewResponse } from '@/server/admin/automation';
 import {
   getControllerReportDispatchLabel,
@@ -20,7 +21,6 @@ import {
   mapBackendOverviewResponse,
   mapBackendScheduleListResponse,
 } from '@/server/admin/upstreamMappers';
-import { buildAdminAnalyticsResponse } from '@/server/admin/automation';
 import type { TableExportColumn } from '@/types/admin';
 
 export interface ServerWorkbookSheet {
@@ -98,13 +98,8 @@ export async function buildAdminServerExportSheets(
   }
 
   if (section === 'analytics') {
-    const [data, reports] = await Promise.all([
-      fetchAdminCoreData(token, request),
-      fetchAdminReports(token, request),
-    ]);
-    const analytics = buildAdminAnalyticsResponse(
-      data,
-      reports,
+    const analytics = await buildAdminAnalyticsSnapshotResponse(
+      token,
       {
         contractType: asText(filters.contract_type),
         headquarterId: asText(filters.headquarter_id),
@@ -112,6 +107,7 @@ export async function buildAdminServerExportSheets(
         query: asText(filters.query),
         userId: asText(filters.user_id),
       },
+      request,
       new Date(),
     );
     return getAnalyticsExportSheets(analytics);

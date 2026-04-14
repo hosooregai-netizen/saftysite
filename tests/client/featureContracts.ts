@@ -27,11 +27,11 @@ export const FEATURE_CONTRACTS: Record<FeatureContractId, FeatureContract> = {
   'admin-control-center': {
     id: 'admin-control-center',
     description:
-      '관제 대시보드 overview/analytics가 admin 로그인 진입, KPI, 차트, 안정적인 로딩 상태, 기간 전환, site 계약 연동 매출, 방문일 경과 기준 실적 집계, export 진입 흐름을 유지한다.',
+      '관제 대시보드 overview/analytics가 admin 로그인 진입, KPI, 차트, 안정적인 로딩 상태, 기간 전환, site 계약 연동 매출, 방문 일정 경과 기준 실적 집계, export 진입 흐름을 유지한다.',
     routes: ['/admin?section=overview', '/admin?section=analytics'],
     markers: ['운영 개요', '현장 상태', '발송 관리 대상', '매출/실적 집계', '계약 예정 매출', '월별 매출 추이', '상세 표'],
     apis: ['GET /api/admin/dashboard/overview', 'GET /api/admin/dashboard/analytics', 'POST /api/admin/exports/:section'],
-    criticalActions: ['admin 로그인 진입', 'overview 진입', 'analytics 진입', '초기 로딩 상태 유지', '기간 전환', 'site 계약 수정 반영 확인', '방문일 경과 실적 집계 확인', '엑셀 내보내기', '핵심 카드와 차트 확인'],
+    criticalActions: ['admin 로그인 진입', 'overview 진입', 'analytics 진입', '초기 로딩 상태 유지', '기간 전환', 'site 계약 수정 반영 확인', '방문 일정 경과 실적 집계 확인', '엑셀 내보내기', '핵심 카드와 차트 확인'],
   },
   'admin-reports': {
     id: 'admin-reports',

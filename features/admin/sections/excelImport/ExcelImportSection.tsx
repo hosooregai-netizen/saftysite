@@ -60,6 +60,10 @@ function formatApplyNotice(preview: ExcelImportPreview, result: ExcelApplyResult
     `사업장 갱신 ${result.summary.updatedHeadquarterCount}건`,
     `현장 생성 ${result.summary.createdSiteCount}건`,
     `현장 갱신 ${result.summary.updatedSiteCount}건`,
+    `기존 지도요원 매칭 ${result.summary.matchedExistingUserCount ?? 0}건`,
+    `지도요원 가계정 생성 ${result.summary.createdPlaceholderUserCount ?? 0}건`,
+    `지도요원 배정 연결 ${result.summary.createdAssignmentCount ?? 0}건`,
+    `동명이인 보류 ${result.summary.ambiguousWorkerMatchCount ?? 0}건`,
     `보완 필요 ${result.summary.completionRequiredCount}건`,
   ].join(' · ');
 }

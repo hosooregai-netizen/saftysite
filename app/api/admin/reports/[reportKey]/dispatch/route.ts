@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { refreshAdminAnalyticsSnapshot } from '@/server/admin/analyticsSnapshot';
 import {
   readRequiredAdminToken,
   SafetyServerApiError,
@@ -39,6 +40,7 @@ export async function PATCH(
       },
       request,
     );
+    await refreshAdminAnalyticsSnapshot(token, request);
 
     return NextResponse.json(updated);
   } catch (error) {

@@ -3,6 +3,7 @@ import {
   buildAdminAnalyticsModel,
   buildAdminOverviewModel,
 } from '../../../features/admin/lib/buildAdminControlCenterModel';
+import { buildSiteMemoWithContractProfile } from '../../../lib/admin/siteContractProfile';
 import { buildControllerReportRows } from '../../../lib/admin/controllerReports';
 import type { ClientSmokePlaywrightConfig } from '../../../playwright.config';
 import type {
@@ -241,6 +242,11 @@ async function installAdminRoutes(harness: ErpSmokeHarness) {
       return;
     }
 
+    if (pathname === '/api/admin/dashboard/analytics/refresh' && request.method() === 'POST') {
+      await fulfillJson(route, { ok: true, refreshedAt: NOW });
+      return;
+    }
+
     if (/^\/api\/admin\/exports\/[^/]+$/.test(pathname) && request.method() === 'POST') {
       await route.fulfill({
         status: 200,
@@ -319,6 +325,92 @@ async function installAdminRoutes(harness: ErpSmokeHarness) {
 
     await route.fallback();
   });
+}
+
+function ensureAdminFixtureSchedules(harness: ErpSmokeHarness) {
+  const site = harness.state.sites.find((item) => String(item.id) === 'site-1');
+  if (!site) return;
+  const buildSchedule = (input: {
+    id: string;
+    plannedDate: string;
+    roundNo: number;
+    status: 'completed' | 'planned';
+    windowEnd: string;
+    windowStart: string;
+  }) => ({
+    assigneeName: '김요원',
+    assigneeUserId: 'field-1',
+    exceptionMemo: '',
+    exceptionReasonCode: '',
+    headquarterId: 'hq-1',
+    headquarterName: '기존 본사',
+    id: input.id,
+    isConflicted: false,
+    isOutOfWindow: false,
+    isOverdue: false,
+    linkedReportKey: '',
+    plannedDate: input.plannedDate,
+    roundNo: input.roundNo,
+    selectionConfirmedAt: '',
+    selectionConfirmedByName: '',
+    selectionConfirmedByUserId: '',
+    selectionReasonLabel: '',
+    selectionReasonMemo: '',
+    siteId: 'site-1',
+    siteName: '기존 현장',
+    status: input.status,
+    windowEnd: input.windowEnd,
+    windowStart: input.windowStart,
+  });
+
+  site.memo = buildSiteMemoWithContractProfile(
+    '',
+    {
+      contractDate: '2026-01-02',
+      contractStatus: 'active',
+      contractType: 'private',
+      technicalGuidanceKind: 'construction',
+      totalContractAmount: 900000,
+      totalRounds: 9,
+    },
+    {
+      existingMemo: typeof site.memo === 'string' ? site.memo : '',
+      schedules: [
+        buildSchedule({
+          id: 'schedule-site-1-round-1',
+          plannedDate: '2026-01-12',
+          roundNo: 1,
+          status: 'completed',
+          windowEnd: '2026-01-31',
+          windowStart: '2026-01-01',
+        }),
+        buildSchedule({
+          id: 'schedule-site-1-round-2',
+          plannedDate: '2026-02-16',
+          roundNo: 2,
+          status: 'completed',
+          windowEnd: '2026-02-28',
+          windowStart: '2026-02-01',
+        }),
+        buildSchedule({
+          id: 'schedule-site-1-round-3',
+          plannedDate: '2026-03-10',
+          roundNo: 3,
+          status: 'completed',
+          windowEnd: '2026-03-31',
+          windowStart: '2026-03-01',
+        }),
+        buildSchedule({
+          id: 'schedule-site-1-round-4',
+          plannedDate: '2026-03-24',
+          roundNo: 4,
+          status: 'planned',
+          windowEnd: '2026-03-31',
+          windowStart: '2026-03-01',
+        }),
+      ],
+    },
+  );
 }
 
 function ensureAdminFixtureReports(harness: ErpSmokeHarness) {
@@ -481,6 +573,7 @@ export async function createAdminSmokeHarness(
   config: ClientSmokePlaywrightConfig,
 ) {
   const harness = await createErpSmokeHarness(featureId, config);
+  ensureAdminFixtureSchedules(harness);
   ensureAdminFixtureReports(harness);
   await installAdminRoutes(harness);
   return harness;

@@ -2,6 +2,8 @@ import {
   createSafetyApiOptionsResponse,
   proxySafetyApiRequest,
 } from '@/lib/safetyApi/proxy';
+import { refreshAdminAnalyticsSnapshot } from '@/server/admin/analyticsSnapshot';
+import { readRequiredAdminToken } from '@/server/admin/safetyApiServer';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
@@ -12,12 +14,37 @@ type SafetyRouteContext = {
   }>;
 };
 
+function shouldRefreshAdminAnalytics(path: string[], method: string) {
+  const normalizedMethod = method.toUpperCase();
+  if (!['POST', 'PATCH', 'PUT', 'DELETE'].includes(normalizedMethod)) {
+    return false;
+  }
+
+  const [root, second] = path;
+  if (root === 'reports' && (second === 'upsert' || path[2] === 'status')) {
+    return true;
+  }
+
+  return root === 'assignments' || root === 'headquarters' || root === 'sites' || root === 'users';
+}
+
 async function handleRequest(
   request: Request,
   context: SafetyRouteContext
 ): Promise<Response> {
   const { path = [] } = await context.params;
-  return proxySafetyApiRequest(request, path);
+  const response = await proxySafetyApiRequest(request, path);
+
+  if (response.ok && shouldRefreshAdminAnalytics(path, request.method)) {
+    try {
+      const token = readRequiredAdminToken(request);
+      await refreshAdminAnalyticsSnapshot(token, request);
+    } catch {
+      // Worker writes or unauthenticated proxy calls should not fail because analytics refresh is best effort.
+    }
+  }
+
+  return response;
 }
 
 export function OPTIONS(): Response {
@@ -47,4 +74,3 @@ export function DELETE(request: Request, context: SafetyRouteContext): Promise<R
 export function HEAD(request: Request, context: SafetyRouteContext): Promise<Response> {
   return handleRequest(request, context);
 }
-

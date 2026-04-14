@@ -3,7 +3,7 @@ import type { SiteContractProfile } from '@/types/admin';
 import { parseDateValue, startOfToday } from './dates';
 import type { EnrichedControllerReportRow } from './rowEnrichment';
 
-export const ANALYTICS_REVENUE_COUNT_LABEL = '방문일 경과 또는 완료 기준';
+export const ANALYTICS_REVENUE_COUNT_LABEL = '방문 일정 경과 기준';
 
 export function hasRevenueProfile(profile: SiteContractProfile) {
   return resolveSiteRevenueProfile(profile).isRevenueReady;

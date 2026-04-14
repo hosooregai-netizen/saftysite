@@ -8,8 +8,7 @@ import { XMLParser } from 'fast-xml-parser';
 import {
   createAdminHeadquarter,
   createAdminSite,
-  fetchSafetyHeadquartersServer,
-  fetchSafetySitesServer,
+  fetchAdminCoreData,
   updateAdminHeadquarter,
   updateAdminSite,
 } from '@/server/admin/safetyApiServer';
@@ -32,6 +31,7 @@ import type {
   ExcelImportSheetPreview,
   ExcelRowActionType,
 } from '@/types/excelImport';
+import { provisionExcelWorkerAssignment } from './workerProvisioning';
 
 const JOB_DIR = path.join(os.tmpdir(), 'safetysite-excel-import-jobs');
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
@@ -957,11 +957,12 @@ export async function parseLocalExcelWorkbook(
   request: Request,
   scope?: ExcelImportScope,
 ): Promise<ExcelImportPreview> {
-  const [headquarters, sites, parsedSheets] = await Promise.all([
-    fetchSafetyHeadquartersServer(token, request),
-    fetchSafetySitesServer(token, request),
+  const [dashboardData, parsedSheets] = await Promise.all([
+    fetchAdminCoreData(token, request),
     parseWorkbook(file.name, new Uint8Array(await file.arrayBuffer())),
   ]);
+  const headquarters = dashboardData.headquarters;
+  const sites = dashboardData.sites;
 
   const headquarterLookup = buildHeadquarterLookup(headquarters);
   const siteLookup = buildSiteLookup(sites);
@@ -1088,13 +1089,20 @@ export async function applyLocalExcelWorkbook(
     throw new LocalExcelImportError('현재 업로드 스코프가 변경되어 다시 미리보기가 필요합니다.');
   }
 
-  let headquarters = await fetchSafetyHeadquartersServer(token, request);
-  let sites = await fetchSafetySitesServer(token, request);
+  const dashboardData = await fetchAdminCoreData(token, request);
+  let headquarters = dashboardData.headquarters;
+  let sites = dashboardData.sites;
+  let users = dashboardData.users;
+  let assignments = dashboardData.assignments;
   const resultRows: ExcelApplyResultRow[] = [];
   const summary = {
+    ambiguousWorkerMatchCount: 0,
     completionRequiredCount: 0,
+    createdAssignmentCount: 0,
     createdHeadquarterCount: 0,
+    createdPlaceholderUserCount: 0,
     createdSiteCount: 0,
+    matchedExistingUserCount: 0,
     updatedHeadquarterCount: 0,
     updatedSiteCount: 0,
   };
@@ -1216,6 +1224,29 @@ export async function applyLocalExcelWorkbook(
       summary.completionRequiredCount += 1;
     }
 
+    const workerProvision = await provisionExcelWorkerAssignment(token, request, {
+      assignments,
+      guidanceOfficerName: rowData.guidance_officer_name || site.guidance_officer_name || '',
+      rowIndex: row.rowIndex,
+      site,
+      users,
+    });
+
+    users = workerProvision.users;
+    assignments = workerProvision.assignments;
+    if (workerProvision.matchedExistingUser) {
+      summary.matchedExistingUserCount += 1;
+    }
+    if (workerProvision.createdPlaceholderUser) {
+      summary.createdPlaceholderUserCount += 1;
+    }
+    if (workerProvision.createdAssignment) {
+      summary.createdAssignmentCount += 1;
+    }
+    if (workerProvision.status === 'ambiguous') {
+      summary.ambiguousWorkerMatchCount += 1;
+    }
+
     headquarters = headquarters.some((item) => item.id === headquarter!.id)
       ? headquarters.map((item) => (item.id === headquarter!.id ? headquarter! : item))
       : [...headquarters, headquarter];
@@ -1227,11 +1258,15 @@ export async function applyLocalExcelWorkbook(
       action,
       headquarterId: headquarter.id,
       headquarterName: headquarter.name,
-      message: '적용 완료',
+      matchedUserEmail: workerProvision.matchedUserEmail,
+      matchedUserId: workerProvision.matchedUserId,
+      message: workerProvision.message,
+      placeholderCreated: workerProvision.createdPlaceholderUser,
       requiredCompletionFields,
       rowIndex: row.rowIndex,
       siteId: site.id,
       siteName: site.site_name,
+      workerMatchStatus: workerProvision.status,
     });
   }
 

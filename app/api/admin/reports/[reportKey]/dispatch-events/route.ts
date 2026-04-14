@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { refreshAdminAnalyticsSnapshot } from '@/server/admin/analyticsSnapshot';
 import {
   appendAdminDispatchEventServer,
   readRequiredAdminToken,
@@ -27,6 +28,7 @@ export async function POST(
       },
       request,
     );
+    await refreshAdminAnalyticsSnapshot(token, request);
 
     return NextResponse.json(updated);
   } catch (error) {

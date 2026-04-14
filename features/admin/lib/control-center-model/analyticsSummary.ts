@@ -3,48 +3,61 @@ import { resolveSiteRevenueProfile } from '@/lib/admin/siteContractProfile';
 import type { ControllerDashboardData } from '@/types/controller';
 import { ANALYTICS_REVENUE_COUNT_LABEL } from './analyticsRevenueRules';
 import type { AdminAnalyticsPeriod, AdminAnalyticsStats } from './types';
-import { buildAnalyticsComparisonWindow, calculateAveragePerVisitAmount, calculateChangeRate, countExecutedRounds, formatDeltaValue, getCurrentWindowLabel, getDeltaTone, sumVisitRevenue } from './analyticsSupport';
+import { buildAnalyticsComparisonWindow, calculateAveragePerVisitAmount, calculateChangeRate, formatDeltaValue, getCurrentWindowLabel, getDeltaTone } from './analyticsSupport';
 import { isWithinDateRange } from './dates';
-import { buildEnrichedRows } from './rowEnrichment';
+import type { AnalyticsRevenueEvent, AnalyticsScheduleRow } from './analyticsRevenueEvents';
+import { countRevenueEvents, sumRevenueEvents } from './analyticsRevenueEvents';
 
 export function buildSummaryCardsAndStats(
   visibleSites: ControllerDashboardData['sites'],
   userLoadCount: number,
-  detailRows: ReturnType<typeof buildEnrichedRows>,
-  detailGuidanceRows: ReturnType<typeof buildEnrichedRows>,
-  previousGuidanceRows: ReturnType<typeof buildEnrichedRows>,
-  scopedGuidanceRows: ReturnType<typeof buildEnrichedRows>,
+  detailScheduleRows: AnalyticsScheduleRow[],
+  detailRevenueEvents: AnalyticsRevenueEvent[],
+  previousRevenueEvents: AnalyticsRevenueEvent[],
+  scopedRevenueEvents: AnalyticsRevenueEvent[],
   filters: { period: AdminAnalyticsPeriod },
   today: Date,
 ) {
   const comparisonWindow = buildAnalyticsComparisonWindow(filters.period, today);
-  const totalExecutedRounds = countExecutedRounds(detailGuidanceRows);
-  const currentPeriodRevenue = sumVisitRevenue(detailGuidanceRows);
-  const previousPeriodRevenue = sumVisitRevenue(previousGuidanceRows);
+  const totalExecutedRounds = countRevenueEvents(detailRevenueEvents);
+  const currentPeriodRevenue = sumRevenueEvents(detailRevenueEvents);
+  const previousPeriodRevenue = sumRevenueEvents(previousRevenueEvents);
   const currentPeriodAveragePerVisitAmount = calculateAveragePerVisitAmount(currentPeriodRevenue, totalExecutedRounds);
-  const previousPeriodAveragePerVisitAmount = calculateAveragePerVisitAmount(previousPeriodRevenue, countExecutedRounds(previousGuidanceRows));
+  const previousPeriodAveragePerVisitAmount = calculateAveragePerVisitAmount(
+    previousPeriodRevenue,
+    countRevenueEvents(previousRevenueEvents),
+  );
   const currentPeriodRevenuePerEmployee = userLoadCount > 0 ? currentPeriodRevenue / userLoadCount : 0;
   const previousPeriodRevenuePerEmployee = userLoadCount > 0 ? previousPeriodRevenue / userLoadCount : 0;
   const monthWindow = buildAnalyticsComparisonWindow('month', today);
   const quarterWindow = buildAnalyticsComparisonWindow('quarter', today);
   const yearWindow = buildAnalyticsComparisonWindow('year', today);
-  const monthRevenue = sumVisitRevenue(scopedGuidanceRows.filter((row) => isWithinDateRange(row.reportDate, monthWindow.current)));
-  const previousMonthRevenue = sumVisitRevenue(scopedGuidanceRows.filter((row) => isWithinDateRange(row.reportDate, monthWindow.previous)));
-  const quarterRevenue = sumVisitRevenue(scopedGuidanceRows.filter((row) => isWithinDateRange(row.reportDate, quarterWindow.current)));
-  const previousQuarterRevenue = sumVisitRevenue(scopedGuidanceRows.filter((row) => isWithinDateRange(row.reportDate, quarterWindow.previous)));
-  const yearRevenue = sumVisitRevenue(scopedGuidanceRows.filter((row) => isWithinDateRange(row.reportDate, yearWindow.current)));
-  const previousYearRevenue = sumVisitRevenue(scopedGuidanceRows.filter((row) => isWithinDateRange(row.reportDate, yearWindow.previous)));
+  const monthRevenue = sumRevenueEvents(scopedRevenueEvents.filter((row) => isWithinDateRange(row.date, monthWindow.current)));
+  const previousMonthRevenue = sumRevenueEvents(
+    scopedRevenueEvents.filter((row) => isWithinDateRange(row.date, monthWindow.previous)),
+  );
+  const quarterRevenue = sumRevenueEvents(
+    scopedRevenueEvents.filter((row) => isWithinDateRange(row.date, quarterWindow.current)),
+  );
+  const previousQuarterRevenue = sumRevenueEvents(
+    scopedRevenueEvents.filter((row) => isWithinDateRange(row.date, quarterWindow.previous)),
+  );
+  const yearRevenue = sumRevenueEvents(scopedRevenueEvents.filter((row) => isWithinDateRange(row.date, yearWindow.current)));
+  const previousYearRevenue = sumRevenueEvents(
+    scopedRevenueEvents.filter((row) => isWithinDateRange(row.date, yearWindow.previous)),
+  );
   const totalPlannedRevenue = visibleSites.reduce((sum, site) => sum + resolveSiteRevenueProfile(site).plannedRevenue, 0);
   const totalPlannedRounds = visibleSites.reduce((sum, site) => sum + resolveSiteRevenueProfile(site).plannedRounds, 0);
+  const overdueCount = detailScheduleRows.filter((row) => row.isOverdue).length;
 
   const stats: AdminAnalyticsStats = {
     averagePerVisitAmount: currentPeriodAveragePerVisitAmount,
     completionRate: totalPlannedRounds > 0 ? totalExecutedRounds / totalPlannedRounds : 0,
     countedSiteCount: visibleSites.filter((site) => resolveSiteRevenueProfile(site).isRevenueReady).length,
-    delayRate: detailRows.length > 0 ? detailRows.filter((row) => row.isOverdue).length / detailRows.length : 0,
+    delayRate: detailScheduleRows.length > 0 ? overdueCount / detailScheduleRows.length : 0,
     excludedSiteCount: visibleSites.filter((site) => !resolveSiteRevenueProfile(site).isRevenueReady).length,
     includedEmployeeCount: userLoadCount,
-    overdueCount: detailRows.filter((row) => row.isOverdue).length,
+    overdueCount,
     plannedContractRevenue: totalPlannedRevenue,
     plannedRounds: totalPlannedRounds,
     totalExecutedRounds,

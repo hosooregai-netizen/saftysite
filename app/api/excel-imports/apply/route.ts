@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { refreshAdminAnalyticsSnapshot } from '@/server/admin/analyticsSnapshot';
 import {
   readRequiredAdminToken,
   SafetyServerApiError,
@@ -56,17 +57,17 @@ export async function POST(request: Request): Promise<Response> {
         { status: 400 },
       );
     }
-    return NextResponse.json(
-      await applyLocalExcelWorkbook(token, request, {
-        jobId,
-        scope: {
-          headquarterId,
-          siteId,
-          sourceSection,
-        },
-        sheetName,
-      }),
-    );
+    const result = await applyLocalExcelWorkbook(token, request, {
+      jobId,
+      scope: {
+        headquarterId,
+        siteId,
+        sourceSection,
+      },
+      sheetName,
+    });
+    await refreshAdminAnalyticsSnapshot(token, request);
+    return NextResponse.json(result);
   } catch (error) {
     if (error instanceof SafetyServerApiError) {
       return NextResponse.json({ error: error.message }, { status: error.status });

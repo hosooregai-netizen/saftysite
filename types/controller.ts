@@ -48,24 +48,26 @@ export interface SafetyAssignment {
 }
 
 export interface SafetyUserCreateInput {
+  auto_provisioned_from_excel?: boolean;
   email: string;
+  is_active?: boolean;
   name: string;
   password: string;
   phone?: string | null;
   role: SafetyUserRole;
   position?: string | null;
   organization_name?: string | null;
-  is_active?: boolean;
 }
 
 export interface SafetyUserUpdateInput {
+  auto_provisioned_from_excel?: boolean | null;
   email?: string | null;
+  is_active?: boolean | null;
   name?: string | null;
   phone?: string | null;
   role?: SafetyUserRole | null;
   position?: string | null;
   organization_name?: string | null;
-  is_active?: boolean | null;
 }
 
 export interface SafetyHeadquarterInput {

@@ -1,11 +1,9 @@
 import { NextResponse } from 'next/server';
 import {
-  fetchAdminCoreData,
-  fetchAdminReports,
   readRequiredAdminToken,
   SafetyServerApiError,
 } from '@/server/admin/safetyApiServer';
-import { buildAdminAnalyticsResponse } from '@/server/admin/automation';
+import { buildAdminAnalyticsSnapshotResponse } from '@/server/admin/analyticsSnapshot';
 
 export const runtime = 'nodejs';
 
@@ -13,25 +11,13 @@ export async function GET(request: Request): Promise<Response> {
   try {
     const token = readRequiredAdminToken(request);
     const url = new URL(request.url);
-    const [data, reports] = await Promise.all([
-      fetchAdminCoreData(token, request),
-      fetchAdminReports(token, request),
-    ]);
-
-    return NextResponse.json(
-      buildAdminAnalyticsResponse(
-        data,
-        reports,
-        {
-          contractType: url.searchParams.get('contract_type') || '',
-          headquarterId: url.searchParams.get('headquarter_id') || '',
-          period: url.searchParams.get('period') || 'month',
-          query: url.searchParams.get('query') || '',
-          userId: url.searchParams.get('user_id') || '',
-        },
-        new Date(),
-      ),
-    );
+    return NextResponse.json(await buildAdminAnalyticsSnapshotResponse(token, {
+      contractType: url.searchParams.get('contract_type') || '',
+      headquarterId: url.searchParams.get('headquarter_id') || '',
+      period: url.searchParams.get('period') || 'month',
+      query: url.searchParams.get('query') || '',
+      userId: url.searchParams.get('user_id') || '',
+    }, request, new Date()));
   } catch (error) {
     if (error instanceof SafetyServerApiError) {
       return NextResponse.json({ error: error.message }, { status: error.status });

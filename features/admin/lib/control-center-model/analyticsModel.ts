@@ -2,28 +2,30 @@ import { getAdminSectionHref } from '@/lib/admin';
 import { parseSiteContractProfile, resolveSiteRevenueProfile } from '@/lib/admin/siteContractProfile';
 import type { ControllerDashboardData } from '@/types/controller';
 import type { SafetyReportListItem } from '@/types/backend';
-import {
-  ANALYTICS_REVENUE_COUNT_LABEL,
-  filterRevenueRecognizedGuidanceRows,
-} from './analyticsRevenueRules';
+import { ANALYTICS_REVENUE_COUNT_LABEL } from './analyticsRevenueRules';
 import {
   buildAnalyticsComparisonWindow,
   buildTrendRows,
   calculateAveragePerVisitAmount,
   calculateChangeRate,
-  countExecutedRounds,
   formatAnalyticsStatValue,
   getContractBucketKey,
   getContractTypeDisplayLabel,
-  isWithinPeriod,
   matchesAnalyticsQuery,
   resolvePrimaryContractTypeLabel,
-  sumVisitRevenue,
 } from './analyticsSupport';
 import { buildContractTypeRows } from './analyticsContractRows';
 import { buildSummaryCardsAndStats } from './analyticsSummary';
 import { isWithinDateRange } from './dates';
-import { buildAssignedSiteIdsByUser, buildEnrichedRows } from './rowEnrichment';
+import { buildAssignedSiteIdsByUser } from './rowEnrichment';
+import {
+  buildAnalyticsRevenueEvents,
+  buildAnalyticsScheduleRows,
+  countRevenueEvents,
+  sumRevenueEvents,
+  type AnalyticsRevenueEvent,
+  type AnalyticsScheduleRow,
+} from './analyticsRevenueEvents';
 import type {
   AdminAnalyticsEmployeeRow,
   AdminAnalyticsModel,
@@ -31,27 +33,37 @@ import type {
   AdminAnalyticsSiteRevenueRow,
 } from './types';
 
+function isWithinPeriod(value: string, period: AdminAnalyticsPeriod, today: Date) {
+  const comparisonWindow = buildAnalyticsComparisonWindow(period, today);
+  if (period === 'all') return true;
+  return isWithinDateRange(value, comparisonWindow.current);
+}
+
 function buildEmployeeRows(
   data: ControllerDashboardData,
   visibleSiteIds: Set<string>,
   assignedSiteIdsByUser: Map<string, Set<string>>,
   sitesById: Map<string, ControllerDashboardData['sites'][number]>,
-  detailRows: ReturnType<typeof buildEnrichedRows>,
-  detailGuidanceRows: ReturnType<typeof buildEnrichedRows>,
-  previousGuidanceRows: ReturnType<typeof buildEnrichedRows>,
+  detailScheduleRows: AnalyticsScheduleRow[],
+  detailRevenueEvents: AnalyticsRevenueEvent[],
+  previousRevenueEvents: AnalyticsRevenueEvent[],
   normalizedQuery: string,
   filters: { userId: string },
   comparisonWindow: { previous: object | null },
 ): AdminAnalyticsEmployeeRow[] {
   return data.users
     .map((user) => {
-      const userCurrentRows = detailRows.filter((row) => row.assigneeUserId === user.id);
-      const userCurrentGuidanceRows = detailGuidanceRows.filter((row) => row.assigneeUserId === user.id);
-      const userPreviousGuidanceRows = previousGuidanceRows.filter((row) => row.assigneeUserId === user.id);
+      const userCurrentScheduleRows = detailScheduleRows.filter((row) => row.assigneeUserId === user.id);
+      const userCurrentRevenueEvents = detailRevenueEvents.filter((row) => row.assigneeUserId === user.id);
+      const userPreviousRevenueEvents = previousRevenueEvents.filter((row) => row.assigneeUserId === user.id);
       const fallbackAssignedSiteIds = Array.from(assignedSiteIdsByUser.get(user.id) ?? new Set<string>()).filter(
         (siteId) => visibleSiteIds.has(siteId),
       );
-      const queriedSiteIds = Array.from(new Set(userCurrentRows.map((row) => row.siteId)));
+      const queriedSiteIds = Array.from(
+        new Set(
+          [...userCurrentScheduleRows.map((row) => row.siteId), ...userCurrentRevenueEvents.map((row) => row.siteId)],
+        ),
+      );
       const assignedSiteIds =
         normalizedQuery && queriedSiteIds.length > 0 ? queriedSiteIds : fallbackAssignedSiteIds;
       const totalAssignedRounds = assignedSiteIds.reduce((sum, siteId) => {
@@ -60,15 +72,15 @@ function buildEmployeeRows(
       const plannedRevenue = assignedSiteIds.reduce((sum, siteId) => {
         return sum + resolveSiteRevenueProfile(sitesById.get(siteId) ?? null).plannedRevenue;
       }, 0);
-      const visitRevenue = sumVisitRevenue(userCurrentGuidanceRows);
-      const executedRounds = countExecutedRounds(userCurrentGuidanceRows);
-      const previousRevenue = sumVisitRevenue(userPreviousGuidanceRows);
+      const visitRevenue = sumRevenueEvents(userCurrentRevenueEvents);
+      const executedRounds = countRevenueEvents(userCurrentRevenueEvents);
+      const previousRevenue = sumRevenueEvents(userPreviousRevenueEvents);
       const shouldInclude =
         filters.userId === user.id ||
         assignedSiteIds.length > 0 ||
-        userCurrentRows.length > 0 ||
-        userCurrentGuidanceRows.length > 0 ||
-        userCurrentRows.some((row) => row.isOverdue);
+        userCurrentScheduleRows.length > 0 ||
+        userCurrentRevenueEvents.length > 0 ||
+        userCurrentScheduleRows.some((row) => row.isOverdue);
 
       if (!shouldInclude) return null;
 
@@ -76,11 +88,13 @@ function buildEmployeeRows(
         assignedSiteCount: assignedSiteIds.length,
         avgPerVisitAmount: calculateAveragePerVisitAmount(visitRevenue, executedRounds),
         completionRate: totalAssignedRounds > 0 ? executedRounds / totalAssignedRounds : 0,
-        overdueCount: userCurrentRows.filter((row) => row.isOverdue).length,
+        overdueCount: userCurrentScheduleRows.filter((row) => row.isOverdue).length,
         plannedRevenue,
         plannedRounds: totalAssignedRounds,
         primaryContractTypeLabel: resolvePrimaryContractTypeLabel(
-          assignedSiteIds.length > 0 ? assignedSiteIds : Array.from(new Set(userCurrentRows.map((row) => row.siteId))),
+          assignedSiteIds.length > 0
+            ? assignedSiteIds
+            : Array.from(new Set(userCurrentScheduleRows.map((row) => row.siteId))),
           sitesById,
         ),
         revenueChangeRate: comparisonWindow.previous ? calculateChangeRate(visitRevenue, previousRevenue) : null,
@@ -96,23 +110,25 @@ function buildEmployeeRows(
 
 function buildSiteRevenueRows(
   visibleSites: ControllerDashboardData['sites'],
-  detailRows: ReturnType<typeof buildEnrichedRows>,
-  detailGuidanceRows: ReturnType<typeof buildEnrichedRows>,
+  detailScheduleRows: AnalyticsScheduleRow[],
+  detailRevenueEvents: AnalyticsRevenueEvent[],
   normalizedQuery: string,
 ): AdminAnalyticsSiteRevenueRow[] {
   return visibleSites
     .map((site) => {
-      const currentGuidanceRows = detailGuidanceRows.filter((row) => row.siteId === site.id);
+      const currentScheduleRows = detailScheduleRows.filter((row) => row.siteId === site.id);
+      const currentRevenueEvents = detailRevenueEvents.filter((row) => row.siteId === site.id);
       const profile = parseSiteContractProfile(site);
       const revenueProfile = resolveSiteRevenueProfile(site);
-      const visitRevenue = sumVisitRevenue(currentGuidanceRows);
-      const executedRounds = countExecutedRounds(currentGuidanceRows);
+      const visitRevenue = sumRevenueEvents(currentRevenueEvents);
+      const executedRounds = countRevenueEvents(currentRevenueEvents);
       const plannedRevenue = revenueProfile.plannedRevenue;
       const plannedRounds = revenueProfile.plannedRounds;
       const contractTypeLabel = getContractTypeDisplayLabel(getContractBucketKey(profile));
       const matchesQuery = normalizedQuery
         ? matchesAnalyticsQuery(
             {
+              assigneeName: currentScheduleRows[0]?.assigneeName || currentRevenueEvents[0]?.assigneeName || '',
               contractTypeLabel,
               headquarterName: site.headquarter_detail?.name || site.headquarter?.name || '-',
               siteName: site.site_name,
@@ -137,7 +153,7 @@ function buildSiteRevenueRows(
       };
     })
     .filter((row) => {
-      if (normalizedQuery) return row.matchesQuery || detailRows.some((item) => item.siteId === row.siteId);
+      if (normalizedQuery) return row.matchesQuery;
       return row.executedRounds > 0 || row.visitRevenue > 0 || row.plannedRounds > 0 || row.plannedRevenue > 0;
     })
     .map(({ matchesQuery, ...row }) => {
@@ -158,14 +174,16 @@ export function buildAdminAnalyticsModel(
   },
   today = new Date(),
 ): AdminAnalyticsModel {
-  const analyticsRows = buildEnrichedRows(data, reports, today);
   const assignedSiteIdsByUser = buildAssignedSiteIdsByUser(data);
   const sitesById = new Map(data.sites.map((site) => [site.id, site]));
+  const analyticsScheduleRows = buildAnalyticsScheduleRows(data, today);
+  const analyticsRevenueEvents = buildAnalyticsRevenueEvents(data, reports, today);
   const userScopedSiteIds = new Set(
     filters.userId
       ? [
           ...(assignedSiteIdsByUser.get(filters.userId) ?? new Set<string>()),
-          ...analyticsRows.filter((row) => row.assigneeUserId === filters.userId).map((row) => row.siteId),
+          ...analyticsScheduleRows.filter((row) => row.assigneeUserId === filters.userId).map((row) => row.siteId),
+          ...analyticsRevenueEvents.filter((row) => row.assigneeUserId === filters.userId).map((row) => row.siteId),
         ]
       : data.sites.map((site) => site.id),
   );
@@ -181,94 +199,99 @@ export function buildAdminAnalyticsModel(
       .map((site) => site.id),
   );
   const visibleSites = data.sites.filter((site) => visibleSiteIds.has(site.id));
-  const scopedRows = analyticsRows.filter(
+  const scopedScheduleRows = analyticsScheduleRows.filter(
     (row) => visibleSiteIds.has(row.siteId) && (!filters.userId || row.assigneeUserId === filters.userId),
   );
-  const scopedGuidanceRows = filterRevenueRecognizedGuidanceRows(scopedRows, today);
-  const detailRows = scopedRows.filter((row) => isWithinPeriod(row.reportDate, filters.period, today));
-  const detailGuidanceRows = filterRevenueRecognizedGuidanceRows(detailRows, today);
+  const scopedRevenueEvents = analyticsRevenueEvents.filter(
+    (row) => visibleSiteIds.has(row.siteId) && (!filters.userId || row.assigneeUserId === filters.userId),
+  );
+  const detailScheduleRows = scopedScheduleRows.filter((row) =>
+    isWithinPeriod(row.plannedDate, filters.period, today),
+  );
+  const detailRevenueEvents = scopedRevenueEvents.filter((row) =>
+    isWithinPeriod(row.date, filters.period, today),
+  );
   const comparisonWindow = buildAnalyticsComparisonWindow(filters.period, today);
-  const previousRows = comparisonWindow.previous
-    ? scopedRows.filter((row) => isWithinDateRange(row.reportDate, comparisonWindow.previous))
+  const previousRevenueEvents = comparisonWindow.previous
+    ? scopedRevenueEvents.filter((row) => isWithinDateRange(row.date, comparisonWindow.previous))
     : [];
-  const previousGuidanceRows = filterRevenueRecognizedGuidanceRows(previousRows, today);
   const normalizedQuery = filters.query.trim();
-  const queriedDetailRows = normalizedQuery
-    ? detailRows.filter((row) =>
+  const queriedDetailScheduleRows = normalizedQuery
+    ? detailScheduleRows.filter((row) =>
         matchesAnalyticsQuery(
           {
             assigneeName: row.assigneeName,
             headquarterName: row.headquarterName,
-            periodLabel: row.periodLabel,
-            reportTitle: row.reportTitle,
             siteName: row.siteName,
           },
           normalizedQuery,
         ),
       )
-    : detailRows;
-  const queriedDetailGuidanceRows = normalizedQuery
-    ? detailGuidanceRows.filter((row) =>
+    : detailScheduleRows;
+  const queriedDetailRevenueEvents = normalizedQuery
+    ? detailRevenueEvents.filter((row) =>
         matchesAnalyticsQuery(
           {
             assigneeName: row.assigneeName,
             headquarterName: row.headquarterName,
-            periodLabel: row.periodLabel,
-            reportTitle: row.reportTitle,
             siteName: row.siteName,
           },
           normalizedQuery,
         ),
       )
-    : detailGuidanceRows;
-  const queriedPreviousGuidanceRows = normalizedQuery
-    ? previousGuidanceRows.filter((row) =>
+    : detailRevenueEvents;
+  const queriedPreviousRevenueEvents = normalizedQuery
+    ? previousRevenueEvents.filter((row) =>
         matchesAnalyticsQuery(
           {
             assigneeName: row.assigneeName,
             headquarterName: row.headquarterName,
-            periodLabel: row.periodLabel,
-            reportTitle: row.reportTitle,
             siteName: row.siteName,
           },
           normalizedQuery,
         ),
       )
-    : previousGuidanceRows;
+    : previousRevenueEvents;
 
   const userLoadCount = data.users.filter(
     (user) =>
       (filters.userId ? user.id === filters.userId : true) &&
       ((assignedSiteIdsByUser.get(user.id)?.size ?? 0) > 0 ||
-        scopedRows.some((item) => item.assigneeUserId === user.id)),
+        scopedScheduleRows.some((item) => item.assigneeUserId === user.id) ||
+        scopedRevenueEvents.some((item) => item.assigneeUserId === user.id)),
   ).length;
 
   return {
-    contractTypeRows: buildContractTypeRows(visibleSites, detailGuidanceRows),
+    contractTypeRows: buildContractTypeRows(visibleSites, queriedDetailRevenueEvents),
     employeeRows: buildEmployeeRows(
       data,
       visibleSiteIds,
       assignedSiteIdsByUser,
       sitesById,
-      queriedDetailRows,
-      queriedDetailGuidanceRows,
-      queriedPreviousGuidanceRows,
+      queriedDetailScheduleRows,
+      queriedDetailRevenueEvents,
+      queriedPreviousRevenueEvents,
       normalizedQuery,
       { userId: filters.userId },
       comparisonWindow,
     ),
-    siteRevenueRows: buildSiteRevenueRows(visibleSites, queriedDetailRows, queriedDetailGuidanceRows, normalizedQuery),
+    siteRevenueRows: buildSiteRevenueRows(
+      visibleSites,
+      queriedDetailScheduleRows,
+      queriedDetailRevenueEvents,
+      normalizedQuery,
+    ),
     ...buildSummaryCardsAndStats(
       visibleSites,
       userLoadCount,
-      detailRows,
-      detailGuidanceRows,
-      previousGuidanceRows,
-      scopedGuidanceRows,
+      detailScheduleRows,
+      detailRevenueEvents,
+      previousRevenueEvents,
+      scopedRevenueEvents,
       { period: filters.period },
       today,
     ),
-    trendRows: buildTrendRows(scopedGuidanceRows, today),
+    trendRows: buildTrendRows(scopedRevenueEvents, today),
   };
 }
 

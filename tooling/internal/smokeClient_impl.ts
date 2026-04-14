@@ -1242,6 +1242,7 @@ async function runBrowserCrudSmoke() {
       const body = (await json?.()) as JsonRecord;
       const created = {
         id: `user-${slugify(String(body.email || body.name || Date.now()))}`,
+        auto_provisioned_from_excel: body.auto_provisioned_from_excel ?? false,
         email: body.email,
         name: body.name,
         phone: body.phone ?? null,

@@ -38,11 +38,15 @@ import type {
 import type {
   ControllerDashboardData,
   SafetyAssignment,
+  SafetyAssignmentInput,
+  SafetyAssignmentUpdateInput,
   SafetyHeadquarter,
   SafetyHeadquarterInput,
   SafetyHeadquarterUpdateInput,
   SafetySiteInput,
   SafetySiteUpdateInput,
+  SafetyUserCreateInput,
+  SafetyUserUpdateInput,
 } from '@/types/controller';
 
 const ADMIN_PAGE_LIMIT = 200;
@@ -414,11 +418,12 @@ export function fetchAdminReports(
   token: string,
   request: Request | null = null,
 ): Promise<SafetyReportListItem[]> {
-  return requestSafetyAdminServer<SafetyReportListItem[]>(
-    withQuery('/reports', { active_only: true, limit: REPORT_LIST_LIMIT }),
-    {},
-    token,
-    request,
+  return fetchAllAdminPages<SafetyReportListItem>(token, request, (limit, offset) =>
+    withQuery('/reports', {
+      active_only: true,
+      limit: Math.min(limit, REPORT_LIST_LIMIT),
+      offset,
+    }),
   ).then((reports) => normalizeReportList(reports));
 }
 
@@ -1100,6 +1105,64 @@ export function updateAdminSite(
 ): Promise<SafetySite> {
   return requestSafetyAdminServer<SafetySite>(
     `/sites/${encodeURIComponent(siteId)}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    },
+    token,
+    request,
+  );
+}
+
+export function createAdminUser(
+  token: string,
+  payload: SafetyUserCreateInput | SafetyUserUpdateInput,
+  request: Request | null = null,
+): Promise<SafetyUser> {
+  return requestSafetyAdminServer<SafetyUser>(
+    '/users',
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    },
+    token,
+    request,
+  );
+}
+
+export function createAdminAssignment(
+  token: string,
+  payload: SafetyAssignmentInput | SafetyAssignmentUpdateInput,
+  request: Request | null = null,
+): Promise<SafetyAssignment> {
+  return requestSafetyAdminServer<SafetyAssignment>(
+    '/assignments',
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    },
+    token,
+    request,
+  );
+}
+
+export function updateAdminAssignment(
+  token: string,
+  assignmentId: string,
+  payload: SafetyAssignmentInput | SafetyAssignmentUpdateInput,
+  request: Request | null = null,
+): Promise<SafetyAssignment> {
+  return requestSafetyAdminServer<SafetyAssignment>(
+    `/assignments/${encodeURIComponent(assignmentId)}`,
     {
       method: 'PATCH',
       body: JSON.stringify(payload),

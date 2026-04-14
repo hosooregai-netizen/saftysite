@@ -36,7 +36,7 @@ export async function runAdminControlCenterSmoke(config: ClientSmokePlaywrightCo
     await page.goto(`${harness.baseURL}/admin?section=analytics`, { waitUntil: 'load' });
     await page.getByText('매출/실적 집계').first().waitFor();
     await page.getByText('집계 기준').first().waitFor();
-    await page.getByText('방문일 경과 또는 완료 기준').first().waitFor();
+    await page.getByText('방문 일정 경과 기준').first().waitFor();
     await harness.waitForRequestCount('GET /api/admin/dashboard/analytics', analyticsReadsBefore + 1);
     await page.getByText('월별 매출 추이').first().waitFor();
     await page.getByRole('button', { name: '필터' }).click();
@@ -49,7 +49,7 @@ export async function runAdminControlCenterSmoke(config: ClientSmokePlaywrightCo
     await page.getByText('집계 기간').first().waitFor();
     await page.getByText('계약 예정 매출').first().waitFor();
     await page.getByText('1,200,000원').first().waitFor();
-    await page.getByText('800,000원').first().waitFor();
+    await page.getByText('400,000원').first().waitFor();
     await page.getByText('100,000원').first().waitFor();
     await page.getByRole('button', { name: '엑셀 내보내기' }).click();
     await harness.waitForRequestCount('POST /api/admin/exports/:section', overviewExportsBefore + 2);

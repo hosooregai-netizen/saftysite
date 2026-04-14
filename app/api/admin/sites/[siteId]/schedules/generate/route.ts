@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { refreshAdminAnalyticsSnapshot } from '@/server/admin/analyticsSnapshot';
 import {
   generateAdminSchedulesServer,
   readRequiredAdminToken,
@@ -16,6 +17,7 @@ export async function POST(
     const token = readRequiredAdminToken(request);
     const { siteId } = await context.params;
     const response = await generateAdminSchedulesServer(token, siteId, request);
+    await refreshAdminAnalyticsSnapshot(token, request);
     return NextResponse.json({ rows: response.rows.map((row) => mapBackendSchedule(row)) });
   } catch (error) {
     if (error instanceof SafetyServerApiError) {

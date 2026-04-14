@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { refreshAdminMasterData } from '@/features/admin/lib/adminDashboardMutations';
+import { refreshAdminAnalyticsSnapshot } from '@/lib/admin/apiClient';
 import type { ControllerDashboardData } from '@/types/controller';
 import type { SafetyReportListItem } from '@/types/backend';
 import { buildAdminDashboardAssignmentActions } from './buildAdminDashboardAssignmentActions';
@@ -73,6 +74,12 @@ export function useAdminDashboardState({
         const result = await task(getToken());
         if (options?.applyResult) {
           setData((current) => options.applyResult?.(current, result) ?? current);
+        }
+
+        try {
+          await refreshAdminAnalyticsSnapshot();
+        } catch (refreshError) {
+          console.error('Admin analytics snapshot refresh failed after mutation', refreshError);
         }
 
         try {
