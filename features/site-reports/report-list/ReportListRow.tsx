@@ -40,7 +40,7 @@ export function ReportListRow({
   const progressRate = Math.max(0, Math.min(100, item.progressRate ?? 0));
   const sessionHref = `/sessions/${item.reportKey}`;
   const menuItems = [
-    { label: '열어 작성', href: sessionHref },
+    { label: '열기', href: sessionHref },
     ...(canArchiveReports
       ? [
           {
