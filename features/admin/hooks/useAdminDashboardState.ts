@@ -79,7 +79,7 @@ export function useAdminDashboardState({
         try {
           await refreshAdminAnalyticsSnapshot();
         } catch (refreshError) {
-          console.error('Admin analytics snapshot refresh failed after mutation', refreshError);
+          // Snapshot refresh is best-effort; the forced reload below still refreshes visible admin data.
         }
 
         try {

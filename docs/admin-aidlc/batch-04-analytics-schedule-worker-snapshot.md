@@ -62,6 +62,9 @@ snapshot path.
   - admin site/schedule/report routes
   - Excel apply
   - proxied safety writes for users, assignments, headquarters, sites, and report upserts/status writes
+- Client-side analytics snapshot refresh after admin mutations is treated as best-effort; if the
+  background refresh is unavailable, the forced dashboard reload still updates the visible admin
+  data without surfacing a browser console error.
 - Mocked admin harness now seeds elapsed schedules into the site memo so control-center smoke protects
   schedule-based revenue instead of report-only revenue.
 
@@ -114,6 +117,8 @@ git diff --check
   - pending for this batch
 - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3101 npm run test:client:smoke -- admin-control-center admin-sites`
   - passed
+- `npm run test:client:smoke -- admin-control-center`
+  - passed after mutating a site from headquarters and re-entering analytics without console errors
 - `git diff --check`
   - pending for this batch
 

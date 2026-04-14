@@ -31,4 +31,5 @@ export async function runAdminControlCenterSection(page: Page) {
     }),
     page.locator('#analytics-filter-period').selectOption('year'),
   ]);
+  await page.getByText('?ㅽ뻾 ?뚯감').first().waitFor();
 }
