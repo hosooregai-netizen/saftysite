@@ -8,7 +8,13 @@ const CHART_WIDTH = 820;
 const CHART_HEIGHT = 300;
 const CHART_PADDING = { bottom: 44, left: 28, right: 28, top: 24 };
 
-export function AnalyticsTrendCard({ rows }: { rows: AdminAnalyticsTrendRow[] }) {
+export function AnalyticsTrendCard({
+  rows,
+  year,
+}: {
+  rows: AdminAnalyticsTrendRow[];
+  year: number;
+}) {
   if (rows.length === 0) {
     return <div className={styles.emptyState}>표시할 추이 데이터가 없습니다.</div>;
   }
@@ -32,8 +38,8 @@ export function AnalyticsTrendCard({ rows }: { rows: AdminAnalyticsTrendRow[] })
     <section className={`${styles.surface} ${styles.surfaceWide}`}>
       <div className={styles.surfaceHeader}>
         <div className={styles.surfaceHeaderText}>
-          <h3 className={styles.surfaceTitle}>월별 매출 추이</h3>
-          <p className={styles.surfaceMeta}>최근 12개월 기준</p>
+          <h3 className={styles.surfaceTitle}>{year}년 월별 매출 추이</h3>
+          <p className={styles.surfaceMeta}>{year}년 기준 월별 실행 매출과 평균 회차 단가</p>
         </div>
         <div className={styles.legend}>
           <span className={styles.legendItem}><span className={styles.legendBar} aria-hidden="true" />월별 매출</span>
@@ -46,7 +52,7 @@ export function AnalyticsTrendCard({ rows }: { rows: AdminAnalyticsTrendRow[] })
         <div className={styles.trendSummaryItem}><span className={styles.trendSummaryLabel}>최근 월 실행 회차</span><strong className={styles.trendSummaryValue}>{latestRow.executedRounds}회</strong></div>
       </div>
       <div className={styles.chartWrap}>
-        <svg className={styles.chartSvg} viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`} role="img" aria-label="최근 12개월 월별 매출과 평균 회차 단가 추이">
+        <svg className={styles.chartSvg} viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`} role="img" aria-label={`${year}년 월별 매출과 평균 회차 단가 추이`}>
           <defs>
             <linearGradient id="analyticsRevenueBar" x1="0%" y1="0%" x2="0%" y2="100%">
               <stop offset="0%" stopColor="#1f4f8f" />

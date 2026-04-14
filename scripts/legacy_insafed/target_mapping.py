@@ -73,6 +73,8 @@ def build_site_payload(record: dict[str, Any], headquarter_id: str, existing_mem
         [
             build_site_tag(str(record.get("legacy_site_id"))),
             f"legacy_insafed_detail_href:{normalize_text(record.get('detail_href'))}",
+            f"legacy_insafed_management_number:{normalize_text(record.get('management_number'))}",
+            f"legacy_insafed_opening_number:{normalize_text(record.get('opening_number'))}",
             f"legacy_insafed_amount_period:{normalize_text(record.get('amount_period'))}",
             f"legacy_insafed_progress_status:{normalize_text(record.get('progress_status'))}",
             f"legacy_insafed_start_round:{normalize_text(record.get('start_round'))}",

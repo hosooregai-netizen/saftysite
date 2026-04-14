@@ -2,106 +2,104 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  buildAdminOverviewModel,
   getOverviewExportSheets,
   type AdminOverviewModel,
 } from '@/features/admin/lib/buildAdminControlCenterModel';
+import { readAdminSessionCache, writeAdminSessionCache } from '@/features/admin/lib/adminSessionCache';
 import { fetchAdminOverview } from '@/lib/admin/apiClient';
 import { exportAdminWorkbook } from '@/lib/admin/exportClient';
 import type { SafetyAdminOverviewResponse, TableSortState } from '@/types/admin';
-import type { SafetyReportListItem } from '@/types/backend';
-import type { ControllerDashboardData } from '@/types/controller';
 import {
   clampPage,
   compareNumber,
   compareText,
-  hasDeadlineSignalSummary,
-  hasQuarterlyMaterialSummary,
-  hasSiteStatusSummary,
   OVERVIEW_TABLE_PAGE_SIZE,
 } from './overviewSectionHelpers';
 
 export function useAdminOverviewSectionState(
-  data: ControllerDashboardData,
-  reports: SafetyReportListItem[],
+  currentUserId: string,
 ) {
-  const fallbackOverview = useMemo(
+  const emptyOverview = useMemo(
     () =>
       ({
-        ...buildAdminOverviewModel(data, reports),
         alerts: [],
         completionRows: [],
+        coverageRows: [],
+        deadlineRows: [],
+        deadlineSignalSummary: { entries: [], totalReportCount: 0 },
         dispatchQueueRows: [],
+        metricCards: [],
+        overdueSiteRows: [],
+        pendingReviewRows: [],
         priorityTargetSiteRows: [],
+        quarterlyMaterialSummary: {
+          entries: [],
+          missingSiteRows: [],
+          quarterKey: '',
+          quarterLabel: '',
+          totalSiteCount: 0,
+        },
         recipientMissingSiteRows: [],
         scheduleRows: [],
+        siteStatusSummary: { entries: [], totalSiteCount: 0 },
+        summaryRows: [],
+        unsentReportRows: [],
+        workerLoadRows: [],
       } satisfies SafetyAdminOverviewResponse),
-    [data, reports],
+    [],
   );
-  const [overviewResponse, setOverviewResponse] = useState<SafetyAdminOverviewResponse | null>(null);
+  const [overviewResponse, setOverviewResponse] = useState<SafetyAdminOverviewResponse | null>(() => {
+    return readAdminSessionCache<SafetyAdminOverviewResponse>(currentUserId, 'overview').value;
+  });
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
+  const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(() => {
+    const cached = readAdminSessionCache<SafetyAdminOverviewResponse>(currentUserId, 'overview');
+    return cached.value ? new Date() : null;
+  });
   const [materialSort, setMaterialSort] = useState<TableSortState>({ direction: 'desc', key: 'missingTotal' });
   const [materialPage, setMaterialPage] = useState(1);
   const [unsentSort, setUnsentSort] = useState<TableSortState>({ direction: 'desc', key: 'unsentDays' });
   const [unsentPage, setUnsentPage] = useState(1);
 
-  const refreshOverview = useCallback(async () => {
+  const refreshOverview = useCallback(async (options?: { force?: boolean }) => {
+    const cached = !options?.force
+      ? readAdminSessionCache<SafetyAdminOverviewResponse>(currentUserId, 'overview')
+      : { isFresh: false, value: null };
+    if (cached.value) {
+      setOverviewResponse(cached.value);
+      setLastSyncedAt(new Date());
+      if (cached.isFresh) {
+        return;
+      }
+    }
+
     try {
       setIsRefreshing(true);
       setError(null);
       const nextOverview = await fetchAdminOverview();
       setOverviewResponse(nextOverview);
       setLastSyncedAt(new Date());
+      writeAdminSessionCache(currentUserId, 'overview', nextOverview);
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : '관제 대시보드를 불러오지 못했습니다.');
     } finally {
       setIsRefreshing(false);
     }
-  }, []);
+  }, [currentUserId]);
 
   useEffect(() => {
     void refreshOverview();
   }, [refreshOverview]);
 
-  const overview = useMemo(() => {
-    if (!overviewResponse) return fallbackOverview;
-    return {
-      ...overviewResponse,
-      deadlineSignalSummary: hasDeadlineSignalSummary(overviewResponse.deadlineSignalSummary)
-        ? overviewResponse.deadlineSignalSummary
-        : fallbackOverview.deadlineSignalSummary,
-      quarterlyMaterialSummary: hasQuarterlyMaterialSummary(overviewResponse.quarterlyMaterialSummary)
-        ? {
-            ...overviewResponse.quarterlyMaterialSummary,
-            quarterKey:
-              overviewResponse.quarterlyMaterialSummary.quarterKey ||
-              fallbackOverview.quarterlyMaterialSummary.quarterKey,
-            quarterLabel:
-              overviewResponse.quarterlyMaterialSummary.quarterLabel ||
-              fallbackOverview.quarterlyMaterialSummary.quarterLabel,
-          }
-        : fallbackOverview.quarterlyMaterialSummary,
-      siteStatusSummary: hasSiteStatusSummary(overviewResponse.siteStatusSummary)
-        ? overviewResponse.siteStatusSummary
-        : fallbackOverview.siteStatusSummary,
-      unsentReportRows:
-        overviewResponse.unsentReportRows.length > 0 || fallbackOverview.unsentReportRows.length === 0
-          ? overviewResponse.unsentReportRows
-          : fallbackOverview.unsentReportRows,
-    } satisfies SafetyAdminOverviewResponse;
-  }, [fallbackOverview, overviewResponse]);
+  const overview = overviewResponse ?? emptyOverview;
+  const isInitialLoading = !overviewResponse && isRefreshing;
 
   const normalizedUnsentReportRows = useMemo(() => {
-    const fallbackRowsByKey = new Map(fallbackOverview.unsentReportRows.map((row) => [row.reportKey, row]));
     return overview.unsentReportRows
-      .map((row) => {
-        const fallbackRow = fallbackRowsByKey.get(row.reportKey);
-        return { ...fallbackRow, ...row, assigneeName: row.assigneeName || fallbackRow?.assigneeName || '-' };
-      })
+      .map((row) => ({ ...row, assigneeName: row.assigneeName || '-' }))
       .filter((row) => Boolean(row.reportKey));
-  }, [fallbackOverview.unsentReportRows, overview.unsentReportRows]);
+  }, [overview.unsentReportRows]);
 
   const sortedMaterialRows = useMemo(() => {
     return [...overview.quarterlyMaterialSummary.missingSiteRows].sort((left, right) => {
@@ -190,6 +188,7 @@ export function useAdminOverviewSectionState(
     error,
     exportOverview,
     isRefreshing,
+    isInitialLoading,
     lastSyncedAt,
     materialTotalPages,
     overview,

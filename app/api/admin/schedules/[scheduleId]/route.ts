@@ -1,11 +1,17 @@
 import { NextResponse } from 'next/server';
 import { refreshAdminAnalyticsSnapshot } from '@/server/admin/analyticsSnapshot';
 import {
+  fetchAdminCoreData,
+  fetchCurrentSafetyUserServer,
   readRequiredAdminToken,
   SafetyServerApiError,
-  updateAdminScheduleServer,
+  updateAdminSite,
 } from '@/server/admin/safetyApiServer';
-import { mapBackendSchedule } from '@/server/admin/upstreamMappers';
+import { updateSingleSchedule } from '@/server/admin/automation';
+import {
+  appendSiteScheduleNotifications,
+  buildScheduleChangeNotifications,
+} from '@/server/admin/localScheduleNotifications';
 import type { SafetyInspectionSchedule } from '@/types/admin';
 
 export const runtime = 'nodejs';
@@ -18,25 +24,34 @@ export async function PATCH(
     const token = readRequiredAdminToken(request);
     const { scheduleId } = await context.params;
     const payload = (await request.json()) as Partial<SafetyInspectionSchedule>;
-    const updated = await updateAdminScheduleServer(
-      token,
+    const data = await fetchAdminCoreData(token, request);
+    const currentUser = await fetchCurrentSafetyUserServer(token, request);
+    const { memo: scheduleMemo, schedule, previousSchedule, site } = updateSingleSchedule(
+      data,
       scheduleId,
+      payload,
       {
-        assignee_name: payload.assigneeName || undefined,
-        assignee_user_id: payload.assigneeUserId || undefined,
-        exception_memo: payload.exceptionMemo || undefined,
-        exception_reason_code: payload.exceptionReasonCode || undefined,
-        linked_report_key: payload.linkedReportKey || undefined,
-        planned_date: payload.plannedDate || undefined,
-        selection_reason_label: payload.selectionReasonLabel || undefined,
-        selection_reason_memo: payload.selectionReasonMemo || undefined,
-        status: payload.status || undefined,
+        actorUserId: currentUser.id,
+        actorUserName: currentUser.name,
       },
-      request,
     );
+    const nextNotifications = buildScheduleChangeNotifications({
+      actorUser: currentUser,
+      nextSchedule: schedule,
+      previousSchedule,
+      site,
+    });
+    const memo = appendSiteScheduleNotifications(
+      {
+        ...site,
+        memo: scheduleMemo,
+      },
+      nextNotifications,
+    );
+    await updateAdminSite(token, site.id, { memo }, request);
     await refreshAdminAnalyticsSnapshot(token, request);
 
-    return NextResponse.json(mapBackendSchedule(updated));
+    return NextResponse.json(schedule);
   } catch (error) {
     if (error instanceof SafetyServerApiError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
@@ -44,7 +59,7 @@ export async function PATCH(
 
     return NextResponse.json(
       { error: error instanceof Error ? error.message : '일정 저장에 실패했습니다.' },
-      { status: 500 },
+      { status: error instanceof Error ? 400 : 500 },
     );
   }
 }

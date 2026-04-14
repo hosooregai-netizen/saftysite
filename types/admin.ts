@@ -363,6 +363,13 @@ export interface AdminAnalyticsTrendRow {
   revenue: number;
 }
 
+export interface AdminAnalyticsChartYearSlice {
+  employeeRows: AdminAnalyticsEmployeeRow[];
+  siteRevenueRows: AdminAnalyticsSiteRevenueRow[];
+  trendRows: AdminAnalyticsTrendRow[];
+  year: number;
+}
+
 export interface AdminAnalyticsEmployeeRow {
   assignedSiteCount: number;
   avgPerVisitAmount: number;
@@ -420,6 +427,8 @@ export interface AdminAnalyticsStats {
 }
 
 export interface SafetyAdminAnalyticsResponse {
+  availableTrendYears: number[];
+  chartYearSlices: AdminAnalyticsChartYearSlice[];
   contractTypeRows: AdminAnalyticsContractTypeRow[];
   employeeRows: AdminAnalyticsEmployeeRow[];
   siteRevenueRows: AdminAnalyticsSiteRevenueRow[];

@@ -47,6 +47,29 @@ export function UsersSection(props: UsersSectionProps) {
     props;
   const state = useUsersSectionState(users, sites, assignments, sessions, busy);
 
+  if (busy && users.length === 0) {
+    return (
+      <section className={`${styles.sectionCard} ${styles.listSectionCard}`}>
+        <div className={styles.sectionHeader}>
+          <div className={styles.sectionHeaderTitleBlock}>
+            <h2 className={styles.sectionTitle}>사용자</h2>
+            <div className={styles.sectionHeaderMeta}>사용자 목록을 불러오는 중입니다.</div>
+          </div>
+        </div>
+        <div className={styles.sectionBody}>
+          <div className={styles.contentTableSkeleton} aria-hidden="true">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div key={`users-skeleton-${index + 1}`} className={styles.contentTableSkeletonRow}>
+                <span className={styles.contentTableSkeletonLine} />
+                <span className={`${styles.contentTableSkeletonLine} ${styles.contentTableSkeletonLineMedium}`} />
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   const submit = async () => {
     if (!state.form.name.trim()) return;
     if (!state.form.email.trim()) return;
@@ -90,17 +113,22 @@ export function UsersSection(props: UsersSectionProps) {
       <UsersTable
         busy={busy}
         canDelete={canDelete}
-        filteredUsers={state.sortedUsers}
+        exportUsers={state.sortedUsers}
+        filteredUsers={state.pagedUsers}
         onCreateRequest={state.openCreate}
         onDeleteRequest={handleDeleteUser}
         onEditRequest={state.openEdit}
+        page={state.page}
         roleFilter={state.roleFilter}
+        setPage={state.setPage}
         setRoleFilter={state.setRoleFilter}
         setSort={state.setSort}
         setStatusFilter={state.setStatusFilter}
         setQuery={state.setQuery}
         sort={state.sort}
         statusFilter={state.statusFilter}
+        totalCount={state.sortedUsers.length}
+        totalPages={state.totalPages}
         userOverviewById={state.userOverviewById}
         query={state.query}
       />

@@ -1,8 +1,6 @@
 'use client';
 
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
-import type { SafetyReportListItem } from '@/types/backend';
-import type { ControllerDashboardData } from '@/types/controller';
 import { OverviewDispatchQueueTable } from './OverviewDispatchQueueTable';
 import { OverviewMaterialGapSection } from './OverviewMaterialGapSection';
 import { OverviewUnsentReportsSection } from './OverviewUnsentReportsSection';
@@ -11,12 +9,38 @@ import { formatSyncTimestamp } from './overviewSectionHelpers';
 import { useAdminOverviewSectionState } from './useAdminOverviewSectionState';
 
 interface AdminOverviewSectionProps {
-  data: ControllerDashboardData;
-  reports: SafetyReportListItem[];
+  currentUserId: string;
 }
 
-export function AdminOverviewSection({ data, reports }: AdminOverviewSectionProps) {
-  const state = useAdminOverviewSectionState(data, reports);
+function OverviewSkeleton() {
+  return (
+    <section className={styles.sectionCard}>
+      <div className={styles.sectionHeader}>
+        <div>
+          <h2 className={styles.sectionTitle}>운영 개요</h2>
+          <div className={styles.sectionHeaderMeta}>개요를 불러오는 중입니다.</div>
+        </div>
+      </div>
+      <div className={`${styles.sectionBody} ${styles.kpiPanelBody}`}>
+        <div className={styles.contentTableSkeleton} aria-hidden="true">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div key={`overview-skeleton-${index + 1}`} className={styles.contentTableSkeletonRow}>
+              <span className={styles.contentTableSkeletonLine} />
+              <span className={`${styles.contentTableSkeletonLine} ${styles.contentTableSkeletonLineMedium}`} />
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export function AdminOverviewSection({ currentUserId }: AdminOverviewSectionProps) {
+  const state = useAdminOverviewSectionState(currentUserId);
+
+  if (state.isInitialLoading) {
+    return <OverviewSkeleton />;
+  }
 
   return (
     <div className={styles.dashboardStack}>
@@ -27,7 +51,7 @@ export function AdminOverviewSection({ data, reports }: AdminOverviewSectionProp
             <div className={styles.sectionHeaderMeta}>마지막 갱신 {formatSyncTimestamp(state.lastSyncedAt)}</div>
           </div>
           <div className={styles.sectionHeaderActions}>
-            <button type="button" className="app-button app-button-secondary" onClick={() => void state.refreshOverview()} disabled={state.isRefreshing}>
+            <button type="button" className="app-button app-button-secondary" onClick={() => void state.refreshOverview({ force: true })} disabled={state.isRefreshing}>
               {state.isRefreshing ? '새로고침 중...' : '새로고침'}
             </button>
             <button type="button" className="app-button app-button-secondary" onClick={() => void state.exportOverview()}>

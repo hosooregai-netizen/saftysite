@@ -45,6 +45,8 @@
 .kpiCard {
   display: grid;
   gap: 8px;
+  align-content: start;
+  min-height: 164px;
   padding: 16px;
   border: 1px solid var(--erp-line);
   border-radius: var(--erp-radius-surface);
@@ -60,9 +62,11 @@
 }
 
 .kpiValue {
-  font-size: clamp(24px, 2vw, 32px);
+  font-size: clamp(18px, 1.5vw, 26px);
   font-weight: 700;
-  line-height: 1.08;
+  line-height: 1.18;
+  white-space: normal;
+  overflow-wrap: anywhere;
   color: var(--erp-dark);
 }
 
@@ -157,6 +161,8 @@
   font-size: var(--text-body-md);
   font-weight: 700;
   color: var(--erp-dark);
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .supportMeta {
@@ -365,6 +371,10 @@
   .kpiGrid,
   .supportStrip {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .kpiCard {
+    min-height: 0;
   }
 
   .detailTabs {

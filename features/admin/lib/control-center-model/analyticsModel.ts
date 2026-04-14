@@ -6,6 +6,7 @@ import { ANALYTICS_REVENUE_COUNT_LABEL } from './analyticsRevenueRules';
 import {
   buildAnalyticsComparisonWindow,
   buildTrendRows,
+  buildTrendRowsForYear,
   calculateAveragePerVisitAmount,
   calculateChangeRate,
   formatAnalyticsStatValue,
@@ -27,6 +28,7 @@ import {
   type AnalyticsScheduleRow,
 } from './analyticsRevenueEvents';
 import type {
+  AdminAnalyticsChartYearSlice,
   AdminAnalyticsEmployeeRow,
   AdminAnalyticsModel,
   AdminAnalyticsPeriod,
@@ -252,6 +254,30 @@ export function buildAdminAnalyticsModel(
         ),
       )
     : previousRevenueEvents;
+  const queriedScopedScheduleRows = normalizedQuery
+    ? scopedScheduleRows.filter((row) =>
+        matchesAnalyticsQuery(
+          {
+            assigneeName: row.assigneeName,
+            headquarterName: row.headquarterName,
+            siteName: row.siteName,
+          },
+          normalizedQuery,
+        ),
+      )
+    : scopedScheduleRows;
+  const queriedScopedRevenueEvents = normalizedQuery
+    ? scopedRevenueEvents.filter((row) =>
+        matchesAnalyticsQuery(
+          {
+            assigneeName: row.assigneeName,
+            headquarterName: row.headquarterName,
+            siteName: row.siteName,
+          },
+          normalizedQuery,
+        ),
+      )
+    : scopedRevenueEvents;
 
   const userLoadCount = data.users.filter(
     (user) =>
@@ -260,8 +286,65 @@ export function buildAdminAnalyticsModel(
         scopedScheduleRows.some((item) => item.assigneeUserId === user.id) ||
         scopedRevenueEvents.some((item) => item.assigneeUserId === user.id)),
   ).length;
+  const availableTrendYears = Array.from(
+    new Set(
+      queriedScopedRevenueEvents
+        .map((row) => {
+          const yearToken = row.date.slice(0, 4);
+          return /^\d{4}$/.test(yearToken) ? Number(yearToken) : null;
+        })
+        .filter((value): value is number => value != null),
+    ),
+  ).sort((left, right) => right - left);
+  if (availableTrendYears.length === 0) {
+    availableTrendYears.push(today.getFullYear());
+  }
+  const chartYearSlices: AdminAnalyticsChartYearSlice[] = availableTrendYears.map((year) => {
+    const yearRange = {
+      end: new Date(year, 11, 31),
+      start: new Date(year, 0, 1),
+    };
+    const previousYearRange = {
+      end: new Date(year - 1, 11, 31),
+      start: new Date(year - 1, 0, 1),
+    };
+    const yearScheduleRows = queriedScopedScheduleRows.filter((row) =>
+      isWithinDateRange(row.plannedDate, yearRange),
+    );
+    const yearRevenueEvents = queriedScopedRevenueEvents.filter((row) =>
+      isWithinDateRange(row.date, yearRange),
+    );
+    const previousYearRevenueEvents = queriedScopedRevenueEvents.filter((row) =>
+      isWithinDateRange(row.date, previousYearRange),
+    );
+
+    return {
+      employeeRows: buildEmployeeRows(
+        data,
+        visibleSiteIds,
+        assignedSiteIdsByUser,
+        sitesById,
+        yearScheduleRows,
+        yearRevenueEvents,
+        previousYearRevenueEvents,
+        '',
+        { userId: filters.userId },
+        { previous: previousYearRange },
+      ),
+      siteRevenueRows: buildSiteRevenueRows(
+        visibleSites,
+        yearScheduleRows,
+        yearRevenueEvents,
+        '',
+      ),
+      trendRows: buildTrendRowsForYear(yearRevenueEvents, year),
+      year,
+    };
+  });
 
   return {
+    availableTrendYears,
+    chartYearSlices,
     contractTypeRows: buildContractTypeRows(visibleSites, queriedDetailRevenueEvents),
     employeeRows: buildEmployeeRows(
       data,

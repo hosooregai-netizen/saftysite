@@ -29,6 +29,7 @@ interface StoredSiteMetaEnvelope {
   photoAssets?: Array<Partial<SafetyPhotoAsset>>;
   quarterlyMaterialTracking?: Array<Partial<SiteQuarterlyMaterialRecord>>;
   requiredCompletionFields?: string[];
+  scheduleNotifications?: Array<Partial<SiteScheduleNotificationRecord>>;
   schedules?: Array<Partial<SafetyInspectionSchedule>>;
   note?: string;
 }
@@ -37,6 +38,19 @@ export interface SiteQuarterlyMaterialRecord {
   educationMaterials: string[];
   measurementMaterials: string[];
   quarterKey: string;
+}
+
+export interface SiteScheduleNotificationRecord {
+  createdAt: string;
+  description: string;
+  href: string;
+  id: string;
+  isRead: boolean;
+  readAt: string;
+  scheduleId: string;
+  siteId: string;
+  title: string;
+  userId: string;
 }
 
 export interface SiteRevenueProfile {
@@ -141,6 +155,34 @@ function normalizeScheduleStatus(value: unknown): SafetyInspectionScheduleStatus
     default:
       return 'planned';
   }
+}
+
+function normalizeScheduleNotificationRecord(
+  value: Partial<SiteScheduleNotificationRecord> | null | undefined,
+): SiteScheduleNotificationRecord | null {
+  if (!value) return null;
+
+  const id = normalizeText(value.id);
+  const userId = normalizeText(value.userId);
+  const siteId = normalizeText(value.siteId);
+  const scheduleId = normalizeText(value.scheduleId);
+
+  if (!id || !userId || !siteId || !scheduleId) {
+    return null;
+  }
+
+  return {
+    createdAt: normalizeText(value.createdAt),
+    description: normalizeText(value.description),
+    href: normalizeText(value.href),
+    id,
+    isRead: Boolean(value.isRead),
+    readAt: normalizeText(value.readAt),
+    scheduleId,
+    siteId,
+    title: normalizeText(value.title),
+    userId,
+  };
 }
 
 function normalizePhotoAsset(
@@ -369,6 +411,20 @@ export function parseSiteInspectionSchedules(
     .filter((item): item is SafetyInspectionSchedule => Boolean(item));
 }
 
+export function parseSiteScheduleNotifications(
+  siteOrMemo: SiteMemoWithContractFields | string | null | undefined,
+): SiteScheduleNotificationRecord[] {
+  const memo = typeof siteOrMemo === 'string' || siteOrMemo == null ? siteOrMemo : siteOrMemo.memo;
+  const envelope = parseEnvelope(memo);
+  if (!Array.isArray(envelope?.scheduleNotifications)) {
+    return [];
+  }
+
+  return envelope.scheduleNotifications
+    .map((item) => normalizeScheduleNotificationRecord(item))
+    .filter((item): item is SiteScheduleNotificationRecord => Boolean(item));
+}
+
 export function parseSitePhotoAssets(
   siteOrMemo: SiteMemoWithContractFields | string | null | undefined,
 ): SafetyPhotoAsset[] {
@@ -452,6 +508,7 @@ export function buildSiteMemoWithContractProfile(
     photoAssets?: SafetyPhotoAsset[];
     quarterlyMaterialTracking?: SiteQuarterlyMaterialRecord[];
     requiredCompletionFields?: string[];
+    scheduleNotifications?: SiteScheduleNotificationRecord[];
     schedules?: SafetyInspectionSchedule[];
   },
 ): string | null {
@@ -468,6 +525,11 @@ export function buildSiteMemoWithContractProfile(
         .map((item) => normalizeSiteInspectionSchedule(item))
         .filter((item): item is SafetyInspectionSchedule => Boolean(item))
     : parseSiteInspectionSchedules(options?.existingMemo);
+  const normalizedScheduleNotifications = Array.isArray(options?.scheduleNotifications)
+    ? options.scheduleNotifications
+        .map((item) => normalizeScheduleNotificationRecord(item))
+        .filter((item): item is SiteScheduleNotificationRecord => Boolean(item))
+    : parseSiteScheduleNotifications(options?.existingMemo);
   const normalizedRequiredCompletionFields = Array.isArray(options?.requiredCompletionFields)
     ? options.requiredCompletionFields.map((item) => normalizeText(item)).filter(Boolean)
     : parseSiteRequiredCompletionFields(options?.existingMemo);
@@ -482,6 +544,7 @@ export function buildSiteMemoWithContractProfile(
     !normalizedNote &&
     !hasProfile &&
     normalizedSchedules.length === 0 &&
+    normalizedScheduleNotifications.length === 0 &&
     normalizedPhotoAssets.length === 0 &&
     normalizedQuarterlyMaterialTracking.length === 0 &&
     normalizedRequiredCompletionFields.length === 0
@@ -492,6 +555,7 @@ export function buildSiteMemoWithContractProfile(
   if (
     !hasProfile &&
     normalizedSchedules.length === 0 &&
+    normalizedScheduleNotifications.length === 0 &&
     normalizedPhotoAssets.length === 0 &&
     normalizedQuarterlyMaterialTracking.length === 0 &&
     normalizedRequiredCompletionFields.length === 0
@@ -509,6 +573,8 @@ export function buildSiteMemoWithContractProfile(
         : undefined,
     requiredCompletionFields:
       normalizedRequiredCompletionFields.length > 0 ? normalizedRequiredCompletionFields : undefined,
+    scheduleNotifications:
+      normalizedScheduleNotifications.length > 0 ? normalizedScheduleNotifications : undefined,
     schedules: normalizedSchedules.length > 0 ? normalizedSchedules : undefined,
   };
 
@@ -527,6 +593,7 @@ export function buildSiteMemoWithPhotoAssets(
       existingMemo,
       photoAssets,
       requiredCompletionFields: parseSiteRequiredCompletionFields(siteOrMemo),
+      scheduleNotifications: parseSiteScheduleNotifications(siteOrMemo),
       schedules: parseSiteInspectionSchedules(siteOrMemo),
     },
   );
@@ -544,6 +611,25 @@ export function buildSiteMemoWithRequiredCompletionFields(
       existingMemo,
       photoAssets: parseSitePhotoAssets(siteOrMemo),
       requiredCompletionFields,
+      scheduleNotifications: parseSiteScheduleNotifications(siteOrMemo),
+      schedules: parseSiteInspectionSchedules(siteOrMemo),
+    },
+  );
+}
+
+export function buildSiteMemoWithScheduleNotifications(
+  siteOrMemo: SiteMemoWithContractFields | string | null | undefined,
+  scheduleNotifications: SiteScheduleNotificationRecord[],
+): string | null {
+  const existingMemo = typeof siteOrMemo === 'string' || siteOrMemo == null ? siteOrMemo : siteOrMemo.memo;
+  return buildSiteMemoWithContractProfile(
+    parseSiteMemoNote(existingMemo),
+    parseSiteContractProfile(siteOrMemo),
+    {
+      existingMemo,
+      photoAssets: parseSitePhotoAssets(siteOrMemo),
+      requiredCompletionFields: parseSiteRequiredCompletionFields(siteOrMemo),
+      scheduleNotifications,
       schedules: parseSiteInspectionSchedules(siteOrMemo),
     },
   );

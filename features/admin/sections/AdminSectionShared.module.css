@@ -1748,9 +1748,27 @@
   box-shadow: 0 0 0 1px rgba(79, 108, 140, 0.12);
 }
 
+.calendarCellDropReady {
+  border-color: #5f7f9f;
+  background: #edf4fb;
+  box-shadow: 0 0 0 1px rgba(95, 127, 159, 0.22);
+}
+
 .calendarCellEmpty {
   border-style: dashed;
   background: #f8fafc;
+}
+
+.calendarCellHeaderButton {
+  display: grid;
+  justify-items: start;
+  gap: 4px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
 }
 
 .calendarCellDate {
@@ -1761,6 +1779,12 @@
 
 .calendarCellCount {
   font-size: var(--text-ui-sm);
+  color: var(--erp-text-muted);
+}
+
+.calendarCellAssignees {
+  font-size: var(--text-micro);
+  line-height: 1.5;
   color: var(--erp-text-muted);
 }
 
@@ -1776,6 +1800,61 @@
   font-weight: 700;
 }
 
+.calendarScheduleStack {
+  display: grid;
+  gap: 6px;
+}
+
+.calendarScheduleChip {
+  display: grid;
+  justify-items: start;
+  gap: 2px;
+  width: 100%;
+  padding: 8px 9px;
+  border: 1px solid rgba(193, 206, 218, 0.9);
+  border-radius: 10px;
+  background: #f8fbff;
+  text-align: left;
+  color: var(--erp-dark);
+  cursor: grab;
+}
+
+.calendarScheduleChip:active {
+  cursor: grabbing;
+}
+
+.calendarScheduleChipWarning {
+  border-color: #ddc18a;
+  background: #fff7e9;
+}
+
+.calendarScheduleChipTitle {
+  font-size: var(--text-ui-sm);
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.calendarScheduleChipMeta {
+  font-size: var(--text-micro);
+  line-height: 1.4;
+  color: var(--erp-text-muted);
+}
+
+.calendarMoreButton {
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-size: var(--text-micro);
+  font-weight: 700;
+  color: var(--erp-mid);
+  text-align: left;
+  cursor: pointer;
+}
+
+.calendarMoreButton:hover {
+  text-decoration: underline;
+}
+
 @media (max-width: 960px) {
   .calendarGrid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1785,6 +1864,15 @@
 @media (max-width: 640px) {
   .calendarGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .scheduleSummaryHeader {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .scheduleSummaryGrid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -1902,6 +1990,58 @@
   line-height: 1.6;
   font-weight: 700;
   color: var(--erp-dark);
+}
+
+.scheduleSummaryPanel {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-surface);
+  background: #f8fbff;
+}
+
+.scheduleSummaryHeader {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.scheduleSummaryTitle {
+  font-size: var(--text-body);
+  font-weight: 700;
+  color: var(--erp-dark);
+}
+
+.scheduleSummaryMeta {
+  margin-top: 4px;
+  font-size: var(--text-ui-sm);
+  line-height: 1.5;
+  color: var(--erp-text-muted);
+}
+
+.scheduleSummaryGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 12px;
+}
+
+.scheduleSummaryGrid strong {
+  display: block;
+  font-size: var(--text-ui-sm);
+  line-height: 1.6;
+  color: var(--erp-dark);
+}
+
+.scheduleSummaryLabel {
+  display: block;
+  margin-bottom: 2px;
+  font-size: var(--text-micro);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--erp-text-muted);
 }
 
 .contentTypePanel {

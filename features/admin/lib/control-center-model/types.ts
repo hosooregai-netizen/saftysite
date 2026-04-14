@@ -1,4 +1,5 @@
 export type {
+  AdminAnalyticsChartYearSlice,
   AdminAnalyticsContractTypeRow,
   AdminAnalyticsEmployeeRow,
   SafetyAdminAnalyticsResponse as AdminAnalyticsModel,
