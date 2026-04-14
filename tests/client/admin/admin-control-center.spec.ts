@@ -10,6 +10,7 @@ export async function runAdminControlCenterSmoke(config: ClientSmokePlaywrightCo
     const analyticsReadsBefore = requestCounts.get('GET /api/admin/dashboard/analytics') || 0;
     const siteUpdatesBefore = requestCounts.get('PATCH /sites/:id') || 0;
     await page.goto(`${harness.baseURL}/admin?section=overview`, { waitUntil: 'load' });
+    await page.getByText('현장 안전 점검 시스템').first().waitFor();
     await harness.loginAs('admin@example.com');
 
     await harness.waitForRequestCount('GET /api/admin/dashboard/overview', 1);

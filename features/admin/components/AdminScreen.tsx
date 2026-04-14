@@ -50,7 +50,6 @@ export function AdminScreen() {
         error={authError}
         onSubmit={login}
         title="현장 안전 점검 시스템"
-        description="API 서버로 로그인하면 사업장, 현장 메인, 보고서 업무를 이어서 확인할 수 있습니다."
       />
     );
   }

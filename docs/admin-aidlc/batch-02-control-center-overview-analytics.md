@@ -99,6 +99,9 @@ contract pack around:
 - Analytics revenue aggregation now treats past `technical_guidance` visit dates as practically
   completed even when the ERP workflow is still draft, matching the K2B Excel-style operational
   reality where `기술지도일` is often available before a manual completion action is recorded.
+- `AdminScreen.tsx` keeps the admin entry shell lean by showing the login title without the older
+  helper description copy, and the `admin-control-center` smoke now explicitly waits for that
+  login entry before authenticating.
 - `admin-control-center` contract was strengthened to require:
   - overview markers
   - analytics markers
