@@ -31,7 +31,11 @@ const GUARDED_SOURCE_PATTERNS = [
 const FEATURE_RULES = [
   {
     ids: ADMIN_SHARED_SMOKE_IDS,
-    patterns: [/^features\/admin\/sections\/AdminSectionShared\.module\.css$/],
+    patterns: [
+      /^features\/admin\/sections\/AdminSectionShared\.module\.css$/,
+      /^features\/admin\/lib\/adminSessionCache\.ts$/,
+      /^features\/admin\/sections\/users\//,
+    ],
   },
   {
     id: 'admin-control-center',
@@ -44,6 +48,7 @@ const FEATURE_RULES = [
       /^features\/admin\/lib\/adminDashboardShellState\.ts$/,
       /^features\/admin\/sections\/analytics\//,
       /^features\/admin\/sections\/overview\//,
+      /^features\/admin\/sections\/schedules\//,
     ],
   },
   {
