@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server';
 import {
-  fetchAdminCoreData,
   readRequiredAdminToken,
   SafetyServerApiError,
 } from '@/server/admin/safetyApiServer';
-import { buildAdminSchedules } from '@/server/admin/automation';
+import { getAdminScheduleSnapshot } from '@/server/admin/scheduleSnapshot';
+import {
+  buildAdminCalendarSchedules,
+  buildAdminQueueSchedules,
+} from '@/server/admin/automation';
 import type { SafetyInspectionSchedule } from '@/types/admin';
 
 export const runtime = 'nodejs';
@@ -68,19 +71,20 @@ export async function GET(request: Request): Promise<Response> {
     const month = url.searchParams.get('month') || '';
     const sortBy = url.searchParams.get('sort_by') || 'plannedDate';
     const sortDir = url.searchParams.get('sort_dir') === 'desc' ? 'desc' : 'asc';
-    const data = await fetchAdminCoreData(
-      token,
-      request,
-    );
+    const snapshot = await getAdminScheduleSnapshot(token, request);
+    const filters = {
+      assigneeUserId: url.searchParams.get('assignee_user_id') || '',
+      month,
+      plannedDate: url.searchParams.get('planned_date') || '',
+      query: url.searchParams.get('query') || '',
+      siteId: url.searchParams.get('site_id') || '',
+      status: url.searchParams.get('status') || '',
+    };
     const rows = sortSchedules(
-      buildAdminSchedules(data, {
-        assigneeUserId: url.searchParams.get('assignee_user_id') || '',
-        month,
-        plannedDate: url.searchParams.get('planned_date') || '',
-        query: url.searchParams.get('query') || '',
-        siteId: url.searchParams.get('site_id') || '',
-        status: url.searchParams.get('status') || '',
-      }),
+      [
+        ...buildAdminCalendarSchedules(snapshot.rows, filters, new Date()),
+        ...buildAdminQueueSchedules(snapshot.rows, filters, new Date()),
+      ],
       sortBy,
       sortDir,
     );

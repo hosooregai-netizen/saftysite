@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { refreshAdminAnalyticsSnapshot } from '@/server/admin/analyticsSnapshot';
+import { refreshAdminScheduleSnapshot } from '@/server/admin/scheduleSnapshot';
 import {
   fetchAdminCoreData,
   fetchCurrentSafetyUserServer,
@@ -50,6 +51,7 @@ export async function PATCH(
     );
     await updateAdminSite(token, site.id, { memo }, request);
     await refreshAdminAnalyticsSnapshot(token, request);
+    await refreshAdminScheduleSnapshot(token, request).catch(() => undefined);
 
     return NextResponse.json(schedule);
   } catch (error) {

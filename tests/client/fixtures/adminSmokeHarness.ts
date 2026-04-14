@@ -7,12 +7,23 @@ import { backfillAnalyticsSourceData } from '../../../features/admin/lib/control
 import { buildSiteMemoWithContractProfile } from '../../../lib/admin/siteContractProfile';
 import { buildControllerReportRows } from '../../../lib/admin/controllerReports';
 import type { ClientSmokePlaywrightConfig } from '../../../playwright.config';
+import {
+  buildAdminCalendarSchedules,
+  buildAdminQueueSchedules,
+  buildAdminScheduleRows,
+  buildAvailableScheduleMonths,
+  updateSingleSchedule,
+} from '../../../server/admin/automation';
 import type {
   ReportControllerReview,
   ReportDispatchMeta,
   SafetyAdminAnalyticsResponse,
   SafetyAdminOverviewResponse,
   SafetyAdminReportsResponse,
+  SafetyAdminScheduleCalendarResponse,
+  SafetyAdminScheduleLookupsResponse,
+  SafetyAdminScheduleQueueResponse,
+  SafetyInspectionSchedule,
 } from '../../../types/admin';
 import type {
   ControllerDashboardData,
@@ -70,7 +81,11 @@ function normalizeAdminApiPath(pathname: string) {
     .replace(/^\/api\/admin\/exports\/[^/]+$/, '/api/admin/exports/:section')
     .replace(/^\/api\/admin\/reports\/[^/]+\/review$/, '/api/admin/reports/:id/review')
     .replace(/^\/api\/admin\/reports\/[^/]+\/dispatch$/, '/api/admin/reports/:id/dispatch')
-    .replace(/^\/api\/admin\/reports\/[^/]+\/dispatch-events$/, '/api/admin/reports/:id/dispatch-events');
+    .replace(/^\/api\/admin\/reports\/[^/]+\/dispatch-events$/, '/api/admin/reports/:id/dispatch-events')
+    .replace(
+      /^\/api\/admin\/schedules\/(?!calendar$|queue$|lookups$)[^/]+$/,
+      '/api/admin/schedules/:id',
+    );
 }
 
 function buildAdminDashboardData(harness: ErpSmokeHarness): ControllerDashboardData {
@@ -175,6 +190,104 @@ function buildReportsResponse(harness: ErpSmokeHarness, url: URL): SafetyAdminRe
   };
 }
 
+function buildScheduleRows(harness: ErpSmokeHarness): SafetyInspectionSchedule[] {
+  return buildAdminScheduleRows(buildAdminDashboardData(harness), new Date(NOW));
+}
+
+function buildScheduleCalendarResponse(
+  harness: ErpSmokeHarness,
+  url: URL,
+): SafetyAdminScheduleCalendarResponse {
+  const filters = {
+    assigneeUserId: url.searchParams.get('assignee_user_id') || '',
+    month: url.searchParams.get('month') || '',
+    query: url.searchParams.get('query') || '',
+    siteId: url.searchParams.get('site_id') || '',
+    status: url.searchParams.get('status') || '',
+  };
+  const rows = buildScheduleRows(harness);
+  const calendarRows = buildAdminCalendarSchedules(rows, filters, new Date(NOW));
+  const allSelectedRows = buildAdminCalendarSchedules(
+    rows,
+    { ...filters, month: 'all' },
+    new Date(NOW),
+  );
+  const unselectedRows = buildAdminQueueSchedules(rows, filters, new Date(NOW));
+  const availableMonths = buildAvailableScheduleMonths([
+    ...buildAdminCalendarSchedules(rows, { ...filters, month: 'all' }, new Date(NOW)),
+    ...buildAdminQueueSchedules(rows, { ...filters, month: 'all' }, new Date(NOW)),
+  ]);
+
+  return {
+    allSelectedTotal: allSelectedRows.length,
+    availableMonths,
+    month: filters.month,
+    monthTotal: calendarRows.length,
+    refreshedAt: NOW,
+    rows: clone(calendarRows),
+    unselectedTotal: unselectedRows.length,
+  };
+}
+
+function buildScheduleQueueResponse(
+  harness: ErpSmokeHarness,
+  url: URL,
+): SafetyAdminScheduleQueueResponse {
+  const filters = {
+    assigneeUserId: url.searchParams.get('assignee_user_id') || '',
+    month: url.searchParams.get('month') || '',
+    query: url.searchParams.get('query') || '',
+    siteId: url.searchParams.get('site_id') || '',
+    status: url.searchParams.get('status') || '',
+  };
+  const limit = Number(url.searchParams.get('limit') || '50');
+  const offset = Number(url.searchParams.get('offset') || '0');
+  const rows = buildAdminQueueSchedules(buildScheduleRows(harness), filters, new Date(NOW));
+
+  return {
+    limit,
+    month: filters.month,
+    offset,
+    refreshedAt: NOW,
+    rows: clone(rows.slice(offset, offset + limit)),
+    total: rows.length,
+  };
+}
+
+function buildScheduleLookupsResponse(
+  harness: ErpSmokeHarness,
+): SafetyAdminScheduleLookupsResponse {
+  return {
+    sites: harness.state.sites.map((site) => ({
+      id: String(site.id),
+      name: String(site.site_name),
+    })),
+    users: harness.state.users.map((user) => ({
+      id: String(user.id),
+      name: String(user.name),
+    })),
+  };
+}
+
+function updateScheduleState(
+  harness: ErpSmokeHarness,
+  scheduleId: string,
+  payload: JsonRecord,
+) {
+  const adminUser = harness.state.users.find((user) => String(user.role) === 'admin') ?? harness.state.users[0];
+  const data = buildAdminDashboardData(harness);
+  const { memo, schedule, site } = updateSingleSchedule(data, scheduleId, payload, {
+    actorUserId: String(adminUser.id),
+    actorUserName: String(adminUser.name),
+  });
+  const siteFixture = harness.state.sites.find((item) => String(item.id) === site.id);
+  if (siteFixture) {
+    siteFixture.memo = memo;
+    siteFixture.updated_at = NOW;
+  }
+  return schedule;
+}
+
 function updateReportState(
   harness: ErpSmokeHarness,
   reportKey: string,
@@ -242,6 +355,29 @@ async function installAdminRoutes(harness: ErpSmokeHarness) {
 
     if (pathname === '/api/admin/dashboard/analytics' && request.method() === 'GET') {
       await fulfillJson(route, buildAnalyticsResponse(harness, url));
+      return;
+    }
+
+    if (pathname === '/api/admin/schedules/calendar' && request.method() === 'GET') {
+      await fulfillJson(route, buildScheduleCalendarResponse(harness, url));
+      return;
+    }
+
+    if (pathname === '/api/admin/schedules/queue' && request.method() === 'GET') {
+      await fulfillJson(route, buildScheduleQueueResponse(harness, url));
+      return;
+    }
+
+    if (pathname === '/api/admin/schedules/lookups' && request.method() === 'GET') {
+      await fulfillJson(route, buildScheduleLookupsResponse(harness));
+      return;
+    }
+
+    if (/^\/api\/admin\/schedules\/[^/]+$/.test(pathname) && request.method() === 'PATCH') {
+      const scheduleId = decodeURIComponent(pathname.split('/').at(-1) || '');
+      const payload = JSON.parse(request.postData() || '{}') as JsonRecord;
+      const schedule = updateScheduleState(harness, scheduleId, payload);
+      await fulfillJson(route, clone(schedule));
       return;
     }
 
@@ -345,6 +481,62 @@ function ensureAdminFixtureSchedules(harness: ErpSmokeHarness) {
     },
     {
       existingMemo: typeof site.memo === 'string' ? site.memo : '',
+      schedules: [
+        {
+          actualVisitDate: '',
+          assigneeName: '김요원',
+          assigneeUserId: 'field-1',
+          exceptionMemo: '',
+          exceptionReasonCode: '',
+          headquarterId: 'hq-1',
+          headquarterName: '기존 본사',
+          id: 'site-1-round-1',
+          isConflicted: false,
+          isOutOfWindow: false,
+          isOverdue: false,
+          linkedReportKey: 'report-tech-1',
+          plannedDate: '2026-04-14',
+          roundNo: 1,
+          selectionConfirmedAt: NOW,
+          selectionConfirmedByName: '관리자',
+          selectionConfirmedByUserId: 'admin-1',
+          selectionReasonLabel: '현장 요청',
+          selectionReasonMemo: '기존 ERP 선택 일정 fixture',
+          siteId: 'site-1',
+          siteName: '기존 현장',
+          status: 'planned',
+          totalRounds: 9,
+          windowEnd: '2026-04-15',
+          windowStart: '2026-04-01',
+        },
+        {
+          actualVisitDate: '',
+          assigneeName: '김요원',
+          assigneeUserId: 'field-1',
+          exceptionMemo: '',
+          exceptionReasonCode: '',
+          headquarterId: 'hq-1',
+          headquarterName: '기존 본사',
+          id: 'site-1-round-2',
+          isConflicted: false,
+          isOutOfWindow: false,
+          isOverdue: false,
+          linkedReportKey: '',
+          plannedDate: '2026-04-17',
+          roundNo: 2,
+          selectionConfirmedAt: NOW,
+          selectionConfirmedByName: '관리자',
+          selectionConfirmedByUserId: 'admin-1',
+          selectionReasonLabel: '운영 배치',
+          selectionReasonMemo: '달력 표시 fixture',
+          siteId: 'site-1',
+          siteName: '기존 현장',
+          status: 'planned',
+          totalRounds: 9,
+          windowEnd: '2026-04-30',
+          windowStart: '2026-04-16',
+        },
+      ],
     },
   );
 }

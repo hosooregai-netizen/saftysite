@@ -146,6 +146,7 @@ export interface SafetyInspectionSchedule {
   id: string;
   siteId: string;
   roundNo: number;
+  totalRounds?: number;
   plannedDate: string;
   actualVisitDate: string;
   windowStart: string;
@@ -456,4 +457,28 @@ export interface SafetyAdminScheduleListResponse {
   offset: number;
   rows: SafetyInspectionSchedule[];
   total: number;
+}
+
+export interface SafetyAdminScheduleCalendarResponse {
+  allSelectedTotal: number;
+  availableMonths: string[];
+  month: string;
+  monthTotal: number;
+  refreshedAt: string;
+  rows: SafetyInspectionSchedule[];
+  unselectedTotal: number;
+}
+
+export interface SafetyAdminScheduleQueueResponse {
+  limit: number;
+  month: string;
+  offset: number;
+  refreshedAt: string;
+  rows: SafetyInspectionSchedule[];
+  total: number;
+}
+
+export interface SafetyAdminScheduleLookupsResponse {
+  sites: Array<{ id: string; name: string }>;
+  users: Array<{ id: string; name: string }>;
 }

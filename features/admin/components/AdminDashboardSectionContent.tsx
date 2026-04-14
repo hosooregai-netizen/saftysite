@@ -120,7 +120,7 @@ export function AdminDashboardSectionContent({
     case 'photos':
       return <PhotosSection sites={sites} />;
     case 'schedules':
-      return <SchedulesSection currentUser={currentUser} sites={sites} users={users} />;
+      return <SchedulesSection currentUser={currentUser} />;
     default:
       return (
         <AdminOverviewSection

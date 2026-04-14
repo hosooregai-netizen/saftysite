@@ -10,10 +10,16 @@
 - add local in-app schedule change notifications for affected workers
 - keep the schedule modal on selection-reason inputs only and drop exception-code/memo entry
 - keep the controller calendar defaulted to the current month while hinting when schedules exist in other months
+- split controller schedule reads into calendar/queue/lookup responses backed by a server snapshot
+- move month navigation out of the filter menu and remove controller-only scope toggles
+- show selected worker schedules as month-grid chips in the controller calendar
 
 ## Contract surfaces
 
 - `/api/admin/schedules`
+- `/api/admin/schedules/calendar`
+- `/api/admin/schedules/queue`
+- `/api/admin/schedules/lookups`
 - `/api/admin/schedules/[scheduleId]`
 - `/api/me/schedules`
 - `/api/me/schedules/[scheduleId]`
@@ -30,13 +36,17 @@
 - schedule change notifications remain in-app only
 - existing memo payloads must keep contract/photo/material data intact
 - current-month schedule fetches must not silently drop rows because of low API limits
+- controller month navigation must stay outside the filter menu
+- controller schedule UI must not show `전체 일정 / 내 일정` scope toggles
 
 ## Verification
 
 - `npx tsc --noEmit --pretty false`
+- `npm run test:client:smoke -- admin-sites`
+- `npm run test:client:smoke -- admin-control-center`
 - `git diff --check`
 
 ## Notes
 
-- real/mocked smoke was not run in this pass because no local admin app was running for Playwright
 - local schedule notifications are stored in `site.memo` and merged into `/api/notifications`
+- controller schedule data now uses 5-minute session cache on the client and a server snapshot on the API side

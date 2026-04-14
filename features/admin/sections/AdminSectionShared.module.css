@@ -1720,6 +1720,102 @@
   flex: 1 1 280px;
 }
 
+.scheduleMonthToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.scheduleMonthNav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.scheduleMonthNavButton,
+.scheduleMonthTodayButton,
+.availableMonthButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--erp-line);
+  border-radius: 8px;
+  background: #fff;
+  font-size: var(--text-ui);
+  font-weight: 700;
+  color: var(--erp-dark);
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.scheduleMonthNavButton:hover,
+.scheduleMonthTodayButton:hover,
+.availableMonthButton:hover {
+  border-color: #9fb2c6;
+  background: #f6f9fc;
+}
+
+.scheduleMonthTodayButton,
+.availableMonthButton {
+  border-color: #bfd0e0;
+  background: #eef5fc;
+  color: var(--erp-navy);
+}
+
+.scheduleMonthLabel {
+  min-width: 132px;
+  font-size: var(--text-title);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--erp-dark);
+}
+
+.scheduleMonthInput {
+  width: 164px;
+  min-width: 164px;
+}
+
+.scheduleMonthMeta {
+  font-size: var(--text-ui-sm);
+  line-height: 1.5;
+  color: var(--erp-text-muted);
+}
+
+.availableMonthButtonRow {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: 10px;
+  vertical-align: middle;
+}
+
+.calendarWeekdayRow {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.calendarWeekdayCell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  border-bottom: 1px solid var(--erp-line);
+  font-size: var(--text-ui-sm);
+  font-weight: 700;
+  color: var(--erp-text-muted);
+}
+
 .calendarGrid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -1844,6 +1940,8 @@
   font-size: var(--text-ui-sm);
   font-weight: 700;
   line-height: 1.4;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 
 .calendarScheduleChipMeta {
@@ -1868,12 +1966,27 @@
 }
 
 @media (max-width: 960px) {
+  .calendarWeekdayRow {
+    display: none;
+  }
+
   .calendarGrid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 640px) {
+  .scheduleMonthToolbar,
+  .scheduleMonthNav {
+    align-items: stretch;
+  }
+
+  .scheduleMonthLabel,
+  .scheduleMonthInput {
+    width: 100%;
+    min-width: 0;
+  }
+
   .calendarGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

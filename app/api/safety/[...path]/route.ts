@@ -3,6 +3,7 @@ import {
   proxySafetyApiRequest,
 } from '@/lib/safetyApi/proxy';
 import { refreshAdminAnalyticsSnapshot } from '@/server/admin/analyticsSnapshot';
+import { refreshAdminScheduleSnapshot } from '@/server/admin/scheduleSnapshot';
 import { readRequiredAdminToken } from '@/server/admin/safetyApiServer';
 
 export const runtime = 'nodejs';
@@ -28,6 +29,16 @@ function shouldRefreshAdminAnalytics(path: string[], method: string) {
   return root === 'assignments' || root === 'headquarters' || root === 'sites' || root === 'users';
 }
 
+function shouldRefreshAdminSchedules(path: string[], method: string) {
+  const normalizedMethod = method.toUpperCase();
+  if (!['POST', 'PATCH', 'PUT', 'DELETE'].includes(normalizedMethod)) {
+    return false;
+  }
+
+  const [root] = path;
+  return root === 'assignments' || root === 'headquarters' || root === 'sites' || root === 'users';
+}
+
 async function handleRequest(
   request: Request,
   context: SafetyRouteContext
@@ -41,6 +52,15 @@ async function handleRequest(
       await refreshAdminAnalyticsSnapshot(token, request);
     } catch {
       // Worker writes or unauthenticated proxy calls should not fail because analytics refresh is best effort.
+    }
+  }
+
+  if (response.ok && shouldRefreshAdminSchedules(path, request.method)) {
+    try {
+      const token = readRequiredAdminToken(request);
+      await refreshAdminScheduleSnapshot(token, request);
+    } catch {
+      // Snapshot refresh is best effort for proxy writes.
     }
   }
 

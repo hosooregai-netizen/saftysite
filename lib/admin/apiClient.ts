@@ -9,7 +9,10 @@ import type {
   SafetyAdminAnalyticsResponse,
   SafetyAdminOverviewResponse,
   SafetyAdminReportsResponse,
+  SafetyAdminScheduleCalendarResponse,
   SafetyAdminScheduleListResponse,
+  SafetyAdminScheduleLookupsResponse,
+  SafetyAdminScheduleQueueResponse,
   SafetyInspectionSchedule,
   TableSortDirection,
 } from '@/types/admin';
@@ -204,6 +207,52 @@ export function fetchAdminSchedules(input: {
       status: input.status,
     })}`,
   );
+}
+
+export function fetchAdminScheduleCalendar(input: {
+  assigneeUserId?: string;
+  month?: string;
+  query?: string;
+  siteId?: string;
+  status?: string;
+}, options: RequestInit = {}) {
+  return requestAdminApi<SafetyAdminScheduleCalendarResponse>(
+    `/schedules/calendar${buildQueryString({
+      assignee_user_id: input.assigneeUserId,
+      month: input.month,
+      query: input.query,
+      site_id: input.siteId,
+      status: input.status,
+    })}`,
+    options,
+  );
+}
+
+export function fetchAdminScheduleQueue(input: {
+  assigneeUserId?: string;
+  limit?: number;
+  month?: string;
+  offset?: number;
+  query?: string;
+  siteId?: string;
+  status?: string;
+}, options: RequestInit = {}) {
+  return requestAdminApi<SafetyAdminScheduleQueueResponse>(
+    `/schedules/queue${buildQueryString({
+      assignee_user_id: input.assigneeUserId,
+      limit: input.limit,
+      month: input.month,
+      offset: input.offset,
+      query: input.query,
+      site_id: input.siteId,
+      status: input.status,
+    })}`,
+    options,
+  );
+}
+
+export function fetchAdminScheduleLookups(options: RequestInit = {}) {
+  return requestAdminApi<SafetyAdminScheduleLookupsResponse>('/schedules/lookups', options);
 }
 
 export function generateAdminSchedules(siteId: string) {

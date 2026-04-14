@@ -331,6 +331,7 @@ function normalizeSiteInspectionSchedule(
     linkedReportKey: normalizeText(value.linkedReportKey),
     plannedDate: normalizeText(value.plannedDate),
     roundNo,
+    totalRounds: normalizePositiveInteger(value.totalRounds) || undefined,
     selectionConfirmedAt: normalizeText(value.selectionConfirmedAt),
     selectionConfirmedByName: normalizeText(value.selectionConfirmedByName),
     selectionConfirmedByUserId: normalizeText(value.selectionConfirmedByUserId),

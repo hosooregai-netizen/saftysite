@@ -152,6 +152,145 @@ function buildBaseScheduleRows(
   }));
 }
 
+function buildScheduleQueryText(row: SafetyInspectionSchedule) {
+  return [row.siteName, row.headquarterName, row.assigneeName]
+    .join(' ')
+    .toLowerCase();
+}
+
+function matchesScheduleQuery(row: SafetyInspectionSchedule, query: string) {
+  const normalizedQuery = normalizeText(query).toLowerCase();
+  if (!normalizedQuery) return true;
+  return buildScheduleQueryText(row).includes(normalizedQuery);
+}
+
+function getScheduleMonthToken(row: SafetyInspectionSchedule) {
+  return (row.plannedDate || row.windowStart).slice(0, 7);
+}
+
+function overlapsMonthWindow(
+  row: SafetyInspectionSchedule,
+  monthWindow: ReturnType<typeof getMonthWindow>,
+) {
+  const windowStart = parseDateValue(row.windowStart);
+  const windowEnd = parseDateValue(row.windowEnd || row.windowStart);
+  if (!windowStart || !windowEnd) {
+    return getScheduleMonthToken(row) === monthWindow.token;
+  }
+
+  return !(
+    windowEnd.getTime() < monthWindow.start.getTime() ||
+    windowStart.getTime() > monthWindow.end.getTime()
+  );
+}
+
+function matchesCommonScheduleFilters(
+  row: SafetyInspectionSchedule,
+  options?: {
+    assigneeUserId?: string;
+    plannedDate?: string;
+    query?: string;
+    siteId?: string;
+    status?: string;
+  },
+) {
+  if (options?.siteId && row.siteId !== options.siteId) return false;
+  if (options?.assigneeUserId && row.assigneeUserId !== options.assigneeUserId) return false;
+  if (options?.plannedDate && row.plannedDate !== options.plannedDate) return false;
+  if (options?.status && row.status !== options.status) return false;
+  return matchesScheduleQuery(row, options?.query || '');
+}
+
+function sortCalendarScheduleRows(rows: SafetyInspectionSchedule[]) {
+  return [...rows].sort(
+    (left, right) =>
+      left.plannedDate.localeCompare(right.plannedDate) ||
+      left.assigneeName.localeCompare(right.assigneeName, 'ko') ||
+      left.siteName.localeCompare(right.siteName, 'ko') ||
+      left.roundNo - right.roundNo,
+  );
+}
+
+function sortQueueScheduleRows(rows: SafetyInspectionSchedule[]) {
+  return [...rows].sort(
+    (left, right) =>
+      left.windowStart.localeCompare(right.windowStart) ||
+      left.roundNo - right.roundNo ||
+      left.siteName.localeCompare(right.siteName, 'ko'),
+  );
+}
+
+export function buildAvailableScheduleMonths(rows: SafetyInspectionSchedule[]) {
+  return Array.from(
+    new Set(
+      rows
+        .map((row) => getScheduleMonthToken(row))
+        .filter(Boolean),
+    ),
+  ).sort((left, right) => left.localeCompare(right));
+}
+
+export function buildAdminScheduleRows(
+  data: ControllerDashboardData,
+  today = new Date(),
+) {
+  return buildBaseScheduleRows(data, today);
+}
+
+export function buildAdminCalendarSchedules(
+  rows: SafetyInspectionSchedule[],
+  options?: {
+    assigneeUserId?: string;
+    month?: string;
+    plannedDate?: string;
+    query?: string;
+    siteId?: string;
+    status?: string;
+  },
+  today = new Date(),
+) {
+  const includeAllMonths = options?.month === 'all';
+  const monthWindow = getMonthWindow(options?.month || '', today);
+
+  return sortCalendarScheduleRows(
+    rows.filter((row) => {
+      if (!row.plannedDate) return false;
+      if (!matchesCommonScheduleFilters(row, options)) return false;
+      if (!includeAllMonths && row.plannedDate.slice(0, 7) !== monthWindow.token) {
+        return false;
+      }
+      return true;
+    }),
+  );
+}
+
+export function buildAdminQueueSchedules(
+  rows: SafetyInspectionSchedule[],
+  options?: {
+    assigneeUserId?: string;
+    month?: string;
+    plannedDate?: string;
+    query?: string;
+    siteId?: string;
+    status?: string;
+  },
+  today = new Date(),
+) {
+  const includeAllMonths = options?.month === 'all';
+  const monthWindow = getMonthWindow(options?.month || '', today);
+
+  return sortQueueScheduleRows(
+    rows.filter((row) => {
+      if (row.plannedDate) return false;
+      if (!matchesCommonScheduleFilters(row, options)) return false;
+      if (!includeAllMonths && !overlapsMonthWindow(row, monthWindow)) {
+        return false;
+      }
+      return true;
+    }),
+  );
+}
+
 function buildCompletionRows(
   data: ControllerDashboardData,
   schedules: SafetyInspectionSchedule[],
@@ -350,27 +489,18 @@ export function buildAdminSchedules(
   },
   today = new Date(),
 ) {
-  const schedules = buildBaseScheduleRows(data, today);
+  const schedules = buildAdminScheduleRows(data, today);
   const includeAllMonths = options?.month === 'all';
   const monthWindow = getMonthWindow(options?.month || '', today);
-  const normalizedQuery = normalizeText(options?.query).toLowerCase();
 
   return schedules
     .filter((row) => {
-      if (options?.siteId && row.siteId !== options.siteId) return false;
-      if (options?.assigneeUserId && row.assigneeUserId !== options.assigneeUserId) return false;
-      if (options?.plannedDate && row.plannedDate !== options.plannedDate) return false;
-      if (options?.status && row.status !== options.status) return false;
+      if (!matchesCommonScheduleFilters(row, options)) return false;
       if (!includeAllMonths && row.plannedDate) {
         if (row.plannedDate < formatDateValue(monthWindow.start)) return false;
         if (row.plannedDate > formatDateValue(monthWindow.end)) return false;
       }
-      if (!normalizedQuery) return true;
-
-      return [row.siteName, row.headquarterName, row.assigneeName]
-        .join(' ')
-        .toLowerCase()
-        .includes(normalizedQuery);
+      return true;
     })
     .sort((left, right) => {
       const dateCompare = (left.plannedDate || '').localeCompare(right.plannedDate || '');
@@ -469,6 +599,7 @@ export function generateSchedulesForSite(site: SafetySite, users: SafetyUser[]) 
       linkedReportKey: existing?.linkedReportKey || '',
       plannedDate: existing?.plannedDate || '',
       roundNo,
+      totalRounds,
       selectionConfirmedAt: existing?.selectionConfirmedAt || '',
       selectionConfirmedByName: existing?.selectionConfirmedByName || '',
       selectionConfirmedByUserId: existing?.selectionConfirmedByUserId || '',
@@ -558,13 +689,6 @@ export function updateSingleSchedule(
       selectionReasonLabel: payload.selectionReasonLabel ?? current.selectionReasonLabel,
       selectionReasonMemo: payload.selectionReasonMemo ?? current.selectionReasonMemo,
     };
-
-    if (
-      isDateOutsideWindow(nextSchedule.plannedDate, nextSchedule.windowStart, nextSchedule.windowEnd) &&
-      (!normalizeText(nextSchedule.exceptionReasonCode) || !normalizeText(nextSchedule.exceptionMemo))
-    ) {
-      throw new Error('허용 구간 밖 일정은 사유코드와 메모를 함께 저장해야 합니다.');
-    }
 
     schedules[index] = nextSchedule;
     return {

@@ -56,8 +56,7 @@ export function useAdminDashboardRouting({
     activeSection === 'headquarters' ||
     activeSection === 'reports' ||
     activeSection === 'mailbox' ||
-    activeSection === 'photos' ||
-    activeSection === 'schedules';
+    activeSection === 'photos';
 
   const replaceRoute = useCallback(
     (section: AdminSectionKey, query: AdminSectionQuery = {}) => {

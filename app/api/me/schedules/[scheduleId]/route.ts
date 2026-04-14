@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { refreshAdminAnalyticsSnapshot } from '@/server/admin/analyticsSnapshot';
+import { refreshAdminScheduleSnapshot } from '@/server/admin/scheduleSnapshot';
 import { updateSingleSchedule } from '@/server/admin/automation';
 import {
   appendSiteScheduleNotifications,
@@ -93,6 +94,7 @@ export async function PATCH(
     );
     await updateAdminSite(token, site.id, { memo }, request);
     await refreshAdminAnalyticsSnapshot(token, request).catch(() => undefined);
+    await refreshAdminScheduleSnapshot(token, request).catch(() => undefined);
     return NextResponse.json(schedule);
   } catch (error) {
     if (error instanceof SafetyServerApiError) {

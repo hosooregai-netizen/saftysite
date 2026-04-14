@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { refreshAdminAnalyticsSnapshot } from '@/server/admin/analyticsSnapshot';
+import { refreshAdminScheduleSnapshot } from '@/server/admin/scheduleSnapshot';
 import {
   fetchAdminCoreData,
   readRequiredAdminToken,
@@ -25,6 +26,7 @@ export async function POST(
     const rows = generateSchedulesForSite(site, data.users);
     await updateAdminSite(token, siteId, { memo: updateSiteSchedules(site, rows) }, request);
     await refreshAdminAnalyticsSnapshot(token, request);
+    await refreshAdminScheduleSnapshot(token, request).catch(() => undefined);
     return NextResponse.json({ rows });
   } catch (error) {
     if (error instanceof SafetyServerApiError) {
