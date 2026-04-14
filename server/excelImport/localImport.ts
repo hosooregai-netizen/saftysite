@@ -219,6 +219,19 @@ function parseIntValue(value: unknown) {
   return parsed == null ? null : Math.trunc(parsed);
 }
 
+function decodeHtmlEntities(value: string) {
+  return value.replace(/&#(x?[0-9a-f]+);/gi, (_, rawCode: string) => {
+    const isHex = rawCode.toLowerCase().startsWith('x');
+    const codePoint = Number.parseInt(isHex ? rawCode.slice(1) : rawCode, isHex ? 16 : 10);
+    if (!Number.isFinite(codePoint)) return '';
+    try {
+      return String.fromCodePoint(codePoint);
+    } catch {
+      return '';
+    }
+  });
+}
+
 function arrayOf<T>(value: T | T[] | null | undefined): T[] {
   if (Array.isArray(value)) return value;
   return value == null ? [] : [value];
@@ -824,7 +837,7 @@ function buildSheetSummary(rowPreviews: ExcelImportPreviewRow[]) {
 
 function sanitizeCellValue(value: unknown) {
   if (value == null) return '';
-  return typeof value === 'string' ? value.trim() : String(value).trim();
+  return decodeHtmlEntities(typeof value === 'string' ? value.trim() : String(value).trim());
 }
 
 function extractSharedStrings(parsed: Record<string, unknown>) {
@@ -931,14 +944,19 @@ function buildHeadquarterPayload(
   return payload;
 }
 
+function buildHeadquarterUpdatePayload(
+  rowData: Record<string, string>,
+): SafetyHeadquarterUpdateInput & Record<string, unknown> {
+  const payload = buildHeadquarterPayload(rowData);
+  delete payload.management_number;
+  delete payload.opening_number;
+  return payload;
+}
+
 function buildSitePayload(rowData: Record<string, string>, headquarterId?: string | null): SafetySiteUpdateInput {
   const payload: SafetySiteUpdateInput = {};
   const siteName = normalizeText(rowData.site_name);
   if (siteName) payload.site_name = siteName;
-  const managementNumber = normalizeText(rowData.headquarter_management_number);
-  if (managementNumber) payload.management_number = managementNumber;
-  const siteCode = normalizeText(rowData.headquarter_opening_number);
-  if (siteCode) payload.site_code = siteCode;
   const laborOffice = normalizeText(rowData.labor_office);
   if (laborOffice) payload.labor_office = laborOffice;
   const guidanceOfficerName = normalizeText(rowData.guidance_officer_name);
@@ -1242,7 +1260,7 @@ export async function applyLocalExcelWorkbook(
       headquarter = await updateAdminHeadquarter(
         token,
         headquarter.id,
-        buildHeadquarterPayload(firstRow.rowData),
+        buildHeadquarterUpdatePayload(firstRow.rowData),
         request,
       );
       summary.updatedHeadquarterCount += 1;
@@ -1278,7 +1296,7 @@ export async function applyLocalExcelWorkbook(
         headquarter = await updateAdminHeadquarter(
           token,
           existingHeadquarter.id,
-          buildHeadquarterPayload(firstRow.rowData),
+          buildHeadquarterUpdatePayload(firstRow.rowData),
           request,
         );
         summary.updatedHeadquarterCount += 1;

@@ -38,7 +38,7 @@ function slugify(value: string) {
 }
 
 function buildPlaceholderEmail(name: string, siteId: string, rowIndex: number) {
-  return `excel-field-agent-${slugify(name)}-${slugify(siteId)}-${rowIndex}@placeholder.local`;
+  return `excel-field-agent-${slugify(name)}-${slugify(siteId)}-${rowIndex}@placeholder.example.com`;
 }
 
 function buildNameMatches(users: SafetyUser[], guidanceOfficerName: string) {
