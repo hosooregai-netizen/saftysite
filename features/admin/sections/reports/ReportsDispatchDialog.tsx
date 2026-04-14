@@ -14,7 +14,6 @@ import type { SmsProviderStatus } from '@/types/messages';
 
 interface ReportsDispatchDialogProps {
   buildManualDispatchPayload: (row: ControllerReportRow) => ReportDispatchMeta;
-  buildPendingDispatchPayload: (row: ControllerReportRow) => ReportDispatchMeta;
   dispatchRow: ControllerReportRow | null;
   dispatchSite: SafetySite | null;
   dispatchSmsMessage: string;
@@ -22,7 +21,6 @@ interface ReportsDispatchDialogProps {
   dispatchSmsSending: boolean;
   onClose: () => void;
   onSaveManual: (row: ControllerReportRow, nextDispatch: ReportDispatchMeta) => void;
-  onSavePending: (row: ControllerReportRow, nextDispatch: ReportDispatchMeta) => void;
   onSendSms: () => void;
   setDispatchSmsMessage: (value: string) => void;
   setDispatchSmsPhone: (value: string) => void;
@@ -32,7 +30,6 @@ interface ReportsDispatchDialogProps {
 
 export function ReportsDispatchDialog({
   buildManualDispatchPayload,
-  buildPendingDispatchPayload,
   dispatchRow,
   dispatchSite,
   dispatchSmsMessage,
@@ -40,7 +37,6 @@ export function ReportsDispatchDialog({
   dispatchSmsSending,
   onClose,
   onSaveManual,
-  onSavePending,
   onSendSms,
   setDispatchSmsMessage,
   setDispatchSmsPhone,
@@ -58,7 +54,7 @@ export function ReportsDispatchDialog({
   return (
     <AppModal
       open={Boolean(dispatchRow)}
-      title="보고서 발송 상태"
+      title="분기 보고서 발송 이력"
       onClose={onClose}
       actions={
         dispatchRow ? (
@@ -68,17 +64,10 @@ export function ReportsDispatchDialog({
             </button>
             <button
               type="button"
-              className="app-button app-button-secondary"
-              onClick={() => onSavePending(dispatchRow, buildPendingDispatchPayload(dispatchRow))}
-            >
-              미발송으로 되돌리기
-            </button>
-            <button
-              type="button"
               className="app-button app-button-primary"
               onClick={() => onSaveManual(dispatchRow, buildManualDispatchPayload(dispatchRow))}
             >
-              발송 완료 처리
+              관제 수동 완료 처리
             </button>
           </>
         ) : undefined
@@ -142,7 +131,7 @@ export function ReportsDispatchDialog({
               <span className={styles.label}>문자 발송 상태</span>
               <div className={styles.tableSecondary}>
                 {smsProviderStatuses.length === 0
-                  ? '문자 발송 공급사 상태를 불러오는 중입니다.'
+                  ? '문자 발송 공급자 상태를 불러오는 중입니다.'
                   : smsProviderStatuses.map((provider) => provider.message).join(' / ')}
               </div>
             </label>
@@ -187,8 +176,8 @@ export function ReportsDispatchDialog({
                 <table className={styles.table}>
                   <thead>
                     <tr>
-                      <th>처리 시각</th>
-                      <th>처리자</th>
+                      <th>발송 시각</th>
+                      <th>발송자</th>
                       <th>메모</th>
                     </tr>
                   </thead>

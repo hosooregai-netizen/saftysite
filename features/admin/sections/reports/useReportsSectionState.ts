@@ -191,7 +191,7 @@ export function useReportsSectionState({
             .filter((site) => site.headquarter_id)
             .map((site) => [
               site.headquarter_id,
-              site.headquarter_detail?.name || site.headquarter?.name || '사업장 미지정',
+              site.headquarter_detail?.name || site.headquarter?.name || '사업장 미상',
             ]),
         ).entries(),
       ),
@@ -225,7 +225,6 @@ export function useReportsSectionState({
 
   const {
     buildManualDispatchPayload,
-    buildPendingDispatchPayload,
     bulkDispatchSent,
     bulkOwnerAssign,
     bulkQuality,
@@ -301,19 +300,13 @@ export function useReportsSectionState({
   const openDispatchModal = useCallback(
     (row: ControllerReportRow) => {
       const site = sites.find((item) => item.id === row.siteId);
-      const reportTypeLabel =
-        row.reportType === 'quarterly_report'
-          ? '분기보고서'
-          : row.reportType === 'technical_guidance'
-            ? '기술지도 보고서'
-            : '보고서';
       setDispatchRow(row);
       setDispatchSmsPhone(site?.manager_phone || '');
       setDispatchSmsMessage(
         [
-          `[${reportTypeLabel}] ${row.siteName}`,
-          `${row.periodLabel || row.reportTitle || row.reportKey} 발송 안내입니다.`,
-          '메일함에서 첨부된 보고서를 확인해 주세요.',
+          `[분기보고서] ${row.siteName}`,
+          `${row.periodLabel || row.reportTitle || row.reportKey} 발송 관련 안내입니다.`,
+          '메일함에서 첨부 보고서를 함께 확인해 주세요.',
         ].join('\n'),
       );
     },
@@ -364,7 +357,6 @@ export function useReportsSectionState({
     assigneeFilter,
     assigneeOptions,
     buildManualDispatchPayload,
-    buildPendingDispatchPayload,
     dateFrom,
     dateTo,
     dispatchRow,

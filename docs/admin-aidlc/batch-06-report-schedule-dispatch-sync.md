@@ -64,18 +64,12 @@ server-side model.
   - nested dispatch delivery metadata for stored send/check state
 - Manual dispatch completion from admin reports now records `manual_checked` with history entries
   instead of writing legacy sent-complete timestamps.
-- Admin reports dispatch controls now support both manual completion and resetting a managed report
-  back to `none` without dropping existing dispatch history payloads.
-- Technical guidance reports now share the same admin dispatch-management modal as quarterly
-  reports, so the admin table can open, complete, and revert dispatch state from one flow.
-- Admin report success toasts and dispatch-management labels now stay aligned with the mocked/real
-  smoke contract:
-  - `보고서 검토 상태를 저장했습니다.`
-  - `보고서 발송 상태`
-  - `발송 상태 관리`
-  - `발송 완료 처리`
-  - `미발송으로 되돌리기`
-  - `발송 완료 상태로 저장했습니다.`
+- Admin report success toasts and the quarterly dispatch dialog action label now stay aligned with
+  the mocked/real smoke contract:
+  - `보고서 품질 체크를 저장했습니다.`
+  - `분기 보고서 발송 이력`
+  - `관제 수동 완료 처리`
+  - `분기 보고서 발송 정보를 저장했습니다.`
 - Quarterly and bad-workplace upserts now send `visit_date: null`, leaving true period keys in
   `quarterKey/periodStartDate/periodEndDate` and `reportMonth`.
 - Schedule parsing/backfill/import helpers now preserve `actualVisitDate` and accept the new
@@ -101,8 +95,7 @@ git diff --check
 - `npx tsc --noEmit --pretty false`
   - passed
 - `npm run test:client:smoke -- admin-reports`
-  - passed after aligning the shared admin dispatch modal labels and manual dispatch actions with
-    smoke expectations
+  - passed after aligning quarterly dispatch dialog/button labels with smoke expectations
 - `npm run lint`
   - passed with pre-existing repo warnings outside this batch
 - `npm run aidlc:audit:admin`

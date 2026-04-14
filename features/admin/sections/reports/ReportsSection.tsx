@@ -46,7 +46,7 @@ export function ReportsSection(props: ReportsSectionProps) {
             siteOptions={state.siteOptions}
           />
           <button type="button" className="app-button app-button-secondary" onClick={() => void state.exportList()}>
-            목록 내보내기
+            엑셀 내보내기
           </button>
         </div>
       </div>
@@ -86,19 +86,13 @@ export function ReportsSection(props: ReportsSectionProps) {
       />
       <ReportsDispatchDialog
         buildManualDispatchPayload={state.buildManualDispatchPayload}
-        buildPendingDispatchPayload={state.buildPendingDispatchPayload}
         dispatchRow={state.dispatchRow}
         dispatchSite={state.dispatchSite}
         dispatchSmsMessage={state.dispatchSmsMessage}
         dispatchSmsPhone={state.dispatchSmsPhone}
         dispatchSmsSending={state.dispatchSmsSending}
         onClose={() => state.setDispatchRow(null)}
-        onSaveManual={(row, nextDispatch) =>
-          void state.saveDispatch(row, nextDispatch, '발송 완료 상태로 저장했습니다.')
-        }
-        onSavePending={(row, nextDispatch) =>
-          void state.saveDispatch(row, nextDispatch, '미발송 상태로 되돌렸습니다.')
-        }
+        onSaveManual={(row, nextDispatch) => void state.saveDispatch(row, nextDispatch)}
         onSendSms={() => void state.sendDispatchSms()}
         setDispatchSmsMessage={state.setDispatchSmsMessage}
         setDispatchSmsPhone={state.setDispatchSmsPhone}

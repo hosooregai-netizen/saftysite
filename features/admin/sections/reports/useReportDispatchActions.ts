@@ -1,7 +1,10 @@
 'use client';
 
 import { useCallback } from 'react';
-import { updateAdminReportDispatch, updateAdminReportReview } from '@/lib/admin/apiClient';
+import {
+  updateAdminReportDispatch,
+  updateAdminReportReview,
+} from '@/lib/admin/apiClient';
 import { fetchSmsProviderStatuses, sendSms } from '@/lib/messages/apiClient';
 import { buildDispatchMeta } from './reportsSectionFilters';
 import type { ControllerQualityStatus, ControllerReportRow, ReportDispatchMeta } from '@/types/admin';
@@ -51,21 +54,6 @@ function buildManualCheckedDispatch(
   };
 }
 
-function buildPendingDispatch(currentDispatch: ReportDispatchMeta): ReportDispatchMeta {
-  return {
-    ...currentDispatch,
-    dispatchStatus: 'none',
-    dispatchMethod: '',
-    dispatchedAt: '',
-    dispatchCheckedBy: '',
-    dispatchCheckedAt: '',
-  };
-}
-
-function isDispatchManageableReport(row: ControllerReportRow) {
-  return row.reportType === 'technical_guidance' || row.reportType === 'quarterly_report';
-}
-
 export function useReportDispatchActions({
   currentUser,
   dispatchRow,
@@ -93,7 +81,7 @@ export function useReportDispatchActions({
         ownerUserId: reviewForm.ownerUserId,
         qualityStatus: reviewForm.qualityStatus,
       });
-      setNotice('보고서 검토 상태를 저장했습니다.');
+      setNotice('보고서 품질 체크를 저장했습니다.');
       setReviewRow(null);
       await fetchRows();
     } catch (nextError) {
@@ -102,14 +90,18 @@ export function useReportDispatchActions({
   }, [currentUser.id, fetchRows, reviewForm, reviewRow, setError, setNotice, setReviewRow]);
 
   const saveDispatch = useCallback(
-    async (row: ControllerReportRow, nextDispatch: ReportDispatchMeta, successMessage?: string) => {
+    async (row: ControllerReportRow, nextDispatch: ReportDispatchMeta) => {
       try {
         await updateAdminReportDispatch(row.reportKey, nextDispatch);
-        setNotice(successMessage || '발송 상태를 저장했습니다.');
+        setNotice(
+          row.reportType === 'quarterly_report'
+            ? '분기 보고서 발송 정보를 저장했습니다.'
+            : '발송 정보를 저장했습니다.',
+        );
         setDispatchRow(null);
         await fetchRows();
       } catch (nextError) {
-        setError(nextError instanceof Error ? nextError.message : '발송 상태 저장에 실패했습니다.');
+        setError(nextError instanceof Error ? nextError.message : '발송 정보 저장에 실패했습니다.');
       }
     },
     [fetchRows, setDispatchRow, setError, setNotice],
@@ -188,7 +180,7 @@ export function useReportDispatchActions({
           }),
         ),
       );
-      setNotice('선택한 보고서의 체크 담당자를 현재 사용자로 지정했습니다.');
+      setNotice('선택한 보고서의 담당자를 현재 사용자로 지정했습니다.');
       await fetchRows();
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : '담당자 지정에 실패했습니다.');
@@ -197,24 +189,25 @@ export function useReportDispatchActions({
 
   const buildManualDispatchPayload = useCallback(
     (row: ControllerReportRow) =>
-      buildManualCheckedDispatch(buildDispatchMeta(row), currentUser.id, '관리자 화면에서 발송 완료 처리'),
+      buildManualCheckedDispatch(
+        buildDispatchMeta(row),
+        currentUser.id,
+        '관리자 화면에서 수동 발송 완료 처리',
+      ),
     [currentUser.id],
   );
 
-  const buildPendingDispatchPayload = useCallback(
-    (row: ControllerReportRow) => buildPendingDispatch(buildDispatchMeta(row)),
-    [],
-  );
-
   const bulkDispatchSent = useCallback(async () => {
-    const dispatchRows = selectedRows.filter(isDispatchManageableReport);
-    if (dispatchRows.length === 0) return;
+    const quarterlyRows = selectedRows.filter((row) => row.reportType === 'quarterly_report');
+    if (quarterlyRows.length === 0) return;
 
     try {
       await Promise.all(
-        dispatchRows.map((row) => updateAdminReportDispatch(row.reportKey, buildManualDispatchPayload(row))),
+        quarterlyRows.map((row) =>
+          updateAdminReportDispatch(row.reportKey, buildManualDispatchPayload(row)),
+        ),
       );
-      setNotice('선택한 보고서를 발송 완료로 처리했습니다.');
+      setNotice('선택한 분기 보고서를 수동 발송 완료로 처리했습니다.');
       await fetchRows();
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : '일괄 발송 처리에 실패했습니다.');
@@ -225,7 +218,7 @@ export function useReportDispatchActions({
     try {
       return await fetchSmsProviderStatuses();
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : '문자 발송 공급사 상태를 불러오지 못했습니다.');
+      setError(nextError instanceof Error ? nextError.message : '문자 발송 공급자 상태를 불러오지 못했습니다.');
       return [];
     }
   }, [setError]);
@@ -235,7 +228,6 @@ export function useReportDispatchActions({
 
   return {
     buildManualDispatchPayload,
-    buildPendingDispatchPayload,
     bulkDispatchSent,
     bulkOwnerAssign,
     bulkQuality,

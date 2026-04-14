@@ -3,11 +3,11 @@
 import ActionMenu from '@/components/ui/ActionMenu';
 import { SortableHeaderCell } from '@/features/admin/components/SortableHeaderCell';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
-import { getAdminSectionHref } from '@/lib/admin';
 import {
   buildControllerReportHref,
   getControllerReportTypeLabel,
 } from '@/lib/admin/controllerReports';
+import { getAdminSectionHref } from '@/lib/admin';
 import { getQualityStatusLabel } from '@/lib/admin/reportMeta';
 import { REPORT_PAGE_SIZE, formatDateOnly, formatDateTime } from './reportsSectionFilters';
 import type { ControllerQualityStatus, ControllerReportRow, TableSortState } from '@/types/admin';
@@ -33,10 +33,6 @@ interface ReportsTableProps {
   total: number;
 }
 
-function isDispatchManageableReport(row: ControllerReportRow) {
-  return row.reportType === 'technical_guidance' || row.reportType === 'quarterly_report';
-}
-
 export function ReportsTable({
   isLoading,
   loading,
@@ -57,29 +53,22 @@ export function ReportsTable({
   sort,
   total,
 }: ReportsTableProps) {
-  const bulkDispatchRows = selectedRows.filter(isDispatchManageableReport);
-
   return (
     <>
       {selectedRows.length > 0 ? (
         <div className={styles.bulkActionBar}>
           <span className={styles.reportsSectionHeaderCount}>선택 {selectedRows.length}건</span>
           <button type="button" className="app-button app-button-secondary" onClick={() => onBulkQuality('ok')}>
-            검토 확인완료
+            품질 확인완료
           </button>
           <button type="button" className="app-button app-button-secondary" onClick={() => onBulkQuality('issue')}>
-            검토 이슈
+            품질 이슈
           </button>
           <button type="button" className="app-button app-button-secondary" onClick={onBulkOwnerAssign}>
             체크 담당자 지정
           </button>
-          <button
-            type="button"
-            className="app-button app-button-secondary"
-            onClick={onBulkDispatchSent}
-            disabled={bulkDispatchRows.length === 0}
-          >
-            발송 완료 처리
+          <button type="button" className="app-button app-button-secondary" onClick={onBulkDispatchSent}>
+            분기 발송완료
           </button>
         </div>
       ) : null}
@@ -112,7 +101,7 @@ export function ReportsTable({
                   />
                   <th>현장</th>
                   <th>담당자</th>
-                  <th>검토체크</th>
+                  <th>품질체크</th>
                   <SortableHeaderCell
                     column={{ key: 'visitDate' }}
                     current={sort}
@@ -185,7 +174,8 @@ export function ReportsTable({
                               label: '사진첩 열기',
                               href: getAdminSectionHref('photos', {
                                 headquarterId: row.headquarterId || null,
-                                reportKey: row.reportType === 'technical_guidance' ? row.reportKey : null,
+                                reportKey:
+                                  row.reportType === 'technical_guidance' ? row.reportKey : null,
                                 reportTitle: row.reportTitle || row.periodLabel || row.reportKey,
                                 returnLabel: '보고서로 돌아가기',
                                 returnTo: buildControllerReportHref(row),
@@ -213,14 +203,14 @@ export function ReportsTable({
                                 ]
                               : []),
                             {
-                              label: '검토 체크',
+                              label: '품질 체크',
                               onSelect: () => onOpenReviewModal(row),
                             },
                             {
                               label: '체크 담당자 지정',
                               onSelect: () => onOpenReviewModal(row),
                             },
-                            ...(isDispatchManageableReport(row)
+                            ...(row.reportType === 'quarterly_report'
                               ? [
                                   {
                                     label: '메일 스레드 보기',
@@ -233,7 +223,7 @@ export function ReportsTable({
                                     }),
                                   },
                                   {
-                                    label: '발송 상태 관리',
+                                    label: '발송이력 보기',
                                     onSelect: () => onOpenDispatchModal(row),
                                   },
                                 ]
