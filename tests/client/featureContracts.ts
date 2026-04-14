@@ -55,11 +55,11 @@ export const FEATURE_CONTRACTS: Record<FeatureContractId, FeatureContract> = {
   'admin-sites': {
     id: 'admin-sites',
     description:
-      '사업장 목록, 현장 목록, 현장 메인이 등록 정보 편집, 점검자 기준 배정, K2B 회차 데이터 반영 동선을 유지한다.',
+      '사업장 목록, 현장 목록, 현장 메인이 등록 정보 편집, 점검자 기준 배정, K2B 회차 데이터 반영 동선을 유지하며 사업장 목록은 축약된 핵심 식별 정보만 노출한다.',
     routes: ['/admin?section=headquarters', '/admin?section=headquarters&headquarterId=hq-1&siteId=site-1'],
     markers: ['사업장 목록', '사업장 추가', '사업장 수정', '현장 목록', '현장 메인', '현장 정보 수정', '지도요원 배정'],
     apis: ['GET /headquarters', 'POST /headquarters', 'PATCH /headquarters/:id', 'GET /sites', 'POST /sites', 'PATCH /sites/:id'],
-    criticalActions: ['사업장 생성/수정', '현장 생성/수정', '현장 메인 진입', '현장 메인 quick edit', '지도요원 배정 modal 진입', 'K2B 회차 데이터 반영'],
+    criticalActions: ['사업장 목록 핵심 컬럼 확인', '사업장 생성/수정', '현장 생성/수정', '현장 메인 진입', '현장 메인 quick edit', '지도요원 배정 modal 진입', 'K2B 회차 데이터 반영'],
   },
   auth: {
     id: 'auth',

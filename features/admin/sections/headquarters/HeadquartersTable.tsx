@@ -193,10 +193,9 @@ export function HeadquartersTable({
               <table className={`${styles.table} ${styles.headquartersTable}`}>
                 <colgroup>
                   <col className={styles.headquartersNameCol} />
-                  <col className={styles.headquartersAddressCol} />
-                  <col className={styles.headquartersAddressCol} />
                   <col className={styles.headquartersContactCol} />
-                  <col className={styles.headquartersUpdatedCol} />
+                  <col className={styles.headquartersRegistrationCol} />
+                  <col className={styles.headquartersAddressCol} />
                   <col className={styles.headquartersMenuCol} />
                 </colgroup>
                 <thead>
@@ -204,31 +203,17 @@ export function HeadquartersTable({
                     <SortableHeaderCell
                       column={{ key: 'name' }}
                       current={sort}
-                      label="사업장 / 담당"
+                      label="사업장 명"
                       onChange={onSortChange}
                     />
-                    <th>등록번호</th>
-                    <th>주소 / 메모</th>
-                    <SortableHeaderCell
-                      column={{ key: 'contact_phone' }}
-                      current={sort}
-                      label="대표 전화"
-                      onChange={onSortChange}
-                    />
-                    <SortableHeaderCell
-                      column={{ key: 'updated_at' }}
-                      current={sort}
-                      defaultDirection="desc"
-                      label="수정일"
-                      onChange={onSortChange}
-                    />
+                    <th>담당자</th>
+                    <th>사업자등록번호</th>
+                    <th>주소</th>
                     <th>메뉴</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredHeadquarters.map((item) => {
-                    const missingFields = getHeadquarterMissingFields(item);
-
                     return (
                       <tr
                         key={item.id}
@@ -248,42 +233,21 @@ export function HeadquartersTable({
                       >
                         <td>
                           <div className={styles.tablePrimary}>{item.name}</div>
-                          <div className={styles.tableSecondary}>
-                            담당자 {item.contact_name || '-'}
-                          </div>
-                          {missingFields.length ? (
-                            <div className={styles.tableBadgeRow}>
-                              <span className={`${styles.tableBadge} ${styles.tableBadgeWarning}`}>
-                                보완 {missingFields.length}건
-                              </span>
-                            </div>
-                          ) : null}
+                        </td>
+                        <td>
+                          <div className={styles.tablePrimary}>{item.contact_name || '-'}</div>
                         </td>
                         <td>
                           <div className={styles.tablePrimary}>
-                            관리번호 {item.management_number || '-'}
+                            {item.business_registration_no || '-'}
                           </div>
                           <div className={styles.tableSecondary}>
-                            개시번호 {item.opening_number || '-'}
-                          </div>
-                          <div className={styles.tableSecondary}>
-                            사업자 {item.business_registration_no || '-'} / 법인{' '}
-                            {item.corporate_registration_no || '-'}
-                          </div>
-                          <div className={styles.tableSecondary}>
-                            면허 {item.license_no || '-'}
+                            면허번호 {item.license_no || '-'}
                           </div>
                         </td>
                         <td>
                           <div className={styles.tablePrimary}>{item.address || '-'}</div>
-                          <div className={styles.tableSecondary}>
-                            {item.memo || '운영 메모 없음'}
-                          </div>
                         </td>
-                        <td>
-                          <div className={styles.tablePrimary}>{item.contact_phone || '-'}</div>
-                        </td>
-                        <td>{formatTimestamp(item.updated_at)}</td>
                         <td>
                           <div
                             className={styles.tableActionMenuWrap}

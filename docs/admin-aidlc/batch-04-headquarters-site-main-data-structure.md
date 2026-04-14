@@ -167,3 +167,11 @@ git diff --check
   site-management responsibility and remain AIDLC split candidates.
 - Real admin smoke still needs seeded credentials or a local smoke seed file before this batch can
   be closed with integrated `/admin` verification.
+
+## Follow-up 2026-04-14
+
+- `HeadquartersTable.tsx` business list columns were tightened for the current admin IA pass.
+- The headquarter list now shows only business name, contact name, business registration number
+  with license number as secondary text, address, and the row action menu.
+- The list intentionally no longer surfaces management/opening/corporate numbers, phone, updated
+  timestamp, memo, or inline completion badges in the table body.

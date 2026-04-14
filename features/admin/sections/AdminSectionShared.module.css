@@ -1057,19 +1057,19 @@
 }
 
 .headquartersNameCol {
-  width: 28%;
+  width: 24%;
+}
+
+.headquartersRegistrationCol {
+  width: 24%;
 }
 
 .headquartersAddressCol {
-  width: 36%;
+  width: 32%;
 }
 
 .headquartersContactCol {
-  width: 16%;
-}
-
-.headquartersUpdatedCol {
-  width: 14%;
+  width: 20%;
 }
 
 .headquartersMenuCol {
