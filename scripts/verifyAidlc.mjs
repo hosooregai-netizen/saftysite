@@ -38,8 +38,39 @@ const IGNORED_FILE_PATTERNS = [
   /^next-env\.d\.ts$/,
 ];
 
+function getCommandCandidates(command) {
+  if (process.platform !== 'win32') {
+    return [command];
+  }
+
+  return [command, `${command}.cmd`, `${command}.exe`];
+}
+
+function execCommand(command, args, options = {}) {
+  let lastError = null;
+
+  for (const candidate of getCommandCandidates(command)) {
+    try {
+      if (process.platform === 'win32' && candidate.endsWith('.cmd')) {
+        return execFileSync('cmd.exe', ['/d', '/s', '/c', candidate, ...args], options);
+      }
+
+      return execFileSync(candidate, args, options);
+    } catch (error) {
+      if (error && typeof error === 'object' && ['ENOENT', 'EINVAL'].includes(error.code)) {
+        lastError = error;
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  throw lastError;
+}
+
 function run(command, args, options = {}) {
-  return execFileSync(command, args, {
+  return execCommand(command, args, {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
     ...options,
@@ -103,7 +134,7 @@ function verifyScope({
 
 function runValidation(command, args, label) {
   console.log(`[aidlc-verify] running ${label}...`);
-  execFileSync(command, args, { stdio: 'inherit' });
+  execCommand(command, args, { stdio: 'inherit' });
 }
 
 function main() {

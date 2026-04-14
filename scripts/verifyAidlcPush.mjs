@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 
 const DEFAULT_BASE_URL = process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:3211';
+const ADMIN_SHARED_SMOKE_IDS = ['admin-control-center', 'admin-reports', 'admin-sites'];
 
 const IGNORED_FILE_PATTERNS = [
   /^\.tmp-ui\//,
@@ -28,6 +29,10 @@ const GUARDED_SOURCE_PATTERNS = [
 ];
 
 const FEATURE_RULES = [
+  {
+    ids: ADMIN_SHARED_SMOKE_IDS,
+    patterns: [/^features\/admin\/sections\/AdminSectionShared\.module\.css$/],
+  },
   {
     id: 'admin-control-center',
     patterns: [
@@ -128,8 +133,39 @@ const FEATURE_RULES = [
   },
 ];
 
+function getCommandCandidates(command) {
+  if (process.platform !== 'win32') {
+    return [command];
+  }
+
+  return [command, `${command}.cmd`, `${command}.exe`];
+}
+
+function execCommand(command, args, options = {}) {
+  let lastError = null;
+
+  for (const candidate of getCommandCandidates(command)) {
+    try {
+      if (process.platform === 'win32' && candidate.endsWith('.cmd')) {
+        return execFileSync('cmd.exe', ['/d', '/s', '/c', candidate, ...args], options);
+      }
+
+      return execFileSync(candidate, args, options);
+    } catch (error) {
+      if (error && typeof error === 'object' && ['ENOENT', 'EINVAL'].includes(error.code)) {
+        lastError = error;
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  throw lastError;
+}
+
 function run(command, args, options = {}) {
-  return execFileSync(command, args, {
+  return execCommand(command, args, {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
     ...options,
@@ -186,7 +222,10 @@ function buildRequiredSmokes(files) {
   for (const file of guardedFiles) {
     const matchedRule = FEATURE_RULES.find((rule) => matchesAny(file, rule.patterns));
     if (matchedRule) {
-      smokeIds.add(matchedRule.id);
+      const ids = matchedRule.ids ?? [matchedRule.id];
+      for (const id of ids) {
+        smokeIds.add(id);
+      }
       continue;
     }
 
@@ -240,7 +279,7 @@ async function main() {
   }
 
   console.log(`[aidlc-push] running smoke features: ${smokeIds.join(', ')}`);
-  execFileSync(
+  execCommand(
     'npm',
     ['run', 'test:client:smoke', '--', ...smokeIds],
     {
