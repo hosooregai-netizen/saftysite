@@ -69,6 +69,7 @@ function buildDefaultSiteAssignee(
     userName:
       normalizeText(site.assigned_user?.name) ||
       normalizeText(site.assigned_users?.[0]?.name) ||
+      normalizeText(site.inspector_name) ||
       normalizeText(site.guidance_officer_name),
   };
 }

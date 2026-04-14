@@ -68,14 +68,14 @@ export async function provisionExcelWorkerAssignment(
   request: Request,
   input: {
     assignments: SafetyAssignment[];
-    guidanceOfficerName: string;
+    workerName: string;
     rowIndex: number;
     site: SafetySite;
     users: SafetyUser[];
   },
 ): Promise<ExcelWorkerProvisionResult> {
-  const guidanceOfficerName = normalizeText(input.guidanceOfficerName);
-  if (!guidanceOfficerName) {
+  const workerName = normalizeText(input.workerName);
+  if (!workerName) {
     return {
       assignments: input.assignments,
       createdAssignment: false,
@@ -83,14 +83,14 @@ export async function provisionExcelWorkerAssignment(
       matchedExistingUser: false,
       matchedUserEmail: '',
       matchedUserId: '',
-      message: '지도요원명이 없어 사용자/배정을 건너뛰었습니다.',
+      message: '점검자명이 없어 사용자/배정을 건너뛰었습니다.',
       status: 'missing_name',
       user: null,
       users: input.users,
     };
   }
 
-  const nameMatches = buildNameMatches(input.users, guidanceOfficerName);
+  const nameMatches = buildNameMatches(input.users, workerName);
   if (nameMatches.length > 1) {
     return {
       assignments: input.assignments,
@@ -99,7 +99,7 @@ export async function provisionExcelWorkerAssignment(
       matchedExistingUser: false,
       matchedUserEmail: '',
       matchedUserId: '',
-      message: '동명이인 후보가 있어 지도요원 자동 연결을 건너뛰었습니다.',
+      message: '동명이인 후보가 있어 점검자 자동 연결을 건너뛰었습니다.',
       status: 'ambiguous',
       user: null,
       users: input.users,
@@ -116,13 +116,13 @@ export async function provisionExcelWorkerAssignment(
       token,
       {
         auto_provisioned_from_excel: true,
-        email: buildPlaceholderEmail(guidanceOfficerName, input.site.id, input.rowIndex),
+        email: buildPlaceholderEmail(workerName, input.site.id, input.rowIndex),
         is_active: true,
-        name: guidanceOfficerName,
+        name: workerName,
         organization_name:
           input.site.headquarter_detail?.name || input.site.headquarter?.name || null,
         password: `ExcelImport!${Date.now()}`,
-        position: '지도요원',
+        position: '점검자',
         role: 'field_agent',
       },
       request,
@@ -140,8 +140,8 @@ export async function provisionExcelWorkerAssignment(
     const createdAssignmentRecord = await createAdminAssignment(
       token,
       {
-        memo: '엑셀 지도요원 자동 연결',
-        role_on_site: '현장 지도요원',
+        memo: '엑셀 점검자 자동 연결',
+        role_on_site: '현장 점검자',
         site_id: input.site.id,
         user_id: user.id,
       },
@@ -155,8 +155,8 @@ export async function provisionExcelWorkerAssignment(
       existingAssignment.id,
       {
         is_active: true,
-        memo: existingAssignment.memo || '엑셀 지도요원 자동 연결',
-        role_on_site: existingAssignment.role_on_site || '현장 지도요원',
+        memo: existingAssignment.memo || '엑셀 점검자 자동 연결',
+        role_on_site: existingAssignment.role_on_site || '현장 점검자',
       },
       request,
     );
@@ -174,10 +174,10 @@ export async function provisionExcelWorkerAssignment(
     matchedUserEmail: normalizeText(user.email),
     matchedUserId: user.id,
     message: createdPlaceholderUser
-      ? '지도요원 가계정을 생성하고 현장 배정을 연결했습니다.'
+      ? '점검자 가계정을 생성하고 현장 배정을 연결했습니다.'
       : createdAssignment
-        ? '기존 지도요원을 현장에 연결했습니다.'
-        : '기존 지도요원과 배정을 그대로 사용했습니다.',
+        ? '기존 점검자를 현장에 연결했습니다.'
+        : '기존 점검자와 배정을 그대로 사용했습니다.',
     status: createdPlaceholderUser ? 'created_placeholder' : 'matched_existing',
     user,
     users,

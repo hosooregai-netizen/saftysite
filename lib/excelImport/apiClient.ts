@@ -6,6 +6,7 @@ import type {
   ExcelApplyResult,
   ExcelImportPreview,
   ExcelImportScope,
+  ExcelRowExclusionReasonCode,
 } from '@/types/excelImport';
 
 function toText(value: unknown) {
@@ -46,7 +47,8 @@ function mapExcelImportPreview(payload: unknown): ExcelImportPreview {
                         : {},
                     summary: toText(row.summary),
                     suggestedAction: toText(row.suggestedAction ?? row.suggested_action),
-                    exclusionReasonCode: (toText(row.exclusionReasonCode ?? row.exclusion_reason_code) as any) || null,
+                    exclusionReasonCode:
+                      (toText(row.exclusionReasonCode ?? row.exclusion_reason_code) as ExcelRowExclusionReasonCode) || null,
                     exclusionReason: toText(row.exclusionReason ?? row.exclusion_reason) || null,
                     inScope:
                       typeof (row.inScope ?? row.in_scope) === 'boolean'
@@ -141,6 +143,10 @@ function mapExcelApplyResult(payload: unknown): ExcelApplyResult {
       createdSiteCount: Number(summary.createdSiteCount ?? summary.created_site_count ?? 0),
       updatedSiteCount: Number(summary.updatedSiteCount ?? summary.updated_site_count ?? 0),
       completionRequiredCount: Number(summary.completionRequiredCount ?? summary.completion_required_count ?? 0),
+      matchedExistingUserCount: Number(summary.matchedExistingUserCount ?? summary.matched_existing_user_count ?? 0),
+      createdPlaceholderUserCount: Number(summary.createdPlaceholderUserCount ?? summary.created_placeholder_user_count ?? 0),
+      ambiguousWorkerMatchCount: Number(summary.ambiguousWorkerMatchCount ?? summary.ambiguous_worker_match_count ?? 0),
+      createdAssignmentCount: Number(summary.createdAssignmentCount ?? summary.created_assignment_count ?? 0),
     },
     rows: Array.isArray(response.rows)
       ? response.rows.map((rowItem) => {
@@ -152,6 +158,10 @@ function mapExcelApplyResult(payload: unknown): ExcelApplyResult {
             headquarterName: toText(row.headquarterName ?? row.headquarter_name),
             siteId: toText(row.siteId ?? row.site_id),
             siteName: toText(row.siteName ?? row.site_name),
+            workerMatchStatus: toText(row.workerMatchStatus ?? row.worker_match_status) || undefined,
+            matchedUserId: toText(row.matchedUserId ?? row.matched_user_id) || undefined,
+            matchedUserEmail: toText(row.matchedUserEmail ?? row.matched_user_email) || undefined,
+            placeholderCreated: Boolean(row.placeholderCreated ?? row.placeholder_created ?? false),
             requiredCompletionFields: Array.isArray(row.requiredCompletionFields ?? row.required_completion_fields)
               ? ((row.requiredCompletionFields ?? row.required_completion_fields) as unknown[]).map((item) => toText(item)).filter(Boolean)
               : [],

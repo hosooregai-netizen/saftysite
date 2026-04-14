@@ -12,7 +12,11 @@ import {
   updateAdminHeadquarter,
   updateAdminSite,
 } from '@/server/admin/safetyApiServer';
-import { buildSiteMemoWithRequiredCompletionFields } from '@/lib/admin/siteContractProfile';
+import {
+  buildSiteMemoWithContractProfile,
+  parseSiteContractProfile,
+  parseSiteMemoNote,
+} from '@/lib/admin/siteContractProfile';
 import type { SafetySite } from '@/types/backend';
 import type {
   SafetyHeadquarter,
@@ -31,6 +35,7 @@ import type {
   ExcelImportSheetPreview,
   ExcelRowActionType,
 } from '@/types/excelImport';
+import { mergeImportedSchedules, type ImportedScheduleSeed } from './importedSchedules';
 import { provisionExcelWorkerAssignment } from './workerProvisioning';
 
 const JOB_DIR = path.join(os.tmpdir(), 'safetysite-excel-import-jobs');
@@ -72,6 +77,9 @@ const FIELD_ALIASES: Record<string, string[]> = {
   contract_start_date: ['계약시작일'],
   contract_end_date: ['계약 종료일', '계약종료일'],
   contract_signed_date: ['계약 체결일', '계약체결일', '계약일'],
+  round_no: ['회차'],
+  visit_date: ['기술지도일'],
+  completion_status: ['완료여부'],
   total_contract_amount: ['총계약금액', '총계약액', '계약총액', '기술지도대가', '기술지도 대가'],
   total_rounds: ['총회차', '총 회차', '회차수', '기술지도횟수', '기술지도 횟수'],
 };
@@ -141,6 +149,15 @@ type MappingAnalysis = {
   ignoredHeaders: ExcelIgnoredHeader[];
   mappingWarnings: string[];
   suggestedMapping: Record<string, string>;
+};
+
+type PreparedApplyRow = {
+  action: ExcelRowActionType;
+  groupKey: string;
+  headquarterMatches: DuplicateCandidate[];
+  row: LocalRow;
+  rowData: Record<string, string>;
+  siteMatches: DuplicateCandidate[];
 };
 
 function buildInScopeDecision(
@@ -718,6 +735,64 @@ function suggestAction(siteMatches: DuplicateCandidate[], headquarterMatches: Du
   return 'create';
 }
 
+function buildPreparedApplyRowGroupKey(
+  row: LocalRow,
+  rowData: Record<string, string>,
+  action: ExcelRowActionType,
+  siteMatches: DuplicateCandidate[],
+  headquarterMatches: DuplicateCandidate[],
+) {
+  const matchedSiteId =
+    row.siteId ??
+    (siteMatches.length === 1 ? siteMatches[0].siteId : null);
+  if (matchedSiteId) {
+    return `site:${matchedSiteId}`;
+  }
+
+  const matchedHeadquarterId =
+    row.headquarterId ??
+    (headquarterMatches.length === 1 ? headquarterMatches[0].headquarterId : null);
+
+  return [
+    action,
+    matchedHeadquarterId || '',
+    normalizeKey(rowData.headquarter_management_number),
+    normalizeKey(rowData.headquarter_opening_number),
+    normalizeKey(rowData.headquarter_name),
+    normalizeKey(rowData.site_name),
+    parseDateValue(rowData.project_start_date),
+    parseDateValue(rowData.project_end_date),
+  ].join('::');
+}
+
+function buildWorkerName(rowData: Record<string, string>, site: SafetySite) {
+  return (
+    normalizeText(rowData.inspector_name) ||
+    normalizeText(site.inspector_name) ||
+    normalizeText(rowData.guidance_officer_name) ||
+    normalizeText(site.guidance_officer_name)
+  );
+}
+
+function buildImportedScheduleSeeds(
+  rows: Array<{
+    assigneeName: string;
+    assigneeUserId: string;
+    completionStatus: string;
+    rowData: Record<string, string>;
+  }>,
+): ImportedScheduleSeed[] {
+  return rows
+    .map((row) => ({
+      assigneeName: row.assigneeName,
+      assigneeUserId: row.assigneeUserId,
+      completionStatus: row.completionStatus,
+      roundNo: parseIntValue(row.rowData.round_no),
+      visitDate: parseDateValue(row.rowData.visit_date),
+    }))
+    .filter((row) => Boolean(row.roundNo && row.visitDate));
+}
+
 function buildRowSummary(rowData: Record<string, string>) {
   const parts = [rowData.headquarter_name, rowData.site_name].filter(Boolean);
   if (rowData.headquarter_management_number) {
@@ -1107,53 +1182,78 @@ export async function applyLocalExcelWorkbook(
     updatedSiteCount: 0,
   };
 
-  for (const row of selectedSheet.rows) {
-    if (!row.inScope) {
-      continue;
-    }
-    const rowData = extractMappedRow(row.values, selectedSheet.suggestedMapping);
-    if (!Object.values(rowData).some((value) => normalizeText(value))) {
-      continue;
-    }
+  const preparedRows = selectedSheet.rows
+    .filter((row) => row.inScope)
+    .map((row) => {
+      const rowData = extractMappedRow(row.values, selectedSheet.suggestedMapping);
+      if (!Object.values(rowData).some((value) => normalizeText(value))) {
+        return null;
+      }
 
-    const nextHeadquarterLookup = buildHeadquarterLookup(headquarters);
-    const nextSiteLookup = buildSiteLookup(sites);
-    const siteMatches = siteCandidates(rowData, nextHeadquarterLookup, nextSiteLookup);
-    const headquarterMatches = headquarterCandidates(rowData, nextHeadquarterLookup);
-    const action = row.explicitAction ?? suggestAction(siteMatches, headquarterMatches);
+      const nextHeadquarterLookup = buildHeadquarterLookup(headquarters);
+      const nextSiteLookup = buildSiteLookup(sites);
+      const siteMatches = siteCandidates(rowData, nextHeadquarterLookup, nextSiteLookup);
+      const headquarterMatches = headquarterCandidates(rowData, nextHeadquarterLookup);
+      const action = row.explicitAction ?? suggestAction(siteMatches, headquarterMatches);
 
+      return {
+        action,
+        groupKey: buildPreparedApplyRowGroupKey(row, rowData, action, siteMatches, headquarterMatches),
+        headquarterMatches,
+        row,
+        rowData,
+        siteMatches,
+      } satisfies PreparedApplyRow;
+    })
+    .filter((row): row is PreparedApplyRow => Boolean(row));
+
+  const rowsByGroup = preparedRows.reduce((map, row) => {
+    if (!map.has(row.groupKey)) {
+      map.set(row.groupKey, []);
+    }
+    map.get(row.groupKey)?.push(row);
+    return map;
+  }, new Map<string, PreparedApplyRow[]>());
+
+  for (const groupRows of rowsByGroup.values()) {
+    const firstRow = groupRows[0];
     let headquarter: SafetyHeadquarter | null = null;
     let site: SafetySite | null = null;
 
-    if (action === 'update_site') {
+    if (firstRow.action === 'update_site') {
       const targetSiteId =
-        row.siteId ??
-        (siteMatches.length === 1 ? siteMatches[0].siteId : null);
+        firstRow.row.siteId ??
+        (firstRow.siteMatches.length === 1 ? firstRow.siteMatches[0].siteId : null);
       site = sites.find((item) => item.id === targetSiteId) || null;
       if (!site) {
-        throw new Error(`${row.rowIndex}행의 현장 갱신 대상을 찾을 수 없습니다.`);
+        throw new Error(`${firstRow.row.rowIndex}행의 현장 갱신 대상을 찾을 수 없습니다.`);
       }
-      site = await updateAdminSite(token, site.id, buildSitePayload(rowData), request);
+      site = await updateAdminSite(token, site.id, buildSitePayload(firstRow.rowData), request);
       headquarter = headquarters.find((item) => item.id === site!.headquarter_id) || null;
       summary.updatedSiteCount += 1;
-    } else if (action === 'update_headquarter') {
+    } else if (firstRow.action === 'update_headquarter') {
       const targetHeadquarterId =
-        row.headquarterId ??
-        (headquarterMatches.length === 1 ? headquarterMatches[0].headquarterId : null);
+        firstRow.row.headquarterId ??
+        (firstRow.headquarterMatches.length === 1 ? firstRow.headquarterMatches[0].headquarterId : null);
       headquarter = headquarters.find((item) => item.id === targetHeadquarterId) || null;
       if (!headquarter) {
-        throw new Error(`${row.rowIndex}행의 사업장 갱신 대상을 찾을 수 없습니다.`);
+        throw new Error(`${firstRow.row.rowIndex}행의 사업장 갱신 대상을 찾을 수 없습니다.`);
       }
-      headquarter = await updateAdminHeadquarter(token, headquarter.id, buildHeadquarterPayload(rowData), request);
+      headquarter = await updateAdminHeadquarter(
+        token,
+        headquarter.id,
+        buildHeadquarterPayload(firstRow.rowData),
+        request,
+      );
       summary.updatedHeadquarterCount += 1;
       const targetSiteId =
-        row.siteId ??
-        (siteMatches.length === 1 ? siteMatches[0].siteId : null);
+        firstRow.row.siteId ??
+        (firstRow.siteMatches.length === 1 ? firstRow.siteMatches[0].siteId : null);
       if (targetSiteId) {
         site = await updateAdminSite(
           token,
           targetSiteId,
-          buildSitePayload(rowData, headquarter.id),
+          buildSitePayload(firstRow.rowData, headquarter.id),
           request,
         );
         summary.updatedSiteCount += 1;
@@ -1162,32 +1262,35 @@ export async function applyLocalExcelWorkbook(
           token,
           {
             headquarter_id: headquarter.id,
-            site_name: normalizeText(rowData.site_name) || '엑셀 현장',
+            site_name: normalizeText(firstRow.rowData.site_name) || '엑셀 현장',
             status: 'active',
-            ...buildSitePayload(rowData, headquarter.id),
+            ...buildSitePayload(firstRow.rowData, headquarter.id),
           },
           request,
         );
         summary.createdSiteCount += 1;
       }
     } else {
-      const existingHeadquarter = headquarterMatches.length === 1
-        ? headquarters.find((item) => item.id === headquarterMatches[0].headquarterId) || null
+      const existingHeadquarter = firstRow.headquarterMatches.length === 1
+        ? headquarters.find((item) => item.id === firstRow.headquarterMatches[0].headquarterId) || null
         : null;
       if (existingHeadquarter) {
         headquarter = await updateAdminHeadquarter(
           token,
           existingHeadquarter.id,
-          buildHeadquarterPayload(rowData),
+          buildHeadquarterPayload(firstRow.rowData),
           request,
         );
         summary.updatedHeadquarterCount += 1;
       } else {
-        const headquarterPayload = buildHeadquarterPayload(rowData);
+        const headquarterPayload = buildHeadquarterPayload(firstRow.rowData);
         headquarter = await createAdminHeadquarter(
           token,
           {
-            name: normalizeText(rowData.headquarter_name) || normalizeText(rowData.site_name) || '엑셀 사업장',
+            name:
+              normalizeText(firstRow.rowData.headquarter_name) ||
+              normalizeText(firstRow.rowData.site_name) ||
+              '엑셀 사업장',
             ...headquarterPayload,
           },
           request,
@@ -1198,9 +1301,9 @@ export async function applyLocalExcelWorkbook(
         token,
         {
           headquarter_id: headquarter.id,
-          site_name: normalizeText(rowData.site_name) || '엑셀 현장',
+          site_name: normalizeText(firstRow.rowData.site_name) || '엑셀 현장',
           status: 'active',
-          ...buildSitePayload(rowData, headquarter.id),
+          ...buildSitePayload(firstRow.rowData, headquarter.id),
         },
         request,
       );
@@ -1208,65 +1311,125 @@ export async function applyLocalExcelWorkbook(
     }
 
     if (!headquarter || !site) {
-      throw new Error(`${row.rowIndex}행의 반영 결과를 확인하지 못했습니다.`);
+      throw new Error(`${firstRow.row.rowIndex}행의 반영 결과를 확인하지 못했습니다.`);
+    }
+
+    const workerProvisionCache = new Map<string, ExcelApplyResultRow & {
+      matchedExistingUser: boolean;
+      createdAssignment: boolean;
+      createdPlaceholderUser: boolean;
+    }>();
+    const importedScheduleRows: Array<{
+      assigneeName: string;
+      assigneeUserId: string;
+      completionStatus: string;
+      rowData: Record<string, string>;
+    }> = [];
+    const pendingResultRows: ExcelApplyResultRow[] = [];
+
+    for (const preparedRow of groupRows) {
+      const workerName = buildWorkerName(preparedRow.rowData, site);
+      const workerKey = normalizeKey(workerName) || `row:${preparedRow.row.rowIndex}`;
+      let workerResult = workerProvisionCache.get(workerKey);
+
+      if (!workerResult) {
+        const workerProvision = await provisionExcelWorkerAssignment(token, request, {
+          assignments,
+          rowIndex: preparedRow.row.rowIndex,
+          site,
+          users,
+          workerName,
+        });
+
+        users = workerProvision.users;
+        assignments = workerProvision.assignments;
+        if (workerProvision.matchedExistingUser) {
+          summary.matchedExistingUserCount += 1;
+        }
+        if (workerProvision.createdPlaceholderUser) {
+          summary.createdPlaceholderUserCount += 1;
+        }
+        if (workerProvision.createdAssignment) {
+          summary.createdAssignmentCount += 1;
+        }
+        if (workerProvision.status === 'ambiguous') {
+          summary.ambiguousWorkerMatchCount += 1;
+        }
+
+        workerResult = {
+          action: firstRow.action,
+          createdAssignment: workerProvision.createdAssignment,
+          createdPlaceholderUser: workerProvision.createdPlaceholderUser,
+          headquarterId: headquarter.id,
+          headquarterName: headquarter.name,
+          matchedExistingUser: workerProvision.matchedExistingUser,
+          matchedUserEmail: workerProvision.matchedUserEmail,
+          matchedUserId: workerProvision.matchedUserId,
+          message: workerProvision.message,
+          placeholderCreated: workerProvision.createdPlaceholderUser,
+          requiredCompletionFields: [],
+          rowIndex: preparedRow.row.rowIndex,
+          siteId: site.id,
+          siteName: site.site_name,
+          workerMatchStatus: workerProvision.status,
+        };
+
+        if (normalizeKey(workerName)) {
+          workerProvisionCache.set(workerKey, workerResult);
+        }
+      }
+
+      importedScheduleRows.push({
+        assigneeName: workerName || site.inspector_name || '',
+        assigneeUserId: workerResult.matchedUserId || '',
+        completionStatus: preparedRow.rowData.completion_status || '',
+        rowData: preparedRow.rowData,
+      });
+
+      pendingResultRows.push({
+        ...workerResult,
+        rowIndex: preparedRow.row.rowIndex,
+      });
     }
 
     const requiredCompletionFields = computeRequiredCompletionFields(headquarter, site);
-    if (requiredCompletionFields.length > 0) {
+    const nextSchedules = mergeImportedSchedules(site, buildImportedScheduleSeeds(importedScheduleRows));
+    const nextMemo = buildSiteMemoWithContractProfile(
+      parseSiteMemoNote(site.memo),
+      parseSiteContractProfile(site),
+      {
+        existingMemo: site.memo,
+        requiredCompletionFields,
+        schedules: nextSchedules,
+      },
+    );
+
+    if (nextMemo !== site.memo) {
       site = await updateAdminSite(
         token,
         site.id,
         {
-          memo: buildSiteMemoWithRequiredCompletionFields(site, requiredCompletionFields),
+          memo: nextMemo,
         } as SafetySiteUpdateInput,
         request,
       );
+    }
+    if (requiredCompletionFields.length > 0) {
       summary.completionRequiredCount += 1;
     }
 
-    const workerProvision = await provisionExcelWorkerAssignment(token, request, {
-      assignments,
-      guidanceOfficerName: rowData.guidance_officer_name || site.guidance_officer_name || '',
-      rowIndex: row.rowIndex,
-      site,
-      users,
-    });
-
-    users = workerProvision.users;
-    assignments = workerProvision.assignments;
-    if (workerProvision.matchedExistingUser) {
-      summary.matchedExistingUserCount += 1;
-    }
-    if (workerProvision.createdPlaceholderUser) {
-      summary.createdPlaceholderUserCount += 1;
-    }
-    if (workerProvision.createdAssignment) {
-      summary.createdAssignmentCount += 1;
-    }
-    if (workerProvision.status === 'ambiguous') {
-      summary.ambiguousWorkerMatchCount += 1;
-    }
-
-    headquarters = headquarters.some((item) => item.id === headquarter!.id)
-      ? headquarters.map((item) => (item.id === headquarter!.id ? headquarter! : item))
+    headquarters = headquarters.some((item) => item.id === headquarter.id)
+      ? headquarters.map((item) => (item.id === headquarter.id ? headquarter : item))
       : [...headquarters, headquarter];
-    sites = sites.some((item) => item.id === site!.id)
-      ? sites.map((item) => (item.id === site!.id ? site! : item))
+    sites = sites.some((item) => item.id === site.id)
+      ? sites.map((item) => (item.id === site.id ? site : item))
       : [...sites, site];
 
-    resultRows.push({
-      action,
-      headquarterId: headquarter.id,
-      headquarterName: headquarter.name,
-      matchedUserEmail: workerProvision.matchedUserEmail,
-      matchedUserId: workerProvision.matchedUserId,
-      message: workerProvision.message,
-      placeholderCreated: workerProvision.createdPlaceholderUser,
-      requiredCompletionFields,
-      rowIndex: row.rowIndex,
-      siteId: site.id,
-      siteName: site.site_name,
-      workerMatchStatus: workerProvision.status,
+    pendingResultRows.forEach((row) => {
+      resultRows.push({
+        ...row,
+        requiredCompletionFields,
+      });
     });
   }
 
