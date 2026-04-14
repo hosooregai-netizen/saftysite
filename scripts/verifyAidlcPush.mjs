@@ -78,7 +78,9 @@ const FEATURE_RULES = [
     id: 'quarterly-report',
     patterns: [
       /^app\/sites\/\[siteKey\]\/quarterly\/\[quarterKey\]\//,
+      /^features\/site-reports\/components\/SiteQuarterlyReportsScreen\.tsx$/,
       /^features\/site-reports\/quarterly-report\//,
+      /^features\/site-reports\/quarterly-list\//,
     ],
   },
   {
