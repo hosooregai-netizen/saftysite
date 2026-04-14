@@ -11,8 +11,11 @@ import type {
 import { parseSiteContractProfile } from '@/lib/admin/siteContractProfile';
 import type { ControllerDashboardData } from '@/types/controller';
 import type { TableSortState } from '@/types/admin';
+import type { SafetyAdminAnalyticsResponse } from '@/types/admin';
 
-export const EMPTY_ANALYTICS = {
+export const EMPTY_ANALYTICS: SafetyAdminAnalyticsResponse = {
+  availableTrendYears: [],
+  chartYearSlices: [],
   contractTypeRows: [],
   employeeRows: [],
   siteRevenueRows: [],
@@ -110,6 +113,34 @@ export function buildScopeChips(
       label: '구분',
       value: SITE_CONTRACT_TYPE_LABELS[input.contractType as keyof typeof SITE_CONTRACT_TYPE_LABELS] || input.contractType,
     });
+  }
+  if (input.query.trim()) chips.push({ label: '검색', value: input.query.trim() });
+  return chips;
+}
+
+export function buildScopeChipsFromLookups(
+  input: {
+    contractType: string;
+    contractTypeOptions: Array<{ label: string; value: string }>;
+    headquarterId: string;
+    headquarterOptions: Array<{ label: string; value: string }>;
+    period: keyof typeof PERIOD_LABELS;
+    query: string;
+    userId: string;
+    userOptions: Array<{ label: string; value: string }>;
+  },
+) {
+  const chips = [
+    { label: '집계 기준', value: ANALYTICS_REVENUE_COUNT_LABEL },
+    { label: '기간', value: PERIOD_LABELS[input.period] },
+  ];
+  const headquarter = input.headquarterOptions.find((item) => item.value === input.headquarterId);
+  const user = input.userOptions.find((item) => item.value === input.userId);
+  const contractType = input.contractTypeOptions.find((item) => item.value === input.contractType);
+  if (headquarter) chips.push({ label: '사업장', value: headquarter.label });
+  if (user) chips.push({ label: '직원', value: user.label });
+  if (contractType) {
+    chips.push({ label: '구분', value: contractType.label });
   }
   if (input.query.trim()) chips.push({ label: '검색', value: input.query.trim() });
   return chips;

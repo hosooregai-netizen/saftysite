@@ -14,7 +14,7 @@ import {
   SITE_STATUS_OPTIONS,
 } from '@/lib/admin';
 import type { TableSortState } from '@/types/admin';
-import type { SafetySite } from '@/types/backend';
+import type { SafetySite, SafetyUser } from '@/types/backend';
 import type { SafetySiteStatus } from '@/types/controller';
 import { shouldIgnoreRowClick } from './siteSectionHelpers';
 
@@ -26,10 +26,16 @@ interface SitesTableProps {
   onDownloadBasicMaterial: (site: SafetySite) => void;
   onOpenAssignmentModal: (siteId: string) => void;
   onOpenEdit: (site: SafetySite) => void;
+  onPageChange: (page: number) => void;
   onOpenSiteEntry: (site: SafetySite) => void;
   onUpdateStatus: (site: SafetySite, status: SafetySiteStatus) => void;
+  page: number;
+  showHeadquarterColumn: boolean;
   sites: SafetySite[];
   sort: TableSortState;
+  totalCount: number;
+  totalPages: number;
+  usersById: Map<string, SafetyUser>;
   onSortChange: (value: TableSortState) => void;
 }
 
@@ -57,15 +63,22 @@ export function SitesTable({
   onDownloadBasicMaterial,
   onOpenAssignmentModal,
   onOpenEdit,
+  onPageChange,
   onOpenSiteEntry,
   onUpdateStatus,
+  page,
+  showHeadquarterColumn,
   sites,
   sort,
+  totalCount,
+  totalPages,
+  usersById: _usersById,
   onSortChange,
 }: SitesTableProps) {
   return (
-    <div className={styles.tableWrap}>
-      <table className={styles.table}>
+    <>
+      <div className={styles.tableWrap}>
+        <table className={styles.table}>
         <thead>
           <tr>
             <SortableHeaderCell
@@ -78,16 +91,18 @@ export function SitesTable({
                 desc: '현장 역순',
               })}
             />
-            <SortableHeaderCell
-              column={{ key: 'headquarter_name' }}
-              current={sort}
-              label="사업장 관리번호"
-              onChange={onSortChange}
-              sortMenuOptions={buildSortMenuOptions('headquarter_name', {
-                asc: '사업장 관리번호 가나다순',
-                desc: '사업장 관리번호 역순',
-              })}
-            />
+            {showHeadquarterColumn ? (
+              <SortableHeaderCell
+                column={{ key: 'headquarter_name' }}
+                current={sort}
+                label="사업장 관리번호"
+                onChange={onSortChange}
+                sortMenuOptions={buildSortMenuOptions('headquarter_name', {
+                  asc: '사업장 관리번호 가나다순',
+                  desc: '사업장 관리번호 역순',
+                })}
+              />
+            ) : null}
             <SortableHeaderCell
               column={{ key: 'project_kind' }}
               current={sort}
@@ -161,11 +176,13 @@ export function SitesTable({
                 <td>
                   <div className={styles.tablePrimary}>{site.site_name}</div>
                 </td>
-                <td>
-                  <div className={styles.tablePrimary}>
-                    {site.headquarter_detail?.management_number || '-'}
-                  </div>
-                </td>
+                {showHeadquarterColumn ? (
+                  <td>
+                    <div className={styles.tablePrimary}>
+                      {site.headquarter_detail?.management_number || '-'}
+                    </div>
+                  </td>
+                ) : null}
                 <td>
                   <div className={styles.tablePrimary}>{site.project_kind || '-'}</div>
                 </td>
@@ -254,7 +271,33 @@ export function SitesTable({
             );
           })}
         </tbody>
-      </table>
-    </div>
+        </table>
+      </div>
+      {totalCount > 0 ? (
+        <div className={styles.paginationRow}>
+          <span>
+            {page} / {totalPages} 페이지 · 총 {totalCount}건
+          </span>
+          <div className={styles.tableActions}>
+            <button
+              type="button"
+              className="app-button app-button-secondary"
+              onClick={() => onPageChange(page - 1)}
+              disabled={page <= 1}
+            >
+              이전
+            </button>
+            <button
+              type="button"
+              className="app-button app-button-secondary"
+              onClick={() => onPageChange(page + 1)}
+              disabled={page >= totalPages}
+            >
+              다음
+            </button>
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }

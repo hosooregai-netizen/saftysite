@@ -25,6 +25,8 @@ const EMPTY_FORM = {
   is_active: true,
 };
 
+const USERS_PAGE_SIZE = 50;
+
 export function useUsersSectionState(
   users: SafetyUser[],
   sites: SafetySite[],
@@ -43,6 +45,7 @@ export function useUsersSectionState(
     const value = searchParams.get('status');
     return value === 'active' || value === 'inactive' ? value : 'all';
   });
+  const [page, setPage] = useState(1);
   const [sort, setSort] = useState<TableSortState>({
     direction: 'asc',
     key: 'name',
@@ -146,6 +149,12 @@ export function useUsersSectionState(
       return left.name.localeCompare(right.name, 'ko') * direction;
     });
   }, [filteredUsers, sort.direction, sort.key, userOverviewById]);
+  const totalPages = Math.max(1, Math.ceil(sortedUsers.length / USERS_PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pagedUsers = useMemo(() => {
+    const offset = (currentPage - 1) * USERS_PAGE_SIZE;
+    return sortedUsers.slice(offset, offset + USERS_PAGE_SIZE);
+  }, [currentPage, sortedUsers]);
 
   const openCreate = () => {
     setEditingId('create');
@@ -230,16 +239,34 @@ export function useUsersSectionState(
     isOpen,
     openCreate,
     openEdit,
+    page: currentPage,
+    pagedUsers,
     query,
     roleFilter,
     setForm,
-    setQuery,
-    setRoleFilter,
-    setSort,
-    setStatusFilter,
+    setPage: (nextPage: number) => {
+      setPage(Math.max(1, Math.min(nextPage, totalPages)));
+    },
+    setQuery: (value: string) => {
+      setPage(1);
+      setQuery(value);
+    },
+    setRoleFilter: (value: 'all' | UserRoleView) => {
+      setPage(1);
+      setRoleFilter(value);
+    },
+    setSort: (value: TableSortState) => {
+      setPage(1);
+      setSort(value);
+    },
+    setStatusFilter: (value: 'all' | 'active' | 'inactive') => {
+      setPage(1);
+      setStatusFilter(value);
+    },
     sort,
     statusFilter,
     sortedUsers,
+    totalPages,
     userOverviewById,
   };
 }

@@ -271,6 +271,32 @@ export function buildTrendRows(rows: AnalyticsRevenueEvent[], today: Date): Admi
   });
 }
 
+export function buildTrendRowsForYear(
+  rows: AnalyticsRevenueEvent[],
+  year: number,
+): AdminAnalyticsTrendRow[] {
+  return Array.from({ length: 12 }, (_, index) => {
+    const monthStart = new Date(year, index, 1);
+    const monthEnd = endOfMonth(monthStart);
+    const monthRows = rows.filter((row) =>
+      isWithinDateRange(row.date, {
+        end: monthEnd,
+        start: monthStart,
+      }),
+    );
+    const executedRounds = monthRows.length;
+    const revenue = monthRows.reduce((sum, row) => sum + row.revenue, 0);
+
+    return {
+      avgPerVisitAmount: calculateAveragePerVisitAmount(revenue, executedRounds),
+      executedRounds,
+      label: formatMonthLabel(monthStart),
+      monthKey: formatMonthKey(monthStart),
+      revenue,
+    };
+  });
+}
+
 export function formatAnalyticsStatValue(label: 'currency' | 'percent' | 'count', value: number) {
   if (label === 'currency') return formatCurrencyValue(value);
   if (label === 'percent') return `${(value * 100).toFixed(1)}%`;

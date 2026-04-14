@@ -471,8 +471,65 @@ export function mapBackendAnalyticsResponse(
   );
   const plannedRounds = response.stats.planned_rounds ?? 0;
   const remainingRounds = Math.max(plannedRounds - totalExecutedRounds, 0);
+  const trendRows = Array.isArray(response.trend_rows)
+    ? response.trend_rows.map((row) => ({
+        avgPerVisitAmount: row.avg_per_visit_amount,
+        executedRounds: row.executed_rounds,
+        label: normalizeText(row.label),
+        monthKey: normalizeText(row.month_key),
+        revenue: row.revenue,
+      }))
+    : [];
+  const availableTrendYears = Array.from(
+    new Set(
+      trendRows
+        .map((row) => Number.parseInt(row.monthKey.slice(0, 4), 10))
+        .filter((year) => Number.isFinite(year)),
+    ),
+  ).sort((left, right) => right - left);
+  if (availableTrendYears.length === 0) {
+    availableTrendYears.push(new Date().getFullYear());
+  }
+  const employeeRows = response.employee_rows.map((row) => ({
+    assignedSiteCount: row.assigned_site_count,
+    avgPerVisitAmount:
+      row.executed_rounds > 0 ? row.visit_revenue / row.executed_rounds : 0,
+    completionRate:
+      row.total_assigned_rounds > 0 ? row.executed_rounds / row.total_assigned_rounds : 0,
+    overdueCount: row.overdue_count,
+    plannedRevenue: row.planned_revenue ?? 0,
+    plannedRounds: row.planned_rounds ?? 0,
+    primaryContractTypeLabel: '',
+    revenueChangeRate: null,
+    totalAssignedRounds: row.total_assigned_rounds,
+    userId: normalizeText(row.user_id),
+    userName: normalizeText(row.user_name),
+    visitRevenue: row.visit_revenue,
+    executedRounds: row.executed_rounds,
+  }));
+  const siteRevenueRows = response.site_revenue_rows.map((row) => ({
+    avgPerVisitAmount:
+      row.executed_rounds > 0 ? row.visit_revenue / row.executed_rounds : 0,
+    contractTypeLabel: normalizeText(row.contract_type_label),
+    executedRounds: row.executed_rounds,
+    executionRate: row.execution_rate ?? 0,
+    headquarterName: normalizeText(row.headquarter_name),
+    href: normalizeText(row.href),
+    plannedRevenue: row.planned_revenue ?? 0,
+    plannedRounds: row.planned_rounds ?? 0,
+    siteId: normalizeText(row.href) || normalizeText(row.site_name),
+    siteName: normalizeText(row.site_name),
+    visitRevenue: row.visit_revenue,
+  }));
 
   return {
+    availableTrendYears,
+    chartYearSlices: availableTrendYears.map((year) => ({
+      employeeRows,
+      siteRevenueRows,
+      trendRows: trendRows.filter((row) => row.monthKey.startsWith(`${year}-`)),
+      year,
+    })),
     contractTypeRows: response.contract_type_rows.map((row) => ({
       avgPerVisitAmount: row.avg_per_visit_amount,
       executedRounds: 0,
@@ -483,37 +540,8 @@ export function mapBackendAnalyticsResponse(
       totalContractAmount: row.total_contract_amount,
       visitRevenue: row.visit_revenue ?? 0,
     })),
-    employeeRows: response.employee_rows.map((row) => ({
-      assignedSiteCount: row.assigned_site_count,
-      avgPerVisitAmount:
-        row.executed_rounds > 0 ? row.visit_revenue / row.executed_rounds : 0,
-      completionRate:
-        row.total_assigned_rounds > 0 ? row.executed_rounds / row.total_assigned_rounds : 0,
-      overdueCount: row.overdue_count,
-      plannedRevenue: row.planned_revenue ?? 0,
-      plannedRounds: row.planned_rounds ?? 0,
-      primaryContractTypeLabel: '',
-      revenueChangeRate: null,
-      totalAssignedRounds: row.total_assigned_rounds,
-      userId: normalizeText(row.user_id),
-      userName: normalizeText(row.user_name),
-      visitRevenue: row.visit_revenue,
-      executedRounds: row.executed_rounds,
-    })),
-    siteRevenueRows: response.site_revenue_rows.map((row) => ({
-      avgPerVisitAmount:
-        row.executed_rounds > 0 ? row.visit_revenue / row.executed_rounds : 0,
-      contractTypeLabel: normalizeText(row.contract_type_label),
-      executedRounds: row.executed_rounds,
-      executionRate: row.execution_rate ?? 0,
-      headquarterName: normalizeText(row.headquarter_name),
-      href: normalizeText(row.href),
-      plannedRevenue: row.planned_revenue ?? 0,
-      plannedRounds: row.planned_rounds ?? 0,
-      siteId: normalizeText(row.href) || normalizeText(row.site_name),
-      siteName: normalizeText(row.site_name),
-      visitRevenue: row.visit_revenue,
-    })),
+    employeeRows,
+    siteRevenueRows,
     stats: {
       averagePerVisitAmount: response.stats.average_per_visit_amount,
       completionRate: response.stats.completion_rate,
@@ -536,15 +564,7 @@ export function mapBackendAnalyticsResponse(
       meta: normalizeText(card.meta),
       value: normalizeText(card.value),
     })),
-    trendRows: Array.isArray(response.trend_rows)
-      ? response.trend_rows.map((row) => ({
-          avgPerVisitAmount: row.avg_per_visit_amount,
-          executedRounds: row.executed_rounds,
-          label: normalizeText(row.label),
-          monthKey: normalizeText(row.month_key),
-          revenue: row.revenue,
-        }))
-      : [],
+    trendRows,
   };
 }
 

@@ -33,7 +33,7 @@ const EMPTY_FORM: HeadquarterFormState = {
   memo: '',
 };
 
-const HEADQUARTERS_PAGE_SIZE = 10;
+const HEADQUARTERS_PAGE_SIZE = 30;
 
 function isPinnedTestHeadquarter(item: SafetyHeadquarter) {
   return item.name.includes('테스트');

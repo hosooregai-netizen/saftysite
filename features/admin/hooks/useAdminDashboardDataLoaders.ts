@@ -3,6 +3,7 @@
 import { useCallback, useEffect } from 'react';
 import { primeControllerDashboardData } from '@/hooks/controller/useControllerDashboard';
 import { fetchSafetyContentItems, fetchSafetyReportList, readSafetyAuthToken, SafetyApiError } from '@/lib/safetyApi';
+import { readAdminSessionCache, writeAdminSessionCache } from '@/features/admin/lib/adminSessionCache';
 import {
   readSafetyContentItemsSessionCache,
   writeSafetyContentItemsSessionCache,
@@ -28,6 +29,7 @@ interface UseAdminDashboardDataLoadersParams {
   setIsLoading: React.Dispatch<React.SetStateAction<boolean>>;
   setIsReportsLoading: React.Dispatch<React.SetStateAction<boolean>>;
   setReportList: React.Dispatch<React.SetStateAction<SafetyReportListItem[]>>;
+  shouldLoadCoreData: boolean;
   shouldLoadReports: boolean;
   shouldLoadContent: boolean;
 }
@@ -48,6 +50,7 @@ export function useAdminDashboardDataLoaders({
   setIsLoading,
   setIsReportsLoading,
   setReportList,
+  shouldLoadCoreData,
   shouldLoadReports,
   shouldLoadContent,
 }: UseAdminDashboardDataLoadersParams) {
@@ -98,10 +101,22 @@ export function useAdminDashboardDataLoaders({
   );
   const loadReports = useCallback(
     async (options?: {
+      force?: boolean;
       headquarters?: ControllerDashboardData['headquarters'];
       sites?: ControllerDashboardData['sites'];
     }) => {
       if (!enabled) return;
+      const cachedReportList =
+        !options?.force && contentCacheScope
+          ? readAdminSessionCache<SafetyReportListItem[]>(contentCacheScope, 'report-list')
+          : { isFresh: false, value: null };
+      if (cachedReportList.value) {
+        setReportList(cachedReportList.value);
+      }
+      if (cachedReportList.isFresh && cachedReportList.value) {
+        setIsReportsLoading(false);
+        return;
+      }
       setError(null);
       setIsReportsLoading(true);
       try {
@@ -112,18 +127,44 @@ export function useAdminDashboardDataLoaders({
         });
         const nextHeadquarters = options?.headquarters ?? data.headquarters;
         const nextSites = options?.sites ?? data.sites;
-        setReportList(filterVisibleAdminReportListItems(reports, nextSites, nextHeadquarters));
+        const visibleReports = filterVisibleAdminReportListItems(reports, nextSites, nextHeadquarters);
+        setReportList(visibleReports);
+        writeAdminSessionCache(contentCacheScope, 'report-list', visibleReports);
       } catch (nextError) {
         setError(getErrorMessage(nextError));
       } finally {
         setIsReportsLoading(false);
       }
     },
-    [data.headquarters, data.sites, enabled, getToken, setError, setIsReportsLoading, setReportList],
+    [contentCacheScope, data.headquarters, data.sites, enabled, getToken, setError, setIsReportsLoading, setReportList],
   );
   const reload = useCallback(
     async (options?: { includeContent?: boolean; includeReports?: boolean; force?: boolean }) => {
       if (!enabled) return;
+      const cachedCoreData =
+        !options?.force && contentCacheScope
+          ? readAdminSessionCache<ControllerDashboardData>(contentCacheScope, 'core-data')
+          : { isFresh: false, value: null };
+      if (cachedCoreData.value) {
+        setData((current) => ({
+          ...current,
+          assignments: cachedCoreData.value?.assignments ?? current.assignments,
+          headquarters: cachedCoreData.value?.headquarters ?? current.headquarters,
+          sites: cachedCoreData.value?.sites ?? current.sites,
+          users: cachedCoreData.value?.users ?? current.users,
+        }));
+        setHasLoadedCoreData(true);
+      }
+      if (cachedCoreData.isFresh && cachedCoreData.value) {
+        if (options?.includeReports) {
+          void loadReports({
+            force: false,
+            headquarters: cachedCoreData.value.headquarters,
+            sites: cachedCoreData.value.sites,
+          });
+        }
+        return;
+      }
       setIsLoading(true);
       setError(null);
       try {
@@ -138,8 +179,17 @@ export function useAdminDashboardDataLoaders({
           sites,
           users,
         }));
+        writeAdminSessionCache(contentCacheScope, 'core-data', {
+          assignments,
+          contentItems: [],
+          headquarters,
+          sites,
+          users,
+        });
         const followUpTasks: Array<Promise<void>> = [];
-        if (options?.includeReports) followUpTasks.push(loadReports({ headquarters, sites }));
+        if (options?.includeReports) {
+          followUpTasks.push(loadReports({ force: options?.force, headquarters, sites }));
+        }
         if (options?.includeContent) followUpTasks.push(reloadContent({ force: options?.force }));
         if (followUpTasks.length > 0) {
           await Promise.all(followUpTasks);
@@ -151,21 +201,22 @@ export function useAdminDashboardDataLoaders({
         setIsLoading(false);
       }
     },
-    [enabled, getToken, loadReports, reloadContent, setData, setError, setHasLoadedCoreData, setIsLoading],
+    [contentCacheScope, enabled, getToken, loadReports, reloadContent, setData, setError, setHasLoadedCoreData, setIsLoading],
   );
   useEffect(() => {
-    if (enabled && !hasLoadedCoreData) {
+    if (enabled && shouldLoadCoreData && !hasLoadedCoreData) {
       void reload({ includeReports: shouldLoadReports });
     }
-  }, [enabled, hasLoadedCoreData, reload, shouldLoadReports]);
+  }, [enabled, hasLoadedCoreData, reload, shouldLoadCoreData, shouldLoadReports]);
   useEffect(() => {
     if (!enabled || !shouldLoadContent) return;
     void reloadContent();
   }, [enabled, reloadContent, shouldLoadContent]);
   useEffect(() => {
-    if (!enabled || !hasLoadedCoreData || !shouldLoadReports) return;
+    if (!enabled || !shouldLoadReports) return;
+    if (shouldLoadCoreData && !hasLoadedCoreData) return;
     if (reportList.length > 0) return;
     void loadReports();
-  }, [enabled, hasLoadedCoreData, loadReports, reportList.length, shouldLoadReports]);
+  }, [enabled, hasLoadedCoreData, loadReports, reportList.length, shouldLoadCoreData, shouldLoadReports]);
   return { getToken, loadReports, reload, reloadContent };
 }

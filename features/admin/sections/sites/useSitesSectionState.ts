@@ -22,6 +22,8 @@ import type { TableSortState } from '@/types/admin';
 import type { SafetyAssignment, SafetySiteInput, SafetySiteStatus, SafetySiteUpdateInput } from '@/types/controller';
 import type { SafetySite, SafetyUser } from '@/types/backend';
 
+const SITES_PAGE_SIZE = 50;
+
 function normalizeSiteValue(value: string | null | undefined) {
   return String(value ?? '').trim().toLowerCase();
 }
@@ -101,6 +103,7 @@ export function useSitesSectionState({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [assignmentSiteId, setAssignmentSiteId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<'all' | SafetySiteStatus>(initialStatusFilter);
   const [sort, setSort] = useState<TableSortState>({
     direction: 'desc',
@@ -169,6 +172,12 @@ export function useSitesSectionState({
     () => [...filteredSites].sort(buildSiteSortComparator(sort, activeAssignmentsBySiteId, usersById)),
     [activeAssignmentsBySiteId, filteredSites, sort, usersById],
   );
+  const totalPages = Math.max(1, Math.ceil(sortedSites.length / SITES_PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pagedSites = useMemo(() => {
+    const offset = (currentPage - 1) * SITES_PAGE_SIZE;
+    return sortedSites.slice(offset, offset + SITES_PAGE_SIZE);
+  }, [currentPage, sortedSites]);
 
   const openCreate = () => {
     setEditingId('create');
@@ -368,13 +377,28 @@ export function useSitesSectionState({
     setAssignmentFilter,
     setAssignmentSiteId,
     setForm,
-    setQuery,
-    setSort,
-    setStatusFilter,
+    setPage: (nextPage: number) => {
+      setPage(Math.max(1, Math.min(nextPage, totalPages)));
+    },
+    setQuery: (value: string) => {
+      setPage(1);
+      setQuery(value);
+    },
+    setSort: (value: TableSortState) => {
+      setPage(1);
+      setSort(value);
+    },
+    setStatusFilter: (value: 'all' | SafetySiteStatus) => {
+      setPage(1);
+      setStatusFilter(value);
+    },
+    pagedSites,
+    page: currentPage,
     sortedSites,
     sort,
     statusFilter,
     submit,
+    totalPages,
     updateStatus: (site: SafetySite, status: SafetySiteStatus) => onUpdate(site.id, { status }),
     users,
     usersById,

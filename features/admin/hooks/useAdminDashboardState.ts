@@ -54,6 +54,7 @@ export function useAdminDashboardState({
     setIsLoading,
     setIsReportsLoading,
     setReportList,
+    shouldLoadCoreData: routing.shouldLoadCoreData,
     shouldLoadContent: routing.shouldLoadContent,
     shouldLoadReports: routing.shouldLoadReports,
   });

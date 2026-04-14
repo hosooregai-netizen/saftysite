@@ -32,7 +32,7 @@ export function useAdminDashboardRouting({
       : null);
   const selectedHeadquarterId = searchParams.get('headquarterId');
   const selectedSiteId = searchParams.get('siteId');
-  const activeSection = parseAdminSectionKey(requestedSection) ?? 'headquarters';
+  const activeSection = parseAdminSectionKey(requestedSection) ?? 'overview';
   const activeSectionMeta = useMemo(
     () => ADMIN_SECTIONS.find((section) => section.key === activeSection) ?? ADMIN_SECTIONS[0],
     [activeSection],
@@ -50,10 +50,14 @@ export function useAdminDashboardRouting({
   );
   const shouldLoadContent = activeSection === 'content';
   const shouldLoadReports =
-    activeSection === 'overview' ||
+    activeSection === 'reports' || activeSection === 'mailbox';
+  const shouldLoadCoreData =
+    activeSection === 'users' ||
+    activeSection === 'headquarters' ||
     activeSection === 'reports' ||
-    activeSection === 'analytics' ||
-    activeSection === 'mailbox';
+    activeSection === 'mailbox' ||
+    activeSection === 'photos' ||
+    activeSection === 'schedules';
 
   const replaceRoute = useCallback(
     (section: AdminSectionKey, query: AdminSectionQuery = {}) => {
@@ -65,10 +69,7 @@ export function useAdminDashboardRouting({
   useEffect(() => {
     if (!enabled) return;
     if (!requestedSection || !isLegacyAdminSectionKey(requestedSection)) {
-      replaceRoute('headquarters', {
-        headquarterId: selectedHeadquarterId,
-        siteId: selectedSiteId,
-      });
+      replaceRoute('overview');
     }
   }, [enabled, replaceRoute, requestedSection, selectedHeadquarterId, selectedSiteId]);
 
@@ -152,6 +153,7 @@ export function useAdminDashboardRouting({
     selectedSite,
     selectedSiteId,
     shouldLoadContent,
+    shouldLoadCoreData,
     shouldLoadReports,
   };
 }

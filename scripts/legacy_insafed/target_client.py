@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 from typing import Any
 from urllib.parse import urljoin
 
@@ -14,6 +15,7 @@ class TargetErpClient:
     def __init__(self, base_url: str, token: str, timeout: int = 30):
         self.base_url = base_url.rstrip("/") + "/"
         self.timeout = timeout
+        self.max_retries = 5
         self.session = requests.Session()
         self.session.headers.update({"Authorization": f"Bearer {token}"})
         self.uses_direct_upstream = self.base_url.rstrip("/").endswith("/api/v1")
@@ -29,25 +31,43 @@ class TargetErpClient:
         return normalized
 
     def _request(self, method: str, path: str, **kwargs: Any) -> requests.Response:
-        response = self.session.request(
-            method,
-            urljoin(self.base_url, self._resolve_path(path).lstrip("/")),
-            timeout=self.timeout,
-            **kwargs,
-        )
-        if response.ok:
-            return response
-        try:
-            payload = response.json()
-        except Exception:
-            payload = {}
-        message = payload.get("error") or payload.get("detail") or response.text or response.reason
-        raise TargetErpError(f"{method} {path} failed: {response.status_code} {message}")
+        url = urljoin(self.base_url, self._resolve_path(path).lstrip("/"))
+        last_error: Exception | None = None
+        for attempt in range(1, self.max_retries + 1):
+            try:
+                response = self.session.request(
+                    method,
+                    url,
+                    timeout=self.timeout,
+                    **kwargs,
+                )
+                if response.ok:
+                    return response
+                if response.status_code >= 500 and attempt < self.max_retries:
+                    time.sleep(min(2 * attempt, 10))
+                    continue
+                try:
+                    payload = response.json()
+                except Exception:
+                    payload = {}
+                message = payload.get("error") or payload.get("detail") or response.text or response.reason
+                raise TargetErpError(f"{method} {path} failed: {response.status_code} {message}")
+            except (requests.ConnectionError, requests.Timeout) as error:
+                last_error = error
+                if attempt >= self.max_retries:
+                    break
+                time.sleep(min(2 * attempt, 10))
+        raise TargetErpError(f"{method} {path} failed after retries: {last_error}")
 
-    def fetch_all(self, path: str, params: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    def fetch_all(
+        self,
+        path: str,
+        params: dict[str, Any] | None = None,
+        *,
+        limit: int = 200,
+    ) -> list[dict[str, Any]]:
         rows: list[dict[str, Any]] = []
         offset = 0
-        limit = 200
         while True:
             payload = dict(params or {})
             payload.setdefault("active_only", "true")
@@ -68,6 +88,7 @@ class TargetErpClient:
         return self.fetch_all(
             "/api/safety/sites",
             {"include_headquarter_detail": "true", "include_assigned_user": "true"},
+            limit=100,
         )
 
     def fetch_users(self) -> list[dict[str, Any]]:

@@ -129,6 +129,21 @@ def payload_differs(existing: dict[str, object], payload: dict[str, object]) -> 
     return False
 
 
+def resolve_conflicting_site_payload(payload: dict[str, object], error: Exception) -> dict[str, object] | None:
+    message = normalize_text(error)
+    if "409" not in message:
+        return None
+    retried = dict(payload)
+    changed = False
+    if "site_code" in message and retried.get("site_code") is not None:
+        retried["site_code"] = None
+        changed = True
+    if "management_number" in message and retried.get("management_number") is not None:
+        retried["management_number"] = None
+        changed = True
+    return retried if changed else None
+
+
 def is_placeholder_user(user: dict[str, object]) -> bool:
     email = normalize_text(user.get("email")).lower()
     return email.endswith("@placeholder.example.com")
@@ -205,6 +220,54 @@ def find_user_match(
         if len(placeholder_matches) == 1:
             return placeholder_matches[0]
     return None
+
+
+def ensure_active_assignment(
+    client: TargetErpClient,
+    assignments: list[dict[str, object]],
+    *,
+    site_id: str,
+    user_id: str,
+    memo: str,
+) -> str:
+    existing_assignment = next(
+        (
+            item
+            for item in assignments
+            if str(item.get("site_id")) == str(site_id) and str(item.get("user_id")) == str(user_id)
+        ),
+        None,
+    )
+    if existing_assignment and not existing_assignment.get("is_active", True):
+        client.update_assignment(
+            str(existing_assignment["id"]),
+            {
+                "is_active": True,
+                "role_on_site": existing_assignment.get("role_on_site") or "Legacy imported field agent",
+            },
+        )
+        existing_assignment["is_active"] = True
+        return "reactivated"
+    if existing_assignment:
+        return "existing"
+    try:
+        assignments.append(
+            client.create_assignment(
+                {
+                    "site_id": site_id,
+                    "user_id": user_id,
+                    "role_on_site": "Legacy imported field agent",
+                    "memo": memo,
+                }
+            )
+        )
+        return "created"
+    except TargetErpError as error:
+        if "활성 배정 정보가 존재" not in str(error):
+            raise
+        refreshed_assignments = client.fetch_assignments()
+        assignments[:] = refreshed_assignments
+        return "existing"
 
 
 def upsert_inspector_user(client: TargetErpClient, users: list[dict[str, object]], inspector: dict[str, object]) -> dict[str, object]:
@@ -358,11 +421,56 @@ def build_schedule_from_visit(
     }
 
 
+def build_default_schedule(
+    site: dict[str, object],
+    round_no: int,
+    assignee_user_id: str,
+    assignee_name: str,
+) -> dict[str, object] | None:
+    if round_no <= 0:
+        return None
+    contract_date = parse_date_value(site.get("contract_date")) or parse_date_value(site.get("project_start_date"))
+    if not contract_date:
+        return None
+    window_start = contract_date + timedelta(days=(round_no - 1) * 15)
+    window_end = window_start + timedelta(days=14)
+    headquarter_detail = site.get("headquarter_detail") if isinstance(site.get("headquarter_detail"), dict) else {}
+    headquarter = site.get("headquarter") if isinstance(site.get("headquarter"), dict) else {}
+    return {
+        "id": f"schedule:{site.get('id')}:{round_no}",
+        "siteId": str(site.get("id") or ""),
+        "roundNo": round_no,
+        "plannedDate": "",
+        "windowStart": format_date_value(window_start),
+        "windowEnd": format_date_value(window_end),
+        "assigneeUserId": assignee_user_id,
+        "assigneeName": assignee_name,
+        "status": "planned",
+        "exceptionReasonCode": "",
+        "exceptionMemo": "",
+        "selectionConfirmedAt": "",
+        "selectionConfirmedByName": "",
+        "selectionConfirmedByUserId": "",
+        "selectionReasonLabel": "",
+        "selectionReasonMemo": "",
+        "linkedReportKey": "",
+        "siteName": normalize_text(site.get("site_name")),
+        "headquarterId": normalize_text(site.get("headquarter_id")),
+        "headquarterName": normalize_text(headquarter_detail.get("name")) or normalize_text(headquarter.get("name")),
+        "isConflicted": False,
+        "isOutOfWindow": False,
+        "isOverdue": False,
+    }
+
+
 def patch_site_schedules_via_memo(
     client: TargetErpClient,
     site: dict[str, object],
     visits: list[dict[str, object]],
     assignee_lookup: dict[str, tuple[str, str]],
+    total_rounds: int,
+    default_assignee_user_id: str,
+    default_assignee_name: str,
 ) -> dict[str, object]:
     note, envelope = split_site_memo(site.get("memo"))
     existing_by_round: dict[int, dict[str, object]] = {}
@@ -374,9 +482,22 @@ def patch_site_schedules_via_memo(
             round_no = int(item.get("roundNo") or 0)
             if round_no > 0:
                 existing_by_round[round_no] = item
+    for round_no in range(1, max(total_rounds, 0) + 1):
+        next_schedule = build_default_schedule(
+            site,
+            round_no,
+            default_assignee_user_id,
+            default_assignee_name,
+        )
+        if not next_schedule:
+            continue
+        existing_by_round[round_no] = {**next_schedule, **existing_by_round.get(round_no, {})}
     for visit in visits:
         worker_name = normalize_text(visit.get("assigned_worker_name"))
-        assignee_user_id, assignee_name = assignee_lookup.get(worker_name, ("", worker_name))
+        assignee_user_id, assignee_name = assignee_lookup.get(
+            worker_name,
+            (default_assignee_user_id, worker_name or default_assignee_name),
+        )
         next_schedule = build_schedule_from_visit(site, visit, assignee_user_id, assignee_name)
         if not next_schedule:
             continue
@@ -513,29 +634,68 @@ def main() -> None:
             else:
                 site = client.update_site(existing["id"], payload) if existing else client.create_site(payload)
         except TargetErpError as error:
-            if existing or "409" not in str(error):
+            fallback_payload = resolve_conflicting_site_payload(payload, error)
+            if existing and fallback_payload is not None:
+                site = client.update_site(existing["id"], fallback_payload)
+                payload = fallback_payload
+            elif not existing and fallback_payload is not None:
+                try:
+                    site = client.create_site(fallback_payload)
+                    payload = fallback_payload
+                except TargetErpError as fallback_error:
+                    if "409" not in str(fallback_error):
+                        raise
+                    sites = client.fetch_sites()
+                    existing = find_site_match(sites, record, headquarter_id)
+                    if not existing:
+                        append_jsonl(
+                            failures_path,
+                            {
+                                "phase": "import_site_conflict",
+                                "legacy_site_id": record.get("legacy_site_id"),
+                                "site_name": record.get("site_name"),
+                                "management_number": record.get("management_number"),
+                                "opening_number": record.get("opening_number"),
+                                "error": str(fallback_error),
+                            },
+                        )
+                        continue
+                    payload = merge_update_payload(
+                        existing,
+                        build_site_payload(record, headquarter_id, normalize_text(existing.get("memo") if existing else "")),
+                        args.update_missing_only,
+                    )
+                    fallback_payload = resolve_conflicting_site_payload(payload, fallback_error)
+                    if fallback_payload is not None:
+                        payload = fallback_payload
+                    site = client.update_site(existing["id"], payload)
+            elif existing or "409" not in str(error):
                 raise
-            sites = client.fetch_sites()
-            existing = find_site_match(sites, record, headquarter_id)
-            if not existing:
-                append_jsonl(
-                    failures_path,
-                    {
-                        "phase": "import_site_conflict",
-                        "legacy_site_id": record.get("legacy_site_id"),
-                        "site_name": record.get("site_name"),
-                        "management_number": record.get("management_number"),
-                        "opening_number": record.get("opening_number"),
-                        "error": str(error),
-                    },
+            else:
+                sites = client.fetch_sites()
+                existing = find_site_match(sites, record, headquarter_id)
+                if not existing:
+                    append_jsonl(
+                        failures_path,
+                        {
+                            "phase": "import_site_conflict",
+                            "legacy_site_id": record.get("legacy_site_id"),
+                            "site_name": record.get("site_name"),
+                            "management_number": record.get("management_number"),
+                            "opening_number": record.get("opening_number"),
+                            "error": str(error),
+                        },
+                    )
+                    continue
+                payload = merge_update_payload(
+                    existing,
+                    build_site_payload(record, headquarter_id, normalize_text(existing.get("memo") if existing else "")),
+                    args.update_missing_only,
                 )
-                continue
-            payload = merge_update_payload(
-                existing,
-                build_site_payload(record, headquarter_id, normalize_text(existing.get("memo") if existing else "")),
-                args.update_missing_only,
-            )
-            site = client.update_site(existing["id"], payload)
+                fallback_payload = resolve_conflicting_site_payload(payload, error)
+                if fallback_payload is not None:
+                    payload = fallback_payload
+                site = client.update_site(existing["id"], payload)
         if not existing:
             sites.append(site)
             summary["created_sites"] += 1
@@ -561,12 +721,16 @@ def main() -> None:
                 str(record["legacy_site_id"]),
                 normalize_text(record.get("headquarter_name")),
             )
-            existing_assignment = next((item for item in assignments if str(item.get("site_id")) == str(site["id"]) and str(item.get("user_id")) == str(user["id"])), None)
-            if existing_assignment and not existing_assignment.get("is_active", True):
-                client.update_assignment(str(existing_assignment["id"]), {"is_active": True, "role_on_site": existing_assignment.get("role_on_site") or "Legacy imported field agent"})
+            assignment_result = ensure_active_assignment(
+                client,
+                assignments,
+                site_id=str(site["id"]),
+                user_id=str(user["id"]),
+                memo="legacy_insafed_import",
+            )
+            if assignment_result == "reactivated":
                 summary["reactivated_assignments"] += 1
-            elif not existing_assignment:
-                assignments.append(client.create_assignment({"site_id": site["id"], "user_id": user["id"], "role_on_site": "Legacy imported field agent", "memo": "legacy_insafed_import"}))
+            elif assignment_result == "created":
                 summary["created_assignments"] += 1
         assignee_lookup: dict[str, tuple[str, str]] = {}
         for visit in record.get("visit_history", []):
@@ -581,51 +745,27 @@ def main() -> None:
                 normalize_text(record.get("headquarter_name")),
             )
             assignee_lookup[visit_worker_name] = (str(visit_user["id"]), str(visit_user["name"]))
-        site_schedules = client.fetch_site_schedules(str(site["id"]))
-        if not site_schedules and record.get("total_rounds"):
-            try:
-                client.generate_site_schedules(str(site["id"]))
-                site_schedules = client.fetch_site_schedules(str(site["id"]))
-            except TargetErpError as error:
-                append_jsonl(
-                    failures_path,
-                    {
-                        "phase": "generate_schedule",
-                        "legacy_site_id": record.get("legacy_site_id"),
-                        "site_id": site.get("id"),
-                        "error": str(error),
-                    },
-                )
-                site_schedules = []
-        missing_rounds = [
-            int(visit.get("round_no") or 0)
-            for visit in record.get("visit_history", [])
-            if int(visit.get("round_no") or 0) > 0
-            and int(visit.get("round_no") or 0) not in {int(item.get("roundNo", 0)) for item in site_schedules}
-        ]
-        if missing_rounds and record.get("visit_history"):
-            site = patch_site_schedules_via_memo(client, site, record.get("visit_history", []), assignee_lookup)
-            site_schedules = client.fetch_site_schedules(str(site["id"]))
-        by_round = {int(item.get("roundNo", 0)): item for item in site_schedules}
-        for visit in record.get("visit_history", []):
-            round_no = int(visit.get("round_no") or 0)
-            current = by_round.get(round_no)
-            if not current:
-                append_jsonl(failures_path, {"phase": "import_schedule", "legacy_site_id": record.get("legacy_site_id"), "round_no": round_no, "error": "missing_generated_schedule"})
-                continue
-            payload = {
-                "plannedDate": visit.get("visit_date") or current.get("plannedDate"),
-                "status": map_legacy_schedule_status(normalize_text(visit.get("status"))),
-                "selectionReasonLabel": "Legacy InSEF import",
-                "selectionReasonMemo": f"legacy_site_id={record.get('legacy_site_id')} round={round_no}",
-            }
-            worker_name = normalize_text(visit.get("assigned_worker_name"))
-            if worker_name:
-                assignee_user_id, assignee_name = assignee_lookup.get(worker_name, ("", worker_name))
-                payload["assigneeUserId"] = assignee_user_id
-                payload["assigneeName"] = assignee_name
-            client.update_schedule(str(current["id"]), payload)
-            summary["updated_schedules"] += 1
+        default_assignee_user_id = ""
+        default_assignee_name = worker_name
+        if worker_name:
+            default_user = inspector_users_by_name.get(worker_name) or assignee_lookup.get(worker_name)
+            if isinstance(default_user, tuple):
+                default_assignee_user_id, default_assignee_name = default_user
+            elif isinstance(default_user, dict):
+                default_assignee_user_id = str(default_user.get("id") or "")
+                default_assignee_name = str(default_user.get("name") or worker_name)
+        total_rounds = int(record.get("total_rounds") or 0)
+        if total_rounds > 0 or record.get("visit_history"):
+            site = patch_site_schedules_via_memo(
+                client,
+                site,
+                record.get("visit_history", []),
+                assignee_lookup,
+                total_rounds,
+                default_assignee_user_id,
+                default_assignee_name,
+            )
+            summary["updated_schedules"] += max(total_rounds, len(record.get("visit_history", [])))
         if index % 100 == 0 or index == len(legacy_sites):
             print(
                 f"[sites] {index}/{len(legacy_sites)} "
@@ -643,31 +783,16 @@ def main() -> None:
                 site_id = site_map.get(legacy_site_id)
                 if not site_id:
                     continue
-                existing_assignment = next(
-                    (
-                        item
-                        for item in assignments
-                        if str(item.get("site_id")) == site_id and str(item.get("user_id")) == str(user.get("id"))
-                    ),
-                    None,
+                assignment_result = ensure_active_assignment(
+                    client,
+                    assignments,
+                    site_id=site_id,
+                    user_id=str(user["id"]),
+                    memo="legacy_insafed_import:assigned_site",
                 )
-                if existing_assignment and not existing_assignment.get("is_active", True):
-                    client.update_assignment(
-                        str(existing_assignment["id"]),
-                        {"is_active": True, "role_on_site": existing_assignment.get("role_on_site") or "Legacy imported field agent"},
-                    )
+                if assignment_result == "reactivated":
                     summary["reactivated_assignments"] += 1
-                elif not existing_assignment:
-                    assignments.append(
-                        client.create_assignment(
-                            {
-                                "site_id": site_id,
-                                "user_id": user["id"],
-                                "role_on_site": "Legacy imported field agent",
-                                "memo": "legacy_insafed_import:assigned_site",
-                            }
-                        )
-                    )
+                elif assignment_result == "created":
                     summary["created_assignments"] += 1
     if args.headquarters_sites_only:
         updated_reports = report_metadata

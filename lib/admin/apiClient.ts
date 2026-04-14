@@ -141,6 +141,14 @@ export function fetchAdminOverview() {
   return requestAdminApi<SafetyAdminOverviewResponse>('/dashboard/overview');
 }
 
+export function fetchAdminDashboardLookups() {
+  return requestAdminApi<{
+    contractTypes: Array<{ label: string; value: string }>;
+    headquarters: Array<{ id: string; name: string }>;
+    users: Array<{ id: string; name: string }>;
+  }>('/dashboard/lookups');
+}
+
 export function fetchAdminAnalytics(input: {
   contractType?: string;
   headquarterId?: string;

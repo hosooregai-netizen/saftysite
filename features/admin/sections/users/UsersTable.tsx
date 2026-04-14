@@ -21,36 +21,46 @@ interface UserOverview {
 interface UsersTableProps {
   busy: boolean;
   canDelete: boolean;
+  exportUsers: SafetyUser[];
   filteredUsers: SafetyUser[];
   onCreateRequest: () => void;
   onDeleteRequest: (user: SafetyUser) => void;
   onEditRequest: (user: SafetyUser) => void;
+  page: number;
   query: string;
   roleFilter: 'all' | 'admin' | 'field_agent';
+  setPage: (page: number) => void;
   setQuery: (value: string) => void;
   setRoleFilter: (value: 'all' | 'admin' | 'field_agent') => void;
   setSort: (value: TableSortState) => void;
   setStatusFilter: (value: 'all' | 'active' | 'inactive') => void;
   sort: TableSortState;
   statusFilter: 'all' | 'active' | 'inactive';
+  totalCount: number;
+  totalPages: number;
   userOverviewById: Map<string, UserOverview>;
 }
 
 export function UsersTable({
   busy,
   canDelete,
+  exportUsers,
   filteredUsers,
   onCreateRequest,
   onDeleteRequest,
   onEditRequest,
+  page,
   query,
   roleFilter,
+  setPage,
   setQuery,
   setRoleFilter,
   setSort,
   setStatusFilter,
   sort,
   statusFilter,
+  totalCount,
+  totalPages,
   userOverviewById,
 }: UsersTableProps) {
   const roleOptions: Array<{ label: string; value: UsersTableProps['roleFilter'] }> = [
@@ -80,7 +90,7 @@ export function UsersTable({
           { key: 'status', label: '상태' },
           { key: 'lastLoginAt', label: '최근 로그인' },
         ],
-        rows: filteredUsers.map((user) => {
+        rows: exportUsers.map((user) => {
           const overview = userOverviewById.get(user.id) ?? {
             assignedSites: [],
             latestSession: null,
@@ -334,6 +344,31 @@ export function UsersTable({
           )}
         </div>
       </div>
+      {totalCount > 0 ? (
+        <div className={styles.paginationRow}>
+          <span>
+            {page} / {totalPages} 페이지 · 총 {totalCount}명
+          </span>
+          <div className={styles.tableActions}>
+            <button
+              type="button"
+              className="app-button app-button-secondary"
+              onClick={() => setPage(page - 1)}
+              disabled={page <= 1}
+            >
+              이전
+            </button>
+            <button
+              type="button"
+              className="app-button app-button-secondary"
+              onClick={() => setPage(page + 1)}
+              disabled={page >= totalPages}
+            >
+              다음
+            </button>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }

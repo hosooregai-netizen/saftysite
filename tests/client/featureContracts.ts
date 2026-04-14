@@ -29,11 +29,11 @@ export const FEATURE_CONTRACTS: Record<FeatureContractId, FeatureContract> = {
   'admin-control-center': {
     id: 'admin-control-center',
     description:
-      '관제 대시보드 overview/analytics가 admin 로그인 진입, KPI, 차트, 안정적인 로딩 상태, 기간 전환, site 계약 연동 매출, K2B 회차/기술지도일 기준 실적 집계, 계약 총량 대신 실행/남은 회차 KPI, legacy 무일정 데이터 백필, export 진입 흐름을 유지한다.',
+      '관제 대시보드 overview/analytics가 admin 로그인 진입, overview-first 로딩, session cache 기반 재진입, KPI/차트/연도 탭, 기간 전환, site 계약 연동 매출, K2B 회차/기술지도일 기준 실적 집계, 계약 총량 대신 실행/남은 회차 KPI, legacy 무일정 데이터 백필, export 진입 흐름을 유지한다.',
     routes: ['/admin?section=overview', '/admin?section=analytics'],
     markers: ['운영 개요', '현장 상태', '발송 관리 대상', '매출/실적 집계', '실행 회차', '남은 회차', '월별 매출 추이', '상세 표'],
     apis: ['GET /api/admin/dashboard/overview', 'GET /api/admin/dashboard/analytics', 'POST /api/admin/exports/:section'],
-    criticalActions: ['admin 로그인 진입', 'overview 진입', 'analytics 진입', '초기 로딩 상태 유지', '기간 전환', 'site 계약 수정 반영 확인', 'K2B 회차 실적 집계 확인', '실행/남은 회차 KPI 확인', 'legacy 무일정 데이터 백필 확인', '엑셀 내보내기', '핵심 카드와 차트 확인'],
+    criticalActions: ['admin 로그인 진입', 'overview 진입', 'analytics 진입', 'overview-first 초기 로딩 상태 유지', 'session cache 재진입 확인', '기간 전환', '차트 연도 탭 전환', 'site 계약 수정 반영 확인', 'K2B 회차 실적 집계 확인', '실행/남은 회차 KPI 확인', 'legacy 무일정 데이터 백필 확인', '엑셀 내보내기', '핵심 카드와 차트 확인'],
   },
   'admin-reports': {
     id: 'admin-reports',
@@ -57,7 +57,7 @@ export const FEATURE_CONTRACTS: Record<FeatureContractId, FeatureContract> = {
   'admin-sites': {
     id: 'admin-sites',
     description:
-      '사업장 목록, 현장 목록, 현장 메인이 등록 정보 편집, 점검자 기준 배정, K2B 회차 데이터 반영 동선을 유지하며 현장 목록은 현장명/사업장 관리번호/공사 종류/주소/공사 금액/상태/마지막 방문일만 노출한다.',
+      '사업장 목록, 현장 목록, 현장 메인이 등록 정보 편집, 점검자 기준 배정, K2B 회차 데이터 반영 동선을 유지하며 현장 목록은 페이지네이션과 핵심 컬럼만 노출하고, 관제 일정 보드는 계약일 기준 자동 회차/드래그 이동/현장 상세 진입 흐름을 유지한다.',
     routes: [
       '/admin?section=headquarters',
       '/admin?section=headquarters&headquarterId=hq-1',
@@ -65,7 +65,7 @@ export const FEATURE_CONTRACTS: Record<FeatureContractId, FeatureContract> = {
     ],
     markers: ['사업장 목록', '사업장 추가', '사업장 수정', '현장 목록', '현장 메인', '현장 정보 수정', '지도요원 배정'],
     apis: ['GET /headquarters', 'POST /headquarters', 'PATCH /headquarters/:id', 'GET /sites', 'POST /sites', 'PATCH /sites/:id'],
-    criticalActions: ['사업장 목록 핵심 컬럼 확인', '사업장 생성/수정', '현장 생성/수정', '현장 메인 진입', '현장 메인 quick edit', '지도요원 배정 modal 진입', 'K2B 회차 데이터 반영'],
+    criticalActions: ['사업장 목록 핵심 컬럼 확인', '현장 목록 페이지 이동', '사업장 생성/수정', '현장 생성/수정', '현장 메인 진입', '현장 메인 quick edit', '지도요원 배정 modal 진입', 'K2B 회차 데이터 반영', '관제 일정 상세 modal 진입', '관제 일정 드래그 이동'],
   },
   auth: {
     id: 'auth',

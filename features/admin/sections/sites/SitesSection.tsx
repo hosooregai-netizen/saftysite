@@ -66,16 +66,22 @@ export function SitesSection(props: SitesSectionProps) {
             <SitesTable
               busy={props.busy}
               canDelete={props.canDelete}
+              page={state.page}
               hasCustomEntry={Boolean(props.onSelectSiteEntry)}
               onDeleteSite={(site) => void state.deleteSite(site)}
               onDownloadBasicMaterial={(site) => void state.downloadBasicMaterial(site)}
               onOpenAssignmentModal={state.openAssignmentModal}
               onOpenEdit={state.openEdit}
               onOpenSiteEntry={state.openSiteEntry}
+              onPageChange={state.setPage}
               onSortChange={state.setSort}
               onUpdateStatus={(site, status) => void state.updateStatus(site, status)}
-              sites={state.sortedSites}
+              showHeadquarterColumn={props.showHeadquarterColumn !== false}
+              sites={state.pagedSites}
               sort={state.sort}
+              totalCount={state.sortedSites.length}
+              totalPages={state.totalPages}
+              usersById={state.usersById}
             />
           )}
         </div>

@@ -20,7 +20,13 @@ function formatDelta(value: number | null) {
   return `${sign}${(value * 100).toFixed(1)}%`;
 }
 
-export function AnalyticsEmployeeContributionCard({ rows }: { rows: AdminAnalyticsEmployeeRow[] }) {
+export function AnalyticsEmployeeContributionCard({
+  rows,
+  year,
+}: {
+  rows: AdminAnalyticsEmployeeRow[];
+  year: number;
+}) {
   const topRows = [...rows]
     .filter((row) => row.visitRevenue > 0 || row.executedRounds > 0)
     .sort((left, right) => right.visitRevenue - left.visitRevenue || right.executedRounds - left.executedRounds || left.userName.localeCompare(right.userName, 'ko'))
@@ -33,7 +39,7 @@ export function AnalyticsEmployeeContributionCard({ rows }: { rows: AdminAnalyti
       <div className={styles.surfaceHeader}>
         <div className={styles.surfaceHeaderText}>
           <h3 className={styles.surfaceTitle}>직원별 매출 기여도 Top 10</h3>
-          <p className={styles.surfaceMeta}>매출, 회차 수, 평균 단가, 전기 대비</p>
+          <p className={styles.surfaceMeta}>{year}년 기준 매출, 회차 수, 평균 단가, 전기 대비</p>
         </div>
       </div>
       <div className={styles.list}>
@@ -55,7 +61,13 @@ export function AnalyticsEmployeeContributionCard({ rows }: { rows: AdminAnalyti
   );
 }
 
-export function AnalyticsSiteContributionCard({ rows }: { rows: AdminAnalyticsSiteRevenueRow[] }) {
+export function AnalyticsSiteContributionCard({
+  rows,
+  year,
+}: {
+  rows: AdminAnalyticsSiteRevenueRow[];
+  year: number;
+}) {
   const topRows = [...rows]
     .filter((row) => row.visitRevenue > 0 || row.executedRounds > 0)
     .sort((left, right) => right.visitRevenue - left.visitRevenue || right.executedRounds - left.executedRounds || left.siteName.localeCompare(right.siteName, 'ko'))
@@ -68,7 +80,7 @@ export function AnalyticsSiteContributionCard({ rows }: { rows: AdminAnalyticsSi
       <div className={styles.surfaceHeader}>
         <div className={styles.surfaceHeaderText}>
           <h3 className={styles.surfaceTitle}>현장별 매출 상위 Top 10</h3>
-          <p className={styles.surfaceMeta}>사업장, 회차 수, 계약유형 중심</p>
+          <p className={styles.surfaceMeta}>{year}년 기준 사업장, 회차 수, 계약유형 중심</p>
         </div>
       </div>
       <div className={styles.list}>

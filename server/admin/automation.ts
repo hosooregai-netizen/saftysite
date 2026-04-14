@@ -102,7 +102,11 @@ function buildBaseScheduleRows(
   const usersById = new Map(data.users.map((user) => [user.id, user]));
 
   const rows = data.sites.flatMap((site) => {
-    const storedSchedules = parseSiteInspectionSchedules(site);
+    const profile = parseSiteContractProfile(site);
+    const storedSchedules =
+      profile.contractDate && (profile.totalRounds ?? 0) > 0
+        ? generateSchedulesForSite(site, data.users)
+        : parseSiteInspectionSchedules(site);
     const defaultAssigneeUserId =
       site.assigned_user?.id || site.assigned_users?.[0]?.id || '';
     const headquarterName = site.headquarter_detail?.name || site.headquarter?.name || '';
@@ -498,27 +502,58 @@ export function updateSingleSchedule(
   data: ControllerDashboardData,
   scheduleId: string,
   payload: Partial<SafetyInspectionSchedule>,
+  options?: {
+    actorUserId?: string;
+    actorUserName?: string;
+  },
 ) {
   for (const site of data.sites) {
-    const schedules = parseSiteInspectionSchedules(site);
+    const profile = parseSiteContractProfile(site);
+    const schedules =
+      profile.contractDate && (profile.totalRounds ?? 0) > 0
+        ? generateSchedulesForSite(site, data.users)
+        : parseSiteInspectionSchedules(site);
     const index = schedules.findIndex((schedule) => schedule.id === scheduleId);
     if (index < 0) continue;
 
     const current = schedules[index];
+    const nextPlannedDate = payload.plannedDate ?? current.plannedDate;
+    const nextAssigneeUserId = payload.assigneeUserId ?? current.assigneeUserId;
+    const scheduleChanged =
+      nextPlannedDate !== current.plannedDate ||
+      nextAssigneeUserId !== current.assigneeUserId ||
+      (payload.status ?? current.status) !== current.status ||
+      (payload.selectionReasonLabel ?? current.selectionReasonLabel) !==
+        current.selectionReasonLabel ||
+      (payload.selectionReasonMemo ?? current.selectionReasonMemo) !==
+        current.selectionReasonMemo ||
+      (payload.exceptionReasonCode ?? current.exceptionReasonCode) !==
+        current.exceptionReasonCode ||
+      (payload.exceptionMemo ?? current.exceptionMemo) !== current.exceptionMemo;
+    const stampedAt = new Date().toISOString();
     const nextSchedule: SafetyInspectionSchedule = {
       ...current,
       ...payload,
       assigneeName: payload.assigneeName ?? current.assigneeName,
-      assigneeUserId: payload.assigneeUserId ?? current.assigneeUserId,
+      assigneeUserId: nextAssigneeUserId,
       exceptionMemo: payload.exceptionMemo ?? current.exceptionMemo,
       exceptionReasonCode: payload.exceptionReasonCode ?? current.exceptionReasonCode,
       linkedReportKey: payload.linkedReportKey ?? current.linkedReportKey,
-      plannedDate: payload.plannedDate ?? current.plannedDate,
+      plannedDate: nextPlannedDate,
       status: payload.status ?? current.status,
-      selectionConfirmedAt: payload.selectionConfirmedAt ?? current.selectionConfirmedAt,
-      selectionConfirmedByName: payload.selectionConfirmedByName ?? current.selectionConfirmedByName,
+      selectionConfirmedAt:
+        payload.selectionConfirmedAt ??
+        (scheduleChanged ? stampedAt : current.selectionConfirmedAt),
+      selectionConfirmedByName:
+        payload.selectionConfirmedByName ??
+        (scheduleChanged
+          ? options?.actorUserName ?? current.selectionConfirmedByName
+          : current.selectionConfirmedByName),
       selectionConfirmedByUserId:
-        payload.selectionConfirmedByUserId ?? current.selectionConfirmedByUserId,
+        payload.selectionConfirmedByUserId ??
+        (scheduleChanged
+          ? options?.actorUserId ?? current.selectionConfirmedByUserId
+          : current.selectionConfirmedByUserId),
       selectionReasonLabel: payload.selectionReasonLabel ?? current.selectionReasonLabel,
       selectionReasonMemo: payload.selectionReasonMemo ?? current.selectionReasonMemo,
     };
@@ -533,6 +568,7 @@ export function updateSingleSchedule(
     schedules[index] = nextSchedule;
     return {
       memo: updateSiteSchedules(site, schedules),
+      previousSchedule: current,
       schedule: nextSchedule,
       site,
     };

@@ -158,6 +158,29 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
   const siteStatusTitle =
     siteStatusFilter === 'all' ? '현장 목록' : `${getSiteStatusLabel(siteStatusFilter)} 현장`;
 
+  if (busy && headquarters.length === 0 && !selectedHeadquarter && !hasSiteStatusScope) {
+    return (
+      <section className={`${styles.sectionCard} ${styles.listSectionCard}`}>
+        <div className={styles.sectionHeader}>
+          <div className={styles.sectionHeaderTitleBlock}>
+            <h2 className={styles.sectionTitle}>사업장</h2>
+            <div className={styles.sectionHeaderMeta}>사업장과 현장 목록을 불러오는 중입니다.</div>
+          </div>
+        </div>
+        <div className={styles.sectionBody}>
+          <div className={styles.contentTableSkeleton} aria-hidden="true">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div key={`headquarters-skeleton-${index + 1}`} className={styles.contentTableSkeletonRow}>
+                <span className={styles.contentTableSkeletonLine} />
+                <span className={`${styles.contentTableSkeletonLine} ${styles.contentTableSkeletonLineMedium}`} />
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   const submit = async () => {
     if (state.editingId === 'create' && !state.isCreateReady) return;
     if (state.editingId !== 'create' && !state.form.name.trim()) return;

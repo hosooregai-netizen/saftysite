@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import AppModal from '@/components/ui/AppModal';
 import {
   buildSortMenuOptions,
@@ -9,9 +9,9 @@ import {
 } from '@/features/admin/components/SortableHeaderCell';
 import { SectionHeaderFilterMenu } from '@/features/admin/components/SectionHeaderFilterMenu';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
+import { getAdminSectionHref } from '@/lib/admin';
 import {
   fetchAdminSchedules,
-  generateAdminSchedules,
   updateAdminSchedule,
 } from '@/lib/admin/apiClient';
 import {
@@ -124,11 +124,30 @@ function buildSelectionSummary(row: SafetyInspectionSchedule) {
   return [row.selectionReasonLabel, row.selectionReasonMemo].filter(Boolean).join(' / ');
 }
 
+function buildIssueSummary(row: SafetyInspectionSchedule) {
+  return [
+    row.isConflicted ? '충돌' : '',
+    row.isOutOfWindow ? '구간 밖' : '',
+    row.isOverdue ? '지연' : '',
+  ]
+    .filter(Boolean)
+    .join(', ');
+}
+
+function buildDayAssigneeSummary(rows: SafetyInspectionSchedule[]) {
+  const labels = Array.from(
+    new Set(rows.map((row) => row.assigneeName).filter(Boolean)),
+  ).slice(0, 2);
+  if (labels.length === 0) return '';
+  return rows.length > 2 ? `${labels.join(', ')} 외` : labels.join(', ');
+}
+
 export function SchedulesSection({
   currentUser,
   sites,
   users,
 }: SchedulesSectionProps) {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [scope, setScope] = useState<'all' | 'mine'>(() =>
     searchParams.get('scope') === 'mine' ? 'mine' : 'all',
@@ -147,9 +166,9 @@ export function SchedulesSection({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [generatorSiteId, setGeneratorSiteId] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [activeScheduleId, setActiveScheduleId] = useState('');
+  const [dragScheduleId, setDragScheduleId] = useState('');
   const [form, setForm] = useState<ScheduleFormState>(EMPTY_FORM);
   const defaultMonth = getMonthToken();
 
@@ -217,6 +236,10 @@ export function SchedulesSection({
     () => rows.find((row) => row.id === activeScheduleId) ?? null,
     [activeScheduleId, rows],
   );
+  const dragSchedule = useMemo(
+    () => rows.find((row) => row.id === dragScheduleId) ?? null,
+    [dragScheduleId, rows],
+  );
   const dialogSelectableRows = useMemo(() => {
     const nextRows = rows.filter(
       (row) =>
@@ -239,6 +262,12 @@ export function SchedulesSection({
     form.plannedDate &&
     !isDateWithinWindow(form.plannedDate, activeSchedule.windowStart, activeSchedule.windowEnd),
   );
+  const activeSiteDetailHref = activeSchedule
+    ? getAdminSectionHref('headquarters', {
+        headquarterId: activeSchedule.headquarterId,
+        siteId: activeSchedule.siteId,
+      })
+    : '';
 
   useEffect(() => {
     if (!dialogOpen || activeScheduleId || dialogSelectableRows.length === 0) return;
@@ -294,22 +323,6 @@ export function SchedulesSection({
     setForm(buildInitialForm(schedule, form.plannedDate || schedule.plannedDate || schedule.windowStart));
   };
 
-  const handleGenerate = async () => {
-    if (!generatorSiteId) {
-      setError('일정 자동생성할 현장을 먼저 선택해 주세요.');
-      return;
-    }
-
-    try {
-      setError(null);
-      await generateAdminSchedules(generatorSiteId);
-      setNotice('회차별 방문 일정을 생성했습니다.');
-      await refreshRows();
-    } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : '일정 자동생성에 실패했습니다.');
-    }
-  };
-
   const handleSave = async () => {
     if (!activeSchedule) {
       setError('일정을 저장할 회차를 먼저 선택해 주세요.');
@@ -349,6 +362,36 @@ export function SchedulesSection({
       closeDialog();
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : '일정 저장에 실패했습니다.');
+    }
+  };
+
+  const canDropScheduleOnDate = (
+    schedule: SafetyInspectionSchedule | null,
+    targetDate: string,
+  ) => {
+    if (!schedule || !schedule.plannedDate || !targetDate) return false;
+    if (targetDate === schedule.plannedDate) return false;
+    return isDateWithinWindow(targetDate, schedule.windowStart, schedule.windowEnd);
+  };
+
+  const handleQuickMove = async (
+    schedule: SafetyInspectionSchedule,
+    targetDate: string,
+  ) => {
+    if (!canDropScheduleOnDate(schedule, targetDate)) return;
+
+    try {
+      setError(null);
+      await updateAdminSchedule(schedule.id, {
+        plannedDate: targetDate,
+      });
+      await refreshRows();
+      setSelectedDate(targetDate);
+      setNotice(`${schedule.siteName} ${schedule.roundNo}회차 방문일을 ${targetDate}로 변경했습니다.`);
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : '일정 이동에 실패했습니다.');
+    } finally {
+      setDragScheduleId('');
     }
   };
 
@@ -488,25 +531,6 @@ export function SchedulesSection({
                 </div>
               </div>
             </SectionHeaderFilterMenu>
-            <select
-              className={`app-select ${styles.sectionHeaderSelect}`}
-              value={generatorSiteId}
-              onChange={(event) => setGeneratorSiteId(event.target.value)}
-            >
-              <option value="">자동생성 현장</option>
-              {sites.map((site) => (
-                <option key={site.id} value={site.id}>
-                  {site.site_name}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              className="app-button app-button-secondary"
-              onClick={() => void handleGenerate()}
-            >
-              회차 자동생성
-            </button>
             {siteId ? (
               <button
                 type="button"
@@ -537,18 +561,84 @@ export function SchedulesSection({
               const dayRows = rowsByDate.get(day.token) || [];
               const hasWarning = dayRows.some((row) => row.isConflicted || row.isOutOfWindow);
               const isSelected = selectedDate === day.token;
+              const canDrop = canDropScheduleOnDate(dragSchedule, day.token);
+              const assigneeSummary = buildDayAssigneeSummary(dayRows);
 
               return (
-                <button
+                <div
                   key={day.token}
-                  type="button"
-                  className={`${styles.calendarCell} ${isSelected ? styles.calendarCellActive : ''}`}
-                  onClick={() => openScheduleDialog({ plannedDate: day.token })}
+                  className={[
+                    styles.calendarCell,
+                    isSelected ? styles.calendarCellActive : '',
+                    canDrop ? styles.calendarCellDropReady : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                  onDragOver={(event) => {
+                    if (!canDrop) return;
+                    event.preventDefault();
+                  }}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    if (!dragSchedule || !canDrop) return;
+                    void handleQuickMove(dragSchedule, day.token);
+                  }}
                 >
-                  <span className={styles.calendarCellDate}>{day.day}</span>
-                  <span className={styles.calendarCellCount}>{dayRows.length}건</span>
-                  {hasWarning ? <span className={styles.calendarCellFlag}>주의</span> : null}
-                </button>
+                  <button
+                    type="button"
+                    className={styles.calendarCellHeaderButton}
+                    onClick={() => openScheduleDialog({ plannedDate: day.token })}
+                  >
+                    <span className={styles.calendarCellDate}>{day.day}</span>
+                    <span className={styles.calendarCellCount}>{dayRows.length}건</span>
+                    {assigneeSummary ? (
+                      <span className={styles.calendarCellAssignees}>{assigneeSummary}</span>
+                    ) : null}
+                    {hasWarning ? <span className={styles.calendarCellFlag}>주의</span> : null}
+                  </button>
+                  {dayRows.length > 0 ? (
+                    <div className={styles.calendarScheduleStack}>
+                      {dayRows.slice(0, 3).map((row) => (
+                        <button
+                          key={`calendar-row-${row.id}`}
+                          type="button"
+                          draggable={Boolean(row.plannedDate)}
+                          className={[
+                            styles.calendarScheduleChip,
+                            row.isConflicted || row.isOutOfWindow ? styles.calendarScheduleChipWarning : '',
+                          ]
+                            .filter(Boolean)
+                            .join(' ')}
+                          onClick={() =>
+                            openScheduleDialog({
+                              plannedDate: row.plannedDate || row.windowStart,
+                              schedule: row,
+                            })
+                          }
+                          onDragStart={() => setDragScheduleId(row.id)}
+                          onDragEnd={() => setDragScheduleId('')}
+                        >
+                          <span className={styles.calendarScheduleChipTitle}>
+                            {row.assigneeName || '미배정'} · {row.siteName}
+                          </span>
+                          <span className={styles.calendarScheduleChipMeta}>
+                            {row.roundNo}회차
+                            {buildIssueSummary(row) ? ` · ${buildIssueSummary(row)}` : ''}
+                          </span>
+                        </button>
+                      ))}
+                      {dayRows.length > 3 ? (
+                        <button
+                          type="button"
+                          className={styles.calendarMoreButton}
+                          onClick={() => openScheduleDialog({ plannedDate: day.token })}
+                        >
+                          +{dayRows.length - 3}건 더보기
+                        </button>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
               );
             })}
           </div>
@@ -557,6 +647,9 @@ export function SchedulesSection({
             <div className={styles.sectionHeader}>
               <div>
                 <h3 className={styles.sectionTitle}>미선택 일정 큐</h3>
+                <div className={styles.sectionHeaderMeta}>
+                  계약일 기준 15일 간격으로 회차가 자동 계산되며, 총 회차 범위 안에서만 선택할 수 있습니다.
+                </div>
               </div>
               <div className={styles.sectionHeaderActions}>
                 <span className={styles.sectionHeaderMeta}>{unselectedRows.length}건</span>
@@ -731,13 +824,7 @@ export function SchedulesSection({
                           {[row.selectionConfirmedByName || '-', formatDateTime(row.selectionConfirmedAt)].join(' / ')}
                         </td>
                         <td>
-                          {[
-                            row.isConflicted ? '충돌' : '',
-                            row.isOutOfWindow ? '구간 밖' : '',
-                            row.isOverdue ? '지연' : '',
-                          ]
-                            .filter(Boolean)
-                            .join(', ') || '-'}
+                          {buildIssueSummary(row) || '-'}
                         </td>
                         <td>
                           <button
@@ -795,6 +882,57 @@ export function SchedulesSection({
         }
       >
         <div className={styles.modalGrid}>
+          {activeSchedule ? (
+            <div className={styles.modalFieldWide}>
+              <div className={styles.scheduleSummaryPanel}>
+                <div className={styles.scheduleSummaryHeader}>
+                  <div>
+                    <div className={styles.scheduleSummaryTitle}>
+                      {activeSchedule.siteName} · {activeSchedule.roundNo}회차
+                    </div>
+                    <div className={styles.scheduleSummaryMeta}>
+                      {activeSchedule.headquarterName || '사업장 정보 없음'}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="app-button app-button-secondary"
+                    onClick={() => router.push(activeSiteDetailHref)}
+                  >
+                    현장 상세로 이동
+                  </button>
+                </div>
+                <div className={styles.scheduleSummaryGrid}>
+                  <div>
+                    <span className={styles.scheduleSummaryLabel}>담당자</span>
+                    <strong>{activeSchedule.assigneeName || '미배정'}</strong>
+                  </div>
+                  <div>
+                    <span className={styles.scheduleSummaryLabel}>허용 구간</span>
+                    <strong>{buildWindowSummary(activeSchedule)}</strong>
+                  </div>
+                  <div>
+                    <span className={styles.scheduleSummaryLabel}>상태</span>
+                    <strong>{activeSchedule.status}</strong>
+                  </div>
+                  <div>
+                    <span className={styles.scheduleSummaryLabel}>선택 사유</span>
+                    <strong>{buildSelectionSummary(activeSchedule)}</strong>
+                  </div>
+                  <div>
+                    <span className={styles.scheduleSummaryLabel}>이슈</span>
+                    <strong>{buildIssueSummary(activeSchedule) || '없음'}</strong>
+                  </div>
+                  <div>
+                    <span className={styles.scheduleSummaryLabel}>선택 정보</span>
+                    <strong>
+                      {[activeSchedule.selectionConfirmedByName || '-', formatDateTime(activeSchedule.selectionConfirmedAt)].join(' / ')}
+                    </strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
           <label className={styles.modalField}>
             <span className={styles.label}>방문일</span>
             <input

@@ -2,30 +2,18 @@
 
 import { AnalyticsCharts } from '@/features/admin/sections/analytics/AnalyticsCharts';
 import sharedStyles from '@/features/admin/sections/AdminSectionShared.module.css';
-import type { SafetyReportListItem } from '@/types/backend';
-import type { ControllerDashboardData } from '@/types/controller';
 import { AnalyticsDetailSection } from './AnalyticsDetailSection';
 import { AnalyticsSectionHeader } from './AnalyticsSectionHeader';
 import { AnalyticsSummarySection } from './AnalyticsSummarySection';
 import { useAnalyticsSectionState } from './useAnalyticsSectionState';
+import localStyles from './AnalyticsSection.module.css';
 
 interface AnalyticsSectionProps {
-  data: ControllerDashboardData;
-  isReportsLoading: boolean;
-  reportList: SafetyReportListItem[];
+  currentUserId: string;
 }
 
-export function AnalyticsSection({ data, isReportsLoading, reportList }: AnalyticsSectionProps) {
-  const state = useAnalyticsSectionState(data, reportList, isReportsLoading);
-  const headquarterOptions = data.headquarters.map((headquarter) => ({
-    label: headquarter.name,
-    value: headquarter.id,
-  }));
-  const userOptions = data.users.map((user) => ({
-    label: user.name,
-    value: user.id,
-  }));
-
+export function AnalyticsSection({ currentUserId }: AnalyticsSectionProps) {
+  const state = useAnalyticsSectionState(currentUserId);
   return (
     <div className={sharedStyles.dashboardStack}>
       <section className={sharedStyles.sectionCard}>
@@ -35,7 +23,7 @@ export function AnalyticsSection({ data, isReportsLoading, reportList }: Analyti
           contractTypeOptions={state.contractTypeOptions}
           exportAnalytics={state.exportAnalytics}
           headquarterId={state.headquarterId}
-          headquarterOptions={headquarterOptions}
+          headquarterOptions={state.headquarterOptions}
           period={state.period}
           query={state.query}
           resetHeaderFilters={state.resetHeaderFilters}
@@ -45,7 +33,7 @@ export function AnalyticsSection({ data, isReportsLoading, reportList }: Analyti
           setQuery={state.setQuery}
           setUserId={state.setUserId}
           userId={state.userId}
-          userOptions={userOptions}
+          userOptions={state.userOptions}
         />
         <AnalyticsSummarySection
           analytics={state.analytics}
@@ -59,15 +47,31 @@ export function AnalyticsSection({ data, isReportsLoading, reportList }: Analyti
 
       <section className={sharedStyles.sectionCard}>
         <div className={sharedStyles.sectionHeader}>
-          <h2 className={sharedStyles.sectionTitle}>추이 및 기여도</h2>
+          <div>
+            <h2 className={sharedStyles.sectionTitle}>추이 및 기여도</h2>
+            <div className={sharedStyles.sectionHeaderMeta}>차트와 기여도 카드만 연도 기준으로 전환됩니다.</div>
+          </div>
+          <div className={localStyles.detailTabs}>
+            {state.analytics.availableTrendYears.map((year) => (
+              <button
+                key={year}
+                type="button"
+                className={`${localStyles.detailTabButton} ${state.chartYear === year ? localStyles.detailTabButtonActive : ''}`}
+                onClick={() => state.setChartYear(year)}
+              >
+                {year}
+              </button>
+            ))}
+          </div>
         </div>
         <div className={sharedStyles.sectionBody}>
           <AnalyticsCharts
-            employeeRows={state.sortedEmployeeRows}
+            chartYear={state.chartYear}
+            employeeRows={state.activeChartSlice.employeeRows}
             isInitialLoading={state.isInitialLoading}
             isRefreshing={state.isRefreshing}
-            siteRevenueRows={state.sortedSiteRevenueRows}
-            trendRows={state.analytics.trendRows}
+            siteRevenueRows={state.activeChartSlice.siteRevenueRows}
+            trendRows={state.activeChartSlice.trendRows}
           />
         </div>
       </section>
