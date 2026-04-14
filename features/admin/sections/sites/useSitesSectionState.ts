@@ -104,7 +104,7 @@ export function useSitesSectionState({
   const [statusFilter, setStatusFilter] = useState<'all' | SafetySiteStatus>(initialStatusFilter);
   const [sort, setSort] = useState<TableSortState>({
     direction: 'desc',
-    key: 'contract_signed_date',
+    key: 'last_visit_date',
   });
   const [assignmentFilter, setAssignmentFilter] = useState<SiteAssignmentFilter>('all');
   const [form, setForm] = useState(EMPTY_FORM);
@@ -153,22 +153,9 @@ export function useSitesSectionState({
 
       const haystack = [
         site.site_name,
-        site.site_code ?? '',
         site.headquarter_detail?.management_number ?? '',
-        site.headquarter_detail?.opening_number ?? '',
+        site.project_kind ?? '',
         site.site_address ?? '',
-        site.site_contact_email ?? '',
-        site.manager_name ?? '',
-        site.manager_phone ?? '',
-        site.labor_office ?? '',
-        site.guidance_officer_name ?? '',
-        site.client_management_number ?? '',
-        site.client_business_name ?? '',
-        site.client_representative_name ?? '',
-        site.contract_contact_name ?? '',
-        site.contract_type ?? '',
-        site.contract_status ?? '',
-        site.memo ?? '',
         site.headquarter_detail?.name ?? site.headquarter?.name ?? '',
         allAssignedNames.join(' '),
       ]

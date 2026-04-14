@@ -116,8 +116,6 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
     sites,
     users,
     onAssignFieldAgent,
-    onClearHeadquarterSelection,
-    onClearSiteSelection,
     onCreate,
     onCreateSite,
     onDelete,
@@ -242,7 +240,6 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
             <SiteManagementMainPanel
               headquarter={selectedHeadquarter}
               site={selectedSite}
-              onBack={onClearSiteSelection}
             />
             <SiteEntryHubPanel
               currentSite={selectedInspectionSite}
@@ -261,7 +258,6 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
           <HeadquarterSummaryPanel
             headquarter={selectedHeadquarter}
             sites={headquarterSites}
-            onBack={onClearHeadquarterSelection}
             onEdit={() => state.openEdit(selectedHeadquarter)}
           />
           <SitesSection

@@ -90,6 +90,72 @@
   color: var(--erp-text-muted);
 }
 
+.summaryCardList {
+  display: grid;
+  gap: 8px;
+}
+
+.summaryCardListRow {
+  display: grid;
+  gap: 2px;
+}
+
+.summaryCardListLabel {
+  font-size: var(--text-ui-sm);
+  font-weight: 700;
+  color: var(--erp-text-muted);
+}
+
+.summaryCardListValue {
+  font-size: var(--text-body);
+  font-weight: 700;
+  line-height: 1.45;
+  color: var(--erp-dark);
+}
+
+.headquarterOverviewShell {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(560px, 2fr);
+  gap: 14px;
+  align-items: stretch;
+}
+
+.headquarterOverviewPrimary {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-card);
+  background:
+    linear-gradient(180deg, rgba(246, 249, 252, 0.92) 0%, rgba(255, 255, 255, 1) 100%);
+  box-shadow: 0 1px 0 rgba(16, 24, 43, 0.04);
+}
+
+.headquarterOverviewHeader {
+  display: grid;
+  gap: 4px;
+}
+
+.headquarterOverviewTitle {
+  font-size: clamp(24px, 2vw, 30px);
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--erp-dark);
+}
+
+.headquarterOverviewAside {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
+  gap: 12px;
+  height: 100%;
+  align-content: stretch;
+}
+
+.headquarterOverviewAside .contextCell {
+  height: 100%;
+}
+
 .mobileSectionRail {
   display: none;
 }
@@ -224,7 +290,7 @@
 .sortHeaderButton {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   min-height: 28px;
   padding: 0;
   border: none;
@@ -251,7 +317,8 @@
 .sortHeaderIcons {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  justify-content: center;
+  min-width: 12px;
 }
 
 .sortHeaderIndicatorSvg {
@@ -948,6 +1015,11 @@
   font-size: var(--text-ui-sm);
   line-height: 1.5;
   color: var(--erp-text-muted);
+}
+
+.contextCellList {
+  display: grid;
+  gap: 4px;
 }
 
 .listSummaryShell {
@@ -2460,6 +2532,8 @@
   .insightGrid,
   .formGrid,
   .contextGrid,
+  .headquarterOverviewShell,
+  .headquarterOverviewAside,
   .detailTwoColumnList,
   .modalGrid,
   .assetGrid,
@@ -2769,6 +2843,10 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .headquarterOverviewShell {
+    gap: 12px;
+  }
+
   .dashboardGrid,
   .metricGrid,
   .coverageGrid {
@@ -2835,6 +2913,15 @@
   .summaryBar {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
+  }
+
+  .headquarterOverviewPrimary {
+    gap: 14px;
+    padding: 14px 16px;
+  }
+
+  .headquarterOverviewTitle {
+    font-size: var(--text-title);
   }
 
   .contextLead {

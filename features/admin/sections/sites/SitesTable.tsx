@@ -8,26 +8,17 @@ import {
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import {
   formatCurrencyValue,
-  formatTimestamp,
   getAdminSectionHref,
   getSiteStatusLabel,
   normalizeSiteStatusForDisplay,
-  SITE_CONTRACT_STATUS_LABELS,
-  SITE_CONTRACT_TYPE_LABELS,
   SITE_STATUS_OPTIONS,
 } from '@/lib/admin';
-import { parseSiteRequiredCompletionFields, resolveSiteRevenueProfile } from '@/lib/admin/siteContractProfile';
 import type { TableSortState } from '@/types/admin';
-import type { SafetySite, SafetyUser } from '@/types/backend';
-import type { SafetyAssignment, SafetySiteStatus } from '@/types/controller';
-import {
-  formatAssignedUsers,
-  getSiteManagementMissingFields,
-  shouldIgnoreRowClick,
-} from './siteSectionHelpers';
+import type { SafetySite } from '@/types/backend';
+import type { SafetySiteStatus } from '@/types/controller';
+import { shouldIgnoreRowClick } from './siteSectionHelpers';
 
 interface SitesTableProps {
-  activeAssignmentsBySiteId: Map<string, SafetyAssignment[]>;
   busy: boolean;
   canDelete: boolean;
   hasCustomEntry: boolean;
@@ -37,20 +28,28 @@ interface SitesTableProps {
   onOpenEdit: (site: SafetySite) => void;
   onOpenSiteEntry: (site: SafetySite) => void;
   onUpdateStatus: (site: SafetySite, status: SafetySiteStatus) => void;
-  showHeadquarterColumn: boolean;
   sites: SafetySite[];
   sort: TableSortState;
-  usersById: Map<string, SafetyUser>;
   onSortChange: (value: TableSortState) => void;
 }
 
-function formatMissingFieldPreview(fields: string[]) {
-  if (fields.length <= 2) return fields.join(', ');
-  return `${fields.slice(0, 2).join(', ')} 외 ${fields.length - 2}건`;
+function formatDateOnly(value: string | null | undefined) {
+  if (!value) return '-';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleDateString('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+}
+
+function formatMonthValue(value: string | null | undefined) {
+  if (!value) return '-';
+  return value.length >= 7 ? value.slice(0, 7) : value;
 }
 
 export function SitesTable({
-  activeAssignmentsBySiteId,
   busy,
   canDelete,
   hasCustomEntry,
@@ -60,10 +59,8 @@ export function SitesTable({
   onOpenEdit,
   onOpenSiteEntry,
   onUpdateStatus,
-  showHeadquarterColumn,
   sites,
   sort,
-  usersById,
   onSortChange,
 }: SitesTableProps) {
   return (
@@ -81,45 +78,42 @@ export function SitesTable({
                 desc: '현장 역순',
               })}
             />
-            {showHeadquarterColumn ? (
-              <SortableHeaderCell
-                column={{ key: 'headquarter_name' }}
-                current={sort}
-                label="사업장"
-                onChange={onSortChange}
-                sortMenuOptions={buildSortMenuOptions('headquarter_name', {
-                  asc: '사업장 가나다순',
-                  desc: '사업장 역순',
-                })}
-              />
-            ) : null}
             <SortableHeaderCell
-              column={{ key: 'contract_signed_date' }}
+              column={{ key: 'headquarter_name' }}
               current={sort}
-              defaultDirection="desc"
-              label="계약 / 기술지도"
+              label="사업장 관리번호"
               onChange={onSortChange}
-              sortMenuOptions={buildSortMenuOptions('contract_signed_date', {
-                asc: '계약 체결일 오래된순',
-                desc: '계약 체결일 최신순',
+              sortMenuOptions={buildSortMenuOptions('headquarter_name', {
+                asc: '사업장 관리번호 가나다순',
+                desc: '사업장 관리번호 역순',
               })}
             />
             <SortableHeaderCell
-              column={{ key: 'manager_name' }}
+              column={{ key: 'project_kind' }}
               current={sort}
-              label="운영 담당"
+              label="공사 종류"
               onChange={onSortChange}
-              sortMenuOptions={buildSortMenuOptions('manager_name', {
-                asc: '운영 담당 가나다순',
-                desc: '운영 담당 역순',
+              sortMenuOptions={buildSortMenuOptions('project_kind', {
+                asc: '공사 종류 가나다순',
+                desc: '공사 종류 역순',
               })}
             />
             <SortableHeaderCell
-              column={{ key: 'updated_at' }}
+              column={{ key: 'site_address' }}
+              current={sort}
+              label="주소"
+              onChange={onSortChange}
+            />
+            <SortableHeaderCell
+              column={{ key: 'project_amount' }}
               current={sort}
               defaultDirection="desc"
-              label="수정일"
+              label="공사 금액"
               onChange={onSortChange}
+              sortMenuOptions={buildSortMenuOptions('project_amount', {
+                asc: '공사 금액 낮은순',
+                desc: '공사 금액 높은순',
+              })}
             />
             <SortableHeaderCell
               column={{ key: 'status' }}
@@ -131,37 +125,22 @@ export function SitesTable({
                 desc: '상태 내림차순',
               })}
             />
+            <SortableHeaderCell
+              column={{ key: 'last_visit_date' }}
+              current={sort}
+              defaultDirection="desc"
+              label="마지막 방문일"
+              onChange={onSortChange}
+              sortMenuOptions={buildSortMenuOptions('last_visit_date', {
+                asc: '마지막 방문일 오래된순',
+                desc: '마지막 방문일 최신순',
+              })}
+            />
             <th>메뉴</th>
           </tr>
         </thead>
         <tbody>
           {sites.map((site) => {
-            const siteAssignments = activeAssignmentsBySiteId.get(site.id) ?? [];
-            const revenueProfile = resolveSiteRevenueProfile(site);
-            const requiredCompletionFields =
-              site.required_completion_fields?.length
-                ? site.required_completion_fields
-                : parseSiteRequiredCompletionFields(site);
-            const managementMissingFields = getSiteManagementMissingFields(site);
-            const combinedMissingFields = Array.from(
-              new Set([...requiredCompletionFields, ...managementMissingFields]),
-            );
-            const assignedUsers = siteAssignments
-              .map((assignment) => usersById.get(assignment.user_id))
-              .filter((user): user is SafetyUser => Boolean(user));
-            const fallbackAssignedUsers =
-              assignedUsers.length === 0 && site.assigned_user
-                ? [usersById.get(site.assigned_user.id) ?? site.assigned_user].filter(Boolean)
-                : [];
-            const contractTypeLabel =
-              SITE_CONTRACT_TYPE_LABELS[
-                (site.contract_type ?? '') as keyof typeof SITE_CONTRACT_TYPE_LABELS
-              ] || '미입력';
-            const contractStatusLabel =
-              SITE_CONTRACT_STATUS_LABELS[
-                (site.contract_status ?? '') as keyof typeof SITE_CONTRACT_STATUS_LABELS
-              ] || '미입력';
-
             return (
               <tr
                 key={site.id}
@@ -181,81 +160,26 @@ export function SitesTable({
               >
                 <td>
                   <div className={styles.tablePrimary}>{site.site_name}</div>
-                  <div className={styles.tableSecondary}>{site.site_address || '주소 미입력'}</div>
-                  <div className={styles.tableBadgeRow}>
-                    <span className={`${styles.tableBadge} ${styles.tableBadgeAccent}`}>
-                      코드 {site.site_code || '-'}
-                    </span>
-                    <span className={styles.tableBadge}>관리번호 {site.management_number || '-'}</span>
-                    {site.is_high_risk_site ? (
-                      <span className={`${styles.tableBadge} ${styles.tableBadgeWarning}`}>고위험</span>
-                    ) : null}
-                  </div>
-                  {combinedMissingFields.length ? (
-                    <div className={styles.tableSecondary}>
-                      보완 {formatMissingFieldPreview(combinedMissingFields)}
-                    </div>
-                  ) : null}
-                </td>
-                {showHeadquarterColumn ? (
-                  <td>
-                    <div className={styles.tablePrimary}>
-                      {site.headquarter_detail?.name || site.headquarter?.name || '-'}
-                    </div>
-                    <div className={styles.tableSecondary}>
-                      관리번호 {site.headquarter_detail?.management_number || '-'}
-                    </div>
-                    <div className={styles.tableSecondary}>
-                      개시번호 {site.headquarter_detail?.opening_number || '-'}
-                    </div>
-                  </td>
-                ) : null}
-                <td>
-                  <div className={styles.tablePrimary}>
-                    {contractTypeLabel} / {contractStatusLabel}
-                  </div>
-                  <div className={styles.tableSecondary}>
-                    계약 {site.contract_start_date || '-'} ~ {site.contract_end_date || '-'}
-                  </div>
-                  <div className={styles.tableSecondary}>
-                    체결일 {site.contract_signed_date || site.contract_date || '-'}
-                  </div>
-                  <div className={styles.tableSecondary}>
-                    기술지도 대가 {formatCurrencyValue(site.total_contract_amount)} / 횟수 {site.total_rounds ?? '-'}
-                  </div>
-                  <div className={styles.tableSecondary}>
-                    회차당 단가{' '}
-                    {revenueProfile.resolvedPerVisitAmount != null
-                      ? `${formatCurrencyValue(revenueProfile.resolvedPerVisitAmount)}${
-                          revenueProfile.source === 'derived' ? ' (자동 계산)' : ''
-                        }`
-                      : '-'}
-                  </div>
-                  <div className={styles.tableSecondary}>
-                    구분 {site.technical_guidance_kind || '-'} / 공사금액 {formatCurrencyValue(site.project_amount)}
-                  </div>
                 </td>
                 <td>
                   <div className={styles.tablePrimary}>
-                    현장소장 {site.manager_name || '-'}
-                  </div>
-                  <div className={styles.tableSecondary}>
-                    연락처 {site.manager_phone || '-'}
-                  </div>
-                  <div className={styles.tableSecondary}>
-                    발송 메일 {site.site_contact_email || '미등록'}
-                  </div>
-                  <div className={styles.tableSecondary}>
-                    배정요원{' '}
-                    {assignedUsers.length > 0
-                      ? formatAssignedUsers(assignedUsers)
-                      : fallbackAssignedUsers.length > 0
-                        ? fallbackAssignedUsers.map((user) => user.name).join(', ')
-                        : '-'}
+                    {site.headquarter_detail?.management_number || '-'}
                   </div>
                 </td>
-                <td>{formatTimestamp(site.updated_at)}</td>
+                <td>
+                  <div className={styles.tablePrimary}>{site.project_kind || '-'}</div>
+                </td>
+                <td>
+                  <div className={styles.tablePrimary}>{site.site_address || '-'}</div>
+                </td>
+                <td>
+                  <div className={styles.tablePrimary}>{formatCurrencyValue(site.project_amount)}</div>
+                  <div className={styles.tableSecondary}>
+                    기간 {formatMonthValue(site.project_start_date)} ~ {formatMonthValue(site.project_end_date)}
+                  </div>
+                </td>
                 <td>{getSiteStatusLabel(site.status)}</td>
+                <td>{formatDateOnly(site.last_visit_date)}</td>
                 <td>
                   <div
                     className={styles.tableActionMenuWrap}

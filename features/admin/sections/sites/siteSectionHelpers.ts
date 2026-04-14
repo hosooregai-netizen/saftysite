@@ -295,11 +295,19 @@ export function buildSiteSortComparator(
 
     if (sort.key === 'headquarter_name') {
       return (
-        (left.headquarter_detail?.name || left.headquarter?.name || '').localeCompare(
-          right.headquarter_detail?.name || right.headquarter?.name || '',
+        (left.headquarter_detail?.management_number || left.headquarter?.name || '').localeCompare(
+          right.headquarter_detail?.management_number || right.headquarter?.name || '',
           'ko',
         ) * direction
       );
+    }
+
+    if (sort.key === 'project_kind') {
+      return (left.project_kind ?? '').localeCompare(right.project_kind ?? '', 'ko') * direction;
+    }
+
+    if (sort.key === 'site_address') {
+      return (left.site_address ?? '').localeCompare(right.site_address ?? '', 'ko') * direction;
     }
 
     if (sort.key === 'manager_name') {
@@ -332,6 +340,9 @@ export function buildSiteSortComparator(
     }
     if (sort.key === 'updated_at') {
       return (left.updated_at ?? '').localeCompare(right.updated_at ?? '') * direction;
+    }
+    if (sort.key === 'last_visit_date') {
+      return (left.last_visit_date ?? '').localeCompare(right.last_visit_date ?? '') * direction;
     }
     if (sort.key === 'project_amount') {
       return ((left.project_amount ?? 0) - (right.project_amount ?? 0)) * direction;

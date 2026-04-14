@@ -175,3 +175,40 @@ git diff --check
   with license number as secondary text, address, and the row action menu.
 - The list intentionally no longer surfaces management/opening/corporate numbers, phone, updated
   timestamp, memo, or inline completion badges in the table body.
+- Selected headquarter and site-main cards no longer repeat the shell-level back control and page
+  title inside the card header; the drilldown now keeps one breadcrumb/title source in the admin
+  shell and starts the card header from compact context badges.
+- `admin-sites` now records the intermediate `headquarterId` drilldown route, and both mocked plus
+  real admin smoke assert that the headquarter/site-main drilldowns render a single shell back
+  label instead of duplicating it inside the summary card.
+- The site list table now shows only `현장명`, `사업장 관리번호`, `공사 종류`, `주소`, `공사 금액`,
+  `상태`, `마지막 방문일`, and `메뉴`.
+- `공사 금액` keeps `공사기간` as the only secondary line, and the default site-list sort now uses
+  `last_visit_date desc` so the visible sort matches the visible columns.
+- The site-list search placeholder now follows the reduced IA and points users to
+  `현장명, 사업장 관리번호, 공사 종류, 주소` only.
+- Headquarter summary no longer repeats `사업장관리번호` and `개시번호` as top badges; those numbers now
+  live inside the `등록 정보` card, one row per number, while the lower context grid avoids
+  repeating the same registration values again.
+- The selected headquarter summary now uses an asymmetric layout: the left column expands the
+  `사업장 등록 정보` card as the main anchor, while the right column stacks the remaining context
+  cards more tightly to reduce dead space in the drilldown header area.
+- Sort headers now use a single inline arrow toggle instead of the previous overflow-menu pattern,
+  so 가나다순/숫자순 switching stays in-place without the extra `...` trigger.
+- The site list amount subline now reads `기간 YYYY-MM ~ YYYY-MM` and intentionally drops the
+  repeated `공사기간` wording.
+- Mocked admin smoke now protects the reduced site-list surface by checking that the populated list
+  renders exactly eight table columns before the site-main drilldown continues.
+- Follow-up validation for this cleanup:
+  - `npx eslint features/admin/sections/headquarters/HeadquarterSummaryPanel.tsx features/admin/sections/headquarters/SiteManagementMainPanel.tsx features/admin/sections/headquarters/HeadquartersSection.tsx tests/client/admin/admin-sites.spec.ts tests/client/featureContracts.ts scripts/smoke-real-client/admin-sections/sites.ts`
+    - passed
+  - `npx tsc --noEmit --pretty false`
+    - passed
+  - `npm run aidlc:audit:admin`
+    - passed as advisory audit; existing oversized admin files remain, including `HeadquartersSection.tsx` and `SiteManagementMainPanel.tsx`
+  - `npm run test:client:smoke -- admin-sites`
+    - passed
+  - `npm run smoke:real:admin -- --sections sites`
+    - blocked by `Missing smoke seed. Provide SMOKE_SEED_PATH (/tmp/safety-e2e-seed.json) or LIVE_SAFETY_EMAIL/LIVE_SAFETY_PASSWORD.`
+  - `git diff --check`
+    - passed; git emitted LF/CRLF conversion warnings for touched files

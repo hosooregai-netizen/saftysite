@@ -25,7 +25,7 @@ export function SitesSection(props: SitesSectionProps) {
         <div className={`${styles.sectionHeaderActions} ${styles.sectionHeaderToolbarActions}`}>
           <input
             className={`app-input ${styles.sectionHeaderSearch} ${styles.sectionHeaderToolbarSearch}`}
-            placeholder="현장명, 코드, 사업장명, 현장소장, 계약유형, 발주자명으로 검색"
+            placeholder="현장명, 사업장 관리번호, 공사 종류, 주소로 검색"
             value={state.query}
             onChange={(event) => state.setQuery(event.target.value)}
           />
@@ -37,10 +37,20 @@ export function SitesSection(props: SitesSectionProps) {
             onStatusFilterChange={state.setStatusFilter}
             statusFilter={state.statusFilter}
           />
-          <button type="button" className="app-button app-button-secondary" onClick={state.exportSites} disabled={props.busy}>
+          <button
+            type="button"
+            className="app-button app-button-secondary"
+            onClick={state.exportSites}
+            disabled={props.busy}
+          >
             엑셀 내보내기
           </button>
-          <button type="button" className="app-button app-button-primary" onClick={state.openCreate} disabled={props.busy}>
+          <button
+            type="button"
+            className="app-button app-button-primary"
+            onClick={state.openCreate}
+            disabled={props.busy}
+          >
             현장 추가
           </button>
         </div>
@@ -49,10 +59,11 @@ export function SitesSection(props: SitesSectionProps) {
       <div className={styles.sectionBody}>
         <div className={styles.tableShell}>
           {state.sortedSites.length === 0 ? (
-            <div className={styles.tableEmpty}>{props.emptyMessage ?? '등록된 현장이 없습니다.'}</div>
+            <div className={styles.tableEmpty}>
+              {props.emptyMessage ?? '등록된 현장이 없습니다.'}
+            </div>
           ) : (
             <SitesTable
-              activeAssignmentsBySiteId={state.activeAssignmentsBySiteId}
               busy={props.busy}
               canDelete={props.canDelete}
               hasCustomEntry={Boolean(props.onSelectSiteEntry)}
@@ -63,10 +74,8 @@ export function SitesSection(props: SitesSectionProps) {
               onOpenSiteEntry={state.openSiteEntry}
               onSortChange={state.setSort}
               onUpdateStatus={(site, status) => void state.updateStatus(site, status)}
-              showHeadquarterColumn={props.showHeadquarterColumn !== false}
               sites={state.sortedSites}
               sort={state.sort}
-              usersById={state.usersById}
             />
           )}
         </div>

@@ -1,6 +1,14 @@
 import type { ClientSmokePlaywrightConfig } from '../../../playwright.config';
 import { createAdminSmokeHarness } from '../fixtures/adminSmokeHarness';
 
+async function assertSiteTableColumnCount(page: import('playwright').Page) {
+  await page.locator('table thead th').first().waitFor({ state: 'visible' });
+  const columnCount = await page.locator('table thead th').count();
+  if (columnCount !== 8) {
+    throw new Error(`Expected 8 site table columns, received ${columnCount}.`);
+  }
+}
+
 export async function runAdminSitesSmoke(config: ClientSmokePlaywrightConfig) {
   const harness = await createAdminSmokeHarness('admin-sites', config);
 
@@ -43,6 +51,13 @@ export async function runAdminSitesSmoke(config: ClientSmokePlaywrightConfig) {
     await page.getByRole('button', { name: '사업장 정보 수정' }).waitFor({ state: 'visible' });
     await page.getByRole('heading', { level: 2, name: '현장 목록' }).waitFor({ state: 'visible' });
 
+    const headquarterBackLabelCount = await page.getByText('사업장 목록', { exact: true }).count();
+    if (headquarterBackLabelCount !== 1) {
+      throw new Error(
+        `Expected a single shell back label for the headquarter drilldown, received ${headquarterBackLabelCount}.`,
+      );
+    }
+
     await page.getByRole('button', { name: '현장 추가' }).click();
     const siteCreateDialog = page.getByRole('dialog', { name: '현장 추가' });
     await siteCreateDialog.getByLabel('현장명').fill('mocked admin site');
@@ -55,14 +70,20 @@ export async function runAdminSitesSmoke(config: ClientSmokePlaywrightConfig) {
     await siteCreateDialog.getByLabel('계약상태').selectOption('active');
     await siteCreateDialog.getByLabel('기술지도 대가').fill('1200000');
     await siteCreateDialog.getByLabel('기술지도 횟수').fill('12');
-    await siteCreateDialog.getByLabel('회차당 단가').fill('100000');
     await siteCreateDialog.getByRole('button', { name: '생성' }).click();
     await harness.waitForRequestCount('POST /sites', siteCreatesBefore + 1);
+    await assertSiteTableColumnCount(page);
 
     await page.getByRole('button', { name: /mocked admin site 현장 작업 메뉴 열기/ }).click();
     await page.getByRole('menuitem', { name: '현장 메인' }).click();
     await page.getByRole('link', { name: '현장 정보 수정' }).waitFor({ state: 'visible' });
     await page.getByText('연락 및 발송 기준').waitFor({ state: 'visible' });
+    const siteBackLabelCount = await page.getByText('현장 목록', { exact: true }).count();
+    if (siteBackLabelCount !== 1) {
+      throw new Error(
+        `Expected a single shell back label for the site main view, received ${siteBackLabelCount}.`,
+      );
+    }
 
     await page.getByRole('link', { name: '현장 정보 수정' }).click();
     const siteEditDialog = page.getByRole('dialog', { name: '현장 수정' });

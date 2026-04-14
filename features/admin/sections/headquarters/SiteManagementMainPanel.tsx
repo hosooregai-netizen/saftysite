@@ -1,4 +1,3 @@
-import { PageBackControl } from '@/components/navigation/PageBackControl';
 import Link from 'next/link';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import {
@@ -19,13 +18,11 @@ import { getSiteManagementMissingFields } from '../sites/siteSectionHelpers';
 interface SiteManagementMainPanelProps {
   headquarter: SafetyHeadquarter | null;
   site: SafetySite;
-  onBack: () => void;
 }
 
 export function SiteManagementMainPanel({
   headquarter,
   site,
-  onBack,
 }: SiteManagementMainPanelProps) {
   const assignedUsers =
     site.assigned_users?.length
@@ -84,11 +81,7 @@ export function SiteManagementMainPanel({
     <section className={styles.sectionCard}>
       <div className={styles.sectionHeader}>
         <div className={styles.sectionHeaderTitleBlock}>
-          <div className={styles.contextLead}>
-            <PageBackControl label="현장 목록" onClick={onBack} />
-            <span className={styles.sectionHeaderMeta}>{headquarterName}</span>
-          </div>
-          <h2 className={styles.sectionTitle}>{site.site_name}</h2>
+          <span className={styles.sectionHeaderMeta}>{headquarterName}</span>
           <div className={styles.contextBadgeRow}>
             <span className={`${styles.contextBadge} ${styles.contextBadgeStrong}`}>현장 메인</span>
             <span className={styles.contextBadge}>운영 {getSiteStatusLabel(site.status)}</span>
