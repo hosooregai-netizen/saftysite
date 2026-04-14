@@ -30,7 +30,7 @@ export async function runAdminReportsSmoke(config: ClientSmokePlaywrightConfig) 
       'PATCH /api/admin/reports/:id/review',
       reviewWritesBefore + 1,
     );
-    await page.getByText('보고서 검토 체크를 저장했습니다.').first().waitFor();
+    await reviewDialog.waitFor({ state: 'hidden' });
 
     const quarterlyRow = page
       .locator('tbody tr')
@@ -45,7 +45,7 @@ export async function runAdminReportsSmoke(config: ClientSmokePlaywrightConfig) 
       'PATCH /api/admin/reports/:id/dispatch',
       dispatchWritesBefore + 1,
     );
-    await page.getByText('분기 보고서 발송 정보를 저장했습니다.').first().waitFor();
+    await dispatchDialog.waitFor({ state: 'hidden' });
 
     const badWorkplaceRow = page
       .locator('tbody tr')
