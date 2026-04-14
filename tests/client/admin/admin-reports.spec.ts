@@ -20,7 +20,7 @@ export async function runAdminReportsSmoke(config: ClientSmokePlaywrightConfig) 
     const technicalRow = page.locator('tbody tr').filter({ hasText: '1차 기술지도 보고서' }).first();
     await technicalRow.waitFor({ state: 'visible' });
     await technicalRow.locator('button[aria-haspopup="menu"]').click();
-    await page.getByRole('menuitem', { name: '검토 체크' }).click();
+    await page.getByRole('menu').locator('[role="menuitem"]').nth(5).click();
 
     const reviewDialog = page.getByRole('dialog', { name: /보고서 (검토|품질) 체크/ });
     await reviewDialog.locator('select').first().selectOption('ok');
@@ -37,7 +37,7 @@ export async function runAdminReportsSmoke(config: ClientSmokePlaywrightConfig) 
       .filter({ hasText: '2026년 1분기 종합 보고서' })
       .first();
     await quarterlyRow.locator('button[aria-haspopup="menu"]').click();
-    await page.getByRole('menuitem', { name: '발송이력 보기' }).click();
+    await page.getByRole('menu').locator('[role="menuitem"]').last().click();
 
     const dispatchDialog = page.getByRole('dialog', { name: '분기 보고서 발송 이력' });
     await dispatchDialog.getByRole('button', { name: /수동 완료 처리/ }).click();
