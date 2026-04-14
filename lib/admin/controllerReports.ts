@@ -68,23 +68,24 @@ function getDaysSince(value: string | null | undefined): number | null {
 
 function resolveQuarterlyDispatchState(
   visitDate: string | null | undefined,
-  dispatchState: Pick<ControllerReportRow, 'deadlineDate' | 'dispatchStatus'>,
-  sentCompletedAt: string | null | undefined,
+  updatedAt: string,
+  deliveryStatus: string | null | undefined,
 ): Pick<ControllerReportRow, 'deadlineDate' | 'dispatchStatus'> {
-  const deadlineDate = dispatchState.deadlineDate || addDays(visitDate, 7);
+  const baseDate = visitDate || updatedAt.slice(0, 10);
+  const deadlineDate = addDays(baseDate, 7);
 
-  if (normalizeMapperText(sentCompletedAt) || dispatchState.dispatchStatus === 'sent') {
+  if (deliveryStatus === 'sent' || deliveryStatus === 'manual_checked') {
     return {
       deadlineDate,
       dispatchStatus: 'sent',
     };
   }
 
-  const daysSinceVisit = getDaysSince(visitDate);
+  const daysSinceVisit = getDaysSince(baseDate);
   if (daysSinceVisit == null) {
     return {
       deadlineDate,
-      dispatchStatus: dispatchState.dispatchStatus,
+      dispatchStatus: '',
     };
   }
 
@@ -179,15 +180,15 @@ export function buildControllerReportRows(
       type === 'quarterly_report'
         ? resolveQuarterlyDispatchState(
             report.visit_date,
-            {
-              deadlineDate: dispatch?.deadlineDate || '',
-              dispatchStatus: dispatch?.dispatchStatus || '',
-            },
-            dispatch?.sentCompletedAt,
+            report.updated_at,
+            dispatch?.dispatchStatus,
           )
         : {
-            deadlineDate: dispatch?.deadlineDate || '',
-            dispatchStatus: dispatch?.dispatchStatus || '',
+            deadlineDate: addDays(report.visit_date || report.updated_at.slice(0, 10), 7),
+            dispatchStatus:
+              dispatch?.dispatchStatus === 'sent' || dispatch?.dispatchStatus === 'manual_checked'
+                ? 'sent'
+                : '',
           };
 
     return applyControllerReportRowStatus({
@@ -196,6 +197,7 @@ export function buildControllerReportRows(
       checkerUserId: controllerReview?.checkerUserId || '',
       deadlineDate: effectiveDispatch.deadlineDate,
       dispatchStatus: effectiveDispatch.dispatchStatus,
+      dispatchSignal: effectiveDispatch.dispatchStatus,
       headquarterId: normalizeMapperText(site?.headquarter_id) || normalizeMapperText(report.headquarter_id),
       headquarterName,
       lifecycleStatus: report.lifecycle_status,

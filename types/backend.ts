@@ -186,6 +186,7 @@ export interface SafetySite {
   total_rounds?: number | null;
   per_visit_amount?: number | null;
   total_contract_amount?: number | null;
+  last_visit_date?: string | null;
   required_completion_fields?: string[] | null;
   created_at: string;
   updated_at: string;
@@ -270,6 +271,7 @@ export interface SafetyReport {
   report_title: string;
   site_id: string;
   headquarter_id: string | null;
+  schedule_id?: string | null;
   assigned_user_id: string | null;
   visit_date: string | null;
   visit_round: number | null;
@@ -299,6 +301,7 @@ export interface SafetyReportListItem {
   report_title: string;
   site_id: string;
   headquarter_id: string | null;
+  schedule_id?: string | null;
   assigned_user_id: string | null;
   visit_date: string | null;
   visit_round: number | null;
@@ -368,11 +371,13 @@ export interface SafetyBackendAdminReportRow {
     quality_status?: string | null;
   } | null;
   deadline_date: string;
+  dispatch_signal: string | null;
   dispatch: {
-    deadline_date?: string | null;
     dispatch_status?: string | null;
-    sent_completed_at?: string | null;
-    actual_sent_at?: string | null;
+    dispatch_method?: string | null;
+    dispatched_at?: string | null;
+    dispatch_checked_by?: string | null;
+    dispatch_checked_at?: string | null;
     mailbox_account_id?: string | null;
     mail_thread_id?: string | null;
     message_id?: string | null;
@@ -429,6 +434,7 @@ export interface SafetyBackendInspectionSchedule {
   is_overdue: boolean;
   linked_report_key: string;
   planned_date: string;
+  actual_visit_date: string;
   round_no: number;
   selection_confirmed_at: string;
   selection_confirmed_by_name: string;
@@ -1262,6 +1268,7 @@ export interface SafetyUpsertReportInput {
   report_title: string;
   site_id: string;
   headquarter_id?: string | null;
+  schedule_id?: string | null;
   assigned_user_id?: string | null;
   visit_date?: string | null;
   visit_round?: number | null;

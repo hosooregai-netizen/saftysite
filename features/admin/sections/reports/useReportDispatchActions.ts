@@ -2,7 +2,6 @@
 
 import { useCallback } from 'react';
 import {
-  appendAdminDispatchEvent,
   updateAdminReportDispatch,
   updateAdminReportReview,
 } from '@/lib/admin/apiClient';
@@ -28,6 +27,31 @@ interface UseReportDispatchActionsInput {
   setNotice: (value: string | null) => void;
   setReviewRow: (value: ControllerReportRow | null) => void;
   sites: SafetySite[];
+}
+
+function buildManualCheckedDispatch(
+  currentDispatch: ReportDispatchMeta,
+  currentUserId: string,
+  memo: string,
+): ReportDispatchMeta {
+  const now = new Date().toISOString();
+
+  return {
+    ...currentDispatch,
+    dispatchMethod: currentDispatch.dispatchMethod || 'manual',
+    dispatchStatus: currentDispatch.dispatchStatus === 'sent' ? 'sent' : 'manual_checked',
+    dispatchCheckedBy: currentUserId,
+    dispatchCheckedAt: now,
+    sentHistory: [
+      ...currentDispatch.sentHistory,
+      {
+        id: now,
+        memo,
+        sentAt: now,
+        sentByUserId: currentUserId,
+      },
+    ],
+  };
 }
 
 export function useReportDispatchActions({
@@ -57,11 +81,11 @@ export function useReportDispatchActions({
         ownerUserId: reviewForm.ownerUserId,
         qualityStatus: reviewForm.qualityStatus,
       });
-      setNotice('보고서 품질 체크를 저장했습니다.');
+      setNotice('보고서 검토 정보를 저장했습니다.');
       setReviewRow(null);
       await fetchRows();
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : '보고서 품질 체크 저장에 실패했습니다.');
+      setError(nextError instanceof Error ? nextError.message : '보고서 검토 저장에 실패했습니다.');
     }
   }, [currentUser.id, fetchRows, reviewForm, reviewRow, setError, setNotice, setReviewRow]);
 
@@ -69,7 +93,7 @@ export function useReportDispatchActions({
     async (row: ControllerReportRow, nextDispatch: ReportDispatchMeta) => {
       try {
         await updateAdminReportDispatch(row.reportKey, nextDispatch);
-        setNotice('분기 보고서 발송 정보를 저장했습니다.');
+        setNotice('발송 정보를 저장했습니다.');
         setDispatchRow(null);
         await fetchRows();
       } catch (nextError) {
@@ -128,10 +152,10 @@ export function useReportDispatchActions({
             }),
           ),
         );
-        setNotice('선택한 보고서의 품질 상태를 저장했습니다.');
+        setNotice('선택한 보고서의 검토 상태를 저장했습니다.');
         await fetchRows();
       } catch (nextError) {
-        setError(nextError instanceof Error ? nextError.message : '일괄 품질 처리에 실패했습니다.');
+        setError(nextError instanceof Error ? nextError.message : '일괄 검토 처리에 실패했습니다.');
       }
     },
     [currentUser.id, fetchRows, selectedRows, setError, setNotice],
@@ -152,12 +176,22 @@ export function useReportDispatchActions({
           }),
         ),
       );
-      setNotice('선택한 보고서의 체크 담당자를 지정했습니다.');
+      setNotice('선택한 보고서의 담당자를 현재 사용자로 지정했습니다.');
       await fetchRows();
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : '담당자 지정에 실패했습니다.');
     }
   }, [currentUser.id, fetchRows, selectedRows, setError, setNotice]);
+
+  const buildManualDispatchPayload = useCallback(
+    (row: ControllerReportRow) =>
+      buildManualCheckedDispatch(
+        buildDispatchMeta(row),
+        currentUser.id,
+        '관리자 화면에서 수동 발송 완료 처리',
+      ),
+    [currentUser.id],
+  );
 
   const bulkDispatchSent = useCallback(async () => {
     const quarterlyRows = selectedRows.filter((row) => row.reportType === 'quarterly_report');
@@ -165,54 +199,25 @@ export function useReportDispatchActions({
 
     try {
       await Promise.all(
-        quarterlyRows.map(async (row) => {
-          const currentDispatch = buildDispatchMeta(row);
-          await updateAdminReportDispatch(row.reportKey, {
-            ...currentDispatch,
-            dispatchStatus: 'sent',
-            sentCompletedAt: currentDispatch.sentCompletedAt || new Date().toISOString(),
-          });
-          await appendAdminDispatchEvent(row.reportKey, {
-            id: new Date().toISOString(),
-            memo: '관제 일괄 발송완료 처리',
-            sentAt: new Date().toISOString(),
-            sentByUserId: currentUser.id,
-          });
-        }),
+        quarterlyRows.map((row) =>
+          updateAdminReportDispatch(row.reportKey, buildManualDispatchPayload(row)),
+        ),
       );
-      setNotice('선택한 분기 보고서를 발송완료 처리했습니다.');
+      setNotice('선택한 분기 보고서를 수동 발송 완료로 처리했습니다.');
       await fetchRows();
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : '일괄 발송 처리에 실패했습니다.');
     }
-  }, [currentUser.id, fetchRows, selectedRows, setError, setNotice]);
+  }, [buildManualDispatchPayload, fetchRows, selectedRows, setError, setNotice]);
 
   const loadSmsProviderStatuses = useCallback(async (): Promise<SmsProviderStatus[]> => {
     try {
       return await fetchSmsProviderStatuses();
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : '문자 공급자 상태를 불러오지 못했습니다.');
+      setError(nextError instanceof Error ? nextError.message : '문자 발송 공급자 상태를 불러오지 못했습니다.');
       return [];
     }
   }, [setError]);
-
-  const buildManualDispatchPayload = useCallback((row: ControllerReportRow) => {
-    const currentDispatch = buildDispatchMeta(row);
-    return {
-      ...currentDispatch,
-      dispatchStatus: 'sent' as const,
-      sentCompletedAt: currentDispatch.sentCompletedAt || new Date().toISOString(),
-      sentHistory: [
-        ...currentDispatch.sentHistory,
-        {
-          id: new Date().toISOString(),
-          memo: '관제에서 발송완료 처리',
-          sentAt: new Date().toISOString(),
-          sentByUserId: currentUser.id,
-        },
-      ],
-    };
-  }, [currentUser.id]);
 
   const dispatchSite =
     dispatchRow == null ? null : sites.find((site) => site.id === dispatchRow.siteId) || null;

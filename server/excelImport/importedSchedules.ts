@@ -68,7 +68,9 @@ export function mergeImportedSchedules(
       return;
     }
     const current = existingByRound.get(seed.roundNo);
+    const nextStatus = normalizeCompletionStatus(seed.completionStatus, seed.visitDate, today);
     existingByRound.set(seed.roundNo, {
+      actualVisitDate: nextStatus === 'completed' ? seed.visitDate : current?.actualVisitDate || '',
       assigneeName: normalizeText(seed.assigneeName) || current?.assigneeName || site.inspector_name || '',
       assigneeUserId: normalizeText(seed.assigneeUserId) || current?.assigneeUserId || '',
       exceptionMemo: current?.exceptionMemo || '',
@@ -89,7 +91,7 @@ export function mergeImportedSchedules(
       selectionReasonMemo: current?.selectionReasonMemo || '',
       siteId: site.id,
       siteName: site.site_name,
-      status: normalizeCompletionStatus(seed.completionStatus, seed.visitDate, today),
+      status: nextStatus,
       windowEnd: current?.windowEnd || seed.visitDate,
       windowStart: current?.windowStart || seed.visitDate,
     });

@@ -72,6 +72,15 @@ export type ReportDispatchStatus =
   | 'sent'
   | '';
 
+export type ReportDeliveryStatus =
+  | 'none'
+  | 'manual_checked'
+  | 'sent'
+  | 'failed'
+  | '';
+
+export type ReportDispatchMethod = 'manual' | 'system_email' | '';
+
 export interface ReportDispatchHistoryEntry {
   id: string;
   memo: string;
@@ -80,10 +89,11 @@ export interface ReportDispatchHistoryEntry {
 }
 
 export interface ReportDispatchMeta {
-  deadlineDate: string;
-  dispatchStatus: ReportDispatchStatus;
-  sentCompletedAt: string;
-  actualSentAt: string;
+  dispatchStatus: ReportDeliveryStatus;
+  dispatchMethod: ReportDispatchMethod;
+  dispatchedAt: string;
+  dispatchCheckedBy: string;
+  dispatchCheckedAt: string;
   sentHistory: ReportDispatchHistoryEntry[];
   mailboxAccountId: string;
   mailThreadId: string;
@@ -101,6 +111,7 @@ export interface ControllerReportRow {
   checkerUserId: string;
   deadlineDate: string;
   dispatchStatus: ReportDispatchStatus;
+  dispatchSignal: ReportDispatchStatus;
   headquarterId: string;
   headquarterName: string;
   lifecycleStatus: import('@/types/backend').SafetyLifecycleStatus;
@@ -126,6 +137,7 @@ export interface ControllerReportRow {
 export type SafetyInspectionScheduleStatus =
   | 'planned'
   | 'completed'
+  | 'postponed'
   | 'canceled';
 
 export interface SafetyInspectionSchedule {
@@ -133,6 +145,7 @@ export interface SafetyInspectionSchedule {
   siteId: string;
   roundNo: number;
   plannedDate: string;
+  actualVisitDate: string;
   windowStart: string;
   windowEnd: string;
   assigneeUserId: string;

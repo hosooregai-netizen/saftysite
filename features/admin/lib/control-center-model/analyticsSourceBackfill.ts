@@ -69,6 +69,7 @@ function buildBackfilledSchedule(
 ): SafetyInspectionSchedule {
   const headquarterName = site.headquarter_detail?.name || site.headquarter?.name || '';
   return {
+    actualVisitDate: current?.actualVisitDate || (linkedReportKey ? plannedDate : ''),
     assigneeName: assigneeName || current?.assigneeName || normalizeText(site.inspector_name) || '',
     assigneeUserId: assigneeUserId || current?.assigneeUserId || '',
     exceptionMemo: current?.exceptionMemo || '',

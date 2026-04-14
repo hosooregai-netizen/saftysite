@@ -450,6 +450,7 @@ export function generateSchedulesForSite(site: SafetySite, users: SafetyUser[]) 
     const existing = existingByRound.get(roundNo);
 
     nextSchedules.push({
+      actualVisitDate: existing?.actualVisitDate || '',
       assigneeName: existing?.assigneeName || defaultAssigneeName,
       assigneeUserId: existing?.assigneeUserId || defaultAssigneeUserId,
       exceptionMemo: existing?.exceptionMemo || '',

@@ -135,6 +135,7 @@ function normalizeQuarterlyMaterialRecord(
 function normalizeScheduleStatus(value: unknown): SafetyInspectionScheduleStatus {
   switch (value) {
     case 'completed':
+    case 'postponed':
     case 'canceled':
       return value;
     default:
@@ -274,6 +275,7 @@ function normalizeSiteInspectionSchedule(
   }
 
   return {
+    actualVisitDate: normalizeText(value.actualVisitDate),
     id,
     assigneeName: normalizeText(value.assigneeName),
     assigneeUserId: normalizeText(value.assigneeUserId),

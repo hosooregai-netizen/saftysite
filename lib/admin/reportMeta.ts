@@ -7,8 +7,10 @@ import type {
   ControllerQualityStatus,
   ControllerReportType,
   ReportControllerReview,
+  ReportDeliveryStatus,
   ReportDispatchHistoryEntry,
   ReportDispatchMeta,
+  ReportDispatchMethod,
   ReportDispatchStatus,
 } from '@/types/admin';
 
@@ -22,12 +24,22 @@ function normalizeQualityStatus(value: unknown): ControllerQualityStatus {
   }
 }
 
-function normalizeDispatchStatus(value: unknown): ReportDispatchStatus {
+function normalizeDeliveryStatus(value: unknown): ReportDeliveryStatus {
   switch (value) {
-    case 'normal':
-    case 'warning':
-    case 'overdue':
+    case 'none':
+    case 'manual_checked':
     case 'sent':
+    case 'failed':
+      return value;
+    default:
+      return '';
+  }
+}
+
+function normalizeDispatchMethod(value: unknown): ReportDispatchMethod {
+  switch (value) {
+    case 'manual':
+    case 'system_email':
       return value;
     default:
       return '';
@@ -95,10 +107,18 @@ export function normalizeDispatchMeta(value: unknown): ReportDispatchMeta | null
     : [];
 
   return {
-    deadlineDate: normalizeMapperText(record.deadlineDate),
-    dispatchStatus: normalizeDispatchStatus(record.dispatchStatus),
-    sentCompletedAt: normalizeMapperText(record.sentCompletedAt),
-    actualSentAt: normalizeMapperText(record.actualSentAt || record.actual_sent_at),
+    dispatchStatus: normalizeDeliveryStatus(record.dispatchStatus || record.dispatch_status),
+    dispatchMethod: normalizeDispatchMethod(record.dispatchMethod || record.dispatch_method),
+    dispatchedAt: normalizeMapperText(
+      record.dispatchedAt || record.dispatched_at || record.actualSentAt || record.actual_sent_at,
+    ),
+    dispatchCheckedBy: normalizeMapperText(record.dispatchCheckedBy || record.dispatch_checked_by),
+    dispatchCheckedAt: normalizeMapperText(
+      record.dispatchCheckedAt ||
+        record.dispatch_checked_at ||
+        record.sentCompletedAt ||
+        record.sent_completed_at,
+    ),
     sentHistory,
     mailboxAccountId: normalizeMapperText(record.mailboxAccountId || record.mailbox_account_id),
     mailThreadId: normalizeMapperText(record.mailThreadId || record.mail_thread_id),
@@ -120,7 +140,33 @@ export function getDispatchStatusLabel(status: ReportDispatchStatus): string {
     case 'overdue':
       return '지연';
     case 'sent':
-      return '발송완료';
+      return '발송 완료';
+    default:
+      return '-';
+  }
+}
+
+export function getDeliveryStatusLabel(status: ReportDeliveryStatus): string {
+  switch (status) {
+    case 'none':
+      return '미처리';
+    case 'manual_checked':
+      return '수동 확인';
+    case 'sent':
+      return '발송 완료';
+    case 'failed':
+      return '발송 실패';
+    default:
+      return '-';
+  }
+}
+
+export function getDispatchMethodLabel(method: ReportDispatchMethod): string {
+  switch (method) {
+    case 'manual':
+      return '수동';
+    case 'system_email':
+      return '시스템 메일';
     default:
       return '-';
   }
@@ -129,7 +175,7 @@ export function getDispatchStatusLabel(status: ReportDispatchStatus): string {
 export function getQualityStatusLabel(status: ControllerQualityStatus): string {
   switch (status) {
     case 'ok':
-      return '확인완료';
+      return '확인 완료';
     case 'issue':
       return '이슈';
     default:

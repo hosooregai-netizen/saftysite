@@ -35,13 +35,6 @@ export function formatDateOnly(value: string) {
   return value.slice(0, 10);
 }
 
-function addDays(value: string, days: number) {
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return '';
-  parsed.setDate(parsed.getDate() + days);
-  return parsed.toISOString().slice(0, 10);
-}
-
 function isCompletedReportStatus(row: ControllerReportRow) {
   return isClosedReport(row);
 }
@@ -91,10 +84,12 @@ export function filterRowsForOverviewPreset(
 
 export function buildDispatchMeta(row: ControllerReportRow): ReportDispatchMeta {
   return row.dispatch ?? {
-    deadlineDate: row.deadlineDate || addDays(row.visitDate || row.updatedAt.slice(0, 10), 7),
-    dispatchStatus: row.dispatchStatus || '',
+    dispatchStatus: '',
+    dispatchMethod: '',
+    dispatchedAt: '',
+    dispatchCheckedBy: '',
+    dispatchCheckedAt: '',
     actualRecipient: '',
-    actualSentAt: '',
     mailboxAccountId: '',
     mailThreadId: '',
     messageId: '',
@@ -102,7 +97,6 @@ export function buildDispatchMeta(row: ControllerReportRow): ReportDispatchMeta 
     recipient: '',
     replyAt: '',
     replySummary: '',
-    sentCompletedAt: '',
     sentHistory: [],
   };
 }

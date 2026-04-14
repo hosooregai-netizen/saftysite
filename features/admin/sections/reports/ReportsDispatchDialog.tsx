@@ -2,14 +2,18 @@
 
 import AppModal from '@/components/ui/AppModal';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
-import { getDispatchStatusLabel } from '@/lib/admin/reportMeta';
+import {
+  getDeliveryStatusLabel,
+  getDispatchMethodLabel,
+  getDispatchStatusLabel,
+} from '@/lib/admin/reportMeta';
 import { buildDispatchMeta, formatDateTime } from './reportsSectionFilters';
 import type { ControllerReportRow, ReportDispatchMeta } from '@/types/admin';
 import type { SafetySite, SafetyUser } from '@/types/backend';
 import type { SmsProviderStatus } from '@/types/messages';
 
 interface ReportsDispatchDialogProps {
-  currentUserId: string;
+  buildManualDispatchPayload: (row: ControllerReportRow) => ReportDispatchMeta;
   dispatchRow: ControllerReportRow | null;
   dispatchSite: SafetySite | null;
   dispatchSmsMessage: string;
@@ -25,7 +29,7 @@ interface ReportsDispatchDialogProps {
 }
 
 export function ReportsDispatchDialog({
-  currentUserId,
+  buildManualDispatchPayload,
   dispatchRow,
   dispatchSite,
   dispatchSmsMessage,
@@ -39,6 +43,14 @@ export function ReportsDispatchDialog({
   smsProviderStatuses,
   users,
 }: ReportsDispatchDialogProps) {
+  const dispatchMeta = dispatchRow ? buildDispatchMeta(dispatchRow) : null;
+  const dispatchSignal = dispatchRow?.dispatchSignal || dispatchRow?.dispatchStatus || '';
+  const checkedByName =
+    dispatchMeta?.dispatchCheckedBy
+      ? users.find((user) => user.id === dispatchMeta.dispatchCheckedBy)?.name ||
+        dispatchMeta.dispatchCheckedBy
+      : '-';
+
   return (
     <AppModal
       open={Boolean(dispatchRow)}
@@ -53,25 +65,9 @@ export function ReportsDispatchDialog({
             <button
               type="button"
               className="app-button app-button-primary"
-              onClick={() =>
-                onSaveManual(dispatchRow, {
-                  ...buildDispatchMeta(dispatchRow),
-                  dispatchStatus: 'sent',
-                  sentCompletedAt:
-                    buildDispatchMeta(dispatchRow).sentCompletedAt || new Date().toISOString(),
-                  sentHistory: [
-                    ...buildDispatchMeta(dispatchRow).sentHistory,
-                    {
-                      id: new Date().toISOString(),
-                      memo: '관제에서 발송완료 처리',
-                      sentAt: new Date().toISOString(),
-                      sentByUserId: currentUserId,
-                    },
-                  ],
-                })
-              }
+              onClick={() => onSaveManual(dispatchRow, buildManualDispatchPayload(dispatchRow))}
             >
-              관제 수동 완료 처리
+              수동 발송 완료 처리
             </button>
           </>
         ) : undefined
@@ -80,55 +76,62 @@ export function ReportsDispatchDialog({
       {dispatchRow ? (
         <div className={styles.sectionBody}>
           <p className={styles.tableSecondary}>
-            현재 상태: {getDispatchStatusLabel(buildDispatchMeta(dispatchRow).dispatchStatus)} / 마감일{' '}
-            {buildDispatchMeta(dispatchRow).deadlineDate || '-'}
+            현재 신호: {getDispatchStatusLabel(dispatchSignal)} / 마감일 {dispatchRow.deadlineDate || '-'}
           </p>
           <div className={styles.modalGrid}>
             <label className={styles.modalFieldWide}>
-              <span className={styles.label}>기본 수신자 정보</span>
+              <span className={styles.label}>기본 수신 대상</span>
               <div className={styles.tableSecondary}>
                 {dispatchSite?.site_contact_email
-                  ? `${dispatchSite.manager_name || dispatchSite.contract_contact_name || '현장대리인'} · ${dispatchSite.site_contact_email}`
-                  : '현장대리인 메일이 등록되지 않았습니다.'}
+                  ? `${dispatchSite.manager_name || dispatchSite.contract_contact_name || '현장 담당자'} · ${dispatchSite.site_contact_email}`
+                  : '현장 수신 메일이 등록되어 있지 않습니다.'}
+              </div>
+            </label>
+            <label className={styles.modalField}>
+              <span className={styles.label}>발송 처리 상태</span>
+              <div className={styles.tableSecondary}>
+                {dispatchMeta
+                  ? `${getDeliveryStatusLabel(dispatchMeta.dispatchStatus)} / ${getDispatchMethodLabel(dispatchMeta.dispatchMethod)}`
+                  : '기록 없음'}
               </div>
             </label>
             <label className={styles.modalField}>
               <span className={styles.label}>실제 메일 발송</span>
               <div className={styles.tableSecondary}>
-                {buildDispatchMeta(dispatchRow).actualSentAt
-                  ? `${formatDateTime(buildDispatchMeta(dispatchRow).actualSentAt || '')} / ${buildDispatchMeta(dispatchRow).actualRecipient || buildDispatchMeta(dispatchRow).recipient || '-'}`
+                {dispatchMeta?.dispatchedAt
+                  ? `${formatDateTime(dispatchMeta.dispatchedAt)} / ${dispatchMeta.actualRecipient || dispatchMeta.recipient || '-'}`
                   : '기록 없음'}
               </div>
             </label>
             <label className={styles.modalField}>
-              <span className={styles.label}>관제 수동 완료</span>
+              <span className={styles.label}>수동 체크</span>
               <div className={styles.tableSecondary}>
-                {buildDispatchMeta(dispatchRow).sentCompletedAt
-                  ? formatDateTime(buildDispatchMeta(dispatchRow).sentCompletedAt || '')
+                {dispatchMeta?.dispatchCheckedAt
+                  ? `${formatDateTime(dispatchMeta.dispatchCheckedAt)} / ${checkedByName}`
                   : '기록 없음'}
               </div>
             </label>
             <label className={styles.modalField}>
               <span className={styles.label}>수신 확인</span>
               <div className={styles.tableSecondary}>
-                {buildDispatchMeta(dispatchRow).readAt
-                  ? formatDateTime(buildDispatchMeta(dispatchRow).readAt || '')
-                  : '아직 확인되지 않았습니다.'}
+                {dispatchMeta?.readAt
+                  ? formatDateTime(dispatchMeta.readAt)
+                  : '아직 수신 확인 기록이 없습니다.'}
               </div>
             </label>
             <label className={styles.modalFieldWide}>
               <span className={styles.label}>회신 상태</span>
               <div className={styles.tableSecondary}>
-                {buildDispatchMeta(dispatchRow).replyAt
-                  ? `${formatDateTime(buildDispatchMeta(dispatchRow).replyAt || '')} / ${buildDispatchMeta(dispatchRow).replySummary || '요약 없음'}`
-                  : '아직 회신이 없습니다.'}
+                {dispatchMeta?.replyAt
+                  ? `${formatDateTime(dispatchMeta.replyAt)} / ${dispatchMeta.replySummary || '요약 없음'}`
+                  : '아직 회신 기록이 없습니다.'}
               </div>
             </label>
             <label className={styles.modalFieldWide}>
               <span className={styles.label}>문자 발송 상태</span>
               <div className={styles.tableSecondary}>
                 {smsProviderStatuses.length === 0
-                  ? '문자 공급자 상태를 불러오는 중입니다.'
+                  ? '문자 발송 공급자 상태를 불러오는 중입니다.'
                   : smsProviderStatuses.map((provider) => provider.message).join(' / ')}
               </div>
             </label>
@@ -167,9 +170,7 @@ export function ReportsDispatchDialog({
               </button>
             </div>
           </div>
-          {buildDispatchMeta(dispatchRow).sentHistory.length === 0 ? (
-            <div className={styles.tableEmpty}>기록된 발송 이력이 없습니다.</div>
-          ) : (
+          {dispatchMeta?.sentHistory.length ? (
             <div className={styles.tableShell}>
               <div className={styles.tableWrap}>
                 <table className={styles.table}>
@@ -181,7 +182,7 @@ export function ReportsDispatchDialog({
                     </tr>
                   </thead>
                   <tbody>
-                    {buildDispatchMeta(dispatchRow).sentHistory.map((item) => (
+                    {dispatchMeta.sentHistory.map((item) => (
                       <tr key={item.id}>
                         <td>{formatDateTime(item.sentAt)}</td>
                         <td>
@@ -194,6 +195,8 @@ export function ReportsDispatchDialog({
                 </table>
               </div>
             </div>
+          ) : (
+            <div className={styles.tableEmpty}>기록된 발송 이력이 없습니다.</div>
           )}
         </div>
       ) : null}

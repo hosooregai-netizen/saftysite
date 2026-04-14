@@ -48,9 +48,11 @@ function buildEmptyReview(): ReportControllerReview {
 function buildEmptyDispatch(overrides: Partial<ReportDispatchMeta> = {}): ReportDispatchMeta {
   return {
     actualRecipient: '',
-    actualSentAt: '',
-    deadlineDate: '',
     dispatchStatus: '',
+    dispatchMethod: '',
+    dispatchedAt: '',
+    dispatchCheckedBy: '',
+    dispatchCheckedAt: '',
     mailThreadId: '',
     mailboxAccountId: '',
     messageId: '',
@@ -58,7 +60,6 @@ function buildEmptyDispatch(overrides: Partial<ReportDispatchMeta> = {}): Report
     recipient: '',
     replyAt: '',
     replySummary: '',
-    sentCompletedAt: '',
     sentHistory: [],
     ...overrides,
   };
@@ -440,7 +441,7 @@ function ensureAdminFixtureReports(harness: ErpSmokeHarness) {
       site_id: 'site-1',
       headquarter_id: 'hq-1',
       assigned_user_id: 'field-1',
-      visit_date: '2026-03-29',
+      visit_date: null,
       visit_round: null,
       total_round: null,
       progress_rate: null,
@@ -454,8 +455,7 @@ function ensureAdminFixtureReports(harness: ErpSmokeHarness) {
       report_type: 'quarterly_report',
       review: buildEmptyReview(),
       dispatch: buildEmptyDispatch({
-        deadlineDate: '2026-04-05',
-        dispatchStatus: 'warning',
+        dispatchStatus: 'none',
         recipient: 'manager@example.com',
       }),
       meta: {
@@ -484,7 +484,7 @@ function ensureAdminFixtureReports(harness: ErpSmokeHarness) {
       site_id: 'site-1',
       headquarter_id: 'hq-1',
       assigned_user_id: 'field-1',
-      visit_date: '2026-03-24',
+      visit_date: null,
       visit_round: null,
       total_round: null,
       progress_rate: null,

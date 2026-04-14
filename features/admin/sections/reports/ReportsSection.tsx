@@ -85,7 +85,7 @@ export function ReportsSection(props: ReportsSectionProps) {
         users={props.users}
       />
       <ReportsDispatchDialog
-        currentUserId={props.currentUser.id}
+        buildManualDispatchPayload={state.buildManualDispatchPayload}
         dispatchRow={state.dispatchRow}
         dispatchSite={state.dispatchSite}
         dispatchSmsMessage={state.dispatchSmsMessage}

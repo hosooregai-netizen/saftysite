@@ -27,7 +27,7 @@ export interface AnalyticsScheduleRow {
   roundNo: number;
   siteId: string;
   siteName: string;
-  status: 'planned' | 'completed' | 'canceled';
+  status: 'planned' | 'completed' | 'postponed' | 'canceled';
 }
 
 function normalizeText(value: unknown) {

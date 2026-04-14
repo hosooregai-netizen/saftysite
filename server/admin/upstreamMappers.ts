@@ -84,6 +84,9 @@ function mapBackendDispatch(row: SafetyBackendAdminReportRow) {
 export function mapBackendAdminReportRow(
   row: SafetyBackendAdminReportRow,
 ): ControllerReportRow {
+  const dispatchSignal =
+    (normalizeText(row.dispatch_signal) || normalizeText(row.dispatch_status) || '') as ControllerReportRow['dispatchStatus'];
+
   return applyControllerReportRowStatus({
     assigneeName: normalizeText(row.assignee_name),
     assigneeUserId: normalizeText(row.assignee_user_id),
@@ -91,7 +94,8 @@ export function mapBackendAdminReportRow(
     controllerReview: mapBackendReview(row),
     deadlineDate: normalizeText(row.deadline_date),
     dispatch: mapBackendDispatch(row),
-    dispatchStatus: (normalizeText(row.dispatch_status) || '') as ControllerReportRow['dispatchStatus'],
+    dispatchSignal,
+    dispatchStatus: dispatchSignal,
     headquarterId: normalizeText(row.headquarter_id),
     headquarterName: normalizeText(row.headquarter_name),
     periodLabel: normalizeText(row.period_label),
@@ -143,6 +147,7 @@ export function mapBackendSchedule(
   row: SafetyBackendInspectionSchedule,
 ): SafetyInspectionSchedule {
   return {
+    actualVisitDate: normalizeText(row.actual_visit_date),
     assigneeName: normalizeText(row.assignee_name),
     assigneeUserId: normalizeText(row.assignee_user_id),
     exceptionMemo: normalizeText(row.exception_memo),
