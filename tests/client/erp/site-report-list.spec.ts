@@ -1,6 +1,8 @@
 import type { ClientSmokePlaywrightConfig } from '../../../playwright.config';
 import { createErpSmokeHarness } from '../fixtures/erpSmokeHarness';
 
+const REPORT_KEY = 'report-tech-1';
+
 export async function runSiteReportListSmoke(config: ClientSmokePlaywrightConfig) {
   const harness = await createErpSmokeHarness('site-report-list', config);
 
@@ -20,19 +22,24 @@ export async function runSiteReportListSmoke(config: ClientSmokePlaywrightConfig
     await page.getByRole('heading', { name: /기술지도\s*보고서/ }).waitFor({ state: 'visible' });
     await page.getByRole('button', { name: '보고서 추가' }).waitFor({ state: 'visible' });
 
-    const firstRow = page.locator('article').filter({ hasText: '1차 기술지도 보고서' }).first();
+    const firstRow = page
+      .locator('article')
+      .filter({ has: page.locator(`a[href="/sessions/${REPORT_KEY}"]`) })
+      .first();
     await firstRow.waitFor({ state: 'visible' });
+
     const toggledReportTitle = (await firstRow.getByRole('link').textContent())?.trim();
-    await firstRow.locator('button[aria-haspopup="menu"]').click();
-    await page.getByRole('menu').locator('[role="menuitem"]').nth(1).click();
+    if (!toggledReportTitle) {
+      throw new Error('Unable to resolve the seeded technical guidance report title.');
+    }
+
+    await firstRow.getByRole('button', { name: `${toggledReportTitle} 작업 메뉴 열기` }).click();
+    await page.getByRole('menu').waitFor({ state: 'visible' });
+    await page.getByRole('menuitem', { name: '발송으로 변경' }).click();
     await harness.waitForRequestCount(
       'PATCH /api/reports/:id/dispatch',
       dispatchWritesBefore + 1,
     );
-
-    if (!toggledReportTitle) {
-      throw new Error('토글한 기술지도 보고서 제목을 찾지 못했습니다.');
-    }
 
     await page
       .locator('article')
