@@ -192,3 +192,10 @@ npm run verify:aidlc:push
 `verify:aidlc:push` looks at the files being pushed, resolves the required mocked smoke features,
 checks that the local app is reachable at `PLAYWRIGHT_BASE_URL` (default `http://127.0.0.1:3211`),
 and blocks the push if the smoke run fails or if a guarded surface has no smoke mapping yet.
+
+For local clones, `npm install` / `npm ci` also runs the repo `prepare` script so the same
+`.githooks` path is reinstalled automatically on each machine.
+
+For remote enforcement, GitHub Actions reruns the AIDLC verification on pull requests and pushes to
+`main`, including the push-equivalent mocked smoke path against a local app started inside CI. That
+means missing local hooks no longer bypass the repo guardrails by accident.

@@ -1,0 +1,119 @@
+name: AIDLC
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Resolve changed files
+        id: changed-files
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          PULL_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          EMPTY_TREE=4b825dc642cb6eb9a060e54bf8d69288fbee4904
+
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            BASE_SHA="$PULL_BASE_SHA"
+          else
+            BASE_SHA="$PUSH_BEFORE"
+          fi
+
+          if [ -z "${BASE_SHA:-}" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            BASE_SHA="$EMPTY_TREE"
+          fi
+
+          git diff --name-only "$BASE_SHA" "$HEAD_SHA" > changed-files.txt
+
+          {
+            echo 'files<<EOF'
+            cat changed-files.txt
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Changed files:"
+          cat changed-files.txt
+
+      - name: Run AIDLC staged-equivalent verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t files < changed-files.txt
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "No changed files detected; skipping verify:aidlc."
+            exit 0
+          fi
+          node scripts/verifyAidlc.mjs "${files[@]}"
+
+      - name: Start local app for smoke verification
+        run: |
+          set -euo pipefail
+          PORT=3211 npm run dev > /tmp/aidlc-dev.log 2>&1 &
+          echo $! > /tmp/aidlc-dev.pid
+
+      - name: Wait for local app
+        run: |
+          set -euo pipefail
+          for _ in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:3211 > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/aidlc-dev.log
+          exit 1
+
+      - name: Run AIDLC push-equivalent smoke verification
+        shell: bash
+        env:
+          PLAYWRIGHT_BASE_URL: http://127.0.0.1:3211
+        run: |
+          set -euo pipefail
+          mapfile -t files < changed-files.txt
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "No changed files detected; skipping verify:aidlc:push."
+            exit 0
+          fi
+          node scripts/verifyAidlcPush.mjs "${files[@]}"
+
+      - name: Print app log on failure
+        if: failure()
+        run: |
+          if [ -f /tmp/aidlc-dev.log ]; then
+            cat /tmp/aidlc-dev.log
+          fi
+
+      - name: Stop local app
+        if: always()
+        run: |
+          if [ -f /tmp/aidlc-dev.pid ]; then
+            kill "$(cat /tmp/aidlc-dev.pid)" || true
+          fi
