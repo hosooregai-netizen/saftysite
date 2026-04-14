@@ -187,6 +187,20 @@ def parse_report_popup(html: str) -> dict[str, Any]:
     round_match = re.search(r"\(\s*(\d+)\s*\)\s*회차\s*/\s*총\s*\(\s*(\d+)\s*\)", rounds)
     manager = pairs.get("연락처 (이메일)", "")
     manager_match = re.match(r"([0-9-]+)\s*\(([^)]+)\)", manager)
+    photo_urls = []
+    for image in soup.select("img[src]"):
+        source = normalize_text(image.get("src"))
+        if not source:
+            continue
+        lowered = source.lower()
+        if (
+            "loading.gif" in lowered
+            or "/images/common/check_" in lowered
+            or "/sign/" in lowered
+        ):
+            continue
+        if source not in photo_urls:
+            photo_urls.append(source)
     return {
         "site_name": pairs.get("현장명", "") or normalize_text(re.search(r"현장명\s+(.+?)\s+사업장관리번호", text).group(1) if re.search(r"현장명\s+(.+?)\s+사업장관리번호", text) else ""),
         "headquarter_name": pairs.get("회사명", "") or normalize_text(re.search(r"회사명\s+(.+?)\s+법인등록번호", text).group(1) if re.search(r"회사명\s+(.+?)\s+법인등록번호", text) else ""),
@@ -200,4 +214,5 @@ def parse_report_popup(html: str) -> dict[str, Any]:
         "manager_phone": manager_match.group(1) if manager_match else normalize_text(re.search(r"연락처\s*\(이메일\)\s+([0-9-]+)", text).group(1) if re.search(r"연락처\s*\(이메일\)\s+([0-9-]+)", text) else manager),
         "manager_email": manager_match.group(2) if manager_match else normalize_text(re.search(r"연락처\s*\(이메일\)\s+[0-9-]+\s+\(([^)]+)\)", text).group(1) if re.search(r"연락처\s*\(이메일\)\s+[0-9-]+\s+\(([^)]+)\)", text) else ""),
         "site_address": pairs.get("주소", "") or normalize_text(re.search(r"주소\s+(.+?)\s+본사", text).group(1) if re.search(r"주소\s+(.+?)\s+본사", text) else ""),
+        "photo_urls": photo_urls,
     }

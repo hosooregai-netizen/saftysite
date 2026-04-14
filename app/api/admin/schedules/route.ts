@@ -63,7 +63,7 @@ export async function GET(request: Request): Promise<Response> {
   try {
     const token = readRequiredAdminToken(request);
     const url = new URL(request.url);
-    const limit = Math.max(1, Math.min(300, Number(url.searchParams.get('limit') || '200')));
+    const limit = Math.max(1, Math.min(5000, Number(url.searchParams.get('limit') || '1000')));
     const offset = Math.max(0, Number(url.searchParams.get('offset') || '0'));
     const month = url.searchParams.get('month') || '';
     const sortBy = url.searchParams.get('sort_by') || 'plannedDate';

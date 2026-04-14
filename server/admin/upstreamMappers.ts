@@ -84,6 +84,8 @@ function mapBackendDispatch(row: SafetyBackendAdminReportRow) {
 export function mapBackendAdminReportRow(
   row: SafetyBackendAdminReportRow,
 ): ControllerReportRow {
+  const reportKey = normalizeText(row.report_key);
+  const isLegacyImportedReport = reportKey.startsWith('legacy:');
   const dispatchSignal =
     (normalizeText(row.dispatch_signal) || normalizeText(row.dispatch_status) || '') as ControllerReportRow['dispatchStatus'];
 
@@ -104,7 +106,11 @@ export function mapBackendAdminReportRow(
         ? row.progress_rate
         : null,
     qualityStatus: (normalizeText(row.quality_status) || 'unchecked') as ControllerReportRow['qualityStatus'],
-    reportKey: normalizeText(row.report_key),
+    originalPdfAvailable: isLegacyImportedReport,
+    originalPdfDownloadPath: isLegacyImportedReport
+      ? `/api/admin/reports/${encodeURIComponent(reportKey)}/original-pdf`
+      : '',
+    reportKey,
     reportMonth: normalizeText(row.report_month),
     reportTitle: normalizeText(row.report_title),
     reportType: (normalizeText(row.report_type) || 'technical_guidance') as ControllerReportRow['reportType'],

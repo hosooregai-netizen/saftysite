@@ -29,8 +29,6 @@ interface SchedulesSectionProps {
 
 interface ScheduleFormState {
   assigneeUserId: string;
-  exceptionMemo: string;
-  exceptionReasonCode: string;
   plannedDate: string;
   selectionReasonLabel: string;
   selectionReasonMemo: string;
@@ -39,8 +37,6 @@ interface ScheduleFormState {
 
 const EMPTY_FORM: ScheduleFormState = {
   assigneeUserId: '',
-  exceptionMemo: '',
-  exceptionReasonCode: '',
   plannedDate: '',
   selectionReasonLabel: '',
   selectionReasonMemo: '',
@@ -104,8 +100,6 @@ function buildInitialForm(
   }
   return {
     assigneeUserId: schedule.assigneeUserId,
-    exceptionMemo: schedule.exceptionMemo,
-    exceptionReasonCode: schedule.exceptionReasonCode,
     plannedDate: plannedDate || schedule.plannedDate || schedule.windowStart,
     selectionReasonLabel: schedule.selectionReasonLabel,
     selectionReasonMemo: schedule.selectionReasonMemo,
@@ -162,6 +156,8 @@ export function SchedulesSection({
     direction: 'asc',
     key: 'plannedDate',
   });
+  const [allMonthTotal, setAllMonthTotal] = useState(0);
+  const [currentMonthTotal, setCurrentMonthTotal] = useState(0);
   const [rows, setRows] = useState<SafetyInspectionSchedule[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -172,6 +168,17 @@ export function SchedulesSection({
   const [form, setForm] = useState<ScheduleFormState>(EMPTY_FORM);
   const defaultMonth = getMonthToken();
 
+  const buildScheduleQuery = (monthToken: string) => ({
+    assigneeUserId: scope === 'mine' ? currentUser.id : assigneeUserId,
+    limit: 5000,
+    month: monthToken,
+    query,
+    siteId,
+    sortBy: sort.key,
+    sortDir: sort.direction,
+    status,
+  });
+
   useEffect(() => {
     let cancelled = false;
 
@@ -179,17 +186,19 @@ export function SchedulesSection({
       try {
         setLoading(true);
         setError(null);
-        const response = await fetchAdminSchedules({
-          assigneeUserId: scope === 'mine' ? currentUser.id : assigneeUserId,
-          month,
-          sortBy: sort.key,
-          sortDir: sort.direction,
-          query,
-          siteId,
-          status,
-        });
+        const [response, allMonthResponse] = await Promise.all([
+          fetchAdminSchedules(buildScheduleQuery(month)),
+          fetchAdminSchedules({
+            ...buildScheduleQuery('all'),
+            limit: 1,
+            sortBy: 'plannedDate',
+            sortDir: 'asc',
+          }),
+        ]);
         if (!cancelled) {
           setRows(response.rows);
+          setCurrentMonthTotal(response.total);
+          setAllMonthTotal(allMonthResponse.total);
         }
       } catch (nextError) {
         if (!cancelled) {
@@ -257,17 +266,14 @@ export function SchedulesSection({
       ),
     [activeScheduleId, form.plannedDate, selectedRows],
   );
-  const requiresExceptionReason = Boolean(
-    activeSchedule &&
-    form.plannedDate &&
-    !isDateWithinWindow(form.plannedDate, activeSchedule.windowStart, activeSchedule.windowEnd),
-  );
   const activeSiteDetailHref = activeSchedule
     ? getAdminSectionHref('headquarters', {
         headquarterId: activeSchedule.headquarterId,
         siteId: activeSchedule.siteId,
       })
     : '';
+  const otherMonthCount = Math.max(0, allMonthTotal - currentMonthTotal);
+  const showOtherMonthHint = !loading && currentMonthTotal === 0 && otherMonthCount > 0;
 
   useEffect(() => {
     if (!dialogOpen || activeScheduleId || dialogSelectableRows.length === 0) return;
@@ -279,17 +285,19 @@ export function SchedulesSection({
     }));
   }, [activeScheduleId, dialogOpen, dialogSelectableRows]);
 
-  const refreshRows = async () => {
-    const response = await fetchAdminSchedules({
-      assigneeUserId: scope === 'mine' ? currentUser.id : assigneeUserId,
-      month,
-      query,
-      siteId,
-      sortBy: sort.key,
-      sortDir: sort.direction,
-      status,
-    });
+  const refreshRows = async (nextMonth = month) => {
+    const [response, allMonthResponse] = await Promise.all([
+      fetchAdminSchedules(buildScheduleQuery(nextMonth)),
+      fetchAdminSchedules({
+        ...buildScheduleQuery('all'),
+        limit: 1,
+        sortBy: 'plannedDate',
+        sortDir: 'asc',
+      }),
+    ]);
     setRows(response.rows);
+    setCurrentMonthTotal(response.total);
+    setAllMonthTotal(allMonthResponse.total);
   };
 
   const openScheduleDialog = (input: {
@@ -336,27 +344,22 @@ export function SchedulesSection({
       setError('사유 분류와 상세 메모를 함께 입력해 주세요.');
       return;
     }
-    if (
-      requiresExceptionReason &&
-      (!form.exceptionReasonCode.trim() || !form.exceptionMemo.trim())
-    ) {
-      setError('허용 구간 밖 일정은 사유코드와 메모를 함께 입력해 주세요.');
-      return;
-    }
 
     try {
       setError(null);
+      const nextMonth = form.plannedDate.slice(0, 7) || month;
       await updateAdminSchedule(activeSchedule.id, {
         assigneeUserId: form.assigneeUserId,
-        exceptionMemo: form.exceptionMemo,
-        exceptionReasonCode: form.exceptionReasonCode,
+        exceptionMemo: '',
+        exceptionReasonCode: '',
         plannedDate: form.plannedDate,
         selectionReasonLabel: form.selectionReasonLabel,
         selectionReasonMemo: form.selectionReasonMemo,
         status: form.status,
       });
 
-      await refreshRows();
+      await refreshRows(nextMonth);
+      setMonth(nextMonth);
       setSelectedDate(form.plannedDate);
       setNotice('일정을 저장했습니다.');
       closeDialog();
@@ -382,10 +385,14 @@ export function SchedulesSection({
 
     try {
       setError(null);
+      const nextMonth = targetDate.slice(0, 7) || month;
       await updateAdminSchedule(schedule.id, {
+        exceptionMemo: '',
+        exceptionReasonCode: '',
         plannedDate: targetDate,
       });
-      await refreshRows();
+      await refreshRows(nextMonth);
+      setMonth(nextMonth);
       setSelectedDate(targetDate);
       setNotice(`${schedule.siteName} ${schedule.roundNo}회차 방문일을 ${targetDate}로 변경했습니다.`);
     } catch (nextError) {
@@ -552,6 +559,11 @@ export function SchedulesSection({
         <div className={styles.sectionBody}>
           {error ? <div className={styles.bannerError}>{error}</div> : null}
           {notice ? <div className={styles.bannerNotice}>{notice}</div> : null}
+          {showOtherMonthHint ? (
+            <div className={styles.bannerNotice}>
+              현재 선택한 {month}에는 일정이 없고, 같은 필터 기준 다른 월에 {otherMonthCount}건이 있습니다.
+            </div>
+          ) : null}
 
           <div className={styles.calendarGrid}>
             {Array.from({ length: calendar.leadingEmptyCount }).map((_, index) => (
@@ -749,7 +761,7 @@ export function SchedulesSection({
           </div>
           <div className={styles.sectionHeaderActions}>
             <span className={styles.sectionHeaderMeta}>
-              {loading ? '불러오는 중' : `${visibleRows.length}건`}
+              {loading ? '불러오는 중' : `${currentMonthTotal.toLocaleString('ko-KR')}건 / 전체 ${allMonthTotal.toLocaleString('ko-KR')}건`}
             </span>
           </div>
         </div>
@@ -871,9 +883,7 @@ export function SchedulesSection({
                 !activeSchedule ||
                 !form.plannedDate ||
                 !form.selectionReasonLabel.trim() ||
-                !form.selectionReasonMemo.trim() ||
-                (requiresExceptionReason &&
-                  (!form.exceptionReasonCode.trim() || !form.exceptionMemo.trim()))
+                !form.selectionReasonMemo.trim()
               }
             >
               저장
@@ -940,7 +950,7 @@ export function SchedulesSection({
               type="date"
               value={form.plannedDate}
               min={activeSchedule?.windowStart || undefined}
-              max={activeSchedule && !requiresExceptionReason ? activeSchedule.windowEnd : undefined}
+              max={undefined}
               onChange={(event) =>
                 setForm((current) => ({
                   ...current,
@@ -1081,38 +1091,11 @@ export function SchedulesSection({
               placeholder="방문 일정을 이 날짜로 확정한 이유를 자세히 기록합니다."
             />
           </label>
-          <label className={styles.modalField}>
-            <span className={styles.label}>예외 사유코드</span>
-            <input
-              className="app-input"
-              value={form.exceptionReasonCode}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, exceptionReasonCode: event.target.value }))
-              }
-              placeholder="예: holiday, customer_request"
-            />
-          </label>
-          <label className={styles.modalField}>
-            <span className={styles.label}>예외 메모</span>
-            <textarea
-              className="app-textarea"
-              rows={3}
-              value={form.exceptionMemo}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, exceptionMemo: event.target.value }))
-              }
-            />
-          </label>
           {activeSchedule ? (
             <div className={styles.modalFieldWide}>
               <div className={styles.modalHint}>
                 허용 구간: {activeSchedule.windowStart} ~ {activeSchedule.windowEnd}
               </div>
-              {requiresExceptionReason ? (
-                <div className={styles.modalHintStrong}>
-                  현재 날짜는 허용 구간 밖입니다. 예외 사유코드와 메모를 함께 입력해야 저장됩니다.
-                </div>
-              ) : null}
             </div>
           ) : null}
         </div>

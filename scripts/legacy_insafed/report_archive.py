@@ -103,8 +103,11 @@ def export_report_archive(
             "manager_phone": popup.get("manager_phone") or row.get("su_manager_hp"),
             "manager_email": popup.get("manager_email") or row.get("su_manager_email"),
             "assigned_worker_name": popup.get("assigned_worker_name"),
+            "photo_urls": popup.get("photo_urls") or [],
             "pdf_filename": pdf_name,
             "archive_status": archive_status,
+            "pdf_exists": pdf_path.exists() and pdf_path.stat().st_size > 0,
+            "pdf_size_bytes": pdf_path.stat().st_size if pdf_path.exists() else 0,
             "new_site_id": None,
         }
 

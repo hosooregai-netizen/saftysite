@@ -351,6 +351,7 @@ export function buildAdminSchedules(
   today = new Date(),
 ) {
   const schedules = buildBaseScheduleRows(data, today);
+  const includeAllMonths = options?.month === 'all';
   const monthWindow = getMonthWindow(options?.month || '', today);
   const normalizedQuery = normalizeText(options?.query).toLowerCase();
 
@@ -360,7 +361,7 @@ export function buildAdminSchedules(
       if (options?.assigneeUserId && row.assigneeUserId !== options.assigneeUserId) return false;
       if (options?.plannedDate && row.plannedDate !== options.plannedDate) return false;
       if (options?.status && row.status !== options.status) return false;
-      if (row.plannedDate) {
+      if (!includeAllMonths && row.plannedDate) {
         if (row.plannedDate < formatDateValue(monthWindow.start)) return false;
         if (row.plannedDate > formatDateValue(monthWindow.end)) return false;
       }

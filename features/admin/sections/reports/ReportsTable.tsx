@@ -204,6 +204,14 @@ export function ReportsTable({
                                   },
                                 ]
                               : []),
+                            ...(row.originalPdfAvailable && row.originalPdfDownloadPath
+                              ? [
+                                  {
+                                    label: '원본 PDF 다운로드',
+                                    href: row.originalPdfDownloadPath,
+                                  },
+                                ]
+                              : []),
                             {
                               label: '검토 체크',
                               onSelect: () => onOpenReviewModal(row),

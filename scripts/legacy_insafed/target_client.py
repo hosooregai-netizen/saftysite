@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import time
 from typing import Any
 from urllib.parse import urljoin
@@ -19,6 +20,7 @@ class TargetErpClient:
         self.session = requests.Session()
         self.session.headers.update({"Authorization": f"Bearer {token}"})
         self.uses_direct_upstream = self.base_url.rstrip("/").endswith("/api/v1")
+        self.progress_logging = os.environ.get("LEGACY_IMPORT_PROGRESS") == "1"
 
     def _resolve_path(self, path: str) -> str:
         normalized = "/" + path.lstrip("/")
@@ -64,7 +66,7 @@ class TargetErpClient:
         path: str,
         params: dict[str, Any] | None = None,
         *,
-        limit: int = 200,
+        limit: int = 500,
     ) -> list[dict[str, Any]]:
         rows: list[dict[str, Any]] = []
         offset = 0
@@ -77,6 +79,16 @@ class TargetErpClient:
             if not isinstance(page, list):
                 raise TargetErpError(f"Expected list response for {path}")
             rows.extend(page)
+            if self.progress_logging:
+                print(
+                    {
+                        "path": path,
+                        "fetched": len(rows),
+                        "page_size": len(page),
+                        "offset": offset,
+                    },
+                    flush=True,
+                )
             if len(page) < limit:
                 return rows
             offset += len(page)
@@ -88,7 +100,7 @@ class TargetErpClient:
         return self.fetch_all(
             "/api/safety/sites",
             {"include_headquarter_detail": "true", "include_assigned_user": "true"},
-            limit=100,
+            limit=500,
         )
 
     def fetch_users(self) -> list[dict[str, Any]]:

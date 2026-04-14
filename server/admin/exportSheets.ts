@@ -180,7 +180,7 @@ export async function buildAdminServerExportSheets(
         token,
         {
           assignee_user_id: asText(filters.assignee_user_id),
-          limit: 1000,
+          limit: 5000,
           month: asText(filters.month),
           offset: 0,
           planned_date: asText(filters.planned_date),
@@ -208,13 +208,9 @@ export async function buildAdminServerExportSheets(
           { key: 'selectionReason', label: '선택 사유' },
           { key: 'selectionConfirmed', label: '선택 확정' },
           { key: 'issues', label: '이슈' },
-          { key: 'exceptionReasonCode', label: '사유코드' },
-          { key: 'exceptionMemo', label: '사유 메모' },
         ],
         rows: rows.map((row) => ({
           assigneeName: row.assigneeName || '-',
-          exceptionMemo: row.exceptionMemo || '',
-          exceptionReasonCode: row.exceptionReasonCode || '',
           headquarterName: row.headquarterName || '-',
           issues: formatScheduleIssues(row) || '-',
           plannedDate: row.plannedDate || '-',

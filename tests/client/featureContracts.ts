@@ -57,7 +57,7 @@ export const FEATURE_CONTRACTS: Record<FeatureContractId, FeatureContract> = {
   'admin-sites': {
     id: 'admin-sites',
     description:
-      '사업장 목록, 현장 목록, 현장 메인이 등록 정보 편집, 점검자 기준 배정, K2B 회차 데이터 반영 동선을 유지하며 현장 목록은 페이지네이션과 핵심 컬럼만 노출하고, 관제 일정 보드는 계약일 기준 자동 회차/드래그 이동/현장 상세 진입 흐름을 유지한다.',
+      '사업장 목록, 현장 목록, 현장 메인이 등록 정보 편집, 점검자 기준 배정, K2B 회차 데이터 반영 동선을 유지하며 현장 목록은 페이지네이션과 핵심 컬럼만 노출하고, 관제 일정 보드는 계약일 기준 자동 회차/드래그 이동/현장 상세 진입, 선택 사유 저장, 현재 월 기본 캘린더 힌트 흐름을 유지한다.',
     routes: [
       '/admin?section=headquarters',
       '/admin?section=headquarters&headquarterId=hq-1',
@@ -65,7 +65,7 @@ export const FEATURE_CONTRACTS: Record<FeatureContractId, FeatureContract> = {
     ],
     markers: ['사업장 목록', '사업장 추가', '사업장 수정', '현장 목록', '현장 메인', '현장 정보 수정', '지도요원 배정'],
     apis: ['GET /headquarters', 'POST /headquarters', 'PATCH /headquarters/:id', 'GET /sites', 'POST /sites', 'PATCH /sites/:id'],
-    criticalActions: ['사업장 목록 핵심 컬럼 확인', '현장 목록 페이지 이동', '사업장 생성/수정', '현장 생성/수정', '현장 메인 진입', '현장 메인 quick edit', '지도요원 배정 modal 진입', 'K2B 회차 데이터 반영', '관제 일정 상세 modal 진입', '관제 일정 드래그 이동'],
+    criticalActions: ['사업장 목록 핵심 컬럼 확인', '현장 목록 페이지 이동', '사업장 생성/수정', '현장 생성/수정', '현장 메인 진입', '현장 메인 quick edit', '지도요원 배정 modal 진입', 'K2B 회차 데이터 반영', '관제 일정 상세 modal 진입', '관제 일정 드래그 이동', '현재 월 외 일정 힌트 확인'],
   },
   auth: {
     id: 'auth',

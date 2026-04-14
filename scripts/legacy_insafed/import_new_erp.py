@@ -44,6 +44,16 @@ def normalize_identifier(value: object) -> str:
     return re.sub(r"[^0-9A-Za-z가-힣]+", "", normalize_text(value)).lower()
 
 
+def normalize_site_code_value(value: object) -> str:
+    normalized = normalize_text(value)
+    if not normalized:
+        return ""
+    digits_only = re.sub(r"[^0-9]", "", normalized)
+    if digits_only and set(digits_only) == {"0"}:
+        return ""
+    return normalized
+
+
 def find_headquarter_match(rows: list[dict[str, object]], record: dict[str, object]) -> dict[str, object] | None:
     matched = find_by_memo(rows, LEGACY_HEADQUARTER_TAG, str(record["legacy_headquarter_id"]))
     if matched:
@@ -62,7 +72,7 @@ def find_site_match(rows: list[dict[str, object]], record: dict[str, object], he
     if matched:
         return matched
     management_number = normalize_identifier(record.get("management_number"))
-    site_code = normalize_identifier(record.get("opening_number"))
+    site_code = normalize_identifier(normalize_site_code_value(record.get("opening_number")))
     for row in rows:
         if str(row.get("headquarter_id")) != headquarter_id:
             continue
@@ -531,6 +541,12 @@ def main() -> None:
     client = TargetErpClient(args.target_base_url, args.target_token)
     legacy_headquarters = read_jsonl(export_root / "headquarters.jsonl")
     legacy_sites = read_jsonl(export_root / "sites.jsonl")
+    opening_number_counts: dict[str, int] = {}
+    for legacy_site in legacy_sites:
+        normalized_opening_number = normalize_site_code_value(legacy_site.get("opening_number"))
+        if not normalized_opening_number:
+            continue
+        opening_number_counts[normalized_opening_number] = opening_number_counts.get(normalized_opening_number, 0) + 1
     legacy_inspectors = read_jsonl(export_root / "admin" / "inspectors.jsonl")
     report_metadata = read_jsonl(export_root / "reports" / "metadata.jsonl")
     headquarters = client.fetch_headquarters()
@@ -628,6 +644,9 @@ def main() -> None:
             build_site_payload(record, headquarter_id, normalize_text(existing.get("memo") if existing else "")),
             args.update_missing_only,
         )
+        normalized_opening_number = normalize_site_code_value(record.get("opening_number"))
+        if not normalized_opening_number or opening_number_counts.get(normalized_opening_number, 0) > 1:
+            payload["site_code"] = existing.get("site_code") if existing and has_meaningful_value(existing.get("site_code")) else None
         try:
             if existing and not payload_differs(existing, payload):
                 site = existing

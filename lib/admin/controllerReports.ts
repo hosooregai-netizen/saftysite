@@ -150,6 +150,10 @@ function getRouteParam(type: ControllerReportType, reportKey: string, meta: Reco
   return reportKey;
 }
 
+function getMetaText(meta: Record<string, unknown>, key: string) {
+  return normalizeMapperText(meta[key]);
+}
+
 export function buildControllerReportRows(
   reports: SafetyReportListItem[],
   sites: SafetySite[],
@@ -176,6 +180,11 @@ export function buildControllerReportRows(
     const headquarterName = getHeadquarterName(site);
     const periodLabel = getPeriodLabel(type, meta);
     const routeParam = getRouteParam(type, report.report_key, meta);
+    const originalPdfDownloadPath =
+      getMetaText(meta, 'original_pdf_download_path') ||
+      (report.report_key.startsWith('legacy:')
+        ? `/api/admin/reports/${encodeURIComponent(report.report_key)}/original-pdf`
+        : '');
     const effectiveDispatch: Pick<ControllerReportRow, 'deadlineDate' | 'dispatchStatus'> =
       type === 'quarterly_report'
         ? resolveQuarterlyDispatchState(
@@ -214,6 +223,11 @@ export function buildControllerReportRows(
       periodLabel,
       progressRate: typeof report.progress_rate === 'number' ? report.progress_rate : null,
       reportMonth: normalizeMapperText(meta.reportMonth),
+      originalPdfAvailable:
+        Boolean(getMetaText(meta, 'original_pdf_filename')) ||
+        Boolean(getMetaText(meta, 'original_pdf_archive_path')) ||
+        Boolean(originalPdfDownloadPath),
+      originalPdfDownloadPath,
       reportTitle: normalizeMapperText(report.report_title),
       routeParam,
       sortLabel:

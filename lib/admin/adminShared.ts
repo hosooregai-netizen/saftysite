@@ -279,7 +279,7 @@ export function parseOptionalNumber(value: string): number | null {
 
 export function formatCurrencyValue(value: number | null | undefined): string {
   if (typeof value !== 'number' || Number.isNaN(value)) return '-';
-  return `${value.toLocaleString('ko-KR')}원`;
+  return `${Math.round(value).toLocaleString('ko-KR')}원`;
 }
 
 export const SITE_CONTRACT_TYPE_OPTIONS: Array<{

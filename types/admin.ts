@@ -128,6 +128,8 @@ export interface ControllerReportRow {
   periodLabel: string;
   progressRate: number | null;
   reportMonth: string;
+  originalPdfAvailable?: boolean;
+  originalPdfDownloadPath?: string;
   reportTitle: string;
   routeParam: string;
   sortLabel: string;

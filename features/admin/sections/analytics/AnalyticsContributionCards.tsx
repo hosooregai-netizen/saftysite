@@ -8,9 +8,10 @@ import type {
 import styles from './AnalyticsCharts.module.css';
 
 function formatCompactCurrency(value: number) {
-  if (value >= 100_000_000) return `${(value / 100_000_000).toFixed(value >= 1_000_000_000 ? 0 : 1)}억`;
-  if (value >= 10_000) return `${(value / 10_000).toFixed(value >= 1_000_000 ? 0 : 1)}만`;
-  return value.toLocaleString('ko-KR');
+  const rounded = Math.round(value);
+  if (rounded >= 100_000_000) return `${Math.round(rounded / 100_000_000).toLocaleString('ko-KR')}억`;
+  if (rounded >= 10_000) return `${Math.round(rounded / 10_000).toLocaleString('ko-KR')}만`;
+  return rounded.toLocaleString('ko-KR');
 }
 
 function formatDelta(value: number | null) {
