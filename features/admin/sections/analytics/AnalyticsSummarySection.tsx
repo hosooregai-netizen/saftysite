@@ -23,17 +23,51 @@ interface AnalyticsSummarySectionProps {
       value: string;
     }>;
   };
+  isInitialLoading: boolean;
   isLoading: boolean;
+  isRefreshing: boolean;
   loadError: string | null;
   scopeChips: Array<{ label: string; value: string }>;
 }
 
 export function AnalyticsSummarySection({
   analytics,
+  isInitialLoading,
   isLoading,
+  isRefreshing,
   loadError,
   scopeChips,
 }: AnalyticsSummarySectionProps) {
+  if (isInitialLoading) {
+    return (
+      <div className={`${sharedStyles.sectionBody} ${localStyles.summaryBody}`}>
+        <div className={localStyles.scopeBar}>
+          {scopeChips.map((chip) => (
+            <div key={`${chip.label}-${chip.value}`} className={`${localStyles.scopeChip} ${localStyles.scopeChipSkeleton}`} />
+          ))}
+        </div>
+        <div className={localStyles.kpiGrid}>
+          {Array.from({ length: 5 }, (_, index) => (
+            <article key={`analytics-kpi-skeleton-${index + 1}`} className={localStyles.kpiCard}>
+              <span className={`${localStyles.skeletonBlock} ${localStyles.skeletonLabel}`} />
+              <span className={`${localStyles.skeletonBlock} ${localStyles.skeletonValue}`} />
+              <span className={`${localStyles.skeletonBlock} ${localStyles.skeletonMeta}`} />
+            </article>
+          ))}
+        </div>
+        <div className={localStyles.supportStrip}>
+          {Array.from({ length: 5 }, (_, index) => (
+            <div key={`analytics-support-skeleton-${index + 1}`} className={localStyles.supportItem}>
+              <span className={`${localStyles.skeletonBlock} ${localStyles.skeletonLabel}`} />
+              <span className={`${localStyles.skeletonBlock} ${localStyles.skeletonMeta}`} />
+            </div>
+          ))}
+        </div>
+        <div className={localStyles.loadingHint}>실적/매출 데이터를 준비하는 중입니다.</div>
+      </div>
+    );
+  }
+
   return (
     <div className={`${sharedStyles.sectionBody} ${localStyles.summaryBody}`}>
       {loadError ? <div className={sharedStyles.tableEmpty}>{loadError}</div> : null}
@@ -86,7 +120,8 @@ export function AnalyticsSummarySection({
           <span className={localStyles.supportMeta}>제외 {analytics.stats.excludedSiteCount}개</span>
         </div>
       </div>
-      {isLoading ? <div className={localStyles.loadingHint}>실적/매출 데이터를 불러오는 중입니다.</div> : null}
+      {isRefreshing ? <div className={localStyles.loadingHint}>조건 변경을 반영하는 중입니다.</div> : null}
+      {isLoading && !isRefreshing ? <div className={localStyles.loadingHint}>실적/매출 데이터를 불러오는 중입니다.</div> : null}
     </div>
   );
 }

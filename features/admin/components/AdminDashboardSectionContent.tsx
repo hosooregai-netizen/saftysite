@@ -114,7 +114,13 @@ export function AdminDashboardSectionContent({
         />
       );
     case 'analytics':
-      return <AnalyticsSection data={dashboard.data} />;
+      return (
+        <AnalyticsSection
+          data={dashboard.data}
+          isReportsLoading={dashboard.isReportsLoading}
+          reportList={dashboard.reportList}
+        />
+      );
     case 'mailbox':
       return <MailboxSection reports={dashboard.reportList} sites={sites} />;
     case 'photos':

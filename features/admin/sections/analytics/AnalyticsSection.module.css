@@ -20,6 +20,10 @@
   background: #f7fafc;
 }
 
+.scopeChipSkeleton {
+  min-width: 124px;
+}
+
 .scopeChipLabel {
   font-size: var(--text-ui-sm);
   font-weight: 700;
@@ -114,6 +118,30 @@
   color: var(--erp-text-muted);
 }
 
+.skeletonBlock {
+  display: block;
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, rgba(226, 233, 241, 0.95) 0%, rgba(244, 247, 250, 0.98) 50%, rgba(226, 233, 241, 0.95) 100%);
+  background-size: 200% 100%;
+  animation: analyticsSkeletonPulse 1.4s ease-in-out infinite;
+}
+
+.skeletonLabel {
+  width: 72px;
+  height: 12px;
+}
+
+.skeletonValue {
+  width: 136px;
+  height: 28px;
+}
+
+.skeletonMeta {
+  width: 96px;
+  height: 12px;
+}
+
 .supportItem {
   display: grid;
   gap: 4px;
@@ -180,6 +208,21 @@
 
 .detailTableWrap {
   overflow-x: hidden;
+}
+
+.detailLoadingState {
+  display: grid;
+  gap: 10px;
+  min-height: 340px;
+}
+
+.detailLoadingRow {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-surface);
+  background: #fff;
 }
 
 .detailTable th,
@@ -286,6 +329,15 @@
   height: 100%;
   border-radius: inherit;
   background: linear-gradient(90deg, #1b3048 0%, #5d90cf 100%);
+}
+
+@keyframes analyticsSkeletonPulse {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
 }
 
 @media (max-width: 1279px) {

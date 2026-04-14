@@ -14,6 +14,8 @@ interface AnalyticsDetailSectionProps {
   detailView: 'employee' | 'site';
   employeeRows: AdminAnalyticsEmployeeRow[];
   employeeSort: TableSortState;
+  isInitialLoading: boolean;
+  isRefreshing: boolean;
   setDetailView: (value: 'employee' | 'site') => void;
   setEmployeeSort: (next: TableSortState) => void;
   setSiteRevenueSort: (next: TableSortState) => void;
@@ -25,6 +27,8 @@ export function AnalyticsDetailSection({
   detailView,
   employeeRows,
   employeeSort,
+  isInitialLoading,
+  isRefreshing,
   setDetailView,
   setEmployeeSort,
   setSiteRevenueSort,
@@ -56,11 +60,25 @@ export function AnalyticsDetailSection({
       </div>
 
       <div className={sharedStyles.sectionBody}>
-        {detailView === 'employee' ? (
+        {isRefreshing ? (
+          <div className={localStyles.loadingHint}>상세 표를 최신 조건으로 다시 계산하는 중입니다.</div>
+        ) : null}
+        {isInitialLoading ? (
+          <div className={localStyles.detailLoadingState}>
+            {Array.from({ length: 6 }, (_, index) => (
+              <div key={`analytics-detail-skeleton-${index + 1}`} className={localStyles.detailLoadingRow}>
+                <span className={`${localStyles.skeletonBlock} ${localStyles.skeletonLabel}`} />
+                <span className={`${localStyles.skeletonBlock} ${localStyles.skeletonMeta}`} />
+              </div>
+            ))}
+          </div>
+        ) : null}
+        {!isInitialLoading && detailView === 'employee' ? (
           <AnalyticsEmployeeTable rows={employeeRows} sort={employeeSort} setSort={setEmployeeSort} />
-        ) : (
+        ) : null}
+        {!isInitialLoading && detailView === 'site' ? (
           <AnalyticsSiteRevenueTable rows={siteRevenueRows} sort={siteRevenueSort} setSort={setSiteRevenueSort} />
-        )}
+        ) : null}
       </div>
     </section>
   );

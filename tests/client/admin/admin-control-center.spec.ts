@@ -33,11 +33,13 @@ export async function runAdminControlCenterSmoke(config: ClientSmokePlaywrightCo
     await harness.waitForRequestCount('PATCH /sites/:id', siteUpdatesBefore + 1);
 
     await page.goto(`${harness.baseURL}/admin?section=analytics`, { waitUntil: 'load' });
-    await harness.waitForRequestCount('GET /api/admin/dashboard/analytics', analyticsReadsBefore + 1);
     await page.getByText('매출/실적 집계').first().waitFor();
+    await page.getByText('집계 기준').first().waitFor();
+    await harness.waitForRequestCount('GET /api/admin/dashboard/analytics', analyticsReadsBefore + 1);
     await page.getByText('월별 매출 추이').first().waitFor();
     await page.getByRole('button', { name: '필터' }).click();
     await page.locator('#analytics-filter-period').selectOption('year');
+    await page.getByText('매출/실적 집계').first().waitFor();
     await harness.waitForRequestCount(
       'GET /api/admin/dashboard/analytics',
       analyticsReadsBefore + 2,
