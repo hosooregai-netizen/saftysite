@@ -102,11 +102,6 @@ export function SiteQuarterlyReportsScreen({
         })
       : getAdminSectionHref('headquarters');
   const backLabel = isAdminView ? '현장 메인' : '현장 메뉴';
-  const snapshot = currentSite?.adminSiteSnapshot;
-  const siteNameDisplay = currentSite?.siteName?.trim() || snapshot?.siteName?.trim() || '-';
-  const addressDisplay = snapshot?.siteAddress?.trim() || '-';
-  const periodDisplay = snapshot?.constructionPeriod?.trim() || '-';
-  const amountDisplay = snapshot?.constructionAmount?.trim() || '-';
 
   if (!isReady) {
     return <QuarterlyReportsStatePanel message="분기 종합 보고서 목록을 불러오는 중입니다." />;
@@ -130,16 +125,12 @@ export function SiteQuarterlyReportsScreen({
   return (
     <>
       <SiteQuarterlyReportsFrame
-        addressDisplay={addressDisplay}
-        amountDisplay={amountDisplay}
         backHref={backHref}
         backLabel={backLabel}
         currentSiteId={currentSite.id}
         currentUserName={currentUser?.name}
         isAdminView={isAdminView}
         menuOpen={menuOpen}
-        periodDisplay={periodDisplay}
-        siteNameDisplay={siteNameDisplay}
         onCloseMenu={() => setMenuOpen(false)}
         onLogout={logout}
         onOpenMenu={() => setMenuOpen(true)}

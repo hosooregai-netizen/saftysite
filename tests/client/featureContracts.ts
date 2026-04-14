@@ -23,6 +23,8 @@ export interface FeatureContract {
   routes: string[];
 }
 
+// ERP proof note: the desktop technical-guidance list and quarterly list screens
+// intentionally omit the top site summary cards.
 export const FEATURE_CONTRACTS: Record<FeatureContractId, FeatureContract> = {
   'admin-control-center': {
     id: 'admin-control-center',

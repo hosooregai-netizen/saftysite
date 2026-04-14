@@ -7,12 +7,9 @@ import WorkerAppHeader from '@/components/worker/WorkerAppHeader';
 import WorkerMenuSidebar from '@/components/worker/WorkerMenuSidebar';
 import WorkerShellBody from '@/components/worker/WorkerShellBody';
 import { WorkerMenuDrawer, WorkerMenuPanel } from '@/components/worker/WorkerMenu';
-import { SiteReportsSummaryBar } from '../components/SiteReportsSummaryBar';
 import styles from '../components/SiteReportsScreen.module.css';
 
 interface SiteQuarterlyReportsFrameProps {
-  addressDisplay: string;
-  amountDisplay: string;
   backHref: string;
   backLabel: string;
   children: ReactNode;
@@ -20,16 +17,12 @@ interface SiteQuarterlyReportsFrameProps {
   currentUserName?: string | null;
   isAdminView: boolean;
   menuOpen: boolean;
-  periodDisplay: string;
-  siteNameDisplay: string;
   onCloseMenu: () => void;
   onLogout: () => void;
   onOpenMenu: () => void;
 }
 
 export function SiteQuarterlyReportsFrame({
-  addressDisplay,
-  amountDisplay,
   backHref,
   backLabel,
   children,
@@ -37,8 +30,6 @@ export function SiteQuarterlyReportsFrame({
   currentUserName,
   isAdminView,
   menuOpen,
-  periodDisplay,
-  siteNameDisplay,
   onCloseMenu,
   onLogout,
   onOpenMenu,
@@ -74,12 +65,6 @@ export function SiteQuarterlyReportsFrame({
               </header>
 
               <div className={styles.pageGrid}>
-                <SiteReportsSummaryBar
-                  addressDisplay={addressDisplay}
-                  amountDisplay={amountDisplay}
-                  periodDisplay={periodDisplay}
-                  siteNameDisplay={siteNameDisplay}
-                />
                 {children}
               </div>
             </div>

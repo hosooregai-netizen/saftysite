@@ -125,6 +125,7 @@ export function SiteReportsScreen({ siteKey }: SiteReportsScreenProps) {
                   reportSortMode={reportSortMode}
                   setReportQuery={setReportQuery}
                   setReportSortMode={setReportSortMode}
+                  showSummaryBar={false}
                 />
               </div>
             </div>
