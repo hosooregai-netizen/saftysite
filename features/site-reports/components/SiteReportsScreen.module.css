@@ -143,6 +143,27 @@
   white-space: nowrap;
 }
 
+.bannerError,
+.bannerInfo {
+  margin: 16px 16px 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: var(--text-ui-sm);
+  line-height: 1.5;
+}
+
+.bannerError {
+  border: 1px solid rgba(180, 35, 24, 0.16);
+  background: #fef3f2;
+  color: #b42318;
+}
+
+.bannerInfo {
+  border: 1px solid rgba(12, 74, 110, 0.14);
+  background: #f0f9ff;
+  color: #0c4a6e;
+}
+
 .listViewport {
   overflow: hidden;
 }

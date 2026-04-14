@@ -4,24 +4,13 @@ import {
   readRequiredAdminToken,
   SafetyServerApiError,
 } from '@/server/admin/safetyApiServer';
+import {
+  getCachedAdminReportsRouteResponse,
+  setCachedAdminReportsRouteResponse,
+} from '@/server/admin/reportsRouteCache';
 import { mapBackendAdminReportsResponse } from '@/server/admin/upstreamMappers';
-import type { SafetyAdminReportsResponse } from '@/types/admin';
 
 export const runtime = 'nodejs';
-
-const REPORTS_ROUTE_CACHE_TTL_MS = 1000 * 60;
-const reportsRouteCache = new Map<
-  string,
-  {
-    payload: SafetyAdminReportsResponse;
-    savedAt: number;
-  }
->();
-
-function buildReportsRouteCacheKey(request: Request) {
-  const url = new URL(request.url);
-  return `${request.headers.get('authorization') || ''}:${url.searchParams.toString()}`;
-}
 
 export async function GET(request: Request): Promise<Response> {
   try {
@@ -32,11 +21,10 @@ export async function GET(request: Request): Promise<Response> {
     const sortBy = url.searchParams.get('sort_by') || 'updatedAt';
     const sortDir = url.searchParams.get('sort_dir') || 'desc';
     const query = (url.searchParams.get('query') || '').trim().toLowerCase();
-    const cacheKey = buildReportsRouteCacheKey(request);
-    const cached = reportsRouteCache.get(cacheKey);
+    const cached = getCachedAdminReportsRouteResponse(request);
 
-    if (cached && Date.now() - cached.savedAt < REPORTS_ROUTE_CACHE_TTL_MS) {
-      return NextResponse.json(cached.payload);
+    if (cached) {
+      return NextResponse.json(cached);
     }
 
     const response = await fetchAdminReportsViewServer(
@@ -60,10 +48,7 @@ export async function GET(request: Request): Promise<Response> {
       request,
     );
     const payload = mapBackendAdminReportsResponse(response);
-    reportsRouteCache.set(cacheKey, {
-      payload,
-      savedAt: Date.now(),
-    });
+    setCachedAdminReportsRouteResponse(request, payload);
 
     return NextResponse.json(payload);
   } catch (error) {

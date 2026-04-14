@@ -552,14 +552,14 @@ export function updateAdminReportReviewServer(
   );
 }
 
-export function updateAdminReportDispatchServer(
+export function updateReportDispatchServer(
   token: string,
   reportKey: string,
   payload: Record<string, unknown>,
   request: Request | null = null,
 ) {
   return requestSafetyAdminServer<SafetyReport>(
-    `/admin/reports/${encodeURIComponent(reportKey)}/dispatch`,
+    `/reports/${encodeURIComponent(reportKey)}/dispatch`,
     {
       method: 'PATCH',
       body: JSON.stringify(payload),
@@ -570,6 +570,15 @@ export function updateAdminReportDispatchServer(
     token,
     request,
   );
+}
+
+export function updateAdminReportDispatchServer(
+  token: string,
+  reportKey: string,
+  payload: Record<string, unknown>,
+  request: Request | null = null,
+) {
+  return updateReportDispatchServer(token, reportKey, payload, request);
 }
 
 export function appendAdminDispatchEventServer(

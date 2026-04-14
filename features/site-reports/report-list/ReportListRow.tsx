@@ -2,9 +2,9 @@
 
 import Link from 'next/link';
 import ActionMenu from '@/components/ui/ActionMenu';
+import styles from '@/features/site-reports/components/SiteReportsScreen.module.css';
 import { formatDateTime } from '@/lib/formatDateTime';
 import type { InspectionReportListItem, InspectionSite } from '@/types/inspectionSession';
-import styles from '@/features/site-reports/components/SiteReportsScreen.module.css';
 import { getReportDrafterDisplay } from './reportListHelpers';
 
 interface ReportListRowProps {
@@ -14,6 +14,7 @@ interface ReportListRowProps {
   item: InspectionReportListItem;
   onDeleteRequest: (reportKey: string) => void;
   onOpenReport: (reportKey: string, sessionHref: string) => void;
+  onToggleDispatch: (item: InspectionReportListItem) => void;
   onWarmReport: (reportKey: string, sessionHref: string) => void;
 }
 
@@ -35,12 +36,17 @@ export function ReportListRow({
   item,
   onDeleteRequest,
   onOpenReport,
+  onToggleDispatch,
   onWarmReport,
 }: ReportListRowProps) {
   const progressRate = Math.max(0, Math.min(100, item.progressRate ?? 0));
   const sessionHref = `/sessions/${item.reportKey}`;
   const menuItems = [
     { label: '열기', href: sessionHref },
+    {
+      label: item.dispatchCompleted ? '미발송으로 변경' : '발송으로 변경',
+      onSelect: () => onToggleDispatch(item),
+    },
     ...(canArchiveReports
       ? [
           {
@@ -96,7 +102,9 @@ export function ReportListRow({
       </div>
 
       <div className={`${styles.dataCell} ${styles.dispatchStatusCell}`}>
-        <span className={styles.dataValue}>{item.dispatchCompleted ? '발송완료' : '미발송'}</span>
+        <span className={styles.dataValue}>
+          {item.dispatchCompleted ? '발송완료' : '미발송'}
+        </span>
       </div>
 
       <div className={`${styles.progressCell} ${styles.progressArea}`}>

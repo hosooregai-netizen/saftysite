@@ -1,4 +1,5 @@
 import { isClosedReport } from '@/lib/admin/lifecycleStatus';
+import { normalizeReportDispatchMeta } from '@/lib/reportDispatch';
 import type {
   ControllerQualityStatus,
   ControllerReportRow,
@@ -83,20 +84,5 @@ export function filterRowsForOverviewPreset(
 }
 
 export function buildDispatchMeta(row: ControllerReportRow): ReportDispatchMeta {
-  return row.dispatch ?? {
-    dispatchStatus: '',
-    dispatchMethod: '',
-    dispatchedAt: '',
-    dispatchCheckedBy: '',
-    dispatchCheckedAt: '',
-    actualRecipient: '',
-    mailboxAccountId: '',
-    mailThreadId: '',
-    messageId: '',
-    readAt: '',
-    recipient: '',
-    replyAt: '',
-    replySummary: '',
-    sentHistory: [],
-  };
+  return normalizeReportDispatchMeta(row.dispatch);
 }

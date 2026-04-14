@@ -59,6 +59,7 @@ export function normalizeSafetyPath(pathname: string): string {
     .replace(/\/reports\/site\/[^/]+\/draft-context$/, '/reports/site/:id/draft-context')
     .replace(/\/reports\/site\/[^/]+\/full$/, '/reports/site/:id/full')
     .replace(/\/reports\/by-key\/[^/]+$/, '/reports/by-key/:id')
+    .replace(/\/reports\/[^/]+\/dispatch$/, '/reports/:id/dispatch')
     .replace(/\/reports\/[^/]+\/status$/, '/reports/:id/status')
     .replace(/\/reports\/[^/]+$/, '/reports/:id')
     .replace(/\/sites\/[^/]+\/dashboard$/, '/sites/:id/dashboard')
@@ -81,6 +82,18 @@ export function extractMockedSafetyPath(pathname: string): string {
   return pathname;
 }
 
+function isDispatchCompleted(dispatch: unknown) {
+  if (!dispatch || typeof dispatch !== 'object') {
+    return false;
+  }
+
+  const record = dispatch as Record<string, unknown>;
+  const status = String(
+    record.dispatch_status ?? record.dispatchStatus ?? '',
+  ).trim();
+  return status === 'sent' || status === 'manual_checked';
+}
+
 export function toReportListItem(report: JsonRecord) {
   return {
     id: report.id,
@@ -101,8 +114,12 @@ export function toReportListItem(report: JsonRecord) {
     submitted_at: report.submitted_at ?? null,
     published_at: report.published_at ?? null,
     last_autosaved_at: report.last_autosaved_at ?? null,
+    dispatch_completed: isDispatchCompleted(report.dispatch),
     document_kind: report.meta?.documentKind ?? null,
+    dispatch: report.dispatch ?? null,
     meta: report.meta ?? {},
+    report_type: report.report_type ?? null,
+    review: report.review ?? null,
     created_at: report.created_at,
     updated_at: report.updated_at,
   };

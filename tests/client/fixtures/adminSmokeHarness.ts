@@ -407,12 +407,16 @@ async function installAdminRoutes(harness: ErpSmokeHarness) {
       updateReportState(harness, reportKey, (current, meta) => ({
         ...current,
         review,
+        updated_at: NOW,
         meta: {
           ...meta,
           controllerReview: review,
         },
       }));
-      await fulfillJson(route, { ok: true });
+      await fulfillJson(
+        route,
+        clone(harness.state.reports.find((report) => String(report.report_key) === reportKey)),
+      );
       return;
     }
 
@@ -422,12 +426,20 @@ async function installAdminRoutes(harness: ErpSmokeHarness) {
       updateReportState(harness, reportKey, (current, meta) => ({
         ...current,
         dispatch,
+        dispatch_completed:
+          String(dispatch.dispatch_status ?? dispatch.dispatchStatus ?? '').trim() === 'sent' ||
+          String(dispatch.dispatch_status ?? dispatch.dispatchStatus ?? '').trim() ===
+            'manual_checked',
+        updated_at: NOW,
         meta: {
           ...meta,
           dispatch,
         },
       }));
-      await fulfillJson(route, { ok: true });
+      await fulfillJson(
+        route,
+        clone(harness.state.reports.find((report) => String(report.report_key) === reportKey)),
+      );
       return;
     }
 

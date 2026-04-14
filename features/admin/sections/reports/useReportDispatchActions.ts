@@ -6,8 +6,13 @@ import {
   updateAdminReportReview,
 } from '@/lib/admin/apiClient';
 import { fetchSmsProviderStatuses, sendSms } from '@/lib/messages/apiClient';
+import { buildToggledReportDispatch } from '@/lib/reportDispatch';
 import { buildDispatchMeta } from './reportsSectionFilters';
-import type { ControllerQualityStatus, ControllerReportRow, ReportDispatchMeta } from '@/types/admin';
+import type {
+  ControllerQualityStatus,
+  ControllerReportRow,
+  ReportDispatchMeta,
+} from '@/types/admin';
 import type { SafetySite, SafetyUser } from '@/types/backend';
 import type { ReportReviewForm } from './reportsSectionTypes';
 import type { SmsProviderStatus } from '@/types/messages';
@@ -27,31 +32,6 @@ interface UseReportDispatchActionsInput {
   setNotice: (value: string | null) => void;
   setReviewRow: (value: ControllerReportRow | null) => void;
   sites: SafetySite[];
-}
-
-function buildManualCheckedDispatch(
-  currentDispatch: ReportDispatchMeta,
-  currentUserId: string,
-  memo: string,
-): ReportDispatchMeta {
-  const now = new Date().toISOString();
-
-  return {
-    ...currentDispatch,
-    dispatchMethod: currentDispatch.dispatchMethod || 'manual',
-    dispatchStatus: currentDispatch.dispatchStatus === 'sent' ? 'sent' : 'manual_checked',
-    dispatchCheckedBy: currentUserId,
-    dispatchCheckedAt: now,
-    sentHistory: [
-      ...currentDispatch.sentHistory,
-      {
-        id: now,
-        memo,
-        sentAt: now,
-        sentByUserId: currentUserId,
-      },
-    ],
-  };
 }
 
 export function useReportDispatchActions({
@@ -81,7 +61,7 @@ export function useReportDispatchActions({
         ownerUserId: reviewForm.ownerUserId,
         qualityStatus: reviewForm.qualityStatus,
       });
-      setNotice('보고서 품질 체크를 저장했습니다.');
+      setNotice('보고서 검토 체크를 저장했습니다.');
       setReviewRow(null);
       await fetchRows();
     } catch (nextError) {
@@ -151,7 +131,8 @@ export function useReportDispatchActions({
               checkedAt: new Date().toISOString(),
               checkerUserId: currentUser.id,
               note: row.controllerReview?.note || '',
-              ownerUserId: row.controllerReview?.ownerUserId || row.assigneeUserId || currentUser.id,
+              ownerUserId:
+                row.controllerReview?.ownerUserId || row.assigneeUserId || currentUser.id,
               qualityStatus,
             }),
           ),
@@ -189,12 +170,38 @@ export function useReportDispatchActions({
 
   const buildManualDispatchPayload = useCallback(
     (row: ControllerReportRow) =>
-      buildManualCheckedDispatch(
-        buildDispatchMeta(row),
-        currentUser.id,
-        '관리자 화면에서 수동 발송 완료 처리',
-      ),
+      buildToggledReportDispatch(buildDispatchMeta(row), {
+        currentUserId: currentUser.id,
+        historyMemo: '관리자 화면에서 수동 발송 완료 처리',
+        nextCompleted: true,
+      }),
     [currentUser.id],
+  );
+
+  const toggleDispatchStatus = useCallback(
+    async (row: ControllerReportRow, nextCompleted: boolean) => {
+      try {
+        await updateAdminReportDispatch(
+          row.reportKey,
+          buildToggledReportDispatch(buildDispatchMeta(row), {
+            currentUserId: currentUser.id,
+            historyMemo: nextCompleted
+              ? '관리자 목록에서 발송으로 변경'
+              : '관리자 목록에서 미발송으로 변경',
+            nextCompleted,
+          }),
+        );
+        setNotice(
+          nextCompleted
+            ? '보고서 발송 여부를 발송으로 변경했습니다.'
+            : '보고서 발송 여부를 미발송으로 변경했습니다.',
+        );
+        await fetchRows();
+      } catch (nextError) {
+        setError(nextError instanceof Error ? nextError.message : '발송 여부 변경에 실패했습니다.');
+      }
+    },
+    [currentUser.id, fetchRows, setError, setNotice],
   );
 
   const bulkDispatchSent = useCallback(async () => {
@@ -218,7 +225,11 @@ export function useReportDispatchActions({
     try {
       return await fetchSmsProviderStatuses();
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : '문자 발송 공급자 상태를 불러오지 못했습니다.');
+      setError(
+        nextError instanceof Error
+          ? nextError.message
+          : '문자 발송 공급사 상태를 불러오지 못했습니다.',
+      );
       return [];
     }
   }, [setError]);
@@ -236,5 +247,6 @@ export function useReportDispatchActions({
     saveDispatch,
     saveReview,
     sendDispatchSms,
+    toggleDispatchStatus,
   };
 }

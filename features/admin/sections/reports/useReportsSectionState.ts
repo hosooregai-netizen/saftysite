@@ -233,6 +233,7 @@ export function useReportsSectionState({
     saveDispatch,
     saveReview,
     sendDispatchSms,
+    toggleDispatchStatus,
   } = useReportDispatchActions({
     currentUser,
     dispatchRow,
@@ -386,6 +387,7 @@ export function useReportsSectionState({
     selectedKeys,
     selectedRows,
     sendDispatchSms,
+    toggleDispatchStatus,
     setAssigneeFilter: (value: string) => {
       setOffset(0);
       setAssigneeFilter(value);

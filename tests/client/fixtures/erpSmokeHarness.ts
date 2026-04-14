@@ -82,6 +82,49 @@ async function fulfillBinary(
   });
 }
 
+function normalizePublicReportApiPath(pathname: string) {
+  return pathname.replace(/^\/api\/reports\/[^/]+\/dispatch$/, '/api/reports/:id/dispatch');
+}
+
+function isDispatchCompleted(dispatch: unknown) {
+  if (!dispatch || typeof dispatch !== 'object') {
+    return false;
+  }
+
+  const record = dispatch as JsonRecord;
+  const status = String(record.dispatch_status ?? record.dispatchStatus ?? '').trim();
+  return status === 'sent' || status === 'manual_checked';
+}
+
+function updateReportDispatchState(
+  state: ReturnType<typeof createInitialState>,
+  reportKey: string,
+  dispatch: JsonRecord,
+) {
+  const reportIndex = state.reports.findIndex((report) => String(report.report_key) === reportKey);
+  if (reportIndex < 0) {
+    return null;
+  }
+
+  const current = state.reports[reportIndex];
+  const meta =
+    current.meta && typeof current.meta === 'object'
+      ? ({ ...(current.meta as JsonRecord) } satisfies JsonRecord)
+      : {};
+  const nextReport = {
+    ...current,
+    dispatch,
+    dispatch_completed: isDispatchCompleted(dispatch),
+    meta: {
+      ...meta,
+      dispatch,
+    },
+    updated_at: NOW,
+  };
+  state.reports[reportIndex] = nextReport;
+  return nextReport;
+}
+
 async function installErpRoutes({
   context,
   delayedReportListRequests,
@@ -415,6 +458,7 @@ async function installErpRoutes({
           report_title: String(report.report_title || ''),
           site_id: String(report.site_id),
           status: String(report.status),
+          dispatch_completed: isDispatchCompleted(report.dispatch),
           period_start_date: String(meta.periodStartDate || ''),
           period_end_date: String(meta.periodEndDate || ''),
           quarter_key: String(meta.quarterKey || ''),
@@ -444,6 +488,7 @@ async function installErpRoutes({
           report_title: String(report.report_title || ''),
           site_id: String(report.site_id),
           status: String(report.status),
+          dispatch_completed: isDispatchCompleted(report.dispatch),
           report_month: String(meta.reportMonth || ''),
           reporter_user_id: String(meta.reporterUserId || ''),
           reporter_name: String(meta.reporterName || ''),
@@ -638,6 +683,25 @@ async function installErpRoutes({
     throw new Error(`Unhandled ERP smoke request: ${request.method()} ${pathname}`);
   };
 
+  const handlePublicReportApiRoute = async (route: Route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    const pathname = url.pathname;
+    const requestKey = `${request.method()} ${normalizePublicReportApiPath(pathname)}`;
+    requestCounts.set(requestKey, (requestCounts.get(requestKey) || 0) + 1);
+
+    if (/^\/api\/reports\/[^/]+\/dispatch$/.test(pathname) && request.method() === 'PATCH') {
+      const reportKey = decodeURIComponent(pathname.split('/')[3] || '');
+      const dispatch = JSON.parse(request.postData() || '{}') as JsonRecord;
+      const report = updateReportDispatchState(state, reportKey, dispatch);
+      assert(report, `Missing ERP report fixture for dispatch update: ${reportKey}`);
+      await fulfillJson(route, clone(report));
+      return;
+    }
+
+    await route.fallback();
+  };
+
   const handleQuarterlyDocumentRoute = async (route: Route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -691,6 +755,7 @@ async function installErpRoutes({
 
   await context.route('**/api/safety/**', handleErpSafetyRoute);
   await context.route('**/api/v1/**', handleErpSafetyRoute);
+  await context.route('**/api/reports/**', handlePublicReportApiRoute);
   await context.route('**/api/documents/quarterly/**', handleQuarterlyDocumentRoute);
   await context.route('**/api/documents/bad-workplace/**', handleBadWorkplaceDocumentRoute);
 }

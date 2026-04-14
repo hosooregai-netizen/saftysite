@@ -1,36 +1,32 @@
 import { NextResponse } from 'next/server';
 import { refreshAdminAnalyticsSnapshot } from '@/server/admin/analyticsSnapshot';
+import { serializeReportDispatchPayload } from '@/server/admin/reportDispatchPayload';
 import { invalidateAdminReportsRouteCache } from '@/server/admin/reportsRouteCache';
 import {
-  appendAdminDispatchEventServer,
-  readRequiredAdminToken,
+  readRequiredSafetyAuthToken,
   SafetyServerApiError,
+  updateReportDispatchServer,
 } from '@/server/admin/safetyApiServer';
-import type { ReportDispatchHistoryEntry } from '@/types/admin';
+import type { ReportDispatchMeta } from '@/types/admin';
 
 export const runtime = 'nodejs';
 
-export async function POST(
+export async function PATCH(
   request: Request,
   context: { params: Promise<{ reportKey: string }> },
 ): Promise<Response> {
   try {
-    const token = readRequiredAdminToken(request);
+    const token = readRequiredSafetyAuthToken(request);
     const { reportKey } = await context.params;
-    const event = (await request.json()) as ReportDispatchHistoryEntry;
-    const updated = await appendAdminDispatchEventServer(
+    const dispatch = (await request.json()) as ReportDispatchMeta;
+    const updated = await updateReportDispatchServer(
       token,
       reportKey,
-      {
-        id: event.id,
-        memo: event.memo || null,
-        sent_at: event.sentAt,
-        sent_by_user_id: event.sentByUserId || null,
-      },
+      serializeReportDispatchPayload(dispatch),
       request,
     );
     invalidateAdminReportsRouteCache();
-    await refreshAdminAnalyticsSnapshot(token, request);
+    void refreshAdminAnalyticsSnapshot(token, request).catch(() => undefined);
 
     return NextResponse.json(updated);
   } catch (error) {
@@ -39,7 +35,7 @@ export async function POST(
     }
 
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : '발송 이력 저장에 실패했습니다.' },
+      { error: error instanceof Error ? error.message : '발송 정보 저장에 실패했습니다.' },
       { status: 500 },
     );
   }

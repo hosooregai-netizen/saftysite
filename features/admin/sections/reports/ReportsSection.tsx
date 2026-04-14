@@ -68,6 +68,9 @@ export function ReportsSection(props: ReportsSectionProps) {
           onOpenReviewModal={state.openReviewModal}
           onSelectionChange={state.setSelectedKeys}
           onSortChange={state.setSort}
+          onToggleDispatchStatus={(row, nextCompleted) =>
+            void state.toggleDispatchStatus(row, nextCompleted)
+          }
           rows={state.rows}
           selectedKeys={state.selectedKeys}
           selectedRows={state.selectedRows}

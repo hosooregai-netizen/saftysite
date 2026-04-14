@@ -19,6 +19,7 @@ interface ReportListProps {
   currentSite: InspectionSite;
   onCreateReport: () => void;
   onDeleteRequest: (reportKey: string) => void;
+  onToggleDispatch: (item: InspectionReportListItem) => void;
   reportIndexStatus: ReportIndexStatus;
   reportItems: InspectionReportListItem[];
   totalReportCount: number;
@@ -52,6 +53,7 @@ export function ReportList({
   currentSite,
   onCreateReport,
   onDeleteRequest,
+  onToggleDispatch,
   reportIndexStatus,
   reportItems,
   totalReportCount,
@@ -116,6 +118,7 @@ export function ReportList({
                   warmSession(reportKey, sessionHref);
                   router.push(sessionHref);
                 }}
+                onToggleDispatch={onToggleDispatch}
                 onWarmReport={warmSession}
               />
             );

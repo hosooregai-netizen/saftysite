@@ -16,12 +16,14 @@ interface QuarterlyReportsListPanelProps {
   filteredRows: QuarterlyListRow[];
   isBusy: boolean;
   isLoading: boolean;
+  notice: string | null;
   onChangeDispatchFilter: (value: QuarterlyListDispatchFilter) => void;
   onChangeQuery: (value: string) => void;
   onChangeSortMode: (value: QuarterlyListSortMode) => void;
   onDeleteRequest: (reportId: string) => void;
   onOpenCreateDialog: () => void;
   onOpenReport: (href: string) => void;
+  onToggleDispatch: (row: QuarterlyListRow) => void;
   operationalError: string | null;
   query: string;
   rows: QuarterlyListRow[];
@@ -34,12 +36,14 @@ export function QuarterlyReportsListPanel({
   filteredRows,
   isBusy,
   isLoading,
+  notice,
   onChangeDispatchFilter,
   onChangeQuery,
   onChangeSortMode,
   onDeleteRequest,
   onOpenCreateDialog,
   onOpenReport,
+  onToggleDispatch,
   operationalError,
   query,
   rows,
@@ -47,6 +51,9 @@ export function QuarterlyReportsListPanel({
 }: QuarterlyReportsListPanelProps) {
   return (
     <section className={styles.panel}>
+      {operationalError ? <div className={styles.bannerError}>{operationalError}</div> : null}
+      {notice ? <div className={styles.bannerInfo}>{notice}</div> : null}
+
       <div className={styles.tableTools}>
         <input
           className={`app-input ${styles.tableSearch}`}
@@ -58,7 +65,9 @@ export function QuarterlyReportsListPanel({
         <select
           className={`app-select ${styles.tableSort}`}
           value={dispatchFilter}
-          onChange={(event) => onChangeDispatchFilter(event.target.value as QuarterlyListDispatchFilter)}
+          onChange={(event) =>
+            onChangeDispatchFilter(event.target.value as QuarterlyListDispatchFilter)
+          }
           aria-label="분기 종합 보고서 발송여부 필터"
         >
           <option value="all">발송여부 전체</option>
@@ -72,7 +81,7 @@ export function QuarterlyReportsListPanel({
           aria-label="분기 종합 보고서 정렬"
         >
           <option value="number">번호순</option>
-          <option value="recent">최근 수정순</option>
+          <option value="recent">최근 수정일</option>
           <option value="name">보고서명순</option>
           <option value="period">기간순</option>
         </select>
@@ -86,16 +95,12 @@ export function QuarterlyReportsListPanel({
         </button>
       </div>
 
-      {operationalError ? (
-        <div className={styles.tableTools}>
-          <span>{operationalError}</span>
-        </div>
-      ) : null}
-
       {(isLoading || (!operationalError && rows.length === 0)) && rows.length === 0 ? (
         <div className={styles.emptyState}>
           <p className={styles.emptyTitle}>
-            {isLoading ? '분기 종합 보고서 목록을 불러오는 중입니다.' : '아직 작성된 분기 종합 보고서가 없습니다.'}
+            {isLoading
+              ? '분기 종합 보고서 목록을 불러오는 중입니다.'
+              : '아직 작성된 분기 종합 보고서가 없습니다.'}
           </p>
         </div>
       ) : filteredRows.length === 0 ? (
@@ -148,7 +153,9 @@ export function QuarterlyReportsListPanel({
                   </div>
 
                   <div className={`${styles.dataCell} ${styles.dispatchStatusCell}`}>
-                    <span className={styles.dataValue}>{row.dispatchCompleted ? '발송완료' : '미발송'}</span>
+                    <span className={styles.dataValue}>
+                      {row.dispatchCompleted ? '발송완료' : '미발송'}
+                    </span>
                   </div>
 
                   <div className={`${styles.dataCell} ${styles.desktopOnly}`}>
@@ -170,8 +177,18 @@ export function QuarterlyReportsListPanel({
                       label={`${row.reportTitle} 작업 메뉴 열기`}
                       items={[
                         { label: '열기', href: row.href },
+                        {
+                          label: row.dispatchCompleted ? '미발송으로 변경' : '발송으로 변경',
+                          onSelect: () => onToggleDispatch(row),
+                        },
                         ...(canArchiveReports
-                          ? [{ label: '삭제', tone: 'danger' as const, onSelect: () => onDeleteRequest(row.reportId) }]
+                          ? [
+                              {
+                                label: '삭제',
+                                tone: 'danger' as const,
+                                onSelect: () => onDeleteRequest(row.reportId),
+                              },
+                            ]
                           : []),
                       ]}
                     />

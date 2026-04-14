@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ReportList } from '@/features/site-reports/components/ReportList';
 import { SiteReportsSummaryBar } from '@/features/site-reports/components/SiteReportsSummaryBar';
 import { getSiteReportSummary } from '@/features/site-reports/report-list/reportListHelpers';
@@ -13,6 +13,14 @@ import type {
   SiteReportSortMode,
 } from '@/features/site-reports/report-list/types';
 import { useSiteReportCreateDialog } from '@/features/site-reports/report-list/useSiteReportCreateDialog';
+import { useInspectionSessions } from '@/hooks/useInspectionSessions';
+import { updateReportDispatch } from '@/lib/reportDispatchApi';
+import { buildToggledReportDispatch } from '@/lib/reportDispatch';
+import {
+  fetchSafetyReportByKey,
+  readSafetyAuthToken,
+  SafetyApiError,
+} from '@/lib/safetyApi';
 import type {
   InspectionReportListItem,
   InspectionSite,
@@ -42,6 +50,14 @@ interface SiteReportListPanelProps {
   showSummaryBar?: boolean;
 }
 
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return '발송 여부 변경에 실패했습니다.';
+}
+
 export function SiteReportListPanel({
   assignedUserDisplay,
   canArchiveReports,
@@ -63,13 +79,44 @@ export function SiteReportListPanel({
   setReportSortMode,
   showSummaryBar = true,
 }: SiteReportListPanelProps) {
+  const { currentUser, ensureSessionLoaded, ensureSiteReportIndexLoaded } =
+    useInspectionSessions();
   const [dialogSessionId, setDialogSessionId] = useState<string | null>(null);
+  const [dispatchError, setDispatchError] = useState<string | null>(null);
+  const [dispatchNotice, setDispatchNotice] = useState<string | null>(null);
+  const [dispatchOverrides, setDispatchOverrides] = useState<Record<string, boolean>>({});
   const deletingSession = dialogSessionId
     ? reportItems.find((item) => item.reportKey === dialogSessionId) ?? null
     : null;
-  const { addressDisplay, amountDisplay, periodDisplay, siteNameDisplay } =
-    useMemo(() => getSiteReportSummary(currentSite), [currentSite]);
+  const { addressDisplay, amountDisplay, periodDisplay, siteNameDisplay } = useMemo(
+    () => getSiteReportSummary(currentSite),
+    [currentSite],
+  );
   const showTableTools = reportIndexStatus === 'loaded' && reportItems.length > 0;
+  const displayReportItems = useMemo(
+    () =>
+      reportItems.map((item) =>
+        dispatchOverrides[item.reportKey] == null
+          ? item
+          : {
+              ...item,
+              dispatchCompleted: dispatchOverrides[item.reportKey],
+            },
+      ),
+    [dispatchOverrides, reportItems],
+  );
+  const displayFilteredReportItems = useMemo(
+    () =>
+      filteredReportItems.map((item) =>
+        dispatchOverrides[item.reportKey] == null
+          ? item
+          : {
+              ...item,
+              dispatchCompleted: dispatchOverrides[item.reportKey],
+            },
+      ),
+    [dispatchOverrides, filteredReportItems],
+  );
   const {
     closeCreateDialog,
     createError,
@@ -86,8 +133,65 @@ export function SiteReportListPanel({
     getCreateReportTitleSuggestion,
   });
 
+  useEffect(() => {
+    setDispatchOverrides({});
+  }, [currentSite.id]);
+
+  const handleToggleDispatch = useCallback(
+    async (item: InspectionReportListItem) => {
+      if (!currentUser) {
+        setDispatchError('로그인 정보를 확인한 뒤 다시 시도해 주세요.');
+        return;
+      }
+
+      try {
+        const token = readSafetyAuthToken();
+        if (!token) {
+          throw new SafetyApiError('로그인이 만료되었습니다. 다시 로그인해 주세요.', 401);
+        }
+
+        setDispatchError(null);
+        setDispatchNotice(null);
+
+        const report = await fetchSafetyReportByKey(token, item.reportKey);
+        const nextCompleted = !item.dispatchCompleted;
+        const nextDispatch = buildToggledReportDispatch(report.dispatch, {
+          currentUserId: currentUser.id,
+          historyMemo: nextCompleted
+            ? '현장 기술지도보고서 목록에서 발송으로 변경'
+            : '현장 기술지도보고서 목록에서 미발송으로 변경',
+          nextCompleted,
+        });
+
+        await updateReportDispatch(item.reportKey, nextDispatch);
+        setDispatchOverrides((current) => ({
+          ...current,
+          [item.reportKey]: nextCompleted,
+        }));
+        await ensureSessionLoaded(item.reportKey, { force: true });
+        void ensureSiteReportIndexLoaded(currentSite.id, { force: true });
+        setDispatchNotice(
+          nextCompleted
+            ? '보고서 발송 여부를 발송으로 변경했습니다.'
+            : '보고서 발송 여부를 미발송으로 변경했습니다.',
+        );
+      } catch (error) {
+        setDispatchError(getErrorMessage(error));
+      }
+    },
+    [
+      currentSite.id,
+      currentUser,
+      ensureSessionLoaded,
+      ensureSiteReportIndexLoaded,
+    ],
+  );
+
   const panelBody = (
     <>
+      {dispatchError ? <div className={styles.bannerError}>{dispatchError}</div> : null}
+      {dispatchNotice ? <div className={styles.bannerInfo}>{dispatchNotice}</div> : null}
+
       {showTableTools ? (
         <SiteReportListToolbar
           canCreateReport={canCreateReport}
@@ -122,9 +226,10 @@ export function SiteReportListPanel({
         currentSite={currentSite}
         onCreateReport={openCreateDialog}
         onDeleteRequest={setDialogSessionId}
+        onToggleDispatch={handleToggleDispatch}
         reportIndexStatus={reportIndexStatus}
-        reportItems={reportIndexStatus === 'loaded' ? filteredReportItems : []}
-        totalReportCount={reportItems.length}
+        reportItems={reportIndexStatus === 'loaded' ? displayFilteredReportItems : []}
+        totalReportCount={displayReportItems.length}
       />
     </>
   );

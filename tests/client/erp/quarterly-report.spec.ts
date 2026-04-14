@@ -1,17 +1,20 @@
 import type { ClientSmokePlaywrightConfig } from '../../../playwright.config';
-import { createErpSmokeHarness, getQuarterlySmokeQuarterKey } from '../fixtures/erpSmokeHarness';
+import {
+  createErpSmokeHarness,
+  getQuarterlySmokeQuarterKey,
+} from '../fixtures/erpSmokeHarness';
 
 export async function runQuarterlyReportSmoke(config: ClientSmokePlaywrightConfig) {
   const harness = await createErpSmokeHarness('quarterly-report', config);
 
   try {
     const { page, requestCounts } = harness;
-    const indexReadsBefore =
-      requestCounts.get('GET /reports/site/:id/operational-index') || 0;
+    const indexReadsBefore = requestCounts.get('GET /reports/site/:id/operational-index') || 0;
     const reportReadsBefore = requestCounts.get('GET /reports/by-key/:id') || 0;
     const seedReadsBefore =
       requestCounts.get('GET /reports/site/:id/quarterly-summary-seed') || 0;
     const reportWritesBefore = requestCounts.get('POST /reports/upsert') || 0;
+    const dispatchWritesBefore = requestCounts.get('PATCH /api/reports/:id/dispatch') || 0;
     const hwpxReadsBefore = requestCounts.get('POST /api/documents/quarterly/hwpx') || 0;
     const pdfReadsBefore = requestCounts.get('POST /api/documents/quarterly/pdf') || 0;
 
@@ -24,11 +27,11 @@ export async function runQuarterlyReportSmoke(config: ClientSmokePlaywrightConfi
       'GET /reports/site/:id/operational-index',
       indexReadsBefore + 1,
     );
-    await page.getByRole('heading', { name: '분기 종합 보고서 목록' }).waitFor({
+    await page.getByRole('heading', { name: /분기 종합 보고서 목록/ }).waitFor({
       state: 'visible',
     });
     await page.getByRole('button', { name: '보고서 작성' }).click();
-    await page.getByRole('heading', { name: '분기 종합 보고서 생성' }).waitFor({
+    await page.getByRole('heading', { name: /분기 종합 보고서 생성/ }).waitFor({
       state: 'visible',
     });
 
@@ -52,10 +55,9 @@ export async function runQuarterlyReportSmoke(config: ClientSmokePlaywrightConfi
           : quarter === 3
             ? `${year}-09-30`
             : `${year}-12-31`;
+    const createdTitle = `${year}년 ${quarter}분기 종합보고서 자동화`;
 
-    await page
-      .getByLabel('제목')
-      .fill(`${year}년 ${quarter}분기 종합보고서 자동화`);
+    await page.getByLabel('제목').fill(createdTitle);
     await page.getByLabel('시작일').fill(quarterStartDate);
     await page.getByLabel('종료일').fill(quarterEndDate);
     await page.getByRole('button', { name: '생성' }).click();
@@ -71,13 +73,17 @@ export async function runQuarterlyReportSmoke(config: ClientSmokePlaywrightConfi
     await page.getByText('1. 원본 보고서 선택').waitFor({ state: 'visible' });
     await page.getByText('1. 기술지도 사업장 개요').waitFor({ state: 'visible' });
     await page.getByText('2. 재해유형 분석').waitFor({ state: 'visible' });
-    await page.getByRole('button', { name: '문서 다운로드 (.hwpx)' }).waitFor({ state: 'visible' });
-    await page.getByRole('button', { name: '문서 다운로드 (.pdf)' }).waitFor({ state: 'visible' });
+    await page.getByRole('button', { name: '문서 다운로드 (.hwpx)' }).waitFor({
+      state: 'visible',
+    });
+    await page.getByRole('button', { name: '문서 다운로드 (.pdf)' }).waitFor({
+      state: 'visible',
+    });
 
     await page.getByRole('button', { name: '보고서 선택' }).click();
     const sourceSelectionDialog = page.getByRole('dialog', { name: '원본 보고서 선택' });
     await sourceSelectionDialog.waitFor({ state: 'visible' });
-    await page.getByText('1차 기술지도 보고서').waitFor({ state: 'visible' });
+    await page.getByText(/1차 기술지도 보고서/).waitFor({ state: 'visible' });
     await sourceSelectionDialog.getByRole('button', { name: '선택 해제' }).click();
     await sourceSelectionDialog.getByRole('button', { name: '다시 계산' }).click();
     await sourceSelectionDialog.waitFor({ state: 'hidden' });
@@ -91,6 +97,22 @@ export async function runQuarterlyReportSmoke(config: ClientSmokePlaywrightConfi
 
     await page.getByRole('button', { name: '문서 다운로드 (.pdf)' }).click();
     await harness.waitForRequestCount('POST /api/documents/quarterly/pdf', pdfReadsBefore + 1);
+
+    await page.goto(`${harness.baseURL}/sites/site-1/quarterly`, { waitUntil: 'load' });
+    await page.getByRole('heading', { name: /분기 종합 보고서 목록/ }).waitFor({
+      state: 'visible',
+    });
+    await page.getByRole('button', { name: `${createdTitle} 작업 메뉴 열기` }).click();
+    await page.getByRole('menuitem', { name: '발송으로 변경' }).click();
+    await harness.waitForRequestCount(
+      'PATCH /api/reports/:id/dispatch',
+      dispatchWritesBefore + 1,
+    );
+    await page
+      .locator('article')
+      .filter({ hasText: createdTitle })
+      .getByText('발송완료')
+      .waitFor({ state: 'visible' });
 
     harness.assertContractApisObserved();
     harness.assertNoClientErrors();
