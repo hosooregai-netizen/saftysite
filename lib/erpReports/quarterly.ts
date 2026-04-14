@@ -412,6 +412,7 @@ export function createQuarterlySummaryDraft(
     siteId: site.id,
     title: buildQuarterlyDefaultTitle(referenceDate),
     reportKind: QUARTERLY_SUMMARY_REPORT_KIND,
+    dispatchCompleted: false,
     periodStartDate: '',
     periodEndDate: '',
     quarterKey: '',

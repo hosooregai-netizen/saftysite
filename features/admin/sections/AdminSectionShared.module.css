@@ -1327,6 +1327,18 @@
   text-decoration: underline;
 }
 
+.tableCheckboxLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-ui-sm);
+  color: var(--erp-dark);
+}
+
+.tableCheckboxLabel input {
+  margin: 0;
+}
+
 .listSectionCard .tablePrimary {
   font-size: var(--text-body-lg);
   line-height: 1.3;

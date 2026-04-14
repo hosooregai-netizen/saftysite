@@ -1,4 +1,5 @@
 import type {
+  SiteDispatchPolicy,
   SafetyHeadquarterLifecycleStatus,
   SafetyContentItem,
   SafetyContentType,
@@ -123,6 +124,7 @@ export interface SafetySiteInput {
   per_visit_amount?: number | null;
   total_contract_amount?: number | null;
   required_completion_fields?: string[] | null;
+  dispatch_policy?: SiteDispatchPolicy | null;
   status?: SafetySiteStatus;
   lifecycle_status?: SafetySiteStatus;
   memo?: string | null;

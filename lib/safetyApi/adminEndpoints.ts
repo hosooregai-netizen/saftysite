@@ -18,6 +18,7 @@ import type {
   SafetyUserCreateInput,
   SafetyUserUpdateInput,
 } from '@/types/controller';
+import type { SiteDispatchPolicy } from '@/types/backend';
 import { requestSafetyApi, SafetyApiError } from './client';
 
 const ADMIN_LIST_LIMIT = 500;
@@ -201,6 +202,14 @@ export const updateSafetySite = async (token: string, id: string, body: SafetySi
     }
     throw error;
   }
+};
+export const updateSafetySiteDispatchPolicy = async (
+  token: string,
+  id: string,
+  body: Pick<SiteDispatchPolicy, 'enabled' | 'alerts_enabled'>,
+) => {
+  const site = await sendJson<SafetySite>(`/sites/${id}/dispatch-policy`, token, 'PATCH', body);
+  return normalizeSafetySite(site);
 };
 export const deactivateSafetySite = (token: string, id: string) =>
   requestSafetyApi<SafetySite>(`/sites/${id}`, { method: 'DELETE' }, token).then((site) =>

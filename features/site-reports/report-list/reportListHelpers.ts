@@ -1,6 +1,6 @@
 import { compareReportIndexItemsByRound } from '@/hooks/inspectionSessions/helpers';
 import type { InspectionReportListItem, InspectionSite } from '@/types/inspectionSession';
-import type { SiteReportSortMode } from './types';
+import type { SiteReportDispatchFilter, SiteReportSortMode } from './types';
 
 export function getDrafterFromReportItem(item: InspectionReportListItem) {
   return typeof item.meta.drafter === 'string' ? item.meta.drafter : '';
@@ -36,6 +36,7 @@ export function buildDefaultReportTitle(reportDate: string, reportNumber: number
 export function getFilteredReportItems(params: {
   assignedUserDisplay: string;
   currentSiteAssigneeName: string | undefined;
+  dispatchFilter: SiteReportDispatchFilter;
   reportItems: InspectionReportListItem[];
   reportQuery: string;
   reportSortMode: SiteReportSortMode;
@@ -43,15 +44,23 @@ export function getFilteredReportItems(params: {
   const {
     assignedUserDisplay,
     currentSiteAssigneeName,
+    dispatchFilter,
     reportItems,
     reportQuery,
     reportSortMode,
   } = params;
   const normalizedQuery = reportQuery.trim().toLowerCase();
   const drafterFallback = assignedUserDisplay || currentSiteAssigneeName || '';
+  const dispatchFilteredItems = reportItems.filter((item) => {
+    if (dispatchFilter === 'completed') return item.dispatchCompleted;
+    if (dispatchFilter === 'pending') return !item.dispatchCompleted;
+    return true;
+  });
   const matchingItems = !normalizedQuery
-    ? reportItems
-    : reportItems.filter((item) => getReportSearchText(item, drafterFallback).includes(normalizedQuery));
+    ? dispatchFilteredItems
+    : dispatchFilteredItems.filter((item) =>
+        getReportSearchText(item, drafterFallback).includes(normalizedQuery),
+      );
 
   return [...matchingItems].sort((left, right) => {
     if (reportSortMode === 'name') {

@@ -100,6 +100,7 @@ function toReportListItem(report: SafetyReport): SafetyReportListItem {
     total_round: report.total_round,
     progress_rate: report.progress_rate,
     status: report.status,
+    dispatch_completed: report.dispatch_completed ?? false,
     payload_version: report.payload_version,
     latest_revision_no: report.latest_revision_no,
     submitted_at: report.submitted_at,

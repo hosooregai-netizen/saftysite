@@ -1,6 +1,8 @@
 export type QuarterlyListSortMode = 'number' | 'recent' | 'name' | 'period';
+export type QuarterlyListDispatchFilter = 'all' | 'pending' | 'completed';
 
 export interface QuarterlyListRow {
+  dispatchCompleted: boolean;
   sequenceNumber: number;
   href: string;
   reportId: string;

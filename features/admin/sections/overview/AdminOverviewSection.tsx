@@ -12,11 +12,21 @@ import { useAdminOverviewSectionState } from './useAdminOverviewSectionState';
 
 interface AdminOverviewSectionProps {
   data: ControllerDashboardData;
+  onUpdateSiteDispatchPolicy?: (
+    siteId: string,
+    input: { enabled: boolean; alerts_enabled: boolean },
+  ) => Promise<unknown>;
   reports: SafetyReportListItem[];
 }
 
-export function AdminOverviewSection({ data, reports }: AdminOverviewSectionProps) {
-  const state = useAdminOverviewSectionState(data, reports);
+export function AdminOverviewSection({
+  data,
+  onUpdateSiteDispatchPolicy,
+  reports,
+}: AdminOverviewSectionProps) {
+  const state = useAdminOverviewSectionState(data, reports, {
+    onUpdateSiteDispatchPolicy,
+  });
 
   return (
     <div className={styles.dashboardStack}>
@@ -27,7 +37,12 @@ export function AdminOverviewSection({ data, reports }: AdminOverviewSectionProp
             <div className={styles.sectionHeaderMeta}>마지막 갱신 {formatSyncTimestamp(state.lastSyncedAt)}</div>
           </div>
           <div className={styles.sectionHeaderActions}>
-            <button type="button" className="app-button app-button-secondary" onClick={() => void state.refreshOverview()} disabled={state.isRefreshing}>
+            <button
+              type="button"
+              className="app-button app-button-secondary"
+              onClick={() => void state.refreshOverview()}
+              disabled={state.isRefreshing}
+            >
               {state.isRefreshing ? '새로고침 중...' : '새로고침'}
             </button>
             <button type="button" className="app-button app-button-secondary" onClick={() => void state.exportOverview()}>
@@ -57,17 +72,31 @@ export function AdminOverviewSection({ data, reports }: AdminOverviewSectionProp
       />
 
       <OverviewDispatchQueueTable
-        title="20억 이상 발송 대상 현장"
+        title="우선 발송 대상 현장"
         rows={state.overview.priorityTargetSiteRows ?? []}
-        emptyLabel="현재 우선 발송 대상으로 분류된 현장이 없습니다."
+        emptyLabel="현재 발송 관리 대상으로 표시된 현장이 없습니다."
+        isUpdating={Boolean(state.policyUpdatingSiteId)}
+        onToggleDispatchAlerts={(siteId, enabled, alertsEnabled) =>
+          void state.updateSiteDispatchPolicy(siteId, {
+            enabled,
+            alerts_enabled: alertsEnabled,
+          })
+        }
+        onToggleDispatchPolicy={(siteId, enabled, alertsEnabled) =>
+          void state.updateSiteDispatchPolicy(siteId, {
+            enabled,
+            alerts_enabled: alertsEnabled,
+          })
+        }
+        updatingSiteId={state.policyUpdatingSiteId}
       />
       <OverviewDispatchQueueTable
-        title="현장대리인 메일 미등록 현장"
+        title="현장 대리인 메일 미등록 현장"
         rows={state.overview.recipientMissingSiteRows ?? []}
         emptyLabel="현재 메일 정보 보완이 필요한 현장이 없습니다."
       />
       <OverviewDispatchQueueTable
-        title="발송 필요하지만 아직 미발송인 현장"
+        title="발송 필요하지만 아직 미발송 보고서가 남은 현장"
         rows={state.overview.dispatchQueueRows ?? []}
         emptyLabel="현재 미발송 보고서가 남아 있는 현장이 없습니다."
       />

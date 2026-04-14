@@ -154,6 +154,7 @@ export function mapSafetyReportToQuarterlySummaryReport(
       normalizeMapperText(report.report_title) ||
       buildQuarterlyDefaultTitle(report.created_at),
     reportKind: QUARTERLY_SUMMARY_REPORT_KIND,
+    dispatchCompleted: Boolean(report.dispatch_completed),
     periodStartDate: normalizedPeriod.periodStartDate,
     periodEndDate: normalizedPeriod.periodEndDate,
     quarterKey: normalizedPeriod.quarterKey,
@@ -229,6 +230,7 @@ export function mapSafetyReportToBadWorkplaceReport(
       normalizeMapperText(report.report_title) ||
       `${formatReportMonthLabel(reportMonth)} 불량사업장 신고`,
     reportKind: BAD_WORKPLACE_REPORT_KIND,
+    dispatchCompleted: Boolean(report.dispatch_completed),
     reportMonth,
     status: normalizeOperationalStatus(payload.status ?? meta.status, report.status),
     controllerReview: normalizeControllerReview(
@@ -286,6 +288,7 @@ export function mapSafetyOperationalQuarterlyIndexItem(
     | 'updated_at'
     | 'meta'
   > & {
+    dispatch_completed?: boolean | null;
     selected_report_count?: number | null;
     last_calculated_at?: string | null;
   },
@@ -310,6 +313,7 @@ export function mapSafetyOperationalQuarterlyIndexItem(
       normalizeMapperText(report.report_title) ||
       buildQuarterlyDefaultTitle(report.created_at),
     reportKind: QUARTERLY_SUMMARY_REPORT_KIND,
+    dispatchCompleted: Boolean(report.dispatch_completed),
     periodStartDate: normalizedPeriod.periodStartDate,
     periodEndDate: normalizedPeriod.periodEndDate,
     quarterKey: normalizedPeriod.quarterKey,
@@ -337,6 +341,7 @@ export function mapSafetyOperationalBadWorkplaceIndexItem(
     | 'updated_at'
     | 'meta'
   > & {
+    dispatch_completed?: boolean | null;
     report_month?: string | null;
     reporter_user_id?: string | null;
     reporter_name?: string | null;
@@ -360,6 +365,7 @@ export function mapSafetyOperationalBadWorkplaceIndexItem(
       normalizeMapperText(report.report_title) ||
       `${formatReportMonthLabel(reportMonth)} 遺덈웾?ъ뾽???좉퀬`,
     reportKind: BAD_WORKPLACE_REPORT_KIND,
+    dispatchCompleted: Boolean(report.dispatch_completed),
     reportMonth,
     status: normalizeOperationalStatus(meta.status, report.status),
     reporterUserId:

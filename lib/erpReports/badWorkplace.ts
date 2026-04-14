@@ -330,6 +330,7 @@ export function buildInitialBadWorkplaceReport(
     siteId: site.id,
     title: `${reportMonth} 불량사업장 신고서`,
     reportKind: BAD_WORKPLACE_REPORT_KIND,
+    dispatchCompleted: false,
     reportMonth,
     status: 'draft',
     controllerReview: null,

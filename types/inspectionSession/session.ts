@@ -99,6 +99,7 @@ export interface InspectionReportListItem {
   totalRound: number | null;
   progressRate: number | null;
   status: SafetyReportStatus;
+  dispatchCompleted: boolean;
   payloadVersion: number;
   latestRevisionNo: number;
   submittedAt: string | null;

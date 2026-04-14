@@ -7,7 +7,11 @@ import { getSiteReportSummary } from '@/features/site-reports/report-list/report
 import { SiteReportCreateDialog } from '@/features/site-reports/report-list/SiteReportCreateDialog';
 import { SiteReportDeleteDialog } from '@/features/site-reports/report-list/SiteReportDeleteDialog';
 import { SiteReportListToolbar } from '@/features/site-reports/report-list/SiteReportListToolbar';
-import type { CreateSiteReportInput, SiteReportSortMode } from '@/features/site-reports/report-list/types';
+import type {
+  CreateSiteReportInput,
+  SiteReportDispatchFilter,
+  SiteReportSortMode,
+} from '@/features/site-reports/report-list/types';
 import { useSiteReportCreateDialog } from '@/features/site-reports/report-list/useSiteReportCreateDialog';
 import type {
   InspectionReportListItem,
@@ -31,6 +35,8 @@ interface SiteReportListPanelProps {
   reportItems: InspectionReportListItem[];
   reportQuery: string;
   reportSortMode: SiteReportSortMode;
+  dispatchFilter: SiteReportDispatchFilter;
+  setDispatchFilter: (value: SiteReportDispatchFilter) => void;
   setReportQuery: (value: string) => void;
   setReportSortMode: (value: SiteReportSortMode) => void;
   showSummaryBar?: boolean;
@@ -51,6 +57,8 @@ export function SiteReportListPanel({
   reportItems,
   reportQuery,
   reportSortMode,
+  dispatchFilter,
+  setDispatchFilter,
   setReportQuery,
   setReportSortMode,
   showSummaryBar = true,
@@ -83,9 +91,11 @@ export function SiteReportListPanel({
       {showTableTools ? (
         <SiteReportListToolbar
           canCreateReport={canCreateReport}
+          dispatchFilter={dispatchFilter}
           onCreateReport={openCreateDialog}
           reportQuery={reportQuery}
           reportSortMode={reportSortMode}
+          setDispatchFilter={setDispatchFilter}
           setReportQuery={setReportQuery}
           setReportSortMode={setReportSortMode}
         />

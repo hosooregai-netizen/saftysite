@@ -142,6 +142,7 @@ function mapBackendResponse(
           report_title: item.report_title,
           site_id: item.site_id,
           status: item.status,
+          dispatch_completed: item.dispatch_completed,
           created_at: item.created_at,
           updated_at: item.updated_at,
           meta: {
@@ -167,6 +168,7 @@ function mapBackendResponse(
           report_title: item.report_title,
           site_id: item.site_id,
           status: item.status,
+          dispatch_completed: item.dispatch_completed,
           created_at: item.created_at,
           updated_at: item.updated_at,
           meta: {

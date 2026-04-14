@@ -4,8 +4,8 @@ import Link from 'next/link';
 import ActionMenu from '@/components/ui/ActionMenu';
 import { formatDateTime } from '@/lib/formatDateTime';
 import type { InspectionReportListItem, InspectionSite } from '@/types/inspectionSession';
-import { getReportDrafterDisplay } from './reportListHelpers';
 import styles from '@/features/site-reports/components/SiteReportsScreen.module.css';
+import { getReportDrafterDisplay } from './reportListHelpers';
 
 interface ReportListRowProps {
   assignedUserDisplay?: string;
@@ -40,7 +40,7 @@ export function ReportListRow({
   const progressRate = Math.max(0, Math.min(100, item.progressRate ?? 0));
   const sessionHref = `/sessions/${item.reportKey}`;
   const menuItems = [
-    { label: '이어서 작성', href: sessionHref },
+    { label: '열어 작성', href: sessionHref },
     ...(canArchiveReports
       ? [
           {
@@ -93,6 +93,10 @@ export function ReportListRow({
         <span className={styles.dataValue}>
           {getReportDrafterDisplay(item, assignedUserDisplay, currentSite)}
         </span>
+      </div>
+
+      <div className={`${styles.dataCell} ${styles.dispatchStatusCell}`}>
+        <span className={styles.dataValue}>{item.dispatchCompleted ? '발송완료' : '미발송'}</span>
       </div>
 
       <div className={`${styles.progressCell} ${styles.progressArea}`}>

@@ -172,6 +172,8 @@ export type SafetyAdminAlertSeverity = 'info' | 'warning' | 'danger';
 export type SafetyAdminAlertType =
   | 'quarterly_dispatch_overdue'
   | 'quarterly_deadline'
+  | 'technical_guidance_dispatch_overdue'
+  | 'technical_guidance_deadline'
   | 'quality_review_pending'
   | 'contract_missing'
   | 'assignment_missing'
@@ -288,6 +290,8 @@ export interface SafetyAdminDeadlineSignalSummary {
 }
 
 export interface SafetyAdminDispatchQueueRow {
+  dispatchAlertsEnabled?: boolean;
+  dispatchPolicyEnabled?: boolean;
   headquarterName: string;
   href: string;
   openReportCount: number;

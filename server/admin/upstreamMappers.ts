@@ -279,6 +279,8 @@ export function mapBackendOverviewResponse(
           : 0,
     },
     dispatchQueueRows: dispatchQueueRows.map((row) => ({
+      dispatchAlertsEnabled: Boolean(row.dispatch_alerts_enabled),
+      dispatchPolicyEnabled: Boolean(row.dispatch_policy_enabled),
       headquarterName: normalizeText(row.headquarter_name),
       href: normalizeText(row.href),
       openReportCount: typeof row.open_report_count === 'number' ? row.open_report_count : 0,
@@ -331,6 +333,8 @@ export function mapBackendOverviewResponse(
       updatedAt: normalizeText(row.updated_at),
     })),
     priorityTargetSiteRows: priorityTargetSiteRows.map((row) => ({
+      dispatchAlertsEnabled: Boolean(row.dispatch_alerts_enabled),
+      dispatchPolicyEnabled: Boolean(row.dispatch_policy_enabled),
       headquarterName: normalizeText(row.headquarter_name),
       href: normalizeText(row.href),
       openReportCount: typeof row.open_report_count === 'number' ? row.open_report_count : 0,
@@ -383,6 +387,8 @@ export function mapBackendOverviewResponse(
           : 0,
     },
     recipientMissingSiteRows: recipientMissingSiteRows.map((row) => ({
+      dispatchAlertsEnabled: Boolean(row.dispatch_alerts_enabled),
+      dispatchPolicyEnabled: Boolean(row.dispatch_policy_enabled),
       headquarterName: normalizeText(row.headquarter_name),
       href: normalizeText(row.href),
       openReportCount: typeof row.open_report_count === 'number' ? row.open_report_count : 0,

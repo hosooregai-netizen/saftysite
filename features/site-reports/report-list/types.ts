@@ -1,4 +1,5 @@
 export type SiteReportSortMode = 'round' | 'name' | 'progress';
+export type SiteReportDispatchFilter = 'all' | 'pending' | 'completed';
 
 export interface CreateSiteReportInput {
   reportDate: string;

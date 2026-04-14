@@ -8,6 +8,7 @@ import {
   deleteSafetyUser,
   updateSafetyHeadquarter,
   updateSafetySite,
+  updateSafetySiteDispatchPolicy,
   updateSafetyUser,
   updateSafetyUserPassword,
 } from '@/lib/safetyApi/adminEndpoints';
@@ -160,6 +161,24 @@ export function buildAdminDashboardCrudActions({
           sites: upsertRecordById(current.sites, site),
         }),
       }),
+    updateSiteDispatchPolicy: (
+      id: string,
+      input: { enabled?: boolean | null; alerts_enabled?: boolean | null },
+    ) =>
+      runMutation(
+        (token) =>
+          updateSafetySiteDispatchPolicy(token, id, {
+            enabled: input.enabled === true,
+            alerts_enabled: input.alerts_enabled === true,
+          }),
+        '?꾩옣 諛쒖넚 愿由??뺤콉??섏젙?덉뒿?덈떎.',
+        {
+          applyResult: (current, site) => ({
+            ...current,
+            sites: upsertRecordById(current.sites, site),
+          }),
+        },
+      ),
     deleteSite: (id: string) =>
       runMutation(
         async (token) => {

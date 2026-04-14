@@ -24,6 +24,12 @@ import {
 export function useAdminOverviewSectionState(
   data: ControllerDashboardData,
   reports: SafetyReportListItem[],
+  options?: {
+    onUpdateSiteDispatchPolicy?: (
+      siteId: string,
+      input: { enabled: boolean; alerts_enabled: boolean },
+    ) => Promise<unknown>;
+  },
 ) {
   const fallbackOverview = useMemo(
     () =>
@@ -41,6 +47,7 @@ export function useAdminOverviewSectionState(
   const [overviewResponse, setOverviewResponse] = useState<SafetyAdminOverviewResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [policyUpdatingSiteId, setPolicyUpdatingSiteId] = useState<string | null>(null);
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const [materialSort, setMaterialSort] = useState<TableSortState>({ direction: 'desc', key: 'missingTotal' });
   const [materialPage, setMaterialPage] = useState(1);
@@ -184,18 +191,37 @@ export function useAdminOverviewSectionState(
     await exportAdminWorkbook('overview', getOverviewExportSheets(exportModel));
   }, [overview, sortedMaterialRows, sortedUnsentReportRows]);
 
+  const updateSiteDispatchPolicy = useCallback(
+    async (siteId: string, input: { enabled: boolean; alerts_enabled: boolean }) => {
+      if (!options?.onUpdateSiteDispatchPolicy) return;
+      try {
+        setPolicyUpdatingSiteId(siteId);
+        setError(null);
+        await options.onUpdateSiteDispatchPolicy(siteId, input);
+        await refreshOverview();
+      } catch (nextError) {
+        setError(nextError instanceof Error ? nextError.message : '발송 관리 정책을 업데이트하지 못했습니다.');
+      } finally {
+        setPolicyUpdatingSiteId(null);
+      }
+    },
+    [options, refreshOverview],
+  );
+
   return {
     currentMaterialPage,
     currentUnsentPage,
     error,
     exportOverview,
     isRefreshing,
+    policyUpdatingSiteId,
     lastSyncedAt,
     materialTotalPages,
     overview,
     pagedMaterialRows,
     pagedUnsentReportRows,
     refreshOverview,
+    updateSiteDispatchPolicy,
     setMaterialPage,
     setMaterialSort,
     setUnsentPage,

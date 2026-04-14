@@ -128,6 +128,12 @@ export function AdminDashboardSectionContent({
     case 'schedules':
       return <SchedulesSection currentUser={currentUser} sites={sites} users={users} />;
     default:
-      return <AdminOverviewSection data={dashboard.data} reports={dashboard.reportList} />;
+      return (
+        <AdminOverviewSection
+          data={dashboard.data}
+          onUpdateSiteDispatchPolicy={dashboard.updateSiteDispatchPolicy}
+          reports={dashboard.reportList}
+        />
+      );
   }
 }

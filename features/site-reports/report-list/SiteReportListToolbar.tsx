@@ -1,22 +1,26 @@
 'use client';
 
 import styles from '@/features/site-reports/components/SiteReportsScreen.module.css';
-import type { SiteReportSortMode } from './types';
+import type { SiteReportDispatchFilter, SiteReportSortMode } from './types';
 
 interface SiteReportListToolbarProps {
   canCreateReport: boolean;
+  dispatchFilter: SiteReportDispatchFilter;
   onCreateReport: () => void;
   reportQuery: string;
   reportSortMode: SiteReportSortMode;
+  setDispatchFilter: (value: SiteReportDispatchFilter) => void;
   setReportQuery: (value: string) => void;
   setReportSortMode: (value: SiteReportSortMode) => void;
 }
 
 export function SiteReportListToolbar({
   canCreateReport,
+  dispatchFilter,
   onCreateReport,
   reportQuery,
   reportSortMode,
+  setDispatchFilter,
   setReportQuery,
   setReportSortMode,
 }: SiteReportListToolbarProps) {
@@ -27,8 +31,18 @@ export function SiteReportListToolbar({
         placeholder="차수, 보고서명, 지도일, 작성자로 검색"
         value={reportQuery}
         onChange={(event) => setReportQuery(event.target.value)}
-        aria-label="보고서 검색"
+        aria-label="기술지도 보고서 검색"
       />
+      <select
+        className={`app-select ${styles.tableSort}`}
+        value={dispatchFilter}
+        onChange={(event) => setDispatchFilter(event.target.value as SiteReportDispatchFilter)}
+        aria-label="발송여부 필터"
+      >
+        <option value="all">발송여부 전체</option>
+        <option value="pending">미발송</option>
+        <option value="completed">발송완료</option>
+      </select>
       <select
         className={`app-select ${styles.tableSort}`}
         value={reportSortMode}

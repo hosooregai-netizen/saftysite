@@ -155,11 +155,12 @@
   display: grid;
   grid-template-columns:
     56px
-    minmax(220px, 1.45fr)
-    minmax(110px, 0.8fr)
+    minmax(210px, 1.35fr)
+    minmax(104px, 0.72fr)
     minmax(118px, 0.72fr)
-    minmax(168px, 0.84fr)
-    minmax(150px, 0.95fr)
+    minmax(92px, 0.62fr)
+    minmax(150px, 0.82fr)
+    minmax(140px, 0.88fr)
     40px;
   gap: 10px;
   padding: 9px 16px 8px;
@@ -179,11 +180,12 @@
   display: grid;
   grid-template-columns:
     56px
-    minmax(220px, 1.45fr)
-    minmax(110px, 0.8fr)
+    minmax(210px, 1.35fr)
+    minmax(104px, 0.72fr)
     minmax(118px, 0.72fr)
-    minmax(168px, 0.84fr)
-    minmax(150px, 0.95fr)
+    minmax(92px, 0.62fr)
+    minmax(150px, 0.82fr)
+    minmax(140px, 0.88fr)
     40px;
   gap: 10px;
   align-items: center;
@@ -219,6 +221,7 @@
 .roundCell,
 .reportDateCell,
 .drafterCell,
+.dispatchStatusCell,
 .progressArea,
 .lastSavedCell,
 .actionsCell {
@@ -237,20 +240,22 @@
 .quarterlyListHead {
   grid-template-columns:
     56px
-    minmax(220px, 1.45fr)
-    minmax(110px, 0.8fr)
-    minmax(150px, 0.95fr)
-    minmax(170px, 1.02fr)
+    minmax(210px, 1.32fr)
+    minmax(104px, 0.74fr)
+    minmax(92px, 0.62fr)
+    minmax(140px, 0.9fr)
+    minmax(160px, 0.98fr)
     40px;
 }
 
 .quarterlyReportRow {
   grid-template-columns:
     56px
-    minmax(220px, 1.45fr)
-    minmax(110px, 0.8fr)
-    minmax(150px, 0.95fr)
-    minmax(170px, 1.02fr)
+    minmax(210px, 1.32fr)
+    minmax(104px, 0.74fr)
+    minmax(92px, 0.62fr)
+    minmax(140px, 0.9fr)
+    minmax(160px, 0.98fr)
     40px;
 }
 
@@ -450,9 +455,10 @@
   .reportRow {
     grid-template-columns:
       42px
-      minmax(0, 1.24fr)
-      minmax(0, 0.8fr)
-      minmax(68px, 0.74fr)
+      minmax(0, 1.14fr)
+      minmax(0, 0.78fr)
+      minmax(76px, 0.78fr)
+      minmax(68px, 0.72fr)
       36px;
     gap: 6px;
     padding-left: 10px;
@@ -467,8 +473,9 @@
   .quarterlyReportRow {
     grid-template-columns:
       42px
-      minmax(0, 1.3fr)
-      minmax(68px, 0.8fr)
+      minmax(0, 1.14fr)
+      minmax(76px, 0.82fr)
+      minmax(68px, 0.72fr)
       36px;
   }
 
@@ -523,9 +530,10 @@
   .reportRow {
     grid-template-columns:
       48px
-      minmax(0, 1.4fr)
-      minmax(0, 0.92fr)
-      minmax(92px, 0.96fr)
+      minmax(0, 1.28fr)
+      minmax(0, 0.88fr)
+      minmax(92px, 0.92fr)
+      minmax(84px, 0.82fr)
       40px;
     gap: 8px;
     padding-left: 14px;
@@ -544,8 +552,9 @@
   .quarterlyReportRow {
     grid-template-columns:
       48px
-      minmax(0, 1.4fr)
-      minmax(92px, 0.96fr)
+      minmax(0, 1.24fr)
+      minmax(92px, 0.92fr)
+      minmax(84px, 0.82fr)
       40px;
   }
 }

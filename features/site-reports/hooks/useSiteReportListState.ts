@@ -16,6 +16,7 @@ import {
 } from '@/features/site-reports/report-list/reportListHelpers';
 import {
   type CreateSiteReportInput,
+  type SiteReportDispatchFilter,
   type SiteReportSortMode,
 } from '@/features/site-reports/report-list/types';
 import { useSiteReportIndexLoader } from '@/features/site-reports/report-list/useSiteReportIndexLoader';
@@ -47,6 +48,7 @@ export function useSiteReportListState(
   } = useInspectionSessions();
   const [reportQuery, setReportQuery] = useState('');
   const [reportSortMode, setReportSortMode] = useState<SiteReportSortMode>('round');
+  const [dispatchFilter, setDispatchFilter] = useState<SiteReportDispatchFilter>('all');
   const currentSite = useMemo(() => {
     if (!decodedSiteKey) return null;
     return sites.find((site) => site.id === decodedSiteKey) ?? options.siteOverride ?? null;
@@ -73,11 +75,19 @@ export function useSiteReportListState(
       getFilteredReportItems({
         assignedUserDisplay,
         currentSiteAssigneeName: currentSite?.assigneeName,
+        dispatchFilter,
         reportItems,
         reportQuery: deferredReportQuery,
         reportSortMode,
       }),
-    [assignedUserDisplay, currentSite?.assigneeName, deferredReportQuery, reportItems, reportSortMode],
+    [
+      assignedUserDisplay,
+      currentSite?.assigneeName,
+      deferredReportQuery,
+      dispatchFilter,
+      reportItems,
+      reportSortMode,
+    ],
   );
   const getCreateReportTitleSuggestion = (reportDate: string) => buildDefaultReportTitle(reportDate, nextReportNumber);
 
@@ -147,6 +157,7 @@ export function useSiteReportListState(
     currentUser,
     getCreateReportTitleSuggestion,
     deleteSession,
+    dispatchFilter,
     filteredReportItems,
     reportIndexError,
     reportIndexStatus,
@@ -156,5 +167,6 @@ export function useSiteReportListState(
     reportSortMode,
     setReportQuery,
     setReportSortMode,
+    setDispatchFilter,
   };
 }

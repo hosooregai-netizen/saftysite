@@ -13,7 +13,10 @@ import { QuarterlyReportDeleteDialog } from '../quarterly-list/QuarterlyReportDe
 import { QuarterlyReportsListPanel } from '../quarterly-list/QuarterlyReportsListPanel';
 import { QuarterlyReportsStatePanel } from '../quarterly-list/QuarterlyReportsStatePanel';
 import { SiteQuarterlyReportsFrame } from '../quarterly-list/SiteQuarterlyReportsFrame';
-import type { QuarterlyListSortMode } from '../quarterly-list/types';
+import type {
+  QuarterlyListDispatchFilter,
+  QuarterlyListSortMode,
+} from '../quarterly-list/types';
 import { useQuarterlyCreateDialog } from '../quarterly-list/useQuarterlyCreateDialog';
 import { useQuarterlyListRows } from '../quarterly-list/useQuarterlyListRows';
 
@@ -28,6 +31,7 @@ export function SiteQuarterlyReportsScreen({
   const [dialogReportId, setDialogReportId] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const [dispatchFilter, setDispatchFilter] = useState<QuarterlyListDispatchFilter>('all');
   const [sortMode, setSortMode] = useState<QuarterlyListSortMode>('number');
   const deferredQuery = useDeferredValue(query);
   const decodedSiteKey = decodeURIComponent(siteKey);
@@ -60,6 +64,7 @@ export function SiteQuarterlyReportsScreen({
   const { existingReportTitles, filteredRows, rows } = useQuarterlyListRows({
     currentSite,
     deferredQuery,
+    dispatchFilter,
     quarterlyReports,
     sortMode,
   });
@@ -140,7 +145,9 @@ export function SiteQuarterlyReportsScreen({
           filteredRows={filteredRows}
           isBusy={isBusy}
           isLoading={isLoading}
+          dispatchFilter={dispatchFilter}
           onChangeQuery={setQuery}
+          onChangeDispatchFilter={setDispatchFilter}
           onChangeSortMode={setSortMode}
           onDeleteRequest={setDialogReportId}
           onOpenCreateDialog={openCreateDialog}

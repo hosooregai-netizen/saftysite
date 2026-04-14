@@ -8,11 +8,16 @@ import {
   getQuarterLabel,
   getSortTime,
 } from './quarterlyListHelpers';
-import type { QuarterlyListRow, QuarterlyListSortMode } from './types';
+import type {
+  QuarterlyListDispatchFilter,
+  QuarterlyListRow,
+  QuarterlyListSortMode,
+} from './types';
 
 interface UseQuarterlyListRowsOptions {
   currentSite: InspectionSite | null;
   deferredQuery: string;
+  dispatchFilter: QuarterlyListDispatchFilter;
   quarterlyReports: OperationalQuarterlyIndexItem[];
   sortMode: QuarterlyListSortMode;
 }
@@ -20,6 +25,7 @@ interface UseQuarterlyListRowsOptions {
 export function useQuarterlyListRows({
   currentSite,
   deferredQuery,
+  dispatchFilter,
   quarterlyReports,
   sortMode,
 }: UseQuarterlyListRowsOptions) {
@@ -42,6 +48,7 @@ export function useQuarterlyListRows({
         ),
       )
       .map((report, index) => ({
+        dispatchCompleted: report.dispatchCompleted,
         sequenceNumber: index + 1,
         href: buildSiteQuarterlyHref(currentSite.id, report.id),
         reportId: report.id,
@@ -57,9 +64,14 @@ export function useQuarterlyListRows({
 
   const filteredRows = useMemo(() => {
     const normalizedQuery = deferredQuery.trim().toLowerCase();
+    const dispatchFilteredRows = rows.filter((row) => {
+      if (dispatchFilter === 'pending') return !row.dispatchCompleted;
+      if (dispatchFilter === 'completed') return row.dispatchCompleted;
+      return true;
+    });
     const matchingRows = !normalizedQuery
-      ? rows
-      : rows.filter((row) =>
+      ? dispatchFilteredRows
+      : dispatchFilteredRows.filter((row) =>
           [row.reportTitle, row.quarterLabel, row.periodLabel].join(' ').toLowerCase().includes(normalizedQuery),
         );
 
@@ -73,7 +85,7 @@ export function useQuarterlyListRows({
       }
       return getSortTime(right.updatedAt) - getSortTime(left.updatedAt);
     });
-  }, [deferredQuery, rows, sortMode]);
+  }, [deferredQuery, dispatchFilter, rows, sortMode]);
 
   const existingReportTitles = useMemo(() => rows.map((row) => row.reportTitle), [rows]);
 

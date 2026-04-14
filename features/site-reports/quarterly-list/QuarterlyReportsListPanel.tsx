@@ -4,13 +4,19 @@ import Link from 'next/link';
 import ActionMenu from '@/components/ui/ActionMenu';
 import styles from '../components/SiteReportsScreen.module.css';
 import { formatDateTimeLabel, shouldIgnoreRowClick } from './quarterlyListHelpers';
-import type { QuarterlyListRow, QuarterlyListSortMode } from './types';
+import type {
+  QuarterlyListDispatchFilter,
+  QuarterlyListRow,
+  QuarterlyListSortMode,
+} from './types';
 
 interface QuarterlyReportsListPanelProps {
   canArchiveReports: boolean;
+  dispatchFilter: QuarterlyListDispatchFilter;
   filteredRows: QuarterlyListRow[];
   isBusy: boolean;
   isLoading: boolean;
+  onChangeDispatchFilter: (value: QuarterlyListDispatchFilter) => void;
   onChangeQuery: (value: string) => void;
   onChangeSortMode: (value: QuarterlyListSortMode) => void;
   onDeleteRequest: (reportId: string) => void;
@@ -24,9 +30,11 @@ interface QuarterlyReportsListPanelProps {
 
 export function QuarterlyReportsListPanel({
   canArchiveReports,
+  dispatchFilter,
   filteredRows,
   isBusy,
   isLoading,
+  onChangeDispatchFilter,
   onChangeQuery,
   onChangeSortMode,
   onDeleteRequest,
@@ -49,12 +57,22 @@ export function QuarterlyReportsListPanel({
         />
         <select
           className={`app-select ${styles.tableSort}`}
+          value={dispatchFilter}
+          onChange={(event) => onChangeDispatchFilter(event.target.value as QuarterlyListDispatchFilter)}
+          aria-label="분기 종합 보고서 발송여부 필터"
+        >
+          <option value="all">발송여부 전체</option>
+          <option value="pending">미발송</option>
+          <option value="completed">발송완료</option>
+        </select>
+        <select
+          className={`app-select ${styles.tableSort}`}
           value={sortMode}
           onChange={(event) => onChangeSortMode(event.target.value as QuarterlyListSortMode)}
           aria-label="분기 종합 보고서 정렬"
         >
           <option value="number">번호순</option>
-          <option value="recent">최근 수정일순</option>
+          <option value="recent">최근 수정순</option>
           <option value="name">보고서명순</option>
           <option value="period">기간순</option>
         </select>
@@ -77,7 +95,7 @@ export function QuarterlyReportsListPanel({
       {(isLoading || (!operationalError && rows.length === 0)) && rows.length === 0 ? (
         <div className={styles.emptyState}>
           <p className={styles.emptyTitle}>
-            {isLoading ? '분기 종합 보고서 목록을 불러오는 중입니다.' : '아직 작성한 분기 종합 보고서가 없습니다.'}
+            {isLoading ? '분기 종합 보고서 목록을 불러오는 중입니다.' : '아직 작성된 분기 종합 보고서가 없습니다.'}
           </p>
         </div>
       ) : filteredRows.length === 0 ? (
@@ -91,6 +109,7 @@ export function QuarterlyReportsListPanel({
               <span>번호</span>
               <span>보고서명</span>
               <span>선택 보고서</span>
+              <span>발송여부</span>
               <span className={styles.desktopOnly}>수정일</span>
               <span className={styles.desktopOnly}>기간</span>
               <span>메뉴</span>
@@ -126,6 +145,10 @@ export function QuarterlyReportsListPanel({
 
                   <div className={styles.dataCell}>
                     <span className={styles.dataValue}>{row.selectedCount}건</span>
+                  </div>
+
+                  <div className={`${styles.dataCell} ${styles.dispatchStatusCell}`}>
+                    <span className={styles.dataValue}>{row.dispatchCompleted ? '발송완료' : '미발송'}</span>
                   </div>
 
                   <div className={`${styles.dataCell} ${styles.desktopOnly}`}>

@@ -120,6 +120,13 @@ export interface SafetyUserSummary {
   role: SafetyUserRole;
 }
 
+export interface SiteDispatchPolicy {
+  enabled: boolean;
+  alerts_enabled: boolean;
+  updated_at: string | null;
+  updated_by: string | null;
+}
+
 export interface SafetyHeadquarterSummary {
   id: string;
   name: string;
@@ -188,6 +195,7 @@ export interface SafetySite {
   total_contract_amount?: number | null;
   last_visit_date?: string | null;
   required_completion_fields?: string[] | null;
+  dispatch_policy?: SiteDispatchPolicy | null;
   created_at: string;
   updated_at: string;
 }
@@ -280,6 +288,7 @@ export interface SafetyReport {
   status: SafetyReportStatus;
   workflow_status?: SafetyReportWorkflowStatus | null;
   lifecycle_status?: SafetyLifecycleStatus;
+  dispatch_completed?: boolean | null;
   payload_version: number;
   latest_revision_no: number;
   submitted_at: string | null;
@@ -315,6 +324,7 @@ export interface SafetyReportListItem {
   submitted_at: string | null;
   published_at: string | null;
   last_autosaved_at: string | null;
+  dispatch_completed?: boolean | null;
   report_type?: ControllerReportType | null;
   review?: ReportControllerReview | null;
   dispatch?: ReportDispatchMeta | null;
@@ -329,6 +339,7 @@ export interface SafetyOperationalQuarterlyIndexItem {
   report_title: string;
   site_id: string;
   status: SafetyReportStatus;
+  dispatch_completed?: boolean | null;
   period_start_date: string;
   period_end_date: string;
   quarter_key: string;
@@ -345,6 +356,7 @@ export interface SafetyOperationalBadWorkplaceIndexItem {
   report_title: string;
   site_id: string;
   status: SafetyReportStatus;
+  dispatch_completed?: boolean | null;
   report_month: string;
   reporter_user_id: string;
   reporter_name: string;
@@ -889,6 +901,8 @@ export interface SafetyBackendAdminOverviewResponse {
     total_report_count: number;
   };
   dispatch_queue_rows?: Array<{
+    dispatch_alerts_enabled?: boolean;
+    dispatch_policy_enabled?: boolean;
     headquarter_name: string;
     href: string;
     open_report_count: number;
@@ -964,6 +978,8 @@ export interface SafetyBackendAdminOverviewResponse {
     total_site_count: number;
   };
   priority_target_site_rows?: Array<{
+    dispatch_alerts_enabled?: boolean;
+    dispatch_policy_enabled?: boolean;
     headquarter_name: string;
     href: string;
     open_report_count: number;
@@ -974,6 +990,8 @@ export interface SafetyBackendAdminOverviewResponse {
     total_contract_amount: number | null;
   }>;
   recipient_missing_site_rows?: Array<{
+    dispatch_alerts_enabled?: boolean;
+    dispatch_policy_enabled?: boolean;
     headquarter_name: string;
     href: string;
     open_report_count: number;

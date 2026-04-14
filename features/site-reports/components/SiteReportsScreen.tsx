@@ -42,8 +42,10 @@ export function SiteReportsScreen({ siteKey }: SiteReportsScreenProps) {
     reportIndexStatus,
     reportItems,
     reloadReportIndex,
+    dispatchFilter,
     reportQuery,
     reportSortMode,
+    setDispatchFilter,
     setReportQuery,
     setReportSortMode,
     workerBackHref,
@@ -121,8 +123,10 @@ export function SiteReportsScreen({ siteKey }: SiteReportsScreenProps) {
                   reportIndexError={reportIndexError}
                   reportIndexStatus={reportIndexStatus}
                   reportItems={reportItems}
+                  dispatchFilter={dispatchFilter}
                   reportQuery={reportQuery}
                   reportSortMode={reportSortMode}
+                  setDispatchFilter={setDispatchFilter}
                   setReportQuery={setReportQuery}
                   setReportSortMode={setReportSortMode}
                   showSummaryBar={false}

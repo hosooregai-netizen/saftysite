@@ -18,6 +18,7 @@ export interface OperationalQuarterlyIndexItem {
   siteId: string;
   title: string;
   reportKind: 'quarterly_summary';
+  dispatchCompleted: boolean;
   periodStartDate: string;
   periodEndDate: string;
   quarterKey: string;
@@ -35,6 +36,7 @@ export interface OperationalBadWorkplaceIndexItem {
   siteId: string;
   title: string;
   reportKind: 'bad_workplace';
+  dispatchCompleted: boolean;
   reportMonth: string;
   status: OperationalReportStatus;
   reporterUserId: string;
@@ -76,6 +78,7 @@ export interface QuarterlySummaryReport {
   siteId: string;
   title: string;
   reportKind: 'quarterly_summary';
+  dispatchCompleted: boolean;
   periodStartDate: string;
   periodEndDate: string;
   quarterKey: string;
@@ -126,6 +129,7 @@ export interface BadWorkplaceReport {
   siteId: string;
   title: string;
   reportKind: 'bad_workplace';
+  dispatchCompleted: boolean;
   reportMonth: string;
   status: OperationalReportStatus;
   sourceMode: 'previous_unresolved' | 'current_new_hazard';

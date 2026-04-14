@@ -2,14 +2,14 @@
 
 import { useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { ReportListEmptyState, type ReportListEmptyMode } from '@/features/site-reports/report-list/ReportListEmptyState';
+import { ReportListRow } from '@/features/site-reports/report-list/ReportListRow';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import type {
   InspectionReportListItem,
   InspectionSite,
   ReportIndexStatus,
 } from '@/types/inspectionSession';
-import { ReportListEmptyState, type ReportListEmptyMode } from '@/features/site-reports/report-list/ReportListEmptyState';
-import { ReportListRow } from '@/features/site-reports/report-list/ReportListRow';
 import styles from './SiteReportsScreen.module.css';
 
 interface ReportListProps {
@@ -96,6 +96,7 @@ export function ReportList({
           <span>보고서명</span>
           <span className={styles.desktopOnly}>지도일</span>
           <span>작성자</span>
+          <span>발송여부</span>
           <span>진행률</span>
           <span className={styles.desktopOnly}>마지막 저장</span>
           <span>메뉴</span>
