@@ -399,9 +399,10 @@ export interface AdminAnalyticsStats {
   excludedSiteCount: number;
   includedEmployeeCount: number;
   overdueCount: number;
-  plannedContractRevenue: number;
   plannedRounds: number;
+  remainingRounds: number;
   totalExecutedRounds: number;
+  totalScopedRounds: number;
   totalVisitRevenue: number;
 }
 

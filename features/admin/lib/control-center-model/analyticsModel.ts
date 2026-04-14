@@ -284,6 +284,7 @@ export function buildAdminAnalyticsModel(
     ...buildSummaryCardsAndStats(
       visibleSites,
       userLoadCount,
+      scopedScheduleRows,
       detailScheduleRows,
       detailRevenueEvents,
       previousRevenueEvents,

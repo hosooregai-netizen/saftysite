@@ -1,6 +1,5 @@
 'use client';
 
-import { formatAnalyticsStatValue } from '@/features/admin/lib/buildAdminControlCenterModel';
 import sharedStyles from '@/features/admin/sections/AdminSectionShared.module.css';
 import localStyles from '@/features/admin/sections/analytics/AnalyticsSection.module.css';
 import { getDeltaClassName } from './analyticsSectionHelpers';
@@ -8,12 +7,12 @@ import { getDeltaClassName } from './analyticsSectionHelpers';
 interface AnalyticsSummarySectionProps {
   analytics: {
     stats: {
-      completionRate: number;
       countedSiteCount: number;
       excludedSiteCount: number;
       overdueCount: number;
-      plannedRounds: number;
+      remainingRounds: number;
       totalExecutedRounds: number;
+      totalScopedRounds: number;
     };
     summaryCards: Array<{
       deltaLabel: string;
@@ -47,7 +46,7 @@ export function AnalyticsSummarySection({
           ))}
         </div>
         <div className={localStyles.kpiGrid}>
-          {Array.from({ length: 5 }, (_, index) => (
+          {Array.from({ length: 7 }, (_, index) => (
             <article key={`analytics-kpi-skeleton-${index + 1}`} className={localStyles.kpiCard}>
               <span className={`${localStyles.skeletonBlock} ${localStyles.skeletonLabel}`} />
               <span className={`${localStyles.skeletonBlock} ${localStyles.skeletonValue}`} />
@@ -101,14 +100,12 @@ export function AnalyticsSummarySection({
           <strong className={localStyles.supportValue}>{analytics.stats.totalExecutedRounds}회</strong>
         </div>
         <div className={localStyles.supportItem}>
-          <span className={localStyles.supportLabel}>예정 회차</span>
-          <strong className={localStyles.supportValue}>{analytics.stats.plannedRounds}회</strong>
+          <span className={localStyles.supportLabel}>남은 회차</span>
+          <strong className={localStyles.supportValue}>{analytics.stats.remainingRounds}회</strong>
         </div>
         <div className={localStyles.supportItem}>
-          <span className={localStyles.supportLabel}>완료율</span>
-          <strong className={localStyles.supportValue}>
-            {formatAnalyticsStatValue('percent', analytics.stats.completionRate)}
-          </strong>
+          <span className={localStyles.supportLabel}>집계 회차</span>
+          <strong className={localStyles.supportValue}>{analytics.stats.totalScopedRounds}회</strong>
         </div>
         <div className={localStyles.supportItem}>
           <span className={localStyles.supportLabel}>지연 건수</span>

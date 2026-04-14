@@ -27,11 +27,11 @@ export const FEATURE_CONTRACTS: Record<FeatureContractId, FeatureContract> = {
   'admin-control-center': {
     id: 'admin-control-center',
     description:
-      '관제 대시보드 overview/analytics가 admin 로그인 진입, KPI, 차트, 안정적인 로딩 상태, 기간 전환, site 계약 연동 매출, K2B 회차/기술지도일 기준 실적 집계, legacy 무일정 데이터 백필, export 진입 흐름을 유지한다.',
+      '관제 대시보드 overview/analytics가 admin 로그인 진입, KPI, 차트, 안정적인 로딩 상태, 기간 전환, site 계약 연동 매출, K2B 회차/기술지도일 기준 실적 집계, 계약 총량 대신 실행/남은 회차 KPI, legacy 무일정 데이터 백필, export 진입 흐름을 유지한다.',
     routes: ['/admin?section=overview', '/admin?section=analytics'],
-    markers: ['운영 개요', '현장 상태', '발송 관리 대상', '매출/실적 집계', '계약 예정 매출', '월별 매출 추이', '상세 표'],
+    markers: ['운영 개요', '현장 상태', '발송 관리 대상', '매출/실적 집계', '실행 회차', '남은 회차', '월별 매출 추이', '상세 표'],
     apis: ['GET /api/admin/dashboard/overview', 'GET /api/admin/dashboard/analytics', 'POST /api/admin/exports/:section'],
-    criticalActions: ['admin 로그인 진입', 'overview 진입', 'analytics 진입', '초기 로딩 상태 유지', '기간 전환', 'site 계약 수정 반영 확인', 'K2B 회차 실적 집계 확인', 'legacy 무일정 데이터 백필 확인', '엑셀 내보내기', '핵심 카드와 차트 확인'],
+    criticalActions: ['admin 로그인 진입', 'overview 진입', 'analytics 진입', '초기 로딩 상태 유지', '기간 전환', 'site 계약 수정 반영 확인', 'K2B 회차 실적 집계 확인', '실행/남은 회차 KPI 확인', 'legacy 무일정 데이터 백필 확인', '엑셀 내보내기', '핵심 카드와 차트 확인'],
   },
   'admin-reports': {
     id: 'admin-reports',

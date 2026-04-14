@@ -47,8 +47,10 @@ export async function runAdminControlCenterSmoke(config: ClientSmokePlaywrightCo
       analyticsReadsBefore + 2,
     );
     await page.getByText('집계 기간').first().waitFor();
-    await page.getByText('계약 예정 매출').first().waitFor();
-    await page.getByText('1,200,000원').first().waitFor();
+    await page.getByText('실행 회차').first().waitFor();
+    await page.getByText('남은 회차').first().waitFor();
+    await page.getByText('4회').first().waitFor();
+    await page.getByText('0회').first().waitFor();
     await page.getByText('400,000원').first().waitFor();
     await page.getByText('100,000원').first().waitFor();
     await page.getByRole('button', { name: '엑셀 내보내기' }).click();

@@ -458,6 +458,8 @@ export function mapBackendAnalyticsResponse(
     (sum, row) => sum + row.visit_revenue,
     0,
   );
+  const plannedRounds = response.stats.planned_rounds ?? 0;
+  const remainingRounds = Math.max(plannedRounds - totalExecutedRounds, 0);
 
   return {
     contractTypeRows: response.contract_type_rows.map((row) => ({
@@ -509,9 +511,10 @@ export function mapBackendAnalyticsResponse(
       excludedSiteCount: response.stats.excluded_site_count,
       includedEmployeeCount: response.employee_rows.length,
       overdueCount: totalOverdueCount,
-      plannedContractRevenue: response.stats.planned_contract_revenue ?? 0,
-      plannedRounds: response.stats.planned_rounds ?? 0,
+      plannedRounds,
+      remainingRounds,
       totalExecutedRounds,
+      totalScopedRounds: plannedRounds,
       totalVisitRevenue,
     },
     summaryCards: response.summary_cards.map((card) => ({

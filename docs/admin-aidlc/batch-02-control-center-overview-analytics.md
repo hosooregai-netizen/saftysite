@@ -96,6 +96,9 @@ contract pack around:
   snapshot before the server response returns, improving perceived load time on `/admin?section=analytics`.
 - Summary cards, charts, and detail tables now render fixed-height loading placeholders so the
   analytics surface no longer flashes or reflows while the first response is loading.
+- Analytics summary KPIs now treat contract-total metrics and 운영 execution metrics as separate
+  concepts: top cards show `실행 회차` and `남은 회차` instead of the older `계약 예정 매출` /
+  `예정 회차`, while detailed tables still keep contract totals for planning/reference views.
 - Analytics revenue aggregation now treats past `technical_guidance` visit dates as practically
   completed even when the ERP workflow is still draft, matching the K2B Excel-style operational
   reality where `기술지도일` is often available before a manual completion action is recorded.
