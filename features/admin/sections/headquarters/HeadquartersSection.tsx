@@ -4,9 +4,7 @@ import { useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import { SitesSection } from '@/features/admin/sections/sites/SitesSection';
-import { SiteEntryHubPanel } from '@/features/home/components/SiteEntryHubPanel';
 import { getSiteStatusLabel } from '@/lib/admin';
-import { mapSafetySiteToInspectionSite } from '@/lib/safetyApiMappers/sites';
 import type { SafetySite, SafetyUser } from '@/types/backend';
 import type {
   SafetyAssignment,
@@ -46,7 +44,7 @@ function validateHeadquarterSubmit(
   for (const [label, value, maxLength] of maxLengthChecks) {
     const normalized = value.trim();
     if (normalized.length > maxLength) {
-      return `${label}은(는) ${maxLength}자 이하로 입력해 주세요.`;
+      return `${label}는 ${maxLength}자 이하로 입력해 주세요.`;
     }
   }
 
@@ -159,10 +157,6 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
   const autoEditSiteId = searchParams.get('editSiteId');
   const siteStatusTitle =
     siteStatusFilter === 'all' ? '현장 목록' : `${getSiteStatusLabel(siteStatusFilter)} 현장`;
-  const selectedInspectionSite = useMemo(
-    () => (selectedSite ? mapSafetySiteToInspectionSite(selectedSite) : null),
-    [selectedSite],
-  );
 
   const submit = async () => {
     if (state.editingId === 'create' && !state.isCreateReady) return;
@@ -185,7 +179,7 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
 
   const handleDeleteHeadquarter = async (item: SafetyHeadquarter) => {
     const confirmed = window.confirm(
-      `'${item.name}' 사업장을 삭제하시겠습니까?\n연결된 현장과 현장 배정 정보는 함께 정리되며, 이 작업은 되돌릴 수 없습니다.`,
+      `'${item.name}' 사업장을 삭제하시겠습니까?\n연결된 현장과 현장 배정 정보도 함께 정리되고, 이 작업은 되돌릴 수 없습니다.`,
     );
 
     if (!confirmed) return;
@@ -235,24 +229,10 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
           users={users}
         />
       ) : selectedSite ? (
-        selectedInspectionSite ? (
-          <div className={styles.contentStack}>
-            <SiteManagementMainPanel
-              headquarter={selectedHeadquarter}
-              site={selectedSite}
-            />
-            <SiteEntryHubPanel
-              currentSite={selectedInspectionSite}
-              reportMetaText="현장 메인에서 기술지도 보고서 목록과 추가 업무 문서로 이동할 수 있습니다."
-            />
-          </div>
-        ) : (
-          <section className={styles.sectionCard}>
-            <div className={styles.sectionBody}>
-              <div className={styles.empty}>현장 정보를 불러오는 중입니다.</div>
-            </div>
-          </section>
-        )
+        <SiteManagementMainPanel
+          headquarter={selectedHeadquarter}
+          site={selectedSite}
+        />
       ) : (
         <div className={styles.contentStack}>
           <HeadquarterSummaryPanel

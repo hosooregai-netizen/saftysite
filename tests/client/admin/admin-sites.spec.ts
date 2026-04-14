@@ -1,7 +1,8 @@
+import type { Page } from 'playwright';
 import type { ClientSmokePlaywrightConfig } from '../../../playwright.config';
 import { createAdminSmokeHarness } from '../fixtures/adminSmokeHarness';
 
-async function assertSiteTableColumnCount(page: import('playwright').Page) {
+async function assertSiteTableColumnCount(page: Page) {
   await page.locator('table thead th').first().waitFor({ state: 'visible' });
   const columnCount = await page.locator('table thead th').count();
   if (columnCount !== 8) {
@@ -70,6 +71,7 @@ export async function runAdminSitesSmoke(config: ClientSmokePlaywrightConfig) {
     await siteCreateDialog.getByLabel('계약상태').selectOption('active');
     await siteCreateDialog.getByLabel('기술지도 대가').fill('1200000');
     await siteCreateDialog.getByLabel('기술지도 횟수').fill('12');
+    await siteCreateDialog.getByLabel('회차당 단가').fill('100000');
     await siteCreateDialog.getByRole('button', { name: '생성' }).click();
     await harness.waitForRequestCount('POST /sites', siteCreatesBefore + 1);
     await assertSiteTableColumnCount(page);
@@ -77,7 +79,7 @@ export async function runAdminSitesSmoke(config: ClientSmokePlaywrightConfig) {
     await page.getByRole('button', { name: /mocked admin site 현장 작업 메뉴 열기/ }).click();
     await page.getByRole('menuitem', { name: '현장 메인' }).click();
     await page.getByRole('link', { name: '현장 정보 수정' }).waitFor({ state: 'visible' });
-    await page.getByText('연락 및 발송 기준').waitFor({ state: 'visible' });
+    await page.getByText('사업장/현장 식별').waitFor({ state: 'visible' });
     const siteBackLabelCount = await page.getByText('현장 목록', { exact: true }).count();
     if (siteBackLabelCount !== 1) {
       throw new Error(

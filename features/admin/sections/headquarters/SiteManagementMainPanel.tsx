@@ -1,16 +1,20 @@
 import Link from 'next/link';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import {
+  buildSiteBadWorkplaceHref,
+  buildSitePhotoAlbumHref,
+  buildSiteQuarterlyListHref,
+  buildSiteReportsHref,
+} from '@/features/home/lib/siteEntry';
+import {
   formatCurrencyValue,
   getControllerSectionHref,
   getSiteStatusLabel,
   SITE_CONTRACT_STATUS_LABELS,
   SITE_CONTRACT_TYPE_LABELS,
 } from '@/lib/admin';
-import {
-  parseSiteRequiredCompletionFields,
-  resolveSiteRevenueProfile,
-} from '@/lib/admin/siteContractProfile';
+import { parseSiteRequiredCompletionFields } from '@/lib/admin/siteContractProfile';
+import { getCurrentReportMonth } from '@/lib/erpReports/shared';
 import type { SafetySite } from '@/types/backend';
 import type { SafetyHeadquarter } from '@/types/controller';
 import { getSiteManagementMissingFields } from '../sites/siteSectionHelpers';
@@ -18,6 +22,14 @@ import { getSiteManagementMissingFields } from '../sites/siteSectionHelpers';
 interface SiteManagementMainPanelProps {
   headquarter: SafetyHeadquarter | null;
   site: SafetySite;
+}
+
+function formatDateRange(start: string | null | undefined, end: string | null | undefined) {
+  return `${start || '-'} ~ ${end || '-'}`;
+}
+
+function formatCountLabel(value: number | null | undefined, suffix = '회') {
+  return value != null ? `${value}${suffix}` : '-';
 }
 
 export function SiteManagementMainPanel({
@@ -37,7 +49,6 @@ export function SiteManagementMainPanel({
   const combinedMissingFields = Array.from(
     new Set([...requiredCompletionFields, ...getSiteManagementMissingFields(site)]),
   );
-  const revenueProfile = resolveSiteRevenueProfile(site);
   const contractTypeLabel =
     SITE_CONTRACT_TYPE_LABELS[
       (site.contract_type ?? '') as keyof typeof SITE_CONTRACT_TYPE_LABELS
@@ -52,46 +63,29 @@ export function SiteManagementMainPanel({
     headquarter?.management_number || site.headquarter_detail?.management_number || '-';
   const headquarterOpeningNumber =
     headquarter?.opening_number || site.headquarter_detail?.opening_number || '-';
-  const headquarterContactName =
-    headquarter?.contact_name || site.headquarter_detail?.contact_name || '-';
-  const headquarterContactPhone =
-    headquarter?.contact_phone || site.headquarter_detail?.contact_phone || '-';
-  const headquarterAddress = headquarter?.address || site.headquarter_detail?.address || '-';
+  const managerDisplay =
+    site.manager_name || site.manager_phone
+      ? `${site.manager_name || '-'}${site.manager_phone ? ` (${site.manager_phone})` : ''}`
+      : '-';
+  const assigneeDisplay = assignedUsers.length > 0 ? assignedUsers.join(', ') : '-';
+  const statusMeta = combinedMissingFields.length
+    ? `보완 ${combinedMissingFields.length}건`
+    : '기본 정보 입력 완료';
+
   const editHref = getControllerSectionHref('headquarters', {
     editSiteId: site.id,
     headquarterId: site.headquarter_id,
   });
-  const reportHref = getControllerSectionHref('reports', {
-    headquarterId: site.headquarter_id,
-    siteId: site.id,
-  });
-  const mailboxHref = getControllerSectionHref('mailbox', {
-    headquarterId: site.headquarter_id,
-    siteId: site.id,
-  });
-  const photoHref = getControllerSectionHref('photos', {
-    headquarterId: site.headquarter_id,
-    siteId: site.id,
-  });
-  const scheduleHref = getControllerSectionHref('schedules', {
-    siteId: site.id,
-  });
+  const reportHref = buildSiteReportsHref(site.id);
+  const quarterlyHref = buildSiteQuarterlyListHref(site.id);
+  const badWorkplaceHref = buildSiteBadWorkplaceHref(site.id, getCurrentReportMonth());
+  const photoHref = buildSitePhotoAlbumHref(site.id);
 
   return (
     <section className={styles.sectionCard}>
       <div className={styles.sectionHeader}>
         <div className={styles.sectionHeaderTitleBlock}>
-          <span className={styles.sectionHeaderMeta}>{headquarterName}</span>
-          <div className={styles.contextBadgeRow}>
-            <span className={`${styles.contextBadge} ${styles.contextBadgeStrong}`}>현장 메인</span>
-            <span className={styles.contextBadge}>운영 {getSiteStatusLabel(site.status)}</span>
-            <span className={styles.contextBadge}>
-              계약 {contractTypeLabel} · {contractStatusLabel}
-            </span>
-            {site.is_high_risk_site ? (
-              <span className={`${styles.contextBadge} ${styles.contextBadgeWarning}`}>고위험 사업장</span>
-            ) : null}
-          </div>
+          <div className={styles.sectionHeaderMeta}>{headquarterName}</div>
         </div>
         <div className={styles.sectionHeaderActions}>
           <Link href={editHref} className="app-button app-button-primary">
@@ -99,196 +93,134 @@ export function SiteManagementMainPanel({
           </Link>
         </div>
       </div>
+
       <div className={styles.sectionBody}>
-        <div className={styles.summaryBar}>
-          <article className={styles.summaryCard}>
-            <span className={styles.summaryCardLabel}>운영 상태</span>
-            <strong className={styles.summaryCardValue}>{getSiteStatusLabel(site.status)}</strong>
-            <span className={styles.summaryCardMeta}>
-              {site.is_high_risk_site ? '고위험 사업장' : '일반 사업장'}
-            </span>
+        <div className={styles.siteMainCardGrid}>
+          <article className={styles.detailCard}>
+            <div className={styles.detailCardHeader}>
+              <h3 className={styles.detailCardTitle}>사업장/현장 식별</h3>
+            </div>
+            <div className={styles.detailList}>
+              <div className={styles.detailItem}>
+                <span className={styles.detailItemLabel}>건설사명</span>
+                <strong className={styles.detailItemValue}>{headquarterName}</strong>
+              </div>
+              <div className={styles.detailItem}>
+                <span className={styles.detailItemLabel}>사업장관리번호 / 사업장개시번호</span>
+                <strong className={styles.detailItemValue}>
+                  {headquarterManagementNumber} / {headquarterOpeningNumber}
+                </strong>
+              </div>
+              <div className={styles.detailItem}>
+                <span className={styles.detailItemLabel}>현장명 / 현장코드</span>
+                <strong className={styles.detailItemValue}>
+                  {site.site_name || '-'} / {site.site_code || '-'}
+                </strong>
+              </div>
+              <div className={styles.detailItem}>
+                <span className={styles.detailItemLabel}>건설 현장 주소</span>
+                <strong className={styles.detailItemValue}>{site.site_address || '-'}</strong>
+              </div>
+            </div>
           </article>
-          <article className={styles.summaryCard}>
-            <span className={styles.summaryCardLabel}>계약 진행</span>
-            <strong className={styles.summaryCardValue}>{contractTypeLabel}</strong>
-            <span className={styles.summaryCardMeta}>상태 {contractStatusLabel}</span>
+
+          <article className={styles.detailCard}>
+            <div className={styles.detailCardHeader}>
+              <h3 className={styles.detailCardTitle}>운영/담당</h3>
+            </div>
+            <div className={styles.detailList}>
+              <div className={styles.detailItem}>
+                <span className={styles.detailItemLabel}>운영 상태</span>
+                <strong className={styles.detailItemValue}>{getSiteStatusLabel(site.status)}</strong>
+                <span className={styles.detailItemMeta}>{statusMeta}</span>
+              </div>
+              <div className={styles.detailItem}>
+                <span className={styles.detailItemLabel}>고용부 관할(지)청</span>
+                <strong className={styles.detailItemValue}>{site.labor_office || '-'}</strong>
+              </div>
+              <div className={styles.detailItem}>
+                <span className={styles.detailItemLabel}>현장 책임자</span>
+                <strong className={styles.detailItemValue}>{managerDisplay}</strong>
+              </div>
+              <div className={styles.detailItem}>
+                <span className={styles.detailItemLabel}>담당요원</span>
+                <strong className={styles.detailItemValue}>{assigneeDisplay}</strong>
+              </div>
+            </div>
           </article>
-          <article className={styles.summaryCard}>
-            <span className={styles.summaryCardLabel}>배정 및 담당</span>
-            <strong className={styles.summaryCardValue}>
-              {assignedUsers.length ? `${assignedUsers.length}명` : '미배정'}
-            </strong>
-            <span className={styles.summaryCardMeta}>
-              {assignedUsers.length ? assignedUsers.join(', ') : '지도요원 배정이 필요합니다.'}
-            </span>
+
+          <article className={styles.detailCard}>
+            <div className={styles.detailCardHeader}>
+              <h3 className={styles.detailCardTitle}>공사 정보</h3>
+            </div>
+            <div className={styles.detailList}>
+              <div className={styles.detailItem}>
+                <span className={styles.detailItemLabel}>공사 금액</span>
+                <strong className={styles.detailItemValue}>
+                  {formatCurrencyValue(site.project_amount)}
+                </strong>
+              </div>
+              <div className={styles.detailItem}>
+                <span className={styles.detailItemLabel}>공사 기간</span>
+                <strong className={styles.detailItemValue}>
+                  {formatDateRange(site.project_start_date, site.project_end_date)}
+                </strong>
+              </div>
+              <div className={styles.detailItem}>
+                <span className={styles.detailItemLabel}>공사 구분 / 공사 종류</span>
+                <strong className={styles.detailItemValue}>
+                  {site.order_type_division || '-'} / {site.project_kind || '-'}
+                </strong>
+              </div>
+              <div className={styles.detailItem}>
+                <span className={styles.detailItemLabel}>발주처</span>
+                <strong className={styles.detailItemValue}>{site.client_business_name || '-'}</strong>
+              </div>
+            </div>
           </article>
-          <article className={styles.summaryCard}>
-            <span className={styles.summaryCardLabel}>데이터 보완</span>
-            <strong className={styles.summaryCardValue}>
-              {combinedMissingFields.length ? `${combinedMissingFields.length}건` : '완료'}
-            </strong>
-            <span className={styles.summaryCardMeta}>
-              {combinedMissingFields.length ? '현장 관리 정보 보완 필요' : '현장 관리 기준 충족'}
-            </span>
+
+          <article className={styles.detailCard}>
+            <div className={styles.detailCardHeader}>
+              <h3 className={styles.detailCardTitle}>계약 정보</h3>
+            </div>
+            <div className={styles.detailList}>
+              <div className={styles.detailItem}>
+                <span className={styles.detailItemLabel}>계약 유형 / 계약 상태</span>
+                <strong className={styles.detailItemValue}>
+                  {contractTypeLabel} / {contractStatusLabel}
+                </strong>
+              </div>
+              <div className={styles.detailItem}>
+                <span className={styles.detailItemLabel}>기술지도 대가(총액)</span>
+                <strong className={styles.detailItemValue}>
+                  {formatCurrencyValue(site.total_contract_amount)}
+                </strong>
+              </div>
+              <div className={styles.detailItem}>
+                <span className={styles.detailItemLabel}>기술지도 횟수</span>
+                <strong className={styles.detailItemValue}>{formatCountLabel(site.total_rounds)}</strong>
+              </div>
+            </div>
           </article>
         </div>
 
-        <div className={styles.detailShell}>
-          <div className={styles.detailShellMain}>
-            <article className={styles.detailCard}>
-              <div className={styles.detailCardHeader}>
-                <h3 className={styles.detailCardTitle}>연락 및 발송 기준</h3>
-              </div>
-              <div className={styles.detailTwoColumnList}>
-                <div className={styles.detailItem}>
-                  <span className={styles.detailItemLabel}>현장소장</span>
-                  <strong className={styles.detailItemValue}>{site.manager_name || '-'}</strong>
-                  <span className={styles.detailItemMeta}>{site.manager_phone || '연락처 미입력'}</span>
-                </div>
-                <div className={styles.detailItem}>
-                  <span className={styles.detailItemLabel}>현장대리인 메일</span>
-                  <strong className={styles.detailItemValue}>{site.site_contact_email || '-'}</strong>
-                  <span className={styles.detailItemMeta}>분기 보고서 기본 수신 주소</span>
-                </div>
-                <div className={styles.detailItem}>
-                  <span className={styles.detailItemLabel}>계약담당자 / 점검자</span>
-                  <strong className={styles.detailItemValue}>
-                    {site.contract_contact_name || '-'} / {site.inspector_name || '-'}
-                  </strong>
-                </div>
-                <div className={styles.detailItem}>
-                  <span className={styles.detailItemLabel}>노동관서 / 지도원</span>
-                  <strong className={styles.detailItemValue}>
-                    {site.labor_office || '-'} / {site.guidance_officer_name || '-'}
-                  </strong>
-                </div>
-                <div className={styles.detailItem}>
-                  <span className={styles.detailItemLabel}>발주처</span>
-                  <strong className={styles.detailItemValue}>{site.client_business_name || '-'}</strong>
-                  <span className={styles.detailItemMeta}>
-                    대표 {site.client_representative_name || '-'} / 관리번호 {site.client_management_number || '-'}
-                  </span>
-                </div>
-              </div>
-            </article>
-
-            <article className={styles.detailCard}>
-              <div className={styles.detailCardHeader}>
-                <h3 className={styles.detailCardTitle}>계약 및 현장 데이터</h3>
-              </div>
-              <div className={styles.detailTwoColumnList}>
-                <div className={styles.detailItem}>
-                  <span className={styles.detailItemLabel}>현장 코드 / 관리번호</span>
-                  <strong className={styles.detailItemValue}>
-                    {site.site_code || '-'} / {site.management_number || '-'}
-                  </strong>
-                  <span className={styles.detailItemMeta}>{site.site_address || '주소 미입력'}</span>
-                </div>
-                <div className={styles.detailItem}>
-                  <span className={styles.detailItemLabel}>계약유형 / 계약상태</span>
-                  <strong className={styles.detailItemValue}>
-                    {contractTypeLabel} / {contractStatusLabel}
-                  </strong>
-                  <span className={styles.detailItemMeta}>
-                    계약 {site.contract_start_date || '-'} ~ {site.contract_end_date || '-'}
-                  </span>
-                </div>
-                <div className={styles.detailItem}>
-                  <span className={styles.detailItemLabel}>기술지도 대가 / 회차당 단가</span>
-                  <strong className={styles.detailItemValue}>
-                    {formatCurrencyValue(site.total_contract_amount)} /{' '}
-                    {revenueProfile.resolvedPerVisitAmount != null
-                      ? formatCurrencyValue(revenueProfile.resolvedPerVisitAmount)
-                      : '-'}
-                  </strong>
-                  <span className={styles.detailItemMeta}>총 {site.total_rounds ?? '-'}회</span>
-                </div>
-                <div className={styles.detailItem}>
-                  <span className={styles.detailItemLabel}>공사 정보</span>
-                  <strong className={styles.detailItemValue}>
-                    {formatCurrencyValue(site.project_amount)}
-                  </strong>
-                  <span className={styles.detailItemMeta}>
-                    기간 {site.project_start_date || '-'} ~ {site.project_end_date || '-'} /{' '}
-                    {site.project_kind || '공사종류 미입력'}
-                  </span>
-                </div>
-                <div className={styles.detailItem}>
-                  <span className={styles.detailItemLabel}>기술지도 구분</span>
-                  <strong className={styles.detailItemValue}>
-                    {site.technical_guidance_kind || '-'}
-                  </strong>
-                </div>
-              </div>
-            </article>
-          </div>
-
-          <div className={styles.detailShellRail}>
-            <article className={styles.detailCard}>
-              <div className={styles.detailCardHeader}>
-                <h3 className={styles.detailCardTitle}>사업장 컨텍스트</h3>
-              </div>
-              <div className={styles.detailList}>
-                <div className={styles.detailItem}>
-                  <span className={styles.detailItemLabel}>사업장</span>
-                  <strong className={styles.detailItemValue}>{headquarterName}</strong>
-                  <span className={styles.detailItemMeta}>
-                    관리번호 {headquarterManagementNumber} / 개시번호 {headquarterOpeningNumber}
-                  </span>
-                </div>
-                <div className={styles.detailItem}>
-                  <span className={styles.detailItemLabel}>본사 담당</span>
-                  <strong className={styles.detailItemValue}>{headquarterContactName}</strong>
-                  <span className={styles.detailItemMeta}>{headquarterContactPhone}</span>
-                </div>
-                <div className={styles.detailItem}>
-                  <span className={styles.detailItemLabel}>본사 주소</span>
-                  <strong className={styles.detailItemValue}>{headquarterAddress}</strong>
-                </div>
-              </div>
-            </article>
-
-            <article className={styles.detailCard}>
-              <div className={styles.detailCardHeader}>
-                <h3 className={styles.detailCardTitle}>보완 체크</h3>
-              </div>
-              {combinedMissingFields.length ? (
-                <div className={styles.detailChipRow}>
-                  {combinedMissingFields.map((item) => (
-                    <span key={item} className={styles.detailChip}>
-                      {item}
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <div className={styles.empty}>현재 기준에서 누락된 관리 데이터가 없습니다.</div>
-              )}
-              <div className={styles.detailItem}>
-                <span className={styles.detailItemLabel}>운영 메모</span>
-                <strong className={styles.detailItemValue}>{site.memo || '운영 메모 없음'}</strong>
-              </div>
-            </article>
-
-            <article className={styles.detailCard}>
-              <div className={styles.detailCardHeader}>
-                <h3 className={styles.detailCardTitle}>빠른 이동</h3>
-              </div>
-              <div className={styles.insightActions}>
-                <Link href={reportHref} className="app-button app-button-secondary">
-                  관리자 보고서
-                </Link>
-                <Link href={mailboxHref} className="app-button app-button-secondary">
-                  메일함
-                </Link>
-                <Link href={photoHref} className="app-button app-button-secondary">
-                  사진첩
-                </Link>
-                <Link href={scheduleHref} className="app-button app-button-secondary">
-                  일정 관리
-                </Link>
-              </div>
-            </article>
-          </div>
+        <div className={styles.siteMainActionGrid}>
+          <Link href={reportHref} className={styles.metricLinkCard}>
+            <strong className={styles.metricLinkValue}>기술지도 보고서 목록</strong>
+            <span className={styles.metricLinkMeta}>기술지도 보고서 목록으로 이동</span>
+          </Link>
+          <Link href={quarterlyHref} className={styles.metricLinkCard}>
+            <strong className={styles.metricLinkValue}>분기 보고서 목록</strong>
+            <span className={styles.metricLinkMeta}>분기 보고서 목록으로 이동</span>
+          </Link>
+          <Link href={badWorkplaceHref} className={styles.metricLinkCard}>
+            <strong className={styles.metricLinkValue}>불량 사업장 신고</strong>
+            <span className={styles.metricLinkMeta}>이번 달 불량 사업장 신고로 이동</span>
+          </Link>
+          <Link href={photoHref} className={styles.metricLinkCard}>
+            <strong className={styles.metricLinkValue}>사진첩</strong>
+            <span className={styles.metricLinkMeta}>점검 사진과 현장 이미지 확인</span>
+          </Link>
         </div>
       </div>
     </section>

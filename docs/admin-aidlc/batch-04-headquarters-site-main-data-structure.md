@@ -193,6 +193,15 @@ git diff --check
 - The selected headquarter summary now uses an asymmetric layout: the left column expands the
   `사업장 등록 정보` card as the main anchor, while the right column stacks the remaining context
   cards more tightly to reduce dead space in the drilldown header area.
+- The site-main summary now follows the same asymmetric pattern: the left column anchors
+  `현장 등록 정보`, while the right column compresses 운영 상태, 배정 담당, 연락/메일, 사업장 연결,
+  보완 체크, 운영 메모 into a denser card stack before the lower detail cards.
+- The follow-up site-main cleanup removes the extra nested title card and quick-link block, leaving
+  the key business/site/contract matrix directly inside the section body so the drilldown stays
+  denser without dropping the important fields.
+- The latest refinement converts that matrix into grouped cards so the site main now reads closer
+  to the business summary pattern: similar fields are bundled into 사업장/현장 식별, 운영/담당,
+  공사 정보, 계약 정보 cards instead of one long flat grid.
 - Sort headers now use a single inline arrow toggle instead of the previous overflow-menu pattern,
   so 가나다순/숫자순 switching stays in-place without the extra `...` trigger.
 - The site list amount subline now reads `기간 YYYY-MM ~ YYYY-MM` and intentionally drops the

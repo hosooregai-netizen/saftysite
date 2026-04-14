@@ -18,7 +18,7 @@ export async function runAdminSitesSection(page: Page) {
   await waitHeading(page, '사업장 목록');
   await page.getByRole('button', { name: '사업장 추가' }).first().waitFor();
   await page
-    .getByPlaceholder('회사명 관리번호 담당자 등록번호, 주소로 검색')
+    .getByPlaceholder('회사명, 관리번호, 담당자, 등록번호, 주소로 검색')
     .fill('');
 
   await page.getByRole('button', { name: /작업 메뉴 열기/ }).first().click();
@@ -47,7 +47,7 @@ export async function runAdminSitesSection(page: Page) {
   await page.getByRole('button', { name: /현장 작업 메뉴 열기/ }).first().click();
   await page.getByRole('menuitem', { name: '현장 메인' }).click();
   await page.getByRole('link', { name: '현장 정보 수정' }).waitFor();
-  await page.getByText('연락 및 발송 기준').waitFor();
+  await page.getByText('사업장/현장 식별').waitFor();
   const siteBackLabelCount = await page.getByText('현장 목록', { exact: true }).count();
   if (siteBackLabelCount !== 1) {
     throw new Error(

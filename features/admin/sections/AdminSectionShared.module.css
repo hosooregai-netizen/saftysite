@@ -156,6 +156,122 @@
   height: 100%;
 }
 
+.siteMainOverviewShell {
+  display: grid;
+  grid-template-columns: minmax(320px, 1.15fr) minmax(420px, 1fr);
+  gap: 14px;
+  align-items: stretch;
+}
+
+.siteMainOverviewPrimary {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-card);
+  background:
+    linear-gradient(180deg, rgba(246, 249, 252, 0.92) 0%, rgba(255, 255, 255, 1) 100%);
+  box-shadow: 0 1px 0 rgba(16, 24, 43, 0.04);
+}
+
+.siteMainOverviewHeader {
+  display: grid;
+  gap: 4px;
+}
+
+.siteMainOverviewTitle {
+  font-size: clamp(24px, 2vw, 30px);
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--erp-dark);
+}
+
+.siteMainOverviewAside {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
+  gap: 12px;
+  height: 100%;
+  align-content: stretch;
+}
+
+.siteMainOverviewAside .contextCell {
+  height: 100%;
+}
+
+.siteMainInfoCard {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-surface);
+  background: linear-gradient(180deg, #fbfcfe 0%, #ffffff 100%);
+  box-shadow: 0 1px 0 rgba(16, 24, 43, 0.04);
+}
+
+.siteMainInfoTable {
+  display: grid;
+  border: 1px solid var(--erp-line);
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.siteMainInfoRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.siteMainInfoRow + .siteMainInfoRow {
+  border-top: 1px solid var(--erp-line);
+}
+
+.siteMainInfoCell {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  min-height: 56px;
+}
+
+.siteMainInfoCell + .siteMainInfoCell {
+  border-left: 1px solid var(--erp-line);
+}
+
+.siteMainInfoLabel {
+  display: grid;
+  align-items: center;
+  padding: 12px 14px;
+  background: var(--erp-panel-muted);
+  font-size: var(--text-ui-sm);
+  font-weight: 700;
+  color: var(--erp-dark);
+}
+
+.siteMainInfoValue {
+  display: grid;
+  align-items: center;
+  min-width: 0;
+  padding: 12px 16px;
+  font-size: var(--text-body);
+  font-weight: 700;
+  line-height: 1.5;
+  color: var(--erp-dark);
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.siteMainCardGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.siteMainActionGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
 .mobileSectionRail {
   display: none;
 }
@@ -2534,6 +2650,11 @@
   .contextGrid,
   .headquarterOverviewShell,
   .headquarterOverviewAside,
+  .siteMainOverviewShell,
+  .siteMainOverviewAside,
+  .siteMainCardGrid,
+  .siteMainActionGrid,
+  .siteMainInfoRow,
   .detailTwoColumnList,
   .modalGrid,
   .assetGrid,
@@ -2847,6 +2968,10 @@
     gap: 12px;
   }
 
+  .siteMainOverviewShell {
+    gap: 12px;
+  }
+
   .dashboardGrid,
   .metricGrid,
   .coverageGrid {
@@ -2922,6 +3047,23 @@
 
   .headquarterOverviewTitle {
     font-size: var(--text-title);
+  }
+
+  .siteMainOverviewPrimary {
+    gap: 14px;
+    padding: 14px 16px;
+  }
+
+  .siteMainOverviewTitle {
+    font-size: var(--text-title);
+  }
+
+  .siteMainInfoCard {
+    padding: 14px 16px;
+  }
+
+  .siteMainInfoCell {
+    grid-template-columns: 128px minmax(0, 1fr);
   }
 
   .contextLead {
