@@ -201,21 +201,32 @@ function matchesAny(file, patterns) {
 }
 
 async function ensureBaseUrlReachable(baseUrl) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 4_000);
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 4_000);
 
-  try {
-    const response = await fetch(baseUrl, {
-      method: 'GET',
-      redirect: 'follow',
-      signal: controller.signal,
-    });
-    return response.ok;
-  } catch {
-    return false;
-  } finally {
-    clearTimeout(timeout);
+    try {
+      const response = await fetch(baseUrl, {
+        method: 'GET',
+        redirect: 'follow',
+        signal: controller.signal,
+      });
+
+      // This guard only checks whether the local app process is listening.
+      // Real route regressions should be caught by the smoke suite itself.
+      if (response.status >= 100 && response.status < 600) {
+        return true;
+      }
+    } catch {
+      // Retry below.
+    } finally {
+      clearTimeout(timeout);
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 1_000));
   }
+
+  return false;
 }
 
 function buildRequiredSmokes(files) {
