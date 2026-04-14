@@ -30,7 +30,8 @@ export async function runAdminReportsSection(page: Page) {
 
   await page.getByRole('button', { name: /2026년 1분기 종합 보고서 메뉴 열기/ }).click();
   await page.getByRole('menuitem', { name: '발송이력 보기' }).click();
-  const dispatchDialog = page.getByRole('dialog');
+  const dispatchDialog = page.getByRole('dialog', { name: '분기 보고서 발송 이력' });
   await dispatchDialog.locator('textarea').first().fill('클라이언트 E2E 발송');
-  await dispatchDialog.getByRole('button', { name: /(저장|추가|발송완료)/ }).first().click();
+  await dispatchDialog.getByRole('button', { name: '관제 수동 완료 처리' }).click();
+  await page.getByText('분기 보고서 발송 정보를 저장했습니다.').first().waitFor();
 }

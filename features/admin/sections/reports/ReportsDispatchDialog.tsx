@@ -67,7 +67,7 @@ export function ReportsDispatchDialog({
               className="app-button app-button-primary"
               onClick={() => onSaveManual(dispatchRow, buildManualDispatchPayload(dispatchRow))}
             >
-              수동 발송 완료 처리
+              관제 수동 완료 처리
             </button>
           </>
         ) : undefined

@@ -81,7 +81,7 @@ export function useReportDispatchActions({
         ownerUserId: reviewForm.ownerUserId,
         qualityStatus: reviewForm.qualityStatus,
       });
-      setNotice('보고서 검토 정보를 저장했습니다.');
+      setNotice('보고서 품질 체크를 저장했습니다.');
       setReviewRow(null);
       await fetchRows();
     } catch (nextError) {
@@ -93,7 +93,11 @@ export function useReportDispatchActions({
     async (row: ControllerReportRow, nextDispatch: ReportDispatchMeta) => {
       try {
         await updateAdminReportDispatch(row.reportKey, nextDispatch);
-        setNotice('발송 정보를 저장했습니다.');
+        setNotice(
+          row.reportType === 'quarterly_report'
+            ? '분기 보고서 발송 정보를 저장했습니다.'
+            : '발송 정보를 저장했습니다.',
+        );
         setDispatchRow(null);
         await fetchRows();
       } catch (nextError) {
