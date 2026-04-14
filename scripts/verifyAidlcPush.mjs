@@ -75,7 +75,9 @@ const FEATURE_RULES = [
     patterns: [
       /^features\/site-reports\/components\/ReportList\.tsx$/,
       /^features\/site-reports\/components\/SiteReportListPanel\.tsx$/,
+      /^features\/site-reports\/components\/SiteReportsScreen\.module\.css$/,
       /^features\/site-reports\/components\/SiteReportsScreen\.tsx$/,
+      /^features\/site-reports\/hooks\/useSiteReportListState\.ts$/,
       /^features\/site-reports\/report-list\//,
     ],
   },
