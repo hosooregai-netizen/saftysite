@@ -1,7 +1,6 @@
 'use client';
 
 const LOGIN_CREDENTIALS_STORAGE_KEY = 'saftysite:remembered-login-credentials';
-const AUTO_LOGIN_SUPPRESSED_KEY = 'saftysite:auto-login-suppressed';
 
 export interface RememberedLoginCredentials {
   email: string;
@@ -12,10 +11,6 @@ export interface RememberedLoginCredentials {
 
 function canUseStorage() {
   return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
-}
-
-function canUseSessionStorage() {
-  return typeof window !== 'undefined' && typeof window.sessionStorage !== 'undefined';
 }
 
 export function readRememberedLoginCredentials(): RememberedLoginCredentials | null {
@@ -63,19 +58,4 @@ export function writeRememberedLoginCredentials(input: {
 export function clearRememberedLoginCredentials() {
   if (!canUseStorage()) return;
   window.localStorage.removeItem(LOGIN_CREDENTIALS_STORAGE_KEY);
-}
-
-export function isAutoLoginSuppressed() {
-  if (!canUseSessionStorage()) return false;
-  return window.sessionStorage.getItem(AUTO_LOGIN_SUPPRESSED_KEY) === '1';
-}
-
-export function suppressAutoLoginForSession() {
-  if (!canUseSessionStorage()) return;
-  window.sessionStorage.setItem(AUTO_LOGIN_SUPPRESSED_KEY, '1');
-}
-
-export function clearAutoLoginSuppression() {
-  if (!canUseSessionStorage()) return;
-  window.sessionStorage.removeItem(AUTO_LOGIN_SUPPRESSED_KEY);
 }

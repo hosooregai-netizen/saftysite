@@ -63,11 +63,11 @@ export const FEATURE_CONTRACTS: Record<FeatureContractId, FeatureContract> = {
   },
   auth: {
     id: 'auth',
-    description: '로그인 성공 후 현장 목록으로 진입하고 로그아웃 뒤 다시 로그인할 수 있다.',
+    description: '로그인 패널이 자동 제출 없이 수동 로그인으로 현장 목록 진입, 로그아웃, 재로그인을 유지한다.',
     routes: ['/'],
     markers: ['현장 목록 로그인', '현장 목록'],
     apis: ['POST /auth/token', 'GET /assignments/me/sites'],
-    criticalActions: ['현장 요원 로그인', '로그아웃', '재로그인'],
+    criticalActions: ['자동 제출 없이 로그인 패널 대기', '현장 요원 로그인', '로그아웃', '재로그인'],
   },
   'bad-workplace-report': {
     id: 'bad-workplace-report',
@@ -161,7 +161,7 @@ export const FEATURE_CONTRACTS: Record<FeatureContractId, FeatureContract> = {
   },
   'mobile-link': {
     id: 'mobile-link',
-    description: '모바일 direct-link로 보고서에 진입하고 로그인 후 저장까지 이어진다.',
+    description: '모바일 direct-link 로그인 화면이 자동 제출 없이 대기하고, 수동 로그인 후 저장까지 이어진다.',
     routes: ['/mobile/sessions/report-tech-1'],
     markers: ['모바일 보고서 로그인', '기술지도 개요', '저장'],
     apis: [
@@ -170,7 +170,7 @@ export const FEATURE_CONTRACTS: Record<FeatureContractId, FeatureContract> = {
       'GET /reports/by-key/:id',
       'POST /reports/upsert',
     ],
-    criticalActions: ['모바일 직접 링크 로그인', '모바일 보고서 진입', '모바일 저장'],
+    criticalActions: ['자동 제출 없이 모바일 로그인 대기', '모바일 직접 링크 로그인', '모바일 보고서 진입', '모바일 저장'],
   },
   'mobile-quarterly-report': {
     id: 'mobile-quarterly-report',
