@@ -2,6 +2,7 @@ import type { SafetyReportListItem } from '@/types/backend';
 import type { ControllerDashboardData } from '@/types/controller';
 import { buildAdminAnalyticsResponse } from '@/server/admin/automation';
 import { fetchAdminCoreData, fetchAdminReports } from '@/server/admin/safetyApiServer';
+import { backfillAnalyticsSourceData } from '@/features/admin/lib/control-center-model/analyticsSourceBackfill';
 import type { SafetyAdminAnalyticsResponse } from '@/types/admin';
 
 interface AnalyticsSourceSnapshot {
@@ -26,10 +27,11 @@ export async function refreshAdminAnalyticsSnapshot(
   token: string,
   request: Request | null = null,
 ) {
-  const [data, reports] = await Promise.all([
+  const [rawData, reports] = await Promise.all([
     fetchAdminCoreData(token, request),
     fetchAdminReports(token, request),
   ]);
+  const data = backfillAnalyticsSourceData(rawData, reports);
 
   const snapshot: AnalyticsSourceSnapshot = {
     data,

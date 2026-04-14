@@ -41,6 +41,8 @@ Align K2B Excel import with the real visit-level data shape so admin analytics u
 - Worker auto-provisioning now prefers `점검자` and only falls back to `지도원` when needed.
 - Analytics schedule assignee fallback now prefers `site.inspector_name` before `guidance_officer_name`.
 - Client Excel apply result mapping now exposes worker match summary fields consistently.
+- Legacy analytics rows without stored schedules now backfill from existing technical guidance reports first,
+  then fall back to inferred contract schedules when only contract range data remains.
 
 ## Validation Commands
 

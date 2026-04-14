@@ -3,6 +3,7 @@ import {
   buildAdminAnalyticsModel,
   buildAdminOverviewModel,
 } from '../../../features/admin/lib/buildAdminControlCenterModel';
+import { backfillAnalyticsSourceData } from '../../../features/admin/lib/control-center-model/analyticsSourceBackfill';
 import { buildSiteMemoWithContractProfile } from '../../../lib/admin/siteContractProfile';
 import { buildControllerReportRows } from '../../../lib/admin/controllerReports';
 import type { ClientSmokePlaywrightConfig } from '../../../playwright.config';
@@ -115,10 +116,11 @@ function buildAnalyticsResponse(
   harness: ErpSmokeHarness,
   url: URL,
 ): SafetyAdminAnalyticsResponse {
+  const reports = harness.state.reports.map((report) => toAdminReportListItem(report));
   const period = url.searchParams.get('period');
   return buildAdminAnalyticsModel(
-    buildAdminDashboardData(harness),
-    harness.state.reports.map((report) => toAdminReportListItem(report)),
+    backfillAnalyticsSourceData(buildAdminDashboardData(harness), reports, new Date(NOW)),
+    reports,
     {
       contractType: url.searchParams.get('contract_type') || '',
       headquarterId: url.searchParams.get('headquarter_id') || '',
@@ -330,39 +332,6 @@ async function installAdminRoutes(harness: ErpSmokeHarness) {
 function ensureAdminFixtureSchedules(harness: ErpSmokeHarness) {
   const site = harness.state.sites.find((item) => String(item.id) === 'site-1');
   if (!site) return;
-  const buildSchedule = (input: {
-    id: string;
-    plannedDate: string;
-    roundNo: number;
-    status: 'completed' | 'planned';
-    windowEnd: string;
-    windowStart: string;
-  }) => ({
-    assigneeName: '김요원',
-    assigneeUserId: 'field-1',
-    exceptionMemo: '',
-    exceptionReasonCode: '',
-    headquarterId: 'hq-1',
-    headquarterName: '기존 본사',
-    id: input.id,
-    isConflicted: false,
-    isOutOfWindow: false,
-    isOverdue: false,
-    linkedReportKey: '',
-    plannedDate: input.plannedDate,
-    roundNo: input.roundNo,
-    selectionConfirmedAt: '',
-    selectionConfirmedByName: '',
-    selectionConfirmedByUserId: '',
-    selectionReasonLabel: '',
-    selectionReasonMemo: '',
-    siteId: 'site-1',
-    siteName: '기존 현장',
-    status: input.status,
-    windowEnd: input.windowEnd,
-    windowStart: input.windowStart,
-  });
-
   site.memo = buildSiteMemoWithContractProfile(
     '',
     {
@@ -375,40 +344,6 @@ function ensureAdminFixtureSchedules(harness: ErpSmokeHarness) {
     },
     {
       existingMemo: typeof site.memo === 'string' ? site.memo : '',
-      schedules: [
-        buildSchedule({
-          id: 'schedule-site-1-round-1',
-          plannedDate: '2026-01-12',
-          roundNo: 1,
-          status: 'completed',
-          windowEnd: '2026-01-31',
-          windowStart: '2026-01-01',
-        }),
-        buildSchedule({
-          id: 'schedule-site-1-round-2',
-          plannedDate: '2026-02-16',
-          roundNo: 2,
-          status: 'completed',
-          windowEnd: '2026-02-28',
-          windowStart: '2026-02-01',
-        }),
-        buildSchedule({
-          id: 'schedule-site-1-round-3',
-          plannedDate: '2026-03-10',
-          roundNo: 3,
-          status: 'completed',
-          windowEnd: '2026-03-31',
-          windowStart: '2026-03-01',
-        }),
-        buildSchedule({
-          id: 'schedule-site-1-round-4',
-          plannedDate: '2026-03-24',
-          roundNo: 4,
-          status: 'planned',
-          windowEnd: '2026-03-31',
-          windowStart: '2026-03-01',
-        }),
-      ],
     },
   );
 }
@@ -424,7 +359,7 @@ function ensureAdminFixtureReports(harness: ErpSmokeHarness) {
       workflow_status: 'submitted',
       submitted_at: NOW,
       updated_at: NOW,
-      visit_date: '2026-03-10',
+      visit_date: '2026-01-12',
       visit_round: 1,
       report_type: 'technical_guidance',
     });
@@ -438,7 +373,7 @@ function ensureAdminFixtureReports(harness: ErpSmokeHarness) {
       site_id: 'site-1',
       headquarter_id: 'hq-1',
       assigned_user_id: 'field-1',
-      visit_date: '2026-03-17',
+      visit_date: '2026-02-16',
       visit_round: 2,
     },
     {
@@ -448,8 +383,18 @@ function ensureAdminFixtureReports(harness: ErpSmokeHarness) {
       site_id: 'site-1',
       headquarter_id: 'hq-1',
       assigned_user_id: 'field-1',
-      visit_date: '2026-03-24',
+      visit_date: '2026-03-10',
       visit_round: 3,
+    },
+    {
+      id: 'report-tech-4',
+      report_key: 'report-tech-4',
+      report_title: '4차 기술지도 보고서',
+      site_id: 'site-1',
+      headquarter_id: 'hq-1',
+      assigned_user_id: 'field-1',
+      visit_date: '2026-03-24',
+      visit_round: 4,
     },
   ];
 
@@ -458,7 +403,7 @@ function ensureAdminFixtureReports(harness: ErpSmokeHarness) {
       return;
     }
 
-    const isPracticalCompletionFixture = fixture.report_key === 'report-tech-3';
+    const isPracticalCompletionFixture = fixture.report_key === 'report-tech-4';
     harness.state.reports.push({
       ...fixture,
       total_round: 12,
