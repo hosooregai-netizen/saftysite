@@ -48,6 +48,7 @@ const FEATURE_RULES = [
   {
     id: 'admin-sites',
     patterns: [
+      /^features\/admin\/sections\/excelImport\//,
       /^features\/admin\/sections\/headquarters\//,
       /^features\/admin\/sections\/sites\//,
     ],
