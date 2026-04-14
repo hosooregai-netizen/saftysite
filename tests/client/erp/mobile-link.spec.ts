@@ -6,6 +6,7 @@ export async function runMobileLinkSmoke(config: ClientSmokePlaywrightConfig) {
 
   try {
     const { page, requestCounts } = harness;
+    const authWritesBefore = requestCounts.get('POST /auth/token') || 0;
     const reportReadsBefore = requestCounts.get('GET /reports/by-key/:id') || 0;
     const reportWritesBefore = requestCounts.get('POST /reports/upsert') || 0;
 
@@ -15,6 +16,10 @@ export async function runMobileLinkSmoke(config: ClientSmokePlaywrightConfig) {
     await page.getByRole('heading', { name: '모바일 보고서 로그인' }).waitFor({
       state: 'visible',
     });
+    await page.waitForTimeout(500);
+    if ((requestCounts.get('POST /auth/token') || 0) !== authWritesBefore) {
+      throw new Error('모바일 로그인 화면이 자동으로 로그인 요청을 보냈습니다.');
+    }
 
     await harness.loginAs('agent@example.com');
     await harness.waitForRequestCount('GET /assignments/me/sites', 1);

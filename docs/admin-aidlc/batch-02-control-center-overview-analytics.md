@@ -90,6 +90,12 @@ contract pack around:
   - `AnalyticsEmployeeTable.tsx`
   - `AnalyticsSiteRevenueTable.tsx`
   - `analyticsSectionHelpers.ts`
+- Analytics state now keeps the last resolved dataset visible while a new analytics request is in
+  flight, so period/filter changes no longer collapse the section to `EMPTY_ANALYTICS`.
+- Analytics first paint now reuses the already-loaded admin `reportList` to build an immediate local
+  snapshot before the server response returns, improving perceived load time on `/admin?section=analytics`.
+- Summary cards, charts, and detail tables now render fixed-height loading placeholders so the
+  analytics surface no longer flashes or reflows while the first response is loading.
 - `admin-control-center` contract was strengthened to require:
   - overview markers
   - analytics markers
@@ -128,10 +134,11 @@ git diff --check
   - passed
 - `npm run aidlc:audit:admin`
   - passed as advisory audit
-  - this batch removed `AdminOverviewSection.tsx`, `AnalyticsSection.tsx`, and the old
-    control-center shared monolith from the `HARD` list
-- `npm run test:client:smoke -- admin-control-center`
-  - passed against local app at `http://127.0.0.1:3211`
+  - current admin residual debt still includes existing oversized files such as
+    `SortableHeaderCell.tsx`, `ContentItemsSection.tsx`, `useReportsSectionState.ts`,
+    `SchedulesSection.tsx`, and `useSitesSectionState.ts`
+- `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3101 npm run test:client:smoke -- admin-control-center`
+  - passed against the current workspace app
 - `npm run smoke:real:admin -- --sections control-center`
   - blocked in this environment
   - exact blocker: `Missing smoke seed. Provide SMOKE_SEED_PATH (/tmp/safety-e2e-seed.json) or LIVE_SAFETY_EMAIL/LIVE_SAFETY_PASSWORD.`

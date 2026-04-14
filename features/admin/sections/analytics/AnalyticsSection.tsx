@@ -2,6 +2,7 @@
 
 import { AnalyticsCharts } from '@/features/admin/sections/analytics/AnalyticsCharts';
 import sharedStyles from '@/features/admin/sections/AdminSectionShared.module.css';
+import type { SafetyReportListItem } from '@/types/backend';
 import type { ControllerDashboardData } from '@/types/controller';
 import { AnalyticsDetailSection } from './AnalyticsDetailSection';
 import { AnalyticsSectionHeader } from './AnalyticsSectionHeader';
@@ -10,10 +11,12 @@ import { useAnalyticsSectionState } from './useAnalyticsSectionState';
 
 interface AnalyticsSectionProps {
   data: ControllerDashboardData;
+  isReportsLoading: boolean;
+  reportList: SafetyReportListItem[];
 }
 
-export function AnalyticsSection({ data }: AnalyticsSectionProps) {
-  const state = useAnalyticsSectionState(data);
+export function AnalyticsSection({ data, isReportsLoading, reportList }: AnalyticsSectionProps) {
+  const state = useAnalyticsSectionState(data, reportList, isReportsLoading);
   const headquarterOptions = data.headquarters.map((headquarter) => ({
     label: headquarter.name,
     value: headquarter.id,
@@ -46,7 +49,9 @@ export function AnalyticsSection({ data }: AnalyticsSectionProps) {
         />
         <AnalyticsSummarySection
           analytics={state.analytics}
+          isInitialLoading={state.isInitialLoading}
           isLoading={state.isLoading}
+          isRefreshing={state.isRefreshing}
           loadError={state.loadError}
           scopeChips={state.scopeChips}
         />
@@ -59,6 +64,8 @@ export function AnalyticsSection({ data }: AnalyticsSectionProps) {
         <div className={sharedStyles.sectionBody}>
           <AnalyticsCharts
             employeeRows={state.sortedEmployeeRows}
+            isInitialLoading={state.isInitialLoading}
+            isRefreshing={state.isRefreshing}
             siteRevenueRows={state.sortedSiteRevenueRows}
             trendRows={state.analytics.trendRows}
           />
@@ -69,6 +76,8 @@ export function AnalyticsSection({ data }: AnalyticsSectionProps) {
         detailView={state.detailView}
         employeeRows={state.sortedEmployeeRows}
         employeeSort={state.employeeSort}
+        isInitialLoading={state.isInitialLoading}
+        isRefreshing={state.isRefreshing}
         setDetailView={state.setDetailView}
         setEmployeeSort={state.setEmployeeSort}
         setSiteRevenueSort={state.setSiteRevenueSort}

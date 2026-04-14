@@ -2,11 +2,13 @@
 
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { fetchAdminAnalytics } from '@/lib/admin/apiClient';
-import { exportAdminServerWorkbook } from '@/lib/admin/exportClient';
 import {
+  buildAdminAnalyticsModel,
   type AdminAnalyticsPeriod,
 } from '@/features/admin/lib/buildAdminControlCenterModel';
+import { fetchAdminAnalytics } from '@/lib/admin/apiClient';
+import { exportAdminServerWorkbook } from '@/lib/admin/exportClient';
+import type { SafetyReportListItem } from '@/types/backend';
 import type { SafetyAdminAnalyticsResponse, TableSortState } from '@/types/admin';
 import type { ControllerDashboardData } from '@/types/controller';
 import {
@@ -17,7 +19,18 @@ import {
   sortSiteRevenueRows,
 } from './analyticsSectionHelpers';
 
-export function useAnalyticsSectionState(data: ControllerDashboardData) {
+interface AnalyticsFetchState {
+  analytics: SafetyAdminAnalyticsResponse;
+  error: string | null;
+  errorRequestKey: string;
+  resolvedRequestKey: string;
+}
+
+export function useAnalyticsSectionState(
+  data: ControllerDashboardData,
+  reportList: SafetyReportListItem[],
+  isReportsLoading: boolean,
+) {
   const searchParams = useSearchParams();
   const [query, setQuery] = useState(() => searchParams.get('query') || '');
   const [period, setPeriod] = useState<AdminAnalyticsPeriod>(() => {
@@ -39,39 +52,69 @@ export function useAnalyticsSectionState(data: ControllerDashboardData) {
     [contractType, deferredQuery, headquarterId, period, userId],
   );
   const requestKey = useMemo(() => JSON.stringify(analyticsRequest), [analyticsRequest]);
-  const [analyticsState, setAnalyticsState] = useState<{
-    analytics: SafetyAdminAnalyticsResponse;
-    error: string | null;
-    requestKey: string;
-  }>({
-    analytics: EMPTY_ANALYTICS,
+  const canBuildInitialAnalytics = !isReportsLoading;
+  const initialAnalytics = useMemo(
+    () =>
+      canBuildInitialAnalytics
+        ? buildAdminAnalyticsModel(data, reportList, analyticsRequest, new Date())
+        : null,
+    [analyticsRequest, canBuildInitialAnalytics, data, reportList],
+  );
+  const [analyticsCache, setAnalyticsCache] = useState<Record<string, SafetyAdminAnalyticsResponse>>({});
+  const [analyticsState, setAnalyticsState] = useState<AnalyticsFetchState>(() => ({
+    analytics: initialAnalytics ?? EMPTY_ANALYTICS,
     error: null,
-    requestKey: '',
-  });
+    errorRequestKey: '',
+    resolvedRequestKey: initialAnalytics ? requestKey : '',
+  }));
 
   useEffect(() => {
-    let cancelled = false;
-    void fetchAdminAnalytics(analyticsRequest)
+    const abortController = new AbortController();
+
+    void fetchAdminAnalytics(analyticsRequest, { signal: abortController.signal })
       .then((response) => {
-        if (cancelled) return;
-        setAnalyticsState({ analytics: response, error: null, requestKey });
+        setAnalyticsCache((current) => ({
+          ...current,
+          [requestKey]: response,
+        }));
+        setAnalyticsState({
+          analytics: response,
+          error: null,
+          errorRequestKey: '',
+          resolvedRequestKey: requestKey,
+        });
       })
       .catch((error) => {
-        if (cancelled) return;
-        setAnalyticsState({
-          analytics: EMPTY_ANALYTICS,
-          error: error instanceof Error ? error.message : '실적/매출 데이터를 불러오지 못했습니다.',
-          requestKey,
-        });
+        if (abortController.signal.aborted) {
+          return;
+        }
+
+        setAnalyticsState((current) => ({
+          ...current,
+          error:
+            error instanceof Error
+              ? error.message
+              : '실적/매출 데이터를 불러오지 못했습니다.',
+          errorRequestKey: requestKey,
+        }));
       });
+
     return () => {
-      cancelled = true;
+      abortController.abort();
     };
   }, [analyticsRequest, requestKey]);
 
-  const analytics = analyticsState.requestKey === requestKey ? analyticsState.analytics : EMPTY_ANALYTICS;
-  const loadError = analyticsState.requestKey === requestKey ? analyticsState.error : null;
-  const isLoading = analyticsState.requestKey !== requestKey;
+  const cachedAnalytics = analyticsCache[requestKey] ?? initialAnalytics;
+  const analytics =
+    analyticsState.resolvedRequestKey === requestKey
+      ? analyticsState.analytics
+      : cachedAnalytics ?? analyticsState.analytics;
+  const loadError = analyticsState.errorRequestKey === requestKey ? analyticsState.error : null;
+  const isLoading = analyticsState.resolvedRequestKey !== requestKey;
+  const hasVisibleAnalytics =
+    analyticsState.resolvedRequestKey === requestKey || Boolean(cachedAnalytics) || analyticsState.resolvedRequestKey.length > 0;
+  const isInitialLoading = isLoading && !hasVisibleAnalytics;
+  const isRefreshing = isLoading && hasVisibleAnalytics;
   const activeFilterCount =
     (period !== 'month' ? 1 : 0) + (headquarterId ? 1 : 0) + (userId ? 1 : 0) + (contractType ? 1 : 0);
   const contractTypeOptions = useMemo(() => buildContractTypeOptions(data), [data]);
@@ -114,7 +157,9 @@ export function useAnalyticsSectionState(data: ControllerDashboardData) {
     employeeSort,
     exportAnalytics,
     headquarterId,
+    isInitialLoading,
     isLoading,
+    isRefreshing,
     loadError,
     period,
     query,

@@ -11,17 +11,62 @@ import styles from './AnalyticsCharts.module.css';
 
 interface AnalyticsChartsProps {
   employeeRows: AdminAnalyticsEmployeeRow[];
+  isInitialLoading: boolean;
+  isRefreshing: boolean;
   siteRevenueRows: AdminAnalyticsSiteRevenueRow[];
   trendRows: AdminAnalyticsTrendRow[];
 }
 
 export function AnalyticsCharts({
   employeeRows,
+  isInitialLoading,
+  isRefreshing,
   siteRevenueRows,
   trendRows,
 }: AnalyticsChartsProps) {
+  if (isInitialLoading) {
+    return (
+      <div className={styles.layout}>
+        <section className={`${styles.surface} ${styles.surfaceWide} ${styles.surfaceSkeleton}`}>
+          <div className={styles.skeletonHeader} />
+          <div className={styles.trendSummary}>
+            {Array.from({ length: 3 }, (_, index) => (
+              <div key={`trend-summary-skeleton-${index + 1}`} className={styles.trendSummaryItem}>
+                <span className={styles.skeletonLineShort} />
+                <span className={styles.skeletonLineLong} />
+              </div>
+            ))}
+          </div>
+          <div className={styles.chartSkeleton} />
+        </section>
+        <section className={`${styles.surface} ${styles.surfaceSkeleton}`}>
+          <div className={styles.skeletonHeader} />
+          <div className={styles.listSkeleton}>
+            {Array.from({ length: 5 }, (_, index) => (
+              <div key={`employee-skeleton-${index + 1}`} className={styles.listRow}>
+                <span className={styles.skeletonLineLong} />
+                <span className={styles.skeletonLineShort} />
+              </div>
+            ))}
+          </div>
+        </section>
+        <section className={`${styles.surface} ${styles.surfaceSkeleton}`}>
+          <div className={styles.skeletonHeader} />
+          <div className={styles.listSkeleton}>
+            {Array.from({ length: 5 }, (_, index) => (
+              <div key={`site-skeleton-${index + 1}`} className={styles.listRow}>
+                <span className={styles.skeletonLineLong} />
+                <span className={styles.skeletonLineShort} />
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   return (
-    <div className={styles.layout}>
+    <div className={styles.layout} data-refreshing={isRefreshing ? 'true' : 'false'}>
       <AnalyticsTrendCard rows={trendRows} />
       <AnalyticsEmployeeContributionCard rows={employeeRows} />
       <AnalyticsSiteContributionCard rows={siteRevenueRows} />

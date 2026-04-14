@@ -1,11 +1,9 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import {
-  clearAutoLoginSuppression,
   clearRememberedLoginCredentials,
-  isAutoLoginSuppressed,
   readRememberedLoginCredentials,
   writeRememberedLoginCredentials,
 } from '@/lib/auth/loginCredentialsStorage';
@@ -33,7 +31,6 @@ export default function LoginPanel({
   const [showPassword, setShowPassword] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const [savedAtLabel, setSavedAtLabel] = useState<string | null>(null);
-  const autoLoginAttemptedRef = useRef(false);
 
   useEffect(() => {
     const remembered = readRememberedLoginCredentials();
@@ -61,7 +58,6 @@ export default function LoginPanel({
 
     try {
       await onSubmit({ email, password });
-      clearAutoLoginSuppression();
       if (rememberCredentials) {
         writeRememberedLoginCredentials({
           email: email.trim(),
@@ -77,29 +73,6 @@ export default function LoginPanel({
       // 상위 상태에서 오류를 표시합니다.
     }
   };
-
-  useEffect(() => {
-    if (autoLoginAttemptedRef.current) return;
-    if (!credentialsLoaded || busy) return;
-    if (!rememberCredentials || !email.trim() || !password) return;
-    if (isAutoLoginSuppressed()) return;
-
-    autoLoginAttemptedRef.current = true;
-
-    void onSubmit({ email: email.trim(), password })
-      .then(() => {
-        clearAutoLoginSuppression();
-        writeRememberedLoginCredentials({
-          email: email.trim(),
-          password,
-          rememberCredentials: true,
-        });
-        setSavedAtLabel(new Date().toLocaleString('ko-KR'));
-      })
-      .catch(() => {
-        // 상위 상태에서 오류를 표시합니다.
-      });
-  }, [busy, credentialsLoaded, email, onSubmit, password, rememberCredentials]);
 
   const handleClearSavedCredentials = () => {
     clearRememberedLoginCredentials();
@@ -186,7 +159,7 @@ export default function LoginPanel({
 
               {credentialsLoaded && savedAtLabel ? (
                 <p className={styles.savedHint}>
-                  저장된 로그인 정보가 자동 입력되었습니다. 마지막 저장: {savedAtLabel}
+                  저장된 로그인 정보가 자동 입력되었습니다. 마지막 저장: {savedAtLabel}. 내용을 확인한 뒤 로그인 버튼을 눌러 계속하세요.
                 </p>
               ) : null}
 

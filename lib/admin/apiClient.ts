@@ -147,7 +147,7 @@ export function fetchAdminAnalytics(input: {
   period?: string;
   query?: string;
   userId?: string;
-}) {
+}, options: RequestInit = {}) {
   return requestAdminApi<SafetyAdminAnalyticsResponse>(
     `/dashboard/analytics${buildQueryString({
       contract_type: input.contractType,
@@ -156,6 +156,7 @@ export function fetchAdminAnalytics(input: {
       query: input.query,
       user_id: input.userId,
     })}`,
+    options,
   );
 }
 
