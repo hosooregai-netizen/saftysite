@@ -82,6 +82,10 @@ server-side model.
   `postponed` schedule status.
 - Mocked admin smoke fixtures now use the new dispatch shape and no longer seed synthetic visit
   dates for quarterly and bad-workplace reports.
+- Admin reports now keep a short-lived session cache for the current filter/page key so reopening
+  `/admin?section=reports` does not always wait on a cold fetch.
+- Legacy technical-guidance rows now try session hydration before navigation and fall back to the
+  archived original PDF when the structured report body is still importing.
 
 ## Validation Commands
 

@@ -38,7 +38,7 @@ export const FEATURE_CONTRACTS: Record<FeatureContractId, FeatureContract> = {
   'admin-reports': {
     id: 'admin-reports',
     description:
-      '전체 보고서 섹션이 목록 조회, 품질 체크 저장, 발송 이력 편집 흐름을 유지한다.',
+      '전체 보고서 섹션이 session cache 기반 목록 재진입, 품질 체크 저장, 발송 이력 편집, legacy 기술지도 보고서 열기 fallback 흐름을 유지한다.',
     routes: ['/admin?section=reports'],
     markers: [
       '전체 보고서',
@@ -52,7 +52,7 @@ export const FEATURE_CONTRACTS: Record<FeatureContractId, FeatureContract> = {
       'PATCH /api/admin/reports/:id/review',
       'PATCH /api/admin/reports/:id/dispatch',
     ],
-    criticalActions: ['보고서 목록 조회', '품질 체크 저장', '발송 이력 저장'],
+    criticalActions: ['보고서 목록 조회', 'session cache 재진입 확인', '품질 체크 저장', '발송 이력 저장', 'legacy 기술지도 보고서 열기 fallback 확인'],
   },
   'admin-sites': {
     id: 'admin-sites',

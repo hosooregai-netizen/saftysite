@@ -8,6 +8,7 @@ import { buildSafetyReportUpsertInput } from '@/lib/safetyApiMappers/reports';
 import { parseSiteInspectionSchedules } from '@/lib/admin/siteContractProfile';
 import type {
   SafetyReportStatus,
+  SafetyReportListItem,
   SafetySite,
   SafetyUpsertReportInput,
   SafetyUser,
@@ -42,6 +43,7 @@ type ImportSummary = {
   importedTechnicalGuidanceCount: number;
   photoAugmentedCount: number;
   processedCount: number;
+  skippedExistingCount: number;
   skippedMissingSiteCount: number;
 };
 
@@ -473,6 +475,7 @@ async function main() {
   const legacyPassword = args.get('--legacy-password');
   const offset = Number(args.get('--offset') || '0');
   const limit = Number(args.get('--limit') || '0');
+  const skipExisting = process.argv.includes('--skip-existing');
 
   if (!exportRoot || !targetBaseUrl || !targetEmail || !targetPassword) {
     throw new Error('Missing required args: --export-root --target-base-url --target-email --target-password');
@@ -495,6 +498,16 @@ async function main() {
     fetchAll<SafetyUser>(targetBaseUrl, usersToken, '/users', {}, 500),
   ]);
   console.log(`[legacy-reports] loaded target snapshots sites=${sites.length} users=${users.length}`);
+  const existingLegacyReportKeys = skipExisting
+    ? new Set(
+        (await fetchAll<SafetyReportListItem>(targetBaseUrl, usersToken, '/reports', {}, 500))
+          .map((row) => normalizeText(row.report_key))
+          .filter((reportKey) => reportKey.startsWith('legacy:')),
+      )
+    : null;
+  if (existingLegacyReportKeys) {
+    console.log(`[legacy-reports] loaded existing legacy reports ${existingLegacyReportKeys.size}`);
+  }
 
   const popupSession =
     legacyEmail && legacyPassword
@@ -554,6 +567,7 @@ async function main() {
     importedTechnicalGuidanceCount: 0,
     photoAugmentedCount: 0,
     processedCount: 0,
+    skippedExistingCount: 0,
     skippedMissingSiteCount: 0,
   };
   const archiveOnlyRows: Record<string, unknown>[] = [];
@@ -561,6 +575,13 @@ async function main() {
 
   for (const row of legacyMetadata) {
     summary.processedCount += 1;
+    const reportKind = inferLegacyReportKind(row);
+    const reportKey = buildLegacyReportKey(reportKind, normalizeText(row.legacy_report_id));
+    if (existingLegacyReportKeys?.has(reportKey)) {
+      summary.skippedExistingCount += 1;
+      continue;
+    }
+
     const legacySiteId =
       normalizeText(row.legacy_site_id) ||
       normalizeText(row.legacy_site_ref) ||
@@ -579,7 +600,6 @@ async function main() {
       continue;
     }
 
-    const reportKind = inferLegacyReportKind(row);
     const archiveStatus = normalizeText(row.archive_status);
     const photoUrls =
       popupSession && normalizeText(row.legacy_report_id)

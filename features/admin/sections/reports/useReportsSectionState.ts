@@ -2,6 +2,10 @@
 
 import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import {
+  readAdminSessionCache,
+  writeAdminSessionCache,
+} from '@/features/admin/lib/adminSessionCache';
 import { fetchAdminReports } from '@/lib/admin/apiClient';
 import { buildControllerReportHref } from '@/lib/admin/controllerReports';
 import { filterVisibleAdminReportRows } from '@/lib/admin/reportVisibility';
@@ -68,6 +72,49 @@ export function useReportsSectionState({
   const [dispatchSmsSending, setDispatchSmsSending] = useState(false);
   const [smsProviderStatuses, setSmsProviderStatuses] = useState<SmsProviderStatus[]>([]);
   const deferredQuery = useDeferredValue(query);
+  const reportCacheKey = useMemo(
+    () =>
+      JSON.stringify({
+        assigneeFilter,
+        dateFrom,
+        dateTo,
+        deferredQuery,
+        headquarterFilter,
+        offset,
+        overviewPreset,
+        qualityFilter,
+        reportType,
+        siteFilter,
+        sort,
+      }),
+    [
+      assigneeFilter,
+      dateFrom,
+      dateTo,
+      deferredQuery,
+      headquarterFilter,
+      offset,
+      overviewPreset,
+      qualityFilter,
+      reportType,
+      siteFilter,
+      sort,
+    ],
+  );
+
+  useEffect(() => {
+    const cached = readAdminSessionCache<{
+      rows: ControllerReportRow[];
+      total: number;
+    }>(currentUser.id, `reports:${reportCacheKey}`);
+    if (!cached.value) {
+      return;
+    }
+
+    setRows(cached.value.rows);
+    setTotal(cached.value.total);
+    setSelectedKeys([]);
+  }, [currentUser.id, reportCacheKey]);
 
   const fetchRows = useCallback(async () => {
     try {
@@ -100,6 +147,10 @@ export function useReportsSectionState({
       setRows(filteredRows);
       setTotal(overviewPreset ? filteredRows.length : response.total);
       setSelectedKeys([]);
+      writeAdminSessionCache(currentUser.id, `reports:${reportCacheKey}`, {
+        rows: filteredRows,
+        total: overviewPreset ? filteredRows.length : response.total,
+      });
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : '보고서 목록을 불러오지 못했습니다.');
     } finally {
@@ -112,9 +163,11 @@ export function useReportsSectionState({
     deferredQuery,
     headquarterFilter,
     headquarters,
+    currentUser.id,
     offset,
     overviewPreset,
     qualityFilter,
+    reportCacheKey,
     reportType,
     siteFilter,
     sites,
@@ -268,10 +321,42 @@ export function useReportsSectionState({
   );
 
   const openReportRow = useCallback(
-    (row: ControllerReportRow) => {
-      router.push(buildControllerReportHref(row));
+    async (row: ControllerReportRow) => {
+      const href = buildControllerReportHref(row);
+      if (row.reportType !== 'technical_guidance' || !row.reportKey.startsWith('legacy:')) {
+        router.push(href);
+        return;
+      }
+
+      setError(null);
+      setNotice('legacy 보고서를 여는 중입니다.');
+
+      try {
+        await ensureSessionLoaded(row.reportKey);
+        if (getSessionById(row.reportKey)) {
+          setNotice(null);
+          router.push(href);
+          return;
+        }
+
+        if (row.originalPdfAvailable && row.originalPdfDownloadPath && typeof window !== 'undefined') {
+          setNotice('구조화 본문이 아직 준비되지 않아 원본 PDF를 엽니다.');
+          window.location.assign(row.originalPdfDownloadPath);
+          return;
+        }
+
+        setError('보고서 본문을 아직 불러오지 못했습니다. 변환 작업이 끝난 뒤 다시 시도해 주세요.');
+      } catch (nextError) {
+        if (row.originalPdfAvailable && row.originalPdfDownloadPath && typeof window !== 'undefined') {
+          setNotice('구조화 본문을 아직 불러오지 못해 원본 PDF를 엽니다.');
+          window.location.assign(row.originalPdfDownloadPath);
+          return;
+        }
+
+        setError(nextError instanceof Error ? nextError.message : '보고서를 열지 못했습니다.');
+      }
     },
-    [router],
+    [ensureSessionLoaded, getSessionById, router],
   );
 
   return {
