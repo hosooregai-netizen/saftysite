@@ -55,11 +55,11 @@ export const FEATURE_CONTRACTS: Record<FeatureContractId, FeatureContract> = {
   'admin-sites': {
     id: 'admin-sites',
     description:
-      '사업장 목록에서 현장 목록 로드, 필터링, 계약 단가 편집, 배정 modal 진입 흐름을 유지한다.',
-    routes: ['/admin?section=headquarters&siteStatus=all'],
-    markers: ['현장 목록', '현장 추가', '현장 수정', '회차당 단가', '지도요원 배정'],
-    apis: ['GET /sites', 'GET /headquarters', 'POST /sites', 'PATCH /sites/:id'],
-    criticalActions: ['현장 목록 조회', '회차당 단가 포함 현장 생성/수정', '지도요원 배정 modal 진입'],
+      '사업장 목록, 현장 목록, 현장 메인이 등록 정보 편집과 quick edit 동선을 유지한다.',
+    routes: ['/admin?section=headquarters', '/admin?section=headquarters&headquarterId=hq-1&siteId=site-1'],
+    markers: ['사업장 목록', '사업장 추가', '사업장 수정', '현장 목록', '현장 메인', '현장 정보 수정', '지도요원 배정'],
+    apis: ['GET /headquarters', 'POST /headquarters', 'PATCH /headquarters/:id', 'GET /sites', 'POST /sites', 'PATCH /sites/:id'],
+    criticalActions: ['사업장 생성/수정', '현장 생성/수정', '현장 메인 진입', '현장 메인 quick edit', '지도요원 배정 modal 진입'],
   },
   auth: {
     id: 'auth',

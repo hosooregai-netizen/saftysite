@@ -37,6 +37,23 @@ function shouldIgnoreRowClick(target: EventTarget | null) {
   );
 }
 
+function getHeadquarterMissingFields(item: SafetyHeadquarter) {
+  const requiredChecks: Array<[string, string | null]> = [
+    ['사업장관리번호', item.management_number],
+    ['사업장개시번호', item.opening_number],
+    ['사업자등록번호', item.business_registration_no],
+    ['법인등록번호', item.corporate_registration_no],
+    ['건설업면허/등록번호', item.license_no],
+    ['본사 담당자명', item.contact_name],
+    ['대표 전화', item.contact_phone],
+    ['본사 주소', item.address],
+  ];
+
+  return requiredChecks
+    .filter(([, value]) => !String(value ?? '').trim())
+    .map(([label]) => label);
+}
+
 export function HeadquartersTable({
   busy,
   canDelete,
@@ -56,21 +73,49 @@ export function HeadquartersTable({
   totalCount,
   totalPages,
 }: HeadquartersTableProps) {
+  const registrationGapCount = exportHeadquarters.filter((item) =>
+    [item.management_number, item.opening_number, item.business_registration_no].some(
+      (value) => !String(value ?? '').trim(),
+    ),
+  ).length;
+  const contactGapCount = exportHeadquarters.filter((item) =>
+    [item.contact_name, item.contact_phone, item.address].some(
+      (value) => !String(value ?? '').trim(),
+    ),
+  ).length;
+  const completedCount = exportHeadquarters.filter(
+    (item) => getHeadquarterMissingFields(item).length === 0,
+  ).length;
+  const memoGapCount = exportHeadquarters.filter(
+    (item) => !String(item.memo ?? '').trim(),
+  ).length;
   const handleExport = () =>
     void exportAdminWorkbook('headquarters', [
       {
         name: '사업장',
         columns: [
+          { key: 'name', label: '회사명' },
           { key: 'management_number', label: '사업장관리번호' },
           { key: 'opening_number', label: '사업장개시번호' },
-          { key: 'name', label: '회사명' },
-          { key: 'contact_phone', label: '전화' },
+          { key: 'business_registration_no', label: '사업자등록번호' },
+          { key: 'corporate_registration_no', label: '법인등록번호' },
+          { key: 'license_no', label: '건설업면허/등록번호' },
+          { key: 'contact_name', label: '본사 담당자명' },
+          { key: 'contact_phone', label: '대표 전화' },
+          { key: 'address', label: '본사 주소' },
+          { key: 'memo', label: '운영 메모' },
           { key: 'updated_at', label: '수정일' },
         ],
         rows: exportHeadquarters.map((item) => ({
+          address: item.address || '',
+          business_registration_no: item.business_registration_no || '',
+          contact_name: item.contact_name || '',
           management_number: item.management_number || '',
           opening_number: item.opening_number || '',
+          corporate_registration_no: item.corporate_registration_no || '',
           contact_phone: item.contact_phone || '',
+          license_no: item.license_no || '',
+          memo: item.memo || '',
           name: item.name,
           updated_at: formatTimestamp(item.updated_at),
         })),
@@ -90,7 +135,7 @@ export function HeadquartersTable({
         <div className={`${styles.sectionHeaderActions} ${styles.sectionHeaderToolbarActions}`}>
           <input
             className={`app-input ${styles.sectionHeaderSearch} ${styles.sectionHeaderToolbarSearch}`}
-            placeholder="회사명, 관리번호, 개시번호, 전화로 검색"
+            placeholder="회사명, 관리번호, 담당자, 등록번호, 주소로 검색"
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
           />
@@ -114,6 +159,32 @@ export function HeadquartersTable({
       </div>
 
       <div className={styles.sectionBody}>
+        {totalCount > 0 ? (
+          <div className={styles.listSummaryShell}>
+            <div className={styles.summaryBar}>
+              <article className={styles.summaryCard}>
+                <span className={styles.summaryCardLabel}>전체 사업장</span>
+                <strong className={styles.summaryCardValue}>{totalCount}개</strong>
+                <span className={styles.summaryCardMeta}>현재 검색/정렬 범위 기준</span>
+              </article>
+              <article className={styles.summaryCard}>
+                <span className={styles.summaryCardLabel}>등록번호 보완</span>
+                <strong className={styles.summaryCardValue}>{registrationGapCount}개</strong>
+                <span className={styles.summaryCardMeta}>관리번호, 개시번호, 사업자번호 기준</span>
+              </article>
+              <article className={styles.summaryCard}>
+                <span className={styles.summaryCardLabel}>연락/주소 보완</span>
+                <strong className={styles.summaryCardValue}>{contactGapCount}개</strong>
+                <span className={styles.summaryCardMeta}>담당자, 대표 전화, 본사 주소 기준</span>
+              </article>
+              <article className={styles.summaryCard}>
+                <span className={styles.summaryCardLabel}>입력 완료</span>
+                <strong className={styles.summaryCardValue}>{completedCount}개</strong>
+                <span className={styles.summaryCardMeta}>운영 메모 미입력 {memoGapCount}개</span>
+              </article>
+            </div>
+          </div>
+        ) : null}
         <div className={styles.tableShell}>
           {filteredHeadquarters.length === 0 ? (
             <div className={styles.tableEmpty}>등록된 사업장이 없습니다.</div>
@@ -133,15 +204,15 @@ export function HeadquartersTable({
                     <SortableHeaderCell
                       column={{ key: 'name' }}
                       current={sort}
-                      label="회사명"
+                      label="사업장 / 담당"
                       onChange={onSortChange}
                     />
-                    <th>사업장관리번호</th>
-                    <th>사업장개시번호</th>
+                    <th>등록번호</th>
+                    <th>주소 / 메모</th>
                     <SortableHeaderCell
                       column={{ key: 'contact_phone' }}
                       current={sort}
-                      label="전화"
+                      label="대표 전화"
                       onChange={onSortChange}
                     />
                     <SortableHeaderCell
@@ -155,76 +226,109 @@ export function HeadquartersTable({
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredHeadquarters.map((item) => (
-                    <tr
-                      key={item.id}
-                      className={styles.tableClickableRow}
-                      tabIndex={busy ? -1 : 0}
-                      role="link"
-                      onClick={(event) => {
-                        if (busy || shouldIgnoreRowClick(event.target)) return;
-                        onOpenSitesRequest(item);
-                      }}
-                      onKeyDown={(event) => {
-                        if (busy || shouldIgnoreRowClick(event.target)) return;
-                        if (event.key !== 'Enter' && event.key !== ' ') return;
-                        event.preventDefault();
-                        onOpenSitesRequest(item);
-                      }}
-                    >
-                      <td>
-                        <div className={styles.tablePrimary}>{item.name}</div>
-                      </td>
-                      <td>{item.management_number || '-'}</td>
-                      <td>{item.opening_number || '-'}</td>
-                      <td>
-                        <div className={styles.tablePrimary}>{item.contact_phone || '-'}</div>
-                      </td>
-                      <td>{formatTimestamp(item.updated_at)}</td>
-                      <td>
-                        <div
-                          className={styles.tableActionMenuWrap}
-                          onClick={(event) => event.stopPropagation()}
-                          onKeyDown={(event) => event.stopPropagation()}
-                        >
-                          <ActionMenu
-                            label={`${item.name} 작업 메뉴 열기`}
-                            items={[
-                              {
-                                label: '현장 보기',
-                                onSelect: () => {
-                                  if (!busy) onOpenSitesRequest(item);
+                  {filteredHeadquarters.map((item) => {
+                    const missingFields = getHeadquarterMissingFields(item);
+
+                    return (
+                      <tr
+                        key={item.id}
+                        className={styles.tableClickableRow}
+                        tabIndex={busy ? -1 : 0}
+                        role="link"
+                        onClick={(event) => {
+                          if (busy || shouldIgnoreRowClick(event.target)) return;
+                          onOpenSitesRequest(item);
+                        }}
+                        onKeyDown={(event) => {
+                          if (busy || shouldIgnoreRowClick(event.target)) return;
+                          if (event.key !== 'Enter' && event.key !== ' ') return;
+                          event.preventDefault();
+                          onOpenSitesRequest(item);
+                        }}
+                      >
+                        <td>
+                          <div className={styles.tablePrimary}>{item.name}</div>
+                          <div className={styles.tableSecondary}>
+                            담당자 {item.contact_name || '-'}
+                          </div>
+                          {missingFields.length ? (
+                            <div className={styles.tableBadgeRow}>
+                              <span className={`${styles.tableBadge} ${styles.tableBadgeWarning}`}>
+                                보완 {missingFields.length}건
+                              </span>
+                            </div>
+                          ) : null}
+                        </td>
+                        <td>
+                          <div className={styles.tablePrimary}>
+                            관리번호 {item.management_number || '-'}
+                          </div>
+                          <div className={styles.tableSecondary}>
+                            개시번호 {item.opening_number || '-'}
+                          </div>
+                          <div className={styles.tableSecondary}>
+                            사업자 {item.business_registration_no || '-'} / 법인{' '}
+                            {item.corporate_registration_no || '-'}
+                          </div>
+                          <div className={styles.tableSecondary}>
+                            면허 {item.license_no || '-'}
+                          </div>
+                        </td>
+                        <td>
+                          <div className={styles.tablePrimary}>{item.address || '-'}</div>
+                          <div className={styles.tableSecondary}>
+                            {item.memo || '운영 메모 없음'}
+                          </div>
+                        </td>
+                        <td>
+                          <div className={styles.tablePrimary}>{item.contact_phone || '-'}</div>
+                        </td>
+                        <td>{formatTimestamp(item.updated_at)}</td>
+                        <td>
+                          <div
+                            className={styles.tableActionMenuWrap}
+                            onClick={(event) => event.stopPropagation()}
+                            onKeyDown={(event) => event.stopPropagation()}
+                          >
+                            <ActionMenu
+                              label={`${item.name} 작업 메뉴 열기`}
+                              items={[
+                                {
+                                  label: '현장 보기',
+                                  onSelect: () => {
+                                    if (!busy) onOpenSitesRequest(item);
+                                  },
                                 },
-                              },
-                              {
-                                label: '사진첩 보기',
-                                href: getAdminSectionHref('photos', {
-                                  headquarterId: item.id,
-                                }),
-                              },
-                              {
-                                label: '수정',
-                                onSelect: () => {
-                                  if (!busy) onEditRequest(item);
+                                {
+                                  label: '사진첩 보기',
+                                  href: getAdminSectionHref('photos', {
+                                    headquarterId: item.id,
+                                  }),
                                 },
-                              },
-                              ...(canDelete
-                                ? [
-                                    {
-                                      label: '삭제',
-                                      tone: 'danger' as const,
-                                      onSelect: () => {
-                                        if (!busy) void onDeleteRequest(item);
+                                {
+                                  label: '수정',
+                                  onSelect: () => {
+                                    if (!busy) onEditRequest(item);
+                                  },
+                                },
+                                ...(canDelete
+                                  ? [
+                                      {
+                                        label: '삭제',
+                                        tone: 'danger' as const,
+                                        onSelect: () => {
+                                          if (!busy) void onDeleteRequest(item);
+                                        },
                                       },
-                                    },
-                                  ]
-                                : []),
-                            ]}
-                          />
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                                    ]
+                                  : []),
+                              ]}
+                            />
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

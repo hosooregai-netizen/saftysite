@@ -17,6 +17,7 @@ export function SitesSection(props: SitesSectionProps) {
         {props.showHeader !== false ? (
           <div className={styles.sectionHeaderTitleBlock}>
             <h2 className={styles.sectionTitle}>{props.title ?? '현장 목록'}</h2>
+            <div className={styles.sectionHeaderMeta}>총 {state.sortedSites.length}건</div>
           </div>
         ) : (
           <div className={styles.sectionHeaderSpacer} />
@@ -24,7 +25,7 @@ export function SitesSection(props: SitesSectionProps) {
         <div className={`${styles.sectionHeaderActions} ${styles.sectionHeaderToolbarActions}`}>
           <input
             className={`app-input ${styles.sectionHeaderSearch} ${styles.sectionHeaderToolbarSearch}`}
-            placeholder="현장명, 사업장명, 노동관서, 지도원, 발주자명, 계약담당자, 점검자로 검색"
+            placeholder="현장명, 코드, 사업장명, 현장소장, 계약유형, 발주자명으로 검색"
             value={state.query}
             onChange={(event) => state.setQuery(event.target.value)}
           />

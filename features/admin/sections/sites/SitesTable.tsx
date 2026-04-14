@@ -12,6 +12,8 @@ import {
   getAdminSectionHref,
   getSiteStatusLabel,
   normalizeSiteStatusForDisplay,
+  SITE_CONTRACT_STATUS_LABELS,
+  SITE_CONTRACT_TYPE_LABELS,
   SITE_STATUS_OPTIONS,
 } from '@/lib/admin';
 import { parseSiteRequiredCompletionFields, resolveSiteRevenueProfile } from '@/lib/admin/siteContractProfile';
@@ -20,6 +22,7 @@ import type { SafetySite, SafetyUser } from '@/types/backend';
 import type { SafetyAssignment, SafetySiteStatus } from '@/types/controller';
 import {
   formatAssignedUsers,
+  getSiteManagementMissingFields,
   shouldIgnoreRowClick,
 } from './siteSectionHelpers';
 
@@ -39,6 +42,11 @@ interface SitesTableProps {
   sort: TableSortState;
   usersById: Map<string, SafetyUser>;
   onSortChange: (value: TableSortState) => void;
+}
+
+function formatMissingFieldPreview(fields: string[]) {
+  if (fields.length <= 2) return fields.join(', ');
+  return `${fields.slice(0, 2).join(', ')} 외 ${fields.length - 2}건`;
 }
 
 export function SitesTable({
@@ -134,6 +142,10 @@ export function SitesTable({
               site.required_completion_fields?.length
                 ? site.required_completion_fields
                 : parseSiteRequiredCompletionFields(site);
+            const managementMissingFields = getSiteManagementMissingFields(site);
+            const combinedMissingFields = Array.from(
+              new Set([...requiredCompletionFields, ...managementMissingFields]),
+            );
             const assignedUsers = siteAssignments
               .map((assignment) => usersById.get(assignment.user_id))
               .filter((user): user is SafetyUser => Boolean(user));
@@ -141,6 +153,14 @@ export function SitesTable({
               assignedUsers.length === 0 && site.assigned_user
                 ? [usersById.get(site.assigned_user.id) ?? site.assigned_user].filter(Boolean)
                 : [];
+            const contractTypeLabel =
+              SITE_CONTRACT_TYPE_LABELS[
+                (site.contract_type ?? '') as keyof typeof SITE_CONTRACT_TYPE_LABELS
+              ] || '미입력';
+            const contractStatusLabel =
+              SITE_CONTRACT_STATUS_LABELS[
+                (site.contract_status ?? '') as keyof typeof SITE_CONTRACT_STATUS_LABELS
+              ] || '미입력';
 
             return (
               <tr
@@ -162,14 +182,18 @@ export function SitesTable({
                 <td>
                   <div className={styles.tablePrimary}>{site.site_name}</div>
                   <div className={styles.tableSecondary}>{site.site_address || '주소 미입력'}</div>
-                  <div className={styles.tableSecondary}>
-                    현장대리인 메일 {site.site_contact_email || '미등록'}
-                    {site.is_high_risk_site ? ' / 고위험 사업장' : ''}
+                  <div className={styles.tableBadgeRow}>
+                    <span className={`${styles.tableBadge} ${styles.tableBadgeAccent}`}>
+                      코드 {site.site_code || '-'}
+                    </span>
+                    <span className={styles.tableBadge}>관리번호 {site.management_number || '-'}</span>
+                    {site.is_high_risk_site ? (
+                      <span className={`${styles.tableBadge} ${styles.tableBadgeWarning}`}>고위험</span>
+                    ) : null}
                   </div>
-                  {requiredCompletionFields.length ? (
+                  {combinedMissingFields.length ? (
                     <div className={styles.tableSecondary}>
-                      <span className="app-chip">보완 필요 {requiredCompletionFields.length}건</span>{' '}
-                      {requiredCompletionFields.join(', ')}
+                      보완 {formatMissingFieldPreview(combinedMissingFields)}
                     </div>
                   ) : null}
                 </td>
@@ -179,15 +203,18 @@ export function SitesTable({
                       {site.headquarter_detail?.name || site.headquarter?.name || '-'}
                     </div>
                     <div className={styles.tableSecondary}>
-                      관리번호 {site.headquarter_detail?.management_number || site.management_number || '-'}
+                      관리번호 {site.headquarter_detail?.management_number || '-'}
                     </div>
                     <div className={styles.tableSecondary}>
-                      개시번호 {site.headquarter_detail?.opening_number || site.site_code || '-'}
+                      개시번호 {site.headquarter_detail?.opening_number || '-'}
                     </div>
                   </td>
                 ) : null}
                 <td>
                   <div className={styles.tablePrimary}>
+                    {contractTypeLabel} / {contractStatusLabel}
+                  </div>
+                  <div className={styles.tableSecondary}>
                     계약 {site.contract_start_date || '-'} ~ {site.contract_end_date || '-'}
                   </div>
                   <div className={styles.tableSecondary}>
@@ -210,24 +237,21 @@ export function SitesTable({
                 </td>
                 <td>
                   <div className={styles.tablePrimary}>
-                    지도원 {site.guidance_officer_name || '-'} / 노동관서 {site.labor_office || '-'}
+                    현장소장 {site.manager_name || '-'}
                   </div>
                   <div className={styles.tableSecondary}>
-                    점검자 {site.inspector_name || '-'} / 계약담당자 {site.contract_contact_name || '-'}
+                    연락처 {site.manager_phone || '-'}
                   </div>
                   <div className={styles.tableSecondary}>
-                    현장책임자 {site.manager_name || '-'} / 배정요원{' '}
+                    발송 메일 {site.site_contact_email || '미등록'}
+                  </div>
+                  <div className={styles.tableSecondary}>
+                    배정요원{' '}
                     {assignedUsers.length > 0
                       ? formatAssignedUsers(assignedUsers)
                       : fallbackAssignedUsers.length > 0
                         ? fallbackAssignedUsers.map((user) => user.name).join(', ')
                         : '-'}
-                  </div>
-                  <div className={styles.tableSecondary}>
-                    현장대리인 메일 {site.site_contact_email || '미등록'}
-                  </div>
-                  <div className={styles.tableSecondary}>
-                    발주자 {site.client_business_name || '-'} / 대표 {site.client_representative_name || '-'}
                   </div>
                 </td>
                 <td>{formatTimestamp(site.updated_at)}</td>

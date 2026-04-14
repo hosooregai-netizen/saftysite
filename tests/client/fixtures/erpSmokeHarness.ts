@@ -125,6 +125,48 @@ async function installErpRoutes({
       return;
     }
 
+    if (pathname === '/headquarters' && request.method() === 'POST') {
+      const body = (request.postDataJSON?.() as JsonRecord) || {};
+      const created = {
+        id: buildFixtureId('hq', body.name),
+        name: String(body.name || '신규 사업장'),
+        management_number: body.management_number ?? null,
+        opening_number: body.opening_number ?? null,
+        business_registration_no: body.business_registration_no ?? null,
+        corporate_registration_no: body.corporate_registration_no ?? null,
+        license_no: body.license_no ?? null,
+        contact_name: body.contact_name ?? null,
+        contact_phone: body.contact_phone ?? null,
+        address: body.address ?? null,
+        memo: body.memo ?? null,
+        is_active: body.is_active ?? true,
+        created_at: NOW,
+        updated_at: NOW,
+      };
+      state.headquarters.push(created);
+      await fulfillJson(route, clone(created));
+      return;
+    }
+
+    if (normalizedPath === '/headquarters/:id' && request.method() === 'PATCH') {
+      const headquarterId = pathname.split('/').pop() || '';
+      const body = (request.postDataJSON?.() as JsonRecord) || {};
+      const item = state.headquarters.find((headquarter) => String(headquarter.id) === headquarterId);
+      assert(item, `Missing headquarter fixture for update: ${headquarterId}`);
+      Object.assign(item, body, { updated_at: NOW });
+      await fulfillJson(route, clone(item));
+      return;
+    }
+
+    if (normalizedPath === '/headquarters/:id' && request.method() === 'DELETE') {
+      const headquarterId = pathname.split('/').pop() || '';
+      const item = state.headquarters.find((headquarter) => String(headquarter.id) === headquarterId);
+      assert(item, `Missing headquarter fixture for delete: ${headquarterId}`);
+      Object.assign(item, { is_active: false, updated_at: NOW });
+      await fulfillJson(route, clone(item));
+      return;
+    }
+
     if (pathname === '/sites' && request.method() === 'GET') {
       await fulfillJson(route, clone(helpers.hydratedSites()));
       return;
@@ -152,6 +194,8 @@ async function installErpRoutes({
         client_business_registration_no: body.client_business_registration_no ?? null,
         order_type_division: body.order_type_division ?? null,
         technical_guidance_kind: body.technical_guidance_kind ?? null,
+        contract_type: body.contract_type ?? null,
+        contract_status: body.contract_status ?? null,
         manager_name: body.manager_name ?? null,
         inspector_name: body.inspector_name ?? null,
         contract_contact_name: body.contract_contact_name ?? null,

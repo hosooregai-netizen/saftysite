@@ -17,6 +17,8 @@ import type {
   SafetySiteStatus,
   SafetySiteUpdateInput,
 } from '@/types/controller';
+import { HeadquarterSummaryPanel } from './HeadquarterSummaryPanel';
+import { SiteManagementMainPanel } from './SiteManagementMainPanel';
 import { HeadquartersTable } from './HeadquartersTable';
 import { HeadquarterEditorModal } from './HeadquarterEditorModal';
 import { useHeadquartersSectionState } from './useHeadquartersSectionState';
@@ -60,6 +62,8 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
     sites,
     users,
     onAssignFieldAgent,
+    onClearHeadquarterSelection,
+    onClearSiteSelection,
     onCreate,
     onCreateSite,
     onDelete,
@@ -175,11 +179,17 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
         />
       ) : selectedSite ? (
         selectedInspectionSite ? (
-          <SiteEntryHubPanel
-            className={styles.contentStack}
-            currentSite={selectedInspectionSite}
-            reportMetaText="현장 메인에서 기술지도 보고서 목록과 추가 업무 문서로 이동할 수 있습니다."
-          />
+          <div className={styles.contentStack}>
+            <SiteManagementMainPanel
+              headquarter={selectedHeadquarter}
+              site={selectedSite}
+              onBack={onClearSiteSelection}
+            />
+            <SiteEntryHubPanel
+              currentSite={selectedInspectionSite}
+              reportMetaText="현장 메인에서 기술지도 보고서 목록과 추가 업무 문서로 이동할 수 있습니다."
+            />
+          </div>
         ) : (
           <section className={styles.sectionCard}>
             <div className={styles.sectionBody}>
@@ -188,25 +198,33 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
           </section>
         )
       ) : (
-        <SitesSection
-          assignments={assignments}
-          autoEditSiteId={autoEditSiteId}
-          busy={busy}
-          canDelete={canDelete}
-          headquarters={headquarters}
-          initialStatusFilter={siteStatusFilter}
-          lockedHeadquarterId={selectedHeadquarter.id}
-          onAssignFieldAgent={onAssignFieldAgent}
-          onCreate={onCreateSite}
-          onDelete={onDeleteSite}
-          onSelectSiteEntry={(site) => onSelectSite(selectedHeadquarter.id, site.id)}
-          onUnassignFieldAgent={onUnassignFieldAgent}
-          onUpdate={onUpdateSite}
-          showHeadquarterColumn={false}
-          sites={headquarterSites}
-          title={siteStatusTitle}
-          users={users}
-        />
+        <div className={styles.contentStack}>
+          <HeadquarterSummaryPanel
+            headquarter={selectedHeadquarter}
+            sites={headquarterSites}
+            onBack={onClearHeadquarterSelection}
+            onEdit={() => state.openEdit(selectedHeadquarter)}
+          />
+          <SitesSection
+            assignments={assignments}
+            autoEditSiteId={autoEditSiteId}
+            busy={busy}
+            canDelete={canDelete}
+            headquarters={headquarters}
+            initialStatusFilter={siteStatusFilter}
+            lockedHeadquarterId={selectedHeadquarter.id}
+            onAssignFieldAgent={onAssignFieldAgent}
+            onCreate={onCreateSite}
+            onDelete={onDeleteSite}
+            onSelectSiteEntry={(site) => onSelectSite(selectedHeadquarter.id, site.id)}
+            onUnassignFieldAgent={onUnassignFieldAgent}
+            onUpdate={onUpdateSite}
+            showHeadquarterColumn={false}
+            sites={headquarterSites}
+            title={siteStatusTitle}
+            users={users}
+          />
+        </div>
       )}
 
       <HeadquarterEditorModal

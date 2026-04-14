@@ -105,15 +105,22 @@ export function useSitesSectionState({
 
       const haystack = [
         site.site_name,
+        site.site_code ?? '',
         site.headquarter_detail?.management_number ?? site.management_number ?? '',
         site.headquarter_detail?.opening_number ?? site.site_code ?? '',
         site.site_address ?? '',
         site.site_contact_email ?? '',
         site.manager_name ?? '',
+        site.manager_phone ?? '',
         site.labor_office ?? '',
         site.guidance_officer_name ?? '',
         site.client_management_number ?? '',
         site.client_business_name ?? '',
+        site.client_representative_name ?? '',
+        site.contract_contact_name ?? '',
+        site.contract_type ?? '',
+        site.contract_status ?? '',
+        site.memo ?? '',
         site.headquarter_detail?.name ?? site.headquarter?.name ?? '',
         allAssignedNames.join(' '),
       ]
@@ -194,6 +201,8 @@ export function useSitesSectionState({
         name: '현장',
         columns: [
           { key: 'site_name', label: '현장명' },
+          { key: 'site_code', label: '현장코드' },
+          { key: 'management_number', label: '현장관리번호' },
           { key: 'headquarter_name', label: '사업장' },
           { key: 'headquarter_management_number', label: '사업장관리번호' },
           { key: 'headquarter_opening_number', label: '사업장개시번호' },
@@ -214,6 +223,8 @@ export function useSitesSectionState({
           { key: 'client_business_registration_no', label: '발주자 사업자등록번호' },
           { key: 'order_type_division', label: '발주유형구분' },
           { key: 'technical_guidance_kind', label: '기술지도 구분' },
+          { key: 'contract_type', label: '계약유형' },
+          { key: 'contract_status', label: '계약상태' },
           { key: 'total_contract_amount', label: '기술지도 대가' },
           { key: 'total_rounds', label: '기술지도 횟수' },
           { key: 'per_visit_amount', label: '회차당 단가' },
@@ -222,7 +233,9 @@ export function useSitesSectionState({
           { key: 'contract_signed_date', label: '계약 체결일' },
           { key: 'contract_contact_name', label: '계약담당자' },
           { key: 'inspector_name', label: '점검자' },
-          { key: 'manager_name', label: '현장책임자명' },
+          { key: 'manager_name', label: '현장소장명' },
+          { key: 'manager_phone', label: '현장소장 연락처' },
+          { key: 'memo', label: '운영 메모' },
           { key: 'assigned_users', label: '배정 요원' },
           { key: 'status', label: '현장 상태' },
         ],
@@ -238,6 +251,8 @@ export function useSitesSectionState({
               assignedUsers.length > 0
                 ? assignedUsers.map((user) => user.name).join(', ')
                 : site.assigned_user?.name || '',
+            contract_status: site.contract_status || '',
+            contract_type: site.contract_type || '',
             headquarter_name: site.headquarter_detail?.name || site.headquarter?.name || '',
             headquarter_management_number:
               site.headquarter_detail?.management_number || site.management_number || '',
@@ -248,6 +263,7 @@ export function useSitesSectionState({
             site_address: site.site_address || '',
             site_contact_email: site.site_contact_email || '',
             is_high_risk_site: site.is_high_risk_site ? '예' : '아니오',
+            management_number: site.management_number || '',
             project_amount: formatCurrencyValue(site.project_amount),
             project_start_date: site.project_start_date || '',
             project_end_date: site.project_end_date || '',
@@ -274,6 +290,9 @@ export function useSitesSectionState({
             contract_contact_name: site.contract_contact_name || '',
             inspector_name: site.inspector_name || '',
             manager_name: site.manager_name || '',
+            manager_phone: site.manager_phone || '',
+            memo: site.memo || '',
+            site_code: site.site_code || '',
             site_name: site.site_name,
             status: getSiteStatusLabel(site.status),
           };

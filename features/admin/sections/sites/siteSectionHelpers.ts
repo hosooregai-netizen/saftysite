@@ -39,6 +39,8 @@ export interface SitesSectionProps {
 
 export interface SiteFormState {
   headquarter_id: string;
+  management_number: string;
+  site_code: string;
   site_name: string;
   status: SafetySiteStatus;
   labor_office: string;
@@ -64,15 +66,21 @@ export interface SiteFormState {
   contract_start_date: string;
   contract_end_date: string;
   contract_signed_date: string;
+  contract_status: string;
+  contract_type: string;
   contract_contact_name: string;
   inspector_name: string;
   manager_name: string;
+  manager_phone: string;
+  memo: string;
 }
 
 export type SiteAssignmentFilter = 'all' | 'unassigned';
 
 export const EMPTY_FORM: SiteFormState = {
   headquarter_id: '',
+  management_number: '',
+  site_code: '',
   site_name: '',
   status: 'planned',
   labor_office: '',
@@ -98,9 +106,13 @@ export const EMPTY_FORM: SiteFormState = {
   contract_start_date: '',
   contract_end_date: '',
   contract_signed_date: '',
+  contract_status: '',
+  contract_type: '',
   contract_contact_name: '',
   inspector_name: '',
   manager_name: '',
+  manager_phone: '',
+  memo: '',
 };
 
 export function formatAssignedUsers(users: SafetyUser[]) {
@@ -133,6 +145,8 @@ export function isPinnedTestSite(site: SafetySite) {
 export function createEditForm(site: SafetySite): SiteFormState {
   return {
     headquarter_id: site.headquarter_id,
+    management_number: site.management_number ?? '',
+    site_code: site.site_code ?? '',
     site_name: site.site_name,
     status: normalizeSiteStatusForDisplay(site.status),
     labor_office: site.labor_office ?? '',
@@ -158,9 +172,13 @@ export function createEditForm(site: SafetySite): SiteFormState {
     contract_start_date: site.contract_start_date ?? '',
     contract_end_date: site.contract_end_date ?? '',
     contract_signed_date: site.contract_signed_date ?? site.contract_date ?? '',
+    contract_status: site.contract_status ?? '',
+    contract_type: site.contract_type ?? '',
     contract_contact_name: site.contract_contact_name ?? '',
     inspector_name: site.inspector_name ?? '',
     manager_name: site.manager_name ?? '',
+    manager_phone: site.manager_phone ?? '',
+    memo: site.memo ?? '',
   };
 }
 
@@ -170,6 +188,8 @@ export function buildSitePayload(
 ): SafetySiteInput | SafetySiteUpdateInput {
   return {
     headquarter_id: lockedHeadquarterId ?? form.headquarter_id,
+    management_number: toNullableText(form.management_number),
+    site_code: toNullableText(form.site_code),
     site_name: form.site_name.trim(),
     status: form.status,
     labor_office: toNullableText(form.labor_office),
@@ -190,8 +210,11 @@ export function buildSitePayload(
     order_type_division: toNullableText(form.order_type_division),
     technical_guidance_kind: toNullableText(form.technical_guidance_kind),
     manager_name: toNullableText(form.manager_name),
+    manager_phone: toNullableText(form.manager_phone),
     inspector_name: toNullableText(form.inspector_name),
     contract_contact_name: toNullableText(form.contract_contact_name),
+    contract_status: toNullableText(form.contract_status),
+    contract_type: toNullableText(form.contract_type),
     contract_start_date: toNullableText(form.contract_start_date),
     contract_end_date: toNullableText(form.contract_end_date),
     contract_signed_date: toNullableText(form.contract_signed_date),
@@ -201,7 +224,30 @@ export function buildSitePayload(
       return typeof parsed === 'number' && Number.isFinite(parsed) ? Math.trunc(parsed) : null;
     })(),
     total_contract_amount: parseOptionalNumber(form.total_contract_amount),
+    memo: toNullableText(form.memo),
   };
+}
+
+export function getSiteManagementMissingFields(site: SafetySite): string[] {
+  const requiredChecks: Array<[string, string | number | null | undefined]> = [
+    ['현장코드', site.site_code],
+    ['현장관리번호', site.management_number],
+    ['현장소장명', site.manager_name],
+    ['현장소장 연락처', site.manager_phone],
+    ['현장대리인 메일', site.site_contact_email],
+    ['계약유형', site.contract_type],
+    ['계약상태', site.contract_status],
+    ['계약종료일', site.contract_end_date],
+    ['기술지도 횟수', site.total_rounds],
+    ['회차당 단가', site.per_visit_amount ?? site.total_contract_amount],
+  ];
+
+  return requiredChecks
+    .filter(([, value]) => {
+      if (typeof value === 'number') return !(Number.isFinite(value) && value > 0);
+      return !String(value ?? '').trim();
+    })
+    .map(([label]) => label);
 }
 
 export function getDerivedPerVisitAmount(form: Pick<SiteFormState, 'per_visit_amount' | 'total_contract_amount' | 'total_rounds'>) {
