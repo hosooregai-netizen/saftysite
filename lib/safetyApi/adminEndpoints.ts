@@ -18,7 +18,7 @@ import type {
   SafetyUserCreateInput,
   SafetyUserUpdateInput,
 } from '@/types/controller';
-import { requestSafetyApi } from './client';
+import { requestSafetyApi, SafetyApiError } from './client';
 
 const ADMIN_LIST_LIMIT = 500;
 const ADMIN_CONTENT_ITEM_LIMIT = 1000;
@@ -43,6 +43,18 @@ function withQuery(path: string, params: Record<string, string | number | boolea
 
 function sendJson<T>(path: string, token: string, method: string, body?: unknown): Promise<T> {
   return requestSafetyApi<T>(path, { method, body: body ? JSON.stringify(body) : undefined }, token);
+}
+
+function isHeadquarterWriteFailure(error: unknown): error is SafetyApiError {
+  return error instanceof SafetyApiError && error.status === 500;
+}
+
+function isDuplicateFieldConflict(error: unknown, fieldName: string): error is SafetyApiError {
+  return (
+    error instanceof SafetyApiError &&
+    error.status === 409 &&
+    error.message.toLowerCase().includes(fieldName.toLowerCase())
+  );
 }
 
 function normalizeSafetySiteStatus(value: string | null | undefined): SafetySiteStatus {
@@ -105,10 +117,36 @@ export const fetchSafetyHeadquartersPage = (token: string, options: AdminListQue
     {},
     token
   );
-export const createSafetyHeadquarter = (token: string, body: SafetyHeadquarterInput) =>
-  sendJson<SafetyHeadquarter>('/headquarters', token, 'POST', body);
-export const updateSafetyHeadquarter = (token: string, id: string, body: SafetyHeadquarterUpdateInput) =>
-  sendJson<SafetyHeadquarter>(`/headquarters/${id}`, token, 'PATCH', body);
+export const createSafetyHeadquarter = async (token: string, body: SafetyHeadquarterInput) => {
+  try {
+    return await sendJson<SafetyHeadquarter>('/headquarters', token, 'POST', body);
+  } catch (error) {
+    if (isHeadquarterWriteFailure(error)) {
+      throw new SafetyApiError(
+        '사업장 저장이 서버에서 실패했습니다. 사업장관리번호/사업장개시번호가 같은 값이 아니라면 서버 로그 확인이 필요합니다.',
+        500,
+      );
+    }
+    throw error;
+  }
+};
+export const updateSafetyHeadquarter = async (
+  token: string,
+  id: string,
+  body: SafetyHeadquarterUpdateInput,
+) => {
+  try {
+    return await sendJson<SafetyHeadquarter>(`/headquarters/${id}`, token, 'PATCH', body);
+  } catch (error) {
+    if (isHeadquarterWriteFailure(error)) {
+      throw new SafetyApiError(
+        '사업장 수정이 서버에서 실패했습니다. 사업장관리번호/사업장개시번호가 같은 값이 아니라면 서버 로그 확인이 필요합니다.',
+        500,
+      );
+    }
+    throw error;
+  }
+};
 export const deactivateSafetyHeadquarter = (token: string, id: string) =>
   requestSafetyApi<SafetyHeadquarter>(`/headquarters/${id}`, { method: 'DELETE' }, token);
 export const deleteSafetyHeadquarter = deactivateSafetyHeadquarter;
@@ -136,10 +174,34 @@ export const fetchSafetySitesAdminPage = (token: string, options: AdminListQuery
     {},
     token
   ).then((sites) => sites.map((site) => normalizeSafetySite(site)));
-export const createSafetySite = (token: string, body: SafetySiteInput) =>
-  sendJson<SafetySite>('/sites', token, 'POST', body).then((site) => normalizeSafetySite(site));
-export const updateSafetySite = (token: string, id: string, body: SafetySiteUpdateInput) =>
-  sendJson<SafetySite>(`/sites/${id}`, token, 'PATCH', body).then((site) => normalizeSafetySite(site));
+export const createSafetySite = async (token: string, body: SafetySiteInput) => {
+  try {
+    const site = await sendJson<SafetySite>('/sites', token, 'POST', body);
+    return normalizeSafetySite(site);
+  } catch (error) {
+    if (isDuplicateFieldConflict(error, 'site_code')) {
+      throw new SafetyApiError(
+        '현장 저장이 서버에서 실패했습니다. 현장코드가 이미 다른 현장이나 삭제 잔존 데이터와 충돌하고 있습니다.',
+        409,
+      );
+    }
+    throw error;
+  }
+};
+export const updateSafetySite = async (token: string, id: string, body: SafetySiteUpdateInput) => {
+  try {
+    const site = await sendJson<SafetySite>(`/sites/${id}`, token, 'PATCH', body);
+    return normalizeSafetySite(site);
+  } catch (error) {
+    if (isDuplicateFieldConflict(error, 'site_code')) {
+      throw new SafetyApiError(
+        '현장 수정이 서버에서 실패했습니다. 현장코드가 다른 현장이나 종료 상태 데이터와 충돌하고 있을 수 있습니다.',
+        409,
+      );
+    }
+    throw error;
+  }
+};
 export const deactivateSafetySite = (token: string, id: string) =>
   requestSafetyApi<SafetySite>(`/sites/${id}`, { method: 'DELETE' }, token).then((site) =>
     normalizeSafetySite(site)

@@ -77,6 +77,23 @@ and site-main management context can be entered and reviewed without leaving bro
   links appear before the ERP report hub without repeating the same values in multiple cards.
 - Editor modals dropped repeated “current selection” and section-description copy unless the hint
   directly affects user input, such as derived per-visit pricing or dispatch email use.
+- Headquarter save flow now validates field length and duplicate management/opening numbers before
+  sending `PATCH /headquarters/:id`, and the client upgrades opaque upstream 500 messages into a
+  more actionable admin hint.
+- Site save flow now validates visible `site_code` duplicates and key field lengths before sending
+  `PATCH /sites/:id`, so obvious collisions are blocked in the admin UI first.
+- Investigation also found a semantic mismatch risk around `site_code`: local Excel import still
+  maps `headquarter_opening_number -> site_code`, and downstream doc review still describes
+  `site_code` as the source for `사업장개시번호`.
+- Server admin CRUD now removes the legacy mirroring path that used to overwrite
+  `sites.management_number/site_code` from `headquarters.management_number/opening_number` during
+  `POST/PATCH /sites` and `PATCH /headquarters`.
+- Startup backfill now remains one-way for missing headquarter numbers only: it can fill
+  `headquarters.management_number/opening_number` from older site data, but it no longer mirrors
+  headquarter numbers back into every child site document.
+- Admin site search/export now reads headquarter business numbers from `headquarter_detail` only,
+  so the admin drilldown no longer treats `site.management_number/site_code` as fallback business
+  registration fields.
 - Updated mocked fixtures and admin smoke so the contract protects:
   - business create/edit
   - site create/edit with contract type/status and manager phone
@@ -114,6 +131,14 @@ git diff --check
 
 - `npx eslint ...`
   - passed
+- live upstream OpenAPI check (`http://52.64.85.49:8011/openapi.json`)
+  - confirmed `HeadquarterCreate` and `HeadquarterUpdate` do declare the expanded headquarter
+    fields, so the observed live `PATCH /headquarters/:id` 500 is likely an upstream runtime/data
+    issue rather than a missing request schema field
+  - confirmed `SiteCreate` and `SiteUpdate` still expose `site_code`, so the observed live
+    `PATCH /sites/:id` `409` points more toward duplicate live data, hidden deleted rows, a
+    repository self-conflict on update, or a semantic mismatch between `site_code` and
+    `사업장개시번호`
 - `npx tsc --noEmit --pretty false`
   - passed
 - `npm run aidlc:audit:admin`
@@ -124,6 +149,10 @@ git diff --check
     `SiteManagementMainPanel.tsx`
 - `npm run test:client:smoke -- admin-sites`
   - passed against mocked harness at `http://127.0.0.1:3100`
+- planned server regression checks after the semantic fix
+  - verify live `sites` indexes no longer retain a legacy unique `site_code`
+  - verify closed sites are included when investigating duplicate `site_code`
+  - verify business-number edits no longer rewrite child site numbers
 - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3100 npm run smoke:real:admin -- --sections sites`
   - blocked in this environment
   - exact blocker: `Missing smoke seed. Provide SMOKE_SEED_PATH (/tmp/safety-e2e-seed.json) or LIVE_SAFETY_EMAIL/LIVE_SAFETY_PASSWORD.`

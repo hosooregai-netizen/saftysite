@@ -65,6 +65,7 @@ export function HeadquarterEditorModal({
                 value={form.name}
                 onChange={(event) => onFormChange({ ...form, name: event.target.value })}
                 disabled={busy}
+                maxLength={200}
               />
             </label>
             <label className={styles.modalField}>
@@ -76,6 +77,7 @@ export function HeadquarterEditorModal({
                   onFormChange({ ...form, management_number: event.target.value })
                 }
                 disabled={busy}
+                maxLength={100}
               />
             </label>
             <label className={styles.modalField}>
@@ -85,6 +87,7 @@ export function HeadquarterEditorModal({
                 value={form.opening_number}
                 onChange={(event) => onFormChange({ ...form, opening_number: event.target.value })}
                 disabled={busy}
+                maxLength={100}
               />
             </label>
             <label className={styles.modalField}>
@@ -96,6 +99,7 @@ export function HeadquarterEditorModal({
                   onFormChange({ ...form, business_registration_no: event.target.value })
                 }
                 disabled={busy}
+                maxLength={50}
               />
             </label>
             <label className={styles.modalField}>
@@ -107,6 +111,7 @@ export function HeadquarterEditorModal({
                   onFormChange({ ...form, corporate_registration_no: event.target.value })
                 }
                 disabled={busy}
+                maxLength={50}
               />
             </label>
             <label className={styles.modalField}>
@@ -116,6 +121,7 @@ export function HeadquarterEditorModal({
                 value={form.license_no}
                 onChange={(event) => onFormChange({ ...form, license_no: event.target.value })}
                 disabled={busy}
+                maxLength={50}
               />
             </label>
           </div>
@@ -135,6 +141,7 @@ export function HeadquarterEditorModal({
                 value={form.contact_name}
                 onChange={(event) => onFormChange({ ...form, contact_name: event.target.value })}
                 disabled={busy}
+                maxLength={100}
               />
             </label>
             <label className={styles.modalField}>
@@ -144,6 +151,7 @@ export function HeadquarterEditorModal({
                 value={form.contact_phone}
                 onChange={(event) => onFormChange({ ...form, contact_phone: event.target.value })}
                 disabled={busy}
+                maxLength={50}
               />
             </label>
             <label className={styles.modalFieldWide}>

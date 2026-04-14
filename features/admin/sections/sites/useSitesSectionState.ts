@@ -15,11 +15,59 @@ import {
   createEditForm,
   isCreateReady,
   type SiteAssignmentFilter,
+  type SiteFormState,
   type SitesSectionProps,
 } from './siteSectionHelpers';
 import type { TableSortState } from '@/types/admin';
 import type { SafetyAssignment, SafetySiteInput, SafetySiteStatus, SafetySiteUpdateInput } from '@/types/controller';
 import type { SafetySite, SafetyUser } from '@/types/backend';
+
+function normalizeSiteValue(value: string | null | undefined) {
+  return String(value ?? '').trim().toLowerCase();
+}
+
+function validateSiteSubmit(
+  form: SiteFormState,
+  sites: SafetySite[],
+  editingId: string | null,
+) {
+  const maxLengthChecks: Array<[string, string, number]> = [
+    ['현장명', form.site_name, 200],
+    ['현장코드', form.site_code, 100],
+    ['현장관리번호', form.management_number, 100],
+    ['노동관서', form.labor_office, 200],
+    ['지도지원원', form.guidance_officer_name, 100],
+    ['현장소장명', form.manager_name, 100],
+    ['현장소장 연락처', form.manager_phone, 50],
+    ['현장대리인 메일', form.site_contact_email, 200],
+    ['발주자 사업장관리번호', form.client_management_number, 100],
+    ['발주자 사업장명', form.client_business_name, 200],
+    ['발주처 대표자', form.client_representative_name, 100],
+    ['발주처 법인등록번호', form.client_corporate_registration_no, 50],
+    ['발주처 사업자등록번호', form.client_business_registration_no, 50],
+    ['발주유형구분', form.order_type_division, 100],
+    ['기술지도 구분', form.technical_guidance_kind, 100],
+    ['계약담당자', form.contract_contact_name, 100],
+    ['점검자', form.inspector_name, 100],
+  ];
+
+  for (const [label, value, maxLength] of maxLengthChecks) {
+    const normalized = value.trim();
+    if (normalized.length > maxLength) {
+      return `${label}은(는) ${maxLength}자 이하로 입력해 주세요.`;
+    }
+  }
+
+  const duplicateSiteCode = normalizeSiteValue(form.site_code);
+  if (
+    duplicateSiteCode &&
+    sites.some((site) => site.id !== editingId && normalizeSiteValue(site.site_code) === duplicateSiteCode)
+  ) {
+    return `현장코드 '${form.site_code.trim()}'는 이미 다른 현장에서 사용 중입니다.`;
+  }
+
+  return null;
+}
 
 export function useSitesSectionState({
   assignments,
@@ -106,8 +154,8 @@ export function useSitesSectionState({
       const haystack = [
         site.site_name,
         site.site_code ?? '',
-        site.headquarter_detail?.management_number ?? site.management_number ?? '',
-        site.headquarter_detail?.opening_number ?? site.site_code ?? '',
+        site.headquarter_detail?.management_number ?? '',
+        site.headquarter_detail?.opening_number ?? '',
         site.site_address ?? '',
         site.site_contact_email ?? '',
         site.manager_name ?? '',
@@ -166,6 +214,11 @@ export function useSitesSectionState({
     const payload = buildSitePayload(form, lockedHeadquarterId);
     if (editingId === 'create' && !isCreateReady(form, lockedHeadquarterId)) return;
     if (editingId !== 'create' && (!payload.headquarter_id || !payload.site_name)) return;
+    const validationMessage = validateSiteSubmit(form, sites, editingId);
+    if (validationMessage) {
+      window.alert(validationMessage);
+      return;
+    }
     if (editingId === 'create') await onCreate(payload as SafetySiteInput);
     else if (editingId) await onUpdate(editingId, payload as SafetySiteUpdateInput);
     closeModal();
@@ -254,10 +307,8 @@ export function useSitesSectionState({
             contract_status: site.contract_status || '',
             contract_type: site.contract_type || '',
             headquarter_name: site.headquarter_detail?.name || site.headquarter?.name || '',
-            headquarter_management_number:
-              site.headquarter_detail?.management_number || site.management_number || '',
-            headquarter_opening_number:
-              site.headquarter_detail?.opening_number || site.site_code || '',
+            headquarter_management_number: site.headquarter_detail?.management_number || '',
+            headquarter_opening_number: site.headquarter_detail?.opening_number || '',
             labor_office: site.labor_office || '',
             guidance_officer_name: site.guidance_officer_name || '',
             site_address: site.site_address || '',

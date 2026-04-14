@@ -23,6 +23,60 @@ import { HeadquartersTable } from './HeadquartersTable';
 import { HeadquarterEditorModal } from './HeadquarterEditorModal';
 import { useHeadquartersSectionState } from './useHeadquartersSectionState';
 
+function normalizeHeadquarterValue(value: string | null | undefined) {
+  return String(value ?? '').trim();
+}
+
+function validateHeadquarterSubmit(
+  form: ReturnType<typeof useHeadquartersSectionState>['form'],
+  headquarters: SafetyHeadquarter[],
+  editingId: string | null,
+) {
+  const maxLengthChecks: Array<[string, string, number]> = [
+    ['회사명', form.name, 200],
+    ['사업장관리번호', form.management_number, 100],
+    ['사업장개시번호', form.opening_number, 100],
+    ['사업자등록번호', form.business_registration_no, 50],
+    ['법인등록번호', form.corporate_registration_no, 50],
+    ['건설업면허/등록번호', form.license_no, 50],
+    ['본사 담당자명', form.contact_name, 100],
+    ['대표 전화', form.contact_phone, 50],
+  ];
+
+  for (const [label, value, maxLength] of maxLengthChecks) {
+    const normalized = value.trim();
+    if (normalized.length > maxLength) {
+      return `${label}은(는) ${maxLength}자 이하로 입력해 주세요.`;
+    }
+  }
+
+  const duplicateManagementNumber = normalizeHeadquarterValue(form.management_number);
+  if (
+    duplicateManagementNumber &&
+    headquarters.some(
+      (item) =>
+        item.id !== editingId &&
+        normalizeHeadquarterValue(item.management_number) === duplicateManagementNumber,
+    )
+  ) {
+    return `사업장관리번호 '${duplicateManagementNumber}'는 이미 다른 사업장에서 사용 중입니다.`;
+  }
+
+  const duplicateOpeningNumber = normalizeHeadquarterValue(form.opening_number);
+  if (
+    duplicateOpeningNumber &&
+    headquarters.some(
+      (item) =>
+        item.id !== editingId &&
+        normalizeHeadquarterValue(item.opening_number) === duplicateOpeningNumber,
+    )
+  ) {
+    return `사업장개시번호 '${duplicateOpeningNumber}'는 이미 다른 사업장에서 사용 중입니다.`;
+  }
+
+  return null;
+}
+
 interface HeadquartersSectionProps {
   assignments: SafetyAssignment[];
   busy: boolean;
@@ -115,6 +169,11 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
   const submit = async () => {
     if (state.editingId === 'create' && !state.isCreateReady) return;
     if (state.editingId !== 'create' && !state.form.name.trim()) return;
+    const validationMessage = validateHeadquarterSubmit(state.form, headquarters, state.editingId);
+    if (validationMessage) {
+      window.alert(validationMessage);
+      return;
+    }
     const payload = state.buildPayload();
 
     if (state.editingId === 'create') {

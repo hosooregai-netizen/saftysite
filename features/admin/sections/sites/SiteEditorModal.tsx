@@ -98,6 +98,7 @@ export function SiteEditorModal({
                 onChange={(event) =>
                   setForm((current) => ({ ...current, site_name: event.target.value }))
                 }
+                maxLength={200}
                 disabled={busy}
               />
             </label>
@@ -109,6 +110,7 @@ export function SiteEditorModal({
                 onChange={(event) =>
                   setForm((current) => ({ ...current, site_code: event.target.value }))
                 }
+                maxLength={100}
                 disabled={busy}
               />
             </label>
@@ -120,6 +122,7 @@ export function SiteEditorModal({
                 onChange={(event) =>
                   setForm((current) => ({ ...current, management_number: event.target.value }))
                 }
+                maxLength={100}
                 disabled={busy}
               />
             </label>
@@ -180,6 +183,7 @@ export function SiteEditorModal({
                 onChange={(event) =>
                   setForm((current) => ({ ...current, site_contact_email: event.target.value }))
                 }
+                maxLength={200}
                 disabled={busy}
                 placeholder="site@example.com"
               />
@@ -260,6 +264,7 @@ export function SiteEditorModal({
                 onChange={(event) =>
                   setForm((current) => ({ ...current, manager_name: event.target.value }))
                 }
+                maxLength={100}
                 disabled={busy}
               />
             </label>
@@ -271,6 +276,7 @@ export function SiteEditorModal({
                 onChange={(event) =>
                   setForm((current) => ({ ...current, manager_phone: event.target.value }))
                 }
+                maxLength={50}
                 disabled={busy}
               />
             </label>
