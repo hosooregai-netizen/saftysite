@@ -5,6 +5,7 @@ import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { getAdminSectionHref, isAdminUserRole } from '@/lib/admin';
 import { buildSiteHubHref } from '@/features/home/lib/siteEntry';
 import { useSiteReportListState } from './useSiteReportListState';
+import { useResolvedSiteRoute } from './useResolvedSiteRoute';
 
 export function useSiteReportsScreen(siteKey: string) {
   const {
@@ -14,7 +15,8 @@ export function useSiteReportsScreen(siteKey: string) {
     login,
     logout,
   } = useInspectionSessions();
-  const reportListState = useSiteReportListState(siteKey);
+  const { currentSite: resolvedSite, isResolvingSite } = useResolvedSiteRoute(siteKey);
+  const reportListState = useSiteReportListState(siteKey, { siteOverride: resolvedSite });
   const { currentSite, currentUser } = reportListState;
   const isAdminView = Boolean(currentUser && isAdminUserRole(currentUser.role));
 
@@ -36,6 +38,7 @@ export function useSiteReportsScreen(siteKey: string) {
     currentUserName: currentUser?.name,
     isAdminView,
     isAuthenticated,
+    isResolvingSite,
     isReady,
     login,
     logout,

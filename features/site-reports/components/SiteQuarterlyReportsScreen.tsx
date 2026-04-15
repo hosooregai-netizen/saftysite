@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useCallback, useDeferredValue, useMemo, useState } from 'react';
+import { useCallback, useDeferredValue, useState } from 'react';
 import LoginPanel from '@/components/auth/LoginPanel';
 import { buildSiteHubHref, buildSiteQuarterlyHref } from '@/features/home/lib/siteEntry';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
@@ -25,6 +25,7 @@ import type {
   QuarterlyListRow,
   QuarterlyListSortMode,
 } from '../quarterly-list/types';
+import { useResolvedSiteRoute } from '../hooks/useResolvedSiteRoute';
 import { useQuarterlyCreateDialog } from '../quarterly-list/useQuarterlyCreateDialog';
 import { useQuarterlyListRows } from '../quarterly-list/useQuarterlyListRows';
 
@@ -53,7 +54,6 @@ export function SiteQuarterlyReportsScreen({
   const [dispatchError, setDispatchError] = useState<string | null>(null);
   const [dispatchNotice, setDispatchNotice] = useState<string | null>(null);
   const deferredQuery = useDeferredValue(query);
-  const decodedSiteKey = decodeURIComponent(siteKey);
   const {
     authError,
     canArchiveReports,
@@ -64,12 +64,8 @@ export function SiteQuarterlyReportsScreen({
     isReady,
     login,
     logout,
-    sites,
   } = useInspectionSessions();
-  const currentSite = useMemo(
-    () => sites.find((site) => site.id === decodedSiteKey) ?? null,
-    [decodedSiteKey, sites],
-  );
+  const { currentSite, isResolvingSite } = useResolvedSiteRoute(siteKey);
   const isAdminView = Boolean(currentUser && isAdminUserRole(currentUser.role));
   const {
     quarterlyReports,
@@ -189,6 +185,10 @@ export function SiteQuarterlyReportsScreen({
         description="분기 종합 보고서 목록을 보려면 다시 로그인해 주세요."
       />
     );
+  }
+
+  if (isResolvingSite && !currentSite) {
+    return <QuarterlyReportsStatePanel message="현장 정보를 확인하는 중입니다." />;
   }
 
   if (!currentSite) {

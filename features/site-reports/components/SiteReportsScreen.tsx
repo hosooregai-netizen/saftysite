@@ -35,6 +35,7 @@ export function SiteReportsScreen({ siteKey }: SiteReportsScreenProps) {
     getCreateReportTitleSuggestion,
     isAdminView,
     isAuthenticated,
+    isResolvingSite,
     isReady,
     login,
     logout,
@@ -64,6 +65,10 @@ export function SiteReportsScreen({ siteKey }: SiteReportsScreenProps) {
         description="현장별 보고서 목록과 저장한 데이터를 보려면 다시 로그인해 주세요."
       />
     );
+  }
+
+  if (isResolvingSite && !currentSite) {
+    return <SiteReportsLoadingState />;
   }
 
   if (!currentSite) {

@@ -11,11 +11,11 @@ import {
 import { buildSiteQuarterlyListHref } from '@/features/home/lib/siteEntry';
 import { isAdminUserRole } from '@/lib/admin';
 import type { QuarterlySummaryReport } from '@/types/erpReports';
+import { useResolvedSiteRoute } from '../hooks/useResolvedSiteRoute';
 import { getQuarterlyPageErrorMessage } from './quarterlyReportHelpers';
 
 export function useQuarterlyReportPageState(siteKey: string, reportKey: string) {
   const {
-    sites,
     isReady,
     isAuthenticated,
     currentUser,
@@ -23,10 +23,7 @@ export function useQuarterlyReportPageState(siteKey: string, reportKey: string) 
     login,
     logout,
   } = useInspectionSessions();
-  const currentSite = useMemo(
-    () => sites.find((site) => site.id === siteKey) ?? null,
-    [siteKey, sites],
-  );
+  const { currentSite, isResolvingSite } = useResolvedSiteRoute(siteKey);
   const { isSaving, error, saveQuarterlyReport } =
     useSiteOperationalReportMutations(currentSite);
   const [existingReport, setExistingReport] = useState<QuarterlySummaryReport | null>(null);
@@ -137,6 +134,7 @@ export function useQuarterlyReportPageState(siteKey: string, reportKey: string) 
     initialDraft,
     isAdminView,
     isAuthenticated,
+    isResolvingSite,
     isReady,
     isSaving,
     login,

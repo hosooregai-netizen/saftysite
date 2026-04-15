@@ -20,7 +20,7 @@ export function QuarterlyReportPageScreen({
   const state = useQuarterlyReportPageState(siteKey, quarterKey);
   const backLabel = '분기 종합 보고서 목록';
 
-  if (!state.isReady || state.existingReportLoading) {
+  if (!state.isReady || state.existingReportLoading || state.isResolvingSite) {
     return (
       <main className="app-page">
         <div className="app-container">
