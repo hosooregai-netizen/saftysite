@@ -29,14 +29,14 @@ export async function runAdminControlCenterSmoke(config: ClientSmokePlaywrightCo
     const editDialog = page.getByRole('dialog', { name: '현장 수정' });
     await editDialog.getByLabel('기술지도 대가').fill('1200000');
     await editDialog.getByLabel('기술지도 횟수').fill('12');
-    await editDialog.getByLabel('회차당 금액').fill('');
+    await editDialog.getByLabel('회차당 단가').fill('');
     await editDialog.getByRole('button', { name: '저장' }).click();
     await harness.waitForRequestCount('PATCH /sites/:id', siteUpdatesBefore + 1);
 
     await page.goto(`${harness.baseURL}/admin?section=analytics`, { waitUntil: 'load' });
     await page.getByText('매출/실적 집계').first().waitFor();
     await page.getByText('집계 기준').first().waitFor();
-    await page.getByText('방문 일정 결과 기준').first().waitFor();
+    await page.getByText('방문 일정 경과 기준').first().waitFor();
     await harness.waitForRequestCount('GET /api/admin/dashboard/analytics', analyticsReadsBefore + 1);
     await page.getByText('월별 매출 추이').first().waitFor();
     await page.getByRole('button', { name: '필터' }).click();
@@ -47,12 +47,11 @@ export async function runAdminControlCenterSmoke(config: ClientSmokePlaywrightCo
       analyticsReadsBefore + 2,
     );
     await page.getByText('집계 기간').first().waitFor();
-    await page.getByText('수행 대가').first().waitFor();
-    await page.getByText('예상 대가').first().waitFor();
-    await page.getByText('4건').first().waitFor();
-    await page.getByText('0건').first().waitFor();
-    await page.getByText('400,000원').first().waitFor();
-    await page.getByText('100,000원').first().waitFor();
+    await page.getByText('실행 회차').first().waitFor();
+    await page.getByText('남은 회차').first().waitFor();
+    await page.getByText('집계 회차').first().waitFor();
+    await page.getByText('지연 건수').first().waitFor();
+    await page.getByText('집계 현장').first().waitFor();
     await page.getByRole('button', { name: '엑셀 내보내기' }).click();
     await harness.waitForRequestCount('POST /api/admin/exports/:section', overviewExportsBefore + 2);
 
