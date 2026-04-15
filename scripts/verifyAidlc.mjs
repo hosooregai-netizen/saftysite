@@ -1,8 +1,12 @@
 import { execFileSync } from 'node:child_process';
 
 const ADMIN_SOURCE_PATTERNS = [
+  /^app\/api\/admin\//,
+  /^app\/api\/safety\//,
   /^app\/admin\//,
   /^features\/admin\//,
+  /^lib\/admin\/apiClient\.ts$/,
+  /^server\/admin\//,
 ];
 
 const ERP_SOURCE_PATTERNS = [
@@ -18,6 +22,8 @@ const ERP_SOURCE_PATTERNS = [
 const ADMIN_DOC_PATTERNS = [/^docs\/admin-aidlc\//];
 const ADMIN_PROOF_PATTERNS = [
   /^tests\/client\/admin\//,
+  /^tests\/client\/contracts\/adminContracts\.ts$/,
+  /^tests\/client\/contracts\/shared\.ts$/,
   /^tests\/client\/featureContracts\.ts$/,
   /^tests\/client\/fixtures\/adminSmokeHarness\.ts$/,
   /^scripts\/smoke-real-client\/admin-sections\//,
@@ -26,6 +32,8 @@ const ADMIN_PROOF_PATTERNS = [
 
 const ERP_PROOF_PATTERNS = [
   /^tests\/client\/erp\//,
+  /^tests\/client\/contracts\/erpContracts\.ts$/,
+  /^tests\/client\/contracts\/shared\.ts$/,
   /^tests\/client\/featureContracts\.ts$/,
   /^tests\/client\/fixtures\/erpSmokeHarness\.ts$/,
   /^scripts\/smokeClient\.ts$/,

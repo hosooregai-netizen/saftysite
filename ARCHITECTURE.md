@@ -45,7 +45,7 @@ Use AIDLC here as a practical anti-regression workflow for AI-assisted coding.
 
 Admin work follows the same rules as ERP work. For `/admin`, the default validation stack is:
 
-1. feature contract in `tests/client/featureContracts.ts`
+1. feature contract pack in `tests/client/contracts/*.ts` with the thin registry in `tests/client/featureContracts.ts`
 2. mocked Playwright smoke for fast refactor loops
 3. real admin smoke for integrated `/admin` verification
 4. batch record in `docs/admin-aidlc/`
@@ -90,7 +90,7 @@ Small files only help if the interface between them is explicit.
 
 When editing a feature, keep these artifacts in view together:
 
-1. the feature contract in `tests/client/featureContracts.ts`
+1. the feature contract pack in `tests/client/contracts/*.ts`
 2. the screen or route being changed
 3. the closest shared interface or helper file
 4. this architecture document when ownership is unclear

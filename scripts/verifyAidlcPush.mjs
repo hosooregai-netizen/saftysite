@@ -1,7 +1,14 @@
 import { execFileSync } from 'node:child_process';
 
 const DEFAULT_BASE_URL = process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:3211';
-const ADMIN_SHARED_SMOKE_IDS = ['admin-control-center', 'admin-reports', 'admin-sites'];
+const ALL_ADMIN_SMOKE_IDS = [
+  'admin-control-center',
+  'admin-headquarters',
+  'admin-reports',
+  'admin-sites',
+  'admin-schedules',
+  'admin-users',
+];
 
 const IGNORED_FILE_PATTERNS = [
   /^\.tmp-ui\//,
@@ -17,6 +24,8 @@ const IGNORED_FILE_PATTERNS = [
 ];
 
 const GUARDED_SOURCE_PATTERNS = [
+  /^app\/api\/admin\//,
+  /^app\/api\/safety\//,
   /^app\/admin\//,
   /^app\/sites\//,
   /^components\/worker\//,
@@ -26,41 +35,79 @@ const GUARDED_SOURCE_PATTERNS = [
   /^features\/mailbox\//,
   /^features\/mobile\//,
   /^features\/site-reports\//,
+  /^lib\/admin\/apiClient\.ts$/,
+  /^server\/admin\//,
 ];
 
 const FEATURE_RULES = [
   {
-    ids: ADMIN_SHARED_SMOKE_IDS,
+    ids: ALL_ADMIN_SMOKE_IDS,
     patterns: [
       /^features\/admin\/sections\/AdminSectionShared\.module\.css$/,
+      /^features\/admin\/components\/AdminDashboard(SectionContent|Screen|Shell.*)\.tsx?$/,
       /^features\/admin\/lib\/adminSessionCache\.ts$/,
-      /^features\/admin\/sections\/users\//,
+      /^features\/admin\/hooks\/useAdminDashboard(DataLoaders|Routing|State)\.ts$/,
+      /^features\/admin\/hooks\/buildAdminDashboard(Assignment|Crud)Actions\.ts$/,
+      /^features\/admin\/lib\/adminDashboardMutations\.ts$/,
+      /^app\/api\/safety\//,
+      /^lib\/admin\/apiClient\.ts$/,
+      /^server\/admin\/adminDirectory(Lists|Snapshot)\.ts$/,
+      /^server\/admin\/exportSheets\.ts$/,
+      /^server\/admin\/safetyApiServer\.ts$/,
     ],
   },
   {
     id: 'admin-control-center',
     patterns: [
       /^app\/admin\//,
+      /^app\/api\/admin\/dashboard\//,
       /^features\/admin\/components\//,
-      /^features\/admin\/hooks\//,
       /^features\/admin\/lib\/control-center-model\//,
       /^features\/admin\/lib\/buildAdminControlCenterModel\.ts$/,
       /^features\/admin\/lib\/adminDashboardShellState\.ts$/,
       /^features\/admin\/sections\/analytics\//,
       /^features\/admin\/sections\/overview\//,
-      /^features\/admin\/sections\/schedules\//,
+      /^server\/admin\/analyticsSnapshot\.ts$/,
+      /^server\/admin\/overviewRouteCache\.ts$/,
+    ],
+  },
+  {
+    id: 'admin-headquarters',
+    patterns: [
+      /^app\/api\/admin\/headquarters\//,
+      /^features\/admin\/sections\/headquarters\//,
     ],
   },
   {
     id: 'admin-reports',
-    patterns: [/^features\/admin\/sections\/reports\//],
+    patterns: [
+      /^app\/api\/admin\/reports\//,
+      /^features\/admin\/sections\/reports\//,
+      /^server\/admin\/reportsRouteCache\.ts$/,
+    ],
   },
   {
     id: 'admin-sites',
     patterns: [
+      /^app\/api\/admin\/sites\/list\//,
       /^features\/admin\/sections\/excelImport\//,
-      /^features\/admin\/sections\/headquarters\//,
       /^features\/admin\/sections\/sites\//,
+    ],
+  },
+  {
+    id: 'admin-schedules',
+    patterns: [
+      /^app\/api\/admin\/schedules\//,
+      /^app\/api\/admin\/sites\/\[siteId\]\/schedules\/generate\//,
+      /^features\/admin\/sections\/schedules\//,
+      /^server\/admin\/scheduleSnapshot\.ts$/,
+    ],
+  },
+  {
+    id: 'admin-users',
+    patterns: [
+      /^app\/api\/admin\/users\//,
+      /^features\/admin\/sections\/users\//,
     ],
   },
   {
