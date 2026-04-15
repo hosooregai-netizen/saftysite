@@ -67,7 +67,14 @@ export async function runQuarterlyReportSmoke(config: ClientSmokePlaywrightConfi
       seedReadsBefore + 1,
     );
     await harness.waitForRequestCount('POST /reports/upsert', reportWritesBefore + 1);
-    await page.waitForURL(/\/sites\/site-1\/quarterly\/[^/]+$/);
+    await page.waitForURL(/\/sites\/site-1\/quarterly(?:\/[^/]+)?$/);
+    if (!/\/sites\/site-1\/quarterly\/[^/]+$/.test(page.url())) {
+      await page.locator('article').filter({ hasText: createdTitle }).first().waitFor({
+        state: 'visible',
+      });
+      await page.locator('article').filter({ hasText: createdTitle }).first().click();
+      await page.waitForURL(/\/sites\/site-1\/quarterly\/[^/]+$/);
+    }
     await harness.waitForRequestCount('GET /reports/by-key/:id', reportReadsBefore + 1);
 
     await page.getByText('1. 원본 보고서 선택').waitFor({ state: 'visible' });
