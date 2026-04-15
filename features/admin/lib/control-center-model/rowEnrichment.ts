@@ -20,6 +20,7 @@ export interface EnrichedControllerReportRow {
   assigneeUserId: string;
   checkerUserId: string;
   contractProfile: SiteContractProfile;
+  dispatchCompleted: boolean;
   deadlineDate: string;
   dispatchStatus: ReportDispatchStatus;
   headquarterId: string;
@@ -172,6 +173,7 @@ export function buildEnrichedRows(
       assigneeUserId: row.assigneeUserId,
       checkerUserId: row.checkerUserId,
       contractProfile,
+      dispatchCompleted: Boolean(sourceReport?.dispatch_completed),
       deadlineDate: quarterlyDispatch?.deadlineDate || row.deadlineDate,
       dispatchStatus: quarterlyDispatch?.dispatchStatus || row.dispatchStatus,
       headquarterId: row.headquarterId,

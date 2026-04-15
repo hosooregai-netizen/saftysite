@@ -10,7 +10,10 @@ import {
   readAdminSessionCache,
   writeAdminSessionCache,
 } from '@/features/admin/lib/adminSessionCache';
-import { getAdminSectionHref } from '@/lib/admin';
+import {
+  buildSiteQuarterlyListHref,
+  buildSiteReportsHref,
+} from '@/features/home/lib/siteEntry';
 import { fetchAdminOverview } from '@/lib/admin/apiClient';
 import { exportAdminWorkbook } from '@/lib/admin/exportClient';
 import type { SafetyAdminOverviewResponse, TableSortState } from '@/types/admin';
@@ -120,10 +123,7 @@ export function useAdminOverviewSectionState(
       siteStatusSummary: hasSiteStatusSummary(overviewResponse.siteStatusSummary)
         ? overviewResponse.siteStatusSummary
         : fallbackOverview.siteStatusSummary,
-      unsentReportRows:
-        overviewResponse.unsentReportRows.length > 0 || fallbackOverview.unsentReportRows.length === 0
-          ? overviewResponse.unsentReportRows
-          : fallbackOverview.unsentReportRows,
+      unsentReportRows: overviewResponse.unsentReportRows,
     } satisfies SafetyAdminOverviewResponse;
   }, [fallbackOverview, overviewResponse]);
 
@@ -132,11 +132,12 @@ export function useAdminOverviewSectionState(
     return overview.unsentReportRows
       .map((row) => {
         const fallbackRow = fallbackRowsByKey.get(row.reportKey);
+        const siteId = row.siteId || fallbackRow?.siteId || '';
         return {
           ...fallbackRow,
           ...row,
           assigneeName: row.assigneeName || fallbackRow?.assigneeName || '-',
-          href: fallbackRow?.href || row.href,
+          href: fallbackRow?.href || (siteId ? buildSiteReportsHref(siteId) : row.href),
         };
       })
       .filter((row) => Boolean(row.reportKey));
@@ -144,7 +145,7 @@ export function useAdminOverviewSectionState(
 
   const normalizedPriorityQuarterlyManagementRows = useMemo(() => {
     const sourceRows =
-      (overview.priorityQuarterlyManagementRows ?? []).length > 0
+      overviewResponse
         ? overview.priorityQuarterlyManagementRows ?? []
         : fallbackOverview.priorityQuarterlyManagementRows ?? [];
     const fallbackRowsByKey = new Map(
@@ -156,13 +157,11 @@ export function useAdminOverviewSectionState(
 
     return sourceRows.map((row) => {
       const fallbackRow = fallbackRowsByKey.get(`${row.siteId}:${row.currentQuarterKey}`);
+      const siteId = row.siteId || fallbackRow?.siteId || '';
       return {
         ...fallbackRow,
         ...row,
-        href: getAdminSectionHref('reports', {
-          reportType: 'quarterly_report',
-          siteId: row.siteId,
-        }),
+        href: siteId ? buildSiteQuarterlyListHref(siteId) : fallbackRow?.href || row.href,
         quarterlyReportHref: fallbackRow?.quarterlyReportHref || row.quarterlyReportHref,
         quarterlyReportKey: fallbackRow?.quarterlyReportKey || row.quarterlyReportKey,
       };
@@ -170,6 +169,7 @@ export function useAdminOverviewSectionState(
   }, [
     fallbackOverview.priorityQuarterlyManagementRows,
     overview.priorityQuarterlyManagementRows,
+    overviewResponse,
   ]);
 
   const sortedMaterialRows = useMemo(() => {

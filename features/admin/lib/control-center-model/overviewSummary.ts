@@ -34,14 +34,14 @@ export function buildSiteStatusSummary(data: ControllerDashboardData): SafetyAdm
 }
 
 export function buildOverviewMetricCards(args: {
-  actionableUnsentReportRows: SafetyAdminUnsentReportRow[];
+  dispatchManagementUnsentReportRows: SafetyAdminUnsentReportRow[];
   metricMeta: string;
   quarterlyMaterialSummary: SafetyAdminQuarterlyMaterialSummary;
   siteStatusSummary: SafetyAdminSiteStatusSummary;
   totalSiteCount: number;
 }): AdminOverviewMetricCard[] {
   const {
-    actionableUnsentReportRows,
+    dispatchManagementUnsentReportRows,
     metricMeta,
     quarterlyMaterialSummary,
     siteStatusSummary,
@@ -88,8 +88,8 @@ export function buildOverviewMetricCards(args: {
       href: getAdminSectionHref('reports'),
       label: '발송 관리 대상',
       meta: '지도 실시일 기준',
-      tone: actionableUnsentReportRows.length > 0 ? 'danger' : 'default',
-      value: `${actionableUnsentReportRows.length}건`,
+      tone: dispatchManagementUnsentReportRows.length > 0 ? 'danger' : 'default',
+      value: `${dispatchManagementUnsentReportRows.length}건`,
     },
   ];
 }

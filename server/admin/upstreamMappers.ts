@@ -10,6 +10,12 @@ import {
   normalizeReportWorkflowStatus,
   normalizeSiteLifecycleStatus,
 } from '@/lib/admin/lifecycleStatus';
+import {
+  buildDeadlineSignalSummaryFromRows,
+  getUnsentDays,
+  isDispatchManagementUnsentRow,
+  isPriorityQuarterlyManagementRowScope,
+} from '@/features/admin/lib/control-center-model/overviewPolicies';
 import type {
   ControllerReportRow,
   SafetyAdminAlert,
@@ -357,6 +363,83 @@ export function mapBackendAlert(alert: SafetyBackendAdminAlert): SafetyAdminAler
   };
 }
 
+function mapBackendOverviewUnsentRows(
+  rows: SafetyBackendAdminOverviewResponse['unsent_report_rows'],
+  today: Date,
+): SafetyAdminOverviewResponse['unsentReportRows'] {
+  return rows
+    .map((row) => {
+      const referenceDate = normalizeText(row.reference_date) || normalizeText(row.visit_date);
+      return {
+        assigneeName: normalizeText(row.assignee_name),
+        deadlineDate: normalizeText(row.deadline_date),
+        dispatchStatus: (normalizeText(row.dispatch_status) ||
+          '') as SafetyAdminOverviewResponse['unsentReportRows'][number]['dispatchStatus'],
+        headquarterName: normalizeText(row.headquarter_name),
+        href: normalizeText(row.href),
+        referenceDate,
+        reportKey: normalizeText(row.report_key),
+        reportTitle: normalizeText(row.report_title),
+        reportTypeLabel: normalizeText(row.report_type_label),
+        siteId: normalizeText(row.site_id),
+        siteName: normalizeText(row.site_name),
+        unsentDays:
+          typeof row.unsent_days === 'number' && Number.isFinite(row.unsent_days)
+            ? row.unsent_days
+            : getUnsentDays(referenceDate, today),
+        visitDate: normalizeText(row.visit_date),
+        mailMissingReason: normalizeText(row.mail_missing_reason),
+        mailReady: Boolean(row.mail_ready),
+        recipientEmail: normalizeText(row.recipient_email),
+        recipientName: normalizeText(row.recipient_name),
+      };
+    })
+    .filter(isDispatchManagementUnsentRow);
+}
+
+function formatCountLike(previousValue: string, count: number) {
+  const normalized = normalizeText(previousValue);
+  const suffix = normalized.replace(/^[\d,.\s]+/, '');
+  return `${count.toLocaleString('ko-KR')}${suffix || '건'}`;
+}
+
+function isDispatchManagementLabel(value: string) {
+  const normalized = normalizeText(value).toLowerCase();
+  return normalized.includes('발송') || normalized.includes('dispatch');
+}
+
+function syncDispatchMetricCards(
+  cards: SafetyAdminOverviewResponse['metricCards'],
+  dispatchManagementCount: number,
+): SafetyAdminOverviewResponse['metricCards'] {
+  if (cards.length === 0) return cards;
+  const dispatchCardIndex = cards.findIndex((card) => isDispatchManagementLabel(card.label));
+  const targetIndex = dispatchCardIndex >= 0 ? dispatchCardIndex : cards.length - 1;
+  return cards.map((card, index) =>
+    index === targetIndex
+      ? {
+          ...card,
+          tone: dispatchManagementCount > 0 ? 'danger' : 'default',
+          value: formatCountLike(card.value, dispatchManagementCount),
+        }
+      : card,
+  );
+}
+
+function syncDispatchSummaryRows(
+  rows: SafetyAdminOverviewResponse['summaryRows'],
+  dispatchManagementCount: number,
+): SafetyAdminOverviewResponse['summaryRows'] {
+  if (rows.length === 0) return rows;
+  const dispatchRowIndex = rows.findIndex((row) => isDispatchManagementLabel(row.label));
+  const targetIndex = dispatchRowIndex >= 0 ? dispatchRowIndex : rows.length - 1;
+  return rows.map((row, index) =>
+    index === targetIndex
+      ? { ...row, value: formatCountLike(row.value, dispatchManagementCount) }
+      : row,
+  );
+}
+
 export function mapBackendOverviewResponse(
   response: SafetyBackendAdminOverviewResponse,
 ): SafetyAdminOverviewResponse {
@@ -426,6 +509,70 @@ export function mapBackendOverviewResponse(
     ? response.recipient_missing_site_rows
     : [];
   const unsentReportRows = Array.isArray(response.unsent_report_rows) ? response.unsent_report_rows : [];
+  const today = new Date();
+  const mappedUnsentReportRows = mapBackendOverviewUnsentRows(unsentReportRows, today);
+  const mappedDeadlineSignalSummary = buildDeadlineSignalSummaryFromRows(
+    mappedUnsentReportRows,
+    {
+      entries: deadlineSignalEntries.map((entry) => ({
+        count: entry.count,
+        href: normalizeText(entry.href),
+        key: normalizeText(entry.key),
+        label: normalizeText(entry.label),
+      })),
+      totalReportCount:
+        typeof deadlineSignalSummary.total_report_count === 'number'
+          ? deadlineSignalSummary.total_report_count
+          : 0,
+    },
+  );
+  const mappedMetricCards = syncDispatchMetricCards(
+    response.metric_cards.map((card) => ({
+      href: normalizeText(card.href),
+      label: normalizeText(card.label),
+      meta: normalizeText(card.meta),
+      tone: (normalizeText(card.tone) || 'default') as 'default' | 'warning' | 'danger',
+      value: normalizeText(card.value),
+    })),
+    mappedUnsentReportRows.length,
+  );
+  const mappedSummaryRows = syncDispatchSummaryRows(
+    response.summary_rows.map((row) => ({
+      label: normalizeText(row.label),
+      meta: normalizeText(row.meta),
+      value: normalizeText(row.value),
+    })),
+    mappedUnsentReportRows.length,
+  );
+  const mappedPriorityQuarterlyManagementRows = priorityQuarterlyManagementRows
+    .map((row) => ({
+      currentQuarterKey: normalizeText(row.current_quarter_key),
+      currentQuarterLabel: normalizeText(row.current_quarter_label),
+      exceptionLabel: normalizeText(row.exception_label),
+      exceptionStatus: (normalizeText(row.exception_status) ||
+        'ok') as SafetyAdminPriorityQuarterlyManagementRow['exceptionStatus'],
+      headquarterName: normalizeText(row.headquarter_name),
+      href: normalizeText(row.href),
+      latestGuidanceDate: normalizeText(row.latest_guidance_date),
+      latestGuidanceRound:
+        typeof row.latest_guidance_round === 'number' &&
+        Number.isFinite(row.latest_guidance_round)
+          ? row.latest_guidance_round
+          : null,
+      projectAmount:
+        typeof row.project_amount === 'number' && Number.isFinite(row.project_amount)
+          ? row.project_amount
+          : null,
+      quarterlyDispatchStatus: (normalizeText(row.quarterly_dispatch_status) ||
+        'report_missing') as SafetyAdminPriorityQuarterlyManagementRow['quarterlyDispatchStatus'],
+      quarterlyReflectionStatus: (normalizeText(row.quarterly_reflection_status) ||
+        'missing') as SafetyAdminPriorityQuarterlyManagementRow['quarterlyReflectionStatus'],
+      quarterlyReportHref: normalizeText(row.quarterly_report_href),
+      quarterlyReportKey: normalizeText(row.quarterly_report_key),
+      siteId: normalizeText(row.site_id),
+      siteName: normalizeText(row.site_name),
+    }))
+    .filter((row) => isPriorityQuarterlyManagementRowScope(row, today));
 
   return {
     alerts: response.alerts.map((item) => mapBackendAlert(item)),
@@ -441,18 +588,7 @@ export function mapBackendOverviewResponse(
       label: normalizeText(row.label),
       missingSiteCount: row.missing_site_count,
     })),
-    deadlineSignalSummary: {
-      entries: deadlineSignalEntries.map((entry) => ({
-        count: entry.count,
-        href: normalizeText(entry.href),
-        key: normalizeText(entry.key),
-        label: normalizeText(entry.label),
-      })),
-      totalReportCount:
-        typeof deadlineSignalSummary.total_report_count === 'number'
-          ? deadlineSignalSummary.total_report_count
-          : 0,
-    },
+    deadlineSignalSummary: mappedDeadlineSignalSummary,
     endingSoonRows: endingSoonRows.map((row) => ({
       deadlineLabel: normalizeText(row.deadline_label),
       daysUntilEnd:
@@ -507,13 +643,7 @@ export function mapBackendOverviewResponse(
       siteName: normalizeText(row.site_name),
       statusLabel: normalizeText(row.status_label),
     })),
-    metricCards: response.metric_cards.map((card) => ({
-      href: normalizeText(card.href),
-      label: normalizeText(card.label),
-      meta: normalizeText(card.meta),
-      tone: (normalizeText(card.tone) || 'default') as 'default' | 'warning' | 'danger',
-      value: normalizeText(card.value),
-    })),
+    metricCards: mappedMetricCards,
     overdueSiteRows: response.overdue_site_rows.map((row) => ({
       badWorkplaceOverdueCount: row.bad_workplace_overdue_count,
       headquarterName: normalizeText(row.headquarter_name),
@@ -533,33 +663,7 @@ export function mapBackendOverviewResponse(
       siteName: normalizeText(row.site_name),
       updatedAt: normalizeText(row.updated_at),
     })),
-    priorityQuarterlyManagementRows: priorityQuarterlyManagementRows.map((row) => ({
-      currentQuarterKey: normalizeText(row.current_quarter_key),
-      currentQuarterLabel: normalizeText(row.current_quarter_label),
-      exceptionLabel: normalizeText(row.exception_label),
-      exceptionStatus: (normalizeText(row.exception_status) ||
-        'ok') as SafetyAdminPriorityQuarterlyManagementRow['exceptionStatus'],
-      headquarterName: normalizeText(row.headquarter_name),
-      href: normalizeText(row.href),
-      latestGuidanceDate: normalizeText(row.latest_guidance_date),
-      latestGuidanceRound:
-        typeof row.latest_guidance_round === 'number' &&
-        Number.isFinite(row.latest_guidance_round)
-          ? row.latest_guidance_round
-          : null,
-      projectAmount:
-        typeof row.project_amount === 'number' && Number.isFinite(row.project_amount)
-          ? row.project_amount
-          : null,
-      quarterlyDispatchStatus: (normalizeText(row.quarterly_dispatch_status) ||
-        'report_missing') as SafetyAdminPriorityQuarterlyManagementRow['quarterlyDispatchStatus'],
-      quarterlyReflectionStatus: (normalizeText(row.quarterly_reflection_status) ||
-        'missing') as SafetyAdminPriorityQuarterlyManagementRow['quarterlyReflectionStatus'],
-      quarterlyReportHref: normalizeText(row.quarterly_report_href),
-      quarterlyReportKey: normalizeText(row.quarterly_report_key),
-      siteId: normalizeText(row.site_id),
-      siteName: normalizeText(row.site_name),
-    })),
+    priorityQuarterlyManagementRows: mappedPriorityQuarterlyManagementRows,
     priorityTargetSiteRows: priorityTargetSiteRows.map((row) => ({
       dispatchAlertsEnabled: Boolean(row.dispatch_alerts_enabled),
       dispatchPolicyEnabled: Boolean(row.dispatch_policy_enabled),
@@ -644,30 +748,8 @@ export function mapBackendOverviewResponse(
       totalSiteCount:
         typeof siteStatusSummary.total_site_count === 'number' ? siteStatusSummary.total_site_count : 0,
     },
-    summaryRows: response.summary_rows.map((row) => ({
-      label: normalizeText(row.label),
-      meta: normalizeText(row.meta),
-      value: normalizeText(row.value),
-    })),
-    unsentReportRows: unsentReportRows.map((row) => ({
-      assigneeName: normalizeText(row.assignee_name),
-      deadlineDate: normalizeText(row.deadline_date),
-      dispatchStatus: (normalizeText(row.dispatch_status) || '') as SafetyAdminOverviewResponse['unsentReportRows'][number]['dispatchStatus'],
-      headquarterName: normalizeText(row.headquarter_name),
-      href: normalizeText(row.href),
-      referenceDate: normalizeText(row.reference_date),
-      reportKey: normalizeText(row.report_key),
-      reportTitle: normalizeText(row.report_title),
-      reportTypeLabel: normalizeText(row.report_type_label),
-      siteId: normalizeText(row.site_id),
-      siteName: normalizeText(row.site_name),
-      unsentDays: typeof row.unsent_days === 'number' ? row.unsent_days : 0,
-      visitDate: normalizeText(row.visit_date),
-      mailMissingReason: normalizeText(row.mail_missing_reason),
-      mailReady: Boolean(row.mail_ready),
-      recipientEmail: normalizeText(row.recipient_email),
-      recipientName: normalizeText(row.recipient_name),
-    })),
+    summaryRows: mappedSummaryRows,
+    unsentReportRows: mappedUnsentReportRows,
     workerLoadRows: response.worker_load_rows.map((row) => ({
       assignedSiteCount: row.assigned_site_count,
       href: normalizeText(row.href),

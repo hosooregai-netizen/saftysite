@@ -1,7 +1,10 @@
 import { getAdminSectionHref } from '@/lib/admin';
+import {
+  buildSiteQuarterlyListHref,
+  buildSiteReportsHref,
+} from '@/features/home/lib/siteEntry';
 import { getControllerReportTypeLabel } from '@/lib/admin/controllerReports';
 import { getDispatchStatusLabel, getQualityStatusLabel } from '@/lib/admin/reportMeta';
-import { isClosedReport } from '@/lib/admin/lifecycleStatus';
 import {
   countFilledQuarterlyMaterials,
   getSiteQuarterlyMaterialRecord,
@@ -16,7 +19,6 @@ import {
   formatDateTime,
   formatQuarterKey,
   formatQuarterLabel,
-  getDaysDiff,
   getDaysUntil,
 } from './dates';
 import { buildQuarterlyMaterialCountsBySite } from './quarterlyMaterials';
@@ -26,15 +28,21 @@ import {
 } from './overviewSummary';
 import {
   buildAssignedSiteIdsByUser,
-  buildDispatchActionableSiteIds,
   buildEnrichedRows,
   resolveVisitDispatchState,
   type EnrichedControllerReportRow,
 } from './rowEnrichment';
+import {
+  buildDeadlineSignalSummaryFromRows,
+  buildDispatchManagementRows,
+  getUnsentDays,
+  isDispatchManagementUnsentRow,
+  isManageableSiteScope,
+  isPriorityQuarterlySiteScope,
+} from './overviewPolicies';
 import type { AdminOverviewModel } from './types';
 import type { SafetyAdminPriorityQuarterlyManagementRow } from '@/types/admin';
 
-const PRIORITY_PROJECT_AMOUNT = 2_000_000_000;
 const PRIORITY_QUARTERLY_EXCEPTION_ORDER: Record<
   SafetyAdminPriorityQuarterlyManagementRow['exceptionStatus'],
   number
@@ -44,6 +52,22 @@ const PRIORITY_QUARTERLY_EXCEPTION_ORDER: Record<
   dispatch_pending: 2,
   ok: 3,
 };
+
+function buildSiteReportListHref(
+  siteId: string,
+  reportType: EnrichedControllerReportRow['reportType'],
+) {
+  return reportType === 'quarterly_report'
+    ? buildSiteQuarterlyListHref(siteId)
+    : buildSiteReportsHref(siteId);
+}
+
+function buildAdminSiteMainHref(siteId: string, headquarterId?: string | null) {
+  return getAdminSectionHref('headquarters', {
+    headquarterId,
+    siteId,
+  });
+}
 
 function resolveSiteEndingDate(site: ControllerDashboardData['sites'][number]) {
   const contractEndDate = site.contract_end_date?.trim() || '';
@@ -84,7 +108,7 @@ function pickLatestQuarterlyRow(
 }
 
 function buildPriorityQuarterlyManagementRows(
-  activeSites: ControllerDashboardData['sites'],
+  candidateSites: ControllerDashboardData['sites'],
   overviewRows: EnrichedControllerReportRow[],
   today: Date,
 ): SafetyAdminPriorityQuarterlyManagementRow[] {
@@ -114,11 +138,18 @@ function buildPriorityQuarterlyManagementRows(
     );
   });
 
-  return activeSites
-    .filter((site) => (site.project_amount ?? 0) >= PRIORITY_PROJECT_AMOUNT)
+  return candidateSites
     .map((site) => {
       const latestGuidanceRow = latestGuidanceRowBySite.get(site.id);
       const quarterlyRow = currentQuarterlyRowBySite.get(site.id);
+      if (!isPriorityQuarterlySiteScope({
+        currentQuarterlyReportDate: quarterlyRow?.reportDate || quarterlyRow?.visitDate || '',
+        latestGuidanceDate: latestGuidanceRow?.visitDate || latestGuidanceRow?.reportDate || '',
+        site,
+        today,
+      })) {
+        return null;
+      }
       const quarterlyReflectionStatus = quarterlyRow ? 'created' : 'missing';
       const quarterlyDispatchStatus = !quarterlyRow
         ? 'report_missing'
@@ -150,10 +181,7 @@ function buildPriorityQuarterlyManagementRows(
         exceptionLabel,
         exceptionStatus,
         headquarterName: site.headquarter_detail?.name || site.headquarter?.name || '-',
-        href: getAdminSectionHref('reports', {
-          reportType: 'quarterly_report',
-          siteId: site.id,
-        }),
+        href: buildSiteQuarterlyListHref(site.id),
         latestGuidanceDate: latestGuidanceRow?.visitDate || '',
         latestGuidanceRound: latestGuidanceRow?.visitRound ?? null,
         projectAmount: site.project_amount ?? null,
@@ -165,6 +193,7 @@ function buildPriorityQuarterlyManagementRows(
         siteName: site.site_name,
       } satisfies SafetyAdminPriorityQuarterlyManagementRow;
     })
+    .filter((row): row is SafetyAdminPriorityQuarterlyManagementRow => Boolean(row))
     .sort(
       (left, right) =>
         PRIORITY_QUARTERLY_EXCEPTION_ORDER[left.exceptionStatus] -
@@ -272,26 +301,28 @@ function buildAttentionRows(
   );
 
   const overdueSiteRows = Array.from(
-    [...overviewRows.filter((row) => row.reportType === 'quarterly_report' && row.dispatchStatus === 'overdue'), ...overviewRows.filter((row) => row.isBadWorkplaceOverdue)].reduce(
+    [...dispatchOverviewRows.filter((row) => row.reportType === 'quarterly_report' && row.dispatchStatus === 'overdue'), ...overviewRows.filter((row) => row.isBadWorkplaceOverdue)].reduce(
       (map, row) => {
         const current = map.get(row.siteId) ?? {
           badWorkplaceOverdueCount: 0,
+          headquarterId: row.headquarterId,
           headquarterName: row.headquarterName,
           quarterlyOverdueCount: 0,
           siteName: row.siteName,
         };
+        if (!current.headquarterId && row.headquarterId) current.headquarterId = row.headquarterId;
         if (row.reportType === 'quarterly_report') current.quarterlyOverdueCount += 1;
         if (row.reportType === 'bad_workplace') current.badWorkplaceOverdueCount += 1;
         map.set(row.siteId, current);
         return map;
       },
-      new Map<string, { badWorkplaceOverdueCount: number; headquarterName: string; quarterlyOverdueCount: number; siteName: string }>(),
+      new Map<string, { badWorkplaceOverdueCount: number; headquarterId: string; headquarterName: string; quarterlyOverdueCount: number; siteName: string }>(),
     ).entries(),
   )
     .map(([siteId, value]) => ({
       badWorkplaceOverdueCount: value.badWorkplaceOverdueCount,
       headquarterName: value.headquarterName || '-',
-      href: getAdminSectionHref('reports', { dispatchStatus: 'overdue', siteId }),
+      href: buildAdminSiteMainHref(siteId, value.headquarterId),
       overdueCount: value.quarterlyOverdueCount + value.badWorkplaceOverdueCount,
       quarterlyOverdueCount: value.quarterlyOverdueCount,
       reportKindsLabel: [
@@ -342,8 +373,7 @@ function buildAttentionRows(
       return row;
     });
 
-  const allUnsentReportRows = dispatchOverviewRows
-    .filter((row) => (row.reportType === 'quarterly_report' || row.reportType === 'technical_guidance') && row.dispatchStatus !== 'sent')
+  const dispatchManagementUnsentReportRows = dispatchOverviewRows
     .map((row) => {
       const referenceDate = row.visitDate || row.updatedAt.slice(0, 10);
       const visitDispatch = resolveVisitDispatchState(row.visitDate, row.deadlineDate, row.dispatchStatus, row.updatedAt, today);
@@ -352,28 +382,22 @@ function buildAttentionRows(
         deadlineDate: formatDateOnly(visitDispatch.deadlineDate),
         dispatchStatus: visitDispatch.dispatchStatus,
         headquarterName: row.headquarterName || '-',
-        href: getAdminSectionHref('reports', {
-          reportType: row.reportType,
-          siteId: row.siteId,
-        }),
+        href: buildSiteReportListHref(row.siteId, row.reportType),
         referenceDate: formatDateOnly(referenceDate),
         reportKey: row.reportKey,
         reportTitle: row.reportTitle || row.periodLabel || row.reportKey,
         reportTypeLabel: getControllerReportTypeLabel(row.reportType),
         siteId: row.siteId,
         siteName: row.siteName,
-        unsentDays: Math.max(0, getDaysDiff(referenceDate, today) ?? 0),
+        unsentDays: getUnsentDays(referenceDate, today),
         visitDate: formatDateOnly(row.visitDate || referenceDate),
       };
     })
+    .filter(isDispatchManagementUnsentRow)
     .sort((left, right) => right.unsentDays - left.unsentDays || left.siteName.localeCompare(right.siteName, 'ko') || left.reportTitle.localeCompare(right.reportTitle, 'ko'));
 
-  const actionableUnsentReportRows = allUnsentReportRows.filter(
-    (row) => row.dispatchStatus === 'warning' || row.dispatchStatus === 'overdue',
-  );
-
   return {
-    actionableUnsentReportRows,
+    dispatchManagementUnsentReportRows,
     deadlineRows: dispatchOverviewRows
       .filter((row) => row.reportType === 'quarterly_report' && row.dispatchStatus !== 'sent')
       .map((row) => ({ daysUntil: getDaysUntil(today, row.deadlineDate), row }))
@@ -383,23 +407,23 @@ function buildAttentionRows(
       .map(({ daysUntil, row }) => ({
         deadlineDate: formatDateOnly(row.deadlineDate),
         deadlineLabel: daysUntil === 0 ? '오늘' : `D-${daysUntil}`,
-        href: row.href,
+        href: buildSiteQuarterlyListHref(row.siteId),
         reportTitle: row.reportTitle || row.periodLabel || row.reportKey,
         reportTypeLabel: getControllerReportTypeLabel(row.reportType),
         siteName: row.siteName,
         statusLabel: getDispatchStatusLabel(row.dispatchStatus),
       })),
-    deadlineSignalSummary: {
+    deadlineSignalSummary: buildDeadlineSignalSummaryFromRows(dispatchManagementUnsentReportRows, {
       entries: [
-        { count: allUnsentReportRows.filter((row) => row.unsentDays <= 3).length, href: getAdminSectionHref('reports', { dispatchStatus: 'normal' }), key: 'd_plus_0_3', label: 'D+0~3' },
-        { count: allUnsentReportRows.filter((row) => row.unsentDays >= 4 && row.unsentDays <= 6).length, href: getAdminSectionHref('reports', { dispatchStatus: 'warning' }), key: 'd_plus_4_6', label: 'D+4~6' },
-        { count: allUnsentReportRows.filter((row) => row.unsentDays >= 7).length, href: getAdminSectionHref('reports', { dispatchStatus: 'overdue' }), key: 'd_plus_7_plus', label: 'D+7 이상' },
+        { count: 0, href: getAdminSectionHref('reports', { dispatchStatus: 'normal' }), key: 'd_plus_0_3', label: 'D+0~3' },
+        { count: 0, href: getAdminSectionHref('reports', { dispatchStatus: 'warning' }), key: 'd_plus_4_6', label: 'D+4~6' },
+        { count: 0, href: getAdminSectionHref('reports', { dispatchStatus: 'overdue' }), key: 'd_plus_7_plus', label: 'D+7 이상' },
       ],
-      totalReportCount: allUnsentReportRows.length,
-    },
+      totalReportCount: 0,
+    }),
     overdueSiteRows,
     pendingReviewRows,
-    unsentReportRows: actionableUnsentReportRows.slice(0, 12),
+    unsentReportRows: dispatchManagementUnsentReportRows,
     workerLoadRows,
   };
 }
@@ -448,12 +472,12 @@ export function buildAdminOverviewModel(
   today = new Date(),
 ): AdminOverviewModel {
   const overviewRows = buildEnrichedRows(data, reports, today);
-  const dispatchActionableSiteIds = buildDispatchActionableSiteIds(data);
-  const dispatchOverviewRows = overviewRows.filter(
-    (row) => dispatchActionableSiteIds.has(row.siteId) && !isClosedReport(row),
-  );
+  const siteById = new Map(data.sites.map((site) => [site.id, site]));
+  const dispatchOverviewRows = buildDispatchManagementRows(overviewRows, siteById, today);
   const siteStatusSummary = buildSiteStatusSummary(data);
-  const activeSites = data.sites.filter((site) => site.status === 'active');
+  const activeSites = data.sites.filter(
+    (site) => site.status === 'active' && isManageableSiteScope(site, today),
+  );
   const { coverageRows, metricMeta, quarterlyMaterialSummary } = buildQuarterlySummary(
     activeSites,
     materialSourceReports,
@@ -462,12 +486,12 @@ export function buildAdminOverviewModel(
   const attention = buildAttentionRows(data, overviewRows, dispatchOverviewRows, today);
   const { endingSoonRows, endingSoonSummary } = buildEndingSoonSummary(activeSites, today);
   const priorityQuarterlyManagementRows = buildPriorityQuarterlyManagementRows(
-    activeSites,
+    data.sites,
     overviewRows,
     today,
   );
   const metricCards = buildOverviewMetricCards({
-    actionableUnsentReportRows: attention.actionableUnsentReportRows,
+    dispatchManagementUnsentReportRows: attention.dispatchManagementUnsentReportRows,
     metricMeta,
     quarterlyMaterialSummary,
     siteStatusSummary,
