@@ -25,6 +25,7 @@ export async function runAdminSchedulesSmoke(config: ClientSmokePlaywrightConfig
     await page.getByRole('button', { name: '[김요원] 1/9 - 기존 현장' }).waitFor({
       state: 'visible',
     });
+    await page.getByText('Legacy InSEF import / legacy_site_id=legacy-1 round=1').first().waitFor();
 
     const scopeToggleCount = await page
       .getByRole('button', { name: /^(전체 일정|내 일정)$/ })
@@ -36,6 +37,7 @@ export async function runAdminSchedulesSmoke(config: ClientSmokePlaywrightConfig
     await page.getByRole('button', { name: '[김요원] 1/9 - 기존 현장' }).click();
     const scheduleDialog = page.getByRole('dialog', { name: '방문 일정 선택' });
     await scheduleDialog.waitFor({ state: 'visible' });
+    await scheduleDialog.getByText('Legacy InSEF import / legacy_site_id=legacy-1 round=1').waitFor();
     if ((await scheduleDialog.getByText('예외 사유코드').count()) !== 0) {
       throw new Error('Expected exception reason code field to be removed from controller schedule dialog.');
     }

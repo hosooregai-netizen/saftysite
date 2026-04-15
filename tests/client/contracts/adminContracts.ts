@@ -67,7 +67,7 @@ export const ADMIN_FEATURE_CONTRACTS = {
   'admin-schedules': {
     id: 'admin-schedules',
     description:
-      '관제 일정 보드가 safety-server calendar/queue/lookups passthrough 기반 월간 캘린더, 월 네비게이션, queue, lookups, 선택 사유 저장, 현재 월 기본 흐름을 유지한다.',
+      '관제 일정 보드가 safety-server calendar/queue/lookups passthrough 기반 월간 캘린더, 월 네비게이션, queue, lookups, 선택 사유 저장, legacy import 선택 일정의 calendar 우선 노출, 현재 월 기본 흐름을 유지한다.',
     routes: ['/admin?section=schedules&month=2026-04'],
     markers: ['일정/캘린더', '오늘', '방문 일정 선택'],
     apis: [
@@ -76,7 +76,7 @@ export const ADMIN_FEATURE_CONTRACTS = {
       'GET /api/admin/schedules/lookups',
       'PATCH /api/admin/schedules/:id',
     ],
-    criticalActions: ['관제 일정 월간 보드 조회', '월 네비게이션 이동', '확정 일정 칩 표시', '관제 일정 상세 modal 진입', '관제 일정 저장'],
+    criticalActions: ['관제 일정 월간 보드 조회', '월 네비게이션 이동', '확정 일정 칩 표시', 'legacy import 선택 일정 표시', '관제 일정 상세 modal 진입', '관제 일정 저장'],
   },
 } as const satisfies Record<string, FeatureContract>;
 
