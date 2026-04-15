@@ -48,7 +48,11 @@ export function AdminOverviewSection({
             >
               {state.isRefreshing ? '불러오는 중...' : '새로고침'}
             </button>
-            <button type="button" className="app-button app-button-secondary" onClick={() => void state.exportOverview()}>
+            <button
+              type="button"
+              className="app-button app-button-secondary"
+              onClick={() => void state.exportOverview()}
+            >
               엑셀 내보내기
             </button>
           </div>
@@ -97,11 +101,6 @@ export function AdminOverviewSection({
         title="현장대리인 메일 미등록 현장"
         rows={state.overview.recipientMissingSiteRows ?? []}
         emptyLabel="현재 메일 정보 보완이 필요한 현장이 없습니다."
-      />
-      <OverviewDispatchQueueTable
-        title="발송 필요 미해결 현장"
-        rows={state.overview.dispatchQueueRows ?? []}
-        emptyLabel="현재 미해결 발송 대상 현장이 없습니다."
       />
 
       <OverviewEndingSoonSection rows={state.overview.endingSoonRows} />
