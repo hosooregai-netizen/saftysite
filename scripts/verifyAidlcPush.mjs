@@ -126,6 +126,8 @@ const FEATURE_RULES = [
       /^features\/site-reports\/components\/SiteReportListPanel\.tsx$/,
       /^features\/site-reports\/components\/SiteReportsScreen\.module\.css$/,
       /^features\/site-reports\/components\/SiteReportsScreen\.tsx$/,
+      /^features\/site-reports\/hooks\/useResolvedSiteRoute\.ts$/,
+      /^features\/site-reports\/hooks\/useSiteReportsScreen\.ts$/,
       /^features\/site-reports\/hooks\/useSiteReportListState\.ts$/,
       /^features\/site-reports\/report-list\//,
     ],
