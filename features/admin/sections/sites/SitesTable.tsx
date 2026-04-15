@@ -43,16 +43,18 @@ function formatDateOnly(value: string | null | undefined) {
   if (!value) return '-';
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return value;
-  return parsed.toLocaleDateString('ko-KR', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  });
+  const year = String(parsed.getFullYear()).slice(-2);
+  const month = String(parsed.getMonth() + 1).padStart(2, '0');
+  const day = String(parsed.getDate()).padStart(2, '0');
+  return `${year}.${month}.${day}`;
 }
 
 function formatMonthValue(value: string | null | undefined) {
   if (!value) return '-';
-  return value.length >= 7 ? value.slice(0, 7) : value;
+  if (value.length >= 7) {
+    return value.slice(2, 7);
+  }
+  return value;
 }
 
 export function SitesTable({

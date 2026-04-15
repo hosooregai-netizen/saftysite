@@ -9,6 +9,7 @@
 - the standalone site-list header does not show a total-count caption beside the title
 - the standalone site-list toolbar does not show a create-site button
 - the `지도요원` column displays `inspector_name` first and only falls back to `guidance_officer_name`
+- the period and last-visit date cells use shortened year text such as `26-03` and `26.05.06`
 
 ## Route Expectations
 

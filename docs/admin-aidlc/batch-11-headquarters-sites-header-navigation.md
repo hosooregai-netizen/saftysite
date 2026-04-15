@@ -17,6 +17,7 @@
 - standalone site list header no longer shows the count meta beside the title
 - standalone site list header no longer shows the create-site action in the toolbar
 - the `지도요원` site-list column now prefers `inspector_name` and falls back to `guidance_officer_name`
+- site-list date displays now shorten the year prefix so period and last-visit cells avoid awkward wraps
 
 ## Navigation Contract
 
