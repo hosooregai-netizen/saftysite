@@ -1,4 +1,5 @@
 import { getAdminSectionHref } from '@/lib/admin';
+import { normalizeSiteLifecycleStatus } from '@/lib/admin/lifecycleStatus';
 import type {
   AdminOverviewMetricCard,
   SafetyAdminQuarterlyMaterialSummary,
@@ -7,29 +8,32 @@ import type {
 } from '@/types/admin';
 import type { ControllerDashboardData } from '@/types/controller';
 
-export function buildSiteStatusSummary(data: ControllerDashboardData): SafetyAdminSiteStatusSummary {
+export function buildSiteStatusSummary(
+  data: ControllerDashboardData,
+  scopedSites: ControllerDashboardData['sites'] = data.sites,
+): SafetyAdminSiteStatusSummary {
   return {
     entries: [
       {
-        count: data.sites.filter((site) => site.status === 'active').length,
+        count: scopedSites.filter((site) => normalizeSiteLifecycleStatus(site) === 'active').length,
         href: getAdminSectionHref('headquarters', { siteStatus: 'active' }),
         key: 'active',
         label: '진행중',
       },
       {
-        count: data.sites.filter((site) => site.status === 'planned').length,
+        count: scopedSites.filter((site) => normalizeSiteLifecycleStatus(site) === 'planned').length,
         href: getAdminSectionHref('headquarters', { siteStatus: 'planned' }),
         key: 'planned',
         label: '미착수',
       },
       {
-        count: data.sites.filter((site) => site.status === 'closed').length,
+        count: scopedSites.filter((site) => normalizeSiteLifecycleStatus(site) === 'closed').length,
         href: getAdminSectionHref('headquarters', { siteStatus: 'closed' }),
         key: 'closed',
         label: '종료',
       },
     ],
-    totalSiteCount: data.sites.length,
+    totalSiteCount: scopedSites.length,
   };
 }
 

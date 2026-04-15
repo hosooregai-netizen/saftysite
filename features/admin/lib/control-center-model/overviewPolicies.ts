@@ -11,7 +11,6 @@ import type {
 } from '@/types/admin';
 import type { SafetySite } from '@/types/backend';
 import {
-  formatQuarterKey,
   getDaysDiff,
   parseDateValue,
   startOfToday,
@@ -28,6 +27,7 @@ type SiteLike = Pick<
   | 'contract_start_date'
   | 'headquarter_detail'
   | 'is_active'
+  | 'last_visit_date'
   | 'lifecycle_status'
   | 'project_amount'
   | 'project_end_date'
@@ -99,6 +99,17 @@ function isDateInCurrentYear(value: string | null | undefined, today: Date) {
   return Boolean(parsed && parsed.getFullYear() === today.getFullYear());
 }
 
+function overlapsCurrentYear(site: SiteLike, today: Date) {
+  const startDate = getSiteStartDate(site);
+  const endDate = getSiteEndDate(site);
+  const yearStart = new Date(today.getFullYear(), 0, 1);
+
+  if (endDate && isBeforeToday(endDate, yearStart)) return false;
+  if (startDate && isAfterToday(startDate, today)) return false;
+
+  return Boolean(startDate || endDate);
+}
+
 function getSiteStartDate(site: SiteLike) {
   return pickDate(
     site.contract_start_date,
@@ -119,6 +130,7 @@ export function isDispatchProcessedStatus(value: unknown) {
 
 export function isManageableSiteScope(site: SiteLike | null | undefined, today: Date) {
   if (!site) return false;
+  void today;
 
   const lifecycleStatus = normalizeSiteLifecycleStatus(site);
   if (lifecycleStatus === 'closed' || lifecycleStatus === 'deleted') return false;
@@ -126,21 +138,13 @@ export function isManageableSiteScope(site: SiteLike | null | undefined, today: 
   const headquarterStatus = normalizeHeadquarterLifecycleStatus(site.headquarter_detail);
   if (headquarterStatus === 'closed' || headquarterStatus === 'deleted') return false;
 
-  const endDate = getSiteEndDate(site);
-  if (endDate && isBeforeToday(endDate, today)) return false;
-
   return true;
 }
 
 export function isCurrentSiteManagementWindow(site: SiteLike | null | undefined, today: Date) {
   if (!site || !isManageableSiteScope(site, today)) return false;
 
-  const startDate = getSiteStartDate(site);
-  const endDate = getSiteEndDate(site);
-  if (!startDate && !endDate) return false;
-  if (startDate && isAfterToday(startDate, today)) return false;
-
-  return true;
+  return overlapsCurrentYear(site, today) || isDateInCurrentYear(site.last_visit_date, today);
 }
 
 export function isDispatchManagementReportScope(row: DispatchManagementReportLike) {
@@ -184,7 +188,8 @@ export function isPriorityQuarterlySiteScope({
   return (
     isCurrentSiteManagementWindow(site, today) ||
     isDateInCurrentYear(latestGuidanceDate, today) ||
-    isDateInCurrentYear(currentQuarterlyReportDate, today)
+    isDateInCurrentYear(currentQuarterlyReportDate, today) ||
+    isDateInCurrentYear(site.last_visit_date, today)
   );
 }
 
@@ -192,8 +197,6 @@ export function isPriorityQuarterlyManagementRowScope(
   row: SafetyAdminPriorityQuarterlyManagementRow,
   today: Date,
 ) {
-  const currentQuarterKey = formatQuarterKey(today);
-  if (row.currentQuarterKey && row.currentQuarterKey !== currentQuarterKey) return false;
   if ((row.projectAmount ?? 0) < PRIORITY_PROJECT_AMOUNT) return false;
   if (row.quarterlyReportKey) return true;
   return isDateInCurrentYear(row.latestGuidanceDate, today);

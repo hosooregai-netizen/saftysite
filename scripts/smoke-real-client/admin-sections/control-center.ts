@@ -6,6 +6,7 @@ import { dismissImportantModalIfPresent, waitHeading } from '../helpers';
 export async function runAdminControlCenterSection(page: Page) {
   await page.goto(`${baseUrl}/admin?section=overview`, { waitUntil: 'load' });
   await waitHeading(page, '운영 개요');
+  await page.getByText('미발송 경과 현황').first().waitFor();
   await page.getByText('현장 상태').first().waitFor();
   await page.getByText('발송 관리 대상').first().waitFor();
   await page.getByText('20억 이상 분기보고서 관리').first().waitFor();

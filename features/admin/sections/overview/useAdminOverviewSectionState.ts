@@ -123,7 +123,10 @@ export function useAdminOverviewSectionState(
       siteStatusSummary: hasSiteStatusSummary(overviewResponse.siteStatusSummary)
         ? overviewResponse.siteStatusSummary
         : fallbackOverview.siteStatusSummary,
-      unsentReportRows: overviewResponse.unsentReportRows,
+      unsentReportRows:
+        overviewResponse.unsentReportRows.length > 0 || fallbackOverview.unsentReportRows.length === 0
+          ? overviewResponse.unsentReportRows
+          : fallbackOverview.unsentReportRows,
     } satisfies SafetyAdminOverviewResponse;
   }, [fallbackOverview, overviewResponse]);
 
@@ -145,7 +148,8 @@ export function useAdminOverviewSectionState(
 
   const normalizedPriorityQuarterlyManagementRows = useMemo(() => {
     const sourceRows =
-      overviewResponse
+      (overview.priorityQuarterlyManagementRows ?? []).length > 0 ||
+      (fallbackOverview.priorityQuarterlyManagementRows ?? []).length === 0
         ? overview.priorityQuarterlyManagementRows ?? []
         : fallbackOverview.priorityQuarterlyManagementRows ?? [];
     const fallbackRowsByKey = new Map(

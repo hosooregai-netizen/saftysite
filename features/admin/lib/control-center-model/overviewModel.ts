@@ -37,7 +37,7 @@ import {
   buildDispatchManagementRows,
   getUnsentDays,
   isDispatchManagementUnsentRow,
-  isManageableSiteScope,
+  isCurrentSiteManagementWindow,
   isPriorityQuarterlySiteScope,
 } from './overviewPolicies';
 import type { AdminOverviewModel } from './types';
@@ -107,6 +107,31 @@ function pickLatestQuarterlyRow(
   return candidate.updatedAt > current.updatedAt ? candidate : current;
 }
 
+function isRowInCurrentYear(row: EnrichedControllerReportRow, today: Date) {
+  const value = row.reportDate || row.visitDate || row.updatedAt.slice(0, 10);
+  return value.startsWith(`${today.getFullYear()}-`);
+}
+
+function extractQuarterKeyFromText(value: string) {
+  const directMatched = value.match(/\b(\d{4})-Q([1-4])\b/i);
+  if (directMatched) {
+    return `${directMatched[1]}-Q${directMatched[2]}`;
+  }
+
+  const labelMatched = value.match(/(\d{4})\s*년\s*([1-4])\s*분기/);
+  if (labelMatched) {
+    return `${labelMatched[1]}-Q${labelMatched[2]}`;
+  }
+
+  return '';
+}
+
+function inferQuarterKeyFromRow(row: EnrichedControllerReportRow) {
+  return extractQuarterKeyFromText(
+    [row.routeParam, row.periodLabel, row.reportTitle].filter(Boolean).join(' '),
+  );
+}
+
 function buildPriorityQuarterlyManagementRows(
   candidateSites: ControllerDashboardData['sites'],
   overviewRows: EnrichedControllerReportRow[],
@@ -115,6 +140,7 @@ function buildPriorityQuarterlyManagementRows(
   const currentQuarterKey = formatQuarterKey(today);
   const currentQuarterLabel = formatQuarterLabel(today);
   const latestGuidanceRowBySite = new Map<string, EnrichedControllerReportRow>();
+  const latestCurrentYearQuarterlyRowBySite = new Map<string, EnrichedControllerReportRow>();
   const currentQuarterlyRowBySite = new Map<string, EnrichedControllerReportRow>();
 
   overviewRows.forEach((row) => {
@@ -127,9 +153,18 @@ function buildPriorityQuarterlyManagementRows(
     }
     if (row.reportType !== 'quarterly_report') return;
 
-    const matchesCurrentQuarter = row.routeParam
-      ? row.routeParam === currentQuarterKey || row.periodLabel === currentQuarterLabel
-      : row.periodLabel === currentQuarterLabel;
+    if (isRowInCurrentYear(row, today)) {
+      latestCurrentYearQuarterlyRowBySite.set(
+        row.siteId,
+        pickLatestQuarterlyRow(latestCurrentYearQuarterlyRowBySite.get(row.siteId), row),
+      );
+    }
+
+    const inferredQuarterKey = inferQuarterKeyFromRow(row);
+    const matchesCurrentQuarter =
+      inferredQuarterKey === currentQuarterKey ||
+      (!inferredQuarterKey &&
+        (row.routeParam === currentQuarterKey || row.periodLabel === currentQuarterLabel));
     if (!matchesCurrentQuarter) return;
 
     currentQuarterlyRowBySite.set(
@@ -141,9 +176,15 @@ function buildPriorityQuarterlyManagementRows(
   return candidateSites
     .map((site) => {
       const latestGuidanceRow = latestGuidanceRowBySite.get(site.id);
+      const latestCurrentYearQuarterlyRow = latestCurrentYearQuarterlyRowBySite.get(site.id);
       const quarterlyRow = currentQuarterlyRowBySite.get(site.id);
       if (!isPriorityQuarterlySiteScope({
-        currentQuarterlyReportDate: quarterlyRow?.reportDate || quarterlyRow?.visitDate || '',
+        currentQuarterlyReportDate:
+          quarterlyRow?.reportDate ||
+          quarterlyRow?.visitDate ||
+          latestCurrentYearQuarterlyRow?.reportDate ||
+          latestCurrentYearQuarterlyRow?.visitDate ||
+          '',
         latestGuidanceDate: latestGuidanceRow?.visitDate || latestGuidanceRow?.reportDate || '',
         site,
         today,
@@ -474,10 +515,9 @@ export function buildAdminOverviewModel(
   const overviewRows = buildEnrichedRows(data, reports, today);
   const siteById = new Map(data.sites.map((site) => [site.id, site]));
   const dispatchOverviewRows = buildDispatchManagementRows(overviewRows, siteById, today);
-  const siteStatusSummary = buildSiteStatusSummary(data);
-  const activeSites = data.sites.filter(
-    (site) => site.status === 'active' && isManageableSiteScope(site, today),
-  );
+  const overviewSites = data.sites.filter((site) => isCurrentSiteManagementWindow(site, today));
+  const siteStatusSummary = buildSiteStatusSummary(data, overviewSites);
+  const activeSites = overviewSites.filter((site) => site.status === 'active');
   const { coverageRows, metricMeta, quarterlyMaterialSummary } = buildQuarterlySummary(
     activeSites,
     materialSourceReports,
@@ -495,7 +535,7 @@ export function buildAdminOverviewModel(
     metricMeta,
     quarterlyMaterialSummary,
     siteStatusSummary,
-    totalSiteCount: data.sites.length,
+    totalSiteCount: siteStatusSummary.totalSiteCount,
   });
 
   return {
