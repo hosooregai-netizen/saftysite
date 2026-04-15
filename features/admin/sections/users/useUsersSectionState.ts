@@ -1,12 +1,15 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { useDeferredValue, useMemo, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  readAdminSessionCache,
+  writeAdminSessionCache,
+} from '@/features/admin/lib/adminSessionCache';
+import { fetchAdminUsersList } from '@/lib/admin/apiClient';
 import { getSessionTitle } from '@/constants/inspectionSession';
 import type { TableSortState } from '@/types/admin';
-import type { SafetySite, SafetyUser } from '@/types/backend';
 import type { InspectionSession } from '@/types/inspectionSession';
-import type { SafetyAssignment } from '@/types/controller';
 import {
   toBackendUserRole,
   toNullableText,
@@ -27,10 +30,18 @@ const EMPTY_FORM = {
 
 const USERS_PAGE_SIZE = 50;
 
+function buildRequestKey(input: {
+  page: number;
+  query: string;
+  roleFilter: 'all' | UserRoleView;
+  sort: TableSortState;
+  statusFilter: 'all' | 'active' | 'inactive';
+}) {
+  return JSON.stringify(input);
+}
+
 export function useUsersSectionState(
-  users: SafetyUser[],
-  sites: SafetySite[],
-  assignments: SafetyAssignment[],
+  currentUserId: string,
   sessions: InspectionSession[],
   busy: boolean,
 ) {
@@ -53,18 +64,86 @@ export function useUsersSectionState(
   const [form, setForm] = useState(EMPTY_FORM);
   const [initialForm, setInitialForm] = useState(EMPTY_FORM);
   const [editingRoleSource, setEditingRoleSource] =
-    useState<SafetyUser['role']>('field_agent');
+    useState<import('@/types/backend').SafetyUser['role']>('field_agent');
+  const [rows, setRows] = useState<import('@/types/admin').SafetyAdminUserListRow[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const isOpen = editingId !== null;
-  const sitesById = useMemo(() => new Map(sites.map((site) => [site.id, site])), [sites]);
-  const activeAssignmentsByUser = useMemo(() => {
-    const next = new Map<string, SafetyAssignment[]>();
-    assignments
-      .filter((item) => item.is_active)
-      .forEach((item) => {
-        next.set(item.user_id, [...(next.get(item.user_id) || []), item]);
+  const deferredQuery = useDeferredValue(query);
+  const requestKey = useMemo(
+    () =>
+      buildRequestKey({
+        page,
+        query: deferredQuery.trim(),
+        roleFilter,
+        sort,
+        statusFilter,
+      }),
+    [deferredQuery, page, roleFilter, sort, statusFilter],
+  );
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    const cached = readAdminSessionCache<import('@/types/admin').SafetyAdminUserListResponse>(
+      currentUserId,
+      `users:list:${requestKey}`,
+    );
+    if (cached.value) {
+      setRows(cached.value.rows);
+      setTotal(cached.value.total);
+    }
+    if (cached.isFresh && cached.value) {
+      setLoading(false);
+      return;
+    }
+
+    abortControllerRef.current?.abort();
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+    setLoading(true);
+    setError(null);
+
+    const requestedSortKey = sort.key === 'reportCount' ? 'name' : sort.key;
+
+    void fetchAdminUsersList(
+      {
+        limit: USERS_PAGE_SIZE,
+        offset: (page - 1) * USERS_PAGE_SIZE,
+        query: deferredQuery.trim(),
+        role: roleFilter,
+        sortBy: requestedSortKey,
+        sortDir: sort.direction,
+        status: statusFilter,
+      },
+      { signal: abortController.signal },
+    )
+      .then((response) => {
+        writeAdminSessionCache(currentUserId, `users:list:${requestKey}`, response);
+        setRows(response.rows);
+        setTotal(response.total);
+      })
+      .catch((nextError) => {
+        if (abortController.signal.aborted) return;
+        setError(nextError instanceof Error ? nextError.message : '사용자 목록을 불러오지 못했습니다.');
+      })
+      .finally(() => {
+        if (!abortController.signal.aborted) {
+          setLoading(false);
+        }
       });
+
+    return () => abortController.abort();
+  }, [currentUserId, deferredQuery, page, requestKey, roleFilter, sort.direction, sort.key, statusFilter]);
+
+  const sessionCountBySiteId = useMemo(() => {
+    const next = new Map<string, number>();
+    sessions.forEach((session) => {
+      next.set(session.siteKey, (next.get(session.siteKey) || 0) + 1);
+    });
     return next;
-  }, [assignments]);
+  }, [sessions]);
+
   const latestSessionBySiteId = useMemo(() => {
     const next = new Map<string, InspectionSession>();
     sessions.forEach((session) => {
@@ -75,86 +154,50 @@ export function useUsersSectionState(
     });
     return next;
   }, [sessions]);
-  const sessionCountBySiteId = useMemo(() => {
-    const next = new Map<string, number>();
-    sessions.forEach((session) => {
-      next.set(session.siteKey, (next.get(session.siteKey) || 0) + 1);
-    });
-    return next;
-  }, [sessions]);
+
   const userOverviewById = useMemo(() => {
     const next = new Map<
       string,
-      { assignedSites: SafetySite[]; latestSession: InspectionSession | null; reportCount: number }
+      {
+        assignedSites: Array<{ id: string; siteName: string }>;
+        latestSession: InspectionSession | null;
+        reportCount: number;
+      }
     >();
 
-    users.forEach((user) => {
-      const assignedSites = (activeAssignmentsByUser.get(user.id) || [])
-        .map((assignment) => sitesById.get(assignment.site_id))
-        .filter(Boolean) as SafetySite[];
+    rows.forEach((user) => {
+      const assignedSites = user.assignedSites ?? [];
       const latestSession =
         assignedSites
           .map((site) => latestSessionBySiteId.get(site.id) || null)
           .filter(Boolean)
           .sort((left, right) => right!.updatedAt.localeCompare(left!.updatedAt))[0] || null;
       const reportCount = assignedSites.reduce(
-        (total, site) => total + (sessionCountBySiteId.get(site.id) || 0),
+        (count, site) => count + (sessionCountBySiteId.get(site.id) || 0),
         0,
       );
-
-      next.set(user.id, { assignedSites, latestSession, reportCount });
+      next.set(user.id, {
+        assignedSites,
+        latestSession,
+        reportCount,
+      });
     });
 
     return next;
-  }, [activeAssignmentsByUser, latestSessionBySiteId, sessionCountBySiteId, sitesById, users]);
-  const deferredQuery = useDeferredValue(query);
-  const filteredUsers = useMemo(() => {
-    const normalizedQuery = deferredQuery.trim().toLowerCase();
-    return users.filter((user) => {
-      if (roleFilter !== 'all' && toUserRoleView(user.role) !== roleFilter) return false;
-      if (statusFilter === 'active' && !user.is_active) return false;
-      if (statusFilter === 'inactive' && user.is_active) return false;
-      if (!normalizedQuery) return true;
+  }, [latestSessionBySiteId, rows, sessionCountBySiteId]);
 
-      const haystack = [
-        user.name,
-        user.email,
-        user.phone ?? '',
-        user.position ?? '',
-        user.organization_name ?? '',
-      ]
-        .join(' ')
-        .toLowerCase();
-      return haystack.includes(normalizedQuery);
-    });
-  }, [deferredQuery, roleFilter, statusFilter, users]);
-  const sortedUsers = useMemo(() => {
-    const direction = sort.direction === 'asc' ? 1 : -1;
-
-    return [...filteredUsers].sort((left, right) => {
-      if (sort.key === 'role') {
-        return toUserRoleView(left.role).localeCompare(toUserRoleView(right.role), 'ko') * direction;
-      }
-
-      if (sort.key === 'last_login_at') {
-        return (left.last_login_at ?? '').localeCompare(right.last_login_at ?? '') * direction;
-      }
-
-      if (sort.key === 'reportCount') {
-        const leftCount = userOverviewById.get(left.id)?.reportCount ?? 0;
-        const rightCount = userOverviewById.get(right.id)?.reportCount ?? 0;
-        return (leftCount - rightCount) * direction;
-      }
-
-      return left.name.localeCompare(right.name, 'ko') * direction;
-    });
-  }, [filteredUsers, sort.direction, sort.key, userOverviewById]);
-  const totalPages = Math.max(1, Math.ceil(sortedUsers.length / USERS_PAGE_SIZE));
-  const currentPage = Math.min(page, totalPages);
   const pagedUsers = useMemo(() => {
-    const offset = (currentPage - 1) * USERS_PAGE_SIZE;
-    return sortedUsers.slice(offset, offset + USERS_PAGE_SIZE);
-  }, [currentPage, sortedUsers]);
+    if (sort.key !== 'reportCount') return rows;
+    const direction = sort.direction === 'asc' ? 1 : -1;
+    return [...rows].sort((left, right) => {
+      const leftCount = userOverviewById.get(left.id)?.reportCount ?? 0;
+      const rightCount = userOverviewById.get(right.id)?.reportCount ?? 0;
+      return (leftCount - rightCount) * direction;
+    });
+  }, [rows, sort.direction, sort.key, userOverviewById]);
+
+  const totalPages = Math.max(1, Math.ceil(total / USERS_PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
 
   const openCreate = () => {
     setEditingId('create');
@@ -163,7 +206,7 @@ export function useUsersSectionState(
     setEditingRoleSource('field_agent');
   };
 
-  const openEdit = (user: SafetyUser) => {
+  const openEdit = (user: import('@/types/admin').SafetyAdminUserListRow) => {
     const nextForm = {
       email: user.email,
       name: user.name,
@@ -222,27 +265,60 @@ export function useUsersSectionState(
       email?: string | null;
       name?: string | null;
       phone?: string | null;
-      role?: SafetyUser['role'];
+      role?: import('@/types/backend').SafetyUser['role'];
       position?: string | null;
       organization_name?: string | null;
       is_active?: boolean | null;
     };
   };
 
+  const refreshPage = async (targetPage = currentPage) => {
+    const response = await fetchAdminUsersList({
+      limit: USERS_PAGE_SIZE,
+      offset: (targetPage - 1) * USERS_PAGE_SIZE,
+      query: deferredQuery.trim(),
+      role: roleFilter,
+      sortBy: sort.key === 'reportCount' ? 'name' : sort.key,
+      sortDir: sort.direction,
+      status: statusFilter,
+    });
+    writeAdminSessionCache(currentUserId, `users:list:${requestKey}`, response);
+    setRows(response.rows);
+    setTotal(response.total);
+  };
+
+  const exportUsers = async () => {
+    const response = await fetchAdminUsersList({
+      limit: 5000,
+      offset: 0,
+      query: deferredQuery.trim(),
+      role: roleFilter,
+      sortBy: sort.key === 'reportCount' ? 'name' : sort.key,
+      sortDir: sort.direction,
+      status: statusFilter,
+    });
+    return response.rows;
+  };
+
   return {
     buildUpdateInput,
     closeModal,
+    currentPage,
     editingId,
-    filteredUsers,
+    error,
+    exportUsers,
     form,
     getLatestSessionTitle: getSessionTitle,
+    isLoading: loading,
     isOpen,
     openCreate,
     openEdit,
     page: currentPage,
     pagedUsers,
     query,
+    refreshPage,
     roleFilter,
+    sessionCountBySiteId,
     setForm,
     setPage: (nextPage: number) => {
       setPage(Math.max(1, Math.min(nextPage, totalPages)));
@@ -265,7 +341,7 @@ export function useUsersSectionState(
     },
     sort,
     statusFilter,
-    sortedUsers,
+    total,
     totalPages,
     userOverviewById,
   };

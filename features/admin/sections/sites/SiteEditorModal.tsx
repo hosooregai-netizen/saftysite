@@ -9,14 +9,14 @@ import {
   SITE_STATUS_OPTIONS,
 } from '@/lib/admin';
 import type { Dispatch, SetStateAction } from 'react';
-import type { SafetyHeadquarter, SafetySiteStatus } from '@/types/controller';
+import type { SafetySiteStatus } from '@/types/controller';
 import { getDerivedPerVisitAmount, type SiteFormState } from './siteSectionHelpers';
 
 interface SiteEditorModalProps {
   busy: boolean;
   editingId: string | null;
   form: SiteFormState;
-  headquarters: SafetyHeadquarter[];
+  headquarters: Array<{ id: string; name: string }>;
   isCreateReady: boolean;
   lockedHeadquarterId: string | null;
   onClose: () => void;

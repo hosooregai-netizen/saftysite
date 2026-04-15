@@ -7,8 +7,11 @@ import {
   type FeatureContractId,
 } from './featureContracts';
 import { runAdminControlCenterSmoke } from './admin/admin-control-center.spec';
+import { runAdminHeadquartersSmoke } from './admin/admin-headquarters.spec';
 import { runAdminReportsSmoke } from './admin/admin-reports.spec';
+import { runAdminSchedulesSmoke } from './admin/admin-schedules.spec';
 import { runAdminSitesSmoke } from './admin/admin-sites.spec';
+import { runAdminUsersSmoke } from './admin/admin-users.spec';
 import { runAuthSmoke } from './erp/auth.spec';
 import { runBadWorkplaceReportSmoke } from './erp/bad-workplace-report.spec';
 import { runMobileBadWorkplaceSmoke } from './erp/mobile-bad-workplace.spec';
@@ -25,8 +28,11 @@ type FeatureRunner = (config: ReturnType<typeof resolveClientSmokePlaywrightConf
 
 const FEATURE_RUNNERS: Record<FeatureContractId, FeatureRunner> = {
   'admin-control-center': runAdminControlCenterSmoke,
+  'admin-headquarters': runAdminHeadquartersSmoke,
   'admin-reports': runAdminReportsSmoke,
   'admin-sites': runAdminSitesSmoke,
+  'admin-schedules': runAdminSchedulesSmoke,
+  'admin-users': runAdminUsersSmoke,
   auth: runAuthSmoke,
   'bad-workplace-report': runBadWorkplaceReportSmoke,
   'mobile-bad-workplace': runMobileBadWorkplaceSmoke,

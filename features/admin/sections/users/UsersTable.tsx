@@ -8,12 +8,12 @@ import { SectionHeaderFilterMenu } from '@/features/admin/components/SectionHead
 import { exportAdminWorkbook } from '@/lib/admin/exportClient';
 import { formatTimestamp, getUserRoleLabel } from '@/lib/admin';
 import type { TableSortState } from '@/types/admin';
-import type { SafetySite, SafetyUser } from '@/types/backend';
+import type { SafetyAdminUserListRow } from '@/types/admin';
 import type { InspectionSession } from '@/types/inspectionSession';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 
 interface UserOverview {
-  assignedSites: SafetySite[];
+  assignedSites: Array<{ id: string; siteName: string }>;
   latestSession: InspectionSession | null;
   reportCount: number;
 }
@@ -21,14 +21,16 @@ interface UserOverview {
 interface UsersTableProps {
   busy: boolean;
   canDelete: boolean;
-  exportUsers: SafetyUser[];
-  filteredUsers: SafetyUser[];
+  exportUsers: () => Promise<SafetyAdminUserListRow[]>;
+  filteredUsers: SafetyAdminUserListRow[];
   onCreateRequest: () => void;
-  onDeleteRequest: (user: SafetyUser) => void;
-  onEditRequest: (user: SafetyUser) => void;
+  onDeleteRequest: (user: SafetyAdminUserListRow) => void;
+  onEditRequest: (user: SafetyAdminUserListRow) => void;
+  onExportRequest?: () => void;
   page: number;
   query: string;
   roleFilter: 'all' | 'admin' | 'field_agent';
+  sessionCountBySiteId: Map<string, number>;
   setPage: (page: number) => void;
   setQuery: (value: string) => void;
   setRoleFilter: (value: 'all' | 'admin' | 'field_agent') => void;
@@ -52,6 +54,7 @@ export function UsersTable({
   page,
   query,
   roleFilter,
+  sessionCountBySiteId,
   setPage,
   setQuery,
   setRoleFilter,
@@ -76,7 +79,8 @@ export function UsersTable({
   const activeFilterCount =
     (roleFilter !== 'all' ? 1 : 0) +
     (statusFilter !== 'all' ? 1 : 0);
-  const handleExport = () =>
+  const handleExport = async () => {
+    const users = await exportUsers();
     void exportAdminWorkbook('users', [
       {
         name: '사용자',
@@ -90,15 +94,18 @@ export function UsersTable({
           { key: 'status', label: '상태' },
           { key: 'lastLoginAt', label: '최근 로그인' },
         ],
-        rows: exportUsers.map((user) => {
+        rows: users.map((user) => {
           const overview = userOverviewById.get(user.id) ?? {
-            assignedSites: [],
+            assignedSites: user.assignedSites,
             latestSession: null,
-            reportCount: 0,
+            reportCount: user.assignedSites.reduce(
+              (count, site) => count + (sessionCountBySiteId.get(site.id) || 0),
+              0,
+            ),
           };
 
           return {
-            assignedSites: overview.assignedSites.map((site) => site.site_name).join(', '),
+            assignedSites: overview.assignedSites.map((site) => site.siteName).join(', '),
             email: user.email,
             lastLoginAt: formatTimestamp(user.last_login_at),
             name: user.name,
@@ -110,6 +117,7 @@ export function UsersTable({
         }),
       },
     ]);
+  };
   const resetHeaderFilters = () => {
     setRoleFilter('all');
     setStatusFilter('all');
@@ -263,15 +271,15 @@ export function UsersTable({
                             '-'
                           ) : (
                             <div className={styles.tableInlineLinks}>
-                              {overview.assignedSites.map((site) => (
-                                <Link
-                                  key={site.id}
-                                  href={`/sites/${encodeURIComponent(site.id)}`}
-                                  className={styles.tableChipLink}
-                                >
-                                  {site.site_name}
-                                </Link>
-                              ))}
+                                  {overview.assignedSites.map((site) => (
+                                    <Link
+                                      key={site.id}
+                                      href={`/sites/${encodeURIComponent(site.id)}`}
+                                      className={styles.tableChipLink}
+                                    >
+                                  {site.siteName}
+                                    </Link>
+                                  ))}
                             </div>
                           )}
                         </td>

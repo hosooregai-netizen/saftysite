@@ -8,6 +8,12 @@ import { buildSiteMemoWithContractProfile } from '../../../lib/admin/siteContrac
 import { buildControllerReportRows } from '../../../lib/admin/controllerReports';
 import type { ClientSmokePlaywrightConfig } from '../../../playwright.config';
 import {
+  buildAdminDirectoryLookupsResponse,
+  buildAdminHeadquartersListResponse,
+  buildAdminSitesListResponse,
+  buildAdminUsersListResponse,
+} from '../../../server/admin/adminDirectoryLists';
+import {
   buildAdminCalendarSchedules,
   buildAdminQueueSchedules,
   buildAdminScheduleRows,
@@ -43,7 +49,13 @@ import {
 } from '../../../tooling/internal/smokeClient_impl';
 import { createErpSmokeHarness, type ErpSmokeHarness } from './erpSmokeHarness';
 
-type AdminFeatureId = 'admin-control-center' | 'admin-reports' | 'admin-sites';
+type AdminFeatureId =
+  | 'admin-control-center'
+  | 'admin-headquarters'
+  | 'admin-reports'
+  | 'admin-sites'
+  | 'admin-schedules'
+  | 'admin-users';
 type JsonRecord = Record<string, unknown>;
 
 function buildEmptyReview(): ReportControllerReview {
@@ -95,6 +107,13 @@ function buildAdminDashboardData(harness: ErpSmokeHarness): ControllerDashboardD
     headquarters: clone(harness.state.headquarters) as unknown as SafetyHeadquarter[],
     sites: clone(harness.helpers.hydratedSites()) as SafetySite[],
     users: clone(harness.state.users) as unknown as SafetyUser[],
+  };
+}
+
+function buildAdminDirectoryData(harness: ErpSmokeHarness) {
+  return {
+    ...buildAdminDashboardData(harness),
+    refreshedAt: NOW,
   };
 }
 
@@ -350,6 +369,60 @@ async function installAdminRoutes(harness: ErpSmokeHarness) {
 
     if (pathname === '/api/admin/dashboard/overview' && request.method() === 'GET') {
       await fulfillJson(route, buildOverviewResponse(harness));
+      return;
+    }
+
+    if (pathname === '/api/admin/users/list' && request.method() === 'GET') {
+      await fulfillJson(
+        route,
+        buildAdminUsersListResponse(buildAdminDirectoryData(harness), {
+          limit: Number(url.searchParams.get('limit') || '50'),
+          offset: Number(url.searchParams.get('offset') || '0'),
+          query: url.searchParams.get('query') || '',
+          role: url.searchParams.get('role') || '',
+          sortBy: url.searchParams.get('sort_by') || 'name',
+          sortDir: url.searchParams.get('sort_dir') === 'desc' ? 'desc' : 'asc',
+          status: url.searchParams.get('status') || '',
+        }),
+      );
+      return;
+    }
+
+    if (pathname === '/api/admin/headquarters/list' && request.method() === 'GET') {
+      await fulfillJson(
+        route,
+        buildAdminHeadquartersListResponse(buildAdminDirectoryData(harness), {
+          id: url.searchParams.get('id') || '',
+          limit: Number(url.searchParams.get('limit') || '30'),
+          offset: Number(url.searchParams.get('offset') || '0'),
+          query: url.searchParams.get('query') || '',
+          sortBy: url.searchParams.get('sort_by') || 'name',
+          sortDir: url.searchParams.get('sort_dir') === 'desc' ? 'desc' : 'asc',
+        }),
+      );
+      return;
+    }
+
+    if (pathname === '/api/admin/sites/list' && request.method() === 'GET') {
+      await fulfillJson(
+        route,
+        buildAdminSitesListResponse(buildAdminDirectoryData(harness), {
+          assignment: url.searchParams.get('assignment') || '',
+          headquarterId: url.searchParams.get('headquarter_id') || '',
+          limit: Number(url.searchParams.get('limit') || '50'),
+          offset: Number(url.searchParams.get('offset') || '0'),
+          query: url.searchParams.get('query') || '',
+          siteId: url.searchParams.get('site_id') || '',
+          sortBy: url.searchParams.get('sort_by') || 'last_visit_date',
+          sortDir: url.searchParams.get('sort_dir') === 'asc' ? 'asc' : 'desc',
+          status: url.searchParams.get('status') || '',
+        }),
+      );
+      return;
+    }
+
+    if (pathname === '/api/admin/directory/lookups' && request.method() === 'GET') {
+      await fulfillJson(route, buildAdminDirectoryLookupsResponse(buildAdminDirectoryData(harness)));
       return;
     }
 

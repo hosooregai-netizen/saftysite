@@ -1,17 +1,20 @@
 'use client';
 
-import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   readAdminSessionCache,
   writeAdminSessionCache,
 } from '@/features/admin/lib/adminSessionCache';
 import {
+  fetchAdminDirectoryLookups,
+  fetchAdminReports,
+  fetchAdminSitesList,
+} from '@/lib/admin/apiClient';
+import {
   buildControllerReportHref,
   buildControllerReportRows,
 } from '@/lib/admin/controllerReports';
-import { fetchAdminReports } from '@/lib/admin/apiClient';
-import { filterVisibleAdminReportRows } from '@/lib/admin/reportVisibility';
 import {
   EMPTY_REVIEW_FORM,
   REPORT_PAGE_SIZE,
@@ -22,19 +25,20 @@ import {
 import { useReportDispatchActions } from './useReportDispatchActions';
 import { useReportDocumentActions } from './useReportDocumentActions';
 import type { ControllerReportRow, TableSortState } from '@/types/admin';
-import type { SafetyReport } from '@/types/backend';
+import type { SafetyReport, SafetySite } from '@/types/backend';
 import type { SmsProviderStatus } from '@/types/messages';
-import type { ReportsSectionProps } from './reportsSectionTypes';
+import type { ReportsSectionProps, ReportsUserOption } from './reportsSectionTypes';
+
+function buildRequestKey(input: Record<string, string | number | null>) {
+  return JSON.stringify(input);
+}
 
 export function useReportsSectionState({
   currentUser,
   ensureSessionLoaded,
   getSessionById,
-  headquarters,
   onReloadData,
   sessions,
-  sites,
-  users,
 }: ReportsSectionProps) {
   void onReloadData;
   const router = useRouter();
@@ -71,25 +75,33 @@ export function useReportsSectionState({
   const [reviewRow, setReviewRow] = useState<ControllerReportRow | null>(null);
   const [reviewForm, setReviewForm] = useState(EMPTY_REVIEW_FORM);
   const [dispatchRow, setDispatchRow] = useState<ControllerReportRow | null>(null);
+  const [dispatchSite, setDispatchSite] = useState<SafetySite | null>(null);
   const [dispatchSmsPhone, setDispatchSmsPhone] = useState('');
   const [dispatchSmsMessage, setDispatchSmsMessage] = useState('');
   const [dispatchSmsSending, setDispatchSmsSending] = useState(false);
   const [smsProviderStatuses, setSmsProviderStatuses] = useState<SmsProviderStatus[]>([]);
+  const [directoryLookups, setDirectoryLookups] = useState<
+    import('@/types/admin').SafetyAdminDirectoryLookupsResponse
+  >({
+    headquarters: [],
+    sites: [],
+    users: [],
+  });
   const deferredQuery = useDeferredValue(query);
   const reportCacheKey = useMemo(
     () =>
-      JSON.stringify({
+      buildRequestKey({
         assigneeFilter,
         dateFrom,
         dateTo,
-        deferredQuery,
+        deferredQuery: deferredQuery.trim(),
         headquarterFilter,
         offset,
         overviewPreset,
         qualityFilter,
         reportType,
         siteFilter,
-        sort,
+        sort: `${sort.key}:${sort.direction}`,
       }),
     [
       assigneeFilter,
@@ -102,9 +114,33 @@ export function useReportsSectionState({
       qualityFilter,
       reportType,
       siteFilter,
-      sort,
+      sort.direction,
+      sort.key,
     ],
   );
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    const cachedLookups = readAdminSessionCache<import('@/types/admin').SafetyAdminDirectoryLookupsResponse>(
+      currentUser.id,
+      'directory-lookups',
+    );
+    if (cachedLookups.value) {
+      setDirectoryLookups(cachedLookups.value);
+    }
+    if (cachedLookups.isFresh && cachedLookups.value) {
+      return;
+    }
+
+    void fetchAdminDirectoryLookups()
+      .then((response) => {
+        writeAdminSessionCache(currentUser.id, 'directory-lookups', response);
+        setDirectoryLookups(response);
+      })
+      .catch((nextError) => {
+        console.error('Failed to load report directory lookups', nextError);
+      });
+  }, [currentUser.id]);
 
   useEffect(() => {
     const cached = readAdminSessionCache<{
@@ -121,66 +157,78 @@ export function useReportsSectionState({
   }, [currentUser.id, reportCacheKey]);
 
   const fetchRows = useCallback(async () => {
+    abortControllerRef.current?.abort();
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
     try {
       setLoading(true);
       setError(null);
-      const response = await fetchAdminReports({
-        assigneeUserId: assigneeFilter === 'all' ? '' : assigneeFilter,
-        dateFrom,
-        dateTo,
-        headquarterId: headquarterFilter === 'all' ? '' : headquarterFilter,
-        limit: overviewPreset ? REPORT_PRESET_PAGE_SIZE : REPORT_PAGE_SIZE,
-        offset,
-        qualityStatus: qualityFilter === 'all' ? '' : qualityFilter,
-        query: deferredQuery,
-        reportType:
-          overviewPreset === 'badWorkplaceOverdue' && reportType === 'all'
-            ? 'bad_workplace'
-            : reportType === 'all'
-              ? ''
-              : reportType,
-        siteId: siteFilter === 'all' ? '' : siteFilter,
-        sortBy: sort.key,
-        sortDir: sort.direction,
-      });
-      const filteredRows = filterVisibleAdminReportRows(
-        filterRowsForOverviewPreset(response.rows, overviewPreset),
-        sites,
-        headquarters,
+      const response = await fetchAdminReports(
+        {
+          assigneeUserId: assigneeFilter === 'all' ? '' : assigneeFilter,
+          dateFrom,
+          dateTo,
+          headquarterId: headquarterFilter === 'all' ? '' : headquarterFilter,
+          limit: overviewPreset ? REPORT_PRESET_PAGE_SIZE : REPORT_PAGE_SIZE,
+          offset,
+          qualityStatus: qualityFilter === 'all' ? '' : qualityFilter,
+          query: deferredQuery.trim(),
+          reportType:
+            overviewPreset === 'badWorkplaceOverdue' && reportType === 'all'
+              ? 'bad_workplace'
+              : reportType === 'all'
+                ? ''
+                : reportType,
+          siteId: siteFilter === 'all' ? '' : siteFilter,
+          sortBy: sort.key,
+          sortDir: sort.direction,
+        },
+        { signal: abortController.signal },
       );
+      if (abortController.signal.aborted) {
+        return;
+      }
+
+      const filteredRows = filterRowsForOverviewPreset(response.rows, overviewPreset);
+      const nextTotal = overviewPreset ? filteredRows.length : response.total;
       setRows(filteredRows);
-      setTotal(overviewPreset ? filteredRows.length : response.total);
+      setTotal(nextTotal);
       setSelectedKeys([]);
       writeAdminSessionCache(currentUser.id, `reports:${reportCacheKey}`, {
         rows: filteredRows,
-        total: overviewPreset ? filteredRows.length : response.total,
+        total: nextTotal,
       });
     } catch (nextError) {
+      if (abortController.signal.aborted) {
+        return;
+      }
       setError(nextError instanceof Error ? nextError.message : '보고서 목록을 불러오지 못했습니다.');
     } finally {
-      setLoading(false);
+      if (!abortController.signal.aborted) {
+        setLoading(false);
+      }
     }
   }, [
     assigneeFilter,
+    currentUser.id,
     dateFrom,
     dateTo,
     deferredQuery,
     headquarterFilter,
-    headquarters,
-    currentUser.id,
     offset,
     overviewPreset,
     qualityFilter,
     reportCacheKey,
     reportType,
     siteFilter,
-    sites,
     sort.direction,
     sort.key,
   ]);
 
   useEffect(() => {
     void fetchRows();
+    return () => abortControllerRef.current?.abort();
   }, [fetchRows]);
 
   const applyUpdatedReportRow = useCallback(
@@ -217,21 +265,21 @@ export function useReportsSectionState({
     [rows, selectedKeys],
   );
   const headquarterOptions = useMemo(
-    () =>
-      Array.from(
-        new Map(
-          sites
-            .filter((site) => site.headquarter_id)
-            .map((site) => [
-              site.headquarter_id,
-              site.headquarter_detail?.name || site.headquarter?.name || '사업장 미상',
-            ]),
-        ).entries(),
-      ),
-    [sites],
+    () => directoryLookups.headquarters.map((item) => [item.id, item.name] as const),
+    [directoryLookups.headquarters],
   );
-  const siteOptions = useMemo(() => sites.map((site) => [site.id, site.site_name] as const), [sites]);
-  const assigneeOptions = useMemo(() => users.map((user) => [user.id, user.name] as const), [users]);
+  const siteOptions = useMemo(
+    () => directoryLookups.sites.map((item) => [item.id, item.name] as const),
+    [directoryLookups.sites],
+  );
+  const users = useMemo<ReportsUserOption[]>(
+    () => directoryLookups.users.map((user) => ({ id: user.id, name: user.name })),
+    [directoryLookups.users],
+  );
+  const assigneeOptions = useMemo(
+    () => users.map((user) => [user.id, user.name] as const),
+    [users],
+  );
   const activeFilterCount = useMemo(
     () =>
       [
@@ -261,7 +309,6 @@ export function useReportsSectionState({
     bulkDispatchSent,
     bulkOwnerAssign,
     bulkQuality,
-    dispatchSite,
     loadSmsProviderStatuses,
     saveDispatch,
     saveReview,
@@ -282,7 +329,6 @@ export function useReportsSectionState({
     setError,
     setNotice,
     setReviewRow,
-    sites,
   });
 
   useEffect(() => {
@@ -333,10 +379,10 @@ export function useReportsSectionState({
   }, []);
 
   const openDispatchModal = useCallback(
-    (row: ControllerReportRow) => {
-      const site = sites.find((item) => item.id === row.siteId);
+    async (row: ControllerReportRow) => {
       setDispatchRow(row);
-      setDispatchSmsPhone(site?.manager_phone || '');
+      setDispatchSite(null);
+      setDispatchSmsPhone('');
       setDispatchSmsMessage(
         [
           `[분기보고서] ${row.siteName}`,
@@ -344,8 +390,29 @@ export function useReportsSectionState({
           '메일함에서 첨부 보고서를 함께 확인해 주세요.',
         ].join('\n'),
       );
+
+      const cacheKey = `reports:site:${row.siteId}`;
+      const cachedSite = readAdminSessionCache<SafetySite>(currentUser.id, cacheKey);
+      if (cachedSite.value) {
+        setDispatchSite(cachedSite.value);
+        setDispatchSmsPhone(cachedSite.value.manager_phone || '');
+        return;
+      }
+
+      try {
+        const response = await fetchAdminSitesList({ limit: 1, offset: 0, siteId: row.siteId });
+        const site = response.rows[0] ?? null;
+        if (!site) {
+          return;
+        }
+        writeAdminSessionCache(currentUser.id, cacheKey, site);
+        setDispatchSite(site);
+        setDispatchSmsPhone(site.manager_phone || '');
+      } catch (nextError) {
+        console.error('Failed to load report dispatch site detail', nextError);
+      }
     },
-    [sites],
+    [currentUser.id],
   );
 
   const openReportRow = useCallback(
@@ -392,6 +459,9 @@ export function useReportsSectionState({
     assigneeFilter,
     assigneeOptions,
     buildManualDispatchPayload,
+    bulkDispatchSent,
+    bulkOwnerAssign,
+    bulkQuality,
     dateFrom,
     dateTo,
     dispatchRow,
@@ -411,6 +481,7 @@ export function useReportsSectionState({
     openReportRow,
     openReviewModal,
     qualityFilter,
+    query,
     reportType,
     resetHeaderFilters,
     reviewForm,
@@ -421,7 +492,6 @@ export function useReportsSectionState({
     selectedKeys,
     selectedRows,
     sendDispatchSms,
-    toggleDispatchStatus,
     setAssigneeFilter: (value: string) => {
       setOffset(0);
       setAssigneeFilter(value);
@@ -469,10 +539,8 @@ export function useReportsSectionState({
     siteOptions,
     smsProviderStatuses,
     sort,
+    toggleDispatchStatus,
     total,
-    bulkDispatchSent,
-    bulkOwnerAssign,
-    bulkQuality,
-    query,
+    users,
   };
 }

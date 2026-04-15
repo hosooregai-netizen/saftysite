@@ -4,8 +4,7 @@ import AppModal from '@/components/ui/AppModal';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import type { Dispatch, SetStateAction } from 'react';
 import type { ControllerQualityStatus, ControllerReportRow } from '@/types/admin';
-import type { SafetyUser } from '@/types/backend';
-import type { ReportReviewForm } from './reportsSectionTypes';
+import type { ReportReviewForm, ReportsUserOption } from './reportsSectionTypes';
 
 interface ReportsReviewDialogProps {
   onClose: () => void;
@@ -13,7 +12,7 @@ interface ReportsReviewDialogProps {
   reviewForm: ReportReviewForm;
   reviewRow: ControllerReportRow | null;
   setReviewForm: Dispatch<SetStateAction<ReportReviewForm>>;
-  users: SafetyUser[];
+  users: ReportsUserOption[];
 }
 
 export function ReportsReviewDialog({

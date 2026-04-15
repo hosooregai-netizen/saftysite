@@ -12,7 +12,12 @@ import {
   updateSafetyUser,
   updateSafetyUserPassword,
 } from '@/lib/safetyApi/adminEndpoints';
-import { deleteAssignmentsById, hasValues } from '@/features/admin/lib/adminDashboardMutations';
+import {
+  deleteAssignmentsById,
+  hasValues,
+  loadAllSafetyAssignments,
+  loadAllSafetySites,
+} from '@/features/admin/lib/adminDashboardMutations';
 import type {
   ControllerDashboardData,
   SafetyHeadquarterInput,
@@ -88,7 +93,8 @@ export function buildAdminDashboardCrudActions({
     deleteUser: (id: string) =>
       runMutation(
         async (token) => {
-          const assignmentIds = data.assignments
+          const assignments = await loadAllSafetyAssignments(token);
+          const assignmentIds = assignments
             .filter((assignment) => assignment.user_id === id)
             .map((assignment) => assignment.id);
           await deleteAssignmentsById(token, assignmentIds, deactivateSafetyAssignment);
@@ -123,9 +129,13 @@ export function buildAdminDashboardCrudActions({
     deleteHeadquarter: (id: string) =>
       runMutation(
         async (token) => {
-          const relatedSites = data.sites.filter((site) => site.headquarter_id === id);
+          const [sites, assignments] = await Promise.all([
+            loadAllSafetySites(token),
+            loadAllSafetyAssignments(token),
+          ]);
+          const relatedSites = sites.filter((site) => site.headquarter_id === id);
           const relatedSiteIds = new Set(relatedSites.map((site) => site.id));
-          const assignmentIds = data.assignments
+          const assignmentIds = assignments
             .filter((assignment) => relatedSiteIds.has(assignment.site_id))
             .map((assignment) => assignment.id);
           await deleteAssignmentsById(token, assignmentIds, deactivateSafetyAssignment);
@@ -182,7 +192,8 @@ export function buildAdminDashboardCrudActions({
     deleteSite: (id: string) =>
       runMutation(
         async (token) => {
-          const assignmentIds = data.assignments
+          const assignments = await loadAllSafetyAssignments(token);
+          const assignmentIds = assignments
             .filter((assignment) => assignment.site_id === id)
             .map((assignment) => assignment.id);
           await deleteAssignmentsById(token, assignmentIds, deactivateSafetyAssignment);

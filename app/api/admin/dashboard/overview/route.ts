@@ -1,13 +1,17 @@
 import { NextResponse } from 'next/server';
 import {
-  fetchAdminCoreData,
   fetchAdminReportByKey,
   fetchAdminReports,
   fetchAdminOverviewServer,
   readRequiredAdminToken,
   SafetyServerApiError,
 } from '@/server/admin/safetyApiServer';
+import { getAdminDirectorySnapshot } from '@/server/admin/adminDirectorySnapshot';
 import { buildAdminOverviewResponse } from '@/server/admin/automation';
+import {
+  getCachedAdminOverviewRouteResponse,
+  setCachedAdminOverviewRouteResponse,
+} from '@/server/admin/overviewRouteCache';
 import { mapBackendOverviewResponse } from '@/server/admin/upstreamMappers';
 import type { SafetyReportListItem } from '@/types/backend';
 
@@ -45,11 +49,19 @@ function isCurrentQuarterTechnicalGuidanceReport(
 export async function GET(request: Request): Promise<Response> {
   try {
     const token = readRequiredAdminToken(request);
-    const [rawOverview, data, reports] = await Promise.all([
+    const cached = getCachedAdminOverviewRouteResponse(request);
+    if (cached) {
+      return NextResponse.json(cached);
+    }
+    const [rawOverview, directorySnapshot, reports] = await Promise.all([
       fetchAdminOverviewServer(token, request),
-      fetchAdminCoreData(token, request),
+      getAdminDirectorySnapshot(token, request),
       fetchAdminReports(token, request),
     ]);
+    const data = {
+      ...directorySnapshot.data,
+      contentItems: [],
+    };
     const upstreamOverview = mapBackendOverviewResponse(rawOverview);
     const currentQuarterKey = formatQuarterKey(new Date());
     const materialReportKeys = reports
@@ -65,7 +77,7 @@ export async function GET(request: Request): Promise<Response> {
     );
     const visibleSiteIds = new Set(data.sites.map((site) => site.id));
 
-    return NextResponse.json({
+    const payload = {
       ...upstreamOverview,
       alerts: upstreamOverview.alerts.filter(
         (alert) => !alert.siteId || visibleSiteIds.has(alert.siteId),
@@ -83,7 +95,10 @@ export async function GET(request: Request): Promise<Response> {
       summaryRows: normalizedOverview.summaryRows,
       unsentReportRows: normalizedOverview.unsentReportRows,
       workerLoadRows: normalizedOverview.workerLoadRows,
-    });
+    };
+    setCachedAdminOverviewRouteResponse(request, payload);
+
+    return NextResponse.json(payload);
   } catch (error) {
     if (error instanceof SafetyServerApiError) {
       return NextResponse.json({ error: error.message }, { status: error.status });

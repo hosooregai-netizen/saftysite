@@ -3,6 +3,9 @@ import {
   proxySafetyApiRequest,
 } from '@/lib/safetyApi/proxy';
 import { refreshAdminAnalyticsSnapshot } from '@/server/admin/analyticsSnapshot';
+import { invalidateAdminDirectorySnapshot } from '@/server/admin/adminDirectorySnapshot';
+import { invalidateAdminOverviewRouteCache } from '@/server/admin/overviewRouteCache';
+import { invalidateAdminReportsRouteCache } from '@/server/admin/reportsRouteCache';
 import { refreshAdminScheduleSnapshot } from '@/server/admin/scheduleSnapshot';
 import { readRequiredAdminToken } from '@/server/admin/safetyApiServer';
 
@@ -39,6 +42,29 @@ function shouldRefreshAdminSchedules(path: string[], method: string) {
   return root === 'assignments' || root === 'headquarters' || root === 'sites' || root === 'users';
 }
 
+function shouldInvalidateAdminDirectory(path: string[], method: string) {
+  const normalizedMethod = method.toUpperCase();
+  if (!['POST', 'PATCH', 'PUT', 'DELETE'].includes(normalizedMethod)) {
+    return false;
+  }
+
+  const [root] = path;
+  return root === 'assignments' || root === 'headquarters' || root === 'sites' || root === 'users';
+}
+
+function shouldInvalidateAdminReports(path: string[], method: string) {
+  const normalizedMethod = method.toUpperCase();
+  if (!['POST', 'PATCH', 'PUT', 'DELETE'].includes(normalizedMethod)) {
+    return false;
+  }
+
+  const [root, second] = path;
+  if (root === 'reports') {
+    return true;
+  }
+  return root === 'assignments' || root === 'headquarters' || root === 'sites' || root === 'users' || second === 'dispatch-policy';
+}
+
 async function handleRequest(
   request: Request,
   context: SafetyRouteContext
@@ -62,6 +88,15 @@ async function handleRequest(
     } catch {
       // Snapshot refresh is best effort for proxy writes.
     }
+  }
+
+  if (response.ok && shouldInvalidateAdminDirectory(path, request.method)) {
+    invalidateAdminDirectorySnapshot();
+  }
+
+  if (response.ok && shouldInvalidateAdminReports(path, request.method)) {
+    invalidateAdminReportsRouteCache();
+    invalidateAdminOverviewRouteCache();
   }
 
   return response;

@@ -11,6 +11,7 @@ import { formatSyncTimestamp } from './overviewSectionHelpers';
 import { useAdminOverviewSectionState } from './useAdminOverviewSectionState';
 
 interface AdminOverviewSectionProps {
+  currentUserId: string;
   data: ControllerDashboardData;
   onUpdateSiteDispatchPolicy?: (
     siteId: string,
@@ -20,11 +21,12 @@ interface AdminOverviewSectionProps {
 }
 
 export function AdminOverviewSection({
+  currentUserId,
   data,
   onUpdateSiteDispatchPolicy,
   reports,
 }: AdminOverviewSectionProps) {
-  const state = useAdminOverviewSectionState(data, reports, {
+  const state = useAdminOverviewSectionState(currentUserId, data, reports, {
     onUpdateSiteDispatchPolicy,
   });
 

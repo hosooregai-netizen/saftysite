@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { refreshAdminAnalyticsSnapshot } from '@/server/admin/analyticsSnapshot';
+import { getAdminDirectorySnapshot } from '@/server/admin/adminDirectorySnapshot';
 import { refreshAdminScheduleSnapshot } from '@/server/admin/scheduleSnapshot';
 import {
-  fetchAdminCoreData,
   readRequiredAdminToken,
   SafetyServerApiError,
   updateAdminSite,
@@ -18,7 +18,11 @@ export async function POST(
   try {
     const token = readRequiredAdminToken(request);
     const { siteId } = await context.params;
-    const data = await fetchAdminCoreData(token, request);
+    const directorySnapshot = await getAdminDirectorySnapshot(token, request);
+    const data = {
+      ...directorySnapshot.data,
+      contentItems: [],
+    };
     const site = data.sites.find((item) => item.id === siteId);
     if (!site) {
       return NextResponse.json({ error: '현장을 찾지 못했습니다.' }, { status: 404 });

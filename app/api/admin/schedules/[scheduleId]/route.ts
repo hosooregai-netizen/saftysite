@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { refreshAdminAnalyticsSnapshot } from '@/server/admin/analyticsSnapshot';
+import { getAdminDirectorySnapshot } from '@/server/admin/adminDirectorySnapshot';
 import { refreshAdminScheduleSnapshot } from '@/server/admin/scheduleSnapshot';
 import {
-  fetchAdminCoreData,
   fetchCurrentSafetyUserServer,
   readRequiredAdminToken,
   SafetyServerApiError,
@@ -25,7 +25,11 @@ export async function PATCH(
     const token = readRequiredAdminToken(request);
     const { scheduleId } = await context.params;
     const payload = (await request.json()) as Partial<SafetyInspectionSchedule>;
-    const data = await fetchAdminCoreData(token, request);
+    const directorySnapshot = await getAdminDirectorySnapshot(token, request);
+    const data = {
+      ...directorySnapshot.data,
+      contentItems: [],
+    };
     const currentUser = await fetchCurrentSafetyUserServer(token, request);
     const { memo: scheduleMemo, schedule, previousSchedule, site } = updateSingleSchedule(
       data,

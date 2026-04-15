@@ -310,7 +310,24 @@ export async function fetchAdminCoreData(
   token: string,
   request: Request | null = null,
 ): Promise<ControllerDashboardData> {
-  const [users, rawHeadquarters, rawSites, assignments, contentItems] = await Promise.all([
+  const [directoryData, contentItems] = await Promise.all([
+    fetchAdminDirectoryData(token, request),
+    fetchAllAdminPages<SafetyContentItem>(token, request, (limit, offset) =>
+      withQuery('/content-items', { active_only: true, limit: Math.min(limit, CONTENT_LIST_LIMIT), offset }),
+    ),
+  ]);
+
+  return {
+    contentItems,
+    ...directoryData,
+  };
+}
+
+export async function fetchAdminDirectoryData(
+  token: string,
+  request: Request | null = null,
+): Promise<Pick<ControllerDashboardData, 'assignments' | 'headquarters' | 'sites' | 'users'>> {
+  const [users, rawHeadquarters, rawSites, assignments] = await Promise.all([
     fetchAllAdminPages<SafetyUser>(token, request, (limit, offset) =>
       withQuery('/users', { active_only: true, limit, offset }),
     ),
@@ -329,17 +346,15 @@ export async function fetchAdminCoreData(
     fetchAllAdminPages<SafetyAssignment>(token, request, (limit, offset) =>
       withQuery('/assignments', { active_only: true, limit, offset }),
     ),
-    fetchAllAdminPages<SafetyContentItem>(token, request, (limit, offset) =>
-      withQuery('/content-items', { active_only: true, limit: Math.min(limit, CONTENT_LIST_LIMIT), offset }),
-    ),
   ]);
   const headquarters = normalizeHeadquarterList(rawHeadquarters);
   const sites = normalizeSiteList(rawSites, headquarters);
   const visibleSiteIds = new Set(sites.map((site) => normalizeText(site.id)));
 
   return {
-    assignments: assignments.filter((assignment) => visibleSiteIds.has(normalizeText(assignment.site_id))),
-    contentItems,
+    assignments: assignments.filter((assignment) =>
+      visibleSiteIds.has(normalizeText(assignment.site_id)),
+    ),
     headquarters,
     sites,
     users,
@@ -495,8 +510,7 @@ export function fetchAdminReportsViewServer(
   );
 
   return Promise.all([
-    fetchSafetyHeadquartersServer(token, request),
-    fetchSafetySitesServer(token, request),
+    fetchAdminDirectoryData(token, request),
     requestSafetyAdminServer<SafetyBackendAdminReportsResponse>(
       withQuery('/admin/reports', {
         ...params,
@@ -507,7 +521,8 @@ export function fetchAdminReportsViewServer(
       token,
       request,
     ),
-  ]).then(([headquarters, sites, response]) => {
+  ]).then(([directoryData, response]) => {
+    const { headquarters, sites } = directoryData;
     const visibleSiteIds = buildVisibleAdminSiteIdSet(sites, headquarters);
     const rows = response.rows.filter((row) => {
       const siteId = normalizeText(row.site_id);

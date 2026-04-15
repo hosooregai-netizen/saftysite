@@ -1,14 +1,15 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
-import { SitesSection } from '@/features/admin/sections/sites/SitesSection';
+import {
+  readAdminSessionCache,
+  writeAdminSessionCache,
+} from '@/features/admin/lib/adminSessionCache';
+import { fetchAdminHeadquartersList, fetchAdminSitesList } from '@/lib/admin/apiClient';
 import { getSiteStatusLabel } from '@/lib/admin';
-import type { SafetySite, SafetyUser } from '@/types/backend';
 import type {
-  SafetyAssignment,
-  SafetyHeadquarter,
   SafetyHeadquarterInput,
   SafetyHeadquarterUpdateInput,
   SafetySiteInput,
@@ -20,6 +21,7 @@ import { SiteManagementMainPanel } from './SiteManagementMainPanel';
 import { HeadquartersTable } from './HeadquartersTable';
 import { HeadquarterEditorModal } from './HeadquarterEditorModal';
 import { useHeadquartersSectionState } from './useHeadquartersSectionState';
+import { SitesSection } from '../sites/SitesSection';
 
 function normalizeHeadquarterValue(value: string | null | undefined) {
   return String(value ?? '').trim();
@@ -27,7 +29,7 @@ function normalizeHeadquarterValue(value: string | null | undefined) {
 
 function validateHeadquarterSubmit(
   form: ReturnType<typeof useHeadquartersSectionState>['form'],
-  headquarters: SafetyHeadquarter[],
+  headquarters: import('@/types/controller').SafetyHeadquarter[],
   editingId: string | null,
 ) {
   const maxLengthChecks: Array<[string, string, number]> = [
@@ -76,14 +78,11 @@ function validateHeadquarterSubmit(
 }
 
 interface HeadquartersSectionProps {
-  assignments: SafetyAssignment[];
   busy: boolean;
   canDelete: boolean;
-  headquarters: SafetyHeadquarter[];
+  currentUserId: string;
   selectedHeadquarterId: string | null;
   selectedSiteId: string | null;
-  sites: SafetySite[];
-  users: SafetyUser[];
   onClearHeadquarterSelection: () => void;
   onClearSiteSelection: () => void;
   onCreate: (input: SafetyHeadquarterInput) => Promise<void>;
@@ -96,24 +95,18 @@ interface HeadquartersSectionProps {
   onUpdateSite: (id: string, input: SafetySiteUpdateInput) => Promise<void>;
   onAssignFieldAgent: (siteId: string, userId: string) => Promise<void>;
   onUnassignFieldAgent: (siteId: string, userId: string) => Promise<void>;
-  onReload?: (options?: {
-    force?: boolean;
-    includeContent?: boolean;
-    includeReports?: boolean;
-  }) => Promise<void>;
 }
 
 export function HeadquartersSection(props: HeadquartersSectionProps) {
   const {
-    assignments,
     busy,
     canDelete,
-    headquarters,
+    currentUserId,
     selectedHeadquarterId,
     selectedSiteId,
-    sites,
-    users,
     onAssignFieldAgent,
+    onClearHeadquarterSelection,
+    onClearSiteSelection,
     onCreate,
     onCreateSite,
     onDelete,
@@ -124,29 +117,128 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
     onUpdate,
     onUpdateSite,
   } = props;
-
   const searchParams = useSearchParams();
-  const state = useHeadquartersSectionState(headquarters, busy);
-  const selectedHeadquarter = useMemo(
-    () => headquarters.find((item) => item.id === selectedHeadquarterId) ?? null,
-    [headquarters, selectedHeadquarterId],
-  );
-  const selectedSite = useMemo(
+  const [rows, setRows] = useState<import('@/types/controller').SafetyHeadquarter[]>([]);
+  const [total, setTotal] = useState(0);
+  const [summary, setSummary] = useState({
+    completedCount: 0,
+    contactGapCount: 0,
+    memoGapCount: 0,
+    registrationGapCount: 0,
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [selectedHeadquarter, setSelectedHeadquarter] =
+    useState<import('@/types/controller').SafetyHeadquarter | null>(null);
+  const [selectedSite, setSelectedSite] = useState<import('@/types/backend').SafetySite | null>(null);
+  const [selectedHeadquarterSites, setSelectedHeadquarterSites] = useState<
+    import('@/types/backend').SafetySite[]
+  >([]);
+  const state = useHeadquartersSectionState(rows, busy);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const requestKey = useMemo(
     () =>
-      sites.find(
-        (item) =>
-          item.id === selectedSiteId &&
-          (!selectedHeadquarter || item.headquarter_id === selectedHeadquarter.id),
-      ) ?? null,
-    [selectedHeadquarter, selectedSiteId, sites],
+      JSON.stringify({
+        page: state.page,
+        query: state.query.trim(),
+        sort: state.sort,
+      }),
+    [state.page, state.query, state.sort],
   );
-  const headquarterSites = useMemo(
-    () =>
-      selectedHeadquarter
-        ? sites.filter((site) => site.headquarter_id === selectedHeadquarter.id)
-        : [],
-    [selectedHeadquarter, sites],
-  );
+
+  const refreshHeadquarterList = async (targetPage = state.page) => {
+    const response = await fetchAdminHeadquartersList({
+      limit: 30,
+      offset: (targetPage - 1) * 30,
+      query: state.query.trim(),
+      sortBy: state.sort.key,
+      sortDir: state.sort.direction,
+    });
+    writeAdminSessionCache(currentUserId, `headquarters:list:${requestKey}`, response);
+    setRows(response.rows);
+    setTotal(response.total);
+    setSummary(response.summary);
+  };
+
+  useEffect(() => {
+    const cached = readAdminSessionCache<import('@/types/admin').SafetyAdminHeadquarterListResponse>(
+      currentUserId,
+      `headquarters:list:${requestKey}`,
+    );
+    if (cached.value) {
+      setRows(cached.value.rows);
+      setTotal(cached.value.total);
+      setSummary(cached.value.summary);
+    }
+    if (cached.isFresh && cached.value) {
+      setIsLoading(false);
+      return;
+    }
+
+    abortControllerRef.current?.abort();
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+    setIsLoading(true);
+
+    void fetchAdminHeadquartersList(
+      {
+        limit: 30,
+        offset: (state.page - 1) * 30,
+        query: state.query.trim(),
+        sortBy: state.sort.key,
+        sortDir: state.sort.direction,
+      },
+      { signal: abortController.signal },
+    )
+      .then((response) => {
+        writeAdminSessionCache(currentUserId, `headquarters:list:${requestKey}`, response);
+        setRows(response.rows);
+        setTotal(response.total);
+        setSummary(response.summary);
+      })
+      .catch((error) => {
+        if (!abortController.signal.aborted) {
+          console.error('Failed to load headquarters list', error);
+        }
+      })
+      .finally(() => {
+        if (!abortController.signal.aborted) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => abortController.abort();
+  }, [currentUserId, requestKey, state.page, state.query, state.sort.direction, state.sort.key]);
+
+  useEffect(() => {
+    if (!selectedHeadquarterId) {
+      setSelectedHeadquarter(null);
+      setSelectedHeadquarterSites([]);
+      return;
+    }
+    void fetchAdminHeadquartersList({ id: selectedHeadquarterId, limit: 1, offset: 0 }).then((response) => {
+      setSelectedHeadquarter(response.rows[0] ?? null);
+    });
+    void fetchAdminSitesList({
+      headquarterId: selectedHeadquarterId,
+      limit: 5000,
+      offset: 0,
+      sortBy: 'last_visit_date',
+      sortDir: 'desc',
+    }).then((response) => {
+      setSelectedHeadquarterSites(response.rows);
+    });
+  }, [selectedHeadquarterId]);
+
+  useEffect(() => {
+    if (!selectedSiteId) {
+      setSelectedSite(null);
+      return;
+    }
+    void fetchAdminSitesList({ limit: 1, offset: 0, siteId: selectedSiteId }).then((response) => {
+      setSelectedSite(response.rows[0] ?? null);
+    });
+  }, [selectedSiteId]);
+
   const siteStatusFilter = useMemo(() => {
     const value = searchParams.get('siteStatus');
     return value === 'all' || value === 'planned' || value === 'active' || value === 'closed'
@@ -157,8 +249,9 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
   const autoEditSiteId = searchParams.get('editSiteId');
   const siteStatusTitle =
     siteStatusFilter === 'all' ? '현장 목록' : `${getSiteStatusLabel(siteStatusFilter)} 현장`;
+  const totalPages = Math.max(1, Math.ceil(total / 30));
 
-  if (busy && headquarters.length === 0 && !selectedHeadquarter && !hasSiteStatusScope) {
+  if (isLoading && rows.length === 0 && !selectedHeadquarter && !hasSiteStatusScope) {
     return (
       <section className={`${styles.sectionCard} ${styles.listSectionCard}`}>
         <div className={styles.sectionHeader}>
@@ -184,29 +277,28 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
   const submit = async () => {
     if (state.editingId === 'create' && !state.isCreateReady) return;
     if (state.editingId !== 'create' && !state.form.name.trim()) return;
-    const validationMessage = validateHeadquarterSubmit(state.form, headquarters, state.editingId);
+    const validationMessage = validateHeadquarterSubmit(state.form, rows, state.editingId);
     if (validationMessage) {
       window.alert(validationMessage);
       return;
     }
     const payload = state.buildPayload();
-
     if (state.editingId === 'create') {
       await onCreate(payload);
     } else if (state.editingId) {
       await onUpdate(state.editingId, payload);
     }
-
     state.closeModal();
+    await refreshHeadquarterList();
   };
 
-  const handleDeleteHeadquarter = async (item: SafetyHeadquarter) => {
+  const handleDeleteHeadquarter = async (item: import('@/types/controller').SafetyHeadquarter) => {
     const confirmed = window.confirm(
       `'${item.name}' 사업장을 삭제하시겠습니까?\n연결된 현장과 현장 배정 정보도 함께 정리되고, 이 작업은 되돌릴 수 없습니다.`,
     );
-
     if (!confirmed) return;
     await onDelete(item.id);
+    await refreshHeadquarterList();
   };
 
   return (
@@ -214,31 +306,74 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
       {!selectedHeadquarter && !hasSiteStatusScope ? (
         <section className={`${styles.sectionCard} ${styles.listSectionCard}`}>
           <HeadquartersTable
-            busy={busy}
+            busy={busy || isLoading}
             canDelete={canDelete}
-            exportHeadquarters={state.sortedHeadquarters}
-            filteredHeadquarters={state.pagedHeadquarters}
+            filteredHeadquarters={rows}
+            summary={summary}
             page={state.page}
             onCreateRequest={state.openCreate}
             onDeleteRequest={handleDeleteHeadquarter}
             onEditRequest={state.openEdit}
+            onExportRequest={() => {
+              void (async () => {
+                const response = await fetchAdminHeadquartersList({
+                  limit: 5000,
+                  offset: 0,
+                  query: state.query.trim(),
+                  sortBy: state.sort.key,
+                  sortDir: state.sort.direction,
+                });
+                const { exportAdminWorkbook } = await import('@/lib/admin/exportClient');
+                void exportAdminWorkbook('headquarters', [
+                  {
+                    name: '사업장',
+                    columns: [
+                      { key: 'name', label: '회사명' },
+                      { key: 'management_number', label: '사업장관리번호' },
+                      { key: 'opening_number', label: '사업장개시번호' },
+                      { key: 'business_registration_no', label: '사업자등록번호' },
+                      { key: 'corporate_registration_no', label: '법인등록번호' },
+                      { key: 'license_no', label: '건설업면허/등록번호' },
+                      { key: 'contact_name', label: '본사 담당자명' },
+                      { key: 'contact_phone', label: '대표 전화' },
+                      { key: 'address', label: '본사 주소' },
+                      { key: 'memo', label: '운영 메모' },
+                      { key: 'updated_at', label: '수정일' },
+                    ],
+                    rows: response.rows.map((item) => ({
+                      address: item.address || '',
+                      business_registration_no: item.business_registration_no || '',
+                      contact_name: item.contact_name || '',
+                      contact_phone: item.contact_phone || '',
+                      corporate_registration_no: item.corporate_registration_no || '',
+                      license_no: item.license_no || '',
+                      management_number: item.management_number || '',
+                      memo: item.memo || '',
+                      name: item.name,
+                      opening_number: item.opening_number || '',
+                      updated_at: item.updated_at,
+                    })),
+                  },
+                ]);
+              })();
+            }}
             onOpenSitesRequest={(item) => onSelectHeadquarter(item.id)}
             onPageChange={state.setPage}
             onQueryChange={state.setQuery}
             onSortChange={state.setSort}
             query={state.query}
             sort={state.sort}
-            totalCount={state.sortedHeadquarters.length}
-            totalPages={state.totalPages}
+            totalCount={total}
+            totalPages={totalPages}
           />
         </section>
       ) : !selectedHeadquarter ? (
         <SitesSection
-          assignments={assignments}
           autoEditSiteId={autoEditSiteId}
           busy={busy}
           canDelete={canDelete}
-          headquarters={headquarters}
+          currentUserId={currentUserId}
+          emptyMessage="조건에 맞는 현장이 없습니다."
           initialStatusFilter={siteStatusFilter}
           onAssignFieldAgent={onAssignFieldAgent}
           onCreate={onCreateSite}
@@ -246,53 +381,74 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
           onSelectSiteEntry={(site) => onSelectSite(site.headquarter_id, site.id)}
           onUnassignFieldAgent={onUnassignFieldAgent}
           onUpdate={onUpdateSite}
+          showHeader
           showHeadquarterColumn
-          sites={sites}
           title={siteStatusTitle}
-          users={users}
         />
       ) : selectedSite ? (
-        <SiteManagementMainPanel
-          headquarter={selectedHeadquarter}
-          site={selectedSite}
-        />
-      ) : (
-        <div className={styles.contentStack}>
+        <>
           <HeadquarterSummaryPanel
             headquarter={selectedHeadquarter}
-            sites={headquarterSites}
+            sites={selectedHeadquarterSites}
             onEdit={() => state.openEdit(selectedHeadquarter)}
           />
+          <SiteManagementMainPanel
+            headquarter={selectedHeadquarter}
+            site={selectedSite}
+          />
           <SitesSection
-            assignments={assignments}
             autoEditSiteId={autoEditSiteId}
             busy={busy}
             canDelete={canDelete}
-            headquarters={headquarters}
-            initialStatusFilter={siteStatusFilter}
+            currentUserId={currentUserId}
+            emptyMessage="등록된 현장이 없습니다."
+            initialStatusFilter="all"
             lockedHeadquarterId={selectedHeadquarter.id}
             onAssignFieldAgent={onAssignFieldAgent}
             onCreate={onCreateSite}
             onDelete={onDeleteSite}
-            onSelectSiteEntry={(site) => onSelectSite(selectedHeadquarter.id, site.id)}
+            onSelectSiteEntry={(site) => onSelectSite(site.headquarter_id, site.id)}
             onUnassignFieldAgent={onUnassignFieldAgent}
             onUpdate={onUpdateSite}
             showHeadquarterColumn={false}
-            sites={headquarterSites}
-            title={siteStatusTitle}
-            users={users}
+            showHeader={false}
           />
-        </div>
+        </>
+      ) : (
+        <>
+          <HeadquarterSummaryPanel
+            headquarter={selectedHeadquarter}
+            sites={selectedHeadquarterSites}
+            onEdit={() => state.openEdit(selectedHeadquarter)}
+          />
+          <SitesSection
+            autoEditSiteId={autoEditSiteId}
+            busy={busy}
+            canDelete={canDelete}
+            currentUserId={currentUserId}
+            emptyMessage="등록된 현장이 없습니다."
+            initialStatusFilter="all"
+            lockedHeadquarterId={selectedHeadquarter.id}
+            onAssignFieldAgent={onAssignFieldAgent}
+            onCreate={onCreateSite}
+            onDelete={onDeleteSite}
+            onSelectSiteEntry={(site) => onSelectSite(site.headquarter_id, site.id)}
+            onUnassignFieldAgent={onUnassignFieldAgent}
+            onUpdate={onUpdateSite}
+            showHeadquarterColumn={false}
+            showHeader={false}
+          />
+        </>
       )}
 
       <HeadquarterEditorModal
         busy={busy}
-        canSubmit={state.editingId !== 'create' || state.isCreateReady}
+        canSubmit={state.isCreateReady}
         editingId={state.editingId}
         form={state.form}
         onClose={state.closeModal}
         onFormChange={state.setForm}
-        onSubmit={submit}
+        onSubmit={() => void submit()}
         open={state.isOpen}
       />
     </div>

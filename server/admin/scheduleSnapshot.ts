@@ -11,7 +11,7 @@ import {
   buildAdminScheduleRows,
   buildAvailableScheduleMonths,
 } from '@/server/admin/automation';
-import { fetchAdminCoreData } from '@/server/admin/safetyApiServer';
+import { getAdminDirectorySnapshot } from '@/server/admin/adminDirectorySnapshot';
 
 interface ScheduleSourceSnapshot {
   data: ControllerDashboardData;
@@ -20,15 +20,29 @@ interface ScheduleSourceSnapshot {
 }
 
 const SNAPSHOT_KEY = '__SAFETY_ADMIN_SCHEDULE_SOURCE_SNAPSHOT__';
+const SNAPSHOT_TTL_MS = 1000 * 60;
 
 function getSnapshotStore() {
   const globalRecord = globalThis as typeof globalThis & {
-    [SNAPSHOT_KEY]?: ScheduleSourceSnapshot | null;
+    [SNAPSHOT_KEY]?: {
+      promise: Promise<ScheduleSourceSnapshot> | null;
+      snapshot: ScheduleSourceSnapshot | null;
+    };
   };
   if (!(SNAPSHOT_KEY in globalRecord)) {
-    globalRecord[SNAPSHOT_KEY] = null;
+    globalRecord[SNAPSHOT_KEY] = {
+      promise: null,
+      snapshot: null,
+    };
   }
-  return globalRecord;
+  return globalRecord[SNAPSHOT_KEY]!;
+}
+
+function isFresh(snapshot: ScheduleSourceSnapshot | null) {
+  if (!snapshot) return false;
+  const refreshedAt = new Date(snapshot.refreshedAt).getTime();
+  if (Number.isNaN(refreshedAt)) return false;
+  return Date.now() - refreshedAt < SNAPSHOT_TTL_MS;
 }
 
 export async function refreshAdminScheduleSnapshot(
@@ -36,14 +50,26 @@ export async function refreshAdminScheduleSnapshot(
   request: Request | null = null,
   today = new Date(),
 ) {
-  const data = await fetchAdminCoreData(token, request);
-  const snapshot: ScheduleSourceSnapshot = {
-    data,
-    refreshedAt: new Date().toISOString(),
-    rows: buildAdminScheduleRows(data, today),
-  };
-  getSnapshotStore()[SNAPSHOT_KEY] = snapshot;
-  return snapshot;
+  const store = getSnapshotStore();
+  const nextPromise = getAdminDirectorySnapshot(token, request)
+    .then((directorySnapshot) => {
+      const data: ControllerDashboardData = {
+        ...directorySnapshot.data,
+        contentItems: [],
+      };
+      const snapshot: ScheduleSourceSnapshot = {
+        data,
+        refreshedAt: new Date().toISOString(),
+        rows: buildAdminScheduleRows(data, today),
+      };
+      store.snapshot = snapshot;
+      return snapshot;
+    })
+    .finally(() => {
+      store.promise = null;
+    });
+  store.promise = nextPromise;
+  return nextPromise;
 }
 
 export async function getAdminScheduleSnapshot(
@@ -51,9 +77,12 @@ export async function getAdminScheduleSnapshot(
   request: Request | null = null,
   today = new Date(),
 ) {
-  const snapshot = getSnapshotStore()[SNAPSHOT_KEY];
-  if (snapshot) {
-    return snapshot;
+  const store = getSnapshotStore();
+  if (store.promise) {
+    return store.promise;
+  }
+  if (isFresh(store.snapshot)) {
+    return store.snapshot!;
   }
   return refreshAdminScheduleSnapshot(token, request, today);
 }

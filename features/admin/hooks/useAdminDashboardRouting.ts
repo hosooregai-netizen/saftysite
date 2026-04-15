@@ -49,14 +49,8 @@ export function useAdminDashboardRouting({
     [data.sites, selectedSiteId],
   );
   const shouldLoadContent = activeSection === 'content';
-  const shouldLoadReports =
-    activeSection === 'reports' || activeSection === 'mailbox';
-  const shouldLoadCoreData =
-    activeSection === 'users' ||
-    activeSection === 'headquarters' ||
-    activeSection === 'reports' ||
-    activeSection === 'mailbox' ||
-    activeSection === 'photos';
+  const shouldLoadReports = activeSection === 'mailbox';
+  const shouldLoadCoreData = activeSection === 'mailbox' || activeSection === 'photos';
 
   const replaceRoute = useCallback(
     (section: AdminSectionKey, query: AdminSectionQuery = {}) => {

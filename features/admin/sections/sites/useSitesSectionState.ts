@@ -1,17 +1,23 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import {
   downloadAdminSiteBasicMaterial,
   exportAdminWorkbook,
 } from '@/lib/admin/exportClient';
-import { normalizeSiteStatusForDisplay, formatCurrencyValue, getSiteStatusLabel } from '@/lib/admin';
-import { resolveSiteRevenueProfile } from '@/lib/admin/siteContractProfile';
+import { normalizeSiteStatusForDisplay, getSiteStatusLabel } from '@/lib/admin';
+import {
+  fetchAdminDirectoryLookups,
+  fetchAdminSitesList,
+} from '@/lib/admin/apiClient';
+import {
+  readAdminSessionCache,
+  writeAdminSessionCache,
+} from '@/features/admin/lib/adminSessionCache';
 import {
   EMPTY_FORM,
   buildSitePayload,
-  buildSiteSortComparator,
   createEditForm,
   isCreateReady,
   type SiteAssignmentFilter,
@@ -19,8 +25,8 @@ import {
   type SitesSectionProps,
 } from './siteSectionHelpers';
 import type { TableSortState } from '@/types/admin';
-import type { SafetyAssignment, SafetySiteInput, SafetySiteStatus, SafetySiteUpdateInput } from '@/types/controller';
-import type { SafetySite, SafetyUser } from '@/types/backend';
+import type { SafetySiteStatus, SafetySiteInput, SafetySiteUpdateInput } from '@/types/controller';
+import type { SafetySite } from '@/types/backend';
 
 const SITES_PAGE_SIZE = 50;
 
@@ -72,32 +78,30 @@ function validateSiteSubmit(
 }
 
 export function useSitesSectionState({
-  assignments,
   autoEditSiteId = null,
   busy,
-  headquarters,
+  currentUserId,
   initialStatusFilter = 'all',
   lockedHeadquarterId = null,
   onCreate,
   onDelete,
   onSelectSiteEntry,
   onUpdate,
-  sites,
-  users,
+  onAssignFieldAgent,
+  onUnassignFieldAgent,
 }: Pick<
   SitesSectionProps,
-  | 'assignments'
   | 'autoEditSiteId'
   | 'busy'
-  | 'headquarters'
+  | 'currentUserId'
   | 'initialStatusFilter'
   | 'lockedHeadquarterId'
+  | 'onAssignFieldAgent'
   | 'onCreate'
   | 'onDelete'
   | 'onSelectSiteEntry'
+  | 'onUnassignFieldAgent'
   | 'onUpdate'
-  | 'sites'
-  | 'users'
 >) {
   const router = useRouter();
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -112,72 +116,116 @@ export function useSitesSectionState({
   const [assignmentFilter, setAssignmentFilter] = useState<SiteAssignmentFilter>('all');
   const [form, setForm] = useState(EMPTY_FORM);
   const [lastAutoEditSiteId, setLastAutoEditSiteId] = useState<string | null>(null);
+  const [rows, setRows] = useState<SafetySite[]>([]);
+  const [total, setTotal] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [directoryLookups, setDirectoryLookups] = useState<
+    import('@/types/admin').SafetyAdminDirectoryLookupsResponse
+  >({
+    headquarters: [],
+    sites: [],
+    users: [],
+  });
   const deferredQuery = useDeferredValue(query);
-
-  const usersById = useMemo(() => new Map(users.map((user) => [user.id, user])), [users]);
-  const activeAssignmentsBySiteId = useMemo(() => {
-    const next = new Map<string, SafetyAssignment[]>();
-    assignments.forEach((assignment) => {
-      if (!assignment.is_active) return;
-      const current = next.get(assignment.site_id) ?? [];
-      current.push(assignment);
-      next.set(assignment.site_id, current);
-    });
-    return next;
-  }, [assignments]);
-  const assignmentSite = sites.find((site) => site.id === assignmentSiteId) || null;
-  const currentAssignments = assignmentSiteId ? activeAssignmentsBySiteId.get(assignmentSiteId) ?? [] : [];
-  const isOpen = editingId !== null;
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const requestKey = useMemo(
+    () =>
+      JSON.stringify({
+        assignmentFilter,
+        headquarterId: lockedHeadquarterId,
+        page,
+        query: deferredQuery.trim(),
+        sort,
+        statusFilter,
+      }),
+    [assignmentFilter, deferredQuery, lockedHeadquarterId, page, sort, statusFilter],
+  );
 
   useEffect(() => {
     setStatusFilter(initialStatusFilter);
   }, [initialStatusFilter]);
 
-  const activeFilterCount = (statusFilter !== 'all' ? 1 : 0) + (assignmentFilter !== 'all' ? 1 : 0);
+  useEffect(() => {
+    const cachedLookups = readAdminSessionCache<import('@/types/admin').SafetyAdminDirectoryLookupsResponse>(
+      currentUserId,
+      'directory-lookups',
+    );
+    if (cachedLookups.value) {
+      setDirectoryLookups(cachedLookups.value);
+    }
+    if (cachedLookups.isFresh && cachedLookups.value) {
+      return;
+    }
+    void fetchAdminDirectoryLookups()
+      .then((response) => {
+        writeAdminSessionCache(currentUserId, 'directory-lookups', response);
+        setDirectoryLookups(response);
+      })
+      .catch((error) => {
+        console.error('Failed to load admin directory lookups', error);
+      });
+  }, [currentUserId]);
 
-  const filteredSites = useMemo(() => {
-    const normalizedQuery = deferredQuery.trim().toLowerCase();
-    return sites.filter((site) => {
-      const siteAssignments = activeAssignmentsBySiteId.get(site.id) ?? [];
-      const assignedUsers = siteAssignments
-        .map((assignment) => usersById.get(assignment.user_id))
-        .filter((user): user is SafetyUser => Boolean(user));
-      const fallbackAssignedUser =
-        assignedUsers.length === 0 && site.assigned_user
-          ? usersById.get(site.assigned_user.id) ?? null
-          : null;
-      const allAssignedNames = assignedUsers.map((user) => user.name);
+  useEffect(() => {
+    const cached = readAdminSessionCache<import('@/types/admin').SafetyAdminSiteListResponse>(
+      currentUserId,
+      `sites:list:${requestKey}`,
+    );
+    if (cached.value) {
+      setRows(cached.value.rows);
+      setTotal(cached.value.total);
+    }
+    if (cached.isFresh && cached.value) {
+      setIsLoading(false);
+      return;
+    }
 
-      if (fallbackAssignedUser) allAssignedNames.push(fallbackAssignedUser.name);
-      const normalizedStatus = normalizeSiteStatusForDisplay(site.status);
-      if (statusFilter !== 'all' && normalizedStatus !== statusFilter) return false;
-      if (assignmentFilter === 'unassigned' && siteAssignments.length > 0) return false;
-      if (!normalizedQuery) return true;
+    abortControllerRef.current?.abort();
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+    setIsLoading(true);
 
-      const haystack = [
-        site.site_name,
-        site.headquarter_detail?.management_number ?? '',
-        site.project_kind ?? '',
-        site.site_address ?? '',
-        site.headquarter_detail?.name ?? site.headquarter?.name ?? '',
-        allAssignedNames.join(' '),
-      ]
-        .join(' ')
-        .toLowerCase();
-      return haystack.includes(normalizedQuery);
-    });
-  }, [activeAssignmentsBySiteId, assignmentFilter, deferredQuery, sites, statusFilter, usersById]);
+    void fetchAdminSitesList(
+      {
+        assignment: assignmentFilter,
+        headquarterId: lockedHeadquarterId ?? '',
+        limit: SITES_PAGE_SIZE,
+        offset: (page - 1) * SITES_PAGE_SIZE,
+        query: deferredQuery.trim(),
+        sortBy: sort.key,
+        sortDir: sort.direction,
+        status: statusFilter,
+      },
+      { signal: abortController.signal },
+    )
+      .then((response) => {
+        writeAdminSessionCache(currentUserId, `sites:list:${requestKey}`, response);
+        setRows(response.rows);
+        setTotal(response.total);
+      })
+      .catch((error) => {
+        if (!abortController.signal.aborted) {
+          console.error('Failed to load sites list', error);
+        }
+      })
+      .finally(() => {
+        if (!abortController.signal.aborted) {
+          setIsLoading(false);
+        }
+      });
 
-  const sortedSites = useMemo(
-    () => [...filteredSites].sort(buildSiteSortComparator(sort, activeAssignmentsBySiteId, usersById)),
-    [activeAssignmentsBySiteId, filteredSites, sort, usersById],
-  );
-  const totalPages = Math.max(1, Math.ceil(sortedSites.length / SITES_PAGE_SIZE));
+    return () => abortController.abort();
+  }, [assignmentFilter, currentUserId, deferredQuery, lockedHeadquarterId, page, requestKey, sort.direction, sort.key, statusFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(total / SITES_PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
-  const pagedSites = useMemo(() => {
-    const offset = (currentPage - 1) * SITES_PAGE_SIZE;
-    return sortedSites.slice(offset, offset + SITES_PAGE_SIZE);
-  }, [currentPage, sortedSites]);
+  const isOpen = editingId !== null;
+  const activeFilterCount = (statusFilter !== 'all' ? 1 : 0) + (assignmentFilter !== 'all' ? 1 : 0);
+  const assignmentSite = rows.find((site) => site.id === assignmentSiteId) || null;
+  const currentAssignedUserIds = assignmentSite
+    ? assignmentSite.assigned_users?.map((user) => user.id) ??
+      (assignmentSite.assigned_user ? [assignmentSite.assigned_user.id] : [])
+    : [];
 
   const openCreate = () => {
     setEditingId('create');
@@ -200,17 +248,46 @@ export function useSitesSectionState({
 
   useEffect(() => {
     if (!autoEditSiteId || busy || lastAutoEditSiteId === autoEditSiteId) return;
-    const matchedSite = sites.find((site) => site.id === autoEditSiteId);
-    if (!matchedSite) return;
-    openEdit(matchedSite);
-    setLastAutoEditSiteId(autoEditSiteId);
-  }, [autoEditSiteId, busy, lastAutoEditSiteId, sites]);
+    const matchedSite = rows.find((site) => site.id === autoEditSiteId);
+    if (matchedSite) {
+      openEdit(matchedSite);
+      setLastAutoEditSiteId(autoEditSiteId);
+      return;
+    }
+    void fetchAdminSitesList({
+      headquarterId: lockedHeadquarterId ?? '',
+      limit: 1,
+      offset: 0,
+      siteId: autoEditSiteId,
+    }).then((response) => {
+      const site = response.rows[0];
+      if (!site) return;
+      openEdit(site);
+      setLastAutoEditSiteId(autoEditSiteId);
+    });
+  }, [autoEditSiteId, busy, lastAutoEditSiteId, lockedHeadquarterId, rows]);
+
+  const refreshPage = async (targetPage = currentPage) => {
+    const response = await fetchAdminSitesList({
+      assignment: assignmentFilter,
+      headquarterId: lockedHeadquarterId ?? '',
+      limit: SITES_PAGE_SIZE,
+      offset: (targetPage - 1) * SITES_PAGE_SIZE,
+      query: deferredQuery.trim(),
+      sortBy: sort.key,
+      sortDir: sort.direction,
+      status: statusFilter,
+    });
+    writeAdminSessionCache(currentUserId, `sites:list:${requestKey}`, response);
+    setRows(response.rows);
+    setTotal(response.total);
+  };
 
   const submit = async () => {
     const payload = buildSitePayload(form, lockedHeadquarterId);
     if (editingId === 'create' && !isCreateReady(form, lockedHeadquarterId)) return;
     if (editingId !== 'create' && (!payload.headquarter_id || !payload.site_name)) return;
-    const validationMessage = validateSiteSubmit(form, sites, editingId);
+    const validationMessage = validateSiteSubmit(form, rows, editingId);
     if (validationMessage) {
       window.alert(validationMessage);
       return;
@@ -218,6 +295,7 @@ export function useSitesSectionState({
     if (editingId === 'create') await onCreate(payload as SafetySiteInput);
     else if (editingId) await onUpdate(editingId, payload as SafetySiteUpdateInput);
     closeModal();
+    await refreshPage();
   };
 
   const deleteSite = async (site: SafetySite) => {
@@ -226,6 +304,7 @@ export function useSitesSectionState({
     );
     if (!confirmed) return;
     await onDelete(site.id);
+    await refreshPage();
   };
 
   const openSiteEntry = (site: SafetySite) => {
@@ -244,8 +323,19 @@ export function useSitesSectionState({
     }
   };
 
-  const exportSites = () =>
-    void exportAdminWorkbook('sites', [
+  const exportSites = async () => {
+    const response = await fetchAdminSitesList({
+      assignment: assignmentFilter,
+      headquarterId: lockedHeadquarterId ?? '',
+      limit: 5000,
+      offset: 0,
+      query: deferredQuery.trim(),
+      sortBy: sort.key,
+      sortDir: sort.direction,
+      status: statusFilter,
+    });
+
+    return exportAdminWorkbook('sites', [
       {
         name: '현장',
         columns: [
@@ -258,123 +348,78 @@ export function useSitesSectionState({
           { key: 'labor_office', label: '노동관서' },
           { key: 'guidance_officer_name', label: '지도원' },
           { key: 'site_address', label: '소재지' },
-          { key: 'site_contact_email', label: '현장대리인 메일' },
-          { key: 'is_high_risk_site', label: '고위험 사업장' },
-          { key: 'project_amount', label: '공사금액' },
-          { key: 'project_start_date', label: '공사시작일' },
-          { key: 'project_end_date', label: '공사종료일' },
-          { key: 'project_scale', label: '공사규모' },
           { key: 'project_kind', label: '공사종류' },
-          { key: 'client_management_number', label: '발주자 사업장관리번호' },
-          { key: 'client_business_name', label: '발주자 사업자명' },
-          { key: 'client_representative_name', label: '발주자 대표자' },
-          { key: 'client_corporate_registration_no', label: '발주자 법인등록번호' },
-          { key: 'client_business_registration_no', label: '발주자 사업자등록번호' },
-          { key: 'order_type_division', label: '발주유형구분' },
-          { key: 'technical_guidance_kind', label: '기술지도 구분' },
-          { key: 'contract_type', label: '계약유형' },
-          { key: 'contract_status', label: '계약상태' },
-          { key: 'total_contract_amount', label: '기술지도 대가' },
-          { key: 'total_rounds', label: '기술지도 횟수' },
-          { key: 'per_visit_amount', label: '회차당 단가' },
-          { key: 'contract_start_date', label: '계약시작일' },
-          { key: 'contract_end_date', label: '계약종료일' },
-          { key: 'contract_signed_date', label: '계약 체결일' },
-          { key: 'contract_contact_name', label: '계약담당자' },
-          { key: 'inspector_name', label: '점검자' },
-          { key: 'manager_name', label: '현장소장명' },
-          { key: 'manager_phone', label: '현장소장 연락처' },
-          { key: 'memo', label: '운영 메모' },
-          { key: 'assigned_users', label: '배정 요원' },
-          { key: 'status', label: '현장 상태' },
+          { key: 'project_amount', label: '공사금액' },
+          { key: 'status', label: '상태' },
         ],
-        rows: sortedSites.map((site) => {
-          const siteAssignments = activeAssignmentsBySiteId.get(site.id) ?? [];
-          const revenueProfile = resolveSiteRevenueProfile(site);
-          const assignedUsers = siteAssignments
-            .map((assignment) => usersById.get(assignment.user_id))
-            .filter((user): user is SafetyUser => Boolean(user));
-
-          return {
-            assigned_users:
-              assignedUsers.length > 0
-                ? assignedUsers.map((user) => user.name).join(', ')
-                : site.assigned_user?.name || '',
-            contract_status: site.contract_status || '',
-            contract_type: site.contract_type || '',
-            headquarter_name: site.headquarter_detail?.name || site.headquarter?.name || '',
-            headquarter_management_number: site.headquarter_detail?.management_number || '',
-            headquarter_opening_number: site.headquarter_detail?.opening_number || '',
-            labor_office: site.labor_office || '',
-            guidance_officer_name: site.guidance_officer_name || '',
-            site_address: site.site_address || '',
-            site_contact_email: site.site_contact_email || '',
-            is_high_risk_site: site.is_high_risk_site ? '예' : '아니오',
-            management_number: site.management_number || '',
-            project_amount: formatCurrencyValue(site.project_amount),
-            project_start_date: site.project_start_date || '',
-            project_end_date: site.project_end_date || '',
-            project_scale: site.project_scale || '',
-            project_kind: site.project_kind || '',
-            client_management_number: site.client_management_number || '',
-            client_business_name: site.client_business_name || '',
-            client_representative_name: site.client_representative_name || '',
-            client_corporate_registration_no: site.client_corporate_registration_no || '',
-            client_business_registration_no: site.client_business_registration_no || '',
-            order_type_division: site.order_type_division || '',
-            technical_guidance_kind: site.technical_guidance_kind || '',
-            total_contract_amount: formatCurrencyValue(site.total_contract_amount),
-            total_rounds: site.total_rounds ?? '',
-            per_visit_amount:
-              revenueProfile.resolvedPerVisitAmount != null
-                ? `${formatCurrencyValue(revenueProfile.resolvedPerVisitAmount)}${
-                    revenueProfile.source === 'derived' ? ' (자동 계산)' : ''
-                  }`
-                : '',
-            contract_start_date: site.contract_start_date || '',
-            contract_end_date: site.contract_end_date || '',
-            contract_signed_date: site.contract_signed_date || site.contract_date || '',
-            contract_contact_name: site.contract_contact_name || '',
-            inspector_name: site.inspector_name || '',
-            manager_name: site.manager_name || '',
-            manager_phone: site.manager_phone || '',
-            memo: site.memo || '',
-            site_code: site.site_code || '',
-            site_name: site.site_name,
-            status: getSiteStatusLabel(site.status),
-          };
-        }),
+        rows: response.rows.map((site) => ({
+          guidance_officer_name: site.guidance_officer_name ?? '',
+          headquarter_management_number: site.headquarter_detail?.management_number ?? '',
+          headquarter_name: site.headquarter_detail?.name ?? site.headquarter?.name ?? '',
+          headquarter_opening_number: site.headquarter_detail?.opening_number ?? '',
+          labor_office: site.labor_office ?? '',
+          management_number: site.management_number ?? '',
+          project_amount: site.project_amount ?? '',
+          project_kind: site.project_kind ?? '',
+          site_address: site.site_address ?? '',
+          site_code: site.site_code ?? '',
+          site_name: site.site_name,
+          status: getSiteStatusLabel(site.status),
+        })),
       },
     ]);
+  };
+
+  const updateStatus = async (site: SafetySite, nextStatus: SafetySiteStatus) => {
+    if (normalizeSiteStatusForDisplay(site.status) === nextStatus) return;
+    await onUpdate(site.id, { status: nextStatus });
+    await refreshPage();
+  };
 
   const resetHeaderFilters = () => {
-    setStatusFilter(initialStatusFilter);
     setAssignmentFilter('all');
+    setStatusFilter('all');
   };
 
   return {
-    activeAssignmentsBySiteId,
     activeFilterCount,
     assignmentFilter,
     assignmentSite,
     closeModal,
-    currentAssignments,
+    currentAssignedUserIds,
+    currentPage,
     deleteSite,
+    directoryLookups,
     downloadBasicMaterial,
     editingId,
     exportSites,
     form,
-    headquarters,
+    headquarters: directoryLookups.headquarters,
     isCreateReady: isCreateReady(form, lockedHeadquarterId),
+    isLoading,
     isOpen,
     lockedHeadquarterId,
-    openAssignmentModal: setAssignmentSiteId,
+    onAssignUser: async (siteId: string, userId: string) => {
+      await onAssignFieldAgent(siteId, userId);
+      await refreshPage();
+    },
+    onUnassignUser: async (siteId: string, userId: string) => {
+      await onUnassignFieldAgent(siteId, userId);
+      await refreshPage();
+    },
+    openAssignmentModal: (siteId: string) => setAssignmentSiteId(siteId),
     openCreate,
     openEdit,
     openSiteEntry,
+    page: currentPage,
+    pagedSites: rows,
     query,
+    refreshPage,
     resetHeaderFilters,
-    setAssignmentFilter,
+    setAssignmentFilter: (value: SiteAssignmentFilter) => {
+      setPage(1);
+      setAssignmentFilter(value);
+    },
     setAssignmentSiteId,
     setForm,
     setPage: (nextPage: number) => {
@@ -392,15 +437,26 @@ export function useSitesSectionState({
       setPage(1);
       setStatusFilter(value);
     },
-    pagedSites,
-    page: currentPage,
-    sortedSites,
     sort,
+    sortedSites: rows,
     statusFilter,
     submit,
+    total,
     totalPages,
-    updateStatus: (site: SafetySite, status: SafetySiteStatus) => onUpdate(site.id, { status }),
-    users,
-    usersById,
+    updateStatus,
+    users: directoryLookups.users.map((user) => ({
+      auto_provisioned_from_excel: false,
+      created_at: '',
+      email: user.email,
+      id: user.id,
+      is_active: user.isActive,
+      last_login_at: null,
+      name: user.name,
+      organization_name: user.organizationName,
+      phone: user.phone,
+      position: user.position,
+      role: user.role,
+      updated_at: '',
+    })),
   };
 }

@@ -32,7 +32,6 @@ interface UseReportDispatchActionsInput {
   setError: (value: string | null) => void;
   setNotice: (value: string | null) => void;
   setReviewRow: (value: ControllerReportRow | null) => void;
-  sites: SafetySite[];
 }
 
 export function useReportDispatchActions({
@@ -50,7 +49,6 @@ export function useReportDispatchActions({
   setError,
   setNotice,
   setReviewRow,
-  sites,
 }: UseReportDispatchActionsInput) {
   const saveReview = useCallback(async () => {
     if (!reviewRow) return;
@@ -236,15 +234,11 @@ export function useReportDispatchActions({
     }
   }, [setError]);
 
-  const dispatchSite =
-    dispatchRow == null ? null : sites.find((site) => site.id === dispatchRow.siteId) || null;
-
   return {
     buildManualDispatchPayload,
     bulkDispatchSent,
     bulkOwnerAssign,
     bulkQuality,
-    dispatchSite,
     loadSmsProviderStatuses,
     saveDispatch,
     saveReview,

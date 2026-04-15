@@ -1,3 +1,10 @@
+import {
+  fetchSafetyAssignmentsPage,
+  fetchSafetySitesAdminPage,
+} from '@/lib/safetyApi/adminEndpoints';
+import type { SafetySite } from '@/types/backend';
+import type { SafetyAssignment } from '@/types/controller';
+
 type AssignmentPayloadOptions = {
   roleOnSite?: string;
   memo?: string | null;
@@ -44,3 +51,27 @@ export async function refreshAdminMasterData(
   await refreshMasterData();
 }
 
+async function fetchAllPages<T>(
+  fetchPage: (offset: number, limit: number) => Promise<T[]>,
+  limit = 500,
+) {
+  const rows: T[] = [];
+  let offset = 0;
+
+  while (true) {
+    const pageRows = await fetchPage(offset, limit);
+    rows.push(...pageRows);
+    if (pageRows.length < limit) {
+      return rows;
+    }
+    offset += limit;
+  }
+}
+
+export function loadAllSafetyAssignments(token: string): Promise<SafetyAssignment[]> {
+  return fetchAllPages((offset, limit) => fetchSafetyAssignmentsPage(token, { limit, offset }));
+}
+
+export function loadAllSafetySites(token: string): Promise<SafetySite[]> {
+  return fetchAllPages((offset, limit) => fetchSafetySitesAdminPage(token, { limit, offset }));
+}

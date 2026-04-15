@@ -5,30 +5,24 @@ import AppModal from '@/components/ui/AppModal';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import { isFieldAgentUserRole } from '@/lib/admin';
 import type { SafetySite, SafetyUser } from '@/types/backend';
-import type { SafetyAssignment } from '@/types/controller';
 
 interface SiteAssignmentModalProps {
   busy: boolean;
   open: boolean;
   site: SafetySite | null;
   users: SafetyUser[];
-  currentAssignments: SafetyAssignment[];
+  currentAssignedUserIds: string[];
   onClose: () => void;
   onAssign: (siteId: string, userId: string) => Promise<void>;
   onClear: (siteId: string, userId: string) => Promise<void>;
 }
 
 export function SiteAssignmentModal(props: SiteAssignmentModalProps) {
-  const { busy, open, site, users, currentAssignments, onClose, onAssign, onClear } = props;
+  const { busy, open, site, users, currentAssignedUserIds, onClose, onAssign, onClear } = props;
   const fieldAgents = users.filter((user) => isFieldAgentUserRole(user.role) && user.is_active);
   const activeAssignmentUserIds = useMemo(
-    () =>
-      new Set(
-        currentAssignments
-          .filter((assignment) => assignment.is_active)
-          .map((assignment) => assignment.user_id),
-      ),
-    [currentAssignments],
+    () => new Set(currentAssignedUserIds),
+    [currentAssignedUserIds],
   );
   const currentAssignedNames = fieldAgents
     .filter((user) => activeAssignmentUserIds.has(user.id))
@@ -118,4 +112,3 @@ export function SiteAssignmentModal(props: SiteAssignmentModalProps) {
     </AppModal>
   );
 }
-

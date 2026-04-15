@@ -20,8 +20,8 @@ import { generateInspectionHwpxBlob } from '@/lib/documents/inspection/hwpxClien
 import { readSafetyAuthToken } from '@/lib/safetyApi';
 import { formatDateOnly, formatDateTime } from './reportsSectionFilters';
 import type { ControllerReportRow, TableSortState } from '@/types/admin';
-import type { SafetyUser } from '@/types/backend';
 import type { InspectionSession } from '@/types/inspectionSession';
+import type { ReportsUserOption } from './reportsSectionTypes';
 
 interface UseReportDocumentActionsInput {
   assigneeFilter: string;
@@ -39,7 +39,7 @@ interface UseReportDocumentActionsInput {
   setNotice: (value: string | null) => void;
   siteFilter: string;
   sort: TableSortState;
-  users: SafetyUser[];
+  users: ReportsUserOption[];
 }
 
 export function useReportDocumentActions({

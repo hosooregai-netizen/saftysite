@@ -17,7 +17,7 @@ export function SitesSection(props: SitesSectionProps) {
         {props.showHeader !== false ? (
           <div className={styles.sectionHeaderTitleBlock}>
             <h2 className={styles.sectionTitle}>{props.title ?? '현장 목록'}</h2>
-            <div className={styles.sectionHeaderMeta}>총 {state.sortedSites.length}건</div>
+            <div className={styles.sectionHeaderMeta}>총 {state.total}건</div>
           </div>
         ) : (
           <div className={styles.sectionHeaderSpacer} />
@@ -40,7 +40,7 @@ export function SitesSection(props: SitesSectionProps) {
           <button
             type="button"
             className="app-button app-button-secondary"
-            onClick={state.exportSites}
+            onClick={() => void state.exportSites()}
             disabled={props.busy}
           >
             엑셀 내보내기
@@ -58,15 +58,25 @@ export function SitesSection(props: SitesSectionProps) {
 
       <div className={styles.sectionBody}>
         <div className={styles.tableShell}>
-          {state.sortedSites.length === 0 ? (
+          {state.isLoading && state.total === 0 ? (
+            <div className={styles.contentTableSkeleton} aria-hidden="true">
+              {Array.from({ length: 6 }).map((_, index) => (
+                <div key={`sites-skeleton-${index + 1}`} className={styles.contentTableSkeletonRow}>
+                  <span className={styles.contentTableSkeletonLine} />
+                  <span
+                    className={`${styles.contentTableSkeletonLine} ${styles.contentTableSkeletonLineMedium}`}
+                  />
+                </div>
+              ))}
+            </div>
+          ) : state.total === 0 ? (
             <div className={styles.tableEmpty}>
               {props.emptyMessage ?? '등록된 현장이 없습니다.'}
             </div>
           ) : (
             <SitesTable
-              busy={props.busy}
+              busy={props.busy || state.isLoading}
               canDelete={props.canDelete}
-              page={state.page}
               hasCustomEntry={Boolean(props.onSelectSiteEntry)}
               onDeleteSite={(site) => void state.deleteSite(site)}
               onDownloadBasicMaterial={(site) => void state.downloadBasicMaterial(site)}
@@ -76,12 +86,13 @@ export function SitesSection(props: SitesSectionProps) {
               onPageChange={state.setPage}
               onSortChange={state.setSort}
               onUpdateStatus={(site, status) => void state.updateStatus(site, status)}
+              page={state.page}
               showHeadquarterColumn={props.showHeadquarterColumn !== false}
               sites={state.pagedSites}
               sort={state.sort}
-              totalCount={state.sortedSites.length}
+              totalCount={state.total}
               totalPages={state.totalPages}
-              usersById={state.usersById}
+              usersById={new Map()}
             />
           )}
         </div>
@@ -103,14 +114,14 @@ export function SitesSection(props: SitesSectionProps) {
         open={Boolean(state.assignmentSite)}
         busy={props.busy}
         site={state.assignmentSite}
-        users={props.users}
-        currentAssignments={state.currentAssignments}
+        users={state.users}
+        currentAssignedUserIds={state.currentAssignedUserIds}
         onClose={() => state.setAssignmentSiteId(null)}
         onAssign={async (siteId, userId) => {
-          await props.onAssignFieldAgent(siteId, userId);
+          await state.onAssignUser(siteId, userId);
         }}
         onClear={async (siteId, userId) => {
-          await props.onUnassignFieldAgent(siteId, userId);
+          await state.onUnassignUser(siteId, userId);
         }}
       />
     </section>

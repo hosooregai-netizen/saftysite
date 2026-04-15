@@ -6,22 +6,18 @@ import {
   toNullableText,
 } from '@/lib/admin';
 import type { TableSortState } from '@/types/admin';
-import type { SafetySite, SafetyUser } from '@/types/backend';
 import type {
-  SafetyAssignment,
-  SafetyHeadquarter,
   SafetySiteInput,
   SafetySiteStatus,
   SafetySiteUpdateInput,
+  SafetyAssignment,
 } from '@/types/controller';
+import type { SafetySite, SafetyUser } from '@/types/backend';
 
 export interface SitesSectionProps {
   busy: boolean;
-  assignments: SafetyAssignment[];
-  headquarters: SafetyHeadquarter[];
-  sites: SafetySite[];
-  users: SafetyUser[];
   canDelete: boolean;
+  currentUserId: string;
   onCreate: (input: SafetySiteInput) => Promise<void>;
   onUpdate: (id: string, input: SafetySiteUpdateInput) => Promise<void>;
   onDelete: (id: string) => Promise<void>;

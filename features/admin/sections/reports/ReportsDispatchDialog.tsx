@@ -9,8 +9,9 @@ import {
 } from '@/lib/admin/reportMeta';
 import { buildDispatchMeta, formatDateTime } from './reportsSectionFilters';
 import type { ControllerReportRow, ReportDispatchMeta } from '@/types/admin';
-import type { SafetySite, SafetyUser } from '@/types/backend';
 import type { SmsProviderStatus } from '@/types/messages';
+import type { SafetySite } from '@/types/backend';
+import type { ReportsUserOption } from './reportsSectionTypes';
 
 interface ReportsDispatchDialogProps {
   buildManualDispatchPayload: (row: ControllerReportRow) => ReportDispatchMeta;
@@ -25,7 +26,7 @@ interface ReportsDispatchDialogProps {
   setDispatchSmsMessage: (value: string) => void;
   setDispatchSmsPhone: (value: string) => void;
   smsProviderStatuses: SmsProviderStatus[];
-  users: SafetyUser[];
+  users: ReportsUserOption[];
 }
 
 export function ReportsDispatchDialog({

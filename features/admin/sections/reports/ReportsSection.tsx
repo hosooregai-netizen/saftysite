@@ -85,7 +85,7 @@ export function ReportsSection(props: ReportsSectionProps) {
         reviewForm={state.reviewForm}
         reviewRow={state.reviewRow}
         setReviewForm={state.setReviewForm}
-        users={props.users}
+        users={state.users}
       />
       <ReportsDispatchDialog
         buildManualDispatchPayload={state.buildManualDispatchPayload}
@@ -100,7 +100,7 @@ export function ReportsSection(props: ReportsSectionProps) {
         setDispatchSmsMessage={state.setDispatchSmsMessage}
         setDispatchSmsPhone={state.setDispatchSmsPhone}
         smsProviderStatuses={state.smsProviderStatuses}
-        users={props.users}
+        users={state.users}
       />
     </section>
   );

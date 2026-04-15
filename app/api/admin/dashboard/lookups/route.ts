@@ -1,14 +1,16 @@
 import { NextResponse } from 'next/server';
 import { SITE_CONTRACT_TYPE_LABELS } from '@/lib/admin';
 import { parseSiteContractProfile } from '@/lib/admin/siteContractProfile';
-import { fetchAdminCoreData, readRequiredAdminToken, SafetyServerApiError } from '@/server/admin/safetyApiServer';
+import { getAdminDirectorySnapshot } from '@/server/admin/adminDirectorySnapshot';
+import { readRequiredAdminToken, SafetyServerApiError } from '@/server/admin/safetyApiServer';
 
 export const runtime = 'nodejs';
 
 export async function GET(request: Request): Promise<Response> {
   try {
     const token = readRequiredAdminToken(request);
-    const data = await fetchAdminCoreData(token, request);
+    const snapshot = await getAdminDirectorySnapshot(token, request);
+    const data = snapshot.data;
     const contractTypeMap = new Map<string, string>();
 
     data.sites.forEach((site) => {

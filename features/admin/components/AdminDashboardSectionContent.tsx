@@ -44,28 +44,24 @@ export function AdminDashboardSectionContent({
     case 'users':
       return (
         <UsersSection
-          assignments={assignments}
           busy={busy}
           canDelete={canDelete}
+          currentUserId={currentUser.id}
           onCreate={dashboard.createUser}
           onDelete={dashboard.deleteUser}
           onSaveEdit={dashboard.saveUserEdit}
           sessions={sessions}
-          sites={sites}
-          users={users}
         />
       );
     case 'headquarters':
       return (
         <HeadquartersSection
-          assignments={assignments}
           busy={busy}
           canDelete={canDelete}
-          headquarters={headquarters}
-          onReload={dashboard.reload}
-          onAssignFieldAgent={dashboard.assignFieldAgentToSite}
           onClearHeadquarterSelection={dashboard.clearHeadquarterSelection}
           onClearSiteSelection={dashboard.clearSiteSelection}
+          currentUserId={currentUser.id}
+          onAssignFieldAgent={dashboard.assignFieldAgentToSite}
           onCreate={dashboard.createHeadquarter}
           onCreateSite={dashboard.createSite}
           onDelete={dashboard.deleteHeadquarter}
@@ -77,8 +73,6 @@ export function AdminDashboardSectionContent({
           onUpdateSite={dashboard.updateSite}
           selectedHeadquarterId={dashboard.selectedHeadquarterId}
           selectedSiteId={dashboard.selectedSiteId}
-          sites={sites}
-          users={users}
         />
       );
     case 'content':
@@ -105,12 +99,9 @@ export function AdminDashboardSectionContent({
           currentUser={currentUser}
           ensureSessionLoaded={ensureSessionLoaded}
           getSessionById={getSessionById}
-          headquarters={headquarters}
           isLoading={dashboard.isLoading || dashboard.isReportsLoading || dashboard.isMutating}
           onReloadData={dashboard.reload}
           sessions={sessions}
-          sites={sites}
-          users={users}
         />
       );
     case 'analytics':
@@ -124,6 +115,7 @@ export function AdminDashboardSectionContent({
     default:
       return (
         <AdminOverviewSection
+          currentUserId={currentUser.id}
           data={dashboard.data}
           onUpdateSiteDispatchPolicy={dashboard.updateSiteDispatchPolicy}
           reports={dashboard.reportList}

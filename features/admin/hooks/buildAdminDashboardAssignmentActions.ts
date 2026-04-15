@@ -3,7 +3,10 @@ import {
   deactivateSafetyAssignment,
   updateSafetyAssignment,
 } from '@/lib/safetyApi/adminEndpoints';
-import { buildAssignmentPayload } from '@/features/admin/lib/adminDashboardMutations';
+import {
+  buildAssignmentPayload,
+  loadAllSafetyAssignments,
+} from '@/features/admin/lib/adminDashboardMutations';
 import type {
   ControllerDashboardData,
   SafetyAssignmentInput,
@@ -32,7 +35,8 @@ export function buildAdminDashboardAssignmentActions({
     createAssignment: (input: SafetyAssignmentInput) =>
       runMutation(
         async (token) => {
-          const existingAssignment = data.assignments.find(
+          const assignments = await loadAllSafetyAssignments(token);
+          const existingAssignment = assignments.find(
             (assignment) =>
               assignment.site_id === input.site_id && assignment.user_id === input.user_id,
           );
@@ -62,7 +66,8 @@ export function buildAdminDashboardAssignmentActions({
     ) =>
       runMutation(
         async (token) => {
-          const matchedAssignment = data.assignments.find(
+          const assignments = await loadAllSafetyAssignments(token);
+          const matchedAssignment = assignments.find(
             (assignment) => assignment.site_id === siteId && assignment.user_id === userId,
           );
 
@@ -94,7 +99,8 @@ export function buildAdminDashboardAssignmentActions({
     unassignFieldAgentFromSite: (siteId: string, userId: string) =>
       runMutation(
         async (token) => {
-          const matchedAssignment = data.assignments.find(
+          const assignments = await loadAllSafetyAssignments(token);
+          const matchedAssignment = assignments.find(
             (assignment) =>
               assignment.site_id === siteId &&
               assignment.user_id === userId &&

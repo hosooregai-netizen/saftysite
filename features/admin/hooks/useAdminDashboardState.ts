@@ -38,7 +38,7 @@ export function useAdminDashboardState({
     enabled,
     hasLoadedCoreData,
   });
-  const { getToken, reload, reloadContent } = useAdminDashboardDataLoaders({
+  const { getToken, loadReports, reload, reloadContent } = useAdminDashboardDataLoaders({
     contentCacheScope,
     data,
     enabled,
@@ -79,20 +79,25 @@ export function useAdminDashboardState({
 
         try {
           await refreshAdminAnalyticsSnapshot();
-        } catch (refreshError) {
-          // Snapshot refresh is best-effort; the forced reload below still refreshes visible admin data.
+        } catch {
+          // Snapshot refresh is best-effort for mutation flows.
         }
 
         try {
-          await reload({
-            includeContent: routing.shouldLoadContent,
-            includeReports: routing.shouldLoadReports,
-            force: true,
-          });
+          const followUpTasks: Array<Promise<unknown>> = [];
+          if (routing.shouldLoadContent) {
+            followUpTasks.push(reloadContent({ force: true }));
+          }
+          if (routing.shouldLoadReports) {
+            followUpTasks.push(loadReports({ force: true }));
+          }
+          if (followUpTasks.length > 0) {
+            await Promise.all(followUpTasks);
+          }
           setNotice(successMessage);
         } catch (reloadError) {
-          console.error('Admin dashboard reload failed after mutation', reloadError);
-          setNotice(`${successMessage} 목록 새로고침은 실패했습니다. 다시 시도해 주세요.`);
+          console.error('Admin dashboard follow-up refresh failed after mutation', reloadError);
+          setNotice(`${successMessage} 화면 갱신은 실패했습니다. 다시 시도해 주세요.`);
         }
       } catch (nextError) {
         const message = getErrorMessage(nextError);
@@ -102,7 +107,7 @@ export function useAdminDashboardState({
         setIsMutating(false);
       }
     },
-    [getToken, reload, routing.shouldLoadContent, routing.shouldLoadReports],
+    [getToken, loadReports, reloadContent, routing.shouldLoadContent, routing.shouldLoadReports],
   );
 
   const runContentMutation = useCallback(

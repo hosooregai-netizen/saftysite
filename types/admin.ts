@@ -1,3 +1,6 @@
+import type { SafetySite, SafetyUser, SafetyUserRole } from '@/types/backend';
+import type { SafetyHeadquarter } from '@/types/controller';
+
 export type TableSortDirection = 'asc' | 'desc';
 
 export interface TableSortState {
@@ -20,6 +23,69 @@ export type TableFilterState = Record<
 export interface TableExportColumn {
   key: string;
   label: string;
+}
+
+export interface SafetyAdminPagedResponse<T> {
+  limit: number;
+  offset: number;
+  refreshedAt: string;
+  rows: T[];
+  total: number;
+}
+
+export interface SafetyAdminUserAssignedSiteSummary {
+  id: string;
+  siteName: string;
+}
+
+export type SafetyAdminUserListRow = SafetyUser & {
+  assignedSites: SafetyAdminUserAssignedSiteSummary[];
+};
+
+export interface SafetyAdminHeadquarterListSummary {
+  completedCount: number;
+  contactGapCount: number;
+  memoGapCount: number;
+  registrationGapCount: number;
+}
+
+export interface SafetyAdminHeadquarterListResponse
+  extends SafetyAdminPagedResponse<SafetyHeadquarter> {
+  summary: SafetyAdminHeadquarterListSummary;
+}
+
+export interface SafetyAdminUserListResponse
+  extends SafetyAdminPagedResponse<SafetyAdminUserListRow> {}
+
+export interface SafetyAdminSiteListResponse
+  extends SafetyAdminPagedResponse<SafetySite> {}
+
+export interface SafetyAdminDirectoryLookupHeadquarter {
+  id: string;
+  name: string;
+}
+
+export interface SafetyAdminDirectoryLookupSite {
+  headquarterId: string;
+  id: string;
+  name: string;
+}
+
+export interface SafetyAdminDirectoryLookupUser {
+  email: string;
+  id: string;
+  isActive: boolean;
+  name: string;
+  organizationName: string | null;
+  phone: string | null;
+  position: string | null;
+  role: SafetyUserRole;
+}
+
+export interface SafetyAdminDirectoryLookupsResponse {
+  headquarters: SafetyAdminDirectoryLookupHeadquarter[];
+  sites: SafetyAdminDirectoryLookupSite[];
+  users: SafetyAdminDirectoryLookupUser[];
 }
 
 export type SiteContractType =

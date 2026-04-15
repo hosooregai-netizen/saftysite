@@ -2,17 +2,21 @@
 
 import { readSafetyAuthToken, SafetyApiError } from '@/lib/safetyApi';
 import type {
+  SafetyAdminDirectoryLookupsResponse,
   ReportControllerReview,
   ReportDispatchHistoryEntry,
   ReportDispatchMeta,
   SafetyAdminAlert,
   SafetyAdminAnalyticsResponse,
+  SafetyAdminHeadquarterListResponse,
   SafetyAdminOverviewResponse,
   SafetyAdminReportsResponse,
   SafetyAdminScheduleCalendarResponse,
+  SafetyAdminSiteListResponse,
   SafetyAdminScheduleListResponse,
   SafetyAdminScheduleLookupsResponse,
   SafetyAdminScheduleQueueResponse,
+  SafetyAdminUserListResponse,
   SafetyInspectionSchedule,
   TableSortDirection,
 } from '@/types/admin';
@@ -90,7 +94,7 @@ export function fetchAdminReports(input: {
   sortDir?: TableSortDirection;
   sortBy?: string;
   status?: string;
-}) {
+}, options: RequestInit = {}) {
   return requestAdminApi<SafetyAdminReportsResponse>(
     `/reports${buildQueryString({
       assignee_user_id: input.assigneeUserId,
@@ -108,6 +112,7 @@ export function fetchAdminReports(input: {
       sort_dir: input.sortDir,
       status: input.status,
     })}`,
+    options,
   );
 }
 
@@ -151,6 +156,81 @@ export function fetchAdminDashboardLookups() {
     headquarters: Array<{ id: string; name: string }>;
     users: Array<{ id: string; name: string }>;
   }>('/dashboard/lookups');
+}
+
+export function fetchAdminDirectoryLookups(options: RequestInit = {}) {
+  return requestAdminApi<SafetyAdminDirectoryLookupsResponse>('/directory/lookups', options);
+}
+
+export function fetchAdminUsersList(input: {
+  limit?: number;
+  offset?: number;
+  query?: string;
+  role?: string;
+  sortDir?: TableSortDirection;
+  sortBy?: string;
+  status?: string;
+}, options: RequestInit = {}) {
+  return requestAdminApi<SafetyAdminUserListResponse>(
+    `/users/list${buildQueryString({
+      limit: input.limit,
+      offset: input.offset,
+      query: input.query,
+      role: input.role,
+      sort_by: input.sortBy,
+      sort_dir: input.sortDir,
+      status: input.status,
+    })}`,
+    options,
+  );
+}
+
+export function fetchAdminHeadquartersList(input: {
+  id?: string;
+  limit?: number;
+  offset?: number;
+  query?: string;
+  sortDir?: TableSortDirection;
+  sortBy?: string;
+}, options: RequestInit = {}) {
+  return requestAdminApi<SafetyAdminHeadquarterListResponse>(
+    `/headquarters/list${buildQueryString({
+      id: input.id,
+      limit: input.limit,
+      offset: input.offset,
+      query: input.query,
+      sort_by: input.sortBy,
+      sort_dir: input.sortDir,
+    })}`,
+    options,
+  );
+}
+
+export function fetchAdminSitesList(input: {
+  assignment?: string;
+  headquarterId?: string;
+  limit?: number;
+  offset?: number;
+  query?: string;
+  siteId?: string;
+  sortDir?: TableSortDirection;
+  sortBy?: string;
+  status?: string;
+}, options: RequestInit = {}) {
+  return requestAdminApi<SafetyAdminSiteListResponse>(
+    `/sites/list${buildQueryString({
+      assignment: input.assignment,
+      headquarter_id: input.headquarterId,
+      limit: input.limit,
+      offset: input.offset,
+      query: input.query,
+      site_id: input.siteId,
+      sort_by: input.sortBy,
+      sort_dir: input.sortDir,
+      status: input.status,
+    })}`,
+    options,
+  );
 }
 
 export function fetchAdminAnalytics(input: {

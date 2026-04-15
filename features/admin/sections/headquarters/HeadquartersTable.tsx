@@ -1,6 +1,5 @@
 import ActionMenu from '@/components/ui/ActionMenu';
 import { SortableHeaderCell } from '@/features/admin/components/SortableHeaderCell';
-import { exportAdminWorkbook } from '@/lib/admin/exportClient';
 import { formatTimestamp, getAdminSectionHref } from '@/lib/admin';
 import type { TableSortState } from '@/types/admin';
 import type { SafetyHeadquarter } from '@/types/controller';
@@ -9,12 +8,18 @@ import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 interface HeadquartersTableProps {
   busy: boolean;
   canDelete: boolean;
-  exportHeadquarters: SafetyHeadquarter[];
   filteredHeadquarters: SafetyHeadquarter[];
+  summary: {
+    completedCount: number;
+    contactGapCount: number;
+    memoGapCount: number;
+    registrationGapCount: number;
+  };
   page: number;
   onCreateRequest: () => void;
   onDeleteRequest: (item: SafetyHeadquarter) => void;
   onEditRequest: (item: SafetyHeadquarter) => void;
+  onExportRequest: () => void;
   onOpenSitesRequest: (item: SafetyHeadquarter) => void;
   onPageChange: (page: number) => void;
   onQueryChange: (value: string) => void;
@@ -57,12 +62,13 @@ function getHeadquarterMissingFields(item: SafetyHeadquarter) {
 export function HeadquartersTable({
   busy,
   canDelete,
-  exportHeadquarters,
   filteredHeadquarters,
+  summary,
   page,
   onCreateRequest,
   onDeleteRequest,
   onEditRequest,
+  onExportRequest,
   onOpenSitesRequest,
   onPageChange,
   onQueryChange,
@@ -73,54 +79,6 @@ export function HeadquartersTable({
   totalCount,
   totalPages,
 }: HeadquartersTableProps) {
-  const registrationGapCount = exportHeadquarters.filter((item) =>
-    [item.management_number, item.opening_number, item.business_registration_no].some(
-      (value) => !String(value ?? '').trim(),
-    ),
-  ).length;
-  const contactGapCount = exportHeadquarters.filter((item) =>
-    [item.contact_name, item.contact_phone, item.address].some(
-      (value) => !String(value ?? '').trim(),
-    ),
-  ).length;
-  const completedCount = exportHeadquarters.filter(
-    (item) => getHeadquarterMissingFields(item).length === 0,
-  ).length;
-  const memoGapCount = exportHeadquarters.filter(
-    (item) => !String(item.memo ?? '').trim(),
-  ).length;
-  const handleExport = () =>
-    void exportAdminWorkbook('headquarters', [
-      {
-        name: '사업장',
-        columns: [
-          { key: 'name', label: '회사명' },
-          { key: 'management_number', label: '사업장관리번호' },
-          { key: 'opening_number', label: '사업장개시번호' },
-          { key: 'business_registration_no', label: '사업자등록번호' },
-          { key: 'corporate_registration_no', label: '법인등록번호' },
-          { key: 'license_no', label: '건설업면허/등록번호' },
-          { key: 'contact_name', label: '본사 담당자명' },
-          { key: 'contact_phone', label: '대표 전화' },
-          { key: 'address', label: '본사 주소' },
-          { key: 'memo', label: '운영 메모' },
-          { key: 'updated_at', label: '수정일' },
-        ],
-        rows: exportHeadquarters.map((item) => ({
-          address: item.address || '',
-          business_registration_no: item.business_registration_no || '',
-          contact_name: item.contact_name || '',
-          management_number: item.management_number || '',
-          opening_number: item.opening_number || '',
-          corporate_registration_no: item.corporate_registration_no || '',
-          contact_phone: item.contact_phone || '',
-          license_no: item.license_no || '',
-          memo: item.memo || '',
-          name: item.name,
-          updated_at: formatTimestamp(item.updated_at),
-        })),
-      },
-    ]);
 
   return (
     <>
@@ -142,7 +100,7 @@ export function HeadquartersTable({
           <button
             type="button"
             className="app-button app-button-secondary"
-            onClick={handleExport}
+            onClick={onExportRequest}
             disabled={busy}
           >
             엑셀 내보내기
@@ -169,18 +127,18 @@ export function HeadquartersTable({
               </article>
               <article className={styles.summaryCard}>
                 <span className={styles.summaryCardLabel}>등록번호 보완</span>
-                <strong className={styles.summaryCardValue}>{registrationGapCount}개</strong>
+                <strong className={styles.summaryCardValue}>{summary.registrationGapCount}개</strong>
                 <span className={styles.summaryCardMeta}>관리번호, 개시번호, 사업자번호 기준</span>
               </article>
               <article className={styles.summaryCard}>
                 <span className={styles.summaryCardLabel}>연락/주소 보완</span>
-                <strong className={styles.summaryCardValue}>{contactGapCount}개</strong>
+                <strong className={styles.summaryCardValue}>{summary.contactGapCount}개</strong>
                 <span className={styles.summaryCardMeta}>담당자, 대표 전화, 본사 주소 기준</span>
               </article>
               <article className={styles.summaryCard}>
                 <span className={styles.summaryCardLabel}>입력 완료</span>
-                <strong className={styles.summaryCardValue}>{completedCount}개</strong>
-                <span className={styles.summaryCardMeta}>운영 메모 미입력 {memoGapCount}개</span>
+                <strong className={styles.summaryCardValue}>{summary.completedCount}개</strong>
+                <span className={styles.summaryCardMeta}>운영 메모 미입력 {summary.memoGapCount}개</span>
               </article>
             </div>
           </div>

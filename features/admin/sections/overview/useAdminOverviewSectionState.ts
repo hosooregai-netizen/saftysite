@@ -6,6 +6,10 @@ import {
   getOverviewExportSheets,
   type AdminOverviewModel,
 } from '@/features/admin/lib/buildAdminControlCenterModel';
+import {
+  readAdminSessionCache,
+  writeAdminSessionCache,
+} from '@/features/admin/lib/adminSessionCache';
 import { fetchAdminOverview } from '@/lib/admin/apiClient';
 import { exportAdminWorkbook } from '@/lib/admin/exportClient';
 import type { SafetyAdminOverviewResponse, TableSortState } from '@/types/admin';
@@ -22,6 +26,7 @@ import {
 } from './overviewSectionHelpers';
 
 export function useAdminOverviewSectionState(
+  currentUserId: string,
   data: ControllerDashboardData,
   reports: SafetyReportListItem[],
   options?: {
@@ -58,7 +63,12 @@ export function useAdminOverviewSectionState(
     try {
       setIsRefreshing(true);
       setError(null);
+      const cached = readAdminSessionCache<SafetyAdminOverviewResponse>(currentUserId, 'overview');
+      if (cached.value && !overviewResponse) {
+        setOverviewResponse(cached.value);
+      }
       const nextOverview = await fetchAdminOverview();
+      writeAdminSessionCache(currentUserId, 'overview', nextOverview);
       setOverviewResponse(nextOverview);
       setLastSyncedAt(new Date());
     } catch (nextError) {
@@ -69,8 +79,16 @@ export function useAdminOverviewSectionState(
   }, []);
 
   useEffect(() => {
+    const cached = readAdminSessionCache<SafetyAdminOverviewResponse>(currentUserId, 'overview');
+    if (cached.value) {
+      setOverviewResponse(cached.value);
+      setLastSyncedAt(new Date());
+      if (cached.isFresh) {
+        return;
+      }
+    }
     void refreshOverview();
-  }, [refreshOverview]);
+  }, [currentUserId, refreshOverview]);
 
   const overview = useMemo(() => {
     if (!overviewResponse) return fallbackOverview;

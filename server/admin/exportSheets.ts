@@ -3,6 +3,7 @@ import {
   getOverviewExportSheets,
 } from '@/features/admin/lib/buildAdminControlCenterModel';
 import { buildAdminAnalyticsSnapshotResponse } from '@/server/admin/analyticsSnapshot';
+import { getAdminDirectorySnapshot } from '@/server/admin/adminDirectorySnapshot';
 import { buildAdminOverviewResponse } from '@/server/admin/automation';
 import {
   getControllerReportDispatchLabel,
@@ -10,7 +11,6 @@ import {
 } from '@/lib/admin/controllerReports';
 import { getQualityStatusLabel } from '@/lib/admin/reportMeta';
 import {
-  fetchAdminCoreData,
   fetchAdminReports,
   fetchAdminOverviewServer,
   fetchAdminReportsViewServer,
@@ -67,11 +67,15 @@ export async function buildAdminServerExportSheets(
   request: Request,
 ): Promise<ServerWorkbookSheet[]> {
   if (section === 'overview') {
-    const [rawOverview, data, reports] = await Promise.all([
+    const [rawOverview, directorySnapshot, reports] = await Promise.all([
       fetchAdminOverviewServer(token, request),
-      fetchAdminCoreData(token, request),
+      getAdminDirectorySnapshot(token, request),
       fetchAdminReports(token, request),
     ]);
+    const data = {
+      ...directorySnapshot.data,
+      contentItems: [],
+    };
     const upstreamOverview = mapBackendOverviewResponse(rawOverview);
     const normalizedOverview = buildAdminOverviewResponse(data, reports);
     const visibleSiteIds = new Set(data.sites.map((site) => site.id));
@@ -114,8 +118,8 @@ export async function buildAdminServerExportSheets(
   }
 
   if (section === 'reports') {
-    const [data, reportsResponse] = await Promise.all([
-      fetchAdminCoreData(token, request),
+    const [directorySnapshot, reportsResponse] = await Promise.all([
+      getAdminDirectorySnapshot(token, request),
       fetchAdminReportsViewServer(
         token,
         {
@@ -137,6 +141,10 @@ export async function buildAdminServerExportSheets(
         request,
       ),
     ]);
+    const data = {
+      ...directorySnapshot.data,
+      contentItems: [],
+    };
     const rows = mapBackendAdminReportsResponse(reportsResponse).rows;
 
     return [

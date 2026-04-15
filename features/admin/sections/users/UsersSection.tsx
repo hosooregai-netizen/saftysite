@@ -1,8 +1,8 @@
 'use client';
 
-import type { SafetySite, SafetyUser } from '@/types/backend';
+import type { SafetyAdminUserListRow } from '@/types/admin';
+import type { SafetyUser } from '@/types/backend';
 import type { InspectionSession } from '@/types/inspectionSession';
-import type { SafetyAssignment } from '@/types/controller';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import { toBackendUserRole, toNullableText } from '@/lib/admin';
 import { UserEditorModal } from './UserEditorModal';
@@ -10,9 +10,9 @@ import { useUsersSectionState } from './useUsersSectionState';
 import { UsersTable } from './UsersTable';
 
 interface UsersSectionProps {
-  assignments: SafetyAssignment[];
   busy: boolean;
   canDelete: boolean;
+  currentUserId: string;
   onCreate: (input: {
     email: string;
     name: string;
@@ -38,16 +38,20 @@ interface UsersSectionProps {
     password?: string | null,
   ) => Promise<void>;
   sessions: InspectionSession[];
-  sites: SafetySite[];
-  users: SafetyUser[];
 }
 
-export function UsersSection(props: UsersSectionProps) {
-  const { assignments, busy, canDelete, onCreate, onDelete, onSaveEdit, sessions, sites, users } =
-    props;
-  const state = useUsersSectionState(users, sites, assignments, sessions, busy);
+export function UsersSection({
+  busy,
+  canDelete,
+  currentUserId,
+  onCreate,
+  onDelete,
+  onSaveEdit,
+  sessions,
+}: UsersSectionProps) {
+  const state = useUsersSectionState(currentUserId, sessions, busy);
 
-  if (busy && users.length === 0) {
+  if (state.isLoading && state.pagedUsers.length === 0) {
     return (
       <section className={`${styles.sectionCard} ${styles.listSectionCard}`}>
         <div className={styles.sectionHeader}>
@@ -61,7 +65,9 @@ export function UsersSection(props: UsersSectionProps) {
             {Array.from({ length: 6 }).map((_, index) => (
               <div key={`users-skeleton-${index + 1}`} className={styles.contentTableSkeletonRow}>
                 <span className={styles.contentTableSkeletonLine} />
-                <span className={`${styles.contentTableSkeletonLine} ${styles.contentTableSkeletonLineMedium}`} />
+                <span
+                  className={`${styles.contentTableSkeletonLine} ${styles.contentTableSkeletonLineMedium}`}
+                />
               </div>
             ))}
           </div>
@@ -78,13 +84,13 @@ export function UsersSection(props: UsersSectionProps) {
       if (!state.form.email.trim() || !state.form.password.trim()) return;
       await onCreate({
         email: state.form.email.trim(),
+        is_active: state.form.is_active,
         name: state.form.name.trim(),
+        organization_name: toNullableText(state.form.organization_name),
         password: state.form.password.trim(),
         phone: toNullableText(state.form.phone),
-        role: toBackendUserRole(state.form.role),
         position: toNullableText(state.form.position),
-        organization_name: toNullableText(state.form.organization_name),
-        is_active: state.form.is_active,
+        role: toBackendUserRole(state.form.role),
       });
     } else if (state.editingId) {
       const updateInput = state.buildUpdateInput();
@@ -97,40 +103,42 @@ export function UsersSection(props: UsersSectionProps) {
     }
 
     state.closeModal();
+    await state.refreshPage();
   };
 
-  const handleDeleteUser = async (user: SafetyUser) => {
+  const handleDeleteUser = async (user: SafetyAdminUserListRow) => {
     const confirmed = window.confirm(
       `'${user.name}' 사용자를 삭제하시겠습니까?\n연결된 현장 배정도 함께 삭제되며, 이 작업은 되돌릴 수 없습니다.`,
     );
-
     if (!confirmed) return;
     await onDelete(user.id);
+    await state.refreshPage();
   };
 
   return (
     <section className={`${styles.sectionCard} ${styles.listSectionCard}`}>
       <UsersTable
-        busy={busy}
+        busy={busy || state.isLoading}
         canDelete={canDelete}
-        exportUsers={state.sortedUsers}
+        exportUsers={state.exportUsers}
         filteredUsers={state.pagedUsers}
         onCreateRequest={state.openCreate}
         onDeleteRequest={handleDeleteUser}
         onEditRequest={state.openEdit}
         page={state.page}
+        query={state.query}
         roleFilter={state.roleFilter}
+        sessionCountBySiteId={state.sessionCountBySiteId}
         setPage={state.setPage}
+        setQuery={state.setQuery}
         setRoleFilter={state.setRoleFilter}
         setSort={state.setSort}
         setStatusFilter={state.setStatusFilter}
-        setQuery={state.setQuery}
         sort={state.sort}
         statusFilter={state.statusFilter}
-        totalCount={state.sortedUsers.length}
+        totalCount={state.total}
         totalPages={state.totalPages}
         userOverviewById={state.userOverviewById}
-        query={state.query}
       />
 
       <UserEditorModal
