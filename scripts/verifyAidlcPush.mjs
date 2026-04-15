@@ -55,6 +55,7 @@ const FEATURE_RULES = [
       /^server\/admin\/adminDirectory(Lists|Snapshot)\.ts$/,
       /^server\/admin\/exportSheets\.ts$/,
       /^server\/admin\/safetyApiServer\.ts$/,
+      /^server\/admin\/upstreamMappers\.ts$/,
     ],
   },
   {
