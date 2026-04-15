@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import LoginPanel from '@/components/auth/LoginPanel';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
@@ -20,7 +20,7 @@ async function readErrorMessage(response: Response) {
   }
 }
 
-export default function AdminReportOpenPage() {
+function AdminReportOpenPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const {
@@ -146,5 +146,13 @@ export default function AdminReportOpenPage() {
         </section>
       </div>
     </main>
+  );
+}
+
+export default function AdminReportOpenPage() {
+  return (
+    <Suspense fallback={<main className="app-page">보고서를 준비하는 중입니다.</main>}>
+      <AdminReportOpenPageContent />
+    </Suspense>
   );
 }
