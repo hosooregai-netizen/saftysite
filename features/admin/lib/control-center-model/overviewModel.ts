@@ -353,7 +353,7 @@ function buildAttentionRows(
         dispatchStatus: visitDispatch.dispatchStatus,
         headquarterName: row.headquarterName || '-',
         href: getAdminSectionHref('reports', {
-          reportType: 'technical_guidance',
+          reportType: row.reportType,
           siteId: row.siteId,
         }),
         referenceDate: formatDateOnly(referenceDate),
