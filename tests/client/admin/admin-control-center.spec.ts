@@ -15,7 +15,12 @@ export async function runAdminControlCenterSmoke(config: ClientSmokePlaywrightCo
     await harness.waitForRequestCount('GET /api/admin/dashboard/overview', 1);
     await page.getByRole('heading', { name: '운영 개요' }).waitFor({ state: 'visible' });
     await page.getByText('현장 상태').first().waitFor();
-    await page.getByText('20억 이상 분기보고서 관리').first().waitFor();
+    const priorityQuarterlySection = page.locator('section').filter({
+      has: page.getByRole('heading', { name: '20억 이상 분기보고서 관리' }),
+    }).first();
+    await priorityQuarterlySection.getByRole('heading', { name: '20억 이상 분기보고서 관리' }).waitFor();
+    await priorityQuarterlySection.getByText(/\d{4}년 \d분기/).first().waitFor();
+    await priorityQuarterlySection.getByRole('columnheader', { name: '상태' }).waitFor();
     await page.getByText('종료 예정 현황').first().waitFor();
     await page.getByRole('button', { name: '엑셀 내보내기' }).click();
     await harness.waitForRequestCount('POST /api/admin/exports/:section', overviewExportsBefore + 1);

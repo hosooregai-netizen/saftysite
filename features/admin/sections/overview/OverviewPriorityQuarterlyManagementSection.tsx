@@ -9,6 +9,11 @@ interface OverviewPriorityQuarterlyManagementSectionProps {
   rows: SafetyAdminPriorityQuarterlyManagementRow[];
 }
 
+function formatQuarterLabel(value: Date) {
+  const quarter = Math.floor(value.getMonth() / 3) + 1;
+  return `${value.getFullYear()}년 ${quarter}분기`;
+}
+
 function formatLatestGuidance(row: SafetyAdminPriorityQuarterlyManagementRow) {
   if (!row.latestGuidanceDate && row.latestGuidanceRound == null) {
     return '-';
@@ -22,11 +27,7 @@ function formatLatestGuidance(row: SafetyAdminPriorityQuarterlyManagementRow) {
   return `${row.latestGuidanceDate} / ${row.latestGuidanceRound}차`;
 }
 
-function getReflectionLabel(status: SafetyAdminPriorityQuarterlyManagementRow['quarterlyReflectionStatus']) {
-  return status === 'created' ? '반영 완료' : '미반영';
-}
-
-function getDispatchLabel(status: SafetyAdminPriorityQuarterlyManagementRow['quarterlyDispatchStatus']) {
+function getStatusLabel(status: SafetyAdminPriorityQuarterlyManagementRow['quarterlyDispatchStatus']) {
   switch (status) {
     case 'sent':
       return '발송 완료';
@@ -40,18 +41,35 @@ function getDispatchLabel(status: SafetyAdminPriorityQuarterlyManagementRow['qua
   }
 }
 
-function getBadgeClassName(isOk: boolean) {
-  return `${styles.tableBadge} ${isOk ? styles.tableBadgeAccent : styles.tableBadgeWarning}`;
+function getStatusTone(
+  status: SafetyAdminPriorityQuarterlyManagementRow['quarterlyDispatchStatus'],
+) {
+  switch (status) {
+    case 'sent':
+      return styles.overviewTableStatusSuccess;
+    case 'pending':
+      return styles.overviewTableStatusWarning;
+    case 'overdue':
+    case 'report_missing':
+      return styles.overviewTableStatusDanger;
+    default:
+      return styles.overviewTableStatusNeutral;
+  }
 }
 
 export function OverviewPriorityQuarterlyManagementSection({
   rows,
 }: OverviewPriorityQuarterlyManagementSectionProps) {
+  const quarterLabel = rows[0]?.currentQuarterLabel || formatQuarterLabel(new Date());
+
   return (
     <section className={`${styles.sectionCard} ${styles.listSectionCard} ${styles.overviewTableCard}`}>
       <div className={styles.sectionHeader}>
         <div className={styles.overviewTableHeaderBlock}>
-          <h2 className={styles.sectionTitle}>20억 이상 분기보고서 관리</h2>
+          <div className={styles.sectionTitleRow}>
+            <h2 className={styles.sectionTitle}>20억 이상 분기보고서 관리</h2>
+            <span className={styles.sectionHeaderMeta}>{quarterLabel}</span>
+          </div>
         </div>
         <div className={styles.sectionHeaderActions}>
           <span className={styles.overviewTableCount}>{rows.length.toLocaleString('ko-KR')}개 현장</span>
@@ -70,15 +88,11 @@ export function OverviewPriorityQuarterlyManagementSection({
                     <th>사업장</th>
                     <th>공사금액</th>
                     <th>최근 지도</th>
-                    <th>현재 분기</th>
-                    <th>반영 상태</th>
-                    <th>발송 상태</th>
-                    <th>예외 상태</th>
+                    <th>상태</th>
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((row) => {
-                    const isOk = row.exceptionStatus === 'ok';
                     return (
                       <tr key={row.siteId}>
                         <td>
@@ -90,26 +104,11 @@ export function OverviewPriorityQuarterlyManagementSection({
                         <td>{formatOverviewCurrency(row.projectAmount)}</td>
                         <td>{formatLatestGuidance(row)}</td>
                         <td>
-                          {row.quarterlyReportHref ? (
-                            <Link href={row.quarterlyReportHref} className={styles.tableInlineLink}>
-                              {row.currentQuarterLabel}
-                            </Link>
-                          ) : (
-                            row.currentQuarterLabel
-                          )}
-                        </td>
-                        <td>
-                          <span className={getBadgeClassName(row.quarterlyReflectionStatus === 'created')}>
-                            {getReflectionLabel(row.quarterlyReflectionStatus)}
+                          <span
+                            className={`${styles.overviewTableStatus} ${getStatusTone(row.quarterlyDispatchStatus)}`}
+                          >
+                            {getStatusLabel(row.quarterlyDispatchStatus)}
                           </span>
-                        </td>
-                        <td>
-                          <span className={getBadgeClassName(row.quarterlyDispatchStatus === 'sent')}>
-                            {getDispatchLabel(row.quarterlyDispatchStatus)}
-                          </span>
-                        </td>
-                        <td>
-                          <span className={getBadgeClassName(isOk)}>{row.exceptionLabel}</span>
                         </td>
                       </tr>
                     );

@@ -87,6 +87,10 @@ contract pack around:
 - Overview also restores the backend-backed dispatch management queues to the client response so
   `20억 이상 분기보고서 관리`, `현장대리인 메일 미등록 현장`, and `발송 필요 미해결 현장`
   render from the same overview payload again.
+- The `20억 이상 분기보고서 관리` queue was then simplified into a read-only quarterly follow-up
+  table: the current quarter now appears beside the title, the row columns focus on `현장`,
+  `사업장`, `공사금액`, `최근 지도`, and a single textual `상태`, and the older duplicated
+  `현재 분기`, `반영 상태`, `발송 상태`, `예외 상태` chip-heavy presentation was removed.
 - `AnalyticsSection.tsx` was reduced to a shell and split into:
   - `useAnalyticsSectionState.ts`
   - `AnalyticsSectionHeader.tsx`
