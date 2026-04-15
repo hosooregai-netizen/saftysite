@@ -42,6 +42,12 @@ export function hasDeadlineSignalSummary(
   return summary.totalReportCount > 0 || hasVisibleChartEntries(summary.entries);
 }
 
+export function hasEndingSoonSummary(
+  summary: SafetyAdminOverviewResponse['endingSoonSummary'],
+) {
+  return summary.totalSiteCount > 0 || hasVisibleChartEntries(summary.entries);
+}
+
 export function formatSyncTimestamp(value: Date | null) {
   if (!value) return '서버 동기화 전';
   return value.toLocaleString('ko-KR', {

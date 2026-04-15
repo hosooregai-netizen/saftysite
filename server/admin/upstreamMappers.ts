@@ -396,6 +396,20 @@ export function mapBackendOverviewResponse(
   const deadlineSignalEntries = Array.isArray(deadlineSignalSummary.entries)
     ? deadlineSignalSummary.entries
     : [];
+  const endingSoonSummary =
+    (response.ending_soon_summary as
+      | SafetyBackendAdminOverviewResponse['ending_soon_summary']
+      | null
+      | undefined) ?? {
+      entries: [],
+      total_site_count: 0,
+    };
+  const endingSoonEntries = Array.isArray(endingSoonSummary.entries)
+    ? endingSoonSummary.entries
+    : [];
+  const endingSoonRows = Array.isArray(response.ending_soon_rows)
+    ? response.ending_soon_rows
+    : [];
   const dispatchQueueRows = Array.isArray(response.dispatch_queue_rows)
     ? response.dispatch_queue_rows
     : [];
@@ -431,6 +445,32 @@ export function mapBackendOverviewResponse(
       totalReportCount:
         typeof deadlineSignalSummary.total_report_count === 'number'
           ? deadlineSignalSummary.total_report_count
+          : 0,
+    },
+    endingSoonRows: endingSoonRows.map((row) => ({
+      deadlineLabel: normalizeText(row.deadline_label),
+      daysUntilEnd:
+        typeof row.days_until_end === 'number' && Number.isFinite(row.days_until_end)
+          ? row.days_until_end
+          : 0,
+      endDate: normalizeText(row.end_date),
+      endDateSource:
+        (normalizeText(row.end_date_source) || '') as SafetyAdminOverviewResponse['endingSoonRows'][number]['endDateSource'],
+      headquarterName: normalizeText(row.headquarter_name),
+      href: normalizeText(row.href),
+      siteId: normalizeText(row.site_id),
+      siteName: normalizeText(row.site_name),
+    })),
+    endingSoonSummary: {
+      entries: endingSoonEntries.map((entry) => ({
+        count: entry.count,
+        href: normalizeText(entry.href),
+        key: normalizeText(entry.key),
+        label: normalizeText(entry.label),
+      })),
+      totalSiteCount:
+        typeof endingSoonSummary.total_site_count === 'number'
+          ? endingSoonSummary.total_site_count
           : 0,
     },
     dispatchQueueRows: dispatchQueueRows.map((row) => ({

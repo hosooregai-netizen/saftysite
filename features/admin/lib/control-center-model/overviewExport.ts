@@ -1,6 +1,12 @@
 import { getDispatchStatusLabel } from '@/lib/admin/reportMeta';
 import type { AdminOverviewModel } from './types';
 
+function getEndingSoonSourceLabel(value: AdminOverviewModel['endingSoonRows'][number]['endDateSource']) {
+  if (value === 'contract_end_date') return '계약종료일';
+  if (value === 'project_end_date') return '공사종료일';
+  return '-';
+}
+
 export function getOverviewExportSheets(model: AdminOverviewModel) {
   return [
     {
@@ -29,6 +35,31 @@ export function getOverviewExportSheets(model: AdminOverviewModel) {
       rows: model.deadlineSignalSummary.entries.map((entry) => ({ count: entry.count, label: entry.label })),
     },
     {
+      name: 'ending-soon-status',
+      columns: [
+        { key: 'label', label: '구분' },
+        { key: 'count', label: '현장 수' },
+      ],
+      rows: model.endingSoonSummary.entries.map((entry) => ({ count: entry.count, label: entry.label })),
+    },
+    {
+      name: 'ending-soon-sites',
+      columns: [
+        { key: 'siteName', label: '현장' },
+        { key: 'headquarterName', label: '본사' },
+        { key: 'endDateSource', label: '종료 기준' },
+        { key: 'endDate', label: '종료일' },
+        { key: 'deadlineLabel', label: '남은 기간' },
+      ],
+      rows: model.endingSoonRows.map((row) => ({
+        deadlineLabel: row.deadlineLabel,
+        endDate: row.endDate,
+        endDateSource: getEndingSoonSourceLabel(row.endDateSource),
+        headquarterName: row.headquarterName,
+        siteName: row.siteName,
+      })),
+    },
+    {
       name: 'quarterly-material-status',
       columns: [
         { key: 'label', label: '구분' },
@@ -40,7 +71,7 @@ export function getOverviewExportSheets(model: AdminOverviewModel) {
       name: 'quarterly-material-missing-sites',
       columns: [
         { key: 'siteName', label: '현장' },
-        { key: 'headquarterName', label: '사업장' },
+        { key: 'headquarterName', label: '본사' },
         { key: 'quarterLabel', label: '분기' },
         { key: 'educationStatus', label: '교육 현황' },
         { key: 'measurementStatus', label: '계측 현황' },
@@ -63,11 +94,11 @@ export function getOverviewExportSheets(model: AdminOverviewModel) {
       name: 'unsent-reports',
       columns: [
         { key: 'siteName', label: '현장' },
-        { key: 'headquarterName', label: '사업장' },
+        { key: 'headquarterName', label: '본사' },
         { key: 'reportTitle', label: '보고서' },
         { key: 'reportTypeLabel', label: '유형' },
         { key: 'assigneeName', label: '담당자' },
-        { key: 'visitDate', label: '지도 실시일' },
+        { key: 'visitDate', label: '지도일' },
         { key: 'unsentDays', label: '미발송 경과일' },
         { key: 'deadlineDate', label: '발송 기준일' },
         { key: 'dispatchStatus', label: '상태' },

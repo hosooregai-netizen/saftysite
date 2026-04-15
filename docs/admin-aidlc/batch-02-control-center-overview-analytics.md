@@ -27,6 +27,7 @@ contract pack around:
 ### Protected user flows
 
 - `/admin?section=overview` still shows KPI cards, site status, dispatch management, and export entry.
+- `/admin?section=overview` now also keeps the `20억 이상 현장 관리` list and the `종료 예정 현황` list visible as stable operator queues.
 - `/admin?section=analytics` still shows summary KPIs, trend chart, contribution tables, period filter, and export entry.
 - `admin-control-center` remains one umbrella contract because the shared control-center model feeds both surfaces.
 
@@ -76,9 +77,16 @@ contract pack around:
   - `useAdminOverviewSectionState.ts`
   - `OverviewVisualCards.tsx`
   - `OverviewDispatchQueueTable.tsx`
+  - `OverviewEndingSoonSection.tsx`
   - `OverviewUnsentReportsSection.tsx`
   - `OverviewMaterialGapSection.tsx`
   - `overviewSectionHelpers.ts`
+- Overview now exposes a dedicated `종료 예정 현황` queue based on active sites whose
+  `contract_end_date` falls within today through 14 days out, with `project_end_date` used as
+  the fallback when contract end is absent.
+- Overview also restores the backend-backed dispatch management queues to the client response so
+  `20억 이상 현장 관리`, `현장대리인 메일 미등록 현장`, and `발송 필요 미해결 현장`
+  render from the same overview payload again.
 - `AnalyticsSection.tsx` was reduced to a shell and split into:
   - `useAnalyticsSectionState.ts`
   - `AnalyticsSectionHeader.tsx`
@@ -146,6 +154,11 @@ git diff --check
   - current admin residual debt still includes existing oversized files such as
     `SortableHeaderCell.tsx`, `ContentItemsSection.tsx`, `useReportsSectionState.ts`,
     `SchedulesSection.tsx`, and `useSitesSectionState.ts`
+- Follow-up control-center verification for the ending-soon and priority-site overview update:
+  - `npx tsc --noEmit --pretty false`
+    - passed
+  - `npm run aidlc:audit:admin`
+    - passed as advisory audit
 - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3101 npm run test:client:smoke -- admin-control-center`
   - passed against the current workspace app
 - `npm run smoke:real:admin -- --sections control-center`

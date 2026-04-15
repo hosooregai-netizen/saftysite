@@ -994,6 +994,25 @@ export interface SafetyBackendAdminOverviewResponse {
     }>;
     total_report_count: number;
   };
+  ending_soon_rows?: Array<{
+    deadline_label: string;
+    days_until_end: number;
+    end_date: string;
+    end_date_source: 'contract_end_date' | 'project_end_date' | string;
+    headquarter_name: string;
+    href: string;
+    site_id: string;
+    site_name: string;
+  }>;
+  ending_soon_summary?: {
+    entries: Array<{
+      count: number;
+      href: string;
+      key: string;
+      label: string;
+    }>;
+    total_site_count: number;
+  };
   dispatch_queue_rows?: Array<{
     dispatch_alerts_enabled?: boolean;
     dispatch_policy_enabled?: boolean;

@@ -4,6 +4,7 @@ import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import type { SafetyReportListItem } from '@/types/backend';
 import type { ControllerDashboardData } from '@/types/controller';
 import { OverviewDispatchQueueTable } from './OverviewDispatchQueueTable';
+import { OverviewEndingSoonSection } from './OverviewEndingSoonSection';
 import { OverviewMaterialGapSection } from './OverviewMaterialGapSection';
 import { OverviewUnsentReportsSection } from './OverviewUnsentReportsSection';
 import { OverviewVisualCards } from './OverviewVisualCards';
@@ -45,7 +46,7 @@ export function AdminOverviewSection({
               onClick={() => void state.refreshOverview()}
               disabled={state.isRefreshing}
             >
-              {state.isRefreshing ? '새로고침 중...' : '새로고침'}
+              {state.isRefreshing ? '불러오는 중...' : '새로고침'}
             </button>
             <button type="button" className="app-button app-button-secondary" onClick={() => void state.exportOverview()}>
               엑셀 내보내기
@@ -74,9 +75,9 @@ export function AdminOverviewSection({
       />
 
       <OverviewDispatchQueueTable
-        title="우선 발송 대상 현장"
+        title="20억 이상 현장 관리"
         rows={state.overview.priorityTargetSiteRows ?? []}
-        emptyLabel="현재 발송 관리 대상으로 표시된 현장이 없습니다."
+        emptyLabel="현재 20억 이상 관리 대상 현장이 없습니다."
         isUpdating={Boolean(state.policyUpdatingSiteId)}
         onToggleDispatchAlerts={(siteId, enabled, alertsEnabled) =>
           void state.updateSiteDispatchPolicy(siteId, {
@@ -93,15 +94,17 @@ export function AdminOverviewSection({
         updatingSiteId={state.policyUpdatingSiteId}
       />
       <OverviewDispatchQueueTable
-        title="현장 대리인 메일 미등록 현장"
+        title="현장대리인 메일 미등록 현장"
         rows={state.overview.recipientMissingSiteRows ?? []}
         emptyLabel="현재 메일 정보 보완이 필요한 현장이 없습니다."
       />
       <OverviewDispatchQueueTable
-        title="발송 필요하지만 아직 미발송 보고서가 남은 현장"
+        title="발송 필요 미해결 현장"
         rows={state.overview.dispatchQueueRows ?? []}
-        emptyLabel="현재 미발송 보고서가 남아 있는 현장이 없습니다."
+        emptyLabel="현재 미해결 발송 대상 현장이 없습니다."
       />
+
+      <OverviewEndingSoonSection rows={state.overview.endingSoonRows} />
 
       <OverviewMaterialGapSection
         currentPage={state.currentMaterialPage}

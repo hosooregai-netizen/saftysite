@@ -20,6 +20,7 @@ import {
   compareNumber,
   compareText,
   hasDeadlineSignalSummary,
+  hasEndingSoonSummary,
   hasQuarterlyMaterialSummary,
   hasSiteStatusSummary,
   OVERVIEW_TABLE_PAGE_SIZE,
@@ -97,6 +98,13 @@ export function useAdminOverviewSectionState(
       deadlineSignalSummary: hasDeadlineSignalSummary(overviewResponse.deadlineSignalSummary)
         ? overviewResponse.deadlineSignalSummary
         : fallbackOverview.deadlineSignalSummary,
+      endingSoonRows:
+        Array.isArray(overviewResponse.endingSoonRows) && overviewResponse.endingSoonRows.length > 0
+          ? overviewResponse.endingSoonRows
+          : fallbackOverview.endingSoonRows,
+      endingSoonSummary: overviewResponse.endingSoonSummary && hasEndingSoonSummary(overviewResponse.endingSoonSummary)
+        ? overviewResponse.endingSoonSummary
+        : fallbackOverview.endingSoonSummary,
       quarterlyMaterialSummary: hasQuarterlyMaterialSummary(overviewResponse.quarterlyMaterialSummary)
         ? {
             ...overviewResponse.quarterlyMaterialSummary,
@@ -194,6 +202,8 @@ export function useAdminOverviewSectionState(
       coverageRows: overview.coverageRows,
       deadlineSignalSummary: overview.deadlineSignalSummary,
       deadlineRows: overview.deadlineRows,
+      endingSoonRows: overview.endingSoonRows,
+      endingSoonSummary: overview.endingSoonSummary,
       metricCards: overview.metricCards,
       overdueSiteRows: overview.overdueSiteRows,
       pendingReviewRows: overview.pendingReviewRows,

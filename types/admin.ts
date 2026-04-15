@@ -358,6 +358,22 @@ export interface SafetyAdminDeadlineSignalSummary {
   totalReportCount: number;
 }
 
+export interface SafetyAdminEndingSoonRow {
+  deadlineLabel: string;
+  daysUntilEnd: number;
+  endDate: string;
+  endDateSource: 'contract_end_date' | 'project_end_date' | '';
+  headquarterName: string;
+  href: string;
+  siteId: string;
+  siteName: string;
+}
+
+export interface SafetyAdminEndingSoonSummary {
+  entries: SafetyAdminOverviewChartEntry[];
+  totalSiteCount: number;
+}
+
 export interface SafetyAdminDispatchQueueRow {
   dispatchAlertsEnabled?: boolean;
   dispatchPolicyEnabled?: boolean;
@@ -406,6 +422,8 @@ export interface SafetyAdminOverviewResponse {
   deadlineSignalSummary: SafetyAdminDeadlineSignalSummary;
   dispatchQueueRows?: SafetyAdminDispatchQueueRow[];
   deadlineRows: AdminOverviewDeadlineRow[];
+  endingSoonRows: SafetyAdminEndingSoonRow[];
+  endingSoonSummary: SafetyAdminEndingSoonSummary;
   metricCards: AdminOverviewMetricCard[];
   overdueSiteRows: AdminOverviewSiteAlertRow[];
   pendingReviewRows: AdminOverviewReviewRow[];

@@ -16,7 +16,8 @@ export async function runAdminControlCenterSmoke(config: ClientSmokePlaywrightCo
     await harness.waitForRequestCount('GET /api/admin/dashboard/overview', 1);
     await page.getByRole('heading', { name: '운영 개요' }).waitFor({ state: 'visible' });
     await page.getByText('현장 상태').first().waitFor();
-    await page.getByText('발송 관리 대상').first().waitFor();
+    await page.getByText('20억 이상 현장 관리').first().waitFor();
+    await page.getByText('종료 예정 현황').first().waitFor();
     await page.getByRole('button', { name: '엑셀 내보내기' }).click();
     await harness.waitForRequestCount('POST /api/admin/exports/:section', overviewExportsBefore + 1);
 

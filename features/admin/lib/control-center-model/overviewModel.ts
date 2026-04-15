@@ -33,6 +33,18 @@ import {
 } from './rowEnrichment';
 import type { AdminOverviewModel } from './types';
 
+function resolveSiteEndingDate(site: ControllerDashboardData['sites'][number]) {
+  const contractEndDate = site.contract_end_date?.trim() || '';
+  if (contractEndDate) {
+    return { endDate: contractEndDate, endDateSource: 'contract_end_date' as const };
+  }
+  const projectEndDate = site.project_end_date?.trim() || '';
+  if (projectEndDate) {
+    return { endDate: projectEndDate, endDateSource: 'project_end_date' as const };
+  }
+  return { endDate: '', endDateSource: '' as const };
+}
+
 function buildQuarterlySummary(
   activeSites: ControllerDashboardData['sites'],
   materialSourceReports: SafetyReport[],
@@ -252,6 +264,43 @@ function buildAttentionRows(
   };
 }
 
+function buildEndingSoonSummary(
+  activeSites: ControllerDashboardData['sites'],
+  today: Date,
+) {
+  const endingSoonRows = activeSites
+    .map((site) => {
+      const { endDate, endDateSource } = resolveSiteEndingDate(site);
+      const daysUntilEnd = getDaysUntil(today, endDate);
+      if (daysUntilEnd == null || daysUntilEnd < 0 || daysUntilEnd > 14) {
+        return null;
+      }
+      return {
+        deadlineLabel: daysUntilEnd === 0 ? '오늘' : `D-${daysUntilEnd}`,
+        daysUntilEnd,
+        endDate: formatDateOnly(endDate),
+        endDateSource,
+        headquarterName: site.headquarter_detail?.name || site.headquarter?.name || '-',
+        href: getAdminSectionHref('headquarters', { headquarterId: site.headquarter_id, siteId: site.id }),
+        siteId: site.id,
+        siteName: site.site_name,
+      };
+    })
+    .filter((row): row is NonNullable<typeof row> => Boolean(row))
+    .sort((left, right) => left.daysUntilEnd - right.daysUntilEnd || left.siteName.localeCompare(right.siteName, 'ko'));
+
+  return {
+    endingSoonRows,
+    endingSoonSummary: {
+      entries: [
+        { count: endingSoonRows.filter((row) => row.daysUntilEnd <= 7).length, href: getAdminSectionHref('headquarters', { siteStatus: 'active' }), key: 'd_0_7', label: 'D-0~7' },
+        { count: endingSoonRows.filter((row) => row.daysUntilEnd >= 8 && row.daysUntilEnd <= 14).length, href: getAdminSectionHref('headquarters', { siteStatus: 'active' }), key: 'd_8_14', label: 'D-8~14' },
+      ],
+      totalSiteCount: endingSoonRows.length,
+    },
+  };
+}
+
 export function buildAdminOverviewModel(
   data: ControllerDashboardData,
   reports: SafetyReportListItem[],
@@ -271,6 +320,7 @@ export function buildAdminOverviewModel(
     today,
   );
   const attention = buildAttentionRows(data, overviewRows, dispatchOverviewRows, today);
+  const { endingSoonRows, endingSoonSummary } = buildEndingSoonSummary(activeSites, today);
   const metricCards = buildOverviewMetricCards({
     actionableUnsentReportRows: attention.actionableUnsentReportRows,
     metricMeta,
@@ -283,6 +333,8 @@ export function buildAdminOverviewModel(
     coverageRows,
     deadlineSignalSummary: attention.deadlineSignalSummary,
     deadlineRows: attention.deadlineRows,
+    endingSoonRows,
+    endingSoonSummary,
     metricCards,
     overdueSiteRows: attention.overdueSiteRows,
     pendingReviewRows: attention.pendingReviewRows,
