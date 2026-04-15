@@ -10,6 +10,7 @@ import {
   readAdminSessionCache,
   writeAdminSessionCache,
 } from '@/features/admin/lib/adminSessionCache';
+import { getAdminSectionHref } from '@/lib/admin';
 import { fetchAdminOverview } from '@/lib/admin/apiClient';
 import { exportAdminWorkbook } from '@/lib/admin/exportClient';
 import type { SafetyAdminOverviewResponse, TableSortState } from '@/types/admin';
@@ -158,7 +159,10 @@ export function useAdminOverviewSectionState(
       return {
         ...fallbackRow,
         ...row,
-        href: fallbackRow?.href || row.href,
+        href: getAdminSectionHref('reports', {
+          reportType: 'quarterly_report',
+          siteId: row.siteId,
+        }),
         quarterlyReportHref: fallbackRow?.quarterlyReportHref || row.quarterlyReportHref,
         quarterlyReportKey: fallbackRow?.quarterlyReportKey || row.quarterlyReportKey,
       };
