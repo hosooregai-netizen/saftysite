@@ -5,8 +5,8 @@ import { createAdminSmokeHarness } from '../fixtures/adminSmokeHarness';
 async function assertSiteTableColumnCount(page: Page) {
   await page.locator('table thead th').first().waitFor({ state: 'visible' });
   const columnCount = await page.locator('table thead th').count();
-  if (columnCount !== 7) {
-    throw new Error(`Expected 7 site table columns, received ${columnCount}.`);
+  if (columnCount !== 8) {
+    throw new Error(`Expected 8 site table columns, received ${columnCount}.`);
   }
 }
 
