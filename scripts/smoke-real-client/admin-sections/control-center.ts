@@ -9,7 +9,6 @@ export async function runAdminControlCenterSection(page: Page) {
   await page.getByText('현장 상태').first().waitFor();
   await page.getByText('발송 관리 대상').first().waitFor();
   await page.getByText('20억 이상 현장 관리').first().waitFor();
-  await page.getByText('현장대리인 메일 미등록 현장').first().waitFor();
   await page.getByRole('button', { name: '엑셀 내보내기' }).waitFor();
   await dismissImportantModalIfPresent(page);
   await page.waitForTimeout(2_000);
