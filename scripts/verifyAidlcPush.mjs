@@ -49,6 +49,7 @@ const FEATURE_RULES = [
       /^features\/admin\/hooks\/useAdminDashboard(DataLoaders|Routing|State)\.ts$/,
       /^features\/admin\/hooks\/buildAdminDashboard(Assignment|Crud)Actions\.ts$/,
       /^features\/admin\/lib\/adminDashboardMutations\.ts$/,
+      /^app\/api\/admin\/directory\//,
       /^app\/api\/safety\//,
       /^lib\/admin\/apiClient\.ts$/,
       /^server\/admin\/adminDirectory(Lists|Snapshot)\.ts$/,
