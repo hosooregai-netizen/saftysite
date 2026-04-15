@@ -11,6 +11,7 @@ import {
 } from '@/constants/inspectionSession';
 import { readFileAsDataUrl } from '@/components/session/workspace/utils';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
+import { fetchAdminReportSessionBootstrap } from '@/lib/admin/apiClient';
 import {
   convertHwpxBlobToPdfWithFallback,
   fetchInspectionHwpxDocument,
@@ -146,6 +147,7 @@ export function useInspectionSessionScreen(sessionId: string) {
     saveNow,
     sites,
     syncError,
+    upsertHydratedSiteSessions,
     updateSession,
   } = useInspectionSessions();
   const [documentError, setDocumentError] = useState<string | null>(null);
@@ -156,6 +158,7 @@ export function useInspectionSessionScreen(sessionId: string) {
     useState<ReportIndexStatus>('idle');
   const [uploadError, setUploadError] = useState<string | null>(null);
   const forcedRelationRefreshIdsRef = useRef<Set<string>>(new Set());
+  const legacyBootstrapAttemptIdsRef = useRef<Set<string>>(new Set());
   const saveNowRef = useRef(saveNow);
   const relationRefreshAttemptKeysRef = useRef<Set<string>>(new Set());
   const session = getSessionById(sessionId);
@@ -242,7 +245,11 @@ export function useInspectionSessionScreen(sessionId: string) {
   const derivedData = useMemo(
     () =>
       session
-        ? buildInspectionSessionDerivedData(masterData, session, [session])
+        ? buildInspectionSessionDerivedData(
+            masterData,
+            session,
+            getSessionsBySiteId(session.siteKey),
+          )
         : {
             currentAccidentEntries: [],
             currentAgentEntries: [],
@@ -253,7 +260,7 @@ export function useInspectionSessionScreen(sessionId: string) {
             progress: null,
             siteSessions: [],
           },
-    [masterData, session],
+    [getSessionsBySiteId, masterData, session],
   );
   const relationRefreshAttemptKey = session
     ? [
@@ -373,23 +380,81 @@ export function useInspectionSessionScreen(sessionId: string) {
     }
 
     let cancelled = false;
-    setIsLoadingSession(!hasDisplaySession);
+    const loadSession = async () => {
+      setIsLoadingSession(!hasDisplaySession);
 
-    void ensureSessionLoaded(sessionId).finally(() => {
-      if (!cancelled) {
-        setIsLoadingSession(false);
+      const shouldBootstrapLegacy = sessionId.startsWith('legacy:') && isAdminView;
+      if (shouldBootstrapLegacy) {
+        if (getSessionById(sessionId)) {
+          if (!cancelled) {
+            setIsLoadingSession(false);
+          }
+          return;
+        }
+        if (legacyBootstrapAttemptIdsRef.current.has(sessionId)) {
+          if (!cancelled) {
+            setIsLoadingSession(false);
+          }
+          return;
+        }
+
+        legacyBootstrapAttemptIdsRef.current.add(sessionId);
+
+        try {
+          const payload = await fetchAdminReportSessionBootstrap(sessionId);
+          if (cancelled) return;
+          upsertHydratedSiteSessions(payload.site, payload.siteSessions);
+        } catch {
+          // Leave the screen in its missing-state fallback when bootstrap also fails.
+        } finally {
+          if (!cancelled) {
+            setIsLoadingSession(false);
+          }
+        }
+        return;
       }
-    });
+
+      try {
+        await ensureSessionLoaded(sessionId);
+      } catch {
+        // Legacy admin bootstrap fallback can still recover after a general by-key miss.
+      }
+      if (cancelled || getSessionById(sessionId)) {
+        if (!cancelled) {
+          setIsLoadingSession(false);
+        }
+        return;
+      }
+      setIsLoadingSession(false);
+    };
+
+    void loadSession();
 
     return () => {
       cancelled = true;
     };
-  }, [ensureSessionLoaded, hasDisplaySession, isAuthenticated, isReady, sessionId]);
+  }, [
+    ensureSessionLoaded,
+    getSessionById,
+    hasDisplaySession,
+    isAdminView,
+    isAuthenticated,
+    isReady,
+    sessionId,
+    upsertHydratedSiteSessions,
+  ]);
 
   useEffect(() => {
     if (!session) {
       forcedRelationRefreshIdsRef.current.clear();
       relationRefreshAttemptKeysRef.current.clear();
+      setMissingRelationsStatus('idle');
+      return;
+    }
+
+    if (isAdminView && session.id.startsWith('legacy:')) {
+      forcedRelationRefreshIdsRef.current.delete(session.id);
+      relationRefreshAttemptKeysRef.current.delete(relationRefreshAttemptKey);
       setMissingRelationsStatus('idle');
       return;
     }
@@ -436,6 +501,7 @@ export function useInspectionSessionScreen(sessionId: string) {
   }, [
     ensureSessionLoaded,
     isAuthenticated,
+    isAdminView,
     isReady,
     needsRelationRefresh,
     relationRefreshAttemptKey,

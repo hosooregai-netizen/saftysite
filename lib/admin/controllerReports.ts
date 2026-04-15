@@ -251,6 +251,14 @@ export function buildControllerReportHref(row: ControllerReportRow): string {
   }
 }
 
+export function buildControllerReportOpenHref(row: ControllerReportRow): string {
+  if (row.reportType === 'technical_guidance' && row.reportKey.startsWith('legacy:')) {
+    return `/admin/report-open?reportKey=${encodeURIComponent(row.reportKey)}`;
+  }
+
+  return buildControllerReportHref(row);
+}
+
 export function getControllerReportTypeLabel(type: ControllerReportType): string {
   switch (type) {
     case 'quarterly_report':

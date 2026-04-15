@@ -184,6 +184,67 @@ export function useInspectionSessionsMutations(
     }
   }, [dirtySessionIdsRef, sessionVersionsRef, sessionsRef, setReportIndexBySiteId, setSessionState]);
 
-  return { createSession, createSite, deleteSessions, deleteSite, updateSession, updateSessions, updateSite };
-}
+  const upsertHydratedSiteSessions = useCallback((
+    site: InspectionSite,
+    sessions: InspectionSession[],
+  ) => {
+    const normalizedSite = normalizeInspectionSite(site);
+    const nextSitesById = new Map(
+      sitesRef.current.map((currentSite) => [currentSite.id, currentSite]),
+    );
+    nextSitesById.set(normalizedSite.id, normalizedSite);
+    setSiteState(Array.from(nextSitesById.values()));
 
+    const nextSessionsById = new Map(
+      sessionsRef.current.map((currentSession) => [currentSession.id, currentSession]),
+    );
+    sessions.forEach((session) => {
+      const hasDirtyLocalCopy = dirtySessionIdsRef.current.has(session.id);
+      if (!hasDirtyLocalCopy) {
+        nextSessionsById.set(session.id, session);
+      }
+    });
+    setSessionState(Array.from(nextSessionsById.values()));
+
+    try {
+      const nextItems = sessions
+        .filter((session) => getSessionSiteKey(session) === normalizedSite.id)
+        .map((session) => mapInspectionSessionToReportListItem(session, normalizedSite));
+      if (nextItems.length === 0) {
+        return;
+      }
+
+      setReportIndexBySiteId((current) => ({
+        ...current,
+        [normalizedSite.id]: {
+          ...createEmptyReportIndexState(),
+          ...(current[normalizedSite.id] ?? {}),
+          status: 'loaded',
+          items: mergeReportIndexItems(current[normalizedSite.id]?.items ?? [], nextItems),
+          fetchedAt: new Date().toISOString(),
+          error: null,
+        },
+      }));
+    } catch (error) {
+      console.warn('Failed to update hydrated inspection report index', error);
+    }
+  }, [
+    dirtySessionIdsRef,
+    sessionsRef,
+    setReportIndexBySiteId,
+    setSessionState,
+    setSiteState,
+    sitesRef,
+  ]);
+
+  return {
+    createSession,
+    createSite,
+    deleteSessions,
+    deleteSite,
+    updateSession,
+    updateSessions,
+    updateSite,
+    upsertHydratedSiteSessions,
+  };
+}

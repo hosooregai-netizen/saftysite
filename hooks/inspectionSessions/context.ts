@@ -73,6 +73,10 @@ export interface InspectionSessionsContextValue {
   getSessionById: (sessionId: string) => InspectionSession | null;
   getSessionsBySiteId: (siteId: string) => InspectionSession[];
   getSiteById: (siteId: string) => InspectionSite | null;
+  upsertHydratedSiteSessions: (
+    site: InspectionSite,
+    sessions: InspectionSession[]
+  ) => void;
   upsertReportIndexItems: (siteId: string, items: InspectionReportListItem[]) => void;
 }
 
@@ -86,4 +90,3 @@ export function useInspectionSessions(): InspectionSessionsContextValue {
   }
   return context;
 }
-

@@ -1,5 +1,6 @@
 import type { SafetySite, SafetyUser, SafetyUserRole } from '@/types/backend';
 import type { SafetyHeadquarter } from '@/types/controller';
+import type { InspectionSession, InspectionSite } from '@/types/inspectionSession';
 
 export type TableSortDirection = 'asc' | 'desc';
 
@@ -54,11 +55,10 @@ export interface SafetyAdminHeadquarterListResponse
   summary: SafetyAdminHeadquarterListSummary;
 }
 
-export interface SafetyAdminUserListResponse
-  extends SafetyAdminPagedResponse<SafetyAdminUserListRow> {}
+export type SafetyAdminUserListResponse =
+  SafetyAdminPagedResponse<SafetyAdminUserListRow>;
 
-export interface SafetyAdminSiteListResponse
-  extends SafetyAdminPagedResponse<SafetySite> {}
+export type SafetyAdminSiteListResponse = SafetyAdminPagedResponse<SafetySite>;
 
 export interface SafetyAdminDirectoryLookupHeadquarter {
   id: string;
@@ -600,4 +600,10 @@ export interface SafetyAdminScheduleQueueResponse {
 export interface SafetyAdminScheduleLookupsResponse {
   sites: Array<{ id: string; name: string }>;
   users: Array<{ id: string; name: string }>;
+}
+
+export interface SafetyAdminReportSessionBootstrapResponse {
+  site: InspectionSite;
+  session: InspectionSession;
+  siteSessions: InspectionSession[];
 }

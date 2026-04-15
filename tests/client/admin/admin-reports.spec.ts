@@ -11,8 +11,21 @@ export async function runAdminReportsSmoke(config: ClientSmokePlaywrightConfig) 
 
     await page.goto(`${harness.baseURL}/admin?section=reports`, { waitUntil: 'load' });
     await harness.loginAs('admin@example.com');
-
     await harness.waitForRequestCount('GET /api/admin/reports', 1);
+    await page.getByRole('heading', { level: 1, name: /전체 보고서/ }).waitFor({
+      state: 'visible',
+    });
+
+    await page.goto(
+      `${harness.baseURL}/sessions/${encodeURIComponent('legacy:technical_guidance:1001')}`,
+      { waitUntil: 'load' },
+    );
+    await page.getByRole('button', { name: 'HWPX 다운로드' }).waitFor({
+      state: 'visible',
+    });
+    await page.getByText('보고서를 찾을 수 없습니다.').waitFor({ state: 'hidden' });
+
+    await page.goto(`${harness.baseURL}/admin?section=reports`, { waitUntil: 'load' });
     await page.getByRole('heading', { level: 1, name: /전체 보고서/ }).waitFor({
       state: 'visible',
     });
@@ -60,6 +73,16 @@ export async function runAdminReportsSmoke(config: ClientSmokePlaywrightConfig) 
     await badWorkplaceRow.locator('button[aria-haspopup="menu"]').click();
     await page.getByRole('menuitem', { name: '발송으로 변경' }).waitFor({ state: 'hidden' });
     await page.getByRole('menuitem', { name: '미발송으로 변경' }).waitFor({ state: 'hidden' });
+    await page.keyboard.press('Escape');
+
+    const legacyTechnicalRow = page
+      .locator('tbody tr')
+      .filter({ hasText: '레거시 5차 기술지도 보고서' })
+      .first();
+    await legacyTechnicalRow.waitFor({ state: 'visible' });
+    await legacyTechnicalRow.locator('button[aria-haspopup="menu"]').click();
+    await page.getByRole('menuitem', { name: '열기', exact: true }).click();
+    await page.waitForURL(/\/sessions\/legacy%3Atechnical_guidance%3A1001$/);
 
     harness.assertContractApisObserved();
     harness.assertNoClientErrors();

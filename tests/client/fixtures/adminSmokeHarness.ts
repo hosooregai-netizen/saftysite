@@ -6,6 +6,11 @@ import {
 import { backfillAnalyticsSourceData } from '../../../features/admin/lib/control-center-model/analyticsSourceBackfill';
 import { buildSiteMemoWithContractProfile } from '../../../lib/admin/siteContractProfile';
 import { buildControllerReportRows } from '../../../lib/admin/controllerReports';
+import {
+  buildSafetyMasterData,
+  mapSafetyReportToInspectionSession,
+  mapSafetySiteToInspectionSite,
+} from '../../../lib/safetyApiMappers';
 import type { ClientSmokePlaywrightConfig } from '../../../playwright.config';
 import {
   buildAdminDirectoryLookupsResponse,
@@ -38,6 +43,7 @@ import type {
 } from '../../../types/controller';
 import type {
   SafetyContentItem,
+  SafetyReport,
   SafetyReportListItem,
   SafetySite,
   SafetyUser,
@@ -91,6 +97,7 @@ function buildEmptyDispatch(overrides: Partial<ReportDispatchMeta> = {}): Report
 function normalizeAdminApiPath(pathname: string) {
   return pathname
     .replace(/^\/api\/admin\/exports\/[^/]+$/, '/api/admin/exports/:section')
+    .replace(/^\/api\/admin\/reports\/[^/]+\/session-bootstrap$/, '/api/admin/reports/:id/session-bootstrap')
     .replace(/^\/api\/admin\/reports\/[^/]+\/review$/, '/api/admin/reports/:id/review')
     .replace(/^\/api\/admin\/reports\/[^/]+\/dispatch$/, '/api/admin/reports/:id/dispatch')
     .replace(/^\/api\/admin\/reports\/[^/]+\/dispatch-events$/, '/api/admin/reports/:id/dispatch-events')
@@ -133,6 +140,87 @@ function buildAdminReportRows(harness: ErpSmokeHarness) {
     harness.helpers.hydratedSites() as SafetySite[],
     harness.state.users as unknown as SafetyUser[],
   );
+}
+
+function isTechnicalGuidanceFixture(report: JsonRecord) {
+  const reportType = String(report.report_type ?? '').trim();
+  if (reportType) {
+    return reportType === 'technical_guidance';
+  }
+
+  const meta =
+    report.meta && typeof report.meta === 'object' ? (report.meta as JsonRecord) : {};
+  const reportKind = String(meta.reportKind ?? '').trim().toLowerCase();
+  return !reportKind || reportKind === 'technical_guidance';
+}
+
+function getFixtureReportRound(report: JsonRecord) {
+  const round = Number(report.visit_round ?? 0);
+  return round > 0 ? round : Number.MAX_SAFE_INTEGER;
+}
+
+function getFixtureReportVisitDate(report: JsonRecord) {
+  return String(report.visit_date ?? '').trim() || '9999-12-31';
+}
+
+function getFixtureReportCreatedAt(report: JsonRecord) {
+  return String(report.created_at ?? '').trim() || '9999-12-31T23:59:59.999Z';
+}
+
+function buildAdminReportSessionBootstrapResponse(
+  harness: ErpSmokeHarness,
+  reportKey: string,
+) {
+  const targetReport = harness.state.reports.find(
+    (report) => String(report.report_key) === reportKey,
+  ) as JsonRecord | undefined;
+  if (!targetReport) {
+    throw new Error(`Missing admin bootstrap report fixture: ${reportKey}`);
+  }
+
+  const matchedSite = (harness.helpers.hydratedSites() as SafetySite[]).find(
+    (site) => String(site.id) === String(targetReport.site_id),
+  );
+  if (!matchedSite) {
+    throw new Error(`Missing admin bootstrap site fixture: ${String(targetReport.site_id)}`);
+  }
+
+  const site = mapSafetySiteToInspectionSite(clone(matchedSite));
+  const masterData = buildSafetyMasterData(
+    clone(harness.state.contentItems) as unknown as SafetyContentItem[],
+  );
+  const siteSessions = harness.state.reports
+    .filter(
+      (report) =>
+        String(report.site_id) === String(targetReport.site_id) &&
+        isTechnicalGuidanceFixture(report),
+    )
+    .sort(
+      (left, right) =>
+        getFixtureReportRound(left) - getFixtureReportRound(right) ||
+        getFixtureReportVisitDate(left).localeCompare(getFixtureReportVisitDate(right)) ||
+        getFixtureReportCreatedAt(left).localeCompare(getFixtureReportCreatedAt(right)),
+    )
+    .map((report) =>
+      mapSafetyReportToInspectionSession(
+        clone(report) as unknown as SafetyReport,
+        site,
+        masterData,
+      ),
+    );
+  const session =
+    siteSessions.find((item) => item.id === reportKey) ??
+    mapSafetyReportToInspectionSession(
+      clone(targetReport) as unknown as SafetyReport,
+      site,
+      masterData,
+    );
+
+  return {
+    site,
+    session,
+    siteSessions,
+  };
 }
 
 function buildOverviewResponse(harness: ErpSmokeHarness): SafetyAdminOverviewResponse {
@@ -331,6 +419,26 @@ async function fulfillJson(route: Route, payload: unknown, status = 200) {
 }
 
 async function installAdminRoutes(harness: ErpSmokeHarness) {
+  const legacyByKeyFailureHandler = async (route: Route) => {
+    const request = route.request();
+    if (request.method() !== 'GET') {
+      await route.fallback();
+      return;
+    }
+
+    const pathname = new URL(request.url()).pathname;
+    const reportKey = decodeURIComponent(pathname.split('/').at(-1) || '');
+    if (!reportKey.startsWith('legacy:technical_guidance:')) {
+      await route.fallback();
+      return;
+    }
+
+    await fulfillJson(route, { detail: 'legacy report requires admin bootstrap' }, 404);
+  };
+
+  await harness.context.route('**/api/safety/reports/by-key/**', legacyByKeyFailureHandler);
+  await harness.context.route('**/api/v1/reports/by-key/**', legacyByKeyFailureHandler);
+
   await harness.context.route('**/api/messages/**', async (route) => {
     const request = route.request();
     const pathname = new URL(request.url()).pathname;
@@ -471,6 +579,15 @@ async function installAdminRoutes(harness: ErpSmokeHarness) {
 
     if (pathname === '/api/admin/reports' && request.method() === 'GET') {
       await fulfillJson(route, buildReportsResponse(harness, url));
+      return;
+    }
+
+    if (
+      /^\/api\/admin\/reports\/[^/]+\/session-bootstrap$/.test(pathname) &&
+      request.method() === 'GET'
+    ) {
+      const reportKey = decodeURIComponent(pathname.split('/')[4] || '');
+      await fulfillJson(route, buildAdminReportSessionBootstrapResponse(harness, reportKey));
       return;
     }
 
@@ -674,6 +791,16 @@ function ensureAdminFixtureReports(harness: ErpSmokeHarness) {
       visit_date: '2026-03-24',
       visit_round: 4,
     },
+    {
+      id: 'legacy:technical_guidance:1001',
+      report_key: 'legacy:technical_guidance:1001',
+      report_title: '레거시 5차 기술지도 보고서',
+      site_id: 'site-1',
+      headquarter_id: 'hq-1',
+      assigned_user_id: 'field-1',
+      visit_date: '2026-03-31',
+      visit_round: 5,
+    },
   ];
 
   technicalGuidanceFixtures.forEach((fixture) => {
@@ -697,6 +824,7 @@ function ensureAdminFixtureReports(harness: ErpSmokeHarness) {
       review: buildEmptyReview(),
       dispatch: buildEmptyDispatch(),
       meta: {
+        forceAdminBootstrap: fixture.report_key.startsWith('legacy:technical_guidance:'),
         reportKind: 'technical_guidance',
         reportNumber: fixture.visit_round,
         siteName: '기존 현장',
@@ -706,6 +834,11 @@ function ensureAdminFixtureReports(harness: ErpSmokeHarness) {
       payload: {
         reportKind: 'technical_guidance',
         reportNumber: fixture.visit_round,
+        meta: {
+          reportDate: fixture.visit_date,
+          reportTitle: fixture.report_title,
+          siteName: '기존 현장',
+        },
       },
     });
   });

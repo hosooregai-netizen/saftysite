@@ -37,34 +37,44 @@ export function useInspectionSessionStateHydration(
     persistSessions,
     persistSites,
     sessionVersionsRef,
+    setSessions,
     sessionsRef,
     setCurrentUser,
     setIsReady,
     setMasterData,
     setReportIndexBySiteId,
-    setSessionState,
     setSiteState,
   } = store;
 
   const applyMasterDataToSessions = useCallback(
     async (masterData: SafetyMasterData) => {
-      const nextSessions = sessionsRef.current.map((session) =>
-        mergeMasterDataIntoSession(session, masterData),
+      const nextSessions = normalizeSessions(
+        sessionsRef.current.map((session) =>
+          mergeMasterDataIntoSession(session, masterData),
+        ),
       );
 
       masterDataRef.current = masterData;
+      sessionsRef.current = nextSessions;
       hasLoadedRemoteMasterDataRef.current = true;
 
       startTransition(() => {
         setMasterData(masterData);
-        setSessionState(nextSessions);
+        setSessions(nextSessions);
       });
 
       void persistSessions(nextSessions).catch(() => {
         // Ignore cache persistence failures during optimistic sync.
       });
     },
-    [hasLoadedRemoteMasterDataRef, masterDataRef, persistSessions, sessionsRef, setMasterData, setSessionState],
+    [
+      hasLoadedRemoteMasterDataRef,
+      masterDataRef,
+      persistSessions,
+      sessionsRef,
+      setMasterData,
+      setSessions,
+    ],
   );
 
   const hydrateRemoteSiteState = useCallback(
@@ -128,23 +138,27 @@ export function useInspectionSessionStateHydration(
 
   const applyHydratedSessions = useCallback(
     async (sessions: InspectionSession[]) => {
-      const nextSessionIds = new Set(sessions.map((session) => session.id));
+      const normalizedSessions = normalizeSessions(sessions);
+      const nextSessionIds = new Set(normalizedSessions.map((session) => session.id));
       dirtySessionIdsRef.current = new Set(
         Array.from(dirtySessionIdsRef.current).filter((sessionId) =>
           nextSessionIds.has(sessionId),
         ),
       );
-      sessionVersionsRef.current = sessions.reduce<Record<string, number>>(
+      sessionVersionsRef.current = normalizedSessions.reduce<Record<string, number>>(
         (accumulator, session) => {
           accumulator[session.id] = sessionVersionsRef.current[session.id] ?? 0;
           return accumulator;
         },
         {},
       );
+      sessionsRef.current = normalizedSessions;
+
       startTransition(() => {
-        setSessionState(sessions);
+        setSessions(normalizedSessions);
       });
-      void persistSessions(sessions).catch(() => {
+
+      void persistSessions(normalizedSessions).catch(() => {
         // Ignore cache persistence failures during optimistic sync.
       });
     },
@@ -152,7 +166,8 @@ export function useInspectionSessionStateHydration(
       dirtySessionIdsRef,
       persistSessions,
       sessionVersionsRef,
-      setSessionState,
+      sessionsRef,
+      setSessions,
     ],
   );
 

@@ -5,7 +5,7 @@ import { SortableHeaderCell } from '@/features/admin/components/SortableHeaderCe
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import { getAdminSectionHref } from '@/lib/admin';
 import {
-  buildControllerReportHref,
+  buildControllerReportOpenHref,
   getControllerReportTypeLabel,
 } from '@/lib/admin/controllerReports';
 import { getQualityStatusLabel } from '@/lib/admin/reportMeta';
@@ -220,7 +220,7 @@ export function ReportsTable({
                                   reportTitle:
                                     row.reportTitle || row.periodLabel || row.reportKey,
                                   returnLabel: '보고서로 돌아가기',
-                                  returnTo: buildControllerReportHref(row),
+                                  returnTo: buildControllerReportOpenHref(row),
                                   siteId: row.siteId,
                                 }),
                               },
