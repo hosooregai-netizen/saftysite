@@ -200,7 +200,7 @@ export function ReportsTable({
                             items={[
                               {
                                 label: '열기',
-                                href: buildControllerReportHref(row),
+                                onSelect: () => onOpenReportRow(row),
                               },
                               {
                                 label: '원본 현장으로 이동',
