@@ -14,6 +14,9 @@
 - `SitesSection` now supports an optional title action link rendered in the same text-only style
 - `HeadquartersSection` passes `사업장 목록 보기` only for the standalone site-list state driven by `siteStatus`
 - shared admin section styles now include the inline title-row and text-link treatment
+- standalone site list header no longer shows the count meta beside the title
+- standalone site list header no longer shows the create-site action in the toolbar
+- the `지도요원` site-list column now prefers `inspector_name` and falls back to `guidance_officer_name`
 
 ## Navigation Contract
 

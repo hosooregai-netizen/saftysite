@@ -113,6 +113,7 @@ export function SitesTable({
                 desc: '공사 종류 역순',
               })}
             />
+            <th>지도요원</th>
             <SortableHeaderCell
               column={{ key: 'site_address' }}
               current={sort}
@@ -185,6 +186,11 @@ export function SitesTable({
                 ) : null}
                 <td>
                   <div className={styles.tablePrimary}>{site.project_kind || '-'}</div>
+                </td>
+                <td>
+                  <div className={styles.tablePrimary}>
+                    {site.inspector_name || site.guidance_officer_name || '-'}
+                  </div>
                 </td>
                 <td>
                   <div className={styles.tablePrimary}>{site.site_address || '-'}</div>
@@ -276,7 +282,7 @@ export function SitesTable({
       {totalCount > 0 ? (
         <div className={styles.paginationRow}>
           <span>
-            {page} / {totalPages} 페이지 · 총 {totalCount}건
+            {page} / {totalPages} 페이지
           </span>
           <div className={styles.tableActions}>
             <button

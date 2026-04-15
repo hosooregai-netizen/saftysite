@@ -25,7 +25,6 @@ export function SitesSection(props: SitesSectionProps) {
                 </Link>
               ) : null}
             </div>
-            <div className={styles.sectionHeaderMeta}>총 {state.total}건</div>
           </div>
         ) : (
           <div className={styles.sectionHeaderSpacer} />
@@ -52,14 +51,6 @@ export function SitesSection(props: SitesSectionProps) {
             disabled={props.busy}
           >
             엑셀 내보내기
-          </button>
-          <button
-            type="button"
-            className="app-button app-button-primary"
-            onClick={state.openCreate}
-            disabled={props.busy}
-          >
-            현장 추가
           </button>
         </div>
       </div>
