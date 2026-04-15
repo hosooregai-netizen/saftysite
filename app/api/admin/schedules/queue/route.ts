@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
-import { readRequiredAdminToken, SafetyServerApiError } from '@/server/admin/safetyApiServer';
-import { buildAdminScheduleQueueSnapshotResponse } from '@/server/admin/scheduleSnapshot';
+import {
+  fetchAdminScheduleQueueServer,
+  readRequiredAdminToken,
+  SafetyServerApiError,
+} from '@/server/admin/safetyApiServer';
+import { mapBackendAdminScheduleQueueResponse } from '@/server/admin/upstreamMappers';
 
 export const runtime = 'nodejs';
 
@@ -8,21 +12,21 @@ export async function GET(request: Request): Promise<Response> {
   try {
     const token = readRequiredAdminToken(request);
     const url = new URL(request.url);
-    const response = await buildAdminScheduleQueueSnapshotResponse(
+    const response = await fetchAdminScheduleQueueServer(
       token,
       {
-        assigneeUserId: url.searchParams.get('assignee_user_id') || '',
+        assignee_user_id: url.searchParams.get('assignee_user_id') || '',
         limit: Number(url.searchParams.get('limit') || '50'),
         month: url.searchParams.get('month') || '',
         offset: Number(url.searchParams.get('offset') || '0'),
         query: url.searchParams.get('query') || '',
-        siteId: url.searchParams.get('site_id') || '',
+        site_id: url.searchParams.get('site_id') || '',
         status: url.searchParams.get('status') || '',
       },
       request,
     );
 
-    return NextResponse.json(response);
+    return NextResponse.json(mapBackendAdminScheduleQueueResponse(response));
   } catch (error) {
     if (error instanceof SafetyServerApiError) {
       return NextResponse.json({ error: error.message }, { status: error.status });

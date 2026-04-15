@@ -1,19 +1,20 @@
 import { NextResponse } from 'next/server';
-import { buildAdminDirectoryLookupsResponse } from '@/server/admin/adminDirectoryLists';
-import { getAdminDirectorySnapshot } from '@/server/admin/adminDirectorySnapshot';
-import { readRequiredAdminToken, SafetyServerApiError } from '@/server/admin/safetyApiServer';
+import {
+  fetchAdminDirectoryLookupsServer,
+  readRequiredAdminToken,
+  SafetyServerApiError,
+} from '@/server/admin/safetyApiServer';
+import { mapBackendAdminDirectoryLookupsResponse } from '@/server/admin/upstreamMappers';
 
 export const runtime = 'nodejs';
 
 export async function GET(request: Request): Promise<Response> {
   try {
     const token = readRequiredAdminToken(request);
-    const snapshot = await getAdminDirectorySnapshot(token, request);
     return NextResponse.json(
-      buildAdminDirectoryLookupsResponse({
-        ...snapshot.data,
-        refreshedAt: snapshot.refreshedAt,
-      }),
+      mapBackendAdminDirectoryLookupsResponse(
+        await fetchAdminDirectoryLookupsServer(token, request),
+      ),
     );
   } catch (error) {
     if (error instanceof SafetyServerApiError) {

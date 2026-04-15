@@ -448,6 +448,7 @@ export interface SafetyBackendInspectionSchedule {
   planned_date: string;
   actual_visit_date: string;
   round_no: number;
+  total_rounds?: number | null;
   selection_confirmed_at: string;
   selection_confirmed_by_name: string;
   selection_confirmed_by_user_id: string;
@@ -619,6 +620,99 @@ export interface SafetyBackendScheduleListResponse {
   offset: number;
   rows: SafetyBackendInspectionSchedule[];
   total: number;
+}
+
+export interface SafetyBackendAdminUserAssignedSiteSummary {
+  id: string;
+  site_name: string;
+}
+
+export interface SafetyBackendAdminUserListRow extends SafetyUser {
+  assigned_sites: SafetyBackendAdminUserAssignedSiteSummary[];
+}
+
+export interface SafetyBackendAdminUserListResponse {
+  limit: number;
+  offset: number;
+  refreshed_at: string;
+  rows: SafetyBackendAdminUserListRow[];
+  total: number;
+}
+
+export interface SafetyBackendAdminHeadquarterListSummary {
+  completed_count: number;
+  contact_gap_count: number;
+  memo_gap_count: number;
+  registration_gap_count: number;
+}
+
+export interface SafetyBackendAdminHeadquarterListResponse {
+  limit: number;
+  offset: number;
+  refreshed_at: string;
+  rows: SafetyHeadquarterDetail[];
+  summary: SafetyBackendAdminHeadquarterListSummary;
+  total: number;
+}
+
+export interface SafetyBackendAdminSiteListResponse {
+  limit: number;
+  offset: number;
+  refreshed_at: string;
+  rows: SafetySite[];
+  total: number;
+}
+
+export interface SafetyBackendAdminDirectoryLookupHeadquarter {
+  id: string;
+  name: string;
+}
+
+export interface SafetyBackendAdminDirectoryLookupSite {
+  headquarter_id: string;
+  id: string;
+  name: string;
+}
+
+export interface SafetyBackendAdminDirectoryLookupUser {
+  email: string;
+  id: string;
+  is_active: boolean;
+  name: string;
+  organization_name: string | null;
+  phone: string | null;
+  position: string | null;
+  role: SafetyUserRole;
+}
+
+export interface SafetyBackendAdminDirectoryLookupsResponse {
+  headquarters: SafetyBackendAdminDirectoryLookupHeadquarter[];
+  sites: SafetyBackendAdminDirectoryLookupSite[];
+  users: SafetyBackendAdminDirectoryLookupUser[];
+}
+
+export interface SafetyBackendAdminScheduleCalendarResponse {
+  all_selected_total: number;
+  available_months: string[];
+  month: string;
+  month_total: number;
+  refreshed_at: string;
+  rows: SafetyBackendInspectionSchedule[];
+  unselected_total: number;
+}
+
+export interface SafetyBackendAdminScheduleQueueResponse {
+  limit: number;
+  month: string;
+  offset: number;
+  refreshed_at: string;
+  rows: SafetyBackendInspectionSchedule[];
+  total: number;
+}
+
+export interface SafetyBackendAdminScheduleLookupsResponse {
+  sites: Array<{ id: string; name: string }>;
+  users: Array<{ id: string; name: string }>;
 }
 
 export interface SafetyBackendExcelImportMatchCandidate {

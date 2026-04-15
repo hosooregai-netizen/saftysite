@@ -1,14 +1,18 @@
 import { NextResponse } from 'next/server';
-import { readRequiredAdminToken, SafetyServerApiError } from '@/server/admin/safetyApiServer';
-import { buildAdminScheduleLookupsSnapshotResponse } from '@/server/admin/scheduleSnapshot';
+import {
+  fetchAdminScheduleLookupsServer,
+  readRequiredAdminToken,
+  SafetyServerApiError,
+} from '@/server/admin/safetyApiServer';
+import { mapBackendAdminScheduleLookupsResponse } from '@/server/admin/upstreamMappers';
 
 export const runtime = 'nodejs';
 
 export async function GET(request: Request): Promise<Response> {
   try {
     const token = readRequiredAdminToken(request);
-    const response = await buildAdminScheduleLookupsSnapshotResponse(token, request);
-    return NextResponse.json(response);
+    const response = await fetchAdminScheduleLookupsServer(token, request);
+    return NextResponse.json(mapBackendAdminScheduleLookupsResponse(response));
   } catch (error) {
     if (error instanceof SafetyServerApiError) {
       return NextResponse.json({ error: error.message }, { status: error.status });

@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
-import { buildAdminUsersListResponse } from '@/server/admin/adminDirectoryLists';
-import { getAdminDirectorySnapshot } from '@/server/admin/adminDirectorySnapshot';
-import { readRequiredAdminToken, SafetyServerApiError } from '@/server/admin/safetyApiServer';
+import {
+  fetchAdminUsersListServer,
+  readRequiredAdminToken,
+  SafetyServerApiError,
+} from '@/server/admin/safetyApiServer';
+import { mapBackendAdminUsersListResponse } from '@/server/admin/upstreamMappers';
 
 export const runtime = 'nodejs';
 
@@ -9,23 +12,20 @@ export async function GET(request: Request): Promise<Response> {
   try {
     const token = readRequiredAdminToken(request);
     const url = new URL(request.url);
-    const snapshot = await getAdminDirectorySnapshot(token, request);
-    const response = buildAdminUsersListResponse(
-      {
-        ...snapshot.data,
-        refreshedAt: snapshot.refreshedAt,
-      },
+    const response = await fetchAdminUsersListServer(
+      token,
       {
       limit: Number(url.searchParams.get('limit') || '50'),
       offset: Number(url.searchParams.get('offset') || '0'),
       query: url.searchParams.get('query') || '',
       role: url.searchParams.get('role') || '',
-      sortBy: url.searchParams.get('sort_by') || 'name',
-      sortDir: url.searchParams.get('sort_dir') === 'desc' ? 'desc' : 'asc',
+      sort_by: url.searchParams.get('sort_by') || 'name',
+      sort_dir: url.searchParams.get('sort_dir') === 'desc' ? 'desc' : 'asc',
       status: url.searchParams.get('status') || '',
       },
+      request,
     );
-    return NextResponse.json(response);
+    return NextResponse.json(mapBackendAdminUsersListResponse(response));
   } catch (error) {
     if (error instanceof SafetyServerApiError) {
       return NextResponse.json({ error: error.message }, { status: error.status });

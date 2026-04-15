@@ -7,14 +7,20 @@ import {
   isVisibleHeadquarter,
   isVisibleReport,
   isVisibleSite,
-  normalizeReportLifecycleStatus,
 } from '@/lib/admin/lifecycleStatus';
 import type { SafetyContentAssetUpload } from '@/lib/safetyApi/adminEndpoints';
 import type {
   SafetyBackendAdminAlert,
   SafetyBackendAdminAnalyticsResponse,
+  SafetyBackendAdminDirectoryLookupsResponse,
+  SafetyBackendAdminHeadquarterListResponse,
   SafetyBackendAdminOverviewResponse,
   SafetyBackendAdminReportsResponse,
+  SafetyBackendAdminScheduleCalendarResponse,
+  SafetyBackendAdminScheduleLookupsResponse,
+  SafetyBackendAdminScheduleQueueResponse,
+  SafetyBackendAdminSiteListResponse,
+  SafetyBackendAdminUserListResponse,
   SafetyBackendInspectionSchedule,
   SafetyBackendMailAccount,
   SafetyBackendMailProviderStatusResponse,
@@ -497,54 +503,63 @@ export function fetchAdminReportsViewServer(
   params: Record<string, string | number | boolean | null | undefined>,
   request: Request | null = null,
 ): Promise<SafetyBackendAdminReportsResponse> {
-  const limit = Math.max(
-    1,
-    Math.min(
-      REPORT_LIST_LIMIT,
-      typeof params.limit === 'number' ? params.limit : Number(params.limit ?? 100) || 100,
-    ),
+  return requestSafetyAdminServer<SafetyBackendAdminReportsResponse>(
+    withQuery('/admin/reports', params),
+    {},
+    token,
+    request,
   );
-  const offset = Math.max(
-    0,
-    typeof params.offset === 'number' ? params.offset : Number(params.offset ?? 0) || 0,
+}
+
+export function fetchAdminUsersListServer(
+  token: string,
+  params: Record<string, string | number | boolean | null | undefined>,
+  request: Request | null = null,
+): Promise<SafetyBackendAdminUserListResponse> {
+  return requestSafetyAdminServer<SafetyBackendAdminUserListResponse>(
+    withQuery('/admin/users/list', params),
+    {},
+    token,
+    request,
   );
+}
 
-  return Promise.all([
-    fetchAdminDirectoryData(token, request),
-    requestSafetyAdminServer<SafetyBackendAdminReportsResponse>(
-      withQuery('/admin/reports', {
-        ...params,
-        limit: REPORT_LIST_LIMIT,
-        offset: 0,
-      }),
-      {},
-      token,
-      request,
-    ),
-  ]).then(([directoryData, response]) => {
-    const { headquarters, sites } = directoryData;
-    const visibleSiteIds = buildVisibleAdminSiteIdSet(sites, headquarters);
-    const rows = response.rows.filter((row) => {
-      const siteId = normalizeText(row.site_id);
-      if (!siteId || !visibleSiteIds.has(siteId)) {
-        return false;
-      }
+export function fetchAdminHeadquartersListServer(
+  token: string,
+  params: Record<string, string | number | boolean | null | undefined>,
+  request: Request | null = null,
+): Promise<SafetyBackendAdminHeadquarterListResponse> {
+  return requestSafetyAdminServer<SafetyBackendAdminHeadquarterListResponse>(
+    withQuery('/admin/headquarters/list', params),
+    {},
+    token,
+    request,
+  );
+}
 
-      return normalizeReportLifecycleStatus({
-        lifecycleStatus: row.lifecycle_status,
-        progressRate: row.progress_rate,
-        status: normalizeText(row.workflow_status) || normalizeText(row.status),
-        workflowStatus: row.workflow_status,
-      }) !== 'deleted';
-    });
+export function fetchAdminSitesListServer(
+  token: string,
+  params: Record<string, string | number | boolean | null | undefined>,
+  request: Request | null = null,
+): Promise<SafetyBackendAdminSiteListResponse> {
+  return requestSafetyAdminServer<SafetyBackendAdminSiteListResponse>(
+    withQuery('/admin/sites/list', params),
+    {},
+    token,
+    request,
+  );
+}
 
-    return {
-      limit,
-      offset,
-      rows: rows.slice(offset, offset + limit),
-      total: rows.length,
-    };
-  });
+export function fetchAdminDirectoryLookupsServer(
+  token: string,
+  request: Request | null = null,
+): Promise<SafetyBackendAdminDirectoryLookupsResponse> {
+  return requestSafetyAdminServer<SafetyBackendAdminDirectoryLookupsResponse>(
+    '/admin/directory/lookups',
+    {},
+    token,
+    request,
+  );
 }
 
 export function updateAdminReportReviewServer(
@@ -660,6 +675,44 @@ export function fetchAdminSchedulesServer(
 ): Promise<SafetyBackendScheduleListResponse> {
   return requestSafetyAdminServer<SafetyBackendScheduleListResponse>(
     withQuery('/admin/schedules', params),
+    {},
+    token,
+    request,
+  );
+}
+
+export function fetchAdminScheduleCalendarServer(
+  token: string,
+  params: Record<string, string | number | boolean | null | undefined>,
+  request: Request | null = null,
+): Promise<SafetyBackendAdminScheduleCalendarResponse> {
+  return requestSafetyAdminServer<SafetyBackendAdminScheduleCalendarResponse>(
+    withQuery('/admin/schedules/calendar', params),
+    {},
+    token,
+    request,
+  );
+}
+
+export function fetchAdminScheduleQueueServer(
+  token: string,
+  params: Record<string, string | number | boolean | null | undefined>,
+  request: Request | null = null,
+): Promise<SafetyBackendAdminScheduleQueueResponse> {
+  return requestSafetyAdminServer<SafetyBackendAdminScheduleQueueResponse>(
+    withQuery('/admin/schedules/queue', params),
+    {},
+    token,
+    request,
+  );
+}
+
+export function fetchAdminScheduleLookupsServer(
+  token: string,
+  request: Request | null = null,
+): Promise<SafetyBackendAdminScheduleLookupsResponse> {
+  return requestSafetyAdminServer<SafetyBackendAdminScheduleLookupsResponse>(
+    '/admin/schedules/lookups',
     {},
     token,
     request,

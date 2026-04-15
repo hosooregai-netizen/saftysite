@@ -1,19 +1,35 @@
 import { NextResponse } from 'next/server';
 import { SITE_CONTRACT_TYPE_LABELS } from '@/lib/admin';
 import { parseSiteContractProfile } from '@/lib/admin/siteContractProfile';
-import { getAdminDirectorySnapshot } from '@/server/admin/adminDirectorySnapshot';
-import { readRequiredAdminToken, SafetyServerApiError } from '@/server/admin/safetyApiServer';
+import {
+  fetchAdminDirectoryLookupsServer,
+  fetchAdminSitesListServer,
+  readRequiredAdminToken,
+  SafetyServerApiError,
+} from '@/server/admin/safetyApiServer';
+import {
+  mapBackendAdminDirectoryLookupsResponse,
+  mapBackendAdminSitesListResponse,
+} from '@/server/admin/upstreamMappers';
 
 export const runtime = 'nodejs';
 
 export async function GET(request: Request): Promise<Response> {
   try {
     const token = readRequiredAdminToken(request);
-    const snapshot = await getAdminDirectorySnapshot(token, request);
-    const data = snapshot.data;
+    const [directoryLookups, sitesResponse] = await Promise.all([
+      fetchAdminDirectoryLookupsServer(token, request).then((response) =>
+        mapBackendAdminDirectoryLookupsResponse(response),
+      ),
+      fetchAdminSitesListServer(
+        token,
+        { limit: 5000, offset: 0, sort_by: 'last_visit_date', sort_dir: 'desc' },
+        request,
+      ).then((response) => mapBackendAdminSitesListResponse(response)),
+    ]);
     const contractTypeMap = new Map<string, string>();
 
-    data.sites.forEach((site) => {
+    sitesResponse.rows.forEach((site) => {
       const profile = parseSiteContractProfile(site);
       const value = profile.technicalGuidanceKind || profile.contractType || '';
       if (!value || contractTypeMap.has(value)) return;
@@ -25,11 +41,8 @@ export async function GET(request: Request): Promise<Response> {
         label: SITE_CONTRACT_TYPE_LABELS[value as keyof typeof SITE_CONTRACT_TYPE_LABELS] || value,
         value,
       })),
-      headquarters: data.headquarters.map((headquarter) => ({
-        id: headquarter.id,
-        name: headquarter.name,
-      })),
-      users: data.users.map((user) => ({
+      headquarters: directoryLookups.headquarters,
+      users: directoryLookups.users.map((user) => ({
         id: user.id,
         name: user.name,
       })),

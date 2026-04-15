@@ -13,7 +13,7 @@ export const ADMIN_FEATURE_CONTRACTS = {
   'admin-headquarters': {
     id: 'admin-headquarters',
     description:
-      '사업장 목록이 서버 페이지네이션, session cache, drilldown 진입, 생성/수정 흐름을 유지한다.',
+      '사업장 목록이 safety-server list passthrough 기반 서버 페이지네이션, session cache, drilldown 진입, 생성/수정 흐름을 유지한다.',
     routes: ['/admin?section=headquarters'],
     markers: ['사업장 목록', '사업장 추가', '사업장 수정', '현장 보기'],
     apis: ['GET /api/admin/headquarters/list', 'GET /api/admin/sites/list', 'POST /headquarters', 'PATCH /headquarters/:id'],
@@ -22,7 +22,7 @@ export const ADMIN_FEATURE_CONTRACTS = {
   'admin-users': {
     id: 'admin-users',
     description:
-      '사용자 목록이 서버 페이지네이션, session cache, 검색/필터, 편집 modal 흐름을 유지한다.',
+      '사용자 목록이 safety-server list passthrough 기반 서버 페이지네이션, session cache, 검색/필터, 편집 modal 흐름을 유지한다.',
     routes: ['/admin?section=users'],
     markers: ['사용자', '사용자 추가', '이름, 이메일, 직책, 소속으로 검색'],
     apis: ['GET /api/admin/users/list'],
@@ -31,7 +31,7 @@ export const ADMIN_FEATURE_CONTRACTS = {
   'admin-reports': {
     id: 'admin-reports',
     description:
-      '전체 보고서 섹션이 session cache 기반 목록 재진입, 품질 체크 저장, 발송 이력 편집, local row patch 기반 무재조회 갱신, legacy 기술지도 보고서 열기 fallback 흐름을 유지한다.',
+      '전체 보고서 섹션이 safety-server reports passthrough, session cache 기반 목록 재진입, 품질 체크 저장, 발송 이력 편집, local row patch 기반 무재조회 갱신, legacy 기술지도 보고서 열기 fallback 흐름을 유지한다.',
     routes: ['/admin?section=reports'],
     markers: [
       '전체 보고서',
@@ -50,7 +50,7 @@ export const ADMIN_FEATURE_CONTRACTS = {
   'admin-sites': {
     id: 'admin-sites',
     description:
-      '현장 목록과 현장 메인이 서버 페이지네이션, 등록 정보 편집, 점검자 기준 배정, K2B 회차 데이터 반영 동선을 유지한다.',
+      '현장 목록과 현장 메인이 safety-server list/lookups passthrough 기반 서버 페이지네이션, 등록 정보 편집, 점검자 기준 배정, K2B 회차 데이터 반영 동선을 유지한다.',
     routes: [
       '/admin?section=headquarters&headquarterId=hq-1',
       '/admin?section=headquarters&headquarterId=hq-1&siteId=site-1',
@@ -67,7 +67,7 @@ export const ADMIN_FEATURE_CONTRACTS = {
   'admin-schedules': {
     id: 'admin-schedules',
     description:
-      '관제 일정 보드가 월간 캘린더, 월 네비게이션, queue, lookups, 선택 사유 저장, 현재 월 기본 흐름을 유지한다.',
+      '관제 일정 보드가 safety-server calendar/queue/lookups passthrough 기반 월간 캘린더, 월 네비게이션, queue, lookups, 선택 사유 저장, 현재 월 기본 흐름을 유지한다.',
     routes: ['/admin?section=schedules&month=2026-04'],
     markers: ['일정/캘린더', '오늘', '방문 일정 선택'],
     apis: [

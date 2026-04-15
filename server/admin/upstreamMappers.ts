@@ -14,17 +14,31 @@ import type {
   ControllerReportRow,
   SafetyAdminAlert,
   SafetyAdminAnalyticsResponse,
+  SafetyAdminDirectoryLookupsResponse,
+  SafetyAdminHeadquarterListResponse,
   SafetyAdminOverviewResponse,
   SafetyAdminReportsResponse,
+  SafetyAdminScheduleCalendarResponse,
   SafetyAdminScheduleListResponse,
+  SafetyAdminScheduleLookupsResponse,
+  SafetyAdminScheduleQueueResponse,
+  SafetyAdminSiteListResponse,
+  SafetyAdminUserListResponse,
   SafetyInspectionSchedule,
 } from '@/types/admin';
 import type {
   SafetyBackendAdminAlert,
   SafetyBackendAdminAnalyticsResponse,
+  SafetyBackendAdminDirectoryLookupsResponse,
+  SafetyBackendAdminHeadquarterListResponse,
   SafetyBackendAdminOverviewResponse,
   SafetyBackendAdminReportRow,
   SafetyBackendAdminReportsResponse,
+  SafetyBackendAdminScheduleCalendarResponse,
+  SafetyBackendAdminScheduleLookupsResponse,
+  SafetyBackendAdminScheduleQueueResponse,
+  SafetyBackendAdminSiteListResponse,
+  SafetyBackendAdminUserListResponse,
   SafetyBackendInspectionSchedule,
   SafetyBackendExcelApplyResult,
   SafetyBackendExcelImportPreview,
@@ -167,6 +181,10 @@ export function mapBackendSchedule(
     linkedReportKey: normalizeText(row.linked_report_key),
     plannedDate: normalizeText(row.planned_date),
     roundNo: typeof row.round_no === 'number' ? row.round_no : 0,
+    totalRounds:
+      typeof row.total_rounds === 'number' && Number.isFinite(row.total_rounds)
+        ? row.total_rounds
+        : undefined,
     selectionConfirmedAt: normalizeText(row.selection_confirmed_at),
     selectionConfirmedByName: normalizeText(row.selection_confirmed_by_name),
     selectionConfirmedByUserId: normalizeText(row.selection_confirmed_by_user_id),
@@ -189,6 +207,137 @@ export function mapBackendScheduleListResponse(
     offset: response.offset,
     rows: response.rows.map((row) => mapBackendSchedule(row)),
     total: response.total,
+  };
+}
+
+export function mapBackendAdminUsersListResponse(
+  response: SafetyBackendAdminUserListResponse,
+): SafetyAdminUserListResponse {
+  return {
+    limit: response.limit,
+    offset: response.offset,
+    refreshedAt: normalizeText(response.refreshed_at),
+    rows: response.rows.map((row) => ({
+      auto_provisioned_from_excel: Boolean(row.auto_provisioned_from_excel),
+      created_at: normalizeText(row.created_at),
+      email: normalizeText(row.email),
+      id: normalizeText(row.id),
+      is_active: Boolean(row.is_active),
+      last_login_at: normalizeText(row.last_login_at),
+      name: normalizeText(row.name),
+      organization_name: row.organization_name ?? null,
+      phone: row.phone ?? null,
+      position: row.position ?? null,
+      role: row.role,
+      updated_at: normalizeText(row.updated_at),
+      assignedSites: Array.isArray(row.assigned_sites)
+        ? row.assigned_sites.map((site) => ({
+            id: normalizeText(site.id),
+            siteName: normalizeText(site.site_name),
+          }))
+        : [],
+    })),
+    total: response.total,
+  };
+}
+
+export function mapBackendAdminHeadquartersListResponse(
+  response: SafetyBackendAdminHeadquarterListResponse,
+): SafetyAdminHeadquarterListResponse {
+  return {
+    limit: response.limit,
+    offset: response.offset,
+    refreshedAt: normalizeText(response.refreshed_at),
+    rows: response.rows.map((row) => applyHeadquarterLifecycleStatus(row)),
+    summary: {
+      completedCount: response.summary?.completed_count ?? 0,
+      contactGapCount: response.summary?.contact_gap_count ?? 0,
+      memoGapCount: response.summary?.memo_gap_count ?? 0,
+      registrationGapCount: response.summary?.registration_gap_count ?? 0,
+    },
+    total: response.total,
+  };
+}
+
+export function mapBackendAdminSitesListResponse(
+  response: SafetyBackendAdminSiteListResponse,
+): SafetyAdminSiteListResponse {
+  return {
+    limit: response.limit,
+    offset: response.offset,
+    refreshedAt: normalizeText(response.refreshed_at),
+    rows: response.rows.map((row) => applySiteLifecycleStatus(row)),
+    total: response.total,
+  };
+}
+
+export function mapBackendAdminDirectoryLookupsResponse(
+  response: SafetyBackendAdminDirectoryLookupsResponse,
+): SafetyAdminDirectoryLookupsResponse {
+  return {
+    headquarters: response.headquarters.map((row) => ({
+      id: normalizeText(row.id),
+      name: normalizeText(row.name),
+    })),
+    sites: response.sites.map((row) => ({
+      headquarterId: normalizeText(row.headquarter_id),
+      id: normalizeText(row.id),
+      name: normalizeText(row.name),
+    })),
+    users: response.users.map((row) => ({
+      email: normalizeText(row.email),
+      id: normalizeText(row.id),
+      isActive: Boolean(row.is_active),
+      name: normalizeText(row.name),
+      organizationName: row.organization_name ?? null,
+      phone: row.phone ?? null,
+      position: row.position ?? null,
+      role: row.role,
+    })),
+  };
+}
+
+export function mapBackendAdminScheduleCalendarResponse(
+  response: SafetyBackendAdminScheduleCalendarResponse,
+): SafetyAdminScheduleCalendarResponse {
+  return {
+    allSelectedTotal: response.all_selected_total,
+    availableMonths: Array.isArray(response.available_months)
+      ? response.available_months.map((value) => normalizeText(value)).filter(Boolean)
+      : [],
+    month: normalizeText(response.month),
+    monthTotal: response.month_total,
+    refreshedAt: normalizeText(response.refreshed_at),
+    rows: response.rows.map((row) => mapBackendSchedule(row)),
+    unselectedTotal: response.unselected_total,
+  };
+}
+
+export function mapBackendAdminScheduleQueueResponse(
+  response: SafetyBackendAdminScheduleQueueResponse,
+): SafetyAdminScheduleQueueResponse {
+  return {
+    limit: response.limit,
+    month: normalizeText(response.month),
+    offset: response.offset,
+    refreshedAt: normalizeText(response.refreshed_at),
+    rows: response.rows.map((row) => mapBackendSchedule(row)),
+    total: response.total,
+  };
+}
+
+export function mapBackendAdminScheduleLookupsResponse(
+  response: SafetyBackendAdminScheduleLookupsResponse,
+): SafetyAdminScheduleLookupsResponse {
+  return {
+    sites: response.sites.map((row) => ({
+      id: normalizeText(row.id),
+      name: normalizeText(row.name),
+    })),
+    users: response.users.map((row) => ({
+      id: normalizeText(row.id),
+      name: normalizeText(row.name),
+    })),
   };
 }
 

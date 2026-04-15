@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
-import { buildAdminSitesListResponse } from '@/server/admin/adminDirectoryLists';
-import { getAdminDirectorySnapshot } from '@/server/admin/adminDirectorySnapshot';
-import { readRequiredAdminToken, SafetyServerApiError } from '@/server/admin/safetyApiServer';
+import {
+  fetchAdminSitesListServer,
+  readRequiredAdminToken,
+  SafetyServerApiError,
+} from '@/server/admin/safetyApiServer';
+import { mapBackendAdminSitesListResponse } from '@/server/admin/upstreamMappers';
 
 export const runtime = 'nodejs';
 
@@ -9,25 +12,22 @@ export async function GET(request: Request): Promise<Response> {
   try {
     const token = readRequiredAdminToken(request);
     const url = new URL(request.url);
-    const snapshot = await getAdminDirectorySnapshot(token, request);
-    const response = buildAdminSitesListResponse(
-      {
-        ...snapshot.data,
-        refreshedAt: snapshot.refreshedAt,
-      },
+    const response = await fetchAdminSitesListServer(
+      token,
       {
       assignment: url.searchParams.get('assignment') || '',
-      headquarterId: url.searchParams.get('headquarter_id') || '',
+      headquarter_id: url.searchParams.get('headquarter_id') || '',
       limit: Number(url.searchParams.get('limit') || '50'),
       offset: Number(url.searchParams.get('offset') || '0'),
       query: url.searchParams.get('query') || '',
-      siteId: url.searchParams.get('site_id') || '',
-      sortBy: url.searchParams.get('sort_by') || 'last_visit_date',
-      sortDir: url.searchParams.get('sort_dir') === 'asc' ? 'asc' : 'desc',
+      site_id: url.searchParams.get('site_id') || '',
+      sort_by: url.searchParams.get('sort_by') || 'last_visit_date',
+      sort_dir: url.searchParams.get('sort_dir') === 'asc' ? 'asc' : 'desc',
       status: url.searchParams.get('status') || '',
       },
+      request,
     );
-    return NextResponse.json(response);
+    return NextResponse.json(mapBackendAdminSitesListResponse(response));
   } catch (error) {
     if (error instanceof SafetyServerApiError) {
       return NextResponse.json({ error: error.message }, { status: error.status });

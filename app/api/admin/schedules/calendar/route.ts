@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
-import { readRequiredAdminToken, SafetyServerApiError } from '@/server/admin/safetyApiServer';
-import { buildAdminScheduleCalendarSnapshotResponse } from '@/server/admin/scheduleSnapshot';
+import {
+  fetchAdminScheduleCalendarServer,
+  readRequiredAdminToken,
+  SafetyServerApiError,
+} from '@/server/admin/safetyApiServer';
+import { mapBackendAdminScheduleCalendarResponse } from '@/server/admin/upstreamMappers';
 
 export const runtime = 'nodejs';
 
@@ -8,19 +12,19 @@ export async function GET(request: Request): Promise<Response> {
   try {
     const token = readRequiredAdminToken(request);
     const url = new URL(request.url);
-    const response = await buildAdminScheduleCalendarSnapshotResponse(
+    const response = await fetchAdminScheduleCalendarServer(
       token,
       {
-        assigneeUserId: url.searchParams.get('assignee_user_id') || '',
+        assignee_user_id: url.searchParams.get('assignee_user_id') || '',
         month: url.searchParams.get('month') || '',
         query: url.searchParams.get('query') || '',
-        siteId: url.searchParams.get('site_id') || '',
+        site_id: url.searchParams.get('site_id') || '',
         status: url.searchParams.get('status') || '',
       },
       request,
     );
 
-    return NextResponse.json(response);
+    return NextResponse.json(mapBackendAdminScheduleCalendarResponse(response));
   } catch (error) {
     if (error instanceof SafetyServerApiError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
