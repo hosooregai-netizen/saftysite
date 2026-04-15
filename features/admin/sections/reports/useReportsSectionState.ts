@@ -13,8 +13,11 @@ import {
 } from '@/lib/admin/apiClient';
 import {
   buildControllerReportHref,
-  buildControllerReportRows,
 } from '@/lib/admin/controllerReports';
+import {
+  normalizeControllerReview,
+  normalizeDispatchMeta,
+} from '@/lib/admin/reportMeta';
 import {
   EMPTY_REVIEW_FORM,
   REPORT_PAGE_SIZE,
@@ -31,6 +34,54 @@ import type { ReportsSectionProps, ReportsUserOption } from './reportsSectionTyp
 
 function buildRequestKey(input: Record<string, string | number | null>) {
   return JSON.stringify(input);
+}
+
+function addDays(value: string, days: number) {
+  if (!value) return '';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return '';
+  }
+  parsed.setDate(parsed.getDate() + days);
+  return parsed.toISOString().slice(0, 10);
+}
+
+function resolveDispatchStatus(
+  row: ControllerReportRow,
+  dispatchStatus: string,
+  visitDate: string,
+  updatedAt: string,
+) {
+  if (row.reportType === 'quarterly_report') {
+    const baseDate = visitDate || updatedAt.slice(0, 10);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const parsed = new Date(baseDate);
+    parsed.setHours(0, 0, 0, 0);
+    const daysSinceVisit = Number.isNaN(parsed.getTime())
+      ? null
+      : Math.floor((today.getTime() - parsed.getTime()) / (1000 * 60 * 60 * 24));
+
+    return {
+      deadlineDate: addDays(baseDate, 7),
+      dispatchStatus:
+        dispatchStatus === 'sent' || dispatchStatus === 'manual_checked'
+          ? 'sent'
+          : daysSinceVisit == null
+            ? ''
+            : daysSinceVisit >= 7
+              ? 'overdue'
+              : daysSinceVisit >= 4
+                ? 'warning'
+                : 'normal',
+    } as const;
+  }
+
+  return {
+    deadlineDate: addDays(visitDate || updatedAt.slice(0, 10), 7),
+    dispatchStatus:
+      dispatchStatus === 'sent' || dispatchStatus === 'manual_checked' ? 'sent' : '',
+  } as const;
 }
 
 export function useReportsSectionState({
@@ -233,11 +284,37 @@ export function useReportsSectionState({
 
   const applyUpdatedReportRow = useCallback(
     (report: SafetyReport) => {
-      const [updatedRow] = buildControllerReportRows([report], sites, users);
-      if (!updatedRow) {
-        return;
-      }
+      const currentRow = rows.find((row) => row.reportKey === report.report_key);
+      if (!currentRow) return;
 
+      const controllerReview = normalizeControllerReview(report.review);
+      const dispatch = normalizeDispatchMeta(report.dispatch);
+      const nextDispatchState = resolveDispatchStatus(
+        currentRow,
+        dispatch?.dispatchStatus || '',
+        String(report.visit_date || currentRow.visitDate || ''),
+        String(report.updated_at || currentRow.updatedAt),
+      );
+      const updatedRow: ControllerReportRow = {
+        ...currentRow,
+        checkerUserId: controllerReview?.checkerUserId || '',
+        controllerReview,
+        deadlineDate: nextDispatchState.deadlineDate,
+        dispatch,
+        dispatchSignal: nextDispatchState.dispatchStatus,
+        dispatchStatus: nextDispatchState.dispatchStatus,
+        lifecycleStatus: report.lifecycle_status || currentRow.lifecycleStatus,
+        qualityStatus: controllerReview?.qualityStatus || 'unchecked',
+        status: report.status,
+        updatedAt: report.updated_at,
+        visitDate: String(report.visit_date || currentRow.visitDate || ''),
+        workflowStatus:
+          report.workflow_status === 'draft' ||
+          report.workflow_status === 'submitted' ||
+          report.workflow_status === 'published'
+            ? report.workflow_status
+            : currentRow.workflowStatus,
+      };
       const nextRows = filterRowsForOverviewPreset(
         rows.map((row) => (row.reportKey === updatedRow.reportKey ? updatedRow : row)),
         overviewPreset,
@@ -257,7 +334,7 @@ export function useReportsSectionState({
         total: nextTotal,
       });
     },
-    [currentUser.id, overviewPreset, reportCacheKey, rows, sites, total, users],
+    [currentUser.id, overviewPreset, reportCacheKey, rows, total],
   );
 
   const selectedRows = useMemo(

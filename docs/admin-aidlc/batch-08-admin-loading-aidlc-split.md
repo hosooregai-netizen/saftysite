@@ -56,6 +56,9 @@
   - `reports -> admin-reports`
   - `overview/analytics shared controller paths -> admin-control-center`
 - truly shared admin plumbing still fans out to the full admin smoke set.
+- `reports` row mutations now patch the cached row in-place instead of rebuilding from an unstaged site array dependency.
+  - this avoids client-side crashes in `/admin?section=reports`
+  - and keeps dispatch/review actions from forcing an unnecessary `GET /api/admin/reports` refetch
 
 ## Upstream index request
 
@@ -97,3 +100,6 @@ This repo cannot apply upstream DB migrations directly, but the runtime changes 
   - `admin-sites`
   - `admin-schedules`
   - `admin-reports`
+- focused reports regression check:
+  - `/admin?section=reports` loads without `sites is not defined`
+  - review/dispatch patch the visible row without a full list refetch
