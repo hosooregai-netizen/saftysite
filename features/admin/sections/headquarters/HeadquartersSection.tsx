@@ -105,7 +105,6 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
     selectedHeadquarterId,
     selectedSiteId,
     onAssignFieldAgent,
-    onClearHeadquarterSelection,
     onClearSiteSelection,
     onCreate,
     onCreateSite,
@@ -157,6 +156,41 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
     setRows(response.rows);
     setTotal(response.total);
     setSummary(response.summary);
+  };
+
+  const refreshSelectedSiteDetail = async (siteId = selectedSiteId) => {
+    if (!siteId) {
+      setSelectedSite(null);
+      return;
+    }
+    const response = await fetchAdminSitesList({ limit: 1, offset: 0, siteId });
+    const nextSite = response.rows[0] ?? null;
+    setSelectedSite(nextSite);
+    if (!nextSite) {
+      onClearSiteSelection();
+    }
+  };
+
+  const refreshSelectedHeadquarterContext = async (headquarterId = selectedHeadquarterId) => {
+    if (!headquarterId) {
+      setSelectedHeadquarter(null);
+      setSelectedHeadquarterSites([]);
+      await refreshSelectedSiteDetail(null);
+      return;
+    }
+    const [headquarterResponse, siteResponse] = await Promise.all([
+      fetchAdminHeadquartersList({ id: headquarterId, limit: 1, offset: 0 }),
+      fetchAdminSitesList({
+        headquarterId,
+        limit: 5000,
+        offset: 0,
+        sortBy: 'last_visit_date',
+        sortDir: 'desc',
+      }),
+    ]);
+    setSelectedHeadquarter(headquarterResponse.rows[0] ?? null);
+    setSelectedHeadquarterSites(siteResponse.rows);
+    await refreshSelectedSiteDetail();
   };
 
   useEffect(() => {
@@ -301,6 +335,21 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
     await refreshHeadquarterList();
   };
 
+  const handleCreateSite = async (input: SafetySiteInput) => {
+    await onCreateSite(input);
+    await refreshSelectedHeadquarterContext(input.headquarter_id);
+  };
+
+  const handleUpdateSite = async (id: string, input: SafetySiteUpdateInput) => {
+    await onUpdateSite(id, input);
+    await refreshSelectedHeadquarterContext(input.headquarter_id ?? selectedHeadquarterId);
+  };
+
+  const handleDeleteSite = async (id: string) => {
+    await onDeleteSite(id);
+    await refreshSelectedHeadquarterContext();
+  };
+
   return (
     <div className={styles.drilldownStack}>
       {!selectedHeadquarter && !hasSiteStatusScope ? (
@@ -376,11 +425,11 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
           emptyMessage="조건에 맞는 현장이 없습니다."
           initialStatusFilter={siteStatusFilter}
           onAssignFieldAgent={onAssignFieldAgent}
-          onCreate={onCreateSite}
-          onDelete={onDeleteSite}
+          onCreate={handleCreateSite}
+          onDelete={handleDeleteSite}
           onSelectSiteEntry={(site) => onSelectSite(site.headquarter_id, site.id)}
           onUnassignFieldAgent={onUnassignFieldAgent}
-          onUpdate={onUpdateSite}
+          onUpdate={handleUpdateSite}
           showHeader
           showHeadquarterColumn
           title={siteStatusTitle}
@@ -405,11 +454,11 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
             initialStatusFilter="all"
             lockedHeadquarterId={selectedHeadquarter.id}
             onAssignFieldAgent={onAssignFieldAgent}
-            onCreate={onCreateSite}
-            onDelete={onDeleteSite}
+            onCreate={handleCreateSite}
+            onDelete={handleDeleteSite}
             onSelectSiteEntry={(site) => onSelectSite(site.headquarter_id, site.id)}
             onUnassignFieldAgent={onUnassignFieldAgent}
-            onUpdate={onUpdateSite}
+            onUpdate={handleUpdateSite}
             showHeadquarterColumn={false}
             showHeader={false}
           />
@@ -430,11 +479,11 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
             initialStatusFilter="all"
             lockedHeadquarterId={selectedHeadquarter.id}
             onAssignFieldAgent={onAssignFieldAgent}
-            onCreate={onCreateSite}
-            onDelete={onDeleteSite}
+            onCreate={handleCreateSite}
+            onDelete={handleDeleteSite}
             onSelectSiteEntry={(site) => onSelectSite(site.headquarter_id, site.id)}
             onUnassignFieldAgent={onUnassignFieldAgent}
-            onUpdate={onUpdateSite}
+            onUpdate={handleUpdateSite}
             showHeadquarterColumn={false}
             showHeader={false}
           />

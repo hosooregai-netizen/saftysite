@@ -13,11 +13,11 @@ export const ADMIN_FEATURE_CONTRACTS = {
   'admin-headquarters': {
     id: 'admin-headquarters',
     description:
-      '사업장 목록이 safety-server list passthrough 기반 서버 페이지네이션, session cache, drilldown 진입, 생성/수정 흐름을 유지한다.',
+      '사업장 목록이 safety-server list passthrough 기반 서버 페이지네이션, session cache, drilldown 진입, 생성/수정 흐름과 deleted soft-delete hidden refresh를 유지한다.',
     routes: ['/admin?section=headquarters'],
     markers: ['사업장 목록', '사업장 추가', '사업장 수정', '현장 보기'],
     apis: ['GET /api/admin/headquarters/list', 'GET /api/admin/sites/list', 'POST /headquarters', 'PATCH /headquarters/:id'],
-    criticalActions: ['사업장 목록 페이지 로드', '사업장 생성', '사업장 수정', '현장 drilldown 진입'],
+    criticalActions: ['사업장 목록 페이지 로드', '사업장 생성', '사업장 수정', '현장 drilldown 진입', 'drilldown 현장 생성/수정/삭제 직후 refresh 확인'],
   },
   'admin-users': {
     id: 'admin-users',
@@ -50,7 +50,7 @@ export const ADMIN_FEATURE_CONTRACTS = {
   'admin-sites': {
     id: 'admin-sites',
     description:
-      '현장 목록과 현장 메인이 safety-server list/lookups passthrough 기반 서버 페이지네이션, 등록 정보 편집, 점검자 기준 배정, K2B 회차 데이터 반영 동선을 유지한다.',
+      '현장 목록과 현장 메인이 safety-server list/lookups passthrough 기반 서버 페이지네이션, planned 기본 생성, deleted soft-delete hidden, 등록 정보 편집, 점검자 기준 배정, K2B 회차 데이터 반영 동선을 유지한다.',
     routes: [
       '/admin?section=headquarters&headquarterId=hq-1',
       '/admin?section=headquarters&headquarterId=hq-1&siteId=site-1',
@@ -62,7 +62,7 @@ export const ADMIN_FEATURE_CONTRACTS = {
       'POST /sites',
       'PATCH /sites/:id',
     ],
-    criticalActions: ['현장 목록 페이지 이동', '현장 생성/수정', '현장 메인 진입', '현장 메인 quick edit', '지도요원 배정 modal 진입', 'K2B 회차 데이터 반영'],
+    criticalActions: ['현장 목록 페이지 이동', '현장 생성/수정', 'planned 기본 생성 확인', 'deleted 상태 hidden 확인', '현장 메인 진입', '현장 메인 quick edit', '지도요원 배정 modal 진입', 'K2B 회차 데이터 반영'],
   },
   'admin-schedules': {
     id: 'admin-schedules',

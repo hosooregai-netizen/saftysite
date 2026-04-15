@@ -133,6 +133,9 @@ export const SITE_STATUS_LABELS: Record<SafetySiteStatus, string> = {
 };
 
 export function getSiteStatusLabel(value: string | null | undefined): string {
+  if (value === 'deleted') {
+    return SITE_STATUS_LABELS.deleted;
+  }
   return SITE_STATUS_LABELS[normalizeSiteStatusForDisplay(value)];
 }
 
