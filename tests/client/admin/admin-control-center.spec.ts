@@ -21,6 +21,15 @@ export async function runAdminControlCenterSmoke(config: ClientSmokePlaywrightCo
     await priorityQuarterlySection.getByRole('heading', { name: '20억 이상 분기보고서 관리' }).waitFor();
     await priorityQuarterlySection.getByText(/\d{4}년 \d분기/).first().waitFor();
     await priorityQuarterlySection.getByRole('columnheader', { name: '상태' }).waitFor();
+    const unsentSection = page.locator('section').filter({
+      has: page.getByRole('heading', { name: '발송 관리 대상' }),
+    }).first();
+    await unsentSection.getByRole('columnheader', { name: '현장' }).waitFor();
+    await unsentSection.getByRole('columnheader', { name: '보고서' }).waitFor();
+    await unsentSection.getByRole('columnheader', { name: '담당자' }).waitFor();
+    await unsentSection.getByRole('columnheader', { name: '지도 실시일' }).waitFor();
+    await unsentSection.getByRole('columnheader', { name: '미발송 경과' }).waitFor();
+    await unsentSection.getByRole('columnheader', { name: '상태' }).waitFor();
     await page.getByText('종료 예정 현황').first().waitFor();
     await page.getByRole('button', { name: '엑셀 내보내기' }).click();
     await harness.waitForRequestCount('POST /api/admin/exports/:section', overviewExportsBefore + 1);

@@ -46,43 +46,31 @@ export function OverviewUnsentReportsSection({
             <div className={styles.tableWrap}>
               <table className={`${styles.table} ${styles.overviewUnsentTable}`}>
                 <colgroup>
-                  <col className={styles.overviewColSite} />
-                  <col className={styles.overviewColHeadquarter} />
+                  <col className={styles.overviewColSiteWide} />
                   <col className={styles.overviewColReport} />
-                  <col className={styles.overviewColType} />
                   <col className={styles.overviewColAssignee} />
                   <col className={styles.overviewColDate} />
                   <col className={styles.overviewColElapsed} />
-                  <col className={styles.overviewColMetric} />
-                  <col className={styles.overviewColMetric} />
                   <col className={styles.overviewColStatus} />
                 </colgroup>
                 <thead>
                   <tr>
                     <SortableHeaderCell column={{ key: 'siteName' }} current={sort} label="현장" onChange={setSort} sortMenuOptions={buildSortMenuOptions('siteName', { asc: '현장 가나다순', desc: '현장 역순' })} />
-                    <SortableHeaderCell column={{ key: 'headquarterName' }} current={sort} label="사업장" onChange={setSort} sortMenuOptions={buildSortMenuOptions('headquarterName', { asc: '사업장 가나다순', desc: '사업장 역순' })} />
                     <SortableHeaderCell column={{ key: 'reportTitle' }} current={sort} label="보고서" onChange={setSort} />
-                    <th>유형</th>
                     <SortableHeaderCell column={{ key: 'assigneeName' }} current={sort} label="담당자" onChange={setSort} sortMenuOptions={buildSortMenuOptions('assigneeName', { asc: '담당자 가나다순', desc: '담당자 역순' })} />
                     <SortableHeaderCell column={{ key: 'visitDate' }} current={sort} defaultDirection="desc" label="지도 실시일" onChange={setSort} />
                     <SortableHeaderCell column={{ key: 'unsentDays' }} current={sort} defaultDirection="desc" label="미발송 경과" onChange={setSort} sortMenuOptions={buildSortMenuOptions('unsentDays', { asc: '최근 지도 우선', desc: '오래 미발송된 순' })} />
-                    <th>기본 수신자</th>
-                    <th>메일 상태</th>
                     <th>상태</th>
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((row) => (
                     <tr key={row.reportKey}>
-                      <td><div className={styles.tablePrimary}>{row.siteName}</div></td>
-                      <td><span className={styles.overviewTableMuted}>{row.headquarterName}</span></td>
+                      <td><span className={styles.overviewTablePrimaryText}>{row.siteName}</span></td>
                       <td><Link href={row.href} className={`${styles.tableInlineLink} ${styles.overviewTableWrapLink}`}>{row.reportTitle}</Link></td>
-                      <td><span className={styles.overviewTableMuted}>{row.reportTypeLabel}</span></td>
                       <td><span className={styles.overviewTableMetric}>{row.assigneeName || '-'}</span></td>
                       <td><span className={styles.overviewTableMetric}>{row.visitDate}</span></td>
                       <td><span className={styles.overviewTableMetric}>{`D+${row.unsentDays}`}</span></td>
-                      <td><span className={styles.overviewTableMetric}>{row.recipientEmail || '미등록'}</span></td>
-                      <td><span className={styles.overviewTableMetric}>{row.mailReady ? '발송 가능' : row.mailMissingReason || '보완 필요'}</span></td>
                       <td>
                         <span className={`${styles.overviewTableStatus} ${getDispatchStatusTone(row.dispatchStatus, styles)}`}>
                           {getDispatchStatusLabel(row.dispatchStatus)}

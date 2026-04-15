@@ -91,6 +91,9 @@ contract pack around:
   table: the current quarter now appears beside the title, the row columns focus on `현장`,
   `사업장`, `공사금액`, `최근 지도`, and a single textual `상태`, and the older duplicated
   `현재 분기`, `반영 상태`, `발송 상태`, `예외 상태` chip-heavy presentation was removed.
+- The `발송 관리 대상` queue was also tightened into the same calmer overview-table rhythm:
+  it now hides the lower-signal `사업장`, `유형`, `기본 수신자`, and `메일 상태` columns so the
+  operator only scans `현장`, `보고서`, `담당자`, `지도 실시일`, `미발송 경과`, and `상태`.
 - `AnalyticsSection.tsx` was reduced to a shell and split into:
   - `useAnalyticsSectionState.ts`
   - `AnalyticsSectionHeader.tsx`

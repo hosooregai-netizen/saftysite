@@ -1476,6 +1476,16 @@
   word-break: keep-all;
 }
 
+.overviewTablePrimaryText {
+  font-size: var(--text-ui-sm);
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--erp-dark);
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+}
+
 .overviewTableMuted {
   color: var(--erp-text-muted);
 }
