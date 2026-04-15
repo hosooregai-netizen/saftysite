@@ -50,3 +50,7 @@ keeping the admin dashboard unsent metrics aligned to `reports.dispatch`.
   successful toggle so the row updates without waiting on a later index refresh.
 - Admin cache invalidation for reports routes is shared so dispatch, review, and dispatch
   event updates keep the admin list consistent.
+- Admin report-list toggles now reuse the PATCH response to update the visible row immediately,
+  while the analytics snapshot refresh runs in the background instead of blocking the response.
+- The admin reports smoke now guards this path by ensuring a manual dispatch toggle does not
+  trigger an extra `GET /api/admin/reports` round-trip before the dialog closes.

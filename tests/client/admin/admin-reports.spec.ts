@@ -31,6 +31,7 @@ export async function runAdminReportsSmoke(config: ClientSmokePlaywrightConfig) 
       reviewWritesBefore + 1,
     );
     await reviewDialog.waitFor({ state: 'hidden' });
+    const reportReadsBeforeDispatch = requestCounts.get('GET /api/admin/reports') || 0;
 
     const quarterlyRow = page
       .locator('tbody tr')
@@ -46,6 +47,11 @@ export async function runAdminReportsSmoke(config: ClientSmokePlaywrightConfig) 
       dispatchWritesBefore + 1,
     );
     await dispatchDialog.waitFor({ state: 'hidden' });
+    await page.waitForTimeout(250);
+
+    if ((requestCounts.get('GET /api/admin/reports') || 0) !== reportReadsBeforeDispatch) {
+      throw new Error('Manual dispatch toggle should not force an extra admin reports refetch.');
+    }
 
     const badWorkplaceRow = page
       .locator('tbody tr')

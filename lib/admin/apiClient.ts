@@ -16,6 +16,7 @@ import type {
   SafetyInspectionSchedule,
   TableSortDirection,
 } from '@/types/admin';
+import type { SafetyReport } from '@/types/backend';
 
 function buildQueryString(params: Record<string, string | number | null | undefined>) {
   const searchParams = new URLSearchParams();
@@ -124,7 +125,7 @@ export function updateAdminReportDispatch(
   reportKey: string,
   dispatch: ReportDispatchMeta,
 ) {
-  return requestAdminApi(`/reports/${encodeURIComponent(reportKey)}/dispatch`, {
+  return requestAdminApi<SafetyReport>(`/reports/${encodeURIComponent(reportKey)}/dispatch`, {
     method: 'PATCH',
     body: JSON.stringify(dispatch),
   });

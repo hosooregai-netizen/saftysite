@@ -13,11 +13,12 @@ import type {
   ControllerReportRow,
   ReportDispatchMeta,
 } from '@/types/admin';
-import type { SafetySite, SafetyUser } from '@/types/backend';
+import type { SafetyReport, SafetySite, SafetyUser } from '@/types/backend';
 import type { ReportReviewForm } from './reportsSectionTypes';
 import type { SmsProviderStatus } from '@/types/messages';
 
 interface UseReportDispatchActionsInput {
+  applyUpdatedReportRow: (report: SafetyReport) => void;
   currentUser: SafetyUser;
   dispatchRow: ControllerReportRow | null;
   dispatchSmsMessage: string;
@@ -35,6 +36,7 @@ interface UseReportDispatchActionsInput {
 }
 
 export function useReportDispatchActions({
+  applyUpdatedReportRow,
   currentUser,
   dispatchRow,
   dispatchSmsMessage,
@@ -72,19 +74,19 @@ export function useReportDispatchActions({
   const saveDispatch = useCallback(
     async (row: ControllerReportRow, nextDispatch: ReportDispatchMeta) => {
       try {
-        await updateAdminReportDispatch(row.reportKey, nextDispatch);
+        const updated = await updateAdminReportDispatch(row.reportKey, nextDispatch);
+        applyUpdatedReportRow(updated);
         setNotice(
           row.reportType === 'quarterly_report'
             ? '분기 보고서 발송 정보를 저장했습니다.'
             : '발송 정보를 저장했습니다.',
         );
         setDispatchRow(null);
-        await fetchRows();
       } catch (nextError) {
         setError(nextError instanceof Error ? nextError.message : '발송 정보 저장에 실패했습니다.');
       }
     },
-    [fetchRows, setDispatchRow, setError, setNotice],
+    [applyUpdatedReportRow, setDispatchRow, setError, setNotice],
   );
 
   const sendDispatchSms = useCallback(async () => {
@@ -181,7 +183,7 @@ export function useReportDispatchActions({
   const toggleDispatchStatus = useCallback(
     async (row: ControllerReportRow, nextCompleted: boolean) => {
       try {
-        await updateAdminReportDispatch(
+        const updated = await updateAdminReportDispatch(
           row.reportKey,
           buildToggledReportDispatch(buildDispatchMeta(row), {
             currentUserId: currentUser.id,
@@ -191,17 +193,17 @@ export function useReportDispatchActions({
             nextCompleted,
           }),
         );
+        applyUpdatedReportRow(updated);
         setNotice(
           nextCompleted
             ? '보고서 발송 여부를 발송으로 변경했습니다.'
             : '보고서 발송 여부를 미발송으로 변경했습니다.',
         );
-        await fetchRows();
       } catch (nextError) {
         setError(nextError instanceof Error ? nextError.message : '발송 여부 변경에 실패했습니다.');
       }
     },
-    [currentUser.id, fetchRows, setError, setNotice],
+    [applyUpdatedReportRow, currentUser.id, setError, setNotice],
   );
 
   const bulkDispatchSent = useCallback(async () => {

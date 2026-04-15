@@ -26,7 +26,7 @@ export async function PATCH(
       request,
     );
     invalidateAdminReportsRouteCache();
-    await refreshAdminAnalyticsSnapshot(token, request);
+    void refreshAdminAnalyticsSnapshot(token, request).catch(() => undefined);
 
     return NextResponse.json(updated);
   } catch (error) {

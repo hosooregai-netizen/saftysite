@@ -6,8 +6,11 @@ import {
   readAdminSessionCache,
   writeAdminSessionCache,
 } from '@/features/admin/lib/adminSessionCache';
+import {
+  buildControllerReportHref,
+  buildControllerReportRows,
+} from '@/lib/admin/controllerReports';
 import { fetchAdminReports } from '@/lib/admin/apiClient';
-import { buildControllerReportHref } from '@/lib/admin/controllerReports';
 import { filterVisibleAdminReportRows } from '@/lib/admin/reportVisibility';
 import {
   EMPTY_REVIEW_FORM,
@@ -19,6 +22,7 @@ import {
 import { useReportDispatchActions } from './useReportDispatchActions';
 import { useReportDocumentActions } from './useReportDocumentActions';
 import type { ControllerReportRow, TableSortState } from '@/types/admin';
+import type { SafetyReport } from '@/types/backend';
 import type { SmsProviderStatus } from '@/types/messages';
 import type { ReportsSectionProps } from './reportsSectionTypes';
 
@@ -179,6 +183,35 @@ export function useReportsSectionState({
     void fetchRows();
   }, [fetchRows]);
 
+  const applyUpdatedReportRow = useCallback(
+    (report: SafetyReport) => {
+      const [updatedRow] = buildControllerReportRows([report], sites, users);
+      if (!updatedRow) {
+        return;
+      }
+
+      const nextRows = filterRowsForOverviewPreset(
+        rows.map((row) => (row.reportKey === updatedRow.reportKey ? updatedRow : row)),
+        overviewPreset,
+      );
+      const nextTotal = overviewPreset ? nextRows.length : total;
+
+      setRows(nextRows);
+      setTotal(nextTotal);
+      setDispatchRow((current) => (current?.reportKey === updatedRow.reportKey ? updatedRow : current));
+      setSelectedKeys((current) =>
+        nextRows.some((row) => row.reportKey === updatedRow.reportKey)
+          ? current
+          : current.filter((key) => key !== updatedRow.reportKey),
+      );
+      writeAdminSessionCache(currentUser.id, `reports:${reportCacheKey}`, {
+        rows: nextRows,
+        total: nextTotal,
+      });
+    },
+    [currentUser.id, overviewPreset, reportCacheKey, rows, sites, total, users],
+  );
+
   const selectedRows = useMemo(
     () => rows.filter((row) => selectedKeys.includes(row.reportKey)),
     [rows, selectedKeys],
@@ -235,6 +268,7 @@ export function useReportsSectionState({
     sendDispatchSms,
     toggleDispatchStatus,
   } = useReportDispatchActions({
+    applyUpdatedReportRow,
     currentUser,
     dispatchRow,
     dispatchSmsMessage,
