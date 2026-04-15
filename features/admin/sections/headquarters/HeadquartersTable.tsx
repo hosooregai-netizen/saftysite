@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import ActionMenu from '@/components/ui/ActionMenu';
 import { SortableHeaderCell } from '@/features/admin/components/SortableHeaderCell';
 import { formatTimestamp, getAdminSectionHref } from '@/lib/admin';
@@ -85,7 +86,15 @@ export function HeadquartersTable({
       <div className={styles.sectionHeader}>
         {showHeader ? (
           <div className={styles.sectionHeaderTitleBlock}>
-            <h2 className={styles.sectionTitle}>사업장 목록</h2>
+            <div className={styles.sectionTitleRow}>
+              <h2 className={styles.sectionTitle}>사업장 목록</h2>
+              <Link
+                href={getAdminSectionHref('headquarters', { siteStatus: 'all' })}
+                className={styles.sectionTitleInlineAction}
+              >
+                현장 목록 보기
+              </Link>
+            </div>
           </div>
         ) : (
           <div className={styles.sectionHeaderSpacer} />

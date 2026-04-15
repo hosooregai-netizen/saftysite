@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import { SiteAssignmentModal } from './SiteAssignmentModal';
 import { SiteEditorModal } from './SiteEditorModal';
@@ -16,7 +17,14 @@ export function SitesSection(props: SitesSectionProps) {
       <div className={styles.sectionHeader}>
         {props.showHeader !== false ? (
           <div className={styles.sectionHeaderTitleBlock}>
-            <h2 className={styles.sectionTitle}>{props.title ?? '현장 목록'}</h2>
+            <div className={styles.sectionTitleRow}>
+              <h2 className={styles.sectionTitle}>{props.title ?? '현장 목록'}</h2>
+              {props.titleActionHref && props.titleActionLabel ? (
+                <Link href={props.titleActionHref} className={styles.sectionTitleInlineAction}>
+                  {props.titleActionLabel}
+                </Link>
+              ) : null}
+            </div>
             <div className={styles.sectionHeaderMeta}>총 {state.total}건</div>
           </div>
         ) : (

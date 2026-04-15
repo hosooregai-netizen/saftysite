@@ -24,6 +24,8 @@ export interface SitesSectionProps {
   onAssignFieldAgent: (siteId: string, userId: string) => Promise<void>;
   onUnassignFieldAgent: (siteId: string, userId: string) => Promise<void>;
   title?: string;
+  titleActionHref?: string;
+  titleActionLabel?: string;
   emptyMessage?: string;
   showHeader?: boolean;
   showHeadquarterColumn?: boolean;

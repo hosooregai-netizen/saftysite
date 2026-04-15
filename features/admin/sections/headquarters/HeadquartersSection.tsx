@@ -8,7 +8,7 @@ import {
   writeAdminSessionCache,
 } from '@/features/admin/lib/adminSessionCache';
 import { fetchAdminHeadquartersList, fetchAdminSitesList } from '@/lib/admin/apiClient';
-import { getSiteStatusLabel } from '@/lib/admin';
+import { getAdminSectionHref, getSiteStatusLabel } from '@/lib/admin';
 import type {
   SafetyHeadquarterInput,
   SafetyHeadquarterUpdateInput,
@@ -433,6 +433,8 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
           showHeader
           showHeadquarterColumn
           title={siteStatusTitle}
+          titleActionHref={getAdminSectionHref('headquarters')}
+          titleActionLabel="사업장 목록 보기"
         />
       ) : selectedSite ? (
         <>
