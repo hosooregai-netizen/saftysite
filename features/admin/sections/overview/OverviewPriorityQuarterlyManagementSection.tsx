@@ -1,9 +1,14 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import type { SafetyAdminPriorityQuarterlyManagementRow } from '@/types/admin';
-import { formatOverviewCurrency } from './overviewSectionHelpers';
+import {
+  formatOverviewCurrency,
+  isOverviewRowActivationKey,
+  stopOverviewRowNavigation,
+} from './overviewSectionHelpers';
 
 interface OverviewPriorityQuarterlyManagementSectionProps {
   rows: SafetyAdminPriorityQuarterlyManagementRow[];
@@ -60,6 +65,7 @@ function getStatusTone(
 export function OverviewPriorityQuarterlyManagementSection({
   rows,
 }: OverviewPriorityQuarterlyManagementSectionProps) {
+  const router = useRouter();
   const quarterLabel = rows[0]?.currentQuarterLabel || formatQuarterLabel(new Date());
 
   return (
@@ -94,9 +100,20 @@ export function OverviewPriorityQuarterlyManagementSection({
                 <tbody>
                   {rows.map((row) => {
                     return (
-                      <tr key={row.siteId}>
+                      <tr
+                        key={row.siteId}
+                        className={styles.overviewClickableRow}
+                        onClick={() => router.push(row.href)}
+                        onKeyDown={(event) => {
+                          if (!isOverviewRowActivationKey(event)) return;
+                          event.preventDefault();
+                          router.push(row.href);
+                        }}
+                        role="link"
+                        tabIndex={0}
+                      >
                         <td>
-                          <Link href={row.href} className={styles.tableInlineLink}>
+                          <Link href={row.href} className={styles.tableInlineLink} onClick={stopOverviewRowNavigation}>
                             {row.siteName}
                           </Link>
                         </td>

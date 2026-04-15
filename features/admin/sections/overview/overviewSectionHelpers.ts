@@ -1,5 +1,6 @@
 'use client';
 
+import type { KeyboardEvent, MouseEvent } from 'react';
 import type { SafetyAdminOverviewResponse, TableSortState } from '@/types/admin';
 import type { AdminOverviewChartEntry } from '@/features/admin/lib/buildAdminControlCenterModel';
 
@@ -80,4 +81,16 @@ export function getDispatchStatusTone(
     default:
       return styles.overviewTableStatusNeutral;
   }
+}
+
+export function isOverviewRowActivationKey(
+  event: KeyboardEvent<HTMLTableRowElement>,
+) {
+  return event.key === 'Enter' || event.key === ' ';
+}
+
+export function stopOverviewRowNavigation(
+  event: MouseEvent<HTMLElement>,
+) {
+  event.stopPropagation();
 }

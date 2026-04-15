@@ -1,10 +1,15 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { buildSortMenuOptions, SortableHeaderCell } from '@/features/admin/components/SortableHeaderCell';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import type { TableSortState } from '@/types/admin';
-import { clampPage } from './overviewSectionHelpers';
+import {
+  clampPage,
+  isOverviewRowActivationKey,
+  stopOverviewRowNavigation,
+} from './overviewSectionHelpers';
 
 interface OverviewMaterialGapSectionProps {
   currentPage: number;
@@ -36,6 +41,8 @@ export function OverviewMaterialGapSection({
   totalPages,
   totalRows,
 }: OverviewMaterialGapSectionProps) {
+  const router = useRouter();
+
   return (
     <section className={`${styles.sectionCard} ${styles.listSectionCard} ${styles.overviewTableCard}`}>
       <div className={styles.sectionHeader}>
@@ -78,8 +85,19 @@ export function OverviewMaterialGapSection({
                   {rows.map((row) => {
                     const missingTotal = row.education.missingCount + row.measurement.missingCount;
                     return (
-                      <tr key={row.siteId}>
-                        <td><Link href={row.href} className={styles.tableInlineLink}>{row.siteName}</Link></td>
+                      <tr
+                        key={row.siteId}
+                        className={styles.overviewClickableRow}
+                        onClick={() => router.push(row.href)}
+                        onKeyDown={(event) => {
+                          if (!isOverviewRowActivationKey(event)) return;
+                          event.preventDefault();
+                          router.push(row.href);
+                        }}
+                        role="link"
+                        tabIndex={0}
+                      >
+                        <td><Link href={row.href} className={styles.tableInlineLink} onClick={stopOverviewRowNavigation}>{row.siteName}</Link></td>
                         <td>{row.headquarterName}</td>
                         <td><span className={styles.overviewTableStatus}>{`${row.education.missingCount}건`}</span></td>
                         <td><span className={styles.overviewTableStatus}>{`${row.measurement.missingCount}건`}</span></td>

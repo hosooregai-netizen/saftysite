@@ -93,7 +93,14 @@ contract pack around:
   `현재 분기`, `반영 상태`, `발송 상태`, `예외 상태` chip-heavy presentation was removed.
 - The `발송 관리 대상` queue was also tightened into the same calmer overview-table rhythm:
   it now hides the lower-signal `사업장`, `유형`, `기본 수신자`, and `메일 상태` columns so the
-  operator only scans `현장`, `보고서`, `담당자`, `지도 실시일`, `미발송 경과`, and `상태`.
+  operator only scans `현장`, `보고서`, `지도요원`, `지도 실시일`, `미발송 경과`, and `상태`.
+- That `지도요원` column now resolves from the site's `inspector_name` first so overview reflects
+  the field operators expect from site master data instead of showing a frequently empty assigned-user slot.
+- The overview queues now treat each data row as a direct navigation entry:
+  `발송 관리 대상` opens the current site's `technical_guidance` report list,
+  `20억 이상 분기보고서 관리` opens the current site's `quarterly_report` list,
+  and both `종료 예정 현황` and `교육/계측 자료 부족 현장` rows jump straight to the site main
+  view in `headquarters`.
 - `AnalyticsSection.tsx` was reduced to a shell and split into:
   - `useAnalyticsSectionState.ts`
   - `AnalyticsSectionHeader.tsx`

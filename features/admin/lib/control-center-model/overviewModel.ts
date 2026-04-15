@@ -150,7 +150,10 @@ function buildPriorityQuarterlyManagementRows(
         exceptionLabel,
         exceptionStatus,
         headquarterName: site.headquarter_detail?.name || site.headquarter?.name || '-',
-        href: getAdminSectionHref('reports', { siteId: site.id }),
+        href: getAdminSectionHref('reports', {
+          reportType: 'quarterly_report',
+          siteId: site.id,
+        }),
         latestGuidanceDate: latestGuidanceRow?.visitDate || '',
         latestGuidanceRound: latestGuidanceRow?.visitRound ?? null,
         projectAmount: site.project_amount ?? null,
@@ -209,7 +212,10 @@ function buildQuarterlySummary(
     return [{
       education: { filledCount: educationFilledCount, missingCount: educationMissingCount, requiredCount: QUARTERLY_MATERIAL_REQUIRED_COUNT },
       headquarterName: site.headquarter_detail?.name || site.headquarter?.name || '-',
-      href: getAdminSectionHref('headquarters', { editSiteId: site.id, headquarterId: site.headquarter_id }),
+      href: getAdminSectionHref('headquarters', {
+        headquarterId: site.headquarter_id,
+        siteId: site.id,
+      }),
       measurement: { filledCount: measurementFilledCount, missingCount: measurementMissingCount, requiredCount: QUARTERLY_MATERIAL_REQUIRED_COUNT },
       missingLabels: [
         educationMissingCount > 0 ? `교육자료 ${educationFilledCount}/${QUARTERLY_MATERIAL_REQUIRED_COUNT}` : '',
@@ -261,6 +267,10 @@ function buildAttentionRows(
   dispatchOverviewRows: EnrichedControllerReportRow[],
   today: Date,
 ) {
+  const inspectorNameBySiteId = new Map(
+    data.sites.map((site) => [site.id, site.inspector_name || ''] as const),
+  );
+
   const overdueSiteRows = Array.from(
     [...overviewRows.filter((row) => row.reportType === 'quarterly_report' && row.dispatchStatus === 'overdue'), ...overviewRows.filter((row) => row.isBadWorkplaceOverdue)].reduce(
       (map, row) => {
@@ -338,11 +348,14 @@ function buildAttentionRows(
       const referenceDate = row.visitDate || row.updatedAt.slice(0, 10);
       const visitDispatch = resolveVisitDispatchState(row.visitDate, row.deadlineDate, row.dispatchStatus, row.updatedAt, today);
       return {
-        assigneeName: row.assigneeName || '-',
+        assigneeName: inspectorNameBySiteId.get(row.siteId) || row.assigneeName || '-',
         deadlineDate: formatDateOnly(visitDispatch.deadlineDate),
         dispatchStatus: visitDispatch.dispatchStatus,
         headquarterName: row.headquarterName || '-',
-        href: row.href,
+        href: getAdminSectionHref('reports', {
+          reportType: 'technical_guidance',
+          siteId: row.siteId,
+        }),
         referenceDate: formatDateOnly(referenceDate),
         reportKey: row.reportKey,
         reportTitle: row.reportTitle || row.periodLabel || row.reportKey,

@@ -1,11 +1,17 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { buildSortMenuOptions, SortableHeaderCell } from '@/features/admin/components/SortableHeaderCell';
 import { getDispatchStatusLabel } from '@/lib/admin/reportMeta';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import type { SafetyAdminUnsentReportRow, TableSortState } from '@/types/admin';
-import { clampPage, getDispatchStatusTone } from './overviewSectionHelpers';
+import {
+  clampPage,
+  getDispatchStatusTone,
+  isOverviewRowActivationKey,
+  stopOverviewRowNavigation,
+} from './overviewSectionHelpers';
 
 interface OverviewUnsentReportsSectionProps {
   currentPage: number;
@@ -28,6 +34,8 @@ export function OverviewUnsentReportsSection({
   totalPages,
   totalRows,
 }: OverviewUnsentReportsSectionProps) {
+  const router = useRouter();
+
   return (
     <section className={`${styles.sectionCard} ${styles.listSectionCard} ${styles.overviewTableCard}`}>
       <div className={styles.sectionHeader}>
@@ -57,7 +65,7 @@ export function OverviewUnsentReportsSection({
                   <tr>
                     <SortableHeaderCell column={{ key: 'siteName' }} current={sort} label="현장" onChange={setSort} sortMenuOptions={buildSortMenuOptions('siteName', { asc: '현장 가나다순', desc: '현장 역순' })} />
                     <SortableHeaderCell column={{ key: 'reportTitle' }} current={sort} label="보고서" onChange={setSort} />
-                    <SortableHeaderCell column={{ key: 'assigneeName' }} current={sort} label="담당자" onChange={setSort} sortMenuOptions={buildSortMenuOptions('assigneeName', { asc: '담당자 가나다순', desc: '담당자 역순' })} />
+                    <SortableHeaderCell column={{ key: 'assigneeName' }} current={sort} label="지도요원" onChange={setSort} sortMenuOptions={buildSortMenuOptions('assigneeName', { asc: '지도요원 가나다순', desc: '지도요원 역순' })} />
                     <SortableHeaderCell column={{ key: 'visitDate' }} current={sort} defaultDirection="desc" label="지도 실시일" onChange={setSort} />
                     <SortableHeaderCell column={{ key: 'unsentDays' }} current={sort} defaultDirection="desc" label="미발송 경과" onChange={setSort} sortMenuOptions={buildSortMenuOptions('unsentDays', { asc: '최근 지도 우선', desc: '오래 미발송된 순' })} />
                     <th>상태</th>
@@ -65,9 +73,20 @@ export function OverviewUnsentReportsSection({
                 </thead>
                 <tbody>
                   {rows.map((row) => (
-                    <tr key={row.reportKey}>
+                    <tr
+                      key={row.reportKey}
+                      className={styles.overviewClickableRow}
+                      onClick={() => router.push(row.href)}
+                      onKeyDown={(event) => {
+                        if (!isOverviewRowActivationKey(event)) return;
+                        event.preventDefault();
+                        router.push(row.href);
+                      }}
+                      role="link"
+                      tabIndex={0}
+                    >
                       <td><span className={styles.overviewTablePrimaryText}>{row.siteName}</span></td>
-                      <td><Link href={row.href} className={`${styles.tableInlineLink} ${styles.overviewTableWrapLink}`}>{row.reportTitle}</Link></td>
+                      <td><Link href={row.href} className={`${styles.tableInlineLink} ${styles.overviewTableWrapLink}`} onClick={stopOverviewRowNavigation}>{row.reportTitle}</Link></td>
                       <td><span className={styles.overviewTableMetric}>{row.assigneeName || '-'}</span></td>
                       <td><span className={styles.overviewTableMetric}>{row.visitDate}</span></td>
                       <td><span className={styles.overviewTableMetric}>{`D+${row.unsentDays}`}</span></td>

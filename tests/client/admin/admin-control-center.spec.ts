@@ -26,11 +26,59 @@ export async function runAdminControlCenterSmoke(config: ClientSmokePlaywrightCo
     }).first();
     await unsentSection.getByRole('columnheader', { name: '현장' }).waitFor();
     await unsentSection.getByRole('columnheader', { name: '보고서' }).waitFor();
-    await unsentSection.getByRole('columnheader', { name: '담당자' }).waitFor();
+    await unsentSection.getByRole('columnheader', { name: '지도요원' }).waitFor();
     await unsentSection.getByRole('columnheader', { name: '지도 실시일' }).waitFor();
     await unsentSection.getByRole('columnheader', { name: '미발송 경과' }).waitFor();
     await unsentSection.getByRole('columnheader', { name: '상태' }).waitFor();
-    await page.getByText('종료 예정 현황').first().waitFor();
+    const endingSoonSection = page.locator('section').filter({
+      has: page.getByRole('heading', { name: '종료 예정 현황' }),
+    }).first();
+    await endingSoonSection.getByRole('heading', { name: '종료 예정 현황' }).waitFor();
+    const materialGapSection = page.locator('section').filter({
+      has: page.getByRole('heading', { name: '교육/계측 자료 부족 현장' }),
+    }).first();
+    await materialGapSection.getByRole('heading', { name: '교육/계측 자료 부족 현장' }).waitFor();
+
+    await unsentSection.locator('tbody tr').first().click();
+    await page.waitForURL(/section=reports/);
+    await page.waitForURL(/reportType=technical_guidance/);
+    await page.waitForURL(/siteId=/);
+
+    await page.goto(`${harness.baseURL}/admin?section=overview`, { waitUntil: 'load' });
+    await harness.waitForRequestCount('GET /api/admin/dashboard/overview', 2);
+
+    const refreshedPriorityQuarterlySection = page.locator('section').filter({
+      has: page.getByRole('heading', { name: '20억 이상 분기보고서 관리' }),
+    }).first();
+    await refreshedPriorityQuarterlySection.locator('tbody tr').first().click();
+    await page.waitForURL(/section=reports/);
+    await page.waitForURL(/reportType=quarterly_report/);
+    await page.waitForURL(/siteId=/);
+
+    await page.goto(`${harness.baseURL}/admin?section=overview`, { waitUntil: 'load' });
+    await harness.waitForRequestCount('GET /api/admin/dashboard/overview', 3);
+
+    const refreshedEndingSoonSection = page.locator('section').filter({
+      has: page.getByRole('heading', { name: '종료 예정 현황' }),
+    }).first();
+    await refreshedEndingSoonSection.locator('tbody tr').first().click();
+    await page.waitForURL(/section=headquarters/);
+    await page.waitForURL(/headquarterId=/);
+    await page.waitForURL(/siteId=/);
+
+    await page.goto(`${harness.baseURL}/admin?section=overview`, { waitUntil: 'load' });
+    await harness.waitForRequestCount('GET /api/admin/dashboard/overview', 4);
+
+    const refreshedMaterialGapSection = page.locator('section').filter({
+      has: page.getByRole('heading', { name: '교육\/계측 자료 부족 현장' }),
+    }).first();
+    await refreshedMaterialGapSection.locator('tbody tr').first().click();
+    await page.waitForURL(/section=headquarters/);
+    await page.waitForURL(/headquarterId=/);
+    await page.waitForURL(/siteId=/);
+
+    await page.goto(`${harness.baseURL}/admin?section=overview`, { waitUntil: 'load' });
+    await harness.waitForRequestCount('GET /api/admin/dashboard/overview', 5);
     await page.getByRole('button', { name: '엑셀 내보내기' }).click();
     await harness.waitForRequestCount('POST /api/admin/exports/:section', overviewExportsBefore + 1);
 

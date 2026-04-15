@@ -1,7 +1,12 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
+import {
+  isOverviewRowActivationKey,
+  stopOverviewRowNavigation,
+} from './overviewSectionHelpers';
 
 interface OverviewEndingSoonSectionProps {
   rows: Array<{
@@ -23,6 +28,8 @@ function getEndDateSourceLabel(value: OverviewEndingSoonSectionProps['rows'][num
 }
 
 export function OverviewEndingSoonSection({ rows }: OverviewEndingSoonSectionProps) {
+  const router = useRouter();
+
   return (
     <section className={`${styles.sectionCard} ${styles.listSectionCard} ${styles.overviewTableCard}`}>
       <div className={styles.sectionHeader}>
@@ -52,9 +59,20 @@ export function OverviewEndingSoonSection({ rows }: OverviewEndingSoonSectionPro
                 </thead>
                 <tbody>
                   {rows.map((row) => (
-                    <tr key={row.siteId}>
+                    <tr
+                      key={row.siteId}
+                      className={styles.overviewClickableRow}
+                      onClick={() => router.push(row.href)}
+                      onKeyDown={(event) => {
+                        if (!isOverviewRowActivationKey(event)) return;
+                        event.preventDefault();
+                        router.push(row.href);
+                      }}
+                      role="link"
+                      tabIndex={0}
+                    >
                       <td>
-                        <Link href={row.href} className={styles.tableInlineLink}>{row.siteName}</Link>
+                        <Link href={row.href} className={styles.tableInlineLink} onClick={stopOverviewRowNavigation}>{row.siteName}</Link>
                       </td>
                       <td>{row.headquarterName}</td>
                       <td>{getEndDateSourceLabel(row.endDateSource)}</td>
