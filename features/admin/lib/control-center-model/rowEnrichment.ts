@@ -1,5 +1,5 @@
 import {
-  buildControllerReportHref,
+  buildControllerReportOpenHref,
   buildControllerReportRows,
 } from '@/lib/admin/controllerReports';
 import {
@@ -176,7 +176,7 @@ export function buildEnrichedRows(
       dispatchStatus: quarterlyDispatch?.dispatchStatus || row.dispatchStatus,
       headquarterId: row.headquarterId,
       headquarterName: row.headquarterName,
-      href: buildControllerReportHref(row),
+      href: buildControllerReportOpenHref(row),
       isBadWorkplaceOverdue,
       isCompleted,
       isOverdue:

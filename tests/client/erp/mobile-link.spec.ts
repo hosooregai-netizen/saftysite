@@ -24,6 +24,7 @@ export async function runMobileLinkSmoke(config: ClientSmokePlaywrightConfig) {
     await harness.loginAs('agent@example.com');
     await harness.waitForRequestCount('GET /assignments/me/sites', 1);
     await harness.waitForRequestCount('GET /reports/by-key/:id', reportReadsBefore + 1);
+    await page.getByText('보고서를 찾을 수 없습니다.').waitFor({ state: 'hidden' });
 
     await page.getByRole('heading', { name: '기술지도 개요' }).waitFor({
       state: 'visible',

@@ -25,7 +25,9 @@ export async function runAdminSchedulesSmoke(config: ClientSmokePlaywrightConfig
     await page.getByRole('button', { name: '[김요원] 1/9 - 기존 현장' }).waitFor({
       state: 'visible',
     });
-    await page.getByText('Legacy InSEF import / legacy_site_id=legacy-1 round=1').first().waitFor();
+    if ((await page.getByText('Legacy InSEF import / legacy_site_id=legacy-1 round=1').count()) !== 0) {
+      throw new Error('Expected legacy placeholder selection reason to be hidden in controller schedule board.');
+    }
 
     const scopeToggleCount = await page
       .getByRole('button', { name: /^(전체 일정|내 일정)$/ })
@@ -37,7 +39,13 @@ export async function runAdminSchedulesSmoke(config: ClientSmokePlaywrightConfig
     await page.getByRole('button', { name: '[김요원] 1/9 - 기존 현장' }).click();
     const scheduleDialog = page.getByRole('dialog', { name: '방문 일정 선택' });
     await scheduleDialog.waitFor({ state: 'visible' });
-    await scheduleDialog.getByText('Legacy InSEF import / legacy_site_id=legacy-1 round=1').waitFor();
+    await scheduleDialog.getByText('선택 사유').waitFor();
+    if ((await scheduleDialog.getByLabel('사유 분류').inputValue()) !== '') {
+      throw new Error('Expected legacy placeholder reason label to be cleared in controller dialog.');
+    }
+    if ((await scheduleDialog.getByLabel('상세 메모').inputValue()) !== '') {
+      throw new Error('Expected legacy placeholder reason memo to be cleared in controller dialog.');
+    }
     if ((await scheduleDialog.getByText('예외 사유코드').count()) !== 0) {
       throw new Error('Expected exception reason code field to be removed from controller schedule dialog.');
     }

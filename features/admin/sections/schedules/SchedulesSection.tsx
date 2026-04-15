@@ -1,6 +1,6 @@
 'use client';
 
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import AppModal from '@/components/ui/AppModal';
 import {
@@ -84,6 +84,30 @@ const DEFAULT_SORT: TableSortState = {
 
 const QUEUE_PAGE_SIZE = 25;
 const WEEKDAY_LABELS = ['월', '화', '수', '목', '금', '토', '일'];
+
+function isLegacySelectionPlaceholder(value: string) {
+  const normalized = value.trim();
+  if (!normalized) return false;
+  return normalized === 'Legacy InSEF import' || normalized.includes('legacy_site_id=');
+}
+
+function getScheduleStatusLabel(status: SafetyInspectionSchedule['status']) {
+  switch (status) {
+    case 'completed':
+      return '완료';
+    case 'postponed':
+      return '연기';
+    case 'canceled':
+      return '취소';
+    case 'planned':
+    default:
+      return '예정';
+  }
+}
+
+function normalizeSelectionReasonValue(value: string) {
+  return isLegacySelectionPlaceholder(value) ? '' : value.trim();
+}
 
 function getMonthToken(date = new Date()) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
@@ -203,8 +227,8 @@ function buildInitialForm(
   return {
     assigneeUserId: schedule.assigneeUserId,
     plannedDate: plannedDate || schedule.plannedDate || schedule.windowStart,
-    selectionReasonLabel: schedule.selectionReasonLabel,
-    selectionReasonMemo: schedule.selectionReasonMemo,
+    selectionReasonLabel: normalizeSelectionReasonValue(schedule.selectionReasonLabel),
+    selectionReasonMemo: normalizeSelectionReasonValue(schedule.selectionReasonMemo),
     status: schedule.status,
   };
 }
@@ -214,18 +238,16 @@ function buildWindowSummary(row: SafetyInspectionSchedule) {
 }
 
 function buildSelectionSummary(row: SafetyInspectionSchedule) {
-  if (!row.selectionReasonLabel && !row.selectionReasonMemo) return '-';
-  return [row.selectionReasonLabel, row.selectionReasonMemo].filter(Boolean).join(' / ');
+  const parts = [
+    normalizeSelectionReasonValue(row.selectionReasonLabel),
+    normalizeSelectionReasonValue(row.selectionReasonMemo),
+  ].filter(Boolean);
+  if (parts.length === 0) return '-';
+  return parts.join(' / ');
 }
 
 function buildIssueSummary(row: SafetyInspectionSchedule) {
-  return [
-    row.isConflicted ? '충돌' : '',
-    row.isOutOfWindow ? '구간 밖' : '',
-    row.isOverdue ? '지연' : '',
-  ]
-    .filter(Boolean)
-    .join(', ');
+  return row.isOverdue ? '지연' : '';
 }
 
 function buildScheduleChipLabel(row: SafetyInspectionSchedule) {
@@ -354,27 +376,30 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
     [currentUser.id, requestKey],
   );
 
-  const applySchedulePayloads = (
-    nextRequestKey: string,
-    payloads: {
-      calendar: SafetyAdminScheduleCalendarResponse;
-      queue: SafetyAdminScheduleQueueResponse;
+  const applySchedulePayloads = useCallback(
+    (
+      nextRequestKey: string,
+      payloads: {
+        calendar: SafetyAdminScheduleCalendarResponse;
+        queue: SafetyAdminScheduleQueueResponse;
+      },
+    ) => {
+      writeAdminSessionCache(
+        currentUser.id,
+        `schedule-calendar:${nextRequestKey}`,
+        payloads.calendar,
+      );
+      writeAdminSessionCache(currentUser.id, `schedule-queue:${nextRequestKey}`, payloads.queue);
+      setScheduleState({
+        calendar: payloads.calendar,
+        error: null,
+        errorRequestKey: '',
+        queue: payloads.queue,
+        resolvedRequestKey: nextRequestKey,
+      });
     },
-  ) => {
-    writeAdminSessionCache(
-      currentUser.id,
-      `schedule-calendar:${nextRequestKey}`,
-      payloads.calendar,
-    );
-    writeAdminSessionCache(currentUser.id, `schedule-queue:${nextRequestKey}`, payloads.queue);
-    setScheduleState({
-      calendar: payloads.calendar,
-      error: null,
-      errorRequestKey: '',
-      queue: payloads.queue,
-      resolvedRequestKey: nextRequestKey,
-    });
-  };
+    [currentUser.id],
+  );
 
   const refreshScheduleData = async (nextMonth = month) => {
     const nextFilters = {
@@ -479,7 +504,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
     return () => {
       abortController.abort();
     };
-  }, [currentUser.id, requestKey, scheduleRequest]);
+  }, [applySchedulePayloads, currentUser.id, requestKey, scheduleRequest]);
 
   const calendarResponse =
     scheduleState.resolvedRequestKey === requestKey
@@ -950,7 +975,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
             ))}
             {calendar.days.map((day) => {
               const dayRows = rowsByDate.get(day.token) || [];
-              const hasWarning = dayRows.some((row) => row.isConflicted || row.isOutOfWindow);
+              const hasWarning = dayRows.some((row) => row.isOverdue);
               const isSelected = selectedDate === day.token;
               const canDrop = canDropScheduleOnDate(dragSchedule, day.token);
 
@@ -981,7 +1006,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                   >
                     <span className={styles.calendarCellDate}>{day.day}일</span>
                     <span className={styles.calendarCellCount}>{dayRows.length}건</span>
-                    {hasWarning ? <span className={styles.calendarCellFlag}>주의</span> : null}
+                    {hasWarning ? <span className={styles.calendarCellFlag}>지연</span> : null}
                   </button>
                   {dayRows.length > 0 ? (
                     <div className={styles.calendarScheduleStack}>
@@ -992,9 +1017,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                           draggable={Boolean(row.plannedDate)}
                           className={[
                             styles.calendarScheduleChip,
-                            row.isConflicted || row.isOutOfWindow
-                              ? styles.calendarScheduleChipWarning
-                              : '',
+                            row.isOverdue ? styles.calendarScheduleChipWarning : '',
                           ]
                             .filter(Boolean)
                             .join(' ')}
@@ -1112,7 +1135,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                           </td>
                           <td>{buildWindowSummary(row)}</td>
                           <td>{row.assigneeName || '-'}</td>
-                          <td>{row.status}</td>
+                          <td>{getScheduleStatusLabel(row.status)}</td>
                           <td>
                             <button
                               type="button"
@@ -1335,7 +1358,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                   </div>
                   <div>
                     <span className={styles.scheduleSummaryLabel}>상태</span>
-                    <strong>{activeSchedule.status}</strong>
+                    <strong>{getScheduleStatusLabel(activeSchedule.status)}</strong>
                   </div>
                   <div>
                     <span className={styles.scheduleSummaryLabel}>선택 사유</span>

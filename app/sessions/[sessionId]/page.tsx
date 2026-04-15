@@ -9,8 +9,8 @@ interface InspectionSessionPageProps {
 export default async function InspectionSessionPage({
   params,
 }: InspectionSessionPageProps) {
-  const { sessionId } = await params;
+  const { sessionId: rawSessionId } = await params;
+  const sessionId = decodeURIComponent(rawSessionId);
 
   return <InspectionSessionScreen sessionId={sessionId} />;
 }
-

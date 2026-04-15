@@ -79,31 +79,27 @@ function buildFallbackSiteFromReport(report: SafetyReport): InspectionSite {
   });
 }
 
-export async function resolveInspectionDocumentRequest(
-  request: Request,
-  body: GenerateInspectionDocumentRequest,
-): Promise<GenerateInspectionHwpxRequest> {
-  if ('session' in body && body.session) {
-    return {
-      session: body.session,
-      siteSessions: body.siteSessions?.length ? body.siteSessions : [body.session],
-    };
-  }
+export interface InspectionSessionBootstrapPayload {
+  site: InspectionSite;
+  session: InspectionSession;
+  siteSessions: InspectionSession[];
+}
 
-  const reportKey =
-    'reportKey' in body && typeof body.reportKey === 'string'
-      ? body.reportKey.trim()
-      : '';
-  if (!reportKey) {
+export async function resolveInspectionSessionBootstrapByReportKey(
+  request: Request,
+  reportKey: string,
+): Promise<InspectionSessionBootstrapPayload> {
+  const normalizedReportKey = reportKey.trim();
+  if (!normalizedReportKey) {
     throw new Error('문서 생성에 필요한 기술지도 보고서 키가 없습니다.');
   }
 
   const token = readRequiredSafetyAuthToken(request);
   const { report: targetReport, site } = await resolveReportSitePayloadByReportKey(
     request,
-    reportKey,
+    normalizedReportKey,
   ).catch(async () => {
-    const report = await fetchAdminReportByKey(token, reportKey, request);
+    const report = await fetchAdminReportByKey(token, normalizedReportKey, request);
     return {
       report,
       site: buildFallbackSiteFromReport(report),
@@ -144,7 +140,38 @@ export async function resolveInspectionDocumentRequest(
   }
 
   return {
+    site,
     session,
     siteSessions: Array.from(sessionsById.values()),
+  };
+}
+
+export async function resolveInspectionDocumentRequest(
+  request: Request,
+  body: GenerateInspectionDocumentRequest,
+): Promise<GenerateInspectionHwpxRequest> {
+  if ('session' in body && body.session) {
+    return {
+      session: body.session,
+      siteSessions: body.siteSessions?.length ? body.siteSessions : [body.session],
+    };
+  }
+
+  const reportKey =
+    'reportKey' in body && typeof body.reportKey === 'string'
+      ? body.reportKey.trim()
+      : '';
+  if (!reportKey) {
+    throw new Error('문서 생성에 필요한 기술지도 보고서 키가 없습니다.');
+  }
+
+  const { session, siteSessions } = await resolveInspectionSessionBootstrapByReportKey(
+    request,
+    reportKey,
+  );
+
+  return {
+    session,
+    siteSessions,
   };
 }

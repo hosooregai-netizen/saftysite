@@ -16,6 +16,7 @@ import type {
   SafetyAdminScheduleListResponse,
   SafetyAdminScheduleLookupsResponse,
   SafetyAdminScheduleQueueResponse,
+  SafetyAdminReportSessionBootstrapResponse,
   SafetyAdminUserListResponse,
   SafetyInspectionSchedule,
   TableSortDirection,
@@ -144,6 +145,16 @@ export function appendAdminDispatchEvent(
     method: 'POST',
     body: JSON.stringify(event),
   });
+}
+
+export function fetchAdminReportSessionBootstrap(
+  reportKey: string,
+  options: RequestInit = {},
+) {
+  return requestAdminApi<SafetyAdminReportSessionBootstrapResponse>(
+    `/reports/${encodeURIComponent(reportKey)}/session-bootstrap`,
+    options,
+  );
 }
 
 export function fetchAdminOverview() {
