@@ -387,6 +387,40 @@ export interface SafetyAdminDispatchQueueRow {
   totalContractAmount: number | null;
 }
 
+export type SafetyAdminQuarterlyReflectionStatus =
+  | 'missing'
+  | 'created';
+
+export type SafetyAdminQuarterlyDispatchStatus =
+  | 'report_missing'
+  | 'pending'
+  | 'overdue'
+  | 'sent';
+
+export type SafetyAdminPriorityQuarterlyExceptionStatus =
+  | 'reflection_missing'
+  | 'dispatch_overdue'
+  | 'dispatch_pending'
+  | 'ok';
+
+export interface SafetyAdminPriorityQuarterlyManagementRow {
+  currentQuarterKey: string;
+  currentQuarterLabel: string;
+  exceptionLabel: string;
+  exceptionStatus: SafetyAdminPriorityQuarterlyExceptionStatus;
+  headquarterName: string;
+  href: string;
+  latestGuidanceDate: string;
+  latestGuidanceRound: number | null;
+  projectAmount: number | null;
+  quarterlyDispatchStatus: SafetyAdminQuarterlyDispatchStatus;
+  quarterlyReflectionStatus: SafetyAdminQuarterlyReflectionStatus;
+  quarterlyReportHref: string;
+  quarterlyReportKey: string;
+  siteId: string;
+  siteName: string;
+}
+
 export interface SafetyAdminUnsentReportRow {
   assigneeName: string;
   deadlineDate: string;
@@ -427,6 +461,7 @@ export interface SafetyAdminOverviewResponse {
   metricCards: AdminOverviewMetricCard[];
   overdueSiteRows: AdminOverviewSiteAlertRow[];
   pendingReviewRows: AdminOverviewReviewRow[];
+  priorityQuarterlyManagementRows?: SafetyAdminPriorityQuarterlyManagementRow[];
   priorityTargetSiteRows?: SafetyAdminDispatchQueueRow[];
   quarterlyMaterialSummary: SafetyAdminQuarterlyMaterialSummary;
   recipientMissingSiteRows?: SafetyAdminDispatchQueueRow[];

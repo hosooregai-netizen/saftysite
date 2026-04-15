@@ -3,9 +3,9 @@
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import type { SafetyReportListItem } from '@/types/backend';
 import type { ControllerDashboardData } from '@/types/controller';
-import { OverviewDispatchQueueTable } from './OverviewDispatchQueueTable';
 import { OverviewEndingSoonSection } from './OverviewEndingSoonSection';
 import { OverviewMaterialGapSection } from './OverviewMaterialGapSection';
+import { OverviewPriorityQuarterlyManagementSection } from './OverviewPriorityQuarterlyManagementSection';
 import { OverviewUnsentReportsSection } from './OverviewUnsentReportsSection';
 import { OverviewVisualCards } from './OverviewVisualCards';
 import { formatSyncTimestamp } from './overviewSectionHelpers';
@@ -37,7 +37,9 @@ export function AdminOverviewSection({
         <div className={styles.sectionHeader}>
           <div>
             <h2 className={styles.sectionTitle}>운영 개요</h2>
-            <div className={styles.sectionHeaderMeta}>마지막 갱신 {formatSyncTimestamp(state.lastSyncedAt)}</div>
+            <div className={styles.sectionHeaderMeta}>
+              마지막 갱신 {formatSyncTimestamp(state.lastSyncedAt)}
+            </div>
           </div>
           <div className={styles.sectionHeaderActions}>
             <button
@@ -78,24 +80,8 @@ export function AdminOverviewSection({
         totalRows={state.sortedUnsentReportRows.length}
       />
 
-      <OverviewDispatchQueueTable
-        title="20억 이상 현장 관리"
-        rows={state.overview.priorityTargetSiteRows ?? []}
-        emptyLabel="현재 20억 이상 관리 대상 현장이 없습니다."
-        isUpdating={Boolean(state.policyUpdatingSiteId)}
-        onToggleDispatchAlerts={(siteId, enabled, alertsEnabled) =>
-          void state.updateSiteDispatchPolicy(siteId, {
-            enabled,
-            alerts_enabled: alertsEnabled,
-          })
-        }
-        onToggleDispatchPolicy={(siteId, enabled, alertsEnabled) =>
-          void state.updateSiteDispatchPolicy(siteId, {
-            enabled,
-            alerts_enabled: alertsEnabled,
-          })
-        }
-        updatingSiteId={state.policyUpdatingSiteId}
+      <OverviewPriorityQuarterlyManagementSection
+        rows={state.overview.priorityQuarterlyManagementRows ?? []}
       />
 
       <OverviewEndingSoonSection rows={state.overview.endingSoonRows} />

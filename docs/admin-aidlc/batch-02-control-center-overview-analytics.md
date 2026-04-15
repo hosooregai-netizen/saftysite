@@ -27,7 +27,7 @@ contract pack around:
 ### Protected user flows
 
 - `/admin?section=overview` still shows KPI cards, site status, dispatch management, and export entry.
-- `/admin?section=overview` now also keeps the `20억 이상 현장 관리` list and the `종료 예정 현황` list visible as stable operator queues.
+- `/admin?section=overview` now also keeps the `20억 이상 분기보고서 관리` list and the `종료 예정 현황` list visible as stable operator queues.
 - `/admin?section=analytics` still shows summary KPIs, trend chart, contribution tables, period filter, and export entry.
 - `admin-control-center` remains one umbrella contract because the shared control-center model feeds both surfaces.
 
@@ -85,7 +85,7 @@ contract pack around:
   `contract_end_date` falls within today through 14 days out, with `project_end_date` used as
   the fallback when contract end is absent.
 - Overview also restores the backend-backed dispatch management queues to the client response so
-  `20억 이상 현장 관리`, `현장대리인 메일 미등록 현장`, and `발송 필요 미해결 현장`
+  `20억 이상 분기보고서 관리`, `현장대리인 메일 미등록 현장`, and `발송 필요 미해결 현장`
   render from the same overview payload again.
 - `AnalyticsSection.tsx` was reduced to a shell and split into:
   - `useAnalyticsSectionState.ts`

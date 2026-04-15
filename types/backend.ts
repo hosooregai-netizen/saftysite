@@ -1060,6 +1060,23 @@ export interface SafetyBackendAdminOverviewResponse {
     site_name: string;
     updated_at: string;
   }>;
+  priority_quarterly_management_rows?: Array<{
+    current_quarter_key: string;
+    current_quarter_label: string;
+    exception_label: string;
+    exception_status: string;
+    headquarter_name: string;
+    href: string;
+    latest_guidance_date: string;
+    latest_guidance_round: number | null;
+    project_amount: number | null;
+    quarterly_dispatch_status: string;
+    quarterly_reflection_status: string;
+    quarterly_report_href: string;
+    quarterly_report_key: string;
+    site_id: string;
+    site_name: string;
+  }>;
   quarterly_material_summary: {
     entries: Array<{
       count: number;

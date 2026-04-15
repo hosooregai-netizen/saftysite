@@ -17,6 +17,7 @@ import type {
   SafetyAdminDirectoryLookupsResponse,
   SafetyAdminHeadquarterListResponse,
   SafetyAdminOverviewResponse,
+  SafetyAdminPriorityQuarterlyManagementRow,
   SafetyAdminReportsResponse,
   SafetyAdminScheduleCalendarResponse,
   SafetyAdminScheduleListResponse,
@@ -416,6 +417,11 @@ export function mapBackendOverviewResponse(
   const priorityTargetSiteRows = Array.isArray(response.priority_target_site_rows)
     ? response.priority_target_site_rows
     : [];
+  const priorityQuarterlyManagementRows = Array.isArray(
+    response.priority_quarterly_management_rows,
+  )
+    ? response.priority_quarterly_management_rows
+    : [];
   const recipientMissingSiteRows = Array.isArray(response.recipient_missing_site_rows)
     ? response.recipient_missing_site_rows
     : [];
@@ -526,6 +532,33 @@ export function mapBackendOverviewResponse(
       reportTypeLabel: normalizeText(row.report_type_label),
       siteName: normalizeText(row.site_name),
       updatedAt: normalizeText(row.updated_at),
+    })),
+    priorityQuarterlyManagementRows: priorityQuarterlyManagementRows.map((row) => ({
+      currentQuarterKey: normalizeText(row.current_quarter_key),
+      currentQuarterLabel: normalizeText(row.current_quarter_label),
+      exceptionLabel: normalizeText(row.exception_label),
+      exceptionStatus: (normalizeText(row.exception_status) ||
+        'ok') as SafetyAdminPriorityQuarterlyManagementRow['exceptionStatus'],
+      headquarterName: normalizeText(row.headquarter_name),
+      href: normalizeText(row.href),
+      latestGuidanceDate: normalizeText(row.latest_guidance_date),
+      latestGuidanceRound:
+        typeof row.latest_guidance_round === 'number' &&
+        Number.isFinite(row.latest_guidance_round)
+          ? row.latest_guidance_round
+          : null,
+      projectAmount:
+        typeof row.project_amount === 'number' && Number.isFinite(row.project_amount)
+          ? row.project_amount
+          : null,
+      quarterlyDispatchStatus: (normalizeText(row.quarterly_dispatch_status) ||
+        'report_missing') as SafetyAdminPriorityQuarterlyManagementRow['quarterlyDispatchStatus'],
+      quarterlyReflectionStatus: (normalizeText(row.quarterly_reflection_status) ||
+        'missing') as SafetyAdminPriorityQuarterlyManagementRow['quarterlyReflectionStatus'],
+      quarterlyReportHref: normalizeText(row.quarterly_report_href),
+      quarterlyReportKey: normalizeText(row.quarterly_report_key),
+      siteId: normalizeText(row.site_id),
+      siteName: normalizeText(row.site_name),
     })),
     priorityTargetSiteRows: priorityTargetSiteRows.map((row) => ({
       dispatchAlertsEnabled: Boolean(row.dispatch_alerts_enabled),

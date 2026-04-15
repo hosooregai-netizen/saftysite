@@ -32,6 +32,18 @@ import {
   type EnrichedControllerReportRow,
 } from './rowEnrichment';
 import type { AdminOverviewModel } from './types';
+import type { SafetyAdminPriorityQuarterlyManagementRow } from '@/types/admin';
+
+const PRIORITY_PROJECT_AMOUNT = 2_000_000_000;
+const PRIORITY_QUARTERLY_EXCEPTION_ORDER: Record<
+  SafetyAdminPriorityQuarterlyManagementRow['exceptionStatus'],
+  number
+> = {
+  reflection_missing: 0,
+  dispatch_overdue: 1,
+  dispatch_pending: 2,
+  ok: 3,
+};
 
 function resolveSiteEndingDate(site: ControllerDashboardData['sites'][number]) {
   const contractEndDate = site.contract_end_date?.trim() || '';
@@ -43,6 +55,121 @@ function resolveSiteEndingDate(site: ControllerDashboardData['sites'][number]) {
     return { endDate: projectEndDate, endDateSource: 'project_end_date' as const };
   }
   return { endDate: '', endDateSource: '' as const };
+}
+
+function pickLatestGuidanceRow(
+  current: EnrichedControllerReportRow | undefined,
+  candidate: EnrichedControllerReportRow,
+) {
+  if (!current) return candidate;
+  const currentDate = current.visitDate || '';
+  const candidateDate = candidate.visitDate || '';
+  if (candidateDate !== currentDate) {
+    return candidateDate > currentDate ? candidate : current;
+  }
+  const currentRound = current.visitRound ?? 0;
+  const candidateRound = candidate.visitRound ?? 0;
+  if (candidateRound !== currentRound) {
+    return candidateRound > currentRound ? candidate : current;
+  }
+  return candidate.updatedAt > current.updatedAt ? candidate : current;
+}
+
+function pickLatestQuarterlyRow(
+  current: EnrichedControllerReportRow | undefined,
+  candidate: EnrichedControllerReportRow,
+) {
+  if (!current) return candidate;
+  return candidate.updatedAt > current.updatedAt ? candidate : current;
+}
+
+function buildPriorityQuarterlyManagementRows(
+  activeSites: ControllerDashboardData['sites'],
+  overviewRows: EnrichedControllerReportRow[],
+  today: Date,
+): SafetyAdminPriorityQuarterlyManagementRow[] {
+  const currentQuarterKey = formatQuarterKey(today);
+  const currentQuarterLabel = formatQuarterLabel(today);
+  const latestGuidanceRowBySite = new Map<string, EnrichedControllerReportRow>();
+  const currentQuarterlyRowBySite = new Map<string, EnrichedControllerReportRow>();
+
+  overviewRows.forEach((row) => {
+    if (row.reportType === 'technical_guidance') {
+      latestGuidanceRowBySite.set(
+        row.siteId,
+        pickLatestGuidanceRow(latestGuidanceRowBySite.get(row.siteId), row),
+      );
+      return;
+    }
+    if (row.reportType !== 'quarterly_report') return;
+
+    const matchesCurrentQuarter = row.routeParam
+      ? row.routeParam === currentQuarterKey || row.periodLabel === currentQuarterLabel
+      : row.periodLabel === currentQuarterLabel;
+    if (!matchesCurrentQuarter) return;
+
+    currentQuarterlyRowBySite.set(
+      row.siteId,
+      pickLatestQuarterlyRow(currentQuarterlyRowBySite.get(row.siteId), row),
+    );
+  });
+
+  return activeSites
+    .filter((site) => (site.project_amount ?? 0) >= PRIORITY_PROJECT_AMOUNT)
+    .map((site) => {
+      const latestGuidanceRow = latestGuidanceRowBySite.get(site.id);
+      const quarterlyRow = currentQuarterlyRowBySite.get(site.id);
+      const quarterlyReflectionStatus = quarterlyRow ? 'created' : 'missing';
+      const quarterlyDispatchStatus = !quarterlyRow
+        ? 'report_missing'
+        : quarterlyRow.dispatchStatus === 'sent'
+          ? 'sent'
+          : quarterlyRow.dispatchStatus === 'overdue'
+            ? 'overdue'
+            : 'pending';
+      const exceptionStatus =
+        quarterlyReflectionStatus === 'missing'
+          ? 'reflection_missing'
+          : quarterlyDispatchStatus === 'overdue'
+            ? 'dispatch_overdue'
+            : quarterlyDispatchStatus === 'pending'
+              ? 'dispatch_pending'
+              : 'ok';
+      const exceptionLabel =
+        exceptionStatus === 'reflection_missing'
+          ? '분기 미반영'
+          : exceptionStatus === 'dispatch_overdue'
+            ? '발송 지연'
+            : exceptionStatus === 'dispatch_pending'
+              ? '발송 대기'
+              : '정상';
+
+      return {
+        currentQuarterKey,
+        currentQuarterLabel,
+        exceptionLabel,
+        exceptionStatus,
+        headquarterName: site.headquarter_detail?.name || site.headquarter?.name || '-',
+        href: getAdminSectionHref('reports', { siteId: site.id }),
+        latestGuidanceDate: latestGuidanceRow?.visitDate || '',
+        latestGuidanceRound: latestGuidanceRow?.visitRound ?? null,
+        projectAmount: site.project_amount ?? null,
+        quarterlyDispatchStatus,
+        quarterlyReflectionStatus,
+        quarterlyReportHref: quarterlyRow?.href || '',
+        quarterlyReportKey: quarterlyRow?.reportKey || '',
+        siteId: site.id,
+        siteName: site.site_name,
+      } satisfies SafetyAdminPriorityQuarterlyManagementRow;
+    })
+    .sort(
+      (left, right) =>
+        PRIORITY_QUARTERLY_EXCEPTION_ORDER[left.exceptionStatus] -
+          PRIORITY_QUARTERLY_EXCEPTION_ORDER[right.exceptionStatus] ||
+        (right.projectAmount ?? 0) - (left.projectAmount ?? 0) ||
+        left.siteName.localeCompare(right.siteName, 'ko'),
+    )
+    .slice(0, 12);
 }
 
 function buildQuarterlySummary(
@@ -321,6 +448,11 @@ export function buildAdminOverviewModel(
   );
   const attention = buildAttentionRows(data, overviewRows, dispatchOverviewRows, today);
   const { endingSoonRows, endingSoonSummary } = buildEndingSoonSummary(activeSites, today);
+  const priorityQuarterlyManagementRows = buildPriorityQuarterlyManagementRows(
+    activeSites,
+    overviewRows,
+    today,
+  );
   const metricCards = buildOverviewMetricCards({
     actionableUnsentReportRows: attention.actionableUnsentReportRows,
     metricMeta,
@@ -338,6 +470,7 @@ export function buildAdminOverviewModel(
     metricCards,
     overdueSiteRows: attention.overdueSiteRows,
     pendingReviewRows: attention.pendingReviewRows,
+    priorityQuarterlyManagementRows,
     quarterlyMaterialSummary,
     siteStatusSummary,
     summaryRows: metricCards.map((card) => ({ label: card.label, meta: card.meta, value: card.value })),

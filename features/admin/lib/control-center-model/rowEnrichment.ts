@@ -37,6 +37,7 @@ export interface EnrichedControllerReportRow {
   reportMonth: string;
   reportTitle: string;
   reportType: 'technical_guidance' | 'quarterly_report' | 'bad_workplace';
+  routeParam: string;
   siteId: string;
   siteName: string;
   status: string;
@@ -191,6 +192,7 @@ export function buildEnrichedRows(
       reportMonth: row.reportMonth,
       reportTitle: row.reportTitle,
       reportType: row.reportType,
+      routeParam: row.routeParam,
       siteId: row.siteId,
       siteName: row.siteName,
       status: row.status,

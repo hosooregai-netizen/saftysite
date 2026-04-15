@@ -207,6 +207,7 @@ export function useAdminOverviewSectionState(
       metricCards: overview.metricCards,
       overdueSiteRows: overview.overdueSiteRows,
       pendingReviewRows: overview.pendingReviewRows,
+      priorityQuarterlyManagementRows: overview.priorityQuarterlyManagementRows ?? [],
       quarterlyMaterialSummary: {
         ...overview.quarterlyMaterialSummary,
         missingSiteRows: sortedMaterialRows,

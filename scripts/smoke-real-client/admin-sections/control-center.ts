@@ -8,7 +8,7 @@ export async function runAdminControlCenterSection(page: Page) {
   await waitHeading(page, '운영 개요');
   await page.getByText('현장 상태').first().waitFor();
   await page.getByText('발송 관리 대상').first().waitFor();
-  await page.getByText('20억 이상 현장 관리').first().waitFor();
+  await page.getByText('20억 이상 분기보고서 관리').first().waitFor();
   await page.getByRole('button', { name: '엑셀 내보내기' }).waitFor();
   await dismissImportantModalIfPresent(page);
   await page.waitForTimeout(2_000);
@@ -19,8 +19,8 @@ export async function runAdminControlCenterSection(page: Page) {
 
   await page.goto(`${baseUrl}/admin?section=analytics`, { waitUntil: 'load' });
   await page.getByText('매출/실적 집계').first().waitFor();
-  await page.getByText('실행 누적').first().waitFor();
-  await page.getByText('예상 누적').first().waitFor();
+  await page.getByText('수행 실적').first().waitFor();
+  await page.getByText('예상 실적').first().waitFor();
   await page.getByText('월별 매출 추이').first().waitFor();
   await page.getByText('직원별 매출 기여도 Top 10').first().waitFor();
   await page.getByText('현장별 매출 상위 Top 10').first().waitFor();
@@ -33,5 +33,5 @@ export async function runAdminControlCenterSection(page: Page) {
     }),
     page.locator('#analytics-filter-period').selectOption('year'),
   ]);
-  await page.getByText('실행 누적').first().waitFor();
+  await page.getByText('수행 실적').first().waitFor();
 }

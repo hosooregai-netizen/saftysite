@@ -17,7 +17,7 @@
 - The overview still shows:
   - `발송 관리 대상`
   - `미발송 경과 현황`
-  - `20억 이상 현장 관리`
+  - `20억 이상 분기보고서 관리`
 - The overview no longer shows:
   - `발송 필요 미해결 현장`
   - `현장대리인 메일 미등록 현장`
