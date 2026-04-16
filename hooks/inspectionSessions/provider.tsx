@@ -38,6 +38,7 @@ export function InspectionSessionsProvider({
     createSite,
     deleteSessions,
     deleteSite,
+    upsertHydratedSiteSessions,
     updateSession,
     updateSessions,
     updateSite,
@@ -128,6 +129,7 @@ export function InspectionSessionsProvider({
       getSessionById,
       getSessionsBySiteId,
       getSiteById,
+      upsertHydratedSiteSessions,
       upsertReportIndexItems,
     }),
     [
@@ -163,6 +165,7 @@ export function InspectionSessionsProvider({
       store.sessions,
       store.sites,
       store.syncError,
+      upsertHydratedSiteSessions,
       upsertReportIndexItems,
       updateSession,
       updateSessions,

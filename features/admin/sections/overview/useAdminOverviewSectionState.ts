@@ -30,6 +30,30 @@ import {
   OVERVIEW_TABLE_PAGE_SIZE,
 } from './overviewSectionHelpers';
 
+function parseYearPrefix(value: string) {
+  const matched = value.trim().match(/^(\d{4})/);
+  if (!matched) return null;
+  const year = Number.parseInt(matched[1], 10);
+  return Number.isInteger(year) ? year : null;
+}
+
+function pickRowsForCurrentYear<T>(
+  rows: T[],
+  currentYear: number,
+  resolveYear: (row: T) => number | null,
+  fallbackSort?: (left: T, right: T) => number,
+) {
+  const currentYearRows = rows.filter((row) => resolveYear(row) === currentYear);
+  if (currentYearRows.length > 0) {
+    return currentYearRows;
+  }
+  if (rows.length <= 1) {
+    return rows;
+  }
+  const fallbackRows = fallbackSort ? [...rows].sort(fallbackSort) : rows;
+  return fallbackRows.slice(0, 1);
+}
+
 export function useAdminOverviewSectionState(
   currentUserId: string,
   data: ControllerDashboardData,
@@ -63,6 +87,7 @@ export function useAdminOverviewSectionState(
   const [materialPage, setMaterialPage] = useState(1);
   const [unsentSort, setUnsentSort] = useState<TableSortState>({ direction: 'desc', key: 'unsentDays' });
   const [unsentPage, setUnsentPage] = useState(1);
+  const currentYear = new Date().getFullYear();
 
   const refreshOverview = useCallback(async () => {
     try {
@@ -176,8 +201,38 @@ export function useAdminOverviewSectionState(
     overviewResponse,
   ]);
 
+  const visibleMaterialRows = useMemo(() => {
+    return pickRowsForCurrentYear(
+      overview.quarterlyMaterialSummary.missingSiteRows,
+      currentYear,
+      (row) => parseYearPrefix(row.quarterKey || row.quarterLabel),
+      (left, right) =>
+        (right.quarterKey || right.quarterLabel).localeCompare(
+          left.quarterKey || left.quarterLabel,
+          'ko',
+        ) || left.siteName.localeCompare(right.siteName, 'ko'),
+    );
+  }, [currentYear, overview.quarterlyMaterialSummary.missingSiteRows]);
+
+  const visibleMaterialQuarterLabel = useMemo(() => {
+    return visibleMaterialRows[0]?.quarterLabel || overview.quarterlyMaterialSummary.quarterLabel;
+  }, [overview.quarterlyMaterialSummary.quarterLabel, visibleMaterialRows]);
+
+  const visibleUnsentReportRows = useMemo(() => {
+    return pickRowsForCurrentYear(
+      normalizedUnsentReportRows,
+      currentYear,
+      (row) => parseYearPrefix(row.visitDate || row.referenceDate || row.deadlineDate),
+      (left, right) =>
+        (right.visitDate || right.referenceDate || right.deadlineDate).localeCompare(
+          left.visitDate || left.referenceDate || left.deadlineDate,
+          'ko',
+        ) || left.siteName.localeCompare(right.siteName, 'ko'),
+    );
+  }, [currentYear, normalizedUnsentReportRows]);
+
   const sortedMaterialRows = useMemo(() => {
-    return [...overview.quarterlyMaterialSummary.missingSiteRows].sort((left, right) => {
+    return [...visibleMaterialRows].sort((left, right) => {
       const leftMissingTotal = left.education.missingCount + left.measurement.missingCount;
       const rightMissingTotal = right.education.missingCount + right.measurement.missingCount;
       switch (materialSort.key) {
@@ -194,10 +249,10 @@ export function useAdminOverviewSectionState(
           return compareNumber(leftMissingTotal, rightMissingTotal, materialSort.direction);
       }
     });
-  }, [materialSort.direction, materialSort.key, overview.quarterlyMaterialSummary.missingSiteRows]);
+  }, [materialSort.direction, materialSort.key, visibleMaterialRows]);
 
   const sortedUnsentReportRows = useMemo(() => {
-    return [...normalizedUnsentReportRows].sort((left, right) => {
+    return [...visibleUnsentReportRows].sort((left, right) => {
       switch (unsentSort.key) {
         case 'siteName':
           return compareText(left.siteName, right.siteName, unsentSort.direction);
@@ -214,7 +269,7 @@ export function useAdminOverviewSectionState(
           return compareNumber(left.unsentDays, right.unsentDays, unsentSort.direction);
       }
     });
-  }, [normalizedUnsentReportRows, unsentSort.direction, unsentSort.key]);
+  }, [unsentSort.direction, unsentSort.key, visibleUnsentReportRows]);
 
   useEffect(() => {
     setMaterialPage(1);
@@ -303,6 +358,7 @@ export function useAdminOverviewSectionState(
     sortedUnsentReportRows,
     unsentTotalPages,
     materialSort,
+    visibleMaterialQuarterLabel,
     unsentSort,
   };
 }

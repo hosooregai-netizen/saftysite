@@ -12,7 +12,7 @@ import {
   fetchAdminSitesList,
 } from '@/lib/admin/apiClient';
 import {
-  buildControllerReportHref,
+  buildControllerReportOpenHref,
 } from '@/lib/admin/controllerReports';
 import {
   normalizeControllerReview,
@@ -494,41 +494,11 @@ export function useReportsSectionState({
 
   const openReportRow = useCallback(
     async (row: ControllerReportRow) => {
-      const href = buildControllerReportHref(row);
-      if (row.reportType !== 'technical_guidance' || !row.reportKey.startsWith('legacy:')) {
-        router.push(href);
-        return;
-      }
-
       setError(null);
-      setNotice('legacy 보고서를 여는 중입니다.');
-
-      try {
-        await ensureSessionLoaded(row.reportKey);
-        if (getSessionById(row.reportKey)) {
-          setNotice(null);
-          router.push(href);
-          return;
-        }
-
-        if (row.originalPdfAvailable && row.originalPdfDownloadPath && typeof window !== 'undefined') {
-          setNotice('구조화 본문이 아직 준비되지 않아 원본 PDF를 엽니다.');
-          window.location.assign(row.originalPdfDownloadPath);
-          return;
-        }
-
-        setError('보고서 본문을 아직 불러오지 못했습니다. 변환 작업이 끝난 뒤 다시 시도해 주세요.');
-      } catch (nextError) {
-        if (row.originalPdfAvailable && row.originalPdfDownloadPath && typeof window !== 'undefined') {
-          setNotice('구조화 본문을 아직 불러오지 못해 원본 PDF를 엽니다.');
-          window.location.assign(row.originalPdfDownloadPath);
-          return;
-        }
-
-        setError(nextError instanceof Error ? nextError.message : '보고서를 열지 못했습니다.');
-      }
+      setNotice(null);
+      router.push(buildControllerReportOpenHref(row));
     },
-    [ensureSessionLoaded, getSessionById, router],
+    [router],
   );
 
   return {
