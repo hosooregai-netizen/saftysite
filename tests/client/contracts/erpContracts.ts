@@ -161,7 +161,7 @@ export const ERP_FEATURE_CONTRACTS = {
   'site-hub': {
     id: 'site-hub',
     description: '현장 목록에서 기술지도 보고서 허브와 분기 보고서 목록으로 이어진다.',
-    routes: ['/', '/sites/site-1', '/sites/site-1/quarterly'],
+    routes: ['/', '/sites/site-1/entry', '/sites/site-1/quarterly'],
     markers: ['현장 목록', '기술지도 보고서', '분기 종합 보고서', '분기 종합 보고서 목록'],
     apis: ['GET /assignments/me/sites', 'GET /reports'],
     criticalActions: ['현장 선택', '기술지도 보고서 허브 진입', '분기 종합 보고서 목록 이동'],

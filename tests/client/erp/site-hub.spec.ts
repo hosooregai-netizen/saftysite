@@ -14,14 +14,15 @@ export async function runSiteHubSmoke(config: ClientSmokePlaywrightConfig) {
     await harness.waitForRequestCount('GET /assignments/me/sites', 1);
     await page.getByRole('heading', { name: '현장 목록' }).waitFor({ state: 'visible' });
 
-    await page.locator('a[href="/sites/site-1"]').first().click();
-    await page.waitForURL(/\/sites\/site-1$/);
+    await page.getByRole('link', { name: '기존 현장' }).first().click();
+    await page.waitForURL(/\/sites\/site-1\/entry$/);
     await harness.waitForRequestCount('GET /reports', reportReadsBefore + 1);
-    await page.getByRole('heading', { name: '기술지도 보고서 - 기존 현장' }).waitFor({
+    await page.getByRole('heading', { name: '사업장/현장 식별' }).waitFor({
       state: 'visible',
     });
 
-    await page.goto(`${harness.baseURL}/sites/site-1/quarterly`, { waitUntil: 'load' });
+    await page.getByRole('link', { name: '분기 보고서 목록' }).first().click();
+    await page.waitForURL(/\/sites\/site-1\/quarterly/);
     await page.getByRole('heading', { name: '분기 종합 보고서 목록' }).waitFor({
       state: 'visible',
     });
