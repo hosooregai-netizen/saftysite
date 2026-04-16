@@ -30,7 +30,6 @@ interface SitesTableProps {
   onOpenSiteEntry: (site: SafetySite) => void;
   onUpdateStatus: (site: SafetySite, status: SafetySiteStatus) => void;
   page: number;
-  showHeadquarterColumn: boolean;
   sites: SafetySite[];
   sort: TableSortState;
   totalCount: number;
@@ -39,22 +38,27 @@ interface SitesTableProps {
   onSortChange: (value: TableSortState) => void;
 }
 
-function formatDateOnly(value: string | null | undefined) {
-  if (!value) return '-';
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return value;
-  const year = String(parsed.getFullYear()).slice(-2);
-  const month = String(parsed.getMonth() + 1).padStart(2, '0');
-  const day = String(parsed.getDate()).padStart(2, '0');
-  return `${year}.${month}.${day}`;
-}
-
 function formatMonthValue(value: string | null | undefined) {
   if (!value) return '-';
   if (value.length >= 7) {
     return value.slice(2, 7);
   }
   return value;
+}
+
+function formatSiteProgress(site: SafetySite) {
+  const progress =
+    typeof site.guidance_max_visit_round === 'number' && Number.isFinite(site.guidance_max_visit_round)
+      ? site.guidance_max_visit_round
+      : 0;
+  const contract =
+    typeof site.total_rounds === 'number' && Number.isFinite(site.total_rounds) && site.total_rounds > 0
+      ? site.total_rounds
+      : null;
+  if (contract != null) {
+    return `${progress}/${contract}회차`;
+  }
+  return `${progress}/-`;
 }
 
 export function SitesTable({
@@ -69,7 +73,6 @@ export function SitesTable({
   onOpenSiteEntry,
   onUpdateStatus,
   page,
-  showHeadquarterColumn,
   sites,
   sort,
   totalCount,
@@ -93,22 +96,10 @@ export function SitesTable({
                 desc: '현장 역순',
               })}
             />
-            {showHeadquarterColumn ? (
-              <SortableHeaderCell
-                column={{ key: 'headquarter_name' }}
-                current={sort}
-                label="사업장 관리번호"
-                onChange={onSortChange}
-                sortMenuOptions={buildSortMenuOptions('headquarter_name', {
-                  asc: '사업장 관리번호 가나다순',
-                  desc: '사업장 관리번호 역순',
-                })}
-              />
-            ) : null}
             <SortableHeaderCell
               column={{ key: 'project_kind' }}
               current={sort}
-              label="공사 종류"
+              label="공사종류"
               onChange={onSortChange}
               sortMenuOptions={buildSortMenuOptions('project_kind', {
                 asc: '공사 종류 가나다순',
@@ -126,7 +117,7 @@ export function SitesTable({
               column={{ key: 'project_amount' }}
               current={sort}
               defaultDirection="desc"
-              label="공사 금액"
+              label="금액"
               onChange={onSortChange}
               sortMenuOptions={buildSortMenuOptions('project_amount', {
                 asc: '공사 금액 낮은순',
@@ -144,14 +135,14 @@ export function SitesTable({
               })}
             />
             <SortableHeaderCell
-              column={{ key: 'last_visit_date' }}
+              column={{ key: 'guidance_max_visit_round' }}
               current={sort}
               defaultDirection="desc"
-              label="마지막 방문일"
+              label="현장별 진행률"
               onChange={onSortChange}
-              sortMenuOptions={buildSortMenuOptions('last_visit_date', {
-                asc: '마지막 방문일 오래된순',
-                desc: '마지막 방문일 최신순',
+              sortMenuOptions={buildSortMenuOptions('guidance_max_visit_round', {
+                asc: '진행 회차 낮은순',
+                desc: '진행 회차 높은순',
               })}
             />
             <th>메뉴</th>
@@ -179,13 +170,6 @@ export function SitesTable({
                 <td>
                   <div className={styles.tablePrimary}>{site.site_name}</div>
                 </td>
-                {showHeadquarterColumn ? (
-                  <td>
-                    <div className={styles.tablePrimary}>
-                      {site.headquarter_detail?.management_number || '-'}
-                    </div>
-                  </td>
-                ) : null}
                 <td>
                   <div className={styles.tablePrimary}>{site.project_kind || '-'}</div>
                 </td>
@@ -204,7 +188,9 @@ export function SitesTable({
                   </div>
                 </td>
                 <td>{getSiteStatusLabel(site.status)}</td>
-                <td>{formatDateOnly(site.last_visit_date)}</td>
+                <td>
+                  <div className={styles.tablePrimary}>{formatSiteProgress(site)}</div>
+                </td>
                 <td>
                   <div
                     className={styles.tableActionMenuWrap}
