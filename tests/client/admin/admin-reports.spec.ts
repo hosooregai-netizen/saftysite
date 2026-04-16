@@ -88,6 +88,15 @@ export async function runAdminReportsSmoke(config: ClientSmokePlaywrightConfig) 
       throw new Error('Legacy reports should open as in-app original PDF, not the authoring session screen.');
     }
 
+    await page.goto(
+      `${harness.baseURL}/admin/report-open?reportKey=${encodeURIComponent('legacy:technical_guidance:1001')}`,
+      { waitUntil: 'load' },
+    );
+    await page.locator('iframe[title*="PDF"]').waitFor({ state: 'visible' });
+    if (!page.url().includes('/admin/report-open')) {
+      throw new Error('Direct legacy PDF fallback route should stay on the report-open page.');
+    }
+
     harness.assertContractApisObserved();
     harness.assertNoClientErrors();
   } finally {

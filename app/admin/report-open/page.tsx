@@ -1,12 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import LoginPanel from '@/components/auth/LoginPanel';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { fetchAdminOriginalPdfBlob } from '@/lib/admin/originalPdfClient';
 
-export default function AdminReportOpenPage() {
+function AdminReportOpenContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const {
@@ -132,5 +132,13 @@ export default function AdminReportOpenPage() {
         </section>
       </div>
     </main>
+  );
+}
+
+export default function AdminReportOpenPage() {
+  return (
+    <Suspense fallback={<main className="app-page">蹂닿퀬?쒕? 以鍮꾪븯??以묒엯?덈떎.</main>}>
+      <AdminReportOpenContent />
+    </Suspense>
   );
 }
