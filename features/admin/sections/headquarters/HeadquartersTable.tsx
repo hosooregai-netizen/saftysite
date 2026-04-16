@@ -50,7 +50,7 @@ function getHeadquarterMissingFields(item: SafetyHeadquarter) {
     ['사업자등록번호', item.business_registration_no],
     ['법인등록번호', item.corporate_registration_no],
     ['건설업면허/등록번호', item.license_no],
-    ['본사 담당자명', item.contact_name],
+    ['본사 대표자명', item.contact_name],
     ['대표 전화', item.contact_phone],
     ['본사 주소', item.address],
   ];
@@ -102,7 +102,7 @@ export function HeadquartersTable({
         <div className={`${styles.sectionHeaderActions} ${styles.sectionHeaderToolbarActions}`}>
           <input
             className={`app-input ${styles.sectionHeaderSearch} ${styles.sectionHeaderToolbarSearch}`}
-            placeholder="회사명, 관리번호, 담당자, 등록번호, 주소로 검색"
+            placeholder="회사명, 관리번호, 대표자, 등록번호, 주소로 검색"
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
           />
@@ -142,7 +142,7 @@ export function HeadquartersTable({
               <article className={styles.summaryCard}>
                 <span className={styles.summaryCardLabel}>연락/주소 보완</span>
                 <strong className={styles.summaryCardValue}>{summary.contactGapCount}개</strong>
-                <span className={styles.summaryCardMeta}>담당자, 대표 전화, 본사 주소 기준</span>
+                <span className={styles.summaryCardMeta}>대표자, 대표 전화, 본사 주소 기준</span>
               </article>
               <article className={styles.summaryCard}>
                 <span className={styles.summaryCardLabel}>입력 완료</span>
@@ -173,7 +173,7 @@ export function HeadquartersTable({
                       label="사업장 명"
                       onChange={onSortChange}
                     />
-                    <th>담당자</th>
+                    <th>대표자</th>
                     <th>사업자등록번호</th>
                     <th>주소</th>
                     <th>메뉴</th>

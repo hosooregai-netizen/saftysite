@@ -135,7 +135,7 @@ export function HeadquarterEditorModal({
           </div>
           <div className={styles.modalGrid}>
             <label className={styles.modalField}>
-              <span className={styles.label}>본사 담당자명</span>
+              <span className={styles.label}>본사 대표자명</span>
               <input
                 className="app-input"
                 value={form.contact_name}

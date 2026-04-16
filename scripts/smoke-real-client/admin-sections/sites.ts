@@ -18,7 +18,7 @@ export async function runAdminSitesSection(page: Page) {
   await waitHeading(page, '사업장 목록');
   await page.getByRole('button', { name: '사업장 추가' }).first().waitFor();
   await page
-    .getByPlaceholder('회사명, 관리번호, 담당자, 등록번호, 주소로 검색')
+    .getByPlaceholder('회사명, 관리번호, 대표자, 등록번호, 주소로 검색')
     .fill('');
 
   await page.getByRole('button', { name: /작업 메뉴 열기/ }).first().click();

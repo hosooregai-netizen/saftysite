@@ -22,7 +22,7 @@ export async function runAdminHeadquartersSmoke(config: ClientSmokePlaywrightCon
     await createDialog.getByLabel('회사명').fill('mocked headquarter');
     await createDialog.getByLabel('사업장관리번호').fill('HQ-NEW-001');
     await createDialog.getByLabel('사업장개시번호').fill('OPEN-NEW-001');
-    await createDialog.getByLabel('본사 담당자명').fill('김담당');
+    await createDialog.getByLabel('본사 대표자명').fill('김담당');
     await createDialog.getByLabel('대표 전화').fill('02-9999-1111');
     await createDialog
       .locator('label')

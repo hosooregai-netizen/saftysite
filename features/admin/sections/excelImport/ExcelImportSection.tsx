@@ -23,7 +23,7 @@ interface ExcelImportSectionProps {
 
 const FIELD_LABELS: Record<string, string> = {
   business_registration_no: '사업자등록번호',
-  contact_name: '본사 담당자명',
+  contact_name: '본사 대표자명',
   contact_phone: '본사 연락처',
   contract_date: '계약일',
   contract_type: '계약유형',

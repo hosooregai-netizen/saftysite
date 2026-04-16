@@ -17,7 +17,7 @@ function getHeadquarterMissingFields(headquarter: SafetyHeadquarter) {
     ['사업자등록번호', headquarter.business_registration_no],
     ['법인등록번호', headquarter.corporate_registration_no],
     ['면허번호', headquarter.license_no],
-    ['담당자명', headquarter.contact_name],
+    ['대표자명', headquarter.contact_name],
     ['대표 전화', headquarter.contact_phone],
     ['본사 주소', headquarter.address],
   ];
@@ -96,7 +96,7 @@ export function HeadquarterSummaryPanel({
           </article>
           <div className={styles.headquarterOverviewAside}>
             <article className={styles.contextCell}>
-              <span className={styles.contextCellLabel}>담당자</span>
+              <span className={styles.contextCellLabel}>대표자</span>
               <strong className={styles.contextCellValue}>{headquarter.contact_name || '-'}</strong>
               <span className={styles.contextCellMeta}>
                 {headquarter.contact_phone || '대표 전화 미입력'}

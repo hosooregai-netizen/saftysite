@@ -39,7 +39,7 @@ function validateHeadquarterSubmit(
     ['사업자등록번호', form.business_registration_no, 50],
     ['법인등록번호', form.corporate_registration_no, 50],
     ['건설업면허/등록번호', form.license_no, 50],
-    ['본사 담당자명', form.contact_name, 100],
+    ['본사 대표자명', form.contact_name, 100],
     ['대표 전화', form.contact_phone, 50],
   ];
 
@@ -383,7 +383,7 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
                       { key: 'business_registration_no', label: '사업자등록번호' },
                       { key: 'corporate_registration_no', label: '법인등록번호' },
                       { key: 'license_no', label: '건설업면허/등록번호' },
-                      { key: 'contact_name', label: '본사 담당자명' },
+                      { key: 'contact_name', label: '본사 대표자명' },
                       { key: 'contact_phone', label: '대표 전화' },
                       { key: 'address', label: '본사 주소' },
                       { key: 'memo', label: '운영 메모' },

@@ -1674,7 +1674,7 @@ async function runBrowserCrudSmoke() {
   await page.getByRole('button', { name: '사업장 추가' }).click();
   const headquarterCreateDialog = page.getByRole('dialog', { name: '사업장 추가' });
   await headquarterCreateDialog.getByLabel('사업장명').fill('테스트 본사');
-  await headquarterCreateDialog.getByLabel('담당자').fill('오담당');
+  await headquarterCreateDialog.getByLabel('본사 대표자명').fill('오담당');
   await headquarterCreateDialog.getByLabel('사업자등록번호').fill('555-55-55555');
   await headquarterCreateDialog.getByLabel('주소').fill('부산시 해운대구 본사로 2');
   await headquarterCreateDialog.getByRole('button', { name: '생성' }).click();
@@ -1684,7 +1684,7 @@ async function runBrowserCrudSmoke() {
   await row.getByRole('button', { name: '수정' }).click();
   const headquarterEditDialog = page.getByRole('dialog', { name: '사업장 수정' });
   await headquarterEditDialog.getByLabel('사업장명').fill('테스트 본사 수정');
-  await headquarterEditDialog.getByLabel('담당자').fill('오담당 수정');
+  await headquarterEditDialog.getByLabel('본사 대표자명').fill('오담당 수정');
   await headquarterEditDialog.getByRole('button', { name: '저장' }).click();
   await expectRowText('테스트 본사 수정');
 
