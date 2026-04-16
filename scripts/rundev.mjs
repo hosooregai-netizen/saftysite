@@ -70,7 +70,59 @@ function safeExec(command, args) {
   }
 }
 
+function safePowerShell(command) {
+  return safeExec('powershell.exe', [
+    '-NoProfile',
+    '-Command',
+    `$OutputEncoding = [System.Text.Encoding]::UTF8; [Console]::OutputEncoding = [System.Text.Encoding]::UTF8; ${command}`,
+  ]);
+}
+
+function normalizeForSearch(value) {
+  return String(value || '')
+    .replace(/\\/g, '/')
+    .toLowerCase();
+}
+
+function parsePortFromAddress(address) {
+  const match = String(address || '').match(/:(\d+)$/);
+  if (!match) return null;
+  const port = Number.parseInt(match[1], 10);
+  return Number.isInteger(port) && port > 0 ? port : null;
+}
+
+function parsePortFromCommandLine(commandLine) {
+  const match = String(commandLine || '').match(/--port(?:=|\s+)"?(\d+)"?/);
+  if (!match) return null;
+  const port = Number.parseInt(match[1], 10);
+  return Number.isInteger(port) && port > 0 ? port : null;
+}
+
+function getWindowsListeningPids(port) {
+  const fromPowerShell = safePowerShell(
+    `Get-NetTCPConnection -LocalPort ${port} -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess`,
+  )
+    .split(/\r?\n/)
+    .map((line) => Number.parseInt(line.trim(), 10))
+    .filter((value) => Number.isInteger(value) && value > 0);
+
+  if (fromPowerShell.length > 0) return fromPowerShell;
+
+  return safeExec('netstat', ['-ano', '-p', 'tcp'])
+    .split(/\r?\n/)
+    .map((line) => line.trim().split(/\s+/))
+    .filter((parts) => parts.length >= 5 && parts[0] === 'TCP')
+    .filter((parts) => parts[3]?.toUpperCase() === 'LISTENING')
+    .filter((parts) => parsePortFromAddress(parts[1]) === port)
+    .map((parts) => Number.parseInt(parts[4], 10))
+    .filter((value) => Number.isInteger(value) && value > 0);
+}
+
 function getListeningPids(port) {
+  if (process.platform === 'win32') {
+    return getWindowsListeningPids(port);
+  }
+
   return safeExec('lsof', ['-nP', `-iTCP:${port}`, '-sTCP:LISTEN', '-Fp'])
     .split('\n')
     .map((line) => line.trim())
@@ -80,6 +132,10 @@ function getListeningPids(port) {
 }
 
 function getProcessCwd(pid) {
+  if (process.platform === 'win32') {
+    return '';
+  }
+
   const output = safeExec('lsof', ['-a', '-p', String(pid), '-d', 'cwd', '-Fn']);
   const cwdLine = output
     .split('\n')
@@ -88,10 +144,19 @@ function getProcessCwd(pid) {
   return cwdLine ? cwdLine.slice(1) : '';
 }
 
+function getProcessCommandLine(pid) {
+  if (process.platform === 'win32') {
+    return safePowerShell(`(Get-CimInstance Win32_Process -Filter "ProcessId = ${pid}").CommandLine`).trim();
+  }
+
+  return safeExec('ps', ['-p', String(pid), '-o', 'command=']).trim();
+}
+
 function getPortOwner(port) {
   const [pid] = getListeningPids(port);
   if (!pid) return null;
   return {
+    commandLine: getProcessCommandLine(pid),
     cwd: getProcessCwd(pid),
     pid,
   };
@@ -99,6 +164,74 @@ function getPortOwner(port) {
 
 function isSameProject(cwd) {
   return Boolean(cwd) && path.resolve(cwd) === projectRoot;
+}
+
+function commandBelongsToProject(commandLine) {
+  return normalizeForSearch(commandLine).includes(normalizeForSearch(projectRoot));
+}
+
+function isSameProjectOwner(owner) {
+  return Boolean(owner) && (isSameProject(owner.cwd) || commandBelongsToProject(owner.commandLine));
+}
+
+function describeOwner(owner) {
+  if (!owner) return 'another process';
+  if (owner.cwd) return owner.cwd;
+  if (owner.commandLine) {
+    return owner.commandLine.replace(/\s+/g, ' ').slice(0, 120);
+  }
+  return 'another process';
+}
+
+function getProcessSnapshot() {
+  if (process.platform === 'win32') {
+    const output = safePowerShell(
+      'Get-CimInstance Win32_Process -Filter "name = \'node.exe\'" | Select-Object ProcessId,ParentProcessId,CommandLine | ConvertTo-Json -Compress',
+    ).trim();
+
+    if (!output) return [];
+
+    try {
+      const parsed = JSON.parse(output);
+      const records = Array.isArray(parsed) ? parsed : [parsed];
+      return records.map((record) => ({
+        commandLine: record.CommandLine || '',
+        parentPid: Number(record.ParentProcessId),
+        pid: Number(record.ProcessId),
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  return safeExec('ps', ['-eo', 'pid=,ppid=,command='])
+    .split(/\r?\n/)
+    .map((line) => line.trim().match(/^(\d+)\s+(\d+)\s+(.+)$/))
+    .filter(Boolean)
+    .map((match) => ({
+      commandLine: match[3],
+      parentPid: Number(match[2]),
+      pid: Number(match[1]),
+    }));
+}
+
+function getRunningProjectDevServers() {
+  const nextCliNeedle = normalizeForSearch(nextCliPath);
+
+  return getProcessSnapshot()
+    .map((processInfo) => ({
+      ...processInfo,
+      port: parsePortFromCommandLine(processInfo.commandLine),
+    }))
+    .filter((processInfo) => {
+      const commandLine = normalizeForSearch(processInfo.commandLine);
+      return (
+        Number.isInteger(processInfo.port) &&
+        commandBelongsToProject(commandLine) &&
+        commandLine.includes(nextCliNeedle) &&
+        /\bdev\b/.test(commandLine)
+      );
+    });
 }
 
 function parseRequestedPort() {
@@ -112,9 +245,9 @@ function resolvePort() {
   const requestedPort = parseRequestedPort();
   const owner3000 = getPortOwner(3000);
 
-  if (owner3000 && !isSameProject(owner3000.cwd)) {
+  if (owner3000 && !isSameProjectOwner(owner3000)) {
     console.log(
-      `[dev] Port 3000 is already used by another project: ${owner3000.cwd} (pid ${owner3000.pid}).`,
+      `[dev] Port 3000 is already used by another project: ${describeOwner(owner3000)} (pid ${owner3000.pid}).`,
     );
     console.log('[dev] safetysite will run on port 3100 or the next available port.');
   }
@@ -123,13 +256,13 @@ function resolvePort() {
     const candidatePort = requestedPort + index;
     const owner = getPortOwner(candidatePort);
     if (!owner) return candidatePort;
-    if (isSameProject(owner.cwd)) {
+    if (isSameProjectOwner(owner)) {
       console.log(`[dev] safetysite is already running on port ${candidatePort} (pid ${owner.pid}).`);
       console.log(`[dev] Use http://${DEFAULT_HOST}:${candidatePort} and confirm the Excel import API there.`);
       process.exit(0);
     }
     console.log(
-      `[dev] Port ${candidatePort} is already in use by ${owner.cwd || 'another process'} (pid ${owner.pid}).`,
+      `[dev] Port ${candidatePort} is already in use by ${describeOwner(owner)} (pid ${owner.pid}).`,
     );
   }
 
@@ -139,6 +272,13 @@ function resolvePort() {
 function prepareLockFile() {
   if (!fs.existsSync(lockPath)) return;
   if (isBusyLock(lockPath)) {
+    const [runningServer] = getRunningProjectDevServers();
+    if (runningServer) {
+      console.log(`[dev] safetysite is already running on port ${runningServer.port} (pid ${runningServer.pid}).`);
+      console.log(`[dev] Use http://${DEFAULT_HOST}:${runningServer.port} and confirm the Excel import API there.`);
+      process.exit(0);
+    }
+
     console.log('[dev] Another safetysite next dev instance still owns .next/dev/lock.');
     console.log('[dev] Stop that instance first, or reuse the existing port shown above.');
     process.exit(0);
