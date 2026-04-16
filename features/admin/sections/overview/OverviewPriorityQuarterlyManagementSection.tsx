@@ -5,13 +5,18 @@ import { useRouter } from 'next/navigation';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import type { SafetyAdminPriorityQuarterlyManagementRow } from '@/types/admin';
 import {
+  clampPage,
   formatOverviewCurrency,
   isOverviewRowActivationKey,
   stopOverviewRowNavigation,
 } from './overviewSectionHelpers';
 
 interface OverviewPriorityQuarterlyManagementSectionProps {
+  currentPage: number;
   rows: SafetyAdminPriorityQuarterlyManagementRow[];
+  setPage: (updater: (current: number) => number) => void;
+  totalPages: number;
+  totalRows: number;
 }
 
 function formatQuarterLabel(value: Date) {
@@ -63,7 +68,11 @@ function getStatusTone(
 }
 
 export function OverviewPriorityQuarterlyManagementSection({
+  currentPage,
   rows,
+  setPage,
+  totalPages,
+  totalRows,
 }: OverviewPriorityQuarterlyManagementSectionProps) {
   const router = useRouter();
   const quarterLabel = rows[0]?.currentQuarterLabel || formatQuarterLabel(new Date());
@@ -78,11 +87,11 @@ export function OverviewPriorityQuarterlyManagementSection({
           </div>
         </div>
         <div className={styles.sectionHeaderActions}>
-          <span className={styles.overviewTableCount}>{rows.length.toLocaleString('ko-KR')}개 현장</span>
+          <span className={styles.overviewTableCount}>{totalRows.toLocaleString('ko-KR')}개 현장</span>
         </div>
       </div>
       <div className={styles.sectionBody}>
-        {rows.length === 0 ? (
+        {totalRows === 0 ? (
           <div className={styles.tableEmpty}>현재 관리가 필요한 20억 이상 활성 현장이 없습니다.</div>
         ) : (
           <div className={styles.tableShell}>
@@ -136,6 +145,29 @@ export function OverviewPriorityQuarterlyManagementSection({
           </div>
         )}
       </div>
+      {totalRows > 0 ? (
+        <div className={styles.paginationRow}>
+          <button
+            type="button"
+            className="app-button app-button-secondary"
+            onClick={() => setPage((current) => clampPage(current - 1, totalPages))}
+            disabled={currentPage <= 1}
+          >
+            이전
+          </button>
+          <span className={styles.paginationLabel}>
+            {currentPage} / {totalPages} 페이지
+          </span>
+          <button
+            type="button"
+            className="app-button app-button-secondary"
+            onClick={() => setPage((current) => clampPage(current + 1, totalPages))}
+            disabled={currentPage >= totalPages}
+          >
+            다음
+          </button>
+        </div>
+      ) : null}
     </section>
   );
 }

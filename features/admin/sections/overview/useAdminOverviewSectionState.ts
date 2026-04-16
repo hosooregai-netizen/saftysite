@@ -87,6 +87,8 @@ export function useAdminOverviewSectionState(
   const [materialPage, setMaterialPage] = useState(1);
   const [unsentSort, setUnsentSort] = useState<TableSortState>({ direction: 'desc', key: 'unsentDays' });
   const [unsentPage, setUnsentPage] = useState(1);
+  const [priorityPage, setPriorityPage] = useState(1);
+  const [endingSoonPage, setEndingSoonPage] = useState(1);
   const currentYear = new Date().getFullYear();
 
   const refreshOverview = useCallback(async () => {
@@ -292,6 +294,23 @@ export function useAdminOverviewSectionState(
     return sortedUnsentReportRows.slice(offset, offset + OVERVIEW_TABLE_PAGE_SIZE);
   }, [currentUnsentPage, sortedUnsentReportRows]);
 
+  const priorityTotalPages = Math.max(
+    1,
+    Math.ceil(normalizedPriorityQuarterlyManagementRows.length / OVERVIEW_TABLE_PAGE_SIZE),
+  );
+  const currentPriorityPage = clampPage(priorityPage, priorityTotalPages);
+  const pagedPriorityQuarterlyManagementRows = useMemo(() => {
+    const offset = (currentPriorityPage - 1) * OVERVIEW_TABLE_PAGE_SIZE;
+    return normalizedPriorityQuarterlyManagementRows.slice(offset, offset + OVERVIEW_TABLE_PAGE_SIZE);
+  }, [currentPriorityPage, normalizedPriorityQuarterlyManagementRows]);
+
+  const endingSoonTotalPages = Math.max(1, Math.ceil(overview.endingSoonRows.length / OVERVIEW_TABLE_PAGE_SIZE));
+  const currentEndingSoonPage = clampPage(endingSoonPage, endingSoonTotalPages);
+  const pagedEndingSoonRows = useMemo(() => {
+    const offset = (currentEndingSoonPage - 1) * OVERVIEW_TABLE_PAGE_SIZE;
+    return overview.endingSoonRows.slice(offset, offset + OVERVIEW_TABLE_PAGE_SIZE);
+  }, [currentEndingSoonPage, overview.endingSoonRows]);
+
   const exportOverview = useCallback(async () => {
     const exportModel: AdminOverviewModel = {
       coverageRows: overview.coverageRows,
@@ -333,11 +352,16 @@ export function useAdminOverviewSectionState(
   );
 
   return {
+    currentEndingSoonPage,
     currentMaterialPage,
+    currentPriorityPage,
     currentUnsentPage,
+    endingSoonTotalPages,
     error,
     exportOverview,
     isRefreshing,
+    pagedEndingSoonRows,
+    pagedPriorityQuarterlyManagementRows,
     policyUpdatingSiteId,
     lastSyncedAt,
     materialTotalPages,
@@ -348,10 +372,13 @@ export function useAdminOverviewSectionState(
     },
     pagedMaterialRows,
     pagedUnsentReportRows,
+    priorityTotalPages,
     refreshOverview,
     updateSiteDispatchPolicy,
+    setEndingSoonPage,
     setMaterialPage,
     setMaterialSort,
+    setPriorityPage,
     setUnsentPage,
     setUnsentSort,
     sortedMaterialRows,

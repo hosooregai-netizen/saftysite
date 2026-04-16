@@ -71,7 +71,6 @@ export function AdminOverviewSection({
 
       <OverviewUnsentReportsSection
         currentPage={state.currentUnsentPage}
-        isRefreshing={state.isRefreshing}
         rows={state.pagedUnsentReportRows}
         setPage={state.setUnsentPage}
         setSort={state.setUnsentSort}
@@ -81,14 +80,23 @@ export function AdminOverviewSection({
       />
 
       <OverviewPriorityQuarterlyManagementSection
-        rows={state.overview.priorityQuarterlyManagementRows ?? []}
+        currentPage={state.currentPriorityPage}
+        rows={state.pagedPriorityQuarterlyManagementRows}
+        setPage={state.setPriorityPage}
+        totalPages={state.priorityTotalPages}
+        totalRows={(state.overview.priorityQuarterlyManagementRows ?? []).length}
       />
 
-      <OverviewEndingSoonSection rows={state.overview.endingSoonRows} />
+      <OverviewEndingSoonSection
+        currentPage={state.currentEndingSoonPage}
+        rows={state.pagedEndingSoonRows}
+        setPage={state.setEndingSoonPage}
+        totalPages={state.endingSoonTotalPages}
+        totalRows={state.overview.endingSoonRows.length}
+      />
 
       <OverviewMaterialGapSection
         currentPage={state.currentMaterialPage}
-        isRefreshing={state.isRefreshing}
         quarterLabel={state.overview.quarterlyMaterialSummary.quarterLabel}
         rows={state.pagedMaterialRows}
         setPage={state.setMaterialPage}

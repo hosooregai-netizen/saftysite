@@ -4,11 +4,13 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import {
+  clampPage,
   isOverviewRowActivationKey,
   stopOverviewRowNavigation,
 } from './overviewSectionHelpers';
 
 interface OverviewEndingSoonSectionProps {
+  currentPage: number;
   rows: Array<{
     deadlineLabel: string;
     daysUntilEnd: number;
@@ -19,6 +21,9 @@ interface OverviewEndingSoonSectionProps {
     siteId: string;
     siteName: string;
   }>;
+  setPage: (updater: (current: number) => number) => void;
+  totalPages: number;
+  totalRows: number;
 }
 
 function getEndDateSourceLabel(value: OverviewEndingSoonSectionProps['rows'][number]['endDateSource']) {
@@ -27,7 +32,13 @@ function getEndDateSourceLabel(value: OverviewEndingSoonSectionProps['rows'][num
   return '-';
 }
 
-export function OverviewEndingSoonSection({ rows }: OverviewEndingSoonSectionProps) {
+export function OverviewEndingSoonSection({
+  currentPage,
+  rows,
+  setPage,
+  totalPages,
+  totalRows,
+}: OverviewEndingSoonSectionProps) {
   const router = useRouter();
 
   return (
@@ -38,11 +49,11 @@ export function OverviewEndingSoonSection({ rows }: OverviewEndingSoonSectionPro
           <div className={styles.overviewTableScope}>오늘부터 14일 이내</div>
         </div>
         <div className={styles.sectionHeaderActions}>
-          <span className={styles.overviewTableCount}>{rows.length.toLocaleString('ko-KR')}개 현장</span>
+          <span className={styles.overviewTableCount}>{totalRows.toLocaleString('ko-KR')}개 현장</span>
         </div>
       </div>
       <div className={styles.sectionBody}>
-        {rows.length === 0 ? (
+        {totalRows === 0 ? (
           <div className={styles.tableEmpty}>현재 2주 이내 종료 예정인 현장이 없습니다.</div>
         ) : (
           <div className={styles.tableShell}>
@@ -88,6 +99,29 @@ export function OverviewEndingSoonSection({ rows }: OverviewEndingSoonSectionPro
           </div>
         )}
       </div>
+      {totalRows > 0 ? (
+        <div className={styles.paginationRow}>
+          <button
+            type="button"
+            className="app-button app-button-secondary"
+            onClick={() => setPage((current) => clampPage(current - 1, totalPages))}
+            disabled={currentPage <= 1}
+          >
+            이전
+          </button>
+          <span className={styles.paginationLabel}>
+            {currentPage} / {totalPages} 페이지
+          </span>
+          <button
+            type="button"
+            className="app-button app-button-secondary"
+            onClick={() => setPage((current) => clampPage(current + 1, totalPages))}
+            disabled={currentPage >= totalPages}
+          >
+            다음
+          </button>
+        </div>
+      ) : null}
     </section>
   );
 }

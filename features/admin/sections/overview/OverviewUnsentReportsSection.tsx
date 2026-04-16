@@ -15,7 +15,6 @@ import {
 
 interface OverviewUnsentReportsSectionProps {
   currentPage: number;
-  isRefreshing: boolean;
   rows: SafetyAdminUnsentReportRow[];
   setPage: (updater: (current: number) => number) => void;
   setSort: (next: TableSortState) => void;
@@ -26,7 +25,6 @@ interface OverviewUnsentReportsSectionProps {
 
 export function OverviewUnsentReportsSection({
   currentPage,
-  isRefreshing,
   rows,
   setPage,
   setSort,
@@ -105,9 +103,9 @@ export function OverviewUnsentReportsSection({
       </div>
       {totalRows > 0 ? (
         <div className={styles.paginationRow}>
-          <button type="button" className="app-button app-button-secondary" onClick={() => setPage((current) => clampPage(current - 1, totalPages))} disabled={isRefreshing || currentPage <= 1}>이전</button>
+          <button type="button" className="app-button app-button-secondary" onClick={() => setPage((current) => clampPage(current - 1, totalPages))} disabled={currentPage <= 1}>이전</button>
           <span className={styles.paginationLabel}>{currentPage} / {totalPages} 페이지</span>
-          <button type="button" className="app-button app-button-secondary" onClick={() => setPage((current) => clampPage(current + 1, totalPages))} disabled={isRefreshing || currentPage >= totalPages}>다음</button>
+          <button type="button" className="app-button app-button-secondary" onClick={() => setPage((current) => clampPage(current + 1, totalPages))} disabled={currentPage >= totalPages}>다음</button>
         </div>
       ) : null}
     </section>

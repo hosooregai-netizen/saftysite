@@ -13,7 +13,6 @@ import {
 
 interface OverviewMaterialGapSectionProps {
   currentPage: number;
-  isRefreshing: boolean;
   quarterLabel: string;
   rows: Array<{
     education: { filledCount: number; missingCount: number; requiredCount: number };
@@ -32,7 +31,6 @@ interface OverviewMaterialGapSectionProps {
 
 export function OverviewMaterialGapSection({
   currentPage,
-  isRefreshing,
   quarterLabel,
   rows,
   setPage,
@@ -115,9 +113,9 @@ export function OverviewMaterialGapSection({
       </div>
       {totalRows > 0 ? (
         <div className={styles.paginationRow}>
-          <button type="button" className="app-button app-button-secondary" onClick={() => setPage((current) => clampPage(current - 1, totalPages))} disabled={isRefreshing || currentPage <= 1}>이전</button>
+          <button type="button" className="app-button app-button-secondary" onClick={() => setPage((current) => clampPage(current - 1, totalPages))} disabled={currentPage <= 1}>이전</button>
           <span className={styles.paginationLabel}>{currentPage} / {totalPages} 페이지</span>
-          <button type="button" className="app-button app-button-secondary" onClick={() => setPage((current) => clampPage(current + 1, totalPages))} disabled={isRefreshing || currentPage >= totalPages}>다음</button>
+          <button type="button" className="app-button app-button-secondary" onClick={() => setPage((current) => clampPage(current + 1, totalPages))} disabled={currentPage >= totalPages}>다음</button>
         </div>
       ) : null}
     </section>
