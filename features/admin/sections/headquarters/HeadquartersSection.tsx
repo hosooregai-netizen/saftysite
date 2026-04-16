@@ -437,34 +437,10 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
           titleActionLabel="사업장 목록 보기"
         />
       ) : selectedSite ? (
-        <>
-          <HeadquarterSummaryPanel
-            headquarter={selectedHeadquarter}
-            sites={selectedHeadquarterSites}
-            onEdit={() => state.openEdit(selectedHeadquarter)}
-          />
-          <SiteManagementMainPanel
-            headquarter={selectedHeadquarter}
-            site={selectedSite}
-          />
-          <SitesSection
-            autoEditSiteId={autoEditSiteId}
-            busy={busy}
-            canDelete={canDelete}
-            currentUserId={currentUserId}
-            emptyMessage="등록된 현장이 없습니다."
-            initialStatusFilter="all"
-            lockedHeadquarterId={selectedHeadquarter.id}
-            onAssignFieldAgent={onAssignFieldAgent}
-            onCreate={handleCreateSite}
-            onDelete={handleDeleteSite}
-            onSelectSiteEntry={(site) => onSelectSite(site.headquarter_id, site.id)}
-            onUnassignFieldAgent={onUnassignFieldAgent}
-            onUpdate={handleUpdateSite}
-            showHeadquarterColumn={false}
-            showHeader={false}
-          />
-        </>
+        <SiteManagementMainPanel
+          headquarter={selectedHeadquarter}
+          site={selectedSite}
+        />
       ) : (
         <>
           <HeadquarterSummaryPanel
