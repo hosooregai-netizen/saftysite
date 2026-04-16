@@ -5,6 +5,7 @@ import {
   createEmptyReportIndexState,
   mergeReportIndexItems,
 } from '@/hooks/inspectionSessions/helpers';
+import { fetchAssignedSafetySites } from '@/lib/safetyApi';
 import { isSafetyAdmin } from '@/lib/safetyApiMappers';
 import type { ReactNode } from 'react';
 import type { InspectionReportListItem } from '@/types/inspectionSession';
@@ -91,6 +92,29 @@ export function InspectionSessionsProvider({
     [store],
   );
 
+  const ensureAssignedSafetySite = useCallback(
+    async (siteId: string) => {
+      const cached = store.assignedSafetySitesByIdRef.current.get(siteId);
+      if (cached) {
+        return cached;
+      }
+
+      const token = store.authTokenRef.current;
+      if (!token) {
+        return null;
+      }
+
+      try {
+        const sites = await fetchAssignedSafetySites(token);
+        store.replaceAssignedSafetySites(sites);
+        return store.assignedSafetySitesByIdRef.current.get(siteId) ?? null;
+      } catch {
+        return null;
+      }
+    },
+    [store],
+  );
+
   const contextValue = useMemo<InspectionSessionsContextValue>(
     () => ({
       sites: store.sites,
@@ -131,8 +155,10 @@ export function InspectionSessionsProvider({
       getSiteById,
       upsertHydratedSiteSessions,
       upsertReportIndexItems,
+      ensureAssignedSafetySite,
     }),
     [
+      ensureAssignedSafetySite,
       createSession,
       createSite,
       deleteSessionRemotely,

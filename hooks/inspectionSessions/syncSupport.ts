@@ -8,7 +8,7 @@ import {
   mapSafetyReportListItem,
   mapSafetyReportToInspectionSession,
 } from '@/lib/safetyApiMappers';
-import type { SafetyMasterData, SafetyReport, SafetyUser } from '@/types/backend';
+import type { SafetyMasterData, SafetyReport, SafetySite, SafetyUser } from '@/types/backend';
 import type {
   InspectionSite,
   InspectionSession,
@@ -26,11 +26,14 @@ export interface HydratedBaseState {
   user: SafetyUser;
   sites: InspectionSite[];
   masterData: SafetyMasterData;
+  /** Full site rows from assignments/admin list; drives worker site-main UI. */
+  assignedSafetySites?: SafetySite[];
 }
 
 export interface HydratedSiteState {
   user: SafetyUser;
   sites: InspectionSite[];
+  assignedSafetySites: SafetySite[];
 }
 
 export interface InspectionSyncRequestRefs {

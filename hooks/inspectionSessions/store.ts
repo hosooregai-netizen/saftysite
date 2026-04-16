@@ -5,7 +5,7 @@ import { deletePersistedValue, writePersistedValue } from '@/lib/clientPersisten
 import { clearOperationalReportIndexCaches } from '@/lib/operationalReportIndexCache';
 import { writeOwnedPersistedValue } from '@/lib/ownedPersistence';
 import { clearSafetyAuthToken } from '@/lib/safetyApi';
-import type { SafetyMasterData, SafetyUser } from '@/types/backend';
+import type { SafetyMasterData, SafetySite, SafetyUser } from '@/types/backend';
 import type {
   InspectionSite,
   InspectionSession,
@@ -54,6 +54,17 @@ export function useInspectionSessionsStore() {
   const dirtySessionIdsRef = useRef<Set<string>>(new Set());
   const sessionVersionsRef = useRef<Record<string, number>>({});
   const isFlushingRef = useRef(false);
+  const assignedSafetySitesByIdRef = useRef<Map<string, SafetySite>>(new Map());
+
+  const replaceAssignedSafetySites = useCallback((sites: SafetySite[] | undefined) => {
+    assignedSafetySitesByIdRef.current.clear();
+    if (!sites?.length) {
+      return;
+    }
+    for (const site of sites) {
+      assignedSafetySitesByIdRef.current.set(site.id, site);
+    }
+  }, []);
 
   const setSessionState = useCollectionState(setSessions, sessionsRef, normalizeSessions);
   const setSiteState = useCollectionState(setSites, sitesRef, normalizeSites);
@@ -150,6 +161,7 @@ export function useInspectionSessionsStore() {
     masterDataRef.current = EMPTY_MASTER_DATA;
     reportIndexBySiteIdRef.current = {};
     siteRelationsStatusBySiteIdRef.current = {};
+    assignedSafetySitesByIdRef.current.clear();
     setSessions([]);
     setSites([]);
     setMasterData(EMPTY_MASTER_DATA);
@@ -166,6 +178,7 @@ export function useInspectionSessionsStore() {
   }, [setCurrentUser]);
 
   return {
+    assignedSafetySitesByIdRef,
     authError,
     authTokenRef,
     clearAuthState,
@@ -187,6 +200,7 @@ export function useInspectionSessionsStore() {
     persistSites,
     reportIndexBySiteId,
     reportIndexBySiteIdRef,
+    replaceAssignedSafetySites,
     resetSessionVersions,
     sessionVersionsRef,
     sessions,

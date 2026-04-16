@@ -138,14 +138,11 @@ export function SiteEntryHubScreen({
               <header className={homeStyles.hero}>
                 <div className={homeStyles.heroBody}>
                   <PageBackControl href={backHref} label={backLabel} />
-                  <div className={homeStyles.heroMain}>
-                    <h1 className={homeStyles.heroTitle}>{currentSite.siteName}</h1>
-                  </div>
                 </div>
               </header>
 
               <div className={homeStyles.pageGrid}>
-                <SiteEntryHubPanel currentSite={currentSite} />
+                <SiteEntryHubPanel key={currentSite.id} currentSite={currentSite} />
               </div>
             </div>
           </WorkerShellBody>

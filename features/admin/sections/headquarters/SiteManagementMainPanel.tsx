@@ -22,6 +22,8 @@ import { getSiteManagementMissingFields } from '../sites/siteSectionHelpers';
 interface SiteManagementMainPanelProps {
   headquarter: SafetyHeadquarter | null;
   site: SafetySite;
+  /** When false, hides the controller "현장 정보 수정" link (e.g. worker site hub). Default true. */
+  showSiteEditAction?: boolean;
 }
 
 function formatDateRange(start: string | null | undefined, end: string | null | undefined) {
@@ -35,6 +37,7 @@ function formatCountLabel(value: number | null | undefined, suffix = '회') {
 export function SiteManagementMainPanel({
   headquarter,
   site,
+  showSiteEditAction = true,
 }: SiteManagementMainPanelProps) {
   const assignedUsers =
     site.assigned_users?.length
@@ -87,11 +90,13 @@ export function SiteManagementMainPanel({
         <div className={styles.sectionHeaderTitleBlock}>
           <div className={styles.sectionHeaderMeta}>{headquarterName}</div>
         </div>
-        <div className={styles.sectionHeaderActions}>
-          <Link href={editHref} className="app-button app-button-primary">
-            현장 정보 수정
-          </Link>
-        </div>
+        {showSiteEditAction ? (
+          <div className={styles.sectionHeaderActions}>
+            <Link href={editHref} className="app-button app-button-primary">
+              현장 정보 수정
+            </Link>
+          </div>
+        ) : null}
       </div>
 
       <div className={styles.sectionBody}>

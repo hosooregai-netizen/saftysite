@@ -13,6 +13,7 @@ import type {
 import type {
   SafetyLoginInput,
   SafetyMasterData,
+  SafetySite,
   SafetyUser,
 } from '@/types/backend';
 
@@ -78,6 +79,8 @@ export interface InspectionSessionsContextValue {
     sessions: InspectionSession[]
   ) => void;
   upsertReportIndexItems: (siteId: string, items: InspectionReportListItem[]) => void;
+  /** Resolves full `SafetySite` for assigned sites (cache + optional refetch). */
+  ensureAssignedSafetySite: (siteId: string) => Promise<SafetySite | null>;
 }
 
 export const InspectionSessionsContext =

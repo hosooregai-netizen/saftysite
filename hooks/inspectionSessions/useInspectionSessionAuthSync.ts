@@ -128,6 +128,7 @@ export function useInspectionSessionAuthSync(
                   user,
                   sites: sites.map(mapSafetySiteToInspectionSite),
                   masterData: EMPTY_MASTER_DATA,
+                  assignedSafetySites: sites,
                 },
                 token,
               );

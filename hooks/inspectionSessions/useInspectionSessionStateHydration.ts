@@ -36,6 +36,7 @@ export function useInspectionSessionStateHydration(
     persistCurrentUser,
     persistSessions,
     persistSites,
+    replaceAssignedSafetySites,
     sessionVersionsRef,
     setSessions,
     sessionsRef,
@@ -84,6 +85,7 @@ export function useInspectionSessionStateHydration(
       return {
         user,
         sites: rawSites.map(mapSafetySiteToInspectionSite),
+        assignedSafetySites: rawSites,
       };
     },
     [],
@@ -115,6 +117,10 @@ export function useInspectionSessionStateHydration(
       authTokenRef.current = token;
       masterDataRef.current = data.masterData;
 
+      if (data.assignedSafetySites !== undefined) {
+        replaceAssignedSafetySites(data.assignedSafetySites);
+      }
+
       startTransition(() => {
         setCurrentUser(data.user);
         setMasterData(data.masterData);
@@ -131,6 +137,7 @@ export function useInspectionSessionStateHydration(
       persistCurrentUser,
       persistSites,
       setCurrentUser,
+      replaceAssignedSafetySites,
       setMasterData,
       setSiteState,
     ],
