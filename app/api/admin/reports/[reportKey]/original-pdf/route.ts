@@ -32,11 +32,22 @@ function getPathBasename(value: string) {
   return value.split(/[\\/]/).filter(Boolean).at(-1) || '';
 }
 
+function decodePathText(value: string) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
 function readMetaCandidates(meta: Record<string, unknown>, report: SafetyReport) {
   const candidates = [
     readMetaText(meta, 'original_pdf_filename'),
     readMetaText(meta, 'originalPdfFilename'),
     readMetaText(meta, 'pdf_filename'),
+    readMetaText(meta, 'pdfFilename'),
+    readMetaText(meta, 'original_pdf_download_path'),
+    readMetaText(meta, 'originalPdfDownloadPath'),
     readMetaText(meta, 'legacy_report_id') ? `${readMetaText(meta, 'legacy_report_id')}.pdf` : '',
     report.report_key.startsWith('legacy:')
       ? `${report.report_key.split(':').at(-1) || ''}.pdf`
@@ -50,7 +61,16 @@ function readMetaCandidates(meta: Record<string, unknown>, report: SafetyReport)
 }
 
 function extractContentAssetRelativePath(value: string) {
-  const normalized = value.trim();
+  const trimmed = value.trim();
+  let normalized = decodePathText(trimmed);
+  if (/^https?:\/\//i.test(normalized)) {
+    try {
+      normalized = new URL(normalized).pathname;
+    } catch {
+      normalized = trimmed;
+    }
+  }
+
   const markerMatch = normalized.match(/content_assets[\\/]+(.+)$/i);
   if (markerMatch?.[1]) {
     return markerMatch[1].replace(/\\/g, '/');
@@ -84,6 +104,25 @@ function buildUpstreamAssetUrls(input: {
     append(`${getSafetyApiUpstreamBaseUrl()}/content-items/assets/${encodedPath}`);
     append(`${origin}/content_assets/${encodedPath}`);
   };
+  const appendAssetCandidate = (candidate: string) => {
+    const normalized = candidate.trim();
+    if (!normalized) return;
+    if (/^https?:\/\//i.test(normalized)) {
+      append(normalized);
+    }
+
+    const relativePath = extractContentAssetRelativePath(normalized);
+    if (relativePath) {
+      appendAssetName(relativePath);
+      return;
+    }
+
+    if (/\/api\/admin\/reports\/.+\/original-pdf(?:$|[?#])/i.test(normalized)) {
+      return;
+    }
+
+    appendAssetName(getPathBasename(normalized) || normalized);
+  };
 
   if (/^https?:\/\//i.test(input.archivePath)) {
     append(input.archivePath);
@@ -99,7 +138,7 @@ function buildUpstreamAssetUrls(input: {
     appendAssetName(archiveBasename);
   }
 
-  input.fileNameCandidates.forEach(appendAssetName);
+  input.fileNameCandidates.forEach(appendAssetCandidate);
   return urls;
 }
 
