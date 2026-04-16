@@ -115,7 +115,7 @@ export function SitesTable({
                 desc: '공사 종류 역순',
               })}
             />
-            <th>지도요원</th>
+            <th>점검자</th>
             <SortableHeaderCell
               column={{ key: 'site_address' }}
               current={sort}

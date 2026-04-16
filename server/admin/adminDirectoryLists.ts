@@ -291,6 +291,8 @@ export function buildAdminSitesListResponse(
         site.project_kind ?? '',
         site.site_address ?? '',
         site.headquarter_detail?.name ?? site.headquarter?.name ?? '',
+        site.inspector_name ?? '',
+        site.guidance_officer_name ?? '',
         assignedNames,
       ]
         .join(' ')

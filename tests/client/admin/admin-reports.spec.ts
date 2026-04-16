@@ -82,7 +82,11 @@ export async function runAdminReportsSmoke(config: ClientSmokePlaywrightConfig) 
     await legacyTechnicalRow.waitFor({ state: 'visible' });
     await legacyTechnicalRow.locator('button[aria-haspopup="menu"]').click();
     await page.getByRole('menuitem', { name: '열기', exact: true }).click();
-    await page.waitForURL(/\/sessions\/legacy%3Atechnical_guidance%3A1001$/);
+    await page.getByRole('dialog', { name: '원본 PDF 보기' }).waitFor({ state: 'visible' });
+    await page.locator('iframe[title*="원본 PDF"]').waitFor({ state: 'visible' });
+    if (page.url().includes('/sessions/')) {
+      throw new Error('Legacy reports should open as in-app original PDF, not the authoring session screen.');
+    }
 
     harness.assertContractApisObserved();
     harness.assertNoClientErrors();

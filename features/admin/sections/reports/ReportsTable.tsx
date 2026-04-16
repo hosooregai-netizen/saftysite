@@ -31,6 +31,7 @@ interface ReportsTableProps {
   onExportReport: (row: ControllerReportRow, format: 'hwpx' | 'pdf') => void;
   onOffsetChange: (value: number | ((current: number) => number)) => void;
   onOpenDispatchModal: (row: ControllerReportRow) => void;
+  onOpenOriginalPdf: (row: ControllerReportRow) => void;
   onOpenReportRow: (row: ControllerReportRow) => void;
   onOpenReviewModal: (row: ControllerReportRow) => void;
   onSelectionChange: (value: string[] | ((current: string[]) => string[])) => void;
@@ -53,6 +54,7 @@ export function ReportsTable({
   onExportReport,
   onOffsetChange,
   onOpenDispatchModal,
+  onOpenOriginalPdf,
   onOpenReportRow,
   onOpenReviewModal,
   onSelectionChange,
@@ -240,8 +242,8 @@ export function ReportsTable({
                               row.originalPdfDownloadPath
                                 ? [
                                     {
-                                      label: '원본 PDF 다운로드',
-                                      href: row.originalPdfDownloadPath,
+                                      label: '원본 PDF 보기',
+                                      onSelect: () => onOpenOriginalPdf(row),
                                     },
                                   ]
                                 : []),

@@ -97,6 +97,7 @@ function buildEmptyDispatch(overrides: Partial<ReportDispatchMeta> = {}): Report
 function normalizeAdminApiPath(pathname: string) {
   return pathname
     .replace(/^\/api\/admin\/exports\/[^/]+$/, '/api/admin/exports/:section')
+    .replace(/^\/api\/admin\/reports\/[^/]+\/original-pdf$/, '/api/admin/reports/:id/original-pdf')
     .replace(/^\/api\/admin\/reports\/[^/]+\/session-bootstrap$/, '/api/admin/reports/:id/session-bootstrap')
     .replace(/^\/api\/admin\/reports\/[^/]+\/review$/, '/api/admin/reports/:id/review')
     .replace(/^\/api\/admin\/reports\/[^/]+\/dispatch$/, '/api/admin/reports/:id/dispatch')
@@ -579,6 +580,21 @@ async function installAdminRoutes(harness: ErpSmokeHarness) {
 
     if (pathname === '/api/admin/reports' && request.method() === 'GET') {
       await fulfillJson(route, buildReportsResponse(harness, url));
+      return;
+    }
+
+    if (
+      /^\/api\/admin\/reports\/[^/]+\/original-pdf$/.test(pathname) &&
+      request.method() === 'GET'
+    ) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/pdf',
+        headers: {
+          'Content-Disposition': "inline; filename*=UTF-8''legacy-report.pdf",
+        },
+        body: '%PDF-1.4\n%mock legacy report\n%%EOF',
+      });
       return;
     }
 

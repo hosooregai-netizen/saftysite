@@ -415,6 +415,10 @@ export interface SafetyBackendAdminReportRow {
   report_month: string;
   report_title: string;
   report_type: string;
+  original_pdf_archive_path?: string | null;
+  original_pdf_available?: boolean | null;
+  original_pdf_download_path?: string | null;
+  original_pdf_filename?: string | null;
   route_param: string;
   site_id: string;
   site_name: string;

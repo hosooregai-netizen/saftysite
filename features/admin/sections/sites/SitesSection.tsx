@@ -32,7 +32,7 @@ export function SitesSection(props: SitesSectionProps) {
         <div className={`${styles.sectionHeaderActions} ${styles.sectionHeaderToolbarActions}`}>
           <input
             className={`app-input ${styles.sectionHeaderSearch} ${styles.sectionHeaderToolbarSearch}`}
-            placeholder="현장명, 사업장 관리번호, 공사 종류, 주소로 검색"
+            placeholder="현장명, 사업장 관리번호, 공사 종류, 주소, 점검자·배정 지도요원으로 검색"
             value={state.query}
             onChange={(event) => state.setQuery(event.target.value)}
           />

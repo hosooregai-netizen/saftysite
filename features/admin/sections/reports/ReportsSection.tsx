@@ -3,6 +3,7 @@
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import { ReportsDispatchDialog } from './ReportsDispatchDialog';
 import { ReportsFilterMenu } from './ReportsFilterMenu';
+import { ReportsOriginalPdfDialog } from './ReportsOriginalPdfDialog';
 import { ReportsReviewDialog } from './ReportsReviewDialog';
 import { ReportsTable } from './ReportsTable';
 import { useReportsSectionState } from './useReportsSectionState';
@@ -64,6 +65,7 @@ export function ReportsSection(props: ReportsSectionProps) {
           onExportReport={(row, format) => void state.exportReport(row, format)}
           onOffsetChange={state.setOffset}
           onOpenDispatchModal={state.openDispatchModal}
+          onOpenOriginalPdf={state.openOriginalPdfDialog}
           onOpenReportRow={state.openReportRow}
           onOpenReviewModal={state.openReviewModal}
           onSelectionChange={state.setSelectedKeys}
@@ -101,6 +103,11 @@ export function ReportsSection(props: ReportsSectionProps) {
         setDispatchSmsPhone={state.setDispatchSmsPhone}
         smsProviderStatuses={state.smsProviderStatuses}
         users={state.users}
+      />
+      <ReportsOriginalPdfDialog
+        dialog={state.originalPdfDialog}
+        onClose={state.closeOriginalPdfDialog}
+        onRetry={(row) => void state.openOriginalPdfDialog(row, state.originalPdfDialog.reason)}
       />
     </section>
   );

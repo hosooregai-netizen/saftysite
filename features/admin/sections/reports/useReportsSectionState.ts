@@ -14,6 +14,7 @@ import {
 import {
   buildControllerReportOpenHref,
 } from '@/lib/admin/controllerReports';
+import { fetchAdminOriginalPdfBlob } from '@/lib/admin/originalPdfClient';
 import {
   normalizeControllerReview,
   normalizeDispatchMeta,
@@ -27,6 +28,7 @@ import {
 } from './reportsSectionFilters';
 import { useReportDispatchActions } from './useReportDispatchActions';
 import { useReportDocumentActions } from './useReportDocumentActions';
+import type { OriginalPdfDialogState } from './ReportsOriginalPdfDialog';
 import type { ControllerReportRow, TableSortState } from '@/types/admin';
 import type { SafetyReport, SafetySite } from '@/types/backend';
 import type { SmsProviderStatus } from '@/types/messages';
@@ -34,6 +36,19 @@ import type { ReportsSectionProps, ReportsUserOption } from './reportsSectionTyp
 
 function buildRequestKey(input: Record<string, string | number | null>) {
   return JSON.stringify(input);
+}
+
+function isLegacyTechnicalGuidanceRow(row: ControllerReportRow) {
+  return row.reportType === 'technical_guidance' && row.reportKey.startsWith('legacy:');
+}
+
+function isAbortError(error: unknown) {
+  return Boolean(
+    error &&
+      typeof error === 'object' &&
+      'name' in error &&
+      (error as { name?: string }).name === 'AbortError',
+  );
 }
 
 function addDays(value: string, days: number) {
@@ -122,6 +137,13 @@ export function useReportsSectionState({
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [originalPdfDialog, setOriginalPdfDialog] = useState<OriginalPdfDialogState>({
+    error: null,
+    loading: false,
+    pdfUrl: null,
+    reason: null,
+    row: null,
+  });
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [reviewRow, setReviewRow] = useState<ControllerReportRow | null>(null);
   const [reviewForm, setReviewForm] = useState(EMPTY_REVIEW_FORM);
@@ -170,6 +192,8 @@ export function useReportsSectionState({
     ],
   );
   const abortControllerRef = useRef<AbortController | null>(null);
+  const originalPdfAbortControllerRef = useRef<AbortController | null>(null);
+  const originalPdfUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
     const cachedLookups = readAdminSessionCache<import('@/types/admin').SafetyAdminDirectoryLookupsResponse>(
@@ -281,6 +305,85 @@ export function useReportsSectionState({
     void fetchRows();
     return () => abortControllerRef.current?.abort();
   }, [fetchRows]);
+
+  const releaseOriginalPdfUrl = useCallback(() => {
+    if (!originalPdfUrlRef.current) return;
+    URL.revokeObjectURL(originalPdfUrlRef.current);
+    originalPdfUrlRef.current = null;
+  }, []);
+
+  const openOriginalPdfDialog = useCallback(
+    async (row: ControllerReportRow, reason: string | null = null) => {
+      originalPdfAbortControllerRef.current?.abort();
+      releaseOriginalPdfUrl();
+
+      const abortController = new AbortController();
+      originalPdfAbortControllerRef.current = abortController;
+      setOriginalPdfDialog({
+        error: null,
+        loading: true,
+        pdfUrl: null,
+        reason,
+        row,
+      });
+
+      try {
+        const blob = await fetchAdminOriginalPdfBlob(row.reportKey, {
+          signal: abortController.signal,
+        });
+        if (abortController.signal.aborted) return;
+
+        const pdfUrl = URL.createObjectURL(blob);
+        originalPdfUrlRef.current = pdfUrl;
+        setOriginalPdfDialog((current) =>
+          current.row?.reportKey === row.reportKey
+            ? {
+                ...current,
+                error: null,
+                loading: false,
+                pdfUrl,
+              }
+            : current,
+        );
+      } catch (nextError) {
+        if (abortController.signal.aborted || isAbortError(nextError)) return;
+        const pdfError =
+          nextError instanceof Error ? nextError.message : '원본 PDF를 열지 못했습니다.';
+        setOriginalPdfDialog((current) =>
+          current.row?.reportKey === row.reportKey
+            ? {
+                ...current,
+                error: reason ? `${reason} ${pdfError}` : pdfError,
+                loading: false,
+                pdfUrl: null,
+              }
+            : current,
+        );
+      }
+    },
+    [releaseOriginalPdfUrl],
+  );
+
+  const closeOriginalPdfDialog = useCallback(() => {
+    originalPdfAbortControllerRef.current?.abort();
+    originalPdfAbortControllerRef.current = null;
+    releaseOriginalPdfUrl();
+    setOriginalPdfDialog({
+      error: null,
+      loading: false,
+      pdfUrl: null,
+      reason: null,
+      row: null,
+    });
+  }, [releaseOriginalPdfUrl]);
+
+  useEffect(
+    () => () => {
+      originalPdfAbortControllerRef.current?.abort();
+      releaseOriginalPdfUrl();
+    },
+    [releaseOriginalPdfUrl],
+  );
 
   const applyUpdatedReportRow = useCallback(
     (report: SafetyReport) => {
@@ -496,9 +599,15 @@ export function useReportsSectionState({
     async (row: ControllerReportRow) => {
       setError(null);
       setNotice(null);
+
+      if (isLegacyTechnicalGuidanceRow(row)) {
+        await openOriginalPdfDialog(row, '레거시 보고서는 원본 PDF로 엽니다.');
+        return;
+      }
+
       router.push(buildControllerReportOpenHref(row));
     },
-    [router],
+    [openOriginalPdfDialog, router],
   );
 
   return {
@@ -524,9 +633,12 @@ export function useReportsSectionState({
     loading,
     notice,
     offset,
+    closeOriginalPdfDialog,
     openDispatchModal,
+    openOriginalPdfDialog,
     openReportRow,
     openReviewModal,
+    originalPdfDialog,
     qualityFilter,
     query,
     reportType,
