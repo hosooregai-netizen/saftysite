@@ -70,6 +70,7 @@ const FEATURE_RULES = [
       /^features\/admin\/sections\/analytics\//,
       /^features\/admin\/sections\/overview\//,
       /^server\/admin\/analyticsSnapshot\.ts$/,
+      /^server\/admin\/overviewPolicyOverlay\.ts$/,
       /^server\/admin\/overviewRouteCache\.ts$/,
     ],
   },
