@@ -431,7 +431,6 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
           onUnassignFieldAgent={onUnassignFieldAgent}
           onUpdate={handleUpdateSite}
           showHeader
-          showHeadquarterColumn
           title={siteStatusTitle}
           titleActionHref={getAdminSectionHref('headquarters')}
           titleActionLabel="사업장 목록 보기"
@@ -462,7 +461,6 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
             onSelectSiteEntry={(site) => onSelectSite(site.headquarter_id, site.id)}
             onUnassignFieldAgent={onUnassignFieldAgent}
             onUpdate={handleUpdateSite}
-            showHeadquarterColumn={false}
             showHeader={false}
           />
         </>

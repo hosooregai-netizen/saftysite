@@ -321,6 +321,12 @@ export function buildAdminSitesListResponse(
           );
         case 'last_visit_date':
           return sortText(left.last_visit_date ?? '', right.last_visit_date ?? '', direction);
+        case 'guidance_max_visit_round':
+          return sortNumber(
+            left.guidance_max_visit_round ?? 0,
+            right.guidance_max_visit_round ?? 0,
+            direction,
+          );
         case 'site_name':
         default:
           return sortText(left.site_name, right.site_name, direction);

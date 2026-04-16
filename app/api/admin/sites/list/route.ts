@@ -18,8 +18,8 @@ function parseFilters(url: URL) {
     offset: Number(url.searchParams.get('offset') || '0'),
     query: url.searchParams.get('query') || '',
     siteId: url.searchParams.get('site_id') || '',
-    sortBy: url.searchParams.get('sort_by') || 'last_visit_date',
-    sortDir: url.searchParams.get('sort_dir') === 'asc' ? 'asc' : 'desc',
+    sortBy: url.searchParams.get('sort_by') || 'site_name',
+    sortDir: url.searchParams.get('sort_dir') === 'desc' ? 'desc' : 'asc',
     status: url.searchParams.get('status') || '',
   } as const;
 }

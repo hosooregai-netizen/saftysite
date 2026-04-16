@@ -110,8 +110,8 @@ export function useSitesSectionState({
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<'all' | SafetySiteStatus>(initialStatusFilter);
   const [sort, setSort] = useState<TableSortState>({
-    direction: 'desc',
-    key: 'last_visit_date',
+    direction: 'asc',
+    key: 'site_name',
   });
   const [assignmentFilter, setAssignmentFilter] = useState<SiteAssignmentFilter>('all');
   const [form, setForm] = useState(EMPTY_FORM);

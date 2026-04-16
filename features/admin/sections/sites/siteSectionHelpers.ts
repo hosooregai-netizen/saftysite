@@ -28,7 +28,6 @@ export interface SitesSectionProps {
   titleActionLabel?: string;
   emptyMessage?: string;
   showHeader?: boolean;
-  showHeadquarterColumn?: boolean;
   lockedHeadquarterId?: string | null;
   onSelectSiteEntry?: (site: SafetySite) => void;
   initialStatusFilter?: 'all' | SafetySiteStatus;
@@ -341,6 +340,11 @@ export function buildSiteSortComparator(
     }
     if (sort.key === 'last_visit_date') {
       return (left.last_visit_date ?? '').localeCompare(right.last_visit_date ?? '') * direction;
+    }
+    if (sort.key === 'guidance_max_visit_round') {
+      return (
+        ((left.guidance_max_visit_round ?? 0) - (right.guidance_max_visit_round ?? 0)) * direction
+      );
     }
     if (sort.key === 'project_amount') {
       return ((left.project_amount ?? 0) - (right.project_amount ?? 0)) * direction;

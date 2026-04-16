@@ -639,6 +639,27 @@ export function createRouteHelpers(state: RouteState) {
     }));
   }
 
+  function maxGuidanceVisitRoundForSite(siteId: string) {
+    let max = 0;
+    for (const report of state.reports) {
+      if (String(report.site_id) !== String(siteId)) continue;
+      const st = String(report.status ?? '');
+      if (!['draft', 'submitted', 'published'].includes(st)) continue;
+      const rt = String(report.report_type ?? '');
+      const meta =
+        report.meta && typeof report.meta === 'object'
+          ? (report.meta as JsonRecord)
+          : {};
+      const kind = String(meta.reportKind ?? '');
+      const isTechnicalGuidance =
+        rt === 'technical_guidance' || (!rt && kind === TECHNICAL_GUIDANCE_REPORT_KIND);
+      if (!isTechnicalGuidance) continue;
+      const vr = Number(report.visit_round);
+      if (Number.isFinite(vr) && vr > max) max = vr;
+    }
+    return max;
+  }
+
   function hydratedSites() {
     const headquarters = headquarterById();
     const users = userSummaryById();
@@ -660,6 +681,7 @@ export function createRouteHelpers(state: RouteState) {
 
         return {
         ...site,
+        guidance_max_visit_round: maxGuidanceVisitRoundForSite(String(site.id)),
         headquarter: headquarter
           ? { id: headquarter.id, name: headquarter.name }
           : null,

@@ -191,6 +191,8 @@ export interface SafetySite {
   contract_type?: string | null;
   contract_status?: string | null;
   total_rounds?: number | null;
+  /** Max visit_round among draft/submitted/published technical guidance reports (admin directory list). */
+  guidance_max_visit_round?: number | null;
   per_visit_amount?: number | null;
   total_contract_amount?: number | null;
   last_visit_date?: string | null;

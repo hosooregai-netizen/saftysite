@@ -94,7 +94,6 @@ export function SitesSection(props: SitesSectionProps) {
               onSortChange={state.setSort}
               onUpdateStatus={(site, status) => void state.updateStatus(site, status)}
               page={state.page}
-              showHeadquarterColumn={props.showHeadquarterColumn !== false}
               sites={state.pagedSites}
               sort={state.sort}
               totalCount={state.total}
