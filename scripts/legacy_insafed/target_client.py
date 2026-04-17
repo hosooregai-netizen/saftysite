@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import time
+from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin
 
@@ -141,6 +142,24 @@ class TargetErpClient:
 
     def update_content_item(self, content_item_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         return self._request("PATCH", f"/api/safety/content-items/{content_item_id}", json=payload).json()
+
+    def upload_content_asset(
+        self,
+        file_path: str | Path,
+        *,
+        upload_filename: str | None = None,
+        content_type: str = "application/pdf",
+    ) -> dict[str, Any]:
+        path = Path(file_path)
+        with path.open("rb") as handle:
+            files = {
+                "file": (
+                    upload_filename or path.name,
+                    handle,
+                    content_type,
+                )
+            }
+            return self._request("POST", "/content-items/assets/upload", files=files).json()
 
     def generate_site_schedules(self, site_id: str) -> dict[str, Any]:
         return self._request("POST", f"/api/admin/sites/{site_id}/schedules/generate").json()

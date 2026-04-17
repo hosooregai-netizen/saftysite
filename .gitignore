@@ -16,3 +16,4 @@ tsconfig.tsbuildinfo
 .tmp-ui/generated/footer_*.hwpx
 __pycache__/
 *.pyc
+.artifacts/
