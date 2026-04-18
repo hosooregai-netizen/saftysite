@@ -74,6 +74,7 @@ const FEATURE_RULES = [
       /^features\/admin\/sections\/analytics\//,
       /^features\/admin\/sections\/content\//,
       /^features\/admin\/sections\/overview\//,
+      /^features\/admin\/sections\/photos\//,
       /^server\/admin\/analyticsSnapshot\.ts$/,
       /^server\/admin\/overviewPolicyOverlay(\.test)?\.ts$/,
       /^server\/admin\/overviewRouteCache(\.test)?\.ts$/,
@@ -172,6 +173,7 @@ const FEATURE_RULES = [
   {
     id: 'mobile-site-home',
     patterns: [
+      /^features\/mobile\/components\/MobileSitePhotoAlbumScreen\.tsx$/,
       /^features\/mobile\/components\/MobileSiteHomeScreen\.tsx$/,
       /^features\/mobile\/site-home\//,
     ],
