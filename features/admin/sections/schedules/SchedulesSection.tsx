@@ -42,6 +42,7 @@ interface SchedulesSectionProps {
 interface ScheduleFormState {
   assigneeUserId: string;
   plannedDate: string;
+  recordSelectionReason: boolean;
   selectionReasonLabel: string;
   selectionReasonMemo: string;
   status: SafetyInspectionSchedule['status'];
@@ -50,6 +51,7 @@ interface ScheduleFormState {
 const EMPTY_FORM: ScheduleFormState = {
   assigneeUserId: '',
   plannedDate: '',
+  recordSelectionReason: false,
   selectionReasonLabel: '',
   selectionReasonMemo: '',
   status: 'planned',
@@ -109,6 +111,13 @@ function getScheduleStatusLabel(status: SafetyInspectionSchedule['status']) {
 
 function normalizeSelectionReasonValue(value: string) {
   return isLegacySelectionPlaceholder(value) ? '' : value.trim();
+}
+
+function hasSelectionReasonInput(selectionReasonLabel: string, selectionReasonMemo: string) {
+  return Boolean(
+    normalizeSelectionReasonValue(selectionReasonLabel) ||
+      normalizeSelectionReasonValue(selectionReasonMemo),
+  );
 }
 
 function getMonthToken(date = new Date()) {
@@ -226,11 +235,15 @@ function buildInitialForm(
     };
   }
 
+  const selectionReasonLabel = normalizeSelectionReasonValue(schedule.selectionReasonLabel);
+  const selectionReasonMemo = normalizeSelectionReasonValue(schedule.selectionReasonMemo);
+
   return {
     assigneeUserId: schedule.assigneeUserId,
     plannedDate: plannedDate || schedule.plannedDate || schedule.windowStart,
-    selectionReasonLabel: normalizeSelectionReasonValue(schedule.selectionReasonLabel),
-    selectionReasonMemo: normalizeSelectionReasonValue(schedule.selectionReasonMemo),
+    recordSelectionReason: hasSelectionReasonInput(selectionReasonLabel, selectionReasonMemo),
+    selectionReasonLabel,
+    selectionReasonMemo,
     status: schedule.status,
   };
 }
@@ -249,7 +262,13 @@ function buildSelectionSummary(row: SafetyInspectionSchedule) {
 }
 
 function buildIssueSummary(row: SafetyInspectionSchedule) {
-  return row.isOverdue ? '지연' : '';
+  return [
+    row.isOutOfWindow ? '구간 밖' : '',
+    row.isConflicted ? '일정 충돌' : '',
+    row.isOverdue ? '지연' : '',
+  ]
+    .filter(Boolean)
+    .join(' / ');
 }
 
 function buildScheduleChipLabel(row: SafetyInspectionSchedule) {
@@ -307,6 +326,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
   const [notice, setNotice] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [activeScheduleId, setActiveScheduleId] = useState('');
+  const [dialogOverflowRowIds, setDialogOverflowRowIds] = useState<string[]>([]);
   const [dragScheduleId, setDragScheduleId] = useState('');
   const [form, setForm] = useState<ScheduleFormState>(EMPTY_FORM);
   const deferredQuery = useDeferredValue(query);
@@ -573,21 +593,20 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
     [dragScheduleId, sortedSelectedRows],
   );
   const dialogSelectableRows = useMemo(() => {
-    const rows = allScheduleRows.filter(
-      (row) =>
-        (row.id === activeScheduleId || !row.plannedDate) &&
-        isDateWithinWindow(form.plannedDate, row.windowStart, row.windowEnd),
-    );
+    const rows = allScheduleRows.filter((row) => row.id === activeScheduleId || !row.plannedDate);
     return sortSelectableRows(rows);
-  }, [activeScheduleId, allScheduleRows, form.plannedDate]);
+  }, [activeScheduleId, allScheduleRows]);
   const dialogSelectedRows = useMemo(
     () =>
       sortSelectableRows(
         sortedSelectedRows.filter(
-          (row) => row.plannedDate === form.plannedDate && row.id !== activeScheduleId,
+          (row) =>
+            row.plannedDate === form.plannedDate &&
+            row.id !== activeScheduleId &&
+            (dialogOverflowRowIds.length === 0 || dialogOverflowRowIds.includes(row.id)),
         ),
       ),
-    [activeScheduleId, form.plannedDate, sortedSelectedRows],
+    [activeScheduleId, dialogOverflowRowIds, form.plannedDate, sortedSelectedRows],
   );
   const activeSiteDetailHref = activeSchedule
     ? getAdminSectionHref('headquarters', {
@@ -617,21 +636,21 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
   }, [activeScheduleId, dialogOpen, dialogSelectableRows]);
 
   const openScheduleDialog = (input: {
+    overflowRowIds?: string[];
     plannedDate: string;
     schedule?: SafetyInspectionSchedule | null;
   }) => {
+    const selectedRowsOnDate = sortSelectableRows(
+      allScheduleRows.filter((row) => row.plannedDate === input.plannedDate),
+    );
     const defaultSchedule =
       input.schedule ??
-      sortSelectableRows(
-        allScheduleRows.filter(
-          (row) =>
-            (!row.plannedDate || row.plannedDate === input.plannedDate) &&
-            isDateWithinWindow(input.plannedDate, row.windowStart, row.windowEnd),
-        ),
-      )[0] ??
+      selectedRowsOnDate[0] ??
+      sortSelectableRows(allScheduleRows.filter((row) => !row.plannedDate))[0] ??
       null;
     setSelectedDate(input.plannedDate);
     setActiveScheduleId(defaultSchedule?.id || '');
+    setDialogOverflowRowIds(input.overflowRowIds ?? []);
     setForm(buildInitialForm(defaultSchedule, input.plannedDate));
     setDialogOpen(true);
   };
@@ -639,6 +658,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
   const closeDialog = () => {
     setDialogOpen(false);
     setActiveScheduleId('');
+    setDialogOverflowRowIds([]);
     setForm(EMPTY_FORM);
   };
 
@@ -666,7 +686,12 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
       }));
       return;
     }
-    if (!form.selectionReasonLabel.trim() || !form.selectionReasonMemo.trim()) {
+    const selectionReasonLabel = form.selectionReasonLabel.trim();
+    const selectionReasonMemo = form.selectionReasonMemo.trim();
+    if (
+      form.recordSelectionReason &&
+      (!selectionReasonLabel || !selectionReasonMemo)
+    ) {
       setScheduleState((current) => ({
         ...current,
         error: '사유 분류와 상세 메모를 함께 입력해 주세요.',
@@ -685,8 +710,8 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
       await updateAdminSchedule(activeSchedule.id, {
         assigneeUserId: form.assigneeUserId,
         plannedDate: form.plannedDate,
-        selectionReasonLabel: form.selectionReasonLabel,
-        selectionReasonMemo: form.selectionReasonMemo,
+        selectionReasonLabel: form.recordSelectionReason ? selectionReasonLabel : '',
+        selectionReasonMemo: form.recordSelectionReason ? selectionReasonMemo : '',
         status: form.status,
       });
       await refreshScheduleData(nextMonth);
@@ -710,7 +735,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
   ) => {
     if (!schedule || !schedule.plannedDate || !targetDate) return false;
     if (targetDate === schedule.plannedDate) return false;
-    return isDateWithinWindow(targetDate, schedule.windowStart, schedule.windowEnd);
+    return true;
   };
 
   const handleQuickMove = async (
@@ -983,7 +1008,9 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
             ))}
             {calendar.days.map((day) => {
               const dayRows = rowsByDate.get(day.token) || [];
-              const hasWarning = dayRows.some((row) => row.isOverdue);
+              const hasWarning = dayRows.some(
+                (row) => row.isConflicted || row.isOutOfWindow || row.isOverdue,
+              );
               const isSelected = selectedDate === day.token;
               const canDrop = canDropScheduleOnDate(dragSchedule, day.token);
 
@@ -1050,7 +1077,13 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                         <button
                           type="button"
                           className={styles.calendarMoreButton}
-                          onClick={() => openScheduleDialog({ plannedDate: day.token })}
+                          onClick={() =>
+                            openScheduleDialog({
+                              overflowRowIds: dayRows.slice(5).map((row) => row.id),
+                              plannedDate: day.token,
+                              schedule: dayRows[5] || dayRows[0] || null,
+                            })
+                          }
                         >
                           +{dayRows.length - 5}건 더보기
                         </button>
@@ -1325,8 +1358,8 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
               disabled={
                 !activeSchedule ||
                 !form.plannedDate ||
-                !form.selectionReasonLabel.trim() ||
-                !form.selectionReasonMemo.trim()
+                (form.recordSelectionReason &&
+                  (!form.selectionReasonLabel.trim() || !form.selectionReasonMemo.trim()))
               }
             >
               저장
@@ -1395,7 +1428,6 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
               className="app-input"
               type="date"
               value={form.plannedDate}
-              min={activeSchedule?.windowStart || undefined}
               onChange={(event) =>
                 setForm((current) => ({
                   ...current,
@@ -1404,6 +1436,30 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
               }
             />
           </label>
+          <div className={styles.modalFieldWide}>
+            <span className={styles.label}>변경 사유 기록</span>
+            <label className={styles.inlineToggle}>
+              <input
+                aria-label="변경 사유 기록"
+                className={styles.inlineToggleInput}
+                type="checkbox"
+                checked={form.recordSelectionReason}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    recordSelectionReason: event.target.checked,
+                    selectionReasonLabel: event.target.checked ? current.selectionReasonLabel : '',
+                    selectionReasonMemo: event.target.checked ? current.selectionReasonMemo : '',
+                  }))
+                }
+              />
+              <span className={styles.inlineToggleLabel}>
+                {form.recordSelectionReason
+                  ? '사유를 함께 저장합니다.'
+                  : '사유 없이 일정만 저장합니다.'}
+              </span>
+            </label>
+          </div>
           <label className={styles.modalField}>
             <span className={styles.label}>담당자</span>
             <select
@@ -1508,6 +1564,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
             <input
               className="app-input"
               value={form.selectionReasonLabel}
+              disabled={!form.recordSelectionReason}
               onChange={(event) =>
                 setForm((current) => ({
                   ...current,
@@ -1541,6 +1598,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
               className="app-textarea"
               rows={4}
               value={form.selectionReasonMemo}
+              disabled={!form.recordSelectionReason}
               onChange={(event) =>
                 setForm((current) => ({
                   ...current,

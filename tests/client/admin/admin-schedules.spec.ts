@@ -53,6 +53,7 @@ export async function runAdminSchedulesSmoke(config: ClientSmokePlaywrightConfig
       throw new Error('Expected exception memo field to be removed from controller schedule dialog.');
     }
     await scheduleDialog.getByLabel('방문일').fill('2026-04-18');
+    await scheduleDialog.getByLabel('변경 사유 기록').check();
     await scheduleDialog.getByLabel('사유 분류').fill('현장 요청');
     await scheduleDialog.getByLabel('상세 메모').fill('관제 일정 smoke 이동');
     await scheduleDialog.getByRole('button', { name: '저장' }).click();

@@ -128,7 +128,6 @@ export function UsersSection({
         page={state.page}
         queryInput={state.queryInput}
         roleFilter={state.roleFilter}
-        sessionCountBySiteId={state.sessionCountBySiteId}
         setPage={state.setPage}
         setQuery={state.setQueryInput}
         submitQuery={state.submitQuery}

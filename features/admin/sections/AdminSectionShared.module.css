@@ -1928,7 +1928,7 @@
 
 .calendarCell,
 .calendarCellEmpty {
-  min-height: 96px;
+  min-height: 84px;
   border: 1px solid var(--erp-line);
   border-radius: var(--erp-radius-surface);
   background: #fff;
@@ -1937,8 +1937,8 @@
 .calendarCell {
   display: grid;
   align-content: start;
-  gap: 6px;
-  padding: 12px;
+  gap: 5px;
+  padding: 10px;
   color: var(--erp-dark);
   text-align: left;
   transition:
@@ -2014,7 +2014,7 @@
 
 .calendarScheduleStack {
   display: grid;
-  gap: 6px;
+  gap: 5px;
 }
 
 .calendarScheduleChip {
@@ -2022,7 +2022,7 @@
   justify-items: start;
   gap: 2px;
   width: 100%;
-  padding: 8px 9px;
+  padding: 7px 8px;
   border: 1px solid rgba(193, 206, 218, 0.9);
   border-radius: 10px;
   background: #f8fbff;
@@ -2205,6 +2205,25 @@
   display: grid;
   grid-column: 1 / -1;
   gap: 6px;
+}
+
+.inlineToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+}
+
+.inlineToggleInput {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+
+.inlineToggleLabel {
+  font-size: var(--text-ui-sm);
+  line-height: 1.5;
+  color: var(--erp-dark);
 }
 
 .modalHint {

@@ -1,17 +1,16 @@
-import Link from 'next/link';
-import { SubmitSearchField } from '@/components/ui/SubmitSearchField';
 import ActionMenu from '@/components/ui/ActionMenu';
+import { SubmitSearchField } from '@/components/ui/SubmitSearchField';
 import {
   buildSortMenuOptions,
   SortableHeaderCell,
 } from '@/features/admin/components/SortableHeaderCell';
 import { SectionHeaderFilterMenu } from '@/features/admin/components/SectionHeaderFilterMenu';
-import { exportAdminWorkbook } from '@/lib/admin/exportClient';
+import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import { formatTimestamp, getUserRoleLabel } from '@/lib/admin';
+import { exportAdminWorkbook } from '@/lib/admin/exportClient';
 import type { TableSortState } from '@/types/admin';
 import type { SafetyAdminUserListRow } from '@/types/admin';
 import type { InspectionSession } from '@/types/inspectionSession';
-import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 
 interface UserOverview {
   assignedSites: Array<{ id: string; siteName: string }>;
@@ -27,11 +26,9 @@ interface UsersTableProps {
   onCreateRequest: () => void;
   onDeleteRequest: (user: SafetyAdminUserListRow) => void;
   onEditRequest: (user: SafetyAdminUserListRow) => void;
-  onExportRequest?: () => void;
   page: number;
   queryInput: string;
   roleFilter: 'all' | 'admin' | 'field_agent';
-  sessionCountBySiteId: Map<string, number>;
   setPage: (page: number) => void;
   setQuery: (value: string) => void;
   submitQuery: () => void;
@@ -45,6 +42,28 @@ interface UsersTableProps {
   userOverviewById: Map<string, UserOverview>;
 }
 
+function buildAssignedSiteSummary(assignedSites: Array<{ id: string; siteName: string }>) {
+  if (assignedSites.length === 0) {
+    return {
+      countLabel: '-',
+      detailLabel: '담당 현장 없음',
+      title: '',
+    };
+  }
+
+  const firstSiteName = assignedSites[0]?.siteName || '현장명 없음';
+  const detailLabel =
+    assignedSites.length === 1
+      ? firstSiteName
+      : `${firstSiteName} 외 ${assignedSites.length - 1}개 현장`;
+
+  return {
+    countLabel: `${assignedSites.length}개 현장`,
+    detailLabel,
+    title: assignedSites.map((site) => site.siteName).join(', '),
+  };
+}
+
 export function UsersTable({
   busy,
   canDelete,
@@ -56,7 +75,6 @@ export function UsersTable({
   page,
   queryInput,
   roleFilter,
-  sessionCountBySiteId,
   setPage,
   setQuery,
   submitQuery,
@@ -71,7 +89,7 @@ export function UsersTable({
 }: UsersTableProps) {
   const roleOptions: Array<{ label: string; value: UsersTableProps['roleFilter'] }> = [
     { label: '전체 권한', value: 'all' },
-    { label: '관리자', value: 'admin' },
+    { label: '관리자/관제', value: 'admin' },
     { label: '지도요원', value: 'field_agent' },
   ];
   const statusOptions: Array<{ label: string; value: UsersTableProps['statusFilter'] }> = [
@@ -79,9 +97,8 @@ export function UsersTable({
     { label: '활성', value: 'active' },
     { label: '비활성', value: 'inactive' },
   ];
-  const activeFilterCount =
-    (roleFilter !== 'all' ? 1 : 0) +
-    (statusFilter !== 'all' ? 1 : 0);
+  const activeFilterCount = (roleFilter !== 'all' ? 1 : 0) + (statusFilter !== 'all' ? 1 : 0);
+
   const handleExport = async () => {
     const users = await exportUsers();
     void exportAdminWorkbook('users', [
@@ -89,11 +106,13 @@ export function UsersTable({
         name: '사용자',
         columns: [
           { key: 'name', label: '이름' },
-          { key: 'email', label: '이메일' },
+          { key: 'email', label: '로그인 ID(이메일)' },
+          { key: 'organizationName', label: '소속' },
+          { key: 'phone', label: '전화번호' },
+          { key: 'position', label: '직책' },
           { key: 'role', label: '권한' },
-          { key: 'assignedSites', label: '담당 현장' },
-          { key: 'reportCount', label: '보고서 수' },
-          { key: 'phone', label: '연락처' },
+          { key: 'assignedSiteCount', label: '담당 현장 수' },
+          { key: 'assignedSiteSummary', label: '담당 현장 요약' },
           { key: 'status', label: '상태' },
           { key: 'lastLoginAt', label: '최근 로그인' },
         ],
@@ -101,19 +120,19 @@ export function UsersTable({
           const overview = userOverviewById.get(user.id) ?? {
             assignedSites: user.assignedSites,
             latestSession: null,
-            reportCount: user.assignedSites.reduce(
-              (count, site) => count + (sessionCountBySiteId.get(site.id) || 0),
-              0,
-            ),
+            reportCount: 0,
           };
+          const assignedSiteSummary = buildAssignedSiteSummary(overview.assignedSites);
 
           return {
-            assignedSites: overview.assignedSites.map((site) => site.siteName).join(', '),
+            assignedSiteCount: overview.assignedSites.length,
+            assignedSiteSummary: assignedSiteSummary.detailLabel,
             email: user.email,
             lastLoginAt: formatTimestamp(user.last_login_at),
             name: user.name,
+            organizationName: user.organization_name || '',
             phone: user.phone || '',
-            reportCount: overview.reportCount,
+            position: user.position || '',
             role: getUserRoleLabel(user.role),
             status: user.is_active ? '활성' : '비활성',
           };
@@ -121,6 +140,7 @@ export function UsersTable({
       },
     ]);
   };
+
   const resetHeaderFilters = () => {
     setRoleFilter('all');
     setStatusFilter('all');
@@ -138,7 +158,7 @@ export function UsersTable({
             formClassName={`${styles.sectionHeaderSearchShell} ${styles.sectionHeaderToolbarSearch}`}
             inputClassName={`app-input ${styles.sectionHeaderSearchInput}`}
             buttonClassName={styles.sectionHeaderSearchButton}
-            placeholder="이름, 이메일, 직책, 소속으로 검색"
+            placeholder="이름, 로그인 ID, 소속, 전화번호, 직책으로 검색"
             value={queryInput}
             onChange={setQuery}
             onSubmit={submitQuery}
@@ -218,26 +238,11 @@ export function UsersTable({
                       label="이름"
                       onChange={setSort}
                     />
-                    <th>이메일</th>
-                    <SortableHeaderCell
-                      column={{ key: 'role' }}
-                      current={sort}
-                      label="권한"
-                      onChange={setSort}
-                      sortMenuOptions={buildSortMenuOptions('role', {
-                        asc: '권한 오름차순',
-                        desc: '권한 내림차순',
-                      })}
-                    />
+                    <th>로그인 ID(이메일)</th>
+                    <th>소속</th>
+                    <th>전화번호</th>
+                    <th>직책</th>
                     <th>담당 현장</th>
-                    <SortableHeaderCell
-                      column={{ key: 'reportCount' }}
-                      current={sort}
-                      defaultDirection="desc"
-                      label="보고서"
-                      onChange={setSort}
-                    />
-                    <th>연락처</th>
                     <th>상태</th>
                     <SortableHeaderCell
                       column={{ key: 'last_login_at' }}
@@ -245,6 +250,10 @@ export function UsersTable({
                       defaultDirection="desc"
                       label="최근 로그인"
                       onChange={setSort}
+                      sortMenuOptions={buildSortMenuOptions('last_login_at', {
+                        asc: '오래된 로그인순',
+                        desc: '최근 로그인순',
+                      })}
                     />
                     <th>메뉴</th>
                   </tr>
@@ -256,15 +265,13 @@ export function UsersTable({
                       latestSession: null,
                       reportCount: 0,
                     };
+                    const assignedSiteSummary = buildAssignedSiteSummary(overview.assignedSites);
 
                     return (
                       <tr key={user.id}>
                         <td>
                           <div className={styles.tablePrimary}>{user.name}</div>
-                          <div className={styles.tableSecondary}>
-                            {user.position || '직책 미입력'} ·{' '}
-                            {user.organization_name || '소속 미입력'}
-                          </div>
+                          <div className={styles.tableSecondary}>{getUserRoleLabel(user.role)}</div>
                           {user.auto_provisioned_from_excel ? (
                             <div className={styles.tableMetaRow}>
                               <span className="app-chip app-chip-warning">자동 생성</span>
@@ -272,56 +279,15 @@ export function UsersTable({
                           ) : null}
                         </td>
                         <td>{user.email}</td>
-                        <td>{getUserRoleLabel(user.role)}</td>
-                        <td>
-                          {overview.assignedSites.length === 0 ? (
-                            '-'
-                          ) : (
-                            <div className={styles.tableInlineLinks}>
-                                  {overview.assignedSites.map((site) => (
-                                    <Link
-                                      key={site.id}
-                                      href={`/sites/${encodeURIComponent(site.id)}`}
-                                      className={styles.tableChipLink}
-                                    >
-                                  {site.siteName}
-                                    </Link>
-                                  ))}
-                            </div>
-                          )}
-                        </td>
-                        <td>
-                          {overview.assignedSites.length === 0 ? (
-                            '-'
-                          ) : (
-                            <div className={styles.tableCellOneLine}>
-                              <span className={styles.tablePrimary}>{overview.reportCount}건</span>
-                              {overview.latestSession ? (
-                                <>
-                                  <span className={styles.tableSep}>·</span>
-                                  <Link
-                                    href={`/sessions/${encodeURIComponent(overview.latestSession.id)}`}
-                                    className={styles.tableInlineLink}
-                                  >
-                                    최근
-                                  </Link>
-                                </>
-                              ) : null}
-                              {overview.assignedSites[0] ? (
-                                <>
-                                  <span className={styles.tableSep}>·</span>
-                                  <Link
-                                    href={`/sites/${encodeURIComponent(overview.assignedSites[0].id)}`}
-                                    className={styles.tableInlineLink}
-                                  >
-                                    목록
-                                  </Link>
-                                </>
-                              ) : null}
-                            </div>
-                          )}
-                        </td>
+                        <td>{user.organization_name || '-'}</td>
                         <td>{user.phone || '-'}</td>
+                        <td>{user.position || '-'}</td>
+                        <td title={assignedSiteSummary.title || undefined}>
+                          <div className={styles.tablePrimary}>{assignedSiteSummary.countLabel}</div>
+                          <div className={styles.tableSecondary}>
+                            {assignedSiteSummary.detailLabel}
+                          </div>
+                        </td>
                         <td>{user.is_active ? '활성' : '비활성'}</td>
                         <td>{formatTimestamp(user.last_login_at)}</td>
                         <td>
