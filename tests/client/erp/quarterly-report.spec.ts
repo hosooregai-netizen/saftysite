@@ -69,10 +69,11 @@ export async function runQuarterlyReportSmoke(config: ClientSmokePlaywrightConfi
     await harness.waitForRequestCount('POST /reports/upsert', reportWritesBefore + 1);
     await page.waitForURL(/\/sites\/site-1\/quarterly(?:\/[^/]+)?$/);
     if (!/\/sites\/site-1\/quarterly\/[^/]+$/.test(page.url())) {
-      await page.locator('article').filter({ hasText: createdTitle }).first().waitFor({
+      const createdRow = page.locator('article').filter({ hasText: createdTitle }).first();
+      await createdRow.waitFor({
         state: 'visible',
       });
-      await page.locator('article').filter({ hasText: createdTitle }).first().click();
+      await createdRow.getByRole('link', { name: createdTitle }).click();
       await page.waitForURL(/\/sites\/site-1\/quarterly\/[^/]+$/);
     }
     await harness.waitForRequestCount('GET /reports/by-key/:id', reportReadsBefore + 1);
