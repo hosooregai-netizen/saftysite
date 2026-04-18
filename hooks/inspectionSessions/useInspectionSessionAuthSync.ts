@@ -9,8 +9,7 @@ import {
   readSafetyAuthToken,
   writeSafetyAuthToken,
 } from '@/lib/safetyApi';
-import { primeControllerDashboardData } from '@/hooks/controller/useControllerDashboard';
-import { isSafetyAdmin, mapSafetySiteToInspectionSite } from '@/lib/safetyApiMappers';
+import { isSafetyAdmin } from '@/lib/safetyApiMappers';
 import type {
   InspectionSite,
   InspectionSession,
@@ -20,7 +19,6 @@ import { normalizeReportIndexBySiteId, REPORT_INDEX_STORAGE_KEY, SITE_STORAGE_KE
 import type { InspectionSessionsStore } from './store';
 import {
   resetInspectionSyncRuntime,
-  scheduleAdminBackgroundTask,
   type InspectionSyncRuntime,
 } from './syncSupport';
 
@@ -101,56 +99,7 @@ export function useInspectionSessionAuthSync(
       }
 
       if (isSafetyAdmin(user)) {
-        const coreDataPromise = primeControllerDashboardData(token);
         await actions.applyImmediateUserState(user, token);
-
-        scheduleAdminBackgroundTask(() => {
-          if (
-            runtime.syncRequestIdRef.current !== requestId ||
-            authTokenRef.current !== token
-          ) {
-            return;
-          }
-
-          void (async () => {
-            try {
-              const { sites } = await coreDataPromise;
-
-              if (
-                runtime.syncRequestIdRef.current !== requestId ||
-                authTokenRef.current !== token
-              ) {
-                return;
-              }
-
-              await actions.applyHydratedBaseState(
-                {
-                  user,
-                  sites: sites.map(mapSafetySiteToInspectionSite),
-                  masterData: EMPTY_MASTER_DATA,
-                  assignedSafetySites: sites,
-                },
-                token,
-              );
-            } catch (error) {
-              if (
-                runtime.syncRequestIdRef.current !== requestId ||
-                authTokenRef.current !== token
-              ) {
-                return;
-              }
-
-              if (isAuthFailure(error)) {
-                runtime.syncRequestIdRef.current += 1;
-                clearAuthState();
-                setAuthError('로그인이 만료되었습니다. 다시 로그인해 주세요.');
-              } else {
-                setDataError(getErrorMessage(error));
-              }
-            }
-          })();
-        });
-
         return;
       }
 
@@ -173,7 +122,7 @@ export function useInspectionSessionAuthSync(
         token,
       );
     },
-    [actions, authTokenRef, clearAuthState, runtime.syncRequestIdRef, setAuthError, setDataError],
+    [actions, authTokenRef, runtime.syncRequestIdRef],
   );
 
   const hydrateAndSync = useCallback(

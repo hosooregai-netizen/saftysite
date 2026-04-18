@@ -10,6 +10,7 @@ import {
 } from '@/lib/admin';
 import type { AdminSectionKey, AdminSectionQuery } from '@/lib/admin';
 import type { ControllerDashboardData } from '@/types/controller';
+import type { AdminCoreDataScope } from './useAdminDashboardDataLoaders';
 
 interface UseAdminDashboardRoutingParams {
   data: ControllerDashboardData;
@@ -50,7 +51,9 @@ export function useAdminDashboardRouting({
   );
   const shouldLoadContent = activeSection === 'content';
   const shouldLoadReports = activeSection === 'mailbox';
-  const shouldLoadCoreData = activeSection === 'mailbox' || activeSection === 'photos';
+  const coreDataScope: AdminCoreDataScope =
+    activeSection === 'mailbox' ? 'mailbox' : activeSection === 'photos' ? 'sites' : 'none';
+  const shouldLoadCoreData = coreDataScope !== 'none';
 
   const replaceRoute = useCallback(
     (section: AdminSectionKey, query: AdminSectionQuery = {}) => {
@@ -145,6 +148,7 @@ export function useAdminDashboardRouting({
     selectedHeadquarterId,
     selectedSite,
     selectedSiteId,
+    coreDataScope,
     shouldLoadContent,
     shouldLoadCoreData,
     shouldLoadReports,

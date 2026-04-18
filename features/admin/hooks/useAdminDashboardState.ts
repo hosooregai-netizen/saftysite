@@ -14,6 +14,7 @@ import {
   type UseAdminDashboardStateOptions,
 } from './adminDashboardStateShared';
 import { useAdminDashboardDataLoaders } from './useAdminDashboardDataLoaders';
+import type { AdminCoreDataScope } from './useAdminDashboardDataLoaders';
 import { useAdminDashboardRouting } from './useAdminDashboardRouting';
 
 export function useAdminDashboardState({
@@ -27,7 +28,7 @@ export function useAdminDashboardState({
   const [isContentRefreshing, setIsContentRefreshing] = useState(false);
   const [isReportsLoading, setIsReportsLoading] = useState(false);
   const [isMutating, setIsMutating] = useState(false);
-  const [hasLoadedCoreData, setHasLoadedCoreData] = useState(false);
+  const [loadedCoreDataScope, setLoadedCoreDataScope] = useState<AdminCoreDataScope>('none');
   const [hasLoadedContentData, setHasLoadedContentData] = useState(false);
   const [reportList, setReportList] = useState<SafetyReportListItem[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -36,24 +37,25 @@ export function useAdminDashboardState({
   const routing = useAdminDashboardRouting({
     data,
     enabled,
-    hasLoadedCoreData,
+    hasLoadedCoreData: loadedCoreDataScope !== 'none',
   });
   const { getToken, loadReports, reload, reloadContent } = useAdminDashboardDataLoaders({
     contentCacheScope,
     data,
     enabled,
     hasLoadedContentData,
-    hasLoadedCoreData,
+    loadedCoreDataScope,
     reportList,
     setData,
     setError,
     setHasLoadedContentData,
-    setHasLoadedCoreData,
+    setLoadedCoreDataScope,
     setIsContentLoading,
     setIsContentRefreshing,
     setIsLoading,
     setIsReportsLoading,
     setReportList,
+    coreDataScope: routing.coreDataScope,
     shouldLoadCoreData: routing.shouldLoadCoreData,
     shouldLoadContent: routing.shouldLoadContent,
     shouldLoadReports: routing.shouldLoadReports,

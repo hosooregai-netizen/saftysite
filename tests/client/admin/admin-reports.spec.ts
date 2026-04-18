@@ -12,6 +12,10 @@ export async function runAdminReportsSmoke(config: ClientSmokePlaywrightConfig) 
     await page.goto(`${harness.baseURL}/admin?section=reports`, { waitUntil: 'load' });
     await harness.loginAs('admin@example.com');
     await harness.waitForRequestCount('GET /api/admin/reports', 1);
+    await page.waitForTimeout(250);
+    if ((requestCounts.get('GET /api/admin/reports') || 0) !== 1) {
+      throw new Error('Reports section should issue one initial admin reports request.');
+    }
     await page.getByRole('heading', { level: 1, name: /전체 보고서/ }).waitFor({
       state: 'visible',
     });

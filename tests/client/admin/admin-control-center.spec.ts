@@ -13,7 +13,20 @@ export async function runAdminControlCenterSmoke(config: ClientSmokePlaywrightCo
     await harness.loginAs('admin@example.com');
 
     await harness.waitForRequestCount('GET /api/admin/dashboard/overview', 1);
-    let overviewReads = 1;
+    await page.waitForTimeout(600);
+
+    for (const requestKey of [
+      'GET /users',
+      'GET /headquarters',
+      'GET /sites',
+      'GET /assignments',
+      'GET /reports',
+      'GET /api/admin/reports',
+    ]) {
+      if ((requestCounts.get(requestKey) || 0) > 0) {
+        throw new Error(`Overview first load should not prefetch bulk admin data: ${requestKey}`);
+      }
+    }
     await page.getByRole('heading', { name: '운영 개요' }).waitFor({ state: 'visible' });
     await page.getByText('현장 상태').first().waitFor();
 
@@ -25,11 +38,11 @@ export async function runAdminControlCenterSmoke(config: ClientSmokePlaywrightCo
       (await priorityQuarterlySection.locator('tbody tr').count()) > 0;
     if (hasPriorityQuarterlyRows) {
       await priorityQuarterlySection.locator('tbody tr').first().waitFor();
-      await priorityQuarterlySection.locator('tbody tr').first().click();
-      await page.waitForURL(/\/sites\/[^/?#]+\/quarterly(?:[?#]|$)/);
+      await Promise.all([
+        page.waitForURL(/\/sites\/[^/?#]+\/quarterly(?:[?#]|$)/),
+        priorityQuarterlySection.locator('tbody tr').first().click(),
+      ]);
       await page.goto(`${harness.baseURL}/admin?section=overview`, { waitUntil: 'load' });
-      overviewReads += 1;
-      await harness.waitForRequestCount('GET /api/admin/dashboard/overview', overviewReads);
     } else {
       await priorityQuarterlySection.getByText(
         '현재 관리가 필요한 20억 이상 활성 현장이 없습니다.',
@@ -41,12 +54,12 @@ export async function runAdminControlCenterSmoke(config: ClientSmokePlaywrightCo
     await unsentHeading.waitFor();
     await unsentSection.locator('tbody tr').first().waitFor();
 
-    await unsentSection.locator('tbody tr').first().click();
-    await page.waitForURL(/\/sites\/[^/?#]+(?:[?#]|$)/);
+    await Promise.all([
+      page.waitForURL(/\/sites\/[^/?#]+(?:[?#]|$)/),
+      unsentSection.locator('tbody tr').first().click(),
+    ]);
 
     await page.goto(`${harness.baseURL}/admin?section=overview`, { waitUntil: 'load' });
-    overviewReads += 1;
-    await harness.waitForRequestCount('GET /api/admin/dashboard/overview', overviewReads);
     await page.getByRole('button', { name: '엑셀 내보내기' }).click();
     await harness.waitForRequestCount('POST /api/admin/exports/:section', overviewExportsBefore + 1);
 

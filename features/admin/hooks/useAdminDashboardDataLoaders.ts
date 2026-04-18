@@ -1,8 +1,11 @@
 'use client';
 
 import { useCallback, useEffect } from 'react';
-import { primeControllerDashboardData } from '@/hooks/controller/useControllerDashboard';
 import { fetchSafetyContentItems, fetchSafetyReportList, readSafetyAuthToken, SafetyApiError } from '@/lib/safetyApi';
+import {
+  fetchSafetyHeadquartersPage,
+  fetchSafetySitesAdminPage,
+} from '@/lib/safetyApi/adminEndpoints';
 import { readAdminSessionCache, writeAdminSessionCache } from '@/features/admin/lib/adminSessionCache';
 import {
   readSafetyContentItemsSessionCache,
@@ -13,17 +16,71 @@ import type { ControllerDashboardData } from '@/types/controller';
 import type { SafetyReportListItem } from '@/types/backend';
 import { ADMIN_REPORT_LIST_LIMIT, getErrorMessage } from './adminDashboardStateShared';
 
+export type AdminCoreDataScope = 'none' | 'sites' | 'mailbox';
+
+const ADMIN_DIRECTORY_PAGE_LIMIT = 200;
+
+type MailboxDirectoryData = Pick<ControllerDashboardData, 'headquarters' | 'sites'>;
+
+function mergeLoadedCoreDataScope(
+  currentScope: AdminCoreDataScope,
+  nextScope: AdminCoreDataScope,
+): AdminCoreDataScope {
+  if (currentScope === 'mailbox' || nextScope === 'mailbox') return 'mailbox';
+  if (currentScope === 'sites' || nextScope === 'sites') return 'sites';
+  return 'none';
+}
+
+function isCoreDataScopeLoaded(
+  loadedScope: AdminCoreDataScope,
+  requestedScope: AdminCoreDataScope,
+) {
+  if (requestedScope === 'none') return true;
+  if (requestedScope === 'sites') return loadedScope === 'sites' || loadedScope === 'mailbox';
+  return loadedScope === 'mailbox';
+}
+
+async function fetchAllAdminPages<T>(
+  fetchPage: (limit: number, offset: number) => Promise<T[]>,
+): Promise<T[]> {
+  const rows: T[] = [];
+  let offset = 0;
+
+  while (true) {
+    const page = await fetchPage(ADMIN_DIRECTORY_PAGE_LIMIT, offset);
+    rows.push(...page);
+
+    if (page.length < ADMIN_DIRECTORY_PAGE_LIMIT) {
+      return rows;
+    }
+
+    offset += page.length;
+  }
+}
+
+function fetchAdminSitesDirectory(token: string) {
+  return fetchAllAdminPages((limit, offset) => fetchSafetySitesAdminPage(token, { limit, offset }));
+}
+
+function fetchMailboxDirectory(token: string): Promise<MailboxDirectoryData> {
+  return Promise.all([
+    fetchAllAdminPages((limit, offset) => fetchSafetyHeadquartersPage(token, { limit, offset })),
+    fetchAdminSitesDirectory(token),
+  ]).then(([headquarters, sites]) => ({ headquarters, sites }));
+}
+
 interface UseAdminDashboardDataLoadersParams {
   contentCacheScope: string | null;
+  coreDataScope: AdminCoreDataScope;
   data: ControllerDashboardData;
   enabled: boolean;
   hasLoadedContentData: boolean;
-  hasLoadedCoreData: boolean;
+  loadedCoreDataScope: AdminCoreDataScope;
   reportList: SafetyReportListItem[];
   setData: React.Dispatch<React.SetStateAction<ControllerDashboardData>>;
   setError: React.Dispatch<React.SetStateAction<string | null>>;
   setHasLoadedContentData: React.Dispatch<React.SetStateAction<boolean>>;
-  setHasLoadedCoreData: React.Dispatch<React.SetStateAction<boolean>>;
+  setLoadedCoreDataScope: React.Dispatch<React.SetStateAction<AdminCoreDataScope>>;
   setIsContentLoading: React.Dispatch<React.SetStateAction<boolean>>;
   setIsContentRefreshing: React.Dispatch<React.SetStateAction<boolean>>;
   setIsLoading: React.Dispatch<React.SetStateAction<boolean>>;
@@ -36,15 +93,16 @@ interface UseAdminDashboardDataLoadersParams {
 
 export function useAdminDashboardDataLoaders({
   contentCacheScope,
+  coreDataScope,
   data,
   enabled,
   hasLoadedContentData,
-  hasLoadedCoreData,
+  loadedCoreDataScope,
   reportList,
   setData,
   setError,
   setHasLoadedContentData,
-  setHasLoadedCoreData,
+  setLoadedCoreDataScope,
   setIsContentLoading,
   setIsContentRefreshing,
   setIsLoading,
@@ -139,56 +197,98 @@ export function useAdminDashboardDataLoaders({
     [contentCacheScope, data.headquarters, data.sites, enabled, getToken, setError, setIsReportsLoading, setReportList],
   );
   const reload = useCallback(
-    async (options?: { includeContent?: boolean; includeReports?: boolean; force?: boolean }) => {
+    async (options?: {
+      coreDataScope?: AdminCoreDataScope;
+      includeContent?: boolean;
+      includeReports?: boolean;
+      force?: boolean;
+    }) => {
       if (!enabled) return;
-      const cachedCoreData =
-        !options?.force && contentCacheScope
-          ? readAdminSessionCache<ControllerDashboardData>(contentCacheScope, 'core-data')
-          : { isFresh: false, value: null };
-      if (cachedCoreData.value) {
-        setData((current) => ({
-          ...current,
-          assignments: cachedCoreData.value?.assignments ?? current.assignments,
-          headquarters: cachedCoreData.value?.headquarters ?? current.headquarters,
-          sites: cachedCoreData.value?.sites ?? current.sites,
-          users: cachedCoreData.value?.users ?? current.users,
-        }));
-        setHasLoadedCoreData(true);
-      }
-      if (cachedCoreData.isFresh && cachedCoreData.value) {
+
+      const requestedScope = options?.coreDataScope ?? coreDataScope;
+      if (requestedScope === 'none') {
+        const followUpTasks: Array<Promise<void>> = [];
         if (options?.includeReports) {
-          void loadReports({
-            force: false,
-            headquarters: cachedCoreData.value.headquarters,
-            sites: cachedCoreData.value.sites,
-          });
+          followUpTasks.push(loadReports({ force: options?.force }));
+        }
+        if (options?.includeContent) {
+          followUpTasks.push(reloadContent({ force: options?.force }));
+        }
+        if (followUpTasks.length > 0) {
+          await Promise.all(followUpTasks);
         }
         return;
       }
+
+      const cachedSites =
+        !options?.force && contentCacheScope
+          ? readAdminSessionCache<ControllerDashboardData['sites']>(contentCacheScope, 'sites-data')
+          : { isFresh: false, value: null };
+      const cachedMailboxDirectory =
+        requestedScope === 'mailbox' && !options?.force && contentCacheScope
+          ? readAdminSessionCache<MailboxDirectoryData>(contentCacheScope, 'mailbox-directory')
+          : { isFresh: false, value: null };
+
+      if (requestedScope === 'sites' && cachedSites.value) {
+        setData((current) => ({ ...current, sites: cachedSites.value ?? current.sites }));
+        setLoadedCoreDataScope((current) => mergeLoadedCoreDataScope(current, 'sites'));
+      }
+      if (requestedScope === 'mailbox' && cachedMailboxDirectory.value) {
+        setData((current) => ({
+          ...current,
+          headquarters: cachedMailboxDirectory.value?.headquarters ?? current.headquarters,
+          sites: cachedMailboxDirectory.value?.sites ?? current.sites,
+        }));
+        setLoadedCoreDataScope((current) => mergeLoadedCoreDataScope(current, 'mailbox'));
+      }
+
+      if (
+        (requestedScope === 'sites' && cachedSites.isFresh && cachedSites.value) ||
+        (requestedScope === 'mailbox' &&
+          cachedMailboxDirectory.isFresh &&
+          cachedMailboxDirectory.value)
+      ) {
+        if (options?.includeReports && requestedScope === 'mailbox') {
+          void loadReports({
+            force: false,
+            headquarters: cachedMailboxDirectory.value?.headquarters,
+            sites: cachedMailboxDirectory.value?.sites,
+          });
+        }
+        if (options?.includeContent) {
+          void reloadContent({ force: false });
+        }
+        return;
+      }
+
       setIsLoading(true);
       setError(null);
       try {
         const token = getToken();
-        const { assignments, headquarters, sites, users } = await primeControllerDashboardData(token, {
-          force: options?.force,
-        });
+        const directory =
+          requestedScope === 'mailbox'
+            ? await fetchMailboxDirectory(token)
+            : { headquarters: data.headquarters, sites: await fetchAdminSitesDirectory(token) };
+
         setData((current) => ({
           ...current,
-          assignments,
-          headquarters,
-          sites,
-          users,
+          ...(requestedScope === 'mailbox' ? { headquarters: directory.headquarters } : {}),
+          sites: directory.sites,
         }));
-        writeAdminSessionCache(contentCacheScope, 'core-data', {
-          assignments,
-          contentItems: [],
-          headquarters,
-          sites,
-          users,
-        });
+        writeAdminSessionCache(contentCacheScope, 'sites-data', directory.sites);
+        if (requestedScope === 'mailbox') {
+          writeAdminSessionCache(contentCacheScope, 'mailbox-directory', directory);
+        }
+
         const followUpTasks: Array<Promise<void>> = [];
         if (options?.includeReports) {
-          followUpTasks.push(loadReports({ force: options?.force, headquarters, sites }));
+          followUpTasks.push(
+            loadReports({
+              force: options?.force,
+              headquarters: directory.headquarters,
+              sites: directory.sites,
+            }),
+          );
         }
         if (options?.includeContent) followUpTasks.push(reloadContent({ force: options?.force }));
         if (followUpTasks.length > 0) {
@@ -197,26 +297,56 @@ export function useAdminDashboardDataLoaders({
       } catch (nextError) {
         setError(getErrorMessage(nextError));
       } finally {
-        setHasLoadedCoreData(true);
+        setLoadedCoreDataScope((current) => mergeLoadedCoreDataScope(current, requestedScope));
         setIsLoading(false);
       }
     },
-    [contentCacheScope, enabled, getToken, loadReports, reloadContent, setData, setError, setHasLoadedCoreData, setIsLoading],
+    [
+      contentCacheScope,
+      coreDataScope,
+      data.headquarters,
+      enabled,
+      getToken,
+      loadReports,
+      reloadContent,
+      setData,
+      setError,
+      setIsLoading,
+      setLoadedCoreDataScope,
+    ],
   );
   useEffect(() => {
-    if (enabled && shouldLoadCoreData && !hasLoadedCoreData) {
-      void reload({ includeReports: shouldLoadReports });
+    if (
+      enabled &&
+      shouldLoadCoreData &&
+      !isCoreDataScopeLoaded(loadedCoreDataScope, coreDataScope)
+    ) {
+      void reload({ coreDataScope, includeReports: shouldLoadReports });
     }
-  }, [enabled, hasLoadedCoreData, reload, shouldLoadCoreData, shouldLoadReports]);
+  }, [
+    coreDataScope,
+    enabled,
+    loadedCoreDataScope,
+    reload,
+    shouldLoadCoreData,
+    shouldLoadReports,
+  ]);
   useEffect(() => {
     if (!enabled || !shouldLoadContent) return;
     void reloadContent();
   }, [enabled, reloadContent, shouldLoadContent]);
   useEffect(() => {
     if (!enabled || !shouldLoadReports) return;
-    if (shouldLoadCoreData && !hasLoadedCoreData) return;
+    if (shouldLoadCoreData && !isCoreDataScopeLoaded(loadedCoreDataScope, 'mailbox')) return;
     if (reportList.length > 0) return;
     void loadReports();
-  }, [enabled, hasLoadedCoreData, loadReports, reportList.length, shouldLoadCoreData, shouldLoadReports]);
+  }, [
+    enabled,
+    loadReports,
+    loadedCoreDataScope,
+    reportList.length,
+    shouldLoadCoreData,
+    shouldLoadReports,
+  ]);
   return { getToken, loadReports, reload, reloadContent };
 }

@@ -29,10 +29,26 @@ import {
 import { useReportDispatchActions } from './useReportDispatchActions';
 import { useReportDocumentActions } from './useReportDocumentActions';
 import type { OriginalPdfDialogState } from './ReportsOriginalPdfDialog';
-import type { ControllerReportRow, TableSortState } from '@/types/admin';
+import type { ControllerReportRow, SafetyAdminReportsResponse, TableSortState } from '@/types/admin';
 import type { SafetyReport, SafetySite } from '@/types/backend';
 import type { SmsProviderStatus } from '@/types/messages';
 import type { ReportsSectionProps, ReportsUserOption } from './reportsSectionTypes';
+
+const adminReportsInFlight = new Map<string, Promise<SafetyAdminReportsResponse>>();
+
+function fetchAdminReportsOnce(
+  requestKey: string,
+  input: Parameters<typeof fetchAdminReports>[0],
+) {
+  const existing = adminReportsInFlight.get(requestKey);
+  if (existing) return existing;
+
+  const nextRequest = fetchAdminReports(input).finally(() => {
+    adminReportsInFlight.delete(requestKey);
+  });
+  adminReportsInFlight.set(requestKey, nextRequest);
+  return nextRequest;
+}
 
 function buildRequestKey(input: Record<string, string | number | null>) {
   return JSON.stringify(input);
@@ -191,9 +207,17 @@ export function useReportsSectionState({
       sort.key,
     ],
   );
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const isMountedRef = useRef(true);
+  const latestReportRequestKeyRef = useRef('');
   const originalPdfAbortControllerRef = useRef<AbortController | null>(null);
   const originalPdfUrlRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     const cachedLookups = readAdminSessionCache<import('@/types/admin').SafetyAdminDirectoryLookupsResponse>(
@@ -232,14 +256,14 @@ export function useReportsSectionState({
   }, [currentUser.id, reportCacheKey]);
 
   const fetchRows = useCallback(async () => {
-    abortControllerRef.current?.abort();
-    const abortController = new AbortController();
-    abortControllerRef.current = abortController;
+    const activeRequestKey = `${currentUser.id}:${reportCacheKey}`;
+    latestReportRequestKeyRef.current = activeRequestKey;
 
     try {
       setLoading(true);
       setError(null);
-      const response = await fetchAdminReports(
+      const response = await fetchAdminReportsOnce(
+        activeRequestKey,
         {
           assigneeUserId: assigneeFilter === 'all' ? '' : assigneeFilter,
           dateFrom,
@@ -259,9 +283,11 @@ export function useReportsSectionState({
           sortBy: sort.key,
           sortDir: sort.direction,
         },
-        { signal: abortController.signal },
       );
-      if (abortController.signal.aborted) {
+      if (
+        !isMountedRef.current ||
+        latestReportRequestKeyRef.current !== activeRequestKey
+      ) {
         return;
       }
 
@@ -275,12 +301,18 @@ export function useReportsSectionState({
         total: nextTotal,
       });
     } catch (nextError) {
-      if (abortController.signal.aborted) {
+      if (
+        !isMountedRef.current ||
+        latestReportRequestKeyRef.current !== activeRequestKey
+      ) {
         return;
       }
       setError(nextError instanceof Error ? nextError.message : '보고서 목록을 불러오지 못했습니다.');
     } finally {
-      if (!abortController.signal.aborted) {
+      if (
+        isMountedRef.current &&
+        latestReportRequestKeyRef.current === activeRequestKey
+      ) {
         setLoading(false);
       }
     }
@@ -303,7 +335,6 @@ export function useReportsSectionState({
 
   useEffect(() => {
     void fetchRows();
-    return () => abortControllerRef.current?.abort();
   }, [fetchRows]);
 
   const releaseOriginalPdfUrl = useCallback(() => {
