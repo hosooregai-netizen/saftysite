@@ -4,6 +4,7 @@
 
 - Recover the worker-facing monthly schedule board used to choose planned visit dates and record selection reasons.
 - Preserve the split between unselected rounds, monthly calendar, selected schedule list, and the visit-selection modal.
+- Add an explicit `달력으로 보기 / 목록으로 보기` toggle so field agents can inspect the same schedule data in both layouts.
 
 ## Source of Truth
 
@@ -56,7 +57,8 @@ Out of scope:
 - current server rules:
   - limit clamped to `1..300`
   - default limit `200`
-  - rows are built from `buildAdminSchedules(...)` but filtered to current user id
+  - route is a passthrough to `safety-server /me/schedules`
+  - client maps backend rows through `mapBackendScheduleListResponse(...)`
 
 ### Write API
 
@@ -67,22 +69,10 @@ Out of scope:
   - `selectionReasonMemo`
   - `status`
 
-### Mutation side effects
+### Mutation handling
 
-Successful worker schedule patch also:
-
-- updates local site memo via `updateAdminSite(...)`
-- appends local schedule notifications
-- refreshes analytics snapshot
-- refreshes schedule snapshot
-
-### Permission rule
-
-After schedule mutation is computed:
-
-- if previous assignee is not the current user
-- and next assignee is also not the current user
-- then return `403` with `수정 권한이 없는 일정입니다.`
+- worker schedule patch is delegated to `safety-server /me/schedules/:scheduleId`
+- the client receives the mapped upstream schedule row back immediately
 
 ## State Model
 
@@ -91,6 +81,7 @@ After schedule mutation is computed:
 - `menuOpen`
 - `month`
 - `rows`
+- `listFilter`
 - `loading`
 - `error`
 - `notice`
@@ -109,9 +100,11 @@ After schedule mutation is computed:
 
 - `isAdminView`
 - `selectedSiteId`
+- `viewMode`
 - `unselectedRows`
 - `selectedRows`
 - `visibleSelectedRows`
+- `listRows`
 - `calendar`
 - `rowsByDate`
 - `dialogSelectedSchedule`
@@ -130,16 +123,45 @@ After schedule mutation is computed:
 ### Month and site filtering
 
 - month is chosen via `<input type="month">`
+- previous / current / next month buttons also shift the month token
 - site filter is a query-param based select
 - changing site replaces route:
   - `/calendar`
   - or `/calendar?siteId=<encoded id>`
+
+### View mode
+
+- query param:
+  - `view=calendar|list`
+- default:
+  - `calendar`
+- calendar and list tabs must show the same fetched worker schedule rows
 
 ### Calendar rules
 
 - Monday-first alignment
 - clicking any day opens the schedule modal for that date
 - calendar day cell shows up to three selected schedule chips
+
+### List rules
+
+- the list view shows all rows from the same worker schedule response
+- filter options:
+  - `전체`
+  - `미선택 회차`
+  - `선택 완료 일정`
+  - `진행`
+  - `완료`
+  - `보류`
+  - `취소`
+- each row shows:
+  - 방문일
+  - 현장명
+  - 차수
+  - 상태
+  - 허용 구간
+  - 선택 사유
+  - 관리 버튼
 
 ### Unselected round rules
 
@@ -209,10 +231,15 @@ Validation messages:
 Contains:
 
 - month selector
+- prev/current/next month controls
 - site selector
-- unselected rounds list
-- month calendar
-- selected schedules list
+- calendar/list toggle tabs
+- calendar view:
+  - unselected rounds list
+  - month calendar
+  - selected schedules list
+- list view:
+  - filterable schedule table
 
 ### Modal
 

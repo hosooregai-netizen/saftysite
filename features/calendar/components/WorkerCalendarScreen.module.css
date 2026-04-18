@@ -57,11 +57,39 @@
   font-size: 0.86rem;
 }
 
+.viewTabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.viewTab {
+  border: 1px solid var(--erp-line);
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.03);
+  color: var(--erp-text-subtle);
+  font-weight: 700;
+  padding: 0.9rem 1rem;
+}
+
+.viewTabActive {
+  background: var(--app-accent, #2563eb);
+  border-color: var(--app-accent, #2563eb);
+  color: #fff;
+}
+
 .toolbar {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
   margin-bottom: 1rem;
+}
+
+.monthNav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
 }
 
 .field {
@@ -174,6 +202,65 @@
   gap: 0.75rem;
 }
 
+.tableScroll {
+  overflow-x: auto;
+}
+
+.scheduleTable {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
+}
+
+.scheduleTable th,
+.scheduleTable td {
+  border-bottom: 1px solid var(--erp-line);
+  padding: 0.8rem 0.75rem;
+  font-size: 0.9rem;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.scheduleTable th {
+  color: var(--erp-text-subtle);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.25rem 0.55rem;
+}
+
+.statusPending {
+  background: rgba(234, 179, 8, 0.14);
+  color: #a16207;
+}
+
+.statusPlanned {
+  background: rgba(37, 99, 235, 0.12);
+  color: #1d4ed8;
+}
+
+.statusCompleted {
+  background: rgba(22, 163, 74, 0.12);
+  color: #15803d;
+}
+
+.statusPostponed {
+  background: rgba(249, 115, 22, 0.12);
+  color: #c2410c;
+}
+
+.statusCanceled {
+  background: rgba(220, 38, 38, 0.12);
+  color: #b91c1c;
+}
+
 .emptyState {
   border: 1px dashed var(--erp-line);
   border-radius: 16px;
@@ -282,6 +369,10 @@
 
 @media (max-width: 920px) {
   .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .viewTabs {
     grid-template-columns: 1fr;
   }
 }

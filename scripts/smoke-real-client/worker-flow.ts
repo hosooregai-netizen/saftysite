@@ -14,23 +14,26 @@ export interface WorkerFlowResult {
 export async function runWorkerFlow(page: Page): Promise<WorkerFlowResult> {
   await page.goto(`${baseUrl}/calendar`, { waitUntil: 'load' });
   await page.getByText('내 일정').first().waitFor();
+  await page.getByRole('tab', { name: '달력으로 보기' }).waitFor();
+  await page.getByRole('tab', { name: '목록으로 보기' }).waitFor();
   await page.getByText('회차별 일정 선택').first().waitFor();
   await dismissImportantModalIfPresent(page);
-  await page.getByRole('button', { name: '이 일정으로 확정' }).first().waitFor();
+  const dialogOpenButton = page.getByRole('button', { name: '일정 지정' }).first();
+  await dialogOpenButton.waitFor();
+  await dialogOpenButton.click();
+  const scheduleDialog = page.getByRole('dialog', { name: '방문 일정 선택' });
+  await scheduleDialog.waitFor({ state: 'visible' });
+  await scheduleDialog.getByLabel('방문 날짜').fill('2026-04-08');
+  await scheduleDialog.getByLabel('변경 사유 기록').check();
+  await scheduleDialog.getByLabel('사유 분류').fill('현장 요청');
+  await scheduleDialog.getByLabel('상세 메모').fill('현장소장과 통화 후 방문일 확정');
+  await scheduleDialog.getByRole('button', { name: '방문 일정 저장' }).click();
+  await page.getByText(/회차 방문 일정과 사유를 저장했습니다\./).first().waitFor({ timeout: 30_000 });
 
-  const unselectedCard = page
-    .locator('section', { hasText: '미선택 회차' })
-    .locator('article')
-    .first();
-  const dateInput = unselectedCard.locator('input[type="date"]').first();
-  const visitDate = (await dateInput.getAttribute('min')) || '2026-04-03';
-  await dateInput.fill(visitDate);
-  await unselectedCard.getByPlaceholder('예: 현장 요청, 비상 작업').fill('현장 요청');
-  await unselectedCard
-    .getByPlaceholder('방문일을 정한 배경이나 협의 내용을 남겨 주세요.')
-    .fill('현장소장과 통화 후 방문일 확정');
-  await unselectedCard.getByRole('button', { name: '이 일정으로 확정' }).click();
-  await page.getByText('회차 일정을 저장했습니다.').first().waitFor({ timeout: 30_000 });
+  await page.getByRole('tab', { name: '목록으로 보기' }).click();
+  await page.getByRole('heading', { name: '기술지도 일정 목록' }).waitFor();
+  await page.getByRole('button', { name: '일정 수정' }).first().waitFor();
+
   await page.goto(`${baseUrl}/mailbox`, { waitUntil: 'load' });
   await waitHeading(page, '메일함');
   const mailboxGate = page.locator('[data-mailbox-connect-gate]');

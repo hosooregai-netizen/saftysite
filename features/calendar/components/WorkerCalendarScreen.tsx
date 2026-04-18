@@ -24,6 +24,13 @@ interface ScheduleDialogState {
   selectionReasonMemo: string;
 }
 
+type CalendarViewMode = 'calendar' | 'list';
+type ScheduleListFilter =
+  | 'all'
+  | 'unselected'
+  | 'selected'
+  | SafetyInspectionSchedule['status'];
+
 const EMPTY_DIALOG_STATE: ScheduleDialogState = {
   open: false,
   plannedDate: '',
@@ -35,6 +42,12 @@ const EMPTY_DIALOG_STATE: ScheduleDialogState = {
 
 function getMonthToken(date = new Date()) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function shiftMonthToken(month: string, delta: number) {
+  const [year, monthValue] = month.split('-').map(Number);
+  const date = new Date(year, monthValue - 1 + delta, 1);
+  return getMonthToken(date);
 }
 
 function buildCalendarDays(month: string) {
@@ -95,12 +108,50 @@ function sortSchedules(rows: SafetyInspectionSchedule[]) {
   );
 }
 
+function sortScheduledRows(rows: SafetyInspectionSchedule[]) {
+  return [...rows].sort(
+    (left, right) =>
+      (left.plannedDate || left.windowStart).localeCompare(right.plannedDate || right.windowStart) ||
+      left.roundNo - right.roundNo ||
+      left.siteName.localeCompare(right.siteName, 'ko'),
+  );
+}
+
+function getStatusLabel(row: SafetyInspectionSchedule) {
+  if (!row.plannedDate) return '미선택';
+  switch (row.status) {
+    case 'completed':
+      return '완료';
+    case 'canceled':
+      return '취소';
+    case 'postponed':
+      return '보류';
+    default:
+      return '진행';
+  }
+}
+
+function getStatusClassName(row: SafetyInspectionSchedule) {
+  if (!row.plannedDate) return styles.statusPending;
+  switch (row.status) {
+    case 'completed':
+      return styles.statusCompleted;
+    case 'canceled':
+      return styles.statusCanceled;
+    case 'postponed':
+      return styles.statusPostponed;
+    default:
+      return styles.statusPlanned;
+  }
+}
+
 export function WorkerCalendarScreen() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [month, setMonth] = useState(getMonthToken());
   const [rows, setRows] = useState<SafetyInspectionSchedule[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [listFilter, setListFilter] = useState<ScheduleListFilter>('all');
   const [notice, setNotice] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState('');
   const [dialog, setDialog] = useState<ScheduleDialogState>(EMPTY_DIALOG_STATE);
@@ -118,6 +169,24 @@ export function WorkerCalendarScreen() {
 
   const isAdminView = Boolean(currentUser && isAdminUserRole(currentUser.role));
   const selectedSiteId = searchParams.get('siteId') || '';
+  const viewMode: CalendarViewMode = searchParams.get('view') === 'list' ? 'list' : 'calendar';
+
+  const replaceCalendarRoute = (input: {
+    siteId?: string;
+    view?: CalendarViewMode;
+  }) => {
+    const nextSiteId = input.siteId ?? selectedSiteId;
+    const nextView = input.view ?? viewMode;
+    const nextSearchParams = new URLSearchParams();
+    if (nextSiteId) {
+      nextSearchParams.set('siteId', nextSiteId);
+    }
+    if (nextView !== 'calendar') {
+      nextSearchParams.set('view', nextView);
+    }
+    const query = nextSearchParams.toString();
+    router.replace(query ? `/calendar?${query}` : '/calendar');
+  };
 
   useEffect(() => {
     if (isAdminView) {
@@ -171,6 +240,22 @@ export function WorkerCalendarScreen() {
     () => (selectedDate ? selectedRows.filter((row) => row.plannedDate === selectedDate) : selectedRows),
     [selectedDate, selectedRows],
   );
+  const listRows = useMemo(() => {
+    const mergedRows = sortScheduledRows(rows);
+    switch (listFilter) {
+      case 'unselected':
+        return mergedRows.filter((row) => !row.plannedDate);
+      case 'selected':
+        return mergedRows.filter((row) => Boolean(row.plannedDate));
+      case 'planned':
+      case 'postponed':
+      case 'completed':
+      case 'canceled':
+        return mergedRows.filter((row) => row.status === listFilter);
+      default:
+        return mergedRows;
+    }
+  }, [listFilter, rows]);
   const calendar = useMemo(() => buildCalendarDays(month), [month]);
   const rowsByDate = useMemo(() => {
     const map = new Map<string, SafetyInspectionSchedule[]>();
@@ -211,6 +296,18 @@ export function WorkerCalendarScreen() {
     !isDateWithinWindow(dialog.plannedDate, dialogSelectedSchedule.windowStart, dialogSelectedSchedule.windowEnd)
       ? buildWindowErrorMessage(dialogSelectedSchedule)
       : '';
+  const statusCards = useMemo(
+    () => [
+      { label: '미선택 회차', value: unselectedRows.length },
+      { label: '선택 완료 일정', value: selectedRows.length },
+      { label: '완료 일정', value: rows.filter((row) => row.status === 'completed').length },
+      {
+        label: '조정 필요',
+        value: rows.filter((row) => row.isConflicted || row.isOutOfWindow || row.isOverdue).length,
+      },
+    ],
+    [rows, selectedRows.length, unselectedRows.length],
+  );
 
   useEffect(() => {
     if (!dialog.open || dialog.scheduleId || dialogEligibleRows.length === 0) return;
@@ -360,20 +457,12 @@ export function WorkerCalendarScreen() {
 
               <div className={homeStyles.pageGrid}>
                 <section className={styles.summaryBar}>
-                  <article className={styles.summaryCard}>
-                    <span className={styles.summaryLabel}>미선택 회차</span>
-                    <strong className={styles.summaryValue}>{unselectedRows.length}</strong>
-                  </article>
-                  <article className={styles.summaryCard}>
-                    <span className={styles.summaryLabel}>선택 완료 일정</span>
-                    <strong className={styles.summaryValue}>{selectedRows.length}</strong>
-                  </article>
-                  <article className={styles.summaryCard}>
-                    <span className={styles.summaryLabel}>배정 현장</span>
-                    <strong className={styles.summaryValue}>
-                      {selectedSiteId ? 1 : sites.length}
-                    </strong>
-                  </article>
+                  {statusCards.map((card) => (
+                    <article key={card.label} className={styles.summaryCard}>
+                      <span className={styles.summaryLabel}>{card.label}</span>
+                      <strong className={styles.summaryValue}>{card.value}</strong>
+                    </article>
+                  ))}
                 </section>
 
                 <section className={styles.sectionCard}>
@@ -381,14 +470,58 @@ export function WorkerCalendarScreen() {
                     <div>
                       <h2 className={styles.sectionTitle}>회차별 일정 선택</h2>
                       <div className={styles.sectionMeta}>
-                        달력 날짜를 클릭하면 해당 날짜에 선택 가능한 회차와 사유 입력 팝업이 열립니다.
+                        관제와 같은 일정 원본을 기준으로, 달력과 목록 두 방식으로 일정을 확인하고 수정할 수 있습니다.
                       </div>
                     </div>
                   </div>
                   {error ? <div className={homeStyles.emptyState}>{error}</div> : null}
                   {notice ? <div className={styles.noticeBox}>{notice}</div> : null}
 
+                  <div className={styles.viewTabs} role="tablist" aria-label="일정 보기 방식">
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={viewMode === 'calendar'}
+                      className={`${styles.viewTab} ${viewMode === 'calendar' ? styles.viewTabActive : ''}`}
+                      onClick={() => replaceCalendarRoute({ view: 'calendar' })}
+                    >
+                      달력으로 보기
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={viewMode === 'list'}
+                      className={`${styles.viewTab} ${viewMode === 'list' ? styles.viewTabActive : ''}`}
+                      onClick={() => replaceCalendarRoute({ view: 'list' })}
+                    >
+                      목록으로 보기
+                    </button>
+                  </div>
+
                   <div className={styles.toolbar}>
+                    <div className={styles.monthNav}>
+                      <button
+                        type="button"
+                        className="app-button app-button-secondary"
+                        onClick={() => setMonth((current) => shiftMonthToken(current, -1))}
+                      >
+                        이전 달
+                      </button>
+                      <button
+                        type="button"
+                        className="app-button app-button-secondary"
+                        onClick={() => setMonth(getMonthToken())}
+                      >
+                        이번 달
+                      </button>
+                      <button
+                        type="button"
+                        className="app-button app-button-secondary"
+                        onClick={() => setMonth((current) => shiftMonthToken(current, 1))}
+                      >
+                        다음 달
+                      </button>
+                    </div>
                     <label className={styles.field}>
                       <span className={styles.fieldLabel}>표시 월</span>
                       <input
@@ -405,7 +538,7 @@ export function WorkerCalendarScreen() {
                         value={selectedSiteId}
                         onChange={(event) => {
                           const value = event.target.value;
-                          router.replace(value ? `/calendar?siteId=${encodeURIComponent(value)}` : '/calendar');
+                          replaceCalendarRoute({ siteId: value, view: viewMode });
                         }}
                       >
                         <option value="">전체 현장</option>
@@ -416,133 +549,226 @@ export function WorkerCalendarScreen() {
                         ))}
                       </select>
                     </label>
+                    {viewMode === 'list' ? (
+                      <label className={styles.field}>
+                        <span className={styles.fieldLabel}>목록 필터</span>
+                        <select
+                          className="app-select"
+                          value={listFilter}
+                          onChange={(event) => setListFilter(event.target.value as ScheduleListFilter)}
+                        >
+                          <option value="all">전체</option>
+                          <option value="unselected">미선택 회차</option>
+                          <option value="selected">선택 완료 일정</option>
+                          <option value="planned">진행</option>
+                          <option value="completed">완료</option>
+                          <option value="postponed">보류</option>
+                          <option value="canceled">취소</option>
+                        </select>
+                      </label>
+                    ) : null}
                   </div>
 
-                  <div className={styles.layout}>
-                    <div className={styles.list}>
-                      <section className={styles.sectionCard}>
-                        <div className={styles.sectionHeader}>
-                          <div>
-                            <h3 className={styles.sectionTitle}>미선택 회차</h3>
-                          </div>
-                        </div>
-                        {loading ? (
-                          <div className={styles.emptyState}>일정을 불러오는 중입니다.</div>
-                        ) : unselectedRows.length === 0 ? (
-                          <div className={styles.emptyState}>선택이 필요한 회차가 없습니다.</div>
-                        ) : (
-                          <div className={styles.list}>
-                            {unselectedRows.map((row) => (
-                              <article key={row.id} className={styles.rowCard}>
-                                <div className={styles.rowTitle}>
-                                  {row.siteName} · {row.roundNo}회차
-                                </div>
-                                <div className={styles.rowMeta}>
-                                  허용 구간 {row.windowStart} ~ {row.windowEnd}
-                                </div>
-                                <div className={styles.rowActions}>
-                                  <button
-                                    type="button"
-                                    className="app-button app-button-primary"
-                                    onClick={() => openScheduleDialog({ plannedDate: row.windowStart, schedule: row })}
-                                  >
-                                    팝업에서 일정 지정
-                                  </button>
-                                </div>
-                              </article>
-                            ))}
-                          </div>
-                        )}
-                      </section>
-                    </div>
+                  {loading ? <div className={styles.emptyState}>일정을 불러오는 중입니다.</div> : null}
 
-                    <div className={styles.list}>
-                      <section className={styles.sectionCard}>
-                        <div className={styles.sectionHeader}>
-                          <div>
-                            <h3 className={styles.sectionTitle}>월간 캘린더</h3>
+                  {viewMode === 'calendar' ? (
+                    <div className={styles.layout}>
+                      <div className={styles.list}>
+                        <section className={styles.sectionCard}>
+                          <div className={styles.sectionHeader}>
+                            <div>
+                              <h3 className={styles.sectionTitle}>월간 캘린더</h3>
+                              <div className={styles.sectionMeta}>
+                                날짜를 누르면 해당 날짜 기준으로 회차를 지정하거나 수정할 수 있습니다.
+                              </div>
+                            </div>
+                          </div>
+                          <div className={styles.calendarGrid}>
+                            {['월', '화', '수', '목', '금', '토', '일'].map((label) => (
+                              <div key={label} className={styles.weekday}>
+                                {label}
+                              </div>
+                            ))}
+                            {Array.from({ length: calendar.leadingEmptyCount }).map((_, index) => (
+                              <div key={`empty-${index + 1}`} className={styles.calendarCellEmpty} />
+                            ))}
+                            {calendar.days.map((day) => {
+                              const dayRows = rowsByDate.get(day.token) || [];
+                              const isActive = selectedDate === day.token;
+                              return (
+                                <button
+                                  key={day.token}
+                                  type="button"
+                                  className={`${styles.calendarCell} ${isActive ? styles.calendarCellActive : ''}`}
+                                  onClick={() => openScheduleDialog({ plannedDate: day.token })}
+                                >
+                                  <div className={styles.calendarDay}>{day.day}</div>
+                                  <div className={styles.calendarEvents}>
+                                    {dayRows.slice(0, 3).map((row) => (
+                                      <span key={row.id} className={styles.calendarEvent}>
+                                        {row.siteName} {row.roundNo}회차
+                                      </span>
+                                    ))}
+                                    {dayRows.length > 3 ? (
+                                      <span className={styles.calendarEvent}>+ {dayRows.length - 3}건</span>
+                                    ) : null}
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </section>
+
+                        <section className={styles.sectionCard}>
+                          <div className={styles.sectionHeader}>
+                            <div>
+                              <h3 className={styles.sectionTitle}>선택된 일정</h3>
+                              <div className={styles.sectionMeta}>
+                                {selectedDate ? `${formatDateLabel(selectedDate)} 기준` : '전체 선택 완료 일정'}
+                              </div>
+                            </div>
+                          </div>
+                          {visibleSelectedRows.length === 0 ? (
+                            <div className={styles.emptyState}>표시할 일정이 없습니다.</div>
+                          ) : (
+                            <div className={styles.selectedList}>
+                              {visibleSelectedRows.map((row) => (
+                                <article key={row.id} className={styles.rowCard}>
+                                  <div className={styles.rowTitle}>
+                                    {row.siteName} · {row.roundNo}회차
+                                  </div>
+                                  <div className={styles.rowMeta}>
+                                    방문일 {row.plannedDate} / 허용 구간 {row.windowStart} ~ {row.windowEnd}
+                                  </div>
+                                  <div className={styles.rowMeta}>
+                                    사유 {row.selectionReasonLabel || '-'} / {row.selectionReasonMemo || '상세 메모 없음'}
+                                  </div>
+                                  <div className={styles.rowMeta}>
+                                    선택자 {row.selectionConfirmedByName || row.assigneeName || '-'} /{' '}
+                                    {formatDateTimeLabel(row.selectionConfirmedAt)}
+                                  </div>
+                                  <div className={styles.rowActions}>
+                                    <button
+                                      type="button"
+                                      className="app-button app-button-secondary"
+                                      onClick={() =>
+                                        openScheduleDialog({
+                                          plannedDate: row.plannedDate || row.windowStart,
+                                          schedule: row,
+                                        })}
+                                    >
+                                      날짜/사유 수정
+                                    </button>
+                                  </div>
+                                </article>
+                              ))}
+                            </div>
+                          )}
+                        </section>
+                      </div>
+
+                      <div className={styles.list}>
+                        <section className={styles.sectionCard}>
+                          <div className={styles.sectionHeader}>
+                            <div>
+                              <h3 className={styles.sectionTitle}>미선택 회차</h3>
+                              <div className={styles.sectionMeta}>아직 방문일을 확정하지 않은 회차입니다.</div>
+                            </div>
+                          </div>
+                          {unselectedRows.length === 0 ? (
+                            <div className={styles.emptyState}>선택이 필요한 회차가 없습니다.</div>
+                          ) : (
+                            <div className={styles.list}>
+                              {unselectedRows.map((row) => (
+                                <article key={row.id} className={styles.rowCard}>
+                                  <div className={styles.rowTitle}>
+                                    {row.siteName} · {row.roundNo}회차
+                                  </div>
+                                  <div className={styles.rowMeta}>
+                                    허용 구간 {row.windowStart} ~ {row.windowEnd}
+                                  </div>
+                                  <div className={styles.rowActions}>
+                                    <button
+                                      type="button"
+                                      className="app-button app-button-primary"
+                                      onClick={() =>
+                                        openScheduleDialog({
+                                          plannedDate: row.windowStart,
+                                          schedule: row,
+                                        })}
+                                    >
+                                      일정 지정
+                                    </button>
+                                  </div>
+                                </article>
+                              ))}
+                            </div>
+                          )}
+                        </section>
+                      </div>
+                    </div>
+                  ) : (
+                    <section className={styles.sectionCard}>
+                      <div className={styles.sectionHeader}>
+                        <div>
+                          <h3 className={styles.sectionTitle}>기술지도 일정 목록</h3>
+                          <div className={styles.sectionMeta}>
+                            월별 일정과 미선택 회차를 한 번에 보고, 바로 수정할 수 있습니다.
                           </div>
                         </div>
-                        <div className={styles.calendarGrid}>
-                          {['월', '화', '수', '목', '금', '토', '일'].map((label) => (
-                            <div key={label} className={styles.weekday}>
-                              {label}
-                            </div>
-                          ))}
-                          {Array.from({ length: calendar.leadingEmptyCount }).map((_, index) => (
-                            <div key={`empty-${index + 1}`} className={styles.calendarCellEmpty} />
-                          ))}
-                          {calendar.days.map((day) => {
-                            const dayRows = rowsByDate.get(day.token) || [];
-                            const isActive = selectedDate === day.token;
-                            return (
-                              <button
-                                key={day.token}
-                                type="button"
-                                className={`${styles.calendarCell} ${isActive ? styles.calendarCellActive : ''}`}
-                                onClick={() => openScheduleDialog({ plannedDate: day.token })}
-                              >
-                                <div className={styles.calendarDay}>{day.day}</div>
-                                <div className={styles.calendarEvents}>
-                                  {dayRows.slice(0, 3).map((row) => (
-                                    <span key={row.id} className={styles.calendarEvent}>
-                                      {row.siteName} {row.roundNo}회차
+                      </div>
+                      {listRows.length === 0 ? (
+                        <div className={styles.emptyState}>조건에 맞는 일정이 없습니다.</div>
+                      ) : (
+                        <div className={styles.tableScroll}>
+                          <table className={styles.scheduleTable}>
+                            <thead>
+                              <tr>
+                                <th>방문일</th>
+                                <th>현장명</th>
+                                <th>차수</th>
+                                <th>상태</th>
+                                <th>허용 구간</th>
+                                <th>선택 사유</th>
+                                <th>관리</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {listRows.map((row) => (
+                                <tr key={row.id}>
+                                  <td>{row.plannedDate || '-'}</td>
+                                  <td>{row.siteName}</td>
+                                  <td>{row.roundNo}회차</td>
+                                  <td>
+                                    <span className={`${styles.statusBadge} ${getStatusClassName(row)}`}>
+                                      {getStatusLabel(row)}
                                     </span>
-                                  ))}
-                                  {dayRows.length > 3 ? (
-                                    <span className={styles.calendarEvent}>+ {dayRows.length - 3}건</span>
-                                  ) : null}
-                                </div>
-                              </button>
-                            );
-                          })}
+                                  </td>
+                                  <td>
+                                    {row.windowStart} ~ {row.windowEnd}
+                                  </td>
+                                  <td>{row.selectionReasonLabel || row.selectionReasonMemo || '-'}</td>
+                                  <td>
+                                    <button
+                                      type="button"
+                                      className="app-button app-button-secondary"
+                                      onClick={() =>
+                                        openScheduleDialog({
+                                          plannedDate: row.plannedDate || row.windowStart,
+                                          schedule: row,
+                                        })}
+                                    >
+                                      {row.plannedDate ? '일정 수정' : '일정 지정'}
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
                         </div>
-                      </section>
-
-                      <section className={styles.sectionCard}>
-                        <div className={styles.sectionHeader}>
-                          <div>
-                            <h3 className={styles.sectionTitle}>선택된 일정</h3>
-                            <div className={styles.sectionMeta}>
-                              {selectedDate ? `${formatDateLabel(selectedDate)} 기준` : '전체 선택 완료 일정'}
-                            </div>
-                          </div>
-                        </div>
-                        {visibleSelectedRows.length === 0 ? (
-                          <div className={styles.emptyState}>표시할 일정이 없습니다.</div>
-                        ) : (
-                          <div className={styles.selectedList}>
-                            {visibleSelectedRows.map((row) => (
-                              <article key={row.id} className={styles.rowCard}>
-                                <div className={styles.rowTitle}>
-                                  {row.siteName} · {row.roundNo}회차
-                                </div>
-                                <div className={styles.rowMeta}>
-                                  방문일 {row.plannedDate} / 허용 구간 {row.windowStart} ~ {row.windowEnd}
-                                </div>
-                                <div className={styles.rowMeta}>
-                                  사유 {row.selectionReasonLabel || '-'} / {row.selectionReasonMemo || '상세 메모 없음'}
-                                </div>
-                                <div className={styles.rowMeta}>
-                                  선택자 {row.selectionConfirmedByName || row.assigneeName || '-'} /{' '}
-                                  {formatDateTimeLabel(row.selectionConfirmedAt)}
-                                </div>
-                                <div className={styles.rowActions}>
-                                  <button
-                                    type="button"
-                                    className="app-button app-button-secondary"
-                                    onClick={() => openScheduleDialog({ plannedDate: row.plannedDate || row.windowStart, schedule: row })}
-                                  >
-                                    날짜/사유 수정
-                                  </button>
-                                </div>
-                              </article>
-                            ))}
-                          </div>
-                        )}
-                      </section>
-                    </div>
-                  </div>
+                      )}
+                    </section>
+                  )}
                 </section>
               </div>
             </div>
