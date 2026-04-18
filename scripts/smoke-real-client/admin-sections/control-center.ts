@@ -3,9 +3,61 @@ import type { Page } from 'playwright';
 import { baseUrl } from '../config';
 import { dismissImportantModalIfPresent, waitHeading } from '../helpers';
 
+type OverviewCounts = {
+  dispatchQueueCount: number;
+  priorityCount: number;
+  unsentCount: number;
+};
+
+function hasArray(value: unknown) {
+  return Array.isArray(value);
+}
+
 export async function runAdminControlCenterSection(page: Page) {
+  let latestOverviewCounts: OverviewCounts | null = null;
+  page.on('response', async (response) => {
+    if (!response.url().includes('/api/admin/dashboard/overview') || !response.ok()) return;
+
+    try {
+      const payload = await response.json();
+      latestOverviewCounts = {
+        dispatchQueueCount: hasArray(payload.dispatchQueueRows) ? payload.dispatchQueueRows.length : -1,
+        priorityCount: hasArray(payload.priorityQuarterlyManagementRows)
+          ? payload.priorityQuarterlyManagementRows.length
+          : -1,
+        unsentCount: hasArray(payload.unsentReportRows) ? payload.unsentReportRows.length : -1,
+      };
+    } catch {
+      latestOverviewCounts = {
+        dispatchQueueCount: -1,
+        priorityCount: -1,
+        unsentCount: -1,
+      };
+    }
+  });
+
   await page.goto(`${baseUrl}/admin?section=overview`, { waitUntil: 'load' });
+  await page.waitForResponse((response) => {
+    return response.url().includes('/api/admin/dashboard/overview') && response.ok();
+  });
   await waitHeading(page, '운영 개요');
+  if (!latestOverviewCounts) {
+    throw new Error('Admin overview smoke did not observe /api/admin/dashboard/overview.');
+  }
+  const overviewCounts: OverviewCounts = latestOverviewCounts ?? {
+    dispatchQueueCount: -1,
+    priorityCount: -1,
+    unsentCount: -1,
+  };
+  if (
+    overviewCounts.dispatchQueueCount < 0 ||
+    overviewCounts.priorityCount < 0 ||
+    overviewCounts.unsentCount < 0
+  ) {
+    throw new Error(
+      `Admin overview smoke received an unexpected overview payload shape: ${JSON.stringify(overviewCounts)}`,
+    );
+  }
   await page.getByText('미발송 경과 현황').first().waitFor();
   await page.getByText('현장 상태').first().waitFor();
   await page.getByText('발송 관리 대상').first().waitFor();
