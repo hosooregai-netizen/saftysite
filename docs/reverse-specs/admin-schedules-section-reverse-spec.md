@@ -5,6 +5,7 @@
 - Reconstruct the `/admin` schedules board without depending on the current implementation details.
 - Preserve the controller workflow for:
   - month-grid schedule overview
+  - explicit calendar/list mode switching inside the same section
   - unselected schedule queue
   - schedule assignment/edit modal
   - quick drag-move inside allowed date windows
@@ -39,6 +40,7 @@ This sample targets the third level.
 Controllers must be able to:
 
 - inspect all selected schedules for a month in a calendar view
+- switch into a list view that exposes both the unselected queue and the selected schedule table
 - inspect all unselected rounds in a queue view
 - filter schedules by site, assignee, text query, and status
 - edit one schedule by opening a modal for a target date
@@ -61,7 +63,9 @@ Controllers must be able to:
   - `siteId`
   - `assigneeUserId`
   - `status`
+  - `view`
 - If `month` is absent, default to the current local month in `YYYY-MM` format.
+- If `view` is absent, default to `calendar`.
 
 ## Data Contracts
 
@@ -163,6 +167,7 @@ Required fields used by the screen:
   - `siteId`
   - `assigneeUserId`
   - `status`
+  - `viewMode`
 - table state:
   - `sort`
   - `queuePage`
@@ -212,6 +217,19 @@ Required fields used by the screen:
 - `selectedDate` is cleared if it no longer belongs to the currently selected `month`.
 - Month navigation works by moving `YYYY-MM` forward or backward by one month.
 - Calendar grid uses Monday-first weekday alignment.
+- List mode ignores `selectedDate` when building the selected schedule table so operators can scan
+  the full month list without first clearing a date.
+
+### View toggle rules
+
+- The section must expose:
+  - `달력으로 보기`
+  - `목록으로 보기`
+- Switching to list mode should persist `view=list` in the section URL.
+- Calendar mode shows the month grid only.
+- List mode shows:
+  - the unselected schedule queue table
+  - the selected schedule list table
 
 ### Sorting rules
 

@@ -20,6 +20,8 @@ export async function runAdminSchedulesSmoke(config: ClientSmokePlaywrightConfig
     await harness.waitForRequestCount('GET /api/admin/schedules/queue', queueReadsBefore + 1);
     await harness.waitForRequestCount('GET /api/admin/schedules/lookups', lookupReadsBefore + 1);
     await page.getByRole('heading', { level: 2, name: '일정/캘린더' }).waitFor({ state: 'visible' });
+    await page.getByRole('tab', { name: '달력으로 보기' }).waitFor({ state: 'visible' });
+    await page.getByRole('tab', { name: '목록으로 보기' }).waitFor({ state: 'visible' });
     await page.getByText('2026년 4월').first().waitFor();
     await page.getByRole('button', { name: '오늘' }).waitFor({ state: 'visible' });
     await page.getByRole('button', { name: '[김요원] 1/9 - 기존 현장' }).waitFor({
@@ -35,6 +37,18 @@ export async function runAdminSchedulesSmoke(config: ClientSmokePlaywrightConfig
     if (scopeToggleCount !== 0) {
       throw new Error(`Expected controller scope buttons to be removed, received ${scopeToggleCount}.`);
     }
+
+    await page.getByRole('tab', { name: '목록으로 보기' }).click();
+    await page.getByRole('heading', { level: 2, name: '미선택 일정 큐' }).waitFor({
+      state: 'visible',
+    });
+    await page.getByRole('heading', { level: 2, name: '방문 일정 목록' }).waitFor({
+      state: 'visible',
+    });
+    await page.getByRole('tab', { name: '달력으로 보기' }).click();
+    await page.getByRole('button', { name: '[김요원] 1/9 - 기존 현장' }).waitFor({
+      state: 'visible',
+    });
 
     await page.getByRole('button', { name: '[김요원] 1/9 - 기존 현장' }).click();
     const scheduleDialog = page.getByRole('dialog', { name: '방문 일정 선택' });

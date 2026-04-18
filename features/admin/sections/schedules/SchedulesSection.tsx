@@ -39,6 +39,8 @@ interface SchedulesSectionProps {
   currentUser: SafetyUser;
 }
 
+type ScheduleViewMode = 'calendar' | 'list';
+
 interface ScheduleFormState {
   assigneeUserId: string;
   plannedDate: string;
@@ -311,6 +313,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
   const defaultMonth = getMonthToken();
   const initialMonth = searchParams.get('month') || defaultMonth;
   const initialSelectedDate = searchParams.get('plannedDate') || '';
+  const viewMode: ScheduleViewMode = searchParams.get('view') === 'list' ? 'list' : 'calendar';
   const [month, setMonth] = useState(initialMonth);
   const [selectedDate, setSelectedDate] = useState(initialSelectedDate);
   const { query, queryInput, setQueryInput, submitQuery } = useSubmittedSearchState(
@@ -371,6 +374,32 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
   });
   const [loadingRequestKey, setLoadingRequestKey] = useState('');
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  const replaceScheduleRoute = useCallback(
+    (overrides: Partial<Record<'assigneeUserId' | 'month' | 'plannedDate' | 'query' | 'siteId' | 'status', string>> & {
+      view?: ScheduleViewMode;
+    }) => {
+      const nextParams = new URLSearchParams();
+      const nextMonth = overrides.month ?? month;
+      const nextPlannedDate = overrides.plannedDate ?? selectedDate;
+      const nextQuery = overrides.query ?? query;
+      const nextSiteId = overrides.siteId ?? siteId;
+      const nextAssigneeUserId = overrides.assigneeUserId ?? assigneeUserId;
+      const nextStatus = overrides.status ?? status;
+      const nextView = overrides.view ?? viewMode;
+
+      if (nextMonth && nextMonth !== defaultMonth) nextParams.set('month', nextMonth);
+      if (nextPlannedDate) nextParams.set('plannedDate', nextPlannedDate);
+      if (nextQuery.trim()) nextParams.set('query', nextQuery.trim());
+      if (nextSiteId) nextParams.set('siteId', nextSiteId);
+      if (nextAssigneeUserId) nextParams.set('assigneeUserId', nextAssigneeUserId);
+      if (nextStatus) nextParams.set('status', nextStatus);
+      if (nextView === 'list') nextParams.set('view', 'list');
+
+      router.replace(getAdminSectionHref('schedules', Object.fromEntries(nextParams.entries())));
+    },
+    [assigneeUserId, defaultMonth, month, query, router, selectedDate, siteId, status, viewMode],
+  );
 
   const scheduleRequest = useMemo(
     () => ({
@@ -560,13 +589,14 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
     [...sortedSelectedRows, ...sortedQueueRows].forEach((row) => byId.set(row.id, row));
     return Array.from(byId.values());
   }, [sortedQueueRows, sortedSelectedRows]);
-  const visibleRows = useMemo(
-    () =>
-      selectedDate
-        ? sortedSelectedRows.filter((row) => row.plannedDate === selectedDate)
-        : sortedSelectedRows,
-    [selectedDate, sortedSelectedRows],
-  );
+  const visibleRows = useMemo(() => {
+    if (viewMode === 'list') {
+      return sortedSelectedRows;
+    }
+    return selectedDate
+      ? sortedSelectedRows.filter((row) => row.plannedDate === selectedDate)
+      : sortedSelectedRows;
+  }, [selectedDate, sortedSelectedRows, viewMode]);
   const pagedQueueRows = useMemo(() => {
     const offset = (queuePage - 1) * QUEUE_PAGE_SIZE;
     return sortedQueueRows.slice(offset, offset + QUEUE_PAGE_SIZE);
@@ -953,6 +983,37 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
             </div>
           ) : null}
 
+          <div className={styles.scheduleViewTabs} role="tablist" aria-label="관제 일정 보기 방식">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={viewMode === 'calendar'}
+              className={[
+                styles.scheduleViewTab,
+                viewMode === 'calendar' ? styles.scheduleViewTabActive : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+              onClick={() => replaceScheduleRoute({ view: 'calendar' })}
+            >
+              달력으로 보기
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={viewMode === 'list'}
+              className={[
+                styles.scheduleViewTab,
+                viewMode === 'list' ? styles.scheduleViewTabActive : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+              onClick={() => replaceScheduleRoute({ view: 'list' })}
+            >
+              목록으로 보기
+            </button>
+          </div>
+
           <div className={styles.scheduleMonthToolbar}>
             <div className={styles.scheduleMonthNav}>
               <button
@@ -995,237 +1056,248 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
             </div>
           </div>
 
-          <div className={styles.calendarWeekdayRow}>
-            {WEEKDAY_LABELS.map((label) => (
-              <div key={label} className={styles.calendarWeekdayCell}>
-                {label}
+          {viewMode === 'calendar' ? (
+            <>
+              <div className={styles.calendarWeekdayRow}>
+                {WEEKDAY_LABELS.map((label) => (
+                  <div key={label} className={styles.calendarWeekdayCell}>
+                    {label}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-          <div className={styles.calendarGrid}>
-            {Array.from({ length: calendar.leadingEmptyCount }).map((_, index) => (
-              <div key={`empty-${index}`} className={styles.calendarCellEmpty} />
-            ))}
-            {calendar.days.map((day) => {
-              const dayRows = rowsByDate.get(day.token) || [];
-              const hasWarning = dayRows.some(
-                (row) => row.isConflicted || row.isOutOfWindow || row.isOverdue,
-              );
-              const isSelected = selectedDate === day.token;
-              const canDrop = canDropScheduleOnDate(dragSchedule, day.token);
+              <div className={styles.calendarGrid}>
+                {Array.from({ length: calendar.leadingEmptyCount }).map((_, index) => (
+                  <div key={`empty-${index}`} className={styles.calendarCellEmpty} />
+                ))}
+                {calendar.days.map((day) => {
+                  const dayRows = rowsByDate.get(day.token) || [];
+                  const hasWarning = dayRows.some(
+                    (row) => row.isConflicted || row.isOutOfWindow || row.isOverdue,
+                  );
+                  const isSelected = selectedDate === day.token;
+                  const canDrop = canDropScheduleOnDate(dragSchedule, day.token);
 
-              return (
-                <div
-                  key={day.token}
-                  className={[
-                    styles.calendarCell,
-                    isSelected ? styles.calendarCellActive : '',
-                    canDrop ? styles.calendarCellDropReady : '',
-                  ]
-                    .filter(Boolean)
-                    .join(' ')}
-                  onDragOver={(event) => {
-                    if (!canDrop) return;
-                    event.preventDefault();
-                  }}
-                  onDrop={(event) => {
-                    event.preventDefault();
-                    if (!dragSchedule || !canDrop) return;
-                    void handleQuickMove(dragSchedule, day.token);
-                  }}
-                >
-                  <button
-                    type="button"
-                    className={styles.calendarCellHeaderButton}
-                    onClick={() => openScheduleDialog({ plannedDate: day.token })}
-                  >
-                    <span className={styles.calendarCellDate}>{day.day}일</span>
-                    <span className={styles.calendarCellCount}>{dayRows.length}건</span>
-                    {hasWarning ? <span className={styles.calendarCellFlag}>지연</span> : null}
-                  </button>
-                  {dayRows.length > 0 ? (
-                    <div className={styles.calendarScheduleStack}>
-                      {dayRows.slice(0, 5).map((row) => (
-                        <button
-                          key={`calendar-row-${row.id}`}
-                          type="button"
-                          draggable={Boolean(row.plannedDate)}
-                          className={[
-                            styles.calendarScheduleChip,
-                            row.isOverdue ? styles.calendarScheduleChipWarning : '',
-                          ]
-                            .filter(Boolean)
-                            .join(' ')}
-                          onClick={() =>
-                            openScheduleDialog({
-                              plannedDate: row.plannedDate || row.windowStart,
-                              schedule: row,
-                            })
-                          }
-                          onDragStart={() => setDragScheduleId(row.id)}
-                          onDragEnd={() => setDragScheduleId('')}
-                        >
-                          <span className={styles.calendarScheduleChipTitle}>
-                            {buildScheduleChipLabel(row)}
-                          </span>
-                          <span className={styles.calendarScheduleChipMeta}>
-                            {buildIssueSummary(row) || buildScheduleQueryText(row)}
-                          </span>
-                        </button>
-                      ))}
-                      {dayRows.length > 5 ? (
-                        <button
-                          type="button"
-                          className={styles.calendarMoreButton}
-                          onClick={() =>
-                            openScheduleDialog({
-                              overflowRowIds: dayRows.slice(5).map((row) => row.id),
-                              plannedDate: day.token,
-                              schedule: dayRows[5] || dayRows[0] || null,
-                            })
-                          }
-                        >
-                          +{dayRows.length - 5}건 더보기
-                        </button>
-                      ) : null}
-                    </div>
-                  ) : null}
-                </div>
-              );
-            })}
-          </div>
-
-          <div className={styles.tableShell}>
-            <div className={styles.sectionHeader}>
-              <div>
-                <h3 className={styles.sectionTitle}>미선택 일정 큐</h3>
-                <div className={styles.sectionHeaderMeta}>
-                  계약일 기준 15일 간격으로 회차가 자동 계산되며, 총 회차 범위 안에서만
-                  선택할 수 있습니다.
-                </div>
-              </div>
-              <div className={styles.sectionHeaderActions}>
-                <span className={styles.sectionHeaderMeta}>
-                  {queueResponse.total.toLocaleString('ko-KR')}건
-                </span>
-              </div>
-            </div>
-            {sortedQueueRows.length === 0 ? (
-              <div className={styles.tableEmpty}>
-                {isInitialLoading ? '일정을 불러오는 중입니다.' : '아직 날짜를 선택하지 않은 회차가 없습니다.'}
-              </div>
-            ) : (
-              <>
-                <div className={styles.tableWrap}>
-                  <table className={styles.table}>
-                    <thead>
-                      <tr>
-                        <SortableHeaderCell
-                          column={{ key: 'siteName' }}
-                          current={sort}
-                          label="미선택 회차"
-                          onChange={setSort}
-                          sortMenuOptions={buildSortMenuOptions('siteName', {
-                            asc: '현장 가나다순',
-                            desc: '현장 역순',
-                          })}
-                        />
-                        <SortableHeaderCell
-                          column={{ key: 'roundNo' }}
-                          current={sort}
-                          defaultDirection="desc"
-                          label="회차"
-                          onChange={setSort}
-                        />
-                        <SortableHeaderCell
-                          column={{ key: 'windowStart' }}
-                          current={sort}
-                          defaultDirection="asc"
-                          label="허용 구간"
-                          onChange={setSort}
-                        />
-                        <SortableHeaderCell
-                          column={{ key: 'assigneeName' }}
-                          current={sort}
-                          label="담당자"
-                          onChange={setSort}
-                          sortMenuOptions={buildSortMenuOptions('assigneeName', {
-                            asc: '담당자 가나다순',
-                            desc: '담당자 역순',
-                          })}
-                        />
-                        <SortableHeaderCell
-                          column={{ key: 'status' }}
-                          current={sort}
-                          label="상태"
-                          onChange={setSort}
-                          sortMenuOptions={buildSortMenuOptions('status', {
-                            asc: '상태 오름차순',
-                            desc: '상태 내림차순',
-                          })}
-                        />
-                        <th>메뉴</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {pagedQueueRows.map((row) => (
-                        <tr key={`unselected-${row.id}`}>
-                          <td>{row.siteName}</td>
-                          <td>
-                            {row.roundNo} / {row.totalRounds && row.totalRounds > 0 ? row.totalRounds : row.roundNo}
-                          </td>
-                          <td>{buildWindowSummary(row)}</td>
-                          <td>{row.assigneeName || '-'}</td>
-                          <td>{getScheduleStatusLabel(row.status)}</td>
-                          <td>
+                  return (
+                    <div
+                      key={day.token}
+                      className={[
+                        styles.calendarCell,
+                        isSelected ? styles.calendarCellActive : '',
+                        canDrop ? styles.calendarCellDropReady : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' ')}
+                      onDragOver={(event) => {
+                        if (!canDrop) return;
+                        event.preventDefault();
+                      }}
+                      onDrop={(event) => {
+                        event.preventDefault();
+                        if (!dragSchedule || !canDrop) return;
+                        void handleQuickMove(dragSchedule, day.token);
+                      }}
+                    >
+                      <button
+                        type="button"
+                        className={styles.calendarCellHeaderButton}
+                        onClick={() => openScheduleDialog({ plannedDate: day.token })}
+                      >
+                        <span className={styles.calendarCellDate}>{day.day}일</span>
+                        <span className={styles.calendarCellCount}>{dayRows.length}건</span>
+                        {hasWarning ? <span className={styles.calendarCellFlag}>지연</span> : null}
+                      </button>
+                      {dayRows.length > 0 ? (
+                        <div className={styles.calendarScheduleStack}>
+                          {dayRows.slice(0, 5).map((row) => (
                             <button
+                              key={`calendar-row-${row.id}`}
                               type="button"
-                              className="app-button app-button-secondary"
+                              draggable={Boolean(row.plannedDate)}
+                              className={[
+                                styles.calendarScheduleChip,
+                                row.isOverdue ? styles.calendarScheduleChipWarning : '',
+                              ]
+                                .filter(Boolean)
+                                .join(' ')}
                               onClick={() =>
                                 openScheduleDialog({
-                                  plannedDate: row.windowStart,
+                                  plannedDate: row.plannedDate || row.windowStart,
                                   schedule: row,
                                 })
                               }
+                              onDragStart={() => setDragScheduleId(row.id)}
+                              onDragEnd={() => setDragScheduleId('')}
                             >
-                              일정 지정
+                              <span className={styles.calendarScheduleChipTitle}>
+                                {buildScheduleChipLabel(row)}
+                              </span>
+                              <span className={styles.calendarScheduleChipMeta}>
+                                {buildIssueSummary(row) || buildScheduleQueryText(row)}
+                              </span>
                             </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <div className={styles.paginationRow}>
-                  <button
-                    type="button"
-                    className="app-button app-button-secondary"
-                    onClick={() => setQueuePage((current) => Math.max(1, current - 1))}
-                    disabled={queuePage <= 1}
-                  >
-                    이전
-                  </button>
-                  <span className={styles.paginationLabel}>
-                    {queuePage} / {queueTotalPages} 페이지
-                  </span>
-                  <button
-                    type="button"
-                    className="app-button app-button-secondary"
-                    onClick={() =>
-                      setQueuePage((current) => Math.min(queueTotalPages, current + 1))
-                    }
-                    disabled={queuePage >= queueTotalPages}
-                  >
-                    다음
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
+                          ))}
+                          {dayRows.length > 5 ? (
+                            <button
+                              type="button"
+                              className={styles.calendarMoreButton}
+                              onClick={() =>
+                                openScheduleDialog({
+                                  overflowRowIds: dayRows.slice(5).map((row) => row.id),
+                                  plannedDate: day.token,
+                                  schedule: dayRows[5] || dayRows[0] || null,
+                                })
+                              }
+                            >
+                              +{dayRows.length - 5}건 더보기
+                            </button>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          ) : null}
         </div>
       </section>
 
-      <section className={`${styles.sectionCard} ${styles.listSectionCard}`}>
+      {viewMode === 'list' ? (
+        <section className={`${styles.sectionCard} ${styles.listSectionCard}`}>
+          <div className={styles.sectionHeader}>
+            <div>
+              <h2 className={styles.sectionTitle}>미선택 일정 큐</h2>
+              <div className={styles.sectionHeaderMeta}>
+                계약일 기준 15일 간격으로 회차가 자동 계산되며, 총 회차 범위 안에서만
+                선택할 수 있습니다.
+              </div>
+            </div>
+            <div className={styles.sectionHeaderActions}>
+              <span className={styles.sectionHeaderMeta}>
+                {queueResponse.total.toLocaleString('ko-KR')}건
+              </span>
+            </div>
+          </div>
+          <div className={styles.sectionBody}>
+            <div className={styles.tableShell}>
+              {sortedQueueRows.length === 0 ? (
+                <div className={styles.tableEmpty}>
+                  {isInitialLoading ? '일정을 불러오는 중입니다.' : '아직 날짜를 선택하지 않은 회차가 없습니다.'}
+                </div>
+              ) : (
+                <>
+                  <div className={styles.tableWrap}>
+                    <table className={styles.table}>
+                      <thead>
+                        <tr>
+                          <SortableHeaderCell
+                            column={{ key: 'siteName' }}
+                            current={sort}
+                            label="미선택 회차"
+                            onChange={setSort}
+                            sortMenuOptions={buildSortMenuOptions('siteName', {
+                              asc: '현장 가나다순',
+                              desc: '현장 역순',
+                            })}
+                          />
+                          <SortableHeaderCell
+                            column={{ key: 'roundNo' }}
+                            current={sort}
+                            defaultDirection="desc"
+                            label="회차"
+                            onChange={setSort}
+                          />
+                          <SortableHeaderCell
+                            column={{ key: 'windowStart' }}
+                            current={sort}
+                            defaultDirection="asc"
+                            label="허용 구간"
+                            onChange={setSort}
+                          />
+                          <SortableHeaderCell
+                            column={{ key: 'assigneeName' }}
+                            current={sort}
+                            label="담당자"
+                            onChange={setSort}
+                            sortMenuOptions={buildSortMenuOptions('assigneeName', {
+                              asc: '담당자 가나다순',
+                              desc: '담당자 역순',
+                            })}
+                          />
+                          <SortableHeaderCell
+                            column={{ key: 'status' }}
+                            current={sort}
+                            label="상태"
+                            onChange={setSort}
+                            sortMenuOptions={buildSortMenuOptions('status', {
+                              asc: '상태 오름차순',
+                              desc: '상태 내림차순',
+                            })}
+                          />
+                          <th>메뉴</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pagedQueueRows.map((row) => (
+                          <tr key={`unselected-${row.id}`}>
+                            <td>{row.siteName}</td>
+                            <td>
+                              {row.roundNo} / {row.totalRounds && row.totalRounds > 0 ? row.totalRounds : row.roundNo}
+                            </td>
+                            <td>{buildWindowSummary(row)}</td>
+                            <td>{row.assigneeName || '-'}</td>
+                            <td>{getScheduleStatusLabel(row.status)}</td>
+                            <td>
+                              <button
+                                type="button"
+                                className="app-button app-button-secondary"
+                                onClick={() =>
+                                  openScheduleDialog({
+                                    plannedDate: row.windowStart,
+                                    schedule: row,
+                                  })
+                                }
+                              >
+                                일정 지정
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className={styles.paginationRow}>
+                    <button
+                      type="button"
+                      className="app-button app-button-secondary"
+                      onClick={() => setQueuePage((current) => Math.max(1, current - 1))}
+                      disabled={queuePage <= 1}
+                    >
+                      이전
+                    </button>
+                    <span className={styles.paginationLabel}>
+                      {queuePage} / {queueTotalPages} 페이지
+                    </span>
+                    <button
+                      type="button"
+                      className="app-button app-button-secondary"
+                      onClick={() =>
+                        setQueuePage((current) => Math.min(queueTotalPages, current + 1))
+                      }
+                      disabled={queuePage >= queueTotalPages}
+                    >
+                      다음
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {viewMode === 'list' ? (
+        <section className={`${styles.sectionCard} ${styles.listSectionCard}`}>
         <div className={styles.sectionHeader}>
           <div>
             <h2 className={styles.sectionTitle}>방문 일정 목록</h2>
@@ -1336,7 +1408,8 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
             </div>
           )}
         </div>
-      </section>
+        </section>
+      ) : null}
 
       <AppModal
         open={dialogOpen}

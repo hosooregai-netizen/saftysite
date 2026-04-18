@@ -32,6 +32,8 @@ export async function runWorkerFlow(page: Page): Promise<WorkerFlowResult> {
 
   await page.getByRole('tab', { name: '목록으로 보기' }).click();
   await page.getByRole('heading', { name: '기술지도 일정 목록' }).waitFor();
+  await page.getByText('2026-04-08').first().waitFor();
+  await page.getByText('현장 요청').first().waitFor();
   await page.getByRole('button', { name: '일정 수정' }).first().waitFor();
 
   await page.goto(`${baseUrl}/mailbox`, { waitUntil: 'load' });
