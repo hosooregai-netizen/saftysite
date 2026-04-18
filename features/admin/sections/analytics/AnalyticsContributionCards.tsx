@@ -30,7 +30,12 @@ export function AnalyticsEmployeeContributionCard({
 }) {
   const topRows = [...rows]
     .filter((row) => row.visitRevenue > 0 || row.executedRounds > 0)
-    .sort((left, right) => right.visitRevenue - left.visitRevenue || right.executedRounds - left.executedRounds || left.userName.localeCompare(right.userName, 'ko'))
+    .sort(
+      (left, right) =>
+        right.visitRevenue - left.visitRevenue ||
+        right.executedRounds - left.executedRounds ||
+        left.userName.localeCompare(right.userName, 'ko'),
+    )
     .slice(0, 10);
 
   if (topRows.length === 0) return <div className={styles.emptyState}>표시할 직원 기여도 데이터가 없습니다.</div>;
@@ -40,7 +45,7 @@ export function AnalyticsEmployeeContributionCard({
       <div className={styles.surfaceHeader}>
         <div className={styles.surfaceHeaderText}>
           <h3 className={styles.surfaceTitle}>직원별 매출 기여도 Top 10</h3>
-          <p className={styles.surfaceMeta}>{year}년 기준 매출, 회차 수, 평균 단가, 전기 대비</p>
+          <p className={styles.surfaceMeta}>{year}년 기준 매출, 실회차 수, 평균 회차 단가, 전기 대비</p>
         </div>
       </div>
       <div className={styles.list}>
@@ -70,8 +75,14 @@ export function AnalyticsSiteContributionCard({
   year: number;
 }) {
   const topRows = [...rows]
+    .filter((row) => !row.isSummaryRow)
     .filter((row) => row.visitRevenue > 0 || row.executedRounds > 0)
-    .sort((left, right) => right.visitRevenue - left.visitRevenue || right.executedRounds - left.executedRounds || left.siteName.localeCompare(right.siteName, 'ko'))
+    .sort(
+      (left, right) =>
+        right.visitRevenue - left.visitRevenue ||
+        right.executedRounds - left.executedRounds ||
+        left.siteName.localeCompare(right.siteName, 'ko'),
+    )
     .slice(0, 10);
 
   if (topRows.length === 0) return <div className={styles.emptyState}>표시할 현장 매출 데이터가 없습니다.</div>;
@@ -81,7 +92,7 @@ export function AnalyticsSiteContributionCard({
       <div className={styles.surfaceHeader}>
         <div className={styles.surfaceHeaderText}>
           <h3 className={styles.surfaceTitle}>현장별 매출 상위 Top 10</h3>
-          <p className={styles.surfaceMeta}>{year}년 기준 사업장, 회차 수, 계약유형 중심</p>
+          <p className={styles.surfaceMeta}>{year}년 기준 사업장, 실회차 수, 담당자 중심</p>
         </div>
       </div>
       <div className={styles.list}>
@@ -91,7 +102,7 @@ export function AnalyticsSiteContributionCard({
               <div className={styles.listRowTitleWrap}>
                 <strong className={styles.listRowTitle}>{row.siteName}</strong>
                 <span className={styles.listRowMeta}>
-                  {row.headquarterName} · {row.executedRounds}회 · {row.contractTypeLabel}
+                  {row.headquarterName} · {row.executedRounds}회 · {row.assigneeName || '담당자 미배정'}
                 </span>
               </div>
               <strong className={styles.listRowValue}>{formatCurrencyValue(row.visitRevenue)}</strong>

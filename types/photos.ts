@@ -6,6 +6,7 @@ export interface SafetyPhotoAsset {
   id: string;
   siteId: string;
   headquarterId: string;
+  roundNo: number;
   siteName: string;
   headquarterName: string;
   originalPath: string;
@@ -32,6 +33,7 @@ export interface PhotoAlbumItem {
   sourceKind: PhotoAlbumSourceKind;
   siteId: string;
   siteName: string;
+  roundNo: number;
   headquarterId: string;
   headquarterName: string;
   previewUrl: string;

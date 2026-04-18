@@ -104,6 +104,7 @@ export function MobileSitePhotoAlbumScreen({
             headquarterName: currentSite.customerName || '사업장',
             id: currentSite.id,
             siteName: currentSite.siteName,
+            totalRounds: currentSite.totalRounds ?? null,
           },
         ]}
       />

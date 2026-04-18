@@ -24,6 +24,7 @@ interface PhotoAlbumSiteOption {
   headquarterName: string;
   id: string;
   siteName: string;
+  totalRounds?: number | null;
 }
 
 interface PhotoAlbumPanelProps {
@@ -67,6 +68,10 @@ function formatGpsLabel(item: PhotoAlbumItem) {
   }
 
   return `${item.gpsLatitude.toFixed(5)}, ${item.gpsLongitude.toFixed(5)}`;
+}
+
+function formatRoundLabel(roundNo: number) {
+  return roundNo > 0 ? `${roundNo}회차` : '회차 미지정';
 }
 
 function getSourceLabel(sourceKind: PhotoAlbumItem['sourceKind']) {
@@ -117,6 +122,7 @@ export function PhotoAlbumPanel({
   const { query, queryInput, setQueryInput, submitQuery } = useSubmittedSearchState();
   const [headquarterId, setHeadquarterId] = useState(() => defaultHeadquarterId);
   const [siteId, setSiteId] = useState(() => defaultSiteId);
+  const [uploadRoundNo, setUploadRoundNo] = useState(0);
   const [rows, setRows] = useState<PhotoAlbumItem[]>([]);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [loading, setLoading] = useState(false);
@@ -156,7 +162,18 @@ export function PhotoAlbumPanel({
       }),
     [headquarterId, lockedHeadquarterId, lockedSiteId, sites],
   );
-  const canUpload = Boolean(lockedSiteId || siteId);
+  const selectedUploadSite = useMemo(
+    () => visibleSiteOptions.find((option) => option.id === (lockedSiteId || siteId || '')) ?? null,
+    [lockedSiteId, siteId, visibleSiteOptions],
+  );
+  const uploadRoundOptions = useMemo(() => {
+    const totalRounds = selectedUploadSite?.totalRounds ?? 0;
+    if (!totalRounds || totalRounds <= 0) {
+      return [];
+    }
+    return Array.from({ length: totalRounds }, (_, index) => index + 1);
+  }, [selectedUploadSite]);
+  const canUpload = Boolean((lockedSiteId || siteId) && uploadRoundNo > 0 && uploadRoundOptions.length > 0);
   const showHeaderFilter =
     (mode === 'admin' && !lockedHeadquarterId) ||
     !lockedSiteId;
@@ -169,6 +186,16 @@ export function PhotoAlbumPanel({
     if (visibleSiteOptions.some((option) => option.id === siteId)) return;
     setSiteId('');
   }, [lockedSiteId, siteId, visibleSiteOptions]);
+
+  useEffect(() => {
+    if (uploadRoundOptions.length === 0) {
+      setUploadRoundNo(0);
+      return;
+    }
+    setUploadRoundNo((current) =>
+      uploadRoundOptions.includes(current) ? current : uploadRoundOptions[0] ?? 0,
+    );
+  }, [uploadRoundOptions]);
 
   useEffect(() => {
     let cancelled = false;
@@ -278,6 +305,11 @@ export function PhotoAlbumPanel({
       return;
     }
 
+    if (uploadRoundOptions.length === 0 || uploadRoundNo <= 0) {
+      setError('회차 생성 후 업로드해 주세요.');
+      return;
+    }
+
     const nextFiles = Array.from(files ?? []).filter((file) => file.size > 0);
     if (nextFiles.length === 0) return;
 
@@ -290,6 +322,7 @@ export function PhotoAlbumPanel({
         const thumbnail = await createPhotoThumbnail(file).catch(() => null);
         await uploadPhotoAlbumAsset({
           file,
+          roundNo: uploadRoundNo,
           siteId: uploadSiteId,
           thumbnail,
         });
@@ -342,6 +375,7 @@ export function PhotoAlbumPanel({
             gps: formatGpsLabel(item),
             headquarterName: item.headquarterName,
             siteName: item.siteName,
+            roundNo: formatRoundLabel(item.roundNo),
             sourceKind: getSourceLabel(item.sourceKind),
             sourceReportTitle: item.sourceReportTitle || '-',
             uploadedByName: item.uploadedByName || '-',
@@ -449,6 +483,27 @@ export function PhotoAlbumPanel({
                   ) : null}
                 </div>
               </SectionHeaderFilterMenu>
+            ) : null}
+            {(lockedSiteId || siteId) ? (
+              <div className={adminStyles.sectionHeaderMenuField}>
+                <label htmlFor="photo-upload-round">업로드 회차</label>
+                <select
+                  id="photo-upload-round"
+                  className="app-select"
+                  value={uploadRoundNo}
+                  onChange={(event) => setUploadRoundNo(Number.parseInt(event.target.value, 10) || 0)}
+                  disabled={uploadRoundOptions.length === 0}
+                >
+                  {uploadRoundOptions.length === 0 ? (
+                    <option value="0">회차 생성 후 업로드</option>
+                  ) : null}
+                  {uploadRoundOptions.map((roundNo) => (
+                    <option key={roundNo} value={roundNo}>
+                      {formatRoundLabel(roundNo)}
+                    </option>
+                  ))}
+                </select>
+              </div>
             ) : null}
             {mode === 'admin' ? (
               <button
@@ -579,7 +634,9 @@ export function PhotoAlbumPanel({
                       <div className={styles.cardTitle} title={item.fileName}>
                         {item.fileName}
                       </div>
-                      <div className={styles.cardMetaText}>{item.siteName}</div>
+                      <div className={styles.cardMetaText}>
+                        {item.siteName} · {formatRoundLabel(item.roundNo)}
+                      </div>
                       {mode === 'admin' ? (
                         <div className={styles.cardMetaText}>{item.headquarterName}</div>
                       ) : null}
@@ -683,6 +740,10 @@ export function PhotoAlbumPanel({
               <div className={styles.modalMetaRow}>
                 <span className={styles.modalMetaLabel}>현장</span>
                 <span>{activeItem.siteName}</span>
+              </div>
+              <div className={styles.modalMetaRow}>
+                <span className={styles.modalMetaLabel}>회차</span>
+                <span>{formatRoundLabel(activeItem.roundNo)}</span>
               </div>
               <div className={styles.modalMetaRow}>
                 <span className={styles.modalMetaLabel}>촬영일</span>

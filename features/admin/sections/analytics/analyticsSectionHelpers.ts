@@ -39,9 +39,9 @@ export const EMPTY_ANALYTICS: SafetyAdminAnalyticsResponse = {
 
 export const PERIOD_LABELS = {
   all: '전체 기간',
-  month: '월 기준',
-  quarter: '분기 기준',
-  year: '연 기준',
+  month: '이번 달',
+  quarter: '이번 분기',
+  year: '올해',
 } as const;
 
 export function getDeltaClassName(
@@ -139,9 +139,7 @@ export function buildScopeChipsFromLookups(
   const contractType = input.contractTypeOptions.find((item) => item.value === input.contractType);
   if (headquarter) chips.push({ label: '사업장', value: headquarter.label });
   if (user) chips.push({ label: '직원', value: user.label });
-  if (contractType) {
-    chips.push({ label: '구분', value: contractType.label });
-  }
+  if (contractType) chips.push({ label: '구분', value: contractType.label });
   if (input.query.trim()) chips.push({ label: '검색', value: input.query.trim() });
   return chips;
 }
@@ -169,7 +167,10 @@ export function sortEmployeeRows(rows: AdminAnalyticsEmployeeRow[], employeeSort
       case 'completionRate':
         return (left.completionRate - right.completionRate) * direction;
       case 'revenueChangeRate':
-        return ((left.revenueChangeRate ?? Number.NEGATIVE_INFINITY) - (right.revenueChangeRate ?? Number.NEGATIVE_INFINITY)) * direction;
+        return (
+          ((left.revenueChangeRate ?? Number.NEGATIVE_INFINITY) -
+            (right.revenueChangeRate ?? Number.NEGATIVE_INFINITY)) * direction
+        );
       case 'visitRevenue':
       default:
         return (left.visitRevenue - right.visitRevenue) * direction;
@@ -182,14 +183,14 @@ export function sortSiteRevenueRows(
   siteRevenueSort: TableSortState,
 ) {
   const direction = siteRevenueSort.direction === 'asc' ? 1 : -1;
-  return [...rows].sort((left, right) => {
+  const sortedRows = [...rows].sort((left, right) => {
     switch (siteRevenueSort.key) {
       case 'siteName':
         return left.siteName.localeCompare(right.siteName, 'ko') * direction;
       case 'headquarterName':
         return left.headquarterName.localeCompare(right.headquarterName, 'ko') * direction;
-      case 'contractTypeLabel':
-        return left.contractTypeLabel.localeCompare(right.contractTypeLabel, 'ko') * direction;
+      case 'assigneeName':
+        return left.assigneeName.localeCompare(right.assigneeName, 'ko') * direction;
       case 'executedRounds':
         return (left.executedRounds - right.executedRounds) * direction;
       case 'plannedRounds':
@@ -205,4 +206,8 @@ export function sortSiteRevenueRows(
         return (left.visitRevenue - right.visitRevenue) * direction;
     }
   });
+
+  const summaryRow = sortedRows.find((row) => row.isSummaryRow);
+  const dataRows = sortedRows.filter((row) => !row.isSummaryRow);
+  return summaryRow ? [summaryRow, ...dataRows] : dataRows;
 }

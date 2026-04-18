@@ -520,11 +520,12 @@ export interface AdminAnalyticsEmployeeRow {
 
 export interface AdminAnalyticsSiteRevenueRow {
   avgPerVisitAmount: number;
-  contractTypeLabel: string;
+  assigneeName: string;
   executedRounds: number;
   executionRate: number;
-    headquarterName: string;
+  headquarterName: string;
   href: string;
+  isSummaryRow?: boolean;
   plannedRevenue: number;
   plannedRounds: number;
   siteId: string;

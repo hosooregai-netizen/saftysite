@@ -46,7 +46,9 @@ function DonutOverviewCard({
           <svg className={styles.kpiDonutSvg} viewBox="-50 -50 100 100" role="img" aria-label={`${title}: 총 ${totalValue}`}>
             <title>{`${title}: 총 ${totalValue}`}</title>
             <path d={EMPTY_DONUT_RING} fill="#e8edf3" />
-            {slices.map((slice) => <path key={slice.label} d={slice.path} fill={slice.color} stroke="none" />)}
+            {slices.map((slice) => (
+              <path key={slice.label} d={slice.path} fill={slice.color} stroke="none" />
+            ))}
           </svg>
           <div className={styles.kpiDonutCenter} aria-hidden="true">
             <strong>{totalValue}</strong>
@@ -58,10 +60,17 @@ function DonutOverviewCard({
             <li key={entry.key} className={styles.kpiLegendItem}>
               <span
                 className={styles.kpiLegendSwatch}
-                style={{ backgroundColor: totalValue > 0 && entry.count > 0 ? colorByKey.get(entry.key) ?? '#4f8ae8' : '#d7e0e8' }}
+                style={{
+                  backgroundColor:
+                    totalValue > 0 && entry.count > 0
+                      ? colorByKey.get(entry.key) ?? '#4f8ae8'
+                      : '#d7e0e8',
+                }}
                 aria-hidden="true"
               />
-              <Link href={entry.href} className={styles.tableInlineLink}>{entry.label}</Link>
+              <Link href={entry.href} className={styles.tableInlineLink}>
+                {entry.label}
+              </Link>
               <span className={styles.kpiLegendValue}>{entry.count}</span>
             </li>
           ))}
@@ -108,7 +117,11 @@ function DeadlineSignalOverviewCard({
         <ul className={styles.kpiSignalLegend}>
           {normalizedEntries.map((entry) => (
             <li key={entry.key} className={styles.kpiSignalLegendItem}>
-              <span className={styles.kpiLegendSwatch} style={{ backgroundColor: entry.count > 0 ? entry.color : '#d7e0e8' }} aria-hidden="true" />
+              <span
+                className={styles.kpiLegendSwatch}
+                style={{ backgroundColor: entry.count > 0 ? entry.color : '#d7e0e8' }}
+                aria-hidden="true"
+              />
               <Link href={entry.href} className={`${styles.tableInlineLink} ${styles.kpiSignalLegendLabel}`}>
                 {entry.label}
               </Link>
@@ -144,9 +157,23 @@ export function OverviewVisualCards({
 }: OverviewVisualCardsProps) {
   return (
     <div className={styles.kpiVisualGrid}>
-      <DonutOverviewCard title="현장 상태" entries={siteStatusSummary.entries} totalLabel="전체 현장" totalValue={siteStatusSummary.totalSiteCount} />
-      <DonutOverviewCard title="교육/계측 자료 충족 상태" entries={quarterlyMaterialSummary.entries} totalLabel={quarterlyMaterialSummary.quarterLabel} totalValue={quarterlyMaterialSummary.totalSiteCount} />
-      <DeadlineSignalOverviewCard title="미발송 경과 현황" entries={deadlineSignalSummary.entries} totalValue={deadlineSignalSummary.totalReportCount} />
+      <DonutOverviewCard
+        title="관리 중인 현장"
+        entries={siteStatusSummary.entries}
+        totalLabel="관리 중인 현장"
+        totalValue={siteStatusSummary.totalSiteCount}
+      />
+      <DonutOverviewCard
+        title="교육/계측 자료 충족 상태"
+        entries={quarterlyMaterialSummary.entries}
+        totalLabel={quarterlyMaterialSummary.quarterLabel}
+        totalValue={quarterlyMaterialSummary.totalSiteCount}
+      />
+      <DeadlineSignalOverviewCard
+        title="미발송 경과 현황"
+        entries={deadlineSignalSummary.entries}
+        totalValue={deadlineSignalSummary.totalReportCount}
+      />
     </div>
   );
 }

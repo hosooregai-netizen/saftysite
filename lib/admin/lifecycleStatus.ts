@@ -11,7 +11,7 @@ import type {
 import type { SafetyHeadquarter } from '@/types/controller';
 
 type HeadquarterLike = Pick<SafetyHeadquarter, 'is_active' | 'lifecycle_status'>;
-type SiteLike = Pick<SafetySite, 'status' | 'lifecycle_status'> & {
+type SiteLike = Pick<SafetySite, 'status' | 'lifecycle_status' | 'contract_status'> & {
   is_active?: boolean | null;
 };
 type ReportLike = Pick<
@@ -44,6 +44,10 @@ function asRecord(value: unknown): Record<string, unknown> {
 
 function isLifecycleStatus(value: string): value is SafetyLifecycleStatus {
   return value === 'planned' || value === 'active' || value === 'closed' || value === 'deleted';
+}
+
+function isSiteLifecycleStatus(value: string): value is SafetySiteLifecycleStatus {
+  return value === 'planned' || value === 'active' || value === 'paused' || value === 'closed' || value === 'deleted';
 }
 
 function isHeadquarterLifecycleStatus(value: string): value is SafetyHeadquarterLifecycleStatus {
@@ -83,13 +87,16 @@ export function normalizeSiteLifecycleStatus(
   site: SiteLike | null | undefined,
 ): SafetySiteLifecycleStatus {
   const lifecycleStatus = normalizeText(site?.lifecycle_status);
-  if (isLifecycleStatus(lifecycleStatus)) {
+  if (isSiteLifecycleStatus(lifecycleStatus)) {
     return lifecycleStatus;
   }
 
   const legacyStatus = normalizeText(site?.status);
-  if (isLifecycleStatus(legacyStatus)) {
+  if (isSiteLifecycleStatus(legacyStatus)) {
     return legacyStatus;
+  }
+  if (normalizeText(site?.contract_status) === 'paused') {
+    return 'paused';
   }
 
   if (normalizeBoolean(site?.is_active) === false) {

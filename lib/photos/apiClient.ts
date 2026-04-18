@@ -100,12 +100,14 @@ export async function fetchPhotoAlbum(input: {
 
 export async function uploadPhotoAlbumAsset(input: {
   file: File;
+  roundNo: number;
   siteId: string;
   thumbnail?: File | null;
 }) {
   const headers = createAuthorizedHeaders();
   const body = new FormData();
   body.set('file', input.file, input.file.name);
+  body.set('round_no', String(input.roundNo));
   body.set('site_id', input.siteId);
   if (input.thumbnail) {
     body.set('thumbnail', input.thumbnail, input.thumbnail.name);

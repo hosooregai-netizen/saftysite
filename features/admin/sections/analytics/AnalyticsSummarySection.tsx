@@ -62,7 +62,7 @@ export function AnalyticsSummarySection({
             </div>
           ))}
         </div>
-        <div className={localStyles.loadingHint}>실적/매출 데이터를 준비하는 중입니다.</div>
+        <div className={localStyles.loadingHint}>실적/매출 데이터를 준비하고 있습니다.</div>
       </div>
     );
   }
@@ -96,7 +96,7 @@ export function AnalyticsSummarySection({
 
       <div className={localStyles.supportStrip}>
         <div className={localStyles.supportItem}>
-          <span className={localStyles.supportLabel}>실행 회차</span>
+          <span className={localStyles.supportLabel}>실회차</span>
           <strong className={localStyles.supportValue}>{analytics.stats.totalExecutedRounds}회</strong>
         </div>
         <div className={localStyles.supportItem}>
@@ -104,7 +104,7 @@ export function AnalyticsSummarySection({
           <strong className={localStyles.supportValue}>{analytics.stats.remainingRounds}회</strong>
         </div>
         <div className={localStyles.supportItem}>
-          <span className={localStyles.supportLabel}>집계 회차</span>
+          <span className={localStyles.supportLabel}>계약 회차</span>
           <strong className={localStyles.supportValue}>{analytics.stats.totalScopedRounds}회</strong>
         </div>
         <div className={localStyles.supportItem}>
@@ -117,8 +117,8 @@ export function AnalyticsSummarySection({
           <span className={localStyles.supportMeta}>제외 {analytics.stats.excludedSiteCount}개</span>
         </div>
       </div>
-      {isRefreshing ? <div className={localStyles.loadingHint}>조건 변경을 반영하는 중입니다.</div> : null}
-      {isLoading && !isRefreshing ? <div className={localStyles.loadingHint}>실적/매출 데이터를 불러오는 중입니다.</div> : null}
+      {isRefreshing ? <div className={localStyles.loadingHint}>조건 변경을 반영하고 있습니다.</div> : null}
+      {isLoading && !isRefreshing ? <div className={localStyles.loadingHint}>실적/매출 데이터를 불러오고 있습니다.</div> : null}
     </div>
   );
 }

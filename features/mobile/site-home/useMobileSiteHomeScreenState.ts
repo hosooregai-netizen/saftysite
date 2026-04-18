@@ -26,8 +26,6 @@ export function useMobileSiteHomeScreenState(siteKey: string) {
     currentSite,
     isAuthenticated && isReady && Boolean(currentSite),
   );
-  const photoUpload = useMobileSiteHomePhotoUpload(currentSite?.id ?? null);
-
   const siteSessions = useMemo(
     () => (currentSite ? getSessionsBySiteId(currentSite.id) : []),
     [currentSite, getSessionsBySiteId],
@@ -35,6 +33,10 @@ export function useMobileSiteHomeScreenState(siteKey: string) {
   const latestReport = useMemo(
     () => getLatestSiteReport({ reportItems, siteSessions }),
     [reportItems, siteSessions],
+  );
+  const photoUpload = useMobileSiteHomePhotoUpload(
+    currentSite?.id ?? null,
+    latestReport.latestReportRound || 1,
   );
   const quarterlyStatusLabel = useMemo(
     () => buildCurrentQuarterStatusLabel(quarterlyReports),
@@ -67,6 +69,7 @@ export function useMobileSiteHomeScreenState(siteKey: string) {
     latestGuidanceDate: latestReport.latestGuidanceDate,
     latestReportHref,
     latestReportProgressLabel: getProgressLabel(latestReport.latestReportProgress),
+    latestReportRound: latestReport.latestReportRound,
     latestReportTitle: latestReport.latestReportTitle,
     login,
     logout,

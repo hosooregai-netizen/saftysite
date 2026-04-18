@@ -28,7 +28,7 @@ export async function runAdminControlCenterSmoke(config: ClientSmokePlaywrightCo
       }
     }
     await page.getByRole('heading', { name: '운영 개요' }).waitFor({ state: 'visible' });
-    await page.getByText('현장 상태').first().waitFor();
+    await page.getByText('관리 중인 현장').first().waitFor();
 
     const priorityQuarterlyHeading = page.getByRole('heading', { name: /20억 이상 분기보고/ }).first();
     const priorityQuarterlySection = priorityQuarterlyHeading.locator('xpath=ancestor::section[1]');

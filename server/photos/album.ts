@@ -136,6 +136,7 @@ function buildAlbumUploadItem(asset: SafetyPhotoAsset, site: SafetySite): PhotoA
     headquarterName: getHeadquarterName(site),
     id: asset.id,
     previewUrl: normalizeSafetyAssetUrl(asset.thumbnailPath || asset.originalPath),
+    roundNo: asset.roundNo || 0,
     siteId: asset.siteId,
     siteName: getSiteName(site),
     sizeBytes: asset.sizeBytes,
@@ -154,6 +155,7 @@ function buildLegacyItem(input: {
   fileName: string;
   reportKey: string;
   reportTitle: string;
+  roundNo?: number;
   site: SafetySite;
   slotKey: string;
   source: string;
@@ -173,6 +175,7 @@ function buildLegacyItem(input: {
     headquarterName: getHeadquarterName(input.site),
     id,
     previewUrl: normalizeSafetyAssetUrl(input.source),
+    roundNo: input.roundNo ?? 0,
     siteId: input.site.id,
     siteName: getSiteName(input.site),
     sizeBytes: 0,
@@ -200,6 +203,7 @@ function buildDoc3Items(report: SafetyReport, site: SafetySite) {
         fileName: inferLegacyFileName(reportTitle, getSiteName(site), 'doc3', slotKey, source),
         reportKey: report.report_key,
         reportTitle,
+        roundNo: report.visit_round ?? 0,
         site,
         slotKey,
         source,
@@ -229,6 +233,7 @@ function buildDoc4Items(report: SafetyReport, site: SafetySite) {
           fileName: inferLegacyFileName(reportTitle, getSiteName(site), 'doc4', slotKey, source),
           reportKey: report.report_key,
           reportTitle,
+          roundNo: report.visit_round ?? 0,
           site,
           slotKey,
           source,
@@ -258,6 +263,7 @@ function buildDoc7Items(report: SafetyReport, site: SafetySite) {
           fileName: inferLegacyFileName(reportTitle, getSiteName(site), 'doc7', `${slotKey}-${index + 1}`, source),
           reportKey: report.report_key,
           reportTitle,
+          roundNo: report.visit_round ?? 0,
           site,
           slotKey: `${slotKey}-${index + 1}`,
           source,
@@ -283,6 +289,7 @@ function buildDoc10Items(report: SafetyReport, site: SafetySite) {
         fileName: inferLegacyFileName(reportTitle, getSiteName(site), 'doc10', slotKey, source),
         reportKey: report.report_key,
         reportTitle,
+        roundNo: report.visit_round ?? 0,
         site,
         slotKey,
         source,
@@ -307,6 +314,7 @@ function buildDoc11Items(report: SafetyReport, site: SafetySite) {
         fileName: inferLegacyFileName(reportTitle, getSiteName(site), 'doc11', slotKey, source),
         reportKey: report.report_key,
         reportTitle,
+        roundNo: report.visit_round ?? 0,
         site,
         slotKey,
         source,
@@ -335,6 +343,7 @@ function buildDoc12Items(report: SafetyReport, site: SafetySite) {
           fileName: inferLegacyFileName(reportTitle, getSiteName(site), 'doc12', `${slotKey}-${index + 1}`, source),
           reportKey: report.report_key,
           reportTitle,
+          roundNo: report.visit_round ?? 0,
           site,
           slotKey: `${slotKey}-${index + 1}`,
           source,
@@ -417,6 +426,7 @@ export function queryPhotoAlbumItems(
       if (sortBy === 'siteName') {
         return (
           left.siteName.localeCompare(right.siteName, 'ko') * sortDir ||
+          (left.roundNo - right.roundNo) * sortDir ||
           left.createdAt.localeCompare(right.createdAt) * sortDir
         );
       }
@@ -425,6 +435,8 @@ export function queryPhotoAlbumItems(
       const rightDate = sortBy === 'createdAt' ? right.createdAt : right.capturedAt || right.createdAt;
 
       return (
+        left.siteName.localeCompare(right.siteName, 'ko') * sortDir ||
+        (left.roundNo - right.roundNo) * sortDir ||
         leftDate.localeCompare(rightDate) * sortDir ||
         left.createdAt.localeCompare(right.createdAt) * sortDir ||
         left.fileName.localeCompare(right.fileName, 'ko')

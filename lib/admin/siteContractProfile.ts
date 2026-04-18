@@ -214,6 +214,7 @@ function normalizePhotoAsset(
     headquarterId,
     headquarterName: normalizeText(value.headquarterName),
     originalPath,
+    roundNo: normalizePositiveInteger(value.roundNo) ?? 0,
     sizeBytes: normalizeNumber(value.sizeBytes) ?? 0,
     siteId,
     siteName: normalizeText(value.siteName),

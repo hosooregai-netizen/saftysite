@@ -79,6 +79,7 @@ export function useInspectionSessionsAutosave(store: InspectionSessionsStore) {
         async (file) => {
           const uploaded = await uploadPhotoAlbumAsset({
             file,
+            roundNo: Math.max(1, session.reportNumber || 1),
             siteId,
           });
           return uploaded.previewUrl;

@@ -94,6 +94,10 @@ export function getLatestSiteReport({
       ? getSessionGuidanceDate(latestSession)
       : latestRemoteReport?.visitDate || '',
     latestReportKey: latestSession?.id || latestRemoteReport?.reportKey || '',
+    latestReportRound:
+      latestSession?.reportNumber ||
+      latestRemoteReport?.visitRound ||
+      1,
     latestReportProgress: latestSession
       ? getSessionProgress(latestSession).percentage
       : clampProgress(latestRemoteReport?.progressRate),

@@ -8,32 +8,40 @@ import type {
 } from '@/types/admin';
 import type { ControllerDashboardData } from '@/types/controller';
 
+const MANAGED_SITE_STATUSES = ['active', 'paused', 'planned'] as const;
+
 export function buildSiteStatusSummary(
   data: ControllerDashboardData,
   scopedSites: ControllerDashboardData['sites'] = data.sites,
 ): SafetyAdminSiteStatusSummary {
+  const managedSites = scopedSites.filter((site) =>
+    MANAGED_SITE_STATUSES.includes(
+      normalizeSiteLifecycleStatus(site) as (typeof MANAGED_SITE_STATUSES)[number],
+    ),
+  );
+
   return {
     entries: [
       {
-        count: scopedSites.filter((site) => normalizeSiteLifecycleStatus(site) === 'active').length,
+        count: managedSites.filter((site) => normalizeSiteLifecycleStatus(site) === 'active').length,
         href: getAdminSectionHref('headquarters', { siteStatus: 'active' }),
         key: 'active',
         label: '진행중',
       },
       {
-        count: scopedSites.filter((site) => normalizeSiteLifecycleStatus(site) === 'planned').length,
+        count: managedSites.filter((site) => normalizeSiteLifecycleStatus(site) === 'paused').length,
+        href: getAdminSectionHref('headquarters', { siteStatus: 'paused' }),
+        key: 'paused',
+        label: '중지',
+      },
+      {
+        count: managedSites.filter((site) => normalizeSiteLifecycleStatus(site) === 'planned').length,
         href: getAdminSectionHref('headquarters', { siteStatus: 'planned' }),
         key: 'planned',
         label: '미착수',
       },
-      {
-        count: scopedSites.filter((site) => normalizeSiteLifecycleStatus(site) === 'closed').length,
-        href: getAdminSectionHref('headquarters', { siteStatus: 'closed' }),
-        key: 'closed',
-        label: '종료',
-      },
     ],
-    totalSiteCount: scopedSites.length,
+    totalSiteCount: managedSites.length,
   };
 }
 
@@ -49,37 +57,39 @@ export function buildOverviewMetricCards(args: {
     metricMeta,
     quarterlyMaterialSummary,
     siteStatusSummary,
-    totalSiteCount,
   } = args;
+  const siteStatusByKey = Object.fromEntries(
+    siteStatusSummary.entries.map((entry) => [entry.key, entry.count]),
+  ) as Record<string, number>;
 
   return [
     {
       href: getAdminSectionHref('headquarters', { siteStatus: 'all' }),
-      label: '전체 현장 수',
-      meta: '관리 대상 전체 현장',
+      label: '관리 중인 현장 수',
+      meta: 'planned / active / paused 기준',
       tone: 'default',
-      value: `${totalSiteCount}건`,
+      value: `${siteStatusSummary.totalSiteCount}건`,
     },
     {
       href: getAdminSectionHref('headquarters', { siteStatus: 'active' }),
       label: '진행중',
-      meta: '운영중 현장',
+      meta: '운영 중인 현장',
       tone: 'default',
-      value: `${siteStatusSummary.entries[0]?.count ?? 0}건`,
+      value: `${siteStatusByKey.active ?? 0}건`,
+    },
+    {
+      href: getAdminSectionHref('headquarters', { siteStatus: 'paused' }),
+      label: '중지',
+      meta: '일시 중지 현장',
+      tone: 'default',
+      value: `${siteStatusByKey.paused ?? 0}건`,
     },
     {
       href: getAdminSectionHref('headquarters', { siteStatus: 'planned' }),
       label: '미착수',
-      meta: '준비중 현장',
+      meta: '준비 중인 현장',
       tone: 'default',
-      value: `${siteStatusSummary.entries[1]?.count ?? 0}건`,
-    },
-    {
-      href: getAdminSectionHref('headquarters', { siteStatus: 'closed' }),
-      label: '종료',
-      meta: '종료된 현장',
-      tone: 'default',
-      value: `${siteStatusSummary.entries[2]?.count ?? 0}건`,
+      value: `${siteStatusByKey.planned ?? 0}건`,
     },
     {
       href: getAdminSectionHref('headquarters', { siteStatus: 'active' }),
@@ -91,7 +101,7 @@ export function buildOverviewMetricCards(args: {
     {
       href: getAdminSectionHref('reports'),
       label: '발송 관리 대상',
-      meta: '지도 실시일 기준',
+      meta: '지연/미발송 보고서 기준',
       tone: dispatchManagementUnsentReportRows.length > 0 ? 'danger' : 'default',
       value: `${dispatchManagementUnsentReportRows.length}건`,
     },

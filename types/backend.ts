@@ -59,7 +59,7 @@ export type SafetyUserRole =
 
 export type SafetyLifecycleStatus = 'planned' | 'active' | 'closed' | 'deleted';
 export type SafetyHeadquarterLifecycleStatus = Exclude<SafetyLifecycleStatus, 'planned'>;
-export type SafetySiteLifecycleStatus = SafetyLifecycleStatus;
+export type SafetySiteLifecycleStatus = SafetyLifecycleStatus | 'paused';
 export type SafetyReportWorkflowStatus = 'draft' | 'submitted' | 'published';
 export type SafetyReportStatus = 'draft' | 'submitted' | 'published' | 'archived';
 export type SafetyEmploymentType = 'daily' | 'regular' | 'partner' | 'other';
@@ -1192,13 +1192,15 @@ export interface SafetyBackendAdminAnalyticsResponse {
   }>;
   site_revenue_rows: Array<{
     contract_contribution_revenue: number;
-    contract_type_label: string;
     executed_rounds: number;
     execution_rate: number;
+    assignee_name: string;
     headquarter_name: string;
     href: string;
+    is_summary_row?: boolean;
     planned_revenue: number;
     planned_rounds: number;
+    site_id: string;
     site_name: string;
     visit_revenue: number;
   }>;
@@ -1237,6 +1239,7 @@ export interface SafetyBackendPhotoAsset {
   headquarter_name: string;
   id: string;
   original_path: string;
+  round_no: number;
   size_bytes: number;
   site_id: string;
   site_name: string;

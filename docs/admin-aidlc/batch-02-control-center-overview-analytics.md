@@ -19,6 +19,7 @@ contract pack around:
 - `features/admin/lib/control-center-model/**`
 - `features/admin/sections/overview/**`
 - `features/admin/sections/analytics/**`
+- `features/admin/sections/photos/**`
 - `tests/client/admin/admin-control-center.spec.ts`
 - `tests/client/fixtures/adminSmokeHarness.ts`
 - `scripts/smoke-real-client/admin-sections/control-center.ts`
@@ -124,6 +125,20 @@ contract pack around:
 - Analytics revenue aggregation now treats past `technical_guidance` visit dates as practically
   completed even when the ERP workflow is still draft, matching the K2B Excel-style operational
   reality where `기술지도일` is often available before a manual completion action is recorded.
+- Overview and analytics now share the same managed-site policy: summary counts and status charts
+  treat `planned`, `active`, and `paused` as operator-managed sites while excluding `closed` and
+  `deleted` from default performance totals.
+- Legacy payloads that only expose `contract_status='paused'` are normalized on the read path so
+  the control center consistently renders the agreed `중지` status without requiring a separate
+  one-time backfill.
+- Analytics labels now follow the agreed round vocabulary across cards, detail tables, and export:
+  `계약 회차`, `실회차`, and `실적률`.
+- The analytics site detail table now replaces `계약유형` with `담당자`, and the detail view adds
+  a top summary row so total contract rounds, actual rounds, and performance rate stay visible
+  while operators scan individual sites.
+- Admin photo album flows now keep `roundNo` attached end-to-end so direct uploads, session-origin
+  uploads, and album rendering can group assets by `현장 -> 회차 -> 촬영일` while preserving the
+  existing EXIF-derived `captured_at` and GPS metadata path.
 - `AdminScreen.tsx` keeps the admin entry shell lean by showing the login title without the older
   helper description copy, and the `admin-control-center` smoke now explicitly waits for that
   login entry before authenticating.
@@ -169,6 +184,11 @@ git diff --check
     `SortableHeaderCell.tsx`, `ContentItemsSection.tsx`, `useReportsSectionState.ts`,
     `SchedulesSection.tsx`, and `useSitesSectionState.ts`
 - Follow-up control-center verification for the ending-soon and priority-site overview update:
+  - `npx tsc --noEmit --pretty false`
+    - passed
+  - `npm run aidlc:audit:admin`
+    - passed as advisory audit
+- Follow-up control-center verification for the paused-status, round-label, and photo-round update:
   - `npx tsc --noEmit --pretty false`
     - passed
   - `npm run aidlc:audit:admin`

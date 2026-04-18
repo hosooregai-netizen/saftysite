@@ -68,6 +68,7 @@ export interface InspectionSession {
 export interface InspectionSite {
   id: string;
   headquarterId?: string;
+  totalRounds?: number | null;
   title: string;
   customerName: string;
   siteName: string;

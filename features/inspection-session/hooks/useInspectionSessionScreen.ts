@@ -562,6 +562,7 @@ export function useInspectionSessionScreen(sessionId: string) {
       if (isImageFile && site?.id) {
         const uploaded = await uploadPhotoAlbumAsset({
           file,
+          roundNo: Math.max(1, session?.reportNumber || 1),
           siteId: site.id,
         });
         value = uploaded.previewUrl;

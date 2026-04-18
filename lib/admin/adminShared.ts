@@ -30,10 +30,10 @@ export const CONTROLLER_SECTIONS: Array<{
   label: string;
   description: string;
 }> = [
-  { key: 'overview', label: '관리 대시보드', description: '운영 모니터링' },
+  { key: 'overview', label: '관리 대시보드', description: '운영 현황 모니터링' },
   { key: 'reports', label: '전체 보고서', description: '보고서 통합 조회' },
   { key: 'analytics', label: '실적/매출', description: '성과 분석' },
-  { key: 'mailbox', label: '메일함', description: '발송·수신·회신 관리' },
+  { key: 'mailbox', label: '메일함', description: '발송 및 수신 관리' },
   { key: 'photos', label: '사진첩', description: '현장 사진 통합 조회' },
   { key: 'schedules', label: '일정/캘린더', description: '방문 일정 관리' },
   { key: 'users', label: '사용자', description: '계정 관리' },
@@ -58,7 +58,6 @@ export function getControllerSectionHref(
 
   Object.entries(query).forEach(([key, value]) => {
     if (key === 'section') return;
-
     if (typeof value === 'string' && value.trim()) {
       searchParams.set(key, value);
     }
@@ -76,8 +75,8 @@ export function isLegacyControllerSectionKey(
 const ADMIN_USER_ROLES = new Set<SafetyUserRole>(['super_admin', 'admin', 'controller']);
 
 export const USER_ROLE_OPTIONS: Array<{ value: UserRoleView; label: string }> = [
-  { value: 'admin', label: '관리자' },
-  { value: 'field_agent', label: '현장 담당자' },
+  { value: 'admin', label: '관리자/관제' },
+  { value: 'field_agent', label: '지도요원' },
 ];
 
 export function isAdminUserRole(role: SafetyUserRole | null | undefined): boolean {
@@ -110,25 +109,29 @@ export function toBackendUserRole(
 }
 
 export function getUserRoleLabel(role: SafetyUserRole): string {
-  return toUserRoleView(role) === 'admin' ? '관리자' : '현장 담당자';
+  return toUserRoleView(role) === 'admin' ? '관리자/관제' : '지도요원';
 }
 
 export const SITE_STATUS_OPTIONS: Array<{ value: Exclude<SafetySiteStatus, 'deleted'>; label: string }> = [
-  { value: 'planned', label: '준비중' },
-  { value: 'active', label: '운영중' },
-  { value: 'closed', label: '종료' },
+  { value: 'planned', label: '미착수' },
+  { value: 'active', label: '진행중' },
+  { value: 'paused', label: '중지' },
+  { value: 'closed', label: '종료 예정' },
 ];
 
 export function normalizeSiteStatusForDisplay(
   value: string | null | undefined,
 ): Exclude<SafetySiteStatus, 'deleted'> {
-  return value === 'planned' || value === 'active' || value === 'closed' ? value : 'active';
+  return value === 'planned' || value === 'active' || value === 'paused' || value === 'closed'
+    ? value
+    : 'active';
 }
 
 export const SITE_STATUS_LABELS: Record<SafetySiteStatus, string> = {
-  planned: '준비중',
-  active: '운영중',
-  closed: '종료',
+  planned: '미착수',
+  active: '진행중',
+  paused: '중지',
+  closed: '종료 예정',
   deleted: '삭제',
 };
 
@@ -151,15 +154,15 @@ export const CONTENT_TYPE_OPTIONS: Array<{
   {
     value: 'measurement_template',
     label: '계측 기준 템플릿',
-    description: '문서 작성 시 장비 선택 후 안전 기준을 자동으로 채웁니다.',
+    description: '문서 작성 시 장비별 안전 기준을 자동으로 채웁니다.',
     editorMode: 'text',
     bodyLabel: '안전 기준',
-    usageHint: '장비명과 안전 기준만 입력하면 작성 화면에서 자동 반영됩니다.',
+    usageHint: '장비명과 안전 기준을 입력하면 문서 작성 화면에 자동 반영됩니다.',
   },
   {
     value: 'safety_news',
     label: '안전 정보',
-    description: '문서 14의 제목과 첨부 자료로 연결되는 공지형 콘텐츠입니다.',
+    description: '문서 14에 연결되는 공지형 콘텐츠입니다.',
     editorMode: 'image',
     bodyLabel: '안내 문구',
     usageHint: '제목, 안내 문구, PDF 또는 이미지 자료를 함께 등록해 주세요.',
@@ -178,7 +181,7 @@ export const CONTENT_TYPE_OPTIONS: Array<{
     description: 'OPS(One Point Sheet) 설명과 대표 이미지를 관리합니다.',
     editorMode: 'image',
     bodyLabel: 'OPS 설명',
-    usageHint: '분기 보고서의 OPS 섹션에서 사용할 자료입니다.',
+    usageHint: '분기 보고서의 OPS 섹션에서 사용하는 자료입니다.',
   },
   {
     value: 'doc7_reference_material',
@@ -198,21 +201,21 @@ export const CONTENT_TYPE_OPTIONS: Array<{
   {
     value: 'correction_result_option',
     label: '시정 결과 옵션',
-    description: '시정 결과 선택지에 노출되는 목록형 값입니다.',
+    description: '시정 결과 선택지로 노출되는 목록 값입니다.',
     editorMode: 'list',
     bodyLabel: '옵션 값',
   },
   {
     value: 'tbm_template',
     label: 'TBM 템플릿',
-    description: 'TBM 문서 작성에 쓰는 텍스트 템플릿입니다.',
+    description: 'TBM 문서 작성에 사용하는 텍스트 템플릿입니다.',
     editorMode: 'text',
     bodyLabel: '템플릿 내용',
   },
   {
     value: 'notice_template',
     label: '공지 템플릿',
-    description: '공지 및 작업일지 계열 문서에 공통으로 쓰는 템플릿입니다.',
+    description: '공지 및 작업지시 계열 문서에 공통으로 쓰는 템플릿입니다.',
     editorMode: 'text',
     bodyLabel: '템플릿 내용',
   },
@@ -226,7 +229,7 @@ export const CONTENT_TYPE_OPTIONS: Array<{
   {
     value: 'ai_prompt',
     label: 'AI 프롬프트',
-    description: 'AI 보조 작성용 프롬프트를 관리합니다.',
+    description: 'AI 보조 작성에 사용하는 프롬프트를 관리합니다.',
     editorMode: 'text',
     bodyLabel: '프롬프트',
   },

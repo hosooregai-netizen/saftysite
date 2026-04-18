@@ -60,7 +60,7 @@ function isDuplicateFieldConflict(error: unknown, fieldName: string): error is S
 }
 
 function normalizeSafetySiteStatus(value: string | null | undefined): SafetySiteStatus {
-  return value === 'planned' || value === 'active' || value === 'closed' || value === 'deleted'
+  return value === 'planned' || value === 'active' || value === 'paused' || value === 'closed' || value === 'deleted'
     ? value
     : 'active';
 }

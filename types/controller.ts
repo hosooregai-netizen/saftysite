@@ -8,7 +8,7 @@ import type {
   SafetyUserRole,
 } from '@/types/backend';
 
-export type SafetySiteStatus = 'planned' | 'active' | 'closed' | 'deleted';
+export type SafetySiteStatus = 'planned' | 'active' | 'paused' | 'closed' | 'deleted';
 
 export interface SafetyHeadquarter {
   id: string;

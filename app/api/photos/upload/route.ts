@@ -33,11 +33,15 @@ export async function POST(request: Request): Promise<Response> {
     const token = readRequiredAdminToken(request);
     const formData = await request.formData();
     const siteId = normalizeText(formData.get('site_id'));
+    const roundNo = Number.parseInt(normalizeText(formData.get('round_no')), 10);
     const originalFile = formData.get('file');
     const thumbnailFile = formData.get('thumbnail');
 
     if (!siteId) {
       return NextResponse.json({ error: '업로드할 현장을 선택해 주세요.' }, { status: 400 });
+    }
+    if (!Number.isInteger(roundNo) || roundNo <= 0) {
+      return NextResponse.json({ error: '업로드할 회차를 선택해 주세요.' }, { status: 400 });
     }
 
     if (!(originalFile instanceof File) || !originalFile.name) {
@@ -66,6 +70,7 @@ export async function POST(request: Request): Promise<Response> {
       sanitizeFileName(originalFile.name || 'photo-original.jpg', 'photo-original.jpg'),
     );
     uploadFormData.set('site_id', siteId);
+    uploadFormData.set('round_no', String(roundNo));
     if (thumbnailFile instanceof File && thumbnailFile.size > 0) {
       uploadFormData.set(
         'thumbnail',

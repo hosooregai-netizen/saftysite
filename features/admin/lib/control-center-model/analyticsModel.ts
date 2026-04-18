@@ -1,4 +1,5 @@
 import { getAdminSectionHref } from '@/lib/admin';
+import { normalizeSiteLifecycleStatus } from '@/lib/admin/lifecycleStatus';
 import { parseSiteContractProfile, resolveSiteRevenueProfile } from '@/lib/admin/siteContractProfile';
 import type { ControllerDashboardData } from '@/types/controller';
 import type { SafetyReportListItem } from '@/types/backend';
@@ -11,7 +12,6 @@ import {
   calculateChangeRate,
   formatAnalyticsStatValue,
   getContractBucketKey,
-  getContractTypeDisplayLabel,
   matchesAnalyticsQuery,
   resolvePrimaryContractTypeLabel,
 } from './analyticsSupport';
@@ -116,22 +116,20 @@ function buildSiteRevenueRows(
   detailRevenueEvents: AnalyticsRevenueEvent[],
   normalizedQuery: string,
 ): AdminAnalyticsSiteRevenueRow[] {
-  return visibleSites
+  const rows = visibleSites
     .map((site) => {
       const currentScheduleRows = detailScheduleRows.filter((row) => row.siteId === site.id);
       const currentRevenueEvents = detailRevenueEvents.filter((row) => row.siteId === site.id);
-      const profile = parseSiteContractProfile(site);
       const revenueProfile = resolveSiteRevenueProfile(site);
       const visitRevenue = sumRevenueEvents(currentRevenueEvents);
       const executedRounds = countRevenueEvents(currentRevenueEvents);
       const plannedRevenue = revenueProfile.plannedRevenue;
       const plannedRounds = revenueProfile.plannedRounds;
-      const contractTypeLabel = getContractTypeDisplayLabel(getContractBucketKey(profile));
+      const assigneeName = currentScheduleRows[0]?.assigneeName || currentRevenueEvents[0]?.assigneeName || '';
       const matchesQuery = normalizedQuery
         ? matchesAnalyticsQuery(
             {
-              assigneeName: currentScheduleRows[0]?.assigneeName || currentRevenueEvents[0]?.assigneeName || '',
-              contractTypeLabel,
+              assigneeName,
               headquarterName: site.headquarter_detail?.name || site.headquarter?.name || '-',
               siteName: site.site_name,
             },
@@ -140,12 +138,13 @@ function buildSiteRevenueRows(
         : true;
 
       return {
+        assigneeName,
         avgPerVisitAmount: calculateAveragePerVisitAmount(visitRevenue, executedRounds),
-        contractTypeLabel,
         executedRounds,
         executionRate: plannedRounds > 0 ? executedRounds / plannedRounds : 0,
         headquarterName: site.headquarter_detail?.name || site.headquarter?.name || '-',
         href: getAdminSectionHref('headquarters', { headquarterId: site.headquarter_id, siteId: site.id }),
+        isSummaryRow: false,
         matchesQuery,
         plannedRevenue,
         plannedRounds,
@@ -162,6 +161,30 @@ function buildSiteRevenueRows(
       void matchesQuery;
       return row;
     });
+  const totalVisitRevenue = rows.reduce((sum, row) => sum + row.visitRevenue, 0);
+  const totalPlannedRevenue = rows.reduce((sum, row) => sum + row.plannedRevenue, 0);
+  const totalPlannedRounds = rows.reduce((sum, row) => sum + row.plannedRounds, 0);
+  const totalExecutedRounds = rows.reduce((sum, row) => sum + row.executedRounds, 0);
+
+  return rows.length > 0
+    ? [
+        {
+          assigneeName: '-',
+          avgPerVisitAmount: calculateAveragePerVisitAmount(totalVisitRevenue, totalExecutedRounds),
+          executedRounds: totalExecutedRounds,
+          executionRate: totalPlannedRounds > 0 ? totalExecutedRounds / totalPlannedRounds : 0,
+          headquarterName: `${rows.length}개 현장`,
+          href: '',
+          isSummaryRow: true,
+          plannedRevenue: totalPlannedRevenue,
+          plannedRounds: totalPlannedRounds,
+          siteId: '__summary__',
+          siteName: '합계',
+          visitRevenue: totalVisitRevenue,
+        },
+        ...rows,
+      ]
+    : rows;
 }
 
 export function buildAdminAnalyticsModel(
@@ -193,9 +216,11 @@ export function buildAdminAnalyticsModel(
     data.sites
       .filter((site) => {
         const profile = parseSiteContractProfile(site);
+        const lifecycleStatus = normalizeSiteLifecycleStatus(site);
         if (filters.headquarterId && site.headquarter_id !== filters.headquarterId) return false;
         if (filters.contractType && getContractBucketKey(profile) !== filters.contractType) return false;
         if (filters.userId && !userScopedSiteIds.has(site.id)) return false;
+        if (!['planned', 'active', 'paused'].includes(lifecycleStatus)) return false;
         return true;
       })
       .map((site) => site.id),

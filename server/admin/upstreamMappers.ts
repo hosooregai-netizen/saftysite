@@ -813,7 +813,9 @@ export function mapBackendAnalyticsResponse(
     avgPerVisitAmount:
       row.executed_rounds > 0 ? row.visit_revenue / row.executed_rounds : 0,
     completionRate:
-      row.total_assigned_rounds > 0 ? row.executed_rounds / row.total_assigned_rounds : 0,
+      (row.planned_rounds ?? row.total_assigned_rounds) > 0
+        ? row.executed_rounds / (row.planned_rounds ?? row.total_assigned_rounds)
+        : 0,
     overdueCount: row.overdue_count,
     plannedRevenue: row.planned_revenue ?? 0,
     plannedRounds: row.planned_rounds ?? 0,
@@ -826,16 +828,17 @@ export function mapBackendAnalyticsResponse(
     executedRounds: row.executed_rounds,
   }));
   const siteRevenueRows = response.site_revenue_rows.map((row) => ({
+    assigneeName: normalizeText(row.assignee_name),
     avgPerVisitAmount:
       row.executed_rounds > 0 ? row.visit_revenue / row.executed_rounds : 0,
-    contractTypeLabel: normalizeText(row.contract_type_label),
     executedRounds: row.executed_rounds,
     executionRate: row.execution_rate ?? 0,
     headquarterName: normalizeText(row.headquarter_name),
     href: normalizeText(row.href),
+    isSummaryRow: Boolean(row.is_summary_row),
     plannedRevenue: row.planned_revenue ?? 0,
     plannedRounds: row.planned_rounds ?? 0,
-    siteId: normalizeText(row.href) || normalizeText(row.site_name),
+    siteId: normalizeText(row.site_id) || normalizeText(row.href) || normalizeText(row.site_name),
     siteName: normalizeText(row.site_name),
     visitRevenue: row.visit_revenue,
   }));
@@ -905,6 +908,7 @@ export function mapBackendPhotoAsset(asset: SafetyBackendPhotoAsset): SafetyPhot
     headquarterName: normalizeText(asset.headquarter_name),
     id: normalizeText(asset.id),
     originalPath: buildSafetyAdminUpstreamUrl(normalizeText(asset.original_path)),
+    roundNo: typeof asset.round_no === 'number' ? asset.round_no : 0,
     sizeBytes: typeof asset.size_bytes === 'number' ? asset.size_bytes : 0,
     siteId: normalizeText(asset.site_id),
     siteName: normalizeText(asset.site_name),
@@ -1258,6 +1262,7 @@ export function buildPhotoAlbumItemFromAsset(
     headquarterName,
     id: asset.id,
     previewUrl: normalizeSafetyAssetUrl(asset.thumbnailPath || asset.originalPath),
+    roundNo: asset.roundNo,
     siteId: asset.siteId,
     siteName,
     sizeBytes: asset.sizeBytes,
