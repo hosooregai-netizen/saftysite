@@ -202,12 +202,15 @@ export interface SafetySite {
   updated_at: string;
 }
 
-export interface SafetyContentItem {
+export interface SafetyContentItemListItem {
   id: string;
   content_type: SafetyContentType;
   title: string;
   code: string | null;
-  body: unknown;
+  body?: unknown | null;
+  body_included: boolean;
+  preview_text: string;
+  attachment_summary: string;
   tags: string[];
   sort_order: number;
   effective_from: string | null;
@@ -215,6 +218,11 @@ export interface SafetyContentItem {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface SafetyContentItem extends SafetyContentItemListItem {
+  body: unknown;
+  body_included: true;
 }
 
 export interface SafetySignatureRecord {

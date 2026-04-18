@@ -12,7 +12,11 @@ import {
   contentBodyToText,
   normalizeMapperText,
 } from '@/lib/safetyApiMappers/utils';
-import type { SafetyContentItem, SafetyContentType } from '@/types/backend';
+import type {
+  SafetyContentItem,
+  SafetyContentItemListItem,
+  SafetyContentType,
+} from '@/types/backend';
 
 export interface ContentFormState {
   accident_type: string;
@@ -254,7 +258,10 @@ export function buildContentBody(form: ContentFormState): Record<string, unknown
   return textBody;
 }
 
-export function getContentPreview(item: SafetyContentItem): string {
+export function getContentPreview(item: SafetyContentItemListItem): string {
+  if (!item.body_included) {
+    return item.preview_text || normalizeMapperText(item.title) || '-';
+  }
   const meta = CONTENT_TYPE_META[item.content_type];
   const text =
     item.content_type === 'measurement_template'
@@ -293,7 +300,10 @@ export function getContentPreview(item: SafetyContentItem): string {
   return text || '-';
 }
 
-export function getContentAttachmentSummary(item: SafetyContentItem): string {
+export function getContentAttachmentSummary(item: SafetyContentItemListItem): string {
+  if (!item.body_included) {
+    return item.attachment_summary || '-';
+  }
   if (item.content_type === 'safety_news') {
     return contentBodyToAssetUrl(item.body) ? 'PDF/이미지 업로드' : 'PDF/이미지 없음';
   }

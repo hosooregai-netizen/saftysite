@@ -35,6 +35,7 @@ import type {
   SafetyBackendSmsProviderStatusResponse,
   SafetyBackendSmsSendResponse,
   SafetyContentItem,
+  SafetyContentItemListItem,
   SafetyReport,
   SafetyReportListItem,
   SafetySite,
@@ -317,8 +318,13 @@ export async function fetchAdminCoreData(
 ): Promise<ControllerDashboardData> {
   const [directoryData, contentItems] = await Promise.all([
     fetchAdminDirectoryData(token, request),
-    fetchAllAdminPages<SafetyContentItem>(token, request, (limit, offset) =>
-      withQuery('/content-items', { active_only: true, limit: Math.min(limit, CONTENT_LIST_LIMIT), offset }),
+    fetchAllAdminPages<SafetyContentItemListItem>(token, request, (limit, offset) =>
+      withQuery('/content-items', {
+        active_only: true,
+        include_body: false,
+        limit: Math.min(limit, CONTENT_LIST_LIMIT),
+        offset,
+      }),
     ),
   ]);
 

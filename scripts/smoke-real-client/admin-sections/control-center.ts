@@ -11,12 +11,18 @@ type OverviewCounts = {
   unsentCount: number;
 };
 
+type ContentSummaryMetrics = {
+  bodyIncluded: boolean;
+  rows: number;
+};
+
 function hasArray(value: unknown) {
   return Array.isArray(value);
 }
 
 export async function runAdminControlCenterSection(page: Page) {
   let latestOverviewCounts: OverviewCounts | null = null;
+  let latestContentSummaryMetrics: ContentSummaryMetrics | null = null;
   page.on('response', async (response) => {
     if (!response.url().includes('/api/admin/dashboard/overview') || !response.ok()) return;
 
@@ -43,6 +49,24 @@ export async function runAdminControlCenterSection(page: Page) {
         siteStatusEntryCount: -1,
         totalSiteCount: -1,
         unsentCount: -1,
+      };
+    }
+  });
+  page.on('response', async (response) => {
+    if (!response.url().includes('/api/safety/content-items') || !response.ok()) return;
+    if (!response.url().includes('include_body=false')) return;
+
+    try {
+      const payload = await response.json();
+      const rows = Array.isArray(payload) ? payload : [];
+      latestContentSummaryMetrics = {
+        bodyIncluded: rows.some((row) => row && typeof row === 'object' && row.body_included !== false),
+        rows: rows.length,
+      };
+    } catch {
+      latestContentSummaryMetrics = {
+        bodyIncluded: true,
+        rows: -1,
       };
     }
   });
@@ -102,4 +126,22 @@ export async function runAdminControlCenterSection(page: Page) {
     page.locator('#analytics-filter-period').selectOption('year'),
   ]);
   await page.getByText('수행 실적').first().waitFor();
+
+  await page.goto(`${baseUrl}/admin?section=content`, { waitUntil: 'load' });
+  await page.waitForResponse((response) => {
+    return response.url().includes('/api/safety/content-items') && response.ok();
+  });
+  await waitHeading(page, '콘텐츠 데이터');
+  if (!latestContentSummaryMetrics) {
+    throw new Error('Admin content smoke did not observe /api/safety/content-items summary request.');
+  }
+  const contentSummaryMetrics: ContentSummaryMetrics = latestContentSummaryMetrics ?? {
+    bodyIncluded: true,
+    rows: -1,
+  };
+  if (contentSummaryMetrics.rows < 0 || contentSummaryMetrics.bodyIncluded) {
+    throw new Error(
+      `Admin content smoke expected summary-only content items payload: ${JSON.stringify(contentSummaryMetrics)}`,
+    );
+  }
 }

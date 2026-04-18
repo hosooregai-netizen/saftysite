@@ -21,9 +21,11 @@ import {
   toNullableText,
 } from '@/lib/admin';
 import { exportAdminWorkbook } from '@/lib/admin/exportClient';
+import { fetchSafetyContentItemDetail } from '@/lib/safetyApi/adminEndpoints';
+import { readSafetyAuthToken } from '@/lib/safetyApi';
 import { formatDateRange } from '@/lib/safetyApiMappers/utils';
 import type { TableSortState } from '@/types/admin';
-import type { SafetyContentItem } from '@/types/backend';
+import type { SafetyContentItem, SafetyContentItemListItem } from '@/types/backend';
 import { ContentAssetField } from './ContentAssetField';
 import {
   buildContentBody,
@@ -82,7 +84,7 @@ interface ContentItemsSectionProps {
   canDelete: boolean;
   canUploadAssets: boolean;
   currentPage: number;
-  items: SafetyContentItem[];
+  items: SafetyContentItemListItem[];
   loading: boolean;
   onCreate: (input: {
     content_type: SafetyContentItem['content_type'];
@@ -136,6 +138,7 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
     key: 'title',
   });
   const [form, setForm] = useState(createEmptyContentForm());
+  const [detailLoadingId, setDetailLoadingId] = useState<string | null>(null);
   const [disasterCaseBatchItems, setDisasterCaseBatchItems] = useState<DisasterCaseBatchItem[]>(
     createEmptyDisasterCaseBatchItems(),
   );
@@ -243,10 +246,30 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
     setDisasterCaseBatchItems(createEmptyDisasterCaseBatchItems());
   };
 
-  const openEdit = (item: SafetyContentItem) => {
-    setEditingId(item.id);
-    setForm(mapContentItemToForm(item));
-    setDisasterCaseBatchItems(createEmptyDisasterCaseBatchItems());
+  const openEdit = async (item: SafetyContentItemListItem) => {
+    try {
+      const detailItem =
+        item.body_included && item.body !== undefined && item.body !== null
+          ? (item as SafetyContentItem)
+          : await (async () => {
+              const token = readSafetyAuthToken();
+              if (!token) {
+                throw new Error('로그인이 만료되었습니다.');
+              }
+              setDetailLoadingId(item.id);
+              try {
+                return await fetchSafetyContentItemDetail(token, item.id);
+              } finally {
+                setDetailLoadingId(null);
+              }
+            })();
+      setEditingId(detailItem.id);
+      setForm(mapContentItemToForm(detailItem));
+      setDisasterCaseBatchItems(createEmptyDisasterCaseBatchItems());
+    } catch (error) {
+      console.error('Failed to load content item detail', error);
+      window.alert('콘텐츠 상세를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');
+    }
   };
 
   const closeModal = () => {
@@ -327,7 +350,7 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
     closeModal();
   };
 
-  const handleDeleteContentItem = async (item: SafetyContentItem) => {
+  const handleDeleteContentItem = async (item: SafetyContentItemListItem) => {
     const confirmed = window.confirm(
       `'${item.title}' 콘텐츠를 비활성화하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`,
     );
@@ -497,7 +520,7 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
                                 {
                                   label: '수정',
                                   onSelect: () => {
-                                    if (!busy) openEdit(item);
+                                    if (!busy && !detailLoadingId) void openEdit(item);
                                   },
                                 },
                                 ...(canDelete

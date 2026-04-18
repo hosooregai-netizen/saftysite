@@ -1,24 +1,22 @@
 'use client';
 
 import { useCallback, useEffect } from 'react';
-import { fetchSafetyContentItems, fetchSafetyReportList, readSafetyAuthToken, SafetyApiError } from '@/lib/safetyApi';
+import { fetchSafetyReportList, readSafetyAuthToken, SafetyApiError } from '@/lib/safetyApi';
 import {
+  fetchSafetyContentItemsAdmin,
   fetchSafetyHeadquartersPage,
   fetchSafetySitesAdminPage,
 } from '@/lib/safetyApi/adminEndpoints';
 import {
+  ADMIN_DASHBOARD_BOOTSTRAP_CONTENT_LIST_CACHE_KEY,
   ADMIN_DASHBOARD_BOOTSTRAP_MAILBOX_DIRECTORY_CACHE_KEY,
   ADMIN_DASHBOARD_BOOTSTRAP_REPORT_LIST_CACHE_KEY,
   ADMIN_DASHBOARD_BOOTSTRAP_SITES_CACHE_KEY,
 } from '@/features/admin/lib/adminDashboardBootstrapCache';
 import { readAdminSessionCache, writeAdminSessionCache } from '@/features/admin/lib/adminSessionCache';
-import {
-  readSafetyContentItemsSessionCache,
-  writeSafetyContentItemsSessionCache,
-} from '@/lib/safetyApi/contentItemsCache';
 import { filterVisibleAdminReportListItems } from '@/lib/admin/reportVisibility';
 import type { ControllerDashboardData } from '@/types/controller';
-import type { SafetyReportListItem } from '@/types/backend';
+import type { SafetyContentItemListItem, SafetyReportListItem } from '@/types/backend';
 import { ADMIN_REPORT_LIST_LIMIT, getErrorMessage } from './adminDashboardStateShared';
 
 export type AdminCoreDataScope = 'none' | 'sites' | 'mailbox';
@@ -135,7 +133,12 @@ export function useAdminDashboardDataLoaders({
       if (!enabled) return;
       const force = options?.force === true;
       const cachedContentItems =
-        !force && contentCacheScope ? readSafetyContentItemsSessionCache(contentCacheScope) : null;
+        !force && contentCacheScope
+          ? readAdminSessionCache<SafetyContentItemListItem[]>(
+              contentCacheScope,
+              ADMIN_DASHBOARD_BOOTSTRAP_CONTENT_LIST_CACHE_KEY,
+            ).value
+          : null;
       const hasCachedContentItems = cachedContentItems !== null;
       const hasVisibleContentItems = data.contentItems.length > 0;
       setError(null);
@@ -153,9 +156,13 @@ export function useAdminDashboardDataLoaders({
 
       try {
         const token = getToken();
-        const contentItems = await fetchSafetyContentItems(token, { force });
+        const contentItems = await fetchSafetyContentItemsAdmin(token, { includeBody: false });
         if (contentCacheScope) {
-          writeSafetyContentItemsSessionCache(contentCacheScope, contentItems);
+          writeAdminSessionCache(
+            contentCacheScope,
+            ADMIN_DASHBOARD_BOOTSTRAP_CONTENT_LIST_CACHE_KEY,
+            contentItems,
+          );
         }
         setData((current) => ({ ...current, contentItems }));
         setHasLoadedContentData(true);

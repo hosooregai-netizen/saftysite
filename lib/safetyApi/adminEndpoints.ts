@@ -1,5 +1,6 @@
 import type {
   SafetyContentItem,
+  SafetyContentItemListItem,
   SafetySite,
   SafetyUser,
 } from '@/types/backend';
@@ -243,22 +244,35 @@ export const deactivateSafetyAssignment = (token: string, id: string) =>
   requestSafetyApi<SafetyAssignment>(`/assignments/${id}`, { method: 'DELETE' }, token);
 export const deleteSafetyAssignment = deactivateSafetyAssignment;
 
-export const fetchSafetyContentItemsAdmin = (token: string) =>
-  requestSafetyApi<SafetyContentItem[]>(
-    withQuery('/content-items', { active_only: true, limit: ADMIN_CONTENT_ITEM_LIMIT }),
+export const fetchSafetyContentItemsAdmin = (
+  token: string,
+  options: { includeBody?: boolean } = {},
+) =>
+  requestSafetyApi<SafetyContentItemListItem[]>(
+    withQuery('/content-items', {
+      active_only: true,
+      include_body: options.includeBody === true,
+      limit: ADMIN_CONTENT_ITEM_LIMIT,
+    }),
     {},
     token
   );
-export const fetchSafetyContentItemsAdminPage = (token: string, options: AdminListQueryOptions = {}) =>
-  requestSafetyApi<SafetyContentItem[]>(
+export const fetchSafetyContentItemsAdminPage = (
+  token: string,
+  options: AdminListQueryOptions & { includeBody?: boolean } = {},
+) =>
+  requestSafetyApi<SafetyContentItemListItem[]>(
     withQuery('/content-items', {
       active_only: true,
+      include_body: options.includeBody === true,
       limit: options.limit ?? ADMIN_CONTENT_ITEM_LIMIT,
       offset: options.offset ?? 0,
     }),
     {},
     token
   );
+export const fetchSafetyContentItemDetail = (token: string, id: string) =>
+  requestSafetyApi<SafetyContentItem>(`/content-items/${id}`, {}, token);
 export const uploadSafetyContentAsset = (token: string, file: File) => {
   const body = new FormData();
   body.set('file', file);

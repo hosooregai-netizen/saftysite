@@ -1,7 +1,7 @@
 import type {
   SiteDispatchPolicy,
   SafetyHeadquarterLifecycleStatus,
-  SafetyContentItem,
+  SafetyContentItemListItem,
   SafetyContentType,
   SafetySite,
   SafetyUser,
@@ -166,5 +166,5 @@ export interface ControllerDashboardData {
   headquarters: SafetyHeadquarter[];
   sites: SafetySite[];
   assignments: SafetyAssignment[];
-  contentItems: SafetyContentItem[];
+  contentItems: SafetyContentItemListItem[];
 }

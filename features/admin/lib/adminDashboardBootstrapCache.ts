@@ -8,6 +8,7 @@
 export const ADMIN_DASHBOARD_BOOTSTRAP_REPORT_LIST_CACHE_KEY = 'bootstrap:report-list';
 export const ADMIN_DASHBOARD_BOOTSTRAP_SITES_CACHE_KEY = 'bootstrap:sites-data';
 export const ADMIN_DASHBOARD_BOOTSTRAP_MAILBOX_DIRECTORY_CACHE_KEY = 'bootstrap:mailbox-directory';
+export const ADMIN_DASHBOARD_BOOTSTRAP_CONTENT_LIST_CACHE_KEY = 'bootstrap:content-list';
 
 /**
  * Legacy keys are still cleared during invalidation so existing sessions
@@ -17,4 +18,5 @@ export const ADMIN_DASHBOARD_BOOTSTRAP_LEGACY_CACHE_KEYS = [
   'report-list',
   'sites-data',
   'mailbox-directory',
+  'content-list',
 ] as const;
