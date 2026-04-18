@@ -27,7 +27,6 @@ import type {
   SafetyBackendMailMessage,
   SafetyBackendMailThread,
   SafetyBackendMailThreadDetail,
-  SafetyBackendNotificationFeedResponse,
   SafetyBackendExcelApplyResult,
   SafetyBackendExcelImportPreview,
   SafetyBackendPhotoAsset,
@@ -1100,18 +1099,6 @@ export function sendSafetySmsServer(
   );
 }
 
-export function fetchNotificationsServer(
-  token: string,
-  request: Request | null = null,
-): Promise<SafetyBackendNotificationFeedResponse> {
-  return requestSafetyAdminServer<SafetyBackendNotificationFeedResponse>(
-    '/notifications',
-    {},
-    token,
-    request,
-  );
-}
-
 export function fetchWorkerSchedulesServer(
   token: string,
   params: Record<string, string | number | boolean | null | undefined>,
@@ -1139,35 +1126,6 @@ export function updateWorkerScheduleServer(
       headers: {
         'Content-Type': 'application/json',
       },
-    },
-    token,
-    request,
-  );
-}
-
-export function acknowledgeNotificationServer(
-  token: string,
-  notificationId: string,
-  request: Request | null = null,
-): Promise<{ acknowledged_ids: string[] }> {
-  return requestSafetyAdminServer<{ acknowledged_ids: string[] }>(
-    `/notifications/${encodeURIComponent(notificationId)}/ack`,
-    {
-      method: 'POST',
-    },
-    token,
-    request,
-  );
-}
-
-export function acknowledgeAllNotificationsServer(
-  token: string,
-  request: Request | null = null,
-): Promise<{ acknowledged_ids: string[] }> {
-  return requestSafetyAdminServer<{ acknowledged_ids: string[] }>(
-    '/notifications/ack-all',
-    {
-      method: 'POST',
     },
     token,
     request,

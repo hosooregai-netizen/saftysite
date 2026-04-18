@@ -915,30 +915,6 @@ export interface SafetyBackendMailThreadDetail {
   messages: SafetyBackendMailMessage[];
 }
 
-export interface SafetyBackendNotificationItem {
-  id: string;
-  severity: string;
-  category: string;
-  title: string;
-  description: string;
-  href: string;
-  is_read: boolean;
-  is_important: boolean;
-  source_type: string;
-  source_id: string;
-  created_at: string;
-  site_id: string;
-  report_key: string;
-  thread_id: string;
-  message_id: string;
-}
-
-export interface SafetyBackendNotificationFeedResponse {
-  unread_count: number;
-  unread_important_count: number;
-  rows: SafetyBackendNotificationItem[];
-}
-
 export interface SafetyBackendSmsProviderStatus {
   provider: string;
   enabled: boolean;

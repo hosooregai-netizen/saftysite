@@ -9,10 +9,6 @@ import {
   updateAdminSite,
 } from '@/server/admin/safetyApiServer';
 import { updateSingleSchedule } from '@/server/admin/automation';
-import {
-  appendSiteScheduleNotifications,
-  buildScheduleChangeNotifications,
-} from '@/server/admin/localScheduleNotifications';
 import type { SafetyInspectionSchedule } from '@/types/admin';
 
 export const runtime = 'nodejs';
@@ -31,7 +27,7 @@ export async function PATCH(
       contentItems: [],
     };
     const currentUser = await fetchCurrentSafetyUserServer(token, request);
-    const { memo: scheduleMemo, schedule, previousSchedule, site } = updateSingleSchedule(
+    const { memo: scheduleMemo, schedule, site } = updateSingleSchedule(
       data,
       scheduleId,
       payload,
@@ -40,20 +36,7 @@ export async function PATCH(
         actorUserName: currentUser.name,
       },
     );
-    const nextNotifications = buildScheduleChangeNotifications({
-      actorUser: currentUser,
-      nextSchedule: schedule,
-      previousSchedule,
-      site,
-    });
-    const memo = appendSiteScheduleNotifications(
-      {
-        ...site,
-        memo: scheduleMemo,
-      },
-      nextNotifications,
-    );
-    await updateAdminSite(token, site.id, { memo }, request);
+    await updateAdminSite(token, site.id, { memo: scheduleMemo }, request);
     await refreshAdminAnalyticsSnapshot(token, request);
     await refreshAdminScheduleSnapshot(token, request).catch(() => undefined);
 

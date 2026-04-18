@@ -54,8 +54,6 @@ import type {
   SafetyBackendMailMessage,
   SafetyBackendMailThread,
   SafetyBackendMailThreadDetail,
-  SafetyBackendNotificationFeedResponse,
-  SafetyBackendNotificationItem,
   SafetyBackendPhotoAsset,
   SafetyBackendScheduleListResponse,
   SafetyBackendSmsMessage,
@@ -65,7 +63,6 @@ import type {
 } from '@/types/backend';
 import type { MailAccount, MailMessage, MailProviderStatus, MailThread, MailThreadDetail } from '@/types/mail';
 import type { SmsMessage, SmsProviderStatus, SmsSendResult } from '@/types/messages';
-import type { NotificationFeedResponse, NotificationItem } from '@/types/notifications';
 import type { PhotoAlbumItem, SafetyPhotoAsset } from '@/types/photos';
 import type {
   ExcelApplyResult,
@@ -1185,36 +1182,6 @@ export function mapBackendMailThreadDetail(detail: SafetyBackendMailThreadDetail
   return {
     messages: detail.messages.map((message) => mapBackendMailMessage(message)),
     thread: mapBackendMailThread(detail.thread),
-  };
-}
-
-export function mapBackendNotificationItem(item: SafetyBackendNotificationItem): NotificationItem {
-  return {
-    category: normalizeText(item.category) as NotificationItem['category'],
-    createdAt: normalizeText(item.created_at),
-    description: normalizeText(item.description),
-    href: normalizeText(item.href),
-    id: normalizeText(item.id),
-    isImportant: Boolean(item.is_important),
-    isRead: Boolean(item.is_read),
-    messageId: normalizeText(item.message_id),
-    reportKey: normalizeText(item.report_key),
-    severity: (normalizeText(item.severity) || 'info') as NotificationItem['severity'],
-    siteId: normalizeText(item.site_id),
-    sourceId: normalizeText(item.source_id),
-    sourceType: normalizeText(item.source_type),
-    threadId: normalizeText(item.thread_id),
-    title: normalizeText(item.title),
-  };
-}
-
-export function mapBackendNotificationFeed(
-  response: SafetyBackendNotificationFeedResponse,
-): NotificationFeedResponse {
-  return {
-    rows: response.rows.map((item) => mapBackendNotificationItem(item)),
-    unreadCount: response.unread_count,
-    unreadImportantCount: response.unread_important_count,
   };
 }
 

@@ -3,10 +3,6 @@ import { refreshAdminAnalyticsSnapshot } from '@/server/admin/analyticsSnapshot'
 import { refreshAdminScheduleSnapshot } from '@/server/admin/scheduleSnapshot';
 import { updateSingleSchedule } from '@/server/admin/automation';
 import {
-  appendSiteScheduleNotifications,
-  buildScheduleChangeNotifications,
-} from '@/server/admin/localScheduleNotifications';
-import {
   fetchAssignedSafetySitesServer,
   fetchCurrentSafetyUserServer,
   readRequiredSafetyAuthToken,
@@ -79,20 +75,7 @@ export async function PATCH(
       return NextResponse.json({ error: '수정 권한이 없는 일정입니다.' }, { status: 403 });
     }
 
-    const nextNotifications = buildScheduleChangeNotifications({
-      actorUser: currentUser,
-      nextSchedule: schedule,
-      previousSchedule,
-      site,
-    });
-    const memo = appendSiteScheduleNotifications(
-      {
-        ...site,
-        memo: scheduleMemo,
-      },
-      nextNotifications,
-    );
-    await updateAdminSite(token, site.id, { memo }, request);
+    await updateAdminSite(token, site.id, { memo: scheduleMemo }, request);
     await refreshAdminAnalyticsSnapshot(token, request).catch(() => undefined);
     await refreshAdminScheduleSnapshot(token, request).catch(() => undefined);
     return NextResponse.json(schedule);

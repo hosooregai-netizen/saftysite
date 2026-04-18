@@ -2,7 +2,6 @@
 
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import NotificationBell from '@/components/notifications/NotificationBell';
 import { WorkerMenuButton } from '@/components/worker/WorkerMenu';
 import styles from './WorkerAppHeader.module.css';
 
@@ -40,7 +39,6 @@ export default function WorkerAppHeader({
         </div>
 
         <div className={styles.headerRight}>
-          <NotificationBell />
           {actions ? <div className={styles.headerActions}>{actions}</div> : null}
           <div className={styles.accountBlock}>
             <span className={styles.accountLabel}>{accountLabel}</span>
