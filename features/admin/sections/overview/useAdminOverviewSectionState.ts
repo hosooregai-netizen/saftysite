@@ -1,12 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   buildAdminOverviewModel,
   getOverviewExportSheets,
   type AdminOverviewModel,
 } from '@/features/admin/lib/buildAdminControlCenterModel';
 import {
+  fetchAdminSessionCacheOnce,
   readAdminSessionCache,
   writeAdminSessionCache,
 } from '@/features/admin/lib/adminSessionCache';
@@ -29,6 +30,8 @@ import {
   hasSiteStatusSummary,
   OVERVIEW_TABLE_PAGE_SIZE,
 } from './overviewSectionHelpers';
+
+const OVERVIEW_CACHE_KEY = 'overview';
 
 function parseYearPrefix(value: string) {
   const matched = value.trim().match(/^(\d{4})/);
@@ -90,36 +93,67 @@ export function useAdminOverviewSectionState(
   const [priorityPage, setPriorityPage] = useState(1);
   const [endingSoonPage, setEndingSoonPage] = useState(1);
   const currentYear = new Date().getFullYear();
-
-  const refreshOverview = useCallback(async () => {
-    try {
-      setIsRefreshing(true);
-      setError(null);
-      const cached = readAdminSessionCache<SafetyAdminOverviewResponse>(currentUserId, 'overview');
-      if (cached.value) {
-        setOverviewResponse(cached.value);
-      }
-      const nextOverview = await fetchAdminOverview();
-      writeAdminSessionCache(currentUserId, 'overview', nextOverview);
-      setOverviewResponse(nextOverview);
-      setLastSyncedAt(new Date());
-    } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : '관제 대시보드를 불러오지 못했습니다.');
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, [currentUserId]);
+  const isMountedRef = useRef(true);
+  const latestOverviewRequestKeyRef = useRef('');
 
   useEffect(() => {
-    const cached = readAdminSessionCache<SafetyAdminOverviewResponse>(currentUserId, 'overview');
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  const refreshOverview = useCallback(
+    async (options?: { force?: boolean; preferCached?: boolean }) => {
+      const activeRequestKey = `${currentUserId}:overview`;
+      latestOverviewRequestKeyRef.current = activeRequestKey;
+      const shouldPreferCached = options?.preferCached !== false && options?.force !== true;
+      const cached = shouldPreferCached
+        ? readAdminSessionCache<SafetyAdminOverviewResponse>(currentUserId, OVERVIEW_CACHE_KEY)
+        : { isFresh: false, savedAt: null, value: null as SafetyAdminOverviewResponse | null };
+
+      try {
+        setIsRefreshing(true);
+        setError(null);
+        if (cached.value && isMountedRef.current) {
+          setOverviewResponse(cached.value);
+          setLastSyncedAt(cached.savedAt ? new Date(cached.savedAt) : new Date());
+        }
+        const nextOverview = await fetchAdminSessionCacheOnce(
+          currentUserId,
+          OVERVIEW_CACHE_KEY,
+          async () => {
+            const freshOverview = await fetchAdminOverview();
+            writeAdminSessionCache(currentUserId, OVERVIEW_CACHE_KEY, freshOverview);
+            return freshOverview;
+          },
+        );
+        if (!isMountedRef.current || latestOverviewRequestKeyRef.current !== activeRequestKey) {
+          return;
+        }
+        setOverviewResponse(nextOverview);
+        setLastSyncedAt(new Date());
+      } catch (nextError) {
+        if (!isMountedRef.current || latestOverviewRequestKeyRef.current !== activeRequestKey) {
+          return;
+        }
+        setError(nextError instanceof Error ? nextError.message : '愿????쒕낫?쒕? 遺덈윭?ㅼ? 紐삵뻽?듬땲??');
+      } finally {
+        if (isMountedRef.current && latestOverviewRequestKeyRef.current === activeRequestKey) {
+          setIsRefreshing(false);
+        }
+      }
+    },
+    [currentUserId],
+  );
+
+  useEffect(() => {
+    const cached = readAdminSessionCache<SafetyAdminOverviewResponse>(currentUserId, OVERVIEW_CACHE_KEY);
     if (cached.value) {
       setOverviewResponse(cached.value);
-      setLastSyncedAt(new Date());
-      if (cached.isFresh) {
-        return;
-      }
+      setLastSyncedAt(cached.savedAt ? new Date(cached.savedAt) : new Date());
     }
-    void refreshOverview();
+    void refreshOverview({ preferCached: false });
   }, [currentUserId, refreshOverview]);
 
   const overview = useMemo(() => {
@@ -200,7 +234,6 @@ export function useAdminOverviewSectionState(
   }, [
     fallbackOverview.priorityQuarterlyManagementRows,
     overview.priorityQuarterlyManagementRows,
-    overviewResponse,
   ]);
 
   const visibleMaterialRows = useMemo(() => {
@@ -341,9 +374,9 @@ export function useAdminOverviewSectionState(
         setPolicyUpdatingSiteId(siteId);
         setError(null);
         await options.onUpdateSiteDispatchPolicy(siteId, input);
-        await refreshOverview();
+        await refreshOverview({ force: true, preferCached: false });
       } catch (nextError) {
-        setError(nextError instanceof Error ? nextError.message : '발송 관리 정책을 업데이트하지 못했습니다.');
+        setError(nextError instanceof Error ? nextError.message : '諛쒖넚 愿由??뺤콉???낅뜲?댄듃?섏? 紐삵뻽?듬땲??');
       } finally {
         setPolicyUpdatingSiteId(null);
       }

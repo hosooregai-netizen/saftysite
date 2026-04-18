@@ -1,13 +1,33 @@
 import type { SafetyAdminReportsResponse } from '@/types/admin';
 
 const REPORTS_ROUTE_CACHE_TTL_MS = 1000 * 60;
-const reportsRouteCache = new Map<
-  string,
-  {
-    payload: SafetyAdminReportsResponse;
-    savedAt: number;
+const REPORTS_ROUTE_CACHE_KEY = '__SAFETY_ADMIN_REPORTS_ROUTE_CACHE__';
+const REPORTS_ROUTE_IN_FLIGHT_KEY = '__SAFETY_ADMIN_REPORTS_ROUTE_IN_FLIGHT__';
+
+interface ReportsRouteCacheEntry {
+  payload: SafetyAdminReportsResponse;
+  savedAt: number;
+}
+
+function getReportsRouteCache() {
+  const globalRecord = globalThis as typeof globalThis & {
+    [REPORTS_ROUTE_CACHE_KEY]?: Map<string, ReportsRouteCacheEntry>;
+  };
+  if (!(REPORTS_ROUTE_CACHE_KEY in globalRecord)) {
+    globalRecord[REPORTS_ROUTE_CACHE_KEY] = new Map();
   }
->();
+  return globalRecord[REPORTS_ROUTE_CACHE_KEY]!;
+}
+
+function getReportsRouteInFlight() {
+  const globalRecord = globalThis as typeof globalThis & {
+    [REPORTS_ROUTE_IN_FLIGHT_KEY]?: Map<string, Promise<SafetyAdminReportsResponse>>;
+  };
+  if (!(REPORTS_ROUTE_IN_FLIGHT_KEY in globalRecord)) {
+    globalRecord[REPORTS_ROUTE_IN_FLIGHT_KEY] = new Map();
+  }
+  return globalRecord[REPORTS_ROUTE_IN_FLIGHT_KEY]!;
+}
 
 function buildReportsRouteCacheKey(request: Request) {
   const url = new URL(request.url);
@@ -15,13 +35,14 @@ function buildReportsRouteCacheKey(request: Request) {
 }
 
 export function getCachedAdminReportsRouteResponse(request: Request) {
-  const cached = reportsRouteCache.get(buildReportsRouteCacheKey(request));
+  const cacheKey = buildReportsRouteCacheKey(request);
+  const cached = getReportsRouteCache().get(cacheKey);
   if (!cached) {
     return null;
   }
 
   if (Date.now() - cached.savedAt >= REPORTS_ROUTE_CACHE_TTL_MS) {
-    reportsRouteCache.delete(buildReportsRouteCacheKey(request));
+    getReportsRouteCache().delete(cacheKey);
     return null;
   }
 
@@ -32,12 +53,41 @@ export function setCachedAdminReportsRouteResponse(
   request: Request,
   payload: SafetyAdminReportsResponse,
 ) {
-  reportsRouteCache.set(buildReportsRouteCacheKey(request), {
+  getReportsRouteCache().set(buildReportsRouteCacheKey(request), {
     payload,
     savedAt: Date.now(),
   });
 }
 
+export function readOrCreateAdminReportsRouteResponse(
+  request: Request,
+  loader: () => Promise<SafetyAdminReportsResponse>,
+) {
+  const cached = getCachedAdminReportsRouteResponse(request);
+  if (cached) {
+    return Promise.resolve(cached);
+  }
+
+  const cacheKey = buildReportsRouteCacheKey(request);
+  const inFlight = getReportsRouteInFlight();
+  const existing = inFlight.get(cacheKey);
+  if (existing) {
+    return existing;
+  }
+
+  const nextRequest = Promise.resolve(loader())
+    .then((payload) => {
+      setCachedAdminReportsRouteResponse(request, payload);
+      return payload;
+    })
+    .finally(() => {
+      inFlight.delete(cacheKey);
+    });
+  inFlight.set(cacheKey, nextRequest);
+  return nextRequest;
+}
+
 export function invalidateAdminReportsRouteCache() {
-  reportsRouteCache.clear();
+  getReportsRouteCache().clear();
+  getReportsRouteInFlight().clear();
 }

@@ -1,53 +1,39 @@
 import type { SafetyAdminOverviewResponse } from '@/types/admin';
 
-const OVERVIEW_ROUTE_CACHE_TTL_MS = 1000 * 60;
-const OVERVIEW_ROUTE_CACHE_KEY = '__SAFETY_ADMIN_OVERVIEW_ROUTE_CACHE__';
+const OVERVIEW_ROUTE_IN_FLIGHT_KEY = '__SAFETY_ADMIN_OVERVIEW_ROUTE_IN_FLIGHT__';
 
-interface OverviewRouteCacheEntry {
-  payload: SafetyAdminOverviewResponse;
-  savedAt: number;
-}
-
-function getOverviewRouteCache() {
+function getOverviewRouteInFlight() {
   const globalRecord = globalThis as typeof globalThis & {
-    [OVERVIEW_ROUTE_CACHE_KEY]?: Map<string, OverviewRouteCacheEntry>;
+    [OVERVIEW_ROUTE_IN_FLIGHT_KEY]?: Map<string, Promise<SafetyAdminOverviewResponse>>;
   };
-  if (!(OVERVIEW_ROUTE_CACHE_KEY in globalRecord)) {
-    globalRecord[OVERVIEW_ROUTE_CACHE_KEY] = new Map();
+  if (!(OVERVIEW_ROUTE_IN_FLIGHT_KEY in globalRecord)) {
+    globalRecord[OVERVIEW_ROUTE_IN_FLIGHT_KEY] = new Map();
   }
-  return globalRecord[OVERVIEW_ROUTE_CACHE_KEY]!;
+  return globalRecord[OVERVIEW_ROUTE_IN_FLIGHT_KEY]!;
 }
 
 function buildOverviewRouteCacheKey(request: Request) {
   return request.headers.get('authorization') || '';
 }
 
-export function getCachedAdminOverviewRouteResponse(request: Request) {
-  const cache = getOverviewRouteCache();
-  const key = buildOverviewRouteCacheKey(request);
-  const cached = cache.get(key);
-  if (!cached) {
-    return null;
-  }
-
-  if (Date.now() - cached.savedAt >= OVERVIEW_ROUTE_CACHE_TTL_MS) {
-    cache.delete(key);
-    return null;
-  }
-
-  return cached.payload;
-}
-
-export function setCachedAdminOverviewRouteResponse(
+export function readOrCreateAdminOverviewRouteResponse(
   request: Request,
-  payload: SafetyAdminOverviewResponse,
+  loader: () => Promise<SafetyAdminOverviewResponse>,
 ) {
-  getOverviewRouteCache().set(buildOverviewRouteCacheKey(request), {
-    payload,
-    savedAt: Date.now(),
+  const cacheKey = buildOverviewRouteCacheKey(request);
+  const inFlight = getOverviewRouteInFlight();
+  const existing = inFlight.get(cacheKey);
+  if (existing) {
+    return existing;
+  }
+
+  const nextRequest = Promise.resolve(loader()).finally(() => {
+    inFlight.delete(cacheKey);
   });
+  inFlight.set(cacheKey, nextRequest);
+  return nextRequest;
 }
 
 export function invalidateAdminOverviewRouteCache() {
-  getOverviewRouteCache().clear();
+  getOverviewRouteInFlight().clear();
 }

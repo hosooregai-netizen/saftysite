@@ -10,6 +10,7 @@ export const runtime = 'nodejs';
 
 export async function GET(request: Request): Promise<Response> {
   try {
+    // Canonical schedules UI read path for filter lookups.
     const token = readRequiredAdminToken(request);
     const response = await fetchAdminScheduleLookupsServer(token, request);
     return NextResponse.json(mapBackendAdminScheduleLookupsResponse(response));

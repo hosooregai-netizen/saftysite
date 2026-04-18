@@ -9,6 +9,8 @@ export const runtime = 'nodejs';
 
 export async function POST(request: Request): Promise<Response> {
   try {
+    // This endpoint warms the export/legacy analytics snapshot only.
+    // It is not the canonical read path for the analytics dashboard UI.
     const token = readRequiredAdminToken(request);
     const snapshot = await refreshAdminAnalyticsSnapshot(token, request);
     return NextResponse.json({

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback } from 'react';
+import { invalidateAdminReportMutationClientCaches } from '@/features/admin/lib/adminClientCacheInvalidation';
 import {
   updateAdminReportDispatch,
   updateAdminReportReview,
@@ -13,7 +14,7 @@ import type {
   ControllerReportRow,
   ReportDispatchMeta,
 } from '@/types/admin';
-import type { SafetyReport, SafetySite, SafetyUser } from '@/types/backend';
+import type { SafetyReport, SafetyUser } from '@/types/backend';
 import type { ReportReviewForm } from './reportsSectionTypes';
 import type { SmsProviderStatus } from '@/types/messages';
 
@@ -50,6 +51,10 @@ export function useReportDispatchActions({
   setNotice,
   setReviewRow,
 }: UseReportDispatchActionsInput) {
+  const invalidateOverviewRelatedCaches = useCallback(() => {
+    invalidateAdminReportMutationClientCaches(currentUser.id);
+  }, [currentUser.id]);
+
   const saveReview = useCallback(async () => {
     if (!reviewRow) return;
 
@@ -61,30 +66,32 @@ export function useReportDispatchActions({
         ownerUserId: reviewForm.ownerUserId,
         qualityStatus: reviewForm.qualityStatus,
       });
-      setNotice('보고서 검토 체크를 저장했습니다.');
+      invalidateOverviewRelatedCaches();
+      setNotice('蹂닿퀬??寃??泥댄겕瑜???ν뻽?듬땲??');
       setReviewRow(null);
       await fetchRows();
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : '보고서 검토 저장에 실패했습니다.');
+      setError(nextError instanceof Error ? nextError.message : '蹂닿퀬??寃????μ뿉 ?ㅽ뙣?덉뒿?덈떎.');
     }
-  }, [currentUser.id, fetchRows, reviewForm, reviewRow, setError, setNotice, setReviewRow]);
+  }, [currentUser.id, fetchRows, invalidateOverviewRelatedCaches, reviewForm, reviewRow, setError, setNotice, setReviewRow]);
 
   const saveDispatch = useCallback(
     async (row: ControllerReportRow, nextDispatch: ReportDispatchMeta) => {
       try {
         const updated = await updateAdminReportDispatch(row.reportKey, nextDispatch);
+        invalidateOverviewRelatedCaches();
         applyUpdatedReportRow(updated);
         setNotice(
           row.reportType === 'quarterly_report'
-            ? '분기 보고서 발송 정보를 저장했습니다.'
-            : '발송 정보를 저장했습니다.',
+            ? '遺꾧린 蹂닿퀬??諛쒖넚 ?뺣낫瑜???ν뻽?듬땲??'
+            : '諛쒖넚 ?뺣낫瑜???ν뻽?듬땲??',
         );
         setDispatchRow(null);
       } catch (nextError) {
-        setError(nextError instanceof Error ? nextError.message : '발송 정보 저장에 실패했습니다.');
+        setError(nextError instanceof Error ? nextError.message : '諛쒖넚 ?뺣낫 ??μ뿉 ?ㅽ뙣?덉뒿?덈떎.');
       }
     },
-    [applyUpdatedReportRow, setDispatchRow, setError, setNotice],
+    [applyUpdatedReportRow, invalidateOverviewRelatedCaches, setDispatchRow, setError, setNotice],
   );
 
   const sendDispatchSms = useCallback(async () => {
@@ -101,11 +108,11 @@ export function useReportDispatchActions({
         siteId: dispatchRow.siteId,
         subject: dispatchRow.reportTitle || dispatchRow.periodLabel || dispatchRow.reportKey,
       });
-      setNotice(result.message || '문자를 발송했습니다.');
+      setNotice(result.message || '臾몄옄瑜?諛쒖넚?덉뒿?덈떎.');
       setDispatchRow(null);
       await fetchRows();
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : '문자 발송에 실패했습니다.');
+      setError(nextError instanceof Error ? nextError.message : '臾몄옄 諛쒖넚???ㅽ뙣?덉뒿?덈떎.');
     } finally {
       setDispatchSmsSending(false);
     }
@@ -137,13 +144,14 @@ export function useReportDispatchActions({
             }),
           ),
         );
-        setNotice('선택한 보고서의 검토 상태를 저장했습니다.');
+        invalidateOverviewRelatedCaches();
+        setNotice('?좏깮??蹂닿퀬?쒖쓽 寃???곹깭瑜???ν뻽?듬땲??');
         await fetchRows();
       } catch (nextError) {
-        setError(nextError instanceof Error ? nextError.message : '일괄 검토 처리에 실패했습니다.');
+        setError(nextError instanceof Error ? nextError.message : '?쇨큵 寃??泥섎━???ㅽ뙣?덉뒿?덈떎.');
       }
     },
-    [currentUser.id, fetchRows, selectedRows, setError, setNotice],
+    [currentUser.id, fetchRows, invalidateOverviewRelatedCaches, selectedRows, setError, setNotice],
   );
 
   const bulkOwnerAssign = useCallback(async () => {
@@ -161,18 +169,19 @@ export function useReportDispatchActions({
           }),
         ),
       );
-      setNotice('선택한 보고서의 담당자를 현재 사용자로 지정했습니다.');
+      invalidateOverviewRelatedCaches();
+      setNotice('?좏깮??蹂닿퀬?쒖쓽 ?대떦?먮? ?꾩옱 ?ъ슜?먮줈 吏?뺥뻽?듬땲??');
       await fetchRows();
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : '담당자 지정에 실패했습니다.');
+      setError(nextError instanceof Error ? nextError.message : '?대떦??吏?뺤뿉 ?ㅽ뙣?덉뒿?덈떎.');
     }
-  }, [currentUser.id, fetchRows, selectedRows, setError, setNotice]);
+  }, [currentUser.id, fetchRows, invalidateOverviewRelatedCaches, selectedRows, setError, setNotice]);
 
   const buildManualDispatchPayload = useCallback(
     (row: ControllerReportRow) =>
       buildToggledReportDispatch(buildDispatchMeta(row), {
         currentUserId: currentUser.id,
-        historyMemo: '관리자 화면에서 수동 발송 완료 처리',
+        historyMemo: 'admin-manual-dispatch-complete',
         nextCompleted: true,
       }),
     [currentUser.id],
@@ -186,22 +195,23 @@ export function useReportDispatchActions({
           buildToggledReportDispatch(buildDispatchMeta(row), {
             currentUserId: currentUser.id,
             historyMemo: nextCompleted
-              ? '관리자 목록에서 발송으로 변경'
-              : '관리자 목록에서 미발송으로 변경',
+              ? 'admin-marked-dispatch-sent'
+              : 'admin-marked-dispatch-pending',
             nextCompleted,
           }),
         );
+        invalidateOverviewRelatedCaches();
         applyUpdatedReportRow(updated);
         setNotice(
           nextCompleted
-            ? '보고서 발송 여부를 발송으로 변경했습니다.'
-            : '보고서 발송 여부를 미발송으로 변경했습니다.',
+            ? '蹂닿퀬??諛쒖넚 ?щ?瑜?諛쒖넚?쇰줈 蹂寃쏀뻽?듬땲??'
+            : '蹂닿퀬??諛쒖넚 ?щ?瑜?誘몃컻?≪쑝濡?蹂寃쏀뻽?듬땲??',
         );
       } catch (nextError) {
-        setError(nextError instanceof Error ? nextError.message : '발송 여부 변경에 실패했습니다.');
+        setError(nextError instanceof Error ? nextError.message : '諛쒖넚 ?щ? 蹂寃쎌뿉 ?ㅽ뙣?덉뒿?덈떎.');
       }
     },
-    [applyUpdatedReportRow, currentUser.id, setError, setNotice],
+    [applyUpdatedReportRow, currentUser.id, invalidateOverviewRelatedCaches, setError, setNotice],
   );
 
   const bulkDispatchSent = useCallback(async () => {
@@ -214,12 +224,13 @@ export function useReportDispatchActions({
           updateAdminReportDispatch(row.reportKey, buildManualDispatchPayload(row)),
         ),
       );
-      setNotice('선택한 분기 보고서를 수동 발송 완료로 처리했습니다.');
+      invalidateOverviewRelatedCaches();
+      setNotice('?좏깮??遺꾧린 蹂닿퀬?쒕? ?섎룞 諛쒖넚 ?꾨즺濡?泥섎━?덉뒿?덈떎.');
       await fetchRows();
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : '일괄 발송 처리에 실패했습니다.');
+      setError(nextError instanceof Error ? nextError.message : '?쇨큵 諛쒖넚 泥섎━???ㅽ뙣?덉뒿?덈떎.');
     }
-  }, [buildManualDispatchPayload, fetchRows, selectedRows, setError, setNotice]);
+  }, [buildManualDispatchPayload, fetchRows, invalidateOverviewRelatedCaches, selectedRows, setError, setNotice]);
 
   const loadSmsProviderStatuses = useCallback(async (): Promise<SmsProviderStatus[]> => {
     try {
@@ -228,7 +239,7 @@ export function useReportDispatchActions({
       setError(
         nextError instanceof Error
           ? nextError.message
-          : '문자 발송 공급사 상태를 불러오지 못했습니다.',
+          : '臾몄옄 諛쒖넚 怨듦툒???곹깭瑜?遺덈윭?ㅼ? 紐삵뻽?듬땲??',
       );
       return [];
     }

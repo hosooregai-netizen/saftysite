@@ -2,7 +2,6 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { refreshAdminMasterData } from '@/features/admin/lib/adminDashboardMutations';
-import { refreshAdminAnalyticsSnapshot } from '@/lib/admin/apiClient';
 import type { ControllerDashboardData } from '@/types/controller';
 import type { SafetyReportListItem } from '@/types/backend';
 import { buildAdminDashboardAssignmentActions } from './buildAdminDashboardAssignmentActions';
@@ -67,6 +66,7 @@ export function useAdminDashboardState({
       successMessage: string,
       options?: {
         applyResult?: (current: ControllerDashboardData, result: TResult) => ControllerDashboardData;
+        invalidateClientCaches?: (scope: string | null) => void;
       },
     ) => {
       setIsMutating(true);
@@ -78,14 +78,12 @@ export function useAdminDashboardState({
         if (options?.applyResult) {
           setData((current) => options.applyResult?.(current, result) ?? current);
         }
+        options?.invalidateClientCaches?.(contentCacheScope);
 
         try {
-          await refreshAdminAnalyticsSnapshot();
-        } catch {
-          // Snapshot refresh is best-effort for mutation flows.
-        }
-
-        try {
+          // Snapshot warm-up is handled on the server write paths that still need it
+          // (export/legacy helpers). Dashboard follow-up refresh should stay focused on
+          // the canonical UI read paths rather than broad snapshot refreshes.
           const followUpTasks: Array<Promise<unknown>> = [];
           if (routing.shouldLoadContent) {
             followUpTasks.push(reloadContent({ force: true }));
@@ -109,7 +107,14 @@ export function useAdminDashboardState({
         setIsMutating(false);
       }
     },
-    [getToken, loadReports, reloadContent, routing.shouldLoadContent, routing.shouldLoadReports],
+    [
+      contentCacheScope,
+      getToken,
+      loadReports,
+      reloadContent,
+      routing.shouldLoadContent,
+      routing.shouldLoadReports,
+    ],
   );
 
   const runContentMutation = useCallback(
@@ -127,12 +132,12 @@ export function useAdminDashboardState({
   );
 
   const crudActions = useMemo(
-    () => buildAdminDashboardCrudActions({ data, runMutation }),
-    [data, runMutation],
+    () => buildAdminDashboardCrudActions({ runMutation }),
+    [runMutation],
   );
   const assignmentActions = useMemo(
-    () => buildAdminDashboardAssignmentActions({ data, runMutation }),
-    [data, runMutation],
+    () => buildAdminDashboardAssignmentActions({ runMutation }),
+    [runMutation],
   );
   const contentActions = useMemo(
     () => buildAdminDashboardContentActions({ runContentMutation, runMutation }),

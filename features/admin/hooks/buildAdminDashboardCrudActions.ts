@@ -18,6 +18,7 @@ import {
   loadAllSafetyAssignments,
   loadAllSafetySites,
 } from '@/features/admin/lib/adminDashboardMutations';
+import { invalidateAdminDirectoryMutationClientCaches } from '@/features/admin/lib/adminClientCacheInvalidation';
 import type {
   ControllerDashboardData,
   SafetyHeadquarterInput,
@@ -34,16 +35,15 @@ type MutationRunner = <TResult>(
   successMessage: string,
   options?: {
     applyResult?: (current: ControllerDashboardData, result: TResult) => ControllerDashboardData;
+    invalidateClientCaches?: (scope: string | null) => void;
   },
 ) => Promise<void>;
 
 interface BuildAdminDashboardCrudActionsParams {
-  data: ControllerDashboardData;
   runMutation: MutationRunner;
 }
 
 export function buildAdminDashboardCrudActions({
-  data,
   runMutation,
 }: BuildAdminDashboardCrudActionsParams) {
   return {
@@ -53,6 +53,7 @@ export function buildAdminDashboardCrudActions({
           ...current,
           users: upsertRecordById(current.users, user),
         }),
+        invalidateClientCaches: invalidateAdminDirectoryMutationClientCaches,
       }),
     updateUser: (id: string, input: SafetyUserUpdateInput) =>
       runMutation((token) => updateSafetyUser(token, id, input), '사용자 정보를 수정했습니다.', {
@@ -60,6 +61,7 @@ export function buildAdminDashboardCrudActions({
           ...current,
           users: upsertRecordById(current.users, user),
         }),
+        invalidateClientCaches: invalidateAdminDirectoryMutationClientCaches,
       }),
     resetUserPassword: (id: string, password: string) =>
       runMutation((token) => updateSafetyUserPassword(token, id, password), '비밀번호를 변경했습니다.'),
@@ -88,6 +90,9 @@ export function buildAdminDashboardCrudActions({
                   users: upsertRecordById(current.users, user),
                 }
               : current,
+          invalidateClientCaches: hasValues(input)
+            ? invalidateAdminDirectoryMutationClientCaches
+            : undefined,
         },
       ),
     deleteUser: (id: string) =>
@@ -110,6 +115,7 @@ export function buildAdminDashboardCrudActions({
               (assignment) => assignment.user_id !== result.userId,
             ),
           }),
+          invalidateClientCaches: invalidateAdminDirectoryMutationClientCaches,
         },
       ),
     createHeadquarter: (input: SafetyHeadquarterInput) =>
@@ -118,6 +124,7 @@ export function buildAdminDashboardCrudActions({
           ...current,
           headquarters: upsertRecordById(current.headquarters, headquarter),
         }),
+        invalidateClientCaches: invalidateAdminDirectoryMutationClientCaches,
       }),
     updateHeadquarter: (id: string, input: SafetyHeadquarterUpdateInput) =>
       runMutation((token) => updateSafetyHeadquarter(token, id, input), '사업장 정보를 수정했습니다.', {
@@ -125,6 +132,7 @@ export function buildAdminDashboardCrudActions({
           ...current,
           headquarters: upsertRecordById(current.headquarters, headquarter),
         }),
+        invalidateClientCaches: invalidateAdminDirectoryMutationClientCaches,
       }),
     deleteHeadquarter: (id: string) =>
       runMutation(
@@ -155,6 +163,7 @@ export function buildAdminDashboardCrudActions({
               (assignment) => !result.relatedSiteIds.includes(assignment.site_id),
             ),
           }),
+          invalidateClientCaches: invalidateAdminDirectoryMutationClientCaches,
         },
       ),
     createSite: (input: SafetySiteInput) =>
@@ -163,6 +172,7 @@ export function buildAdminDashboardCrudActions({
           ...current,
           sites: upsertRecordById(current.sites, site),
         }),
+        invalidateClientCaches: invalidateAdminDirectoryMutationClientCaches,
       }),
     updateSite: (id: string, input: SafetySiteUpdateInput) =>
       runMutation((token) => updateSafetySite(token, id, input), '현장 정보를 수정했습니다.', {
@@ -170,6 +180,7 @@ export function buildAdminDashboardCrudActions({
           ...current,
           sites: upsertRecordById(current.sites, site),
         }),
+        invalidateClientCaches: invalidateAdminDirectoryMutationClientCaches,
       }),
     updateSiteDispatchPolicy: (
       id: string,
@@ -187,6 +198,7 @@ export function buildAdminDashboardCrudActions({
             ...current,
             sites: upsertRecordById(current.sites, site),
           }),
+          invalidateClientCaches: invalidateAdminDirectoryMutationClientCaches,
         },
       ),
     deleteSite: (id: string) =>
@@ -209,6 +221,7 @@ export function buildAdminDashboardCrudActions({
               (assignment) => assignment.site_id !== result.siteId,
             ),
           }),
+          invalidateClientCaches: invalidateAdminDirectoryMutationClientCaches,
         },
       ),
   };

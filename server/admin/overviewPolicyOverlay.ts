@@ -1,259 +1,117 @@
-import { buildAdminOverviewModel } from '@/features/admin/lib/buildAdminControlCenterModel';
-import { formatDateValue, parseDateValue } from '@/features/admin/lib/control-center-model/dates';
-import { normalizeDispatchMeta } from '@/lib/admin/reportMeta';
 import type { SafetyAdminOverviewResponse } from '@/types/admin';
-import type {
-  SafetyBackendAdminReportRow,
-  SafetyBackendAdminReportsResponse,
-  SafetyReportListItem,
-} from '@/types/backend';
-import type { ControllerDashboardData } from '@/types/controller';
-import {
-  fetchAdminDirectoryData,
-  fetchAdminReportsViewServer,
-} from './safetyApiServer';
 
-const OVERVIEW_REPORT_PAGE_LIMIT = 200;
-const OVERVIEW_REPORT_TYPES = ['technical_guidance', 'quarterly_report'] as const;
+type OverviewPolicyOverlay = Pick<SafetyAdminOverviewResponse, 'siteStatusSummary'>;
 
-type OverviewPolicyOverlay = Pick<
-  SafetyAdminOverviewResponse,
-  | 'deadlineSignalSummary'
-  | 'metricCards'
-  | 'priorityQuarterlyManagementRows'
-  | 'siteStatusSummary'
-  | 'summaryRows'
-  | 'unsentReportRows'
->;
-
-function normalizeText(value: unknown) {
-  return typeof value === 'string' ? value.trim() : '';
+function roundDurationMs(startedAt: number) {
+  return Math.round((performance.now() - startedAt) * 10) / 10;
 }
 
-function startOfYearDate(today: Date) {
-  return new Date(today.getFullYear(), 0, 1);
-}
-
-function extractQuarterKeyFromText(value: string) {
-  const directMatched = value.match(/\b(\d{4})-Q([1-4])\b/i);
-  if (directMatched) {
-    return `${directMatched[1]}-Q${directMatched[2]}`;
-  }
-
-  const labelMatched = value.match(/(\d{4})\s*년\s*([1-4])\s*분기/);
-  if (labelMatched) {
-    return `${labelMatched[1]}-Q${labelMatched[2]}`;
-  }
-
-  return '';
-}
-
-function getQuarterKeyForDate(value: string) {
-  const parsed = parseDateValue(value);
-  if (!parsed) return '';
-  return `${parsed.getFullYear()}-Q${Math.floor(parsed.getMonth() / 3) + 1}`;
-}
-
-function inferQuarterKey(row: SafetyBackendAdminReportRow) {
-  const explicitQuarterKey = extractQuarterKeyFromText(
-    [
-      normalizeText(row.route_param),
-      normalizeText(row.period_label),
-      normalizeText(row.report_title),
-    ]
-      .filter(Boolean)
-      .join(' '),
+function trimLogContext(context: Record<string, unknown>) {
+  return Object.fromEntries(
+    Object.entries(context).filter(([, value]) => value !== '' && value !== null && value !== undefined),
   );
-
-  if (explicitQuarterKey) return explicitQuarterKey;
-
-  return row.report_type === 'quarterly_report'
-    ? getQuarterKeyForDate(normalizeText(row.visit_date) || normalizeText(row.updated_at))
-    : '';
 }
 
-function toSafetyReportListItem(row: SafetyBackendAdminReportRow): SafetyReportListItem {
-  const reportKey = normalizeText(row.report_key);
-  const dispatch = normalizeDispatchMeta(row.dispatch);
-  const deliveryStatus = dispatch?.dispatchStatus || '';
-  const quarterKey = inferQuarterKey(row);
-
-  return {
-    assigned_user_id: normalizeText(row.assignee_user_id) || null,
-    created_at: normalizeText(row.updated_at),
-    dispatch,
-    dispatch_completed: deliveryStatus === 'sent' || deliveryStatus === 'manual_checked',
-    document_kind: null,
-    headquarter_id: normalizeText(row.headquarter_id) || null,
-    id: reportKey,
-    last_autosaved_at: null,
-    latest_revision_no: 0,
-    lifecycle_status: normalizeText(row.lifecycle_status) as SafetyReportListItem['lifecycle_status'],
-    meta: {
-      periodLabel: normalizeText(row.period_label),
-      quarterKey,
-      reportKind: normalizeText(row.report_type),
-      reportMonth: normalizeText(row.report_month),
-      routeParam: normalizeText(row.route_param),
-    },
-    payload_version: 0,
-    progress_rate:
-      typeof row.progress_rate === 'number' && Number.isFinite(row.progress_rate)
-        ? row.progress_rate
-        : null,
-    published_at: null,
-    report_key: reportKey,
-    report_title: normalizeText(row.report_title),
-    report_type: normalizeText(row.report_type) as SafetyReportListItem['report_type'],
-    review: null,
-    schedule_id: null,
-    site_id: normalizeText(row.site_id),
-    status: (normalizeText(row.workflow_status) || normalizeText(row.status)) as SafetyReportListItem['status'],
-    submitted_at: null,
-    total_round: null,
-    updated_at: normalizeText(row.updated_at),
-    visit_date: normalizeText(row.visit_date) || null,
-    visit_round: null,
-    workflow_status: (normalizeText(row.workflow_status) ||
-      normalizeText(row.status)) as SafetyReportListItem['workflow_status'],
-  };
-}
-
-async function fetchAllAdminReportRows(
-  token: string,
-  request: Request | null,
-  params: Record<string, string | number>,
+function logOverviewPolicyOverlayStage(
+  stage: string,
+  startedAt: number,
+  context: Record<string, unknown>,
 ) {
-  const rows: SafetyBackendAdminReportRow[] = [];
-  let offset = 0;
-
-  while (true) {
-    const response: SafetyBackendAdminReportsResponse = await fetchAdminReportsViewServer(
-      token,
-      {
-        ...params,
-        limit: OVERVIEW_REPORT_PAGE_LIMIT,
-        offset,
-      },
-      request,
-    );
-    rows.push(...response.rows);
-
-    if (response.rows.length < OVERVIEW_REPORT_PAGE_LIMIT || rows.length >= response.total) {
-      return rows;
-    }
-
-    offset += response.rows.length;
-  }
-}
-
-async function fetchCurrentYearOverviewReports(
-  token: string,
-  request: Request | null,
-  today: Date,
-) {
-  const baseParams = {
-    date_from: formatDateValue(startOfYearDate(today)),
-    date_to: formatDateValue(today),
-    sort_by: 'visitDate',
-    sort_dir: 'desc',
-  };
-  const rows = await Promise.all(
-    OVERVIEW_REPORT_TYPES.map((reportType) =>
-      fetchAllAdminReportRows(token, request, {
-        ...baseParams,
-        report_type: reportType,
-      }),
-    ),
-  );
-  const rowsByKey = new Map<string, SafetyBackendAdminReportRow>();
-
-  rows.flat().forEach((row) => {
-    const reportKey = normalizeText(row.report_key);
-    if (reportKey) rowsByKey.set(reportKey, row);
+  console.info('admin-overview-policy-overlay-stage', {
+    stage,
+    duration_ms: roundDurationMs(startedAt),
+    ...trimLogContext(context),
   });
-
-  return Array.from(rowsByKey.values()).map((row) => toSafetyReportListItem(row));
 }
 
-function hasDispatchMeaning(value: string) {
-  const normalized = value.toLowerCase();
-  return normalized.includes('미발송') || normalized.includes('dispatch');
+function summarizeOverlay(overlay: OverviewPolicyOverlay) {
+  return {
+    site_status_entries: overlay.siteStatusSummary.entries.length,
+    total_sites: overlay.siteStatusSummary.totalSiteCount,
+  };
 }
 
-function findDispatchCardIndex(
-  cards: SafetyAdminOverviewResponse['metricCards'] | SafetyAdminOverviewResponse['summaryRows'],
-) {
-  const index = cards.findIndex((card) =>
-    hasDispatchMeaning(`${card.label} ${card.meta}`),
-  );
-  return index >= 0 ? index : cards.length - 1;
+function cloneSiteStatusSummary(
+  siteStatusSummary: SafetyAdminOverviewResponse['siteStatusSummary'],
+): SafetyAdminOverviewResponse['siteStatusSummary'] {
+  return {
+    entries: siteStatusSummary.entries.map((entry) => ({ ...entry })),
+    totalSiteCount: siteStatusSummary.totalSiteCount,
+  };
+}
+
+function formatCountLike(previousValue: string, count: number) {
+  const suffix = previousValue.trim().replace(/^[\d,.\s]+/, '');
+  return `${count.toLocaleString('ko-KR')}${suffix || '건'}`;
+}
+
+function getSiteStatusCounts(siteStatusSummary: SafetyAdminOverviewResponse['siteStatusSummary']) {
+  return [
+    siteStatusSummary.totalSiteCount,
+    siteStatusSummary.entries[0]?.count ?? 0,
+    siteStatusSummary.entries[1]?.count ?? 0,
+    siteStatusSummary.entries[2]?.count ?? 0,
+  ];
 }
 
 function mergeMetricCards(
   baseCards: SafetyAdminOverviewResponse['metricCards'],
-  overlayCards: SafetyAdminOverviewResponse['metricCards'],
-) {
-  if (baseCards.length === 0) return overlayCards;
-  if (overlayCards.length === 0) return baseCards;
+  siteStatusSummary: SafetyAdminOverviewResponse['siteStatusSummary'],
+): SafetyAdminOverviewResponse['metricCards'] {
+  if (baseCards.length === 0) return baseCards;
 
-  const nextCards = baseCards.map((card) => ({ ...card }));
-  overlayCards.slice(0, 4).forEach((card, index) => {
-    if (nextCards[index]) nextCards[index] = card;
-  });
-
-  const dispatchOverlay = overlayCards[findDispatchCardIndex(overlayCards)];
-  const dispatchIndex = findDispatchCardIndex(nextCards);
-  if (dispatchOverlay && nextCards[dispatchIndex]) {
-    nextCards[dispatchIndex] = dispatchOverlay;
-  }
-
-  return nextCards;
+  const siteStatusCounts = getSiteStatusCounts(siteStatusSummary);
+  return baseCards.map((card, index) =>
+    index < siteStatusCounts.length
+      ? {
+          ...card,
+          tone: 'default' as const,
+          value: formatCountLike(card.value, siteStatusCounts[index] ?? 0),
+        }
+      : { ...card },
+  );
 }
 
 function mergeSummaryRows(
   baseRows: SafetyAdminOverviewResponse['summaryRows'],
-  overlayRows: SafetyAdminOverviewResponse['summaryRows'],
+  siteStatusSummary: SafetyAdminOverviewResponse['siteStatusSummary'],
 ) {
-  if (baseRows.length === 0) return overlayRows;
-  if (overlayRows.length === 0) return baseRows;
+  if (baseRows.length === 0) return baseRows;
 
-  const nextRows = baseRows.map((row) => ({ ...row }));
-  overlayRows.slice(0, 4).forEach((row, index) => {
-    if (nextRows[index]) nextRows[index] = row;
-  });
-
-  const dispatchOverlay = overlayRows[findDispatchCardIndex(overlayRows)];
-  const dispatchIndex = findDispatchCardIndex(nextRows);
-  if (dispatchOverlay && nextRows[dispatchIndex]) {
-    nextRows[dispatchIndex] = dispatchOverlay;
-  }
-
-  return nextRows;
+  const siteStatusCounts = getSiteStatusCounts(siteStatusSummary);
+  return baseRows.map((row, index) =>
+    index < siteStatusCounts.length
+      ? {
+          ...row,
+          value: formatCountLike(row.value, siteStatusCounts[index] ?? 0),
+        }
+      : { ...row },
+  );
 }
 
-export async function buildAdminOverviewPolicyOverlay(
-  token: string,
-  request: Request | null,
-  today = new Date(),
-): Promise<OverviewPolicyOverlay> {
-  const [directoryData, reports] = await Promise.all([
-    fetchAdminDirectoryData(token, request),
-    fetchCurrentYearOverviewReports(token, request, today),
-  ]);
-  const data: ControllerDashboardData = {
-    ...directoryData,
-    contentItems: [],
-  };
-  const model = buildAdminOverviewModel(data, reports, [], today);
+export function buildAdminOverviewPolicyOverlay(
+  base: SafetyAdminOverviewResponse,
+): OverviewPolicyOverlay {
+  const fetchStartedAt = performance.now();
+  logOverviewPolicyOverlayStage('fetch_overlay_sources', fetchStartedAt, {
+    source: 'upstream.site_status_summary',
+    strategy: 'site_status_only',
+    ...summarizeOverlay({
+      siteStatusSummary: base.siteStatusSummary,
+    }),
+  });
+
+  const buildStartedAt = performance.now();
+  const siteStatusSummary = cloneSiteStatusSummary(base.siteStatusSummary);
+  logOverviewPolicyOverlayStage('build_admin_overview_model', buildStartedAt, {
+    ...summarizeOverlay({
+      siteStatusSummary,
+    }),
+    strategy: 'site_status_only',
+  });
 
   return {
-    deadlineSignalSummary: model.deadlineSignalSummary,
-    metricCards: model.metricCards,
-    priorityQuarterlyManagementRows: model.priorityQuarterlyManagementRows,
-    siteStatusSummary: model.siteStatusSummary,
-    summaryRows: model.summaryRows,
-    unsentReportRows: model.unsentReportRows,
+    siteStatusSummary,
   };
 }
 
@@ -263,11 +121,8 @@ export function mergeAdminOverviewPolicyOverlay(
 ): SafetyAdminOverviewResponse {
   return {
     ...base,
-    deadlineSignalSummary: overlay.deadlineSignalSummary,
-    metricCards: mergeMetricCards(base.metricCards, overlay.metricCards),
-    priorityQuarterlyManagementRows: overlay.priorityQuarterlyManagementRows,
+    metricCards: mergeMetricCards(base.metricCards, overlay.siteStatusSummary),
     siteStatusSummary: overlay.siteStatusSummary,
-    summaryRows: mergeSummaryRows(base.summaryRows, overlay.summaryRows),
-    unsentReportRows: overlay.unsentReportRows,
+    summaryRows: mergeSummaryRows(base.summaryRows, overlay.siteStatusSummary),
   };
 }

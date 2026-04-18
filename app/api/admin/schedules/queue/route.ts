@@ -10,6 +10,7 @@ export const runtime = 'nodejs';
 
 export async function GET(request: Request): Promise<Response> {
   try {
+    // Canonical schedules UI read path for queue data.
     const token = readRequiredAdminToken(request);
     const url = new URL(request.url);
     const response = await fetchAdminScheduleQueueServer(

@@ -6,6 +6,11 @@ import {
   fetchSafetyHeadquartersPage,
   fetchSafetySitesAdminPage,
 } from '@/lib/safetyApi/adminEndpoints';
+import {
+  ADMIN_DASHBOARD_BOOTSTRAP_MAILBOX_DIRECTORY_CACHE_KEY,
+  ADMIN_DASHBOARD_BOOTSTRAP_REPORT_LIST_CACHE_KEY,
+  ADMIN_DASHBOARD_BOOTSTRAP_SITES_CACHE_KEY,
+} from '@/features/admin/lib/adminDashboardBootstrapCache';
 import { readAdminSessionCache, writeAdminSessionCache } from '@/features/admin/lib/adminSessionCache';
 import {
   readSafetyContentItemsSessionCache,
@@ -21,6 +26,12 @@ export type AdminCoreDataScope = 'none' | 'sites' | 'mailbox';
 const ADMIN_DIRECTORY_PAGE_LIMIT = 200;
 
 type MailboxDirectoryData = Pick<ControllerDashboardData, 'headquarters' | 'sites'>;
+
+/**
+ * These loaders hydrate dashboard shell/bootstrap data. They intentionally use
+ * bootstrap-scoped session cache keys so they do not masquerade as section-owned
+ * caches such as overview, analytics, reports, or schedules.
+ */
 
 function mergeLoadedCoreDataScope(
   currentScope: AdminCoreDataScope,
@@ -166,7 +177,10 @@ export function useAdminDashboardDataLoaders({
       if (!enabled) return;
       const cachedReportList =
         !options?.force && contentCacheScope
-          ? readAdminSessionCache<SafetyReportListItem[]>(contentCacheScope, 'report-list')
+          ? readAdminSessionCache<SafetyReportListItem[]>(
+              contentCacheScope,
+              ADMIN_DASHBOARD_BOOTSTRAP_REPORT_LIST_CACHE_KEY,
+            )
           : { isFresh: false, value: null };
       if (cachedReportList.value) {
         setReportList(cachedReportList.value);
@@ -187,7 +201,11 @@ export function useAdminDashboardDataLoaders({
         const nextSites = options?.sites ?? data.sites;
         const visibleReports = filterVisibleAdminReportListItems(reports, nextSites, nextHeadquarters);
         setReportList(visibleReports);
-        writeAdminSessionCache(contentCacheScope, 'report-list', visibleReports);
+        writeAdminSessionCache(
+          contentCacheScope,
+          ADMIN_DASHBOARD_BOOTSTRAP_REPORT_LIST_CACHE_KEY,
+          visibleReports,
+        );
       } catch (nextError) {
         setError(getErrorMessage(nextError));
       } finally {
@@ -222,11 +240,17 @@ export function useAdminDashboardDataLoaders({
 
       const cachedSites =
         !options?.force && contentCacheScope
-          ? readAdminSessionCache<ControllerDashboardData['sites']>(contentCacheScope, 'sites-data')
+          ? readAdminSessionCache<ControllerDashboardData['sites']>(
+              contentCacheScope,
+              ADMIN_DASHBOARD_BOOTSTRAP_SITES_CACHE_KEY,
+            )
           : { isFresh: false, value: null };
       const cachedMailboxDirectory =
         requestedScope === 'mailbox' && !options?.force && contentCacheScope
-          ? readAdminSessionCache<MailboxDirectoryData>(contentCacheScope, 'mailbox-directory')
+          ? readAdminSessionCache<MailboxDirectoryData>(
+              contentCacheScope,
+              ADMIN_DASHBOARD_BOOTSTRAP_MAILBOX_DIRECTORY_CACHE_KEY,
+            )
           : { isFresh: false, value: null };
 
       if (requestedScope === 'sites' && cachedSites.value) {
@@ -275,9 +299,17 @@ export function useAdminDashboardDataLoaders({
           ...(requestedScope === 'mailbox' ? { headquarters: directory.headquarters } : {}),
           sites: directory.sites,
         }));
-        writeAdminSessionCache(contentCacheScope, 'sites-data', directory.sites);
+        writeAdminSessionCache(
+          contentCacheScope,
+          ADMIN_DASHBOARD_BOOTSTRAP_SITES_CACHE_KEY,
+          directory.sites,
+        );
         if (requestedScope === 'mailbox') {
-          writeAdminSessionCache(contentCacheScope, 'mailbox-directory', directory);
+          writeAdminSessionCache(
+            contentCacheScope,
+            ADMIN_DASHBOARD_BOOTSTRAP_MAILBOX_DIRECTORY_CACHE_KEY,
+            directory,
+          );
         }
 
         const followUpTasks: Array<Promise<void>> = [];

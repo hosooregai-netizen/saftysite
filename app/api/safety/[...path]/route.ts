@@ -4,8 +4,10 @@ import {
 } from '@/lib/safetyApi/proxy';
 import { refreshAdminAnalyticsSnapshot } from '@/server/admin/analyticsSnapshot';
 import { invalidateAdminDirectorySnapshot } from '@/server/admin/adminDirectorySnapshot';
-import { invalidateAdminOverviewRouteCache } from '@/server/admin/overviewRouteCache';
-import { invalidateAdminReportsRouteCache } from '@/server/admin/reportsRouteCache';
+import {
+  invalidateAdminRouteCaches,
+  resolveAdminRouteInvalidationTargets,
+} from '@/server/admin/adminRouteInvalidation';
 import { refreshAdminScheduleSnapshot } from '@/server/admin/scheduleSnapshot';
 import { readRequiredAdminToken } from '@/server/admin/safetyApiServer';
 
@@ -25,6 +27,8 @@ function shouldRefreshAdminAnalytics(path: string[], method: string) {
   }
 
   const [root, second] = path;
+  // This refresh keeps export/legacy analytics snapshot helpers warm.
+  // The analytics dashboard UI itself reads from `/api/admin/dashboard/analytics`.
   if (root === 'reports' && (second === 'upsert' || path[2] === 'status')) {
     return true;
   }
@@ -50,19 +54,6 @@ function shouldInvalidateAdminDirectory(path: string[], method: string) {
 
   const [root] = path;
   return root === 'assignments' || root === 'headquarters' || root === 'sites' || root === 'users';
-}
-
-function shouldInvalidateAdminReports(path: string[], method: string) {
-  const normalizedMethod = method.toUpperCase();
-  if (!['POST', 'PATCH', 'PUT', 'DELETE'].includes(normalizedMethod)) {
-    return false;
-  }
-
-  const [root, second] = path;
-  if (root === 'reports') {
-    return true;
-  }
-  return root === 'assignments' || root === 'headquarters' || root === 'sites' || root === 'users' || second === 'dispatch-policy';
 }
 
 async function handleRequest(
@@ -94,9 +85,8 @@ async function handleRequest(
     invalidateAdminDirectorySnapshot();
   }
 
-  if (response.ok && shouldInvalidateAdminReports(path, request.method)) {
-    invalidateAdminReportsRouteCache();
-    invalidateAdminOverviewRouteCache();
+  if (response.ok) {
+    invalidateAdminRouteCaches(resolveAdminRouteInvalidationTargets(path, request.method));
   }
 
   return response;

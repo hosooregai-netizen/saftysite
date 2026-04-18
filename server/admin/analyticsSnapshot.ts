@@ -6,6 +6,11 @@ import { fetchAdminReports } from '@/server/admin/safetyApiServer';
 import { backfillAnalyticsSourceData } from '@/features/admin/lib/control-center-model/analyticsSourceBackfill';
 import type { SafetyAdminAnalyticsResponse } from '@/types/admin';
 
+/**
+ * Analytics snapshot is not the dashboard UI source of truth.
+ * The analytics screen reads from `/api/admin/dashboard/analytics` directly.
+ * This snapshot exists for export flows and explicit snapshot refresh/warm-up paths.
+ */
 interface AnalyticsSourceSnapshot {
   data: ControllerDashboardData;
   refreshedAt: string;
@@ -95,6 +100,8 @@ export async function buildAdminAnalyticsSnapshotResponse(
   request: Request | null = null,
   today = new Date(),
 ): Promise<SafetyAdminAnalyticsResponse> {
+  // Export and snapshot-oriented helpers should read from the shared snapshot.
+  // The main analytics route intentionally does not use this path.
   const snapshot = await getAdminAnalyticsSnapshot(token, request);
   return buildAdminAnalyticsResponse(snapshot.data, snapshot.reports, filters, today);
 }

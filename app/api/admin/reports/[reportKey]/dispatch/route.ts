@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { refreshAdminAnalyticsSnapshot } from '@/server/admin/analyticsSnapshot';
+import { invalidateAdminOverviewAndReportsRouteCaches } from '@/server/admin/adminRouteInvalidation';
 import { serializeReportDispatchPayload } from '@/server/admin/reportDispatchPayload';
-import { invalidateAdminReportsRouteCache } from '@/server/admin/reportsRouteCache';
 import {
   readRequiredAdminToken,
   SafetyServerApiError,
@@ -25,7 +25,7 @@ export async function PATCH(
       serializeReportDispatchPayload(dispatch),
       request,
     );
-    invalidateAdminReportsRouteCache();
+    invalidateAdminOverviewAndReportsRouteCaches();
     void refreshAdminAnalyticsSnapshot(token, request).catch(() => undefined);
 
     return NextResponse.json(updated);

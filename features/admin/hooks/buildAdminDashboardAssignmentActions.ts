@@ -7,6 +7,7 @@ import {
   buildAssignmentPayload,
   loadAllSafetyAssignments,
 } from '@/features/admin/lib/adminDashboardMutations';
+import { invalidateAdminDirectoryMutationClientCaches } from '@/features/admin/lib/adminClientCacheInvalidation';
 import type {
   ControllerDashboardData,
   SafetyAssignmentInput,
@@ -19,16 +20,15 @@ type MutationRunner = <TResult>(
   successMessage: string,
   options?: {
     applyResult?: (current: ControllerDashboardData, result: TResult) => ControllerDashboardData;
+    invalidateClientCaches?: (scope: string | null) => void;
   },
 ) => Promise<void>;
 
 interface BuildAdminDashboardAssignmentActionsParams {
-  data: ControllerDashboardData;
   runMutation: MutationRunner;
 }
 
 export function buildAdminDashboardAssignmentActions({
-  data,
   runMutation,
 }: BuildAdminDashboardAssignmentActionsParams) {
   return {
@@ -57,6 +57,7 @@ export function buildAdminDashboardAssignmentActions({
             ...current,
             assignments: upsertRecordById(current.assignments, assignment),
           }),
+          invalidateClientCaches: invalidateAdminDirectoryMutationClientCaches,
         },
       ),
     assignFieldAgentToSite: (
@@ -94,6 +95,7 @@ export function buildAdminDashboardAssignmentActions({
             ...current,
             assignments: upsertRecordById(current.assignments, assignment),
           }),
+          invalidateClientCaches: invalidateAdminDirectoryMutationClientCaches,
         },
       ),
     unassignFieldAgentFromSite: (siteId: string, userId: string) =>
@@ -123,6 +125,7 @@ export function buildAdminDashboardAssignmentActions({
                   assignments: removeRecordById(current.assignments, result.assignmentId),
                 }
               : current,
+          invalidateClientCaches: invalidateAdminDirectoryMutationClientCaches,
         },
       ),
     updateAssignment: (id: string, input: SafetyAssignmentUpdateInput) =>
@@ -131,6 +134,7 @@ export function buildAdminDashboardAssignmentActions({
           ...current,
           assignments: upsertRecordById(current.assignments, assignment),
         }),
+        invalidateClientCaches: invalidateAdminDirectoryMutationClientCaches,
       }),
     deactivateAssignment: (id: string) =>
       runMutation((token) => deactivateSafetyAssignment(token, id), '배정을 비활성화했습니다.', {
@@ -138,6 +142,7 @@ export function buildAdminDashboardAssignmentActions({
           ...current,
           assignments: removeRecordById(current.assignments, assignment.id),
         }),
+        invalidateClientCaches: invalidateAdminDirectoryMutationClientCaches,
       }),
   };
 }

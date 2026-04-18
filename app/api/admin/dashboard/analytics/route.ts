@@ -10,6 +10,8 @@ export const runtime = 'nodejs';
 
 export async function GET(request: Request): Promise<Response> {
   try {
+    // Canonical UI read path for the analytics dashboard.
+    // Keep this on the direct upstream fetch path; do not route it through analyticsSnapshot.
     const token = readRequiredAdminToken(request);
     const url = new URL(request.url);
     const response = await fetchAdminAnalyticsServer(

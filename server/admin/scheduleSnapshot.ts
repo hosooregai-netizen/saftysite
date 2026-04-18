@@ -13,6 +13,11 @@ import {
 } from '@/server/admin/automation';
 import { getAdminDirectorySnapshot } from '@/server/admin/adminDirectorySnapshot';
 
+/**
+ * Schedule snapshot is a legacy/shared helper layer.
+ * The schedules UI reads from `/api/admin/schedules/calendar`,
+ * `/api/admin/schedules/queue`, and `/api/admin/schedules/lookups` directly.
+ */
 interface ScheduleSourceSnapshot {
   data: ControllerDashboardData;
   refreshedAt: string;

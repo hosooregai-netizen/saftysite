@@ -12,6 +12,10 @@ import type { SafetyInspectionSchedule } from '@/types/admin';
 
 export const runtime = 'nodejs';
 
+function logLegacyScheduleRouteUsage(context: Record<string, unknown>) {
+  console.info('admin-schedules-route-legacy-usage', context);
+}
+
 function compareText(left: string, right: string, direction: 'asc' | 'desc') {
   const compared = left.localeCompare(right, 'ko');
   return direction === 'asc' ? compared : -compared;
@@ -64,6 +68,8 @@ function sortSchedules(
 
 export async function GET(request: Request): Promise<Response> {
   try {
+    // Legacy aggregate schedules route backed by scheduleSnapshot.
+    // The schedules UI should prefer /calendar, /queue, and /lookups.
     const token = readRequiredAdminToken(request);
     const url = new URL(request.url);
     const limit = Math.max(1, Math.min(5000, Number(url.searchParams.get('limit') || '1000')));
@@ -80,6 +86,16 @@ export async function GET(request: Request): Promise<Response> {
       siteId: url.searchParams.get('site_id') || '',
       status: url.searchParams.get('status') || '',
     };
+    logLegacyScheduleRouteUsage({
+      assignee_user_id: Boolean(filters.assigneeUserId),
+      month: filters.month,
+      planned_date: Boolean(filters.plannedDate),
+      query: Boolean(filters.query),
+      site_id: Boolean(filters.siteId),
+      sort_by: sortBy,
+      sort_dir: sortDir,
+      status: Boolean(filters.status),
+    });
     const rows = sortSchedules(
       [
         ...buildAdminCalendarSchedules(snapshot.rows, filters, new Date()),
@@ -95,6 +111,10 @@ export async function GET(request: Request): Promise<Response> {
       offset,
       rows: rows.slice(offset, offset + limit),
       total: rows.length,
+    }, {
+      headers: {
+        'X-Admin-Schedules-Route-Mode': 'legacy-snapshot',
+      },
     });
   } catch (error) {
     if (error instanceof SafetyServerApiError) {
