@@ -3,10 +3,12 @@
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import AppModal from '@/components/ui/AppModal';
 import ActionMenu from '@/components/ui/ActionMenu';
+import { SubmitSearchField } from '@/components/ui/SubmitSearchField';
 import {
   buildSortMenuOptions,
   SortableHeaderCell,
 } from '@/features/admin/components/SortableHeaderCell';
+import { useSubmittedSearchState } from '@/hooks/useSubmittedSearchState';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import {
   uploadSafetyAssetFile,
@@ -132,11 +134,11 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
   } = props;
   const [editingId, setEditingId] = useState<string | null>(null);
   const [activeType, setActiveType] = useState<SafetyContentItem['content_type'] | 'all'>('all');
-  const [query, setQuery] = useState('');
   const [sort, setSort] = useState<TableSortState>({
     direction: 'asc',
     key: 'title',
   });
+  const { query, queryInput, setQueryInput, submitQuery } = useSubmittedSearchState();
   const [form, setForm] = useState(createEmptyContentForm());
   const [detailLoadingId, setDetailLoadingId] = useState<string | null>(null);
   const [disasterCaseBatchItems, setDisasterCaseBatchItems] = useState<DisasterCaseBatchItem[]>(
@@ -397,13 +399,17 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
           </p>
         </div>
         <div className={`${styles.sectionHeaderActions} ${styles.sectionHeaderToolbarActions}`}>
-          <input
-            className={`app-input ${styles.sectionHeaderSearch} ${styles.sectionHeaderToolbarSearch}`}
+          <SubmitSearchField
+            busy={loading || refreshing}
+            formClassName={`${styles.sectionHeaderSearchShell} ${styles.sectionHeaderToolbarSearch}`}
+            inputClassName={`app-input ${styles.sectionHeaderSearchInput}`}
+            buttonClassName={styles.sectionHeaderSearchButton}
             placeholder="제목, 미리보기 내용으로 검색"
-            value={query}
-            onChange={(event) => {
-              setQuery(event.target.value);
+            value={queryInput}
+            onChange={setQueryInput}
+            onSubmit={() => {
               onPageChange(1);
+              submitQuery();
             }}
           />
           <select

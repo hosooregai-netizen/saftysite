@@ -44,10 +44,11 @@ export function SiteReportsScreen({ siteKey }: SiteReportsScreenProps) {
     reportItems,
     reloadReportIndex,
     dispatchFilter,
-    reportQuery,
+    reportQueryInput,
     reportSortMode,
     setDispatchFilter,
     setReportQuery,
+    submitReportQuery,
     setReportSortMode,
     workerBackHref,
   } = useSiteReportsScreen(siteKey);
@@ -129,10 +130,11 @@ export function SiteReportsScreen({ siteKey }: SiteReportsScreenProps) {
                   reportIndexStatus={reportIndexStatus}
                   reportItems={reportItems}
                   dispatchFilter={dispatchFilter}
-                  reportQuery={reportQuery}
+                  reportQueryInput={reportQueryInput}
                   reportSortMode={reportSortMode}
                   setDispatchFilter={setDispatchFilter}
                   setReportQuery={setReportQuery}
+                  submitReportQuery={submitReportQuery}
                   setReportSortMode={setReportSortMode}
                   showSummaryBar={false}
                 />

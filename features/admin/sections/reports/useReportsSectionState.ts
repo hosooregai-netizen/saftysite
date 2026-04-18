@@ -2,6 +2,7 @@
 
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useSubmittedSearchState } from '@/hooks/useSubmittedSearchState';
 import {
   readAdminSessionCache,
   writeAdminSessionCache,
@@ -131,7 +132,12 @@ export function useReportsSectionState({
       ? value
       : null;
   }, [searchParams]);
-  const [query, setQuery] = useState(() => searchParams.get('query') || '');
+  const {
+    query,
+    queryInput,
+    setQueryInput,
+    submitQuery,
+  } = useSubmittedSearchState(searchParams.get('query') || '');
   const [sort, setSort] = useState<TableSortState>({ direction: 'desc', key: 'updatedAt' });
   const [reportType, setReportType] = useState<'all' | ControllerReportRow['reportType']>(() => {
     const value = searchParams.get('reportType');
@@ -673,6 +679,7 @@ export function useReportsSectionState({
     originalPdfDialog,
     qualityFilter,
     query,
+    queryInput,
     reportType,
     resetHeaderFilters,
     reviewForm,
@@ -707,9 +714,10 @@ export function useReportsSectionState({
       setOffset(0);
       setQualityFilter(value);
     },
-    setQuery: (value: string) => {
+    setQueryInput,
+    submitQuery: () => {
       setOffset(0);
-      setQuery(value);
+      submitQuery();
     },
     setReportType: (value: 'all' | ControllerReportRow['reportType']) => {
       setOffset(0);

@@ -2,6 +2,7 @@
 
 import { useSearchParams } from 'next/navigation';
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import { useSubmittedSearchState } from '@/hooks/useSubmittedSearchState';
 import {
   readAdminSessionCache,
   writeAdminSessionCache,
@@ -47,7 +48,12 @@ export function useUsersSectionState(
 ) {
   const searchParams = useSearchParams();
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [query, setQuery] = useState(() => searchParams.get('query') || '');
+  const {
+    query,
+    queryInput,
+    setQueryInput,
+    submitQuery,
+  } = useSubmittedSearchState(searchParams.get('query') || '');
   const [roleFilter, setRoleFilter] = useState<'all' | UserRoleView>(() => {
     const value = searchParams.get('role');
     return value === 'admin' || value === 'field_agent' ? value : 'all';
@@ -316,6 +322,7 @@ export function useUsersSectionState(
     page: currentPage,
     pagedUsers,
     query,
+    queryInput,
     refreshPage,
     roleFilter,
     sessionCountBySiteId,
@@ -323,9 +330,10 @@ export function useUsersSectionState(
     setPage: (nextPage: number) => {
       setPage(Math.max(1, Math.min(nextPage, totalPages)));
     },
-    setQuery: (value: string) => {
+    setQueryInput,
+    submitQuery: () => {
       setPage(1);
-      setQuery(value);
+      submitQuery();
     },
     setRoleFilter: (value: 'all' | UserRoleView) => {
       setPage(1);

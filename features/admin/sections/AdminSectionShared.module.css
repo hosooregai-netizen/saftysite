@@ -662,6 +662,13 @@
   width: min(320px, 100%);
 }
 
+.sectionHeaderSearchShell {
+  position: relative;
+  flex: 1 1 320px;
+  min-width: min(100%, 320px);
+  width: min(320px, 100%);
+}
+
 .sectionHeaderToolbarSearch {
   flex: 0 1 320px;
   min-width: 220px;
@@ -672,6 +679,49 @@
   flex: 0 1 320px;
   min-width: 220px;
   width: 320px;
+}
+
+.sectionHeaderSearchInput {
+  width: 100%;
+  padding-right: 68px;
+}
+
+.sectionHeaderSearchButton {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  bottom: 4px;
+  min-width: 54px;
+  padding: 0 12px;
+  border: 1px solid #b7c3d0;
+  border-radius: 1px;
+  background: #f4f7fb;
+  font: inherit;
+  font-size: var(--text-ui-sm);
+  font-weight: 700;
+  color: var(--erp-dark);
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.sectionHeaderSearchButton:hover {
+  border-color: #96a4b4;
+  background: #ecf2f8;
+}
+
+.sectionHeaderSearchButton:disabled {
+  border-color: #cfd8e1;
+  background: #f5f7fa;
+  color: #8391a1;
+  cursor: wait;
+}
+
+.sectionHeaderSearchButton:focus-visible {
+  outline: 2px solid var(--erp-mid);
+  outline-offset: 1px;
 }
 
 .sectionHeaderMenuWrap {

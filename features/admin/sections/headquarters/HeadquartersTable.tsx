@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { SubmitSearchField } from '@/components/ui/SubmitSearchField';
 import ActionMenu from '@/components/ui/ActionMenu';
 import { SortableHeaderCell } from '@/features/admin/components/SortableHeaderCell';
 import { formatTimestamp, getAdminSectionHref } from '@/lib/admin';
@@ -24,6 +25,7 @@ interface HeadquartersTableProps {
   onOpenSitesRequest: (item: SafetyHeadquarter) => void;
   onPageChange: (page: number) => void;
   onQueryChange: (value: string) => void;
+  onQuerySubmit: () => void;
   onSortChange: (value: TableSortState) => void;
   query: string;
   sort: TableSortState;
@@ -73,6 +75,7 @@ export function HeadquartersTable({
   onOpenSitesRequest,
   onPageChange,
   onQueryChange,
+  onQuerySubmit,
   onSortChange,
   query,
   sort,
@@ -100,11 +103,15 @@ export function HeadquartersTable({
           <div className={styles.sectionHeaderSpacer} />
         )}
         <div className={`${styles.sectionHeaderActions} ${styles.sectionHeaderToolbarActions}`}>
-          <input
-            className={`app-input ${styles.sectionHeaderSearch} ${styles.sectionHeaderToolbarSearch}`}
+          <SubmitSearchField
+            busy={busy}
+            formClassName={`${styles.sectionHeaderSearchShell} ${styles.sectionHeaderToolbarSearch}`}
+            inputClassName={`app-input ${styles.sectionHeaderSearchInput}`}
+            buttonClassName={styles.sectionHeaderSearchButton}
             placeholder="회사명, 관리번호, 대표자, 등록번호, 주소로 검색"
             value={query}
-            onChange={(event) => onQueryChange(event.target.value)}
+            onChange={onQueryChange}
+            onSubmit={onQuerySubmit}
           />
           <button
             type="button"

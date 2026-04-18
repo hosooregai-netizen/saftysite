@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { SubmitSearchField } from '@/components/ui/SubmitSearchField';
 import ActionMenu from '@/components/ui/ActionMenu';
 import {
   buildSortMenuOptions,
@@ -28,11 +29,12 @@ interface UsersTableProps {
   onEditRequest: (user: SafetyAdminUserListRow) => void;
   onExportRequest?: () => void;
   page: number;
-  query: string;
+  queryInput: string;
   roleFilter: 'all' | 'admin' | 'field_agent';
   sessionCountBySiteId: Map<string, number>;
   setPage: (page: number) => void;
   setQuery: (value: string) => void;
+  submitQuery: () => void;
   setRoleFilter: (value: 'all' | 'admin' | 'field_agent') => void;
   setSort: (value: TableSortState) => void;
   setStatusFilter: (value: 'all' | 'active' | 'inactive') => void;
@@ -52,11 +54,12 @@ export function UsersTable({
   onDeleteRequest,
   onEditRequest,
   page,
-  query,
+  queryInput,
   roleFilter,
   sessionCountBySiteId,
   setPage,
   setQuery,
+  submitQuery,
   setRoleFilter,
   setSort,
   setStatusFilter,
@@ -130,11 +133,15 @@ export function UsersTable({
           <h2 className={styles.sectionTitle}>사용자</h2>
         </div>
         <div className={`${styles.sectionHeaderActions} ${styles.sectionHeaderToolbarActions}`}>
-          <input
-            className={`app-input ${styles.sectionHeaderSearch} ${styles.sectionHeaderToolbarSearch}`}
+          <SubmitSearchField
+            busy={busy}
+            formClassName={`${styles.sectionHeaderSearchShell} ${styles.sectionHeaderToolbarSearch}`}
+            inputClassName={`app-input ${styles.sectionHeaderSearchInput}`}
+            buttonClassName={styles.sectionHeaderSearchButton}
             placeholder="이름, 이메일, 직책, 소속으로 검색"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            value={queryInput}
+            onChange={setQuery}
+            onSubmit={submitQuery}
           />
           <SectionHeaderFilterMenu
             activeCount={activeFilterCount}

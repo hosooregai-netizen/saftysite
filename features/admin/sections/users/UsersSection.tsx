@@ -126,11 +126,12 @@ export function UsersSection({
         onDeleteRequest={handleDeleteUser}
         onEditRequest={state.openEdit}
         page={state.page}
-        query={state.query}
+        queryInput={state.queryInput}
         roleFilter={state.roleFilter}
         sessionCountBySiteId={state.sessionCountBySiteId}
         setPage={state.setPage}
-        setQuery={state.setQuery}
+        setQuery={state.setQueryInput}
+        submitQuery={state.submitQuery}
         setRoleFilter={state.setRoleFilter}
         setSort={state.setSort}
         setStatusFilter={state.setStatusFilter}

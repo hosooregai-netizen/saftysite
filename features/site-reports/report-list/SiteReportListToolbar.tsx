@@ -1,12 +1,15 @@
 'use client';
 
+import { SubmitSearchField } from '@/components/ui/SubmitSearchField';
 import styles from '@/features/site-reports/components/SiteReportsScreen.module.css';
 import type { SiteReportDispatchFilter, SiteReportSortMode } from './types';
 
 interface SiteReportListToolbarProps {
   canCreateReport: boolean;
   dispatchFilter: SiteReportDispatchFilter;
+  isSearching?: boolean;
   onCreateReport: () => void;
+  onSubmitReportQuery: () => void;
   reportQuery: string;
   reportSortMode: SiteReportSortMode;
   setDispatchFilter: (value: SiteReportDispatchFilter) => void;
@@ -17,7 +20,9 @@ interface SiteReportListToolbarProps {
 export function SiteReportListToolbar({
   canCreateReport,
   dispatchFilter,
+  isSearching = false,
   onCreateReport,
+  onSubmitReportQuery,
   reportQuery,
   reportSortMode,
   setDispatchFilter,
@@ -26,11 +31,15 @@ export function SiteReportListToolbar({
 }: SiteReportListToolbarProps) {
   return (
     <div className={styles.tableTools}>
-      <input
-        className={`app-input ${styles.tableSearch}`}
+      <SubmitSearchField
+        busy={isSearching}
+        formClassName={styles.tableSearchShell}
+        inputClassName={`app-input ${styles.tableSearchInput}`}
+        buttonClassName={styles.tableSearchButton}
         placeholder="차수, 보고서명, 지도일, 작성자로 검색"
         value={reportQuery}
-        onChange={(event) => setReportQuery(event.target.value)}
+        onChange={setReportQuery}
+        onSubmit={onSubmitReportQuery}
         aria-label="기술지도 보고서 검색"
       />
       <select

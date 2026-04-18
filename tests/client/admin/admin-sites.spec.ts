@@ -28,14 +28,37 @@ export async function runAdminSitesSmoke(config: ClientSmokePlaywrightConfig) {
     await harness.waitForRequestCount('GET /api/admin/sites/list', siteListReadsBefore + 1);
     await harness.waitForRequestCount('GET /api/admin/directory/lookups', lookupReadsBefore + 1);
     await page.getByRole('button', { name: '사업장 정보 수정' }).waitFor({ state: 'visible' });
+    await page.waitForTimeout(250);
+    const settledSiteListReads = requestCounts.get('GET /api/admin/sites/list') || 0;
 
-    const siteSearchInput = page.getByPlaceholder('현장명, 사업장 관리번호, 공사 종류, 주소, 점검자·배정 지도요원으로 검색');
+    const siteSearch = page.locator('[role="search"]').first();
+    const siteSearchInput = siteSearch.locator('input');
     await siteSearchInput.fill('ZZ-no-match-123');
+    await page.waitForTimeout(250);
+    if ((requestCounts.get('GET /api/admin/sites/list') || 0) !== settledSiteListReads) {
+      throw new Error('Site search should wait for an explicit submit before refetching.');
+    }
+    await page.locator('tbody').getByText('기존 현장', { exact: true }).waitFor({ state: 'visible' });
+    await Promise.all([
+      harness.waitForRequestCount('GET /api/admin/sites/list', settledSiteListReads + 1),
+      siteSearch.getByRole('button').click(),
+    ]);
     await page.getByText('등록된 현장이 없습니다.', { exact: true }).waitFor({ state: 'visible' });
+
     await siteSearchInput.fill('김요원');
+    await page.waitForTimeout(250);
+    if ((requestCounts.get('GET /api/admin/sites/list') || 0) !== settledSiteListReads + 1) {
+      throw new Error('Site search should keep the submitted query until the next submit.');
+    }
+    await Promise.all([
+      harness.waitForRequestCount('GET /api/admin/sites/list', settledSiteListReads + 2),
+      siteSearch.getByRole('button').click(),
+    ]);
     await page.getByText('등록된 현장이 없습니다.', { exact: true }).waitFor({ state: 'hidden' });
     await page.locator('tbody').getByText('기존 현장', { exact: true }).waitFor({ state: 'visible' });
+
     await siteSearchInput.fill('');
+    await siteSearch.getByRole('button').click();
     await page.locator('tbody').getByText('기존 현장', { exact: true }).waitFor({ state: 'visible' });
 
     const headquarterBackLabelCount = await page.getByText('사업장 목록', { exact: true }).count();

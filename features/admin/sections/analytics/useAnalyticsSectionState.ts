@@ -2,6 +2,7 @@
 
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useSubmittedSearchState } from '@/hooks/useSubmittedSearchState';
 import type { AdminAnalyticsPeriod } from '@/features/admin/lib/buildAdminControlCenterModel';
 import { readAdminSessionCache, writeAdminSessionCache } from '@/features/admin/lib/adminSessionCache';
 import { fetchAdminAnalytics, fetchAdminDirectoryLookups } from '@/lib/admin/apiClient';
@@ -42,7 +43,12 @@ function normalizeYearSelection(
 
 export function useAnalyticsSectionState(currentUserId: string) {
   const searchParams = useSearchParams();
-  const [query, setQuery] = useState(() => searchParams.get('query') || '');
+  const {
+    query,
+    queryInput,
+    setQueryInput,
+    submitQuery,
+  } = useSubmittedSearchState(searchParams.get('query') || '');
   const [period, setPeriod] = useState<AdminAnalyticsPeriod>(() => {
     const value = searchParams.get('period');
     return value === 'month' || value === 'quarter' || value === 'year' || value === 'all'
@@ -295,6 +301,7 @@ export function useAnalyticsSectionState(currentUserId: string) {
     loadError,
     period,
     query,
+    queryInput,
     resetHeaderFilters,
     scopeChips,
     setChartYear,
@@ -303,7 +310,8 @@ export function useAnalyticsSectionState(currentUserId: string) {
     setEmployeeSort,
     setHeadquarterId,
     setPeriod,
-    setQuery,
+    setQueryInput,
+    submitQuery,
     setSiteRevenueSort,
     setUserId,
     siteRevenueSort,

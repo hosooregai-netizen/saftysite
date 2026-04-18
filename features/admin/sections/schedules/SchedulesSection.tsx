@@ -3,11 +3,13 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import AppModal from '@/components/ui/AppModal';
+import { SubmitSearchField } from '@/components/ui/SubmitSearchField';
 import {
   buildSortMenuOptions,
   SortableHeaderCell,
 } from '@/features/admin/components/SortableHeaderCell';
 import { SectionHeaderFilterMenu } from '@/features/admin/components/SectionHeaderFilterMenu';
+import { useSubmittedSearchState } from '@/hooks/useSubmittedSearchState';
 import {
   readAdminSessionCache,
   writeAdminSessionCache,
@@ -292,7 +294,9 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
   const initialSelectedDate = searchParams.get('plannedDate') || '';
   const [month, setMonth] = useState(initialMonth);
   const [selectedDate, setSelectedDate] = useState(initialSelectedDate);
-  const [query, setQuery] = useState(() => searchParams.get('query') || '');
+  const { query, queryInput, setQueryInput, submitQuery } = useSubmittedSearchState(
+    searchParams.get('query') || '',
+  );
   const [siteId, setSiteId] = useState(() => searchParams.get('siteId') || '');
   const [assigneeUserId, setAssigneeUserId] = useState(
     () => searchParams.get('assigneeUserId') || '',
@@ -815,10 +819,14 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
             <h2 className={styles.sectionTitle}>일정/캘린더</h2>
           </div>
           <div className={styles.sectionHeaderActions}>
-            <input
-              className={`app-input ${styles.sectionHeaderSearch} ${styles.sectionHeaderToolbarSearch}`}
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
+            <SubmitSearchField
+              busy={isLoading}
+              formClassName={`${styles.sectionHeaderSearchShell} ${styles.sectionHeaderToolbarSearch}`}
+              inputClassName={`app-input ${styles.sectionHeaderSearchInput}`}
+              buttonClassName={styles.sectionHeaderSearchButton}
+              value={queryInput}
+              onChange={setQueryInput}
+              onSubmit={submitQuery}
               placeholder="현장명, 사업장명, 담당자로 검색"
             />
             <SectionHeaderFilterMenu

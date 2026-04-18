@@ -1,5 +1,6 @@
 'use client';
 
+import { SubmitSearchField } from '@/components/ui/SubmitSearchField';
 import { SectionHeaderFilterMenu } from '@/features/admin/components/SectionHeaderFilterMenu';
 import type { AdminAnalyticsPeriod } from '@/features/admin/lib/buildAdminControlCenterModel';
 import sharedStyles from '@/features/admin/sections/AdminSectionShared.module.css';
@@ -11,6 +12,7 @@ interface AnalyticsSectionHeaderProps {
   exportAnalytics: () => Promise<void>;
   headquarterId: string;
   headquarterOptions: Array<{ label: string; value: string }>;
+  isBusy: boolean;
   period: AdminAnalyticsPeriod;
   query: string;
   resetHeaderFilters: () => void;
@@ -18,6 +20,7 @@ interface AnalyticsSectionHeaderProps {
   setHeadquarterId: (value: string) => void;
   setPeriod: (value: AdminAnalyticsPeriod) => void;
   setQuery: (value: string) => void;
+  submitQuery: () => void;
   setUserId: (value: string) => void;
   userId: string;
   userOptions: Array<{ label: string; value: string }>;
@@ -30,6 +33,7 @@ export function AnalyticsSectionHeader({
   exportAnalytics,
   headquarterId,
   headquarterOptions,
+  isBusy,
   period,
   query,
   resetHeaderFilters,
@@ -37,6 +41,7 @@ export function AnalyticsSectionHeader({
   setHeadquarterId,
   setPeriod,
   setQuery,
+  submitQuery,
   setUserId,
   userId,
   userOptions,
@@ -47,11 +52,15 @@ export function AnalyticsSectionHeader({
         <h2 className={sharedStyles.sectionTitle}>매출/실적 집계</h2>
       </div>
       <div className={`${sharedStyles.sectionHeaderActions} ${sharedStyles.sectionHeaderToolbarActions}`}>
-        <input
-          className={`app-input ${sharedStyles.sectionHeaderSearch} ${sharedStyles.sectionHeaderToolbarSearch}`}
+        <SubmitSearchField
+          busy={isBusy}
+          formClassName={`${sharedStyles.sectionHeaderSearchShell} ${sharedStyles.sectionHeaderToolbarSearch}`}
+          inputClassName={`app-input ${sharedStyles.sectionHeaderSearchInput}`}
+          buttonClassName={sharedStyles.sectionHeaderSearchButton}
           placeholder="직원, 현장, 사업장 검색"
           value={query}
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={setQuery}
+          onSubmit={submitQuery}
         />
         <SectionHeaderFilterMenu activeCount={activeFilterCount} ariaLabel="실적 집계 필터" onReset={resetHeaderFilters}>
           <div className={sharedStyles.sectionHeaderMenuGrid}>

@@ -3,8 +3,10 @@
 import Link from 'next/link';
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import AppModal from '@/components/ui/AppModal';
+import { SubmitSearchField } from '@/components/ui/SubmitSearchField';
 import { buildNextTableSort } from '@/features/admin/components/SortableHeaderCell';
 import { SectionHeaderFilterMenu } from '@/features/admin/components/SectionHeaderFilterMenu';
+import { useSubmittedSearchState } from '@/hooks/useSubmittedSearchState';
 import adminStyles from '@/features/admin/sections/AdminSectionShared.module.css';
 import { exportAdminWorkbook } from '@/lib/admin/exportClient';
 import {
@@ -108,11 +110,11 @@ export function PhotoAlbumPanel({
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const defaultHeadquarterId = lockedHeadquarterId || initialHeadquarterId || '';
   const defaultSiteId = lockedSiteId || initialSiteId || '';
-  const [query, setQuery] = useState('');
   const [sort, setSort] = useState<TableSortState>({
     direction: 'desc',
     key: 'capturedAt',
   });
+  const { query, queryInput, setQueryInput, submitQuery } = useSubmittedSearchState();
   const [headquarterId, setHeadquarterId] = useState(() => defaultHeadquarterId);
   const [siteId, setSiteId] = useState(() => defaultSiteId);
   const [rows, setRows] = useState<PhotoAlbumItem[]>([]);
@@ -389,11 +391,15 @@ export function PhotoAlbumPanel({
                 {backLabel || '이전 화면으로'}
               </Link>
             ) : null}
-            <input
-              className={`app-input ${adminStyles.sectionHeaderSearch} ${adminStyles.sectionHeaderToolbarSearch}`}
+            <SubmitSearchField
+              busy={loading}
+              formClassName={`${adminStyles.sectionHeaderSearchShell} ${adminStyles.sectionHeaderToolbarSearch}`}
+              inputClassName={`app-input ${adminStyles.sectionHeaderSearchInput}`}
+              buttonClassName={adminStyles.sectionHeaderSearchButton}
               placeholder="파일명, 현장명, 보고서명, 업로더 검색"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              value={queryInput}
+              onChange={setQueryInput}
+              onSubmit={submitQuery}
             />
             {showHeaderFilter ? (
               <SectionHeaderFilterMenu

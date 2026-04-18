@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { SubmitSearchField } from '@/components/ui/SubmitSearchField';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import { SiteAssignmentModal } from './SiteAssignmentModal';
 import { SiteEditorModal } from './SiteEditorModal';
@@ -30,11 +31,15 @@ export function SitesSection(props: SitesSectionProps) {
           <div className={styles.sectionHeaderSpacer} />
         )}
         <div className={`${styles.sectionHeaderActions} ${styles.sectionHeaderToolbarActions}`}>
-          <input
-            className={`app-input ${styles.sectionHeaderSearch} ${styles.sectionHeaderToolbarSearch}`}
+          <SubmitSearchField
+            busy={state.isLoading}
+            formClassName={`${styles.sectionHeaderSearchShell} ${styles.sectionHeaderToolbarSearch}`}
+            inputClassName={`app-input ${styles.sectionHeaderSearchInput}`}
+            buttonClassName={styles.sectionHeaderSearchButton}
             placeholder="현장명, 사업장 관리번호, 공사 종류, 주소, 점검자·배정 지도요원으로 검색"
-            value={state.query}
-            onChange={(event) => state.setQuery(event.target.value)}
+            value={state.queryInput}
+            onChange={state.setQueryInput}
+            onSubmit={state.submitQuery}
           />
           <SitesFilterMenu
             activeCount={state.activeFilterCount}

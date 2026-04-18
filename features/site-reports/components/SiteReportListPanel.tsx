@@ -41,11 +41,12 @@ interface SiteReportListPanelProps {
   reportIndexError: string | null;
   reportIndexStatus: ReportIndexStatus;
   reportItems: InspectionReportListItem[];
-  reportQuery: string;
+  reportQueryInput: string;
   reportSortMode: SiteReportSortMode;
   dispatchFilter: SiteReportDispatchFilter;
   setDispatchFilter: (value: SiteReportDispatchFilter) => void;
   setReportQuery: (value: string) => void;
+  submitReportQuery: () => void;
   setReportSortMode: (value: SiteReportSortMode) => void;
   showSummaryBar?: boolean;
 }
@@ -71,11 +72,12 @@ export function SiteReportListPanel({
   reportIndexError,
   reportIndexStatus,
   reportItems,
-  reportQuery,
+  reportQueryInput,
   reportSortMode,
   dispatchFilter,
   setDispatchFilter,
   setReportQuery,
+  submitReportQuery,
   setReportSortMode,
   showSummaryBar = true,
 }: SiteReportListPanelProps) {
@@ -197,7 +199,8 @@ export function SiteReportListPanel({
           canCreateReport={canCreateReport}
           dispatchFilter={dispatchFilter}
           onCreateReport={openCreateDialog}
-          reportQuery={reportQuery}
+          onSubmitReportQuery={submitReportQuery}
+          reportQuery={reportQueryInput}
           reportSortMode={reportSortMode}
           setDispatchFilter={setDispatchFilter}
           setReportQuery={setReportQuery}

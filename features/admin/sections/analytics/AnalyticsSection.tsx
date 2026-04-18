@@ -24,13 +24,15 @@ export function AnalyticsSection({ currentUserId }: AnalyticsSectionProps) {
           exportAnalytics={state.exportAnalytics}
           headquarterId={state.headquarterId}
           headquarterOptions={state.headquarterOptions}
+          isBusy={state.isLoading}
           period={state.period}
-          query={state.query}
+          query={state.queryInput}
           resetHeaderFilters={state.resetHeaderFilters}
           setContractType={state.setContractType}
           setHeadquarterId={state.setHeadquarterId}
           setPeriod={state.setPeriod}
-          setQuery={state.setQuery}
+          setQuery={state.setQueryInput}
+          submitQuery={state.submitQuery}
           setUserId={state.setUserId}
           userId={state.userId}
           userOptions={state.userOptions}

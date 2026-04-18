@@ -133,6 +133,55 @@
   flex: 1 1 320px;
 }
 
+.tableSearchShell {
+  position: relative;
+  min-width: min(100%, 320px);
+  flex: 1 1 320px;
+}
+
+.tableSearchInput {
+  width: 100%;
+  padding-right: 68px;
+}
+
+.tableSearchButton {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  bottom: 4px;
+  min-width: 54px;
+  padding: 0 12px;
+  border: 1px solid #bfd0df;
+  border-radius: 10px;
+  background: #eef6ff;
+  font: inherit;
+  font-size: var(--text-ui-sm);
+  font-weight: 700;
+  color: #0f3f67;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.tableSearchButton:hover {
+  border-color: #94b7d4;
+  background: #e3f0fb;
+}
+
+.tableSearchButton:disabled {
+  border-color: #cddaea;
+  background: #f3f8fd;
+  color: #7b99b6;
+  cursor: wait;
+}
+
+.tableSearchButton:focus-visible {
+  outline: 2px solid var(--erp-mid);
+  outline-offset: 1px;
+}
+
 .tableSort {
   min-width: 164px;
   flex: 0 0 164px;

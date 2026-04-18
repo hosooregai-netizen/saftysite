@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useCallback, useDeferredValue, useState } from 'react';
+import { useSubmittedSearchState } from '@/hooks/useSubmittedSearchState';
 import LoginPanel from '@/components/auth/LoginPanel';
 import { buildSiteHubHref, buildSiteQuarterlyHref } from '@/features/home/lib/siteEntry';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
@@ -47,7 +48,7 @@ export function SiteQuarterlyReportsScreen({
   const router = useRouter();
   const [dialogReportId, setDialogReportId] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [query, setQuery] = useState('');
+  const { query, queryInput, setQueryInput, submitQuery } = useSubmittedSearchState();
   const [dispatchFilter, setDispatchFilter] =
     useState<QuarterlyListDispatchFilter>('all');
   const [sortMode, setSortMode] = useState<QuarterlyListSortMode>('number');
@@ -216,14 +217,15 @@ export function SiteQuarterlyReportsScreen({
           isLoading={isLoading}
           notice={dispatchNotice}
           onChangeDispatchFilter={setDispatchFilter}
-          onChangeQuery={setQuery}
+          onChangeQuery={setQueryInput}
+          onSubmitQuery={submitQuery}
           onChangeSortMode={setSortMode}
           onDeleteRequest={setDialogReportId}
           onOpenCreateDialog={openCreateDialog}
           onOpenReport={(href) => router.push(href)}
           onToggleDispatch={handleToggleDispatch}
           operationalError={operationalError}
-          query={query}
+          query={queryInput}
           rows={rows}
           sortMode={sortMode}
         />

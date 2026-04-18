@@ -4,6 +4,7 @@ import { useDeferredValue, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createEmptyTechnicalGuidanceRelations } from '@/constants/inspectionSession/sessionFactory';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
+import { useSubmittedSearchState } from '@/hooks/useSubmittedSearchState';
 import {
   fetchTechnicalGuidanceSeed,
   readSafetyAuthToken,
@@ -46,7 +47,12 @@ export function useSiteReportListState(
     isAuthenticated,
     isReady,
   } = useInspectionSessions();
-  const [reportQuery, setReportQuery] = useState('');
+  const {
+    query: reportQuery,
+    queryInput: reportQueryInput,
+    setQueryInput: setReportQueryInput,
+    submitQuery: submitReportQuery,
+  } = useSubmittedSearchState();
   const [reportSortMode, setReportSortMode] = useState<SiteReportSortMode>('round');
   const [dispatchFilter, setDispatchFilter] = useState<SiteReportDispatchFilter>('all');
   const currentSite = useMemo(() => {
@@ -164,8 +170,10 @@ export function useSiteReportListState(
     reportItems,
     reloadReportIndex,
     reportQuery,
+    reportQueryInput,
     reportSortMode,
-    setReportQuery,
+    setReportQuery: setReportQueryInput,
+    submitReportQuery,
     setReportSortMode,
     setDispatchFilter,
   };

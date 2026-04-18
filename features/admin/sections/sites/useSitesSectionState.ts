@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import { useSubmittedSearchState } from '@/hooks/useSubmittedSearchState';
 import {
   downloadAdminSiteBasicMaterial,
   exportAdminWorkbook,
@@ -106,7 +107,6 @@ export function useSitesSectionState({
   const router = useRouter();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [assignmentSiteId, setAssignmentSiteId] = useState<string | null>(null);
-  const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<'all' | SafetySiteStatus>(initialStatusFilter);
   const [sort, setSort] = useState<TableSortState>({
@@ -127,6 +127,7 @@ export function useSitesSectionState({
     sites: [],
     users: [],
   });
+  const { query, queryInput, setQueryInput, submitQuery } = useSubmittedSearchState();
   const deferredQuery = useDeferredValue(query);
   const abortControllerRef = useRef<AbortController | null>(null);
   const requestKey = useMemo(
@@ -415,6 +416,7 @@ export function useSitesSectionState({
     page: currentPage,
     pagedSites: rows,
     query,
+    queryInput,
     refreshPage,
     resetHeaderFilters,
     setAssignmentFilter: (value: SiteAssignmentFilter) => {
@@ -426,9 +428,10 @@ export function useSitesSectionState({
     setPage: (nextPage: number) => {
       setPage(Math.max(1, Math.min(nextPage, totalPages)));
     },
-    setQuery: (value: string) => {
+    setQueryInput,
+    submitQuery: () => {
       setPage(1);
-      setQuery(value);
+      submitQuery();
     },
     setSort: (value: TableSortState) => {
       setPage(1);

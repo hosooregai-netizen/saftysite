@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { SubmitSearchField } from '@/components/ui/SubmitSearchField';
 import ActionMenu from '@/components/ui/ActionMenu';
 import styles from '../components/SiteReportsScreen.module.css';
 import { formatDateTimeLabel, shouldIgnoreRowClick } from './quarterlyListHelpers';
@@ -19,6 +20,7 @@ interface QuarterlyReportsListPanelProps {
   notice: string | null;
   onChangeDispatchFilter: (value: QuarterlyListDispatchFilter) => void;
   onChangeQuery: (value: string) => void;
+  onSubmitQuery: () => void;
   onChangeSortMode: (value: QuarterlyListSortMode) => void;
   onDeleteRequest: (reportId: string) => void;
   onOpenCreateDialog: () => void;
@@ -39,6 +41,7 @@ export function QuarterlyReportsListPanel({
   notice,
   onChangeDispatchFilter,
   onChangeQuery,
+  onSubmitQuery,
   onChangeSortMode,
   onDeleteRequest,
   onOpenCreateDialog,
@@ -55,11 +58,15 @@ export function QuarterlyReportsListPanel({
       {notice ? <div className={styles.bannerInfo}>{notice}</div> : null}
 
       <div className={styles.tableTools}>
-        <input
-          className={`app-input ${styles.tableSearch}`}
+        <SubmitSearchField
+          busy={isLoading}
+          formClassName={styles.tableSearchShell}
+          inputClassName={`app-input ${styles.tableSearchInput}`}
+          buttonClassName={styles.tableSearchButton}
           placeholder="보고서명, 기간 검색"
           value={query}
-          onChange={(event) => onChangeQuery(event.target.value)}
+          onChange={onChangeQuery}
+          onSubmit={onSubmitQuery}
           aria-label="분기 종합 보고서 검색"
         />
         <select

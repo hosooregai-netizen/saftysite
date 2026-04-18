@@ -1,6 +1,7 @@
 'use client';
 
 import { useDeferredValue, useMemo, useState } from 'react';
+import { useSubmittedSearchState } from '@/hooks/useSubmittedSearchState';
 import type { TableSortState } from '@/types/admin';
 import type { SafetyHeadquarter } from '@/types/controller';
 import { toNullableText } from '@/lib/admin';
@@ -45,12 +46,12 @@ export function useHeadquartersSectionState(
 ) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const [query, setQuery] = useState('');
   const [sort, setSort] = useState<TableSortState>({
     direction: 'asc',
     key: 'name',
   });
   const [form, setForm] = useState(EMPTY_FORM);
+  const { query, queryInput, setQueryInput, submitQuery } = useSubmittedSearchState();
   const isOpen = editingId !== null;
   const deferredQuery = useDeferredValue(query);
   const filteredHeadquarters = useMemo(() => {
@@ -159,13 +160,15 @@ export function useHeadquartersSectionState(
     page: currentPage,
     pagedHeadquarters,
     query,
+    queryInput,
     setForm,
     setPage: (nextPage: number) => {
       setPage(Math.max(1, Math.min(nextPage, totalPages)));
     },
-    setQuery: (value: string) => {
+    setQueryInput,
+    submitQuery: () => {
       setPage(1);
-      setQuery(value);
+      submitQuery();
     },
     setSort: (value: TableSortState) => {
       setPage(1);

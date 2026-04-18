@@ -13,8 +13,20 @@ export async function runAdminUsersSmoke(config: ClientSmokePlaywrightConfig) {
 
     await harness.waitForRequestCount('GET /api/admin/users/list', listReadsBefore + 1);
     await page.getByRole('heading', { level: 2, name: '사용자' }).waitFor({ state: 'visible' });
-    await page.getByPlaceholder('이름, 이메일, 직책, 소속으로 검색').fill('김요원');
-    await harness.waitForRequestCount('GET /api/admin/users/list', listReadsBefore + 2);
+    await page.waitForTimeout(250);
+    const settledListReads = requestCounts.get('GET /api/admin/users/list') || 0;
+
+    const searchField = page.locator('[role="search"]').first();
+    await searchField.locator('input').fill('김요원');
+    await page.waitForTimeout(250);
+    if ((requestCounts.get('GET /api/admin/users/list') || 0) !== settledListReads) {
+      throw new Error('User search should wait for an explicit submit before refetching.');
+    }
+    await Promise.all([
+      harness.waitForRequestCount('GET /api/admin/users/list', settledListReads + 1),
+      searchField.getByRole('button').click(),
+    ]);
+
     await page.getByRole('button', { name: '사용자 추가' }).click();
     await page.getByRole('dialog', { name: '사용자 추가' }).waitFor({ state: 'visible' });
     await page.getByRole('button', { name: '취소' }).click();

@@ -33,6 +33,18 @@ export async function runSiteReportListSmoke(config: ClientSmokePlaywrightConfig
       throw new Error('Unable to resolve the seeded technical guidance report title.');
     }
 
+    const searchField = page.locator('[role="search"]').first();
+    await searchField.locator('input').fill('ZZ-no-match-123');
+    await page.waitForTimeout(250);
+    await firstRow.waitFor({ state: 'visible' });
+    await searchField.getByRole('button').click();
+    await page.getByText('검색 조건에 맞는 보고서가 없습니다.').waitFor({ state: 'visible' });
+    await searchField.locator('input').fill(toggledReportTitle);
+    await page.waitForTimeout(250);
+    await page.getByText('검색 조건에 맞는 보고서가 없습니다.').waitFor({ state: 'visible' });
+    await searchField.locator('input').press('Enter');
+    await firstRow.waitFor({ state: 'visible' });
+
     await firstRow.getByRole('button', { name: `${toggledReportTitle} 작업 메뉴 열기` }).click();
     await page.getByRole('menu').waitFor({ state: 'visible' });
     await page.getByRole('menuitem', { name: '발송으로 변경' }).click();

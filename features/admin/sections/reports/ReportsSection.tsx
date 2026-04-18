@@ -1,5 +1,6 @@
 'use client';
 
+import { SubmitSearchField } from '@/components/ui/SubmitSearchField';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import { ReportsDispatchDialog } from './ReportsDispatchDialog';
 import { ReportsFilterMenu } from './ReportsFilterMenu';
@@ -19,11 +20,15 @@ export function ReportsSection(props: ReportsSectionProps) {
           <h2 className={styles.sectionTitle}>전체 보고서</h2>
         </div>
         <div className={`${styles.sectionHeaderActions} ${styles.reportsSectionHeaderActions}`}>
-          <input
-            className={`app-input ${styles.sectionHeaderSearch} ${styles.reportsSectionSearch}`}
+          <SubmitSearchField
+            busy={state.loading || props.isLoading}
+            formClassName={`${styles.sectionHeaderSearchShell} ${styles.reportsSectionSearch}`}
+            inputClassName={`app-input ${styles.sectionHeaderSearchInput}`}
+            buttonClassName={styles.sectionHeaderSearchButton}
             placeholder="보고서명, 현장명, 사업장명, 담당자로 검색"
-            value={state.query}
-            onChange={(event) => state.setQuery(event.target.value)}
+            value={state.queryInput}
+            onChange={state.setQueryInput}
+            onSubmit={state.submitQuery}
           />
           <ReportsFilterMenu
             activeCount={state.activeFilterCount}

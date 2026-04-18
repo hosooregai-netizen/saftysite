@@ -408,9 +408,10 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
             }}
             onOpenSitesRequest={(item) => onSelectHeadquarter(item.id)}
             onPageChange={state.setPage}
-            onQueryChange={state.setQuery}
+            onQueryChange={state.setQueryInput}
+            onQuerySubmit={state.submitQuery}
             onSortChange={state.setSort}
-            query={state.query}
+            query={state.queryInput}
             sort={state.sort}
             totalCount={total}
             totalPages={totalPages}
