@@ -82,7 +82,13 @@ export interface SafetyAdminDirectoryLookupUser {
   role: SafetyUserRole;
 }
 
+export interface SafetyAdminDirectoryLookupContractType {
+  label: string;
+  value: string;
+}
+
 export interface SafetyAdminDirectoryLookupsResponse {
+  contractTypes: SafetyAdminDirectoryLookupContractType[];
   headquarters: SafetyAdminDirectoryLookupHeadquarter[];
   sites: SafetyAdminDirectoryLookupSite[];
   users: SafetyAdminDirectoryLookupUser[];

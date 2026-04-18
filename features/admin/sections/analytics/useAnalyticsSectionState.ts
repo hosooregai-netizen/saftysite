@@ -4,7 +4,7 @@ import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import type { AdminAnalyticsPeriod } from '@/features/admin/lib/buildAdminControlCenterModel';
 import { readAdminSessionCache, writeAdminSessionCache } from '@/features/admin/lib/adminSessionCache';
-import { fetchAdminAnalytics, fetchAdminDashboardLookups } from '@/lib/admin/apiClient';
+import { fetchAdminAnalytics, fetchAdminDirectoryLookups } from '@/lib/admin/apiClient';
 import { exportAdminServerWorkbook } from '@/lib/admin/exportClient';
 import type { SafetyAdminAnalyticsResponse, TableSortState } from '@/types/admin';
 import {
@@ -109,10 +109,18 @@ export function useAnalyticsSectionState(currentUserId: string) {
       return;
     }
 
-    void fetchAdminDashboardLookups()
+    void fetchAdminDirectoryLookups()
       .then((response) => {
-        writeAdminSessionCache(currentUserId, 'analytics-lookups', response);
-        setLookups(response);
+        const normalizedLookups = {
+          contractTypes: response.contractTypes,
+          headquarters: response.headquarters,
+          users: response.users.map((user) => ({
+            id: user.id,
+            name: user.name,
+          })),
+        } satisfies AnalyticsLookups;
+        writeAdminSessionCache(currentUserId, 'analytics-lookups', normalizedLookups);
+        setLookups(normalizedLookups);
       })
       .catch((error) => {
         console.error('Failed to load admin analytics lookups', error);

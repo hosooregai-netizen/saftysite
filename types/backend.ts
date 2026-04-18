@@ -691,7 +691,13 @@ export interface SafetyBackendAdminDirectoryLookupUser {
   role: SafetyUserRole;
 }
 
+export interface SafetyBackendAdminDirectoryLookupContractType {
+  label: string;
+  value: string;
+}
+
 export interface SafetyBackendAdminDirectoryLookupsResponse {
+  contract_types: SafetyBackendAdminDirectoryLookupContractType[];
   headquarters: SafetyBackendAdminDirectoryLookupHeadquarter[];
   sites: SafetyBackendAdminDirectoryLookupSite[];
   users: SafetyBackendAdminDirectoryLookupUser[];

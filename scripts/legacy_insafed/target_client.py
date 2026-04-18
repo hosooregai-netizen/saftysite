@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import os
 import time
+from pathlib import Path
 from typing import Any
-from urllib.parse import urljoin
+from urllib.parse import quote, urljoin, urlsplit, urlunsplit
 
 import requests
 
@@ -13,27 +14,78 @@ class TargetErpError(RuntimeError):
 
 
 class TargetErpClient:
-    def __init__(self, base_url: str, token: str, timeout: int = 30):
-        self.base_url = base_url.rstrip("/") + "/"
+    def __init__(self, base_url: str, token: str, timeout: int = 30, max_retries: int = 5):
+        self.base_url = self.normalize_base_url(base_url)
         self.timeout = timeout
-        self.max_retries = 5
+        self.max_retries = max(1, max_retries)
         self.session = requests.Session()
         self.session.headers.update({"Authorization": f"Bearer {token}"})
-        self.uses_direct_upstream = self.base_url.rstrip("/").endswith("/api/v1")
         self.progress_logging = os.environ.get("LEGACY_IMPORT_PROGRESS") == "1"
 
-    def _resolve_path(self, path: str) -> str:
+    @staticmethod
+    def normalize_base_url(base_url: str) -> str:
+        return base_url.rstrip("/") + "/"
+
+    @staticmethod
+    def _resolve_request_path(base_path: str, path: str) -> str:
         normalized = "/" + path.lstrip("/")
-        if not self.uses_direct_upstream:
-            return normalized
-        if normalized.startswith("/api/safety/"):
-            return normalized.removeprefix("/api/safety")
-        if normalized.startswith("/api/admin/"):
-            return "/admin/" + normalized.removeprefix("/api/admin/").lstrip("/")
+        if base_path.endswith("/api/v1"):
+            if normalized.startswith("/api/safety/"):
+                return f"{base_path}{normalized.removeprefix('/api/safety')}"
+            if normalized.startswith("/api/admin/"):
+                return f"{base_path}/admin{normalized.removeprefix('/api/admin')}"
+            if normalized.startswith(f"{base_path}/"):
+                return normalized
+            return f"{base_path}{normalized}"
+        if base_path.endswith("/api/safety"):
+            if normalized.startswith("/api/safety/") or normalized.startswith("/api/admin/"):
+                return normalized
+            return f"{base_path}{normalized}"
         return normalized
 
+    @classmethod
+    def resolve_url(cls, base_url: str, path: str) -> str:
+        normalized_base = cls.normalize_base_url(base_url)
+        parsed = urlsplit(normalized_base)
+        origin = urlunsplit((parsed.scheme, parsed.netloc, "", "", ""))
+        base_path = parsed.path.rstrip("/")
+        request_path = cls._resolve_request_path(base_path, path)
+        return urljoin(f"{origin}/", request_path.lstrip("/"))
+
+    @classmethod
+    def issue_token(
+        cls,
+        base_url: str,
+        email: str,
+        password: str,
+        *,
+        timeout: int = 60,
+        max_retries: int = 5,
+    ) -> str:
+        last_error: Exception | None = None
+        token_url = cls.resolve_url(base_url, "/auth/token")
+        for attempt in range(1, max_retries + 1):
+            try:
+                response = requests.post(
+                    token_url,
+                    data={"username": email.strip(), "password": password},
+                    headers={"Content-Type": "application/x-www-form-urlencoded"},
+                    timeout=timeout,
+                )
+                response.raise_for_status()
+                payload = response.json()
+                token = str(payload.get("access_token") or "").strip()
+                if not token:
+                    raise RuntimeError("Target token response did not include access_token.")
+                return token
+            except Exception as error:
+                last_error = error
+                if attempt >= max_retries:
+                    break
+        raise RuntimeError(f"Target login failed after retries: {last_error}")
+
     def _request(self, method: str, path: str, **kwargs: Any) -> requests.Response:
-        url = urljoin(self.base_url, self._resolve_path(path).lstrip("/"))
+        url = self.resolve_url(self.base_url, path)
         last_error: Exception | None = None
         for attempt in range(1, self.max_retries + 1):
             try:
@@ -141,6 +193,30 @@ class TargetErpClient:
 
     def update_content_item(self, content_item_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         return self._request("PATCH", f"/api/safety/content-items/{content_item_id}", json=payload).json()
+
+    def fetch_report_by_key(self, report_key: str) -> dict[str, Any]:
+        return self._request("GET", f"/reports/by-key/{quote(report_key, safe='')}").json()
+
+    def upsert_report(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return self._request("POST", "/reports/upsert", json=payload).json()
+
+    def upload_content_asset(
+        self,
+        file_path: str | Path,
+        *,
+        upload_filename: str | None = None,
+        content_type: str = "application/pdf",
+    ) -> dict[str, Any]:
+        path = Path(file_path)
+        with path.open("rb") as handle:
+            files = {
+                "file": (
+                    upload_filename or path.name,
+                    handle,
+                    content_type,
+                )
+            }
+            return self._request("POST", "/content-items/assets/upload", files=files).json()
 
     def generate_site_schedules(self, site_id: str) -> dict[str, Any]:
         return self._request("POST", f"/api/admin/sites/{site_id}/schedules/generate").json()

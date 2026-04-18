@@ -93,6 +93,9 @@ git diff --check
 - `SitesSection.tsx` was reduced to a shell and split into:
   `useSitesSectionState.ts`, `siteSectionHelpers.ts`, `SitesFilterMenu.tsx`,
   `SitesTable.tsx`, and `SiteEditorModal.tsx`.
+- Admin directory lookups now carry upstream `contractTypes` as part of the shared lookup contract,
+  so control-center analytics, reports, and sites all read one passthrough source instead of
+  rebuilding contract-type options inside `/api/admin/dashboard/lookups`.
 - Admin contract pack landed:
   - feature contracts: `admin-control-center`, `admin-reports`, `admin-sites`
   - mocked smoke: `tests/client/admin/admin-control-center.spec.ts`,
@@ -102,6 +105,10 @@ git diff --check
 - Admin audit scope landed without changing the ERP default scope:
   - `npm run aidlc:audit` still targets ERP
   - `npm run aidlc:audit:admin` targets admin paths
+- Legacy admin report PDF archive follow-up tooling now lives under `scripts/legacy_insafed/` for:
+  - preparing archive transfer manifests
+  - uploading recent PDFs into the ERP asset store
+  - applying rewritten `original_pdf_archive_path` values to existing legacy reports
 
 ### Validation run
 

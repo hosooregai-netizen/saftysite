@@ -282,6 +282,14 @@ export function mapBackendAdminDirectoryLookupsResponse(
   response: SafetyBackendAdminDirectoryLookupsResponse,
 ): SafetyAdminDirectoryLookupsResponse {
   return {
+    contractTypes: Array.isArray(response.contract_types)
+      ? response.contract_types
+          .map((row) => ({
+            label: normalizeText(row.label),
+            value: normalizeText(row.value),
+          }))
+          .filter((row) => row.value.length > 0)
+      : [],
     headquarters: response.headquarters.map((row) => ({
       id: normalizeText(row.id),
       name: normalizeText(row.name),

@@ -122,6 +122,7 @@ export function useSitesSectionState({
   const [directoryLookups, setDirectoryLookups] = useState<
     import('@/types/admin').SafetyAdminDirectoryLookupsResponse
   >({
+    contractTypes: [],
     headquarters: [],
     sites: [],
     users: [],

@@ -30,6 +30,32 @@ function sortNumber(left: number, right: number, direction: 'asc' | 'desc') {
   return direction === 'asc' ? left - right : right - left;
 }
 
+function resolveSiteContractTypeOption(site: SafetySite) {
+  const technicalGuidanceKind = String(site.technical_guidance_kind ?? '').trim();
+  if (technicalGuidanceKind) {
+    return {
+      label: technicalGuidanceKind,
+      value: technicalGuidanceKind,
+    };
+  }
+
+  const contractType = String(site.contract_type ?? '').trim();
+  if (!contractType) return null;
+
+  const labelByValue: Record<string, string> = {
+    bid: '입찰계약',
+    maintenance: '유지보수',
+    negotiated: '수의계약',
+    other: '기타',
+    private: '민간계약',
+  };
+
+  return {
+    label: labelByValue[contractType] ?? contractType,
+    value: contractType,
+  };
+}
+
 function clampPaging(limit?: number, offset?: number) {
   return {
     limit: Math.max(1, Math.min(500, limit ?? 50)),
@@ -73,7 +99,17 @@ function enrichSiteRows(
 export function buildAdminDirectoryLookupsResponse(
   snapshot: AdminDirectoryData,
 ): SafetyAdminDirectoryLookupsResponse {
+  const contractTypes = new Map<string, { label: string; value: string }>();
+  snapshot.sites.forEach((site) => {
+    const option = resolveSiteContractTypeOption(site);
+    if (!option || contractTypes.has(option.value)) return;
+    contractTypes.set(option.value, option);
+  });
+
   return {
+    contractTypes: Array.from(contractTypes.values()).sort((left, right) =>
+      left.label.localeCompare(right.label, 'ko'),
+    ),
     headquarters: snapshot.headquarters.map((headquarter) => ({
       id: headquarter.id,
       name: headquarter.name,
