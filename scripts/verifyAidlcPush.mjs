@@ -71,6 +71,7 @@ const FEATURE_RULES = [
       /^features\/admin\/lib\/buildAdminControlCenterModel\.ts$/,
       /^features\/admin\/lib\/adminDashboardShellState\.ts$/,
       /^features\/admin\/sections\/analytics\//,
+      /^features\/admin\/sections\/content\//,
       /^features\/admin\/sections\/overview\//,
       /^server\/admin\/analyticsSnapshot\.ts$/,
       /^server\/admin\/overviewPolicyOverlay(\.test)?\.ts$/,
