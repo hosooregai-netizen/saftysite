@@ -26,6 +26,8 @@
 - verified the fixed local route changed the overview counts from `unsentReportRows=0 / priorityQuarterlyManagementRows=0` to `unsentReportRows=220 / priorityQuarterlyManagementRows=9`
 - confirmed the latest production deployment commit (`5c801ad`, deployed on 2026-04-18) still lacked this route restore, so the deployed app remained on the regressed path until this change is pushed and redeployed
 - tightened the real-admin smoke section to observe `/api/admin/dashboard/overview` and fail if the response shape stops including the derived overview arrays
+- removed the temporary route and overlay `console.info` stage logging once the restored overview merge path was verified against live payloads
+- kept the smoke proof focused on payload-shape guarantees instead of console output so the route can stay quiet while still proving the overlay contract
 
 ## Residual Debt
 

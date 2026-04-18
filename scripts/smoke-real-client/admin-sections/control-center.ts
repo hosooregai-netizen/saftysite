@@ -6,6 +6,8 @@ import { dismissImportantModalIfPresent, waitHeading } from '../helpers';
 type OverviewCounts = {
   dispatchQueueCount: number;
   priorityCount: number;
+  siteStatusEntryCount: number;
+  totalSiteCount: number;
   unsentCount: number;
 };
 
@@ -25,12 +27,21 @@ export async function runAdminControlCenterSection(page: Page) {
         priorityCount: hasArray(payload.priorityQuarterlyManagementRows)
           ? payload.priorityQuarterlyManagementRows.length
           : -1,
+        siteStatusEntryCount: hasArray(payload.siteStatusSummary?.entries)
+          ? payload.siteStatusSummary.entries.length
+          : -1,
+        totalSiteCount:
+          typeof payload.siteStatusSummary?.totalSiteCount === 'number'
+            ? payload.siteStatusSummary.totalSiteCount
+            : -1,
         unsentCount: hasArray(payload.unsentReportRows) ? payload.unsentReportRows.length : -1,
       };
     } catch {
       latestOverviewCounts = {
         dispatchQueueCount: -1,
         priorityCount: -1,
+        siteStatusEntryCount: -1,
+        totalSiteCount: -1,
         unsentCount: -1,
       };
     }
@@ -47,11 +58,15 @@ export async function runAdminControlCenterSection(page: Page) {
   const overviewCounts: OverviewCounts = latestOverviewCounts ?? {
     dispatchQueueCount: -1,
     priorityCount: -1,
+    siteStatusEntryCount: -1,
+    totalSiteCount: -1,
     unsentCount: -1,
   };
   if (
     overviewCounts.dispatchQueueCount < 0 ||
     overviewCounts.priorityCount < 0 ||
+    overviewCounts.siteStatusEntryCount < 0 ||
+    overviewCounts.totalSiteCount < 0 ||
     overviewCounts.unsentCount < 0
   ) {
     throw new Error(

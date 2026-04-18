@@ -2,35 +2,6 @@ import type { SafetyAdminOverviewResponse } from '@/types/admin';
 
 type OverviewPolicyOverlay = Pick<SafetyAdminOverviewResponse, 'siteStatusSummary'>;
 
-function roundDurationMs(startedAt: number) {
-  return Math.round((performance.now() - startedAt) * 10) / 10;
-}
-
-function trimLogContext(context: Record<string, unknown>) {
-  return Object.fromEntries(
-    Object.entries(context).filter(([, value]) => value !== '' && value !== null && value !== undefined),
-  );
-}
-
-function logOverviewPolicyOverlayStage(
-  stage: string,
-  startedAt: number,
-  context: Record<string, unknown>,
-) {
-  console.info('admin-overview-policy-overlay-stage', {
-    stage,
-    duration_ms: roundDurationMs(startedAt),
-    ...trimLogContext(context),
-  });
-}
-
-function summarizeOverlay(overlay: OverviewPolicyOverlay) {
-  return {
-    site_status_entries: overlay.siteStatusSummary.entries.length,
-    total_sites: overlay.siteStatusSummary.totalSiteCount,
-  };
-}
-
 function cloneSiteStatusSummary(
   siteStatusSummary: SafetyAdminOverviewResponse['siteStatusSummary'],
 ): SafetyAdminOverviewResponse['siteStatusSummary'] {
@@ -92,23 +63,7 @@ function mergeSummaryRows(
 export function buildAdminOverviewPolicyOverlay(
   base: SafetyAdminOverviewResponse,
 ): OverviewPolicyOverlay {
-  const fetchStartedAt = performance.now();
-  logOverviewPolicyOverlayStage('fetch_overlay_sources', fetchStartedAt, {
-    source: 'upstream.site_status_summary',
-    strategy: 'site_status_only',
-    ...summarizeOverlay({
-      siteStatusSummary: base.siteStatusSummary,
-    }),
-  });
-
-  const buildStartedAt = performance.now();
   const siteStatusSummary = cloneSiteStatusSummary(base.siteStatusSummary);
-  logOverviewPolicyOverlayStage('build_admin_overview_model', buildStartedAt, {
-    ...summarizeOverlay({
-      siteStatusSummary,
-    }),
-    strategy: 'site_status_only',
-  });
 
   return {
     siteStatusSummary,
