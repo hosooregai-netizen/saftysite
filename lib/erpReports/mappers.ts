@@ -1,10 +1,10 @@
 import { createFutureProcessRiskPlan } from '@/constants/inspectionSession';
 import {
   asRecord,
-  createEmptyAdminSiteSnapshot,
   generateId,
   normalizeText,
 } from '@/constants/inspectionSession/shared';
+import { normalizeAdminSiteSnapshot } from '@/constants/inspectionSession/normalizeSite';
 import {
   normalizeControllerReview,
   normalizeDispatchMeta,
@@ -85,14 +85,52 @@ function normalizeCounterItems(value: unknown) {
     .filter((item) => item.label);
 }
 
-function normalizeBadWorkplaceViolations(value: unknown): BadWorkplaceViolation[] {
+function normalizeBadWorkplaceSourceMode(value: unknown): BadWorkplaceReport['sourceMode'] {
+  const normalized = normalizeMapperText(value);
+  if (
+    normalized === 'combined' ||
+    normalized === 'previous_unresolved' ||
+    normalized === 'current_new_hazard'
+  ) {
+    return normalized;
+  }
+
+  return 'combined';
+}
+
+function normalizeBadWorkplaceViolations(
+  value: unknown,
+  options: {
+    sourceMode: BadWorkplaceReport['sourceMode'];
+    sourceSessionId: string;
+  },
+): BadWorkplaceViolation[] {
   if (!Array.isArray(value)) return [];
 
   return value.map((item) => {
     const record = asRecord(item);
+    const id = normalizeText(record.id) || generateId('bad-workplace-item');
+    const sourceFindingId = normalizeText(record.sourceFindingId);
+    const originKindValue = normalizeText(record.originKind);
+    const fallbackOriginKind =
+      options.sourceMode === 'previous_unresolved' ||
+      options.sourceMode === 'current_new_hazard'
+        ? options.sourceMode
+        : 'manual';
+    const originKind =
+      originKindValue === 'previous_unresolved' ||
+      originKindValue === 'current_new_hazard' ||
+      originKindValue === 'manual'
+        ? originKindValue
+        : fallbackOriginKind;
+    const originFindingId = normalizeText(record.originFindingId) || sourceFindingId;
+    const originSessionId =
+      normalizeText(record.originSessionId) ||
+      (originKind === 'manual' ? '' : options.sourceSessionId);
+
     return {
-      id: normalizeText(record.id) || generateId('bad-workplace-item'),
-      sourceFindingId: normalizeText(record.sourceFindingId),
+      id,
+      sourceFindingId,
       legalReference: normalizeText(record.legalReference),
       hazardFactor: normalizeText(record.hazardFactor),
       improvementMeasure: normalizeText(record.improvementMeasure),
@@ -103,6 +141,14 @@ function normalizeBadWorkplaceViolations(value: unknown): BadWorkplaceViolation[
       causativeAgentKey: normalizeText(
         record.causativeAgentKey,
       ) as BadWorkplaceViolation['causativeAgentKey'],
+      originKind,
+      originKey:
+        normalizeText(record.originKey) ||
+        (originKind === 'manual'
+          ? `manual:${id}`
+          : `${originKind}:${originSessionId || 'legacy'}:${originFindingId || id}`),
+      originSessionId,
+      ...(originFindingId ? { originFindingId } : {}),
     };
   });
 }
@@ -174,7 +220,7 @@ export function mapSafetyReportToQuarterlySummaryReport(
     approver:
       normalizeMapperText(payload.approver) ||
       normalizeMapperText(meta.approver),
-    siteSnapshot: createEmptyAdminSiteSnapshot(asRecord(payload.siteSnapshot)),
+    siteSnapshot: normalizeAdminSiteSnapshot(payload.siteSnapshot),
     generatedFromSessionIds: Array.isArray(payload.generatedFromSessionIds)
       ? payload.generatedFromSessionIds.map((item) => normalizeMapperText(item)).filter(Boolean)
       : [],
@@ -221,6 +267,10 @@ export function mapSafetyReportToBadWorkplaceReport(
   const reportMonth =
     normalizeMapperText(payload.reportMonth) ||
     normalizeMapperText(meta.reportMonth);
+  const sourceSessionId = normalizeMapperText(payload.sourceSessionId);
+  const sourceMode = normalizeBadWorkplaceSourceMode(
+    normalizeMapperText(payload.sourceMode) || normalizeMapperText(meta.sourceMode),
+  );
 
   const nextReport: BadWorkplaceReport = {
     id: report.report_key,
@@ -236,7 +286,7 @@ export function mapSafetyReportToBadWorkplaceReport(
     controllerReview: normalizeControllerReview(
       payload.controllerReview ?? meta.controllerReview,
     ),
-    siteSnapshot: createEmptyAdminSiteSnapshot(asRecord(payload.siteSnapshot)),
+    siteSnapshot: normalizeAdminSiteSnapshot(payload.siteSnapshot),
     reporterUserId:
       normalizeMapperText(payload.reporterUserId) ||
       normalizeMapperText(meta.reporterUserId),
@@ -257,18 +307,15 @@ export function mapSafetyReportToBadWorkplaceReport(
     notificationDate: normalizeMapperText(payload.notificationDate),
     recipientOfficeName: normalizeMapperText(payload.recipientOfficeName),
     attachmentDescription: normalizeMapperText(payload.attachmentDescription),
-    sourceSessionId: normalizeMapperText(payload.sourceSessionId),
-    sourceMode:
-      (
-        normalizeMapperText(payload.sourceMode) ||
-        normalizeMapperText(meta.sourceMode)
-      ) === 'previous_unresolved'
-        ? 'previous_unresolved'
-        : 'current_new_hazard',
+    sourceSessionId,
+    sourceMode,
     sourceFindingIds: Array.isArray(payload.sourceFindingIds)
       ? payload.sourceFindingIds.map((item) => normalizeMapperText(item)).filter(Boolean)
       : [],
-    violations: normalizeBadWorkplaceViolations(payload.violations),
+    violations: normalizeBadWorkplaceViolations(payload.violations, {
+      sourceMode,
+      sourceSessionId,
+    }),
     note: normalizeMapperText(payload.note),
     createdAt: normalizeMapperText(payload.createdAt) || report.created_at,
     updatedAt: normalizeMapperText(payload.updatedAt) || report.updated_at,

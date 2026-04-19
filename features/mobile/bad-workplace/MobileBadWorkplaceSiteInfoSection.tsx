@@ -1,8 +1,8 @@
 'use client';
 
+import styles from '@/features/mobile/components/MobileShell.module.css';
 import { BAD_WORKPLACE_NOTICE_TITLE } from '@/lib/erpReports/badWorkplace';
 import type { BadWorkplaceReport } from '@/types/erpReports';
-import styles from '@/features/mobile/components/MobileShell.module.css';
 import { MobileBadWorkplaceEditableField } from './MobileBadWorkplaceEditableField';
 
 interface MobileBadWorkplaceSiteInfoSectionProps {
@@ -53,9 +53,7 @@ export function MobileBadWorkplaceSiteInfoSection({
             <MobileBadWorkplaceEditableField
               label="공정률"
               value={draft.progressRate}
-              onChange={(value) =>
-                onUpdateDraft((current) => ({ ...current, progressRate: value }))
-              }
+              onChange={(value) => onUpdateDraft((current) => ({ ...current, progressRate: value }))}
             />
             <MobileBadWorkplaceEditableField
               label="공사금액"
@@ -100,7 +98,7 @@ export function MobileBadWorkplaceSiteInfoSection({
               onChange={(value) => onUpdateSiteSnapshot('businessRegistrationNumber', value)}
             />
             <MobileBadWorkplaceEditableField
-              label="사업장관리번호"
+              label="사업관리번호"
               value={draft.siteSnapshot.siteManagementNumber}
               onChange={(value) => onUpdateSiteSnapshot('siteManagementNumber', value)}
             />

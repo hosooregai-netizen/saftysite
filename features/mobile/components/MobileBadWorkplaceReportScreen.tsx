@@ -5,8 +5,6 @@ import {
   buildMobileSiteHomeHref,
   buildSiteBadWorkplaceHref,
 } from '@/features/home/lib/siteEntry';
-import { MobileShell } from '@/features/mobile/components/MobileShell';
-import { MobileTabBar } from '@/features/mobile/components/MobileTabBar';
 import { MobileBadWorkplaceDocumentInfoModal } from '@/features/mobile/bad-workplace/MobileBadWorkplaceDocumentInfoModal';
 import { MobileBadWorkplaceNotificationSection } from '@/features/mobile/bad-workplace/MobileBadWorkplaceNotificationSection';
 import { MobileBadWorkplaceSiteInfoSection } from '@/features/mobile/bad-workplace/MobileBadWorkplaceSiteInfoSection';
@@ -16,9 +14,11 @@ import { MobileBadWorkplaceSummarySection } from '@/features/mobile/bad-workplac
 import { MobileBadWorkplaceViolationsSection } from '@/features/mobile/bad-workplace/MobileBadWorkplaceViolationsSection';
 import { useMobileBadWorkplaceScreenState } from '@/features/mobile/bad-workplace/useMobileBadWorkplaceScreenState';
 import { buildSiteTabs } from '@/features/mobile/lib/buildSiteTabs';
-import { formatReportMonthLabel } from '@/lib/erpReports/shared';
 import { MobileQuarterlyReportStatePanel } from '@/features/mobile/quarterly-report/MobileQuarterlyReportStatePanel';
+import { formatReportMonthLabel } from '@/lib/erpReports/shared';
+import { MobileShell } from './MobileShell';
 import styles from './MobileShell.module.css';
+import { MobileTabBar } from './MobileTabBar';
 
 interface MobileBadWorkplaceReportScreenProps {
   reportMonth: string;
@@ -37,8 +37,11 @@ export function MobileBadWorkplaceReportScreen({
     documentError,
     documentInfoOpen,
     draft,
+    handleAddViolation,
     handleDownloadHwpx,
     handleDownloadPdf,
+    handleReloadViolations,
+    handleRemoveViolation,
     handleSaveWithFeedback,
     handleSourceSessionChange,
     isAuthenticated,
@@ -94,7 +97,7 @@ export function MobileBadWorkplaceReportScreen({
   if (!draft) {
     return (
       <MobileQuarterlyReportStatePanel
-        message="불량사업장 신고서를 열 수 없습니다."
+        message="불량사업장 신고서를 찾을 수 없습니다."
         detail={loadError || '보고서를 찾지 못했습니다.'}
       />
     );
@@ -134,6 +137,7 @@ export function MobileBadWorkplaceReportScreen({
               selectedSession={selectedSession}
               siteSessions={siteSessions}
               onOpenSourceModal={() => setSourceModalOpen(true)}
+              onReloadViolations={handleReloadViolations}
             />
             <MobileBadWorkplaceSiteInfoSection
               draft={draft}
@@ -146,6 +150,8 @@ export function MobileBadWorkplaceReportScreen({
             />
             <MobileBadWorkplaceViolationsSection
               draft={draft}
+              onAddViolation={handleAddViolation}
+              onRemoveViolation={handleRemoveViolation}
               onUpdateViolation={updateViolation}
             />
           </div>

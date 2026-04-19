@@ -20,7 +20,7 @@ export async function runMobileBadWorkplaceSmoke(config: ClientSmokePlaywrightCo
 
     await page.getByRole('button', { name: '저장' }).waitFor({ state: 'visible' });
     await page.getByText('1. 원본 보고서 선택').waitFor({ state: 'visible' });
-    await page.getByRole('button', { name: '한글' }).waitFor({ state: 'visible' });
+    await page.getByRole('button', { name: 'HWPX' }).waitFor({ state: 'visible' });
     await page.getByRole('button', { name: 'PDF' }).waitFor({ state: 'visible' });
 
     const sourceButton = page.getByRole('button', { name: '보고서 선택' });
@@ -36,11 +36,22 @@ export async function runMobileBadWorkplaceSmoke(config: ClientSmokePlaywrightCo
       }
     }
 
-    await page.getByLabel('담당 요원').fill('모바일 불량사업장 자동화');
+    await page.getByRole('button', { name: '행 추가' }).click();
+    await page.getByLabel('해당 요원').fill('모바일 불량사업장 자동화');
+
+    const deleteButtons = page.getByRole('button', { name: '삭제' });
+    if ((await deleteButtons.count()) > 0) {
+      await deleteButtons.last().click();
+    }
+
+    const reloadButton = page.getByRole('button', { name: '기본 항목 다시 불러오기' });
+    if ((await reloadButton.count()) > 0) {
+      await reloadButton.click();
+    }
     await page.getByRole('button', { name: '저장' }).click();
     await harness.waitForRequestCount('POST /reports/upsert', reportWritesBefore + 1);
 
-    await page.getByRole('button', { name: '한글' }).click();
+    await page.getByRole('button', { name: 'HWPX' }).click();
     await harness.waitForRequestCount('POST /reports/upsert', reportWritesBefore + 2);
     await harness.waitForRequestCount(
       'POST /api/documents/bad-workplace/hwpx',

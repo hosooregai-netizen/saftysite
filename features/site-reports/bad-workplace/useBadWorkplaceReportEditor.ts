@@ -4,11 +4,13 @@ import {
   fetchBadWorkplaceHwpxDocumentByReportKey,
   saveBlobAsFile,
 } from '@/lib/api';
-import { syncBadWorkplaceReportSource } from '@/lib/erpReports/badWorkplace';
+import {
+  createEmptyManualBadWorkplaceViolation,
+  syncBadWorkplaceReportSource,
+} from '@/lib/erpReports/badWorkplace';
 import { readSafetyAuthToken } from '@/lib/safetyApi';
 import type { BadWorkplaceReport } from '@/types/erpReports';
 import type { BadWorkplaceReportEditorProps } from './types';
-import { getBadWorkplaceSourceModeLabel } from './badWorkplaceHelpers';
 
 export function useBadWorkplaceReportEditor({
   initialDraft,
@@ -60,33 +62,38 @@ export function useBadWorkplaceReportEditor({
   };
 
   const handleSourceSessionChange = (sessionId: string) => {
-    const nextSession =
-      siteSessions.find((session) => session.id === sessionId) ?? null;
-    setDraft((current) => syncBadWorkplaceReportSource(current, nextSession));
+    const nextSession = siteSessions.find((session) => session.id === sessionId) ?? null;
+    setDraft((current) => syncBadWorkplaceReportSource(current, nextSession, siteSessions));
     setNotice(
       nextSession
-        ? `${nextSession.meta.reportDate || '-'} 기술지도 보고서를 원본으로 선택했습니다.`
+        ? `${nextSession.meta.reportDate || '-'} 기술지도 보고서를 기준으로 기본 항목을 다시 불러왔습니다.`
         : null,
     );
     setSourceModalOpen(false);
   };
 
-  const handleSourceModeChange = (sourceMode: BadWorkplaceReport['sourceMode']) => {
-    setDraft((current) =>
-      syncBadWorkplaceReportSource(
-        {
-          ...current,
-          sourceMode,
-        },
-        selectedSession,
-        current.sourceFindingIds,
-      ),
-    );
-    setNotice(
-      sourceMode === 'current_new_hazard'
-        ? '당회차 신규 위험 기준으로 신고 초안을 전환했습니다.'
-        : '이전 지적사항 미이행 기준으로 신고 초안을 전환했습니다.',
-    );
+  const handleReloadViolations = () => {
+    setDraft((current) => syncBadWorkplaceReportSource(current, selectedSession, siteSessions));
+    setNotice('기술지도 보고서를 기준으로 기본 항목을 다시 불러왔습니다.');
+  };
+
+  const handleAddViolation = () => {
+    setDraft((current) => ({
+      ...current,
+      violations: [
+        ...current.violations,
+        createEmptyManualBadWorkplaceViolation(selectedSession, current),
+      ],
+    }));
+    setNotice('수동 입력 행을 추가했습니다.');
+  };
+
+  const handleRemoveViolation = (violationId: string) => {
+    setDraft((current) => ({
+      ...current,
+      violations: current.violations.filter((violation) => violation.id !== violationId),
+    }));
+    setNotice('행을 삭제했습니다.');
   };
 
   const handleSave = async () => {
@@ -115,12 +122,12 @@ export function useBadWorkplaceReportEditor({
         authToken,
       );
       saveBlobAsFile(blob, filename);
-      setNotice('불량사업장 신고서 HWPX를 다운로드했습니다.');
+      setNotice('불량사업장 신고서 HWPX를 내려받았습니다.');
     } catch (nextError) {
       setDocumentError(
         nextError instanceof Error
           ? nextError.message
-          : '문서를 다운로드하는 중 오류가 발생했습니다.',
+          : '문서를 내려받는 중 오류가 발생했습니다.',
       );
     } finally {
       setIsGeneratingHwpx(false);
@@ -130,16 +137,17 @@ export function useBadWorkplaceReportEditor({
   return {
     documentError,
     draft,
+    handleAddViolation,
     handleDownloadHwpx,
+    handleReloadViolations,
+    handleRemoveViolation,
     handleSave,
-    handleSourceModeChange,
     handleSourceSessionChange,
     isGeneratingHwpx,
     notice,
     selectedSession,
     setSourceModalOpen,
     sourceModalOpen,
-    sourceModeLabel: getBadWorkplaceSourceModeLabel(draft.sourceMode),
     siteSessions,
     updateDraft,
     updateSiteSnapshot,

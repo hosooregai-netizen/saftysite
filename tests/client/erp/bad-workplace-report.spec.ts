@@ -31,7 +31,7 @@ export async function runBadWorkplaceReportSmoke(config: ClientSmokePlaywrightCo
       const sourceDialog = page.getByRole('dialog', { name: '기술지도 보고서 선택' });
       await sourceDialog.waitFor({ state: 'visible' });
       const sourceLoadButtons = sourceDialog.getByRole('button', {
-        name: '이 보고서를 기준으로 불러오기',
+        name: '이 보고서 기준으로 불러오기',
       });
       if ((await sourceLoadButtons.count()) > 0) {
         await sourceLoadButtons.first().click();
@@ -40,9 +40,20 @@ export async function runBadWorkplaceReportSmoke(config: ClientSmokePlaywrightCo
       }
     }
 
-    await page
-      .getByRole('textbox', { name: '담당 요원', exact: true })
-      .fill('데스크톱 불량사업장 자동화');
+    await page.getByRole('button', { name: '행 추가' }).click();
+    await page.getByRole('textbox', { name: '해당 요원', exact: true }).fill(
+      '테스트용 불량사업장 자동화',
+    );
+
+    const deleteButtons = page.getByRole('button', { name: '삭제' });
+    if ((await deleteButtons.count()) > 0) {
+      await deleteButtons.last().click();
+    }
+
+    const reloadButton = page.getByRole('button', { name: '기본 항목 다시 불러오기' });
+    if ((await reloadButton.count()) > 0) {
+      await reloadButton.click();
+    }
     await page.getByRole('button', { name: '저장' }).click();
     await harness.waitForRequestCount('POST /reports/upsert', reportWritesBefore + 1);
 

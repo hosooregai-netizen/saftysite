@@ -1,8 +1,8 @@
 'use client';
 
 import AppModal from '@/components/ui/AppModal';
-import type { InspectionSession } from '@/types/inspectionSession';
 import styles from '@/features/mobile/components/MobileShell.module.css';
+import type { InspectionSession } from '@/types/inspectionSession';
 import { MobileBadWorkplaceSourceCard } from './MobileBadWorkplaceSourceCard';
 
 interface MobileBadWorkplaceSourceModalProps {

@@ -25,9 +25,7 @@ export function BadWorkplaceSiteSnapshotSection({
       <BadWorkplaceSectionHeader title="2. 통보서 기본 정보" />
 
       <div className={operationalStyles.documentHeading}>
-        <strong className={operationalStyles.documentTitle}>
-          {BAD_WORKPLACE_NOTICE_TITLE}
-        </strong>
+        <strong className={operationalStyles.documentTitle}>{BAD_WORKPLACE_NOTICE_TITLE}</strong>
       </div>
 
       <div className={operationalStyles.snapshotSectionGrid}>
@@ -42,10 +40,7 @@ export function BadWorkplaceSiteSnapshotSection({
           draft={draft}
           onUpdateSiteSnapshot={onUpdateSiteSnapshot}
         />
-        <BadWorkplaceNotificationPanel
-          draft={draft}
-          onUpdateDraft={onUpdateDraft}
-        />
+        <BadWorkplaceNotificationPanel draft={draft} onUpdateDraft={onUpdateDraft} />
       </div>
     </article>
   );

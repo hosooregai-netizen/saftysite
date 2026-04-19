@@ -1,10 +1,10 @@
 import AppModal from '@/components/ui/AppModal';
 import operationalStyles from '@/components/site/OperationalReports.module.css';
+import { getSessionGuidanceDate, getSessionTitle } from '@/constants/inspectionSession';
 import {
   countDocument7FindingsForDisplay,
   formatSessionProgressRateDisplay,
 } from '@/lib/erpReports/badWorkplace';
-import { getSessionGuidanceDate, getSessionTitle } from '@/constants/inspectionSession';
 import type { InspectionSession } from '@/types/inspectionSession';
 
 interface BadWorkplaceSourceSelectionModalProps {
@@ -54,10 +54,11 @@ export function BadWorkplaceSourceSelectionModal({
                     {getSessionTitle(session)}
                   </strong>
                   <span className={operationalStyles.sourceCardMeta}>
-                    지도일 {getSessionGuidanceDate(session) || '-'} / 작성자{' '}
-                    {session.meta.drafter || '-'} / 지적사항{' '}
-                    {countDocument7FindingsForDisplay(session)}건 / 진행률{' '}
-                    {formatSessionProgressRateDisplay(session)}
+                    {`지도일 ${getSessionGuidanceDate(session) || '-'} / 작성자 ${
+                      session.meta.drafter || '-'
+                    } / 지적사항 ${countDocument7FindingsForDisplay(
+                      session,
+                    )}건 / 진행률 ${formatSessionProgressRateDisplay(session)}`}
                   </span>
                 </div>
               </div>
@@ -70,7 +71,7 @@ export function BadWorkplaceSourceSelectionModal({
                   onClick={() => onSelectSession(session.id)}
                   disabled={isSelected}
                 >
-                  {isSelected ? '선택됨' : '이 보고서를 기준으로 불러오기'}
+                  {isSelected ? '선택됨' : '이 보고서 기준으로 불러오기'}
                 </button>
               </div>
             </article>

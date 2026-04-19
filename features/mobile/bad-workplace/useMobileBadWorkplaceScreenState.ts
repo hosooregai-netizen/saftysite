@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createTimestamp } from '@/constants/inspectionSession/shared';
 import {
+  createEmptyManualBadWorkplaceViolation,
   getBadWorkplaceSourceSessions,
   syncBadWorkplaceReportSource,
 } from '@/lib/erpReports/badWorkplace';
@@ -8,7 +9,7 @@ import { buildBadWorkplaceReportKey } from '@/lib/erpReports/shared';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { useSiteOperationalReportMutations } from '@/hooks/useSiteOperationalReportMutations';
 import type { BadWorkplaceReport } from '@/types/erpReports';
-import { buildBadWorkplaceSourceNotice, getMessage } from './mobileBadWorkplaceHelpers';
+import { getMessage } from './mobileBadWorkplaceHelpers';
 import { useMobileBadWorkplaceDocumentActions } from './useMobileBadWorkplaceDocumentActions';
 import { useMobileBadWorkplaceDraftLoader } from './useMobileBadWorkplaceDraftLoader';
 
@@ -42,10 +43,7 @@ export function useMobileBadWorkplaceScreenState({
     [decodedSiteKey, sites],
   );
   const siteSessions = useMemo(
-    () =>
-      currentSite
-        ? getBadWorkplaceSourceSessions(getSessionsBySiteId(currentSite.id))
-        : [],
+    () => (currentSite ? getBadWorkplaceSourceSessions(getSessionsBySiteId(currentSite.id)) : []),
     [currentSite, getSessionsBySiteId],
   );
   const reportKey =
@@ -120,8 +118,29 @@ export function useMobileBadWorkplaceScreenState({
     documentError,
     documentInfoOpen,
     draft,
+    handleAddViolation: () => {
+      updateDraft((current) => ({
+        ...current,
+        violations: [
+          ...current.violations,
+          createEmptyManualBadWorkplaceViolation(selectedSession, current),
+        ],
+      }));
+      setNotice('수동 입력 행을 추가했습니다.');
+    },
     handleDownloadHwpx,
     handleDownloadPdf,
+    handleReloadViolations: () => {
+      updateDraft((current) => syncBadWorkplaceReportSource(current, selectedSession, siteSessions));
+      setNotice('기술지도 보고서를 기준으로 기본 항목을 다시 불러왔습니다.');
+    },
+    handleRemoveViolation: (violationId: string) => {
+      updateDraft((current) => ({
+        ...current,
+        violations: current.violations.filter((violation) => violation.id !== violationId),
+      }));
+      setNotice('행을 삭제했습니다.');
+    },
     handleSave,
     handleSaveWithFeedback: async () => {
       try {
@@ -131,10 +150,13 @@ export function useMobileBadWorkplaceScreenState({
       }
     },
     handleSourceSessionChange: (sessionId: string) => {
-      const nextSession =
-        siteSessions.find((session) => session.id === sessionId) ?? null;
-      updateDraft((current) => syncBadWorkplaceReportSource(current, nextSession));
-      setNotice(buildBadWorkplaceSourceNotice(nextSession));
+      const nextSession = siteSessions.find((session) => session.id === sessionId) ?? null;
+      updateDraft((current) => syncBadWorkplaceReportSource(current, nextSession, siteSessions));
+      setNotice(
+        nextSession
+          ? `${nextSession.meta.reportDate || '-'} 기술지도 보고서를 기준으로 기본 항목을 다시 불러왔습니다.`
+          : null,
+      );
       setSourceModalOpen(false);
     },
     isAuthenticated,

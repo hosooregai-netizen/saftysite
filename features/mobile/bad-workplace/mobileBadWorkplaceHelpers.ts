@@ -40,15 +40,9 @@ export function getSourceSessionDisplay(session: InspectionSession | null) {
 
 export function buildBadWorkplaceSourceSessionMeta(session: InspectionSession) {
   return [
-    getSessionGuidanceDate(session) || '-',
-    `작성 ${session.meta.drafter || '-'}`,
-    `지적 ${countDocument7FindingsForDisplay(session)}건`,
-    `공정률 ${formatSessionProgressRateDisplay(session)}`,
+    `지도일 ${getSessionGuidanceDate(session) || '-'}`,
+    `작성자 ${session.meta.drafter || '-'}`,
+    `지적사항 ${countDocument7FindingsForDisplay(session)}건`,
+    `진행률 ${formatSessionProgressRateDisplay(session)}`,
   ];
-}
-
-export function buildBadWorkplaceSourceNotice(session: InspectionSession | null) {
-  return session
-    ? `${getSessionGuidanceDate(session) || '-'} 기술지도 보고서를 원본으로 반영했습니다.`
-    : null;
 }

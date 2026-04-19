@@ -1,9 +1,9 @@
 'use client';
 
 import AppModal from '@/components/ui/AppModal';
+import styles from '@/features/mobile/components/MobileShell.module.css';
 import type { BadWorkplaceReport } from '@/types/erpReports';
 import type { InspectionSession } from '@/types/inspectionSession';
-import styles from '@/features/mobile/components/MobileShell.module.css';
 import {
   formatDateTimeLabel,
   formatMobileBadWorkplaceMonth,

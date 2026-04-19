@@ -1,5 +1,4 @@
 import { SafetyApiError } from '@/lib/safetyApi';
-import type { BadWorkplaceReport } from '@/types/erpReports';
 
 export function getBadWorkplacePageErrorMessage(error: unknown) {
   if (error instanceof SafetyApiError || error instanceof Error) {
@@ -7,12 +6,4 @@ export function getBadWorkplacePageErrorMessage(error: unknown) {
   }
 
   return '불량사업장 신고서를 불러오는 중 오류가 발생했습니다.';
-}
-
-export function getBadWorkplaceSourceModeLabel(
-  sourceMode: BadWorkplaceReport['sourceMode'],
-) {
-  return sourceMode === 'current_new_hazard'
-    ? '당회차 신규 위험'
-    : '이전 지적사항 미이행';
 }

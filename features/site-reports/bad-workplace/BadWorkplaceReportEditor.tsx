@@ -27,16 +27,12 @@ export function BadWorkplaceReportEditor(props: BadWorkplaceReportEditorProps) {
         <div className={operationalStyles.bannerError}>{editor.documentError}</div>
       ) : null}
       {editor.notice ? <div className={operationalStyles.bannerInfo}>{editor.notice}</div> : null}
-      <p className={operationalStyles.reportCardDescription}>
-        현재 초안 기준은 {editor.sourceModeLabel}입니다.
-      </p>
 
       <BadWorkplaceSourceSelectionSection
-        draft={editor.draft}
         selectedSession={editor.selectedSession}
         siteSessions={editor.siteSessions}
-        onChangeSourceMode={editor.handleSourceModeChange}
         onOpenSelector={() => editor.setSourceModalOpen(true)}
+        onReloadViolations={editor.handleReloadViolations}
       />
       <BadWorkplaceSourceSelectionModal
         open={editor.sourceModalOpen}
@@ -52,6 +48,8 @@ export function BadWorkplaceReportEditor(props: BadWorkplaceReportEditorProps) {
       />
       <BadWorkplaceViolationsSection
         draft={editor.draft}
+        onAddViolation={editor.handleAddViolation}
+        onRemoveViolation={editor.handleRemoveViolation}
         onUpdateViolation={editor.updateViolation}
       />
     </section>

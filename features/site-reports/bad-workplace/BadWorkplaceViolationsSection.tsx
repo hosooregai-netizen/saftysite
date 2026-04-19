@@ -4,6 +4,8 @@ import { BadWorkplaceSectionHeader } from './BadWorkplaceSectionHeader';
 
 interface BadWorkplaceViolationsSectionProps {
   draft: BadWorkplaceReport;
+  onAddViolation: () => void;
+  onRemoveViolation: (violationId: string) => void;
   onUpdateViolation: (
     violationId: string,
     patch: Partial<BadWorkplaceReport['violations'][number]>,
@@ -12,32 +14,43 @@ interface BadWorkplaceViolationsSectionProps {
 
 export function BadWorkplaceViolationsSection({
   draft,
+  onAddViolation,
+  onRemoveViolation,
   onUpdateViolation,
 }: BadWorkplaceViolationsSectionProps) {
   return (
     <article className={operationalStyles.reportCard}>
       <BadWorkplaceSectionHeader title="3. 기술지도 미이행 등 사망사고 고위험 취약 사항" />
 
-      <div
-        className={`${operationalStyles.tableWrap} ${operationalStyles.violationTableWrap}`}
-      >
-        <table
-          className={`${operationalStyles.table} ${operationalStyles.violationTable}`}
-        >
+      <div className={`${operationalStyles.tableWrap} ${operationalStyles.violationTableWrap}`}>
+        <table className={`${operationalStyles.table} ${operationalStyles.violationTable}`}>
           <thead>
             <tr>
-              <th>관련 법규</th>
-              <th>유해·위험요인</th>
-              <th>개선지도 사항(지도일)</th>
+              <th>관련 법령</th>
+              <th>유해위험요인</th>
+              <th>개선지시 사항(지도일)</th>
               <th>불이행 사항(확인일)</th>
+              <th className={operationalStyles.violationActionHeader}>
+                <div className={operationalStyles.violationActionHeaderContent}>
+                  <span className={operationalStyles.violationActionLabel}>작업</span>
+                  <button
+                    type="button"
+                    className={`app-button ${operationalStyles.violationAddButton}`}
+                    onClick={onAddViolation}
+                  >
+                    행 추가
+                  </button>
+                </div>
+              </th>
             </tr>
           </thead>
           <tbody>
             {draft.violations.length > 0 ? (
               draft.violations.map((item) => (
                 <tr key={item.id}>
-                  <td data-label="관련 법규">
+                  <td data-label="관련 법령">
                     <textarea
+                      aria-label="관련 법령"
                       className={`app-textarea ${operationalStyles.violationEditor}`}
                       value={item.legalReference}
                       onChange={(event) =>
@@ -47,8 +60,9 @@ export function BadWorkplaceViolationsSection({
                       }
                     />
                   </td>
-                  <td data-label="유해·위험요인">
+                  <td data-label="유해위험요인">
                     <textarea
+                      aria-label="유해위험요인"
                       className={`app-textarea ${operationalStyles.violationEditor}`}
                       value={item.hazardFactor}
                       onChange={(event) =>
@@ -58,9 +72,10 @@ export function BadWorkplaceViolationsSection({
                       }
                     />
                   </td>
-                  <td data-label="개선지도 사항">
+                  <td data-label="개선지시 사항">
                     <div className={operationalStyles.tableCellStack}>
                       <textarea
+                        aria-label="개선지시 사항"
                         className={`app-textarea ${operationalStyles.violationEditor}`}
                         value={item.improvementMeasure}
                         onChange={(event) =>
@@ -72,6 +87,7 @@ export function BadWorkplaceViolationsSection({
                       <label className={operationalStyles.tableDateField}>
                         <span className={operationalStyles.tableDateLabel}>지도일</span>
                         <input
+                          aria-label="지도일"
                           className={`app-input ${operationalStyles.tableDateInput} ${operationalStyles.violationEditorInput}`}
                           value={item.guidanceDate}
                           onChange={(event) =>
@@ -86,6 +102,7 @@ export function BadWorkplaceViolationsSection({
                   <td data-label="불이행 사항">
                     <div className={operationalStyles.tableCellStack}>
                       <textarea
+                        aria-label="불이행 사항"
                         className={`app-textarea ${operationalStyles.violationEditor}`}
                         value={item.nonCompliance}
                         onChange={(event) =>
@@ -97,6 +114,7 @@ export function BadWorkplaceViolationsSection({
                       <label className={operationalStyles.tableDateField}>
                         <span className={operationalStyles.tableDateLabel}>확인일</span>
                         <input
+                          aria-label="확인일"
                           className={`app-input ${operationalStyles.tableDateInput} ${operationalStyles.violationEditorInput}`}
                           value={item.confirmationDate}
                           onChange={(event) =>
@@ -108,11 +126,20 @@ export function BadWorkplaceViolationsSection({
                       </label>
                     </div>
                   </td>
+                  <td className={operationalStyles.violationActionCell} data-label="작업">
+                    <button
+                      type="button"
+                      className={`app-button app-button-secondary ${operationalStyles.violationActionButton}`}
+                      onClick={() => onRemoveViolation(item.id)}
+                    >
+                      삭제
+                    </button>
+                  </td>
                 </tr>
               ))
             ) : (
               <tr className={operationalStyles.violationEmptyRow}>
-                <td colSpan={4}>선택한 지적사항이 없습니다.</td>
+                <td colSpan={5}>표시할 취약 사항이 없습니다.</td>
               </tr>
             )}
           </tbody>

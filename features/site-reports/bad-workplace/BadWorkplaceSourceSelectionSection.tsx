@@ -4,22 +4,18 @@ import {
   countDocument7FindingsForDisplay,
   formatSessionProgressRateDisplay,
 } from '@/lib/erpReports/badWorkplace';
-import type { BadWorkplaceReport } from '@/types/erpReports';
 import type { InspectionSession } from '@/types/inspectionSession';
-import { getBadWorkplaceSourceModeLabel } from './badWorkplaceHelpers';
 
 interface BadWorkplaceSourceSelectionSectionProps {
-  draft: BadWorkplaceReport;
-  onChangeSourceMode: (sourceMode: BadWorkplaceReport['sourceMode']) => void;
   onOpenSelector: () => void;
+  onReloadViolations: () => void;
   selectedSession: InspectionSession | null;
   siteSessions: InspectionSession[];
 }
 
 export function BadWorkplaceSourceSelectionSection({
-  draft,
-  onChangeSourceMode,
   onOpenSelector,
+  onReloadViolations,
   selectedSession,
   siteSessions,
 }: BadWorkplaceSourceSelectionSectionProps) {
@@ -29,6 +25,13 @@ export function BadWorkplaceSourceSelectionSection({
         <strong className={operationalStyles.reportCardTitle}>1. 원본 보고서 선택</strong>
         {siteSessions.length > 0 ? (
           <div className={operationalStyles.reportActions}>
+            <button
+              type="button"
+              className="app-button app-button-secondary"
+              onClick={onReloadViolations}
+            >
+              기본 항목 다시 불러오기
+            </button>
             <button
               type="button"
               className="app-button app-button-primary"
@@ -49,40 +52,17 @@ export function BadWorkplaceSourceSelectionSection({
                   {getSessionTitle(selectedSession)}
                 </strong>
                 <span className={operationalStyles.sourceCardMeta}>
-                  지도일 {getSessionGuidanceDate(selectedSession) || '-'} / 작성자{' '}
-                  {selectedSession.meta.drafter || '-'} / 지적사항{' '}
-                  {countDocument7FindingsForDisplay(selectedSession)}건 / 진행률{' '}
-                  {formatSessionProgressRateDisplay(selectedSession)}
+                  {`지도일 ${getSessionGuidanceDate(selectedSession) || '-'} / 작성자 ${
+                    selectedSession.meta.drafter || '-'
+                  } / 지적사항 ${countDocument7FindingsForDisplay(
+                    selectedSession,
+                  )}건 / 진행률 ${formatSessionProgressRateDisplay(selectedSession)}`}
                 </span>
               </div>
             </div>
           ) : null}
-          <div className={operationalStyles.reportActions}>
-            <button
-              type="button"
-              className={
-                draft.sourceMode === 'previous_unresolved'
-                  ? 'app-button app-button-primary'
-                  : 'app-button app-button-secondary'
-              }
-              onClick={() => onChangeSourceMode('previous_unresolved')}
-            >
-              이전 지적사항 미이행
-            </button>
-            <button
-              type="button"
-              className={
-                draft.sourceMode === 'current_new_hazard'
-                  ? 'app-button app-button-primary'
-                  : 'app-button app-button-secondary'
-              }
-              onClick={() => onChangeSourceMode('current_new_hazard')}
-            >
-              당회차 신규 위험
-            </button>
-          </div>
           <p className={operationalStyles.reportCardDescription}>
-            현재 기준: {getBadWorkplaceSourceModeLabel(draft.sourceMode)}
+            선택한 기술지도 보고서의 이전 미이행과 당회차 신규 위험을 함께 불러옵니다.
           </p>
         </>
       ) : (

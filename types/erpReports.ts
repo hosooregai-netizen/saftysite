@@ -122,6 +122,10 @@ export interface BadWorkplaceViolation {
   confirmationDate: string;
   accidentType: string;
   causativeAgentKey: CausativeAgentKey | '';
+  originKind: 'previous_unresolved' | 'current_new_hazard' | 'manual';
+  originKey: string;
+  originSessionId: string;
+  originFindingId?: string;
 }
 
 export interface BadWorkplaceReport {
@@ -132,7 +136,7 @@ export interface BadWorkplaceReport {
   dispatchCompleted: boolean;
   reportMonth: string;
   status: OperationalReportStatus;
-  sourceMode: 'previous_unresolved' | 'current_new_hazard';
+  sourceMode: 'combined' | 'previous_unresolved' | 'current_new_hazard';
   controllerReview: ReportControllerReview | null;
   siteSnapshot: AdminSiteSnapshot;
   reporterUserId: string;

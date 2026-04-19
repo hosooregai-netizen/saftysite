@@ -1,7 +1,7 @@
 'use client';
 
-import type { BadWorkplaceReport } from '@/types/erpReports';
 import styles from '@/features/mobile/components/MobileShell.module.css';
+import type { BadWorkplaceReport } from '@/types/erpReports';
 import { formatMobileBadWorkplaceMonth } from './mobileBadWorkplaceHelpers';
 
 interface MobileBadWorkplaceSummarySectionProps {
@@ -57,7 +57,7 @@ export function MobileBadWorkplaceSummarySection({
               disabled={isGeneratingHwpx || isGeneratingPdf}
               onClick={onDownloadHwpx}
             >
-              {isGeneratingHwpx ? '한글...' : '한글'}
+              {isGeneratingHwpx ? 'HWPX...' : 'HWPX'}
             </button>
             <button
               type="button"

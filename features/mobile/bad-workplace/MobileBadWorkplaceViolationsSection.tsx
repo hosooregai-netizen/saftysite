@@ -1,11 +1,13 @@
 'use client';
 
-import type { BadWorkplaceReport } from '@/types/erpReports';
 import styles from '@/features/mobile/components/MobileShell.module.css';
+import type { BadWorkplaceReport } from '@/types/erpReports';
 import { MobileBadWorkplaceEditableField } from './MobileBadWorkplaceEditableField';
 
 interface MobileBadWorkplaceViolationsSectionProps {
   draft: BadWorkplaceReport;
+  onAddViolation: () => void;
+  onRemoveViolation: (violationId: string) => void;
   onUpdateViolation: (
     violationId: string,
     patch: Partial<BadWorkplaceReport['violations'][number]>,
@@ -14,12 +16,21 @@ interface MobileBadWorkplaceViolationsSectionProps {
 
 export function MobileBadWorkplaceViolationsSection({
   draft,
+  onAddViolation,
+  onRemoveViolation,
   onUpdateViolation,
 }: MobileBadWorkplaceViolationsSectionProps) {
   return (
     <section className={styles.mobileEditorCard}>
       <div className={styles.mobileImplementationListHeader}>
         <div className={styles.mobileImplementationListTitle}>4. 위반사항</div>
+        <button
+          type="button"
+          className={`app-button app-button-secondary ${styles.mobileImplementationAddButton}`}
+          onClick={onAddViolation}
+        >
+          행 추가
+        </button>
       </div>
 
       {draft.violations.length > 0 ? (
@@ -30,6 +41,13 @@ export function MobileBadWorkplaceViolationsSection({
                 <span className={styles.mobileImplementationItemBadge}>
                   {`위반사항 ${index + 1}`}
                 </span>
+                <button
+                  type="button"
+                  className={`app-button app-button-secondary ${styles.mobileImplementationDeleteButton}`}
+                  onClick={() => onRemoveViolation(item.id)}
+                >
+                  삭제
+                </button>
               </div>
               <div className={styles.mobileImplementationFieldGrid}>
                 <MobileBadWorkplaceEditableField
@@ -47,7 +65,7 @@ export function MobileBadWorkplaceViolationsSection({
                   onChange={(value) => onUpdateViolation(item.id, { hazardFactor: value })}
                 />
                 <MobileBadWorkplaceEditableField
-                  label="개선지시사항"
+                  label="개선지시 사항"
                   multiline
                   rows={4}
                   wide
@@ -57,7 +75,7 @@ export function MobileBadWorkplaceViolationsSection({
                   }
                 />
                 <MobileBadWorkplaceEditableField
-                  label="지시일"
+                  label="지도일"
                   value={item.guidanceDate}
                   placeholder="YYYY-MM-DD"
                   onChange={(value) => onUpdateViolation(item.id, { guidanceDate: value })}
@@ -83,7 +101,7 @@ export function MobileBadWorkplaceViolationsSection({
           ))}
         </div>
       ) : (
-        <div className={styles.mobileImplementationEmpty}>선택된 지적사항이 없습니다.</div>
+        <div className={styles.mobileImplementationEmpty}>표시할 취약 사항이 없습니다.</div>
       )}
     </section>
   );

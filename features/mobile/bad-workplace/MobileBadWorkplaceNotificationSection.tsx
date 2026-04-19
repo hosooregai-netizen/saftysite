@@ -1,7 +1,7 @@
 'use client';
 
-import type { BadWorkplaceReport } from '@/types/erpReports';
 import styles from '@/features/mobile/components/MobileShell.module.css';
+import type { BadWorkplaceReport } from '@/types/erpReports';
 import { MobileBadWorkplaceEditableField } from './MobileBadWorkplaceEditableField';
 
 interface MobileBadWorkplaceNotificationSectionProps {
@@ -35,7 +35,7 @@ export function MobileBadWorkplaceNotificationSection({
           }
         />
         <MobileBadWorkplaceEditableField
-          label="담당 요원"
+          label="해당 요원"
           value={draft.reporterName}
           onChange={(value) => onUpdateDraft((current) => ({ ...current, reporterName: value }))}
         />
@@ -64,7 +64,7 @@ export function MobileBadWorkplaceNotificationSection({
           }
         />
         <MobileBadWorkplaceEditableField
-          label="대리자"
+          label="대표자"
           value={draft.agencyRepresentative}
           onChange={(value) =>
             onUpdateDraft((current) => ({ ...current, agencyRepresentative: value }))

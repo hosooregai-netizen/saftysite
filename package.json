@@ -9,6 +9,7 @@
     "start": "next start",
     "prepare": "node scripts/installGitHooks.mjs",
     "lint": "eslint .",
+    "test:domain:bad-workplace": "tsx tests/domain/badWorkplace.domain.ts",
     "test:client:smoke": "tsx tests/client/runSmoke.ts",
     "test:client:smoke:headed": "PLAYWRIGHT_HEADLESS=0 tsx tests/client/runSmoke.ts",
     "test:client:feature": "tsx tests/client/runSmoke.ts",
