@@ -6,12 +6,14 @@ export type ReportListEmptyMode = 'empty' | 'error' | 'filtered-empty' | 'loadin
 
 interface ReportListEmptyStateProps {
   canCreateReport: boolean;
+  createAvailabilityMessage: string | null;
   mode: ReportListEmptyMode;
   onCreateReport: () => void;
 }
 
 export function ReportListEmptyState({
   canCreateReport,
+  createAvailabilityMessage,
   mode,
   onCreateReport,
 }: ReportListEmptyStateProps) {
@@ -27,7 +29,9 @@ export function ReportListEmptyState({
     return (
       <div className={styles.emptyState}>
         <p className={styles.emptyTitle}>보고서 목록을 아직 불러오지 못했습니다.</p>
-        <p className={styles.emptySearchHint}>다시 불러오기를 눌러 목록을 새로 받아오세요.</p>
+        <p className={styles.emptySearchHint}>
+          다시 불러오기를 눌러 목록을 새로 받아오세요.
+        </p>
       </div>
     );
   }
@@ -35,11 +39,17 @@ export function ReportListEmptyState({
   if (mode === 'empty') {
     return (
       <div className={styles.emptyState}>
-        <p className={styles.emptyTitle}>아직 작성한 보고서가 없습니다.</p>
-        {canCreateReport ? (
-          <button type="button" onClick={onCreateReport} className="app-button app-button-primary">
-            첫 보고서 작성
-          </button>
+        <p className={styles.emptyTitle}>아직 작성된 보고서가 없습니다.</p>
+        <button
+          type="button"
+          onClick={onCreateReport}
+          className="app-button app-button-primary"
+          disabled={!canCreateReport}
+        >
+          첫 보고서 작성
+        </button>
+        {createAvailabilityMessage ? (
+          <p className={styles.createAvailabilityHint}>{createAvailabilityMessage}</p>
         ) : null}
       </div>
     );
@@ -48,7 +58,9 @@ export function ReportListEmptyState({
   return (
     <div className={styles.emptyState}>
       <p className={styles.emptyTitle}>검색 조건에 맞는 보고서가 없습니다.</p>
-      <p className={styles.emptySearchHint}>검색어나 정렬을 바꿔 다시 시도해 보세요.</p>
+      <p className={styles.emptySearchHint}>
+        검색어 또는 정렬을 바꿔 다시 시도해 보세요.
+      </p>
     </div>
   );
 }

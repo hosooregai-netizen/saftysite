@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
+import { fetchAdminSite } from '@/lib/admin/apiClient';
 import { isAdminUserRole } from '@/lib/admin';
-import { fetchAdminSitesList } from '@/lib/admin/apiClient';
 import { mapSafetySiteToInspectionSite } from '@/lib/safetyApiMappers';
 import type { InspectionSite } from '@/types/inspectionSession';
 
@@ -25,7 +25,8 @@ const EMPTY_FETCH_STATE: SiteFetchState = {
 };
 
 export function useResolvedSiteRoute(siteKey: string | null): UseResolvedSiteRouteResult {
-  const { currentUser, isAuthenticated, isReady, sites } = useInspectionSessions();
+  const { currentUser, ensureAssignedSafetySite, isAuthenticated, isReady, sites } =
+    useInspectionSessions();
   const decodedSiteKey = siteKey ? decodeURIComponent(siteKey) : '';
   const contextSite = useMemo(
     () => sites.find((site) => site.id === decodedSiteKey) ?? null,
@@ -33,58 +34,84 @@ export function useResolvedSiteRoute(siteKey: string | null): UseResolvedSiteRou
   );
   const isAdminView = Boolean(currentUser && isAdminUserRole(currentUser.role));
   const [fetchState, setFetchState] = useState<SiteFetchState>(EMPTY_FETCH_STATE);
+  const requestIdRef = useRef(0);
 
   useEffect(() => {
-    if (contextSite || !decodedSiteKey || !isReady || !isAuthenticated || !isAdminView) {
+    if (!decodedSiteKey || !isReady || !isAuthenticated) {
+      requestIdRef.current += 1;
+      queueMicrotask(() => {
+        if (requestIdRef.current > 0) {
+          setFetchState(EMPTY_FETCH_STATE);
+        }
+      });
       return;
     }
 
-    let cancelled = false;
+    if (
+      fetchState.siteKey === decodedSiteKey &&
+      (fetchState.status === 'loading' || fetchState.status === 'resolved')
+    ) {
+      return;
+    }
+
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
+
     queueMicrotask(() => {
-      if (!cancelled) {
-        setFetchState({
-          site: null,
-          siteKey: decodedSiteKey,
-          status: 'loading',
-        });
-      }
+      if (requestIdRef.current !== requestId) return;
+      setFetchState({
+        site: null,
+        siteKey: decodedSiteKey,
+        status: 'loading',
+      });
     });
 
-    void fetchAdminSitesList({ limit: 1, offset: 0, siteId: decodedSiteKey })
-      .then((response) => {
-        if (cancelled) return;
-        const matchedSite = response.rows.find((site) => site.id === decodedSiteKey) ?? null;
+    const resolver = isAdminView
+      ? fetchAdminSite(decodedSiteKey).then((site) =>
+          site ? mapSafetySiteToInspectionSite(site) : null,
+        )
+      : ensureAssignedSafetySite(decodedSiteKey).then((site) =>
+          site ? mapSafetySiteToInspectionSite(site) : null,
+        );
+
+    void resolver
+      .then((site) => {
+        if (requestIdRef.current !== requestId) return;
         setFetchState({
-          site: matchedSite ? mapSafetySiteToInspectionSite(matchedSite) : null,
+          site,
           siteKey: decodedSiteKey,
           status: 'resolved',
         });
       })
       .catch(() => {
-        if (cancelled) return;
+        if (requestIdRef.current !== requestId) return;
         setFetchState({
           site: null,
           siteKey: decodedSiteKey,
           status: 'resolved',
         });
       });
+  }, [
+    decodedSiteKey,
+    fetchState.siteKey,
+    fetchState.status,
+    isAdminView,
+    isAuthenticated,
+    isReady,
+    ensureAssignedSafetySite,
+  ]);
 
-    return () => {
-      cancelled = true;
-    };
-  }, [contextSite, decodedSiteKey, isAdminView, isAuthenticated, isReady]);
-
-  const fallbackSite =
-    !contextSite && fetchState.siteKey === decodedSiteKey ? fetchState.site : null;
-  const shouldAttemptAdminFallback = Boolean(
-    !contextSite && decodedSiteKey && isReady && isAuthenticated && isAdminView,
-  );
+  const resolvedAdminSite =
+    fetchState.siteKey === decodedSiteKey && fetchState.status === 'resolved'
+      ? fetchState.site
+      : null;
+  const shouldAttemptSiteResolve = Boolean(decodedSiteKey && isReady && isAuthenticated);
   const isResolvingSite =
-    shouldAttemptAdminFallback &&
+    shouldAttemptSiteResolve &&
     (fetchState.siteKey !== decodedSiteKey || fetchState.status === 'loading');
 
   return {
-    currentSite: contextSite ?? fallbackSite,
+    currentSite: resolvedAdminSite ?? contextSite,
     isResolvingSite,
   };
 }

@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { SubmitSearchField } from '@/components/ui/SubmitSearchField';
 import ActionMenu from '@/components/ui/ActionMenu';
+import { SubmitSearchField } from '@/components/ui/SubmitSearchField';
 import styles from '../components/SiteReportsScreen.module.css';
 import { formatDateTimeLabel, shouldIgnoreRowClick } from './quarterlyListHelpers';
 import type {
@@ -13,6 +13,8 @@ import type {
 
 interface QuarterlyReportsListPanelProps {
   canArchiveReports: boolean;
+  canCreateReport: boolean;
+  createAvailabilityMessage: string | null;
   dispatchFilter: QuarterlyListDispatchFilter;
   filteredRows: QuarterlyListRow[];
   isBusy: boolean;
@@ -34,6 +36,8 @@ interface QuarterlyReportsListPanelProps {
 
 export function QuarterlyReportsListPanel({
   canArchiveReports,
+  canCreateReport,
+  createAvailabilityMessage,
   dispatchFilter,
   filteredRows,
   isBusy,
@@ -88,7 +92,7 @@ export function QuarterlyReportsListPanel({
           aria-label="분기 종합 보고서 정렬"
         >
           <option value="number">번호순</option>
-          <option value="recent">최근 수정일</option>
+          <option value="recent">최신 수정순</option>
           <option value="name">보고서명순</option>
           <option value="period">기간순</option>
         </select>
@@ -96,10 +100,13 @@ export function QuarterlyReportsListPanel({
           type="button"
           className={`app-button app-button-primary ${styles.tableCreateButton}`}
           onClick={onOpenCreateDialog}
-          disabled={isBusy}
+          disabled={isBusy || !canCreateReport}
         >
           보고서 작성
         </button>
+        {createAvailabilityMessage ? (
+          <p className={styles.createAvailabilityHint}>{createAvailabilityMessage}</p>
+        ) : null}
       </div>
 
       {(isLoading || (!operationalError && rows.length === 0)) && rows.length === 0 ? (
@@ -185,7 +192,9 @@ export function QuarterlyReportsListPanel({
                       items={[
                         { label: '열기', href: row.href },
                         {
-                          label: row.dispatchCompleted ? '미발송으로 변경' : '발송으로 변경',
+                          label: row.dispatchCompleted
+                            ? '미발송으로 변경'
+                            : '발송으로 변경',
                           onSelect: () => onToggleDispatch(row),
                         },
                         ...(canArchiveReports

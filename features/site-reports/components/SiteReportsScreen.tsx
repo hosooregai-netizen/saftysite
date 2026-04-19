@@ -27,6 +27,7 @@ export function SiteReportsScreen({ siteKey }: SiteReportsScreenProps) {
     authError,
     canArchiveReports,
     canCreateReport,
+    createAvailabilityMessage,
     createReport,
     currentSite,
     currentUserName,
@@ -121,6 +122,7 @@ export function SiteReportsScreen({ siteKey }: SiteReportsScreenProps) {
                   assignedUserDisplay={assignedUserDisplay}
                   canArchiveReports={canArchiveReports}
                   canCreateReport={canCreateReport}
+                  createAvailabilityMessage={createAvailabilityMessage}
                   createReport={createReport}
                   currentSite={currentSite}
                   deleteSession={deleteSession}

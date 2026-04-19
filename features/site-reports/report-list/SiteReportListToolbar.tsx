@@ -6,6 +6,7 @@ import type { SiteReportDispatchFilter, SiteReportSortMode } from './types';
 
 interface SiteReportListToolbarProps {
   canCreateReport: boolean;
+  createAvailabilityMessage?: string | null;
   dispatchFilter: SiteReportDispatchFilter;
   isSearching?: boolean;
   onCreateReport: () => void;
@@ -19,6 +20,7 @@ interface SiteReportListToolbarProps {
 
 export function SiteReportListToolbar({
   canCreateReport,
+  createAvailabilityMessage = null,
   dispatchFilter,
   isSearching = false,
   onCreateReport,
@@ -70,6 +72,9 @@ export function SiteReportListToolbar({
       >
         보고서 추가
       </button>
+      {createAvailabilityMessage ? (
+        <p className={styles.createAvailabilityHint}>{createAvailabilityMessage}</p>
+      ) : null}
     </div>
   );
 }

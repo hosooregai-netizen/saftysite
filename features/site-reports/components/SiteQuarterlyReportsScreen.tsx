@@ -2,12 +2,10 @@
 
 import { useRouter } from 'next/navigation';
 import { useCallback, useDeferredValue, useState } from 'react';
-import { useSubmittedSearchState } from '@/hooks/useSubmittedSearchState';
 import LoginPanel from '@/components/auth/LoginPanel';
 import { buildSiteHubHref, buildSiteQuarterlyHref } from '@/features/home/lib/siteEntry';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
-import { useSiteOperationalReportIndex } from '@/hooks/useSiteOperationalReportIndex';
-import { useSiteOperationalReportMutations } from '@/hooks/useSiteOperationalReportMutations';
+import { useSubmittedSearchState } from '@/hooks/useSubmittedSearchState';
 import { getAdminSectionHref, isAdminUserRole } from '@/lib/admin';
 import { buildToggledReportDispatch } from '@/lib/reportDispatch';
 import { updateReportDispatch } from '@/lib/reportDispatchApi';
@@ -16,6 +14,9 @@ import {
   readSafetyAuthToken,
   SafetyApiError,
 } from '@/lib/safetyApi';
+import { useSiteOperationalReportIndex } from '@/hooks/useSiteOperationalReportIndex';
+import { useSiteOperationalReportMutations } from '@/hooks/useSiteOperationalReportMutations';
+import { useResolvedSiteRoute } from '../hooks/useResolvedSiteRoute';
 import { QuarterlyReportCreateDialog } from '../quarterly-list/QuarterlyReportCreateDialog';
 import { QuarterlyReportDeleteDialog } from '../quarterly-list/QuarterlyReportDeleteDialog';
 import { QuarterlyReportsListPanel } from '../quarterly-list/QuarterlyReportsListPanel';
@@ -26,7 +27,6 @@ import type {
   QuarterlyListRow,
   QuarterlyListSortMode,
 } from '../quarterly-list/types';
-import { useResolvedSiteRoute } from '../hooks/useResolvedSiteRoute';
 import { useQuarterlyCreateDialog } from '../quarterly-list/useQuarterlyCreateDialog';
 import { useQuarterlyListRows } from '../quarterly-list/useQuarterlyListRows';
 
@@ -68,12 +68,7 @@ export function SiteQuarterlyReportsScreen({
   } = useInspectionSessions();
   const { currentSite, isResolvingSite } = useResolvedSiteRoute(siteKey);
   const isAdminView = Boolean(currentUser && isAdminUserRole(currentUser.role));
-  const {
-    quarterlyReports,
-    isLoading,
-    error,
-    reload,
-  } = useSiteOperationalReportIndex(
+  const { quarterlyReports, isLoading, error, reload } = useSiteOperationalReportIndex(
     currentSite,
     isAuthenticated && isReady && Boolean(currentSite),
   );
@@ -106,7 +101,7 @@ export function SiteQuarterlyReportsScreen({
     handleCreateTitleChange,
     openCreateDialog,
   } = useQuarterlyCreateDialog({
-    currentSite,
+    currentSite: currentSite && !isResolvingSite ? currentSite : null,
     currentUserName: currentUser?.name,
     ensureSiteReportsLoaded,
     existingReportTitles,
@@ -118,6 +113,9 @@ export function SiteQuarterlyReportsScreen({
     },
     saveQuarterlyReport,
   });
+  const canCreateReport = Boolean(currentSite) && !isResolvingSite;
+  const createAvailabilityMessage =
+    currentSite && isResolvingSite ? '사업장 정보를 확인하는 중입니다.' : null;
   const deletingRow = dialogReportId
     ? rows.find((row) => row.reportId === dialogReportId) ?? null
     : null;
@@ -143,7 +141,10 @@ export function SiteQuarterlyReportsScreen({
       try {
         const token = readSafetyAuthToken();
         if (!token) {
-          throw new SafetyApiError('로그인이 만료되었습니다. 다시 로그인해 주세요.', 401);
+          throw new SafetyApiError(
+            '로그인이 만료되었습니다. 다시 로그인해 주세요.',
+            401,
+          );
         }
 
         setDispatchError(null);
@@ -189,7 +190,7 @@ export function SiteQuarterlyReportsScreen({
   }
 
   if (isResolvingSite && !currentSite) {
-    return <QuarterlyReportsStatePanel message="현장 정보를 확인하는 중입니다." />;
+    return <QuarterlyReportsStatePanel message="사업장 정보를 확인하는 중입니다." />;
   }
 
   if (!currentSite) {
@@ -212,6 +213,8 @@ export function SiteQuarterlyReportsScreen({
       >
         <QuarterlyReportsListPanel
           canArchiveReports={canArchiveReports}
+          canCreateReport={canCreateReport}
+          createAvailabilityMessage={createAvailabilityMessage}
           dispatchFilter={dispatchFilter}
           filteredRows={filteredRows}
           isBusy={isBusy}

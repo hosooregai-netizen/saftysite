@@ -16,6 +16,7 @@ interface ReportListProps {
   assignedUserDisplay?: string;
   canArchiveReports: boolean;
   canCreateReport: boolean;
+  createAvailabilityMessage: string | null;
   currentSite: InspectionSite;
   onCreateReport: () => void;
   onDeleteRequest: (reportKey: string) => void;
@@ -50,6 +51,7 @@ export function ReportList({
   assignedUserDisplay,
   canArchiveReports,
   canCreateReport,
+  createAvailabilityMessage,
   currentSite,
   onCreateReport,
   onDeleteRequest,
@@ -84,6 +86,7 @@ export function ReportList({
     return (
       <ReportListEmptyState
         canCreateReport={canCreateReport}
+        createAvailabilityMessage={createAvailabilityMessage}
         mode={emptyStateMode}
         onCreateReport={onCreateReport}
       />

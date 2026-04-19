@@ -32,6 +32,7 @@ interface SiteReportListPanelProps {
   assignedUserDisplay?: string;
   canArchiveReports: boolean;
   canCreateReport: boolean;
+  createAvailabilityMessage: string | null;
   createReport: (input: CreateSiteReportInput) => Promise<void>;
   currentSite: InspectionSite;
   deleteSession: (sessionId: string) => Promise<void>;
@@ -63,6 +64,7 @@ export function SiteReportListPanel({
   assignedUserDisplay,
   canArchiveReports,
   canCreateReport,
+  createAvailabilityMessage,
   createReport,
   currentSite,
   deleteSession,
@@ -197,6 +199,7 @@ export function SiteReportListPanel({
       {showTableTools ? (
         <SiteReportListToolbar
           canCreateReport={canCreateReport}
+          createAvailabilityMessage={createAvailabilityMessage}
           dispatchFilter={dispatchFilter}
           onCreateReport={openCreateDialog}
           onSubmitReportQuery={submitReportQuery}
@@ -226,6 +229,7 @@ export function SiteReportListPanel({
         assignedUserDisplay={assignedUserDisplay}
         canArchiveReports={canArchiveReports}
         canCreateReport={canCreateReport}
+        createAvailabilityMessage={createAvailabilityMessage}
         currentSite={currentSite}
         onCreateReport={openCreateDialog}
         onDeleteRequest={setDialogSessionId}

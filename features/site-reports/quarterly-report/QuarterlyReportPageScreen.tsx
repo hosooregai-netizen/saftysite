@@ -20,15 +20,13 @@ export function QuarterlyReportPageScreen({
   const state = useQuarterlyReportPageState(siteKey, quarterKey);
   const backLabel = '분기 종합 보고서 목록';
 
-  if (
-    !state.isReady ||
-    state.existingReportLoading ||
-    (state.isResolvingSite && !state.currentSite)
-  ) {
+  if (!state.isReady || state.existingReportLoading || state.isResolvingSite) {
     return (
       <main className="app-page">
         <div className="app-container">
-          <section className={operationalStyles.sectionCard}>분기 보고서를 불러오는 중입니다.</section>
+          <section className={operationalStyles.sectionCard}>
+            분기 보고서를 불러오는 중입니다.
+          </section>
         </div>
       </main>
     );
@@ -49,7 +47,9 @@ export function QuarterlyReportPageScreen({
     return (
       <main className="app-page">
         <div className="app-container">
-          <section className={operationalStyles.sectionCard}>{state.existingReportError}</section>
+          <section className={operationalStyles.sectionCard}>
+            {state.existingReportError}
+          </section>
         </div>
       </main>
     );
@@ -96,7 +96,11 @@ export function QuarterlyReportPageScreen({
             <div className={shellStyles.contentColumn}>
               <header className={shellStyles.hero}>
                 <div className={shellStyles.heroBody}>
-                  <PageBackControl href={state.backHref} label={backLabel} ariaLabel="이전 페이지로" />
+                  <PageBackControl
+                    href={state.backHref}
+                    label={backLabel}
+                    ariaLabel="이전 페이지로"
+                  />
                   <div className={shellStyles.heroMain}>
                     <h1 className={shellStyles.heroTitle}>{state.initialDraft.title}</h1>
                   </div>

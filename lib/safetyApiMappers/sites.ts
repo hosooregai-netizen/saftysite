@@ -49,8 +49,8 @@ export function mapSafetySiteToAdminSnapshot(site: SafetySite): AdminSiteSnapsho
     siteContactEmail: normalizeMapperText(site.site_contact_email),
     siteAddress: normalizeMapperText(site.site_address),
     companyName:
-      normalizeMapperText(site.client_business_name) ||
-      headquarterName,
+      headquarterName ||
+      normalizeMapperText(site.client_business_name),
     corporationRegistrationNumber: normalizeMapperText(
       site.headquarter_detail?.corporate_registration_no
     ),

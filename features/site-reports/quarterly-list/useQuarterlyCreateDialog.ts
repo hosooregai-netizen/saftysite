@@ -8,7 +8,11 @@ import { createQuarterKey, getQuarterRange } from '@/lib/erpReports/shared';
 import { fetchQuarterlySummarySeed, readSafetyAuthToken } from '@/lib/safetyApi';
 import type { QuarterlySummaryReport } from '@/types/erpReports';
 import type { InspectionSession, InspectionSite } from '@/types/inspectionSession/session';
-import { getCreateQuarterSelectionTarget, getCreateTitleSuggestion, shouldUseLocalQuarterlySeedFallback } from './quarterlyListHelpers';
+import {
+  getCreateQuarterSelectionTarget,
+  getCreateTitleSuggestion,
+  shouldUseLocalQuarterlySeedFallback,
+} from './quarterlyListHelpers';
 import { EMPTY_CREATE_FORM, type CreateQuarterlyReportForm } from './types';
 
 interface UseQuarterlyCreateDialogOptions {
@@ -39,14 +43,21 @@ export function useQuarterlyCreateDialog({
   const [isCreatingReport, setIsCreatingReport] = useState(false);
 
   const isBusy = isSaving || isCreatingReport;
-  const isCreateRangeInvalid = Boolean(createForm.periodStartDate) && Boolean(createForm.periodEndDate) && createForm.periodStartDate > createForm.periodEndDate;
+  const isCreateRangeInvalid =
+    Boolean(createForm.periodStartDate) &&
+    Boolean(createForm.periodEndDate) &&
+    createForm.periodStartDate > createForm.periodEndDate;
   const isCreateDisabled =
     isBusy ||
+    !currentSite ||
     !createForm.title.trim() ||
     !createForm.periodStartDate ||
     !createForm.periodEndDate ||
     isCreateRangeInvalid;
-  const createQuarterSelection = useMemo(() => String(getCreateQuarterSelectionTarget(createForm).quarter), [createForm]);
+  const createQuarterSelection = useMemo(
+    () => String(getCreateQuarterSelectionTarget(createForm).quarter),
+    [createForm],
+  );
 
   const resetCreateDialog = () => {
     setCreateForm(EMPTY_CREATE_FORM);
@@ -91,7 +102,11 @@ export function useQuarterlyCreateDialog({
       periodEndDate: nextRange.endDate,
       title: hasEditedCreateTitle
         ? current.title
-        : getCreateTitleSuggestion(nextRange.startDate, nextRange.endDate, existingReportTitles),
+        : getCreateTitleSuggestion(
+            nextRange.startDate,
+            nextRange.endDate,
+            existingReportTitles,
+          ),
     }));
   };
 
@@ -144,7 +159,10 @@ export function useQuarterlyCreateDialog({
 
       let seed;
       try {
-        seed = await fetchQuarterlySummarySeed(token, currentSite.id, { periodStartDate, periodEndDate });
+        seed = await fetchQuarterlySummarySeed(token, currentSite.id, {
+          periodStartDate,
+          periodEndDate,
+        });
       } catch (seedError) {
         if (!shouldUseLocalQuarterlySeedFallback(seedError)) {
           throw seedError;
@@ -164,7 +182,9 @@ export function useQuarterlyCreateDialog({
       resetCreateDialog();
       onCreated(nextDraft);
     } catch {
-      setCreateDialogError('보고서를 생성하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+      setCreateDialogError(
+        '보고서를 생성하지 못했습니다. 잠시 후 다시 시도해 주세요.',
+      );
     } finally {
       setIsCreatingReport(false);
     }

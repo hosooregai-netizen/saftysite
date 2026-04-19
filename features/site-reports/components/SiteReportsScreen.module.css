@@ -192,6 +192,14 @@
   white-space: nowrap;
 }
 
+.createAvailabilityHint {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: var(--text-ui-sm);
+  line-height: 1.5;
+  color: var(--erp-text-muted);
+}
+
 .bannerError,
 .bannerInfo {
   margin: 16px 16px 0;
