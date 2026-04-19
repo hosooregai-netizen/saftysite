@@ -19,6 +19,7 @@ interface WorkspaceShellProps {
   backHref: string;
   currentSection: InspectionSectionKey;
   currentSectionIndex: number;
+  currentHeadquarterId?: string | null;
   currentUserName?: string;
   documentError: string | null;
   generateHwpxDocument: () => Promise<void>;
@@ -45,6 +46,7 @@ export function WorkspaceShell({
   backHref,
   currentSection,
   currentSectionIndex,
+  currentHeadquarterId = null,
   currentUserName,
   documentError,
   generateHwpxDocument,
@@ -88,7 +90,11 @@ export function WorkspaceShell({
           <WorkerShellBody>
             <WorkerMenuSidebar>
               {isAdminView ? (
-                <AdminMenuPanel activeSection="headquarters" currentSiteKey={session.siteKey} />
+                <AdminMenuPanel
+                  activeSection="headquarters"
+                  currentHeadquarterId={currentHeadquarterId}
+                  currentSiteKey={session.siteKey}
+                />
               ) : (
                 <WorkerMenuPanel currentSiteKey={session.siteKey} />
               )}
@@ -172,6 +178,7 @@ export function WorkspaceShell({
           open={menuOpen}
           onClose={() => setMenuOpen(false)}
           activeSection="headquarters"
+          currentHeadquarterId={currentHeadquarterId}
           currentSiteKey={session.siteKey}
         />
       ) : (

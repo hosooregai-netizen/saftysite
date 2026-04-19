@@ -18,6 +18,7 @@ import styles from './AdminMenu.module.css';
 
 interface AdminMenuPanelProps {
   activeSection: AdminSectionKey;
+  currentHeadquarterId?: string | null;
   currentSiteKey?: string | null;
   forceExpanded?: boolean;
   onNavClick?: () => void;
@@ -65,6 +66,7 @@ function joinClassNames(...tokens: Array<string | false | null | undefined>) {
 
 export function AdminMenuPanel({
   activeSection,
+  currentHeadquarterId = null,
   currentSiteKey = null,
   forceExpanded = false,
   onNavClick,
@@ -75,6 +77,7 @@ export function AdminMenuPanel({
   const searchParams = useSearchParams();
   const selectedAdminSiteId = searchParams.get('siteId');
   const selectedAdminHeadquarterId = searchParams.get('headquarterId');
+  const resolvedHeadquarterId = currentHeadquarterId ?? selectedAdminHeadquarterId;
   const siteNavView = resolveSiteNavView({
     pathname,
     siteKey: currentSiteKey,
@@ -96,7 +99,7 @@ export function AdminMenuPanel({
         {
           label: '\uD604\uC7A5 \uBA54\uC778',
           href: getAdminSectionHref('headquarters', {
-            headquarterId: selectedAdminHeadquarterId,
+            headquarterId: resolvedHeadquarterId,
             siteId: currentSiteKey,
           }),
           active: siteNavView === 'site-home',
@@ -114,7 +117,7 @@ export function AdminMenuPanel({
         {
           label: '\uD604\uC7A5 \uC0AC\uC9C4\uCCA9',
           href: getAdminSectionHref('photos', {
-            headquarterId: selectedAdminHeadquarterId,
+            headquarterId: resolvedHeadquarterId,
             siteId: currentSiteKey,
           }),
           active: siteNavView === 'photos',
@@ -230,6 +233,7 @@ export function AdminMenuDrawer({
   open,
   onClose,
   activeSection,
+  currentHeadquarterId,
   currentSiteKey,
   onSelectSection,
 }: AdminMenuDrawerProps) {
@@ -246,6 +250,7 @@ export function AdminMenuDrawer({
       <aside className={styles.drawer}>
         <AdminMenuPanel
           activeSection={activeSection}
+          currentHeadquarterId={currentHeadquarterId}
           currentSiteKey={currentSiteKey}
           forceExpanded
           onNavClick={onClose}

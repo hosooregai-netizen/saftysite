@@ -201,6 +201,7 @@ export function SiteQuarterlyReportsScreen({
       <SiteQuarterlyReportsFrame
         backHref={backHref}
         backLabel={backLabel}
+        currentHeadquarterId={currentSite.headquarterId ?? null}
         currentSiteId={currentSite.id}
         currentUserName={currentUser?.name}
         isAdminView={isAdminView}

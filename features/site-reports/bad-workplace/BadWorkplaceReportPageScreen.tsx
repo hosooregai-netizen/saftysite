@@ -83,6 +83,7 @@ export function BadWorkplaceReportPageScreen({
               {state.isAdminView ? (
                 <AdminMenuPanel
                   activeSection="headquarters"
+                  currentHeadquarterId={state.currentSite.headquarterId ?? null}
                   currentSiteKey={state.currentSite.id}
                 />
               ) : (
@@ -124,6 +125,7 @@ export function BadWorkplaceReportPageScreen({
           open={menuOpen}
           onClose={() => setMenuOpen(false)}
           activeSection="headquarters"
+          currentHeadquarterId={state.currentSite.headquarterId ?? null}
           currentSiteKey={state.currentSite.id}
         />
       ) : (

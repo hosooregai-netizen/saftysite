@@ -92,6 +92,7 @@ export function SiteReportsScreen({ siteKey }: SiteReportsScreenProps) {
               {isAdminView ? (
                 <AdminMenuPanel
                   activeSection="headquarters"
+                  currentHeadquarterId={currentSite.headquarterId ?? null}
                   currentSiteKey={currentSite.id}
                 />
               ) : (
@@ -149,6 +150,7 @@ export function SiteReportsScreen({ siteKey }: SiteReportsScreenProps) {
           open={menuOpen}
           onClose={() => setMenuOpen(false)}
           activeSection="headquarters"
+          currentHeadquarterId={currentSite.headquarterId ?? null}
           currentSiteKey={currentSite.id}
         />
       ) : (

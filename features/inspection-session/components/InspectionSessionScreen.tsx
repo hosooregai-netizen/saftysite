@@ -67,6 +67,7 @@ export function InspectionSessionScreen({ sessionId }: InspectionSessionScreenPr
       backHref={screen.backHref}
       currentSection={screen.currentSection}
       currentSectionIndex={screen.currentSectionIndex}
+      currentHeadquarterId={screen.site?.headquarterId ?? null}
       currentUserName={screen.currentUserName}
       documentError={screen.documentError}
       generateHwpxDocument={screen.generateHwpxDocument}

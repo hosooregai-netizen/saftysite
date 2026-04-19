@@ -13,6 +13,7 @@ interface SiteQuarterlyReportsFrameProps {
   backHref: string;
   backLabel: string;
   children: ReactNode;
+  currentHeadquarterId?: string | null;
   currentSiteId: string;
   currentUserName?: string | null;
   isAdminView: boolean;
@@ -26,6 +27,7 @@ export function SiteQuarterlyReportsFrame({
   backHref,
   backLabel,
   children,
+  currentHeadquarterId = null,
   currentSiteId,
   currentUserName,
   isAdminView,
@@ -48,7 +50,11 @@ export function SiteQuarterlyReportsFrame({
           <WorkerShellBody>
             <WorkerMenuSidebar>
               {isAdminView ? (
-                <AdminMenuPanel activeSection="headquarters" currentSiteKey={currentSiteId} />
+                <AdminMenuPanel
+                  activeSection="headquarters"
+                  currentHeadquarterId={currentHeadquarterId}
+                  currentSiteKey={currentSiteId}
+                />
               ) : (
                 <WorkerMenuPanel currentSiteKey={currentSiteId} />
               )}
@@ -77,6 +83,7 @@ export function SiteQuarterlyReportsFrame({
           open={menuOpen}
           onClose={onCloseMenu}
           activeSection="headquarters"
+          currentHeadquarterId={currentHeadquarterId}
           currentSiteKey={currentSiteId}
         />
       ) : (

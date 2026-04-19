@@ -79,7 +79,11 @@ export function QuarterlyReportPageScreen({
           <WorkerShellBody>
             <WorkerMenuSidebar>
               {state.isAdminView ? (
-                <AdminMenuPanel activeSection="headquarters" currentSiteKey={state.currentSite.id} />
+                <AdminMenuPanel
+                  activeSection="headquarters"
+                  currentHeadquarterId={state.currentSite.headquarterId ?? null}
+                  currentSiteKey={state.currentSite.id}
+                />
               ) : (
                 <WorkerMenuPanel currentSiteKey={state.currentSite.id} />
               )}
@@ -116,6 +120,7 @@ export function QuarterlyReportPageScreen({
           open={menuOpen}
           onClose={() => setMenuOpen(false)}
           activeSection="headquarters"
+          currentHeadquarterId={state.currentSite.headquarterId ?? null}
           currentSiteKey={state.currentSite.id}
         />
       ) : (

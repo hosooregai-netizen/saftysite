@@ -23,6 +23,8 @@ export interface SafetyHeadquarter {
   address: string | null;
   memo: string | null;
   is_active: boolean;
+  site_count?: number | null;
+  sequence_no?: number | null;
   lifecycle_status?: SafetyHeadquarterLifecycleStatus;
   created_at: string;
   updated_at: string;

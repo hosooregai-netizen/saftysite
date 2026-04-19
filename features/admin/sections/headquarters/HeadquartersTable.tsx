@@ -20,7 +20,6 @@ interface HeadquartersTableProps {
     registrationGapCount: number;
   };
   page: number;
-  siteCountsByHeadquarterId: Record<string, number>;
   onCreateRequest: () => void;
   onDeleteRequest: (item: SafetyHeadquarter) => void;
   onEditRequest: (item: SafetyHeadquarter) => void;
@@ -71,7 +70,6 @@ export function HeadquartersTable({
   filteredHeadquarters,
   summary,
   page,
-  siteCountsByHeadquarterId,
   onCreateRequest,
   onDeleteRequest,
   onEditRequest,
@@ -202,8 +200,10 @@ export function HeadquartersTable({
                 </thead>
                 <tbody>
                   {filteredHeadquarters.map((item, index) => {
-                    const rowNumber = (page - 1) * HEADQUARTERS_PAGE_SIZE + index + 1;
-                    const siteCount = siteCountsByHeadquarterId[item.id] ?? 0;
+                    const rowNumber =
+                      item.sequence_no ??
+                      Math.max(totalCount - ((page - 1) * HEADQUARTERS_PAGE_SIZE + index), 1);
+                    const siteCount = item.site_count ?? 0;
                     return (
                       <tr
                         key={item.id}

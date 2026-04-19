@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import {
   readAdminSessionCache,
@@ -16,7 +16,6 @@ import type {
   SafetySiteStatus,
   SafetySiteUpdateInput,
 } from '@/types/controller';
-import type { SafetySite } from '@/types/backend';
 import { HeadquarterSummaryPanel } from './HeadquarterSummaryPanel';
 import { SiteManagementMainPanel } from './SiteManagementMainPanel';
 import { HeadquartersTable } from './HeadquartersTable';
@@ -82,7 +81,6 @@ interface HeadquartersSectionProps {
   busy: boolean;
   canDelete: boolean;
   currentUserId: string;
-  sites: SafetySite[];
   selectedHeadquarterId: string | null;
   selectedSiteId: string | null;
   onClearHeadquarterSelection: () => void;
@@ -100,11 +98,11 @@ interface HeadquartersSectionProps {
 }
 
 export function HeadquartersSection(props: HeadquartersSectionProps) {
+  const HEADQUARTER_LIST_CACHE_KEY_PREFIX = 'headquarters:list:v2:';
   const {
     busy,
     canDelete,
     currentUserId,
-    sites,
     selectedHeadquarterId,
     selectedSiteId,
     onAssignFieldAgent,
@@ -119,7 +117,10 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
     onUpdate,
     onUpdateSite,
   } = props;
+  const router = useRouter();
   const searchParams = useSearchParams();
+  const siteStatusParam = searchParams.get('siteStatus');
+  const autoEditSiteId = searchParams.get('editSiteId');
   const [rows, setRows] = useState<import('@/types/controller').SafetyHeadquarter[]>([]);
   const [total, setTotal] = useState(0);
   const [summary, setSummary] = useState({
@@ -135,6 +136,7 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
   const [selectedHeadquarterSites, setSelectedHeadquarterSites] = useState<
     import('@/types/backend').SafetySite[]
   >([]);
+  const [isResolvingSiteContext, setIsResolvingSiteContext] = useState(false);
   const state = useHeadquartersSectionState(rows, busy);
   const abortControllerRef = useRef<AbortController | null>(null);
   const requestKey = useMemo(
@@ -155,7 +157,7 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
       sortBy: state.sort.key,
       sortDir: state.sort.direction,
     });
-    writeAdminSessionCache(currentUserId, `headquarters:list:${requestKey}`, response);
+    writeAdminSessionCache(currentUserId, `${HEADQUARTER_LIST_CACHE_KEY_PREFIX}${requestKey}`, response);
     setRows(response.rows);
     setTotal(response.total);
     setSummary(response.summary);
@@ -197,9 +199,63 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
   };
 
   useEffect(() => {
+    if (!selectedSiteId || selectedHeadquarterId) {
+      setIsResolvingSiteContext(false);
+      return;
+    }
+
+    let cancelled = false;
+    setIsResolvingSiteContext(true);
+
+    void fetchAdminSitesList({ limit: 1, offset: 0, siteId: selectedSiteId })
+      .then((response) => {
+        if (cancelled) return;
+
+        const matchedSite =
+          response.rows.find((site) => site.id === selectedSiteId) ?? response.rows[0] ?? null;
+        const restoredHeadquarterId = String(matchedSite?.headquarter_id ?? '').trim();
+
+        if (restoredHeadquarterId) {
+          router.replace(
+            getAdminSectionHref('headquarters', {
+              editSiteId: autoEditSiteId,
+              headquarterId: restoredHeadquarterId,
+              siteId: selectedSiteId,
+              siteStatus: siteStatusParam,
+            }),
+          );
+          return;
+        }
+
+        router.replace(
+          getAdminSectionHref('headquarters', {
+            editSiteId: autoEditSiteId,
+            siteStatus: siteStatusParam,
+          }),
+        );
+        setIsResolvingSiteContext(false);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        console.error('Failed to restore headquarters site context', error);
+        router.replace(
+          getAdminSectionHref('headquarters', {
+            editSiteId: autoEditSiteId,
+            siteStatus: siteStatusParam,
+          }),
+        );
+        setIsResolvingSiteContext(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [autoEditSiteId, router, selectedHeadquarterId, selectedSiteId, siteStatusParam]);
+
+  useEffect(() => {
     const cached = readAdminSessionCache<import('@/types/admin').SafetyAdminHeadquarterListResponse>(
       currentUserId,
-      `headquarters:list:${requestKey}`,
+      `${HEADQUARTER_LIST_CACHE_KEY_PREFIX}${requestKey}`,
     );
     if (cached.value) {
       setRows(cached.value.rows);
@@ -227,7 +283,11 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
       { signal: abortController.signal },
     )
       .then((response) => {
-        writeAdminSessionCache(currentUserId, `headquarters:list:${requestKey}`, response);
+        writeAdminSessionCache(
+          currentUserId,
+          `${HEADQUARTER_LIST_CACHE_KEY_PREFIX}${requestKey}`,
+          response,
+        );
         setRows(response.rows);
         setTotal(response.total);
         setSummary(response.summary);
@@ -277,27 +337,17 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
   }, [selectedSiteId]);
 
   const siteStatusFilter = useMemo(() => {
-    const value = searchParams.get('siteStatus');
+    const value = siteStatusParam;
     return value === 'all' || value === 'planned' || value === 'active' || value === 'closed'
       ? (value as 'all' | SafetySiteStatus)
       : 'all';
-  }, [searchParams]);
+  }, [siteStatusParam]);
   const hasSiteStatusScope = searchParams.has('siteStatus');
-  const autoEditSiteId = searchParams.get('editSiteId');
   const siteStatusTitle =
     siteStatusFilter === 'all' ? '현장 목록' : `${getSiteStatusLabel(siteStatusFilter)} 현장`;
   const totalPages = Math.max(1, Math.ceil(total / 30));
-  const siteCountsByHeadquarterId = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const site of sites) {
-      const headquarterId = site.headquarter_id?.trim();
-      if (!headquarterId) continue;
-      counts[headquarterId] = (counts[headquarterId] ?? 0) + 1;
-    }
-    return counts;
-  }, [sites]);
 
-  if (isLoading && rows.length === 0 && !selectedHeadquarter && !hasSiteStatusScope) {
+  if (isResolvingSiteContext || (isLoading && rows.length === 0 && !selectedHeadquarter && !hasSiteStatusScope)) {
     return (
       <section className={`${styles.sectionCard} ${styles.listSectionCard}`}>
         <div className={styles.sectionHeader}>
@@ -376,7 +426,6 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
             filteredHeadquarters={rows}
             summary={summary}
             page={state.page}
-            siteCountsByHeadquarterId={siteCountsByHeadquarterId}
             onCreateRequest={state.openCreate}
             onDeleteRequest={handleDeleteHeadquarter}
             onEditRequest={state.openEdit}
@@ -418,7 +467,7 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
                       memo: item.memo || '',
                       name: item.name,
                       opening_number: item.opening_number || '',
-                      site_count: siteCountsByHeadquarterId[item.id] ?? 0,
+                      site_count: item.site_count ?? 0,
                       updated_at: item.updated_at,
                     })),
                   },

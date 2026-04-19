@@ -120,7 +120,11 @@ export function SitePhotoAlbumScreen({
           <WorkerShellBody>
             <WorkerMenuSidebar>
               {isAdminView ? (
-                <AdminMenuPanel activeSection="photos" currentSiteKey={currentSite.id} />
+                <AdminMenuPanel
+                  activeSection="photos"
+                  currentHeadquarterId={currentSite.headquarterId ?? null}
+                  currentSiteKey={currentSite.id}
+                />
               ) : (
                 <WorkerMenuPanel currentSiteKey={currentSite.id} />
               )}
@@ -172,6 +176,7 @@ export function SitePhotoAlbumScreen({
           open={menuOpen}
           onClose={() => setMenuOpen(false)}
           activeSection="photos"
+          currentHeadquarterId={currentSite.headquarterId ?? null}
           currentSiteKey={currentSite.id}
         />
       ) : (

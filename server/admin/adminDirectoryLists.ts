@@ -242,6 +242,20 @@ export function buildAdminHeadquartersListResponse(
   const { limit, offset } = clampPaging(filters.limit, filters.offset);
   const direction = filters.sortDir === 'desc' ? 'desc' : 'asc';
   const query = normalizeText(filters.query);
+  const siteCountByHeadquarterId = snapshot.sites.reduce<Record<string, number>>((counts, site) => {
+    const headquarterId = String(site.headquarter_id ?? '').trim();
+    if (!headquarterId) return counts;
+    counts[headquarterId] = (counts[headquarterId] ?? 0) + 1;
+    return counts;
+  }, {});
+  const sequenceByHeadquarterId = new Map(
+    [...snapshot.headquarters]
+      .sort((left, right) =>
+        left.created_at.localeCompare(right.created_at, 'ko') ||
+        left.id.localeCompare(right.id, 'ko'),
+      )
+      .map((item, index) => [item.id, index + 1] as const),
+  );
 
   const filteredRows = snapshot.headquarters
     .filter((item) => item.is_active !== false)
@@ -276,7 +290,12 @@ export function buildAdminHeadquartersListResponse(
         default:
           return sortText(left.name, right.name, direction);
       }
-    });
+    })
+    .map((item) => ({
+      ...item,
+      sequence_no: sequenceByHeadquarterId.get(item.id) ?? null,
+      site_count: siteCountByHeadquarterId[item.id] ?? 0,
+    }));
 
   return {
     limit,
