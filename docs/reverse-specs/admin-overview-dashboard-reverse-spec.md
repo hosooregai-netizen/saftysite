@@ -233,6 +233,11 @@ Columns:
 - 계측 현황
 - 총 부족
 
+Column width rule:
+
+- `현장` and `사업장` take the widest columns in the row.
+- Short numeric/status columns stay narrow so site and headquarter names remain readable first.
+
 Rows are clickable and navigate to `row.href`.
 
 ## Interaction Flows
