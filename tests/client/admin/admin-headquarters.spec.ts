@@ -10,6 +10,7 @@ export async function runAdminHeadquartersSmoke(config: ClientSmokePlaywrightCon
     const siteReadsBefore = requestCounts.get('GET /api/admin/sites/list') || 0;
     const headquarterCreatesBefore = requestCounts.get('POST /headquarters') || 0;
     const headquarterUpdatesBefore = requestCounts.get('PATCH /headquarters/:id') || 0;
+    const headquarterDeletesBefore = requestCounts.get('DELETE /headquarters/:id') || 0;
 
     await page.goto(`${harness.baseURL}/admin?section=headquarters`, { waitUntil: 'load' });
     await harness.loginAs('admin@example.com');
@@ -44,6 +45,14 @@ export async function runAdminHeadquartersSmoke(config: ClientSmokePlaywrightCon
     await page.getByRole('menuitem', { name: '현장 보기' }).click();
     await harness.waitForRequestCount('GET /api/admin/sites/list', siteReadsBefore + 1);
     await page.getByRole('button', { name: '사업장 정보 수정' }).waitFor({ state: 'visible' });
+
+    await page.goto(`${harness.baseURL}/admin?section=headquarters`, { waitUntil: 'load' });
+    await page.getByRole('heading', { level: 2, name: '사업장 목록' }).waitFor({ state: 'visible' });
+    page.once('dialog', (dialog) => dialog.accept());
+    await page.getByRole('button', { name: /mocked headquarter 작업 메뉴 열기/ }).click();
+    await page.getByRole('menuitem', { name: '삭제' }).click();
+    await harness.waitForRequestCount('DELETE /headquarters/:id', headquarterDeletesBefore + 1);
+    await page.getByText('mocked headquarter', { exact: true }).waitFor({ state: 'hidden' });
 
     harness.assertContractApisObserved();
     harness.assertNoClientErrors();

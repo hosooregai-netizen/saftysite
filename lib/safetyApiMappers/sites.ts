@@ -6,6 +6,8 @@ import {
   normalizeMapperText,
 } from './utils';
 
+const DEFAULT_SITE_TOTAL_ROUNDS = 8;
+
 function buildHeadquarterContact(site: SafetySite): string {
   const contactName = normalizeMapperText(site.headquarter_detail?.contact_name);
   const contactPhone = normalizeMapperText(site.headquarter_detail?.contact_phone);
@@ -62,11 +64,15 @@ export function mapSafetySiteToAdminSnapshot(site: SafetySite): AdminSiteSnapsho
 
 export function mapSafetySiteToInspectionSite(site: SafetySite): InspectionSite {
   const adminSiteSnapshot = mapSafetySiteToAdminSnapshot(site);
+  const resolvedTotalRounds =
+    typeof site.total_rounds === 'number' && site.total_rounds > 0
+      ? site.total_rounds
+      : DEFAULT_SITE_TOTAL_ROUNDS;
 
   return {
     id: site.id,
     headquarterId: site.headquarter_id,
-    totalRounds: site.total_rounds ?? null,
+    totalRounds: resolvedTotalRounds,
     title: adminSiteSnapshot.siteName || adminSiteSnapshot.customerName || '현장',
     customerName: adminSiteSnapshot.customerName,
     siteName: adminSiteSnapshot.siteName,

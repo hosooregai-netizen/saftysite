@@ -13,11 +13,11 @@ export const ADMIN_FEATURE_CONTRACTS = {
   'admin-headquarters': {
     id: 'admin-headquarters',
     description:
-      '사업장 목록이 safety-server list passthrough 기반 서버 페이지네이션, session cache, drilldown 진입, 생성/수정 흐름, 저장 성공 후 empty-body 응답 fallback 재조회, deleted soft-delete hidden refresh를 유지한다.',
+      '사업장 목록이 safety-server list passthrough 기반 서버 페이지네이션, session cache, drilldown 진입, 생성/수정/삭제 흐름, 저장 성공 후 empty-body 응답 fallback 재조회, deleted soft-delete hidden refresh를 유지한다.',
     routes: ['/admin?section=headquarters'],
     markers: ['사업장 목록', '사업장 추가', '사업장 수정', '현장 보기'],
-    apis: ['GET /api/admin/headquarters/list', 'GET /api/admin/sites/list', 'POST /headquarters', 'PATCH /headquarters/:id'],
-    criticalActions: ['사업장 목록 페이지 로드', '사업장 생성', '사업장 수정', '사업장 수정 empty-body fallback 재조회 확인', '현장 drilldown 진입', 'drilldown 현장 생성/수정/삭제 직후 refresh 확인'],
+    apis: ['GET /api/admin/headquarters/list', 'GET /api/admin/sites/list', 'POST /headquarters', 'PATCH /headquarters/:id', 'DELETE /headquarters/:id'],
+    criticalActions: ['사업장 목록 페이지 로드', '사업장 생성', '사업장 수정', '사업장 수정 empty-body fallback 재조회 확인', '현장 drilldown 진입', '사업장 삭제', 'drilldown 현장 생성/수정/삭제 직후 refresh 확인'],
   },
   'admin-users': {
     id: 'admin-users',
@@ -51,7 +51,7 @@ export const ADMIN_FEATURE_CONTRACTS = {
   'admin-sites': {
     id: 'admin-sites',
     description:
-      '현장 목록과 현장 메인이 safety-server list/lookups passthrough 기반 서버 페이지네이션, directory lookups 계약유형 옵션, planned 기본 생성, deleted soft-delete hidden, 등록 정보 편집, 저장 성공 후 empty-body 응답 fallback 재조회, 점검자 기준 배정, assignment 저장 전 전체 목록 재조회 없는 빠른 mutation 경로, K2B 회차 데이터 반영 동선을 유지한다.',
+      '현장 목록과 현장 메인이 safety-server list/lookups passthrough 기반 서버 페이지네이션, directory lookups 계약유형 옵션, planned 기본 생성, deleted soft-delete hidden, 등록 정보 편집, 저장 성공 후 empty-body 응답 fallback 재조회, 점검자 기준 배정/해제, assignment 저장 전 전체 목록 재조회 없는 빠른 mutation 경로, K2B 회차 데이터 반영 동선을 유지한다.',
     routes: [
       '/admin?section=headquarters&headquarterId=hq-1',
       '/admin?section=headquarters&headquarterId=hq-1&siteId=site-1',
@@ -62,8 +62,11 @@ export const ADMIN_FEATURE_CONTRACTS = {
       'GET /api/admin/directory/lookups',
       'POST /sites',
       'PATCH /sites/:id',
+      'POST /assignments',
+      'DELETE /assignments/:id',
+      'DELETE /sites/:id',
     ],
-    criticalActions: ['현장 목록 페이지 이동', '현장 생성/수정', '현장 수정 empty-body fallback 재조회 확인', '계약유형 lookup option 확인', 'planned 기본 생성 확인', 'deleted 상태 hidden 확인', '현장 메인 진입', '현장 메인 quick edit', '지도요원 배정 modal 진입', '배정 mutation preflight 축소 확인', 'K2B 회차 데이터 반영'],
+    criticalActions: ['현장 목록 페이지 이동', '현장 생성/수정', '현장 수정 empty-body fallback 재조회 확인', '계약유형 lookup option 확인', 'planned 기본 생성 확인', 'deleted 상태 hidden 확인', '현장 메인 진입', '현장 메인 quick edit', '지도요원 배정 modal 진입', '지도요원 배정/해제', '배정 mutation preflight 축소 확인', '현장 삭제', 'K2B 회차 데이터 반영'],
   },
   'admin-schedules': {
     id: 'admin-schedules',

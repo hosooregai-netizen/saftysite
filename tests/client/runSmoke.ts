@@ -23,6 +23,7 @@ import { runMobileQuarterlyReportSmoke } from './erp/mobile-quarterly-report.spe
 import { runMobileLinkSmoke } from './erp/mobile-link.spec';
 import { runQuarterlyReportSmoke } from './erp/quarterly-report.spec';
 import { runSiteHubSmoke } from './erp/site-hub.spec';
+import { runWorkerCalendarSmoke } from './erp/worker-calendar.spec';
 
 type FeatureRunner = (config: ReturnType<typeof resolveClientSmokePlaywrightConfig>) => Promise<void>;
 
@@ -44,6 +45,7 @@ const FEATURE_RUNNERS: Record<FeatureContractId, FeatureRunner> = {
   'mobile-link': runMobileLinkSmoke,
   'quarterly-report': runQuarterlyReportSmoke,
   'site-hub': runSiteHubSmoke,
+  'worker-calendar': runWorkerCalendarSmoke,
 };
 
 function parseRequestedFeatures(argv: string[]) {

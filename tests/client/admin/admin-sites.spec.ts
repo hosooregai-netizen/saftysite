@@ -19,6 +19,9 @@ export async function runAdminSitesSmoke(config: ClientSmokePlaywrightConfig) {
     const lookupReadsBefore = requestCounts.get('GET /api/admin/directory/lookups') || 0;
     const siteCreatesBefore = requestCounts.get('POST /sites') || 0;
     const siteUpdatesBefore = requestCounts.get('PATCH /sites/:id') || 0;
+    const siteDeletesBefore = requestCounts.get('DELETE /sites/:id') || 0;
+    const assignmentCreatesBefore = requestCounts.get('POST /assignments') || 0;
+    const assignmentDeletesBefore = requestCounts.get('DELETE /assignments/:id') || 0;
 
     await page.goto(`${harness.baseURL}/admin?section=headquarters&headquarterId=hq-1`, {
       waitUntil: 'load',
@@ -108,7 +111,17 @@ export async function runAdminSitesSmoke(config: ClientSmokePlaywrightConfig) {
     await page.getByRole('menuitem', { name: '지도요원 배정' }).click();
     const assignmentDialog = page.getByRole('dialog', { name: '지도요원 배정' });
     await assignmentDialog.waitFor({ state: 'visible' });
+    await assignmentDialog.getByRole('button', { name: '배정' }).first().click();
+    await harness.waitForRequestCount('POST /assignments', assignmentCreatesBefore + 1);
+    await assignmentDialog.getByRole('button', { name: '해제' }).first().click();
+    await harness.waitForRequestCount('DELETE /assignments/:id', assignmentDeletesBefore + 1);
     await assignmentDialog.getByRole('button', { name: '닫기' }).click();
+
+    page.once('dialog', (dialog) => dialog.accept());
+    await page.getByRole('button', { name: /mocked admin site 현장 작업 메뉴 열기/ }).click();
+    await page.getByRole('menuitem', { name: '삭제' }).click();
+    await harness.waitForRequestCount('DELETE /sites/:id', siteDeletesBefore + 1);
+    await page.getByText('mocked admin site', { exact: true }).waitFor({ state: 'hidden' });
 
     harness.assertContractApisObserved();
     harness.assertNoClientErrors();

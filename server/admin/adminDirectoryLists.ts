@@ -100,25 +100,31 @@ export function buildAdminDirectoryLookupsResponse(
   snapshot: AdminDirectoryData,
 ): SafetyAdminDirectoryLookupsResponse {
   const contractTypes = new Map<string, { label: string; value: string }>();
-  snapshot.sites.forEach((site) => {
-    const option = resolveSiteContractTypeOption(site);
-    if (!option || contractTypes.has(option.value)) return;
-    contractTypes.set(option.value, option);
-  });
+  snapshot.sites
+    .filter((site) => site.is_active !== false)
+    .forEach((site) => {
+      const option = resolveSiteContractTypeOption(site);
+      if (!option || contractTypes.has(option.value)) return;
+      contractTypes.set(option.value, option);
+    });
 
   return {
     contractTypes: Array.from(contractTypes.values()).sort((left, right) =>
       left.label.localeCompare(right.label, 'ko'),
     ),
-    headquarters: snapshot.headquarters.map((headquarter) => ({
-      id: headquarter.id,
-      name: headquarter.name,
-    })),
-    sites: snapshot.sites.map((site) => ({
-      headquarterId: site.headquarter_id,
-      id: site.id,
-      name: site.site_name,
-    })),
+    headquarters: snapshot.headquarters
+      .filter((headquarter) => headquarter.is_active !== false)
+      .map((headquarter) => ({
+        id: headquarter.id,
+        name: headquarter.name,
+      })),
+    sites: snapshot.sites
+      .filter((site) => site.is_active !== false)
+      .map((site) => ({
+        headquarterId: site.headquarter_id,
+        id: site.id,
+        name: site.site_name,
+      })),
     users: snapshot.users.map((user) => ({
       email: user.email,
       id: user.id,
@@ -238,6 +244,7 @@ export function buildAdminHeadquartersListResponse(
   const query = normalizeText(filters.query);
 
   const filteredRows = snapshot.headquarters
+    .filter((item) => item.is_active !== false)
     .filter((item) => {
       if (filters.id && item.id !== filters.id) return false;
       if (!query) return true;
@@ -311,7 +318,11 @@ export function buildAdminSitesListResponse(
   const query = normalizeText(filters.query);
   const usersById = new Map(snapshot.users.map((user) => [user.id, user]));
 
-  const rows = enrichSiteRows(snapshot.sites, snapshot.assignments, usersById)
+  const rows = enrichSiteRows(
+    snapshot.sites.filter((site) => site.is_active !== false),
+    snapshot.assignments,
+    usersById,
+  )
     .filter((site) => {
       const normalizedStatus = normalizeSiteStatusForDisplay(site.status);
       const assignedNames = (site.assigned_users ?? []).map((user) => user.name).join(' ');
