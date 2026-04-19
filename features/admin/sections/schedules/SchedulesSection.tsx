@@ -328,8 +328,10 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
   const [queuePage, setQueuePage] = useState(1);
   const [notice, setNotice] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [dayListDialogOpen, setDayListDialogOpen] = useState(false);
+  const [dayListDialogDate, setDayListDialogDate] = useState('');
+  const [dayListDialogRowIds, setDayListDialogRowIds] = useState<string[]>([]);
   const [activeScheduleId, setActiveScheduleId] = useState('');
-  const [dialogOverflowRowIds, setDialogOverflowRowIds] = useState<string[]>([]);
   const [dragScheduleId, setDragScheduleId] = useState('');
   const [form, setForm] = useState<ScheduleFormState>(EMPTY_FORM);
   const deferredQuery = useDeferredValue(query);
@@ -627,17 +629,16 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
     const rows = allScheduleRows.filter((row) => row.id === activeScheduleId || !row.plannedDate);
     return sortSelectableRows(rows);
   }, [activeScheduleId, allScheduleRows]);
-  const dialogSelectedRows = useMemo(
+  const dayListDialogRows = useMemo(
     () =>
       sortSelectableRows(
         sortedSelectedRows.filter(
           (row) =>
-            row.plannedDate === form.plannedDate &&
-            row.id !== activeScheduleId &&
-            (dialogOverflowRowIds.length === 0 || dialogOverflowRowIds.includes(row.id)),
+            row.plannedDate === dayListDialogDate &&
+            (dayListDialogRowIds.length === 0 || dayListDialogRowIds.includes(row.id)),
         ),
       ),
-    [activeScheduleId, dialogOverflowRowIds, form.plannedDate, sortedSelectedRows],
+    [dayListDialogDate, dayListDialogRowIds, sortedSelectedRows],
   );
   const activeSiteDetailHref = activeSchedule
     ? getAdminSectionHref('headquarters', {
@@ -667,31 +668,36 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
   }, [activeScheduleId, dialogOpen, dialogSelectableRows]);
 
   const openScheduleDialog = (input: {
-    overflowRowIds?: string[];
     plannedDate: string;
     schedule?: SafetyInspectionSchedule | null;
   }) => {
-    const selectedRowsOnDate = sortSelectableRows(
-      allScheduleRows.filter((row) => row.plannedDate === input.plannedDate),
-    );
-    const relatedRowIds = input.overflowRowIds ?? selectedRowsOnDate.map((row) => row.id);
     const defaultSchedule =
       input.schedule ??
-      selectedRowsOnDate[0] ??
       sortSelectableRows(allScheduleRows.filter((row) => !row.plannedDate))[0] ??
       null;
     setSelectedDate(input.plannedDate);
     setActiveScheduleId(defaultSchedule?.id || '');
-    setDialogOverflowRowIds(defaultSchedule ? relatedRowIds : input.overflowRowIds ?? []);
     setForm(buildInitialForm(defaultSchedule, input.plannedDate));
     setDialogOpen(true);
+  };
+
+  const openDayListDialog = (plannedDate: string, rowIds: string[]) => {
+    setSelectedDate(plannedDate);
+    setDayListDialogDate(plannedDate);
+    setDayListDialogRowIds(rowIds);
+    setDayListDialogOpen(true);
   };
 
   const closeDialog = () => {
     setDialogOpen(false);
     setActiveScheduleId('');
-    setDialogOverflowRowIds([]);
     setForm(EMPTY_FORM);
+  };
+
+  const closeDayListDialog = () => {
+    setDayListDialogOpen(false);
+    setDayListDialogDate('');
+    setDayListDialogRowIds([]);
   };
 
   const handlePickSchedule = (schedule: SafetyInspectionSchedule) => {
@@ -1102,15 +1108,20 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                       <button
                         type="button"
                         className={styles.calendarCellHeaderButton}
-                        onClick={() =>
-                          dayRows.length > 0
-                            ? openScheduleDialog({
-                                plannedDate: day.token,
-                                schedule: dayRows[0] || null,
-                                overflowRowIds: dayRows.map((row) => row.id),
-                              })
-                            : openScheduleDialog({ plannedDate: day.token })
-                        }
+                        onClick={() => {
+                          if (dayRows.length > 1) {
+                            openDayListDialog(day.token, dayRows.map((row) => row.id));
+                            return;
+                          }
+                          if (dayRows.length === 1) {
+                            openScheduleDialog({
+                              plannedDate: day.token,
+                              schedule: dayRows[0] || null,
+                            });
+                            return;
+                          }
+                          openScheduleDialog({ plannedDate: day.token });
+                        }}
                       >
                         <span className={styles.calendarCellDate}>{day.day}일</span>
                         <span className={styles.calendarCellCount}>{dayRows.length}건</span>
@@ -1133,7 +1144,6 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                                 openScheduleDialog({
                                   plannedDate: row.plannedDate || row.windowStart,
                                   schedule: row,
-                                  overflowRowIds: dayRows.map((item) => item.id),
                                 })
                               }
                               onDragStart={() => setDragScheduleId(row.id)}
@@ -1152,11 +1162,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                               type="button"
                               className={styles.calendarMoreButton}
                               onClick={() =>
-                                openScheduleDialog({
-                                  overflowRowIds: dayRows.map((row) => row.id),
-                                  plannedDate: day.token,
-                                  schedule: dayRows[5] || dayRows[0] || null,
-                                })
+                                openDayListDialog(day.token, dayRows.map((row) => row.id))
                               }
                             >
                               +{dayRows.length - 5}건 더보기
@@ -1605,45 +1611,6 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
               )}
             </label>
           ) : null}
-          {dialogSelectedRows.length > 0 ? (
-            <div className={styles.modalFieldWide}>
-              <span className={styles.label}>같은 날짜 일정</span>
-              <div className={styles.tableWrap}>
-                <table className={styles.table}>
-                  <thead>
-                    <tr>
-                      <th>현장</th>
-                      <th>회차</th>
-                      <th>선택 사유</th>
-                      <th>선택자</th>
-                      <th>메뉴</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {dialogSelectedRows.map((row) => (
-                      <tr key={`existing-${row.id}`}>
-                        <td>{row.siteName}</td>
-                        <td>
-                          {row.roundNo} / {row.totalRounds && row.totalRounds > 0 ? row.totalRounds : row.roundNo}
-                        </td>
-                        <td>{buildSelectionSummary(row)}</td>
-                        <td>{row.selectionConfirmedByName || '-'}</td>
-                        <td>
-                          <button
-                            type="button"
-                            className="app-button app-button-secondary"
-                            onClick={() => handlePickSchedule(row)}
-                          >
-                            불러오기
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ) : null}
           <label className={styles.modalField}>
             <span className={styles.label}>사유 분류</span>
             <input
@@ -1700,6 +1667,73 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
               </div>
             </div>
           ) : null}
+        </div>
+      </AppModal>
+
+      <AppModal
+        open={dayListDialogOpen}
+        title={`${dayListDialogDate || form.plannedDate || month} 일정 목록`}
+        onClose={closeDayListDialog}
+        actions={
+          <button
+            type="button"
+            className="app-button app-button-secondary"
+            onClick={closeDayListDialog}
+          >
+            닫기
+          </button>
+        }
+      >
+        <div className={styles.modalGrid}>
+          <div className={styles.modalFieldWide}>
+            <span className={styles.label}>선택한 날짜 일정</span>
+            {dayListDialogRows.length === 0 ? (
+              <div className={styles.tableEmpty}>이 날짜에 등록된 일정이 없습니다.</div>
+            ) : (
+              <div className={styles.tableWrap}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th>현장</th>
+                      <th>회차</th>
+                      <th>담당자</th>
+                      <th>상태</th>
+                      <th>선택 사유</th>
+                      <th>메뉴</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {dayListDialogRows.map((row) => (
+                      <tr key={`day-list-${row.id}`}>
+                        <td>{row.siteName}</td>
+                        <td>
+                          {row.roundNo} / {row.totalRounds && row.totalRounds > 0 ? row.totalRounds : row.roundNo}
+                        </td>
+                        <td>{row.assigneeName || '-'}</td>
+                        <td>{getScheduleStatusLabel(row.status)}</td>
+                        <td>{buildSelectionSummary(row)}</td>
+                        <td>
+                          <button
+                            type="button"
+                            className="app-button app-button-secondary"
+                            onClick={() => {
+                              closeDayListDialog();
+                              openScheduleDialog({
+                                plannedDate: row.plannedDate || dayListDialogDate || row.windowStart,
+                                schedule: row,
+                              });
+                            }}
+                          >
+                            일정 보기
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       </AppModal>
     </div>

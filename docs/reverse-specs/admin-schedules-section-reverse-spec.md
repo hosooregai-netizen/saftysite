@@ -269,10 +269,12 @@ Required fields used by the screen:
 - Selectable rows in the modal are:
   - the currently active row, even if already selected
   - any unplanned row whose date window contains the modal date
-- Existing selected rows for the same modal date are shown separately as `같은 날짜 일정`.
-- If the modal opens from an already scheduled chip, a day header that already has schedules, or a
-  `더보기` action, the modal enters schedule-detail mode first and does not render the selectable
-  round table.
+- Existing selected rows for the same modal date are not rendered inside the detail modal.
+- If the user opens `더보기` or a calendar date that already has multiple schedules, the UI opens a
+  day-level schedule list popup first. Each row in that popup can then open the schedule-detail
+  modal directly.
+- If the modal opens from an already scheduled chip or a date that only has one scheduled row, the
+  modal enters schedule-detail mode first and does not render the selectable round table.
 
 ### Save validation rules
 
@@ -333,11 +335,19 @@ Contains:
 - date input
 - assignee select
 - selectable round table, only for empty-date assignment flow
-- same-date existing schedule table
 - selection reason input
 - status select
 - detailed memo textarea
 - save/cancel actions
+
+### Modal: 날짜별 일정 목록
+
+Contains:
+
+- selected date label
+- same-day schedule table
+- `일정 보기` action per row
+- close action
 
 ## Interaction Flows
 
@@ -354,19 +364,27 @@ Contains:
 
 1. User clicks calendar day header.
 2. Use that day as `plannedDate`.
-3. If the day already has scheduled rows, open the first scheduled row in schedule-detail mode.
-4. Otherwise pick the first row that is either:
+3. If the day already has multiple scheduled rows, open the day-level schedule list popup.
+4. If the day has exactly one scheduled row, open that row in schedule-detail mode.
+5. Otherwise pick the first row that is either:
    - already on that date, or
    - unplanned and within the date window
-5. Open modal with derived form state.
+6. Open modal with derived form state.
 
 ### Open modal from schedule row/chip
 
 1. User clicks a row or chip.
 2. Modal date is `plannedDate`, falling back to `windowStart`.
 3. Set clicked row as active row.
-4. Seed the same-date row switcher from every scheduled row on that date.
-5. Initialize form from that row in schedule-detail mode.
+4. Initialize form from that row in schedule-detail mode.
+
+### Open modal from `더보기`
+
+1. User clicks the `+N건 더보기` action.
+2. Open the day-level schedule list popup for that date.
+3. User clicks `일정 보기` on one row.
+4. Close the day-level list popup.
+5. Open the selected row in schedule-detail mode.
 
 ### Save schedule
 

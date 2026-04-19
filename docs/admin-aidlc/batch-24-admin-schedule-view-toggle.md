@@ -32,13 +32,15 @@ edit flows intact.
 - The selected schedule table no longer inherits a stale `selectedDate` filter while list mode is
   active.
 - Clicking an existing calendar chip, day header with scheduled rows, or `더보기` now opens the
-  existing schedule dialog first instead of the round-selection flow.
+  correct follow-up dialog instead of the round-selection flow.
 - The existing-schedule dialog hides `선택 가능한 회차` and focuses on the selected schedule details
-  plus the same-date schedule switcher.
+  only.
+- `더보기` now opens a day-level schedule list popup and each row in that popup can open the
+  schedule-detail dialog directly.
 - Client smoke now asserts that both schedule view tabs render and can switch between the queue/list
   mode and the month calendar mode.
 - Client smoke also asserts that opening an existing schedule from the month board lands in the
-  schedule-detail dialog without rendering the selectable-round table.
+  schedule-detail dialog without rendering the selectable-round table or same-date schedule table.
 - Real worker smoke now checks that the just-saved schedule date and selection reason are visible
   after switching to the worker list view.
 
