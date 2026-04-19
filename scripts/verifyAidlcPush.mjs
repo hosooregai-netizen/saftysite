@@ -110,6 +110,7 @@ const FEATURE_RULES = [
       /^app\/api\/admin\/sites\/\[siteId\]\/schedules\/generate\//,
       /^features\/admin\/sections\/schedules\//,
       /^server\/admin\/localScheduleNotifications\.ts$/,
+      /^server\/admin\/automation\.ts$/,
       /^server\/admin\/scheduleSnapshot\.ts$/,
     ],
   },
