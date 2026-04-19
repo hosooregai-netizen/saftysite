@@ -296,7 +296,6 @@ function buildAnalyticsMonthDetailResponse(
 
   return {
     comparisonMonthKey,
-    detailScope: 'month',
     employeeRows: activeMonthSlice.employeeRows,
     monthKey: activeMonthSlice.monthKey,
     siteRevenueRows: activeMonthSlice.siteRevenueRows,
@@ -308,17 +307,6 @@ function buildAnalyticsDetailResponse(
   url: URL,
 ): SafetyAdminAnalyticsMonthDetailResponse {
   const analytics = buildAnalyticsResponse(harness, url);
-  const detailScope =
-    url.searchParams.get('detail_scope') === 'cumulative' ? 'cumulative' : 'month';
-  if (detailScope === 'cumulative') {
-    return {
-      comparisonMonthKey: '',
-      detailScope,
-      employeeRows: analytics.employeeRows,
-      monthKey: analytics.basisMonth,
-      siteRevenueRows: analytics.siteRevenueRows,
-    };
-  }
   return buildAnalyticsMonthDetailResponse(harness, url);
 }
 

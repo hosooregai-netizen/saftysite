@@ -26,6 +26,7 @@ interface ScheduleDialogState {
 
 interface WorkerDialogSiteOption {
   completedRounds: number;
+  hasLoadedCompletion: boolean;
   isComplete: boolean;
   label: string;
   remainingRounds: number;
@@ -77,20 +78,6 @@ function buildCalendarDays(month: string) {
     days,
     leadingEmptyCount,
   };
-}
-
-function formatDateLabel(value: string) {
-  if (!value) return '-';
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return value;
-  return parsed.toLocaleDateString('ko-KR');
-}
-
-function formatDateTimeLabel(value: string) {
-  if (!value) return '-';
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return value;
-  return parsed.toLocaleString('ko-KR');
 }
 
 function isDateWithinWindow(value: string, windowStart: string, windowEnd: string) {
@@ -245,7 +232,6 @@ export function WorkerCalendarScreen() {
     };
   }, [isAdminView, isAuthenticated, month, selectedSiteId]);
 
-  const unselectedRows = useMemo(() => sortSchedules(rows.filter((row) => !row.plannedDate)), [rows]);
   const selectedRows = useMemo(
     () =>
       [...rows]
@@ -257,10 +243,6 @@ export function WorkerCalendarScreen() {
             left.siteName.localeCompare(right.siteName, 'ko'),
         ),
     [rows],
-  );
-  const visibleSelectedRows = useMemo(
-    () => (selectedDate ? selectedRows.filter((row) => row.plannedDate === selectedDate) : selectedRows),
-    [selectedDate, selectedRows],
   );
   const listRows = useMemo(() => {
     const mergedRows = sortScheduledRows(rows);
@@ -297,8 +279,13 @@ export function WorkerCalendarScreen() {
   const reportCompletedRoundsBySiteId = useMemo(() => {
     const nextMap = new Map<string, Set<number>>();
     sites.forEach((site) => {
-      const items = getReportIndexBySiteId(site.id)?.items ?? [];
-      nextMap.set(site.id, getCompletedRoundNumbers(items));
+      const reportIndex = getReportIndexBySiteId(site.id);
+      nextMap.set(
+        site.id,
+        reportIndex?.status === 'loaded'
+          ? getCompletedRoundNumbers(reportIndex.items)
+          : new Set<number>(),
+      );
     });
     return nextMap;
   }, [getReportIndexBySiteId, sites]);
@@ -308,18 +295,23 @@ export function WorkerCalendarScreen() {
       .sort((left, right) => left.siteName.localeCompare(right.siteName, 'ko'))
       .map((site) => {
         const totalRounds = typeof site.totalRounds === 'number' && site.totalRounds > 0 ? site.totalRounds : 0;
-        const completedRounds = reportCompletedRoundsBySiteId.get(site.id)?.size ?? 0;
+        const reportIndex = getReportIndexBySiteId(site.id);
+        const hasLoadedCompletion = reportIndex?.status === 'loaded';
+        const completedRounds = hasLoadedCompletion
+          ? reportCompletedRoundsBySiteId.get(site.id)?.size ?? 0
+          : 0;
         const remainingRounds = Math.max(totalRounds - completedRounds, 0);
         return {
           completedRounds,
-          isComplete: totalRounds > 0 && completedRounds >= totalRounds,
+          hasLoadedCompletion,
+          isComplete: hasLoadedCompletion && totalRounds > 0 && completedRounds >= totalRounds,
           label: site.siteName,
           remainingRounds,
           siteId: site.id,
           totalRounds,
         };
       });
-  }, [reportCompletedRoundsBySiteId, selectedSiteId, sites]);
+  }, [getReportIndexBySiteId, reportCompletedRoundsBySiteId, selectedSiteId, sites]);
   const dialogAllRoundRows = useMemo(
     () =>
       sortSchedules(rows.filter((row) => row.siteId === dialog.siteId)).sort(
@@ -343,25 +335,15 @@ export function WorkerCalendarScreen() {
     () => dialogSiteOptions.find((option) => option.siteId === dialog.siteId) ?? null,
     [dialog.siteId, dialogSiteOptions],
   );
+  const dialogSelectedReportIndexState = dialog.siteId
+    ? getReportIndexBySiteId(dialog.siteId)
+    : null;
   const dialogWindowError =
     dialogSelectedSchedule &&
     dialog.plannedDate &&
     !isDateWithinWindow(dialog.plannedDate, dialogSelectedSchedule.windowStart, dialogSelectedSchedule.windowEnd)
       ? buildWindowErrorMessage(dialogSelectedSchedule)
       : '';
-  const statusCards = useMemo(
-    () => [
-      { label: '미선택 회차', value: unselectedRows.length },
-      { label: '선택 완료 일정', value: selectedRows.length },
-      { label: '완료 일정', value: rows.filter((row) => row.status === 'completed').length },
-      {
-        label: '조정 필요',
-        value: rows.filter((row) => row.isConflicted || row.isOutOfWindow || row.isOverdue).length,
-      },
-    ],
-    [rows, selectedRows.length, unselectedRows.length],
-  );
-
   useEffect(() => {
     if (!dialog.open || dialog.siteId || dialogSiteOptions.length === 0) return;
     setDialog((current) => ({
@@ -371,11 +353,9 @@ export function WorkerCalendarScreen() {
   }, [dialog.open, dialog.siteId, dialogSiteOptions]);
 
   useEffect(() => {
-    if (!dialog.open) return;
-    dialogSiteOptions.forEach((option) => {
-      void ensureSiteReportIndexLoaded(option.siteId).catch(() => undefined);
-    });
-  }, [dialog.open, dialogSiteOptions, ensureSiteReportIndexLoaded]);
+    if (!dialog.open || !dialog.siteId) return;
+    void ensureSiteReportIndexLoaded(dialog.siteId).catch(() => undefined);
+  }, [dialog.open, dialog.siteId, ensureSiteReportIndexLoaded]);
 
   useEffect(() => {
     if (!dialog.open || !dialog.siteId) return;
@@ -581,15 +561,6 @@ export function WorkerCalendarScreen() {
               </header>
 
               <div className={homeStyles.pageGrid}>
-                <section className={styles.summaryBar}>
-                  {statusCards.map((card) => (
-                    <article key={card.label} className={styles.summaryCard}>
-                      <span className={styles.summaryLabel}>{card.label}</span>
-                      <strong className={styles.summaryValue}>{card.value}</strong>
-                    </article>
-                  ))}
-                </section>
-
                 <section className={styles.sectionCard}>
                   <div className={styles.sectionHeader}>
                     <div>
@@ -743,93 +714,6 @@ export function WorkerCalendarScreen() {
                             })}
                           </div>
                         </section>
-
-                        <section className={styles.sectionCard}>
-                          <div className={styles.sectionHeader}>
-                            <div>
-                              <h3 className={styles.sectionTitle}>선택된 일정</h3>
-                              <div className={styles.sectionMeta}>
-                                {selectedDate ? `${formatDateLabel(selectedDate)} 기준` : '전체 선택 완료 일정'}
-                              </div>
-                            </div>
-                          </div>
-                          {visibleSelectedRows.length === 0 ? (
-                            <div className={styles.emptyState}>표시할 일정이 없습니다.</div>
-                          ) : (
-                            <div className={styles.selectedList}>
-                              {visibleSelectedRows.map((row) => (
-                                <article key={row.id} className={styles.rowCard}>
-                                  <div className={styles.rowTitle}>
-                                    {row.siteName} · {row.roundNo}회차
-                                  </div>
-                                  <div className={styles.rowMeta}>
-                                    방문일 {row.plannedDate} / 허용 구간 {row.windowStart} ~ {row.windowEnd}
-                                  </div>
-                                  <div className={styles.rowMeta}>
-                                    사유 {row.selectionReasonLabel || '-'} / {row.selectionReasonMemo || '상세 메모 없음'}
-                                  </div>
-                                  <div className={styles.rowMeta}>
-                                    선택자 {row.selectionConfirmedByName || row.assigneeName || '-'} /{' '}
-                                    {formatDateTimeLabel(row.selectionConfirmedAt)}
-                                  </div>
-                                  <div className={styles.rowActions}>
-                                    <button
-                                      type="button"
-                                      className="app-button app-button-secondary"
-                                      onClick={() =>
-                                        openScheduleDialog({
-                                          plannedDate: row.plannedDate || row.windowStart,
-                                          schedule: row,
-                                        })}
-                                    >
-                                      날짜/사유 수정
-                                    </button>
-                                  </div>
-                                </article>
-                              ))}
-                            </div>
-                          )}
-                        </section>
-                      </div>
-
-                      <div className={styles.list}>
-                        <section className={styles.sectionCard}>
-                          <div className={styles.sectionHeader}>
-                            <div>
-                              <h3 className={styles.sectionTitle}>미선택 회차</h3>
-                              <div className={styles.sectionMeta}>아직 방문일을 확정하지 않은 회차입니다.</div>
-                            </div>
-                          </div>
-                          {unselectedRows.length === 0 ? (
-                            <div className={styles.emptyState}>선택이 필요한 회차가 없습니다.</div>
-                          ) : (
-                            <div className={styles.list}>
-                              {unselectedRows.map((row) => (
-                                <article key={row.id} className={styles.rowCard}>
-                                  <div className={styles.rowTitle}>
-                                    {row.siteName} · {row.roundNo}회차
-                                  </div>
-                                  <div className={styles.rowMeta}>
-                                    허용 구간 {row.windowStart} ~ {row.windowEnd}
-                                  </div>
-                                  <div className={styles.rowActions}>
-                                    <button
-                                      type="button"
-                                      className="app-button app-button-primary"
-                                      onClick={() =>
-                                        openScheduleDialog({
-                                          plannedDate: row.windowStart,
-                                          schedule: row,
-                                        })}
-                                    >
-                                      일정 지정
-                                    </button>
-                                  </div>
-                                </article>
-                              ))}
-                            </div>
-                          )}
-                        </section>
                       </div>
                     </div>
                   ) : (
@@ -838,7 +722,7 @@ export function WorkerCalendarScreen() {
                         <div>
                           <h3 className={styles.sectionTitle}>기술지도 일정 목록</h3>
                           <div className={styles.sectionMeta}>
-                            월별 일정과 미선택 회차를 한 번에 보고, 바로 수정할 수 있습니다.
+                            방문 일정 전체를 목록으로 보고 바로 수정할 수 있습니다.
                           </div>
                         </div>
                       </div>
@@ -967,9 +851,11 @@ export function WorkerCalendarScreen() {
                       <strong>{option.label}</strong>
                       <span className={styles.dialogMeta}>
                         {option.totalRounds > 0
-                          ? option.isComplete
-                            ? `총 ${option.totalRounds}회차 완료`
-                            : `완료 ${option.completedRounds}/${option.totalRounds}회차 · 선택 가능 ${option.remainingRounds}회차`
+                          ? option.hasLoadedCompletion
+                            ? option.isComplete
+                              ? `총 ${option.totalRounds}회차 완료`
+                              : `완료 ${option.completedRounds}/${option.totalRounds}회차 · 선택 가능 ${option.remainingRounds}회차`
+                            : `총 ${option.totalRounds}회차`
                           : '총 계약회차 미설정'}
                       </span>
                     </div>
@@ -986,6 +872,8 @@ export function WorkerCalendarScreen() {
             </div>
             {!dialog.siteId ? (
               <div className={styles.emptyState}>먼저 현장을 선택해 주세요.</div>
+            ) : dialogSelectedReportIndexState?.status === 'loading' ? (
+              <div className={styles.emptyState}>선택한 현장의 완료 회차를 확인하는 중입니다.</div>
             ) : dialogSelectedSite?.isComplete ? (
               <div className={styles.emptyState}>
                 선택한 현장은 총 계약회차를 모두 완료했습니다.

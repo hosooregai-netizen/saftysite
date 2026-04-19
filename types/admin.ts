@@ -592,7 +592,6 @@ export interface SafetyAdminAnalyticsSummaryResponse {
 
 export interface SafetyAdminAnalyticsMonthDetailResponse {
   comparisonMonthKey: string;
-  detailScope: 'cumulative' | 'month';
   employeeRows: AdminAnalyticsEmployeeRow[];
   monthKey: string;
   siteRevenueRows: AdminAnalyticsSiteRevenueRow[];

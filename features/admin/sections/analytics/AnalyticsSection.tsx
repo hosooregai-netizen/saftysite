@@ -63,8 +63,8 @@ export function AnalyticsSection({ currentUserId }: AnalyticsSectionProps) {
       <section className={sharedStyles.sectionCard}>
         <div className={sharedStyles.sectionHeader}>
           <div>
-            <h2 className={sharedStyles.sectionTitle}>추이 및 기여도</h2>
-            <div className={sharedStyles.sectionHeaderMeta}>차트와 기여도 카드, 상세표를 선택한 기준월로 볼 수 있습니다.</div>
+            <h2 className={sharedStyles.sectionTitle}>월별 추이</h2>
+            <div className={sharedStyles.sectionHeaderMeta}>차트와 상세표를 선택한 기준월로 볼 수 있습니다.</div>
           </div>
           <div className={localStyles.analyticsMonthNav}>
             <button
@@ -103,12 +103,8 @@ export function AnalyticsSection({ currentUserId }: AnalyticsSectionProps) {
           <AnalyticsCharts
             basisMonth={state.basisMonth}
             chartYear={state.chartYear}
-            detailError={state.chartDetailError}
-            employeeRows={state.chartDetail.employeeRows}
-            isDetailInitialLoading={state.isChartDetailInitialLoading}
             isInitialLoading={state.isSummaryInitialLoading}
-            isRefreshing={state.isChartDetailRefreshing}
-            siteRevenueRows={state.chartDetail.siteRevenueRows}
+            isRefreshing={state.isSummaryRefreshing}
             trendRows={state.activeChartSlice.trendRows}
           />
         </div>
@@ -116,7 +112,6 @@ export function AnalyticsSection({ currentUserId }: AnalyticsSectionProps) {
 
       <AnalyticsDetailSection
         basisMonth={state.basisMonth}
-        detailScope={state.detailScope}
         detailView={state.detailView}
         employeePage={state.employeePage}
         employeeRows={state.pagedEmployeeRows}
@@ -125,7 +120,6 @@ export function AnalyticsSection({ currentUserId }: AnalyticsSectionProps) {
         isInitialLoading={state.isAnalyticsDetailInitialLoading}
         isRefreshing={state.isAnalyticsDetailRefreshing}
         loadError={state.analyticsDetailError}
-        setDetailScope={state.setDetailScope}
         setDetailView={state.setDetailView}
         setEmployeePage={state.setEmployeePage}
         setEmployeeSort={state.setEmployeeSort}

@@ -44,7 +44,6 @@ type ScheduleViewMode = 'calendar' | 'list';
 interface ScheduleFormState {
   assigneeUserId: string;
   plannedDate: string;
-  recordSelectionReason: boolean;
   selectionReasonLabel: string;
   selectionReasonMemo: string;
   status: SafetyInspectionSchedule['status'];
@@ -53,7 +52,6 @@ interface ScheduleFormState {
 const EMPTY_FORM: ScheduleFormState = {
   assigneeUserId: '',
   plannedDate: '',
-  recordSelectionReason: false,
   selectionReasonLabel: '',
   selectionReasonMemo: '',
   status: 'planned',
@@ -113,13 +111,6 @@ function getScheduleStatusLabel(status: SafetyInspectionSchedule['status']) {
 
 function normalizeSelectionReasonValue(value: string) {
   return isLegacySelectionPlaceholder(value) ? '' : value.trim();
-}
-
-function hasSelectionReasonInput(selectionReasonLabel: string, selectionReasonMemo: string) {
-  return Boolean(
-    normalizeSelectionReasonValue(selectionReasonLabel) ||
-      normalizeSelectionReasonValue(selectionReasonMemo),
-  );
 }
 
 function getMonthToken(date = new Date()) {
@@ -243,7 +234,6 @@ function buildInitialForm(
   return {
     assigneeUserId: schedule.assigneeUserId,
     plannedDate: plannedDate || schedule.plannedDate || schedule.windowStart,
-    recordSelectionReason: hasSelectionReasonInput(selectionReasonLabel, selectionReasonMemo),
     selectionReasonLabel,
     selectionReasonMemo,
     status: schedule.status,
@@ -720,17 +710,6 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
     }
     const selectionReasonLabel = form.selectionReasonLabel.trim();
     const selectionReasonMemo = form.selectionReasonMemo.trim();
-    if (
-      form.recordSelectionReason &&
-      (!selectionReasonLabel || !selectionReasonMemo)
-    ) {
-      setScheduleState((current) => ({
-        ...current,
-        error: '사유 분류와 상세 메모를 함께 입력해 주세요.',
-        errorRequestKey: requestKey,
-      }));
-      return;
-    }
 
     try {
       const nextMonth = form.plannedDate.slice(0, 7) || month;
@@ -742,8 +721,8 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
       await updateAdminSchedule(activeSchedule.id, {
         assigneeUserId: form.assigneeUserId,
         plannedDate: form.plannedDate,
-        selectionReasonLabel: form.recordSelectionReason ? selectionReasonLabel : '',
-        selectionReasonMemo: form.recordSelectionReason ? selectionReasonMemo : '',
+        selectionReasonLabel,
+        selectionReasonMemo,
         status: form.status,
       });
       await refreshScheduleData(nextMonth);
@@ -1472,12 +1451,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
               type="button"
               className="app-button app-button-primary"
               onClick={() => void handleSave()}
-              disabled={
-                !activeSchedule ||
-                !form.plannedDate ||
-                (form.recordSelectionReason &&
-                  (!form.selectionReasonLabel.trim() || !form.selectionReasonMemo.trim()))
-              }
+              disabled={!activeSchedule || !form.plannedDate}
             >
               저장
             </button>
@@ -1549,30 +1523,6 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
               }
             />
           </label>
-          <div className={styles.modalFieldWide}>
-            <span className={styles.label}>변경 사유 기록</span>
-            <label className={styles.inlineToggle}>
-              <input
-                aria-label="변경 사유 기록"
-                className={styles.inlineToggleInput}
-                type="checkbox"
-                checked={form.recordSelectionReason}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    recordSelectionReason: event.target.checked,
-                    selectionReasonLabel: event.target.checked ? current.selectionReasonLabel : '',
-                    selectionReasonMemo: event.target.checked ? current.selectionReasonMemo : '',
-                  }))
-                }
-              />
-              <span className={styles.inlineToggleLabel}>
-                {form.recordSelectionReason
-                  ? '사유를 함께 저장합니다.'
-                  : '사유 없이 일정만 저장합니다.'}
-              </span>
-            </label>
-          </div>
           <label className={styles.modalField}>
             <span className={styles.label}>담당자</span>
             <select
@@ -1640,7 +1590,6 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
             <input
               className="app-input"
               value={form.selectionReasonLabel}
-              disabled={!form.recordSelectionReason}
               onChange={(event) =>
                 setForm((current) => ({
                   ...current,
@@ -1674,7 +1623,6 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
               className="app-textarea"
               rows={4}
               value={form.selectionReasonMemo}
-              disabled={!form.recordSelectionReason}
               onChange={(event) =>
                 setForm((current) => ({
                   ...current,

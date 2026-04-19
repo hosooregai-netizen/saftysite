@@ -85,8 +85,10 @@ export async function runAdminSchedulesSmoke(config: ClientSmokePlaywrightConfig
     if ((await scheduleDialog.getByText('예외 메모').count()) !== 0) {
       throw new Error('Expected exception memo field to be removed from controller schedule dialog.');
     }
+    if ((await scheduleDialog.getByLabel('변경 사유 기록').count()) !== 0) {
+      throw new Error('Expected change reason checkbox to be removed from controller schedule dialog.');
+    }
     await scheduleDialog.getByLabel('방문일').fill('2026-04-18');
-    await scheduleDialog.getByLabel('변경 사유 기록').check();
     await scheduleDialog.getByLabel('사유 분류').fill('현장 요청');
     await scheduleDialog.getByLabel('상세 메모').fill('관제 일정 smoke 이동');
     await scheduleDialog.getByRole('button', { name: '저장' }).click();

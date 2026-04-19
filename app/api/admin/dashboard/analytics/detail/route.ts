@@ -17,7 +17,6 @@ export async function GET(request: Request): Promise<Response> {
       {
         basis_month: url.searchParams.get('basis_month') || '',
         contract_type: url.searchParams.get('contract_type') || '',
-        detail_scope: url.searchParams.get('detail_scope') || 'month',
         headquarter_id: url.searchParams.get('headquarter_id') || '',
         period: url.searchParams.get('period') || 'month',
         query: url.searchParams.get('query') || '',

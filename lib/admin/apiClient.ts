@@ -327,7 +327,6 @@ export function fetchAdminAnalyticsMonthDetail(input: {
 export function fetchAdminAnalyticsDetail(input: {
   basisMonth?: string;
   contractType?: string;
-  detailScope?: 'cumulative' | 'month';
   headquarterId?: string;
   period?: string;
   query?: string;
@@ -337,7 +336,6 @@ export function fetchAdminAnalyticsDetail(input: {
     `/dashboard/analytics/detail${buildQueryString({
       basis_month: input.basisMonth,
       contract_type: input.contractType,
-      detail_scope: input.detailScope,
       headquarter_id: input.headquarterId,
       period: input.period,
       query: input.query,

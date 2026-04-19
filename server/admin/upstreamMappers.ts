@@ -1061,8 +1061,6 @@ export function mapBackendAnalyticsMonthDetailResponse(
 ): SafetyAdminAnalyticsMonthDetailResponse {
   return {
     comparisonMonthKey: normalizeText(response.comparison_month_key),
-    detailScope:
-      normalizeText(response.detail_scope) === 'cumulative' ? 'cumulative' : 'month',
     employeeRows: response.employee_rows.map((row) => mapAnalyticsEmployeeRow(row)),
     monthKey: normalizeText(response.month_key),
     siteRevenueRows: response.site_revenue_rows.map((row) => mapAnalyticsSiteRevenueRow(row)),

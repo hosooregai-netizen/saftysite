@@ -9,8 +9,6 @@ export async function runAdminControlCenterSmoke(config: ClientSmokePlaywrightCo
     const overviewExportsBefore = requestCounts.get('POST /api/admin/exports/:section') || 0;
     const analyticsSummaryReadsBefore =
       requestCounts.get('GET /api/admin/dashboard/analytics') || 0;
-    const analyticsChartDetailReadsBefore =
-      requestCounts.get('GET /api/admin/dashboard/analytics/month-detail') || 0;
     const analyticsTableDetailReadsBefore =
       requestCounts.get('GET /api/admin/dashboard/analytics/detail') || 0;
 
@@ -77,15 +75,16 @@ export async function runAdminControlCenterSmoke(config: ClientSmokePlaywrightCo
       analyticsSummaryReadsBefore + 1,
     );
     await harness.waitForRequestCount(
-      'GET /api/admin/dashboard/analytics/month-detail',
-      analyticsChartDetailReadsBefore + 1,
-    );
-    await harness.waitForRequestCount(
       'GET /api/admin/dashboard/analytics/detail',
       analyticsTableDetailReadsBefore + 1,
     );
-    await page.getByRole('heading', { name: '상위 매출 사업장 Top 10' }).waitFor();
     await page.getByRole('columnheader', { name: '지도요원명' }).waitFor();
+    if ((await page.getByText('직원별 매출 기여도 Top 10').count()) > 0) {
+      throw new Error('직원별 매출 기여도 Top 10 카드는 제거되어야 합니다.');
+    }
+    if ((await page.getByText('상위 매출 사업장 Top 10').count()) > 0) {
+      throw new Error('상위 매출 사업장 Top 10 카드는 제거되어야 합니다.');
+    }
     if ((await page.getByRole('columnheader', { name: '전기 대비' }).count()) > 0) {
       throw new Error('직원별 표에서 전기 대비 열이 제거되어야 합니다.');
     }
@@ -99,15 +98,9 @@ export async function runAdminControlCenterSmoke(config: ClientSmokePlaywrightCo
     await monthInput.waitFor();
     const analyticsSummaryReadsAtMonthChange =
       requestCounts.get('GET /api/admin/dashboard/analytics') || 0;
-    const analyticsChartDetailReadsAtMonthChange =
-      requestCounts.get('GET /api/admin/dashboard/analytics/month-detail') || 0;
     const analyticsTableDetailReadsAtMonthChange =
       requestCounts.get('GET /api/admin/dashboard/analytics/detail') || 0;
     await monthInput.fill('2026-03');
-    await harness.waitForRequestCount(
-      'GET /api/admin/dashboard/analytics/month-detail',
-      analyticsChartDetailReadsAtMonthChange + 1,
-    );
     await harness.waitForRequestCount(
       'GET /api/admin/dashboard/analytics/detail',
       analyticsTableDetailReadsAtMonthChange + 1,
@@ -116,17 +109,9 @@ export async function runAdminControlCenterSmoke(config: ClientSmokePlaywrightCo
       throw new Error('기준월 전환은 analytics summary를 다시 요청하지 않아야 합니다.');
     }
     await page.getByText(/1 \/ \d+ 페이지/).first().waitFor();
-    const analyticsTableDetailReadsAtScopeToggle =
-      requestCounts.get('GET /api/admin/dashboard/analytics/detail') || 0;
-    await page.getByRole('button', { name: '누적' }).click();
-    await harness.waitForRequestCount(
-      'GET /api/admin/dashboard/analytics/detail',
-      analyticsTableDetailReadsAtScopeToggle + 1,
-    );
-    if ((requestCounts.get('GET /api/admin/dashboard/analytics/month-detail') || 0) !== analyticsChartDetailReadsAtMonthChange + 1) {
-      throw new Error('상세표 범위 전환은 chart detail을 다시 요청하지 않아야 합니다.');
+    if ((await page.getByRole('button', { name: '누적' }).count()) > 0) {
+      throw new Error('상세표 범위 전환 버튼은 제거되어야 합니다.');
     }
-    await page.getByText(/현재 필터 누적/).waitFor();
     await page.getByRole('button', { name: '필터' }).click();
     await page.locator('#analytics-filter-period').selectOption('year');
     await page.getByText('매출/실적 집계').first().waitFor();
@@ -135,12 +120,8 @@ export async function runAdminControlCenterSmoke(config: ClientSmokePlaywrightCo
       analyticsSummaryReadsBefore + 2,
     );
     await harness.waitForRequestCount(
-      'GET /api/admin/dashboard/analytics/month-detail',
-      analyticsChartDetailReadsBefore + 3,
-    );
-    await harness.waitForRequestCount(
       'GET /api/admin/dashboard/analytics/detail',
-      analyticsTableDetailReadsBefore + 4,
+      analyticsTableDetailReadsBefore + 3,
     );
     await page.getByRole('button', { name: '엑셀 내보내기' }).click();
     await harness.waitForRequestCount('POST /api/admin/exports/:section', overviewExportsBefore + 2);

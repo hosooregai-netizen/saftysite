@@ -115,9 +115,6 @@ export async function runAdminControlCenterSection(page: Page) {
       return response.url().includes('/api/admin/dashboard/analytics') && response.ok();
     }),
     page.waitForResponse((response) => {
-      return response.url().includes('/api/admin/dashboard/analytics/month-detail') && response.ok();
-    }),
-    page.waitForResponse((response) => {
       return response.url().includes('/api/admin/dashboard/analytics/detail') && response.ok();
     }),
   ]);
@@ -125,8 +122,6 @@ export async function runAdminControlCenterSection(page: Page) {
   await page.getByText('수행 실적').first().waitFor();
   await page.getByText('예상 실적').first().waitFor();
   await page.getByText('월별 매출 추이').first().waitFor();
-  await page.getByText('직원별 매출 기여도 Top 10').first().waitFor();
-  await page.getByText('상위 매출 사업장 Top 10').first().waitFor();
   await page.getByText('상세 표').first().waitFor();
   await page.locator('input[type="month"]').first().waitFor();
   await page.getByRole('button', { name: '엑셀 내보내기' }).waitFor();
@@ -134,9 +129,6 @@ export async function runAdminControlCenterSection(page: Page) {
   await Promise.all([
     page.waitForResponse((response) => {
       return response.url().includes('/api/admin/dashboard/analytics') && response.ok();
-    }),
-    page.waitForResponse((response) => {
-      return response.url().includes('/api/admin/dashboard/analytics/month-detail') && response.ok();
     }),
     page.waitForResponse((response) => {
       return response.url().includes('/api/admin/dashboard/analytics/detail') && response.ok();

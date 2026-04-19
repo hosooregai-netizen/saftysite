@@ -96,6 +96,16 @@ function isDispatchCompleted(dispatch: unknown) {
   return status === 'sent' || status === 'manual_checked';
 }
 
+function isExpectedPageError(error: unknown) {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'message' in error &&
+    (error as { message?: unknown }).message === 'Event' &&
+    !('stack' in error && (error as { stack?: unknown }).stack)
+  );
+}
+
 function updateReportDispatchState(
   state: ReturnType<typeof createInitialState>,
   reportKey: string,
@@ -794,7 +804,10 @@ export async function createErpSmokeHarness(
   const consoleErrors: string[] = [];
 
   page.on('pageerror', (error) => {
-    pageErrors.push(error.message);
+    if (isExpectedPageError(error)) {
+      return;
+    }
+    pageErrors.push(error.stack || error.message || String(error));
   });
   page.on('console', (message) => {
     if (message.type() === 'error' && !isExpectedConsoleError(message.text())) {

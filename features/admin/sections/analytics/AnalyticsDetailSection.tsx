@@ -12,7 +12,6 @@ import { AnalyticsSiteRevenueTable } from './AnalyticsSiteRevenueTable';
 
 interface AnalyticsDetailSectionProps {
   basisMonth: string;
-  detailScope: 'cumulative' | 'month';
   detailView: 'employee' | 'site';
   employeePage: number;
   employeeRows: AdminAnalyticsEmployeeRow[];
@@ -21,7 +20,6 @@ interface AnalyticsDetailSectionProps {
   isInitialLoading: boolean;
   isRefreshing: boolean;
   loadError: string | null;
-  setDetailScope: (value: 'cumulative' | 'month') => void;
   setDetailView: (value: 'employee' | 'site') => void;
   setEmployeePage: (next: number | ((current: number) => number)) => void;
   setEmployeeSort: (next: TableSortState) => void;
@@ -35,7 +33,6 @@ interface AnalyticsDetailSectionProps {
 
 export function AnalyticsDetailSection({
   basisMonth,
-  detailScope,
   detailView,
   employeePage,
   employeeRows,
@@ -44,7 +41,6 @@ export function AnalyticsDetailSection({
   isInitialLoading,
   isRefreshing,
   loadError,
-  setDetailScope,
   setDetailView,
   setEmployeePage,
   setEmployeeSort,
@@ -55,31 +51,14 @@ export function AnalyticsDetailSection({
   siteRevenueSort,
   siteRevenueTotalPages,
 }: AnalyticsDetailSectionProps) {
-  const detailScopeLabel = detailScope === 'month' ? `${basisMonth} 기준` : '현재 필터 누적';
   return (
     <section className={`${sharedStyles.sectionCard} ${sharedStyles.listSectionCard}`}>
       <div className={sharedStyles.sectionHeader}>
         <div>
           <h2 className={sharedStyles.sectionTitle}>상세 표</h2>
-          <div className={sharedStyles.sectionHeaderMeta}>상세표 범위: {detailScopeLabel}</div>
+          <div className={sharedStyles.sectionHeaderMeta}>상세표 범위: {basisMonth} 기준</div>
         </div>
         <div className={localStyles.detailSectionControls}>
-          <div className={localStyles.detailTabs}>
-            <button
-              type="button"
-              className={`${localStyles.detailTabButton} ${detailScope === 'month' ? localStyles.detailTabButtonActive : ''}`}
-              onClick={() => setDetailScope('month')}
-            >
-              월별
-            </button>
-            <button
-              type="button"
-              className={`${localStyles.detailTabButton} ${detailScope === 'cumulative' ? localStyles.detailTabButtonActive : ''}`}
-              onClick={() => setDetailScope('cumulative')}
-            >
-              누적
-            </button>
-          </div>
           <div className={localStyles.detailTabs}>
             <button
               type="button"

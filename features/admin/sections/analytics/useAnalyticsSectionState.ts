@@ -8,7 +8,6 @@ import { readAdminSessionCache, writeAdminSessionCache } from '@/features/admin/
 import {
   fetchAdminAnalyticsDetail,
   fetchAdminAnalytics,
-  fetchAdminAnalyticsMonthDetail,
   fetchAdminDirectoryLookups,
 } from '@/lib/admin/apiClient';
 import { exportAdminServerWorkbook } from '@/lib/admin/exportClient';
@@ -101,7 +100,6 @@ export function useAnalyticsSectionState(currentUserId: string) {
   const [userId, setUserId] = useState(() => searchParams.get('userId') || '');
   const [contractType, setContractType] = useState(() => searchParams.get('contractType') || '');
   const [detailView, setDetailView] = useState<'employee' | 'site'>('employee');
-  const [detailScope, setDetailScope] = useState<'cumulative' | 'month'>('month');
   const [employeeSort, setEmployeeSort] = useState<TableSortState>(DEFAULT_EMPLOYEE_SORT);
   const [siteRevenueSort, setSiteRevenueSort] = useState<TableSortState>(DEFAULT_SITE_REVENUE_SORT);
   const [employeePage, setEmployeePage] = useState(1);
@@ -278,132 +276,10 @@ export function useAnalyticsSectionState(currentUserId: string) {
     });
   }, [basisMonth]);
 
-  const detailRequest = useMemo(
+  const analyticsDetailRequest = useMemo(
     () => ({
       basisMonth,
       contractType,
-      headquarterId,
-      period,
-      query: deferredQuery.trim(),
-      userId,
-    }),
-    [basisMonth, contractType, deferredQuery, headquarterId, period, userId],
-  );
-  const detailRequestKey = useMemo(
-    () => JSON.stringify(detailRequest),
-    [detailRequest],
-  );
-  const [detailState, setDetailState] = useState<AnalyticsRequestState<SafetyAdminAnalyticsMonthDetailResponse>>(
-    () => {
-      const cached = readAdminSessionCache<SafetyAdminAnalyticsMonthDetailResponse>(
-        currentUserId,
-        `analytics-month-detail:${detailRequestKey}`,
-      ).value;
-      return {
-        data: cached ?? EMPTY_ANALYTICS_MONTH_DETAIL,
-        error: null,
-        errorRequestKey: '',
-        resolvedRequestKey: cached ? detailRequestKey : '',
-      };
-    },
-  );
-  const [loadingDetailRequestKey, setLoadingDetailRequestKey] = useState('');
-  const detailAbortControllerRef = useRef<AbortController | null>(null);
-  const cachedDetailForRequest = useMemo(
-    () =>
-      readAdminSessionCache<SafetyAdminAnalyticsMonthDetailResponse>(
-        currentUserId,
-        `analytics-month-detail:${detailRequestKey}`,
-      ).value,
-    [currentUserId, detailRequestKey],
-  );
-
-  useEffect(() => {
-    if (!canRequestDetail || !basisMonth) {
-      setLoadingDetailRequestKey('');
-      return;
-    }
-
-    const cachedDetail = readAdminSessionCache<SafetyAdminAnalyticsMonthDetailResponse>(
-      currentUserId,
-      `analytics-month-detail:${detailRequestKey}`,
-    );
-
-    if (cachedDetail.value) {
-      setDetailState((current) => ({
-        data: cachedDetail.value ?? current.data,
-        error: current.errorRequestKey === detailRequestKey ? current.error : null,
-        errorRequestKey:
-          current.errorRequestKey === detailRequestKey ? current.errorRequestKey : '',
-        resolvedRequestKey: detailRequestKey,
-      }));
-    }
-    if (cachedDetail.isFresh && cachedDetail.value) {
-      setLoadingDetailRequestKey('');
-      return;
-    }
-
-    detailAbortControllerRef.current?.abort();
-    const abortController = new AbortController();
-    detailAbortControllerRef.current = abortController;
-    setLoadingDetailRequestKey(detailRequestKey);
-
-    void fetchAdminAnalyticsMonthDetail(detailRequest, { signal: abortController.signal })
-      .then((response) => {
-        writeAdminSessionCache(
-          currentUserId,
-          `analytics-month-detail:${detailRequestKey}`,
-          response,
-        );
-        setDetailState({
-          data: response,
-          error: null,
-          errorRequestKey: '',
-          resolvedRequestKey: detailRequestKey,
-        });
-        setLoadingDetailRequestKey('');
-      })
-      .catch((error) => {
-        if (abortController.signal.aborted) return;
-        setDetailState((current) => ({
-          ...current,
-          error:
-            error instanceof Error
-              ? error.message
-              : '실적/매출 상세 데이터를 불러오지 못했습니다.',
-          errorRequestKey: detailRequestKey,
-        }));
-        setLoadingDetailRequestKey('');
-      });
-
-    return () => {
-      abortController.abort();
-    };
-  }, [basisMonth, canRequestDetail, currentUserId, detailRequest, detailRequestKey]);
-
-  const chartDetail =
-    detailState.resolvedRequestKey === detailRequestKey
-      ? detailState.data
-      : cachedDetailForRequest ?? detailState.data;
-  const chartDetailError =
-    detailState.errorRequestKey === detailRequestKey ? detailState.error : null;
-  const isChartDetailLoading =
-    canRequestDetail &&
-    Boolean(basisMonth) &&
-    (loadingDetailRequestKey === detailRequestKey ||
-      detailState.resolvedRequestKey !== detailRequestKey);
-  const isChartDetailInitialLoading =
-    !isSummaryInitialLoading &&
-    isChartDetailLoading &&
-    !hasVisibleMonthDetail(chartDetail);
-  const isChartDetailRefreshing =
-    isChartDetailLoading && hasVisibleMonthDetail(chartDetail);
-
-  const analyticsDetailRequest = useMemo(
-    () => ({
-      basisMonth: detailScope === 'month' ? basisMonth : '',
-      contractType,
-      detailScope,
       headquarterId,
       period,
       query: deferredQuery.trim(),
@@ -413,7 +289,6 @@ export function useAnalyticsSectionState(currentUserId: string) {
       basisMonth,
       contractType,
       deferredQuery,
-      detailScope,
       headquarterId,
       period,
       userId,
@@ -449,7 +324,7 @@ export function useAnalyticsSectionState(currentUserId: string) {
   );
 
   useEffect(() => {
-    if (!canRequestDetail || (detailScope === 'month' && !basisMonth)) {
+    if (!canRequestDetail || !basisMonth) {
       setLoadingAnalyticsDetailRequestKey('');
       return;
     }
@@ -518,7 +393,6 @@ export function useAnalyticsSectionState(currentUserId: string) {
     basisMonth,
     canRequestDetail,
     currentUserId,
-    detailScope,
   ]);
 
   const analyticsDetail =
@@ -582,8 +456,6 @@ export function useAnalyticsSectionState(currentUserId: string) {
     const targetYear = Number.parseInt((basisMonth || todayMonth).slice(0, 4), 10) || todayYear;
     if (summaryAnalytics.chartYearSlices.length === 0) {
       return {
-        employeeRows: chartDetail.employeeRows,
-        siteRevenueRows: chartDetail.siteRevenueRows,
         trendRows: summaryAnalytics.trendRows,
         year: targetYear,
       };
@@ -594,8 +466,6 @@ export function useAnalyticsSectionState(currentUserId: string) {
     );
   }, [
     basisMonth,
-    chartDetail.employeeRows,
-    chartDetail.siteRevenueRows,
     summaryAnalytics.chartYearSlices,
     summaryAnalytics.trendRows,
     todayMonth,
@@ -691,10 +561,7 @@ export function useAnalyticsSectionState(currentUserId: string) {
     contractTypeOptions,
     analyticsDetail,
     analyticsDetailError,
-    chartDetail,
-    chartDetailError,
     detailView,
-    detailScope,
     employeePage,
     employeeSort,
     employeeTotalPages,
@@ -703,9 +570,7 @@ export function useAnalyticsSectionState(currentUserId: string) {
     headquarterOptions,
     isAnalyticsDetailInitialLoading,
     isAnalyticsDetailRefreshing,
-    isChartDetailInitialLoading,
-    isChartDetailRefreshing,
-    isLoading: isSummaryLoading || isChartDetailLoading || isAnalyticsDetailLoading,
+    isLoading: isSummaryLoading || isAnalyticsDetailLoading,
     isSummaryLoading,
     isSummaryInitialLoading,
     isSummaryRefreshing,
@@ -720,7 +585,6 @@ export function useAnalyticsSectionState(currentUserId: string) {
     setBasisMonth,
     setContractType,
     setDetailView,
-    setDetailScope,
     setEmployeePage,
     setEmployeeSort,
     setHeadquarterId,
