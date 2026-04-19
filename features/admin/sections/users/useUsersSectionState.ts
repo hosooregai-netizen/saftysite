@@ -9,7 +9,7 @@ import {
 } from '@/features/admin/lib/adminSessionCache';
 import { fetchAdminUsersList } from '@/lib/admin/apiClient';
 import { getSessionTitle } from '@/constants/inspectionSession';
-import type { TableSortState } from '@/types/admin';
+import type { SafetyAdminUserListResponse, TableSortState } from '@/types/admin';
 import type { InspectionSession } from '@/types/inspectionSession';
 import {
   toBackendUserRole,
@@ -30,6 +30,7 @@ const EMPTY_FORM = {
 };
 
 const USERS_PAGE_SIZE = 50;
+const EMPTY_USER_ROWS: SafetyAdminUserListResponse['rows'] = [];
 
 function buildRequestKey(input: {
   page: number;
@@ -71,8 +72,6 @@ export function useUsersSectionState(
   const [initialForm, setInitialForm] = useState(EMPTY_FORM);
   const [editingRoleSource, setEditingRoleSource] =
     useState<import('@/types/backend').SafetyUser['role']>('field_agent');
-  const [rows, setRows] = useState<import('@/types/admin').SafetyAdminUserListRow[]>([]);
-  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isOpen = editingId !== null;
@@ -89,18 +88,35 @@ export function useUsersSectionState(
     [deferredQuery, page, roleFilter, sort, statusFilter],
   );
   const abortControllerRef = useRef<AbortController | null>(null);
+  const cachedResponse = useMemo(
+    () =>
+      readAdminSessionCache<SafetyAdminUserListResponse>(
+        currentUserId,
+        `users:list:${requestKey}`,
+      ),
+    [currentUserId, requestKey],
+  );
+  const [resolvedResponseState, setResolvedResponseState] = useState<{
+    requestKey: string;
+    response: SafetyAdminUserListResponse;
+  } | null>(null);
+  const currentResponse =
+    useMemo(
+      () =>
+        (resolvedResponseState?.requestKey === requestKey ? resolvedResponseState.response : null) ??
+        cachedResponse.value ??
+        resolvedResponseState?.response ??
+        null,
+      [cachedResponse.value, requestKey, resolvedResponseState],
+    );
+  const rows = currentResponse?.rows ?? EMPTY_USER_ROWS;
+  const total = currentResponse?.total ?? 0;
 
   useEffect(() => {
-    const cached = readAdminSessionCache<import('@/types/admin').SafetyAdminUserListResponse>(
-      currentUserId,
-      `users:list:${requestKey}`,
-    );
-    if (cached.value) {
-      setRows(cached.value.rows);
-      setTotal(cached.value.total);
-    }
-    if (cached.isFresh && cached.value) {
-      setLoading(false);
+    if (cachedResponse.isFresh && cachedResponse.value) {
+      queueMicrotask(() => {
+        setLoading(false);
+      });
       return;
     }
 
@@ -126,8 +142,10 @@ export function useUsersSectionState(
     )
       .then((response) => {
         writeAdminSessionCache(currentUserId, `users:list:${requestKey}`, response);
-        setRows(response.rows);
-        setTotal(response.total);
+        setResolvedResponseState({
+          requestKey,
+          response,
+        });
       })
       .catch((nextError) => {
         if (abortController.signal.aborted) return;
@@ -140,7 +158,18 @@ export function useUsersSectionState(
       });
 
     return () => abortController.abort();
-  }, [currentUserId, deferredQuery, page, requestKey, roleFilter, sort.direction, sort.key, statusFilter]);
+  }, [
+    cachedResponse.isFresh,
+    cachedResponse.value,
+    currentUserId,
+    deferredQuery,
+    page,
+    requestKey,
+    roleFilter,
+    sort.direction,
+    sort.key,
+    statusFilter,
+  ]);
 
   const sessionCountBySiteId = useMemo(() => {
     const next = new Map<string, number>();
@@ -279,6 +308,13 @@ export function useUsersSectionState(
   };
 
   const refreshPage = async (targetPage = currentPage) => {
+    const targetRequestKey = buildRequestKey({
+      page: targetPage,
+      query: deferredQuery.trim(),
+      roleFilter,
+      sort,
+      statusFilter,
+    });
     const response = await fetchAdminUsersList({
       limit: USERS_PAGE_SIZE,
       offset: (targetPage - 1) * USERS_PAGE_SIZE,
@@ -288,9 +324,11 @@ export function useUsersSectionState(
       sortDir: sort.direction,
       status: statusFilter,
     });
-    writeAdminSessionCache(currentUserId, `users:list:${requestKey}`, response);
-    setRows(response.rows);
-    setTotal(response.total);
+    writeAdminSessionCache(currentUserId, `users:list:${targetRequestKey}`, response);
+    setResolvedResponseState({
+      requestKey: targetRequestKey,
+      response,
+    });
   };
 
   const exportUsers = async () => {

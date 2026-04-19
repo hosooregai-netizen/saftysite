@@ -15,6 +15,14 @@ export async function runAdminUsersSmoke(config: ClientSmokePlaywrightConfig) {
     await page.getByRole('heading', { level: 2, name: '사용자' }).waitFor({ state: 'visible' });
     await page.waitForTimeout(250);
     const settledListReads = requestCounts.get('GET /api/admin/users/list') || 0;
+    await page.goto(`${harness.baseURL}/admin?section=overview`, { waitUntil: 'load' });
+    await page.waitForTimeout(250);
+    await page.goto(`${harness.baseURL}/admin?section=users`, { waitUntil: 'load' });
+    await page.locator('tbody tr').first().waitFor();
+    await page.waitForTimeout(250);
+    if ((requestCounts.get('GET /api/admin/users/list') || 0) !== settledListReads) {
+      throw new Error('Users revisit should reuse the fresh session cache before an explicit submit.');
+    }
 
     const searchField = page.locator('[role="search"]').first();
     await searchField.locator('input').fill('김요원');

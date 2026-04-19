@@ -65,9 +65,14 @@ export function useAnalyticsSectionState(currentUserId: string) {
   const [employeePage, setEmployeePage] = useState(1);
   const [siteRevenuePage, setSiteRevenuePage] = useState(1);
   const [chartYear, setChartYear] = useState<number | null>(null);
-  const [lookups, setLookups] = useState<AnalyticsLookups>(() => {
-    return readAdminSessionCache<AnalyticsLookups>(currentUserId, 'analytics-lookups').value ?? EMPTY_LOOKUPS;
-  });
+  const cachedLookups = useMemo(
+    () => readAdminSessionCache<AnalyticsLookups>(currentUserId, 'analytics-lookups'),
+    [currentUserId],
+  );
+  const [resolvedLookupsState, setResolvedLookupsState] = useState<{
+    lookups: AnalyticsLookups;
+    userId: string;
+  } | null>(null);
   const deferredQuery = useDeferredValue(query);
 
   const analyticsRequest = useMemo(
@@ -81,16 +86,21 @@ export function useAnalyticsSectionState(currentUserId: string) {
     [contractType, deferredQuery, headquarterId, period, userId],
   );
   const requestKey = useMemo(() => JSON.stringify(analyticsRequest), [analyticsRequest]);
+  const cachedAnalyticsForRequest = useMemo(
+    () =>
+      readAdminSessionCache<SafetyAdminAnalyticsResponse>(
+        currentUserId,
+        `analytics:${requestKey}`,
+      ),
+    [currentUserId, requestKey],
+  );
   const [analyticsState, setAnalyticsState] = useState<{
     analytics: SafetyAdminAnalyticsResponse;
     error: string | null;
     errorRequestKey: string;
     resolvedRequestKey: string;
   }>(() => {
-    const cached = readAdminSessionCache<SafetyAdminAnalyticsResponse>(
-      currentUserId,
-      `analytics:${requestKey}`,
-    ).value;
+    const cached = cachedAnalyticsForRequest.value;
     return {
       analytics: cached ?? EMPTY_ANALYTICS,
       error: null,
@@ -100,20 +110,21 @@ export function useAnalyticsSectionState(currentUserId: string) {
   });
   const [loadingRequestKey, setLoadingRequestKey] = useState('');
   const abortControllerRef = useRef<AbortController | null>(null);
-  const cachedAnalyticsForRequest = useMemo(
-    () =>
-      readAdminSessionCache<SafetyAdminAnalyticsResponse>(
-        currentUserId,
-        `analytics:${requestKey}`,
-      ).value,
-    [currentUserId, requestKey],
+  const lookups =
+    (resolvedLookupsState?.userId === currentUserId ? resolvedLookupsState.lookups : null) ??
+    cachedLookups.value ??
+    EMPTY_LOOKUPS;
+  const analytics =
+    analyticsState.resolvedRequestKey === requestKey
+      ? analyticsState.analytics
+      : cachedAnalyticsForRequest.value ?? analyticsState.analytics;
+  const todayYear = new Date().getFullYear();
+  const selectedChartYear = useMemo(
+    () => normalizeYearSelection(chartYear, analytics.availableTrendYears, todayYear),
+    [analytics.availableTrendYears, chartYear, todayYear],
   );
 
   useEffect(() => {
-    const cachedLookups = readAdminSessionCache<AnalyticsLookups>(currentUserId, 'analytics-lookups');
-    if (cachedLookups.value) {
-      setLookups(cachedLookups.value);
-    }
     if (cachedLookups.isFresh && cachedLookups.value) {
       return;
     }
@@ -129,36 +140,27 @@ export function useAnalyticsSectionState(currentUserId: string) {
           })),
         } satisfies AnalyticsLookups;
         writeAdminSessionCache(currentUserId, 'analytics-lookups', normalizedLookups);
-        setLookups(normalizedLookups);
+        setResolvedLookupsState({
+          lookups: normalizedLookups,
+          userId: currentUserId,
+        });
       })
       .catch((error) => {
         console.error('Failed to load admin analytics lookups', error);
       });
-  }, [currentUserId]);
+  }, [cachedLookups.isFresh, cachedLookups.value, currentUserId]);
 
   useEffect(() => {
-    const cachedAnalytics = readAdminSessionCache<SafetyAdminAnalyticsResponse>(
-      currentUserId,
-      `analytics:${requestKey}`,
-    );
-
-    if (cachedAnalytics.value) {
-      setAnalyticsState((current) => ({
-        analytics: cachedAnalytics.value ?? current.analytics,
-        error: current.errorRequestKey === requestKey ? current.error : null,
-        errorRequestKey: current.errorRequestKey === requestKey ? current.errorRequestKey : '',
-        resolvedRequestKey: requestKey,
-      }));
-    }
-    if (cachedAnalytics.isFresh && cachedAnalytics.value) {
-      setLoadingRequestKey('');
+    if (cachedAnalyticsForRequest.isFresh && cachedAnalyticsForRequest.value) {
       return;
     }
 
     abortControllerRef.current?.abort();
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
-    setLoadingRequestKey(requestKey);
+    queueMicrotask(() => {
+      setLoadingRequestKey(requestKey);
+    });
 
     void fetchAdminAnalytics(analyticsRequest, { signal: abortController.signal })
       .then((response) => {
@@ -187,17 +189,13 @@ export function useAnalyticsSectionState(currentUserId: string) {
     return () => {
       abortController.abort();
     };
-  }, [analyticsRequest, currentUserId, requestKey]);
+  }, [analyticsRequest, cachedAnalyticsForRequest.isFresh, cachedAnalyticsForRequest.value, currentUserId, requestKey]);
 
-  const analytics =
-    analyticsState.resolvedRequestKey === requestKey
-      ? analyticsState.analytics
-      : cachedAnalyticsForRequest ?? analyticsState.analytics;
   const loadError = analyticsState.errorRequestKey === requestKey ? analyticsState.error : null;
   const isLoading = loadingRequestKey === requestKey || analyticsState.resolvedRequestKey !== requestKey;
   const hasVisibleAnalytics =
     analyticsState.resolvedRequestKey.length > 0 ||
-    Boolean(cachedAnalyticsForRequest) ||
+    Boolean(cachedAnalyticsForRequest.value) ||
     analytics.availableTrendYears.length > 0 ||
     analytics.summaryCards.length > 0 ||
     analytics.employeeRows.length > 0 ||
@@ -229,35 +227,25 @@ export function useAnalyticsSectionState(currentUserId: string) {
       }),
     [contractType, contractTypeOptions, headquarterId, headquarterOptions, period, query, userId, userOptions],
   );
-  const todayYear = new Date().getFullYear();
-
-  useEffect(() => {
-    setChartYear((current) =>
-      normalizeYearSelection(current, analytics.availableTrendYears, todayYear),
-    );
-  }, [analytics.availableTrendYears, todayYear]);
-
   const activeChartSlice = useMemo(() => {
     if (analytics.chartYearSlices.length === 0) {
       return {
         employeeRows: analytics.employeeRows,
         siteRevenueRows: analytics.siteRevenueRows,
         trendRows: analytics.trendRows,
-        year: normalizeYearSelection(chartYear, analytics.availableTrendYears, todayYear),
+        year: selectedChartYear,
       };
     }
     return (
-      analytics.chartYearSlices.find((slice) => slice.year === chartYear) ??
+      analytics.chartYearSlices.find((slice) => slice.year === selectedChartYear) ??
       analytics.chartYearSlices[0]
     );
   }, [
-    analytics.availableTrendYears,
     analytics.chartYearSlices,
     analytics.employeeRows,
     analytics.siteRevenueRows,
     analytics.trendRows,
-    chartYear,
-    todayYear,
+    selectedChartYear,
   ]);
 
   const sortedEmployeeRows = useMemo(
