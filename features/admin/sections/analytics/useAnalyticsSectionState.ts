@@ -1,7 +1,7 @@
 'use client';
 
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useSubmittedSearchState } from '@/hooks/useSubmittedSearchState';
 import type { AdminAnalyticsPeriod } from '@/features/admin/lib/buildAdminControlCenterModel';
 import { readAdminSessionCache, writeAdminSessionCache } from '@/features/admin/lib/adminSessionCache';
@@ -30,6 +30,25 @@ const EMPTY_LOOKUPS: AnalyticsLookups = {
 const DEFAULT_EMPLOYEE_SORT: TableSortState = { direction: 'desc', key: 'visitRevenue' };
 const DEFAULT_SITE_REVENUE_SORT: TableSortState = { direction: 'desc', key: 'visitRevenue' };
 const DETAIL_PAGE_SIZE = 20;
+function formatMonthToken(target: Date) {
+  return `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function shiftMonthToken(month: string, delta: number) {
+  const [year, monthValue] = month.split('-').map(Number);
+  if (!year || !monthValue) return month;
+  return formatMonthToken(new Date(year, monthValue - 1 + delta, 1));
+}
+
+function normalizeBasisMonthSelection(
+  current: string,
+  availableMonths: string[],
+  todayMonth: string,
+) {
+  if (current && availableMonths.includes(current)) return current;
+  if (availableMonths.includes(todayMonth)) return todayMonth;
+  return availableMonths[0] ?? todayMonth;
+}
 
 function normalizeYearSelection(
   current: number | null,
@@ -43,6 +62,8 @@ function normalizeYearSelection(
 }
 
 export function useAnalyticsSectionState(currentUserId: string) {
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const {
     query,
@@ -64,7 +85,8 @@ export function useAnalyticsSectionState(currentUserId: string) {
   const [siteRevenueSort, setSiteRevenueSort] = useState<TableSortState>(DEFAULT_SITE_REVENUE_SORT);
   const [employeePage, setEmployeePage] = useState(1);
   const [siteRevenuePage, setSiteRevenuePage] = useState(1);
-  const [chartYear, setChartYear] = useState<number | null>(null);
+  const todayMonth = formatMonthToken(new Date());
+  const [basisMonth, setBasisMonthState] = useState(() => searchParams.get('basisMonth') || todayMonth);
   const [lookups, setLookups] = useState<AnalyticsLookups>(() => {
     return readAdminSessionCache<AnalyticsLookups>(currentUserId, 'analytics-lookups').value ?? EMPTY_LOOKUPS;
   });
@@ -72,13 +94,14 @@ export function useAnalyticsSectionState(currentUserId: string) {
 
   const analyticsRequest = useMemo(
     () => ({
+      basisMonth,
       contractType,
       headquarterId,
       period,
       query: deferredQuery.trim(),
       userId,
     }),
-    [contractType, deferredQuery, headquarterId, period, userId],
+    [basisMonth, contractType, deferredQuery, headquarterId, period, userId],
   );
   const requestKey = useMemo(() => JSON.stringify(analyticsRequest), [analyticsRequest]);
   const [analyticsState, setAnalyticsState] = useState<{
@@ -198,7 +221,9 @@ export function useAnalyticsSectionState(currentUserId: string) {
   const hasVisibleAnalytics =
     analyticsState.resolvedRequestKey.length > 0 ||
     Boolean(cachedAnalyticsForRequest) ||
+    analytics.availableMonths.length > 0 ||
     analytics.availableTrendYears.length > 0 ||
+    analytics.monthSlices.length > 0 ||
     analytics.summaryCards.length > 0 ||
     analytics.employeeRows.length > 0 ||
     analytics.siteRevenueRows.length > 0;
@@ -230,24 +255,40 @@ export function useAnalyticsSectionState(currentUserId: string) {
     [contractType, contractTypeOptions, headquarterId, headquarterOptions, period, query, userId, userOptions],
   );
   const todayYear = new Date().getFullYear();
+  const setBasisMonth = (nextMonth: string) => {
+    setBasisMonthState(nextMonth);
+    const nextParams = new URLSearchParams(searchParams.toString());
+    if (nextMonth && nextMonth !== todayMonth) {
+      nextParams.set('basisMonth', nextMonth);
+    } else {
+      nextParams.delete('basisMonth');
+    }
+    const nextQuery = nextParams.toString();
+    router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
+  };
 
   useEffect(() => {
-    setChartYear((current) =>
-      normalizeYearSelection(current, analytics.availableTrendYears, todayYear),
+    setBasisMonthState((current) =>
+      normalizeBasisMonthSelection(
+        current || analytics.basisMonth,
+        analytics.availableMonths,
+        todayMonth,
+      ),
     );
-  }, [analytics.availableTrendYears, todayYear]);
+  }, [analytics.availableMonths, analytics.basisMonth, todayMonth]);
 
   const activeChartSlice = useMemo(() => {
+    const targetYear = Number.parseInt((basisMonth || todayMonth).slice(0, 4), 10) || todayYear;
     if (analytics.chartYearSlices.length === 0) {
       return {
         employeeRows: analytics.employeeRows,
         siteRevenueRows: analytics.siteRevenueRows,
         trendRows: analytics.trendRows,
-        year: normalizeYearSelection(chartYear, analytics.availableTrendYears, todayYear),
+        year: normalizeYearSelection(targetYear, analytics.availableTrendYears, todayYear),
       };
     }
     return (
-      analytics.chartYearSlices.find((slice) => slice.year === chartYear) ??
+      analytics.chartYearSlices.find((slice) => slice.year === targetYear) ??
       analytics.chartYearSlices[0]
     );
   }, [
@@ -256,17 +297,27 @@ export function useAnalyticsSectionState(currentUserId: string) {
     analytics.employeeRows,
     analytics.siteRevenueRows,
     analytics.trendRows,
-    chartYear,
+    basisMonth,
+    todayMonth,
     todayYear,
   ]);
+  const activeMonthSlice = useMemo(
+    () =>
+      analytics.monthSlices.find((slice) => slice.monthKey === basisMonth) ?? {
+        employeeRows: analytics.employeeRows,
+        monthKey: basisMonth,
+        siteRevenueRows: analytics.siteRevenueRows,
+      },
+    [analytics.employeeRows, analytics.monthSlices, analytics.siteRevenueRows, basisMonth],
+  );
 
   const sortedEmployeeRows = useMemo(
-    () => sortEmployeeRows(analytics.employeeRows, employeeSort),
-    [analytics.employeeRows, employeeSort],
+    () => sortEmployeeRows(activeMonthSlice.employeeRows, employeeSort),
+    [activeMonthSlice.employeeRows, employeeSort],
   );
   const sortedSiteRevenueRows = useMemo(
-    () => sortSiteRevenueRows(analytics.siteRevenueRows, siteRevenueSort),
-    [analytics.siteRevenueRows, siteRevenueSort],
+    () => sortSiteRevenueRows(activeMonthSlice.siteRevenueRows, siteRevenueSort),
+    [activeMonthSlice.siteRevenueRows, siteRevenueSort],
   );
   const employeeTotalPages = Math.max(1, Math.ceil(sortedEmployeeRows.length / DETAIL_PAGE_SIZE));
   const siteSummaryRow = sortedSiteRevenueRows.find((row) => row.isSummaryRow) ?? null;
@@ -283,11 +334,11 @@ export function useAnalyticsSectionState(currentUserId: string) {
 
   useEffect(() => {
     setEmployeePage(1);
-  }, [analytics.employeeRows, contractType, employeeSort, headquarterId, period, requestKey, userId]);
+  }, [activeMonthSlice.employeeRows, basisMonth, contractType, employeeSort, headquarterId, period, requestKey, userId]);
 
   useEffect(() => {
     setSiteRevenuePage(1);
-  }, [analytics.siteRevenueRows, contractType, headquarterId, period, requestKey, siteRevenueSort, userId]);
+  }, [activeMonthSlice.siteRevenueRows, basisMonth, contractType, headquarterId, period, requestKey, siteRevenueSort, userId]);
 
   const pagedEmployeeRows = useMemo(() => {
     const startIndex = (employeePage - 1) * DETAIL_PAGE_SIZE;
@@ -319,8 +370,10 @@ export function useAnalyticsSectionState(currentUserId: string) {
 
   return {
     activeChartSlice,
+    activeMonthSlice,
     activeFilterCount,
     analytics,
+    basisMonth,
     chartYear: activeChartSlice.year,
     contractType,
     contractTypeOptions,
@@ -342,7 +395,7 @@ export function useAnalyticsSectionState(currentUserId: string) {
     queryInput,
     resetHeaderFilters,
     scopeChips,
-    setChartYear,
+    setBasisMonth,
     setContractType,
     setDetailView,
     setEmployeePage,

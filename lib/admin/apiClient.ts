@@ -258,6 +258,7 @@ export function fetchAdminSitesList(input: {
 }
 
 export function fetchAdminAnalytics(input: {
+  basisMonth?: string;
   contractType?: string;
   headquarterId?: string;
   period?: string;
@@ -266,6 +267,7 @@ export function fetchAdminAnalytics(input: {
 }, options: RequestInit = {}) {
   return requestAdminApi<SafetyAdminAnalyticsResponse>(
     `/dashboard/analytics${buildQueryString({
+      basis_month: input.basisMonth,
       contract_type: input.contractType,
       headquarter_id: input.headquarterId,
       period: input.period,

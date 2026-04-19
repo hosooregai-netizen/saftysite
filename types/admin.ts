@@ -502,6 +502,12 @@ export interface AdminAnalyticsChartYearSlice {
   year: number;
 }
 
+export interface AdminAnalyticsMonthSlice {
+  employeeRows: AdminAnalyticsEmployeeRow[];
+  monthKey: string;
+  siteRevenueRows: AdminAnalyticsSiteRevenueRow[];
+}
+
 export interface AdminAnalyticsEmployeeRow {
   assignedSiteCount: number;
   avgPerVisitAmount: number;
@@ -560,10 +566,13 @@ export interface AdminAnalyticsStats {
 }
 
 export interface SafetyAdminAnalyticsResponse {
+  availableMonths: string[];
   availableTrendYears: number[];
+  basisMonth: string;
   chartYearSlices: AdminAnalyticsChartYearSlice[];
   contractTypeRows: AdminAnalyticsContractTypeRow[];
   employeeRows: AdminAnalyticsEmployeeRow[];
+  monthSlices: AdminAnalyticsMonthSlice[];
   siteRevenueRows: AdminAnalyticsSiteRevenueRow[];
   stats: AdminAnalyticsStats;
   summaryCards: AdminAnalyticsSummaryCard[];

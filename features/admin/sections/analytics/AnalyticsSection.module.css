@@ -206,6 +206,27 @@
   box-shadow: 0 1px 3px rgba(18, 35, 58, 0.08);
 }
 
+.analyticsMonthNav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.analyticsMonthBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--erp-line);
+  border-radius: 999px;
+  background: #f8fafc;
+  font-size: var(--text-ui);
+  font-weight: 700;
+  color: var(--erp-dark);
+}
+
 .detailTable {
   width: 100%;
   min-width: 0;

@@ -15,6 +15,12 @@ interface HeadquarterContributionRow {
   visitRevenue: number;
 }
 
+function formatBasisMonthLabel(value: string) {
+  const [year, month] = value.split('-').map(Number);
+  if (!year || !month) return value;
+  return `${year}년 ${month}월`;
+}
+
 function formatCompactCurrency(value: number) {
   const rounded = Math.round(value);
   if (rounded >= 100_000_000) return `${Math.round(rounded / 100_000_000).toLocaleString('ko-KR')}억`;
@@ -30,11 +36,11 @@ function formatDelta(value: number | null) {
 }
 
 export function AnalyticsEmployeeContributionCard({
+  basisMonth,
   rows,
-  year,
 }: {
+  basisMonth: string;
   rows: AdminAnalyticsEmployeeRow[];
-  year: number;
 }) {
   const topRows = [...rows]
     .filter((row) => row.visitRevenue > 0 || row.executedRounds > 0)
@@ -53,7 +59,7 @@ export function AnalyticsEmployeeContributionCard({
       <div className={styles.surfaceHeader}>
         <div className={styles.surfaceHeaderText}>
           <h3 className={styles.surfaceTitle}>직원별 매출 기여도 Top 10</h3>
-          <p className={styles.surfaceMeta}>{year}년 기준 매출, 실회차 수, 평균 회차 단가, 전년 대비</p>
+          <p className={styles.surfaceMeta}>{formatBasisMonthLabel(basisMonth)} 기준 매출, 실회차 수, 평균 회차 단가, 전년 대비</p>
         </div>
       </div>
       <div className={styles.list}>
@@ -76,11 +82,11 @@ export function AnalyticsEmployeeContributionCard({
 }
 
 export function AnalyticsSiteContributionCard({
+  basisMonth,
   rows,
-  year,
 }: {
+  basisMonth: string;
   rows: AdminAnalyticsSiteRevenueRow[];
-  year: number;
 }) {
   const topRows = Array.from(
     [...rows]
@@ -132,7 +138,7 @@ export function AnalyticsSiteContributionCard({
       <div className={styles.surfaceHeader}>
         <div className={styles.surfaceHeaderText}>
           <h3 className={styles.surfaceTitle}>상위 매출 사업장 Top 10</h3>
-          <p className={styles.surfaceMeta}>{year}년 기준 건설사 합산 매출, 실회차 수, 담당 현장 중심</p>
+          <p className={styles.surfaceMeta}>{formatBasisMonthLabel(basisMonth)} 기준 건설사 합산 매출, 실회차 수, 담당 현장 중심</p>
         </div>
       </div>
       <div className={styles.list}>
