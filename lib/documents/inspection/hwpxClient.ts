@@ -7,6 +7,12 @@ import { getSessionGuidanceDate } from '@/constants/inspectionSession';
 import { FIXED_SCENE_COUNT } from '@/constants/inspectionSession/catalog';
 import { CAUSATIVE_AGENT_LABELS } from '@/constants/inspectionSession/doc7Catalog';
 import { getExtraSceneTitle } from '@/constants/inspectionSession/scenePhotos';
+import {
+  getInspectionTemplateFilename,
+  INSPECTION_TEMPLATE_IMAGE_DONOR_FILENAME,
+  selectInspectionTemplateVariant,
+  type InspectionTemplateVariant,
+} from '@/lib/documents/inspection/templateVariant';
 import type { ChecklistRating, InspectionSession } from '@/types/inspectionSession';
 
 const DOC5_CHART_TOP_N = 5;
@@ -102,10 +108,9 @@ const DOC5_CHART_LEGEND_LABEL_GAP = 30;
 
 const HWPX_GENERATION_MODE: 'template_native' | 'advanced' = 'advanced';
 const IMAGE_BINDING_MODE: 'embedded' | 'text_only' = 'embedded';
-const TEMPLATE_FILENAME = '\uAE30\uC220\uC9C0\uB3C4 \uC218\uB3D9\uBCF4\uACE0\uC11C \uC571 - \uC11C\uC2DD_4.annotated.v8.hwpx';
-const TEMPLATE_URL = `/templates/inspection/${encodeURIComponent(TEMPLATE_FILENAME)}`;
-const TEMPLATE_IMAGE_DONOR_FILENAME = '\uAE30\uC220\uC9C0\uB3C4 \uC218\uB3D9\uBCF4\uACE0\uC11C \uC571 - \uC11C\uC2DD_4.annotated.v6.hwpx';
-const TEMPLATE_IMAGE_DONOR_URL = `/templates/inspection/${encodeURIComponent(TEMPLATE_IMAGE_DONOR_FILENAME)}`;
+const TEMPLATE_IMAGE_DONOR_URL = `/templates/inspection/${encodeURIComponent(
+  INSPECTION_TEMPLATE_IMAGE_DONOR_FILENAME,
+)}`;
 const BLANK_PNG_BASE64 =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5cH7QAAAAASUVORK5CYII=';
 const BLANK_JPEG_BASE64 =
@@ -164,6 +169,10 @@ const COVER_PAGE_NUMBER_HIDING_CONTROL =
   '<hp:ctrl><hp:pageHiding hideHeader="0" hideFooter="0" hideMasterPage="0" hideBorder="0" hideFill="0" hidePageNum="1"/></hp:ctrl>';
 const COVER_FOOTER_HIDING_CONTROL =
   '<hp:ctrl><hp:pageHiding hideHeader="0" hideFooter="1" hideMasterPage="0" hideBorder="0" hideFill="0" hidePageNum="0"/></hp:ctrl>';
+
+function buildTemplateUrl(variant: InspectionTemplateVariant): string {
+  return `/templates/inspection/${encodeURIComponent(getInspectionTemplateFilename(variant))}`;
+}
 
 const WORK_PLAN_PLACEHOLDERS = [
   { sourceKey: 'towerCrane', placeholderPath: 'sec2.work_plan_checks.tower_crane' },
@@ -268,6 +277,7 @@ const LEGACY_TEMPLATE_IMAGE_REPAIRS = [
 const TEXT_PLACEHOLDERS = [
   'footer.visit_page_prefix',
   'cover.site_name',
+  'cover.client_representative_name',
   'cover.report_date',
   'cover.drafter',
   'cover.reviewer',
@@ -357,7 +367,7 @@ const TEXT_PLACEHOLDERS = [
 const TEMPLATE_TEXT_TOKEN_SET = new Set<string>(TEXT_PLACEHOLDERS);
 const TEMPLATE_REPEAT_TOKEN_SET = new Set<string>(REPEAT_BLOCKS);
 
-const TEMPLATE_IMAGE_PLACEHOLDERS: TemplateImagePlaceholder[] = [
+const BASE_TEMPLATE_IMAGE_PLACEHOLDERS: TemplateImagePlaceholder[] = [
   { table: 2, row: 2, col: 0, placeholderPath: 'sec3.fixed[0].photo_image', binaryItemId: 'tplimg01' },
   { table: 2, row: 2, col: 1, placeholderPath: 'sec3.fixed[1].photo_image', binaryItemId: 'tplimg02' },
   { table: 2, row: 4, col: 0, placeholderPath: 'sec3.extra[0].photo_image', binaryItemId: 'tplimg03' },
@@ -526,6 +536,38 @@ const TEMPLATE_IMAGE_PLACEHOLDERS: TemplateImagePlaceholder[] = [
     optional: true,
   },
 ];
+
+function getTemplateImagePlaceholders(
+  variant: InspectionTemplateVariant,
+): TemplateImagePlaceholder[] {
+  if (variant === 'v9-1') {
+    return [
+      ...BASE_TEMPLATE_IMAGE_PLACEHOLDERS,
+      {
+        table: 7,
+        row: 18,
+        col: 0,
+        donorTable: 5,
+        donorRow: 8,
+        donorCol: 0,
+        placeholderPath: 'sec10.accident_tracking.photo_image',
+        binaryItemId: 'tplimg34',
+      },
+      {
+        table: 7,
+        row: 18,
+        col: 2,
+        donorTable: 5,
+        donorRow: 8,
+        donorCol: 5,
+        placeholderPath: 'sec10.accident_tracking.photo_image_2',
+        binaryItemId: 'tplimg35',
+      },
+    ];
+  }
+
+  return BASE_TEMPLATE_IMAGE_PLACEHOLDERS;
+}
 
 function valueOrBlank(value: unknown): string {
   return typeof value === 'string' ? value.trim() : '';
@@ -1367,6 +1409,7 @@ function mapSessionToTemplateBinding(session: InspectionSession): TemplateBindin
   text['cover.site_name'] = valueOrDash(
     `${session.meta.siteName || site.siteName}${site.isHighRiskSite ? ' (고위험 사업장)' : ''}`.trim(),
   );
+  text['cover.client_representative_name'] = valueOrDash(site.clientRepresentativeName);
   text['cover.report_date'] = valueOrDash(
     formatDateText(getSessionGuidanceDate(session)),
   );
@@ -1533,6 +1576,9 @@ function mapSessionToTemplateBinding(session: InspectionSession): TemplateBindin
     text[`sec9.risk_assessment[${index}].note`] = valueOrBlank(item.note);
   });
 
+  images['sec10.accident_tracking.photo_image'] = valueOrBlank(overview.accidentPhotoUrl);
+  images['sec10.accident_tracking.photo_image_2'] = valueOrBlank(overview.accidentPhotoUrl2);
+
   const measurements = ensureRepeatItems(session.document10Measurements, createEmptyMeasurement);
   repeatCounts['sec10.measurements'] = measurements.length;
   measurements.forEach((item, index) => {
@@ -1599,6 +1645,7 @@ function mapSessionToTemplateBinding(session: InspectionSession): TemplateBindin
 function expandRepeatBlocks(
   xml: string,
   repeatCounts: Record<RepeatBlockPath, number>,
+  imagePlaceholders: TemplateImagePlaceholder[],
   sourceBinaryByPlaceholderPath: Record<string, string> = {},
 ): {
   xml: string;
@@ -1606,7 +1653,9 @@ function expandRepeatBlocks(
   sourceBinaryByPlaceholderPath: Record<string, string>;
 } {
   let currentXml = xml;
-  const expandedImagePlaceholders = TEMPLATE_IMAGE_PLACEHOLDERS.filter((item) => !item.repeatBlockPath).map((item) => ({ ...item }));
+  const expandedImagePlaceholders = imagePlaceholders
+    .filter((item) => !item.repeatBlockPath)
+    .map((item) => ({ ...item }));
   const expandedSourceBinaryByPlaceholderPath: Record<string, string> = { ...sourceBinaryByPlaceholderPath };
 
   for (const repeatBlockPath of REPEAT_BLOCKS) {
@@ -1614,7 +1663,9 @@ function expandRepeatBlocks(
     const endMarker = `{/${repeatBlockPath}}`;
     const startIndex = currentXml.indexOf(startMarker);
     const endIndex = currentXml.indexOf(endMarker, startIndex >= 0 ? startIndex : 0);
-    const repeatImagePlaceholders = TEMPLATE_IMAGE_PLACEHOLDERS.filter((item) => item.repeatBlockPath === repeatBlockPath);
+    const repeatImagePlaceholders = imagePlaceholders.filter(
+      (item) => item.repeatBlockPath === repeatBlockPath,
+    );
 
     if (startIndex === -1 || endIndex === -1 || endIndex < startIndex) {
       // v8 keeps sec11/sec12 as fixed single-page tables, so their image slots must
@@ -2363,6 +2414,56 @@ function replaceLocatedTemplateCell(
   return `${xml.slice(0, located.tableSpan.start)}${patchedTableXml}${xml.slice(located.tableSpan.end)}`;
 }
 
+function ensureCoverClientRepresentativePlaceholder(sectionXml: string): string {
+  if (sectionXml.includes('{cover.client_representative_name}')) {
+    return sectionXml;
+  }
+
+  return sectionXml.replace(
+    /(<hp:t>발주자 :<\/hp:t>[\s\S]*?<hp:t>)([\s\S]*?)(<\/hp:t>)/,
+    (_match, prefix: string, _currentValue: string, suffix: string) =>
+      `${prefix}{cover.client_representative_name}${suffix}`,
+  );
+}
+
+function stripPlaceholderFromTemplateCell(
+  sectionXml: string,
+  descriptor: Pick<TemplateImagePlaceholder, 'table' | 'row' | 'col'>,
+  placeholder: string,
+): string {
+  const located = locateTemplateCell(sectionXml, descriptor);
+  if (!located || !located.cellXml.includes(placeholder)) {
+    return sectionXml;
+  }
+
+  const patchedCellXml = located.cellXml
+    .replace(new RegExp(`\\s*\\{${placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\}`), '')
+    .replace(/\s+<\/hp:t>/g, '</hp:t>');
+  return replaceLocatedTemplateCell(sectionXml, located, patchedCellXml);
+}
+
+function applyVariantTemplateAnnotations(
+  sectionXml: string,
+  variant: InspectionTemplateVariant,
+): string {
+  let nextSectionXml = ensureCoverClientRepresentativePlaceholder(sectionXml);
+
+  if (variant === 'v9-1') {
+    nextSectionXml = stripPlaceholderFromTemplateCell(
+      nextSectionXml,
+      { table: 7, row: 19, col: 0 },
+      'sec10.accident_tracking.occurrence_part',
+    );
+    nextSectionXml = stripPlaceholderFromTemplateCell(
+      nextSectionXml,
+      { table: 7, row: 19, col: 2 },
+      'sec10.accident_tracking.implementation_status',
+    );
+  }
+
+  return nextSectionXml;
+}
+
 function normalizeNotificationSignatureTextRun(cellXml: string): string {
   return cellXml.replace(
     /<hp:run\b[^>]*charPrIDRef="(\d+)"[^>]*><hp:t>([^<]*?\{sec2\.notification_recipient_name\}[^<]*?)(\s*\/서명)(\s*)\{sec2\.notification_recipient_signature\}([^<]*)<\/hp:t><\/hp:run>/,
@@ -2483,12 +2584,13 @@ function replaceCellImageBinaryRef(
 function restoreMissingTemplateImageSlots(
   sectionXml: string,
   donorSectionXml: string,
+  imagePlaceholders: TemplateImagePlaceholder[],
 ): { sectionXml: string; restoredCount: number } {
   let nextSectionXml = sectionXml;
   let restoredCount = 0;
   const seenCells = new Set<string>();
 
-  for (const descriptor of TEMPLATE_IMAGE_PLACEHOLDERS) {
+  for (const descriptor of imagePlaceholders) {
     if (descriptor.optional) {
       continue;
     }
@@ -2526,13 +2628,14 @@ async function normalizeTemplateImageSlots(
   sectionXml: string,
   contentHpf: string,
   warnings: string[],
+  imagePlaceholders: TemplateImagePlaceholder[],
 ): Promise<{ sectionXml: string; contentHpf: string; sourceBinaryByPlaceholderPath: Record<string, string> }> {
   let nextSectionXml = sectionXml;
   let nextContentHpf = contentHpf;
   const manifestItems = parseManifestItems(contentHpf);
   const sourceBinaryByPlaceholderPath: Record<string, string> = {};
 
-  for (const descriptor of TEMPLATE_IMAGE_PLACEHOLDERS) {
+  for (const descriptor of imagePlaceholders) {
     const replaced = replaceCellImageBinaryRef(nextSectionXml, descriptor);
     if (!replaced.found) {
       if (!descriptor.optional) {
@@ -2887,8 +2990,8 @@ function repairLegacyContentHpfMetadata(contentHpf: string): string {
   return nextContentHpf;
 }
 
-async function loadTemplateBuffer(): Promise<ArrayBuffer> {
-  const response = await fetch(`${TEMPLATE_URL}?ts=${Date.now()}`, { cache: 'no-store' });
+async function loadTemplateBuffer(variant: InspectionTemplateVariant): Promise<ArrayBuffer> {
+  const response = await fetch(`${buildTemplateUrl(variant)}?ts=${Date.now()}`, { cache: 'no-store' });
   if (!response.ok) {
     throw new Error(`HWPX template download failed: ${response.status} ${response.statusText}`);
   }
@@ -2909,9 +3012,11 @@ export async function generateInspectionHwpxBlob(
   session: InspectionSession,
   _siteSessions: InspectionSession[] = [session],
 ): Promise<{ blob: Blob; filename: string; warnings: string[]; deferred: string[] }> {
+  const templateVariant = selectInspectionTemplateVariant(session);
+  const templateImagePlaceholders = getTemplateImagePlaceholders(templateVariant);
   const binding = mapSessionToTemplateBinding(session);
   Object.assign(binding.images, buildDoc5ChartImages(session, _siteSessions));
-  const templateBuffer = await loadTemplateBuffer();
+  const templateBuffer = await loadTemplateBuffer(templateVariant);
   const zip = await JSZip.loadAsync(templateBuffer);
   const sectionEntry = zip.file('Contents/section0.xml');
   const headerEntry = zip.file('Contents/header.xml');
@@ -2934,8 +3039,12 @@ export async function generateInspectionHwpxBlob(
     HWPX_GENERATION_MODE === 'advanced' && IMAGE_BINDING_MODE === 'embedded'
       ? ensureNotificationSignatureImageSlot(sectionXmlWithDoc5Charts)
       : sectionXmlWithDoc5Charts;
-  const sectionXmlWithVisitCountFooter = applyVisitCountPageFooter(
+  const sectionXmlWithVariantAnnotations = applyVariantTemplateAnnotations(
     sectionXmlWithTemplateOverlays,
+    templateVariant,
+  );
+  const sectionXmlWithVisitCountFooter = applyVisitCountPageFooter(
+    sectionXmlWithVariantAnnotations,
     visitCountFooterParaPrId,
   );
   const contentHpf = await contentEntry.async('string');
@@ -2966,7 +3075,11 @@ export async function generateInspectionHwpxBlob(
     let boundContentHpf = contentHpfWithRepairs;
 
     if (IMAGE_BINDING_MODE === 'text_only') {
-      const expanded = expandRepeatBlocks(sectionXmlWithVisitCountFooter, binding.repeatCounts);
+      const expanded = expandRepeatBlocks(
+        sectionXmlWithVisitCountFooter,
+        binding.repeatCounts,
+        templateImagePlaceholders,
+      );
       boundSectionXml = stripLineSegArrays(
         replaceTextPlaceholders(applyTemplateTextQuirks(expanded.xml), binding.text),
       );
@@ -2978,7 +3091,11 @@ export async function generateInspectionHwpxBlob(
         throw new Error('The HWPX image donor template is missing Contents/section0.xml.');
       }
       const donorSectionXml = await donorSectionEntry.async('string');
-      const restored = restoreMissingTemplateImageSlots(sectionXmlWithVisitCountFooter, donorSectionXml);
+      const restored = restoreMissingTemplateImageSlots(
+        sectionXmlWithVisitCountFooter,
+        donorSectionXml,
+        templateImagePlaceholders,
+      );
       if (restored.restoredCount > 0) {
         binding.warnings.push(`Restored ${restored.restoredCount} missing image slot(s) from the v6 donor template.`);
       }
@@ -2988,8 +3105,14 @@ export async function generateInspectionHwpxBlob(
         restored.sectionXml,
         contentHpfWithTemplateImageRepairs,
         binding.warnings,
+        templateImagePlaceholders,
       );
-      const expanded = expandRepeatBlocks(normalized.sectionXml, binding.repeatCounts, normalized.sourceBinaryByPlaceholderPath);
+      const expanded = expandRepeatBlocks(
+        normalized.sectionXml,
+        binding.repeatCounts,
+        templateImagePlaceholders,
+        normalized.sourceBinaryByPlaceholderPath,
+      );
       boundSectionXml = stripLineSegArrays(
         replaceTextPlaceholders(applyTemplateTextQuirks(expanded.xml), binding.text),
       );

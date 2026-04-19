@@ -25,6 +25,9 @@ export function normalizeInspectionSite(raw: unknown): InspectionSite {
     clientBusinessName:
       normalizeText(snapshotSource.clientBusinessName) ||
       normalizeText(source.clientBusinessName),
+    clientRepresentativeName:
+      normalizeText(snapshotSource.clientRepresentativeName) ||
+      normalizeText(source.clientRepresentativeName),
     siteName: normalizeText(snapshotSource.siteName) || normalizeText(source.siteName) || normalizeText(source.title),
     assigneeName: normalizeText(snapshotSource.assigneeName) || normalizeText(source.assigneeName),
     siteManagementNumber: normalizeText(snapshotSource.siteManagementNumber),

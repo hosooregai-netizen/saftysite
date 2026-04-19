@@ -44,6 +44,7 @@ export interface InspectionReportMeta {
 export interface AdminSiteSnapshot {
   customerName: string;
   clientBusinessName: string;
+  clientRepresentativeName: string;
   siteName: string;
   assigneeName: string;
   siteManagementNumber: string;

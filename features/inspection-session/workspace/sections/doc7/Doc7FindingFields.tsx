@@ -23,6 +23,24 @@ interface Doc7FindingFieldsProps {
 
 type ReferencePreviewKind = 'reference1' | 'reference2' | null;
 
+const DOC7_TEMPLATE_LABELS = {
+  reference1Fallback: '\uAD00\uB828 \uC911\uB300\uC7AC\uD574 \uC0AC\uB840',
+  reference2Fallback: '\uC608\uBC29\uB300\uCC45',
+  referenceEmpty: '\uC790\uB3D9 \uB9E4\uCE6D\uB41C \uCC38\uACE0\uC790\uB8CC\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.',
+  inspectorEmphasis: '\uC9C0\uB3C4\uC694\uC6D0 \uAC15\uC870\uC0AC\uD56D',
+  hazard: '\uC704\uD5D8\uC694\uC778',
+  controlMeasure: '\uAD00\uB9AC\uB300\uCC45',
+  legalReference: '\uCC38\uACE0\uBC95\uB839',
+  legalPlaceholder:
+    '\uBC95\uB839 \uC81C\uBAA9\uC740 \uC27C\uD45C \uB610\uB294 \uC904\uBC14\uAFC8\uC73C\uB85C \uAD6C\uBD84\uD574 \uC785\uB825',
+  reference1Label: '\uAD00\uB828 \uC911\uB300\uC7AC\uD574 \uC0AC\uB840',
+  reference1PreviewAria: '\uAD00\uB828 \uC911\uB300\uC7AC\uD574 \uC0AC\uB840 \uBBF8\uB9AC\uBCF4\uAE30',
+  reference2Label: '\uC608\uBC29\uB300\uCC45',
+  reference2PreviewAria: '\uC608\uBC29\uB300\uCC45 \uBBF8\uB9AC\uBCF4\uAE30',
+  close: '\uB2EB\uAE30',
+  previewEmpty: '\uD45C\uC2DC\uD560 \uCC38\uACE0\uC790\uB8CC\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.',
+} as const;
+
 function decodeReferenceFileName(value: string): string {
   const normalized = value.trim();
   if (!normalized) {
@@ -81,8 +99,8 @@ export function Doc7FindingFields({
 
     return (
       decodeReferenceFileName(referenceImageValue) ||
-      buildShortReferenceLabel(referenceImageValue, '참고자료 이미지') ||
-      '참고자료 이미지'
+      buildShortReferenceLabel(referenceImageValue, DOC7_TEMPLATE_LABELS.reference1Fallback) ||
+      DOC7_TEMPLATE_LABELS.reference1Fallback
     );
   }, [referenceImageValue, referenceMaterial1Title]);
   const reference2Label = useMemo(() => {
@@ -95,15 +113,16 @@ export function Doc7FindingFields({
     }
 
     return (
-      buildShortReferenceLabel(referenceDescriptionValue, '참고자료 설명') ||
-      '참고자료 설명'
+      buildShortReferenceLabel(
+        referenceDescriptionValue,
+        DOC7_TEMPLATE_LABELS.reference2Fallback,
+      ) || DOC7_TEMPLATE_LABELS.reference2Fallback
     );
   }, [referenceDescriptionValue, referenceMaterial2Title]);
   const hasReferencePreviewImage = isImageValue(referenceImageValue);
-  const referenceImageDisplay =
-    reference1Label || '자동 매칭된 참고자료가 없습니다.';
+  const referenceImageDisplay = reference1Label || DOC7_TEMPLATE_LABELS.referenceEmpty;
   const referenceDescriptionDisplay =
-    reference2Label || '자동 매칭된 참고자료가 없습니다.';
+    reference2Label || DOC7_TEMPLATE_LABELS.referenceEmpty;
 
   return (
     <>
@@ -208,7 +227,7 @@ export function Doc7FindingFields({
               <tbody>
                 <tr>
                   <th scope="row" className={styles.doc7LabelCell}>
-                    유해위험요인
+                    {DOC7_TEMPLATE_LABELS.inspectorEmphasis}
                   </th>
                   <td className={styles.doc7ValueCell}>
                     <textarea
@@ -226,7 +245,7 @@ export function Doc7FindingFields({
                 </tr>
                 <tr>
                   <th scope="row" className={styles.doc7LabelCell}>
-                    개선요구사항
+                    {DOC7_TEMPLATE_LABELS.hazard}
                   </th>
                   <td className={styles.doc7ValueCell}>
                     <textarea
@@ -246,11 +265,7 @@ export function Doc7FindingFields({
                 </tr>
                 <tr>
                   <th scope="row" className={styles.doc7LabelCell}>
-                    <>
-                      중점관리 위험요인 및
-                      <br />
-                      관리대책
-                    </>
+                    {DOC7_TEMPLATE_LABELS.controlMeasure}
                   </th>
                   <td className={styles.doc7ValueCell}>
                     <textarea
@@ -268,14 +283,14 @@ export function Doc7FindingFields({
                 </tr>
                 <tr>
                   <th scope="row" className={styles.doc7LabelCell}>
-                    관계 법령
+                    {DOC7_TEMPLATE_LABELS.legalReference}
                   </th>
                   <td className={styles.doc7ValueCell}>
                     <input
                       type="text"
                       className="app-input"
                       value={item.legalReferenceTitle}
-                      placeholder="법령 제목은 쉼표 또는 줄바꿈으로 구분해 입력"
+                      placeholder={DOC7_TEMPLATE_LABELS.legalPlaceholder}
                       onChange={(event) =>
                         updateFinding((finding) => ({
                           ...finding,
@@ -303,7 +318,7 @@ export function Doc7FindingFields({
               <tbody>
                 <tr>
                   <th scope="row" className={styles.doc7LabelCell}>
-                    참고자료 이미지
+                    {DOC7_TEMPLATE_LABELS.reference1Label}
                   </th>
                   <td className={styles.doc7ValueCell}>
                     <div className={styles.doc7ReferenceValueRow}>
@@ -319,7 +334,7 @@ export function Doc7FindingFields({
                         className={styles.doc7ReferencePreviewButton}
                         onClick={() => setPreviewKind('reference1')}
                         disabled={!referenceImageValue.trim()}
-                        aria-label="참고자료 이미지 미리보기"
+                        aria-label={DOC7_TEMPLATE_LABELS.reference1PreviewAria}
                       >
                         <PicturePreviewIcon />
                       </button>
@@ -328,7 +343,7 @@ export function Doc7FindingFields({
                 </tr>
                 <tr>
                   <th scope="row" className={styles.doc7LabelCell}>
-                    참고자료 설명
+                    {DOC7_TEMPLATE_LABELS.reference2Label}
                   </th>
                   <td className={styles.doc7ValueCell}>
                     <div className={styles.doc7ReferenceValueRow}>
@@ -344,7 +359,7 @@ export function Doc7FindingFields({
                         className={styles.doc7ReferencePreviewButton}
                         onClick={() => setPreviewKind('reference2')}
                         disabled={!referenceDescriptionValue.trim()}
-                        aria-label="참고자료 설명 미리보기"
+                        aria-label={DOC7_TEMPLATE_LABELS.reference2PreviewAria}
                       >
                         <PicturePreviewIcon />
                       </button>
@@ -361,8 +376,8 @@ export function Doc7FindingFields({
         open={previewKind !== null}
         title={
           previewKind === 'reference1'
-            ? reference1Label || '참고자료 이미지'
-            : reference2Label || '참고자료 설명'
+            ? reference1Label || DOC7_TEMPLATE_LABELS.reference1Label
+            : reference2Label || DOC7_TEMPLATE_LABELS.reference2Label
         }
         size="large"
         onClose={() => setPreviewKind(null)}
@@ -372,7 +387,7 @@ export function Doc7FindingFields({
             className="app-button app-button-primary"
             onClick={() => setPreviewKind(null)}
           >
-            닫기
+            {DOC7_TEMPLATE_LABELS.close}
           </button>
         }
       >
@@ -382,19 +397,19 @@ export function Doc7FindingFields({
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={referenceImageValue}
-                alt={reference1Label || '참고자료 이미지'}
+                alt={reference1Label || DOC7_TEMPLATE_LABELS.reference1Label}
                 className={styles.doc7ReferencePreviewImage}
               />
             ) : (
               <div className={styles.doc7ReferencePreviewText}>
-                {referenceImageValue || '표시할 참고자료가 없습니다.'}
+                {referenceImageValue || DOC7_TEMPLATE_LABELS.previewEmpty}
               </div>
             )}
           </div>
         ) : (
           <div className={styles.doc7ReferencePreviewModal}>
             <div className={styles.doc7ReferencePreviewText}>
-              {referenceDescriptionValue || '표시할 참고자료가 없습니다.'}
+              {referenceDescriptionValue || DOC7_TEMPLATE_LABELS.previewEmpty}
             </div>
           </div>
         )}

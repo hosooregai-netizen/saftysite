@@ -32,6 +32,7 @@ export function mapSafetySiteToAdminSnapshot(site: SafetySite): AdminSiteSnapsho
       normalizeMapperText(site.client_business_name) ||
       headquarterName,
     clientBusinessName: normalizeMapperText(site.client_business_name),
+    clientRepresentativeName: normalizeMapperText(site.client_representative_name),
     siteName: normalizeMapperText(site.site_name),
     assigneeName,
     siteManagementNumber:

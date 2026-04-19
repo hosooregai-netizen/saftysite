@@ -112,6 +112,7 @@ export function createEmptyAdminSiteSnapshot(
   return {
     customerName: '',
     clientBusinessName: '',
+    clientRepresentativeName: '',
     siteName: '',
     assigneeName: '',
     siteManagementNumber: '',

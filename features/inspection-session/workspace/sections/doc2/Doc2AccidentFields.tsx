@@ -6,6 +6,7 @@ import styles from '@/components/session/InspectionSessionWorkspace.module.css';
 import type { OverviewSectionProps } from '@/components/session/workspace/types';
 import Doc2AccidentDatePicker from '@/components/session/workspace/sections/Doc2AccidentDatePicker';
 import { updateOverviewField } from '@/components/session/workspace/sections/doc2Shared';
+import { UploadBox } from '@/components/session/workspace/widgets';
 import AppModal from '@/components/ui/AppModal';
 import {
   buildDoc2ProcessNotesDraft,
@@ -20,6 +21,11 @@ interface Doc2ProcessNotesResponse {
   riskLines?: string[];
   error?: string;
 }
+
+const ACCIDENT_TRACKING_LABELS = {
+  occurrencePart: '\uC0AC\uACE0\uBC1C\uC0DD \uBD80\uC704',
+  implementationStatus: '\uD604\uC7AC \uC774\uD589\uC0C1\uD0DC',
+} as const;
 
 async function generateDoc2RiskLines(input: {
   processWorkContent: string;
@@ -109,6 +115,16 @@ export function Doc2AccidentFields({ props }: Doc2AccidentFieldsProps) {
     setIsProcessNotesModalOpen(false);
   };
 
+  const handleAccidentPhotoSelect = async (
+    key: 'accidentPhotoUrl' | 'accidentPhotoUrl2',
+    file: File,
+  ) => {
+    const value = await props.withFileData(file);
+    if (!value) return;
+
+    updateOverviewField(props, key, value);
+  };
+
   return (
     <div className={styles.doc2AccidentSections}>
       <section className={styles.doc2AccidentSectionBlock}>
@@ -187,6 +203,61 @@ export function Doc2AccidentFields({ props }: Doc2AccidentFieldsProps) {
                           }
                           placeholder="재해 개요 입력"
                         />
+                      </td>
+                    </tr>
+                    <tr>
+                      <td
+                        colSpan={6}
+                        className={`${styles.doc2AccidentValueCell} ${styles.doc2AccidentMediaRowCell}`}
+                      >
+                        <div className={styles.doc2AccidentMediaGrid}>
+                          <div className={styles.doc2AccidentMediaItem}>
+                            <div className={styles.doc2AccidentMediaLabel}>
+                              {ACCIDENT_TRACKING_LABELS.occurrencePart}
+                            </div>
+                            <div className={styles.doc2AccidentMediaField}>
+                              <UploadBox
+                                id="doc2-accident-photo-1"
+                                label={ACCIDENT_TRACKING_LABELS.occurrencePart}
+                                labelLayout="field"
+                                fieldBodyHeight={160}
+                                fieldClearOverlay
+                                fieldLabelMode="omit"
+                                fitImageToBox
+                                value={session.document2Overview.accidentPhotoUrl}
+                                onClear={() =>
+                                  updateOverviewField(props, 'accidentPhotoUrl', '')
+                                }
+                                onSelect={async (file) =>
+                                  handleAccidentPhotoSelect('accidentPhotoUrl', file)
+                                }
+                              />
+                            </div>
+                          </div>
+                          <div className={styles.doc2AccidentMediaItem}>
+                            <div className={styles.doc2AccidentMediaLabel}>
+                              {ACCIDENT_TRACKING_LABELS.implementationStatus}
+                            </div>
+                            <div className={styles.doc2AccidentMediaField}>
+                              <UploadBox
+                                id="doc2-accident-photo-2"
+                                label={ACCIDENT_TRACKING_LABELS.implementationStatus}
+                                labelLayout="field"
+                                fieldBodyHeight={160}
+                                fieldClearOverlay
+                                fieldLabelMode="omit"
+                                fitImageToBox
+                                value={session.document2Overview.accidentPhotoUrl2}
+                                onClear={() =>
+                                  updateOverviewField(props, 'accidentPhotoUrl2', '')
+                                }
+                                onSelect={async (file) =>
+                                  handleAccidentPhotoSelect('accidentPhotoUrl2', file)
+                                }
+                              />
+                            </div>
+                          </div>
+                        </div>
                       </td>
                     </tr>
                   </>

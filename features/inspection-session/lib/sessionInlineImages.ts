@@ -15,9 +15,16 @@ type SessionImageArrayItem = {
   [key: string]: unknown;
 };
 
+type OverviewImageFieldKey = 'accidentPhotoUrl' | 'accidentPhotoUrl2';
+
 interface SessionImageFieldDescriptor {
   fileNamePrefix: string;
   propertyKey: string;
+}
+
+interface OverviewImageFieldDescriptor {
+  fileNamePrefix: string;
+  propertyKey: OverviewImageFieldKey;
 }
 
 export interface InspectionSessionInlineImageSlot {
@@ -143,10 +150,46 @@ function createArrayImageSlots(
   return slots;
 }
 
+function createOverviewImageSlots(
+  session: InspectionSession,
+  fields: OverviewImageFieldDescriptor[],
+): InspectionSessionInlineImageSlot[] {
+  return fields.flatMap(({ fileNamePrefix, propertyKey }, index) => {
+    const fromValue = normalizeText(session.document2Overview[propertyKey]);
+    if (!isInlineImageDataUrl(fromValue)) {
+      return [];
+    }
+
+    return [
+      {
+        apply: (current, nextValue) => {
+          if (normalizeText(current.document2Overview[propertyKey]) !== fromValue) {
+            return current;
+          }
+
+          return {
+            ...current,
+            document2Overview: {
+              ...current.document2Overview,
+              [propertyKey]: nextValue,
+            },
+          };
+        },
+        fileName: buildInlineImageFileName(session, fileNamePrefix, index + 1, fromValue),
+        fromValue,
+      },
+    ];
+  });
+}
+
 function collectInspectionSessionInlineImageSlots(
   session: InspectionSession,
 ): InspectionSessionInlineImageSlot[] {
   return [
+    ...createOverviewImageSlots(session, [
+      { fileNamePrefix: 'doc2-accident-photo-1', propertyKey: 'accidentPhotoUrl' },
+      { fileNamePrefix: 'doc2-accident-photo-2', propertyKey: 'accidentPhotoUrl2' },
+    ]),
     ...createArrayImageSlots(session, 'document3Scenes', [
       { fileNamePrefix: 'doc3-scene', propertyKey: 'photoUrl' },
     ]),

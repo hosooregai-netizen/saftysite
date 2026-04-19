@@ -137,6 +137,10 @@ export function normalizeInspectionSession(raw: unknown): InspectionSession {
       accidentOccurred: normalizeAccidentOccurred(
         doc2Partial.accidentOccurred ?? session.document2Overview.accidentOccurred
       ),
+      accidentPhotoUrl: normalizeText(doc2Partial.accidentPhotoUrl),
+      accidentPhotoUrl2: normalizeText(doc2Partial.accidentPhotoUrl2),
+      accidentOccurrencePart: normalizeText(doc2Partial.accidentOccurrencePart),
+      accidentImplementationStatus: normalizeText(doc2Partial.accidentImplementationStatus),
       workPlanChecks: createWorkPlanChecks({
         ...session.document2Overview.workPlanChecks,
         ...(doc2Partial.workPlanChecks ?? {}),

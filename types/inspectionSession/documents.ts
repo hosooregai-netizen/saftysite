@@ -27,6 +27,10 @@ export interface TechnicalGuidanceOverview {
   recentAccidentDate: string;
   accidentType: string;
   accidentSummary: string;
+  accidentPhotoUrl: string;
+  accidentPhotoUrl2: string;
+  accidentOccurrencePart: string;
+  accidentImplementationStatus: string;
   processWorkerCount: string;
   processEquipment: string;
   processTools: string;
