@@ -309,21 +309,25 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
   }
 
   const submit = async () => {
-    if (state.editingId === 'create' && !state.isCreateReady) return;
-    if (state.editingId !== 'create' && !state.form.name.trim()) return;
-    const validationMessage = validateHeadquarterSubmit(state.form, rows, state.editingId);
-    if (validationMessage) {
-      window.alert(validationMessage);
-      return;
+    try {
+      if (state.editingId === 'create' && !state.isCreateReady) return;
+      if (state.editingId !== 'create' && !state.form.name.trim()) return;
+      const validationMessage = validateHeadquarterSubmit(state.form, rows, state.editingId);
+      if (validationMessage) {
+        window.alert(validationMessage);
+        return;
+      }
+      const payload = state.buildPayload();
+      if (state.editingId === 'create') {
+        await onCreate(payload);
+      } else if (state.editingId) {
+        await onUpdate(state.editingId, payload);
+      }
+      state.closeModal();
+      await refreshHeadquarterList();
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : '사업장 저장에 실패했습니다.');
     }
-    const payload = state.buildPayload();
-    if (state.editingId === 'create') {
-      await onCreate(payload);
-    } else if (state.editingId) {
-      await onUpdate(state.editingId, payload);
-    }
-    state.closeModal();
-    await refreshHeadquarterList();
   };
 
   const handleDeleteHeadquarter = async (item: import('@/types/controller').SafetyHeadquarter) => {

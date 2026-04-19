@@ -40,3 +40,31 @@ test('requestSafetyApi tolerates empty JSON bodies on successful write responses
     }
   });
 });
+
+test('requestSafetyApi adds save guidance when a write request times out', async () => {
+  const originalFetch = globalThis.fetch;
+
+  await withProxyBaseUrl('https://example.com/api/safety', async () => {
+    globalThis.fetch = async () => {
+      throw new DOMException('POST /sites 요청이 30000ms 안에 완료되지 않았습니다.', 'AbortError');
+    };
+
+    try {
+      await assert.rejects(
+        () =>
+          requestSafetyApi('/sites', {
+            method: 'POST',
+            body: JSON.stringify({ site_name: 'mocked' }),
+          }),
+        (error: unknown) => {
+          assert.ok(error instanceof Error);
+          assert.match(error.message, /저장 요청이 지연되고 있습니다/);
+          assert.match(error.message, /반영 여부를 먼저 확인/);
+          return true;
+        },
+      );
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+});

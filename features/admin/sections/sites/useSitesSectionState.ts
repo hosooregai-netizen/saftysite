@@ -286,18 +286,22 @@ export function useSitesSectionState({
   };
 
   const submit = async () => {
-    const payload = buildSitePayload(form, lockedHeadquarterId);
-    if (editingId === 'create' && !isCreateReady(form, lockedHeadquarterId)) return;
-    if (editingId !== 'create' && (!payload.headquarter_id || !payload.site_name)) return;
-    const validationMessage = validateSiteSubmit(form, rows, editingId);
-    if (validationMessage) {
-      window.alert(validationMessage);
-      return;
+    try {
+      const payload = buildSitePayload(form, lockedHeadquarterId);
+      if (editingId === 'create' && !isCreateReady(form, lockedHeadquarterId)) return;
+      if (editingId !== 'create' && (!payload.headquarter_id || !payload.site_name)) return;
+      const validationMessage = validateSiteSubmit(form, rows, editingId);
+      if (validationMessage) {
+        window.alert(validationMessage);
+        return;
+      }
+      if (editingId === 'create') await onCreate(payload as SafetySiteInput);
+      else if (editingId) await onUpdate(editingId, payload as SafetySiteUpdateInput);
+      closeModal();
+      await refreshPage();
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : '현장 저장에 실패했습니다.');
     }
-    if (editingId === 'create') await onCreate(payload as SafetySiteInput);
-    else if (editingId) await onUpdate(editingId, payload as SafetySiteUpdateInput);
-    closeModal();
-    await refreshPage();
   };
 
   const deleteSite = async (site: SafetySite) => {

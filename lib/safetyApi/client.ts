@@ -3,6 +3,7 @@ import { buildPublicSafetyApiUpstreamUrl } from './upstream';
 
 const DEFAULT_SAFETY_API_TIMEOUT_MS = 12000;
 const AUTH_SAFETY_API_TIMEOUT_MS = 30000;
+const WRITE_SAFETY_API_TIMEOUT_MS = 30000;
 const ASSIGNMENT_WRITE_SAFETY_API_TIMEOUT_MS = 30000;
 const UPLOAD_SAFETY_API_TIMEOUT_MS = 45000;
 const REPORT_UPSERT_SAFETY_API_TIMEOUT_MS = 45000;
@@ -131,6 +132,14 @@ function formatRequestLabel(path: string, method?: string): string {
   return `${normalizedMethod} ${path}`;
 }
 
+function isAbortError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  return (
+    (error instanceof DOMException && error.name === 'AbortError') ||
+    ('name' in error && error.name === 'AbortError')
+  );
+}
+
 async function parseErrorMessage(response: Response): Promise<string> {
   const contentType = response.headers.get('content-type') ?? '';
 
@@ -182,11 +191,13 @@ async function parseJsonSuccessBody<T>(
 }
 
 function getSafetyApiTimeoutMs(path: string, options: RequestInit): number {
+  const method = (options.method || 'GET').toUpperCase();
+
   if (path === '/auth/token') {
     return AUTH_SAFETY_API_TIMEOUT_MS;
   }
 
-  if (path.startsWith('/assignments') && (options.method || 'GET').toUpperCase() !== 'GET') {
+  if (path.startsWith('/assignments') && method !== 'GET') {
     return ASSIGNMENT_WRITE_SAFETY_API_TIMEOUT_MS;
   }
 
@@ -196,6 +207,10 @@ function getSafetyApiTimeoutMs(path: string, options: RequestInit): number {
 
   if (path === '/reports/upsert') {
     return REPORT_UPSERT_SAFETY_API_TIMEOUT_MS;
+  }
+
+  if (method !== 'GET' && method !== 'HEAD') {
+    return WRITE_SAFETY_API_TIMEOUT_MS;
   }
 
   if (path.includes('/dashboard') || path.includes('/draft-context')) {
@@ -328,9 +343,13 @@ export async function requestSafetyApi<T>(
           : failedTargets.length === 1
             ? ` 시도 경로(${failedTargets[0].label}) 오류: ${failedTargets[0].message}`
             : '';
+      const timeoutHint =
+        isAbortError(error) && method !== 'GET' && method !== 'HEAD'
+          ? ' 저장 요청이 지연되고 있습니다. 서버 반영이 진행 중일 수 있으니 잠시 후 목록을 새로고침해 반영 여부를 먼저 확인해 주세요.'
+          : '';
       throw new SafetyApiError(
         error instanceof Error
-          ? `${requestLabel} 요청 중 네트워크 오류가 발생했습니다. ${error.message}${retryHint}`
+          ? `${requestLabel} 요청 중 네트워크 오류가 발생했습니다. ${error.message}${retryHint}${timeoutHint}`
           : `${requestLabel} 요청 중 안전 API 서버에 연결하지 못했습니다.`,
         null
       );

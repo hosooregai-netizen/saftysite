@@ -77,33 +77,37 @@ export function UsersSection({
   }
 
   const submit = async () => {
-    if (!state.form.name.trim()) return;
-    if (!state.form.email.trim()) return;
+    try {
+      if (!state.form.name.trim()) return;
+      if (!state.form.email.trim()) return;
 
-    if (state.editingId === 'create') {
-      if (!state.form.email.trim() || !state.form.password.trim()) return;
-      await onCreate({
-        email: state.form.email.trim(),
-        is_active: state.form.is_active,
-        name: state.form.name.trim(),
-        organization_name: toNullableText(state.form.organization_name),
-        password: state.form.password.trim(),
-        phone: toNullableText(state.form.phone),
-        position: toNullableText(state.form.position),
-        role: toBackendUserRole(state.form.role),
-      });
-    } else if (state.editingId) {
-      const updateInput = state.buildUpdateInput();
-      const nextPassword = state.form.password.trim() || null;
-      if (Object.keys(updateInput).length === 0 && !nextPassword) {
-        state.closeModal();
-        return;
+      if (state.editingId === 'create') {
+        if (!state.form.email.trim() || !state.form.password.trim()) return;
+        await onCreate({
+          email: state.form.email.trim(),
+          is_active: state.form.is_active,
+          name: state.form.name.trim(),
+          organization_name: toNullableText(state.form.organization_name),
+          password: state.form.password.trim(),
+          phone: toNullableText(state.form.phone),
+          position: toNullableText(state.form.position),
+          role: toBackendUserRole(state.form.role),
+        });
+      } else if (state.editingId) {
+        const updateInput = state.buildUpdateInput();
+        const nextPassword = state.form.password.trim() || null;
+        if (Object.keys(updateInput).length === 0 && !nextPassword) {
+          state.closeModal();
+          return;
+        }
+        await onSaveEdit(state.editingId, updateInput, nextPassword);
       }
-      await onSaveEdit(state.editingId, updateInput, nextPassword);
-    }
 
-    state.closeModal();
-    await state.refreshPage();
+      state.closeModal();
+      await state.refreshPage();
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : '사용자 저장에 실패했습니다.');
+    }
   };
 
   const handleDeleteUser = async (user: SafetyAdminUserListRow) => {
