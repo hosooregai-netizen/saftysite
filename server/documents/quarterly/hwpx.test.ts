@@ -14,6 +14,9 @@ import {
 import type { QuarterlySummaryReport } from '@/types/erpReports';
 import { buildQuarterlyHwpxDocument } from './hwpx';
 
+const TRANSPARENT_PNG_DATA_URL =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aR9kAAAAASUVORK5CYII=';
+
 function buildQuarterlyFixture(): {
   report: QuarterlySummaryReport;
   sessions: ReturnType<typeof buildSiteSessions>['sessions'];
@@ -120,4 +123,28 @@ test('buildQuarterlyHwpxDocument appends selected inspection bodies as extra sec
   assert.doesNotMatch(secondAppendixSection, /\{cover\.site_name\}/);
   assert.match(appendixSection, /<hp:tbl\b/);
   assert.ok((headerXml.match(/<hh:style\b/g) ?? []).length > 22);
+});
+
+test('buildQuarterlyHwpxDocument binds the OPS image into the dedicated template slot', async () => {
+  const fixture = buildQuarterlyFixture();
+  const report = {
+    ...fixture.report,
+    opsAssetDescription: 'should not be rendered when an OPS image is available',
+    opsAssetFileUrl: TRANSPARENT_PNG_DATA_URL,
+    opsAssetPreviewUrl: TRANSPARENT_PNG_DATA_URL,
+  };
+  const document = await buildQuarterlyHwpxDocument(report, fixture.site);
+  const zip = await JSZip.loadAsync(document.buffer);
+  const sectionXml = await zip.file('Contents/section0.xml')?.async('string');
+  const contentHpf = await zip.file('Contents/content.hpf')?.async('string');
+
+  assert.ok(sectionXml);
+  assert.ok(contentHpf);
+  assert.match(sectionXml, /binaryItemIDRef="opsAssetImage"/);
+  assert.doesNotMatch(sectionXml, /binaryItemIDRef="tplopsimg01"/);
+  assert.match(contentHpf, /id="opsAssetImage"/);
+  assert.doesNotMatch(
+    sectionXml,
+    /should not be rendered when an OPS image is available/,
+  );
 });

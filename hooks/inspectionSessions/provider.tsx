@@ -117,7 +117,10 @@ export function InspectionSessionsProvider({
     async (siteId: string) => {
       const cached = store.assignedSafetySitesByIdRef.current.get(siteId);
       if (cached) {
-        upsertAssignedSitesIntoStore([cached]);
+        const hasStoredSite = store.sitesRef.current.some((site) => site.id === siteId);
+        if (!hasStoredSite) {
+          upsertAssignedSitesIntoStore([cached]);
+        }
         return cached;
       }
 

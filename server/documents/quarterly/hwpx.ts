@@ -49,6 +49,7 @@ const EMPTY_CHART_LABEL = '\uC790\uB8CC \uC5C6\uC74C';
 const OPS_PENDING_TITLE = '\uAD00\uB9AC\uC790 \uBCF4\uC644 \uB300\uAE30';
 const OPS_PENDING_BODY = '\uAD00\uB9AC\uC790\uAC00 OPS \uC790\uB8CC\uB97C \uC544\uC9C1 \uC5F0\uACB0\uD558\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.';
 const OPS_IMAGE_ITEM_ID = 'opsAssetImage';
+const OPS_TEMPLATE_IMAGE_ITEM_ID = 'tplopsimg01';
 const ACCIDENT_CHART_IMAGE_ITEM_ID = 'quarterlyAccidentChartImage';
 const CAUSATIVE_CHART_IMAGE_ITEM_ID = 'quarterlyCausativeChartImage';
 const NO_DATA_VALUE = '-';
@@ -639,6 +640,37 @@ function replaceCellImage(
   return tableXml.replace(cellBlock, nextCell);
 }
 
+function replaceTemplateCellImageBinaryRef(
+  tableXml: string,
+  rowAddr: number,
+  colAddr: number,
+  targetBinaryItemId: string,
+  nextBinaryItemId: string,
+) {
+  const targetMarker = `<hp:cellAddr colAddr="${colAddr}" rowAddr="${rowAddr}"/>`;
+  const cellBlock = [...tableXml.matchAll(/<hp:tc\b[\s\S]*?<\/hp:tc>/g)]
+    .map((match) => match[0])
+    .find((candidate) => candidate.includes(targetMarker));
+  if (!cellBlock) {
+    throw new Error(
+      `Quarterly HWPX template cell was not found for row=${rowAddr}, col=${colAddr}.`,
+    );
+  }
+
+  if (!cellBlock.includes(`binaryItemIDRef="${targetBinaryItemId}"`)) {
+    throw new Error(
+      `Quarterly HWPX template image slot "${targetBinaryItemId}" is missing for row=${rowAddr}, col=${colAddr}.`,
+    );
+  }
+
+  const nextCell = cellBlock.replace(
+    new RegExp(`binaryItemIDRef="${escapeRegExp(targetBinaryItemId)}"`, 'g'),
+    `binaryItemIDRef="${nextBinaryItemId}"`,
+  );
+
+  return tableXml.replace(cellBlock, nextCell);
+}
+
 function getTableRows(tableXml: string) {
   return [...tableXml.matchAll(/<hp:tr>[\s\S]*?<\/hp:tr>/g)].map((match) => match[0]);
 }
@@ -1035,7 +1067,13 @@ function updateOpsTable(
   let nextTable = tableXml;
   nextTable = replaceCellText(nextTable, 1, 0, `\u25A0${opsTitle}`);
   nextTable = opsImageAsset
-    ? replaceCellImage(nextTable, 2, 0, OPS_IMAGE_ITEM_ID, opsImageAsset)
+    ? replaceTemplateCellImageBinaryRef(
+        nextTable,
+        2,
+        0,
+        OPS_TEMPLATE_IMAGE_ITEM_ID,
+        OPS_IMAGE_ITEM_ID,
+      )
     : replaceCellText(nextTable, 2, 0, buildOpsDetailLines(report), {
         multiline: true,
         wrapAt: 42,
