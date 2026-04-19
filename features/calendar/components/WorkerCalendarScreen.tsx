@@ -25,6 +25,15 @@ interface ScheduleDialogState {
   siteId: string;
 }
 
+interface WorkerDialogSiteOption {
+  completedRounds: number;
+  isComplete: boolean;
+  label: string;
+  remainingRounds: number;
+  siteId: string;
+  totalRounds: number;
+}
+
 type CalendarViewMode = 'calendar' | 'list';
 type ScheduleListFilter =
   | 'all'
@@ -119,6 +128,21 @@ function sortScheduledRows(rows: SafetyInspectionSchedule[]) {
   );
 }
 
+function getCompletedRoundNumbers(rows: Array<{ visitRound: number | null }>) {
+  const completed = new Set<number>();
+  rows.forEach((row) => {
+    if (typeof row.visitRound === 'number' && Number.isFinite(row.visitRound) && row.visitRound > 0) {
+      completed.add(Math.trunc(row.visitRound));
+    }
+  });
+  return completed;
+}
+
+function formatWorkerRoundLabel(row: SafetyInspectionSchedule) {
+  const totalRounds = row.totalRounds && row.totalRounds > 0 ? row.totalRounds : row.roundNo;
+  return `${row.roundNo} / ${totalRounds}회차`;
+}
+
 function getStatusLabel(row: SafetyInspectionSchedule) {
   if (!row.plannedDate) return '미선택';
   switch (row.status) {
@@ -162,6 +186,8 @@ export function WorkerCalendarScreen() {
   const {
     authError,
     currentUser,
+    ensureSiteReportIndexLoaded,
+    getReportIndexBySiteId,
     isAuthenticated,
     isReady,
     login,
@@ -274,16 +300,33 @@ export function WorkerCalendarScreen() {
     () => rows.find((row) => row.id === dialog.scheduleId) ?? null,
     [dialog.scheduleId, rows],
   );
-  const dialogSiteOptions = useMemo(() => {
+  const reportCompletedRoundsBySiteId = useMemo(() => {
+    const nextMap = new Map<string, Set<number>>();
+    sites.forEach((site) => {
+      const items = getReportIndexBySiteId(site.id)?.items ?? [];
+      nextMap.set(site.id, getCompletedRoundNumbers(items));
+    });
+    return nextMap;
+  }, [getReportIndexBySiteId, sites]);
+  const dialogSiteOptions = useMemo<WorkerDialogSiteOption[]>(() => {
     return [...sites]
       .filter((site) => !selectedSiteId || site.id === selectedSiteId)
       .sort((left, right) => left.siteName.localeCompare(right.siteName, 'ko'))
-      .map((site) => ({
-        label: site.siteName,
-        siteId: site.id,
-      }));
-  }, [selectedSiteId, sites]);
-  const dialogRoundRows = useMemo(
+      .map((site) => {
+        const totalRounds = typeof site.totalRounds === 'number' && site.totalRounds > 0 ? site.totalRounds : 0;
+        const completedRounds = reportCompletedRoundsBySiteId.get(site.id)?.size ?? 0;
+        const remainingRounds = Math.max(totalRounds - completedRounds, 0);
+        return {
+          completedRounds,
+          isComplete: totalRounds > 0 && completedRounds >= totalRounds,
+          label: site.siteName,
+          remainingRounds,
+          siteId: site.id,
+          totalRounds,
+        };
+      });
+  }, [reportCompletedRoundsBySiteId, selectedSiteId, sites]);
+  const dialogAllRoundRows = useMemo(
     () =>
       sortSchedules(rows.filter((row) => row.siteId === dialog.siteId)).sort(
         (left, right) =>
@@ -292,6 +335,19 @@ export function WorkerCalendarScreen() {
           left.siteName.localeCompare(right.siteName, 'ko'),
       ),
     [dialog.siteId, rows],
+  );
+  const dialogRoundRows = useMemo(() => {
+    const completedRounds = reportCompletedRoundsBySiteId.get(dialog.siteId) ?? new Set<number>();
+    return dialogAllRoundRows.filter((row) => {
+      if (row.status === 'canceled' || row.status === 'completed') {
+        return false;
+      }
+      return !completedRounds.has(row.roundNo);
+    });
+  }, [dialog.siteId, dialogAllRoundRows, reportCompletedRoundsBySiteId]);
+  const dialogSelectedSite = useMemo(
+    () => dialogSiteOptions.find((option) => option.siteId === dialog.siteId) ?? null,
+    [dialog.siteId, dialogSiteOptions],
   );
   const dialogWindowError =
     dialogSelectedSchedule &&
@@ -321,13 +377,38 @@ export function WorkerCalendarScreen() {
   }, [dialog.open, dialog.siteId, dialogSiteOptions]);
 
   useEffect(() => {
-    if (!dialog.open || !dialog.siteId || dialog.scheduleId) return;
-    if (dialogRoundRows.length === 0) return;
+    if (!dialog.open) return;
+    dialogSiteOptions.forEach((option) => {
+      void ensureSiteReportIndexLoaded(option.siteId).catch(() => undefined);
+    });
+  }, [dialog.open, dialogSiteOptions, ensureSiteReportIndexLoaded]);
+
+  useEffect(() => {
+    if (!dialog.open || !dialog.siteId) return;
     const preferredRow =
+      dialogRoundRows.find((row) => row.id === dialog.scheduleId) ??
       dialogRoundRows.find((row) => row.plannedDate === dialog.plannedDate) ??
       dialogRoundRows.find((row) => !row.plannedDate) ??
-      dialogRoundRows[0];
-    if (!preferredRow) return;
+      dialogRoundRows[0] ??
+      null;
+    if (!preferredRow) {
+      if (!dialog.scheduleId) return;
+      setDialog((current) => ({
+        ...current,
+        recordSelectionReason: false,
+        scheduleId: '',
+        selectionReasonLabel: '',
+        selectionReasonMemo: '',
+      }));
+      return;
+    }
+    if (
+      preferredRow.id === dialog.scheduleId &&
+      dialog.selectionReasonLabel === (preferredRow.selectionReasonLabel || '') &&
+      dialog.selectionReasonMemo === (preferredRow.selectionReasonMemo || '')
+    ) {
+      return;
+    }
     setDialog((current) => ({
       ...current,
       recordSelectionReason: hasSelectionReasonInput(
@@ -338,7 +419,15 @@ export function WorkerCalendarScreen() {
       selectionReasonLabel: preferredRow.selectionReasonLabel || '',
       selectionReasonMemo: preferredRow.selectionReasonMemo || '',
     }));
-  }, [dialog.open, dialog.plannedDate, dialog.scheduleId, dialog.siteId, dialogRoundRows]);
+  }, [
+    dialog.open,
+    dialog.plannedDate,
+    dialog.scheduleId,
+    dialog.selectionReasonLabel,
+    dialog.selectionReasonMemo,
+    dialog.siteId,
+    dialogRoundRows,
+  ]);
 
   const closeDialog = () => {
     setDialog(EMPTY_DIALOG_STATE);
@@ -354,12 +443,18 @@ export function WorkerCalendarScreen() {
       (selectedSiteId && dialogSiteOptions.some((option) => option.siteId === selectedSiteId)
         ? selectedSiteId
         : dialogSiteOptions[0]?.siteId || '');
+    const defaultCompletedRounds = reportCompletedRoundsBySiteId.get(defaultSiteId) ?? new Set<number>();
+    const defaultSiteRows = sortSchedules(rows.filter((row) => row.siteId === defaultSiteId)).filter((row) => {
+      if (row.status === 'canceled' || row.status === 'completed') {
+        return false;
+      }
+      return !defaultCompletedRounds.has(row.roundNo);
+    });
     const defaultSchedule =
       input.schedule ??
-      sortSchedules(rows.filter((row) => row.siteId === defaultSiteId && !row.plannedDate))[0] ??
-      sortSchedules(rows.filter((row) => row.siteId === defaultSiteId))[0] ??
-      sortSchedules(rows.filter((row) => !row.plannedDate))[0] ??
-      sortSchedules(rows)[0] ??
+      defaultSiteRows.find((row) => row.plannedDate === nextPlannedDate) ??
+      defaultSiteRows.find((row) => !row.plannedDate) ??
+      defaultSiteRows[0] ??
       null;
 
     setSelectedDate(nextPlannedDate);
@@ -378,7 +473,13 @@ export function WorkerCalendarScreen() {
   };
 
   const handleDialogSiteSelect = (siteId: string) => {
-    const nextRoundRows = sortSchedules(rows.filter((row) => row.siteId === siteId));
+    const completedRounds = reportCompletedRoundsBySiteId.get(siteId) ?? new Set<number>();
+    const nextRoundRows = sortSchedules(rows.filter((row) => row.siteId === siteId)).filter((row) => {
+      if (row.status === 'canceled' || row.status === 'completed') {
+        return false;
+      }
+      return !completedRounds.has(row.roundNo);
+    });
     const preferredRow =
       nextRoundRows.find((row) => row.id === dialog.scheduleId) ??
       nextRoundRows.find((row) => row.plannedDate === dialog.plannedDate) ??
@@ -895,6 +996,13 @@ export function WorkerCalendarScreen() {
                     />
                     <div className={styles.dialogOptionBody}>
                       <strong>{option.label}</strong>
+                      <span className={styles.dialogMeta}>
+                        {option.totalRounds > 0
+                          ? option.isComplete
+                            ? `총 ${option.totalRounds}회차 완료`
+                            : `완료 ${option.completedRounds}/${option.totalRounds}회차 · 선택 가능 ${option.remainingRounds}회차`
+                          : '총 계약회차 미설정'}
+                      </span>
                     </div>
                   </label>
                 ))}
@@ -909,8 +1017,12 @@ export function WorkerCalendarScreen() {
             </div>
             {!dialog.siteId ? (
               <div className={styles.emptyState}>먼저 현장을 선택해 주세요.</div>
+            ) : dialogSelectedSite?.isComplete ? (
+              <div className={styles.emptyState}>
+                선택한 현장은 총 계약회차를 모두 완료했습니다.
+              </div>
             ) : dialogRoundRows.length === 0 ? (
-              <div className={styles.emptyState}>선택한 현장에서 선택 가능한 회차가 없습니다.</div>
+              <div className={styles.emptyState}>선택한 현장에서 아직 고를 수 있는 회차가 없습니다.</div>
             ) : (
               <div className={styles.dialogList}>
                 {dialogRoundRows.map((row) => (
@@ -925,12 +1037,12 @@ export function WorkerCalendarScreen() {
                       onChange={() => handleDialogScheduleSelect(row)}
                     />
                     <div className={styles.dialogOptionBody}>
-                      <strong>{row.roundNo}회차</strong>
+                      <strong>{formatWorkerRoundLabel(row)}</strong>
                       <span className={styles.dialogMeta}>
-                        계약 기간 {row.windowStart} ~ {row.windowEnd}
+                        {row.siteName}
                       </span>
                       <span className={styles.dialogMeta}>
-                        현재 방문일 {row.plannedDate || '미선택'} · 상태 {getStatusLabel(row)}
+                        방문일 {row.plannedDate || '미선택'} · 상태 {getStatusLabel(row)} · 계약 기간 {row.windowStart} ~ {row.windowEnd}
                       </span>
                     </div>
                   </label>
