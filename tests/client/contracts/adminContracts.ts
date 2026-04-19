@@ -59,6 +59,7 @@ export const ADMIN_FEATURE_CONTRACTS = {
     markers: ['현장 목록', '현장 추가', '현장 수정', '현장 메인', '지도요원 배정'],
     apis: [
       'GET /api/admin/sites/list',
+      'GET /api/admin/sites/:id',
       'GET /api/admin/directory/lookups',
       'GET /api/admin/directory/assignments',
       'POST /sites',

@@ -2,6 +2,10 @@
 
 import { useDeferredValue, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import {
+  mergeAdminSiteSnapshots,
+  normalizeInspectionSite,
+} from '@/constants/inspectionSession';
 import { createEmptyTechnicalGuidanceRelations } from '@/constants/inspectionSession/sessionFactory';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { useSubmittedSearchState } from '@/hooks/useSubmittedSearchState';
@@ -56,8 +60,35 @@ export function useSiteReportListState(
   const [reportSortMode, setReportSortMode] = useState<SiteReportSortMode>('round');
   const [dispatchFilter, setDispatchFilter] = useState<SiteReportDispatchFilter>('all');
   const currentSite = useMemo(() => {
-    if (!decodedSiteKey) return null;
-    return sites.find((site) => site.id === decodedSiteKey) ?? options.siteOverride ?? null;
+    if (!decodedSiteKey) {
+      return options.siteOverride ?? null;
+    }
+
+    const storedSite = sites.find((site) => site.id === decodedSiteKey) ?? null;
+    const overrideSite =
+      options.siteOverride && options.siteOverride.id === decodedSiteKey
+        ? options.siteOverride
+        : null;
+
+    if (overrideSite && storedSite) {
+      return normalizeInspectionSite({
+        ...storedSite,
+        ...overrideSite,
+        headquarterId: overrideSite.headquarterId || storedSite.headquarterId,
+        title: overrideSite.title || storedSite.title,
+        customerName: overrideSite.customerName || storedSite.customerName,
+        siteName: overrideSite.siteName || storedSite.siteName,
+        assigneeName: overrideSite.assigneeName || storedSite.assigneeName,
+        adminSiteSnapshot: mergeAdminSiteSnapshots(
+          overrideSite.adminSiteSnapshot,
+          storedSite.adminSiteSnapshot,
+        ),
+        createdAt: overrideSite.createdAt || storedSite.createdAt,
+        updatedAt: overrideSite.updatedAt || storedSite.updatedAt,
+      });
+    }
+
+    return overrideSite ?? storedSite;
   }, [decodedSiteKey, options.siteOverride, sites]);
   const { reloadReportIndex, reportIndexError, reportIndexStatus, reportItems } =
     useSiteReportIndexLoader({

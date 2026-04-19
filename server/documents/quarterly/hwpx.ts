@@ -8,8 +8,9 @@ import {
   buildQuarterlyTitleForPeriod,
   normalizeQuarterlyReportPeriod,
 } from '@/lib/erpReports/shared';
+import { appendInspectionAppendixSections } from '@/server/documents/quarterly/inspectionAppendixMerge';
 import type { QuarterlyCounter, QuarterlySummaryReport } from '@/types/erpReports';
-import type { InspectionSite } from '@/types/inspectionSession';
+import type { InspectionSession, InspectionSite } from '@/types/inspectionSession';
 
 export interface GeneratedHwpxDocument {
   buffer: Buffer;
@@ -18,6 +19,8 @@ export interface GeneratedHwpxDocument {
 
 interface QuarterlyHwpxBuildOptions {
   assetBaseUrl?: string;
+  selectedSessions?: InspectionSession[];
+  siteSessions?: InspectionSession[];
 }
 
 interface ResolvedHwpxImageAsset {
@@ -1153,11 +1156,34 @@ export async function buildQuarterlyHwpxDocument(
     );
   }
 
+  const selectedSessions = options?.selectedSessions ?? [];
+  let nextHeaderXml = '';
+  if (selectedSessions.length > 0) {
+    const headerXmlFile = zip.file('Contents/header.xml');
+    if (!headerXmlFile) {
+      throw new Error('Quarterly HWPX template is missing Contents/header.xml.');
+    }
+    nextHeaderXml = await headerXmlFile.async('string');
+    const mergedAppendices = await appendInspectionAppendixSections({
+      assetBaseUrl: options?.assetBaseUrl,
+      contentHpf,
+      headerXml: nextHeaderXml,
+      selectedSessions,
+      siteSessions: options?.siteSessions?.length ? options.siteSessions : selectedSessions,
+      zip,
+    });
+    contentHpf = mergedAppendices.contentHpf;
+    nextHeaderXml = mergedAppendices.headerXml;
+  }
+
   zip.file(
     'Contents/section0.xml',
     updateSectionXml(sectionXml, report, site, opsImageAsset, chartImages),
   );
   zip.file('Contents/content.hpf', contentHpf);
+  if (nextHeaderXml) {
+    zip.file('Contents/header.xml', nextHeaderXml);
+  }
   if (accidentChartFile && accidentChartXml) {
     zip.file('Chart/chart1.xml', updateChartXml(accidentChartXml, report.accidentStats));
   }

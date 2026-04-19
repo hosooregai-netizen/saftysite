@@ -98,6 +98,7 @@ function buildEmptyDispatch(overrides: Partial<ReportDispatchMeta> = {}): Report
 
 function normalizeAdminApiPath(pathname: string) {
   return pathname
+    .replace(/^\/api\/admin\/sites\/(?!list$)[^/]+$/, '/api/admin/sites/:id')
     .replace(/^\/api\/admin\/exports\/[^/]+$/, '/api/admin/exports/:section')
     .replace(/^\/api\/admin\/reports\/[^/]+\/original-pdf$/, '/api/admin/reports/:id/original-pdf')
     .replace(/^\/api\/admin\/reports\/[^/]+\/session-bootstrap$/, '/api/admin/reports/:id/session-bootstrap')
@@ -579,6 +580,22 @@ async function installAdminRoutes(harness: ErpSmokeHarness) {
           status: url.searchParams.get('status') || '',
         }),
       );
+      return;
+    }
+
+    if (/^\/api\/admin\/sites\/[^/]+$/.test(pathname) && request.method() === 'GET') {
+      const siteId = decodeURIComponent(pathname.split('/').at(-1) || '');
+      const site = buildAdminSitesListResponse(buildAdminDirectoryData(harness), {
+        limit: 1,
+        offset: 0,
+        siteId,
+      }).rows[0];
+      if (!site) {
+        await fulfillJson(route, { error: 'Site not found.' }, 404);
+        return;
+      }
+
+      await fulfillJson(route, clone(site));
       return;
     }
 

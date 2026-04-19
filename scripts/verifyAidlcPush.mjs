@@ -99,6 +99,7 @@ const FEATURE_RULES = [
     id: 'admin-sites',
     patterns: [
       /^app\/api\/admin\/sites\/list\//,
+      /^app\/api\/admin\/sites\/\[siteId\]\/route\.ts$/,
       /^features\/admin\/sections\/excelImport\//,
       /^features\/admin\/sections\/sites\//,
     ],

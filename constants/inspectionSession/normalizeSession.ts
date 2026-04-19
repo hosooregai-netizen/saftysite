@@ -23,9 +23,9 @@ import { getSceneSlotTitle } from '@/constants/inspectionSession/scenePhotos';
 import { createInspectionSession } from '@/constants/inspectionSession/sessionFactory';
 import { createEmptyTechnicalGuidanceRelations } from '@/constants/inspectionSession/sessionFactory';
 import { finalizeInspectionSession } from '@/constants/inspectionSession/sessionState';
+import { normalizeAdminSiteSnapshot } from '@/constants/inspectionSession/normalizeSite';
 import {
   asRecord,
-  createEmptyAdminSiteSnapshot,
   createTimestamp,
   createWorkPlanChecks,
   normalizeBoolean,
@@ -85,8 +85,8 @@ export function normalizeInspectionSession(raw: unknown): InspectionSession {
   }
 
   const timestamp = createTimestamp();
-  const adminSiteSnapshot = createEmptyAdminSiteSnapshot(
-    asRecord(source.adminSiteSnapshot) as Partial<AdminSiteSnapshot>
+  const adminSiteSnapshot = normalizeAdminSiteSnapshot(
+    asRecord(source.adminSiteSnapshot) as Partial<AdminSiteSnapshot>,
   );
   const session = createInspectionSession(
     {

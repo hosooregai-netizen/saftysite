@@ -22,8 +22,8 @@ import type {
   SafetyInspectionSchedule,
   TableSortDirection,
 } from '@/types/admin';
-import type { SafetyReport } from '@/types/backend';
 import type { SafetyAssignment } from '@/types/controller';
+import type { SafetyReport, SafetySite } from '@/types/backend';
 
 function buildQueryString(params: Record<string, string | number | null | undefined>) {
   const searchParams = new URLSearchParams();
@@ -278,6 +278,13 @@ export function fetchAdminSitesList(input: {
       sort_dir: input.sortDir,
       status: input.status,
     })}`,
+    options,
+  );
+}
+
+export function fetchAdminSite(siteId: string, options: RequestInit = {}) {
+  return requestAdminApi<SafetySite>(
+    `/sites/${encodeURIComponent(siteId)}`,
     options,
   );
 }

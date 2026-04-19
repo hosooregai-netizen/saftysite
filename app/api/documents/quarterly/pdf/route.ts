@@ -54,6 +54,8 @@ export async function POST(request: Request): Promise<Response> {
     }
     const document = await buildQuarterlyHwpxDocument(payload.report, payload.site, {
       assetBaseUrl: new URL(request.url).origin,
+      selectedSessions: payload.selectedSessions,
+      siteSessions: payload.siteSessions,
     });
     const { buffer, filename } = await convertHwpxBufferToPdf(
       document.buffer,

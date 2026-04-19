@@ -4,7 +4,7 @@ import {
   getSessionGuidanceDate,
   getSessionProgress,
   getSessionTitle,
-  normalizeInspectionSite,
+  mergeAdminSiteSnapshots,
   normalizeInspectionSession,
 } from '@/constants/inspectionSession';
 import { normalizeControllerReview } from '@/lib/admin/reportMeta';
@@ -36,24 +36,7 @@ function mergeAdminSiteSnapshot(
   primary: Partial<AdminSiteSnapshot> | null | undefined,
   fallback: Partial<AdminSiteSnapshot> | null | undefined,
 ): AdminSiteSnapshot {
-  const normalizedPrimary = normalizeInspectionSite({
-    id: 'snapshot-primary',
-    adminSiteSnapshot: primary ?? {},
-  }).adminSiteSnapshot;
-  const normalizedFallback = normalizeInspectionSite({
-    id: 'snapshot-fallback',
-    adminSiteSnapshot: fallback ?? {},
-  }).adminSiteSnapshot;
-
-  return {
-    ...normalizedFallback,
-    ...Object.fromEntries(
-      Object.entries(normalizedPrimary).map(([key, value]) => [
-        key,
-        typeof value === 'string' && value.trim() ? value : normalizedFallback[key as keyof AdminSiteSnapshot],
-      ]),
-    ),
-  } as AdminSiteSnapshot;
+  return mergeAdminSiteSnapshots(primary ?? {}, fallback ?? {});
 }
 
 function mapTechnicalGuidanceRelations(
@@ -96,6 +79,7 @@ function buildTechnicalGuidancePayloadForSave(
     siteKey: site.id,
     reportNumber: session.reportNumber,
     currentSection: session.currentSection,
+    adminSiteSnapshot: session.adminSiteSnapshot,
     meta: session.meta,
     controllerReview: session.controllerReview,
     documentsMeta: session.documentsMeta,

@@ -17,6 +17,8 @@ export async function POST(request: Request): Promise<Response> {
     const payload = await resolveQuarterlyDocumentRequest(request, body);
     const document = await buildQuarterlyHwpxDocument(payload.report, payload.site, {
       assetBaseUrl: new URL(request.url).origin,
+      selectedSessions: payload.selectedSessions,
+      siteSessions: payload.siteSessions,
     });
     return createHwpxDownloadResponse(document);
   } catch (error) {

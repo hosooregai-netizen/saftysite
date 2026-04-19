@@ -69,6 +69,7 @@ export async function runAdminSitesSmoke(config: ClientSmokePlaywrightConfig) {
     const siteDeletesBefore = requestCounts.get('DELETE /sites/:id') || 0;
     const assignmentCreatesBefore = requestCounts.get('POST /assignments') || 0;
     const assignmentDeletesBefore = requestCounts.get('DELETE /assignments/:id') || 0;
+    const adminSiteReadsBefore = requestCounts.get('GET /api/admin/sites/:id') || 0;
     const siteAName = 'mocked admin site a';
     const siteAId = 'site-mocked-admin-site-a';
     const siteBName = 'mocked admin site b';
@@ -172,6 +173,7 @@ export async function runAdminSitesSmoke(config: ClientSmokePlaywrightConfig) {
     });
     await reportLink.click();
     await page.waitForURL(new RegExp(`/sites/${siteBId}$`));
+    await harness.waitForRequestCount('GET /api/admin/sites/:id', adminSiteReadsBefore + 1);
     await harness.waitForRequestCount(
       'GET /api/admin/sites/list',
       siteReadsBeforeDelayedSelection + 1,

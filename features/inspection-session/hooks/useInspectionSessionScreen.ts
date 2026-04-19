@@ -6,6 +6,7 @@ import {
   createEmptyAdminSiteSnapshot,
   getSessionSiteKey,
   getSessionProgress,
+  isMeaningfulSnapshotText,
   normalizeSectionKey,
   touchDocumentMeta,
 } from '@/constants/inspectionSession';
@@ -45,6 +46,7 @@ import {
   resolveWorkspaceSectionKey,
 } from '@/features/inspection-session/workspace/workspaceSections';
 import { buildSitePhotoAlbumHref } from '@/features/home/lib/siteEntry';
+import { useResolvedSiteRoute } from '@/features/site-reports/hooks/useResolvedSiteRoute';
 import { getMetaTouchSection } from '@/components/session/workspace/utils';
 
 function mergeMissingSnapshotFields(
@@ -65,9 +67,9 @@ function mergeMissingSnapshotFields(
     const value = base[typedKey];
     const fallback = siteSnapshot[typedKey];
     const nextValue =
-      typeof value === 'string' && value.trim()
+      typeof value === 'string' && isMeaningfulSnapshotText(value)
         ? value
-        : typeof fallback === 'string' && fallback.trim()
+        : typeof fallback === 'string' && isMeaningfulSnapshotText(fallback)
           ? fallback
           : typeof value === 'boolean'
             ? value || (typeof fallback === 'boolean' ? fallback : value)
@@ -188,6 +190,10 @@ export function useInspectionSessionScreen(sessionId: string) {
       null
     );
   }, [getSiteById, shellReportItem, sites]);
+  const resolvedRouteSiteKey = session
+    ? getSessionSiteKey(session)
+    : shellReportItem?.siteId || null;
+  const { currentSite: resolvedRouteSite } = useResolvedSiteRoute(resolvedRouteSiteKey);
   const shellSession = useMemo(
     () =>
       session || !shellReportItem || !shellSite
@@ -204,7 +210,7 @@ export function useInspectionSessionScreen(sessionId: string) {
         (item) => item.key === workspaceCurrentSection,
       )
     : -1;
-  const site = session ? getSiteById(getSessionSiteKey(session)) : null;
+  const site = resolvedRouteSite ?? (session ? getSiteById(getSessionSiteKey(session)) : null);
   const displaySite = site ?? shellSite;
   const storedRelations = session?.technicalGuidanceRelations ?? null;
   const hasStoredRelations = Boolean(

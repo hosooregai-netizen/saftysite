@@ -9,6 +9,12 @@ export interface GenerateQuarterlyHwpxRequest {
   site: InspectionSite;
 }
 
+export interface GenerateQuarterlyResolvedDocumentRequest
+  extends GenerateQuarterlyHwpxRequest {
+  selectedSessions: InspectionSession[];
+  siteSessions: InspectionSession[];
+}
+
 export interface GenerateBadWorkplaceHwpxRequest {
   report: BadWorkplaceReport;
   site: InspectionSite;

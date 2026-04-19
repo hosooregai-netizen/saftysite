@@ -1,20 +1,25 @@
 'use client';
 
 import { useCallback } from 'react';
-import { normalizeInspectionSite } from '@/constants/inspectionSession/normalizeSite';
+import { mergeAdminSiteSnapshots, normalizeInspectionSite } from '@/constants/inspectionSession/normalizeSite';
 import { SafetyApiError } from '@/lib/safetyApi';
 import {
   fetchSafetyReportByKey,
   fetchSafetyReportList,
   fetchSafetyReportsBySite,
 } from '@/lib/safetyApi';
-import { mapSafetyReportListItem, mapSafetyReportToInspectionSession } from '@/lib/safetyApiMappers';
+import {
+  mapSafetyReportListItem,
+  mapSafetyReportToInspectionSession,
+  mapSafetySiteToInspectionSite,
+} from '@/lib/safetyApiMappers';
 import { TECHNICAL_GUIDANCE_REPORT_KIND } from '@/lib/erpReports/shared';
 import {
   getReportCacheFreshness,
   shouldSurfaceCacheError,
   shouldUseBlockingReload,
 } from '@/lib/reportCachePolicy';
+import type { SafetyReport } from '@/types/backend';
 import { getErrorMessage, isAuthFailure, mergeReportIndexItems, normalizeSessions } from './helpers';
 import type { InspectionSessionsStore } from './store';
 import {
@@ -26,6 +31,7 @@ import {
   mergeFetchedSiteSessions,
   type InspectionSyncRuntime,
 } from './syncSupport';
+import type { InspectionSite } from '@/types/inspectionSession';
 
 interface ReportLoaderActions {
   applyHydratedSessions: (
@@ -34,12 +40,56 @@ interface ReportLoaderActions {
   removeSessionFromLocalState: (reportKey: string) => Promise<void>;
 }
 
+function mergePreferredSite(
+  primary: InspectionSite | null,
+  fallback: InspectionSite | null,
+): InspectionSite | null {
+  if (!primary) return fallback;
+  if (!fallback) return primary;
+
+  return normalizeInspectionSite({
+    ...fallback,
+    ...primary,
+    headquarterId: primary.headquarterId || fallback.headquarterId,
+    title: primary.title || fallback.title,
+    customerName: primary.customerName || fallback.customerName,
+    siteName: primary.siteName || fallback.siteName,
+    assigneeName: primary.assigneeName || fallback.assigneeName,
+    adminSiteSnapshot: mergeAdminSiteSnapshots(
+      primary.adminSiteSnapshot,
+      fallback.adminSiteSnapshot,
+    ),
+    createdAt: primary.createdAt || fallback.createdAt,
+    updatedAt: primary.updatedAt || fallback.updatedAt,
+  });
+}
+
+function hasSiteChanged(current: InspectionSite | null, next: InspectionSite) {
+  if (!current) return true;
+
+  if (
+    current.headquarterId !== next.headquarterId ||
+    current.title !== next.title ||
+    current.customerName !== next.customerName ||
+    current.siteName !== next.siteName ||
+    current.assigneeName !== next.assigneeName
+  ) {
+    return true;
+  }
+
+  return Object.keys(current.adminSiteSnapshot).some((key) => {
+    const typedKey = key as keyof InspectionSite['adminSiteSnapshot'];
+    return current.adminSiteSnapshot[typedKey] !== next.adminSiteSnapshot[typedKey];
+  });
+}
+
 export function useInspectionSessionReportLoaders(
   store: InspectionSessionsStore,
   runtime: InspectionSyncRuntime,
   actions: ReportLoaderActions,
 ) {
   const {
+    assignedSafetySitesByIdRef,
     authTokenRef,
     clearAuthState,
     dirtySessionIdsRef,
@@ -55,6 +105,25 @@ export function useInspectionSessionReportLoaders(
     setSiteState,
     sitesRef,
   } = store;
+
+  const resolveKnownSite = useCallback(
+    (siteId: string, fallbackReport?: SafetyReport | null) => {
+      const currentSite = sitesRef.current.find((item) => item.id === siteId) ?? null;
+      const assignedSite = assignedSafetySitesByIdRef.current.has(siteId)
+        ? mapSafetySiteToInspectionSite(assignedSafetySitesByIdRef.current.get(siteId)!)
+        : null;
+      const fallbackSite =
+        fallbackReport && fallbackReport.site_id === siteId
+          ? buildFallbackSiteFromReport(fallbackReport)
+          : null;
+
+      return mergePreferredSite(
+        mergePreferredSite(currentSite, assignedSite),
+        fallbackSite,
+      );
+    },
+    [assignedSafetySitesByIdRef, sitesRef],
+  );
 
   const ensureSiteReportIndexLoaded = useCallback(
     async (siteId: string, options?: { force?: boolean }) => {
@@ -210,17 +279,18 @@ export function useInspectionSessionReportLoaders(
             return;
           }
 
-          const site =
-            sitesRef.current.find((item) => item.id === report.site_id) ??
-            buildFallbackSiteFromReport(report);
+          const site = resolveKnownSite(report.site_id, report) ?? buildFallbackSiteFromReport(report);
           const nextSession = mapSafetyReportToInspectionSession(
             report,
             site,
             masterDataRef.current,
           );
 
-          if (!sitesRef.current.some((item) => item.id === site.id)) {
-            const nextSites = [...sitesRef.current, site];
+          const currentSite = sitesRef.current.find((item) => item.id === site.id) ?? null;
+          if (hasSiteChanged(currentSite, site)) {
+            const nextSites = currentSite
+              ? sitesRef.current.map((item) => (item.id === site.id ? site : item))
+              : [...sitesRef.current, site];
             setSiteState(nextSites);
             void persistSites(nextSites).catch(() => {
               // Ignore cache persistence failures during detail hydration.
@@ -270,6 +340,7 @@ export function useInspectionSessionReportLoaders(
       dirtySessionIdsRef,
       masterDataRef,
       persistSites,
+      resolveKnownSite,
       runtime,
       sessionsRef,
       setAuthError,
@@ -323,15 +394,15 @@ export function useInspectionSessionReportLoaders(
           }
 
           const technicalReports = reports.filter(isTechnicalGuidanceReport);
-          const fallbackSite = technicalReports[0]
-            ? buildFallbackSiteFromReport(technicalReports[0])
+          const site = resolveKnownSite(siteId, technicalReports[0] ?? null);
+          const currentSite = site
+            ? sitesRef.current.find((item) => item.id === site.id) ?? null
             : null;
-          const site =
-            sitesRef.current.find((item) => item.id === siteId) ??
-            fallbackSite;
 
-          if (site && !sitesRef.current.some((item) => item.id === site.id)) {
-            const nextSites = [...sitesRef.current, site];
+          if (site && hasSiteChanged(currentSite, site)) {
+            const nextSites = currentSite
+              ? sitesRef.current.map((item) => (item.id === site.id ? site : item))
+              : [...sitesRef.current, site];
             setSiteState(nextSites);
             void persistSites(nextSites).catch(() => {
               // Ignore cache persistence failures during detail hydration.
@@ -359,8 +430,10 @@ export function useInspectionSessionReportLoaders(
           await actions.applyHydratedSessions(nextSessions);
           runtime.loadedSiteReportsRef.current.add(siteId);
 
-          const nextSites = site && !sitesRef.current.some((item) => item.id === site.id)
-            ? [...sitesRef.current, site]
+          const nextSites = site
+            ? currentSite
+              ? sitesRef.current.map((item) => (item.id === site.id ? site : item))
+              : [...sitesRef.current, site]
             : sitesRef.current;
           const localItems = buildLocalReportIndexItems(
             siteId,
@@ -421,6 +494,7 @@ export function useInspectionSessionReportLoaders(
       dirtySessionIdsRef,
       masterDataRef,
       persistSites,
+      resolveKnownSite,
       runtime,
       sessionsRef,
       setAuthError,

@@ -3,6 +3,7 @@ import {
   getSessionGuidanceDate,
   isImplementedFollowUpResult,
 } from '@/constants/inspectionSession';
+import { mergeAdminSiteSnapshots } from '@/constants/inspectionSession/normalizeSite';
 import { isMeaningfulDocument7Finding } from '@/lib/erpReports/document7FindingCount';
 import {
   createTimestamp,
@@ -11,7 +12,7 @@ import {
 import { CAUSATIVE_AGENT_LABELS } from '@/constants/inspectionSession/doc7Catalog';
 import type { SafetyQuarterlySummarySeed } from '@/types/backend';
 import type { QuarterTarget, QuarterlyCounter, QuarterlySummaryReport } from '@/types/erpReports';
-import type { InspectionSession, InspectionSite } from '@/types/inspectionSession';
+import type { AdminSiteSnapshot, InspectionSession, InspectionSite } from '@/types/inspectionSession';
 import {
   buildQuarterlyTitleForPeriod,
   buildQuarterlyDefaultTitle,
@@ -143,6 +144,13 @@ function createQuarterlySiteSnapshot(site: InspectionSite): QuarterlySummaryRepo
   return {
     ...site.adminSiteSnapshot,
   };
+}
+
+function mergeQuarterlySiteSnapshot(
+  primary: QuarterlySummaryReport['siteSnapshot'] | null | undefined,
+  fallback: AdminSiteSnapshot,
+) {
+  return mergeAdminSiteSnapshots(primary ?? {}, fallback);
 }
 
 export function getQuarterlySourceSessions(
@@ -467,10 +475,10 @@ export function buildInitialQuarterlySummaryReport(
       approver: existing.approver || '',
       controllerReview: existing.controllerReview ?? null,
       dispatch: existing.dispatch ?? null,
-      siteSnapshot:
-        existing.siteSnapshot && Object.values(existing.siteSnapshot).some(Boolean)
-          ? existing.siteSnapshot
-          : createQuarterlySiteSnapshot(site),
+      siteSnapshot: mergeQuarterlySiteSnapshot(
+        existing.siteSnapshot,
+        createQuarterlySiteSnapshot(site),
+      ),
       lastCalculatedAt: existing.lastCalculatedAt || existing.updatedAt || createTimestamp(),
       updatedAt: existing.updatedAt || createTimestamp(),
       accidentStats: collapseQuarterlyCounters(existing.accidentStats || []),

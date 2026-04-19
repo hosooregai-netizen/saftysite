@@ -6,7 +6,7 @@ import {
   mergeReportIndexItems,
 } from '@/hooks/inspectionSessions/helpers';
 import { fetchAssignedSafetySites } from '@/lib/safetyApi';
-import { isSafetyAdmin } from '@/lib/safetyApiMappers';
+import { isSafetyAdmin, mapSafetySiteToInspectionSite } from '@/lib/safetyApiMappers';
 import type { ReactNode } from 'react';
 import type { InspectionReportListItem } from '@/types/inspectionSession';
 import { useInspectionSessionsAutosave } from './autosave';
@@ -92,10 +92,32 @@ export function InspectionSessionsProvider({
     [store],
   );
 
+  const upsertAssignedSitesIntoStore = useCallback(
+    (rawSites: import('@/types/backend').SafetySite[]) => {
+      if (rawSites.length === 0) {
+        return;
+      }
+
+      const nextSitesById = new Map(
+        store.sitesRef.current.map((site) => [site.id, site]),
+      );
+      rawSites.forEach((site) => {
+        nextSitesById.set(site.id, mapSafetySiteToInspectionSite(site));
+      });
+      const nextSites = Array.from(nextSitesById.values());
+      store.setSiteState(nextSites);
+      void store.persistSites(nextSites).catch(() => {
+        // Ignore cache persistence failures during site enrichment.
+      });
+    },
+    [store],
+  );
+
   const ensureAssignedSafetySite = useCallback(
     async (siteId: string) => {
       const cached = store.assignedSafetySitesByIdRef.current.get(siteId);
       if (cached) {
+        upsertAssignedSitesIntoStore([cached]);
         return cached;
       }
 
@@ -107,12 +129,13 @@ export function InspectionSessionsProvider({
       try {
         const sites = await fetchAssignedSafetySites(token);
         store.replaceAssignedSafetySites(sites);
+        upsertAssignedSitesIntoStore(sites);
         return store.assignedSafetySitesByIdRef.current.get(siteId) ?? null;
       } catch {
         return null;
       }
     },
-    [store],
+    [store, upsertAssignedSitesIntoStore],
   );
 
   const contextValue = useMemo<InspectionSessionsContextValue>(
