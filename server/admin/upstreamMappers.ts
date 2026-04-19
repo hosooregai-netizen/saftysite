@@ -82,6 +82,14 @@ function normalizeText(value: unknown) {
   return typeof value === 'string' ? value.trim() : '';
 }
 
+function normalizeCount(value: unknown, fallback = 0) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+}
+
+function asBackendRecord<T extends Record<string, unknown>>(value: unknown): T | null {
+  return value && typeof value === 'object' ? (value as T) : null;
+}
+
 function normalizeExcelRowExclusionReasonCode(
   value: unknown,
 ): ExcelRowExclusionReasonCode | null {
@@ -105,61 +113,69 @@ function mapBackendDispatch(row: SafetyBackendAdminReportRow) {
 export function mapBackendAdminReportRow(
   row: SafetyBackendAdminReportRow,
 ): ControllerReportRow {
-  const reportKey = normalizeText(row.report_key);
-  const originalPdfArchivePath = normalizeText(row.original_pdf_archive_path);
-  const originalPdfDownloadPath = normalizeText(row.original_pdf_download_path);
+  const record = asBackendRecord<Partial<SafetyBackendAdminReportRow> & Record<string, unknown>>(row) ?? {};
+  const reportKey = normalizeText(record.report_key);
+  const originalPdfArchivePath = normalizeText(record.original_pdf_archive_path);
+  const originalPdfDownloadPath = normalizeText(record.original_pdf_download_path);
   const originalPdfAvailable =
-    Boolean(originalPdfArchivePath) || row.original_pdf_available === true;
+    Boolean(originalPdfArchivePath) || record.original_pdf_available === true;
   const dispatchSignal =
-    (normalizeText(row.dispatch_signal) || normalizeText(row.dispatch_status) || '') as ControllerReportRow['dispatchStatus'];
+    (normalizeText(record.dispatch_signal) || normalizeText(record.dispatch_status) || '') as ControllerReportRow['dispatchStatus'];
 
   return applyControllerReportRowStatus({
-    assigneeName: normalizeText(row.assignee_name),
-    assigneeUserId: normalizeText(row.assignee_user_id),
-    checkerUserId: normalizeText(row.checker_user_id),
-    controllerReview: mapBackendReview(row),
-    deadlineDate: normalizeText(row.deadline_date),
-    dispatch: mapBackendDispatch(row),
+    assigneeName: normalizeText(record.assignee_name),
+    assigneeUserId: normalizeText(record.assignee_user_id),
+    checkerUserId: normalizeText(record.checker_user_id),
+    controllerReview: mapBackendReview(record as SafetyBackendAdminReportRow),
+    deadlineDate: normalizeText(record.deadline_date),
+    dispatch: mapBackendDispatch(record as SafetyBackendAdminReportRow),
     dispatchSignal,
     dispatchStatus: dispatchSignal,
-    headquarterId: normalizeText(row.headquarter_id),
-    headquarterName: normalizeText(row.headquarter_name),
-    periodLabel: normalizeText(row.period_label),
+    headquarterId: normalizeText(record.headquarter_id),
+    headquarterName: normalizeText(record.headquarter_name),
+    periodLabel: normalizeText(record.period_label),
     progressRate:
-      typeof row.progress_rate === 'number' && Number.isFinite(row.progress_rate)
-        ? row.progress_rate
+      typeof record.progress_rate === 'number' && Number.isFinite(record.progress_rate)
+        ? record.progress_rate
         : null,
-    qualityStatus: (normalizeText(row.quality_status) || 'unchecked') as ControllerReportRow['qualityStatus'],
+    qualityStatus: (normalizeText(record.quality_status) || 'unchecked') as ControllerReportRow['qualityStatus'],
     originalPdfAvailable,
     originalPdfDownloadPath: originalPdfAvailable
       ? originalPdfDownloadPath || `/api/admin/reports/${encodeURIComponent(reportKey)}/original-pdf`
       : '',
     reportKey,
-    reportMonth: normalizeText(row.report_month),
-    reportTitle: normalizeText(row.report_title),
-    reportType: (normalizeText(row.report_type) || 'technical_guidance') as ControllerReportRow['reportType'],
-    routeParam: normalizeText(row.route_param),
-    siteId: normalizeText(row.site_id),
-    siteName: normalizeText(row.site_name),
-    sortLabel: normalizeText(row.sort_label),
-    status: normalizeText(row.workflow_status) || normalizeText(row.status),
-    updatedAt: normalizeText(row.updated_at),
-    visitDate: normalizeText(row.visit_date),
-    workflowStatus: normalizeText(row.workflow_status),
-    lifecycleStatus: normalizeText(row.lifecycle_status),
+    reportMonth: normalizeText(record.report_month),
+    reportTitle: normalizeText(record.report_title),
+    reportType: (normalizeText(record.report_type) || 'technical_guidance') as ControllerReportRow['reportType'],
+    routeParam: normalizeText(record.route_param),
+    siteId: normalizeText(record.site_id),
+    siteName: normalizeText(record.site_name),
+    sortLabel: normalizeText(record.sort_label),
+    status: normalizeText(record.workflow_status) || normalizeText(record.status),
+    updatedAt: normalizeText(record.updated_at),
+    visitDate: normalizeText(record.visit_date),
+    workflowStatus: normalizeText(record.workflow_status),
+    lifecycleStatus: normalizeText(record.lifecycle_status),
   });
 }
 
 export function mapBackendAdminReportsResponse(
   response: SafetyBackendAdminReportsResponse,
 ): SafetyAdminReportsResponse {
+  const rows = Array.isArray(response?.rows) ? response.rows : [];
+  const mappedRows = rows
+    .map((row) => {
+      const mapped = mapBackendAdminReportRow(row);
+      return mapped.reportKey ? mapped : null;
+    })
+    .filter((row): row is ControllerReportRow => Boolean(row))
+    .filter((row) => isVisibleReport(row));
+
   return {
-    limit: response.limit,
-    offset: response.offset,
-    rows: response.rows
-      .map((row) => mapBackendAdminReportRow(row))
-      .filter((row) => isVisibleReport(row)),
-    total: response.total,
+    limit: normalizeCount(response?.limit, mappedRows.length),
+    offset: normalizeCount(response?.offset),
+    rows: mappedRows,
+    total: normalizeCount(response?.total, mappedRows.length),
   };
 }
 
