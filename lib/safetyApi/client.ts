@@ -3,6 +3,7 @@ import { buildPublicSafetyApiUpstreamUrl } from './upstream';
 
 const DEFAULT_SAFETY_API_TIMEOUT_MS = 12000;
 const AUTH_SAFETY_API_TIMEOUT_MS = 30000;
+const ASSIGNMENT_WRITE_SAFETY_API_TIMEOUT_MS = 30000;
 const UPLOAD_SAFETY_API_TIMEOUT_MS = 45000;
 const REPORT_UPSERT_SAFETY_API_TIMEOUT_MS = 45000;
 const ERP_CONTEXT_SAFETY_API_TIMEOUT_MS = 30000;
@@ -183,6 +184,10 @@ async function parseJsonSuccessBody<T>(
 function getSafetyApiTimeoutMs(path: string, options: RequestInit): number {
   if (path === '/auth/token') {
     return AUTH_SAFETY_API_TIMEOUT_MS;
+  }
+
+  if (path.startsWith('/assignments') && (options.method || 'GET').toUpperCase() !== 'GET') {
+    return ASSIGNMENT_WRITE_SAFETY_API_TIMEOUT_MS;
   }
 
   if (path.includes('/assets/upload') || options.body instanceof FormData) {
