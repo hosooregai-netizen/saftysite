@@ -51,8 +51,11 @@ export async function runAdminSchedulesSmoke(config: ClientSmokePlaywrightConfig
     });
 
     await page.getByRole('button', { name: '[김요원] 1/9 - 기존 현장' }).click();
-    const scheduleDialog = page.getByRole('dialog', { name: '방문 일정 선택' });
+    const scheduleDialog = page.getByRole('dialog', { name: '방문 일정' });
     await scheduleDialog.waitFor({ state: 'visible' });
+    if ((await scheduleDialog.getByText('선택 가능한 회차').count()) !== 0) {
+      throw new Error('Expected existing schedule dialog to hide selectable round table.');
+    }
     await scheduleDialog.getByText('선택 사유').waitFor();
     if ((await scheduleDialog.getByLabel('사유 분류').inputValue()) !== '') {
       throw new Error('Expected legacy placeholder reason label to be cleared in controller dialog.');

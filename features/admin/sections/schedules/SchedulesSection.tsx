@@ -623,6 +623,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
     [dragScheduleId, sortedSelectedRows],
   );
   const dialogSelectableRows = useMemo(() => {
+    if (activeScheduleId) return [];
     const rows = allScheduleRows.filter((row) => row.id === activeScheduleId || !row.plannedDate);
     return sortSelectableRows(rows);
   }, [activeScheduleId, allScheduleRows]);
@@ -673,6 +674,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
     const selectedRowsOnDate = sortSelectableRows(
       allScheduleRows.filter((row) => row.plannedDate === input.plannedDate),
     );
+    const relatedRowIds = input.overflowRowIds ?? selectedRowsOnDate.map((row) => row.id);
     const defaultSchedule =
       input.schedule ??
       selectedRowsOnDate[0] ??
@@ -680,7 +682,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
       null;
     setSelectedDate(input.plannedDate);
     setActiveScheduleId(defaultSchedule?.id || '');
-    setDialogOverflowRowIds(input.overflowRowIds ?? []);
+    setDialogOverflowRowIds(defaultSchedule ? relatedRowIds : input.overflowRowIds ?? []);
     setForm(buildInitialForm(defaultSchedule, input.plannedDate));
     setDialogOpen(true);
   };
@@ -1100,7 +1102,15 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                       <button
                         type="button"
                         className={styles.calendarCellHeaderButton}
-                        onClick={() => openScheduleDialog({ plannedDate: day.token })}
+                        onClick={() =>
+                          dayRows.length > 0
+                            ? openScheduleDialog({
+                                plannedDate: day.token,
+                                schedule: dayRows[0] || null,
+                                overflowRowIds: dayRows.map((row) => row.id),
+                              })
+                            : openScheduleDialog({ plannedDate: day.token })
+                        }
                       >
                         <span className={styles.calendarCellDate}>{day.day}일</span>
                         <span className={styles.calendarCellCount}>{dayRows.length}건</span>
@@ -1123,6 +1133,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                                 openScheduleDialog({
                                   plannedDate: row.plannedDate || row.windowStart,
                                   schedule: row,
+                                  overflowRowIds: dayRows.map((item) => item.id),
                                 })
                               }
                               onDragStart={() => setDragScheduleId(row.id)}
@@ -1142,7 +1153,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                               className={styles.calendarMoreButton}
                               onClick={() =>
                                 openScheduleDialog({
-                                  overflowRowIds: dayRows.slice(5).map((row) => row.id),
+                                  overflowRowIds: dayRows.map((row) => row.id),
                                   plannedDate: day.token,
                                   schedule: dayRows[5] || dayRows[0] || null,
                                 })
@@ -1412,7 +1423,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
 
       <AppModal
         open={dialogOpen}
-        title="방문 일정 선택"
+        title={activeSchedule ? '방문 일정' : '방문 일정 선택'}
         onClose={closeDialog}
         actions={
           <>
@@ -1552,49 +1563,51 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
               ))}
             </select>
           </label>
-          <label className={styles.modalFieldWide}>
-            <span className={styles.label}>선택 가능한 회차</span>
-            {dialogSelectableRows.length === 0 ? (
-              <div className={styles.tableEmpty}>이 날짜에 선택할 수 있는 회차가 없습니다.</div>
-            ) : (
-              <div className={styles.tableWrap}>
-                <table className={styles.table}>
-                  <thead>
-                    <tr>
-                      <th>선택</th>
-                      <th>현장</th>
-                      <th>회차</th>
-                      <th>허용 구간</th>
-                      <th>담당자</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {dialogSelectableRows.map((row) => (
-                      <tr key={`dialog-${row.id}`}>
-                        <td>
-                          <input
-                            type="radio"
-                            name="schedule-select"
-                            checked={activeScheduleId === row.id}
-                            onChange={() => handlePickSchedule(row)}
-                          />
-                        </td>
-                        <td>{row.siteName}</td>
-                        <td>
-                          {row.roundNo} / {row.totalRounds && row.totalRounds > 0 ? row.totalRounds : row.roundNo}
-                        </td>
-                        <td>{buildWindowSummary(row)}</td>
-                        <td>{row.assigneeName || '-'}</td>
+          {!activeSchedule ? (
+            <label className={styles.modalFieldWide}>
+              <span className={styles.label}>선택 가능한 회차</span>
+              {dialogSelectableRows.length === 0 ? (
+                <div className={styles.tableEmpty}>이 날짜에 선택할 수 있는 회차가 없습니다.</div>
+              ) : (
+                <div className={styles.tableWrap}>
+                  <table className={styles.table}>
+                    <thead>
+                      <tr>
+                        <th>선택</th>
+                        <th>현장</th>
+                        <th>회차</th>
+                        <th>허용 구간</th>
+                        <th>담당자</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </label>
+                    </thead>
+                    <tbody>
+                      {dialogSelectableRows.map((row) => (
+                        <tr key={`dialog-${row.id}`}>
+                          <td>
+                            <input
+                              type="radio"
+                              name="schedule-select"
+                              checked={activeScheduleId === row.id}
+                              onChange={() => handlePickSchedule(row)}
+                            />
+                          </td>
+                          <td>{row.siteName}</td>
+                          <td>
+                            {row.roundNo} / {row.totalRounds && row.totalRounds > 0 ? row.totalRounds : row.roundNo}
+                          </td>
+                          <td>{buildWindowSummary(row)}</td>
+                          <td>{row.assigneeName || '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </label>
+          ) : null}
           {dialogSelectedRows.length > 0 ? (
             <div className={styles.modalFieldWide}>
-              <span className={styles.label}>같은 날짜 확정 일정</span>
+              <span className={styles.label}>같은 날짜 일정</span>
               <div className={styles.tableWrap}>
                 <table className={styles.table}>
                   <thead>
