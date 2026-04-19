@@ -3,6 +3,7 @@ import {
   deactivateSafetyAssignment,
   updateSafetyAssignment,
 } from '@/lib/safetyApi/adminEndpoints';
+import { SafetyApiError } from '@/lib/safetyApi';
 import {
   buildAssignmentPayload,
   loadAllSafetyAssignments,
@@ -25,21 +26,24 @@ type MutationRunner = <TResult>(
 ) => Promise<void>;
 
 interface BuildAdminDashboardAssignmentActionsParams {
+  getCurrentData: () => ControllerDashboardData;
   runMutation: MutationRunner;
 }
 
 export function buildAdminDashboardAssignmentActions({
+  getCurrentData,
   runMutation,
 }: BuildAdminDashboardAssignmentActionsParams) {
+  const findKnownAssignment = (siteId: string, userId: string) =>
+    getCurrentData().assignments.find(
+      (assignment) => assignment.site_id === siteId && assignment.user_id === userId,
+    );
+
   return {
     createAssignment: (input: SafetyAssignmentInput) =>
       runMutation(
         async (token) => {
-          const assignments = await loadAllSafetyAssignments(token);
-          const existingAssignment = assignments.find(
-            (assignment) =>
-              assignment.site_id === input.site_id && assignment.user_id === input.user_id,
-          );
+          const existingAssignment = findKnownAssignment(input.site_id, input.user_id);
 
           if (existingAssignment) {
             return updateSafetyAssignment(token, existingAssignment.id, {
@@ -49,7 +53,26 @@ export function buildAdminDashboardAssignmentActions({
             });
           }
 
-          return createSafetyAssignment(token, input);
+          try {
+            return await createSafetyAssignment(token, input);
+          } catch (error) {
+            if (!(error instanceof SafetyApiError) || error.status !== 409) {
+              throw error;
+            }
+            const assignments = await loadAllSafetyAssignments(token);
+            const matchedAssignment = assignments.find(
+              (assignment) =>
+                assignment.site_id === input.site_id && assignment.user_id === input.user_id,
+            );
+            if (!matchedAssignment) {
+              throw error;
+            }
+            return updateSafetyAssignment(token, matchedAssignment.id, {
+              role_on_site: input.role_on_site ?? matchedAssignment.role_on_site,
+              memo: input.memo ?? matchedAssignment.memo ?? null,
+              is_active: true,
+            });
+          }
         },
         '현장 배정을 생성했습니다.',
         {
@@ -67,10 +90,7 @@ export function buildAdminDashboardAssignmentActions({
     ) =>
       runMutation(
         async (token) => {
-          const assignments = await loadAllSafetyAssignments(token);
-          const matchedAssignment = assignments.find(
-            (assignment) => assignment.site_id === siteId && assignment.user_id === userId,
-          );
+          const matchedAssignment = findKnownAssignment(siteId, userId);
 
           if (matchedAssignment) {
             if (matchedAssignment.is_active) {
@@ -83,11 +103,29 @@ export function buildAdminDashboardAssignmentActions({
             });
           }
 
-          return createSafetyAssignment(token, {
+          const payload = {
             site_id: siteId,
             user_id: userId,
             ...buildAssignmentPayload('현장 지도요원', options),
-          });
+          };
+          try {
+            return await createSafetyAssignment(token, payload);
+          } catch (error) {
+            if (!(error instanceof SafetyApiError) || error.status !== 409) {
+              throw error;
+            }
+            const assignments = await loadAllSafetyAssignments(token);
+            const conflictingAssignment = assignments.find(
+              (assignment) => assignment.site_id === siteId && assignment.user_id === userId,
+            );
+            if (!conflictingAssignment) {
+              throw error;
+            }
+            return updateSafetyAssignment(token, conflictingAssignment.id, {
+              ...buildAssignmentPayload('현장 지도요원', options, conflictingAssignment),
+              is_active: true,
+            });
+          }
         },
         '지도요원을 배정했습니다.',
         {
@@ -101,13 +139,19 @@ export function buildAdminDashboardAssignmentActions({
     unassignFieldAgentFromSite: (siteId: string, userId: string) =>
       runMutation(
         async (token) => {
-          const assignments = await loadAllSafetyAssignments(token);
-          const matchedAssignment = assignments.find(
+          const matchedAssignment =
+            getCurrentData().assignments.find(
+              (assignment) =>
+                assignment.site_id === siteId &&
+                assignment.user_id === userId &&
+                assignment.is_active,
+            ) ??
+            (await loadAllSafetyAssignments(token)).find(
             (assignment) =>
               assignment.site_id === siteId &&
               assignment.user_id === userId &&
               assignment.is_active,
-          );
+            );
 
           if (!matchedAssignment) {
             return null;

@@ -3,6 +3,7 @@ import { buildPublicSafetyApiUpstreamUrl } from './upstream';
 
 const DEFAULT_SAFETY_API_TIMEOUT_MS = 12000;
 const AUTH_SAFETY_API_TIMEOUT_MS = 30000;
+const ASSIGNMENT_WRITE_SAFETY_API_TIMEOUT_MS = 30000;
 const UPLOAD_SAFETY_API_TIMEOUT_MS = 45000;
 const REPORT_UPSERT_SAFETY_API_TIMEOUT_MS = 45000;
 const ERP_CONTEXT_SAFETY_API_TIMEOUT_MS = 30000;
@@ -130,15 +131,6 @@ function formatRequestLabel(path: string, method?: string): string {
   return `${normalizedMethod} ${path}`;
 }
 
-async function parseJsonResponse<T extends JsonLike>(response: Response): Promise<T> {
-  const text = await response.text();
-  if (!text.trim()) {
-    return undefined as T;
-  }
-
-  return JSON.parse(text) as T;
-}
-
 async function parseErrorMessage(response: Response): Promise<string> {
   const contentType = response.headers.get('content-type') ?? '';
 
@@ -170,9 +162,32 @@ async function parseErrorMessage(response: Response): Promise<string> {
   return text || response.statusText || '요청 처리 중 오류가 발생했습니다.';
 }
 
+async function parseJsonSuccessBody<T>(
+  response: Response,
+  requestLabel: string
+): Promise<T | undefined> {
+  const text = await response.text();
+  if (!text.trim()) {
+    return undefined;
+  }
+
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new SafetyApiError(
+      `${requestLabel} 요청은 성공했지만 응답 본문을 해석하지 못했습니다.`,
+      response.status
+    );
+  }
+}
+
 function getSafetyApiTimeoutMs(path: string, options: RequestInit): number {
   if (path === '/auth/token') {
     return AUTH_SAFETY_API_TIMEOUT_MS;
+  }
+
+  if (path.startsWith('/assignments') && (options.method || 'GET').toUpperCase() !== 'GET') {
+    return ASSIGNMENT_WRITE_SAFETY_API_TIMEOUT_MS;
   }
 
   if (path.includes('/assets/upload') || options.body instanceof FormData) {
@@ -341,7 +356,7 @@ export async function requestSafetyApi<T>(
       return undefined as JsonLike;
     }
 
-    return await parseJsonResponse<JsonLike>(response);
+    return (await parseJsonSuccessBody<JsonLike>(response, requestLabel)) as JsonLike;
   };
 
   if (cacheTtlMs > 0) {

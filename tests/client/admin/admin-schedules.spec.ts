@@ -53,6 +53,13 @@ export async function runAdminSchedulesSmoke(config: ClientSmokePlaywrightConfig
       state: 'visible',
     });
 
+    await page.getByRole('button', { name: /14일.*2건/ }).click();
+    const dayListDialog = page.getByRole('dialog', { name: '2026-04-14 일정 목록' });
+    await dayListDialog.waitFor({ state: 'visible' });
+    await dayListDialog.locator('tbody tr').first().click();
+    await page.getByRole('dialog', { name: '방문 일정' }).waitFor({ state: 'visible' });
+    await page.getByRole('button', { name: '취소' }).click();
+
     await page.getByRole('button', { name: '[김요원] 1/9 - 기존 현장' }).click();
     const scheduleDialog = page.getByRole('dialog', { name: '방문 일정' });
     await scheduleDialog.waitFor({ state: 'visible' });

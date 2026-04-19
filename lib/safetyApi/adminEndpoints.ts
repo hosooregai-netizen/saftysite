@@ -72,6 +72,19 @@ function normalizeSafetySite(site: SafetySite): SafetySite {
   };
 }
 
+async function fetchSafetyHeadquarterById(token: string, id: string): Promise<SafetyHeadquarter> {
+  return requestSafetyApi<SafetyHeadquarter>(`/headquarters/${id}`, {}, token);
+}
+
+async function fetchSafetySiteById(token: string, id: string): Promise<SafetySite> {
+  const site = await requestSafetyApi<SafetySite>(
+    `/sites/${id}?include_headquarter_detail=true&include_assigned_user=true`,
+    {},
+    token
+  );
+  return normalizeSafetySite(site);
+}
+
 export interface SafetyContentAssetUpload {
   path: string;
   file_name: string;
@@ -140,7 +153,13 @@ export const updateSafetyHeadquarter = async (
   body: SafetyHeadquarterUpdateInput,
 ) => {
   try {
-    return await sendJson<SafetyHeadquarter>(`/headquarters/${id}`, token, 'PATCH', body);
+    const headquarter = await sendJson<SafetyHeadquarter | undefined>(
+      `/headquarters/${id}`,
+      token,
+      'PATCH',
+      body
+    );
+    return headquarter ?? (await fetchSafetyHeadquarterById(token, id));
   } catch (error) {
     if (isHeadquarterWriteFailure(error)) {
       throw new SafetyApiError(
@@ -194,7 +213,10 @@ export const createSafetySite = async (token: string, body: SafetySiteInput) => 
 };
 export const updateSafetySite = async (token: string, id: string, body: SafetySiteUpdateInput) => {
   try {
-    const site = await sendJson<SafetySite>(`/sites/${id}`, token, 'PATCH', body);
+    const site = await sendJson<SafetySite | undefined>(`/sites/${id}`, token, 'PATCH', body);
+    if (!site) {
+      return await fetchSafetySiteById(token, id);
+    }
     return normalizeSafetySite(site);
   } catch (error) {
     if (isDuplicateFieldConflict(error, 'site_code')) {
@@ -211,7 +233,15 @@ export const updateSafetySiteDispatchPolicy = async (
   id: string,
   body: Pick<SiteDispatchPolicy, 'enabled' | 'alerts_enabled'>,
 ) => {
-  const site = await sendJson<SafetySite>(`/sites/${id}/dispatch-policy`, token, 'PATCH', body);
+  const site = await sendJson<SafetySite | undefined>(
+    `/sites/${id}/dispatch-policy`,
+    token,
+    'PATCH',
+    body
+  );
+  if (!site) {
+    return fetchSafetySiteById(token, id);
+  }
   return normalizeSafetySite(site);
 };
 export const deactivateSafetySite = (token: string, id: string) =>

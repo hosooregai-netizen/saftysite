@@ -21,6 +21,7 @@ Workers must be able to:
 - see assigned schedule rounds for a selected month
 - identify unselected rounds
 - choose a visit date within the allowed window
+- choose one of the remaining contract rounds for an assigned site
 - enter both a reason label and detailed memo
 - inspect already selected schedules for a date
 - revise an existing selected schedule and its reason
@@ -108,8 +109,9 @@ Out of scope:
 - `calendar`
 - `rowsByDate`
 - `dialogSelectedSchedule`
-- `dialogEligibleRows`
-- `dialogSelectedRows`
+- `dialogSiteOptions`
+- `dialogRoundRows`
+- `dialogSelectedSite`
 - `dialogWindowError`
 
 ## Business Rules
@@ -179,12 +181,17 @@ Out of scope:
   - `siteName`
 - bottom list optionally narrows to `selectedDate`
 
-### Modal eligibility rule
+### Modal round selection rule
 
-- selectable rows are:
-  - rows with no `plannedDate`
-  - plus the currently selected row
-  - but only when modal date falls within `windowStart ~ windowEnd`
+- assigned site options come from the real worker assigned-site list, not only from current month schedule rows
+- each site shows:
+  - completed rounds based on technical-guidance reports
+  - total contract rounds
+  - remaining selectable rounds
+- selectable rounds are:
+  - non-canceled / non-completed schedule rows
+  - excluding round numbers already completed by report
+- if completed rounds reach total contract rounds, the site is treated as complete and the modal shows no remaining round choices
 - `windowStart ~ windowEnd` is treated as the contract-period selection range for that round, not a fixed 15-day slot
 
 ### Save validation

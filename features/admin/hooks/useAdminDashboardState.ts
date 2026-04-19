@@ -136,8 +136,12 @@ export function useAdminDashboardState({
     [runMutation],
   );
   const assignmentActions = useMemo(
-    () => buildAdminDashboardAssignmentActions({ runMutation }),
-    [runMutation],
+    () =>
+      buildAdminDashboardAssignmentActions({
+        getCurrentData: () => data,
+        runMutation,
+      }),
+    [data, runMutation],
   );
   const contentActions = useMemo(
     () => buildAdminDashboardContentActions({ runContentMutation, runMutation }),

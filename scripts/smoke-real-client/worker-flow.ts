@@ -25,6 +25,8 @@ export async function runWorkerFlow(page: Page): Promise<WorkerFlowResult> {
   await scheduleDialog.waitFor({ state: 'visible' });
   await scheduleDialog.getByText('배정된 현장').waitFor();
   await scheduleDialog.getByText('선택 가능한 회차').waitFor();
+  await scheduleDialog.locator('input[name="worker-site"]').first().waitFor();
+  await scheduleDialog.locator('input[name="worker-schedule"]').first().waitFor();
   await scheduleDialog.getByLabel('방문 날짜').fill('2026-04-08');
   await scheduleDialog.getByLabel('변경 사유 기록').check();
   await scheduleDialog.getByLabel('사유 분류').fill('현장 요청');

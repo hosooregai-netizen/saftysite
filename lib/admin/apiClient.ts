@@ -47,6 +47,19 @@ async function parseErrorMessage(response: Response) {
   return response.statusText || '요청 처리 중 오류가 발생했습니다.';
 }
 
+async function parseSuccessBody<T>(response: Response): Promise<T | undefined> {
+  const text = await response.text();
+  if (!text.trim()) {
+    return undefined;
+  }
+
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new SafetyApiError('요청은 성공했지만 응답 본문을 해석하지 못했습니다.', response.status);
+  }
+}
+
 export async function requestAdminApi<T>(
   path: string,
   options: RequestInit = {},
@@ -77,7 +90,7 @@ export async function requestAdminApi<T>(
     return undefined as T;
   }
 
-  return (await response.json()) as T;
+  return (await parseSuccessBody<T>(response)) as T;
 }
 
 export function fetchAdminReports(input: {

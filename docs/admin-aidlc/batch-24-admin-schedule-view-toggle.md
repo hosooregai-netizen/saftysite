@@ -37,6 +37,8 @@ edit flows intact.
   only.
 - `더보기` now opens a day-level schedule list popup and each row in that popup can open the
   schedule-detail dialog directly.
+- The day-level popup no longer requires a narrow secondary button hit area; the schedule row
+  itself is keyboard-focusable and opens the detail dialog on click or Enter/Space.
 - The day-level schedule list now prioritizes quick identification with `[담당자] 현장명` labels and
   removes extra issue/selection-detail columns that slowed down scan time.
 - Client smoke now asserts that both schedule view tabs render and can switch between the queue/list
