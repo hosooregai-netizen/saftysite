@@ -1,17 +1,22 @@
 import { mapSafetyReportToQuarterlySummaryReport } from '@/lib/erpReports/mappers';
 import { SafetyServerApiError } from '@/server/admin/safetyApiServer';
+import type { GeneratedReportPdfCacheKey } from '@/server/documents/shared/generatedReportPdfCache';
 import { resolveReportSitePayloadByReportKey } from '@/server/documents/shared/reportKeyResolver';
 import type {
   GenerateQuarterlyDocumentRequest,
   GenerateQuarterlyHwpxRequest,
 } from '@/types/documents';
 
+export interface ResolvedQuarterlyDocumentRequest extends GenerateQuarterlyHwpxRequest {
+  cacheKey: GeneratedReportPdfCacheKey | null;
+}
+
 export async function resolveQuarterlyDocumentRequest(
   request: Request,
   body: GenerateQuarterlyDocumentRequest,
-): Promise<GenerateQuarterlyHwpxRequest> {
+): Promise<ResolvedQuarterlyDocumentRequest> {
   if ('report' in body && body.report && body.site) {
-    return body;
+    return { ...body, cacheKey: null };
   }
 
   const reportKey =
@@ -29,6 +34,11 @@ export async function resolveQuarterlyDocumentRequest(
   }
 
   return {
+    cacheKey: {
+      documentKind: 'quarterly_report',
+      reportKey,
+      updatedAt: payload.report.updated_at || '',
+    },
     report,
     site: payload.site,
   };

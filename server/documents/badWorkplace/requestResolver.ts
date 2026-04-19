@@ -1,17 +1,22 @@
 import { mapSafetyReportToBadWorkplaceReport } from '@/lib/erpReports/mappers';
 import { SafetyServerApiError } from '@/server/admin/safetyApiServer';
+import type { GeneratedReportPdfCacheKey } from '@/server/documents/shared/generatedReportPdfCache';
 import { resolveReportSitePayloadByReportKey } from '@/server/documents/shared/reportKeyResolver';
 import type {
   GenerateBadWorkplaceDocumentRequest,
   GenerateBadWorkplaceHwpxRequest,
 } from '@/types/documents';
 
+export interface ResolvedBadWorkplaceDocumentRequest extends GenerateBadWorkplaceHwpxRequest {
+  cacheKey: GeneratedReportPdfCacheKey | null;
+}
+
 export async function resolveBadWorkplaceDocumentRequest(
   request: Request,
   body: GenerateBadWorkplaceDocumentRequest,
-): Promise<GenerateBadWorkplaceHwpxRequest> {
+): Promise<ResolvedBadWorkplaceDocumentRequest> {
   if ('report' in body && body.report && body.site) {
-    return body;
+    return { ...body, cacheKey: null };
   }
 
   const reportKey =
@@ -29,6 +34,11 @@ export async function resolveBadWorkplaceDocumentRequest(
   }
 
   return {
+    cacheKey: {
+      documentKind: 'bad_workplace',
+      reportKey,
+      updatedAt: payload.report.updated_at || '',
+    },
     report,
     site: payload.site,
   };

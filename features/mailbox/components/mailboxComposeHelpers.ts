@@ -7,6 +7,8 @@ import { normalizeControllerReportType } from '@/lib/admin/reportMeta';
 import type { MailAttachmentPayload, MailThread } from '@/types/mail';
 import type { ComposeState, MailboxReportOption, SelectedReportContext } from './mailboxPanelTypes';
 
+const reportAttachmentCache = new Map<string, Promise<MailAttachmentPayload>>();
+
 function escapeHtml(value: string) {
   return value
     .replaceAll('&', '&amp;')
@@ -112,18 +114,35 @@ export async function buildReportAttachmentPayload(
   report: SelectedReportContext,
   authToken: string,
 ): Promise<MailAttachmentPayload> {
-  const reportType = resolveSelectedReportType(report);
-  const exported =
-    reportType === 'bad_workplace'
-      ? await fetchBadWorkplacePdfDocumentByReportKey(report.reportKey, authToken)
-      : reportType === 'quarterly_report'
-        ? await fetchQuarterlyPdfDocumentByReportKey(report.reportKey, authToken)
-        : await fetchInspectionPdfDocumentByReportKey(report.reportKey, authToken);
-  return {
-    contentType: exported.blob.type || 'application/pdf',
-    dataBase64: await blobToBase64(exported.blob),
-    filename: exported.filename || `${report.reportKey || 'report'}.pdf`,
-  };
+  const cacheKey = [
+    report.reportKey || 'report',
+    report.updatedAt || 'unknown',
+    resolveSelectedReportType(report),
+  ].join('::');
+  const cached = reportAttachmentCache.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
+  const pending = (async () => {
+    const reportType = resolveSelectedReportType(report);
+    const exported =
+      reportType === 'bad_workplace'
+        ? await fetchBadWorkplacePdfDocumentByReportKey(report.reportKey, authToken)
+        : reportType === 'quarterly_report'
+          ? await fetchQuarterlyPdfDocumentByReportKey(report.reportKey, authToken)
+          : await fetchInspectionPdfDocumentByReportKey(report.reportKey, authToken);
+    return {
+      contentType: exported.blob.type || 'application/pdf',
+      dataBase64: await blobToBase64(exported.blob),
+      filename: exported.filename || `${report.reportKey || 'report'}.pdf`,
+    };
+  })();
+  reportAttachmentCache.set(cacheKey, pending);
+  return pending.catch((error) => {
+    reportAttachmentCache.delete(cacheKey);
+    throw error;
+  });
 }
 
 export async function buildFileAttachmentPayload(file: File): Promise<MailAttachmentPayload> {

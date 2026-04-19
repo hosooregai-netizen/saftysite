@@ -4,6 +4,10 @@ import { SafetyServerApiError } from '@/server/admin/safetyApiServer';
 import { buildInspectionHwpxDocument } from '@/server/documents/inspection/hwpx';
 import { convertHwpxBufferToPdf } from '@/server/documents/inspection/hwpxToPdf';
 import { resolveInspectionDocumentRequest } from '@/server/documents/inspection/requestResolver';
+import {
+  readGeneratedReportPdfCache,
+  writeGeneratedReportPdfCache,
+} from '@/server/documents/shared/generatedReportPdfCache';
 import type { GenerateInspectionDocumentRequest } from '@/types/documents';
 
 export const runtime = 'nodejs';
@@ -32,21 +36,34 @@ function getPdfRouteStatus(error: unknown, message: string): number {
   return 500;
 }
 
-async function readHwpxFromRequest(
+async function readPdfRequest(
   request: Request,
-): Promise<{ buffer: Buffer; filename: string } | Response> {
+): Promise<
+  | {
+      kind: 'document';
+      cacheKey: Awaited<ReturnType<typeof resolveInspectionDocumentRequest>>['cacheKey'];
+      filename: string;
+      session: Awaited<ReturnType<typeof resolveInspectionDocumentRequest>>['session'];
+      siteSessions: Awaited<ReturnType<typeof resolveInspectionDocumentRequest>>['siteSessions'];
+    }
+  | {
+      kind: 'direct-buffer';
+      buffer: Buffer;
+      filename: string;
+    }
+  | Response
+> {
   const contentType = request.headers.get('content-type') ?? '';
 
   if (contentType.includes('application/json')) {
     const body = (await request.json()) as GenerateInspectionDocumentRequest;
     const payload = await resolveInspectionDocumentRequest(request, body);
-    const document = await buildInspectionHwpxDocument(payload.session, payload.siteSessions, {
-      assetBaseUrl: new URL(request.url).origin,
-    });
-
     return {
-      buffer: document.buffer,
-      filename: document.filename,
+      cacheKey: payload.cacheKey,
+      filename: 'inspection-report.hwpx',
+      kind: 'document',
+      session: payload.session,
+      siteSessions: payload.siteSessions,
     };
   }
 
@@ -64,20 +81,45 @@ async function readHwpxFromRequest(
       typeof originalFilename === 'string' && originalFilename.trim()
         ? originalFilename.trim()
         : file.name || 'inspection-report.hwpx',
+    kind: 'direct-buffer',
   };
 }
 
 export async function POST(request: Request): Promise<Response> {
   try {
-    const payload = await readHwpxFromRequest(request);
+    const payload = await readPdfRequest(request);
     if (payload instanceof Response) {
       return payload;
     }
 
+    if (payload.kind === 'document' && payload.cacheKey) {
+      const cached = await readGeneratedReportPdfCache(payload.cacheKey);
+      if (cached) {
+        return new Response(new Uint8Array(cached.buffer), {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(cached.filename)}`,
+          },
+        });
+      }
+    }
+
+    const generated =
+      payload.kind === 'document'
+        ? await buildInspectionHwpxDocument(payload.session, payload.siteSessions, {
+            assetBaseUrl: new URL(request.url).origin,
+          })
+        : { buffer: payload.buffer, filename: payload.filename };
+
     const { buffer, filename } = await convertHwpxBufferToPdf(
-      payload.buffer,
-      payload.filename,
+      generated.buffer,
+      generated.filename,
     );
+
+    if (payload.kind === 'document' && payload.cacheKey) {
+      await writeGeneratedReportPdfCache(payload.cacheKey, { buffer, filename });
+    }
 
     return new Response(new Uint8Array(buffer), {
       status: 200,

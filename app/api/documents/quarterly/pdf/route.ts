@@ -4,6 +4,10 @@ import { SafetyServerApiError } from '@/server/admin/safetyApiServer';
 import { convertHwpxBufferToPdf } from '@/server/documents/inspection/hwpxToPdf';
 import { buildQuarterlyHwpxDocument } from '@/server/documents/quarterly/hwpx';
 import { resolveQuarterlyDocumentRequest } from '@/server/documents/quarterly/requestResolver';
+import {
+  readGeneratedReportPdfCache,
+  writeGeneratedReportPdfCache,
+} from '@/server/documents/shared/generatedReportPdfCache';
 import type { GenerateQuarterlyDocumentRequest } from '@/types/documents';
 
 export const runtime = 'nodejs';
@@ -36,6 +40,18 @@ export async function POST(request: Request): Promise<Response> {
   try {
     const body = (await request.json()) as GenerateQuarterlyDocumentRequest;
     const payload = await resolveQuarterlyDocumentRequest(request, body);
+    if (payload.cacheKey) {
+      const cached = await readGeneratedReportPdfCache(payload.cacheKey);
+      if (cached) {
+        return new Response(new Uint8Array(cached.buffer), {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(cached.filename)}`,
+          },
+        });
+      }
+    }
     const document = await buildQuarterlyHwpxDocument(payload.report, payload.site, {
       assetBaseUrl: new URL(request.url).origin,
     });
@@ -43,6 +59,9 @@ export async function POST(request: Request): Promise<Response> {
       document.buffer,
       document.filename,
     );
+    if (payload.cacheKey) {
+      await writeGeneratedReportPdfCache(payload.cacheKey, { buffer, filename });
+    }
 
     return new Response(new Uint8Array(buffer), {
       status: 200,

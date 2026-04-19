@@ -146,7 +146,7 @@ export const ERP_FEATURE_CONTRACTS = {
   'quarterly-report': {
     id: 'quarterly-report',
     description:
-      '분기 보고서가 목록에서 생성되고, 로컬 seed fallback, 자동 저장, 문서 다운로드 흐름을 유지한다.',
+      '분기 보고서가 목록에서 생성되고, 로컬 seed fallback, 자동 저장, 문서 다운로드와 동일 revision PDF 재사용 흐름을 유지한다.',
     routes: ['/sites/site-1/quarterly', '/sites/site-1/quarterly/{quarterKey}'],
     markers: [
       '분기 종합 보고서 목록',
@@ -170,6 +170,7 @@ export const ERP_FEATURE_CONTRACTS = {
       '원본 보고서 동기화',
       '자동 저장',
       '문서 다운로드',
+      '동일 revision PDF 재사용',
     ],
   },
   'site-hub': {

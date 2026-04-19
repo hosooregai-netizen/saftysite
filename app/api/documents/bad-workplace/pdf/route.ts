@@ -4,6 +4,10 @@ import { SafetyServerApiError } from '@/server/admin/safetyApiServer';
 import { buildBadWorkplaceHwpxDocument } from '@/server/documents/badWorkplace/hwpx';
 import { convertHwpxBufferToPdf } from '@/server/documents/inspection/hwpxToPdf';
 import { resolveBadWorkplaceDocumentRequest } from '@/server/documents/badWorkplace/requestResolver';
+import {
+  readGeneratedReportPdfCache,
+  writeGeneratedReportPdfCache,
+} from '@/server/documents/shared/generatedReportPdfCache';
 import type { GenerateBadWorkplaceDocumentRequest } from '@/types/documents';
 
 export const runtime = 'nodejs';
@@ -36,11 +40,26 @@ export async function POST(request: Request): Promise<Response> {
   try {
     const body = (await request.json()) as GenerateBadWorkplaceDocumentRequest;
     const payload = await resolveBadWorkplaceDocumentRequest(request, body);
+    if (payload.cacheKey) {
+      const cached = await readGeneratedReportPdfCache(payload.cacheKey);
+      if (cached) {
+        return new Response(new Uint8Array(cached.buffer), {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(cached.filename)}`,
+          },
+        });
+      }
+    }
     const document = await buildBadWorkplaceHwpxDocument(payload.report, payload.site);
     const { buffer, filename } = await convertHwpxBufferToPdf(
       document.buffer,
       document.filename,
     );
+    if (payload.cacheKey) {
+      await writeGeneratedReportPdfCache(payload.cacheKey, { buffer, filename });
+    }
 
     return new Response(new Uint8Array(buffer), {
       status: 200,

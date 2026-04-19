@@ -714,6 +714,19 @@ export function fetchAdminAnalyticsMonthDetailServer(
   );
 }
 
+export function fetchAdminAnalyticsDetailServer(
+  token: string,
+  params: Record<string, string | number | boolean | null | undefined>,
+  request: Request | null = null,
+): Promise<SafetyBackendAdminAnalyticsMonthDetailResponse> {
+  return requestSafetyAdminServer<SafetyBackendAdminAnalyticsMonthDetailResponse>(
+    withQuery('/admin/dashboard/analytics/detail', params),
+    {},
+    token,
+    request,
+  );
+}
+
 export function fetchAdminAlertsServer(
   token: string,
   request: Request | null = null,

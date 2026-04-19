@@ -8,6 +8,7 @@ import {
   readRequiredSafetyAuthToken,
 } from '@/server/admin/safetyApiServer';
 import { resolveReportSitePayloadByReportKey } from '@/server/documents/shared/reportKeyResolver';
+import type { GeneratedReportPdfCacheKey } from '@/server/documents/shared/generatedReportPdfCache';
 import type { SafetyReport } from '@/types/backend';
 import type {
   GenerateInspectionDocumentRequest,
@@ -80,9 +81,14 @@ function buildFallbackSiteFromReport(report: SafetyReport): InspectionSite {
 }
 
 export interface InspectionSessionBootstrapPayload {
+  cacheKey: GeneratedReportPdfCacheKey;
   site: InspectionSite;
   session: InspectionSession;
   siteSessions: InspectionSession[];
+}
+
+export interface ResolvedInspectionDocumentRequest extends GenerateInspectionHwpxRequest {
+  cacheKey: GeneratedReportPdfCacheKey | null;
 }
 
 export async function resolveInspectionSessionBootstrapByReportKey(
@@ -140,6 +146,11 @@ export async function resolveInspectionSessionBootstrapByReportKey(
   }
 
   return {
+    cacheKey: {
+      documentKind: 'technical_guidance',
+      reportKey: targetReport.report_key,
+      updatedAt: targetReport.updated_at || '',
+    },
     site,
     session,
     siteSessions: Array.from(sessionsById.values()),
@@ -149,9 +160,10 @@ export async function resolveInspectionSessionBootstrapByReportKey(
 export async function resolveInspectionDocumentRequest(
   request: Request,
   body: GenerateInspectionDocumentRequest,
-): Promise<GenerateInspectionHwpxRequest> {
+): Promise<ResolvedInspectionDocumentRequest> {
   if ('session' in body && body.session) {
     return {
+      cacheKey: null,
       session: body.session,
       siteSessions: body.siteSessions?.length ? body.siteSessions : [body.session],
     };
@@ -165,12 +177,13 @@ export async function resolveInspectionDocumentRequest(
     throw new Error('문서 생성에 필요한 기술지도 보고서 키가 없습니다.');
   }
 
-  const { session, siteSessions } = await resolveInspectionSessionBootstrapByReportKey(
+  const { cacheKey, session, siteSessions } = await resolveInspectionSessionBootstrapByReportKey(
     request,
     reportKey,
   );
 
   return {
+    cacheKey,
     session,
     siteSessions,
   };

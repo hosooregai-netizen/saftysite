@@ -117,6 +117,9 @@ export async function runAdminControlCenterSection(page: Page) {
     page.waitForResponse((response) => {
       return response.url().includes('/api/admin/dashboard/analytics/month-detail') && response.ok();
     }),
+    page.waitForResponse((response) => {
+      return response.url().includes('/api/admin/dashboard/analytics/detail') && response.ok();
+    }),
   ]);
   await page.getByText('매출/실적 집계').first().waitFor();
   await page.getByText('수행 실적').first().waitFor();
@@ -134,6 +137,9 @@ export async function runAdminControlCenterSection(page: Page) {
     }),
     page.waitForResponse((response) => {
       return response.url().includes('/api/admin/dashboard/analytics/month-detail') && response.ok();
+    }),
+    page.waitForResponse((response) => {
+      return response.url().includes('/api/admin/dashboard/analytics/detail') && response.ok();
     }),
     page.locator('#analytics-filter-period').selectOption('year'),
   ]);

@@ -180,6 +180,14 @@
   background: #f8fafc;
 }
 
+.detailSectionControls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
 .detailTabButton {
   min-height: 34px;
   padding: 0 14px;
@@ -398,6 +406,11 @@
   }
 
   .detailTabs {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .detailSectionControls {
     width: 100%;
     justify-content: stretch;
   }

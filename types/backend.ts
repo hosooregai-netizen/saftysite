@@ -1253,6 +1253,7 @@ export interface SafetyBackendAdminAnalyticsSummaryResponse {
 
 export interface SafetyBackendAdminAnalyticsMonthDetailResponse {
   comparison_month_key?: string;
+  detail_scope?: string;
   employee_rows: SafetyBackendAdminAnalyticsEmployeeRow[];
   month_key?: string;
   site_revenue_rows: SafetyBackendAdminAnalyticsSiteRevenueRow[];

@@ -70,6 +70,7 @@ export const EMPTY_ANALYTICS_SUMMARY: SafetyAdminAnalyticsSummaryResponse = {
 
 export const EMPTY_ANALYTICS_MONTH_DETAIL: SafetyAdminAnalyticsMonthDetailResponse = {
   comparisonMonthKey: '',
+  detailScope: 'month',
   employeeRows: [],
   monthKey: '',
   siteRevenueRows: [],

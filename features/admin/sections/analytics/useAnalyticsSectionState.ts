@@ -6,6 +6,7 @@ import { useSubmittedSearchState } from '@/hooks/useSubmittedSearchState';
 import type { AdminAnalyticsPeriod } from '@/features/admin/lib/buildAdminControlCenterModel';
 import { readAdminSessionCache, writeAdminSessionCache } from '@/features/admin/lib/adminSessionCache';
 import {
+  fetchAdminAnalyticsDetail,
   fetchAdminAnalytics,
   fetchAdminAnalyticsMonthDetail,
   fetchAdminDirectoryLookups,
@@ -100,6 +101,7 @@ export function useAnalyticsSectionState(currentUserId: string) {
   const [userId, setUserId] = useState(() => searchParams.get('userId') || '');
   const [contractType, setContractType] = useState(() => searchParams.get('contractType') || '');
   const [detailView, setDetailView] = useState<'employee' | 'site'>('employee');
+  const [detailScope, setDetailScope] = useState<'cumulative' | 'month'>('month');
   const [employeeSort, setEmployeeSort] = useState<TableSortState>(DEFAULT_EMPLOYEE_SORT);
   const [siteRevenueSort, setSiteRevenueSort] = useState<TableSortState>(DEFAULT_SITE_REVENUE_SORT);
   const [employeePage, setEmployeePage] = useState(1);
@@ -379,23 +381,164 @@ export function useAnalyticsSectionState(currentUserId: string) {
     };
   }, [basisMonth, canRequestDetail, currentUserId, detailRequest, detailRequestKey]);
 
-  const monthDetail =
+  const chartDetail =
     detailState.resolvedRequestKey === detailRequestKey
       ? detailState.data
       : cachedDetailForRequest ?? detailState.data;
-  const detailError =
+  const chartDetailError =
     detailState.errorRequestKey === detailRequestKey ? detailState.error : null;
-  const isDetailLoading =
+  const isChartDetailLoading =
     canRequestDetail &&
     Boolean(basisMonth) &&
     (loadingDetailRequestKey === detailRequestKey ||
       detailState.resolvedRequestKey !== detailRequestKey);
-  const isDetailInitialLoading =
+  const isChartDetailInitialLoading =
     !isSummaryInitialLoading &&
-    isDetailLoading &&
-    !hasVisibleMonthDetail(monthDetail);
-  const isDetailRefreshing =
-    isDetailLoading && hasVisibleMonthDetail(monthDetail);
+    isChartDetailLoading &&
+    !hasVisibleMonthDetail(chartDetail);
+  const isChartDetailRefreshing =
+    isChartDetailLoading && hasVisibleMonthDetail(chartDetail);
+
+  const analyticsDetailRequest = useMemo(
+    () => ({
+      basisMonth: detailScope === 'month' ? basisMonth : '',
+      contractType,
+      detailScope,
+      headquarterId,
+      period,
+      query: deferredQuery.trim(),
+      userId,
+    }),
+    [
+      basisMonth,
+      contractType,
+      deferredQuery,
+      detailScope,
+      headquarterId,
+      period,
+      userId,
+    ],
+  );
+  const analyticsDetailRequestKey = useMemo(
+    () => JSON.stringify(analyticsDetailRequest),
+    [analyticsDetailRequest],
+  );
+  const [analyticsDetailState, setAnalyticsDetailState] = useState<
+    AnalyticsRequestState<SafetyAdminAnalyticsMonthDetailResponse>
+  >(() => {
+    const cached = readAdminSessionCache<SafetyAdminAnalyticsMonthDetailResponse>(
+      currentUserId,
+      `analytics-detail:${analyticsDetailRequestKey}`,
+    ).value;
+    return {
+      data: cached ?? EMPTY_ANALYTICS_MONTH_DETAIL,
+      error: null,
+      errorRequestKey: '',
+      resolvedRequestKey: cached ? analyticsDetailRequestKey : '',
+    };
+  });
+  const [loadingAnalyticsDetailRequestKey, setLoadingAnalyticsDetailRequestKey] = useState('');
+  const analyticsDetailAbortControllerRef = useRef<AbortController | null>(null);
+  const cachedAnalyticsDetailForRequest = useMemo(
+    () =>
+      readAdminSessionCache<SafetyAdminAnalyticsMonthDetailResponse>(
+        currentUserId,
+        `analytics-detail:${analyticsDetailRequestKey}`,
+      ).value,
+    [analyticsDetailRequestKey, currentUserId],
+  );
+
+  useEffect(() => {
+    if (!canRequestDetail || (detailScope === 'month' && !basisMonth)) {
+      setLoadingAnalyticsDetailRequestKey('');
+      return;
+    }
+
+    const cachedDetail = readAdminSessionCache<SafetyAdminAnalyticsMonthDetailResponse>(
+      currentUserId,
+      `analytics-detail:${analyticsDetailRequestKey}`,
+    );
+
+    if (cachedDetail.value) {
+      setAnalyticsDetailState((current) => ({
+        data: cachedDetail.value ?? current.data,
+        error:
+          current.errorRequestKey === analyticsDetailRequestKey ? current.error : null,
+        errorRequestKey:
+          current.errorRequestKey === analyticsDetailRequestKey
+            ? current.errorRequestKey
+            : '',
+        resolvedRequestKey: analyticsDetailRequestKey,
+      }));
+    }
+    if (cachedDetail.isFresh && cachedDetail.value) {
+      setLoadingAnalyticsDetailRequestKey('');
+      return;
+    }
+
+    analyticsDetailAbortControllerRef.current?.abort();
+    const abortController = new AbortController();
+    analyticsDetailAbortControllerRef.current = abortController;
+    setLoadingAnalyticsDetailRequestKey(analyticsDetailRequestKey);
+
+    void fetchAdminAnalyticsDetail(analyticsDetailRequest, { signal: abortController.signal })
+      .then((response) => {
+        writeAdminSessionCache(
+          currentUserId,
+          `analytics-detail:${analyticsDetailRequestKey}`,
+          response,
+        );
+        setAnalyticsDetailState({
+          data: response,
+          error: null,
+          errorRequestKey: '',
+          resolvedRequestKey: analyticsDetailRequestKey,
+        });
+        setLoadingAnalyticsDetailRequestKey('');
+      })
+      .catch((error) => {
+        if (abortController.signal.aborted) return;
+        setAnalyticsDetailState((current) => ({
+          ...current,
+          error:
+            error instanceof Error
+              ? error.message
+              : '실적/매출 상세표 데이터를 불러오지 못했습니다.',
+          errorRequestKey: analyticsDetailRequestKey,
+        }));
+        setLoadingAnalyticsDetailRequestKey('');
+      });
+
+    return () => {
+      abortController.abort();
+    };
+  }, [
+    analyticsDetailRequest,
+    analyticsDetailRequestKey,
+    basisMonth,
+    canRequestDetail,
+    currentUserId,
+    detailScope,
+  ]);
+
+  const analyticsDetail =
+    analyticsDetailState.resolvedRequestKey === analyticsDetailRequestKey
+      ? analyticsDetailState.data
+      : cachedAnalyticsDetailForRequest ?? analyticsDetailState.data;
+  const analyticsDetailError =
+    analyticsDetailState.errorRequestKey === analyticsDetailRequestKey
+      ? analyticsDetailState.error
+      : null;
+  const isAnalyticsDetailLoading =
+    canRequestDetail &&
+    (loadingAnalyticsDetailRequestKey === analyticsDetailRequestKey ||
+      analyticsDetailState.resolvedRequestKey !== analyticsDetailRequestKey);
+  const isAnalyticsDetailInitialLoading =
+    !isSummaryInitialLoading &&
+    isAnalyticsDetailLoading &&
+    !hasVisibleMonthDetail(analyticsDetail);
+  const isAnalyticsDetailRefreshing =
+    isAnalyticsDetailLoading && hasVisibleMonthDetail(analyticsDetail);
 
   const activeFilterCount =
     (period !== 'month' ? 1 : 0) +
@@ -439,8 +582,8 @@ export function useAnalyticsSectionState(currentUserId: string) {
     const targetYear = Number.parseInt((basisMonth || todayMonth).slice(0, 4), 10) || todayYear;
     if (summaryAnalytics.chartYearSlices.length === 0) {
       return {
-        employeeRows: monthDetail.employeeRows,
-        siteRevenueRows: monthDetail.siteRevenueRows,
+        employeeRows: chartDetail.employeeRows,
+        siteRevenueRows: chartDetail.siteRevenueRows,
         trendRows: summaryAnalytics.trendRows,
         year: targetYear,
       };
@@ -451,8 +594,8 @@ export function useAnalyticsSectionState(currentUserId: string) {
     );
   }, [
     basisMonth,
-    monthDetail.employeeRows,
-    monthDetail.siteRevenueRows,
+    chartDetail.employeeRows,
+    chartDetail.siteRevenueRows,
     summaryAnalytics.chartYearSlices,
     summaryAnalytics.trendRows,
     todayMonth,
@@ -460,12 +603,12 @@ export function useAnalyticsSectionState(currentUserId: string) {
   ]);
 
   const sortedEmployeeRows = useMemo(
-    () => sortEmployeeRows(monthDetail.employeeRows, employeeSort),
-    [employeeSort, monthDetail.employeeRows],
+    () => sortEmployeeRows(analyticsDetail.employeeRows, employeeSort),
+    [analyticsDetail.employeeRows, employeeSort],
   );
   const sortedSiteRevenueRows = useMemo(
-    () => sortSiteRevenueRows(monthDetail.siteRevenueRows, siteRevenueSort),
-    [monthDetail.siteRevenueRows, siteRevenueSort],
+    () => sortSiteRevenueRows(analyticsDetail.siteRevenueRows, siteRevenueSort),
+    [analyticsDetail.siteRevenueRows, siteRevenueSort],
   );
   const employeeTotalPages = Math.max(
     1,
@@ -488,11 +631,11 @@ export function useAnalyticsSectionState(currentUserId: string) {
 
   useEffect(() => {
     setEmployeePage(1);
-  }, [detailRequestKey, employeeSort]);
+  }, [analyticsDetailRequestKey, employeeSort]);
 
   useEffect(() => {
     setSiteRevenuePage(1);
-  }, [detailRequestKey, siteRevenueSort]);
+  }, [analyticsDetailRequestKey, siteRevenueSort]);
 
   const pagedEmployeeRows = useMemo(() => {
     const startIndex = (employeePage - 1) * DETAIL_PAGE_SIZE;
@@ -546,22 +689,27 @@ export function useAnalyticsSectionState(currentUserId: string) {
     chartYear: activeChartSlice.year,
     contractType,
     contractTypeOptions,
-    detailError,
+    analyticsDetail,
+    analyticsDetailError,
+    chartDetail,
+    chartDetailError,
     detailView,
+    detailScope,
     employeePage,
     employeeSort,
     employeeTotalPages,
     exportAnalytics,
     headquarterId,
     headquarterOptions,
-    isDetailInitialLoading,
-    isDetailRefreshing,
-    isLoading: isSummaryLoading || isDetailLoading,
+    isAnalyticsDetailInitialLoading,
+    isAnalyticsDetailRefreshing,
+    isChartDetailInitialLoading,
+    isChartDetailRefreshing,
+    isLoading: isSummaryLoading || isChartDetailLoading || isAnalyticsDetailLoading,
     isSummaryLoading,
     isSummaryInitialLoading,
     isSummaryRefreshing,
     loadError: summaryError,
-    monthDetail,
     pagedEmployeeRows,
     pagedSiteRevenueRows,
     period,
@@ -572,6 +720,7 @@ export function useAnalyticsSectionState(currentUserId: string) {
     setBasisMonth,
     setContractType,
     setDetailView,
+    setDetailScope,
     setEmployeePage,
     setEmployeeSort,
     setHeadquarterId,

@@ -271,6 +271,15 @@ const PROBES: ProbeDefinition[] = [
     maxResponseBytes: 2000000,
   },
   {
+    name: 'Admin Analytics Detail Table',
+    group: 'admin',
+    path: () => '/admin/dashboard/analytics/detail?period=month&basis_month=2026-04&detail_scope=month',
+    timeoutBucket: 'erp_context',
+    notes: '관리자 대시보드 analytics 상세표 전용 데이터',
+    maxElapsedMs: 3000,
+    maxResponseBytes: 2000000,
+  },
+  {
     name: 'Report By Key',
     group: 'reports',
     path: ({ reportKey }) => (reportKey ? `/reports/by-key/${reportKey}` : null),

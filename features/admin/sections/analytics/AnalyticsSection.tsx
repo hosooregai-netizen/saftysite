@@ -103,26 +103,29 @@ export function AnalyticsSection({ currentUserId }: AnalyticsSectionProps) {
           <AnalyticsCharts
             basisMonth={state.basisMonth}
             chartYear={state.chartYear}
-            detailError={state.detailError}
-            employeeRows={state.monthDetail.employeeRows}
-            isDetailInitialLoading={state.isDetailInitialLoading}
+            detailError={state.chartDetailError}
+            employeeRows={state.chartDetail.employeeRows}
+            isDetailInitialLoading={state.isChartDetailInitialLoading}
             isInitialLoading={state.isSummaryInitialLoading}
-            isRefreshing={state.isDetailRefreshing}
-            siteRevenueRows={state.monthDetail.siteRevenueRows}
+            isRefreshing={state.isChartDetailRefreshing}
+            siteRevenueRows={state.chartDetail.siteRevenueRows}
             trendRows={state.activeChartSlice.trendRows}
           />
         </div>
       </section>
 
       <AnalyticsDetailSection
+        basisMonth={state.basisMonth}
+        detailScope={state.detailScope}
         detailView={state.detailView}
         employeePage={state.employeePage}
         employeeRows={state.pagedEmployeeRows}
         employeeSort={state.employeeSort}
         employeeTotalPages={state.employeeTotalPages}
-        isInitialLoading={state.isDetailInitialLoading}
-        isRefreshing={state.isDetailRefreshing}
-        loadError={state.detailError}
+        isInitialLoading={state.isAnalyticsDetailInitialLoading}
+        isRefreshing={state.isAnalyticsDetailRefreshing}
+        loadError={state.analyticsDetailError}
+        setDetailScope={state.setDetailScope}
         setDetailView={state.setDetailView}
         setEmployeePage={state.setEmployeePage}
         setEmployeeSort={state.setEmployeeSort}

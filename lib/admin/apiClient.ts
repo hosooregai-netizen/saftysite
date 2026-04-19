@@ -300,6 +300,29 @@ export function fetchAdminAnalyticsMonthDetail(input: {
   );
 }
 
+export function fetchAdminAnalyticsDetail(input: {
+  basisMonth?: string;
+  contractType?: string;
+  detailScope?: 'cumulative' | 'month';
+  headquarterId?: string;
+  period?: string;
+  query?: string;
+  userId?: string;
+}, options: RequestInit = {}) {
+  return requestAdminApi<SafetyAdminAnalyticsMonthDetailResponse>(
+    `/dashboard/analytics/detail${buildQueryString({
+      basis_month: input.basisMonth,
+      contract_type: input.contractType,
+      detail_scope: input.detailScope,
+      headquarter_id: input.headquarterId,
+      period: input.period,
+      query: input.query,
+      user_id: input.userId,
+    })}`,
+    options,
+  );
+}
+
 export function refreshAdminAnalyticsSnapshot() {
   return requestAdminApi<{ ok: boolean; refreshedAt: string }>('/dashboard/analytics/refresh', {
     method: 'POST',

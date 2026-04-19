@@ -9,8 +9,10 @@ export async function runAdminControlCenterSmoke(config: ClientSmokePlaywrightCo
     const overviewExportsBefore = requestCounts.get('POST /api/admin/exports/:section') || 0;
     const analyticsSummaryReadsBefore =
       requestCounts.get('GET /api/admin/dashboard/analytics') || 0;
-    const analyticsDetailReadsBefore =
+    const analyticsChartDetailReadsBefore =
       requestCounts.get('GET /api/admin/dashboard/analytics/month-detail') || 0;
+    const analyticsTableDetailReadsBefore =
+      requestCounts.get('GET /api/admin/dashboard/analytics/detail') || 0;
 
     await page.goto(`${harness.baseURL}/admin?section=overview`, { waitUntil: 'load' });
     await harness.loginAs('admin@example.com');
@@ -76,7 +78,11 @@ export async function runAdminControlCenterSmoke(config: ClientSmokePlaywrightCo
     );
     await harness.waitForRequestCount(
       'GET /api/admin/dashboard/analytics/month-detail',
-      analyticsDetailReadsBefore + 1,
+      analyticsChartDetailReadsBefore + 1,
+    );
+    await harness.waitForRequestCount(
+      'GET /api/admin/dashboard/analytics/detail',
+      analyticsTableDetailReadsBefore + 1,
     );
     await page.getByRole('heading', { name: '상위 매출 사업장 Top 10' }).waitFor();
     await page.getByRole('columnheader', { name: '지도요원명' }).waitFor();
@@ -93,17 +99,34 @@ export async function runAdminControlCenterSmoke(config: ClientSmokePlaywrightCo
     await monthInput.waitFor();
     const analyticsSummaryReadsAtMonthChange =
       requestCounts.get('GET /api/admin/dashboard/analytics') || 0;
-    const analyticsDetailReadsAtMonthChange =
+    const analyticsChartDetailReadsAtMonthChange =
       requestCounts.get('GET /api/admin/dashboard/analytics/month-detail') || 0;
+    const analyticsTableDetailReadsAtMonthChange =
+      requestCounts.get('GET /api/admin/dashboard/analytics/detail') || 0;
     await monthInput.fill('2026-03');
     await harness.waitForRequestCount(
       'GET /api/admin/dashboard/analytics/month-detail',
-      analyticsDetailReadsAtMonthChange + 1,
+      analyticsChartDetailReadsAtMonthChange + 1,
+    );
+    await harness.waitForRequestCount(
+      'GET /api/admin/dashboard/analytics/detail',
+      analyticsTableDetailReadsAtMonthChange + 1,
     );
     if ((requestCounts.get('GET /api/admin/dashboard/analytics') || 0) !== analyticsSummaryReadsAtMonthChange) {
       throw new Error('기준월 전환은 analytics summary를 다시 요청하지 않아야 합니다.');
     }
     await page.getByText(/1 \/ \d+ 페이지/).first().waitFor();
+    const analyticsTableDetailReadsAtScopeToggle =
+      requestCounts.get('GET /api/admin/dashboard/analytics/detail') || 0;
+    await page.getByRole('button', { name: '누적' }).click();
+    await harness.waitForRequestCount(
+      'GET /api/admin/dashboard/analytics/detail',
+      analyticsTableDetailReadsAtScopeToggle + 1,
+    );
+    if ((requestCounts.get('GET /api/admin/dashboard/analytics/month-detail') || 0) !== analyticsChartDetailReadsAtMonthChange + 1) {
+      throw new Error('상세표 범위 전환은 chart detail을 다시 요청하지 않아야 합니다.');
+    }
+    await page.getByText(/현재 필터 누적/).waitFor();
     await page.getByRole('button', { name: '필터' }).click();
     await page.locator('#analytics-filter-period').selectOption('year');
     await page.getByText('매출/실적 집계').first().waitFor();
@@ -113,7 +136,11 @@ export async function runAdminControlCenterSmoke(config: ClientSmokePlaywrightCo
     );
     await harness.waitForRequestCount(
       'GET /api/admin/dashboard/analytics/month-detail',
-      analyticsDetailReadsBefore + 3,
+      analyticsChartDetailReadsBefore + 3,
+    );
+    await harness.waitForRequestCount(
+      'GET /api/admin/dashboard/analytics/detail',
+      analyticsTableDetailReadsBefore + 4,
     );
     await page.getByRole('button', { name: '엑셀 내보내기' }).click();
     await harness.waitForRequestCount('POST /api/admin/exports/:section', overviewExportsBefore + 2);
