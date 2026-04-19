@@ -599,6 +599,22 @@ async function installAdminRoutes(harness: ErpSmokeHarness) {
       return;
     }
 
+    if (pathname === '/api/admin/directory/assignments' && request.method() === 'GET') {
+      const limit = Number(url.searchParams.get('limit') || '500');
+      const offset = Number(url.searchParams.get('offset') || '0');
+      const activeOnly = url.searchParams.get('active_only') !== 'false';
+      const siteId = url.searchParams.get('site_id') || '';
+      const userId = url.searchParams.get('user_id') || '';
+      const rows = (clone(harness.helpers.hydratedAssignments()) as SafetyAssignment[]).filter(
+        (assignment) =>
+          (!activeOnly || assignment.is_active) &&
+          (!siteId || assignment.site_id === siteId) &&
+          (!userId || assignment.user_id === userId),
+      );
+      await fulfillJson(route, rows.slice(offset, offset + limit));
+      return;
+    }
+
     if (pathname === '/api/admin/dashboard/analytics' && request.method() === 'GET') {
       await fulfillJson(route, buildAnalyticsSummaryResponse(harness, url));
       return;

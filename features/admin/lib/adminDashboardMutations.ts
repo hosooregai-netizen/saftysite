@@ -1,7 +1,7 @@
 import {
-  fetchSafetyAssignmentsPage,
-  fetchSafetySitesAdminPage,
-} from '@/lib/safetyApi/adminEndpoints';
+  fetchAdminAssignmentsPage,
+} from '@/lib/admin/apiClient';
+import { fetchSafetySitesAdminPage } from '@/lib/safetyApi/adminEndpoints';
 import type { SafetySite } from '@/types/backend';
 import type { SafetyAssignment } from '@/types/controller';
 
@@ -68,8 +68,10 @@ async function fetchAllPages<T>(
   }
 }
 
-export function loadAllSafetyAssignments(token: string): Promise<SafetyAssignment[]> {
-  return fetchAllPages((offset, limit) => fetchSafetyAssignmentsPage(token, { limit, offset }));
+export function loadAllSafetyAssignments(_token: string): Promise<SafetyAssignment[]> {
+  return fetchAllPages((offset, limit) =>
+    fetchAdminAssignmentsPage({ activeOnly: true, limit, offset }),
+  );
 }
 
 export function loadAllSafetySites(token: string): Promise<SafetySite[]> {

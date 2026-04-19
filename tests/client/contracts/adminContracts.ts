@@ -16,7 +16,7 @@ export const ADMIN_FEATURE_CONTRACTS = {
       '사업장 목록이 safety-server list passthrough 기반 서버 페이지네이션, session cache, drilldown 진입, 생성/수정/삭제 흐름, 저장 성공 후 empty-body 응답 fallback 재조회, 저장 timeout 시 모달 유지와 안내 메시지, deleted soft-delete hidden refresh를 유지한다.',
     routes: ['/admin?section=headquarters'],
     markers: ['사업장 목록', '사업장 추가', '사업장 수정', '현장 보기'],
-    apis: ['GET /api/admin/headquarters/list', 'GET /api/admin/sites/list', 'POST /headquarters', 'PATCH /headquarters/:id', 'DELETE /headquarters/:id'],
+    apis: ['GET /api/admin/headquarters/list', 'GET /api/admin/sites/list', 'GET /api/admin/directory/assignments', 'POST /headquarters', 'PATCH /headquarters/:id', 'DELETE /headquarters/:id'],
     criticalActions: ['사업장 목록 페이지 로드', '사업장 생성', '사업장 수정', '사업장 수정 empty-body fallback 재조회 확인', '사업장 수정 timeout 시 모달 유지와 안내 메시지 확인', '현장 drilldown 진입', '사업장 삭제', 'drilldown 현장 생성/수정/삭제 직후 refresh 확인'],
   },
   'admin-users': {
@@ -25,7 +25,7 @@ export const ADMIN_FEATURE_CONTRACTS = {
       '사용자 목록이 safety-server list passthrough 기반 서버 페이지네이션, session cache, 검색/필터, 편집 modal 흐름과 저장 timeout 안내를 유지한다.',
     routes: ['/admin?section=users'],
     markers: ['사용자', '사용자 추가', '이름, 이메일, 직책, 소속으로 검색'],
-    apis: ['GET /api/admin/users/list'],
+    apis: ['GET /api/admin/users/list', 'GET /api/admin/directory/assignments', 'DELETE /users/:id'],
     criticalActions: ['사용자 목록 조회', '검색 재조회', '사용자 추가 modal 진입', '사용자 수정 modal 진입', '사용자 저장 timeout 시 모달 유지와 안내 메시지 확인'],
   },
   'admin-reports': {
@@ -60,6 +60,7 @@ export const ADMIN_FEATURE_CONTRACTS = {
     apis: [
       'GET /api/admin/sites/list',
       'GET /api/admin/directory/lookups',
+      'GET /api/admin/directory/assignments',
       'POST /sites',
       'PATCH /sites/:id',
       'POST /assignments',

@@ -163,6 +163,20 @@ async function installErpRoutes({
       return;
     }
 
+    if (normalizedPath === '/users/:id' && request.method() === 'DELETE') {
+      const userId = pathname.split('/').pop() || '';
+      const item = state.users.find((user) => String(user.id) === userId);
+      assert(item, `Missing user fixture for delete: ${userId}`);
+      Object.assign(item, { is_active: false, updated_at: NOW });
+      state.assignments.forEach((assignment) => {
+        if (String(assignment.user_id) === userId) {
+          Object.assign(assignment, { is_active: false, updated_at: NOW });
+        }
+      });
+      await fulfillJson(route, clone(item));
+      return;
+    }
+
     if (pathname === '/headquarters' && request.method() === 'GET') {
       await fulfillJson(route, clone(state.headquarters));
       return;

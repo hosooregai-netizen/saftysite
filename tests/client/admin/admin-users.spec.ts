@@ -7,6 +7,9 @@ export async function runAdminUsersSmoke(config: ClientSmokePlaywrightConfig) {
   try {
     const { page, requestCounts } = harness;
     const listReadsBefore = requestCounts.get('GET /api/admin/users/list') || 0;
+    const assignmentReadsBefore =
+      requestCounts.get('GET /api/admin/directory/assignments') || 0;
+    const userDeletesBefore = requestCounts.get('DELETE /users/:id') || 0;
 
     await page.goto(`${harness.baseURL}/admin?section=users`, { waitUntil: 'load' });
     await harness.loginAs('admin@example.com');
@@ -44,6 +47,16 @@ export async function runAdminUsersSmoke(config: ClientSmokePlaywrightConfig) {
     await page.getByRole('menuitem', { name: '수정' }).click();
     await page.getByRole('dialog', { name: '사용자 수정' }).waitFor({ state: 'visible' });
     await page.getByRole('button', { name: '취소' }).click();
+
+    page.once('dialog', (dialog) => dialog.accept());
+    await page.getByRole('button', { name: /김요원 작업 메뉴 열기/ }).click();
+    await page.getByRole('menuitem', { name: '삭제' }).click();
+    await harness.waitForRequestCount(
+      'GET /api/admin/directory/assignments',
+      assignmentReadsBefore + 1,
+    );
+    await harness.waitForRequestCount('DELETE /users/:id', userDeletesBefore + 1);
+    await page.waitForTimeout(250);
 
     harness.assertContractApisObserved();
     harness.assertNoClientErrors();

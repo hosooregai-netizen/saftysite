@@ -23,6 +23,7 @@ import type {
   TableSortDirection,
 } from '@/types/admin';
 import type { SafetyReport } from '@/types/backend';
+import type { SafetyAssignment } from '@/types/controller';
 
 function buildQueryString(params: Record<string, string | number | null | undefined>) {
   const searchParams = new URLSearchParams();
@@ -185,6 +186,29 @@ export function fetchAdminDashboardLookups() {
 
 export function fetchAdminDirectoryLookups(options: RequestInit = {}) {
   return requestAdminApi<SafetyAdminDirectoryLookupsResponse>('/directory/lookups', options);
+}
+
+export function fetchAdminAssignmentsPage(
+  input: {
+    activeOnly?: boolean;
+    limit?: number;
+    offset?: number;
+    siteId?: string;
+    userId?: string;
+  },
+  options: RequestInit = {},
+) {
+  return requestAdminApi<SafetyAssignment[]>(
+    `/directory/assignments${buildQueryString({
+      active_only:
+        typeof input.activeOnly === 'boolean' ? String(input.activeOnly) : undefined,
+      limit: input.limit,
+      offset: input.offset,
+      site_id: input.siteId,
+      user_id: input.userId,
+    })}`,
+    options,
+  );
 }
 
 export function fetchAdminUsersList(input: {

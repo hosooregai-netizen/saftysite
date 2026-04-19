@@ -607,6 +607,19 @@ export function fetchAdminDirectoryLookupsServer(
   );
 }
 
+export function fetchAdminAssignmentsPageServer(
+  token: string,
+  params: Record<string, string | number | boolean | null | undefined>,
+  request: Request | null = null,
+): Promise<SafetyAssignment[]> {
+  return requestSafetyAdminServer<SafetyAssignment[]>(
+    withQuery('/assignments', params),
+    {},
+    token,
+    request,
+  );
+}
+
 export function updateAdminReportReviewServer(
   token: string,
   reportKey: string,
