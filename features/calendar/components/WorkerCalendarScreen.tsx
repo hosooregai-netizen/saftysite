@@ -18,7 +18,6 @@ import styles from './WorkerCalendarScreen.module.css';
 interface ScheduleDialogState {
   open: boolean;
   plannedDate: string;
-  recordSelectionReason: boolean;
   scheduleId: string;
   selectionReasonLabel: string;
   selectionReasonMemo: string;
@@ -44,7 +43,6 @@ type ScheduleListFilter =
 const EMPTY_DIALOG_STATE: ScheduleDialogState = {
   open: false,
   plannedDate: '',
-  recordSelectionReason: false,
   scheduleId: '',
   selectionReasonLabel: '',
   selectionReasonMemo: '',
@@ -104,10 +102,6 @@ function buildWindowErrorMessage(
   schedule: Pick<SafetyInspectionSchedule, 'roundNo' | 'siteName' | 'windowEnd' | 'windowStart'>,
 ) {
   return `${schedule.siteName} ${schedule.roundNo}회차는 계약 기간 ${schedule.windowStart} ~ ${schedule.windowEnd} 안에서만 선택할 수 있습니다.`;
-}
-
-function hasSelectionReasonInput(selectionReasonLabel: string, selectionReasonMemo: string) {
-  return Boolean(selectionReasonLabel.trim() || selectionReasonMemo.trim());
 }
 
 function sortSchedules(rows: SafetyInspectionSchedule[]) {
@@ -395,7 +389,6 @@ export function WorkerCalendarScreen() {
       if (!dialog.scheduleId) return;
       setDialog((current) => ({
         ...current,
-        recordSelectionReason: false,
         scheduleId: '',
         selectionReasonLabel: '',
         selectionReasonMemo: '',
@@ -411,10 +404,6 @@ export function WorkerCalendarScreen() {
     }
     setDialog((current) => ({
       ...current,
-      recordSelectionReason: hasSelectionReasonInput(
-        preferredRow.selectionReasonLabel || '',
-        preferredRow.selectionReasonMemo || '',
-      ),
       scheduleId: preferredRow.id,
       selectionReasonLabel: preferredRow.selectionReasonLabel || '',
       selectionReasonMemo: preferredRow.selectionReasonMemo || '',
@@ -461,10 +450,6 @@ export function WorkerCalendarScreen() {
     setDialog({
       open: true,
       plannedDate: nextPlannedDate,
-      recordSelectionReason: hasSelectionReasonInput(
-        defaultSchedule?.selectionReasonLabel || '',
-        defaultSchedule?.selectionReasonMemo || '',
-      ),
       scheduleId: defaultSchedule?.id || '',
       selectionReasonLabel: defaultSchedule?.selectionReasonLabel || '',
       selectionReasonMemo: defaultSchedule?.selectionReasonMemo || '',
@@ -488,10 +473,6 @@ export function WorkerCalendarScreen() {
       null;
     setDialog((current) => ({
       ...current,
-      recordSelectionReason: hasSelectionReasonInput(
-        preferredRow?.selectionReasonLabel || '',
-        preferredRow?.selectionReasonMemo || '',
-      ),
       scheduleId: preferredRow?.id || '',
       selectionReasonLabel: preferredRow?.selectionReasonLabel || '',
       selectionReasonMemo: preferredRow?.selectionReasonMemo || '',
@@ -502,10 +483,6 @@ export function WorkerCalendarScreen() {
   const handleDialogScheduleSelect = (schedule: SafetyInspectionSchedule) => {
     setDialog((current) => ({
       ...current,
-      recordSelectionReason: hasSelectionReasonInput(
-        schedule.selectionReasonLabel || '',
-        schedule.selectionReasonMemo || '',
-      ),
       scheduleId: schedule.id,
       selectionReasonLabel: schedule.selectionReasonLabel || '',
       selectionReasonMemo: schedule.selectionReasonMemo || '',
@@ -529,24 +506,21 @@ export function WorkerCalendarScreen() {
     }
     const selectionReasonLabel = dialog.selectionReasonLabel.trim();
     const selectionReasonMemo = dialog.selectionReasonMemo.trim();
-    if (
-      dialog.recordSelectionReason &&
-      (!selectionReasonLabel || !selectionReasonMemo)
-    ) {
-      setError('사유 분류와 상세 메모를 함께 입력해 주세요.');
-      return;
-    }
 
     try {
       setError(null);
       const updated = await updateMySchedule(schedule.id, {
         plannedDate: dialog.plannedDate,
-        selectionReasonLabel: dialog.recordSelectionReason ? selectionReasonLabel : '',
-        selectionReasonMemo: dialog.recordSelectionReason ? selectionReasonMemo : '',
+        selectionReasonLabel,
+        selectionReasonMemo,
       });
       setRows((current) => current.map((row) => (row.id === updated.id ? updated : row)));
       setSelectedDate(updated.plannedDate || dialog.plannedDate);
-      setNotice(`${schedule.siteName} ${schedule.roundNo}회차 방문 일정과 사유를 저장했습니다.`);
+      setNotice(
+        selectionReasonLabel || selectionReasonMemo
+          ? `${schedule.siteName} ${schedule.roundNo}회차 방문 일정과 사유를 저장했습니다.`
+          : `${schedule.siteName} ${schedule.roundNo}회차 방문 일정을 저장했습니다.`,
+      );
       closeDialog();
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : '일정을 저장하지 못했습니다.');
@@ -946,12 +920,7 @@ export function WorkerCalendarScreen() {
               type="button"
               className="app-button app-button-primary"
               onClick={() => void handleSaveSchedule()}
-              disabled={
-                !dialog.scheduleId ||
-                !dialog.plannedDate ||
-                (dialog.recordSelectionReason &&
-                  (!dialog.selectionReasonLabel.trim() || !dialog.selectionReasonMemo.trim()))
-              }
+              disabled={!dialog.scheduleId || !dialog.plannedDate}
             >
               방문 일정 저장
             </button>
@@ -1051,37 +1020,11 @@ export function WorkerCalendarScreen() {
             )}
           </section>
 
-          <div className={styles.field}>
-            <span className={styles.fieldLabel}>변경 사유 기록</span>
-            <label className={styles.inlineToggle}>
-              <input
-                aria-label="변경 사유 기록"
-                className={styles.inlineToggleInput}
-                type="checkbox"
-                checked={dialog.recordSelectionReason}
-                onChange={(event) =>
-                  setDialog((current) => ({
-                    ...current,
-                    recordSelectionReason: event.target.checked,
-                    selectionReasonLabel: event.target.checked ? current.selectionReasonLabel : '',
-                    selectionReasonMemo: event.target.checked ? current.selectionReasonMemo : '',
-                  }))
-                }
-              />
-              <span className={styles.inlineToggleLabel}>
-                {dialog.recordSelectionReason
-                  ? '사유를 함께 저장합니다.'
-                  : '사유 없이 일정만 저장합니다.'}
-              </span>
-            </label>
-          </div>
-
           <label className={styles.field}>
             <span className={styles.fieldLabel}>사유 분류</span>
             <input
               className="app-input"
               value={dialog.selectionReasonLabel}
-              disabled={!dialog.recordSelectionReason}
               onChange={(event) =>
                 setDialog((current) => ({
                   ...current,
@@ -1098,7 +1041,6 @@ export function WorkerCalendarScreen() {
               className="app-textarea"
               rows={4}
               value={dialog.selectionReasonMemo}
-              disabled={!dialog.recordSelectionReason}
               onChange={(event) =>
                 setDialog((current) => ({
                   ...current,

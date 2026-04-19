@@ -28,7 +28,6 @@ export async function runWorkerFlow(page: Page): Promise<WorkerFlowResult> {
   await scheduleDialog.locator('input[name="worker-site"]').first().waitFor();
   await scheduleDialog.locator('input[name="worker-schedule"]').first().waitFor();
   await scheduleDialog.getByLabel('방문 날짜').fill('2026-04-08');
-  await scheduleDialog.getByLabel('변경 사유 기록').check();
   await scheduleDialog.getByLabel('사유 분류').fill('현장 요청');
   await scheduleDialog.getByLabel('상세 메모').fill('현장소장과 통화 후 방문일 확정');
   await scheduleDialog.getByRole('button', { name: '방문 일정 저장' }).click();
