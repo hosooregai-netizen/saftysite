@@ -30,7 +30,6 @@ export function AnalyticsEmployeeTable({ rows, setSort, sort }: AnalyticsEmploye
             <col className={localStyles.employeeMoneyCol} />
             <col className={localStyles.employeeMoneyCol} />
             <col className={localStyles.employeeMoneyCol} />
-            <col className={localStyles.employeeCountCol} />
           </colgroup>
           <thead>
             <tr>
@@ -41,7 +40,6 @@ export function AnalyticsEmployeeTable({ rows, setSort, sort }: AnalyticsEmploye
               <SortableHeaderCell column={{ key: 'plannedRevenue' }} current={sort} defaultDirection="desc" label="계약 매출" onChange={setSort} />
               <SortableHeaderCell column={{ key: 'visitRevenue' }} current={sort} defaultDirection="desc" label="매출" onChange={setSort} />
               <SortableHeaderCell column={{ key: 'avgPerVisitAmount' }} current={sort} defaultDirection="desc" label="평균 회차 단가" onChange={setSort} />
-              <SortableHeaderCell column={{ key: 'overdueCount' }} current={sort} defaultDirection="desc" label="지연" onChange={setSort} />
             </tr>
           </thead>
           <tbody>
@@ -56,9 +54,6 @@ export function AnalyticsEmployeeTable({ rows, setSort, sort }: AnalyticsEmploye
                 <td className={localStyles.numberCell}>{formatCurrencyValue(row.plannedRevenue)}</td>
                 <td className={localStyles.numberCell}>{formatCurrencyValue(row.visitRevenue)}</td>
                 <td className={localStyles.numberCell}>{formatCurrencyValue(row.avgPerVisitAmount)}</td>
-                <td className={`${localStyles.numberCell} ${row.overdueCount > 0 ? localStyles.overdueCell : ''}`}>
-                  {row.overdueCount}건
-                </td>
               </tr>
             ))}
           </tbody>

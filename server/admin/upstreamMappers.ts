@@ -771,6 +771,174 @@ export function mapBackendOverviewResponse(
 export function mapBackendAnalyticsResponse(
   response: SafetyBackendAdminAnalyticsResponse,
 ): SafetyAdminAnalyticsResponse {
+  const calculateChangeRate = (current: number, previous: number) => {
+    if (previous === 0) return current === 0 ? 0 : null;
+    return (current - previous) / previous;
+  };
+  const formatDeltaValue = (value: number | null) => {
+    if (value == null || Number.isNaN(value)) return '비교 없음';
+    if (Math.abs(value) < 0.0005) return '0.0%';
+    const sign = value > 0 ? '+' : '';
+    return `${sign}${(value * 100).toFixed(1)}%`;
+  };
+  const getDeltaTone = (value: number | null) => {
+    if (value == null || Number.isNaN(value) || Math.abs(value) < 0.0005) {
+      return 'neutral' as const;
+    }
+    return value > 0 ? ('positive' as const) : ('negative' as const);
+  };
+  const mapTrendRows = (
+    rows: Array<{
+      avg_per_visit_amount: number;
+      executed_rounds: number;
+      label: string;
+      month_key: string;
+      revenue: number;
+    }> = [],
+  ) =>
+    rows.map((row) => ({
+      avgPerVisitAmount: row.avg_per_visit_amount,
+      executedRounds: row.executed_rounds,
+      label: normalizeText(row.label),
+      monthKey: normalizeText(row.month_key),
+      revenue: row.revenue,
+    }));
+  const mapEmployeeRow = (
+    row: SafetyBackendAdminAnalyticsResponse['employee_rows'][number],
+  ) => ({
+    assignedSiteCount: row.assigned_site_count,
+    avgPerVisitAmount:
+      row.executed_rounds > 0 ? row.visit_revenue / row.executed_rounds : 0,
+    completionRate:
+      (row.planned_rounds ?? row.total_assigned_rounds) > 0
+        ? row.executed_rounds / (row.planned_rounds ?? row.total_assigned_rounds)
+        : 0,
+    overdueCount: row.overdue_count,
+    plannedRevenue: row.planned_revenue ?? 0,
+    plannedRounds: row.planned_rounds ?? 0,
+    primaryContractTypeLabel: '',
+    revenueChangeRate: null as number | null,
+    totalAssignedRounds: row.total_assigned_rounds,
+    userId: normalizeText(row.user_id),
+    userName: normalizeText(row.user_name),
+    visitRevenue: row.visit_revenue,
+    executedRounds: row.executed_rounds,
+  });
+  const mapSiteRevenueRow = (
+    row: SafetyBackendAdminAnalyticsResponse['site_revenue_rows'][number],
+  ) => ({
+    assigneeName: normalizeText(row.assignee_name),
+    avgPerVisitAmount:
+      row.executed_rounds > 0 ? row.visit_revenue / row.executed_rounds : 0,
+    executedRounds: row.executed_rounds,
+    executionRate: row.execution_rate ?? 0,
+    headquarterName: normalizeText(row.headquarter_name),
+    href: normalizeText(row.href),
+    isSummaryRow: Boolean(row.is_summary_row),
+    plannedRevenue: row.planned_revenue ?? 0,
+    plannedRounds: row.planned_rounds ?? 0,
+    siteId:
+      normalizeText(row.site_id) ||
+      normalizeText(row.href) ||
+      normalizeText(row.site_name),
+    siteName: normalizeText(row.site_name),
+    visitRevenue: row.visit_revenue,
+  });
+  const decorateEmployeeComparisons = (
+    slices: SafetyAdminAnalyticsResponse['chartYearSlices'],
+  ) => {
+    const sliceByYear = new Map(slices.map((slice) => [slice.year, slice]));
+    return slices.map((slice) => {
+      const previousSlice = sliceByYear.get(slice.year - 1);
+      const previousRowsByUser = new Map(
+        (previousSlice?.employeeRows ?? []).map((row) => [row.userId, row]),
+      );
+      return {
+        ...slice,
+        employeeRows: slice.employeeRows.map((row) => ({
+          ...row,
+          revenueChangeRate: calculateChangeRate(
+            row.visitRevenue,
+            previousRowsByUser.get(row.userId)?.visitRevenue ?? 0,
+          ),
+        })),
+      };
+    });
+  };
+  const buildSummaryDelta = (
+    label: string,
+    trendRows: SafetyAdminAnalyticsResponse['trendRows'],
+    slices: SafetyAdminAnalyticsResponse['chartYearSlices'],
+  ) => {
+    const now = new Date();
+    const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const previousMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const previousMonthKey = `${previousMonthDate.getFullYear()}-${String(previousMonthDate.getMonth() + 1).padStart(2, '0')}`;
+    const trendByKey = new Map(trendRows.map((row) => [row.monthKey, row]));
+    const currentYearSlice = slices.find((slice) => slice.year === now.getFullYear()) ?? slices[0];
+    const previousYearSlice = slices.find((slice) => slice.year === (currentYearSlice?.year ?? now.getFullYear()) - 1);
+    if (label === '이번 달 매출') {
+      const value = calculateChangeRate(
+        trendByKey.get(currentMonthKey)?.revenue ?? 0,
+        trendByKey.get(previousMonthKey)?.revenue ?? 0,
+      );
+      return { deltaLabel: '전월 대비', deltaTone: getDeltaTone(value), deltaValue: formatDeltaValue(value) };
+    }
+    if (label === '이번 분기 매출') {
+      const currentQuarter = Math.floor(now.getMonth() / 3);
+      const currentQuarterKeys = Array.from({ length: 3 }, (_, index) => {
+        const month = currentQuarter * 3 + index + 1;
+        return `${now.getFullYear()}-${String(month).padStart(2, '0')}`;
+      });
+      const previousQuarterDate = new Date(now.getFullYear(), currentQuarter * 3 - 3, 1);
+      const previousQuarter = Math.floor(previousQuarterDate.getMonth() / 3);
+      const previousQuarterKeys = Array.from({ length: 3 }, (_, index) => {
+        const month = previousQuarter * 3 + index + 1;
+        return `${previousQuarterDate.getFullYear()}-${String(month).padStart(2, '0')}`;
+      });
+      const currentValue = currentQuarterKeys.reduce(
+        (sum, key) => sum + (trendByKey.get(key)?.revenue ?? 0),
+        0,
+      );
+      const previousValue = previousQuarterKeys.reduce(
+        (sum, key) => sum + (trendByKey.get(key)?.revenue ?? 0),
+        0,
+      );
+      const value = calculateChangeRate(currentValue, previousValue);
+      return { deltaLabel: '전분기 대비', deltaTone: getDeltaTone(value), deltaValue: formatDeltaValue(value) };
+    }
+    if (label === '올해 누적 매출') {
+      const currentValue = (currentYearSlice?.trendRows ?? []).reduce(
+        (sum, row) => sum + row.revenue,
+        0,
+      );
+      const previousValue = (previousYearSlice?.trendRows ?? []).reduce(
+        (sum, row) => sum + row.revenue,
+        0,
+      );
+      const value = calculateChangeRate(currentValue, previousValue);
+      return { deltaLabel: '전년 대비', deltaTone: getDeltaTone(value), deltaValue: formatDeltaValue(value) };
+    }
+    if (label === '직원 1인당 평균 매출') {
+      const currentValue =
+        currentYearSlice && currentYearSlice.employeeRows.length > 0
+          ? currentYearSlice.employeeRows.reduce((sum, row) => sum + row.visitRevenue, 0) /
+            currentYearSlice.employeeRows.length
+          : 0;
+      const previousValue =
+        previousYearSlice && previousYearSlice.employeeRows.length > 0
+          ? previousYearSlice.employeeRows.reduce((sum, row) => sum + row.visitRevenue, 0) /
+            previousYearSlice.employeeRows.length
+          : 0;
+      const value = calculateChangeRate(currentValue, previousValue);
+      return { deltaLabel: '전년 대비', deltaTone: getDeltaTone(value), deltaValue: formatDeltaValue(value) };
+    }
+    return {
+      deltaLabel: '비교 구간 없음',
+      deltaTone: 'neutral' as const,
+      deltaValue: '비교 없음',
+    };
+  };
   const totalContractAmount = response.contract_type_rows.reduce(
     (sum, row) => sum + row.total_contract_amount,
     0,
@@ -789,68 +957,43 @@ export function mapBackendAnalyticsResponse(
   );
   const plannedRounds = response.stats.planned_rounds ?? 0;
   const remainingRounds = Math.max(plannedRounds - totalExecutedRounds, 0);
-  const trendRows = Array.isArray(response.trend_rows)
-    ? response.trend_rows.map((row) => ({
-        avgPerVisitAmount: row.avg_per_visit_amount,
-        executedRounds: row.executed_rounds,
-        label: normalizeText(row.label),
-        monthKey: normalizeText(row.month_key),
-        revenue: row.revenue,
-      }))
-    : [];
+  const trendRows = mapTrendRows(Array.isArray(response.trend_rows) ? response.trend_rows : []);
   const availableTrendYears = Array.from(
     new Set(
-      trendRows
-        .map((row) => Number.parseInt(row.monthKey.slice(0, 4), 10))
+      [
+        ...trendRows.map((row) => Number.parseInt(row.monthKey.slice(0, 4), 10)),
+        ...((response.chart_year_slices ?? []).map((slice) => slice.year)),
+      ]
         .filter((year) => Number.isFinite(year)),
     ),
   ).sort((left, right) => right - left);
   if (availableTrendYears.length === 0) {
     availableTrendYears.push(new Date().getFullYear());
   }
-  const employeeRows = response.employee_rows.map((row) => ({
-    assignedSiteCount: row.assigned_site_count,
-    avgPerVisitAmount:
-      row.executed_rounds > 0 ? row.visit_revenue / row.executed_rounds : 0,
-    completionRate:
-      (row.planned_rounds ?? row.total_assigned_rounds) > 0
-        ? row.executed_rounds / (row.planned_rounds ?? row.total_assigned_rounds)
-        : 0,
-    overdueCount: row.overdue_count,
-    plannedRevenue: row.planned_revenue ?? 0,
-    plannedRounds: row.planned_rounds ?? 0,
-    primaryContractTypeLabel: '',
-    revenueChangeRate: null,
-    totalAssignedRounds: row.total_assigned_rounds,
-    userId: normalizeText(row.user_id),
-    userName: normalizeText(row.user_name),
-    visitRevenue: row.visit_revenue,
-    executedRounds: row.executed_rounds,
-  }));
-  const siteRevenueRows = response.site_revenue_rows.map((row) => ({
-    assigneeName: normalizeText(row.assignee_name),
-    avgPerVisitAmount:
-      row.executed_rounds > 0 ? row.visit_revenue / row.executed_rounds : 0,
-    executedRounds: row.executed_rounds,
-    executionRate: row.execution_rate ?? 0,
-    headquarterName: normalizeText(row.headquarter_name),
-    href: normalizeText(row.href),
-    isSummaryRow: Boolean(row.is_summary_row),
-    plannedRevenue: row.planned_revenue ?? 0,
-    plannedRounds: row.planned_rounds ?? 0,
-    siteId: normalizeText(row.site_id) || normalizeText(row.href) || normalizeText(row.site_name),
-    siteName: normalizeText(row.site_name),
-    visitRevenue: row.visit_revenue,
-  }));
+  const mappedChartYearSlices = Array.isArray(response.chart_year_slices) && response.chart_year_slices.length > 0
+    ? response.chart_year_slices.map((slice) => ({
+        employeeRows: slice.employee_rows.map((row) => mapEmployeeRow(row)),
+        siteRevenueRows: slice.site_revenue_rows.map((row) => mapSiteRevenueRow(row)),
+        trendRows: mapTrendRows(slice.trend_rows),
+        year: slice.year,
+      }))
+    : availableTrendYears.map((year) => ({
+        employeeRows: response.employee_rows.map((row) => mapEmployeeRow(row)),
+        siteRevenueRows: response.site_revenue_rows.map((row) => mapSiteRevenueRow(row)),
+        trendRows: trendRows.filter((row) => row.monthKey.startsWith(`${year}-`)),
+        year,
+      }));
+  const chartYearSlices = decorateEmployeeComparisons(mappedChartYearSlices).sort(
+    (left, right) => right.year - left.year,
+  );
+  const currentYear = availableTrendYears[0] ?? chartYearSlices[0]?.year;
+  const currentYearSlice = chartYearSlices.find((slice) => slice.year === currentYear);
+  const employeeRows = currentYearSlice?.employeeRows ?? response.employee_rows.map((row) => mapEmployeeRow(row));
+  const siteRevenueRows = currentYearSlice?.siteRevenueRows ?? response.site_revenue_rows.map((row) => mapSiteRevenueRow(row));
 
   return {
     availableTrendYears,
-    chartYearSlices: availableTrendYears.map((year) => ({
-      employeeRows,
-      siteRevenueRows,
-      trendRows: trendRows.filter((row) => row.monthKey.startsWith(`${year}-`)),
-      year,
-    })),
+    chartYearSlices,
     contractTypeRows: response.contract_type_rows.map((row) => ({
       avgPerVisitAmount: row.avg_per_visit_amount,
       executedRounds: 0,
@@ -877,14 +1020,16 @@ export function mapBackendAnalyticsResponse(
       totalScopedRounds: plannedRounds,
       totalVisitRevenue,
     },
-    summaryCards: response.summary_cards.map((card) => ({
-      deltaLabel: '비교 구간 없음',
-      deltaTone: 'neutral',
-      deltaValue: '비교 없음',
-      label: normalizeText(card.label),
-      meta: normalizeText(card.meta),
-      value: normalizeText(card.value),
-    })),
+    summaryCards: response.summary_cards.map((card) => {
+      const normalizedLabel = normalizeText(card.label);
+      const delta = buildSummaryDelta(normalizedLabel, trendRows, chartYearSlices);
+      return {
+        ...delta,
+        label: normalizedLabel,
+        meta: normalizeText(card.meta),
+        value: normalizeText(card.value),
+      };
+    }),
     trendRows,
   };
 }

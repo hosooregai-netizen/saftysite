@@ -29,6 +29,7 @@ const EMPTY_LOOKUPS: AnalyticsLookups = {
 
 const DEFAULT_EMPLOYEE_SORT: TableSortState = { direction: 'desc', key: 'visitRevenue' };
 const DEFAULT_SITE_REVENUE_SORT: TableSortState = { direction: 'desc', key: 'visitRevenue' };
+const DETAIL_PAGE_SIZE = 20;
 
 function normalizeYearSelection(
   current: number | null,
@@ -61,6 +62,8 @@ export function useAnalyticsSectionState(currentUserId: string) {
   const [detailView, setDetailView] = useState<'employee' | 'site'>('employee');
   const [employeeSort, setEmployeeSort] = useState<TableSortState>(DEFAULT_EMPLOYEE_SORT);
   const [siteRevenueSort, setSiteRevenueSort] = useState<TableSortState>(DEFAULT_SITE_REVENUE_SORT);
+  const [employeePage, setEmployeePage] = useState(1);
+  const [siteRevenuePage, setSiteRevenuePage] = useState(1);
   const [chartYear, setChartYear] = useState<number | null>(null);
   const [lookups, setLookups] = useState<AnalyticsLookups>(() => {
     return readAdminSessionCache<AnalyticsLookups>(currentUserId, 'analytics-lookups').value ?? EMPTY_LOOKUPS;
@@ -265,6 +268,37 @@ export function useAnalyticsSectionState(currentUserId: string) {
     () => sortSiteRevenueRows(analytics.siteRevenueRows, siteRevenueSort),
     [analytics.siteRevenueRows, siteRevenueSort],
   );
+  const employeeTotalPages = Math.max(1, Math.ceil(sortedEmployeeRows.length / DETAIL_PAGE_SIZE));
+  const siteSummaryRow = sortedSiteRevenueRows.find((row) => row.isSummaryRow) ?? null;
+  const siteDetailRows = sortedSiteRevenueRows.filter((row) => !row.isSummaryRow);
+  const siteRevenueTotalPages = Math.max(1, Math.ceil(siteDetailRows.length / DETAIL_PAGE_SIZE));
+
+  useEffect(() => {
+    setEmployeePage((current) => Math.min(current, employeeTotalPages));
+  }, [employeeTotalPages]);
+
+  useEffect(() => {
+    setSiteRevenuePage((current) => Math.min(current, siteRevenueTotalPages));
+  }, [siteRevenueTotalPages]);
+
+  useEffect(() => {
+    setEmployeePage(1);
+  }, [analytics.employeeRows, contractType, employeeSort, headquarterId, period, requestKey, userId]);
+
+  useEffect(() => {
+    setSiteRevenuePage(1);
+  }, [analytics.siteRevenueRows, contractType, headquarterId, period, requestKey, siteRevenueSort, userId]);
+
+  const pagedEmployeeRows = useMemo(() => {
+    const startIndex = (employeePage - 1) * DETAIL_PAGE_SIZE;
+    return sortedEmployeeRows.slice(startIndex, startIndex + DETAIL_PAGE_SIZE);
+  }, [employeePage, sortedEmployeeRows]);
+
+  const pagedSiteRevenueRows = useMemo(() => {
+    const startIndex = (siteRevenuePage - 1) * DETAIL_PAGE_SIZE;
+    const pageRows = siteDetailRows.slice(startIndex, startIndex + DETAIL_PAGE_SIZE);
+    return siteSummaryRow ? [siteSummaryRow, ...pageRows] : pageRows;
+  }, [siteDetailRows, siteRevenuePage, siteSummaryRow]);
 
   const resetHeaderFilters = () => {
     setPeriod('month');
@@ -291,7 +325,9 @@ export function useAnalyticsSectionState(currentUserId: string) {
     contractType,
     contractTypeOptions,
     detailView,
+    employeePage,
     employeeSort,
+    employeeTotalPages,
     exportAnalytics,
     headquarterId,
     headquarterOptions,
@@ -299,6 +335,8 @@ export function useAnalyticsSectionState(currentUserId: string) {
     isLoading,
     isRefreshing,
     loadError,
+    pagedEmployeeRows,
+    pagedSiteRevenueRows,
     period,
     query,
     queryInput,
@@ -307,14 +345,18 @@ export function useAnalyticsSectionState(currentUserId: string) {
     setChartYear,
     setContractType,
     setDetailView,
+    setEmployeePage,
     setEmployeeSort,
     setHeadquarterId,
     setPeriod,
     setQueryInput,
     submitQuery,
+    setSiteRevenuePage,
     setSiteRevenueSort,
     setUserId,
+    siteRevenuePage,
     siteRevenueSort,
+    siteRevenueTotalPages,
     sortedEmployeeRows,
     sortedSiteRevenueRows,
     userId,

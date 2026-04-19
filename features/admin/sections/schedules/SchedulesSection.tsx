@@ -1249,7 +1249,25 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                       </thead>
                       <tbody>
                         {pagedQueueRows.map((row) => (
-                          <tr key={`unselected-${row.id}`}>
+                          <tr
+                            key={`unselected-${row.id}`}
+                            onClick={() =>
+                              openScheduleDialog({
+                                plannedDate: row.windowStart,
+                                schedule: row,
+                              })
+                            }
+                            onKeyDown={(event) => {
+                              if (event.key === 'Enter' || event.key === ' ') {
+                                event.preventDefault();
+                                openScheduleDialog({
+                                  plannedDate: row.windowStart,
+                                  schedule: row,
+                                });
+                              }
+                            }}
+                            tabIndex={0}
+                          >
                             <td>{row.siteName}</td>
                             <td>
                               {row.roundNo} / {row.totalRounds && row.totalRounds > 0 ? row.totalRounds : row.roundNo}
@@ -1261,12 +1279,13 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                               <button
                                 type="button"
                                 className="app-button app-button-secondary"
-                                onClick={() =>
+                                onClick={(event) => {
+                                  event.stopPropagation();
                                   openScheduleDialog({
                                     plannedDate: row.windowStart,
                                     schedule: row,
-                                  })
-                                }
+                                  });
+                                }}
                               >
                                 일정 지정
                               </button>
@@ -1378,7 +1397,25 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                   </thead>
                   <tbody>
                     {visibleRows.map((row) => (
-                      <tr key={row.id}>
+                      <tr
+                        key={row.id}
+                        onClick={() =>
+                          openScheduleDialog({
+                            plannedDate: row.plannedDate || row.windowStart,
+                            schedule: row,
+                          })
+                        }
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            openScheduleDialog({
+                              plannedDate: row.plannedDate || row.windowStart,
+                              schedule: row,
+                            });
+                          }
+                        }}
+                        tabIndex={0}
+                      >
                         <td>{row.siteName}</td>
                         <td>
                           {row.roundNo} / {row.totalRounds && row.totalRounds > 0 ? row.totalRounds : row.roundNo}
@@ -1396,12 +1433,13 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                           <button
                             type="button"
                             className="app-button app-button-secondary"
-                            onClick={() =>
+                            onClick={(event) => {
+                              event.stopPropagation();
                               openScheduleDialog({
                                 plannedDate: row.plannedDate || row.windowStart,
                                 schedule: row,
-                              })
-                            }
+                              });
+                            }}
                           >
                             수정
                           </button>

@@ -45,6 +45,9 @@ export async function runAdminSchedulesSmoke(config: ClientSmokePlaywrightConfig
     await page.getByRole('heading', { level: 2, name: '방문 일정 목록' }).waitFor({
       state: 'visible',
     });
+    await page.getByRole('cell', { name: '기존 현장' }).first().click();
+    await page.getByRole('dialog', { name: '방문 일정' }).waitFor({ state: 'visible' });
+    await page.getByRole('button', { name: '취소' }).click();
     await page.getByRole('tab', { name: '달력으로 보기' }).click();
     await page.getByRole('button', { name: '[김요원] 1/9 - 기존 현장' }).waitFor({
       state: 'visible',

@@ -46,13 +46,11 @@ export function getAnalyticsExportSheets(model: AdminAnalyticsModel) {
         { key: 'plannedRevenue', label: '계약 매출' },
         { key: 'visitRevenue', label: '매출' },
         { key: 'avgPerVisitAmount', label: '평균 회차 단가' },
-        { key: 'overdueCount', label: '지연 건수' },
       ],
       rows: model.employeeRows.map((row) => ({
         assignedSiteCount: row.assignedSiteCount,
         avgPerVisitAmount: formatCurrencyValue(row.avgPerVisitAmount),
         executedRounds: `${row.executedRounds}회`,
-        overdueCount: row.overdueCount,
         plannedRevenue: formatCurrencyValue(row.plannedRevenue),
         plannedRounds: `${row.plannedRounds}회`,
         userName: row.userName,

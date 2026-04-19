@@ -12,28 +12,40 @@ import { AnalyticsSiteRevenueTable } from './AnalyticsSiteRevenueTable';
 
 interface AnalyticsDetailSectionProps {
   detailView: 'employee' | 'site';
+  employeePage: number;
   employeeRows: AdminAnalyticsEmployeeRow[];
   employeeSort: TableSortState;
+  employeeTotalPages: number;
   isInitialLoading: boolean;
   isRefreshing: boolean;
   setDetailView: (value: 'employee' | 'site') => void;
+  setEmployeePage: (next: number | ((current: number) => number)) => void;
   setEmployeeSort: (next: TableSortState) => void;
+  setSiteRevenuePage: (next: number | ((current: number) => number)) => void;
   setSiteRevenueSort: (next: TableSortState) => void;
+  siteRevenuePage: number;
   siteRevenueRows: AdminAnalyticsSiteRevenueRow[];
   siteRevenueSort: TableSortState;
+  siteRevenueTotalPages: number;
 }
 
 export function AnalyticsDetailSection({
   detailView,
+  employeePage,
   employeeRows,
   employeeSort,
+  employeeTotalPages,
   isInitialLoading,
   isRefreshing,
   setDetailView,
+  setEmployeePage,
   setEmployeeSort,
+  setSiteRevenuePage,
   setSiteRevenueSort,
+  siteRevenuePage,
   siteRevenueRows,
   siteRevenueSort,
+  siteRevenueTotalPages,
 }: AnalyticsDetailSectionProps) {
   return (
     <section className={`${sharedStyles.sectionCard} ${sharedStyles.listSectionCard}`}>
@@ -74,10 +86,56 @@ export function AnalyticsDetailSection({
           </div>
         ) : null}
         {!isInitialLoading && detailView === 'employee' ? (
-          <AnalyticsEmployeeTable rows={employeeRows} sort={employeeSort} setSort={setEmployeeSort} />
+          <>
+            <AnalyticsEmployeeTable rows={employeeRows} sort={employeeSort} setSort={setEmployeeSort} />
+            <div className={sharedStyles.paginationRow}>
+              <button
+                type="button"
+                className="app-button app-button-secondary"
+                onClick={() => setEmployeePage((current) => Math.max(1, current - 1))}
+                disabled={employeePage <= 1}
+              >
+                이전
+              </button>
+              <span className={sharedStyles.paginationLabel}>
+                {employeePage} / {employeeTotalPages} 페이지
+              </span>
+              <button
+                type="button"
+                className="app-button app-button-secondary"
+                onClick={() => setEmployeePage((current) => Math.min(employeeTotalPages, current + 1))}
+                disabled={employeePage >= employeeTotalPages}
+              >
+                다음
+              </button>
+            </div>
+          </>
         ) : null}
         {!isInitialLoading && detailView === 'site' ? (
-          <AnalyticsSiteRevenueTable rows={siteRevenueRows} sort={siteRevenueSort} setSort={setSiteRevenueSort} />
+          <>
+            <AnalyticsSiteRevenueTable rows={siteRevenueRows} sort={siteRevenueSort} setSort={setSiteRevenueSort} />
+            <div className={sharedStyles.paginationRow}>
+              <button
+                type="button"
+                className="app-button app-button-secondary"
+                onClick={() => setSiteRevenuePage((current) => Math.max(1, current - 1))}
+                disabled={siteRevenuePage <= 1}
+              >
+                이전
+              </button>
+              <span className={sharedStyles.paginationLabel}>
+                {siteRevenuePage} / {siteRevenueTotalPages} 페이지
+              </span>
+              <button
+                type="button"
+                className="app-button app-button-secondary"
+                onClick={() => setSiteRevenuePage((current) => Math.min(siteRevenueTotalPages, current + 1))}
+                disabled={siteRevenuePage >= siteRevenueTotalPages}
+              >
+                다음
+              </button>
+            </div>
+          </>
         ) : null}
       </div>
     </section>

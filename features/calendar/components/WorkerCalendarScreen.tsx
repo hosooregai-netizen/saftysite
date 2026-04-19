@@ -22,6 +22,7 @@ interface ScheduleDialogState {
   scheduleId: string;
   selectionReasonLabel: string;
   selectionReasonMemo: string;
+  siteId: string;
 }
 
 type CalendarViewMode = 'calendar' | 'list';
@@ -38,6 +39,7 @@ const EMPTY_DIALOG_STATE: ScheduleDialogState = {
   scheduleId: '',
   selectionReasonLabel: '',
   selectionReasonMemo: '',
+  siteId: '',
 };
 
 function getMonthToken(date = new Date()) {
@@ -92,7 +94,7 @@ function isDateWithinWindow(value: string, windowStart: string, windowEnd: strin
 function buildWindowErrorMessage(
   schedule: Pick<SafetyInspectionSchedule, 'roundNo' | 'siteName' | 'windowEnd' | 'windowStart'>,
 ) {
-  return `${schedule.siteName} ${schedule.roundNo}회차는 ${schedule.windowStart} ~ ${schedule.windowEnd} 안에서만 선택할 수 있습니다.`;
+  return `${schedule.siteName} ${schedule.roundNo}회차는 계약 기간 ${schedule.windowStart} ~ ${schedule.windowEnd} 안에서만 선택할 수 있습니다.`;
 }
 
 function hasSelectionReasonInput(selectionReasonLabel: string, selectionReasonMemo: string) {
@@ -272,23 +274,28 @@ export function WorkerCalendarScreen() {
     () => rows.find((row) => row.id === dialog.scheduleId) ?? null,
     [dialog.scheduleId, rows],
   );
-  const dialogEligibleRows = useMemo(
+  const dialogSiteOptions = useMemo(() => {
+    const seen = new Set<string>();
+    return sortSchedules(rows)
+      .filter((row) => {
+        if (!row.siteId || seen.has(row.siteId)) return false;
+        seen.add(row.siteId);
+        return true;
+      })
+      .map((row) => ({
+        label: row.siteName,
+        siteId: row.siteId,
+      }));
+  }, [rows]);
+  const dialogRoundRows = useMemo(
     () =>
-      sortSchedules(
-        rows.filter(
-          (row) => !row.plannedDate || row.id === dialog.scheduleId,
-        ),
+      sortSchedules(rows.filter((row) => row.siteId === dialog.siteId)).sort(
+        (left, right) =>
+          left.roundNo - right.roundNo ||
+          (left.plannedDate || '').localeCompare(right.plannedDate || '') ||
+          left.siteName.localeCompare(right.siteName, 'ko'),
       ),
-    [dialog.scheduleId, rows],
-  );
-  const dialogSelectedRows = useMemo(
-    () =>
-      sortSchedules(
-        selectedRows.filter(
-          (row) => row.plannedDate === dialog.plannedDate && row.id !== dialog.scheduleId,
-        ),
-      ),
-    [dialog.plannedDate, dialog.scheduleId, selectedRows],
+    [dialog.siteId, rows],
   );
   const dialogWindowError =
     dialogSelectedSchedule &&
@@ -310,12 +317,32 @@ export function WorkerCalendarScreen() {
   );
 
   useEffect(() => {
-    if (!dialog.open || dialog.scheduleId || dialogEligibleRows.length === 0) return;
+    if (!dialog.open || dialog.siteId || dialogSiteOptions.length === 0) return;
     setDialog((current) => ({
       ...current,
-      scheduleId: dialogEligibleRows[0].id,
+      siteId: dialogSiteOptions[0].siteId,
     }));
-  }, [dialog.open, dialog.scheduleId, dialogEligibleRows]);
+  }, [dialog.open, dialog.siteId, dialogSiteOptions]);
+
+  useEffect(() => {
+    if (!dialog.open || !dialog.siteId || dialog.scheduleId) return;
+    if (dialogRoundRows.length === 0) return;
+    const preferredRow =
+      dialogRoundRows.find((row) => row.plannedDate === dialog.plannedDate) ??
+      dialogRoundRows.find((row) => !row.plannedDate) ??
+      dialogRoundRows[0];
+    if (!preferredRow) return;
+    setDialog((current) => ({
+      ...current,
+      recordSelectionReason: hasSelectionReasonInput(
+        preferredRow.selectionReasonLabel || '',
+        preferredRow.selectionReasonMemo || '',
+      ),
+      scheduleId: preferredRow.id,
+      selectionReasonLabel: preferredRow.selectionReasonLabel || '',
+      selectionReasonMemo: preferredRow.selectionReasonMemo || '',
+    }));
+  }, [dialog.open, dialog.plannedDate, dialog.scheduleId, dialog.siteId, dialogRoundRows]);
 
   const closeDialog = () => {
     setDialog(EMPTY_DIALOG_STATE);
@@ -326,13 +353,10 @@ export function WorkerCalendarScreen() {
     schedule?: SafetyInspectionSchedule | null;
   }) => {
     const nextPlannedDate = input.plannedDate;
-    const selectedRowsOnDate = sortSchedules(
-      rows.filter((row) => row.plannedDate === nextPlannedDate),
-    );
     const defaultSchedule =
       input.schedule ??
-      selectedRowsOnDate[0] ??
       sortSchedules(rows.filter((row) => !row.plannedDate))[0] ??
+      sortSchedules(rows)[0] ??
       null;
 
     setSelectedDate(nextPlannedDate);
@@ -346,7 +370,29 @@ export function WorkerCalendarScreen() {
       scheduleId: defaultSchedule?.id || '',
       selectionReasonLabel: defaultSchedule?.selectionReasonLabel || '',
       selectionReasonMemo: defaultSchedule?.selectionReasonMemo || '',
+      siteId: defaultSchedule?.siteId || '',
     });
+  };
+
+  const handleDialogSiteSelect = (siteId: string) => {
+    const nextRoundRows = sortSchedules(rows.filter((row) => row.siteId === siteId));
+    const preferredRow =
+      nextRoundRows.find((row) => row.id === dialog.scheduleId) ??
+      nextRoundRows.find((row) => row.plannedDate === dialog.plannedDate) ??
+      nextRoundRows.find((row) => !row.plannedDate) ??
+      nextRoundRows[0] ??
+      null;
+    setDialog((current) => ({
+      ...current,
+      recordSelectionReason: hasSelectionReasonInput(
+        preferredRow?.selectionReasonLabel || '',
+        preferredRow?.selectionReasonMemo || '',
+      ),
+      scheduleId: preferredRow?.id || '',
+      selectionReasonLabel: preferredRow?.selectionReasonLabel || '',
+      selectionReasonMemo: preferredRow?.selectionReasonMemo || '',
+      siteId,
+    }));
   };
 
   const handleDialogScheduleSelect = (schedule: SafetyInspectionSchedule) => {
@@ -359,6 +405,7 @@ export function WorkerCalendarScreen() {
       scheduleId: schedule.id,
       selectionReasonLabel: schedule.selectionReasonLabel || '',
       selectionReasonMemo: schedule.selectionReasonMemo || '',
+      siteId: schedule.siteId,
     }));
   };
 
@@ -824,15 +871,46 @@ export function WorkerCalendarScreen() {
           </label>
 
           <section className={styles.dialogSection}>
-            <div className={styles.dialogSectionHeader}>
-              <strong>선택 가능한 회차</strong>
-              <span className={styles.sectionMeta}>{dialogEligibleRows.length}건</span>
-            </div>
-            {dialogEligibleRows.length === 0 ? (
-              <div className={styles.emptyState}>이 날짜에 선택할 수 있는 회차가 없습니다.</div>
+              <div className={styles.dialogSectionHeader}>
+                <strong>배정된 현장</strong>
+                <span className={styles.sectionMeta}>{dialogSiteOptions.length}곳</span>
+              </div>
+            {dialogSiteOptions.length === 0 ? (
+              <div className={styles.emptyState}>배정된 현장이 없습니다.</div>
             ) : (
               <div className={styles.dialogList}>
-                {dialogEligibleRows.map((row) => (
+                {dialogSiteOptions.map((option) => (
+                  <label
+                    key={option.siteId}
+                    className={`${styles.dialogOption} ${dialog.siteId === option.siteId ? styles.dialogOptionActive : ''}`}
+                  >
+                    <input
+                      type="radio"
+                      name="worker-site"
+                      checked={dialog.siteId === option.siteId}
+                      onChange={() => handleDialogSiteSelect(option.siteId)}
+                    />
+                    <div className={styles.dialogOptionBody}>
+                      <strong>{option.label}</strong>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section className={styles.dialogSection}>
+            <div className={styles.dialogSectionHeader}>
+              <strong>선택 가능한 회차</strong>
+              <span className={styles.sectionMeta}>{dialogRoundRows.length}건</span>
+            </div>
+            {!dialog.siteId ? (
+              <div className={styles.emptyState}>먼저 현장을 선택해 주세요.</div>
+            ) : dialogRoundRows.length === 0 ? (
+              <div className={styles.emptyState}>선택한 현장에서 선택 가능한 회차가 없습니다.</div>
+            ) : (
+              <div className={styles.dialogList}>
+                {dialogRoundRows.map((row) => (
                   <label
                     key={row.id}
                     className={`${styles.dialogOption} ${dialog.scheduleId === row.id ? styles.dialogOptionActive : ''}`}
@@ -844,9 +922,12 @@ export function WorkerCalendarScreen() {
                       onChange={() => handleDialogScheduleSelect(row)}
                     />
                     <div className={styles.dialogOptionBody}>
-                      <strong>{row.siteName} · {row.roundNo}회차</strong>
+                      <strong>{row.roundNo}회차</strong>
                       <span className={styles.dialogMeta}>
-                        허용 구간 {row.windowStart} ~ {row.windowEnd}
+                        계약 기간 {row.windowStart} ~ {row.windowEnd}
+                      </span>
+                      <span className={styles.dialogMeta}>
+                        현재 방문일 {row.plannedDate || '미선택'} · 상태 {getStatusLabel(row)}
                       </span>
                     </div>
                   </label>
@@ -854,33 +935,6 @@ export function WorkerCalendarScreen() {
               </div>
             )}
           </section>
-
-          {dialogSelectedRows.length > 0 ? (
-            <section className={styles.dialogSection}>
-              <div className={styles.dialogSectionHeader}>
-                <strong>같은 날짜에 확정된 일정</strong>
-              </div>
-              <div className={styles.dialogList}>
-                {dialogSelectedRows.map((row) => (
-                  <div key={row.id} className={styles.dialogExistingRow}>
-                    <div className={styles.dialogOptionBody}>
-                      <strong>{row.siteName} · {row.roundNo}회차</strong>
-                      <span className={styles.dialogMeta}>
-                        {row.selectionReasonLabel || '사유 미입력'} / {row.selectionReasonMemo || '상세 메모 없음'}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      className="app-button app-button-secondary"
-                      onClick={() => handleDialogScheduleSelect(row)}
-                    >
-                      불러오기
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </section>
-          ) : null}
 
           <div className={styles.field}>
             <span className={styles.fieldLabel}>변경 사유 기록</span>

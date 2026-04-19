@@ -1168,6 +1168,45 @@ export interface SafetyBackendAdminOverviewResponse {
 }
 
 export interface SafetyBackendAdminAnalyticsResponse {
+  chart_year_slices?: Array<{
+    employee_rows: Array<{
+      assigned_site_count: number;
+      bad_workplace_submitted_count: number;
+      completed_report_count: number;
+      contract_contribution_revenue: number;
+      overdue_count: number;
+      planned_revenue: number;
+      planned_rounds: number;
+      quarterly_completed_count: number;
+      total_assigned_rounds: number;
+      user_id: string;
+      user_name: string;
+      visit_revenue: number;
+      executed_rounds: number;
+    }>;
+    site_revenue_rows: Array<{
+      contract_contribution_revenue: number;
+      executed_rounds: number;
+      execution_rate: number;
+      assignee_name: string;
+      headquarter_name: string;
+      href: string;
+      is_summary_row?: boolean;
+      planned_revenue: number;
+      planned_rounds: number;
+      site_id: string;
+      site_name: string;
+      visit_revenue: number;
+    }>;
+    trend_rows: Array<{
+      month_key: string;
+      label: string;
+      revenue: number;
+      avg_per_visit_amount: number;
+      executed_rounds: number;
+    }>;
+    year: number;
+  }>;
   contract_type_rows: Array<{
     avg_per_visit_amount: number;
     label: string;

@@ -80,15 +80,21 @@ export function AnalyticsSection({ currentUserId }: AnalyticsSectionProps) {
 
       <AnalyticsDetailSection
         detailView={state.detailView}
-        employeeRows={state.sortedEmployeeRows}
+        employeePage={state.employeePage}
+        employeeRows={state.pagedEmployeeRows}
         employeeSort={state.employeeSort}
+        employeeTotalPages={state.employeeTotalPages}
         isInitialLoading={state.isInitialLoading}
         isRefreshing={state.isRefreshing}
         setDetailView={state.setDetailView}
+        setEmployeePage={state.setEmployeePage}
         setEmployeeSort={state.setEmployeeSort}
+        setSiteRevenuePage={state.setSiteRevenuePage}
         setSiteRevenueSort={state.setSiteRevenueSort}
-        siteRevenueRows={state.sortedSiteRevenueRows}
+        siteRevenuePage={state.siteRevenuePage}
+        siteRevenueRows={state.pagedSiteRevenueRows}
         siteRevenueSort={state.siteRevenueSort}
+        siteRevenueTotalPages={state.siteRevenueTotalPages}
       />
     </div>
   );

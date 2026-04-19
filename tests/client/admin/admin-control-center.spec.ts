@@ -68,6 +68,7 @@ export async function runAdminControlCenterSmoke(config: ClientSmokePlaywrightCo
     await page.goto(`${harness.baseURL}/admin?section=analytics`, { waitUntil: 'load' });
     await page.getByText('매출/실적 집계').first().waitFor();
     await harness.waitForRequestCount('GET /api/admin/dashboard/analytics', analyticsReadsBefore + 1);
+    await page.getByRole('heading', { name: '상위 매출 사업장 Top 10' }).waitFor();
     await page.getByRole('columnheader', { name: '지도요원명' }).waitFor();
     if ((await page.getByRole('columnheader', { name: '전기 대비' }).count()) > 0) {
       throw new Error('직원별 표에서 전기 대비 열이 제거되어야 합니다.');
@@ -78,6 +79,7 @@ export async function runAdminControlCenterSmoke(config: ClientSmokePlaywrightCo
     await page.getByRole('button', { name: '현장별' }).click();
     await page.getByRole('columnheader', { name: '건설사' }).waitFor();
     await page.getByRole('columnheader', { name: '진행률' }).waitFor();
+    await page.getByText(/1 \/ \d+ 페이지/).first().waitFor();
     await page.getByRole('button', { name: '필터' }).click();
     await page.locator('#analytics-filter-period').selectOption('year');
     await page.getByText('매출/실적 집계').first().waitFor();
