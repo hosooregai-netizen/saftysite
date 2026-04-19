@@ -3,8 +3,8 @@ import type { InspectionSession } from '@/types/inspectionSession';
 export type InspectionTemplateVariant = 'v9' | 'v9-1';
 
 export const INSPECTION_TEMPLATE_FILENAMES: Record<InspectionTemplateVariant, string> = {
-  v9: '기술지도 수동보고서 앱 - 서식_4.annotated.v9.hwpx',
-  'v9-1': '기술지도 수동보고서 앱 - 서식_4.annotated.v9-1.hwpx',
+  v9: '기술지도 수동보고서 앱 - 서식_4.annotated.v9-2.hwpx',
+  'v9-1': '기술지도 수동보고서 앱 - 서식_4.annotated.v9-2-1.hwpx',
 };
 
 export const INSPECTION_TEMPLATE_IMAGE_DONOR_FILENAME =

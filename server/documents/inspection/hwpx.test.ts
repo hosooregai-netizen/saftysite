@@ -115,3 +115,46 @@ test('buildInspectionHwpxDocument binds doc10 measurement values for both inspec
     }
   }
 });
+
+test('buildInspectionHwpxDocument repeats doc7 findings beyond the first item for both inspection template variants', async () => {
+  for (const accidentOccurred of ['no', 'yes'] as const) {
+    const session = buildMeasurementFixture(accidentOccurred);
+    session.document7Findings = [
+      {
+        ...session.document7Findings[0],
+        location: 'finding-location-1',
+        accidentType: 'fall-a',
+        causativeAgentKey: 'ladder',
+        hazardDescription: 'finding-hazard-1',
+        improvementPlan: 'finding-improvement-1',
+        improvementRequest: 'finding-improvement-1',
+        emphasis: 'finding-emphasis-1',
+        legalReferenceTitle: 'finding-law-1',
+      },
+      {
+        ...session.document7Findings[0],
+        id: 'finding-2',
+        location: 'finding-location-2',
+        accidentType: 'fall-b',
+        causativeAgentKey: 'ladder',
+        hazardDescription: 'finding-hazard-2',
+        improvementPlan: 'finding-improvement-2',
+        improvementRequest: 'finding-improvement-2',
+        emphasis: 'finding-emphasis-2',
+        legalReferenceTitle: 'finding-law-2',
+      },
+    ];
+
+    const document = await buildInspectionHwpxDocument(session, [session]);
+    const zip = await JSZip.loadAsync(document.buffer);
+    const sectionXml = await zip.file('Contents/section0.xml')?.async('string');
+
+    assert.ok(sectionXml);
+    assert.match(sectionXml, /finding-hazard-1/);
+    assert.match(sectionXml, /finding-hazard-2/);
+    assert.match(sectionXml, /finding-improvement-2/);
+    assert.match(sectionXml, /finding-law-2/);
+    assert.doesNotMatch(sectionXml, /\{\/sec7\.findings\}/);
+    assert.doesNotMatch(sectionXml, /\{sec7\.findings\[1\]\.location\}/);
+  }
+});
