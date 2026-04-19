@@ -139,6 +139,8 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
   const [isResolvingSiteContext, setIsResolvingSiteContext] = useState(false);
   const state = useHeadquartersSectionState(rows, busy);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const selectedHeadquarterRequestIdRef = useRef(0);
+  const selectedSiteRequestIdRef = useRef(0);
   const requestKey = useMemo(
     () =>
       JSON.stringify({
@@ -148,6 +150,30 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
       }),
     [state.page, state.query, state.sort],
   );
+  const resolvedSelectedHeadquarter = useMemo(
+    () =>
+      selectedHeadquarterId && selectedHeadquarter?.id === selectedHeadquarterId
+        ? selectedHeadquarter
+        : null,
+    [selectedHeadquarter, selectedHeadquarterId],
+  );
+  const resolvedSelectedHeadquarterSites = useMemo(
+    () =>
+      selectedHeadquarterId
+        ? selectedHeadquarterSites.filter((site) => site.headquarter_id === selectedHeadquarterId)
+        : [],
+    [selectedHeadquarterId, selectedHeadquarterSites],
+  );
+  const resolvedSelectedSite = useMemo(
+    () =>
+      (selectedSiteId
+        ? resolvedSelectedHeadquarterSites.find((site) => site.id === selectedSiteId) ?? null
+        : null) ??
+      (selectedSiteId && selectedSite?.id === selectedSiteId ? selectedSite : null),
+    [resolvedSelectedHeadquarterSites, selectedSite, selectedSiteId],
+  );
+  const isLoadingSelectedHeadquarter = Boolean(selectedHeadquarterId && !resolvedSelectedHeadquarter);
+  const isLoadingSelectedSite = Boolean(selectedSiteId && !resolvedSelectedSite);
 
   const refreshHeadquarterList = async (targetPage = state.page) => {
     const response = await fetchAdminHeadquartersList({
@@ -163,12 +189,23 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
     setSummary(response.summary);
   };
 
-  const refreshSelectedSiteDetail = async (siteId = selectedSiteId) => {
+  const refreshSelectedSiteDetail = async (
+    siteId = selectedSiteId,
+    fallbackSite: import('@/types/backend').SafetySite | null = null,
+  ) => {
     if (!siteId) {
+      selectedSiteRequestIdRef.current += 1;
       setSelectedSite(null);
       return;
     }
+    const requestId = selectedSiteRequestIdRef.current + 1;
+    selectedSiteRequestIdRef.current = requestId;
+    const optimisticSite = fallbackSite ?? (selectedSite?.id === siteId ? selectedSite : null);
+    setSelectedSite(optimisticSite);
     const response = await fetchAdminSitesList({ limit: 1, offset: 0, siteId });
+    if (selectedSiteRequestIdRef.current !== requestId) {
+      return;
+    }
     const nextSite = response.rows[0] ?? null;
     setSelectedSite(nextSite);
     if (!nextSite) {
@@ -195,7 +232,10 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
     ]);
     setSelectedHeadquarter(headquarterResponse.rows[0] ?? null);
     setSelectedHeadquarterSites(siteResponse.rows);
-    await refreshSelectedSiteDetail();
+    const matchedSelectedSite = selectedSiteId
+      ? siteResponse.rows.find((site) => site.id === selectedSiteId) ?? null
+      : null;
+    await refreshSelectedSiteDetail(selectedSiteId, matchedSelectedSite);
   };
 
   useEffect(() => {
@@ -308,33 +348,70 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
 
   useEffect(() => {
     if (!selectedHeadquarterId) {
+      selectedHeadquarterRequestIdRef.current += 1;
       setSelectedHeadquarter(null);
       setSelectedHeadquarterSites([]);
       return;
     }
-    void fetchAdminHeadquartersList({ id: selectedHeadquarterId, limit: 1, offset: 0 }).then((response) => {
-      setSelectedHeadquarter(response.rows[0] ?? null);
-    });
-    void fetchAdminSitesList({
-      headquarterId: selectedHeadquarterId,
-      limit: 5000,
-      offset: 0,
-      sortBy: 'last_visit_date',
-      sortDir: 'desc',
-    }).then((response) => {
-      setSelectedHeadquarterSites(response.rows);
-    });
+    const requestId = selectedHeadquarterRequestIdRef.current + 1;
+    selectedHeadquarterRequestIdRef.current = requestId;
+    setSelectedHeadquarter(null);
+    setSelectedHeadquarterSites([]);
+    void Promise.all([
+      fetchAdminHeadquartersList({ id: selectedHeadquarterId, limit: 1, offset: 0 }),
+      fetchAdminSitesList({
+        headquarterId: selectedHeadquarterId,
+        limit: 5000,
+        offset: 0,
+        sortBy: 'last_visit_date',
+        sortDir: 'desc',
+      }),
+    ])
+      .then(([headquarterResponse, siteResponse]) => {
+        if (selectedHeadquarterRequestIdRef.current !== requestId) {
+          return;
+        }
+        setSelectedHeadquarter(headquarterResponse.rows[0] ?? null);
+        setSelectedHeadquarterSites(siteResponse.rows);
+      })
+      .catch((error) => {
+        if (selectedHeadquarterRequestIdRef.current !== requestId) {
+          return;
+        }
+        console.error('Failed to load selected headquarter context', error);
+      });
   }, [selectedHeadquarterId]);
 
   useEffect(() => {
     if (!selectedSiteId) {
+      selectedSiteRequestIdRef.current += 1;
       setSelectedSite(null);
       return;
     }
-    void fetchAdminSitesList({ limit: 1, offset: 0, siteId: selectedSiteId }).then((response) => {
-      setSelectedSite(response.rows[0] ?? null);
-    });
-  }, [selectedSiteId]);
+    const matchedSite =
+      resolvedSelectedHeadquarterSites.find((site) => site.id === selectedSiteId) ?? null;
+    const requestId = selectedSiteRequestIdRef.current + 1;
+    selectedSiteRequestIdRef.current = requestId;
+    setSelectedSite(matchedSite);
+    void fetchAdminSitesList({ limit: 1, offset: 0, siteId: selectedSiteId })
+      .then((response) => {
+        if (selectedSiteRequestIdRef.current !== requestId) {
+          return;
+        }
+        const nextSite =
+          response.rows.find((site) => site.id === selectedSiteId) ?? response.rows[0] ?? matchedSite;
+        setSelectedSite(nextSite);
+        if (!nextSite) {
+          onClearSiteSelection();
+        }
+      })
+      .catch((error) => {
+        if (selectedSiteRequestIdRef.current !== requestId) {
+          return;
+        }
+        console.error('Failed to load selected site detail', error);
+      });
+  }, [onClearSiteSelection, resolvedSelectedHeadquarterSites, selectedSiteId]);
 
   const siteStatusFilter = useMemo(() => {
     const value = siteStatusParam;
@@ -347,7 +424,12 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
     siteStatusFilter === 'all' ? '현장 목록' : `${getSiteStatusLabel(siteStatusFilter)} 현장`;
   const totalPages = Math.max(1, Math.ceil(total / 30));
 
-  if (isResolvingSiteContext || (isLoading && rows.length === 0 && !selectedHeadquarter && !hasSiteStatusScope)) {
+  if (
+    isResolvingSiteContext ||
+    isLoadingSelectedHeadquarter ||
+    isLoadingSelectedSite ||
+    (isLoading && rows.length === 0 && !resolvedSelectedHeadquarter && !hasSiteStatusScope)
+  ) {
     return (
       <section className={`${styles.sectionCard} ${styles.listSectionCard}`}>
         <div className={styles.sectionHeader}>
@@ -485,7 +567,7 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
             totalPages={totalPages}
           />
         </section>
-      ) : !selectedHeadquarter ? (
+      ) : !resolvedSelectedHeadquarter ? (
         <SitesSection
           autoEditSiteId={autoEditSiteId}
           busy={busy}
@@ -504,17 +586,17 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
           titleActionHref={getAdminSectionHref('headquarters')}
           titleActionLabel="사업장 목록 보기"
         />
-      ) : selectedSite ? (
+      ) : resolvedSelectedSite ? (
         <SiteManagementMainPanel
-          headquarter={selectedHeadquarter}
-          site={selectedSite}
+          headquarter={resolvedSelectedHeadquarter}
+          site={resolvedSelectedSite}
         />
       ) : (
         <>
           <HeadquarterSummaryPanel
-            headquarter={selectedHeadquarter}
-            sites={selectedHeadquarterSites}
-            onEdit={() => state.openEdit(selectedHeadquarter)}
+            headquarter={resolvedSelectedHeadquarter}
+            sites={resolvedSelectedHeadquarterSites}
+            onEdit={() => state.openEdit(resolvedSelectedHeadquarter)}
           />
           <SitesSection
             autoEditSiteId={autoEditSiteId}
@@ -523,7 +605,7 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
             currentUserId={currentUserId}
             emptyMessage="등록된 현장이 없습니다."
             initialStatusFilter="all"
-            lockedHeadquarterId={selectedHeadquarter.id}
+            lockedHeadquarterId={resolvedSelectedHeadquarter.id}
             onAssignFieldAgent={onAssignFieldAgent}
             onCreate={handleCreateSite}
             onDelete={handleDeleteSite}
