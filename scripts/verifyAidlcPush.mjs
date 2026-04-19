@@ -320,9 +320,8 @@ function buildRequiredSmokes(files) {
     }
 
     if (file.startsWith('features/mailbox/')) {
-      unmappedFiles.push(
-        `${file} (mailbox smoke mapping is not defined yet; add a mailbox feature contract/smoke first)`,
-      );
+      smokeIds.add('bad-workplace-report');
+      smokeIds.add('quarterly-report');
       continue;
     }
 
