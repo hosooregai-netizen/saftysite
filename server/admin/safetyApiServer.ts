@@ -32,6 +32,7 @@ import type {
   SafetyBackendExcelImportPreview,
   SafetyBackendPhotoAsset,
   SafetyBackendPhotoAssetListResponse,
+  SafetyBackendPhotoAssetMutationResponse,
   SafetyBackendScheduleListResponse,
   SafetyBackendSmsProviderStatusResponse,
   SafetyBackendSmsSendResponse,
@@ -158,6 +159,14 @@ async function fetchAdminSiteById(
     token,
     request,
   );
+}
+
+export function fetchAdminSiteServer(
+  token: string,
+  siteId: string,
+  request: Request | null = null,
+): Promise<SafetySite> {
+  return fetchAdminSiteById(token, siteId, request);
 }
 
 async function parseErrorMessage(response: Response) {
@@ -859,6 +868,44 @@ export function fetchSafetyPhotoAssetsServer(
   return requestSafetyAdminServer<SafetyBackendPhotoAssetListResponse>(
     withQuery('/photo-assets', params),
     {},
+    token,
+    request,
+  );
+}
+
+export function updateSafetyPhotoAssetsRoundServer(
+  token: string,
+  payload: { item_ids: string[]; round_no: number },
+  request: Request | null = null,
+): Promise<SafetyBackendPhotoAssetMutationResponse> {
+  return requestSafetyAdminServer<SafetyBackendPhotoAssetMutationResponse>(
+    '/photo-assets',
+    {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    },
+    token,
+    request,
+  );
+}
+
+export function deleteSafetyPhotoAssetsServer(
+  token: string,
+  payload: { item_ids: string[] },
+  request: Request | null = null,
+): Promise<SafetyBackendPhotoAssetMutationResponse> {
+  return requestSafetyAdminServer<SafetyBackendPhotoAssetMutationResponse>(
+    '/photo-assets',
+    {
+      method: 'DELETE',
+      body: JSON.stringify(payload),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    },
     token,
     request,
   );

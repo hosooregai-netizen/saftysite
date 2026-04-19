@@ -1293,6 +1293,10 @@ export interface SafetyBackendPhotoAssetListResponse {
   total: number;
 }
 
+export interface SafetyBackendPhotoAssetMutationResponse {
+  affected_count: number;
+}
+
 export interface SafetyMasterData {
   caseFeed: SafetyCaseCatalogItem[];
   safetyInfos: SafetyInfoCatalogItem[];

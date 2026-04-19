@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server';
 
-import { readRequiredAdminToken, SafetyServerApiError } from '@/server/admin/safetyApiServer';
+import {
+  deleteSafetyPhotoAssetsServer,
+  readRequiredAdminToken,
+  SafetyServerApiError,
+  updateSafetyPhotoAssetsRoundServer,
+} from '@/server/admin/safetyApiServer';
 import { loadPhotoAlbumList } from '@/server/photos/service';
 import type { PhotoAlbumSourceFilter } from '@/types/photos';
 
@@ -28,6 +33,32 @@ function parseSource(value: string | null): PhotoAlbumSourceFilter {
 
 function parseAll(value: string | null) {
   return value === 'true';
+}
+
+function parseItemIds(payload: unknown) {
+  if (!payload || typeof payload !== 'object') return [];
+  const record = payload as Record<string, unknown>;
+  const rawItems = Array.isArray(record.item_ids)
+    ? record.item_ids
+    : Array.isArray(record.itemIds)
+      ? record.itemIds
+      : [];
+  return rawItems
+    .map((value) => (typeof value === 'string' ? value.trim() : ''))
+    .filter(Boolean);
+}
+
+function parseRoundNo(payload: unknown) {
+  if (!payload || typeof payload !== 'object') return 0;
+  const record = payload as Record<string, unknown>;
+  const rawValue = record.round_no ?? record.roundNo;
+  if (typeof rawValue === 'number' && Number.isFinite(rawValue)) {
+    return Math.trunc(rawValue);
+  }
+  if (typeof rawValue === 'string') {
+    return Number.parseInt(rawValue.trim(), 10) || 0;
+  }
+  return 0;
 }
 
 export async function GET(request: Request): Promise<Response> {
@@ -60,6 +91,61 @@ export async function GET(request: Request): Promise<Response> {
 
     return NextResponse.json(
       { error: error instanceof Error ? error.message : '사진첩을 불러오지 못했습니다.' },
+      { status: 500 },
+    );
+  }
+}
+
+export async function PATCH(request: Request): Promise<Response> {
+  try {
+    const token = readRequiredAdminToken(request);
+    const body = await request.json().catch(() => ({}));
+    const response = await updateSafetyPhotoAssetsRoundServer(
+      token,
+      {
+        item_ids: parseItemIds(body),
+        round_no: parseRoundNo(body),
+      },
+      request,
+    );
+
+    return NextResponse.json({
+      affectedCount: response.affected_count,
+    });
+  } catch (error) {
+    if (error instanceof SafetyServerApiError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : '사진 회차를 변경하지 못했습니다.' },
+      { status: 500 },
+    );
+  }
+}
+
+export async function DELETE(request: Request): Promise<Response> {
+  try {
+    const token = readRequiredAdminToken(request);
+    const body = await request.json().catch(() => ({}));
+    const response = await deleteSafetyPhotoAssetsServer(
+      token,
+      {
+        item_ids: parseItemIds(body),
+      },
+      request,
+    );
+
+    return NextResponse.json({
+      affectedCount: response.affected_count,
+    });
+  } catch (error) {
+    if (error instanceof SafetyServerApiError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : '사진을 삭제하지 못했습니다.' },
       { status: 500 },
     );
   }

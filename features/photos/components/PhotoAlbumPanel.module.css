@@ -69,6 +69,18 @@
   border-radius: 2px;
   background: #fff;
   box-shadow: 0 1px 0 rgba(16, 24, 43, 0.04);
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+.cardSelected {
+  border-color: rgba(27, 43, 68, 0.35);
+  box-shadow:
+    0 10px 24px rgba(18, 28, 47, 0.08),
+    inset 0 0 0 1px rgba(27, 43, 68, 0.08);
+  transform: translateY(-1px);
 }
 
 .cardPreviewButton {
@@ -130,20 +142,6 @@
   gap: 8px;
 }
 
-.sourceBadge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 24px;
-  padding: 0 10px;
-  border-radius: 2px;
-  background: rgba(31, 48, 69, 0.08);
-  color: var(--erp-dark);
-  font-size: var(--text-ui-sm);
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
 .cardTitle {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -177,33 +175,6 @@
   font-size: var(--text-body);
 }
 
-.sortBar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 14px;
-}
-
-.sortChip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 34px;
-  padding: 0 12px;
-  border: 1px solid var(--erp-line);
-  border-radius: 2px;
-  background: #fff;
-  font-size: var(--text-ui);
-  font-weight: 700;
-  color: var(--erp-dark);
-}
-
-.sortChipActive {
-  border-color: rgba(31, 48, 69, 0.28);
-  background: rgba(31, 48, 69, 0.06);
-  color: var(--erp-navy);
-}
-
 .bulkBar,
 .loadMoreRow {
   display: flex;
@@ -213,12 +184,24 @@
   margin-top: 16px;
 }
 
-.selectAll {
-  display: inline-flex;
+.bulkBar {
+  padding: 14px 16px;
+  border: 1px solid var(--erp-line);
+  border-radius: 2px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 1), rgba(247, 250, 255, 0.94));
+}
+
+.bulkActions {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
   align-items: center;
   gap: 8px;
-  font-size: var(--text-ui);
-  color: var(--erp-dark);
+}
+
+.bulkActions :global(.app-button) {
+  min-width: 132px;
 }
 
 .paginationMeta {
@@ -269,6 +252,29 @@
 .modalMetaLabel {
   color: var(--erp-text-muted);
   font-weight: 700;
+}
+
+.roundModalBody {
+  display: grid;
+  gap: 14px;
+}
+
+.roundModalMessage {
+  margin: 0;
+  font-size: var(--text-body);
+  color: var(--erp-dark);
+  line-height: 1.5;
+}
+
+.roundModalField {
+  display: grid;
+  gap: 8px;
+}
+
+.roundModalLabel {
+  font-size: var(--text-ui-sm);
+  font-weight: 700;
+  color: var(--erp-text-muted);
 }
 
 .workerCompactGrid {
@@ -328,5 +334,14 @@
   .loadMoreRow {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .bulkActions {
+    flex-wrap: wrap;
+    justify-content: stretch;
+  }
+
+  .bulkActions :global(.app-button) {
+    width: 100%;
   }
 }

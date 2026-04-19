@@ -4,18 +4,18 @@ import Link from 'next/link';
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import AppModal from '@/components/ui/AppModal';
 import { SubmitSearchField } from '@/components/ui/SubmitSearchField';
-import { buildNextTableSort } from '@/features/admin/components/SortableHeaderCell';
 import { SectionHeaderFilterMenu } from '@/features/admin/components/SectionHeaderFilterMenu';
-import { useSubmittedSearchState } from '@/hooks/useSubmittedSearchState';
 import adminStyles from '@/features/admin/sections/AdminSectionShared.module.css';
+import { useSubmittedSearchState } from '@/hooks/useSubmittedSearchState';
 import { exportAdminWorkbook } from '@/lib/admin/exportClient';
 import {
+  deletePhotoAlbumSelection,
   downloadPhotoAlbumSelection,
   fetchPhotoAlbum,
+  updatePhotoAlbumRounds,
   uploadPhotoAlbumAsset,
 } from '@/lib/photos/apiClient';
 import { createPhotoThumbnail } from '@/lib/photos/thumbnail';
-import type { TableSortState } from '@/types/admin';
 import type { PhotoAlbumItem } from '@/types/photos';
 import styles from './PhotoAlbumPanel.module.css';
 
@@ -97,7 +97,7 @@ function compareDisplayRoundNo(left: number, right: number) {
 }
 
 function getSourceLabel(sourceKind: PhotoAlbumItem['sourceKind']) {
-  return sourceKind === 'legacy_import' ? '이관된 보고서 사진' : '업로드 사진';
+  return sourceKind === 'legacy_import' ? '레거시 보고서 사진' : '사진첩 업로드';
 }
 
 function matchesContext(
@@ -122,6 +122,25 @@ function matchesContext(
     .includes(query);
 }
 
+async function requestPhotoAlbumRows(input: {
+  deferredQuery: string;
+  headquarterId: string;
+  initialReportKey: string | null;
+  lockedHeadquarterId: string | null;
+  lockedSiteId: string | null;
+  siteId: string;
+}) {
+  return fetchPhotoAlbum({
+    all: true,
+    headquarterId: input.lockedHeadquarterId || input.headquarterId || '',
+    query: input.deferredQuery,
+    reportKey: input.initialReportKey || '',
+    siteId: input.lockedSiteId || input.siteId || '',
+    sortBy: 'capturedAt',
+    sortDir: 'desc',
+  });
+}
+
 export function PhotoAlbumPanel({
   backHref = null,
   backLabel = null,
@@ -137,18 +156,18 @@ export function PhotoAlbumPanel({
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const defaultHeadquarterId = lockedHeadquarterId || initialHeadquarterId || '';
   const defaultSiteId = lockedSiteId || initialSiteId || '';
-  const [sort, setSort] = useState<TableSortState>({
-    direction: 'desc',
-    key: 'capturedAt',
-  });
   const { query, queryInput, setQueryInput, submitQuery } = useSubmittedSearchState();
   const [headquarterId, setHeadquarterId] = useState(() => defaultHeadquarterId);
   const [siteId, setSiteId] = useState(() => defaultSiteId);
   const [uploadRoundNo, setUploadRoundNo] = useState(0);
+  const [bulkRoundNo, setBulkRoundNo] = useState(0);
   const [rows, setRows] = useState<PhotoAlbumItem[]>([]);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [bulkUpdating, setBulkUpdating] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [roundModalOpen, setRoundModalOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -165,7 +184,7 @@ export function PhotoAlbumPanel({
 
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
-  }, [deferredQuery, headquarterId, siteId, sort.direction, sort.key]);
+  }, [deferredQuery, headquarterId, siteId]);
 
   const headquarterOptions = useMemo(
     () =>
@@ -174,6 +193,7 @@ export function PhotoAlbumPanel({
       ).map(([id, name]) => ({ id, name })),
     [sites],
   );
+
   const visibleSiteOptions = useMemo(
     () =>
       sites.filter((site) => {
@@ -184,10 +204,12 @@ export function PhotoAlbumPanel({
       }),
     [headquarterId, lockedHeadquarterId, lockedSiteId, sites],
   );
+
   const selectedUploadSite = useMemo(
     () => visibleSiteOptions.find((option) => option.id === (lockedSiteId || siteId || '')) ?? null,
     [lockedSiteId, siteId, visibleSiteOptions],
   );
+
   const uploadRoundOptions = useMemo(() => {
     const totalRounds = selectedUploadSite?.totalRounds ?? 0;
     if (!totalRounds || totalRounds <= 0) {
@@ -195,10 +217,9 @@ export function PhotoAlbumPanel({
     }
     return Array.from({ length: totalRounds }, (_, index) => index + 1);
   }, [selectedUploadSite]);
+
   const canUpload = Boolean((lockedSiteId || siteId) && uploadRoundNo > 0 && uploadRoundOptions.length > 0);
-  const showHeaderFilter =
-    (mode === 'admin' && !lockedHeadquarterId) ||
-    !lockedSiteId;
+  const showHeaderFilter = (mode === 'admin' && !lockedHeadquarterId) || !lockedSiteId;
   const activeFilterCount =
     (mode === 'admin' && !lockedHeadquarterId && headquarterId ? 1 : 0) +
     (!lockedSiteId && siteId ? 1 : 0);
@@ -226,18 +247,19 @@ export function PhotoAlbumPanel({
       try {
         setLoading(true);
         setError(null);
-        const response = await fetchPhotoAlbum({
-          all: true,
-          headquarterId: lockedHeadquarterId || headquarterId || '',
-          query: deferredQuery,
-          reportKey: initialReportKey || '',
-          siteId: lockedSiteId || siteId || '',
-          sortBy: (sort.key as 'capturedAt' | 'createdAt' | 'fileName' | 'siteName') || 'capturedAt',
-          sortDir: sort.direction,
+        const response = await requestPhotoAlbumRows({
+          deferredQuery,
+          headquarterId,
+          initialReportKey,
+          lockedHeadquarterId,
+          lockedSiteId,
+          siteId,
         });
         if (cancelled) return;
         setRows(response.rows);
-        setSelectedIds((current) => current.filter((itemId) => response.rows.some((row) => row.id === itemId)));
+        setSelectedIds((current) =>
+          current.filter((itemId) => response.rows.some((row) => row.id === itemId)),
+        );
       } catch (nextError) {
         if (cancelled) return;
         setError(nextError instanceof Error ? nextError.message : '사진첩을 불러오지 못했습니다.');
@@ -260,8 +282,6 @@ export function PhotoAlbumPanel({
     lockedHeadquarterId,
     lockedSiteId,
     siteId,
-    sort.direction,
-    sort.key,
   ]);
 
   useEffect(() => {
@@ -290,6 +310,7 @@ export function PhotoAlbumPanel({
     () => rows.slice(0, Math.min(rows.length, visibleCount)),
     [rows, visibleCount],
   );
+
   const groupedVisibleRows = useMemo<PhotoAlbumSiteGroup[]>(() => {
     const siteGroups = new Map<string, PhotoAlbumSiteGroup>();
 
@@ -332,9 +353,70 @@ export function PhotoAlbumPanel({
       ),
     }));
   }, [visibleRows]);
+
+  const selectedRows = useMemo(
+    () => rows.filter((row) => selectedIds.includes(row.id)),
+    [rows, selectedIds],
+  );
+
+  const selectedSiteIds = useMemo(
+    () => Array.from(new Set(selectedRows.map((row) => row.siteId).filter(Boolean))),
+    [selectedRows],
+  );
+
+  const selectedBulkSite = useMemo(
+    () =>
+      selectedSiteIds.length === 1
+        ? sites.find((site) => site.id === selectedSiteIds[0]) ?? null
+        : null,
+    [selectedSiteIds, sites],
+  );
+
+  const bulkRoundOptions = useMemo(() => {
+    const totalRounds = selectedBulkSite?.totalRounds ?? 0;
+    if (!selectedBulkSite || totalRounds <= 0) {
+      return [];
+    }
+    return Array.from({ length: totalRounds }, (_, index) => index + 1);
+  }, [selectedBulkSite]);
+
+  useEffect(() => {
+    if (bulkRoundOptions.length === 0) {
+      setBulkRoundNo(0);
+      return;
+    }
+    setBulkRoundNo((current) =>
+      bulkRoundOptions.includes(current) ? current : bulkRoundOptions[0] ?? 0,
+    );
+  }, [bulkRoundOptions]);
+
   const hasMoreRows = visibleRows.length < rows.length;
   const allVisibleSelected =
     visibleRows.length > 0 && visibleRows.every((row) => selectedIds.includes(row.id));
+  const hasSelectedRows = selectedIds.length > 0;
+  const canBulkEditRound =
+    hasSelectedRows &&
+    selectedSiteIds.length === 1 &&
+    bulkRoundOptions.length > 0 &&
+    bulkRoundNo > 0;
+
+  const activeItemMatchesContext =
+    activeItem &&
+    matchesContext(
+      activeItem,
+      lockedHeadquarterId || headquarterId || '',
+      lockedSiteId || siteId || '',
+      deferredQuery,
+    );
+
+  const resetHeaderFilters = () => {
+    if (!lockedHeadquarterId) {
+      setHeadquarterId(defaultHeadquarterId);
+    }
+    if (!lockedSiteId) {
+      setSiteId(defaultSiteId);
+    }
+  };
 
   const handleToggleAll = () => {
     const visibleRowIds = visibleRows.map((row) => row.id);
@@ -362,6 +444,20 @@ export function PhotoAlbumPanel({
     }
   };
 
+  const reloadRows = async (nextSiteId?: string) => {
+    const response = await requestPhotoAlbumRows({
+      deferredQuery,
+      headquarterId,
+      initialReportKey,
+      lockedHeadquarterId,
+      lockedSiteId,
+      siteId: nextSiteId ?? siteId,
+    });
+    setVisibleCount(PAGE_SIZE);
+    setRows(response.rows);
+    return response.rows;
+  };
+
   const handleFilesSelected = async (files: FileList | null) => {
     const uploadSiteId = lockedSiteId || siteId;
     if (!uploadSiteId) {
@@ -370,7 +466,7 @@ export function PhotoAlbumPanel({
     }
 
     if (uploadRoundOptions.length === 0 || uploadRoundNo <= 0) {
-      setError('회차 생성 후 업로드해 주세요.');
+      setError('업로드할 회차를 먼저 선택해 주세요.');
       return;
     }
 
@@ -392,17 +488,7 @@ export function PhotoAlbumPanel({
         });
       }
 
-      const refreshed = await fetchPhotoAlbum({
-        all: true,
-        headquarterId: lockedHeadquarterId || headquarterId || '',
-        query: deferredQuery,
-        reportKey: initialReportKey || '',
-        siteId: uploadSiteId,
-        sortBy: (sort.key as 'capturedAt' | 'createdAt' | 'fileName' | 'siteName') || 'capturedAt',
-        sortDir: sort.direction,
-      });
-      setVisibleCount(PAGE_SIZE);
-      setRows(refreshed.rows);
+      await reloadRows(uploadSiteId);
       setSelectedIds([]);
       setNotice(`${nextFiles.length}건의 사진을 업로드했습니다.`);
       if (fileInputRef.current) {
@@ -413,6 +499,66 @@ export function PhotoAlbumPanel({
     } finally {
       setUploading(false);
     }
+  };
+
+  const handleBulkRoundChange = async () => {
+    if (!canBulkEditRound) {
+      return false;
+    }
+
+    try {
+      setBulkUpdating(true);
+      setError(null);
+      setNotice(null);
+      const selectedCount = selectedIds.length;
+      await updatePhotoAlbumRounds(selectedIds, bulkRoundNo);
+      await reloadRows();
+      setSelectedIds([]);
+      setRoundModalOpen(false);
+      setNotice(`${selectedCount}건의 사진을 ${formatRoundLabel(bulkRoundNo)}로 변경했습니다.`);
+      return true;
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : '사진 회차를 변경하지 못했습니다.');
+      return false;
+    } finally {
+      setBulkUpdating(false);
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (!hasSelectedRows) {
+      return;
+    }
+
+    const confirmed = window.confirm(`선택한 사진 ${selectedIds.length}건을 삭제할까요?`);
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setDeleting(true);
+      setError(null);
+      setNotice(null);
+      const deletingIds = [...selectedIds];
+      await deletePhotoAlbumSelection(deletingIds);
+      await reloadRows();
+      if (activeItem && deletingIds.includes(activeItem.id)) {
+        setActiveItem(null);
+      }
+      setSelectedIds([]);
+      setNotice(`${deletingIds.length}건의 사진을 삭제했습니다.`);
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : '사진 삭제에 실패했습니다.');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleOpenRoundModal = () => {
+    if (!hasSelectedRows) {
+      return;
+    }
+    setRoundModalOpen(true);
   };
 
   const handleExport = async () => {
@@ -428,7 +574,7 @@ export function PhotoAlbumPanel({
             { key: 'sourceKind', label: '출처' },
             { key: 'sourceReportTitle', label: '원본 보고서' },
             { key: 'capturedAt', label: '촬영일' },
-            { key: 'uploadedByName', label: '업로더' },
+            { key: 'uploadedByName', label: '업로드' },
             { key: 'gps', label: 'GPS' },
             { key: 'createdAt', label: '등록일' },
           ],
@@ -452,29 +598,6 @@ export function PhotoAlbumPanel({
     }
   };
 
-  const activeItemMatchesContext =
-    activeItem &&
-    matchesContext(
-      activeItem,
-      lockedHeadquarterId || headquarterId || '',
-      lockedSiteId || siteId || '',
-      deferredQuery,
-    );
-  const sortOptions: Array<{ defaultDirection: TableSortState['direction']; key: typeof sort.key; label: string }> = [
-    { defaultDirection: 'desc', key: 'capturedAt', label: '촬영일' },
-    { defaultDirection: 'desc', key: 'createdAt', label: '등록일' },
-    { defaultDirection: 'asc', key: 'fileName', label: '파일명' },
-    { defaultDirection: 'asc', key: 'siteName', label: '현장명' },
-  ];
-  const resetHeaderFilters = () => {
-    if (!lockedHeadquarterId) {
-      setHeadquarterId(defaultHeadquarterId);
-    }
-    if (!lockedSiteId) {
-      setSiteId(defaultSiteId);
-    }
-  };
-
   return (
     <div className={adminStyles.dashboardStack}>
       <section className={adminStyles.sectionCard}>
@@ -495,7 +618,7 @@ export function PhotoAlbumPanel({
               formClassName={`${adminStyles.sectionHeaderSearchShell} ${adminStyles.sectionHeaderToolbarSearch}`}
               inputClassName={`app-input ${adminStyles.sectionHeaderSearchInput}`}
               buttonClassName={adminStyles.sectionHeaderSearchButton}
-              placeholder="파일명, 현장명, 보고서명, 업로더 검색"
+              placeholder="파일명, 현장명, 보고서명, 업로드 검색"
               value={queryInput}
               onChange={setQueryInput}
               onSubmit={submitQuery}
@@ -560,7 +683,7 @@ export function PhotoAlbumPanel({
                   disabled={uploadRoundOptions.length === 0}
                 >
                   {uploadRoundOptions.length === 0 ? (
-                    <option value="0">회차 생성 후 업로드</option>
+                    <option value="0">업로드 가능한 회차 없음</option>
                   ) : null}
                   {uploadRoundOptions.map((roundNo) => (
                     <option key={roundNo} value={roundNo}>
@@ -579,14 +702,6 @@ export function PhotoAlbumPanel({
                 메타데이터 엑셀
               </button>
             ) : null}
-            <button
-              type="button"
-              className="app-button app-button-secondary"
-              onClick={() => void handleDownload(selectedIds)}
-              disabled={selectedIds.length === 0 || loading}
-            >
-              선택 다운로드
-            </button>
             <button
               type="button"
               className="app-button app-button-primary"
@@ -611,28 +726,6 @@ export function PhotoAlbumPanel({
           {error ? <div className={adminStyles.bannerError}>{error}</div> : null}
           {notice ? <div className={adminStyles.bannerNotice}>{notice}</div> : null}
 
-          <div className={styles.sortBar} role="toolbar" aria-label="사진첩 정렬">
-            {sortOptions.map((option) => {
-              const active = sort.key === option.key;
-              const arrow = active ? (sort.direction === 'asc' ? '↑' : '↓') : '↕';
-              return (
-                <button
-                  key={option.key}
-                  type="button"
-                  className={`${styles.sortChip} ${active ? styles.sortChipActive : ''}`}
-                  onClick={() =>
-                    setSort((current) =>
-                      buildNextTableSort(current, option.key, option.defaultDirection),
-                    )
-                  }
-                >
-                  <span>{option.label}</span>
-                  <span>{arrow}</span>
-                </button>
-              );
-            })}
-          </div>
-
           {loading ? (
             <div className={styles.emptyState}>사진첩을 불러오는 중입니다.</div>
           ) : rows.length === 0 ? (
@@ -642,15 +735,40 @@ export function PhotoAlbumPanel({
           ) : (
             <>
               <div className={styles.bulkBar}>
-                <label className={styles.selectAll}>
-                  <input
-                    type="checkbox"
-                    checked={allVisibleSelected}
-                    onChange={handleToggleAll}
-                  />
-                  <span>현재 보이는 사진 전체 선택</span>
-                </label>
-                <span className={adminStyles.sectionHeaderMeta}>선택 {selectedIds.length}건</span>
+                <div className={styles.bulkActions}>
+                  <button
+                    type="button"
+                    className="app-button app-button-secondary"
+                    onClick={handleToggleAll}
+                    disabled={visibleRows.length === 0 || bulkUpdating || deleting}
+                  >
+                    모두 선택
+                  </button>
+                  <button
+                    type="button"
+                    className="app-button app-button-secondary"
+                    onClick={handleOpenRoundModal}
+                    disabled={!hasSelectedRows || bulkUpdating || deleting}
+                  >
+                    선택 회차 변경
+                  </button>
+                  <button
+                    type="button"
+                    className="app-button app-button-secondary"
+                    onClick={() => void handleDownload(selectedIds)}
+                    disabled={!hasSelectedRows || bulkUpdating || deleting}
+                  >
+                    선택 다운로드
+                  </button>
+                  <button
+                    type="button"
+                    className="app-button app-button-danger"
+                    onClick={() => void handleDeleteSelected()}
+                    disabled={!hasSelectedRows || bulkUpdating || deleting}
+                  >
+                    {deleting ? '삭제 중...' : '선택 삭제'}
+                  </button>
+                </div>
               </div>
 
               <div className={styles.groupStack}>
@@ -676,80 +794,87 @@ export function PhotoAlbumPanel({
                           <div
                             className={`${styles.grid} ${mode === 'worker' ? styles.workerCompactGrid : ''}`}
                           >
-                            {roundGroup.rows.map((item) => (
-                              <article
-                                key={item.id}
-                                className={`${styles.card} ${mode === 'worker' ? styles.workerCompactCard : ''}`}
-                              >
-                                <button
-                                  type="button"
-                                  className={`${styles.cardPreviewButton} ${mode === 'worker' ? styles.workerCompactPreviewButton : ''}`}
-                                  onClick={() => setActiveItem(item)}
-                                >
-                                  {item.previewUrl ? (
-                                    // eslint-disable-next-line @next/next/no-img-element
-                                    <img
-                                      src={item.previewUrl}
-                                      alt={item.fileName}
-                                      className={`${styles.cardImage} ${mode === 'worker' ? styles.workerCompactImage : ''}`}
-                                    />
-                                  ) : (
-                                    <div
-                                      className={`${styles.cardImageFallback} ${mode === 'worker' ? styles.workerCompactImageFallback : ''}`}
-                                    >
-                                      미리보기 없음
-                                    </div>
-                                  )}
-                                </button>
-                                <label
-                                  className={`${styles.cardCheckbox} ${mode === 'worker' ? styles.workerCompactCheckbox : ''}`}
-                                >
-                                  <input
-                                    type="checkbox"
-                                    checked={selectedIds.includes(item.id)}
-                                    onChange={() => handleToggleRow(item.id)}
-                                  />
-                                </label>
-                                <div
-                                  className={`${styles.cardBody} ${mode === 'worker' ? styles.workerCompactBody : ''}`}
-                                >
-                                  <div className={styles.cardMetaRow}>
-                                    <span className={styles.cardMetaText}>{formatFileSize(item.sizeBytes)}</span>
-                                  </div>
-                                  <div className={styles.cardTitle} title={item.fileName}>
-                                    {item.fileName}
-                                  </div>
-                                  <div className={styles.cardMetaText}>
-                                    {item.siteName} · {formatRoundLabel(item.roundNo)}
-                                  </div>
-                                  {mode === 'admin' ? (
-                                    <div className={styles.cardMetaText}>{item.headquarterName}</div>
-                                  ) : null}
-                                  <div className={styles.cardMetaText}>
-                                    {item.capturedAt ? `촬영 ${formatDateLabel(item.capturedAt)}` : `등록 ${formatDateLabel(item.createdAt)}`}
-                                  </div>
-                                  <div className={styles.cardMetaText}>
-                                    {item.uploadedByName ? `업로더 ${item.uploadedByName}` : '업로더 미상'}
-                                  </div>
-                                  {item.sourceReportTitle ? (
-                                    <div className={styles.cardMetaText} title={item.sourceReportTitle}>
-                                      {item.sourceReportTitle}
-                                    </div>
-                                  ) : null}
-                                </div>
-                                <div
-                                  className={`${styles.cardActions} ${mode === 'worker' ? styles.workerCompactActions : ''}`}
+                            {roundGroup.rows.map((item) => {
+                              const isSelected = selectedIds.includes(item.id);
+                              return (
+                                <article
+                                  key={item.id}
+                                  className={`${styles.card} ${isSelected ? styles.cardSelected : ''} ${
+                                    mode === 'worker' ? styles.workerCompactCard : ''
+                                  }`}
                                 >
                                   <button
                                     type="button"
-                                    className="app-button app-button-secondary"
-                                    onClick={() => void handleDownload([item.id])}
+                                    className={`${styles.cardPreviewButton} ${mode === 'worker' ? styles.workerCompactPreviewButton : ''}`}
+                                    onClick={() => setActiveItem(item)}
                                   >
-                                    다운로드
+                                    {item.previewUrl ? (
+                                      // eslint-disable-next-line @next/next/no-img-element
+                                      <img
+                                        src={item.previewUrl}
+                                        alt={item.fileName}
+                                        className={`${styles.cardImage} ${mode === 'worker' ? styles.workerCompactImage : ''}`}
+                                      />
+                                    ) : (
+                                      <div
+                                        className={`${styles.cardImageFallback} ${mode === 'worker' ? styles.workerCompactImageFallback : ''}`}
+                                      >
+                                        미리보기 없음
+                                      </div>
+                                    )}
                                   </button>
-                                </div>
-                              </article>
-                            ))}
+                                  <label
+                                    className={`${styles.cardCheckbox} ${mode === 'worker' ? styles.workerCompactCheckbox : ''}`}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={isSelected}
+                                      onChange={() => handleToggleRow(item.id)}
+                                    />
+                                  </label>
+                                  <div
+                                    className={`${styles.cardBody} ${mode === 'worker' ? styles.workerCompactBody : ''}`}
+                                  >
+                                    <div className={styles.cardMetaRow}>
+                                      <span className={styles.cardMetaText}>{formatFileSize(item.sizeBytes)}</span>
+                                    </div>
+                                    <div className={styles.cardTitle} title={item.fileName}>
+                                      {item.fileName}
+                                    </div>
+                                    <div className={styles.cardMetaText}>
+                                      {item.siteName} · {formatRoundLabel(item.roundNo)}
+                                    </div>
+                                    {mode === 'admin' ? (
+                                      <div className={styles.cardMetaText}>{item.headquarterName}</div>
+                                    ) : null}
+                                    <div className={styles.cardMetaText}>
+                                      {item.capturedAt
+                                        ? `촬영 ${formatDateLabel(item.capturedAt)}`
+                                        : `등록 ${formatDateLabel(item.createdAt)}`}
+                                    </div>
+                                    <div className={styles.cardMetaText}>
+                                      {item.uploadedByName ? `업로드 ${item.uploadedByName}` : '업로드 정보 없음'}
+                                    </div>
+                                    {item.sourceReportTitle ? (
+                                      <div className={styles.cardMetaText} title={item.sourceReportTitle}>
+                                        {item.sourceReportTitle}
+                                      </div>
+                                    ) : null}
+                                  </div>
+                                  <div
+                                    className={`${styles.cardActions} ${mode === 'worker' ? styles.workerCompactActions : ''}`}
+                                  >
+                                    <button
+                                      type="button"
+                                      className="app-button app-button-secondary"
+                                      onClick={() => void handleDownload([item.id])}
+                                    >
+                                      다운로드
+                                    </button>
+                                  </div>
+                                </article>
+                              );
+                            })}
                           </div>
                         </section>
                       ))}
@@ -761,7 +886,7 @@ export function PhotoAlbumPanel({
               {hasMoreRows ? (
                 <div ref={loadMoreRef} className={styles.loadMoreRow}>
                   <span className={styles.paginationMeta}>
-                    아래로 내려 나머지 {rows.length - visibleRows.length}건을 이어서 볼 수 있습니다.
+                    아래로 내려 남은 {rows.length - visibleRows.length}건을 더 볼 수 있습니다.
                   </span>
                   <button
                     type="button"
@@ -778,6 +903,67 @@ export function PhotoAlbumPanel({
           )}
         </div>
       </section>
+
+      <AppModal
+        open={roundModalOpen}
+        title="선택 회차 변경"
+        onClose={() => setRoundModalOpen(false)}
+        mobileActionsLayout="row"
+        actions={
+          <>
+            <button
+              type="button"
+              className="app-button app-button-secondary"
+              onClick={() => setRoundModalOpen(false)}
+            >
+              닫기
+            </button>
+            <button
+              type="button"
+              className="app-button app-button-primary"
+              onClick={() => void handleBulkRoundChange()}
+              disabled={!canBulkEditRound || bulkUpdating}
+            >
+              {bulkUpdating ? '변경 중...' : '변경하기'}
+            </button>
+          </>
+        }
+      >
+        <div className={styles.roundModalBody}>
+          {selectedSiteIds.length !== 1 ? (
+            <p className={styles.roundModalMessage}>
+              같은 현장 사진만 함께 선택하면 회차를 변경할 수 있습니다.
+            </p>
+          ) : bulkRoundOptions.length === 0 ? (
+            <p className={styles.roundModalMessage}>
+              선택한 현장의 회차 정보가 없어 회차를 변경할 수 없습니다.
+            </p>
+          ) : (
+            <>
+              <p className={styles.roundModalMessage}>
+                선택한 사진 {selectedIds.length}건의 회차를 변경합니다.
+              </p>
+              <div className={styles.roundModalField}>
+                <label htmlFor="photo-bulk-round" className={styles.roundModalLabel}>
+                  변경할 회차
+                </label>
+                <select
+                  id="photo-bulk-round"
+                  className="app-select"
+                  value={bulkRoundNo}
+                  onChange={(event) => setBulkRoundNo(Number.parseInt(event.target.value, 10) || 0)}
+                >
+                  {bulkRoundOptions.map((roundNo) => (
+                    <option key={roundNo} value={roundNo}>
+                      {formatRoundLabel(roundNo)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </>
+          )}
+        </div>
+      </AppModal>
 
       <AppModal
         open={Boolean(activeItem && activeItemMatchesContext)}
@@ -845,7 +1031,7 @@ export function PhotoAlbumPanel({
                 <span>{formatDateLabel(activeItem.createdAt)}</span>
               </div>
               <div className={styles.modalMetaRow}>
-                <span className={styles.modalMetaLabel}>업로더</span>
+                <span className={styles.modalMetaLabel}>업로드</span>
                 <span>{activeItem.uploadedByName || '-'}</span>
               </div>
               <div className={styles.modalMetaRow}>
@@ -863,7 +1049,7 @@ export function PhotoAlbumPanel({
                     <span>{activeItem.sourceReportTitle || '-'}</span>
                   </div>
                   <div className={styles.modalMetaRow}>
-                    <span className={styles.modalMetaLabel}>문서 슬롯</span>
+                    <span className={styles.modalMetaLabel}>문서 위치</span>
                     <span>{`${activeItem.sourceDocumentKey} / ${activeItem.sourceSlotKey}`}</span>
                   </div>
                 </>

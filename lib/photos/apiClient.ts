@@ -3,7 +3,12 @@
 import { saveBlobAsFile } from '@/lib/api';
 import { readSafetyAuthToken, SafetyApiError } from '@/lib/safetyApi';
 import type { TableSortDirection } from '@/types/admin';
-import type { PhotoAlbumItem, PhotoAlbumListResponse, PhotoAlbumSourceFilter } from '@/types/photos';
+import type {
+  PhotoAlbumItem,
+  PhotoAlbumListResponse,
+  PhotoAlbumMutationResponse,
+  PhotoAlbumSourceFilter,
+} from '@/types/photos';
 
 function buildQueryString(params: Record<string, string | number | null | undefined>) {
   const searchParams = new URLSearchParams();
@@ -145,4 +150,34 @@ export async function downloadPhotoAlbumSelection(itemIds: string[]) {
 
   const blob = await response.blob();
   saveBlobAsFile(blob, getDownloadFilenameFromDisposition(response.headers.get('content-disposition')));
+}
+
+export async function updatePhotoAlbumRounds(itemIds: string[], roundNo: number) {
+  const headers = createAuthorizedHeaders({ json: true });
+  const response = await fetch('/api/photos', {
+    body: JSON.stringify({ item_ids: itemIds, round_no: roundNo }),
+    headers,
+    method: 'PATCH',
+  });
+
+  if (!response.ok) {
+    throw new SafetyApiError(await parseErrorMessage(response), response.status);
+  }
+
+  return (await response.json()) as PhotoAlbumMutationResponse;
+}
+
+export async function deletePhotoAlbumSelection(itemIds: string[]) {
+  const headers = createAuthorizedHeaders({ json: true });
+  const response = await fetch('/api/photos', {
+    body: JSON.stringify({ item_ids: itemIds }),
+    headers,
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    throw new SafetyApiError(await parseErrorMessage(response), response.status);
+  }
+
+  return (await response.json()) as PhotoAlbumMutationResponse;
 }

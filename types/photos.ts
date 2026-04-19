@@ -60,6 +60,10 @@ export interface PhotoAlbumListResponse {
   total: number;
 }
 
+export interface PhotoAlbumMutationResponse {
+  affectedCount: number;
+}
+
 export interface PhotoAlbumContext {
   backHref?: string | null;
   backLabel?: string | null;
