@@ -66,6 +66,7 @@ Fields that must survive reconstruction:
   - `id`
   - `siteId`
   - `siteName`
+  - `roundNo`
   - `headquarterId`
   - `headquarterName`
 - binary/display:
@@ -133,6 +134,7 @@ Server rules:
 - `POST /api/photos/upload`
 - multipart form fields:
   - `file`
+  - `round_no`
   - `site_id`
   - optional `thumbnail`
 
@@ -143,6 +145,7 @@ Upload response:
 Route rules:
 
 - site id is required
+- `round_no` must be a positive integer
 - `file` must be an image file
 - original image must be `> 0` and `<= 50MB`
 - thumbnail, when present, must also be `<= 50MB`
@@ -254,6 +257,14 @@ This helper is the bridge used by document sections when a file needs to become 
 
 ### Display rules
 
+- default album rendering is grouped by:
+  - `siteName`
+  - `roundNo`
+- grouped display is used by:
+  - admin photo album
+  - worker site photo album
+  - mobile site photo album
+- embedded picker-style flows may stay flat because they are selection modals, not the main album view
 - source label:
   - `legacy_import` => `이관된 보고서 사진`
   - otherwise => `업로드 사진`

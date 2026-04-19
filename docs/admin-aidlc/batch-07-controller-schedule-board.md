@@ -3,7 +3,7 @@
 ## Scope
 
 - remove the manual round-generation action from the admin schedules section
-- derive schedule rows from `contractDate + 15-day intervals + totalRounds`
+- derive schedule rows from contract period bounds and keep round-level selection windows inside that period
 - make admin and worker schedule APIs share the same local schedule source
 - add controller calendar drag-move inside each round window
 - add schedule detail modal actions including site deep link

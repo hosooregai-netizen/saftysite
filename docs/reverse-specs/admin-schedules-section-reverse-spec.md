@@ -78,6 +78,7 @@ Required fields used by the screen:
 - identifiers: `id`, `siteId`, `headquarterId`
 - schedule metadata: `roundNo`, `totalRounds`, `plannedDate`, `actualVisitDate`
 - allowed movement window: `windowStart`, `windowEnd`
+  - interpreted as the contract-period selection window for that round
 - assignment: `assigneeUserId`, `assigneeName`
 - status: `status`
 - display labels: `siteName`, `headquarterName`
@@ -219,6 +220,8 @@ Required fields used by the screen:
 - Calendar grid uses Monday-first weekday alignment.
 - List mode ignores `selectedDate` when building the selected schedule table so operators can scan
   the full month list without first clearing a date.
+- rounds remain separate, but the visit date is no longer derived from a fixed 15-day slot pattern
+- validation only enforces that the chosen date stays within `windowStart ~ windowEnd`
 
 ### View toggle rules
 

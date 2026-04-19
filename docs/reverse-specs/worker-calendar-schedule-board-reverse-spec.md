@@ -185,6 +185,7 @@ Out of scope:
   - rows with no `plannedDate`
   - plus the currently selected row
   - but only when modal date falls within `windowStart ~ windowEnd`
+- `windowStart ~ windowEnd` is treated as the contract-period selection range for that round, not a fixed 15-day slot
 
 ### Save validation
 

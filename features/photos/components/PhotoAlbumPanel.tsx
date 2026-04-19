@@ -40,6 +40,21 @@ interface PhotoAlbumPanelProps {
   sites: PhotoAlbumSiteOption[];
 }
 
+interface PhotoAlbumRoundGroup {
+  key: string;
+  label: string;
+  roundNo: number;
+  rows: PhotoAlbumItem[];
+}
+
+interface PhotoAlbumSiteGroup {
+  headquarterName: string;
+  key: string;
+  siteId: string;
+  siteName: string;
+  rounds: PhotoAlbumRoundGroup[];
+}
+
 const PAGE_SIZE = 60;
 
 function formatDateLabel(value: string) {
@@ -72,6 +87,13 @@ function formatGpsLabel(item: PhotoAlbumItem) {
 
 function formatRoundLabel(roundNo: number) {
   return roundNo > 0 ? `${roundNo}회차` : '회차 미지정';
+}
+
+function compareDisplayRoundNo(left: number, right: number) {
+  if (left <= 0 && right <= 0) return 0;
+  if (left <= 0) return 1;
+  if (right <= 0) return -1;
+  return left - right;
 }
 
 function getSourceLabel(sourceKind: PhotoAlbumItem['sourceKind']) {
@@ -268,6 +290,48 @@ export function PhotoAlbumPanel({
     () => rows.slice(0, Math.min(rows.length, visibleCount)),
     [rows, visibleCount],
   );
+  const groupedVisibleRows = useMemo<PhotoAlbumSiteGroup[]>(() => {
+    const siteGroups = new Map<string, PhotoAlbumSiteGroup>();
+
+    for (const item of visibleRows) {
+      const siteKey = `${item.siteId}::${item.headquarterId}`;
+      const existingSiteGroup =
+        siteGroups.get(siteKey) ??
+        {
+          headquarterName: item.headquarterName,
+          key: siteKey,
+          rounds: [],
+          siteId: item.siteId,
+          siteName: item.siteName,
+        };
+      if (!siteGroups.has(siteKey)) {
+        siteGroups.set(siteKey, existingSiteGroup);
+      }
+
+      const roundKey = `round:${item.roundNo}`;
+      const existingRoundGroup =
+        existingSiteGroup.rounds.find((group) => group.key === roundKey) ??
+        {
+          key: roundKey,
+          label: formatRoundLabel(item.roundNo),
+          roundNo: item.roundNo,
+          rows: [],
+        };
+      if (!existingSiteGroup.rounds.some((group) => group.key === roundKey)) {
+        existingSiteGroup.rounds.push(existingRoundGroup);
+      }
+      existingRoundGroup.rows.push(item);
+    }
+
+    return Array.from(siteGroups.values()).map((siteGroup) => ({
+      ...siteGroup,
+      rounds: [...siteGroup.rounds].sort(
+        (left, right) =>
+          compareDisplayRoundNo(left.roundNo, right.roundNo) ||
+          left.label.localeCompare(right.label, 'ko-KR'),
+      ),
+    }));
+  }, [visibleRows]);
   const hasMoreRows = visibleRows.length < rows.length;
   const allVisibleSelected =
     visibleRows.length > 0 && visibleRows.every((row) => selectedIds.includes(row.id));
@@ -359,6 +423,7 @@ export function PhotoAlbumPanel({
           columns: [
             { key: 'headquarterName', label: '사업장' },
             { key: 'siteName', label: '현장' },
+            { key: 'roundNo', label: '회차' },
             { key: 'fileName', label: '파일명' },
             { key: 'sourceKind', label: '출처' },
             { key: 'sourceReportTitle', label: '원본 보고서' },
@@ -588,82 +653,108 @@ export function PhotoAlbumPanel({
                 <span className={adminStyles.sectionHeaderMeta}>선택 {selectedIds.length}건</span>
               </div>
 
-              <div
-                className={`${styles.grid} ${mode === 'worker' ? styles.workerCompactGrid : ''}`}
-              >
-                {visibleRows.map((item) => (
-                  <article
-                    key={item.id}
-                    className={`${styles.card} ${mode === 'worker' ? styles.workerCompactCard : ''}`}
-                  >
-                    <button
-                      type="button"
-                      className={`${styles.cardPreviewButton} ${mode === 'worker' ? styles.workerCompactPreviewButton : ''}`}
-                      onClick={() => setActiveItem(item)}
-                    >
-                      {item.previewUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={item.previewUrl}
-                          alt={item.fileName}
-                          className={`${styles.cardImage} ${mode === 'worker' ? styles.workerCompactImage : ''}`}
-                        />
-                      ) : (
-                        <div
-                          className={`${styles.cardImageFallback} ${mode === 'worker' ? styles.workerCompactImageFallback : ''}`}
-                        >
-                          미리보기 없음
+              <div className={styles.groupStack}>
+                {groupedVisibleRows.map((siteGroup) => (
+                  <section key={siteGroup.key} className={styles.groupSection}>
+                    <header className={styles.groupHeader}>
+                      <div>
+                        <h3 className={styles.groupTitle}>{siteGroup.siteName}</h3>
+                        <div className={styles.groupMeta}>
+                          {mode === 'admin'
+                            ? `${siteGroup.headquarterName} · ${siteGroup.rounds.length}개 회차`
+                            : `${siteGroup.rounds.length}개 회차`}
                         </div>
-                      )}
-                    </button>
-                    <label
-                      className={`${styles.cardCheckbox} ${mode === 'worker' ? styles.workerCompactCheckbox : ''}`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.includes(item.id)}
-                        onChange={() => handleToggleRow(item.id)}
-                      />
-                    </label>
-                    <div
-                      className={`${styles.cardBody} ${mode === 'worker' ? styles.workerCompactBody : ''}`}
-                    >
-                      <div className={styles.cardMetaRow}>
-                        <span className={styles.cardMetaText}>{formatFileSize(item.sizeBytes)}</span>
                       </div>
-                      <div className={styles.cardTitle} title={item.fileName}>
-                        {item.fileName}
-                      </div>
-                      <div className={styles.cardMetaText}>
-                        {item.siteName} · {formatRoundLabel(item.roundNo)}
-                      </div>
-                      {mode === 'admin' ? (
-                        <div className={styles.cardMetaText}>{item.headquarterName}</div>
-                      ) : null}
-                      <div className={styles.cardMetaText}>
-                        {item.capturedAt ? `촬영 ${formatDateLabel(item.capturedAt)}` : `등록 ${formatDateLabel(item.createdAt)}`}
-                      </div>
-                      <div className={styles.cardMetaText}>
-                        {item.uploadedByName ? `업로더 ${item.uploadedByName}` : '업로더 미상'}
-                      </div>
-                      {item.sourceReportTitle ? (
-                        <div className={styles.cardMetaText} title={item.sourceReportTitle}>
-                          {item.sourceReportTitle}
-                        </div>
-                      ) : null}
+                    </header>
+                    <div className={styles.roundStack}>
+                      {siteGroup.rounds.map((roundGroup) => (
+                        <section key={`${siteGroup.key}:${roundGroup.key}`} className={styles.roundSection}>
+                          <div className={styles.roundHeader}>
+                            <strong>{roundGroup.label}</strong>
+                            <span className={styles.groupMeta}>{roundGroup.rows.length}건</span>
+                          </div>
+                          <div
+                            className={`${styles.grid} ${mode === 'worker' ? styles.workerCompactGrid : ''}`}
+                          >
+                            {roundGroup.rows.map((item) => (
+                              <article
+                                key={item.id}
+                                className={`${styles.card} ${mode === 'worker' ? styles.workerCompactCard : ''}`}
+                              >
+                                <button
+                                  type="button"
+                                  className={`${styles.cardPreviewButton} ${mode === 'worker' ? styles.workerCompactPreviewButton : ''}`}
+                                  onClick={() => setActiveItem(item)}
+                                >
+                                  {item.previewUrl ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img
+                                      src={item.previewUrl}
+                                      alt={item.fileName}
+                                      className={`${styles.cardImage} ${mode === 'worker' ? styles.workerCompactImage : ''}`}
+                                    />
+                                  ) : (
+                                    <div
+                                      className={`${styles.cardImageFallback} ${mode === 'worker' ? styles.workerCompactImageFallback : ''}`}
+                                    >
+                                      미리보기 없음
+                                    </div>
+                                  )}
+                                </button>
+                                <label
+                                  className={`${styles.cardCheckbox} ${mode === 'worker' ? styles.workerCompactCheckbox : ''}`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedIds.includes(item.id)}
+                                    onChange={() => handleToggleRow(item.id)}
+                                  />
+                                </label>
+                                <div
+                                  className={`${styles.cardBody} ${mode === 'worker' ? styles.workerCompactBody : ''}`}
+                                >
+                                  <div className={styles.cardMetaRow}>
+                                    <span className={styles.cardMetaText}>{formatFileSize(item.sizeBytes)}</span>
+                                  </div>
+                                  <div className={styles.cardTitle} title={item.fileName}>
+                                    {item.fileName}
+                                  </div>
+                                  <div className={styles.cardMetaText}>
+                                    {item.siteName} · {formatRoundLabel(item.roundNo)}
+                                  </div>
+                                  {mode === 'admin' ? (
+                                    <div className={styles.cardMetaText}>{item.headquarterName}</div>
+                                  ) : null}
+                                  <div className={styles.cardMetaText}>
+                                    {item.capturedAt ? `촬영 ${formatDateLabel(item.capturedAt)}` : `등록 ${formatDateLabel(item.createdAt)}`}
+                                  </div>
+                                  <div className={styles.cardMetaText}>
+                                    {item.uploadedByName ? `업로더 ${item.uploadedByName}` : '업로더 미상'}
+                                  </div>
+                                  {item.sourceReportTitle ? (
+                                    <div className={styles.cardMetaText} title={item.sourceReportTitle}>
+                                      {item.sourceReportTitle}
+                                    </div>
+                                  ) : null}
+                                </div>
+                                <div
+                                  className={`${styles.cardActions} ${mode === 'worker' ? styles.workerCompactActions : ''}`}
+                                >
+                                  <button
+                                    type="button"
+                                    className="app-button app-button-secondary"
+                                    onClick={() => void handleDownload([item.id])}
+                                  >
+                                    다운로드
+                                  </button>
+                                </div>
+                              </article>
+                            ))}
+                          </div>
+                        </section>
+                      ))}
                     </div>
-                    <div
-                      className={`${styles.cardActions} ${mode === 'worker' ? styles.workerCompactActions : ''}`}
-                    >
-                      <button
-                        type="button"
-                        className="app-button app-button-secondary"
-                        onClick={() => void handleDownload([item.id])}
-                      >
-                        다운로드
-                      </button>
-                    </div>
-                  </article>
+                  </section>
                 ))}
               </div>
 

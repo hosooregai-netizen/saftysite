@@ -79,6 +79,7 @@ Fields used by this feature include:
   - `assigned_users`
 - status:
   - `status`
+  - `pause_start_date`
 - project dates and finance:
   - `project_amount`
   - `project_start_date`
@@ -208,6 +209,15 @@ Fields used by this feature include:
 
 - action menu shows every status except the site’s current normalized display status
 - no-op if target status already matches current normalized status
+- `pause_start_date` is managed only when status is `paused`
+- moving back to `active` or `closed` clears `pause_start_date`
+
+### Pause start date rules
+
+- site editor shows a dedicated `중지 시작일` field
+- the field is enabled only when status is `paused`
+- list/table rendering may surface `중지 시작일` inline with the status cell instead of a separate table column
+- Excel export must include `중지 시작일`
 
 ### Site entry rule
 

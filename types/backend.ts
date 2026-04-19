@@ -181,6 +181,7 @@ export interface SafetySite {
   is_high_risk_site?: boolean | null;
   site_address: string | null;
   status: string;
+  pause_start_date?: string | null;
   lifecycle_status?: SafetySiteLifecycleStatus;
   is_active?: boolean | null;
   memo: string | null;

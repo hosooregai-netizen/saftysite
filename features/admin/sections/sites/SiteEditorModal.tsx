@@ -135,6 +135,8 @@ export function SiteEditorModal({
                   setForm((current) => ({
                     ...current,
                     status: event.target.value as SafetySiteStatus,
+                    pause_start_date:
+                      event.target.value === 'paused' ? current.pause_start_date : '',
                   }))
                 }
                 disabled={busy}
@@ -145,6 +147,21 @@ export function SiteEditorModal({
                   </option>
                 ))}
               </select>
+            </label>
+            <label className={styles.modalField}>
+              <span className={styles.label}>중지 시작일</span>
+              <input
+                className="app-input"
+                type="date"
+                value={form.pause_start_date}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, pause_start_date: event.target.value }))
+                }
+                disabled={busy || form.status !== 'paused'}
+              />
+              <span className={styles.modalHint}>
+                중지 상태일 때만 관리합니다. 재개 시 상태를 운영중으로 바꾸면 자동으로 비워집니다.
+              </span>
             </label>
             <label className={styles.modalField}>
               <span className={styles.label}>고위험 사업장</span>

@@ -353,6 +353,7 @@ export function useSitesSectionState({
           { key: 'project_kind', label: '공사종류' },
           { key: 'project_amount', label: '공사금액' },
           { key: 'status', label: '상태' },
+          { key: 'pause_start_date', label: '중지 시작일' },
         ],
         rows: response.rows.map((site) => ({
           guidance_officer_name: site.guidance_officer_name ?? '',
@@ -367,6 +368,7 @@ export function useSitesSectionState({
           site_code: site.site_code ?? '',
           site_name: site.site_name,
           status: getSiteStatusLabel(site.status),
+          pause_start_date: site.pause_start_date ?? '',
         })),
       },
     ]);

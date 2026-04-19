@@ -45,6 +45,7 @@ export interface SiteFormState {
   site_address: string;
   site_contact_email: string;
   is_high_risk_site: boolean;
+  pause_start_date: string;
   project_amount: string;
   project_start_date: string;
   project_end_date: string;
@@ -85,6 +86,7 @@ export const EMPTY_FORM: SiteFormState = {
   site_address: '',
   site_contact_email: '',
   is_high_risk_site: false,
+  pause_start_date: '',
   project_amount: '',
   project_start_date: '',
   project_end_date: '',
@@ -156,6 +158,7 @@ export function createEditForm(site: SafetySite): SiteFormState {
     project_kind: site.project_kind ?? '',
     site_contact_email: site.site_contact_email ?? '',
     is_high_risk_site: Boolean(site.is_high_risk_site),
+    pause_start_date: site.pause_start_date ?? '',
     client_management_number: site.client_management_number ?? '',
     client_business_name: site.client_business_name ?? '',
     client_representative_name: site.client_representative_name ?? '',
@@ -194,6 +197,7 @@ export function buildSitePayload(
     site_address: toNullableText(form.site_address),
     site_contact_email: toNullableText(form.site_contact_email),
     is_high_risk_site: form.is_high_risk_site,
+    pause_start_date: toNullableText(form.pause_start_date),
     project_amount: parseOptionalNumber(form.project_amount),
     project_start_date: toNullableText(form.project_start_date),
     project_end_date: toNullableText(form.project_end_date),

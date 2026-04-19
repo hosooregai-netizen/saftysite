@@ -576,12 +576,23 @@ export function generateSchedulesForSite(site: SafetySite, users: SafetyUser[]) 
     site.assigned_users?.[0]?.name ||
     '';
   const headquarterName = site.headquarter_detail?.name || site.headquarter?.name || '';
+  const contractWindowStart =
+    normalizeText(site.contract_start_date) ||
+    normalizeText(contractProfile.contractDate) ||
+    normalizeText(site.contract_date);
+  let contractWindowEnd =
+    normalizeText(site.contract_end_date) ||
+    normalizeText(site.project_end_date) ||
+    contractWindowStart;
+  if (contractWindowStart && contractWindowEnd && contractWindowEnd < contractWindowStart) {
+    contractWindowEnd = contractWindowStart;
+  }
 
   const nextSchedules: SafetyInspectionSchedule[] = [];
 
   for (let roundNo = 1; roundNo <= totalRounds; roundNo += 1) {
-    const windowStart = addDays(contractDate, (roundNo - 1) * 15);
-    const windowEnd = addDays(windowStart, 14);
+    const windowStart = contractWindowStart;
+    const windowEnd = contractWindowEnd;
     const existing = existingByRound.get(roundNo);
 
     nextSchedules.push({

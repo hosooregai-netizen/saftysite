@@ -114,6 +114,7 @@ export interface SafetySiteInput {
   site_contact_email?: string | null;
   is_high_risk_site?: boolean | null;
   site_address?: string | null;
+  pause_start_date?: string | null;
   contract_date?: string | null;
   contract_start_date?: string | null;
   contract_end_date?: string | null;

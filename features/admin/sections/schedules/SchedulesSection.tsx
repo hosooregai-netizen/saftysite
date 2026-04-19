@@ -1168,8 +1168,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
             <div>
               <h2 className={styles.sectionTitle}>미선택 일정 큐</h2>
               <div className={styles.sectionHeaderMeta}>
-                계약일 기준 15일 간격으로 회차가 자동 계산되며, 총 회차 범위 안에서만
-                선택할 수 있습니다.
+                회차는 유지하되 방문일은 계약 기간 안에서 자유롭게 선택할 수 있습니다.
               </div>
             </div>
             <div className={styles.sectionHeaderActions}>

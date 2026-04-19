@@ -187,7 +187,12 @@ export function SitesTable({
                     기간 {formatMonthValue(site.project_start_date)} ~ {formatMonthValue(site.project_end_date)}
                   </div>
                 </td>
-                <td>{getSiteStatusLabel(site.status)}</td>
+                <td>
+                  <div className={styles.tablePrimary}>{getSiteStatusLabel(site.status)}</div>
+                  {site.pause_start_date ? (
+                    <div className={styles.tableSecondary}>중지 시작 {site.pause_start_date}</div>
+                  ) : null}
+                </td>
                 <td>
                   <div className={styles.tablePrimary}>{formatSiteProgress(site)}</div>
                 </td>

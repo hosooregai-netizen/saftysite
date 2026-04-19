@@ -724,7 +724,7 @@ function ensureAdminFixtureSchedules(harness: ErpSmokeHarness) {
           siteName: '기존 현장',
           status: 'planned',
           totalRounds: 9,
-          windowEnd: '2026-04-15',
+          windowEnd: '2026-04-30',
           windowStart: '2026-04-01',
         },
         {
@@ -752,7 +752,7 @@ function ensureAdminFixtureSchedules(harness: ErpSmokeHarness) {
           status: 'planned',
           totalRounds: 9,
           windowEnd: '2026-04-30',
-          windowStart: '2026-04-16',
+          windowStart: '2026-04-01',
         },
       ],
     },
