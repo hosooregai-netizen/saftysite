@@ -275,18 +275,14 @@ export function WorkerCalendarScreen() {
     [dialog.scheduleId, rows],
   );
   const dialogSiteOptions = useMemo(() => {
-    const seen = new Set<string>();
-    return sortSchedules(rows)
-      .filter((row) => {
-        if (!row.siteId || seen.has(row.siteId)) return false;
-        seen.add(row.siteId);
-        return true;
-      })
-      .map((row) => ({
-        label: row.siteName,
-        siteId: row.siteId,
+    return [...sites]
+      .filter((site) => !selectedSiteId || site.id === selectedSiteId)
+      .sort((left, right) => left.siteName.localeCompare(right.siteName, 'ko'))
+      .map((site) => ({
+        label: site.siteName,
+        siteId: site.id,
       }));
-  }, [rows]);
+  }, [selectedSiteId, sites]);
   const dialogRoundRows = useMemo(
     () =>
       sortSchedules(rows.filter((row) => row.siteId === dialog.siteId)).sort(
@@ -353,8 +349,15 @@ export function WorkerCalendarScreen() {
     schedule?: SafetyInspectionSchedule | null;
   }) => {
     const nextPlannedDate = input.plannedDate;
+    const defaultSiteId =
+      input.schedule?.siteId ||
+      (selectedSiteId && dialogSiteOptions.some((option) => option.siteId === selectedSiteId)
+        ? selectedSiteId
+        : dialogSiteOptions[0]?.siteId || '');
     const defaultSchedule =
       input.schedule ??
+      sortSchedules(rows.filter((row) => row.siteId === defaultSiteId && !row.plannedDate))[0] ??
+      sortSchedules(rows.filter((row) => row.siteId === defaultSiteId))[0] ??
       sortSchedules(rows.filter((row) => !row.plannedDate))[0] ??
       sortSchedules(rows)[0] ??
       null;
@@ -370,7 +373,7 @@ export function WorkerCalendarScreen() {
       scheduleId: defaultSchedule?.id || '',
       selectionReasonLabel: defaultSchedule?.selectionReasonLabel || '',
       selectionReasonMemo: defaultSchedule?.selectionReasonMemo || '',
-      siteId: defaultSchedule?.siteId || '',
+      siteId: defaultSchedule?.siteId || defaultSiteId,
     });
   };
 
