@@ -1244,6 +1244,25 @@ export function fetchWorkerSchedulesServer(
   );
 }
 
+export function createWorkerScheduleServer(
+  token: string,
+  payload: Record<string, unknown>,
+  request: Request | null = null,
+): Promise<SafetyBackendInspectionSchedule> {
+  return requestSafetyAdminServer<SafetyBackendInspectionSchedule>(
+    '/me/schedules',
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    },
+    token,
+    request,
+  );
+}
+
 export function updateWorkerScheduleServer(
   token: string,
   scheduleId: string,

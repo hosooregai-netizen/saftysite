@@ -236,11 +236,21 @@ export function normalizeInspectionSite(raw: unknown): InspectionSite {
     'adminSiteSnapshot' in source ? asRecord(source.adminSiteSnapshot) : source;
   const snapshot = mergeAdminSiteSnapshots(snapshotSource, source);
   const timestamp = createTimestamp();
+  const rawTotalRounds =
+    typeof source.totalRounds === 'number'
+      ? source.totalRounds
+      : typeof source.total_rounds === 'number'
+        ? source.total_rounds
+        : null;
 
   return {
     id: normalizeText(source.id) || generateId('site'),
     headquarterId:
       normalizeText(source.headquarterId) || normalizeText(source.headquarter_id),
+    totalRounds:
+      typeof rawTotalRounds === 'number' && Number.isFinite(rawTotalRounds)
+        ? Math.trunc(rawTotalRounds)
+        : null,
     title:
       normalizeText(source.title) ||
       snapshot.siteName ||

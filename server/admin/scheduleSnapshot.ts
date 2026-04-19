@@ -92,6 +92,11 @@ export async function getAdminScheduleSnapshot(
   return refreshAdminScheduleSnapshot(token, request, today);
 }
 
+export function invalidateAdminScheduleSnapshot() {
+  const store = getSnapshotStore();
+  store.snapshot = null;
+}
+
 function buildFilteredAvailableMonths(
   rows: SafetyInspectionSchedule[],
   filters: {

@@ -8,11 +8,15 @@ import WorkerAppHeader from '@/components/worker/WorkerAppHeader';
 import WorkerMenuSidebar from '@/components/worker/WorkerMenuSidebar';
 import WorkerShellBody from '@/components/worker/WorkerShellBody';
 import { WorkerMenuDrawer, WorkerMenuPanel } from '@/components/worker/WorkerMenu';
+import { createEmptyTechnicalGuidanceRelations } from '@/constants/inspectionSession/sessionFactory';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { isAdminUserRole, getAdminSectionHref } from '@/lib/admin';
-import { fetchMySchedules, updateMySchedule } from '@/lib/calendar/apiClient';
+import { buildDefaultReportTitle } from '@/features/site-reports/report-list/reportListHelpers';
+import { createMySchedule, fetchMySchedules, updateMySchedule } from '@/lib/calendar/apiClient';
+import { fetchTechnicalGuidanceSeed, readSafetyAuthToken } from '@/lib/safetyApi';
 import homeStyles from '@/features/home/components/HomeScreen.module.css';
 import type { SafetyInspectionSchedule } from '@/types/admin';
+import type { InspectionReportListItem } from '@/types/inspectionSession';
 import styles from './WorkerCalendarScreen.module.css';
 
 interface ScheduleDialogState {
@@ -34,6 +38,19 @@ interface WorkerDialogSiteOption {
   totalRounds: number;
 }
 
+type WorkerDialogRoundState =
+  | 'available'
+  | 'needs_schedule_link'
+  | 'linked_report';
+
+interface WorkerDialogRoundOption {
+  linkedReport: InspectionReportListItem | null;
+  row: SafetyInspectionSchedule;
+  state: WorkerDialogRoundState;
+}
+
+const SYNTHETIC_WORKER_SCHEDULE_ID_PREFIX = 'worker-round:';
+
 type CalendarViewMode = 'calendar' | 'list';
 type ScheduleListFilter =
   | 'all'
@@ -49,6 +66,10 @@ const EMPTY_DIALOG_STATE: ScheduleDialogState = {
   selectionReasonMemo: '',
   siteId: '',
 };
+
+function isSyntheticWorkerScheduleId(value: string) {
+  return value.startsWith(SYNTHETIC_WORKER_SCHEDULE_ID_PREFIX);
+}
 
 function getMonthToken(date = new Date()) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
@@ -109,6 +130,162 @@ function sortScheduledRows(rows: SafetyInspectionSchedule[]) {
   );
 }
 
+function normalizeText(value: string | null | undefined) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function buildContractWindowFromSafetySite(
+  site: {
+    contract_date?: string | null;
+    contract_end_date?: string | null;
+    contract_start_date?: string | null;
+    project_end_date?: string | null;
+  } | null,
+) {
+  const windowStart =
+    normalizeText(site?.contract_start_date) || normalizeText(site?.contract_date);
+  let windowEnd =
+    normalizeText(site?.contract_end_date) ||
+    normalizeText(site?.project_end_date) ||
+    windowStart;
+  if (windowStart && windowEnd && windowEnd < windowStart) {
+    windowEnd = windowStart;
+  }
+  return {
+    windowEnd,
+    windowStart,
+  };
+}
+
+function getReportPriorityScore(item: InspectionReportListItem) {
+  let score = 0;
+  if (item.status === 'published') score += 40;
+  else if (item.status === 'submitted') score += 30;
+  else if (item.status === 'draft') score += 20;
+  if (item.publishedAt) score += 10;
+  else if (item.submittedAt) score += 8;
+  if (item.visitDate) score += 4;
+  if (item.lastAutosavedAt) score += 2;
+  return score;
+}
+
+function buildReportItemsByRound(rows: InspectionReportListItem[]) {
+  const nextMap = new Map<number, InspectionReportListItem>();
+  rows.forEach((row) => {
+    if (typeof row.visitRound !== 'number' || !Number.isFinite(row.visitRound) || row.visitRound <= 0) {
+      return;
+    }
+    const roundNo = Math.trunc(row.visitRound);
+    const current = nextMap.get(roundNo) ?? null;
+    if (!current || getReportPriorityScore(row) >= getReportPriorityScore(current)) {
+      nextMap.set(roundNo, row);
+    }
+  });
+  return nextMap;
+}
+
+function buildWorkerDialogRoundOptions(input: {
+  contractWindowEnd: string;
+  contractWindowStart: string;
+  reportItemsByRound: Map<number, InspectionReportListItem>;
+  siteId: string;
+  siteName: string;
+  rows: SafetyInspectionSchedule[];
+  totalRounds: number;
+}) {
+  if (input.totalRounds <= 0) {
+    return [] as WorkerDialogRoundOption[];
+  }
+
+  const siteRows = sortSchedules(input.rows.filter((row) => row.siteId === input.siteId));
+  const existingByRound = new Map(siteRows.map((row) => [row.roundNo, row]));
+  const fallbackWindowStart = input.contractWindowStart || siteRows[0]?.windowStart || '';
+  const fallbackWindowEnd = input.contractWindowEnd || siteRows[0]?.windowEnd || fallbackWindowStart;
+  const nextRows: WorkerDialogRoundOption[] = [];
+
+  for (let roundNo = 1; roundNo <= input.totalRounds; roundNo += 1) {
+    const existing = existingByRound.get(roundNo) ?? null;
+    const linkedReport = input.reportItemsByRound.get(roundNo) ?? null;
+    if (existing && (existing.status === 'canceled' || existing.status === 'completed')) {
+      continue;
+    }
+    const hasPersistedLink = Boolean(normalizeText(existing?.linkedReportKey));
+    const state: WorkerDialogRoundState = linkedReport
+      ? hasPersistedLink
+        ? 'linked_report'
+        : 'needs_schedule_link'
+      : 'available';
+    if (existing) {
+      nextRows.push({
+        linkedReport,
+        row: {
+          ...existing,
+          actualVisitDate: existing.actualVisitDate || normalizeText(linkedReport?.visitDate),
+          windowEnd: existing.windowEnd || fallbackWindowEnd,
+          windowStart: existing.windowStart || fallbackWindowStart,
+        },
+        state,
+      });
+      continue;
+    }
+
+    nextRows.push({
+      linkedReport,
+      row: {
+        actualVisitDate: normalizeText(linkedReport?.visitDate),
+        assigneeName: '',
+        assigneeUserId: '',
+        exceptionMemo: '',
+        exceptionReasonCode: '',
+        headquarterId: '',
+        headquarterName: '',
+        id: `${SYNTHETIC_WORKER_SCHEDULE_ID_PREFIX}${input.siteId}:${roundNo}`,
+        isConflicted: false,
+        isOutOfWindow: false,
+        isOverdue: false,
+        linkedReportKey: '',
+        plannedDate: '',
+        roundNo,
+        selectionConfirmedAt: '',
+        selectionConfirmedByName: '',
+        selectionConfirmedByUserId: '',
+        selectionReasonLabel: '',
+        selectionReasonMemo: '',
+        siteId: input.siteId,
+        siteName: input.siteName,
+        status: 'planned',
+        totalRounds: input.totalRounds,
+        windowEnd: fallbackWindowEnd,
+        windowStart: fallbackWindowStart,
+      },
+      state,
+    });
+  }
+
+  return [...nextRows].sort(
+    (left, right) =>
+      left.row.roundNo - right.row.roundNo ||
+      left.row.siteName.localeCompare(right.row.siteName, 'ko') ||
+      left.row.windowStart.localeCompare(right.row.windowStart),
+  );
+}
+
+function findPreferredWorkerDialogRow(
+  rows: SafetyInspectionSchedule[],
+  input: {
+    plannedDate: string;
+    scheduleId?: string;
+  },
+) {
+  return (
+    rows.find((row) => row.id === input.scheduleId) ??
+    rows.find((row) => row.plannedDate === input.plannedDate) ??
+    rows.find((row) => !row.plannedDate) ??
+    rows[0] ??
+    null
+  );
+}
+
 function getCompletedRoundNumbers(rows: Array<{ visitRound: number | null }>) {
   const completed = new Set<number>();
   rows.forEach((row) => {
@@ -117,6 +294,10 @@ function getCompletedRoundNumbers(rows: Array<{ visitRound: number | null }>) {
     }
   });
   return completed;
+}
+
+function getSelectableWorkerRoundCount(rows: WorkerDialogRoundOption[]) {
+  return rows.filter((option) => option.state !== 'linked_report').length;
 }
 
 function formatWorkerRoundLabel(row: SafetyInspectionSchedule) {
@@ -162,12 +343,18 @@ export function WorkerCalendarScreen() {
   const [notice, setNotice] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState('');
   const [dialog, setDialog] = useState<ScheduleDialogState>(EMPTY_DIALOG_STATE);
+  const [contractWindowsBySiteId, setContractWindowsBySiteId] = useState<
+    Record<string, { windowEnd: string; windowStart: string }>
+  >({});
   const router = useRouter();
   const searchParams = useSearchParams();
   const {
     authError,
+    createSession,
     currentUser,
+    ensureAssignedSafetySite,
     ensureSiteReportIndexLoaded,
+    getSessionsBySiteId,
     getReportIndexBySiteId,
     isAuthenticated,
     isReady,
@@ -272,10 +459,6 @@ export function WorkerCalendarScreen() {
     });
     return map;
   }, [selectedRows]);
-  const dialogSelectedSchedule = useMemo(
-    () => rows.find((row) => row.id === dialog.scheduleId) ?? null,
-    [dialog.scheduleId, rows],
-  );
   const reportCompletedRoundsBySiteId = useMemo(() => {
     const nextMap = new Map<string, Set<number>>();
     sites.forEach((site) => {
@@ -285,6 +468,17 @@ export function WorkerCalendarScreen() {
         reportIndex?.status === 'loaded'
           ? getCompletedRoundNumbers(reportIndex.items)
           : new Set<number>(),
+      );
+    });
+    return nextMap;
+  }, [getReportIndexBySiteId, sites]);
+  const reportItemsByRoundBySiteId = useMemo(() => {
+    const nextMap = new Map<string, Map<number, InspectionReportListItem>>();
+    sites.forEach((site) => {
+      const reportIndex = getReportIndexBySiteId(site.id);
+      nextMap.set(
+        site.id,
+        reportIndex?.status === 'loaded' ? buildReportItemsByRound(reportIndex.items) : new Map(),
       );
     });
     return nextMap;
@@ -300,40 +494,73 @@ export function WorkerCalendarScreen() {
         const completedRounds = hasLoadedCompletion
           ? reportCompletedRoundsBySiteId.get(site.id)?.size ?? 0
           : 0;
-        const remainingRounds = Math.max(totalRounds - completedRounds, 0);
+        const contractWindow = contractWindowsBySiteId[site.id] ?? { windowEnd: '', windowStart: '' };
+        const remainingRounds = hasLoadedCompletion
+          ? getSelectableWorkerRoundCount(
+              buildWorkerDialogRoundOptions({
+                contractWindowEnd: contractWindow.windowEnd,
+                contractWindowStart: contractWindow.windowStart,
+                reportItemsByRound: reportItemsByRoundBySiteId.get(site.id) ?? new Map(),
+                siteId: site.id,
+                siteName: site.siteName,
+                rows,
+                totalRounds,
+              }),
+            )
+          : Math.max(totalRounds - completedRounds, 0);
         return {
           completedRounds,
           hasLoadedCompletion,
-          isComplete: hasLoadedCompletion && totalRounds > 0 && completedRounds >= totalRounds,
+          isComplete: hasLoadedCompletion && totalRounds > 0 && remainingRounds <= 0,
           label: site.siteName,
           remainingRounds,
           siteId: site.id,
           totalRounds,
         };
       });
-  }, [getReportIndexBySiteId, reportCompletedRoundsBySiteId, selectedSiteId, sites]);
-  const dialogAllRoundRows = useMemo(
-    () =>
-      sortSchedules(rows.filter((row) => row.siteId === dialog.siteId)).sort(
-        (left, right) =>
-          left.roundNo - right.roundNo ||
-          (left.plannedDate || '').localeCompare(right.plannedDate || '') ||
-          left.siteName.localeCompare(right.siteName, 'ko'),
-      ),
-    [dialog.siteId, rows],
-  );
-  const dialogRoundRows = useMemo(() => {
-    const completedRounds = reportCompletedRoundsBySiteId.get(dialog.siteId) ?? new Set<number>();
-    return dialogAllRoundRows.filter((row) => {
-      if (row.status === 'canceled' || row.status === 'completed') {
-        return false;
-      }
-      return !completedRounds.has(row.roundNo);
-    });
-  }, [dialog.siteId, dialogAllRoundRows, reportCompletedRoundsBySiteId]);
+  }, [
+    contractWindowsBySiteId,
+    getReportIndexBySiteId,
+    reportCompletedRoundsBySiteId,
+    reportItemsByRoundBySiteId,
+    rows,
+    selectedSiteId,
+    sites,
+  ]);
   const dialogSelectedSite = useMemo(
     () => dialogSiteOptions.find((option) => option.siteId === dialog.siteId) ?? null,
     [dialog.siteId, dialogSiteOptions],
+  );
+  const dialogRoundOptions = useMemo(() => {
+    const contractWindow = contractWindowsBySiteId[dialog.siteId] ?? { windowEnd: '', windowStart: '' };
+    return buildWorkerDialogRoundOptions({
+      contractWindowEnd: contractWindow.windowEnd,
+      contractWindowStart: contractWindow.windowStart,
+      reportItemsByRound: reportItemsByRoundBySiteId.get(dialog.siteId) ?? new Map(),
+      siteId: dialog.siteId,
+      siteName: dialogSelectedSite?.label || '',
+      rows,
+      totalRounds: dialogSelectedSite?.totalRounds ?? 0,
+    });
+  }, [contractWindowsBySiteId, dialog.siteId, dialogSelectedSite, reportItemsByRoundBySiteId, rows]);
+  const dialogRoundRows = useMemo(
+    () =>
+      dialogRoundOptions
+        .filter((option) => option.state !== 'linked_report' || option.row.id === dialog.scheduleId)
+        .map((option) => option.row),
+    [dialog.scheduleId, dialogRoundOptions],
+  );
+  const dialogRoundOptionById = useMemo(
+    () => new Map(dialogRoundOptions.map((option) => [option.row.id, option])),
+    [dialogRoundOptions],
+  );
+  const dialogSelectedOption = useMemo(
+    () => dialogRoundOptionById.get(dialog.scheduleId) ?? null,
+    [dialog.scheduleId, dialogRoundOptionById],
+  );
+  const dialogSelectedSchedule = useMemo(
+    () => dialogRoundRows.find((row) => row.id === dialog.scheduleId) ?? null,
+    [dialog.scheduleId, dialogRoundRows],
   );
   const dialogSelectedReportIndexState = dialog.siteId
     ? getReportIndexBySiteId(dialog.siteId)
@@ -358,13 +585,43 @@ export function WorkerCalendarScreen() {
   }, [dialog.open, dialog.siteId, ensureSiteReportIndexLoaded]);
 
   useEffect(() => {
+    if (!dialog.open) return;
+    const missingSiteIds = dialogSiteOptions
+      .map((option) => option.siteId)
+      .filter((siteId) => !contractWindowsBySiteId[siteId]);
+    if (missingSiteIds.length === 0) {
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const nextEntries = await Promise.all(
+        missingSiteIds.map(async (siteId) => {
+          const assignedSite = await ensureAssignedSafetySite(siteId);
+          return [siteId, buildContractWindowFromSafetySite(assignedSite)] as const;
+        }),
+      );
+      if (cancelled) {
+        return;
+      }
+      setContractWindowsBySiteId((current) => {
+        const next = { ...current };
+        nextEntries.forEach(([siteId, contractWindow]) => {
+          next[siteId] = contractWindow;
+        });
+        return next;
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [contractWindowsBySiteId, dialog.open, dialogSiteOptions, ensureAssignedSafetySite]);
+
+  useEffect(() => {
     if (!dialog.open || !dialog.siteId) return;
-    const preferredRow =
-      dialogRoundRows.find((row) => row.id === dialog.scheduleId) ??
-      dialogRoundRows.find((row) => row.plannedDate === dialog.plannedDate) ??
-      dialogRoundRows.find((row) => !row.plannedDate) ??
-      dialogRoundRows[0] ??
-      null;
+    const preferredRow = findPreferredWorkerDialogRow(dialogRoundRows, {
+      plannedDate: dialog.plannedDate,
+      scheduleId: dialog.scheduleId,
+    });
     if (!preferredRow) {
       if (!dialog.scheduleId) return;
       setDialog((current) => ({
@@ -375,11 +632,7 @@ export function WorkerCalendarScreen() {
       }));
       return;
     }
-    if (
-      preferredRow.id === dialog.scheduleId &&
-      dialog.selectionReasonLabel === (preferredRow.selectionReasonLabel || '') &&
-      dialog.selectionReasonMemo === (preferredRow.selectionReasonMemo || '')
-    ) {
+    if (preferredRow.id === dialog.scheduleId) {
       return;
     }
     setDialog((current) => ({
@@ -392,8 +645,6 @@ export function WorkerCalendarScreen() {
     dialog.open,
     dialog.plannedDate,
     dialog.scheduleId,
-    dialog.selectionReasonLabel,
-    dialog.selectionReasonMemo,
     dialog.siteId,
     dialogRoundRows,
   ]);
@@ -412,19 +663,23 @@ export function WorkerCalendarScreen() {
       (selectedSiteId && dialogSiteOptions.some((option) => option.siteId === selectedSiteId)
         ? selectedSiteId
         : dialogSiteOptions[0]?.siteId || '');
-    const defaultCompletedRounds = reportCompletedRoundsBySiteId.get(defaultSiteId) ?? new Set<number>();
-    const defaultSiteRows = sortSchedules(rows.filter((row) => row.siteId === defaultSiteId)).filter((row) => {
-      if (row.status === 'canceled' || row.status === 'completed') {
-        return false;
-      }
-      return !defaultCompletedRounds.has(row.roundNo);
-    });
-    const defaultSchedule =
-      input.schedule ??
-      defaultSiteRows.find((row) => row.plannedDate === nextPlannedDate) ??
-      defaultSiteRows.find((row) => !row.plannedDate) ??
-      defaultSiteRows[0] ??
-      null;
+    const defaultSiteOption =
+      dialogSiteOptions.find((option) => option.siteId === defaultSiteId) ?? null;
+    const defaultContractWindow = contractWindowsBySiteId[defaultSiteId] ?? { windowEnd: '', windowStart: '' };
+    const defaultSiteRows = buildWorkerDialogRoundOptions({
+      contractWindowEnd: defaultContractWindow.windowEnd,
+      contractWindowStart: defaultContractWindow.windowStart,
+      reportItemsByRound: reportItemsByRoundBySiteId.get(defaultSiteId) ?? new Map(),
+      siteId: defaultSiteId,
+      siteName: defaultSiteOption?.label || input.schedule?.siteName || '',
+      rows,
+      totalRounds: defaultSiteOption?.totalRounds ?? input.schedule?.totalRounds ?? 0,
+    })
+      .filter((option) => option.state !== 'linked_report' || option.row.id === input.schedule?.id)
+      .map((option) => option.row);
+    const defaultSchedule = input.schedule
+      ? defaultSiteRows.find((row) => row.roundNo === input.schedule?.roundNo) ?? input.schedule
+      : findPreferredWorkerDialogRow(defaultSiteRows, { plannedDate: nextPlannedDate });
 
     setSelectedDate(nextPlannedDate);
     setDialog({
@@ -438,19 +693,24 @@ export function WorkerCalendarScreen() {
   };
 
   const handleDialogSiteSelect = (siteId: string) => {
-    const completedRounds = reportCompletedRoundsBySiteId.get(siteId) ?? new Set<number>();
-    const nextRoundRows = sortSchedules(rows.filter((row) => row.siteId === siteId)).filter((row) => {
-      if (row.status === 'canceled' || row.status === 'completed') {
-        return false;
-      }
-      return !completedRounds.has(row.roundNo);
+    const selectedSiteOption =
+      dialogSiteOptions.find((option) => option.siteId === siteId) ?? null;
+    const contractWindow = contractWindowsBySiteId[siteId] ?? { windowEnd: '', windowStart: '' };
+    const nextRoundRows = buildWorkerDialogRoundOptions({
+      contractWindowEnd: contractWindow.windowEnd,
+      contractWindowStart: contractWindow.windowStart,
+      reportItemsByRound: reportItemsByRoundBySiteId.get(siteId) ?? new Map(),
+      siteId,
+      siteName: selectedSiteOption?.label || '',
+      rows,
+      totalRounds: selectedSiteOption?.totalRounds ?? 0,
+    })
+      .filter((option) => option.state !== 'linked_report')
+      .map((option) => option.row);
+    const preferredRow = findPreferredWorkerDialogRow(nextRoundRows, {
+      plannedDate: dialog.plannedDate,
+      scheduleId: dialog.scheduleId,
     });
-    const preferredRow =
-      nextRoundRows.find((row) => row.id === dialog.scheduleId) ??
-      nextRoundRows.find((row) => row.plannedDate === dialog.plannedDate) ??
-      nextRoundRows.find((row) => !row.plannedDate) ??
-      nextRoundRows[0] ??
-      null;
     setDialog((current) => ({
       ...current,
       scheduleId: preferredRow?.id || '',
@@ -470,12 +730,85 @@ export function WorkerCalendarScreen() {
     }));
   };
 
+  const ensureDraftSessionForSchedule = async (schedule: SafetyInspectionSchedule) => {
+    const selectedReport = reportItemsByRoundBySiteId.get(schedule.siteId)?.get(schedule.roundNo) ?? null;
+    if (selectedReport) {
+      return {
+        actualVisitDate: schedule.actualVisitDate || normalizeText(selectedReport.visitDate),
+        linkedReportKey: normalizeText(selectedReport.reportKey),
+      };
+    }
+
+    const site = sites.find((item) => item.id === schedule.siteId);
+    if (!site) return null;
+
+    const existingSession = getSessionsBySiteId(site.id).find(
+      (session) => session.reportNumber === schedule.roundNo,
+    );
+    if (existingSession) {
+      return null;
+    }
+
+    let technicalGuidanceRelations:
+      | ReturnType<typeof createEmptyTechnicalGuidanceRelations>
+      | undefined;
+    let document4FollowUps:
+      | NonNullable<Parameters<typeof createSession>[1]>['document4FollowUps']
+      | undefined;
+
+    try {
+      const token = readSafetyAuthToken();
+      if (token) {
+        const seed = await fetchTechnicalGuidanceSeed(token, site.id);
+        document4FollowUps = seed.open_followups.map((item) => ({
+          id: item.id,
+          sourceSessionId: item.source_session_id ?? undefined,
+          sourceFindingId: item.source_finding_id ?? undefined,
+          location: item.location,
+          guidanceDate: item.guidance_date,
+          confirmationDate: item.confirmation_date || schedule.plannedDate,
+          beforePhotoUrl: item.before_photo_url,
+          afterPhotoUrl: item.after_photo_url,
+          result: item.result,
+        }));
+        technicalGuidanceRelations = createEmptyTechnicalGuidanceRelations({
+          computedAt: new Date().toISOString(),
+          projectionVersion: seed.projection_version,
+          stale: false,
+          recomputeStatus: 'fresh',
+          sourceReportKeys: seed.previous_authoritative_report?.report_key
+            ? [seed.previous_authoritative_report.report_key]
+            : [],
+          cumulativeAccidentEntries: seed.cumulative_accident_entries,
+          cumulativeAgentEntries: seed.cumulative_agent_entries,
+        });
+      }
+    } catch {
+      document4FollowUps = undefined;
+      technicalGuidanceRelations = undefined;
+    }
+
+    const reportDate = schedule.plannedDate || new Date().toISOString().slice(0, 10);
+    createSession(site, {
+      document4FollowUps,
+      meta: {
+        drafter: currentUser?.name || site.assigneeName,
+        reportDate,
+        reportTitle: buildDefaultReportTitle(reportDate, schedule.roundNo),
+        siteName: site.siteName,
+      },
+      reportNumber: schedule.roundNo,
+      technicalGuidanceRelations,
+    });
+    return null;
+  };
+
   const handleSaveSchedule = async () => {
     if (!dialog.scheduleId) {
       setError('회차를 먼저 선택해 주세요.');
       return;
     }
-    const schedule = rows.find((row) => row.id === dialog.scheduleId);
+    const schedule = dialogRoundRows.find((row) => row.id === dialog.scheduleId) ?? null;
     if (!schedule) {
       setError('선택한 회차를 찾지 못했습니다.');
       return;
@@ -486,15 +819,58 @@ export function WorkerCalendarScreen() {
     }
     const selectionReasonLabel = dialog.selectionReasonLabel.trim();
     const selectionReasonMemo = dialog.selectionReasonMemo.trim();
+    const linkedReport = dialogSelectedOption?.linkedReport ?? null;
+    const linkedReportKey = normalizeText(linkedReport?.reportKey);
+    const actualVisitDate = normalizeText(linkedReport?.visitDate);
 
     try {
       setError(null);
-      const updated = await updateMySchedule(schedule.id, {
-        plannedDate: dialog.plannedDate,
-        selectionReasonLabel,
-        selectionReasonMemo,
+      const saved =
+        isSyntheticWorkerScheduleId(schedule.id) || !rows.some((row) => row.id === schedule.id)
+          ? await createMySchedule({
+              actualVisitDate,
+              linkedReportKey,
+              plannedDate: dialog.plannedDate,
+              roundNo: schedule.roundNo,
+              selectionReasonLabel,
+              selectionReasonMemo,
+              siteId: schedule.siteId,
+            })
+          : await updateMySchedule(schedule.id, {
+              actualVisitDate,
+              linkedReportKey,
+              plannedDate: dialog.plannedDate,
+              selectionReasonLabel,
+              selectionReasonMemo,
+            });
+      const updated: SafetyInspectionSchedule = {
+        ...saved,
+        actualVisitDate: saved.actualVisitDate || actualVisitDate,
+        linkedReportKey: saved.linkedReportKey || linkedReportKey,
+        windowEnd: saved.windowEnd || schedule.windowEnd,
+        windowStart: saved.windowStart || schedule.windowStart,
+      };
+      setRows((current) => {
+        const nextRows = current.filter(
+          (row) =>
+            row.id !== updated.id &&
+            !(row.siteId === updated.siteId && row.roundNo === updated.roundNo),
+        );
+        return [...nextRows, updated];
       });
-      setRows((current) => current.map((row) => (row.id === updated.id ? updated : row)));
+      const reportLinkUpdate = await ensureDraftSessionForSchedule(updated);
+      const finalized = reportLinkUpdate
+        ? {
+            ...updated,
+            actualVisitDate: updated.actualVisitDate || reportLinkUpdate.actualVisitDate,
+            linkedReportKey: updated.linkedReportKey || reportLinkUpdate.linkedReportKey,
+          }
+        : updated;
+      if (finalized !== updated) {
+        setRows((current) =>
+          current.map((row) => (row.id === finalized.id ? finalized : row)),
+        );
+      }
       setSelectedDate(updated.plannedDate || dialog.plannedDate);
       setNotice(
         selectionReasonLabel || selectionReasonMemo
@@ -898,8 +1274,12 @@ export function WorkerCalendarScreen() {
                       <span className={styles.dialogMeta}>
                         {row.siteName}
                       </span>
-                      <span className={styles.dialogMeta}>
-                        방문일 {row.plannedDate || '미선택'} · 상태 {getStatusLabel(row)} · 계약 기간 {row.windowStart} ~ {row.windowEnd}
+                  <span className={styles.dialogMeta}>
+                        {dialogRoundOptionById.get(row.id)?.state === 'needs_schedule_link'
+                          ? `보고서 있음 · 일정 연결 필요 · 계약 기간 ${row.windowStart} ~ ${row.windowEnd}`
+                          : dialogRoundOptionById.get(row.id)?.state === 'linked_report'
+                            ? `보고서 연결됨 · 상태 ${getStatusLabel(row)} · 계약 기간 ${row.windowStart} ~ ${row.windowEnd}`
+                            : `방문일 ${row.plannedDate || '미선택'} · 상태 ${getStatusLabel(row)} · 계약 기간 ${row.windowStart} ~ ${row.windowEnd}`}
                       </span>
                     </div>
                   </label>

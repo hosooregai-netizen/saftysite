@@ -19,6 +19,8 @@ export const ERP_FEATURE_CONTRACTS = {
       'POST /auth/token',
       'GET /assignments/me/sites',
       'GET /api/me/schedules',
+      'GET /reports',
+      'POST /api/me/schedules',
       'PATCH /api/me/schedules/:id',
     ],
     criticalActions: ['지도요원 로그인', '일정 지정 modal 진입', '배정 현장/회차 선택', '방문 일정 저장', '목록 반영 확인'],

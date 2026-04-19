@@ -641,6 +641,58 @@ export function updateSiteSchedules(
   );
 }
 
+function applyScheduleUpdate(
+  current: SafetyInspectionSchedule,
+  payload: Partial<SafetyInspectionSchedule>,
+  options?: {
+    actorUserId?: string;
+    actorUserName?: string;
+  },
+) {
+  const nextPlannedDate = payload.plannedDate ?? current.plannedDate;
+  const nextAssigneeUserId = payload.assigneeUserId ?? current.assigneeUserId;
+  const scheduleChanged =
+    nextPlannedDate !== current.plannedDate ||
+    nextAssigneeUserId !== current.assigneeUserId ||
+    (payload.status ?? current.status) !== current.status ||
+    (payload.selectionReasonLabel ?? current.selectionReasonLabel) !==
+      current.selectionReasonLabel ||
+    (payload.selectionReasonMemo ?? current.selectionReasonMemo) !==
+      current.selectionReasonMemo ||
+    (payload.exceptionReasonCode ?? current.exceptionReasonCode) !==
+      current.exceptionReasonCode ||
+    (payload.exceptionMemo ?? current.exceptionMemo) !== current.exceptionMemo;
+  const stampedAt = new Date().toISOString();
+
+  return {
+    ...current,
+    ...payload,
+    actualVisitDate: payload.actualVisitDate ?? current.actualVisitDate,
+    assigneeName: payload.assigneeName ?? current.assigneeName,
+    assigneeUserId: nextAssigneeUserId,
+    exceptionMemo: payload.exceptionMemo ?? current.exceptionMemo,
+    exceptionReasonCode: payload.exceptionReasonCode ?? current.exceptionReasonCode,
+    linkedReportKey: payload.linkedReportKey ?? current.linkedReportKey,
+    plannedDate: nextPlannedDate,
+    status: payload.status ?? current.status,
+    selectionConfirmedAt:
+      payload.selectionConfirmedAt ??
+      (scheduleChanged ? stampedAt : current.selectionConfirmedAt),
+    selectionConfirmedByName:
+      payload.selectionConfirmedByName ??
+      (scheduleChanged
+        ? options?.actorUserName ?? current.selectionConfirmedByName
+        : current.selectionConfirmedByName),
+    selectionConfirmedByUserId:
+      payload.selectionConfirmedByUserId ??
+      (scheduleChanged
+        ? options?.actorUserId ?? current.selectionConfirmedByUserId
+        : current.selectionConfirmedByUserId),
+    selectionReasonLabel: payload.selectionReasonLabel ?? current.selectionReasonLabel,
+    selectionReasonMemo: payload.selectionReasonMemo ?? current.selectionReasonMemo,
+  };
+}
+
 export function updateSingleSchedule(
   data: ControllerDashboardData,
   scheduleId: string,
@@ -660,46 +712,7 @@ export function updateSingleSchedule(
     if (index < 0) continue;
 
     const current = schedules[index];
-    const nextPlannedDate = payload.plannedDate ?? current.plannedDate;
-    const nextAssigneeUserId = payload.assigneeUserId ?? current.assigneeUserId;
-    const scheduleChanged =
-      nextPlannedDate !== current.plannedDate ||
-      nextAssigneeUserId !== current.assigneeUserId ||
-      (payload.status ?? current.status) !== current.status ||
-      (payload.selectionReasonLabel ?? current.selectionReasonLabel) !==
-        current.selectionReasonLabel ||
-      (payload.selectionReasonMemo ?? current.selectionReasonMemo) !==
-        current.selectionReasonMemo ||
-      (payload.exceptionReasonCode ?? current.exceptionReasonCode) !==
-        current.exceptionReasonCode ||
-      (payload.exceptionMemo ?? current.exceptionMemo) !== current.exceptionMemo;
-    const stampedAt = new Date().toISOString();
-    const nextSchedule: SafetyInspectionSchedule = {
-      ...current,
-      ...payload,
-      assigneeName: payload.assigneeName ?? current.assigneeName,
-      assigneeUserId: nextAssigneeUserId,
-      exceptionMemo: payload.exceptionMemo ?? current.exceptionMemo,
-      exceptionReasonCode: payload.exceptionReasonCode ?? current.exceptionReasonCode,
-      linkedReportKey: payload.linkedReportKey ?? current.linkedReportKey,
-      plannedDate: nextPlannedDate,
-      status: payload.status ?? current.status,
-      selectionConfirmedAt:
-        payload.selectionConfirmedAt ??
-        (scheduleChanged ? stampedAt : current.selectionConfirmedAt),
-      selectionConfirmedByName:
-        payload.selectionConfirmedByName ??
-        (scheduleChanged
-          ? options?.actorUserName ?? current.selectionConfirmedByName
-          : current.selectionConfirmedByName),
-      selectionConfirmedByUserId:
-        payload.selectionConfirmedByUserId ??
-        (scheduleChanged
-          ? options?.actorUserId ?? current.selectionConfirmedByUserId
-          : current.selectionConfirmedByUserId),
-      selectionReasonLabel: payload.selectionReasonLabel ?? current.selectionReasonLabel,
-      selectionReasonMemo: payload.selectionReasonMemo ?? current.selectionReasonMemo,
-    };
+    const nextSchedule = applyScheduleUpdate(current, payload, options);
 
     schedules[index] = nextSchedule;
     return {

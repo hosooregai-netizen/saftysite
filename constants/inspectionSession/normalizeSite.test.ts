@@ -6,6 +6,7 @@ import {
   isMeaningfulSnapshotText,
   mergeAdminSiteSnapshots,
   normalizeAdminSiteSnapshot,
+  normalizeInspectionSite,
 } from './normalizeSite';
 
 test('isMeaningfulSnapshotText treats placeholder dashes as empty', () => {
@@ -74,4 +75,20 @@ test('normalizeInspectionSession clears placeholder values in adminSiteSnapshot'
   assert.equal(session.adminSiteSnapshot.siteManagementNumber, 'MG-009');
   assert.equal(session.adminSiteSnapshot.companyName, '');
   assert.equal(session.adminSiteSnapshot.headquartersAddress, '');
+});
+
+test('normalizeInspectionSite preserves totalRounds from camelCase and snake_case inputs', () => {
+  const camelCaseSite = normalizeInspectionSite({
+    id: 'site-1',
+    siteName: 'Site Alpha',
+    totalRounds: 8,
+  });
+  const snakeCaseSite = normalizeInspectionSite({
+    id: 'site-2',
+    site_name: 'Site Beta',
+    total_rounds: 12,
+  });
+
+  assert.equal(camelCaseSite.totalRounds, 8);
+  assert.equal(snakeCaseSite.totalRounds, 12);
 });

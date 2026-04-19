@@ -1,4 +1,7 @@
 import { NextResponse } from 'next/server';
+import { invalidateAdminDirectorySnapshot } from '@/server/admin/adminDirectorySnapshot';
+import { invalidateAdminOverviewAndReportsRouteCaches } from '@/server/admin/adminRouteInvalidation';
+import { invalidateAdminScheduleSnapshot } from '@/server/admin/scheduleSnapshot';
 import {
   readRequiredSafetyAuthToken,
   SafetyServerApiError,
@@ -37,6 +40,10 @@ export async function PATCH(
       token,
       decodeURIComponent(scheduleId),
       {
+        actual_visit_date:
+          normalizeText(rawPayload.actualVisitDate) || normalizeText(rawPayload.actual_visit_date),
+        linked_report_key:
+          normalizeText(rawPayload.linkedReportKey) || normalizeText(rawPayload.linked_report_key),
         planned_date: normalizeText(rawPayload.plannedDate) || normalizeText(rawPayload.planned_date),
         selection_reason_label:
           normalizeText(rawPayload.selectionReasonLabel) ||
@@ -48,6 +55,9 @@ export async function PATCH(
       },
       request,
     );
+    invalidateAdminDirectorySnapshot();
+    invalidateAdminScheduleSnapshot();
+    invalidateAdminOverviewAndReportsRouteCaches();
     return NextResponse.json(mapBackendSchedule(updated));
   } catch (error) {
     if (error instanceof SafetyServerApiError) {
