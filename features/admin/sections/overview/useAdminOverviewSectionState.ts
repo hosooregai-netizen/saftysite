@@ -45,6 +45,7 @@ function pickRowsForCurrentYear<T>(
   currentYear: number,
   resolveYear: (row: T) => number | null,
   fallbackSort?: (left: T, right: T) => number,
+  resolveFallbackGroup?: (row: T) => string,
 ) {
   const currentYearRows = rows.filter((row) => resolveYear(row) === currentYear);
   if (currentYearRows.length > 0) {
@@ -53,8 +54,23 @@ function pickRowsForCurrentYear<T>(
   if (rows.length <= 1) {
     return rows;
   }
-  const fallbackRows = fallbackSort ? [...rows].sort(fallbackSort) : rows;
-  return fallbackRows.slice(0, 1);
+  const fallbackRows = fallbackSort ? [...rows].sort(fallbackSort) : [...rows];
+  const fallbackHead = fallbackRows[0];
+  if (!fallbackHead) {
+    return [];
+  }
+
+  const fallbackGroup = resolveFallbackGroup?.(fallbackHead) || '';
+  if (fallbackGroup) {
+    return fallbackRows.filter((row) => resolveFallbackGroup?.(row) === fallbackGroup);
+  }
+
+  const fallbackYear = resolveYear(fallbackHead);
+  if (fallbackYear == null) {
+    return fallbackRows;
+  }
+
+  return fallbackRows.filter((row) => resolveYear(row) === fallbackYear);
 }
 
 export function useAdminOverviewSectionState(
@@ -246,6 +262,7 @@ export function useAdminOverviewSectionState(
           left.quarterKey || left.quarterLabel,
           'ko',
         ) || left.siteName.localeCompare(right.siteName, 'ko'),
+      (row) => row.quarterKey || row.quarterLabel,
     );
   }, [currentYear, overview.quarterlyMaterialSummary.missingSiteRows]);
 
@@ -254,17 +271,8 @@ export function useAdminOverviewSectionState(
   }, [overview.quarterlyMaterialSummary.quarterLabel, visibleMaterialRows]);
 
   const visibleUnsentReportRows = useMemo(() => {
-    return pickRowsForCurrentYear(
-      normalizedUnsentReportRows,
-      currentYear,
-      (row) => parseYearPrefix(row.visitDate || row.referenceDate || row.deadlineDate),
-      (left, right) =>
-        (right.visitDate || right.referenceDate || right.deadlineDate).localeCompare(
-          left.visitDate || left.referenceDate || left.deadlineDate,
-          'ko',
-        ) || left.siteName.localeCompare(right.siteName, 'ko'),
-    );
-  }, [currentYear, normalizedUnsentReportRows]);
+    return normalizedUnsentReportRows;
+  }, [normalizedUnsentReportRows]);
 
   const sortedMaterialRows = useMemo(() => {
     return [...visibleMaterialRows].sort((left, right) => {

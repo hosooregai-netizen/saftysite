@@ -414,7 +414,11 @@ function buildAttentionRows(
       return row;
     });
 
-  const dispatchManagementUnsentReportRows = dispatchOverviewRows
+  const technicalGuidanceDispatchRows = dispatchOverviewRows.filter(
+    (row) => row.reportType === 'technical_guidance',
+  );
+
+  const dispatchManagementUnsentReportRows = technicalGuidanceDispatchRows
     .map((row) => {
       const referenceDate = row.visitDate || row.updatedAt.slice(0, 10);
       const visitDispatch = resolveVisitDispatchState(row.visitDate, row.deadlineDate, row.dispatchStatus, row.updatedAt, today);
