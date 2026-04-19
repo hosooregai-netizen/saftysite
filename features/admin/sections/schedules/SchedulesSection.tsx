@@ -263,19 +263,13 @@ function buildSelectionSummary(row: SafetyInspectionSchedule) {
   return parts.join(' / ');
 }
 
-function buildIssueSummary(row: SafetyInspectionSchedule) {
-  return [
-    row.isOutOfWindow ? '구간 밖' : '',
-    row.isConflicted ? '일정 충돌' : '',
-    row.isOverdue ? '지연' : '',
-  ]
-    .filter(Boolean)
-    .join(' / ');
-}
-
 function buildScheduleChipLabel(row: SafetyInspectionSchedule) {
   const totalRounds = row.totalRounds && row.totalRounds > 0 ? row.totalRounds : row.roundNo;
   return `[${row.assigneeName || '미배정'}] ${row.roundNo}/${totalRounds} - ${row.siteName}`;
+}
+
+function buildDayListLabel(row: SafetyInspectionSchedule) {
+  return `[${row.assigneeName || '미배정'}] ${row.siteName}`;
 }
 
 function buildScheduleQueryText(row: SafetyInspectionSchedule) {
@@ -1153,7 +1147,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                                 {buildScheduleChipLabel(row)}
                               </span>
                               <span className={styles.calendarScheduleChipMeta}>
-                                {buildIssueSummary(row) || buildScheduleQueryText(row)}
+                                {buildScheduleQueryText(row)}
                               </span>
                             </button>
                           ))}
@@ -1378,9 +1372,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                           desc: '담당자 역순',
                         })}
                       />
-                      <th>선택 사유</th>
                       <th>선택 정보</th>
-                      <th>이슈</th>
                       <th>메뉴</th>
                     </tr>
                   </thead>
@@ -1394,14 +1386,12 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                         <td>{row.plannedDate || '-'}</td>
                         <td>{buildWindowSummary(row)}</td>
                         <td>{row.assigneeName || '-'}</td>
-                        <td>{buildSelectionSummary(row)}</td>
                         <td>
                           {[
                             row.selectionConfirmedByName || '-',
                             formatDateTime(row.selectionConfirmedAt),
                           ].join(' / ')}
                         </td>
-                        <td>{buildIssueSummary(row) || '-'}</td>
                         <td>
                           <button
                             type="button"
@@ -1493,10 +1483,6 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                   <div>
                     <span className={styles.scheduleSummaryLabel}>선택 사유</span>
                     <strong>{buildSelectionSummary(activeSchedule)}</strong>
-                  </div>
-                  <div>
-                    <span className={styles.scheduleSummaryLabel}>이슈</span>
-                    <strong>{buildIssueSummary(activeSchedule) || '없음'}</strong>
                   </div>
                   <div>
                     <span className={styles.scheduleSummaryLabel}>선택 정보</span>
@@ -1694,24 +1680,20 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                 <table className={styles.table}>
                   <thead>
                     <tr>
-                      <th>현장</th>
+                      <th>일정</th>
                       <th>회차</th>
-                      <th>담당자</th>
                       <th>상태</th>
-                      <th>선택 사유</th>
                       <th>메뉴</th>
                     </tr>
                   </thead>
                   <tbody>
                     {dayListDialogRows.map((row) => (
                       <tr key={`day-list-${row.id}`}>
-                        <td>{row.siteName}</td>
+                        <td>{buildDayListLabel(row)}</td>
                         <td>
                           {row.roundNo} / {row.totalRounds && row.totalRounds > 0 ? row.totalRounds : row.roundNo}
                         </td>
-                        <td>{row.assigneeName || '-'}</td>
                         <td>{getScheduleStatusLabel(row.status)}</td>
-                        <td>{buildSelectionSummary(row)}</td>
                         <td>
                           <button
                             type="button"

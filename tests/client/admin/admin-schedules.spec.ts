@@ -59,6 +59,9 @@ export async function runAdminSchedulesSmoke(config: ClientSmokePlaywrightConfig
     if ((await scheduleDialog.getByText('같은 날짜 일정').count()) !== 0) {
       throw new Error('Expected existing schedule dialog to hide same-date schedule table.');
     }
+    if ((await scheduleDialog.getByText('이슈').count()) !== 0) {
+      throw new Error('Expected existing schedule dialog to hide issue summary field.');
+    }
     await scheduleDialog.getByText('선택 사유').waitFor();
     if ((await scheduleDialog.getByLabel('사유 분류').inputValue()) !== '') {
       throw new Error('Expected legacy placeholder reason label to be cleared in controller dialog.');

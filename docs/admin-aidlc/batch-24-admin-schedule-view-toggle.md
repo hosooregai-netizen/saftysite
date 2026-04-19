@@ -37,6 +37,8 @@ edit flows intact.
   only.
 - `더보기` now opens a day-level schedule list popup and each row in that popup can open the
   schedule-detail dialog directly.
+- The day-level schedule list now prioritizes quick identification with `[담당자] 현장명` labels and
+  removes extra issue/selection-detail columns that slowed down scan time.
 - Client smoke now asserts that both schedule view tabs render and can switch between the queue/list
   mode and the month calendar mode.
 - Client smoke also asserts that opening an existing schedule from the month board lands in the
