@@ -740,7 +740,7 @@ function ensureAdminFixtureSchedules(harness: ErpSmokeHarness) {
           isOutOfWindow: false,
           isOverdue: false,
           linkedReportKey: '',
-          plannedDate: '2026-04-17',
+          plannedDate: '2026-04-14',
           roundNo: 2,
           selectionConfirmedAt: NOW,
           selectionConfirmedByName: '관리자',

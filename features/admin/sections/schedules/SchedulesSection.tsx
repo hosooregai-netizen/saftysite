@@ -1721,32 +1721,37 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                       <th>일정</th>
                       <th>회차</th>
                       <th>상태</th>
-                      <th>메뉴</th>
                     </tr>
                   </thead>
                   <tbody>
                     {dayListDialogRows.map((row) => (
-                      <tr key={`day-list-${row.id}`}>
+                      <tr
+                        key={`day-list-${row.id}`}
+                        className={styles.tableClickableRow}
+                        onClick={() => {
+                          closeDayListDialog();
+                          openScheduleDialog({
+                            plannedDate: row.plannedDate || dayListDialogDate || row.windowStart,
+                            schedule: row,
+                          });
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            closeDayListDialog();
+                            openScheduleDialog({
+                              plannedDate: row.plannedDate || dayListDialogDate || row.windowStart,
+                              schedule: row,
+                            });
+                          }
+                        }}
+                        tabIndex={0}
+                      >
                         <td>{buildDayListLabel(row)}</td>
                         <td>
                           {row.roundNo} / {row.totalRounds && row.totalRounds > 0 ? row.totalRounds : row.roundNo}
                         </td>
                         <td>{getScheduleStatusLabel(row.status)}</td>
-                        <td>
-                          <button
-                            type="button"
-                            className="app-button app-button-secondary"
-                            onClick={() => {
-                              closeDayListDialog();
-                              openScheduleDialog({
-                                plannedDate: row.plannedDate || dayListDialogDate || row.windowStart,
-                                schedule: row,
-                              });
-                            }}
-                          >
-                            일정 보기
-                          </button>
-                        </td>
                       </tr>
                     ))}
                   </tbody>
