@@ -23,6 +23,7 @@
     "smoke:real:admin": "tsx scripts/smokeRealAdmin.ts",
     "verify:erp-live": "tsx scripts/verifyErpLiveContracts.ts",
     "probe:api-live": "tsx scripts/probeSafetyApiLive.ts",
+    "verify:api-live-budgets": "tsx scripts/probeSafetyApiLive.ts --enforce-budgets",
     "generate:service-intro": "tsx scripts/generateServiceIntro.ts",
     "capture:naver-review": "tsx scripts/captureNaverReview.ts",
     "capture:google-review": "tsx scripts/captureGoogleReview.ts",

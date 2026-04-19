@@ -234,6 +234,15 @@ function execCommand(command, args, options = {}) {
   throw lastError;
 }
 
+function hasLiveApiProbeEnv() {
+  return Boolean(
+    process.env.LIVE_NEXT_BASE_URL &&
+      process.env.LIVE_SAFETY_EMAIL &&
+      process.env.LIVE_SAFETY_PASSWORD &&
+      process.env.LIVE_SAFETY_SITE_ID,
+  );
+}
+
 function run(command, args, options = {}) {
   return execCommand(command, args, {
     encoding: 'utf8',
@@ -373,6 +382,17 @@ async function main() {
   );
 
   console.log('[aidlc-push] smoke verification passed.');
+
+  if (hasLiveApiProbeEnv()) {
+    console.log('[aidlc-push] running live API probe budgets.');
+    execCommand('npm', ['run', 'verify:api-live-budgets'], {
+      stdio: 'inherit',
+      env: {
+        ...process.env,
+      },
+    });
+    console.log('[aidlc-push] live API probe budgets passed.');
+  }
 }
 
 await main();
