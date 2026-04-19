@@ -16,6 +16,7 @@ import type {
   SafetySiteStatus,
   SafetySiteUpdateInput,
 } from '@/types/controller';
+import type { SafetySite } from '@/types/backend';
 import { HeadquarterSummaryPanel } from './HeadquarterSummaryPanel';
 import { SiteManagementMainPanel } from './SiteManagementMainPanel';
 import { HeadquartersTable } from './HeadquartersTable';
@@ -81,6 +82,7 @@ interface HeadquartersSectionProps {
   busy: boolean;
   canDelete: boolean;
   currentUserId: string;
+  sites: SafetySite[];
   selectedHeadquarterId: string | null;
   selectedSiteId: string | null;
   onClearHeadquarterSelection: () => void;
@@ -102,6 +104,7 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
     busy,
     canDelete,
     currentUserId,
+    sites,
     selectedHeadquarterId,
     selectedSiteId,
     onAssignFieldAgent,
@@ -284,6 +287,15 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
   const siteStatusTitle =
     siteStatusFilter === 'all' ? '현장 목록' : `${getSiteStatusLabel(siteStatusFilter)} 현장`;
   const totalPages = Math.max(1, Math.ceil(total / 30));
+  const siteCountsByHeadquarterId = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const site of sites) {
+      const headquarterId = site.headquarter_id?.trim();
+      if (!headquarterId) continue;
+      counts[headquarterId] = (counts[headquarterId] ?? 0) + 1;
+    }
+    return counts;
+  }, [sites]);
 
   if (isLoading && rows.length === 0 && !selectedHeadquarter && !hasSiteStatusScope) {
     return (
@@ -364,6 +376,7 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
             filteredHeadquarters={rows}
             summary={summary}
             page={state.page}
+            siteCountsByHeadquarterId={siteCountsByHeadquarterId}
             onCreateRequest={state.openCreate}
             onDeleteRequest={handleDeleteHeadquarter}
             onEditRequest={state.openEdit}
@@ -382,6 +395,7 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
                     name: '사업장',
                     columns: [
                       { key: 'name', label: '회사명' },
+                      { key: 'site_count', label: '현장 수' },
                       { key: 'management_number', label: '사업장관리번호' },
                       { key: 'opening_number', label: '사업장개시번호' },
                       { key: 'business_registration_no', label: '사업자등록번호' },
@@ -404,6 +418,7 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
                       memo: item.memo || '',
                       name: item.name,
                       opening_number: item.opening_number || '',
+                      site_count: siteCountsByHeadquarterId[item.id] ?? 0,
                       updated_at: item.updated_at,
                     })),
                   },

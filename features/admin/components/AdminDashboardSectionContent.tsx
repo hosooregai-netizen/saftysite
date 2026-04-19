@@ -61,6 +61,7 @@ export function AdminDashboardSectionContent({
           onClearHeadquarterSelection={dashboard.clearHeadquarterSelection}
           onClearSiteSelection={dashboard.clearSiteSelection}
           currentUserId={currentUser.id}
+          sites={sites}
           onAssignFieldAgent={dashboard.assignFieldAgentToSite}
           onCreate={dashboard.createHeadquarter}
           onCreateSite={dashboard.createSite}

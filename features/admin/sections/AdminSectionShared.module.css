@@ -1325,24 +1325,42 @@
   table-layout: fixed;
 }
 
+.headquartersOrderCol {
+  width: 72px;
+}
+
 .headquartersNameCol {
-  width: 24%;
+  width: 18%;
 }
 
 .headquartersRegistrationCol {
-  width: 24%;
+  width: 20%;
 }
 
 .headquartersAddressCol {
-  width: 32%;
+  width: 26%;
 }
 
 .headquartersContactCol {
-  width: 20%;
+  width: 14%;
+}
+
+.headquartersSiteCountCol {
+  width: 9%;
 }
 
 .headquartersMenuCol {
   width: 56px;
+}
+
+.headquartersSiteCountCell {
+  text-align: center;
+  white-space: nowrap;
+}
+
+.headquartersOrderCell {
+  text-align: center;
+  white-space: nowrap;
 }
 
 /* 인라인 링크·칩을 한 줄로 (가로 스크롤) */

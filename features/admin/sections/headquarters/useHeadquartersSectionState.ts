@@ -47,8 +47,8 @@ export function useHeadquartersSectionState(
   const [editingId, setEditingId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState<TableSortState>({
-    direction: 'asc',
-    key: 'name',
+    direction: 'desc',
+    key: 'created_at',
   });
   const [form, setForm] = useState(EMPTY_FORM);
   const { query, queryInput, setQueryInput, submitQuery } = useSubmittedSearchState();
@@ -83,6 +83,10 @@ export function useHeadquartersSectionState(
       const rightPinned = isPinnedTestHeadquarter(right);
       if (leftPinned !== rightPinned) {
         return leftPinned ? -1 : 1;
+      }
+
+      if (sort.key === 'created_at') {
+        return left.created_at.localeCompare(right.created_at) * direction;
       }
 
       if (sort.key === 'updated_at') {

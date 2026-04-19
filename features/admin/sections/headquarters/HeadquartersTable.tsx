@@ -7,6 +7,8 @@ import type { TableSortState } from '@/types/admin';
 import type { SafetyHeadquarter } from '@/types/controller';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 
+const HEADQUARTERS_PAGE_SIZE = 30;
+
 interface HeadquartersTableProps {
   busy: boolean;
   canDelete: boolean;
@@ -18,6 +20,7 @@ interface HeadquartersTableProps {
     registrationGapCount: number;
   };
   page: number;
+  siteCountsByHeadquarterId: Record<string, number>;
   onCreateRequest: () => void;
   onDeleteRequest: (item: SafetyHeadquarter) => void;
   onEditRequest: (item: SafetyHeadquarter) => void;
@@ -68,6 +71,7 @@ export function HeadquartersTable({
   filteredHeadquarters,
   summary,
   page,
+  siteCountsByHeadquarterId,
   onCreateRequest,
   onDeleteRequest,
   onEditRequest,
@@ -166,14 +170,23 @@ export function HeadquartersTable({
             <div className={styles.tableWrap}>
               <table className={`${styles.table} ${styles.headquartersTable}`}>
                 <colgroup>
+                  <col className={styles.headquartersOrderCol} />
                   <col className={styles.headquartersNameCol} />
                   <col className={styles.headquartersContactCol} />
                   <col className={styles.headquartersRegistrationCol} />
                   <col className={styles.headquartersAddressCol} />
+                  <col className={styles.headquartersSiteCountCol} />
                   <col className={styles.headquartersMenuCol} />
                 </colgroup>
                 <thead>
                   <tr>
+                    <SortableHeaderCell
+                      column={{ key: 'created_at' }}
+                      current={sort}
+                      defaultDirection="desc"
+                      label="순번"
+                      onChange={onSortChange}
+                    />
                     <SortableHeaderCell
                       column={{ key: 'name' }}
                       current={sort}
@@ -183,11 +196,14 @@ export function HeadquartersTable({
                     <th>대표자</th>
                     <th>사업자등록번호</th>
                     <th>주소</th>
+                    <th className={styles.headquartersSiteCountCell}>현장 수</th>
                     <th>메뉴</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredHeadquarters.map((item) => {
+                  {filteredHeadquarters.map((item, index) => {
+                    const rowNumber = (page - 1) * HEADQUARTERS_PAGE_SIZE + index + 1;
+                    const siteCount = siteCountsByHeadquarterId[item.id] ?? 0;
                     return (
                       <tr
                         key={item.id}
@@ -205,6 +221,9 @@ export function HeadquartersTable({
                           onOpenSitesRequest(item);
                         }}
                       >
+                        <td className={styles.headquartersOrderCell}>
+                          <div className={styles.tablePrimary}>{rowNumber}</div>
+                        </td>
                         <td>
                           <div className={styles.tablePrimary}>{item.name}</div>
                         </td>
@@ -221,6 +240,9 @@ export function HeadquartersTable({
                         </td>
                         <td>
                           <div className={styles.tablePrimary}>{item.address || '-'}</div>
+                        </td>
+                        <td className={styles.headquartersSiteCountCell}>
+                          <div className={styles.tablePrimary}>{siteCount}</div>
                         </td>
                         <td>
                           <div

@@ -266,6 +266,8 @@ export function buildAdminHeadquartersListResponse(
     })
     .sort((left, right) => {
       switch (filters.sortBy) {
+        case 'created_at':
+          return sortText(left.created_at, right.created_at, direction);
         case 'updated_at':
           return sortText(left.updated_at, right.updated_at, direction);
         case 'contact_phone':
