@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { applyOverviewUpstreamFallbacks } from './routeFallbacks';
+import { mapBackendOverviewResponse } from '@/server/admin/upstreamMappers';
 import type { SafetyAdminOverviewResponse } from '@/types/admin';
 import type { SafetyBackendAdminOverviewResponse } from '@/types/backend';
 
@@ -168,4 +169,131 @@ test('keeps mapped overview unchanged when representative rows are already prese
   const preserved = applyOverviewUpstreamFallbacks(buildBackendOverview(), mappedOverview);
 
   assert.strictEqual(preserved, mappedOverview);
+});
+
+test('drops long-overdue unsent rows from the mapped overview queue', () => {
+  const backendOverview = buildBackendOverview();
+  backendOverview.metric_cards = [
+    {
+      href: '/reports',
+      label: 'Dispatch management',
+      meta: 'Outstanding sends',
+      tone: 'danger',
+      value: '1 items',
+    },
+  ];
+  backendOverview.summary_rows = [
+    { label: 'Dispatch management', meta: 'Outstanding sends', value: '1 items' },
+  ];
+  backendOverview.unsent_report_rows = [
+    {
+      assignee_name: 'Owner',
+      deadline_date: '2026-03-01',
+      dispatch_status: 'overdue',
+      headquarter_name: 'HQ',
+      href: '/reports/r-long',
+      mail_missing_reason: '',
+      mail_ready: true,
+      recipient_email: 'owner@example.com',
+      recipient_name: 'Owner',
+      reference_date: '2026-03-01',
+      report_key: 'r-long',
+      report_title: 'Long overdue report',
+      report_type_label: 'Technical guidance',
+      site_id: 's1',
+      site_name: 'Site 1',
+      unsent_days: 49,
+      visit_date: '2026-03-01',
+    },
+  ];
+
+  const mappedOverview = mapBackendOverviewResponse(backendOverview);
+
+  assert.equal(mappedOverview.unsentReportRows.length, 0);
+  assert.equal(mappedOverview.deadlineSignalSummary.totalReportCount, 0);
+  assert.match(mappedOverview.metricCards[0]?.value ?? '', /^0/);
+});
+
+test('does not restore long-overdue unsent rows through upstream fallback', () => {
+  const mappedOverview = buildMappedOverview();
+  const backendOverview = buildBackendOverview();
+  backendOverview.unsent_report_rows = [
+    {
+      assignee_name: 'Owner',
+      deadline_date: '2026-03-01',
+      dispatch_status: 'overdue',
+      headquarter_name: 'HQ',
+      href: '/reports/r-long',
+      mail_missing_reason: '',
+      mail_ready: true,
+      recipient_email: 'owner@example.com',
+      recipient_name: 'Owner',
+      reference_date: '2026-03-01',
+      report_key: 'r-long',
+      report_title: 'Long overdue report',
+      report_type_label: 'Technical guidance',
+      site_id: 's1',
+      site_name: 'Site 1',
+      unsent_days: 49,
+      visit_date: '2026-03-01',
+    },
+  ];
+
+  const restored = applyOverviewUpstreamFallbacks(backendOverview, mappedOverview);
+
+  assert.equal(restored.unsentReportRows.length, 0);
+  assert.equal(restored.deadlineSignalSummary.totalReportCount, 0);
+  assert.match(restored.metricCards[5]?.value ?? '', /^0/);
+});
+
+test('restores upstream unsent rows in dispatch priority order', () => {
+  const mappedOverview = buildMappedOverview();
+  const backendOverview = buildBackendOverview();
+  backendOverview.unsent_report_rows = [
+    {
+      assignee_name: 'No Mail',
+      deadline_date: '2026-04-10',
+      dispatch_status: 'overdue',
+      headquarter_name: 'HQ',
+      href: '/reports/r-not-ready',
+      mail_missing_reason: 'Missing mail',
+      mail_ready: false,
+      recipient_email: '',
+      recipient_name: '',
+      reference_date: '2026-04-10',
+      report_key: 'r-not-ready',
+      report_title: 'Not ready report',
+      report_type_label: 'Technical guidance',
+      site_id: 's2',
+      site_name: 'Site 2',
+      unsent_days: 9,
+      visit_date: '2026-04-10',
+    },
+    {
+      assignee_name: 'Ready',
+      deadline_date: '2026-04-11',
+      dispatch_status: 'warning',
+      headquarter_name: 'HQ',
+      href: '/reports/r-ready',
+      mail_missing_reason: '',
+      mail_ready: true,
+      recipient_email: 'ready@example.com',
+      recipient_name: 'Ready',
+      reference_date: '2026-04-11',
+      report_key: 'r-ready',
+      report_title: 'Ready report',
+      report_type_label: 'Technical guidance',
+      site_id: 's1',
+      site_name: 'Site 1',
+      unsent_days: 8,
+      visit_date: '2026-04-11',
+    },
+  ];
+
+  const restored = applyOverviewUpstreamFallbacks(backendOverview, mappedOverview);
+
+  assert.deepEqual(
+    restored.unsentReportRows.map((row) => row.reportKey),
+    ['r-ready', 'r-not-ready'],
+  );
 });

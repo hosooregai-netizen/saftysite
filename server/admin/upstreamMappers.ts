@@ -12,6 +12,7 @@ import {
 } from '@/lib/admin/lifecycleStatus';
 import {
   buildDeadlineSignalSummaryFromRows,
+  compareDispatchManagementUnsentRows,
   getUnsentDays,
   isDispatchManagementUnsentRow,
   isPriorityQuarterlyManagementRowScope,
@@ -404,7 +405,8 @@ function mapBackendOverviewUnsentRows(
         recipientName: normalizeText(row.recipient_name),
       };
     })
-    .filter(isDispatchManagementUnsentRow);
+    .filter(isDispatchManagementUnsentRow)
+    .sort(compareDispatchManagementUnsentRows);
 }
 
 function formatCountLike(previousValue: string, count: number) {

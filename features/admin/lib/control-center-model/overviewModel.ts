@@ -35,6 +35,7 @@ import {
 import {
   buildDeadlineSignalSummaryFromRows,
   buildDispatchManagementRows,
+  compareDispatchManagementUnsentRows,
   getUnsentDays,
   isDispatchManagementUnsentRow,
   isCurrentSiteManagementWindow,
@@ -107,11 +108,6 @@ function pickLatestQuarterlyRow(
   return candidate.updatedAt > current.updatedAt ? candidate : current;
 }
 
-function isRowInCurrentYear(row: EnrichedControllerReportRow, today: Date) {
-  const value = row.reportDate || row.visitDate || row.updatedAt.slice(0, 10);
-  return value.startsWith(`${today.getFullYear()}-`);
-}
-
 function extractQuarterKeyFromText(value: string) {
   const directMatched = value.match(/\b(\d{4})-Q([1-4])\b/i);
   if (directMatched) {
@@ -140,7 +136,6 @@ function buildPriorityQuarterlyManagementRows(
   const currentQuarterKey = formatQuarterKey(today);
   const currentQuarterLabel = formatQuarterLabel(today);
   const latestGuidanceRowBySite = new Map<string, EnrichedControllerReportRow>();
-  const latestCurrentYearQuarterlyRowBySite = new Map<string, EnrichedControllerReportRow>();
   const currentQuarterlyRowBySite = new Map<string, EnrichedControllerReportRow>();
 
   overviewRows.forEach((row) => {
@@ -152,13 +147,6 @@ function buildPriorityQuarterlyManagementRows(
       return;
     }
     if (row.reportType !== 'quarterly_report') return;
-
-    if (isRowInCurrentYear(row, today)) {
-      latestCurrentYearQuarterlyRowBySite.set(
-        row.siteId,
-        pickLatestQuarterlyRow(latestCurrentYearQuarterlyRowBySite.get(row.siteId), row),
-      );
-    }
 
     const inferredQuarterKey = inferQuarterKeyFromRow(row);
     const matchesCurrentQuarter =
@@ -176,19 +164,8 @@ function buildPriorityQuarterlyManagementRows(
   return candidateSites
     .map((site) => {
       const latestGuidanceRow = latestGuidanceRowBySite.get(site.id);
-      const latestCurrentYearQuarterlyRow = latestCurrentYearQuarterlyRowBySite.get(site.id);
       const quarterlyRow = currentQuarterlyRowBySite.get(site.id);
-      if (!isPriorityQuarterlySiteScope({
-        currentQuarterlyReportDate:
-          quarterlyRow?.reportDate ||
-          quarterlyRow?.visitDate ||
-          latestCurrentYearQuarterlyRow?.reportDate ||
-          latestCurrentYearQuarterlyRow?.visitDate ||
-          '',
-        latestGuidanceDate: latestGuidanceRow?.visitDate || latestGuidanceRow?.reportDate || '',
-        site,
-        today,
-      })) {
+      if (!isPriorityQuarterlySiteScope({ site, today })) {
         return null;
       }
       const quarterlyReflectionStatus = quarterlyRow ? 'created' : 'missing';
@@ -423,7 +400,7 @@ function buildAttentionRows(
       const referenceDate = row.visitDate || row.updatedAt.slice(0, 10);
       const visitDispatch = resolveVisitDispatchState(row.visitDate, row.deadlineDate, row.dispatchStatus, row.updatedAt, today);
       return {
-        assigneeName: inspectorNameBySiteId.get(row.siteId) || row.assigneeName || '-',
+        assigneeName: row.assigneeName || inspectorNameBySiteId.get(row.siteId) || '-',
         deadlineDate: formatDateOnly(visitDispatch.deadlineDate),
         dispatchStatus: visitDispatch.dispatchStatus,
         headquarterName: row.headquarterName || '-',
@@ -439,7 +416,7 @@ function buildAttentionRows(
       };
     })
     .filter(isDispatchManagementUnsentRow)
-    .sort((left, right) => right.unsentDays - left.unsentDays || left.siteName.localeCompare(right.siteName, 'ko') || left.reportTitle.localeCompare(right.reportTitle, 'ko'));
+    .sort(compareDispatchManagementUnsentRows);
 
   return {
     dispatchManagementUnsentReportRows,

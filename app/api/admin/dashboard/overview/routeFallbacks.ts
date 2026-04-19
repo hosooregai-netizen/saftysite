@@ -1,4 +1,8 @@
-import { buildDeadlineSignalSummaryFromRows } from '@/features/admin/lib/control-center-model/overviewPolicies';
+import {
+  buildDeadlineSignalSummaryFromRows,
+  compareDispatchManagementUnsentRows,
+  isDispatchManagementUnsentRow,
+} from '@/features/admin/lib/control-center-model/overviewPolicies';
 import type {
   SafetyAdminOverviewResponse,
   SafetyAdminPriorityQuarterlyManagementRow,
@@ -12,32 +16,35 @@ function normalizeText(value: unknown) {
 function mapBackendOverviewUnsentRowsPreservingUpstream(
   rows: SafetyBackendAdminOverviewResponse['unsent_report_rows'],
 ): SafetyAdminOverviewResponse['unsentReportRows'] {
-  return rows.map((row) => {
-    const referenceDate = normalizeText(row.reference_date) || normalizeText(row.visit_date);
-    return {
-      assigneeName: normalizeText(row.assignee_name),
-      deadlineDate: normalizeText(row.deadline_date),
-      dispatchStatus: (normalizeText(row.dispatch_status) ||
-        '') as SafetyAdminOverviewResponse['unsentReportRows'][number]['dispatchStatus'],
-      headquarterName: normalizeText(row.headquarter_name),
-      href: normalizeText(row.href),
-      referenceDate,
-      reportKey: normalizeText(row.report_key),
-      reportTitle: normalizeText(row.report_title),
-      reportTypeLabel: normalizeText(row.report_type_label),
-      siteId: normalizeText(row.site_id),
-      siteName: normalizeText(row.site_name),
-      unsentDays:
-        typeof row.unsent_days === 'number' && Number.isFinite(row.unsent_days)
-          ? row.unsent_days
-          : 0,
-      visitDate: normalizeText(row.visit_date),
-      mailMissingReason: normalizeText(row.mail_missing_reason),
-      mailReady: Boolean(row.mail_ready),
-      recipientEmail: normalizeText(row.recipient_email),
-      recipientName: normalizeText(row.recipient_name),
-    };
-  });
+  return rows
+    .map((row) => {
+      const referenceDate = normalizeText(row.reference_date) || normalizeText(row.visit_date);
+      return {
+        assigneeName: normalizeText(row.assignee_name),
+        deadlineDate: normalizeText(row.deadline_date),
+        dispatchStatus: (normalizeText(row.dispatch_status) ||
+          '') as SafetyAdminOverviewResponse['unsentReportRows'][number]['dispatchStatus'],
+        headquarterName: normalizeText(row.headquarter_name),
+        href: normalizeText(row.href),
+        referenceDate,
+        reportKey: normalizeText(row.report_key),
+        reportTitle: normalizeText(row.report_title),
+        reportTypeLabel: normalizeText(row.report_type_label),
+        siteId: normalizeText(row.site_id),
+        siteName: normalizeText(row.site_name),
+        unsentDays:
+          typeof row.unsent_days === 'number' && Number.isFinite(row.unsent_days)
+            ? row.unsent_days
+            : 0,
+        visitDate: normalizeText(row.visit_date),
+        mailMissingReason: normalizeText(row.mail_missing_reason),
+        mailReady: Boolean(row.mail_ready),
+        recipientEmail: normalizeText(row.recipient_email),
+        recipientName: normalizeText(row.recipient_name),
+      };
+    })
+    .filter(isDispatchManagementUnsentRow)
+    .sort(compareDispatchManagementUnsentRows);
 }
 
 function mapBackendOverviewPriorityRowsPreservingUpstream(
@@ -147,7 +154,10 @@ export function applyOverviewUpstreamFallbacks(
   response: SafetyBackendAdminOverviewResponse,
   mappedOverview: SafetyAdminOverviewResponse,
 ): SafetyAdminOverviewResponse {
-  const rawUnsentCount = response.unsent_report_rows.length;
+  const preservedUnsentReportRows = mapBackendOverviewUnsentRowsPreservingUpstream(
+    response.unsent_report_rows,
+  );
+  const rawUnsentCount = preservedUnsentReportRows.length;
   const rawPriorityCount = response.priority_quarterly_management_rows?.length ?? 0;
   const mappedPriorityRows = mappedOverview.priorityQuarterlyManagementRows ?? [];
   const shouldPreserveUnsent = rawUnsentCount > 0 && mappedOverview.unsentReportRows.length === 0;
@@ -162,14 +172,19 @@ export function applyOverviewUpstreamFallbacks(
   };
 
   if (shouldPreserveUnsent) {
-    const unsentReportRows = mapBackendOverviewUnsentRowsPreservingUpstream(response.unsent_report_rows);
-    nextOverview.unsentReportRows = unsentReportRows;
+    nextOverview.unsentReportRows = preservedUnsentReportRows;
     nextOverview.deadlineSignalSummary = mapBackendDeadlineSignalSummaryPreservingUpstream(
       response,
-      unsentReportRows,
+      preservedUnsentReportRows,
     );
-    nextOverview.metricCards = syncDispatchMetricCards(mappedOverview.metricCards, unsentReportRows.length);
-    nextOverview.summaryRows = syncDispatchSummaryRows(mappedOverview.summaryRows, unsentReportRows.length);
+    nextOverview.metricCards = syncDispatchMetricCards(
+      mappedOverview.metricCards,
+      preservedUnsentReportRows.length,
+    );
+    nextOverview.summaryRows = syncDispatchSummaryRows(
+      mappedOverview.summaryRows,
+      preservedUnsentReportRows.length,
+    );
   }
 
   if (shouldPreservePriority) {

@@ -6,6 +6,7 @@ import {
   getOverviewExportSheets,
   type AdminOverviewModel,
 } from '@/features/admin/lib/buildAdminControlCenterModel';
+import { compareDispatchManagementUnsentRows } from '@/features/admin/lib/control-center-model/overviewPolicies';
 import {
   fetchAdminSessionCacheOnce,
   readAdminSessionCache,
@@ -104,7 +105,10 @@ export function useAdminOverviewSectionState(
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const [materialSort, setMaterialSort] = useState<TableSortState>({ direction: 'desc', key: 'missingTotal' });
   const [materialPage, setMaterialPage] = useState(1);
-  const [unsentSort, setUnsentSort] = useState<TableSortState>({ direction: 'desc', key: 'unsentDays' });
+  const [unsentSort, setUnsentSort] = useState<TableSortState>({
+    direction: 'desc',
+    key: 'dispatchPriority',
+  });
   const [unsentPage, setUnsentPage] = useState(1);
   const [priorityPage, setPriorityPage] = useState(1);
   const [endingSoonPage, setEndingSoonPage] = useState(1);
@@ -297,6 +301,10 @@ export function useAdminOverviewSectionState(
   const sortedUnsentReportRows = useMemo(() => {
     return [...visibleUnsentReportRows].sort((left, right) => {
       switch (unsentSort.key) {
+        case 'dispatchPriority': {
+          const comparison = compareDispatchManagementUnsentRows(left, right);
+          return unsentSort.direction === 'asc' ? -comparison : comparison;
+        }
         case 'siteName':
           return compareText(left.siteName, right.siteName, unsentSort.direction);
         case 'headquarterName':
