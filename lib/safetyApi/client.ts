@@ -130,6 +130,15 @@ function formatRequestLabel(path: string, method?: string): string {
   return `${normalizedMethod} ${path}`;
 }
 
+async function parseJsonResponse<T extends JsonLike>(response: Response): Promise<T> {
+  const text = await response.text();
+  if (!text.trim()) {
+    return undefined as T;
+  }
+
+  return JSON.parse(text) as T;
+}
+
 async function parseErrorMessage(response: Response): Promise<string> {
   const contentType = response.headers.get('content-type') ?? '';
 
@@ -332,7 +341,7 @@ export async function requestSafetyApi<T>(
       return undefined as JsonLike;
     }
 
-    return (await response.json()) as JsonLike;
+    return await parseJsonResponse<JsonLike>(response);
   };
 
   if (cacheTtlMs > 0) {

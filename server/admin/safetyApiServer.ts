@@ -129,6 +129,15 @@ function buildUpstreamUrl(path: string) {
   return `${getSafetyApiUpstreamBaseUrl()}${normalizedPath}`;
 }
 
+async function parseJsonResponse<T>(response: Response): Promise<T> {
+  const text = await response.text();
+  if (!text.trim()) {
+    return undefined as T;
+  }
+
+  return JSON.parse(text) as T;
+}
+
 export function buildSafetyAdminUpstreamUrl(path: string) {
   return buildUpstreamUrl(path);
 }
@@ -269,7 +278,7 @@ export async function requestSafetyAdminServer<T>(
     return undefined as T;
   }
 
-  return (await response.json()) as T;
+  return await parseJsonResponse<T>(response);
 }
 
 export async function requestSafetyAdminServerRaw(

@@ -20,6 +20,12 @@ type SafetyRouteContext = {
   }>;
 };
 
+function runBestEffortRefresh(task: () => Promise<unknown>) {
+  void task().catch(() => {
+    // Best-effort refresh should never block or fail the write response.
+  });
+}
+
 function shouldRefreshAdminAnalytics(path: string[], method: string) {
   const normalizedMethod = method.toUpperCase();
   if (!['POST', 'PATCH', 'PUT', 'DELETE'].includes(normalizedMethod)) {
@@ -64,21 +70,17 @@ async function handleRequest(
   const response = await proxySafetyApiRequest(request, path);
 
   if (response.ok && shouldRefreshAdminAnalytics(path, request.method)) {
-    try {
+    runBestEffortRefresh(async () => {
       const token = readRequiredAdminToken(request);
       await refreshAdminAnalyticsSnapshot(token, request);
-    } catch {
-      // Worker writes or unauthenticated proxy calls should not fail because analytics refresh is best effort.
-    }
+    });
   }
 
   if (response.ok && shouldRefreshAdminSchedules(path, request.method)) {
-    try {
+    runBestEffortRefresh(async () => {
       const token = readRequiredAdminToken(request);
       await refreshAdminScheduleSnapshot(token, request);
-    } catch {
-      // Snapshot refresh is best effort for proxy writes.
-    }
+    });
   }
 
   if (response.ok && shouldInvalidateAdminDirectory(path, request.method)) {
