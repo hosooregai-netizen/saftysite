@@ -16,6 +16,24 @@ import { buildQuarterlyHwpxDocument } from './hwpx';
 
 const TRANSPARENT_PNG_DATA_URL =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aR9kAAAAASUVORK5CYII=';
+const TRANSPARENT_GIF_DATA_URL =
+  'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+
+function findTableCell(tableXml: string, rowAddr: number, colAddr: number) {
+  const targetMarker = `<hp:cellAddr colAddr="${colAddr}" rowAddr="${rowAddr}"/>`;
+  return (
+    [...tableXml.matchAll(/<hp:tc\b[\s\S]*?<\/hp:tc>/g)]
+      .map((match) => match[0])
+      .find((cellXml) => cellXml.includes(targetMarker)) ?? null
+  );
+}
+
+function extractVertPositions(cellXml: string) {
+  return Array.from(
+    cellXml.matchAll(/\bvertpos="(\d+)"/g),
+    (match) => Number.parseInt(match[1], 10),
+  ).filter(Number.isFinite);
+}
 
 function buildQuarterlyFixture(): {
   report: QuarterlySummaryReport;
@@ -147,4 +165,87 @@ test('buildQuarterlyHwpxDocument binds the OPS image into the dedicated template
     sectionXml,
     /should not be rendered when an OPS image is available/,
   );
+});
+
+test('buildQuarterlyHwpxDocument prefers OPS preview images over file assets for export', async () => {
+  const fixture = buildQuarterlyFixture();
+  const report = {
+    ...fixture.report,
+    opsAssetFileUrl: TRANSPARENT_GIF_DATA_URL,
+    opsAssetPreviewUrl: TRANSPARENT_PNG_DATA_URL,
+  };
+  const document = await buildQuarterlyHwpxDocument(report, fixture.site);
+  const zip = await JSZip.loadAsync(document.buffer);
+  const contentHpf = await zip.file('Contents/content.hpf')?.async('string');
+
+  assert.ok(contentHpf);
+  assert.match(contentHpf, /href="BinData\/opsAssetImage\.png"/);
+  assert.doesNotMatch(contentHpf, /href="BinData\/opsAssetImage\.gif"/);
+});
+
+test('buildQuarterlyHwpxDocument embeds OPS images even when the response is an opaque image download', async () => {
+  const fixture = buildQuarterlyFixture();
+  const report = {
+    ...fixture.report,
+    opsAssetFileUrl: 'https://example.com/assets/download',
+    opsAssetPreviewUrl: 'https://example.com/assets/download',
+  };
+  const pngBuffer = Buffer.from(TRANSPARENT_PNG_DATA_URL.split(',')[1], 'base64');
+  const originalFetch = globalThis.fetch;
+
+  globalThis.fetch = async (input, init) => {
+    if (typeof input === 'string' && input === report.opsAssetPreviewUrl) {
+      return new Response(pngBuffer, {
+        headers: {
+          'content-type': 'application/octet-stream',
+        },
+      });
+    }
+
+    return originalFetch(input, init);
+  };
+
+  try {
+    const document = await buildQuarterlyHwpxDocument(report, fixture.site);
+    const zip = await JSZip.loadAsync(document.buffer);
+    const contentHpf = await zip.file('Contents/content.hpf')?.async('string');
+
+    assert.ok(contentHpf);
+    assert.match(contentHpf, /href="BinData\/opsAssetImage\.png"/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('buildQuarterlyHwpxDocument reflows long future plan text inside the table cells', async () => {
+  const fixture = buildQuarterlyFixture();
+  const report = {
+    ...fixture.report,
+    futurePlans: [
+      {
+        id: 'future-plan-long-text',
+        processName: '',
+        hazard: '위험요인 첫 줄\n위험요인 둘째 줄\n위험요인 셋째 줄',
+        countermeasure: '대책 첫 줄\n대책 둘째 줄\n대책 셋째 줄',
+        note: '',
+        source: 'manual' as const,
+      },
+    ],
+  };
+  const document = await buildQuarterlyHwpxDocument(report, fixture.site);
+  const zip = await JSZip.loadAsync(document.buffer);
+  const sectionXml = await zip.file('Contents/section0.xml')?.async('string');
+
+  assert.ok(sectionXml);
+  const tables = sectionXml.match(/<hp:tbl\b[\s\S]*?<\/hp:tbl>/g) ?? [];
+  assert.ok(tables.length >= 5);
+
+  const futurePlanTable = tables[4];
+  const hazardCell = findTableCell(futurePlanTable, 2, 0);
+  const countermeasureCell = findTableCell(futurePlanTable, 2, 1);
+
+  assert.ok(hazardCell);
+  assert.ok(countermeasureCell);
+  assert.ok(new Set(extractVertPositions(hazardCell)).size > 1);
+  assert.ok(new Set(extractVertPositions(countermeasureCell)).size > 1);
 });

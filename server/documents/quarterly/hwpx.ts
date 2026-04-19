@@ -86,8 +86,10 @@ const IMAGE_EXTENSION_TO_MEDIA_TYPE: Record<string, string> = {
   jpeg: 'image/jpeg',
   jpg: 'image/jpeg',
   png: 'image/png',
+  svg: 'image/svg+xml',
   webp: 'image/webp',
 };
+const HWPX_SAFE_IMAGE_EXTENSIONS = new Set(['bmp', 'gif', 'jpg', 'jpeg', 'png']);
 
 function sanitizeDocumentFileName(value: string | null | undefined, fallback: string) {
   const normalized = (value ?? '').replace(/[\\/:*?"<>|]/g, '-').trim();
@@ -201,6 +203,76 @@ function parseDataUrl(value: string) {
   };
 }
 
+function normalizeImageExtension(value: string | null | undefined) {
+  const normalized = (value ?? '').trim().toLowerCase().replace(/^image\//, '').replace('jpeg', 'jpg');
+  return normalized in IMAGE_EXTENSION_TO_MEDIA_TYPE ? normalized : '';
+}
+
+function getImageExtensionFromMediaType(mediaType: string | null | undefined) {
+  const normalizedMediaType = (mediaType ?? '').trim().toLowerCase();
+  if (!normalizedMediaType) {
+    return '';
+  }
+
+  return (
+    Object.entries(IMAGE_EXTENSION_TO_MEDIA_TYPE).find(
+      ([, candidateMediaType]) => candidateMediaType === normalizedMediaType,
+    )?.[0] ?? ''
+  );
+}
+
+function readImageSizeSafely(buffer: Buffer) {
+  try {
+    return imageSize(buffer);
+  } catch {
+    return null;
+  }
+}
+
+async function buildResolvedImageAssetFromBuffer(
+  buffer: Buffer,
+  hints?: {
+    extension?: string | null;
+    mediaType?: string | null;
+  },
+): Promise<ResolvedHwpxImageAsset | null> {
+  const inspectedSize = readImageSizeSafely(buffer);
+  const detectedExtension = normalizeImageExtension(inspectedSize?.type);
+  let normalizedExtension =
+    normalizeImageExtension(hints?.extension) ||
+    getImageExtensionFromMediaType(hints?.mediaType) ||
+    detectedExtension;
+
+  if (!normalizedExtension) {
+    return null;
+  }
+
+  let normalizedBuffer = Buffer.from(buffer);
+  let normalizedMediaType =
+    (hints?.mediaType ?? '').trim().toLowerCase() ||
+    IMAGE_EXTENSION_TO_MEDIA_TYPE[normalizedExtension];
+
+  if (!HWPX_SAFE_IMAGE_EXTENSIONS.has(normalizedExtension)) {
+    const sharp = (await import('sharp')).default;
+    normalizedBuffer = Buffer.from(await sharp(normalizedBuffer).png().toBuffer());
+    normalizedExtension = 'png';
+    normalizedMediaType = 'image/png';
+  }
+
+  const normalizedSize = readImageSizeSafely(normalizedBuffer);
+  if (!normalizedSize?.width || !normalizedSize.height) {
+    return null;
+  }
+
+  return {
+    buffer: new Uint8Array(normalizedBuffer),
+    extension: normalizedExtension,
+    height: normalizedSize.height,
+    mediaType: normalizedMediaType,
+    width: normalizedSize.width,
+  };
+}
+
 function normalizeHwpxMediaType(mediaType: string, href: string) {
   const normalized = mediaType.toLowerCase();
   const extension = href.split(/[?#]/)[0].split('.').pop()?.toLowerCase() ?? '';
@@ -295,30 +367,10 @@ async function fetchImageAssetFromUrl(url: string): Promise<ResolvedHwpxImageAss
     if (!parsed) {
       return null;
     }
-
-    const extension = IMAGE_EXTENSION_TO_MEDIA_TYPE[parsed.mediaType.split('/')[1] ?? ''] ? parsed.mediaType.split('/')[1] : '';
-    const normalizedExtension =
-      extension && extension in IMAGE_EXTENSION_TO_MEDIA_TYPE
-        ? extension === 'jpeg'
-          ? 'jpg'
-          : extension
-        : '';
-    if (!normalizedExtension) {
-      return null;
-    }
-
-    const size = imageSize(parsed.buffer);
-    if (!size.width || !size.height) {
-      return null;
-    }
-
-    return {
-      buffer: new Uint8Array(parsed.buffer),
-      extension: normalizedExtension,
-      height: size.height,
+    return buildResolvedImageAssetFromBuffer(parsed.buffer, {
+      extension: parsed.mediaType.split('/')[1] ?? '',
       mediaType: parsed.mediaType,
-      width: size.width,
-    };
+    });
   }
 
   const response = await fetch(url, { cache: 'no-store' });
@@ -327,40 +379,19 @@ async function fetchImageAssetFromUrl(url: string): Promise<ResolvedHwpxImageAss
   }
 
   const contentType = response.headers.get('content-type')?.split(';')[0].trim().toLowerCase() ?? '';
-  if (!contentType.startsWith('image/')) {
-    return null;
-  }
-
-  const extensionFromType = Object.entries(IMAGE_EXTENSION_TO_MEDIA_TYPE).find(
-    ([, mediaType]) => mediaType === contentType,
-  )?.[0];
   const extensionFromUrl = url.split(/[?#]/)[0].split('.').pop()?.toLowerCase() ?? '';
-  const extension =
-    (extensionFromType || extensionFromUrl || '').replace('jpeg', 'jpg');
-  if (!(extension in IMAGE_EXTENSION_TO_MEDIA_TYPE)) {
-    return null;
-  }
-
   const buffer = Buffer.from(await response.arrayBuffer());
-  const size = imageSize(buffer);
-  if (!size.width || !size.height) {
-    return null;
-  }
-
-  return {
-    buffer: new Uint8Array(buffer),
-    extension,
-    height: size.height,
+  return buildResolvedImageAssetFromBuffer(buffer, {
+    extension: extensionFromUrl,
     mediaType: contentType,
-    width: size.width,
-  };
+  });
 }
 
 async function resolveOpsImageAsset(
   report: QuarterlySummaryReport,
   options?: QuarterlyHwpxBuildOptions,
 ) {
-  const candidates = [report.opsAssetFileUrl, report.opsAssetPreviewUrl]
+  const candidates = [report.opsAssetPreviewUrl, report.opsAssetFileUrl]
     .map((value) => resolveDocumentAssetUrl(value, options?.assetBaseUrl))
     .filter((value, index, array): value is string => Boolean(value) && array.indexOf(value) === index);
 
@@ -461,13 +492,7 @@ function buildReflowParagraphs(paragraphTemplate: string, text: string) {
     return replaceParagraphRuns(paragraphTemplate, text);
   }
 
-  const [, paragraphOpen, paragraphBody, lineSegArrayXml] = paragraphMatch;
-  const textRunMatch = paragraphBody.match(/^([\s\S]*?<hp:t>)([\s\S]*?)(<\/hp:t>[\s\S]*)$/);
-  if (!textRunMatch) {
-    return replaceParagraphRuns(paragraphTemplate, text);
-  }
-
-  const [, textPrefix, , textSuffix] = textRunMatch;
+  const [, paragraphOpen, , lineSegArrayXml] = paragraphMatch;
   const lineSegMatch = lineSegArrayXml.match(
     /^(<hp:linesegarray>\s*)(<hp:lineseg\b[^>]*\bvertpos="(\d+)"[^>]*\bvertsize="(\d+)"[^>]*\btextheight="(\d+)"[^>]*\bspacing="(\d+)"[^>]*\bhorzsize="(\d+)"[^>]*\/>)([\s\S]*<\/hp:linesegarray>)$/,
   );
@@ -492,6 +517,7 @@ function buildReflowParagraphs(paragraphTemplate: string, text: string) {
   const textHeight = Number.parseInt(textHeightText, 10);
   const spacing = Number.parseInt(spacingText, 10);
   const horzSize = Number.parseInt(horzSizeText, 10);
+  const charPrIDRef = paragraphTemplate.match(/<hp:run\b[^>]*charPrIDRef="(\d+)"/)?.[1] ?? '8';
   const lineStep = extractFirstLineSegMetric(paragraphTemplate, 'vertpos') !== null
     ? vertSize + spacing
     : vertSize + spacing;
@@ -506,7 +532,7 @@ function buildReflowParagraphs(paragraphTemplate: string, text: string) {
     .map((line, lineIndex) => {
       const nextVertPos = baseVertPos + lineStep * lineIndex;
       const nextLineSeg = lineSegTemplate.replace(/\bvertpos="\d+"/, `vertpos="${nextVertPos}"`);
-      return `${paragraphOpen}${textPrefix}${escapeXmlText(line)}${textSuffix}${lineSegArrayOpen}${nextLineSeg}${lineSegArrayClose}</hp:p>`;
+      return `${paragraphOpen}${buildRunXml(charPrIDRef, line)}${lineSegArrayOpen}${nextLineSeg}${lineSegArrayClose}</hp:p>`;
     })
     .join('');
 }
@@ -1042,12 +1068,10 @@ function updateFuturePlanTable(tableXml: string, report: QuarterlySummaryReport)
     const rightText = formatOptionalText(item.countermeasure);
 
     nextTable = replaceCellText(nextTable, rowAddr, 0, formatText(leftText), {
-      multiline: true,
-      wrapAt: 22,
+      reflow: true,
     });
     nextTable = replaceCellText(nextTable, rowAddr, 1, formatText(rightText), {
-      multiline: true,
-      wrapAt: 28,
+      reflow: true,
     });
   });
 

@@ -278,33 +278,40 @@ export async function fetchInspectionPdfDocumentByReportKeyWithFallback(
 export async function fetchQuarterlyHwpxDocument(
   report: QuarterlySummaryReport,
   site: InspectionSite,
+  authToken?: string | null,
 ): Promise<{ blob: Blob; filename: string }> {
   const body: GenerateQuarterlyHwpxRequest = { report, site };
+  const headers = buildInspectionDocumentHeaders(authToken);
   return fetchDocumentFile(
     '/documents/quarterly/hwpx',
     body,
     '분기 보고서 HWPX 다운로드 실패',
+    headers,
   );
 }
 
 export async function fetchQuarterlyPdfDocument(
   report: QuarterlySummaryReport,
   site: InspectionSite,
+  authToken?: string | null,
 ): Promise<{ blob: Blob; filename: string }> {
   const body: GenerateQuarterlyHwpxRequest = { report, site };
+  const headers = buildInspectionDocumentHeaders(authToken);
   return fetchDocumentFile(
     '/documents/quarterly/pdf',
     body,
     '분기 보고서 PDF 다운로드 실패',
+    headers,
   );
 }
 
 export async function fetchQuarterlyPdfDocumentWithFallback(
   report: QuarterlySummaryReport,
   site: InspectionSite,
+  authToken?: string | null,
 ): Promise<PdfDocumentResult> {
   try {
-    const pdf = await fetchQuarterlyPdfDocument(report, site);
+    const pdf = await fetchQuarterlyPdfDocument(report, site, authToken);
     return { ...pdf, fallbackToHwpx: false };
   } catch (error) {
     console.warn('Quarterly PDF generation failed; falling back to HWPX download.', {
@@ -312,7 +319,7 @@ export async function fetchQuarterlyPdfDocumentWithFallback(
       reportId: report.id,
       siteId: site.id,
     });
-    const hwpx = await fetchQuarterlyHwpxDocument(report, site);
+    const hwpx = await fetchQuarterlyHwpxDocument(report, site, authToken);
     return {
       ...hwpx,
       fallbackReason: error instanceof Error ? error.message : 'PDF 생성에 실패했습니다.',

@@ -47,6 +47,7 @@ export function useQuarterlyReportEditor({
     setNotice,
   });
   const documentActions = useQuarterlyDocumentActions({
+    currentSite,
     draftRef,
     onSave,
     setDraft,

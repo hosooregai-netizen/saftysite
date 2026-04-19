@@ -1,21 +1,23 @@
 import { useState, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
 import { createTimestamp } from '@/constants/inspectionSession/shared';
 import {
-  fetchQuarterlyHwpxDocumentByReportKey,
-  fetchQuarterlyPdfDocumentByReportKeyWithFallback,
+  fetchQuarterlyHwpxDocument,
+  fetchQuarterlyPdfDocumentWithFallback,
   saveBlobAsFile,
 } from '@/lib/api';
 import { readSafetyAuthToken, SafetyApiError } from '@/lib/safetyApi';
 import type { QuarterlySummaryReport } from '@/types/erpReports';
+import type { InspectionSite } from '@/types/inspectionSession';
 
 export function useQuarterlyDocumentActions(args: {
+  currentSite: InspectionSite;
   draftRef: MutableRefObject<QuarterlySummaryReport>;
   onSave: (report: QuarterlySummaryReport) => Promise<void>;
   setDraft: Dispatch<SetStateAction<QuarterlySummaryReport>>;
   setDocumentError: Dispatch<SetStateAction<string | null>>;
   setNotice: Dispatch<SetStateAction<string | null>>;
 }) {
-  const { draftRef, onSave, setDraft, setDocumentError, setNotice } = args;
+  const { currentSite, draftRef, onSave, setDraft, setDocumentError, setNotice } = args;
   const [isGeneratingHwpx, setIsGeneratingHwpx] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
@@ -31,7 +33,7 @@ export function useQuarterlyDocumentActions(args: {
 
     return {
       authToken,
-      reportKey: nextDraft.id,
+      report: nextDraft,
     };
   };
 
@@ -44,9 +46,9 @@ export function useQuarterlyDocumentActions(args: {
         setDocumentError(null);
         setNotice(null);
         setIsGeneratingPdf(true);
-        const { authToken, reportKey } = await persistDraftForDocumentExport();
+        const { authToken, report } = await persistDraftForDocumentExport();
         const { blob, fallbackToHwpx, filename } =
-          await fetchQuarterlyPdfDocumentByReportKeyWithFallback(reportKey, authToken);
+          await fetchQuarterlyPdfDocumentWithFallback(report, currentSite, authToken);
         saveBlobAsFile(blob, filename);
         if (fallbackToHwpx) {
           setNotice('PDF 변환에 실패해 HWPX로 다운로드했습니다.');
@@ -63,8 +65,8 @@ export function useQuarterlyDocumentActions(args: {
       try {
         setDocumentError(null);
         setIsGeneratingHwpx(true);
-        const { authToken, reportKey } = await persistDraftForDocumentExport();
-        const { blob, filename } = await fetchQuarterlyHwpxDocumentByReportKey(reportKey, authToken);
+        const { authToken, report } = await persistDraftForDocumentExport();
+        const { blob, filename } = await fetchQuarterlyHwpxDocument(report, currentSite, authToken);
         saveBlobAsFile(blob, filename);
       } catch (nextError) {
         setDocumentError(
