@@ -51,10 +51,10 @@ export function AnalyticsSection({ currentUserId }: AnalyticsSectionProps) {
           userOptions={state.userOptions}
         />
         <AnalyticsSummarySection
-          analytics={state.analytics}
-          isInitialLoading={state.isInitialLoading}
-          isLoading={state.isLoading}
-          isRefreshing={state.isRefreshing}
+          analytics={state.summaryAnalytics}
+          isInitialLoading={state.isSummaryInitialLoading}
+          isLoading={state.isSummaryLoading}
+          isRefreshing={state.isSummaryRefreshing}
           loadError={state.loadError}
           scopeChips={state.scopeChips}
         />
@@ -103,10 +103,12 @@ export function AnalyticsSection({ currentUserId }: AnalyticsSectionProps) {
           <AnalyticsCharts
             basisMonth={state.basisMonth}
             chartYear={state.chartYear}
-            employeeRows={state.activeMonthSlice.employeeRows}
-            isInitialLoading={state.isInitialLoading}
-            isRefreshing={state.isRefreshing}
-            siteRevenueRows={state.activeMonthSlice.siteRevenueRows}
+            detailError={state.detailError}
+            employeeRows={state.monthDetail.employeeRows}
+            isDetailInitialLoading={state.isDetailInitialLoading}
+            isInitialLoading={state.isSummaryInitialLoading}
+            isRefreshing={state.isDetailRefreshing}
+            siteRevenueRows={state.monthDetail.siteRevenueRows}
             trendRows={state.activeChartSlice.trendRows}
           />
         </div>
@@ -118,8 +120,9 @@ export function AnalyticsSection({ currentUserId }: AnalyticsSectionProps) {
         employeeRows={state.pagedEmployeeRows}
         employeeSort={state.employeeSort}
         employeeTotalPages={state.employeeTotalPages}
-        isInitialLoading={state.isInitialLoading}
-        isRefreshing={state.isRefreshing}
+        isInitialLoading={state.isDetailInitialLoading}
+        isRefreshing={state.isDetailRefreshing}
+        loadError={state.detailError}
         setDetailView={state.setDetailView}
         setEmployeePage={state.setEmployeePage}
         setEmployeeSort={state.setEmployeeSort}

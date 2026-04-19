@@ -7,7 +7,8 @@ import type {
   ReportDispatchHistoryEntry,
   ReportDispatchMeta,
   SafetyAdminAlert,
-  SafetyAdminAnalyticsResponse,
+  SafetyAdminAnalyticsMonthDetailResponse,
+  SafetyAdminAnalyticsSummaryResponse,
   SafetyAdminHeadquarterListResponse,
   SafetyAdminOverviewResponse,
   SafetyAdminReportsResponse,
@@ -265,8 +266,29 @@ export function fetchAdminAnalytics(input: {
   query?: string;
   userId?: string;
 }, options: RequestInit = {}) {
-  return requestAdminApi<SafetyAdminAnalyticsResponse>(
+  return requestAdminApi<SafetyAdminAnalyticsSummaryResponse>(
     `/dashboard/analytics${buildQueryString({
+      basis_month: input.basisMonth,
+      contract_type: input.contractType,
+      headquarter_id: input.headquarterId,
+      period: input.period,
+      query: input.query,
+      user_id: input.userId,
+    })}`,
+    options,
+  );
+}
+
+export function fetchAdminAnalyticsMonthDetail(input: {
+  basisMonth?: string;
+  contractType?: string;
+  headquarterId?: string;
+  period?: string;
+  query?: string;
+  userId?: string;
+}, options: RequestInit = {}) {
+  return requestAdminApi<SafetyAdminAnalyticsMonthDetailResponse>(
+    `/dashboard/analytics/month-detail${buildQueryString({
       basis_month: input.basisMonth,
       contract_type: input.contractType,
       headquarter_id: input.headquarterId,

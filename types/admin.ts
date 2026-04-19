@@ -579,6 +579,24 @@ export interface SafetyAdminAnalyticsResponse {
   trendRows: AdminAnalyticsTrendRow[];
 }
 
+export interface SafetyAdminAnalyticsSummaryResponse {
+  availableMonths: string[];
+  availableTrendYears: number[];
+  basisMonth: string;
+  chartYearSlices: AdminAnalyticsChartYearSlice[];
+  contractTypeRows: AdminAnalyticsContractTypeRow[];
+  stats: AdminAnalyticsStats;
+  summaryCards: AdminAnalyticsSummaryCard[];
+  trendRows: AdminAnalyticsTrendRow[];
+}
+
+export interface SafetyAdminAnalyticsMonthDetailResponse {
+  comparisonMonthKey: string;
+  employeeRows: AdminAnalyticsEmployeeRow[];
+  monthKey: string;
+  siteRevenueRows: AdminAnalyticsSiteRevenueRow[];
+}
+
 export interface SafetyAdminReportsResponse {
   limit: number;
   offset: number;

@@ -11,7 +11,8 @@ import {
 import type { SafetyContentAssetUpload } from '@/lib/safetyApi/adminEndpoints';
 import type {
   SafetyBackendAdminAlert,
-  SafetyBackendAdminAnalyticsResponse,
+  SafetyBackendAdminAnalyticsMonthDetailResponse,
+  SafetyBackendAdminAnalyticsSummaryResponse,
   SafetyBackendAdminDirectoryLookupsResponse,
   SafetyBackendAdminHeadquarterListResponse,
   SafetyBackendAdminOverviewResponse,
@@ -691,9 +692,22 @@ export function fetchAdminAnalyticsServer(
   token: string,
   params: Record<string, string | number | boolean | null | undefined>,
   request: Request | null = null,
-): Promise<SafetyBackendAdminAnalyticsResponse> {
-  return requestSafetyAdminServer<SafetyBackendAdminAnalyticsResponse>(
+): Promise<SafetyBackendAdminAnalyticsSummaryResponse> {
+  return requestSafetyAdminServer<SafetyBackendAdminAnalyticsSummaryResponse>(
     withQuery('/admin/dashboard/analytics', params),
+    {},
+    token,
+    request,
+  );
+}
+
+export function fetchAdminAnalyticsMonthDetailServer(
+  token: string,
+  params: Record<string, string | number | boolean | null | undefined>,
+  request: Request | null = null,
+): Promise<SafetyBackendAdminAnalyticsMonthDetailResponse> {
+  return requestSafetyAdminServer<SafetyBackendAdminAnalyticsMonthDetailResponse>(
+    withQuery('/admin/dashboard/analytics/month-detail', params),
     {},
     token,
     request,

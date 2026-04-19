@@ -11,7 +11,11 @@ import type {
 import { parseSiteContractProfile } from '@/lib/admin/siteContractProfile';
 import type { ControllerDashboardData } from '@/types/controller';
 import type { TableSortState } from '@/types/admin';
-import type { SafetyAdminAnalyticsResponse } from '@/types/admin';
+import type {
+  SafetyAdminAnalyticsMonthDetailResponse,
+  SafetyAdminAnalyticsResponse,
+  SafetyAdminAnalyticsSummaryResponse,
+} from '@/types/admin';
 
 export const EMPTY_ANALYTICS: SafetyAdminAnalyticsResponse = {
   availableMonths: [],
@@ -38,6 +42,37 @@ export const EMPTY_ANALYTICS: SafetyAdminAnalyticsResponse = {
   },
   summaryCards: [],
   trendRows: [],
+};
+
+export const EMPTY_ANALYTICS_SUMMARY: SafetyAdminAnalyticsSummaryResponse = {
+  availableMonths: [],
+  availableTrendYears: [],
+  basisMonth: '',
+  chartYearSlices: [],
+  contractTypeRows: [],
+  stats: {
+    averagePerVisitAmount: 0,
+    completionRate: 0,
+    countedSiteCount: 0,
+    delayRate: 0,
+    excludedSiteCount: 0,
+    includedEmployeeCount: 0,
+    overdueCount: 0,
+    plannedRounds: 0,
+    remainingRounds: 0,
+    totalExecutedRounds: 0,
+    totalScopedRounds: 0,
+    totalVisitRevenue: 0,
+  },
+  summaryCards: [],
+  trendRows: [],
+};
+
+export const EMPTY_ANALYTICS_MONTH_DETAIL: SafetyAdminAnalyticsMonthDetailResponse = {
+  comparisonMonthKey: '',
+  employeeRows: [],
+  monthKey: '',
+  siteRevenueRows: [],
 };
 
 export const PERIOD_LABELS = {

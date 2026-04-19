@@ -18,6 +18,7 @@ interface AnalyticsDetailSectionProps {
   employeeTotalPages: number;
   isInitialLoading: boolean;
   isRefreshing: boolean;
+  loadError: string | null;
   setDetailView: (value: 'employee' | 'site') => void;
   setEmployeePage: (next: number | ((current: number) => number)) => void;
   setEmployeeSort: (next: TableSortState) => void;
@@ -37,6 +38,7 @@ export function AnalyticsDetailSection({
   employeeTotalPages,
   isInitialLoading,
   isRefreshing,
+  loadError,
   setDetailView,
   setEmployeePage,
   setEmployeeSort,
@@ -72,6 +74,7 @@ export function AnalyticsDetailSection({
       </div>
 
       <div className={sharedStyles.sectionBody}>
+        {loadError ? <div className={sharedStyles.tableEmpty}>{loadError}</div> : null}
         {isRefreshing ? (
           <div className={localStyles.loadingHint}>상세 표를 최신 조건으로 다시 계산하는 중입니다.</div>
         ) : null}

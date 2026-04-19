@@ -28,7 +28,9 @@ import {
 import type {
   ReportControllerReview,
   ReportDispatchMeta,
+  SafetyAdminAnalyticsMonthDetailResponse,
   SafetyAdminAnalyticsResponse,
+  SafetyAdminAnalyticsSummaryResponse,
   SafetyAdminOverviewResponse,
   SafetyAdminReportsResponse,
   SafetyAdminScheduleCalendarResponse,
@@ -256,6 +258,48 @@ function buildAnalyticsResponse(
       userId: url.searchParams.get('user_id') || '',
     },
   );
+}
+
+function buildAnalyticsSummaryResponse(
+  harness: ErpSmokeHarness,
+  url: URL,
+): SafetyAdminAnalyticsSummaryResponse {
+  const analytics = buildAnalyticsResponse(harness, url);
+  return {
+    availableMonths: analytics.availableMonths,
+    availableTrendYears: analytics.availableTrendYears,
+    basisMonth: analytics.basisMonth,
+    chartYearSlices: analytics.chartYearSlices,
+    contractTypeRows: analytics.contractTypeRows,
+    stats: analytics.stats,
+    summaryCards: analytics.summaryCards,
+    trendRows: analytics.trendRows,
+  };
+}
+
+function buildAnalyticsMonthDetailResponse(
+  harness: ErpSmokeHarness,
+  url: URL,
+): SafetyAdminAnalyticsMonthDetailResponse {
+  const analytics = buildAnalyticsResponse(harness, url);
+  const basisMonth =
+    url.searchParams.get('basis_month') || analytics.basisMonth || analytics.availableMonths[0] || '';
+  const activeMonthSlice =
+    analytics.monthSlices.find((slice) => slice.monthKey === basisMonth) ?? {
+      employeeRows: analytics.employeeRows,
+      monthKey: basisMonth,
+      siteRevenueRows: analytics.siteRevenueRows,
+    };
+  const [year, month] = basisMonth.split('-').map(Number);
+  const comparisonMonthKey =
+    year && month ? `${year - 1}-${String(month).padStart(2, '0')}` : '';
+
+  return {
+    comparisonMonthKey,
+    employeeRows: activeMonthSlice.employeeRows,
+    monthKey: activeMonthSlice.monthKey,
+    siteRevenueRows: activeMonthSlice.siteRevenueRows,
+  };
 }
 
 function matchesQuery(row: ReturnType<typeof buildAdminReportRows>[number], query: string) {
@@ -536,7 +580,12 @@ async function installAdminRoutes(harness: ErpSmokeHarness) {
     }
 
     if (pathname === '/api/admin/dashboard/analytics' && request.method() === 'GET') {
-      await fulfillJson(route, buildAnalyticsResponse(harness, url));
+      await fulfillJson(route, buildAnalyticsSummaryResponse(harness, url));
+      return;
+    }
+
+    if (pathname === '/api/admin/dashboard/analytics/month-detail' && request.method() === 'GET') {
+      await fulfillJson(route, buildAnalyticsMonthDetailResponse(harness, url));
       return;
     }
 

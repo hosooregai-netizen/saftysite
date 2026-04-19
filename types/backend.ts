@@ -1167,39 +1167,44 @@ export interface SafetyBackendAdminOverviewResponse {
   }>;
 }
 
-export interface SafetyBackendAdminAnalyticsResponse {
+interface SafetyBackendAdminAnalyticsEmployeeRow {
+  assigned_site_count: number;
+  bad_workplace_submitted_count: number;
+  completed_report_count: number;
+  contract_contribution_revenue: number;
+  overdue_count: number;
+  planned_revenue: number;
+  planned_rounds: number;
+  quarterly_completed_count: number;
+  revenue_change_rate?: number | null;
+  total_assigned_rounds: number;
+  user_id: string;
+  user_name: string;
+  visit_revenue: number;
+  executed_rounds: number;
+}
+
+interface SafetyBackendAdminAnalyticsSiteRevenueRow {
+  contract_contribution_revenue: number;
+  executed_rounds: number;
+  execution_rate: number;
+  assignee_name: string;
+  headquarter_name: string;
+  href: string;
+  is_summary_row?: boolean;
+  planned_revenue: number;
+  planned_rounds: number;
+  site_id: string;
+  site_name: string;
+  visit_revenue: number;
+}
+
+export interface SafetyBackendAdminAnalyticsSummaryResponse {
   available_months?: string[];
   basis_month?: string;
   chart_year_slices?: Array<{
-    employee_rows: Array<{
-      assigned_site_count: number;
-      bad_workplace_submitted_count: number;
-      completed_report_count: number;
-      contract_contribution_revenue: number;
-      overdue_count: number;
-      planned_revenue: number;
-      planned_rounds: number;
-      quarterly_completed_count: number;
-      total_assigned_rounds: number;
-      user_id: string;
-      user_name: string;
-      visit_revenue: number;
-      executed_rounds: number;
-    }>;
-    site_revenue_rows: Array<{
-      contract_contribution_revenue: number;
-      executed_rounds: number;
-      execution_rate: number;
-      assignee_name: string;
-      headquarter_name: string;
-      href: string;
-      is_summary_row?: boolean;
-      planned_revenue: number;
-      planned_rounds: number;
-      site_id: string;
-      site_name: string;
-      visit_revenue: number;
-    }>;
+    employee_rows: SafetyBackendAdminAnalyticsEmployeeRow[];
+    site_revenue_rows: SafetyBackendAdminAnalyticsSiteRevenueRow[];
     trend_rows: Array<{
       month_key: string;
       label: string;
@@ -1209,38 +1214,6 @@ export interface SafetyBackendAdminAnalyticsResponse {
     }>;
     year: number;
   }>;
-  month_slices?: Array<{
-    month_key: string;
-    employee_rows: Array<{
-      assigned_site_count: number;
-      bad_workplace_submitted_count: number;
-      completed_report_count: number;
-      contract_contribution_revenue: number;
-      overdue_count: number;
-      planned_revenue: number;
-      planned_rounds: number;
-      quarterly_completed_count: number;
-      total_assigned_rounds: number;
-      user_id: string;
-      user_name: string;
-      visit_revenue: number;
-      executed_rounds: number;
-    }>;
-    site_revenue_rows: Array<{
-      contract_contribution_revenue: number;
-      executed_rounds: number;
-      execution_rate: number;
-      assignee_name: string;
-      headquarter_name: string;
-      href: string;
-      is_summary_row?: boolean;
-      planned_revenue: number;
-      planned_rounds: number;
-      site_id: string;
-      site_name: string;
-      visit_revenue: number;
-    }>;
-  }>;
   contract_type_rows: Array<{
     avg_per_visit_amount: number;
     label: string;
@@ -1249,43 +1222,20 @@ export interface SafetyBackendAdminAnalyticsResponse {
     visit_revenue: number;
     planned_rounds: number;
   }>;
-  employee_rows: Array<{
-    assigned_site_count: number;
-    bad_workplace_submitted_count: number;
-    completed_report_count: number;
-    contract_contribution_revenue: number;
-    overdue_count: number;
-    planned_revenue: number;
-    planned_rounds: number;
-    quarterly_completed_count: number;
-    total_assigned_rounds: number;
-    user_id: string;
-    user_name: string;
-    visit_revenue: number;
-    executed_rounds: number;
-  }>;
-  site_revenue_rows: Array<{
-    contract_contribution_revenue: number;
-    executed_rounds: number;
-    execution_rate: number;
-    assignee_name: string;
-    headquarter_name: string;
-    href: string;
-    is_summary_row?: boolean;
-    planned_revenue: number;
-    planned_rounds: number;
-    site_id: string;
-    site_name: string;
-    visit_revenue: number;
-  }>;
   stats: {
     average_per_visit_amount: number;
     completion_rate: number;
     counted_site_count: number;
     delay_rate: number;
     excluded_site_count: number;
+    included_employee_count?: number;
+    overdue_count?: number;
     planned_contract_revenue: number;
     planned_rounds: number;
+    remaining_rounds?: number;
+    total_executed_rounds?: number;
+    total_scoped_rounds?: number;
+    total_visit_revenue?: number;
   };
   summary_cards: Array<{
     label: string;
@@ -1299,6 +1249,13 @@ export interface SafetyBackendAdminAnalyticsResponse {
     avg_per_visit_amount: number;
     executed_rounds: number;
   }>;
+}
+
+export interface SafetyBackendAdminAnalyticsMonthDetailResponse {
+  comparison_month_key?: string;
+  employee_rows: SafetyBackendAdminAnalyticsEmployeeRow[];
+  month_key?: string;
+  site_revenue_rows: SafetyBackendAdminAnalyticsSiteRevenueRow[];
 }
 
 export interface SafetyBackendPhotoAsset {
