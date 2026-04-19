@@ -8,6 +8,19 @@ import { AnalyticsSummarySection } from './AnalyticsSummarySection';
 import { useAnalyticsSectionState } from './useAnalyticsSectionState';
 import localStyles from './AnalyticsSection.module.css';
 
+function shiftMonthToken(month: string, delta: number) {
+  const [year, monthValue] = month.split('-').map(Number);
+  if (!year || !monthValue) return month;
+  const nextDate = new Date(year, monthValue - 1 + delta, 1);
+  return `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function formatMonthLabel(month: string) {
+  const [year, monthValue] = month.split('-').map(Number);
+  if (!year || !monthValue) return month;
+  return `${year}년 ${monthValue}월`;
+}
+
 interface AnalyticsSectionProps {
   currentUserId: string;
 }
@@ -51,28 +64,49 @@ export function AnalyticsSection({ currentUserId }: AnalyticsSectionProps) {
         <div className={sharedStyles.sectionHeader}>
           <div>
             <h2 className={sharedStyles.sectionTitle}>추이 및 기여도</h2>
-            <div className={sharedStyles.sectionHeaderMeta}>차트와 기여도 카드만 연도 기준으로 전환됩니다.</div>
+            <div className={sharedStyles.sectionHeaderMeta}>차트와 기여도 카드, 상세표를 선택한 기준월로 볼 수 있습니다.</div>
           </div>
-          <div className={localStyles.detailTabs}>
-            {state.analytics.availableTrendYears.map((year) => (
-              <button
-                key={year}
-                type="button"
-                className={`${localStyles.detailTabButton} ${state.chartYear === year ? localStyles.detailTabButtonActive : ''}`}
-                onClick={() => state.setChartYear(year)}
-              >
-                {year}
-              </button>
-            ))}
+          <div className={localStyles.analyticsMonthNav}>
+            <button
+              type="button"
+              className="app-button app-button-secondary"
+              onClick={() => state.setBasisMonth(shiftMonthToken(state.basisMonth, -1))}
+            >
+              이전 달
+            </button>
+            <span className={localStyles.analyticsMonthBadge}>
+              {formatMonthLabel(state.basisMonth)}
+            </span>
+            <button
+              type="button"
+              className="app-button app-button-secondary"
+              onClick={() => state.setBasisMonth(shiftMonthToken(state.basisMonth, 1))}
+            >
+              다음 달
+            </button>
+            <input
+              type="month"
+              className="app-input"
+              value={state.basisMonth}
+              onChange={(event) => state.setBasisMonth(event.target.value)}
+            />
+            <button
+              type="button"
+              className="app-button app-button-secondary"
+              onClick={() => state.setBasisMonth(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`)}
+            >
+              이번 달
+            </button>
           </div>
         </div>
         <div className={sharedStyles.sectionBody}>
           <AnalyticsCharts
+            basisMonth={state.basisMonth}
             chartYear={state.chartYear}
-            employeeRows={state.activeChartSlice.employeeRows}
+            employeeRows={state.activeMonthSlice.employeeRows}
             isInitialLoading={state.isInitialLoading}
             isRefreshing={state.isRefreshing}
-            siteRevenueRows={state.activeChartSlice.siteRevenueRows}
+            siteRevenueRows={state.activeMonthSlice.siteRevenueRows}
             trendRows={state.activeChartSlice.trendRows}
           />
         </div>

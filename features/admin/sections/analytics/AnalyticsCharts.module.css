@@ -171,6 +171,16 @@
   fill: #647488;
 }
 
+.chartAxisLabelActive {
+  fill: #1f4f8f;
+  font-weight: 800;
+}
+
+.chartBarActive {
+  stroke: #12233a;
+  stroke-width: 2;
+}
+
 .chartLinePath {
   stroke: #d57a11;
   stroke-width: 3;
@@ -182,6 +192,11 @@
   fill: #d57a11;
   stroke: #fff7ee;
   stroke-width: 2;
+}
+
+.chartLinePointActive {
+  stroke: #12233a;
+  stroke-width: 3;
 }
 
 .list,

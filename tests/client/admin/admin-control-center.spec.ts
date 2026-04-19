@@ -79,6 +79,7 @@ export async function runAdminControlCenterSmoke(config: ClientSmokePlaywrightCo
     await page.getByRole('button', { name: '현장별' }).click();
     await page.getByRole('columnheader', { name: '건설사' }).waitFor();
     await page.getByRole('columnheader', { name: '진행률' }).waitFor();
+    await page.locator('input[type="month"]').first().waitFor();
     await page.getByText(/1 \/ \d+ 페이지/).first().waitFor();
     await page.getByRole('button', { name: '필터' }).click();
     await page.locator('#analytics-filter-period').selectOption('year');

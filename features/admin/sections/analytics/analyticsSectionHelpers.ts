@@ -14,10 +14,13 @@ import type { TableSortState } from '@/types/admin';
 import type { SafetyAdminAnalyticsResponse } from '@/types/admin';
 
 export const EMPTY_ANALYTICS: SafetyAdminAnalyticsResponse = {
+  availableMonths: [],
   availableTrendYears: [],
+  basisMonth: '',
   chartYearSlices: [],
   contractTypeRows: [],
   employeeRows: [],
+  monthSlices: [],
   siteRevenueRows: [],
   stats: {
     averagePerVisitAmount: 0,

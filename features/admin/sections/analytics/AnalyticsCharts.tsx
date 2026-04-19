@@ -10,6 +10,7 @@ import { AnalyticsTrendCard } from './AnalyticsTrendCard';
 import styles from './AnalyticsCharts.module.css';
 
 interface AnalyticsChartsProps {
+  basisMonth: string;
   chartYear: number;
   employeeRows: AdminAnalyticsEmployeeRow[];
   isInitialLoading: boolean;
@@ -19,6 +20,7 @@ interface AnalyticsChartsProps {
 }
 
 export function AnalyticsCharts({
+  basisMonth,
   chartYear,
   employeeRows,
   isInitialLoading,
@@ -69,9 +71,9 @@ export function AnalyticsCharts({
 
   return (
     <div className={styles.layout} data-refreshing={isRefreshing ? 'true' : 'false'}>
-      <AnalyticsTrendCard rows={trendRows} year={chartYear} />
-      <AnalyticsEmployeeContributionCard rows={employeeRows} year={chartYear} />
-      <AnalyticsSiteContributionCard rows={siteRevenueRows} year={chartYear} />
+      <AnalyticsTrendCard activeMonthKey={basisMonth} rows={trendRows} year={chartYear} />
+      <AnalyticsEmployeeContributionCard basisMonth={basisMonth} rows={employeeRows} />
+      <AnalyticsSiteContributionCard basisMonth={basisMonth} rows={siteRevenueRows} />
     </div>
   );
 }

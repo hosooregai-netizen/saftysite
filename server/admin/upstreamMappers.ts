@@ -844,12 +844,44 @@ export function mapBackendAnalyticsResponse(
     siteName: normalizeText(row.site_name),
     visitRevenue: row.visit_revenue,
   });
+  const mapMonthSlices = (
+    rows: NonNullable<SafetyBackendAdminAnalyticsResponse['month_slices']>,
+  ) =>
+    rows.map((slice) => ({
+      employeeRows: slice.employee_rows.map((row) => mapEmployeeRow(row)),
+      monthKey: normalizeText(slice.month_key),
+      siteRevenueRows: slice.site_revenue_rows.map((row) => mapSiteRevenueRow(row)),
+    }));
   const decorateEmployeeComparisons = (
     slices: SafetyAdminAnalyticsResponse['chartYearSlices'],
   ) => {
     const sliceByYear = new Map(slices.map((slice) => [slice.year, slice]));
     return slices.map((slice) => {
       const previousSlice = sliceByYear.get(slice.year - 1);
+      const previousRowsByUser = new Map(
+        (previousSlice?.employeeRows ?? []).map((row) => [row.userId, row]),
+      );
+      return {
+        ...slice,
+        employeeRows: slice.employeeRows.map((row) => ({
+          ...row,
+          revenueChangeRate: calculateChangeRate(
+            row.visitRevenue,
+            previousRowsByUser.get(row.userId)?.visitRevenue ?? 0,
+          ),
+        })),
+      };
+    });
+  };
+  const decorateMonthComparisons = (
+    slices: SafetyAdminAnalyticsResponse['monthSlices'],
+  ) => {
+    const sliceByMonth = new Map(slices.map((slice) => [slice.monthKey, slice]));
+    return slices.map((slice) => {
+      const [year, month] = slice.monthKey.split('-').map(Number);
+      const previousMonthKey =
+        year && month ? `${year - 1}-${String(month).padStart(2, '0')}` : '';
+      const previousSlice = sliceByMonth.get(previousMonthKey);
       const previousRowsByUser = new Map(
         (previousSlice?.employeeRows ?? []).map((row) => [row.userId, row]),
       );
@@ -986,13 +1018,32 @@ export function mapBackendAnalyticsResponse(
   const chartYearSlices = decorateEmployeeComparisons(mappedChartYearSlices).sort(
     (left, right) => right.year - left.year,
   );
-  const currentYear = availableTrendYears[0] ?? chartYearSlices[0]?.year;
-  const currentYearSlice = chartYearSlices.find((slice) => slice.year === currentYear);
-  const employeeRows = currentYearSlice?.employeeRows ?? response.employee_rows.map((row) => mapEmployeeRow(row));
-  const siteRevenueRows = currentYearSlice?.siteRevenueRows ?? response.site_revenue_rows.map((row) => mapSiteRevenueRow(row));
+  const availableMonths = Array.from(
+    new Set(
+      [
+        ...trendRows.map((row) => row.monthKey),
+        ...(Array.isArray(response.month_slices)
+          ? response.month_slices.map((slice) => normalizeText(slice.month_key))
+          : []),
+      ].filter(Boolean),
+    ),
+  ).sort((left, right) => right.localeCompare(left, 'ko'));
+  const normalizedBasisMonth = normalizeText(response.basis_month);
+  const basisMonth = availableMonths.includes(normalizedBasisMonth)
+    ? normalizedBasisMonth
+    : (availableMonths[0] ?? '');
+  const employeeRows = response.employee_rows.map((row) => mapEmployeeRow(row));
+  const siteRevenueRows = response.site_revenue_rows.map((row) => mapSiteRevenueRow(row));
+  const monthSlices = Array.isArray(response.month_slices)
+    ? decorateMonthComparisons(
+        mapMonthSlices(response.month_slices).sort((left, right) => right.monthKey.localeCompare(left.monthKey, 'ko')),
+      )
+    : [];
 
   return {
+    availableMonths,
     availableTrendYears,
+    basisMonth,
     chartYearSlices,
     contractTypeRows: response.contract_type_rows.map((row) => ({
       avgPerVisitAmount: row.avg_per_visit_amount,
@@ -1005,6 +1056,7 @@ export function mapBackendAnalyticsResponse(
       visitRevenue: row.visit_revenue ?? 0,
     })),
     employeeRows,
+    monthSlices,
     siteRevenueRows,
     stats: {
       averagePerVisitAmount: response.stats.average_per_visit_amount,

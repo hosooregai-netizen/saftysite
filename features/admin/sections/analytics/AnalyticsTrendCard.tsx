@@ -9,9 +9,11 @@ const CHART_HEIGHT = 300;
 const CHART_PADDING = { bottom: 44, left: 28, right: 28, top: 24 };
 
 export function AnalyticsTrendCard({
+  activeMonthKey,
   rows,
   year,
 }: {
+  activeMonthKey: string;
   rows: AdminAnalyticsTrendRow[];
   year: number;
 }) {
@@ -25,7 +27,7 @@ export function AnalyticsTrendCard({
   const innerHeight = CHART_HEIGHT - CHART_PADDING.top - CHART_PADDING.bottom;
   const step = innerWidth / rows.length;
   const barWidth = Math.max(14, step * 0.46);
-  const latestRow = rows[rows.length - 1];
+  const latestRow = rows.find((row) => row.monthKey === activeMonthKey) ?? rows[rows.length - 1];
   const linePoints = rows
     .map((row, index) => {
       const x = CHART_PADDING.left + step * index + step / 2;
@@ -39,7 +41,7 @@ export function AnalyticsTrendCard({
       <div className={styles.surfaceHeader}>
         <div className={styles.surfaceHeaderText}>
           <h3 className={styles.surfaceTitle}>{year}년 월별 매출 추이</h3>
-          <p className={styles.surfaceMeta}>{year}년 기준 월별 실행 매출과 평균 회차 단가</p>
+          <p className={styles.surfaceMeta}>{year}년 전체 추이 · 선택 기준월 {activeMonthKey || `${year}-01`}</p>
         </div>
         <div className={styles.legend}>
           <span className={styles.legendItem}><span className={styles.legendBar} aria-hidden="true" />월별 매출</span>
@@ -47,9 +49,9 @@ export function AnalyticsTrendCard({
         </div>
       </div>
       <div className={styles.trendSummary}>
-        <div className={styles.trendSummaryItem}><span className={styles.trendSummaryLabel}>최근 월 매출</span><strong className={styles.trendSummaryValue}>{formatCurrencyValue(latestRow.revenue)}</strong></div>
-        <div className={styles.trendSummaryItem}><span className={styles.trendSummaryLabel}>최근 월 평균 단가</span><strong className={styles.trendSummaryValue}>{formatCurrencyValue(latestRow.avgPerVisitAmount)}</strong></div>
-        <div className={styles.trendSummaryItem}><span className={styles.trendSummaryLabel}>최근 월 실행 회차</span><strong className={styles.trendSummaryValue}>{latestRow.executedRounds}회</strong></div>
+        <div className={styles.trendSummaryItem}><span className={styles.trendSummaryLabel}>선택 월 매출</span><strong className={styles.trendSummaryValue}>{formatCurrencyValue(latestRow.revenue)}</strong></div>
+        <div className={styles.trendSummaryItem}><span className={styles.trendSummaryLabel}>선택 월 평균 단가</span><strong className={styles.trendSummaryValue}>{formatCurrencyValue(latestRow.avgPerVisitAmount)}</strong></div>
+        <div className={styles.trendSummaryItem}><span className={styles.trendSummaryLabel}>선택 월 실행 회차</span><strong className={styles.trendSummaryValue}>{latestRow.executedRounds}회</strong></div>
       </div>
       <div className={styles.chartWrap}>
         <svg className={styles.chartSvg} viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`} role="img" aria-label={`${year}년 월별 매출과 평균 회차 단가 추이`}>
@@ -67,10 +69,26 @@ export function AnalyticsTrendCard({
             const x = CHART_PADDING.left + step * index + (step - barWidth) / 2;
             const barHeight = (row.revenue / maxRevenue) * innerHeight;
             const y = CHART_PADDING.top + innerHeight - barHeight;
+            const isActive = row.monthKey === activeMonthKey;
             return (
               <g key={row.monthKey}>
-                <rect x={x} y={y} width={barWidth} height={Math.max(2, barHeight)} rx="4" fill="url(#analyticsRevenueBar)" />
-                <text x={x + barWidth / 2} y={CHART_HEIGHT - 14} textAnchor="middle" className={styles.chartAxisLabel}>{row.label}</text>
+                <rect
+                  x={x}
+                  y={y}
+                  width={barWidth}
+                  height={Math.max(2, barHeight)}
+                  rx="4"
+                  fill="url(#analyticsRevenueBar)"
+                  className={isActive ? styles.chartBarActive : undefined}
+                />
+                <text
+                  x={x + barWidth / 2}
+                  y={CHART_HEIGHT - 14}
+                  textAnchor="middle"
+                  className={`${styles.chartAxisLabel} ${isActive ? styles.chartAxisLabelActive : ''}`}
+                >
+                  {row.label}
+                </text>
               </g>
             );
           })}
@@ -78,7 +96,7 @@ export function AnalyticsTrendCard({
           {rows.map((row, index) => {
             const x = CHART_PADDING.left + step * index + step / 2;
             const y = CHART_PADDING.top + innerHeight - (row.avgPerVisitAmount / maxAvgPerVisitAmount) * innerHeight;
-            return <circle key={`point-${row.monthKey}`} cx={x} cy={y} r="4.5" className={styles.chartLinePoint} />;
+            return <circle key={`point-${row.monthKey}`} cx={x} cy={y} r="4.5" className={`${styles.chartLinePoint} ${row.monthKey === activeMonthKey ? styles.chartLinePointActive : ''}`} />;
           })}
         </svg>
       </div>

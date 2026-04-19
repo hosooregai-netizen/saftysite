@@ -366,9 +366,57 @@ export function buildAdminAnalyticsModel(
       year,
     };
   });
+  const trendRows = buildTrendRows(scopedRevenueEvents, today);
+  const availableMonths = Array.from(
+    new Set(trendRows.map((row) => row.monthKey).filter(Boolean)),
+  ).sort((left, right) => right.localeCompare(left, 'ko'));
+  const basisMonth = availableMonths[0] ?? `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  const monthSlices = availableMonths.map((monthKey) => {
+    const [year, month] = monthKey.split('-').map(Number);
+    const monthRange = {
+      end: new Date(year, month, 0),
+      start: new Date(year, month - 1, 1),
+    };
+    const previousMonthRange = {
+      end: new Date(year - 1, month, 0),
+      start: new Date(year - 1, month - 1, 1),
+    };
+    const monthScheduleRows = queriedDetailScheduleRows.filter((row) =>
+      isWithinDateRange(row.plannedDate, monthRange),
+    );
+    const monthRevenueEvents = queriedDetailRevenueEvents.filter((row) =>
+      isWithinDateRange(row.date, monthRange),
+    );
+    const previousMonthRevenueEvents = queriedDetailRevenueEvents.filter((row) =>
+      isWithinDateRange(row.date, previousMonthRange),
+    );
+    return {
+      employeeRows: buildEmployeeRows(
+        data,
+        visibleSiteIds,
+        assignedSiteIdsByUser,
+        sitesById,
+        monthScheduleRows,
+        monthRevenueEvents,
+        previousMonthRevenueEvents,
+        '',
+        { userId: filters.userId },
+        { previous: previousMonthRange },
+      ),
+      monthKey,
+      siteRevenueRows: buildSiteRevenueRows(
+        visibleSites,
+        monthScheduleRows,
+        monthRevenueEvents,
+        '',
+      ),
+    };
+  });
 
   return {
+    availableMonths,
     availableTrendYears,
+    basisMonth,
     chartYearSlices,
     contractTypeRows: buildContractTypeRows(visibleSites, queriedDetailRevenueEvents),
     employeeRows: buildEmployeeRows(
@@ -400,7 +448,8 @@ export function buildAdminAnalyticsModel(
       { period: filters.period },
       today,
     ),
-    trendRows: buildTrendRows(scopedRevenueEvents, today),
+    monthSlices,
+    trendRows,
   };
 }
 
