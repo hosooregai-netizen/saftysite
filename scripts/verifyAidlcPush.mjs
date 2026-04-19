@@ -58,7 +58,7 @@ const FEATURE_RULES = [
       /^server\/admin\/adminRouteInvalidation(\.test)?\.ts$/,
       /^server\/admin\/adminDirectory(Lists|Snapshot)\.ts$/,
       /^server\/admin\/exportSheets\.ts$/,
-      /^server\/admin\/safetyApiServer\.ts$/,
+      /^server\/admin\/safetyApiServer(\.test)?\.ts$/,
       /^server\/admin\/upstreamMappers\.ts$/,
     ],
   },
