@@ -251,47 +251,39 @@
 }
 
 .employeeNameCol {
-  width: 22%;
+  width: 24%;
 }
 
 .employeeCountCol {
-  width: 10%;
+  width: 8%;
 }
 
 .employeeMoneyCol {
-  width: 13%;
-}
-
-.employeeDeltaCol {
-  width: 12%;
-}
-
-.employeeRateCol {
   width: 14%;
 }
 
 .siteNameCol {
-  width: 28%;
+  width: 30%;
 }
 
 .siteBusinessCol {
-  width: 22%;
+  width: 16%;
 }
 
 .siteTypeCol {
-  width: 14%;
+  width: 8%;
 }
 
 .siteCountCol {
-  width: 10%;
+  width: 6%;
 }
 
 .siteMoneyCol {
-  width: 13%;
+  width: 8%;
 }
 
 .siteRateCol {
-  width: 11%;
+  width: 8%;
 }
 
 .textCell {
@@ -299,6 +291,13 @@
   overflow-wrap: anywhere;
   word-break: keep-all;
   white-space: normal;
+}
+
+.siteNameLink {
+  display: inline;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
 }
 
 .numberCell {

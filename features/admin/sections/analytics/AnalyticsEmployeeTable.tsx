@@ -2,10 +2,8 @@
 
 import { SortableHeaderCell } from '@/features/admin/components/SortableHeaderCell';
 import { formatCurrencyValue } from '@/lib/admin';
-import { formatAnalyticsStatValue } from '@/features/admin/lib/buildAdminControlCenterModel';
 import sharedStyles from '@/features/admin/sections/AdminSectionShared.module.css';
 import localStyles from '@/features/admin/sections/analytics/AnalyticsSection.module.css';
-import { formatRevenueChange, getDeltaClassName } from './analyticsSectionHelpers';
 import type { TableSortState } from '@/types/admin';
 import type { AdminAnalyticsEmployeeRow } from '@/features/admin/lib/buildAdminControlCenterModel';
 
@@ -32,22 +30,18 @@ export function AnalyticsEmployeeTable({ rows, setSort, sort }: AnalyticsEmploye
             <col className={localStyles.employeeMoneyCol} />
             <col className={localStyles.employeeMoneyCol} />
             <col className={localStyles.employeeMoneyCol} />
-            <col className={localStyles.employeeDeltaCol} />
             <col className={localStyles.employeeCountCol} />
-            <col className={localStyles.employeeRateCol} />
           </colgroup>
           <thead>
             <tr>
-              <SortableHeaderCell column={{ key: 'userName' }} current={sort} label="직원명" onChange={setSort} />
+              <SortableHeaderCell column={{ key: 'userName' }} current={sort} label="지도요원명" onChange={setSort} />
               <SortableHeaderCell column={{ key: 'assignedSiteCount' }} current={sort} defaultDirection="desc" label="담당 현장" onChange={setSort} />
               <SortableHeaderCell column={{ key: 'plannedRounds' }} current={sort} defaultDirection="desc" label="계약 회차" onChange={setSort} />
               <SortableHeaderCell column={{ key: 'executedRounds' }} current={sort} defaultDirection="desc" label="실회차" onChange={setSort} />
               <SortableHeaderCell column={{ key: 'plannedRevenue' }} current={sort} defaultDirection="desc" label="계약 매출" onChange={setSort} />
               <SortableHeaderCell column={{ key: 'visitRevenue' }} current={sort} defaultDirection="desc" label="매출" onChange={setSort} />
               <SortableHeaderCell column={{ key: 'avgPerVisitAmount' }} current={sort} defaultDirection="desc" label="평균 회차 단가" onChange={setSort} />
-              <SortableHeaderCell column={{ key: 'revenueChangeRate' }} current={sort} defaultDirection="desc" label="전기 대비" onChange={setSort} />
               <SortableHeaderCell column={{ key: 'overdueCount' }} current={sort} defaultDirection="desc" label="지연" onChange={setSort} />
-              <SortableHeaderCell column={{ key: 'completionRate' }} current={sort} defaultDirection="desc" label="실적률" onChange={setSort} />
             </tr>
           </thead>
           <tbody>
@@ -62,33 +56,8 @@ export function AnalyticsEmployeeTable({ rows, setSort, sort }: AnalyticsEmploye
                 <td className={localStyles.numberCell}>{formatCurrencyValue(row.plannedRevenue)}</td>
                 <td className={localStyles.numberCell}>{formatCurrencyValue(row.visitRevenue)}</td>
                 <td className={localStyles.numberCell}>{formatCurrencyValue(row.avgPerVisitAmount)}</td>
-                <td
-                  className={`${localStyles.numberCell} ${getDeltaClassName(
-                    row.revenueChangeRate == null || Math.abs(row.revenueChangeRate) < 0.0005
-                      ? 'neutral'
-                      : row.revenueChangeRate > 0
-                        ? 'positive'
-                        : 'negative',
-                    localStyles,
-                  )}`}
-                >
-                  {formatRevenueChange(row.revenueChangeRate)}
-                </td>
                 <td className={`${localStyles.numberCell} ${row.overdueCount > 0 ? localStyles.overdueCell : ''}`}>
                   {row.overdueCount}건
-                </td>
-                <td>
-                  <div className={localStyles.rateCell}>
-                    <span className={localStyles.rateValue}>
-                      {formatAnalyticsStatValue('percent', row.completionRate)}
-                    </span>
-                    <span className={localStyles.rateTrack} aria-hidden="true">
-                      <span
-                        className={localStyles.rateFill}
-                        style={{ width: `${Math.max(6, row.completionRate * 100)}%` }}
-                      />
-                    </span>
-                  </div>
                 </td>
               </tr>
             ))}

@@ -56,11 +56,11 @@ export function AnalyticsSiteRevenueTable({
               <SortableHeaderCell
                 column={{ key: 'headquarterName' }}
                 current={sort}
-                label="사업장"
+                label="건설사"
                 onChange={setSort}
                 sortMenuOptions={buildSortMenuOptions('headquarterName', {
-                  asc: '사업장 오름차순',
-                  desc: '사업장 내림차순',
+                  asc: '건설사 오름차순',
+                  desc: '건설사 내림차순',
                 })}
               />
               <SortableHeaderCell
@@ -77,7 +77,7 @@ export function AnalyticsSiteRevenueTable({
               <SortableHeaderCell column={{ key: 'executedRounds' }} current={sort} defaultDirection="desc" label="실회차" onChange={setSort} />
               <SortableHeaderCell column={{ key: 'plannedRevenue' }} current={sort} defaultDirection="desc" label="계약금액" onChange={setSort} />
               <SortableHeaderCell column={{ key: 'visitRevenue' }} current={sort} defaultDirection="desc" label="매출" onChange={setSort} />
-              <SortableHeaderCell column={{ key: 'executionRate' }} current={sort} defaultDirection="desc" label="실적률" onChange={setSort} />
+              <SortableHeaderCell column={{ key: 'executionRate' }} current={sort} defaultDirection="desc" label="진행률" onChange={setSort} />
               <SortableHeaderCell column={{ key: 'avgPerVisitAmount' }} current={sort} defaultDirection="desc" label="평균 회차 단가" onChange={setSort} />
             </tr>
           </thead>
@@ -88,7 +88,7 @@ export function AnalyticsSiteRevenueTable({
                   {row.isSummaryRow || !row.href ? (
                     <strong className={sharedStyles.tablePrimary}>{row.siteName}</strong>
                   ) : (
-                    <Link href={row.href} className={sharedStyles.tableInlineLink}>
+                    <Link href={row.href} className={`${sharedStyles.tableInlineLink} ${localStyles.siteNameLink}`}>
                       {row.siteName}
                     </Link>
                   )}

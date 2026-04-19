@@ -1,5 +1,5 @@
 import { formatCurrencyValue } from '@/lib/admin';
-import { formatAnalyticsStatValue, formatDeltaValue } from './analyticsSupport';
+import { formatAnalyticsStatValue } from './analyticsSupport';
 import type { AdminAnalyticsModel } from './types';
 
 export function getAnalyticsExportSheets(model: AdminAnalyticsModel) {
@@ -39,7 +39,7 @@ export function getAnalyticsExportSheets(model: AdminAnalyticsModel) {
     {
       name: '직원별 매출',
       columns: [
-        { key: 'userName', label: '직원명' },
+        { key: 'userName', label: '지도요원명' },
         { key: 'assignedSiteCount', label: '담당 현장 수' },
         { key: 'plannedRounds', label: '계약 회차' },
         { key: 'executedRounds', label: '실회차' },
@@ -47,18 +47,14 @@ export function getAnalyticsExportSheets(model: AdminAnalyticsModel) {
         { key: 'visitRevenue', label: '매출' },
         { key: 'avgPerVisitAmount', label: '평균 회차 단가' },
         { key: 'overdueCount', label: '지연 건수' },
-        { key: 'completionRate', label: '실적률' },
-        { key: 'revenueChangeRate', label: '전기 대비' },
       ],
       rows: model.employeeRows.map((row) => ({
         assignedSiteCount: row.assignedSiteCount,
         avgPerVisitAmount: formatCurrencyValue(row.avgPerVisitAmount),
-        completionRate: formatAnalyticsStatValue('percent', row.completionRate),
         executedRounds: `${row.executedRounds}회`,
         overdueCount: row.overdueCount,
         plannedRevenue: formatCurrencyValue(row.plannedRevenue),
         plannedRounds: `${row.plannedRounds}회`,
-        revenueChangeRate: formatDeltaValue(row.revenueChangeRate),
         userName: row.userName,
         visitRevenue: formatCurrencyValue(row.visitRevenue),
       })),
@@ -67,13 +63,13 @@ export function getAnalyticsExportSheets(model: AdminAnalyticsModel) {
       name: '현장별 매출',
       columns: [
         { key: 'siteName', label: '현장명' },
-        { key: 'headquarterName', label: '사업장' },
+        { key: 'headquarterName', label: '건설사' },
         { key: 'assigneeName', label: '담당자' },
         { key: 'plannedRounds', label: '계약 회차' },
         { key: 'executedRounds', label: '실회차' },
         { key: 'plannedRevenue', label: '계약금액' },
         { key: 'visitRevenue', label: '매출' },
-        { key: 'executionRate', label: '실적률' },
+        { key: 'executionRate', label: '진행률' },
         { key: 'avgPerVisitAmount', label: '평균 회차 단가' },
       ],
       rows: model.siteRevenueRows.map((row) => ({
