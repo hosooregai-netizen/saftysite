@@ -1,58 +1,56 @@
-import {
-  getSessionProgress,
-  getSessionSiteKey,
-  getSessionSortTime,
-} from '@/constants/inspectionSession';
-import type { InspectionSession, InspectionSite } from '@/types/inspectionSession';
+import type {
+  InspectionReportListItem,
+  InspectionSite,
+  ReportIndexStatus,
+  SiteReportIndexState,
+} from '@/types/inspectionSession';
 
 export interface HomeSiteSummary {
-  latestProgress: number;
+  latestReportLastSavedAt: string | null;
+  latestReportProgressRate: number | null;
+  latestReportVisitDate: string | null;
+  reportCount: number;
+  reportSyncStatus: ReportIndexStatus;
   site: InspectionSite;
-  sessionCount: number;
-  latestSession: InspectionSession | null;
   sortTime: number;
+}
+
+function getReportSortTime(item: InspectionReportListItem) {
+  return Math.max(
+    item.lastAutosavedAt ? new Date(item.lastAutosavedAt).getTime() : 0,
+    item.updatedAt ? new Date(item.updatedAt).getTime() : 0,
+    item.createdAt ? new Date(item.createdAt).getTime() : 0,
+    item.visitDate ? new Date(item.visitDate).getTime() : 0,
+  );
+}
+
+function getLatestReport(items: InspectionReportListItem[]) {
+  if (items.length === 0) {
+    return null;
+  }
+
+  return [...items].sort((left, right) => getReportSortTime(right) - getReportSortTime(left))[0];
 }
 
 export function buildHomeSiteSummaries(
   sites: InspectionSite[],
-  sessions: InspectionSession[],
+  reportIndexBySiteId: Record<string, SiteReportIndexState | null | undefined>,
 ): HomeSiteSummary[] {
-  const sessionsBySite = sessions.reduce<Map<string, InspectionSession[]>>(
-    (accumulator, session) => {
-      const siteKey = getSessionSiteKey(session);
-      const existingSessions = accumulator.get(siteKey);
-
-      if (existingSessions) {
-        existingSessions.push(session);
-      } else {
-        accumulator.set(siteKey, [session]);
-      }
-
-      return accumulator;
-    },
-    new Map(),
-  );
-
   return sites
     .map((site) => {
-      const siteSessions = sessionsBySite.get(site.id) ?? [];
-      const latestSession =
-        siteSessions.length > 0
-          ? [...siteSessions].sort(
-              (left, right) => getSessionSortTime(right) - getSessionSortTime(left),
-            )[0]
-          : null;
+      const reportIndexState = reportIndexBySiteId[site.id] ?? null;
+      const reportItems = reportIndexState?.status === 'loaded' ? reportIndexState.items : [];
+      const latestReport = getLatestReport(reportItems);
 
       return {
-        latestProgress: latestSession ? getSessionProgress(latestSession).percentage : 0,
+        latestReportLastSavedAt: latestReport?.lastAutosavedAt ?? null,
+        latestReportProgressRate: latestReport?.progressRate ?? null,
+        latestReportVisitDate: latestReport?.visitDate ?? null,
+        reportCount: reportItems.length,
+        reportSyncStatus: reportIndexState?.status ?? 'idle',
         site,
-        sessionCount: siteSessions.length,
-        latestSession,
-        sortTime: latestSession
-          ? getSessionSortTime(latestSession)
-          : new Date(site.updatedAt).getTime(),
+        sortTime: latestReport ? getReportSortTime(latestReport) : new Date(site.updatedAt).getTime(),
       };
     })
     .sort((left, right) => right.sortTime - left.sortTime);
 }
-

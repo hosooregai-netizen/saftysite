@@ -11,8 +11,16 @@ import {
 
 export type HomeSortMode = 'recent' | 'name' | 'reports';
 
-const HOME_REPORT_INDEX_PREFETCH_LIMIT = 2;
 const HOME_REPORT_INDEX_PREFETCH_DELAY_MS = 400;
+
+export function getPendingHomeReportIndexSiteIds(
+  siteSummaries: HomeSiteSummary[],
+  prefetchedSiteIds: ReadonlySet<string>,
+) {
+  return siteSummaries
+    .map((summary) => summary.site.id)
+    .filter((siteId) => !prefetchedSiteIds.has(siteId));
+}
 
 interface HomeScreenState {
   authError: string | null;
@@ -35,13 +43,13 @@ interface HomeScreenState {
 export function useHomeScreenState(): HomeScreenState {
   const {
     sites,
-    sessions,
     hasAuthToken,
     isReady,
     isHydrating,
     currentUser,
     authError,
     dataError,
+    getReportIndexBySiteId,
     login,
     logout,
     ensureSiteReportIndexLoaded,
@@ -51,9 +59,16 @@ export function useHomeScreenState(): HomeScreenState {
   const prefetchedSiteIdsRef = useRef<Set<string>>(new Set());
   const router = useRouter();
   const deferredQuery = useDeferredValue(query);
+  const reportIndexBySiteId = useMemo(
+    () =>
+      Object.fromEntries(
+        sites.map((site) => [site.id, getReportIndexBySiteId(site.id)]),
+      ),
+    [getReportIndexBySiteId, sites],
+  );
   const siteSummaries = useMemo(
-    () => buildHomeSiteSummaries(sites, sessions),
-    [sessions, sites],
+    () => buildHomeSiteSummaries(sites, reportIndexBySiteId),
+    [reportIndexBySiteId, sites],
   );
   const filteredSiteSummaries = useMemo(() => {
     const normalizedQuery = deferredQuery.trim().toLowerCase();
@@ -72,7 +87,7 @@ export function useHomeScreenState(): HomeScreenState {
       }
 
       if (sortMode === 'reports') {
-        return right.sessionCount - left.sessionCount || right.sortTime - left.sortTime;
+        return right.reportCount - left.reportCount || right.sortTime - left.sortTime;
       }
 
       return right.sortTime - left.sortTime;
@@ -82,6 +97,12 @@ export function useHomeScreenState(): HomeScreenState {
   const isInitialHydration =
     (isHydrating || (hasAuthToken && !currentUser)) && siteSummaries.length === 0;
   const shouldShowLogin = !hasAuthToken && !currentUser;
+
+  useEffect(() => {
+    if (!hasAuthToken || sites.length === 0) {
+      prefetchedSiteIdsRef.current.clear();
+    }
+  }, [hasAuthToken, sites.length]);
 
   useEffect(() => {
     if (
@@ -94,10 +115,10 @@ export function useHomeScreenState(): HomeScreenState {
       return;
     }
 
-    const nextSiteIds = siteSummaries
-      .slice(0, HOME_REPORT_INDEX_PREFETCH_LIMIT)
-      .map((summary) => summary.site.id)
-      .filter((siteId) => !prefetchedSiteIdsRef.current.has(siteId));
+    const nextSiteIds = getPendingHomeReportIndexSiteIds(
+      siteSummaries,
+      prefetchedSiteIdsRef.current,
+    );
 
     if (nextSiteIds.length === 0) {
       return;
