@@ -12,6 +12,7 @@ import type {
   SafetyContentItemInput,
   SafetyContentItemUpdateInput,
 } from '@/types/controller';
+import { upsertRecordById } from './adminDashboardStateShared';
 
 type MutationRunner = <TResult>(
   task: (token: string) => Promise<TResult>,
@@ -32,11 +33,26 @@ export function buildAdminDashboardContentActions({
 }: BuildAdminDashboardContentActionsParams) {
   return {
     createContentItem: (input: SafetyContentItemInput) =>
-      runContentMutation((token) => createSafetyContentItem(token, input), '콘텐츠 데이터를 생성했습니다.'),
+      runContentMutation((token) => createSafetyContentItem(token, input), '콘텐츠 데이터를 생성했습니다.', {
+        applyResult: (current, item) => ({
+          ...current,
+          contentItems: upsertRecordById(current.contentItems, item),
+        }),
+      }),
     updateContentItem: (id: string, input: SafetyContentItemUpdateInput) =>
-      runContentMutation((token) => updateSafetyContentItem(token, id, input), '콘텐츠 데이터를 수정했습니다.'),
+      runContentMutation((token) => updateSafetyContentItem(token, id, input), '콘텐츠 데이터를 수정했습니다.', {
+        applyResult: (current, item) => ({
+          ...current,
+          contentItems: upsertRecordById(current.contentItems, item),
+        }),
+      }),
     deleteContentItem: (id: string) =>
-      runContentMutation((token) => deleteSafetyContentItem(token, id), '콘텐츠 데이터를 삭제했습니다.'),
+      runContentMutation((token) => deleteSafetyContentItem(token, id), '콘텐츠 데이터를 삭제했습니다.', {
+        applyResult: (current, item) => ({
+          ...current,
+          contentItems: upsertRecordById(current.contentItems, item),
+        }),
+      }),
     saveReportMeta: (
       reportKey: string,
       metaPatch: Record<string, unknown>,

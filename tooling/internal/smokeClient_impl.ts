@@ -1791,7 +1791,7 @@ async function runBrowserCrudSmoke() {
   await expectRowText('테스트 법령 수정');
 
   row = page.locator('tr', { hasText: '테스트 법령 수정' }).first();
-  await row.getByRole('button', { name: '비활성화' }).click();
+  await row.getByRole('button', { name: '삭제' }).click();
 
   console.log('Step: admin report archive');
   await page.goto(`${BASE_URL}/sites/site-1`, { waitUntil: 'load' });

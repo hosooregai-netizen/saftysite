@@ -354,7 +354,7 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
 
   const handleDeleteContentItem = async (item: SafetyContentItemListItem) => {
     const confirmed = window.confirm(
-      `'${item.title}' 콘텐츠를 비활성화하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`,
+      `'${item.title}' 콘텐츠를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`,
     );
 
     if (!confirmed) return;
@@ -531,7 +531,7 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
                                 },
                                 ...(canDelete
                                   ? [{
-                                      label: '비활성화',
+                                      label: '삭제',
                                       tone: 'danger' as const,
                                       onSelect: () => {
                                         if (!busy) void handleDeleteContentItem(item);

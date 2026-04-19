@@ -43,6 +43,34 @@ function withQuery(path: string, params: Record<string, string | number | boolea
   return query ? `${path}?${query}` : path;
 }
 
+async function fetchAllAdminContentItemPages(
+  token: string,
+  options: { includeBody?: boolean } = {},
+): Promise<SafetyContentItemListItem[]> {
+  const rows: SafetyContentItemListItem[] = [];
+  let offset = 0;
+
+  while (true) {
+    const page = await requestSafetyApi<SafetyContentItemListItem[]>(
+      withQuery('/content-items', {
+        active_only: true,
+        include_body: options.includeBody === true,
+        limit: ADMIN_CONTENT_ITEM_LIMIT,
+        offset,
+      }),
+      {},
+      token
+    );
+    rows.push(...page);
+
+    if (page.length < ADMIN_CONTENT_ITEM_LIMIT) {
+      return rows;
+    }
+
+    offset += page.length;
+  }
+}
+
 function sendJson<T>(path: string, token: string, method: string, body?: unknown): Promise<T> {
   return requestSafetyApi<T>(path, { method, body: body ? JSON.stringify(body) : undefined }, token);
 }
@@ -277,16 +305,7 @@ export const deleteSafetyAssignment = deactivateSafetyAssignment;
 export const fetchSafetyContentItemsAdmin = (
   token: string,
   options: { includeBody?: boolean } = {},
-) =>
-  requestSafetyApi<SafetyContentItemListItem[]>(
-    withQuery('/content-items', {
-      active_only: true,
-      include_body: options.includeBody === true,
-      limit: ADMIN_CONTENT_ITEM_LIMIT,
-    }),
-    {},
-    token
-  );
+) => fetchAllAdminContentItemPages(token, options);
 export const fetchSafetyContentItemsAdminPage = (
   token: string,
   options: AdminListQueryOptions & { includeBody?: boolean } = {},

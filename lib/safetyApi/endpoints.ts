@@ -383,17 +383,36 @@ export function fetchSafetyContentItems(
   if (options?.force) {
     invalidateSafetyApiGetCache('/content-items', token);
   }
+  const rows: SafetyContentItem[] = [];
 
-  const searchParams = new URLSearchParams({
-    active_only: 'true',
-    limit: String(CLIENT_CONTENT_ITEM_LIMIT),
-  });
+  const fetchNextPage = async (offset: number): Promise<SafetyContentItem[]> => {
+    const searchParams = new URLSearchParams({
+      active_only: 'true',
+      limit: String(CLIENT_CONTENT_ITEM_LIMIT),
+      offset: String(offset),
+    });
 
-  return requestSafetyApi<SafetyContentItem[]>(
-    `/content-items?${searchParams.toString()}`,
-    {},
-    token
-  );
+    return requestSafetyApi<SafetyContentItem[]>(
+      `/content-items?${searchParams.toString()}`,
+      {},
+      token
+    );
+  };
+
+  return (async () => {
+    let offset = 0;
+
+    while (true) {
+      const page = await fetchNextPage(offset);
+      rows.push(...page);
+
+      if (page.length < CLIENT_CONTENT_ITEM_LIMIT) {
+        return rows;
+      }
+
+      offset += page.length;
+    }
+  })();
 }
 
 export function fetchSafetyReportsBySite(
