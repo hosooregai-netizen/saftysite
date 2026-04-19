@@ -161,6 +161,25 @@ async function parseErrorMessage(response: Response): Promise<string> {
   return text || response.statusText || '요청 처리 중 오류가 발생했습니다.';
 }
 
+async function parseJsonSuccessBody<T>(
+  response: Response,
+  requestLabel: string
+): Promise<T | undefined> {
+  const text = await response.text();
+  if (!text.trim()) {
+    return undefined;
+  }
+
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new SafetyApiError(
+      `${requestLabel} 요청은 성공했지만 응답 본문을 해석하지 못했습니다.`,
+      response.status
+    );
+  }
+}
+
 function getSafetyApiTimeoutMs(path: string, options: RequestInit): number {
   if (path === '/auth/token') {
     return AUTH_SAFETY_API_TIMEOUT_MS;
@@ -332,7 +351,7 @@ export async function requestSafetyApi<T>(
       return undefined as JsonLike;
     }
 
-    return (await response.json()) as JsonLike;
+    return (await parseJsonSuccessBody<JsonLike>(response, requestLabel)) as JsonLike;
   };
 
   if (cacheTtlMs > 0) {

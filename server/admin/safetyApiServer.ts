@@ -133,6 +133,32 @@ export function buildSafetyAdminUpstreamUrl(path: string) {
   return buildUpstreamUrl(path);
 }
 
+async function fetchAdminHeadquarterById(
+  token: string,
+  headquarterId: string,
+  request: Request | null = null,
+): Promise<SafetyHeadquarter> {
+  return requestSafetyAdminServer<SafetyHeadquarter>(
+    `/headquarters/${encodeURIComponent(headquarterId)}`,
+    {},
+    token,
+    request,
+  );
+}
+
+async function fetchAdminSiteById(
+  token: string,
+  siteId: string,
+  request: Request | null = null,
+): Promise<SafetySite> {
+  return requestSafetyAdminServer<SafetySite>(
+    `/sites/${encodeURIComponent(siteId)}?include_headquarter_detail=true&include_assigned_user=true`,
+    {},
+    token,
+    request,
+  );
+}
+
 async function parseErrorMessage(response: Response) {
   const contentType = response.headers.get('content-type') || '';
   const text = await response.text();
@@ -155,6 +181,19 @@ async function parseErrorMessage(response: Response) {
   }
 
   return text || response.statusText || '요청 처리 중 오류가 발생했습니다.';
+}
+
+async function parseSuccessBody<T>(response: Response): Promise<T | undefined> {
+  const text = await response.text();
+  if (!text.trim()) {
+    return undefined;
+  }
+
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new SafetyServerApiError('안전 API 응답 본문을 해석하지 못했습니다.', response.status);
+  }
 }
 
 function buildHeaders(
@@ -269,7 +308,7 @@ export async function requestSafetyAdminServer<T>(
     return undefined as T;
   }
 
-  return (await response.json()) as T;
+  return (await parseSuccessBody<T>(response)) as T;
 }
 
 export async function requestSafetyAdminServerRaw(
@@ -1144,7 +1183,7 @@ export function updateAdminSite(
   payload: SafetySiteInput | SafetySiteUpdateInput,
   request: Request | null = null,
 ): Promise<SafetySite> {
-  return requestSafetyAdminServer<SafetySite>(
+  return requestSafetyAdminServer<SafetySite | undefined>(
     `/sites/${encodeURIComponent(siteId)}`,
     {
       method: 'PATCH',
@@ -1155,7 +1194,7 @@ export function updateAdminSite(
     },
     token,
     request,
-  );
+  ).then((site) => site ?? fetchAdminSiteById(token, siteId, request));
 }
 
 export function createAdminUser(
@@ -1241,7 +1280,7 @@ export function updateAdminHeadquarter(
   payload: SafetyHeadquarterInput | SafetyHeadquarterUpdateInput,
   request: Request | null = null,
 ): Promise<SafetyHeadquarter> {
-  return requestSafetyAdminServer<SafetyHeadquarter>(
+  return requestSafetyAdminServer<SafetyHeadquarter | undefined>(
     `/headquarters/${encodeURIComponent(headquarterId)}`,
     {
       method: 'PATCH',
@@ -1252,7 +1291,7 @@ export function updateAdminHeadquarter(
     },
     token,
     request,
-  );
+  ).then((headquarter) => headquarter ?? fetchAdminHeadquarterById(token, headquarterId, request));
 }
 
 export function createAdminSite(

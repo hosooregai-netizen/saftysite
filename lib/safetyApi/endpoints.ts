@@ -529,14 +529,14 @@ export function upsertSafetyReport(
   token: string,
   payload: SafetyUpsertReportInput
 ): Promise<SafetyReport> {
-  return requestSafetyApi<SafetyReport>(
+  return requestSafetyApi<SafetyReport | undefined>(
     '/reports/upsert',
     {
       method: 'POST',
       body: JSON.stringify(payload),
     },
     token
-  );
+  ).then((report) => report ?? fetchSafetyReportByKey(token, payload.report_key));
 }
 
 export function updateSafetyReportStatus(
@@ -544,14 +544,14 @@ export function updateSafetyReportStatus(
   reportId: string,
   payload: SafetyReportStatusUpdateInput
 ): Promise<SafetyReport> {
-  return requestSafetyApi<SafetyReport>(
+  return requestSafetyApi<SafetyReport | undefined>(
     `/reports/${reportId}/status`,
     {
       method: 'POST',
       body: JSON.stringify(payload),
     },
     token
-  );
+  ).then((report) => report ?? fetchSafetyReportById(token, reportId));
 }
 
 export async function fetchSafetySiteDashboard(

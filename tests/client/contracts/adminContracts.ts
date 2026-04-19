@@ -13,11 +13,11 @@ export const ADMIN_FEATURE_CONTRACTS = {
   'admin-headquarters': {
     id: 'admin-headquarters',
     description:
-      '사업장 목록이 safety-server list passthrough 기반 서버 페이지네이션, session cache, drilldown 진입, 생성/수정 흐름과 deleted soft-delete hidden refresh를 유지한다.',
+      '사업장 목록이 safety-server list passthrough 기반 서버 페이지네이션, session cache, drilldown 진입, 생성/수정 흐름, 저장 성공 후 empty-body 응답 fallback 재조회, deleted soft-delete hidden refresh를 유지한다.',
     routes: ['/admin?section=headquarters'],
     markers: ['사업장 목록', '사업장 추가', '사업장 수정', '현장 보기'],
     apis: ['GET /api/admin/headquarters/list', 'GET /api/admin/sites/list', 'POST /headquarters', 'PATCH /headquarters/:id'],
-    criticalActions: ['사업장 목록 페이지 로드', '사업장 생성', '사업장 수정', '현장 drilldown 진입', 'drilldown 현장 생성/수정/삭제 직후 refresh 확인'],
+    criticalActions: ['사업장 목록 페이지 로드', '사업장 생성', '사업장 수정', '사업장 수정 empty-body fallback 재조회 확인', '현장 drilldown 진입', 'drilldown 현장 생성/수정/삭제 직후 refresh 확인'],
   },
   'admin-users': {
     id: 'admin-users',
@@ -31,7 +31,7 @@ export const ADMIN_FEATURE_CONTRACTS = {
   'admin-reports': {
     id: 'admin-reports',
     description:
-      '전체 보고서 섹션이 safety-server reports passthrough, directory lookups 기반 필터 참조, session cache 기반 목록 재진입, 품질 체크 저장, 발송 이력 편집, local row patch 기반 무재조회 갱신, legacy 기술지도 보고서 열기 fallback 흐름을 유지한다.',
+      '전체 보고서 섹션이 safety-server reports passthrough, directory lookups 기반 필터 참조, session cache 기반 목록 재진입, 품질 체크 저장, 발송 이력 편집, 저장 성공 후 empty-body 응답 fallback 재조회, local row patch 기반 무재조회 갱신, legacy 기술지도 보고서 열기 fallback 흐름을 유지한다.',
     routes: ['/admin?section=reports'],
     markers: [
       '전체 보고서',
@@ -46,12 +46,12 @@ export const ADMIN_FEATURE_CONTRACTS = {
       'PATCH /api/admin/reports/:id/review',
       'PATCH /api/admin/reports/:id/dispatch',
     ],
-    criticalActions: ['보고서 목록 조회', '보고서 필터 lookup 로드 확인', 'session cache 재진입 확인', '품질 체크 저장', '발송 이력 저장', '목록 무재조회 row patch 확인', 'legacy 기술지도 보고서 열기 fallback 확인'],
+    criticalActions: ['보고서 목록 조회', '보고서 필터 lookup 로드 확인', 'session cache 재진입 확인', '품질 체크 저장', '보고서 저장 empty-body fallback 재조회 확인', '발송 이력 저장', '목록 무재조회 row patch 확인', 'legacy 기술지도 보고서 열기 fallback 확인'],
   },
   'admin-sites': {
     id: 'admin-sites',
     description:
-      '현장 목록과 현장 메인이 safety-server list/lookups passthrough 기반 서버 페이지네이션, directory lookups 계약유형 옵션, planned 기본 생성, deleted soft-delete hidden, 등록 정보 편집, 점검자 기준 배정, K2B 회차 데이터 반영 동선을 유지한다.',
+      '현장 목록과 현장 메인이 safety-server list/lookups passthrough 기반 서버 페이지네이션, directory lookups 계약유형 옵션, planned 기본 생성, deleted soft-delete hidden, 등록 정보 편집, 저장 성공 후 empty-body 응답 fallback 재조회, 점검자 기준 배정, K2B 회차 데이터 반영 동선을 유지한다.',
     routes: [
       '/admin?section=headquarters&headquarterId=hq-1',
       '/admin?section=headquarters&headquarterId=hq-1&siteId=site-1',
@@ -63,7 +63,7 @@ export const ADMIN_FEATURE_CONTRACTS = {
       'POST /sites',
       'PATCH /sites/:id',
     ],
-    criticalActions: ['현장 목록 페이지 이동', '현장 생성/수정', '계약유형 lookup option 확인', 'planned 기본 생성 확인', 'deleted 상태 hidden 확인', '현장 메인 진입', '현장 메인 quick edit', '지도요원 배정 modal 진입', 'K2B 회차 데이터 반영'],
+    criticalActions: ['현장 목록 페이지 이동', '현장 생성/수정', '현장 수정 empty-body fallback 재조회 확인', '계약유형 lookup option 확인', 'planned 기본 생성 확인', 'deleted 상태 hidden 확인', '현장 메인 진입', '현장 메인 quick edit', '지도요원 배정 modal 진입', 'K2B 회차 데이터 반영'],
   },
   'admin-schedules': {
     id: 'admin-schedules',
