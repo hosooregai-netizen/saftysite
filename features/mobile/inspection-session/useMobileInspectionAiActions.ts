@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { assetUrlToFile, buildHazardFindingAutoFill } from '@/components/session/workspace/doc7Ai';
 import type { useInspectionSessionScreen } from '@/features/inspection-session/hooks/useInspectionSessionScreen';
-import { applyDoc7AutoCompletionMatch } from '@/lib/doc7AutoCompletion';
+import { applyDoc7ReferenceMaterialMatch } from '@/lib/doc7ReferenceMaterials';
 import {
   buildDoc5StructuredSummaryPayload,
   buildLocalDoc5SummaryDraft,
@@ -110,17 +110,12 @@ export function useMobileInspectionAiActions({
         ...current,
         document7Findings: current.document7Findings.map((finding) =>
           finding.id === findingId
-            ? applyDoc7AutoCompletionMatch(
+            ? applyDoc7ReferenceMaterialMatch(
                 {
                   ...finding,
                   ...patch,
                 },
-                {
-                  doc7ReferenceMaterials: screen.derivedData.doc7ReferenceMaterials,
-                  hazardCountermeasureCatalog:
-                    screen.derivedData.hazardCountermeasureCatalog,
-                  legalReferences: screen.derivedData.legalReferences,
-                },
+                screen.derivedData.doc7ReferenceMaterials,
               )
             : finding,
         ),

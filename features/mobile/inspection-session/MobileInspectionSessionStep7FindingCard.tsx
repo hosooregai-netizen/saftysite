@@ -13,7 +13,6 @@ import {
   getHazardCountermeasureRecommendations,
   type HazardCountermeasureCatalogMatchField,
 } from '@/lib/hazardCountermeasureCatalog';
-import { applyDoc7AutoCompletionMatch } from '@/lib/doc7AutoCompletion';
 import type { MobilePhotoSourceTarget } from './mobileInspectionSessionHelpers';
 
 type InspectionScreenController = ReturnType<typeof useInspectionSessionScreen>;
@@ -49,26 +48,6 @@ export function MobileInspectionSessionStep7FindingCard({
       ...current,
       document7Findings: current.document7Findings.map((item) =>
         item.id === finding.id ? { ...item, ...patch } : item,
-      ),
-    }));
-  };
-  const updateFindingWithAutoCompletion = (
-    patch: Partial<InspectionSessionDraft['document7Findings'][number]>,
-  ) => {
-    screen.applyDocumentUpdate('doc7', 'manual', (current) => ({
-      ...current,
-      document7Findings: current.document7Findings.map((item) =>
-        item.id === finding.id
-          ? applyDoc7AutoCompletionMatch(
-              { ...item, ...patch },
-              {
-                doc7ReferenceMaterials: screen.derivedData.doc7ReferenceMaterials,
-                hazardCountermeasureCatalog:
-                  screen.derivedData.hazardCountermeasureCatalog,
-                legalReferences: screen.derivedData.legalReferences,
-              },
-            )
-          : item,
       ),
     }));
   };
@@ -211,7 +190,7 @@ export function MobileInspectionSessionStep7FindingCard({
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px' }}>
           <div className={styles.mobileEditorFieldGroup}>
             <span className={styles.mobileEditorFieldLabel}>사고유형</span>
-            <select className="app-select" value={finding.accidentType} onChange={(event) => updateFindingWithAutoCompletion({ accidentType: event.target.value })}>
+            <select className="app-select" value={finding.accidentType} onChange={(event) => updateFinding({ accidentType: event.target.value })}>
               <option value="">선택</option>
               {ACCIDENT_TYPE_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
             </select>
@@ -228,7 +207,7 @@ export function MobileInspectionSessionStep7FindingCard({
           <select
             className="app-select"
             value={finding.causativeAgentKey}
-            onChange={(event) => updateFindingWithAutoCompletion({ causativeAgentKey: event.target.value as typeof finding.causativeAgentKey })}
+            onChange={(event) => updateFinding({ causativeAgentKey: event.target.value as typeof finding.causativeAgentKey })}
           >
             <option value="">선택</option>
             {CAUSATIVE_AGENT_OPTIONS.map((option) => (
@@ -240,7 +219,7 @@ export function MobileInspectionSessionStep7FindingCard({
         </div>
         <div className={styles.mobileEditorFieldGroup}>
           <span className={styles.mobileEditorFieldLabel}>유해위험요인</span>
-          <textarea className={`app-input ${styles.mobileEditorTextareaCompact}`} value={finding.hazardDescription || ''} onChange={(event) => updateFindingWithAutoCompletion({ hazardDescription: event.target.value })} placeholder="유해위험요인 설명" style={{ width: '100%' }} />
+          <textarea className={`app-input ${styles.mobileEditorTextareaCompact}`} value={finding.hazardDescription || ''} onChange={(event) => updateFinding({ hazardDescription: event.target.value })} placeholder="유해위험요인 설명" style={{ width: '100%' }} />
         </div>
         <div className={styles.mobileEditorFieldGroup}>
           <span className={styles.mobileEditorFieldLabel}>개선요청사항</span>
@@ -255,7 +234,7 @@ export function MobileInspectionSessionStep7FindingCard({
                 }
               }}
               onChange={(event) =>
-                updateFindingWithAutoCompletion({
+                updateFinding({
                   ...clearHazardCountermeasureSelectionFromFinding(finding),
                   improvementPlan: event.target.value,
                   improvementRequest: event.target.value,
