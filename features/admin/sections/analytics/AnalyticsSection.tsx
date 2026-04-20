@@ -4,6 +4,7 @@ import { AnalyticsCharts } from '@/features/admin/sections/analytics/AnalyticsCh
 import sharedStyles from '@/features/admin/sections/AdminSectionShared.module.css';
 import { AnalyticsDetailSection } from './AnalyticsDetailSection';
 import { AnalyticsSectionHeader } from './AnalyticsSectionHeader';
+import { AnalyticsSummarySection } from './AnalyticsSummarySection';
 import { useAnalyticsSectionState } from './useAnalyticsSectionState';
 import localStyles from './AnalyticsSection.module.css';
 
@@ -29,25 +30,14 @@ export function AnalyticsSection({ currentUserId }: AnalyticsSectionProps) {
   return (
     <div className={sharedStyles.dashboardStack}>
       <section className={sharedStyles.sectionCard}>
-        <AnalyticsSectionHeader
-          activeFilterCount={state.activeFilterCount}
-          contractType={state.contractType}
-          contractTypeOptions={state.contractTypeOptions}
-          exportAnalytics={state.exportAnalytics}
-          headquarterId={state.headquarterId}
-          headquarterOptions={state.headquarterOptions}
-          isBusy={state.isLoading}
-          period={state.period}
-          query={state.queryInput}
-          resetHeaderFilters={state.resetHeaderFilters}
-          setContractType={state.setContractType}
-          setHeadquarterId={state.setHeadquarterId}
-          setPeriod={state.setPeriod}
-          setQuery={state.setQueryInput}
-          submitQuery={state.submitQuery}
-          setUserId={state.setUserId}
-          userId={state.userId}
-          userOptions={state.userOptions}
+        <AnalyticsSectionHeader />
+        <AnalyticsSummarySection
+          analytics={state.summaryAnalytics}
+          isInitialLoading={state.isSummaryInitialLoading}
+          isLoading={state.isSummaryLoading}
+          isRefreshing={state.isSummaryRefreshing}
+          loadError={state.loadError}
+          scopeChips={state.scopeChips}
         />
       </section>
 
@@ -74,19 +64,6 @@ export function AnalyticsSection({ currentUserId }: AnalyticsSectionProps) {
               onClick={() => state.setBasisMonth(shiftMonthToken(state.basisMonth, 1))}
             >
               다음 달
-            </button>
-            <input
-              type="month"
-              className="app-input"
-              value={state.basisMonth}
-              onChange={(event) => state.setBasisMonth(event.target.value)}
-            />
-            <button
-              type="button"
-              className="app-button app-button-secondary"
-              onClick={() => state.setBasisMonth(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`)}
-            >
-              이번 달
             </button>
           </div>
         </div>

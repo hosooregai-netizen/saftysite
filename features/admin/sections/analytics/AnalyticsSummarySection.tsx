@@ -4,6 +4,15 @@ import sharedStyles from '@/features/admin/sections/AdminSectionShared.module.cs
 import localStyles from '@/features/admin/sections/analytics/AnalyticsSection.module.css';
 import { getDeltaClassName } from './analyticsSectionHelpers';
 
+const HIDDEN_SUMMARY_CARD_LABELS = new Set([
+  '계약 예정 매출',
+  '계약 회차',
+  '완료 보고서',
+  '지연 일정',
+  '실회차',
+  '남은 회차',
+]);
+
 interface AnalyticsSummarySectionProps {
   analytics: {
     stats: {
@@ -37,6 +46,10 @@ export function AnalyticsSummarySection({
   loadError,
   scopeChips,
 }: AnalyticsSummarySectionProps) {
+  const visibleSummaryCards = analytics.summaryCards.filter(
+    (card) => !HIDDEN_SUMMARY_CARD_LABELS.has(card.label),
+  );
+
   if (isInitialLoading) {
     return (
       <div className={`${sharedStyles.sectionBody} ${localStyles.summaryBody}`}>
@@ -46,20 +59,12 @@ export function AnalyticsSummarySection({
           ))}
         </div>
         <div className={localStyles.kpiGrid}>
-          {Array.from({ length: 7 }, (_, index) => (
+          {Array.from({ length: Math.max(visibleSummaryCards.length, 1) }, (_, index) => (
             <article key={`analytics-kpi-skeleton-${index + 1}`} className={localStyles.kpiCard}>
               <span className={`${localStyles.skeletonBlock} ${localStyles.skeletonLabel}`} />
               <span className={`${localStyles.skeletonBlock} ${localStyles.skeletonValue}`} />
               <span className={`${localStyles.skeletonBlock} ${localStyles.skeletonMeta}`} />
             </article>
-          ))}
-        </div>
-        <div className={localStyles.supportStrip}>
-          {Array.from({ length: 5 }, (_, index) => (
-            <div key={`analytics-support-skeleton-${index + 1}`} className={localStyles.supportItem}>
-              <span className={`${localStyles.skeletonBlock} ${localStyles.skeletonLabel}`} />
-              <span className={`${localStyles.skeletonBlock} ${localStyles.skeletonMeta}`} />
-            </div>
           ))}
         </div>
         <div className={localStyles.loadingHint}>실적/매출 데이터를 준비하고 있습니다.</div>
@@ -80,7 +85,7 @@ export function AnalyticsSummarySection({
       </div>
 
       <div className={localStyles.kpiGrid}>
-        {analytics.summaryCards.map((card) => (
+        {visibleSummaryCards.map((card) => (
           <article key={card.label} className={localStyles.kpiCard}>
             <span className={localStyles.kpiLabel}>{card.label}</span>
             <strong className={localStyles.kpiValue}>{card.value}</strong>
@@ -92,30 +97,6 @@ export function AnalyticsSummarySection({
             </div>
           </article>
         ))}
-      </div>
-
-      <div className={localStyles.supportStrip}>
-        <div className={localStyles.supportItem}>
-          <span className={localStyles.supportLabel}>실회차</span>
-          <strong className={localStyles.supportValue}>{analytics.stats.totalExecutedRounds}회</strong>
-        </div>
-        <div className={localStyles.supportItem}>
-          <span className={localStyles.supportLabel}>남은 회차</span>
-          <strong className={localStyles.supportValue}>{analytics.stats.remainingRounds}회</strong>
-        </div>
-        <div className={localStyles.supportItem}>
-          <span className={localStyles.supportLabel}>계약 회차</span>
-          <strong className={localStyles.supportValue}>{analytics.stats.totalScopedRounds}회</strong>
-        </div>
-        <div className={localStyles.supportItem}>
-          <span className={localStyles.supportLabel}>지연 건수</span>
-          <strong className={localStyles.supportValue}>{analytics.stats.overdueCount}건</strong>
-        </div>
-        <div className={localStyles.supportItem}>
-          <span className={localStyles.supportLabel}>집계 현장</span>
-          <strong className={localStyles.supportValue}>{analytics.stats.countedSiteCount}개</strong>
-          <span className={localStyles.supportMeta}>제외 {analytics.stats.excludedSiteCount}개</span>
-        </div>
       </div>
       {isRefreshing ? <div className={localStyles.loadingHint}>조건 변경을 반영하고 있습니다.</div> : null}
       {isLoading && !isRefreshing ? <div className={localStyles.loadingHint}>실적/매출 데이터를 불러오고 있습니다.</div> : null}
