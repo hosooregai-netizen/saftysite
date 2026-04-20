@@ -50,6 +50,31 @@ function getDownloadFilenameFromDisposition(header: string | null) {
   return basicMatch?.[1]?.trim() || 'download.bin';
 }
 
+function ensurePhotoDownloadFilename(filename: string, contentType: string | null) {
+  const normalizedName = filename.trim() || 'photo';
+  if (/\.[A-Za-z0-9]{2,8}$/.test(normalizedName)) {
+    return normalizedName;
+  }
+
+  const normalizedType = (contentType || '').split(';', 1)[0]?.trim().toLowerCase();
+  const extension =
+    normalizedType === 'image/jpeg'
+      ? '.jpg'
+      : normalizedType === 'image/png'
+        ? '.png'
+        : normalizedType === 'image/webp'
+          ? '.webp'
+          : normalizedType === 'image/gif'
+            ? '.gif'
+            : normalizedType === 'image/heic'
+              ? '.heic'
+              : normalizedType === 'application/zip'
+                ? '.zip'
+                : '';
+
+  return extension ? `${normalizedName}${extension}` : normalizedName;
+}
+
 function createAuthorizedHeaders(options?: { json?: boolean }) {
   const token = readSafetyAuthToken();
   if (!token) {
@@ -149,7 +174,13 @@ export async function downloadPhotoAlbumSelection(itemIds: string[]) {
   }
 
   const blob = await response.blob();
-  saveBlobAsFile(blob, getDownloadFilenameFromDisposition(response.headers.get('content-disposition')));
+  saveBlobAsFile(
+    blob,
+    ensurePhotoDownloadFilename(
+      getDownloadFilenameFromDisposition(response.headers.get('content-disposition')),
+      response.headers.get('content-type'),
+    ),
+  );
 }
 
 export async function updatePhotoAlbumRounds(itemIds: string[], roundNo: number) {

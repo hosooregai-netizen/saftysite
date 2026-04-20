@@ -218,17 +218,16 @@ export function fetchAdminUsersList(input: {
   role?: string;
   sortDir?: TableSortDirection;
   sortBy?: string;
-  status?: string;
 }, options: RequestInit = {}) {
   return requestAdminApi<SafetyAdminUserListResponse>(
     `/users/list${buildQueryString({
+      active_only: 'true',
       limit: input.limit,
       offset: input.offset,
       query: input.query,
       role: input.role,
       sort_by: input.sortBy,
       sort_dir: input.sortDir,
-      status: input.status,
     })}`,
     options,
   );

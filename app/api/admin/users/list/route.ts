@@ -15,13 +15,13 @@ export async function GET(request: Request): Promise<Response> {
     const response = await fetchAdminUsersListServer(
       token,
       {
-      limit: Number(url.searchParams.get('limit') || '50'),
-      offset: Number(url.searchParams.get('offset') || '0'),
-      query: url.searchParams.get('query') || '',
-      role: url.searchParams.get('role') || '',
-      sort_by: url.searchParams.get('sort_by') || 'name',
-      sort_dir: url.searchParams.get('sort_dir') === 'desc' ? 'desc' : 'asc',
-      status: url.searchParams.get('status') || '',
+        active_only: true,
+        limit: Number(url.searchParams.get('limit') || '50'),
+        offset: Number(url.searchParams.get('offset') || '0'),
+        query: url.searchParams.get('query') || '',
+        role: url.searchParams.get('role') || '',
+        sort_by: url.searchParams.get('sort_by') || 'name',
+        sort_dir: url.searchParams.get('sort_dir') === 'desc' ? 'desc' : 'asc',
       },
       request,
     );

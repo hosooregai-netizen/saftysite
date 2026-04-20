@@ -137,9 +137,7 @@ export function UsersSection({
         submitQuery={state.submitQuery}
         setRoleFilter={state.setRoleFilter}
         setSort={state.setSort}
-        setStatusFilter={state.setStatusFilter}
         sort={state.sort}
-        statusFilter={state.statusFilter}
         totalCount={state.total}
         totalPages={state.totalPages}
         userOverviewById={state.userOverviewById}

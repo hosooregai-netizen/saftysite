@@ -37,7 +37,6 @@ function buildRequestKey(input: {
   query: string;
   roleFilter: 'all' | UserRoleView;
   sort: TableSortState;
-  statusFilter: 'all' | 'active' | 'inactive';
 }) {
   return JSON.stringify(input);
 }
@@ -59,10 +58,6 @@ export function useUsersSectionState(
     const value = searchParams.get('role');
     return value === 'admin' || value === 'field_agent' ? value : 'all';
   });
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>(() => {
-    const value = searchParams.get('status');
-    return value === 'active' || value === 'inactive' ? value : 'all';
-  });
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState<TableSortState>({
     direction: 'asc',
@@ -83,9 +78,8 @@ export function useUsersSectionState(
         query: deferredQuery.trim(),
         roleFilter,
         sort,
-        statusFilter,
       }),
-    [deferredQuery, page, roleFilter, sort, statusFilter],
+    [deferredQuery, page, roleFilter, sort],
   );
   const abortControllerRef = useRef<AbortController | null>(null);
   const cachedResponse = useMemo(
@@ -136,7 +130,6 @@ export function useUsersSectionState(
         role: roleFilter,
         sortBy: requestedSortKey,
         sortDir: sort.direction,
-        status: statusFilter,
       },
       { signal: abortController.signal },
     )
@@ -168,7 +161,6 @@ export function useUsersSectionState(
     roleFilter,
     sort.direction,
     sort.key,
-    statusFilter,
   ]);
 
   const sessionCountBySiteId = useMemo(() => {
@@ -313,7 +305,6 @@ export function useUsersSectionState(
       query: deferredQuery.trim(),
       roleFilter,
       sort,
-      statusFilter,
     });
     const response = await fetchAdminUsersList({
       limit: USERS_PAGE_SIZE,
@@ -322,7 +313,6 @@ export function useUsersSectionState(
       role: roleFilter,
       sortBy: sort.key === 'reportCount' ? 'name' : sort.key,
       sortDir: sort.direction,
-      status: statusFilter,
     });
     writeAdminSessionCache(currentUserId, `users:list:${targetRequestKey}`, response);
     setResolvedResponseState({
@@ -339,7 +329,6 @@ export function useUsersSectionState(
       role: roleFilter,
       sortBy: sort.key === 'reportCount' ? 'name' : sort.key,
       sortDir: sort.direction,
-      status: statusFilter,
     });
     return response.rows;
   };
@@ -381,12 +370,7 @@ export function useUsersSectionState(
       setPage(1);
       setSort(value);
     },
-    setStatusFilter: (value: 'all' | 'active' | 'inactive') => {
-      setPage(1);
-      setStatusFilter(value);
-    },
     sort,
-    statusFilter,
     total,
     totalPages,
     userOverviewById,

@@ -34,9 +34,7 @@ interface UsersTableProps {
   submitQuery: () => void;
   setRoleFilter: (value: 'all' | 'admin' | 'field_agent') => void;
   setSort: (value: TableSortState) => void;
-  setStatusFilter: (value: 'all' | 'active' | 'inactive') => void;
   sort: TableSortState;
-  statusFilter: 'all' | 'active' | 'inactive';
   totalCount: number;
   totalPages: number;
   userOverviewById: Map<string, UserOverview>;
@@ -80,9 +78,7 @@ export function UsersTable({
   submitQuery,
   setRoleFilter,
   setSort,
-  setStatusFilter,
   sort,
-  statusFilter,
   totalCount,
   totalPages,
   userOverviewById,
@@ -92,12 +88,7 @@ export function UsersTable({
     { label: '관리자/관제', value: 'admin' },
     { label: '지도요원', value: 'field_agent' },
   ];
-  const statusOptions: Array<{ label: string; value: UsersTableProps['statusFilter'] }> = [
-    { label: '전체 상태', value: 'all' },
-    { label: '활성', value: 'active' },
-    { label: '비활성', value: 'inactive' },
-  ];
-  const activeFilterCount = (roleFilter !== 'all' ? 1 : 0) + (statusFilter !== 'all' ? 1 : 0);
+  const activeFilterCount = roleFilter !== 'all' ? 1 : 0;
 
   const handleExport = async () => {
     const users = await exportUsers();
@@ -143,7 +134,6 @@ export function UsersTable({
 
   const resetHeaderFilters = () => {
     setRoleFilter('all');
-    setStatusFilter('all');
   };
 
   return (
@@ -180,23 +170,6 @@ export function UsersTable({
                   }
                 >
                   {roleOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className={styles.sectionHeaderMenuField}>
-                <label htmlFor="users-filter-status">상태</label>
-                <select
-                  id="users-filter-status"
-                  className="app-select"
-                  value={statusFilter}
-                  onChange={(event) =>
-                    setStatusFilter(event.target.value as UsersTableProps['statusFilter'])
-                  }
-                >
-                  {statusOptions.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}
                     </option>
