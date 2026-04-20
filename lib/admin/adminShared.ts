@@ -259,11 +259,10 @@ export const CONTENT_TYPE_OPTIONS: Array<{
   },
 ];
 
-const CONTENT_CRUD_LAST_VISIBLE_TYPE: SafetyContentType = 'legal_reference';
+const CONTENT_CRUD_HIDDEN_TYPES = new Set<SafetyContentType>(['legal_reference']);
 
-export const CONTENT_CRUD_TYPE_OPTIONS = CONTENT_TYPE_OPTIONS.slice(
-  0,
-  CONTENT_TYPE_OPTIONS.findIndex((option) => option.value === CONTENT_CRUD_LAST_VISIBLE_TYPE) + 1,
+export const CONTENT_CRUD_TYPE_OPTIONS = CONTENT_TYPE_OPTIONS.filter(
+  (option) => !CONTENT_CRUD_HIDDEN_TYPES.has(option.value),
 );
 
 export const CONTENT_TYPE_LABELS = {

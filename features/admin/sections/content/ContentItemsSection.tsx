@@ -149,10 +149,12 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
 
   const filteredItems = useMemo(
     () =>
-      (activeType === 'all'
-        ? items
-        : items.filter((item) => item.content_type === activeType)
-      ).filter((item) => {
+      items
+        .filter((item) => item.content_type !== 'legal_reference')
+        .filter((item) =>
+          activeType === 'all' ? true : item.content_type === activeType,
+        )
+        .filter((item) => {
         const normalizedQuery = deferredQuery.trim().toLowerCase();
         if (!normalizedQuery) return true;
         return [
@@ -164,7 +166,7 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
           .join(' ')
           .toLowerCase()
           .includes(normalizedQuery);
-      }),
+        }),
     [activeType, deferredQuery, items],
   );
   const sortedItems = useMemo(() => {
