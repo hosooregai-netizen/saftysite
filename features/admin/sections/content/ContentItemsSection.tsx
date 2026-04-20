@@ -1034,7 +1034,8 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
               {!isMeasurementTemplate &&
               !isSafetyNews &&
               !isDisasterCase &&
-              !isDoc7ReferenceMaterial ? (
+              !isDoc7ReferenceMaterial &&
+              !isHazardCountermeasureCatalog ? (
                 <label className={styles.modalFieldWide}>
                   <span className={styles.label}>{activeTypeMeta.bodyLabel}</span>
                   <textarea

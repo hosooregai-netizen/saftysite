@@ -193,11 +193,12 @@ export const CONTENT_TYPE_OPTIONS: Array<{
   {
     value: 'hazard_countermeasure_catalog',
     label: '유해위험작업 안전대책',
-    description: 'doc7/doc8/분기 보고서의 공통 위험요인-안전대책 매칭 자료를 관리합니다.',
+    description:
+      'doc7/doc8/분기 보고서의 공통 위험요인-안전대책 매칭 자료를 관리합니다. 관리대책은 작성 페이지의 안전대책과 같은 값입니다.',
     editorMode: 'text',
-    bodyLabel: '안전대책',
+    bodyLabel: '관리대책',
     usageHint:
-      '구분, 제목, 예상위험, 관리대책, 법령, 비고를 입력하면 doc7/doc8/분기 보고서에서 공통 매칭됩니다.',
+      '구분, 제목, 예상위험, 관리대책, 법령, 비고를 입력하면 doc7/doc8/분기 보고서에서 공통 매칭됩니다. 관리대책은 doc8/분기 작성 화면에서 안전대책으로 연결됩니다.',
   },
   {
     value: 'legal_reference',

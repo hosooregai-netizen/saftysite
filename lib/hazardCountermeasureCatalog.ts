@@ -40,6 +40,8 @@ export function readHazardCountermeasureCatalogBody(
       'countermeasure',
       'managementMeasure',
       'management_measure',
+      'safetyMeasure',
+      'safety_measure',
       'body',
     ),
     legalReference: readBodyText(
