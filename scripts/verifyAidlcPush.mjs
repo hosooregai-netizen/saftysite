@@ -188,6 +188,15 @@ const FEATURE_RULES = [
     ],
   },
   {
+    id: 'mobile-worker-nav',
+    patterns: [
+      /^features\/mobile\/components\/MobileMailboxScreen\.tsx$/,
+      /^features\/mobile\/components\/MobileSiteListScreen\.tsx$/,
+      /^features\/mobile\/components\/MobileWorkerCalendarScreen\.tsx$/,
+      /^features\/mobile\/site-list\//,
+    ],
+  },
+  {
     id: 'mobile-site-reports',
     patterns: [
       /^features\/mobile\/components\/MobileSiteReportsScreen\.tsx$/,
