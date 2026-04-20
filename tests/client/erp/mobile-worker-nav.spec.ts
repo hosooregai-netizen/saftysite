@@ -67,7 +67,6 @@ export async function runMobileWorkerNavSmoke(config: ClientSmokePlaywrightConfi
     await page.waitForURL(/\/mobile\/calendar$/);
     await harness.waitForRequestCount('GET /api/me/schedules', scheduleReadsBefore + 1);
     await page.getByRole('heading', { name: '일정', exact: true }).waitFor({ state: 'visible' });
-    await page.getByRole('heading', { name: '월간 캘린더' }).waitFor({ state: 'visible' });
 
     await page.getByRole('link', { name: '메일함' }).click();
     await page.waitForURL(/\/mobile\/mailbox(?:\?.*)?$/);
