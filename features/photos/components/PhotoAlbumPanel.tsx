@@ -47,14 +47,6 @@ interface PhotoAlbumRoundGroup {
   rows: PhotoAlbumItem[];
 }
 
-interface PhotoAlbumSiteGroup {
-  headquarterName: string;
-  key: string;
-  siteId: string;
-  siteName: string;
-  rounds: PhotoAlbumRoundGroup[];
-}
-
 const PAGE_SIZE = 60;
 
 function formatDateLabel(value: string) {
@@ -211,6 +203,8 @@ export function PhotoAlbumPanel({
     () => visibleSiteOptions.find((option) => option.id === (lockedSiteId || siteId || '')) ?? null,
     [lockedSiteId, siteId, visibleSiteOptions],
   );
+  const activeScopedSiteId = lockedSiteId || siteId || '';
+  const isSiteScopedView = mode !== 'admin' || Boolean(activeScopedSiteId);
 
   const uploadRoundOptions = useMemo(() => {
     const totalRounds = selectedUploadSite?.totalRounds ?? 0;
@@ -314,48 +308,42 @@ export function PhotoAlbumPanel({
     [rows, visibleCount],
   );
 
-  const groupedVisibleRows = useMemo<PhotoAlbumSiteGroup[]>(() => {
-    const siteGroups = new Map<string, PhotoAlbumSiteGroup>();
+  const scopedSiteMeta = useMemo(() => {
+    if (!isSiteScopedView || visibleRows.length === 0) return null;
+    const [first] = visibleRows;
+    return {
+      headquarterName: first.headquarterName,
+      siteName: first.siteName,
+    };
+  }, [isSiteScopedView, visibleRows]);
+
+  const roundGroupedVisibleRows = useMemo<PhotoAlbumRoundGroup[]>(() => {
+    if (!isSiteScopedView) return [];
+
+    const roundGroups = new Map<string, PhotoAlbumRoundGroup>();
 
     for (const item of visibleRows) {
-      const siteKey = `${item.siteId}::${item.headquarterId}`;
-      const existingSiteGroup =
-        siteGroups.get(siteKey) ??
-        {
-          headquarterName: item.headquarterName,
-          key: siteKey,
-          rounds: [],
-          siteId: item.siteId,
-          siteName: item.siteName,
-        };
-      if (!siteGroups.has(siteKey)) {
-        siteGroups.set(siteKey, existingSiteGroup);
-      }
-
       const roundKey = `round:${item.roundNo}`;
       const existingRoundGroup =
-        existingSiteGroup.rounds.find((group) => group.key === roundKey) ??
+        roundGroups.get(roundKey) ??
         {
           key: roundKey,
           label: formatRoundLabel(item.roundNo),
           roundNo: item.roundNo,
           rows: [],
         };
-      if (!existingSiteGroup.rounds.some((group) => group.key === roundKey)) {
-        existingSiteGroup.rounds.push(existingRoundGroup);
+      if (!roundGroups.has(roundKey)) {
+        roundGroups.set(roundKey, existingRoundGroup);
       }
       existingRoundGroup.rows.push(item);
     }
 
-    return Array.from(siteGroups.values()).map((siteGroup) => ({
-      ...siteGroup,
-      rounds: [...siteGroup.rounds].sort(
-        (left, right) =>
-          compareDisplayRoundNo(left.roundNo, right.roundNo) ||
-          left.label.localeCompare(right.label, 'ko-KR'),
-      ),
-    }));
-  }, [visibleRows]);
+    return Array.from(roundGroups.values()).sort(
+      (left, right) =>
+        compareDisplayRoundNo(left.roundNo, right.roundNo) ||
+        left.label.localeCompare(right.label, 'ko-KR'),
+    );
+  }, [isSiteScopedView, visibleRows]);
 
   const selectedRows = useMemo(
     () => rows.filter((row) => selectedIds.includes(row.id)),
@@ -803,22 +791,24 @@ export function PhotoAlbumPanel({
                 </div>
               </div>
 
-              <div className={styles.groupStack}>
-                {groupedVisibleRows.map((siteGroup) => (
-                  <section key={siteGroup.key} className={styles.groupSection}>
-                    <header className={styles.groupHeader}>
-                      <div>
-                        <h3 className={styles.groupTitle}>{siteGroup.siteName}</h3>
-                        <div className={styles.groupMeta}>
-                          {mode === 'admin'
-                            ? `${siteGroup.headquarterName} · ${siteGroup.rounds.length}개 회차`
-                            : `${siteGroup.rounds.length}개 회차`}
+              {isSiteScopedView ? (
+                <div className={styles.groupStack}>
+                  <section className={styles.groupSection}>
+                    {scopedSiteMeta ? (
+                      <header className={styles.groupHeader}>
+                        <div>
+                          <h3 className={styles.groupTitle}>{scopedSiteMeta.siteName}</h3>
+                          <div className={styles.groupMeta}>
+                            {mode === 'admin'
+                              ? `${scopedSiteMeta.headquarterName} · ${roundGroupedVisibleRows.length}개 회차`
+                              : `${roundGroupedVisibleRows.length}개 회차`}
+                          </div>
                         </div>
-                      </div>
-                    </header>
+                      </header>
+                    ) : null}
                     <div className={styles.roundStack}>
-                      {siteGroup.rounds.map((roundGroup) => (
-                        <section key={`${siteGroup.key}:${roundGroup.key}`} className={styles.roundSection}>
+                      {roundGroupedVisibleRows.map((roundGroup) => (
+                        <section key={roundGroup.key} className={styles.roundSection}>
                           <div className={styles.roundHeader}>
                             <strong>{roundGroup.label}</strong>
                             <span className={styles.groupMeta}>{roundGroup.rows.length}건</span>
@@ -912,8 +902,78 @@ export function PhotoAlbumPanel({
                       ))}
                     </div>
                   </section>
-                ))}
-              </div>
+                </div>
+              ) : (
+                <div className={styles.grid}>
+                  {visibleRows.map((item) => {
+                    const isSelected = selectedIds.includes(item.id);
+                    return (
+                      <article
+                        key={item.id}
+                        className={`${styles.card} ${isSelected ? styles.cardSelected : ''}`}
+                      >
+                        <button
+                          type="button"
+                          className={styles.cardPreviewButton}
+                          onClick={() => setActiveItem(item)}
+                        >
+                          {item.previewUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={item.previewUrl}
+                              alt={item.fileName}
+                              className={styles.cardImage}
+                            />
+                          ) : (
+                            <div className={styles.cardImageFallback}>미리보기 없음</div>
+                          )}
+                        </button>
+                        <label className={styles.cardCheckbox}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => handleToggleRow(item.id)}
+                          />
+                        </label>
+                        <div className={styles.cardBody}>
+                          <div className={styles.cardMetaRow}>
+                            <span className={styles.cardMetaText}>{formatFileSize(item.sizeBytes)}</span>
+                          </div>
+                          <div className={styles.cardTitle} title={item.fileName}>
+                            {item.fileName}
+                          </div>
+                          <div className={styles.cardMetaText}>{item.headquarterName}</div>
+                          <div className={styles.cardMetaText}>
+                            {item.siteName} · {formatRoundLabel(item.roundNo)}
+                          </div>
+                          <div className={styles.cardMetaText}>
+                            {item.capturedAt
+                              ? `촬영 ${formatDateLabel(item.capturedAt)}`
+                              : `등록 ${formatDateLabel(item.createdAt)}`}
+                          </div>
+                          <div className={styles.cardMetaText}>
+                            {item.uploadedByName ? `업로드 ${item.uploadedByName}` : '업로드 정보 없음'}
+                          </div>
+                          {item.sourceReportTitle ? (
+                            <div className={styles.cardMetaText} title={item.sourceReportTitle}>
+                              {item.sourceReportTitle}
+                            </div>
+                          ) : null}
+                        </div>
+                        <div className={styles.cardActions}>
+                          <button
+                            type="button"
+                            className="app-button app-button-secondary"
+                            onClick={() => void handleDownload([item.id])}
+                          >
+                            다운로드
+                          </button>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
 
               {hasMoreRows ? (
                 <div ref={loadMoreRef} className={styles.loadMoreRow}>
