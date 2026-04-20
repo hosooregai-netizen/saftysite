@@ -132,11 +132,6 @@ function buildContractWindowFromSafetySite(
     project_end_date?: string | null;
   } | null,
 ) {
-  const hasScheduleSeed = Boolean(
-    normalizeText(site?.contract_date) ||
-      normalizeText(site?.contract_start_date) ||
-      normalizeText(site?.contract_signed_date),
-  );
   const windowStart =
     normalizeText(site?.contract_start_date) ||
     normalizeText(site?.contract_signed_date) ||
@@ -149,7 +144,6 @@ function buildContractWindowFromSafetySite(
     windowEnd = windowStart;
   }
   return {
-    hasScheduleSeed,
     windowEnd,
     windowStart,
   };
@@ -359,7 +353,7 @@ export function WorkerCalendarScreen() {
   const [selectedDate, setSelectedDate] = useState('');
   const [dialog, setDialog] = useState<ScheduleDialogState>(EMPTY_DIALOG_STATE);
   const [contractWindowsBySiteId, setContractWindowsBySiteId] = useState<
-    Record<string, { hasScheduleSeed: boolean; windowEnd: string; windowStart: string }>
+    Record<string, { windowEnd: string; windowStart: string }>
   >({});
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -503,19 +497,14 @@ export function WorkerCalendarScreen() {
       .filter((site) => !selectedSiteId || site.id === selectedSiteId)
       .sort((left, right) => left.siteName.localeCompare(right.siteName, 'ko'))
       .map((site) => {
-        const siteTotalRounds =
+        const totalRounds =
           typeof site.totalRounds === 'number' && site.totalRounds > 0 ? site.totalRounds : 0;
         const reportIndex = getReportIndexBySiteId(site.id);
         const hasLoadedCompletion = reportIndex?.status === 'loaded';
         const completedRounds = hasLoadedCompletion
           ? reportCompletedRoundsBySiteId.get(site.id)?.size ?? 0
           : 0;
-        const contractWindow = contractWindowsBySiteId[site.id] ?? {
-          hasScheduleSeed: false,
-          windowEnd: '',
-          windowStart: '',
-        };
-        const totalRounds = contractWindow.hasScheduleSeed ? siteTotalRounds : 0;
+        const contractWindow = contractWindowsBySiteId[site.id] ?? { windowEnd: '', windowStart: '' };
         const remainingRounds = hasLoadedCompletion
           ? getSelectableWorkerRoundCount(
               buildWorkerDialogRoundOptions({
@@ -553,11 +542,7 @@ export function WorkerCalendarScreen() {
     [dialog.siteId, dialogSiteOptions],
   );
   const dialogRoundOptions = useMemo(() => {
-    const contractWindow = contractWindowsBySiteId[dialog.siteId] ?? {
-      hasScheduleSeed: false,
-      windowEnd: '',
-      windowStart: '',
-    };
+    const contractWindow = contractWindowsBySiteId[dialog.siteId] ?? { windowEnd: '', windowStart: '' };
     return buildWorkerDialogRoundOptions({
       contractWindowEnd: contractWindow.windowEnd,
       contractWindowStart: contractWindow.windowStart,
@@ -698,11 +683,7 @@ export function WorkerCalendarScreen() {
         : dialogSiteOptions[0]?.siteId || '');
     const defaultSiteOption =
       dialogSiteOptions.find((option) => option.siteId === defaultSiteId) ?? null;
-    const defaultContractWindow = contractWindowsBySiteId[defaultSiteId] ?? {
-      hasScheduleSeed: false,
-      windowEnd: '',
-      windowStart: '',
-    };
+    const defaultContractWindow = contractWindowsBySiteId[defaultSiteId] ?? { windowEnd: '', windowStart: '' };
     const defaultTotalRounds = Math.max(
       defaultSiteOption?.totalRounds ?? 0,
       requestedSchedule?.totalRounds ?? 0,
@@ -747,11 +728,7 @@ export function WorkerCalendarScreen() {
   const handleDialogSiteSelect = (siteId: string) => {
     const selectedSiteOption =
       dialogSiteOptions.find((option) => option.siteId === siteId) ?? null;
-    const contractWindow = contractWindowsBySiteId[siteId] ?? {
-      hasScheduleSeed: false,
-      windowEnd: '',
-      windowStart: '',
-    };
+    const contractWindow = contractWindowsBySiteId[siteId] ?? { windowEnd: '', windowStart: '' };
     const preferredRow = findPreferredWorkerDialogOption(
       buildWorkerDialogRoundOptions({
         contractWindowEnd: contractWindow.windowEnd,
