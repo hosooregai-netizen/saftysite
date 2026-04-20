@@ -1,14 +1,26 @@
 'use client';
 
+import { useState, type FocusEvent } from 'react';
 import type { useInspectionSessionScreen } from '@/features/inspection-session/hooks/useInspectionSessionScreen';
 import { ACCIDENT_TYPE_OPTIONS, CAUSATIVE_AGENT_LABELS, CAUSATIVE_AGENT_OPTIONS } from '@/constants/inspectionSession/doc7Catalog';
 import { RISK_TRI_LEVEL_OPTIONS } from '@/components/session/workspace/constants';
 import workspaceStyles from '@/components/session/InspectionSessionWorkspace.module.css';
 import styles from '@/features/mobile/components/MobileShell.module.css';
+import {
+  applyHazardCountermeasureSelectionToFinding,
+  clearHazardCountermeasureSelectionFromFinding,
+  getHazardCountermeasureFieldText,
+  getHazardCountermeasureRecommendations,
+  type HazardCountermeasureCatalogMatchField,
+} from '@/lib/hazardCountermeasureCatalog';
 import type { MobilePhotoSourceTarget } from './mobileInspectionSessionHelpers';
 
 type InspectionScreenController = ReturnType<typeof useInspectionSessionScreen>;
 type InspectionSessionDraft = NonNullable<InspectionScreenController['sectionSession']>;
+type Doc7MatchField = Extract<
+  HazardCountermeasureCatalogMatchField,
+  'expectedRisk' | 'countermeasure' | 'legalReference'
+>;
 
 interface MobileInspectionSessionStep7FindingCardProps {
   doc7AiError?: string;
@@ -29,6 +41,8 @@ export function MobileInspectionSessionStep7FindingCard({
   onRefill,
   screen,
 }: MobileInspectionSessionStep7FindingCardProps) {
+  const [activeField, setActiveField] = useState<Doc7MatchField | null>(null);
+  const hazardCountermeasureCatalog = screen.derivedData.hazardCountermeasureCatalog;
   const updateFinding = (patch: Partial<InspectionSessionDraft['document7Findings'][number]>) => {
     screen.applyDocumentUpdate('doc7', 'manual', (current) => ({
       ...current,
@@ -49,6 +63,47 @@ export function MobileInspectionSessionStep7FindingCard({
         await screen.withFileData(file, (value) => updateFinding({ [key]: value }));
       },
     });
+
+  const recommendations =
+    activeField === null
+      ? []
+      : getHazardCountermeasureRecommendations(
+          hazardCountermeasureCatalog,
+          activeField === 'expectedRisk'
+            ? finding.improvementRequest || finding.improvementPlan || ''
+            : activeField === 'countermeasure'
+              ? finding.emphasis
+              : finding.legalReferenceTitle,
+          activeField,
+          { excludeId: finding.hazardCountermeasureItemId },
+        );
+
+  const handleBlur = (field: Doc7MatchField, event: FocusEvent<HTMLDivElement>) => {
+    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+      setActiveField((current) => (current === field ? null : current));
+    }
+  };
+
+  const selectRecommendation = (
+    item: InspectionScreenController['derivedData']['hazardCountermeasureCatalog'][number],
+  ) => {
+    updateFinding(applyHazardCountermeasureSelectionToFinding(finding, item));
+    setActiveField(null);
+  };
+
+  const buildRecommendationLabel = (
+    item: InspectionScreenController['derivedData']['hazardCountermeasureCatalog'][number],
+    field: Doc7MatchField,
+  ) => {
+    const primary =
+      getHazardCountermeasureFieldText(item, field).trim() ||
+      item.title.trim() ||
+      item.expectedRisk.trim() ||
+      item.countermeasure.trim() ||
+      item.legalReference.trim();
+    const title = item.title.trim();
+    return title && primary !== title ? `${primary} (${title})` : primary;
+  };
 
   return (
     <article style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px' }}>
@@ -165,33 +220,144 @@ export function MobileInspectionSessionStep7FindingCard({
         </div>
         <div className={styles.mobileEditorFieldGroup}>
           <span className={styles.mobileEditorFieldLabel}>개선요청사항</span>
-          <textarea
-            className={`app-input ${styles.mobileEditorTextareaCompact}`}
-            value={finding.improvementRequest || finding.improvementPlan || ''}
-            onChange={(event) => updateFinding({ improvementPlan: event.target.value, improvementRequest: event.target.value })}
-            placeholder="개선요청사항"
-            style={{ width: '100%' }}
-          />
+          <div className={styles.mobileDoc8ProcessStack} onBlur={(event) => handleBlur('expectedRisk', event)}>
+            <textarea
+              className={`app-input ${styles.mobileEditorTextareaCompact}`}
+              value={finding.improvementRequest || finding.improvementPlan || ''}
+              onFocus={() => setActiveField('expectedRisk')}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') {
+                  setActiveField((current) => (current === 'expectedRisk' ? null : current));
+                }
+              }}
+              onChange={(event) =>
+                updateFinding({
+                  ...clearHazardCountermeasureSelectionFromFinding(finding),
+                  improvementPlan: event.target.value,
+                  improvementRequest: event.target.value,
+                })
+              }
+              placeholder="개선요청사항"
+              style={{ width: '100%' }}
+            />
+            {activeField === 'expectedRisk' && recommendations.length > 0 ? (
+              <div
+                id={`mobile-doc7-recommendations-${finding.id}-expectedRisk`}
+                className={workspaceStyles.doc8RecommendationList}
+                role="listbox"
+                style={{ top: 'calc(100% + 6px)', left: 0, right: 0 }}
+              >
+                {recommendations.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    role="option"
+                    aria-selected={false}
+                    className={workspaceStyles.doc8RecommendationButton}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => selectRecommendation(item)}
+                  >
+                    {buildRecommendationLabel(item, 'expectedRisk')}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
         </div>
         <div className={styles.mobileEditorFieldGroup}>
           <span className={styles.mobileEditorFieldLabel}>중점관리 위험요인 및 관리방안</span>
-          <textarea className={`app-input ${styles.mobileEditorTextareaCompact}`} value={finding.emphasis} onChange={(event) => updateFinding({ emphasis: event.target.value })} placeholder="중점관리 위험요인 및 관리방안" style={{ width: '100%' }} />
+          <div className={styles.mobileDoc8ProcessStack} onBlur={(event) => handleBlur('countermeasure', event)}>
+            <textarea
+              className={`app-input ${styles.mobileEditorTextareaCompact}`}
+              value={finding.emphasis}
+              onFocus={() => setActiveField('countermeasure')}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') {
+                  setActiveField((current) => (current === 'countermeasure' ? null : current));
+                }
+              }}
+              onChange={(event) =>
+                updateFinding({
+                  ...clearHazardCountermeasureSelectionFromFinding(finding),
+                  emphasis: event.target.value,
+                })
+              }
+              placeholder="중점관리 위험요인 및 관리방안"
+              style={{ width: '100%' }}
+            />
+            {activeField === 'countermeasure' && recommendations.length > 0 ? (
+              <div
+                id={`mobile-doc7-recommendations-${finding.id}-countermeasure`}
+                className={workspaceStyles.doc8RecommendationList}
+                role="listbox"
+                style={{ top: 'calc(100% + 6px)', left: 0, right: 0 }}
+              >
+                {recommendations.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    role="option"
+                    aria-selected={false}
+                    className={workspaceStyles.doc8RecommendationButton}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => selectRecommendation(item)}
+                  >
+                    {buildRecommendationLabel(item, 'countermeasure')}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
         </div>
         <div className={styles.mobileEditorFieldGroup}>
           <span className={styles.mobileEditorFieldLabel}>관련 법령</span>
-          <input
-            className="app-input"
-            value={finding.legalReferenceTitle}
-            onChange={(event) =>
-              updateFinding({
-                legalReferenceId: '',
-                legalReferenceTitle: event.target.value,
-                referenceLawTitles: event.target.value.split(/[\n,]+/).map((entry) => entry.trim()).filter(Boolean),
-              })
-            }
-            placeholder="관련 법령"
-            style={{ width: '100%' }}
-          />
+          <div className={styles.mobileDoc8ProcessStack} onBlur={(event) => handleBlur('legalReference', event)}>
+            <input
+              className="app-input"
+              value={finding.legalReferenceTitle}
+              onFocus={() => setActiveField('legalReference')}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') {
+                  setActiveField((current) => (current === 'legalReference' ? null : current));
+                }
+              }}
+              onChange={(event) =>
+                updateFinding({
+                  ...clearHazardCountermeasureSelectionFromFinding(finding),
+                  legalReferenceId: '',
+                  legalReferenceTitle: event.target.value,
+                  referenceLawTitles: event.target.value
+                    .split(/[\n,]+/)
+                    .map((entry) => entry.trim())
+                    .filter(Boolean),
+                })
+              }
+              placeholder="관련 법령"
+              style={{ width: '100%' }}
+            />
+            {activeField === 'legalReference' && recommendations.length > 0 ? (
+              <div
+                id={`mobile-doc7-recommendations-${finding.id}-legalReference`}
+                className={workspaceStyles.doc8RecommendationList}
+                role="listbox"
+                style={{ top: 'calc(100% + 6px)', left: 0, right: 0 }}
+              >
+                {recommendations.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    role="option"
+                    aria-selected={false}
+                    className={workspaceStyles.doc8RecommendationButton}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => selectRecommendation(item)}
+                  >
+                    {buildRecommendationLabel(item, 'legalReference')}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
         </div>
       </div>
     </article>

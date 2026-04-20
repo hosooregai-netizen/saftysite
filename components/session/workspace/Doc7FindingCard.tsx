@@ -15,7 +15,10 @@ import {
 } from '@/lib/doc7ReferenceMaterials';
 import { Doc7FindingFields } from '@/features/inspection-session/workspace/sections/doc7/Doc7FindingFields';
 import { Doc7FindingPhotoPanel } from '@/features/inspection-session/workspace/sections/doc7/Doc7FindingPhotoPanel';
-import type { SafetyDoc7ReferenceMaterialCatalogItem } from '@/types/backend';
+import type {
+  SafetyDoc7ReferenceMaterialCatalogItem,
+  SafetyHazardCountermeasureCatalogItem,
+} from '@/types/backend';
 import type { CurrentHazardFinding } from '@/types/inspectionSession';
 import type { CausativeAgentKey } from '@/types/siteOverview';
 
@@ -30,6 +33,7 @@ function selectValueForRiskLevel(stored: string): string {
 interface Doc7FindingCardProps {
   applyDocumentUpdate: ApplyDocumentUpdate;
   doc7ReferenceMaterials: SafetyDoc7ReferenceMaterialCatalogItem[];
+  hazardCountermeasureCatalog: SafetyHazardCountermeasureCatalogItem[];
   item: CurrentHazardFinding;
   index: number;
   removable: boolean;
@@ -39,6 +43,7 @@ interface Doc7FindingCardProps {
 export default function Doc7FindingCard({
   applyDocumentUpdate,
   doc7ReferenceMaterials,
+  hazardCountermeasureCatalog,
   item,
   index,
   removable,
@@ -169,6 +174,7 @@ export default function Doc7FindingCard({
           <span className={styles.cardEyebrow}>{`위험요인 ${index + 1}`}</span>
         </div>
         <Doc7FindingFields
+          hazardCountermeasureCatalog={hazardCountermeasureCatalog}
           item={item}
           referenceMaterial1Title={
             matchedReferenceMaterial?.referenceTitle1 || matchedReferenceMaterial?.title || ''

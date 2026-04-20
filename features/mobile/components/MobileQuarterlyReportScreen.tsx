@@ -49,6 +49,7 @@ export function MobileQuarterlyReportScreen({
     handleUpdateFuturePlan,
     handleUpdateImplementationRow,
     handleUpdateSnapshotField,
+    hazardCountermeasureCatalog,
     isAuthenticated,
     isGeneratingHwpx,
     isGeneratingPdf,
@@ -141,6 +142,7 @@ export function MobileQuarterlyReportScreen({
             activeStep={activeStep}
             documentNotice={documentNotice}
             draft={draft}
+            hazardCountermeasureCatalog={hazardCountermeasureCatalog}
             isOpsAssetsLoading={isOpsAssetsLoading}
             isOpsAssetsRefreshing={isOpsAssetsRefreshing}
             isSourceLoading={isSourceLoading}

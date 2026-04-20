@@ -2,6 +2,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { useSiteOperationalReportMutations } from '@/hooks/useSiteOperationalReportMutations';
+import { getHazardCountermeasureCatalogForReportDate } from '@/lib/safetyApiMappers/masterData';
 import { readSafetyAuthToken } from '@/lib/safetyApi';
 import { resolveSafetyContentItemsCacheScope } from '@/lib/safetyApi/contentItemsCache';
 import {
@@ -39,6 +40,7 @@ export function useMobileQuarterlyReportScreenState({
     isAuthenticated,
     isReady,
     login,
+    masterData,
     logout,
     sites,
   } = useInspectionSessions();
@@ -138,6 +140,16 @@ export function useMobileQuarterlyReportScreenState({
   });
   const { isGeneratingHwpx, isGeneratingPdf, handleDownloadHwpx, handleDownloadPdf } =
     useMobileQuarterlyDocumentActions({ onSave: handleSave, setDocumentNotice });
+  const hazardCountermeasureCatalog = useMemo(
+    () =>
+      draft
+        ? getHazardCountermeasureCatalogForReportDate(
+            masterData,
+            draft.periodEndDate || draft.periodStartDate || new Date().toISOString().slice(0, 10),
+          )
+        : [],
+    [draft, masterData],
+  );
   return {
     activeStep,
     authError,
@@ -166,6 +178,7 @@ export function useMobileQuarterlyReportScreenState({
     handleUpdateFuturePlan,
     handleUpdateImplementationRow,
     handleUpdateSnapshotField,
+    hazardCountermeasureCatalog,
     isAuthenticated,
     isGeneratingHwpx,
     isGeneratingPdf,

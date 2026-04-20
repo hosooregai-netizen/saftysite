@@ -7,6 +7,7 @@ import type {
 } from '@/types/inspectionSession';
 import type {
   SafetyDoc7ReferenceMaterialCatalogItem,
+  SafetyHazardCountermeasureCatalogItem,
   SafetyMeasurementTemplate,
 } from '@/types/backend';
 import type { ChartEntry } from './utils';
@@ -39,6 +40,7 @@ export interface HazardStatsSectionProps {
   cumulativeAccidentEntries: ChartEntry[];
   cumulativeAgentEntries: ChartEntry[];
   doc7ReferenceMaterials: SafetyDoc7ReferenceMaterialCatalogItem[];
+  hazardCountermeasureCatalog: SafetyHazardCountermeasureCatalogItem[];
   isRelationHydrating: boolean;
   isRelationReady: boolean;
   relationStatus: ReportIndexStatus;

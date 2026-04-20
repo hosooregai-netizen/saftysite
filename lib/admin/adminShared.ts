@@ -191,6 +191,15 @@ export const CONTENT_TYPE_OPTIONS: Array<{
     bodyLabel: '참고자료 내용',
   },
   {
+    value: 'hazard_countermeasure_catalog',
+    label: '유해위험작업 안전대책',
+    description: 'doc7/doc8/분기 보고서의 공통 위험요인-안전대책 매칭 자료를 관리합니다.',
+    editorMode: 'text',
+    bodyLabel: '안전대책',
+    usageHint:
+      '구분, 제목, 예상위험, 관리대책, 법령, 비고를 입력하면 doc7/doc8/분기 보고서에서 공통 매칭됩니다.',
+  },
+  {
     value: 'legal_reference',
     label: '법령 참고자료',
     description: 'ERP 문서 작성 시 참고할 법령 자료를 관리합니다.',

@@ -74,6 +74,7 @@ export function createCurrentHazardFinding(
     legalReferenceId: '',
     legalReferenceTitle: '',
     referenceLawTitles: [],
+    hazardCountermeasureItemId: '',
     referenceMaterial1: '',
     referenceMaterial2: '',
     referenceMaterialImage: '',
@@ -91,6 +92,7 @@ export function createFutureProcessRiskPlan(
 ): FutureProcessRiskPlan {
   return {
     id: initial.id ?? generateId('future-plan'),
+    hazardCountermeasureItemId: '',
     processName: '',
     hazard: '',
     countermeasure: '',

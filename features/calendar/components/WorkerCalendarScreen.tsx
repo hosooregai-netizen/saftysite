@@ -49,6 +49,12 @@ interface WorkerDialogRoundOption {
   state: WorkerDialogRoundState;
 }
 
+interface WorkerGuidanceSessionLink {
+  actualVisitDate: string;
+  linkedReportKey: string;
+  sessionId: string;
+}
+
 const SYNTHETIC_WORKER_SCHEDULE_ID_PREFIX = 'worker-round:';
 
 type CalendarViewMode = 'calendar' | 'list';
@@ -352,6 +358,7 @@ export function WorkerCalendarScreen() {
   const [notice, setNotice] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState('');
   const [dialog, setDialog] = useState<ScheduleDialogState>(EMPTY_DIALOG_STATE);
+  const [dialogSubmittingAction, setDialogSubmittingAction] = useState<'save' | 'launch' | null>(null);
   const [contractWindowsBySiteId, setContractWindowsBySiteId] = useState<
     Record<string, { windowEnd: string; windowStart: string }>
   >({});
@@ -362,6 +369,7 @@ export function WorkerCalendarScreen() {
     createSession,
     currentUser,
     ensureAssignedSafetySite,
+    ensureSessionLoaded,
     ensureSiteReportIndexLoaded,
     getSessionsBySiteId,
     getReportIndexBySiteId,
@@ -787,13 +795,25 @@ export function WorkerCalendarScreen() {
     }));
   };
 
+  const upsertScheduleRow = (schedule: SafetyInspectionSchedule) => {
+    setRows((current) => {
+      const nextRows = current.filter(
+        (row) =>
+          row.id !== schedule.id &&
+          !(row.siteId === schedule.siteId && row.roundNo === schedule.roundNo),
+      );
+      return [...nextRows, schedule];
+    });
+  };
+
   const ensureDraftSessionForSchedule = async (schedule: SafetyInspectionSchedule) => {
     const selectedReport = reportItemsByRoundBySiteId.get(schedule.siteId)?.get(schedule.roundNo) ?? null;
     if (selectedReport) {
       return {
         actualVisitDate: schedule.actualVisitDate || normalizeText(selectedReport.visitDate),
         linkedReportKey: normalizeText(selectedReport.reportKey),
-      };
+        sessionId: normalizeText(selectedReport.reportKey),
+      } satisfies WorkerGuidanceSessionLink;
     }
 
     const site = sites.find((item) => item.id === schedule.siteId);
@@ -803,7 +823,11 @@ export function WorkerCalendarScreen() {
       (session) => session.reportNumber === schedule.roundNo,
     );
     if (existingSession) {
-      return null;
+      return {
+        actualVisitDate: normalizeText(schedule.actualVisitDate),
+        linkedReportKey: normalizeText(schedule.linkedReportKey),
+        sessionId: existingSession.id,
+      } satisfies WorkerGuidanceSessionLink;
     }
 
     let technicalGuidanceRelations:
@@ -846,7 +870,7 @@ export function WorkerCalendarScreen() {
     }
 
     const reportDate = schedule.plannedDate || new Date().toISOString().slice(0, 10);
-    createSession(site, {
+    const createdSession = createSession(site, {
       document4FollowUps,
       meta: {
         drafter: currentUser?.name || site.assigneeName,
@@ -857,7 +881,11 @@ export function WorkerCalendarScreen() {
       reportNumber: schedule.roundNo,
       technicalGuidanceRelations,
     });
-    return null;
+    return {
+      actualVisitDate: normalizeText(schedule.actualVisitDate),
+      linkedReportKey: normalizeText(schedule.linkedReportKey),
+      sessionId: createdSession.id,
+    } satisfies WorkerGuidanceSessionLink;
   };
 
   const resolvePersistedScheduleForSave = async (schedule: SafetyInspectionSchedule) => {
@@ -887,6 +915,51 @@ export function WorkerCalendarScreen() {
     });
 
     return persisted ?? schedule;
+  };
+
+  const saveScheduleSelection = async (schedule: SafetyInspectionSchedule) => {
+    const selectionReasonLabel = dialog.selectionReasonLabel.trim();
+    const selectionReasonMemo = dialog.selectionReasonMemo.trim();
+    const linkedReport = dialogSelectedOption?.linkedReport ?? null;
+    const linkedReportKey = normalizeText(linkedReport?.reportKey);
+    const actualVisitDate = normalizeText(linkedReport?.visitDate);
+
+    const persistedSchedule = await resolvePersistedScheduleForSave(schedule);
+    const saved = await updateMySchedule(persistedSchedule.id, {
+      actualVisitDate,
+      linkedReportKey,
+      plannedDate: dialog.plannedDate,
+      selectionReasonLabel,
+      selectionReasonMemo,
+    });
+    const updated: SafetyInspectionSchedule = {
+      ...saved,
+      actualVisitDate: saved.actualVisitDate || actualVisitDate,
+      linkedReportKey: saved.linkedReportKey || linkedReportKey,
+      windowEnd: saved.windowEnd || persistedSchedule.windowEnd || schedule.windowEnd,
+      windowStart: saved.windowStart || persistedSchedule.windowStart || schedule.windowStart,
+    };
+    upsertScheduleRow(updated);
+
+    const reportLinkUpdate = await ensureDraftSessionForSchedule(updated);
+    const finalized = reportLinkUpdate
+      ? {
+          ...updated,
+          actualVisitDate: updated.actualVisitDate || reportLinkUpdate.actualVisitDate,
+          linkedReportKey: updated.linkedReportKey || reportLinkUpdate.linkedReportKey,
+        }
+      : updated;
+    if (finalized !== updated) {
+      upsertScheduleRow(finalized);
+    }
+    setSelectedDate(finalized.plannedDate || dialog.plannedDate);
+
+    return {
+      finalized,
+      reportLinkUpdate,
+      selectionReasonLabel,
+      selectionReasonMemo,
+    };
   };
 
   const handleSaveSchedule = async () => {
@@ -956,6 +1029,54 @@ export function WorkerCalendarScreen() {
       closeDialog();
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : '일정을 저장하지 못했습니다.');
+    }
+  };
+
+  const handleLaunchTechnicalGuidance = async () => {
+    if (!dialog.scheduleId) {
+      setError('회차를 먼저 선택해 주세요.');
+      return;
+    }
+
+    const schedule = dialogRoundRows.find((row) => row.id === dialog.scheduleId) ?? null;
+    if (!schedule) {
+      setError('선택한 회차를 찾지 못했습니다.');
+      return;
+    }
+
+    const isReadOnlySchedule = schedule.status === 'completed' || schedule.status === 'canceled';
+    if (!isReadOnlySchedule && !dialog.plannedDate) {
+      setError('방문 날짜를 먼저 선택해 주세요.');
+      return;
+    }
+
+    try {
+      setDialogSubmittingAction('launch');
+      setError(null);
+
+      const reportLinkUpdate = isReadOnlySchedule
+        ? await ensureDraftSessionForSchedule(schedule)
+        : (await saveScheduleSelection(schedule)).reportLinkUpdate;
+      const sessionId =
+        normalizeText(reportLinkUpdate?.sessionId) ||
+        normalizeText(reportLinkUpdate?.linkedReportKey) ||
+        normalizeText(schedule.linkedReportKey);
+
+      if (!sessionId) {
+        throw new Error('연결된 기술지도 보고서를 찾지 못했습니다.');
+      }
+
+      await ensureSessionLoaded(sessionId).catch(() => undefined);
+      closeDialog();
+      router.push(`/sessions/${encodeURIComponent(sessionId)}`);
+    } catch (nextError) {
+      setError(
+        nextError instanceof Error
+          ? nextError.message
+          : '연결된 기술지도 보고서를 열지 못했습니다.',
+      );
+    } finally {
+      setDialogSubmittingAction(null);
     }
   };
 
@@ -1276,14 +1397,23 @@ export function WorkerCalendarScreen() {
               type="button"
               className="app-button app-button-secondary"
               onClick={closeDialog}
+              disabled={dialogSubmittingAction !== null}
             >
               닫기
             </button>
             <button
               type="button"
+              className="app-button app-button-secondary"
+              onClick={() => void handleLaunchTechnicalGuidance()}
+              disabled={!dialog.scheduleId || dialogSubmittingAction !== null}
+            >
+              {dialogSubmittingAction === 'launch' ? '기술지도 여는 중...' : '기술지도 실시'}
+            </button>
+            <button
+              type="button"
               className="app-button app-button-primary"
               onClick={() => void handleSaveSchedule()}
-              disabled={!dialog.scheduleId || !dialog.plannedDate}
+              disabled={!dialog.scheduleId || !dialog.plannedDate || dialogSubmittingAction !== null}
             >
               방문 일정 저장
             </button>

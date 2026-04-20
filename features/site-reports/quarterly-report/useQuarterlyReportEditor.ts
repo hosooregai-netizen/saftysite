@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createFutureProcessRiskPlan } from '@/constants/inspectionSession';
+import { useInspectionSessions } from '@/hooks/useInspectionSessions';
+import { getHazardCountermeasureCatalogForReportDate } from '@/lib/safetyApiMappers/masterData';
 import type { QuarterlySummaryReport } from '@/types/erpReports';
 import {
   createEmptyImplementationRow,
@@ -21,6 +23,7 @@ export function useQuarterlyReportEditor({
   QuarterlyReportEditorProps,
   'currentSite' | 'initialDraft' | 'isExistingReport' | 'isSaving' | 'onSave'
 >) {
+  const { masterData } = useInspectionSessions();
   const [draft, setDraft] = useState(initialDraft);
   const [notice, setNotice] = useState<string | null>(null);
   const [documentError, setDocumentError] = useState<string | null>(null);
@@ -31,6 +34,14 @@ export function useQuarterlyReportEditor({
   const lastPersistedDraftFingerprintRef = useRef(getQuarterlyDraftFingerprint(initialDraft));
   const draftRef = useRef(initialDraft);
   const draftFingerprint = useMemo(() => getQuarterlyDraftFingerprint(draft), [draft]);
+  const hazardCountermeasureCatalog = useMemo(
+    () =>
+      getHazardCountermeasureCatalogForReportDate(
+        masterData,
+        draft.periodEndDate || draft.periodStartDate || new Date().toISOString().slice(0, 10),
+      ),
+    [draft.periodEndDate, draft.periodStartDate, masterData],
+  );
 
   useEffect(() => {
     draftRef.current = draft;
@@ -87,6 +98,7 @@ export function useQuarterlyReportEditor({
     handleDownloadWord: documentActions.handleDownloadWord,
     handleQuarterChange: sourceSync.handleQuarterChange,
     handleToggleSourceReport: sourceSync.handleToggleSourceReport,
+    hazardCountermeasureCatalog,
     handlePeriodChange: sourceSync.handlePeriodChange,
     handleImplementationRowChange: (
       index: number,

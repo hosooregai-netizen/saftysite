@@ -50,6 +50,20 @@ export interface SafetyDoc7ReferenceMaterialCatalogItem {
   sortOrder: number;
 }
 
+export interface SafetyHazardCountermeasureCatalogItem {
+  id: string;
+  title: string;
+  category: string;
+  expectedRisk: string;
+  countermeasure: string;
+  legalReference: string;
+  note: string;
+  effectiveFrom: string | null;
+  effectiveTo: string | null;
+  isActive: boolean;
+  sortOrder: number;
+}
+
 export type SafetyUserRole =
   | 'super_admin'
   | 'admin'
@@ -84,6 +98,7 @@ export type SafetyContentType =
   | 'disaster_case'
   | 'campaign_template'
   | 'doc7_reference_material'
+  | 'hazard_countermeasure_catalog'
   | 'ai_prompt'
   | 'legal_reference'
   | 'correction_result_option'
@@ -1304,6 +1319,7 @@ export interface SafetyMasterData {
   correctionResultOptions: string[];
   measurementTemplates: SafetyMeasurementTemplate[];
   doc7ReferenceMaterials: SafetyDoc7ReferenceMaterialCatalogItem[];
+  hazardCountermeasureCatalog: SafetyHazardCountermeasureCatalogItem[];
 }
 
 export interface SafetyHydratedData {

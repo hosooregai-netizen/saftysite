@@ -1501,6 +1501,7 @@ function createEmptyFinding() {
     legalReferenceId: '',
     legalReferenceTitle: '',
     referenceLawTitles: [] as string[],
+    hazardCountermeasureItemId: '',
     referenceMaterial1: '',
     referenceMaterial2: '',
     referenceMaterialImage: '',
@@ -1512,7 +1513,15 @@ function createEmptyFinding() {
 }
 
 function createEmptyPlan() {
-  return { id: '', processName: '', hazard: '', countermeasure: '', note: '', source: 'manual' as const };
+  return {
+    id: '',
+    hazardCountermeasureItemId: '',
+    processName: '',
+    hazard: '',
+    countermeasure: '',
+    note: '',
+    source: 'manual' as const,
+  };
 }
 
 function createEmptyMeasurement() {

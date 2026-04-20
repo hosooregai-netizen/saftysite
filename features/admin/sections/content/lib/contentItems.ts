@@ -2,6 +2,7 @@ import {
   buildDoc7ReferenceMaterialTitle,
   readDoc7ReferenceMaterialBody,
 } from '@/lib/doc7ReferenceMaterials';
+import { readHazardCountermeasureCatalogBody } from '@/lib/hazardCountermeasureCatalog';
 import { CONTENT_TYPE_META, type ContentEditorMode } from '@/lib/admin';
 import { resolveSafetyAssetUrlIfPathLike } from '@/lib/safetyApi/assetUrls';
 import {
@@ -38,6 +39,11 @@ export interface ContentFormState {
   reference_title_1: string;
   reference_title_2: string;
   sort_order: string;
+  catalog_category: string;
+  catalog_expected_risk: string;
+  catalog_countermeasure: string;
+  catalog_legal_reference: string;
+  catalog_note: string;
 }
 
 function bodyRecord(body: unknown) {
@@ -131,6 +137,11 @@ export function createEmptyContentForm(
     reference_title_1: '',
     reference_title_2: '',
     sort_order: '0',
+    catalog_category: '',
+    catalog_expected_risk: '',
+    catalog_countermeasure: '',
+    catalog_legal_reference: '',
+    catalog_note: '',
   };
 }
 
@@ -138,6 +149,10 @@ export function mapContentItemToForm(item: SafetyContentItem): ContentFormState 
   const record = bodyRecord(item.body);
   const isMeasurementTemplate = item.content_type === 'measurement_template';
   const isSafetyNews = item.content_type === 'safety_news';
+  const hazardCountermeasureCatalog =
+    item.content_type === 'hazard_countermeasure_catalog'
+      ? readHazardCountermeasureCatalogBody(item.body)
+      : null;
   const doc7ReferenceMaterial =
     item.content_type === 'doc7_reference_material'
       ? readDoc7ReferenceMaterialBody(item.body)
@@ -169,6 +184,11 @@ export function mapContentItemToForm(item: SafetyContentItem): ContentFormState 
     reference_title_1: doc7ReferenceMaterial?.referenceTitle1 ?? '',
     reference_title_2: doc7ReferenceMaterial?.referenceTitle2 ?? '',
     sort_order: String(item.sort_order),
+    catalog_category: hazardCountermeasureCatalog?.category ?? '',
+    catalog_expected_risk: hazardCountermeasureCatalog?.expectedRisk ?? '',
+    catalog_countermeasure: hazardCountermeasureCatalog?.countermeasure ?? '',
+    catalog_legal_reference: hazardCountermeasureCatalog?.legalReference ?? '',
+    catalog_note: hazardCountermeasureCatalog?.note ?? '',
   };
 }
 
@@ -232,6 +252,16 @@ export function buildContentBody(form: ContentFormState): Record<string, unknown
     };
   }
 
+  if (form.content_type === 'hazard_countermeasure_catalog') {
+    return {
+      category: form.catalog_category.trim(),
+      expectedRisk: form.catalog_expected_risk.trim(),
+      countermeasure: form.catalog_countermeasure.trim(),
+      legalReference: form.catalog_legal_reference.trim(),
+      note: form.catalog_note.trim(),
+    };
+  }
+
   if (meta.editorMode === 'image') {
     return {
       body: textBody,
@@ -268,6 +298,16 @@ export function getContentPreview(item: SafetyContentItemListItem): string {
       ? readMeasurementSafetyCriteria(item.body) || normalizeMapperText(item.title)
       : item.content_type === 'doc7_reference_material'
         ? readDoc7ReferenceMaterialBody(item.body).body || normalizeMapperText(item.title)
+        : item.content_type === 'hazard_countermeasure_catalog'
+          ? (() => {
+              const body = readHazardCountermeasureCatalogBody(item.body);
+              return (
+                body.expectedRisk ||
+                body.countermeasure ||
+                body.legalReference ||
+                normalizeMapperText(item.title)
+              );
+            })()
         : readText(item.body, item.content_type) || normalizeMapperText(item.title);
 
   if (item.content_type === 'measurement_template') {

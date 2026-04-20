@@ -208,11 +208,14 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
   const isSafetyNews = form.content_type === 'safety_news';
   const isDisasterCase = form.content_type === 'disaster_case';
   const isDoc7ReferenceMaterial = form.content_type === 'doc7_reference_material';
+  const isHazardCountermeasureCatalog =
+    form.content_type === 'hazard_countermeasure_catalog';
   const isGenericTitleType =
     !isMeasurementTemplate &&
     !isSafetyNews &&
     !isDisasterCase &&
-    !isDoc7ReferenceMaterial;
+    !isDoc7ReferenceMaterial &&
+    !isHazardCountermeasureCatalog;
   const isDisasterCaseBatchCreate = editingId === 'create' && isDisasterCase;
   const titleLabel = isMeasurementTemplate ? '장비명' : '제목';
   const titlePlaceholder = isMeasurementTemplate ? '예: 조도계' : ''; 
@@ -935,6 +938,83 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
                       </div>
                     </label>
                   </div>
+                </>
+              ) : null}
+
+              {isHazardCountermeasureCatalog ? (
+                <>
+                  <div className={styles.modalGrid}>
+                    <label className={styles.modalField}>
+                      <span className={styles.label}>구분</span>
+                      <input
+                        className="app-input"
+                        value={form.catalog_category}
+                        placeholder="예: 철근, 거푸집, 전기"
+                        onChange={(e) =>
+                          setForm({ ...form, catalog_category: e.target.value })
+                        }
+                        disabled={busy}
+                      />
+                    </label>
+                    <label className={styles.modalField}>
+                      <span className={styles.label}>제목</span>
+                      <input
+                        className="app-input"
+                        value={form.title}
+                        placeholder="향후 주요 작업공정 또는 대표 제목"
+                        onChange={(e) => setForm({ ...form, title: e.target.value })}
+                        disabled={busy}
+                      />
+                    </label>
+                    <label className={styles.modalField}>
+                      <span className={styles.label}>비고</span>
+                      <input
+                        className="app-input"
+                        value={form.catalog_note}
+                        placeholder="검색 키워드나 관리 메모"
+                        onChange={(e) =>
+                          setForm({ ...form, catalog_note: e.target.value })
+                        }
+                        disabled={busy}
+                      />
+                    </label>
+                  </div>
+                  <label className={styles.modalFieldWide}>
+                    <span className={styles.label}>예상위험</span>
+                    <textarea
+                      className="app-textarea"
+                      rows={6}
+                      value={form.catalog_expected_risk}
+                      onChange={(e) =>
+                        setForm({ ...form, catalog_expected_risk: e.target.value })
+                      }
+                      disabled={busy}
+                    />
+                  </label>
+                  <label className={styles.modalFieldWide}>
+                    <span className={styles.label}>관리대책</span>
+                    <textarea
+                      className="app-textarea"
+                      rows={6}
+                      value={form.catalog_countermeasure}
+                      onChange={(e) =>
+                        setForm({ ...form, catalog_countermeasure: e.target.value })
+                      }
+                      disabled={busy}
+                    />
+                  </label>
+                  <label className={styles.modalFieldWide}>
+                    <span className={styles.label}>법령</span>
+                    <textarea
+                      className="app-textarea"
+                      rows={3}
+                      value={form.catalog_legal_reference}
+                      onChange={(e) =>
+                        setForm({ ...form, catalog_legal_reference: e.target.value })
+                      }
+                      disabled={busy}
+                    />
+                  </label>
                 </>
               ) : null}
 

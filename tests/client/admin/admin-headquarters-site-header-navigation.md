@@ -2,9 +2,9 @@
 
 ## Expected Behavior
 
-- the `사업장 목록` header shows a text-only `현장 목록 보기` action on the right side of the title
-- the `현장 목록` header shows a text-only `사업장 목록 보기` action on the right side of the title
-- neither action uses button chrome such as filled background, border, or icon
+- the `사업장 목록` header shows a lightly outlined `현장 목록 보기` action beside the title
+- the `현장 목록` header shows a lightly outlined `사업장 목록 보기` action beside the title
+- both actions should read as secondary navigation buttons without competing with the main toolbar buttons
 - the reverse link is only shown for the standalone site-list state, not inside headquarter drilldown detail layouts
 - the standalone site-list header does not show a total-count caption beside the title
 - the standalone site-list toolbar does not show a create-site button

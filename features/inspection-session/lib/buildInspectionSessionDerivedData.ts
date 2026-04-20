@@ -13,6 +13,7 @@ import {
 const DOC5_CHART_TOP_N = 5;
 import {
   getDoc7ReferenceMaterialsForReportDate,
+  getHazardCountermeasureCatalogForReportDate,
   getMeasurementTemplatesForReportDate,
 } from '@/lib/safetyApiMappers/masterData';
 import type { SafetyMasterData } from '@/types/backend';
@@ -69,6 +70,10 @@ export function buildInspectionSessionDerivedData(
       getSessionGuidanceDate(session),
     ),
     doc7ReferenceMaterials: getDoc7ReferenceMaterialsForReportDate(
+      masterData,
+      getSessionGuidanceDate(session),
+    ),
+    hazardCountermeasureCatalog: getHazardCountermeasureCatalogForReportDate(
       masterData,
       getSessionGuidanceDate(session),
     ),

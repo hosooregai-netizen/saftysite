@@ -130,8 +130,8 @@ export function buildLocalQuarterlySummarySeed(
     causative_stats: derivedReport.causativeStats.map((item) => ({ ...item })),
     future_plans: derivedReport.futurePlans.map((item) => ({
       id: item.id,
-      process_name: item.hazard ? '' : item.processName,
-      hazard: item.hazard || item.processName,
+      process_name: item.processName,
+      hazard: item.hazard,
       countermeasure: item.countermeasure,
       note: item.note,
       source: item.source,

@@ -1,6 +1,7 @@
 'use client';
 
 import styles from '@/features/mobile/components/MobileShell.module.css';
+import type { SafetyHazardCountermeasureCatalogItem } from '@/types/backend';
 import type { QuarterlySummaryReport } from '@/types/erpReports';
 import { MobileQuarterlyAnalysisStep } from './MobileQuarterlyAnalysisStep';
 import { MobileQuarterlyCountermeasuresStep } from './MobileQuarterlyCountermeasuresStep';
@@ -13,6 +14,7 @@ interface MobileQuarterlyStepContentProps {
   activeStep: MobileQuarterlyStepId;
   documentNotice: string | null;
   draft: QuarterlySummaryReport;
+  hazardCountermeasureCatalog: SafetyHazardCountermeasureCatalogItem[];
   isOpsAssetsLoading: boolean;
   isOpsAssetsRefreshing: boolean;
   isSourceLoading: boolean;
@@ -51,6 +53,7 @@ export function MobileQuarterlyStepContent({
   activeStep,
   documentNotice,
   draft,
+  hazardCountermeasureCatalog,
   isOpsAssetsLoading,
   isOpsAssetsRefreshing,
   isSourceLoading,
@@ -115,6 +118,7 @@ export function MobileQuarterlyStepContent({
       {activeStep === 'countermeasures' ? (
         <MobileQuarterlyCountermeasuresStep
           draft={draft}
+          hazardCountermeasureCatalog={hazardCountermeasureCatalog}
           isOpsAssetsLoading={isOpsAssetsLoading}
           isOpsAssetsRefreshing={isOpsAssetsRefreshing}
           opsAssets={opsAssets}

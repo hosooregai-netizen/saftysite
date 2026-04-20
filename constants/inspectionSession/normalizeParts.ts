@@ -121,6 +121,9 @@ export function normalizeHazardFinding(raw: unknown, fallbackInspector: string) 
       .split(/[\n,]+/)
       .map((item) => normalizeText(item))
       .filter(Boolean),
+    hazardCountermeasureItemId:
+      normalizeText(source.hazardCountermeasureItemId) ||
+      normalizeText(source.hazard_countermeasure_item_id),
     referenceMaterial1:
       normalizeReferenceMaterialValue(source.referenceMaterialImage) ||
       normalizeReferenceMaterialValue(source.referenceMaterial1) ||
@@ -153,6 +156,9 @@ export function normalizeFuturePlan(raw: unknown) {
   const source = asRecord(raw);
   return createFutureProcessRiskPlan({
     id: normalizeText(source.id) || generateId('future-plan'),
+    hazardCountermeasureItemId:
+      normalizeText(source.hazardCountermeasureItemId) ||
+      normalizeText(source.hazard_countermeasure_item_id),
     processName: normalizeText(source.processName) || normalizeText(source.locationDetail),
     hazard: normalizeText(source.hazard) || normalizeText(source.hazardFactors),
     countermeasure: normalizeText(source.countermeasure) || normalizeText(source.improvementItems),

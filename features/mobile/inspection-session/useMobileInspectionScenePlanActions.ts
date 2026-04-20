@@ -9,7 +9,8 @@ import {
   isExtraScenePlaceholderTitle,
 } from '@/constants/inspectionSession/scenePhotos';
 import type { useInspectionSessionScreen } from '@/features/inspection-session/hooks/useInspectionSessionScreen';
-import { findDoc8ProcessMatch, inferSceneTitle } from './mobileInspectionSessionHelpers';
+import { clearHazardCountermeasureSelectionFromFuturePlan } from '@/lib/hazardCountermeasureCatalog';
+import { inferSceneTitle } from './mobileInspectionSessionHelpers';
 
 type InspectionScreenController = ReturnType<typeof useInspectionSessionScreen>;
 type InspectionSessionDraft = NonNullable<InspectionScreenController['sectionSession']>;
@@ -81,18 +82,13 @@ export function useMobileInspectionScenePlanActions({
   };
 
   const updateDoc8ProcessPlan = (planId: string, nextProcessName: string) => {
-    const matched = findDoc8ProcessMatch(nextProcessName);
-
-    screen.applyDocumentUpdate('doc8', matched ? 'api' : 'manual', (current) => ({
+    screen.applyDocumentUpdate('doc8', 'manual', (current) => ({
       ...current,
       document8Plans: current.document8Plans.map((plan) =>
         plan.id === planId
           ? {
-              ...plan,
+              ...clearHazardCountermeasureSelectionFromFuturePlan(plan),
               processName: nextProcessName,
-              hazard: matched?.hazard ?? plan.hazard,
-              countermeasure: matched?.countermeasure ?? plan.countermeasure,
-              source: matched ? 'api' : 'manual',
             }
           : plan,
       ),

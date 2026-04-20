@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type FocusEvent } from 'react';
 import AppModal from '@/components/ui/AppModal';
 import { RISK_TRI_LEVEL_OPTIONS } from '@/components/session/workspace/constants';
 import { isImageValue } from '@/components/session/workspace/utils';
@@ -8,10 +8,19 @@ import {
   CAUSATIVE_AGENT_OPTIONS,
 } from '@/constants/inspectionSession/doc7Catalog';
 import styles from '@/components/session/InspectionSessionWorkspace.module.css';
+import {
+  applyHazardCountermeasureSelectionToFinding,
+  clearHazardCountermeasureSelectionFromFinding,
+  getHazardCountermeasureFieldText,
+  getHazardCountermeasureRecommendations,
+  type HazardCountermeasureCatalogMatchField,
+} from '@/lib/hazardCountermeasureCatalog';
+import type { SafetyHazardCountermeasureCatalogItem } from '@/types/backend';
 import type { CurrentHazardFinding } from '@/types/inspectionSession';
 import type { CausativeAgentKey } from '@/types/siteOverview';
 
 interface Doc7FindingFieldsProps {
+  hazardCountermeasureCatalog: SafetyHazardCountermeasureCatalogItem[];
   item: CurrentHazardFinding;
   onAccidentTypeChange: (value: string) => void;
   onCausativeAgentChange: (value: CausativeAgentKey | '') => void;
@@ -76,6 +85,7 @@ function PicturePreviewIcon() {
 }
 
 export function Doc7FindingFields({
+  hazardCountermeasureCatalog,
   item,
   onAccidentTypeChange,
   onCausativeAgentChange,
@@ -85,6 +95,8 @@ export function Doc7FindingFields({
   updateFinding,
 }: Doc7FindingFieldsProps) {
   const [previewKind, setPreviewKind] = useState<ReferencePreviewKind>(null);
+  const [activeRecommendationField, setActiveRecommendationField] =
+    useState<HazardCountermeasureCatalogMatchField | null>(null);
   const referenceImageValue = item.referenceMaterialImage || item.referenceMaterial1;
   const referenceDescriptionValue =
     item.referenceMaterialDescription || item.referenceMaterial2;
@@ -123,6 +135,58 @@ export function Doc7FindingFields({
   const referenceImageDisplay = reference1Label || DOC7_TEMPLATE_LABELS.referenceEmpty;
   const referenceDescriptionDisplay =
     reference2Label || DOC7_TEMPLATE_LABELS.referenceEmpty;
+  const recommendationListId =
+    activeRecommendationField ? `doc7-hazard-countermeasure-${item.id}-${activeRecommendationField}` : '';
+  const activeRecommendationQuery =
+    activeRecommendationField === 'expectedRisk'
+      ? item.improvementRequest || item.improvementPlan
+      : activeRecommendationField === 'countermeasure'
+        ? item.emphasis
+        : activeRecommendationField === 'legalReference'
+          ? item.legalReferenceTitle
+          : '';
+  const activeRecommendations =
+    activeRecommendationField === null
+      ? []
+      : getHazardCountermeasureRecommendations(
+          hazardCountermeasureCatalog,
+          activeRecommendationQuery,
+          activeRecommendationField,
+          {
+            excludeId: item.hazardCountermeasureItemId,
+          },
+        );
+
+  const handleRecommendationBlur = (
+    field: HazardCountermeasureCatalogMatchField,
+    event: FocusEvent<HTMLDivElement>,
+  ) => {
+    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+      setActiveRecommendationField((current) => (current === field ? null : current));
+    }
+  };
+
+  const selectHazardCountermeasureItem = (catalogItem: SafetyHazardCountermeasureCatalogItem) => {
+    updateFinding((finding) =>
+      applyHazardCountermeasureSelectionToFinding(finding, catalogItem),
+    );
+    setActiveRecommendationField(null);
+  };
+
+  const buildRecommendationLabel = (
+    catalogItem: SafetyHazardCountermeasureCatalogItem,
+    field: HazardCountermeasureCatalogMatchField,
+  ) => {
+    const primary =
+      getHazardCountermeasureFieldText(catalogItem, field).trim() ||
+      catalogItem.title.trim() ||
+      catalogItem.expectedRisk.trim() ||
+      catalogItem.countermeasure.trim() ||
+      catalogItem.legalReference.trim();
+
+    const title = catalogItem.title.trim();
+    return title && primary !== title ? `${primary} (${title})` : primary;
+  };
 
   return (
     <>
@@ -248,19 +312,59 @@ export function Doc7FindingFields({
                     {DOC7_TEMPLATE_LABELS.hazard}
                   </th>
                   <td className={styles.doc7ValueCell}>
-                    <textarea
-                      className={`app-textarea ${styles.doc7TextareaDouble}`}
-                      rows={2}
-                      maxLength={220}
-                      value={item.improvementRequest || item.improvementPlan}
-                      onChange={(event) =>
-                        updateFinding((finding) => ({
-                          ...finding,
-                          improvementPlan: event.target.value,
-                          improvementRequest: event.target.value,
-                        }))
-                      }
-                    />
+                    <div
+                      style={{ position: 'relative' }}
+                      onBlur={(event) => handleRecommendationBlur('expectedRisk', event)}
+                    >
+                      <textarea
+                        className={`app-textarea ${styles.doc7TextareaDouble}`}
+                        rows={2}
+                        maxLength={220}
+                        value={item.improvementRequest || item.improvementPlan}
+                        onFocus={() => setActiveRecommendationField('expectedRisk')}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Escape') {
+                            setActiveRecommendationField((current) =>
+                              current === 'expectedRisk' ? null : current,
+                            );
+                          }
+                        }}
+                        onChange={(event) =>
+                          updateFinding((finding) => {
+                            const nextFinding =
+                              clearHazardCountermeasureSelectionFromFinding(finding);
+                            return {
+                              ...nextFinding,
+                              improvementPlan: event.target.value,
+                              improvementRequest: event.target.value,
+                            };
+                          })
+                        }
+                      />
+                      {activeRecommendationField === 'expectedRisk' &&
+                      activeRecommendations.length > 0 ? (
+                        <div
+                          id={recommendationListId}
+                          className={styles.doc8RecommendationList}
+                          role="listbox"
+                          style={{ top: 'calc(100% + 6px)', left: 0, right: 0 }}
+                        >
+                          {activeRecommendations.map((catalogItem) => (
+                            <button
+                              key={catalogItem.id}
+                              type="button"
+                              role="option"
+                              aria-selected={false}
+                              className={styles.doc8RecommendationButton}
+                              onMouseDown={(event) => event.preventDefault()}
+                              onClick={() => selectHazardCountermeasureItem(catalogItem)}
+                            >
+                              {buildRecommendationLabel(catalogItem, 'expectedRisk')}
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
                   </td>
                 </tr>
                 <tr>
@@ -268,17 +372,53 @@ export function Doc7FindingFields({
                     {DOC7_TEMPLATE_LABELS.controlMeasure}
                   </th>
                   <td className={styles.doc7ValueCell}>
-                    <textarea
-                      className={`app-textarea ${styles.doc7TextareaFive}`}
-                      rows={5}
-                      value={item.emphasis}
-                      onChange={(event) =>
-                        updateFinding((finding) => ({
-                          ...finding,
-                          emphasis: event.target.value,
-                        }))
-                      }
-                    />
+                    <div
+                      style={{ position: 'relative' }}
+                      onBlur={(event) => handleRecommendationBlur('countermeasure', event)}
+                    >
+                      <textarea
+                        className={`app-textarea ${styles.doc7TextareaFive}`}
+                        rows={5}
+                        value={item.emphasis}
+                        onFocus={() => setActiveRecommendationField('countermeasure')}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Escape') {
+                            setActiveRecommendationField((current) =>
+                              current === 'countermeasure' ? null : current,
+                            );
+                          }
+                        }}
+                        onChange={(event) =>
+                          updateFinding((finding) => ({
+                            ...clearHazardCountermeasureSelectionFromFinding(finding),
+                            emphasis: event.target.value,
+                          }))
+                        }
+                      />
+                      {activeRecommendationField === 'countermeasure' &&
+                      activeRecommendations.length > 0 ? (
+                        <div
+                          id={recommendationListId}
+                          className={styles.doc8RecommendationList}
+                          role="listbox"
+                          style={{ top: 'calc(100% + 6px)', left: 0, right: 0 }}
+                        >
+                          {activeRecommendations.map((catalogItem) => (
+                            <button
+                              key={catalogItem.id}
+                              type="button"
+                              role="option"
+                              aria-selected={false}
+                              className={styles.doc8RecommendationButton}
+                              onMouseDown={(event) => event.preventDefault()}
+                              onClick={() => selectHazardCountermeasureItem(catalogItem)}
+                            >
+                              {buildRecommendationLabel(catalogItem, 'countermeasure')}
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
                   </td>
                 </tr>
                 <tr>
@@ -286,23 +426,59 @@ export function Doc7FindingFields({
                     {DOC7_TEMPLATE_LABELS.legalReference}
                   </th>
                   <td className={styles.doc7ValueCell}>
-                    <input
-                      type="text"
-                      className="app-input"
-                      value={item.legalReferenceTitle}
-                      placeholder={DOC7_TEMPLATE_LABELS.legalPlaceholder}
-                      onChange={(event) =>
-                        updateFinding((finding) => ({
-                          ...finding,
-                          legalReferenceId: '',
-                          legalReferenceTitle: event.target.value,
-                          referenceLawTitles: event.target.value
-                            .split(/[\n,]+/)
-                            .map((entry) => entry.trim())
-                            .filter(Boolean),
-                        }))
-                      }
-                    />
+                    <div
+                      style={{ position: 'relative' }}
+                      onBlur={(event) => handleRecommendationBlur('legalReference', event)}
+                    >
+                      <input
+                        type="text"
+                        className="app-input"
+                        value={item.legalReferenceTitle}
+                        placeholder={DOC7_TEMPLATE_LABELS.legalPlaceholder}
+                        onFocus={() => setActiveRecommendationField('legalReference')}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Escape') {
+                            setActiveRecommendationField((current) =>
+                              current === 'legalReference' ? null : current,
+                            );
+                          }
+                        }}
+                        onChange={(event) =>
+                          updateFinding((finding) => ({
+                            ...clearHazardCountermeasureSelectionFromFinding(finding),
+                            legalReferenceId: '',
+                            legalReferenceTitle: event.target.value,
+                            referenceLawTitles: event.target.value
+                              .split(/[\n,]+/)
+                              .map((entry) => entry.trim())
+                              .filter(Boolean),
+                          }))
+                        }
+                      />
+                      {activeRecommendationField === 'legalReference' &&
+                      activeRecommendations.length > 0 ? (
+                        <div
+                          id={recommendationListId}
+                          className={styles.doc8RecommendationList}
+                          role="listbox"
+                          style={{ top: 'calc(100% + 6px)', left: 0, right: 0 }}
+                        >
+                          {activeRecommendations.map((catalogItem) => (
+                            <button
+                              key={catalogItem.id}
+                              type="button"
+                              role="option"
+                              aria-selected={false}
+                              className={styles.doc8RecommendationButton}
+                              onMouseDown={(event) => event.preventDefault()}
+                              onClick={() => selectHazardCountermeasureItem(catalogItem)}
+                            >
+                              {buildRecommendationLabel(catalogItem, 'legalReference')}
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
                   </td>
                 </tr>
               </tbody>

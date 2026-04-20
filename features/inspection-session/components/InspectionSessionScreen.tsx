@@ -53,6 +53,7 @@ export function InspectionSessionScreen({ sessionId }: InspectionSessionScreenPr
         cumulativeAccidentEntries: screen.derivedData.cumulativeAccidentEntries,
         cumulativeAgentEntries: screen.derivedData.cumulativeAgentEntries,
         doc7ReferenceMaterials: screen.derivedData.doc7ReferenceMaterials,
+        hazardCountermeasureCatalog: screen.derivedData.hazardCountermeasureCatalog,
         isRelationHydrating: screen.isRelationHydrating,
         isRelationReady: screen.isRelationReady,
         measurementTemplates: screen.derivedData.measurementTemplates,

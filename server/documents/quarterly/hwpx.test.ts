@@ -113,6 +113,7 @@ function buildSiteSessions() {
       improvementPlan: 'appendix-plan-one',
       improvementRequest: '',
       inspector: '',
+      hazardCountermeasureItemId: '',
       legalReferenceId: '',
       legalReferenceTitle: 'law-one',
       likelihood: '',
@@ -141,6 +142,7 @@ function buildSiteSessions() {
       improvementPlan: 'appendix-plan-two',
       improvementRequest: '',
       inspector: '',
+      hazardCountermeasureItemId: '',
       legalReferenceId: '',
       legalReferenceTitle: 'law-two',
       likelihood: '',
@@ -223,6 +225,7 @@ test('buildQuarterlyHwpxDocument renders v9-1 appendix content into the merged s
       improvementPlan: 'appendix-v91-plan',
       improvementRequest: '',
       inspector: '',
+      hazardCountermeasureItemId: '',
       legalReferenceId: '',
       legalReferenceTitle: 'law-v91',
       likelihood: '',
@@ -339,6 +342,7 @@ test('buildQuarterlyHwpxDocument reflows long future plan text inside the table 
     futurePlans: [
       {
         id: 'future-plan-long-text',
+        hazardCountermeasureItemId: '',
         processName: '',
         hazard: '위험요인 첫 줄\n위험요인 둘째 줄\n위험요인 셋째 줄',
         countermeasure: '대책 첫 줄\n대책 둘째 줄\n대책 셋째 줄',

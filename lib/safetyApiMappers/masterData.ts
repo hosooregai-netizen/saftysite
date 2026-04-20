@@ -14,6 +14,7 @@ import type {
   SafetyCaseCatalogItem,
   SafetyContentItem,
   SafetyDoc7ReferenceMaterialCatalogItem,
+  SafetyHazardCountermeasureCatalogItem,
   SafetyInfoCatalogItem,
   SafetyLegalReference,
   SafetyMasterData,
@@ -229,6 +230,50 @@ function mapDoc7ReferenceMaterialItem(
   };
 }
 
+function mapHazardCountermeasureCatalogItem(
+  item: SafetyContentItem,
+): SafetyHazardCountermeasureCatalogItem | null {
+  const body = asMapperRecord(item.body);
+  const title = normalizeMapperText(item.title);
+  const category =
+    normalizeMapperText(body.category) ||
+    normalizeMapperText(body.division) ||
+    normalizeMapperText(body.group);
+  const expectedRisk =
+    normalizeMapperText(body.expectedRisk) ||
+    normalizeMapperText(body.expected_risk) ||
+    normalizeMapperText(body.hazard) ||
+    normalizeMapperText(body.risk);
+  const countermeasure =
+    normalizeMapperText(body.countermeasure) ||
+    normalizeMapperText(body.managementMeasure) ||
+    normalizeMapperText(body.management_measure) ||
+    normalizeMapperText(body.body);
+  const legalReference =
+    normalizeMapperText(body.legalReference) ||
+    normalizeMapperText(body.legal_reference) ||
+    normalizeMapperText(body.legalInfo);
+  const note = normalizeMapperText(body.note) || normalizeMapperText(body.remark);
+
+  if (!title && !expectedRisk && !countermeasure) {
+    return null;
+  }
+
+  return {
+    id: item.id,
+    title,
+    category,
+    expectedRisk,
+    countermeasure,
+    legalReference,
+    note,
+    effectiveFrom: normalizeContentDate(item.effective_from),
+    effectiveTo: normalizeContentDate(item.effective_to),
+    isActive: item.is_active,
+    sortOrder: item.sort_order,
+  };
+}
+
 function filterCatalogItemsByDate<T extends { effectiveFrom: string | null; effectiveTo: string | null; isActive: boolean; sortOrder: number }>(
   items: T[],
   reportDate: string,
@@ -288,6 +333,13 @@ export function getDoc7ReferenceMaterialsForReportDate(
   return filterCatalogItemsByDate(masterData.doc7ReferenceMaterials, reportDate);
 }
 
+export function getHazardCountermeasureCatalogForReportDate(
+  masterData: SafetyMasterData,
+  reportDate: string,
+): SafetyHazardCountermeasureCatalogItem[] {
+  return filterCatalogItemsByDate(masterData.hazardCountermeasureCatalog, reportDate);
+}
+
 export function resolveMeasurementTemplate(
   masterData: SafetyMasterData,
   instrumentType: string,
@@ -340,6 +392,12 @@ export function buildSafetyMasterData(items: SafetyContentItem[]): SafetyMasterD
     .map(mapDoc7ReferenceMaterialItem)
     .filter((item): item is SafetyDoc7ReferenceMaterialCatalogItem => Boolean(item));
 
+  const hazardCountermeasureCatalog = items
+    .filter((item) => item.content_type === 'hazard_countermeasure_catalog')
+    .sort((left, right) => left.sort_order - right.sort_order)
+    .map(mapHazardCountermeasureCatalogItem)
+    .filter((item): item is SafetyHazardCountermeasureCatalogItem => Boolean(item));
+
   return {
     caseFeed:
       disasterCases.length > 0
@@ -374,6 +432,7 @@ export function buildSafetyMasterData(items: SafetyContentItem[]): SafetyMasterD
     correctionResultOptions,
     measurementTemplates,
     doc7ReferenceMaterials,
+    hazardCountermeasureCatalog,
   };
 }
 

@@ -92,6 +92,7 @@ export interface CurrentHazardFinding {
   legalReferenceId: string;
   legalReferenceTitle: string;
   referenceLawTitles?: string[];
+  hazardCountermeasureItemId: string;
   referenceMaterial1: string;
   referenceMaterial2: string;
   referenceMaterialImage?: string;
@@ -105,6 +106,7 @@ export interface CurrentHazardFinding {
 
 export interface FutureProcessRiskPlan {
   id: string;
+  hazardCountermeasureItemId: string;
   processName: string;
   hazard: string;
   countermeasure: string;

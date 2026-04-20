@@ -79,6 +79,7 @@ export function QuarterlyReportEditor(props: QuarterlyReportEditorProps) {
         onRemove={editor.removeImplementationRow}
       />
       <QuarterlyFuturePlansSection
+        hazardCountermeasureCatalog={editor.hazardCountermeasureCatalog}
         plans={editor.draft.futurePlans}
         onAdd={editor.addFuturePlan}
         onChange={editor.updateFuturePlans}

@@ -19,6 +19,7 @@ export default function Doc7Section(props: HazardStatsSectionProps) {
           key={item.id}
           applyDocumentUpdate={applyDocumentUpdate}
           doc7ReferenceMaterials={props.doc7ReferenceMaterials}
+          hazardCountermeasureCatalog={props.hazardCountermeasureCatalog}
           index={index}
           item={item}
           removable={session.document7Findings.length > 1}
