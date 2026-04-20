@@ -12,7 +12,7 @@ import { createEmptyTechnicalGuidanceRelations } from '@/constants/inspectionSes
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { isAdminUserRole, getAdminSectionHref } from '@/lib/admin';
 import { buildDefaultReportTitle } from '@/features/site-reports/report-list/reportListHelpers';
-import { createMySchedule, fetchMySchedules, updateMySchedule } from '@/lib/calendar/apiClient';
+import { fetchMySchedules, updateMySchedule } from '@/lib/calendar/apiClient';
 import { fetchTechnicalGuidanceSeed, readSafetyAuthToken } from '@/lib/safetyApi';
 import homeStyles from '@/features/home/components/HomeScreen.module.css';
 import type { SafetyInspectionSchedule } from '@/types/admin';
@@ -99,17 +99,6 @@ function buildCalendarDays(month: string) {
     days,
     leadingEmptyCount,
   };
-}
-
-function isDateWithinWindow(value: string, windowStart: string, windowEnd: string) {
-  if (!value || !windowStart || !windowEnd) return false;
-  return value >= windowStart && value <= windowEnd;
-}
-
-function buildWindowErrorMessage(
-  schedule: Pick<SafetyInspectionSchedule, 'roundNo' | 'siteName' | 'windowEnd' | 'windowStart'>,
-) {
-  return `${schedule.siteName} ${schedule.roundNo}회차는 계약 기간 ${schedule.windowStart} ~ ${schedule.windowEnd} 안에서만 선택할 수 있습니다.`;
 }
 
 function sortSchedules(rows: SafetyInspectionSchedule[]) {
@@ -270,17 +259,27 @@ function buildWorkerDialogRoundOptions(input: {
   );
 }
 
-function findPreferredWorkerDialogRow(
-  rows: SafetyInspectionSchedule[],
+function findPreferredWorkerDialogOption(
+  options: WorkerDialogRoundOption[],
   input: {
     plannedDate: string;
     scheduleId?: string;
   },
 ) {
+  const rows = options.map((option) => option.row);
+  const availableRows = options
+    .filter((option) => option.state === 'available')
+    .map((option) => option.row);
+  const needsLinkRows = options
+    .filter((option) => option.state === 'needs_schedule_link')
+    .map((option) => option.row);
   return (
     rows.find((row) => row.id === input.scheduleId) ??
+    availableRows.find((row) => !row.plannedDate) ??
+    needsLinkRows.find((row) => !row.plannedDate) ??
     rows.find((row) => row.plannedDate === input.plannedDate) ??
-    rows.find((row) => !row.plannedDate) ??
+    availableRows[0] ??
+    needsLinkRows[0] ??
     rows[0] ??
     null
   );
@@ -565,12 +564,6 @@ export function WorkerCalendarScreen() {
   const dialogSelectedReportIndexState = dialog.siteId
     ? getReportIndexBySiteId(dialog.siteId)
     : null;
-  const dialogWindowError =
-    dialogSelectedSchedule &&
-    dialog.plannedDate &&
-    !isDateWithinWindow(dialog.plannedDate, dialogSelectedSchedule.windowStart, dialogSelectedSchedule.windowEnd)
-      ? buildWindowErrorMessage(dialogSelectedSchedule)
-      : '';
   useEffect(() => {
     if (!dialog.open || dialog.siteId || dialogSiteOptions.length === 0) return;
     setDialog((current) => ({
@@ -618,9 +611,17 @@ export function WorkerCalendarScreen() {
 
   useEffect(() => {
     if (!dialog.open || !dialog.siteId) return;
-    const preferredRow = findPreferredWorkerDialogRow(dialogRoundRows, {
+    const currentOption = dialogRoundOptionById.get(dialog.scheduleId) ?? null;
+    const firstReportFreeRow =
+      dialogRoundOptions.find((option) => !option.linkedReport && !option.row.plannedDate)?.row ??
+      dialogRoundOptions.find((option) => !option.linkedReport)?.row ??
+      null;
+    const preferredRow =
+      currentOption?.linkedReport && firstReportFreeRow
+        ? firstReportFreeRow
+        : findPreferredWorkerDialogOption(dialogRoundOptions, {
       plannedDate: dialog.plannedDate,
-      scheduleId: dialog.scheduleId,
+      scheduleId: currentOption?.state === 'available' ? dialog.scheduleId : '',
     });
     if (!preferredRow) {
       if (!dialog.scheduleId) return;
@@ -632,7 +633,10 @@ export function WorkerCalendarScreen() {
       }));
       return;
     }
-    if (preferredRow.id === dialog.scheduleId) {
+    const shouldKeepCurrentSelection =
+      preferredRow.id === dialog.scheduleId ||
+      (!dialog.plannedDate && currentOption?.state === 'available');
+    if (shouldKeepCurrentSelection) {
       return;
     }
     setDialog((current) => ({
@@ -646,6 +650,8 @@ export function WorkerCalendarScreen() {
     dialog.plannedDate,
     dialog.scheduleId,
     dialog.siteId,
+    dialogRoundOptionById,
+    dialogRoundOptions,
     dialogRoundRows,
   ]);
 
@@ -658,8 +664,9 @@ export function WorkerCalendarScreen() {
     schedule?: SafetyInspectionSchedule | null;
   }) => {
     const nextPlannedDate = input.plannedDate;
+    const requestedSchedule = input.schedule ?? null;
     const defaultSiteId =
-      input.schedule?.siteId ||
+      requestedSchedule?.siteId ||
       (selectedSiteId && dialogSiteOptions.some((option) => option.siteId === selectedSiteId)
         ? selectedSiteId
         : dialogSiteOptions[0]?.siteId || '');
@@ -671,15 +678,26 @@ export function WorkerCalendarScreen() {
       contractWindowStart: defaultContractWindow.windowStart,
       reportItemsByRound: reportItemsByRoundBySiteId.get(defaultSiteId) ?? new Map(),
       siteId: defaultSiteId,
-      siteName: defaultSiteOption?.label || input.schedule?.siteName || '',
+      siteName: defaultSiteOption?.label || requestedSchedule?.siteName || '',
       rows,
-      totalRounds: defaultSiteOption?.totalRounds ?? input.schedule?.totalRounds ?? 0,
+      totalRounds: defaultSiteOption?.totalRounds ?? requestedSchedule?.totalRounds ?? 0,
     })
-      .filter((option) => option.state !== 'linked_report' || option.row.id === input.schedule?.id)
+      .filter((option) => option.state !== 'linked_report' || option.row.id === requestedSchedule?.id)
       .map((option) => option.row);
-    const defaultSchedule = input.schedule
-      ? defaultSiteRows.find((row) => row.roundNo === input.schedule?.roundNo) ?? input.schedule
-      : findPreferredWorkerDialogRow(defaultSiteRows, { plannedDate: nextPlannedDate });
+    const defaultSchedule = requestedSchedule
+      ? defaultSiteRows.find((row) => row.roundNo === requestedSchedule.roundNo) ?? requestedSchedule
+      : findPreferredWorkerDialogOption(
+          buildWorkerDialogRoundOptions({
+            contractWindowEnd: defaultContractWindow.windowEnd,
+            contractWindowStart: defaultContractWindow.windowStart,
+            reportItemsByRound: reportItemsByRoundBySiteId.get(defaultSiteId) ?? new Map(),
+            siteId: defaultSiteId,
+            siteName: defaultSiteOption?.label || '',
+            rows,
+            totalRounds: defaultSiteOption?.totalRounds ?? 0,
+          }).filter((option) => option.state !== 'linked_report'),
+          { plannedDate: nextPlannedDate },
+        );
 
     setSelectedDate(nextPlannedDate);
     setDialog({
@@ -696,21 +714,21 @@ export function WorkerCalendarScreen() {
     const selectedSiteOption =
       dialogSiteOptions.find((option) => option.siteId === siteId) ?? null;
     const contractWindow = contractWindowsBySiteId[siteId] ?? { windowEnd: '', windowStart: '' };
-    const nextRoundRows = buildWorkerDialogRoundOptions({
-      contractWindowEnd: contractWindow.windowEnd,
-      contractWindowStart: contractWindow.windowStart,
-      reportItemsByRound: reportItemsByRoundBySiteId.get(siteId) ?? new Map(),
-      siteId,
-      siteName: selectedSiteOption?.label || '',
-      rows,
-      totalRounds: selectedSiteOption?.totalRounds ?? 0,
-    })
-      .filter((option) => option.state !== 'linked_report')
-      .map((option) => option.row);
-    const preferredRow = findPreferredWorkerDialogRow(nextRoundRows, {
+    const preferredRow = findPreferredWorkerDialogOption(
+      buildWorkerDialogRoundOptions({
+        contractWindowEnd: contractWindow.windowEnd,
+        contractWindowStart: contractWindow.windowStart,
+        reportItemsByRound: reportItemsByRoundBySiteId.get(siteId) ?? new Map(),
+        siteId,
+        siteName: selectedSiteOption?.label || '',
+        rows,
+        totalRounds: selectedSiteOption?.totalRounds ?? 0,
+      }).filter((option) => option.state !== 'linked_report'),
+      {
       plannedDate: dialog.plannedDate,
       scheduleId: dialog.scheduleId,
-    });
+      },
+    );
     setDialog((current) => ({
       ...current,
       scheduleId: preferredRow?.id || '',
@@ -803,6 +821,35 @@ export function WorkerCalendarScreen() {
     return null;
   };
 
+  const resolvePersistedScheduleForSave = async (schedule: SafetyInspectionSchedule) => {
+    if (!isSyntheticWorkerScheduleId(schedule.id) && rows.some((row) => row.id === schedule.id)) {
+      return schedule;
+    }
+
+    const response = await fetchMySchedules({
+      limit: 300,
+      month,
+      siteId: schedule.siteId,
+    });
+    const persisted = response.rows.find(
+      (row) => row.siteId === schedule.siteId && row.roundNo === schedule.roundNo,
+    );
+
+    setRows((current) => {
+      const nextRows = current.filter(
+        (row) =>
+          !response.rows.some(
+            (refreshed) =>
+              refreshed.id === row.id ||
+              (refreshed.siteId === row.siteId && refreshed.roundNo === row.roundNo),
+          ),
+      );
+      return [...nextRows, ...response.rows];
+    });
+
+    return persisted ?? null;
+  };
+
   const handleSaveSchedule = async () => {
     if (!dialog.scheduleId) {
       setError('회차를 먼저 선택해 주세요.');
@@ -825,30 +872,24 @@ export function WorkerCalendarScreen() {
 
     try {
       setError(null);
-      const saved =
-        isSyntheticWorkerScheduleId(schedule.id) || !rows.some((row) => row.id === schedule.id)
-          ? await createMySchedule({
-              actualVisitDate,
-              linkedReportKey,
-              plannedDate: dialog.plannedDate,
-              roundNo: schedule.roundNo,
-              selectionReasonLabel,
-              selectionReasonMemo,
-              siteId: schedule.siteId,
-            })
-          : await updateMySchedule(schedule.id, {
-              actualVisitDate,
-              linkedReportKey,
-              plannedDate: dialog.plannedDate,
-              selectionReasonLabel,
-              selectionReasonMemo,
-            });
+      const persistedSchedule = await resolvePersistedScheduleForSave(schedule);
+      if (!persistedSchedule) {
+        setError('서버가 이 회차 일정 row를 아직 준비하지 못했습니다. 잠시 후 다시 열어 주세요.');
+        return;
+      }
+      const saved = await updateMySchedule(persistedSchedule.id, {
+        actualVisitDate,
+        linkedReportKey,
+        plannedDate: dialog.plannedDate,
+        selectionReasonLabel,
+        selectionReasonMemo,
+      });
       const updated: SafetyInspectionSchedule = {
         ...saved,
         actualVisitDate: saved.actualVisitDate || actualVisitDate,
         linkedReportKey: saved.linkedReportKey || linkedReportKey,
-        windowEnd: saved.windowEnd || schedule.windowEnd,
-        windowStart: saved.windowStart || schedule.windowStart,
+        windowEnd: saved.windowEnd || persistedSchedule.windowEnd || schedule.windowEnd,
+        windowStart: saved.windowStart || persistedSchedule.windowStart || schedule.windowStart,
       };
       setRows((current) => {
         const nextRows = current.filter(
@@ -997,6 +1038,7 @@ export function WorkerCalendarScreen() {
                     <label className={styles.field}>
                       <span className={styles.fieldLabel}>표시 월</span>
                       <input
+                        aria-label="표시 월"
                         className="app-input"
                         type="month"
                         value={month}
@@ -1006,6 +1048,7 @@ export function WorkerCalendarScreen() {
                     <label className={styles.field}>
                       <span className={styles.fieldLabel}>현장</span>
                       <select
+                        aria-label="현장"
                         className="app-select"
                         value={selectedSiteId}
                         onChange={(event) => {
@@ -1025,6 +1068,7 @@ export function WorkerCalendarScreen() {
                       <label className={styles.field}>
                         <span className={styles.fieldLabel}>목록 필터</span>
                         <select
+                          aria-label="목록 필터"
                           className="app-select"
                           value={listFilter}
                           onChange={(event) => setListFilter(event.target.value as ScheduleListFilter)}
@@ -1046,13 +1090,11 @@ export function WorkerCalendarScreen() {
                   {viewMode === 'calendar' ? (
                     <div className={styles.layout}>
                       <div className={styles.list}>
-                        <section className={styles.sectionCard}>
-                          <div className={styles.sectionHeader}>
-                            <div>
-                              <h3 className={styles.sectionTitle}>월간 캘린더</h3>
-                              <div className={styles.sectionMeta}>
-                                날짜를 누르면 해당 날짜 기준으로 회차를 지정하거나 수정할 수 있습니다.
-                              </div>
+                        <section className={styles.calendarPanel}>
+                          <div className={styles.calendarPanelHeader}>
+                            <h3 className={styles.sectionTitle}>월간 캘린더</h3>
+                            <div className={styles.sectionMeta}>
+                              날짜를 누르면 해당 날짜 기준으로 회차를 지정하거나 수정할 수 있습니다.
                             </div>
                           </div>
                           <div className={styles.calendarGrid}>
@@ -1204,88 +1246,55 @@ export function WorkerCalendarScreen() {
           </label>
 
           <section className={styles.dialogSection}>
-              <div className={styles.dialogSectionHeader}>
-                <strong>배정된 현장</strong>
-                <span className={styles.sectionMeta}>{dialogSiteOptions.length}곳</span>
-              </div>
-            {dialogSiteOptions.length === 0 ? (
-              <div className={styles.emptyState}>배정된 현장이 없습니다.</div>
-            ) : (
-              <div className={styles.dialogList}>
+            <label className={styles.field}>
+              <span className={styles.fieldLabel}>현장</span>
+              <select
+                className="app-select"
+                name="worker-site-select"
+                value={dialog.siteId}
+                onChange={(event) => handleDialogSiteSelect(event.target.value)}
+              >
+                {dialogSiteOptions.length === 0 ? (
+                  <option value="">배정된 현장이 없습니다.</option>
+                ) : null}
                 {dialogSiteOptions.map((option) => (
-                  <label
-                    key={option.siteId}
-                    className={`${styles.dialogOption} ${dialog.siteId === option.siteId ? styles.dialogOptionActive : ''}`}
-                  >
-                    <input
-                      type="radio"
-                      name="worker-site"
-                      checked={dialog.siteId === option.siteId}
-                      onChange={() => handleDialogSiteSelect(option.siteId)}
-                    />
-                    <div className={styles.dialogOptionBody}>
-                      <strong>{option.label}</strong>
-                      <span className={styles.dialogMeta}>
-                        {option.totalRounds > 0
-                          ? option.hasLoadedCompletion
-                            ? option.isComplete
-                              ? `총 ${option.totalRounds}회차 완료`
-                              : `완료 ${option.completedRounds}/${option.totalRounds}회차 · 선택 가능 ${option.remainingRounds}회차`
-                            : `총 ${option.totalRounds}회차`
-                          : '총 계약회차 미설정'}
-                      </span>
-                    </div>
-                  </label>
+                  <option key={option.siteId} value={option.siteId}>
+                    {option.label}
+                  </option>
                 ))}
-              </div>
-            )}
+              </select>
+            </label>
           </section>
 
           <section className={styles.dialogSection}>
-            <div className={styles.dialogSectionHeader}>
-              <strong>선택 가능한 회차</strong>
-              <span className={styles.sectionMeta}>{dialogRoundRows.length}건</span>
-            </div>
-            {!dialog.siteId ? (
-              <div className={styles.emptyState}>먼저 현장을 선택해 주세요.</div>
-            ) : dialogSelectedReportIndexState?.status === 'loading' ? (
-              <div className={styles.emptyState}>선택한 현장의 완료 회차를 확인하는 중입니다.</div>
-            ) : dialogSelectedSite?.isComplete ? (
-              <div className={styles.emptyState}>
-                선택한 현장은 총 계약회차를 모두 완료했습니다.
-              </div>
-            ) : dialogRoundRows.length === 0 ? (
-              <div className={styles.emptyState}>선택한 현장에서 아직 고를 수 있는 회차가 없습니다.</div>
-            ) : (
-              <div className={styles.dialogList}>
+            <label className={styles.field}>
+              <span className={styles.fieldLabel}>회차</span>
+              <select
+                className="app-select"
+                name="worker-round-select"
+                value={dialog.scheduleId}
+                onChange={(event) => {
+                  const nextSchedule = dialogRoundRows.find((row) => row.id === event.target.value) ?? null;
+                  if (nextSchedule) {
+                    handleDialogScheduleSelect(nextSchedule);
+                  }
+                }}
+                disabled={!dialog.siteId || dialogSelectedReportIndexState?.status === 'loading' || dialogRoundRows.length === 0}
+              >
+                {!dialog.siteId ? <option value="">먼저 현장을 선택해 주세요.</option> : null}
+                {dialog.siteId && dialogSelectedReportIndexState?.status === 'loading' ? (
+                  <option value="">회차를 불러오는 중입니다.</option>
+                ) : null}
+                {dialog.siteId && dialogSelectedReportIndexState?.status !== 'loading' && dialogRoundRows.length === 0 ? (
+                  <option value="">선택 가능한 회차가 없습니다.</option>
+                ) : null}
                 {dialogRoundRows.map((row) => (
-                  <label
-                    key={row.id}
-                    className={`${styles.dialogOption} ${dialog.scheduleId === row.id ? styles.dialogOptionActive : ''}`}
-                  >
-                    <input
-                      type="radio"
-                      name="worker-schedule"
-                      checked={dialog.scheduleId === row.id}
-                      onChange={() => handleDialogScheduleSelect(row)}
-                    />
-                    <div className={styles.dialogOptionBody}>
-                      <strong>{formatWorkerRoundLabel(row)}</strong>
-                      <span className={styles.dialogMeta}>
-                        {row.siteName}
-                      </span>
-                  <span className={styles.dialogMeta}>
-                        {dialogRoundOptionById.get(row.id)?.state === 'needs_schedule_link'
-                          ? `보고서 있음 · 일정 연결 필요 · 계약 기간 ${row.windowStart} ~ ${row.windowEnd}`
-                          : dialogRoundOptionById.get(row.id)?.state === 'linked_report'
-                            ? `보고서 연결됨 · 상태 ${getStatusLabel(row)} · 계약 기간 ${row.windowStart} ~ ${row.windowEnd}`
-                            : `방문일 ${row.plannedDate || '미선택'} · 상태 ${getStatusLabel(row)} · 계약 기간 ${row.windowStart} ~ ${row.windowEnd}`}
-                      </span>
-                    </div>
-                  </label>
+                  <option key={row.id} value={row.id}>
+                    {formatWorkerRoundLabel(row)}
+                  </option>
                 ))}
-              </div>
-            )}
+              </select>
+            </label>
           </section>
 
           <label className={styles.field}>
@@ -1320,11 +1329,15 @@ export function WorkerCalendarScreen() {
           </label>
 
           {dialogSelectedSchedule ? (
-            <div className={styles.dialogHint}>
-              선택 회차 허용 구간: {dialogSelectedSchedule.windowStart} ~ {dialogSelectedSchedule.windowEnd}
-            </div>
+            <>
+              <div className={styles.dialogHint}>
+                계약 기간: {dialogSelectedSchedule.windowStart} ~ {dialogSelectedSchedule.windowEnd}
+              </div>
+              {dialogSelectedOption?.state === 'needs_schedule_link' ? (
+                <div className={styles.dialogHint}>기존 보고서가 있어 이 회차 일정에 연결됩니다.</div>
+              ) : null}
+            </>
           ) : null}
-          {dialogWindowError ? <div className={styles.dialogError}>{dialogWindowError}</div> : null}
         </div>
       </AppModal>
     </main>

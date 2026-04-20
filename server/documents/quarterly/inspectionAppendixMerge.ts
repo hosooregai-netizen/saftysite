@@ -3,7 +3,7 @@ import type JSZip from 'jszip';
 import { buildInspectionAppendixSource } from '@/server/documents/inspection/appendix';
 import type { InspectionSession } from '@/types/inspectionSession';
 
-interface NumericIdMaps {
+export interface NumericIdMaps {
   borderFill: Map<string, string>;
   charPr: Map<string, string>;
   memo: Map<string, string>;
@@ -13,7 +13,7 @@ interface NumericIdMaps {
   tabPr: Map<string, string>;
 }
 
-interface HeaderMergeResult {
+export interface HeaderMergeResult {
   headerXml: string;
   maps: NumericIdMaps;
 }
@@ -31,7 +31,7 @@ interface ParsedCollectionItem {
   xml: string;
 }
 
-interface ParsedManifestItem {
+export interface ParsedManifestItem {
   href: string;
   id: string;
   isEmbedded: boolean;
@@ -376,7 +376,7 @@ function remapStyleXml(
   return nextXml;
 }
 
-function mergeHeaderDefinitions(
+export function mergeHeaderDefinitions(
   destinationHeaderXml: string,
   sourceHeaderXml: string,
 ): HeaderMergeResult {
@@ -435,7 +435,7 @@ function mergeHeaderDefinitions(
   };
 }
 
-function normalizeHwpxMediaType(mediaType: string, href: string) {
+export function normalizeHwpxMediaType(mediaType: string, href: string) {
   const normalized = mediaType.toLowerCase();
   const extension = href.split(/[?#]/)[0].split('.').pop()?.toLowerCase() ?? '';
   if (
@@ -449,7 +449,7 @@ function normalizeHwpxMediaType(mediaType: string, href: string) {
   return normalized;
 }
 
-function parseManifestItems(contentHpf: string): ParsedManifestItem[] {
+export function parseManifestItems(contentHpf: string): ParsedManifestItem[] {
   return Array.from(
     contentHpf.matchAll(/<opf:item\b([^>]*)\/>/g),
     (match): ParsedManifestItem | null => {
@@ -473,7 +473,7 @@ function parseManifestItems(contentHpf: string): ParsedManifestItem[] {
   ).filter((item): item is ParsedManifestItem => item !== null);
 }
 
-function upsertManifestItem(
+export function upsertManifestItem(
   contentHpf: string,
   itemId: string,
   href: string,
@@ -503,7 +503,7 @@ function getNextSectionIndex(contentHpf: string) {
   return currentIndexes.length > 0 ? Math.max(...currentIndexes) + 1 : 0;
 }
 
-function buildUniqueManifestItemId(contentHpf: string, preferredId: string) {
+export function buildUniqueManifestItemId(contentHpf: string, preferredId: string) {
   const existingIds = new Set(parseManifestItems(contentHpf).map((item) => item.id));
   let nextId = preferredId;
   let suffix = 1;
@@ -516,7 +516,7 @@ function buildUniqueManifestItemId(contentHpf: string, preferredId: string) {
   return nextId;
 }
 
-function buildUniqueManifestHref(contentHpf: string, preferredHref: string) {
+export function buildUniqueManifestHref(contentHpf: string, preferredHref: string) {
   const existingHrefs = new Set(parseManifestItems(contentHpf).map((item) => item.href));
   if (!existingHrefs.has(preferredHref)) {
     return preferredHref;
@@ -535,7 +535,11 @@ function buildUniqueManifestHref(contentHpf: string, preferredHref: string) {
   return nextHref;
 }
 
-function remapAppendixSectionXml(sectionXml: string, maps: NumericIdMaps, binaryIdMap: Map<string, string>) {
+export function remapAppendixSectionXml(
+  sectionXml: string,
+  maps: NumericIdMaps,
+  binaryIdMap: Map<string, string>,
+) {
   let nextXml = sectionXml;
 
   nextXml = replaceMappedNumericAttribute(nextXml, 'styleIDRef', maps.style);

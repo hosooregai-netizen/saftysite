@@ -8,7 +8,10 @@ import {
   buildQuarterlyTitleForPeriod,
   normalizeQuarterlyReportPeriod,
 } from '@/lib/erpReports/shared';
+import { selectInspectionTemplateVariant } from '@/lib/documents/inspection/templateVariant';
 import { appendInspectionAppendixSections } from '@/server/documents/quarterly/inspectionAppendixMerge';
+import { buildQuarterlyMergedTemplatePrototype } from '@/server/documents/quarterly/mergedTemplatePrototype';
+import { renderAppendicesIntoMergedQuarterlySection } from '@/server/documents/quarterly/mergedTemplateRuntime';
 import type { QuarterlyCounter, QuarterlySummaryReport } from '@/types/erpReports';
 import type { InspectionSession, InspectionSite } from '@/types/inspectionSession';
 
@@ -90,6 +93,18 @@ const IMAGE_EXTENSION_TO_MEDIA_TYPE: Record<string, string> = {
   webp: 'image/webp',
 };
 const HWPX_SAFE_IMAGE_EXTENSIONS = new Set(['bmp', 'gif', 'jpg', 'jpeg', 'png']);
+
+function selectQuarterlyMergedTemplateVariant(selectedSessions: InspectionSession[]) {
+  if (selectedSessions.length === 0) {
+    return null;
+  }
+
+  return selectedSessions.some(
+    (session) => selectInspectionTemplateVariant(session) === 'v9-1',
+  )
+    ? 'v9-1'
+    : 'v9';
+}
 
 function sanitizeDocumentFileName(value: string | null | undefined, fallback: string) {
   const normalized = (value ?? '').replace(/[\\/:*?"<>|]/g, '-').trim();
@@ -1138,6 +1153,9 @@ function updateSectionXml(
   site: InspectionSite,
   opsImageAsset: ResolvedHwpxImageAsset | null,
   chartImages: QuarterlyChartImageAssets,
+  options?: {
+    skipPictureIdNormalization?: boolean;
+  },
 ) {
   const textUpdatedSection = replaceQuarterlyCoverTextNodes(sectionXml, report, site);
   const tableBlocks = matchTableBlocks(textUpdatedSection);
@@ -1153,9 +1171,111 @@ function updateSectionXml(
   tables[4] = updateFuturePlanTable(tables[4], report);
   tables[5] = updateOpsTable(tables[5], report, opsImageAsset);
 
-  return ensureUniquePictureObjectIds(
-    rebuildSectionXml(textUpdatedSection, tableBlocks, tables),
+  const rebuiltSectionXml = rebuildSectionXml(textUpdatedSection, tableBlocks, tables);
+  return options?.skipPictureIdNormalization
+    ? rebuiltSectionXml
+    : ensureUniquePictureObjectIds(rebuiltSectionXml);
+}
+
+async function tryBuildQuarterlyMergedHwpxDocument(
+  report: QuarterlySummaryReport,
+  site: InspectionSite,
+  options?: QuarterlyHwpxBuildOptions,
+): Promise<GeneratedHwpxDocument | null> {
+  const selectedSessions = options?.selectedSessions ?? [];
+  const mergedTemplateVariant = selectQuarterlyMergedTemplateVariant(selectedSessions);
+  if (!mergedTemplateVariant || selectedSessions.length === 0) {
+    return null;
+  }
+
+  const prototype = await buildQuarterlyMergedTemplatePrototype(mergedTemplateVariant);
+  const zip = await JSZip.loadAsync(prototype.buffer);
+  const sectionXmlFile = zip.file('Contents/section0.xml');
+  const contentHpfFile = zip.file('Contents/content.hpf');
+  const accidentChartFile = zip.file('Chart/chart1.xml');
+  const causativeChartFile = zip.file('Chart/chart2.xml');
+
+  if (!sectionXmlFile || !contentHpfFile) {
+    throw new Error('Quarterly merged HWPX template is missing required assets.');
+  }
+
+  const sectionXml = await sectionXmlFile.async('string');
+  let contentHpf = await contentHpfFile.async('string');
+  const accidentChartXml = accidentChartFile
+    ? await accidentChartFile.async('string')
+    : null;
+  const causativeChartXml = causativeChartFile
+    ? await causativeChartFile.async('string')
+    : null;
+  const [opsImageAsset, accidentChartImage, causativeChartImage] = await Promise.all([
+    resolveOpsImageAsset(report, options),
+    renderQuarterlyChartImageAsset(report.accidentStats),
+    renderQuarterlyChartImageAsset(report.causativeStats),
+  ]);
+  const chartImages: QuarterlyChartImageAssets = {
+    accident: accidentChartImage,
+    causative: causativeChartImage,
+  };
+
+  if (opsImageAsset) {
+    const href = `BinData/${OPS_IMAGE_ITEM_ID}.${opsImageAsset.extension}`;
+    zip.file(href, opsImageAsset.buffer, { compression: 'STORE' });
+    contentHpf = upsertManifestItem(
+      contentHpf,
+      OPS_IMAGE_ITEM_ID,
+      href,
+      normalizeHwpxMediaType(opsImageAsset.mediaType, href),
+    );
+  }
+
+  for (const [itemId, asset] of [
+    [ACCIDENT_CHART_IMAGE_ITEM_ID, chartImages.accident],
+    [CAUSATIVE_CHART_IMAGE_ITEM_ID, chartImages.causative],
+  ] as const) {
+    const href = `BinData/${itemId}.${asset.extension}`;
+    zip.file(href, asset.buffer, { compression: 'STORE' });
+    contentHpf = upsertManifestItem(
+      contentHpf,
+      itemId,
+      href,
+      normalizeHwpxMediaType(asset.mediaType, href),
+    );
+  }
+
+  const updatedSectionXml = updateSectionXml(
+    sectionXml,
+    report,
+    site,
+    opsImageAsset,
+    chartImages,
+    { skipPictureIdNormalization: true },
   );
+  const renderedAppendices = await renderAppendicesIntoMergedQuarterlySection({
+    appendixPrototypeXml: prototype.appendixPrototypeXml,
+    assetBaseUrl: options?.assetBaseUrl,
+    contentHpf,
+    imagePlaceholders: prototype.imagePlaceholders,
+    sectionXml: updatedSectionXml,
+    selectedSessions,
+    zip,
+  });
+
+  zip.file(
+    'Contents/section0.xml',
+    ensureUniquePictureObjectIds(renderedAppendices.sectionXml),
+  );
+  zip.file('Contents/content.hpf', renderedAppendices.contentHpf);
+  if (accidentChartFile && accidentChartXml) {
+    zip.file('Chart/chart1.xml', updateChartXml(accidentChartXml, report.accidentStats));
+  }
+  if (causativeChartFile && causativeChartXml) {
+    zip.file('Chart/chart2.xml', updateChartXml(causativeChartXml, report.causativeStats));
+  }
+
+  return {
+    buffer: await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' }),
+    filename: fileNameForQuarterlyReport(report, site),
+  };
 }
 
 export async function buildQuarterlyHwpxDocument(
@@ -1163,6 +1283,19 @@ export async function buildQuarterlyHwpxDocument(
   site: InspectionSite,
   options?: QuarterlyHwpxBuildOptions,
 ): Promise<GeneratedHwpxDocument> {
+  const selectedSessions = options?.selectedSessions ?? [];
+  if (selectedSessions.length > 0) {
+    try {
+      const mergedDocument = await tryBuildQuarterlyMergedHwpxDocument(report, site, options);
+      if (mergedDocument) {
+        return mergedDocument;
+      }
+    } catch {
+      // Fall back to the legacy multi-section path if the merged template renderer
+      // cannot produce a valid document for the current data shape.
+    }
+  }
+
   const templateBuffer = await fs.readFile(TEMPLATE_PATH);
   const zip = await JSZip.loadAsync(templateBuffer);
 
@@ -1218,7 +1351,6 @@ export async function buildQuarterlyHwpxDocument(
     );
   }
 
-  const selectedSessions = options?.selectedSessions ?? [];
   let nextHeaderXml = '';
   if (selectedSessions.length > 0) {
     const headerXmlFile = zip.file('Contents/header.xml');

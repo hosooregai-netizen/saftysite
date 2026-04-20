@@ -35,7 +35,8 @@
   border: 1px solid var(--erp-line);
   border-radius: 20px;
   background: var(--app-panel, #fff);
-  padding: 1.1rem;
+  padding: 1rem;
+  box-shadow: var(--erp-shadow-soft, 0 10px 30px rgba(15, 23, 42, 0.06));
 }
 
 .sectionHeader {
@@ -43,7 +44,11 @@
   justify-content: space-between;
   gap: 0.8rem;
   align-items: center;
-  margin-bottom: 0.9rem;
+  margin-bottom: 0.75rem;
+}
+
+.sectionCard > .sectionHeader:first-child {
+  display: none;
 }
 
 .sectionTitle {
@@ -58,44 +63,67 @@
 }
 
 .viewTabs {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
-  margin-bottom: 1rem;
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(140px, 1fr));
+  gap: 4px;
+  width: min(100%, 420px);
+  margin-bottom: 0.85rem;
+  padding: 4px;
+  border: 1px solid var(--erp-line);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #f8fbff 0%, #f3f7fc 100%);
 }
 
 .viewTab {
-  border: 1px solid var(--erp-line);
-  border-radius: 14px;
-  background: rgba(15, 23, 42, 0.03);
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
   color: var(--erp-text-subtle);
   font-weight: 700;
-  padding: 0.9rem 1rem;
+  min-height: 38px;
+  padding: 0.7rem 0.95rem;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease,
+    box-shadow 140ms ease;
 }
 
 .viewTabActive {
-  background: var(--app-accent, #2563eb);
-  border-color: var(--app-accent, #2563eb);
+  background: linear-gradient(180deg, var(--app-accent, #2563eb), #2f5fdb);
   color: #fff;
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.24);
 }
 
 .toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
+  align-items: end;
+  gap: 0.7rem;
+  margin-bottom: 0.9rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--erp-line);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(251, 252, 254, 0.98), rgba(245, 248, 252, 0.96));
 }
 
 .monthNav {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.55rem;
+  gap: 0.45rem;
+}
+
+.monthNav :global(.app-button) {
+  min-height: 38px;
+  padding: 0.55rem 0.85rem;
+  border-radius: 12px;
+  box-shadow: none;
+  font-size: 0.86rem;
 }
 
 .field {
   display: grid;
   gap: 0.35rem;
-  min-width: 180px;
+  min-width: 168px;
 }
 
 .fieldLabel {
@@ -103,15 +131,34 @@
   font-size: 0.82rem;
 }
 
+.toolbar .fieldLabel {
+  display: none;
+}
+
+.toolbar .field {
+  gap: 0;
+}
+
 .layout {
-  display: grid;
-  gap: 1rem;
-  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+  display: block;
 }
 
 .list {
+  display: block;
+}
+
+.calendarPanel {
   display: grid;
-  gap: 0.75rem;
+  gap: 0.8rem;
+}
+
+.calendarPanelHeader {
+  display: grid;
+  gap: 0.22rem;
+}
+
+.calendarPanelHeader {
+  display: none;
 }
 
 .rowCard {
@@ -148,7 +195,7 @@
 .calendarGrid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 0.65rem;
+  gap: 0.5rem;
 }
 
 .weekday {
@@ -156,19 +203,21 @@
   color: var(--erp-text-subtle);
   font-size: 0.8rem;
   font-weight: 600;
+  padding-bottom: 0.1rem;
 }
 
 .calendarCell,
 .calendarCellEmpty {
-  min-height: 92px;
-  border-radius: 16px;
+  min-height: 112px;
+  border-radius: 14px;
   border: 1px solid var(--erp-line);
-  padding: 0.6rem;
+  padding: 0.58rem 0.55rem;
   background: var(--app-panel, #fff);
 }
 
 .calendarCellEmpty {
-  opacity: 0.45;
+  opacity: 0.75;
+  background: rgba(15, 23, 42, 0.02);
 }
 
 .calendarCellActive {
@@ -178,18 +227,19 @@
 
 .calendarDay {
   font-weight: 700;
-  margin-bottom: 0.45rem;
+  margin-bottom: 0.38rem;
+  font-size: 0.94rem;
 }
 
 .calendarEvents {
   display: grid;
-  gap: 0.35rem;
+  gap: 0.28rem;
 }
 
 .calendarEvent {
   border-radius: 999px;
-  padding: 0.2rem 0.5rem;
-  font-size: 0.78rem;
+  padding: 0.18rem 0.45rem;
+  font-size: 0.74rem;
   background: rgba(15, 118, 110, 0.1);
   color: var(--app-accent, #0f766e);
   white-space: nowrap;
@@ -368,11 +418,28 @@
 }
 
 @media (max-width: 920px) {
-  .layout {
+  .viewTabs {
+    display: grid;
+    width: 100%;
     grid-template-columns: 1fr;
   }
 
-  .viewTabs {
-    grid-template-columns: 1fr;
+  .toolbar {
+    padding: 0.8rem;
+  }
+
+  .monthNav {
+    width: 100%;
+  }
+
+  .monthNav :global(.app-button) {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .calendarCell,
+  .calendarCellEmpty {
+    min-height: 88px;
+    padding: 0.48rem 0.4rem;
   }
 }

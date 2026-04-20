@@ -35,6 +35,16 @@ function extractVertPositions(cellXml: string) {
   ).filter(Number.isFinite);
 }
 
+function extractAppendixSlice(sectionXml: string, marker: string) {
+  const markerIndex = sectionXml.indexOf(marker);
+  assert.notEqual(markerIndex, -1, `expected appendix marker "${marker}" to be rendered`);
+  const appendixStartIndex = sectionXml.lastIndexOf('pageBreak="1"', markerIndex);
+  return sectionXml.slice(
+    appendixStartIndex >= 0 ? appendixStartIndex : markerIndex,
+    markerIndex + 4000,
+  );
+}
+
 function buildQuarterlyFixture(): {
   report: QuarterlySummaryReport;
   sessions: ReturnType<typeof buildSiteSessions>['sessions'];
@@ -92,6 +102,63 @@ function buildSiteSessions() {
     2,
   );
 
+  first.document7Findings = [
+    {
+      accidentType: '',
+      carryForward: false,
+      causativeAgentKey: '',
+      emphasis: '',
+      hazardDescription: 'appendix-hazard-one',
+      id: 'finding-1',
+      improvementPlan: 'appendix-plan-one',
+      improvementRequest: '',
+      inspector: '',
+      legalReferenceId: '',
+      legalReferenceTitle: 'law-one',
+      likelihood: '',
+      location: 'zone-one',
+      photoUrl: '',
+      photoUrl2: '',
+      referenceCatalogAccidentType: '',
+      referenceCatalogCausativeAgentKey: '',
+      referenceLawTitles: [],
+      referenceMaterial1: '',
+      referenceMaterial2: '',
+      referenceMaterialDescription: '',
+      referenceMaterialImage: '',
+      riskLevel: '',
+      severity: '',
+    },
+  ];
+  second.document7Findings = [
+    {
+      accidentType: '',
+      carryForward: false,
+      causativeAgentKey: '',
+      emphasis: '',
+      hazardDescription: 'appendix-hazard-two',
+      id: 'finding-2',
+      improvementPlan: 'appendix-plan-two',
+      improvementRequest: '',
+      inspector: '',
+      legalReferenceId: '',
+      legalReferenceTitle: 'law-two',
+      likelihood: '',
+      location: 'zone-two',
+      photoUrl: '',
+      photoUrl2: '',
+      referenceCatalogAccidentType: '',
+      referenceCatalogCausativeAgentKey: '',
+      referenceLawTitles: [],
+      referenceMaterial1: '',
+      referenceMaterial2: '',
+      referenceMaterialDescription: '',
+      referenceMaterialImage: '',
+      riskLevel: '',
+      severity: '',
+    },
+  ];
+
   return {
     sessions: [first, second],
     site,
@@ -117,30 +184,78 @@ test('buildQuarterlyHwpxDocument keeps the standalone quarterly structure when n
   assert.doesNotMatch(contentHpf, /href="Contents\/section1\.xml"/);
 });
 
-test('buildQuarterlyHwpxDocument appends selected inspection bodies as extra sections', async () => {
+test('buildQuarterlyHwpxDocument renders selected inspection bodies into the merged section template', async () => {
   const fixture = buildQuarterlyFixture();
   const zip = await loadGeneratedZip(fixture, {
     selectedSessions: fixture.sessions,
     siteSessions: fixture.sessions,
   });
   const contentHpf = await zip.file('Contents/content.hpf')?.async('string');
-  const headerXml = await zip.file('Contents/header.xml')?.async('string');
-  const appendixSection = await zip.file('Contents/section1.xml')?.async('string');
-  const secondAppendixSection = await zip.file('Contents/section2.xml')?.async('string');
+  const sectionXml = await zip.file('Contents/section0.xml')?.async('string');
 
   assert.ok(contentHpf);
-  assert.ok(headerXml);
-  assert.ok(appendixSection);
-  assert.ok(secondAppendixSection);
-  assert.match(contentHpf, /href="Contents\/section1\.xml"/);
-  assert.match(contentHpf, /href="Contents\/section2\.xml"/);
-  assert.match(contentHpf, /href="BinData\/appendix-1-/);
-  assert.match(contentHpf, /href="BinData\/appendix-2-/);
-  assert.doesNotMatch(appendixSection, /\{cover\.site_name\}/);
-  assert.doesNotMatch(appendixSection, /hidePageNum="1"/);
-  assert.doesNotMatch(secondAppendixSection, /\{cover\.site_name\}/);
-  assert.match(appendixSection, /<hp:tbl\b/);
-  assert.ok((headerXml.match(/<hh:style\b/g) ?? []).length > 22);
+  assert.ok(sectionXml);
+  assert.doesNotMatch(contentHpf, /href="Contents\/section1\.xml"/);
+  assert.doesNotMatch(contentHpf, /href="Contents\/section2\.xml"/);
+  assert.match(sectionXml, /appendix-hazard-one/);
+  assert.match(sectionXml, /appendix-hazard-two/);
+  assert.doesNotMatch(sectionXml, /\{#appendices\}/);
+  assert.doesNotMatch(sectionXml, /\{\/appendices\}/);
+  const firstAppendixSlice = extractAppendixSlice(sectionXml, 'appendix-hazard-one');
+  assert.doesNotMatch(firstAppendixSlice, /hidePageNum="1"/);
+  assert.doesNotMatch(firstAppendixSlice, /www\.safetysite\.co\.kr/);
+});
+
+test('buildQuarterlyHwpxDocument renders v9-1 appendix content into the merged section template', async () => {
+  const fixture = buildQuarterlyFixture();
+  const accidentSession = fixture.sessions[0];
+  accidentSession.document2Overview.accidentOccurred = 'yes';
+  accidentSession.document2Overview.accidentPhotoUrl = '';
+  accidentSession.document2Overview.accidentPhotoUrl2 = '';
+  accidentSession.document7Findings = [
+    {
+      accidentType: '',
+      carryForward: false,
+      causativeAgentKey: '',
+      emphasis: '',
+      hazardDescription: 'appendix-v91-hazard',
+      id: 'finding-v91',
+      improvementPlan: 'appendix-v91-plan',
+      improvementRequest: '',
+      inspector: '',
+      legalReferenceId: '',
+      legalReferenceTitle: 'law-v91',
+      likelihood: '',
+      location: 'zone-v91',
+      photoUrl: '',
+      photoUrl2: '',
+      referenceCatalogAccidentType: '',
+      referenceCatalogCausativeAgentKey: '',
+      referenceLawTitles: [],
+      referenceMaterial1: '',
+      referenceMaterial2: '',
+      referenceMaterialDescription: '',
+      referenceMaterialImage: '',
+      riskLevel: '',
+      severity: '',
+    },
+  ];
+
+  const zip = await loadGeneratedZip(fixture, {
+    selectedSessions: [accidentSession],
+    siteSessions: fixture.sessions,
+  });
+  const contentHpf = await zip.file('Contents/content.hpf')?.async('string');
+  const sectionXml = await zip.file('Contents/section0.xml')?.async('string');
+
+  assert.ok(contentHpf);
+  assert.ok(sectionXml);
+  assert.doesNotMatch(contentHpf, /href="Contents\/section1\.xml"/);
+  assert.match(sectionXml, /appendix-v91-hazard/);
+  assert.doesNotMatch(sectionXml, /\{#appendices\}/);
+  const appendixSlice = extractAppendixSlice(sectionXml, 'appendix-v91-hazard');
+  assert.doesNotMatch(appendixSlice, /hidePageNum="1"/);
+  assert.doesNotMatch(appendixSlice, /www\.safetysite\.co\.kr/);
 });
 
 test('buildQuarterlyHwpxDocument binds the OPS image into the dedicated template slot', async () => {

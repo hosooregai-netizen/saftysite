@@ -55,23 +55,92 @@ function parseManifestItems(contentHpf: string): ParsedManifestItem[] {
   ).filter((item): item is ParsedManifestItem => item !== null);
 }
 
-function extractInspectionAppendixSection(sectionXml: string): string {
+function balancedTagSpans(xml: string, tagName: string): Array<{ start: number; end: number }> {
+  const escapedTagName = tagName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const tokenPattern = new RegExp(`<${escapedTagName}\\b[^>]*\\/?>|<\\/${escapedTagName}>`, 'g');
+  const spans: Array<{ start: number; end: number }> = [];
+  const stack: number[] = [];
+
+  for (const match of xml.matchAll(tokenPattern)) {
+    const token = match[0];
+    const index = match.index ?? 0;
+    const isClosing = token.startsWith(`</${tagName}`);
+    const isSelfClosing = !isClosing && token.endsWith('/>');
+
+    if (isClosing) {
+      const start = stack.pop();
+      if (start != null) {
+        spans.push({ start, end: index + token.length });
+      }
+      continue;
+    }
+
+    if (isSelfClosing) {
+      spans.push({ start: index, end: index + token.length });
+      continue;
+    }
+
+    stack.push(index);
+  }
+
+  return spans.sort((left, right) => left.start - right.start);
+}
+
+export function extractInspectionAppendixSection(sectionXml: string): string {
   const rootTag = sectionXml.match(/<hs:sec\b[^>]*>/)?.[0] ?? '';
   const sectionCloseIndex = sectionXml.lastIndexOf('</hs:sec>');
   const coverMarkerIndex = [
     sectionXml.indexOf('hidePageNum="1"'),
     sectionXml.indexOf('hideFooter="1"'),
   ].find((index) => index >= 0) ?? -1;
-  const firstTableIndex =
-    coverMarkerIndex >= 0 ? sectionXml.indexOf('<hp:tbl', coverMarkerIndex) : -1;
+  const firstTableIndex = coverMarkerIndex >= 0 ? sectionXml.indexOf('<hp:tbl', coverMarkerIndex) : -1;
   const bodyStartIndex =
-    firstTableIndex >= 0 ? sectionXml.lastIndexOf('<hp:p ', firstTableIndex) : -1;
+    firstTableIndex >= 0
+      ? ((balancedTagSpans(sectionXml, 'hp:p').find(
+          (span) => firstTableIndex >= span.start && firstTableIndex <= span.end,
+        ) ?? null))
+      : -1;
 
-  if (!rootTag || sectionCloseIndex < 0 || bodyStartIndex < 0) {
+  if (!rootTag || sectionCloseIndex < 0 || bodyStartIndex === -1 || bodyStartIndex === null) {
     throw new Error('Inspection appendix extraction failed: could not isolate the coverless body.');
   }
 
-  return `${rootTag}${sectionXml.slice(bodyStartIndex, sectionCloseIndex)}</hs:sec>`;
+  const firstParagraphXml = sectionXml.slice(bodyStartIndex.start, bodyStartIndex.end);
+  const tableIndexWithinParagraph = firstTableIndex - bodyStartIndex.start;
+  const pageHidingIndexWithinParagraph = firstParagraphXml.lastIndexOf(
+    '<hp:ctrl><hp:pageHiding',
+    tableIndexWithinParagraph,
+  );
+  const paragraphOpenTag = firstParagraphXml.match(/^<hp:p\b[^>]*>/)?.[0] ?? '';
+  const runMatches = Array.from(firstParagraphXml.matchAll(/<hp:run\b[^>]*>/g));
+  const runOpenTag =
+    runMatches
+      .filter((match) => (match.index ?? -1) < tableIndexWithinParagraph)
+      .at(-1)?.[0] ?? '';
+  const pageHidingCtrlCloseWithinParagraph =
+    pageHidingIndexWithinParagraph >= 0
+      ? firstParagraphXml.indexOf('</hp:ctrl>', pageHidingIndexWithinParagraph)
+      : -1;
+  const trimmedParagraphBodyStart =
+    pageHidingCtrlCloseWithinParagraph >= 0
+      ? pageHidingCtrlCloseWithinParagraph + '</hp:ctrl>'.length
+      : tableIndexWithinParagraph;
+
+  if (!paragraphOpenTag || !runOpenTag || trimmedParagraphBodyStart < 0) {
+    throw new Error('Inspection appendix extraction failed: could not trim the first body paragraph.');
+  }
+
+  const firstBodyParagraphXml =
+    paragraphOpenTag +
+    runOpenTag +
+    firstParagraphXml.slice(trimmedParagraphBodyStart);
+
+  return (
+    `${rootTag}` +
+    firstBodyParagraphXml +
+    sectionXml.slice(bodyStartIndex.end, sectionCloseIndex) +
+    '</hs:sec>'
+  );
 }
 
 export async function extractInspectionAppendixSourceFromHwpxBuffer(

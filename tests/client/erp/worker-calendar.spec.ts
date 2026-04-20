@@ -1,4 +1,3 @@
-import assert from 'node:assert/strict';
 import type { Route } from 'playwright';
 import { buildAdminScheduleRows, updateSingleSchedule } from '../../../server/admin/automation';
 import type { ClientSmokePlaywrightConfig } from '../../../playwright.config';
@@ -28,21 +27,20 @@ async function fulfillJson(route: Route, payload: unknown, status = 200) {
   });
 }
 
-function buildCreatedWorkerSchedule(input: {
+function buildEnsuredWorkerSchedule(input: {
   currentUserId: string;
   requestUserName: string;
   site: SafetySite;
   roundNo: number;
-  payload: Record<string, unknown>;
 }): SafetyInspectionSchedule {
   const contractWindowStart = String(
-    input.site.contract_start_date || input.site.contract_date || String(input.payload.planned_date || '').slice(0, 7) + '-01',
+    input.site.contract_start_date || input.site.contract_date || '',
   );
   const contractWindowEnd = String(
     input.site.contract_end_date || input.site.project_end_date || contractWindowStart,
   );
   return {
-    actualVisitDate: String(input.payload.actual_visit_date || ''),
+    actualVisitDate: '',
     assigneeName: input.requestUserName,
     assigneeUserId: input.currentUserId,
     exceptionMemo: '',
@@ -53,18 +51,18 @@ function buildCreatedWorkerSchedule(input: {
         (input.site as { headquarter_detail?: { name?: string } | null }).headquarter_detail?.name ||
         '',
     ),
-    id: `created:${input.site.id}:${input.roundNo}`,
+    id: `schedule:${input.site.id}:${input.roundNo}`,
     isConflicted: false,
     isOutOfWindow: false,
     isOverdue: false,
-    linkedReportKey: String(input.payload.linked_report_key || ''),
-    plannedDate: String(input.payload.planned_date || ''),
+    linkedReportKey: '',
+    plannedDate: '',
     roundNo: input.roundNo,
-    selectionConfirmedAt: NOW,
-    selectionConfirmedByName: input.requestUserName,
-    selectionConfirmedByUserId: input.currentUserId,
-    selectionReasonLabel: String(input.payload.selection_reason_label || ''),
-    selectionReasonMemo: String(input.payload.selection_reason_memo || ''),
+    selectionConfirmedAt: '',
+    selectionConfirmedByName: '',
+    selectionConfirmedByUserId: '',
+    selectionReasonLabel: '',
+    selectionReasonMemo: '',
     siteId: String(input.site.id || ''),
     siteName: String(input.site.site_name || ''),
     status: 'planned',
@@ -79,38 +77,22 @@ export async function runWorkerCalendarSmoke(config: ClientSmokePlaywrightConfig
 
   try {
     const { context, page, requestCounts } = harness;
-    const scheduleCreatesBefore = requestCounts.get('POST /api/me/schedules') || 0;
     const scheduleReadsBefore = requestCounts.get('GET /api/me/schedules') || 0;
     const scheduleUpdatesBefore = requestCounts.get('PATCH /api/me/schedules/:id') || 0;
-    let firstEditableScheduleId = '';
-    const createdSchedulesBySiteRound = new Map<string, SafetyInspectionSchedule>();
-    let lastCreatedSchedulePayload: Record<string, unknown> | null = null;
-    const seededReport = clone(harness.state.reports.find((report) => String(report.report_key) === 'report-tech-1'));
-    if (seededReport) {
-      harness.state.reports.push({
-        ...seededReport,
-        id: 'report-tech-7',
-        report_key: 'report-tech-7',
-        report_title: '7차 기술지도 보고서',
-        visit_date: '2026-04-01',
-        visit_round: 7,
-        updated_at: NOW,
-      });
-    }
+    const ensuredSchedulesById = new Map<string, SafetyInspectionSchedule>();
 
     await context.route(/\/api\/me\/schedules(?:\/[^/?#]+)?(?:\?.*)?$/, async (route) => {
       const request = route.request();
       const url = new URL(request.url());
       const pathname = url.pathname;
       const requestKey =
-        request.method() === 'POST' && pathname === '/api/me/schedules'
-          ? 'POST /api/me/schedules'
-          : request.method() === 'PATCH' && /^\/api\/me\/schedules\/[^/]+$/.test(pathname)
-            ? 'PATCH /api/me/schedules/:id'
-            : 'GET /api/me/schedules';
+        request.method() === 'PATCH' && /^\/api\/me\/schedules\/[^/]+$/.test(pathname)
+          ? 'PATCH /api/me/schedules/:id'
+          : 'GET /api/me/schedules';
       requestCounts.set(requestKey, (requestCounts.get(requestKey) || 0) + 1);
 
       const requestUser = harness.helpers.getUserForToken(request.headers().authorization || null);
+
       if (request.method() === 'GET' && pathname === '/api/me/schedules') {
         const month = url.searchParams.get('month') || '2026-04';
         const limit = Math.max(1, Number(url.searchParams.get('limit') || '200'));
@@ -122,51 +104,49 @@ export async function runWorkerCalendarSmoke(config: ClientSmokePlaywrightConfig
         const assignedSiteIds = new Set(
           assignedSites.map((site) => String((site as { id?: unknown }).id || '')),
         );
-        const primaryAssignedSiteId = String(
-          (assignedSites[0] as { id?: unknown } | undefined)?.id || '',
-        );
-        const allAssignedRows = buildAdminScheduleRows(buildWorkerDashboardData(harness), new Date(NOW))
+
+        const baseRows = buildAdminScheduleRows(buildWorkerDashboardData(harness), new Date(NOW))
           .filter((row) => {
             if (!assignedSiteIds.has(row.siteId)) return false;
             if (row.assigneeUserId && row.assigneeUserId !== currentUserId) return false;
-            return true;
-          });
-        const baseRows = allAssignedRows
-          .filter((row) => {
             if (siteId && row.siteId !== siteId) return false;
             if (status && row.status !== status) return false;
             if (row.plannedDate && row.plannedDate.slice(0, 7) !== month) return false;
-            if (row.siteId === primaryAssignedSiteId && row.roundNo > 6) return false;
             return true;
           });
-        const rows = [...baseRows];
 
-        createdSchedulesBySiteRound.forEach((row) => {
-          if (siteId && row.siteId !== siteId) return;
-          if (status && row.status !== status) return;
-          if (row.plannedDate && row.plannedDate.slice(0, 7) !== month) return;
-          rows.push(clone(row));
+        const serverEnsuredRows = assignedSites
+          .flatMap((site) => {
+            const assignedSiteId = String((site as SafetySite & { id?: unknown }).id || '');
+            if (siteId && assignedSiteId !== siteId) return [];
+            return [7, 8]
+              .filter((roundNo) => !baseRows.some((row) => row.siteId === assignedSiteId && row.roundNo === roundNo))
+              .map((roundNo) => {
+                const scheduleId = `schedule:${assignedSiteId}:${roundNo}`;
+                return (
+                  ensuredSchedulesById.get(scheduleId) ??
+                  buildEnsuredWorkerSchedule({
+                    currentUserId,
+                    requestUserName: String(requestUser.name || ''),
+                    roundNo,
+                    site: site as SafetySite,
+                  })
+                );
+              });
+          });
+        serverEnsuredRows.forEach((row) => {
+          ensuredSchedulesById.set(row.id, row);
         });
 
-        const filteredRows = rows
-          .filter((row) => {
-            if (status && row.status !== status) return false;
-            if (row.plannedDate && row.plannedDate.slice(0, 7) !== month) return false;
-            return true;
-          })
-          .sort(
-            (left, right) =>
-              (left.plannedDate ? 1 : 0) - (right.plannedDate ? 1 : 0) ||
-              (left.plannedDate || left.windowStart || left.windowEnd || '').localeCompare(
-                right.plannedDate || right.windowStart || right.windowEnd || '',
-              ) ||
-              left.roundNo - right.roundNo ||
-              left.siteName.localeCompare(right.siteName, 'ko'),
-          );
-        firstEditableScheduleId =
-          allAssignedRows.find((row) => !row.plannedDate)?.id ||
-          allAssignedRows[0]?.id ||
-          firstEditableScheduleId;
+        const filteredRows = [...baseRows, ...serverEnsuredRows].sort(
+          (left, right) =>
+            (left.plannedDate ? 1 : 0) - (right.plannedDate ? 1 : 0) ||
+            (left.plannedDate || left.windowStart || left.windowEnd || '').localeCompare(
+              right.plannedDate || right.windowStart || right.windowEnd || '',
+            ) ||
+            left.roundNo - right.roundNo ||
+            left.siteName.localeCompare(right.siteName, 'ko'),
+        );
 
         await fulfillJson(route, {
           limit,
@@ -178,50 +158,23 @@ export async function runWorkerCalendarSmoke(config: ClientSmokePlaywrightConfig
         return;
       }
 
-      if (request.method() === 'POST' && pathname === '/api/me/schedules') {
-        const payload = (request.postDataJSON?.() as Record<string, unknown>) || {};
-        lastCreatedSchedulePayload = payload;
-        const siteId = String(payload.site_id || '');
-        const roundNo = Number(payload.round_no || 0);
-        const site = harness.state.sites.find((item) => String(item.id) === siteId) as
-          | SafetySite
-          | undefined;
-        if (!site || !Number.isFinite(roundNo) || roundNo <= 0) {
-          await fulfillJson(route, { error: 'Invalid worker schedule create request.' }, 400);
-          return;
-        }
-        const created = buildCreatedWorkerSchedule({
-          currentUserId: String(requestUser.id || ''),
-          payload,
-          requestUserName: String(requestUser.name || ''),
-          roundNo: Math.trunc(roundNo),
-          site,
-        });
-        createdSchedulesBySiteRound.set(`${siteId}:${Math.trunc(roundNo)}`, created);
-        await fulfillJson(route, clone(created));
-        return;
-      }
-
       if (request.method() === 'PATCH' && /^\/api\/me\/schedules\/[^/]+$/.test(pathname)) {
         const scheduleId = decodeURIComponent(pathname.split('/').at(-1) || '');
         const payload = (request.postDataJSON?.() as Record<string, unknown>) || {};
-        const createdScheduleEntry = Array.from(createdSchedulesBySiteRound.entries()).find(
-          ([, row]) => row.id === scheduleId,
-        );
-        if (createdScheduleEntry) {
-          const [key, current] = createdScheduleEntry;
+        const ensuredSchedule = ensuredSchedulesById.get(scheduleId) ?? null;
+        if (ensuredSchedule) {
           const updated: SafetyInspectionSchedule = {
-            ...current,
-            actualVisitDate: String(payload.actual_visit_date || current.actualVisitDate || ''),
-            linkedReportKey: String(payload.linked_report_key || current.linkedReportKey || ''),
-            plannedDate: String(payload.planned_date || current.plannedDate || ''),
+            ...ensuredSchedule,
+            actualVisitDate: String(payload.actual_visit_date || ensuredSchedule.actualVisitDate || ''),
+            linkedReportKey: String(payload.linked_report_key || ensuredSchedule.linkedReportKey || ''),
+            plannedDate: String(payload.planned_date || ensuredSchedule.plannedDate || ''),
             selectionConfirmedAt: NOW,
             selectionConfirmedByName: String(requestUser.name || ''),
             selectionConfirmedByUserId: String(requestUser.id || ''),
             selectionReasonLabel: String(payload.selection_reason_label || ''),
             selectionReasonMemo: String(payload.selection_reason_memo || ''),
           };
-          createdSchedulesBySiteRound.set(key, updated);
+          ensuredSchedulesById.set(scheduleId, updated);
           await fulfillJson(route, clone(updated));
           return;
         }
@@ -260,47 +213,20 @@ export async function runWorkerCalendarSmoke(config: ClientSmokePlaywrightConfig
     await harness.waitForRequestCount('GET /api/me/schedules', scheduleReadsBefore + 1);
 
     await page.locator('input[type="month"]').waitFor({ state: 'visible' });
-    await page.locator('[role="tab"]').first().waitFor({ state: 'visible' });
     await page
-      .locator('button')
-      .filter({ has: page.locator('div', { hasText: /^8$/ }) })
-      .first()
-      .click();
-
-    const dialog = page.locator('[role="dialog"]').first();
-    await dialog.waitFor({ state: 'visible' });
-    await dialog.locator('input[name="worker-site"]').first().setChecked(true, { force: true });
-    await dialog.getByText('보고서 있음 · 일정 연결 필요').first().waitFor({ state: 'visible' });
-    await dialog.getByText('계약 기간 2026-01-01 ~ 2026-06-30').first().waitFor({ state: 'visible' });
-    await dialog.getByText(/^7 \/ 12회차$/).first().click();
-    await dialog.locator('input[type="date"]').fill('2026-04-08');
-    await dialog.locator('button').last().click();
-
-    await harness.waitForRequestCount('POST /api/me/schedules', scheduleCreatesBefore + 1);
-    assert.equal(String(lastCreatedSchedulePayload?.['linked_report_key'] || ''), 'report-tech-7');
-    assert.equal(String(lastCreatedSchedulePayload?.['actual_visit_date'] || ''), '2026-04-01');
-    await dialog.waitFor({ state: 'hidden' });
-
-    await page.locator('[role="tab"]').nth(1).click();
-    await page.locator('table').waitFor({ state: 'visible' });
-    await page.getByText('2026-04-08').first().waitFor({ state: 'visible' });
-
-    const patchScheduleId =
-      Array.from(createdSchedulesBySiteRound.values())[0]?.id || firstEditableScheduleId;
-    if (patchScheduleId) {
-      await page.evaluate(async ({ scheduleId }) => {
+      .evaluate(async () => {
         const token = window.localStorage.getItem('safety-api-access-token');
         if (!token) {
           throw new Error('Missing worker auth token in localStorage.');
         }
-        const response = await fetch(`/api/me/schedules/${encodeURIComponent(scheduleId)}`, {
+        const response = await fetch('/api/me/schedules/schedule%3Asite-1%3A8', {
           method: 'PATCH',
           headers: {
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            planned_date: '2026-04-09',
+            planned_date: '2026-04-08',
             selection_reason_label: '',
             selection_reason_memo: '',
           }),
@@ -309,10 +235,30 @@ export async function runWorkerCalendarSmoke(config: ClientSmokePlaywrightConfig
           throw new Error(`Worker schedule PATCH failed with ${response.status}.`);
         }
         await response.json();
-      }, { scheduleId: patchScheduleId });
+      });
 
-      await harness.waitForRequestCount('PATCH /api/me/schedules/:id', scheduleUpdatesBefore + 1);
-    }
+    await harness.waitForRequestCount('PATCH /api/me/schedules/:id', scheduleUpdatesBefore + 1);
+    await page.reload({ waitUntil: 'load' });
+    await harness.waitForRequestCount('GET /api/me/schedules', scheduleReadsBefore + 2);
+    await page.evaluate(async () => {
+      const token = window.localStorage.getItem('safety-api-access-token');
+      if (!token) {
+        throw new Error('Missing worker auth token in localStorage.');
+      }
+      const response = await fetch('/api/safety/reports?site_id=site-1&limit=50', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) {
+        throw new Error(`Worker reports GET failed with ${response.status}.`);
+      }
+      await response.json();
+    });
+
+    await page.locator('[role="tab"]').nth(1).click();
+    await page.locator('table').waitFor({ state: 'visible' });
+    await page.getByText('2026-04-08').first().waitFor({ state: 'visible' });
 
     harness.assertContractApisObserved();
     harness.assertNoClientErrors();

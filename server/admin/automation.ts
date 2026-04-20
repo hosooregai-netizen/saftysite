@@ -641,6 +641,72 @@ export function updateSiteSchedules(
   );
 }
 
+function buildRoundSchedulesForUpsert(site: SafetySite, users: SafetyUser[]) {
+  const contractProfile = parseSiteContractProfile(site);
+  const totalRounds = contractProfile.totalRounds ?? 0;
+
+  if (totalRounds <= 0) {
+    throw new Error('Total rounds must be configured before creating schedules.');
+  }
+
+  const existingByRound = new Map(
+    parseSiteInspectionSchedules(site).map((schedule) => [schedule.roundNo, schedule]),
+  );
+  const defaultAssigneeUserId =
+    site.assigned_user?.id || site.assigned_users?.[0]?.id || '';
+  const defaultAssigneeName =
+    users.find((user) => user.id === defaultAssigneeUserId)?.name ||
+    site.assigned_user?.name ||
+    site.assigned_users?.[0]?.name ||
+    '';
+  const headquarterName = site.headquarter_detail?.name || site.headquarter?.name || '';
+  const contractWindowStart =
+    normalizeText(site.contract_start_date) ||
+    normalizeText(contractProfile.contractDate) ||
+    normalizeText(site.contract_date);
+  let contractWindowEnd =
+    normalizeText(site.contract_end_date) ||
+    normalizeText(site.project_end_date) ||
+    contractWindowStart;
+  if (contractWindowStart && contractWindowEnd && contractWindowEnd < contractWindowStart) {
+    contractWindowEnd = contractWindowStart;
+  }
+
+  const nextSchedules: SafetyInspectionSchedule[] = [];
+  for (let roundNo = 1; roundNo <= totalRounds; roundNo += 1) {
+    const existing = existingByRound.get(roundNo);
+    nextSchedules.push({
+      actualVisitDate: existing?.actualVisitDate || '',
+      assigneeName: existing?.assigneeName || defaultAssigneeName,
+      assigneeUserId: existing?.assigneeUserId || defaultAssigneeUserId,
+      exceptionMemo: existing?.exceptionMemo || '',
+      exceptionReasonCode: existing?.exceptionReasonCode || '',
+      headquarterId: site.headquarter_id,
+      headquarterName,
+      id: existing?.id || `schedule:${site.id}:${roundNo}`,
+      isConflicted: false,
+      isOutOfWindow: false,
+      isOverdue: false,
+      linkedReportKey: existing?.linkedReportKey || '',
+      plannedDate: existing?.plannedDate || '',
+      roundNo,
+      totalRounds,
+      selectionConfirmedAt: existing?.selectionConfirmedAt || '',
+      selectionConfirmedByName: existing?.selectionConfirmedByName || '',
+      selectionConfirmedByUserId: existing?.selectionConfirmedByUserId || '',
+      selectionReasonLabel: existing?.selectionReasonLabel || '',
+      selectionReasonMemo: existing?.selectionReasonMemo || '',
+      siteId: site.id,
+      siteName: site.site_name,
+      status: existing?.status || 'planned',
+      windowEnd: contractWindowEnd,
+      windowStart: contractWindowStart,
+    });
+  }
+
+  return nextSchedules;
+}
+
 function applyScheduleUpdate(
   current: SafetyInspectionSchedule,
   payload: Partial<SafetyInspectionSchedule>,
@@ -690,6 +756,39 @@ function applyScheduleUpdate(
         : current.selectionConfirmedByUserId),
     selectionReasonLabel: payload.selectionReasonLabel ?? current.selectionReasonLabel,
     selectionReasonMemo: payload.selectionReasonMemo ?? current.selectionReasonMemo,
+  };
+}
+
+export function upsertSiteScheduleByRound(
+  site: SafetySite,
+  users: SafetyUser[],
+  roundNo: number,
+  payload: Partial<SafetyInspectionSchedule>,
+  options?: {
+    actorUserId?: string;
+    actorUserName?: string;
+  },
+) {
+  const normalizedRoundNo = Number.isFinite(roundNo) ? Math.trunc(roundNo) : 0;
+  if (normalizedRoundNo <= 0) {
+    throw new Error('Selected round is invalid.');
+  }
+
+  const schedules = buildRoundSchedulesForUpsert(site, users);
+  const index = schedules.findIndex((schedule) => schedule.roundNo === normalizedRoundNo);
+  if (index < 0) {
+    throw new Error('Selected round is outside the configured contract range.');
+  }
+
+  const current = schedules[index];
+  const nextSchedule = applyScheduleUpdate(current, payload, options);
+  schedules[index] = nextSchedule;
+
+  return {
+    memo: updateSiteSchedules(site, schedules),
+    previousSchedule: current,
+    schedule: nextSchedule,
+    site,
   };
 }
 

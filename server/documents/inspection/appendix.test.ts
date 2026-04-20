@@ -8,6 +8,11 @@ import {
 import { buildInspectionHwpxDocument } from './hwpx';
 import { extractInspectionAppendixSourceFromHwpxBuffer } from './appendix';
 
+function countTagOccurrences(xml: string, tagName: string, closing = false) {
+  const pattern = new RegExp(closing ? `<\\/${tagName}>` : `<${tagName}\\b`, 'g');
+  return Array.from(xml.matchAll(pattern)).length;
+}
+
 function buildSiteSessions() {
   const site = createInspectionSite({
     assigneeName: '담당자',
@@ -50,7 +55,17 @@ test('extractInspectionAppendixSourceFromHwpxBuffer strips the cover and keeps r
   assert.ok(appendix.sectionXml.startsWith('<hs:sec'));
   assert.doesNotMatch(appendix.sectionXml, /\{cover\.site_name\}/);
   assert.doesNotMatch(appendix.sectionXml, /hidePageNum="1"/);
+  assert.doesNotMatch(appendix.sectionXml, /www\.safetysite\.co\.kr/);
+  assert.doesNotMatch(appendix.sectionXml, /070-4106-6051/);
   assert.match(appendix.sectionXml, /<hp:tbl\b/);
+  assert.equal(
+    countTagOccurrences(appendix.sectionXml, 'hp:subList'),
+    countTagOccurrences(appendix.sectionXml, 'hp:subList', true),
+  );
+  assert.equal(
+    countTagOccurrences(appendix.sectionXml, 'hp:p'),
+    countTagOccurrences(appendix.sectionXml, 'hp:p', true),
+  );
   assert.ok(appendix.manifestItems.length > 0);
   assert.ok(appendix.manifestItems.every((item) => item.href.startsWith('BinData/')));
 });

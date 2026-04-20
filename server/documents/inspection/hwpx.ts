@@ -21,7 +21,7 @@ import type { ChecklistRating, InspectionSession } from '@/types/inspectionSessi
 const DOC5_CHART_TOP_N = 5;
 const HWPX_CONTENT_TYPE = 'application/haansofthwpx';
 
-type RepeatBlockPath =
+export type RepeatBlockPath =
   | 'sec4.follow_ups'
   | 'sec7.findings'
   | 'sec8.plans'
@@ -34,7 +34,7 @@ interface RepeatBlockConfig {
   prototypeIndices: number[];
 }
 
-interface TemplateBindingData {
+export interface TemplateBindingData {
   text: Record<string, string>;
   images: Record<string, string>;
   repeatCounts: Record<RepeatBlockPath, number>;
@@ -43,7 +43,7 @@ interface TemplateBindingData {
   truncated: Record<string, number>;
 }
 
-interface TemplateImagePlaceholder {
+export interface TemplateImagePlaceholder {
   table: number;
   row: number;
   col: number;
@@ -557,7 +557,7 @@ const BASE_TEMPLATE_IMAGE_PLACEHOLDERS: TemplateImagePlaceholder[] = [
   },
 ];
 
-function getTemplateImagePlaceholders(
+export function getTemplateImagePlaceholders(
   variant: InspectionTemplateVariant,
 ): TemplateImagePlaceholder[] {
   if (variant === 'v9-1') {
@@ -1558,7 +1558,7 @@ function createEmptyCheckRow() {
   return { id: '', prompt: '', rating: '' as ChecklistRating, note: '' };
 }
 
-function mapSessionToTemplateBinding(session: InspectionSession): TemplateBindingData {
+export function mapSessionToTemplateBinding(session: InspectionSession): TemplateBindingData {
   const text = Object.fromEntries(TEXT_PLACEHOLDERS.map((placeholder) => [placeholder, '']));
   const images: Record<string, string> = {};
   const warnings: string[] = [];
@@ -1817,7 +1817,7 @@ function mapSessionToTemplateBinding(session: InspectionSession): TemplateBindin
   };
 }
 
-function expandRepeatBlocks(
+export function expandRepeatBlocks(
   xml: string,
   repeatCounts: Record<RepeatBlockPath, number>,
   imagePlaceholders: TemplateImagePlaceholder[],
@@ -1934,7 +1934,7 @@ function expandRepeatBlocks(
   };
 }
 
-function replaceTextPlaceholders(xml: string, textBindings: Record<string, string>): string {
+export function replaceTextPlaceholders(xml: string, textBindings: Record<string, string>): string {
   return replaceStructuredTextPlaceholders(xml, textBindings).replace(/\{(?![#/])([^{}]+)\}/g, (_match, rawPath: string) => {
     const placeholderPath = rawPath.trim();
     return escapeXmlText(textBindings[placeholderPath] ?? '');
@@ -2255,7 +2255,7 @@ function ensureDoc5SummaryPlaceholder(sectionXml: string): string {
   return injectPlaceholderIntoBlankParagraphRange(sectionXml, sec4Table.end, sec6Table.start, 'sec5.summary_text');
 }
 
-function applyTemplateTextQuirks(xml: string): string {
+export function applyTemplateTextQuirks(xml: string): string {
   return xml
     .replace(
       /\(\s*\{sec1\.corporation_registration_number\}\s*\)\s*회차\s*\/\s*총\(\s*\{sec1\.business_registration_number\}\s*\)\s*회/g,
@@ -2311,7 +2311,7 @@ function applyVisitCountPageFooter(sectionXml: string, footerParaPrId: string): 
     .replace(COVER_PAGE_NUMBER_HIDING_CONTROL, COVER_FOOTER_HIDING_CONTROL);
 }
 
-function stripLineSegArrays(xml: string): string {
+export function stripLineSegArrays(xml: string): string {
   return xml.replace(/<hp:linesegarray>[\s\S]*?<\/hp:linesegarray>/g, '');
 }
 
@@ -2393,7 +2393,11 @@ function ensureUniquePictureObjectIds(sectionXml: string): string {
   });
 }
 
-function validateGeneratedHwpxOrThrow(zip: JSZip, sectionXml: string, contentHpf: string): void {
+export function validateGeneratedHwpxOrThrow(
+  zip: JSZip,
+  sectionXml: string,
+  contentHpf: string,
+): void {
   const issues: string[] = [];
   const unresolvedTokens = findUnresolvedTemplateTokens(sectionXml);
   if (unresolvedTokens.length > 0) {
@@ -2929,7 +2933,7 @@ async function resolveImageAsset(
   return pending;
 }
 
-async function bindImagesIntoZip(
+export async function bindImagesIntoZip(
   zip: JSZip,
   contentHpf: string,
   imagePlaceholders: TemplateImagePlaceholder[],

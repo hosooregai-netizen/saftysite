@@ -95,30 +95,3 @@ export function updateMySchedule(
     }),
   });
 }
-
-export function createMySchedule(
-  payload: {
-    actualVisitDate?: string;
-    linkedReportKey?: string;
-    siteId: string;
-    roundNo: number;
-    plannedDate?: string;
-    selectionReasonLabel?: string;
-    selectionReasonMemo?: string;
-    status?: SafetyInspectionSchedule['status'];
-  },
-) {
-  return requestCalendarApi<SafetyInspectionSchedule>('/schedules', {
-    method: 'POST',
-    body: JSON.stringify({
-      actual_visit_date: payload.actualVisitDate || '',
-      linked_report_key: payload.linkedReportKey || '',
-      site_id: payload.siteId,
-      round_no: payload.roundNo,
-      planned_date: payload.plannedDate || '',
-      selection_reason_label: payload.selectionReasonLabel || '',
-      selection_reason_memo: payload.selectionReasonMemo || '',
-      status: payload.status || undefined,
-    }),
-  });
-}
