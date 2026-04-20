@@ -18,6 +18,11 @@ const TRANSPARENT_PNG_DATA_URL =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aR9kAAAAASUVORK5CYII=';
 const TRANSPARENT_GIF_DATA_URL =
   'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+const COVER_SITE_NAME_LABEL = '\uD604\uC7A5\uBA85 : ';
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
 function findTableCell(tableXml: string, rowAddr: number, colAddr: number) {
   const targetMarker = `<hp:cellAddr colAddr="${colAddr}" rowAddr="${rowAddr}"/>`;
@@ -43,6 +48,14 @@ function extractAppendixSlice(sectionXml: string, marker: string) {
     appendixStartIndex >= 0 ? appendixStartIndex : markerIndex,
     markerIndex + 4000,
   );
+}
+
+function assertCoverSiteLine(sectionXml: string, siteName: string) {
+  assert.match(
+    sectionXml,
+    new RegExp(`<hp:t>${escapeRegExp(`${COVER_SITE_NAME_LABEL}${siteName}`)}<\\/hp:t>`),
+  );
+  assert.doesNotMatch(sectionXml, /<hp:t>현장명 : [^<]*ㅇㅇㅇ/);
 }
 
 function buildQuarterlyFixture(): {
@@ -180,10 +193,13 @@ test('buildQuarterlyHwpxDocument keeps the standalone quarterly structure when n
   const fixture = buildQuarterlyFixture();
   const zip = await loadGeneratedZip(fixture, {});
   const contentHpf = await zip.file('Contents/content.hpf')?.async('string');
+  const sectionXml = await zip.file('Contents/section0.xml')?.async('string');
 
   assert.ok(contentHpf);
+  assert.ok(sectionXml);
   assert.match(contentHpf, /href="Contents\/section0\.xml"/);
   assert.doesNotMatch(contentHpf, /href="Contents\/section1\.xml"/);
+  assertCoverSiteLine(sectionXml, fixture.report.siteSnapshot.siteName);
 });
 
 test('buildQuarterlyHwpxDocument renders selected inspection bodies into the merged section template', async () => {
@@ -203,6 +219,7 @@ test('buildQuarterlyHwpxDocument renders selected inspection bodies into the mer
   assert.match(sectionXml, /appendix-hazard-two/);
   assert.doesNotMatch(sectionXml, /\{#appendices\}/);
   assert.doesNotMatch(sectionXml, /\{\/appendices\}/);
+  assertCoverSiteLine(sectionXml, fixture.report.siteSnapshot.siteName);
   const firstAppendixSlice = extractAppendixSlice(sectionXml, 'appendix-hazard-one');
   assert.doesNotMatch(firstAppendixSlice, /hidePageNum="1"/);
   assert.doesNotMatch(firstAppendixSlice, /www\.safetysite\.co\.kr/);

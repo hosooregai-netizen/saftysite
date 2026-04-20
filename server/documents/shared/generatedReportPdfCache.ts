@@ -6,6 +6,7 @@ export interface GeneratedReportPdfCacheKey {
   documentKind: 'bad_workplace' | 'quarterly_report' | 'technical_guidance';
   reportKey: string;
   updatedAt: string;
+  version?: string;
 }
 
 interface GeneratedReportPdfCacheEntry {
@@ -24,14 +25,18 @@ function getCacheRoot() {
 }
 
 function buildCacheStem(input: GeneratedReportPdfCacheKey) {
+  const version = input.version?.trim();
+  const parts = [
+    input.documentKind.trim(),
+    input.reportKey.trim(),
+    input.updatedAt.trim() || 'unknown',
+  ];
+  if (version) {
+    parts.push(version);
+  }
+
   return createHash('sha1')
-    .update(
-      [
-        input.documentKind.trim(),
-        input.reportKey.trim(),
-        input.updatedAt.trim() || 'unknown',
-      ].join('::'),
-    )
+    .update(parts.join('::'))
     .digest('hex');
 }
 

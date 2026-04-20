@@ -57,9 +57,10 @@ const ACCIDENT_CHART_IMAGE_ITEM_ID = 'quarterlyAccidentChartImage';
 const CAUSATIVE_CHART_IMAGE_ITEM_ID = 'quarterlyCausativeChartImage';
 const NO_DATA_VALUE = '-';
 const COVER_TITLE_TEXT_INDEX = 2;
-const COVER_SITE_NAME_TEXT_INDEX = 4;
-const COVER_REPORT_DATE_TEXT_INDEX = 5;
-const BODY_TITLE_TEXT_INDEX = 12;
+const COVER_SITE_NAME_TEXT_INDEX = 3;
+const COVER_REPORT_DATE_TEXT_INDEX = 4;
+const BODY_TITLE_TEXT_INDEX = 11;
+const COVER_SITE_NAME_LABEL = '\uD604\uC7A5\uBA85 : ';
 const QUARTERLY_CHART_WIDTH = 1560;
 const QUARTERLY_CHART_HEIGHT = 640;
 const QUARTERLY_CHART_CENTER_X = 280;
@@ -203,6 +204,10 @@ function buildQuarterlyCoverTitle(report: QuarterlySummaryReport) {
 
 function getQuarterlyCoverSiteName(report: QuarterlySummaryReport, site: InspectionSite) {
   return formatOptionalText(report.siteSnapshot.siteName || site.siteName || report.siteId);
+}
+
+function buildQuarterlyCoverSiteLine(report: QuarterlySummaryReport, site: InspectionSite) {
+  return `${COVER_SITE_NAME_LABEL}${formatText(getQuarterlyCoverSiteName(report, site))}`;
 }
 
 function getQuarterlyCoverReportDate() {
@@ -789,6 +794,24 @@ function replaceNthTextNode(sectionXml: string, targetIndex: number, nextText: s
   });
 }
 
+function replaceFirstTextNodeMatching(
+  sectionXml: string,
+  predicate: (currentText: string) => boolean,
+  nextText: string,
+) {
+  let replaced = false;
+  const nextSectionXml = sectionXml.replace(/<hp:t>([\s\S]*?)<\/hp:t>/g, (match, currentText) => {
+    if (replaced || !predicate(currentText)) {
+      return match;
+    }
+
+    replaced = true;
+    return `<hp:t>${escapeXmlText(nextText)}</hp:t>`;
+  });
+
+  return { replaced, sectionXml: nextSectionXml };
+}
+
 function formatQuarterlyChartPercent(count: number, total: number) {
   if (total <= 0) {
     return '0%';
@@ -1130,16 +1153,23 @@ function replaceQuarterlyCoverTextNodes(
     COVER_TITLE_TEXT_INDEX,
     buildQuarterlyCoverTitle(report),
   );
-  nextSection = replaceNthTextNode(
+  const coverSiteLine = buildQuarterlyCoverSiteLine(report, site);
+  const siteLineReplacement = replaceFirstTextNodeMatching(
     nextSection,
-    COVER_SITE_NAME_TEXT_INDEX,
-    getQuarterlyCoverSiteName(report, site),
+    (currentText) => currentText.includes('\uD604\uC7A5\uBA85'),
+    coverSiteLine,
   );
-  nextSection = replaceNthTextNode(
+  nextSection = siteLineReplacement.replaced
+    ? siteLineReplacement.sectionXml
+    : replaceNthTextNode(nextSection, COVER_SITE_NAME_TEXT_INDEX, coverSiteLine);
+  const coverDateReplacement = replaceFirstTextNodeMatching(
     nextSection,
-    COVER_REPORT_DATE_TEXT_INDEX,
+    (currentText) => /^\d{4}\.\d{2}\.\d{2}$/.test(currentText.trim()),
     getQuarterlyCoverReportDate(),
   );
+  nextSection = coverDateReplacement.replaced
+    ? coverDateReplacement.sectionXml
+    : replaceNthTextNode(nextSection, COVER_REPORT_DATE_TEXT_INDEX, getQuarterlyCoverReportDate());
   return replaceNthTextNode(
     nextSection,
     BODY_TITLE_TEXT_INDEX,
