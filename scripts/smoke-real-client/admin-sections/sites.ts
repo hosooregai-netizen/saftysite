@@ -16,7 +16,12 @@ export async function runAdminSitesSection(page: Page) {
     waitUntil: 'load',
   });
   await waitHeading(page, '사업장 목록');
+  await page.getByRole('link', { name: '현장 목록 보기' }).waitFor();
   await page.getByRole('button', { name: '사업장 추가' }).first().waitFor();
+  const headquarterSummaryCount = await page.getByText('전체 사업장', { exact: true }).count();
+  if (headquarterSummaryCount !== 0) {
+    throw new Error(`Expected headquarters summary cards to be removed, received ${headquarterSummaryCount} visible labels.`);
+  }
   await page
     .getByPlaceholder('회사명, 관리번호, 대표자, 등록번호, 주소로 검색')
     .fill('');
@@ -24,6 +29,7 @@ export async function runAdminSitesSection(page: Page) {
   await page.getByRole('button', { name: /작업 메뉴 열기/ }).first().click();
   await page.getByRole('menuitem', { name: '현장 보기' }).click();
   await waitHeading(page, '현장 목록');
+  await page.getByRole('link', { name: '사업장 목록 보기' }).waitFor();
   await assertSiteTableHeaders(page);
 
   const headquarterBackLabelCount = await page.getByText('사업장 목록', { exact: true }).count();

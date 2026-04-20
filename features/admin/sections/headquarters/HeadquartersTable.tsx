@@ -64,27 +64,27 @@ function getHeadquarterMissingFields(item: SafetyHeadquarter) {
     .map(([label]) => label);
 }
 
-export function HeadquartersTable({
-  busy,
-  canDelete,
-  filteredHeadquarters,
-  summary,
-  page,
-  onCreateRequest,
-  onDeleteRequest,
-  onEditRequest,
-  onExportRequest,
-  onOpenSitesRequest,
-  onPageChange,
-  onQueryChange,
-  onQuerySubmit,
-  onSortChange,
-  query,
-  sort,
-  showHeader = true,
-  totalCount,
-  totalPages,
-}: HeadquartersTableProps) {
+export function HeadquartersTable(props: HeadquartersTableProps) {
+  const {
+    busy,
+    canDelete,
+    filteredHeadquarters,
+    page,
+    onCreateRequest,
+    onDeleteRequest,
+    onEditRequest,
+    onExportRequest,
+    onOpenSitesRequest,
+    onPageChange,
+    onQueryChange,
+    onQuerySubmit,
+    onSortChange,
+    query,
+    sort,
+    showHeader = true,
+    totalCount,
+    totalPages,
+  } = props;
 
   return (
     <>
@@ -135,32 +135,6 @@ export function HeadquartersTable({
       </div>
 
       <div className={styles.sectionBody}>
-        {totalCount > 0 ? (
-          <div className={styles.listSummaryShell}>
-            <div className={styles.summaryBar}>
-              <article className={styles.summaryCard}>
-                <span className={styles.summaryCardLabel}>전체 사업장</span>
-                <strong className={styles.summaryCardValue}>{totalCount}개</strong>
-                <span className={styles.summaryCardMeta}>현재 검색/정렬 범위 기준</span>
-              </article>
-              <article className={styles.summaryCard}>
-                <span className={styles.summaryCardLabel}>등록번호 보완</span>
-                <strong className={styles.summaryCardValue}>{summary.registrationGapCount}개</strong>
-                <span className={styles.summaryCardMeta}>관리번호, 개시번호, 사업자번호 기준</span>
-              </article>
-              <article className={styles.summaryCard}>
-                <span className={styles.summaryCardLabel}>연락/주소 보완</span>
-                <strong className={styles.summaryCardValue}>{summary.contactGapCount}개</strong>
-                <span className={styles.summaryCardMeta}>대표자, 대표 전화, 본사 주소 기준</span>
-              </article>
-              <article className={styles.summaryCard}>
-                <span className={styles.summaryCardLabel}>입력 완료</span>
-                <strong className={styles.summaryCardValue}>{summary.completedCount}개</strong>
-                <span className={styles.summaryCardMeta}>운영 메모 미입력 {summary.memoGapCount}개</span>
-              </article>
-            </div>
-          </div>
-        ) : null}
         <div className={styles.tableShell}>
           {filteredHeadquarters.length === 0 ? (
             <div className={styles.tableEmpty}>등록된 사업장이 없습니다.</div>
