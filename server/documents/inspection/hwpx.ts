@@ -2602,9 +2602,47 @@ function replaceLocatedTemplateCell(
   return `${xml.slice(0, located.tableSpan.start)}${patchedTableXml}${xml.slice(located.tableSpan.end)}`;
 }
 
+function replaceFirstTextNodeAfterLabel(
+  sectionXml: string,
+  labelMatcher: (currentText: string) => boolean,
+  nextText: string,
+) {
+  let matchedLabel = false;
+  let replaced = false;
+
+  const nextSectionXml = sectionXml.replace(/(<hp:t(?:\s+[^/>][^>]*)?>)([\s\S]*?)(<\/hp:t>)/g, (match, prefix, currentText, suffix) => {
+    if (replaced) {
+      return match;
+    }
+
+    if (matchedLabel) {
+      replaced = true;
+      return `${prefix}${nextText}${suffix}`;
+    }
+
+    const normalizedText = currentText.replace(/\s+/g, '');
+    if (labelMatcher(normalizedText)) {
+      matchedLabel = true;
+    }
+
+    return match;
+  });
+
+  return { replaced, sectionXml: nextSectionXml };
+}
+
 function ensureCoverClientRepresentativePlaceholder(sectionXml: string): string {
   if (sectionXml.includes('{cover.client_representative_name}')) {
     return sectionXml;
+  }
+
+  const replacedAfterLabel = replaceFirstTextNodeAfterLabel(
+    sectionXml,
+    (currentText) => currentText === '\uBC1C\uC8FC\uC790:',
+    '{cover.client_representative_name}',
+  );
+  if (replacedAfterLabel.replaced) {
+    return replacedAfterLabel.sectionXml;
   }
 
   return sectionXml.replace(

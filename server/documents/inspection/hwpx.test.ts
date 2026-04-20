@@ -15,6 +15,7 @@ function escapeRegExp(value: string) {
 
 function buildMeasurementFixture(accidentOccurred: 'no' | 'yes') {
   const site = createInspectionSite({
+    clientRepresentativeName: 'client-rep-alpha',
     assigneeName: '담당자',
     customerName: '고객사',
     siteName: '테스트 현장',
@@ -72,6 +73,15 @@ async function readGeneratedSectionXml(accidentOccurred: 'no' | 'yes') {
   assert.ok(sectionXml);
   return sectionXml;
 }
+
+test('buildInspectionHwpxDocument binds the cover client representative for both inspection template variants', async () => {
+  for (const accidentOccurred of ['no', 'yes'] as const) {
+    const sectionXml = await readGeneratedSectionXml(accidentOccurred);
+
+    assert.match(sectionXml, /client-rep-alpha/);
+    assert.doesNotMatch(sectionXml, /\{cover\.client_representative_name\}/);
+  }
+});
 
 test('buildInspectionHwpxDocument binds doc10 measurement values for both inspection template variants', async () => {
   const expectedValues = [
