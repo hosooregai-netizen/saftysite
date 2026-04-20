@@ -29,6 +29,7 @@ import {
   normalizeQuarterlyReportPeriod,
   QUARTERLY_SUMMARY_REPORT_KIND,
 } from './shared';
+import { normalizeQuarterlyCounters } from './quarterly';
 
 function normalizeOperationalStatus(
   value: unknown,
@@ -229,8 +230,8 @@ export function mapSafetyReportToQuarterlySummaryReport(
       normalizeMapperText(payload.updatedAt) ||
       report.updated_at,
     implementationRows: normalizeQuarterlyImplementationRows(payload.implementationRows),
-    accidentStats: normalizeCounterItems(payload.accidentStats),
-    causativeStats: normalizeCounterItems(payload.causativeStats),
+    accidentStats: normalizeQuarterlyCounters(normalizeCounterItems(payload.accidentStats)),
+    causativeStats: normalizeQuarterlyCounters(normalizeCounterItems(payload.causativeStats)),
     futurePlans: Array.isArray(payload.futurePlans)
       ? payload.futurePlans.map((item) => createFutureProcessRiskPlan(asRecord(item)))
       : [],
@@ -433,6 +434,8 @@ export function buildQuarterlySummaryUpsertInput(
   site: InspectionSite,
 ): SafetyUpsertReportInput {
   const normalizedPeriod = normalizeQuarterlyReportPeriod(report);
+  const normalizedAccidentStats = normalizeQuarterlyCounters(report.accidentStats);
+  const normalizedCausativeStats = normalizeQuarterlyCounters(report.causativeStats);
 
   return {
     report_key: report.id,
@@ -442,6 +445,8 @@ export function buildQuarterlySummaryUpsertInput(
     payload: {
       ...report,
       ...normalizedPeriod,
+      accidentStats: normalizedAccidentStats,
+      causativeStats: normalizedCausativeStats,
       reportKind: QUARTERLY_SUMMARY_REPORT_KIND,
       updatedAt: report.updatedAt,
     },

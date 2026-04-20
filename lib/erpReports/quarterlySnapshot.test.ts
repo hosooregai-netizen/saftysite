@@ -13,6 +13,10 @@ import {
   createQuarterlySummaryDraft,
 } from './quarterly';
 
+function sumCounterCounts(items: Array<{ count: number }>) {
+  return items.reduce((total, item) => total + item.count, 0);
+}
+
 test('mapSafetyReportToQuarterlySummaryReport normalizes stored site snapshot fields', () => {
   const report = mapSafetyReportToQuarterlySummaryReport({
     report_key: 'quarterly-1',
@@ -51,6 +55,72 @@ test('mapSafetyReportToQuarterlySummaryReport normalizes stored site snapshot fi
   assert.equal(report?.siteSnapshot.companyName, 'Acme Construction');
   assert.equal(report?.siteSnapshot.headquartersContact, '02-1111-2222');
   assert.equal(report?.siteSnapshot.headquartersAddress, '1 Test-ro, Seoul');
+});
+
+test('mapSafetyReportToQuarterlySummaryReport normalizes stored chart counters to top five plus other', () => {
+  const report = mapSafetyReportToQuarterlySummaryReport({
+    report_key: 'quarterly-2',
+    site_id: 'site-1',
+    report_title: '2026 Q2 Summary',
+    status: 'draft',
+    dispatch_completed: false,
+    created_at: '2026-04-01T00:00:00.000Z',
+    updated_at: '2026-04-02T00:00:00.000Z',
+    meta: {
+      reportKind: 'quarterly_summary',
+      quarterKey: '2026-Q2',
+      year: 2026,
+      quarter: 2,
+    },
+    payload: {
+      reportKind: 'quarterly_summary',
+      quarterKey: '2026-Q2',
+      year: 2026,
+      quarter: 2,
+      periodStartDate: '2026-04-01',
+      periodEndDate: '2026-06-30',
+      accidentStats: [
+        { label: '\uB098', count: 1 },
+        { label: '\uB77C', count: 1 },
+        { label: '\uAE30\uD0C0', count: 2 },
+        { label: '\uB2E4', count: 3 },
+        { label: '\uAC00', count: 3 },
+        { label: '\uB9C8', count: 1 },
+        { label: '\uC0AC', count: 1 },
+      ],
+      causativeStats: [
+        { label: '\uB2E4', count: 1 },
+        { label: '\uAC00', count: 4 },
+        { label: '\uB098', count: 4 },
+        { label: '\uB77C', count: 2 },
+        { label: '\uB9C8', count: 1 },
+        { label: '\uBC14', count: 1 },
+      ],
+    },
+  } as never);
+
+  assert.ok(report);
+  assert.deepEqual(report?.accidentStats, [
+    { label: '\uAC00', count: 3 },
+    { label: '\uB2E4', count: 3 },
+    { label: '\uAE30\uD0C0', count: 4 },
+    { label: '\uB098', count: 1 },
+    { label: '\uB77C', count: 1 },
+  ]);
+  assert.deepEqual(report?.causativeStats, [
+    { label: '\uAC00', count: 4 },
+    { label: '\uB098', count: 4 },
+    { label: '\uB77C', count: 2 },
+    { label: '\uB2E4', count: 1 },
+    { label: '\uB9C8', count: 1 },
+    { label: '\uAE30\uD0C0', count: 1 },
+  ]);
+  assert.equal(
+    report?.accidentStats.filter((item) => item.label === '\uAE30\uD0C0').length,
+    1,
+  );
+  assert.equal(sumCounterCounts(report?.accidentStats ?? []), 12);
+  assert.equal(sumCounterCounts(report?.causativeStats ?? []), 13);
 });
 
 test('buildInitialQuarterlySummaryReport backfills blank snapshot values from site info', () => {
@@ -141,7 +211,7 @@ test('buildLocalQuarterlySummarySeed preserves process_name when hazard is prese
   assert.equal(seed.future_plans[0]?.hazard, '낙하 위험');
 });
 
-test('applyQuarterlySummarySeed restores process_name alongside hazard text', () => {
+test('applyQuarterlySummarySeed restores process_name and normalizes chart counters', () => {
   const site = createInspectionSite({
     siteName: 'Site Alpha',
   });
@@ -154,8 +224,23 @@ test('applyQuarterlySummarySeed restores process_name alongside hazard text', ()
     source_reports: [],
     last_calculated_at: '2026-04-20T00:00:00.000Z',
     implementation_rows: [],
-    accident_stats: [],
-    causative_stats: [],
+    accident_stats: [
+      { label: '\uB2E4', count: 1 },
+      { label: '\uAC00', count: 3 },
+      { label: '\uB098', count: 3 },
+      { label: '\uB77C', count: 2 },
+      { label: '\uB9C8', count: 1 },
+      { label: '\uBC14', count: 1 },
+    ],
+    causative_stats: [
+      { label: '\uB098', count: 1 },
+      { label: '\uB77C', count: 1 },
+      { label: '\uAE30\uD0C0', count: 1 },
+      { label: '\uB2E4', count: 2 },
+      { label: '\uAC00', count: 3 },
+      { label: '\uB9C8', count: 1 },
+      { label: '\uC0AC', count: 1 },
+    ],
     future_plans: [
       {
         id: 'future-plan-1',
@@ -168,6 +253,24 @@ test('applyQuarterlySummarySeed restores process_name alongside hazard text', ()
     ],
     major_measures: [],
   });
+
+  assert.deepEqual(applied.accidentStats, [
+    { label: '\uAC00', count: 3 },
+    { label: '\uB098', count: 3 },
+    { label: '\uB77C', count: 2 },
+    { label: '\uB2E4', count: 1 },
+    { label: '\uB9C8', count: 1 },
+    { label: '\uAE30\uD0C0', count: 1 },
+  ]);
+  assert.deepEqual(applied.causativeStats, [
+    { label: '\uAC00', count: 3 },
+    { label: '\uB2E4', count: 2 },
+    { label: '\uAE30\uD0C0', count: 3 },
+    { label: '\uB098', count: 1 },
+    { label: '\uB77C', count: 1 },
+  ]);
+  assert.equal(sumCounterCounts(applied.accidentStats), 11);
+  assert.equal(sumCounterCounts(applied.causativeStats), 10);
 
   assert.equal(applied.futurePlans[0]?.processName, '철근 작업');
   assert.equal(applied.futurePlans[0]?.hazard, '낙하 위험');

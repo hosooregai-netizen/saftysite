@@ -73,18 +73,34 @@ function buildQuarterlyFuturePlans(selectedSessions: InspectionSession[]) {
   return futurePlans;
 }
 
-function buildQuarterlyCounters(counterMap: Map<string, number>): QuarterlyCounter[] {
-  const entries = [...counterMap.entries()]
-    .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0], 'ko'))
-    .map(([label, count]) => ({ label, count }));
+const DEFAULT_QUARTERLY_COUNTER_TOP_N = 5;
+const DEFAULT_QUARTERLY_OTHER_LABEL = '\uAE30\uD0C0';
 
-  return collapseQuarterlyCounters(entries);
+function sortQuarterlyCounters(counters: QuarterlyCounter[]) {
+  return counters
+    .filter((item) => item.label)
+    .map((item) => ({ ...item }))
+    .sort((left, right) => right.count - left.count || left.label.localeCompare(right.label, 'ko'));
+}
+
+export function normalizeQuarterlyCounters(
+  counters: QuarterlyCounter[],
+  topN = DEFAULT_QUARTERLY_COUNTER_TOP_N,
+  otherLabel = DEFAULT_QUARTERLY_OTHER_LABEL,
+) {
+  return collapseQuarterlyCounters(sortQuarterlyCounters(counters), topN, otherLabel);
+}
+
+function buildQuarterlyCounters(counterMap: Map<string, number>): QuarterlyCounter[] {
+  return normalizeQuarterlyCounters(
+    [...counterMap.entries()].map(([label, count]) => ({ label, count })),
+  );
 }
 
 function collapseQuarterlyCounters(
   counters: QuarterlyCounter[],
-  topN = 5,
-  otherLabel = '기타',
+  topN = DEFAULT_QUARTERLY_COUNTER_TOP_N,
+  otherLabel = DEFAULT_QUARTERLY_OTHER_LABEL,
 ) {
   if (counters.length <= topN) {
     return counters;
@@ -392,8 +408,12 @@ export function applyQuarterlySummarySeed(
       improvedCount: row.improved_count,
       note: noteBySessionId.get(row.session_id) ?? row.note ?? '',
     })),
-    accidentStats: seed.accident_stats.map((item) => ({ ...item })),
-    causativeStats: seed.causative_stats.map((item) => ({ ...item })),
+    accidentStats: normalizeQuarterlyCounters(
+      seed.accident_stats.map((item) => ({ ...item })),
+    ),
+    causativeStats: normalizeQuarterlyCounters(
+      seed.causative_stats.map((item) => ({ ...item })),
+    ),
     futurePlans: seed.future_plans.map((item) =>
       createFutureProcessRiskPlan({
         id: item.id,
@@ -481,8 +501,8 @@ export function buildInitialQuarterlySummaryReport(
       ),
       lastCalculatedAt: existing.lastCalculatedAt || existing.updatedAt || createTimestamp(),
       updatedAt: existing.updatedAt || createTimestamp(),
-      accidentStats: collapseQuarterlyCounters(existing.accidentStats || []),
-      causativeStats: collapseQuarterlyCounters(existing.causativeStats || []),
+      accidentStats: normalizeQuarterlyCounters(existing.accidentStats || []),
+      causativeStats: normalizeQuarterlyCounters(existing.causativeStats || []),
       futurePlans: existing.futurePlans,
       opsAssetId: existing.opsAssetId || '',
       opsAssetTitle: existing.opsAssetTitle || '',
