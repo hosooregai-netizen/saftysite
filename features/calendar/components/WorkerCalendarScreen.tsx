@@ -553,12 +553,24 @@ export function WorkerCalendarScreen() {
       totalRounds: dialogSelectedSite?.totalRounds ?? 0,
     });
   }, [contractWindowsBySiteId, dialog.siteId, dialogSelectedSite, reportItemsByRoundBySiteId, rows]);
+  const dialogPersistedSelectedRow = useMemo(
+    () => rows.find((row) => row.id === dialog.scheduleId) ?? null,
+    [dialog.scheduleId, rows],
+  );
   const dialogRoundRows = useMemo(
-    () =>
-      dialogRoundOptions
+    () => {
+      const nextRows = dialogRoundOptions
         .filter((option) => option.state !== 'linked_report' || option.row.id === dialog.scheduleId)
-        .map((option) => option.row),
-    [dialog.scheduleId, dialogRoundOptions],
+        .map((option) => option.row);
+      if (
+        dialogPersistedSelectedRow &&
+        !nextRows.some((row) => row.id === dialogPersistedSelectedRow.id)
+      ) {
+        nextRows.unshift(dialogPersistedSelectedRow);
+      }
+      return nextRows;
+    },
+    [dialog.scheduleId, dialogPersistedSelectedRow, dialogRoundOptions],
   );
   const dialogRoundOptionById = useMemo(
     () => new Map(dialogRoundOptions.map((option) => [option.row.id, option])),
@@ -623,6 +635,17 @@ export function WorkerCalendarScreen() {
   useEffect(() => {
     if (!dialog.open || !dialog.siteId) return;
     const currentOption = dialogRoundOptionById.get(dialog.scheduleId) ?? null;
+    const isEditingExistingSelection = Boolean(
+      (currentOption &&
+        currentOption.row.plannedDate &&
+        currentOption.row.id === dialog.scheduleId) ||
+        (dialogPersistedSelectedRow &&
+          dialogPersistedSelectedRow.plannedDate &&
+          dialogPersistedSelectedRow.id === dialog.scheduleId),
+    );
+    if (isEditingExistingSelection) {
+      return;
+    }
     const firstReportFreeRow =
       dialogRoundOptions.find((option) => !option.linkedReport && !option.row.plannedDate)?.row ??
       dialogRoundOptions.find((option) => !option.linkedReport)?.row ??
@@ -661,6 +684,7 @@ export function WorkerCalendarScreen() {
     dialog.plannedDate,
     dialog.scheduleId,
     dialog.siteId,
+    dialogPersistedSelectedRow,
     dialogRoundOptionById,
     dialogRoundOptions,
     dialogRoundRows,
@@ -1121,24 +1145,50 @@ export function WorkerCalendarScreen() {
                               const dayRows = rowsByDate.get(day.token) || [];
                               const isActive = selectedDate === day.token;
                               return (
-                                <button
+                                <div
                                   key={day.token}
-                                  type="button"
+                                  role="button"
+                                  tabIndex={0}
                                   className={`${styles.calendarCell} ${isActive ? styles.calendarCellActive : ''}`}
-                                  onClick={() => openScheduleDialog({ plannedDate: day.token })}
+                                  onClick={() =>
+                                    openScheduleDialog({
+                                      plannedDate: day.token,
+                                      schedule: dayRows.length === 1 ? dayRows[0] : null,
+                                    })
+                                  }
+                                  onKeyDown={(event) => {
+                                    if (event.key === 'Enter' || event.key === ' ') {
+                                      event.preventDefault();
+                                      openScheduleDialog({
+                                        plannedDate: day.token,
+                                        schedule: dayRows.length === 1 ? dayRows[0] : null,
+                                      });
+                                    }
+                                  }}
                                 >
                                   <div className={styles.calendarDay}>{day.day}</div>
                                   <div className={styles.calendarEvents}>
                                     {dayRows.slice(0, 3).map((row) => (
-                                      <span key={row.id} className={styles.calendarEvent}>
+                                      <button
+                                        key={row.id}
+                                        type="button"
+                                        className={`${styles.calendarEvent} ${styles.calendarEventButton}`}
+                                        onClick={(event) => {
+                                          event.stopPropagation();
+                                          openScheduleDialog({
+                                            plannedDate: row.plannedDate || day.token,
+                                            schedule: row,
+                                          });
+                                        }}
+                                      >
                                         {row.siteName} {row.roundNo}회차
-                                      </span>
+                                      </button>
                                     ))}
                                     {dayRows.length > 3 ? (
                                       <span className={styles.calendarEvent}>+ {dayRows.length - 3}건</span>
                                     ) : null}
                                   </div>
-                                </button>
+                                </div>
                               );
                             })}
                           </div>

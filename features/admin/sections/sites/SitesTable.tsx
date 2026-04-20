@@ -8,14 +8,10 @@ import {
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import {
   formatCurrencyValue,
-  getAdminSectionHref,
   getSiteStatusLabel,
-  normalizeSiteStatusForDisplay,
-  SITE_STATUS_OPTIONS,
 } from '@/lib/admin';
 import type { TableSortState } from '@/types/admin';
-import type { SafetySite, SafetyUser } from '@/types/backend';
-import type { SafetySiteStatus } from '@/types/controller';
+import type { SafetySite } from '@/types/backend';
 import { shouldIgnoreRowClick } from './siteSectionHelpers';
 
 interface SitesTableProps {
@@ -28,13 +24,11 @@ interface SitesTableProps {
   onOpenEdit: (site: SafetySite) => void;
   onPageChange: (page: number) => void;
   onOpenSiteEntry: (site: SafetySite) => void;
-  onUpdateStatus: (site: SafetySite, status: SafetySiteStatus) => void;
   page: number;
   sites: SafetySite[];
   sort: TableSortState;
   totalCount: number;
   totalPages: number;
-  usersById: Map<string, SafetyUser>;
   onSortChange: (value: TableSortState) => void;
 }
 
@@ -71,13 +65,11 @@ export function SitesTable({
   onOpenEdit,
   onPageChange,
   onOpenSiteEntry,
-  onUpdateStatus,
   page,
   sites,
   sort,
   totalCount,
   totalPages,
-  usersById: _usersById,
   onSortChange,
 }: SitesTableProps) {
   return (
@@ -225,13 +217,6 @@ export function SitesTable({
                           },
                         },
                         {
-                          label: '사진첩 보기',
-                          href: getAdminSectionHref('photos', {
-                            headquarterId: site.headquarter_id,
-                            siteId: site.id,
-                          }),
-                        },
-                        {
                           label: '기초자료 출력',
                           onSelect: () => {
                             if (!busy) onDownloadBasicMaterial(site);
@@ -243,14 +228,6 @@ export function SitesTable({
                             if (!busy) onOpenEdit(site);
                           },
                         },
-                        ...SITE_STATUS_OPTIONS.filter(
-                          (option) => option.value !== normalizeSiteStatusForDisplay(site.status),
-                        ).map((option) => ({
-                          label: `상태 변경: ${option.label}`,
-                          onSelect: () => {
-                            if (!busy) onUpdateStatus(site, option.value);
-                          },
-                        })),
                         ...(canDelete
                           ? [
                               {

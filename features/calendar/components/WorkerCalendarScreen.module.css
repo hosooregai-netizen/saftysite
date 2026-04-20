@@ -222,6 +222,10 @@
   background: var(--app-panel, #fff);
 }
 
+.calendarCell {
+  cursor: pointer;
+}
+
 .calendarCellEmpty {
   opacity: 0.75;
   background: rgba(15, 23, 42, 0.02);
@@ -252,6 +256,13 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.calendarEventButton {
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
 }
 
 .selectedList {

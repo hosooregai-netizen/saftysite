@@ -16,6 +16,7 @@ import type {
   SafetySiteStatus,
   SafetySiteUpdateInput,
 } from '@/types/controller';
+import type { SafetySite } from '@/types/backend';
 import { HeadquarterSummaryPanel } from './HeadquarterSummaryPanel';
 import { SiteManagementMainPanel } from './SiteManagementMainPanel';
 import { HeadquartersTable } from './HeadquartersTable';
@@ -86,7 +87,7 @@ interface HeadquartersSectionProps {
   onClearHeadquarterSelection: () => void;
   onClearSiteSelection: () => void;
   onCreate: (input: SafetyHeadquarterInput) => Promise<void>;
-  onCreateSite: (input: SafetySiteInput) => Promise<void>;
+  onCreateSite: (input: SafetySiteInput) => Promise<SafetySite>;
   onDelete: (id: string) => Promise<void>;
   onDeleteSite: (id: string) => Promise<void>;
   onSelectHeadquarter: (headquarterId: string) => void;
@@ -484,8 +485,9 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
   };
 
   const handleCreateSite = async (input: SafetySiteInput) => {
-    await onCreateSite(input);
+    const createdSite = await onCreateSite(input);
     await refreshSelectedHeadquarterContext(input.headquarter_id);
+    return createdSite;
   };
 
   const handleUpdateSite = async (id: string, input: SafetySiteUpdateInput) => {

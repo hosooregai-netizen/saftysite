@@ -20,7 +20,7 @@ type MutationRunner = <TResult>(
   options?: {
     applyResult?: (current: ControllerDashboardData, result: TResult) => ControllerDashboardData;
   },
-) => Promise<void>;
+) => Promise<TResult>;
 
 interface BuildAdminDashboardContentActionsParams {
   runContentMutation: MutationRunner;

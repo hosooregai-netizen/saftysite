@@ -18,7 +18,7 @@ export interface SitesSectionProps {
   busy: boolean;
   canDelete: boolean;
   currentUserId: string;
-  onCreate: (input: SafetySiteInput) => Promise<void>;
+  onCreate: (input: SafetySiteInput) => Promise<SafetySite>;
   onUpdate: (id: string, input: SafetySiteUpdateInput) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onAssignFieldAgent: (siteId: string, userId: string) => Promise<void>;

@@ -45,18 +45,14 @@ function validateSiteSubmit(
     ['현장코드', form.site_code, 100],
     ['현장관리번호', form.management_number, 100],
     ['노동관서', form.labor_office, 200],
-    ['지도지원원', form.guidance_officer_name, 100],
-    ['현장소장명', form.manager_name, 100],
-    ['현장소장 연락처', form.manager_phone, 50],
-    ['현장대리인 메일', form.site_contact_email, 200],
-    ['발주자 사업장관리번호', form.client_management_number, 100],
-    ['발주자 사업장명', form.client_business_name, 200],
-    ['발주처 대표자', form.client_representative_name, 100],
-    ['발주처 법인등록번호', form.client_corporate_registration_no, 50],
-    ['발주처 사업자등록번호', form.client_business_registration_no, 50],
-    ['발주유형구분', form.order_type_division, 100],
+    ['지도요원', form.guidance_officer_name, 100],
+    ['현장 책임자명', form.manager_name, 100],
+    ['현장 책임자 연락처', form.manager_phone, 50],
+    ['보고서 수신 메일', form.site_contact_email, 200],
+    ['발주처명', form.client_business_name, 200],
+    ['발주유형 구분', form.order_type_division, 100],
     ['기술지도 구분', form.technical_guidance_kind, 100],
-    ['계약담당자', form.contract_contact_name, 100],
+    ['계약 담당자', form.contract_contact_name, 100],
     ['점검자', form.inspector_name, 100],
   ];
 
@@ -107,6 +103,7 @@ export function useSitesSectionState({
   const router = useRouter();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [assignmentSiteId, setAssignmentSiteId] = useState<string | null>(null);
+  const [newlyCreatedSiteId, setNewlyCreatedSiteId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<'all' | SafetySiteStatus>(initialStatusFilter);
   const [sort, setSort] = useState<TableSortState>({
@@ -295,8 +292,10 @@ export function useSitesSectionState({
         window.alert(validationMessage);
         return;
       }
-      if (editingId === 'create') await onCreate(payload as SafetySiteInput);
-      else if (editingId) await onUpdate(editingId, payload as SafetySiteUpdateInput);
+      if (editingId === 'create') {
+        const createdSite = await onCreate(payload as SafetySiteInput);
+        setNewlyCreatedSiteId(createdSite.id);
+      } else if (editingId) await onUpdate(editingId, payload as SafetySiteUpdateInput);
       closeModal();
       await refreshPage();
     } catch (error) {
@@ -314,6 +313,11 @@ export function useSitesSectionState({
   };
 
   const openSiteEntry = (site: SafetySite) => {
+    if (site.id === newlyCreatedSiteId) {
+      setAssignmentSiteId(site.id);
+      setNewlyCreatedSiteId(null);
+      return;
+    }
     if (onSelectSiteEntry) {
       onSelectSiteEntry(site);
       return;
@@ -415,7 +419,12 @@ export function useSitesSectionState({
       await onUnassignFieldAgent(siteId, userId);
       await refreshPage();
     },
-    openAssignmentModal: (siteId: string) => setAssignmentSiteId(siteId),
+    openAssignmentModal: (siteId: string) => {
+      if (siteId === newlyCreatedSiteId) {
+        setNewlyCreatedSiteId(null);
+      }
+      setAssignmentSiteId(siteId);
+    },
     openCreate,
     openEdit,
     openSiteEntry,

@@ -2298,14 +2298,6 @@
   color: var(--erp-text-muted);
 }
 
-.modalHintStrong {
-  margin-top: 4px;
-  font-size: var(--text-ui-sm);
-  line-height: 1.6;
-  font-weight: 700;
-  color: var(--erp-dark);
-}
-
 .scheduleSummaryPanel {
   display: grid;
   gap: 12px;
@@ -2373,6 +2365,48 @@
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 10px;
+}
+
+.collapsiblePanel {
+  gap: 0;
+}
+
+.collapsibleSummaryButton {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.collapsibleSummaryBody {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.collapsibleChevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 14px;
+  color: var(--erp-text-muted);
+  transition: transform 0.18s ease;
+}
+
+.collapsibleChevronOpen {
+  transform: rotate(90deg);
+}
+
+.collapsibleContent {
+  display: grid;
+  gap: 14px;
+  padding-top: 14px;
+  margin-top: 14px;
+  border-top: 1px solid var(--erp-line);
 }
 
 .assetGrid {

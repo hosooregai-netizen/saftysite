@@ -38,7 +38,7 @@ export function AdminDashboardSectionContent({
   const canDelete = canDeleteControllerCrud(currentUser.role);
   const canUploadAssets = canUploadContentAssets(currentUser.role);
   const busy = dashboard.isLoading || dashboard.isContentLoading || dashboard.isMutating;
-  const { assignments, headquarters, sites, users } = dashboard.data;
+  const { sites } = dashboard.data;
 
   switch (dashboard.activeSection) {
     case 'users':
@@ -47,9 +47,15 @@ export function AdminDashboardSectionContent({
           busy={busy}
           canDelete={canDelete}
           currentUserId={currentUser.id}
-          onCreate={dashboard.createUser}
-          onDelete={dashboard.deleteUser}
-          onSaveEdit={dashboard.saveUserEdit}
+          onCreate={async (input) => {
+            await dashboard.createUser(input);
+          }}
+          onDelete={async (id) => {
+            await dashboard.deleteUser(id);
+          }}
+          onSaveEdit={async (id, input, password) => {
+            await dashboard.saveUserEdit(id, input, password);
+          }}
           sessions={sessions}
         />
       );
@@ -61,16 +67,30 @@ export function AdminDashboardSectionContent({
           onClearHeadquarterSelection={dashboard.clearHeadquarterSelection}
           onClearSiteSelection={dashboard.clearSiteSelection}
           currentUserId={currentUser.id}
-          onAssignFieldAgent={dashboard.assignFieldAgentToSite}
-          onCreate={dashboard.createHeadquarter}
+          onAssignFieldAgent={async (siteId, userId) => {
+            await dashboard.assignFieldAgentToSite(siteId, userId);
+          }}
+          onCreate={async (input) => {
+            await dashboard.createHeadquarter(input);
+          }}
           onCreateSite={dashboard.createSite}
-          onDelete={dashboard.deleteHeadquarter}
-          onDeleteSite={dashboard.deleteSite}
+          onDelete={async (id) => {
+            await dashboard.deleteHeadquarter(id);
+          }}
+          onDeleteSite={async (id) => {
+            await dashboard.deleteSite(id);
+          }}
           onSelectHeadquarter={dashboard.selectHeadquarter}
           onSelectSite={dashboard.selectSite}
-          onUnassignFieldAgent={dashboard.unassignFieldAgentFromSite}
-          onUpdate={dashboard.updateHeadquarter}
-          onUpdateSite={dashboard.updateSite}
+          onUnassignFieldAgent={async (siteId, userId) => {
+            await dashboard.unassignFieldAgentFromSite(siteId, userId);
+          }}
+          onUpdate={async (id, input) => {
+            await dashboard.updateHeadquarter(id, input);
+          }}
+          onUpdateSite={async (id, input) => {
+            await dashboard.updateSite(id, input);
+          }}
           selectedHeadquarterId={dashboard.selectedHeadquarterId}
           selectedSiteId={dashboard.selectedSiteId}
         />
@@ -84,11 +104,17 @@ export function AdminDashboardSectionContent({
           currentPage={contentPage}
           items={dashboard.data.contentItems}
           loading={dashboard.isContentLoading}
-          onCreate={dashboard.createContentItem}
-          onDelete={dashboard.deleteContentItem}
+          onCreate={async (input) => {
+            await dashboard.createContentItem(input);
+          }}
+          onDelete={async (id) => {
+            await dashboard.deleteContentItem(id);
+          }}
           onPageChange={onContentPageChange}
           onRefresh={() => void dashboard.reloadContent({ force: true })}
-          onUpdate={dashboard.updateContentItem}
+          onUpdate={async (id, input) => {
+            await dashboard.updateContentItem(id, input);
+          }}
           pageSize={CONTENT_SECTION_PAGE_SIZE}
           refreshing={dashboard.isContentRefreshing}
         />

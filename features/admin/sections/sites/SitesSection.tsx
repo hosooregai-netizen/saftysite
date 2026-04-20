@@ -97,13 +97,11 @@ export function SitesSection(props: SitesSectionProps) {
               onOpenSiteEntry={state.openSiteEntry}
               onPageChange={state.setPage}
               onSortChange={state.setSort}
-              onUpdateStatus={(site, status) => void state.updateStatus(site, status)}
               page={state.page}
               sites={state.pagedSites}
               sort={state.sort}
               totalCount={state.total}
               totalPages={state.totalPages}
-              usersById={new Map()}
             />
           )}
         </div>

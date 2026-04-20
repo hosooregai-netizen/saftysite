@@ -23,7 +23,7 @@ type MutationRunner = <TResult>(
     applyResult?: (current: ControllerDashboardData, result: TResult) => ControllerDashboardData;
     invalidateClientCaches?: (scope: string | null) => void;
   },
-) => Promise<void>;
+) => Promise<TResult>;
 
 interface BuildAdminDashboardAssignmentActionsParams {
   getCurrentData: () => ControllerDashboardData;

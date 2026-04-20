@@ -99,6 +99,7 @@ export function useAdminDashboardState({
           console.error('Admin dashboard follow-up refresh failed after mutation', reloadError);
           setNotice(`${successMessage} 화면 갱신은 실패했습니다. 다시 시도해 주세요.`);
         }
+        return result;
       } catch (nextError) {
         const message = getErrorMessage(nextError);
         setError(message);
@@ -125,8 +126,9 @@ export function useAdminDashboardState({
         applyResult?: (current: ControllerDashboardData, result: TResult) => ControllerDashboardData;
       },
     ) => {
-      await runMutation(task, successMessage, options);
+      const result = await runMutation(task, successMessage, options);
       await refreshAdminMasterData(refreshMasterData);
+      return result;
     },
     [refreshMasterData, runMutation],
   );
