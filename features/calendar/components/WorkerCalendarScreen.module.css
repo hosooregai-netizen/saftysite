@@ -75,11 +75,17 @@
 }
 
 .viewTab {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 0;
   border-radius: 12px;
   background: transparent;
   color: var(--erp-text-subtle);
+  -webkit-text-fill-color: currentColor;
   font-weight: 700;
+  line-height: 1.2;
   min-height: 38px;
   padding: 0.7rem 0.95rem;
   transition:
@@ -91,6 +97,7 @@
 .viewTabActive {
   background: linear-gradient(180deg, var(--app-accent, #2563eb), #2f5fdb);
   color: #fff;
+  -webkit-text-fill-color: currentColor;
   box-shadow: 0 8px 20px rgba(37, 99, 235, 0.24);
 }
 
@@ -422,6 +429,16 @@
     display: grid;
     width: 100%;
     grid-template-columns: 1fr;
+  }
+
+  .viewTab,
+  .viewTabActive {
+    color: var(--erp-text, #111827);
+    -webkit-text-fill-color: currentColor;
+  }
+
+  .viewTabActive {
+    color: #fff;
   }
 
   .toolbar {
