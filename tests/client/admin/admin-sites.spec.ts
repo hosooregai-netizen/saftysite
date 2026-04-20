@@ -1,4 +1,4 @@
-import type { Page } from 'playwright';
+import type { Locator, Page } from 'playwright';
 import type { ClientSmokePlaywrightConfig } from '../../../playwright.config';
 import { createAdminSmokeHarness } from '../fixtures/adminSmokeHarness';
 
@@ -12,6 +12,13 @@ async function assertSiteTableColumnCount(page: Page) {
 
 function getSiteTableRow(page: Page, siteName: string) {
   return page.locator('tbody tr').filter({ hasText: siteName }).first();
+}
+
+async function expandSectionIfCollapsed(dialog: Locator, name: string) {
+  const toggle = dialog.getByRole('button', { name });
+  if ((await toggle.getAttribute('aria-expanded')) !== 'true') {
+    await toggle.click();
+  }
 }
 
 async function createSite(
@@ -28,16 +35,18 @@ async function createSite(
   await page.getByRole('button', { name: '현장 추가' }).click();
   const siteCreateDialog = page.getByRole('dialog', { name: '현장 추가' });
   await siteCreateDialog.getByLabel('현장명').fill(input.siteName);
+  await expandSectionIfCollapsed(siteCreateDialog, '운영 정보');
   await siteCreateDialog.getByLabel('현장코드').fill(input.siteCode);
   await siteCreateDialog.getByLabel('현장관리번호').fill(input.managementNumber);
-  await siteCreateDialog.getByLabel('현장소장명').fill(input.managerName);
-  await siteCreateDialog.getByLabel('현장소장 연락처').fill(input.managerPhone);
-  await siteCreateDialog.getByLabel('현장대리인/소장 메일').fill(input.managerEmail);
-  await siteCreateDialog.getByLabel('계약유형').selectOption('private');
-  await siteCreateDialog.getByLabel('계약상태').selectOption('active');
-  await siteCreateDialog.getByLabel(/기술지도.*대가/).fill('1200000');
-  await siteCreateDialog.getByLabel(/기술지도.*횟수/).fill('12');
-  await siteCreateDialog.getByLabel(/회차당/).fill('100000');
+  await siteCreateDialog.getByLabel('현장 책임자명').fill(input.managerName);
+  await siteCreateDialog.getByLabel('현장 책임자 연락처').fill(input.managerPhone);
+  await siteCreateDialog.getByLabel('보고서 수신 메일').fill(input.managerEmail);
+  await expandSectionIfCollapsed(siteCreateDialog, '계약 정보');
+  await siteCreateDialog.getByLabel('계약 유형').selectOption('private');
+  await siteCreateDialog.getByLabel('계약 상태').selectOption('active');
+  await siteCreateDialog.getByLabel('기술지도 계약 총액').fill('1200000');
+  await siteCreateDialog.getByLabel('기술지도 횟수').fill('12');
+  await siteCreateDialog.getByLabel('회차당 단가').fill('100000');
   await siteCreateDialog.getByRole('button', { name: '생성' }).click();
 }
 
@@ -186,9 +195,9 @@ export async function runAdminSitesSmoke(config: ClientSmokePlaywrightConfig) {
     await page
       .locator(`a[href="/admin?section=headquarters&editSiteId=${siteAId}&headquarterId=hq-1"]`)
       .click();
-    const siteEditDialog = page.getByRole('dialog', { name: '현장 수정' });
-    await siteEditDialog.getByLabel('현장소장 연락처').fill('010-5555-2222');
-    await siteEditDialog.getByLabel('계약유형').selectOption('bid');
+    const siteEditDialog = page.getByRole('dialog', { name: '현장 정보 수정' });
+    await siteEditDialog.getByLabel('현장 책임자 연락처').fill('010-5555-2222');
+    await siteEditDialog.getByLabel('계약 유형').selectOption('bid');
     await siteEditDialog.getByLabel('운영 메모').fill('현장 메인 quick edit smoke');
     await siteEditDialog.getByRole('button', { name: '저장' }).click();
     await harness.waitForRequestCount('PATCH /sites/:id', siteUpdatesBefore + 1);

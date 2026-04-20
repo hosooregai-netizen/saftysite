@@ -435,7 +435,7 @@ A rebuild is not complete unless all of the following are true:
 - queue rows can be sorted and paged client-side
 - drag-move is blocked outside `windowStart ~ windowEnd`
 - modal refuses save without both reason fields
-- same-date existing schedules are visible inside the modal
+- same-date existing schedules are not shown inside the existing-schedule modal; operators review the selected schedule details directly
 - basic-material download is disabled without a selected site
 - request cache is scoped by user and filter signature
 
