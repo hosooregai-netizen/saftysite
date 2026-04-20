@@ -4,15 +4,12 @@ import sharedStyles from '@/features/admin/sections/AdminSectionShared.module.cs
 import localStyles from '@/features/admin/sections/analytics/AnalyticsSection.module.css';
 import type {
   AdminAnalyticsEmployeeRow,
-  AdminAnalyticsSiteRevenueRow,
 } from '@/features/admin/lib/buildAdminControlCenterModel';
 import type { TableSortState } from '@/types/admin';
 import { AnalyticsEmployeeTable } from './AnalyticsEmployeeTable';
-import { AnalyticsSiteRevenueTable } from './AnalyticsSiteRevenueTable';
 
 interface AnalyticsDetailSectionProps {
   basisMonth: string;
-  detailView: 'employee' | 'site';
   employeePage: number;
   employeeRows: AdminAnalyticsEmployeeRow[];
   employeeSort: TableSortState;
@@ -20,20 +17,12 @@ interface AnalyticsDetailSectionProps {
   isInitialLoading: boolean;
   isRefreshing: boolean;
   loadError: string | null;
-  setDetailView: (value: 'employee' | 'site') => void;
   setEmployeePage: (next: number | ((current: number) => number)) => void;
   setEmployeeSort: (next: TableSortState) => void;
-  setSiteRevenuePage: (next: number | ((current: number) => number)) => void;
-  setSiteRevenueSort: (next: TableSortState) => void;
-  siteRevenuePage: number;
-  siteRevenueRows: AdminAnalyticsSiteRevenueRow[];
-  siteRevenueSort: TableSortState;
-  siteRevenueTotalPages: number;
 }
 
 export function AnalyticsDetailSection({
   basisMonth,
-  detailView,
   employeePage,
   employeeRows,
   employeeSort,
@@ -41,40 +30,15 @@ export function AnalyticsDetailSection({
   isInitialLoading,
   isRefreshing,
   loadError,
-  setDetailView,
   setEmployeePage,
   setEmployeeSort,
-  setSiteRevenuePage,
-  setSiteRevenueSort,
-  siteRevenuePage,
-  siteRevenueRows,
-  siteRevenueSort,
-  siteRevenueTotalPages,
 }: AnalyticsDetailSectionProps) {
   return (
     <section className={`${sharedStyles.sectionCard} ${sharedStyles.listSectionCard}`}>
       <div className={sharedStyles.sectionHeader}>
         <div>
-          <h2 className={sharedStyles.sectionTitle}>상세 표</h2>
+          <h2 className={sharedStyles.sectionTitle}>직원별 월별 매출</h2>
           <div className={sharedStyles.sectionHeaderMeta}>상세표 범위: {basisMonth} 기준</div>
-        </div>
-        <div className={localStyles.detailSectionControls}>
-          <div className={localStyles.detailTabs}>
-            <button
-              type="button"
-              className={`${localStyles.detailTabButton} ${detailView === 'employee' ? localStyles.detailTabButtonActive : ''}`}
-              onClick={() => setDetailView('employee')}
-            >
-              직원별
-            </button>
-            <button
-              type="button"
-              className={`${localStyles.detailTabButton} ${detailView === 'site' ? localStyles.detailTabButtonActive : ''}`}
-              onClick={() => setDetailView('site')}
-            >
-              현장별
-            </button>
-          </div>
         </div>
       </div>
 
@@ -93,7 +57,7 @@ export function AnalyticsDetailSection({
             ))}
           </div>
         ) : null}
-        {!isInitialLoading && detailView === 'employee' ? (
+        {!isInitialLoading ? (
           <>
             <AnalyticsEmployeeTable rows={employeeRows} sort={employeeSort} setSort={setEmployeeSort} />
             <div className={sharedStyles.paginationRow}>
@@ -113,32 +77,6 @@ export function AnalyticsDetailSection({
                 className="app-button app-button-secondary"
                 onClick={() => setEmployeePage((current) => Math.min(employeeTotalPages, current + 1))}
                 disabled={employeePage >= employeeTotalPages}
-              >
-                다음
-              </button>
-            </div>
-          </>
-        ) : null}
-        {!isInitialLoading && detailView === 'site' ? (
-          <>
-            <AnalyticsSiteRevenueTable rows={siteRevenueRows} sort={siteRevenueSort} setSort={setSiteRevenueSort} />
-            <div className={sharedStyles.paginationRow}>
-              <button
-                type="button"
-                className="app-button app-button-secondary"
-                onClick={() => setSiteRevenuePage((current) => Math.max(1, current - 1))}
-                disabled={siteRevenuePage <= 1}
-              >
-                이전
-              </button>
-              <span className={sharedStyles.paginationLabel}>
-                {siteRevenuePage} / {siteRevenueTotalPages} 페이지
-              </span>
-              <button
-                type="button"
-                className="app-button app-button-secondary"
-                onClick={() => setSiteRevenuePage((current) => Math.min(siteRevenueTotalPages, current + 1))}
-                disabled={siteRevenuePage >= siteRevenueTotalPages}
               >
                 다음
               </button>

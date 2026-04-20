@@ -21,7 +21,6 @@ import {
   EMPTY_ANALYTICS_MONTH_DETAIL,
   EMPTY_ANALYTICS_SUMMARY,
   sortEmployeeRows,
-  sortSiteRevenueRows,
 } from './analyticsSectionHelpers';
 
 interface AnalyticsLookups {
@@ -37,7 +36,6 @@ const EMPTY_LOOKUPS: AnalyticsLookups = {
 };
 
 const DEFAULT_EMPLOYEE_SORT: TableSortState = { direction: 'desc', key: 'visitRevenue' };
-const DEFAULT_SITE_REVENUE_SORT: TableSortState = { direction: 'desc', key: 'visitRevenue' };
 const DETAIL_PAGE_SIZE = 20;
 
 function formatMonthToken(target: Date) {
@@ -99,11 +97,8 @@ export function useAnalyticsSectionState(currentUserId: string) {
   const [headquarterId, setHeadquarterId] = useState(() => searchParams.get('headquarterId') || '');
   const [userId, setUserId] = useState(() => searchParams.get('userId') || '');
   const [contractType, setContractType] = useState(() => searchParams.get('contractType') || '');
-  const [detailView, setDetailView] = useState<'employee' | 'site'>('employee');
   const [employeeSort, setEmployeeSort] = useState<TableSortState>(DEFAULT_EMPLOYEE_SORT);
-  const [siteRevenueSort, setSiteRevenueSort] = useState<TableSortState>(DEFAULT_SITE_REVENUE_SORT);
   const [employeePage, setEmployeePage] = useState(1);
-  const [siteRevenuePage, setSiteRevenuePage] = useState(1);
   const todayMonth = formatMonthToken(new Date());
   const [basisMonthState, setBasisMonthState] = useState(
     () => searchParams.get('basisMonth') || todayMonth,
@@ -476,19 +471,9 @@ export function useAnalyticsSectionState(currentUserId: string) {
     () => sortEmployeeRows(analyticsDetail.employeeRows, employeeSort),
     [analyticsDetail.employeeRows, employeeSort],
   );
-  const sortedSiteRevenueRows = useMemo(
-    () => sortSiteRevenueRows(analyticsDetail.siteRevenueRows, siteRevenueSort),
-    [analyticsDetail.siteRevenueRows, siteRevenueSort],
-  );
   const employeeTotalPages = Math.max(
     1,
     Math.ceil(sortedEmployeeRows.length / DETAIL_PAGE_SIZE),
-  );
-  const siteSummaryRow = sortedSiteRevenueRows.find((row) => row.isSummaryRow) ?? null;
-  const siteDetailRows = sortedSiteRevenueRows.filter((row) => !row.isSummaryRow);
-  const siteRevenueTotalPages = Math.max(
-    1,
-    Math.ceil(siteDetailRows.length / DETAIL_PAGE_SIZE),
   );
 
   useEffect(() => {
@@ -496,27 +481,13 @@ export function useAnalyticsSectionState(currentUserId: string) {
   }, [employeeTotalPages]);
 
   useEffect(() => {
-    setSiteRevenuePage((current) => Math.min(current, siteRevenueTotalPages));
-  }, [siteRevenueTotalPages]);
-
-  useEffect(() => {
     setEmployeePage(1);
   }, [analyticsDetailRequestKey, employeeSort]);
-
-  useEffect(() => {
-    setSiteRevenuePage(1);
-  }, [analyticsDetailRequestKey, siteRevenueSort]);
 
   const pagedEmployeeRows = useMemo(() => {
     const startIndex = (employeePage - 1) * DETAIL_PAGE_SIZE;
     return sortedEmployeeRows.slice(startIndex, startIndex + DETAIL_PAGE_SIZE);
   }, [employeePage, sortedEmployeeRows]);
-
-  const pagedSiteRevenueRows = useMemo(() => {
-    const startIndex = (siteRevenuePage - 1) * DETAIL_PAGE_SIZE;
-    const pageRows = siteDetailRows.slice(startIndex, startIndex + DETAIL_PAGE_SIZE);
-    return siteSummaryRow ? [siteSummaryRow, ...pageRows] : pageRows;
-  }, [siteDetailRows, siteRevenuePage, siteSummaryRow]);
 
   const setBasisMonth = (nextMonth: string) => {
     setBasisMonthState(nextMonth);
@@ -561,7 +532,6 @@ export function useAnalyticsSectionState(currentUserId: string) {
     contractTypeOptions,
     analyticsDetail,
     analyticsDetailError,
-    detailView,
     employeePage,
     employeeSort,
     employeeTotalPages,
@@ -576,7 +546,6 @@ export function useAnalyticsSectionState(currentUserId: string) {
     isSummaryRefreshing,
     loadError: summaryError,
     pagedEmployeeRows,
-    pagedSiteRevenueRows,
     period,
     query,
     queryInput,
@@ -584,18 +553,12 @@ export function useAnalyticsSectionState(currentUserId: string) {
     scopeChips,
     setBasisMonth,
     setContractType,
-    setDetailView,
     setEmployeePage,
     setEmployeeSort,
     setHeadquarterId,
     setPeriod,
     setQueryInput,
-    setSiteRevenuePage,
-    setSiteRevenueSort,
     setUserId,
-    siteRevenuePage,
-    siteRevenueSort,
-    siteRevenueTotalPages,
     submitQuery,
     summaryAnalytics,
     userId,

@@ -4,7 +4,6 @@ import { AnalyticsCharts } from '@/features/admin/sections/analytics/AnalyticsCh
 import sharedStyles from '@/features/admin/sections/AdminSectionShared.module.css';
 import { AnalyticsDetailSection } from './AnalyticsDetailSection';
 import { AnalyticsSectionHeader } from './AnalyticsSectionHeader';
-import { AnalyticsSummarySection } from './AnalyticsSummarySection';
 import { useAnalyticsSectionState } from './useAnalyticsSectionState';
 import localStyles from './AnalyticsSection.module.css';
 
@@ -49,14 +48,6 @@ export function AnalyticsSection({ currentUserId }: AnalyticsSectionProps) {
           setUserId={state.setUserId}
           userId={state.userId}
           userOptions={state.userOptions}
-        />
-        <AnalyticsSummarySection
-          analytics={state.summaryAnalytics}
-          isInitialLoading={state.isSummaryInitialLoading}
-          isLoading={state.isSummaryLoading}
-          isRefreshing={state.isSummaryRefreshing}
-          loadError={state.loadError}
-          scopeChips={state.scopeChips}
         />
       </section>
 
@@ -112,7 +103,6 @@ export function AnalyticsSection({ currentUserId }: AnalyticsSectionProps) {
 
       <AnalyticsDetailSection
         basisMonth={state.basisMonth}
-        detailView={state.detailView}
         employeePage={state.employeePage}
         employeeRows={state.pagedEmployeeRows}
         employeeSort={state.employeeSort}
@@ -120,15 +110,8 @@ export function AnalyticsSection({ currentUserId }: AnalyticsSectionProps) {
         isInitialLoading={state.isAnalyticsDetailInitialLoading}
         isRefreshing={state.isAnalyticsDetailRefreshing}
         loadError={state.analyticsDetailError}
-        setDetailView={state.setDetailView}
         setEmployeePage={state.setEmployeePage}
         setEmployeeSort={state.setEmployeeSort}
-        setSiteRevenuePage={state.setSiteRevenuePage}
-        setSiteRevenueSort={state.setSiteRevenueSort}
-        siteRevenuePage={state.siteRevenuePage}
-        siteRevenueRows={state.pagedSiteRevenueRows}
-        siteRevenueSort={state.siteRevenueSort}
-        siteRevenueTotalPages={state.siteRevenueTotalPages}
       />
     </div>
   );
