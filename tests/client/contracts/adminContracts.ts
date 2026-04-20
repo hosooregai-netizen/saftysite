@@ -7,7 +7,7 @@ export const ADMIN_FEATURE_CONTRACTS = {
       '관제 대시보드 overview/analytics가 admin 로그인 진입, overview-first 로딩, session cache 기반 재진입, KPI/차트/기준월 전환, 기준월 고정 상세표, 기간 전환, directory lookups 기반 계약 유형 옵션, site 계약 연동 매출, 과거 예정 일정을 실회차로 인정하는 집계, 직원별 표의 지연 중심 간소화, 현장별 표의 건설사/진행률 copy, export 진입 흐름, 그리고 자료 부족 표에서 현장/사업장 이름이 우선 읽히는 컬럼 배치를 유지한다.',
     routes: ['/admin?section=overview', '/admin?section=analytics'],
     markers: ['운영 개요', '현장 상태', '발송 관리 대상', '매출/실적 집계', '실행 회차', '남은 회차', '월별 매출 추이', '상세 표', '건설사', '진행률'],
-    apis: ['GET /api/admin/dashboard/overview', 'GET /api/admin/dashboard/analytics', 'GET /api/admin/dashboard/analytics/detail', 'GET /api/admin/directory/lookups', 'POST /api/admin/exports/:section'],
+    apis: ['GET /api/admin/dashboard/overview', 'GET /api/admin/dashboard/analytics', 'GET /api/admin/dashboard/analytics/month-detail', 'GET /api/admin/directory/lookups', 'POST /api/admin/exports/:section'],
     criticalActions: ['admin 로그인 진입', 'overview 진입', 'analytics 진입', 'overview-first 초기 로딩 상태 유지', 'session cache 재진입 확인', '기간 전환', 'analytics 기준월 전환', 'analytics 기준월 상세표 확인', 'analytics 계약유형 lookup 확인', 'site 계약 수정 반영 확인', 'K2B 회차 실적 집계 확인', '과거 예정 일정 실회차 반영 확인', '직원별 불필요 열 제거 확인', '현장별 건설사/진행률 표기 확인', '실행/남은 회차 KPI 확인', 'legacy 무일정 데이터 백필 확인', '엑셀 내보내기', '핵심 카드와 차트 확인'],
   },
   'admin-headquarters': {

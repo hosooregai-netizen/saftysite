@@ -6,8 +6,8 @@ import { useSubmittedSearchState } from '@/hooks/useSubmittedSearchState';
 import type { AdminAnalyticsPeriod } from '@/features/admin/lib/buildAdminControlCenterModel';
 import { readAdminSessionCache, writeAdminSessionCache } from '@/features/admin/lib/adminSessionCache';
 import {
-  fetchAdminAnalyticsDetail,
   fetchAdminAnalytics,
+  fetchAdminAnalyticsMonthDetail,
   fetchAdminDirectoryLookups,
 } from '@/lib/admin/apiClient';
 import { exportAdminServerWorkbook } from '@/lib/admin/exportClient';
@@ -356,7 +356,7 @@ export function useAnalyticsSectionState(currentUserId: string) {
     analyticsDetailAbortControllerRef.current = abortController;
     setLoadingAnalyticsDetailRequestKey(analyticsDetailRequestKey);
 
-    void fetchAdminAnalyticsDetail(analyticsDetailRequest, { signal: abortController.signal })
+    void fetchAdminAnalyticsMonthDetail(analyticsDetailRequest, { signal: abortController.signal })
       .then((response) => {
         writeAdminSessionCache(
           currentUserId,

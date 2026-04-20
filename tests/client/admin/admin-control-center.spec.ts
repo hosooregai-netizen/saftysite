@@ -10,7 +10,7 @@ export async function runAdminControlCenterSmoke(config: ClientSmokePlaywrightCo
     const analyticsSummaryReadsBefore =
       requestCounts.get('GET /api/admin/dashboard/analytics') || 0;
     const analyticsTableDetailReadsBefore =
-      requestCounts.get('GET /api/admin/dashboard/analytics/detail') || 0;
+      requestCounts.get('GET /api/admin/dashboard/analytics/month-detail') || 0;
 
     await page.goto(`${harness.baseURL}/admin?section=overview`, { waitUntil: 'load' });
     await harness.loginAs('admin@example.com');
@@ -75,7 +75,7 @@ export async function runAdminControlCenterSmoke(config: ClientSmokePlaywrightCo
       analyticsSummaryReadsBefore + 1,
     );
     await harness.waitForRequestCount(
-      'GET /api/admin/dashboard/analytics/detail',
+      'GET /api/admin/dashboard/analytics/month-detail',
       analyticsTableDetailReadsBefore + 1,
     );
     await page.getByRole('columnheader', { name: '지도요원명' }).waitFor();
@@ -99,10 +99,10 @@ export async function runAdminControlCenterSmoke(config: ClientSmokePlaywrightCo
     const analyticsSummaryReadsAtMonthChange =
       requestCounts.get('GET /api/admin/dashboard/analytics') || 0;
     const analyticsTableDetailReadsAtMonthChange =
-      requestCounts.get('GET /api/admin/dashboard/analytics/detail') || 0;
+      requestCounts.get('GET /api/admin/dashboard/analytics/month-detail') || 0;
     await monthInput.fill('2026-03');
     await harness.waitForRequestCount(
-      'GET /api/admin/dashboard/analytics/detail',
+      'GET /api/admin/dashboard/analytics/month-detail',
       analyticsTableDetailReadsAtMonthChange + 1,
     );
     if ((requestCounts.get('GET /api/admin/dashboard/analytics') || 0) !== analyticsSummaryReadsAtMonthChange) {
@@ -120,7 +120,7 @@ export async function runAdminControlCenterSmoke(config: ClientSmokePlaywrightCo
       analyticsSummaryReadsBefore + 2,
     );
     await harness.waitForRequestCount(
-      'GET /api/admin/dashboard/analytics/detail',
+      'GET /api/admin/dashboard/analytics/month-detail',
       analyticsTableDetailReadsBefore + 3,
     );
     await page.getByRole('button', { name: '엑셀 내보내기' }).click();
