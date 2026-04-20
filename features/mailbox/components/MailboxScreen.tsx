@@ -59,7 +59,7 @@ export function MailboxScreen() {
         error={authError}
         onSubmit={login}
         title="메일함 로그인"
-        description="로그인하면 개인 연결 메일함의 수신/발신 내역과 알림을 확인할 수 있습니다."
+        description="로그인하면 현재 사용자에게 연결된 개인 메일 계정의 수신/발신 내역과 알림을 확인할 수 있습니다."
       />
     );
   }

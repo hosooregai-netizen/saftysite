@@ -60,6 +60,19 @@ export function buildMobileHomeHref(): string {
   return '/mobile';
 }
 
+export function buildMobileCalendarHref(): string {
+  return '/mobile/calendar';
+}
+
+export function buildMobileMailboxHref(box: 'inbox' | 'sent' = 'inbox'): string {
+  const searchParams = new URLSearchParams();
+  if (box !== 'inbox') {
+    searchParams.set('box', box);
+  }
+  const queryString = searchParams.toString();
+  return queryString ? `/mobile/mailbox?${queryString}` : '/mobile/mailbox';
+}
+
 export function buildMobileSiteHomeHref(siteId: string): string {
   return `/mobile/sites/${encodeURIComponent(siteId)}`;
 }

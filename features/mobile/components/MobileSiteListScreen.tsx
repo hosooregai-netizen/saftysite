@@ -5,7 +5,7 @@ import { useHomeScreenState } from '@/features/home/hooks/useHomeScreenState';
 import { MobileShell } from './MobileShell';
 import { MobileTabBar } from './MobileTabBar';
 import { MobileSiteCard } from '../site-list/MobileSiteCard';
-import { MOBILE_SITE_LIST_TABS } from '../site-list/mobileSiteListTabs';
+import { buildMobileRootTabs } from '../site-list/mobileSiteListTabs';
 import styles from './MobileShell.module.css';
 
 export function MobileSiteListScreen() {
@@ -47,7 +47,7 @@ export function MobileSiteListScreen() {
       onLogout={logout}
       title="배정 현장"
       webHref="/"
-      tabBar={<MobileTabBar tabs={[...MOBILE_SITE_LIST_TABS]} />}
+      tabBar={<MobileTabBar tabs={buildMobileRootTabs('sites')} />}
     >
       {dataError ? (
         <section className={styles.stateCard}>

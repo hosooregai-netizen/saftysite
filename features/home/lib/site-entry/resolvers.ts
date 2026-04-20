@@ -1,5 +1,7 @@
 import {
+  buildMobileCalendarHref,
   buildMobileHomeHref,
+  buildMobileMailboxHref,
   buildMobileSessionHref,
   buildMobileSiteBadWorkplaceHref,
   buildMobileSiteHomeHref,
@@ -36,6 +38,15 @@ export function resolveWorkerMobileSwitchHref({
 }): string {
   if (!pathname) {
     return buildMobileHomeHref();
+  }
+
+  if (pathname === '/calendar') {
+    return buildMobileCalendarHref();
+  }
+
+  if (pathname === '/mailbox') {
+    const resolvedBox = searchParams?.get('box') === 'sent' ? 'sent' : 'inbox';
+    return buildMobileMailboxHref(resolvedBox);
   }
 
   const sessionMatch = pathname.match(/^\/sessions\/([^/]+)/);

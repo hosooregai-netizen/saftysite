@@ -43,8 +43,8 @@ export function MailboxConnectWorkspace({
             </strong>
             <span className={localStyles.accountMeta}>
               {isPrompt
-                ? '현재는 공용 메일함만 연결되어 있습니다. 개인 지메일 또는 네이버 메일을 추가로 연결하면 개인 수신/발신 흐름까지 함께 사용할 수 있습니다.'
-                : '메일 계정을 연결하면 받은편지함, 보낸편지함, 보고서 발송까지 한 화면에서 이어서 사용할 수 있습니다.'}
+                ? '현재는 공용 메일함만 연결되어 있습니다. 개인 지메일 또는 네이버 메일을 추가로 연결하면 현재 사용자에게 귀속된 개인 수신/발신 흐름까지 함께 사용할 수 있습니다.'
+                : '메일 계정을 연결하면 현재 로그인한 사용자에게 귀속된 받은편지함, 보낸편지함, 보고서 발송 흐름을 한 화면에서 이어서 사용할 수 있습니다.'}
             </span>
           </div>
           <button
@@ -64,8 +64,8 @@ export function MailboxConnectWorkspace({
             <strong className={localStyles.accountTitle}>지메일 로그인</strong>
             <span className={localStyles.accountMeta}>
               {isPrompt
-                ? '개인 지메일 계정을 추가 연결합니다.'
-                : '구글 메일 계정을 연결해 받은편지함과 보고서 메일 발송 흐름을 바로 사용할 수 있습니다.'}
+                ? '현재 사용자에게 연결될 개인 지메일 계정을 추가합니다.'
+                : '구글 메일 계정을 현재 사용자 계정에 연결해 받은편지함과 보고서 메일 발송 흐름을 바로 사용할 수 있습니다.'}
             </span>
           </div>
           <span className={localStyles.inlineMeta}>{googleProviderStatusLabel}</span>
@@ -91,8 +91,8 @@ export function MailboxConnectWorkspace({
             <strong className={localStyles.accountTitle}>네이버 로그인</strong>
             <span className={localStyles.accountMeta}>
               {isPrompt
-                ? '개인 네이버 메일 계정을 추가 연결합니다.'
-                : '네이버 메일 계정을 연결해 수신 메일과 발송 이력을 같은 메일함에서 관리할 수 있습니다.'}
+                ? '현재 사용자에게 연결될 개인 네이버 메일 계정을 추가합니다.'
+                : '네이버 메일 계정을 현재 사용자 계정에 연결해 수신 메일과 발송 이력을 같은 메일함에서 관리할 수 있습니다.'}
             </span>
           </div>
           <span className={localStyles.inlineMeta}>{naverProviderStatusLabel}</span>

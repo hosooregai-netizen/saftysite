@@ -17,6 +17,7 @@ import { runBadWorkplaceReportSmoke } from './erp/bad-workplace-report.spec';
 import { runMobileBadWorkplaceSmoke } from './erp/mobile-bad-workplace.spec';
 import { runSiteReportListSmoke } from './erp/site-report-list.spec';
 import { runMobileSiteHomeSmoke } from './erp/mobile-site-home.spec';
+import { runMobileWorkerNavSmoke } from './erp/mobile-worker-nav.spec';
 import { runMobileSiteReportsSmoke } from './erp/mobile-site-reports.spec';
 import { runMobileQuarterlyListSmoke } from './erp/mobile-quarterly-list.spec';
 import { runMobileQuarterlyReportSmoke } from './erp/mobile-quarterly-report.spec';
@@ -39,6 +40,7 @@ const FEATURE_RUNNERS: Record<FeatureContractId, FeatureRunner> = {
   'mobile-bad-workplace': runMobileBadWorkplaceSmoke,
   'site-report-list': runSiteReportListSmoke,
   'mobile-site-home': runMobileSiteHomeSmoke,
+  'mobile-worker-nav': runMobileWorkerNavSmoke,
   'mobile-site-reports': runMobileSiteReportsSmoke,
   'mobile-quarterly-list': runMobileQuarterlyListSmoke,
   'mobile-quarterly-report': runMobileQuarterlyReportSmoke,

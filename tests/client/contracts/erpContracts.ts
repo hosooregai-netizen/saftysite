@@ -85,6 +85,19 @@ export const ERP_FEATURE_CONTRACTS = {
     ],
     criticalActions: ['모바일 현장 홈 로그인', '최근 보고 상태 확인', '최근 보고서 진입', '분기 목록 이동'],
   },
+  'mobile-worker-nav': {
+    id: 'mobile-worker-nav',
+    description:
+      '모바일 하단 탭에서 배정 현장, 일정, 메일함 전환이 실제 route와 worker 기능 화면으로 이어진다.',
+    routes: ['/mobile', '/mobile/calendar', '/mobile/mailbox'],
+    markers: ['배정 현장', '일정', '월간 캘린더', '메일함'],
+    apis: [
+      'POST /auth/token',
+      'GET /assignments/me/sites',
+      'GET /api/me/schedules',
+    ],
+    criticalActions: ['모바일 로그인', '일정 탭 이동', '모바일 일정 로드', '메일함 탭 이동'],
+  },
   'mobile-site-reports': {
     id: 'mobile-site-reports',
     description:

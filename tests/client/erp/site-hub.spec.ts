@@ -17,11 +17,20 @@ export async function runSiteHubSmoke(config: ClientSmokePlaywrightConfig) {
     await page.getByRole('link', { name: '기존 현장' }).first().click();
     await page.waitForURL(/\/sites\/site-1\/entry$/);
     await harness.waitForRequestCount('GET /reports', reportReadsBefore + 1);
-    await page.getByRole('heading', { name: '사업장/현장 식별' }).waitFor({
+    await page.getByRole('heading', { name: '기술지도 보고서' }).waitFor({
+      state: 'visible',
+    });
+    await page.getByRole('heading', { name: '분기 종합 보고서' }).waitFor({
+      state: 'visible',
+    });
+    await page.getByRole('heading', { name: '불량사업장 신고' }).waitFor({
+      state: 'visible',
+    });
+    await page.getByRole('heading', { name: '현장 사진첩' }).waitFor({
       state: 'visible',
     });
 
-    await page.getByRole('link', { name: '분기 보고서 목록' }).first().click();
+    await page.getByRole('link', { name: '분기 종합 보고서 목록' }).first().click();
     await page.waitForURL(/\/sites\/site-1\/quarterly/);
     await page.getByRole('heading', { name: '분기 종합 보고서 목록' }).waitFor({
       state: 'visible',
@@ -35,6 +44,18 @@ export async function runSiteHubSmoke(config: ClientSmokePlaywrightConfig) {
       true,
       '분기 종합 보고서 목록 화면으로 이동하지 못했습니다.',
     );
+
+    await page.goto(`${harness.baseURL}/sites/site-1/entry`, { waitUntil: 'load' });
+    await page.getByRole('link', { name: '보고서 목록 열기' }).click();
+    await page.waitForURL(/\/sites\/site-1$/);
+
+    await page.goto(`${harness.baseURL}/sites/site-1/entry`, { waitUntil: 'load' });
+    await page.getByRole('link', { name: '이번 달 신고 작성' }).click();
+    await page.waitForURL(/\/sites\/site-1\/bad-workplace\/\d{4}-\d{2}$/);
+
+    await page.goto(`${harness.baseURL}/sites/site-1/entry`, { waitUntil: 'load' });
+    await page.getByRole('link', { name: '사진첩 열기' }).click();
+    await page.waitForURL(/\/sites\/site-1\/photos$/);
 
     harness.assertContractApisObserved();
     harness.assertNoClientErrors();
