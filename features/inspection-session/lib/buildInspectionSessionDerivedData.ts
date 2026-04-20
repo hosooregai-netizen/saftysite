@@ -69,6 +69,7 @@ export function buildInspectionSessionDerivedData(
       masterData,
       getSessionGuidanceDate(session),
     ),
+    legalReferences: masterData.legalReferences,
     doc7ReferenceMaterials: getDoc7ReferenceMaterialsForReportDate(
       masterData,
       getSessionGuidanceDate(session),

@@ -22,6 +22,7 @@ export default function Doc7Section(props: HazardStatsSectionProps) {
           hazardCountermeasureCatalog={props.hazardCountermeasureCatalog}
           index={index}
           item={item}
+          legalReferences={props.legalReferences}
           removable={session.document7Findings.length > 1}
           withFileData={withFileData}
         />
@@ -34,4 +35,3 @@ export default function Doc7Section(props: HazardStatsSectionProps) {
     </div>
   );
 }
-

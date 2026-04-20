@@ -24,6 +24,9 @@ interface Doc7FindingFieldsProps {
   item: CurrentHazardFinding;
   onAccidentTypeChange: (value: string) => void;
   onCausativeAgentChange: (value: CausativeAgentKey | '') => void;
+  onHazardDescriptionChange: (value: string) => void;
+  onImprovementPlanChange: (value: string) => void;
+  legalReferenceSuggestions: string[];
   referenceMaterial1Title: string;
   referenceMaterial2Title: string;
   selectValueForRiskLevel: (stored: string) => string;
@@ -89,6 +92,9 @@ export function Doc7FindingFields({
   item,
   onAccidentTypeChange,
   onCausativeAgentChange,
+  onHazardDescriptionChange,
+  onImprovementPlanChange,
+  legalReferenceSuggestions,
   referenceMaterial1Title,
   referenceMaterial2Title,
   selectValueForRiskLevel,
@@ -298,12 +304,7 @@ export function Doc7FindingFields({
                       className={`app-textarea ${styles.doc7TextareaSingle}`}
                       rows={1}
                       value={item.hazardDescription ?? ''}
-                      onChange={(event) =>
-                        updateFinding((finding) => ({
-                          ...finding,
-                          hazardDescription: event.target.value,
-                        }))
-                      }
+                      onChange={(event) => onHazardDescriptionChange(event.target.value)}
                     />
                   </td>
                 </tr>
@@ -329,17 +330,7 @@ export function Doc7FindingFields({
                             );
                           }
                         }}
-                        onChange={(event) =>
-                          updateFinding((finding) => {
-                            const nextFinding =
-                              clearHazardCountermeasureSelectionFromFinding(finding);
-                            return {
-                              ...nextFinding,
-                              improvementPlan: event.target.value,
-                              improvementRequest: event.target.value,
-                            };
-                          })
-                        }
+                        onChange={(event) => onImprovementPlanChange(event.target.value)}
                       />
                       {activeRecommendationField === 'expectedRisk' &&
                       activeRecommendations.length > 0 ? (
@@ -433,6 +424,7 @@ export function Doc7FindingFields({
                       <input
                         type="text"
                         className="app-input"
+                        list={`doc7-legal-reference-suggestions-${item.id}`}
                         value={item.legalReferenceTitle}
                         placeholder={DOC7_TEMPLATE_LABELS.legalPlaceholder}
                         onFocus={() => setActiveRecommendationField('legalReference')}
@@ -450,11 +442,16 @@ export function Doc7FindingFields({
                             legalReferenceTitle: event.target.value,
                             referenceLawTitles: event.target.value
                               .split(/[\n,]+/)
-                              .map((entry) => entry.trim())
-                              .filter(Boolean),
-                          }))
-                        }
-                      />
+                            .map((entry) => entry.trim())
+                            .filter(Boolean),
+                        }))
+                      }
+                    />
+                    <datalist id={`doc7-legal-reference-suggestions-${item.id}`}>
+                      {legalReferenceSuggestions.map((title) => (
+                        <option key={title} value={title} />
+                      ))}
+                    </datalist>
                       {activeRecommendationField === 'legalReference' &&
                       activeRecommendations.length > 0 ? (
                         <div

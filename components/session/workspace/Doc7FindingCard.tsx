@@ -8,16 +8,14 @@ import {
   isFindingEmptyForAiAutofill,
 } from '@/components/session/workspace/doc7Ai';
 import styles from '@/components/session/InspectionSessionWorkspace.module.css';
-import {
-  applyDoc7ReferenceMaterialMatch,
-  getDoc7ReferenceMatchKeys,
-  matchDoc7ReferenceMaterial,
-} from '@/lib/doc7ReferenceMaterials';
+import { applyDoc7AutoCompletionMatch } from '@/lib/doc7AutoCompletion';
+import { getDoc7ReferenceMatchKeys, matchDoc7ReferenceMaterial } from '@/lib/doc7ReferenceMaterials';
 import { Doc7FindingFields } from '@/features/inspection-session/workspace/sections/doc7/Doc7FindingFields';
 import { Doc7FindingPhotoPanel } from '@/features/inspection-session/workspace/sections/doc7/Doc7FindingPhotoPanel';
 import type {
   SafetyDoc7ReferenceMaterialCatalogItem,
   SafetyHazardCountermeasureCatalogItem,
+  SafetyLegalReference,
 } from '@/types/backend';
 import type { CurrentHazardFinding } from '@/types/inspectionSession';
 import type { CausativeAgentKey } from '@/types/siteOverview';
@@ -36,6 +34,7 @@ interface Doc7FindingCardProps {
   hazardCountermeasureCatalog: SafetyHazardCountermeasureCatalogItem[];
   item: CurrentHazardFinding;
   index: number;
+  legalReferences: SafetyLegalReference[];
   removable: boolean;
   withFileData: WithFileData;
 }
@@ -46,6 +45,7 @@ export default function Doc7FindingCard({
   hazardCountermeasureCatalog,
   item,
   index,
+  legalReferences,
   removable,
   withFileData,
 }: Doc7FindingCardProps) {
@@ -72,9 +72,13 @@ export default function Doc7FindingCard({
   const updateFindingWithReferenceMaterial = useCallback(
     (updater: (finding: CurrentHazardFinding) => CurrentHazardFinding) =>
       updateFinding((finding) =>
-        applyDoc7ReferenceMaterialMatch(updater(finding), doc7ReferenceMaterials),
+        applyDoc7AutoCompletionMatch(updater(finding), {
+          doc7ReferenceMaterials,
+          hazardCountermeasureCatalog,
+          legalReferences,
+        }),
       ),
-    [doc7ReferenceMaterials, updateFinding],
+    [doc7ReferenceMaterials, hazardCountermeasureCatalog, legalReferences, updateFinding],
   );
 
   useEffect(() => {
@@ -83,21 +87,19 @@ export default function Doc7FindingCard({
       return;
     }
 
-    if (
-      item.referenceMaterial1 ||
-      item.referenceMaterial2 ||
-      item.referenceMaterialImage ||
-      item.referenceMaterialDescription
-    ) {
-      return;
-    }
-
-    const nextFinding = applyDoc7ReferenceMaterialMatch(item, doc7ReferenceMaterials);
+    const nextFinding = applyDoc7AutoCompletionMatch(item, {
+      doc7ReferenceMaterials,
+      hazardCountermeasureCatalog,
+      legalReferences,
+    });
     if (
       nextFinding.referenceMaterial1 === item.referenceMaterial1 &&
       nextFinding.referenceMaterial2 === item.referenceMaterial2 &&
       nextFinding.referenceMaterialImage === item.referenceMaterialImage &&
-      nextFinding.referenceMaterialDescription === item.referenceMaterialDescription
+      nextFinding.referenceMaterialDescription === item.referenceMaterialDescription &&
+      nextFinding.emphasis === item.emphasis &&
+      nextFinding.legalReferenceId === item.legalReferenceId &&
+      nextFinding.legalReferenceTitle === item.legalReferenceTitle
     ) {
       return;
     }
@@ -105,15 +107,23 @@ export default function Doc7FindingCard({
     updateFinding(() => nextFinding);
   }, [
     doc7ReferenceMaterials,
+    hazardCountermeasureCatalog,
     item,
     item.accidentType,
     item.causativeAgentKey,
+    item.emphasis,
+    item.hazardDescription,
+    item.improvementPlan,
+    item.improvementRequest,
+    item.legalReferenceId,
+    item.legalReferenceTitle,
     item.referenceCatalogAccidentType,
     item.referenceCatalogCausativeAgentKey,
     item.referenceMaterial1,
     item.referenceMaterial2,
     item.referenceMaterialImage,
     item.referenceMaterialDescription,
+    legalReferences,
     updateFinding,
   ]);
 
@@ -182,6 +192,7 @@ export default function Doc7FindingCard({
           referenceMaterial2Title={
             matchedReferenceMaterial?.referenceTitle2 || matchedReferenceMaterial?.title || ''
           }
+          legalReferenceSuggestions={legalReferences.map((entry) => entry.title).filter(Boolean)}
           selectValueForRiskLevel={selectValueForRiskLevel}
           updateFinding={updateFinding}
           onAccidentTypeChange={(value) =>
@@ -194,6 +205,19 @@ export default function Doc7FindingCard({
             updateFindingWithReferenceMaterial((finding) => ({
               ...finding,
               causativeAgentKey: value as CausativeAgentKey | '',
+            }))
+          }
+          onHazardDescriptionChange={(value) =>
+            updateFindingWithReferenceMaterial((finding) => ({
+              ...finding,
+              hazardDescription: value,
+            }))
+          }
+          onImprovementPlanChange={(value) =>
+            updateFindingWithReferenceMaterial((finding) => ({
+              ...finding,
+              improvementPlan: value,
+              improvementRequest: value,
             }))
           }
         />

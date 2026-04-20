@@ -52,7 +52,18 @@ function bodyRecord(body: unknown) {
 
 function readText(body: unknown, type?: SafetyContentType) {
   const text = contentBodyToText(body);
-  return text || (type === 'correction_result_option' ? normalizeMapperText(body) : '');
+  if (text) {
+    return text;
+  }
+  const record = bodyRecord(body);
+  if (type === 'hazard_countermeasure_catalog') {
+    return (
+      normalizeMapperText(record.countermeasure) ||
+      normalizeMapperText(record.expectedRisk) ||
+      normalizeMapperText(record.legalReference)
+    );
+  }
+  return type === 'correction_result_option' ? normalizeMapperText(body) : '';
 }
 
 function readMeasurementSafetyCriteria(body: unknown) {

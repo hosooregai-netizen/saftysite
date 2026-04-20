@@ -209,6 +209,13 @@ export const CONTENT_TYPE_OPTIONS: Array<{
     fileLabels: ['참고자료 1', '참고자료 2'],
   },
   {
+    value: 'hazard_countermeasure_catalog',
+    label: '유해위험작업 안전대책',
+    description: '기술지도 보고서의 관리대책 자동완성에 사용하는 카탈로그입니다.',
+    editorMode: 'text',
+    bodyLabel: '관리대책',
+  },
+  {
     value: 'correction_result_option',
     label: '시정 결과 옵션',
     description: '시정 결과 선택지로 노출되는 목록 값입니다.',

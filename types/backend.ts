@@ -97,6 +97,7 @@ export type SafetyContentType =
   | 'safety_news'
   | 'disaster_case'
   | 'campaign_template'
+  | 'hazard_countermeasure_catalog'
   | 'doc7_reference_material'
   | 'hazard_countermeasure_catalog'
   | 'ai_prompt'

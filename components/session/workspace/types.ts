@@ -8,6 +8,7 @@ import type {
 import type {
   SafetyDoc7ReferenceMaterialCatalogItem,
   SafetyHazardCountermeasureCatalogItem,
+  SafetyLegalReference,
   SafetyMeasurementTemplate,
 } from '@/types/backend';
 import type { ChartEntry } from './utils';
@@ -43,6 +44,7 @@ export interface HazardStatsSectionProps {
   hazardCountermeasureCatalog: SafetyHazardCountermeasureCatalogItem[];
   isRelationHydrating: boolean;
   isRelationReady: boolean;
+  legalReferences: SafetyLegalReference[];
   relationStatus: ReportIndexStatus;
   measurementTemplates: SafetyMeasurementTemplate[];
   session: InspectionSession;
@@ -59,4 +61,3 @@ export interface ChecklistSectionProps {
   items: ChecklistQuestion[];
   onChange: (itemId: string, patch: Partial<ChecklistQuestion>) => void;
 }
-

@@ -56,6 +56,7 @@ export function InspectionSessionScreen({ sessionId }: InspectionSessionScreenPr
         hazardCountermeasureCatalog: screen.derivedData.hazardCountermeasureCatalog,
         isRelationHydrating: screen.isRelationHydrating,
         isRelationReady: screen.isRelationReady,
+        legalReferences: screen.derivedData.legalReferences,
         measurementTemplates: screen.derivedData.measurementTemplates,
         relationStatus: screen.relationStatus,
         session: screen.sectionSession!,

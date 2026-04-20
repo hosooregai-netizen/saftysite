@@ -238,6 +238,7 @@ function mapHazardCountermeasureCatalogItem(
   const category =
     normalizeMapperText(body.category) ||
     normalizeMapperText(body.division) ||
+    normalizeMapperText(body.section) ||
     normalizeMapperText(body.group);
   const expectedRisk =
     normalizeMapperText(body.expectedRisk) ||
@@ -248,10 +249,14 @@ function mapHazardCountermeasureCatalogItem(
     normalizeMapperText(body.countermeasure) ||
     normalizeMapperText(body.managementMeasure) ||
     normalizeMapperText(body.management_measure) ||
+    normalizeMapperText(body.counter_measure) ||
+    normalizeMapperText(body.measure) ||
+    normalizeMapperText(body.safetyMeasure) ||
     normalizeMapperText(body.body);
   const legalReference =
     normalizeMapperText(body.legalReference) ||
     normalizeMapperText(body.legal_reference) ||
+    normalizeMapperText(body.referenceLaw) ||
     normalizeMapperText(body.legalInfo);
   const note = normalizeMapperText(body.note) || normalizeMapperText(body.remark);
 

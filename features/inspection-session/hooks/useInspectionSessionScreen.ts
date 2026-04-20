@@ -263,6 +263,7 @@ export function useInspectionSessionScreen(sessionId: string) {
             cumulativeAgentEntries: [],
             doc7ReferenceMaterials: [],
             hazardCountermeasureCatalog: [],
+            legalReferences: [],
             measurementTemplates: [],
             progress: null,
             siteSessions: [],
