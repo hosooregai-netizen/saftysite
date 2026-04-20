@@ -62,6 +62,21 @@ const CONTENT_LIST_LIMIT = 1000;
 const REPORT_LIST_LIMIT = 500;
 const DEFAULT_SERVER_TIMEOUT_MS = 15000;
 const LONG_RUNNING_SERVER_TIMEOUT_MS = 45000;
+const PHOTO_ASSET_MUTATION_CAPABILITY_CACHE_TTL_MS = 5 * 60 * 1000;
+
+interface SafetyPhotoAssetMutationCapabilities {
+  deleteSupported: boolean;
+  roundUpdateSupported: boolean;
+}
+
+interface SafetyPhotoAssetMutationCapabilitiesCache {
+  expiresAt: number;
+  value: SafetyPhotoAssetMutationCapabilities;
+}
+
+const globalSafetyCapabilityCache = globalThis as typeof globalThis & {
+  __safetyPhotoAssetMutationCapabilitiesCache?: SafetyPhotoAssetMutationCapabilitiesCache;
+};
 
 export class SafetyServerApiError extends Error {
   status: number;
@@ -133,6 +148,99 @@ function buildUpstreamUrl(path: string) {
 
 export function buildSafetyAdminUpstreamUrl(path: string) {
   return buildUpstreamUrl(path);
+}
+
+function buildSafetyApiOpenApiUrls() {
+  const upstreamUrl = new URL(getSafetyApiUpstreamBaseUrl());
+  const normalizedBasePath = upstreamUrl.pathname.replace(/\/+$/, '');
+  const urls = new Set<string>([`${upstreamUrl.origin}/openapi.json`]);
+
+  if (normalizedBasePath) {
+    urls.add(`${upstreamUrl.origin}${normalizedBasePath}/openapi.json`);
+  }
+
+  return Array.from(urls);
+}
+
+function buildPhotoAssetOpenApiPathCandidates() {
+  const upstreamUrl = new URL(getSafetyApiUpstreamBaseUrl());
+  const normalizedBasePath = upstreamUrl.pathname.replace(/\/+$/, '');
+  const paths = new Set<string>(['/photo-assets']);
+
+  if (normalizedBasePath) {
+    paths.add(`${normalizedBasePath}/photo-assets`);
+  }
+
+  return Array.from(paths);
+}
+
+async function fetchSafetyApiOpenApiDocument() {
+  for (const url of buildSafetyApiOpenApiUrls()) {
+    try {
+      const response = await fetch(url, {
+        cache: 'no-store',
+      });
+      if (!response.ok) {
+        continue;
+      }
+
+      return (await response.json()) as Record<string, unknown>;
+    } catch {
+      // Try the next candidate URL.
+    }
+  }
+
+  return null;
+}
+
+export async function fetchSafetyPhotoAssetMutationCapabilitiesServer(): Promise<SafetyPhotoAssetMutationCapabilities> {
+  const cached = globalSafetyCapabilityCache.__safetyPhotoAssetMutationCapabilitiesCache;
+  const now = Date.now();
+  if (cached && cached.expiresAt > now) {
+    return cached.value;
+  }
+
+  const defaultCapabilities: SafetyPhotoAssetMutationCapabilities = {
+    deleteSupported: true,
+    roundUpdateSupported: true,
+  };
+
+  try {
+    const openApiDocument = await fetchSafetyApiOpenApiDocument();
+    if (!openApiDocument || typeof openApiDocument !== 'object') {
+      return defaultCapabilities;
+    }
+
+    const rawPaths = openApiDocument.paths;
+    if (!rawPaths || typeof rawPaths !== 'object') {
+      return defaultCapabilities;
+    }
+
+    const paths = rawPaths as Record<string, Record<string, unknown>>;
+    const matchedPath =
+      buildPhotoAssetOpenApiPathCandidates()
+        .map((path) => paths[path])
+        .find((value): value is Record<string, unknown> => Boolean(value && typeof value === 'object')) ??
+      Object.entries(paths).find(([path]) => path.endsWith('/photo-assets'))?.[1];
+
+    if (!matchedPath) {
+      return defaultCapabilities;
+    }
+
+    const nextValue: SafetyPhotoAssetMutationCapabilities = {
+      deleteSupported: Object.prototype.hasOwnProperty.call(matchedPath, 'delete'),
+      roundUpdateSupported: Object.prototype.hasOwnProperty.call(matchedPath, 'patch'),
+    };
+
+    globalSafetyCapabilityCache.__safetyPhotoAssetMutationCapabilitiesCache = {
+      expiresAt: now + PHOTO_ASSET_MUTATION_CAPABILITY_CACHE_TTL_MS,
+      value: nextValue,
+    };
+
+    return nextValue;
+  } catch {
+    return defaultCapabilities;
+  }
 }
 
 async function fetchAdminHeadquarterById(

@@ -1,6 +1,7 @@
 import 'server-only';
 
 import {
+  fetchSafetyPhotoAssetMutationCapabilitiesServer,
   fetchSafetyPhotoAssetsServer,
 } from '@/server/admin/safetyApiServer';
 import {
@@ -27,24 +28,31 @@ export async function loadPhotoAlbumList(
   request: Request,
   query: PhotoAlbumQuery,
 ): Promise<PhotoAlbumListResponse> {
-  const response = await fetchSafetyPhotoAssetsServer(
-    token,
-    {
-      all: Boolean(query.all),
-      headquarter_id: query.headquarterId || '',
-      limit: Math.max(1, Math.min(200, query.limit ?? 60)),
-      offset: Math.max(0, query.offset ?? 0),
-      query: query.query || '',
-      report_key: query.reportKey || '',
-      site_id: query.siteId || '',
-      sort_by: normalizeSortKey(query.sortBy),
-      sort_dir: normalizeSortDir(query.sortDir),
-      source_kind: normalizeSource(query.source),
-    },
-    request,
-  );
+  const [response, capabilities] = await Promise.all([
+    fetchSafetyPhotoAssetsServer(
+      token,
+      {
+        all: Boolean(query.all),
+        headquarter_id: query.headquarterId || '',
+        limit: Math.max(1, Math.min(200, query.limit ?? 60)),
+        offset: Math.max(0, query.offset ?? 0),
+        query: query.query || '',
+        report_key: query.reportKey || '',
+        site_id: query.siteId || '',
+        sort_by: normalizeSortKey(query.sortBy),
+        sort_dir: normalizeSortDir(query.sortDir),
+        source_kind: normalizeSource(query.source),
+      },
+      request,
+    ),
+    fetchSafetyPhotoAssetMutationCapabilitiesServer(),
+  ]);
 
   return {
+    capabilities: {
+      deleteSupported: capabilities.deleteSupported,
+      roundUpdateSupported: capabilities.roundUpdateSupported,
+    },
     limit: response.limit,
     offset: response.offset,
     rows: response.rows

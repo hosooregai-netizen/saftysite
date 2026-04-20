@@ -447,6 +447,10 @@ export function queryPhotoAlbumItems(
   const limit = Math.max(1, Math.min(200, query.limit ?? 60));
 
   return {
+    capabilities: {
+      deleteSupported: true,
+      roundUpdateSupported: true,
+    },
     limit,
     offset,
     rows: filtered.slice(offset, offset + limit),

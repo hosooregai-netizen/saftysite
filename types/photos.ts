@@ -53,7 +53,13 @@ export interface PhotoAlbumItem {
   sourceReportTitle: string;
 }
 
+export interface PhotoAlbumMutationCapabilities {
+  deleteSupported: boolean;
+  roundUpdateSupported: boolean;
+}
+
 export interface PhotoAlbumListResponse {
+  capabilities: PhotoAlbumMutationCapabilities;
   limit: number;
   offset: number;
   rows: PhotoAlbumItem[];

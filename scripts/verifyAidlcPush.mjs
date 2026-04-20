@@ -49,7 +49,7 @@ const FEATURE_RULES = [
       /^features\/admin\/lib\/adminClientCacheInvalidation(\.test)?\.ts$/,
       /^features\/admin\/lib\/adminDashboardBootstrapCache\.ts$/,
       /^features\/admin\/hooks\/useAdminDashboard(DataLoaders|Routing|State)\.ts$/,
-      /^features\/admin\/hooks\/buildAdminDashboard(Assignment|Crud)Actions\.ts$/,
+      /^features\/admin\/hooks\/buildAdminDashboard(Assignment|Content|Crud)Actions\.ts$/,
       /^features\/admin\/lib\/adminDashboardMutations\.ts$/,
       /^features\/admin\/sections\/content\//,
       /^app\/api\/admin\/directory\//,
@@ -59,7 +59,7 @@ const FEATURE_RULES = [
       /^server\/admin\/adminDirectory(Lists|Snapshot)\.ts$/,
       /^server\/admin\/exportSheets\.ts$/,
       /^server\/admin\/safetyApiServer(\.test)?\.ts$/,
-      /^server\/admin\/upstreamMappers\.ts$/,
+      /^server\/admin\/upstreamMappers(\.test)?\.ts$/,
     ],
   },
   {
@@ -111,8 +111,15 @@ const FEATURE_RULES = [
       /^app\/api\/admin\/sites\/\[siteId\]\/schedules\/generate\//,
       /^features\/admin\/sections\/schedules\//,
       /^server\/admin\/localScheduleNotifications\.ts$/,
-      /^server\/admin\/automation\.ts$/,
+      /^server\/admin\/automation(\.test)?\.ts$/,
       /^server\/admin\/scheduleSnapshot\.ts$/,
+    ],
+  },
+  {
+    ids: ['mobile-site-home', 'mobile-site-reports'],
+    patterns: [
+      /^features\/mobile\/components\/MobileSiteListScreen\.tsx$/,
+      /^features\/mobile\/site-list\//,
     ],
   },
   {

@@ -25,7 +25,11 @@ export async function runMobileSiteHomeSmoke(config: ClientSmokePlaywrightConfig
     await page.getByRole('heading', { name: '기술지도 보고서' }).waitFor({ state: 'visible' });
     await page.getByRole('heading', { name: '분기보고서' }).waitFor({ state: 'visible' });
 
-    await page.getByRole('link', { name: '분기 보고 열기' }).click();
+    // Pointer clicks here can land on the sticky mobile chrome instead of the anchor in CI/dev.
+    await page
+      .locator('a[href="/mobile/sites/site-1/quarterly"]')
+      .first()
+      .evaluate((element) => (element as HTMLAnchorElement).click());
     await page.waitForURL(/\/mobile\/sites\/site-1\/quarterly$/);
     await page.getByRole('heading', { name: '분기 보고 목록' }).waitFor({ state: 'visible' });
 

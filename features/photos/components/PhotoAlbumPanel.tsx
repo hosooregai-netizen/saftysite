@@ -16,7 +16,7 @@ import {
   uploadPhotoAlbumAsset,
 } from '@/lib/photos/apiClient';
 import { createPhotoThumbnail } from '@/lib/photos/thumbnail';
-import type { PhotoAlbumItem } from '@/types/photos';
+import type { PhotoAlbumItem, PhotoAlbumMutationCapabilities } from '@/types/photos';
 import styles from './PhotoAlbumPanel.module.css';
 
 interface PhotoAlbumSiteOption {
@@ -162,6 +162,8 @@ export function PhotoAlbumPanel({
   const [uploadRoundNo, setUploadRoundNo] = useState(0);
   const [bulkRoundNo, setBulkRoundNo] = useState(0);
   const [rows, setRows] = useState<PhotoAlbumItem[]>([]);
+  const [mutationCapabilities, setMutationCapabilities] =
+    useState<PhotoAlbumMutationCapabilities | null>(null);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -257,6 +259,7 @@ export function PhotoAlbumPanel({
         });
         if (cancelled) return;
         setRows(response.rows);
+        setMutationCapabilities(response.capabilities);
         setSelectedIds((current) =>
           current.filter((itemId) => response.rows.some((row) => row.id === itemId)),
         );
@@ -394,11 +397,21 @@ export function PhotoAlbumPanel({
   const allVisibleSelected =
     visibleRows.length > 0 && visibleRows.every((row) => selectedIds.includes(row.id));
   const hasSelectedRows = selectedIds.length > 0;
+  const roundUpdateSupported = mutationCapabilities?.roundUpdateSupported ?? true;
+  const deleteSupported = mutationCapabilities?.deleteSupported ?? true;
   const canBulkEditRound =
+    roundUpdateSupported &&
     hasSelectedRows &&
     selectedSiteIds.length === 1 &&
     bulkRoundOptions.length > 0 &&
     bulkRoundNo > 0;
+  const mutationCapabilityNotice = !roundUpdateSupported && !deleteSupported
+    ? '현재 연결된 Safety API 서버가 사진 회차 변경과 삭제를 아직 지원하지 않습니다.'
+    : !roundUpdateSupported
+      ? '현재 연결된 Safety API 서버가 사진 회차 변경을 아직 지원하지 않습니다.'
+      : !deleteSupported
+        ? '현재 연결된 Safety API 서버가 사진 삭제를 아직 지원하지 않습니다.'
+        : null;
 
   const activeItemMatchesContext =
     activeItem &&
@@ -455,6 +468,7 @@ export function PhotoAlbumPanel({
     });
     setVisibleCount(PAGE_SIZE);
     setRows(response.rows);
+    setMutationCapabilities(response.capabilities);
     return response.rows;
   };
 
@@ -502,6 +516,11 @@ export function PhotoAlbumPanel({
   };
 
   const handleBulkRoundChange = async () => {
+    if (!roundUpdateSupported) {
+      setError('현재 연결된 Safety API 서버가 사진 회차 변경을 아직 지원하지 않습니다.');
+      return false;
+    }
+
     if (!canBulkEditRound) {
       return false;
     }
@@ -526,6 +545,11 @@ export function PhotoAlbumPanel({
   };
 
   const handleDeleteSelected = async () => {
+    if (!deleteSupported) {
+      setError('현재 연결된 Safety API 서버가 사진 삭제를 아직 지원하지 않습니다.');
+      return;
+    }
+
     if (!hasSelectedRows) {
       return;
     }
@@ -555,6 +579,11 @@ export function PhotoAlbumPanel({
   };
 
   const handleOpenRoundModal = () => {
+    if (!roundUpdateSupported) {
+      setError('현재 연결된 Safety API 서버가 사진 회차 변경을 아직 지원하지 않습니다.');
+      return;
+    }
+
     if (!hasSelectedRows) {
       return;
     }
@@ -725,6 +754,9 @@ export function PhotoAlbumPanel({
         <div className={adminStyles.sectionBody}>
           {error ? <div className={adminStyles.bannerError}>{error}</div> : null}
           {notice ? <div className={adminStyles.bannerNotice}>{notice}</div> : null}
+          {mutationCapabilityNotice ? (
+            <div className={adminStyles.bannerNotice}>{mutationCapabilityNotice}</div>
+          ) : null}
 
           {loading ? (
             <div className={styles.emptyState}>사진첩을 불러오는 중입니다.</div>
@@ -748,7 +780,7 @@ export function PhotoAlbumPanel({
                     type="button"
                     className="app-button app-button-secondary"
                     onClick={handleOpenRoundModal}
-                    disabled={!hasSelectedRows || bulkUpdating || deleting}
+                    disabled={!roundUpdateSupported || !hasSelectedRows || bulkUpdating || deleting}
                   >
                     선택 회차 변경
                   </button>
@@ -764,7 +796,7 @@ export function PhotoAlbumPanel({
                     type="button"
                     className="app-button app-button-danger"
                     onClick={() => void handleDeleteSelected()}
-                    disabled={!hasSelectedRows || bulkUpdating || deleting}
+                    disabled={!deleteSupported || !hasSelectedRows || bulkUpdating || deleting}
                   >
                     {deleting ? '삭제 중...' : '선택 삭제'}
                   </button>

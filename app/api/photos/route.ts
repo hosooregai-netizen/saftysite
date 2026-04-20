@@ -11,6 +11,16 @@ import type { PhotoAlbumSourceFilter } from '@/types/photos';
 
 export const runtime = 'nodejs';
 
+function createUnsupportedMutationResponse(action: 'delete' | 'round') {
+  const actionLabel = action === 'delete' ? '사진 삭제' : '사진 회차 변경';
+  return NextResponse.json(
+    {
+      error: `현재 연결된 Safety API 서버가 ${actionLabel} 기능을 아직 지원하지 않습니다. 최신 safety-server 배포본에 연결한 뒤 다시 시도해 주세요.`,
+    },
+    { status: 501 },
+  );
+}
+
 function parseLimit(value: string | null) {
   const parsed = Number(value || '60');
   if (!Number.isFinite(parsed)) return 60;
@@ -114,6 +124,9 @@ export async function PATCH(request: Request): Promise<Response> {
     });
   } catch (error) {
     if (error instanceof SafetyServerApiError) {
+      if (error.status === 405) {
+        return createUnsupportedMutationResponse('round');
+      }
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
 
@@ -141,6 +154,9 @@ export async function DELETE(request: Request): Promise<Response> {
     });
   } catch (error) {
     if (error instanceof SafetyServerApiError) {
+      if (error.status === 405) {
+        return createUnsupportedMutationResponse('delete');
+      }
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
 
