@@ -847,7 +847,7 @@ export function WorkerCalendarScreen() {
       return [...nextRows, ...response.rows];
     });
 
-    return persisted ?? null;
+    return persisted ?? schedule;
   };
 
   const handleSaveSchedule = async () => {
@@ -873,10 +873,6 @@ export function WorkerCalendarScreen() {
     try {
       setError(null);
       const persistedSchedule = await resolvePersistedScheduleForSave(schedule);
-      if (!persistedSchedule) {
-        setError('서버가 이 회차 일정 row를 아직 준비하지 못했습니다. 잠시 후 다시 열어 주세요.');
-        return;
-      }
       const saved = await updateMySchedule(persistedSchedule.id, {
         actualVisitDate,
         linkedReportKey,
