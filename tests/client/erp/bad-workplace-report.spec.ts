@@ -24,6 +24,11 @@ export async function runBadWorkplaceReportSmoke(config: ClientSmokePlaywrightCo
       .getByRole('button', { name: '문서 다운로드 (.hwpx)' })
       .waitFor({ state: 'visible' });
     await page.getByRole('button', { name: '저장' }).waitFor({ state: 'visible' });
+    await page.getByRole('columnheader', { name: '행 추가' }).waitFor({ state: 'visible' });
+
+    if ((await page.getByRole('columnheader', { name: '작업' }).count()) > 0) {
+      throw new Error('불량 사업장 신고 취약사항 표 헤더가 아직 작업으로 표시됩니다.');
+    }
 
     const sourceButton = page.getByRole('button', { name: '보고서 선택' });
     if ((await sourceButton.count()) > 0) {

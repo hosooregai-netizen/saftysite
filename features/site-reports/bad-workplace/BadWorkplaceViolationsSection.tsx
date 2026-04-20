@@ -31,16 +31,13 @@ export function BadWorkplaceViolationsSection({
               <th>개선지시 사항(지도일)</th>
               <th>불이행 사항(확인일)</th>
               <th className={operationalStyles.violationActionHeader}>
-                <div className={operationalStyles.violationActionHeaderContent}>
-                  <span className={operationalStyles.violationActionLabel}>작업</span>
-                  <button
-                    type="button"
-                    className={`app-button ${operationalStyles.violationAddButton}`}
-                    onClick={onAddViolation}
-                  >
-                    행 추가
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  className={`app-button ${operationalStyles.violationAddButton}`}
+                  onClick={onAddViolation}
+                >
+                  행 추가
+                </button>
               </th>
             </tr>
           </thead>

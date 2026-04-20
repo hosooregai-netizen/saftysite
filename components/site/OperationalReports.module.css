@@ -613,39 +613,27 @@
 .violationActionHeader {
   width: 116px;
   min-width: 116px;
-  padding: 10px 8px !important;
-}
-
-.violationActionHeaderContent {
-  display: grid;
-  gap: 10px;
-  align-items: center;
-}
-
-.violationActionLabel {
-  display: inline-flex;
-  justify-content: center;
-  width: 100%;
+  padding: 4px !important;
 }
 
 .violationAddButton {
   width: 100%;
   min-height: 34px;
-  border: 1px solid #7ec79a !important;
-  border-radius: 10px !important;
-  background: linear-gradient(180deg, #eefaf2 0%, #dbf2e2 100%) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
-  color: #1f6b42 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--erp-mid) !important;
   font-size: 12px;
-  font-weight: 800;
-  letter-spacing: -0.01em;
+  font-weight: 700;
+  letter-spacing: 0;
 }
 
 .violationAddButton:hover,
 .violationAddButton:focus-visible {
-  border-color: #5faa7a !important;
-  background: linear-gradient(180deg, #e4f6eb 0%, #cdebd8 100%) !important;
-  color: #195837 !important;
+  color: var(--erp-navy) !important;
+  text-decoration: underline;
+  text-underline-offset: 3px;
   outline: none;
 }
 
@@ -742,9 +730,10 @@
 }
 
 .violationActionCell {
-  padding: 8px;
+  padding: 4px;
+  text-align: center;
   vertical-align: middle !important;
-  background: color-mix(in srgb, var(--erp-panel-muted) 36%, var(--erp-white));
+  background: var(--erp-white);
 }
 
 .violationActionButton {
