@@ -15,6 +15,13 @@ export interface FeatureContractSmokeScope {
   kind: 'client-smoke';
 }
 
+export interface FeatureContractSmokeSpec {
+  primaryDocPath: string;
+  relatedDocPaths: string[];
+  runnerExportName: string;
+  runnerImportPath: string;
+}
+
 export interface RecoverySliceManifest {
   criticalInvariants: string[];
   goal: string;
@@ -30,6 +37,7 @@ export interface FeatureContractMetadata {
   ownedGlobs: string[];
   recoverySlices: RecoverySliceManifest[];
   scope: FeatureContractScope;
+  smokeSpec: FeatureContractSmokeSpec;
   smokeScope: FeatureContractSmokeScope;
 }
 

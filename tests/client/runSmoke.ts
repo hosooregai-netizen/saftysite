@@ -6,49 +6,7 @@ import {
   isFeatureContractId,
   type FeatureContractId,
 } from './featureContracts';
-import { runAdminControlCenterSmoke } from './admin/admin-control-center.spec';
-import { runAdminHeadquartersSmoke } from './admin/admin-headquarters.spec';
-import { runAdminReportsSmoke } from './admin/admin-reports.spec';
-import { runAdminSchedulesSmoke } from './admin/admin-schedules.spec';
-import { runAdminSitesSmoke } from './admin/admin-sites.spec';
-import { runAdminUsersSmoke } from './admin/admin-users.spec';
-import { runAuthSmoke } from './erp/auth.spec';
-import { runBadWorkplaceReportSmoke } from './erp/bad-workplace-report.spec';
-import { runMobileBadWorkplaceSmoke } from './erp/mobile-bad-workplace.spec';
-import { runSiteReportListSmoke } from './erp/site-report-list.spec';
-import { runMobileSiteHomeSmoke } from './erp/mobile-site-home.spec';
-import { runMobileWorkerNavSmoke } from './erp/mobile-worker-nav.spec';
-import { runMobileSiteReportsSmoke } from './erp/mobile-site-reports.spec';
-import { runMobileQuarterlyListSmoke } from './erp/mobile-quarterly-list.spec';
-import { runMobileQuarterlyReportSmoke } from './erp/mobile-quarterly-report.spec';
-import { runMobileLinkSmoke } from './erp/mobile-link.spec';
-import { runQuarterlyReportSmoke } from './erp/quarterly-report.spec';
-import { runSiteHubSmoke } from './erp/site-hub.spec';
-import { runWorkerCalendarSmoke } from './erp/worker-calendar.spec';
-
-type FeatureRunner = (config: ReturnType<typeof resolveClientSmokePlaywrightConfig>) => Promise<void>;
-
-const FEATURE_RUNNERS: Record<FeatureContractId, FeatureRunner> = {
-  'admin-control-center': runAdminControlCenterSmoke,
-  'admin-headquarters': runAdminHeadquartersSmoke,
-  'admin-reports': runAdminReportsSmoke,
-  'admin-sites': runAdminSitesSmoke,
-  'admin-schedules': runAdminSchedulesSmoke,
-  'admin-users': runAdminUsersSmoke,
-  auth: runAuthSmoke,
-  'bad-workplace-report': runBadWorkplaceReportSmoke,
-  'mobile-bad-workplace': runMobileBadWorkplaceSmoke,
-  'site-report-list': runSiteReportListSmoke,
-  'mobile-site-home': runMobileSiteHomeSmoke,
-  'mobile-worker-nav': runMobileWorkerNavSmoke,
-  'mobile-site-reports': runMobileSiteReportsSmoke,
-  'mobile-quarterly-list': runMobileQuarterlyListSmoke,
-  'mobile-quarterly-report': runMobileQuarterlyReportSmoke,
-  'mobile-link': runMobileLinkSmoke,
-  'quarterly-report': runQuarterlyReportSmoke,
-  'site-hub': runSiteHubSmoke,
-  'worker-calendar': runWorkerCalendarSmoke,
-};
+import { SMOKE_RUNNERS } from './smokeRegistry.generated';
 
 function parseRequestedFeatures(argv: string[]) {
   if (argv.length === 0) return FEATURE_CONTRACT_IDS;
@@ -80,7 +38,7 @@ export async function main(argv: string[] = process.argv.slice(2)) {
     const contract = getFeatureContract(featureId);
     const startedAt = performance.now();
     console.log(`[client-smoke] START ${featureId}: ${contract.description}`);
-    await FEATURE_RUNNERS[featureId](config);
+    await SMOKE_RUNNERS[featureId](config);
     const elapsedMs = Math.round(performance.now() - startedAt);
     console.log(`[client-smoke] PASS ${featureId} (${elapsedMs}ms)`);
   }

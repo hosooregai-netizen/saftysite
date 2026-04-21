@@ -199,7 +199,7 @@ function addSummarySlide(pptx: PptxGenJS) {
     body: [
       'working tree가 아니라 staged snapshot 기준으로 verify',
       '부분 staging과 미저장 작업이 섞여도 판정이 일관적',
-      'guardrail config 변경 시 전체 validate + audit 수행',
+      'metadata와 generated smoke registry drift도 commit 전에 검증',
     ],
   });
   addInfoCard(slide, {
@@ -211,7 +211,7 @@ function addSummarySlide(pptx: PptxGenJS) {
     body: [
       '실제 push ref stdin을 읽어 diff 범위를 계산',
       '새 브랜치 push와 다른 대상 ref push를 더 정확히 판정',
-      'metadata/harness/runner 변경 시 scope-aware smoke 승격',
+      'metadata/doc/runner/generated registry 변경 시 scope-aware smoke 승격',
     ],
   });
   addInfoCard(slide, {
@@ -227,7 +227,7 @@ function addSummarySlide(pptx: PptxGenJS) {
     ],
   });
   addBullets(slide, [
-    '핵심은 guarded source만이 아니라 metadata/harness/runner 같은 guardrail 자체 변경도 놓치지 않는 것이다.',
+    '핵심은 guarded source만이 아니라 metadata/harness/runner/canonical smoke doc 같은 guardrail 자체 변경도 놓치지 않는 것이다.',
     '로컬 개발 속도는 유지하면서도 잘못된 diff 범위 계산과 unstaged noise 때문에 생기던 오검출을 줄였다.',
   ], { x: 0.9, y: 4.25, w: 10.8, h: 1.9, fontSize: 15 });
   addFooter(slide, 'AIDLC Hook Runtime');
@@ -259,6 +259,7 @@ function addPreCommitSlide(pptx: PptxGenJS) {
       '부분 staging 중인 파일 때문에 typecheck/audit가 흔들리지 않게 한다.',
       '“지금 커밋하려는 것”과 “작업 중인 것”을 분리해 판정한다.',
       'guarded source 삭제도 diff-filter에 포함해 companion 누락을 더 빨리 잡는다.',
+      'smoke registry generated file이 stale이면 커밋 전에 바로 막는다.',
     ],
   });
   addFooter(slide, 'AIDLC Hook Runtime');
@@ -282,7 +283,7 @@ function addPrePushSlide(pptx: PptxGenJS) {
       '  local ref / local oid / remote ref / remote oid',
       '    -> updated ref별 changed files 계산',
       '      -> guarded source면 metadata 기반 targeted smoke',
-      '      -> metadata or smoke runner config면 scoped smoke set',
+      '      -> metadata or smoke/doc/runner config면 scoped smoke set',
       '        -> local app reachability 확인 후 Playwright smoke 실행',
     ].join('\n'),
     {
@@ -332,9 +333,11 @@ function addGuardrailConfigSlide(pptx: PptxGenJS) {
     title: 'Full validation 대상으로 보는 파일',
     body: [
       '`tests/client/contracts/featureContractMetadata.json`',
-      '`tests/client/contracts/*.ts`, `tests/client/featureContracts.ts`',
+      '`tests/client/contracts/*.ts`, `tests/client/contracts/smoke-specs/**/*.md`',
+      '`tests/client/featureContracts.ts`, `tests/client/smokeRegistry.generated.ts`',
       '`tests/client/fixtures/*SmokeHarness.ts`',
-      '`tests/client/runSmoke.ts`, `scripts/smoke*.ts`',
+      '`tests/client/runSmoke.ts`, `scripts/generateSmokeRegistry.mjs`',
+      '`scripts/listSmokeRegistryContractIds.ts`, `scripts/smoke*.ts`',
     ],
   });
   addInfoCard(slide, {
@@ -346,7 +349,7 @@ function addGuardrailConfigSlide(pptx: PptxGenJS) {
     body: [
       'guarded source가 없어도 `tsc`, recovery validation, ERP reverse validation은 돈다.',
       '필요할 때는 admin/ERP audit를 둘 다 태워서 drift를 줄인다.',
-      'pre-push는 smoke mapping layer가 바뀌면 targeted smoke 대신 scope-aware smoke로 승격한다.',
+      'pre-push는 smoke mapping layer나 canonical doc linkage가 바뀌면 targeted smoke 대신 scope-aware smoke로 승격한다.',
     ],
   });
   addFooter(slide, 'AIDLC Hook Runtime');
@@ -389,6 +392,7 @@ function addFileMapSlide(pptx: PptxGenJS) {
       '`scripts/aidlcContractMetadata.mjs`',
       '`tests/client/contracts/featureContractMetadata.json`',
       '`tests/client/featureContracts.ts`',
+      '`tests/client/contracts/smoke-specs/**`',
     ],
   });
   addInfoCard(slide, {
@@ -399,6 +403,7 @@ function addFileMapSlide(pptx: PptxGenJS) {
     title: '실행 증거',
     body: [
       '`tests/client/runSmoke.ts`',
+      '`tests/client/smokeRegistry.generated.ts`',
       '`tests/client/fixtures/*SmokeHarness.ts`',
       '`.github/workflows/aidlc.yml`',
     ],
@@ -411,10 +416,11 @@ function addChecklistSlide(pptx: PptxGenJS) {
   addTitle(slide, '6. 운영 체크리스트', '새 feature보다 중요한 것은 hook과 metadata가 같은 판단을 하도록 유지하는 것이다.');
   addBullets(slide, [
     '1. guarded source를 건드렸다면 proof/doc/reverse spec이 같이 staged 되었는지 본다.',
-    '2. contract metadata나 smoke harness를 바꿨다면 targeted smoke가 아니라 관련 scope smoke까지 각오한다.',
-    '3. 다른 branch/ref로 push할 때도 pre-push가 실제 stdin ref를 읽는다는 전제를 유지한다.',
-    '4. local hook을 우회할 수 있어도 CI가 같은 verify script를 다시 돌린다는 점을 문서에 남긴다.',
-    '5. hook을 더 바꿀 때는 `tests/scripts/aidlcHookUtils.test.mjs` 같은 순수 규칙 테스트도 같이 갱신한다.',
+    '2. smoke runner나 canonical smoke doc를 바꿨다면 metadata와 generated registry를 같이 갱신한다.',
+    '3. contract metadata나 smoke harness를 바꿨다면 targeted smoke가 아니라 관련 scope smoke까지 각오한다.',
+    '4. 다른 branch/ref로 push할 때도 pre-push가 실제 stdin ref를 읽는다는 전제를 유지한다.',
+    '5. local hook을 우회할 수 있어도 CI가 같은 verify script를 다시 돌린다는 점을 문서에 남긴다.',
+    '6. hook을 더 바꿀 때는 `tests/scripts/aidlcHookUtils.test.mjs`와 smoke registry 테스트를 같이 갱신한다.',
   ], { x: 0.95, y: 1.55, w: 10.5, h: 4.9, fontSize: 18 });
   addFooter(slide, 'AIDLC Hook Runtime');
 }
@@ -426,6 +432,8 @@ function addAppendixSlide(pptx: PptxGenJS) {
     'docs/guardrails/aidlc-hooks-overview.md',
     'scripts/generateAidlcHooksOverviewDeck.ts',
     'scripts/aidlcHookUtils.mjs',
+    'scripts/generateSmokeRegistry.mjs',
+    'scripts/smokeRegistrySupport.mjs',
     'scripts/verifyAidlc.mjs',
     'scripts/verifyAidlcPush.mjs',
     '.githooks/pre-commit',

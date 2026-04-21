@@ -80,7 +80,7 @@ remote CI
 | [tests/client/contracts/erpContracts.ts](/Users/mac_mini/Documents/GitHub/saftysite-real/tests/client/contracts/erpContracts.ts:1) | ERP top-level feature contract 정의 |
 | [tests/client/contracts/shared.ts](/Users/mac_mini/Documents/GitHub/saftysite-real/tests/client/contracts/shared.ts:1) | `FeatureContract`, `FeatureContractMetadata`, `RecoverySliceManifest` 타입 정의 |
 | [tests/client/featureContracts.ts](/Users/mac_mini/Documents/GitHub/saftysite-real/tests/client/featureContracts.ts:1) | contract registry. smoke runner가 읽는 얇은 합본 레이어 |
-| [tests/client/contracts/featureContractMetadata.json](/Users/mac_mini/Documents/GitHub/saftysite-real/tests/client/contracts/featureContractMetadata.json:1) | guarded globs, smoke scope, recovery slice, reverse spec path의 단일 메타데이터 소스 |
+| [tests/client/contracts/featureContractMetadata.json](/Users/mac_mini/Documents/GitHub/saftysite-real/tests/client/contracts/featureContractMetadata.json:1) | guarded globs, smoke scope, recovery slice, reverse spec path, smoke runner/doc linkage의 단일 메타데이터 소스 |
 | [tests/client/contracts/metadata.ts](/Users/mac_mini/Documents/GitHub/saftysite-real/tests/client/contracts/metadata.ts:1) | JSON metadata 타입 래퍼 |
 
 ### 3. 검증 스크립트
@@ -89,17 +89,22 @@ remote CI
 | --- | --- |
 | [scripts/aidlcContractMetadata.mjs](/Users/mac_mini/Documents/GitHub/saftysite-real/scripts/aidlcContractMetadata.mjs:1) | metadata JSON 로드, glob 매칭, contract/slice 해석 |
 | [scripts/aidlcHookUtils.mjs](/Users/mac_mini/Documents/GitHub/saftysite-real/scripts/aidlcHookUtils.mjs:1) | guardrail config 파일 분류, pre-push stdin parser |
-| [scripts/validateRecoverySlices.mjs](/Users/mac_mini/Documents/GitHub/saftysite-real/scripts/validateRecoverySlices.mjs:1) | metadata 정합성, reverse spec header, inventory 링크, staged slice companion 검사 |
+| [scripts/validateRecoverySlices.mjs](/Users/mac_mini/Documents/GitHub/saftysite-real/scripts/validateRecoverySlices.mjs:1) | metadata 정합성, smoke registry drift, reverse spec header, inventory 링크, staged slice companion 검사 |
 | [scripts/verifyAidlc.mjs](/Users/mac_mini/Documents/GitHub/saftysite-real/scripts/verifyAidlc.mjs:1) | pre-commit 성격. proof/doc 동반 여부, recovery-slice validation, `tsc`, audit 실행 |
 | [scripts/verifyAidlcPush.mjs](/Users/mac_mini/Documents/GitHub/saftysite-real/scripts/verifyAidlcPush.mjs:1) | pre-push 성격. 실제 pushed ref에서 변경 파일을 계산하고 필요한 smoke를 실행 |
 | [scripts/aidlcAudit.mjs](/Users/mac_mini/Documents/GitHub/saftysite-real/scripts/aidlcAudit.mjs:1) | 파일 크기/분해 후보를 advisory audit으로 표시 |
 | [scripts/listFeatureContractIds.ts](/Users/mac_mini/Documents/GitHub/saftysite-real/scripts/listFeatureContractIds.ts:1) | metadata와 실제 contract registry id drift 검사 보조 |
+| [scripts/generateSmokeRegistry.mjs](/Users/mac_mini/Documents/GitHub/saftysite-real/scripts/generateSmokeRegistry.mjs:1) | metadata에서 checked-in smoke registry 생성 및 stale check |
+| [scripts/listSmokeRegistryContractIds.ts](/Users/mac_mini/Documents/GitHub/saftysite-real/scripts/listSmokeRegistryContractIds.ts:1) | generated smoke registry와 contract id drift 검사 보조 |
+| [scripts/smokeRegistrySupport.mjs](/Users/mac_mini/Documents/GitHub/saftysite-real/scripts/smokeRegistrySupport.mjs:1) | smoke runner/doc validation과 registry source 빌드 로직 |
 
 ### 4. smoke와 증거 레이어
 
 | 파일 | 역할 |
 | --- | --- |
 | [tests/client/runSmoke.ts](/Users/mac_mini/Documents/GitHub/saftysite-real/tests/client/runSmoke.ts:1) | top-level contract id를 받아 smoke runner 실행 |
+| [tests/client/smokeRegistry.generated.ts](/Users/mac_mini/Documents/GitHub/saftysite-real/tests/client/smokeRegistry.generated.ts:1) | metadata에서 생성된 smoke runner/doc registry |
+| [tests/client/contracts/smoke-specs/](/Users/mac_mini/Documents/GitHub/saftysite-real/tests/client/contracts/smoke-specs/) | contract별 canonical smoke doc 모음 |
 | [tests/client/admin/admin-control-center.spec.ts](/Users/mac_mini/Documents/GitHub/saftysite-real/tests/client/admin/admin-control-center.spec.ts:1) | admin 대표 smoke 예시 |
 | [tests/client/erp/quarterly-report.spec.ts](/Users/mac_mini/Documents/GitHub/saftysite-real/tests/client/erp/quarterly-report.spec.ts:1) | ERP 대표 smoke 예시 |
 | [tests/client/fixtures/adminSmokeHarness.ts](/Users/mac_mini/Documents/GitHub/saftysite-real/tests/client/fixtures/adminSmokeHarness.ts:1) | admin mocked smoke harness |
@@ -131,18 +136,40 @@ remote CI
 2. `npm run verify:aidlc`가 staged 파일 중 guarded 파일과 guardrail config 파일을 찾는다.
 3. admin/erp proof 파일이 같이 staged 되었는지 본다.
 4. `validateRecoverySlices`를 돌린다.
-5. managed recovery slice에 속한 파일이 바뀌었으면 해당 reverse spec도 같이 바뀌었는지 본다.
-6. `tsc --noEmit`을 돌린다.
-7. 해당 scope의 `aidlc:audit`를 돌리거나, guardrail config 변경이면 admin/ERP audit를 둘 다 돌린다.
-8. 종료 후 stash를 자동 복원한다.
+5. metadata의 `smokeSpec`가 실제 runner/doc와 맞는지, generated registry가 stale이 아닌지 본다.
+6. managed recovery slice에 속한 파일이 바뀌었으면 해당 reverse spec도 같이 바뀌었는지 본다.
+7. `tsc --noEmit`을 돌린다.
+8. 해당 scope의 `aidlc:audit`를 돌리거나, guardrail config 변경이면 admin/ERP audit를 둘 다 돌린다.
+9. 종료 후 stash를 자동 복원한다.
 
 ### 로컬 푸시 전
 
 1. `.githooks/pre-push`가 Git hook stdin의 ref update를 임시 파일로 받아 `npm run verify:aidlc:push`에 넘긴다.
 2. `verifyAidlcPush`는 실제 pushed ref 범위에서 변경 파일을 계산한다.
 3. guarded source면 contract metadata에 매핑해서 smoke id를 모은다.
-4. metadata/harness/runner 변경이면 관련 scope smoke set으로 승격한다.
+4. metadata/harness/runner/generated registry/canonical smoke doc 변경이면 관련 scope smoke set으로 승격한다.
 5. 필요한 smoke를 실행한다.
+
+## smoke registry와 문서 연결
+
+이번 구조에서 smoke-specific truth는 `featureContractMetadata.json`의 `smokeSpec`가 가진다.
+
+- `runnerImportPath`
+- `runnerExportName`
+- `primaryDocPath`
+- `relatedDocPaths`
+
+의도는 두 가지다.
+
+- `adminContracts.ts` / `erpContracts.ts`는 제품 설명과 route/API/critical action 같은 hand-authored contract를 계속 맡는다.
+- smoke runner binding과 canonical smoke doc linkage는 metadata가 소유하고, 실행 레이어는 generated file이 맡는다.
+
+생성 결과인 `tests/client/smokeRegistry.generated.ts`는 아래 두 맵을 export한다.
+
+- `SMOKE_RUNNERS`
+- `SMOKE_DOCS`
+
+그래서 `runSmoke.ts`는 더 이상 hand-maintained runner map을 들고 있지 않고, generated registry만 소비한다.
 
 ### CI
 
@@ -157,10 +184,13 @@ remote CI
 
 - guarded 파일이 어느 top-level contract에 속하는지
 - 그 contract가 어떤 smoke id를 요구하는지
+- 그 contract가 어떤 smoke runner와 canonical smoke doc을 가져야 하는지
 - managed recovery slice가 어떤 reverse spec을 가져야 하는지
 - reverse spec header가 metadata와 맞는지
 - reverse inventory에 managed slice가 반영되었는지
 - 실제 contract registry와 metadata contract id 집합이 같은지
+- generated smoke registry id 집합이 contract id와 같은지
+- canonical smoke doc이 존재하고 verification heading을 갖는지
 
 즉, 첫 번째 migration wave에 대해서는 “틀이 깨진 상태로 슬쩍 지나가기”가 꽤 어려워졌다.
 
@@ -173,6 +203,7 @@ remote CI
 - batch record까지 무조건 강제하는 메타데이터 validator는 아직 없음
 - 일부 공용 코드 변경이 너무 넓은 ownership으로 묶일 수 있어서, 더 세밀한 slice 분해가 필요할 수 있음
 - smoke는 여전히 top-level contract 단위라, 세부 slice별 smoke 분리는 아직 하지 않음
+- canonical smoke doc 내용 자체를 runner 단계와 semantic diff까지 비교하는 수준은 아직 아님
 
 ## 분리된 ERP Reverse Platform
 

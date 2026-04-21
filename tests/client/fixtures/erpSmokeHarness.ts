@@ -38,7 +38,7 @@ export interface ErpSmokeHarness extends ErpSmokeFixtureContext {
   loginAs: (email: string, password?: string) => Promise<void>;
   logoutToLoginPanel: () => Promise<void>;
   waitForCondition: (check: () => Promise<boolean>, failureMessage: string) => Promise<void>;
-  waitForLoginPanel: () => Promise<void>;
+  waitForLoginPanel: (options?: { timeoutMs?: number }) => Promise<void>;
   waitForRequestCount: (requestKey: string, minimumCount: number) => Promise<void>;
 }
 
@@ -844,7 +844,23 @@ export async function createErpSmokeHarness(
       await browser.close();
     },
     async loginAs(email: string, password = 'smoke-password') {
-      await harness.waitForLoginPanel();
+      const sawLoginPanel = await harness.waitForLoginPanel({ timeoutMs: 1_500 }).then(
+        () => true,
+        () => false,
+      );
+      if (!sawLoginPanel) {
+        const logoutVisible = await page
+          .getByRole('button', { name: '로그아웃' })
+          .first()
+          .isVisible({ timeout: 1_500 })
+          .catch(() => false);
+        if (logoutVisible) {
+          return;
+        }
+
+        await harness.waitForLoginPanel();
+      }
+
       await page.evaluate(
         ({ nextEmail, nextPassword }) => {
           const emailInput = document.querySelector('input[type="email"]');
@@ -900,10 +916,10 @@ export async function createErpSmokeHarness(
 
       assert.fail(failureMessage);
     },
-    async waitForLoginPanel() {
-      await page.locator('input[type="email"]').waitFor({ state: 'visible' });
-      await page.locator('input[type="password"]').waitFor({ state: 'visible' });
-      await page.locator('button[type="submit"]').waitFor({ state: 'visible' });
+    async waitForLoginPanel({ timeoutMs = config.testTimeoutMs }: { timeoutMs?: number } = {}) {
+      await page.locator('input[type="email"]').waitFor({ state: 'visible', timeout: timeoutMs });
+      await page.locator('input[type="password"]').waitFor({ state: 'visible', timeout: timeoutMs });
+      await page.locator('button[type="submit"]').waitFor({ state: 'visible', timeout: timeoutMs });
     },
     async waitForRequestCount(requestKey: string, minimumCount: number) {
       const deadline = Date.now() + config.testTimeoutMs;

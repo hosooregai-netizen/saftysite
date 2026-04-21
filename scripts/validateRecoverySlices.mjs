@@ -9,6 +9,10 @@ import {
   isGuardedFile,
   loadContractMetadata,
 } from './aidlcContractMetadata.mjs';
+import {
+  getGeneratedSmokeRegistryPath,
+  validateSmokeSpecMetadata,
+} from './smokeRegistrySupport.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const inventoryPath = path.join(repoRoot, getReverseSpecInventoryPath());
@@ -72,6 +76,9 @@ function validateStaticMetadata() {
   const featureContractIds = JSON.parse(
     run('npx', ['tsx', 'scripts/listFeatureContractIds.ts']),
   ).sort();
+  const smokeRegistryContractIds = JSON.parse(
+    run('npx', ['tsx', 'scripts/listSmokeRegistryContractIds.ts']),
+  ).sort();
   const metadataContractIds = Object.keys(metadata.contracts).sort();
 
   assert(
@@ -84,6 +91,21 @@ function validateStaticMetadata() {
     'feature contract metadata ids must stay in sync with tests/client/featureContracts.ts.',
     failures,
   );
+  assert(
+    JSON.stringify(featureContractIds) === JSON.stringify(smokeRegistryContractIds),
+    `feature contract ids must stay in sync with ${getGeneratedSmokeRegistryPath()}.`,
+    failures,
+  );
+
+  failures.push(...validateSmokeSpecMetadata());
+
+  try {
+    run('node', ['scripts/generateSmokeRegistry.mjs', '--check']);
+  } catch {
+    failures.push(
+      `generated smoke registry is stale. run "npm run generate:smoke-registry" to refresh ${getGeneratedSmokeRegistryPath()}.`,
+    );
+  }
 
   for (const [contractId, contract] of Object.entries(metadata.contracts)) {
     assert(contract.scope === 'admin' || contract.scope === 'erp', `${contractId} has an invalid scope.`, failures);

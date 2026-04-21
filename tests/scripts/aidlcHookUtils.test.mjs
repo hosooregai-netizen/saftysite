@@ -36,24 +36,28 @@ test('collectVerificationConfigFiles includes hook and metadata changes', () => 
   const files = [
     '.githooks/pre-commit',
     'tests/client/contracts/featureContractMetadata.json',
+    'tests/client/contracts/smoke-specs/admin/admin-control-center.md',
     'app/(admin)/page.tsx',
   ];
 
   assert.deepEqual(collectVerificationConfigFiles(files), [
     '.githooks/pre-commit',
     'tests/client/contracts/featureContractMetadata.json',
+    'tests/client/contracts/smoke-specs/admin/admin-control-center.md',
   ]);
 });
 
 test('collectFullSmokeConfigFiles narrows to smoke-affecting guardrail files', () => {
   const files = [
     'tests/client/fixtures/erpSmokeHarness.ts',
+    'tests/client/smokeRegistry.generated.ts',
     'scripts/validateRecoverySlices.mjs',
     'tests/client/contracts/featureContractMetadata.json',
   ];
 
   assert.deepEqual(collectFullSmokeConfigFiles(files), [
     'tests/client/fixtures/erpSmokeHarness.ts',
+    'tests/client/smokeRegistry.generated.ts',
     'tests/client/contracts/featureContractMetadata.json',
   ]);
 });

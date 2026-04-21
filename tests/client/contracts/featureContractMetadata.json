@@ -143,7 +143,19 @@
             "npm run test:client:smoke -- admin-control-center"
           ]
         }
-      ]
+      ],
+      "smokeSpec": {
+        "runnerImportPath": "tests/client/admin/admin-control-center.spec.ts",
+        "runnerExportName": "runAdminControlCenterSmoke",
+        "primaryDocPath": "tests/client/contracts/smoke-specs/admin/admin-control-center.md",
+        "relatedDocPaths": [
+          "tests/client/admin/analytics-employee-monthly-only.md",
+          "tests/client/admin/analytics-month-detail-client-route-fix.md",
+          "tests/client/admin/admin-read-paths-and-cache-roles.md",
+          "tests/client/admin/admin-photo-album-mutation-capabilities.md",
+          "tests/client/admin/admin-overview-report-navigation.md"
+        ]
+      }
     },
     "admin-headquarters": {
       "scope": "admin",
@@ -158,7 +170,19 @@
         ]
       },
       "enforceRecoverySlices": false,
-      "recoverySlices": []
+      "recoverySlices": [],
+      "smokeSpec": {
+        "runnerImportPath": "tests/client/admin/admin-headquarters.spec.ts",
+        "runnerExportName": "runAdminHeadquartersSmoke",
+        "primaryDocPath": "tests/client/contracts/smoke-specs/admin/admin-headquarters.md",
+        "relatedDocPaths": [
+          "tests/client/admin/admin-headquarters-site-drilldown-main-only.md",
+          "tests/client/admin/admin-headquarters-site-header-navigation.md",
+          "tests/client/admin/admin-headquarters-write-response-regression.md",
+          "tests/client/admin/admin-headquarters-site-context-restore.md",
+          "tests/client/admin/admin-headquarters-list-order-and-count.md"
+        ]
+      }
     },
     "admin-reports": {
       "scope": "admin",
@@ -176,7 +200,19 @@
         ]
       },
       "enforceRecoverySlices": false,
-      "recoverySlices": []
+      "recoverySlices": [],
+      "smokeSpec": {
+        "runnerImportPath": "tests/client/admin/admin-reports.spec.ts",
+        "runnerExportName": "runAdminReportsSmoke",
+        "primaryDocPath": "tests/client/contracts/smoke-specs/admin/admin-reports.md",
+        "relatedDocPaths": [
+          "tests/client/admin/admin-reports-malformed-row-guard.md",
+          "tests/client/admin/admin-original-pdf-asset-fallback.md",
+          "tests/client/admin/admin-report-open-and-list-typography.md",
+          "tests/client/admin/admin-overview-dispatch-technical-guidance-split.md",
+          "tests/client/admin/overview-dispatch-quarter-scope-proof.md"
+        ]
+      }
     },
     "admin-sites": {
       "scope": "admin",
@@ -193,7 +229,16 @@
         ]
       },
       "enforceRecoverySlices": false,
-      "recoverySlices": []
+      "recoverySlices": [],
+      "smokeSpec": {
+        "runnerImportPath": "tests/client/admin/admin-sites.spec.ts",
+        "runnerExportName": "runAdminSitesSmoke",
+        "primaryDocPath": "tests/client/contracts/smoke-specs/admin/admin-sites.md",
+        "relatedDocPaths": [
+          "tests/client/admin/admin-sites-form-trim-and-first-assignment-modal.md",
+          "tests/client/admin/admin-site-entry-hub-site-management-panel.md"
+        ]
+      }
     },
     "admin-schedules": {
       "scope": "admin",
@@ -212,7 +257,16 @@
         ]
       },
       "enforceRecoverySlices": false,
-      "recoverySlices": []
+      "recoverySlices": [],
+      "smokeSpec": {
+        "runnerImportPath": "tests/client/admin/admin-schedules.spec.ts",
+        "runnerExportName": "runAdminSchedulesSmoke",
+        "primaryDocPath": "tests/client/contracts/smoke-specs/admin/admin-schedules.md",
+        "relatedDocPaths": [
+          "tests/client/admin/worker-calendar-admin-proof.md",
+          "tests/client/admin/worker-schedule-report-linking.proof.md"
+        ]
+      }
     },
     "admin-users": {
       "scope": "admin",
@@ -227,7 +281,15 @@
         ]
       },
       "enforceRecoverySlices": false,
-      "recoverySlices": []
+      "recoverySlices": [],
+      "smokeSpec": {
+        "runnerImportPath": "tests/client/admin/admin-users.spec.ts",
+        "runnerExportName": "runAdminUsersSmoke",
+        "primaryDocPath": "tests/client/contracts/smoke-specs/admin/admin-users.md",
+        "relatedDocPaths": [
+          "tests/client/admin/admin-users-schedules-photo-download.proof.md"
+        ]
+      }
     },
     "auth": {
       "scope": "erp",
@@ -246,7 +308,13 @@
         ]
       },
       "enforceRecoverySlices": false,
-      "recoverySlices": []
+      "recoverySlices": [],
+      "smokeSpec": {
+        "runnerImportPath": "tests/client/erp/auth.spec.ts",
+        "runnerExportName": "runAuthSmoke",
+        "primaryDocPath": "tests/client/contracts/smoke-specs/erp/auth.md",
+        "relatedDocPaths": []
+      }
     },
     "worker-calendar": {
       "scope": "erp",
@@ -263,7 +331,15 @@
         ]
       },
       "enforceRecoverySlices": false,
-      "recoverySlices": []
+      "recoverySlices": [],
+      "smokeSpec": {
+        "runnerImportPath": "tests/client/erp/worker-calendar.spec.ts",
+        "runnerExportName": "runWorkerCalendarSmoke",
+        "primaryDocPath": "tests/client/contracts/smoke-specs/erp/worker-calendar.md",
+        "relatedDocPaths": [
+          "tests/client/admin/worker-calendar-admin-proof.md"
+        ]
+      }
     },
     "bad-workplace-report": {
       "scope": "erp",
@@ -278,7 +354,13 @@
         ]
       },
       "enforceRecoverySlices": false,
-      "recoverySlices": []
+      "recoverySlices": [],
+      "smokeSpec": {
+        "runnerImportPath": "tests/client/erp/bad-workplace-report.spec.ts",
+        "runnerExportName": "runBadWorkplaceReportSmoke",
+        "primaryDocPath": "tests/client/contracts/smoke-specs/erp/bad-workplace-report.md",
+        "relatedDocPaths": []
+      }
     },
     "mobile-bad-workplace": {
       "scope": "erp",
@@ -293,7 +375,13 @@
         ]
       },
       "enforceRecoverySlices": false,
-      "recoverySlices": []
+      "recoverySlices": [],
+      "smokeSpec": {
+        "runnerImportPath": "tests/client/erp/mobile-bad-workplace.spec.ts",
+        "runnerExportName": "runMobileBadWorkplaceSmoke",
+        "primaryDocPath": "tests/client/contracts/smoke-specs/erp/mobile-bad-workplace.md",
+        "relatedDocPaths": []
+      }
     },
     "site-report-list": {
       "scope": "erp",
@@ -363,7 +451,16 @@
             "npm run test:client:smoke -- site-report-list"
           ]
         }
-      ]
+      ],
+      "smokeSpec": {
+        "runnerImportPath": "tests/client/erp/site-report-list.spec.ts",
+        "runnerExportName": "runSiteReportListSmoke",
+        "primaryDocPath": "tests/client/contracts/smoke-specs/erp/site-report-list.md",
+        "relatedDocPaths": [
+          "tests/client/erp/site-report-route-fallback.md",
+          "tests/client/erp/worker-site-report-summary-alignment.md"
+        ]
+      }
     },
     "mobile-site-home": {
       "scope": "erp",
@@ -379,7 +476,16 @@
         ]
       },
       "enforceRecoverySlices": false,
-      "recoverySlices": []
+      "recoverySlices": [],
+      "smokeSpec": {
+        "runnerImportPath": "tests/client/erp/mobile-site-home.spec.ts",
+        "runnerExportName": "runMobileSiteHomeSmoke",
+        "primaryDocPath": "tests/client/contracts/smoke-specs/erp/mobile-site-home.md",
+        "relatedDocPaths": [
+          "tests/client/erp/site-entry-hub-site-management-panel.md",
+          "tests/client/erp/worker-header-without-notifications.md"
+        ]
+      }
     },
     "mobile-worker-nav": {
       "scope": "erp",
@@ -396,7 +502,15 @@
         ]
       },
       "enforceRecoverySlices": false,
-      "recoverySlices": []
+      "recoverySlices": [],
+      "smokeSpec": {
+        "runnerImportPath": "tests/client/erp/mobile-worker-nav.spec.ts",
+        "runnerExportName": "runMobileWorkerNavSmoke",
+        "primaryDocPath": "tests/client/contracts/smoke-specs/erp/mobile-worker-nav.md",
+        "relatedDocPaths": [
+          "tests/client/erp/worker-header-without-notifications.md"
+        ]
+      }
     },
     "mobile-site-reports": {
       "scope": "erp",
@@ -411,7 +525,16 @@
         ]
       },
       "enforceRecoverySlices": false,
-      "recoverySlices": []
+      "recoverySlices": [],
+      "smokeSpec": {
+        "runnerImportPath": "tests/client/erp/mobile-site-reports.spec.ts",
+        "runnerExportName": "runMobileSiteReportsSmoke",
+        "primaryDocPath": "tests/client/contracts/smoke-specs/erp/mobile-site-reports.md",
+        "relatedDocPaths": [
+          "tests/client/erp/site-report-route-fallback.md",
+          "tests/client/erp/worker-site-report-summary-alignment.md"
+        ]
+      }
     },
     "mobile-quarterly-list": {
       "scope": "erp",
@@ -426,7 +549,15 @@
         ]
       },
       "enforceRecoverySlices": false,
-      "recoverySlices": []
+      "recoverySlices": [],
+      "smokeSpec": {
+        "runnerImportPath": "tests/client/erp/mobile-quarterly-list.spec.ts",
+        "runnerExportName": "runMobileQuarterlyListSmoke",
+        "primaryDocPath": "tests/client/contracts/smoke-specs/erp/mobile-quarterly-list.md",
+        "relatedDocPaths": [
+          "tests/client/erp/site-snapshot-resolution-and-quarterly-appendix.md"
+        ]
+      }
     },
     "mobile-quarterly-report": {
       "scope": "erp",
@@ -441,7 +572,16 @@
         ]
       },
       "enforceRecoverySlices": false,
-      "recoverySlices": []
+      "recoverySlices": [],
+      "smokeSpec": {
+        "runnerImportPath": "tests/client/erp/mobile-quarterly-report.spec.ts",
+        "runnerExportName": "runMobileQuarterlyReportSmoke",
+        "primaryDocPath": "tests/client/contracts/smoke-specs/erp/mobile-quarterly-report.md",
+        "relatedDocPaths": [
+          "tests/client/erp/quarterly-export-ops-image-and-risk-reflow.md",
+          "tests/client/erp/site-snapshot-resolution-and-quarterly-appendix.md"
+        ]
+      }
     },
     "mobile-link": {
       "scope": "erp",
@@ -516,7 +656,13 @@
             "npm run test:client:smoke -- mobile-link"
           ]
         }
-      ]
+      ],
+      "smokeSpec": {
+        "runnerImportPath": "tests/client/erp/mobile-link.spec.ts",
+        "runnerExportName": "runMobileLinkSmoke",
+        "primaryDocPath": "tests/client/contracts/smoke-specs/erp/mobile-link.md",
+        "relatedDocPaths": []
+      }
     },
     "quarterly-report": {
       "scope": "erp",
@@ -605,7 +751,16 @@
             "npm run test:client:smoke -- quarterly-report"
           ]
         }
-      ]
+      ],
+      "smokeSpec": {
+        "runnerImportPath": "tests/client/erp/quarterly-report.spec.ts",
+        "runnerExportName": "runQuarterlyReportSmoke",
+        "primaryDocPath": "tests/client/contracts/smoke-specs/erp/quarterly-report.md",
+        "relatedDocPaths": [
+          "tests/client/erp/quarterly-export-ops-image-and-risk-reflow.md",
+          "tests/client/erp/site-snapshot-resolution-and-quarterly-appendix.md"
+        ]
+      }
     },
     "site-hub": {
       "scope": "erp",
@@ -622,7 +777,16 @@
         ]
       },
       "enforceRecoverySlices": false,
-      "recoverySlices": []
+      "recoverySlices": [],
+      "smokeSpec": {
+        "runnerImportPath": "tests/client/erp/site-hub.spec.ts",
+        "runnerExportName": "runSiteHubSmoke",
+        "primaryDocPath": "tests/client/contracts/smoke-specs/erp/site-hub.md",
+        "relatedDocPaths": [
+          "tests/client/erp/site-entry-hub-site-management-panel.md",
+          "tests/client/erp/admin-site-menu-context-restore.md"
+        ]
+      }
     }
   }
 }
