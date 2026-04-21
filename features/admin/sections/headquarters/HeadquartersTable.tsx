@@ -1,11 +1,11 @@
 import Link from 'next/link';
-import { SubmitSearchField } from '@/components/ui/SubmitSearchField';
 import ActionMenu from '@/components/ui/ActionMenu';
+import { SubmitSearchField } from '@/components/ui/SubmitSearchField';
 import { SortableHeaderCell } from '@/features/admin/components/SortableHeaderCell';
-import { formatTimestamp, getAdminSectionHref } from '@/lib/admin';
+import styles from '@/features/admin/sections/AdminSectionShared.module.css';
+import { getAdminSectionHref } from '@/lib/admin';
 import type { TableSortState } from '@/types/admin';
 import type { SafetyHeadquarter } from '@/types/controller';
-import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 
 const HEADQUARTERS_PAGE_SIZE = 30;
 
@@ -13,12 +13,6 @@ interface HeadquartersTableProps {
   busy: boolean;
   canDelete: boolean;
   filteredHeadquarters: SafetyHeadquarter[];
-  summary: {
-    completedCount: number;
-    contactGapCount: number;
-    memoGapCount: number;
-    registrationGapCount: number;
-  };
   page: number;
   onCreateRequest: () => void;
   onDeleteRequest: (item: SafetyHeadquarter) => void;
@@ -47,45 +41,26 @@ function shouldIgnoreRowClick(target: EventTarget | null) {
   );
 }
 
-function getHeadquarterMissingFields(item: SafetyHeadquarter) {
-  const requiredChecks: Array<[string, string | null]> = [
-    ['사업장관리번호', item.management_number],
-    ['사업장개시번호', item.opening_number],
-    ['사업자등록번호', item.business_registration_no],
-    ['법인등록번호', item.corporate_registration_no],
-    ['건설업면허/등록번호', item.license_no],
-    ['본사 대표자명', item.contact_name],
-    ['대표 전화', item.contact_phone],
-    ['본사 주소', item.address],
-  ];
-
-  return requiredChecks
-    .filter(([, value]) => !String(value ?? '').trim())
-    .map(([label]) => label);
-}
-
-export function HeadquartersTable(props: HeadquartersTableProps) {
-  const {
-    busy,
-    canDelete,
-    filteredHeadquarters,
-    page,
-    onCreateRequest,
-    onDeleteRequest,
-    onEditRequest,
-    onExportRequest,
-    onOpenSitesRequest,
-    onPageChange,
-    onQueryChange,
-    onQuerySubmit,
-    onSortChange,
-    query,
-    sort,
-    showHeader = true,
-    totalCount,
-    totalPages,
-  } = props;
-
+export function HeadquartersTable({
+  busy,
+  canDelete,
+  filteredHeadquarters,
+  page,
+  onCreateRequest,
+  onDeleteRequest,
+  onEditRequest,
+  onExportRequest,
+  onOpenSitesRequest,
+  onPageChange,
+  onQueryChange,
+  onQuerySubmit,
+  onSortChange,
+  query,
+  sort,
+  showHeader = true,
+  totalCount,
+  totalPages,
+}: HeadquartersTableProps) {
   return (
     <>
       <div className={styles.sectionHeader}>
@@ -110,7 +85,7 @@ export function HeadquartersTable(props: HeadquartersTableProps) {
             formClassName={`${styles.sectionHeaderSearchShell} ${styles.sectionHeaderToolbarSearch}`}
             inputClassName={`app-input ${styles.sectionHeaderSearchInput}`}
             buttonClassName={styles.sectionHeaderSearchButton}
-            placeholder="회사명, 관리번호, 대표자, 등록번호, 주소로 검색"
+            placeholder="회사명, 관리번호, 담당자, 등록번호, 주소로 검색"
             value={query}
             onChange={onQueryChange}
             onSubmit={onQuerySubmit}
@@ -156,16 +131,16 @@ export function HeadquartersTable(props: HeadquartersTableProps) {
                       column={{ key: 'created_at' }}
                       current={sort}
                       defaultDirection="desc"
-                      label="순번"
+                      label="번호"
                       onChange={onSortChange}
                     />
                     <SortableHeaderCell
                       column={{ key: 'name' }}
                       current={sort}
-                      label="사업장 명"
+                      label="사업장명"
                       onChange={onSortChange}
                     />
-                    <th>대표자</th>
+                    <th>담당자</th>
                     <th>사업자등록번호</th>
                     <th>주소</th>
                     <th className={styles.headquartersSiteCountCell}>현장 수</th>
@@ -178,6 +153,7 @@ export function HeadquartersTable(props: HeadquartersTableProps) {
                       item.sequence_no ??
                       Math.max(totalCount - ((page - 1) * HEADQUARTERS_PAGE_SIZE + index), 1);
                     const siteCount = item.site_count ?? 0;
+
                     return (
                       <tr
                         key={item.id}
@@ -208,9 +184,7 @@ export function HeadquartersTable(props: HeadquartersTableProps) {
                           <div className={styles.tablePrimary}>
                             {item.business_registration_no || '-'}
                           </div>
-                          <div className={styles.tableSecondary}>
-                            면허번호 {item.license_no || '-'}
-                          </div>
+                          <div className={styles.tableSecondary}>면허번호 {item.license_no || '-'}</div>
                         </td>
                         <td>
                           <div className={styles.tablePrimary}>{item.address || '-'}</div>
@@ -269,6 +243,7 @@ export function HeadquartersTable(props: HeadquartersTableProps) {
           )}
         </div>
       </div>
+
       {totalCount > 0 ? (
         <div className={styles.paginationRow}>
           <button

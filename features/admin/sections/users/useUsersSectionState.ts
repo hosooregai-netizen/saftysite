@@ -94,14 +94,17 @@ export function useUsersSectionState(
     requestKey: string;
     response: SafetyAdminUserListResponse;
   } | null>(null);
+  const [lastStableResponse, setLastStableResponse] =
+    useState<SafetyAdminUserListResponse | null>(null);
   const currentResponse =
     useMemo(
       () =>
         (resolvedResponseState?.requestKey === requestKey ? resolvedResponseState.response : null) ??
         cachedResponse.value ??
         resolvedResponseState?.response ??
+        lastStableResponse ??
         null,
-      [cachedResponse.value, requestKey, resolvedResponseState],
+      [cachedResponse.value, lastStableResponse, requestKey, resolvedResponseState],
     );
   const rows = currentResponse?.rows ?? EMPTY_USER_ROWS;
   const total = currentResponse?.total ?? 0;
@@ -355,6 +358,9 @@ export function useUsersSectionState(
     sessionCountBySiteId,
     setForm,
     setPage: (nextPage: number) => {
+      if (currentResponse) {
+        setLastStableResponse(currentResponse);
+      }
       setPage(Math.max(1, Math.min(nextPage, totalPages)));
     },
     setQueryInput,

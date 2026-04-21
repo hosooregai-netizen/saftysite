@@ -30,9 +30,21 @@ import type { SafetySiteStatus, SafetySiteInput, SafetySiteUpdateInput } from '@
 import type { SafetySite } from '@/types/backend';
 
 const SITES_PAGE_SIZE = 50;
+const EMPTY_SITE_ROWS: SafetySite[] = [];
 
 function normalizeSiteValue(value: string | null | undefined) {
   return String(value ?? '').trim().toLowerCase();
+}
+
+function buildRequestKey(input: {
+  assignmentFilter: SiteAssignmentFilter;
+  headquarterId: string | null;
+  page: number;
+  query: string;
+  sort: TableSortState;
+  statusFilter: 'all' | SafetySiteStatus;
+}) {
+  return JSON.stringify(input);
 }
 
 function validateSiteSubmit(
@@ -113,8 +125,6 @@ export function useSitesSectionState({
   const [assignmentFilter, setAssignmentFilter] = useState<SiteAssignmentFilter>('all');
   const [form, setForm] = useState(EMPTY_FORM);
   const [lastAutoEditSiteId, setLastAutoEditSiteId] = useState<string | null>(null);
-  const [rows, setRows] = useState<SafetySite[]>([]);
-  const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [directoryLookups, setDirectoryLookups] = useState<
     import('@/types/admin').SafetyAdminDirectoryLookupsResponse
@@ -129,7 +139,7 @@ export function useSitesSectionState({
   const abortControllerRef = useRef<AbortController | null>(null);
   const requestKey = useMemo(
     () =>
-      JSON.stringify({
+      buildRequestKey({
         assignmentFilter,
         headquarterId: lockedHeadquarterId,
         page,
@@ -139,6 +149,31 @@ export function useSitesSectionState({
       }),
     [assignmentFilter, deferredQuery, lockedHeadquarterId, page, sort, statusFilter],
   );
+  const cachedResponse = useMemo(
+    () =>
+      readAdminSessionCache<import('@/types/admin').SafetyAdminSiteListResponse>(
+        currentUserId,
+        `sites:list:${requestKey}`,
+      ),
+    [currentUserId, requestKey],
+  );
+  const [resolvedResponseState, setResolvedResponseState] = useState<{
+    requestKey: string;
+    response: import('@/types/admin').SafetyAdminSiteListResponse;
+  } | null>(null);
+  const [lastStableResponse, setLastStableResponse] =
+    useState<import('@/types/admin').SafetyAdminSiteListResponse | null>(null);
+  const currentResponse = useMemo(
+    () =>
+      (resolvedResponseState?.requestKey === requestKey ? resolvedResponseState.response : null) ??
+      cachedResponse.value ??
+      resolvedResponseState?.response ??
+      lastStableResponse ??
+      null,
+    [cachedResponse.value, lastStableResponse, requestKey, resolvedResponseState],
+  );
+  const rows = currentResponse?.rows ?? EMPTY_SITE_ROWS;
+  const total = currentResponse?.total ?? 0;
 
   useEffect(() => {
     setStatusFilter(initialStatusFilter);
@@ -166,16 +201,10 @@ export function useSitesSectionState({
   }, [currentUserId]);
 
   useEffect(() => {
-    const cached = readAdminSessionCache<import('@/types/admin').SafetyAdminSiteListResponse>(
-      currentUserId,
-      `sites:list:${requestKey}`,
-    );
-    if (cached.value) {
-      setRows(cached.value.rows);
-      setTotal(cached.value.total);
-    }
-    if (cached.isFresh && cached.value) {
-      setIsLoading(false);
+    if (cachedResponse.isFresh && cachedResponse.value) {
+      queueMicrotask(() => {
+        setIsLoading(false);
+      });
       return;
     }
 
@@ -199,8 +228,10 @@ export function useSitesSectionState({
     )
       .then((response) => {
         writeAdminSessionCache(currentUserId, `sites:list:${requestKey}`, response);
-        setRows(response.rows);
-        setTotal(response.total);
+        setResolvedResponseState({
+          requestKey,
+          response,
+        });
       })
       .catch((error) => {
         if (!abortController.signal.aborted) {
@@ -214,7 +245,19 @@ export function useSitesSectionState({
       });
 
     return () => abortController.abort();
-  }, [assignmentFilter, currentUserId, deferredQuery, lockedHeadquarterId, page, requestKey, sort.direction, sort.key, statusFilter]);
+  }, [
+    assignmentFilter,
+    cachedResponse.isFresh,
+    cachedResponse.value,
+    currentUserId,
+    deferredQuery,
+    lockedHeadquarterId,
+    page,
+    requestKey,
+    sort.direction,
+    sort.key,
+    statusFilter,
+  ]);
 
   const totalPages = Math.max(1, Math.ceil(total / SITES_PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -267,6 +310,14 @@ export function useSitesSectionState({
   }, [autoEditSiteId, busy, lastAutoEditSiteId, lockedHeadquarterId, rows]);
 
   const refreshPage = async (targetPage = currentPage) => {
+    const targetRequestKey = buildRequestKey({
+      assignmentFilter,
+      headquarterId: lockedHeadquarterId,
+      page: targetPage,
+      query: deferredQuery.trim(),
+      sort,
+      statusFilter,
+    });
     const response = await fetchAdminSitesList({
       assignment: assignmentFilter,
       headquarterId: lockedHeadquarterId ?? '',
@@ -277,9 +328,11 @@ export function useSitesSectionState({
       sortDir: sort.direction,
       status: statusFilter,
     });
-    writeAdminSessionCache(currentUserId, `sites:list:${requestKey}`, response);
-    setRows(response.rows);
-    setTotal(response.total);
+    writeAdminSessionCache(currentUserId, `sites:list:${targetRequestKey}`, response);
+    setResolvedResponseState({
+      requestKey: targetRequestKey,
+      response,
+    });
   };
 
   const submit = async () => {
@@ -441,6 +494,9 @@ export function useSitesSectionState({
     setAssignmentSiteId,
     setForm,
     setPage: (nextPage: number) => {
+      if (currentResponse) {
+        setLastStableResponse(currentResponse);
+      }
       setPage(Math.max(1, Math.min(nextPage, totalPages)));
     },
     setQueryInput,

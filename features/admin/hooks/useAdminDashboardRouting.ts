@@ -95,24 +95,10 @@ export function useAdminDashboardRouting({
 
     if (activeSection !== 'headquarters') return;
 
-    if (selectedSiteId) {
-      if (!selectedSite) {
-        replaceRoute('headquarters', { headquarterId: selectedHeadquarterId });
-        return;
-      }
-
-      if (selectedHeadquarterId !== selectedSite.headquarter_id) {
-        replaceRoute('headquarters', {
-          headquarterId: selectedSite.headquarter_id,
-          siteId: selectedSite.id,
-        });
-        return;
-      }
-    }
-
-    if (selectedHeadquarterId && !selectedHeadquarter) {
-      replaceRoute('headquarters');
-    }
+    // The headquarters section resolves selected headquarter/site context with its own
+    // section-level list APIs. Do not eagerly clear URL state here based on shell data,
+    // because the shell may not have loaded headquarters yet or may still be on a
+    // sites-only bootstrap scope from another section.
   }, [
     activeSection,
     data.sites,

@@ -24,6 +24,16 @@ import { HeadquarterEditorModal } from './HeadquarterEditorModal';
 import { useHeadquartersSectionState } from './useHeadquartersSectionState';
 import { SitesSection } from '../sites/SitesSection';
 
+const EMPTY_HEADQUARTER_ROWS: import('@/types/controller').SafetyHeadquarter[] = [];
+
+function buildRequestKey(input: {
+  page: number;
+  query: string;
+  sort: import('@/types/admin').TableSortState;
+}) {
+  return JSON.stringify(input);
+}
+
 function normalizeHeadquarterValue(value: string | null | undefined) {
   return String(value ?? '').trim();
 }
@@ -122,14 +132,6 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
   const searchParams = useSearchParams();
   const siteStatusParam = searchParams.get('siteStatus');
   const autoEditSiteId = searchParams.get('editSiteId');
-  const [rows, setRows] = useState<import('@/types/controller').SafetyHeadquarter[]>([]);
-  const [total, setTotal] = useState(0);
-  const [summary, setSummary] = useState({
-    completedCount: 0,
-    contactGapCount: 0,
-    memoGapCount: 0,
-    registrationGapCount: 0,
-  });
   const [isLoading, setIsLoading] = useState(false);
   const [selectedHeadquarter, setSelectedHeadquarter] =
     useState<import('@/types/controller').SafetyHeadquarter | null>(null);
@@ -138,19 +140,44 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
     import('@/types/backend').SafetySite[]
   >([]);
   const [isResolvingSiteContext, setIsResolvingSiteContext] = useState(false);
-  const state = useHeadquartersSectionState(rows, busy);
+  const state = useHeadquartersSectionState(busy);
   const abortControllerRef = useRef<AbortController | null>(null);
   const selectedHeadquarterRequestIdRef = useRef(0);
   const selectedSiteRequestIdRef = useRef(0);
   const requestKey = useMemo(
     () =>
-      JSON.stringify({
+      buildRequestKey({
         page: state.page,
         query: state.query.trim(),
         sort: state.sort,
       }),
     [state.page, state.query, state.sort],
   );
+  const cachedResponse = useMemo(
+    () =>
+      readAdminSessionCache<import('@/types/admin').SafetyAdminHeadquarterListResponse>(
+        currentUserId,
+        `${HEADQUARTER_LIST_CACHE_KEY_PREFIX}${requestKey}`,
+      ),
+    [currentUserId, requestKey],
+  );
+  const [resolvedResponseState, setResolvedResponseState] = useState<{
+    requestKey: string;
+    response: import('@/types/admin').SafetyAdminHeadquarterListResponse;
+  } | null>(null);
+  const [lastStableResponse, setLastStableResponse] =
+    useState<import('@/types/admin').SafetyAdminHeadquarterListResponse | null>(null);
+  const currentResponse = useMemo(
+    () =>
+      (resolvedResponseState?.requestKey === requestKey ? resolvedResponseState.response : null) ??
+      cachedResponse.value ??
+      resolvedResponseState?.response ??
+      lastStableResponse ??
+      null,
+    [cachedResponse.value, lastStableResponse, requestKey, resolvedResponseState],
+  );
+  const rows = currentResponse?.rows ?? EMPTY_HEADQUARTER_ROWS;
+  const total = currentResponse?.total ?? 0;
   const resolvedSelectedHeadquarter = useMemo(
     () =>
       selectedHeadquarterId && selectedHeadquarter?.id === selectedHeadquarterId
@@ -173,10 +200,14 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
       (selectedSiteId && selectedSite?.id === selectedSiteId ? selectedSite : null),
     [resolvedSelectedHeadquarterSites, selectedSite, selectedSiteId],
   );
-  const isLoadingSelectedHeadquarter = Boolean(selectedHeadquarterId && !resolvedSelectedHeadquarter);
   const isLoadingSelectedSite = Boolean(selectedSiteId && !resolvedSelectedSite);
 
   const refreshHeadquarterList = async (targetPage = state.page) => {
+    const targetRequestKey = buildRequestKey({
+      page: targetPage,
+      query: state.query.trim(),
+      sort: state.sort,
+    });
     const response = await fetchAdminHeadquartersList({
       limit: 30,
       offset: (targetPage - 1) * 30,
@@ -184,10 +215,15 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
       sortBy: state.sort.key,
       sortDir: state.sort.direction,
     });
-    writeAdminSessionCache(currentUserId, `${HEADQUARTER_LIST_CACHE_KEY_PREFIX}${requestKey}`, response);
-    setRows(response.rows);
-    setTotal(response.total);
-    setSummary(response.summary);
+    writeAdminSessionCache(
+      currentUserId,
+      `${HEADQUARTER_LIST_CACHE_KEY_PREFIX}${targetRequestKey}`,
+      response,
+    );
+    setResolvedResponseState({
+      requestKey: targetRequestKey,
+      response,
+    });
   };
 
   const refreshSelectedSiteDetail = async (
@@ -294,17 +330,10 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
   }, [autoEditSiteId, router, selectedHeadquarterId, selectedSiteId, siteStatusParam]);
 
   useEffect(() => {
-    const cached = readAdminSessionCache<import('@/types/admin').SafetyAdminHeadquarterListResponse>(
-      currentUserId,
-      `${HEADQUARTER_LIST_CACHE_KEY_PREFIX}${requestKey}`,
-    );
-    if (cached.value) {
-      setRows(cached.value.rows);
-      setTotal(cached.value.total);
-      setSummary(cached.value.summary);
-    }
-    if (cached.isFresh && cached.value) {
-      setIsLoading(false);
+    if (cachedResponse.isFresh && cachedResponse.value) {
+      queueMicrotask(() => {
+        setIsLoading(false);
+      });
       return;
     }
 
@@ -329,9 +358,10 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
           `${HEADQUARTER_LIST_CACHE_KEY_PREFIX}${requestKey}`,
           response,
         );
-        setRows(response.rows);
-        setTotal(response.total);
-        setSummary(response.summary);
+        setResolvedResponseState({
+          requestKey,
+          response,
+        });
       })
       .catch((error) => {
         if (!abortController.signal.aborted) {
@@ -345,7 +375,16 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
       });
 
     return () => abortController.abort();
-  }, [currentUserId, requestKey, state.page, state.query, state.sort.direction, state.sort.key]);
+  }, [
+    cachedResponse.isFresh,
+    cachedResponse.value,
+    currentUserId,
+    requestKey,
+    state.page,
+    state.query,
+    state.sort.direction,
+    state.sort.key,
+  ]);
 
   useEffect(() => {
     if (!selectedHeadquarterId) {
@@ -427,7 +466,6 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
 
   if (
     isResolvingSiteContext ||
-    isLoadingSelectedHeadquarter ||
     isLoadingSelectedSite ||
     (isLoading && rows.length === 0 && !resolvedSelectedHeadquarter && !hasSiteStatusScope)
   ) {
@@ -508,7 +546,6 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
             busy={busy || isLoading}
             canDelete={canDelete}
             filteredHeadquarters={rows}
-            summary={summary}
             page={state.page}
             onCreateRequest={state.openCreate}
             onDeleteRequest={handleDeleteHeadquarter}
@@ -559,7 +596,12 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
               })();
             }}
             onOpenSitesRequest={(item) => onSelectHeadquarter(item.id)}
-            onPageChange={state.setPage}
+            onPageChange={(nextPage) => {
+              if (currentResponse) {
+                setLastStableResponse(currentResponse);
+              }
+              state.setPage(nextPage);
+            }}
             onQueryChange={state.setQueryInput}
             onQuerySubmit={state.submitQuery}
             onSortChange={state.setSort}
