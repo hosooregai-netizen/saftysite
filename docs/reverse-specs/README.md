@@ -2,7 +2,7 @@
 
 ## Goal
 
-This folder is for reconstruction-grade feature documentation.
+This folder holds reconstruction-grade feature documentation.
 
 The target is not:
 
@@ -12,17 +12,39 @@ The target is not:
 
 The target is:
 
-- a markdown spec that lets us rebuild a feature with high behavioral fidelity even if the original implementation is removed
+- one markdown spec per recovery slice that lets us rebuild the behavior with high fidelity even if the current implementation disappears
+
+This folder is not the reusable cross-industry ERP module catalog.
+
+That reusable layer lives in `docs/erp-reverse-platform/` and is organized by capability modules,
+adapters, industry packs, and compositions instead of recovery slices.
+
+## Two Layers
+
+Reverse specs now sit under a two-layer contract model:
+
+- top-level feature contract:
+  - the smoke and push-gating unit
+  - examples: `admin-control-center`, `quarterly-report`, `site-report-list`
+- recovery slice:
+  - the reverse-spec and fine-grained recovery unit
+  - examples: `admin-overview-dashboard`, `quarterly-editor-source-sync`, `tech-guidance-create-dialog`
+
+Rules:
+
+- keep the top-level smoke contract stable unless the user-facing workflow actually changes shape
+- write one reverse spec per recovery slice
+- do not use one umbrella reverse spec to describe multiple unrelated controllers just because the smoke id is shared
 
 ## When To Write One
 
-Create a reverse spec when:
+Create or update a reverse spec when:
 
-- a feature is business-critical
+- a business-critical flow is being refactored
 - the current implementation is large or fragile
 - multiple files are tightly coupled
-- the team expects refactors, migrations, or rewrites
-- AI-assisted recovery should be possible later without re-reading the whole codebase
+- the team expects rewrites or migrations later
+- a guarded recovery slice changed and needs its behavioral source of truth refreshed
 
 ## What “Recoverable” Means
 
@@ -32,8 +54,8 @@ A reverse spec is only considered recoverable if it captures:
 2. external contracts
 3. state model
 4. derived state rules
-5. business rules and validation
-6. user interaction flows
+5. mutation semantics
+6. business rules and validation
 7. error/loading/cache behavior
 8. output expectations and smoke checks
 
@@ -94,73 +116,83 @@ Adds:
 - state transitions
 - verification checklist
 
-This is the default target for ERP-critical features.
+This is the default target for managed ERP/admin recovery slices.
 
 ## Authoring Workflow
 
-1. Pick one feature slice, not a whole domain.
-2. Identify source-of-truth files.
-3. Extract contracts before UI commentary.
-4. Document state and derived state separately.
-5. Write business rules in plain language.
-6. Add interaction flows in numbered order.
+1. Identify the affected top-level feature contract.
+2. Identify the specific recovery slice.
+3. Confirm the reverse spec path from `tests/client/contracts/featureContractMetadata.json`.
+4. Extract contracts before UI commentary.
+5. Document state and derived state separately.
+6. Capture mutation semantics and fallback behavior explicitly.
 7. Add recovery checklist items that can be tested.
 8. Link the final spec from `feature-inventory.md`.
+9. If the same change affects a reusable ERP capability, update the paired reverse module under
+   `docs/erp-reverse-platform/` as a separate artifact.
 
 ## Granularity Rule
 
 Good unit:
 
 - one visible workflow with one dominant user goal
+- one main controller/state owner
 
 Examples:
 
-- admin schedules board
-- report-open legacy bootstrap
+- admin overview dashboard
+- quarterly list/create dialog
 - mobile inspection step 7 editor
-- site list filter + export flow
+- site report index
 
 Bad unit:
 
-- “admin”
-- “reports”
-- “ERP backend”
+- `admin`
+- `reports`
+- `quarterly`
+- `ERP backend`
 
 Those are too large to recover accurately from one document.
+
+## Required Spec Header
+
+Every managed reverse spec should declare:
+
+- `Recovery Slice ID: \`...\``
+- `Top-level contract: \`...\``
+- `Reverse spec status: \`done\`` or `\`seed\``
 
 ## Recommended Spec Sections
 
 Every reverse spec should try to include:
 
-1. purpose
-2. source of truth
-3. feature goal
-4. user role
-5. entry and scope
-6. data contracts
-7. caching and persistence
-8. state model
-9. business rules
-10. UI composition
-11. interaction flows
-12. error handling
-13. non-obvious notes
+1. recovery slice header
+2. purpose
+3. source of truth
+4. feature goal
+5. user role
+6. entry and scope
+7. data contracts
+8. caching and persistence
+9. state model
+10. business rules
+11. UI composition
+12. interaction flows
+13. error handling
 14. recovery checklist
 
 ## Naming Convention
 
 - file name:
-  - `<domain>-<feature>-reverse-spec.md`
+  - `<domain>-<slice>-reverse-spec.md`
 - examples:
-  - `admin-schedules-section-reverse-spec.md`
-  - `worker-inspection-step7-reverse-spec.md`
-  - `admin-report-open-reverse-spec.md`
+  - `admin-analytics-dashboard-reverse-spec.md`
+  - `quarterly-editor-source-sync-reverse-spec.md`
+  - `tech-guidance-create-dialog-reverse-spec.md`
 
 ## Current Files
 
-- sample spec:
-  - [admin-schedules-section-reverse-spec.md](/Users/mac_mini/Documents/GitHub/saftysite-real/docs/reverse-specs/admin-schedules-section-reverse-spec.md)
 - reusable template:
   - [reverse-spec-template.md](/Users/mac_mini/Documents/GitHub/saftysite-real/docs/reverse-specs/reverse-spec-template.md)
-- initial inventory:
+- managed inventory:
   - [feature-inventory.md](/Users/mac_mini/Documents/GitHub/saftysite-real/docs/reverse-specs/feature-inventory.md)

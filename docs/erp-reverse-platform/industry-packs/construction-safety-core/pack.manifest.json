@@ -1,0 +1,40 @@
+{
+  "id": "construction-safety-core",
+  "version": "1.0.0",
+  "baseModules": [
+    "operations-dashboard.queue-overview",
+    "operations-dashboard.analytics",
+    "work-item.index-and-filter",
+    "work-item.create-dialog",
+    "periodic-report.source-sync",
+    "document-output.export-and-reuse",
+    "asset-review.photo-workbench"
+  ],
+  "policyOverrides": [
+    "dashboard.queueDefinitions",
+    "dashboard.exportColumns",
+    "periodicReport.sourcePriority",
+    "asset.reviewFlags",
+    "document.approvalStampRules"
+  ],
+  "requiredAdapters": [
+    "safety-upstream-normalization"
+  ],
+  "vocabularyOverrides": [
+    "work item -> 기술지도 보고서",
+    "periodic report -> 분기 보고서",
+    "asset review -> 사진 관리"
+  ],
+  "complianceRules": [
+    "construction.quarterly.output-order",
+    "construction.photo.context-reuse",
+    "construction.dashboard.queue-export"
+  ],
+  "defaultTenantConfig": [
+    "dashboard.defaultLandingSection",
+    "periodicReport.defaultTemplate",
+    "document.exportBranding",
+    "photoReview.defaultFilter"
+  ]
+}
+

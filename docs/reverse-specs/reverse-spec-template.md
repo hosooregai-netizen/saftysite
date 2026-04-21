@@ -1,5 +1,11 @@
 # Reverse Spec Template - <Feature Name>
 
+## Recovery Slice
+
+- Recovery Slice ID: `<slice-id>`
+- Top-level contract: `<feature-contract-id>`
+- Reverse spec status: `done` or `seed`
+
 ## Purpose
 
 - Why this feature exists.
@@ -50,6 +56,12 @@
 - method and path
 - request shape
 - response shape
+
+### Mutation semantics
+
+- what local state changes immediately
+- what waits for server confirmation
+- rollback or fallback rules
 
 ### Output/download/export APIs
 

@@ -1,5 +1,11 @@
 # Reverse Spec - Mobile Inspection Session Shell
 
+## Recovery Slice
+
+- Recovery Slice ID: `mobile-link-session-shell`
+- Top-level contract: `mobile-link`
+- Reverse spec status: `done`
+
 ## Purpose
 
 - Recover the mobile-first inspection-session writing experience that sits on top of the shared inspection-session state and document engine.

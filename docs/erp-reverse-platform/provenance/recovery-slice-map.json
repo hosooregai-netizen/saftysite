@@ -1,0 +1,74 @@
+{
+  "version": "1.0.0",
+  "entries": [
+    {
+      "recoverySliceId": "admin-overview-dashboard",
+      "reverseModuleIds": [
+        "platform-dashboard.snapshot-cache",
+        "operations-dashboard.queue-overview"
+      ],
+      "confidence": "high",
+      "lastVerifiedAt": "2026-04-21"
+    },
+    {
+      "recoverySliceId": "admin-analytics-dashboard",
+      "reverseModuleIds": [
+        "platform-dashboard.snapshot-cache",
+        "operations-dashboard.analytics"
+      ],
+      "confidence": "high",
+      "lastVerifiedAt": "2026-04-21"
+    },
+    {
+      "recoverySliceId": "admin-photo-admin-flow",
+      "reverseModuleIds": [
+        "platform-asset.attachment-pipeline",
+        "asset-review.photo-workbench"
+      ],
+      "confidence": "high",
+      "lastVerifiedAt": "2026-04-21"
+    },
+    {
+      "recoverySliceId": "site-report-index",
+      "reverseModuleIds": [
+        "platform-work-item.collection-shell",
+        "work-item.index-and-filter"
+      ],
+      "confidence": "high",
+      "lastVerifiedAt": "2026-04-21"
+    },
+    {
+      "recoverySliceId": "tech-guidance-create-dialog",
+      "reverseModuleIds": [
+        "work-item.create-dialog"
+      ],
+      "confidence": "high",
+      "lastVerifiedAt": "2026-04-21"
+    },
+    {
+      "recoverySliceId": "quarterly-editor-source-sync",
+      "reverseModuleIds": [
+        "periodic-report.source-sync"
+      ],
+      "confidence": "high",
+      "lastVerifiedAt": "2026-04-21"
+    },
+    {
+      "recoverySliceId": "quarterly-export-and-pdf-reuse",
+      "reverseModuleIds": [
+        "platform-document.output-pipeline",
+        "document-output.export-and-reuse"
+      ],
+      "confidence": "high",
+      "lastVerifiedAt": "2026-04-21"
+    },
+    {
+      "recoverySliceId": "mobile-link-session-shell",
+      "reverseModuleIds": [
+        "platform-asset.attachment-pipeline"
+      ],
+      "confidence": "medium",
+      "lastVerifiedAt": "2026-04-21"
+    }
+  ]
+}

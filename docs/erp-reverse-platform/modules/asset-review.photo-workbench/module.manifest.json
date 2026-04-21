@@ -1,0 +1,152 @@
+{
+  "id": "asset-review.photo-workbench",
+  "version": "1.0.0",
+  "capability": "asset-review.photo-workbench",
+  "category": "business-module",
+  "sourceSlices": [
+    "admin-photo-admin-flow"
+  ],
+  "platformDependencies": [
+    "platform-asset.attachment-pipeline"
+  ],
+  "entities": [
+    "PhotoReviewRow",
+    "PhotoReviewContext"
+  ],
+  "commands": [
+    "openPhotoReview",
+    "flagPhotoForReview",
+    "downloadPhotoSelection"
+  ],
+  "events": [
+    "photoReview.contextLoaded",
+    "photoReview.selectionChanged"
+  ],
+  "views": [
+    "photoReviewWorkbench",
+    "photoReviewToolbar"
+  ],
+  "policies": [
+    "context-preserving admin wrapper",
+    "bulk actions over normalized asset selection"
+  ],
+  "extensionPoints": [
+    "review flags",
+    "photo taxonomies",
+    "download naming"
+  ],
+  "industryOverridesAllowed": [
+    "asset.reviewFlags",
+    "asset.downloadBundleNaming"
+  ],
+  "tenantConfigSurface": [
+    "asset.defaultPreviewMode",
+    "photoReview.defaultFilter"
+  ],
+  "outputArtifacts": [
+    "photo review workbench",
+    "download bundle"
+  ],
+  "apiContracts": [
+    {
+      "name": "Review Photo List Fetch",
+      "owner": "next-route",
+      "method": "GET",
+      "path": "/api/photos",
+      "requestShape": [
+        "admin-authenticated GET request",
+        "admin mode plus site, round, and filter query parameters"
+      ],
+      "responseShape": [
+        "contextual photo rows",
+        "capabilities used by the review toolbar"
+      ],
+      "touchpoints": [
+        "app/api/photos/route.ts",
+        "server/photos/service.ts",
+        "server/photos/album.ts"
+      ]
+    },
+    {
+      "name": "Review Photo Upload",
+      "owner": "next-route",
+      "method": "POST",
+      "path": "/api/photos/upload",
+      "requestShape": [
+        "multipart file upload",
+        "admin review context metadata"
+      ],
+      "responseShape": [
+        "uploaded photo metadata",
+        "review-grid-refresh identifiers"
+      ],
+      "touchpoints": [
+        "app/api/photos/upload/route.ts",
+        "server/photos/service.ts"
+      ]
+    },
+    {
+      "name": "Review Photo Bulk Download",
+      "owner": "next-route",
+      "method": "POST",
+      "path": "/api/photos/download",
+      "requestShape": [
+        "selected photo ids",
+        "current admin review context"
+      ],
+      "responseShape": [
+        "binary download bundle or stream",
+        "partial-failure-aware response semantics"
+      ],
+      "touchpoints": [
+        "app/api/photos/download/route.ts",
+        "server/photos/album.ts"
+      ]
+    }
+  ],
+  "serverTouchpoints": [
+    "app/api/photos/route.ts",
+    "app/api/photos/upload/route.ts",
+    "app/api/photos/download/route.ts",
+    "server/photos/service.ts",
+    "server/photos/album.ts"
+  ],
+  "performanceGuardrails": [
+    {
+      "name": "Review photo list fetch",
+      "appliesTo": "Review Photo List Fetch",
+      "maxLatencyMs": 3000,
+      "maxResponseBytes": 1500000,
+      "cacheStrategy": "query-scoped list state refreshed in place without remounting the review shell",
+      "invalidationTriggers": [
+        "upload",
+        "asset mutation",
+        "route-context change",
+        "explicit reload"
+      ]
+    },
+    {
+      "name": "Review photo upload",
+      "appliesTo": "Review Photo Upload",
+      "maxLatencyMs": 45000,
+      "cacheStrategy": "no cache; successful upload triggers review-grid refresh",
+      "invalidationTriggers": [
+        "every successful upload",
+        "photo replacement"
+      ]
+    },
+    {
+      "name": "Review bulk download",
+      "appliesTo": "Review Photo Bulk Download",
+      "maxLatencyMs": 12000,
+      "maxResponseBytes": 8000000,
+      "cacheStrategy": "no cache; preserve current selection during partial failures",
+      "invalidationTriggers": [
+        "selection change",
+        "download retry"
+      ]
+    }
+  ],
+  "portabilityTier": "adaptable",
+  "status": "published"
+}

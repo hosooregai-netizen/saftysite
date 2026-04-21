@@ -1,5 +1,11 @@
 # Reverse Spec - Admin Overview Dashboard
 
+## Recovery Slice
+
+- Recovery Slice ID: `admin-overview-dashboard`
+- Top-level contract: `admin-control-center`
+- Reverse spec status: `done`
+
 ## Purpose
 
 - Recover the `/admin` controller overview dashboard that summarizes site status, quarterly material readiness, dispatch aging, and operational follow-up tables.
@@ -44,6 +50,8 @@ Controllers must be able to:
   - `data: ControllerDashboardData`
   - `reports: SafetyReportListItem[]`
   - optional `onUpdateSiteDispatchPolicy`
+- this slice is the overview half of the umbrella `admin-control-center` contract
+- analytics and admin photo management are separate recovery slices even though they still share the same smoke id
 
 ## Data Contracts
 

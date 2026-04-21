@@ -1,5 +1,11 @@
 # Reverse Spec - Mobile Inspection Step 7 / Doc7 Hazard Findings
 
+## Recovery Slice
+
+- Recovery Slice ID: `mobile-inspection-step7-doc7`
+- Top-level contract: `mobile-link`
+- Reverse spec status: `done`
+
 ## Purpose
 
 - Recover the mobile editing experience for document 7, the current hazard finding section.

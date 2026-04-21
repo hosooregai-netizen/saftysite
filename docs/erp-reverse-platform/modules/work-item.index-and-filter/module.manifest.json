@@ -1,0 +1,89 @@
+{
+  "id": "work-item.index-and-filter",
+  "version": "1.0.0",
+  "capability": "work-item.index-and-filter",
+  "category": "business-module",
+  "sourceSlices": [
+    "site-report-index"
+  ],
+  "platformDependencies": [
+    "platform-work-item.collection-shell"
+  ],
+  "entities": [
+    "WorkItemIndexRow",
+    "WorkItemRouteContext"
+  ],
+  "commands": [
+    "resolveWorkItemRoute",
+    "filterWorkItemIndex",
+    "openWorkItemFromIndex"
+  ],
+  "events": [
+    "workItem.indexLoaded",
+    "workItem.routeResolved"
+  ],
+  "views": [
+    "workItemIndexScreen",
+    "workItemIndexToolbar"
+  ],
+  "policies": [
+    "normalized route handoff",
+    "context-preserving filter state"
+  ],
+  "extensionPoints": [
+    "row badges",
+    "column set",
+    "create entry CTA"
+  ],
+  "industryOverridesAllowed": [
+    "collection.columns",
+    "collection.rowActions"
+  ],
+  "tenantConfigSurface": [
+    "collection.defaultSort",
+    "workItem.defaultCreateTarget"
+  ],
+  "outputArtifacts": [
+    "work item index screen"
+  ],
+  "apiContracts": [
+    {
+      "name": "Work Item Index Fetch",
+      "owner": "proxy-route",
+      "method": "GET",
+      "path": "/api/safety/reports/site/{siteId}/full?limit=50",
+      "requestShape": [
+        "authenticated proxy GET request",
+        "siteId path parameter and optional list query parameters"
+      ],
+      "responseShape": [
+        "report list payload",
+        "normalized work-item index rows shared by web and mobile shells"
+      ],
+      "touchpoints": [
+        "app/api/safety/[...path]/route.ts",
+        "external FastAPI /api/v1/reports/site/{siteId}/full"
+      ]
+    }
+  ],
+  "serverTouchpoints": [
+    "app/api/safety/[...path]/route.ts",
+    "external FastAPI /api/v1/reports/site/{siteId}/full"
+  ],
+  "performanceGuardrails": [
+    {
+      "name": "Work-item index list fetch",
+      "appliesTo": "Work Item Index Fetch",
+      "maxLatencyMs": 8000,
+      "maxResponseBytes": 3000000,
+      "cacheStrategy": "shared site report index cache with force-reload escape hatch",
+      "invalidationTriggers": [
+        "site switch",
+        "explicit reload",
+        "successful create or update on the same site"
+      ]
+    }
+  ],
+  "portabilityTier": "core",
+  "status": "published"
+}

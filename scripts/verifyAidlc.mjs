@@ -1,23 +1,5 @@
 import { execFileSync } from 'node:child_process';
-
-const ADMIN_SOURCE_PATTERNS = [
-  /^app\/api\/admin\//,
-  /^app\/api\/safety\//,
-  /^app\/admin\//,
-  /^features\/admin\//,
-  /^lib\/admin\/apiClient\.ts$/,
-  /^server\/admin\//,
-];
-
-const ERP_SOURCE_PATTERNS = [
-  /^app\/sites\//,
-  /^components\/worker\//,
-  /^features\/home\//,
-  /^features\/inspection-session\//,
-  /^features\/mailbox\//,
-  /^features\/mobile\//,
-  /^features\/site-reports\//,
-];
+import { getGuardedScopesForFile, isGuardedFile } from './aidlcContractMetadata.mjs';
 
 const ADMIN_DOC_PATTERNS = [/^docs\/admin-aidlc\//];
 const ADMIN_PROOF_PATTERNS = [
@@ -98,6 +80,13 @@ function collectMatching(files, patterns) {
   return files.filter((file) => matchesAny(file, patterns));
 }
 
+function getScopeSourceFiles(files, scopeName) {
+  return files.filter((file) => {
+    if (!isGuardedFile(file)) return false;
+    return getGuardedScopesForFile(file).includes(scopeName);
+  });
+}
+
 function printFailure(title, details) {
   console.error(`[aidlc-verify] ${title}`);
   for (const detail of details) {
@@ -108,11 +97,10 @@ function printFailure(title, details) {
 function verifyScope({
   files,
   scopeName,
-  sourcePatterns,
   proofPatterns,
   docPatterns = [],
 }) {
-  const sourceFiles = collectMatching(files, sourcePatterns);
+  const sourceFiles = getScopeSourceFiles(files, scopeName);
   if (sourceFiles.length === 0) return { active: false, sourceFiles };
 
   const proofFiles = collectMatching(files, proofPatterns);
@@ -158,14 +146,12 @@ function main() {
   const admin = verifyScope({
     files,
     scopeName: 'admin',
-    sourcePatterns: ADMIN_SOURCE_PATTERNS,
     proofPatterns: ADMIN_PROOF_PATTERNS,
     docPatterns: ADMIN_DOC_PATTERNS,
   });
   const erp = verifyScope({
     files,
     scopeName: 'erp',
-    sourcePatterns: ERP_SOURCE_PATTERNS,
     proofPatterns: ERP_PROOF_PATTERNS,
   });
 
@@ -175,6 +161,8 @@ function main() {
   }
 
   runValidation('npx', ['tsc', '--noEmit', '--pretty', 'false'], 'TypeScript check');
+  runValidation('node', ['scripts/validateRecoverySlices.mjs', ...files], 'recovery-slice validation');
+  runValidation('npx', ['tsx', 'scripts/validateErpReversePlatform.ts', ...files], 'ERP reverse-platform validation');
 
   if (admin.active) {
     runValidation('npm', ['run', 'aidlc:audit:admin'], 'admin audit');

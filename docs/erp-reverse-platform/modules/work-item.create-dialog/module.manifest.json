@@ -1,0 +1,88 @@
+{
+  "id": "work-item.create-dialog",
+  "version": "1.0.0",
+  "capability": "work-item.create-dialog",
+  "category": "business-module",
+  "sourceSlices": [
+    "tech-guidance-create-dialog"
+  ],
+  "platformDependencies": [
+    "platform-work-item.collection-shell"
+  ],
+  "entities": [
+    "CreateDialogState",
+    "CreateDestinationIntent"
+  ],
+  "commands": [
+    "validateCreateIntent",
+    "createWorkItem",
+    "handoffToEditor"
+  ],
+  "events": [
+    "workItem.createStarted",
+    "workItem.createCompleted",
+    "workItem.createFailed"
+  ],
+  "views": [
+    "createWorkItemDialog"
+  ],
+  "policies": [
+    "validate before handoff",
+    "recoverable create failure"
+  ],
+  "extensionPoints": [
+    "field copy",
+    "create presets",
+    "destination editor mapping"
+  ],
+  "industryOverridesAllowed": [
+    "collection.rowActions"
+  ],
+  "tenantConfigSurface": [
+    "workItem.defaultCreateTarget",
+    "workItem.createPresets"
+  ],
+  "outputArtifacts": [
+    "create dialog",
+    "editor handoff intent"
+  ],
+  "apiContracts": [
+    {
+      "name": "Work Item Create Submit",
+      "owner": "proxy-route",
+      "method": "POST",
+      "path": "/api/safety/reports/upsert",
+      "requestShape": [
+        "authenticated proxy POST request",
+        "site id, report date, title, report kind, and draft payload"
+      ],
+      "responseShape": [
+        "saved report identity and route key",
+        "persisted draft shell for editor handoff"
+      ],
+      "touchpoints": [
+        "app/api/safety/[...path]/route.ts",
+        "external FastAPI /api/v1/reports/upsert"
+      ]
+    }
+  ],
+  "serverTouchpoints": [
+    "app/api/safety/[...path]/route.ts",
+    "external FastAPI /api/v1/reports/upsert"
+  ],
+  "performanceGuardrails": [
+    {
+      "name": "Work-item create submit",
+      "appliesTo": "Work Item Create Submit",
+      "maxLatencyMs": 8000,
+      "maxResponseBytes": 500000,
+      "cacheStrategy": "no read cache; success must invalidate the site report index cache",
+      "invalidationTriggers": [
+        "successful create",
+        "create retry after failure"
+      ]
+    }
+  ],
+  "portabilityTier": "adaptable",
+  "status": "published"
+}

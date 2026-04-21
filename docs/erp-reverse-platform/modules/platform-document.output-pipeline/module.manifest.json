@@ -1,0 +1,122 @@
+{
+  "id": "platform-document.output-pipeline",
+  "version": "1.0.0",
+  "capability": "platform-document.output-pipeline",
+  "category": "platform-primitive",
+  "sourceSlices": [
+    "quarterly-export-and-pdf-reuse"
+  ],
+  "platformDependencies": [],
+  "entities": [
+    "DocumentDraftState",
+    "RenderedArtifact"
+  ],
+  "commands": [
+    "persistDraft",
+    "exportDocument",
+    "reuseRenderedArtifact"
+  ],
+  "events": [
+    "document.persisted",
+    "document.exportRequested",
+    "document.exportCompleted"
+  ],
+  "views": [
+    "documentActionBar",
+    "artifactReuseLink"
+  ],
+  "policies": [
+    "save-before-export",
+    "artifact reuse fallback",
+    "normalized persisted output state"
+  ],
+  "extensionPoints": [
+    "template selector",
+    "output naming",
+    "approval stamp rules"
+  ],
+  "industryOverridesAllowed": [
+    "document.templateSelection",
+    "document.outputNaming",
+    "document.approvalStampRules"
+  ],
+  "tenantConfigSurface": [
+    "document.defaultTemplate",
+    "document.exportBranding"
+  ],
+  "outputArtifacts": [
+    "generated document",
+    "reused rendered artifact"
+  ],
+  "apiContracts": [
+    {
+      "name": "Persist Draft Before Export",
+      "owner": "proxy-route",
+      "method": "POST",
+      "path": "/api/safety/reports/upsert",
+      "requestShape": [
+        "authenticated proxy POST request",
+        "latest draft payload with fresh updatedAt"
+      ],
+      "responseShape": [
+        "persisted report payload",
+        "saved report identity used as export source of truth"
+      ],
+      "touchpoints": [
+        "app/api/safety/[...path]/route.ts",
+        "external FastAPI /api/v1/reports/upsert"
+      ]
+    },
+    {
+      "name": "Generate Quarterly PDF",
+      "owner": "next-route",
+      "method": "POST",
+      "path": "/api/documents/quarterly/pdf",
+      "requestShape": [
+        "report body plus current site/context",
+        "document-generation request payload"
+      ],
+      "responseShape": [
+        "generated binary PDF document",
+        "fallback-aware document response metadata"
+      ],
+      "touchpoints": [
+        "app/api/documents/quarterly/pdf/route.ts",
+        "server/documents/quarterly/requestResolver.ts"
+      ]
+    }
+  ],
+  "serverTouchpoints": [
+    "app/api/safety/[...path]/route.ts",
+    "external FastAPI /api/v1/reports/upsert",
+    "app/api/documents/quarterly/pdf/route.ts",
+    "server/documents/quarterly/requestResolver.ts"
+  ],
+  "performanceGuardrails": [
+    {
+      "name": "Persist draft before export",
+      "appliesTo": "Persist Draft Before Export",
+      "maxLatencyMs": 8000,
+      "maxResponseBytes": 500000,
+      "cacheStrategy": "no cache; persisted draft becomes the export source of truth",
+      "invalidationTriggers": [
+        "every export attempt",
+        "every explicit save"
+      ]
+    },
+    {
+      "name": "Binary document generation",
+      "appliesTo": "Generate Quarterly PDF",
+      "maxLatencyMs": 12000,
+      "maxResponseBytes": 8000000,
+      "cacheStrategy": "reuse last successful rendered artifact when regeneration is unnecessary",
+      "invalidationTriggers": [
+        "draft save",
+        "template change",
+        "document-option change"
+      ]
+    }
+  ],
+  "portabilityTier": "adaptable",
+  "status": "published"
+}

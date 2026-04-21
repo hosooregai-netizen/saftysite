@@ -1,0 +1,127 @@
+{
+  "id": "platform-dashboard.snapshot-cache",
+  "version": "1.0.0",
+  "capability": "platform-dashboard.snapshot-cache",
+  "category": "platform-primitive",
+  "sourceSlices": [
+    "admin-overview-dashboard",
+    "admin-analytics-dashboard"
+  ],
+  "platformDependencies": [],
+  "entities": [
+    "DashboardSnapshot",
+    "DashboardSectionState"
+  ],
+  "commands": [
+    "bootstrapSnapshot",
+    "refreshSnapshot",
+    "mergeSectionSnapshot"
+  ],
+  "events": [
+    "dashboard.snapshotHydrated",
+    "dashboard.refreshCompleted",
+    "dashboard.refreshFailed"
+  ],
+  "views": [
+    "dashboardShell",
+    "dashboardSection"
+  ],
+  "policies": [
+    "section-aware merge",
+    "stale-while-refresh",
+    "normalized export state"
+  ],
+  "extensionPoints": [
+    "queue definitions",
+    "summary card layout",
+    "export column presets"
+  ],
+  "industryOverridesAllowed": [
+    "dashboard.queueDefinitions",
+    "dashboard.defaultFilters",
+    "dashboard.exportColumns"
+  ],
+  "tenantConfigSurface": [
+    "dashboard.defaultLandingSection",
+    "dashboard.hiddenCards"
+  ],
+  "outputArtifacts": [
+    "dashboard snapshot",
+    "section export model"
+  ],
+  "apiContracts": [
+    {
+      "name": "Admin Overview Snapshot",
+      "owner": "next-route",
+      "method": "GET",
+      "path": "/api/admin/dashboard/overview",
+      "requestShape": [
+        "admin-authenticated GET request",
+        "optional route/session cache context"
+      ],
+      "responseShape": [
+        "overview sections and queue cards",
+        "normalized counts and export-visible rows"
+      ],
+      "touchpoints": [
+        "app/api/admin/dashboard/overview/route.ts",
+        "app/api/admin/dashboard/overview/routeFallbacks.ts",
+        "server/admin/overviewPolicyOverlay.ts",
+        "server/admin/overviewRouteCache.ts"
+      ]
+    },
+    {
+      "name": "Admin Analytics Summary Snapshot",
+      "owner": "next-route",
+      "method": "GET",
+      "path": "/api/admin/dashboard/analytics?period=month",
+      "requestShape": [
+        "admin-authenticated GET request",
+        "period query parameter"
+      ],
+      "responseShape": [
+        "normalized analytics summary payload",
+        "basis-period metadata and export-ready KPI groups"
+      ],
+      "touchpoints": [
+        "app/api/admin/dashboard/analytics/route.ts",
+        "server/admin/analyticsSnapshot.ts"
+      ]
+    }
+  ],
+  "serverTouchpoints": [
+    "app/api/admin/dashboard/overview/route.ts",
+    "app/api/admin/dashboard/overview/routeFallbacks.ts",
+    "server/admin/overviewPolicyOverlay.ts",
+    "server/admin/overviewRouteCache.ts",
+    "app/api/admin/dashboard/analytics/route.ts",
+    "server/admin/analyticsSnapshot.ts"
+  ],
+  "performanceGuardrails": [
+    {
+      "name": "Admin overview snapshot",
+      "appliesTo": "Admin Overview Snapshot",
+      "maxLatencyMs": 7000,
+      "maxResponseBytes": 2500000,
+      "cacheStrategy": "admin session cache plus route-level snapshot reuse for first paint",
+      "invalidationTriggers": [
+        "report mutations",
+        "site and assignment mutations",
+        "overview manual refresh"
+      ]
+    },
+    {
+      "name": "Admin analytics summary snapshot",
+      "appliesTo": "Admin Analytics Summary Snapshot",
+      "maxLatencyMs": 1500,
+      "maxResponseBytes": 1000000,
+      "cacheStrategy": "independent analytics summary cache keyed by period",
+      "invalidationTriggers": [
+        "analytics refresh action",
+        "upstream safety mutations affecting aggregates"
+      ]
+    }
+  ],
+  "portabilityTier": "core",
+  "status": "published"
+}

@@ -46,9 +46,29 @@ Use AIDLC here as a practical anti-regression workflow for AI-assisted coding.
 Admin work follows the same rules as ERP work. For `/admin`, the default validation stack is:
 
 1. feature contract pack in `tests/client/contracts/*.ts` with the thin registry in `tests/client/featureContracts.ts`
-2. mocked Playwright smoke for fast refactor loops
-3. real admin smoke for integrated `/admin` verification
-4. batch record in `docs/admin-aidlc/`
+2. companion metadata in `tests/client/contracts/featureContractMetadata.json`
+3. reverse specs by recovery slice in `docs/reverse-specs/`
+4. mocked Playwright smoke for fast refactor loops
+5. real admin smoke for integrated `/admin` verification
+6. batch record in `docs/admin-aidlc/`
+
+The important split is:
+
+- top-level feature contract:
+  - smoke, push gating, CI unit
+- recovery slice:
+  - reverse-spec and reconstruction unit
+- batch record:
+  - work log and validation unit
+
+For reusable cross-industry ERP reconstruction, keep a separate reverse program:
+
+- ERP reverse platform:
+  - capability-module, adapter, industry-pack, and composition unit
+  - document + manifest pair under `docs/erp-reverse-platform/`
+  - provenance-linked back to recovery slices instead of replacing them
+
+Do not overload a recovery-slice reverse spec and a reusable ERP module spec into the same file.
 
 ### Keep change units small
 
@@ -91,18 +111,26 @@ Small files only help if the interface between them is explicit.
 When editing a feature, keep these artifacts in view together:
 
 1. the feature contract pack in `tests/client/contracts/*.ts`
-2. the screen or route being changed
-3. the closest shared interface or helper file
-4. this architecture document when ownership is unclear
+2. the contract metadata in `tests/client/contracts/featureContractMetadata.json`
+3. the reverse spec for the affected recovery slice in `docs/reverse-specs/`
+4. the screen or route being changed
+5. the closest shared interface or helper file
+6. the corresponding ERP reverse module in `docs/erp-reverse-platform/` when the behavior is meant
+   to be reusable across industries
+7. this architecture document when ownership is unclear
 
 ## Contract Before Mutation
 
 For ERP client work:
 
 1. identify the affected feature contract
-2. add or adjust smoke coverage
-3. change code in the smallest responsible file
-4. re-run the targeted smoke
+2. identify the affected recovery slice
+3. add or adjust smoke coverage when the top-level contract changes
+4. update the managed reverse spec when the recovery slice changes
+5. if the behavior is a reusable ERP capability, update the reverse module doc/manifest and
+   provenance map in `docs/erp-reverse-platform/`
+6. change code in the smallest responsible file
+7. re-run the targeted smoke and the ERP reverse validator
 
 If a behavior has no contract yet, treat it as unprotected until one exists.
 
@@ -110,16 +138,18 @@ For admin client work, treat the contract pack as the unit of change:
 
 1. create or update the batch spec/record under `docs/admin-aidlc/`
 2. add or adjust the admin feature contract
-3. update mocked smoke
-4. change code in the smallest responsible file
-5. rerun mocked smoke, then real admin smoke when a local app is available
+3. identify and update the affected recovery slice
+4. update mocked smoke
+5. change code in the smallest responsible file
+6. rerun mocked smoke, then real admin smoke when a local app is available
 
 For control-center work, keep the batch record especially tight:
 
 1. update the active `docs/admin-aidlc/batch-*.md` record
 2. strengthen the `admin-control-center` contract when markers, export entry, or period filters move
-3. rerun mocked control-center smoke
-4. rerun real control-center smoke or record the exact blocker
+3. update the exact overview / analytics / admin-photo recovery slice that changed
+4. rerun mocked control-center smoke
+5. rerun real control-center smoke or record the exact blocker
 
 ## Skill Loading Strategy
 
@@ -181,7 +211,8 @@ npm run verify:aidlc
 ```
 
 `verify:aidlc` checks staged file paths, requires matching contract-pack companions for guarded
-admin/ERP source edits, and runs the matching AIDLC audit plus `tsc` before the commit is allowed.
+admin/ERP source edits, runs recovery-slice validation, runs ERP reverse-platform validation, and
+then runs the matching AIDLC audit plus `tsc` before the commit is allowed.
 
 `.githooks/pre-push` adds smoke enforcement for guarded source pushes:
 
@@ -191,7 +222,7 @@ npm run verify:aidlc:push
 
 `verify:aidlc:push` looks at the files being pushed, resolves the required mocked smoke features,
 checks that the local app is reachable at `PLAYWRIGHT_BASE_URL` (default `http://127.0.0.1:3211`),
-and blocks the push if the smoke run fails or if a guarded surface has no smoke mapping yet.
+and blocks the push if the smoke run fails or if a guarded surface has no metadata-driven smoke mapping yet.
 
 For local clones, `npm install` / `npm ci` also runs the repo `prepare` script so the same
 `.githooks` path is reinstalled automatically on each machine.

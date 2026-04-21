@@ -1,0 +1,39 @@
+{
+  "id": "aidlc-control-tower",
+  "version": "1.0.0",
+  "industryPack": "construction-safety-core",
+  "enabledModules": [
+    "operations-dashboard.queue-overview",
+    "operations-dashboard.analytics",
+    "work-item.index-and-filter",
+    "work-item.create-dialog",
+    "periodic-report.source-sync",
+    "document-output.export-and-reuse",
+    "asset-review.photo-workbench"
+  ],
+  "adapterBindings": [
+    "safety-upstream-normalization"
+  ],
+  "tenantBindings": [
+    "dashboard.defaultLandingSection",
+    "dashboard.hiddenCards",
+    "analytics.defaultBasisPeriod",
+    "workItem.defaultCreateTarget",
+    "periodicReport.defaultTemplate",
+    "periodicReport.autoReusePrevious",
+    "document.exportBranding",
+    "photoReview.defaultFilter"
+  ],
+  "documentTemplates": [
+    "quarterly-report-default",
+    "quarterly-report-stamped"
+  ],
+  "navigationLayout": [
+    "admin.control-center.overview",
+    "admin.control-center.analytics",
+    "admin.control-center.photo-review",
+    "site.work-item.index",
+    "site.periodic-report.editor"
+  ]
+}
+

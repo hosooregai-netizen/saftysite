@@ -1,0 +1,93 @@
+{
+  "id": "operations-dashboard.queue-overview",
+  "version": "1.0.0",
+  "capability": "operations-dashboard.queue-overview",
+  "category": "business-module",
+  "sourceSlices": [
+    "admin-overview-dashboard"
+  ],
+  "platformDependencies": [
+    "platform-dashboard.snapshot-cache"
+  ],
+  "entities": [
+    "OverviewQueueCard",
+    "OverviewQueueRow"
+  ],
+  "commands": [
+    "openQueueSection",
+    "exportQueueOverview"
+  ],
+  "events": [
+    "overview.queueRendered",
+    "overview.exportRequested"
+  ],
+  "views": [
+    "overviewDashboard",
+    "overviewQueueSection"
+  ],
+  "policies": [
+    "section-level fallback merge",
+    "visible-state export"
+  ],
+  "extensionPoints": [
+    "queue cards",
+    "section copy",
+    "export column presets"
+  ],
+  "industryOverridesAllowed": [
+    "dashboard.queueDefinitions",
+    "dashboard.exportColumns"
+  ],
+  "tenantConfigSurface": [
+    "dashboard.defaultLandingSection",
+    "dashboard.hiddenCards"
+  ],
+  "outputArtifacts": [
+    "queue overview dashboard",
+    "queue export sheet"
+  ],
+  "apiContracts": [
+    {
+      "name": "Overview Queue Snapshot",
+      "owner": "next-route",
+      "method": "GET",
+      "path": "/api/admin/dashboard/overview",
+      "requestShape": [
+        "admin-authenticated GET request",
+        "session bootstrap may seed cache before fetch"
+      ],
+      "responseShape": [
+        "overview response with cards, queue rows, and summary counts",
+        "normalized visible rows for export"
+      ],
+      "touchpoints": [
+        "app/api/admin/dashboard/overview/route.ts",
+        "app/api/admin/dashboard/overview/routeFallbacks.ts",
+        "server/admin/overviewPolicyOverlay.ts",
+        "server/admin/overviewRouteCache.ts"
+      ]
+    }
+  ],
+  "serverTouchpoints": [
+    "app/api/admin/dashboard/overview/route.ts",
+    "app/api/admin/dashboard/overview/routeFallbacks.ts",
+    "server/admin/overviewPolicyOverlay.ts",
+    "server/admin/overviewRouteCache.ts"
+  ],
+  "performanceGuardrails": [
+    {
+      "name": "Overview queue snapshot",
+      "appliesTo": "Overview Queue Snapshot",
+      "maxLatencyMs": 7000,
+      "maxResponseBytes": 2500000,
+      "cacheStrategy": "admin session cache and normalized overview snapshot reuse",
+      "invalidationTriggers": [
+        "report dispatch mutations",
+        "site or assignment mutations",
+        "explicit overview refresh"
+      ]
+    }
+  ],
+  "portabilityTier": "adaptable",
+  "status": "published"
+}

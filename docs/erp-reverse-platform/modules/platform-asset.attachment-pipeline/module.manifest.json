@@ -1,0 +1,154 @@
+{
+  "id": "platform-asset.attachment-pipeline",
+  "version": "1.0.0",
+  "capability": "platform-asset.attachment-pipeline",
+  "category": "platform-primitive",
+  "sourceSlices": [
+    "admin-photo-admin-flow",
+    "mobile-link-session-shell"
+  ],
+  "platformDependencies": [],
+  "entities": [
+    "AssetRecord",
+    "AssetSelectionState"
+  ],
+  "commands": [
+    "loadAssets",
+    "uploadAsset",
+    "downloadSelectedAssets"
+  ],
+  "events": [
+    "asset.uploadStarted",
+    "asset.uploadCompleted",
+    "asset.selectionChanged"
+  ],
+  "views": [
+    "assetGrid",
+    "assetPreview",
+    "assetToolbar"
+  ],
+  "policies": [
+    "context-preserving asset identity",
+    "selection survives partial download failure",
+    "preview returns safely to list state"
+  ],
+  "extensionPoints": [
+    "asset kind taxonomy",
+    "review badges",
+    "download naming"
+  ],
+  "industryOverridesAllowed": [
+    "asset.allowedKinds",
+    "asset.reviewFlags",
+    "asset.downloadBundleNaming"
+  ],
+  "tenantConfigSurface": [
+    "asset.maxUploadSizeMb",
+    "asset.defaultPreviewMode"
+  ],
+  "outputArtifacts": [
+    "attachment review grid",
+    "download bundle"
+  ],
+  "apiContracts": [
+    {
+      "name": "Asset List Fetch",
+      "owner": "next-route",
+      "method": "GET",
+      "path": "/api/photos",
+      "requestShape": [
+        "admin-authenticated GET request",
+        "site, round, filter, pagination, and mode query parameters"
+      ],
+      "responseShape": [
+        "paged asset rows",
+        "capabilities and total-count metadata"
+      ],
+      "touchpoints": [
+        "app/api/photos/route.ts",
+        "server/photos/service.ts",
+        "server/photos/album.ts"
+      ]
+    },
+    {
+      "name": "Asset Upload",
+      "owner": "next-route",
+      "method": "POST",
+      "path": "/api/photos/upload",
+      "requestShape": [
+        "multipart form data",
+        "file payload plus contextual metadata"
+      ],
+      "responseShape": [
+        "uploaded asset metadata",
+        "list-refresh-ready identifiers"
+      ],
+      "touchpoints": [
+        "app/api/photos/upload/route.ts",
+        "server/photos/service.ts"
+      ]
+    },
+    {
+      "name": "Asset Bulk Download",
+      "owner": "next-route",
+      "method": "POST",
+      "path": "/api/photos/download",
+      "requestShape": [
+        "selected asset ids",
+        "download context and bundling options"
+      ],
+      "responseShape": [
+        "binary download bundle or stream",
+        "partial-failure-aware response semantics"
+      ],
+      "touchpoints": [
+        "app/api/photos/download/route.ts",
+        "server/photos/album.ts"
+      ]
+    }
+  ],
+  "serverTouchpoints": [
+    "app/api/photos/route.ts",
+    "app/api/photos/upload/route.ts",
+    "app/api/photos/download/route.ts",
+    "server/photos/service.ts",
+    "server/photos/album.ts"
+  ],
+  "performanceGuardrails": [
+    {
+      "name": "Asset list fetch",
+      "appliesTo": "Asset List Fetch",
+      "maxLatencyMs": 3000,
+      "maxResponseBytes": 1500000,
+      "cacheStrategy": "no durable server cache; rely on current query context and explicit reload",
+      "invalidationTriggers": [
+        "upload",
+        "patch or delete",
+        "round or site filter change"
+      ]
+    },
+    {
+      "name": "Asset upload",
+      "appliesTo": "Asset Upload",
+      "maxLatencyMs": 45000,
+      "cacheStrategy": "no cache; completed upload must trigger list refresh",
+      "invalidationTriggers": [
+        "every successful upload",
+        "asset replacement"
+      ]
+    },
+    {
+      "name": "Asset bulk download",
+      "appliesTo": "Asset Bulk Download",
+      "maxLatencyMs": 12000,
+      "maxResponseBytes": 8000000,
+      "cacheStrategy": "no cache; selection state stays client-owned during partial failures",
+      "invalidationTriggers": [
+        "selection change",
+        "download retry"
+      ]
+    }
+  ],
+  "portabilityTier": "adaptable",
+  "status": "published"
+}

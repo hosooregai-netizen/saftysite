@@ -1,14 +1,7 @@
 import { execFileSync } from 'node:child_process';
+import { findContractsForFile, isGuardedFile } from './aidlcContractMetadata.mjs';
 
 const DEFAULT_BASE_URL = process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:3211';
-const ALL_ADMIN_SMOKE_IDS = [
-  'admin-control-center',
-  'admin-headquarters',
-  'admin-reports',
-  'admin-sites',
-  'admin-schedules',
-  'admin-users',
-];
 
 const IGNORED_FILE_PATTERNS = [
   /^\.tmp-ui\//,
@@ -21,203 +14,6 @@ const IGNORED_FILE_PATTERNS = [
   /^scripts\/verifyAidlc\.mjs$/,
   /^scripts\/verifyAidlcPush\.mjs$/,
   /^\.githooks\//,
-];
-
-const GUARDED_SOURCE_PATTERNS = [
-  /^app\/api\/admin\//,
-  /^app\/api\/safety\//,
-  /^app\/admin\//,
-  /^app\/sites\//,
-  /^components\/worker\//,
-  /^features\/admin\//,
-  /^features\/home\//,
-  /^features\/inspection-session\//,
-  /^features\/mailbox\//,
-  /^features\/mobile\//,
-  /^features\/site-reports\//,
-  /^lib\/admin\/apiClient\.ts$/,
-  /^server\/admin\//,
-];
-
-const FEATURE_RULES = [
-  {
-    ids: ALL_ADMIN_SMOKE_IDS,
-    patterns: [
-      /^features\/admin\/sections\/AdminSectionShared\.module\.css$/,
-      /^features\/admin\/components\/AdminDashboard(SectionContent|Screen|Shell.*)\.tsx?$/,
-      /^features\/admin\/lib\/adminSessionCache\.ts$/,
-      /^features\/admin\/lib\/adminClientCacheInvalidation(\.test)?\.ts$/,
-      /^features\/admin\/lib\/adminDashboardBootstrapCache\.ts$/,
-      /^features\/admin\/hooks\/useAdminDashboard(DataLoaders|Routing|State)\.ts$/,
-      /^features\/admin\/hooks\/buildAdminDashboard(Assignment|Content|Crud)Actions\.ts$/,
-      /^features\/admin\/lib\/adminDashboardMutations\.ts$/,
-      /^features\/admin\/sections\/content\//,
-      /^app\/api\/admin\/directory\//,
-      /^app\/api\/safety\//,
-      /^lib\/admin\/apiClient\.ts$/,
-      /^server\/admin\/adminRouteInvalidation(\.test)?\.ts$/,
-      /^server\/admin\/adminDirectory(Lists|Snapshot)\.ts$/,
-      /^server\/admin\/exportSheets\.ts$/,
-      /^server\/admin\/safetyApiServer(\.test)?\.ts$/,
-      /^server\/admin\/upstreamMappers(\.test)?\.ts$/,
-    ],
-  },
-  {
-    id: 'admin-control-center',
-    patterns: [
-      /^app\/admin\//,
-      /^app\/api\/admin\/dashboard\//,
-      /^features\/admin\/components\//,
-      /^features\/admin\/lib\/control-center-model\//,
-      /^features\/admin\/lib\/buildAdminControlCenterModel\.ts$/,
-      /^features\/admin\/lib\/adminDashboardShellState\.ts$/,
-      /^features\/admin\/sections\/analytics\//,
-      /^features\/admin\/sections\/content\//,
-      /^features\/admin\/sections\/overview\//,
-      /^features\/admin\/sections\/photos\//,
-      /^server\/admin\/analyticsSnapshot\.ts$/,
-      /^server\/admin\/overviewPolicyOverlay(\.test)?\.ts$/,
-      /^server\/admin\/overviewRouteCache(\.test)?\.ts$/,
-    ],
-  },
-  {
-    id: 'admin-headquarters',
-    patterns: [
-      /^app\/api\/admin\/headquarters\//,
-      /^features\/admin\/sections\/headquarters\//,
-    ],
-  },
-  {
-    id: 'admin-reports',
-    patterns: [
-      /^app\/api\/admin\/reports\//,
-      /^features\/admin\/sections\/reports\//,
-      /^server\/admin\/reportsRouteCache(\.test)?\.ts$/,
-    ],
-  },
-  {
-    id: 'admin-sites',
-    patterns: [
-      /^app\/api\/admin\/sites\/list\//,
-      /^app\/api\/admin\/sites\/\[siteId\]\/route\.ts$/,
-      /^features\/admin\/sections\/excelImport\//,
-      /^features\/admin\/sections\/sites\//,
-    ],
-  },
-  {
-    id: 'admin-schedules',
-    patterns: [
-      /^app\/api\/admin\/schedules\//,
-      /^app\/api\/admin\/sites\/\[siteId\]\/schedules\/generate\//,
-      /^features\/admin\/sections\/schedules\//,
-      /^server\/admin\/localScheduleNotifications\.ts$/,
-      /^server\/admin\/automation(\.test)?\.ts$/,
-      /^server\/admin\/scheduleSnapshot\.ts$/,
-    ],
-  },
-  {
-    ids: ['mobile-site-home', 'mobile-site-reports'],
-    patterns: [
-      /^features\/mobile\/components\/MobileSiteListScreen\.tsx$/,
-      /^features\/mobile\/site-list\//,
-    ],
-  },
-  {
-    id: 'admin-users',
-    patterns: [
-      /^app\/api\/admin\/users\//,
-      /^features\/admin\/sections\/users\//,
-    ],
-  },
-  {
-    id: 'site-hub',
-    patterns: [
-      /^components\/worker\//,
-      /^features\/home\//,
-    ],
-  },
-  {
-    id: 'site-report-list',
-    patterns: [
-      /^features\/site-reports\/components\/ReportList\.tsx$/,
-      /^features\/site-reports\/components\/SiteReportListPanel\.tsx$/,
-      /^features\/site-reports\/components\/SiteReportsScreen\.module\.css$/,
-      /^features\/site-reports\/components\/SiteReportsScreen\.tsx$/,
-      /^features\/site-reports\/hooks\/useResolvedSiteRoute\.ts$/,
-      /^features\/site-reports\/hooks\/useSiteReportsScreen\.ts$/,
-      /^features\/site-reports\/hooks\/useSiteReportListState\.ts$/,
-      /^features\/site-reports\/report-list\//,
-    ],
-  },
-  {
-    id: 'quarterly-report',
-    patterns: [
-      /^app\/sites\/\[siteKey\]\/quarterly\/\[quarterKey\]\//,
-      /^features\/site-reports\/components\/SiteQuarterlyReportsScreen\.tsx$/,
-      /^features\/site-reports\/quarterly-report\//,
-      /^features\/site-reports\/quarterly-list\//,
-    ],
-  },
-  {
-    id: 'bad-workplace-report',
-    patterns: [
-      /^app\/sites\/\[siteKey\]\/bad-workplace\/\[reportMonth\]\//,
-      /^features\/site-reports\/bad-workplace\//,
-    ],
-  },
-  {
-    id: 'mobile-quarterly-list',
-    patterns: [
-      /^features\/mobile\/components\/MobileSiteQuarterlyReportsScreen\.tsx$/,
-      /^features\/mobile\/quarterly-list\//,
-    ],
-  },
-  {
-    id: 'mobile-quarterly-report',
-    patterns: [
-      /^features\/mobile\/components\/MobileQuarterlyReportScreen\.tsx$/,
-      /^features\/mobile\/quarterly-report\//,
-    ],
-  },
-  {
-    id: 'mobile-site-home',
-    patterns: [
-      /^features\/mobile\/components\/MobileSitePhotoAlbumScreen\.tsx$/,
-      /^features\/mobile\/components\/MobileSiteHomeScreen\.tsx$/,
-      /^features\/mobile\/site-home\//,
-    ],
-  },
-  {
-    id: 'mobile-worker-nav',
-    patterns: [
-      /^features\/mobile\/components\/MobileMailboxScreen\.tsx$/,
-      /^features\/mobile\/components\/MobileSiteListScreen\.tsx$/,
-      /^features\/mobile\/components\/MobileWorkerCalendarScreen\.tsx$/,
-      /^features\/mobile\/site-list\//,
-    ],
-  },
-  {
-    id: 'mobile-site-reports',
-    patterns: [
-      /^features\/mobile\/components\/MobileSiteReportsScreen\.tsx$/,
-      /^features\/mobile\/report-list\//,
-    ],
-  },
-  {
-    id: 'mobile-bad-workplace',
-    patterns: [
-      /^features\/mobile\/bad-workplace\//,
-      /^features\/mobile\/components\/MobileBadWorkplaceReportScreen\.tsx$/,
-    ],
-  },
-  {
-    id: 'mobile-link',
-    patterns: [
-      /^features\/inspection-session\//,
-      /^features\/mobile\/components\/MobileInspectionSessionScreen\.tsx$/,
-      /^features\/mobile\/inspection-session\//,
-    ],
-  },
 ];
 
 function getCommandCandidates(command) {
@@ -318,7 +114,7 @@ async function ensureBaseUrlReachable(baseUrl) {
 
 function buildRequiredSmokes(files) {
   const relevantFiles = files.filter((file) => !matchesAny(file, IGNORED_FILE_PATTERNS));
-  const guardedFiles = relevantFiles.filter((file) => matchesAny(file, GUARDED_SOURCE_PATTERNS));
+  const guardedFiles = relevantFiles.filter((file) => isGuardedFile(file));
   if (guardedFiles.length === 0) {
     return { guardedFiles, smokeIds: [] };
   }
@@ -327,18 +123,13 @@ function buildRequiredSmokes(files) {
   const unmappedFiles = [];
 
   for (const file of guardedFiles) {
-    const matchedRule = FEATURE_RULES.find((rule) => matchesAny(file, rule.patterns));
-    if (matchedRule) {
-      const ids = matchedRule.ids ?? [matchedRule.id];
-      for (const id of ids) {
-        smokeIds.add(id);
+    const matchedContracts = findContractsForFile(file);
+    if (matchedContracts.length > 0) {
+      for (const { metadata } of matchedContracts) {
+        for (const id of metadata.smokeScope.ids) {
+          smokeIds.add(id);
+        }
       }
-      continue;
-    }
-
-    if (file.startsWith('features/mailbox/')) {
-      smokeIds.add('bad-workplace-report');
-      smokeIds.add('quarterly-report');
       continue;
     }
 

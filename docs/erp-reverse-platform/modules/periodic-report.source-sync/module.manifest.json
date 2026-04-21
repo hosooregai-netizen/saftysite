@@ -1,0 +1,117 @@
+{
+  "id": "periodic-report.source-sync",
+  "version": "1.0.0",
+  "capability": "periodic-report.source-sync",
+  "category": "business-module",
+  "sourceSlices": [
+    "quarterly-editor-source-sync"
+  ],
+  "platformDependencies": [],
+  "entities": [
+    "PeriodicReportDraft",
+    "PeriodicReportSourceRecord"
+  ],
+  "commands": [
+    "resolveSourceRecords",
+    "selectSourceRecord",
+    "recalculatePeriodicDraft"
+  ],
+  "events": [
+    "periodicReport.sourceResolved",
+    "periodicReport.draftRehydrated"
+  ],
+  "views": [
+    "periodicReportEditor",
+    "sourceSelectionModal"
+  ],
+  "policies": [
+    "normalized source recalculation",
+    "draft-preserving failure recovery"
+  ],
+  "extensionPoints": [
+    "source precedence rules",
+    "period labels",
+    "field mapping policies"
+  ],
+  "industryOverridesAllowed": [
+    "periodicReport.sourcePriority"
+  ],
+  "tenantConfigSurface": [
+    "periodicReport.defaultTemplate",
+    "periodicReport.autoReusePrevious"
+  ],
+  "outputArtifacts": [
+    "rehydrated periodic report draft"
+  ],
+  "apiContracts": [
+    {
+      "name": "Quarterly Report Lookup",
+      "owner": "proxy-route",
+      "method": "GET",
+      "path": "/api/safety/reports/by-key/{reportKey}",
+      "requestShape": [
+        "authenticated proxy GET request",
+        "reportKey path parameter"
+      ],
+      "responseShape": [
+        "existing report payload",
+        "404 fallback interpreted as a new route-key draft seed"
+      ],
+      "touchpoints": [
+        "app/api/safety/[...path]/route.ts",
+        "external FastAPI /api/v1/reports/by-key/{reportKey}"
+      ]
+    },
+    {
+      "name": "Quarterly Summary Seed",
+      "owner": "proxy-route",
+      "method": "GET",
+      "path": "/api/safety/reports/site/{siteId}/quarterly-summary-seed",
+      "requestShape": [
+        "authenticated proxy GET request",
+        "siteId plus quarter-range and selected-source query parameters"
+      ],
+      "responseShape": [
+        "recalculated quarterly summary seed",
+        "derived section inputs for implementation rows, stats, and future plans"
+      ],
+      "touchpoints": [
+        "app/api/safety/[...path]/route.ts",
+        "external FastAPI /api/v1/reports/site/{siteId}/quarterly-summary-seed"
+      ]
+    }
+  ],
+  "serverTouchpoints": [
+    "app/api/safety/[...path]/route.ts",
+    "external FastAPI /api/v1/reports/by-key/{reportKey}",
+    "external FastAPI /api/v1/reports/site/{siteId}/quarterly-summary-seed"
+  ],
+  "performanceGuardrails": [
+    {
+      "name": "Quarterly report lookup",
+      "appliesTo": "Quarterly Report Lookup",
+      "maxLatencyMs": 2500,
+      "maxResponseBytes": 1500000,
+      "cacheStrategy": "boot from existing report when found and preserve route-key draft on 404",
+      "invalidationTriggers": [
+        "route-key change",
+        "save of the same report",
+        "auth or site context reset"
+      ]
+    },
+    {
+      "name": "Quarterly summary seed recalculation",
+      "appliesTo": "Quarterly Summary Seed",
+      "maxLatencyMs": 5000,
+      "maxResponseBytes": 2000000,
+      "cacheStrategy": "optimistic editor state may bridge reload but no long-lived seed cache is assumed",
+      "invalidationTriggers": [
+        "quarter change",
+        "selected source change",
+        "explicit source refresh"
+      ]
+    }
+  ],
+  "portabilityTier": "adaptable",
+  "status": "published"
+}

@@ -1,0 +1,122 @@
+{
+  "id": "document-output.export-and-reuse",
+  "version": "1.0.0",
+  "capability": "document-output.export-and-reuse",
+  "category": "business-module",
+  "sourceSlices": [
+    "quarterly-export-and-pdf-reuse"
+  ],
+  "platformDependencies": [
+    "platform-document.output-pipeline"
+  ],
+  "entities": [
+    "DocumentActionState",
+    "ReusableOutputArtifact"
+  ],
+  "commands": [
+    "requestDocumentExport",
+    "reuseExistingDocumentOutput"
+  ],
+  "events": [
+    "documentOutput.exportTriggered",
+    "documentOutput.reuseTriggered"
+  ],
+  "views": [
+    "documentOutputActionBar"
+  ],
+  "policies": [
+    "save-before-export",
+    "artifact reuse over unnecessary rerender"
+  ],
+  "extensionPoints": [
+    "action copy",
+    "template selector",
+    "approval-stamp logic"
+  ],
+  "industryOverridesAllowed": [
+    "document.templateSelection",
+    "document.outputNaming",
+    "document.approvalStampRules"
+  ],
+  "tenantConfigSurface": [
+    "document.defaultTemplate",
+    "document.exportBranding"
+  ],
+  "outputArtifacts": [
+    "document export action surface",
+    "reused PDF artifact"
+  ],
+  "apiContracts": [
+    {
+      "name": "Generate Quarterly HWPX",
+      "owner": "next-route",
+      "method": "POST",
+      "path": "/api/documents/quarterly/hwpx",
+      "requestShape": [
+        "persisted report body plus site/context",
+        "document-generation request payload"
+      ],
+      "responseShape": [
+        "binary HWPX blob",
+        "filename metadata"
+      ],
+      "touchpoints": [
+        "app/api/documents/quarterly/hwpx/route.ts",
+        "server/documents/quarterly/requestResolver.ts",
+        "server/documents/quarterly/hwpx.ts"
+      ]
+    },
+    {
+      "name": "Generate Quarterly PDF",
+      "owner": "next-route",
+      "method": "POST",
+      "path": "/api/documents/quarterly/pdf",
+      "requestShape": [
+        "persisted report body plus site/context",
+        "document-generation request payload"
+      ],
+      "responseShape": [
+        "binary PDF blob on success",
+        "fallback HWPX response with notice semantics when PDF conversion fails"
+      ],
+      "touchpoints": [
+        "app/api/documents/quarterly/pdf/route.ts",
+        "server/documents/quarterly/requestResolver.ts",
+        "server/documents/quarterly/hwpx.ts"
+      ]
+    }
+  ],
+  "serverTouchpoints": [
+    "app/api/documents/quarterly/hwpx/route.ts",
+    "app/api/documents/quarterly/pdf/route.ts",
+    "server/documents/quarterly/requestResolver.ts",
+    "server/documents/quarterly/hwpx.ts"
+  ],
+  "performanceGuardrails": [
+    {
+      "name": "HWPX generation",
+      "appliesTo": "Generate Quarterly HWPX",
+      "maxLatencyMs": 12000,
+      "maxResponseBytes": 8000000,
+      "cacheStrategy": "reuse persisted draft state and avoid rendering against stale in-memory form data",
+      "invalidationTriggers": [
+        "save-before-export",
+        "template change"
+      ]
+    },
+    {
+      "name": "PDF generation",
+      "appliesTo": "Generate Quarterly PDF",
+      "maxLatencyMs": 12000,
+      "maxResponseBytes": 8000000,
+      "cacheStrategy": "prefer reusable output artifact when regeneration is unnecessary",
+      "invalidationTriggers": [
+        "save-before-export",
+        "PDF option change",
+        "fallback-to-HWPX notice path"
+      ]
+    }
+  ],
+  "portabilityTier": "adaptable",
+  "status": "published"
+}

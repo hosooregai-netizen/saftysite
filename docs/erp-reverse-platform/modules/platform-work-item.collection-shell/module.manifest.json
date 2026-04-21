@@ -1,0 +1,91 @@
+{
+  "id": "platform-work-item.collection-shell",
+  "version": "1.0.0",
+  "capability": "platform-work-item.collection-shell",
+  "category": "platform-primitive",
+  "sourceSlices": [
+    "site-report-index"
+  ],
+  "platformDependencies": [],
+  "entities": [
+    "WorkItemRow",
+    "CollectionQueryState"
+  ],
+  "commands": [
+    "loadCollection",
+    "applyCollectionFilters",
+    "openWorkItem"
+  ],
+  "events": [
+    "collection.loaded",
+    "collection.filterChanged",
+    "collection.sortChanged"
+  ],
+  "views": [
+    "collectionScreen",
+    "collectionToolbar",
+    "collectionEmptyState"
+  ],
+  "policies": [
+    "normalized rows",
+    "stable query persistence",
+    "graceful malformed-row handling"
+  ],
+  "extensionPoints": [
+    "column set",
+    "filter definitions",
+    "row action set"
+  ],
+  "industryOverridesAllowed": [
+    "collection.columns",
+    "collection.defaultFilters",
+    "collection.rowActions"
+  ],
+  "tenantConfigSurface": [
+    "collection.defaultSort",
+    "collection.hiddenColumns"
+  ],
+  "outputArtifacts": [
+    "work item index view"
+  ],
+  "apiContracts": [
+    {
+      "name": "Collection Shell List Fetch",
+      "owner": "proxy-route",
+      "method": "GET",
+      "path": "/api/safety/reports/site/{siteId}/full?limit=50",
+      "requestShape": [
+        "authenticated proxy GET request",
+        "siteId path parameter plus limit and optional list query parameters"
+      ],
+      "responseShape": [
+        "report list payload",
+        "rows normalized into shared collection-shell items"
+      ],
+      "touchpoints": [
+        "app/api/safety/[...path]/route.ts",
+        "external FastAPI /api/v1/reports/site/{siteId}/full"
+      ]
+    }
+  ],
+  "serverTouchpoints": [
+    "app/api/safety/[...path]/route.ts",
+    "external FastAPI /api/v1/reports/site/{siteId}/full"
+  ],
+  "performanceGuardrails": [
+    {
+      "name": "Collection shell list fetch",
+      "appliesTo": "Collection Shell List Fetch",
+      "maxLatencyMs": 8000,
+      "maxResponseBytes": 3000000,
+      "cacheStrategy": "one-shot client index cache per site with explicit force reload",
+      "invalidationTriggers": [
+        "site switch",
+        "explicit reload",
+        "successful work-item create or update"
+      ]
+    }
+  ],
+  "portabilityTier": "core",
+  "status": "published"
+}

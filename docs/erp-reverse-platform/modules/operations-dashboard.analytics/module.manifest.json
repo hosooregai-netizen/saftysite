@@ -1,0 +1,152 @@
+{
+  "id": "operations-dashboard.analytics",
+  "version": "1.0.0",
+  "capability": "operations-dashboard.analytics",
+  "category": "business-module",
+  "sourceSlices": [
+    "admin-analytics-dashboard"
+  ],
+  "platformDependencies": [
+    "platform-dashboard.snapshot-cache"
+  ],
+  "entities": [
+    "AnalyticsSummaryCard",
+    "AnalyticsDetailRow",
+    "AnalyticsBasisPeriod"
+  ],
+  "commands": [
+    "switchAnalyticsBasisPeriod",
+    "exportAnalytics"
+  ],
+  "events": [
+    "analytics.summaryLoaded",
+    "analytics.detailLoaded",
+    "analytics.periodChanged"
+  ],
+  "views": [
+    "analyticsDashboard",
+    "analyticsDetailTable"
+  ],
+  "policies": [
+    "independent summary/detail cache",
+    "compatible refresh without blanking",
+    "normalized analytics export"
+  ],
+  "extensionPoints": [
+    "KPI cards",
+    "period selector",
+    "detail columns"
+  ],
+  "industryOverridesAllowed": [
+    "dashboard.defaultFilters",
+    "dashboard.exportColumns"
+  ],
+  "tenantConfigSurface": [
+    "analytics.defaultBasisPeriod",
+    "analytics.hiddenMetrics"
+  ],
+  "outputArtifacts": [
+    "analytics dashboard",
+    "analytics export sheet"
+  ],
+  "apiContracts": [
+    {
+      "name": "Analytics Summary",
+      "owner": "next-route",
+      "method": "GET",
+      "path": "/api/admin/dashboard/analytics?period=month",
+      "requestShape": [
+        "admin-authenticated GET request",
+        "period query parameter"
+      ],
+      "responseShape": [
+        "analytics summary cards",
+        "period metadata and export-ready KPI groups"
+      ],
+      "touchpoints": [
+        "app/api/admin/dashboard/analytics/route.ts",
+        "server/admin/analyticsSnapshot.ts"
+      ]
+    },
+    {
+      "name": "Analytics Month Detail",
+      "owner": "next-route",
+      "method": "GET",
+      "path": "/api/admin/dashboard/analytics/month-detail?period=month&basis_month=YYYY-MM",
+      "requestShape": [
+        "admin-authenticated GET request",
+        "period and basis_month query parameters"
+      ],
+      "responseShape": [
+        "selected-basis-month detail payload",
+        "month-specific aggregate groups"
+      ],
+      "touchpoints": [
+        "app/api/admin/dashboard/analytics/month-detail/route.ts",
+        "server/admin/analyticsSnapshot.ts"
+      ]
+    },
+    {
+      "name": "Analytics Detail Table",
+      "owner": "next-route",
+      "method": "GET",
+      "path": "/api/admin/dashboard/analytics/detail?period=month&basis_month=YYYY-MM&detail_scope=month",
+      "requestShape": [
+        "admin-authenticated GET request",
+        "period, basis_month, and detail_scope query parameters"
+      ],
+      "responseShape": [
+        "normalized detail table rows",
+        "detail metadata for the current basis month"
+      ],
+      "touchpoints": [
+        "app/api/admin/dashboard/analytics/detail/route.ts",
+        "server/admin/analyticsSnapshot.ts"
+      ]
+    }
+  ],
+  "serverTouchpoints": [
+    "app/api/admin/dashboard/analytics/route.ts",
+    "app/api/admin/dashboard/analytics/month-detail/route.ts",
+    "app/api/admin/dashboard/analytics/detail/route.ts",
+    "server/admin/analyticsSnapshot.ts"
+  ],
+  "performanceGuardrails": [
+    {
+      "name": "Analytics summary",
+      "appliesTo": "Analytics Summary",
+      "maxLatencyMs": 1500,
+      "maxResponseBytes": 1000000,
+      "cacheStrategy": "summary cache keyed by period and reused during compatible refresh",
+      "invalidationTriggers": [
+        "period change affecting summary scope",
+        "explicit analytics refresh"
+      ]
+    },
+    {
+      "name": "Analytics month detail",
+      "appliesTo": "Analytics Month Detail",
+      "maxLatencyMs": 3000,
+      "maxResponseBytes": 2000000,
+      "cacheStrategy": "detail cache keyed by basis month",
+      "invalidationTriggers": [
+        "basis month change",
+        "explicit month-detail reload"
+      ]
+    },
+    {
+      "name": "Analytics detail table",
+      "appliesTo": "Analytics Detail Table",
+      "maxLatencyMs": 3000,
+      "maxResponseBytes": 2000000,
+      "cacheStrategy": "detail-table cache keyed by period, basis month, and detail scope",
+      "invalidationTriggers": [
+        "detail scope change",
+        "basis month change",
+        "explicit detail-table reload"
+      ]
+    }
+  ],
+  "portabilityTier": "adaptable",
+  "status": "published"
+}

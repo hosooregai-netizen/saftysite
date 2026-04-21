@@ -1,0 +1,24 @@
+{
+  "id": "safety-upstream-normalization",
+  "version": "1.0.0",
+  "target": "legacy safety-service payload family",
+  "inputContracts": [
+    "admin-control-center",
+    "site-report-list",
+    "quarterly-report"
+  ],
+  "outputEntities": [
+    "DashboardSnapshot",
+    "WorkItemRow",
+    "PeriodicReportSourceRecord",
+    "RenderedArtifact",
+    "AssetRecord"
+  ],
+  "extensionSurface": [
+    "payload naming aliases",
+    "fallback defaults",
+    "legacy enum translation"
+  ],
+  "status": "published"
+}
+
