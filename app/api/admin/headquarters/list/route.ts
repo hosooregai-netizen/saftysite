@@ -1,1 +1,3 @@
-export { GET, runtime } from './getHandler';
+export const runtime = 'nodejs';
+
+export { GET } from './getHandler';
