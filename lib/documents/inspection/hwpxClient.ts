@@ -148,6 +148,7 @@ const DOC5_SECTION_TITLE_CANDIDATES = [
   '5.현재 공정내 현존하는 유해·위험요인 분류',
   '5.현재 공정내 존재하는 유해·위험요인 분류',
 ] as const;
+const DOC7_SECTION_MARKERS = ['sec7.findings[0].location'] as const;
 const DOC5_SUMMARY_DEFERRED_MARKERS = [
   '[[DEFERRED:auto_aggregation_required}',
   '[[DEFERRED:auto_aggregation_required]]',
@@ -1936,13 +1937,73 @@ function buildDoc5ChartRowParagraph(paragraphXml: string, leftBinaryId: string, 
 }
 
 function findDoc5TableIndex(sectionXml: string): number | null {
+  return findTableIndexByMarkers(sectionXml, DOC5_SECTION_TITLE_CANDIDATES);
+}
+
+function findTableIndexByMarkers(sectionXml: string, markers: readonly string[]): number | null {
   const tables = tableSpans(sectionXml);
   const index = tables.findIndex((span) => {
     const tableXml = sectionXml.slice(span.start, span.end);
-    return DOC5_SECTION_TITLE_CANDIDATES.some((title) => tableXml.includes(title));
+    return markers.some((marker) => tableXml.includes(marker));
   });
 
   return index === -1 ? null : index;
+}
+
+function promoteFloatingTableAnchorParagraph(sectionXml: string, tableIndex: number): string {
+  if (tableIndex == null || tableIndex <= 0) {
+    return sectionXml;
+  }
+
+  const tables = tableSpans(sectionXml);
+  const doc4Table = tables[tableIndex - 1];
+  const doc5Table = tables[tableIndex];
+  if (!doc4Table || !doc5Table || doc4Table.end >= doc5Table.start) {
+    return sectionXml;
+  }
+
+  const paragraphs = paragraphSpans(sectionXml);
+  const doc5AnchorParagraph = paragraphs.find(
+    (span) => doc5Table.start >= span.start && doc5Table.end <= span.end,
+  );
+  if (!doc5AnchorParagraph || doc5AnchorParagraph.start <= doc4Table.end) {
+    return sectionXml;
+  }
+
+  const doc5AnchorXml = sectionXml.slice(doc5AnchorParagraph.start, doc5AnchorParagraph.end);
+  const candidateParagraphs = paragraphs.filter(
+    (span) => span.start >= doc4Table.end && span.end <= doc5Table.start,
+  );
+  const targetParagraph = candidateParagraphs.find((span) =>
+    isHwpxBlankParagraph(sectionXml.slice(span.start, span.end)),
+  );
+
+  if (!targetParagraph || targetParagraph.start >= doc5AnchorParagraph.start) {
+    return sectionXml;
+  }
+
+  const targetParagraphXml = sectionXml.slice(targetParagraph.start, targetParagraph.end);
+  return (
+    sectionXml.slice(0, targetParagraph.start) +
+    doc5AnchorXml +
+    sectionXml.slice(targetParagraph.end, doc5AnchorParagraph.start) +
+    targetParagraphXml +
+    sectionXml.slice(doc5AnchorParagraph.end)
+  );
+}
+
+export function normalizeInspectionFloatingTableAnchors(sectionXml: string): string {
+  let normalizedXml = sectionXml;
+
+  for (const markers of [DOC5_SECTION_TITLE_CANDIDATES, DOC7_SECTION_MARKERS] as const) {
+    const tableIndex = findTableIndexByMarkers(normalizedXml, markers);
+    if (tableIndex == null) {
+      continue;
+    }
+    normalizedXml = promoteFloatingTableAnchorParagraph(normalizedXml, tableIndex);
+  }
+
+  return normalizedXml;
 }
 
 function locateDoc5TableCell(
@@ -3131,8 +3192,11 @@ export async function generateInspectionHwpxBlob(
     sectionXmlWithTemplateOverlays,
     templateVariant,
   );
-  const sectionXmlWithVisitCountFooter = applyVisitCountPageFooter(
+  const sectionXmlWithNormalizedFloatingAnchors = normalizeInspectionFloatingTableAnchors(
     sectionXmlWithVariantAnnotations,
+  );
+  const sectionXmlWithVisitCountFooter = applyVisitCountPageFooter(
+    sectionXmlWithNormalizedFloatingAnchors,
     visitCountFooterParaPrId,
   );
   const contentHpf = await contentEntry.async('string');

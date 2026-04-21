@@ -28,6 +28,29 @@ function collectDuplicateTableIds(xml: string) {
   return Array.from(new Set(tableIds.filter((id, index) => tableIds.indexOf(id) !== index)));
 }
 
+function countBlankParagraphsBetweenTableIndices(xml: string, leftIndex: number, rightIndex: number) {
+  const tables = Array.from(xml.matchAll(/<hp:tbl\b[\s\S]*?<\/hp:tbl>/g)).map((match) => ({
+    end: (match.index ?? 0) + match[0].length,
+    start: match.index ?? 0,
+  }));
+  const left = tables[leftIndex];
+  const right = tables[rightIndex];
+  if (!left || !right || left.end >= right.start) {
+    return 0;
+  }
+
+  const slice = xml.slice(left.end, right.start);
+  return Array.from(slice.matchAll(/<hp:p\b[\s\S]*?<\/hp:p>/g)).filter((match) =>
+    !match[0].replace(/<[^>]+>/g, '').trim(),
+  ).length;
+}
+
+function findTableIndexContainingText(xml: string, text: string) {
+  return (xml.match(/<hp:tbl\b[\s\S]*?<\/hp:tbl>/g) ?? []).findIndex((tableXml) =>
+    tableXml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').includes(text),
+  );
+}
+
 function buildMeasurementFixture(accidentOccurred: 'no' | 'yes') {
   const site = createInspectionSite({
     clientRepresentativeName: 'client-rep-alpha',
@@ -219,6 +242,18 @@ test('buildInspectionHwpxDocument renders doc7 manual reference text and left re
   }
 });
 
+test('buildInspectionHwpxDocument keeps doc7 anchored directly after doc5 for both inspection template variants', async () => {
+  for (const accidentOccurred of ['no', 'yes'] as const) {
+    const sectionXml = await readGeneratedSectionXml(accidentOccurred);
+    const doc5Index = findTableIndexContainingText(sectionXml, '5.현재 공정내 현존하는 유해·위험요인');
+    const doc7Index = findTableIndexContainingText(sectionXml, '7.현재 공정내 현존하는 유해·위험요인');
+
+    assert.notEqual(doc5Index, -1);
+    assert.notEqual(doc7Index, -1);
+    assert.equal(countBlankParagraphsBetweenTableIndices(sectionXml, doc5Index, doc7Index), 0);
+  }
+});
+
 test('buildInspectionHwpxDocument keeps repeated doc4 follow-up pages page-broken and table ids unique', async () => {
   const session = buildMeasurementFixture('no');
   session.document4FollowUps = Array.from({ length: 4 }, (_, index) => ({
@@ -251,4 +286,19 @@ test('buildInspectionHwpxDocument keeps repeated doc4 follow-up pages page-broke
     sectionXml,
     /<hp:p\b[^>]*pageBreak="1"[^>]*>\s*<hp:run\b[^>]*><hp:tbl\b[\s\S]*follow-up-location-4/,
   );
+});
+
+test('buildInspectionHwpxDocument promotes the doc5 anchor directly after doc4 flow', async () => {
+  const sectionXml = await readGeneratedSectionXml('no');
+
+  assert.equal(countBlankParagraphsBetweenTableIndices(sectionXml, 3, 4), 0);
+  assert.match(sectionXml, /5\.현재 공정내 현존하는 유해·위험요인/);
+  assert.match(sectionXml, /7\.현재 공정내 현존하는 유해·위험요인/);
+});
+test('buildInspectionHwpxDocument keeps doc5 anchored directly after doc4 for both inspection template variants', async () => {
+  for (const accidentOccurred of ['no', 'yes'] as const) {
+    const sectionXml = await readGeneratedSectionXml(accidentOccurred);
+
+    assert.equal(countBlankParagraphsBetweenTableIndices(sectionXml, 3, 4), 0);
+  }
 });
