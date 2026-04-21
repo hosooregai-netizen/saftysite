@@ -676,11 +676,17 @@ export interface SafetyBackendAdminHeadquarterListSummary {
   registration_gap_count: number;
 }
 
+export interface SafetyBackendAdminHeadquarterListRow
+  extends SafetyHeadquarterDetail {
+  sequence_no?: number | null;
+  site_count?: number | null;
+}
+
 export interface SafetyBackendAdminHeadquarterListResponse {
   limit: number;
   offset: number;
   refreshed_at: string;
-  rows: SafetyHeadquarterDetail[];
+  rows: SafetyBackendAdminHeadquarterListRow[];
   summary: SafetyBackendAdminHeadquarterListSummary;
   total: number;
 }
