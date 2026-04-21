@@ -246,6 +246,24 @@ function normalizeAppendixLayoutForMergedQuarterly(fragment: string) {
     );
 }
 
+function ensureUniqueTableObjectIds(sectionXml: string) {
+  const tableTagPattern = /<hp:tbl\b[^>]*>/g;
+  const currentTableIds = Array.from(
+    sectionXml.matchAll(/<hp:tbl\b[^>]*\bid="(\d+)"/g),
+    (match) => Number.parseInt(match[1], 10),
+  ).filter(Number.isFinite);
+  let nextTableId = Math.max(2107269000, ...currentTableIds, 0);
+
+  return sectionXml.replace(tableTagPattern, (tableTag) => {
+    if (!/\bid="\d+"/.test(tableTag)) {
+      return tableTag;
+    }
+
+    nextTableId += 1;
+    return tableTag.replace(/\bid="\d+"/, `id="${nextTableId}"`);
+  });
+}
+
 function ensureUniquePictureObjectIds(sectionXml: string) {
   const pictureTagPattern = /<hp:pic\b[^>]*>/g;
   const currentPictureIds = Array.from(
@@ -269,6 +287,10 @@ function ensureUniquePictureObjectIds(sectionXml: string) {
   });
 }
 
+function ensureUniqueRenderableObjectIds(sectionXml: string) {
+  return ensureUniquePictureObjectIds(ensureUniqueTableObjectIds(sectionXml));
+}
+
 function appendFragmentToQuarterlySection(sectionXml: string, fragment: string) {
   const closeTag = '</hs:sec>';
   const closeTagIndex = sectionXml.lastIndexOf(closeTag);
@@ -277,7 +299,7 @@ function appendFragmentToQuarterlySection(sectionXml: string, fragment: string) 
     throw new Error('Quarterly merged template prototype failed: quarterly section root is malformed.');
   }
 
-  return ensureUniquePictureObjectIds(
+  return ensureUniqueRenderableObjectIds(
     `${sectionXml.slice(0, closeTagIndex)}${fragment}${sectionXml.slice(closeTagIndex)}`,
   );
 }

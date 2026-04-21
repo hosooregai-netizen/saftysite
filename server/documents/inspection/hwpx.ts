@@ -1909,9 +1909,10 @@ export function expandRepeatBlocks(
         }
       }
 
-      if (repeatBlockPath === 'sec7.findings' && pageIndex > 0) {
-        // Section 7 finding tables reuse fixed line positions, so each additional
-        // finding must start on a fresh page to avoid overlapping section 8.
+      if (pageIndex > 0 && containsFloatingTable(blockXml)) {
+        // Repeated floating tables are page-sized layouts in the inspection template.
+        // Starting each cloned block on a fresh page keeps later sections from drifting
+        // into a blank page or overlapping when HWP reflows anchored objects.
         blockXml = forceFirstParagraphPageBreak(blockXml);
       }
 
@@ -1945,6 +1946,10 @@ function forceFirstParagraphPageBreak(xml: string): string {
       ? paragraphTag.replace(/pageBreak="[^"]*"/, 'pageBreak="1"')
       : paragraphTag.replace(/>$/, ' pageBreak="1">'),
   );
+}
+
+function containsFloatingTable(xml: string): boolean {
+  return /<hp:tbl\b[^>]*textWrap="IN_FRONT_OF_TEXT"/.test(xml);
 }
 
 function repeatBlockSpan(
@@ -2363,6 +2368,24 @@ function countSelfClosingTagOccurrences(xml: string, tagName: string): number {
   return Array.from(xml.matchAll(new RegExp(`<${tagName}\\b[^>]*\\/>`, 'g'))).length;
 }
 
+export function ensureUniqueTableObjectIds(sectionXml: string): string {
+  const tableTagPattern = /<hp:tbl\b[^>]*>/g;
+  const currentTableIds = Array.from(
+    sectionXml.matchAll(/<hp:tbl\b[^>]*\bid="(\d+)"/g),
+    (match) => Number.parseInt(match[1], 10),
+  ).filter(Number.isFinite);
+  let nextTableId = Math.max(2107269000, ...currentTableIds, 0);
+
+  return sectionXml.replace(tableTagPattern, (tableTag) => {
+    if (!/\bid="\d+"/.test(tableTag)) {
+      return tableTag;
+    }
+
+    nextTableId += 1;
+    return tableTag.replace(/\bid="\d+"/, `id="${nextTableId}"`);
+  });
+}
+
 function ensureUniquePictureObjectIds(sectionXml: string): string {
   const pictureTagPattern = /<hp:pic\b[^>]*>/g;
   const currentPictureIds = Array.from(
@@ -2385,6 +2408,10 @@ function ensureUniquePictureObjectIds(sectionXml: string): string {
     nextTag = nextTag.replace(/\binstid="\d+"/, `instid="${nextInstanceId}"`);
     return nextTag;
   });
+}
+
+function ensureUniqueRenderableObjectIds(sectionXml: string): string {
+  return ensureUniquePictureObjectIds(ensureUniqueTableObjectIds(sectionXml));
 }
 
 export function validateGeneratedHwpxOrThrow(
@@ -3349,7 +3376,7 @@ export async function buildInspectionHwpxDocument(
     }
   }
 
-  boundSectionXml = ensureUniquePictureObjectIds(boundSectionXml);
+  boundSectionXml = ensureUniqueRenderableObjectIds(boundSectionXml);
   zip.file('Contents/header.xml', headerXmlWithVisitCountFooter, buildZipWriteOptions(headerEntry, 'DEFLATE'));
   zip.file('Contents/section0.xml', boundSectionXml, buildZipWriteOptions(sectionEntry, 'DEFLATE'));
   removeDirectoryEntries(zip);

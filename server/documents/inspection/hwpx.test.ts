@@ -20,6 +20,14 @@ function flattenXmlText(xml: string) {
   return xml.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ');
 }
 
+function collectDuplicateTableIds(xml: string) {
+  const tableIds = Array.from(
+    xml.matchAll(/<hp:tbl\b[^>]*\bid="(\d+)"/g),
+    (match) => match[1],
+  );
+  return Array.from(new Set(tableIds.filter((id, index) => tableIds.indexOf(id) !== index)));
+}
+
 function buildMeasurementFixture(accidentOccurred: 'no' | 'yes') {
   const site = createInspectionSite({
     clientRepresentativeName: 'client-rep-alpha',
@@ -209,4 +217,35 @@ test('buildInspectionHwpxDocument renders doc7 manual reference text and left re
     assert.doesNotMatch(sectionXml, /data:image\/png;base64/);
     assert.deepEqual(boundImage, expectedImage);
   }
+});
+
+test('buildInspectionHwpxDocument keeps repeated doc4 follow-up pages page-broken and table ids unique', async () => {
+  const session = buildMeasurementFixture('no');
+  session.document4FollowUps = Array.from({ length: 4 }, (_, index) => ({
+    ...session.document4FollowUps[0],
+    afterPhotoUrl: '',
+    beforePhotoUrl: '',
+    confirmationDate: '2026-04-02',
+    guidanceDate: '2026-04-01',
+    id: `follow-up-${index + 1}`,
+    location: `follow-up-location-${index + 1}`,
+    result: `follow-up-result-${index + 1}`,
+  }));
+  session.document7Findings = [
+    {
+      ...session.document7Findings[0],
+      id: 'finding-1',
+      location: 'doc7-location',
+    },
+  ];
+
+  const document = await buildInspectionHwpxDocument(session, [session]);
+  const zip = await JSZip.loadAsync(document.buffer);
+  const sectionXml = await zip.file('Contents/section0.xml')?.async('string');
+
+  assert.ok(sectionXml);
+  assert.match(sectionXml, /follow-up-location-4/);
+  assert.match(sectionXml, /doc7-location/);
+  assert.equal(collectDuplicateTableIds(sectionXml).length, 0);
+  assert.match(sectionXml, /<hp:p\b[^>]*pageBreak="1"[^>]*>[\s\S]*follow-up-location-4/);
 });

@@ -309,6 +309,24 @@ function upsertManifestItem(contentHpf: string, itemId: string, href: string, me
   return withoutExisting.replace('</opf:manifest>', `${manifestItem}</opf:manifest>`);
 }
 
+function ensureUniqueTableObjectIds(sectionXml: string) {
+  const tableTagPattern = /<hp:tbl\b[^>]*>/g;
+  const currentTableIds = Array.from(
+    sectionXml.matchAll(/<hp:tbl\b[^>]*\bid="(\d+)"/g),
+    (match) => Number.parseInt(match[1], 10),
+  ).filter(Number.isFinite);
+  let nextTableId = Math.max(2107269000, ...currentTableIds, 0);
+
+  return sectionXml.replace(tableTagPattern, (tableTag) => {
+    if (!/\bid="\d+"/.test(tableTag)) {
+      return tableTag;
+    }
+
+    nextTableId += 1;
+    return tableTag.replace(/\bid="\d+"/, `id="${nextTableId}"`);
+  });
+}
+
 function ensureUniquePictureObjectIds(sectionXml: string) {
   const pictureTagPattern = /<hp:pic\b[^>]*>/g;
   const currentPictureIds = Array.from(
@@ -330,6 +348,10 @@ function ensureUniquePictureObjectIds(sectionXml: string) {
       .replace(/\bid="\d+"/, `id="${nextPictureId}"`)
       .replace(/\binstid="\d+"/, `instid="${nextInstanceId}"`);
   });
+}
+
+function ensureUniqueRenderableObjectIds(sectionXml: string) {
+  return ensureUniquePictureObjectIds(ensureUniqueTableObjectIds(sectionXml));
 }
 
 function resolveDocumentAssetUrl(value: string | null | undefined, baseUrl?: string) {
@@ -1204,7 +1226,7 @@ function updateSectionXml(
   const rebuiltSectionXml = rebuildSectionXml(textUpdatedSection, tableBlocks, tables);
   return options?.skipPictureIdNormalization
     ? rebuiltSectionXml
-    : ensureUniquePictureObjectIds(rebuiltSectionXml);
+    : ensureUniqueRenderableObjectIds(rebuiltSectionXml);
 }
 
 async function tryBuildQuarterlyMergedHwpxDocument(
@@ -1292,7 +1314,7 @@ async function tryBuildQuarterlyMergedHwpxDocument(
 
   zip.file(
     'Contents/section0.xml',
-    ensureUniquePictureObjectIds(renderedAppendices.sectionXml),
+    ensureUniqueRenderableObjectIds(renderedAppendices.sectionXml),
   );
   zip.file('Contents/content.hpf', renderedAppendices.contentHpf);
   if (accidentChartFile && accidentChartXml) {

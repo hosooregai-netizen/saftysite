@@ -28,6 +28,14 @@ function flattenXmlText(xml: string) {
   return xml.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ');
 }
 
+function collectDuplicateTableIds(xml: string) {
+  const tableIds = Array.from(
+    xml.matchAll(/<hp:tbl\b[^>]*\bid="(\d+)"/g),
+    (match) => match[1],
+  );
+  return Array.from(new Set(tableIds.filter((id, index) => tableIds.indexOf(id) !== index)));
+}
+
 function findTableCell(tableXml: string, rowAddr: number, colAddr: number) {
   const targetMarker = `<hp:cellAddr colAddr="${colAddr}" rowAddr="${rowAddr}"/>`;
   return (
@@ -306,6 +314,29 @@ test('buildQuarterlyHwpxDocument renders v9-1 appendix content into the merged s
   const appendixSlice = extractAppendixSlice(sectionXml, 'appendix-v91-hazard');
   assert.doesNotMatch(appendixSlice, /hidePageNum="1"/);
   assert.doesNotMatch(appendixSlice, /www\.safetysite\.co\.kr/);
+});
+
+test('buildQuarterlyHwpxDocument keeps merged appendix table ids unique', async () => {
+  const fixture = buildQuarterlyFixture();
+  fixture.sessions[0].document4FollowUps = Array.from({ length: 4 }, (_, index) => ({
+    ...fixture.sessions[0].document4FollowUps[0],
+    afterPhotoUrl: '',
+    beforePhotoUrl: '',
+    confirmationDate: '2026-04-02',
+    guidanceDate: '2026-04-01',
+    id: `quarterly-follow-up-${index + 1}`,
+    location: `quarterly-follow-up-location-${index + 1}`,
+    result: `quarterly-follow-up-result-${index + 1}`,
+  }));
+
+  const zip = await loadGeneratedZip(fixture, {
+    selectedSessions: fixture.sessions,
+    siteSessions: fixture.sessions,
+  });
+  const sectionXml = await zip.file('Contents/section0.xml')?.async('string');
+
+  assert.ok(sectionXml);
+  assert.equal(collectDuplicateTableIds(sectionXml).length, 0);
 });
 
 test('buildQuarterlyHwpxDocument binds the OPS image into the dedicated template slot', async () => {
