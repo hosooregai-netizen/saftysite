@@ -152,8 +152,15 @@ export const CONTENT_TYPE_OPTIONS: Array<{
   fileLabels?: [string, string?];
 }> = [
   {
+    value: 'doc7_reference_material',
+    label: '기술지도 - 참고자료',
+    description: '사고 유형과 기인물 조합으로 DOC7 참고자료를 자동 매핑합니다.',
+    editorMode: 'image',
+    bodyLabel: '참고자료 내용',
+  },
+  {
     value: 'measurement_template',
-    label: '계측 기준 템플릿',
+    label: '기술지도 - 계측 기준',
     description: '문서 작성 시 장비별 안전 기준을 자동으로 채웁니다.',
     editorMode: 'text',
     bodyLabel: '안전 기준',
@@ -161,7 +168,7 @@ export const CONTENT_TYPE_OPTIONS: Array<{
   },
   {
     value: 'safety_news',
-    label: '안전 정보',
+    label: '기술지도 - 안전 정보',
     description: '문서 14에 연결되는 공지형 콘텐츠입니다.',
     editorMode: 'image',
     bodyLabel: '안내 문구',
@@ -169,7 +176,7 @@ export const CONTENT_TYPE_OPTIONS: Array<{
   },
   {
     value: 'disaster_case',
-    label: '재해 사례',
+    label: '기술지도 - 재해사례',
     description: '문서 13에 반영되는 사례형 콘텐츠입니다.',
     editorMode: 'image',
     bodyLabel: '사례 요약',
@@ -177,22 +184,15 @@ export const CONTENT_TYPE_OPTIONS: Array<{
   },
   {
     value: 'campaign_template',
-    label: 'OPS',
+    label: '분기보고 - OPS',
     description: 'OPS(One Point Sheet) 설명과 대표 이미지를 관리합니다.',
     editorMode: 'image',
     bodyLabel: 'OPS 설명',
     usageHint: '분기 보고서의 OPS 섹션에서 사용하는 자료입니다.',
   },
   {
-    value: 'doc7_reference_material',
-    label: 'DOC7 참고자료',
-    description: '사고 유형과 기인물 조합으로 DOC7 참고자료를 자동 매핑합니다.',
-    editorMode: 'image',
-    bodyLabel: '참고자료 내용',
-  },
-  {
     value: 'hazard_countermeasure_catalog',
-    label: '유해위험작업 안전대책',
+    label: '예상위험&관리대책',
     description:
       'doc7/doc8/분기 보고서의 공통 위험요인-안전대책 매칭 자료를 관리합니다. 관리대책은 작성 페이지의 안전대책과 같은 값입니다.',
     editorMode: 'text',
