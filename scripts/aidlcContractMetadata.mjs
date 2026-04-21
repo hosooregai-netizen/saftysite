@@ -148,6 +148,24 @@ export function getAllSmokeIds() {
   return [...smokeIds];
 }
 
+export function getSmokeIdsForScopes(scopes) {
+  const metadata = loadContractMetadata();
+  const requestedScopes = new Set(scopes);
+  const smokeIds = new Set();
+
+  for (const contract of Object.values(metadata.contracts)) {
+    if (!requestedScopes.has(contract.scope)) {
+      continue;
+    }
+
+    for (const id of contract.smokeScope.ids) {
+      smokeIds.add(id);
+    }
+  }
+
+  return [...smokeIds];
+}
+
 export function getContractMetadataPath() {
   return path.relative(repoRoot, metadataPath).replace(/\\/g, '/');
 }

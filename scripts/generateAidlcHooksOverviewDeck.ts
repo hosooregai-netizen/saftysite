@@ -166,7 +166,7 @@ function addCoverSlide(pptx: PptxGenJS) {
     color: '5C6B75',
     bold: true,
   });
-  slide.addText('Staged snapshot + push ref diff + full smoke fallback', {
+  slide.addText('Staged snapshot + push ref diff + scope-aware smoke fallback', {
     x: 3.98,
     y: 2.95,
     w: 6.3,
@@ -211,7 +211,7 @@ function addSummarySlide(pptx: PptxGenJS) {
     body: [
       '실제 push ref stdin을 읽어 diff 범위를 계산',
       '새 브랜치 push와 다른 대상 ref push를 더 정확히 판정',
-      'metadata/harness/runner 변경 시 전체 smoke set 실행',
+      'metadata/harness/runner 변경 시 scope-aware smoke 승격',
     ],
   });
   addInfoCard(slide, {
@@ -282,7 +282,7 @@ function addPrePushSlide(pptx: PptxGenJS) {
       '  local ref / local oid / remote ref / remote oid',
       '    -> updated ref별 changed files 계산',
       '      -> guarded source면 metadata 기반 targeted smoke',
-      '      -> metadata or smoke runner config면 full smoke set',
+      '      -> metadata or smoke runner config면 scoped smoke set',
       '        -> local app reachability 확인 후 Playwright smoke 실행',
     ].join('\n'),
     {
@@ -315,7 +315,7 @@ function addPrePushSlide(pptx: PptxGenJS) {
     title: '새 ref push / config 변경',
     body: [
       'remote oid가 없으면 remote에 없는 commit 집합에서 파일을 합산',
-      'metadata/harness/runner 변경이면 전체 smoke set으로 안전하게 승격',
+      'metadata/harness/runner 변경이면 관련 scope smoke만 승격',
     ],
   });
   addFooter(slide, 'AIDLC Hook Runtime');
@@ -346,7 +346,7 @@ function addGuardrailConfigSlide(pptx: PptxGenJS) {
     body: [
       'guarded source가 없어도 `tsc`, recovery validation, ERP reverse validation은 돈다.',
       '필요할 때는 admin/ERP audit를 둘 다 태워서 drift를 줄인다.',
-      'pre-push는 smoke mapping layer가 바뀌면 targeted smoke 대신 full smoke로 승격한다.',
+      'pre-push는 smoke mapping layer가 바뀌면 targeted smoke 대신 scope-aware smoke로 승격한다.',
     ],
   });
   addFooter(slide, 'AIDLC Hook Runtime');
@@ -411,7 +411,7 @@ function addChecklistSlide(pptx: PptxGenJS) {
   addTitle(slide, '6. 운영 체크리스트', '새 feature보다 중요한 것은 hook과 metadata가 같은 판단을 하도록 유지하는 것이다.');
   addBullets(slide, [
     '1. guarded source를 건드렸다면 proof/doc/reverse spec이 같이 staged 되었는지 본다.',
-    '2. contract metadata나 smoke harness를 바꿨다면 targeted smoke가 아니라 full smoke까지 각오한다.',
+    '2. contract metadata나 smoke harness를 바꿨다면 targeted smoke가 아니라 관련 scope smoke까지 각오한다.',
     '3. 다른 branch/ref로 push할 때도 pre-push가 실제 stdin ref를 읽는다는 전제를 유지한다.',
     '4. local hook을 우회할 수 있어도 CI가 같은 verify script를 다시 돌린다는 점을 문서에 남긴다.',
     '5. hook을 더 바꿀 때는 `tests/scripts/aidlcHookUtils.test.mjs` 같은 순수 규칙 테스트도 같이 갱신한다.',

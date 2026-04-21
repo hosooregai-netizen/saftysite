@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   collectFullSmokeConfigFiles,
+  collectFullSmokeScopes,
   collectVerificationConfigFiles,
   isZeroOid,
   parsePrePushUpdates,
@@ -55,6 +56,16 @@ test('collectFullSmokeConfigFiles narrows to smoke-affecting guardrail files', (
     'tests/client/fixtures/erpSmokeHarness.ts',
     'tests/client/contracts/featureContractMetadata.json',
   ]);
+});
+
+test('collectFullSmokeScopes infers admin/erp scope from smoke-affecting files', () => {
+  const files = [
+    'tests/client/fixtures/adminSmokeHarness.ts',
+    'scripts/smokeClient.ts',
+    'tests/client/contracts/featureContractMetadata.json',
+  ];
+
+  assert.deepEqual(collectFullSmokeScopes(files), ['admin', 'erp']);
 });
 
 test('isZeroOid recognizes deleted remote refs', () => {

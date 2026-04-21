@@ -51,7 +51,7 @@ local hooks
     -> verify:aidlc:push
        -> derive files from pushed refs
        -> derive smoke ids from metadata
-       -> full smoke fallback for metadata/harness/runner changes
+       -> scope-aware smoke fallback for metadata/harness/runner changes
        -> run targeted client smoke
 
 remote CI
@@ -141,7 +141,7 @@ remote CI
 1. `.githooks/pre-push`가 Git hook stdin의 ref update를 임시 파일로 받아 `npm run verify:aidlc:push`에 넘긴다.
 2. `verifyAidlcPush`는 실제 pushed ref 범위에서 변경 파일을 계산한다.
 3. guarded source면 contract metadata에 매핑해서 smoke id를 모은다.
-4. metadata/harness/runner 변경이면 전체 smoke set으로 승격한다.
+4. metadata/harness/runner 변경이면 관련 scope smoke set으로 승격한다.
 5. 필요한 smoke를 실행한다.
 
 ### CI

@@ -91,40 +91,69 @@ export async function runAdminControlCenterSmoke(config: ClientSmokePlaywrightCo
     if ((await page.getByRole('columnheader', { name: '실적률' }).count()) > 0) {
       throw new Error('직원별 표에서 실적률 열이 제거되어야 합니다.');
     }
-    await page.getByRole('button', { name: '현장별' }).click();
-    await page.getByRole('columnheader', { name: '건설사' }).waitFor();
-    await page.getByRole('columnheader', { name: '진행률' }).waitFor();
-    const monthInput = page.locator('input[type="month"]').first();
-    await monthInput.waitFor();
-    const analyticsSummaryReadsAtMonthChange =
+
+    await page.getByRole('heading', { name: '직원별 월별 매출' }).waitFor();
+    if ((await page.getByRole('button', { name: '현장별' }).count()) > 0) {
+      throw new Error('현장별 탭은 제거되어야 합니다.');
+    }
+    if ((await page.getByRole('button', { name: '필터' }).count()) > 0) {
+      throw new Error('analytics 헤더의 필터 버튼은 제거되어야 합니다.');
+    }
+    if ((await page.getByRole('button', { name: '엑셀 내보내기' }).count()) > 0) {
+      throw new Error('analytics 헤더의 엑셀 내보내기 버튼은 제거되어야 합니다.');
+    }
+    if ((await page.locator('input[type="month"]').count()) > 0) {
+      throw new Error('analytics month input은 제거되어야 합니다.');
+    }
+    if ((await page.getByRole('button', { name: '이번 달' }).count()) > 0) {
+      throw new Error('analytics month toolbar의 이번 달 버튼은 제거되어야 합니다.');
+    }
+
+    const monthBadge = page.getByText(/\d{4}년 \d{1,2}월/).first();
+    const basisMonthBefore = await monthBadge.textContent();
+    const analyticsSummaryReadsAtMonthBack =
       requestCounts.get('GET /api/admin/dashboard/analytics') || 0;
-    const analyticsTableDetailReadsAtMonthChange =
+    const analyticsTableDetailReadsAtMonthBack =
       requestCounts.get('GET /api/admin/dashboard/analytics/month-detail') || 0;
-    await monthInput.fill('2026-03');
+    await page.getByRole('button', { name: '이전 달' }).click();
     await harness.waitForRequestCount(
       'GET /api/admin/dashboard/analytics/month-detail',
-      analyticsTableDetailReadsAtMonthChange + 1,
+      analyticsTableDetailReadsAtMonthBack + 1,
     );
-    if ((requestCounts.get('GET /api/admin/dashboard/analytics') || 0) !== analyticsSummaryReadsAtMonthChange) {
-      throw new Error('기준월 전환은 analytics summary를 다시 요청하지 않아야 합니다.');
+    const basisMonthAfterBack = await monthBadge.textContent();
+    if (!basisMonthBefore || !basisMonthAfterBack || basisMonthBefore === basisMonthAfterBack) {
+      throw new Error('이전 달 버튼은 기준월 배지를 바꿔야 합니다.');
     }
+    if ((requestCounts.get('GET /api/admin/dashboard/analytics') || 0) !== analyticsSummaryReadsAtMonthBack) {
+      throw new Error('기준월 이전 이동은 analytics summary를 다시 요청하지 않아야 합니다.');
+    }
+
+    const analyticsSummaryReadsAtMonthForward =
+      requestCounts.get('GET /api/admin/dashboard/analytics') || 0;
+    const analyticsTableDetailReadsAtMonthForward =
+      requestCounts.get('GET /api/admin/dashboard/analytics/month-detail') || 0;
+    await page.getByRole('button', { name: '다음 달' }).click();
+    await page.waitForTimeout(300);
+    const basisMonthAfterForward = await monthBadge.textContent();
+    if (basisMonthAfterForward !== basisMonthBefore) {
+      throw new Error('다음 달 버튼은 기준월 배지를 원래 값으로 되돌려야 합니다.');
+    }
+    if ((requestCounts.get('GET /api/admin/dashboard/analytics') || 0) !== analyticsSummaryReadsAtMonthForward) {
+      throw new Error('기준월 다음 이동도 analytics summary를 다시 요청하지 않아야 합니다.');
+    }
+    const analyticsTableDetailReadsAfterForward =
+      requestCounts.get('GET /api/admin/dashboard/analytics/month-detail') || 0;
+    if (
+      analyticsTableDetailReadsAfterForward !== analyticsTableDetailReadsAtMonthForward &&
+      analyticsTableDetailReadsAfterForward !== analyticsTableDetailReadsAtMonthForward + 1
+    ) {
+      throw new Error('기준월 다음 이동은 month-detail cache hit 또는 단일 재요청만 허용해야 합니다.');
+    }
+
     await page.getByText(/1 \/ \d+ 페이지/).first().waitFor();
     if ((await page.getByRole('button', { name: '누적' }).count()) > 0) {
       throw new Error('상세표 범위 전환 버튼은 제거되어야 합니다.');
     }
-    await page.getByRole('button', { name: '필터' }).click();
-    await page.locator('#analytics-filter-period').selectOption('year');
-    await page.getByText('매출/실적 집계').first().waitFor();
-    await harness.waitForRequestCount(
-      'GET /api/admin/dashboard/analytics',
-      analyticsSummaryReadsBefore + 2,
-    );
-    await harness.waitForRequestCount(
-      'GET /api/admin/dashboard/analytics/month-detail',
-      analyticsTableDetailReadsBefore + 3,
-    );
-    await page.getByRole('button', { name: '엑셀 내보내기' }).click();
-    await harness.waitForRequestCount('POST /api/admin/exports/:section', overviewExportsBefore + 2);
 
     harness.assertContractApisObserved();
     harness.assertNoClientErrors();

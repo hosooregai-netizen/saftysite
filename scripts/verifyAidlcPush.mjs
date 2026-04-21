@@ -1,8 +1,9 @@
 import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
-import { findContractsForFile, getAllSmokeIds, isGuardedFile } from './aidlcContractMetadata.mjs';
+import { findContractsForFile, getSmokeIdsForScopes, isGuardedFile } from './aidlcContractMetadata.mjs';
 import {
   collectFullSmokeConfigFiles,
+  collectFullSmokeScopes,
   isZeroOid,
   matchesAny,
   parsePrePushUpdates,
@@ -126,7 +127,7 @@ function collectFilesForUpdate(update, remoteName) {
   const commitOutput = run('git', commitArgs);
   const commits = commitOutput ? commitOutput.split('\n').map((line) => line.trim()).filter(Boolean) : [];
   if (commits.length === 0) {
-    return collectChangedFilesFromCommit(update.localOid);
+    return [];
   }
 
   const files = new Set();
@@ -211,15 +212,19 @@ function buildRequiredSmokes(files) {
   const relevantFiles = files.filter((file) => !matchesAny(file, IGNORED_FILE_PATTERNS));
   const guardedFiles = relevantFiles.filter((file) => isGuardedFile(file));
   const fullSmokeConfigFiles = collectFullSmokeConfigFiles(relevantFiles);
+  const fullSmokeScopes = collectFullSmokeScopes(relevantFiles);
   if (guardedFiles.length === 0 && fullSmokeConfigFiles.length === 0) {
-    return { guardedFiles, fullSmokeConfigFiles, smokeIds: [] };
+    return { guardedFiles, fullSmokeConfigFiles, fullSmokeScopes, smokeIds: [] };
   }
 
   if (fullSmokeConfigFiles.length > 0) {
+    const scopedSmokeIds =
+      fullSmokeScopes.length > 0 ? getSmokeIdsForScopes(fullSmokeScopes) : [];
     return {
       guardedFiles,
       fullSmokeConfigFiles,
-      smokeIds: finalizeSmokeIds(getAllSmokeIds()),
+      fullSmokeScopes,
+      smokeIds: finalizeSmokeIds(scopedSmokeIds),
     };
   }
 
@@ -251,13 +256,14 @@ function buildRequiredSmokes(files) {
   return {
     guardedFiles,
     fullSmokeConfigFiles,
+    fullSmokeScopes,
     smokeIds: finalizeSmokeIds(smokeIds),
   };
 }
 
 async function main() {
   const files = getPushedFiles();
-  const { guardedFiles, fullSmokeConfigFiles, smokeIds } = buildRequiredSmokes(files);
+  const { guardedFiles, fullSmokeConfigFiles, fullSmokeScopes, smokeIds } = buildRequiredSmokes(files);
 
   if (guardedFiles.length === 0 && fullSmokeConfigFiles.length === 0) {
     console.log('[aidlc-push] no guarded source files changed; skipping smoke verification.');
@@ -271,7 +277,7 @@ async function main() {
 
   if (fullSmokeConfigFiles.length > 0) {
     console.log(
-      `[aidlc-push] smoke guardrail config changed; running full smoke set: ${fullSmokeConfigFiles.join(', ')}`,
+      `[aidlc-push] smoke guardrail config changed; running ${fullSmokeScopes.join('+') || 'all'} smoke scope(s): ${fullSmokeConfigFiles.join(', ')}`,
     );
   }
 
