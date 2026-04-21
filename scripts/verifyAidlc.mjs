@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { getGuardedScopesForFile, isGuardedFile } from './aidlcContractMetadata.mjs';
+import { collectVerificationConfigFiles, matchesAny } from './aidlcHookUtils.mjs';
 
 const ADMIN_DOC_PATTERNS = [/^docs\/admin-aidlc\//];
 const ADMIN_PROOF_PATTERNS = [
@@ -68,12 +69,8 @@ function run(command, args, options = {}) {
 }
 
 function getStagedFiles() {
-  const output = run('git', ['diff', '--cached', '--name-only', '--diff-filter=ACMR']);
+  const output = run('git', ['diff', '--cached', '--name-only', '--diff-filter=ACMRD']);
   return output ? output.split('\n').map((line) => line.trim()).filter(Boolean) : [];
-}
-
-function matchesAny(file, patterns) {
-  return patterns.some((pattern) => pattern.test(file));
 }
 
 function collectMatching(files, patterns) {
@@ -137,6 +134,7 @@ function main() {
   const candidateFiles = process.argv.slice(2);
   const rawFiles = candidateFiles.length > 0 ? candidateFiles : getStagedFiles();
   const files = rawFiles.filter((file) => !matchesAny(file, IGNORED_FILE_PATTERNS));
+  const verificationConfigFiles = collectVerificationConfigFiles(files);
 
   if (files.length === 0) {
     console.log('[aidlc-verify] no relevant staged files found; skipping.');
@@ -156,20 +154,31 @@ function main() {
   });
 
   if (!admin.active && !erp.active) {
-    console.log('[aidlc-verify] no guarded AIDLC source files changed; skipping.');
-    return;
+    if (verificationConfigFiles.length > 0) {
+      console.log(
+        `[aidlc-verify] guardrail config changed; running full validation: ${verificationConfigFiles.join(', ')}`,
+      );
+    } else {
+      console.log('[aidlc-verify] no guarded AIDLC source files changed; skipping.');
+      return;
+    }
   }
 
   runValidation('npx', ['tsc', '--noEmit', '--pretty', 'false'], 'TypeScript check');
   runValidation('node', ['scripts/validateRecoverySlices.mjs', ...files], 'recovery-slice validation');
   runValidation('npx', ['tsx', 'scripts/validateErpReversePlatform.ts', ...files], 'ERP reverse-platform validation');
 
-  if (admin.active) {
+  if (verificationConfigFiles.length > 0) {
     runValidation('npm', ['run', 'aidlc:audit:admin'], 'admin audit');
-  }
-
-  if (erp.active) {
     runValidation('npm', ['run', 'aidlc:audit'], 'erp audit');
+  } else {
+    if (admin.active) {
+      runValidation('npm', ['run', 'aidlc:audit:admin'], 'admin audit');
+    }
+
+    if (erp.active) {
+      runValidation('npm', ['run', 'aidlc:audit'], 'erp audit');
+    }
   }
 
   console.log('[aidlc-verify] passed.');

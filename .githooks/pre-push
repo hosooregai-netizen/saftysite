@@ -2,4 +2,8 @@
 set -e
 
 echo "[pre-push] Running AIDLC smoke verification..."
-npm run verify:aidlc:push
+HOOK_INPUT=$(mktemp)
+trap 'rm -f "$HOOK_INPUT"' EXIT HUP INT TERM
+cat > "$HOOK_INPUT"
+
+npm run verify:aidlc:push -- --remote-name "${1:-}" --remote-url "${2:-}" --stdin-file "$HOOK_INPUT"

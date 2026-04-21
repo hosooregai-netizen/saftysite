@@ -135,6 +135,19 @@ export function getManagedRecoverySlices() {
   return slices;
 }
 
+export function getAllSmokeIds() {
+  const metadata = loadContractMetadata();
+  const smokeIds = new Set();
+
+  for (const contract of Object.values(metadata.contracts)) {
+    for (const id of contract.smokeScope.ids) {
+      smokeIds.add(id);
+    }
+  }
+
+  return [...smokeIds];
+}
+
 export function getContractMetadataPath() {
   return path.relative(repoRoot, metadataPath).replace(/\\/g, '/');
 }

@@ -211,8 +211,10 @@ npm run verify:aidlc
 ```
 
 `verify:aidlc` checks staged file paths, requires matching contract-pack companions for guarded
-admin/ERP source edits, runs recovery-slice validation, runs ERP reverse-platform validation, and
-then runs the matching AIDLC audit plus `tsc` before the commit is allowed.
+admin/ERP source edits, temporarily isolates the staged snapshot from unstaged worktree noise,
+runs recovery-slice validation, runs ERP reverse-platform validation, and then runs the matching
+AIDLC audit plus `tsc` before the commit is allowed. Guardrail metadata and hook config changes
+also force the full validation path even when no guarded source file changed directly.
 
 `.githooks/pre-push` adds smoke enforcement for guarded source pushes:
 
@@ -220,9 +222,11 @@ then runs the matching AIDLC audit plus `tsc` before the commit is allowed.
 npm run verify:aidlc:push
 ```
 
-`verify:aidlc:push` looks at the files being pushed, resolves the required mocked smoke features,
-checks that the local app is reachable at `PLAYWRIGHT_BASE_URL` (default `http://127.0.0.1:3211`),
-and blocks the push if the smoke run fails or if a guarded surface has no metadata-driven smoke mapping yet.
+`verify:aidlc:push` reads the actual `pre-push` ref updates from hook stdin, resolves the files
+that are about to be pushed, maps them to the required mocked smoke features, checks that the local
+app is reachable at `PLAYWRIGHT_BASE_URL` (default `http://127.0.0.1:3211`), and blocks the push if
+the smoke run fails or if a guarded surface has no metadata-driven smoke mapping yet. Smoke
+metadata/harness changes automatically escalate to the full smoke set.
 
 For local clones, `npm install` / `npm ci` also runs the repo `prepare` script so the same
 `.githooks` path is reinstalled automatically on each machine.

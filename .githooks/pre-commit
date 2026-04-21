@@ -1,5 +1,32 @@
 #!/bin/sh
-set -e
+set -eu
 
-echo "[pre-commit] Running AIDLC verification..."
+STASHED=0
+STASH_REF=""
+
+cleanup() {
+  status=$?
+
+  if [ "$STASHED" -eq 1 ]; then
+    if git stash apply --index -q "$STASH_REF"; then
+      git stash drop -q "$STASH_REF" >/dev/null 2>&1 || true
+    else
+      echo "[pre-commit] failed to restore your unstaged changes automatically."
+      echo "[pre-commit] inspect 'git stash list' and re-apply the latest pre-commit snapshot."
+      status=1
+    fi
+  fi
+
+  exit "$status"
+}
+
+trap cleanup EXIT HUP INT TERM
+
+if ! git diff --quiet --ignore-submodules -- || [ -n "$(git ls-files --others --exclude-standard)" ]; then
+  git stash push --quiet --keep-index --include-untracked --message "pre-commit verify snapshot"
+  STASHED=1
+  STASH_REF=$(git stash list --format='%gd %gs' | sed -n '/pre-commit verify snapshot$/s/ .*//p' | head -n 1)
+fi
+
+echo "[pre-commit] Running AIDLC verification against the staged snapshot..."
 npm run verify:aidlc

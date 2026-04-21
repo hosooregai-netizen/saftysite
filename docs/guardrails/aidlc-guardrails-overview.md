@@ -41,6 +41,7 @@ source code
 local hooks
   pre-commit
     -> verify:aidlc
+       -> staged snapshot isolation
        -> companion checks
        -> recovery-slice validation
        -> tsc
@@ -48,7 +49,9 @@ local hooks
 
   pre-push
     -> verify:aidlc:push
+       -> derive files from pushed refs
        -> derive smoke ids from metadata
+       -> full smoke fallback for metadata/harness/runner changes
        -> run targeted client smoke
 
 remote CI
@@ -85,9 +88,10 @@ remote CI
 | 파일 | 역할 |
 | --- | --- |
 | [scripts/aidlcContractMetadata.mjs](/Users/mac_mini/Documents/GitHub/saftysite-real/scripts/aidlcContractMetadata.mjs:1) | metadata JSON 로드, glob 매칭, contract/slice 해석 |
+| [scripts/aidlcHookUtils.mjs](/Users/mac_mini/Documents/GitHub/saftysite-real/scripts/aidlcHookUtils.mjs:1) | guardrail config 파일 분류, pre-push stdin parser |
 | [scripts/validateRecoverySlices.mjs](/Users/mac_mini/Documents/GitHub/saftysite-real/scripts/validateRecoverySlices.mjs:1) | metadata 정합성, reverse spec header, inventory 링크, staged slice companion 검사 |
 | [scripts/verifyAidlc.mjs](/Users/mac_mini/Documents/GitHub/saftysite-real/scripts/verifyAidlc.mjs:1) | pre-commit 성격. proof/doc 동반 여부, recovery-slice validation, `tsc`, audit 실행 |
-| [scripts/verifyAidlcPush.mjs](/Users/mac_mini/Documents/GitHub/saftysite-real/scripts/verifyAidlcPush.mjs:1) | pre-push 성격. 변경 파일에서 contract를 역으로 찾아 필요한 smoke만 실행 |
+| [scripts/verifyAidlcPush.mjs](/Users/mac_mini/Documents/GitHub/saftysite-real/scripts/verifyAidlcPush.mjs:1) | pre-push 성격. 실제 pushed ref에서 변경 파일을 계산하고 필요한 smoke를 실행 |
 | [scripts/aidlcAudit.mjs](/Users/mac_mini/Documents/GitHub/saftysite-real/scripts/aidlcAudit.mjs:1) | 파일 크기/분해 후보를 advisory audit으로 표시 |
 | [scripts/listFeatureContractIds.ts](/Users/mac_mini/Documents/GitHub/saftysite-real/scripts/listFeatureContractIds.ts:1) | metadata와 실제 contract registry id drift 검사 보조 |
 
@@ -123,20 +127,22 @@ remote CI
 
 ### 로컬 커밋 전
 
-1. `.githooks/pre-commit`이 `npm run verify:aidlc`를 실행한다.
-2. `verifyAidlc`는 staged 파일 중 guarded 파일을 찾는다.
+1. `.githooks/pre-commit`이 unstaged/untracked 변경을 잠깐 stash해서 staged snapshot만 남긴다.
+2. `npm run verify:aidlc`가 staged 파일 중 guarded 파일과 guardrail config 파일을 찾는다.
 3. admin/erp proof 파일이 같이 staged 되었는지 본다.
 4. `validateRecoverySlices`를 돌린다.
 5. managed recovery slice에 속한 파일이 바뀌었으면 해당 reverse spec도 같이 바뀌었는지 본다.
 6. `tsc --noEmit`을 돌린다.
-7. 해당 scope의 `aidlc:audit`를 돌린다.
+7. 해당 scope의 `aidlc:audit`를 돌리거나, guardrail config 변경이면 admin/ERP audit를 둘 다 돌린다.
+8. 종료 후 stash를 자동 복원한다.
 
 ### 로컬 푸시 전
 
-1. `.githooks/pre-push`가 `npm run verify:aidlc:push`를 실행한다.
-2. `verifyAidlcPush`는 변경 파일을 contract metadata에 매핑한다.
-3. 그 contract가 요구하는 smoke id를 모은다.
-4. 필요한 smoke만 골라 실행한다.
+1. `.githooks/pre-push`가 Git hook stdin의 ref update를 임시 파일로 받아 `npm run verify:aidlc:push`에 넘긴다.
+2. `verifyAidlcPush`는 실제 pushed ref 범위에서 변경 파일을 계산한다.
+3. guarded source면 contract metadata에 매핑해서 smoke id를 모은다.
+4. metadata/harness/runner 변경이면 전체 smoke set으로 승격한다.
+5. 필요한 smoke를 실행한다.
 
 ### CI
 
@@ -235,6 +241,11 @@ remote CI
 생성 스크립트:
 
 - [scripts/generateGuardrailsOverviewDeck.ts](/Users/mac_mini/Documents/GitHub/saftysite-real/scripts/generateGuardrailsOverviewDeck.ts:1)
+
+hook runtime 발표본은 별도 파일로 생성된다.
+
+- [aidlc-hooks-overview.pptx](</Users/mac_mini/Documents/GitHub/saftysite-real/docs/guardrails/aidlc-hooks-overview.pptx>)
+- [scripts/generateAidlcHooksOverviewDeck.ts](/Users/mac_mini/Documents/GitHub/saftysite-real/scripts/generateAidlcHooksOverviewDeck.ts:1)
 
 ERP reverse platform 발표본은 별도 파일로 생성된다.
 

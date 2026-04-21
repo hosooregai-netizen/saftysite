@@ -1,5 +1,12 @@
+import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
-import { findContractsForFile, isGuardedFile } from './aidlcContractMetadata.mjs';
+import { findContractsForFile, getAllSmokeIds, isGuardedFile } from './aidlcContractMetadata.mjs';
+import {
+  collectFullSmokeConfigFiles,
+  isZeroOid,
+  matchesAny,
+  parsePrePushUpdates,
+} from './aidlcHookUtils.mjs';
 
 const DEFAULT_BASE_URL = process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:3211';
 
@@ -10,10 +17,6 @@ const IGNORED_FILE_PATTERNS = [
   /^next-env\.d\.ts$/,
   /^package-lock\.json$/,
   /^package\.json$/,
-  /^scripts\/installGitHooks\.mjs$/,
-  /^scripts\/verifyAidlc\.mjs$/,
-  /^scripts\/verifyAidlcPush\.mjs$/,
-  /^\.githooks\//,
 ];
 
 function getCommandCandidates(command) {
@@ -64,10 +67,97 @@ function run(command, args, options = {}) {
   }).trim();
 }
 
+function parseArgs(argv) {
+  const positional = [];
+  const options = {
+    remoteName: '',
+    remoteUrl: '',
+    stdinFile: '',
+  };
+
+  for (let index = 0; index < argv.length; index += 1) {
+    const value = argv[index];
+    if (value === '--remote-name') {
+      options.remoteName = argv[index + 1] ?? '';
+      index += 1;
+      continue;
+    }
+
+    if (value === '--remote-url') {
+      options.remoteUrl = argv[index + 1] ?? '';
+      index += 1;
+      continue;
+    }
+
+    if (value === '--stdin-file') {
+      options.stdinFile = argv[index + 1] ?? '';
+      index += 1;
+      continue;
+    }
+
+    positional.push(value);
+  }
+
+  return { positional, options };
+}
+
+function collectChangedFilesFromCommit(commitOid) {
+  const output = run('git', ['show', '--pretty=format:', '--name-only', commitOid]);
+  return output ? output.split('\n').map((line) => line.trim()).filter(Boolean) : [];
+}
+
+function collectFilesForUpdate(update, remoteName) {
+  if (isZeroOid(update.localOid)) {
+    return [];
+  }
+
+  if (!isZeroOid(update.remoteOid)) {
+    const output = run('git', ['diff', '--name-only', `${update.remoteOid}..${update.localOid}`]);
+    return output ? output.split('\n').map((line) => line.trim()).filter(Boolean) : [];
+  }
+
+  const commitArgs = ['rev-list', update.localOid];
+  if (remoteName) {
+    commitArgs.push('--not', `--remotes=${remoteName}`);
+  } else {
+    commitArgs.push('--not', '--remotes');
+  }
+
+  const commitOutput = run('git', commitArgs);
+  const commits = commitOutput ? commitOutput.split('\n').map((line) => line.trim()).filter(Boolean) : [];
+  if (commits.length === 0) {
+    return collectChangedFilesFromCommit(update.localOid);
+  }
+
+  const files = new Set();
+  for (const commitOid of commits) {
+    for (const file of collectChangedFilesFromCommit(commitOid)) {
+      files.add(file);
+    }
+  }
+
+  return [...files];
+}
+
 function getPushedFiles() {
-  const explicitFiles = process.argv.slice(2).map((value) => value.trim()).filter(Boolean);
+  const { positional, options } = parseArgs(process.argv.slice(2));
+  const explicitFiles = positional.map((value) => value.trim()).filter(Boolean);
   if (explicitFiles.length > 0) {
     return explicitFiles;
+  }
+
+  if (options.stdinFile) {
+    const rawInput = fs.readFileSync(options.stdinFile, 'utf8');
+    const updates = parsePrePushUpdates(rawInput);
+    if (updates.length > 0) {
+      const files = new Set();
+      for (const update of updates) {
+        for (const file of collectFilesForUpdate(update, options.remoteName)) {
+          files.add(file);
+        }
+      }
+      return [...files];
+    }
   }
 
   try {
@@ -79,8 +169,13 @@ function getPushedFiles() {
   }
 }
 
-function matchesAny(file, patterns) {
-  return patterns.some((pattern) => pattern.test(file));
+function finalizeSmokeIds(smokeIds) {
+  const finalSmokeIds = new Set(smokeIds);
+  const hasErpSmoke = Array.from(smokeIds).some((id) => !id.startsWith('admin-'));
+  if (hasErpSmoke) {
+    finalSmokeIds.add('auth');
+  }
+  return [...finalSmokeIds];
 }
 
 async function ensureBaseUrlReachable(baseUrl) {
@@ -115,8 +210,17 @@ async function ensureBaseUrlReachable(baseUrl) {
 function buildRequiredSmokes(files) {
   const relevantFiles = files.filter((file) => !matchesAny(file, IGNORED_FILE_PATTERNS));
   const guardedFiles = relevantFiles.filter((file) => isGuardedFile(file));
-  if (guardedFiles.length === 0) {
-    return { guardedFiles, smokeIds: [] };
+  const fullSmokeConfigFiles = collectFullSmokeConfigFiles(relevantFiles);
+  if (guardedFiles.length === 0 && fullSmokeConfigFiles.length === 0) {
+    return { guardedFiles, fullSmokeConfigFiles, smokeIds: [] };
+  }
+
+  if (fullSmokeConfigFiles.length > 0) {
+    return {
+      guardedFiles,
+      fullSmokeConfigFiles,
+      smokeIds: finalizeSmokeIds(getAllSmokeIds()),
+    };
   }
 
   const smokeIds = new Set();
@@ -144,20 +248,18 @@ function buildRequiredSmokes(files) {
     process.exit(1);
   }
 
-  const finalSmokeIds = new Set(smokeIds);
-  const hasErpSmoke = Array.from(smokeIds).some((id) => !id.startsWith('admin-'));
-  if (hasErpSmoke) {
-    finalSmokeIds.add('auth');
-  }
-
-  return { guardedFiles, smokeIds: [...finalSmokeIds] };
+  return {
+    guardedFiles,
+    fullSmokeConfigFiles,
+    smokeIds: finalizeSmokeIds(smokeIds),
+  };
 }
 
 async function main() {
   const files = getPushedFiles();
-  const { guardedFiles, smokeIds } = buildRequiredSmokes(files);
+  const { guardedFiles, fullSmokeConfigFiles, smokeIds } = buildRequiredSmokes(files);
 
-  if (guardedFiles.length === 0) {
+  if (guardedFiles.length === 0 && fullSmokeConfigFiles.length === 0) {
     console.log('[aidlc-push] no guarded source files changed; skipping smoke verification.');
     return;
   }
@@ -165,6 +267,12 @@ async function main() {
   if (smokeIds.length === 0) {
     console.log('[aidlc-push] no smoke features were required for this push; skipping.');
     return;
+  }
+
+  if (fullSmokeConfigFiles.length > 0) {
+    console.log(
+      `[aidlc-push] smoke guardrail config changed; running full smoke set: ${fullSmokeConfigFiles.join(', ')}`,
+    );
   }
 
   const reachable = await ensureBaseUrlReachable(DEFAULT_BASE_URL);

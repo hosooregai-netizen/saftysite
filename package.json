@@ -28,6 +28,7 @@
     "probe:api-live": "tsx scripts/probeSafetyApiLive.ts",
     "verify:api-live-budgets": "tsx scripts/probeSafetyApiLive.ts --enforce-budgets",
     "generate:guardrails-overview": "tsx scripts/generateGuardrailsOverviewDeck.ts",
+    "generate:aidlc-hooks-overview": "tsx scripts/generateAidlcHooksOverviewDeck.ts",
     "generate:erp-reverse-platform-overview": "tsx scripts/generateErpReversePlatformDeck.ts",
     "generate:erp-reverse-platform-intro-deck": "tsx scripts/generateErpReversePlatformIntroDeck.ts",
     "generate:erp-reverse-platform-full-reference": "tsx scripts/generateErpReversePlatformFullReferenceDeck.ts",
