@@ -247,5 +247,8 @@ test('buildInspectionHwpxDocument keeps repeated doc4 follow-up pages page-broke
   assert.match(sectionXml, /follow-up-location-4/);
   assert.match(sectionXml, /doc7-location/);
   assert.equal(collectDuplicateTableIds(sectionXml).length, 0);
-  assert.match(sectionXml, /<hp:p\b[^>]*pageBreak="1"[^>]*>[\s\S]*follow-up-location-4/);
+  assert.match(
+    sectionXml,
+    /<hp:p\b[^>]*pageBreak="1"[^>]*>\s*<hp:run\b[^>]*><hp:tbl\b[\s\S]*follow-up-location-4/,
+  );
 });

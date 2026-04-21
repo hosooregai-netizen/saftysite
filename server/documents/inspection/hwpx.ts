@@ -1969,7 +1969,9 @@ function repeatBlockSpan(
 
   const containingTable = tables[tableIndex];
   const containingParagraph =
-    paragraphs.find((span) => containingTable.start >= span.start && containingTable.end <= span.end) ?? containingTable;
+    floatingTableAnchorParagraphSpan(xml, containingTable)
+    ?? paragraphs.find((span) => containingTable.start >= span.start && containingTable.end <= span.end)
+    ?? containingTable;
   const nextTable = tables[tableIndex + 1];
 
   if (!nextTable) {
@@ -1980,11 +1982,38 @@ function repeatBlockSpan(
   }
 
   const nextParagraph =
-    paragraphs.find((span) => nextTable.start >= span.start && nextTable.end <= span.end) ?? nextTable;
+    floatingTableAnchorParagraphSpan(xml, nextTable)
+    ?? paragraphs.find((span) => nextTable.start >= span.start && nextTable.end <= span.end)
+    ?? nextTable;
 
   return {
     start: containingParagraph.start,
     end: nextParagraph.start,
+  };
+}
+
+function floatingTableAnchorParagraphSpan(
+  xml: string,
+  tableSpan: { start: number; end: number },
+): { start: number; end: number } | null {
+  if (!containsFloatingTable(xml.slice(tableSpan.start, tableSpan.end))) {
+    return null;
+  }
+
+  const paragraphStart = xml.lastIndexOf('<hp:p', tableSpan.start);
+  const previousParagraphEnd = xml.lastIndexOf('</hp:p>', tableSpan.start);
+  if (paragraphStart === -1 || paragraphStart < previousParagraphEnd) {
+    return null;
+  }
+
+  const paragraphEnd = xml.indexOf('</hp:p>', tableSpan.end);
+  if (paragraphEnd === -1) {
+    return null;
+  }
+
+  return {
+    start: paragraphStart,
+    end: paragraphEnd + '</hp:p>'.length,
   };
 }
 

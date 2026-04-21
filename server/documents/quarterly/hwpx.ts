@@ -725,15 +725,32 @@ function replaceTemplateCellImageBinaryRef(
     );
   }
 
-  if (!cellBlock.includes(`binaryItemIDRef="${targetBinaryItemId}"`)) {
+  const pictureBlocks = [...cellBlock.matchAll(/<hp:pic\b[\s\S]*?<\/hp:pic>/g)].map((match) => match[0]);
+  const targetPictureBlock = pictureBlocks.find(
+    (candidate) =>
+      candidate.includes(`binaryItemIDRef="${targetBinaryItemId}"`)
+      || candidate.includes(`<hp:shapeComment>${targetBinaryItemId}</hp:shapeComment>`),
+  );
+
+  if (!targetPictureBlock) {
     throw new Error(
       `Quarterly HWPX template image slot "${targetBinaryItemId}" is missing for row=${rowAddr}, col=${colAddr}.`,
     );
   }
 
+  const nextPictureBlock = targetPictureBlock.includes(`binaryItemIDRef="${targetBinaryItemId}"`)
+    ? targetPictureBlock.replace(
+        new RegExp(`binaryItemIDRef="${escapeRegExp(targetBinaryItemId)}"`, 'g'),
+        `binaryItemIDRef="${nextBinaryItemId}"`,
+      )
+    : targetPictureBlock.replace(
+        /\bbinaryItemIDRef="[^"]+"/,
+        `binaryItemIDRef="${nextBinaryItemId}"`,
+      );
+
   const nextCell = cellBlock.replace(
-    new RegExp(`binaryItemIDRef="${escapeRegExp(targetBinaryItemId)}"`, 'g'),
-    `binaryItemIDRef="${nextBinaryItemId}"`,
+    targetPictureBlock,
+    nextPictureBlock,
   );
 
   return tableXml.replace(cellBlock, nextCell);
