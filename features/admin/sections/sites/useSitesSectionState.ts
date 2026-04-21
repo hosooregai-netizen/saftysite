@@ -29,7 +29,8 @@ import type { TableSortState } from '@/types/admin';
 import type { SafetySiteStatus, SafetySiteInput, SafetySiteUpdateInput } from '@/types/controller';
 import type { SafetySite } from '@/types/backend';
 
-const SITES_PAGE_SIZE = 50;
+const SITES_PAGE_SIZE = 10;
+const SITES_LIST_CACHE_KEY_PREFIX = 'sites:list:v2:';
 const EMPTY_SITE_ROWS: SafetySite[] = [];
 
 function normalizeSiteValue(value: string | null | undefined) {
@@ -153,7 +154,7 @@ export function useSitesSectionState({
     () =>
       readAdminSessionCache<import('@/types/admin').SafetyAdminSiteListResponse>(
         currentUserId,
-        `sites:list:${requestKey}`,
+        `${SITES_LIST_CACHE_KEY_PREFIX}${requestKey}`,
       ),
     [currentUserId, requestKey],
   );
@@ -227,7 +228,7 @@ export function useSitesSectionState({
       { signal: abortController.signal },
     )
       .then((response) => {
-        writeAdminSessionCache(currentUserId, `sites:list:${requestKey}`, response);
+        writeAdminSessionCache(currentUserId, `${SITES_LIST_CACHE_KEY_PREFIX}${requestKey}`, response);
         setResolvedResponseState({
           requestKey,
           response,
@@ -328,7 +329,11 @@ export function useSitesSectionState({
       sortDir: sort.direction,
       status: statusFilter,
     });
-    writeAdminSessionCache(currentUserId, `sites:list:${targetRequestKey}`, response);
+    writeAdminSessionCache(
+      currentUserId,
+      `${SITES_LIST_CACHE_KEY_PREFIX}${targetRequestKey}`,
+      response,
+    );
     setResolvedResponseState({
       requestKey: targetRequestKey,
       response,

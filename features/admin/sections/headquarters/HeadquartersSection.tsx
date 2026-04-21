@@ -25,6 +25,7 @@ import { useHeadquartersSectionState } from './useHeadquartersSectionState';
 import { SitesSection } from '../sites/SitesSection';
 
 const EMPTY_HEADQUARTER_ROWS: import('@/types/controller').SafetyHeadquarter[] = [];
+const HEADQUARTERS_PAGE_SIZE = 10;
 
 function buildRequestKey(input: {
   page: number;
@@ -209,8 +210,8 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
       sort: state.sort,
     });
     const response = await fetchAdminHeadquartersList({
-      limit: 30,
-      offset: (targetPage - 1) * 30,
+      limit: HEADQUARTERS_PAGE_SIZE,
+      offset: (targetPage - 1) * HEADQUARTERS_PAGE_SIZE,
       query: state.query.trim(),
       sortBy: state.sort.key,
       sortDir: state.sort.direction,
@@ -344,8 +345,8 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
 
     void fetchAdminHeadquartersList(
       {
-        limit: 30,
-        offset: (state.page - 1) * 30,
+        limit: HEADQUARTERS_PAGE_SIZE,
+        offset: (state.page - 1) * HEADQUARTERS_PAGE_SIZE,
         query: state.query.trim(),
         sortBy: state.sort.key,
         sortDir: state.sort.direction,
@@ -462,7 +463,7 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
   const hasSiteStatusScope = searchParams.has('siteStatus');
   const siteStatusTitle =
     siteStatusFilter === 'all' ? '현장 목록' : `${getSiteStatusLabel(siteStatusFilter)} 현장`;
-  const totalPages = Math.max(1, Math.ceil(total / 30));
+  const totalPages = Math.max(1, Math.ceil(total / HEADQUARTERS_PAGE_SIZE));
 
   if (
     isResolvingSiteContext ||

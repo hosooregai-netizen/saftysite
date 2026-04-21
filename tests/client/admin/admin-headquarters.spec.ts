@@ -91,9 +91,9 @@ export async function runAdminHeadquartersSmoke(config: ClientSmokePlaywrightCon
     await page.waitForFunction(
       () =>
         document.querySelector('tbody tr td:nth-child(2)')?.textContent?.trim() ===
-        'Pagination HQ 04',
+        'Pagination HQ 24',
     );
-    assert.equal((await firstRowName.textContent())?.trim(), 'Pagination HQ 04');
+    assert.equal((await firstRowName.textContent())?.trim(), 'Pagination HQ 24');
 
     const exportedRows = await page.evaluate(async () => {
       const response = await fetch(
