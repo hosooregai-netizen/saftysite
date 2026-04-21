@@ -1,13 +1,11 @@
 import { useMemo, useState, type FocusEvent } from 'react';
-import AppModal from '@/components/ui/AppModal';
-import { RISK_TRI_LEVEL_OPTIONS } from '@/components/session/workspace/constants';
-import { isImageValue } from '@/components/session/workspace/utils';
 import {
   ACCIDENT_TYPE_OPTIONS,
   CAUSATIVE_AGENT_LABELS,
   CAUSATIVE_AGENT_OPTIONS,
 } from '@/constants/inspectionSession/doc7Catalog';
 import styles from '@/components/session/InspectionSessionWorkspace.module.css';
+import { RISK_TRI_LEVEL_OPTIONS } from '@/components/session/workspace/constants';
 import {
   applyHazardCountermeasureSelectionToFinding,
   clearHazardCountermeasureSelectionFromFinding,
@@ -15,128 +13,90 @@ import {
   getHazardCountermeasureRecommendations,
   type HazardCountermeasureCatalogMatchField,
 } from '@/lib/hazardCountermeasureCatalog';
-import type { SafetyHazardCountermeasureCatalogItem } from '@/types/backend';
+import {
+  applyDoc7ReferenceMaterialSelection,
+  buildDoc7ReferenceMaterialLabel,
+  clearDoc7ReferenceMaterialSelection,
+} from '@/lib/doc7ReferenceMaterials';
+import type {
+  SafetyDoc7ReferenceMaterialCatalogItem,
+  SafetyHazardCountermeasureCatalogItem,
+} from '@/types/backend';
 import type { CurrentHazardFinding } from '@/types/inspectionSession';
 import type { CausativeAgentKey } from '@/types/siteOverview';
+import { Doc7ReferenceMaterialPickerModal } from './Doc7ReferenceMaterialPickerModal';
+import { Doc7ReferenceMaterialPreviewModal } from './Doc7ReferenceMaterialPreviewModal';
 
 interface Doc7FindingFieldsProps {
+  doc7ReferenceMaterials: SafetyDoc7ReferenceMaterialCatalogItem[];
   hazardCountermeasureCatalog: SafetyHazardCountermeasureCatalogItem[];
   item: CurrentHazardFinding;
   onAccidentTypeChange: (value: string) => void;
   onCausativeAgentChange: (value: CausativeAgentKey | '') => void;
-  referenceMaterial1Title: string;
-  referenceMaterial2Title: string;
   selectValueForRiskLevel: (stored: string) => string;
   updateFinding: (updater: (finding: CurrentHazardFinding) => CurrentHazardFinding) => void;
 }
 
-type ReferencePreviewKind = 'reference1' | 'reference2' | null;
-
 const DOC7_TEMPLATE_LABELS = {
-  reference1Fallback: '\uAD00\uB828 \uC911\uB300\uC7AC\uD574 \uC0AC\uB840',
-  reference2Fallback: '\uC608\uBC29\uB300\uCC45',
-  referenceEmpty: '\uC790\uB3D9 \uB9E4\uCE6D\uB41C \uCC38\uACE0\uC790\uB8CC\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.',
-  inspectorEmphasis: '\uC9C0\uB3C4\uC694\uC6D0 \uAC15\uC870\uC0AC\uD56D',
-  hazard: '\uC704\uD5D8\uC694\uC778',
-  controlMeasure: '\uAD00\uB9AC\uB300\uCC45',
-  legalReference: '\uCC38\uACE0\uBC95\uB839',
-  legalPlaceholder:
-    '\uBC95\uB839 \uC81C\uBAA9\uC740 \uC27C\uD45C \uB610\uB294 \uC904\uBC14\uAFC8\uC73C\uB85C \uAD6C\uBD84\uD574 \uC785\uB825',
-  reference1Label: '\uAD00\uB828 \uC911\uB300\uC7AC\uD574 \uC0AC\uB840',
-  reference1PreviewAria: '\uAD00\uB828 \uC911\uB300\uC7AC\uD574 \uC0AC\uB840 \uBBF8\uB9AC\uBCF4\uAE30',
-  reference2Label: '\uC608\uBC29\uB300\uCC45',
-  reference2PreviewAria: '\uC608\uBC29\uB300\uCC45 \uBBF8\uB9AC\uBCF4\uAE30',
-  close: '\uB2EB\uAE30',
-  previewEmpty: '\uD45C\uC2DC\uD560 \uCC38\uACE0\uC790\uB8CC\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.',
+  controlMeasure: '관리대책',
+  hazard: '위험요인',
+  inspectorEmphasis: '지도요원 강조사항',
+  legacyReferenceLabel: '기존 참고자료',
+  legalPlaceholder: '법령 제목은 쉼표 또는 줄바꿈으로 구분해 입력',
+  legalReference: '참고법령',
+  referenceEmpty: '선택된 참고자료가 없습니다.',
+  referenceLabel: '관련 중대재해 사례 및 예방대책',
+  referencePreviewEmpty: '표시할 참고자료가 없습니다.',
 } as const;
 
-function decodeReferenceFileName(value: string): string {
-  const normalized = value.trim();
-  if (!normalized) {
-    return '';
+function buildReferenceDisplayLabel(
+  item: CurrentHazardFinding,
+  hasSelectedReference: boolean,
+): string {
+  const accidentType = item.referenceCatalogAccidentType.trim();
+  const causative = item.referenceCatalogCausativeAgentKey.trim();
+
+  if (accidentType) {
+    const label = buildDoc7ReferenceMaterialLabel({
+      accidentType,
+      causativeAgentKey: causative || '일반',
+    });
+    return label;
   }
 
-  try {
-    const url = new URL(normalized, 'https://local.invalid');
-    const lastSegment = url.pathname.split('/').filter(Boolean).pop() ?? '';
-    return decodeURIComponent(lastSegment).trim();
-  } catch {
-    return '';
-  }
-}
-
-function buildShortReferenceLabel(value: string, fallback: string): string {
-  const normalized = value.replace(/\s+/g, ' ').trim();
-  if (!normalized) {
-    return '';
-  }
-
-  return normalized.length <= 36 ? normalized : fallback;
-}
-
-function PicturePreviewIcon() {
-  return (
-    <svg viewBox="0 0 20 20" aria-hidden="true" className={styles.doc7ReferenceIcon}>
-      <rect x="2.5" y="3.5" width="15" height="13" rx="2" />
-      <circle cx="7" cy="8" r="1.5" />
-      <path d="M4.5 14.5 8.5 10.5 11.5 13.5 14 11 17 14.5" />
-    </svg>
-  );
+  return hasSelectedReference
+    ? DOC7_TEMPLATE_LABELS.legacyReferenceLabel
+    : DOC7_TEMPLATE_LABELS.referenceEmpty;
 }
 
 export function Doc7FindingFields({
+  doc7ReferenceMaterials,
   hazardCountermeasureCatalog,
   item,
   onAccidentTypeChange,
   onCausativeAgentChange,
-  referenceMaterial1Title,
-  referenceMaterial2Title,
   selectValueForRiskLevel,
   updateFinding,
 }: Doc7FindingFieldsProps) {
-  const [previewKind, setPreviewKind] = useState<ReferencePreviewKind>(null);
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [activeRecommendationField, setActiveRecommendationField] =
     useState<HazardCountermeasureCatalogMatchField | null>(null);
+
   const referenceImageValue = item.referenceMaterialImage || item.referenceMaterial1;
   const referenceDescriptionValue =
     item.referenceMaterialDescription || item.referenceMaterial2;
-  const reference1Label = useMemo(() => {
-    if (!referenceImageValue.trim()) {
-      return '';
-    }
-
-    if (referenceMaterial1Title) {
-      return referenceMaterial1Title;
-    }
-
-    return (
-      decodeReferenceFileName(referenceImageValue) ||
-      buildShortReferenceLabel(referenceImageValue, DOC7_TEMPLATE_LABELS.reference1Fallback) ||
-      DOC7_TEMPLATE_LABELS.reference1Fallback
-    );
-  }, [referenceImageValue, referenceMaterial1Title]);
-  const reference2Label = useMemo(() => {
-    if (!referenceDescriptionValue.trim()) {
-      return '';
-    }
-
-    if (referenceMaterial2Title) {
-      return referenceMaterial2Title;
-    }
-
-    return (
-      buildShortReferenceLabel(
-        referenceDescriptionValue,
-        DOC7_TEMPLATE_LABELS.reference2Fallback,
-      ) || DOC7_TEMPLATE_LABELS.reference2Fallback
-    );
-  }, [referenceDescriptionValue, referenceMaterial2Title]);
-  const hasReferencePreviewImage = isImageValue(referenceImageValue);
-  const referenceImageDisplay = reference1Label || DOC7_TEMPLATE_LABELS.referenceEmpty;
-  const referenceDescriptionDisplay =
-    reference2Label || DOC7_TEMPLATE_LABELS.referenceEmpty;
+  const hasSelectedReference = Boolean(
+    referenceImageValue.trim() || referenceDescriptionValue.trim(),
+  );
+  const referenceDisplayLabel = useMemo(
+    () => buildReferenceDisplayLabel(item, hasSelectedReference),
+    [hasSelectedReference, item],
+  );
   const recommendationListId =
-    activeRecommendationField ? `doc7-hazard-countermeasure-${item.id}-${activeRecommendationField}` : '';
+    activeRecommendationField
+      ? `doc7-hazard-countermeasure-${item.id}-${activeRecommendationField}`
+      : '';
   const activeRecommendationQuery =
     activeRecommendationField === 'expectedRisk'
       ? item.improvementRequest || item.improvementPlan
@@ -166,7 +126,9 @@ export function Doc7FindingFields({
     }
   };
 
-  const selectHazardCountermeasureItem = (catalogItem: SafetyHazardCountermeasureCatalogItem) => {
+  const selectHazardCountermeasureItem = (
+    catalogItem: SafetyHazardCountermeasureCatalogItem,
+  ) => {
     updateFinding((finding) =>
       applyHazardCountermeasureSelectionToFinding(finding, catalogItem),
     );
@@ -219,7 +181,7 @@ export function Doc7FindingFields({
                     />
                   </td>
                   <th scope="row" className={styles.doc7LabelCell}>
-                    재해유형
+                    사고유형
                   </th>
                   <td className={styles.doc7ValueCell}>
                     <select
@@ -494,51 +456,43 @@ export function Doc7FindingFields({
               <tbody>
                 <tr>
                   <th scope="row" className={styles.doc7LabelCell}>
-                    {DOC7_TEMPLATE_LABELS.reference1Label}
+                    {DOC7_TEMPLATE_LABELS.referenceLabel}
                   </th>
                   <td className={styles.doc7ValueCell}>
-                    <div className={styles.doc7ReferenceValueRow}>
-                      <div
-                        className={`${styles.doc7ReferenceDisplayText} ${
-                          reference1Label ? '' : styles.doc7ReferenceDisplayEmpty
-                        }`}
-                      >
-                        {referenceImageDisplay}
-                      </div>
+                    <div className={styles.doc7ReferenceSelectionRow}>
                       <button
                         type="button"
-                        className={styles.doc7ReferencePreviewButton}
-                        onClick={() => setPreviewKind('reference1')}
-                        disabled={!referenceImageValue.trim()}
-                        aria-label={DOC7_TEMPLATE_LABELS.reference1PreviewAria}
-                      >
-                        <PicturePreviewIcon />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-                <tr>
-                  <th scope="row" className={styles.doc7LabelCell}>
-                    {DOC7_TEMPLATE_LABELS.reference2Label}
-                  </th>
-                  <td className={styles.doc7ValueCell}>
-                    <div className={styles.doc7ReferenceValueRow}>
-                      <div
-                        className={`${styles.doc7ReferenceDisplayText} ${
-                          reference2Label ? '' : styles.doc7ReferenceDisplayEmpty
+                        className={`${styles.doc7ReferenceSelectionValue} ${
+                          hasSelectedReference ? '' : styles.doc7ReferenceDisplayEmpty
                         }`}
+                        onClick={() => setIsPreviewOpen(true)}
+                        disabled={!hasSelectedReference}
                       >
-                        {referenceDescriptionDisplay}
-                      </div>
-                      <button
-                        type="button"
-                        className={styles.doc7ReferencePreviewButton}
-                        onClick={() => setPreviewKind('reference2')}
-                        disabled={!referenceDescriptionValue.trim()}
-                        aria-label={DOC7_TEMPLATE_LABELS.reference2PreviewAria}
-                      >
-                        <PicturePreviewIcon />
+                        {referenceDisplayLabel}
                       </button>
+                      <div className={styles.doc7ReferenceSelectionActions}>
+                        <button
+                          type="button"
+                          className={styles.doc7ReferenceActionButton}
+                          onClick={() => setIsPickerOpen(true)}
+                        >
+                          참고자료 선택
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.doc7ReferenceActionButton}
+                          onClick={() =>
+                            updateFinding((finding) => ({
+                              ...clearDoc7ReferenceMaterialSelection(finding),
+                              referenceCatalogAccidentType: '',
+                              referenceCatalogCausativeAgentKey: '',
+                            }))
+                          }
+                          disabled={!hasSelectedReference}
+                        >
+                          해제
+                        </button>
+                      </div>
                     </div>
                   </td>
                 </tr>
@@ -548,48 +502,29 @@ export function Doc7FindingFields({
         </div>
       </div>
 
-      <AppModal
-        open={previewKind !== null}
+      <Doc7ReferenceMaterialPreviewModal
+        description={referenceDescriptionValue}
+        imageUrl={referenceImageValue}
+        open={isPreviewOpen}
+        onClose={() => setIsPreviewOpen(false)}
         title={
-          previewKind === 'reference1'
-            ? reference1Label || DOC7_TEMPLATE_LABELS.reference1Label
-            : reference2Label || DOC7_TEMPLATE_LABELS.reference2Label
+          hasSelectedReference
+            ? referenceDisplayLabel
+            : DOC7_TEMPLATE_LABELS.referencePreviewEmpty
         }
-        size="large"
-        onClose={() => setPreviewKind(null)}
-        actions={
-          <button
-            type="button"
-            className="app-button app-button-primary"
-            onClick={() => setPreviewKind(null)}
-          >
-            {DOC7_TEMPLATE_LABELS.close}
-          </button>
+      />
+      <Doc7ReferenceMaterialPickerModal
+        items={doc7ReferenceMaterials}
+        open={isPickerOpen}
+        onClose={() => setIsPickerOpen(false)}
+        onSelect={(referenceItem) =>
+          updateFinding((finding) => ({
+            ...applyDoc7ReferenceMaterialSelection(finding, referenceItem),
+            referenceCatalogAccidentType: referenceItem.accidentType,
+            referenceCatalogCausativeAgentKey: referenceItem.causativeAgentKey,
+          }))
         }
-      >
-        {previewKind === 'reference1' ? (
-          <div className={styles.doc7ReferencePreviewModal}>
-            {hasReferencePreviewImage ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={referenceImageValue}
-                alt={reference1Label || DOC7_TEMPLATE_LABELS.reference1Label}
-                className={styles.doc7ReferencePreviewImage}
-              />
-            ) : (
-              <div className={styles.doc7ReferencePreviewText}>
-                {referenceImageValue || DOC7_TEMPLATE_LABELS.previewEmpty}
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className={styles.doc7ReferencePreviewModal}>
-            <div className={styles.doc7ReferencePreviewText}>
-              {referenceDescriptionValue || DOC7_TEMPLATE_LABELS.previewEmpty}
-            </div>
-          </div>
-        )}
-      </AppModal>
+      />
     </>
   );
 }

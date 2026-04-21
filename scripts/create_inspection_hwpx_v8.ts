@@ -60,7 +60,6 @@ const IMAGE_PLACEHOLDERS: TemplateImagePlaceholder[] = [
   { table: 5, row: 2, col: 0, placeholderPath: 'sec7.findings[0].photo_image', binaryItemId: 'tplimg07' },
   { table: 5, row: 2, col: 5, placeholderPath: 'sec7.findings[0].photo_image_2', binaryItemId: 'tplimg08' },
   { table: 5, row: 8, col: 0, placeholderPath: 'sec7.findings[0].reference_material_1_image', binaryItemId: 'tplimg09' },
-  { table: 5, row: 8, col: 5, placeholderPath: 'sec7.findings[0].reference_material_2_image', binaryItemId: 'tplimg10' },
   { table: 8, row: 2, col: 0, placeholderPath: 'sec10.measurements[0].photo_image', binaryItemId: 'tplimg11' },
   { table: 8, row: 7, col: 0, placeholderPath: 'sec10.measurements[1].photo_image', binaryItemId: 'tplimg12' },
   { table: 8, row: 12, col: 0, placeholderPath: 'sec10.measurements[2].photo_image', binaryItemId: 'tplimg13' },

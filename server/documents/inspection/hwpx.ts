@@ -354,7 +354,6 @@ const TEXT_PLACEHOLDERS = [
   'sec7.findings[0].improvement_plan',
   'sec7.findings[0].emphasis',
   'sec7.findings[0].legal_reference_title',
-  'sec7.findings[0].reference_material_1',
   'sec7.findings[0].reference_material_2',
   ...Array.from({ length: 3 }, (_, index) => [
     `sec8.plans[${index}].process_name`,
@@ -473,14 +472,6 @@ const BASE_TEMPLATE_IMAGE_PLACEHOLDERS: TemplateImagePlaceholder[] = [
     col: 0,
     placeholderPath: 'sec7.findings[0].reference_material_1_image',
     binaryItemId: 'tplimg09',
-    repeatBlockPath: 'sec7.findings',
-  },
-  {
-    table: 5,
-    row: 8,
-    col: 5,
-    placeholderPath: 'sec7.findings[0].reference_material_2_image',
-    binaryItemId: 'tplimg10',
     repeatBlockPath: 'sec7.findings',
   },
   {
@@ -1721,9 +1712,6 @@ export function mapSessionToTemplateBinding(session: InspectionSession): Templat
     text[`sec7.findings[${index}].improvement_plan`] = valueOrDash(improvementRequest);
     text[`sec7.findings[${index}].emphasis`] = valueOrDash(item.emphasis);
     text[`sec7.findings[${index}].legal_reference_title`] = valueOrDash(legalReferenceText);
-    text[`sec7.findings[${index}].reference_material_1`] = looksLikeImageSource(referenceMaterialImage)
-      ? ''
-      : valueOrBlank(referenceMaterialImage);
     text[`sec7.findings[${index}].reference_material_2`] = looksLikeImageSource(referenceMaterialDescription)
       ? ''
       : valueOrBlank(referenceMaterialDescription);
@@ -1731,9 +1719,6 @@ export function mapSessionToTemplateBinding(session: InspectionSession): Templat
     images[`sec7.findings[${index}].photo_image_2`] = valueOrBlank(item.photoUrl2);
     images[`sec7.findings[${index}].reference_material_1_image`] = looksLikeImageSource(referenceMaterialImage)
       ? valueOrBlank(referenceMaterialImage)
-      : '';
-    images[`sec7.findings[${index}].reference_material_2_image`] = looksLikeImageSource(referenceMaterialDescription)
-      ? valueOrBlank(referenceMaterialDescription)
       : '';
   });
 

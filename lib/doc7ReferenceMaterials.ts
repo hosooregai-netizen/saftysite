@@ -1,7 +1,5 @@
 import {
-  CATALOG_COMPATIBLE_CAUSATIVE_KEYS,
   CAUSATIVE_AGENT_LABELS,
-  getCompatibleDoc7AccidentTypes,
   normalizeDoc7CausativeAgentKey,
 } from '@/constants/inspectionSession/doc7Catalog';
 import {
@@ -15,38 +13,65 @@ import type { SafetyDoc7ReferenceMaterialCatalogItem } from '@/types/backend';
 import type { CurrentHazardFinding } from '@/types/inspectionSession';
 import type { CausativeAgentKey } from '@/types/siteOverview';
 
+export const DOC7_REFERENCE_GENERAL_CAUSATIVE = '일반';
+
 export interface Doc7ReferenceMaterialBodyValue {
   accidentType: string;
   body: string;
   causativeAgentKey: string;
   imageName: string;
   imageUrl: string;
-  referenceTitle1: string;
-  referenceTitle2: string;
+}
+
+function decodeAssetNameFromUrl(value: string): string {
+  const normalized = value.trim();
+  if (!normalized) {
+    return '';
+  }
+
+  try {
+    const url = new URL(normalized, 'https://local.invalid');
+    const lastSegment = url.pathname.split('/').filter(Boolean).pop() ?? '';
+    return decodeURIComponent(lastSegment).trim();
+  } catch {
+    return '';
+  }
+}
+
+export function normalizeDoc7ReferenceMaterialCausativeValue(
+  value: string | null | undefined,
+  options?: { fallbackToGeneral?: boolean },
+): string {
+  const normalized = normalizeMapperText(value);
+  const normalizedKey = normalizeDoc7CausativeAgentKey(normalized);
+  const label =
+    CAUSATIVE_AGENT_LABELS[normalizedKey as CausativeAgentKey] ?? normalizedKey;
+
+  if (label) {
+    return label;
+  }
+
+  return options?.fallbackToGeneral ? DOC7_REFERENCE_GENERAL_CAUSATIVE : '';
 }
 
 export function readDoc7ReferenceMaterialBody(
   body: unknown,
 ): Doc7ReferenceMaterialBodyValue {
   const record = asMapperRecord(body);
-  const normalizedCausativeKey = normalizeMapperText(
-    record.causativeAgentKey ?? record.causative_agent_key,
-  );
+  const imageUrl = contentBodyToImageUrl(body);
 
   return {
     accidentType: normalizeMapperText(record.accidentType ?? record.accident_type),
     body: contentBodyToText(body),
-    causativeAgentKey: normalizeDoc7CausativeAgentKey(normalizedCausativeKey),
+    causativeAgentKey: normalizeDoc7ReferenceMaterialCausativeValue(
+      normalizeMapperText(record.causativeAgentKey ?? record.causative_agent_key),
+      { fallbackToGeneral: true },
+    ),
     imageName:
       contentBodyToAssetName(body) ||
+      decodeAssetNameFromUrl(imageUrl) ||
       normalizeMapperText(record.imageName ?? record.image_name),
-    imageUrl: contentBodyToImageUrl(body),
-    referenceTitle1: normalizeMapperText(
-      record.referenceTitle1 ?? record.reference_title_1 ?? record.imageTitle ?? record.image_title,
-    ),
-    referenceTitle2: normalizeMapperText(
-      record.referenceTitle2 ?? record.reference_title_2 ?? record.bodyTitle ?? record.body_title,
-    ),
+    imageUrl,
   };
 }
 
@@ -55,69 +80,71 @@ export function buildDoc7ReferenceMaterialTitle(
   causativeAgentKey: string,
 ): string {
   const normalizedAccidentType = normalizeMapperText(accidentType);
-  const normalizedCausativeKey = normalizeDoc7CausativeAgentKey(causativeAgentKey);
-  const causativeLabel = normalizedCausativeKey
-    ? CAUSATIVE_AGENT_LABELS[normalizedCausativeKey as CausativeAgentKey] ??
-      normalizedCausativeKey
-    : '';
+  const normalizedCausativeKey = normalizeDoc7ReferenceMaterialCausativeValue(
+    causativeAgentKey,
+    { fallbackToGeneral: true },
+  );
 
-  const segments = [normalizedAccidentType, causativeLabel].filter(Boolean);
+  const segments = [normalizedAccidentType, normalizedCausativeKey].filter(Boolean);
   return segments.join(' / ') || 'DOC7 참고자료';
 }
 
-export function matchDoc7ReferenceMaterial(
-  items: SafetyDoc7ReferenceMaterialCatalogItem[],
-  accidentType: string,
-  causativeAgentKey: string,
-): SafetyDoc7ReferenceMaterialCatalogItem | null {
-  const normalizedAccidentType = normalizeMapperText(accidentType);
-  const normalizedCausativeKey = normalizeDoc7CausativeAgentKey(causativeAgentKey);
+export function buildDoc7ReferenceMaterialLabel(
+  item:
+    | Pick<SafetyDoc7ReferenceMaterialCatalogItem, 'accidentType' | 'causativeAgentKey'>
+    | Pick<Doc7ReferenceMaterialBodyValue, 'accidentType' | 'causativeAgentKey'>,
+): string {
+  const accidentType = normalizeMapperText(item.accidentType);
+  const causative = normalizeDoc7ReferenceMaterialCausativeValue(item.causativeAgentKey, {
+    fallbackToGeneral: true,
+  });
 
-  if (!normalizedAccidentType || !normalizedCausativeKey) {
-    return null;
+  if (!accidentType) {
+    return causative ? `기타(${causative})` : '기타';
   }
 
-  const compatibleList =
-    CATALOG_COMPATIBLE_CAUSATIVE_KEYS[normalizedCausativeKey as CausativeAgentKey] ?? [
-      normalizedCausativeKey,
-    ];
-  const compatibleCausativeKeys = new Set<string>(compatibleList);
-  const compatibleAccidentTypes = new Set(getCompatibleDoc7AccidentTypes(normalizedAccidentType));
-
-  return (
-    items.find(
-      (item) =>
-        compatibleAccidentTypes.has(item.accidentType) &&
-        compatibleCausativeKeys.has(item.causativeAgentKey),
-    ) ?? null
-  );
+  return `${accidentType}(${causative})`;
 }
 
-export function getDoc7ReferenceMatchKeys(finding: CurrentHazardFinding): {
-  accidentType: string;
-  causativeAgentKey: string;
-} {
-  const refAccidentType = normalizeMapperText(finding.referenceCatalogAccidentType);
-  const refCausativeKey = normalizeDoc7CausativeAgentKey(finding.referenceCatalogCausativeAgentKey);
-
-  return {
-    accidentType: refAccidentType || finding.accidentType,
-    causativeAgentKey: refCausativeKey || finding.causativeAgentKey,
-  };
+export function buildDoc7ReferenceMaterialSearchText(
+  item: Pick<SafetyDoc7ReferenceMaterialCatalogItem, 'accidentType' | 'causativeAgentKey' | 'body'>,
+): string {
+  return [
+    normalizeMapperText(item.accidentType),
+    normalizeDoc7ReferenceMaterialCausativeValue(item.causativeAgentKey, {
+      fallbackToGeneral: true,
+    }),
+    normalizeMapperText(item.body),
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
 }
 
-export function applyDoc7ReferenceMaterialMatch<T extends CurrentHazardFinding>(
+export function applyDoc7ReferenceMaterialSelection<T extends CurrentHazardFinding>(
   finding: T,
-  items: SafetyDoc7ReferenceMaterialCatalogItem[],
+  item:
+    | Pick<SafetyDoc7ReferenceMaterialCatalogItem, 'body' | 'imageUrl'>
+    | null,
 ): T {
-  const { accidentType, causativeAgentKey } = getDoc7ReferenceMatchKeys(finding);
-  const matched = matchDoc7ReferenceMaterial(items, accidentType, causativeAgentKey);
+  const imageUrl = item?.imageUrl?.trim() ?? '';
+  const body = item?.body?.trim() ?? '';
 
   return {
     ...finding,
-    referenceMaterial1: matched?.imageUrl ?? '',
-    referenceMaterial2: matched?.body ?? '',
-    referenceMaterialImage: matched?.imageUrl ?? '',
-    referenceMaterialDescription: matched?.body ?? '',
+    referenceMaterial1: imageUrl,
+    referenceMaterial2: body,
+    referenceMaterialImage: imageUrl,
+    referenceMaterialDescription: body,
   };
+}
+
+export function clearDoc7ReferenceMaterialSelection<T extends CurrentHazardFinding>(
+  finding: T,
+): T {
+  return applyDoc7ReferenceMaterialSelection(finding, null);
+}
+
+export function decodeDoc7ReferenceAssetName(value: string): string {
+  return decodeAssetNameFromUrl(value);
 }

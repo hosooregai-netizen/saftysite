@@ -124,6 +124,8 @@ interface ExistingWebReportData {
     legalReferenceTitle: string;
     referenceMaterial1: string;
     referenceMaterial2: string;
+    referenceMaterialImage?: string;
+    referenceMaterialDescription?: string;
   }>;
   document8Plans: Array<{
     id?: string;
@@ -383,7 +385,6 @@ const SEC7_TEXT_PLACEHOLDERS = [
   'sec7.findings[0].emphasis',
   'sec7.findings[0].improvement_plan',
   'sec7.findings[0].legal_reference_title',
-  'sec7.findings[0].reference_material_1',
   'sec7.findings[0].reference_material_2',
 ];
 const SEC8_TEXT_PLACEHOLDERS = Array.from({ length: 6 }, (_, index) => [
@@ -522,14 +523,6 @@ const TEMPLATE_IMAGE_PLACEHOLDERS: TemplateImagePlaceholder[] = [
     col: 0,
     placeholderPath: 'sec7.findings[0].reference_material_1_image',
     binaryItemId: 'tplimg09',
-    repeatBlockPath: 'sec7.findings',
-  },
-  {
-    table: 5,
-    row: 8,
-    col: 2,
-    placeholderPath: 'sec7.findings[0].reference_material_2_image',
-    binaryItemId: 'tplimg10',
     repeatBlockPath: 'sec7.findings',
   },
   {
@@ -1206,6 +1199,8 @@ function createEmptyFinding() {
     legalReferenceTitle: '',
     referenceMaterial1: '',
     referenceMaterial2: '',
+    referenceMaterialImage: '',
+    referenceMaterialDescription: '',
   };
 }
 
@@ -1393,19 +1388,15 @@ function mapWebDataToTemplateBinding(data: ExistingWebReportData): TemplateBindi
     text[`sec7.findings[${index}].emphasis`] = valueOrDash(item.emphasis);
     text[`sec7.findings[${index}].improvement_plan`] = valueOrDash(item.improvementPlan);
     text[`sec7.findings[${index}].legal_reference_title`] = valueOrDash(item.legalReferenceTitle);
-    text[`sec7.findings[${index}].reference_material_1`] = looksLikeImageSource(item.referenceMaterial1)
+    const referenceMaterialImage = item.referenceMaterialImage || item.referenceMaterial1;
+    const referenceMaterialDescription = item.referenceMaterialDescription || item.referenceMaterial2;
+    text[`sec7.findings[${index}].reference_material_2`] = looksLikeImageSource(referenceMaterialDescription)
       ? ''
-      : valueOrBlank(item.referenceMaterial1);
-    text[`sec7.findings[${index}].reference_material_2`] = looksLikeImageSource(item.referenceMaterial2)
-      ? ''
-      : valueOrBlank(item.referenceMaterial2);
+      : valueOrBlank(referenceMaterialDescription);
     images[`sec7.findings[${index}].photo_image`] = valueOrBlank(item.photoUrl);
     images[`sec7.findings[${index}].photo_image_2`] = valueOrBlank(item.photoUrl2);
-    images[`sec7.findings[${index}].reference_material_1_image`] = looksLikeImageSource(item.referenceMaterial1)
-      ? valueOrBlank(item.referenceMaterial1)
-      : '';
-    images[`sec7.findings[${index}].reference_material_2_image`] = looksLikeImageSource(item.referenceMaterial2)
-      ? valueOrBlank(item.referenceMaterial2)
+    images[`sec7.findings[${index}].reference_material_1_image`] = looksLikeImageSource(referenceMaterialImage)
+      ? valueOrBlank(referenceMaterialImage)
       : '';
   });
 

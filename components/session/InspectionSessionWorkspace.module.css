@@ -1579,8 +1579,211 @@
   color: var(--erp-text-muted);
 }
 
+.doc7ReferenceSelectionRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+}
+
+.doc7ReferenceSelectionValue {
+  display: inline-flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  padding: 10px 12px;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-sm);
+  background: var(--erp-white);
+  font-size: var(--text-body);
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--erp-dark);
+  text-align: left;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    color 0.18s ease;
+}
+
+.doc7ReferenceSelectionValue:hover:not(:disabled) {
+  border-color: #c5d0de;
+  background: #f8fbff;
+}
+
+.doc7ReferenceSelectionValue:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.doc7ReferenceSelectionActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.doc7ReferenceActionButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 74px;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-control);
+  background: var(--erp-white);
+  font-size: var(--text-ui-sm);
+  font-weight: 700;
+  color: var(--erp-dark);
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    color 0.18s ease;
+}
+
+.doc7ReferenceActionButton:hover:not(:disabled) {
+  border-color: #c5d0de;
+  background: #f8fafc;
+}
+
+.doc7ReferenceActionButton:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+.doc7ReferencePickerLayout {
+  display: grid;
+  gap: 16px;
+}
+
+.doc7ReferencePickerFilters {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) repeat(2, minmax(180px, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+.doc7ReferencePickerField {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.doc7ReferencePickerList {
+  display: grid;
+  gap: 12px;
+  max-height: min(60vh, 680px);
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.doc7ReferencePickerCard {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-card);
+  background: var(--erp-white);
+}
+
+.doc7ReferencePickerThumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 92px;
+  height: 92px;
+  overflow: hidden;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-sm);
+  background: #f8fafc;
+}
+
+.doc7ReferencePickerThumbImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.doc7ReferencePickerThumbEmpty {
+  padding: 12px;
+  font-size: var(--text-ui-sm);
+  font-weight: 600;
+  color: var(--erp-text-muted);
+  text-align: center;
+}
+
+.doc7ReferencePickerBody {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.doc7ReferencePickerTitle {
+  font-size: var(--text-body-md);
+  line-height: 1.4;
+  color: var(--erp-dark);
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.doc7ReferencePickerExcerpt {
+  margin: 0;
+  color: var(--erp-text-muted);
+  font-size: var(--text-ui);
+  line-height: 1.65;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.doc7ReferencePickerActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.doc7ReferencePickerEmpty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;
+  padding: 16px;
+  border: 1px dashed var(--erp-line);
+  border-radius: var(--erp-radius-card);
+  background: var(--erp-panel-muted);
+  color: var(--erp-text-muted);
+  text-align: center;
+}
+
 /* 모바일·태블릿: 현장 사진을 폼보다 위에 */
 @media (max-width: 899px) {
+  .doc7ReferencePickerFilters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .doc7ReferencePickerField:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .doc7ReferencePickerCard {
+    grid-template-columns: 108px minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .doc7ReferencePickerActions {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
+
   .doc7Eyebrow {
     order: 0;
   }
@@ -1597,6 +1800,25 @@
   .doc7DetailTable,
   .doc7ReferenceTable {
     min-width: 760px;
+  }
+}
+
+@media (max-width: 640px) {
+  .doc7ReferenceSelectionRow {
+    grid-template-columns: 1fr;
+  }
+
+  .doc7ReferenceSelectionActions {
+    justify-content: flex-start;
+  }
+
+  .doc7ReferencePickerFilters,
+  .doc7ReferencePickerCard {
+    grid-template-columns: 1fr;
+  }
+
+  .doc7ReferencePickerThumb {
+    height: 160px;
   }
 }
 

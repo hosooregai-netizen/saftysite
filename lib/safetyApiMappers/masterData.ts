@@ -221,8 +221,6 @@ function mapDoc7ReferenceMaterialItem(
     causativeAgentKey: body.causativeAgentKey,
     body: body.body,
     imageUrl: body.imageUrl,
-    referenceTitle1: body.referenceTitle1,
-    referenceTitle2: body.referenceTitle2,
     effectiveFrom: normalizeContentDate(item.effective_from),
     effectiveTo: normalizeContentDate(item.effective_to),
     isActive: item.is_active,

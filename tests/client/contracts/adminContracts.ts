@@ -84,6 +84,27 @@ export const ADMIN_FEATURE_CONTRACTS = {
     ],
     criticalActions: ['관제 일정 월간 보드 조회', '월 네비게이션 이동', '확정 일정 칩 표시', 'legacy import 선택 일정 표시', '관제 일정 상세 modal 진입', '관제 일정 저장'],
   },
+  'admin-content': {
+    id: 'admin-content',
+    description:
+      'Admin content CRUD keeps the DOC7 reference material editor on the simplified four-field shape: accident type, causative agent, major accident case image, and prevention body text. The list and editor still tolerate legacy items, but saving normalizes them into the manual picker schema.',
+    routes: ['/admin?section=content'],
+    markers: ['사고유형', '기인물', '중대 재해 사례 이미지', '재해 사례 및 예방대책'],
+    apis: [
+      'GET /api/safety/content-items',
+      'POST /content-items',
+      'PATCH /content-items/:id',
+      'DELETE /content-items/:id',
+      'POST /content-items/assets/upload',
+    ],
+    criticalActions: [
+      'DOC7 참고자료 유형 선택',
+      '4필드만 입력해 신규 저장',
+      '이미지 업로드',
+      '기인물 공란 저장 시 일반 처리 확인',
+      '레거시 참고자료 항목 수정 저장',
+    ],
+  },
 } as const satisfies Record<string, FeatureContract>;
 
 export type AdminFeatureContractId = keyof typeof ADMIN_FEATURE_CONTRACTS;

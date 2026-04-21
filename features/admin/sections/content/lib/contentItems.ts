@@ -1,5 +1,6 @@
 import {
   buildDoc7ReferenceMaterialTitle,
+  normalizeDoc7ReferenceMaterialCausativeValue,
   readDoc7ReferenceMaterialBody,
 } from '@/lib/doc7ReferenceMaterials';
 import { readHazardCountermeasureCatalogBody } from '@/lib/hazardCountermeasureCatalog';
@@ -36,8 +37,6 @@ export interface ContentFormState {
   effective_from: string;
   effective_to: string;
   is_active: boolean;
-  reference_title_1: string;
-  reference_title_2: string;
   sort_order: string;
   catalog_category: string;
   catalog_expected_risk: string;
@@ -134,8 +133,6 @@ export function createEmptyContentForm(
     effective_from: '',
     effective_to: '',
     is_active: true,
-    reference_title_1: '',
-    reference_title_2: '',
     sort_order: '0',
     catalog_category: '',
     catalog_expected_risk: '',
@@ -181,8 +178,6 @@ export function mapContentItemToForm(item: SafetyContentItem): ContentFormState 
     effective_from: item.effective_from?.slice(0, 10) ?? '',
     effective_to: item.effective_to?.slice(0, 10) ?? '',
     is_active: item.is_active,
-    reference_title_1: doc7ReferenceMaterial?.referenceTitle1 ?? '',
-    reference_title_2: doc7ReferenceMaterial?.referenceTitle2 ?? '',
     sort_order: String(item.sort_order),
     catalog_category: hazardCountermeasureCatalog?.category ?? '',
     catalog_expected_risk: hazardCountermeasureCatalog?.expectedRisk ?? '',
@@ -211,11 +206,14 @@ export function switchContentType(
 
 export function buildContentTitle(form: ContentFormState): string {
   if (form.content_type === 'doc7_reference_material') {
-    if (!form.accident_type.trim() || !form.causative_agent_key.trim()) {
+    if (!form.accident_type.trim()) {
       return '';
     }
 
-    return buildDoc7ReferenceMaterialTitle(form.accident_type, form.causative_agent_key);
+    return buildDoc7ReferenceMaterialTitle(
+      form.accident_type,
+      form.causative_agent_key,
+    );
   }
 
   return form.title.trim();
@@ -244,11 +242,11 @@ export function buildContentBody(form: ContentFormState): Record<string, unknown
     return {
       accidentType: form.accident_type.trim(),
       body: textBody,
-      causativeAgentKey: form.causative_agent_key.trim(),
-      imageName: form.image_name || '',
+      causativeAgentKey: normalizeDoc7ReferenceMaterialCausativeValue(
+        form.causative_agent_key,
+        { fallbackToGeneral: true },
+      ),
       imageUrl: form.image_url || '',
-      referenceTitle1: form.reference_title_1.trim(),
-      referenceTitle2: form.reference_title_2.trim(),
     };
   }
 
@@ -308,10 +306,10 @@ export function getContentPreview(item: SafetyContentItemListItem): string {
                 normalizeMapperText(item.title)
               );
             })()
-        : readText(item.body, item.content_type) || normalizeMapperText(item.title);
+          : readText(item.body, item.content_type) || normalizeMapperText(item.title);
 
   if (item.content_type === 'measurement_template') {
-    return text || '안전 기준 없음';
+    return text || '안전 기준 내용 없음';
   }
 
   if (!meta) {
@@ -320,7 +318,9 @@ export function getContentPreview(item: SafetyContentItemListItem): string {
 
   if (meta.editorMode === 'image') {
     if (item.content_type === 'safety_news') {
-      return contentBodyToAssetUrl(item.body) ? `${text || '안전 정보'} 및 자료` : text || '안전 정보';
+      return contentBodyToAssetUrl(item.body)
+        ? `${text || '안전 정보'} 및 자료`
+        : text || '안전 정보';
     }
 
     if (item.content_type === 'doc7_reference_material') {
@@ -358,7 +358,9 @@ export function getContentAttachmentSummary(item: SafetyContentItemListItem): st
     return contentBodyToImageUrl(item.body) ? '이미지 업로드' : '이미지 없음';
   }
   if (mode === 'file') {
-    return readFileUrl(item.body, 1) || readFileUrl(item.body, 2) ? '파일 업로드' : '파일 없음';
+    return readFileUrl(item.body, 1) || readFileUrl(item.body, 2)
+      ? '파일 업로드'
+      : '파일 없음';
   }
   if (mode === 'list') return '목록값';
   return '텍스트';

@@ -794,12 +794,6 @@
         },
         {
           "kind": "text",
-          "placeholderPath": "sec7.findings[0].reference_material_1",
-          "repeatBlockPath": "sec7.findings",
-          "note": ""
-        },
-        {
-          "kind": "text",
           "placeholderPath": "sec7.findings[0].reference_material_2",
           "repeatBlockPath": "sec7.findings",
           "note": ""
@@ -836,17 +830,6 @@
           "row": 8,
           "col": 0,
           "binaryItemId": "tplimg09",
-          "deferred": false,
-          "optional": false
-        },
-        {
-          "kind": "image",
-          "placeholderPath": "sec7.findings[0].reference_material_2_image",
-          "repeatBlockPath": "sec7.findings",
-          "table": 5,
-          "row": 8,
-          "col": 5,
-          "binaryItemId": "tplimg10",
           "deferred": false,
           "optional": false
         }

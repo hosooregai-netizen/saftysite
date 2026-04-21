@@ -859,24 +859,24 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
                 <>
                   <div className={styles.modalGrid}>
                     <label className={styles.modalField}>
-                      <span className={styles.label}>재해유형</span>
+                      <span className={styles.label}>사고유형</span>
                       <input
                         className="app-input"
                         type="text"
                         value={form.accident_type}
-                        placeholder="재해유형 직접 입력"
+                        placeholder="사고유형 직접 입력"
                         onChange={(e) => setForm({ ...form, accident_type: e.target.value })}
                         disabled={busy}
                         autoComplete="off"
                       />
                     </label>
                     <label className={styles.modalField}>
-                      <span className={styles.label}>기인물 유형</span>
+                      <span className={styles.label}>기인물</span>
                       <input
                         className="app-input"
                         type="text"
                         value={form.causative_agent_key}
-                        placeholder="기인물 직접 입력 (표준 키 또는 문구)"
+                        placeholder="기인물을 직접 입력하세요. 비우면 '일반'으로 저장됩니다."
                         onChange={(e) =>
                           setForm({ ...form, causative_agent_key: e.target.value })
                         }
@@ -885,61 +885,33 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
                       />
                     </label>
                   </div>
-                  <div className={styles.referenceMaterialEditorGrid}>
-                    <div className={styles.referenceMaterialTextField}>
-                      <label className={styles.modalField}>
-                        <span className={styles.label}>참고자료 1 제목</span>
-                        <input
-                          className="app-input"
-                          value={form.reference_title_1}
-                          placeholder="예: 추락 재해사례"
-                          onChange={(e) =>
-                            setForm({ ...form, reference_title_1: e.target.value })
-                          }
-                          disabled={busy}
-                        />
-                      </label>
-                    <ContentAssetField
-                      accept="image/*"
-                      disabled={busy || !canUploadAssets}
-                      label="참고자료 이미지"
-                      mode="image"
-                      readOnly={!canUploadAssets}
-                      value={form.image_url}
-                      fileName={form.image_name}
-                      onChange={({ value, fileName }) =>
-                        setForm({ ...form, image_url: value, image_name: fileName })
-                      }
-                      onClear={() => setForm({ ...form, image_url: '', image_name: '' })}
-                      resolveFile={uploadFileAsset}
-                      validateFile={validateLargeFile}
+                  <ContentAssetField
+                    accept="image/*"
+                    disabled={busy || !canUploadAssets}
+                    helperText={uploadPermissionHelperText}
+                    label="중대 재해 사례 이미지"
+                    mode="image"
+                    readOnly={!canUploadAssets}
+                    value={form.image_url}
+                    fileName={form.image_name}
+                    onChange={({ value, fileName }) =>
+                      setForm({ ...form, image_url: value, image_name: fileName })
+                    }
+                    onClear={() => setForm({ ...form, image_url: '', image_name: '' })}
+                    resolveFile={uploadFileAsset}
+                    validateFile={validateLargeFile}
+                  />
+                  <label className={styles.modalFieldWide}>
+                    <span className={styles.label}>재해 사례 및 예방대책</span>
+                    <textarea
+                      className="app-textarea"
+                      rows={10}
+                      value={form.text_body}
+                      placeholder="재해 사례 및 예방대책을 입력"
+                      onChange={(e) => setForm({ ...form, text_body: e.target.value })}
+                      disabled={busy}
                     />
-                    </div>
-                    <label className={styles.referenceMaterialTextField}>
-                      <span className={styles.label}>참고자료 2 제목</span>
-                      <input
-                        className="app-input"
-                        value={form.reference_title_2}
-                        placeholder="예: 재해 개요 및 원인"
-                        onChange={(e) =>
-                          setForm({ ...form, reference_title_2: e.target.value })
-                        }
-                        disabled={busy}
-                      />
-                      <span className={styles.label}>{activeTypeMeta.bodyLabel}</span>
-                      <div className={styles.referenceMaterialTextBox}>
-                        <textarea
-                          className={styles.referenceMaterialTextArea}
-                          value={form.text_body}
-                          placeholder="참고자료 내용을 입력"
-                          onChange={(e) =>
-                            setForm({ ...form, text_body: e.target.value })
-                          }
-                          disabled={busy}
-                        />
-                      </div>
-                    </label>
-                  </div>
+                  </label>
                 </>
               ) : null}
 

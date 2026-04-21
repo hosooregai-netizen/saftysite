@@ -30,6 +30,7 @@ type FeatureRunner = (config: ReturnType<typeof resolveClientSmokePlaywrightConf
 
 const FEATURE_RUNNERS: Record<FeatureContractId, FeatureRunner> = {
   'admin-control-center': runAdminControlCenterSmoke,
+  'admin-content': runAdminControlCenterSmoke,
   'admin-headquarters': runAdminHeadquartersSmoke,
   'admin-reports': runAdminReportsSmoke,
   'admin-sites': runAdminSitesSmoke,
@@ -45,6 +46,7 @@ const FEATURE_RUNNERS: Record<FeatureContractId, FeatureRunner> = {
   'mobile-quarterly-list': runMobileQuarterlyListSmoke,
   'mobile-quarterly-report': runMobileQuarterlyReportSmoke,
   'mobile-link': runMobileLinkSmoke,
+  'inspection-session-doc7': runMobileLinkSmoke,
   'quarterly-report': runQuarterlyReportSmoke,
   'site-hub': runSiteHubSmoke,
   'worker-calendar': runWorkerCalendarSmoke,

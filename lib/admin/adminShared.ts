@@ -154,9 +154,9 @@ export const CONTENT_TYPE_OPTIONS: Array<{
   {
     value: 'doc7_reference_material',
     label: '기술지도 - 참고자료',
-    description: '사고 유형과 기인물 조합으로 DOC7 참고자료를 자동 매핑합니다.',
+    description: 'DOC7에서 작업자가 직접 선택하는 중대 재해 사례 및 예방대책을 관리합니다.',
     editorMode: 'image',
-    bodyLabel: '참고자료 내용',
+    bodyLabel: '재해 사례 및 예방대책',
   },
   {
     value: 'measurement_template',

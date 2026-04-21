@@ -105,7 +105,6 @@
     "sec7.findings[0].improvement_plan",
     "sec7.findings[0].emphasis",
     "sec7.findings[0].legal_reference_title",
-    "sec7.findings[0].reference_material_1",
     "sec7.findings[0].reference_material_2",
     "sec8.plans[0].process_name",
     "sec8.plans[0].hazard",
@@ -394,14 +393,12 @@
         "sec7.findings[0].improvement_plan",
         "sec7.findings[0].emphasis",
         "sec7.findings[0].legal_reference_title",
-        "sec7.findings[0].reference_material_1",
         "sec7.findings[0].reference_material_2"
       ],
       "imagePlaceholders": [
         "sec7.findings[0].photo_image",
         "sec7.findings[0].photo_image_2",
-        "sec7.findings[0].reference_material_1_image",
-        "sec7.findings[0].reference_material_2_image"
+        "sec7.findings[0].reference_material_1_image"
       ]
     },
     {
@@ -636,14 +633,6 @@
       "col": 0,
       "placeholderPath": "sec7.findings[0].reference_material_1_image",
       "binaryItemId": "tplimg09",
-      "repeatBlockPath": "sec7.findings"
-    },
-    {
-      "table": 5,
-      "row": 8,
-      "col": 5,
-      "placeholderPath": "sec7.findings[0].reference_material_2_image",
-      "binaryItemId": "tplimg10",
       "repeatBlockPath": "sec7.findings"
     },
     {

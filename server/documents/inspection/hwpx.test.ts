@@ -9,8 +9,15 @@ import {
 } from '@/constants/inspectionSession/sessionFactory';
 import { buildInspectionHwpxDocument } from './hwpx';
 
+const TRANSPARENT_PNG_DATA_URL =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aR9kAAAAASUVORK5CYII=';
+
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function flattenXmlText(xml: string) {
+  return xml.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ');
 }
 
 function buildMeasurementFixture(accidentOccurred: 'no' | 'yes') {
@@ -166,5 +173,40 @@ test('buildInspectionHwpxDocument repeats doc7 findings beyond the first item fo
     assert.match(sectionXml, /finding-law-2/);
     assert.doesNotMatch(sectionXml, /\{\/sec7\.findings\}/);
     assert.doesNotMatch(sectionXml, /\{sec7\.findings\[1\]\.location\}/);
+  }
+});
+
+test('buildInspectionHwpxDocument renders doc7 manual reference text and left reference image for both inspection template variants', async () => {
+  const expectedImage = Buffer.from(TRANSPARENT_PNG_DATA_URL.split(',')[1], 'base64');
+
+  for (const accidentOccurred of ['no', 'yes'] as const) {
+    const session = buildMeasurementFixture(accidentOccurred);
+    session.document7Findings = [
+      {
+        ...session.document7Findings[0],
+        location: 'reference-zone',
+        hazardDescription: 'reference-hazard',
+        improvementPlan: 'reference-improvement',
+        improvementRequest: 'reference-improvement',
+        referenceMaterial1: '',
+        referenceMaterial2: '',
+        referenceMaterialImage: TRANSPARENT_PNG_DATA_URL,
+        referenceMaterialDescription: 'reference-body-text',
+      },
+    ];
+
+    const document = await buildInspectionHwpxDocument(session, [session]);
+    const zip = await JSZip.loadAsync(document.buffer);
+    const sectionXml = await zip.file('Contents/section0.xml')?.async('string');
+    const boundImage = await zip.file('BinData/tplimg09.png')?.async('nodebuffer');
+
+    assert.ok(sectionXml);
+    assert.ok(boundImage);
+    const flattenedText = flattenXmlText(sectionXml);
+    assert.match(flattenedText, /reference-body-text/);
+    assert.match(sectionXml, /binaryItemIDRef="tplimg09"/);
+    assert.doesNotMatch(sectionXml, /\{sec7\.findings\[0\]\.reference_material_2\}/);
+    assert.doesNotMatch(sectionXml, /data:image\/png;base64/);
+    assert.deepEqual(boundImage, expectedImage);
   }
 });

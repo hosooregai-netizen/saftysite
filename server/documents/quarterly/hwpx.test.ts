@@ -24,6 +24,10 @@ function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+function flattenXmlText(xml: string) {
+  return xml.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ');
+}
+
 function findTableCell(tableXml: string, rowAddr: number, colAddr: number) {
   const targetMarker = `<hp:cellAddr colAddr="${colAddr}" rowAddr="${rowAddr}"/>`;
   return (
@@ -223,6 +227,32 @@ test('buildQuarterlyHwpxDocument renders selected inspection bodies into the mer
   const firstAppendixSlice = extractAppendixSlice(sectionXml, 'appendix-hazard-one');
   assert.doesNotMatch(firstAppendixSlice, /hidePageNum="1"/);
   assert.doesNotMatch(firstAppendixSlice, /www\.safetysite\.co\.kr/);
+});
+
+test('buildQuarterlyHwpxDocument renders doc7 manual reference text inside the merged inspection appendix', async () => {
+  const fixture = buildQuarterlyFixture();
+  fixture.sessions[0].document7Findings = [
+    {
+      ...fixture.sessions[0].document7Findings[0],
+      hazardDescription: 'appendix-reference-hazard',
+      referenceMaterial1: '',
+      referenceMaterial2: '',
+      referenceMaterialImage: TRANSPARENT_PNG_DATA_URL,
+      referenceMaterialDescription: 'appendix-reference-body',
+    },
+  ];
+
+  const zip = await loadGeneratedZip(fixture, {
+    selectedSessions: fixture.sessions,
+    siteSessions: fixture.sessions,
+  });
+  const sectionXml = await zip.file('Contents/section0.xml')?.async('string');
+  const flattenedText = flattenXmlText(sectionXml ?? '');
+
+  assert.ok(sectionXml);
+  assert.match(flattenedText, /appendix-reference-body/);
+  assert.doesNotMatch(sectionXml, /\{sec7\.findings\[0\]\.reference_material_2\}/);
+  assert.match(flattenedText, /appendix-reference-hazard[\s\S]*appendix-reference-body/);
 });
 
 test('buildQuarterlyHwpxDocument renders v9-1 appendix content into the merged section template', async () => {

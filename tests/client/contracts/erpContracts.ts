@@ -195,6 +195,28 @@ export const ERP_FEATURE_CONTRACTS = {
     apis: ['GET /assignments/me/sites', 'GET /reports'],
     criticalActions: ['현장 선택', '현장 메인 상세 진입', '분기 종합 보고서 목록 이동'],
   },
+  'inspection-session-doc7': {
+    id: 'inspection-session-doc7',
+    description:
+      'The inspection session DOC7 flow now keeps reference materials fully manual: workers open a picker modal, search the current reference catalog, copy the selected image/body snapshot into the finding, and keep that selection stable across AI refills and downstream inspection or quarterly document generation.',
+    routes: ['/sessions/report-tech-1', '/mobile/sessions/report-tech-1'],
+    markers: ['관련 중대재해 사례 및 예방대책', '참고자료 선택', '선택', '해제', '재해 사례 및 예방대책'],
+    apis: [
+      'GET /content-items',
+      'POST /api/ai/doc7-finding',
+      'POST /reports/upsert',
+      'POST /api/documents/inspection/hwpx',
+      'POST /api/documents/quarterly/hwpx',
+    ],
+    criticalActions: [
+      'DOC7 참고자료 선택 모달 열기',
+      '검색과 사고유형/기인물 필터로 참고자료 찾기',
+      '선택 후 이미지와 본문 미리보기 갱신 확인',
+      '선택 해제로 스냅샷 필드 초기화',
+      'AI 재채움 후 선택된 참고자료 유지 확인',
+      '기술지도와 분기 appendix 문서 출력 반영 확인',
+    ],
+  },
 } as const satisfies Record<string, FeatureContract>;
 
 export type ErpFeatureContractId = keyof typeof ERP_FEATURE_CONTRACTS;

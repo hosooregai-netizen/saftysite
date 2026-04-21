@@ -42,8 +42,6 @@ export interface SafetyDoc7ReferenceMaterialCatalogItem {
   causativeAgentKey: string;
   body: string;
   imageUrl: string;
-  referenceTitle1: string;
-  referenceTitle2: string;
   effectiveFrom: string | null;
   effectiveTo: string | null;
   isActive: boolean;
