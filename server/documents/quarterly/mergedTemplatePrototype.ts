@@ -202,48 +202,9 @@ function forceFirstParagraphPageBreak(fragment: string) {
   );
 }
 
-function setXmlAttribute(tag: string, attributeName: string, attributeValue: string) {
-  const attributePattern = new RegExp(`\\b${attributeName}="[^"]*"`);
-  if (attributePattern.test(tag)) {
-    return tag.replace(attributePattern, `${attributeName}="${attributeValue}"`);
-  }
-
-  return tag.replace(/\/?>$/, (suffix) => ` ${attributeName}="${attributeValue}"${suffix}`);
-}
-
-function normalizeAppendixObjectPosition(positionTag: string) {
-  let nextTag = positionTag;
-
-  for (const [attributeName, attributeValue] of [
-    ['treatAsChar', '1'],
-    ['affectLSpacing', '0'],
-    ['flowWithText', '1'],
-    ['allowOverlap', '0'],
-    ['holdAnchorAndSO', '0'],
-    ['vertRelTo', 'PARA'],
-    ['horzRelTo', 'COLUMN'],
-    ['vertAlign', 'TOP'],
-    ['horzAlign', 'LEFT'],
-    ['vertOffset', '0'],
-    ['horzOffset', '0'],
-  ] as const) {
-    nextTag = setXmlAttribute(nextTag, attributeName, attributeValue);
-  }
-
-  return nextTag;
-}
-
 function normalizeAppendixLayoutForMergedQuarterly(fragment: string) {
   return fragment
-    .replace(/<hp:ctrl><hp:pageHiding\b[^>]*\/><\/hp:ctrl>/g, '')
-    .replace(/<hp:tbl\b[^>]*>/g, (tableTag) =>
-      setXmlAttribute(tableTag, 'textWrap', 'TOP_AND_BOTTOM'),
-    )
-    .replace(/\btextWrap="IN_FRONT_OF_TEXT"/g, 'textWrap="TOP_AND_BOTTOM"')
-    .replace(
-      /<hp:pos\b[^>]*treatAsChar="0"[^>]*\/>/g,
-      normalizeAppendixObjectPosition,
-    );
+    .replace(/<hp:ctrl><hp:pageHiding\b[^>]*\/><\/hp:ctrl>/g, '');
 }
 
 function ensureUniqueTableObjectIds(sectionXml: string) {

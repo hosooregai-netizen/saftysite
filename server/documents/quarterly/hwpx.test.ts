@@ -36,6 +36,21 @@ function collectDuplicateTableIds(xml: string) {
   return Array.from(new Set(tableIds.filter((id, index) => tableIds.indexOf(id) !== index)));
 }
 
+function collectCharacterTreatedTables(xml: string) {
+  const tables = xml.match(/<hp:tbl\b[\s\S]*?<\/hp:tbl>/g) ?? [];
+  return tables
+    .filter((tableXml) => (tableXml.match(/<hp:pos\b[^>]*treatAsChar="(\d+)"/)?.[1] ?? '0') === '1')
+    .map((tableXml) => tableXml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80));
+}
+
+function findTableByText(xml: string, text: string) {
+  return (
+    (xml.match(/<hp:tbl\b[\s\S]*?<\/hp:tbl>/g) ?? []).find((tableXml) =>
+      tableXml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').includes(text),
+    ) ?? null
+  );
+}
+
 function findTableCell(tableXml: string, rowAddr: number, colAddr: number) {
   const targetMarker = `<hp:cellAddr colAddr="${colAddr}" rowAddr="${rowAddr}"/>`;
   return (
@@ -212,6 +227,10 @@ test('buildQuarterlyHwpxDocument keeps the standalone quarterly structure when n
   assert.match(contentHpf, /href="Contents\/section0\.xml"/);
   assert.doesNotMatch(contentHpf, /href="Contents\/section1\.xml"/);
   assertCoverSiteLine(sectionXml, fixture.report.siteSnapshot.siteName);
+  assert.match(
+    findTableByText(sectionXml, '3.기술지도 이행현황') ?? '',
+    /<hp:pos\b[^>]*treatAsChar="1"/,
+  );
 });
 
 test('buildQuarterlyHwpxDocument renders selected inspection bodies into the merged section template', async () => {
@@ -235,6 +254,10 @@ test('buildQuarterlyHwpxDocument renders selected inspection bodies into the mer
   const firstAppendixSlice = extractAppendixSlice(sectionXml, 'appendix-hazard-one');
   assert.doesNotMatch(firstAppendixSlice, /hidePageNum="1"/);
   assert.doesNotMatch(firstAppendixSlice, /www\.safetysite\.co\.kr/);
+  assert.match(
+    findTableByText(sectionXml, 'appendix-hazard-one') ?? '',
+    /<hp:tbl\b[^>]*textWrap="IN_FRONT_OF_TEXT"[\s\S]*?<hp:pos\b[^>]*treatAsChar="0"/,
+  );
 });
 
 test('buildQuarterlyHwpxDocument renders doc7 manual reference text inside the merged inspection appendix', async () => {

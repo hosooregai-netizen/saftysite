@@ -1223,6 +1223,7 @@ function updateSectionXml(
   opsImageAsset: ResolvedHwpxImageAsset | null,
   chartImages: QuarterlyChartImageAssets,
   options?: {
+    normalizeTableAnchors?: boolean;
     skipPictureIdNormalization?: boolean;
   },
 ) {
@@ -1241,9 +1242,10 @@ function updateSectionXml(
   tables[5] = updateOpsTable(tables[5], report, opsImageAsset);
 
   const rebuiltSectionXml = rebuildSectionXml(textUpdatedSection, tableBlocks, tables);
+  const normalizedSectionXml = rebuiltSectionXml;
   return options?.skipPictureIdNormalization
-    ? rebuiltSectionXml
-    : ensureUniqueRenderableObjectIds(rebuiltSectionXml);
+    ? normalizedSectionXml
+    : ensureUniqueRenderableObjectIds(normalizedSectionXml);
 }
 
 async function tryBuildQuarterlyMergedHwpxDocument(
@@ -1317,7 +1319,10 @@ async function tryBuildQuarterlyMergedHwpxDocument(
     site,
     opsImageAsset,
     chartImages,
-    { skipPictureIdNormalization: true },
+    {
+      normalizeTableAnchors: false,
+      skipPictureIdNormalization: true,
+    },
   );
   const renderedAppendices = await renderAppendicesIntoMergedQuarterlySection({
     appendixPrototypeXml: prototype.appendixPrototypeXml,
