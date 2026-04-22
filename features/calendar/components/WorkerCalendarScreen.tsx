@@ -825,7 +825,7 @@ export function WorkerCalendarScreen() {
     if (existingSession) {
       return {
         actualVisitDate: normalizeText(schedule.actualVisitDate),
-        linkedReportKey: normalizeText(schedule.linkedReportKey),
+        linkedReportKey: existingSession.id,
         sessionId: existingSession.id,
       } satisfies WorkerGuidanceSessionLink;
     }
@@ -883,7 +883,7 @@ export function WorkerCalendarScreen() {
     });
     return {
       actualVisitDate: normalizeText(schedule.actualVisitDate),
-      linkedReportKey: normalizeText(schedule.linkedReportKey),
+      linkedReportKey: createdSession.id,
       sessionId: createdSession.id,
     } satisfies WorkerGuidanceSessionLink;
   };
@@ -917,6 +917,46 @@ export function WorkerCalendarScreen() {
     return persisted ?? schedule;
   };
 
+  const persistScheduleReportLink = async (
+    schedule: SafetyInspectionSchedule,
+    reportLinkUpdate: WorkerGuidanceSessionLink | null,
+    selectionReasonLabel: string,
+    selectionReasonMemo: string,
+  ) => {
+    const nextLinkedReportKey =
+      normalizeText(reportLinkUpdate?.linkedReportKey) || normalizeText(reportLinkUpdate?.sessionId);
+    const nextActualVisitDate =
+      normalizeText(schedule.actualVisitDate) || normalizeText(reportLinkUpdate?.actualVisitDate);
+    const mergedSchedule: SafetyInspectionSchedule = {
+      ...schedule,
+      actualVisitDate: nextActualVisitDate,
+      linkedReportKey: normalizeText(schedule.linkedReportKey) || nextLinkedReportKey,
+    };
+
+    if (!nextLinkedReportKey || nextLinkedReportKey === normalizeText(schedule.linkedReportKey)) {
+      return mergedSchedule;
+    }
+
+    const saved = await updateMySchedule(schedule.id, {
+      actualVisitDate: nextActualVisitDate,
+      linkedReportKey: nextLinkedReportKey,
+      plannedDate: schedule.plannedDate,
+      selectionReasonLabel,
+      selectionReasonMemo,
+      status: schedule.status,
+    });
+
+    const syncedSchedule: SafetyInspectionSchedule = {
+      ...saved,
+      actualVisitDate: saved.actualVisitDate || nextActualVisitDate,
+      linkedReportKey: saved.linkedReportKey || nextLinkedReportKey,
+      windowEnd: saved.windowEnd || schedule.windowEnd,
+      windowStart: saved.windowStart || schedule.windowStart,
+    };
+    upsertScheduleRow(syncedSchedule);
+    return syncedSchedule;
+  };
+
   const saveScheduleSelection = async (schedule: SafetyInspectionSchedule) => {
     const selectionReasonLabel = dialog.selectionReasonLabel.trim();
     const selectionReasonMemo = dialog.selectionReasonMemo.trim();
@@ -943,11 +983,12 @@ export function WorkerCalendarScreen() {
 
     const reportLinkUpdate = await ensureDraftSessionForSchedule(updated);
     const finalized = reportLinkUpdate
-      ? {
-          ...updated,
-          actualVisitDate: updated.actualVisitDate || reportLinkUpdate.actualVisitDate,
-          linkedReportKey: updated.linkedReportKey || reportLinkUpdate.linkedReportKey,
-        }
+      ? await persistScheduleReportLink(
+          updated,
+          reportLinkUpdate,
+          selectionReasonLabel,
+          selectionReasonMemo,
+        )
       : updated;
     if (finalized !== updated) {
       upsertScheduleRow(finalized);
@@ -978,49 +1019,11 @@ export function WorkerCalendarScreen() {
     }
     const selectionReasonLabel = dialog.selectionReasonLabel.trim();
     const selectionReasonMemo = dialog.selectionReasonMemo.trim();
-    const linkedReport = dialogSelectedOption?.linkedReport ?? null;
-    const linkedReportKey = normalizeText(linkedReport?.reportKey);
-    const actualVisitDate = normalizeText(linkedReport?.visitDate);
 
     try {
       setError(null);
-      const persistedSchedule = await resolvePersistedScheduleForSave(schedule);
-      const saved = await updateMySchedule(persistedSchedule.id, {
-        actualVisitDate,
-        linkedReportKey,
-        plannedDate: dialog.plannedDate,
-        selectionReasonLabel,
-        selectionReasonMemo,
-      });
-      const updated: SafetyInspectionSchedule = {
-        ...saved,
-        actualVisitDate: saved.actualVisitDate || actualVisitDate,
-        linkedReportKey: saved.linkedReportKey || linkedReportKey,
-        windowEnd: saved.windowEnd || persistedSchedule.windowEnd || schedule.windowEnd,
-        windowStart: saved.windowStart || persistedSchedule.windowStart || schedule.windowStart,
-      };
-      setRows((current) => {
-        const nextRows = current.filter(
-          (row) =>
-            row.id !== updated.id &&
-            !(row.siteId === updated.siteId && row.roundNo === updated.roundNo),
-        );
-        return [...nextRows, updated];
-      });
-      const reportLinkUpdate = await ensureDraftSessionForSchedule(updated);
-      const finalized = reportLinkUpdate
-        ? {
-            ...updated,
-            actualVisitDate: updated.actualVisitDate || reportLinkUpdate.actualVisitDate,
-            linkedReportKey: updated.linkedReportKey || reportLinkUpdate.linkedReportKey,
-          }
-        : updated;
-      if (finalized !== updated) {
-        setRows((current) =>
-          current.map((row) => (row.id === finalized.id ? finalized : row)),
-        );
-      }
-      setSelectedDate(updated.plannedDate || dialog.plannedDate);
+      const { finalized } = await saveScheduleSelection(schedule);
+      setSelectedDate(finalized.plannedDate || dialog.plannedDate);
       setNotice(
         selectionReasonLabel || selectionReasonMemo
           ? `${schedule.siteName} ${schedule.roundNo}회차 방문 일정과 사유를 저장했습니다.`
