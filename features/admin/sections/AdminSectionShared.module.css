@@ -2107,6 +2107,32 @@
   cursor: grab;
 }
 
+.calendarScheduleChipCompleted {
+  border-color: #8ec39d;
+  background: #e8f8ed;
+}
+
+.calendarScheduleChipInProgress {
+  border-color: #90b9eb;
+  background: #e8f2ff;
+}
+
+.calendarScheduleChipPlanned {
+  border-color: #c5ced8;
+  background: #f2f5f8;
+}
+
+.calendarScheduleChipPostponed {
+  border-color: #d6c5e6;
+  background: #f5effc;
+}
+
+.calendarScheduleChipCanceled {
+  border-color: #d7c7c7;
+  background: #f7f1f1;
+  color: #6f5f5f;
+}
+
 .calendarScheduleChip:active {
   cursor: grabbing;
 }

@@ -49,6 +49,13 @@ interface ScheduleFormState {
   status: SafetyInspectionSchedule['status'];
 }
 
+type ScheduleDisplayPhase =
+  | 'canceled'
+  | 'completed'
+  | 'in_progress'
+  | 'planned'
+  | 'postponed';
+
 const EMPTY_FORM: ScheduleFormState = {
   assigneeUserId: '',
   plannedDate: '',
@@ -95,10 +102,36 @@ function isLegacySelectionPlaceholder(value: string) {
   return normalized === 'Legacy InSEF import' || normalized.includes('legacy_site_id=');
 }
 
-function getScheduleStatusLabel(status: SafetyInspectionSchedule['status']) {
-  switch (status) {
+function getScheduleDisplayPhase(row: Pick<
+  SafetyInspectionSchedule,
+  'actualVisitDate' | 'linkedReportKey' | 'status'
+>): ScheduleDisplayPhase {
+  switch (row.status) {
+    case 'completed':
+      return 'completed';
+    case 'postponed':
+      return 'postponed';
+    case 'canceled':
+      return 'canceled';
+    case 'planned': {
+      if (row.linkedReportKey || row.actualVisitDate) {
+        return 'in_progress';
+      }
+      return 'planned';
+    }
+    default:
+      return 'planned';
+  }
+}
+
+function getScheduleStatusLabel(
+  row: Pick<SafetyInspectionSchedule, 'actualVisitDate' | 'linkedReportKey' | 'status'>,
+) {
+  switch (getScheduleDisplayPhase(row)) {
     case 'completed':
       return '완료';
+    case 'in_progress':
+      return '기술지도 진행중';
     case 'postponed':
       return '연기';
     case 'canceled':
@@ -1077,7 +1110,10 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                 {calendar.days.map((day) => {
                   const dayRows = rowsByDate.get(day.token) || [];
                   const hasWarning = dayRows.some(
-                    (row) => row.isConflicted || row.isOutOfWindow || row.isOverdue,
+                    (row) =>
+                      row.isConflicted ||
+                      row.isOutOfWindow ||
+                      (getScheduleDisplayPhase(row) === 'planned' && row.isOverdue),
                   );
                   const isSelected = selectedDate === day.token;
                   const canDrop = canDropScheduleOnDate(dragSchedule, day.token);
@@ -1127,29 +1163,51 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                       {dayRows.length > 0 ? (
                         <div className={styles.calendarScheduleStack}>
                           {dayRows.slice(0, 5).map((row) => (
-                            <button
-                              key={`calendar-row-${row.id}`}
-                              type="button"
-                              draggable={Boolean(row.plannedDate)}
-                              className={[
-                                styles.calendarScheduleChip,
-                                row.isOverdue ? styles.calendarScheduleChipWarning : '',
-                              ]
-                                .filter(Boolean)
-                                .join(' ')}
-                              onClick={() =>
-                                openScheduleDialog({
-                                  plannedDate: row.plannedDate || row.windowStart,
-                                  schedule: row,
-                                })
-                              }
-                              onDragStart={() => setDragScheduleId(row.id)}
-                              onDragEnd={() => setDragScheduleId('')}
-                            >
-                              <span className={styles.calendarScheduleChipTitle}>
-                                {buildScheduleDisplayLabel(row, userNameById)}
-                              </span>
-                            </button>
+                            (() => {
+                              const displayPhase = getScheduleDisplayPhase(row);
+                              return (
+                                <button
+                                  key={`calendar-row-${row.id}`}
+                                  type="button"
+                                  draggable={Boolean(row.plannedDate)}
+                                  className={[
+                                    styles.calendarScheduleChip,
+                                    displayPhase === 'completed'
+                                      ? styles.calendarScheduleChipCompleted
+                                      : '',
+                                    displayPhase === 'in_progress'
+                                      ? styles.calendarScheduleChipInProgress
+                                      : '',
+                                    displayPhase === 'planned'
+                                      ? styles.calendarScheduleChipPlanned
+                                      : '',
+                                    displayPhase === 'postponed'
+                                      ? styles.calendarScheduleChipPostponed
+                                      : '',
+                                    displayPhase === 'canceled'
+                                      ? styles.calendarScheduleChipCanceled
+                                      : '',
+                                    displayPhase === 'planned' && row.isOverdue
+                                      ? styles.calendarScheduleChipWarning
+                                      : '',
+                                  ]
+                                    .filter(Boolean)
+                                    .join(' ')}
+                                  onClick={() =>
+                                    openScheduleDialog({
+                                      plannedDate: row.plannedDate || row.windowStart,
+                                      schedule: row,
+                                    })
+                                  }
+                                  onDragStart={() => setDragScheduleId(row.id)}
+                                  onDragEnd={() => setDragScheduleId('')}
+                                >
+                                  <span className={styles.calendarScheduleChipTitle}>
+                                    {buildScheduleDisplayLabel(row, userNameById)}
+                                  </span>
+                                </button>
+                              );
+                            })()
                           ))}
                           {dayRows.length > 5 ? (
                             <button
@@ -1274,7 +1332,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                             </td>
                             <td>{buildWindowSummary(row)}</td>
                             <td>{resolveScheduleAssigneeName(row, userNameById) || '-'}</td>
-                            <td>{getScheduleStatusLabel(row.status)}</td>
+                            <td>{getScheduleStatusLabel(row)}</td>
                             <td>
                               <button
                                 type="button"
@@ -1514,7 +1572,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                   </div>
                   <div>
                     <span className={styles.scheduleSummaryLabel}>상태</span>
-                    <strong>{getScheduleStatusLabel(activeSchedule.status)}</strong>
+                    <strong>{getScheduleStatusLabel(activeSchedule)}</strong>
                   </div>
                   <div>
                     <span className={styles.scheduleSummaryLabel}>선택 사유</span>
@@ -1723,7 +1781,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                         <td>
                           {row.roundNo} / {row.totalRounds && row.totalRounds > 0 ? row.totalRounds : row.roundNo}
                         </td>
-                        <td>{getScheduleStatusLabel(row.status)}</td>
+                        <td>{getScheduleStatusLabel(row)}</td>
                       </tr>
                     ))}
                   </tbody>

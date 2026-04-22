@@ -254,6 +254,17 @@ Required fields used by the screen:
 - Calendar chip title format:
   - `[assigneeName or 미배정] roundNo/totalRounds - siteName`
 - If `totalRounds` is absent or invalid, fall back to `roundNo`.
+- Calendar chip display phase is derived for presentation:
+  - `completed` status -> `완료`
+  - `planned` with `linkedReportKey` or `actualVisitDate` -> `기술지도 진행중`
+  - plain `planned` -> `예정`
+  - `postponed` -> `연기`
+  - `canceled` -> `취소`
+- Legacy-style chip tones follow the same phase split:
+  - green for `완료`
+  - blue for `기술지도 진행중`
+  - gray for `예정`
+- overdue warning styling only applies to rows that still display as `예정`
 
 ### Drag-move rules
 
