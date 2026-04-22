@@ -73,7 +73,7 @@ export const ADMIN_FEATURE_CONTRACTS = {
   'admin-schedules': {
     id: 'admin-schedules',
     description:
-      '관제 일정 보드가 safety-server calendar/queue/lookups passthrough 기반 월간 캘린더, 월 네비게이션, queue, lookups, 선택 사유 저장, legacy import 선택 일정의 calendar 우선 노출, 현재 월 기본 흐름을 유지한다.',
+      '관제 일정 보드가 snapshot-backed calendar/queue와 lookups 기준으로 월간 캘린더, 월 네비게이션, queue, lookups, 선택 사유 저장, legacy import 선택 일정의 calendar 우선 노출, 현재 월 기본 흐름을 유지한다.',
     routes: ['/admin?section=schedules&month=2026-04'],
     markers: ['일정/캘린더', '오늘', '방문 일정 선택'],
     apis: [

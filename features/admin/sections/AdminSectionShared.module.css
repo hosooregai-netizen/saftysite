@@ -2096,7 +2096,7 @@
 .calendarScheduleChip {
   display: grid;
   justify-items: start;
-  gap: 2px;
+  gap: 0;
   width: 100%;
   padding: 7px 8px;
   border: 1px solid rgba(193, 206, 218, 0.9);
@@ -2125,6 +2125,7 @@
 }
 
 .calendarScheduleChipMeta {
+  display: none;
   font-size: var(--text-micro);
   line-height: 1.4;
   color: var(--erp-text-muted);

@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { refreshAdminAnalyticsSnapshot } from '@/server/admin/analyticsSnapshot';
-import { getAdminDirectorySnapshot } from '@/server/admin/adminDirectorySnapshot';
+import {
+  getAdminDirectorySnapshot,
+  refreshAdminDirectorySnapshot,
+} from '@/server/admin/adminDirectorySnapshot';
 import { refreshAdminScheduleSnapshot } from '@/server/admin/scheduleSnapshot';
 import {
   readRequiredAdminToken,
@@ -29,6 +32,7 @@ export async function POST(
     }
     const rows = generateSchedulesForSite(site, data.users);
     await updateAdminSite(token, siteId, { memo: updateSiteSchedules(site, rows) }, request);
+    await refreshAdminDirectorySnapshot(token, request);
     await refreshAdminAnalyticsSnapshot(token, request);
     await refreshAdminScheduleSnapshot(token, request).catch(() => undefined);
     return NextResponse.json({ rows });
