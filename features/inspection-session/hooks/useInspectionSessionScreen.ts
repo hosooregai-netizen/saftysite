@@ -14,9 +14,9 @@ import { readFileAsDataUrl } from '@/components/session/workspace/utils';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { fetchAdminReportSessionBootstrap } from '@/lib/admin/apiClient';
 import {
-  convertHwpxBlobToPdfWithFallback,
   fetchInspectionHwpxDocument,
   fetchInspectionHwpxDocumentByReportKey,
+  fetchInspectionPdfDocumentByReportKeyWithFallback,
   saveBlobAsFile,
 } from '@/lib/api';
 import { generateInspectionHwpxBlob } from '@/lib/documents/inspection/hwpxClient';
@@ -707,11 +707,28 @@ export function useInspectionSessionScreen(sessionId: string) {
         }
       }
 
+      await saveNow();
+      const latestSession = getSessionById(session.id) ?? session;
+      const authToken = readSafetyAuthToken();
+
+      try {
+        const pdf = await fetchInspectionPdfDocumentByReportKeyWithFallback(
+          latestSession.id,
+          authToken,
+        );
+        saveBlobAsFile(pdf.blob, pdf.filename);
+        return;
+      } catch (serverError) {
+        console.warn('Inspection PDF server generation failed; falling back to HWPX generation.', {
+          error: serverError instanceof Error ? serverError.message : String(serverError),
+          sessionId: session.id,
+        });
+      }
+
       const generation = await buildHwpxDocument();
       if (!generation) return;
 
-      const pdf = await convertHwpxBlobToPdfWithFallback(generation.blob, generation.filename);
-      saveBlobAsFile(pdf.blob, pdf.filename);
+      saveBlobAsFile(generation.blob, generation.filename);
     } catch (error) {
       setDocumentError(
         error instanceof Error ? error.message : 'PDF 생성 중 오류가 발생했습니다.',
