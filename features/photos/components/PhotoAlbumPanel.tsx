@@ -48,6 +48,7 @@ interface PhotoAlbumRoundGroup {
 }
 
 const PAGE_SIZE = 60;
+const DEFAULT_SITE_TOTAL_ROUNDS = 8;
 
 function formatDateLabel(value: string) {
   if (!value) return '-';
@@ -67,6 +68,13 @@ function formatFileSize(value: number) {
   if (value >= 1024 * 1024) return `${(value / (1024 * 1024)).toFixed(1)}MB`;
   if (value >= 1024) return `${Math.round(value / 1024)}KB`;
   return `${value}B`;
+}
+
+function getNormalizedTotalRounds(value: number | null | undefined) {
+  if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+    return Math.trunc(value);
+  }
+  return DEFAULT_SITE_TOTAL_ROUNDS;
 }
 
 function formatGpsLabel(item: PhotoAlbumItem) {
@@ -207,14 +215,17 @@ export function PhotoAlbumPanel({
   const isSiteScopedView = mode !== 'admin' || Boolean(activeScopedSiteId);
 
   const uploadRoundOptions = useMemo(() => {
-    const totalRounds = selectedUploadSite?.totalRounds ?? 0;
-    if (!totalRounds || totalRounds <= 0) {
-      return [];
-    }
+    if (!selectedUploadSite) return [];
+    const totalRounds = getNormalizedTotalRounds(selectedUploadSite.totalRounds);
     return Array.from({ length: totalRounds }, (_, index) => index + 1);
   }, [selectedUploadSite]);
 
-  const canUpload = Boolean((lockedSiteId || siteId) && uploadRoundNo > 0 && uploadRoundOptions.length > 0);
+  const uploadBlockedReason = !(lockedSiteId || siteId)
+    ? '필터에서 현장을 선택하면 업로드할 수 있습니다.'
+    : uploadRoundOptions.length === 0 || uploadRoundNo <= 0
+      ? '업로드 회차를 먼저 선택해 주세요.'
+      : null;
+  const canUpload = !uploadBlockedReason;
   const showHeaderFilter = (mode === 'admin' && !lockedHeadquarterId) || !lockedSiteId;
   const activeFilterCount =
     (mode === 'admin' && !lockedHeadquarterId && headquarterId ? 1 : 0) +
@@ -364,10 +375,10 @@ export function PhotoAlbumPanel({
   );
 
   const bulkRoundOptions = useMemo(() => {
-    const totalRounds = selectedBulkSite?.totalRounds ?? 0;
-    if (!selectedBulkSite || totalRounds <= 0) {
+    if (!selectedBulkSite) {
       return [];
     }
+    const totalRounds = getNormalizedTotalRounds(selectedBulkSite.totalRounds);
     return Array.from({ length: totalRounds }, (_, index) => index + 1);
   }, [selectedBulkSite]);
 
@@ -724,6 +735,7 @@ export function PhotoAlbumPanel({
               className="app-button app-button-primary"
               onClick={() => fileInputRef.current?.click()}
               disabled={!canUpload || uploading}
+              title={uploading ? '사진을 업로드하는 중입니다.' : uploadBlockedReason ?? undefined}
             >
               {uploading ? '업로드 중...' : '사진 업로드'}
             </button>
