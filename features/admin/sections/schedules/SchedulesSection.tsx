@@ -170,14 +170,22 @@ function compareNumber(left: number, right: number, direction: 'asc' | 'desc') {
   return direction === 'asc' ? left - right : right - left;
 }
 
-function sortScheduleRows(rows: SafetyInspectionSchedule[], sort: TableSortState) {
+function sortScheduleRows(
+  rows: SafetyInspectionSchedule[],
+  sort: TableSortState,
+  userNameById: ReadonlyMap<string, string>,
+) {
   const sortDir = sort.direction;
   const sortBy = sort.key;
 
   return [...rows].sort((left, right) => {
     switch (sortBy) {
       case 'assigneeName':
-        return compareText(left.assigneeName || '', right.assigneeName || '', sortDir);
+        return compareText(
+          resolveScheduleAssigneeName(left, userNameById),
+          resolveScheduleAssigneeName(right, userNameById),
+          sortDir,
+        );
       case 'headquarterName':
         return compareText(left.headquarterName || '', right.headquarterName || '', sortDir);
       case 'roundNo':
@@ -253,12 +261,29 @@ function buildSelectionSummary(row: SafetyInspectionSchedule) {
   return parts.join(' / ');
 }
 
-function buildScheduleDisplayLabel(row: SafetyInspectionSchedule) {
-  return `[${row.assigneeName || '미배정'}] ${row.siteName}`;
+function resolveScheduleAssigneeName(
+  row: SafetyInspectionSchedule,
+  userNameById: ReadonlyMap<string, string>,
+) {
+  return userNameById.get(row.assigneeUserId) || row.assigneeName || '';
 }
 
-function buildDayListLabel(row: SafetyInspectionSchedule) {
-  return buildScheduleDisplayLabel(row);
+function buildScheduleDisplayLabel(
+  row: SafetyInspectionSchedule,
+  userNameById: ReadonlyMap<string, string>,
+) {
+  return `[${resolveScheduleAssigneeName(row, userNameById) || '미배정'}] ${row.siteName}`;
+}
+
+function buildDayListLabel(
+  row: SafetyInspectionSchedule,
+  userNameById: ReadonlyMap<string, string>,
+) {
+  return buildScheduleDisplayLabel(row, userNameById);
+}
+
+function getCalendarDateToken(row: SafetyInspectionSchedule) {
+  return row.plannedDate || row.windowStart;
 }
 
 async function fetchSchedulePayloads(
@@ -557,13 +582,19 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
     calendarResponse.availableMonths.length > 0;
   const isInitialLoading = isLoading && !hasVisibleData;
   const activeFilterCount = (siteId ? 1 : 0) + (assigneeUserId ? 1 : 0) + (status ? 1 : 0);
+  const siteOptions = lookups.sites;
+  const userOptions = lookups.users;
+  const userNameById = useMemo(
+    () => new Map(userOptions.map((user) => [user.id, user.name])),
+    [userOptions],
+  );
   const sortedSelectedRows = useMemo(
-    () => sortScheduleRows(calendarResponse.rows, sort),
-    [calendarResponse.rows, sort],
+    () => sortScheduleRows(calendarResponse.rows, sort, userNameById),
+    [calendarResponse.rows, sort, userNameById],
   );
   const sortedQueueRows = useMemo(
-    () => sortScheduleRows(queueResponse.rows, sort),
-    [queueResponse.rows, sort],
+    () => sortScheduleRows(queueResponse.rows, sort, userNameById),
+    [queueResponse.rows, sort, userNameById],
   );
   const allScheduleRows = useMemo(() => {
     const byId = new Map<string, SafetyInspectionSchedule>();
@@ -633,8 +664,6 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
   const jumpableMonths = calendarResponse.availableMonths
     .filter((token) => token !== month)
     .slice(0, 6);
-  const siteOptions = lookups.sites;
-  const userOptions = lookups.users;
 
   useEffect(() => {
     if (!dialogOpen || activeScheduleId || dialogSelectableRows.length === 0) return;
@@ -1118,7 +1147,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                               onDragEnd={() => setDragScheduleId('')}
                             >
                               <span className={styles.calendarScheduleChipTitle}>
-                                {buildScheduleDisplayLabel(row)}
+                                {buildScheduleDisplayLabel(row, userNameById)}
                               </span>
                             </button>
                           ))}
@@ -1244,7 +1273,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                               {row.roundNo} / {row.totalRounds && row.totalRounds > 0 ? row.totalRounds : row.roundNo}
                             </td>
                             <td>{buildWindowSummary(row)}</td>
-                            <td>{row.assigneeName || '-'}</td>
+                            <td>{resolveScheduleAssigneeName(row, userNameById) || '-'}</td>
                             <td>{getScheduleStatusLabel(row.status)}</td>
                             <td>
                               <button
@@ -1393,7 +1422,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                         </td>
                         <td>{row.plannedDate || '-'}</td>
                         <td>{buildWindowSummary(row)}</td>
-                        <td>{row.assigneeName || '-'}</td>
+                        <td>{resolveScheduleAssigneeName(row, userNameById) || '-'}</td>
                         <td>
                           {[
                             row.selectionConfirmedByName || '-',
@@ -1457,7 +1486,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                 <div className={styles.scheduleSummaryHeader}>
                   <div>
                     <div className={styles.scheduleSummaryTitle}>
-                      {buildScheduleDisplayLabel(activeSchedule)}
+                      {buildScheduleDisplayLabel(activeSchedule, userNameById)}
                     </div>
                     <div className={styles.scheduleSummaryMeta}>
                       {[
@@ -1477,7 +1506,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                 <div className={styles.scheduleSummaryGrid}>
                   <div>
                     <span className={styles.scheduleSummaryLabel}>담당자</span>
-                    <strong>{activeSchedule.assigneeName || '미배정'}</strong>
+                    <strong>{resolveScheduleAssigneeName(activeSchedule, userNameById) || '미배정'}</strong>
                   </div>
                   <div>
                     <span className={styles.scheduleSummaryLabel}>허용 구간</span>
@@ -1571,7 +1600,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                             {row.roundNo} / {row.totalRounds && row.totalRounds > 0 ? row.totalRounds : row.roundNo}
                           </td>
                           <td>{buildWindowSummary(row)}</td>
-                          <td>{row.assigneeName || '-'}</td>
+                          <td>{resolveScheduleAssigneeName(row, userNameById) || '-'}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -1690,7 +1719,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                         }}
                         tabIndex={0}
                       >
-                        <td>{buildDayListLabel(row)}</td>
+                        <td>{buildDayListLabel(row, userNameById)}</td>
                         <td>
                           {row.roundNo} / {row.totalRounds && row.totalRounds > 0 ? row.totalRounds : row.roundNo}
                         </td>
