@@ -4,6 +4,7 @@ import type { SafetyContentAssetUpload } from './adminEndpoints';
 import { uploadSafetyContentAsset } from './adminEndpoints';
 import { resolveSafetyAssetUrl } from './assetUrls';
 import { readSafetyAuthToken } from './authStorage';
+import { SafetyApiError } from './client';
 import { getSafetyApiBaseUrl } from './config';
 import { buildPublicSafetyApiUpstreamUrl } from './upstream';
 
@@ -25,8 +26,34 @@ function getDirectSafetyAssetUploadUrl(): string | null {
   return buildPublicSafetyApiUpstreamUrl('/content-items/assets/upload');
 }
 
+function canUseDirectSafetyAssetUploadUrl(uploadUrl: string | null) {
+  if (!uploadUrl) {
+    return false;
+  }
+
+  try {
+    const targetUrl = new URL(uploadUrl);
+    if (!/^https?:$/i.test(targetUrl.protocol)) {
+      return false;
+    }
+
+    if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
+      return targetUrl.protocol === 'https:';
+    }
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function getUsableDirectSafetyAssetUploadUrl(): string | null {
+  const uploadUrl = getDirectSafetyAssetUploadUrl();
+  return canUseDirectSafetyAssetUploadUrl(uploadUrl) ? uploadUrl : null;
+}
+
 export function usesSafetyProxyUpload(): boolean {
-  if (getDirectSafetyAssetUploadUrl()) {
+  if (getUsableDirectSafetyAssetUploadUrl()) {
     return false;
   }
 
@@ -45,14 +72,10 @@ function parseUploadErrorMessage(payload: unknown, fallback: string): string {
 }
 
 async function uploadSafetyContentAssetDirect(
+  uploadUrl: string,
   token: string,
   file: File,
 ): Promise<SafetyContentAssetUpload> {
-  const uploadUrl = getDirectSafetyAssetUploadUrl();
-  if (!uploadUrl) {
-    throw new Error('직접 업로드용 안전 API 주소를 확인하지 못했습니다.');
-  }
-
   const body = new FormData();
   body.set('file', file);
 
@@ -105,6 +128,22 @@ async function uploadSafetyContentAssetDirect(
   return payload as SafetyContentAssetUpload;
 }
 
+function shouldFallbackSafetyAssetUploadToProxy(error: unknown, file: File) {
+  if (file.size > MAX_SAFETY_PROXY_FILE_BYTES) {
+    return false;
+  }
+
+  if (error instanceof SafetyApiError) {
+    return error.status === 404 || error.status === 405;
+  }
+
+  if (error instanceof Error) {
+    return !/\((4\d\d|5\d\d)\)\./.test(error.message) || /\((404|405)\)\./.test(error.message);
+  }
+
+  return false;
+}
+
 export function validateSafetyAssetFile(
   file: File,
   options: SafetyAssetValidationOptions = {},
@@ -134,9 +173,21 @@ export async function uploadSafetyAssetFile(file: File): Promise<UploadedSafetyA
     throw new Error('로그인이 만료되었습니다. 다시 로그인해 주세요.');
   }
 
-  const uploaded = usesSafetyProxyUpload()
-    ? await uploadSafetyContentAsset(token, file)
-    : await uploadSafetyContentAssetDirect(token, file);
+  const directUploadUrl = getUsableDirectSafetyAssetUploadUrl();
+  let uploaded: SafetyContentAssetUpload;
+
+  if (!directUploadUrl) {
+    uploaded = await uploadSafetyContentAsset(token, file);
+  } else {
+    try {
+      uploaded = await uploadSafetyContentAssetDirect(directUploadUrl, token, file);
+    } catch (error) {
+      if (!shouldFallbackSafetyAssetUploadToProxy(error, file)) {
+        throw error;
+      }
+      uploaded = await uploadSafetyContentAsset(token, file);
+    }
+  }
 
   return {
     ...uploaded,
