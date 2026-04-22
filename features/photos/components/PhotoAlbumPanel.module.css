@@ -42,6 +42,60 @@
   gap: 12px;
 }
 
+.uploadButtonShell {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  outline: none;
+}
+
+.uploadTooltip {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 20;
+  width: max-content;
+  min-width: 220px;
+  max-width: min(360px, calc(100vw - 40px));
+  padding: 12px 14px;
+  border: 1px solid rgba(27, 43, 68, 0.28);
+  border-radius: 6px;
+  background: rgba(255, 252, 244, 0.98);
+  box-shadow: 0 12px 28px rgba(17, 29, 44, 0.18);
+  color: #352616;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.45;
+  text-align: left;
+  white-space: normal;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition:
+    opacity 0.08s ease,
+    transform 0.08s ease;
+}
+
+.uploadTooltip::before {
+  content: '';
+  position: absolute;
+  top: -7px;
+  right: 18px;
+  width: 12px;
+  height: 12px;
+  border-top: 1px solid rgba(27, 43, 68, 0.28);
+  border-left: 1px solid rgba(27, 43, 68, 0.28);
+  background: rgba(255, 252, 244, 0.98);
+  transform: rotate(45deg);
+}
+
+.uploadButtonShell:hover .uploadTooltip,
+.uploadButtonShell:focus-within .uploadTooltip,
+.uploadButtonShell:focus .uploadTooltip {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 .roundHeader {
   display: flex;
   justify-content: space-between;

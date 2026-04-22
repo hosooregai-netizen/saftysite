@@ -264,6 +264,7 @@ export function PhotoAlbumPanel({
     : uploadRoundOptions.length === 0 || uploadRoundNo <= 0
       ? '업로드 회차를 먼저 선택해 주세요.'
       : null;
+  const uploadTooltipMessage = uploading ? '사진을 업로드하는 중입니다.' : uploadBlockedReason;
   const canUpload = !uploadBlockedReason;
   const showHeaderFilter = (mode === 'admin' && !lockedHeadquarterId) || !lockedSiteId;
   const activeFilterCount =
@@ -823,15 +824,29 @@ export function PhotoAlbumPanel({
                 메타데이터 엑셀
               </button>
             ) : null}
-            <button
+            <span
+              className={styles.uploadButtonShell}
+              tabIndex={uploadTooltipMessage ? 0 : undefined}
+              >
+              <button
               type="button"
               className="app-button app-button-primary"
               onClick={() => fileInputRef.current?.click()}
               disabled={!canUpload || uploading}
-              title={uploading ? '사진을 업로드하는 중입니다.' : uploadBlockedReason ?? undefined}
+              aria-describedby={uploadTooltipMessage ? 'photo-upload-tooltip' : undefined}
             >
               {uploading ? '업로드 중...' : '사진 업로드'}
-            </button>
+              </button>
+              {uploadTooltipMessage ? (
+                <span
+                  id="photo-upload-tooltip"
+                  role="tooltip"
+                  className={styles.uploadTooltip}
+                >
+                  {uploadTooltipMessage}
+                </span>
+              ) : null}
+            </span>
             <input
               ref={fileInputRef}
               type="file"
