@@ -6,7 +6,7 @@ import { resolveSafetyAssetUrl } from './assetUrls';
 import { readSafetyAuthToken } from './authStorage';
 import { SafetyApiError } from './client';
 import { getSafetyApiBaseUrl } from './config';
-import { buildPublicSafetyApiUpstreamUrl } from './upstream';
+import { buildPublicSafetyUploadUpstreamUrl } from './upstream';
 
 export const MAX_SAFETY_ASSET_BYTES = 50 * 1024 * 1024;
 export const MAX_SAFETY_PROXY_FILE_BYTES = Math.floor(4.5 * 1024 * 1024);
@@ -23,7 +23,7 @@ export interface UploadedSafetyAsset extends SafetyContentAssetUpload {
 }
 
 function getDirectSafetyAssetUploadUrl(): string | null {
-  return buildPublicSafetyApiUpstreamUrl('/content-items/assets/upload');
+  return buildPublicSafetyUploadUpstreamUrl('/content-items/assets/upload');
 }
 
 function canUseDirectSafetyAssetUploadUrl(uploadUrl: string | null) {

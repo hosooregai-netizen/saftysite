@@ -7,6 +7,10 @@ const PUBLIC_UPSTREAM_BASE_URL_ENV_KEYS = [
   'NEXT_PUBLIC_SAFETY_API_UPSTREAM_BASE_URL',
   'NEXT_PUBLIC_SAFETY_API_BASE_URL',
 ] as const;
+const PUBLIC_UPLOAD_UPSTREAM_BASE_URL_ENV_KEYS = [
+  'NEXT_PUBLIC_SAFETY_UPLOAD_UPSTREAM_BASE_URL',
+  'NEXT_PUBLIC_SAFETY_API_UPLOAD_UPSTREAM_BASE_URL',
+] as const;
 const NEXT_PUBLIC_SAFETY_API_UPSTREAM_BASE_URL =
   process.env.NEXT_PUBLIC_SAFETY_API_UPSTREAM_BASE_URL?.trim() || '';
 const NEXT_PUBLIC_SAFETY_API_BASE_URL =
@@ -45,6 +49,27 @@ export function buildPublicSafetyApiUpstreamUrl(path: string): string | null {
 
   const normalizedPath = path.replace(/^\/+/, '');
   return new URL(normalizedPath, `${publicUpstreamBaseUrl}/`).toString();
+}
+
+export function getPublicSafetyUploadUpstreamBaseUrl(): string | null {
+  for (const envKey of PUBLIC_UPLOAD_UPSTREAM_BASE_URL_ENV_KEYS) {
+    const configured = process.env[envKey]?.trim();
+    if (configured && isAbsoluteHttpUrl(configured)) {
+      return normalizeBaseUrl(configured);
+    }
+  }
+
+  return null;
+}
+
+export function buildPublicSafetyUploadUpstreamUrl(path: string): string | null {
+  const publicUploadUpstreamBaseUrl = getPublicSafetyUploadUpstreamBaseUrl();
+  if (!publicUploadUpstreamBaseUrl) {
+    return null;
+  }
+
+  const normalizedPath = path.replace(/^\/+/, '');
+  return new URL(normalizedPath, `${publicUploadUpstreamBaseUrl}/`).toString();
 }
 
 export function getSafetyApiUpstreamBaseUrl(): string {

@@ -3,7 +3,7 @@
 import { saveBlobAsFile } from '@/lib/api';
 import { resolveSafetyAssetUrl } from '@/lib/safetyApi/assetUrls';
 import { getSafetyApiBaseUrl } from '@/lib/safetyApi/config';
-import { buildPublicSafetyApiUpstreamUrl } from '@/lib/safetyApi/upstream';
+import { buildPublicSafetyUploadUpstreamUrl } from '@/lib/safetyApi/upstream';
 import { readSafetyAuthToken, SafetyApiError } from '@/lib/safetyApi';
 import type { TableSortDirection } from '@/types/admin';
 import type { SafetyBackendPhotoAsset } from '@/types/backend';
@@ -98,7 +98,7 @@ function isImageFile(file: File) {
 }
 
 function getDirectPhotoAssetUploadUrl(): string | null {
-  return buildPublicSafetyApiUpstreamUrl('/photo-assets/upload');
+  return buildPublicSafetyUploadUpstreamUrl('/photo-assets/upload');
 }
 
 function canUseDirectPhotoAssetUploadUrl(uploadUrl: string | null) {
