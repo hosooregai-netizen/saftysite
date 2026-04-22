@@ -122,6 +122,44 @@ function matchesContext(
     .includes(query);
 }
 
+function comparePhotoAlbumRows(left: PhotoAlbumItem, right: PhotoAlbumItem) {
+  const leftDate = left.capturedAt || left.createdAt;
+  const rightDate = right.capturedAt || right.createdAt;
+
+  return (
+    right.siteName.localeCompare(left.siteName, 'ko') ||
+    right.roundNo - left.roundNo ||
+    rightDate.localeCompare(leftDate) ||
+    right.createdAt.localeCompare(left.createdAt) ||
+    left.fileName.localeCompare(right.fileName, 'ko')
+  );
+}
+
+function sortPhotoAlbumRows(rows: PhotoAlbumItem[]) {
+  return [...rows].sort(comparePhotoAlbumRows);
+}
+
+function mergePhotoAlbumRows(currentRows: PhotoAlbumItem[], nextRows: PhotoAlbumItem[]) {
+  const byId = new Map(currentRows.map((item) => [item.id, item] as const));
+  for (const item of nextRows) {
+    byId.set(item.id, item);
+  }
+  return sortPhotoAlbumRows([...byId.values()]);
+}
+
+function filterPhotoAlbumRowsForCurrentView(
+  rows: PhotoAlbumItem[],
+  input: {
+    headquarterId: string;
+    query: string;
+    siteId: string;
+  },
+) {
+  return rows.filter((item) =>
+    matchesContext(item, input.headquarterId, input.siteId, input.query),
+  );
+}
+
 async function requestPhotoAlbumRows(input: {
   deferredQuery: string;
   headquarterId: string;
@@ -173,6 +211,7 @@ export function PhotoAlbumPanel({
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [pendingDeleteIds, setPendingDeleteIds] = useState<string[]>([]);
   const [activeItem, setActiveItem] = useState<PhotoAlbumItem | null>(null);
   const deferredQuery = useDeferredValue(query.trim().toLowerCase());
 
@@ -292,13 +331,20 @@ export function PhotoAlbumPanel({
     siteId,
   ]);
 
+  const pendingDeleteIdSet = useMemo(() => new Set(pendingDeleteIds), [pendingDeleteIds]);
+
+  const displayRows = useMemo(
+    () => rows.filter((item) => !pendingDeleteIdSet.has(item.id)),
+    [pendingDeleteIdSet, rows],
+  );
+
   const orderedRows = useMemo(() => {
     if (!isSiteScopedView) {
-      return rows;
+      return displayRows;
     }
 
     const roundRowsByNo = new Map<number, PhotoAlbumItem[]>();
-    for (const item of rows) {
+    for (const item of displayRows) {
       const existingRows = roundRowsByNo.get(item.roundNo);
       if (existingRows) {
         existingRows.push(item);
@@ -314,7 +360,7 @@ export function PhotoAlbumPanel({
           formatRoundLabel(leftRoundNo).localeCompare(formatRoundLabel(rightRoundNo), 'ko-KR'),
       )
       .flatMap(([, roundRows]) => roundRows);
-  }, [isSiteScopedView, rows]);
+  }, [displayRows, isSiteScopedView]);
 
   useEffect(() => {
     if (!loadMoreRef.current || visibleCount >= orderedRows.length) {
@@ -381,8 +427,8 @@ export function PhotoAlbumPanel({
   }, [isSiteScopedView, visibleRows]);
 
   const selectedRows = useMemo(
-    () => rows.filter((row) => selectedIds.includes(row.id)),
-    [rows, selectedIds],
+    () => displayRows.filter((row) => selectedIds.includes(row.id)),
+    [displayRows, selectedIds],
   );
 
   const selectedSiteIds = useMemo(
@@ -419,7 +465,7 @@ export function PhotoAlbumPanel({
   const hasMoreRows = visibleRows.length < orderedRows.length;
   const allVisibleSelected =
     visibleRows.length > 0 && visibleRows.every((row) => selectedIds.includes(row.id));
-  const hasSelectedRows = selectedIds.length > 0;
+  const hasSelectedRows = selectedRows.length > 0;
   const roundUpdateSupported = mutationCapabilities?.roundUpdateSupported ?? true;
   const deleteSupported = mutationCapabilities?.deleteSupported ?? true;
   const canBulkEditRound =
@@ -480,21 +526,6 @@ export function PhotoAlbumPanel({
     }
   };
 
-  const reloadRows = async (nextSiteId?: string) => {
-    const response = await requestPhotoAlbumRows({
-      deferredQuery,
-      headquarterId,
-      initialReportKey,
-      lockedHeadquarterId,
-      lockedSiteId,
-      siteId: nextSiteId ?? siteId,
-    });
-    setVisibleCount(PAGE_SIZE);
-    setRows(response.rows);
-    setMutationCapabilities(response.capabilities);
-    return response.rows;
-  };
-
   const handleFilesSelected = async (files: FileList | null) => {
     const uploadSiteId = lockedSiteId || siteId;
     if (!uploadSiteId) {
@@ -514,18 +545,29 @@ export function PhotoAlbumPanel({
       setUploading(true);
       setError(null);
       setNotice(null);
+      const uploadedItems: PhotoAlbumItem[] = [];
 
       for (const file of nextFiles) {
         const thumbnail = await createPhotoThumbnail(file).catch(() => null);
-        await uploadPhotoAlbumAsset({
+        const uploadedItem = await uploadPhotoAlbumAsset({
           file,
           roundNo: uploadRoundNo,
           siteId: uploadSiteId,
           thumbnail,
         });
+        uploadedItems.push(uploadedItem);
       }
 
-      await reloadRows(uploadSiteId);
+      setRows((current) =>
+        mergePhotoAlbumRows(
+          current,
+          filterPhotoAlbumRowsForCurrentView(uploadedItems, {
+            headquarterId: lockedHeadquarterId || headquarterId || '',
+            query: deferredQuery,
+            siteId: lockedSiteId || uploadSiteId || '',
+          }),
+        ),
+      );
       setSelectedIds([]);
       setNotice(`${nextFiles.length}건의 사진을 업로드했습니다.`);
       if (fileInputRef.current) {
@@ -554,7 +596,26 @@ export function PhotoAlbumPanel({
       setNotice(null);
       const selectedCount = selectedIds.length;
       await updatePhotoAlbumRounds(selectedIds, bulkRoundNo);
-      await reloadRows();
+      setRows((current) =>
+        sortPhotoAlbumRows(
+          current.map((item) =>
+            selectedIds.includes(item.id)
+              ? {
+                  ...item,
+                  roundNo: bulkRoundNo,
+                }
+              : item,
+          ),
+        ),
+      );
+      setActiveItem((current) =>
+        current && selectedIds.includes(current.id)
+          ? {
+              ...current,
+              roundNo: bulkRoundNo,
+            }
+          : current,
+      );
       setSelectedIds([]);
       setRoundModalOpen(false);
       setNotice(`${selectedCount}건의 사진을 ${formatRoundLabel(bulkRoundNo)}로 변경했습니다.`);
@@ -582,21 +643,29 @@ export function PhotoAlbumPanel({
       return;
     }
 
+    const deletingIds = [...selectedIds];
+
     try {
       setDeleting(true);
       setError(null);
-      setNotice(null);
-      const deletingIds = [...selectedIds];
-      await deletePhotoAlbumSelection(deletingIds);
-      await reloadRows();
-      if (activeItem && deletingIds.includes(activeItem.id)) {
+      const deletedActiveItem =
+        activeItem && deletingIds.includes(activeItem.id) ? activeItem : null;
+
+      setNotice(`${deletingIds.length}건의 사진을 삭제하는 중입니다.`);
+      setPendingDeleteIds((current) => Array.from(new Set([...current, ...deletingIds])));
+      setSelectedIds((current) => current.filter((itemId) => !deletingIds.includes(itemId)));
+      if (deletedActiveItem) {
         setActiveItem(null);
       }
+      await deletePhotoAlbumSelection(deletingIds);
+      setRows((current) => current.filter((item) => !deletingIds.includes(item.id)));
+      setPendingDeleteIds((current) => current.filter((itemId) => !deletingIds.includes(itemId)));
       setSelectedIds([]);
       setNotice(`${deletingIds.length}건의 사진을 삭제했습니다.`);
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : '사진 삭제에 실패했습니다.');
     } finally {
+      setPendingDeleteIds((current) => current.filter((itemId) => !deletingIds.includes(itemId)));
       setDeleting(false);
     }
   };
@@ -784,7 +853,7 @@ export function PhotoAlbumPanel({
 
           {loading ? (
             <div className={styles.emptyState}>사진첩을 불러오는 중입니다.</div>
-          ) : rows.length === 0 ? (
+          ) : orderedRows.length === 0 ? (
             <div className={styles.emptyState}>
               {canUpload ? '표시할 사진이 없습니다.' : '현장을 선택하면 사진첩을 볼 수 있습니다.'}
             </div>
@@ -1014,13 +1083,13 @@ export function PhotoAlbumPanel({
               {hasMoreRows ? (
                 <div ref={loadMoreRef} className={styles.loadMoreRow}>
                   <span className={styles.paginationMeta}>
-                    아래로 내려 남은 {rows.length - visibleRows.length}건을 더 볼 수 있습니다.
+                    아래로 내려 남은 {orderedRows.length - visibleRows.length}건을 더 볼 수 있습니다.
                   </span>
                   <button
                     type="button"
                     className="app-button app-button-secondary"
                     onClick={() =>
-                      setVisibleCount((current) => Math.min(rows.length, current + PAGE_SIZE))
+                      setVisibleCount((current) => Math.min(orderedRows.length, current + PAGE_SIZE))
                     }
                   >
                     사진 더 보기
