@@ -48,6 +48,7 @@ const FEATURE_RULES = [
       /^features\/admin\/lib\/adminSessionCache\.ts$/,
       /^features\/admin\/lib\/adminClientCacheInvalidation(\.test)?\.ts$/,
       /^features\/admin\/lib\/adminDashboardBootstrapCache\.ts$/,
+      /^features\/admin\/hooks\/useAdminScreenState\.ts$/,
       /^features\/admin\/hooks\/useAdminDashboard(DataLoaders|Routing|State)\.ts$/,
       /^features\/admin\/hooks\/buildAdminDashboard(Assignment|Content|Crud)Actions\.ts$/,
       /^features\/admin\/lib\/adminDashboardMutations\.ts$/,
