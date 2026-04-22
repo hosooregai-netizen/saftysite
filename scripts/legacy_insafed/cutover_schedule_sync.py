@@ -81,13 +81,16 @@ def sync_site_schedule_rows(
     user_by_name: dict[str, tuple[str, str]],
     report_keys_by_round: dict[int, str] | None = None,
 ) -> dict[str, Any]:
-    client.generate_site_schedules(normalize_text(site.get("id")))
-    current_rows = client.fetch_site_schedules(normalize_text(site.get("id")))
+    generated = client.generate_site_schedules(normalize_text(site.get("id")))
+    current_rows = generated.get("rows", []) if isinstance(generated, dict) else []
+    if not isinstance(current_rows, list) or not current_rows:
+        current_rows = client.fetch_site_schedules(normalize_text(site.get("id")))
     rows_by_round = {schedule_round_no(row): row for row in current_rows if schedule_round_no(row) > 0}
     visit_by_round = {int(visit.get("round_no") or 0): visit for visit in legacy_site.get("visit_history", []) if int(visit.get("round_no") or 0) > 0}
     max_round = max([int(legacy_site.get("total_rounds") or 0), *visit_by_round.keys(), *rows_by_round.keys()], default=0)
     default_assignee = resolve_assignee(site, user_by_name, normalize_text(legacy_site.get("assigned_worker_name")))
     audit_rows: list[dict[str, Any]] = []
+    refreshed_by_round = {schedule_round_no(row): row for row in current_rows if schedule_round_no(row) > 0}
 
     for round_no in range(1, max_round + 1):
         current_row = rows_by_round.get(round_no)
@@ -103,6 +106,7 @@ def sync_site_schedule_rows(
                 status = "planned"
             payload = {
                 "actual_visit_date": normalize_text(visit.get("visit_date")) if status == "completed" else "",
+                "assignee_name": assignee[1],
                 "assignee_user_id": assignee[0],
                 "linked_report_key": report_key,
                 "planned_date": normalize_text(visit.get("visit_date")),
@@ -113,6 +117,7 @@ def sync_site_schedule_rows(
         else:
             payload = {
                 "actual_visit_date": "",
+                "assignee_name": default_assignee[1],
                 "assignee_user_id": default_assignee[0],
                 "linked_report_key": "",
                 "planned_date": "",
@@ -120,10 +125,14 @@ def sync_site_schedule_rows(
                 "selection_reason_memo": "",
                 "status": "planned",
             }
-        update_schedule_with_fallback(client, normalize_text(current_row.get("id")), payload)
+        refreshed_by_round[round_no] = update_schedule_with_fallback(
+            client,
+            normalize_text(current_row.get("id")),
+            payload,
+        )
         audit_rows.append({"kind": "schedule_synced", "legacy_site_id": normalize_text(legacy_site.get("legacy_site_id")), "round_no": round_no})
 
-    refreshed_rows = client.fetch_site_schedules(normalize_text(site.get("id")))
+    refreshed_rows = [refreshed_by_round[round_no] for round_no in sorted(refreshed_by_round)]
     sync_site_memo_with_rows(client, site, refreshed_rows)
     return {"audit_rows": audit_rows, "rows": refreshed_rows}
 
@@ -136,14 +145,34 @@ def resolve_assignee(site: dict[str, Any], user_by_name: dict[str, tuple[str, st
         normalize_text(assigned_user.get("name")) or preferred_name,
     )
 
-def update_schedule_with_fallback(client: Any, schedule_id: str, payload: dict[str, Any]) -> None:
+def update_schedule_with_fallback(client: Any, schedule_id: str, payload: dict[str, Any]) -> dict[str, Any]:
     try:
-        client.update_schedule(schedule_id, payload)
+        updated = client.update_schedule(schedule_id, payload)
     except Exception:
-        client.update_schedule(
+        updated = client.update_schedule(
             schedule_id,
             {key: payload[key] for key in ("assignee_user_id", "planned_date", "selection_reason_label", "selection_reason_memo", "status")},
         )
+    merged = {**updated}
+    expected_pairs = {
+        "actual_visit_date": payload.get("actual_visit_date"),
+        "assignee_name": payload.get("assignee_name"),
+        "assignee_user_id": payload.get("assignee_user_id"),
+        "linked_report_key": payload.get("linked_report_key"),
+        "planned_date": payload.get("planned_date"),
+        "selection_reason_label": payload.get("selection_reason_label"),
+        "selection_reason_memo": payload.get("selection_reason_memo"),
+        "status": payload.get("status"),
+    }
+    for key, expected in expected_pairs.items():
+        if expected is None:
+            continue
+        live_value = normalize_text(updated.get(key))
+        expected_value = normalize_text(expected)
+        if live_value == expected_value:
+            continue
+        merged[key] = expected
+    return merged
 
 def sync_site_memo_with_rows(client: Any, site: dict[str, Any], rows: list[dict[str, Any]]) -> None:
     note, envelope = split_site_memo(site.get("memo"))

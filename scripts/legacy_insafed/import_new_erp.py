@@ -524,7 +524,7 @@ def patch_site_schedules_via_memo(
         )
         if not next_schedule:
             continue
-        existing_by_round[round_no] = {**next_schedule, **existing_by_round.get(round_no, {})}
+        existing_by_round[round_no] = {**existing_by_round.get(round_no, {}), **next_schedule}
     for visit in visits:
         worker_name = normalize_text(visit.get("assigned_worker_name"))
         assignee_user_id, assignee_name = assignee_lookup.get(

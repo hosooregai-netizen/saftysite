@@ -245,6 +245,7 @@
       "ownedGlobs": [
         "app/api/admin/schedules/**",
         "app/api/admin/sites/[siteId]/schedules/generate/**",
+        "features/admin/sections/AdminSectionShared.module.css",
         "features/admin/sections/schedules/**",
         "server/admin/automation.ts",
         "server/admin/automation.test.ts",

@@ -1,31 +1,35 @@
 import { NextResponse } from 'next/server';
 import {
-  fetchAdminScheduleCalendarServer,
   readRequiredAdminToken,
   SafetyServerApiError,
 } from '@/server/admin/safetyApiServer';
-import { mapBackendAdminScheduleCalendarResponse } from '@/server/admin/upstreamMappers';
+import { buildAdminScheduleCalendarSnapshotResponse } from '@/server/admin/scheduleSnapshot';
 
 export const runtime = 'nodejs';
 
 export async function GET(request: Request): Promise<Response> {
   try {
-    // Canonical schedules UI read path for calendar data.
+    // Read calendar rows from the local snapshot so memo-backed schedule repairs
+    // and UI-side schedule saves are reflected even when upstream rows lag behind.
     const token = readRequiredAdminToken(request);
     const url = new URL(request.url);
-    const response = await fetchAdminScheduleCalendarServer(
+    const response = await buildAdminScheduleCalendarSnapshotResponse(
       token,
       {
-        assignee_user_id: url.searchParams.get('assignee_user_id') || '',
+        assigneeUserId: url.searchParams.get('assignee_user_id') || '',
         month: url.searchParams.get('month') || '',
         query: url.searchParams.get('query') || '',
-        site_id: url.searchParams.get('site_id') || '',
+        siteId: url.searchParams.get('site_id') || '',
         status: url.searchParams.get('status') || '',
       },
       request,
     );
 
-    return NextResponse.json(mapBackendAdminScheduleCalendarResponse(response));
+    return NextResponse.json(response, {
+      headers: {
+        'X-Admin-Schedules-Route-Mode': 'snapshot',
+      },
+    });
   } catch (error) {
     if (error instanceof SafetyServerApiError) {
       return NextResponse.json({ error: error.message }, { status: error.status });

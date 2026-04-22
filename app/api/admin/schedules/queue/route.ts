@@ -1,33 +1,37 @@
 import { NextResponse } from 'next/server';
 import {
-  fetchAdminScheduleQueueServer,
   readRequiredAdminToken,
   SafetyServerApiError,
 } from '@/server/admin/safetyApiServer';
-import { mapBackendAdminScheduleQueueResponse } from '@/server/admin/upstreamMappers';
+import { buildAdminScheduleQueueSnapshotResponse } from '@/server/admin/scheduleSnapshot';
 
 export const runtime = 'nodejs';
 
 export async function GET(request: Request): Promise<Response> {
   try {
-    // Canonical schedules UI read path for queue data.
+    // Keep queue reads aligned with the memo-backed schedule snapshot so
+    // selected/unselected transitions stay in sync with the calendar board.
     const token = readRequiredAdminToken(request);
     const url = new URL(request.url);
-    const response = await fetchAdminScheduleQueueServer(
+    const response = await buildAdminScheduleQueueSnapshotResponse(
       token,
       {
-        assignee_user_id: url.searchParams.get('assignee_user_id') || '',
+        assigneeUserId: url.searchParams.get('assignee_user_id') || '',
         limit: Number(url.searchParams.get('limit') || '50'),
         month: url.searchParams.get('month') || '',
         offset: Number(url.searchParams.get('offset') || '0'),
         query: url.searchParams.get('query') || '',
-        site_id: url.searchParams.get('site_id') || '',
+        siteId: url.searchParams.get('site_id') || '',
         status: url.searchParams.get('status') || '',
       },
       request,
     );
 
-    return NextResponse.json(mapBackendAdminScheduleQueueResponse(response));
+    return NextResponse.json(response, {
+      headers: {
+        'X-Admin-Schedules-Route-Mode': 'snapshot',
+      },
+    });
   } catch (error) {
     if (error instanceof SafetyServerApiError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
