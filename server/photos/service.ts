@@ -25,6 +25,7 @@ import {
 } from './album';
 
 const PHOTO_ASSET_PAGE_SIZE = 200;
+const LEGACY_REPORT_FETCH_CONCURRENCY = 6;
 
 function normalizeSource(value: PhotoAlbumQuery['source']) {
   return value && value !== 'all' ? value : '';
@@ -130,24 +131,50 @@ async function fetchReportsBySiteId(
       .filter(Boolean),
   );
   const reportKeyFilter = options?.query?.reportKey?.trim() || '';
+  const reportsBySiteId = new Map<string, SafetyReport[]>();
+  const failedSiteIds: string[] = [];
 
-  const entries = await Promise.all(
-    accessibleSites.map(async (site) => {
-      const reports = await fetchSafetyReportsBySiteFullServer(token, site.id, request);
-      const filteredReports = reports.filter((report) => {
-        if (reportKeyFilter && report.report_key !== reportKeyFilter) {
-          return false;
-        }
-        if (targetReportKeys.size > 0 && !targetReportKeys.has(report.report_key)) {
-          return false;
-        }
-        return true;
-      });
-      return [site.id, filteredReports] as const;
-    }),
-  );
+  for (let index = 0; index < accessibleSites.length; index += LEGACY_REPORT_FETCH_CONCURRENCY) {
+    const chunk = accessibleSites.slice(index, index + LEGACY_REPORT_FETCH_CONCURRENCY);
+    const chunkResults = await Promise.allSettled(
+      chunk.map(async (site) => {
+        const reports = await fetchSafetyReportsBySiteFullServer(token, site.id, request);
+        const filteredReports = reports.filter((report) => {
+          if (reportKeyFilter && report.report_key !== reportKeyFilter) {
+            return false;
+          }
+          if (targetReportKeys.size > 0 && !targetReportKeys.has(report.report_key)) {
+            return false;
+          }
+          return true;
+        });
+        return [site.id, filteredReports] as const;
+      }),
+    );
 
-  return new Map(entries);
+    chunkResults.forEach((result, resultIndex) => {
+      const siteId = chunk[resultIndex]?.id || '';
+      if (result.status === 'fulfilled') {
+        const [resolvedSiteId, reports] = result.value;
+        reportsBySiteId.set(resolvedSiteId, reports);
+        return;
+      }
+
+      if (siteId) {
+        failedSiteIds.push(siteId);
+      }
+    });
+  }
+
+  if (failedSiteIds.length > 0) {
+    console.warn(
+      `[photo-album] skipped legacy report fetch for ${failedSiteIds.length} site(s): ${failedSiteIds
+        .slice(0, 10)
+        .join(', ')}${failedSiteIds.length > 10 ? ', ...' : ''}`,
+    );
+  }
+
+  return reportsBySiteId;
 }
 
 function buildLegacyItems(

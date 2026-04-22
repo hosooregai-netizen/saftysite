@@ -168,6 +168,11 @@ async function requestPhotoAlbumRows(input: {
   lockedSiteId: string | null;
   siteId: string;
 }) {
+  const isGlobalAdminScope =
+    !input.lockedSiteId &&
+    !input.siteId &&
+    !input.initialReportKey;
+
   return fetchPhotoAlbum({
     all: true,
     headquarterId: input.lockedHeadquarterId || input.headquarterId || '',
@@ -176,6 +181,7 @@ async function requestPhotoAlbumRows(input: {
     siteId: input.lockedSiteId || input.siteId || '',
     sortBy: 'capturedAt',
     sortDir: 'desc',
+    source: isGlobalAdminScope ? 'album_upload' : 'all',
   });
 }
 
