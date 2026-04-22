@@ -26,6 +26,10 @@ import {
   downloadAdminSiteBasicMaterial,
   exportAdminServerWorkbook,
 } from '@/lib/admin/exportClient';
+import {
+  getScheduleDisplayPhase,
+  getScheduleStatusLabel,
+} from './scheduleDisplayPhase';
 import type {
   SafetyAdminScheduleCalendarResponse,
   SafetyAdminScheduleLookupsResponse,
@@ -48,13 +52,6 @@ interface ScheduleFormState {
   selectionReasonMemo: string;
   status: SafetyInspectionSchedule['status'];
 }
-
-type ScheduleDisplayPhase =
-  | 'canceled'
-  | 'completed'
-  | 'in_progress'
-  | 'planned'
-  | 'postponed';
 
 const EMPTY_FORM: ScheduleFormState = {
   assigneeUserId: '',
@@ -100,46 +97,6 @@ function isLegacySelectionPlaceholder(value: string) {
   const normalized = value.trim();
   if (!normalized) return false;
   return normalized === 'Legacy InSEF import' || normalized.includes('legacy_site_id=');
-}
-
-function getScheduleDisplayPhase(row: Pick<
-  SafetyInspectionSchedule,
-  'actualVisitDate' | 'linkedReportKey' | 'status'
->): ScheduleDisplayPhase {
-  switch (row.status) {
-    case 'completed':
-      return 'completed';
-    case 'postponed':
-      return 'postponed';
-    case 'canceled':
-      return 'canceled';
-    case 'planned': {
-      if (row.linkedReportKey || row.actualVisitDate) {
-        return 'in_progress';
-      }
-      return 'planned';
-    }
-    default:
-      return 'planned';
-  }
-}
-
-function getScheduleStatusLabel(
-  row: Pick<SafetyInspectionSchedule, 'actualVisitDate' | 'linkedReportKey' | 'status'>,
-) {
-  switch (getScheduleDisplayPhase(row)) {
-    case 'completed':
-      return '완료';
-    case 'in_progress':
-      return '기술지도 진행중';
-    case 'postponed':
-      return '연기';
-    case 'canceled':
-      return '취소';
-    case 'planned':
-    default:
-      return '예정';
-  }
 }
 
 function normalizeSelectionReasonValue(value: string) {
@@ -1109,12 +1066,6 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                 ))}
                 {calendar.days.map((day) => {
                   const dayRows = rowsByDate.get(day.token) || [];
-                  const hasWarning = dayRows.some(
-                    (row) =>
-                      row.isConflicted ||
-                      row.isOutOfWindow ||
-                      (getScheduleDisplayPhase(row) === 'planned' && row.isOverdue),
-                  );
                   const isSelected = selectedDate === day.token;
                   const canDrop = canDropScheduleOnDate(dragSchedule, day.token);
 
@@ -1158,7 +1109,6 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                       >
                         <span className={styles.calendarCellDate}>{day.day}일</span>
                         <span className={styles.calendarCellCount}>{dayRows.length}건</span>
-                        {hasWarning ? <span className={styles.calendarCellFlag}>지연</span> : null}
                       </button>
                       {dayRows.length > 0 ? (
                         <div className={styles.calendarScheduleStack}>
@@ -1728,6 +1678,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
         open={dayListDialogOpen}
         title={`${dayListDialogDate || form.plannedDate || month} 일정 목록`}
         onClose={closeDayListDialog}
+        size="large"
         actions={
           <button
             type="button"
@@ -1744,8 +1695,8 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
             {dayListDialogRows.length === 0 ? (
               <div className={styles.tableEmpty}>이 날짜에 등록된 일정이 없습니다.</div>
             ) : (
-              <div className={styles.tableWrap}>
-                <table className={styles.table}>
+              <div className={`${styles.tableWrap} ${styles.dayListTableWrap}`}>
+                <table className={`${styles.table} ${styles.dayListTable}`}>
                   <thead>
                     <tr>
                       <th>일정</th>
@@ -1755,34 +1706,69 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                   </thead>
                   <tbody>
                     {dayListDialogRows.map((row) => (
-                      <tr
-                        key={`day-list-${row.id}`}
-                        className={styles.tableClickableRow}
-                        onClick={() => {
-                          closeDayListDialog();
-                          openScheduleDialog({
-                            plannedDate: row.plannedDate || dayListDialogDate || row.windowStart,
-                            schedule: row,
-                          });
-                        }}
-                        onKeyDown={(event) => {
-                          if (event.key === 'Enter' || event.key === ' ') {
-                            event.preventDefault();
-                            closeDayListDialog();
-                            openScheduleDialog({
-                              plannedDate: row.plannedDate || dayListDialogDate || row.windowStart,
-                              schedule: row,
-                            });
-                          }
-                        }}
-                        tabIndex={0}
-                      >
-                        <td>{buildDayListLabel(row, userNameById)}</td>
-                        <td>
-                          {row.roundNo} / {row.totalRounds && row.totalRounds > 0 ? row.totalRounds : row.roundNo}
-                        </td>
-                        <td>{getScheduleStatusLabel(row)}</td>
-                      </tr>
+                      (() => {
+                        const displayPhase = getScheduleDisplayPhase(row);
+                        const toneClasses = [
+                          displayPhase === 'completed' ? styles.dayListToneCompleted : '',
+                          displayPhase === 'in_progress' ? styles.dayListToneInProgress : '',
+                          displayPhase === 'planned' ? styles.dayListTonePlanned : '',
+                          displayPhase === 'postponed' ? styles.dayListTonePostponed : '',
+                          displayPhase === 'canceled' ? styles.dayListToneCanceled : '',
+                          displayPhase === 'planned' && row.isOverdue
+                            ? styles.dayListToneWarning
+                            : '',
+                        ]
+                          .filter(Boolean)
+                          .join(' ');
+
+                        return (
+                          <tr
+                            key={`day-list-${row.id}`}
+                            className={styles.tableClickableRow}
+                            onClick={() => {
+                              closeDayListDialog();
+                              openScheduleDialog({
+                                plannedDate: row.plannedDate || dayListDialogDate || row.windowStart,
+                                schedule: row,
+                              });
+                            }}
+                            onKeyDown={(event) => {
+                              if (event.key === 'Enter' || event.key === ' ') {
+                                event.preventDefault();
+                                closeDayListDialog();
+                                openScheduleDialog({
+                                  plannedDate: row.plannedDate || dayListDialogDate || row.windowStart,
+                                  schedule: row,
+                                });
+                              }
+                            }}
+                            tabIndex={0}
+                          >
+                            <td>
+                              <span
+                                className={[styles.dayListScheduleChip, toneClasses]
+                                  .filter(Boolean)
+                                  .join(' ')}
+                              >
+                                {buildDayListLabel(row, userNameById)}
+                              </span>
+                            </td>
+                            <td>
+                              {row.roundNo} /{' '}
+                              {row.totalRounds && row.totalRounds > 0 ? row.totalRounds : row.roundNo}
+                            </td>
+                            <td>
+                              <span
+                                className={[styles.dayListStatusBadge, toneClasses]
+                                  .filter(Boolean)
+                                  .join(' ')}
+                              >
+                                {getScheduleStatusLabel(row)}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })()
                     ))}
                   </tbody>
                 </table>

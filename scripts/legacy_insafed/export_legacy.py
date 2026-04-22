@@ -48,7 +48,18 @@ def main() -> None:
     failures_path = out_root / "failures.jsonl"
     client = LegacyInsafedClient(args.legacy_base_url, args.username, args.password)
     client.login()
-    client.download_schedule_workbook(out_root / "schedules.xlsx")
+    schedule_workbook_exported = False
+    try:
+        client.download_schedule_workbook(out_root / "schedules.xlsx")
+        schedule_workbook_exported = True
+    except Exception as error:
+        append_jsonl(
+            failures_path,
+            {
+                "phase": "export_schedule_workbook",
+                "error": str(error),
+            },
+        )
     companies: list[dict[str, object]] = []
     sites: list[dict[str, object]] = []
     exported = 0
@@ -142,7 +153,7 @@ def main() -> None:
             "paths": {
                 "headquarters": "headquarters.jsonl",
                 "sites": "sites.jsonl",
-                "schedules": "schedules.xlsx",
+                "schedules": "schedules.xlsx" if schedule_workbook_exported else None,
                 "reports": "reports/metadata.jsonl",
                 "reportPdfDir": "reports/pdf",
                 "failures": "failures.jsonl",

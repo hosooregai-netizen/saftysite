@@ -12,6 +12,10 @@ import {
   buildAvailableScheduleMonths,
 } from '@/server/admin/automation';
 import { getAdminDirectorySnapshot } from '@/server/admin/adminDirectorySnapshot';
+import {
+  alignScheduleRowsWithLegacyReports,
+} from '@/server/admin/legacyReportAlignment';
+import { getLegacyAdminReportsSnapshot } from '@/server/admin/legacyAdminReportsSnapshot';
 
 /**
  * Schedule snapshot is a legacy/shared helper layer.
@@ -56,8 +60,11 @@ export async function refreshAdminScheduleSnapshot(
   today = new Date(),
 ) {
   const store = getSnapshotStore();
-  const nextPromise = getAdminDirectorySnapshot(token, request)
-    .then((directorySnapshot) => {
+  const nextPromise = Promise.all([
+    getAdminDirectorySnapshot(token, request),
+    getLegacyAdminReportsSnapshot(),
+  ])
+    .then(([directorySnapshot, legacyReports]) => {
       const data: ControllerDashboardData = {
         ...directorySnapshot.data,
         contentItems: [],
@@ -65,7 +72,11 @@ export async function refreshAdminScheduleSnapshot(
       const snapshot: ScheduleSourceSnapshot = {
         data,
         refreshedAt: new Date().toISOString(),
-        rows: buildAdminScheduleRows(data, today),
+        rows: alignScheduleRowsWithLegacyReports(buildAdminScheduleRows(data, today), {
+          legacyRows: legacyReports,
+          sites: data.sites,
+          today,
+        }),
       };
       store.snapshot = snapshot;
       return snapshot;

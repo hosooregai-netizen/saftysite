@@ -21,6 +21,7 @@
   - blue for `기술지도 진행중`
   - gray for `예정`
 - linked schedules that already had a report/session connection were being shown with the same tone as plain planned rows, and overdue planned styling could override the intended legacy phase
+- imported legacy report links represent completed historical visits and should not stay blue as if they were still being written
 
 ## Validation
 
@@ -30,4 +31,6 @@
 ## Notes
 
 - display phase is derived in the admin UI from existing schedule data
-- persisted schedule `status` values stay unchanged; `기술지도 진행중` is a presentation-layer phase driven by linked report metadata
+- persisted schedule `status` values stay unchanged
+- `기술지도 진행중` is shown whenever a linked report exists but the visit is not yet marked complete, including legacy draft/reservation rows
+- `완료` is shown when the visit has an `actualVisitDate` or the linked legacy report is matched as submitted/completed

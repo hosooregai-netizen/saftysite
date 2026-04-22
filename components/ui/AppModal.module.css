@@ -26,7 +26,7 @@
 }
 
 .dialogLarge {
-  width: min(100%, 880px);
+  width: min(100%, 1080px);
 }
 
 .body {
@@ -76,6 +76,10 @@
     max-height: calc(100dvh - 32px);
   }
 
+  .dialogLarge {
+    width: min(100%, 720px);
+  }
+
   .body {
     padding: 16px;
   }
@@ -98,4 +102,3 @@
     width: auto;
   }
 }
-

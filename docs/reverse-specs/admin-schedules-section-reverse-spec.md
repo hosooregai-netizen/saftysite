@@ -256,7 +256,9 @@ Required fields used by the screen:
 - If `totalRounds` is absent or invalid, fall back to `roundNo`.
 - Calendar chip display phase is derived for presentation:
   - `completed` status -> `완료`
-  - `planned` with `linkedReportKey` or `actualVisitDate` -> `기술지도 진행중`
+  - `planned` with `actualVisitDate` -> `완료`
+  - `planned` with any `linkedReportKey` but no completion visit date -> `기술지도 진행중`
+  - legacy submitted/completed rows are normalized to completed before rendering
   - plain `planned` -> `예정`
   - `postponed` -> `연기`
   - `canceled` -> `취소`

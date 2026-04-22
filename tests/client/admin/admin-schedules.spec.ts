@@ -25,6 +25,7 @@ export async function runAdminSchedulesSmoke(config: ClientSmokePlaywrightConfig
     await page.getByRole('tab', { name: '목록으로 보기' }).waitFor({ state: 'visible' });
     await page.getByText('2026년 4월').first().waitFor();
     await page.getByRole('button', { name: '오늘' }).waitFor({ state: 'visible' });
+<<<<<<< HEAD
     await page.getByRole('button', { name: scheduleChipLabel }).first().waitFor({
       state: 'visible',
     });
@@ -50,6 +51,7 @@ export async function runAdminSchedulesSmoke(config: ClientSmokePlaywrightConfig
     await page.getByRole('dialog', { name: '방문 일정' }).waitFor({ state: 'visible' });
     await page.getByRole('button', { name: '취소' }).click();
     await page.getByRole('tab', { name: '달력으로 보기' }).click();
+<<<<<<< HEAD
     await page.getByRole('button', { name: scheduleChipLabel }).first().waitFor({
       state: 'visible',
     });
@@ -61,6 +63,7 @@ export async function runAdminSchedulesSmoke(config: ClientSmokePlaywrightConfig
     await page.getByRole('dialog', { name: '방문 일정' }).waitFor({ state: 'visible' });
     await page.getByRole('button', { name: '취소' }).click();
 
+<<<<<<< HEAD
     await page.getByRole('button', { name: scheduleChipLabel }).first().click();
     const scheduleDialog = page.getByRole('dialog', { name: '방문 일정' });
     await scheduleDialog.waitFor({ state: 'visible' });
@@ -97,6 +100,7 @@ export async function runAdminSchedulesSmoke(config: ClientSmokePlaywrightConfig
     await scheduleDialog.getByLabel('상세 메모').fill('관제 일정 smoke 이동');
     await scheduleDialog.getByRole('button', { name: '저장' }).click();
     await harness.waitForRequestCount('PATCH /api/admin/schedules/:id', scheduleUpdatesBefore + 1);
+<<<<<<< HEAD
     await page.getByRole('button', { name: scheduleChipLabel }).first().waitFor({
       state: 'visible',
     });

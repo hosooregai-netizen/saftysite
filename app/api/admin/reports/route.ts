@@ -5,6 +5,7 @@ import {
   buildLegacyAdminReportRows,
   getLegacyAdminReportsSnapshot,
 } from '@/server/admin/legacyAdminReportsSnapshot';
+import { alignAdminReportRowsWithLegacySites } from '@/server/admin/legacyReportAlignment';
 import {
   fetchAdminReportsViewServer,
   readRequiredAdminToken,
@@ -186,7 +187,11 @@ async function buildReportsRowsSnapshot(token: string, request: Request) {
     getLegacyAdminReportsSnapshot(),
     fetchCurrentAdminReportRows(token, request),
   ]);
-  const currentRowKeys = new Set(currentRows.map((row) => row.reportKey));
+  const alignedCurrentRows = alignAdminReportRowsWithLegacySites(currentRows, {
+    legacyRows: legacyReports,
+    sites: directorySnapshot.data.sites,
+  });
+  const currentRowKeys = new Set(alignedCurrentRows.map((row) => row.reportKey));
   const legacyRows = buildLegacyAdminReportRows({
     legacyRows: legacyReports,
     pdfManifest: legacyPdfManifest,
@@ -194,7 +199,7 @@ async function buildReportsRowsSnapshot(token: string, request: Request) {
     users: directorySnapshot.data.users,
   }).filter((row) => !currentRowKeys.has(row.reportKey));
 
-  return [...currentRows, ...legacyRows];
+  return [...alignedCurrentRows, ...legacyRows];
 }
 
 async function fetchCurrentAdminReportRows(token: string, request: Request) {
