@@ -44,16 +44,16 @@ const MAILBOX_ICON = (
 export function buildMobileRootTabs(activeTab: MobileRootTabKey): TabItem[] {
   return [
     {
-      label: '사업장/현장',
-      href: buildMobileHomeHref(),
-      icon: BUILDING_ICON,
-      isActive: activeTab === 'sites',
-    },
-    {
       label: '일정',
       href: buildMobileCalendarHref(),
       icon: CALENDAR_ICON,
       isActive: activeTab === 'calendar',
+    },
+    {
+      label: '사업장/현장',
+      href: buildMobileHomeHref(),
+      icon: BUILDING_ICON,
+      isActive: activeTab === 'sites',
     },
     {
       label: '메일함',

@@ -4,6 +4,12 @@ import { useCallback, useEffect } from 'react';
 import { readPersistedValue } from '@/lib/clientPersistence';
 import { readOwnedPersistedValue } from '@/lib/ownedPersistence';
 import {
+  ADMIN_OVERVIEW_POST_LOGIN_REDIRECT,
+  clearPendingPostLoginRedirect,
+  WORKER_CALENDAR_POST_LOGIN_REDIRECT,
+  writePendingPostLoginRedirect,
+} from '@/lib/auth/postLoginRedirect';
+import {
   fetchCurrentSafetyUser,
   loginSafetyApi,
   readSafetyAuthToken,
@@ -268,10 +274,16 @@ export function useInspectionSessionAuthSync(
 
         const requestId = ++runtime.syncRequestIdRef.current;
         const user = await fetchCurrentSafetyUser(token.access_token);
+        writePendingPostLoginRedirect(
+          isSafetyAdmin(user)
+            ? ADMIN_OVERVIEW_POST_LOGIN_REDIRECT
+            : WORKER_CALENDAR_POST_LOGIN_REDIRECT,
+        );
         await bootWithUser(token.access_token, user, requestId);
       } catch (error) {
         runtime.syncRequestIdRef.current += 1;
         clearAuthState();
+        clearPendingPostLoginRedirect();
         setAuthError(getErrorMessage(error));
         throw error;
       } finally {
@@ -301,6 +313,7 @@ export function useInspectionSessionAuthSync(
     resetInspectionSyncRuntime(runtime);
     setSiteRelationsStatusBySiteId({});
     clearAuthState();
+    clearPendingPostLoginRedirect();
     setReportIndexBySiteId({});
     setAuthError(null);
     setDataError(null);

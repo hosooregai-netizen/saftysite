@@ -10,6 +10,10 @@ import WorkerShellBody from '@/components/worker/WorkerShellBody';
 import { WorkerMenuDrawer, WorkerMenuPanel } from '@/components/worker/WorkerMenu';
 import { createEmptyTechnicalGuidanceRelations } from '@/constants/inspectionSession/sessionFactory';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
+import {
+  consumePendingPostLoginRedirect,
+  WORKER_CALENDAR_POST_LOGIN_REDIRECT,
+} from '@/lib/auth/postLoginRedirect';
 import { isAdminUserRole, getAdminSectionHref } from '@/lib/admin';
 import { buildDefaultReportTitle } from '@/features/site-reports/report-list/reportListHelpers';
 import { fetchMySchedules, updateMySchedule } from '@/lib/calendar/apiClient';
@@ -402,10 +406,20 @@ export function WorkerCalendarScreen() {
   };
 
   useEffect(() => {
+    if (!currentUser) return;
+
+    const pendingRedirect = consumePendingPostLoginRedirect();
+    if (pendingRedirect) {
+      if (pendingRedirect !== WORKER_CALENDAR_POST_LOGIN_REDIRECT) {
+        router.replace(pendingRedirect);
+      }
+      return;
+    }
+
     if (isAdminView) {
       router.replace(getAdminSectionHref('schedules', selectedSiteId ? { siteId: selectedSiteId } : undefined));
     }
-  }, [isAdminView, router, selectedSiteId]);
+  }, [currentUser, isAdminView, router, selectedSiteId]);
 
   useEffect(() => {
     if (!isAuthenticated || isAdminView) return;

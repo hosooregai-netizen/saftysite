@@ -3,6 +3,7 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
+import { consumePendingPostLoginRedirect } from '@/lib/auth/postLoginRedirect';
 import { getAdminSectionHref, isAdminUserRole } from '@/lib/admin';
 import {
   buildHomeSiteSummaries,
@@ -181,7 +182,15 @@ export function useHomeScreenState(): HomeScreenState {
   ]);
 
   useEffect(() => {
-    if (currentUser && isControllerView) {
+    if (!currentUser) return;
+
+    const pendingRedirect = consumePendingPostLoginRedirect();
+    if (pendingRedirect) {
+      router.replace(pendingRedirect);
+      return;
+    }
+
+    if (isControllerView) {
       router.replace(getAdminSectionHref('headquarters'));
     }
   }, [currentUser, isControllerView, router]);

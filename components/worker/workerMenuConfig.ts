@@ -77,17 +77,19 @@ export function buildWorkerTopLevelMenuItems(input: {
 
   const topLevelItems: WorkerTopLevelMenuItem[] = [
     {
-      label: '사업장/현장',
-      href: '/',
-      active:
-        isWorkerListPath(pathname) || siteNavView === 'site-home' || siteMenuItems.some((item) => item.active),
-      children: siteMenuItems.length > 0 ? siteMenuItems : undefined,
-      expandMode: siteMenuItems.length > 0 ? 'always' : undefined,
-    },
-    {
       label: '내 일정',
       href: buildWorkerCalendarHref(),
       active: pathname === '/calendar',
+    },
+    {
+      label: '사업장/현장',
+      href: '/',
+      active:
+        isWorkerListPath(pathname) ||
+        siteNavView === 'site-home' ||
+        siteMenuItems.some((item) => item.active),
+      children: siteMenuItems.length > 0 ? siteMenuItems : undefined,
+      expandMode: siteMenuItems.length > 0 ? 'always' : undefined,
     },
     {
       label: '메일함',
