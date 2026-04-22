@@ -11,16 +11,15 @@ export async function runSiteHubSmoke(config: ClientSmokePlaywrightConfig) {
 
     await page.goto(harness.baseURL, { waitUntil: 'load' });
     await harness.loginAs('agent@example.com');
-    await page.waitForURL((url) => url.pathname === '/' || url.pathname === '/calendar');
-
-    if (new URL(page.url()).pathname === '/calendar') {
-      await page.goto(harness.baseURL, { waitUntil: 'load' });
-    }
+    await page.waitForURL((url) => url.pathname === '/calendar');
+    await page.goto(harness.baseURL, { waitUntil: 'load' });
 
     await harness.waitForRequestCount('GET /assignments/me/sites', 1);
     await page.getByRole('heading', { name: '현장 목록' }).waitFor({ state: 'visible' });
 
-    await page.getByRole('link', { name: '기존 현장' }).first().click();
+    const siteRow = page.locator('article').filter({ hasText: '테스트발주처' }).first();
+    await siteRow.waitFor({ state: 'visible' });
+    await siteRow.getByRole('link', { name: '기존 현장' }).click();
     await page.waitForURL(/\/sites\/site-1\/entry$/);
     await harness.waitForRequestCount('GET /reports', reportReadsBefore + 1);
     await page.getByRole('heading', { name: '사업장/현장 식별' }).waitFor({
