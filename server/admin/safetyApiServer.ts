@@ -1,4 +1,5 @@
-import { getSafetyApiUpstreamBaseUrl } from '@/lib/safetyApi/upstream';
+import { buildSafetyAssetUrl } from '@/lib/safetyApi/assetUrls';
+import { getPublicSafetyApiUpstreamBaseUrl, getSafetyApiUpstreamBaseUrl } from '@/lib/safetyApi/upstream';
 import { buildVisibleAdminSiteIdSet } from '@/lib/admin/reportVisibility';
 import {
   applyHeadquarterLifecycleStatus,
@@ -152,6 +153,15 @@ export function buildSafetyAdminUpstreamUrl(path: string) {
 
 export function buildSafetyAdminPublicUrl(path: string) {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  if (normalizedPath.startsWith('/uploads/')) {
+    return buildSafetyAssetUrl(normalizedPath);
+  }
+
+  const publicUpstreamBaseUrl = getPublicSafetyApiUpstreamBaseUrl();
+  if (publicUpstreamBaseUrl) {
+    return new URL(normalizedPath, `${new URL(publicUpstreamBaseUrl).origin}/`).toString();
+  }
+
   const upstreamUrl = new URL(getSafetyApiUpstreamBaseUrl());
   return new URL(normalizedPath, `${upstreamUrl.origin}/`).toString();
 }
