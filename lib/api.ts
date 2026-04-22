@@ -303,11 +303,43 @@ export function saveBlobAsFile(blob: Blob, filename: string): void {
   }, 0);
 }
 
-export function startFileDownloadFromUrl(downloadUrl: string): void {
+export async function startFileDownloadFromUrl(
+  downloadUrl: string,
+  filename?: string | null,
+): Promise<void> {
+  const normalizedFilename = filename?.trim() || '';
+
+  try {
+    const response = await fetch(downloadUrl, {
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      throw new Error(`Download request failed with status ${response.status}.`);
+    }
+
+    const blob = await response.blob();
+    saveBlobAsFile(
+      blob,
+      normalizedFilename ||
+        getDownloadFilenameFromDisposition(response.headers.get('content-disposition')),
+    );
+    return;
+  } catch (error) {
+    console.warn('Direct file download via fetch failed; falling back to navigation.', {
+      downloadUrl,
+      error: error instanceof Error ? error.message : String(error),
+      filename: normalizedFilename || undefined,
+    });
+  }
+
   const link = document.createElement('a');
 
   link.href = downloadUrl;
   link.rel = 'noopener';
+  if (normalizedFilename) {
+    link.download = normalizedFilename;
+  }
   document.body.appendChild(link);
   link.click();
 

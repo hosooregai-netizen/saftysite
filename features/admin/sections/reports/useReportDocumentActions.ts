@@ -78,7 +78,7 @@ export function useReportDocumentActions({
                 row.reportKey,
                 authToken,
               );
-              startFileDownloadFromUrl(exported.downloadUrl);
+              await startFileDownloadFromUrl(exported.downloadUrl, exported.filename);
               setNotice('지도보고서를 내보냈습니다.');
             } else {
               const exported = await fetchInspectionHwpxDocumentByReportKey(

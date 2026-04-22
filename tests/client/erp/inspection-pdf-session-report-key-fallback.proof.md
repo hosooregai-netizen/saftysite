@@ -7,3 +7,4 @@
 
 - `npx eslint features/inspection-session/hooks/useInspectionSessionScreen.ts`
 - session screen PDF export now calls `fetchInspectionPdfDownloadUrlByReportKey(...)` before any local HWPX fallback
+- session screen download helper now prefers fetching the returned PDF asset URL as a blob before falling back to plain navigation

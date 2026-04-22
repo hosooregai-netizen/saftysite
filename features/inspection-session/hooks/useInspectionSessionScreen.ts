@@ -717,7 +717,7 @@ export function useInspectionSessionScreen(sessionId: string) {
           latestSession.id,
           authToken,
         );
-        startFileDownloadFromUrl(pdf.downloadUrl);
+        await startFileDownloadFromUrl(pdf.downloadUrl, pdf.filename);
         return;
       } catch (serverError) {
         console.warn('Inspection PDF server generation failed; falling back to HWPX generation.', {
