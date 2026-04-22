@@ -1,4 +1,5 @@
 import { createHash } from 'crypto';
+import os from 'os';
 import { promises as fs } from 'fs';
 import path from 'path';
 
@@ -23,7 +24,7 @@ interface GeneratedReportPdfCacheMeta extends GeneratedReportPdfCacheKey {
 
 function getCacheRoot() {
   const configured = process.env.GENERATED_REPORT_PDF_CACHE_DIR?.trim();
-  return configured || path.join(process.cwd(), '.artifacts', 'generated-report-pdf-cache');
+  return configured || path.join(os.tmpdir(), 'generated-report-pdf-cache');
 }
 
 function buildCacheStem(input: GeneratedReportPdfCacheKey) {
