@@ -13,9 +13,9 @@ interface ReportListRowProps {
   currentSite: InspectionSite;
   item: InspectionReportListItem;
   onDeleteRequest: (reportKey: string) => void;
-  onOpenReport: (reportKey: string, sessionHref: string) => void;
+  onOpenReport: (item: InspectionReportListItem) => void;
   onToggleDispatch: (item: InspectionReportListItem) => void;
-  onWarmReport: (reportKey: string, sessionHref: string) => void;
+  onWarmReport: (item: InspectionReportListItem) => void;
 }
 
 function shouldIgnoreRowClick(target: EventTarget | null) {
@@ -40,40 +40,42 @@ export function ReportListRow({
   onWarmReport,
 }: ReportListRowProps) {
   const progressRate = Math.max(0, Math.min(100, item.progressRate ?? 0));
-  const sessionHref = `/sessions/${item.reportKey}`;
-  const menuItems = [
-    { label: '열기', href: sessionHref },
-    {
-      label: item.dispatchCompleted ? '미발송으로 변경' : '발송으로 변경',
-      onSelect: () => onToggleDispatch(item),
-    },
-    ...(canArchiveReports
-      ? [
-          {
-            label: '삭제',
-            tone: 'danger' as const,
-            onSelect: () => onDeleteRequest(item.reportKey),
-          },
-        ]
-      : []),
-  ];
+  const sessionHref = item.reportOpenHref || `/sessions/${item.reportKey}`;
+  const menuItems = item.readOnly
+    ? [{ label: '열기', href: sessionHref }]
+    : [
+        { label: '열기', href: sessionHref },
+        {
+          label: item.dispatchCompleted ? '미발송으로 변경' : '발송으로 변경',
+          onSelect: () => onToggleDispatch(item),
+        },
+        ...(canArchiveReports
+          ? [
+              {
+                label: '삭제',
+                tone: 'danger' as const,
+                onSelect: () => onDeleteRequest(item.reportKey),
+              },
+            ]
+          : []),
+      ];
 
   return (
     <article
       className={`${styles.reportRow} ${styles.reportRowClickable}`}
       tabIndex={0}
       role="link"
-      onPointerEnter={() => onWarmReport(item.reportKey, sessionHref)}
-      onFocus={() => onWarmReport(item.reportKey, sessionHref)}
+      onPointerEnter={() => onWarmReport(item)}
+      onFocus={() => onWarmReport(item)}
       onClick={(event) => {
         if (shouldIgnoreRowClick(event.target)) return;
-        onOpenReport(item.reportKey, sessionHref);
+        onOpenReport(item);
       }}
       onKeyDown={(event) => {
         if (shouldIgnoreRowClick(event.target)) return;
         if (event.key !== 'Enter' && event.key !== ' ') return;
         event.preventDefault();
-        onOpenReport(item.reportKey, sessionHref);
+        onOpenReport(item);
       }}
     >
       <div className={`${styles.dataCell} ${styles.roundCell}`}>
@@ -84,8 +86,8 @@ export function ReportListRow({
         <Link
           href={sessionHref}
           className={styles.reportLink}
-          onMouseEnter={() => onWarmReport(item.reportKey, sessionHref)}
-          onFocus={() => onWarmReport(item.reportKey, sessionHref)}
+          onMouseEnter={() => onWarmReport(item)}
+          onFocus={() => onWarmReport(item)}
         >
           {item.reportTitle}
         </Link>

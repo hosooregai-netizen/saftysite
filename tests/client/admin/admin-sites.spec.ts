@@ -78,7 +78,7 @@ export async function runAdminSitesSmoke(config: ClientSmokePlaywrightConfig) {
     const siteDeletesBefore = requestCounts.get('DELETE /sites/:id') || 0;
     const assignmentCreatesBefore = requestCounts.get('POST /assignments') || 0;
     const assignmentDeletesBefore = requestCounts.get('DELETE /assignments/:id') || 0;
-    const adminSiteReadsBefore = requestCounts.get('GET /api/admin/sites/:id') || 0;
+    let adminSiteReadsBefore = requestCounts.get('GET /api/admin/sites/:id') || 0;
     const siteAName = 'mocked admin site a';
     const siteAId = 'site-mocked-admin-site-a';
     const siteBName = 'mocked admin site b';
@@ -93,7 +93,36 @@ export async function runAdminSitesSmoke(config: ClientSmokePlaywrightConfig) {
     await harness.waitForRequestCount('GET /api/admin/directory/lookups', lookupReadsBefore + 1);
     await page.getByRole('button', { name: '사업장 정보 수정' }).waitFor({ state: 'visible' });
     await page.waitForTimeout(250);
-    const settledSiteListReads = requestCounts.get('GET /api/admin/sites/list') || 0;
+    let settledSiteListReads = requestCounts.get('GET /api/admin/sites/list') || 0;
+
+    await page.goto(
+      `${harness.baseURL}/admin?section=headquarters&headquarterId=hq-1&siteId=site-1`,
+      { waitUntil: 'load' },
+    );
+    await page.locator('a[href="/sites/site-1"]').first().click();
+    await page.waitForURL(/\/sites\/site-1$/);
+    const legacyReportLink = page.getByRole('link', {
+      exact: true,
+      name: '레거시 5차 기술지도 보고서',
+    });
+    await legacyReportLink.waitFor({ state: 'visible' });
+    await legacyReportLink.click();
+    await page.waitForURL(
+      new RegExp(
+        `/admin/report-open\\?reportKey=${encodeURIComponent('legacy:technical_guidance:1001')}`,
+      ),
+    );
+    await page.getByRole('heading', { name: '레거시 원본 PDF 보기' }).waitFor({
+      state: 'visible',
+    });
+
+    await page.goto(`${harness.baseURL}/admin?section=headquarters&headquarterId=hq-1`, {
+      waitUntil: 'load',
+    });
+    await page.getByRole('button', { name: '사업장 정보 수정' }).waitFor({ state: 'visible' });
+    await page.waitForTimeout(250);
+    settledSiteListReads = requestCounts.get('GET /api/admin/sites/list') || 0;
+    adminSiteReadsBefore = requestCounts.get('GET /api/admin/sites/:id') || 0;
 
     const siteSearch = page.locator('[role="search"]').first();
     const siteSearchInput = siteSearch.locator('input');

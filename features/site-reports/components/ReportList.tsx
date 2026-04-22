@@ -47,6 +47,10 @@ function getEmptyStateMode(params: {
   return null;
 }
 
+function resolveReportHref(item: InspectionReportListItem) {
+  return item.reportOpenHref || `/sessions/${item.reportKey}`;
+}
+
 export function ReportList({
   assignedUserDisplay,
   canArchiveReports,
@@ -64,15 +68,19 @@ export function ReportList({
   const { ensureSessionLoaded } = useInspectionSessions();
   const prefetchedReportKeysRef = useRef<Set<string>>(new Set());
   const warmSession = useCallback(
-    (reportKey: string, sessionHref: string) => {
-      if (prefetchedReportKeysRef.current.has(reportKey)) {
+    (item: InspectionReportListItem) => {
+      const sessionHref = resolveReportHref(item);
+      if (prefetchedReportKeysRef.current.has(item.reportKey)) {
         return;
       }
 
-      prefetchedReportKeysRef.current.add(reportKey);
+      prefetchedReportKeysRef.current.add(item.reportKey);
       router.prefetch(sessionHref);
-      void ensureSessionLoaded(reportKey).catch(() => {
-        prefetchedReportKeysRef.current.delete(reportKey);
+      if (item.readOnly || item.reportOpenMode === 'original_pdf') {
+        return;
+      }
+      void ensureSessionLoaded(item.reportKey).catch(() => {
+        prefetchedReportKeysRef.current.delete(item.reportKey);
       });
     },
     [ensureSessionLoaded, router],
@@ -117,9 +125,9 @@ export function ReportList({
                 currentSite={currentSite}
                 item={item}
                 onDeleteRequest={onDeleteRequest}
-                onOpenReport={(reportKey, sessionHref) => {
-                  warmSession(reportKey, sessionHref);
-                  router.push(sessionHref);
+                onOpenReport={(nextItem) => {
+                  warmSession(nextItem);
+                  router.push(resolveReportHref(nextItem));
                 }}
                 onToggleDispatch={onToggleDispatch}
                 onWarmReport={warmSession}

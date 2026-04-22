@@ -1,6 +1,6 @@
 'use client';
 
-import { useDeferredValue, useMemo, useState } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   mergeAdminSiteSnapshots,
@@ -9,11 +9,17 @@ import {
 import { createEmptyTechnicalGuidanceRelations } from '@/constants/inspectionSession/sessionFactory';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { useSubmittedSearchState } from '@/hooks/useSubmittedSearchState';
+import { mergeReportIndexItems } from '@/hooks/inspectionSessions/helpers';
+import { fetchAdminReports } from '@/lib/admin/apiClient';
+import { isAdminUserRole } from '@/lib/admin';
 import {
   fetchTechnicalGuidanceSeed,
   readSafetyAuthToken,
   SafetyApiError,
 } from '@/lib/safetyApi';
+import { mapInspectionSessionToReportListItem } from '@/lib/safetyApiMappers';
+import type { ControllerReportRow } from '@/types/admin';
+import type { SafetyReportStatus } from '@/types/backend';
 import type { InspectionSite } from '@/types/inspectionSession';
 import {
   buildDefaultReportTitle,
@@ -33,6 +39,117 @@ interface UseSiteReportListStateOptions {
 
 export type { CreateSiteReportInput, SiteReportSortMode };
 
+type AdminLegacySiteReportsState = {
+  error: string | null;
+  items: import('@/types/inspectionSession').InspectionReportListItem[];
+  status: 'idle' | 'loading' | 'loaded' | 'error';
+};
+
+function extractVisitRound(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  const match = value.match(/(\d+)\s*차/);
+  if (!match) {
+    return null;
+  }
+
+  const parsed = Number(match[1]);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function isLegacyTechnicalGuidanceRow(row: ControllerReportRow) {
+  return row.reportType === 'technical_guidance' && row.reportKey.startsWith('legacy:');
+}
+
+function isDispatchCompleted(row: ControllerReportRow) {
+  return (
+    row.dispatch?.dispatchStatus === 'sent' ||
+    row.dispatch?.dispatchStatus === 'manual_checked'
+  );
+}
+
+function normalizeLegacyReportStatus(status: string): SafetyReportStatus {
+  switch (status) {
+    case 'submitted':
+    case 'published':
+    case 'archived':
+      return status;
+    case 'draft':
+    default:
+      return 'draft';
+  }
+}
+
+function mapAdminLegacyRowToReportItem(
+  row: ControllerReportRow,
+): import('@/types/inspectionSession').InspectionReportListItem {
+  const parsedRouteRound =
+    typeof row.routeParam === 'string' && /^\d+$/.test(row.routeParam)
+      ? Number(row.routeParam)
+      : null;
+
+  return {
+    id: row.reportKey,
+    reportKey: row.reportKey,
+    reportTitle: row.reportTitle || row.periodLabel || row.reportKey,
+    reportOpenHref: `/admin/report-open?reportKey=${encodeURIComponent(row.reportKey)}`,
+    reportOpenMode: 'original_pdf',
+    readOnly: true,
+    originalPdfAvailable: Boolean(row.originalPdfAvailable),
+    siteId: row.siteId,
+    headquarterId: row.headquarterId || null,
+    assignedUserId: row.assigneeUserId || null,
+    visitDate: row.visitDate || null,
+    visitRound:
+      parsedRouteRound ??
+      extractVisitRound(row.reportTitle) ??
+      extractVisitRound(row.periodLabel),
+    totalRound: null,
+    progressRate: row.progressRate,
+    status: normalizeLegacyReportStatus(row.status),
+    dispatchCompleted: isDispatchCompleted(row),
+    payloadVersion: 1,
+    latestRevisionNo: 0,
+    submittedAt: row.status === 'submitted' || row.status === 'published' ? row.updatedAt : null,
+    publishedAt: row.status === 'published' ? row.updatedAt : null,
+    lastAutosavedAt: row.updatedAt,
+    createdAt: row.updatedAt,
+    updatedAt: row.updatedAt,
+    meta: {
+      drafter: row.assigneeName,
+      originalPdfAvailable: Boolean(row.originalPdfAvailable),
+      reportType: row.reportType,
+      siteName: row.siteName,
+    },
+  };
+}
+
+async function fetchAllAdminLegacySiteReportItems(siteId: string) {
+  const items: import('@/types/inspectionSession').InspectionReportListItem[] = [];
+  let offset = 0;
+
+  while (true) {
+    const response = await fetchAdminReports({
+      limit: 200,
+      offset,
+      reportType: 'technical_guidance',
+      siteId,
+    });
+    items.push(
+      ...response.rows
+        .filter((row) => isLegacyTechnicalGuidanceRow(row))
+        .map((row) => mapAdminLegacyRowToReportItem(row)),
+    );
+
+    offset += response.rows.length;
+    if (offset >= response.total || response.rows.length < response.limit) {
+      return items;
+    }
+  }
+}
+
 export function useSiteReportListState(
   siteKey: string | null,
   options: UseSiteReportListStateOptions = {}
@@ -51,6 +168,7 @@ export function useSiteReportListState(
     isAuthenticated,
     isReady,
   } = useInspectionSessions();
+  const isAdminView = Boolean(currentUser && isAdminUserRole(currentUser.role));
   const {
     query: reportQuery,
     queryInput: reportQueryInput,
@@ -99,7 +217,87 @@ export function useSiteReportListState(
       isAuthenticated,
       isReady,
     });
+  const [adminLegacyState, setAdminLegacyState] = useState<AdminLegacySiteReportsState>({
+    error: null,
+    items: [],
+    status: 'idle',
+  });
+  const reloadAdminLegacyItems = useCallback(
+    async (options?: { force?: boolean }) => {
+      if (!isAdminView || !currentSite || !isAuthenticated || !isReady) {
+        setAdminLegacyState({ error: null, items: [], status: 'idle' });
+        return;
+      }
+
+      setAdminLegacyState((current) => ({
+        error: null,
+        items: options?.force ? [] : current.items,
+        status:
+          current.status === 'loaded' && !options?.force && current.items.length > 0
+            ? 'loaded'
+            : 'loading',
+      }));
+
+      try {
+        const items = await fetchAllAdminLegacySiteReportItems(currentSite.id);
+        setAdminLegacyState({
+          error: null,
+          items,
+          status: 'loaded',
+        });
+      } catch (error) {
+        setAdminLegacyState((current) => ({
+          error: error instanceof Error ? error.message : '레거시 보고서 목록을 불러오지 못했습니다.',
+          items: current.items,
+          status: current.items.length > 0 ? 'loaded' : 'error',
+        }));
+      }
+    },
+    [currentSite, isAdminView, isAuthenticated, isReady],
+  );
+
+  useEffect(() => {
+    void reloadAdminLegacyItems();
+  }, [reloadAdminLegacyItems]);
   const deferredReportQuery = useDeferredValue(reportQuery);
+  const effectiveReportItems = useMemo(() => {
+    if (!isAdminView || !currentSite) {
+      return reportItems;
+    }
+
+    const localSessionItems = sessions
+      .filter((session) => session.siteKey === currentSite.id)
+      .map((session) => mapInspectionSessionToReportListItem(session, currentSite));
+
+    return mergeReportIndexItems(
+      mergeReportIndexItems(reportItems, localSessionItems),
+      adminLegacyState.items,
+    );
+  }, [adminLegacyState.items, currentSite, isAdminView, reportItems, sessions]);
+  const effectiveReportIndexStatus = useMemo(() => {
+    if (!isAdminView) {
+      return reportIndexStatus;
+    }
+    if (
+      effectiveReportItems.length === 0 &&
+      (reportIndexStatus === 'loading' ||
+        reportIndexStatus === 'idle' ||
+        adminLegacyState.status === 'loading' ||
+        adminLegacyState.status === 'idle')
+    ) {
+      return 'loading' as const;
+    }
+    if (effectiveReportItems.length > 0) {
+      return 'loaded' as const;
+    }
+    if (reportIndexStatus === 'error' || adminLegacyState.status === 'error') {
+      return 'error' as const;
+    }
+    return reportIndexStatus;
+  }, [adminLegacyState.status, effectiveReportItems.length, isAdminView, reportIndexStatus]);
+  const effectiveReportIndexError = isAdminView
+    ? reportIndexError || adminLegacyState.error
+    : reportIndexError;
   const nextReportNumber = useMemo(() => {
     if (!currentSite) return 1;
     return sessions.filter((session) => session.siteKey === currentSite.id).length + 1;
@@ -113,7 +311,7 @@ export function useSiteReportListState(
         assignedUserDisplay,
         currentSiteAssigneeName: currentSite?.assigneeName,
         dispatchFilter,
-        reportItems,
+        reportItems: effectiveReportItems,
         reportQuery: deferredReportQuery,
         reportSortMode,
       }),
@@ -122,14 +320,14 @@ export function useSiteReportListState(
       currentSite?.assigneeName,
       deferredReportQuery,
       dispatchFilter,
-      reportItems,
+      effectiveReportItems,
       reportSortMode,
     ],
   );
   const getCreateReportTitleSuggestion = (reportDate: string) => buildDefaultReportTitle(reportDate, nextReportNumber);
 
   const createReport = async ({ reportDate, reportTitle }: CreateSiteReportInput) => {
-    if (!currentSite || reportIndexStatus !== 'loaded') return;
+    if (!currentSite || effectiveReportIndexStatus !== 'loaded') return;
 
     const normalizedReportDate = reportDate.trim();
     const normalizedReportTitle =
@@ -184,7 +382,7 @@ export function useSiteReportListState(
     router.push(nextHref);
   };
 
-  const canCreateReport = reportIndexStatus === 'loaded';
+  const canCreateReport = effectiveReportIndexStatus === 'loaded';
   return {
     assignedUserDisplay,
     canArchiveReports,
@@ -196,10 +394,13 @@ export function useSiteReportListState(
     deleteSession,
     dispatchFilter,
     filteredReportItems,
-    reportIndexError,
-    reportIndexStatus,
-    reportItems,
-    reloadReportIndex,
+    reportIndexError: effectiveReportIndexError,
+    reportIndexStatus: effectiveReportIndexStatus,
+    reportItems: effectiveReportItems,
+    reloadReportIndex: () => {
+      reloadReportIndex();
+      void reloadAdminLegacyItems({ force: true });
+    },
     reportQuery,
     reportQueryInput,
     reportSortMode,
