@@ -36,10 +36,10 @@ export async function runMobileBadWorkplaceSmoke(config: ClientSmokePlaywrightCo
       }
     }
 
-    await page.getByRole('button', { name: '행 추가' }).click();
+    await page.getByRole('button', { name: '행 추가' }).last().click();
     await page.getByLabel('해당 요원').fill('모바일 불량사업장 자동화');
 
-    const deleteButtons = page.getByRole('button', { name: '삭제' });
+    const deleteButtons = page.getByRole('button', { name: '행 삭제' });
     if ((await deleteButtons.count()) > 0) {
       await deleteButtons.last().click();
     }

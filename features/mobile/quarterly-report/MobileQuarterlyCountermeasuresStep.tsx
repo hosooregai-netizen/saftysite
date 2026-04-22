@@ -74,18 +74,14 @@ export function MobileQuarterlyCountermeasuresStep({
   return (
     <section className={styles.mobileEditorCard}>
       <div className={styles.mobileImplementationListHeader}>
-        <div className={styles.mobileImplementationListTitle}>4. 향후 공정 유해위험작업 안전대책</div>
-        <button
-          type="button"
-          className={`app-button app-button-secondary ${styles.mobileImplementationAddButton}`}
-          onClick={onAddFuturePlan}
-        >
-          행 추가
-        </button>
+        <div className={styles.mobileImplementationListTitle}>
+          4. 향후 공정 유해위험작업 안전대책
+        </div>
       </div>
       {draft.futurePlans.length > 0 ? (
         <div className={styles.mobileFuturePlanCardList}>
           {draft.futurePlans.map((plan, index) => {
+            const isLastRow = index === draft.futurePlans.length - 1;
             const recommendationQuery =
               activeEditor?.planId === plan.id
                 ? activeEditor.field === 'expectedRisk'
@@ -105,14 +101,25 @@ export function MobileQuarterlyCountermeasuresStep({
             return (
               <article key={plan.id} className={styles.mobileFuturePlanCard}>
                 <div className={styles.mobileImplementationItemTop}>
-                  <span className={styles.mobileImplementationItemBadge}>{`행 ${index + 1}`}</span>
-                  <button
-                    type="button"
-                    className={`app-button app-button-secondary ${styles.mobileFuturePlanDeleteButton}`}
-                    onClick={() => onRemoveFuturePlan(plan.id)}
-                  >
-                    삭제
-                  </button>
+                  <span className={styles.mobileImplementationItemBadge}>{`항목 ${index + 1}`}</span>
+                  <div className={styles.mobileRowActionStack}>
+                    {isLastRow ? (
+                      <button
+                        type="button"
+                        className={styles.mobileRowActionAdd}
+                        onClick={onAddFuturePlan}
+                      >
+                        행 추가
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      className={styles.mobileRowActionRemove}
+                      onClick={() => onRemoveFuturePlan(plan.id)}
+                    >
+                      행 삭제
+                    </button>
+                  </div>
                 </div>
                 <div className={styles.mobileEditorFieldStack}>
                   <label className={styles.mobileEditorFieldGroup}>
@@ -125,7 +132,7 @@ export function MobileQuarterlyCountermeasuresStep({
                         className={`app-textarea ${styles.mobileFuturePlanTextarea}`}
                         rows={4}
                         value={plan.hazard || plan.processName}
-                        placeholder="위험요인을 입력해 주세요"
+                        placeholder="위험요인을 입력해 주세요."
                         onFocus={() =>
                           setActiveEditor({ planId: plan.id, field: 'expectedRisk' })
                         }
@@ -187,7 +194,7 @@ export function MobileQuarterlyCountermeasuresStep({
                         className={`app-textarea ${styles.mobileFuturePlanTextarea}`}
                         rows={4}
                         value={plan.countermeasure}
-                        placeholder="안전대책을 입력해 주세요"
+                        placeholder="안전대책을 입력해 주세요."
                         onFocus={() =>
                           setActiveEditor({ planId: plan.id, field: 'countermeasure' })
                         }
@@ -246,7 +253,16 @@ export function MobileQuarterlyCountermeasuresStep({
           })}
         </div>
       ) : (
-        <div className={styles.mobileFuturePlanEmpty}>등록된 위험요인 및 안전대책이 없습니다.</div>
+        <div className={styles.mobileFuturePlanEmpty}>
+          <span>등록된 위험요인 및 안전대책이 없습니다.</span>
+          <button
+            type="button"
+            className={styles.mobileEmptyActionButton}
+            onClick={onAddFuturePlan}
+          >
+            행 추가
+          </button>
+        </div>
       )}
 
       <label className={styles.mobileEditorFieldGroup}>
@@ -258,7 +274,9 @@ export function MobileQuarterlyCountermeasuresStep({
           onChange={(event) => onSelectOpsAsset(event.target.value)}
         >
           <option value="">
-            {isOpsAssetsLoading && opsAssets.length === 0 ? 'OPS 자료 불러오는 중...' : 'OPS 자료 없음'}
+            {isOpsAssetsLoading && opsAssets.length === 0
+              ? 'OPS 자료를 불러오는 중...'
+              : 'OPS 자료 없음'}
           </option>
           {opsAssets.map((asset) => (
             <option key={asset.id} value={asset.id}>
@@ -267,7 +285,9 @@ export function MobileQuarterlyCountermeasuresStep({
           ))}
         </select>
       </label>
-      {isOpsAssetsRefreshing ? <p className={styles.inlineNotice}>OPS 자료 최신 데이터를 확인 중입니다.</p> : null}
+      {isOpsAssetsRefreshing ? (
+        <p className={styles.inlineNotice}>OPS 자료 최신 데이터를 확인 중입니다.</p>
+      ) : null}
       {draft.opsAssetFileUrl ? (
         <a href={draft.opsAssetFileUrl} target="_blank" rel="noreferrer">
           OPS 자료 열기

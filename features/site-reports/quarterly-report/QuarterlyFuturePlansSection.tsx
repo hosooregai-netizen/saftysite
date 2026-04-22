@@ -69,19 +69,14 @@ export function QuarterlyFuturePlansSection(props: {
               <th
                 className={`${operationalStyles.implementationHeaderCell} ${operationalStyles.implementationHeaderActionCell}`}
               >
-                <button
-                  type="button"
-                  className={`app-button app-button-secondary ${operationalStyles.implementationAddButton}`}
-                  onClick={onAdd}
-                >
-                  행 추가
-                </button>
+                행 관리
               </th>
             </tr>
           </thead>
           <tbody>
             {plans.length > 0 ? (
-              plans.map((item) => {
+              plans.map((item, index) => {
+                const isLastRow = index === plans.length - 1;
                 const recommendationQuery =
                   activeEditor?.planId === item.id
                     ? activeEditor.field === 'expectedRisk'
@@ -250,13 +245,24 @@ export function QuarterlyFuturePlansSection(props: {
                       </div>
                     </td>
                     <td className={operationalStyles.implementationActionCell}>
-                      <button
-                        type="button"
-                        className={`app-button app-button-secondary ${operationalStyles.implementationActionButton}`}
-                        onClick={() => onChange(plans.filter((plan) => plan.id !== item.id))}
-                      >
-                        삭제
-                      </button>
+                      <div className={operationalStyles.reportRowActionStack}>
+                        {isLastRow ? (
+                          <button
+                            type="button"
+                            className={operationalStyles.reportRowActionAdd}
+                            onClick={onAdd}
+                          >
+                            행 추가
+                          </button>
+                        ) : null}
+                        <button
+                          type="button"
+                          className={operationalStyles.reportRowActionRemove}
+                          onClick={() => onChange(plans.filter((plan) => plan.id !== item.id))}
+                        >
+                          행 삭제
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -264,7 +270,16 @@ export function QuarterlyFuturePlansSection(props: {
             ) : (
               <tr>
                 <td colSpan={3} className={operationalStyles.implementationEmptyCell}>
-                  등록된 위험요인 및 안전대책이 없습니다.
+                  <div className={operationalStyles.reportEmptyState}>
+                    <span>등록된 위험요인 및 안전대책이 없습니다.</span>
+                    <button
+                      type="button"
+                      className={operationalStyles.reportEmptyActionButton}
+                      onClick={onAdd}
+                    >
+                      행 추가
+                    </button>
+                  </div>
                 </td>
               </tr>
             )}

@@ -14,6 +14,7 @@ export function QuarterlyImplementationSection(props: {
   onRemove: (index: number) => void;
 }) {
   const { rows, onChange, onAdd, onRemove } = props;
+
   return (
     <article className={operationalStyles.reportCard}>
       <QuarterlySectionHeader title="3. 기술지도 이행현황" />
@@ -40,39 +41,95 @@ export function QuarterlyImplementationSection(props: {
               <th className={operationalStyles.implementationHeaderCell}>지적 건수</th>
               <th className={operationalStyles.implementationHeaderCell}>개선 건수</th>
               <th className={operationalStyles.implementationHeaderCell}>비고</th>
-              <th className={`${operationalStyles.implementationHeaderCell} ${operationalStyles.implementationHeaderActionCell}`}>
-                <button
-                  type="button"
-                  className={`app-button app-button-secondary ${operationalStyles.implementationAddButton}`}
-                  onClick={onAdd}
-                >
-                  행 추가
-                </button>
+              <th
+                className={`${operationalStyles.implementationHeaderCell} ${operationalStyles.implementationHeaderActionCell}`}
+              >
+                행 관리
               </th>
             </tr>
           </thead>
           <tbody>
             {rows.length > 0 ? (
-              rows.map((item, index) => (
-                <tr key={item.sessionId || index}>
-                  <ImplementationInputCell value={item.reportTitle} onChange={(value) => onChange(index, 'reportTitle', value)} />
-                  <ImplementationInputCell type="number" min={0} value={item.reportNumber} onChange={(value) => onChange(index, 'reportNumber', value)} />
-                  <ImplementationInputCell value={item.drafter} onChange={(value) => onChange(index, 'drafter', value)} />
-                  <ImplementationInputCell value={item.reportDate} onChange={(value) => onChange(index, 'reportDate', value)} />
-                  <ImplementationInputCell value={item.progressRate} onChange={(value) => onChange(index, 'progressRate', value)} />
-                  <ImplementationInputCell type="number" min={0} value={item.findingCount} onChange={(value) => onChange(index, 'findingCount', value)} />
-                  <ImplementationInputCell type="number" min={0} value={item.improvedCount} onChange={(value) => onChange(index, 'improvedCount', value)} />
-                  <ImplementationInputCell value={item.note} onChange={(value) => onChange(index, 'note', value)} />
-                  <td className={operationalStyles.implementationActionCell}>
-                    <button type="button" className={`app-button app-button-secondary ${operationalStyles.implementationActionButton}`} onClick={() => onRemove(index)}>
-                      삭제
-                    </button>
-                  </td>
-                </tr>
-              ))
+              rows.map((item, index) => {
+                const isLastRow = index === rows.length - 1;
+
+                return (
+                  <tr key={item.sessionId || index}>
+                    <ImplementationInputCell
+                      value={item.reportTitle}
+                      onChange={(value) => onChange(index, 'reportTitle', value)}
+                    />
+                    <ImplementationInputCell
+                      type="number"
+                      min={0}
+                      value={item.reportNumber}
+                      onChange={(value) => onChange(index, 'reportNumber', value)}
+                    />
+                    <ImplementationInputCell
+                      value={item.drafter}
+                      onChange={(value) => onChange(index, 'drafter', value)}
+                    />
+                    <ImplementationInputCell
+                      value={item.reportDate}
+                      onChange={(value) => onChange(index, 'reportDate', value)}
+                    />
+                    <ImplementationInputCell
+                      value={item.progressRate}
+                      onChange={(value) => onChange(index, 'progressRate', value)}
+                    />
+                    <ImplementationInputCell
+                      type="number"
+                      min={0}
+                      value={item.findingCount}
+                      onChange={(value) => onChange(index, 'findingCount', value)}
+                    />
+                    <ImplementationInputCell
+                      type="number"
+                      min={0}
+                      value={item.improvedCount}
+                      onChange={(value) => onChange(index, 'improvedCount', value)}
+                    />
+                    <ImplementationInputCell
+                      value={item.note}
+                      onChange={(value) => onChange(index, 'note', value)}
+                    />
+                    <td className={operationalStyles.implementationActionCell}>
+                      <div className={operationalStyles.reportRowActionStack}>
+                        {isLastRow ? (
+                          <button
+                            type="button"
+                            className={operationalStyles.reportRowActionAdd}
+                            onClick={onAdd}
+                          >
+                            행 추가
+                          </button>
+                        ) : null}
+                        <button
+                          type="button"
+                          className={operationalStyles.reportRowActionRemove}
+                          onClick={() => onRemove(index)}
+                        >
+                          행 삭제
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
             ) : (
               <tr>
-                <td colSpan={9} className={operationalStyles.implementationEmptyCell}>선택된 기술지도 보고서가 없습니다.</td>
+                <td colSpan={9} className={operationalStyles.implementationEmptyCell}>
+                  <div className={operationalStyles.reportEmptyState}>
+                    <span>선택된 기술지도 보고서가 없습니다.</span>
+                    <button
+                      type="button"
+                      className={operationalStyles.reportEmptyActionButton}
+                      onClick={onAdd}
+                    >
+                      행 추가
+                    </button>
+                  </div>
+                </td>
               </tr>
             )}
           </tbody>

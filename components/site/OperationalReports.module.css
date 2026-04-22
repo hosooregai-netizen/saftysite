@@ -613,28 +613,8 @@
 .violationActionHeader {
   width: 116px;
   min-width: 116px;
-  padding: 4px !important;
-}
-
-.violationAddButton {
-  width: 100%;
-  min-height: 34px;
-  border: 0 !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  color: var(--erp-mid) !important;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0;
-}
-
-.violationAddButton:hover,
-.violationAddButton:focus-visible {
-  color: var(--erp-navy) !important;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  outline: none;
+  padding-inline: 6px !important;
+  white-space: nowrap;
 }
 
 .violationTable td {
@@ -736,22 +716,6 @@
   background: var(--erp-white);
 }
 
-.violationActionButton {
-  width: 100%;
-  min-height: 36px;
-  border: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  color: var(--erp-danger-text) !important;
-}
-
-.violationActionButton:hover,
-.violationActionButton:focus-visible {
-  color: color-mix(in srgb, var(--erp-danger-text) 84%, #000) !important;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
 .implementationTableWrap {
   overflow-x: auto;
   border: 1px solid #b9c6d8;
@@ -821,7 +785,8 @@
 }
 
 .implementationHeaderActionCell {
-  padding: 4px;
+  padding-inline: 6px;
+  white-space: nowrap;
 }
 
 .implementationValueCell {
@@ -907,44 +872,8 @@
 .implementationActionCell {
   padding: 4px;
   text-align: center;
+  vertical-align: middle;
   background: var(--erp-white);
-}
-
-.implementationActionButton {
-  width: 100%;
-  min-height: 32px;
-  border: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  color: var(--erp-danger-text) !important;
-}
-
-.implementationAddButton {
-  width: 100%;
-  min-height: 32px;
-  border: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  color: var(--erp-mid) !important;
-}
-
-.implementationActionButton:hover,
-.implementationActionButton:focus-visible {
-  color: color-mix(in srgb, var(--erp-danger-text) 84%, #000) !important;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.implementationAddButton:hover,
-.implementationAddButton:focus-visible {
-  color: var(--erp-navy) !important;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.implementationActionButton:focus-visible,
-.implementationAddButton:focus-visible {
-  outline: none;
 }
 
 .implementationEmptyCell {
@@ -954,6 +883,74 @@
   color: var(--erp-text-muted);
   text-align: center;
   background: var(--erp-white);
+}
+
+.reportRowActionStack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 48px;
+  padding: 4px 0;
+}
+
+.reportRowActionAdd,
+.reportRowActionRemove,
+.reportEmptyActionButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: 0;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.reportRowActionAdd,
+.reportEmptyActionButton {
+  color: #216e39;
+}
+
+.reportRowActionRemove {
+  color: var(--erp-danger-text);
+}
+
+.reportRowActionAdd:hover,
+.reportRowActionAdd:focus,
+.reportRowActionAdd:focus-visible,
+.reportEmptyActionButton:hover,
+.reportEmptyActionButton:focus,
+.reportEmptyActionButton:focus-visible {
+  color: var(--erp-navy);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  outline: none;
+}
+
+.reportRowActionRemove:hover,
+.reportRowActionRemove:focus,
+.reportRowActionRemove:focus-visible {
+  color: color-mix(in srgb, var(--erp-danger-text) 84%, #000);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  outline: none;
+}
+
+.reportEmptyState {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
 }
 
 .implementationTable th:last-child,
@@ -1247,7 +1244,9 @@
   .toolbar,
   .reportActions,
   .statusRow,
-  .violationAddButton {
+  .reportRowActionAdd,
+  .reportRowActionRemove,
+  .reportEmptyActionButton {
     display: none !important;
   }
 

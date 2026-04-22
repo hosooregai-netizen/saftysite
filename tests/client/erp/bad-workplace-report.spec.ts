@@ -24,7 +24,7 @@ export async function runBadWorkplaceReportSmoke(config: ClientSmokePlaywrightCo
       .getByRole('button', { name: '문서 다운로드 (.hwpx)' })
       .waitFor({ state: 'visible' });
     await page.getByRole('button', { name: '저장' }).waitFor({ state: 'visible' });
-    await page.getByRole('columnheader', { name: '행 추가' }).waitFor({ state: 'visible' });
+    await page.getByRole('columnheader', { name: '행 관리' }).waitFor({ state: 'visible' });
 
     if ((await page.getByRole('columnheader', { name: '작업' }).count()) > 0) {
       throw new Error('불량 사업장 신고 취약사항 표 헤더가 아직 작업으로 표시됩니다.');
@@ -45,12 +45,12 @@ export async function runBadWorkplaceReportSmoke(config: ClientSmokePlaywrightCo
       }
     }
 
-    await page.getByRole('button', { name: '행 추가' }).click();
+    await page.getByRole('button', { name: '행 추가' }).last().click();
     await page.getByRole('textbox', { name: '해당 요원', exact: true }).fill(
       '테스트용 불량사업장 자동화',
     );
 
-    const deleteButtons = page.getByRole('button', { name: '삭제' });
+    const deleteButtons = page.getByRole('button', { name: '행 삭제' });
     if ((await deleteButtons.count()) > 0) {
       await deleteButtons.last().click();
     }

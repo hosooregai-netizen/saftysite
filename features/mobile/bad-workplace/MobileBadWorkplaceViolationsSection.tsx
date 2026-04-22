@@ -24,84 +24,101 @@ export function MobileBadWorkplaceViolationsSection({
     <section className={styles.mobileEditorCard}>
       <div className={styles.mobileImplementationListHeader}>
         <div className={styles.mobileImplementationListTitle}>4. 위반사항</div>
-        <button
-          type="button"
-          className={`app-button app-button-secondary ${styles.mobileImplementationAddButton}`}
-          onClick={onAddViolation}
-        >
-          행 추가
-        </button>
       </div>
 
       {draft.violations.length > 0 ? (
         <div className={styles.mobileFuturePlanCardList}>
-          {draft.violations.map((item, index) => (
-            <article key={item.id} className={styles.mobileFuturePlanCard}>
-              <div className={styles.mobileImplementationItemTop}>
-                <span className={styles.mobileImplementationItemBadge}>
-                  {`위반사항 ${index + 1}`}
-                </span>
-                <button
-                  type="button"
-                  className={`app-button app-button-secondary ${styles.mobileImplementationDeleteButton}`}
-                  onClick={() => onRemoveViolation(item.id)}
-                >
-                  삭제
-                </button>
-              </div>
-              <div className={styles.mobileImplementationFieldGrid}>
-                <MobileBadWorkplaceEditableField
-                  label="관련 법령"
-                  multiline
-                  rows={3}
-                  value={item.legalReference}
-                  onChange={(value) => onUpdateViolation(item.id, { legalReference: value })}
-                />
-                <MobileBadWorkplaceEditableField
-                  label="유해위험요인"
-                  multiline
-                  rows={4}
-                  value={item.hazardFactor}
-                  onChange={(value) => onUpdateViolation(item.id, { hazardFactor: value })}
-                />
-                <MobileBadWorkplaceEditableField
-                  label="개선지시 사항"
-                  multiline
-                  rows={4}
-                  wide
-                  value={item.improvementMeasure}
-                  onChange={(value) =>
-                    onUpdateViolation(item.id, { improvementMeasure: value })
-                  }
-                />
-                <MobileBadWorkplaceEditableField
-                  label="지도일"
-                  value={item.guidanceDate}
-                  placeholder="YYYY-MM-DD"
-                  onChange={(value) => onUpdateViolation(item.id, { guidanceDate: value })}
-                />
-                <MobileBadWorkplaceEditableField
-                  label="불이행 사항"
-                  multiline
-                  rows={4}
-                  wide
-                  value={item.nonCompliance}
-                  onChange={(value) => onUpdateViolation(item.id, { nonCompliance: value })}
-                />
-                <MobileBadWorkplaceEditableField
-                  label="확인일"
-                  value={item.confirmationDate}
-                  placeholder="YYYY-MM-DD"
-                  onChange={(value) =>
-                    onUpdateViolation(item.id, { confirmationDate: value })
-                  }
-                />
-              </div>
-            </article>
-          ))}
+          {draft.violations.map((item, index) => {
+            const isLastRow = index === draft.violations.length - 1;
+
+            return (
+              <article key={item.id} className={styles.mobileFuturePlanCard}>
+                <div className={styles.mobileImplementationItemTop}>
+                  <span className={styles.mobileImplementationItemBadge}>
+                    {`위반사항 ${index + 1}`}
+                  </span>
+                  <div className={styles.mobileRowActionStack}>
+                    {isLastRow ? (
+                      <button
+                        type="button"
+                        className={styles.mobileRowActionAdd}
+                        onClick={onAddViolation}
+                      >
+                        행 추가
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      className={styles.mobileRowActionRemove}
+                      onClick={() => onRemoveViolation(item.id)}
+                    >
+                      행 삭제
+                    </button>
+                  </div>
+                </div>
+                <div className={styles.mobileImplementationFieldGrid}>
+                  <MobileBadWorkplaceEditableField
+                    label="관련 법령"
+                    multiline
+                    rows={3}
+                    value={item.legalReference}
+                    onChange={(value) => onUpdateViolation(item.id, { legalReference: value })}
+                  />
+                  <MobileBadWorkplaceEditableField
+                    label="유해위험요인"
+                    multiline
+                    rows={4}
+                    value={item.hazardFactor}
+                    onChange={(value) => onUpdateViolation(item.id, { hazardFactor: value })}
+                  />
+                  <MobileBadWorkplaceEditableField
+                    label="개선지도 사항"
+                    multiline
+                    rows={4}
+                    wide
+                    value={item.improvementMeasure}
+                    onChange={(value) =>
+                      onUpdateViolation(item.id, { improvementMeasure: value })
+                    }
+                  />
+                  <MobileBadWorkplaceEditableField
+                    label="지도일"
+                    value={item.guidanceDate}
+                    placeholder="YYYY-MM-DD"
+                    onChange={(value) => onUpdateViolation(item.id, { guidanceDate: value })}
+                  />
+                  <MobileBadWorkplaceEditableField
+                    label="불이행 사항"
+                    multiline
+                    rows={4}
+                    wide
+                    value={item.nonCompliance}
+                    onChange={(value) => onUpdateViolation(item.id, { nonCompliance: value })}
+                  />
+                  <MobileBadWorkplaceEditableField
+                    label="확인일"
+                    value={item.confirmationDate}
+                    placeholder="YYYY-MM-DD"
+                    onChange={(value) =>
+                      onUpdateViolation(item.id, { confirmationDate: value })
+                    }
+                  />
+                </div>
+              </article>
+            );
+          })}
         </div>
       ) : (
-        <div className={styles.mobileImplementationEmpty}>표시할 취약 사항이 없습니다.</div>
+        <div className={styles.mobileImplementationEmpty}>
+          <span>표시할 취약 사항이 없습니다.</span>
+          <button
+            type="button"
+            className={styles.mobileEmptyActionButton}
+            onClick={onAddViolation}
+          >
+            행 추가
+          </button>
+        </div>
       )}
     </section>
   );

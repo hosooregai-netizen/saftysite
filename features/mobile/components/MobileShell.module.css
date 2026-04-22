@@ -738,20 +738,13 @@
 .mobileImplementationListHeader {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
 }
 
 .mobileImplementationListTitle {
   font-size: var(--text-ui);
   font-weight: 800;
   color: var(--erp-dark);
-}
-
-.mobileImplementationAddButton,
-.mobileImplementationDeleteButton {
-  min-height: 36px;
-  padding-inline: 10px;
 }
 
 .mobileImplementationList {
@@ -770,7 +763,7 @@
 
 .mobileImplementationItemTop {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
 }
@@ -798,6 +791,9 @@
 }
 
 .mobileImplementationEmpty {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
   padding: 14px;
   border: 1px dashed rgba(174, 186, 200, 0.92);
   border-radius: 12px;
@@ -896,13 +892,10 @@
   font-weight: 700;
 }
 
-.mobileFuturePlanDeleteButton {
-  min-height: 36px;
-  padding-inline: 10px;
-  align-self: flex-start;
-}
-
 .mobileFuturePlanEmpty {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
   padding: 14px;
   border: 1px dashed rgba(174, 186, 200, 0.92);
   border-radius: 12px;
@@ -916,6 +909,63 @@
   position: relative;
   display: grid;
   gap: 8px;
+}
+
+.mobileRowActionStack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.mobileRowActionAdd,
+.mobileRowActionRemove,
+.mobileEmptyActionButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  font: inherit;
+  font-size: var(--text-ui-sm);
+  font-weight: 700;
+  line-height: 1.35;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.mobileRowActionAdd,
+.mobileEmptyActionButton {
+  color: #216e39;
+}
+
+.mobileRowActionRemove {
+  color: var(--erp-danger-text);
+}
+
+.mobileRowActionAdd:hover,
+.mobileRowActionAdd:focus,
+.mobileRowActionAdd:focus-visible,
+.mobileEmptyActionButton:hover,
+.mobileEmptyActionButton:focus,
+.mobileEmptyActionButton:focus-visible {
+  color: var(--erp-navy);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  outline: none;
+}
+
+.mobileRowActionRemove:hover,
+.mobileRowActionRemove:focus,
+.mobileRowActionRemove:focus-visible {
+  color: color-mix(in srgb, var(--erp-danger-text) 84%, #000);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  outline: none;
 }
 
 .doc6SectionStack {
