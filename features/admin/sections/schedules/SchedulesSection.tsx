@@ -254,16 +254,11 @@ function buildSelectionSummary(row: SafetyInspectionSchedule) {
 }
 
 function buildScheduleChipLabel(row: SafetyInspectionSchedule) {
-  const totalRounds = row.totalRounds && row.totalRounds > 0 ? row.totalRounds : row.roundNo;
-  return `[${row.assigneeName || '미배정'}] ${row.roundNo}/${totalRounds} - ${row.siteName}`;
+  return `[${row.assigneeName || '미배정'}] ${row.siteName}`;
 }
 
 function buildDayListLabel(row: SafetyInspectionSchedule) {
   return `[${row.assigneeName || '미배정'}] ${row.siteName}`;
-}
-
-function buildScheduleQueryText(row: SafetyInspectionSchedule) {
-  return [row.siteName, row.headquarterName, row.assigneeName].filter(Boolean).join(' ');
 }
 
 async function fetchSchedulePayloads(
@@ -1124,9 +1119,6 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                             >
                               <span className={styles.calendarScheduleChipTitle}>
                                 {buildScheduleChipLabel(row)}
-                              </span>
-                              <span className={styles.calendarScheduleChipMeta}>
-                                {buildScheduleQueryText(row)}
                               </span>
                             </button>
                           ))}
