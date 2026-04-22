@@ -292,8 +292,32 @@ export function PhotoAlbumPanel({
     siteId,
   ]);
 
+  const orderedRows = useMemo(() => {
+    if (!isSiteScopedView) {
+      return rows;
+    }
+
+    const roundRowsByNo = new Map<number, PhotoAlbumItem[]>();
+    for (const item of rows) {
+      const existingRows = roundRowsByNo.get(item.roundNo);
+      if (existingRows) {
+        existingRows.push(item);
+      } else {
+        roundRowsByNo.set(item.roundNo, [item]);
+      }
+    }
+
+    return Array.from(roundRowsByNo.entries())
+      .sort(
+        ([leftRoundNo], [rightRoundNo]) =>
+          compareDisplayRoundNo(leftRoundNo, rightRoundNo) ||
+          formatRoundLabel(leftRoundNo).localeCompare(formatRoundLabel(rightRoundNo), 'ko-KR'),
+      )
+      .flatMap(([, roundRows]) => roundRows);
+  }, [isSiteScopedView, rows]);
+
   useEffect(() => {
-    if (!loadMoreRef.current || visibleCount >= rows.length) {
+    if (!loadMoreRef.current || visibleCount >= orderedRows.length) {
       return;
     }
 
@@ -303,7 +327,7 @@ export function PhotoAlbumPanel({
         if (!entries.some((entry) => entry.isIntersecting)) {
           return;
         }
-        setVisibleCount((current) => Math.min(rows.length, current + PAGE_SIZE));
+        setVisibleCount((current) => Math.min(orderedRows.length, current + PAGE_SIZE));
       },
       { rootMargin: '320px 0px' },
     );
@@ -312,11 +336,11 @@ export function PhotoAlbumPanel({
     return () => {
       observer.disconnect();
     };
-  }, [rows.length, visibleCount]);
+  }, [orderedRows.length, visibleCount]);
 
   const visibleRows = useMemo(
-    () => rows.slice(0, Math.min(rows.length, visibleCount)),
-    [rows, visibleCount],
+    () => orderedRows.slice(0, Math.min(orderedRows.length, visibleCount)),
+    [orderedRows, visibleCount],
   );
 
   const scopedSiteMeta = useMemo(() => {
@@ -392,7 +416,7 @@ export function PhotoAlbumPanel({
     );
   }, [bulkRoundOptions]);
 
-  const hasMoreRows = visibleRows.length < rows.length;
+  const hasMoreRows = visibleRows.length < orderedRows.length;
   const allVisibleSelected =
     visibleRows.length > 0 && visibleRows.every((row) => selectedIds.includes(row.id));
   const hasSelectedRows = selectedIds.length > 0;
