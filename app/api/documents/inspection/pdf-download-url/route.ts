@@ -47,8 +47,22 @@ function getPdfRouteStatus(error: unknown, message: string): number {
   return 500;
 }
 
-function buildDownloadUrl(assetPath: string): string {
-  const downloadUrl = new URL(buildSafetyAdminPublicUrl(assetPath));
+function normalizeAssetPath(assetPath: string): string {
+  return assetPath.startsWith('/') ? assetPath : `/${assetPath}`;
+}
+
+function buildProxiedDownloadUrl(request: Request, assetPath: string): string {
+  const proxiedUrl = new URL(`/api/safety${normalizeAssetPath(assetPath)}`, request.url);
+  proxiedUrl.searchParams.set('download', '1');
+  return proxiedUrl.toString();
+}
+
+function buildDownloadUrl(request: Request, assetPath: string): string {
+  const downloadUrl = new URL(buildSafetyAdminPublicUrl(assetPath), request.url);
+  if (new URL(request.url).protocol === 'https:' && downloadUrl.protocol !== 'https:') {
+    return buildProxiedDownloadUrl(request, assetPath);
+  }
+
   downloadUrl.searchParams.set('download', '1');
   return downloadUrl.toString();
 }
@@ -65,7 +79,7 @@ async function uploadGeneratedPdfAsset(
   const uploaded = await uploadSafetyAssetServer(token, body, request);
   return {
     assetPath: uploaded.path,
-    downloadUrl: buildDownloadUrl(uploaded.path),
+    downloadUrl: buildDownloadUrl(request, uploaded.path),
     filename: uploaded.file_name || filename,
   };
 }
@@ -81,7 +95,7 @@ export async function POST(request: Request): Promise<Response> {
       if (cached?.downloadPath) {
         return NextResponse.json({
           assetPath: cached.downloadPath,
-          downloadUrl: buildDownloadUrl(cached.downloadPath),
+          downloadUrl: buildDownloadUrl(request, cached.downloadPath),
           filename: cached.filename,
         } satisfies PdfDownloadUrlResponse);
       }
