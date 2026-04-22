@@ -11,12 +11,6 @@ export async function runSiteHubSmoke(config: ClientSmokePlaywrightConfig) {
 
     await page.goto(harness.baseURL, { waitUntil: 'load' });
     await harness.loginAs('agent@example.com');
-    await page.waitForURL((url) => url.pathname === '/' || url.pathname === '/calendar');
-
-    if (new URL(page.url()).pathname === '/calendar') {
-      await page.goto(harness.baseURL, { waitUntil: 'load' });
-    }
-
     await harness.waitForRequestCount('GET /assignments/me/sites', 1);
     await page.getByRole('heading', { name: '현장 목록' }).waitFor({ state: 'visible' });
 
