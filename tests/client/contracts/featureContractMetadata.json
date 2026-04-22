@@ -1,0 +1,796 @@
+{
+  "guardedGlobsByScope": {
+    "admin": [
+      "app/api/admin/**",
+      "app/api/safety/**",
+      "app/admin/**",
+      "features/admin/**",
+      "lib/admin/apiClient.ts",
+      "server/admin/**"
+    ],
+    "erp": [
+      "app/calendar/**",
+      "app/api/me/schedules/**",
+      "app/sites/**",
+      "components/auth/**",
+      "components/worker/**",
+      "features/calendar/**",
+      "features/home/**",
+      "features/inspection-session/**",
+      "features/mailbox/**",
+      "features/mobile/**",
+      "features/site-reports/**",
+      "hooks/useInspectionSessions.tsx",
+      "hooks/inspectionSessions/**",
+      "lib/auth/loginCredentialsStorage.ts",
+      "lib/calendar/apiClient.ts"
+    ]
+  },
+  "contracts": {
+    "admin-control-center": {
+      "scope": "admin",
+      "ownedGlobs": [
+        "app/admin/**",
+        "app/api/admin/dashboard/**",
+        "app/api/admin/directory/**",
+        "app/api/safety/**",
+        "features/admin/components/**",
+        "features/admin/hooks/buildAdminDashboardAssignmentActions.ts",
+        "features/admin/hooks/buildAdminDashboardContentActions.ts",
+        "features/admin/hooks/buildAdminDashboardCrudActions.ts",
+        "features/admin/hooks/useAdminDashboardDataLoaders.ts",
+        "features/admin/hooks/useAdminDashboardRouting.ts",
+        "features/admin/hooks/useAdminDashboardState.ts",
+        "features/admin/lib/adminDashboardBootstrapCache.ts",
+        "features/admin/lib/adminDashboardMutations.ts",
+        "features/admin/lib/adminDashboardShellState.ts",
+        "features/admin/lib/adminSessionCache.ts",
+        "features/admin/lib/adminClientCacheInvalidation.ts",
+        "features/admin/lib/adminClientCacheInvalidation.test.ts",
+        "features/admin/lib/buildAdminControlCenterModel.ts",
+        "features/admin/lib/control-center-model/**",
+        "features/admin/sections/analytics/**",
+        "features/admin/sections/content/**",
+        "features/admin/sections/overview/**",
+        "features/admin/sections/photos/**",
+        "lib/admin/apiClient.ts",
+        "server/admin/adminDirectoryLists.ts",
+        "server/admin/adminDirectorySnapshot.ts",
+        "server/admin/adminRouteInvalidation.ts",
+        "server/admin/adminRouteInvalidation.test.ts",
+        "server/admin/analyticsSnapshot.ts",
+        "server/admin/exportSheets.ts",
+        "server/admin/overviewPolicyOverlay.ts",
+        "server/admin/overviewPolicyOverlay.test.ts",
+        "server/admin/overviewRouteCache.ts",
+        "server/admin/overviewRouteCache.test.ts",
+        "server/admin/safetyApiServer.ts",
+        "server/admin/safetyApiServer.test.ts",
+        "server/admin/upstreamMappers.ts",
+        "server/admin/upstreamMappers.test.ts"
+      ],
+      "smokeScope": {
+        "kind": "client-smoke",
+        "ids": [
+          "admin-control-center"
+        ]
+      },
+      "enforceRecoverySlices": true,
+      "recoverySlices": [
+        {
+          "id": "admin-overview-dashboard",
+          "goal": "Protect overview queues, fallback merge, export, and cache behavior as a recoverable slice.",
+          "ownedGlobs": [
+            "app/api/admin/dashboard/overview/**",
+            "features/admin/lib/buildAdminControlCenterModel.ts",
+            "features/admin/lib/control-center-model/overview*.ts",
+            "features/admin/sections/overview/**",
+            "server/admin/overviewPolicyOverlay.ts",
+            "server/admin/overviewPolicyOverlay.test.ts",
+            "server/admin/overviewRouteCache.ts",
+            "server/admin/overviewRouteCache.test.ts"
+          ],
+          "reverseSpecPath": "docs/reverse-specs/admin-overview-dashboard-reverse-spec.md",
+          "status": "done",
+          "criticalInvariants": [
+            "Remote overview data merges with fallback model per section instead of all-or-nothing replacement.",
+            "Overview export reflects the currently normalized and sorted client-visible rows.",
+            "Session cache can seed first paint and refresh in place without leaving the overview shell."
+          ],
+          "targetedChecks": [
+            "npm run test:client:smoke -- admin-control-center"
+          ]
+        },
+        {
+          "id": "admin-analytics-dashboard",
+          "goal": "Protect analytics summary/detail loading, basis-month switching, and export behavior as one recoverable slice.",
+          "ownedGlobs": [
+            "app/api/admin/dashboard/analytics/**",
+            "features/admin/lib/buildAdminControlCenterModel.ts",
+            "features/admin/lib/control-center-model/analytics*.ts",
+            "features/admin/sections/analytics/**",
+            "server/admin/analyticsSnapshot.ts"
+          ],
+          "reverseSpecPath": "docs/reverse-specs/admin-analytics-dashboard-reverse-spec.md",
+          "status": "done",
+          "criticalInvariants": [
+            "Summary and month-detail requests stay independently cached and basis-month changes do not force a summary refetch.",
+            "Analytics keeps the last visible dataset rendered while a compatible refresh is in flight.",
+            "Export uses the normalized analytics model rather than raw server payload fragments."
+          ],
+          "targetedChecks": [
+            "npm run test:client:smoke -- admin-control-center"
+          ]
+        },
+        {
+          "id": "admin-photo-admin-flow",
+          "goal": "Protect the admin photo section as a recoverable slice on top of the shared photo album and download/upload path.",
+          "ownedGlobs": [
+            "app/api/photos/**",
+            "features/admin/sections/photos/**",
+            "features/photos/components/**",
+            "lib/photos/**",
+            "server/photos/**"
+          ],
+          "reverseSpecPath": "docs/reverse-specs/admin-photo-admin-flow-reverse-spec.md",
+          "status": "done",
+          "criticalInvariants": [
+            "Admin photo section passes admin mode and route-derived context into the shared photo album panel.",
+            "Album upload, preview, and multi-download continue to use the shared photo API routes.",
+            "Round and site context survive the admin wrapper so the same photo records stay reusable in reports."
+          ],
+          "targetedChecks": [
+            "npm run test:client:smoke -- admin-control-center"
+          ]
+        }
+      ],
+      "smokeSpec": {
+        "runnerImportPath": "tests/client/admin/admin-control-center.spec.ts",
+        "runnerExportName": "runAdminControlCenterSmoke",
+        "primaryDocPath": "tests/client/contracts/smoke-specs/admin/admin-control-center.md",
+        "relatedDocPaths": [
+          "tests/client/admin/analytics-employee-monthly-only.md",
+          "tests/client/admin/analytics-month-detail-client-route-fix.md",
+          "tests/client/admin/admin-read-paths-and-cache-roles.md",
+          "tests/client/admin/admin-photo-album-mutation-capabilities.md",
+          "tests/client/admin/admin-overview-report-navigation.md"
+        ]
+      }
+    },
+    "admin-headquarters": {
+      "scope": "admin",
+      "ownedGlobs": [
+        "app/api/admin/headquarters/**",
+        "features/admin/sections/headquarters/**"
+      ],
+      "smokeScope": {
+        "kind": "client-smoke",
+        "ids": [
+          "admin-headquarters"
+        ]
+      },
+      "enforceRecoverySlices": false,
+      "recoverySlices": [],
+      "smokeSpec": {
+        "runnerImportPath": "tests/client/admin/admin-headquarters.spec.ts",
+        "runnerExportName": "runAdminHeadquartersSmoke",
+        "primaryDocPath": "tests/client/contracts/smoke-specs/admin/admin-headquarters.md",
+        "relatedDocPaths": [
+          "tests/client/admin/admin-headquarters-site-drilldown-main-only.md",
+          "tests/client/admin/admin-headquarters-site-header-navigation.md",
+          "tests/client/admin/admin-headquarters-write-response-regression.md",
+          "tests/client/admin/admin-headquarters-site-context-restore.md",
+          "tests/client/admin/admin-headquarters-list-order-and-count.md"
+        ]
+      }
+    },
+    "admin-reports": {
+      "scope": "admin",
+      "ownedGlobs": [
+        "app/admin/report-open/**",
+        "app/api/admin/reports/**",
+        "data/legacy-admin-reports.snapshot.jsonl",
+        "features/admin/sections/reports/**",
+        "server/admin/legacyAdminReportsSnapshot.ts",
+        "server/admin/legacyAdminReportsSnapshot.test.ts",
+        "server/admin/reportsRouteCache.ts",
+        "server/admin/reportsRouteCache.test.ts"
+      ],
+      "smokeScope": {
+        "kind": "client-smoke",
+        "ids": [
+          "admin-reports"
+        ]
+      },
+      "enforceRecoverySlices": false,
+      "recoverySlices": [],
+      "smokeSpec": {
+        "runnerImportPath": "tests/client/admin/admin-reports.spec.ts",
+        "runnerExportName": "runAdminReportsSmoke",
+        "primaryDocPath": "tests/client/contracts/smoke-specs/admin/admin-reports.md",
+        "relatedDocPaths": [
+          "tests/client/admin/admin-reports-malformed-row-guard.md",
+          "tests/client/admin/admin-original-pdf-asset-fallback.md",
+          "tests/client/admin/admin-report-open-and-list-typography.md",
+          "tests/client/admin/admin-overview-dispatch-technical-guidance-split.md",
+          "tests/client/admin/overview-dispatch-quarter-scope-proof.md"
+        ]
+      }
+    },
+    "admin-sites": {
+      "scope": "admin",
+      "ownedGlobs": [
+        "app/api/admin/sites/list/**",
+        "app/api/admin/sites/[siteId]/route.ts",
+        "features/admin/sections/excelImport/**",
+        "features/admin/sections/sites/**"
+      ],
+      "smokeScope": {
+        "kind": "client-smoke",
+        "ids": [
+          "admin-sites"
+        ]
+      },
+      "enforceRecoverySlices": false,
+      "recoverySlices": [],
+      "smokeSpec": {
+        "runnerImportPath": "tests/client/admin/admin-sites.spec.ts",
+        "runnerExportName": "runAdminSitesSmoke",
+        "primaryDocPath": "tests/client/contracts/smoke-specs/admin/admin-sites.md",
+        "relatedDocPaths": [
+          "tests/client/admin/admin-sites-form-trim-and-first-assignment-modal.md",
+          "tests/client/admin/admin-site-entry-hub-site-management-panel.md"
+        ]
+      }
+    },
+    "admin-schedules": {
+      "scope": "admin",
+      "ownedGlobs": [
+        "app/api/admin/schedules/**",
+        "app/api/admin/sites/[siteId]/schedules/generate/**",
+        "features/admin/sections/AdminSectionShared.module.css",
+        "features/admin/sections/schedules/**",
+        "server/admin/automation.ts",
+        "server/admin/automation.test.ts",
+        "server/admin/scheduleSnapshot.ts"
+      ],
+      "smokeScope": {
+        "kind": "client-smoke",
+        "ids": [
+          "admin-schedules"
+        ]
+      },
+      "enforceRecoverySlices": false,
+      "recoverySlices": [],
+      "smokeSpec": {
+        "runnerImportPath": "tests/client/admin/admin-schedules.spec.ts",
+        "runnerExportName": "runAdminSchedulesSmoke",
+        "primaryDocPath": "tests/client/contracts/smoke-specs/admin/admin-schedules.md",
+        "relatedDocPaths": [
+          "tests/client/admin/worker-calendar-admin-proof.md",
+          "tests/client/admin/worker-schedule-report-linking.proof.md"
+        ]
+      }
+    },
+    "admin-users": {
+      "scope": "admin",
+      "ownedGlobs": [
+        "app/api/admin/users/**",
+        "features/admin/sections/users/**"
+      ],
+      "smokeScope": {
+        "kind": "client-smoke",
+        "ids": [
+          "admin-users"
+        ]
+      },
+      "enforceRecoverySlices": false,
+      "recoverySlices": [],
+      "smokeSpec": {
+        "runnerImportPath": "tests/client/admin/admin-users.spec.ts",
+        "runnerExportName": "runAdminUsersSmoke",
+        "primaryDocPath": "tests/client/contracts/smoke-specs/admin/admin-users.md",
+        "relatedDocPaths": [
+          "tests/client/admin/admin-users-schedules-photo-download.proof.md"
+        ]
+      }
+    },
+    "auth": {
+      "scope": "erp",
+      "ownedGlobs": [
+        "app/page.tsx",
+        "components/auth/**",
+        "hooks/inspectionSessions/sync.ts",
+        "hooks/inspectionSessions/useInspectionSessionAuthSync.ts",
+        "hooks/useInspectionSessions.tsx",
+        "lib/auth/loginCredentialsStorage.ts"
+      ],
+      "smokeScope": {
+        "kind": "client-smoke",
+        "ids": [
+          "auth"
+        ]
+      },
+      "enforceRecoverySlices": false,
+      "recoverySlices": [],
+      "smokeSpec": {
+        "runnerImportPath": "tests/client/erp/auth.spec.ts",
+        "runnerExportName": "runAuthSmoke",
+        "primaryDocPath": "tests/client/contracts/smoke-specs/erp/auth.md",
+        "relatedDocPaths": []
+      }
+    },
+    "worker-calendar": {
+      "scope": "erp",
+      "ownedGlobs": [
+        "app/api/me/schedules/**",
+        "app/calendar/**",
+        "features/calendar/**",
+        "lib/calendar/apiClient.ts"
+      ],
+      "smokeScope": {
+        "kind": "client-smoke",
+        "ids": [
+          "worker-calendar"
+        ]
+      },
+      "enforceRecoverySlices": false,
+      "recoverySlices": [],
+      "smokeSpec": {
+        "runnerImportPath": "tests/client/erp/worker-calendar.spec.ts",
+        "runnerExportName": "runWorkerCalendarSmoke",
+        "primaryDocPath": "tests/client/contracts/smoke-specs/erp/worker-calendar.md",
+        "relatedDocPaths": [
+          "tests/client/admin/worker-calendar-admin-proof.md"
+        ]
+      }
+    },
+    "bad-workplace-report": {
+      "scope": "erp",
+      "ownedGlobs": [
+        "app/sites/[siteKey]/bad-workplace/[reportMonth]/**",
+        "features/site-reports/bad-workplace/**"
+      ],
+      "smokeScope": {
+        "kind": "client-smoke",
+        "ids": [
+          "bad-workplace-report"
+        ]
+      },
+      "enforceRecoverySlices": false,
+      "recoverySlices": [],
+      "smokeSpec": {
+        "runnerImportPath": "tests/client/erp/bad-workplace-report.spec.ts",
+        "runnerExportName": "runBadWorkplaceReportSmoke",
+        "primaryDocPath": "tests/client/contracts/smoke-specs/erp/bad-workplace-report.md",
+        "relatedDocPaths": []
+      }
+    },
+    "mobile-bad-workplace": {
+      "scope": "erp",
+      "ownedGlobs": [
+        "features/mobile/bad-workplace/**",
+        "features/mobile/components/MobileBadWorkplaceReportScreen.tsx"
+      ],
+      "smokeScope": {
+        "kind": "client-smoke",
+        "ids": [
+          "mobile-bad-workplace"
+        ]
+      },
+      "enforceRecoverySlices": false,
+      "recoverySlices": [],
+      "smokeSpec": {
+        "runnerImportPath": "tests/client/erp/mobile-bad-workplace.spec.ts",
+        "runnerExportName": "runMobileBadWorkplaceSmoke",
+        "primaryDocPath": "tests/client/contracts/smoke-specs/erp/mobile-bad-workplace.md",
+        "relatedDocPaths": []
+      }
+    },
+    "site-report-list": {
+      "scope": "erp",
+      "ownedGlobs": [
+        "app/sites/[siteKey]/page.module.css",
+        "app/sites/[siteKey]/page.tsx",
+        "hooks/useInspectionSessions.tsx",
+        "features/site-reports/components/ReportList.tsx",
+        "features/site-reports/components/SiteReportListPanel.tsx",
+        "features/site-reports/components/SiteReportsScreen.module.css",
+        "features/site-reports/components/SiteReportsScreen.tsx",
+        "features/site-reports/hooks/useResolvedSiteRoute.ts",
+        "features/site-reports/hooks/useSiteReportsScreen.ts",
+        "features/site-reports/hooks/useSiteReportListState.ts",
+        "features/site-reports/report-list/**"
+      ],
+      "smokeScope": {
+        "kind": "client-smoke",
+        "ids": [
+          "site-report-list"
+        ]
+      },
+      "enforceRecoverySlices": true,
+      "recoverySlices": [
+        {
+          "id": "site-report-index",
+          "goal": "Protect shared technical-guidance report index loading, filtering, and list rendering as a recoverable slice.",
+          "ownedGlobs": [
+            "hooks/useInspectionSessions.tsx",
+            "features/mobile/components/MobileSiteReportsScreen.tsx",
+            "features/mobile/report-list/**",
+            "features/site-reports/components/SiteReportListPanel.tsx",
+            "features/site-reports/hooks/useSiteReportListState.ts",
+            "features/site-reports/report-list/ReportListEmptyState.tsx",
+            "features/site-reports/report-list/ReportListRow.tsx",
+            "features/site-reports/report-list/SiteReportListToolbar.tsx",
+            "features/site-reports/report-list/reportListHelpers.ts",
+            "features/site-reports/report-list/types.ts",
+            "features/site-reports/report-list/useSiteReportIndexLoader.ts"
+          ],
+          "reverseSpecPath": "docs/reverse-specs/site-report-index-reverse-spec.md",
+          "status": "done",
+          "criticalInvariants": [
+            "Site report index loads exactly once per site until an error or explicit force reload resets the attempt gate.",
+            "Web and mobile list shells render over the same filtered report-index model.",
+            "Search, sort, and dispatch filters stay local list transforms over the shared report index."
+          ],
+          "targetedChecks": [
+            "npm run test:client:smoke -- site-report-list"
+          ]
+        },
+        {
+          "id": "tech-guidance-create-dialog",
+          "goal": "Protect technical-guidance create dialog behavior, validation, seed usage, and immediate navigation as a recoverable slice.",
+          "ownedGlobs": [
+            "features/site-reports/report-list/SiteReportCreateDialog.tsx",
+            "features/site-reports/report-list/useSiteReportCreateDialog.ts"
+          ],
+          "reverseSpecPath": "docs/reverse-specs/tech-guidance-create-dialog-reverse-spec.md",
+          "status": "done",
+          "criticalInvariants": [
+            "Create dialog auto-suggests date and title until the user manually edits the title.",
+            "Creation is blocked until both report date and report title are present.",
+            "Successful creation closes the dialog and routes directly into the new report."
+          ],
+          "targetedChecks": [
+            "npm run test:client:smoke -- site-report-list"
+          ]
+        }
+      ],
+      "smokeSpec": {
+        "runnerImportPath": "tests/client/erp/site-report-list.spec.ts",
+        "runnerExportName": "runSiteReportListSmoke",
+        "primaryDocPath": "tests/client/contracts/smoke-specs/erp/site-report-list.md",
+        "relatedDocPaths": [
+          "tests/client/erp/site-report-route-fallback.md",
+          "tests/client/erp/worker-site-report-summary-alignment.md"
+        ]
+      }
+    },
+    "mobile-site-home": {
+      "scope": "erp",
+      "ownedGlobs": [
+        "features/mobile/components/MobileSiteHomeScreen.tsx",
+        "features/mobile/components/MobileSitePhotoAlbumScreen.tsx",
+        "features/mobile/site-home/**"
+      ],
+      "smokeScope": {
+        "kind": "client-smoke",
+        "ids": [
+          "mobile-site-home"
+        ]
+      },
+      "enforceRecoverySlices": false,
+      "recoverySlices": [],
+      "smokeSpec": {
+        "runnerImportPath": "tests/client/erp/mobile-site-home.spec.ts",
+        "runnerExportName": "runMobileSiteHomeSmoke",
+        "primaryDocPath": "tests/client/contracts/smoke-specs/erp/mobile-site-home.md",
+        "relatedDocPaths": [
+          "tests/client/erp/site-entry-hub-site-management-panel.md",
+          "tests/client/erp/worker-header-without-notifications.md"
+        ]
+      }
+    },
+    "mobile-worker-nav": {
+      "scope": "erp",
+      "ownedGlobs": [
+        "features/mobile/components/MobileMailboxScreen.tsx",
+        "features/mobile/components/MobileSiteListScreen.tsx",
+        "features/mobile/components/MobileWorkerCalendarScreen.tsx",
+        "features/mobile/site-list/**"
+      ],
+      "smokeScope": {
+        "kind": "client-smoke",
+        "ids": [
+          "mobile-worker-nav"
+        ]
+      },
+      "enforceRecoverySlices": false,
+      "recoverySlices": [],
+      "smokeSpec": {
+        "runnerImportPath": "tests/client/erp/mobile-worker-nav.spec.ts",
+        "runnerExportName": "runMobileWorkerNavSmoke",
+        "primaryDocPath": "tests/client/contracts/smoke-specs/erp/mobile-worker-nav.md",
+        "relatedDocPaths": [
+          "tests/client/erp/worker-header-without-notifications.md"
+        ]
+      }
+    },
+    "mobile-site-reports": {
+      "scope": "erp",
+      "ownedGlobs": [
+        "features/mobile/components/MobileSiteReportsScreen.tsx",
+        "features/mobile/report-list/**"
+      ],
+      "smokeScope": {
+        "kind": "client-smoke",
+        "ids": [
+          "mobile-site-reports"
+        ]
+      },
+      "enforceRecoverySlices": false,
+      "recoverySlices": [],
+      "smokeSpec": {
+        "runnerImportPath": "tests/client/erp/mobile-site-reports.spec.ts",
+        "runnerExportName": "runMobileSiteReportsSmoke",
+        "primaryDocPath": "tests/client/contracts/smoke-specs/erp/mobile-site-reports.md",
+        "relatedDocPaths": [
+          "tests/client/erp/site-report-route-fallback.md",
+          "tests/client/erp/worker-site-report-summary-alignment.md"
+        ]
+      }
+    },
+    "mobile-quarterly-list": {
+      "scope": "erp",
+      "ownedGlobs": [
+        "features/mobile/components/MobileSiteQuarterlyReportsScreen.tsx",
+        "features/mobile/quarterly-list/**"
+      ],
+      "smokeScope": {
+        "kind": "client-smoke",
+        "ids": [
+          "mobile-quarterly-list"
+        ]
+      },
+      "enforceRecoverySlices": false,
+      "recoverySlices": [],
+      "smokeSpec": {
+        "runnerImportPath": "tests/client/erp/mobile-quarterly-list.spec.ts",
+        "runnerExportName": "runMobileQuarterlyListSmoke",
+        "primaryDocPath": "tests/client/contracts/smoke-specs/erp/mobile-quarterly-list.md",
+        "relatedDocPaths": [
+          "tests/client/erp/site-snapshot-resolution-and-quarterly-appendix.md"
+        ]
+      }
+    },
+    "mobile-quarterly-report": {
+      "scope": "erp",
+      "ownedGlobs": [
+        "features/mobile/components/MobileQuarterlyReportScreen.tsx",
+        "features/mobile/quarterly-report/**"
+      ],
+      "smokeScope": {
+        "kind": "client-smoke",
+        "ids": [
+          "mobile-quarterly-report"
+        ]
+      },
+      "enforceRecoverySlices": false,
+      "recoverySlices": [],
+      "smokeSpec": {
+        "runnerImportPath": "tests/client/erp/mobile-quarterly-report.spec.ts",
+        "runnerExportName": "runMobileQuarterlyReportSmoke",
+        "primaryDocPath": "tests/client/contracts/smoke-specs/erp/mobile-quarterly-report.md",
+        "relatedDocPaths": [
+          "tests/client/erp/quarterly-export-ops-image-and-risk-reflow.md",
+          "tests/client/erp/site-snapshot-resolution-and-quarterly-appendix.md"
+        ]
+      }
+    },
+    "mobile-link": {
+      "scope": "erp",
+      "ownedGlobs": [
+        "app/mobile/sessions/**",
+        "features/inspection-session/**",
+        "features/mobile/components/MobileInspectionSessionScreen.tsx",
+        "features/mobile/inspection-session/**",
+        "hooks/inspectionSessions/**",
+        "hooks/useInspectionSessions.tsx"
+      ],
+      "smokeScope": {
+        "kind": "client-smoke",
+        "ids": [
+          "mobile-link"
+        ]
+      },
+      "enforceRecoverySlices": true,
+      "recoverySlices": [
+        {
+          "id": "mobile-link-session-shell",
+          "goal": "Protect the direct mobile inspection-session shell, step orchestration, and shared-controller bridge as one recoverable slice.",
+          "ownedGlobs": [
+            "app/mobile/sessions/**",
+            "features/mobile/components/MobileInspectionSessionScreen.tsx",
+            "features/mobile/inspection-session/MobileInspectionSessionDoc2ProcessModal.tsx",
+            "features/mobile/inspection-session/MobileInspectionSessionDocumentInfoModal.tsx",
+            "features/mobile/inspection-session/MobileInspectionSessionModals.tsx",
+            "features/mobile/inspection-session/MobileInspectionSessionPhotoAlbumModal.tsx",
+            "features/mobile/inspection-session/MobileInspectionSessionPhotoSourceModal.tsx",
+            "features/mobile/inspection-session/MobileInspectionSessionStandaloneState.tsx",
+            "features/mobile/inspection-session/MobileInspectionSessionStateGate.tsx",
+            "features/mobile/inspection-session/MobileInspectionSessionStepPanels.tsx",
+            "features/mobile/inspection-session/MobileInspectionSessionSummaryBar.tsx",
+            "features/mobile/inspection-session/MobileInspectionSessionWorkspace.tsx",
+            "features/mobile/inspection-session/mobileInspectionSessionHelpers.ts",
+            "features/mobile/inspection-session/useMobileInspectionAiActions.ts",
+            "features/mobile/inspection-session/useMobileInspectionDirectSignature.ts",
+            "features/mobile/inspection-session/useMobileInspectionDoc2Process.ts",
+            "features/mobile/inspection-session/useMobileInspectionMeasurementActions.ts",
+            "features/mobile/inspection-session/useMobileInspectionPhotoPicker.ts",
+            "features/mobile/inspection-session/useMobileInspectionScenePlanActions.ts",
+            "hooks/inspectionSessions/**",
+            "hooks/useInspectionSessions.tsx"
+          ],
+          "reverseSpecPath": "docs/reverse-specs/mobile-inspection-session-shell-reverse-spec.md",
+          "status": "done",
+          "criticalInvariants": [
+            "Mobile shell remains a presentation layer over the shared inspection-session controller instead of a separate data model.",
+            "State gating preserves the distinction between displaySession and fully hydrated sectionSession.",
+            "Save and export actions continue to bridge into shared save and document-generation behavior."
+          ],
+          "targetedChecks": [
+            "npm run test:client:smoke -- mobile-link"
+          ]
+        },
+        {
+          "id": "mobile-inspection-step7-doc7",
+          "goal": "Protect mobile step 7 document editing and its doc7 finding-card behaviors as a recoverable slice.",
+          "ownedGlobs": [
+            "features/mobile/inspection-session/MobileInspectionSessionStep7.tsx",
+            "features/mobile/inspection-session/MobileInspectionSessionStep7FindingCard.tsx"
+          ],
+          "reverseSpecPath": "docs/reverse-specs/mobile-inspection-step7-doc7-reverse-spec.md",
+          "status": "done",
+          "criticalInvariants": [
+            "Step 7 keeps one-card-per-finding editing with local validation and shared document update wiring.",
+            "Step 7 continues to preserve mobile-specific controls without forking the underlying finding payload shape.",
+            "Finding add/remove/edit interactions stay scoped to the active session draft rather than ad hoc local copies."
+          ],
+          "targetedChecks": [
+            "npm run test:client:smoke -- mobile-link"
+          ]
+        }
+      ],
+      "smokeSpec": {
+        "runnerImportPath": "tests/client/erp/mobile-link.spec.ts",
+        "runnerExportName": "runMobileLinkSmoke",
+        "primaryDocPath": "tests/client/contracts/smoke-specs/erp/mobile-link.md",
+        "relatedDocPaths": []
+      }
+    },
+    "quarterly-report": {
+      "scope": "erp",
+      "ownedGlobs": [
+        "app/sites/[siteKey]/quarterly/**",
+        "features/site-reports/components/SiteQuarterlyReportsScreen.tsx",
+        "features/site-reports/quarterly-list/**",
+        "features/site-reports/quarterly-report/**",
+        "hooks/useInspectionSessions.tsx"
+      ],
+      "smokeScope": {
+        "kind": "client-smoke",
+        "ids": [
+          "quarterly-report"
+        ]
+      },
+      "enforceRecoverySlices": true,
+      "recoverySlices": [
+        {
+          "id": "quarterly-list-create",
+          "goal": "Protect quarterly list/create flow, period defaults, and seed fallback before the editor opens.",
+          "ownedGlobs": [
+            "features/mobile/components/MobileSiteQuarterlyReportsScreen.tsx",
+            "features/mobile/quarterly-list/**",
+            "features/site-reports/components/SiteQuarterlyReportsScreen.tsx",
+            "features/site-reports/quarterly-list/**"
+          ],
+          "reverseSpecPath": "docs/reverse-specs/quarterly-report-list-create-reverse-spec.md",
+          "status": "done",
+          "criticalInvariants": [
+            "Quarterly create dialog blocks invalid or incomplete ranges before attempting generation.",
+            "Create flow uses upstream seed first and falls back to local seed only for approved upstream failures.",
+            "Successful creation closes the dialog and routes directly into the newly created quarterly draft."
+          ],
+          "targetedChecks": [
+            "npm run test:client:smoke -- quarterly-report"
+          ]
+        },
+        {
+          "id": "quarterly-editor-source-sync",
+          "goal": "Protect quarterly editor hydration, source-report selection, and recalculation behavior as a recoverable slice.",
+          "ownedGlobs": [
+            "hooks/useInspectionSessions.tsx",
+            "features/mobile/components/MobileQuarterlyReportScreen.tsx",
+            "features/mobile/quarterly-report/useMobileQuarterlyReportScreenState.ts",
+            "features/site-reports/quarterly-report/QuarterlyReportEditor.tsx",
+            "features/site-reports/quarterly-report/QuarterlyReportPageScreen.tsx",
+            "features/site-reports/quarterly-report/QuarterlySourceSelectionModal.tsx",
+            "features/site-reports/quarterly-report/QuarterlySourceSelectionSection.tsx",
+            "features/site-reports/quarterly-report/quarterlyReportHelpers.ts",
+            "features/site-reports/quarterly-report/quarterlyReportStateHelpers.ts",
+            "features/site-reports/quarterly-report/quarterlySourceSyncHelpers.ts",
+            "features/site-reports/quarterly-report/types.ts",
+            "features/site-reports/quarterly-report/useQuarterlyReportEditor.ts",
+            "features/site-reports/quarterly-report/useQuarterlyReportPageState.ts",
+            "features/site-reports/quarterly-report/useQuarterlySourceSync.ts"
+          ],
+          "reverseSpecPath": "docs/reverse-specs/quarterly-editor-source-sync-reverse-spec.md",
+          "status": "done",
+          "criticalInvariants": [
+            "404 report lookup creates a recoverable draft instead of blocking the page.",
+            "Changing quarter or source selection regenerates derived summary content through seed application rather than piecemeal mutation.",
+            "Source-report loading preserves optimistic UI only when the period remains valid and rolls back on failed recalculation."
+          ],
+          "targetedChecks": [
+            "npm run test:client:smoke -- quarterly-report"
+          ]
+        },
+        {
+          "id": "quarterly-export-and-pdf-reuse",
+          "goal": "Protect quarterly document export, persist-before-export behavior, and PDF fallback/reuse expectations.",
+          "ownedGlobs": [
+            "app/api/documents/quarterly/**",
+            "features/site-reports/quarterly-report/useQuarterlyAutosave.ts",
+            "features/site-reports/quarterly-report/useQuarterlyDocumentActions.ts",
+            "lib/api.ts"
+          ],
+          "reverseSpecPath": "docs/reverse-specs/quarterly-export-and-pdf-reuse-reverse-spec.md",
+          "status": "done",
+          "criticalInvariants": [
+            "Quarterly export persists a fresh updatedAt timestamp before generating HWPX or PDF.",
+            "PDF download can fall back to HWPX without losing the user-visible completion path.",
+            "Autosave and export coordination avoids overlapping save/export mutations against the same draft fingerprint."
+          ],
+          "targetedChecks": [
+            "npm run test:client:smoke -- quarterly-report"
+          ]
+        }
+      ],
+      "smokeSpec": {
+        "runnerImportPath": "tests/client/erp/quarterly-report.spec.ts",
+        "runnerExportName": "runQuarterlyReportSmoke",
+        "primaryDocPath": "tests/client/contracts/smoke-specs/erp/quarterly-report.md",
+        "relatedDocPaths": [
+          "tests/client/erp/quarterly-export-ops-image-and-risk-reflow.md",
+          "tests/client/erp/site-snapshot-resolution-and-quarterly-appendix.md"
+        ]
+      }
+    },
+    "site-hub": {
+      "scope": "erp",
+      "ownedGlobs": [
+        "app/sites/[siteKey]/entry/page.tsx",
+        "app/sites/[siteKey]/photos/page.tsx",
+        "components/worker/**",
+        "features/home/**"
+      ],
+      "smokeScope": {
+        "kind": "client-smoke",
+        "ids": [
+          "site-hub"
+        ]
+      },
+      "enforceRecoverySlices": false,
+      "recoverySlices": [],
+      "smokeSpec": {
+        "runnerImportPath": "tests/client/erp/site-hub.spec.ts",
+        "runnerExportName": "runSiteHubSmoke",
+        "primaryDocPath": "tests/client/contracts/smoke-specs/erp/site-hub.md",
+        "relatedDocPaths": [
+          "tests/client/erp/site-entry-hub-site-management-panel.md",
+          "tests/client/erp/admin-site-menu-context-restore.md"
+        ]
+      }
+    }
+  }
+}

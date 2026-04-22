@@ -1,15 +1,21 @@
 import { NextResponse } from 'next/server';
-import { buildControllerReportRows } from '@/lib/admin/controllerReports';
-import { asMapperRecord } from '@/lib/safetyApiMappers/utils';
+import { isVisibleReport } from '@/lib/admin/lifecycleStatus';
 import { getAdminDirectorySnapshot } from '@/server/admin/adminDirectorySnapshot';
 import {
-  fetchAdminReports,
+  buildLegacyAdminReportRows,
+  getLegacyAdminReportsSnapshot,
+} from '@/server/admin/legacyAdminReportsSnapshot';
+import {
+  fetchAdminReportsViewServer,
   readRequiredAdminToken,
   SafetyServerApiError,
 } from '@/server/admin/safetyApiServer';
-import { readOrCreateAdminReportsRouteResponse } from '@/server/admin/reportsRouteCache';
+import {
+  readOrCreateAdminReportsRouteResponse,
+  readOrCreateAdminReportsRowsSnapshot,
+} from '@/server/admin/reportsRouteCache';
+import { mapBackendAdminReportRow } from '@/server/admin/upstreamMappers';
 import type { ControllerReportRow, SafetyAdminReportsResponse } from '@/types/admin';
-import type { SafetyReportListItem } from '@/types/backend';
 import legacyReportOriginalPdfs from '@/data/legacy-admin-report-original-pdfs.json';
 
 export const runtime = 'nodejs';
@@ -143,7 +149,7 @@ async function buildReportsRoutePayload(
   request: Request,
 ): Promise<SafetyAdminReportsResponse> {
   const url = new URL(request.url);
-  const limit = Math.max(1, Math.min(200, Number(url.searchParams.get('limit') || '100')));
+  const limit = Math.max(1, Math.min(200, Number(url.searchParams.get('limit') || '20')));
   const offset = Math.max(0, Number(url.searchParams.get('offset') || '0'));
   const sortBy = normalizeText(url.searchParams.get('sort_by') || 'updatedAt') || 'updatedAt';
   const sortDir = normalizeSortDirection(normalizeText(url.searchParams.get('sort_dir') || 'desc'));
@@ -160,17 +166,8 @@ async function buildReportsRoutePayload(
     status: normalizeText(url.searchParams.get('status')),
   };
 
-  const [directorySnapshot, reports] = await Promise.all([
-    getAdminDirectorySnapshot(token, request),
-    fetchAdminReports(token, request),
-  ]);
-  const reportsWithOriginalPdf = reports.map((report) =>
-    mergeLegacyOriginalPdfMeta(report, legacyPdfManifest.get(report.report_key) ?? null),
-  );
-  const rows = buildControllerReportRows(
-    reportsWithOriginalPdf,
-    directorySnapshot.data.sites,
-    directorySnapshot.data.users,
+  const rows = (
+    await readOrCreateAdminReportsRowsSnapshot(request, () => buildReportsRowsSnapshot(token, request))
   )
     .filter((row) => matchesReportRow(row, filters))
     .sort((left, right) => compareReportRows(left, right, sortBy, sortDir));
@@ -183,42 +180,61 @@ async function buildReportsRoutePayload(
   };
 }
 
-function mergeLegacyOriginalPdfMeta(
-  report: SafetyReportListItem,
-  manifestEntry: LegacyReportPdfEntry | null,
-): SafetyReportListItem {
+async function buildReportsRowsSnapshot(token: string, request: Request) {
+  const [directorySnapshot, legacyReports, currentRows] = await Promise.all([
+    getAdminDirectorySnapshot(token, request),
+    getLegacyAdminReportsSnapshot(),
+    fetchCurrentAdminReportRows(token, request),
+  ]);
+  const currentRowKeys = new Set(currentRows.map((row) => row.reportKey));
+  const legacyRows = buildLegacyAdminReportRows({
+    legacyRows: legacyReports,
+    pdfManifest: legacyPdfManifest,
+    sites: directorySnapshot.data.sites,
+    users: directorySnapshot.data.users,
+  }).filter((row) => !currentRowKeys.has(row.reportKey));
+
+  return [...currentRows, ...legacyRows];
+}
+
+async function fetchCurrentAdminReportRows(token: string, request: Request) {
+  const rows: ControllerReportRow[] = [];
+  let offset = 0;
+
+  while (true) {
+    const response = await fetchAdminReportsViewServer(
+      token,
+      {
+        limit: 200,
+        offset,
+      },
+      request,
+    );
+    const mappedRows = response.rows
+      .map((row) => applyLegacyOriginalPdfMeta(mapBackendAdminReportRow(row)))
+      .filter((row) => row.reportKey)
+      .filter((row) => isVisibleReport(row));
+    rows.push(...mappedRows);
+
+    offset += response.rows.length;
+    if (offset >= response.total || response.rows.length < response.limit) {
+      return rows;
+    }
+  }
+}
+
+function applyLegacyOriginalPdfMeta(row: ControllerReportRow): ControllerReportRow {
+  const manifestEntry = legacyPdfManifest.get(row.reportKey) ?? null;
   if (!manifestEntry) {
-    return report;
+    return row;
   }
 
-  const meta = asMapperRecord(report.meta);
-  const archivePath =
-    normalizeText(meta.original_pdf_archive_path) ||
-    normalizeText(meta.originalPdfArchivePath) ||
-    manifestEntry.archivePath;
-  const fileName =
-    normalizeText(meta.original_pdf_filename) ||
-    normalizeText(meta.originalPdfFilename) ||
-    manifestEntry.fileName;
-
   return {
-    ...report,
-    meta: {
-      ...meta,
-      originalPdfArchivePath: archivePath,
-      originalPdfDownloadPath:
-        normalizeText(meta.originalPdfDownloadPath) ||
-        normalizeText(meta.original_pdf_download_path) ||
-        `/api/admin/reports/${encodeURIComponent(report.report_key)}/original-pdf`,
-      originalPdfFilename: fileName,
-      original_pdf_archive_path: archivePath,
-      original_pdf_available: true,
-      original_pdf_download_path:
-        normalizeText(meta.original_pdf_download_path) ||
-        normalizeText(meta.originalPdfDownloadPath) ||
-        `/api/admin/reports/${encodeURIComponent(report.report_key)}/original-pdf`,
-      original_pdf_filename: fileName,
-    },
+    ...row,
+    originalPdfAvailable: true,
+    originalPdfDownloadPath:
+      row.originalPdfDownloadPath ||
+      `/api/admin/reports/${encodeURIComponent(row.reportKey)}/original-pdf`,
   };
 }
 
