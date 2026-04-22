@@ -1,3 +1,7 @@
+import { generateInspectionHwpxBlob } from '@/lib/documents/inspection/hwpxClient';
+import { readSafetyAuthToken } from '@/lib/safetyApi';
+import { buildPublicSafetyApiUpstreamUrl } from '@/lib/safetyApi/upstream';
+import type { SafetyAdminReportSessionBootstrapResponse } from '@/types/admin';
 import type {
   GenerateBadWorkplaceHwpxRequest,
   GenerateQuarterlyHwpxRequest,
@@ -14,6 +18,7 @@ import type { InspectionSession, InspectionSite } from '@/types/inspectionSessio
 
 const API_BASE = '/api';
 const VERCEL_FUNCTION_BODY_LIMIT_MB = 4.5;
+const PDF_CONVERTER_TIMEOUT_MS = 180000;
 
 function formatBlobSizeMb(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
@@ -94,6 +99,142 @@ function buildInspectionDocumentHeaders(authToken?: string | null): HeadersInit 
   return headers;
 }
 
+function normalizeBaseUrl(value: string): string {
+  return value.replace(/\/+$/, '');
+}
+
+function isAbsoluteHttpUrl(value: string): boolean {
+  return /^https?:\/\//i.test(value);
+}
+
+function getPublicInspectionPdfConverterUrl(): string | null {
+  const dedicatedBaseUrl = process.env.NEXT_PUBLIC_INSPECTION_PDF_UPSTREAM_BASE_URL?.trim() || '';
+  if (dedicatedBaseUrl && isAbsoluteHttpUrl(dedicatedBaseUrl)) {
+    return new URL('documents/inspection/pdf', `${normalizeBaseUrl(dedicatedBaseUrl)}/`).toString();
+  }
+
+  return buildPublicSafetyApiUpstreamUrl('/documents/inspection/pdf');
+}
+
+function canUseDirectInspectionPdfConverter(converterUrl: string | null): boolean {
+  if (!converterUrl) {
+    return false;
+  }
+
+  try {
+    const targetUrl = new URL(converterUrl);
+    if (!/^https?:$/i.test(targetUrl.protocol)) {
+      return false;
+    }
+
+    if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
+      return targetUrl.protocol === 'https:';
+    }
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function getUsableDirectInspectionPdfConverterUrl(): string | null {
+  const converterUrl = getPublicInspectionPdfConverterUrl();
+  return canUseDirectInspectionPdfConverter(converterUrl) ? converterUrl : null;
+}
+
+function getDirectPdfAuthToken(authToken?: string | null): string | null {
+  const normalizedToken = authToken?.trim();
+  if (normalizedToken) {
+    return normalizedToken;
+  }
+
+  return readSafetyAuthToken()?.trim() || null;
+}
+
+async function convertHwpxBlobToPdfDirect(
+  converterUrl: string,
+  hwpxBlob: Blob,
+  hwpxFilename: string,
+  authToken: string,
+): Promise<{ blob: Blob; filename: string }> {
+  const formData = new FormData();
+  formData.append('file', hwpxBlob, hwpxFilename || 'inspection-report.hwpx');
+  formData.append('filename', hwpxFilename || 'inspection-report.hwpx');
+
+  const abortController = new AbortController();
+  const timeoutId = window.setTimeout(() => {
+    abortController.abort(new Error('Inspection PDF direct conversion timed out.'));
+  }, PDF_CONVERTER_TIMEOUT_MS);
+
+  let res: Response;
+  try {
+    res = await fetch(converterUrl, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${authToken}`,
+      },
+      body: formData,
+      cache: 'no-store',
+      signal: abortController.signal,
+    });
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+
+  if (!res.ok) {
+    const errorBody = await parseApiResponse(res);
+    const message =
+      typeof errorBody === 'object' && errorBody && 'detail' in errorBody
+        ? String(errorBody.detail)
+        : typeof errorBody === 'object' && errorBody && 'error' in errorBody
+          ? String(errorBody.error)
+          : res.statusText;
+
+    throw new Error(`PDF direct conversion failed (${res.status}): ${message}`);
+  }
+
+  return {
+    blob: await res.blob(),
+    filename: getDownloadFilenameFromDisposition(res.headers.get('content-disposition')),
+  };
+}
+
+async function fetchInspectionSessionBootstrapByReportKey(
+  reportKey: string,
+  authToken?: string | null,
+): Promise<SafetyAdminReportSessionBootstrapResponse> {
+  const res = await fetch(`/api/admin/reports/${encodeURIComponent(reportKey)}/session-bootstrap`, {
+    cache: 'no-store',
+    headers: buildInspectionDocumentHeaders(authToken),
+  });
+
+  if (!res.ok) {
+    const errorBody = await parseApiResponse(res);
+    const message =
+      typeof errorBody === 'object' && errorBody && 'error' in errorBody
+        ? String(errorBody.error)
+        : res.statusText;
+    throw new Error(`기술지도 세션 bootstrap 다운로드 실패 (${res.status}): ${message}`);
+  }
+
+  return (await res.json()) as SafetyAdminReportSessionBootstrapResponse;
+}
+
+async function tryDirectInspectionPdfByReportKey(
+  reportKey: string,
+  authToken?: string | null,
+): Promise<{ blob: Blob; filename: string }> {
+  const converterUrl = getUsableDirectInspectionPdfConverterUrl();
+  const token = getDirectPdfAuthToken(authToken);
+  if (!converterUrl || !token) {
+    throw new Error('Direct inspection PDF converter is not available.');
+  }
+
+  const bootstrap = await fetchInspectionSessionBootstrapByReportKey(reportKey, authToken);
+  const hwpx = await generateInspectionHwpxBlob(bootstrap.session, bootstrap.siteSessions);
+  return convertHwpxBlobToPdfDirect(converterUrl, hwpx.blob, hwpx.filename, token);
+}
+
 export interface PdfDocumentResult {
   blob: Blob;
   filename: string;
@@ -120,6 +261,25 @@ export async function convertHwpxBlobToPdf(
   hwpxBlob: Blob,
   hwpxFilename: string,
 ): Promise<{ blob: Blob; filename: string }> {
+  const directConverterUrl = getUsableDirectInspectionPdfConverterUrl();
+  const directAuthToken = getDirectPdfAuthToken();
+
+  if (directConverterUrl && directAuthToken) {
+    try {
+      return await convertHwpxBlobToPdfDirect(
+        directConverterUrl,
+        hwpxBlob,
+        hwpxFilename,
+        directAuthToken,
+      );
+    } catch (error) {
+      console.warn('Inspection PDF direct conversion failed; falling back to Vercel route.', {
+        error: error instanceof Error ? error.message : String(error),
+        filename: hwpxFilename,
+      });
+    }
+  }
+
   const formData = new FormData();
 
   formData.append('file', hwpxBlob, hwpxFilename || 'inspection-report.hwpx');
@@ -258,6 +418,16 @@ export async function fetchInspectionPdfDocumentByReportKeyWithFallback(
   reportKey: string,
   authToken?: string | null,
 ): Promise<PdfDocumentResult> {
+  try {
+    const directPdf = await tryDirectInspectionPdfByReportKey(reportKey, authToken);
+    return { ...directPdf, fallbackToHwpx: false };
+  } catch (directError) {
+    console.warn('Inspection PDF direct export failed; falling back to server generation.', {
+      error: directError instanceof Error ? directError.message : String(directError),
+      reportKey,
+    });
+  }
+
   try {
     const pdf = await fetchInspectionPdfDocumentByReportKey(reportKey, authToken);
     return { ...pdf, fallbackToHwpx: false };
