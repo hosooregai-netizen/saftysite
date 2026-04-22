@@ -101,34 +101,8 @@ function getDirectPhotoAssetUploadUrl(): string | null {
   return buildPublicSafetyApiUpstreamUrl('/photo-assets/upload');
 }
 
-function canUseDirectPhotoAssetUploadUrl(uploadUrl: string | null) {
-  if (!uploadUrl) {
-    return false;
-  }
-
-  try {
-    const targetUrl = new URL(uploadUrl);
-    if (!/^https?:$/i.test(targetUrl.protocol)) {
-      return false;
-    }
-
-    if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
-      return targetUrl.protocol === 'https:';
-    }
-
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function getUsableDirectPhotoAssetUploadUrl(): string | null {
-  const uploadUrl = getDirectPhotoAssetUploadUrl();
-  return canUseDirectPhotoAssetUploadUrl(uploadUrl) ? uploadUrl : null;
-}
-
 function usesPhotoProxyUpload() {
-  if (getUsableDirectPhotoAssetUploadUrl()) {
+  if (getDirectPhotoAssetUploadUrl()) {
     return false;
   }
 
@@ -219,7 +193,6 @@ async function invalidatePhotoAlbumRouteCacheClient(headers: Headers) {
 }
 
 async function uploadPhotoAlbumAssetDirect(
-  uploadUrl: string,
   headers: Headers,
   input: {
     file: File;
@@ -228,6 +201,11 @@ async function uploadPhotoAlbumAssetDirect(
     thumbnail?: File | null;
   },
 ) {
+  const uploadUrl = getDirectPhotoAssetUploadUrl();
+  if (!uploadUrl) {
+    throw new Error('직접 업로드용 사진 API 주소를 확인하지 못했습니다.');
+  }
+
   const body = new FormData();
   body.set(
     'file',
@@ -282,72 +260,6 @@ async function uploadPhotoAlbumAssetDirect(
   const item = mapUploadedPhotoAsset(payload);
   void invalidatePhotoAlbumRouteCacheClient(headers);
   return item;
-}
-
-function shouldFallbackPhotoUploadToProxy(
-  error: unknown,
-  input: {
-    file: File;
-    thumbnail?: File | null;
-  },
-) {
-  const uploadBytes =
-    input.file.size + (input.thumbnail instanceof File ? input.thumbnail.size : 0);
-  if (uploadBytes > MAX_PHOTO_PROXY_FILE_BYTES) {
-    return false;
-  }
-
-  if (error instanceof SafetyApiError) {
-    return error.status === 404 || error.status === 405;
-  }
-
-  return error instanceof Error;
-}
-
-async function uploadPhotoAlbumAssetProxy(
-  headers: Headers,
-  input: {
-    file: File;
-    roundNo: number;
-    siteId: string;
-    thumbnail?: File | null;
-  },
-) {
-  const body = new FormData();
-  body.set(
-    'file',
-    input.file,
-    sanitizeFileName(input.file.name || 'photo-original.jpg', 'photo-original.jpg'),
-  );
-  body.set('round_no', String(input.roundNo));
-  body.set('site_id', input.siteId);
-  if (input.thumbnail instanceof File && input.thumbnail.size > 0) {
-    body.set(
-      'thumbnail',
-      input.thumbnail,
-      sanitizeFileName(
-        input.thumbnail.name || 'photo-thumbnail.jpg',
-        'photo-thumbnail.jpg',
-      ),
-    );
-  }
-
-  const response = await fetch('/api/photos/upload', {
-    body,
-    headers,
-    method: 'POST',
-  });
-
-  if (!response.ok) {
-    throw new SafetyApiError(await parseErrorMessage(response), response.status);
-  }
-
-  const payload = (await response.json()) as { item?: PhotoAlbumItem | null };
-  if (!payload.item) {
-    throw new Error('업로드 결과 사진 정보를 확인하지 못했습니다.');
-  }
-
-  return payload.item;
 }
 
 function createAuthorizedHeaders(options?: { json?: boolean }) {
@@ -415,18 +327,46 @@ export async function uploadPhotoAlbumAsset(input: {
   }
 
   const headers = createAuthorizedHeaders();
-  const directUploadUrl = getUsableDirectPhotoAssetUploadUrl();
+  const directUploadUrl = getDirectPhotoAssetUploadUrl();
   if (directUploadUrl) {
-    try {
-      return await uploadPhotoAlbumAssetDirect(directUploadUrl, headers, input);
-    } catch (error) {
-      if (!shouldFallbackPhotoUploadToProxy(error, input)) {
-        throw error;
-      }
-    }
+    return uploadPhotoAlbumAssetDirect(headers, input);
   }
 
-  return uploadPhotoAlbumAssetProxy(headers, input);
+  const body = new FormData();
+  body.set(
+    'file',
+    input.file,
+    sanitizeFileName(input.file.name || 'photo-original.jpg', 'photo-original.jpg'),
+  );
+  body.set('round_no', String(input.roundNo));
+  body.set('site_id', input.siteId);
+  if (input.thumbnail instanceof File && input.thumbnail.size > 0) {
+    body.set(
+      'thumbnail',
+      input.thumbnail,
+      sanitizeFileName(
+        input.thumbnail.name || 'photo-thumbnail.jpg',
+        'photo-thumbnail.jpg',
+      ),
+    );
+  }
+
+  const response = await fetch('/api/photos/upload', {
+    body,
+    headers,
+    method: 'POST',
+  });
+
+  if (!response.ok) {
+    throw new SafetyApiError(await parseErrorMessage(response), response.status);
+  }
+
+  const payload = (await response.json()) as { item?: PhotoAlbumItem | null };
+  if (!payload.item) {
+    throw new Error('업로드 결과 사진 정보를 확인하지 못했습니다.');
+  }
+
+  return payload.item;
 }
 
 export async function downloadPhotoAlbumSelection(itemIds: string[]) {
