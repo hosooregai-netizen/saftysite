@@ -150,6 +150,12 @@ export function buildSafetyAdminUpstreamUrl(path: string) {
   return buildUpstreamUrl(path);
 }
 
+export function buildSafetyAdminPublicUrl(path: string) {
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  const upstreamUrl = new URL(getSafetyApiUpstreamBaseUrl());
+  return new URL(normalizedPath, `${upstreamUrl.origin}/`).toString();
+}
+
 function buildSafetyApiOpenApiUrls() {
   const upstreamUrl = new URL(getSafetyApiUpstreamBaseUrl());
   const normalizedBasePath = upstreamUrl.pathname.replace(/\/+$/, '');

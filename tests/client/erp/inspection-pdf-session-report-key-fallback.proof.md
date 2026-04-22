@@ -6,4 +6,4 @@
 ## Proof
 
 - `npx eslint features/inspection-session/hooks/useInspectionSessionScreen.ts`
-- session screen PDF export now calls `fetchInspectionPdfDocumentByReportKeyWithFallback(...)` before any local HWPX fallback
+- session screen PDF export now calls `fetchInspectionPdfDownloadUrlByReportKey(...)` before any local HWPX fallback

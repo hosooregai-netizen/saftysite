@@ -199,6 +199,52 @@ async function convertHwpxBlobToPdfDirect(
   };
 }
 
+async function fetchDocumentDownloadUrl<TBody>(
+  path: string,
+  body: TBody,
+  errorLabel: string,
+  headers?: HeadersInit,
+): Promise<{ downloadUrl: string; filename: string }> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: 'POST',
+    headers:
+      headers ??
+      {
+        'Content-Type': 'application/json',
+      },
+    body: JSON.stringify(body),
+  });
+
+  const errorBody = !res.ok ? await parseApiResponse(res) : null;
+  if (!res.ok) {
+    const message =
+      typeof errorBody === 'object' && errorBody && 'error' in errorBody
+        ? String(errorBody.error)
+        : res.statusText;
+
+    throw new Error(`${errorLabel} (${res.status}): ${message}`);
+  }
+
+  const payload = (await res.json()) as { downloadUrl?: unknown; filename?: unknown };
+  const downloadUrl =
+    typeof payload.downloadUrl === 'string' && payload.downloadUrl.trim()
+      ? payload.downloadUrl.trim()
+      : '';
+  const filename =
+    typeof payload.filename === 'string' && payload.filename.trim()
+      ? payload.filename.trim()
+      : 'download.bin';
+
+  if (!downloadUrl) {
+    throw new Error(`${errorLabel}: download URL is missing.`);
+  }
+
+  return {
+    downloadUrl,
+    filename,
+  };
+}
+
 async function fetchInspectionSessionBootstrapByReportKey(
   reportKey: string,
   authToken?: string | null,
@@ -254,6 +300,19 @@ export function saveBlobAsFile(blob: Blob, filename: string): void {
   window.setTimeout(() => {
     link.remove();
     URL.revokeObjectURL(blobUrl);
+  }, 0);
+}
+
+export function startFileDownloadFromUrl(downloadUrl: string): void {
+  const link = document.createElement('a');
+
+  link.href = downloadUrl;
+  link.rel = 'noopener';
+  document.body.appendChild(link);
+  link.click();
+
+  window.setTimeout(() => {
+    link.remove();
   }, 0);
 }
 
@@ -389,6 +448,19 @@ export async function fetchInspectionPdfDocumentByReportKey(
     '/documents/inspection/pdf',
     body,
     '기술지도 PDF 다운로드 실패',
+    buildInspectionDocumentHeaders(authToken),
+  );
+}
+
+export async function fetchInspectionPdfDownloadUrlByReportKey(
+  reportKey: string,
+  authToken?: string | null,
+): Promise<{ downloadUrl: string; filename: string }> {
+  const body: GenerateInspectionDocumentByReportKeyRequest = { reportKey };
+  return fetchDocumentDownloadUrl(
+    '/documents/inspection/pdf-download-url',
+    body,
+    '기술지도 PDF 다운로드 URL 조회 실패',
     buildInspectionDocumentHeaders(authToken),
   );
 }

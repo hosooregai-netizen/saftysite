@@ -7,14 +7,14 @@ import {
 } from '@/lib/admin/exportClient';
 import { getControllerReportTypeLabel } from '@/lib/admin/controllerReports';
 import {
-  convertHwpxBlobToPdfWithFallback,
   fetchBadWorkplaceHwpxDocumentByReportKey,
   fetchBadWorkplacePdfDocumentByReportKeyWithFallback,
   fetchInspectionHwpxDocumentByReportKey,
-  fetchInspectionPdfDocumentByReportKeyWithFallback,
+  fetchInspectionPdfDownloadUrlByReportKey,
   fetchQuarterlyHwpxDocumentByReportKey,
   fetchQuarterlyPdfDocumentByReportKeyWithFallback,
   saveBlobAsFile,
+  startFileDownloadFromUrl,
 } from '@/lib/api';
 import { generateInspectionHwpxBlob } from '@/lib/documents/inspection/hwpxClient';
 import { readSafetyAuthToken } from '@/lib/safetyApi';
@@ -71,71 +71,39 @@ export function useReportDocumentActions({
 
         if (row.reportType === 'technical_guidance') {
           await ensureSessionLoaded(row.reportKey);
-          const browserSession = getSessionById(row.reportKey);
-
-          if (browserSession) {
-            const siteSessions = sessions.filter((item) => item.siteKey === browserSession.siteKey);
-
-            try {
-              const document = await generateInspectionHwpxBlob(browserSession, siteSessions);
-
-              if (format === 'hwpx') {
-                saveBlobAsFile(document.blob, document.filename);
-                setNotice('지도보고서를 내보냈습니다.');
-              } else {
-                const exported = await convertHwpxBlobToPdfWithFallback(
-                  document.blob,
-                  document.filename,
-                );
-                saveBlobAsFile(exported.blob, exported.filename);
-                setNotice(
-                  exported.fallbackToHwpx
-                    ? 'PDF 변환에 실패해 HWPX로 내보냈습니다.'
-                    : '지도보고서를 내보냈습니다.',
-                );
-              }
-              return;
-            } catch (browserError) {
-              console.warn('Inspection report browser export failed; falling back to server generation.', {
-                error: browserError instanceof Error ? browserError.message : String(browserError),
-                reportKey: row.reportKey,
-              });
-            }
-          }
 
           try {
-            if (format === 'hwpx') {
-              const exported = await fetchInspectionHwpxDocumentByReportKey(row.reportKey, authToken);
-              saveBlobAsFile(exported.blob, exported.filename);
+            if (format === 'pdf') {
+              const exported = await fetchInspectionPdfDownloadUrlByReportKey(
+                row.reportKey,
+                authToken,
+              );
+              startFileDownloadFromUrl(exported.downloadUrl);
               setNotice('지도보고서를 내보냈습니다.');
             } else {
-              const exported = await fetchInspectionPdfDocumentByReportKeyWithFallback(
+              const exported = await fetchInspectionHwpxDocumentByReportKey(
                 row.reportKey,
                 authToken,
               );
               saveBlobAsFile(exported.blob, exported.filename);
-              setNotice(
-                exported.fallbackToHwpx
-                  ? 'PDF 변환에 실패해 HWPX로 내보냈습니다.'
-                  : '지도보고서를 내보냈습니다.',
-              );
+              setNotice('지도보고서를 내보냈습니다.');
             }
             return;
           } catch (serverError) {
-            console.warn('Inspection report server export failed; falling back to browser generation.', {
+            console.warn('Inspection report server export failed; falling back to HWPX generation.', {
               error: serverError instanceof Error ? serverError.message : String(serverError),
+              format,
               reportKey: row.reportKey,
             });
           }
 
-          await ensureSessionLoaded(row.reportKey);
-          const session = getSessionById(row.reportKey);
-          if (!session) {
+          const browserSession = getSessionById(row.reportKey);
+          if (!browserSession) {
             throw new Error('지도보고서를 불러오지 못했습니다.');
           }
 
-          const siteSessions = sessions.filter((item) => item.siteKey === session.siteKey);
-          const document = await generateInspectionHwpxBlob(session, siteSessions);
+          const siteSessions = sessions.filter((item) => item.siteKey === browserSession.siteKey);
+          const document = await generateInspectionHwpxBlob(browserSession, siteSessions);
           saveBlobAsFile(document.blob, document.filename);
           setNotice(
             format === 'pdf' ? 'PDF 변환에 실패해 HWPX로 내보냈습니다.' : '지도보고서를 내보냈습니다.',

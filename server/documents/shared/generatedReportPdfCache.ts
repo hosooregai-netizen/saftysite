@@ -11,11 +11,13 @@ export interface GeneratedReportPdfCacheKey {
 
 interface GeneratedReportPdfCacheEntry {
   buffer: Buffer;
+  downloadPath?: string;
   filename: string;
 }
 
 interface GeneratedReportPdfCacheMeta extends GeneratedReportPdfCacheKey {
   cachedAt: string;
+  downloadPath?: string;
   filename: string;
 }
 
@@ -65,6 +67,10 @@ export async function readGeneratedReportPdfCache(
     }
     return {
       buffer,
+      downloadPath:
+        typeof meta.downloadPath === 'string' && meta.downloadPath.trim()
+          ? meta.downloadPath.trim()
+          : undefined,
       filename: meta.filename.trim(),
     };
   } catch {
@@ -80,6 +86,7 @@ export async function writeGeneratedReportPdfCache(
   const meta: GeneratedReportPdfCacheMeta = {
     ...input,
     cachedAt: new Date().toISOString(),
+    downloadPath: entry.downloadPath?.trim() || undefined,
     filename: entry.filename,
   };
   await fs.mkdir(root, { recursive: true });

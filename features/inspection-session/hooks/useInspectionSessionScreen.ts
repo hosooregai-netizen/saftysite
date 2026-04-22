@@ -16,8 +16,9 @@ import { fetchAdminReportSessionBootstrap } from '@/lib/admin/apiClient';
 import {
   fetchInspectionHwpxDocument,
   fetchInspectionHwpxDocumentByReportKey,
-  fetchInspectionPdfDocumentByReportKeyWithFallback,
+  fetchInspectionPdfDownloadUrlByReportKey,
   saveBlobAsFile,
+  startFileDownloadFromUrl,
 } from '@/lib/api';
 import { generateInspectionHwpxBlob } from '@/lib/documents/inspection/hwpxClient';
 import {
@@ -712,11 +713,11 @@ export function useInspectionSessionScreen(sessionId: string) {
       const authToken = readSafetyAuthToken();
 
       try {
-        const pdf = await fetchInspectionPdfDocumentByReportKeyWithFallback(
+        const pdf = await fetchInspectionPdfDownloadUrlByReportKey(
           latestSession.id,
           authToken,
         );
-        saveBlobAsFile(pdf.blob, pdf.filename);
+        startFileDownloadFromUrl(pdf.downloadUrl);
         return;
       } catch (serverError) {
         console.warn('Inspection PDF server generation failed; falling back to HWPX generation.', {
