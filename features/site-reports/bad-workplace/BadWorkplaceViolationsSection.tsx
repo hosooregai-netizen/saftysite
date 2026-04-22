@@ -26,11 +26,11 @@ export function BadWorkplaceViolationsSection({
         <table className={`${operationalStyles.table} ${operationalStyles.violationTable}`}>
           <thead>
             <tr>
-              <th>관련 법령</th>
-              <th>유해위험요인</th>
-              <th>개선지도 사항(지도일)</th>
-              <th>불이행 사항(확인일)</th>
-              <th className={operationalStyles.violationActionHeader}>행 관리</th>
+              <th scope="col">관련 법령</th>
+              <th scope="col">유해위험요인</th>
+              <th scope="col">개선지도 사항(지도일)</th>
+              <th scope="col">불이행 사항(확인일)</th>
+              <th scope="col" className={operationalStyles.violationActionHeader}>행 관리</th>
             </tr>
           </thead>
           <tbody>
