@@ -86,8 +86,9 @@ export async function runAdminReportsSmoke(config: ClientSmokePlaywrightConfig) 
     await legacyTechnicalRow.waitFor({ state: 'visible' });
     await legacyTechnicalRow.locator('button[aria-haspopup="menu"]').click();
     await page.getByRole('menuitem', { name: '열기', exact: true }).click();
-    await page.getByRole('dialog', { name: '원본 PDF 보기' }).waitFor({ state: 'visible' });
-    await page.locator('iframe[title*="원본 PDF"]').waitFor({ state: 'visible' });
+    await page.getByText('레거시 5차 기술지도 보고서 원본 PDF가 아직 등록되지 않았습니다.').waitFor({
+      state: 'visible',
+    });
     if (page.url().includes('/sessions/')) {
       throw new Error('Legacy reports should open as in-app original PDF, not the authoring session screen.');
     }

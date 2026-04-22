@@ -639,7 +639,15 @@ export function useReportsSectionState({
       setNotice(null);
 
       if (isLegacyTechnicalGuidanceRow(row)) {
-        await openOriginalPdfDialog(row, '레거시 보고서는 원본 PDF로 엽니다.');
+        if (!row.originalPdfAvailable) {
+          setNotice(
+            `${
+              row.reportTitle || row.periodLabel || row.reportKey
+            } 원본 PDF가 아직 등록되지 않았습니다.`,
+          );
+          return;
+        }
+        await openOriginalPdfDialog(row, '이전 ERP 보고서는 원본 PDF로 엽니다.');
         return;
       }
 
