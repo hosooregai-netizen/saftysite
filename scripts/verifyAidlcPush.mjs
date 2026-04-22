@@ -93,6 +93,7 @@ const FEATURE_RULES = [
     patterns: [
       /^app\/api\/admin\/reports\//,
       /^features\/admin\/sections\/reports\//,
+      /^server\/admin\/legacyReportAlignment(\.test)?\.ts$/,
       /^server\/admin\/reportsRouteCache(\.test)?\.ts$/,
     ],
   },
@@ -113,6 +114,7 @@ const FEATURE_RULES = [
       /^features\/admin\/sections\/schedules\//,
       /^server\/admin\/localScheduleNotifications\.ts$/,
       /^server\/admin\/automation(\.test)?\.ts$/,
+      /^server\/admin\/legacyReportAlignment(\.test)?\.ts$/,
       /^server\/admin\/scheduleSnapshot\.ts$/,
     ],
   },
