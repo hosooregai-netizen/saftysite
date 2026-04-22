@@ -253,12 +253,12 @@ function buildSelectionSummary(row: SafetyInspectionSchedule) {
   return parts.join(' / ');
 }
 
-function buildScheduleChipLabel(row: SafetyInspectionSchedule) {
+function buildScheduleDisplayLabel(row: SafetyInspectionSchedule) {
   return `[${row.assigneeName || '미배정'}] ${row.siteName}`;
 }
 
 function buildDayListLabel(row: SafetyInspectionSchedule) {
-  return `[${row.assigneeName || '미배정'}] ${row.siteName}`;
+  return buildScheduleDisplayLabel(row);
 }
 
 async function fetchSchedulePayloads(
@@ -1118,7 +1118,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                               onDragEnd={() => setDragScheduleId('')}
                             >
                               <span className={styles.calendarScheduleChipTitle}>
-                                {buildScheduleChipLabel(row)}
+                                {buildScheduleDisplayLabel(row)}
                               </span>
                             </button>
                           ))}
@@ -1457,10 +1457,13 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                 <div className={styles.scheduleSummaryHeader}>
                   <div>
                     <div className={styles.scheduleSummaryTitle}>
-                      {activeSchedule.siteName} · {activeSchedule.roundNo}회차
+                      {buildScheduleDisplayLabel(activeSchedule)}
                     </div>
                     <div className={styles.scheduleSummaryMeta}>
-                      {activeSchedule.headquarterName || '사업장 정보 없음'}
+                      {[
+                        activeSchedule.headquarterName || '사업장 정보 없음',
+                        `${activeSchedule.roundNo}회차`,
+                      ].join(' · ')}
                     </div>
                   </div>
                   <button
