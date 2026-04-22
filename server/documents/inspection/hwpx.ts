@@ -16,6 +16,7 @@ import {
   selectInspectionTemplateVariant,
   type InspectionTemplateVariant,
 } from '@/lib/documents/inspection/templateVariant';
+import { renderChartSvgTextPath } from '@/server/documents/shared/chartSvgText';
 import type { ChecklistRating, InspectionSession } from '@/types/inspectionSession';
 
 const DOC5_CHART_TOP_N = 5;
@@ -1205,15 +1206,6 @@ function renderDoc5ChartCardDataUrl(
   return canvas.toDataURL('image/png');
 }
 
-function escapeDoc5ChartSvgText(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
 function truncateDoc5ChartLabel(label: string, maxLength: number): string {
   return label.length > maxLength ? `${label.slice(0, Math.max(1, maxLength - 3))}...` : label;
 }
@@ -1276,7 +1268,13 @@ function buildDoc5ChartSvg(entries: Doc5ChartEntry[]): string {
 
   if (entries.length === 0 || total === 0) {
     svgParts.push(
-      '<text x="58" y="140" fill="#6b7280" font-size="34" font-family="Malgun Gothic, Apple SD Gothic Neo, Noto Sans KR, sans-serif">No data</text>',
+      renderChartSvgTextPath('집계된 차트 데이터가 없습니다.', {
+        fill: '#6b7280',
+        fontSize: 34,
+        fontWeight: 400,
+        x: 58,
+        y: 140,
+      }),
     );
     svgParts.push('</svg>');
     return svgParts.join('');
@@ -1298,18 +1296,32 @@ function buildDoc5ChartSvg(entries: Doc5ChartEntry[]): string {
   for (let index = 0; index < entries.length; index += 1) {
     const item = entries[index];
     const rowCenterY = legendStartY + rowHeight * index + rowHeight / 2;
-    const safeLabel = escapeDoc5ChartSvgText(truncateDoc5ChartLabel(item.label, labelMaxChars));
-    const safeStat = escapeDoc5ChartSvgText(formatDoc5ChartStatText(item.count, total));
     const color = DOC5_CHART_SEGMENT_COLORS[index % DOC5_CHART_SEGMENT_COLORS.length];
 
     svgParts.push(
       `<rect x="${legendLeft}" y="${(rowCenterY - markerSize / 2).toFixed(1)}" width="${markerSize}" height="${markerSize}" rx="4" ry="4" fill="${color}"/>`,
     );
     svgParts.push(
-      `<text x="${labelX}" y="${rowCenterY}" fill="#1f2937" font-size="${fontSize}" font-weight="500" dominant-baseline="middle" font-family="Malgun Gothic, Apple SD Gothic Neo, Noto Sans KR, sans-serif">${safeLabel}</text>`,
+      renderChartSvgTextPath(truncateDoc5ChartLabel(item.label, labelMaxChars), {
+        fill: '#1f2937',
+        fontSize,
+        fontWeight: 500,
+        textAnchor: 'left',
+        textBaseline: 'middle',
+        x: labelX,
+        y: rowCenterY,
+      }),
     );
     svgParts.push(
-      `<text x="${countX}" y="${rowCenterY}" fill="#111827" font-size="${fontSize}" font-weight="700" text-anchor="end" dominant-baseline="middle" font-family="Malgun Gothic, Apple SD Gothic Neo, Noto Sans KR, sans-serif">${safeStat}</text>`,
+      renderChartSvgTextPath(formatDoc5ChartStatText(item.count, total), {
+        fill: '#111827',
+        fontSize,
+        fontWeight: 700,
+        textAnchor: 'right',
+        textBaseline: 'middle',
+        x: countX,
+        y: rowCenterY,
+      }),
     );
   }
 

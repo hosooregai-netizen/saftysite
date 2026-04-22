@@ -12,6 +12,7 @@ import { selectInspectionTemplateVariant } from '@/lib/documents/inspection/temp
 import { appendInspectionAppendixSections } from '@/server/documents/quarterly/inspectionAppendixMerge';
 import { buildQuarterlyMergedTemplatePrototype } from '@/server/documents/quarterly/mergedTemplatePrototype';
 import { renderAppendicesIntoMergedQuarterlySection } from '@/server/documents/quarterly/mergedTemplateRuntime';
+import { renderChartSvgTextPath } from '@/server/documents/shared/chartSvgText';
 import type { QuarterlyCounter, QuarterlySummaryReport } from '@/types/erpReports';
 import type { InspectionSession, InspectionSite } from '@/types/inspectionSession';
 
@@ -865,15 +866,6 @@ function formatQuarterlyChartStatText(count: number, total: number) {
   return `${count}건 · ${formatQuarterlyChartPercent(count, total)}`;
 }
 
-function escapeQuarterlyChartSvgText(value: string) {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
 function truncateQuarterlyChartLabel(label: string, maxLength: number) {
   return label.length > maxLength ? `${label.slice(0, Math.max(1, maxLength - 3))}...` : label;
 }
@@ -929,7 +921,13 @@ function buildQuarterlyChartSvg(rows: QuarterlyCounter[]) {
 
   if (entries.length === 0 || total === 0) {
     svgParts.push(
-      '<text x="88" y="320" fill="#6b7280" font-size="34" font-family="Malgun Gothic, Apple SD Gothic Neo, Noto Sans KR, sans-serif">집계된 통계 데이터가 없습니다.</text>',
+      renderChartSvgTextPath('집계된 통계 데이터가 없습니다.', {
+        fill: '#6b7280',
+        fontSize: 34,
+        fontWeight: 400,
+        x: 88,
+        y: 320,
+      }),
     );
     svgParts.push('</svg>');
     return svgParts.join('');
@@ -976,22 +974,32 @@ function buildQuarterlyChartSvg(rows: QuarterlyCounter[]) {
   for (let index = 0; index < entries.length; index += 1) {
     const item = entries[index];
     const rowCenterY = legendStartY + rowHeight * index + rowHeight / 2;
-    const safeLabel = escapeQuarterlyChartSvgText(
-      truncateQuarterlyChartLabel(item.label, labelMaxChars),
-    );
-    const safeStat = escapeQuarterlyChartSvgText(
-      formatQuarterlyChartStatText(item.count, total),
-    );
     const color = QUARTERLY_CHART_SEGMENT_COLORS[index % QUARTERLY_CHART_SEGMENT_COLORS.length];
 
     svgParts.push(
       `<rect x="${QUARTERLY_CHART_LEGEND_LEFT}" y="${(rowCenterY - markerSize / 2).toFixed(1)}" width="${markerSize}" height="${markerSize}" rx="4" ry="4" fill="${color}"/>`,
     );
     svgParts.push(
-      `<text x="${labelX}" y="${rowCenterY}" fill="#5b6a84" font-size="${fontSize}" font-weight="500" dominant-baseline="middle" font-family="Malgun Gothic, Apple SD Gothic Neo, Noto Sans KR, sans-serif">${safeLabel}</text>`,
+      renderChartSvgTextPath(truncateQuarterlyChartLabel(item.label, labelMaxChars), {
+        fill: '#5b6a84',
+        fontSize,
+        fontWeight: 500,
+        textAnchor: 'left',
+        textBaseline: 'middle',
+        x: labelX,
+        y: rowCenterY,
+      }),
     );
     svgParts.push(
-      `<text x="${countX}" y="${rowCenterY}" fill="#111827" font-size="${fontSize}" font-weight="700" text-anchor="end" dominant-baseline="middle" font-family="Malgun Gothic, Apple SD Gothic Neo, Noto Sans KR, sans-serif">${safeStat}</text>`,
+      renderChartSvgTextPath(formatQuarterlyChartStatText(item.count, total), {
+        fill: '#111827',
+        fontSize,
+        fontWeight: 700,
+        textAnchor: 'right',
+        textBaseline: 'middle',
+        x: countX,
+        y: rowCenterY,
+      }),
     );
   }
 
