@@ -142,6 +142,8 @@ async function installErpRoutes({
   requestCounts,
   state,
 }: Pick<ErpSmokeHarness, 'context' | 'delayedReportListRequests' | 'helpers' | 'requestCounts' | 'state'>) {
+  const photoAlbumItems: JsonRecord[] = [];
+
   const handleErpSafetyRoute = async (route: Route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -777,9 +779,132 @@ async function installErpRoutes({
     );
   };
 
+  const handlePhotoApiRoute = async (route: Route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    const requestKey = `${request.method()} ${url.pathname}`;
+    requestCounts.set(requestKey, (requestCounts.get(requestKey) || 0) + 1);
+
+    if (url.pathname === '/api/photos' && request.method() === 'GET') {
+      const siteId = (url.searchParams.get('site_id') || '').trim();
+      const headquarterId = (url.searchParams.get('headquarter_id') || '').trim();
+      const source = (url.searchParams.get('source') || 'all').trim();
+      const query = (url.searchParams.get('query') || '').trim().toLowerCase();
+      const rows = photoAlbumItems.filter((item) => {
+        if (siteId && String(item.siteId || '') !== siteId) return false;
+        if (headquarterId && String(item.headquarterId || '') !== headquarterId) return false;
+        if (source !== 'all' && String(item.sourceKind || '') !== source) return false;
+        if (!query) return true;
+        return [
+          item.fileName,
+          item.headquarterName,
+          item.siteName,
+          item.uploadedByName,
+          item.sourceReportTitle,
+        ]
+          .join(' ')
+          .toLowerCase()
+          .includes(query);
+      });
+      await fulfillJson(route, {
+        capabilities: {
+          deleteSupported: true,
+          roundUpdateSupported: true,
+        },
+        limit: rows.length,
+        offset: 0,
+        rows,
+        total: rows.length,
+      });
+      return;
+    }
+
+    if (url.pathname === '/api/photos/upload' && request.method() === 'POST') {
+      const currentUser = helpers.getUserForToken(request.headers().authorization || null);
+      const site = (
+        helpers.hydratedSites() as Array<JsonRecord & { id?: string; headquarter_id?: string }>
+      ).find((item) => String(item.id) === 'site-1');
+      const created = {
+        id: buildFixtureId('photo', photoAlbumItems.length + 1),
+        sourceKind: 'album_upload',
+        siteId: 'site-1',
+        siteName: String(site?.site_name || '기존 현장'),
+        roundNo: 6,
+        headquarterId: String(site?.headquarter_id || 'hq-1'),
+        headquarterName: String(site?.headquarter_name || '기존 거래처'),
+        previewUrl: 'https://example.com/mock-photo-thumb.png',
+        downloadUrl: `/api/photos/download?item_id=${encodeURIComponent(buildFixtureId('photo', photoAlbumItems.length + 1))}`,
+        fileName: 'mobile-site-photo.png',
+        contentType: 'image/png',
+        sizeBytes: 1024,
+        capturedAt: NOW,
+        gpsLatitude: null,
+        gpsLongitude: null,
+        uploadedByUserId: String(currentUser.id || 'field-1'),
+        uploadedByName: String(currentUser.name || '현장 요원'),
+        createdAt: NOW,
+        sourceReportKey: '',
+        sourceDocumentKey: '',
+        sourceSlotKey: '',
+        sourceReportTitle: '',
+      } satisfies JsonRecord;
+      photoAlbumItems.unshift(created);
+      await fulfillJson(route, {
+        ok: true,
+        item: created,
+      });
+      return;
+    }
+
+    if (url.pathname === '/api/photos' && request.method() === 'PATCH') {
+      const body = (request.postDataJSON?.() as JsonRecord) || {};
+      const itemIds = Array.isArray(body.item_ids) ? body.item_ids.map(String) : [];
+      const roundNo =
+        typeof body.round_no === 'number' && Number.isFinite(body.round_no)
+          ? Math.trunc(body.round_no)
+          : 0;
+      let affectedCount = 0;
+      photoAlbumItems.forEach((item) => {
+        if (itemIds.includes(String(item.id)) && roundNo > 0) {
+          item.roundNo = roundNo;
+          affectedCount += 1;
+        }
+      });
+      await fulfillJson(route, { affectedCount });
+      return;
+    }
+
+    if (url.pathname === '/api/photos' && request.method() === 'DELETE') {
+      const body = (request.postDataJSON?.() as JsonRecord) || {};
+      const itemIds = new Set(Array.isArray(body.item_ids) ? body.item_ids.map(String) : []);
+      const remaining = photoAlbumItems.filter((item) => !itemIds.has(String(item.id)));
+      const affectedCount = photoAlbumItems.length - remaining.length;
+      photoAlbumItems.splice(0, photoAlbumItems.length, ...remaining);
+      await fulfillJson(route, { affectedCount });
+      return;
+    }
+
+    if (url.pathname === '/api/photos/download' && request.method() === 'GET') {
+      await fulfillBinary(
+        route,
+        Buffer.from(
+          'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO7Z0foAAAAASUVORK5CYII=',
+          'base64',
+        ),
+        'image/png',
+        'mock-photo.png',
+      );
+      return;
+    }
+
+    await route.fallback();
+  };
+
   await context.route('**/api/safety/**', handleErpSafetyRoute);
   await context.route('**/api/v1/**', handleErpSafetyRoute);
   await context.route('**/api/reports/**', handlePublicReportApiRoute);
+  await context.route('**/api/photos', handlePhotoApiRoute);
+  await context.route('**/api/photos/**', handlePhotoApiRoute);
   await context.route('**/api/documents/quarterly/**', handleQuarterlyDocumentRoute);
   await context.route('**/api/documents/bad-workplace/**', handleBadWorkplaceDocumentRoute);
 }

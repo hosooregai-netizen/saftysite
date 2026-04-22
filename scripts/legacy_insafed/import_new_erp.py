@@ -12,6 +12,10 @@ from pathlib import Path
 if __package__ in {None, ""}:
     sys.path.append(str(Path(__file__).resolve().parents[2]))
     from scripts.legacy_insafed.common import append_jsonl, iso_now, normalize_text, read_json, read_jsonl, slugify, write_json, write_jsonl
+    from scripts.legacy_insafed.legacy_site_identity import (
+        has_conflicting_legacy_site_tag,
+        is_conflicting_legacy_import_schedule,
+    )
     from scripts.legacy_insafed.target_client import TargetErpClient, TargetErpError
     from scripts.legacy_insafed.target_mapping import (
         LEGACY_HEADQUARTER_TAG,
@@ -22,6 +26,10 @@ if __package__ in {None, ""}:
     )
 else:
     from .common import append_jsonl, iso_now, normalize_text, read_json, read_jsonl, slugify, write_json, write_jsonl
+    from .legacy_site_identity import (
+        has_conflicting_legacy_site_tag,
+        is_conflicting_legacy_import_schedule,
+    )
     from .target_client import TargetErpClient, TargetErpError
     from .target_mapping import (
         LEGACY_HEADQUARTER_TAG,
@@ -68,7 +76,8 @@ def find_headquarter_match(rows: list[dict[str, object]], record: dict[str, obje
 
 
 def find_site_match(rows: list[dict[str, object]], record: dict[str, object], headquarter_id: str) -> dict[str, object] | None:
-    matched = find_by_memo(rows, LEGACY_SITE_TAG, str(record["legacy_site_id"]))
+    legacy_site_id = normalize_text(record.get("legacy_site_id"))
+    matched = find_by_memo(rows, LEGACY_SITE_TAG, legacy_site_id)
     if matched:
         return matched
     management_number = normalize_identifier(record.get("management_number"))
@@ -76,12 +85,23 @@ def find_site_match(rows: list[dict[str, object]], record: dict[str, object], he
     for row in rows:
         if str(row.get("headquarter_id")) != headquarter_id:
             continue
+        if has_conflicting_legacy_site_tag(row.get("memo"), legacy_site_id):
+            continue
         if management_number and normalize_identifier(row.get("management_number")) == management_number:
             return row
         if site_code and normalize_identifier(row.get("site_code")) == site_code:
             return row
     site_name = normalize_text(record.get("site_name"))
-    return next((row for row in rows if str(row.get("headquarter_id")) == headquarter_id and normalize_text(row.get("site_name")) == site_name), None)
+    return next(
+        (
+            row
+            for row in rows
+            if str(row.get("headquarter_id")) == headquarter_id
+            and not has_conflicting_legacy_site_tag(row.get("memo"), legacy_site_id)
+            and normalize_text(row.get("site_name")) == site_name
+        ),
+        None,
+    )
 
 
 def placeholder_email(worker_name: str, legacy_site_id: str) -> str:
@@ -476,6 +496,7 @@ def build_default_schedule(
 def patch_site_schedules_via_memo(
     client: TargetErpClient,
     site: dict[str, object],
+    legacy_site_id: str,
     visits: list[dict[str, object]],
     assignee_lookup: dict[str, tuple[str, str]],
     total_rounds: int,
@@ -488,6 +509,8 @@ def patch_site_schedules_via_memo(
     if isinstance(current_schedules, list):
         for item in current_schedules:
             if not isinstance(item, dict):
+                continue
+            if is_conflicting_legacy_import_schedule(item, legacy_site_id):
                 continue
             round_no = int(item.get("roundNo") or 0)
             if round_no > 0:
@@ -778,6 +801,7 @@ def main() -> None:
             site = patch_site_schedules_via_memo(
                 client,
                 site,
+                str(record["legacy_site_id"]),
                 record.get("visit_history", []),
                 assignee_lookup,
                 total_rounds,

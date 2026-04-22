@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { uploadPhotoAlbumAsset } from '@/lib/photos/apiClient';
-import { createPhotoThumbnail } from '@/lib/photos/thumbnail';
+import { createPhotoThumbnailSafely } from '@/lib/photos/thumbnail';
 
 export function useMobileSiteHomePhotoUpload(siteId: string | null, roundNo: number) {
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
@@ -34,7 +34,7 @@ export function useMobileSiteHomePhotoUpload(siteId: string | null, roundNo: num
       setPhotoUploadError(null);
       setPhotoUploadNotice(null);
 
-      const thumbnail = await createPhotoThumbnail(file).catch(() => null);
+      const thumbnail = await createPhotoThumbnailSafely(file);
       await uploadPhotoAlbumAsset({
         file,
         roundNo: Math.max(1, roundNo || 1),

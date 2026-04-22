@@ -10,6 +10,7 @@ export async function runMobileSiteHomeSmoke(config: ClientSmokePlaywrightConfig
     const reportReadsBefore = requestCounts.get('GET /reports') || 0;
     const operationalReadsBefore = requestCounts.get('GET /reports/site/:id/operational-index') || 0;
     const reportDetailReadsBefore = requestCounts.get('GET /reports/by-key/:id') || 0;
+    const photoUploadsBefore = requestCounts.get('POST /api/photos/upload') || 0;
 
     await page.goto(`${harness.baseURL}/mobile/sites/site-1`, { waitUntil: 'load' });
     await harness.loginAs('agent@example.com');
@@ -24,6 +25,18 @@ export async function runMobileSiteHomeSmoke(config: ClientSmokePlaywrightConfig
     await page.getByRole('heading', { name: '현장 정보' }).waitFor({ state: 'visible' });
     await page.getByRole('heading', { name: '기술지도 보고서' }).waitFor({ state: 'visible' });
     await page.getByRole('heading', { name: '분기보고서' }).waitFor({ state: 'visible' });
+    await page.locator('input[type="file"][accept="image/*"]').setInputFiles({
+      name: 'mobile-site-photo.png',
+      mimeType: 'image/png',
+      buffer: Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO7Z0foAAAAASUVORK5CYII=',
+        'base64',
+      ),
+    });
+    await harness.waitForRequestCount('POST /api/photos/upload', photoUploadsBefore + 1);
+    await page.getByText('촬영한 사진을 현장 사진첩에 바로 저장했습니다.').waitFor({
+      state: 'visible',
+    });
 
     // Pointer clicks here can land on the sticky mobile chrome instead of the anchor in CI/dev.
     await page

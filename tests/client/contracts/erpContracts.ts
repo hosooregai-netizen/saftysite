@@ -73,7 +73,7 @@ export const ERP_FEATURE_CONTRACTS = {
   'mobile-site-home': {
     id: 'mobile-site-home',
     description:
-      '모바일 현장 홈에서 로그인 후 최신 보고 상태를 보고, 최근 보고서와 분기 목록으로 이동할 수 있다.',
+      '모바일 현장 홈에서 로그인 후 최신 보고 상태를 보고, 현장 사진을 바로 업로드하며, 최근 보고서와 분기 목록으로 이동할 수 있다.',
     routes: ['/mobile/sites/site-1'],
     markers: ['현장 메뉴 로그인', '현장 정보', '기술지도 보고서', '분기보고서'],
     apis: [
@@ -81,9 +81,16 @@ export const ERP_FEATURE_CONTRACTS = {
       'GET /assignments/me/sites',
       'GET /reports',
       'GET /reports/site/:id/operational-index',
+      'POST /api/photos/upload',
       'GET /reports/by-key/:id',
     ],
-    criticalActions: ['모바일 현장 홈 로그인', '최근 보고 상태 확인', '최근 보고서 진입', '분기 목록 이동'],
+    criticalActions: [
+      '모바일 현장 홈 로그인',
+      '최근 보고 상태 확인',
+      '현장 사진 업로드',
+      '최근 보고서 진입',
+      '분기 목록 이동',
+    ],
   },
   'mobile-worker-nav': {
     id: 'mobile-worker-nav',

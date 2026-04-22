@@ -71,3 +71,21 @@ export async function createPhotoThumbnail(
     URL.revokeObjectURL(sourceUrl);
   }
 }
+
+export async function createPhotoThumbnailSafely(
+  file: File,
+  options?: {
+    maxEdge?: number;
+    quality?: number;
+    timeoutMs?: number;
+  },
+): Promise<File | null> {
+  const timeoutMs = Math.max(500, Math.trunc(options?.timeoutMs ?? 1500));
+
+  return Promise.race([
+    createPhotoThumbnail(file, options).catch(() => null),
+    new Promise<null>((resolve) => {
+      window.setTimeout(() => resolve(null), timeoutMs);
+    }),
+  ]);
+}

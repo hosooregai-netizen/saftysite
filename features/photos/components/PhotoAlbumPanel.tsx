@@ -15,7 +15,7 @@ import {
   updatePhotoAlbumRounds,
   uploadPhotoAlbumAsset,
 } from '@/lib/photos/apiClient';
-import { createPhotoThumbnail } from '@/lib/photos/thumbnail';
+import { createPhotoThumbnailSafely } from '@/lib/photos/thumbnail';
 import type { PhotoAlbumItem, PhotoAlbumMutationCapabilities } from '@/types/photos';
 import styles from './PhotoAlbumPanel.module.css';
 
@@ -481,7 +481,7 @@ export function PhotoAlbumPanel({
       setNotice(null);
 
       for (const file of nextFiles) {
-        const thumbnail = await createPhotoThumbnail(file).catch(() => null);
+        const thumbnail = await createPhotoThumbnailSafely(file);
         await uploadPhotoAlbumAsset({
           file,
           roundNo: uploadRoundNo,

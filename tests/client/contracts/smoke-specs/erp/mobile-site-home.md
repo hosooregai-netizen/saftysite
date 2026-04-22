@@ -10,6 +10,7 @@
 ## Verification
 
 - `npm run test:client:smoke -- mobile-site-home`
+- 로그인 후 현장 홈에서 사진 촬영 입력이 `/api/photos/upload`를 호출하고 성공 안내가 보여야 한다.
 
 ## Related Docs
 
