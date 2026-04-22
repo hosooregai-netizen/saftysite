@@ -389,6 +389,19 @@ export function buildLegacyPhotoAlbumItemsFromReports(
   return reports.flatMap((report) => buildLegacyPhotoAlbumItemsForReport(report, site));
 }
 
+export function parseLegacyPhotoAlbumItemId(itemId: string) {
+  const matched = itemId.match(/^legacy:([^:]+):([^:]+):(.+)$/);
+  if (!matched) {
+    return null;
+  }
+
+  return {
+    documentKey: matched[2],
+    reportKey: matched[1],
+    slotKey: matched[3],
+  };
+}
+
 export function queryPhotoAlbumItems(
   items: PhotoAlbumItem[],
   query: PhotoAlbumQuery,
@@ -614,7 +627,16 @@ export function mergePhotoAlbumItems(
   albumItems: PhotoAlbumItem[],
   legacyItems: PhotoAlbumItem[],
 ) {
-  return [...albumItems, ...legacyItems];
+  const byId = new Map<string, PhotoAlbumItem>();
+  for (const item of albumItems) {
+    byId.set(item.id, item);
+  }
+  for (const item of legacyItems) {
+    if (!byId.has(item.id)) {
+      byId.set(item.id, item);
+    }
+  }
+  return [...byId.values()];
 }
 
 export type { AlbumAccessContext };

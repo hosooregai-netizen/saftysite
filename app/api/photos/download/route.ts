@@ -4,13 +4,14 @@ import { NextResponse } from 'next/server';
 import {
   assertDownloadItemLimit,
   buildDownloadZipEntryName,
+  resolvePhotoAlbumItemBinary,
 } from '@/server/photos/album';
 import {
   downloadSafetyPhotoAssetServer,
   readRequiredAdminToken,
   SafetyServerApiError,
 } from '@/server/admin/safetyApiServer';
-import { loadPhotoAlbumItemsByIds } from '@/server/photos/service';
+import { loadResolvedPhotoAlbumSelection } from '@/server/photos/service';
 
 export const runtime = 'nodejs';
 
@@ -64,6 +65,22 @@ function parseItemIdsFromRequest(request: Request, body?: unknown) {
   return [];
 }
 
+async function downloadAlbumUploadBinary(
+  token: string,
+  request: Request,
+  itemId: string,
+  fallbackContentType: string,
+  fallbackFileName: string,
+) {
+  const response = await downloadSafetyPhotoAssetServer(token, itemId, request);
+  const arrayBuffer = await response.arrayBuffer();
+  return {
+    buffer: Buffer.from(arrayBuffer),
+    contentType: response.headers.get('content-type') || fallbackContentType || 'application/octet-stream',
+    fileName: fallbackFileName || 'photo.jpg',
+  };
+}
+
 async function buildDownloadResponse(
   token: string,
   request: Request,
@@ -71,26 +88,22 @@ async function buildDownloadResponse(
 ): Promise<Response> {
   assertDownloadItemLimit(itemIds);
 
-  const selectedItems = await loadPhotoAlbumItemsByIds(token, request, itemIds);
+  const selection = await loadResolvedPhotoAlbumSelection(token, request, itemIds);
+  const { accessibleSites, items: selectedItems, reportsBySiteId } = selection;
 
   if (selectedItems.length !== itemIds.length) {
     return NextResponse.json(
-      { error: '선택한 사진 중 일부를 찾지 못했거나 접근 권한이 없습니다.' },
+      { error: 'Some selected photos were not found or are not accessible.' },
       { status: 404 },
     );
   }
 
   if (selectedItems.length === 1) {
     const item = selectedItems[0];
-    const binary = await (async () => {
-      const response = await downloadSafetyPhotoAssetServer(token, item.id, request);
-      const arrayBuffer = await response.arrayBuffer();
-      return {
-        buffer: Buffer.from(arrayBuffer),
-        contentType: response.headers.get('content-type') || item.contentType || 'application/octet-stream',
-        fileName: item.fileName || 'photo.jpg',
-      };
-    })();
+    const binary =
+      item.sourceKind === 'album_upload'
+        ? await downloadAlbumUploadBinary(token, request, item.id, item.contentType, item.fileName)
+        : await resolvePhotoAlbumItemBinary(item, accessibleSites, reportsBySiteId);
 
     return new Response(new Uint8Array(binary.buffer), {
       headers: {
@@ -105,15 +118,10 @@ async function buildDownloadResponse(
   const takenNames = new Set<string>();
 
   for (const item of selectedItems) {
-    const binary = await (async () => {
-      const response = await downloadSafetyPhotoAssetServer(token, item.id, request);
-      const arrayBuffer = await response.arrayBuffer();
-      return {
-        buffer: Buffer.from(arrayBuffer),
-        contentType: response.headers.get('content-type') || item.contentType || 'application/octet-stream',
-        fileName: item.fileName || 'photo.jpg',
-      };
-    })();
+    const binary =
+      item.sourceKind === 'album_upload'
+        ? await downloadAlbumUploadBinary(token, request, item.id, item.contentType, item.fileName)
+        : await resolvePhotoAlbumItemBinary(item, accessibleSites, reportsBySiteId);
     zip.file(
       makeUniqueEntryName(buildDownloadZipEntryName(item), takenNames),
       binary.buffer,
@@ -147,7 +155,7 @@ export async function GET(request: Request): Promise<Response> {
     }
 
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : '사진 다운로드에 실패했습니다.' },
+      { error: error instanceof Error ? error.message : 'Photo download failed.' },
       { status: 500 },
     );
   }
@@ -169,7 +177,7 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : '사진 다운로드에 실패했습니다.' },
+      { error: error instanceof Error ? error.message : 'Photo download failed.' },
       { status: 500 },
     );
   }
