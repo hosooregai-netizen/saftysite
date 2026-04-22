@@ -1,6 +1,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { NextResponse } from 'next/server';
+import legacyReportOriginalPdfs from '@/data/legacy-admin-report-original-pdfs.json';
 import { getSafetyApiUpstreamBaseUrl } from '@/lib/safetyApi/upstream';
 import {
   fetchAdminReportByKey,
@@ -11,6 +12,17 @@ import {
 import type { SafetyReport } from '@/types/backend';
 
 export const runtime = 'nodejs';
+
+type LegacyReportPdfEntry = {
+  archivePath: string;
+  fileName: string;
+  legacyReportId: string;
+  visitDate: string;
+};
+
+const legacyPdfManifest = new Map(
+  Object.entries(legacyReportOriginalPdfs as Record<string, LegacyReportPdfEntry>),
+);
 
 function normalizeText(value: unknown) {
   return typeof value === 'string' ? value.trim() : '';
@@ -222,6 +234,7 @@ export async function GET(
   try {
     const token = readRequiredAdminToken(request);
     const { reportKey } = await context.params;
+    const manifestEntry = legacyPdfManifest.get(reportKey) ?? null;
     const backendPdf = await fetchBackendOriginalPdf(reportKey, token, request);
     if (backendPdf) {
       return new Response(new Uint8Array(backendPdf.buffer), {
@@ -234,16 +247,35 @@ export async function GET(
       });
     }
 
-    const report = await fetchAdminReportByKey(token, reportKey, request);
-    const meta = report.meta && typeof report.meta === 'object' ? (report.meta as Record<string, unknown>) : {};
+    let report: SafetyReport | null = null;
+    try {
+      report = await fetchAdminReportByKey(token, reportKey, request);
+    } catch (error) {
+      if (!(error instanceof SafetyServerApiError && error.status === 404)) {
+        throw error;
+      }
+    }
+
+    const meta =
+      report?.meta && typeof report.meta === 'object'
+        ? (report.meta as Record<string, unknown>)
+        : {};
     const archivePath =
       readMetaText(meta, 'original_pdf_archive_path') ||
-      readMetaText(meta, 'originalPdfArchivePath');
+      readMetaText(meta, 'originalPdfArchivePath') ||
+      manifestEntry?.archivePath ||
+      '';
     const fileName =
       readMetaText(meta, 'original_pdf_filename') ||
       readMetaText(meta, 'originalPdfFilename') ||
+      manifestEntry?.fileName ||
       `${reportKey}.pdf`;
-    const fileNameCandidates = readMetaCandidates(meta, report);
+    const fileNameCandidates = Array.from(
+      new Set([
+        ...(report ? readMetaCandidates(meta, report) : []),
+        manifestEntry?.fileName || '',
+      ].filter(Boolean)),
+    );
 
     const localBuffer = await readLocalPdf(archivePath).catch((error) => {
       if ((error as NodeJS.ErrnoException | null)?.code === 'ENOENT') return null;
