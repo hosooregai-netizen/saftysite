@@ -123,6 +123,21 @@ const FEATURE_RULES = [
     ],
   },
   {
+    ids: [
+      'mobile-site-home',
+      'mobile-site-reports',
+      'mobile-quarterly-list',
+      'mobile-quarterly-report',
+      'mobile-bad-workplace',
+      'mobile-link',
+      'mobile-worker-nav',
+    ],
+    patterns: [
+      /^features\/mobile\/components\/MobileShell\.module\.css$/,
+      /^features\/mobile\/components\/MobileShell\.tsx$/,
+    ],
+  },
+  {
     id: 'admin-users',
     patterns: [
       /^app\/api\/admin\/users\//,
