@@ -148,6 +148,7 @@ const DOC5_SECTION_TITLE_CANDIDATES = [
   '5.현재 공정내 현존하는 유해·위험요인 분류',
   '5.현재 공정내 존재하는 유해·위험요인 분류',
 ] as const;
+const DOC7_SECTION_MARKERS = ['sec7.findings[0].location'] as const;
 const DOC5_SUMMARY_DEFERRED_MARKERS = [
   '[[DEFERRED:auto_aggregation_required}',
   '[[DEFERRED:auto_aggregation_required]]',
@@ -1936,13 +1937,78 @@ function buildDoc5ChartRowParagraph(paragraphXml: string, leftBinaryId: string, 
 }
 
 function findDoc5TableIndex(sectionXml: string): number | null {
+  return findTableIndexByMarkers(sectionXml, DOC5_SECTION_TITLE_CANDIDATES);
+}
+
+function findTableIndexByMarkers(sectionXml: string, markers: readonly string[]): number | null {
   const tables = tableSpans(sectionXml);
   const index = tables.findIndex((span) => {
     const tableXml = sectionXml.slice(span.start, span.end);
-    return DOC5_SECTION_TITLE_CANDIDATES.some((title) => tableXml.includes(title));
+    return markers.some((marker) => tableXml.includes(marker));
   });
 
   return index === -1 ? null : index;
+}
+
+function trimLeadingBlankParagraphPagesBeforeTable(sectionXml: string, tableIndex: number | null): string {
+  if (tableIndex == null || tableIndex <= 0) {
+    return sectionXml;
+  }
+
+  const tables = tableSpans(sectionXml);
+  const previousTable = tables[tableIndex - 1];
+  const targetTable = tables[tableIndex];
+  if (!previousTable || !targetTable || previousTable.end >= targetTable.start) {
+    return sectionXml;
+  }
+
+  const gapParagraphs = paragraphSpans(sectionXml)
+    .filter((span) => span.start >= previousTable.end && span.end <= targetTable.start)
+    .map((span) => ({
+      ...span,
+      xml: sectionXml.slice(span.start, span.end),
+    }));
+
+  if (
+    gapParagraphs.length === 0
+    || gapParagraphs.some((paragraph) => !isHwpxBlankParagraph(paragraph.xml))
+  ) {
+    return sectionXml;
+  }
+
+  const vertPositions = gapParagraphs.map((paragraph) => extractFirstLineSegMetric(paragraph.xml, 'vertpos'));
+  if (vertPositions.some((value) => value == null)) {
+    return sectionXml;
+  }
+
+  let trimParagraphCount = 0;
+  for (let index = 0; index < vertPositions.length - 1; index += 1) {
+    if ((vertPositions[index] ?? 0) > (vertPositions[index + 1] ?? 0)) {
+      trimParagraphCount = index + 1;
+    }
+  }
+
+  if (trimParagraphCount <= 0 || trimParagraphCount >= gapParagraphs.length) {
+    return sectionXml;
+  }
+
+  return (
+    sectionXml.slice(0, gapParagraphs[0].start) +
+    sectionXml.slice(gapParagraphs[trimParagraphCount].start)
+  );
+}
+
+export function normalizeInspectionFloatingTableGapPages(sectionXml: string): string {
+  let normalizedXml = sectionXml;
+
+  for (const markers of [DOC5_SECTION_TITLE_CANDIDATES, DOC7_SECTION_MARKERS] as const) {
+    normalizedXml = trimLeadingBlankParagraphPagesBeforeTable(
+      normalizedXml,
+      findTableIndexByMarkers(normalizedXml, markers),
+    );
+  }
+
+  return normalizedXml;
 }
 
 function locateDoc5TableCell(
@@ -3131,8 +3197,11 @@ export async function generateInspectionHwpxBlob(
     sectionXmlWithTemplateOverlays,
     templateVariant,
   );
-  const sectionXmlWithVisitCountFooter = applyVisitCountPageFooter(
+  const sectionXmlWithNormalizedFloatingTableGaps = normalizeInspectionFloatingTableGapPages(
     sectionXmlWithVariantAnnotations,
+  );
+  const sectionXmlWithVisitCountFooter = applyVisitCountPageFooter(
+    sectionXmlWithNormalizedFloatingTableGaps,
     visitCountFooterParaPrId,
   );
   const contentHpf = await contentEntry.async('string');

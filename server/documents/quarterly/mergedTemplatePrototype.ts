@@ -8,6 +8,7 @@ import {
 } from '@/server/documents/inspection/appendix';
 import {
   getTemplateImagePlaceholders,
+  normalizeInspectionFloatingTableGapPages,
   type TemplateImagePlaceholder,
 } from '@/server/documents/inspection/hwpx';
 import {
@@ -297,13 +298,16 @@ export async function buildQuarterlyMergedTemplatePrototype(
   ]);
   const quarterlyTemplate = await loadTemplateParts(quarterlyBuffer);
   const inspectionTemplate = await loadTemplateParts(inspectionBuffer);
+  const normalizedInspectionSectionXml = normalizeInspectionFloatingTableGapPages(
+    inspectionTemplate.sectionXml,
+  );
 
   let contentHpf = quarterlyTemplate.contentHpf;
   const mergedHeader = mergeHeaderDefinitions(
     quarterlyTemplate.headerXml,
     inspectionTemplate.headerXml,
   );
-  const appendixSectionXml = extractInspectionAppendixSection(inspectionTemplate.sectionXml);
+  const appendixSectionXml = extractInspectionAppendixSection(normalizedInspectionSectionXml);
   const appendixToken = `appendix-prototype-${variant}`;
   const appendixManifestItems = parseManifestItems(inspectionTemplate.contentHpf);
   const templateImagePlaceholders = getTemplateImagePlaceholders(variant);
@@ -349,7 +353,7 @@ export async function buildQuarterlyMergedTemplatePrototype(
   );
   const imagePlaceholders = templateImagePlaceholders
     .map<QuarterlyMergedTemplateImagePlaceholder | null>((placeholder) => {
-      const located = locateTemplateCell(inspectionTemplate.sectionXml, placeholder);
+      const located = locateTemplateCell(normalizedInspectionSectionXml, placeholder);
       if (!located) {
         if (placeholder.optional) {
           return null;

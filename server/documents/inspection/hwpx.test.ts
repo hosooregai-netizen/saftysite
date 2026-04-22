@@ -28,6 +28,29 @@ function collectDuplicateTableIds(xml: string) {
   return Array.from(new Set(tableIds.filter((id, index) => tableIds.indexOf(id) !== index)));
 }
 
+function countBlankParagraphsBetweenTableIndices(xml: string, leftIndex: number, rightIndex: number) {
+  const tables = Array.from(xml.matchAll(/<hp:tbl\b[\s\S]*?<\/hp:tbl>/g)).map((match) => ({
+    end: (match.index ?? 0) + match[0].length,
+    start: match.index ?? 0,
+  }));
+  const left = tables[leftIndex];
+  const right = tables[rightIndex];
+  if (!left || !right || left.end >= right.start) {
+    return 0;
+  }
+
+  const slice = xml.slice(left.end, right.start);
+  return Array.from(slice.matchAll(/<hp:p\b[\s\S]*?<\/hp:p>/g)).filter((match) =>
+    !match[0].replace(/<[^>]+>/g, '').trim(),
+  ).length;
+}
+
+function findTableIndexContainingText(xml: string, text: string) {
+  return (xml.match(/<hp:tbl\b[\s\S]*?<\/hp:tbl>/g) ?? []).findIndex((tableXml) =>
+    tableXml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').includes(text),
+  );
+}
+
 function buildMeasurementFixture(accidentOccurred: 'no' | 'yes') {
   const site = createInspectionSite({
     clientRepresentativeName: 'client-rep-alpha',
@@ -251,4 +274,12 @@ test('buildInspectionHwpxDocument keeps repeated doc4 follow-up pages page-broke
     sectionXml,
     /<hp:p\b[^>]*pageBreak="1"[^>]*>\s*<hp:run\b[^>]*><hp:tbl\b[\s\S]*follow-up-location-4/,
   );
+  const doc4Index = findTableIndexContainingText(sectionXml, 'follow-up-location-4');
+  const doc5Index = findTableIndexContainingText(sectionXml, 'tplimg23');
+  const doc7Index = findTableIndexContainingText(sectionXml, 'doc7-location');
+  assert.notEqual(doc4Index, -1);
+  assert.notEqual(doc5Index, -1);
+  assert.notEqual(doc7Index, -1);
+  assert.equal(countBlankParagraphsBetweenTableIndices(sectionXml, doc4Index, doc5Index), 6);
+  assert.equal(countBlankParagraphsBetweenTableIndices(sectionXml, doc5Index, doc7Index), 44);
 });
