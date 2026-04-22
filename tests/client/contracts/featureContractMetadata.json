@@ -189,7 +189,10 @@
       "ownedGlobs": [
         "app/admin/report-open/**",
         "app/api/admin/reports/**",
+        "data/legacy-admin-reports.snapshot.jsonl",
         "features/admin/sections/reports/**",
+        "server/admin/legacyAdminReportsSnapshot.ts",
+        "server/admin/legacyAdminReportsSnapshot.test.ts",
         "server/admin/reportsRouteCache.ts",
         "server/admin/reportsRouteCache.test.ts"
       ],

@@ -7,7 +7,7 @@ import type {
 } from '@/types/admin';
 import type { ReportReviewForm } from './reportsSectionTypes';
 
-export const REPORT_PAGE_SIZE = 100;
+export const REPORT_PAGE_SIZE = 20;
 export const REPORT_PRESET_PAGE_SIZE = 500;
 
 export type OverviewReportsPreset = 'badWorkplaceOverdue' | 'issueBundle' | 'siteOverdueBundle';
