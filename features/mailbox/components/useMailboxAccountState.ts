@@ -33,7 +33,8 @@ export function useMailboxAccountState({
   const [accounts, setAccounts] = useState<MailAccount[]>([]);
   const [providerStatuses, setProviderStatuses] = useState<MailProviderStatus[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState('');
-  const [accountStateLoading, setAccountStateLoading] = useState(false);
+  const [accountStateLoading, setAccountStateLoading] = useState(!isDemoMode);
+  const [accountStateReady, setAccountStateReady] = useState(isDemoMode);
 
   useEffect(() => {
     if (typeof window === 'undefined' || isDemoMode) return;
@@ -47,6 +48,7 @@ export function useMailboxAccountState({
       setProviderStatuses([]);
       setSelectedAccountId(demoAccounts[0]?.id || '');
       setAccountStateLoading(false);
+      setAccountStateReady(true);
       return;
     }
 
@@ -54,6 +56,7 @@ export function useMailboxAccountState({
     void (async () => {
       try {
         setAccountStateLoading(true);
+        setAccountStateReady(false);
         const [response, providerResponse] = await Promise.all([
           fetchMailAccounts(),
           fetchMailProviderStatuses(),
@@ -77,6 +80,7 @@ export function useMailboxAccountState({
       } finally {
         if (!cancelled) {
           setAccountStateLoading(false);
+          setAccountStateReady(true);
         }
       }
     })();
@@ -133,6 +137,7 @@ export function useMailboxAccountState({
   const naverWorksProviderStatus = providerStatusMap.get('naver_works');
 
   return {
+    accountStateReady,
     accountStateLoading,
     accounts,
     disconnectableAccount,

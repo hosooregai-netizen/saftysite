@@ -1,11 +1,13 @@
 'use client';
 
+import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import { MailboxConnectWorkspace } from './MailboxConnectWorkspace';
 import { MailboxComposeWorkspace } from './MailboxComposeWorkspace';
 import { MailboxThreadWorkspace } from './MailboxThreadWorkspace';
 import type { MailboxWorkspaceContentProps } from './mailboxWorkspaceContentTypes';
 
 export function MailboxWorkspaceContent({
+  accountStateReady,
   accountStateLoading,
   attachments,
   attachmentInputRef,
@@ -70,6 +72,14 @@ export function MailboxWorkspaceContent({
   onSelectRecipientSuggestion,
   onSend,
 }: MailboxWorkspaceContentProps) {
+  if (!isDemoMode && !accountStateReady) {
+    return (
+      <div className={styles.tableShell}>
+        <div className={styles.tableEmpty}>메일함을 불러오는 중입니다.</div>
+      </div>
+    );
+  }
+
   const showMailboxConnectPrompt = !showMailboxConnectGate && !hasPersonalAccount;
 
   if (showMailboxConnectPrompt || showMailboxConnectGate) {

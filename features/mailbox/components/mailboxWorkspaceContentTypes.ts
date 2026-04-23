@@ -13,6 +13,7 @@ import type {
 } from './mailboxPanelTypes';
 
 export interface MailboxWorkspaceContentProps {
+  accountStateReady: boolean;
   accountStateLoading: boolean;
   attachmentInputRef: RefObject<HTMLInputElement | null>;
   attachments: ComposeAttachment[];

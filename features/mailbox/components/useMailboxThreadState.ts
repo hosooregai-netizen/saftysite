@@ -14,7 +14,9 @@ import {
 import { THREAD_PAGE_SIZE, type MailboxTab, type MailboxView } from './mailboxPanelTypes';
 
 interface UseMailboxThreadStateParams {
+  accountStateReady: boolean;
   headquarterId: string;
+  hasSelectableAccounts: boolean;
   isDemoMode: boolean;
   query: string;
   requestedThreadId: string;
@@ -27,7 +29,9 @@ interface UseMailboxThreadStateParams {
 }
 
 export function useMailboxThreadState({
+  accountStateReady,
   headquarterId,
+  hasSelectableAccounts,
   isDemoMode,
   query,
   requestedThreadId,
@@ -65,6 +69,22 @@ export function useMailboxThreadState({
           ? current
           : demoThreads[0]?.id || '',
       );
+      setThreadLoading(false);
+      return;
+    }
+
+    if (!accountStateReady) {
+      setThreadLoading(false);
+      return;
+    }
+
+    if (!selectedAccount?.id) {
+      if (!hasSelectableAccounts) {
+        setThreads([]);
+        setThreadTotal(0);
+        setSelectedThreadId('');
+        setThreadDetail(null);
+      }
       setThreadLoading(false);
       return;
     }
@@ -110,7 +130,19 @@ export function useMailboxThreadState({
     return () => {
       cancelled = true;
     };
-  }, [headquarterId, isDemoMode, query, selectedAccount?.id, selectedAccountId, setError, siteId, tab, threadOffset]);
+  }, [
+    accountStateReady,
+    hasSelectableAccounts,
+    headquarterId,
+    isDemoMode,
+    query,
+    selectedAccount?.id,
+    selectedAccountId,
+    setError,
+    siteId,
+    tab,
+    threadOffset,
+  ]);
 
   useEffect(() => {
     if (isDemoMode) {
@@ -121,6 +153,11 @@ export function useMailboxThreadState({
       }
       setThreadLoading(true);
       setThreadDetail(getDemoMailboxThreadDetail(selectedThreadId));
+      setThreadLoading(false);
+      return;
+    }
+
+    if (!accountStateReady) {
       setThreadLoading(false);
       return;
     }
@@ -159,7 +196,7 @@ export function useMailboxThreadState({
     return () => {
       cancelled = true;
     };
-  }, [isDemoMode, selectedThreadId, setError, view]);
+  }, [accountStateReady, isDemoMode, selectedThreadId, setError, view]);
 
   const threadPage = Math.floor(threadOffset / THREAD_PAGE_SIZE) + 1;
   const threadPageCount = Math.max(1, Math.ceil(threadTotal / THREAD_PAGE_SIZE));

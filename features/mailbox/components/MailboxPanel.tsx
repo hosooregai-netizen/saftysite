@@ -44,7 +44,10 @@ export function MailboxPanel({
     isDemoMode: uiState.isDemoMode,
     setError: uiState.setError,
   });
-  const showMailboxConnectGate = !uiState.isDemoMode && accountState.accounts.length === 0;
+  const showMailboxConnectGate =
+    !uiState.isDemoMode &&
+    accountState.accountStateReady &&
+    accountState.accounts.length === 0;
   const currentView = showMailboxConnectGate ? 'list' : routing.view;
   const reportState = useMailboxReportState({
     adminReports,
@@ -65,7 +68,9 @@ export function MailboxPanel({
     selectedReport: reportState.selectedReport,
   });
   const threadState = useMailboxThreadState({
+    accountStateReady: accountState.accountStateReady,
     headquarterId,
+    hasSelectableAccounts: accountState.selectableAccounts.length > 0,
     isDemoMode: uiState.isDemoMode,
     query: uiState.query,
     requestedThreadId: routing.requestedThreadId,

@@ -84,6 +84,7 @@ export function useMailboxPanelLayoutProps({
       onSync: () => void actions.handleSync(),
     },
     workspaceProps: {
+      accountStateReady: accountState.accountStateReady,
       accountStateLoading: accountState.accountStateLoading,
       attachmentInputRef: actions.attachmentInputRef,
       attachments: composeState.attachments,
