@@ -7,15 +7,37 @@ const PUBLIC_UPSTREAM_BASE_URL_ENV_KEYS = [
   'NEXT_PUBLIC_SAFETY_API_UPSTREAM_BASE_URL',
   'NEXT_PUBLIC_SAFETY_API_BASE_URL',
 ] as const;
-const PUBLIC_UPLOAD_UPSTREAM_BASE_URL_ENV_KEYS = [
-  'NEXT_PUBLIC_SAFETY_UPLOAD_UPSTREAM_BASE_URL',
-  'NEXT_PUBLIC_SAFETY_API_UPLOAD_UPSTREAM_BASE_URL',
-] as const;
-const PUBLIC_ASSET_BASE_URL_ENV_KEYS = ['NEXT_PUBLIC_SAFETY_ASSET_BASE_URL'] as const;
 const NEXT_PUBLIC_SAFETY_API_UPSTREAM_BASE_URL =
   process.env.NEXT_PUBLIC_SAFETY_API_UPSTREAM_BASE_URL?.trim() || '';
 const NEXT_PUBLIC_SAFETY_API_BASE_URL =
   process.env.NEXT_PUBLIC_SAFETY_API_BASE_URL?.trim() || '';
+const NEXT_PUBLIC_SAFETY_UPLOAD_UPSTREAM_BASE_URL =
+  process.env.NEXT_PUBLIC_SAFETY_UPLOAD_UPSTREAM_BASE_URL?.trim() || '';
+const NEXT_PUBLIC_SAFETY_API_UPLOAD_UPSTREAM_BASE_URL =
+  process.env.NEXT_PUBLIC_SAFETY_API_UPLOAD_UPSTREAM_BASE_URL?.trim() || '';
+const NEXT_PUBLIC_SAFETY_ASSET_BASE_URL =
+  process.env.NEXT_PUBLIC_SAFETY_ASSET_BASE_URL?.trim() || '';
+
+const PUBLIC_UPSTREAM_BASE_URL_VALUES = [
+  [
+    'NEXT_PUBLIC_SAFETY_API_UPSTREAM_BASE_URL',
+    NEXT_PUBLIC_SAFETY_API_UPSTREAM_BASE_URL,
+  ],
+  ['NEXT_PUBLIC_SAFETY_API_BASE_URL', NEXT_PUBLIC_SAFETY_API_BASE_URL],
+] as const;
+const PUBLIC_UPLOAD_UPSTREAM_BASE_URL_VALUES = [
+  [
+    'NEXT_PUBLIC_SAFETY_UPLOAD_UPSTREAM_BASE_URL',
+    NEXT_PUBLIC_SAFETY_UPLOAD_UPSTREAM_BASE_URL,
+  ],
+  [
+    'NEXT_PUBLIC_SAFETY_API_UPLOAD_UPSTREAM_BASE_URL',
+    NEXT_PUBLIC_SAFETY_API_UPLOAD_UPSTREAM_BASE_URL,
+  ],
+] as const;
+const PUBLIC_ASSET_BASE_URL_VALUES = [
+  ['NEXT_PUBLIC_SAFETY_ASSET_BASE_URL', NEXT_PUBLIC_SAFETY_ASSET_BASE_URL],
+] as const;
 
 function normalizeBaseUrl(value: string): string {
   return value.replace(/\/+$/, '');
@@ -25,11 +47,13 @@ function isAbsoluteHttpUrl(value: string): boolean {
   return /^https?:\/\//i.test(value);
 }
 
+function readPublicEnvValue(key: string, buildTimeValue: string): string {
+  return buildTimeValue || process.env[key]?.trim() || '';
+}
+
 function readPublicConfiguredUpstreamBaseUrl(): string | null {
-  for (const candidate of [
-    NEXT_PUBLIC_SAFETY_API_UPSTREAM_BASE_URL,
-    NEXT_PUBLIC_SAFETY_API_BASE_URL,
-  ]) {
+  for (const [envKey, buildTimeValue] of PUBLIC_UPSTREAM_BASE_URL_VALUES) {
+    const candidate = readPublicEnvValue(envKey, buildTimeValue);
     if (candidate && isAbsoluteHttpUrl(candidate)) {
       return normalizeBaseUrl(candidate);
     }
@@ -53,15 +77,15 @@ export function buildPublicSafetyApiUpstreamUrl(path: string): string | null {
 }
 
 export function getPublicSafetyUploadUpstreamBaseUrl(): string | null {
-  for (const envKey of PUBLIC_UPLOAD_UPSTREAM_BASE_URL_ENV_KEYS) {
-    const configured = process.env[envKey]?.trim();
+  for (const [envKey, buildTimeValue] of PUBLIC_UPLOAD_UPSTREAM_BASE_URL_VALUES) {
+    const configured = readPublicEnvValue(envKey, buildTimeValue);
     if (configured && isAbsoluteHttpUrl(configured)) {
       return normalizeBaseUrl(configured);
     }
   }
 
-  for (const envKey of PUBLIC_ASSET_BASE_URL_ENV_KEYS) {
-    const configured = process.env[envKey]?.trim();
+  for (const [envKey, buildTimeValue] of PUBLIC_ASSET_BASE_URL_VALUES) {
+    const configured = readPublicEnvValue(envKey, buildTimeValue);
     if (configured && isAbsoluteHttpUrl(configured)) {
       return normalizeBaseUrl(configured);
     }

@@ -9,6 +9,8 @@ const SAFETY_PUBLIC_UPSTREAM_BASE_URL_ENV_KEYS = [
   'NEXT_PUBLIC_SAFETY_API_UPSTREAM_BASE_URL',
   'NEXT_PUBLIC_SAFETY_API_BASE_URL',
 ] as const;
+const NEXT_PUBLIC_SAFETY_ASSET_BASE_URL =
+  process.env.NEXT_PUBLIC_SAFETY_ASSET_BASE_URL?.trim() || '';
 const ABSOLUTE_HTTP_URL_PATTERN = /^https?:\/\//i;
 const PASSTHROUGH_URL_PATTERN = /^(?:data|blob):/i;
 const SAFETY_UPLOADS_PATH_PREFIX = '/uploads/';
@@ -32,6 +34,10 @@ function normalizeBaseUrl(value: string): string {
 
 function isAbsoluteHttpUrl(value: string): boolean {
   return ABSOLUTE_HTTP_URL_PATTERN.test(value);
+}
+
+function readPublicEnvValue(key: string, buildTimeValue: string): string {
+  return buildTimeValue || process.env[key]?.trim() || '';
 }
 
 function hasNonProxyLocalScheme(value: string): boolean {
@@ -165,7 +171,7 @@ function extractSafetyAssetPath(value: string): string | null {
 
 export function getSafetyAssetBaseUrl(): string | null {
   for (const envKey of SAFETY_ASSET_BASE_URL_ENV_KEYS) {
-    const configured = process.env[envKey]?.trim();
+    const configured = readPublicEnvValue(envKey, NEXT_PUBLIC_SAFETY_ASSET_BASE_URL);
     if (configured?.startsWith('/') || (configured && isAbsoluteHttpUrl(configured))) {
       return normalizeBaseUrl(configured);
     }
