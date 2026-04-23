@@ -4,7 +4,8 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import { useRouter, useSearchParams } from 'next/navigation';
 import LoginPanel from '@/components/auth/LoginPanel';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
-import { fetchAdminOriginalPdfBlob } from '@/lib/admin/originalPdfClient';
+import { saveBlobAsFile } from '@/lib/api';
+import { fetchAdminOriginalPdfDocument } from '@/lib/admin/originalPdfClient';
 
 function AdminReportOpenContent() {
   const router = useRouter();
@@ -18,7 +19,9 @@ function AdminReportOpenContent() {
   const reportKey = useMemo(() => searchParams.get('reportKey')?.trim() || '', [searchParams]);
   const [message, setMessage] = useState('레거시 원본 PDF를 여는 중입니다.');
   const [error, setError] = useState<string | null>(null);
+  const [pdfFilename, setPdfFilename] = useState('');
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const pdfUrlRef = useRef<string | null>(null);
   const missingReportKeyError =
     isReady && isAuthenticated && !reportKey ? '열 보고서 키가 없습니다.' : null;
@@ -41,16 +44,20 @@ function AdminReportOpenContent() {
     const openReport = async () => {
       releasePdfUrl();
       setPdfUrl(null);
+      setPdfBlob(null);
+      setPdfFilename('');
       setError(null);
       setMessage('레거시 원본 PDF를 여는 중입니다.');
 
       try {
-        const blob = await fetchAdminOriginalPdfBlob(reportKey, {
+        const document = await fetchAdminOriginalPdfDocument(reportKey, {
           signal: abortController.signal,
         });
         if (cancelled) return;
-        const blobUrl = URL.createObjectURL(blob);
+        const blobUrl = URL.createObjectURL(document.blob);
         pdfUrlRef.current = blobUrl;
+        setPdfBlob(document.blob);
+        setPdfFilename(document.filename);
         setPdfUrl(blobUrl);
         setMessage('레거시 원본 PDF를 열었습니다.');
       } catch (nextError) {
@@ -98,9 +105,9 @@ function AdminReportOpenContent() {
           <p style={{ margin: 0 }}>{displayError || message}</p>
           {pdfUrl && !displayError ? (
             <div
-              style={{
-                border: '1px solid var(--erp-line)',
-                borderRadius: 8,
+            style={{
+              border: '1px solid var(--erp-line)',
+              borderRadius: 8,
                 height: 'min(74dvh, 780px)',
                 marginTop: 16,
                 minHeight: 420,
@@ -116,6 +123,31 @@ function AdminReportOpenContent() {
                   width: '100%',
                 }}
               />
+            </div>
+          ) : null}
+          {pdfUrl && !displayError ? (
+            <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+              <a
+                href={pdfUrl}
+                download={pdfFilename || `${reportKey || 'original-report'}.pdf`}
+                className="app-button app-button-secondary"
+              >
+                PDF 다운로드
+              </a>
+              {pdfBlob ? (
+                <button
+                  type="button"
+                  className="app-button app-button-secondary"
+                  onClick={() =>
+                    saveBlobAsFile(
+                      pdfBlob,
+                      pdfFilename || `${reportKey || 'original-report'}.pdf`,
+                    )
+                  }
+                >
+                  다른 이름으로 저장
+                </button>
+              ) : null}
             </div>
           ) : null}
           {displayError ? (

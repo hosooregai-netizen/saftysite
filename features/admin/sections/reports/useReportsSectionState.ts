@@ -15,7 +15,7 @@ import {
 import {
   buildControllerReportOpenHref,
 } from '@/lib/admin/controllerReports';
-import { fetchAdminOriginalPdfBlob } from '@/lib/admin/originalPdfClient';
+import { fetchAdminOriginalPdfDocument } from '@/lib/admin/originalPdfClient';
 import {
   normalizeControllerReview,
   normalizeDispatchMeta,
@@ -162,6 +162,7 @@ export function useReportsSectionState({
   const [originalPdfDialog, setOriginalPdfDialog] = useState<OriginalPdfDialogState>({
     error: null,
     loading: false,
+    pdfFilename: null,
     pdfUrl: null,
     reason: null,
     row: null,
@@ -360,18 +361,19 @@ export function useReportsSectionState({
       setOriginalPdfDialog({
         error: null,
         loading: true,
+        pdfFilename: null,
         pdfUrl: null,
         reason,
         row,
       });
 
       try {
-        const blob = await fetchAdminOriginalPdfBlob(row.reportKey, {
+        const document = await fetchAdminOriginalPdfDocument(row.reportKey, {
           signal: abortController.signal,
         });
         if (abortController.signal.aborted) return;
 
-        const pdfUrl = URL.createObjectURL(blob);
+        const pdfUrl = URL.createObjectURL(document.blob);
         originalPdfUrlRef.current = pdfUrl;
         setOriginalPdfDialog((current) =>
           current.row?.reportKey === row.reportKey
@@ -379,6 +381,7 @@ export function useReportsSectionState({
                 ...current,
                 error: null,
                 loading: false,
+                pdfFilename: document.filename,
                 pdfUrl,
               }
             : current,
@@ -393,6 +396,7 @@ export function useReportsSectionState({
                 ...current,
                 error: reason ? `${reason} ${pdfError}` : pdfError,
                 loading: false,
+                pdfFilename: null,
                 pdfUrl: null,
               }
             : current,
@@ -409,6 +413,7 @@ export function useReportsSectionState({
     setOriginalPdfDialog({
       error: null,
       loading: false,
+      pdfFilename: null,
       pdfUrl: null,
       reason: null,
       row: null,
