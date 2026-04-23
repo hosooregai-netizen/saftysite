@@ -18,6 +18,8 @@ export interface MailboxReportOption {
   meta: Record<string, unknown>;
   recipientEmail: string;
   reportKey: string;
+  originalPdfAvailable: boolean;
+  originalPdfDownloadPath: string;
   reportType: SafetyReportListItem['report_type'] | null;
   reportTitle: string;
   siteId: string;

@@ -38,6 +38,16 @@ function normalizeText(value: unknown) {
   return typeof value === 'string' ? value.trim() : '';
 }
 
+function normalizeMatchText(value: unknown) {
+  return normalizeText(value).normalize('NFKC').replace(/\s+/g, ' ').toLowerCase();
+}
+
+function normalizeCompanyMatchText(value: unknown) {
+  return normalizeMatchText(value)
+    .replace(/\(주\)|㈜|주식회사|\(유\)|유한회사/g, '')
+    .replace(/[()\s]/g, '');
+}
+
 function removeExt(value: string) {
   return value.replace(/\.[^.]+$/, '');
 }
@@ -56,7 +66,7 @@ function parseLegacySiteId(memo: unknown) {
 }
 
 function buildSiteMatchKey(headquarterName: string, siteName: string) {
-  return `${normalizeText(headquarterName)}::${normalizeText(siteName)}`;
+  return `${normalizeCompanyMatchText(headquarterName)}::${normalizeMatchText(siteName)}`;
 }
 
 function buildLegacyReportKey(legacyReportId: string) {
@@ -160,6 +170,7 @@ export function buildLegacyAdminReportRows(input: {
 }) {
   const siteByLegacyId = new Map<string, SafetySite>();
   const siteByMatchKey = new Map<string, SafetySite>();
+  const sitesByName = new Map<string, SafetySite[]>();
   const userByName = new Map<string, SafetyUser>();
 
   input.users.forEach((user) => {
@@ -174,6 +185,11 @@ export function buildLegacyAdminReportRows(input: {
     const headquarterName =
       normalizeText(site.headquarter_detail?.name) ||
       normalizeText(site.headquarter?.name);
+    const siteNameKey = normalizeMatchText(siteName);
+    if (siteNameKey) {
+      sitesByName.set(siteNameKey, [...(sitesByName.get(siteNameKey) || []), site]);
+    }
+
     const siteMatchKey = buildSiteMatchKey(headquarterName, siteName);
     if (siteName && headquarterName && !siteByMatchKey.has(siteMatchKey)) {
       siteByMatchKey.set(siteMatchKey, site);
@@ -187,9 +203,11 @@ export function buildLegacyAdminReportRows(input: {
 
   return input.legacyRows.map((row) => {
     const reportKey = buildLegacyReportKey(row.legacyReportId);
+    const sameNameSites = sitesByName.get(normalizeMatchText(row.siteName)) || [];
     const matchedSite =
       siteByLegacyId.get(normalizeText(row.legacySiteId)) ||
       siteByMatchKey.get(buildSiteMatchKey(row.headquarterName, row.siteName)) ||
+      (sameNameSites.length === 1 ? sameNameSites[0] : null) ||
       null;
     const matchedUser = userByName.get(normalizeText(row.assigneeName)) ?? null;
     const siteName = normalizeText(matchedSite?.site_name) || normalizeText(row.siteName) || '현장 미상';

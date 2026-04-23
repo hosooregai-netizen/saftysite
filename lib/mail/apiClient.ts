@@ -69,6 +69,27 @@ function withQuery(path: string, params: Record<string, string | null | undefine
   return query ? `${path}?${query}` : path;
 }
 
+const reportPdfPrepareRequests = new Map<string, Promise<void>>();
+
+function buildReportPdfPrepareKey(input: {
+  originalPdfAvailable?: boolean;
+  reportKey: string;
+  reportType?: string | null;
+}) {
+  return [
+    input.reportKey,
+    input.reportType || '',
+    input.originalPdfAvailable ? 'original' : 'generated',
+  ].join('::');
+}
+
+function shouldSkipReportPdfPrepare(input: {
+  originalPdfAvailable?: boolean;
+  reportKey: string;
+}) {
+  return Boolean(input.originalPdfAvailable) || input.reportKey.startsWith('legacy:');
+}
+
 export async function fetchMailAccounts() {
   return requestMailApi<{ rows: MailAccount[] }>('/accounts');
 }
@@ -284,6 +305,91 @@ export async function sendMail(input: {
       to: input.to,
     }),
   });
+}
+
+export async function sendReportMail(input: {
+  accountId: string;
+  attachments?: MailAttachmentPayload[];
+  body: string;
+  headquarterId?: string;
+  originalPdfAvailable?: boolean;
+  reportKey: string;
+  reportType?: string | null;
+  siteId?: string;
+  subject: string;
+  to: MailRecipient[];
+}) {
+  const prepareKey = buildReportPdfPrepareKey(input);
+  const pendingPrepare = reportPdfPrepareRequests.get(prepareKey);
+  if (pendingPrepare) {
+    await pendingPrepare.catch(() => undefined);
+  }
+
+  return requestMailApi<MailMessage>('/send-report', {
+    method: 'POST',
+    body: JSON.stringify({
+      account_id: input.accountId,
+      attachments: (input.attachments || []).map((attachment) => ({
+        content_type: attachment.contentType,
+        data_base64: attachment.dataBase64,
+        filename: attachment.filename,
+      })),
+      body: input.body,
+      headquarter_id: input.headquarterId || '',
+      original_pdf_available: Boolean(input.originalPdfAvailable),
+      report: {
+        original_pdf_available: Boolean(input.originalPdfAvailable),
+        report_key: input.reportKey,
+        report_type: input.reportType || '',
+      },
+      report_key: input.reportKey,
+      report_type: input.reportType || '',
+      site_id: input.siteId || '',
+      subject: input.subject,
+      thread_id: '',
+      to: input.to,
+    }),
+  });
+}
+
+export function prepareReportMailAttachment(input: {
+  originalPdfAvailable?: boolean;
+  reportKey: string;
+  reportType?: string | null;
+}) {
+  if (!input.reportKey || shouldSkipReportPdfPrepare(input)) {
+    return Promise.resolve();
+  }
+
+  const prepareKey = buildReportPdfPrepareKey(input);
+  const existing = reportPdfPrepareRequests.get(prepareKey);
+  if (existing) {
+    return existing;
+  }
+
+  const nextRequest = requestMailApi<{ prepared: boolean; skipped: string | null }>(
+    '/prepare-report',
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        original_pdf_available: Boolean(input.originalPdfAvailable),
+        report: {
+          original_pdf_available: Boolean(input.originalPdfAvailable),
+          report_key: input.reportKey,
+          report_type: input.reportType || '',
+        },
+        report_key: input.reportKey,
+        report_type: input.reportType || '',
+      }),
+    },
+  )
+    .then(() => undefined)
+    .catch((error) => {
+      reportPdfPrepareRequests.delete(prepareKey);
+      throw error;
+    });
+  reportPdfPrepareRequests.set(prepareKey, nextRequest);
+  return nextRequest;
 }
 
 export async function syncMail() {

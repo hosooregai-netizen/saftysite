@@ -235,7 +235,10 @@ export async function GET(
     const token = readRequiredAdminToken(request);
     const { reportKey } = await context.params;
     const manifestEntry = legacyPdfManifest.get(reportKey) ?? null;
-    const backendPdf = await fetchBackendOriginalPdf(reportKey, token, request);
+    const shouldUseLegacyManifestDirectly = Boolean(manifestEntry) && reportKey.startsWith('legacy:');
+    const backendPdf = shouldUseLegacyManifestDirectly
+      ? null
+      : await fetchBackendOriginalPdf(reportKey, token, request);
     if (backendPdf) {
       return new Response(new Uint8Array(backendPdf.buffer), {
         headers: {
@@ -248,11 +251,13 @@ export async function GET(
     }
 
     let report: SafetyReport | null = null;
-    try {
-      report = await fetchAdminReportByKey(token, reportKey, request);
-    } catch (error) {
-      if (!(error instanceof SafetyServerApiError && error.status === 404)) {
-        throw error;
+    if (!shouldUseLegacyManifestDirectly) {
+      try {
+        report = await fetchAdminReportByKey(token, reportKey, request);
+      } catch (error) {
+        if (!(error instanceof SafetyServerApiError && error.status === 404)) {
+          throw error;
+        }
       }
     }
 

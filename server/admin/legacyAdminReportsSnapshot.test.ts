@@ -173,3 +173,62 @@ test('buildLegacyAdminReportRows maps legacy rows to matched sites and pdf manif
   assert.equal(rows[1]?.originalPdfAvailable, false);
   assert.equal(rows[1]?.status, 'draft');
 });
+
+test('buildLegacyAdminReportRows tolerates company suffix differences and unique site-name matches', () => {
+  const rows = buildLegacyAdminReportRows({
+    legacyRows: [
+      {
+        assigneeName: '홍길동',
+        headquarterName: '(주)은화종합건설',
+        legacyReportId: '9101',
+        legacySiteId: '',
+        pdfFileName: '',
+        roundNo: 1,
+        siteName: '하왕십리동 890-93 다세대 신축공사',
+        status: '완료',
+        visitDate: '2026-01-05',
+      },
+      {
+        assigneeName: '홍길동',
+        headquarterName: '다른 본부 표기',
+        legacyReportId: '9102',
+        legacySiteId: '',
+        pdfFileName: '',
+        roundNo: 2,
+        siteName: '유일 현장명',
+        status: '완료',
+        visitDate: '2026-01-06',
+      },
+    ],
+    pdfManifest: new Map(),
+    sites: [
+      buildSite({
+        id: 'site-eunhwa',
+        site_name: '하왕십리동 890-93 다세대 신축공사',
+        headquarter: { id: 'hq-eunhwa', name: '주식회사은화종합건설' },
+        headquarter_detail: {
+          ...buildSite().headquarter_detail!,
+          id: 'hq-eunhwa',
+          name: '주식회사은화종합건설',
+        },
+        memo: '',
+      }),
+      buildSite({
+        id: 'site-unique',
+        site_name: '유일 현장명',
+        headquarter: { id: 'hq-unique', name: '현재 본부' },
+        headquarter_detail: {
+          ...buildSite().headquarter_detail!,
+          id: 'hq-unique',
+          name: '현재 본부',
+        },
+        memo: '',
+      }),
+    ],
+    users: [buildUser()],
+  });
+
+  assert.equal(rows[0]?.siteId, 'site-eunhwa');
+  assert.equal(rows[0]?.headquarterName, '주식회사은화종합건설');
+  assert.equal(rows[1]?.siteId, 'site-unique');
+});

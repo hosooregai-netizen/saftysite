@@ -353,6 +353,8 @@ export interface SafetyReportListItem {
   review?: ReportControllerReview | null;
   dispatch?: ReportDispatchMeta | null;
   document_kind?: ErpDocumentKind | null;
+  originalPdfAvailable?: boolean;
+  originalPdfDownloadPath?: string;
   meta: Record<string, unknown>;
   created_at: string;
   updated_at: string;

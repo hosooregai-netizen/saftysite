@@ -1,10 +1,9 @@
 import type { Dispatch, SetStateAction } from 'react';
-import { fetchMailThreadDetail, fetchMailThreads, sendMail } from '@/lib/mail/apiClient';
+import { fetchMailThreadDetail, fetchMailThreads, sendMail, sendReportMail } from '@/lib/mail/apiClient';
 import { readSafetyAuthToken } from '@/lib/safetyApi';
 import type { MailAccount, MailThreadDetail } from '@/types/mail';
 import {
   buildFileAttachmentPayload,
-  buildReportAttachmentPayload,
   dedupeRecipients,
   isLikelyEmail,
 } from './mailboxComposeHelpers';
@@ -102,12 +101,15 @@ export function useMailboxSendAction({
         if (!authToken) {
           throw new Error('보고서 첨부를 준비하려면 다시 로그인해 주세요.');
         }
+        const usesOriginalPdf =
+          selectedReport.originalPdfAvailable || selectedReport.reportKey.startsWith('legacy:');
         setMailSendProgress({
-          detail: '선택한 보고서를 PDF로 생성하고 있습니다.',
+          detail: usesOriginalPdf
+            ? '등록된 원본 PDF를 서버에서 바로 첨부합니다.'
+            : '보고서 PDF는 서버에서 생성해 바로 첨부합니다.',
           percent: 30,
-          title: '보고서 PDF 준비 중',
+          title: usesOriginalPdf ? '원본 PDF 첨부 중' : '보고서 PDF 준비 중',
         });
-        normalizedAttachments.push(await buildReportAttachmentPayload(selectedReport, authToken));
       }
       if (attachments.length > 0) {
         setMailSendProgress({
@@ -124,17 +126,33 @@ export function useMailboxSendAction({
         percent: 78,
         title: '메일 발송 중',
       });
-      await sendMail({
-        accountId: selectedAccount.id,
-        attachments: normalizedAttachments,
-        body: compose.body,
-        headquarterId: selectedHeadquarterId,
-        reportKey: selectedReportKey,
-        siteId: selectedSiteId,
-        subject: compose.subject,
-        threadId: composeMode === 'reply' ? threadDetail?.thread.id || '' : '',
-        to: normalizedRecipients.map((email) => ({ email, name: null })),
-      });
+      const recipients = normalizedRecipients.map((email) => ({ email, name: null }));
+      if (composeMode === 'report' && selectedReport?.reportKey) {
+        await sendReportMail({
+          accountId: selectedAccount.id,
+          attachments: normalizedAttachments,
+          body: compose.body,
+          headquarterId: selectedHeadquarterId,
+          originalPdfAvailable: selectedReport.originalPdfAvailable,
+          reportKey: selectedReport.reportKey,
+          reportType: selectedReport.reportType,
+          siteId: selectedSiteId,
+          subject: compose.subject,
+          to: recipients,
+        });
+      } else {
+        await sendMail({
+          accountId: selectedAccount.id,
+          attachments: normalizedAttachments,
+          body: compose.body,
+          headquarterId: selectedHeadquarterId,
+          reportKey: selectedReportKey,
+          siteId: selectedSiteId,
+          subject: compose.subject,
+          threadId: composeMode === 'reply' ? threadDetail?.thread.id || '' : '',
+          to: recipients,
+        });
+      }
       setMailSendProgress({
         detail: '발송 결과를 메일함 목록에 반영하고 있습니다.',
         percent: 92,
@@ -142,7 +160,9 @@ export function useMailboxSendAction({
       });
       setNotice(
         normalizedAttachments.length > 0
-          ? `메일을 발송했습니다. 첨부 ${normalizedAttachments.length}건을 함께 보냈습니다.`
+          ? `메일을 발송했습니다. 첨부 ${normalizedAttachments.length + (composeMode === 'report' ? 1 : 0)}건을 함께 보냈습니다.`
+          : composeMode === 'report'
+            ? '메일을 발송했습니다. 보고서 PDF를 함께 보냈습니다.'
           : '메일을 발송했습니다.',
       );
       if (composeMode === 'report') {

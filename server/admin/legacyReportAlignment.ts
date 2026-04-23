@@ -19,13 +19,23 @@ function normalizeText(value: unknown) {
   return typeof value === 'string' ? value.trim() : '';
 }
 
+function normalizeMatchText(value: unknown) {
+  return normalizeText(value).normalize('NFKC').replace(/\s+/g, ' ').toLowerCase();
+}
+
+function normalizeCompanyMatchText(value: unknown) {
+  return normalizeMatchText(value)
+    .replace(/\(주\)|㈜|주식회사|\(유\)|유한회사/g, '')
+    .replace(/[()\s]/g, '');
+}
+
 function parseLegacySiteId(memo: unknown) {
   const matched = normalizeText(memo).match(/legacy_insafed_site_id:([^\s]+)/);
   return matched?.[1]?.trim() || '';
 }
 
 function buildSiteMatchKey(headquarterName: string, siteName: string) {
-  return `${normalizeText(headquarterName)}::${normalizeText(siteName)}`;
+  return `${normalizeCompanyMatchText(headquarterName)}::${normalizeMatchText(siteName)}`;
 }
 
 function buildLegacyReportKey(legacyReportId: string) {
@@ -85,8 +95,14 @@ function buildLegacyReportAlignmentIndex(
 ) {
   const siteByLegacyId = new Map<string, SafetySite>();
   const siteByMatchKey = new Map<string, SafetySite>();
+  const sitesByName = new Map<string, SafetySite[]>();
 
   sites.forEach((site) => {
+    const siteNameKey = normalizeMatchText(site.site_name);
+    if (siteNameKey) {
+      sitesByName.set(siteNameKey, [...(sitesByName.get(siteNameKey) || []), site]);
+    }
+
     const legacySiteId = parseLegacySiteId(site.memo);
     if (legacySiteId && !siteByLegacyId.has(legacySiteId)) {
       siteByLegacyId.set(legacySiteId, site);
@@ -105,9 +121,11 @@ function buildLegacyReportAlignmentIndex(
   const bySiteRound = new Map<string, LegacyAlignedReportMeta>();
 
   legacyRows.forEach((row) => {
+    const sameNameSites = sitesByName.get(normalizeMatchText(row.siteName)) || [];
     const matchedSite =
       siteByLegacyId.get(normalizeText(row.legacySiteId)) ||
       siteByMatchKey.get(buildSiteMatchKey(row.headquarterName, row.siteName)) ||
+      (sameNameSites.length === 1 ? sameNameSites[0] : null) ||
       null;
     if (!matchedSite) {
       return;

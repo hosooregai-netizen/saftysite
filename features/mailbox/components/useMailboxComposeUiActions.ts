@@ -1,4 +1,5 @@
 import type { ChangeEvent, Dispatch, RefObject, SetStateAction } from 'react';
+import { prepareReportMailAttachment } from '@/lib/mail/apiClient';
 import type { MailAccount, MailThreadDetail } from '@/types/mail';
 import type {
   ComposeAttachment,
@@ -7,7 +8,13 @@ import type {
   MailboxView,
   SelectedReportContext,
 } from './mailboxPanelTypes';
-import { buildComposeState, buildReplySubject, buildThreadRecipients, dedupeRecipients, isLikelyEmail } from './mailboxComposeHelpers';
+import {
+  buildComposeState,
+  buildReplySubject,
+  buildThreadRecipients,
+  dedupeRecipients,
+  isLikelyEmail,
+} from './mailboxComposeHelpers';
 
 interface UseMailboxComposeUiActionsParams {
   attachmentInputRef: RefObject<HTMLInputElement | null>;
@@ -149,6 +156,16 @@ export function useMailboxComposeUiActions({
             ? [option.recipientEmail]
             : [],
     }));
+    void prepareReportMailAttachment({
+      originalPdfAvailable: option.originalPdfAvailable,
+      reportKey: option.reportKey,
+      reportType: option.reportType,
+    }).catch((error) => {
+      console.warn('Report PDF prepare failed; send will retry on demand.', {
+        error: error instanceof Error ? error.message : String(error),
+        reportKey: option.reportKey,
+      });
+    });
     setReportPickerOpen(false);
   };
 

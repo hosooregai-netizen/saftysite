@@ -1,13 +1,5 @@
-import {
-  fetchBadWorkplacePdfDocumentByReportKey,
-  fetchInspectionPdfDocumentByReportKey,
-  fetchQuarterlyPdfDocumentByReportKey,
-} from '@/lib/api';
-import { normalizeControllerReportType } from '@/lib/admin/reportMeta';
 import type { MailAttachmentPayload, MailThread } from '@/types/mail';
-import type { ComposeState, MailboxReportOption, SelectedReportContext } from './mailboxPanelTypes';
-
-const reportAttachmentCache = new Map<string, Promise<MailAttachmentPayload>>();
+import type { ComposeState } from './mailboxPanelTypes';
 
 function escapeHtml(value: string) {
   return value
@@ -29,12 +21,6 @@ function encodeByteArrayToBase64(bytes: Uint8Array) {
 
 async function blobToBase64(blob: Blob) {
   return encodeByteArrayToBase64(new Uint8Array(await blob.arrayBuffer()));
-}
-
-function resolveSelectedReportType(report: Pick<MailboxReportOption, 'documentKind' | 'meta' | 'reportType'>) {
-  const metaReportKind =
-    report.meta && typeof report.meta.reportKind === 'string' ? report.meta.reportKind : report.documentKind || '';
-  return normalizeControllerReportType(report.reportType || metaReportKind);
 }
 
 export function stripHtmlToText(value: string) {
@@ -108,41 +94,6 @@ export function buildReplySubject(subject: string) {
   const normalized = subject.trim();
   if (!normalized) return '';
   return /^re:/i.test(normalized) ? normalized : `Re: ${normalized}`;
-}
-
-export async function buildReportAttachmentPayload(
-  report: SelectedReportContext,
-  authToken: string,
-): Promise<MailAttachmentPayload> {
-  const cacheKey = [
-    report.reportKey || 'report',
-    report.updatedAt || 'unknown',
-    resolveSelectedReportType(report),
-  ].join('::');
-  const cached = reportAttachmentCache.get(cacheKey);
-  if (cached) {
-    return cached;
-  }
-
-  const pending = (async () => {
-    const reportType = resolveSelectedReportType(report);
-    const exported =
-      reportType === 'bad_workplace'
-        ? await fetchBadWorkplacePdfDocumentByReportKey(report.reportKey, authToken)
-        : reportType === 'quarterly_report'
-          ? await fetchQuarterlyPdfDocumentByReportKey(report.reportKey, authToken)
-          : await fetchInspectionPdfDocumentByReportKey(report.reportKey, authToken);
-    return {
-      contentType: exported.blob.type || 'application/pdf',
-      dataBase64: await blobToBase64(exported.blob),
-      filename: exported.filename || `${report.reportKey || 'report'}.pdf`,
-    };
-  })();
-  reportAttachmentCache.set(cacheKey, pending);
-  return pending.catch((error) => {
-    reportAttachmentCache.delete(cacheKey);
-    throw error;
-  });
 }
 
 export async function buildFileAttachmentPayload(file: File): Promise<MailAttachmentPayload> {

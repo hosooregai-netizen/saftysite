@@ -5,6 +5,7 @@ import localStyles from './MailboxPanel.module.css';
 
 interface MailboxReportPickerModalOption {
   headquarterName: string;
+  originalPdfAvailable: boolean;
   reportKey: string;
   reportTitle: string;
   siteName: string;
@@ -99,6 +100,9 @@ export function MailboxReportPickerModal({
                   {option.visitDate ? ` · ${option.visitDate}` : ''}
                 </span>
                 <span className={localStyles.accountMeta}>{option.reportKey}</span>
+                {option.originalPdfAvailable || option.reportKey.startsWith('legacy:') ? (
+                  <span className={localStyles.accountMeta}>원본 PDF 첨부 가능</span>
+                ) : null}
               </div>
               <button
                 type="button"

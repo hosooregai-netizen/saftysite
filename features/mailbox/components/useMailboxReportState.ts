@@ -1,10 +1,21 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { fetchAdminReports } from '@/lib/admin/apiClient';
 import { fetchSafetyReportList, readSafetyAuthToken } from '@/lib/safetyApi';
+import type { ControllerReportRow } from '@/types/admin';
 import type { InspectionSite } from '@/types/inspectionSession/session';
 import type { SafetyReportListItem, SafetySite } from '@/types/backend';
 import type { MailboxReportOption, SelectedReportContext } from './mailboxPanelTypes';
+import {
+  doesReportOptionMatchSiteFilter,
+  mapAdminReportRowToMailboxReportOption,
+  mapSafetyReportListItemToMailboxReportOption,
+  mergeMailboxReportOptions,
+} from './mailboxReportPickerHelpers';
+
+const ADMIN_REPORT_PAGE_SIZE = 200;
+const ADMIN_REPORT_OPTION_MAX = 1000;
 
 interface UseMailboxReportStateParams {
   adminReports: SafetyReportListItem[];
@@ -36,6 +47,7 @@ export function useMailboxReportState({
   const [reportPickerLoading, setReportPickerLoading] = useState(false);
   const [reportSearch, setReportSearch] = useState('');
   const [reportSiteFilter, setReportSiteFilter] = useState('');
+  const [adminModalReports, setAdminModalReports] = useState<MailboxReportOption[]>([]);
   const [workerModalReports, setWorkerModalReports] = useState<MailboxReportOption[]>([]);
   const [selectedReport, setSelectedReport] = useState<SelectedReportContext | null>(null);
 
@@ -48,6 +60,10 @@ export function useMailboxReportState({
             recipientEmail: '',
             documentKind: null,
             meta: {},
+            originalPdfAvailable: reportKey.startsWith('legacy:'),
+            originalPdfDownloadPath: reportKey
+              ? `/api/admin/reports/${encodeURIComponent(reportKey)}/original-pdf`
+              : '',
             reportKey,
             reportType: null,
             reportTitle: reportKey || '보고서',
@@ -67,30 +83,86 @@ export function useMailboxReportState({
   );
   const adminReportOptions = useMemo(
     () =>
-      adminReports.map((item) => {
-        const matchedSite = adminSiteById.get(item.site_id);
-        return {
-          headquarterId: item.headquarter_id || '',
-          headquarterName:
-            matchedSite?.headquarter_detail?.name || matchedSite?.headquarter?.name || '',
-          recipientEmail: matchedSite?.site_contact_email || '',
-          documentKind: item.document_kind ?? null,
-          meta: item.meta,
-          reportKey: item.report_key,
-          reportType: item.report_type ?? null,
-          reportTitle: item.report_title,
-          siteId: item.site_id,
-          siteName: matchedSite?.site_name || item.site_id,
-          updatedAt: item.updated_at,
-          visitDate: item.visit_date,
-        };
-      }),
+      adminReports.map((item) => mapSafetyReportListItemToMailboxReportOption(item, adminSiteById)),
     [adminReports, adminSiteById],
   );
   const reportOptions = useMemo(
-    () => (mode === 'admin' ? adminReportOptions : workerModalReports),
-    [adminReportOptions, mode, workerModalReports],
+    () =>
+      mode === 'admin'
+        ? adminModalReports.length > 0
+          ? adminModalReports
+          : adminReportOptions
+        : workerModalReports,
+    [adminModalReports, adminReportOptions, mode, workerModalReports],
   );
+
+  useEffect(() => {
+    if (isDemoMode || mode !== 'admin' || !reportPickerOpen || !isAuthenticated || !isReady) {
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        setReportPickerLoading(true);
+        const selectedSite = reportSiteFilter ? adminSiteById.get(reportSiteFilter) ?? null : null;
+        const fetchRows = async (input: { query?: string; siteId?: string }) => {
+          const rows: ControllerReportRow[] = [];
+          for (let offset = 0; offset < ADMIN_REPORT_OPTION_MAX; offset += ADMIN_REPORT_PAGE_SIZE) {
+            const response = await fetchAdminReports({
+              limit: ADMIN_REPORT_PAGE_SIZE,
+              offset,
+              query: input.query,
+              siteId: input.siteId,
+              sortBy: 'updatedAt',
+              sortDir: 'desc',
+            });
+            rows.push(...response.rows);
+            if (rows.length >= response.total || response.rows.length < response.limit) {
+              break;
+            }
+          }
+          return rows;
+        };
+        const rows = await fetchRows({ siteId: reportSiteFilter || undefined });
+        const fallbackRows =
+          selectedSite?.site_name && reportSiteFilter
+            ? await fetchRows({ query: selectedSite.site_name })
+            : [];
+        if (cancelled) return;
+        setAdminModalReports(
+          mergeMailboxReportOptions(
+            [...rows, ...fallbackRows]
+              .slice(0, ADMIN_REPORT_OPTION_MAX * (fallbackRows.length > 0 ? 2 : 1))
+              .map((row) => mapAdminReportRowToMailboxReportOption(row, adminSiteById, selectedSite))
+              .filter((option) =>
+                doesReportOptionMatchSiteFilter(option, reportSiteFilter, selectedSite),
+              ),
+          ),
+        );
+      } catch (error) {
+        if (!cancelled) {
+          console.error('Failed to load admin mailbox report options', error);
+        }
+      } finally {
+        if (!cancelled) {
+          setReportPickerLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    adminSiteById,
+    isAuthenticated,
+    isDemoMode,
+    isReady,
+    mode,
+    reportPickerOpen,
+    reportSiteFilter,
+  ]);
 
   useEffect(() => {
     if (isDemoMode || mode !== 'worker' || !reportPickerOpen || !isAuthenticated || !isReady) {
@@ -116,6 +188,8 @@ export function useMailboxReportState({
               recipientEmail: workerSite.adminSiteSnapshot.siteContactEmail || '',
               documentKind: item.document_kind ?? null,
               meta: item.meta,
+              originalPdfAvailable: Boolean(item.originalPdfAvailable),
+              originalPdfDownloadPath: item.originalPdfDownloadPath || '',
               reportKey: item.report_key,
               reportType: item.report_type ?? null,
               reportTitle: item.report_title,
@@ -154,7 +228,9 @@ export function useMailboxReportState({
       if (
         current.reportTitle === matchedReport.reportTitle &&
         current.siteName === matchedReport.siteName &&
-        current.headquarterName === matchedReport.headquarterName
+        current.headquarterName === matchedReport.headquarterName &&
+        current.originalPdfAvailable === matchedReport.originalPdfAvailable &&
+        current.originalPdfDownloadPath === matchedReport.originalPdfDownloadPath
       ) {
         return current;
       }
@@ -164,8 +240,13 @@ export function useMailboxReportState({
 
   const filteredReportOptions = useMemo(() => {
     const normalizedQuery = reportSearch.trim().toLowerCase();
+    const selectedSite = reportSiteFilter ? adminSiteById.get(reportSiteFilter) ?? null : null;
     return reportOptions
-      .filter((item) => (mode === 'admin' && reportSiteFilter ? item.siteId === reportSiteFilter : true))
+      .filter((item) =>
+        mode === 'admin'
+          ? doesReportOptionMatchSiteFilter(item, reportSiteFilter, selectedSite)
+          : true,
+      )
       .filter((item) => {
         if (!normalizedQuery) return true;
         return [
@@ -180,7 +261,7 @@ export function useMailboxReportState({
           .includes(normalizedQuery);
       })
       .sort((left, right) => (right.updatedAt || '').localeCompare(left.updatedAt || ''));
-  }, [mode, reportOptions, reportSearch, reportSiteFilter]);
+  }, [adminSiteById, mode, reportOptions, reportSearch, reportSiteFilter]);
 
   return {
     filteredReportOptions,
