@@ -95,6 +95,7 @@ const FEATURE_RULES = [
       /^features\/admin\/sections\/reports\//,
       /^server\/admin\/legacyAdminReportsSnapshot(\.test)?\.ts$/,
       /^server\/admin\/legacyReportAlignment(\.test)?\.ts$/,
+      /^server\/admin\/originalPdfRouteHelpers(\.test)?\.ts$/,
       /^server\/admin\/reportsRouteCache(\.test)?\.ts$/,
     ],
   },

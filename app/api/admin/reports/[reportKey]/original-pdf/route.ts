@@ -9,6 +9,7 @@ import {
   requestSafetyAdminServerRaw,
   SafetyServerApiError,
 } from '@/server/admin/safetyApiServer';
+import { normalizeOriginalPdfRouteReportKey } from '@/server/admin/originalPdfRouteHelpers';
 import type { SafetyReport } from '@/types/backend';
 
 export const runtime = 'nodejs';
@@ -233,7 +234,8 @@ export async function GET(
 ): Promise<Response> {
   try {
     const token = readRequiredAdminToken(request);
-    const { reportKey } = await context.params;
+    const params = await context.params;
+    const reportKey = normalizeOriginalPdfRouteReportKey(params.reportKey);
     const manifestEntry = legacyPdfManifest.get(reportKey) ?? null;
     const shouldUseLegacyManifestDirectly = Boolean(manifestEntry) && reportKey.startsWith('legacy:');
     const backendPdf = shouldUseLegacyManifestDirectly
