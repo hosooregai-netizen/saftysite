@@ -1,6 +1,7 @@
 'use client';
 
 import { saveBlobAsFile } from '@/lib/api';
+import { createOptimizedPhotoUpload } from '@/lib/photos/thumbnail';
 import { resolveSafetyAssetUrl } from '@/lib/safetyApi/assetUrls';
 import { getSafetyApiBaseUrl } from '@/lib/safetyApi/config';
 import { buildPublicSafetyUploadUpstreamUrl } from '@/lib/safetyApi/upstream';
@@ -131,6 +132,7 @@ function getPhotoUploadTransport() {
 
 function validatePhotoUploadInput(input: {
   file: File;
+  skipProxySizeCheck?: boolean;
   thumbnail?: File | null;
 }) {
   if (!input.file.name) {
@@ -153,7 +155,11 @@ function validatePhotoUploadInput(input: {
   }
 
   const uploadBytes = getPhotoUploadByteSize(input);
-  if (getPhotoUploadTransport().usesProxyUpload && uploadBytes > MAX_PHOTO_PROXY_FILE_BYTES) {
+  if (
+    !input.skipProxySizeCheck &&
+    getPhotoUploadTransport().usesProxyUpload &&
+    uploadBytes > MAX_PHOTO_PROXY_FILE_BYTES
+  ) {
     return buildProxyUploadOversizeErrorMessage('사진');
   }
 
@@ -383,21 +389,31 @@ export async function uploadPhotoAlbumAsset(input: {
   siteId: string;
   thumbnail?: File | null;
 }) {
-  const validationMessage = validatePhotoUploadInput(input);
+  const validationMessage = validatePhotoUploadInput({
+    ...input,
+    skipProxySizeCheck: true,
+  });
   if (validationMessage) {
     throw new SafetyApiError(validationMessage, 400);
+  }
+
+  const optimizedFile = await createOptimizedPhotoUpload(input.file).catch(() => input.file);
+  const uploadInput = optimizedFile === input.file ? input : { ...input, file: optimizedFile };
+  const proxyValidationMessage = validatePhotoUploadInput(uploadInput);
+  if (proxyValidationMessage) {
+    throw new SafetyApiError(proxyValidationMessage, 400);
   }
 
   const headers = createAuthorizedHeaders();
   const transport = getPhotoUploadTransport();
   if (transport.directUploadUrl) {
     try {
-      return await uploadPhotoAlbumAssetDirect(transport.directUploadUrl, headers, input);
+      return await uploadPhotoAlbumAssetDirect(transport.directUploadUrl, headers, uploadInput);
     } catch (error) {
       if (
         !shouldFallbackDirectUploadToProxy(
           error,
-          getPhotoUploadByteSize(input),
+          getPhotoUploadByteSize(uploadInput),
           MAX_PHOTO_PROXY_FILE_BYTES,
         )
       ) {
@@ -406,7 +422,7 @@ export async function uploadPhotoAlbumAsset(input: {
     }
   }
 
-  return uploadPhotoAlbumAssetProxy(headers, input);
+  return uploadPhotoAlbumAssetProxy(headers, uploadInput);
 }
 
 export async function downloadPhotoAlbumSelection(itemIds: string[]) {
