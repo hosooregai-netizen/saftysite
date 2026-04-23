@@ -189,11 +189,11 @@ export const ERP_FEATURE_CONTRACTS = {
   },
   'site-hub': {
     id: 'site-hub',
-    description: '현장 목록에서 현장 메인 상세 패널과 분기 보고서 목록으로 이어진다.',
-    routes: ['/', '/sites/site-1/entry', '/sites/site-1/quarterly'],
-    markers: ['현장 목록', '사업장/현장 식별', '운영/담당', '분기 종합 보고서 목록'],
-    apis: ['GET /assignments/me/sites', 'GET /reports'],
-    criticalActions: ['현장 선택', '현장 메인 상세 진입', '분기 종합 보고서 목록 이동'],
+    description: '작업자 로그인 후 내 일정에서 현장 메인 상세 패널과 분기 보고서 목록으로 이어진다.',
+    routes: ['/calendar', '/sites/site-1/entry', '/sites/site-1/quarterly'],
+    markers: ['내 일정', '사업장/현장 식별', '운영/담당', '분기 종합 보고서 목록'],
+    apis: ['GET /assignments/me/sites'],
+    criticalActions: ['작업자 로그인', '현장 메인 상세 진입', '분기 종합 보고서 목록 이동'],
   },
   'inspection-session-doc7': {
     id: 'inspection-session-doc7',
