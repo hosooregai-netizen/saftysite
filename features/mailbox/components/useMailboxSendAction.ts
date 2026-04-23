@@ -134,8 +134,7 @@ export function useMailboxSendAction({
         if (!authToken) {
           throw new Error('보고서 첨부를 준비하려면 다시 로그인해 주세요.');
         }
-        const usesOriginalPdf =
-          selectedReport.originalPdfAvailable || selectedReport.reportKey.startsWith('legacy:');
+        const usesOriginalPdf = selectedReport.originalPdfAvailable;
         setMailSendProgress({
           detail: usesOriginalPdf
             ? '등록된 원본 PDF를 서버에서 바로 첨부합니다.'

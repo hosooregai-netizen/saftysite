@@ -87,7 +87,7 @@ function shouldSkipReportPdfPrepare(input: {
   originalPdfAvailable?: boolean;
   reportKey: string;
 }) {
-  return Boolean(input.originalPdfAvailable) || input.reportKey.startsWith('legacy:');
+  return Boolean(input.originalPdfAvailable);
 }
 
 export async function fetchMailAccounts() {

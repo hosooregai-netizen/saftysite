@@ -17,6 +17,8 @@
 - Search or site-filter changes reset the picker to the first page and fetch the new page from the server.
 - Mail attachments use the selected report title as the outgoing PDF filename for both legacy and generated reports.
 - Admin mailbox sends can forward the current user's display name alongside the shared mailbox account.
+- The compose/report picker UI only advertises original PDF usage when the selected row explicitly has `originalPdfAvailable`.
+- Sending no longer hard-fails on missing original PDFs when a generated report PDF can be produced instead.
 
 ## Automated Coverage
 

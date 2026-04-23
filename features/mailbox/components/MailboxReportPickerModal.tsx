@@ -118,7 +118,7 @@ export function MailboxReportPickerModal({
                   {option.visitDate ? ` · ${option.visitDate}` : ''}
                 </span>
                 <span className={localStyles.accountMeta}>{option.reportKey}</span>
-                {option.originalPdfAvailable || option.reportKey.startsWith('legacy:') ? (
+                {option.originalPdfAvailable ? (
                   <span className={localStyles.accountMeta}>원본 PDF 첨부 가능</span>
                 ) : null}
               </div>

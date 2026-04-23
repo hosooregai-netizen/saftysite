@@ -88,8 +88,8 @@ export function MailboxComposeSupport({
                 기본 수신자 {selectedReport.recipientEmail || '미등록'}
               </span>
               <span className={localStyles.accountMeta}>발송 시 선택한 보고서 PDF가 자동으로 첨부됩니다.</span>
-              {selectedReport.originalPdfAvailable || selectedReport.reportKey.startsWith('legacy:') ? (
-                <span className={localStyles.accountMeta}>레거시 보고서는 등록된 원본 PDF를 첨부합니다.</span>
+              {selectedReport.originalPdfAvailable ? (
+                <span className={localStyles.accountMeta}>등록된 원본 PDF가 있으면 그 파일을 우선 첨부합니다.</span>
               ) : null}
             </div>
             <button

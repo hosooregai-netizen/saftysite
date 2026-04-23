@@ -60,7 +60,7 @@ export function useMailboxReportState({
             recipientEmail: '',
             documentKind: null,
             meta: {},
-            originalPdfAvailable: reportKey.startsWith('legacy:'),
+            originalPdfAvailable: false,
             originalPdfDownloadPath: reportKey
               ? `/api/admin/reports/${encodeURIComponent(reportKey)}/original-pdf`
               : '',

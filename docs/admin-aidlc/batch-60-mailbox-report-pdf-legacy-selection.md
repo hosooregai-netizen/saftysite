@@ -16,6 +16,8 @@
 - `/api/admin/reports/[reportKey]/original-pdf` normalizes encoded legacy report keys before manifest lookup.
 - Mail attachments now prefer the visible report title as the PDF filename instead of raw keys like `legacy:...`.
 - Admin shared-mailbox sends can forward the current admin user's display name so recipients do not only see the shared mailbox label.
+- Mailbox UI now shows `원본 PDF 첨부 가능` only when the report row explicitly exposes an original PDF.
+- If an original-PDF-marked send still returns `404`, the mail attachment path falls back to generated PDF creation instead of failing immediately.
 
 ## Deployment Notes
 

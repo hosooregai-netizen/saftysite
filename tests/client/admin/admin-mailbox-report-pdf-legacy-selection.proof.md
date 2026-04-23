@@ -15,6 +15,8 @@
 - Encoded legacy keys such as `legacy%3Atechnical_guidance%3A435681` resolve to the same original PDF manifest entry as decoded keys.
 - Mail attachments use the visible report title as the filename instead of raw legacy/generated keys.
 - Shared mailbox sends can stamp the current admin user's display name instead of only the shared mailbox label.
+- The picker only labels rows as original-PDF-capable when `originalPdfAvailable` is explicitly true.
+- A stale/missing original PDF now falls back to generated PDF attachment creation on send.
 
 ## Automated Coverage
 

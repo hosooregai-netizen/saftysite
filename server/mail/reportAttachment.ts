@@ -35,7 +35,7 @@ export function buildMailReportFilename(
 }
 
 export function shouldUseOriginalPdfForMailReport(input: MailReportAttachmentInput) {
-  return Boolean(input.originalPdfAvailable) || input.reportKey.startsWith('legacy:');
+  return Boolean(input.originalPdfAvailable);
 }
 
 export function readMailReportFilenameFromHeaders(headers: Headers, fallback: string) {
@@ -137,7 +137,16 @@ export async function buildMailReportAttachment(
   }
 
   const pdfRequest = buildReportPdfRequest({ ...input, reportKey }, request, token);
-  const response = await fetch(pdfRequest.url, pdfRequest.requestInit);
+  let response = await fetch(pdfRequest.url, pdfRequest.requestInit);
+
+  if (pdfRequest.isOriginalPdf && response.status === 404) {
+    const generatedPdfRequest = buildReportPdfRequest(
+      { ...input, originalPdfAvailable: false, reportKey },
+      request,
+      token,
+    );
+    response = await fetch(generatedPdfRequest.url, generatedPdfRequest.requestInit);
+  }
 
   if (!response.ok) {
     const detail = await readErrorMessage(response);
