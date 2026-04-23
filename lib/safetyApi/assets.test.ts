@@ -188,6 +188,42 @@ test('uploadSafetyAssetFile uses the HTTPS asset origin when a dedicated upload 
   );
 });
 
+test('uploadSafetyAssetFile prefers the local proxy route for small image assets', async () => {
+  const restoreWindow = installWindow({ protocol: 'https:', token: 'asset-token' });
+  const originalFetch = globalThis.fetch;
+
+  await withUploadEnv('https://uploads.example.com', async () => {
+    globalThis.fetch = async (input, init) => {
+      assert.equal(String(input), '/api/safety/content-items/assets/upload');
+      assert.equal(init?.method, 'POST');
+      return new Response(
+        JSON.stringify({
+          path: '/uploads/content-items/mock-photo.jpg',
+          file_name: 'mock-photo.jpg',
+          content_type: 'image/jpeg',
+          size: 128,
+        }),
+        {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        },
+      );
+    };
+
+    try {
+      const uploaded = await uploadSafetyAssetFile(
+        new File(['img'], 'mock-photo.jpg', { type: 'image/jpeg' }),
+      );
+
+      assert.equal(uploaded.file_name, 'mock-photo.jpg');
+      assert.ok(uploaded.url.includes('/uploads/content-items/mock-photo.jpg'));
+    } finally {
+      globalThis.fetch = originalFetch;
+      restoreWindow();
+    }
+  });
+});
+
 test('uploadSafetyAssetFile falls back to the proxy route after a small direct-upload 404', async () => {
   const restoreWindow = installWindow({ protocol: 'https:', token: 'asset-token' });
   const originalFetch = globalThis.fetch;

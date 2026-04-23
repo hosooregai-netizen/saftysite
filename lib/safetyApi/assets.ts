@@ -2,10 +2,9 @@
 
 import { createOptimizedPhotoUpload } from '@/lib/photos/thumbnail';
 import type { SafetyContentAssetUpload } from './adminEndpoints';
-import { uploadSafetyContentAsset } from './adminEndpoints';
 import { resolveSafetyAssetUrl } from './assetUrls';
 import { readSafetyAuthToken } from './authStorage';
-import { getSafetyApiBaseUrl } from './config';
+import { buildSafetyApiUrl, getSafetyApiBaseUrl } from './config';
 import { buildPublicSafetyUploadUpstreamUrl } from './upstream';
 import {
   buildProxyUploadOversizeErrorMessage,
@@ -16,7 +15,9 @@ import {
 
 export const MAX_SAFETY_ASSET_BYTES = 50 * 1024 * 1024;
 export const MAX_SAFETY_PROXY_FILE_BYTES = Math.floor(4.5 * 1024 * 1024);
-const SAFETY_ASSET_UPLOAD_TIMEOUT_MS = 45000;
+const SAFETY_ASSET_UPLOAD_BASE_TIMEOUT_MS = 60000;
+const SAFETY_ASSET_UPLOAD_TIMEOUT_PER_MB_MS = 4000;
+const SAFETY_ASSET_UPLOAD_MAX_TIMEOUT_MS = 180000;
 
 interface SafetyAssetValidationOptions {
   allowImageProxyOptimization?: boolean;
@@ -40,6 +41,18 @@ function getSafetyAssetUploadTransport() {
   });
 }
 
+function getProxySafetyAssetUploadUrl(): string {
+  return buildSafetyApiUrl('/content-items/assets/upload');
+}
+
+function shouldPreferProxySafetyImageUpload(file: File, proxyUploadUrl: string): boolean {
+  return (
+    proxyUploadUrl.startsWith('/') &&
+    isOptimizableSafetyImageFile(file) &&
+    file.size <= MAX_SAFETY_PROXY_FILE_BYTES
+  );
+}
+
 function isOptimizableSafetyImageFile(file: File): boolean {
   if (/^image\/(?:png|jpe?g|webp|bmp|heic|heif)$/i.test(file.type)) {
     return true;
@@ -54,6 +67,13 @@ async function prepareSafetyAssetFileForUpload(file: File): Promise<File> {
   }
 
   return createOptimizedPhotoUpload(file).catch(() => file);
+}
+
+function getSafetyAssetUploadTimeoutMs(fileSize: number): number {
+  const sizeBasedTimeout =
+    SAFETY_ASSET_UPLOAD_BASE_TIMEOUT_MS +
+    Math.ceil(fileSize / (1024 * 1024)) * SAFETY_ASSET_UPLOAD_TIMEOUT_PER_MB_MS;
+  return Math.min(SAFETY_ASSET_UPLOAD_MAX_TIMEOUT_MS, sizeBasedTimeout);
 }
 
 export function usesSafetyProxyUpload(): boolean {
@@ -71,7 +91,7 @@ function parseUploadErrorMessage(payload: unknown, fallback: string): string {
   return fallback;
 }
 
-async function uploadSafetyContentAssetDirect(
+async function uploadSafetyContentAsset(
   uploadUrl: string,
   token: string,
   file: File,
@@ -79,12 +99,13 @@ async function uploadSafetyContentAssetDirect(
   const body = new FormData();
   body.set('file', file);
 
+  const uploadTimeoutMs = getSafetyAssetUploadTimeoutMs(file.size);
   const abortController = new AbortController();
   const timeoutId = setTimeout(() => {
     abortController.abort(
-      new Error(`콘텐츠 파일 업로드가 ${SAFETY_ASSET_UPLOAD_TIMEOUT_MS}ms 안에 완료되지 않았습니다.`),
+      new Error(`콘텐츠 파일 업로드가 ${uploadTimeoutMs}ms 안에 완료되지 않았습니다.`),
     );
-  }, SAFETY_ASSET_UPLOAD_TIMEOUT_MS);
+  }, uploadTimeoutMs);
 
   let response: Response;
 
@@ -178,13 +199,16 @@ export async function uploadSafetyAssetFile(file: File): Promise<UploadedSafetyA
   }
 
   const transport = getSafetyAssetUploadTransport();
+  const proxyUploadUrl = getProxySafetyAssetUploadUrl();
   let uploaded: SafetyContentAssetUpload;
 
-  if (!transport.directUploadUrl) {
-    uploaded = await uploadSafetyContentAsset(token, uploadFile);
+  if (shouldPreferProxySafetyImageUpload(uploadFile, proxyUploadUrl)) {
+    uploaded = await uploadSafetyContentAsset(proxyUploadUrl, token, uploadFile);
+  } else if (!transport.directUploadUrl) {
+    uploaded = await uploadSafetyContentAsset(proxyUploadUrl, token, uploadFile);
   } else {
     try {
-      uploaded = await uploadSafetyContentAssetDirect(
+      uploaded = await uploadSafetyContentAsset(
         transport.directUploadUrl,
         token,
         uploadFile,
@@ -197,9 +221,9 @@ export async function uploadSafetyAssetFile(file: File): Promise<UploadedSafetyA
           MAX_SAFETY_PROXY_FILE_BYTES,
         )
       ) {
-        throw error;
+          throw error;
       }
-      uploaded = await uploadSafetyContentAsset(token, uploadFile);
+      uploaded = await uploadSafetyContentAsset(proxyUploadUrl, token, uploadFile);
     }
   }
 
