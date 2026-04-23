@@ -3,6 +3,8 @@
 import AppModal from '@/components/ui/AppModal';
 import localStyles from './MailboxPanel.module.css';
 
+const REPORT_PICKER_PAGE_SIZE = 20;
+
 interface MailboxReportPickerModalOption {
   headquarterName: string;
   originalPdfAvailable: boolean;
@@ -22,12 +24,16 @@ interface MailboxReportPickerModalProps {
   mode: 'admin' | 'worker';
   open: boolean;
   reportPickerLoading: boolean;
+  reportPickerPage: number;
+  reportPickerPageCount: number;
+  reportPickerTotal: number;
   reportSearch: string;
   reportSiteFilter: string;
   siteOptions: MailboxReportPickerSiteOption[];
   onChangeReportSearch: (value: string) => void;
   onChangeSiteFilter: (value: string) => void;
   onClose: () => void;
+  onMoveReportPickerPage: (page: number) => void;
   onSelectReport: (reportKey: string) => void;
 }
 
@@ -36,14 +42,26 @@ export function MailboxReportPickerModal({
   mode,
   open,
   reportPickerLoading,
+  reportPickerPage,
+  reportPickerPageCount,
+  reportPickerTotal,
   reportSearch,
   reportSiteFilter,
   siteOptions,
   onChangeReportSearch,
   onChangeSiteFilter,
   onClose,
+  onMoveReportPickerPage,
   onSelectReport,
 }: MailboxReportPickerModalProps) {
+  const canShowPagination = mode === 'admin' && reportPickerTotal > 0;
+  const rangeStart = canShowPagination
+    ? (reportPickerPage - 1) * REPORT_PICKER_PAGE_SIZE + 1
+    : 0;
+  const rangeEnd = canShowPagination
+    ? Math.min(reportPickerPage * REPORT_PICKER_PAGE_SIZE, reportPickerTotal)
+    : 0;
+
   return (
     <AppModal
       open={open}
@@ -115,6 +133,30 @@ export function MailboxReportPickerModal({
           ))
         )}
       </div>
+      {canShowPagination ? (
+        <div className={localStyles.reportPickerPagination}>
+          <span className={localStyles.paginationMeta}>
+            {rangeStart}-{rangeEnd} / {reportPickerTotal}건 · {reportPickerPage} /{' '}
+            {reportPickerPageCount}
+          </span>
+          <button
+            type="button"
+            className={`app-button app-button-secondary ${localStyles.paginationButton}`}
+            disabled={reportPickerLoading || reportPickerPage <= 1}
+            onClick={() => onMoveReportPickerPage(reportPickerPage - 1)}
+          >
+            이전
+          </button>
+          <button
+            type="button"
+            className={`app-button app-button-secondary ${localStyles.paginationButton}`}
+            disabled={reportPickerLoading || reportPickerPage >= reportPickerPageCount}
+            onClick={() => onMoveReportPickerPage(reportPickerPage + 1)}
+          >
+            다음
+          </button>
+        </div>
+      ) : null}
     </AppModal>
   );
 }

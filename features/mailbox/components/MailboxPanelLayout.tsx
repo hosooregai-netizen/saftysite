@@ -20,8 +20,12 @@ interface MailboxPanelLayoutProps {
   mode: MailboxPanelProps['mode'];
   reportPickerLoading: boolean;
   reportPickerOpen: boolean;
+  reportPickerPage: number;
+  reportPickerPageCount: number;
+  reportPickerTotal: number;
   reportSearch: string;
   reportSiteFilter: string;
+  setReportPickerPage: (page: number) => void;
   setReportPickerOpen: (open: boolean) => void;
   setReportSearch: (value: string) => void;
   setReportSiteFilter: (value: string) => void;
@@ -40,8 +44,12 @@ export function MailboxPanelLayout({
   mode,
   reportPickerLoading,
   reportPickerOpen,
+  reportPickerPage,
+  reportPickerPageCount,
+  reportPickerTotal,
   reportSearch,
   reportSiteFilter,
+  setReportPickerPage,
   setReportPickerOpen,
   setReportSearch,
   setReportSiteFilter,
@@ -72,12 +80,16 @@ export function MailboxPanelLayout({
         mode={mode}
         open={reportPickerOpen}
         reportPickerLoading={reportPickerLoading}
+        reportPickerPage={reportPickerPage}
+        reportPickerPageCount={reportPickerPageCount}
+        reportPickerTotal={reportPickerTotal}
         reportSearch={reportSearch}
         reportSiteFilter={reportSiteFilter}
         siteOptions={adminSites}
         onChangeReportSearch={setReportSearch}
         onChangeSiteFilter={setReportSiteFilter}
         onClose={() => setReportPickerOpen(false)}
+        onMoveReportPickerPage={setReportPickerPage}
         onSelectReport={(reportKey) => {
           if (filteredReportOptionsByKey.has(reportKey)) {
             onSelectReport(reportKey);

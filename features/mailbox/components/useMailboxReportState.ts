@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { fetchAdminReports } from '@/lib/admin/apiClient';
 import { fetchSafetyReportList, readSafetyAuthToken } from '@/lib/safetyApi';
-import type { ControllerReportRow } from '@/types/admin';
 import type { InspectionSite } from '@/types/inspectionSession/session';
 import type { SafetyReportListItem, SafetySite } from '@/types/backend';
 import type { MailboxReportOption, SelectedReportContext } from './mailboxPanelTypes';
@@ -14,8 +13,7 @@ import {
   mergeMailboxReportOptions,
 } from './mailboxReportPickerHelpers';
 
-const ADMIN_REPORT_PAGE_SIZE = 200;
-const ADMIN_REPORT_OPTION_MAX = 1000;
+const ADMIN_REPORT_PICKER_PAGE_SIZE = 20;
 
 interface UseMailboxReportStateParams {
   adminReports: SafetyReportListItem[];
@@ -48,6 +46,8 @@ export function useMailboxReportState({
   const [reportSearch, setReportSearch] = useState('');
   const [reportSiteFilter, setReportSiteFilter] = useState('');
   const [adminModalReports, setAdminModalReports] = useState<MailboxReportOption[]>([]);
+  const [adminModalReportTotal, setAdminModalReportTotal] = useState(0);
+  const [reportPickerPage, setReportPickerPage] = useState(1);
   const [workerModalReports, setWorkerModalReports] = useState<MailboxReportOption[]>([]);
   const [selectedReport, setSelectedReport] = useState<SelectedReportContext | null>(null);
 
@@ -89,12 +89,16 @@ export function useMailboxReportState({
   const reportOptions = useMemo(
     () =>
       mode === 'admin'
-        ? adminModalReports.length > 0
+        ? reportPickerOpen
           ? adminModalReports
           : adminReportOptions
         : workerModalReports,
-    [adminModalReports, adminReportOptions, mode, workerModalReports],
+    [adminModalReports, adminReportOptions, mode, reportPickerOpen, workerModalReports],
   );
+
+  useEffect(() => {
+    setReportPickerPage(1);
+  }, [reportPickerOpen, reportSearch, reportSiteFilter]);
 
   useEffect(() => {
     if (isDemoMode || mode !== 'admin' || !reportPickerOpen || !isAuthenticated || !isReady) {
@@ -105,44 +109,45 @@ export function useMailboxReportState({
     void (async () => {
       try {
         setReportPickerLoading(true);
+        const normalizedQuery = reportSearch.trim();
         const selectedSite = reportSiteFilter ? adminSiteById.get(reportSiteFilter) ?? null : null;
-        const fetchRows = async (input: { query?: string; siteId?: string }) => {
-          const rows: ControllerReportRow[] = [];
-          for (let offset = 0; offset < ADMIN_REPORT_OPTION_MAX; offset += ADMIN_REPORT_PAGE_SIZE) {
-            const response = await fetchAdminReports({
-              limit: ADMIN_REPORT_PAGE_SIZE,
-              offset,
-              query: input.query,
-              siteId: input.siteId,
-              sortBy: 'updatedAt',
-              sortDir: 'desc',
-            });
-            rows.push(...response.rows);
-            if (rows.length >= response.total || response.rows.length < response.limit) {
-              break;
-            }
-          }
-          return rows;
-        };
-        const rows = await fetchRows({ siteId: reportSiteFilter || undefined });
-        const fallbackRows =
-          selectedSite?.site_name && reportSiteFilter
-            ? await fetchRows({ query: selectedSite.site_name })
-            : [];
+        const fetchPage = (input: { query?: string; siteId?: string }) =>
+          fetchAdminReports({
+            limit: ADMIN_REPORT_PICKER_PAGE_SIZE,
+            offset: (reportPickerPage - 1) * ADMIN_REPORT_PICKER_PAGE_SIZE,
+            query: input.query,
+            siteId: input.siteId,
+            sortBy: 'updatedAt',
+            sortDir: 'desc',
+          });
+        let response = await fetchPage({
+          query: normalizedQuery || undefined,
+          siteId: reportSiteFilter || undefined,
+        });
+        let rows = response.rows;
+
+        if (response.total === 0 && selectedSite?.site_name && reportSiteFilter) {
+          const fallbackResponse = await fetchPage({ query: selectedSite.site_name });
+          rows = fallbackResponse.rows;
+          response = fallbackResponse;
+        }
+
         if (cancelled) return;
         setAdminModalReports(
           mergeMailboxReportOptions(
-            [...rows, ...fallbackRows]
-              .slice(0, ADMIN_REPORT_OPTION_MAX * (fallbackRows.length > 0 ? 2 : 1))
+            rows
               .map((row) => mapAdminReportRowToMailboxReportOption(row, adminSiteById, selectedSite))
               .filter((option) =>
                 doesReportOptionMatchSiteFilter(option, reportSiteFilter, selectedSite),
               ),
           ),
         );
+        setAdminModalReportTotal(response.total);
       } catch (error) {
         if (!cancelled) {
           console.error('Failed to load admin mailbox report options', error);
+          setAdminModalReports([]);
+          setAdminModalReportTotal(0);
         }
       } finally {
         if (!cancelled) {
@@ -161,6 +166,8 @@ export function useMailboxReportState({
     isReady,
     mode,
     reportPickerOpen,
+    reportPickerPage,
+    reportSearch,
     reportSiteFilter,
   ]);
 
@@ -263,16 +270,27 @@ export function useMailboxReportState({
       .sort((left, right) => (right.updatedAt || '').localeCompare(left.updatedAt || ''));
   }, [adminSiteById, mode, reportOptions, reportSearch, reportSiteFilter]);
 
+  const reportPickerTotal =
+    mode === 'admin' && reportPickerOpen ? adminModalReportTotal : filteredReportOptions.length;
+  const reportPickerPageCount = Math.max(
+    1,
+    Math.ceil(reportPickerTotal / ADMIN_REPORT_PICKER_PAGE_SIZE),
+  );
+
   return {
     filteredReportOptions,
     filteredReportOptionsByKey: new Map(
       filteredReportOptions.map((option) => [option.reportKey, option] as const),
     ),
     reportOptions,
+    reportPickerPage,
+    reportPickerPageCount,
     reportPickerLoading,
     reportSearch,
     reportSiteFilter,
+    reportPickerTotal,
     selectedReport,
+    setReportPickerPage,
     setReportSearch,
     setReportSiteFilter,
     setSelectedReport,

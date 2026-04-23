@@ -121,10 +121,14 @@ export function MailboxPanel({
       filteredReportOptionsByKey={reportState.filteredReportOptionsByKey}
       headerProps={layoutProps.headerProps}
       mode={mode}
+      reportPickerPage={reportState.reportPickerPage}
+      reportPickerPageCount={reportState.reportPickerPageCount}
       reportPickerLoading={reportState.reportPickerLoading}
       reportPickerOpen={uiState.reportPickerOpen}
       reportSearch={reportState.reportSearch}
       reportSiteFilter={reportState.reportSiteFilter}
+      reportPickerTotal={reportState.reportPickerTotal}
+      setReportPickerPage={reportState.setReportPickerPage}
       setReportPickerOpen={uiState.setReportPickerOpen}
       setReportSearch={reportState.setReportSearch}
       setReportSiteFilter={reportState.setReportSiteFilter}
