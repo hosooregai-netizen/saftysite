@@ -1,16 +1,17 @@
 import type { Dispatch, SetStateAction } from 'react';
 import {
+  connectNaverMail,
   disconnectMailAccount,
   fetchMailAccounts,
   fetchMailProviderStatuses,
   fetchMailThreads,
   startGoogleMailConnect,
-  startNaverMailConnect,
   startNaverWorksMailConnect,
   syncMail,
 } from '@/lib/mail/apiClient';
 import type { MailAccount, MailProviderStatus, MailThread, MailThreadDetail } from '@/types/mail';
 import { normalizeMailAccountUi, normalizeMailThreadUi } from './mailboxPanelHelpers';
+import type { NaverMailConnectInput } from './mailboxWorkspaceContentTypes';
 import type { ComposeMode, MailboxTab, MailboxView, SelectedReportContext } from './mailboxPanelTypes';
 import { THREAD_PAGE_SIZE } from './mailboxPanelTypes';
 
@@ -175,15 +176,27 @@ export function useMailboxAccountActions({
       setOauthProvider(null);
     }
   };
-  const handleConnectNaverOauth = async () => {
+  const handleConnectNaverMail = async (input: NaverMailConnectInput) => {
     try {
       handleDisableDemoMode({ silent: true });
       setError(null);
       setOauthProvider('naver_mail');
-      const response = await startNaverMailConnect();
-      window.location.assign(response.authorizationUrl);
+      const account = normalizeMailAccountUi(await connectNaverMail(input));
+      const [accountsResponse, providerResponse] = await Promise.all([
+        fetchMailAccounts(),
+        fetchMailProviderStatuses(),
+      ]);
+      setAccounts(accountsResponse.rows.map(normalizeMailAccountUi));
+      setProviderStatuses(providerResponse.rows);
+      setSelectedAccountId(account.id);
+      setNotice('네이버 메일 계정을 연결했습니다. 받은메일함은 새로 고침하면 IMAP INBOX 기준으로 동기화됩니다.');
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : '네이버 로그인 연결에 실패했습니다.');
+      setError(
+        nextError instanceof Error
+          ? nextError.message
+          : '네이버 메일 연결에 실패했습니다. IMAP/SMTP 사용함과 애플리케이션 전용 비밀번호를 확인해 주세요.',
+      );
+    } finally {
       setOauthProvider(null);
     }
   };
@@ -202,7 +215,7 @@ export function useMailboxAccountActions({
 
   return {
     handleConnectGoogle,
-    handleConnectNaverOauth,
+    handleConnectNaverMail,
     handleConnectNaverWorksOauth,
     handleDisconnectSelectedAccount,
     handleRefreshAccountState,

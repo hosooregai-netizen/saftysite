@@ -11,6 +11,12 @@ import type {
   SelectedReportContext,
 } from './mailboxPanelTypes';
 
+export interface NaverMailConnectInput {
+  appPassword: string;
+  displayName: string;
+  email: string;
+}
+
 export interface MailboxWorkspaceContentProps {
   accountStateLoading: boolean;
   attachmentInputRef: RefObject<HTMLInputElement | null>;
@@ -27,8 +33,6 @@ export interface MailboxWorkspaceContentProps {
   isDemoMode: boolean;
   isSendingMail: boolean;
   mailSendProgress: MailSendProgressState | null;
-  naverProviderStatusDetail: string;
-  naverProviderStatusLabel: string;
   naverWorksProviderStatusDetail: string;
   naverWorksProviderStatusLabel: string;
   oauthProvider: 'google' | 'naver_mail' | 'naver_works' | null;
@@ -63,7 +67,7 @@ export interface MailboxWorkspaceContentProps {
   onComposerInput: () => void;
   onComposerLink: () => void;
   onConnectGoogle: () => void;
-  onConnectNaver: () => void;
+  onConnectNaver: (input: NaverMailConnectInput) => void | Promise<void>;
   onConnectNaverWorks: () => void;
   onFocusRecipient: () => void;
   onMoveThreadPage: (nextPage: number) => void;

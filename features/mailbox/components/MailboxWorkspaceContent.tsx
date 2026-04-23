@@ -21,8 +21,6 @@ export function MailboxWorkspaceContent({
   isDemoMode,
   isSendingMail,
   mailSendProgress,
-  naverProviderStatusDetail,
-  naverProviderStatusLabel,
   naverWorksProviderStatusDetail,
   naverWorksProviderStatusLabel,
   oauthProvider,
@@ -79,8 +77,6 @@ export function MailboxWorkspaceContent({
         googleProviderStatusDetail={googleProviderStatusDetail}
         googleProviderStatusLabel={googleProviderStatusLabel}
         mode={showMailboxConnectGate ? 'gate' : 'prompt'}
-        naverProviderStatusDetail={naverProviderStatusDetail}
-        naverProviderStatusLabel={naverProviderStatusLabel}
         naverWorksProviderStatusDetail={naverWorksProviderStatusDetail}
         naverWorksProviderStatusLabel={naverWorksProviderStatusLabel}
         oauthProvider={oauthProvider}

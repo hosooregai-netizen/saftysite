@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import type { MailboxPanelProps } from './mailboxPanelTypes';
+import type { NaverMailConnectInput } from './mailboxWorkspaceContentTypes';
 import { useMailboxAccountState } from './useMailboxAccountState';
 import { useMailboxComposeState } from './useMailboxComposeState';
 import { useMailboxPanelActions } from './useMailboxPanelActions';
@@ -101,8 +102,6 @@ export function useMailboxPanelLayoutProps({
       isDemoMode: uiState.isDemoMode,
       isSendingMail: Boolean(composeState.mailSendProgress),
       mailSendProgress: composeState.mailSendProgress,
-      naverProviderStatusDetail: accountState.naverProviderStatusDetail,
-      naverProviderStatusLabel: accountState.naverProviderStatusLabel,
       naverWorksProviderStatusDetail: accountState.naverWorksProviderStatusDetail,
       naverWorksProviderStatusLabel: accountState.naverWorksProviderStatusLabel,
       oauthProvider: uiState.oauthProvider,
@@ -138,7 +137,7 @@ export function useMailboxPanelLayoutProps({
       onComposerInput: actions.handleComposerInput,
       onComposerLink: actions.handleComposerLink,
       onConnectGoogle: () => void actions.handleConnectGoogle(),
-      onConnectNaver: () => void actions.handleConnectNaverOauth(),
+      onConnectNaver: (input: NaverMailConnectInput) => void actions.handleConnectNaverMail(input),
       onConnectNaverWorks: () => void actions.handleConnectNaverWorksOauth(),
       onFocusRecipient: () => recipientSuggestionState.setRecipientSuggestionsOpen(true),
       onMoveThreadPage: threadState.moveThreadPage,
