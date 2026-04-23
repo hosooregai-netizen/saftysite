@@ -11,6 +11,7 @@ import {
   readRequiredAdminToken,
   SafetyServerApiError,
 } from '@/server/admin/safetyApiServer';
+import { isMailAttachmentReady } from '@/lib/mail/reportAttachmentEligibility';
 import {
   readOrCreateAdminReportsRouteResponse,
   readOrCreateAdminReportsRowsSnapshot,
@@ -102,6 +103,7 @@ function matchesReportRow(
     dateTo: string;
     dispatchStatus: string;
     headquarterId: string;
+    mailAttachableOnly: boolean;
     qualityStatus: string;
     query: string;
     reportType: string;
@@ -128,6 +130,15 @@ function matchesReportRow(
     return false;
   }
   if (filters.status && row.status !== filters.status && row.workflowStatus !== filters.status) {
+    return false;
+  }
+  if (
+    filters.mailAttachableOnly &&
+    !isMailAttachmentReady({
+      originalPdfAvailable: Boolean(row.originalPdfAvailable),
+      reportKey: row.reportKey,
+    })
+  ) {
     return false;
   }
   if (filters.dateFrom && row.visitDate && row.visitDate < filters.dateFrom) {
@@ -160,6 +171,7 @@ async function buildReportsRoutePayload(
     dateTo: normalizeText(url.searchParams.get('date_to')),
     dispatchStatus: normalizeText(url.searchParams.get('dispatch_status')),
     headquarterId: normalizeText(url.searchParams.get('headquarter_id')),
+    mailAttachableOnly: url.searchParams.get('mail_attachable_only') === 'true',
     qualityStatus: normalizeText(url.searchParams.get('quality_status')),
     query: normalizeText(url.searchParams.get('query')).toLowerCase(),
     reportType: normalizeText(url.searchParams.get('report_type')),

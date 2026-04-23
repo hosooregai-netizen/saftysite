@@ -232,3 +232,32 @@ test('buildLegacyAdminReportRows tolerates company suffix differences and unique
   assert.equal(rows[0]?.headquarterName, '주식회사은화종합건설');
   assert.equal(rows[1]?.siteId, 'site-unique');
 });
+
+test('buildLegacyAdminReportRows tolerates punctuation differences in site names', () => {
+  const rows = buildLegacyAdminReportRows({
+    legacyRows: [
+      {
+        assigneeName: '홍길동',
+        headquarterName: '테스트 본부',
+        legacyReportId: '9201',
+        legacySiteId: '',
+        pdfFileName: '',
+        roundNo: 1,
+        siteName: '노량진동 218-75,76번지 다세대 신축공사',
+        status: '완료',
+        visitDate: '2026-01-07',
+      },
+    ],
+    pdfManifest: new Map(),
+    sites: [
+      buildSite({
+        id: 'site-punctuation',
+        site_name: '노량진동 218-75 76번지 다세대 신축공사',
+        memo: '',
+      }),
+    ],
+    users: [buildUser()],
+  });
+
+  assert.equal(rows[0]?.siteId, 'site-punctuation');
+});

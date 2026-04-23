@@ -1,5 +1,10 @@
 import type { ControllerReportRow, SafetyInspectionSchedule } from '@/types/admin';
 import type { SafetyReportWorkflowStatus, SafetySite } from '@/types/backend';
+import {
+  buildLegacySiteMatchKey,
+  normalizeLegacyLooseMatchText,
+  parseLegacySiteId,
+} from '@/lib/admin/legacySiteMatching';
 import type { LegacyAdminReportSnapshotRow } from './legacyAdminReportsSnapshot';
 
 type LegacyAlignedReportMeta = {
@@ -17,25 +22,6 @@ type LegacyAlignedReportMeta = {
 
 function normalizeText(value: unknown) {
   return typeof value === 'string' ? value.trim() : '';
-}
-
-function normalizeMatchText(value: unknown) {
-  return normalizeText(value).normalize('NFKC').replace(/\s+/g, ' ').toLowerCase();
-}
-
-function normalizeCompanyMatchText(value: unknown) {
-  return normalizeMatchText(value)
-    .replace(/\(주\)|㈜|주식회사|\(유\)|유한회사/g, '')
-    .replace(/[()\s]/g, '');
-}
-
-function parseLegacySiteId(memo: unknown) {
-  const matched = normalizeText(memo).match(/legacy_insafed_site_id:([^\s]+)/);
-  return matched?.[1]?.trim() || '';
-}
-
-function buildSiteMatchKey(headquarterName: string, siteName: string) {
-  return `${normalizeCompanyMatchText(headquarterName)}::${normalizeMatchText(siteName)}`;
 }
 
 function buildLegacyReportKey(legacyReportId: string) {
@@ -98,7 +84,7 @@ function buildLegacyReportAlignmentIndex(
   const sitesByName = new Map<string, SafetySite[]>();
 
   sites.forEach((site) => {
-    const siteNameKey = normalizeMatchText(site.site_name);
+    const siteNameKey = normalizeLegacyLooseMatchText(site.site_name);
     if (siteNameKey) {
       sitesByName.set(siteNameKey, [...(sitesByName.get(siteNameKey) || []), site]);
     }
@@ -108,7 +94,7 @@ function buildLegacyReportAlignmentIndex(
       siteByLegacyId.set(legacySiteId, site);
     }
 
-    const siteMatchKey = buildSiteMatchKey(
+    const siteMatchKey = buildLegacySiteMatchKey(
       normalizeText(site.headquarter_detail?.name) || normalizeText(site.headquarter?.name),
       site.site_name,
     );
@@ -121,10 +107,10 @@ function buildLegacyReportAlignmentIndex(
   const bySiteRound = new Map<string, LegacyAlignedReportMeta>();
 
   legacyRows.forEach((row) => {
-    const sameNameSites = sitesByName.get(normalizeMatchText(row.siteName)) || [];
+    const sameNameSites = sitesByName.get(normalizeLegacyLooseMatchText(row.siteName)) || [];
     const matchedSite =
       siteByLegacyId.get(normalizeText(row.legacySiteId)) ||
-      siteByMatchKey.get(buildSiteMatchKey(row.headquarterName, row.siteName)) ||
+      siteByMatchKey.get(buildLegacySiteMatchKey(row.headquarterName, row.siteName)) ||
       (sameNameSites.length === 1 ? sameNameSites[0] : null) ||
       null;
     if (!matchedSite) {

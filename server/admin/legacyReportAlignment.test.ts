@@ -171,6 +171,36 @@ test('alignAdminReportRowsWithLegacySites rewires legacy reports to the matched 
   assert.equal(row?.headquarterName, '서울서부');
 });
 
+test('alignAdminReportRowsWithLegacySites tolerates punctuation differences in site names', () => {
+  const [row] = alignAdminReportRowsWithLegacySites(
+    [
+      buildReportRow({
+        siteId: '',
+        siteName: '노량진동 218-75,76번지 다세대 신축공사',
+      }),
+    ],
+    {
+      legacyRows: [
+        buildLegacyRow({
+          legacyReportId: '628181',
+          legacySiteId: '',
+          siteName: '노량진동 218-75,76번지 다세대 신축공사',
+        }),
+      ],
+      sites: [
+        buildSite({
+          id: 'site-punctuation',
+          memo: '',
+          site_name: '노량진동 218-75 76번지 다세대 신축공사',
+        }),
+      ],
+    },
+  );
+
+  assert.equal(row?.siteId, 'site-punctuation');
+  assert.equal(row?.siteName, '노량진동 218-75 76번지 다세대 신축공사');
+});
+
 test('alignScheduleRowsWithLegacyReports marks completed legacy schedules as completed', () => {
   const [row] = alignScheduleRowsWithLegacyReports([buildScheduleRow()], {
     legacyRows: [buildLegacyRow()],

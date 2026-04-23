@@ -131,6 +131,12 @@ export function useMailboxSendAction({
       const authToken = readSafetyAuthToken();
       const normalizedAttachments = [];
       if (composeMode === 'report' && selectedReport?.reportKey) {
+        if (!selectedReport.attachmentReady) {
+          throw new Error(
+            selectedReport.attachmentUnavailableReason ||
+              '선택한 보고서는 메일 첨부 발송을 지원하지 않습니다.',
+          );
+        }
         if (!authToken) {
           throw new Error('보고서 첨부를 준비하려면 다시 로그인해 주세요.');
         }
@@ -171,6 +177,7 @@ export function useMailboxSendAction({
           reportKey: selectedReport.reportKey,
           reportTitle: selectedReport.reportTitle,
           reportType: selectedReport.reportType,
+          reportUpdatedAt: selectedReport.updatedAt,
           siteId: selectedSiteId,
           subject: compose.subject,
           to: recipients,

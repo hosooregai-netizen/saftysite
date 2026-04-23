@@ -6,6 +6,8 @@ import localStyles from './MailboxPanel.module.css';
 const REPORT_PICKER_PAGE_SIZE = 20;
 
 interface MailboxReportPickerModalOption {
+  attachmentReady: boolean;
+  attachmentUnavailableReason: string;
   headquarterName: string;
   originalPdfAvailable: boolean;
   reportKey: string;
@@ -121,13 +123,17 @@ export function MailboxReportPickerModal({
                 {option.originalPdfAvailable ? (
                   <span className={localStyles.accountMeta}>원본 PDF 첨부 가능</span>
                 ) : null}
+                {!option.attachmentReady && option.attachmentUnavailableReason ? (
+                  <span className={localStyles.accountMeta}>{option.attachmentUnavailableReason}</span>
+                ) : null}
               </div>
               <button
                 type="button"
                 className={`app-button app-button-primary ${localStyles.inlineActionButton}`}
+                disabled={!option.attachmentReady}
                 onClick={() => onSelectReport(option.reportKey)}
               >
-                선택
+                {option.attachmentReady ? '선택' : '선택 불가'}
               </button>
             </article>
           ))

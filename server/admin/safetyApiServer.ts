@@ -362,13 +362,14 @@ function isAbortError(error: unknown): boolean {
   );
 }
 
-function getServerRequestTimeoutMs(path: string, options: RequestInit) {
+export function getServerRequestTimeoutMs(path: string, options: RequestInit) {
   if (options.body instanceof FormData) {
     return LONG_RUNNING_SERVER_TIMEOUT_MS;
   }
 
   if (
     path.includes('/dashboard/') ||
+    path === '/mail/send' ||
     path.includes('/reports/upsert') ||
     path.includes('/content-items/assets/upload') ||
     path.includes('/photo-assets/upload') ||

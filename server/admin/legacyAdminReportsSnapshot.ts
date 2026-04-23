@@ -1,6 +1,11 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { applyControllerReportRowStatus } from '@/lib/admin/lifecycleStatus';
+import {
+  buildLegacySiteMatchKey,
+  normalizeLegacyLooseMatchText,
+  parseLegacySiteId,
+} from '@/lib/admin/legacySiteMatching';
 import type {
   SafetyReportWorkflowStatus,
   SafetySite,
@@ -38,16 +43,6 @@ function normalizeText(value: unknown) {
   return typeof value === 'string' ? value.trim() : '';
 }
 
-function normalizeMatchText(value: unknown) {
-  return normalizeText(value).normalize('NFKC').replace(/\s+/g, ' ').toLowerCase();
-}
-
-function normalizeCompanyMatchText(value: unknown) {
-  return normalizeMatchText(value)
-    .replace(/\(주\)|㈜|주식회사|\(유\)|유한회사/g, '')
-    .replace(/[()\s]/g, '');
-}
-
 function removeExt(value: string) {
   return value.replace(/\.[^.]+$/, '');
 }
@@ -58,15 +53,6 @@ function readJsonlLines<T>(text: string): T[] {
     .map((line) => line.trim())
     .filter(Boolean)
     .map((line) => JSON.parse(line) as T);
-}
-
-function parseLegacySiteId(memo: unknown) {
-  const matched = normalizeText(memo).match(/legacy_insafed_site_id:([^\s]+)/);
-  return matched?.[1]?.trim() || '';
-}
-
-function buildSiteMatchKey(headquarterName: string, siteName: string) {
-  return `${normalizeCompanyMatchText(headquarterName)}::${normalizeMatchText(siteName)}`;
 }
 
 function buildLegacyReportKey(legacyReportId: string) {
@@ -185,12 +171,12 @@ export function buildLegacyAdminReportRows(input: {
     const headquarterName =
       normalizeText(site.headquarter_detail?.name) ||
       normalizeText(site.headquarter?.name);
-    const siteNameKey = normalizeMatchText(siteName);
+    const siteNameKey = normalizeLegacyLooseMatchText(siteName);
     if (siteNameKey) {
       sitesByName.set(siteNameKey, [...(sitesByName.get(siteNameKey) || []), site]);
     }
 
-    const siteMatchKey = buildSiteMatchKey(headquarterName, siteName);
+    const siteMatchKey = buildLegacySiteMatchKey(headquarterName, siteName);
     if (siteName && headquarterName && !siteByMatchKey.has(siteMatchKey)) {
       siteByMatchKey.set(siteMatchKey, site);
     }
@@ -203,10 +189,10 @@ export function buildLegacyAdminReportRows(input: {
 
   return input.legacyRows.map((row) => {
     const reportKey = buildLegacyReportKey(row.legacyReportId);
-    const sameNameSites = sitesByName.get(normalizeMatchText(row.siteName)) || [];
+    const sameNameSites = sitesByName.get(normalizeLegacyLooseMatchText(row.siteName)) || [];
     const matchedSite =
       siteByLegacyId.get(normalizeText(row.legacySiteId)) ||
-      siteByMatchKey.get(buildSiteMatchKey(row.headquarterName, row.siteName)) ||
+      siteByMatchKey.get(buildLegacySiteMatchKey(row.headquarterName, row.siteName)) ||
       (sameNameSites.length === 1 ? sameNameSites[0] : null) ||
       null;
     const matchedUser = userByName.get(normalizeText(row.assigneeName)) ?? null;

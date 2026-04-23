@@ -7,6 +7,8 @@ export interface MailboxComposeAttachmentItem {
 }
 
 export interface MailboxComposeSelectedReport {
+  attachmentReady: boolean;
+  attachmentUnavailableReason: string;
   headquarterName: string;
   originalPdfAvailable: boolean;
   recipientEmail: string;
@@ -90,6 +92,9 @@ export function MailboxComposeSupport({
               <span className={localStyles.accountMeta}>발송 시 선택한 보고서 PDF가 자동으로 첨부됩니다.</span>
               {selectedReport.originalPdfAvailable ? (
                 <span className={localStyles.accountMeta}>등록된 원본 PDF가 있으면 그 파일을 우선 첨부합니다.</span>
+              ) : null}
+              {!selectedReport.attachmentReady && selectedReport.attachmentUnavailableReason ? (
+                <span className={localStyles.accountMeta}>{selectedReport.attachmentUnavailableReason}</span>
               ) : null}
             </div>
             <button

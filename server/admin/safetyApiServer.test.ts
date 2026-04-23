@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { requestSafetyAdminServer } from './safetyApiServer';
+import {
+  getServerRequestTimeoutMs,
+  requestSafetyAdminServer,
+} from './safetyApiServer';
 
 const UPSTREAM_BASE_URL_ENV_KEY = 'SAFETY_API_UPSTREAM_BASE_URL';
 const ORIGINAL_UPSTREAM_BASE_URL = process.env[UPSTREAM_BASE_URL_ENV_KEY];
@@ -44,4 +47,12 @@ test('requestSafetyAdminServer tolerates empty JSON bodies on successful write r
       globalThis.fetch = originalFetch;
     }
   });
+});
+
+test('getServerRequestTimeoutMs treats mail send as long running', () => {
+  assert.equal(getServerRequestTimeoutMs('/mail/send', {}), 45000);
+});
+
+test('getServerRequestTimeoutMs keeps ordinary reads on the default timeout', () => {
+  assert.equal(getServerRequestTimeoutMs('/mail/threads', {}), 15000);
 });

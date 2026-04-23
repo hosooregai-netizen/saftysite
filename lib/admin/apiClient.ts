@@ -102,6 +102,7 @@ export function fetchAdminReports(input: {
   dispatchStatus?: string;
   headquarterId?: string;
   limit?: number;
+  mailAttachableOnly?: boolean;
   offset?: number;
   qualityStatus?: string;
   query?: string;
@@ -119,6 +120,10 @@ export function fetchAdminReports(input: {
       dispatch_status: input.dispatchStatus,
       headquarter_id: input.headquarterId,
       limit: input.limit,
+      mail_attachable_only:
+        typeof input.mailAttachableOnly === 'boolean'
+          ? String(input.mailAttachableOnly)
+          : undefined,
       offset: input.offset,
       quality_status: input.qualityStatus,
       query: input.query,
