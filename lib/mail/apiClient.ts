@@ -69,26 +69,6 @@ function withQuery(path: string, params: Record<string, string | null | undefine
   return query ? `${path}?${query}` : path;
 }
 
-const reportPdfPrepareRequests = new Map<string, Promise<void>>();
-
-function buildReportPdfPrepareKey(input: {
-  originalPdfAvailable?: boolean;
-  reportFilename?: string | null;
-  reportKey: string;
-  reportTitle?: string | null;
-  reportType?: string | null;
-  reportUpdatedAt?: string | null;
-}) {
-  return [
-    input.reportKey,
-    input.reportType || '',
-    input.reportTitle || '',
-    input.reportFilename || '',
-    input.reportUpdatedAt || '',
-    input.originalPdfAvailable ? 'original' : 'generated',
-  ].join('::');
-}
-
 export async function fetchMailAccounts() {
   return requestMailApi<{ rows: MailAccount[] }>('/accounts');
 }
@@ -324,12 +304,6 @@ export async function sendReportMail(input: {
   subject: string;
   to: MailRecipient[];
 }) {
-  const prepareKey = buildReportPdfPrepareKey(input);
-  const pendingPrepare = reportPdfPrepareRequests.get(prepareKey);
-  if (pendingPrepare) {
-    await pendingPrepare.catch(() => undefined);
-  }
-
   return requestMailApi<MailMessage>('/send-report', {
     method: 'POST',
     body: JSON.stringify({
@@ -376,13 +350,7 @@ export function prepareReportMailAttachment(input: {
     return Promise.resolve();
   }
 
-  const prepareKey = buildReportPdfPrepareKey(input);
-  const existing = reportPdfPrepareRequests.get(prepareKey);
-  if (existing) {
-    return existing;
-  }
-
-  const nextRequest = requestMailApi<{ prepared: boolean; skipped: string | null }>(
+  return requestMailApi<{ prepared: boolean; skipped: string | null }>(
     '/prepare-report',
     {
       method: 'POST',
@@ -404,13 +372,7 @@ export function prepareReportMailAttachment(input: {
       }),
     },
   )
-    .then(() => undefined)
-    .catch((error) => {
-      reportPdfPrepareRequests.delete(prepareKey);
-      throw error;
-    });
-  reportPdfPrepareRequests.set(prepareKey, nextRequest);
-  return nextRequest;
+    .then(() => undefined);
 }
 
 export async function syncMail() {

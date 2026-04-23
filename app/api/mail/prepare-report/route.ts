@@ -40,7 +40,7 @@ export async function POST(request: Request): Promise<Response> {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : '보고서 PDF 캐시 준비에 실패했습니다.' },
+      { error: error instanceof Error ? error.message : '보고서 PDF 준비에 실패했습니다.' },
       { status: 500 },
     );
   }

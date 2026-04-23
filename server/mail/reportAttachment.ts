@@ -1,10 +1,6 @@
 import { normalizeControllerReportType } from '@/lib/admin/reportMeta';
 import { fetchAdminOriginalPdfDescriptor } from '@/server/admin/originalPdfDocument';
 import { SafetyServerApiError } from '@/server/admin/safetyApiServer';
-import {
-  readMailReportAttachmentCache,
-  writeMailReportAttachmentCache,
-} from './reportAttachmentCache';
 
 export interface MailReportAttachmentInput {
   originalPdfAvailable?: boolean;
@@ -34,22 +30,6 @@ function sanitizePdfFilename(value: string) {
 
 function isLegacyReportKey(reportKey: string) {
   return normalizeText(reportKey).startsWith('legacy:');
-}
-
-function shouldReuseCachedMailReportAttachment(
-  input: MailReportAttachmentInput,
-  cached: MailAttachmentServerPayload,
-) {
-  const reportKey = normalizeText(input.reportKey);
-  if (!isLegacyReportKey(reportKey)) {
-    return true;
-  }
-
-  if (normalizeText(cached.download_url)) {
-    return true;
-  }
-
-  return false;
 }
 
 export function buildMailReportFilename(
@@ -126,17 +106,6 @@ async function readErrorMessage(response: Response) {
   } catch {
     return '';
   }
-}
-
-function buildMailReportAttachmentCacheKey(input: MailReportAttachmentInput) {
-  return {
-    originalPdfAvailable: Boolean(input.originalPdfAvailable),
-    preferredFilename: normalizeText(input.preferredFilename),
-    reportKey: normalizeText(input.reportKey),
-    reportTitle: normalizeText(input.reportTitle),
-    reportType: normalizeText(input.reportType),
-    reportUpdatedAt: normalizeText(input.reportUpdatedAt),
-  };
 }
 
 async function buildMailReportAttachmentUncached(
@@ -220,17 +189,10 @@ export async function prepareMailReportAttachment(
     throw new Error('메일에 첨부할 보고서 키가 없습니다.');
   }
 
-  const cacheKey = buildMailReportAttachmentCacheKey({ ...input, reportKey });
-  const cached = await readMailReportAttachmentCache(cacheKey);
-  if (cached && shouldReuseCachedMailReportAttachment({ ...input, reportKey }, cached)) {
-    return { prepared: false, skipped: 'cached' as const };
-  }
-
-  const attachment = await buildMailReportAttachmentUncached(request, token, {
+  await buildMailReportAttachmentUncached(request, token, {
     ...input,
     reportKey,
   });
-  await writeMailReportAttachmentCache(cacheKey, attachment);
   return { prepared: true, skipped: null };
 }
 
@@ -244,17 +206,9 @@ export async function buildMailReportAttachment(
     throw new Error('메일에 첨부할 보고서 키가 없습니다.');
   }
 
-  const cacheKey = buildMailReportAttachmentCacheKey({ ...input, reportKey });
-  const cached = await readMailReportAttachmentCache(cacheKey);
-  if (cached && shouldReuseCachedMailReportAttachment({ ...input, reportKey }, cached)) {
-    return cached;
-  }
-
-  const attachment = await buildMailReportAttachmentUncached(
+  return buildMailReportAttachmentUncached(
     request,
     token,
     { ...input, reportKey },
   );
-  await writeMailReportAttachmentCache(cacheKey, attachment);
-  return attachment;
 }
