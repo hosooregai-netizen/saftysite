@@ -8,7 +8,7 @@ import {
   isOversizeMailAttachmentError,
   MAIL_ATTACHMENT_TOTAL_LIMIT_BYTES,
   shouldSendReportAsDownloadLink,
-} from './route';
+} from './routeHelpers';
 
 test('isOversizeMailAttachmentError matches backend attachment limit failures', () => {
   assert.equal(
