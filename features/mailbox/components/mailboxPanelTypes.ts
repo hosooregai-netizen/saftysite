@@ -17,6 +17,8 @@ export interface MailboxPanelProps {
 }
 
 export interface MailboxReportOption {
+  attachmentReady: boolean;
+  attachmentUnavailableReason: string;
   documentKind: SafetyReportListItem['document_kind'] | null;
   headquarterId: string;
   headquarterName: string;

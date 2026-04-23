@@ -1,47 +1,37 @@
 import type { ControllerReportRow } from '@/types/admin';
 import type { SafetyReportListItem, SafetySite } from '@/types/backend';
+import { doesLegacySiteMatch, normalizeLegacyMatchText } from '@/lib/admin/legacySiteMatching';
+import {
+  getMailAttachmentUnavailableReason,
+  isLegacyMailAttachmentReport,
+  isMailAttachmentReady,
+} from '@/lib/mail/reportAttachmentEligibility';
 import type { MailboxReportOption } from './mailboxPanelTypes';
 
 export function normalizeReportPickerText(value: unknown) {
-  return typeof value === 'string'
-    ? value.normalize('NFKC').replace(/\s+/g, ' ').trim().toLowerCase()
-    : '';
-}
-
-function normalizeCompanyText(value: unknown) {
-  return normalizeReportPickerText(value)
-    .replace(/\(주\)|㈜|주식회사|\(유\)|유한회사/g, '')
-    .replace(/[()\s]/g, '');
+  return normalizeLegacyMatchText(value);
 }
 
 function isLegacyReportKey(value: string) {
-  return normalizeReportPickerText(value).startsWith('legacy:');
+  return isLegacyMailAttachmentReport(normalizeReportPickerText(value));
 }
 
-function getSiteHeadquarterName(site: SafetySite | null | undefined) {
-  return (
-    normalizeReportPickerText(site?.headquarter_detail?.name) ||
-    normalizeReportPickerText(site?.headquarter?.name)
-  );
-}
-
-function doesTextMatchSite(
-  input: {
-    headquarterName: string;
-    siteName: string;
-  },
-  site: SafetySite | null | undefined,
+export function getReportAttachmentUnavailableReason(
+  option: Pick<MailboxReportOption, 'originalPdfAvailable' | 'reportKey'>,
 ) {
-  if (!site) return false;
-  const optionSiteName = normalizeReportPickerText(input.siteName);
-  const siteName = normalizeReportPickerText(site.site_name);
-  if (!optionSiteName || !siteName || optionSiteName !== siteName) {
-    return false;
-  }
+  return getMailAttachmentUnavailableReason({
+    originalPdfAvailable: option.originalPdfAvailable,
+    reportKey: option.reportKey,
+  });
+}
 
-  const optionHeadquarterName = normalizeCompanyText(input.headquarterName);
-  const siteHeadquarterName = normalizeCompanyText(getSiteHeadquarterName(site));
-  return !optionHeadquarterName || !siteHeadquarterName || optionHeadquarterName === siteHeadquarterName;
+export function isReportAttachmentReady(
+  option: Pick<MailboxReportOption, 'originalPdfAvailable' | 'reportKey'>,
+) {
+  return isMailAttachmentReady({
+    originalPdfAvailable: option.originalPdfAvailable,
+    reportKey: option.reportKey,
+  });
 }
 
 export function doesReportOptionMatchSiteFilter(
@@ -51,7 +41,7 @@ export function doesReportOptionMatchSiteFilter(
 ) {
   if (!siteFilter) return true;
   if (option.siteId === siteFilter) return true;
-  return isLegacyReportKey(option.reportKey) && doesTextMatchSite(option, selectedSite);
+  return isLegacyReportKey(option.reportKey) && doesLegacySiteMatch(option, selectedSite);
 }
 
 export function mapSafetyReportListItemToMailboxReportOption(
@@ -59,16 +49,23 @@ export function mapSafetyReportListItemToMailboxReportOption(
   adminSiteById: Map<string, SafetySite>,
 ): MailboxReportOption {
   const matchedSite = adminSiteById.get(item.site_id);
+  const originalPdfAvailable = Boolean(item.originalPdfAvailable);
+  const reportKey = item.report_key;
   return {
+    attachmentReady: isReportAttachmentReady({ originalPdfAvailable, reportKey }),
+    attachmentUnavailableReason: getReportAttachmentUnavailableReason({
+      originalPdfAvailable,
+      reportKey,
+    }),
     headquarterId: item.headquarter_id || '',
     headquarterName:
       matchedSite?.headquarter_detail?.name || matchedSite?.headquarter?.name || '',
     recipientEmail: matchedSite?.site_contact_email || '',
     documentKind: item.document_kind ?? null,
     meta: item.meta,
-    originalPdfAvailable: Boolean(item.originalPdfAvailable),
+    originalPdfAvailable,
     originalPdfDownloadPath: item.originalPdfDownloadPath || '',
-    reportKey: item.report_key,
+    reportKey,
     reportType: item.report_type ?? null,
     reportTitle: item.report_title,
     siteId: item.site_id,
@@ -85,12 +82,19 @@ export function mapAdminReportRowToMailboxReportOption(
 ): MailboxReportOption {
   const matchedSiteById = adminSiteById.get(row.siteId);
   const matchedSelectedSite =
-    isLegacyReportKey(row.reportKey) && doesTextMatchSite(row, selectedSite)
+    isLegacyReportKey(row.reportKey) && doesLegacySiteMatch(row, selectedSite)
       ? selectedSite
       : null;
   const matchedSite = matchedSiteById || matchedSelectedSite || null;
+  const originalPdfAvailable = Boolean(row.originalPdfAvailable);
+  const reportKey = row.reportKey;
 
   return {
+    attachmentReady: isReportAttachmentReady({ originalPdfAvailable, reportKey }),
+    attachmentUnavailableReason: getReportAttachmentUnavailableReason({
+      originalPdfAvailable,
+      reportKey,
+    }),
     headquarterId: row.headquarterId || matchedSite?.headquarter_id || '',
     headquarterName:
       row.headquarterName ||
@@ -100,9 +104,9 @@ export function mapAdminReportRowToMailboxReportOption(
     recipientEmail: matchedSite?.site_contact_email || '',
     documentKind: null,
     meta: { reportKind: row.reportType },
-    originalPdfAvailable: Boolean(row.originalPdfAvailable),
+    originalPdfAvailable,
     originalPdfDownloadPath: row.originalPdfDownloadPath || '',
-    reportKey: row.reportKey,
+    reportKey,
     reportType: row.reportType,
     reportTitle: row.reportTitle || row.periodLabel || row.reportKey,
     siteId: row.siteId || matchedSelectedSite?.id || '',
@@ -122,7 +126,7 @@ export function mergeMailboxReportOptions(options: MailboxReportOption[]) {
       return;
     }
 
-    byReportKey.set(option.reportKey, {
+    const merged = {
       ...existing,
       ...option,
       headquarterId: option.headquarterId || existing.headquarterId,
@@ -134,6 +138,11 @@ export function mergeMailboxReportOptions(options: MailboxReportOption[]) {
       siteName: option.siteName || existing.siteName,
       updatedAt: option.updatedAt || existing.updatedAt,
       visitDate: option.visitDate || existing.visitDate,
+    };
+    byReportKey.set(option.reportKey, {
+      ...merged,
+      attachmentReady: isReportAttachmentReady(merged),
+      attachmentUnavailableReason: getReportAttachmentUnavailableReason(merged),
     });
   });
   return Array.from(byReportKey.values());

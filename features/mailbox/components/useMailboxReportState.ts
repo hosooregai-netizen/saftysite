@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { fetchAdminReports } from '@/lib/admin/apiClient';
 import { fetchSafetyReportList, readSafetyAuthToken } from '@/lib/safetyApi';
+import { getMailAttachmentUnavailableReason, isMailAttachmentReady } from '@/lib/mail/reportAttachmentEligibility';
 import type { InspectionSite } from '@/types/inspectionSession/session';
 import type { SafetyReportListItem, SafetySite } from '@/types/backend';
 import type { MailboxReportOption, SelectedReportContext } from './mailboxPanelTypes';
@@ -55,6 +56,14 @@ export function useMailboxReportState({
     setSelectedReport(
       reportKey || siteId || headquarterId
         ? {
+            attachmentReady: isMailAttachmentReady({
+              originalPdfAvailable: false,
+              reportKey,
+            }),
+            attachmentUnavailableReason: getMailAttachmentUnavailableReason({
+              originalPdfAvailable: false,
+              reportKey,
+            }),
             headquarterId,
             headquarterName: '',
             recipientEmail: '',
@@ -114,6 +123,7 @@ export function useMailboxReportState({
         const fetchPage = (input: { query?: string; siteId?: string }) =>
           fetchAdminReports({
             limit: ADMIN_REPORT_PICKER_PAGE_SIZE,
+            mailAttachableOnly: true,
             offset: (reportPickerPage - 1) * ADMIN_REPORT_PICKER_PAGE_SIZE,
             query: input.query,
             siteId: input.siteId,
@@ -190,6 +200,14 @@ export function useMailboxReportState({
               siteId: workerSite.id,
             });
             return reports.map((item) => ({
+              attachmentReady: isMailAttachmentReady({
+                originalPdfAvailable: Boolean(item.originalPdfAvailable),
+                reportKey: item.report_key,
+              }),
+              attachmentUnavailableReason: getMailAttachmentUnavailableReason({
+                originalPdfAvailable: Boolean(item.originalPdfAvailable),
+                reportKey: item.report_key,
+              }),
               headquarterId: item.headquarter_id || workerSite.headquarterId || '',
               headquarterName: workerSite.customerName || '',
               recipientEmail: workerSite.adminSiteSnapshot.siteContactEmail || '',
@@ -233,6 +251,8 @@ export function useMailboxReportState({
     setSelectedReport((current) => {
       if (!current) return current;
       if (
+        current.attachmentReady === matchedReport.attachmentReady &&
+        current.attachmentUnavailableReason === matchedReport.attachmentUnavailableReason &&
         current.reportTitle === matchedReport.reportTitle &&
         current.siteName === matchedReport.siteName &&
         current.headquarterName === matchedReport.headquarterName &&
@@ -249,6 +269,7 @@ export function useMailboxReportState({
     const normalizedQuery = reportSearch.trim().toLowerCase();
     const selectedSite = reportSiteFilter ? adminSiteById.get(reportSiteFilter) ?? null : null;
     return reportOptions
+      .filter((item) => item.attachmentReady)
       .filter((item) =>
         mode === 'admin'
           ? doesReportOptionMatchSiteFilter(item, reportSiteFilter, selectedSite)

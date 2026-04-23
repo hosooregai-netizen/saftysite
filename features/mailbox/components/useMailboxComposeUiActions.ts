@@ -156,16 +156,21 @@ export function useMailboxComposeUiActions({
             ? [option.recipientEmail]
             : [],
     }));
-    void prepareReportMailAttachment({
-      originalPdfAvailable: option.originalPdfAvailable,
-      reportKey: option.reportKey,
-      reportType: option.reportType,
-    }).catch((error) => {
-      console.warn('Report PDF prepare failed; send will retry on demand.', {
-        error: error instanceof Error ? error.message : String(error),
+    if (option.attachmentReady) {
+      void prepareReportMailAttachment({
+        originalPdfAvailable: option.originalPdfAvailable,
+        reportFilename: option.reportTitle,
         reportKey: option.reportKey,
+        reportTitle: option.reportTitle,
+        reportType: option.reportType,
+        reportUpdatedAt: option.updatedAt,
+      }).catch((error) => {
+        console.warn('Report PDF prepare failed; send will retry on demand.', {
+          error: error instanceof Error ? error.message : String(error),
+          reportKey: option.reportKey,
+        });
       });
-    });
+    }
     setReportPickerOpen(false);
   };
 

@@ -1,4 +1,9 @@
 import { normalizeControllerReportType } from '@/lib/admin/reportMeta';
+import { fetchAdminOriginalPdfDescriptor } from '@/server/admin/originalPdfDocument';
+import {
+  readMailReportAttachmentCache,
+  writeMailReportAttachmentCache,
+} from './reportAttachmentCache';
 
 export interface MailReportAttachmentInput {
   originalPdfAvailable?: boolean;
@@ -6,12 +11,16 @@ export interface MailReportAttachmentInput {
   reportKey: string;
   reportTitle?: string | null;
   reportType?: string | null;
+  reportUpdatedAt?: string | null;
 }
 
 export interface MailAttachmentServerPayload {
   content_type: string;
-  data_base64: string;
   filename: string;
+  data_base64?: string;
+  download_headers?: Record<string, string>;
+  download_url?: string;
+  size_bytes?: number;
 }
 
 function normalizeText(value: unknown) {
@@ -98,35 +107,18 @@ async function readErrorMessage(response: Response) {
   }
 }
 
-export async function prepareGeneratedMailReportPdf(
-  request: Request,
-  token: string,
-  input: MailReportAttachmentInput,
-) {
-  const reportKey = normalizeText(input.reportKey);
-  if (!reportKey) {
-    throw new Error('메일에 첨부할 보고서 키가 없습니다.');
-  }
-
-  const pdfRequest = buildReportPdfRequest({ ...input, reportKey }, request, token);
-  if (pdfRequest.isOriginalPdf) {
-    return { prepared: false, skipped: 'original_pdf' as const };
-  }
-
-  const response = await fetch(pdfRequest.url, pdfRequest.requestInit);
-  if (!response.ok) {
-    const detail = await readErrorMessage(response);
-    throw new Error(
-      detail || `보고서 PDF 캐시를 준비하지 못했습니다. (${response.status})`,
-    );
-  }
-
-  // Reading the body completes generation and lets the document route write its PDF cache.
-  await response.arrayBuffer();
-  return { prepared: true, skipped: null };
+function buildMailReportAttachmentCacheKey(input: MailReportAttachmentInput) {
+  return {
+    originalPdfAvailable: Boolean(input.originalPdfAvailable),
+    preferredFilename: normalizeText(input.preferredFilename),
+    reportKey: normalizeText(input.reportKey),
+    reportTitle: normalizeText(input.reportTitle),
+    reportType: normalizeText(input.reportType),
+    reportUpdatedAt: normalizeText(input.reportUpdatedAt),
+  };
 }
 
-export async function buildMailReportAttachment(
+async function buildMailReportAttachmentUncached(
   request: Request,
   token: string,
   input: MailReportAttachmentInput,
@@ -137,16 +129,29 @@ export async function buildMailReportAttachment(
   }
 
   const pdfRequest = buildReportPdfRequest({ ...input, reportKey }, request, token);
-  let response = await fetch(pdfRequest.url, pdfRequest.requestInit);
-
-  if (pdfRequest.isOriginalPdf && response.status === 404) {
-    const generatedPdfRequest = buildReportPdfRequest(
-      { ...input, originalPdfAvailable: false, reportKey },
+  if (pdfRequest.isOriginalPdf) {
+    const descriptor = await fetchAdminOriginalPdfDescriptor({
+      reportKey,
       request,
       token,
-    );
-    response = await fetch(generatedPdfRequest.url, generatedPdfRequest.requestInit);
+    });
+    return {
+      content_type: descriptor.contentType,
+      download_headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      download_url: pdfRequest.url.toString(),
+      filename: buildMailReportFilename({ ...input, reportKey }, descriptor.filename),
+      size_bytes: descriptor.sizeBytes ?? undefined,
+    };
   }
+
+  const generatedPdfRequest = buildReportPdfRequest(
+    { ...input, originalPdfAvailable: false, reportKey },
+    request,
+    token,
+  );
+  const response = await fetch(generatedPdfRequest.url, generatedPdfRequest.requestInit);
 
   if (!response.ok) {
     const detail = await readErrorMessage(response);
@@ -167,5 +172,55 @@ export async function buildMailReportAttachment(
       { ...input, reportKey },
       readMailReportFilenameFromHeaders(response.headers, `${reportKey}.pdf`),
     ),
+    size_bytes: buffer.length,
   };
+}
+
+export async function prepareMailReportAttachment(
+  request: Request,
+  token: string,
+  input: MailReportAttachmentInput,
+) {
+  const reportKey = normalizeText(input.reportKey);
+  if (!reportKey) {
+    throw new Error('메일에 첨부할 보고서 키가 없습니다.');
+  }
+
+  const cacheKey = buildMailReportAttachmentCacheKey({ ...input, reportKey });
+  const cached = await readMailReportAttachmentCache(cacheKey);
+  if (cached) {
+    return { prepared: false, skipped: 'cached' as const };
+  }
+
+  const attachment = await buildMailReportAttachmentUncached(request, token, {
+    ...input,
+    reportKey,
+  });
+  await writeMailReportAttachmentCache(cacheKey, attachment);
+  return { prepared: true, skipped: null };
+}
+
+export async function buildMailReportAttachment(
+  request: Request,
+  token: string,
+  input: MailReportAttachmentInput,
+): Promise<MailAttachmentServerPayload> {
+  const reportKey = normalizeText(input.reportKey);
+  if (!reportKey) {
+    throw new Error('메일에 첨부할 보고서 키가 없습니다.');
+  }
+
+  const cacheKey = buildMailReportAttachmentCacheKey({ ...input, reportKey });
+  const cached = await readMailReportAttachmentCache(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
+  const attachment = await buildMailReportAttachmentUncached(
+    request,
+    token,
+    { ...input, reportKey },
+  );
+  await writeMailReportAttachmentCache(cacheKey, attachment);
+  return attachment;
 }

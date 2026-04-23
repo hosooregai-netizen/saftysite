@@ -73,21 +73,20 @@ const reportPdfPrepareRequests = new Map<string, Promise<void>>();
 
 function buildReportPdfPrepareKey(input: {
   originalPdfAvailable?: boolean;
+  reportFilename?: string | null;
   reportKey: string;
+  reportTitle?: string | null;
   reportType?: string | null;
+  reportUpdatedAt?: string | null;
 }) {
   return [
     input.reportKey,
     input.reportType || '',
+    input.reportTitle || '',
+    input.reportFilename || '',
+    input.reportUpdatedAt || '',
     input.originalPdfAvailable ? 'original' : 'generated',
   ].join('::');
-}
-
-function shouldSkipReportPdfPrepare(input: {
-  originalPdfAvailable?: boolean;
-  reportKey: string;
-}) {
-  return Boolean(input.originalPdfAvailable);
 }
 
 export async function fetchMailAccounts() {
@@ -320,6 +319,7 @@ export async function sendReportMail(input: {
   reportKey: string;
   reportTitle?: string | null;
   reportType?: string | null;
+  reportUpdatedAt?: string | null;
   siteId?: string;
   subject: string;
   to: MailRecipient[];
@@ -349,11 +349,13 @@ export async function sendReportMail(input: {
         report_key: input.reportKey,
         report_title: input.reportTitle || '',
         report_type: input.reportType || '',
+        report_updated_at: input.reportUpdatedAt || '',
       },
       report_filename: input.reportFilename || '',
       report_key: input.reportKey,
       report_title: input.reportTitle || '',
       report_type: input.reportType || '',
+      report_updated_at: input.reportUpdatedAt || '',
       site_id: input.siteId || '',
       subject: input.subject,
       thread_id: '',
@@ -364,10 +366,13 @@ export async function sendReportMail(input: {
 
 export function prepareReportMailAttachment(input: {
   originalPdfAvailable?: boolean;
+  reportFilename?: string | null;
   reportKey: string;
+  reportTitle?: string | null;
   reportType?: string | null;
+  reportUpdatedAt?: string | null;
 }) {
-  if (!input.reportKey || shouldSkipReportPdfPrepare(input)) {
+  if (!input.reportKey) {
     return Promise.resolve();
   }
 
@@ -385,11 +390,17 @@ export function prepareReportMailAttachment(input: {
         original_pdf_available: Boolean(input.originalPdfAvailable),
         report: {
           original_pdf_available: Boolean(input.originalPdfAvailable),
+          report_filename: input.reportFilename || '',
           report_key: input.reportKey,
+          report_title: input.reportTitle || '',
           report_type: input.reportType || '',
+          report_updated_at: input.reportUpdatedAt || '',
         },
+        report_filename: input.reportFilename || '',
         report_key: input.reportKey,
+        report_title: input.reportTitle || '',
         report_type: input.reportType || '',
+        report_updated_at: input.reportUpdatedAt || '',
       }),
     },
   )

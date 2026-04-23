@@ -4,6 +4,8 @@ import type { ControllerReportRow } from '@/types/admin';
 import type { SafetySite } from '@/types/backend';
 import {
   doesReportOptionMatchSiteFilter,
+  getReportAttachmentUnavailableReason,
+  isReportAttachmentReady,
   mapAdminReportRowToMailboxReportOption,
   mergeMailboxReportOptions,
 } from './mailboxReportPickerHelpers';
@@ -86,6 +88,23 @@ test('legacy report options tolerate headquarter company suffix differences', ()
   assert.equal(doesReportOptionMatchSiteFilter(option, 'site-live', site), true);
 });
 
+test('legacy report options tolerate punctuation differences in site names', () => {
+  const site = {
+    ...buildSite(),
+    site_name: '노량진동 218-75 76번지 다세대 신축공사',
+  } as SafetySite;
+  const option = mapAdminReportRowToMailboxReportOption(
+    buildReportRow({
+      siteName: '노량진동 218-75,76번지 다세대 신축공사',
+    }),
+    new Map(),
+    site,
+  );
+
+  assert.equal(option.siteId, 'site-live');
+  assert.equal(doesReportOptionMatchSiteFilter(option, 'site-live', site), true);
+});
+
 
 test('non-legacy report options still require an exact site id match', () => {
   const site = buildSite();
@@ -101,6 +120,27 @@ test('non-legacy report options still require an exact site id match', () => {
 
   assert.equal(option.siteId, '');
   assert.equal(doesReportOptionMatchSiteFilter(option, 'site-live', site), false);
+});
+
+test('legacy report options without original PDFs are marked unavailable for mail attachment', () => {
+  const option = mapAdminReportRowToMailboxReportOption(
+    buildReportRow({
+      originalPdfAvailable: false,
+      reportKey: 'legacy:technical_guidance:641788',
+      routeParam: 'legacy:technical_guidance:641788',
+      status: 'draft',
+      updatedAt: '2026-04-30T09:00:00+09:00',
+      visitDate: '2026-04-30',
+    }),
+    new Map(),
+  );
+
+  assert.equal(isReportAttachmentReady(option), false);
+  assert.match(
+    getReportAttachmentUnavailableReason(option),
+    /등록된 원본 PDF가 없는 레거시 보고서/,
+  );
+  assert.equal(option.attachmentReady, false);
 });
 
 test('merged report options preserve site-specific legacy fallback metadata', () => {

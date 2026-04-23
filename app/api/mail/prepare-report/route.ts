@@ -3,7 +3,7 @@ import {
   readRequiredAdminToken,
   SafetyServerApiError,
 } from '@/server/admin/safetyApiServer';
-import { prepareGeneratedMailReportPdf } from '@/server/mail/reportAttachment';
+import { prepareMailReportAttachment } from '@/server/mail/reportAttachment';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
@@ -22,11 +22,16 @@ export async function POST(request: Request): Promise<Response> {
     const payload = (await request.json()) as Record<string, unknown>;
     const report = asRecord(payload.report);
     const reportKey = normalizeText(report.report_key) || normalizeText(payload.report_key);
-    const result = await prepareGeneratedMailReportPdf(request, token, {
+    const result = await prepareMailReportAttachment(request, token, {
       originalPdfAvailable:
         report.original_pdf_available === true || payload.original_pdf_available === true,
+      preferredFilename:
+        normalizeText(report.report_filename) || normalizeText(payload.report_filename),
       reportKey,
+      reportTitle: normalizeText(report.report_title) || normalizeText(payload.report_title),
       reportType: normalizeText(report.report_type) || normalizeText(payload.report_type),
+      reportUpdatedAt:
+        normalizeText(report.report_updated_at) || normalizeText(payload.report_updated_at),
     });
 
     return NextResponse.json(result);
