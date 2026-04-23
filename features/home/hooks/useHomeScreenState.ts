@@ -3,7 +3,10 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
-import { consumePendingPostLoginRedirect } from '@/lib/auth/postLoginRedirect';
+import {
+  consumePendingPostLoginRedirect,
+  WORKER_CALENDAR_POST_LOGIN_REDIRECT,
+} from '@/lib/auth/postLoginRedirect';
 import { getAdminSectionHref, isAdminUserRole } from '@/lib/admin';
 import {
   buildHomeSiteSummaries,
@@ -192,7 +195,10 @@ export function useHomeScreenState(): HomeScreenState {
 
     if (isControllerView) {
       router.replace(getAdminSectionHref('overview'));
+      return;
     }
+
+    router.replace(WORKER_CALENDAR_POST_LOGIN_REDIRECT);
   }, [currentUser, isControllerView, router]);
 
   return {
