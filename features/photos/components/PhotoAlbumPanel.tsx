@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import AppModal from '@/components/ui/AppModal';
 import { SubmitSearchField } from '@/components/ui/SubmitSearchField';
 import { SectionHeaderFilterMenu } from '@/features/admin/components/SectionHeaderFilterMenu';
@@ -47,8 +47,14 @@ interface PhotoAlbumRoundGroup {
   rows: PhotoAlbumItem[];
 }
 
-const PAGE_SIZE = 60;
+interface PhotoUploadProgress {
+  completed: number;
+  total: number;
+}
+
+const PAGE_SIZE = 20;
 const DEFAULT_SITE_TOTAL_ROUNDS = 8;
+const MAX_PARALLEL_PHOTO_UPLOADS = 3;
 
 function formatDateLabel(value: string) {
   if (!value) return '-';
@@ -160,12 +166,35 @@ function filterPhotoAlbumRowsForCurrentView(
   );
 }
 
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error && error.message ? error.message : fallback;
+}
+
+async function runConcurrentPhotoUploads(
+  files: File[],
+  worker: (file: File, index: number) => Promise<void>,
+) {
+  let nextIndex = 0;
+  const workerCount = Math.min(MAX_PARALLEL_PHOTO_UPLOADS, files.length);
+
+  await Promise.all(
+    Array.from({ length: workerCount }, async () => {
+      while (nextIndex < files.length) {
+        const index = nextIndex;
+        nextIndex += 1;
+        await worker(files[index], index);
+      }
+    }),
+  );
+}
+
 async function requestPhotoAlbumRows(input: {
   deferredQuery: string;
   headquarterId: string;
   initialReportKey: string | null;
   lockedHeadquarterId: string | null;
   lockedSiteId: string | null;
+  offset?: number;
   siteId: string;
 }) {
   const isGlobalAdminScope =
@@ -174,8 +203,10 @@ async function requestPhotoAlbumRows(input: {
     !input.initialReportKey;
 
   return fetchPhotoAlbum({
-    all: true,
+    all: false,
     headquarterId: input.lockedHeadquarterId || input.headquarterId || '',
+    limit: PAGE_SIZE,
+    offset: input.offset ?? 0,
     query: input.deferredQuery,
     reportKey: input.initialReportKey || '',
     siteId: input.lockedSiteId || input.siteId || '',
@@ -208,9 +239,13 @@ export function PhotoAlbumPanel({
   const [rows, setRows] = useState<PhotoAlbumItem[]>([]);
   const [mutationCapabilities, setMutationCapabilities] =
     useState<PhotoAlbumMutationCapabilities | null>(null);
+  const [loadedRowCount, setLoadedRowCount] = useState(0);
+  const [rowTotal, setRowTotal] = useState(0);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [loading, setLoading] = useState(false);
+  const [loadingMoreRows, setLoadingMoreRows] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<PhotoUploadProgress | null>(null);
   const [bulkUpdating, setBulkUpdating] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [roundModalOpen, setRoundModalOpen] = useState(false);
@@ -270,7 +305,12 @@ export function PhotoAlbumPanel({
     : uploadRoundOptions.length === 0 || uploadRoundNo <= 0
       ? '업로드 회차를 먼저 선택해 주세요.'
       : null;
-  const uploadTooltipMessage = uploading ? '사진을 업로드하는 중입니다.' : uploadBlockedReason;
+  const uploadProgressLabel = uploadProgress
+    ? `${uploadProgress.completed}/${uploadProgress.total}`
+    : '';
+  const uploadTooltipMessage = uploading
+    ? `사진을 업로드하는 중입니다.${uploadProgressLabel ? ` (${uploadProgressLabel})` : ''}`
+    : uploadBlockedReason;
   const canUpload = !uploadBlockedReason;
   const showHeaderFilter = (mode === 'admin' && !lockedHeadquarterId) || !lockedSiteId;
   const activeFilterCount =
@@ -310,6 +350,9 @@ export function PhotoAlbumPanel({
         });
         if (cancelled) return;
         setRows(response.rows);
+        setLoadedRowCount(response.offset + response.rows.length);
+        setRowTotal(response.total);
+        setVisibleCount(PAGE_SIZE);
         setMutationCapabilities(response.capabilities);
         setSelectedIds((current) =>
           current.filter((itemId) => response.rows.some((row) => row.id === itemId)),
@@ -369,8 +412,59 @@ export function PhotoAlbumPanel({
       .flatMap(([, roundRows]) => roundRows);
   }, [displayRows, isSiteScopedView]);
 
+  const hasMoreRemoteRows = loadedRowCount < rowTotal;
+
+  const handleLoadMoreRows = useCallback(async () => {
+    if (visibleCount < orderedRows.length) {
+      setVisibleCount((current) => Math.min(orderedRows.length, current + PAGE_SIZE));
+      return;
+    }
+
+    if (loadingMoreRows || loadedRowCount >= rowTotal) {
+      return;
+    }
+
+    try {
+      setLoadingMoreRows(true);
+      setError(null);
+      const response = await requestPhotoAlbumRows({
+        deferredQuery,
+        headquarterId,
+        initialReportKey,
+        lockedHeadquarterId,
+        lockedSiteId,
+        offset: loadedRowCount,
+        siteId,
+      });
+
+      setRows((current) => mergePhotoAlbumRows(current, response.rows));
+      setLoadedRowCount(response.offset + response.rows.length);
+      setRowTotal(response.total);
+      setMutationCapabilities(response.capabilities);
+      setVisibleCount((current) =>
+        Math.min(orderedRows.length + response.rows.length, current + PAGE_SIZE),
+      );
+    } catch (nextError) {
+      setError(getErrorMessage(nextError, '사진첩을 더 불러오지 못했습니다.'));
+    } finally {
+      setLoadingMoreRows(false);
+    }
+  }, [
+    deferredQuery,
+    headquarterId,
+    initialReportKey,
+    loadedRowCount,
+    loadingMoreRows,
+    lockedHeadquarterId,
+    lockedSiteId,
+    orderedRows.length,
+    rowTotal,
+    siteId,
+    visibleCount,
+  ]);
+
   useEffect(() => {
-    if (!loadMoreRef.current || visibleCount >= orderedRows.length) {
+    if (!loadMoreRef.current || (visibleCount >= orderedRows.length && !hasMoreRemoteRows)) {
       return;
     }
 
@@ -380,7 +474,7 @@ export function PhotoAlbumPanel({
         if (!entries.some((entry) => entry.isIntersecting)) {
           return;
         }
-        setVisibleCount((current) => Math.min(orderedRows.length, current + PAGE_SIZE));
+        void handleLoadMoreRows();
       },
       { rootMargin: '320px 0px' },
     );
@@ -389,7 +483,7 @@ export function PhotoAlbumPanel({
     return () => {
       observer.disconnect();
     };
-  }, [orderedRows.length, visibleCount]);
+  }, [handleLoadMoreRows, hasMoreRemoteRows, orderedRows.length, visibleCount]);
 
   const visibleRows = useMemo(
     () => orderedRows.slice(0, Math.min(orderedRows.length, visibleCount)),
@@ -469,7 +563,11 @@ export function PhotoAlbumPanel({
     );
   }, [bulkRoundOptions]);
 
-  const hasMoreRows = visibleRows.length < orderedRows.length;
+  const hasMoreRows = visibleRows.length < orderedRows.length || hasMoreRemoteRows;
+  const remainingRowCount = Math.max(
+    0,
+    Math.max(orderedRows.length, rowTotal) - visibleRows.length,
+  );
   const allVisibleSelected =
     visibleRows.length > 0 && visibleRows.every((row) => selectedIds.includes(row.id));
   const hasSelectedRows = selectedRows.length > 0;
@@ -550,40 +648,76 @@ export function PhotoAlbumPanel({
 
     try {
       setUploading(true);
+      setUploadProgress({ completed: 0, total: nextFiles.length });
       setError(null);
       setNotice(null);
       const uploadedItems: PhotoAlbumItem[] = [];
+      const failedFiles: string[] = [];
 
-      for (const file of nextFiles) {
-        const thumbnail = await createPhotoThumbnail(file).catch(() => null);
-        const uploadedItem = await uploadPhotoAlbumAsset({
-          file,
-          roundNo: uploadRoundNo,
-          siteId: uploadSiteId,
-          thumbnail,
-        });
-        uploadedItems.push(uploadedItem);
+      await runConcurrentPhotoUploads(nextFiles, async (file) => {
+        try {
+          const thumbnail = await createPhotoThumbnail(file).catch(() => null);
+          const uploadedItem = await uploadPhotoAlbumAsset({
+            file,
+            roundNo: uploadRoundNo,
+            siteId: uploadSiteId,
+            thumbnail,
+          });
+          uploadedItems.push(uploadedItem);
+        } catch (uploadError) {
+          failedFiles.push(`${file.name}: ${getErrorMessage(uploadError, '업로드 실패')}`);
+        } finally {
+          setUploadProgress((current) =>
+            current
+              ? {
+                  completed: Math.min(current.total, current.completed + 1),
+                  total: current.total,
+                }
+              : current,
+          );
+        }
+      });
+
+      if (uploadedItems.length > 0) {
+        setRows((current) =>
+          mergePhotoAlbumRows(
+            current,
+            filterPhotoAlbumRowsForCurrentView(uploadedItems, {
+              headquarterId: lockedHeadquarterId || headquarterId || '',
+              query: deferredQuery,
+              siteId: lockedSiteId || uploadSiteId || '',
+            }),
+          ),
+        );
+        setLoadedRowCount((current) => current + uploadedItems.length);
+        setRowTotal((current) => current + uploadedItems.length);
+        setSelectedIds([]);
+        setNotice(`${uploadedItems.length}건의 사진을 업로드했습니다.`);
       }
 
-      setRows((current) =>
-        mergePhotoAlbumRows(
-          current,
-          filterPhotoAlbumRowsForCurrentView(uploadedItems, {
-            headquarterId: lockedHeadquarterId || headquarterId || '',
-            query: deferredQuery,
-            siteId: lockedSiteId || uploadSiteId || '',
-          }),
-        ),
-      );
-      setSelectedIds([]);
-      setNotice(`${nextFiles.length}건의 사진을 업로드했습니다.`);
+      if (failedFiles.length > 0) {
+        setError(
+          `${failedFiles.length}건의 사진 업로드에 실패했습니다. ${failedFiles
+            .slice(0, 3)
+            .join(' / ')}`,
+        );
+      }
+
+      if (uploadedItems.length === 0 && failedFiles.length > 0) {
+        return;
+      }
+
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : '사진 업로드에 실패했습니다.');
+      setError(getErrorMessage(nextError, '사진 업로드에 실패했습니다.'));
     } finally {
       setUploading(false);
+      setUploadProgress(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -841,7 +975,9 @@ export function PhotoAlbumPanel({
               disabled={!canUpload || uploading}
               aria-describedby={uploadTooltipMessage ? 'photo-upload-tooltip' : undefined}
             >
-              {uploading ? '업로드 중...' : '사진 업로드'}
+              {uploading
+                ? `업로드 중...${uploadProgressLabel ? ` ${uploadProgressLabel}` : ''}`
+                : '사진 업로드'}
               </button>
               {uploadTooltipMessage ? (
                 <span
@@ -1104,16 +1240,15 @@ export function PhotoAlbumPanel({
               {hasMoreRows ? (
                 <div ref={loadMoreRef} className={styles.loadMoreRow}>
                   <span className={styles.paginationMeta}>
-                    아래로 내려 남은 {orderedRows.length - visibleRows.length}건을 더 볼 수 있습니다.
+                    아래로 내려 남은 {remainingRowCount}건을 더 볼 수 있습니다.
                   </span>
                   <button
                     type="button"
                     className="app-button app-button-secondary"
-                    onClick={() =>
-                      setVisibleCount((current) => Math.min(orderedRows.length, current + PAGE_SIZE))
-                    }
+                    onClick={() => void handleLoadMoreRows()}
+                    disabled={loadingMoreRows}
                   >
-                    사진 더 보기
+                    {loadingMoreRows ? '불러오는 중...' : '사진 더 보기'}
                   </button>
                 </div>
               ) : null}

@@ -27,6 +27,14 @@ import {
 const PHOTO_ASSET_PAGE_SIZE = 200;
 const LEGACY_REPORT_FETCH_CONCURRENCY = 6;
 
+function normalizePageLimit(value: number | undefined) {
+  return Math.max(1, Math.min(200, value ?? 60));
+}
+
+function normalizePageOffset(value: number | undefined) {
+  return Math.max(0, value ?? 0);
+}
+
 function normalizeSource(value: PhotoAlbumQuery['source']) {
   return value && value !== 'all' ? value : '';
 }
@@ -108,6 +116,53 @@ async function fetchAllAlbumUploadItems(
   }
 
   return rows;
+}
+
+async function loadPagedAlbumUploadList(
+  token: string,
+  request: Request,
+  query: PhotoAlbumQuery,
+): Promise<PhotoAlbumListResponse | null> {
+  if (query.all || normalizeSource(query.source) !== 'album_upload') {
+    return null;
+  }
+
+  const accessibleSites = await loadAccessibleSites(token, request, query);
+  const sitesById = new Map(accessibleSites.map((site) => [site.id, site] as const));
+  const limit = normalizePageLimit(query.limit);
+  const offset = normalizePageOffset(query.offset);
+
+  const [response, capabilities] = await Promise.all([
+    fetchSafetyPhotoAssetsServer(
+      token,
+      {
+        headquarter_id: query.headquarterId || '',
+        limit,
+        offset,
+        query: query.query || '',
+        report_key: query.reportKey || '',
+        site_id: query.siteId || '',
+        sort_by: normalizeSortKey(query.sortBy),
+        sort_dir: normalizeSortDir(query.sortDir),
+        source_kind: 'album_upload',
+      },
+      request,
+    ),
+    fetchSafetyPhotoAssetMutationCapabilitiesServer(),
+  ]);
+
+  return {
+    capabilities: {
+      deleteSupported: capabilities.deleteSupported,
+      roundUpdateSupported: capabilities.roundUpdateSupported,
+    },
+    limit,
+    offset,
+    rows: response.rows
+      .map((asset) => mapBackendPhotoAsset(asset))
+      .map((asset) => buildPhotoAlbumItemFromAsset(asset, sitesById.get(asset.siteId))),
+    total: response.total,
+  };
 }
 
 async function fetchReportsBySiteId(
@@ -211,6 +266,11 @@ export async function loadPhotoAlbumList(
   request: Request,
   query: PhotoAlbumQuery,
 ): Promise<PhotoAlbumListResponse> {
+  const pagedAlbumUploadList = await loadPagedAlbumUploadList(token, request, query);
+  if (pagedAlbumUploadList) {
+    return pagedAlbumUploadList;
+  }
+
   const [snapshot, capabilities] = await Promise.all([
     loadPhotoAlbumSnapshot(token, request, query),
     fetchSafetyPhotoAssetMutationCapabilitiesServer(),

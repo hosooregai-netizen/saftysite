@@ -40,13 +40,15 @@ Large content and photo uploads should bypass the Vercel `/api` proxy when possi
 Set these env vars in the Next app:
 
 - `NEXT_PUBLIC_SAFETY_ASSET_BASE_URL=https://<asset-origin>`
-- `NEXT_PUBLIC_SAFETY_UPLOAD_UPSTREAM_BASE_URL=https://<asset-origin>`
+- `NEXT_PUBLIC_SAFETY_UPLOAD_UPSTREAM_BASE_URL=https://<asset-origin-or-api-base>`
 
-Use the same HTTPS asset origin for both settings. That origin must serve:
+Use the same HTTPS asset domain for both settings. The upload base must be the exact base that serves:
 
 - `/uploads/...`
 - `/content-items/assets/upload`
 - `/photo-assets/upload`
+
+If the upload routes are mounted below an API prefix, include that prefix in `NEXT_PUBLIC_SAFETY_UPLOAD_UPSTREAM_BASE_URL` (for example, `https://<asset-origin>/api/v1`).
 
 When `NEXT_PUBLIC_SAFETY_UPLOAD_UPSTREAM_BASE_URL` is missing or unusable from the current page protocol, the app falls back to the existing proxy upload routes. In that mode, uploads above 4.5MB are blocked intentionally and the UI points back to the direct-upload env setting.
 
