@@ -19,9 +19,10 @@ import type { ControllerDashboardData } from '@/types/controller';
 import type { SafetyContentItemListItem, SafetyReportListItem } from '@/types/backend';
 import { ADMIN_REPORT_LIST_LIMIT, getErrorMessage } from './adminDashboardStateShared';
 
-export type AdminCoreDataScope = 'none' | 'sites' | 'mailbox';
+export type AdminCoreDataScope = 'none' | 'photo-sites' | 'sites' | 'mailbox';
 
 const ADMIN_DIRECTORY_PAGE_LIMIT = 200;
+const PHOTO_SITE_OPTION_LIMIT = 100;
 
 type MailboxDirectoryData = Pick<ControllerDashboardData, 'headquarters' | 'sites'>;
 
@@ -37,6 +38,7 @@ function mergeLoadedCoreDataScope(
 ): AdminCoreDataScope {
   if (currentScope === 'mailbox' || nextScope === 'mailbox') return 'mailbox';
   if (currentScope === 'sites' || nextScope === 'sites') return 'sites';
+  if (currentScope === 'photo-sites' || nextScope === 'photo-sites') return 'photo-sites';
   return 'none';
 }
 
@@ -45,6 +47,7 @@ function isCoreDataScopeLoaded(
   requestedScope: AdminCoreDataScope,
 ) {
   if (requestedScope === 'none') return true;
+  if (requestedScope === 'photo-sites') return loadedScope !== 'none';
   if (requestedScope === 'sites') return loadedScope === 'sites' || loadedScope === 'mailbox';
   return loadedScope === 'mailbox';
 }
@@ -69,6 +72,10 @@ async function fetchAllAdminPages<T>(
 
 function fetchAdminSitesDirectory(token: string) {
   return fetchAllAdminPages((limit, offset) => fetchSafetySitesAdminPage(token, { limit, offset }));
+}
+
+function fetchAdminPhotoSiteOptions(token: string) {
+  return fetchSafetySitesAdminPage(token, { limit: PHOTO_SITE_OPTION_LIMIT, offset: 0 });
 }
 
 function fetchMailboxDirectory(token: string): Promise<MailboxDirectoryData> {
@@ -260,9 +267,9 @@ export function useAdminDashboardDataLoaders({
             )
           : { isFresh: false, value: null };
 
-      if (requestedScope === 'sites' && cachedSites.value) {
+      if ((requestedScope === 'photo-sites' || requestedScope === 'sites') && cachedSites.value) {
         setData((current) => ({ ...current, sites: cachedSites.value ?? current.sites }));
-        setLoadedCoreDataScope((current) => mergeLoadedCoreDataScope(current, 'sites'));
+        setLoadedCoreDataScope((current) => mergeLoadedCoreDataScope(current, requestedScope));
       }
       if (requestedScope === 'mailbox' && cachedMailboxDirectory.value) {
         setData((current) => ({
@@ -274,7 +281,9 @@ export function useAdminDashboardDataLoaders({
       }
 
       if (
-        (requestedScope === 'sites' && cachedSites.isFresh && cachedSites.value) ||
+        ((requestedScope === 'photo-sites' || requestedScope === 'sites') &&
+          cachedSites.isFresh &&
+          cachedSites.value) ||
         (requestedScope === 'mailbox' &&
           cachedMailboxDirectory.isFresh &&
           cachedMailboxDirectory.value)
@@ -299,7 +308,13 @@ export function useAdminDashboardDataLoaders({
         const directory =
           requestedScope === 'mailbox'
             ? await fetchMailboxDirectory(token)
-            : { headquarters: data.headquarters, sites: await fetchAdminSitesDirectory(token) };
+            : {
+                headquarters: data.headquarters,
+                sites:
+                  requestedScope === 'photo-sites'
+                    ? await fetchAdminPhotoSiteOptions(token)
+                    : await fetchAdminSitesDirectory(token),
+              };
 
         setData((current) => ({
           ...current,

@@ -52,7 +52,7 @@ export function useAdminDashboardRouting({
   const shouldLoadContent = activeSection === 'content';
   const shouldLoadReports = activeSection === 'mailbox';
   const coreDataScope: AdminCoreDataScope =
-    activeSection === 'mailbox' ? 'mailbox' : activeSection === 'photos' ? 'sites' : 'none';
+    activeSection === 'mailbox' ? 'mailbox' : activeSection === 'photos' ? 'photo-sites' : 'none';
   const shouldLoadCoreData = coreDataScope !== 'none';
 
   const replaceRoute = useCallback(
