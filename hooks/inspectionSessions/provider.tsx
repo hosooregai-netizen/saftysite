@@ -1,14 +1,23 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import {
   createEmptyReportIndexState,
   mergeReportIndexItems,
 } from '@/hooks/inspectionSessions/helpers';
-import { fetchAssignedSafetySites } from '@/lib/safetyApi';
-import { isSafetyAdmin, mapSafetySiteToInspectionSite } from '@/lib/safetyApiMappers';
+import {
+  fetchAssignedSafetySites,
+  fetchSafetySiteDetail,
+} from '@/lib/safetyApi';
+import {
+  mergeAssignedSafetySitesIntoInspectionSites,
+  upsertAssignedSafetySitesIntoInspectionSites,
+} from '@/lib/safetyApi/assignedSites';
+import { isSafetyAdmin } from '@/lib/safetyApiMappers';
 import type { ReactNode } from 'react';
+import type { SafetySite } from '@/types/backend';
 import type { InspectionReportListItem } from '@/types/inspectionSession';
+import { resolveAssignedSafetySite } from './assignedSafetySiteResolver';
 import { useInspectionSessionsAutosave } from './autosave';
 import {
   InspectionSessionsContext,
@@ -44,6 +53,7 @@ export function InspectionSessionsProvider({
     updateSessions,
     updateSite,
   } = useInspectionSessionsMutations(store, markSessionDirty);
+  const assignedSiteRequestsRef = useRef<Map<string, Promise<SafetySite | null>>>(new Map());
 
   const getSessionById = useCallback(
     (sessionId: string) =>
@@ -93,18 +103,11 @@ export function InspectionSessionsProvider({
   );
 
   const upsertAssignedSitesIntoStore = useCallback(
-    (rawSites: import('@/types/backend').SafetySite[]) => {
-      if (rawSites.length === 0) {
-        return;
-      }
-
-      const nextSitesById = new Map(
-        store.sitesRef.current.map((site) => [site.id, site]),
+    (rawSites: SafetySite[]) => {
+      const nextSites = upsertAssignedSafetySitesIntoInspectionSites(
+        store.sitesRef.current,
+        rawSites,
       );
-      rawSites.forEach((site) => {
-        nextSitesById.set(site.id, mapSafetySiteToInspectionSite(site));
-      });
-      const nextSites = Array.from(nextSitesById.values());
       store.setSiteState(nextSites);
       void store.persistSites(nextSites).catch(() => {
         // Ignore cache persistence failures during site enrichment.
@@ -113,15 +116,25 @@ export function InspectionSessionsProvider({
     [store],
   );
 
+  const replaceAssignedSitesInStore = useCallback(
+    (rawSites: SafetySite[]) => {
+      const nextSites = mergeAssignedSafetySitesIntoInspectionSites(
+        store.sitesRef.current,
+        rawSites,
+      );
+      store.setSiteState(nextSites);
+      void store.persistSites(nextSites).catch(() => {
+        // Ignore cache persistence failures during summary sync.
+      });
+    },
+    [store],
+  );
+
   const ensureAssignedSafetySite = useCallback(
     async (siteId: string) => {
-      const cached = store.assignedSafetySitesByIdRef.current.get(siteId);
-      if (cached) {
-        const hasStoredSite = store.sitesRef.current.some((site) => site.id === siteId);
-        if (!hasStoredSite) {
-          upsertAssignedSitesIntoStore([cached]);
-        }
-        return cached;
+      const inFlightRequest = assignedSiteRequestsRef.current.get(siteId);
+      if (inFlightRequest) {
+        return inFlightRequest;
       }
 
       const token = store.authTokenRef.current;
@@ -129,16 +142,26 @@ export function InspectionSessionsProvider({
         return null;
       }
 
-      try {
-        const sites = await fetchAssignedSafetySites(token);
-        store.replaceAssignedSafetySites(sites);
-        upsertAssignedSitesIntoStore(sites);
-        return store.assignedSafetySitesByIdRef.current.get(siteId) ?? null;
-      } catch {
-        return null;
-      }
+      const request = resolveAssignedSafetySite(siteId, {
+        fetchAssignedSafetySites: () => fetchAssignedSafetySites(token),
+        fetchSafetySiteDetail: (resolvedSiteId) =>
+          fetchSafetySiteDetail(token, resolvedSiteId),
+        getAssignedSafetySite: (resolvedSiteId) =>
+          store.assignedSafetySitesByIdRef.current.get(resolvedSiteId) ?? null,
+        hasAssignedSafetySiteDetail: (resolvedSiteId) =>
+          store.hasAssignedSafetySiteDetail(resolvedSiteId),
+        replaceAssignedSafetySites: store.replaceAssignedSafetySites,
+        upsertAssignedSafetySiteDetail: store.upsertAssignedSafetySiteDetail,
+        replaceAssignedSitesInStore,
+        upsertAssignedSitesIntoStore,
+      }).finally(() => {
+        assignedSiteRequestsRef.current.delete(siteId);
+      });
+      assignedSiteRequestsRef.current.set(siteId, request);
+
+      return request;
     },
-    [store, upsertAssignedSitesIntoStore],
+    [replaceAssignedSitesInStore, store, upsertAssignedSitesIntoStore],
   );
 
   const contextValue = useMemo<InspectionSessionsContextValue>(

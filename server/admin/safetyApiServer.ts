@@ -9,8 +9,10 @@ import {
   isVisibleReport,
   isVisibleSite,
 } from '@/lib/admin/lifecycleStatus';
+import { expandAssignedSiteSummaryToSafetySite } from '@/lib/safetyApi/assignedSites';
 import type { SafetyContentAssetUpload } from '@/lib/safetyApi/adminEndpoints';
 import type {
+  SafetyAssignedSiteSummary,
   SafetyBackendAdminAlert,
   SafetyBackendAdminAnalyticsMonthDetailResponse,
   SafetyBackendAdminAnalyticsSummaryResponse,
@@ -590,15 +592,13 @@ export function fetchAssignedSafetySitesServer(
   token: string,
   request: Request | null = null,
 ): Promise<SafetySite[]> {
-  return fetchAllAdminPages<SafetySite>(token, request, (limit, offset) =>
+  return fetchAllAdminPages<SafetyAssignedSiteSummary>(token, request, (limit, offset) =>
     withQuery('/assignments/me/sites', {
       active_only: true,
-      include_headquarter_detail: true,
-      include_assigned_user: true,
       limit,
       offset,
     }),
-  ).then((sites) => normalizeSiteList(sites));
+  ).then((sites) => normalizeSiteList(sites.map(expandAssignedSiteSummaryToSafetySite)));
 }
 
 export function fetchSafetyContentItemsServer(

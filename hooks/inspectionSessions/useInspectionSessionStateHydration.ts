@@ -6,6 +6,7 @@ import {
   fetchCurrentSafetyUser,
   fetchSafetyContentItems,
 } from '@/lib/safetyApi';
+import { mergeAssignedSafetySitesIntoInspectionSites } from '@/lib/safetyApi/assignedSites';
 import {
   buildSafetyMasterData,
   mapSafetySiteToInspectionSite,
@@ -45,6 +46,7 @@ export function useInspectionSessionStateHydration(
     setMasterData,
     setReportIndexBySiteId,
     setSiteState,
+    sitesRef,
   } = store;
 
   const applyMasterDataToSessions = useCallback(
@@ -82,13 +84,17 @@ export function useInspectionSessionStateHydration(
     async (token: string, preloadedUser?: SafetyUser): Promise<HydratedSiteState> => {
       const user = preloadedUser ?? (await fetchCurrentSafetyUser(token));
       const rawSites = await fetchAssignedSafetySites(token);
+      const mergedSites = mergeAssignedSafetySitesIntoInspectionSites(
+        sitesRef.current,
+        rawSites,
+      );
       return {
         user,
-        sites: rawSites.map(mapSafetySiteToInspectionSite),
+        sites: mergedSites.length ? mergedSites : rawSites.map(mapSafetySiteToInspectionSite),
         assignedSafetySites: rawSites,
       };
     },
-    [],
+    [sitesRef],
   );
 
   const hydrateRemoteMasterData = useCallback(async (token: string) => {

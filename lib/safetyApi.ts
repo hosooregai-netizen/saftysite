@@ -17,6 +17,7 @@ export {
   fetchAssignedSafetySites,
   fetchCurrentSafetyUser,
   fetchSafetyContentItems,
+  fetchSafetySiteDetail,
   fetchSafetyOperationalReportIndex,
   fetchSafetyReportById,
   fetchSafetyReportByKey,

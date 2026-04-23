@@ -5,6 +5,10 @@ import { deletePersistedValue, writePersistedValue } from '@/lib/clientPersisten
 import { clearOperationalReportIndexCaches } from '@/lib/operationalReportIndexCache';
 import { writeOwnedPersistedValue } from '@/lib/ownedPersistence';
 import { clearSafetyAuthToken } from '@/lib/safetyApi';
+import {
+  mergeAssignedSiteDetail,
+  mergeAssignedSiteSummaryIntoSafetySite,
+} from '@/lib/safetyApi/assignedSites';
 import type { SafetyMasterData, SafetySite, SafetyUser } from '@/types/backend';
 import type {
   InspectionSite,
@@ -55,15 +59,39 @@ export function useInspectionSessionsStore() {
   const sessionVersionsRef = useRef<Record<string, number>>({});
   const isFlushingRef = useRef(false);
   const assignedSafetySitesByIdRef = useRef<Map<string, SafetySite>>(new Map());
+  const assignedSafetySiteDetailIdsRef = useRef<Set<string>>(new Set());
 
   const replaceAssignedSafetySites = useCallback((sites: SafetySite[] | undefined) => {
-    assignedSafetySitesByIdRef.current.clear();
-    if (!sites?.length) {
-      return;
-    }
-    for (const site of sites) {
-      assignedSafetySitesByIdRef.current.set(site.id, site);
-    }
+    const nextSitesById = new Map<string, SafetySite>();
+    const nextDetailedSiteIds = new Set<string>();
+
+    (sites ?? []).forEach((site) => {
+      const existing = assignedSafetySitesByIdRef.current.get(site.id) ?? null;
+      const hasDetail = assignedSafetySiteDetailIdsRef.current.has(site.id);
+      nextSitesById.set(
+        site.id,
+        hasDetail && existing
+          ? mergeAssignedSiteSummaryIntoSafetySite(existing, site)
+          : site,
+      );
+      if (hasDetail) {
+        nextDetailedSiteIds.add(site.id);
+      }
+    });
+
+    assignedSafetySitesByIdRef.current = nextSitesById;
+    assignedSafetySiteDetailIdsRef.current = nextDetailedSiteIds;
+  }, []);
+
+  const hasAssignedSafetySiteDetail = useCallback(
+    (siteId: string) => assignedSafetySiteDetailIdsRef.current.has(siteId),
+    [],
+  );
+
+  const upsertAssignedSafetySiteDetail = useCallback((site: SafetySite) => {
+    const current = assignedSafetySitesByIdRef.current.get(site.id) ?? null;
+    assignedSafetySitesByIdRef.current.set(site.id, mergeAssignedSiteDetail(current, site));
+    assignedSafetySiteDetailIdsRef.current.add(site.id);
   }, []);
 
   const setSessionState = useCollectionState(setSessions, sessionsRef, normalizeSessions);
@@ -162,6 +190,7 @@ export function useInspectionSessionsStore() {
     reportIndexBySiteIdRef.current = {};
     siteRelationsStatusBySiteIdRef.current = {};
     assignedSafetySitesByIdRef.current.clear();
+    assignedSafetySiteDetailIdsRef.current.clear();
     setSessions([]);
     setSites([]);
     setMasterData(EMPTY_MASTER_DATA);
@@ -179,6 +208,7 @@ export function useInspectionSessionsStore() {
 
   return {
     assignedSafetySitesByIdRef,
+    assignedSafetySiteDetailIdsRef,
     authError,
     authTokenRef,
     clearAuthState,
@@ -187,6 +217,7 @@ export function useInspectionSessionsStore() {
     dataError,
     dirtySessionIdsRef,
     hasAuthToken,
+    hasAssignedSafetySiteDetail,
     isFlushingRef,
     isHydrating,
     isHydratingReports,
@@ -226,6 +257,7 @@ export function useInspectionSessionsStore() {
     siteRelationsStatusBySiteId,
     siteRelationsStatusBySiteIdRef,
     syncError,
+    upsertAssignedSafetySiteDetail,
   };
 }
 

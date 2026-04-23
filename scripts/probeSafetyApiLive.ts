@@ -210,11 +210,11 @@ const PROBES: ProbeDefinition[] = [
   {
     name: 'Assignments Me Sites',
     group: 'workers',
-    path: () => '/assignments/me/sites?active_only=true&include_headquarter_detail=true&include_assigned_user=true&limit=200',
+    path: () => '/assignments/me/sites?active_only=true&limit=200',
     timeoutBucket: 'default',
     notes: '내 배정 현장 목록',
     maxElapsedMs: 3000,
-    maxResponseBytes: 900000,
+    maxResponseBytes: 800000,
   },
   {
     name: 'Worker Schedules',

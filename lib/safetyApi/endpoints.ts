@@ -1,5 +1,6 @@
 import type {
   ErpDocumentKind,
+  SafetyAssignedSiteSummary,
   SafetyContentType,
   SafetyContentItem,
   SafetyPendingMobileAckGroup,
@@ -26,11 +27,10 @@ import type {
 } from '@/types/backend';
 import {
   applyReportLifecycleStatus,
-  applySiteLifecycleStatus,
   isVisibleReport,
-  isVisibleSite,
 } from '@/lib/admin/lifecycleStatus';
 import { invalidateSafetyApiGetCache, requestSafetyApi, SafetyApiError } from './client';
+import { expandAssignedSiteSummaryToSafetySite } from './assignedSites';
 
 const CLIENT_SITE_LIST_LIMIT = 500;
 const CLIENT_CONTENT_ITEM_LIMIT = 1000;
@@ -357,19 +357,21 @@ export function fetchCurrentSafetyUser(token: string): Promise<SafetyUser> {
 export function fetchAssignedSafetySites(token: string): Promise<SafetySite[]> {
   const searchParams = new URLSearchParams({
     active_only: 'true',
-    include_headquarter_detail: 'true',
-    include_assigned_user: 'true',
     limit: String(CLIENT_SITE_LIST_LIMIT),
   });
 
-  return requestSafetyApi<SafetySite[]>(
+  return requestSafetyApi<SafetyAssignedSiteSummary[]>(
     `/assignments/me/sites?${searchParams.toString()}`,
     {},
     token
-  ).then((sites) =>
-    sites
-      .map((site) => applySiteLifecycleStatus(site))
-      .filter((site) => isVisibleSite(site))
+  ).then((sites) => sites.map(expandAssignedSiteSummaryToSafetySite));
+}
+
+export function fetchSafetySiteDetail(token: string, siteId: string): Promise<SafetySite> {
+  return requestSafetyApi<SafetySite>(
+    `/sites/${encodeURIComponent(siteId)}?include_headquarter_detail=true&include_assigned_user=true`,
+    {},
+    token,
   );
 }
 

@@ -216,6 +216,20 @@ export interface SafetySite {
   updated_at: string;
 }
 
+export interface SafetyAssignedSiteSummary {
+  id: string;
+  headquarter_id: string;
+  headquarter: SafetyHeadquarterSummary | null;
+  assigned_user: SafetyUserSummary | null;
+  active_assignment_count: number;
+  site_name: string;
+  client_business_name: string | null;
+  site_address: string | null;
+  total_rounds: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface SafetyContentItemListItem {
   id: string;
   content_type: SafetyContentType;
