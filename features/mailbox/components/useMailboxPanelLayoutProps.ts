@@ -2,7 +2,6 @@
 
 import { useMemo } from 'react';
 import type { MailboxPanelProps } from './mailboxPanelTypes';
-import type { NaverMailConnectInput } from './mailboxWorkspaceContentTypes';
 import { useMailboxAccountState } from './useMailboxAccountState';
 import { useMailboxComposeState } from './useMailboxComposeState';
 import { useMailboxPanelActions } from './useMailboxPanelActions';
@@ -137,7 +136,6 @@ export function useMailboxPanelLayoutProps({
       onComposerInput: actions.handleComposerInput,
       onComposerLink: actions.handleComposerLink,
       onConnectGoogle: () => void actions.handleConnectGoogle(),
-      onConnectNaver: (input: NaverMailConnectInput) => void actions.handleConnectNaverMail(input),
       onConnectNaverWorks: () => void actions.handleConnectNaverWorksOauth(),
       onFocusRecipient: () => recipientSuggestionState.setRecipientSuggestionsOpen(true),
       onMoveThreadPage: threadState.moveThreadPage,

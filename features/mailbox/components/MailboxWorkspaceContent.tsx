@@ -54,7 +54,6 @@ export function MailboxWorkspaceContent({
   onComposerInput,
   onComposerLink,
   onConnectGoogle,
-  onConnectNaver,
   onConnectNaverWorks,
   onFocusRecipient,
   onMoveThreadPage,
@@ -81,7 +80,6 @@ export function MailboxWorkspaceContent({
         naverWorksProviderStatusLabel={naverWorksProviderStatusLabel}
         oauthProvider={oauthProvider}
         onConnectGoogle={onConnectGoogle}
-        onConnectNaver={onConnectNaver}
         onConnectNaverWorks={onConnectNaverWorks}
         onRefreshAccountState={onRefreshAccountState}
       />

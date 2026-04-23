@@ -188,21 +188,6 @@ export async function completeNaverWorksMailConnect(input: {
   });
 }
 
-export async function connectNaverMail(input: {
-  appPassword?: string;
-  displayName?: string;
-  email: string;
-}) {
-  return requestMailApi<MailAccount>('/accounts/connect/naver', {
-    method: 'POST',
-    body: JSON.stringify({
-      app_password: input.appPassword || '',
-      display_name: input.displayName || '',
-      email: input.email,
-    }),
-  });
-}
-
 export async function disconnectMailAccount(accountId: string) {
   return requestMailApi<void>(`/accounts/${encodeURIComponent(accountId)}`, {
     method: 'DELETE',
