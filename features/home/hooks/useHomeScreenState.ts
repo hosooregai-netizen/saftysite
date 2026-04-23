@@ -191,7 +191,7 @@ export function useHomeScreenState(): HomeScreenState {
     }
 
     if (isControllerView) {
-      router.replace(getAdminSectionHref('headquarters'));
+      router.replace(getAdminSectionHref('overview'));
     }
   }, [currentUser, isControllerView, router]);
 
