@@ -1,5 +1,6 @@
 import { normalizeControllerReportType } from '@/lib/admin/reportMeta';
 import { fetchAdminOriginalPdfDescriptor } from '@/server/admin/originalPdfDocument';
+import { SafetyServerApiError } from '@/server/admin/safetyApiServer';
 import {
   readMailReportAttachmentCache,
   writeMailReportAttachmentCache,
@@ -29,6 +30,10 @@ function normalizeText(value: unknown) {
 
 function sanitizePdfFilename(value: string) {
   return value.replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function isLegacyReportKey(reportKey: string) {
+  return normalizeText(reportKey).startsWith('legacy:');
 }
 
 export function buildMailReportFilename(
@@ -128,22 +133,35 @@ async function buildMailReportAttachmentUncached(
     throw new Error('메일에 첨부할 보고서 키가 없습니다.');
   }
 
-  const pdfRequest = buildReportPdfRequest({ ...input, reportKey }, request, token);
-  if (pdfRequest.isOriginalPdf) {
-    const descriptor = await fetchAdminOriginalPdfDescriptor({
-      reportKey,
-      request,
-      token,
-    });
-    return {
-      content_type: descriptor.contentType,
-      download_headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      download_url: pdfRequest.url.toString(),
-      filename: buildMailReportFilename({ ...input, reportKey }, descriptor.filename),
-      size_bytes: descriptor.sizeBytes ?? undefined,
-    };
+  const originalPdfRequest = buildReportPdfRequest(
+    { ...input, originalPdfAvailable: true, reportKey },
+    request,
+    token,
+  );
+  const shouldAttemptOriginalPdf =
+    shouldUseOriginalPdfForMailReport({ ...input, reportKey }) || isLegacyReportKey(reportKey);
+
+  if (shouldAttemptOriginalPdf) {
+    try {
+      const descriptor = await fetchAdminOriginalPdfDescriptor({
+        reportKey,
+        request,
+        token,
+      });
+      return {
+        content_type: descriptor.contentType,
+        download_headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        download_url: originalPdfRequest.url.toString(),
+        filename: buildMailReportFilename({ ...input, reportKey }, descriptor.filename),
+        size_bytes: descriptor.sizeBytes ?? undefined,
+      };
+    } catch (error) {
+      if (!(error instanceof SafetyServerApiError) || error.status !== 404) {
+        throw error;
+      }
+    }
   }
 
   const generatedPdfRequest = buildReportPdfRequest(

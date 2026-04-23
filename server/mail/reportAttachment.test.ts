@@ -107,6 +107,48 @@ test('buildMailReportAttachment returns an authenticated original PDF download U
   });
 });
 
+test('buildMailReportAttachment upgrades manifest-backed legacy reports to original PDF attachments even when the row metadata is stale', async () => {
+  await withAttachmentCacheDir(async () => {
+    const previousFetch = globalThis.fetch;
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      assert.match(
+        String(input),
+        /\/uploads\/content-items\/6e85aa9a264e4b69a375053a66411250-legacy-admin-report-2025-05-23-427520\.pdf$/,
+      );
+      assert.equal(init?.method, 'HEAD');
+      assert.equal(new Headers(init?.headers).get('authorization'), 'Bearer token-1');
+      return new Response(null, {
+        headers: {
+          'content-length': '71241257',
+          'content-type': 'application/pdf',
+        },
+      });
+    }) as typeof fetch;
+
+    try {
+      const attachment = await buildMailReportAttachment(
+        new Request('https://app.example.com/api/mail/send-report'),
+        'token-1',
+        {
+          originalPdfAvailable: false,
+          reportKey: 'legacy:technical_guidance:427520',
+          reportTitle:
+            '2025년 교통안전시설(안전표지) 유지보수공사(연간단가) 2025-05-23 2차 기술지도 보고서',
+        },
+      );
+
+      assert.equal(
+        attachment.download_url,
+        'https://app.example.com/api/admin/reports/legacy%3Atechnical_guidance%3A427520/original-pdf',
+      );
+      assert.equal(attachment.data_base64, undefined);
+      assert.equal(attachment.size_bytes, 71241257);
+    } finally {
+      globalThis.fetch = previousFetch;
+    }
+  });
+});
+
 test('buildMailReportAttachment posts reportKey to current quarterly PDF route', async () => {
   await withAttachmentCacheDir(async () => {
     const previousFetch = globalThis.fetch;
@@ -135,6 +177,54 @@ test('buildMailReportAttachment posts reportKey to current quarterly PDF route',
 
       assert.equal(attachment.filename, '2026년 1분기 보고서.pdf');
       assert.equal(attachment.data_base64, 'JVBERg==');
+    } finally {
+      globalThis.fetch = previousFetch;
+    }
+  });
+});
+
+test('buildMailReportAttachment falls back to generated PDF when a legacy original PDF lookup returns 404', async () => {
+  await withAttachmentCacheDir(async () => {
+    const previousFetch = globalThis.fetch;
+    let fetchCount = 0;
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      fetchCount += 1;
+      if (fetchCount === 1) {
+        assert.match(
+          String(input),
+          /\/uploads\/content-items\/6e85aa9a264e4b69a375053a66411250-legacy-admin-report-2025-05-23-427520\.pdf$/,
+        );
+        assert.equal(init?.method, 'HEAD');
+        return new Response(null, { status: 404 });
+      }
+
+      assert.equal(String(input), 'https://app.example.com/api/documents/inspection/pdf');
+      assert.equal(init?.method, 'POST');
+      assert.equal(init?.body, JSON.stringify({ reportKey: 'legacy:technical_guidance:427520' }));
+      return new Response(new Uint8Array([37, 80, 68, 70]), {
+        headers: {
+          'content-disposition': "attachment; filename*=UTF-8''inspection.pdf",
+          'content-type': 'application/pdf',
+        },
+      });
+    }) as typeof fetch;
+
+    try {
+      const attachment = await buildMailReportAttachment(
+        new Request('https://app.example.com/api/mail/send-report'),
+        'token-1',
+        {
+          originalPdfAvailable: false,
+          reportKey: 'legacy:technical_guidance:427520',
+          reportTitle:
+            '2025년 교통안전시설(안전표지) 유지보수공사(연간단가) 2025-05-23 2차 기술지도 보고서',
+          reportType: 'technical_guidance',
+        },
+      );
+
+      assert.equal(attachment.download_url, undefined);
+      assert.equal(attachment.data_base64, 'JVBERg==');
+      assert.equal(fetchCount >= 2, true);
     } finally {
       globalThis.fetch = previousFetch;
     }
