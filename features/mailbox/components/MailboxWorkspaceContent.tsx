@@ -16,6 +16,7 @@ export function MailboxWorkspaceContent({
   composerRef,
   googleProviderStatusDetail,
   googleProviderStatusLabel,
+  googleProviderStatusTone,
   hasPersonalAccount,
   hasMultipleAccounts,
   isDemoMode,
@@ -23,6 +24,7 @@ export function MailboxWorkspaceContent({
   mailSendProgress,
   naverWorksProviderStatusDetail,
   naverWorksProviderStatusLabel,
+  naverWorksProviderStatusTone,
   oauthProvider,
   recipientSuggestionIndex,
   recipientSuggestions,
@@ -56,6 +58,7 @@ export function MailboxWorkspaceContent({
   onConnectGoogle,
   onConnectNaverWorks,
   onFocusRecipient,
+  onForward,
   onMoveThreadPage,
   onOpenReportPicker,
   onOpenThread,
@@ -75,9 +78,11 @@ export function MailboxWorkspaceContent({
         accountStateLoading={accountStateLoading}
         googleProviderStatusDetail={googleProviderStatusDetail}
         googleProviderStatusLabel={googleProviderStatusLabel}
+        googleProviderStatusTone={googleProviderStatusTone}
         mode={showMailboxConnectGate ? 'gate' : 'prompt'}
         naverWorksProviderStatusDetail={naverWorksProviderStatusDetail}
         naverWorksProviderStatusLabel={naverWorksProviderStatusLabel}
+        naverWorksProviderStatusTone={naverWorksProviderStatusTone}
         oauthProvider={oauthProvider}
         onConnectGoogle={onConnectGoogle}
         onConnectNaverWorks={onConnectNaverWorks}
@@ -145,6 +150,7 @@ export function MailboxWorkspaceContent({
         onBackToList={onBackToList}
         onMoveThreadPage={onMoveThreadPage}
         onOpenThread={onOpenThread}
+        onForward={onForward}
         onReply={onReply}
       />
     );
@@ -168,6 +174,7 @@ export function MailboxWorkspaceContent({
       onBackToList={onBackToList}
       onMoveThreadPage={onMoveThreadPage}
       onOpenThread={onOpenThread}
+      onForward={onForward}
       onReply={onReply}
     />
   );

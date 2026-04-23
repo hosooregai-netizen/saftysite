@@ -2,10 +2,7 @@
 
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import type { MailAccount } from '@/types/mail';
-import type {
-  MailboxSyncStatusSummary,
-  MailboxView,
-} from './mailboxPanelTypes';
+import type { MailboxSyncStatusSummary, MailboxView } from './mailboxPanelTypes';
 import localStyles from './MailboxPanel.module.css';
 
 interface MailboxHeaderPanelProps {
@@ -45,17 +42,29 @@ export function MailboxHeaderPanel({
   onOpenCompose,
   onSync,
 }: MailboxHeaderPanelProps) {
+  const isListView = view === 'list';
+  const showLead = isListView || showMailboxConnectGate;
+
   return (
     <>
-      <div className={styles.sectionHeader}>
-        <div className={`${styles.sectionHeaderActions} ${localStyles.headerToolbar}`}>
+      <div className={`${styles.sectionHeader} ${!showLead ? localStyles.headerCompact : ''}`}>
+        <div
+          className={`${styles.sectionHeaderActions} ${localStyles.headerToolbar} ${
+            !showLead ? localStyles.headerToolbarCompact : ''
+          }`}
+        >
           <div className={localStyles.headerPrimaryRow}>
-            <div className={localStyles.sectionHeaderMeta}>
+            <div
+              className={`${localStyles.sectionHeaderMeta} ${
+                !showLead ? localStyles.sectionHeaderMetaCompact : ''
+              }`}
+            >
               <h2 className={styles.sectionTitle}>통합 메일함</h2>
-              <p className={localStyles.sectionLead}>{mailboxLead}</p>
+              {showLead ? <p className={localStyles.sectionLead}>{mailboxLead}</p> : null}
             </div>
+
             <div className={localStyles.headerUtilityGroup}>
-              {!showMailboxConnectGate && view === 'list' ? (
+              {!showMailboxConnectGate && isListView ? (
                 <input
                   aria-label="메일 검색"
                   className={`app-input ${localStyles.searchField}`}
@@ -64,6 +73,7 @@ export function MailboxHeaderPanel({
                   placeholder="제목, 본문, 주소 검색"
                 />
               ) : null}
+
               <div className={localStyles.headerPrimaryActions}>
                 <button
                   type="button"
@@ -72,6 +82,7 @@ export function MailboxHeaderPanel({
                 >
                   새로 고침
                 </button>
+
                 {!showMailboxConnectGate ? (
                   <button
                     type="button"
@@ -81,6 +92,7 @@ export function MailboxHeaderPanel({
                     메일 보내기
                   </button>
                 ) : null}
+
                 {!showMailboxConnectGate && disconnectableAccount ? (
                   <button
                     type="button"
@@ -95,7 +107,9 @@ export function MailboxHeaderPanel({
             </div>
           </div>
 
-          {!showMailboxConnectGate && view === 'list' && (hasMultipleAccounts || listScopeMeta.length > 0) ? (
+          {!showMailboxConnectGate &&
+          isListView &&
+          (hasMultipleAccounts || listScopeMeta.length > 0) ? (
             <div className={localStyles.headerSecondaryRow}>
               {hasMultipleAccounts ? (
                 <select
@@ -111,6 +125,7 @@ export function MailboxHeaderPanel({
                   ))}
                 </select>
               ) : null}
+
               {hasMultipleAccounts && listScopeMeta.length > 0 ? (
                 <span className={localStyles.headerScope}>{listScopeMeta.join(' · ')}</span>
               ) : null}
@@ -118,7 +133,8 @@ export function MailboxHeaderPanel({
           ) : null}
         </div>
       </div>
-      {!showMailboxConnectGate && view === 'list' && syncStatusSummary ? (
+
+      {!showMailboxConnectGate && isListView && syncStatusSummary ? (
         <div
           className={`${localStyles.syncStatusBanner} ${
             syncStatusSummary.tone === 'error'

@@ -52,6 +52,7 @@ export function MailboxThreadListSection({
             표시 {rangeStart}-{rangeEnd} / 전체 {total}건
           </span>
         </div>
+
         {total > 0 ? (
           <div className={localStyles.pagination}>
             <MailboxThreadPagination
@@ -65,58 +66,56 @@ export function MailboxThreadListSection({
           </div>
         ) : null}
       </div>
+
       {rows.length === 0 ? (
         <div className={styles.tableEmpty}>{emptyMessage}</div>
       ) : (
-        <>
-          <div className={`${styles.tableWrap} ${localStyles.mailTableWrap}`}>
-            <table className={`${styles.table} ${localStyles.mailTable}`}>
-              <thead>
-                <tr>
-                  <th>{primaryColumnLabel}</th>
-                  <th>제목</th>
-                  <th>첨부</th>
-                  <th>일시</th>
+        <div className={`${styles.tableWrap} ${localStyles.mailTableWrap}`}>
+          <table className={`${styles.table} ${localStyles.mailTable}`}>
+            <colgroup>
+              <col className={localStyles.mailPartyColumn} />
+              <col />
+              <col className={localStyles.mailDateColumn} />
+            </colgroup>
+            <thead>
+              <tr>
+                <th>{primaryColumnLabel}</th>
+                <th>제목</th>
+                <th>일시</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr
+                  key={row.id}
+                  className={`${styles.tableClickableRow} ${localStyles.mailTableRow} ${
+                    row.isUnread ? localStyles.mailRowUnread : ''
+                  }`}
+                  tabIndex={0}
+                  onClick={() => onOpenThread(row.id)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      onOpenThread(row.id);
+                    }
+                  }}
+                >
+                  <td className={localStyles.mailPartyCell}>
+                    <span className={`${styles.tablePrimary} ${localStyles.mailTablePrimary}`}>
+                      {row.partyLabel}
+                    </span>
+                  </td>
+                  <td className={localStyles.mailSubjectCell}>
+                    <span className={`${styles.tablePrimary} ${localStyles.mailTablePrimary}`}>
+                      {row.subject}
+                    </span>
+                  </td>
+                  <td className={localStyles.mailDateCell}>{row.timestamp}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {rows.map((row) => (
-                  <tr
-                    key={row.id}
-                    className={`${styles.tableClickableRow} ${localStyles.mailTableRow} ${row.isUnread ? localStyles.mailRowUnread : ''}`}
-                    tabIndex={0}
-                    onClick={() => onOpenThread(row.id)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        onOpenThread(row.id);
-                      }
-                    }}
-                  >
-                    <td>
-                      <span className={`${styles.tablePrimary} ${localStyles.mailTablePrimary}`}>{row.partyLabel}</span>
-                    </td>
-                    <td>
-                      <span className={`${styles.tablePrimary} ${localStyles.mailTablePrimary}`}>{row.subject}</span>
-                    </td>
-                    <td className={localStyles.mailAttachmentCell}>-</td>
-                    <td className={localStyles.mailDateCell}>{row.timestamp}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className={styles.paginationRow}>
-            <MailboxThreadPagination
-              canGoNextThreadPage={canGoNextThreadPage}
-              canGoPrevThreadPage={canGoPrevThreadPage}
-              meta={`${rangeStart}-${rangeEnd} / ${total}건 · ${page} / ${pageCount}`}
-              page={page}
-              pageCount={pageCount}
-              onMovePage={onMovePage}
-            />
-          </div>
-        </>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </section>
   );

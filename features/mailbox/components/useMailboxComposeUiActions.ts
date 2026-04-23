@@ -9,6 +9,8 @@ import type {
   SelectedReportContext,
 } from './mailboxPanelTypes';
 import {
+  buildForwardBody,
+  buildForwardSubject,
   buildComposeState,
   buildReplySubject,
   buildThreadRecipients,
@@ -79,6 +81,23 @@ export function useMailboxComposeUiActions({
                 .filter(Boolean),
             )
           : [],
+      }),
+    );
+    setAttachments([]);
+    setView('compose');
+  };
+
+  const handleForward = () => {
+    const sourceMessage = threadDetail
+      ? threadDetail.messages[threadDetail.messages.length - 1]
+      : null;
+    if (!threadDetail || !sourceMessage) return;
+    setSelectedReport(null);
+    setComposeMode('new');
+    setCompose(
+      buildComposeState({
+        body: buildForwardBody(sourceMessage),
+        subject: buildForwardSubject(sourceMessage.subject || threadDetail.thread.subject),
       }),
     );
     setAttachments([]);
@@ -182,6 +201,7 @@ export function useMailboxComposeUiActions({
     handleComposerCommand,
     handleComposerInput,
     handleComposerLink,
+    handleForward,
     handleOpenCompose,
     handleOpenReportPicker,
     handleRemoveAttachment,

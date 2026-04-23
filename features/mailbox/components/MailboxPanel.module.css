@@ -18,6 +18,15 @@
   max-width: 620px;
 }
 
+.headerCompact {
+  padding-block: 12px;
+}
+
+.headerToolbarCompact,
+.sectionHeaderMetaCompact {
+  gap: 2px;
+}
+
 .demoBadge {
   display: inline-flex;
   align-items: center;
@@ -129,7 +138,7 @@
   gap: 4px;
   padding: 11px 14px;
   border: 1px solid var(--erp-line);
-  border-radius: var(--erp-radius-card);
+  border-radius: 2px;
 }
 
 .syncStatusBannerProgress {
@@ -183,6 +192,10 @@
   align-content: start;
 }
 
+.workspaceSection {
+  overflow: hidden;
+}
+
 .stageCard {
   display: grid;
   gap: 12px;
@@ -232,6 +245,14 @@
   gap: 12px;
 }
 
+.composeHeaderActions,
+.detailHeaderRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
 .composeAccountInline {
   display: grid;
   gap: 6px;
@@ -260,9 +281,9 @@
   gap: 10px;
   padding: 12px;
   border: 1px solid var(--erp-line);
-  border-radius: var(--erp-radius-card);
+  border-radius: 2px;
   background: var(--erp-white);
-  box-shadow: 0 1px 0 rgba(16, 24, 43, 0.04);
+  box-shadow: none;
 }
 
 .accountColumn,
@@ -314,6 +335,147 @@
   background: linear-gradient(180deg, rgba(250, 252, 255, 0.98), rgba(243, 247, 252, 0.98));
 }
 
+.detailReadShell {
+  display: grid;
+  background: #fff;
+}
+
+.detailHeaderBlock {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--erp-line);
+  background: linear-gradient(180deg, rgba(251, 253, 255, 0.98), rgba(245, 248, 252, 0.98));
+}
+
+.detailSubjectRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.detailSubject {
+  min-width: 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--erp-dark);
+}
+
+.detailMetaLine,
+.detailInfoRow,
+.detailActionInline,
+.detailHistoryHeader,
+.detailHistoryMetaBlock {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+}
+
+.detailInfoRow {
+  justify-content: space-between;
+  gap: 10px 16px;
+}
+
+.detailSender,
+.detailHistorySender,
+.detailHistorySubject {
+  color: var(--erp-dark);
+}
+
+.detailSender,
+.detailHistorySender {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.detailMetaDivider,
+.detailActionDivider {
+  color: var(--erp-text-muted);
+}
+
+.detailActionInline {
+  justify-content: flex-end;
+}
+
+.detailActionButton {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--erp-dark);
+  cursor: pointer;
+}
+
+.detailActionButton:hover,
+.detailActionButton:focus-visible {
+  color: #132d4b;
+  text-decoration: underline;
+}
+
+.detailActionButtonDisabled,
+.detailActionButtonDisabled:hover,
+.detailActionButtonDisabled:focus-visible {
+  color: var(--erp-text-muted);
+  text-decoration: none;
+  cursor: not-allowed;
+}
+
+.detailBodySection,
+.detailHistoryList {
+  display: grid;
+}
+
+.detailPrimaryMessage {
+  padding: 14px 16px 16px;
+  background: #fff;
+}
+
+.mailBodyFrameShell {
+  overflow: hidden;
+  border: 1px solid var(--erp-line);
+  border-radius: 2px;
+  background: #fff;
+}
+
+.mailBodyFrame {
+  display: block;
+  inline-size: 100%;
+  border: 0;
+  background: #fff;
+}
+
+.detailHistoryList {
+  background: #fff;
+  border-top: 1px solid var(--erp-line);
+}
+
+.detailHistoryItem {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border-top: 1px solid var(--erp-line);
+}
+
+.detailHistoryItem:first-child {
+  border-top: 0;
+}
+
+.detailHistoryHeader {
+  justify-content: space-between;
+}
+
+.detailHistoryMetaBlock {
+  min-width: 0;
+}
+
+.detailHistorySubject {
+  font-size: 14px;
+  font-weight: 800;
+}
+
 .mailTableHeader {
   display: flex;
   flex-wrap: wrap;
@@ -323,6 +485,23 @@
   padding: 14px 16px;
   border-bottom: 1px solid rgba(221, 228, 237, 0.9);
   background: linear-gradient(180deg, rgba(251, 253, 255, 0.98), rgba(245, 248, 252, 0.98));
+}
+
+.mailTableWrap {
+  overflow-x: hidden;
+}
+
+.mailTable {
+  min-width: 0;
+  table-layout: fixed;
+}
+
+.mailPartyColumn {
+  width: 24%;
+}
+
+.mailDateColumn {
+  width: 140px;
 }
 
 .mailTable thead th {
@@ -354,12 +533,24 @@
   color: var(--erp-dark);
 }
 
+.mailPartyCell,
+.mailSubjectCell {
+  min-width: 0;
+}
+
+.mailPartyCell .mailTablePrimary,
+.mailSubjectCell .mailTablePrimary {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .mailRowUnread td {
   font-weight: 700;
   color: #132d4b;
 }
 
-.mailAttachmentCell,
 .mailDateCell {
   white-space: nowrap;
 }
@@ -377,6 +568,10 @@
 
 .messageList {
   max-height: 420px;
+}
+
+.messageTimeline {
+  display: grid;
 }
 
 .threadCard {
@@ -478,6 +673,49 @@
   box-shadow: 0 8px 18px rgba(16, 24, 43, 0.035);
 }
 
+.messageRecord {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border-top: 1px solid var(--erp-line);
+  background: #fff;
+}
+
+.messageRecord:first-child {
+  border-top: 0;
+}
+
+.messageRecordIncoming {
+  box-shadow: inset 3px 0 0 rgba(45, 95, 167, 0.92);
+}
+
+.messageRecordOutgoing {
+  box-shadow: inset 3px 0 0 rgba(22, 163, 74, 0.82);
+}
+
+.messageRecordHeader,
+.messageRecordMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+
+.messageDirectionBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--erp-line);
+  border-radius: 2px;
+  background: #f8fafc;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--erp-dark);
+  white-space: nowrap;
+}
+
 .messageIncoming {
   border-color: rgba(59, 130, 246, 0.2);
   background: linear-gradient(180deg, #f7fbff, #ffffff);
@@ -500,6 +738,12 @@
 .providerGrid {
   display: grid;
   gap: 12px;
+}
+
+.composeSectionBody {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
 }
 
 .composeGrid,
@@ -639,7 +883,7 @@
   border: 1px solid var(--erp-line-strong);
   border-radius: 2px 2px 0 0;
   background: #f8fafc;
-  box-shadow: inset 0 0 0 1px rgba(31, 48, 69, 0.05);
+  box-shadow: none;
 }
 
 .composeToolbarGroup {
@@ -677,7 +921,7 @@
   border-color: #213a61;
   background: linear-gradient(180deg, #2a4872, #1f3454);
   color: #fff;
-  box-shadow: 0 10px 20px rgba(31, 52, 84, 0.18);
+  box-shadow: none;
 }
 
 .reportPickerButton:hover,
@@ -705,10 +949,8 @@
   gap: 10px;
   padding: 14px 16px;
   border: 1px solid rgba(45, 95, 167, 0.15);
-  border-radius: 14px;
-  background:
-    radial-gradient(circle at top right, rgba(45, 95, 167, 0.08), transparent 28%),
-    linear-gradient(180deg, #fcfdff, #f8fbff);
+  border-radius: 2px;
+  background: #f8fbff;
 }
 
 .reportSelectionMain,
@@ -748,6 +990,11 @@
   box-shadow: inset 0 0 0 1px rgba(31, 48, 69, 0.06);
 }
 
+.composeEditorSection {
+  display: grid;
+  gap: 0;
+}
+
 .composeEditor:empty::before {
   content: attr(data-placeholder);
   color: var(--erp-text-muted);
@@ -765,15 +1012,15 @@
   gap: 12px;
   margin-top: 12px;
   padding: 14px 16px;
-  border: 1px solid rgba(211, 220, 230, 0.92);
-  border-radius: 16px;
+  border: 1px solid var(--erp-line);
+  border-radius: 2px;
   background: #fbfcfe;
 }
 
 .composeSupportActions {
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: 8px;
 }
 
@@ -852,8 +1099,8 @@
   min-width: min(420px, 100%);
   padding: 12px 14px;
   border: 1px solid rgba(45, 95, 167, 0.18);
-  border-radius: 12px;
-  background: linear-gradient(180deg, rgba(247, 250, 255, 0.98), rgba(255, 255, 255, 0.98));
+  border-radius: 2px;
+  background: #f8fbff;
 }
 
 .sendProgressHeader {
@@ -902,7 +1149,7 @@
   position: relative;
   overflow: hidden;
   block-size: 8px;
-  border-radius: 999px;
+  border-radius: 2px;
   background: rgba(45, 95, 167, 0.12);
 }
 
@@ -930,6 +1177,11 @@
 .accountList {
   display: grid;
   gap: 8px;
+}
+
+.connectWorkspace {
+  display: grid;
+  gap: 16px;
 }
 
 .accountRecord,
@@ -983,7 +1235,51 @@
 .backButton,
 .headerActionButton,
 .composeHeaderButton {
-  border-radius: 10px;
+  border-radius: 2px;
+}
+
+.connectTable {
+  min-width: 0;
+}
+
+.connectProviderCell {
+  display: grid;
+  gap: 4px;
+}
+
+.connectStatusBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--erp-line);
+  border-radius: 2px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.connectStatusReady {
+  border-color: rgba(74, 222, 128, 0.42);
+  background: linear-gradient(180deg, rgba(240, 253, 244, 0.96), rgba(248, 250, 252, 0.98));
+  color: #166534;
+}
+
+.connectStatusProgress {
+  border-color: rgba(147, 197, 253, 0.55);
+  background: linear-gradient(180deg, rgba(239, 246, 255, 0.96), rgba(248, 250, 252, 0.98));
+  color: #1d4ed8;
+}
+
+.connectStatusError {
+  border-color: rgba(248, 113, 113, 0.38);
+  background: linear-gradient(180deg, rgba(254, 242, 242, 0.98), rgba(255, 247, 247, 0.98));
+  color: #b91c1c;
+}
+
+.connectActionCell {
+  text-align: right;
+  white-space: nowrap;
 }
 
 .emptyState {
@@ -1042,6 +1338,21 @@
   .composeAccountInline {
     min-width: 0;
   }
+
+  .messageRecordHeader,
+  .messageRecordMeta {
+    justify-content: flex-start;
+  }
+
+  .detailInfoRow,
+  .detailActionInline,
+  .detailHistoryHeader {
+    justify-content: flex-start;
+  }
+
+  .connectActionCell {
+    text-align: left;
+  }
 }
 
 @media (max-width: 767px) {
@@ -1069,6 +1380,15 @@
 
   .composeSupportActions {
     justify-content: flex-start;
+  }
+
+  .detailPrimaryMessage,
+  .detailHistoryItem {
+    padding: 12px;
+  }
+
+  .detailHeaderBlock {
+    padding: 12px;
   }
 
   .sendProgressCard {

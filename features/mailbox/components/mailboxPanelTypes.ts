@@ -4,6 +4,7 @@ import type { MailRecipientSuggestion } from '@/types/mail';
 export type MailboxTab = 'all' | 'inbox' | 'sent';
 export type MailboxView = 'list' | 'thread' | 'compose';
 export type ComposeMode = 'new' | 'reply' | 'report';
+export type MailboxStatusTone = 'error' | 'progress' | 'ready';
 
 export interface MailboxPanelProps {
   currentUser?: {
@@ -60,7 +61,7 @@ export interface RecipientSuggestionItem extends MailRecipientSuggestion {
 export interface MailboxSyncStatusSummary {
   description: string;
   title: string;
-  tone: 'error' | 'progress' | 'ready';
+  tone: MailboxStatusTone;
 }
 
 export const THREAD_PAGE_SIZE = 50;

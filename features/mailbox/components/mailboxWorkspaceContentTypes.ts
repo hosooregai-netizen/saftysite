@@ -5,6 +5,7 @@ import type {
   ComposeMode,
   ComposeState,
   MailSendProgressState,
+  MailboxStatusTone,
   MailboxTab,
   MailboxView,
   RecipientSuggestionItem,
@@ -22,6 +23,7 @@ export interface MailboxWorkspaceContentProps {
   composerRef: RefObject<HTMLDivElement | null>;
   googleProviderStatusDetail: string;
   googleProviderStatusLabel: string;
+  googleProviderStatusTone: MailboxStatusTone;
   hasPersonalAccount: boolean;
   hasMultipleAccounts: boolean;
   isDemoMode: boolean;
@@ -29,6 +31,7 @@ export interface MailboxWorkspaceContentProps {
   mailSendProgress: MailSendProgressState | null;
   naverWorksProviderStatusDetail: string;
   naverWorksProviderStatusLabel: string;
+  naverWorksProviderStatusTone: MailboxStatusTone;
   oauthProvider: 'google' | 'naver_mail' | 'naver_works' | null;
   recipientSuggestionIndex: number;
   recipientSuggestions: RecipientSuggestionItem[];
@@ -70,6 +73,7 @@ export interface MailboxWorkspaceContentProps {
   onRefreshAccountState: () => void;
   onRemoveAttachment: (attachmentId: string) => void;
   onRemoveRecipient: (email: string) => void;
+  onForward: () => void;
   onReply: () => void;
   onSelectRecipientSuggestion: (suggestion: RecipientSuggestionItem) => void;
   onSend: () => void;

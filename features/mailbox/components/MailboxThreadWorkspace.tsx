@@ -24,6 +24,7 @@ interface MailboxThreadWorkspaceProps {
   threads: MailThread[];
   view: Exclude<MailboxView, 'compose'>;
   onBackToList: () => void;
+  onForward: () => void;
   onMoveThreadPage: (nextPage: number) => void;
   onOpenThread: (threadId: string) => void;
   onReply: () => void;
@@ -44,35 +45,19 @@ export function MailboxThreadWorkspace({
   threads,
   view,
   onBackToList,
+  onForward,
   onMoveThreadPage,
   onOpenThread,
   onReply,
 }: MailboxThreadWorkspaceProps) {
   if (view === 'thread') {
-    const detailEmptyMessage = '메일을 선택하면 상세 내용을 볼 수 있습니다.';
     return (
       <MailboxThreadDetailSection
-        detailDescription={
-          threadDetail
-            ? `${buildThreadCounterparty(threadDetail.thread, selectedAccountEmail)} · ${buildThreadTimestamp(threadDetail.thread)}`
-            : detailEmptyMessage
-        }
-        detailEmptyMessage={detailEmptyMessage}
-        detailHints={
-          threadDetail
-            ? [
-                `읽지 않은 메일 ${threadDetail.thread.unreadCount}건`,
-                `메시지 ${threadDetail.thread.messageCount}건`,
-                `계정 ${threadDetail.thread.accountDisplayName}`,
-                ...(threadDetail.thread.reportKey
-                  ? [`보고서 ${threadDetail.thread.reportKey}`]
-                  : []),
-              ]
-            : []
-        }
+        detailEmptyMessage="메일을 선택하면 상세 내용을 확인할 수 있습니다."
         threadDetail={threadDetail}
         title={threadDetail ? threadDetail.thread.subject || '(제목 없음)' : '메일 상세'}
         onBackToList={onBackToList}
+        onForward={onForward}
         onReply={onReply}
         renderMessageBodyHtml={formatMailBodyHtml}
       />

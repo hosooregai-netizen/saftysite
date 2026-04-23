@@ -15,6 +15,12 @@ import {
   readMailAccountSyncMetadata,
 } from './mailboxPanelHelpers';
 
+function buildProviderStatusTone(provider: MailProviderStatus | undefined) {
+  if (!provider || !provider.enabled || provider.missingFields.length > 0) return 'error' as const;
+  if (!provider.isRedirectAllowed) return 'progress' as const;
+  return 'ready' as const;
+}
+
 interface UseMailboxAccountStateParams {
   isDemoMode: boolean;
   setError: React.Dispatch<React.SetStateAction<string | null>>;
@@ -132,12 +138,14 @@ export function useMailboxAccountState({
     disconnectableAccount,
     googleProviderStatusDetail: buildProviderStatusDetail(googleProviderStatus),
     googleProviderStatusLabel: buildProviderStatusLabel(googleProviderStatus),
+    googleProviderStatusTone: buildProviderStatusTone(googleProviderStatus),
     hasMultipleAccounts: selectableAccounts.length > 1,
     hasPersonalAccount: accounts.some((account) => account.scope === 'personal'),
     naverProviderStatusDetail: buildProviderStatusDetail(naverProviderStatus),
     naverProviderStatusLabel: buildProviderStatusLabel(naverProviderStatus),
     naverWorksProviderStatusDetail: buildProviderStatusDetail(naverWorksProviderStatus),
     naverWorksProviderStatusLabel: buildProviderStatusLabel(naverWorksProviderStatus),
+    naverWorksProviderStatusTone: buildProviderStatusTone(naverWorksProviderStatus),
     providerStatuses,
     selectableAccounts,
     selectedAccount,
