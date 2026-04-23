@@ -92,6 +92,18 @@ test('validateSafetyAssetFile reports direct upload origin guidance for oversize
   assert.match(message || '', /NEXT_PUBLIC_SAFETY_UPLOAD_UPSTREAM_BASE_URL/);
 });
 
+test('validateSafetyAssetFile allows oversized raster images to continue to upload optimization', () => {
+  const file = new File(['oversized'], 'photo.jpg', { type: 'image/jpeg' });
+  Object.defineProperty(file, 'size', { value: FOUR_POINT_FIVE_MB + 1 });
+
+  const message = validateSafetyAssetFile(file, {
+    proxyFileBytes: FOUR_POINT_FIVE_MB,
+    usesProxy: true,
+  });
+
+  assert.equal(message, null);
+});
+
 test('getSafetyAssetUploadHelperText only warns while proxy uploads are active', () => {
   assert.match(
     getSafetyAssetUploadHelperText({ usesProxy: true }) || '',
@@ -217,6 +229,28 @@ test('uploadSafetyAssetFile falls back to the proxy route after a small direct-u
       assert.equal(uploaded.file_name, 'fallback-guide.pdf');
     } finally {
       globalThis.fetch = originalFetch;
+      restoreWindow();
+    }
+  });
+});
+
+test('uploadSafetyAssetFile rejects oversized raster images when optimization does not reduce them enough', async () => {
+  const restoreWindow = installWindow({ protocol: 'https:', token: 'asset-token' });
+
+  await withUploadEnv(undefined, async () => {
+    const file = new File(['oversized'], 'photo.jpg', { type: 'image/jpeg' });
+    Object.defineProperty(file, 'size', { value: FOUR_POINT_FIVE_MB + 1 });
+
+    try {
+      await assert.rejects(
+        () => uploadSafetyAssetFile(file),
+        (error: unknown) => {
+          assert.ok(error instanceof Error);
+          assert.match(error.message, /NEXT_PUBLIC_SAFETY_UPLOAD_UPSTREAM_BASE_URL/);
+          return true;
+        },
+      );
+    } finally {
       restoreWindow();
     }
   });

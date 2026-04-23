@@ -1,5 +1,6 @@
 'use client';
 
+import { createOptimizedPhotoUpload } from '@/lib/photos/thumbnail';
 import type { SafetyContentAssetUpload } from './adminEndpoints';
 import { uploadSafetyContentAsset } from './adminEndpoints';
 import { resolveSafetyAssetUrl } from './assetUrls';
@@ -18,6 +19,7 @@ export const MAX_SAFETY_PROXY_FILE_BYTES = Math.floor(4.5 * 1024 * 1024);
 const SAFETY_ASSET_UPLOAD_TIMEOUT_MS = 45000;
 
 interface SafetyAssetValidationOptions {
+  allowImageProxyOptimization?: boolean;
   maxFileBytes?: number;
   proxyFileBytes?: number;
   usesProxy?: boolean;
@@ -36,6 +38,22 @@ function getSafetyAssetUploadTransport() {
     directUploadUrl: getDirectSafetyAssetUploadUrl(),
     proxyBaseUrl: getSafetyApiBaseUrl(),
   });
+}
+
+function isOptimizableSafetyImageFile(file: File): boolean {
+  if (/^image\/(?:png|jpe?g|webp|bmp|heic|heif)$/i.test(file.type)) {
+    return true;
+  }
+
+  return /\.(png|jpe?g|bmp|webp|heic|heif)$/i.test(file.name);
+}
+
+async function prepareSafetyAssetFileForUpload(file: File): Promise<File> {
+  if (!isOptimizableSafetyImageFile(file)) {
+    return file;
+  }
+
+  return createOptimizedPhotoUpload(file).catch(() => file);
 }
 
 export function usesSafetyProxyUpload(): boolean {
@@ -114,6 +132,7 @@ export function validateSafetyAssetFile(
   file: File,
   options: SafetyAssetValidationOptions = {},
 ): string | null {
+  const allowImageProxyOptimization = options.allowImageProxyOptimization ?? true;
   const maxFileBytes = options.maxFileBytes ?? MAX_SAFETY_ASSET_BYTES;
   const proxyFileBytes = options.proxyFileBytes ?? MAX_SAFETY_PROXY_FILE_BYTES;
   const usesProxy = options.usesProxy ?? usesSafetyProxyUpload();
@@ -126,7 +145,11 @@ export function validateSafetyAssetFile(
     return '50MB를 초과하는 파일은 업로드할 수 없습니다.';
   }
 
-  if (usesProxy && file.size > proxyFileBytes) {
+  if (
+    usesProxy &&
+    file.size > proxyFileBytes &&
+    !(allowImageProxyOptimization && isOptimizableSafetyImageFile(file))
+  ) {
     return buildProxyUploadOversizeErrorMessage('파일');
   }
 
@@ -146,19 +169,37 @@ export async function uploadSafetyAssetFile(file: File): Promise<UploadedSafetyA
     throw new Error('로그인이 만료되었습니다. 다시 로그인해 주세요.');
   }
 
+  const uploadFile = await prepareSafetyAssetFileForUpload(file);
+  const validationMessage = validateSafetyAssetFile(uploadFile, {
+    allowImageProxyOptimization: false,
+  });
+  if (validationMessage) {
+    throw new Error(validationMessage);
+  }
+
   const transport = getSafetyAssetUploadTransport();
   let uploaded: SafetyContentAssetUpload;
 
   if (!transport.directUploadUrl) {
-    uploaded = await uploadSafetyContentAsset(token, file);
+    uploaded = await uploadSafetyContentAsset(token, uploadFile);
   } else {
     try {
-      uploaded = await uploadSafetyContentAssetDirect(transport.directUploadUrl, token, file);
+      uploaded = await uploadSafetyContentAssetDirect(
+        transport.directUploadUrl,
+        token,
+        uploadFile,
+      );
     } catch (error) {
-      if (!shouldFallbackDirectUploadToProxy(error, file.size, MAX_SAFETY_PROXY_FILE_BYTES)) {
+      if (
+        !shouldFallbackDirectUploadToProxy(
+          error,
+          uploadFile.size,
+          MAX_SAFETY_PROXY_FILE_BYTES,
+        )
+      ) {
         throw error;
       }
-      uploaded = await uploadSafetyContentAsset(token, file);
+      uploaded = await uploadSafetyContentAsset(token, uploadFile);
     }
   }
 
