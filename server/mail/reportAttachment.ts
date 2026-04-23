@@ -2,7 +2,9 @@ import { normalizeControllerReportType } from '@/lib/admin/reportMeta';
 
 export interface MailReportAttachmentInput {
   originalPdfAvailable?: boolean;
+  preferredFilename?: string | null;
   reportKey: string;
+  reportTitle?: string | null;
   reportType?: string | null;
 }
 
@@ -14,6 +16,22 @@ export interface MailAttachmentServerPayload {
 
 function normalizeText(value: unknown) {
   return typeof value === 'string' ? value.trim() : '';
+}
+
+function sanitizePdfFilename(value: string) {
+  return value.replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+export function buildMailReportFilename(
+  input: Pick<MailReportAttachmentInput, 'preferredFilename' | 'reportKey' | 'reportTitle'>,
+  fallback: string,
+) {
+  const normalizedBaseName = sanitizePdfFilename(
+    normalizeText(input.preferredFilename) || normalizeText(input.reportTitle),
+  );
+  const fallbackBaseName = sanitizePdfFilename(fallback.replace(/\.pdf$/i, ''));
+  const baseName = normalizedBaseName || fallbackBaseName || sanitizePdfFilename(input.reportKey) || 'report';
+  return /\.pdf$/i.test(baseName) ? baseName : `${baseName}.pdf`;
 }
 
 export function shouldUseOriginalPdfForMailReport(input: MailReportAttachmentInput) {
@@ -136,6 +154,9 @@ export async function buildMailReportAttachment(
   return {
     content_type: response.headers.get('content-type') || 'application/pdf',
     data_base64: buffer.toString('base64'),
-    filename: readMailReportFilenameFromHeaders(response.headers, `${reportKey}.pdf`),
+    filename: buildMailReportFilename(
+      { ...input, reportKey },
+      readMailReportFilenameFromHeaders(response.headers, `${reportKey}.pdf`),
+    ),
   };
 }

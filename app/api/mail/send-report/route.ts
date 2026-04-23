@@ -24,10 +24,15 @@ export async function POST(request: Request): Promise<Response> {
     const payload = (await request.json()) as Record<string, unknown>;
     const report = asRecord(payload.report);
     const reportKey = normalizeText(report.report_key) || normalizeText(payload.report_key);
+    const reportTitle = normalizeText(report.report_title) || normalizeText(payload.report_title);
+    const reportFilename =
+      normalizeText(report.report_filename) || normalizeText(payload.report_filename) || reportTitle;
     const reportAttachment = await buildMailReportAttachment(request, token, {
       originalPdfAvailable:
         report.original_pdf_available === true || payload.original_pdf_available === true,
+      preferredFilename: reportFilename,
       reportKey,
+      reportTitle,
       reportType: normalizeText(report.report_type) || normalizeText(payload.report_type),
     });
     const attachments = Array.isArray(payload.attachments) ? payload.attachments : [];

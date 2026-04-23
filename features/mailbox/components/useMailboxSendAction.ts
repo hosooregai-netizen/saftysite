@@ -17,12 +17,17 @@ import type {
   MailSendProgressState,
   SelectedReportContext,
 } from './mailboxPanelTypes';
-import { THREAD_PAGE_SIZE } from './mailboxPanelTypes';
+import { DEFAULT_SHARED_MAILBOX_NAME, THREAD_PAGE_SIZE } from './mailboxPanelTypes';
 
 interface UseMailboxSendActionParams {
   attachments: ComposeAttachment[];
   compose: ComposeState;
   composeMode: ComposeMode;
+  currentUser?: {
+    email: string;
+    id: string;
+    name: string;
+  };
   isDemoMode: boolean;
   query: string;
   resetCompose: (mode: ComposeMode) => void;
@@ -44,10 +49,37 @@ interface UseMailboxSendActionParams {
   threadOffset: number;
 }
 
+function normalizeText(value: unknown) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function resolveSenderName(
+  currentUser: UseMailboxSendActionParams['currentUser'],
+  selectedAccount: MailAccount,
+) {
+  const currentUserName = normalizeText(currentUser?.name);
+  if (currentUserName) {
+    return currentUserName;
+  }
+
+  const accountDisplayName = normalizeText(selectedAccount.displayName);
+  if (accountDisplayName && accountDisplayName !== DEFAULT_SHARED_MAILBOX_NAME) {
+    return accountDisplayName;
+  }
+
+  const mailboxLabel = normalizeText(selectedAccount.mailboxLabel);
+  if (mailboxLabel && mailboxLabel !== DEFAULT_SHARED_MAILBOX_NAME) {
+    return mailboxLabel;
+  }
+
+  return normalizeText(selectedAccount.email);
+}
+
 export function useMailboxSendAction({
   attachments,
   compose,
   composeMode,
+  currentUser,
   isDemoMode,
   query,
   resetCompose,
@@ -87,6 +119,7 @@ export function useMailboxSendAction({
       composeMode === 'reply'
         ? threadDetail?.thread.headquarterId || ''
         : selectedReport?.headquarterId || '';
+    const senderName = resolveSenderName(currentUser, selectedAccount);
 
     try {
       setError(null);
@@ -132,9 +165,12 @@ export function useMailboxSendAction({
           accountId: selectedAccount.id,
           attachments: normalizedAttachments,
           body: compose.body,
+          fromName: senderName,
           headquarterId: selectedHeadquarterId,
           originalPdfAvailable: selectedReport.originalPdfAvailable,
+          reportFilename: selectedReport.reportTitle,
           reportKey: selectedReport.reportKey,
+          reportTitle: selectedReport.reportTitle,
           reportType: selectedReport.reportType,
           siteId: selectedSiteId,
           subject: compose.subject,
@@ -145,6 +181,7 @@ export function useMailboxSendAction({
           accountId: selectedAccount.id,
           attachments: normalizedAttachments,
           body: compose.body,
+          fromName: senderName,
           headquarterId: selectedHeadquarterId,
           reportKey: selectedReportKey,
           siteId: selectedSiteId,

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  buildMailReportFilename,
   buildMailReportAttachment,
   prepareGeneratedMailReportPdf,
   readMailReportFilenameFromHeaders,
@@ -28,6 +29,20 @@ test('readMailReportFilenameFromHeaders decodes UTF-8 filenames', () => {
   assert.equal(readMailReportFilenameFromHeaders(headers, 'fallback.pdf'), '보고서.pdf');
 });
 
+test('buildMailReportFilename prefers report display names and appends pdf extension', () => {
+  assert.equal(
+    buildMailReportFilename(
+      {
+        preferredFilename: '',
+        reportKey: 'legacy:technical_guidance:9001',
+        reportTitle: '하왕십리동 890-93 다세대 신축공사 기술지도 보고서',
+      },
+      'legacy.pdf',
+    ),
+    '하왕십리동 890-93 다세대 신축공사 기술지도 보고서.pdf',
+  );
+});
+
 test('buildMailReportAttachment fetches original PDF for legacy reports', async () => {
   const previousFetch = globalThis.fetch;
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -49,10 +64,13 @@ test('buildMailReportAttachment fetches original PDF for legacy reports', async 
     const attachment = await buildMailReportAttachment(
       new Request('https://app.example.com/api/mail/send-report'),
       'token-1',
-      { reportKey: 'legacy:technical_guidance:9001' },
+      {
+        reportKey: 'legacy:technical_guidance:9001',
+        reportTitle: '하왕십리동 890-93 다세대 신축공사 기술지도 보고서',
+      },
     );
 
-    assert.equal(attachment.filename, 'legacy.pdf');
+    assert.equal(attachment.filename, '하왕십리동 890-93 다세대 신축공사 기술지도 보고서.pdf');
     assert.equal(attachment.content_type, 'application/pdf');
     assert.equal(attachment.data_base64, 'JVBERg==');
   } finally {
@@ -78,10 +96,14 @@ test('buildMailReportAttachment posts reportKey to current quarterly PDF route',
     const attachment = await buildMailReportAttachment(
       new Request('https://app.example.com/api/mail/send-report'),
       'token-1',
-      { reportKey: 'quarterly-1', reportType: 'quarterly_report' },
+      {
+        reportKey: 'quarterly-1',
+        reportTitle: '2026년 1분기 보고서',
+        reportType: 'quarterly_report',
+      },
     );
 
-    assert.equal(attachment.filename, 'quarterly.pdf');
+    assert.equal(attachment.filename, '2026년 1분기 보고서.pdf');
     assert.equal(attachment.data_base64, 'JVBERg==');
   } finally {
     globalThis.fetch = previousFetch;

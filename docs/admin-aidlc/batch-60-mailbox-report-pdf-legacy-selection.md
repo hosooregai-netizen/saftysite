@@ -14,15 +14,17 @@
 - `/api/mail/send-report` builds the selected report PDF attachment server-side before forwarding to `/mail/send`.
 - `/api/mail/prepare-report` warms generated report PDF cache after selection so send-time work is shorter.
 - `/api/admin/reports/[reportKey]/original-pdf` normalizes encoded legacy report keys before manifest lookup.
+- Mail attachments now prefer the visible report title as the PDF filename instead of raw keys like `legacy:...`.
+- Admin shared-mailbox sends can forward the current admin user's display name so recipients do not only see the shared mailbox label.
 
 ## Deployment Notes
 
-- No safety-server restart is required for this client/Next route change.
+- The shared mailbox sender-name override also requires the paired safety-server deployment.
 - Vercel deployment must include the new server routes and legacy matching helpers.
 - Existing asset/upload/PDF environment variables are unchanged.
 
 ## Verification
 
 - `npx tsx --test features/mailbox/components/mailboxReportPickerHelpers.test.ts server/admin/legacyAdminReportsSnapshot.test.ts server/admin/legacyReportAlignment.test.ts server/admin/originalPdfRouteHelpers.test.ts lib/admin/originalPdfClient.test.ts server/mail/reportAttachment.test.ts`
-- `npx eslint app/api/admin/reports/[reportKey]/original-pdf/route.ts app/api/mail/prepare-report/route.ts app/api/mail/send-report/route.ts server/mail/reportAttachment.ts server/mail/reportAttachment.test.ts features/mailbox/components/mailboxReportPickerHelpers.ts features/mailbox/components/mailboxReportPickerHelpers.test.ts features/mailbox/components/useMailboxReportState.ts features/mailbox/components/useMailboxComposeUiActions.ts features/mailbox/components/useMailboxSendAction.ts server/admin/legacyAdminReportsSnapshot.ts server/admin/legacyAdminReportsSnapshot.test.ts server/admin/legacyReportAlignment.ts server/admin/originalPdfRouteHelpers.ts server/admin/originalPdfRouteHelpers.test.ts lib/mail/apiClient.ts`
+- `npx eslint app/api/admin/reports/[reportKey]/original-pdf/route.ts app/api/mail/prepare-report/route.ts app/api/mail/send-report/route.ts server/mail/reportAttachment.ts server/mail/reportAttachment.test.ts features/mailbox/components/mailboxReportPickerHelpers.ts features/mailbox/components/mailboxReportPickerHelpers.test.ts features/mailbox/components/useMailboxReportState.ts features/mailbox/components/useMailboxComposeUiActions.ts features/mailbox/components/useMailboxSendAction.ts features/mailbox/components/useMailboxPanelActions.ts features/mailbox/components/MailboxPanel.tsx features/admin/components/AdminDashboardSectionContent.tsx features/admin/sections/mailbox/MailboxSection.tsx server/admin/legacyAdminReportsSnapshot.ts server/admin/legacyAdminReportsSnapshot.test.ts server/admin/legacyReportAlignment.ts server/admin/originalPdfRouteHelpers.ts server/admin/originalPdfRouteHelpers.test.ts lib/mail/apiClient.ts`
 - `npx tsc --noEmit`

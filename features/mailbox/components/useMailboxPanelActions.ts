@@ -35,6 +35,11 @@ interface UseMailboxPanelActionsParams {
   attachmentInputRef: RefObject<HTMLInputElement | null>;
   composeState: ComposeState;
   composerRef: RefObject<HTMLDivElement | null>;
+  currentUser?: {
+    email: string;
+    id: string;
+    name: string;
+  };
   headquarterId: string;
   pathname: string;
   recipientSuggestionState: RecipientSuggestionState;
@@ -52,6 +57,7 @@ export function useMailboxPanelActions({
   attachmentInputRef,
   composeState,
   composerRef,
+  currentUser,
   headquarterId,
   pathname,
   recipientSuggestionState,
@@ -138,6 +144,7 @@ export function useMailboxPanelActions({
     attachments: composeState.attachments,
     compose: composeState.effectiveCompose,
     composeMode: routing.composeMode,
+    currentUser,
     isDemoMode: uiState.isDemoMode,
     query: uiState.query,
     resetCompose: composeState.resetCompose,

@@ -15,6 +15,8 @@
 - Encoded legacy report keys are decoded before original PDF manifest lookup.
 - The report picker loads admin options in 20-row pages instead of preloading up to 1000 rows.
 - Search or site-filter changes reset the picker to the first page and fetch the new page from the server.
+- Mail attachments use the selected report title as the outgoing PDF filename for both legacy and generated reports.
+- Admin mailbox sends can forward the current user's display name alongside the shared mailbox account.
 
 ## Automated Coverage
 
@@ -26,5 +28,5 @@
 ## Commands Run
 
 - `npx tsx --test features/mailbox/components/mailboxReportPickerHelpers.test.ts server/admin/legacyAdminReportsSnapshot.test.ts server/admin/legacyReportAlignment.test.ts server/admin/originalPdfRouteHelpers.test.ts lib/admin/originalPdfClient.test.ts server/mail/reportAttachment.test.ts`
-- `npx eslint features/mailbox/components/useMailboxReportState.ts features/mailbox/components/MailboxReportPickerModal.tsx features/mailbox/components/MailboxPanelLayout.tsx features/mailbox/components/MailboxPanel.tsx`
+- `npx eslint app/api/mail/send-report/route.ts server/mail/reportAttachment.ts server/mail/reportAttachment.test.ts lib/mail/apiClient.ts features/mailbox/components/useMailboxSendAction.ts features/mailbox/components/useMailboxPanelActions.ts features/mailbox/components/MailboxPanel.tsx features/admin/components/AdminDashboardSectionContent.tsx features/admin/sections/mailbox/MailboxSection.tsx`
 - `npx tsc --noEmit`

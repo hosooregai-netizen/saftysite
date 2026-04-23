@@ -6,6 +6,11 @@ export type MailboxView = 'list' | 'thread' | 'compose';
 export type ComposeMode = 'new' | 'reply' | 'report';
 
 export interface MailboxPanelProps {
+  currentUser?: {
+    email: string;
+    id: string;
+    name: string;
+  };
   mode: 'admin' | 'worker';
   adminReports?: SafetyReportListItem[];
   adminSites?: SafetySite[];

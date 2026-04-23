@@ -16,6 +16,7 @@ import { useMailboxThreadState } from './useMailboxThreadState';
 import { useMailboxPanelActions } from './useMailboxPanelActions';
 
 export function MailboxPanel({
+  currentUser,
   mode,
   adminReports = [],
   adminSites = [],
@@ -86,6 +87,7 @@ export function MailboxPanel({
     attachmentInputRef,
     composeState,
     composerRef,
+    currentUser,
     headquarterId,
     pathname,
     recipientSuggestionState,

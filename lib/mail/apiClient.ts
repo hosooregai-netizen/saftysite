@@ -280,6 +280,7 @@ export async function sendMail(input: {
   accountId: string;
   attachments?: MailAttachmentPayload[];
   body: string;
+  fromName?: string;
   headquarterId?: string;
   reportKey?: string;
   siteId?: string;
@@ -297,6 +298,7 @@ export async function sendMail(input: {
         filename: attachment.filename,
       })),
       body: input.body,
+      sender_name: input.fromName || '',
       headquarter_id: input.headquarterId || '',
       report_key: input.reportKey || '',
       site_id: input.siteId || '',
@@ -311,9 +313,12 @@ export async function sendReportMail(input: {
   accountId: string;
   attachments?: MailAttachmentPayload[];
   body: string;
+  fromName?: string;
   headquarterId?: string;
   originalPdfAvailable?: boolean;
+  reportFilename?: string | null;
   reportKey: string;
+  reportTitle?: string | null;
   reportType?: string | null;
   siteId?: string;
   subject: string;
@@ -335,14 +340,19 @@ export async function sendReportMail(input: {
         filename: attachment.filename,
       })),
       body: input.body,
+      sender_name: input.fromName || '',
       headquarter_id: input.headquarterId || '',
       original_pdf_available: Boolean(input.originalPdfAvailable),
       report: {
         original_pdf_available: Boolean(input.originalPdfAvailable),
+        report_filename: input.reportFilename || '',
         report_key: input.reportKey,
+        report_title: input.reportTitle || '',
         report_type: input.reportType || '',
       },
+      report_filename: input.reportFilename || '',
       report_key: input.reportKey,
+      report_title: input.reportTitle || '',
       report_type: input.reportType || '',
       site_id: input.siteId || '',
       subject: input.subject,
