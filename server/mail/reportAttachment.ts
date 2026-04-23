@@ -36,6 +36,22 @@ function isLegacyReportKey(reportKey: string) {
   return normalizeText(reportKey).startsWith('legacy:');
 }
 
+function shouldReuseCachedMailReportAttachment(
+  input: MailReportAttachmentInput,
+  cached: MailAttachmentServerPayload,
+) {
+  const reportKey = normalizeText(input.reportKey);
+  if (!isLegacyReportKey(reportKey)) {
+    return true;
+  }
+
+  if (normalizeText(cached.download_url)) {
+    return true;
+  }
+
+  return false;
+}
+
 export function buildMailReportFilename(
   input: Pick<MailReportAttachmentInput, 'preferredFilename' | 'reportKey' | 'reportTitle'>,
   fallback: string,
@@ -206,7 +222,7 @@ export async function prepareMailReportAttachment(
 
   const cacheKey = buildMailReportAttachmentCacheKey({ ...input, reportKey });
   const cached = await readMailReportAttachmentCache(cacheKey);
-  if (cached) {
+  if (cached && shouldReuseCachedMailReportAttachment({ ...input, reportKey }, cached)) {
     return { prepared: false, skipped: 'cached' as const };
   }
 
@@ -230,7 +246,7 @@ export async function buildMailReportAttachment(
 
   const cacheKey = buildMailReportAttachmentCacheKey({ ...input, reportKey });
   const cached = await readMailReportAttachmentCache(cacheKey);
-  if (cached) {
+  if (cached && shouldReuseCachedMailReportAttachment({ ...input, reportKey }, cached)) {
     return cached;
   }
 
