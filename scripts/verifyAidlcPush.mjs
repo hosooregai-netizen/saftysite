@@ -74,6 +74,7 @@ const FEATURE_RULES = [
       /^features\/admin\/lib\/adminDashboardShellState\.ts$/,
       /^features\/admin\/sections\/analytics\//,
       /^features\/admin\/sections\/content\//,
+      /^features\/admin\/sections\/mailbox\//,
       /^features\/admin\/sections\/overview\//,
       /^features\/admin\/sections\/photos\//,
       /^server\/admin\/analyticsSnapshot\.ts$/,
