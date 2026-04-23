@@ -34,6 +34,7 @@ export interface MailboxReportOption {
   siteName: string;
   updatedAt: string | null;
   visitDate: string | null;
+  workflowStatus: string | null;
 }
 
 export type SelectedReportContext = MailboxReportOption;

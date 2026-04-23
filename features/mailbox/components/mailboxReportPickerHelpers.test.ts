@@ -143,6 +143,26 @@ test('legacy report options without original PDFs are marked unavailable for mai
   assert.equal(option.attachmentReady, false);
 });
 
+test('draft non-legacy report options are marked unavailable for mail attachment', () => {
+  const option = mapAdminReportRowToMailboxReportOption(
+    buildReportRow({
+      originalPdfAvailable: false,
+      reportKey: 'report-current-draft-1',
+      routeParam: 'report-current-draft-1',
+      status: 'draft',
+      workflowStatus: 'draft',
+    }),
+    new Map(),
+  );
+
+  assert.equal(isReportAttachmentReady(option), false);
+  assert.match(
+    getReportAttachmentUnavailableReason(option),
+    /작성 중인 보고서는 메일에 첨부할 수 없습니다/,
+  );
+  assert.equal(option.attachmentReady, false);
+});
+
 test('merged report options preserve site-specific legacy fallback metadata', () => {
   const site = buildSite();
   const fallback = mapAdminReportRowToMailboxReportOption(buildReportRow(), new Map(), site);

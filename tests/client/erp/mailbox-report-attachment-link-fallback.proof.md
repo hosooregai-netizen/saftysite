@@ -3,6 +3,7 @@
 ## Scope
 
 - mailbox report selection should hide legacy rows that do not have an attachable original PDF
+- mailbox report selection should hide draft/in-progress report rows that are not yet attachable
 - selecting a legacy report with an original PDF should prepare an authenticated download-based attachment payload without reading the full PDF body first
 - report sends should replace oversized original-PDF attachments with a download link instead of failing at the 20MB mail limit
 

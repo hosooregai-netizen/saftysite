@@ -137,6 +137,7 @@ function matchesReportRow(
     !isMailAttachmentReady({
       originalPdfAvailable: Boolean(row.originalPdfAvailable),
       reportKey: row.reportKey,
+      workflowStatus: row.workflowStatus || row.status,
     })
   ) {
     return false;
