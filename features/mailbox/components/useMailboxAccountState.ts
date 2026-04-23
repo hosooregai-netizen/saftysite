@@ -124,6 +124,7 @@ export function useMailboxAccountState({
   );
   const googleProviderStatus = providerStatusMap.get('google');
   const naverProviderStatus = providerStatusMap.get('naver_mail');
+  const naverWorksProviderStatus = providerStatusMap.get('naver_works');
 
   return {
     accountStateLoading,
@@ -135,6 +136,8 @@ export function useMailboxAccountState({
     hasPersonalAccount: accounts.some((account) => account.scope === 'personal'),
     naverProviderStatusDetail: buildProviderStatusDetail(naverProviderStatus),
     naverProviderStatusLabel: buildProviderStatusLabel(naverProviderStatus),
+    naverWorksProviderStatusDetail: buildProviderStatusDetail(naverWorksProviderStatus),
+    naverWorksProviderStatusLabel: buildProviderStatusLabel(naverWorksProviderStatus),
     providerStatuses,
     selectableAccounts,
     selectedAccount,

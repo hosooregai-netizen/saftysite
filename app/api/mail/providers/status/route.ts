@@ -17,6 +17,7 @@ export async function GET(request: Request): Promise<Response> {
       {
         google_redirect_uri: searchParams.get('googleRedirectUri') || '',
         naver_redirect_uri: searchParams.get('naverRedirectUri') || '',
+        naver_works_redirect_uri: searchParams.get('naverWorksRedirectUri') || '',
       },
       request,
     );

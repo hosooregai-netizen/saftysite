@@ -3,9 +3,9 @@ import type { FeatureContract } from './shared';
 export const ERP_FEATURE_CONTRACTS = {
   auth: {
     id: 'auth',
-    description: '로그인 패널이 자동 제출 없이 수동 로그인으로 현장 목록 진입, 로그아웃, 재로그인을 유지한다.',
+    description: '로그인 패널이 자동 제출 없이 수동 로그인으로 내 일정 진입, 로그아웃, 재로그인을 유지한다.',
     routes: ['/'],
-    markers: ['현장 목록 로그인', '현장 목록'],
+    markers: ['현장 목록 로그인', '내 일정'],
     apis: ['POST /auth/token', 'GET /assignments/me/sites'],
     criticalActions: ['자동 제출 없이 로그인 패널 대기', '현장 요원 로그인', '로그아웃', '재로그인'],
   },

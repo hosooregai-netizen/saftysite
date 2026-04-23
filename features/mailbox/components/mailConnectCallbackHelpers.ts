@@ -3,6 +3,7 @@
 import {
   completeGoogleMailConnect,
   completeNaverMailConnect,
+  completeNaverWorksMailConnect,
 } from '@/lib/mail/apiClient';
 
 export type OAuthCompletionResult = {
@@ -13,9 +14,16 @@ export type OAuthCompletionResult = {
 const OAUTH_RESULT_STORAGE_PREFIX = 'mailbox-oauth-result:';
 const oauthCompletionRequests = new Map<string, Promise<OAuthCompletionResult>>();
 
-export function getRedirectUri(provider: 'google' | 'naver') {
+export type MailOAuthCallbackProvider = 'google' | 'naver' | 'naver-works';
+
+export function getRedirectUri(provider: MailOAuthCallbackProvider) {
   if (typeof window === 'undefined') return '';
-  const path = provider === 'google' ? '/mail/connect/google' : '/mail/connect/naver';
+  const path =
+    provider === 'google'
+      ? '/mail/connect/google'
+      : provider === 'naver-works'
+        ? '/mail/connect/naver-works'
+        : '/mail/connect/naver';
   return `${window.location.origin}${path}`;
 }
 
@@ -25,7 +33,7 @@ export function buildMailboxRedirectUrl(input: OAuthCompletionResult) {
   return `/mailbox?${searchParams.toString()}`;
 }
 
-export function buildCallbackKey(provider: 'google' | 'naver', state: string, authCode: string) {
+export function buildCallbackKey(provider: MailOAuthCallbackProvider, state: string, authCode: string) {
   return `${provider}:${state}:${authCode}`;
 }
 
@@ -70,7 +78,7 @@ export function rememberMailboxRedirectResult(result: OAuthCompletionResult) {
 export function getOAuthCompletionPromise(input: {
   authCode: string;
   callbackKey: string;
-  provider: 'google' | 'naver';
+  provider: MailOAuthCallbackProvider;
   state: string;
 }): Promise<OAuthCompletionResult> {
   const existing = oauthCompletionRequests.get(input.callbackKey);
@@ -84,6 +92,12 @@ export function getOAuthCompletionPromise(input: {
           redirectUri: getRedirectUri('google'),
           state: input.state,
         });
+      } else if (input.provider === 'naver-works') {
+        await completeNaverWorksMailConnect({
+          authCode: input.authCode,
+          redirectUri: getRedirectUri('naver-works'),
+          state: input.state,
+        });
       } else {
         await completeNaverMailConnect({
           authCode: input.authCode,
@@ -93,7 +107,13 @@ export function getOAuthCompletionPromise(input: {
       }
       return {
         type: 'notice',
-        message: `${input.provider === 'google' ? '구글' : '네이버'} 메일 계정을 연결했습니다.`,
+        message: `${
+          input.provider === 'google'
+            ? '구글'
+            : input.provider === 'naver-works'
+              ? '네이버웍스'
+              : '네이버'
+        } 메일 계정을 연결했습니다.`,
       } satisfies OAuthCompletionResult;
     } catch (errorValue) {
       return {

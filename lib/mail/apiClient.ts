@@ -78,10 +78,13 @@ export async function fetchMailProviderStatuses() {
     typeof window === 'undefined' ? '' : `${window.location.origin}/mail/connect/google`;
   const naverRedirectUri =
     typeof window === 'undefined' ? '' : `${window.location.origin}/mail/connect/naver`;
+  const naverWorksRedirectUri =
+    typeof window === 'undefined' ? '' : `${window.location.origin}/mail/connect/naver-works`;
   return requestMailApi<{ rows: MailProviderStatus[] }>(
     withQuery('/providers/status', {
       googleRedirectUri,
       naverRedirectUri,
+      naverWorksRedirectUri,
     }),
   );
 }
@@ -143,6 +146,39 @@ export async function completeNaverMailConnect(input: {
   state: string;
 }) {
   return requestMailApi<MailAccount>('/accounts/connect/naver/complete', {
+    method: 'POST',
+    body: JSON.stringify({
+      auth_code: input.authCode,
+      state: input.state,
+      redirect_uri: input.redirectUri || '',
+    }),
+  });
+}
+
+export async function startNaverWorksMailConnect() {
+  const response = await requestMailApi<{ authorization_url: string; provider?: string; state: string }>(
+    '/accounts/connect/naver-works/start',
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        redirect_uri:
+          typeof window === 'undefined' ? '' : `${window.location.origin}/mail/connect/naver-works`,
+      }),
+    },
+  );
+  return {
+    authorizationUrl: response.authorization_url,
+    provider: (response.provider || 'naver_works') as MailOAuthStartPayload['provider'],
+    state: response.state,
+  } satisfies MailOAuthStartPayload;
+}
+
+export async function completeNaverWorksMailConnect(input: {
+  authCode: string;
+  redirectUri?: string;
+  state: string;
+}) {
+  return requestMailApi<MailAccount>('/accounts/connect/naver-works/complete', {
     method: 'POST',
     body: JSON.stringify({
       auth_code: input.authCode,

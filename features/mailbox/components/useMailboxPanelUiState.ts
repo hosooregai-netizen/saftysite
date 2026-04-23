@@ -10,7 +10,7 @@ export function useMailboxPanelUiState(searchParams: SearchParamsLike) {
   const [query, setQuery] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [oauthProvider, setOauthProvider] = useState<'google' | 'naver_mail' | null>(null);
+  const [oauthProvider, setOauthProvider] = useState<'google' | 'naver_mail' | 'naver_works' | null>(null);
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [reportPickerOpen, setReportPickerOpen] = useState(false);
   const [storedOauthNotice] = useState(

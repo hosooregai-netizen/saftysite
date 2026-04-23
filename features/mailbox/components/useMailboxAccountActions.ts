@@ -6,6 +6,7 @@ import {
   fetchMailThreads,
   startGoogleMailConnect,
   startNaverMailConnect,
+  startNaverWorksMailConnect,
   syncMail,
 } from '@/lib/mail/apiClient';
 import type { MailAccount, MailProviderStatus, MailThread, MailThreadDetail } from '@/types/mail';
@@ -25,7 +26,7 @@ interface UseMailboxAccountActionsParams {
   setAccounts: Dispatch<SetStateAction<MailAccount[]>>;
   setError: Dispatch<SetStateAction<string | null>>;
   setNotice: Dispatch<SetStateAction<string | null>>;
-  setOauthProvider: Dispatch<SetStateAction<'google' | 'naver_mail' | null>>;
+  setOauthProvider: Dispatch<SetStateAction<'google' | 'naver_mail' | 'naver_works' | null>>;
   setProviderStatuses: Dispatch<SetStateAction<MailProviderStatus[]>>;
   setSelectedAccountId: Dispatch<SetStateAction<string>>;
   setSelectedReport: Dispatch<SetStateAction<SelectedReportContext | null>>;
@@ -186,10 +187,23 @@ export function useMailboxAccountActions({
       setOauthProvider(null);
     }
   };
+  const handleConnectNaverWorksOauth = async () => {
+    try {
+      handleDisableDemoMode({ silent: true });
+      setError(null);
+      setOauthProvider('naver_works');
+      const response = await startNaverWorksMailConnect();
+      window.location.assign(response.authorizationUrl);
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : '네이버웍스 로그인 연결에 실패했습니다.');
+      setOauthProvider(null);
+    }
+  };
 
   return {
     handleConnectGoogle,
     handleConnectNaverOauth,
+    handleConnectNaverWorksOauth,
     handleDisconnectSelectedAccount,
     handleRefreshAccountState,
     handleSync,

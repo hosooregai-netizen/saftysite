@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, type MutableRefObject } from 'react';
-import type { OAuthCompletionResult } from './mailConnectCallbackHelpers';
+import type { MailOAuthCallbackProvider, OAuthCompletionResult } from './mailConnectCallbackHelpers';
 import {
   buildCallbackKey,
   buildMailboxRedirectUrl,
@@ -20,7 +20,7 @@ interface SearchParamsLike {
 }
 
 interface UseMailConnectCallbackParams {
-  provider: 'google' | 'naver';
+  provider: MailOAuthCallbackProvider;
   router: RouterLike;
   searchParams: SearchParamsLike;
 }
@@ -53,7 +53,8 @@ export function useMailConnectCallback({
     const state = searchParams.get('state') || '';
 
     if (error) {
-      const providerLabel = provider === 'google' ? '구글' : '네이버';
+      const providerLabel =
+        provider === 'google' ? '구글' : provider === 'naver-works' ? '네이버웍스' : '네이버';
       const detail = errorDescription ? `${error} (${errorDescription})` : error;
       const result = {
         type: 'error',

@@ -233,7 +233,9 @@ export async function runQuarterlyReportSmoke(config: ClientSmokePlaywrightConfi
     if (!/\/sites\/site-1\/quarterly\/[^/]+$/.test(page.url())) {
       const createdRow = page.locator('article').filter({ hasText: createdTitle }).first();
       await createdRow.waitFor({ state: 'visible' });
-      await createdRow.getByRole('link', { name: createdTitle }).click();
+      const createdHref = await createdRow.getByRole('link', { name: createdTitle }).getAttribute('href');
+      assert.ok(createdHref, 'Created quarterly report link did not render an href.');
+      await page.goto(new URL(createdHref, page.url()).toString(), { waitUntil: 'load' });
       await page.waitForURL(/\/sites\/site-1\/quarterly\/[^/]+$/);
     }
     await harness.waitForRequestCount('GET /reports/by-key/:id', reportReadsBefore + 1);

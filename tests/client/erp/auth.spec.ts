@@ -18,8 +18,8 @@ export async function runAuthSmoke(config: ClientSmokePlaywrightConfig) {
 
     await harness.loginAs('agent@example.com');
     await harness.waitForRequestCount('GET /assignments/me/sites', 1);
-    await page.getByRole('heading', { name: '현장 목록' }).waitFor({ state: 'visible' });
-    await page.getByText('기존 현장').first().waitFor({ state: 'visible' });
+    await page.waitForURL(/\/calendar(?:\?.*)?$/);
+    await page.getByRole('heading', { name: '내 일정' }).waitFor({ state: 'visible' });
 
     await harness.logoutToLoginPanel();
     await page.getByText('현장 목록 로그인').waitFor({ state: 'visible' });
@@ -30,7 +30,8 @@ export async function runAuthSmoke(config: ClientSmokePlaywrightConfig) {
     }
     await harness.loginAs('agent@example.com');
     await harness.waitForRequestCount('POST /auth/token', 2);
-    await page.getByRole('heading', { name: '현장 목록' }).waitFor({ state: 'visible' });
+    await page.waitForURL(/\/calendar(?:\?.*)?$/);
+    await page.getByRole('heading', { name: '내 일정' }).waitFor({ state: 'visible' });
 
     harness.assertContractApisObserved();
     harness.assertNoClientErrors();

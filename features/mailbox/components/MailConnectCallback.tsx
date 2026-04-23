@@ -3,9 +3,10 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { MailConnectCallbackState } from './MailConnectCallbackState';
 import { useMailConnectCallback } from './useMailConnectCallback';
+import type { MailOAuthCallbackProvider } from './mailConnectCallbackHelpers';
 
 interface MailConnectCallbackProps {
-  provider: 'google' | 'naver';
+  provider: MailOAuthCallbackProvider;
 }
 
 export function MailConnectCallback({ provider }: MailConnectCallbackProps) {

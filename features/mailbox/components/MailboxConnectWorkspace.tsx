@@ -9,9 +9,12 @@ interface MailboxConnectWorkspaceProps {
   mode: 'gate' | 'prompt';
   naverProviderStatusDetail: string;
   naverProviderStatusLabel: string;
+  naverWorksProviderStatusDetail: string;
+  naverWorksProviderStatusLabel: string;
   oauthProvider: string | null;
   onConnectGoogle: () => void;
   onConnectNaver: () => void;
+  onConnectNaverWorks: () => void;
   onRefreshAccountState: () => void;
 }
 
@@ -22,9 +25,12 @@ export function MailboxConnectWorkspace({
   mode,
   naverProviderStatusDetail,
   naverProviderStatusLabel,
+  naverWorksProviderStatusDetail,
+  naverWorksProviderStatusLabel,
   oauthProvider,
   onConnectGoogle,
   onConnectNaver,
+  onConnectNaverWorks,
   onRefreshAccountState,
 }: MailboxConnectWorkspaceProps) {
   const isPrompt = mode === 'prompt';
@@ -54,6 +60,33 @@ export function MailboxConnectWorkspace({
             disabled={accountStateLoading}
           >
             상태 새로 고침
+          </button>
+        </div>
+      </article>
+
+      <article className={localStyles.accountCard}>
+        <div className={localStyles.panelHeader}>
+          <div className={localStyles.panelHeading}>
+            <strong className={localStyles.accountTitle}>네이버웍스 로그인</strong>
+            <span className={localStyles.accountMeta}>
+              {isPrompt
+                ? '현재 사용자에게 연결될 네이버웍스 메일 계정을 추가합니다.'
+                : '네이버웍스 조직 계정을 연결해 보고서 메일 발송 흐름을 사용할 수 있습니다.'}
+            </span>
+          </div>
+          <span className={localStyles.inlineMeta}>{naverWorksProviderStatusLabel}</span>
+        </div>
+        {naverWorksProviderStatusDetail ? (
+          <span className={localStyles.accountMeta}>{naverWorksProviderStatusDetail}</span>
+        ) : null}
+        <div className={localStyles.sectionActions}>
+          <button
+            type="button"
+            className={`app-button app-button-primary ${localStyles.primaryActionButton}`}
+            onClick={onConnectNaverWorks}
+            disabled={oauthProvider === 'naver_works'}
+          >
+            {oauthProvider === 'naver_works' ? '이동 중...' : '네이버웍스 로그인'}
           </button>
         </div>
       </article>

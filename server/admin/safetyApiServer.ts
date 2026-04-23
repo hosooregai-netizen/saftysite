@@ -1224,6 +1224,40 @@ export function completeNaverMailConnectionServer(
   );
 }
 
+export function startNaverWorksMailConnectionServer(
+  token: string,
+  payload: Record<string, unknown>,
+  request: Request | null = null,
+): Promise<{ authorization_url: string; provider?: string; state: string }> {
+  return requestSafetyAdminServer<{ authorization_url: string; provider?: string; state: string }>(
+    '/mail/accounts/connect/naver-works/start',
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      headers: { 'Content-Type': 'application/json' },
+    },
+    token,
+    request,
+  );
+}
+
+export function completeNaverWorksMailConnectionServer(
+  token: string,
+  payload: Record<string, unknown>,
+  request: Request | null = null,
+): Promise<SafetyBackendMailAccount> {
+  return requestSafetyAdminServer<SafetyBackendMailAccount>(
+    '/mail/accounts/connect/naver-works/complete',
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      headers: { 'Content-Type': 'application/json' },
+    },
+    token,
+    request,
+  );
+}
+
 export function connectNaverMailServer(
   token: string,
   payload: Record<string, unknown>,
