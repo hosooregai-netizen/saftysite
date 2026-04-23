@@ -12,7 +12,6 @@ import { isReportDispatchCompleted } from '@/lib/reportDispatch';
 import {
   REPORT_PAGE_SIZE,
   formatDateOnly,
-  formatDateTime,
 } from './reportsSectionFilters';
 import type {
   ControllerQualityStatus,
@@ -140,13 +139,6 @@ export function ReportsTable({
                     label="기준일"
                     onChange={onSortChange}
                   />
-                  <SortableHeaderCell
-                    column={{ key: 'updatedAt' }}
-                    current={sort}
-                    defaultDirection="desc"
-                    label="수정일"
-                    onChange={onSortChange}
-                  />
                   <th>메뉴</th>
                 </tr>
               </thead>
@@ -191,7 +183,6 @@ export function ReportsTable({
                       <td>{row.siteName}</td>
                       <td>{row.assigneeName || '-'}</td>
                       <td>{formatDateOnly(row.visitDate)}</td>
-                      <td>{formatDateTime(row.updatedAt)}</td>
                       <td onClick={(event) => event.stopPropagation()}>
                         <div className={styles.tableActionMenuWrap}>
                           <ActionMenu

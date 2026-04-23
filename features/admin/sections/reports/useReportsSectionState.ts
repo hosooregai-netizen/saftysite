@@ -138,7 +138,7 @@ export function useReportsSectionState({
     setQueryInput,
     submitQuery,
   } = useSubmittedSearchState(searchParams.get('query') || '');
-  const [sort, setSort] = useState<TableSortState>({ direction: 'desc', key: 'updatedAt' });
+  const [sort, setSort] = useState<TableSortState>({ direction: 'desc', key: 'visitDate' });
   const [reportType, setReportType] = useState<'all' | ControllerReportRow['reportType']>(() => {
     const value = searchParams.get('reportType');
     return value === 'technical_guidance' ||

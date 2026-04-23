@@ -18,7 +18,7 @@ import {
 } from '@/lib/api';
 import { generateInspectionHwpxBlob } from '@/lib/documents/inspection/hwpxClient';
 import { readSafetyAuthToken } from '@/lib/safetyApi';
-import { formatDateOnly, formatDateTime } from './reportsSectionFilters';
+import { formatDateOnly } from './reportsSectionFilters';
 import type { ControllerReportRow, TableSortState } from '@/types/admin';
 import type { InspectionSession } from '@/types/inspectionSession';
 import type { ReportsUserOption } from './reportsSectionTypes';
@@ -183,7 +183,6 @@ export function useReportDocumentActions({
               { key: 'headquarterName', label: '사업장' },
               { key: 'assigneeName', label: '담당자' },
               { key: 'visitDate', label: '기준일' },
-              { key: 'updatedAt', label: '수정일' },
               { key: 'deadlineDate', label: '마감일' },
               { key: 'qualityStatus', label: '품질체크' },
               { key: 'checkerUserId', label: '체크 담당자' },
@@ -197,7 +196,6 @@ export function useReportDocumentActions({
               reportTitle: row.reportTitle || row.periodLabel || row.reportKey,
               reportType: getControllerReportTypeLabel(row.reportType),
               siteName: row.siteName,
-              updatedAt: formatDateTime(row.updatedAt),
               visitDate: formatDateOnly(row.visitDate),
             })),
           },
