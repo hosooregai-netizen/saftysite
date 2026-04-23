@@ -130,7 +130,6 @@ test('fetchAdminOriginalPdfDocument keeps arbitrary uploads paths from report me
 
     assert.deepEqual(calls.map((url) => url.replace(/^https?:\/\/[^/]+/, '')), [
       '/api/v1/reports/by-key/report-uploads',
-      '/api/v1/reports/by-key/report-uploads/original-pdf',
       '/uploads/legacy/reports/report-uploads.pdf',
     ]);
     assert.equal(document.filename, 'legacy-direct.pdf');

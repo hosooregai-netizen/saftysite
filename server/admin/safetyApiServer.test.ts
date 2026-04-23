@@ -54,6 +54,13 @@ test('getServerRequestTimeoutMs treats mail send as long running', () => {
   assert.equal(getServerRequestTimeoutMs('/mail/send', {}), 45000);
 });
 
+test('getServerRequestTimeoutMs treats original pdf downloads as file downloads', () => {
+  assert.equal(
+    getServerRequestTimeoutMs('/reports/by-key/report-1/original-pdf', {}),
+    120000,
+  );
+});
+
 test('getServerRequestTimeoutMs keeps ordinary reads on the default timeout', () => {
   assert.equal(getServerRequestTimeoutMs('/mail/threads', {}), 15000);
 });

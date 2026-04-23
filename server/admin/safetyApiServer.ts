@@ -65,6 +65,7 @@ const CONTENT_LIST_LIMIT = 1000;
 const REPORT_LIST_LIMIT = 500;
 const DEFAULT_SERVER_TIMEOUT_MS = 15000;
 const LONG_RUNNING_SERVER_TIMEOUT_MS = 45000;
+const FILE_DOWNLOAD_SERVER_TIMEOUT_MS = 120000;
 const PHOTO_ASSET_MUTATION_CAPABILITY_CACHE_TTL_MS = 5 * 60 * 1000;
 
 interface SafetyPhotoAssetMutationCapabilities {
@@ -367,6 +368,14 @@ function isAbortError(error: unknown): boolean {
 export function getServerRequestTimeoutMs(path: string, options: RequestInit) {
   if (options.body instanceof FormData) {
     return LONG_RUNNING_SERVER_TIMEOUT_MS;
+  }
+
+  if (
+    path.includes('/original-pdf') ||
+    path.startsWith('/uploads/') ||
+    path.includes('/content-items/assets/')
+  ) {
+    return FILE_DOWNLOAD_SERVER_TIMEOUT_MS;
   }
 
   if (

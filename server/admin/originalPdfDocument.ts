@@ -323,6 +323,8 @@ async function resolveAdminOriginalPdfReference(input: {
   const archivePath =
     readMetaText(meta, 'original_pdf_archive_path') ||
     readMetaText(meta, 'originalPdfArchivePath') ||
+    readMetaText(meta, 'original_pdf_download_path') ||
+    readMetaText(meta, 'originalPdfDownloadPath') ||
     manifestEntry?.archivePath ||
     '';
   const filename =
@@ -402,13 +404,6 @@ export async function fetchAdminOriginalPdfDocument(input: {
     token: input.token,
   });
   const shouldUseLegacyManifestDirectly = resolved.shouldUseLegacyManifestDirectly;
-  const backendPdf = shouldUseLegacyManifestDirectly
-    ? null
-    : await fetchBackendOriginalPdf(reportKey, input.token, input.request);
-  if (backendPdf) {
-    return backendPdf;
-  }
-
   const localBuffer = await readLocalPdf(resolved.archivePath).catch((error) => {
     if ((error as NodeJS.ErrnoException | null)?.code === 'ENOENT') return null;
     throw error;
@@ -423,13 +418,37 @@ export async function fetchAdminOriginalPdfDocument(input: {
     };
   }
 
-  const upstreamPdf = await fetchUpstreamPdf(
-    buildUpstreamAssetUrls({
-      archivePath: resolved.archivePath,
-      fileNameCandidates: resolved.fileNameCandidates,
-    }),
-    input.token,
-  );
+  const directAssetUrls = buildUpstreamAssetUrls({
+    archivePath: resolved.archivePath,
+    fileNameCandidates: resolved.fileNameCandidates,
+  });
+  const prefersDirectAssetLookup =
+    Boolean(resolved.archivePath) &&
+    (/^https?:\/\//i.test(resolved.archivePath) || resolved.archivePath.startsWith('/uploads/'));
+
+  if (prefersDirectAssetLookup) {
+    const directAssetPdf = await fetchUpstreamPdf(directAssetUrls, input.token);
+    if (directAssetPdf.buffer) {
+      return {
+        buffer: directAssetPdf.buffer,
+        contentDisposition: encodeInlineName(resolved.filename),
+        contentType: directAssetPdf.contentType,
+        filename: resolved.filename,
+        source: directAssetPdf.source,
+      };
+    }
+  }
+
+  const backendPdf = shouldUseLegacyManifestDirectly
+    ? null
+    : await fetchBackendOriginalPdf(reportKey, input.token, input.request);
+  if (backendPdf) {
+    return backendPdf;
+  }
+
+  const upstreamPdf = prefersDirectAssetLookup
+    ? { buffer: null, contentType: 'application/pdf', source: '' }
+    : await fetchUpstreamPdf(directAssetUrls, input.token);
   if (!upstreamPdf.buffer) {
     throw new SafetyServerApiError(
       resolved.archivePath ? '원본 PDF 파일을 찾지 못했습니다.' : '원본 PDF가 등록되지 않았습니다.',
