@@ -1,6 +1,8 @@
 import type { ClientSmokePlaywrightConfig } from '../../../playwright.config';
 import { createAdminSmokeHarness } from '../fixtures/adminSmokeHarness';
 
+const EXISTING_SITE_BUTTON_NAME = /\[김요원\].*기존 현장/;
+
 export async function runAdminSchedulesSmoke(config: ClientSmokePlaywrightConfig) {
   const harness = await createAdminSmokeHarness('admin-schedules', config);
 
@@ -24,7 +26,7 @@ export async function runAdminSchedulesSmoke(config: ClientSmokePlaywrightConfig
     await page.getByRole('tab', { name: '목록으로 보기' }).waitFor({ state: 'visible' });
     await page.getByText('2026년 4월').first().waitFor();
     await page.getByRole('button', { name: '오늘' }).waitFor({ state: 'visible' });
-    await page.getByRole('button', { name: '[김요원] 1/9 - 기존 현장' }).waitFor({
+    await page.getByRole('button', { name: EXISTING_SITE_BUTTON_NAME }).first().waitFor({
       state: 'visible',
     });
     if ((await page.getByText('Legacy InSEF import / legacy_site_id=legacy-1 round=1').count()) !== 0) {
@@ -49,7 +51,7 @@ export async function runAdminSchedulesSmoke(config: ClientSmokePlaywrightConfig
     await page.getByRole('dialog', { name: '방문 일정' }).waitFor({ state: 'visible' });
     await page.getByRole('button', { name: '취소' }).click();
     await page.getByRole('tab', { name: '달력으로 보기' }).click();
-    await page.getByRole('button', { name: '[김요원] 1/9 - 기존 현장' }).waitFor({
+    await page.getByRole('button', { name: EXISTING_SITE_BUTTON_NAME }).first().waitFor({
       state: 'visible',
     });
 
@@ -60,7 +62,7 @@ export async function runAdminSchedulesSmoke(config: ClientSmokePlaywrightConfig
     await page.getByRole('dialog', { name: '방문 일정' }).waitFor({ state: 'visible' });
     await page.getByRole('button', { name: '취소' }).click();
 
-    await page.getByRole('button', { name: '[김요원] 1/9 - 기존 현장' }).click();
+    await page.getByRole('button', { name: EXISTING_SITE_BUTTON_NAME }).first().click();
     const scheduleDialog = page.getByRole('dialog', { name: '방문 일정' });
     await scheduleDialog.waitFor({ state: 'visible' });
     await scheduleDialog.getByText('기술지도 진행중', { exact: true }).waitFor({
@@ -96,7 +98,7 @@ export async function runAdminSchedulesSmoke(config: ClientSmokePlaywrightConfig
     await scheduleDialog.getByLabel('상세 메모').fill('관제 일정 smoke 이동');
     await scheduleDialog.getByRole('button', { name: '저장' }).click();
     await harness.waitForRequestCount('PATCH /api/admin/schedules/:id', scheduleUpdatesBefore + 1);
-    await page.getByRole('button', { name: '[김요원] 1/9 - 기존 현장' }).waitFor({
+    await page.getByRole('button', { name: EXISTING_SITE_BUTTON_NAME }).first().waitFor({
       state: 'visible',
     });
 
