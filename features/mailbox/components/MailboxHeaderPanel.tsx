@@ -4,10 +4,8 @@ import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import type { MailAccount } from '@/types/mail';
 import type {
   MailboxSyncStatusSummary,
-  MailboxTab,
   MailboxView,
 } from './mailboxPanelTypes';
-import { MAILBOX_TAB_META } from './mailboxPanelTypes';
 import localStyles from './MailboxPanel.module.css';
 
 interface MailboxHeaderPanelProps {
@@ -21,10 +19,8 @@ interface MailboxHeaderPanelProps {
   selectableAccounts: MailAccount[];
   showMailboxConnectGate: boolean;
   syncStatusSummary: MailboxSyncStatusSummary | null;
-  tab: MailboxTab;
   view: MailboxView;
   onChangeAccountId: (value: string) => void;
-  onChangeMailboxTab: (tab: MailboxTab) => void;
   onChangeQuery: (value: string) => void;
   onDisconnectSelectedAccount: () => void;
   onOpenCompose: () => void;
@@ -42,10 +38,8 @@ export function MailboxHeaderPanel({
   selectableAccounts,
   showMailboxConnectGate,
   syncStatusSummary,
-  tab,
   view,
   onChangeAccountId,
-  onChangeMailboxTab,
   onChangeQuery,
   onDisconnectSelectedAccount,
   onOpenCompose,
@@ -124,29 +118,6 @@ export function MailboxHeaderPanel({
           ) : null}
         </div>
       </div>
-
-      {!showMailboxConnectGate && view === 'list' && listScopeMeta.length > 0 ? (
-        <div className={localStyles.scopeRow}>
-          <span className={localStyles.scopeKicker}>현재 범위</span>
-          <strong className={localStyles.scopeValue}>{MAILBOX_TAB_META[tab].title}</strong>
-          <span className={localStyles.scopeText}>{listScopeMeta.join(' · ')}</span>
-        </div>
-      ) : null}
-      {!showMailboxConnectGate && view === 'list' ? (
-        <div className={localStyles.tabRail}>
-          {(['all', 'inbox', 'sent'] as MailboxTab[]).map((item) => (
-            <button
-              key={item}
-              type="button"
-              className={`${localStyles.tabButton} ${tab === item ? localStyles.tabButtonActive : ''}`}
-              onClick={() => onChangeMailboxTab(item)}
-            >
-              <span className={localStyles.tabButtonBullet} aria-hidden="true" />
-              <span className={localStyles.tabButtonLabel}>{MAILBOX_TAB_META[item].title}</span>
-            </button>
-          ))}
-        </div>
-      ) : null}
       {!showMailboxConnectGate && view === 'list' && syncStatusSummary ? (
         <div
           className={`${localStyles.syncStatusBanner} ${

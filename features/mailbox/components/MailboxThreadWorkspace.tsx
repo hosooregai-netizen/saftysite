@@ -96,7 +96,7 @@ export function MailboxThreadWorkspace({
         subject: thread.subject || '(제목 없음)',
         timestamp: buildThreadTimestamp(thread),
       }))}
-      title={MAILBOX_TAB_META[tab].title}
+      title="메일 목록"
       total={threadTotal}
       onMovePage={onMoveThreadPage}
       onOpenThread={onOpenThread}

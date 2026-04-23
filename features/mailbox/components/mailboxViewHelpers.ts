@@ -13,9 +13,8 @@ export function buildThreadCounterparty(thread: MailThread, accountEmail: string
 }
 
 export function deriveMailboxTab(rawBox: string | null): MailboxTab {
-  if (rawBox === 'all') return 'all';
   if (rawBox === 'sent') return 'sent';
-  return rawBox === 'inbox' ? 'inbox' : 'all';
+  return 'inbox';
 }
 
 export function deriveInitialComposeMode(input: {

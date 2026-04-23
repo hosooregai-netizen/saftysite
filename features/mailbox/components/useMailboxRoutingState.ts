@@ -69,9 +69,9 @@ export function useMailboxRoutingState({
   });
 
   useEffect(() => {
-    if (nextBox === 'accounts') {
+    if (!nextBox || nextBox === 'accounts' || nextBox === 'all') {
       const nextSearchParams = new URLSearchParams(searchParams.toString());
-      nextSearchParams.set('box', 'all');
+      nextSearchParams.set('box', 'inbox');
       router.replace(`${pathname}?${nextSearchParams.toString()}`, { scroll: false });
     }
   }, [nextBox, pathname, router, searchParams]);

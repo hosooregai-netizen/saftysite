@@ -157,6 +157,10 @@ export function AdminMenuPanel({
             const hasSiteChildren =
               section.key === SITE_MENU_PARENT_SECTION && siteMenuItems.length > 0;
             const hasMailboxChildren = section.key === 'mailbox';
+            const sectionHref =
+              section.key === 'mailbox'
+                ? getAdminSectionHref('mailbox', { box: 'inbox' })
+                : getAdminSectionHref(section.key);
             const isSectionActive = activeSection === section.key;
             const isParentActive =
               hasSiteChildren &&
@@ -189,7 +193,7 @@ export function AdminMenuPanel({
                   </button>
                 ) : (
                   <Link
-                    href={getAdminSectionHref(section.key)}
+                    href={sectionHref}
                     className={menuButtonClassName}
                     onClick={() => handleSelect(section.key)}
                     title={forceExpanded ? undefined : menuLabel}
