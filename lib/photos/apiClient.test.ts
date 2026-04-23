@@ -5,7 +5,9 @@ import { uploadPhotoAlbumAsset } from './apiClient';
 import { SAFETY_AUTH_TOKEN_KEY } from '@/lib/safetyApi/config';
 
 const UPLOAD_ENV_KEY = 'NEXT_PUBLIC_SAFETY_UPLOAD_UPSTREAM_BASE_URL';
+const ASSET_ENV_KEY = 'NEXT_PUBLIC_SAFETY_ASSET_BASE_URL';
 const ORIGINAL_UPLOAD_ENV = process.env[UPLOAD_ENV_KEY];
+const ORIGINAL_ASSET_ENV = process.env[ASSET_ENV_KEY];
 const FOUR_POINT_FIVE_MB = Math.floor(4.5 * 1024 * 1024);
 
 type StorageMap = Map<string, string>;
@@ -54,6 +56,22 @@ function withUploadEnv(value: string | undefined, callback: () => Promise<void>)
       delete process.env[UPLOAD_ENV_KEY];
     } else {
       process.env[UPLOAD_ENV_KEY] = ORIGINAL_UPLOAD_ENV;
+    }
+  });
+}
+
+function withAssetEnv(value: string | undefined, callback: () => Promise<void>) {
+  if (value === undefined) {
+    delete process.env[ASSET_ENV_KEY];
+  } else {
+    process.env[ASSET_ENV_KEY] = value;
+  }
+
+  return callback().finally(() => {
+    if (ORIGINAL_ASSET_ENV === undefined) {
+      delete process.env[ASSET_ENV_KEY];
+    } else {
+      process.env[ASSET_ENV_KEY] = ORIGINAL_ASSET_ENV;
     }
   });
 }
@@ -126,6 +144,47 @@ test('uploadPhotoAlbumAsset prefers direct upload when a secure upload origin is
   });
 });
 
+test('uploadPhotoAlbumAsset uses the HTTPS asset origin when a dedicated upload origin is missing', async () => {
+  const restoreWindow = installWindow({ protocol: 'https:', token: 'photo-token' });
+  const originalFetch = globalThis.fetch;
+  let callCount = 0;
+
+  await withUploadEnv(undefined, () =>
+    withAssetEnv('https://assets.example.com', async () => {
+      globalThis.fetch = async (input) => {
+        callCount += 1;
+        if (callCount === 1) {
+          assert.equal(String(input), 'https://assets.example.com/photo-assets/upload');
+          return new Response(JSON.stringify(buildPhotoAssetResponse()), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          });
+        }
+
+        assert.equal(String(input), '/api/photos/cache');
+        return new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        });
+      };
+
+      try {
+        const uploaded = await uploadPhotoAlbumAsset({
+          file: new File(['img'], 'photo.jpg', { type: 'image/jpeg' }),
+          roundNo: 1,
+          siteId: 'site-1',
+        });
+
+        assert.equal(uploaded.id, 'photo-1');
+        assert.equal(callCount, 2);
+      } finally {
+        globalThis.fetch = originalFetch;
+        restoreWindow();
+      }
+    }),
+  );
+});
+
 test('uploadPhotoAlbumAsset falls back to the proxy route after a small direct-upload 404', async () => {
   const restoreWindow = installWindow({ protocol: 'https:', token: 'photo-token' });
   const originalFetch = globalThis.fetch;
@@ -168,29 +227,31 @@ test('uploadPhotoAlbumAsset falls back to the proxy route after a small direct-u
 test('uploadPhotoAlbumAsset blocks oversized proxy uploads using the original plus thumbnail byte total', async () => {
   const restoreWindow = installWindow({ protocol: 'https:', token: 'photo-token' });
 
-  await withUploadEnv(undefined, async () => {
-    try {
-      const original = new File(['img'], 'photo.jpg', { type: 'image/jpeg' });
-      const thumbnail = new File(['thumb'], 'thumb.jpg', { type: 'image/jpeg' });
-      Object.defineProperty(original, 'size', { value: FOUR_POINT_FIVE_MB - 128 });
-      Object.defineProperty(thumbnail, 'size', { value: 256 });
+  await withUploadEnv(undefined, () =>
+    withAssetEnv(undefined, async () => {
+      try {
+        const original = new File(['img'], 'photo.jpg', { type: 'image/jpeg' });
+        const thumbnail = new File(['thumb'], 'thumb.jpg', { type: 'image/jpeg' });
+        Object.defineProperty(original, 'size', { value: FOUR_POINT_FIVE_MB - 128 });
+        Object.defineProperty(thumbnail, 'size', { value: 256 });
 
-      await assert.rejects(
-        () =>
-          uploadPhotoAlbumAsset({
-            file: original,
-            roundNo: 1,
-            siteId: 'site-1',
-            thumbnail,
-          }),
-        (error: unknown) => {
-          assert.ok(error instanceof Error);
-          assert.match(error.message, /NEXT_PUBLIC_SAFETY_UPLOAD_UPSTREAM_BASE_URL/);
-          return true;
-        },
-      );
-    } finally {
-      restoreWindow();
-    }
-  });
+        await assert.rejects(
+          () =>
+            uploadPhotoAlbumAsset({
+              file: original,
+              roundNo: 1,
+              siteId: 'site-1',
+              thumbnail,
+            }),
+          (error: unknown) => {
+            assert.ok(error instanceof Error);
+            assert.match(error.message, /NEXT_PUBLIC_SAFETY_UPLOAD_UPSTREAM_BASE_URL/);
+            return true;
+          },
+        );
+      } finally {
+        restoreWindow();
+      }
+    }),
+  );
 });
