@@ -21,7 +21,9 @@ import type {
 
 const MAX_PHOTO_UPLOAD_BYTES = 50 * 1024 * 1024;
 const MAX_PHOTO_PROXY_FILE_BYTES = Math.floor(4.5 * 1024 * 1024);
-const PHOTO_UPLOAD_TIMEOUT_MS = 45000;
+const PHOTO_UPLOAD_BASE_TIMEOUT_MS = 60000;
+const PHOTO_UPLOAD_TIMEOUT_PER_MB_MS = 4000;
+const PHOTO_UPLOAD_MAX_TIMEOUT_MS = 180000;
 
 function buildQueryString(params: Record<string, string | number | null | undefined>) {
   const searchParams = new URLSearchParams();
@@ -111,6 +113,13 @@ function getPhotoUploadByteSize(input: {
   thumbnail?: File | null;
 }) {
   return input.file.size + (input.thumbnail instanceof File ? input.thumbnail.size : 0);
+}
+
+function getPhotoUploadTimeoutMs(uploadBytes: number) {
+  const sizeBasedTimeout =
+    PHOTO_UPLOAD_BASE_TIMEOUT_MS +
+    Math.ceil(uploadBytes / (1024 * 1024)) * PHOTO_UPLOAD_TIMEOUT_PER_MB_MS;
+  return Math.min(PHOTO_UPLOAD_MAX_TIMEOUT_MS, sizeBasedTimeout);
 }
 
 function getPhotoUploadTransport() {
@@ -231,12 +240,13 @@ async function uploadPhotoAlbumAssetDirect(
     );
   }
 
+  const uploadTimeoutMs = getPhotoUploadTimeoutMs(getPhotoUploadByteSize(input));
   const abortController = new AbortController();
   const timeoutId = setTimeout(() => {
     abortController.abort(
-      new Error(`사진 업로드가 ${PHOTO_UPLOAD_TIMEOUT_MS}ms 안에 완료되지 않았습니다.`),
+      new Error(`사진 업로드가 ${uploadTimeoutMs}ms 안에 완료되지 않았습니다.`),
     );
-  }, PHOTO_UPLOAD_TIMEOUT_MS);
+  }, uploadTimeoutMs);
 
   let response: Response;
 

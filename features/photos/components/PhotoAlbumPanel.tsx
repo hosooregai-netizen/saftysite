@@ -55,6 +55,8 @@ interface PhotoUploadProgress {
 const PAGE_SIZE = 20;
 const DEFAULT_SITE_TOTAL_ROUNDS = 8;
 const MAX_PARALLEL_PHOTO_UPLOADS = 3;
+const MAX_PARALLEL_LARGE_PHOTO_UPLOADS = 2;
+const LARGE_PHOTO_UPLOAD_BYTES = Math.floor(4.5 * 1024 * 1024);
 
 function formatDateLabel(value: string) {
   if (!value) return '-';
@@ -175,7 +177,11 @@ async function runConcurrentPhotoUploads(
   worker: (file: File, index: number) => Promise<void>,
 ) {
   let nextIndex = 0;
-  const workerCount = Math.min(MAX_PARALLEL_PHOTO_UPLOADS, files.length);
+  const hasLargeUpload = files.some((file) => file.size > LARGE_PHOTO_UPLOAD_BYTES);
+  const maxParallelUploads = hasLargeUpload
+    ? MAX_PARALLEL_LARGE_PHOTO_UPLOADS
+    : MAX_PARALLEL_PHOTO_UPLOADS;
+  const workerCount = Math.min(maxParallelUploads, files.length);
 
   await Promise.all(
     Array.from({ length: workerCount }, async () => {

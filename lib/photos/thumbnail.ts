@@ -1,7 +1,7 @@
 'use client';
 
-const DEFAULT_MAX_EDGE = 1600;
-const DEFAULT_QUALITY = 0.84;
+const DEFAULT_MAX_EDGE = 960;
+const DEFAULT_QUALITY = 0.72;
 
 function getThumbnailMimeType(originalType: string) {
   if (originalType === 'image/png' || originalType === 'image/webp') {
