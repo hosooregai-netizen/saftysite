@@ -8,7 +8,6 @@ import {
   buildControllerReportOpenHref,
   getControllerReportTypeLabel,
 } from '@/lib/admin/controllerReports';
-import { getQualityStatusLabel } from '@/lib/admin/reportMeta';
 import { isReportDispatchCompleted } from '@/lib/reportDispatch';
 import {
   REPORT_PAGE_SIZE,
@@ -134,7 +133,6 @@ export function ReportsTable({
                   />
                   <th>현장</th>
                   <th>담당자</th>
-                  <th>검토체크</th>
                   <SortableHeaderCell
                     column={{ key: 'visitDate' }}
                     current={sort}
@@ -192,7 +190,6 @@ export function ReportsTable({
                       </td>
                       <td>{row.siteName}</td>
                       <td>{row.assigneeName || '-'}</td>
-                      <td>{getQualityStatusLabel(row.qualityStatus)}</td>
                       <td>{formatDateOnly(row.visitDate)}</td>
                       <td>{formatDateTime(row.updatedAt)}</td>
                       <td onClick={(event) => event.stopPropagation()}>
