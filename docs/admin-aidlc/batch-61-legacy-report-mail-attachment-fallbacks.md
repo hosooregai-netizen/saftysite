@@ -4,11 +4,13 @@
 
 - Keep legacy report selection aligned across admin reports and mailbox send flows.
 - Stop showing legacy reports in the mailbox picker when no attachable PDF exists.
+- Stop showing in-progress draft/current reports in the mailbox picker when they are not yet attachable.
 - Avoid slow or failing oversized report sends by swapping large original PDFs to download links.
 
 ## Admin Contract Impact
 
 - `/api/admin/reports` can now filter mailbox selections down to report rows that are actually attachable.
+- Mailbox attachment eligibility now also considers report workflow state so draft/in-progress rows do not appear as sendable report attachments.
 - Legacy site/report alignment reuses a shared site-name normalization helper so older labels still match live sites.
 - `/api/admin/reports/[reportKey]/original-pdf` resolves original-PDF metadata through a shared descriptor helper instead of duplicating path logic.
 - Mail attachment preparation records original-PDF size metadata without downloading the full file body first.

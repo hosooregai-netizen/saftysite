@@ -17,20 +17,22 @@ function isLegacyReportKey(value: string) {
 }
 
 export function getReportAttachmentUnavailableReason(
-  option: Pick<MailboxReportOption, 'originalPdfAvailable' | 'reportKey'>,
+  option: Pick<MailboxReportOption, 'originalPdfAvailable' | 'reportKey' | 'workflowStatus'>,
 ) {
   return getMailAttachmentUnavailableReason({
     originalPdfAvailable: option.originalPdfAvailable,
     reportKey: option.reportKey,
+    workflowStatus: option.workflowStatus,
   });
 }
 
 export function isReportAttachmentReady(
-  option: Pick<MailboxReportOption, 'originalPdfAvailable' | 'reportKey'>,
+  option: Pick<MailboxReportOption, 'originalPdfAvailable' | 'reportKey' | 'workflowStatus'>,
 ) {
   return isMailAttachmentReady({
     originalPdfAvailable: option.originalPdfAvailable,
     reportKey: option.reportKey,
+    workflowStatus: option.workflowStatus,
   });
 }
 
@@ -51,11 +53,13 @@ export function mapSafetyReportListItemToMailboxReportOption(
   const matchedSite = adminSiteById.get(item.site_id);
   const originalPdfAvailable = Boolean(item.originalPdfAvailable);
   const reportKey = item.report_key;
+  const workflowStatus = item.workflow_status || item.status || null;
   return {
-    attachmentReady: isReportAttachmentReady({ originalPdfAvailable, reportKey }),
+    attachmentReady: isReportAttachmentReady({ originalPdfAvailable, reportKey, workflowStatus }),
     attachmentUnavailableReason: getReportAttachmentUnavailableReason({
       originalPdfAvailable,
       reportKey,
+      workflowStatus,
     }),
     headquarterId: item.headquarter_id || '',
     headquarterName:
@@ -72,6 +76,7 @@ export function mapSafetyReportListItemToMailboxReportOption(
     siteName: matchedSite?.site_name || item.site_id,
     updatedAt: item.updated_at,
     visitDate: item.visit_date,
+    workflowStatus,
   };
 }
 
@@ -88,12 +93,14 @@ export function mapAdminReportRowToMailboxReportOption(
   const matchedSite = matchedSiteById || matchedSelectedSite || null;
   const originalPdfAvailable = Boolean(row.originalPdfAvailable);
   const reportKey = row.reportKey;
+  const workflowStatus = row.workflowStatus || row.status || null;
 
   return {
-    attachmentReady: isReportAttachmentReady({ originalPdfAvailable, reportKey }),
+    attachmentReady: isReportAttachmentReady({ originalPdfAvailable, reportKey, workflowStatus }),
     attachmentUnavailableReason: getReportAttachmentUnavailableReason({
       originalPdfAvailable,
       reportKey,
+      workflowStatus,
     }),
     headquarterId: row.headquarterId || matchedSite?.headquarter_id || '',
     headquarterName:
@@ -113,6 +120,7 @@ export function mapAdminReportRowToMailboxReportOption(
     siteName: row.siteName || matchedSite?.site_name || row.siteId,
     updatedAt: row.updatedAt || null,
     visitDate: row.visitDate || null,
+    workflowStatus,
   };
 }
 
@@ -138,6 +146,7 @@ export function mergeMailboxReportOptions(options: MailboxReportOption[]) {
       siteName: option.siteName || existing.siteName,
       updatedAt: option.updatedAt || existing.updatedAt,
       visitDate: option.visitDate || existing.visitDate,
+      workflowStatus: option.workflowStatus || existing.workflowStatus,
     };
     byReportKey.set(option.reportKey, {
       ...merged,

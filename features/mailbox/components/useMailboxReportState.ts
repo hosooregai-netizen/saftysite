@@ -55,14 +55,16 @@ export function useMailboxReportState({
   useEffect(() => {
     setSelectedReport(
       reportKey || siteId || headquarterId
-        ? {
+          ? {
             attachmentReady: isMailAttachmentReady({
               originalPdfAvailable: false,
               reportKey,
+              workflowStatus: 'draft',
             }),
             attachmentUnavailableReason: getMailAttachmentUnavailableReason({
               originalPdfAvailable: false,
               reportKey,
+              workflowStatus: 'draft',
             }),
             headquarterId,
             headquarterName: '',
@@ -80,6 +82,7 @@ export function useMailboxReportState({
             siteName: '',
             updatedAt: null,
             visitDate: null,
+            workflowStatus: 'draft',
           }
         : null,
     );
@@ -203,10 +206,12 @@ export function useMailboxReportState({
               attachmentReady: isMailAttachmentReady({
                 originalPdfAvailable: Boolean(item.originalPdfAvailable),
                 reportKey: item.report_key,
+                workflowStatus: item.workflow_status || item.status || null,
               }),
               attachmentUnavailableReason: getMailAttachmentUnavailableReason({
                 originalPdfAvailable: Boolean(item.originalPdfAvailable),
                 reportKey: item.report_key,
+                workflowStatus: item.workflow_status || item.status || null,
               }),
               headquarterId: item.headquarter_id || workerSite.headquarterId || '',
               headquarterName: workerSite.customerName || '',
@@ -222,6 +227,7 @@ export function useMailboxReportState({
               siteName: workerSite.siteName,
               updatedAt: item.updated_at,
               visitDate: item.visit_date,
+              workflowStatus: item.workflow_status || item.status || null,
             }));
           }),
         );

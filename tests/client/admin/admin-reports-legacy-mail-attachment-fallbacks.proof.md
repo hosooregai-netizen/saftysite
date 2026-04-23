@@ -3,6 +3,7 @@
 ## Scope
 
 - admin report rows should only surface as mailbox-send candidates when an attachable original PDF exists
+- admin report rows that are still draft/in-progress should not surface as mailbox-send candidates until they are actually attachable
 - legacy report selection should keep matching the same live site even when older site/headquarter labels differ in formatting
 - large legacy original PDFs should still have a usable authenticated download path when they cannot be mailed as direct attachments
 
