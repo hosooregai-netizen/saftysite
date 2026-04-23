@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import {
   buildSiteBadWorkplaceHref,
+  buildSitePhotoAlbumHref,
   buildSiteQuarterlyListHref,
   buildSiteReportsHref,
   resolveSiteNavView,
@@ -116,10 +117,7 @@ export function AdminMenuPanel({
         },
         {
           label: '\uD604\uC7A5 \uC0AC\uC9C4\uCCA9',
-          href: getAdminSectionHref('photos', {
-            headquarterId: resolvedHeadquarterId,
-            siteId: currentSiteKey,
-          }),
+          href: buildSitePhotoAlbumHref(currentSiteKey),
           active: siteNavView === 'photos',
         },
         {
