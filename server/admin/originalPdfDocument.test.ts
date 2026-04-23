@@ -67,6 +67,60 @@ test('fetchAdminOriginalPdfDescriptor reads legacy manifest upload size through 
   }
 });
 
+test('fetchAdminOriginalPdfDescriptor falls back to a ranged GET when the asset endpoint does not support HEAD', async () => {
+  const previousFetch = globalThis.fetch;
+  const calls: Array<{ headers: Headers; method: string; url: string }> = [];
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    const method = init?.method || 'GET';
+    const headers = new Headers(init?.headers);
+    calls.push({ headers, method, url });
+
+    if (url.includes('/uploads/content-items/014b5e89d6a04950ac574e03d33a5c4f-legacy-admin-report-2025-04-25-351093.pdf')) {
+      assert.equal(method, 'HEAD');
+      return new Response(null, { status: 404 });
+    }
+
+    if (url.includes('/api/v1/content-items/assets/014b5e89d6a04950ac574e03d33a5c4f-legacy-admin-report-2025-04-25-351093.pdf')) {
+      if (method === 'HEAD') {
+        return new Response(null, { status: 405 });
+      }
+
+      assert.equal(method, 'GET');
+      assert.equal(headers.get('range'), 'bytes=0-0');
+      return new Response(new Uint8Array([37]), {
+        status: 206,
+        headers: {
+          'content-length': '1',
+          'content-range': 'bytes 0-0/71241257',
+          'content-type': 'application/pdf',
+        },
+      });
+    }
+
+    throw new Error(`unexpected fetch: ${url}`);
+  }) as typeof fetch;
+
+  try {
+    const descriptor = await fetchAdminOriginalPdfDescriptor({
+      reportKey: 'legacy:technical_guidance:351093',
+      request: new Request('https://app.example.com/api/admin/reports/legacy%3Atechnical_guidance%3A351093/original-pdf'),
+      token: 'token-1',
+    });
+
+    assert.equal(descriptor.filename, 'legacy-admin-report-2025-04-25-351093.pdf');
+    assert.equal(descriptor.contentType, 'application/pdf');
+    assert.equal(descriptor.sizeBytes, 71241257);
+    assert.match(
+      descriptor.source,
+      /\/api\/v1\/content-items\/assets\/014b5e89d6a04950ac574e03d33a5c4f-legacy-admin-report-2025-04-25-351093\.pdf$/,
+    );
+    assert.equal(calls.length, 3);
+  } finally {
+    globalThis.fetch = previousFetch;
+  }
+});
+
 test('fetchAdminOriginalPdfDocument keeps arbitrary uploads paths from report metadata', async () => {
   const previousFetch = globalThis.fetch;
   const calls: string[] = [];

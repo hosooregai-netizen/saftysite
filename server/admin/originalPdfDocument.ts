@@ -158,7 +158,6 @@ function buildUpstreamAssetUrls(input: {
     const directAssetUrl = resolveDirectAssetUrl(normalized);
     if (directAssetUrl) {
       append(directAssetUrl);
-      return;
     }
 
     if (/^https?:\/\//i.test(normalized)) {
@@ -262,6 +261,49 @@ function parseContentLength(headers: Headers) {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 
+function parseContentRangeTotal(headers: Headers) {
+  const raw = normalizeText(headers.get('content-range'));
+  if (!raw) return null;
+  const match = raw.match(/\/(\d+)\s*$/);
+  if (!match?.[1]) return null;
+  const parsed = Number(match[1]);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+}
+
+function readPdfDescriptorFromHeaders(headers: Headers) {
+  return {
+    contentType: headers.get('content-type') || 'application/pdf',
+    sizeBytes: parseContentRangeTotal(headers) ?? parseContentLength(headers),
+  };
+}
+
+async function fetchUpstreamPdfDescriptorByRange(url: string, token: string) {
+  const response = await fetch(url, {
+    cache: 'no-store',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Range: 'bytes=0-0',
+    },
+    method: 'GET',
+  });
+  if (!response.ok) {
+    await response.body?.cancel().catch(() => {});
+    return {
+      contentType: 'application/pdf',
+      lastError: `${response.status} ${response.statusText}`,
+      sizeBytes: null,
+      source: '',
+    };
+  }
+
+  await response.body?.cancel().catch(() => {});
+  return {
+    ...readPdfDescriptorFromHeaders(response.headers),
+    lastError: '',
+    source: url,
+  };
+}
+
 async function fetchUpstreamPdfDescriptor(urls: string[], token: string) {
   let lastError = '';
   for (const url of urls) {
@@ -273,16 +315,26 @@ async function fetchUpstreamPdfDescriptor(urls: string[], token: string) {
         },
         method: 'HEAD',
       });
+      if (response.ok) {
+        return {
+          ...readPdfDescriptorFromHeaders(response.headers),
+          source: url,
+        };
+      }
+
+      if (response.status === 405) {
+        const rangeDescriptor = await fetchUpstreamPdfDescriptorByRange(url, token);
+        if (rangeDescriptor.source) {
+          return rangeDescriptor;
+        }
+        lastError = rangeDescriptor.lastError;
+        continue;
+      }
+
       if (!response.ok) {
         lastError = `${response.status} ${response.statusText}`;
         continue;
       }
-
-      return {
-        contentType: response.headers.get('content-type') || 'application/pdf',
-        sizeBytes: parseContentLength(response.headers),
-        source: url,
-      };
     } catch (error) {
       lastError = error instanceof Error ? error.message : String(error);
     }

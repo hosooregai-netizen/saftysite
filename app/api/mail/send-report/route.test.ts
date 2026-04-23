@@ -7,6 +7,7 @@ import {
   getMailAttachmentPayloadSizeBytes,
   isOversizeMailAttachmentError,
   MAIL_ATTACHMENT_TOTAL_LIMIT_BYTES,
+  materializeMailAttachmentDownload,
   shouldSendReportAsDownloadLink,
 } from './routeHelpers';
 
@@ -96,4 +97,36 @@ test('shouldSendReportAsDownloadLink switches oversized report attachments to a 
     }),
     false,
   );
+});
+
+test('materializeMailAttachmentDownload converts download_url attachments into base64 payloads', async () => {
+  const previousFetch = globalThis.fetch;
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    assert.equal(String(input), 'https://app.example.com/api/admin/reports/report-1/original-pdf');
+    assert.equal(new Headers(init?.headers).get('authorization'), 'Bearer token-1');
+    return new Response(new Uint8Array([37, 80, 68, 70]), {
+      headers: {
+        'content-type': 'application/pdf',
+      },
+    });
+  }) as typeof fetch;
+
+  try {
+    const attachment = await materializeMailAttachmentDownload({
+      content_type: 'application/pdf',
+      download_headers: {
+        Authorization: 'Bearer token-1',
+      },
+      download_url: 'https://app.example.com/api/admin/reports/report-1/original-pdf',
+      filename: 'report.pdf',
+      size_bytes: 4,
+    });
+
+    assert.equal(attachment.download_url, undefined);
+    assert.equal(attachment.filename, 'report.pdf');
+    assert.equal(attachment.data_base64, 'JVBERg==');
+    assert.equal(attachment.size_bytes, 4);
+  } finally {
+    globalThis.fetch = previousFetch;
+  }
 });

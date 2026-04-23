@@ -106,11 +106,15 @@ function matchesReportRow(
     mailAttachableOnly: boolean;
     qualityStatus: string;
     query: string;
+    reportKey: string;
     reportType: string;
     siteId: string;
     status: string;
   },
 ) {
+  if (filters.reportKey) {
+    return row.reportKey === filters.reportKey;
+  }
   if (filters.headquarterId && row.headquarterId !== filters.headquarterId) {
     return false;
   }
@@ -175,6 +179,7 @@ async function buildReportsRoutePayload(
     mailAttachableOnly: url.searchParams.get('mail_attachable_only') === 'true',
     qualityStatus: normalizeText(url.searchParams.get('quality_status')),
     query: normalizeText(url.searchParams.get('query')).toLowerCase(),
+    reportKey: normalizeText(url.searchParams.get('report_key')),
     reportType: normalizeText(url.searchParams.get('report_type')),
     siteId: normalizeText(url.searchParams.get('site_id')),
     status: normalizeText(url.searchParams.get('status')),

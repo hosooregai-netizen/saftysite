@@ -156,3 +156,82 @@ export function mergeMailboxReportOptions(options: MailboxReportOption[]) {
   });
   return Array.from(byReportKey.values());
 }
+
+function buildMailboxSemanticIdentity(option: MailboxReportOption) {
+  const siteIdentity = normalizeReportPickerText(option.siteId || option.siteName);
+  const reportIdentity = normalizeReportPickerText(option.reportTitle);
+  const visitIdentity = normalizeReportPickerText(option.visitDate || '');
+  const typeIdentity = normalizeReportPickerText(option.reportType || '');
+  if (!siteIdentity || !reportIdentity) {
+    return '';
+  }
+  return [siteIdentity, reportIdentity, visitIdentity, typeIdentity].join('::');
+}
+
+function choosePreferredMailboxReportOption(
+  existing: MailboxReportOption,
+  incoming: MailboxReportOption,
+) {
+  if (incoming.originalPdfAvailable !== existing.originalPdfAvailable) {
+    return incoming.originalPdfAvailable ? incoming : existing;
+  }
+  if (incoming.attachmentReady !== existing.attachmentReady) {
+    return incoming.attachmentReady ? incoming : existing;
+  }
+  if ((incoming.updatedAt || '') !== (existing.updatedAt || '')) {
+    return (incoming.updatedAt || '') > (existing.updatedAt || '') ? incoming : existing;
+  }
+  const incomingIsLegacy = isLegacyReportKey(incoming.reportKey);
+  const existingIsLegacy = isLegacyReportKey(existing.reportKey);
+  if (incomingIsLegacy !== existingIsLegacy) {
+    return incomingIsLegacy ? incoming : existing;
+  }
+  return incoming.reportKey.localeCompare(existing.reportKey, 'ko') < 0 ? incoming : existing;
+}
+
+export function mergeCanonicalMailboxReportOptions(options: MailboxReportOption[]) {
+  const mergedByReportKey = mergeMailboxReportOptions(options);
+  const byIdentity = new Map<string, MailboxReportOption>();
+
+  mergedByReportKey.forEach((option) => {
+    const identity = buildMailboxSemanticIdentity(option);
+    if (!identity) {
+      byIdentity.set(`${option.reportKey}::${byIdentity.size}`, option);
+      return;
+    }
+
+    const existing = byIdentity.get(identity);
+    if (!existing) {
+      byIdentity.set(identity, option);
+      return;
+    }
+
+    const preferred = choosePreferredMailboxReportOption(existing, option);
+    const other = preferred === existing ? option : existing;
+    const merged = {
+      ...other,
+      ...preferred,
+      attachmentReady: preferred.attachmentReady || other.attachmentReady,
+      attachmentUnavailableReason:
+        preferred.attachmentUnavailableReason || other.attachmentUnavailableReason,
+      headquarterId: preferred.headquarterId || other.headquarterId,
+      headquarterName: preferred.headquarterName || other.headquarterName,
+      originalPdfAvailable: preferred.originalPdfAvailable || other.originalPdfAvailable,
+      originalPdfDownloadPath:
+        preferred.originalPdfDownloadPath || other.originalPdfDownloadPath,
+      recipientEmail: preferred.recipientEmail || other.recipientEmail,
+      siteId: preferred.siteId || other.siteId,
+      siteName: preferred.siteName || other.siteName,
+      updatedAt: preferred.updatedAt || other.updatedAt,
+      visitDate: preferred.visitDate || other.visitDate,
+      workflowStatus: preferred.workflowStatus || other.workflowStatus,
+    };
+    byIdentity.set(identity, {
+      ...merged,
+      attachmentReady: isReportAttachmentReady(merged),
+      attachmentUnavailableReason: getReportAttachmentUnavailableReason(merged),
+    });
+  });
+
+  return Array.from(byIdentity.values());
+}

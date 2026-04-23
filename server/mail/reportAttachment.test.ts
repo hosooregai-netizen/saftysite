@@ -125,6 +125,48 @@ test('buildMailReportAttachment upgrades manifest-backed legacy reports to origi
   }
 });
 
+test('buildMailReportAttachment keeps manifest-backed legacy original PDFs on the original-pdf route for 440160 without calling generated PDF endpoints', async () => {
+  const previousFetch = globalThis.fetch;
+  let fetchCount = 0;
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    fetchCount += 1;
+    assert.match(
+      String(input),
+      /\/uploads\/content-items\/d327feccfffb47ba999ea8f3ce51e13f-legacy-admin-report-2025-06-23-440160\.pdf$/,
+    );
+    assert.equal(init?.method, 'HEAD');
+    return new Response(null, {
+      headers: {
+        'content-length': '24504008',
+        'content-type': 'application/pdf',
+      },
+    });
+  }) as typeof fetch;
+
+  try {
+    const attachment = await buildMailReportAttachment(
+      new Request('https://app.example.com/api/mail/send-report'),
+      'token-1',
+      {
+        originalPdfAvailable: false,
+        reportKey: 'legacy:technical_guidance:440160',
+        reportTitle:
+          '2025년 교통안전시설(안전표지) 유지보수공사(연간단가) 2025-06-23 3차 기술지도 보고서',
+      },
+    );
+
+    assert.equal(fetchCount, 1);
+    assert.equal(
+      attachment.download_url,
+      'https://app.example.com/api/admin/reports/legacy%3Atechnical_guidance%3A440160/original-pdf',
+    );
+    assert.equal(attachment.data_base64, undefined);
+    assert.equal(attachment.size_bytes, 24504008);
+  } finally {
+    globalThis.fetch = previousFetch;
+  }
+});
+
 test('buildMailReportAttachment posts reportKey to current quarterly PDF route', async () => {
   const previousFetch = globalThis.fetch;
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {

@@ -42,6 +42,47 @@ export function getMailAttachmentPayloadSizeBytes(attachment: unknown) {
   return getBase64DecodedSizeBytes(dataBase64);
 }
 
+async function readMailAttachmentDownloadError(response: Response) {
+  try {
+    const payload = (await response.json()) as Record<string, unknown>;
+    return normalizeText(payload.error) || normalizeText(payload.detail) || '';
+  } catch {
+    return '';
+  }
+}
+
+export async function materializeMailAttachmentDownload(
+  attachment: MailAttachmentServerPayload,
+): Promise<MailAttachmentServerPayload> {
+  const downloadUrl = normalizeText(attachment.download_url);
+  if (!downloadUrl) {
+    return attachment;
+  }
+
+  const response = await fetch(downloadUrl, {
+    cache: 'no-store',
+    headers: attachment.download_headers || {},
+  });
+  if (!response.ok) {
+    const detail = await readMailAttachmentDownloadError(response);
+    throw new Error(
+      detail || `첨부 파일을 다운로드해 메일 첨부로 변환하지 못했습니다. (${response.status})`,
+    );
+  }
+
+  const buffer = Buffer.from(await response.arrayBuffer());
+  if (buffer.length === 0) {
+    throw new Error('메일 첨부용 원본 PDF 파일이 비어 있습니다.');
+  }
+
+  return {
+    content_type: response.headers.get('content-type') || attachment.content_type || 'application/pdf',
+    data_base64: buffer.toString('base64'),
+    filename: attachment.filename,
+    size_bytes: buffer.length,
+  };
+}
+
 export function shouldSendReportAsDownloadLink(input: {
   attachments: unknown[];
   reportAttachment: MailAttachmentServerPayload;

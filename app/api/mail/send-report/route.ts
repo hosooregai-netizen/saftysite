@@ -11,6 +11,7 @@ import {
 import {
   buildOversizeReportFallbackBody,
   isOversizeMailAttachmentError,
+  materializeMailAttachmentDownload,
   shouldSendReportAsDownloadLink,
 } from './routeHelpers';
 
@@ -45,9 +46,15 @@ export async function POST(request: Request): Promise<Response> {
         normalizeText(report.report_updated_at) || normalizeText(payload.report_updated_at),
     });
     const attachments = Array.isArray(payload.attachments) ? payload.attachments : [];
+    const normalizedReportAttachment = shouldSendReportAsDownloadLink({
+      attachments,
+      reportAttachment,
+    })
+      ? reportAttachment
+      : await materializeMailAttachmentDownload(reportAttachment);
     const mailPayload = {
       ...payload,
-      attachments: [reportAttachment, ...attachments],
+      attachments: [normalizedReportAttachment, ...attachments],
       report_key: reportKey || normalizeText(payload.report_key),
     };
 
