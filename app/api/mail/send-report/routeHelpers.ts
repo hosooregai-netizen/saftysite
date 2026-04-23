@@ -1,5 +1,6 @@
 import { SafetyServerApiError } from '@/server/admin/safetyApiServer';
 import type { MailAttachmentServerPayload } from '@/server/mail/reportAttachment';
+import { buildMailReportDownloadUrl } from '@/server/mail/reportDownloadLink';
 import type { MailMessage, MailRecipient } from '@/types/mail';
 
 export const MAIL_ATTACHMENT_TOTAL_LIMIT_BYTES = 20 * 1024 * 1024;
@@ -21,14 +22,6 @@ function escapeHtml(value: string) {
     .replaceAll("'", '&#39;');
 }
 
-function resolveUrlOrigin(value: string) {
-  try {
-    return new URL(value).origin;
-  } catch {
-    return '';
-  }
-}
-
 function extractReportKeyFromOriginalPdfUrl(value: string) {
   const normalized = normalizeText(value);
   if (!normalized) {
@@ -47,28 +40,6 @@ function extractReportKeyFromOriginalPdfUrl(value: string) {
   } catch {
     return '';
   }
-}
-
-function buildBrowserSafeReportOpenUrl(input: {
-  downloadUrl?: string | null;
-  reportKey?: string | null;
-  requestUrl?: string | null;
-}) {
-  const reportKey =
-    normalizeText(input.reportKey) || extractReportKeyFromOriginalPdfUrl(input.downloadUrl || '');
-  if (!reportKey) {
-    return normalizeText(input.downloadUrl);
-  }
-
-  const origin =
-    resolveUrlOrigin(normalizeText(input.requestUrl || '')) ||
-    resolveUrlOrigin(normalizeText(input.downloadUrl || ''));
-  const pathname = `/admin/report-open?reportKey=${encodeURIComponent(reportKey)}`;
-  if (!origin) {
-    return pathname;
-  }
-
-  return new URL(pathname, origin).toString();
 }
 
 function stripHtml(value: string) {
@@ -183,6 +154,7 @@ export function isOversizeMailAttachmentError(error: unknown) {
 }
 
 export function buildOversizeReportFallbackBody(input: {
+  accessToken?: string | null;
   body: unknown;
   reportAttachment: MailAttachmentServerPayload;
   reportFilename?: string | null;
@@ -191,12 +163,20 @@ export function buildOversizeReportFallbackBody(input: {
   requestUrl?: string | null;
 }) {
   const originalBody = typeof input.body === 'string' ? input.body : '';
-  const openUrl = buildBrowserSafeReportOpenUrl({
-    downloadUrl: input.reportAttachment.download_url,
-    reportKey: input.reportKey,
+  const reportKey =
+    normalizeText(input.reportKey) ||
+    extractReportKeyFromOriginalPdfUrl(input.reportAttachment.download_url || '');
+  const downloadUrl = buildMailReportDownloadUrl({
+    accessToken: normalizeText(input.accessToken),
+    filename:
+      normalizeText(input.reportFilename) ||
+      normalizeText(input.reportTitle) ||
+      normalizeText(input.reportAttachment.filename) ||
+      `${reportKey || 'report'}.pdf`,
+    reportKey,
     requestUrl: input.requestUrl,
   });
-  if (!openUrl) {
+  if (!downloadUrl) {
     return originalBody;
   }
 
@@ -209,9 +189,9 @@ export function buildOversizeReportFallbackBody(input: {
   return [
     originalBody,
     '<hr />',
-    '<p>보고서 첨부 파일 용량이 커서 앱에서 열 수 있는 다운로드 링크로 대체했습니다.</p>',
-    '<p>링크를 열 때 로그인이 필요할 수 있습니다.</p>',
-    `<p><a href="${escapeHtml(openUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(reportLabel)}</a></p>`,
+    '<p>보고서 첨부 파일 용량이 커서 외부 다운로드 링크로 대체했습니다.</p>',
+    '<p>링크는 일정 기간 뒤 만료될 수 있습니다.</p>',
+    `<p><a href="${escapeHtml(downloadUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(reportLabel)}</a></p>`,
   ].join('');
 }
 

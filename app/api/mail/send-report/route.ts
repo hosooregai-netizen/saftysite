@@ -86,6 +86,7 @@ export async function POST(request: Request): Promise<Response> {
 
     if (shouldSendAsDownloadLink) {
       const queuedBody = buildOversizeReportFallbackBody({
+        accessToken: token,
         body: payload.body,
         reportAttachment,
         reportFilename,
@@ -146,6 +147,7 @@ export async function POST(request: Request): Promise<Response> {
               ...mailPayload,
               attachments,
               body: buildOversizeReportFallbackBody({
+                accessToken: token,
                 body: payload.body,
                 reportAttachment,
                 reportFilename,

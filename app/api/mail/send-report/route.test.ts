@@ -11,6 +11,7 @@ import {
   materializeMailAttachmentDownload,
   shouldSendReportAsDownloadLink,
 } from './routeHelpers';
+import { readMailReportDownloadToken } from '@/server/mail/reportDownloadLink';
 
 test('isOversizeMailAttachmentError matches backend attachment limit failures', () => {
   assert.equal(
@@ -30,7 +31,12 @@ test('isOversizeMailAttachmentError matches backend attachment limit failures', 
 });
 
 test('buildOversizeReportFallbackBody appends a safe download link for oversized report attachments', () => {
+  const originalSecret = process.env.MAIL_REPORT_DOWNLOAD_SECRET;
+  process.env.MAIL_REPORT_DOWNLOAD_SECRET = 'mail-report-download-test-secret';
+
+  try {
   const body = buildOversizeReportFallbackBody({
+    accessToken: 'token-123',
     body: '<p>본문</p>',
     reportAttachment: {
       content_type: 'application/pdf',
@@ -41,17 +47,33 @@ test('buildOversizeReportFallbackBody appends a safe download link for oversized
     requestUrl: 'https://app.example.com/api/mail/send-report',
   });
 
-  assert.match(body, /첨부 파일 용량이 커서 앱에서 열 수 있는 다운로드 링크로 대체/);
-  assert.match(body, /로그인이 필요할 수 있습니다/);
+  assert.match(body, /첨부 파일 용량이 커서 외부 다운로드 링크로 대체/);
+  assert.match(body, /일정 기간 뒤 만료될 수 있습니다/);
   assert.match(body, /2025년 교통안전시설\(안전표지\) 유지보수공사\(연간단가\)/);
-  assert.match(
-    body,
-    /href="https:\/\/app\.example\.com\/admin\/report-open\?reportKey=legacy%3Atechnical_guidance%3A427520"/,
-  );
+  const hrefMatch = body.match(/href="([^"]+)"/);
+  assert.ok(hrefMatch?.[1]);
+  const downloadUrl = new URL(hrefMatch[1]);
+  assert.equal(downloadUrl.origin, 'https://app.example.com');
+  assert.equal(downloadUrl.pathname, '/api/mail/report-download');
+  const payload = readMailReportDownloadToken(downloadUrl.searchParams.get('token') || '');
+  assert.equal(payload.reportKey, 'legacy:technical_guidance:427520');
+  assert.equal(payload.accessToken, 'token-123');
+  } finally {
+    if (originalSecret === undefined) {
+      delete process.env.MAIL_REPORT_DOWNLOAD_SECRET;
+    } else {
+      process.env.MAIL_REPORT_DOWNLOAD_SECRET = originalSecret;
+    }
+  }
 });
 
 test('buildOversizeReportFallbackBody falls back to report-open when the report attachment uses a raw asset url', () => {
+  const originalSecret = process.env.MAIL_REPORT_DOWNLOAD_SECRET;
+  process.env.MAIL_REPORT_DOWNLOAD_SECRET = 'mail-report-download-test-secret';
+
+  try {
   const body = buildOversizeReportFallbackBody({
+    accessToken: 'token-raw-asset',
     body: '<p>본문</p>',
     reportAttachment: {
       content_type: 'application/pdf',
@@ -63,10 +85,21 @@ test('buildOversizeReportFallbackBody falls back to report-open when the report 
     requestUrl: 'http://127.0.0.1:3211/api/mail/send-report',
   });
 
-  assert.match(
-    body,
-    /href="http:\/\/127\.0\.0\.1:3211\/admin\/report-open\?reportKey=legacy%3Atechnical_guidance%3A427520"/,
-  );
+  const hrefMatch = body.match(/href="([^"]+)"/);
+  assert.ok(hrefMatch?.[1]);
+  const downloadUrl = new URL(hrefMatch[1]);
+  assert.equal(downloadUrl.origin, 'http://127.0.0.1:3211');
+  assert.equal(downloadUrl.pathname, '/api/mail/report-download');
+  const payload = readMailReportDownloadToken(downloadUrl.searchParams.get('token') || '');
+  assert.equal(payload.reportKey, 'legacy:technical_guidance:427520');
+  assert.equal(payload.accessToken, 'token-raw-asset');
+  } finally {
+    if (originalSecret === undefined) {
+      delete process.env.MAIL_REPORT_DOWNLOAD_SECRET;
+    } else {
+      process.env.MAIL_REPORT_DOWNLOAD_SECRET = originalSecret;
+    }
+  }
 });
 
 test('getMailAttachmentPayloadSizeBytes prefers size_bytes and decodes base64 payloads', () => {
