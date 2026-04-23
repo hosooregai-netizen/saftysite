@@ -1,5 +1,6 @@
 import { SafetyServerApiError } from '@/server/admin/safetyApiServer';
 import type { MailAttachmentServerPayload } from '@/server/mail/reportAttachment';
+import type { MailMessage, MailRecipient } from '@/types/mail';
 
 export const MAIL_ATTACHMENT_TOTAL_LIMIT_BYTES = 20 * 1024 * 1024;
 
@@ -18,6 +19,71 @@ function escapeHtml(value: string) {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
+}
+
+function resolveUrlOrigin(value: string) {
+  try {
+    return new URL(value).origin;
+  } catch {
+    return '';
+  }
+}
+
+function extractReportKeyFromOriginalPdfUrl(value: string) {
+  const normalized = normalizeText(value);
+  if (!normalized) {
+    return '';
+  }
+
+  try {
+    const url = normalized.startsWith('http://') || normalized.startsWith('https://')
+      ? new URL(normalized)
+      : new URL(normalized, 'http://local.test');
+    const match = url.pathname.match(/^\/api\/admin\/reports\/([^/]+)\/original-pdf$/i);
+    if (!match?.[1]) {
+      return '';
+    }
+    return decodeURIComponent(match[1]).trim();
+  } catch {
+    return '';
+  }
+}
+
+function buildBrowserSafeReportOpenUrl(input: {
+  downloadUrl?: string | null;
+  reportKey?: string | null;
+  requestUrl?: string | null;
+}) {
+  const reportKey =
+    normalizeText(input.reportKey) || extractReportKeyFromOriginalPdfUrl(input.downloadUrl || '');
+  if (!reportKey) {
+    return normalizeText(input.downloadUrl);
+  }
+
+  const origin =
+    resolveUrlOrigin(normalizeText(input.requestUrl || '')) ||
+    resolveUrlOrigin(normalizeText(input.downloadUrl || ''));
+  const pathname = `/admin/report-open?reportKey=${encodeURIComponent(reportKey)}`;
+  if (!origin) {
+    return pathname;
+  }
+
+  return new URL(pathname, origin).toString();
+}
+
+function stripHtml(value: string) {
+  return value
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function getBase64DecodedSizeBytes(value: string) {
@@ -120,11 +186,17 @@ export function buildOversizeReportFallbackBody(input: {
   body: unknown;
   reportAttachment: MailAttachmentServerPayload;
   reportFilename?: string | null;
+  reportKey?: string | null;
   reportTitle?: string | null;
+  requestUrl?: string | null;
 }) {
   const originalBody = typeof input.body === 'string' ? input.body : '';
-  const downloadUrl = normalizeText(input.reportAttachment.download_url);
-  if (!downloadUrl) {
+  const openUrl = buildBrowserSafeReportOpenUrl({
+    downloadUrl: input.reportAttachment.download_url,
+    reportKey: input.reportKey,
+    requestUrl: input.requestUrl,
+  });
+  if (!openUrl) {
     return originalBody;
   }
 
@@ -137,7 +209,44 @@ export function buildOversizeReportFallbackBody(input: {
   return [
     originalBody,
     '<hr />',
-    '<p>보고서 첨부 파일 용량이 커서 다운로드 링크로 대체했습니다.</p>',
-    `<p><a href="${escapeHtml(downloadUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(reportLabel)}</a></p>`,
+    '<p>보고서 첨부 파일 용량이 커서 앱에서 열 수 있는 다운로드 링크로 대체했습니다.</p>',
+    '<p>링크를 열 때 로그인이 필요할 수 있습니다.</p>',
+    `<p><a href="${escapeHtml(openUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(reportLabel)}</a></p>`,
   ].join('');
+}
+
+export function buildQueuedMailMessage(input: {
+  accountId: string;
+  body: string;
+  fromEmail?: string | null;
+  fromName?: string | null;
+  headquarterId?: string | null;
+  id: string;
+  reportKey?: string | null;
+  siteId?: string | null;
+  subject: string;
+  to: MailRecipient[];
+  queuedAt: string;
+}) {
+  const bodyPreview = stripHtml(input.body).slice(0, 280);
+  return {
+    accountId: input.accountId,
+    body: input.body,
+    bodyPreview,
+    createdAt: input.queuedAt,
+    deliveredAt: null,
+    direction: 'outgoing',
+    fromEmail: normalizeText(input.fromEmail),
+    fromName: normalizeText(input.fromName) || null,
+    headquarterId: normalizeText(input.headquarterId) || null,
+    id: input.id,
+    readAt: null,
+    reportKey: normalizeText(input.reportKey) || null,
+    sentAt: input.queuedAt,
+    siteId: normalizeText(input.siteId) || null,
+    subject: input.subject,
+    threadId: input.id,
+    to: input.to,
+    updatedAt: input.queuedAt,
+  } satisfies MailMessage;
 }

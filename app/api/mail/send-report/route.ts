@@ -10,6 +10,7 @@ import {
 } from '@/server/mail/reportAttachment';
 import {
   buildOversizeReportFallbackBody,
+  buildQueuedMailMessage,
   isOversizeMailAttachmentError,
   materializeMailAttachmentDownload,
   shouldSendReportAsDownloadLink,
@@ -24,6 +25,27 @@ function asRecord(value: unknown): Record<string, unknown> {
 
 function normalizeText(value: unknown) {
   return typeof value === 'string' ? value.trim() : '';
+}
+
+function normalizeRecipients(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => {
+      const record = asRecord(item);
+      const email = normalizeText(record.email);
+      if (!email) {
+        return null;
+      }
+
+      return {
+        email,
+        name: normalizeText(record.name) || null,
+      };
+    })
+    .filter((item): item is { email: string; name: string | null } => Boolean(item));
 }
 
 export async function POST(request: Request): Promise<Response> {
@@ -46,6 +68,10 @@ export async function POST(request: Request): Promise<Response> {
         normalizeText(report.report_updated_at) || normalizeText(payload.report_updated_at),
     });
     const attachments = Array.isArray(payload.attachments) ? payload.attachments : [];
+    const shouldSendAsDownloadLink = shouldSendReportAsDownloadLink({
+      attachments,
+      reportAttachment,
+    });
     const normalizedReportAttachment = shouldSendReportAsDownloadLink({
       attachments,
       reportAttachment,
@@ -58,24 +84,48 @@ export async function POST(request: Request): Promise<Response> {
       report_key: reportKey || normalizeText(payload.report_key),
     };
 
-    if (shouldSendReportAsDownloadLink({ attachments, reportAttachment })) {
+    if (shouldSendAsDownloadLink) {
+      const queuedBody = buildOversizeReportFallbackBody({
+        body: payload.body,
+        reportAttachment,
+        reportFilename,
+        reportKey,
+        reportTitle,
+        requestUrl: request.url,
+      });
+      const queuedMailPayload = {
+        ...mailPayload,
+        attachments,
+        body: queuedBody,
+      };
+      const queuedAt = new Date().toISOString();
+      const queuedId = `queued:mail-report:${crypto.randomUUID()}`;
+
+      globalThis.setTimeout(() => {
+        void sendSafetyMailServer(token, queuedMailPayload, null).catch((error) => {
+          console.error('[mail/send-report] oversized link send failed', {
+            error: error instanceof Error ? error.message : String(error),
+            reportKey,
+            subject: normalizeText(payload.subject),
+          });
+        });
+      }, 0);
+
       return NextResponse.json(
-        mapBackendMailMessage(
-          await sendSafetyMailServer(
-            token,
-            {
-              ...mailPayload,
-              attachments,
-              body: buildOversizeReportFallbackBody({
-                body: payload.body,
-                reportAttachment,
-                reportFilename,
-                reportTitle,
-              }),
-            },
-            request,
-          ),
-        ),
+        buildQueuedMailMessage({
+          accountId: normalizeText(payload.account_id),
+          body: queuedBody,
+          fromEmail: normalizeText(payload.sender_email),
+          fromName: normalizeText(payload.sender_name),
+          headquarterId: normalizeText(payload.headquarter_id),
+          id: queuedId,
+          queuedAt,
+          reportKey,
+          siteId: normalizeText(payload.site_id),
+          subject: normalizeText(payload.subject),
+          to: normalizeRecipients(payload.to),
+        }),
+        { status: 202 },
       );
     }
 
@@ -99,7 +149,9 @@ export async function POST(request: Request): Promise<Response> {
                 body: payload.body,
                 reportAttachment,
                 reportFilename,
+                reportKey,
                 reportTitle,
+                requestUrl: request.url,
               }),
             },
             request,

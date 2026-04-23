@@ -155,6 +155,16 @@ function buildUpstreamAssetUrls(input: {
       return;
     }
 
+    const canonicalAssetName = getPathBasename(normalized) || normalized;
+    if (
+      normalized.startsWith('/uploads/content-items/') ||
+      normalized.startsWith('/content-items/assets/') ||
+      /^https?:\/\/.+\/uploads\/content-items\//i.test(normalized) ||
+      /^https?:\/\/.+\/api\/v\d+\/content-items\/assets\//i.test(normalized)
+    ) {
+      appendAssetName(canonicalAssetName);
+    }
+
     const directAssetUrl = resolveDirectAssetUrl(normalized);
     if (directAssetUrl) {
       append(directAssetUrl);
@@ -164,7 +174,7 @@ function buildUpstreamAssetUrls(input: {
       append(normalized);
     }
 
-    appendAssetName(getPathBasename(normalized) || normalized);
+    appendAssetName(canonicalAssetName);
   };
 
   appendAssetCandidate(input.archivePath);
