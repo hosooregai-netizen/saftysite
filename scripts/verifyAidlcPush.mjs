@@ -93,6 +93,7 @@ const FEATURE_RULES = [
     patterns: [
       /^app\/api\/admin\/reports\//,
       /^features\/admin\/sections\/reports\//,
+      /^server\/admin\/legacyAdminReportsSnapshot(\.test)?\.ts$/,
       /^server\/admin\/legacyReportAlignment(\.test)?\.ts$/,
       /^server\/admin\/reportsRouteCache(\.test)?\.ts$/,
     ],
