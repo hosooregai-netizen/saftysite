@@ -116,9 +116,13 @@ export function mapBackendAdminReportRow(
   const record = asBackendRecord<Partial<SafetyBackendAdminReportRow> & Record<string, unknown>>(row) ?? {};
   const reportKey = normalizeText(record.report_key);
   const originalPdfArchivePath = normalizeText(record.original_pdf_archive_path);
+  const originalPdfFilename = normalizeText(record.original_pdf_filename);
   const originalPdfDownloadPath = normalizeText(record.original_pdf_download_path);
   const originalPdfAvailable =
-    Boolean(originalPdfArchivePath) || record.original_pdf_available === true;
+    Boolean(originalPdfArchivePath) ||
+    Boolean(originalPdfFilename) ||
+    Boolean(originalPdfDownloadPath) ||
+    record.original_pdf_available === true;
   const dispatchSignal =
     (normalizeText(record.dispatch_signal) || normalizeText(record.dispatch_status) || '') as ControllerReportRow['dispatchStatus'];
 

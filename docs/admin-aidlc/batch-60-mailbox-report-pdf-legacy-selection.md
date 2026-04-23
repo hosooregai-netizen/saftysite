@@ -18,6 +18,7 @@
 - Admin shared-mailbox sends can forward the current admin user's display name so recipients do not only see the shared mailbox label.
 - Mailbox UI now shows `원본 PDF 첨부 가능` only when the report row explicitly exposes an original PDF.
 - If an original-PDF-marked send still returns `404`, the mail attachment path falls back to generated PDF creation instead of failing immediately.
+- Admin report row mapping also treats filename-only or download-path-only original PDF metadata as attachable originals, so legacy rows do not fall back to generated-report lookup by mistake.
 
 ## Deployment Notes
 

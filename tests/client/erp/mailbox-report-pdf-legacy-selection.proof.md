@@ -19,6 +19,7 @@
 - Admin mailbox sends can forward the current user's display name alongside the shared mailbox account.
 - The compose/report picker UI only advertises original PDF usage when the selected row explicitly has `originalPdfAvailable`.
 - Sending no longer hard-fails on missing original PDFs when a generated report PDF can be produced instead.
+- Admin report API rows with only `original_pdf_filename` or `original_pdf_download_path` still surface as original-PDF-capable in the picker.
 
 ## Automated Coverage
 

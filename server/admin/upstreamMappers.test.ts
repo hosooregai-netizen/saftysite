@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { mapBackendAdminReportsResponse } from './upstreamMappers';
+import { mapBackendAdminReportRow, mapBackendAdminReportsResponse } from './upstreamMappers';
 import type { SafetyBackendAdminReportsResponse } from '@/types/backend';
 
 test('mapBackendAdminReportsResponse skips malformed rows instead of throwing', () => {
@@ -89,4 +89,43 @@ test('mapBackendAdminReportsResponse tolerates missing row arrays', () => {
     rows: [],
     total: 0,
   });
+});
+
+test('mapBackendAdminReportRow treats filename-only original PDF metadata as available', () => {
+  const row = mapBackendAdminReportRow({
+    assignee_name: '',
+    assignee_user_id: '',
+    checker_user_id: '',
+    controller_review: null,
+    deadline_date: '',
+    dispatch: null,
+    dispatch_signal: null,
+    dispatch_status: null,
+    headquarter_id: 'hq-1',
+    headquarter_name: 'HQ',
+    original_pdf_archive_path: '',
+    original_pdf_available: false,
+    original_pdf_download_path: '',
+    original_pdf_filename: 'legacy-guide.pdf',
+    period_label: '',
+    progress_rate: null,
+    quality_status: 'unchecked',
+    report_key: 'legacy:technical_guidance:110231',
+    report_month: '',
+    report_title: 'Legacy Guide',
+    report_type: 'technical_guidance',
+    route_param: '',
+    site_id: 'site-1',
+    site_name: 'Site 1',
+    sort_label: 'Site 1 Legacy Guide',
+    status: 'draft',
+    updated_at: '2026-04-23T17:30:00+09:00',
+    visit_date: '2026-04-01',
+  } as never);
+
+  assert.equal(row.originalPdfAvailable, true);
+  assert.equal(
+    row.originalPdfDownloadPath,
+    '/api/admin/reports/legacy%3Atechnical_guidance%3A110231/original-pdf',
+  );
 });

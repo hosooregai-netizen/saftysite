@@ -157,7 +157,11 @@ function getMetaText(meta: Record<string, unknown>, key: string) {
 function hasOriginalPdfArchivePath(meta: Record<string, unknown>) {
   return Boolean(
     getMetaText(meta, 'original_pdf_archive_path') ||
-      getMetaText(meta, 'originalPdfArchivePath'),
+      getMetaText(meta, 'originalPdfArchivePath') ||
+      getMetaText(meta, 'original_pdf_filename') ||
+      getMetaText(meta, 'originalPdfFilename') ||
+      getMetaText(meta, 'original_pdf_download_path') ||
+      getMetaText(meta, 'originalPdfDownloadPath'),
   );
 }
 

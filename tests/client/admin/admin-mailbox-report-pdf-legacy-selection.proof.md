@@ -17,6 +17,7 @@
 - Shared mailbox sends can stamp the current admin user's display name instead of only the shared mailbox label.
 - The picker only labels rows as original-PDF-capable when `originalPdfAvailable` is explicitly true.
 - A stale/missing original PDF now falls back to generated PDF attachment creation on send.
+- Filename-only or download-path-only original PDF metadata still marks admin legacy rows as original-PDF-capable.
 
 ## Automated Coverage
 
