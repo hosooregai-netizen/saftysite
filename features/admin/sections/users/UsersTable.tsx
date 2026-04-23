@@ -97,7 +97,6 @@ export function UsersTable({
         name: '사용자',
         columns: [
           { key: 'name', label: '이름' },
-          { key: 'email', label: '로그인 ID(이메일)' },
           { key: 'organizationName', label: '소속' },
           { key: 'phone', label: '전화번호' },
           { key: 'position', label: '직책' },
@@ -118,7 +117,6 @@ export function UsersTable({
           return {
             assignedSiteCount: overview.assignedSites.length,
             assignedSiteSummary: assignedSiteSummary.detailLabel,
-            email: user.email,
             lastLoginAt: formatTimestamp(user.last_login_at),
             name: user.name,
             organizationName: user.organization_name || '',
@@ -148,7 +146,7 @@ export function UsersTable({
             formClassName={`${styles.sectionHeaderSearchShell} ${styles.sectionHeaderToolbarSearch}`}
             inputClassName={`app-input ${styles.sectionHeaderSearchInput}`}
             buttonClassName={styles.sectionHeaderSearchButton}
-            placeholder="이름, 로그인 ID, 소속, 전화번호, 직책으로 검색"
+            placeholder="이름, 소속, 전화번호, 직책으로 검색"
             value={queryInput}
             onChange={setQuery}
             onSubmit={submitQuery}
@@ -211,7 +209,6 @@ export function UsersTable({
                       label="이름"
                       onChange={setSort}
                     />
-                    <th>로그인 ID(이메일)</th>
                     <th>소속</th>
                     <th>전화번호</th>
                     <th>직책</th>
@@ -251,7 +248,6 @@ export function UsersTable({
                             </div>
                           ) : null}
                         </td>
-                        <td>{user.email}</td>
                         <td>{user.organization_name || '-'}</td>
                         <td>{user.phone || '-'}</td>
                         <td>{user.position || '-'}</td>
