@@ -33,5 +33,22 @@ Asset base resolution order:
 
 For production HTTPS deployments, set `NEXT_PUBLIC_SAFETY_ASSET_BASE_URL` to an HTTPS origin that serves `/uploads/...`. If the asset host is only available over HTTP, browsers may block the file as mixed content or an insecure download.
 
+## Safety Direct Uploads
+
+Large content and photo uploads should bypass the Vercel `/api` proxy when possible so they do not hit the 4.5MB request body limit.
+
+Set these env vars in the Next app:
+
+- `NEXT_PUBLIC_SAFETY_ASSET_BASE_URL=https://<asset-origin>`
+- `NEXT_PUBLIC_SAFETY_UPLOAD_UPSTREAM_BASE_URL=https://<asset-origin>`
+
+Use the same HTTPS asset origin for both settings. That origin must serve:
+
+- `/uploads/...`
+- `/content-items/assets/upload`
+- `/photo-assets/upload`
+
+When `NEXT_PUBLIC_SAFETY_UPLOAD_UPSTREAM_BASE_URL` is missing or unusable from the current page protocol, the app falls back to the existing proxy upload routes. In that mode, uploads above 4.5MB are blocked intentionally and the UI points back to the direct-upload env setting.
+
 # safety-client
 # safety-client

@@ -5,7 +5,13 @@ import { uploadSafetyContentAsset } from './adminEndpoints';
 import { resolveSafetyAssetUrl } from './assetUrls';
 import { readSafetyAuthToken } from './authStorage';
 import { getSafetyApiBaseUrl } from './config';
-import { buildPublicSafetyApiUpstreamUrl } from './upstream';
+import { buildPublicSafetyUploadUpstreamUrl } from './upstream';
+import {
+  buildProxyUploadOversizeErrorMessage,
+  getProxyUploadWarningMessage,
+  resolveUploadTransport,
+  shouldFallbackDirectUploadToProxy,
+} from './uploadTransport';
 
 export const MAX_SAFETY_ASSET_BYTES = 50 * 1024 * 1024;
 export const MAX_SAFETY_PROXY_FILE_BYTES = Math.floor(4.5 * 1024 * 1024);
@@ -22,15 +28,18 @@ export interface UploadedSafetyAsset extends SafetyContentAssetUpload {
 }
 
 function getDirectSafetyAssetUploadUrl(): string | null {
-  return buildPublicSafetyApiUpstreamUrl('/content-items/assets/upload');
+  return buildPublicSafetyUploadUpstreamUrl('/content-items/assets/upload');
+}
+
+function getSafetyAssetUploadTransport() {
+  return resolveUploadTransport({
+    directUploadUrl: getDirectSafetyAssetUploadUrl(),
+    proxyBaseUrl: getSafetyApiBaseUrl(),
+  });
 }
 
 export function usesSafetyProxyUpload(): boolean {
-  if (getDirectSafetyAssetUploadUrl()) {
-    return false;
-  }
-
-  return getSafetyApiBaseUrl().startsWith('/');
+  return getSafetyAssetUploadTransport().usesProxyUpload;
 }
 
 function parseUploadErrorMessage(payload: unknown, fallback: string): string {
@@ -45,14 +54,10 @@ function parseUploadErrorMessage(payload: unknown, fallback: string): string {
 }
 
 async function uploadSafetyContentAssetDirect(
+  uploadUrl: string,
   token: string,
   file: File,
 ): Promise<SafetyContentAssetUpload> {
-  const uploadUrl = getDirectSafetyAssetUploadUrl();
-  if (!uploadUrl) {
-    throw new Error('직접 업로드용 안전 API 주소를 확인하지 못했습니다.');
-  }
-
   const body = new FormData();
   body.set('file', file);
 
@@ -122,10 +127,17 @@ export function validateSafetyAssetFile(
   }
 
   if (usesProxy && file.size > proxyFileBytes) {
-    return '4.5MB를 초과하는 파일은 현재 Vercel 프록시 업로드 경로로는 저장할 수 없습니다. 직접 업로드 origin 설정을 확인해 주세요.';
+    return buildProxyUploadOversizeErrorMessage('파일');
   }
 
   return null;
+}
+
+export function getSafetyAssetUploadHelperText(
+  options: { usesProxy?: boolean } = {},
+): string | undefined {
+  const usesProxy = options.usesProxy ?? usesSafetyProxyUpload();
+  return usesProxy ? getProxyUploadWarningMessage('파일') : undefined;
 }
 
 export async function uploadSafetyAssetFile(file: File): Promise<UploadedSafetyAsset> {
@@ -134,9 +146,21 @@ export async function uploadSafetyAssetFile(file: File): Promise<UploadedSafetyA
     throw new Error('로그인이 만료되었습니다. 다시 로그인해 주세요.');
   }
 
-  const uploaded = usesSafetyProxyUpload()
-    ? await uploadSafetyContentAsset(token, file)
-    : await uploadSafetyContentAssetDirect(token, file);
+  const transport = getSafetyAssetUploadTransport();
+  let uploaded: SafetyContentAssetUpload;
+
+  if (!transport.directUploadUrl) {
+    uploaded = await uploadSafetyContentAsset(token, file);
+  } else {
+    try {
+      uploaded = await uploadSafetyContentAssetDirect(transport.directUploadUrl, token, file);
+    } catch (error) {
+      if (!shouldFallbackDirectUploadToProxy(error, file.size, MAX_SAFETY_PROXY_FILE_BYTES)) {
+        throw error;
+      }
+      uploaded = await uploadSafetyContentAsset(token, file);
+    }
+  }
 
   return {
     ...uploaded,

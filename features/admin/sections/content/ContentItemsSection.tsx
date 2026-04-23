@@ -11,6 +11,7 @@ import {
 import { useSubmittedSearchState } from '@/hooks/useSubmittedSearchState';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import {
+  getSafetyAssetUploadHelperText,
   uploadSafetyAssetFile,
   usesSafetyProxyUpload,
   validateSafetyAssetFile,
@@ -225,10 +226,9 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
   const uploadPermissionHelperText = canUploadAssets
     ? '이미지 파일 업로드 API를 사용할 수 없습니다.'
     : '현재 권한에서는 콘텐츠 자산 업로드나 교체를 할 수 없습니다.';
+  const proxyUploadHelperText = getSafetyAssetUploadHelperText({ usesProxy: usesSafetyProxy });
   const fileUploadHelperText = canUploadAssets
-    ? usesSafetyProxy
-      ? '현재는 기본 업로드 용량이 50MB이며, 배포 환경의 제한이 더 작으면 업로드가 실패할 수 있습니다.'
-      : undefined
+    ? proxyUploadHelperText
     : uploadPermissionHelperText;
 
   useEffect(() => {
@@ -1048,11 +1048,7 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
                   <ContentAssetField
                     accept=".pdf,.doc,.docx,.hwp,.png,.jpg,.jpeg,.gif,.webp"
                     disabled={busy || !canUploadAssets}
-                    helperText={
-                      usesSafetyProxy
-                        ? '현재는 Vercel 프록시 경유 업로드라 4.5MB를 넘으면 실패할 수 있습니다. direct upload origin 설정을 확인해 주세요.'
-                        : undefined
-                    }
+                    helperText={proxyUploadHelperText}
                     label={activeTypeMeta.fileLabels?.[0] || '파일 1'}
                     mode="file"
                     readOnly={!canUploadAssets}
@@ -1068,11 +1064,7 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
                   <ContentAssetField
                     accept=".pdf,.doc,.docx,.hwp,.png,.jpg,.jpeg,.gif,.webp"
                     disabled={busy || !canUploadAssets}
-                    helperText={
-                      usesSafetyProxy
-                        ? '현재는 Vercel 프록시 경유 업로드라 4.5MB를 넘으면 실패할 수 있습니다. direct upload origin 설정을 확인해 주세요.'
-                        : undefined
-                    }
+                    helperText={proxyUploadHelperText}
                     label={activeTypeMeta.fileLabels?.[1] || '파일 2'}
                     mode="file"
                     readOnly={!canUploadAssets}
