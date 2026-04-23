@@ -127,8 +127,6 @@ async function loadPagedAlbumUploadList(
     return null;
   }
 
-  const accessibleSites = await loadAccessibleSites(token, request, query);
-  const sitesById = new Map(accessibleSites.map((site) => [site.id, site] as const));
   const limit = normalizePageLimit(query.limit);
   const offset = normalizePageOffset(query.offset);
 
@@ -160,7 +158,7 @@ async function loadPagedAlbumUploadList(
     offset,
     rows: response.rows
       .map((asset) => mapBackendPhotoAsset(asset))
-      .map((asset) => buildPhotoAlbumItemFromAsset(asset, sitesById.get(asset.siteId))),
+      .map((asset) => buildPhotoAlbumItemFromAsset(asset, null)),
     total: response.total,
   };
 }
