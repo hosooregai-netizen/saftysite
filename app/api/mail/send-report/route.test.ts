@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { SafetyServerApiError } from '@/server/admin/safetyApiServer';
-import { handleSendReportPost } from './route';
+import { handleSendReportPost } from './routeHandler';
 import {
   buildOversizeReportFallbackBody,
   buildQueuedMailMessage,
