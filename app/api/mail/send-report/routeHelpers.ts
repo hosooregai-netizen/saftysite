@@ -42,6 +42,24 @@ function extractReportKeyFromOriginalPdfUrl(value: string) {
   }
 }
 
+function buildReportOpenUrl(reportKey: string, requestUrl?: string | null) {
+  const normalizedReportKey = normalizeText(reportKey);
+  const normalizedRequestUrl = normalizeText(requestUrl);
+  if (!normalizedReportKey || !normalizedRequestUrl) {
+    return '';
+  }
+
+  try {
+    const baseUrl = new URL(normalizedRequestUrl).origin;
+    return new URL(
+      `/admin/report-open?reportKey=${encodeURIComponent(normalizedReportKey)}`,
+      baseUrl,
+    ).toString();
+  } catch {
+    return '';
+  }
+}
+
 function stripHtml(value: string) {
   return value
     .replace(/<style[\s\S]*?<\/style>/gi, ' ')
@@ -166,31 +184,43 @@ export function buildOversizeReportFallbackBody(input: {
   const reportKey =
     normalizeText(input.reportKey) ||
     extractReportKeyFromOriginalPdfUrl(input.reportAttachment.download_url || '');
-  const downloadUrl = buildMailReportDownloadUrl({
-    accessToken: normalizeText(input.accessToken),
-    filename:
-      normalizeText(input.reportFilename) ||
-      normalizeText(input.reportTitle) ||
-      normalizeText(input.reportAttachment.filename) ||
-      `${reportKey || 'report'}.pdf`,
-    reportKey,
-    requestUrl: input.requestUrl,
-  });
-  if (!downloadUrl) {
-    return originalBody;
-  }
-
   const reportLabel =
     normalizeText(input.reportFilename) ||
     normalizeText(input.reportTitle) ||
     normalizeText(input.reportAttachment.filename) ||
     '보고서 PDF';
+  let downloadUrl = '';
+
+  try {
+    downloadUrl = buildMailReportDownloadUrl({
+      accessToken: normalizeText(input.accessToken),
+      filename: reportLabel,
+      reportKey,
+      requestUrl: input.requestUrl,
+    });
+  } catch {
+    downloadUrl = buildReportOpenUrl(reportKey, input.requestUrl);
+  }
+
+  if (!downloadUrl) {
+    downloadUrl = buildReportOpenUrl(reportKey, input.requestUrl);
+  }
+
+  if (!downloadUrl) {
+    return originalBody;
+  }
+
+  const usesBrowserOpenLink = downloadUrl.includes('/admin/report-open?');
 
   return [
     originalBody,
     '<hr />',
-    '<p>보고서 첨부 파일 용량이 커서 외부 다운로드 링크로 대체했습니다.</p>',
-    '<p>링크는 일정 기간 뒤 만료될 수 있습니다.</p>',
+    usesBrowserOpenLink
+      ? '<p>보고서 첨부 파일 용량이 커서 앱에서 여는 링크로 대체했습니다.</p>'
+      : '<p>보고서 첨부 파일 용량이 커서 외부 다운로드 링크로 대체했습니다.</p>',
+    usesBrowserOpenLink
+      ? '<p>링크를 열면 앱 로그인 후 보고서를 확인할 수 있습니다.</p>'
+      : '<p>링크는 일정 기간 뒤 만료될 수 있습니다.</p>',
     `<p><a href="${escapeHtml(downloadUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(reportLabel)}</a></p>`,
   ].join('');
 }

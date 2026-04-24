@@ -102,6 +102,55 @@ test('buildOversizeReportFallbackBody falls back to report-open when the report 
   }
 });
 
+test('buildOversizeReportFallbackBody falls back to report-open when the public download secret is missing', () => {
+  const originalSecret = process.env.MAIL_REPORT_DOWNLOAD_SECRET;
+  const originalAdminPassword = process.env.SAFETY_ADMIN_PASSWORD;
+  const originalLivePassword = process.env.LIVE_SAFETY_PASSWORD;
+  delete process.env.MAIL_REPORT_DOWNLOAD_SECRET;
+  delete process.env.SAFETY_ADMIN_PASSWORD;
+  delete process.env.LIVE_SAFETY_PASSWORD;
+
+  try {
+    const body = buildOversizeReportFallbackBody({
+      accessToken: 'token-no-secret',
+      body: '<p>본문</p>',
+      reportAttachment: {
+        content_type: 'application/pdf',
+        download_url: 'https://app.example.com/api/admin/reports/legacy%3Atechnical_guidance%3A440160/original-pdf',
+        filename: 'legacy-admin-report-2025-06-23-440160.pdf',
+      },
+      reportKey: 'legacy:technical_guidance:440160',
+      reportTitle: '2025년 교통안전시설(안전표지) 유지보수공사(연간단가) 2025-06-23 3차 기술지도 보고서',
+      requestUrl: 'https://app.example.com/api/mail/send-report',
+    });
+
+    assert.match(body, /앱에서 여는 링크로 대체/);
+    assert.match(body, /앱 로그인 후 보고서를 확인/);
+    const hrefMatch = body.match(/href="([^"]+)"/);
+    assert.ok(hrefMatch?.[1]);
+    const downloadUrl = new URL(hrefMatch[1]);
+    assert.equal(downloadUrl.origin, 'https://app.example.com');
+    assert.equal(downloadUrl.pathname, '/admin/report-open');
+    assert.equal(downloadUrl.searchParams.get('reportKey'), 'legacy:technical_guidance:440160');
+  } finally {
+    if (originalSecret === undefined) {
+      delete process.env.MAIL_REPORT_DOWNLOAD_SECRET;
+    } else {
+      process.env.MAIL_REPORT_DOWNLOAD_SECRET = originalSecret;
+    }
+    if (originalAdminPassword === undefined) {
+      delete process.env.SAFETY_ADMIN_PASSWORD;
+    } else {
+      process.env.SAFETY_ADMIN_PASSWORD = originalAdminPassword;
+    }
+    if (originalLivePassword === undefined) {
+      delete process.env.LIVE_SAFETY_PASSWORD;
+    } else {
+      process.env.LIVE_SAFETY_PASSWORD = originalLivePassword;
+    }
+  }
+});
+
 test('getMailAttachmentPayloadSizeBytes prefers size_bytes and decodes base64 payloads', () => {
   assert.equal(getMailAttachmentPayloadSizeBytes({ size_bytes: 1234 }), 1234);
   assert.equal(
