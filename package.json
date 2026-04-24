@@ -23,6 +23,7 @@
     "smoke:erp": "tsx scripts/smokeClient.ts",
     "smoke:real:admin": "tsx scripts/smokeRealAdmin.ts",
     "benchmark:mail-send": "tsx scripts/benchmarkMailSend.ts",
+    "smoke:real:admin:safe": "tsx scripts/smokeSafeAdmin.ts",
     "verify:erp-live": "tsx scripts/verifyErpLiveContracts.ts",
     "probe:api-live": "tsx scripts/probeSafetyApiLive.ts",
     "verify:api-live-budgets": "tsx scripts/probeSafetyApiLive.ts --enforce-budgets",
