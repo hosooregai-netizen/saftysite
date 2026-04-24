@@ -965,6 +965,13 @@ export interface SafetyBackendMailThreadDetail {
   messages: SafetyBackendMailMessage[];
 }
 
+export interface SafetyBackendMailRecipientSuggestion {
+  email: string;
+  last_used_at: string | null;
+  name: string | null;
+  usage_count: number;
+}
+
 export interface SafetyBackendSmsProviderStatus {
   provider: string;
   enabled: boolean;

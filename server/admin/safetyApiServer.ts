@@ -29,6 +29,7 @@ import type {
   SafetyBackendMailAccount,
   SafetyBackendMailProviderStatusResponse,
   SafetyBackendMailMessage,
+  SafetyBackendMailRecipientSuggestion,
   SafetyBackendMailThread,
   SafetyBackendMailThreadDetail,
   SafetyBackendExcelApplyResult,
@@ -1307,6 +1308,19 @@ export function fetchSafetyMailThreadsServer(
 ): Promise<{ rows: SafetyBackendMailThread[]; total: number; limit: number; offset: number }> {
   return requestSafetyAdminServer<{ rows: SafetyBackendMailThread[]; total: number; limit: number; offset: number }>(
     withQuery('/mail/threads', params),
+    {},
+    token,
+    request,
+  );
+}
+
+export function fetchSafetyMailRecipientSuggestionsServer(
+  token: string,
+  params: Record<string, string | number | boolean | null | undefined>,
+  request: Request | null = null,
+): Promise<{ rows: SafetyBackendMailRecipientSuggestion[] }> {
+  return requestSafetyAdminServer<{ rows: SafetyBackendMailRecipientSuggestion[] }>(
+    withQuery('/mail/recipient-suggestions', params),
     {},
     token,
     request,
