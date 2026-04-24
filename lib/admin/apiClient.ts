@@ -106,6 +106,7 @@ export function fetchAdminReports(input: {
   offset?: number;
   qualityStatus?: string;
   query?: string;
+  reportKey?: string;
   reportType?: string;
   siteId?: string;
   sortDir?: TableSortDirection;
@@ -127,6 +128,7 @@ export function fetchAdminReports(input: {
       offset: input.offset,
       quality_status: input.qualityStatus,
       query: input.query,
+      report_key: input.reportKey,
       report_type: input.reportType,
       site_id: input.siteId,
       sort_by: input.sortBy,

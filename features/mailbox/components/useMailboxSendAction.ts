@@ -53,6 +53,10 @@ function normalizeText(value: unknown) {
   return typeof value === 'string' ? value.trim() : '';
 }
 
+function isQueuedMailMessageId(value: unknown) {
+  return normalizeText(value).startsWith('queued:mail-report:');
+}
+
 function resolveSenderName(
   currentUser: UseMailboxSendActionParams['currentUser'],
   selectedAccount: MailAccount,
@@ -151,9 +155,9 @@ export function useMailboxSendAction({
       }
       if (attachments.length > 0) {
         setMailSendProgress({
-          detail: `첨부 파일 ${attachments.length}건을 메일 전송 형식으로 준비하고 있습니다.`,
+          detail: `첨부 파일 ${attachments.length}건을 HTTPS 자산으로 업로드하고 있습니다.`,
           percent: 54,
-          title: '첨부 파일 정리 중',
+          title: '첨부 파일 업로드 중',
         });
         for (const attachment of attachments) {
           normalizedAttachments.push(await buildFileAttachmentPayload(attachment.file));
@@ -165,8 +169,9 @@ export function useMailboxSendAction({
         title: '메일 발송 중',
       });
       const recipients = normalizedRecipients.map((email) => ({ email, name: null }));
+      let sentMessageId = '';
       if (composeMode === 'report' && selectedReport?.reportKey) {
-        await sendReportMail({
+        const sent = await sendReportMail({
           accountId: selectedAccount.id,
           attachments: normalizedAttachments,
           body: compose.body,
@@ -182,8 +187,9 @@ export function useMailboxSendAction({
           subject: compose.subject,
           to: recipients,
         });
+        sentMessageId = sent.id;
       } else {
-        await sendMail({
+        const sent = await sendMail({
           accountId: selectedAccount.id,
           attachments: normalizedAttachments,
           body: compose.body,
@@ -195,6 +201,7 @@ export function useMailboxSendAction({
           threadId: composeMode === 'reply' ? threadDetail?.thread.id || '' : '',
           to: recipients,
         });
+        sentMessageId = sent.id;
       }
       setMailSendProgress({
         detail: '발송 결과를 메일함 목록에 반영하고 있습니다.',
@@ -202,11 +209,13 @@ export function useMailboxSendAction({
         title: '목록 새로고침 중',
       });
       setNotice(
-        normalizedAttachments.length > 0
-          ? `메일을 발송했습니다. 첨부 ${normalizedAttachments.length + (composeMode === 'report' ? 1 : 0)}건을 함께 보냈습니다.`
-          : composeMode === 'report'
-            ? '메일을 발송했습니다. 보고서 PDF를 함께 보냈습니다.'
-          : '메일을 발송했습니다.',
+        isQueuedMailMessageId(sentMessageId)
+          ? '메일 발송을 접수했습니다. 큰 보고서는 다운로드 링크 메일로 백그라운드 전송됩니다.'
+          : normalizedAttachments.length > 0
+            ? `메일을 발송했습니다. 첨부 ${normalizedAttachments.length + (composeMode === 'report' ? 1 : 0)}건을 함께 보냈습니다.`
+            : composeMode === 'report'
+              ? '메일을 발송했습니다. 보고서 PDF를 함께 보냈습니다.'
+              : '메일을 발송했습니다.',
       );
       if (composeMode === 'report') {
         setSelectedReport(null);

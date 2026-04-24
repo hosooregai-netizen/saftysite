@@ -1,4 +1,5 @@
 import type { MailAttachmentPayload, MailMessage, MailThread } from '@/types/mail';
+import { uploadSafetyAssetFile } from '@/lib/safetyApi/assets';
 import type { ComposeState } from './mailboxPanelTypes';
 
 function escapeHtml(value: string) {
@@ -8,19 +9,6 @@ function escapeHtml(value: string) {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
-}
-
-function encodeByteArrayToBase64(bytes: Uint8Array) {
-  let binary = '';
-  const chunkSize = 0x8000;
-  for (let index = 0; index < bytes.length; index += chunkSize) {
-    binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
-  }
-  return btoa(binary);
-}
-
-async function blobToBase64(blob: Blob) {
-  return encodeByteArrayToBase64(new Uint8Array(await blob.arrayBuffer()));
 }
 
 export function stripHtmlToText(value: string) {
@@ -167,9 +155,11 @@ export function buildForwardBody(message: MailMessage) {
 }
 
 export async function buildFileAttachmentPayload(file: File): Promise<MailAttachmentPayload> {
+  const uploaded = await uploadSafetyAssetFile(file);
   return {
     contentType: file.type || 'application/octet-stream',
-    dataBase64: await blobToBase64(file),
+    downloadUrl: uploaded.url,
     filename: file.name,
+    sizeBytes: uploaded.size || file.size,
   };
 }

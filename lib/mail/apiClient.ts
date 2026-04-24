@@ -69,26 +69,6 @@ function withQuery(path: string, params: Record<string, string | null | undefine
   return query ? `${path}?${query}` : path;
 }
 
-const reportPdfPrepareRequests = new Map<string, Promise<void>>();
-
-function buildReportPdfPrepareKey(input: {
-  originalPdfAvailable?: boolean;
-  reportFilename?: string | null;
-  reportKey: string;
-  reportTitle?: string | null;
-  reportType?: string | null;
-  reportUpdatedAt?: string | null;
-}) {
-  return [
-    input.reportKey,
-    input.reportType || '',
-    input.reportTitle || '',
-    input.reportFilename || '',
-    input.reportUpdatedAt || '',
-    input.originalPdfAvailable ? 'original' : 'generated',
-  ].join('::');
-}
-
 export async function fetchMailAccounts() {
   return requestMailApi<{ rows: MailAccount[] }>('/accounts');
 }
@@ -287,15 +267,20 @@ export async function sendMail(input: {
   threadId?: string;
   to: MailRecipient[];
 }) {
+  const attachments = (input.attachments || []).map((attachment) => ({
+    content_type: attachment.contentType,
+    ...(attachment.dataBase64 ? { data_base64: attachment.dataBase64 } : {}),
+    ...(attachment.downloadHeaders ? { download_headers: attachment.downloadHeaders } : {}),
+    ...(attachment.downloadUrl ? { download_url: attachment.downloadUrl } : {}),
+    filename: attachment.filename,
+    ...(typeof attachment.sizeBytes === 'number' ? { size_bytes: attachment.sizeBytes } : {}),
+  }));
+
   return requestMailApi<MailMessage>('/send', {
     method: 'POST',
     body: JSON.stringify({
       account_id: input.accountId,
-      attachments: (input.attachments || []).map((attachment) => ({
-        content_type: attachment.contentType,
-        data_base64: attachment.dataBase64,
-        filename: attachment.filename,
-      })),
+      attachments,
       body: input.body,
       sender_name: input.fromName || '',
       headquarter_id: input.headquarterId || '',
@@ -324,21 +309,20 @@ export async function sendReportMail(input: {
   subject: string;
   to: MailRecipient[];
 }) {
-  const prepareKey = buildReportPdfPrepareKey(input);
-  const pendingPrepare = reportPdfPrepareRequests.get(prepareKey);
-  if (pendingPrepare) {
-    await pendingPrepare.catch(() => undefined);
-  }
+  const attachments = (input.attachments || []).map((attachment) => ({
+    content_type: attachment.contentType,
+    ...(attachment.dataBase64 ? { data_base64: attachment.dataBase64 } : {}),
+    ...(attachment.downloadHeaders ? { download_headers: attachment.downloadHeaders } : {}),
+    ...(attachment.downloadUrl ? { download_url: attachment.downloadUrl } : {}),
+    filename: attachment.filename,
+    ...(typeof attachment.sizeBytes === 'number' ? { size_bytes: attachment.sizeBytes } : {}),
+  }));
 
   return requestMailApi<MailMessage>('/send-report', {
     method: 'POST',
     body: JSON.stringify({
       account_id: input.accountId,
-      attachments: (input.attachments || []).map((attachment) => ({
-        content_type: attachment.contentType,
-        data_base64: attachment.dataBase64,
-        filename: attachment.filename,
-      })),
+      attachments,
       body: input.body,
       sender_name: input.fromName || '',
       headquarter_id: input.headquarterId || '',
@@ -376,13 +360,7 @@ export function prepareReportMailAttachment(input: {
     return Promise.resolve();
   }
 
-  const prepareKey = buildReportPdfPrepareKey(input);
-  const existing = reportPdfPrepareRequests.get(prepareKey);
-  if (existing) {
-    return existing;
-  }
-
-  const nextRequest = requestMailApi<{ prepared: boolean; skipped: string | null }>(
+  return requestMailApi<{ prepared: boolean; skipped: string | null }>(
     '/prepare-report',
     {
       method: 'POST',
@@ -404,13 +382,7 @@ export function prepareReportMailAttachment(input: {
       }),
     },
   )
-    .then(() => undefined)
-    .catch((error) => {
-      reportPdfPrepareRequests.delete(prepareKey);
-      throw error;
-    });
-  reportPdfPrepareRequests.set(prepareKey, nextRequest);
-  return nextRequest;
+    .then(() => undefined);
 }
 
 export async function syncMail() {

@@ -7,6 +7,7 @@ import type { ControllerReportRow } from '@/types/admin';
 export interface OriginalPdfDialogState {
   error: string | null;
   loading: boolean;
+  pdfFilename: string | null;
   pdfUrl: string | null;
   reason: string | null;
   row: ControllerReportRow | null;
@@ -26,6 +27,7 @@ export function ReportsOriginalPdfDialog({
   const row = dialog.row;
   const title = row?.reportTitle || row?.periodLabel || row?.reportKey || '원본 PDF';
   const viewerUrl = dialog.pdfUrl ? `${dialog.pdfUrl}#toolbar=0&navpanes=0` : '';
+  const downloadFilename = dialog.pdfFilename || `${title}.pdf`;
 
   return (
     <AppModal
@@ -36,6 +38,15 @@ export function ReportsOriginalPdfDialog({
       size="large"
       actions={
         <>
+          {dialog.pdfUrl && !dialog.error ? (
+            <a
+              href={dialog.pdfUrl}
+              download={downloadFilename}
+              className="app-button app-button-secondary"
+            >
+              PDF 다운로드
+            </a>
+          ) : null}
           {row && dialog.error ? (
             <button
               type="button"

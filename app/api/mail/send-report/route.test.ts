@@ -4,11 +4,14 @@ import test from 'node:test';
 import { SafetyServerApiError } from '@/server/admin/safetyApiServer';
 import {
   buildOversizeReportFallbackBody,
+  buildQueuedMailMessage,
   getMailAttachmentPayloadSizeBytes,
   isOversizeMailAttachmentError,
   MAIL_ATTACHMENT_TOTAL_LIMIT_BYTES,
+  materializeMailAttachmentDownload,
   shouldSendReportAsDownloadLink,
 } from './routeHelpers';
+import { readMailReportDownloadToken } from '@/server/mail/reportDownloadLink';
 
 test('isOversizeMailAttachmentError matches backend attachment limit failures', () => {
   assert.equal(
@@ -28,7 +31,12 @@ test('isOversizeMailAttachmentError matches backend attachment limit failures', 
 });
 
 test('buildOversizeReportFallbackBody appends a safe download link for oversized report attachments', () => {
+  const originalSecret = process.env.MAIL_REPORT_DOWNLOAD_SECRET;
+  process.env.MAIL_REPORT_DOWNLOAD_SECRET = 'mail-report-download-test-secret';
+
+  try {
   const body = buildOversizeReportFallbackBody({
+    accessToken: 'token-123',
     body: '<p>본문</p>',
     reportAttachment: {
       content_type: 'application/pdf',
@@ -36,11 +44,111 @@ test('buildOversizeReportFallbackBody appends a safe download link for oversized
       filename: 'legacy-admin-report-2025-05-23-427520.pdf',
     },
     reportFilename: '2025년 교통안전시설(안전표지) 유지보수공사(연간단가) 2025-05-23 2차 기술지도 보고서.pdf',
+    requestUrl: 'https://app.example.com/api/mail/send-report',
   });
 
-  assert.match(body, /첨부 파일 용량이 커서 다운로드 링크로 대체/);
+  assert.match(body, /첨부 파일 용량이 커서 외부 다운로드 링크로 대체/);
+  assert.match(body, /일정 기간 뒤 만료될 수 있습니다/);
   assert.match(body, /2025년 교통안전시설\(안전표지\) 유지보수공사\(연간단가\)/);
-  assert.match(body, /href="https:\/\/app\.example\.com\/api\/admin\/reports\//);
+  const hrefMatch = body.match(/href="([^"]+)"/);
+  assert.ok(hrefMatch?.[1]);
+  const downloadUrl = new URL(hrefMatch[1]);
+  assert.equal(downloadUrl.origin, 'https://app.example.com');
+  assert.equal(downloadUrl.pathname, '/api/mail/report-download');
+  const payload = readMailReportDownloadToken(downloadUrl.searchParams.get('token') || '');
+  assert.equal(payload.reportKey, 'legacy:technical_guidance:427520');
+  assert.equal(payload.accessToken, 'token-123');
+  } finally {
+    if (originalSecret === undefined) {
+      delete process.env.MAIL_REPORT_DOWNLOAD_SECRET;
+    } else {
+      process.env.MAIL_REPORT_DOWNLOAD_SECRET = originalSecret;
+    }
+  }
+});
+
+test('buildOversizeReportFallbackBody falls back to report-open when the report attachment uses a raw asset url', () => {
+  const originalSecret = process.env.MAIL_REPORT_DOWNLOAD_SECRET;
+  process.env.MAIL_REPORT_DOWNLOAD_SECRET = 'mail-report-download-test-secret';
+
+  try {
+  const body = buildOversizeReportFallbackBody({
+    accessToken: 'token-raw-asset',
+    body: '<p>본문</p>',
+    reportAttachment: {
+      content_type: 'application/pdf',
+      download_url: 'http://52.64.85.49/uploads/content-items/legacy-report-427520.pdf',
+      filename: 'legacy-admin-report-2025-05-23-427520.pdf',
+    },
+    reportKey: 'legacy:technical_guidance:427520',
+    reportTitle: '2025년 교통안전시설(안전표지) 유지보수공사(연간단가) 2025-05-23 2차 기술지도 보고서',
+    requestUrl: 'http://127.0.0.1:3211/api/mail/send-report',
+  });
+
+  const hrefMatch = body.match(/href="([^"]+)"/);
+  assert.ok(hrefMatch?.[1]);
+  const downloadUrl = new URL(hrefMatch[1]);
+  assert.equal(downloadUrl.origin, 'http://127.0.0.1:3211');
+  assert.equal(downloadUrl.pathname, '/api/mail/report-download');
+  const payload = readMailReportDownloadToken(downloadUrl.searchParams.get('token') || '');
+  assert.equal(payload.reportKey, 'legacy:technical_guidance:427520');
+  assert.equal(payload.accessToken, 'token-raw-asset');
+  } finally {
+    if (originalSecret === undefined) {
+      delete process.env.MAIL_REPORT_DOWNLOAD_SECRET;
+    } else {
+      process.env.MAIL_REPORT_DOWNLOAD_SECRET = originalSecret;
+    }
+  }
+});
+
+test('buildOversizeReportFallbackBody falls back to report-open when the public download secret is missing', () => {
+  const originalSecret = process.env.MAIL_REPORT_DOWNLOAD_SECRET;
+  const originalAdminPassword = process.env.SAFETY_ADMIN_PASSWORD;
+  const originalLivePassword = process.env.LIVE_SAFETY_PASSWORD;
+  delete process.env.MAIL_REPORT_DOWNLOAD_SECRET;
+  delete process.env.SAFETY_ADMIN_PASSWORD;
+  delete process.env.LIVE_SAFETY_PASSWORD;
+
+  try {
+    const body = buildOversizeReportFallbackBody({
+      accessToken: 'token-no-secret',
+      body: '<p>본문</p>',
+      reportAttachment: {
+        content_type: 'application/pdf',
+        download_url: 'https://app.example.com/api/admin/reports/legacy%3Atechnical_guidance%3A440160/original-pdf',
+        filename: 'legacy-admin-report-2025-06-23-440160.pdf',
+      },
+      reportKey: 'legacy:technical_guidance:440160',
+      reportTitle: '2025년 교통안전시설(안전표지) 유지보수공사(연간단가) 2025-06-23 3차 기술지도 보고서',
+      requestUrl: 'https://app.example.com/api/mail/send-report',
+    });
+
+    assert.match(body, /앱에서 여는 링크로 대체/);
+    assert.match(body, /앱 로그인 후 보고서를 확인/);
+    const hrefMatch = body.match(/href="([^"]+)"/);
+    assert.ok(hrefMatch?.[1]);
+    const downloadUrl = new URL(hrefMatch[1]);
+    assert.equal(downloadUrl.origin, 'https://app.example.com');
+    assert.equal(downloadUrl.pathname, '/admin/report-open');
+    assert.equal(downloadUrl.searchParams.get('reportKey'), 'legacy:technical_guidance:440160');
+  } finally {
+    if (originalSecret === undefined) {
+      delete process.env.MAIL_REPORT_DOWNLOAD_SECRET;
+    } else {
+      process.env.MAIL_REPORT_DOWNLOAD_SECRET = originalSecret;
+    }
+    if (originalAdminPassword === undefined) {
+      delete process.env.SAFETY_ADMIN_PASSWORD;
+    } else {
+      process.env.SAFETY_ADMIN_PASSWORD = originalAdminPassword;
+    }
+    if (originalLivePassword === undefined) {
+      delete process.env.LIVE_SAFETY_PASSWORD;
+    } else {
+      process.env.LIVE_SAFETY_PASSWORD = originalLivePassword;
+    }
+  }
 });
 
 test('getMailAttachmentPayloadSizeBytes prefers size_bytes and decodes base64 payloads', () => {
@@ -96,4 +204,58 @@ test('shouldSendReportAsDownloadLink switches oversized report attachments to a 
     }),
     false,
   );
+});
+
+test('materializeMailAttachmentDownload converts download_url attachments into base64 payloads', async () => {
+  const previousFetch = globalThis.fetch;
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    assert.equal(String(input), 'https://app.example.com/api/admin/reports/report-1/original-pdf');
+    assert.equal(new Headers(init?.headers).get('authorization'), 'Bearer token-1');
+    return new Response(new Uint8Array([37, 80, 68, 70]), {
+      headers: {
+        'content-type': 'application/pdf',
+      },
+    });
+  }) as typeof fetch;
+
+  try {
+    const attachment = await materializeMailAttachmentDownload({
+      content_type: 'application/pdf',
+      download_headers: {
+        Authorization: 'Bearer token-1',
+      },
+      download_url: 'https://app.example.com/api/admin/reports/report-1/original-pdf',
+      filename: 'report.pdf',
+      size_bytes: 4,
+    });
+
+    assert.equal(attachment.download_url, undefined);
+    assert.equal(attachment.filename, 'report.pdf');
+    assert.equal(attachment.data_base64, 'JVBERg==');
+    assert.equal(attachment.size_bytes, 4);
+  } finally {
+    globalThis.fetch = previousFetch;
+  }
+});
+
+test('buildQueuedMailMessage returns a mailbox-safe placeholder response for queued oversized sends', () => {
+  const message = buildQueuedMailMessage({
+    accountId: 'account-1',
+    body: '<p>본문</p><hr /><p>보고서 첨부 파일 용량이 커서 다운로드 링크로 대체했습니다.</p>',
+    fromEmail: 'sender@example.com',
+    fromName: '관제',
+    headquarterId: 'hq-1',
+    id: 'queued:mail-report:test-1',
+    queuedAt: '2026-04-24T00:30:00.000Z',
+    reportKey: 'legacy:technical_guidance:427520',
+    siteId: 'site-1',
+    subject: '링크 메일 접수',
+    to: [{ email: 'rlqls505@naver.com', name: null }],
+  });
+
+  assert.equal(message.id, 'queued:mail-report:test-1');
+  assert.equal(message.threadId, 'queued:mail-report:test-1');
+  assert.equal(message.sentAt, '2026-04-24T00:30:00.000Z');
+  assert.match(message.bodyPreview, /다운로드 링크로 대체/);
+  assert.equal(message.to[0]?.email, 'rlqls505@naver.com');
 });

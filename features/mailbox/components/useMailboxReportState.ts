@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { fetchAdminReports } from '@/lib/admin/apiClient';
 import { fetchSafetyReportList, readSafetyAuthToken } from '@/lib/safetyApi';
 import { getMailAttachmentUnavailableReason, isMailAttachmentReady } from '@/lib/mail/reportAttachmentEligibility';
 import type { InspectionSite } from '@/types/inspectionSession/session';
@@ -9,10 +8,12 @@ import type { SafetyReportListItem, SafetySite } from '@/types/backend';
 import type { MailboxReportOption, SelectedReportContext } from './mailboxPanelTypes';
 import {
   doesReportOptionMatchSiteFilter,
-  mapAdminReportRowToMailboxReportOption,
   mapSafetyReportListItemToMailboxReportOption,
-  mergeMailboxReportOptions,
 } from './mailboxReportPickerHelpers';
+import {
+  fetchCanonicalAdminMailboxReportOptions,
+  fetchCanonicalAdminMailboxSelectedReport,
+} from './adminMailboxReportData';
 
 const ADMIN_REPORT_PICKER_PAGE_SIZE = 20;
 
@@ -33,7 +34,6 @@ interface UseMailboxReportStateParams {
 export function useMailboxReportState({
   adminReports,
   adminSites,
-  headquarterId,
   isAuthenticated,
   isDemoMode,
   isReady,
@@ -46,66 +46,54 @@ export function useMailboxReportState({
   const [reportPickerLoading, setReportPickerLoading] = useState(false);
   const [reportSearch, setReportSearch] = useState('');
   const [reportSiteFilter, setReportSiteFilter] = useState('');
-  const [adminModalReports, setAdminModalReports] = useState<MailboxReportOption[]>([]);
-  const [adminModalReportTotal, setAdminModalReportTotal] = useState(0);
+  const [adminCanonicalReports, setAdminCanonicalReports] = useState<MailboxReportOption[]>([]);
+  const [adminCanonicalReportTotal, setAdminCanonicalReportTotal] = useState(0);
+  const [adminCanonicalReportsLoaded, setAdminCanonicalReportsLoaded] = useState(false);
+  const [adminCanonicalReportsFailed, setAdminCanonicalReportsFailed] = useState(false);
   const [reportPickerPage, setReportPickerPage] = useState(1);
   const [workerModalReports, setWorkerModalReports] = useState<MailboxReportOption[]>([]);
   const [selectedReport, setSelectedReport] = useState<SelectedReportContext | null>(null);
 
   useEffect(() => {
-    setSelectedReport(
-      reportKey || siteId || headquarterId
-          ? {
-            attachmentReady: isMailAttachmentReady({
-              originalPdfAvailable: false,
-              reportKey,
-              workflowStatus: 'draft',
-            }),
-            attachmentUnavailableReason: getMailAttachmentUnavailableReason({
-              originalPdfAvailable: false,
-              reportKey,
-              workflowStatus: 'draft',
-            }),
-            headquarterId,
-            headquarterName: '',
-            recipientEmail: '',
-            documentKind: null,
-            meta: {},
-            originalPdfAvailable: false,
-            originalPdfDownloadPath: reportKey
-              ? `/api/admin/reports/${encodeURIComponent(reportKey)}/original-pdf`
-              : '',
-            reportKey,
-            reportType: null,
-            reportTitle: reportKey || '보고서',
-            siteId,
-            siteName: '',
-            updatedAt: null,
-            visitDate: null,
-            workflowStatus: 'draft',
-          }
-        : null,
-    );
+    setSelectedReport(null);
     setReportSiteFilter(siteId || '');
-  }, [headquarterId, reportKey, siteId]);
+  }, [siteId, reportKey]);
 
   const adminSiteById = useMemo(
     () => new Map(adminSites.map((item) => [item.id, item])),
     [adminSites],
   );
-  const adminReportOptions = useMemo(
+  const adminFallbackReportOptions = useMemo(
     () =>
       adminReports.map((item) => mapSafetyReportListItemToMailboxReportOption(item, adminSiteById)),
     [adminReports, adminSiteById],
   );
+  const adminReportOptions = useMemo(() => {
+    if (isDemoMode || !isAuthenticated || !isReady) {
+      return adminFallbackReportOptions;
+    }
+    if (!adminCanonicalReportsLoaded && !adminCanonicalReportsFailed) {
+      return [];
+    }
+    if (adminCanonicalReports.length > 0 || !adminCanonicalReportsFailed) {
+      return adminCanonicalReports;
+    }
+    return adminFallbackReportOptions;
+  }, [
+    adminCanonicalReports,
+    adminCanonicalReportsFailed,
+    adminCanonicalReportsLoaded,
+    adminFallbackReportOptions,
+    isAuthenticated,
+    isDemoMode,
+    isReady,
+  ]);
   const reportOptions = useMemo(
     () =>
       mode === 'admin'
-        ? reportPickerOpen
-          ? adminModalReports
-          : adminReportOptions
+        ? adminReportOptions
         : workerModalReports,
-    [adminModalReports, adminReportOptions, mode, reportPickerOpen, workerModalReports],
+    [adminReportOptions, mode, workerModalReports],
   );
 
   useEffect(() => {
@@ -113,7 +101,7 @@ export function useMailboxReportState({
   }, [reportPickerOpen, reportSearch, reportSiteFilter]);
 
   useEffect(() => {
-    if (isDemoMode || mode !== 'admin' || !reportPickerOpen || !isAuthenticated || !isReady) {
+    if (isDemoMode || mode !== 'admin' || !isAuthenticated || !isReady) {
       return;
     }
 
@@ -121,46 +109,26 @@ export function useMailboxReportState({
     void (async () => {
       try {
         setReportPickerLoading(true);
-        const normalizedQuery = reportSearch.trim();
-        const selectedSite = reportSiteFilter ? adminSiteById.get(reportSiteFilter) ?? null : null;
-        const fetchPage = (input: { query?: string; siteId?: string }) =>
-          fetchAdminReports({
-            limit: ADMIN_REPORT_PICKER_PAGE_SIZE,
-            mailAttachableOnly: true,
-            offset: (reportPickerPage - 1) * ADMIN_REPORT_PICKER_PAGE_SIZE,
-            query: input.query,
-            siteId: input.siteId,
-            sortBy: 'updatedAt',
-            sortDir: 'desc',
-          });
-        let response = await fetchPage({
-          query: normalizedQuery || undefined,
-          siteId: reportSiteFilter || undefined,
+        const response = await fetchCanonicalAdminMailboxReportOptions({
+          adminSiteById,
+          page: reportPickerPage,
+          reportPickerOpen,
+          reportSearch,
+          reportSiteFilter,
         });
-        let rows = response.rows;
-
-        if (response.total === 0 && selectedSite?.site_name && reportSiteFilter) {
-          const fallbackResponse = await fetchPage({ query: selectedSite.site_name });
-          rows = fallbackResponse.rows;
-          response = fallbackResponse;
-        }
 
         if (cancelled) return;
-        setAdminModalReports(
-          mergeMailboxReportOptions(
-            rows
-              .map((row) => mapAdminReportRowToMailboxReportOption(row, adminSiteById, selectedSite))
-              .filter((option) =>
-                doesReportOptionMatchSiteFilter(option, reportSiteFilter, selectedSite),
-              ),
-          ),
-        );
-        setAdminModalReportTotal(response.total);
+        setAdminCanonicalReports(response.options);
+        setAdminCanonicalReportTotal(response.total);
+        setAdminCanonicalReportsFailed(false);
+        setAdminCanonicalReportsLoaded(true);
       } catch (error) {
         if (!cancelled) {
           console.error('Failed to load admin mailbox report options', error);
-          setAdminModalReports([]);
-          setAdminModalReportTotal(0);
+          setAdminCanonicalReports([]);
+          setAdminCanonicalReportTotal(0);
+          setAdminCanonicalReportsFailed(true);
+          setAdminCanonicalReportsLoaded(true);
         }
       } finally {
         if (!cancelled) {
@@ -183,6 +151,41 @@ export function useMailboxReportState({
     reportSearch,
     reportSiteFilter,
   ]);
+
+  useEffect(() => {
+    if (
+      isDemoMode ||
+      mode !== 'admin' ||
+      !reportKey ||
+      !isAuthenticated ||
+      !isReady
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const nextSelectedReport = await fetchCanonicalAdminMailboxSelectedReport({
+          adminSiteById,
+          reportKey,
+          siteId,
+        });
+        if (!cancelled) {
+          setSelectedReport(nextSelectedReport);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.error('Failed to hydrate canonical admin mailbox report selection', error);
+          setSelectedReport(null);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [adminSiteById, isAuthenticated, isDemoMode, isReady, mode, reportKey, siteId]);
 
   useEffect(() => {
     if (isDemoMode || mode !== 'worker' || !reportPickerOpen || !isAuthenticated || !isReady) {
@@ -298,7 +301,7 @@ export function useMailboxReportState({
   }, [adminSiteById, mode, reportOptions, reportSearch, reportSiteFilter]);
 
   const reportPickerTotal =
-    mode === 'admin' && reportPickerOpen ? adminModalReportTotal : filteredReportOptions.length;
+    mode === 'admin' && reportPickerOpen ? adminCanonicalReportTotal : filteredReportOptions.length;
   const reportPickerPageCount = Math.max(
     1,
     Math.ceil(reportPickerTotal / ADMIN_REPORT_PICKER_PAGE_SIZE),

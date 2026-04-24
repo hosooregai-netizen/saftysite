@@ -17,7 +17,10 @@ export interface MailRecipientSuggestion extends MailRecipient {
 export interface MailAttachmentPayload {
   filename: string;
   contentType: string;
-  dataBase64: string;
+  dataBase64?: string;
+  downloadHeaders?: Record<string, string>;
+  downloadUrl?: string;
+  sizeBytes?: number;
 }
 
 export interface MailAccount {

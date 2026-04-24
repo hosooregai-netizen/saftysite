@@ -6,6 +6,7 @@ import {
   doesReportOptionMatchSiteFilter,
   getReportAttachmentUnavailableReason,
   isReportAttachmentReady,
+  mergeCanonicalMailboxReportOptions,
   mapAdminReportRowToMailboxReportOption,
   mergeMailboxReportOptions,
 } from './mailboxReportPickerHelpers';
@@ -182,4 +183,33 @@ test('merged report options preserve site-specific legacy fallback metadata', ()
   assert.equal(merged[0]?.siteId, 'site-live');
   assert.equal(merged[0]?.originalPdfAvailable, true);
   assert.equal(merged[0]?.siteName, '레거시 매칭 현장');
+});
+
+test('canonical mailbox merge prefers original PDF rows when current and legacy reports share the same identity', () => {
+  const site = buildSite();
+  const current = mapAdminReportRowToMailboxReportOption(
+    buildReportRow({
+      originalPdfAvailable: false,
+      reportKey: 'report-current-1',
+      routeParam: 'report-current-1',
+      siteId: 'site-live',
+    }),
+    new Map([['site-live', site]]),
+  );
+  const legacy = mapAdminReportRowToMailboxReportOption(
+    buildReportRow({
+      originalPdfAvailable: true,
+      originalPdfDownloadPath: '/api/admin/reports/legacy%3Atechnical_guidance%3A9001/original-pdf',
+      reportKey: 'legacy:technical_guidance:9001',
+      routeParam: 'legacy:technical_guidance:9001',
+      siteId: 'site-live',
+    }),
+    new Map([['site-live', site]]),
+  );
+
+  const merged = mergeCanonicalMailboxReportOptions([current, legacy]);
+
+  assert.equal(merged.length, 1);
+  assert.equal(merged[0]?.reportKey, 'legacy:technical_guidance:9001');
+  assert.equal(merged[0]?.originalPdfAvailable, true);
 });
