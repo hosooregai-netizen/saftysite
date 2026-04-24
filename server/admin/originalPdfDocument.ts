@@ -522,16 +522,21 @@ function readPdfDescriptorFromHeaders(headers: Headers) {
 
 
 async function resolveAdminOriginalPdfReference(input: {
+  preferredDownloadPath?: string | null;
   reportKey: string;
   request: Request;
   token: string;
 }) {
   const reportKey = normalizeText(input.reportKey);
+  const preferredDownloadPath = normalizeText(input.preferredDownloadPath);
   const manifestEntry = legacyPdfManifest.get(reportKey) ?? null;
   const shouldUseLegacyManifestDirectly = Boolean(manifestEntry) && reportKey.startsWith('legacy:');
+  const shouldUsePreferredDownloadPathDirectly =
+    Boolean(preferredDownloadPath) &&
+    !/\/api\/admin\/reports\/.+\/original-pdf(?:$|[?#])/i.test(preferredDownloadPath);
 
   let report: SafetyReport | null = null;
-  if (!shouldUseLegacyManifestDirectly) {
+  if (!shouldUseLegacyManifestDirectly && !shouldUsePreferredDownloadPathDirectly) {
     try {
       report = await fetchAdminReportByKey(input.token, reportKey, input.request);
     } catch (error) {
@@ -546,6 +551,7 @@ async function resolveAdminOriginalPdfReference(input: {
       ? (report.meta as Record<string, unknown>)
       : {};
   const archivePath =
+    preferredDownloadPath ||
     readMetaText(meta, 'original_pdf_archive_path') ||
     readMetaText(meta, 'originalPdfArchivePath') ||
     readMetaText(meta, 'original_pdf_download_path') ||
@@ -559,6 +565,7 @@ async function resolveAdminOriginalPdfReference(input: {
     `${reportKey}.pdf`;
   const fileNameCandidates = Array.from(
     new Set([
+      preferredDownloadPath,
       ...(report ? readMetaCandidates(meta, report) : []),
       manifestEntry?.fileName || '',
     ].filter(Boolean)),
@@ -574,6 +581,7 @@ async function resolveAdminOriginalPdfReference(input: {
 }
 
 export async function fetchAdminOriginalPdfDescriptor(input: {
+  preferredDownloadPath?: string | null;
   reportKey: string;
   request: Request;
   token: string;
@@ -619,6 +627,7 @@ export async function fetchAdminOriginalPdfDescriptor(input: {
 }
 
 export async function fetchAdminOriginalPdfDocument(input: {
+  preferredDownloadPath?: string | null;
   reportKey: string;
   request: Request;
   token: string;

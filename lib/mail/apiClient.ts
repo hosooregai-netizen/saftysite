@@ -300,6 +300,7 @@ export async function sendReportMail(input: {
   fromName?: string;
   headquarterId?: string;
   originalPdfAvailable?: boolean;
+  originalPdfDownloadPath?: string | null;
   reportFilename?: string | null;
   reportKey: string;
   reportTitle?: string | null;
@@ -327,8 +328,10 @@ export async function sendReportMail(input: {
       sender_name: input.fromName || '',
       headquarter_id: input.headquarterId || '',
       original_pdf_available: Boolean(input.originalPdfAvailable),
+      original_pdf_download_path: input.originalPdfDownloadPath || '',
       report: {
         original_pdf_available: Boolean(input.originalPdfAvailable),
+        original_pdf_download_path: input.originalPdfDownloadPath || '',
         report_filename: input.reportFilename || '',
         report_key: input.reportKey,
         report_title: input.reportTitle || '',
@@ -350,6 +353,7 @@ export async function sendReportMail(input: {
 
 export function prepareReportMailAttachment(input: {
   originalPdfAvailable?: boolean;
+  originalPdfDownloadPath?: string | null;
   reportFilename?: string | null;
   reportKey: string;
   reportTitle?: string | null;
@@ -366,8 +370,10 @@ export function prepareReportMailAttachment(input: {
       method: 'POST',
       body: JSON.stringify({
         original_pdf_available: Boolean(input.originalPdfAvailable),
+        original_pdf_download_path: input.originalPdfDownloadPath || '',
         report: {
           original_pdf_available: Boolean(input.originalPdfAvailable),
+          original_pdf_download_path: input.originalPdfDownloadPath || '',
           report_filename: input.reportFilename || '',
           report_key: input.reportKey,
           report_title: input.reportTitle || '',

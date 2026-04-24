@@ -165,7 +165,7 @@ test('buildLegacyAdminReportRows maps legacy rows to matched sites and pdf manif
   assert.equal(rows[0]?.originalPdfAvailable, true);
   assert.equal(
     rows[0]?.originalPdfDownloadPath,
-    '/api/admin/reports/legacy%3Atechnical_guidance%3A9001/original-pdf',
+    '/uploads/content-items/sample.pdf',
   );
   assert.equal(rows[0]?.status, 'submitted');
   assert.equal(rows[1]?.siteId, 'site-2');

@@ -218,6 +218,47 @@ test('buildMailReportAttachment inlines small original PDFs during attachment pr
   }
 });
 
+test('buildMailReportAttachment uses the provided originalPdfDownloadPath without refetching report metadata', async () => {
+  const previousFetch = globalThis.fetch;
+  const calls: string[] = [];
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    calls.push(`${init?.method || 'GET'} ${url}`);
+    assert.match(url, /\/uploads\/legacy\/reports\/report-direct-path\.pdf$/);
+    assert.equal(init?.method, 'HEAD');
+    return new Response(null, {
+      headers: {
+        'content-length': '71241257',
+        'content-type': 'application/pdf',
+      },
+    });
+  }) as typeof fetch;
+
+  try {
+    const attachment = await buildMailReportAttachment(
+      new Request('https://app.example.com/api/mail/send-report'),
+      'token-1',
+      {
+        originalPdfAvailable: true,
+        originalPdfDownloadPath: '/uploads/legacy/reports/report-direct-path.pdf',
+        reportKey: 'report-direct-path',
+        reportTitle: '직접 경로 보고서',
+      },
+    );
+
+    assert.equal(calls.length, 1);
+    assert.ok(attachment.download_url);
+    assert.match(
+      attachment.download_url,
+      /\/uploads\/legacy\/reports\/report-direct-path\.pdf$/,
+    );
+    assert.deepEqual(attachment.download_headers, { Authorization: 'Bearer token-1' });
+    assert.equal(attachment.size_bytes, 71241257);
+  } finally {
+    globalThis.fetch = previousFetch;
+  }
+});
+
 test('buildMailReportAttachment posts reportKey to current quarterly PDF route', async () => {
   const previousFetch = globalThis.fetch;
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {

@@ -257,6 +257,7 @@ function applyLegacyOriginalPdfMeta(row: ControllerReportRow): ControllerReportR
     originalPdfAvailable: true,
     originalPdfDownloadPath:
       row.originalPdfDownloadPath ||
+      manifestEntry.archivePath ||
       `/api/admin/reports/${encodeURIComponent(row.reportKey)}/original-pdf`,
   };
 }

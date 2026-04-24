@@ -222,7 +222,8 @@ export function buildLegacyAdminReportRows(input: {
       lifecycleStatus: 'active',
       originalPdfAvailable: Boolean(manifestEntry),
       originalPdfDownloadPath: manifestEntry
-        ? `/api/admin/reports/${encodeURIComponent(reportKey)}/original-pdf`
+        ? manifestEntry.archivePath ||
+          `/api/admin/reports/${encodeURIComponent(reportKey)}/original-pdf`
         : '',
       periodLabel: '',
       progressRate: workflowStatus === 'submitted' ? 100 : 10,

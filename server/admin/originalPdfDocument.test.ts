@@ -164,6 +164,43 @@ test('fetchAdminOriginalPdfDescriptor falls through to the next candidate when t
   }
 });
 
+test('fetchAdminOriginalPdfDescriptor can skip report metadata lookup when a direct download path is provided', async () => {
+  const previousFetch = globalThis.fetch;
+  const calls: string[] = [];
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    calls.push(`${init?.method || 'GET'} ${url}`);
+    assert.match(url, /\/uploads\/legacy\/reports\/report-direct-path\.pdf$/);
+    assert.equal(init?.method, 'HEAD');
+    assert.equal(new Headers(init?.headers).get('authorization'), 'Bearer token-1');
+    return new Response(null, {
+      headers: {
+        'content-length': '4161717',
+        'content-type': 'application/pdf',
+      },
+    });
+  }) as typeof fetch;
+
+  try {
+    const descriptor = await fetchAdminOriginalPdfDescriptor({
+      preferredDownloadPath: '/uploads/legacy/reports/report-direct-path.pdf',
+      reportKey: 'report-direct-path',
+      request: new Request('https://app.example.com/api/mail/send-report'),
+      token: 'token-1',
+    });
+
+    assert.equal(descriptor.sizeBytes, 4161717);
+    assert.equal(descriptor.contentType, 'application/pdf');
+    assert.equal(calls.length, 1);
+    assert.match(
+      calls[0],
+      /^HEAD http:\/\/52\.64\.85\.49:8011\/uploads\/legacy\/reports\/report-direct-path\.pdf$/,
+    );
+  } finally {
+    globalThis.fetch = previousFetch;
+  }
+});
+
 test('fetchAdminOriginalPdfDocument raises 504 when every direct asset lookup times out', async () => {
   const previousFetch = globalThis.fetch;
   globalThis.fetch = (async () => {

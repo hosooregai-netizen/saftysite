@@ -25,6 +25,9 @@ export async function POST(request: Request): Promise<Response> {
     const result = await prepareMailReportAttachment(request, token, {
       originalPdfAvailable:
         report.original_pdf_available === true || payload.original_pdf_available === true,
+      originalPdfDownloadPath:
+        normalizeText(report.original_pdf_download_path) ||
+        normalizeText(payload.original_pdf_download_path),
       preferredFilename:
         normalizeText(report.report_filename) || normalizeText(payload.report_filename),
       reportKey,

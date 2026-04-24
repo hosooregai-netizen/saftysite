@@ -60,6 +60,9 @@ export async function POST(request: Request): Promise<Response> {
     const reportAttachment = await buildMailReportAttachment(request, token, {
       originalPdfAvailable:
         report.original_pdf_available === true || payload.original_pdf_available === true,
+      originalPdfDownloadPath:
+        normalizeText(report.original_pdf_download_path) ||
+        normalizeText(payload.original_pdf_download_path),
       preferredFilename: reportFilename,
       reportKey,
       reportTitle,

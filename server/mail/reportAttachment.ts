@@ -4,6 +4,7 @@ import { SafetyServerApiError } from '@/server/admin/safetyApiServer';
 
 export interface MailReportAttachmentInput {
   originalPdfAvailable?: boolean;
+  originalPdfDownloadPath?: string | null;
   preferredFilename?: string | null;
   reportKey: string;
   reportTitle?: string | null;
@@ -253,6 +254,7 @@ async function buildMailReportAttachmentUncached(
   if (shouldAttemptOriginalPdf) {
     try {
       const descriptor = await fetchAdminOriginalPdfDescriptor({
+        preferredDownloadPath: normalizeText(input.originalPdfDownloadPath),
         reportKey,
         request,
         token,

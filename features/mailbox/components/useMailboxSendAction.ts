@@ -178,6 +178,7 @@ export function useMailboxSendAction({
           fromName: senderName,
           headquarterId: selectedHeadquarterId,
           originalPdfAvailable: selectedReport.originalPdfAvailable,
+          originalPdfDownloadPath: selectedReport.originalPdfDownloadPath,
           reportFilename: selectedReport.reportTitle,
           reportKey: selectedReport.reportKey,
           reportTitle: selectedReport.reportTitle,

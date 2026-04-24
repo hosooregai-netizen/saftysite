@@ -178,6 +178,7 @@ export function useMailboxComposeUiActions({
     if (option.attachmentReady) {
       void prepareReportMailAttachment({
         originalPdfAvailable: option.originalPdfAvailable,
+        originalPdfDownloadPath: option.originalPdfDownloadPath,
         reportFilename: option.reportTitle,
         reportKey: option.reportKey,
         reportTitle: option.reportTitle,
