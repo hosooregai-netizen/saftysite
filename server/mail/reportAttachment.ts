@@ -20,6 +20,7 @@ export interface MailAttachmentServerPayload {
   size_bytes?: number;
 }
 
+const MAIL_REPORT_INLINE_PREFETCH_MAX_BYTES = 6 * 1024 * 1024;
 const MAIL_REPORT_ATTACHMENT_CACHE_TTL_MS = 2 * 60 * 1000;
 const MAIL_REPORT_ATTACHMENT_CACHE_MAX_ENTRIES = 8;
 
@@ -187,6 +188,50 @@ async function readErrorMessage(response: Response) {
   }
 }
 
+async function buildInlineOriginalPdfAttachment(input: {
+  contentType: string;
+  downloadUrl: string;
+  filename: string;
+  sizeBytes: number | null;
+  token: string;
+}): Promise<MailAttachmentServerPayload | null> {
+  if (
+    !input.downloadUrl ||
+    input.sizeBytes === null ||
+    input.sizeBytes > MAIL_REPORT_INLINE_PREFETCH_MAX_BYTES
+  ) {
+    return null;
+  }
+
+  try {
+    const response = await fetch(input.downloadUrl, {
+      cache: 'no-store',
+      headers: {
+        Authorization: `Bearer ${input.token}`,
+      },
+    });
+
+    if (!response.ok) {
+      await response.body?.cancel().catch(() => {});
+      return null;
+    }
+
+    const buffer = Buffer.from(await response.arrayBuffer());
+    if (buffer.length === 0) {
+      return null;
+    }
+
+    return {
+      content_type: response.headers.get('content-type') || input.contentType || 'application/pdf',
+      data_base64: buffer.toString('base64'),
+      filename: input.filename,
+      size_bytes: buffer.length,
+    };
+  } catch {
+    return null;
+  }
+}
+
 async function buildMailReportAttachmentUncached(
   request: Request,
   token: string,
@@ -212,13 +257,26 @@ async function buildMailReportAttachmentUncached(
         request,
         token,
       });
+      const filename = buildMailReportFilename({ ...input, reportKey }, descriptor.filename);
+      const directDownloadUrl = normalizeText(descriptor.source);
+      const warmedAttachment = await buildInlineOriginalPdfAttachment({
+        contentType: descriptor.contentType,
+        downloadUrl: directDownloadUrl,
+        filename,
+        sizeBytes: descriptor.sizeBytes,
+        token,
+      });
+      if (warmedAttachment) {
+        return warmedAttachment;
+      }
+
       return {
         content_type: descriptor.contentType,
         download_headers: {
           Authorization: `Bearer ${token}`,
         },
-        download_url: originalPdfRequest.url.toString(),
-        filename: buildMailReportFilename({ ...input, reportKey }, descriptor.filename),
+        download_url: directDownloadUrl || originalPdfRequest.url.toString(),
+        filename,
         size_bytes: descriptor.sizeBytes ?? undefined,
       };
     } catch (error) {

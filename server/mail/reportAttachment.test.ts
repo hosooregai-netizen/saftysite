@@ -74,9 +74,9 @@ test('buildMailReportAttachment returns an authenticated original PDF download U
 
     assert.equal(attachment.filename, '하왕십리동 890-93 다세대 신축공사 기술지도 보고서.pdf');
     assert.equal(attachment.content_type, 'application/pdf');
-    assert.equal(
+    assert.match(
       attachment.download_url,
-      'https://app.example.com/api/admin/reports/legacy%3Atechnical_guidance%3A351093/original-pdf',
+      /\/uploads\/content-items\/014b5e89d6a04950ac574e03d33a5c4f-legacy-admin-report-2025-04-25-351093\.pdf$/,
     );
     assert.deepEqual(attachment.download_headers, { Authorization: 'Bearer token-1' });
     assert.equal(attachment.data_base64, undefined);
@@ -115,9 +115,9 @@ test('buildMailReportAttachment upgrades manifest-backed legacy reports to origi
       },
     );
 
-    assert.equal(
+    assert.match(
       attachment.download_url,
-      'https://app.example.com/api/admin/reports/legacy%3Atechnical_guidance%3A427520/original-pdf',
+      /\/uploads\/content-items\/6e85aa9a264e4b69a375053a66411250-legacy-admin-report-2025-05-23-427520\.pdf$/,
     );
     assert.equal(attachment.data_base64, undefined);
     assert.equal(attachment.size_bytes, 71241257);
@@ -157,12 +157,59 @@ test('buildMailReportAttachment keeps manifest-backed legacy original PDFs on th
     );
 
     assert.equal(fetchCount, 1);
-    assert.equal(
+    assert.match(
       attachment.download_url,
-      'https://app.example.com/api/admin/reports/legacy%3Atechnical_guidance%3A440160/original-pdf',
+      /\/uploads\/content-items\/d327feccfffb47ba999ea8f3ce51e13f-legacy-admin-report-2025-06-23-440160\.pdf$/,
     );
     assert.equal(attachment.data_base64, undefined);
     assert.equal(attachment.size_bytes, 24504008);
+  } finally {
+    globalThis.fetch = previousFetch;
+  }
+});
+
+test('buildMailReportAttachment inlines small original PDFs during attachment preparation', async () => {
+  const previousFetch = globalThis.fetch;
+  let fetchCount = 0;
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    fetchCount += 1;
+    assert.match(
+      String(input),
+      /\/uploads\/content-items\/014b5e89d6a04950ac574e03d33a5c4f-legacy-admin-report-2025-04-25-351093\.pdf$/,
+    );
+    if (init?.method === 'HEAD') {
+      return new Response(null, {
+        headers: {
+          'content-length': '4161717',
+          'content-type': 'application/pdf',
+        },
+      });
+    }
+
+    assert.equal(new Headers(init?.headers).get('authorization'), 'Bearer token-1');
+    return new Response(new Uint8Array([37, 80, 68, 70]), {
+      headers: {
+        'content-type': 'application/pdf',
+      },
+    });
+  }) as typeof fetch;
+
+  try {
+    const attachment = await buildMailReportAttachment(
+      new Request('https://app.example.com/api/mail/send-report'),
+      'token-1',
+      {
+        originalPdfAvailable: true,
+        reportKey: 'legacy:technical_guidance:351093',
+        reportTitle: '하왕십리동 890-93 다세대 신축공사 기술지도 보고서',
+        reportUpdatedAt: '2026-04-24T13:30:00.000Z',
+      },
+    );
+
+    assert.equal(fetchCount, 2);
+    assert.equal(attachment.download_url, undefined);
+    assert.equal(attachment.data_base64, 'JVBERg==');
+    assert.equal(attachment.size_bytes, 4);
   } finally {
     globalThis.fetch = previousFetch;
   }
@@ -322,12 +369,73 @@ test('prepareMailReportAttachment reuses the warmed original PDF descriptor for 
     assert.deepEqual(prepared, { prepared: true, skipped: null });
     assert.equal(fetchCount, 1);
     assert.equal(attachment.filename, '하왕십리동 890-93 다세대 신축공사 기술지도 보고서.pdf');
-    assert.equal(
+    assert.match(
       attachment.download_url,
-      'https://app.example.com/api/admin/reports/legacy%3Atechnical_guidance%3A351093/original-pdf',
+      /\/uploads\/content-items\/014b5e89d6a04950ac574e03d33a5c4f-legacy-admin-report-2025-04-25-351093\.pdf$/,
     );
     assert.deepEqual(attachment.download_headers, { Authorization: 'Bearer token-1' });
     assert.equal(attachment.size_bytes, 71241257);
+  } finally {
+    globalThis.fetch = previousFetch;
+  }
+});
+
+test('prepareMailReportAttachment reuses warmed small original PDFs for send', async () => {
+  const previousFetch = globalThis.fetch;
+  let fetchCount = 0;
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    fetchCount += 1;
+    assert.match(
+      String(input),
+      /\/uploads\/content-items\/014b5e89d6a04950ac574e03d33a5c4f-legacy-admin-report-2025-04-25-351093\.pdf$/,
+    );
+    if (init?.method === 'HEAD') {
+      return new Response(null, {
+        headers: {
+          'content-length': '4161717',
+          'content-type': 'application/pdf',
+        },
+      });
+    }
+
+    return new Response(new Uint8Array([37, 80, 68, 70]), {
+      headers: {
+        'content-type': 'application/pdf',
+      },
+    });
+  }) as typeof fetch;
+
+  try {
+    const prepared = await prepareMailReportAttachment(
+      new Request('https://app.example.com/api/mail/prepare-report'),
+      'token-1',
+      {
+        originalPdfAvailable: true,
+        preferredFilename: '하왕십리동 890-93 다세대 신축공사 기술지도 보고서',
+        reportKey: 'legacy:technical_guidance:351093',
+        reportTitle: '하왕십리동 890-93 다세대 신축공사 기술지도 보고서',
+        reportType: 'technical_guidance',
+        reportUpdatedAt: '2026-04-24T13:35:00.000Z',
+      },
+    );
+    const attachment = await buildMailReportAttachment(
+      new Request('https://app.example.com/api/mail/send-report'),
+      'token-1',
+      {
+        originalPdfAvailable: true,
+        preferredFilename: '하왕십리동 890-93 다세대 신축공사 기술지도 보고서',
+        reportKey: 'legacy:technical_guidance:351093',
+        reportTitle: '하왕십리동 890-93 다세대 신축공사 기술지도 보고서',
+        reportType: 'technical_guidance',
+        reportUpdatedAt: '2026-04-24T13:35:00.000Z',
+      },
+    );
+
+    assert.deepEqual(prepared, { prepared: true, skipped: null });
+    assert.equal(fetchCount, 2);
+    assert.equal(attachment.download_url, undefined);
+    assert.equal(attachment.data_base64, 'JVBERg==');
+    assert.equal(attachment.size_bytes, 4);
   } finally {
     globalThis.fetch = previousFetch;
   }
