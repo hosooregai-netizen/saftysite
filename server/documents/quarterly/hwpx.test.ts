@@ -256,7 +256,7 @@ test('buildQuarterlyHwpxDocument renders selected inspection bodies into the mer
   assert.doesNotMatch(firstAppendixSlice, /www\.safetysite\.co\.kr/);
   assert.match(
     findTableByText(sectionXml, 'appendix-hazard-one') ?? '',
-    /<hp:tbl\b[^>]*textWrap="IN_FRONT_OF_TEXT"[\s\S]*?<hp:pos\b[^>]*treatAsChar="0"/,
+    /<hp:tbl\b[^>]*textWrap="TOP_AND_BOTTOM"[\s\S]*?<hp:pos\b[^>]*treatAsChar="0"/,
   );
 });
 

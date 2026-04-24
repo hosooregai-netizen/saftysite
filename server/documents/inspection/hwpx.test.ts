@@ -272,7 +272,7 @@ test('buildInspectionHwpxDocument keeps repeated doc4 follow-up pages page-broke
   assert.equal(collectDuplicateTableIds(sectionXml).length, 0);
   assert.match(
     sectionXml,
-    /<hp:p\b[^>]*pageBreak="1"[^>]*>\s*<hp:run\b[^>]*><hp:tbl\b[\s\S]*follow-up-location-4/,
+    /<hp:p\b[^>]*pageBreak="1"[\s\S]*?<hp:tbl\b[\s\S]*follow-up-location-4/,
   );
   const doc4Index = findTableIndexContainingText(sectionXml, 'follow-up-location-4');
   const doc5Index = findTableIndexContainingText(sectionXml, 'tplimg23');
@@ -280,6 +280,6 @@ test('buildInspectionHwpxDocument keeps repeated doc4 follow-up pages page-broke
   assert.notEqual(doc4Index, -1);
   assert.notEqual(doc5Index, -1);
   assert.notEqual(doc7Index, -1);
-  assert.equal(countBlankParagraphsBetweenTableIndices(sectionXml, doc4Index, doc5Index), 6);
-  assert.equal(countBlankParagraphsBetweenTableIndices(sectionXml, doc5Index, doc7Index), 44);
+  assert.equal(countBlankParagraphsBetweenTableIndices(sectionXml, doc4Index, doc5Index), 0);
+  assert.equal(countBlankParagraphsBetweenTableIndices(sectionXml, doc5Index, doc7Index), 0);
 });

@@ -1735,10 +1735,10 @@ function expandRepeatBlocks(
         }
       }
 
-      if (pageIndex > 0 && containsFloatingTable(blockXml)) {
-        // Repeated floating tables are page-sized layouts in the inspection template.
-        // Starting each cloned block on a fresh page keeps later sections from drifting
-        // into a blank page or overlapping when HWP reflows anchored objects.
+      if (pageIndex > 0 && containsTable(blockXml)) {
+        // Repeated template tables are page-sized layouts. Starting each cloned
+        // block on a fresh page keeps later sections from drifting or overlapping
+        // regardless of whether the table is floating or top/bottom wrapped.
         blockXml = forceFirstParagraphPageBreak(blockXml);
       }
 
@@ -1767,6 +1767,16 @@ function stripRepeatBlockMarkers(xml: string): string {
 }
 
 function forceFirstParagraphPageBreak(xml: string): string {
+  const firstTableIndex = xml.search(/<hp:tbl\b/);
+  const firstParagraphIndex = xml.search(/<hp:p\b/);
+  if (firstTableIndex >= 0 && (firstParagraphIndex === -1 || firstTableIndex < firstParagraphIndex)) {
+    return (
+      '<hp:p id="0" paraPrIDRef="21" styleIDRef="0" pageBreak="1" columnBreak="0" merged="0">' +
+      '<hp:run charPrIDRef="0"/></hp:p>' +
+      xml
+    );
+  }
+
   return xml.replace(/<hp:p\b[^>]*>/, (paragraphTag) =>
     /pageBreak=/.test(paragraphTag)
       ? paragraphTag.replace(/pageBreak="[^"]*"/, 'pageBreak="1"')
@@ -1776,6 +1786,10 @@ function forceFirstParagraphPageBreak(xml: string): string {
 
 function containsFloatingTable(xml: string): boolean {
   return /<hp:tbl\b[^>]*textWrap="IN_FRONT_OF_TEXT"/.test(xml);
+}
+
+function containsTable(xml: string): boolean {
+  return /<hp:tbl\b/.test(xml);
 }
 
 function repeatBlockSpan(
@@ -1794,9 +1808,12 @@ function repeatBlockSpan(
   }
 
   const containingTable = tables[tableIndex];
+  const containingTableXml = xml.slice(containingTable.start, containingTable.end);
   const containingParagraph =
     floatingTableAnchorParagraphSpan(xml, containingTable)
-    ?? paragraphs.find((span) => containingTable.start >= span.start && containingTable.end <= span.end)
+    ?? (containsFloatingTable(containingTableXml)
+      ? paragraphs.find((span) => containingTable.start >= span.start && containingTable.end <= span.end)
+      : undefined)
     ?? containingTable;
   const nextTable = tables[tableIndex + 1];
 
@@ -1807,9 +1824,12 @@ function repeatBlockSpan(
     };
   }
 
+  const nextTableXml = xml.slice(nextTable.start, nextTable.end);
   const nextParagraph =
     floatingTableAnchorParagraphSpan(xml, nextTable)
-    ?? paragraphs.find((span) => nextTable.start >= span.start && nextTable.end <= span.end)
+    ?? (containsFloatingTable(nextTableXml)
+      ? paragraphs.find((span) => nextTable.start >= span.start && nextTable.end <= span.end)
+      : undefined)
     ?? nextTable;
 
   return {
