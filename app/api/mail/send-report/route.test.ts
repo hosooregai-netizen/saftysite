@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { SafetyServerApiError } from '@/server/admin/safetyApiServer';
+import { handleSendReportPost } from './route';
 import {
   buildOversizeReportFallbackBody,
   buildQueuedMailMessage,
@@ -12,6 +13,137 @@ import {
   shouldSendReportAsDownloadLink,
 } from './routeHelpers';
 import { readMailReportDownloadToken } from '@/server/mail/reportDownloadLink';
+
+test('POST /api/mail/send-report waits for oversized link sends and returns the real sent message', async () => {
+  const sendCalls: Array<{
+    payload: Record<string, unknown>;
+    request: Request | null;
+    token: string;
+  }> = [];
+  let materializeCalls = 0;
+  const request = new Request('https://app.example.com/api/mail/send-report', {
+    body: JSON.stringify({
+      account_id: 'account-1',
+      attachments: [{ filename: 'note.txt', data_base64: 'bm90ZQ==', content_type: 'text/plain' }],
+      body: '<p>body</p>',
+      headquarter_id: 'hq-1',
+      original_pdf_available: true,
+      original_pdf_download_path: '/uploads/content-items/oversized-report.pdf',
+      report_key: 'legacy:technical_guidance:427520',
+      report_title: 'Oversized report',
+      site_id: 'site-1',
+      subject: 'Oversized send',
+      to: [{ email: 'receiver@example.com', name: 'Receiver' }],
+    }),
+    headers: {
+      authorization: 'Bearer route-token',
+      'content-type': 'application/json',
+    },
+    method: 'POST',
+  });
+
+  const response = await handleSendReportPost(request, {
+    buildMailReportAttachment: async () => ({
+      content_type: 'application/pdf',
+      download_headers: {
+        Authorization: 'Bearer route-token',
+      },
+      download_url: 'https://app.example.com/api/admin/reports/legacy%3Atechnical_guidance%3A427520/original-pdf',
+      filename: 'oversized-report.pdf',
+      size_bytes: MAIL_ATTACHMENT_TOTAL_LIMIT_BYTES + 1,
+    }),
+    buildOversizeReportFallbackBody: () => '<p>download-link-body</p>',
+    isOversizeMailAttachmentError,
+    mapBackendMailMessage: (message) => ({
+      accountId: message.account_id,
+      body: message.body,
+      bodyPreview: message.body_preview,
+      createdAt: message.created_at,
+      deliveredAt: message.delivered_at,
+      direction: 'outgoing',
+      fromEmail: message.from_email,
+      fromName: message.from_name,
+      headquarterId: message.headquarter_id,
+      id: message.id,
+      readAt: message.read_at,
+      reportKey: message.report_key,
+      sentAt: message.sent_at,
+      siteId: message.site_id,
+      subject: message.subject,
+      threadId: message.thread_id,
+      to: message.to,
+      updatedAt: message.updated_at,
+    }),
+    materializeMailAttachmentDownload: async () => {
+      materializeCalls += 1;
+      return {
+        content_type: 'application/pdf',
+        data_base64: 'JVBERg==',
+        filename: 'oversized-report.pdf',
+        size_bytes: 4,
+      };
+    },
+    readRequiredAdminToken: () => 'route-token',
+    sendSafetyMailServer: async (token, payload, currentRequest) => {
+      sendCalls.push({
+        payload,
+        request: currentRequest,
+        token,
+      });
+      return {
+        account_id: 'account-1',
+        body: String(payload.body || ''),
+        body_preview: 'download-link-body',
+        created_at: '2026-04-24T10:00:00.000Z',
+        delivered_at: '2026-04-24T10:00:02.000Z',
+        direction: 'outgoing',
+        from_email: 'sender@example.com',
+        from_name: 'Sender',
+        headquarter_id: 'hq-1',
+        id: 'message-1',
+        read_at: null,
+        report_key: 'legacy:technical_guidance:427520',
+        sent_at: '2026-04-24T10:00:01.000Z',
+        site_id: 'site-1',
+        subject: 'Oversized send',
+        thread_id: 'thread-1',
+        to: [{ email: 'receiver@example.com', name: 'Receiver' }],
+        updated_at: '2026-04-24T10:00:02.000Z',
+      };
+    },
+    shouldSendReportAsDownloadLink: () => true,
+  });
+
+  assert.equal(materializeCalls, 0);
+  assert.equal(sendCalls.length, 1);
+  assert.equal(sendCalls[0]?.token, 'route-token');
+  assert.equal(sendCalls[0]?.request, request);
+  assert.deepEqual(sendCalls[0]?.payload.attachments, [
+    { filename: 'note.txt', data_base64: 'bm90ZQ==', content_type: 'text/plain' },
+  ]);
+  assert.equal(sendCalls[0]?.payload.body, '<p>download-link-body</p>');
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    accountId: 'account-1',
+    body: '<p>download-link-body</p>',
+    bodyPreview: 'download-link-body',
+    createdAt: '2026-04-24T10:00:00.000Z',
+    deliveredAt: '2026-04-24T10:00:02.000Z',
+    direction: 'outgoing',
+    fromEmail: 'sender@example.com',
+    fromName: 'Sender',
+    headquarterId: 'hq-1',
+    id: 'message-1',
+    readAt: null,
+    reportKey: 'legacy:technical_guidance:427520',
+    sentAt: '2026-04-24T10:00:01.000Z',
+    siteId: 'site-1',
+    subject: 'Oversized send',
+    threadId: 'thread-1',
+    to: [{ email: 'receiver@example.com', name: 'Receiver' }],
+    updatedAt: '2026-04-24T10:00:02.000Z',
+  });
+});
 
 test('isOversizeMailAttachmentError matches backend attachment limit failures', () => {
   assert.equal(

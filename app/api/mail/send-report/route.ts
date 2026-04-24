@@ -10,7 +10,6 @@ import {
 } from '@/server/mail/reportAttachment';
 import {
   buildOversizeReportFallbackBody,
-  buildQueuedMailMessage,
   isOversizeMailAttachmentError,
   materializeMailAttachmentDownload,
   shouldSendReportAsDownloadLink,
@@ -18,6 +17,19 @@ import {
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
+
+const defaultSendReportRouteDeps = {
+  buildMailReportAttachment,
+  buildOversizeReportFallbackBody,
+  isOversizeMailAttachmentError,
+  mapBackendMailMessage,
+  materializeMailAttachmentDownload,
+  readRequiredAdminToken,
+  sendSafetyMailServer,
+  shouldSendReportAsDownloadLink,
+};
+
+type SendReportRouteDeps = typeof defaultSendReportRouteDeps;
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
@@ -27,37 +39,19 @@ function normalizeText(value: unknown) {
   return typeof value === 'string' ? value.trim() : '';
 }
 
-function normalizeRecipients(value: unknown) {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value
-    .map((item) => {
-      const record = asRecord(item);
-      const email = normalizeText(record.email);
-      if (!email) {
-        return null;
-      }
-
-      return {
-        email,
-        name: normalizeText(record.name) || null,
-      };
-    })
-    .filter((item): item is { email: string; name: string | null } => Boolean(item));
-}
-
-export async function POST(request: Request): Promise<Response> {
+export async function handleSendReportPost(
+  request: Request,
+  deps: SendReportRouteDeps = defaultSendReportRouteDeps,
+): Promise<Response> {
   try {
-    const token = readRequiredAdminToken(request);
+    const token = deps.readRequiredAdminToken(request);
     const payload = (await request.json()) as Record<string, unknown>;
     const report = asRecord(payload.report);
     const reportKey = normalizeText(report.report_key) || normalizeText(payload.report_key);
     const reportTitle = normalizeText(report.report_title) || normalizeText(payload.report_title);
     const reportFilename =
       normalizeText(report.report_filename) || normalizeText(payload.report_filename) || reportTitle;
-    const reportAttachment = await buildMailReportAttachment(request, token, {
+    const reportAttachment = await deps.buildMailReportAttachment(request, token, {
       originalPdfAvailable:
         report.original_pdf_available === true || payload.original_pdf_available === true,
       originalPdfDownloadPath:
@@ -71,16 +65,13 @@ export async function POST(request: Request): Promise<Response> {
         normalizeText(report.report_updated_at) || normalizeText(payload.report_updated_at),
     });
     const attachments = Array.isArray(payload.attachments) ? payload.attachments : [];
-    const shouldSendAsDownloadLink = shouldSendReportAsDownloadLink({
+    const shouldSendAsDownloadLink = deps.shouldSendReportAsDownloadLink({
       attachments,
       reportAttachment,
     });
-    const normalizedReportAttachment = shouldSendReportAsDownloadLink({
-      attachments,
-      reportAttachment,
-    })
+    const normalizedReportAttachment = shouldSendAsDownloadLink
       ? reportAttachment
-      : await materializeMailAttachmentDownload(reportAttachment);
+      : await deps.materializeMailAttachmentDownload(reportAttachment);
     const mailPayload = {
       ...payload,
       attachments: [normalizedReportAttachment, ...attachments],
@@ -88,7 +79,7 @@ export async function POST(request: Request): Promise<Response> {
     };
 
     if (shouldSendAsDownloadLink) {
-      const queuedBody = buildOversizeReportFallbackBody({
+      const queuedBody = deps.buildOversizeReportFallbackBody({
         accessToken: token,
         body: payload.body,
         reportAttachment,
@@ -97,59 +88,38 @@ export async function POST(request: Request): Promise<Response> {
         reportTitle,
         requestUrl: request.url,
       });
-      const queuedMailPayload = {
-        ...mailPayload,
-        attachments,
-        body: queuedBody,
-      };
-      const queuedAt = new Date().toISOString();
-      const queuedId = `queued:mail-report:${crypto.randomUUID()}`;
-
-      globalThis.setTimeout(() => {
-        void sendSafetyMailServer(token, queuedMailPayload, null).catch((error) => {
-          console.error('[mail/send-report] oversized link send failed', {
-            error: error instanceof Error ? error.message : String(error),
-            reportKey,
-            subject: normalizeText(payload.subject),
-          });
-        });
-      }, 0);
-
       return NextResponse.json(
-        buildQueuedMailMessage({
-          accountId: normalizeText(payload.account_id),
-          body: queuedBody,
-          fromEmail: normalizeText(payload.sender_email),
-          fromName: normalizeText(payload.sender_name),
-          headquarterId: normalizeText(payload.headquarter_id),
-          id: queuedId,
-          queuedAt,
-          reportKey,
-          siteId: normalizeText(payload.site_id),
-          subject: normalizeText(payload.subject),
-          to: normalizeRecipients(payload.to),
-        }),
-        { status: 202 },
+        deps.mapBackendMailMessage(
+          await deps.sendSafetyMailServer(
+            token,
+            {
+              ...mailPayload,
+              attachments,
+              body: queuedBody,
+            },
+            request,
+          ),
+        ),
       );
     }
 
     try {
       return NextResponse.json(
-        mapBackendMailMessage(await sendSafetyMailServer(token, mailPayload, request)),
+        deps.mapBackendMailMessage(await deps.sendSafetyMailServer(token, mailPayload, request)),
       );
     } catch (error) {
-      if (!isOversizeMailAttachmentError(error) || !reportAttachment.download_url) {
+      if (!deps.isOversizeMailAttachmentError(error) || !reportAttachment.download_url) {
         throw error;
       }
 
       return NextResponse.json(
-        mapBackendMailMessage(
-          await sendSafetyMailServer(
+        deps.mapBackendMailMessage(
+          await deps.sendSafetyMailServer(
             token,
             {
               ...mailPayload,
               attachments,
-              body: buildOversizeReportFallbackBody({
+              body: deps.buildOversizeReportFallbackBody({
                 accessToken: token,
                 body: payload.body,
                 reportAttachment,
@@ -173,4 +143,8 @@ export async function POST(request: Request): Promise<Response> {
       { status: 500 },
     );
   }
+}
+
+export async function POST(request: Request): Promise<Response> {
+  return handleSendReportPost(request);
 }
