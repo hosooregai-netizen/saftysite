@@ -82,6 +82,37 @@ function tableSpans(xml: string): Array<{ start: number; end: number }> {
   }));
 }
 
+function balancedTagSpans(xml: string, tagName: string): Array<{ start: number; end: number }> {
+  const escapedTagName = tagName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const tokenPattern = new RegExp(`<${escapedTagName}\\b[^>]*\\/?>|<\\/${escapedTagName}>`, 'g');
+  const spans: Array<{ start: number; end: number }> = [];
+  const stack: number[] = [];
+
+  for (const match of xml.matchAll(tokenPattern)) {
+    const token = match[0];
+    const index = match.index ?? 0;
+    const isClosing = token.startsWith(`</${tagName}`);
+    const isSelfClosing = !isClosing && token.endsWith('/>');
+
+    if (isClosing) {
+      const start = stack.pop();
+      if (start != null) {
+        spans.push({ start, end: index + token.length });
+      }
+      continue;
+    }
+
+    if (isSelfClosing) {
+      spans.push({ start: index, end: index + token.length });
+      continue;
+    }
+
+    stack.push(index);
+  }
+
+  return spans.sort((left, right) => left.start - right.start);
+}
+
 function locateTemplateCell(
   xml: string,
   descriptor: Pick<TemplateImagePlaceholder, 'table' | 'row' | 'col'>,
@@ -204,8 +235,89 @@ function forceFirstParagraphPageBreak(fragment: string) {
 }
 
 function normalizeAppendixLayoutForMergedQuarterly(fragment: string) {
-  return fragment
-    .replace(/<hp:ctrl><hp:pageHiding\b[^>]*\/><\/hp:ctrl>/g, '');
+  return splitTopLevelTableParagraphs(
+    fragment.replace(/<hp:ctrl><hp:pageHiding\b[^>]*\/><\/hp:ctrl>/g, ''),
+  );
+}
+
+function setParagraphPageBreak(paragraphTag: string, value: '0' | '1'): string {
+  return /pageBreak=/.test(paragraphTag)
+    ? paragraphTag.replace(/pageBreak="[^"]*"/, `pageBreak="${value}"`)
+    : paragraphTag.replace(/>$/, ` pageBreak="${value}">`);
+}
+
+function topLevelParagraphSpans(xml: string): Array<{ start: number; end: number }> {
+  const paragraphs = balancedTagSpans(xml, 'hp:p');
+  return paragraphs.filter((candidate) =>
+    !paragraphs.some((span) =>
+      span !== candidate && span.start < candidate.start && candidate.end < span.end,
+    ),
+  );
+}
+
+function openRunTagBefore(content: string, index: number): string | null {
+  const runTagPattern = /<hp:run\b[^>]*\/?>|<\/hp:run>/g;
+  const stack: string[] = [];
+
+  for (const match of content.slice(0, index).matchAll(runTagPattern)) {
+    const token = match[0];
+    const isClosing = token.startsWith('</hp:run');
+    const isSelfClosing = !isClosing && token.endsWith('/>');
+
+    if (isClosing) {
+      stack.pop();
+    } else if (!isSelfClosing) {
+      stack.push(token);
+    }
+  }
+
+  return stack.at(-1) ?? null;
+}
+
+function splitTopLevelTableParagraph(paragraphXml: string): string {
+  const paragraphOpenTag = paragraphXml.match(/^<hp:p\b[^>]*>/)?.[0] ?? '';
+  if (!paragraphOpenTag) {
+    return paragraphXml;
+  }
+
+  const contentStart = paragraphOpenTag.length;
+  const contentEnd = paragraphXml.endsWith('</hp:p>')
+    ? paragraphXml.length - '</hp:p>'.length
+    : paragraphXml.length;
+  const content = paragraphXml.slice(contentStart, contentEnd);
+  const tables = tableSpans(content);
+
+  if (tables.length <= 1) {
+    return paragraphXml;
+  }
+
+  const firstRunTag = openRunTagBefore(content, tables[0].start);
+  if (!firstRunTag) {
+    return paragraphXml;
+  }
+
+  return tables.map((table, index) => {
+    const runTag = openRunTagBefore(content, table.start) ?? firstRunTag;
+    const prefix = index === 0 ? content.slice(0, table.start) : runTag;
+    const nextParagraphOpenTag = index === 0
+      ? paragraphOpenTag
+      : setParagraphPageBreak(paragraphOpenTag, '0');
+
+    return `${nextParagraphOpenTag}${prefix}${content.slice(table.start, table.end)}<hp:t/></hp:run></hp:p>`;
+  }).join('');
+}
+
+function splitTopLevelTableParagraphs(fragment: string): string {
+  let result = '';
+  let cursor = 0;
+
+  for (const paragraph of topLevelParagraphSpans(fragment)) {
+    result += fragment.slice(cursor, paragraph.start);
+    result += splitTopLevelTableParagraph(fragment.slice(paragraph.start, paragraph.end));
+    cursor = paragraph.end;
+  }
+
+  return result + fragment.slice(cursor);
 }
 
 function ensureUniqueTableObjectIds(sectionXml: string) {

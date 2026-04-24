@@ -1766,8 +1766,10 @@ function expandRepeatBlocks(
     currentXml = `${before}${repeatedXml}${after}`;
   }
 
+  const normalizedXml = stripBlankParagraphsBetweenTables(currentXml);
+
   return {
-    xml: currentXml.replace(/\{#([^{}]+)\}|\{\/([^{}]+)\}/g, ''),
+    xml: normalizedXml.replace(/\{#([^{}]+)\}|\{\/([^{}]+)\}/g, ''),
     imagePlaceholders: expandedImagePlaceholders,
     sourceBinaryByPlaceholderPath: expandedSourceBinaryByPlaceholderPath,
   };
@@ -1936,6 +1938,40 @@ function stripLeadingInlineContextClose(xml: string): { removed: boolean; xml: s
     removed: true,
     xml: xml.slice(match[0].length),
   };
+}
+
+function stripBlankParagraphsBetweenTables(xml: string): string {
+  const tables = tableSpans(xml);
+  let nextXml = xml;
+
+  for (let index = tables.length - 2; index >= 0; index -= 1) {
+    const left = tables[index];
+    const right = tables[index + 1];
+    if (!left || !right || left.end >= right.start) {
+      continue;
+    }
+
+    const gapXml = nextXml.slice(left.end, right.start);
+    const patchedGapXml = gapXml.replace(/<hp:p\b[\s\S]*?<\/hp:p>/g, (paragraphXml) => {
+      if (
+        /<hp:tbl\b|<hp:pic\b|<hp:ctrl\b/.test(paragraphXml)
+        || /pageBreak="1"/.test(paragraphXml)
+        || !isHwpxBlankParagraph(paragraphXml)
+      ) {
+        return paragraphXml;
+      }
+
+      return '';
+    });
+
+    if (patchedGapXml === gapXml) {
+      continue;
+    }
+
+    nextXml = `${nextXml.slice(0, left.end)}${patchedGapXml}${nextXml.slice(right.start)}`;
+  }
+
+  return nextXml;
 }
 
 function repeatBlockSpan(

@@ -75,6 +75,14 @@ test('buildQuarterlyMergedTemplatePrototype builds a single-section merged templ
     ),
     0,
   );
+  assert.equal(
+    countBlankParagraphsBetweenTablesByText(
+      document.appendixPrototypeXml,
+      'appendices[0].sec7.findings[0].location',
+      'appendices[0].sec8.plans[0].process_name',
+    ),
+    0,
+  );
   assert.doesNotMatch(document.appendixPrototypeXml, /hidePageNum="1"/);
   assert.doesNotMatch(document.appendixPrototypeXml, /www\.safetysite\.co\.kr/);
   assert.doesNotMatch(document.appendixPrototypeXml, /070-4106-6051/);
@@ -117,6 +125,14 @@ test('buildQuarterlyMergedTemplatePrototype also supports v9-1 inspection varian
       document.appendixPrototypeXml,
       'auto_aggregation_required',
       'appendices[0].sec7.findings[0].location',
+    ),
+    0,
+  );
+  assert.equal(
+    countBlankParagraphsBetweenTablesByText(
+      document.appendixPrototypeXml,
+      'appendices[0].sec7.findings[0].location',
+      'appendices[0].sec8.plans[0].process_name',
     ),
     0,
   );

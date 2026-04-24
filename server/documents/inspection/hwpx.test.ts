@@ -292,59 +292,62 @@ test('buildInspectionHwpxDocument keeps repeated doc4 follow-up pages page-broke
 });
 
 test('buildInspectionHwpxDocument keeps multi-section repeated tables free of blank page-break paragraphs', async () => {
-  const session = buildMeasurementFixture('no');
-  session.document4FollowUps = Array.from({ length: 10 }, (_, index) => ({
-    ...session.document4FollowUps[0],
-    afterPhotoUrl: '',
-    beforePhotoUrl: '',
-    id: `follow-up-many-${index + 1}`,
-    location: `FUPM${index + 1}`,
-    result: `FUPR${index + 1}`,
-  }));
-  session.document7Findings = Array.from({ length: 6 }, (_, index) => ({
-    ...session.document7Findings[0],
-    id: `finding-many-${index + 1}`,
-    location: `FINDM${index + 1}`,
-    photoUrl: '',
-    photoUrl2: '',
-  }));
-  session.document8Plans = Array.from({ length: 10 }, (_, index) => ({
-    ...session.document8Plans[0],
-    countermeasure: `PLANC${index + 1}`,
-    hazard: `PLANH${index + 1}`,
-    id: `future-plan-${index + 1}`,
-    processName: `PLANP${index + 1}`,
-  }));
-  session.document10Measurements = Array.from({ length: 10 }, (_, index) => ({
-    ...session.document10Measurements[0],
-    id: `measurement-many-${index + 1}`,
-    measuredValue: `MEASV${index + 1}`,
-    measurementLocation: `MEASM${index + 1}`,
-  }));
+  for (const accidentOccurred of ['no', 'yes'] as const) {
+    const session = buildMeasurementFixture(accidentOccurred);
+    session.document4FollowUps = Array.from({ length: 10 }, (_, index) => ({
+      ...session.document4FollowUps[0],
+      afterPhotoUrl: '',
+      beforePhotoUrl: '',
+      id: `follow-up-many-${index + 1}`,
+      location: `FUPM${index + 1}`,
+      result: `FUPR${index + 1}`,
+    }));
+    session.document7Findings = Array.from({ length: 6 }, (_, index) => ({
+      ...session.document7Findings[0],
+      id: `finding-many-${index + 1}`,
+      location: `FINDM${index + 1}`,
+      photoUrl: '',
+      photoUrl2: '',
+    }));
+    session.document8Plans = Array.from({ length: 10 }, (_, index) => ({
+      ...session.document8Plans[0],
+      countermeasure: `PLANC${index + 1}`,
+      hazard: `PLANH${index + 1}`,
+      id: `future-plan-${index + 1}`,
+      processName: `PLANP${index + 1}`,
+    }));
+    session.document10Measurements = Array.from({ length: 10 }, (_, index) => ({
+      ...session.document10Measurements[0],
+      id: `measurement-many-${index + 1}`,
+      measuredValue: `MEASV${index + 1}`,
+      measurementLocation: `MEASM${index + 1}`,
+    }));
 
-  const document = await buildInspectionHwpxDocument(session, [session]);
-  const zip = await JSZip.loadAsync(document.buffer);
-  const sectionXml = await zip.file('Contents/section0.xml')?.async('string');
+    const document = await buildInspectionHwpxDocument(session, [session]);
+    const zip = await JSZip.loadAsync(document.buffer);
+    const sectionXml = await zip.file('Contents/section0.xml')?.async('string');
 
-  assert.ok(sectionXml);
-  assert.equal(countStandaloneBlankPageBreakParagraphs(sectionXml), 0);
-  assert.match(sectionXml, /FUPM10/);
-  assert.match(sectionXml, /FINDM6/);
-  assert.match(sectionXml, /PLANP10/);
-  assert.match(sectionXml, /MEASM10/);
+    assert.ok(sectionXml);
+    assert.equal(countStandaloneBlankPageBreakParagraphs(sectionXml), 0);
+    assert.match(sectionXml, /FUPM10/);
+    assert.match(sectionXml, /FINDM6/);
+    assert.match(sectionXml, /PLANP10/);
+    assert.match(sectionXml, /MEASM10/);
 
-  const repeatedPairs = [
-    ['FUPM4', 'FUPM7'],
-    ['FINDM2', 'FINDM3'],
-    ['PLANP4', 'PLANP7'],
-    ['MEASM4', 'MEASM7'],
-  ] as const;
+    const repeatedPairs = [
+      ['FUPM4', 'FUPM7'],
+      ['FINDM2', 'FINDM3'],
+      ['FINDM6', 'PLANP1'],
+      ['PLANP4', 'PLANP7'],
+      ['MEASM4', 'MEASM7'],
+    ] as const;
 
-  for (const [leftText, rightText] of repeatedPairs) {
-    const leftIndex = findTableIndexContainingText(sectionXml, leftText);
-    const rightIndex = findTableIndexContainingText(sectionXml, rightText);
-    assert.notEqual(leftIndex, -1);
-    assert.notEqual(rightIndex, -1);
-    assert.equal(countBlankParagraphsBetweenTableIndices(sectionXml, leftIndex, rightIndex), 0);
+    for (const [leftText, rightText] of repeatedPairs) {
+      const leftIndex = findTableIndexContainingText(sectionXml, leftText);
+      const rightIndex = findTableIndexContainingText(sectionXml, rightText);
+      assert.notEqual(leftIndex, -1);
+      assert.notEqual(rightIndex, -1);
+      assert.equal(countBlankParagraphsBetweenTableIndices(sectionXml, leftIndex, rightIndex), 0);
+    }
   }
 });
