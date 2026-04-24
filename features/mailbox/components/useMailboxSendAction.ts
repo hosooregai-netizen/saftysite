@@ -155,9 +155,9 @@ export function useMailboxSendAction({
       }
       if (attachments.length > 0) {
         setMailSendProgress({
-          detail: `첨부 파일 ${attachments.length}건을 메일 전송 형식으로 준비하고 있습니다.`,
+          detail: `첨부 파일 ${attachments.length}건을 HTTPS 자산으로 업로드하고 있습니다.`,
           percent: 54,
-          title: '첨부 파일 정리 중',
+          title: '첨부 파일 업로드 중',
         });
         for (const attachment of attachments) {
           normalizedAttachments.push(await buildFileAttachmentPayload(attachment.file));

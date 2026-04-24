@@ -22,6 +22,12 @@ const legacyPdfManifest = new Map(
   Object.entries(legacyReportOriginalPdfs as Record<string, LegacyReportPdfEntry>),
 );
 
+const UPSTREAM_PDF_DESCRIPTOR_HEAD_TIMEOUT_MS = 5000;
+const UPSTREAM_PDF_DESCRIPTOR_RANGE_TIMEOUT_MS = 8000;
+const UPSTREAM_PDF_DESCRIPTOR_TOTAL_TIMEOUT_MS = 25000;
+const UPSTREAM_PDF_DOWNLOAD_TIMEOUT_MS = 30000;
+const UPSTREAM_PDF_DOWNLOAD_TOTAL_TIMEOUT_MS = 90000;
+
 export interface AdminOriginalPdfDocument {
   buffer: Buffer;
   contentDisposition: string;
@@ -40,6 +46,59 @@ export interface AdminOriginalPdfDescriptor {
 
 function normalizeText(value: unknown) {
   return typeof value === 'string' ? value.trim() : '';
+}
+
+function isAbortError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  return (
+    (error instanceof DOMException && error.name === 'AbortError') ||
+    ('name' in error && error.name === 'AbortError')
+  );
+}
+
+function getRemainingTimeoutMs(deadlineAt: number, timeoutMs: number) {
+  return Math.max(0, Math.min(timeoutMs, deadlineAt - Date.now()));
+}
+
+async function fetchWithTimeout(
+  url: string,
+  init: RequestInit,
+  timeoutMs: number,
+  requestLabel: string,
+) {
+  const abortController = new AbortController();
+  const timeoutId = setTimeout(() => {
+    abortController.abort(
+      new Error(`${requestLabel} 요청이 ${timeoutMs}ms 안에 완료되지 않았습니다.`),
+    );
+  }, timeoutMs);
+  const originalSignal = init.signal;
+
+  if (originalSignal) {
+    if (originalSignal.aborted) {
+      abortController.abort(originalSignal.reason);
+    } else {
+      originalSignal.addEventListener(
+        'abort',
+        () => abortController.abort(originalSignal.reason),
+        { once: true },
+      );
+    }
+  }
+
+  try {
+    return await fetch(url, {
+      ...init,
+      signal: abortController.signal,
+    });
+  } catch (error) {
+    if (isAbortError(error)) {
+      throw new Error(`${requestLabel} 요청이 ${timeoutMs}ms 안에 완료되지 않았습니다.`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 function readMetaText(meta: Record<string, unknown>, key: string) {
@@ -184,15 +243,30 @@ function buildUpstreamAssetUrls(input: {
 
 async function fetchUpstreamPdf(urls: string[], token: string) {
   let lastError = '';
+  let timedOut = false;
+  const deadlineAt = Date.now() + UPSTREAM_PDF_DOWNLOAD_TOTAL_TIMEOUT_MS;
   for (const url of urls) {
     try {
-      const response = await fetch(url, {
-        cache: 'no-store',
-        headers: {
-          Authorization: `Bearer ${token}`,
+      const timeoutMs = getRemainingTimeoutMs(deadlineAt, UPSTREAM_PDF_DOWNLOAD_TIMEOUT_MS);
+      if (timeoutMs <= 0) {
+        timedOut = true;
+        lastError = '원본 PDF 파일 조회 제한 시간을 초과했습니다.';
+        break;
+      }
+
+      const response = await fetchWithTimeout(
+        url,
+        {
+          cache: 'no-store',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         },
-      });
+        timeoutMs,
+        '원본 PDF 파일 조회',
+      );
       if (!response.ok) {
+        await response.body?.cancel().catch(() => {});
         lastError = `${response.status} ${response.statusText}`;
         continue;
       }
@@ -206,10 +280,18 @@ async function fetchUpstreamPdf(urls: string[], token: string) {
       return {
         buffer,
         contentType: response.headers.get('content-type') || 'application/pdf',
+        lastError: '',
         source: url,
+        timedOut: false,
       };
     } catch (error) {
-      lastError = error instanceof Error ? error.message : String(error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      lastError = errorMessage;
+      timedOut =
+        timedOut ||
+        isAbortError(error) ||
+        errorMessage.includes('안에 완료되지 않았습니다') ||
+        errorMessage.includes('제한 시간을 초과');
     }
   }
 
@@ -218,6 +300,157 @@ async function fetchUpstreamPdf(urls: string[], token: string) {
     contentType: 'application/pdf',
     source: '',
     lastError,
+    timedOut,
+  };
+}
+
+function buildOriginalPdfLookupError(input: {
+  archivePath: string;
+  lastError?: string;
+  timedOut?: boolean;
+}) {
+  if (input.timedOut) {
+    return new SafetyServerApiError(
+      '원본 PDF 파일 조회가 시간 안에 완료되지 않았습니다. 잠시 후 다시 시도해 주세요.',
+      504,
+    );
+  }
+
+  return new SafetyServerApiError(
+    input.archivePath ? '원본 PDF 파일을 찾지 못했습니다.' : '원본 PDF가 등록되지 않았습니다.',
+    404,
+  );
+}
+
+async function fetchUpstreamPdfDescriptorByRange(url: string, token: string, timeoutMs: number) {
+  if (timeoutMs <= 0) {
+    return {
+      contentType: 'application/pdf',
+      lastError: '원본 PDF 범위 조회 제한 시간을 초과했습니다.',
+      sizeBytes: null,
+      source: '',
+      timedOut: true,
+    };
+  }
+
+  try {
+    const response = await fetchWithTimeout(
+      url,
+      {
+        cache: 'no-store',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Range: 'bytes=0-0',
+        },
+      },
+      timeoutMs,
+      '원본 PDF 범위 조회',
+    );
+    if (!response.ok) {
+      await response.body?.cancel().catch(() => {});
+      return {
+        contentType: 'application/pdf',
+        lastError: `${response.status} ${response.statusText}`,
+        sizeBytes: null,
+        source: '',
+        timedOut: false,
+      };
+    }
+
+    await response.body?.cancel().catch(() => {});
+    return {
+      ...readPdfDescriptorFromHeaders(response.headers),
+      lastError: '',
+      source: url,
+      timedOut: false,
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return {
+      contentType: 'application/pdf',
+      lastError: errorMessage,
+      sizeBytes: null,
+      source: '',
+      timedOut:
+        isAbortError(error) ||
+        errorMessage.includes('안에 완료되지 않았습니다') ||
+        errorMessage.includes('제한 시간을 초과'),
+    };
+  }
+}
+
+async function fetchUpstreamPdfDescriptor(urls: string[], token: string) {
+  let lastError = '';
+  let timedOut = false;
+  const deadlineAt = Date.now() + UPSTREAM_PDF_DESCRIPTOR_TOTAL_TIMEOUT_MS;
+  for (const url of urls) {
+    try {
+      const timeoutMs = getRemainingTimeoutMs(deadlineAt, UPSTREAM_PDF_DESCRIPTOR_HEAD_TIMEOUT_MS);
+      if (timeoutMs <= 0) {
+        timedOut = true;
+        lastError = '원본 PDF 정보 조회 제한 시간을 초과했습니다.';
+        break;
+      }
+
+      const response = await fetchWithTimeout(
+        url,
+        {
+          cache: 'no-store',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          method: 'HEAD',
+        },
+        timeoutMs,
+        '원본 PDF 정보 조회',
+      );
+      if (response.ok) {
+        return {
+          ...readPdfDescriptorFromHeaders(response.headers),
+          lastError: '',
+          source: url,
+          timedOut: false,
+        };
+      }
+
+      if (response.status === 405) {
+        await response.body?.cancel().catch(() => {});
+        const rangeTimeoutMs = getRemainingTimeoutMs(
+          deadlineAt,
+          UPSTREAM_PDF_DESCRIPTOR_RANGE_TIMEOUT_MS,
+        );
+        const rangeDescriptor = await fetchUpstreamPdfDescriptorByRange(
+          url,
+          token,
+          rangeTimeoutMs,
+        );
+        if (rangeDescriptor.source) {
+          return rangeDescriptor;
+        }
+        lastError = rangeDescriptor.lastError;
+        timedOut = timedOut || rangeDescriptor.timedOut;
+        continue;
+      }
+
+      await response.body?.cancel().catch(() => {});
+      lastError = `${response.status} ${response.statusText}`;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      lastError = errorMessage;
+      timedOut =
+        timedOut ||
+        isAbortError(error) ||
+        errorMessage.includes('안에 완료되지 않았습니다') ||
+        errorMessage.includes('제한 시간을 초과');
+    }
+  }
+
+  return {
+    contentType: 'application/pdf',
+    lastError,
+    sizeBytes: null,
+    source: '',
+    timedOut,
   };
 }
 
@@ -287,76 +520,6 @@ function readPdfDescriptorFromHeaders(headers: Headers) {
   };
 }
 
-async function fetchUpstreamPdfDescriptorByRange(url: string, token: string) {
-  const response = await fetch(url, {
-    cache: 'no-store',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Range: 'bytes=0-0',
-    },
-    method: 'GET',
-  });
-  if (!response.ok) {
-    await response.body?.cancel().catch(() => {});
-    return {
-      contentType: 'application/pdf',
-      lastError: `${response.status} ${response.statusText}`,
-      sizeBytes: null,
-      source: '',
-    };
-  }
-
-  await response.body?.cancel().catch(() => {});
-  return {
-    ...readPdfDescriptorFromHeaders(response.headers),
-    lastError: '',
-    source: url,
-  };
-}
-
-async function fetchUpstreamPdfDescriptor(urls: string[], token: string) {
-  let lastError = '';
-  for (const url of urls) {
-    try {
-      const response = await fetch(url, {
-        cache: 'no-store',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        method: 'HEAD',
-      });
-      if (response.ok) {
-        return {
-          ...readPdfDescriptorFromHeaders(response.headers),
-          source: url,
-        };
-      }
-
-      if (response.status === 405) {
-        const rangeDescriptor = await fetchUpstreamPdfDescriptorByRange(url, token);
-        if (rangeDescriptor.source) {
-          return rangeDescriptor;
-        }
-        lastError = rangeDescriptor.lastError;
-        continue;
-      }
-
-      if (!response.ok) {
-        lastError = `${response.status} ${response.statusText}`;
-        continue;
-      }
-    } catch (error) {
-      lastError = error instanceof Error ? error.message : String(error);
-    }
-  }
-
-  return {
-    contentType: 'application/pdf',
-    lastError,
-    sizeBytes: null,
-    source: '',
-  };
-}
 
 async function resolveAdminOriginalPdfReference(input: {
   reportKey: string;
@@ -439,10 +602,11 @@ export async function fetchAdminOriginalPdfDescriptor(input: {
     input.token,
   );
   if (!upstreamDescriptor.source) {
-    throw new SafetyServerApiError(
-      resolved.archivePath ? '원본 PDF 파일을 찾지 못했습니다.' : '원본 PDF가 등록되지 않았습니다.',
-      404,
-    );
+    throw buildOriginalPdfLookupError({
+      archivePath: resolved.archivePath,
+      lastError: upstreamDescriptor.lastError,
+      timedOut: upstreamDescriptor.timedOut,
+    });
   }
 
   return {
@@ -487,9 +651,16 @@ export async function fetchAdminOriginalPdfDocument(input: {
   const prefersDirectAssetLookup =
     Boolean(resolved.archivePath) &&
     (/^https?:\/\//i.test(resolved.archivePath) || resolved.archivePath.startsWith('/uploads/'));
+  let directAssetPdf = {
+    buffer: null as Buffer | null,
+    contentType: 'application/pdf',
+    lastError: '',
+    source: '',
+    timedOut: false,
+  };
 
   if (prefersDirectAssetLookup) {
-    const directAssetPdf = await fetchUpstreamPdf(directAssetUrls, input.token);
+    directAssetPdf = await fetchUpstreamPdf(directAssetUrls, input.token);
     if (directAssetPdf.buffer) {
       return {
         buffer: directAssetPdf.buffer,
@@ -509,13 +680,14 @@ export async function fetchAdminOriginalPdfDocument(input: {
   }
 
   const upstreamPdf = prefersDirectAssetLookup
-    ? { buffer: null, contentType: 'application/pdf', source: '' }
+    ? directAssetPdf
     : await fetchUpstreamPdf(directAssetUrls, input.token);
   if (!upstreamPdf.buffer) {
-    throw new SafetyServerApiError(
-      resolved.archivePath ? '원본 PDF 파일을 찾지 못했습니다.' : '원본 PDF가 등록되지 않았습니다.',
-      404,
-    );
+    throw buildOriginalPdfLookupError({
+      archivePath: resolved.archivePath,
+      lastError: upstreamPdf.lastError,
+      timedOut: upstreamPdf.timedOut,
+    });
   }
 
   return {

@@ -20,6 +20,20 @@ export interface MailAttachmentServerPayload {
   size_bytes?: number;
 }
 
+const MAIL_REPORT_ATTACHMENT_CACHE_TTL_MS = 2 * 60 * 1000;
+const MAIL_REPORT_ATTACHMENT_CACHE_MAX_ENTRIES = 8;
+
+interface CachedMailReportAttachmentEntry {
+  expiresAt: number;
+  lastAccessedAt: number;
+  promise: Promise<MailAttachmentServerPayload> | null;
+  value: MailAttachmentServerPayload | null;
+}
+
+const globalMailReportAttachmentState = globalThis as typeof globalThis & {
+  __mailReportAttachmentCache?: Map<string, CachedMailReportAttachmentEntry>;
+};
+
 function normalizeText(value: unknown) {
   return typeof value === 'string' ? value.trim() : '';
 }
@@ -30,6 +44,14 @@ function sanitizePdfFilename(value: string) {
 
 function isLegacyReportKey(reportKey: string) {
   return normalizeText(reportKey).startsWith('legacy:');
+}
+
+function getMailReportAttachmentCache() {
+  if (!globalMailReportAttachmentState.__mailReportAttachmentCache) {
+    globalMailReportAttachmentState.__mailReportAttachmentCache = new Map();
+  }
+
+  return globalMailReportAttachmentState.__mailReportAttachmentCache;
 }
 
 export function buildMailReportFilename(
@@ -99,6 +121,63 @@ function buildReportPdfRequest(input: MailReportAttachmentInput, request: Reques
   };
 }
 
+function buildMailReportAttachmentCacheKey(input: MailReportAttachmentInput) {
+  return JSON.stringify({
+    originalPdfAvailable: Boolean(input.originalPdfAvailable),
+    preferredFilename: normalizeText(input.preferredFilename),
+    reportKey: normalizeText(input.reportKey),
+    reportTitle: normalizeText(input.reportTitle),
+    reportType: normalizeText(input.reportType),
+    reportUpdatedAt: normalizeText(input.reportUpdatedAt),
+  });
+}
+
+function cloneMailAttachmentPayload(
+  attachment: MailAttachmentServerPayload,
+): MailAttachmentServerPayload {
+  return {
+    ...attachment,
+    download_headers: attachment.download_headers
+      ? { ...attachment.download_headers }
+      : undefined,
+  };
+}
+
+function applyMailReportAttachmentFilename(
+  attachment: MailAttachmentServerPayload,
+  input: MailReportAttachmentInput,
+) {
+  return {
+    ...cloneMailAttachmentPayload(attachment),
+    filename: buildMailReportFilename(
+      input,
+      attachment.filename || `${normalizeText(input.reportKey) || 'report'}.pdf`,
+    ),
+  } satisfies MailAttachmentServerPayload;
+}
+
+function pruneMailReportAttachmentCache(cache: Map<string, CachedMailReportAttachmentEntry>) {
+  const now = Date.now();
+  for (const [key, entry] of cache.entries()) {
+    if (entry.expiresAt <= now && !entry.promise) {
+      cache.delete(key);
+    }
+  }
+
+  if (cache.size <= MAIL_REPORT_ATTACHMENT_CACHE_MAX_ENTRIES) {
+    return;
+  }
+
+  const removableEntries = Array.from(cache.entries())
+    .filter(([, entry]) => !entry.promise)
+    .sort((left, right) => left[1].lastAccessedAt - right[1].lastAccessedAt);
+
+  while (cache.size > MAIL_REPORT_ATTACHMENT_CACHE_MAX_ENTRIES && removableEntries.length > 0) {
+    const [key] = removableEntries.shift()!;
+    cache.delete(key);
+  }
+}
+
 async function readErrorMessage(response: Response) {
   try {
     const payload = (await response.json()) as Record<string, unknown>;
@@ -143,6 +222,16 @@ async function buildMailReportAttachmentUncached(
         size_bytes: descriptor.sizeBytes ?? undefined,
       };
     } catch (error) {
+      if (error instanceof SafetyServerApiError && error.status === 504) {
+        return {
+          content_type: 'application/pdf',
+          download_headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          download_url: originalPdfRequest.url.toString(),
+          filename: buildMailReportFilename({ ...input, reportKey }, `${reportKey}.pdf`),
+        };
+      }
       if (!(error instanceof SafetyServerApiError) || error.status !== 404) {
         throw error;
       }
@@ -179,6 +268,68 @@ async function buildMailReportAttachmentUncached(
   };
 }
 
+async function buildMailReportAttachmentCached(
+  request: Request,
+  token: string,
+  input: MailReportAttachmentInput,
+): Promise<MailAttachmentServerPayload> {
+  const reportKey = normalizeText(input.reportKey);
+  if (!reportKey) {
+    throw new Error('메일에 첨부할 보고서 키가 없습니다.');
+  }
+
+  const normalizedInput = {
+    ...input,
+    reportKey,
+  };
+  const cache = getMailReportAttachmentCache();
+  const cacheKey = buildMailReportAttachmentCacheKey(normalizedInput);
+  const now = Date.now();
+  const cachedEntry = cache.get(cacheKey);
+
+  if (cachedEntry && cachedEntry.expiresAt > now) {
+    cachedEntry.lastAccessedAt = now;
+    if (cachedEntry.value) {
+      return applyMailReportAttachmentFilename(cachedEntry.value, normalizedInput);
+    }
+    if (cachedEntry.promise) {
+      return applyMailReportAttachmentFilename(await cachedEntry.promise, normalizedInput);
+    }
+  }
+
+  const loadPromise = buildMailReportAttachmentUncached(request, token, normalizedInput)
+    .then((attachment) => {
+      const settledAt = Date.now();
+      const storedAttachment = cloneMailAttachmentPayload(attachment);
+      const currentEntry = cache.get(cacheKey);
+      if (currentEntry?.promise === loadPromise) {
+        currentEntry.expiresAt = settledAt + MAIL_REPORT_ATTACHMENT_CACHE_TTL_MS;
+        currentEntry.lastAccessedAt = settledAt;
+        currentEntry.promise = null;
+        currentEntry.value = storedAttachment;
+        pruneMailReportAttachmentCache(cache);
+      }
+      return storedAttachment;
+    })
+    .catch((error) => {
+      const currentEntry = cache.get(cacheKey);
+      if (currentEntry?.promise === loadPromise) {
+        cache.delete(cacheKey);
+      }
+      throw error;
+    });
+
+  cache.set(cacheKey, {
+    expiresAt: now + MAIL_REPORT_ATTACHMENT_CACHE_TTL_MS,
+    lastAccessedAt: now,
+    promise: loadPromise,
+    value: null,
+  });
+
+  pruneMailReportAttachmentCache(cache);
+  return applyMailReportAttachmentFilename(await loadPromise, normalizedInput);
+}
+
 export async function prepareMailReportAttachment(
   request: Request,
   token: string,
@@ -189,7 +340,7 @@ export async function prepareMailReportAttachment(
     throw new Error('메일에 첨부할 보고서 키가 없습니다.');
   }
 
-  await buildMailReportAttachmentUncached(request, token, {
+  await buildMailReportAttachmentCached(request, token, {
     ...input,
     reportKey,
   });
@@ -206,7 +357,7 @@ export async function buildMailReportAttachment(
     throw new Error('메일에 첨부할 보고서 키가 없습니다.');
   }
 
-  return buildMailReportAttachmentUncached(
+  return buildMailReportAttachmentCached(
     request,
     token,
     { ...input, reportKey },

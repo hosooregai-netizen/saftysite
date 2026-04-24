@@ -68,6 +68,7 @@ test('buildMailReportAttachment returns an authenticated original PDF download U
         originalPdfAvailable: true,
         reportKey: 'legacy:technical_guidance:351093',
         reportTitle: '하왕십리동 890-93 다세대 신축공사 기술지도 보고서',
+        reportUpdatedAt: '2026-04-24T12:34:56.000Z',
       },
     );
 
@@ -245,7 +246,38 @@ test('buildMailReportAttachment falls back to generated PDF when a legacy origin
   }
 });
 
-test('prepareMailReportAttachment validates original PDF availability without caching', async () => {
+test('buildMailReportAttachment keeps the original-pdf attachment when descriptor lookup times out', async () => {
+  const previousFetch = globalThis.fetch;
+  globalThis.fetch = (async () => {
+    const error = new Error('timed out');
+    (error as Error & { name: string }).name = 'AbortError';
+    throw error;
+  }) as typeof fetch;
+
+  try {
+    const attachment = await buildMailReportAttachment(
+      new Request('https://app.example.com/api/mail/send-report'),
+      'token-1',
+      {
+        originalPdfAvailable: true,
+        reportKey: 'legacy:technical_guidance:351093',
+        reportTitle: '하왕십리동 890-93 다세대 신축공사 기술지도 보고서',
+      },
+    );
+
+    assert.equal(
+      attachment.download_url,
+      'https://app.example.com/api/admin/reports/legacy%3Atechnical_guidance%3A351093/original-pdf',
+    );
+    assert.deepEqual(attachment.download_headers, { Authorization: 'Bearer token-1' });
+    assert.equal(attachment.data_base64, undefined);
+    assert.equal(attachment.size_bytes, undefined);
+  } finally {
+    globalThis.fetch = previousFetch;
+  }
+});
+
+test('prepareMailReportAttachment reuses the warmed original PDF descriptor for send', async () => {
   const previousFetch = globalThis.fetch;
   let fetchCount = 0;
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -288,7 +320,7 @@ test('prepareMailReportAttachment validates original PDF availability without ca
     );
 
     assert.deepEqual(prepared, { prepared: true, skipped: null });
-    assert.equal(fetchCount, 2);
+    assert.equal(fetchCount, 1);
     assert.equal(attachment.filename, '하왕십리동 890-93 다세대 신축공사 기술지도 보고서.pdf');
     assert.equal(
       attachment.download_url,
@@ -301,7 +333,7 @@ test('prepareMailReportAttachment validates original PDF availability without ca
   }
 });
 
-test('prepareMailReportAttachment validates generated PDFs without reusing stale entries', async () => {
+test('prepareMailReportAttachment reuses generated PDFs only for the same report revision', async () => {
   const previousFetch = globalThis.fetch;
   let fetchCount = 0;
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -326,6 +358,7 @@ test('prepareMailReportAttachment validates generated PDFs without reusing stale
         reportKey: 'inspection-1',
         reportTitle: '기술지도 보고서',
         reportType: 'technical_guidance',
+        reportUpdatedAt: '2026-04-24T09:00:00.000Z',
       },
     );
     const second = await prepareMailReportAttachment(
@@ -336,11 +369,24 @@ test('prepareMailReportAttachment validates generated PDFs without reusing stale
         reportKey: 'inspection-1',
         reportTitle: '기술지도 보고서',
         reportType: 'technical_guidance',
+        reportUpdatedAt: '2026-04-24T09:00:00.000Z',
+      },
+    );
+    const third = await prepareMailReportAttachment(
+      new Request('https://app.example.com/api/mail/prepare-report'),
+      'token-1',
+      {
+        preferredFilename: '기술지도 보고서',
+        reportKey: 'inspection-1',
+        reportTitle: '기술지도 보고서',
+        reportType: 'technical_guidance',
+        reportUpdatedAt: '2026-04-24T09:05:00.000Z',
       },
     );
 
     assert.deepEqual(first, { prepared: true, skipped: null });
     assert.deepEqual(second, { prepared: true, skipped: null });
+    assert.deepEqual(third, { prepared: true, skipped: null });
     assert.equal(fetchCount, 2);
   } finally {
     globalThis.fetch = previousFetch;

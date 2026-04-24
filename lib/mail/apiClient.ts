@@ -267,15 +267,20 @@ export async function sendMail(input: {
   threadId?: string;
   to: MailRecipient[];
 }) {
+  const attachments = (input.attachments || []).map((attachment) => ({
+    content_type: attachment.contentType,
+    ...(attachment.dataBase64 ? { data_base64: attachment.dataBase64 } : {}),
+    ...(attachment.downloadHeaders ? { download_headers: attachment.downloadHeaders } : {}),
+    ...(attachment.downloadUrl ? { download_url: attachment.downloadUrl } : {}),
+    filename: attachment.filename,
+    ...(typeof attachment.sizeBytes === 'number' ? { size_bytes: attachment.sizeBytes } : {}),
+  }));
+
   return requestMailApi<MailMessage>('/send', {
     method: 'POST',
     body: JSON.stringify({
       account_id: input.accountId,
-      attachments: (input.attachments || []).map((attachment) => ({
-        content_type: attachment.contentType,
-        data_base64: attachment.dataBase64,
-        filename: attachment.filename,
-      })),
+      attachments,
       body: input.body,
       sender_name: input.fromName || '',
       headquarter_id: input.headquarterId || '',
@@ -304,15 +309,20 @@ export async function sendReportMail(input: {
   subject: string;
   to: MailRecipient[];
 }) {
+  const attachments = (input.attachments || []).map((attachment) => ({
+    content_type: attachment.contentType,
+    ...(attachment.dataBase64 ? { data_base64: attachment.dataBase64 } : {}),
+    ...(attachment.downloadHeaders ? { download_headers: attachment.downloadHeaders } : {}),
+    ...(attachment.downloadUrl ? { download_url: attachment.downloadUrl } : {}),
+    filename: attachment.filename,
+    ...(typeof attachment.sizeBytes === 'number' ? { size_bytes: attachment.sizeBytes } : {}),
+  }));
+
   return requestMailApi<MailMessage>('/send-report', {
     method: 'POST',
     body: JSON.stringify({
       account_id: input.accountId,
-      attachments: (input.attachments || []).map((attachment) => ({
-        content_type: attachment.contentType,
-        data_base64: attachment.dataBase64,
-        filename: attachment.filename,
-      })),
+      attachments,
       body: input.body,
       sender_name: input.fromName || '',
       headquarter_id: input.headquarterId || '',
