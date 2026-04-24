@@ -61,7 +61,7 @@ export async function materializeMailSendAttachments(attachments: unknown[]) {
   }, 0);
 
   if (knownTotalAttachmentBytes > MAIL_ATTACHMENT_TOTAL_LIMIT_BYTES) {
-    throw new SafetyServerApiError('첨부 파일 총 용량이 너무 큽니다. 20MB 이하로 줄여 주세요.', 400);
+    throw new SafetyServerApiError('첨부 파일 총 용량이 너무 큽니다. 15MB 이하로 줄여 주세요.', 400);
   }
 
   const materializedAttachments = await Promise.all(
@@ -73,7 +73,7 @@ export async function materializeMailSendAttachments(attachments: unknown[]) {
   }, 0);
 
   if (totalAttachmentBytes > MAIL_ATTACHMENT_TOTAL_LIMIT_BYTES) {
-    throw new SafetyServerApiError('첨부 파일 총 용량이 너무 큽니다. 20MB 이하로 줄여 주세요.', 400);
+    throw new SafetyServerApiError('첨부 파일 총 용량이 너무 큽니다. 15MB 이하로 줄여 주세요.', 400);
   }
 
   return materializedAttachments;

@@ -16,7 +16,7 @@ import { readMailReportDownloadToken } from '@/server/mail/reportDownloadLink';
 test('isOversizeMailAttachmentError matches backend attachment limit failures', () => {
   assert.equal(
     isOversizeMailAttachmentError(
-      new SafetyServerApiError('첨부 파일 총 용량이 너무 큽니다. 20MB 이하로 줄여 주세요.', 400),
+      new SafetyServerApiError('첨부 파일 총 용량이 너무 큽니다. 15MB 이하로 줄여 주세요.', 400),
     ),
     true,
   );

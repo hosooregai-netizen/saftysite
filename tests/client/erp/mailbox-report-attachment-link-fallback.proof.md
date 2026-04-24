@@ -5,7 +5,7 @@
 - mailbox report selection should hide legacy rows that do not have an attachable original PDF
 - mailbox report selection should hide draft/in-progress report rows that are not yet attachable
 - selecting a legacy report with an original PDF should prepare an authenticated download-based attachment payload without reading the full PDF body first
-- report sends should replace oversized original-PDF attachments with a download link instead of failing at the 20MB mail limit
+- report sends should replace oversized original-PDF attachments with a download link instead of failing at the 15MB mail limit
 - generic mailbox file attachments should upload to HTTPS content assets instead of pushing raw base64 blobs through `/api/mail/send`
 - `/api/mail/send` should materialize uploaded attachment references server-side and reject oversized totals before the upstream mail provider call
 

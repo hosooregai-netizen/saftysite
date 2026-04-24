@@ -55,7 +55,7 @@ test('materializeMailSendAttachments rejects oversized attachment totals before 
     (error: unknown) => {
       assert.ok(error instanceof SafetyServerApiError);
       assert.equal(error.status, 400);
-      assert.match(error.message, /20MB 이하/);
+      assert.match(error.message, /15MB 이하/);
       return true;
     },
   );

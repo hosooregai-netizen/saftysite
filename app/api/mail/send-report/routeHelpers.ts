@@ -3,7 +3,7 @@ import type { MailAttachmentServerPayload } from '@/server/mail/reportAttachment
 import { buildMailReportDownloadUrl } from '@/server/mail/reportDownloadLink';
 import type { MailMessage, MailRecipient } from '@/types/mail';
 
-export const MAIL_ATTACHMENT_TOTAL_LIMIT_BYTES = 20 * 1024 * 1024;
+export const MAIL_ATTACHMENT_TOTAL_LIMIT_BYTES = 15 * 1024 * 1024;
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
