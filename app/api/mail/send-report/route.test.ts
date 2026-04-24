@@ -71,7 +71,10 @@ test('POST /api/mail/send-report waits for oversized link sends and returns the 
       siteId: message.site_id,
       subject: message.subject,
       threadId: message.thread_id,
-      to: message.to,
+      to: message.to.map((recipient) => ({
+        email: recipient.email,
+        name: recipient.name ?? null,
+      })),
       updatedAt: message.updated_at,
     }),
     materializeMailAttachmentDownload: async () => {
@@ -84,10 +87,10 @@ test('POST /api/mail/send-report waits for oversized link sends and returns the 
       };
     },
     readRequiredAdminToken: () => 'route-token',
-    sendSafetyMailServer: async (token, payload, currentRequest) => {
+    sendSafetyMailServer: async (token, payload, currentRequest = null) => {
       sendCalls.push({
         payload,
-        request: currentRequest,
+        request: currentRequest ?? null,
         token,
       });
       return {

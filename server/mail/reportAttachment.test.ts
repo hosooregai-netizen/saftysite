@@ -291,6 +291,39 @@ test('buildMailReportAttachment posts reportKey to current quarterly PDF route',
   }
 });
 
+test('buildMailReportAttachment posts non-legacy technical guidance reports to the generated inspection PDF route', async () => {
+  const previousFetch = globalThis.fetch;
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    assert.equal(String(input), 'https://app.example.com/api/documents/inspection/pdf');
+    assert.equal(init?.method, 'POST');
+    assert.equal(init?.body, JSON.stringify({ reportKey: 'report-current-draft-1' }));
+    return new Response(new Uint8Array([37, 80, 68, 70]), {
+      headers: {
+        'content-disposition': "attachment; filename*=UTF-8''inspection.pdf",
+        'content-type': 'application/pdf',
+      },
+    });
+  }) as typeof fetch;
+
+  try {
+    const attachment = await buildMailReportAttachment(
+      new Request('https://app.example.com/api/mail/send-report'),
+      'token-1',
+      {
+        reportKey: 'report-current-draft-1',
+        reportTitle: 'Current inspection report',
+        reportType: 'technical_guidance',
+      },
+    );
+
+    assert.equal(attachment.filename, 'Current inspection report.pdf');
+    assert.equal(attachment.data_base64, 'JVBERg==');
+    assert.equal(attachment.download_url, undefined);
+  } finally {
+    globalThis.fetch = previousFetch;
+  }
+});
+
 test('buildMailReportAttachment falls back to generated PDF when a legacy original PDF lookup returns 404', async () => {
   const previousFetch = globalThis.fetch;
   let fetchCount = 0;

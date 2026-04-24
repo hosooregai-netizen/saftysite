@@ -11,7 +11,6 @@ import {
   readRequiredAdminToken,
   SafetyServerApiError,
 } from '@/server/admin/safetyApiServer';
-import { isMailAttachmentReady } from '@/lib/mail/reportAttachmentEligibility';
 import {
   readOrCreateAdminReportsRouteResponse,
   readOrCreateAdminReportsRowsSnapshot,
@@ -19,6 +18,7 @@ import {
 import { mapBackendAdminReportRow } from '@/server/admin/upstreamMappers';
 import type { ControllerReportRow, SafetyAdminReportsResponse } from '@/types/admin';
 import legacyReportOriginalPdfs from '@/data/legacy-admin-report-original-pdfs.json';
+import { matchesReportRow, type ReportRowFilters } from './reportRowFilters';
 
 export const runtime = 'nodejs';
 
@@ -39,19 +39,6 @@ function normalizeText(value: unknown) {
 
 function normalizeSortDirection(value: string) {
   return value === 'asc' ? 'asc' : 'desc';
-}
-
-function buildReportQueryText(row: ControllerReportRow) {
-  return [
-    row.reportKey,
-    row.reportTitle,
-    row.periodLabel,
-    row.siteName,
-    row.headquarterName,
-    row.assigneeName,
-  ]
-    .join(' ')
-    .toLowerCase();
 }
 
 function getSortValue(row: ControllerReportRow, sortBy: string) {
@@ -95,72 +82,6 @@ function compareReportRows(
   return left.reportKey.localeCompare(right.reportKey, 'ko') * direction;
 }
 
-function matchesReportRow(
-  row: ControllerReportRow,
-  filters: {
-    assigneeUserId: string;
-    dateFrom: string;
-    dateTo: string;
-    dispatchStatus: string;
-    headquarterId: string;
-    mailAttachableOnly: boolean;
-    qualityStatus: string;
-    query: string;
-    reportKey: string;
-    reportType: string;
-    siteId: string;
-    status: string;
-  },
-) {
-  if (filters.reportKey) {
-    return row.reportKey === filters.reportKey;
-  }
-  if (filters.headquarterId && row.headquarterId !== filters.headquarterId) {
-    return false;
-  }
-  if (filters.siteId && row.siteId !== filters.siteId) {
-    return false;
-  }
-  if (filters.assigneeUserId && row.assigneeUserId !== filters.assigneeUserId) {
-    return false;
-  }
-  if (filters.qualityStatus && row.qualityStatus !== filters.qualityStatus) {
-    return false;
-  }
-  if (filters.dispatchStatus && row.dispatchStatus !== filters.dispatchStatus) {
-    return false;
-  }
-  if (filters.reportType && row.reportType !== filters.reportType) {
-    return false;
-  }
-  if (filters.status && row.status !== filters.status && row.workflowStatus !== filters.status) {
-    return false;
-  }
-  if (
-    filters.mailAttachableOnly &&
-    !isMailAttachmentReady({
-      originalPdfAvailable: Boolean(row.originalPdfAvailable),
-      reportKey: row.reportKey,
-      workflowStatus: row.workflowStatus || row.status,
-    })
-  ) {
-    return false;
-  }
-  if (filters.dateFrom && row.visitDate && row.visitDate < filters.dateFrom) {
-    return false;
-  }
-  if (filters.dateTo && row.visitDate && row.visitDate > filters.dateTo) {
-    return false;
-  }
-  if (filters.dateFrom && !row.visitDate) {
-    return false;
-  }
-  if (filters.query && !buildReportQueryText(row).includes(filters.query)) {
-    return false;
-  }
-  return true;
-}
-
 async function buildReportsRoutePayload(
   token: string,
   request: Request,
@@ -170,7 +91,7 @@ async function buildReportsRoutePayload(
   const offset = Math.max(0, Number(url.searchParams.get('offset') || '0'));
   const sortBy = normalizeText(url.searchParams.get('sort_by') || 'updatedAt') || 'updatedAt';
   const sortDir = normalizeSortDirection(normalizeText(url.searchParams.get('sort_dir') || 'desc'));
-  const filters = {
+  const filters: ReportRowFilters = {
     assigneeUserId: normalizeText(url.searchParams.get('assignee_user_id')),
     dateFrom: normalizeText(url.searchParams.get('date_from')),
     dateTo: normalizeText(url.searchParams.get('date_to')),
