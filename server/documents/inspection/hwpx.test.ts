@@ -45,6 +45,13 @@ function countBlankParagraphsBetweenTableIndices(xml: string, leftIndex: number,
   ).length;
 }
 
+function countStandaloneBlankPageBreakParagraphs(xml: string) {
+  return Array.from(xml.matchAll(/<hp:p\b[^>]*pageBreak="1"[\s\S]*?<\/hp:p>/g)).filter((match) => {
+    const paragraphXml = match[0];
+    return !/<hp:tbl\b/.test(paragraphXml) && !paragraphXml.replace(/<[^>]+>/g, '').trim();
+  }).length;
+}
+
 function findTableIndexContainingText(xml: string, text: string) {
   return (xml.match(/<hp:tbl\b[\s\S]*?<\/hp:tbl>/g) ?? []).findIndex((tableXml) =>
     tableXml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').includes(text),
@@ -282,4 +289,62 @@ test('buildInspectionHwpxDocument keeps repeated doc4 follow-up pages page-broke
   assert.notEqual(doc7Index, -1);
   assert.equal(countBlankParagraphsBetweenTableIndices(sectionXml, doc4Index, doc5Index), 0);
   assert.equal(countBlankParagraphsBetweenTableIndices(sectionXml, doc5Index, doc7Index), 0);
+});
+
+test('buildInspectionHwpxDocument keeps multi-section repeated tables free of blank page-break paragraphs', async () => {
+  const session = buildMeasurementFixture('no');
+  session.document4FollowUps = Array.from({ length: 10 }, (_, index) => ({
+    ...session.document4FollowUps[0],
+    afterPhotoUrl: '',
+    beforePhotoUrl: '',
+    id: `follow-up-many-${index + 1}`,
+    location: `FUPM${index + 1}`,
+    result: `FUPR${index + 1}`,
+  }));
+  session.document7Findings = Array.from({ length: 6 }, (_, index) => ({
+    ...session.document7Findings[0],
+    id: `finding-many-${index + 1}`,
+    location: `FINDM${index + 1}`,
+    photoUrl: '',
+    photoUrl2: '',
+  }));
+  session.document8Plans = Array.from({ length: 10 }, (_, index) => ({
+    ...session.document8Plans[0],
+    countermeasure: `PLANC${index + 1}`,
+    hazard: `PLANH${index + 1}`,
+    id: `future-plan-${index + 1}`,
+    processName: `PLANP${index + 1}`,
+  }));
+  session.document10Measurements = Array.from({ length: 10 }, (_, index) => ({
+    ...session.document10Measurements[0],
+    id: `measurement-many-${index + 1}`,
+    measuredValue: `MEASV${index + 1}`,
+    measurementLocation: `MEASM${index + 1}`,
+  }));
+
+  const document = await buildInspectionHwpxDocument(session, [session]);
+  const zip = await JSZip.loadAsync(document.buffer);
+  const sectionXml = await zip.file('Contents/section0.xml')?.async('string');
+
+  assert.ok(sectionXml);
+  assert.equal(countStandaloneBlankPageBreakParagraphs(sectionXml), 0);
+  assert.match(sectionXml, /FUPM10/);
+  assert.match(sectionXml, /FINDM6/);
+  assert.match(sectionXml, /PLANP10/);
+  assert.match(sectionXml, /MEASM10/);
+
+  const repeatedPairs = [
+    ['FUPM4', 'FUPM7'],
+    ['FINDM2', 'FINDM3'],
+    ['PLANP4', 'PLANP7'],
+    ['MEASM4', 'MEASM7'],
+  ] as const;
+
+  for (const [leftText, rightText] of repeatedPairs) {
+    const leftIndex = findTableIndexContainingText(sectionXml, leftText);
+    const rightIndex = findTableIndexContainingText(sectionXml, rightText);
+    assert.notEqual(leftIndex, -1);
+    assert.notEqual(rightIndex, -1);
+    assert.equal(countBlankParagraphsBetweenTableIndices(sectionXml, leftIndex, rightIndex), 0);
+  }
 });

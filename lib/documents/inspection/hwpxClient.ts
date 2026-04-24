@@ -1678,14 +1678,25 @@ function expandRepeatBlocks(
     const blockSpan = repeatBlockSpan(currentXml, startIndex, endIndex + endMarker.length);
     const blockStart = blockSpan?.start ?? startIndex;
     const blockEnd = blockSpan?.end ?? endIndex + endMarker.length;
-    const before = currentXml.slice(0, blockStart);
-    const blockTemplateXml = blockSpan
-      ? currentXml.slice(blockStart, blockEnd).replaceAll(startMarker, '').replaceAll(endMarker, '')
-      : currentXml.slice(startIndex + startMarker.length, endIndex);
-    const after = currentXml.slice(blockEnd);
     const config = REPEAT_BLOCK_CONFIG[repeatBlockPath];
     const repeatCount = repeatBlockPageCount(repeatBlockPath, repeatCounts[repeatBlockPath] ?? 1);
-    const repeatedXml = Array.from({ length: repeatCount }, (_, pageIndex) => {
+    const before = currentXml.slice(0, blockStart);
+    const blockTemplateXml = stripTrailingBlankParagraphs(
+      blockSpan
+        ? currentXml.slice(blockStart, blockEnd).replaceAll(startMarker, '').replaceAll(endMarker, '')
+        : currentXml.slice(startIndex + startMarker.length, endIndex),
+    );
+    const inlineTableContext = blockSpan ? inlineTableContextBefore(currentXml, blockStart) : null;
+    const rawAfter = currentXml.slice(blockEnd);
+    const afterWithoutInlineClose =
+      repeatCount > 1 && inlineTableContext ? stripLeadingInlineContextClose(rawAfter) : { removed: false, xml: rawAfter };
+    const after = blockSpan
+      ? stripLeadingBlankParagraphsBeforeNextTable(afterWithoutInlineClose.xml)
+      : afterWithoutInlineClose.xml;
+    const repeatedXmlParts: string[] = [];
+    let inlineContextOpen = true;
+
+    for (let pageIndex = 0; pageIndex < repeatCount; pageIndex += 1) {
       const indexMap = new Map<number, number>(
         config.prototypeIndices.map((prototypeIndex) => [
           prototypeIndex,
@@ -1739,11 +1750,18 @@ function expandRepeatBlocks(
         // Repeated template tables are page-sized layouts. Starting each cloned
         // block on a fresh page keeps later sections from drifting or overlapping
         // regardless of whether the table is floating or top/bottom wrapped.
-        blockXml = forceFirstParagraphPageBreak(blockXml);
+        const reopenInlineContext = pageIndex === repeatCount - 1 && !afterWithoutInlineClose.removed;
+        blockXml = forceFirstParagraphPageBreak(blockXml, inlineTableContext, {
+          closeInlineContext: inlineContextOpen,
+          reopenInlineContext,
+        });
+        inlineContextOpen = reopenInlineContext;
       }
 
-      return blockXml;
-    }).join('');
+      repeatedXmlParts.push(blockXml);
+    }
+
+    const repeatedXml = repeatedXmlParts.join('');
 
     currentXml = `${before}${repeatedXml}${after}`;
   }
@@ -1766,10 +1784,82 @@ function stripRepeatBlockMarkers(xml: string): string {
   return xml.replace(/\{#([^{}]+)\}|\{\/([^{}]+)\}/g, '');
 }
 
-function forceFirstParagraphPageBreak(xml: string): string {
+interface InlineTableContext {
+  paragraphTag: string;
+  runTag: string;
+}
+
+function inlineTableContextBefore(xml: string, index: number): InlineTableContext | null {
+  const paragraphStart = openTagStartBefore(xml, index, 'hp:p');
+  const runStart = openTagStartBefore(xml, index, 'hp:run');
+
+  if (paragraphStart == null || runStart == null || runStart < paragraphStart) {
+    return null;
+  }
+
+  const paragraphTagEnd = xml.indexOf('>', paragraphStart);
+  const runTagEnd = xml.indexOf('>', runStart);
+  if (paragraphTagEnd === -1 || runTagEnd === -1) {
+    return null;
+  }
+
+  const paragraphTag = xml.slice(paragraphStart, paragraphTagEnd + 1);
+  const runTag = xml.slice(runStart, runTagEnd + 1);
+  if (paragraphTag.endsWith('/>') || runTag.endsWith('/>')) {
+    return null;
+  }
+
+  return { paragraphTag, runTag };
+}
+
+function openTagStartBefore(xml: string, index: number, tagName: string): number | null {
+  const escapedTagName = escapeRegExp(tagName);
+  const tokenPattern = new RegExp(`<${escapedTagName}\\b[^>]*\\/?>|<\\/${escapedTagName}>`, 'g');
+  const stack: number[] = [];
+
+  for (const match of xml.slice(0, index).matchAll(tokenPattern)) {
+    const token = match[0];
+    const tokenIndex = match.index ?? 0;
+    const isClosing = token.startsWith(`</${tagName}`);
+    const isSelfClosing = !isClosing && token.endsWith('/>');
+
+    if (isClosing) {
+      stack.pop();
+    } else if (!isSelfClosing) {
+      stack.push(tokenIndex);
+    }
+  }
+
+  return stack.at(-1) ?? null;
+}
+
+function setParagraphPageBreak(paragraphTag: string, value: '0' | '1'): string {
+  return /pageBreak=/.test(paragraphTag)
+    ? paragraphTag.replace(/pageBreak="[^"]*"/, `pageBreak="${value}"`)
+    : paragraphTag.replace(/>$/, ` pageBreak="${value}">`);
+}
+
+function forceFirstParagraphPageBreak(
+  xml: string,
+  inlineTableContext: InlineTableContext | null = null,
+  options: { closeInlineContext?: boolean; reopenInlineContext?: boolean } = {},
+): string {
   const firstTableIndex = xml.search(/<hp:tbl\b/);
   const firstParagraphIndex = xml.search(/<hp:p\b/);
   if (firstTableIndex >= 0 && (firstParagraphIndex === -1 || firstTableIndex < firstParagraphIndex)) {
+    if (inlineTableContext) {
+      return (
+        (options.closeInlineContext === false ? '' : '</hp:run></hp:p>') +
+        setParagraphPageBreak(inlineTableContext.paragraphTag, '1') +
+        inlineTableContext.runTag +
+        xml +
+        '</hp:run></hp:p>' +
+        (options.reopenInlineContext === false
+          ? ''
+          : setParagraphPageBreak(inlineTableContext.paragraphTag, '0') + inlineTableContext.runTag)
+      );
+    }
+
     return (
       '<hp:p id="0" paraPrIDRef="21" styleIDRef="0" pageBreak="1" columnBreak="0" merged="0">' +
       '<hp:run charPrIDRef="0"/></hp:p>' +
@@ -1784,12 +1874,68 @@ function forceFirstParagraphPageBreak(xml: string): string {
   );
 }
 
-function containsFloatingTable(xml: string): boolean {
-  return /<hp:tbl\b[^>]*textWrap="IN_FRONT_OF_TEXT"/.test(xml);
-}
-
 function containsTable(xml: string): boolean {
   return /<hp:tbl\b/.test(xml);
+}
+
+function stripTrailingBlankParagraphs(xml: string): string {
+  let nextXml = xml;
+
+  while (true) {
+    const trailingWhitespace = nextXml.match(/\s*$/)?.[0] ?? '';
+    const contentEnd = nextXml.length - trailingWhitespace.length;
+    const paragraphs = paragraphSpans(nextXml.slice(0, contentEnd));
+    const trailingParagraph = paragraphs
+      .filter((span) => span.end === contentEnd)
+      .sort((left, right) => right.start - left.start)[0];
+
+    if (!trailingParagraph) {
+      return nextXml;
+    }
+
+    const paragraphXml = nextXml.slice(trailingParagraph.start, trailingParagraph.end);
+    if (/<hp:tbl\b|<hp:pic\b/.test(paragraphXml) || !isHwpxBlankParagraph(paragraphXml)) {
+      return nextXml;
+    }
+
+    nextXml = `${nextXml.slice(0, trailingParagraph.start)}${trailingWhitespace}`;
+  }
+}
+
+function stripLeadingBlankParagraphsBeforeNextTable(xml: string): string {
+  const firstTableIndex = xml.search(/<hp:tbl\b/);
+  if (firstTableIndex <= 0) {
+    return xml;
+  }
+
+  const prefix = xml.slice(0, firstTableIndex).replace(/<hp:p\b[\s\S]*?<\/hp:p>/g, (paragraphXml) => {
+    if (
+      /<hp:tbl\b|<hp:pic\b|<hp:ctrl\b/.test(paragraphXml)
+      || /pageBreak="1"/.test(paragraphXml)
+      || !isHwpxBlankParagraph(paragraphXml)
+    ) {
+      return paragraphXml;
+    }
+
+    return '';
+  });
+
+  return `${prefix}${xml.slice(firstTableIndex)}`;
+}
+
+function stripLeadingInlineContextClose(xml: string): { removed: boolean; xml: string } {
+  const match = xml.match(
+    /^(?:<hp:t\s*\/>|<hp:t>\s*<\/hp:t>)?<\/hp:run>(?:<hp:linesegarray\b[\s\S]*?<\/hp:linesegarray>)?<\/hp:p>/,
+  );
+
+  if (!match) {
+    return { removed: false, xml };
+  }
+
+  return {
+    removed: true,
+    xml: xml.slice(match[0].length),
+  };
 }
 
 function repeatBlockSpan(
@@ -1798,7 +1944,6 @@ function repeatBlockSpan(
   endIndexExclusive: number,
 ): { start: number; end: number } | null {
   const tables = tableSpans(xml);
-  const paragraphs = paragraphSpans(xml);
   const tableIndex = tables.findIndex(
     (span) => startIndex >= span.start && endIndexExclusive <= span.end,
   );
@@ -1807,60 +1952,7 @@ function repeatBlockSpan(
     return null;
   }
 
-  const containingTable = tables[tableIndex];
-  const containingTableXml = xml.slice(containingTable.start, containingTable.end);
-  const containingParagraph =
-    floatingTableAnchorParagraphSpan(xml, containingTable)
-    ?? (containsFloatingTable(containingTableXml)
-      ? paragraphs.find((span) => containingTable.start >= span.start && containingTable.end <= span.end)
-      : undefined)
-    ?? containingTable;
-  const nextTable = tables[tableIndex + 1];
-
-  if (!nextTable) {
-    return {
-      start: containingParagraph.start,
-      end: containingParagraph.end,
-    };
-  }
-
-  const nextTableXml = xml.slice(nextTable.start, nextTable.end);
-  const nextParagraph =
-    floatingTableAnchorParagraphSpan(xml, nextTable)
-    ?? (containsFloatingTable(nextTableXml)
-      ? paragraphs.find((span) => nextTable.start >= span.start && nextTable.end <= span.end)
-      : undefined)
-    ?? nextTable;
-
-  return {
-    start: containingParagraph.start,
-    end: nextParagraph.start,
-  };
-}
-
-function floatingTableAnchorParagraphSpan(
-  xml: string,
-  tableSpan: { start: number; end: number },
-): { start: number; end: number } | null {
-  if (!containsFloatingTable(xml.slice(tableSpan.start, tableSpan.end))) {
-    return null;
-  }
-
-  const paragraphStart = xml.lastIndexOf('<hp:p', tableSpan.start);
-  const previousParagraphEnd = xml.lastIndexOf('</hp:p>', tableSpan.start);
-  if (paragraphStart === -1 || paragraphStart < previousParagraphEnd) {
-    return null;
-  }
-
-  const paragraphEnd = xml.indexOf('</hp:p>', tableSpan.end);
-  if (paragraphEnd === -1) {
-    return null;
-  }
-
-  return {
-    start: paragraphStart,
-    end: paragraphEnd + '</hp:p>'.length,
-  };
+  return tables[tableIndex];
 }
 
 function injectPlaceholderIntoBlankParagraphRange(
