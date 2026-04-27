@@ -89,7 +89,7 @@ export function QuarterlyFuturePlansSection(props: {
                         hazardCountermeasureCatalog,
                         recommendationQuery,
                         activeEditor.field,
-                        { excludeId: item.hazardCountermeasureItemId },
+                        { excludeId: item.hazardCountermeasureItemId, limit: 12 },
                       )
                     : [];
                 const recommendationListId =
@@ -105,8 +105,19 @@ export function QuarterlyFuturePlansSection(props: {
                         onBlur={(event) => handleBlur(item.id, 'expectedRisk', event)}
                       >
                         <textarea
+                          autoComplete="off"
+                          role="combobox"
+                          aria-autocomplete="list"
+                          aria-controls={recommendationListId}
+                          aria-expanded={
+                            activeEditor?.planId === item.id &&
+                            activeEditor.field === 'expectedRisk' &&
+                            recommendations.length > 0
+                          }
+                          aria-haspopup="listbox"
                           className={`app-textarea ${operationalStyles.futurePlanControl}`}
                           value={item.hazard || item.processName}
+                          placeholder="예상위험 검색 또는 입력"
                           onFocus={() =>
                             setActiveEditor({ planId: item.id, field: 'expectedRisk' })
                           }
@@ -177,8 +188,19 @@ export function QuarterlyFuturePlansSection(props: {
                         onBlur={(event) => handleBlur(item.id, 'countermeasure', event)}
                       >
                         <textarea
+                          autoComplete="off"
+                          role="combobox"
+                          aria-autocomplete="list"
+                          aria-controls={recommendationListId}
+                          aria-expanded={
+                            activeEditor?.planId === item.id &&
+                            activeEditor.field === 'countermeasure' &&
+                            recommendations.length > 0
+                          }
+                          aria-haspopup="listbox"
                           className={`app-textarea ${operationalStyles.futurePlanControl}`}
                           value={item.countermeasure}
+                          placeholder="관리대책 검색 또는 입력"
                           onFocus={() =>
                             setActiveEditor({ planId: item.id, field: 'countermeasure' })
                           }
