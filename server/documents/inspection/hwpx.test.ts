@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import JSZip from 'jszip';
+import sharp from 'sharp';
 
 import {
   createInspectionSession,
@@ -289,6 +290,37 @@ test('buildInspectionHwpxDocument keeps repeated doc4 follow-up pages page-broke
   assert.notEqual(doc7Index, -1);
   assert.equal(countBlankParagraphsBetweenTableIndices(sectionXml, doc4Index, doc5Index), 0);
   assert.equal(countBlankParagraphsBetweenTableIndices(sectionXml, doc5Index, doc7Index), 0);
+});
+
+test('buildInspectionHwpxDocument renders single-category doc5 chart slices as visible opaque images', async () => {
+  const session = buildMeasurementFixture('no');
+  session.document7Findings = [
+    {
+      ...session.document7Findings[0],
+      id: 'single-chart-finding',
+      location: 'single-chart-location',
+      accidentType: '추락',
+      causativeAgentKey: 'scaffold_platform',
+      hazardDescription: 'single-chart-hazard',
+      improvementPlan: 'single-chart-plan',
+      improvementRequest: 'single-chart-plan',
+    },
+  ];
+
+  const document = await buildInspectionHwpxDocument(session, [session]);
+  const zip = await JSZip.loadAsync(document.buffer);
+  const chartImage = await zip.file('BinData/tplimg23.png')?.async('nodebuffer');
+
+  assert.ok(chartImage);
+
+  const metadata = await sharp(chartImage).metadata();
+  const outerRingPixel = await sharp(chartImage)
+    .extract({ left: 575, top: 340, width: 1, height: 1 })
+    .raw()
+    .toBuffer();
+
+  assert.equal(metadata.hasAlpha, false);
+  assert.notDeepEqual(Array.from(outerRingPixel), [255, 255, 255]);
 });
 
 test('buildInspectionHwpxDocument keeps multi-section repeated tables free of blank page-break paragraphs', async () => {

@@ -1285,9 +1285,15 @@ function buildDoc5ChartSvg(entries: Doc5ChartEntry[]): string {
     const item = entries[index];
     const sliceAngle = (item.count / total) * Math.PI * 2;
     const nextAngle = angle + sliceAngle;
-    svgParts.push(
-      `<path d="${buildDoc5ChartSlicePath(centerX, centerY, outerRadius, innerRadius, angle, nextAngle)}" fill="${DOC5_CHART_SEGMENT_COLORS[index % DOC5_CHART_SEGMENT_COLORS.length]}"/>`,
-    );
+    const color = DOC5_CHART_SEGMENT_COLORS[index % DOC5_CHART_SEGMENT_COLORS.length];
+
+    if (sliceAngle >= Math.PI * 2 - 0.0001) {
+      svgParts.push(`<circle cx="${centerX}" cy="${centerY}" r="${outerRadius}" fill="${color}"/>`);
+    } else {
+      svgParts.push(
+        `<path d="${buildDoc5ChartSlicePath(centerX, centerY, outerRadius, innerRadius, angle, nextAngle)}" fill="${color}"/>`,
+      );
+    }
     angle = nextAngle;
   }
 
@@ -1338,6 +1344,7 @@ async function renderDoc5ChartCardDataUrlEmbedded(
   const sharp = (await import('sharp')).default;
   const rightPadding = DOC5_CHART_IMAGE_WIDTH - DOC5_CHART_CONTENT_WIDTH - DOC5_CHART_CONTENT_OFFSET_X;
   const pngBuffer = await sharp(Buffer.from(buildDoc5ChartSvg(entries)))
+    .flatten({ background: '#ffffff' })
     .extend({
       top: DOC5_CHART_CONTENT_OFFSET_Y,
       bottom: DOC5_CHART_IMAGE_HEIGHT - DOC5_CHART_CONTENT_HEIGHT - DOC5_CHART_CONTENT_OFFSET_Y,
