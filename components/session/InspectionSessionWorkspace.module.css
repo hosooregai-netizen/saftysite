@@ -3413,36 +3413,7 @@
   gap: 8px;
   align-content: start;
   min-height: 132px;
-  padding: 10px 12px;
-}
-
-.doc8ProcessInput:global(.app-input) {
-  width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-  min-height: 44px;
   margin: 0;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-  font-size: var(--text-ui-sm);
-  font-weight: 600;
-  line-height: 1.55;
-  color: var(--erp-dark);
-}
-
-.doc8ProcessInput:global(.app-input::placeholder) {
-  color: var(--erp-text-muted);
-  font-weight: 500;
-}
-
-.doc8ProcessInput:global(.app-input:focus),
-.doc8ProcessInput:global(.app-input:focus-visible) {
-  outline: none;
-  box-shadow: none;
-  background: transparent;
 }
 
 .doc8RecommendationList {
@@ -3552,6 +3523,7 @@
 }
 
 /* 향후 주요 작업공정: 셀 직접입력형, 5줄 정도 높이 */
+.doc8FutureTable .doc8TdProcess .doc8ProcessTextarea:global(.app-textarea),
 .doc8FutureTable .doc8TdArea .doc8Textarea:global(.app-textarea) {
   width: 100%;
   min-width: 0;
@@ -3566,10 +3538,19 @@
   border-radius: 0;
   background: transparent;
   box-shadow: none;
+  font-size: var(--text-ui-sm);
   overflow-y: auto;
   line-height: 1.55;
 }
 
+.doc8FutureTable .doc8TdProcess .doc8ProcessTextarea:global(.app-textarea::placeholder),
+.doc8FutureTable .doc8TdArea .doc8Textarea:global(.app-textarea::placeholder) {
+  color: var(--erp-text-muted);
+  font-weight: 500;
+}
+
+.doc8FutureTable .doc8TdProcess .doc8ProcessTextarea:global(.app-textarea:focus),
+.doc8FutureTable .doc8TdProcess .doc8ProcessTextarea:global(.app-textarea:focus-visible),
 .doc8FutureTable .doc8TdArea .doc8Textarea:global(.app-textarea:focus),
 .doc8FutureTable .doc8TdArea .doc8Textarea:global(.app-textarea:focus-visible) {
   outline: none;

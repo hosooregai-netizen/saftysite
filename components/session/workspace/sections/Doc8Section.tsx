@@ -169,7 +169,7 @@ export default function Doc8Section({
                       className={styles.doc8ProcessCellStack}
                       onBlur={(event) => handleEditorBlur(item.id, 'title', event)}
                     >
-                      <input
+                      <textarea
                         autoComplete="off"
                         role="combobox"
                         aria-autocomplete="list"
@@ -180,7 +180,8 @@ export default function Doc8Section({
                           recommendations.length > 0
                         }
                         aria-haspopup="listbox"
-                        className={`${styles.doc8ProcessInput} app-input`}
+                        rows={5}
+                        className={`${styles.doc8ProcessTextarea} app-textarea`}
                         value={item.processName}
                         placeholder="작업공정 검색 또는 입력"
                         onFocus={() => setActiveEditor({ planId: item.id, field: 'title' })}
@@ -204,6 +205,7 @@ export default function Doc8Section({
                           id={recommendationListId}
                           className={styles.doc8RecommendationList}
                           role="listbox"
+                          style={{ top: 'calc(100% + 6px)', left: 0, right: 0 }}
                         >
                           {recommendations.map((catalogItem) => (
                             <button

@@ -155,14 +155,14 @@ export function MobileInspectionSessionStep8({
                       className={styles.mobileDoc8ProcessStack}
                       onBlur={(event) => handleDoc8ProcessBlur(plan.id, event)}
                     >
-                      <input
+                      <textarea
                         autoComplete="off"
                         role="combobox"
                         aria-autocomplete="list"
                         aria-controls={`mobile-doc8-recommendations-${plan.id}-${activeField}`}
                         aria-expanded={activeDoc8PlanId === plan.id && activeField === 'title'}
                         aria-haspopup="listbox"
-                        className="app-input"
+                        className={`app-input ${styles.mobileEditorTextareaCompact}`}
                         value={plan.processName}
                         onFocus={() => {
                           setActiveField('title');
