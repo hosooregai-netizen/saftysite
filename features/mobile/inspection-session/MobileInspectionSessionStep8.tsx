@@ -120,13 +120,14 @@ export function MobileInspectionSessionStep8({
                     ? plan.hazard
                     : plan.countermeasure
                 : '';
+            const hasRecommendationQuery = recommendationQuery.trim().length > 0;
             const recommendations =
-              activeDoc8PlanId === plan.id
+              activeDoc8PlanId === plan.id && hasRecommendationQuery
                 ? getHazardCountermeasureRecommendations(
                     recommendationSource,
                     recommendationQuery,
                     activeField,
-                    { excludeId: plan.hazardCountermeasureItemId },
+                    { excludeId: plan.hazardCountermeasureItemId, limit: 12 },
                   )
                 : [];
 
@@ -177,7 +178,7 @@ export function MobileInspectionSessionStep8({
                           setActiveDoc8PlanId(plan.id);
                           updatePlanField(plan.id, 'title', event.target.value);
                         }}
-                        placeholder="공정명 입력"
+                        placeholder="공정명 검색 또는 입력"
                         style={{ width: '100%' }}
                       />
                       {activeDoc8PlanId === plan.id &&
@@ -228,7 +229,7 @@ export function MobileInspectionSessionStep8({
                           setActiveDoc8PlanId(plan.id);
                           updatePlanField(plan.id, 'expectedRisk', event.target.value);
                         }}
-                        placeholder="위험요인"
+                        placeholder="위험요인 검색 또는 입력"
                         style={{ width: '100%' }}
                       />
                       {activeDoc8PlanId === plan.id &&
@@ -280,7 +281,7 @@ export function MobileInspectionSessionStep8({
                           setActiveDoc8PlanId(plan.id);
                           updatePlanField(plan.id, 'countermeasure', event.target.value);
                         }}
-                        placeholder="안전대책"
+                        placeholder="안전대책 검색 또는 입력"
                         style={{ width: '100%' }}
                       />
                       {activeDoc8PlanId === plan.id &&

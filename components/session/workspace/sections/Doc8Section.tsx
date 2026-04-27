@@ -147,13 +147,14 @@ export default function Doc8Section({
                       ? item.hazard
                       : item.countermeasure
                   : '';
+              const hasRecommendationQuery = recommendationQuery.trim().length > 0;
               const recommendations =
-                activeEditor?.planId === item.id
+                activeEditor?.planId === item.id && hasRecommendationQuery
                   ? getHazardCountermeasureRecommendations(
                       recommendationSource,
                       recommendationQuery,
                       activeEditor.field,
-                      { excludeId: item.hazardCountermeasureItemId },
+                      { excludeId: item.hazardCountermeasureItemId, limit: 12 },
                     )
                   : [];
               const recommendationListId =
@@ -181,7 +182,7 @@ export default function Doc8Section({
                         aria-haspopup="listbox"
                         className={`${styles.doc8ProcessInput} app-input`}
                         value={item.processName}
-                        placeholder="향후 작업공정 입력"
+                        placeholder="작업공정 검색 또는 입력"
                         onFocus={() => setActiveEditor({ planId: item.id, field: 'title' })}
                         onKeyDown={(event) => {
                           if (event.key === 'Escape') {
@@ -230,6 +231,7 @@ export default function Doc8Section({
                         rows={5}
                         className={`${styles.doc8Textarea} app-textarea`}
                         value={item.hazard}
+                        placeholder="위험요인 검색 또는 입력"
                         onFocus={() => setActiveEditor({ planId: item.id, field: 'expectedRisk' })}
                         onKeyDown={(event) => {
                           if (event.key === 'Escape') {
@@ -279,6 +281,7 @@ export default function Doc8Section({
                         rows={5}
                         className={`${styles.doc8Textarea} app-textarea`}
                         value={item.countermeasure}
+                        placeholder="안전대책 검색 또는 입력"
                         onFocus={() =>
                           setActiveEditor({ planId: item.id, field: 'countermeasure' })
                         }
