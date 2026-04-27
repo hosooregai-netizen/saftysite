@@ -11,9 +11,10 @@ import {
 } from '@/features/home/lib/siteEntry';
 import {
   ADMIN_SECTIONS,
+  CONTENT_CRUD_TYPE_OPTIONS,
   getAdminSectionHref,
   type AdminSectionKey,
-} from '@/lib/admin/adminSections';
+} from '@/lib/admin';
 import { getCurrentReportMonth } from '@/lib/erpReports/shared';
 import styles from './AdminMenu.module.css';
 
@@ -47,6 +48,8 @@ interface AdminSubMenuItem {
 const ADMIN_MENU_TITLE = '\uAD00\uB9AC \uBA54\uB274';
 const ADMIN_MENU_CLOSE_LABEL = '\uAD00\uB9AC\uC790 \uBA54\uB274 \uB2EB\uAE30';
 const SITE_MENU_GROUP_LABEL = '\uD604\uC7A5 \uBA54\uB274';
+const CONTENT_MENU_GROUP_LABEL = '\uCF58\uD150\uCE20 \uBD84\uB958';
+const CONTENT_ALL_LABEL = '\uC804\uCCB4 \uBD84\uB958';
 const SITE_MENU_PARENT_SECTION: AdminSectionKey = 'headquarters';
 
 const ADMIN_MENU_LABELS: Record<AdminSectionKey, string> = {
@@ -129,6 +132,12 @@ export function AdminMenuPanel({
     : [];
   const mailboxBox = searchParams.get('box');
   const resolvedMailboxBox = mailboxBox === 'sent' ? 'sent' : 'inbox';
+  const contentTypeParam = searchParams.get('contentType');
+  const resolvedContentType = CONTENT_CRUD_TYPE_OPTIONS.some(
+    (option) => option.value === contentTypeParam,
+  )
+    ? contentTypeParam
+    : 'all';
   const mailboxMenuItems: AdminSubMenuItem[] = [
     {
       label: '받은편지함',
@@ -140,6 +149,18 @@ export function AdminMenuPanel({
       href: getAdminSectionHref('mailbox', { box: 'sent' }),
       active: activeSection === 'mailbox' && resolvedMailboxBox === 'sent',
     },
+  ];
+  const contentMenuItems: AdminSubMenuItem[] = [
+    {
+      label: CONTENT_ALL_LABEL,
+      href: getAdminSectionHref('content'),
+      active: activeSection === 'content' && resolvedContentType === 'all',
+    },
+    ...CONTENT_CRUD_TYPE_OPTIONS.map((option) => ({
+      label: option.label,
+      href: getAdminSectionHref('content', { contentType: option.value }),
+      active: activeSection === 'content' && resolvedContentType === option.value,
+    })),
   ];
 
   return (
@@ -155,6 +176,7 @@ export function AdminMenuPanel({
             const hasSiteChildren =
               section.key === SITE_MENU_PARENT_SECTION && siteMenuItems.length > 0;
             const hasMailboxChildren = section.key === 'mailbox';
+            const hasContentChildren = section.key === 'content';
             const sectionHref =
               section.key === 'mailbox'
                 ? getAdminSectionHref('mailbox', { box: 'inbox' })
@@ -164,9 +186,18 @@ export function AdminMenuPanel({
               hasSiteChildren &&
               (isSectionActive || siteNavView === 'site-home');
             const topLevelActive = hasSiteChildren ? isParentActive : isSectionActive;
-            const hasChildren = hasSiteChildren || hasMailboxChildren;
-            const childItems = hasSiteChildren ? siteMenuItems : hasMailboxChildren ? mailboxMenuItems : [];
-            const showChildren = hasSiteChildren || (hasMailboxChildren && isSectionActive);
+            const hasChildren = hasSiteChildren || hasMailboxChildren || hasContentChildren;
+            const childItems = hasSiteChildren
+              ? siteMenuItems
+              : hasMailboxChildren
+                ? mailboxMenuItems
+                : hasContentChildren
+                  ? contentMenuItems
+                  : [];
+            const showChildren =
+              hasSiteChildren ||
+              (hasMailboxChildren && isSectionActive) ||
+              (hasContentChildren && isSectionActive);
             const menuButtonClassName = joinClassNames(
               styles.menuButton,
               hasChildren && styles.menuButtonGrouped,
@@ -204,7 +235,13 @@ export function AdminMenuPanel({
                   <div
                     className={styles.menuTreeChildren}
                     role="group"
-                    aria-label={hasSiteChildren ? SITE_MENU_GROUP_LABEL : `${menuLabel} 하위 메뉴`}
+                    aria-label={
+                      hasSiteChildren
+                        ? SITE_MENU_GROUP_LABEL
+                        : hasContentChildren
+                          ? CONTENT_MENU_GROUP_LABEL
+                          : `${menuLabel} 하위 메뉴`
+                    }
                   >
                     {childItems.map((item) => (
                       <Link

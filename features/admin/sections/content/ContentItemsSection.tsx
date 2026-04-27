@@ -83,6 +83,7 @@ function ContentTableSkeleton() {
 }
 
 interface ContentItemsSectionProps {
+  activeType: SafetyContentItem['content_type'] | 'all';
   busy: boolean;
   canDelete: boolean;
   canUploadAssets: boolean;
@@ -113,12 +114,14 @@ interface ContentItemsSectionProps {
   onDelete: (id: string) => Promise<void>;
   onPageChange: (page: number) => void;
   onRefresh: () => void;
+  onTypeChange: (type: SafetyContentItem['content_type'] | 'all') => void;
   pageSize: number;
   refreshing: boolean;
 }
 
 export function ContentItemsSection(props: ContentItemsSectionProps) {
   const {
+    activeType,
     busy,
     canDelete,
     canUploadAssets,
@@ -129,12 +132,12 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
     onDelete,
     onPageChange,
     onRefresh,
+    onTypeChange,
     onUpdate,
     pageSize,
     refreshing,
   } = props;
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [activeType, setActiveType] = useState<SafetyContentItem['content_type'] | 'all'>('all');
   const [sort, setSort] = useState<TableSortState>({
     direction: 'asc',
     key: 'title',
@@ -422,9 +425,7 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
             aria-label="콘텐츠 분류 필터"
             value={activeType}
             onChange={(event) => {
-              setActiveType(
-                event.target.value as SafetyContentItem['content_type'] | 'all',
-              );
+              onTypeChange(event.target.value as SafetyContentItem['content_type'] | 'all');
               onPageChange(1);
             }}
           >

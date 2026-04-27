@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
-import type { SafetyUser } from '@/types/backend';
+import { CONTENT_CRUD_TYPE_OPTIONS } from '@/lib/admin';
+import type { SafetyContentType, SafetyUser } from '@/types/backend';
 import { AdminDashboardShell } from '@/features/admin/components/AdminDashboardShell';
 import { AdminDashboardSectionContent } from '@/features/admin/components/AdminDashboardSectionContent';
 import { AdminDashboardStateBanners } from '@/features/admin/components/AdminDashboardStateBanners';
@@ -19,6 +21,8 @@ export function AdminDashboardScreen({
   onLogout,
 }: AdminDashboardScreenProps) {
   const [contentPage, setContentPage] = useState(1);
+  const searchParams = useSearchParams();
+  const contentTypeParam = searchParams.get('contentType');
   const {
     ensureSessionLoaded,
     getSessionById,
@@ -40,6 +44,13 @@ export function AdminDashboardScreen({
     selectedSiteId: dashboard.selectedSiteId,
     selectedSiteName: dashboard.selectedSite?.site_name ?? null,
   });
+  const activeContentType = useMemo<SafetyContentType | 'all'>(
+    () =>
+      CONTENT_CRUD_TYPE_OPTIONS.some((option) => option.value === contentTypeParam)
+        ? (contentTypeParam as SafetyContentType)
+        : 'all',
+    [contentTypeParam],
+  );
 
   return (
     <AdminDashboardShell
@@ -56,12 +67,20 @@ export function AdminDashboardScreen({
       onSelectSection={dashboard.selectSection}
     >
       <AdminDashboardSectionContent
+        activeContentType={activeContentType}
         contentPage={contentPage}
         currentUser={currentUser}
         dashboard={dashboard}
         ensureSessionLoaded={ensureSessionLoaded}
         getSessionById={getSessionById}
         onContentPageChange={setContentPage}
+        onContentTypeChange={(type) => {
+          setContentPage(1);
+          dashboard.selectSection(
+            'content',
+            type === 'all' ? {} : { contentType: type },
+          );
+        }}
         sessions={sessions}
       />
     </AdminDashboardShell>

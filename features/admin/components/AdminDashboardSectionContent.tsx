@@ -2,7 +2,7 @@
 
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { canDeleteControllerCrud, canUploadContentAssets } from '@/lib/admin';
-import type { SafetyUser } from '@/types/backend';
+import type { SafetyContentItem, SafetyUser } from '@/types/backend';
 import { useAdminDashboardState } from '@/features/admin/hooks/useAdminDashboardState';
 import { AnalyticsSection } from '@/features/admin/sections/analytics/AnalyticsSection';
 import { ContentItemsSection } from '@/features/admin/sections/content/ContentItemsSection';
@@ -17,22 +17,28 @@ import { UsersSection } from '@/features/admin/sections/users/UsersSection';
 const CONTENT_SECTION_PAGE_SIZE = 50;
 
 interface AdminDashboardSectionContentProps {
+  activeContentType: ActiveContentType;
   contentPage: number;
   currentUser: SafetyUser;
   dashboard: ReturnType<typeof useAdminDashboardState>;
   ensureSessionLoaded: ReturnType<typeof useInspectionSessions>['ensureSessionLoaded'];
   getSessionById: ReturnType<typeof useInspectionSessions>['getSessionById'];
   onContentPageChange: (page: number) => void;
+  onContentTypeChange: (type: ActiveContentType) => void;
   sessions: ReturnType<typeof useInspectionSessions>['sessions'];
 }
 
+type ActiveContentType = SafetyContentItem['content_type'] | 'all';
+
 export function AdminDashboardSectionContent({
+  activeContentType,
   contentPage,
   currentUser,
   dashboard,
   ensureSessionLoaded,
   getSessionById,
   onContentPageChange,
+  onContentTypeChange,
   sessions,
 }: AdminDashboardSectionContentProps) {
   const canDelete = canDeleteControllerCrud(currentUser.role);
@@ -98,6 +104,7 @@ export function AdminDashboardSectionContent({
     case 'content':
       return (
         <ContentItemsSection
+          activeType={activeContentType}
           busy={busy}
           canDelete={canDelete}
           canUploadAssets={canUploadAssets}
@@ -112,6 +119,7 @@ export function AdminDashboardSectionContent({
           }}
           onPageChange={onContentPageChange}
           onRefresh={() => void dashboard.reloadContent({ force: true })}
+          onTypeChange={onContentTypeChange}
           onUpdate={async (id, input) => {
             await dashboard.updateContentItem(id, input);
           }}
