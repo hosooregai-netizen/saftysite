@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import {
   consumePendingPostLoginRedirect,
-  WORKER_CALENDAR_POST_LOGIN_REDIRECT,
 } from '@/lib/auth/postLoginRedirect';
 import { getAdminSectionHref, isAdminUserRole } from '@/lib/admin';
 import {
@@ -24,6 +23,24 @@ export function getPendingHomeReportIndexSiteIds(
   return siteSummaries
     .map((summary) => summary.site.id)
     .filter((siteId) => !prefetchedSiteIds.has(siteId));
+}
+
+export function resolveHomePostAuthRedirect({
+  isControllerView,
+  pendingRedirect,
+}: {
+  isControllerView: boolean;
+  pendingRedirect: string | null;
+}) {
+  if (pendingRedirect) {
+    return pendingRedirect;
+  }
+
+  if (isControllerView) {
+    return getAdminSectionHref('overview');
+  }
+
+  return null;
 }
 
 interface HomeScreenState {
@@ -187,18 +204,13 @@ export function useHomeScreenState(): HomeScreenState {
   useEffect(() => {
     if (!currentUser) return;
 
-    const pendingRedirect = consumePendingPostLoginRedirect();
-    if (pendingRedirect) {
-      router.replace(pendingRedirect);
-      return;
+    const nextRedirect = resolveHomePostAuthRedirect({
+      isControllerView,
+      pendingRedirect: consumePendingPostLoginRedirect(),
+    });
+    if (nextRedirect) {
+      router.replace(nextRedirect);
     }
-
-    if (isControllerView) {
-      router.replace(getAdminSectionHref('overview'));
-      return;
-    }
-
-    router.replace(WORKER_CALENDAR_POST_LOGIN_REDIRECT);
   }, [currentUser, isControllerView, router]);
 
   return {
