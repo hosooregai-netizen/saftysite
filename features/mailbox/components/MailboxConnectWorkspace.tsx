@@ -67,15 +67,7 @@ export function MailboxConnectWorkspace({
       </section>
 
       <section className={`${styles.tableShell} ${localStyles.workspaceSection}`}>
-        <div className={localStyles.mailTableHeader}>
-          <div className={localStyles.mailTableHeaderMeta}>
-            <strong className={localStyles.panelTitle}>연결 가능한 메일 계정</strong>
-            <span className={localStyles.panelDescription}>
-              공급자를 선택하고, 각 계정 상태와 바로 연결 작업을 같은 흐름으로 처리합니다.
-            </span>
-          </div>
-        </div>
-        <div className={styles.tableWrap}>
+        <div className={`${styles.tableWrap} ${localStyles.connectTableWrap}`}>
           <table className={`${styles.table} ${localStyles.connectTable}`}>
             <thead>
               <tr>

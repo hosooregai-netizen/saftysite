@@ -1238,8 +1238,35 @@
   border-radius: 2px;
 }
 
+.connectTableWrap {
+  overflow-x: hidden;
+}
+
 .connectTable {
+  width: 100%;
   min-width: 0;
+  table-layout: fixed;
+}
+
+.connectTable th,
+.connectTable td {
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+}
+
+.connectTable th:nth-child(1),
+.connectTable td:nth-child(1) {
+  width: 38%;
+}
+
+.connectTable th:nth-child(2),
+.connectTable td:nth-child(2) {
+  width: 112px;
+}
+
+.connectTable th:nth-child(4),
+.connectTable td:nth-child(4) {
+  width: 160px;
 }
 
 .connectProviderCell {
@@ -1280,6 +1307,11 @@
 .connectActionCell {
   text-align: right;
   white-space: nowrap;
+}
+
+.connectActionCell .primaryActionButton {
+  max-width: 100%;
+  white-space: normal;
 }
 
 .emptyState {
