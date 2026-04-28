@@ -16,6 +16,7 @@ import { fetchAdminReportSessionBootstrap } from '@/lib/admin/apiClient';
 import {
   fetchInspectionHwpxDocument,
   fetchInspectionHwpxDocumentByReportKey,
+  fetchInspectionPdfDocumentByReportKeyWithFallback,
   fetchInspectionPdfDownloadUrlByReportKey,
   saveBlobAsFile,
   startFileDownloadFromUrl,
@@ -711,25 +712,37 @@ export function useInspectionSessionScreen(sessionId: string) {
       await saveNow();
       const latestSession = getSessionById(session.id) ?? session;
       const authToken = readSafetyAuthToken();
+      const canCreateDownloadUrl = canUploadContentAssets(currentUser?.role);
 
-      try {
-        const pdf = await fetchInspectionPdfDownloadUrlByReportKey(
-          latestSession.id,
-          authToken,
-        );
-        await startFileDownloadFromUrl(pdf.downloadUrl, pdf.filename);
-        return;
-      } catch (serverError) {
-        console.warn('Inspection PDF server generation failed; falling back to HWPX generation.', {
-          error: serverError instanceof Error ? serverError.message : String(serverError),
-          sessionId: session.id,
-        });
+      if (canCreateDownloadUrl) {
+        try {
+          const pdf = await fetchInspectionPdfDownloadUrlByReportKey(
+            latestSession.id,
+            authToken,
+          );
+          await startFileDownloadFromUrl(pdf.downloadUrl, pdf.filename);
+          return;
+        } catch (serverError) {
+          console.warn('Inspection PDF download URL failed; falling back to direct PDF export.', {
+            error: serverError instanceof Error ? serverError.message : String(serverError),
+            sessionId: session.id,
+          });
+        }
       }
 
-      const generation = await buildHwpxDocument();
-      if (!generation) return;
+      const pdf = await fetchInspectionPdfDocumentByReportKeyWithFallback(
+        latestSession.id,
+        authToken,
+      );
+      saveBlobAsFile(pdf.blob, pdf.filename);
+      if (!pdf.fallbackToHwpx) {
+        return;
+      }
 
-      saveBlobAsFile(generation.blob, generation.filename);
+      console.warn('Inspection PDF direct export failed; downloaded HWPX fallback.', {
+        reason: pdf.fallbackReason,
+        sessionId: session.id,
+      });
     } catch (error) {
       setDocumentError(
         error instanceof Error ? error.message : 'PDF 생성 중 오류가 발생했습니다.',

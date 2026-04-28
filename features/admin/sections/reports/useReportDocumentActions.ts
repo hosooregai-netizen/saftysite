@@ -10,6 +10,7 @@ import {
   fetchBadWorkplaceHwpxDocumentByReportKey,
   fetchBadWorkplacePdfDocumentByReportKeyWithFallback,
   fetchInspectionHwpxDocumentByReportKey,
+  fetchInspectionPdfDocumentByReportKeyWithFallback,
   fetchInspectionPdfDownloadUrlByReportKey,
   fetchQuarterlyHwpxDocumentByReportKey,
   fetchQuarterlyPdfDocumentByReportKeyWithFallback,
@@ -74,11 +75,33 @@ export function useReportDocumentActions({
 
           try {
             if (format === 'pdf') {
-              const exported = await fetchInspectionPdfDownloadUrlByReportKey(
-                row.reportKey,
-                authToken,
-              );
-              await startFileDownloadFromUrl(exported.downloadUrl, exported.filename);
+              let fallbackToHwpx = false;
+              try {
+                const exported = await fetchInspectionPdfDownloadUrlByReportKey(
+                  row.reportKey,
+                  authToken,
+                );
+                await startFileDownloadFromUrl(exported.downloadUrl, exported.filename);
+              } catch (downloadUrlError) {
+                console.warn('Inspection report PDF download URL failed; falling back to direct PDF export.', {
+                  error:
+                    downloadUrlError instanceof Error
+                      ? downloadUrlError.message
+                      : String(downloadUrlError),
+                  reportKey: row.reportKey,
+                });
+                const exported = await fetchInspectionPdfDocumentByReportKeyWithFallback(
+                  row.reportKey,
+                  authToken,
+                );
+                fallbackToHwpx = exported.fallbackToHwpx;
+                saveBlobAsFile(exported.blob, exported.filename);
+                if (fallbackToHwpx) {
+                  console.warn('Inspection report PDF export ultimately fell back to HWPX.', {
+                    reportKey: row.reportKey,
+                  });
+                }
+              }
               setNotice('지도보고서를 내보냈습니다.');
             } else {
               const exported = await fetchInspectionHwpxDocumentByReportKey(
