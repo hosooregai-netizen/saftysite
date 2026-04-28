@@ -176,6 +176,18 @@
   gap: 0.65rem;
 }
 
+.rowCardButton {
+  width: 100%;
+  background: var(--app-panel, #fff);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.rowCardButton:hover {
+  border-color: rgba(15, 118, 110, 0.3);
+}
+
 .rowTitle {
   font-weight: 700;
 }

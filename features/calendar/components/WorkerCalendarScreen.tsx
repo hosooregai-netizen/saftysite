@@ -324,6 +324,17 @@ function formatWorkerRoundLabel(row: SafetyInspectionSchedule) {
   return `${row.roundNo} / ${totalRounds}회차`;
 }
 
+function isDateWithinWindow(value: string, windowStart: string, windowEnd: string) {
+  if (!value || !windowStart || !windowEnd) return false;
+  return value >= windowStart && value <= windowEnd;
+}
+
+function buildWindowErrorMessage(
+  schedule: Pick<SafetyInspectionSchedule, 'roundNo' | 'siteName' | 'windowEnd' | 'windowStart'>,
+) {
+  return `${schedule.siteName} ${schedule.roundNo}회차는 계약 기간 ${schedule.windowStart} ~ ${schedule.windowEnd} 안에서만 선택할 수 있습니다.`;
+}
+
 function getStatusLabel(row: SafetyInspectionSchedule) {
   if (!row.plannedDate) return '미선택';
   switch (row.status) {
@@ -606,6 +617,16 @@ export function WorkerCalendarScreen() {
     () => dialogRoundRows.find((row) => row.id === dialog.scheduleId) ?? null,
     [dialog.scheduleId, dialogRoundRows],
   );
+  const dialogWindowError =
+    dialogSelectedSchedule &&
+    dialog.plannedDate &&
+    !isDateWithinWindow(
+      dialog.plannedDate,
+      dialogSelectedSchedule.windowStart,
+      dialogSelectedSchedule.windowEnd,
+    )
+      ? buildWindowErrorMessage(dialogSelectedSchedule)
+      : '';
   const dialogSelectedReportIndexState = dialog.siteId
     ? getReportIndexBySiteId(dialog.siteId)
     : null;
@@ -1031,6 +1052,10 @@ export function WorkerCalendarScreen() {
       setError('방문 날짜를 먼저 선택해 주세요.');
       return;
     }
+    if (dialogWindowError) {
+      setError(dialogWindowError);
+      return;
+    }
     const selectionReasonLabel = dialog.selectionReasonLabel.trim();
     const selectionReasonMemo = dialog.selectionReasonMemo.trim();
 
@@ -1064,6 +1089,10 @@ export function WorkerCalendarScreen() {
     const isReadOnlySchedule = schedule.status === 'completed' || schedule.status === 'canceled';
     if (!isReadOnlySchedule && !dialog.plannedDate) {
       setError('방문 날짜를 먼저 선택해 주세요.');
+      return;
+    }
+    if (!isReadOnlySchedule && dialogWindowError) {
+      setError(dialogWindowError);
       return;
     }
 
@@ -1430,7 +1459,12 @@ export function WorkerCalendarScreen() {
               type="button"
               className="app-button app-button-primary"
               onClick={() => void handleSaveSchedule()}
-              disabled={!dialog.scheduleId || !dialog.plannedDate || dialogSubmittingAction !== null}
+              disabled={
+                !dialog.scheduleId ||
+                !dialog.plannedDate ||
+                Boolean(dialogWindowError) ||
+                dialogSubmittingAction !== null
+              }
             >
               방문 일정 저장
             </button>
@@ -1543,6 +1577,9 @@ export function WorkerCalendarScreen() {
               </div>
               {dialogSelectedOption?.state === 'needs_schedule_link' ? (
                 <div className={styles.dialogHint}>기존 보고서가 있어 이 회차 일정에 연결됩니다.</div>
+              ) : null}
+              {dialogWindowError ? (
+                <div className={styles.dialogError}>{dialogWindowError}</div>
               ) : null}
             </>
           ) : null}

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import AppModal from '@/components/ui/AppModal';
 import LoginPanel from '@/components/auth/LoginPanel';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
+import { buildDefaultReportTitle } from '@/features/site-reports/report-list/reportListHelpers';
 import { fetchMySchedules, updateMySchedule } from '@/lib/calendar/apiClient';
 import type { SafetyInspectionSchedule } from '@/types/admin';
 import { MobileShell } from './MobileShell';
@@ -77,6 +78,10 @@ function sortSchedules(rows: SafetyInspectionSchedule[]) {
   );
 }
 
+function normalizeText(value: string | null | undefined) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
 function getNormalizedTotalRounds(value: number | null | undefined) {
   if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
     return Math.trunc(value);
@@ -109,7 +114,9 @@ export function MobileWorkerCalendarScreen() {
   const [dialog, setDialog] = useState<ScheduleDialogState>(EMPTY_DIALOG_STATE);
   const {
     authError,
+    createSession,
     currentUser,
+    getSessionsBySiteId,
     isAuthenticated,
     isReady,
     login,
@@ -217,9 +224,12 @@ export function MobileWorkerCalendarScreen() {
       if (row.status === 'canceled' || row.status === 'completed') {
         return false;
       }
+      if (row.id === dialog.scheduleId) {
+        return true;
+      }
       return !completedRounds.has(row.roundNo);
     });
-  }, [completedRoundsBySiteId, dialog.siteId, dialogAllRoundRows]);
+  }, [completedRoundsBySiteId, dialog.scheduleId, dialog.siteId, dialogAllRoundRows]);
   const dialogSelectedSchedule = useMemo(
     () => rows.find((row) => row.id === dialog.scheduleId) ?? null,
     [dialog.scheduleId, rows],
@@ -284,26 +294,39 @@ export function MobileWorkerCalendarScreen() {
     dialogRoundRows,
   ]);
 
-  const openScheduleDialog = (plannedDate: string) => {
-    const defaultSite = dialogSiteOptions.find((option) => !option.isComplete) ?? dialogSiteOptions[0];
+  const openScheduleDialog = (input: {
+    plannedDate: string;
+    schedule?: SafetyInspectionSchedule | null;
+  }) => {
+    const requestedSchedule = input.schedule ?? null;
+    const defaultSite =
+      (requestedSchedule
+        ? dialogSiteOptions.find((option) => option.siteId === requestedSchedule.siteId)
+        : null) ??
+      dialogSiteOptions.find((option) => !option.isComplete) ??
+      dialogSiteOptions[0];
     const defaultSiteId = defaultSite?.siteId || '';
     const completedRounds = completedRoundsBySiteId.get(defaultSiteId) ?? new Set<number>();
     const defaultSiteRows = sortSchedules(rows.filter((row) => row.siteId === defaultSiteId)).filter((row) => {
       if (row.status === 'canceled' || row.status === 'completed') {
         return false;
       }
+      if (row.id === requestedSchedule?.id) {
+        return true;
+      }
       return !completedRounds.has(row.roundNo);
     });
     const defaultSchedule =
-      defaultSiteRows.find((row) => row.plannedDate === plannedDate) ??
+      requestedSchedule ??
+      defaultSiteRows.find((row) => row.plannedDate === input.plannedDate) ??
       defaultSiteRows.find((row) => !row.plannedDate) ??
       defaultSiteRows[0] ??
       null;
 
-    setSelectedDate(plannedDate);
+    setSelectedDate(input.plannedDate);
     setDialog({
       open: true,
-      plannedDate,
+      plannedDate: input.plannedDate,
       scheduleId: defaultSchedule?.id || '',
       selectionReasonLabel: defaultSchedule?.selectionReasonLabel || '',
       selectionReasonMemo: defaultSchedule?.selectionReasonMemo || '',
@@ -334,6 +357,45 @@ export function MobileWorkerCalendarScreen() {
     }));
   };
 
+  const ensureDraftSessionForSchedule = (schedule: SafetyInspectionSchedule) => {
+    const existingLinkedReportKey = normalizeText(schedule.linkedReportKey);
+    if (existingLinkedReportKey) {
+      return {
+        actualVisitDate: normalizeText(schedule.actualVisitDate) || schedule.plannedDate,
+        linkedReportKey: existingLinkedReportKey,
+      };
+    }
+
+    const site = sites.find((item) => item.id === schedule.siteId);
+    if (!site) return null;
+
+    const existingSession = getSessionsBySiteId(site.id).find(
+      (session) => session.reportNumber === schedule.roundNo,
+    );
+    if (existingSession) {
+      return {
+        actualVisitDate: normalizeText(existingSession.meta.reportDate) || schedule.plannedDate,
+        linkedReportKey: existingSession.id,
+      };
+    }
+
+    const reportDate = schedule.plannedDate || dialog.plannedDate || new Date().toISOString().slice(0, 10);
+    const createdSession = createSession(site, {
+      meta: {
+        drafter: currentUser?.name || site.assigneeName,
+        reportDate,
+        reportTitle: buildDefaultReportTitle(reportDate, schedule.roundNo),
+        siteName: site.siteName,
+      },
+      reportNumber: schedule.roundNo,
+    });
+
+    return {
+      actualVisitDate: reportDate,
+      linkedReportKey: createdSession.id,
+    };
+  };
+
   const handleSaveSchedule = async () => {
     if (!dialog.scheduleId) {
       setError('회차를 먼저 선택해 주세요.');
@@ -348,6 +410,10 @@ export function MobileWorkerCalendarScreen() {
       setError('방문 날짜를 먼저 선택해 주세요.');
       return;
     }
+    if (dialogWindowError) {
+      setError(dialogWindowError);
+      return;
+    }
     try {
       setError(null);
       const updated = await updateMySchedule(schedule.id, {
@@ -355,9 +421,24 @@ export function MobileWorkerCalendarScreen() {
         selectionReasonLabel: dialog.selectionReasonLabel.trim(),
         selectionReasonMemo: dialog.selectionReasonMemo.trim(),
       });
-      setRows((current) => current.map((row) => (row.id === updated.id ? updated : row)));
-      setSelectedDate(updated.plannedDate || dialog.plannedDate);
-      setNotice(`${schedule.siteName} ${schedule.roundNo}회차 방문 일정을 저장했습니다.`);
+      const linkUpdate = ensureDraftSessionForSchedule(updated);
+      const finalized =
+        linkUpdate && linkUpdate.linkedReportKey !== normalizeText(updated.linkedReportKey)
+          ? await updateMySchedule(updated.id, {
+              actualVisitDate: linkUpdate.actualVisitDate,
+              linkedReportKey: linkUpdate.linkedReportKey,
+              plannedDate: updated.plannedDate || dialog.plannedDate,
+              selectionReasonLabel: dialog.selectionReasonLabel.trim(),
+              selectionReasonMemo: dialog.selectionReasonMemo.trim(),
+            })
+          : updated;
+      setRows((current) => current.map((row) => (row.id === finalized.id ? finalized : row)));
+      setSelectedDate(finalized.plannedDate || dialog.plannedDate);
+      setNotice(
+        linkUpdate
+          ? `${schedule.siteName} ${schedule.roundNo}회차 방문 일정과 기술지도 보고서를 연결했습니다.`
+          : `${schedule.siteName} ${schedule.roundNo}회차 방문 일정을 저장했습니다.`,
+      );
       setDialog(EMPTY_DIALOG_STATE);
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : '일정을 저장하지 못했습니다.');
@@ -469,7 +550,7 @@ export function MobileWorkerCalendarScreen() {
                     key={day.token}
                     type="button"
                     className={`${workerStyles.calendarCell} ${selectedDate === day.token ? workerStyles.calendarCellActive : ''}`}
-                    onClick={() => openScheduleDialog(day.token)}
+                    onClick={() => openScheduleDialog({ plannedDate: day.token })}
                     style={{ textAlign: 'left' }}
                   >
                     <div className={workerStyles.calendarDay}>{day.day}</div>
@@ -502,12 +583,22 @@ export function MobileWorkerCalendarScreen() {
               ) : (
                 <div className={workerStyles.list}>
                   {selectedDateRows.map((row) => (
-                    <article key={row.id} className={workerStyles.rowCard}>
+                    <button
+                      key={row.id}
+                      type="button"
+                      className={`${workerStyles.rowCard} ${workerStyles.rowCardButton}`}
+                      onClick={() =>
+                        openScheduleDialog({
+                          plannedDate: row.plannedDate || selectedDate,
+                          schedule: row,
+                        })
+                      }
+                    >
                       <div className={workerStyles.rowTitle}>{row.siteName}</div>
                       <div className={workerStyles.rowMeta}>
                         {formatWorkerRoundLabel(row)} · {row.plannedDate || '미선택'}
                       </div>
-                    </article>
+                    </button>
                   ))}
                 </div>
               )}
@@ -529,7 +620,7 @@ export function MobileWorkerCalendarScreen() {
               type="button"
               className="app-button app-button-primary"
               onClick={() => void handleSaveSchedule()}
-              disabled={!dialog.scheduleId || Boolean(dialogWindowError)}
+              disabled={!dialog.scheduleId || !dialog.plannedDate || Boolean(dialogWindowError)}
             >
               방문 일정 저장
             </button>

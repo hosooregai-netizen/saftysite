@@ -48,8 +48,11 @@ export async function runAdminSchedulesSmoke(config: ClientSmokePlaywrightConfig
       state: 'visible',
     });
     await page.getByRole('cell', { name: '기존 현장' }).first().click();
-    await page.getByRole('dialog', { name: '방문 일정' }).waitFor({ state: 'visible' });
-    await page.getByRole('button', { name: '취소' }).click();
+    await page.getByRole('dialog', { name: '방문 일정 상세' }).waitFor({ state: 'visible' });
+    await page
+      .getByRole('dialog', { name: '방문 일정 상세' })
+      .getByRole('button', { name: '닫기', exact: true })
+      .click();
     await page.getByRole('tab', { name: '달력으로 보기' }).click();
     await page.getByRole('button', { name: EXISTING_SITE_BUTTON_NAME }).first().waitFor({
       state: 'visible',
@@ -59,11 +62,14 @@ export async function runAdminSchedulesSmoke(config: ClientSmokePlaywrightConfig
     const dayListDialog = page.getByRole('dialog', { name: '2026-04-14 일정 목록' });
     await dayListDialog.waitFor({ state: 'visible' });
     await dayListDialog.locator('tbody tr').first().click();
-    await page.getByRole('dialog', { name: '방문 일정' }).waitFor({ state: 'visible' });
-    await page.getByRole('button', { name: '취소' }).click();
+    await page.getByRole('dialog', { name: '방문 일정 상세' }).waitFor({ state: 'visible' });
+    await page
+      .getByRole('dialog', { name: '방문 일정 상세' })
+      .getByRole('button', { name: '닫기', exact: true })
+      .click();
 
     await page.getByRole('button', { name: EXISTING_SITE_BUTTON_NAME }).first().click();
-    const scheduleDialog = page.getByRole('dialog', { name: '방문 일정' });
+    const scheduleDialog = page.getByRole('dialog', { name: '방문 일정 상세' });
     await scheduleDialog.waitFor({ state: 'visible' });
     await scheduleDialog.getByText('기술지도 진행중', { exact: true }).waitFor({
       state: 'visible',
@@ -93,11 +99,16 @@ export async function runAdminSchedulesSmoke(config: ClientSmokePlaywrightConfig
     if ((await scheduleDialog.getByLabel('변경 사유 기록').count()) !== 0) {
       throw new Error('Expected change reason checkbox to be removed from controller schedule dialog.');
     }
-    await scheduleDialog.getByLabel('방문일').fill('2026-04-18');
-    await scheduleDialog.getByLabel('사유 분류').fill('현장 요청');
-    await scheduleDialog.getByLabel('상세 메모').fill('관제 일정 smoke 이동');
-    await scheduleDialog.getByRole('button', { name: '저장' }).click();
-    await harness.waitForRequestCount('PATCH /api/admin/schedules/:id', scheduleUpdatesBefore + 1);
+    if ((await scheduleDialog.getByRole('button', { name: '저장' }).count()) !== 0) {
+      throw new Error('Expected admin schedule dialog to be read-only without a save button.');
+    }
+    if (!(await scheduleDialog.getByLabel('방문일').isDisabled()) && !(await scheduleDialog.getByLabel('방문일').evaluate((node) => (node as HTMLInputElement).readOnly))) {
+      throw new Error('Expected admin schedule visit date field to be read-only.');
+    }
+    await scheduleDialog.getByRole('button', { name: '닫기', exact: true }).click();
+    if ((requestCounts.get('PATCH /api/admin/schedules/:id') || 0) !== scheduleUpdatesBefore) {
+      throw new Error('Expected admin schedule flow not to PATCH schedules.');
+    }
     await page.getByRole('button', { name: EXISTING_SITE_BUTTON_NAME }).first().waitFor({
       state: 'visible',
     });

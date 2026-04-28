@@ -69,6 +69,12 @@ export function MobileShell({
           <div className={styles.headerBody}>
             {kicker ? <span className={styles.kicker}>{kicker}</span> : null}
             <h1 className={styles.title}>{title}</h1>
+            {currentUserName ? (
+              <div className={styles.accountRow}>
+                <span className={styles.accountLabel}>로그인 계정</span>
+                <strong className={styles.accountValue}>{currentUserName}</strong>
+              </div>
+            ) : null}
           </div>
         </header>
 

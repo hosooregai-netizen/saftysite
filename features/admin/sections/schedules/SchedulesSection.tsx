@@ -20,7 +20,6 @@ import {
   fetchAdminScheduleCalendar,
   fetchAdminScheduleLookups,
   fetchAdminScheduleQueue,
-  updateAdminSchedule,
 } from '@/lib/admin/apiClient';
 import {
   downloadAdminSiteBasicMaterial,
@@ -137,11 +136,6 @@ function buildCalendarDays(month: string) {
     days,
     leadingEmptyCount,
   };
-}
-
-function isDateWithinWindow(value: string, windowStart: string, windowEnd: string) {
-  if (!value || !windowStart || !windowEnd) return false;
-  return value >= windowStart && value <= windowEnd;
 }
 
 function formatDateTime(value: string) {
@@ -272,10 +266,6 @@ function buildDayListLabel(
   return buildScheduleDisplayLabel(row, userNameById);
 }
 
-function getCalendarDateToken(row: SafetyInspectionSchedule) {
-  return row.plannedDate || row.windowStart;
-}
-
 async function fetchSchedulePayloads(
   filters: {
     assigneeUserId?: string;
@@ -320,13 +310,11 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
   const [status, setStatus] = useState(() => searchParams.get('status') || '');
   const [sort, setSort] = useState<TableSortState>(DEFAULT_SORT);
   const [queuePage, setQueuePage] = useState(1);
-  const [notice, setNotice] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dayListDialogOpen, setDayListDialogOpen] = useState(false);
   const [dayListDialogDate, setDayListDialogDate] = useState('');
   const [dayListDialogRowIds, setDayListDialogRowIds] = useState<string[]>([]);
   const [activeScheduleId, setActiveScheduleId] = useState('');
-  const [dragScheduleId, setDragScheduleId] = useState('');
   const [form, setForm] = useState<ScheduleFormState>(EMPTY_FORM);
   const deferredQuery = useDeferredValue(query);
   const [lookups, setLookups] = useState<SafetyAdminScheduleLookupsResponse>(() => {
@@ -449,21 +437,6 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
     },
     [currentUser.id],
   );
-
-  const refreshScheduleData = async (nextMonth = month) => {
-    const nextFilters = {
-      assigneeUserId,
-      month: nextMonth,
-      query: query.trim(),
-      siteId,
-      status,
-    };
-    const nextRequestKey = JSON.stringify(nextFilters);
-    const payloads = await fetchSchedulePayloads(nextFilters);
-    applySchedulePayloads(nextRequestKey, payloads);
-    setLoadingRequestKey('');
-    return payloads;
-  };
 
   useEffect(() => {
     if (selectedDate && !selectedDate.startsWith(month)) {
@@ -620,15 +593,6 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
     () => allScheduleRows.find((row) => row.id === activeScheduleId) ?? null,
     [activeScheduleId, allScheduleRows],
   );
-  const dragSchedule = useMemo(
-    () => sortedSelectedRows.find((row) => row.id === dragScheduleId) ?? null,
-    [dragScheduleId, sortedSelectedRows],
-  );
-  const dialogSelectableRows = useMemo(() => {
-    if (activeScheduleId) return [];
-    const rows = allScheduleRows.filter((row) => row.id === activeScheduleId || !row.plannedDate);
-    return sortSelectableRows(rows);
-  }, [activeScheduleId, allScheduleRows]);
   const dayListDialogRows = useMemo(
     () =>
       sortSelectableRows(
@@ -655,24 +619,15 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
     .filter((token) => token !== month)
     .slice(0, 6);
 
-  useEffect(() => {
-    if (!dialogOpen || activeScheduleId || dialogSelectableRows.length === 0) return;
-    const defaultSchedule = dialogSelectableRows[0];
-    setActiveScheduleId(defaultSchedule.id);
-    setForm((current) => ({
-      ...buildInitialForm(defaultSchedule, current.plannedDate || defaultSchedule.windowStart),
-      plannedDate: current.plannedDate || defaultSchedule.windowStart,
-    }));
-  }, [activeScheduleId, dialogOpen, dialogSelectableRows]);
-
   const openScheduleDialog = (input: {
     plannedDate: string;
     schedule?: SafetyInspectionSchedule | null;
   }) => {
-    const defaultSchedule =
-      input.schedule ??
-      sortSelectableRows(allScheduleRows.filter((row) => !row.plannedDate))[0] ??
-      null;
+    const defaultSchedule = input.schedule ?? null;
+    if (!defaultSchedule) {
+      setSelectedDate(input.plannedDate);
+      return;
+    }
     setSelectedDate(input.plannedDate);
     setActiveScheduleId(defaultSchedule?.id || '');
     setForm(buildInitialForm(defaultSchedule, input.plannedDate));
@@ -696,105 +651,6 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
     setDayListDialogOpen(false);
     setDayListDialogDate('');
     setDayListDialogRowIds([]);
-  };
-
-  const handlePickSchedule = (schedule: SafetyInspectionSchedule) => {
-    setActiveScheduleId(schedule.id);
-    setForm(
-      buildInitialForm(schedule, form.plannedDate || schedule.plannedDate || schedule.windowStart),
-    );
-  };
-
-  const handleSave = async () => {
-    if (!activeSchedule) {
-      setScheduleState((current) => ({
-        ...current,
-        error: '일정을 저장할 회차를 먼저 선택해 주세요.',
-        errorRequestKey: requestKey,
-      }));
-      return;
-    }
-    if (!form.plannedDate) {
-      setScheduleState((current) => ({
-        ...current,
-        error: '방문일을 먼저 선택해 주세요.',
-        errorRequestKey: requestKey,
-      }));
-      return;
-    }
-    const selectionReasonLabel = form.selectionReasonLabel.trim();
-    const selectionReasonMemo = form.selectionReasonMemo.trim();
-
-    try {
-      const nextMonth = form.plannedDate.slice(0, 7) || month;
-      setScheduleState((current) => ({
-        ...current,
-        error: null,
-        errorRequestKey: '',
-      }));
-      await updateAdminSchedule(activeSchedule.id, {
-        assigneeUserId: form.assigneeUserId,
-        plannedDate: form.plannedDate,
-        selectionReasonLabel,
-        selectionReasonMemo,
-        status: form.status,
-      });
-      await refreshScheduleData(nextMonth);
-      setMonth(nextMonth);
-      setSelectedDate(form.plannedDate);
-      setNotice('일정을 저장했습니다.');
-      closeDialog();
-    } catch (nextError) {
-      setScheduleState((current) => ({
-        ...current,
-        error:
-          nextError instanceof Error ? nextError.message : '일정 저장에 실패했습니다.',
-        errorRequestKey: requestKey,
-      }));
-    }
-  };
-
-  const canDropScheduleOnDate = (
-    schedule: SafetyInspectionSchedule | null,
-    targetDate: string,
-  ) => {
-    if (!schedule || !schedule.plannedDate || !targetDate) return false;
-    if (targetDate === schedule.plannedDate) return false;
-    return true;
-  };
-
-  const handleQuickMove = async (
-    schedule: SafetyInspectionSchedule,
-    targetDate: string,
-  ) => {
-    if (!canDropScheduleOnDate(schedule, targetDate)) return;
-
-    try {
-      const nextMonth = targetDate.slice(0, 7) || month;
-      setScheduleState((current) => ({
-        ...current,
-        error: null,
-        errorRequestKey: '',
-      }));
-      await updateAdminSchedule(schedule.id, {
-        plannedDate: targetDate,
-      });
-      await refreshScheduleData(nextMonth);
-      setMonth(nextMonth);
-      setSelectedDate(targetDate);
-      setNotice(
-        `${schedule.siteName} ${schedule.roundNo}회차 방문일을 ${targetDate}로 변경했습니다.`,
-      );
-    } catch (nextError) {
-      setScheduleState((current) => ({
-        ...current,
-        error:
-          nextError instanceof Error ? nextError.message : '일정 이동에 실패했습니다.',
-        errorRequestKey: requestKey,
-      }));
-    } finally {
-      setDragScheduleId('');
-    }
   };
 
   const handleExport = async () => {
@@ -954,7 +810,6 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
         </div>
         <div className={styles.sectionBody}>
           {error ? <div className={styles.bannerError}>{error}</div> : null}
-          {notice ? <div className={styles.bannerNotice}>{notice}</div> : null}
           {showOtherMonthHint ? (
             <div className={styles.bannerNotice}>
               현재 선택한 {formatMonthLabel(month)}에는 확정 일정이 없고, 다른 월에
@@ -1067,7 +922,6 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                 {calendar.days.map((day) => {
                   const dayRows = rowsByDate.get(day.token) || [];
                   const isSelected = selectedDate === day.token;
-                  const canDrop = canDropScheduleOnDate(dragSchedule, day.token);
 
                   return (
                     <div
@@ -1075,19 +929,9 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                       className={[
                         styles.calendarCell,
                         isSelected ? styles.calendarCellActive : '',
-                        canDrop ? styles.calendarCellDropReady : '',
                       ]
                         .filter(Boolean)
                         .join(' ')}
-                      onDragOver={(event) => {
-                        if (!canDrop) return;
-                        event.preventDefault();
-                      }}
-                      onDrop={(event) => {
-                        event.preventDefault();
-                        if (!dragSchedule || !canDrop) return;
-                        void handleQuickMove(dragSchedule, day.token);
-                      }}
                     >
                       <button
                         type="button"
@@ -1104,7 +948,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                             });
                             return;
                           }
-                          openScheduleDialog({ plannedDate: day.token });
+                          setSelectedDate(day.token);
                         }}
                       >
                         <span className={styles.calendarCellDate}>{day.day}일</span>
@@ -1119,7 +963,6 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                                 <button
                                   key={`calendar-row-${row.id}`}
                                   type="button"
-                                  draggable={Boolean(row.plannedDate)}
                                   className={[
                                     styles.calendarScheduleChip,
                                     displayPhase === 'completed'
@@ -1149,8 +992,6 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                                       schedule: row,
                                     })
                                   }
-                                  onDragStart={() => setDragScheduleId(row.id)}
-                                  onDragEnd={() => setDragScheduleId('')}
                                 >
                                   <span className={styles.calendarScheduleChipTitle}>
                                     {buildScheduleDisplayLabel(row, userNameById)}
@@ -1295,7 +1136,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                                   });
                                 }}
                               >
-                                일정 지정
+                                확인
                               </button>
                             </td>
                           </tr>
@@ -1449,7 +1290,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                               });
                             }}
                           >
-                            수정
+                            확인
                           </button>
                         </td>
                       </tr>
@@ -1465,26 +1306,16 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
 
       <AppModal
         open={dialogOpen}
-        title={activeSchedule ? '방문 일정' : '방문 일정 선택'}
+        title="방문 일정 상세"
         onClose={closeDialog}
         actions={
-          <>
-            <button
-              type="button"
-              className="app-button app-button-secondary"
-              onClick={closeDialog}
-            >
-              취소
-            </button>
-            <button
-              type="button"
-              className="app-button app-button-primary"
-              onClick={() => void handleSave()}
-              disabled={!activeSchedule || !form.plannedDate}
-            >
-              저장
-            </button>
-          </>
+          <button
+            type="button"
+            className="app-button app-button-secondary"
+            onClick={closeDialog}
+          >
+            닫기
+          </button>
         }
       >
         <div className={styles.modalGrid}>
@@ -1547,6 +1378,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
               className="app-input"
               type="date"
               value={form.plannedDate}
+              readOnly
               onChange={(event) =>
                 setForm((current) => ({
                   ...current,
@@ -1560,6 +1392,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
             <select
               className="app-select"
               value={form.assigneeUserId}
+              disabled
               onChange={(event) =>
                 setForm((current) => ({
                   ...current,
@@ -1575,53 +1408,12 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
               ))}
             </select>
           </label>
-          {!activeSchedule ? (
-            <label className={styles.modalFieldWide}>
-              <span className={styles.label}>선택 가능한 회차</span>
-              {dialogSelectableRows.length === 0 ? (
-                <div className={styles.tableEmpty}>이 날짜에 선택할 수 있는 회차가 없습니다.</div>
-              ) : (
-                <div className={styles.tableWrap}>
-                  <table className={styles.table}>
-                    <thead>
-                      <tr>
-                        <th>선택</th>
-                        <th>현장</th>
-                        <th>회차</th>
-                        <th>허용 구간</th>
-                        <th>담당자</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {dialogSelectableRows.map((row) => (
-                        <tr key={`dialog-${row.id}`}>
-                          <td>
-                            <input
-                              type="radio"
-                              name="schedule-select"
-                              checked={activeScheduleId === row.id}
-                              onChange={() => handlePickSchedule(row)}
-                            />
-                          </td>
-                          <td>{row.siteName}</td>
-                          <td>
-                            {row.roundNo} / {row.totalRounds && row.totalRounds > 0 ? row.totalRounds : row.roundNo}
-                          </td>
-                          <td>{buildWindowSummary(row)}</td>
-                          <td>{resolveScheduleAssigneeName(row, userNameById) || '-'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </label>
-          ) : null}
           <label className={styles.modalField}>
             <span className={styles.label}>사유 분류</span>
             <input
               className="app-input"
               value={form.selectionReasonLabel}
+              readOnly
               onChange={(event) =>
                 setForm((current) => ({
                   ...current,
@@ -1636,6 +1428,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
             <select
               className="app-select"
               value={form.status}
+              disabled
               onChange={(event) =>
                 setForm((current) => ({
                   ...current,
@@ -1655,6 +1448,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
               className="app-textarea"
               rows={4}
               value={form.selectionReasonMemo}
+              readOnly
               onChange={(event) =>
                 setForm((current) => ({
                   ...current,
