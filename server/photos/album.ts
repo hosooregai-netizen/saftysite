@@ -18,6 +18,7 @@ import type {
   PhotoAlbumSourceFilter,
   SafetyPhotoAsset,
 } from '@/types/photos';
+import { comparePhotoAlbumItems } from './albumSort';
 
 const DOWNLOAD_ROUTE_PREFIX = '/api/photos/download?item_id=';
 const MAX_DOWNLOAD_ITEMS = 200;
@@ -408,7 +409,6 @@ export function queryPhotoAlbumItems(
 ): PhotoAlbumListResponse {
   const normalizedQuery = normalizeText(query.query).toLowerCase();
   const sortBy = query.sortBy || 'capturedAt';
-  const sortDir = query.sortDir === 'asc' ? 1 : -1;
   const filtered = items
     .filter((item) => {
       if (query.siteId && item.siteId !== query.siteId) return false;
@@ -431,30 +431,7 @@ export function queryPhotoAlbumItems(
         .toLowerCase()
         .includes(normalizedQuery);
     })
-    .sort((left, right) => {
-      if (sortBy === 'fileName') {
-        return left.fileName.localeCompare(right.fileName, 'ko') * sortDir;
-      }
-
-      if (sortBy === 'siteName') {
-        return (
-          left.siteName.localeCompare(right.siteName, 'ko') * sortDir ||
-          (left.roundNo - right.roundNo) * sortDir ||
-          left.createdAt.localeCompare(right.createdAt) * sortDir
-        );
-      }
-
-      const leftDate = sortBy === 'createdAt' ? left.createdAt : left.capturedAt || left.createdAt;
-      const rightDate = sortBy === 'createdAt' ? right.createdAt : right.capturedAt || right.createdAt;
-
-      return (
-        left.siteName.localeCompare(right.siteName, 'ko') * sortDir ||
-        (left.roundNo - right.roundNo) * sortDir ||
-        leftDate.localeCompare(rightDate) * sortDir ||
-        left.createdAt.localeCompare(right.createdAt) * sortDir ||
-        left.fileName.localeCompare(right.fileName, 'ko')
-      );
-    });
+    .sort((left, right) => comparePhotoAlbumItems(left, right, { sortBy, sortDir: query.sortDir }));
 
   const offset = Math.max(0, query.offset ?? 0);
   const limit = Math.max(1, Math.min(200, query.limit ?? 60));
