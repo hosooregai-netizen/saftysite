@@ -357,6 +357,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
     };
   });
   const [loadingRequestKey, setLoadingRequestKey] = useState('');
+  const [refreshNonce, setRefreshNonce] = useState(0);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const replaceScheduleRoute = useCallback(
@@ -449,6 +450,31 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
   }, [assigneeUserId, month, query, siteId, status]);
 
   useEffect(() => {
+    let lastRequestedAt = 0;
+    const requestRefresh = () => {
+      const now = Date.now();
+      if (now - lastRequestedAt < 2000) return;
+      lastRequestedAt = now;
+      setRefreshNonce((current) => current + 1);
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        requestRefresh();
+      }
+    };
+
+    window.addEventListener('focus', requestRefresh);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    const refreshInterval = window.setInterval(requestRefresh, 30000);
+
+    return () => {
+      window.clearInterval(refreshInterval);
+      window.removeEventListener('focus', requestRefresh);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
+  useEffect(() => {
     const cachedLookups = readAdminSessionCache<SafetyAdminScheduleLookupsResponse>(
       currentUser.id,
       'schedule-lookups',
@@ -490,16 +516,6 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
         resolvedRequestKey: requestKey,
       }));
     }
-    if (
-      cachedCalendar.isFresh &&
-      cachedQueue.isFresh &&
-      cachedCalendar.value &&
-      cachedQueue.value
-    ) {
-      setLoadingRequestKey('');
-      return;
-    }
-
     abortControllerRef.current?.abort();
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
@@ -526,7 +542,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
     return () => {
       abortController.abort();
     };
-  }, [applySchedulePayloads, currentUser.id, requestKey, scheduleRequest]);
+  }, [applySchedulePayloads, currentUser.id, refreshNonce, requestKey, scheduleRequest]);
 
   const calendarResponse =
     scheduleState.resolvedRequestKey === requestKey
