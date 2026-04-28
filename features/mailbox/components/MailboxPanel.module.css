@@ -1181,7 +1181,7 @@
 
 .connectWorkspace {
   display: grid;
-  gap: 16px;
+  gap: 0;
 }
 
 .accountRecord,
@@ -1238,35 +1238,41 @@
   border-radius: 2px;
 }
 
-.connectTableWrap {
-  overflow-x: hidden;
+.connectTableSection {
+  width: 100%;
 }
 
-.connectTable {
+.connectList {
+  display: grid;
   width: 100%;
   min-width: 0;
-  table-layout: fixed;
 }
 
-.connectTable th,
-.connectTable td {
+.connectListRow {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.1fr) 100px minmax(120px, 1fr) 196px;
+  align-items: center;
+  min-width: 0;
+  border-bottom: 1px solid var(--erp-line);
+}
+
+.connectListRow:last-child {
+  border-bottom: 0;
+}
+
+.connectListRow > * {
+  min-width: 0;
+  padding: 10px 12px;
   overflow-wrap: anywhere;
   word-break: keep-all;
 }
 
-.connectTable th:nth-child(1),
-.connectTable td:nth-child(1) {
-  width: 38%;
-}
-
-.connectTable th:nth-child(2),
-.connectTable td:nth-child(2) {
-  width: 112px;
-}
-
-.connectTable th:nth-child(4),
-.connectTable td:nth-child(4) {
-  width: 160px;
+.connectListHeader {
+  min-height: 34px;
+  background: #f6f9fc;
+  color: var(--erp-text-muted);
+  font-size: var(--text-ui-sm);
+  font-weight: 700;
 }
 
 .connectProviderCell {
@@ -1306,11 +1312,14 @@
 
 .connectActionCell {
   text-align: right;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .connectActionCell .primaryActionButton {
+  width: 100%;
   max-width: 100%;
+  min-height: 36px;
+  padding-inline: 14px;
   white-space: normal;
 }
 
@@ -1385,6 +1394,10 @@
   .connectActionCell {
     text-align: left;
   }
+
+  .connectListRow {
+    grid-template-columns: minmax(150px, 1fr) 96px minmax(120px, 0.9fr) 174px;
+  }
 }
 
 @media (max-width: 767px) {
@@ -1408,6 +1421,20 @@
 
   .composeSupportArea {
     padding: 10px 12px;
+  }
+
+  .connectListRow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .connectListHeader > :nth-child(2),
+  .connectListHeader > :nth-child(3),
+  .connectListHeader > :nth-child(4) {
+    display: none;
+  }
+
+  .connectActionCell .primaryActionButton {
+    width: auto;
   }
 
   .composeSupportActions {

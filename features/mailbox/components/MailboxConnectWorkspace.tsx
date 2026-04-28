@@ -19,6 +19,17 @@ interface MailboxConnectWorkspaceProps {
   onRefreshAccountState: () => void;
 }
 
+function connectStatusClass(tone: MailboxStatusTone) {
+  return [
+    localStyles.connectStatusBadge,
+    tone === 'error'
+      ? localStyles.connectStatusError
+      : tone === 'ready'
+        ? localStyles.connectStatusReady
+        : localStyles.connectStatusProgress,
+  ].join(' ');
+}
+
 export function MailboxConnectWorkspace({
   accountStateLoading,
   googleProviderStatusDetail,
@@ -66,100 +77,74 @@ export function MailboxConnectWorkspace({
         </div>
       </section>
 
-      <section className={`${styles.tableShell} ${localStyles.workspaceSection}`}>
-        <div className={`${styles.tableWrap} ${localStyles.connectTableWrap}`}>
-          <table className={`${styles.table} ${localStyles.connectTable}`}>
-            <thead>
-              <tr>
-                <th>서비스</th>
-                <th>상태</th>
-                <th>안내</th>
-                <th>처리</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>
-                  <div className={localStyles.connectProviderCell}>
-                    <span className={styles.tablePrimary}>네이버웍스</span>
-                    <span className={localStyles.threadMeta}>NAVER WORKS</span>
-                  </div>
-                </td>
-                <td>
-                  <span
-                    className={[
-                      localStyles.connectStatusBadge,
-                      naverWorksProviderStatusTone === 'error'
-                        ? localStyles.connectStatusError
-                        : naverWorksProviderStatusTone === 'ready'
-                          ? localStyles.connectStatusReady
-                          : localStyles.connectStatusProgress,
-                    ].join(' ')}
-                  >
-                    {naverWorksProviderStatusLabel}
-                  </span>
-                </td>
-                <td>
-                  <span className={localStyles.accountMeta}>
-                    {naverWorksProviderStatusDetail ||
-                      (isPrompt
-                        ? '현재 사용자에게 연결할 네이버웍스 메일 계정을 추가합니다.'
-                        : '네이버웍스 조직 계정을 연결해 보고서 메일 발송 흐름에 사용합니다.')}
-                  </span>
-                </td>
-                <td className={localStyles.connectActionCell}>
-                  <button
-                    type="button"
-                    className={`app-button app-button-primary ${localStyles.primaryActionButton}`}
-                    onClick={onConnectNaverWorks}
-                    disabled={oauthProvider === 'naver_works'}
-                  >
-                    {oauthProvider === 'naver_works' ? '이동 중..' : '네이버웍스 로그인'}
-                  </button>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <div className={localStyles.connectProviderCell}>
-                    <span className={styles.tablePrimary}>지메일</span>
-                    <span className={localStyles.threadMeta}>Google</span>
-                  </div>
-                </td>
-                <td>
-                  <span
-                    className={[
-                      localStyles.connectStatusBadge,
-                      googleProviderStatusTone === 'error'
-                        ? localStyles.connectStatusError
-                        : googleProviderStatusTone === 'ready'
-                          ? localStyles.connectStatusReady
-                          : localStyles.connectStatusProgress,
-                    ].join(' ')}
-                  >
-                    {googleProviderStatusLabel}
-                  </span>
-                </td>
-                <td>
-                  <span className={localStyles.accountMeta}>
-                    {googleProviderStatusDetail ||
-                      (isPrompt
-                        ? '현재 사용자에게 연결할 개인 지메일 계정을 추가합니다.'
-                        : '구글 메일 계정을 현재 사용자 계정에 연결해 받은 메일과 보고서 메일 발송 흐름에 바로 사용합니다.')}
-                  </span>
-                </td>
-                <td className={localStyles.connectActionCell}>
-                  <button
-                    type="button"
-                    className={`app-button app-button-primary ${localStyles.primaryActionButton}`}
-                    onClick={onConnectGoogle}
-                    disabled={oauthProvider === 'google'}
-                  >
-                    {oauthProvider === 'google' ? '이동 중..' : '지메일 로그인'}
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+      <section className={`${styles.tableShell} ${localStyles.workspaceSection} ${localStyles.connectTableSection}`}>
+        <div className={localStyles.connectList} role="table" aria-label="연결 가능한 메일 계정">
+          <div className={`${localStyles.connectListRow} ${localStyles.connectListHeader}`} role="row">
+            <span role="columnheader">서비스</span>
+            <span role="columnheader">상태</span>
+            <span role="columnheader">안내</span>
+            <span role="columnheader">처리</span>
+          </div>
+
+          <div className={localStyles.connectListRow} role="row">
+            <div className={localStyles.connectProviderCell} role="cell">
+              <span className={styles.tablePrimary}>네이버웍스</span>
+              <span className={localStyles.threadMeta}>NAVER WORKS</span>
+            </div>
+            <div role="cell">
+              <span className={connectStatusClass(naverWorksProviderStatusTone)}>
+                {naverWorksProviderStatusLabel}
+              </span>
+            </div>
+            <div role="cell">
+              <span className={localStyles.accountMeta}>
+                {naverWorksProviderStatusDetail ||
+                  (isPrompt
+                    ? '현재 사용자에게 연결할 네이버웍스 메일 계정을 추가합니다.'
+                    : '네이버웍스 조직 계정을 연결해 보고서 메일 발송 흐름에 사용합니다.')}
+              </span>
+            </div>
+            <div className={localStyles.connectActionCell} role="cell">
+              <button
+                type="button"
+                className={`app-button app-button-primary ${localStyles.primaryActionButton}`}
+                onClick={onConnectNaverWorks}
+                disabled={oauthProvider === 'naver_works'}
+              >
+                {oauthProvider === 'naver_works' ? '이동 중..' : '네이버웍스 로그인'}
+              </button>
+            </div>
+          </div>
+
+          <div className={localStyles.connectListRow} role="row">
+            <div className={localStyles.connectProviderCell} role="cell">
+              <span className={styles.tablePrimary}>지메일</span>
+              <span className={localStyles.threadMeta}>Google</span>
+            </div>
+            <div role="cell">
+              <span className={connectStatusClass(googleProviderStatusTone)}>
+                {googleProviderStatusLabel}
+              </span>
+            </div>
+            <div role="cell">
+              <span className={localStyles.accountMeta}>
+                {googleProviderStatusDetail ||
+                  (isPrompt
+                    ? '현재 사용자에게 연결할 개인 지메일 계정을 추가합니다.'
+                    : '구글 메일 계정을 연결해 받은 메일과 보고서 메일 발송 흐름을 바로 사용합니다.')}
+              </span>
+            </div>
+            <div className={localStyles.connectActionCell} role="cell">
+              <button
+                type="button"
+                className={`app-button app-button-primary ${localStyles.primaryActionButton}`}
+                onClick={onConnectGoogle}
+                disabled={oauthProvider === 'google'}
+              >
+                {oauthProvider === 'google' ? '이동 중..' : '지메일 로그인'}
+              </button>
+            </div>
+          </div>
         </div>
       </section>
     </div>
