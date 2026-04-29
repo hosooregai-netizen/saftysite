@@ -71,10 +71,20 @@ export function normalizeFollowUpItem(raw: unknown, fallbackDate: string): Previ
     sourceSessionId: normalizeText(source.sourceSessionId) || undefined,
     sourceFindingId: normalizeText(source.sourceFindingId || source.sourceHazardId) || undefined,
     location: normalizeText(source.location) || normalizeText(source.locationDetail) || normalizeText(source.title),
+    hazardDescription:
+      normalizeText(source.hazardDescription) ||
+      normalizeText(source.hazard_description) ||
+      normalizeText(source.hazard) ||
+      normalizeText(source.issue),
     guidanceDate: normalizeText(source.guidanceDate) || normalizeText(source.inspectionDate) || '',
     confirmationDate: normalizeText(source.confirmationDate) || normalizeText(fallbackDate),
     beforePhotoUrl: normalizeAssetValue(source.beforePhotoUrl) || normalizeAssetValue(source.photoUrl) || normalizeAssetValue(source.previousPhotoUrl),
     afterPhotoUrl: normalizeAssetValue(source.afterPhotoUrl) || normalizeAssetValue(source.currentPhotoUrl),
+    actionRequired:
+      normalizeText(source.actionRequired) ||
+      normalizeText(source.action_required) ||
+      normalizeText(source.guidance) ||
+      normalizeText(source.countermeasure),
     result: normalizeFollowUpResult(
       normalizeText(source.result) || normalizeText(source.implementationResult),
     ),

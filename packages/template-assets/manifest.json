@@ -1,0 +1,11 @@
+{
+  "sourceHwp": "../../기술지도_표준보고서.hwp",
+  "standardTemplateVersion": "standard-v1",
+  "conversionStatus": "source_hwpx_ready",
+  "renderStatus": "runtime_standard_builder_connected",
+  "notes": [
+    "루트 HWP 원본이 canonical source of truth입니다.",
+    "표준 변환본은 packages/template-assets/templates/standard-v1.source.hwpx 에서 관리합니다.",
+    "1차 전환은 direct table binding 기반이며, placeholder annotation contract 고도화는 후속 단계입니다."
+  ]
+}

@@ -1,0 +1,612 @@
+.flowShell {
+  display: grid;
+  gap: 18px;
+}
+
+.stepRail {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.stepCard {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface-muted);
+  text-align: left;
+  cursor: pointer;
+}
+
+.stepCard:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.stepCardActive {
+  border-color: var(--navy);
+  background: #edf3f8;
+}
+
+.stepBadge {
+  display: inline-flex;
+  width: fit-content;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #eef4f9;
+  color: var(--navy);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.stepTitle {
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.stepHelper {
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.stepTabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.stepTab {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface-muted);
+  text-align: left;
+  cursor: pointer;
+}
+
+.stepTabActive {
+  border-color: var(--navy);
+  background: #edf3f8;
+}
+
+.stepTabLocked {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.stepTabTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.stepTabLabel {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--accent);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.stepTabState {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+.stepTabTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.stepTabHelper {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.panelStack {
+  display: grid;
+  gap: 18px;
+}
+
+.panelHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.panelHeaderCompact {
+  margin-bottom: 0;
+}
+
+.panelEyebrow {
+  display: inline-flex;
+  margin-bottom: 8px;
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.panelTitle {
+  margin: 0;
+  color: var(--text);
+  font-size: 1.65rem;
+  font-family: var(--font-display);
+}
+
+.panelDescription {
+  margin: 8px 0 0;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.statusPill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--surface-accent);
+  color: var(--navy);
+  font-size: 0.84rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.statusPillReady {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.statusPillPending {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.metaGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.metaField {
+  display: grid;
+  gap: 8px;
+}
+
+.metaLabelRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.metaLabel {
+  color: var(--text);
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.requiredMark {
+  color: var(--danger);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.metaInput {
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.metaInput:focus {
+  outline: 2px solid rgba(33, 55, 74, 0.16);
+  outline-offset: 1px;
+}
+
+.metaHint {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.slotGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.generatePanel {
+  display: grid;
+  gap: 16px;
+}
+
+.generateSummaryGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.generateSummaryCard {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-muted);
+}
+
+.generateSummaryCard span {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.generateSummaryCard strong {
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.generateActionArea {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.inlineNotice {
+  padding: 12px 14px;
+  border: 1px solid #ead59d;
+  border-radius: 14px;
+  background: #fff8e5;
+  color: #82600c;
+  font-weight: 700;
+}
+
+.footerBar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.slotCard {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface-muted);
+}
+
+.slotHeader {
+  display: grid;
+  gap: 4px;
+}
+
+.slotLabelRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.slotLabel {
+  color: var(--text);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.slotHelper {
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.slotBody {
+  position: relative;
+  min-height: 240px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 14px;
+  background: #f5f8fb;
+  overflow: hidden;
+}
+
+.slotPreviewButton,
+.slotPlaceholderButton {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.slotPreviewButton {
+  position: relative;
+  padding: 0;
+}
+
+.slotPreviewButton img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.slotPreviewOverlay {
+  position: absolute;
+  inset: auto 12px 12px auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(24, 40, 56, 0.72);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.slotPlaceholderButton {
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  text-align: center;
+}
+
+.slotPlaceholderInner {
+  display: grid;
+  gap: 8px;
+}
+
+.slotPlaceholderTitle {
+  color: var(--navy);
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.slotPlaceholderHint {
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.slotFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.slotState {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.slotActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.slotActionText {
+  border: 0;
+  background: transparent;
+  color: var(--navy);
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.stageSummary {
+  display: grid;
+  gap: 14px;
+}
+
+.summaryStrip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.summaryCard {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-muted);
+}
+
+.summaryCard span {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.summaryCard strong {
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.generationGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.generationCard {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-muted);
+}
+
+.generationCard span {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.generationCard strong {
+  color: var(--text);
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+.inlineAssistNote {
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: linear-gradient(180deg, #f8fbfd 0%, #f1f6fa 100%);
+  color: var(--text-muted);
+  line-height: 1.6;
+  font-weight: 700;
+}
+
+.footerCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.footerCopy {
+  display: grid;
+  gap: 6px;
+}
+
+.footerTitle {
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.footerDescription {
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.footerActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.finalPanel {
+  display: grid;
+  gap: 18px;
+}
+
+.finalStatusGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.finalStatusCard {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface-muted);
+}
+
+.finalStatusCard strong {
+  color: var(--text);
+}
+
+.finalStatusCard span {
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.finalActionCard {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #f8fbfd 0%, #eef4f8 100%);
+}
+
+.finalActionTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.finalActionTitle {
+  color: var(--text);
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.finalActionDesc {
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.finalActionButtons {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.autoMoveNotice {
+  color: var(--navy);
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
+.hiddenInput {
+  display: none;
+}
+
+@media (max-width: 1180px) {
+  .stepRail,
+  .stepTabs,
+  .slotGrid,
+  .summaryStrip,
+  .generateSummaryGrid,
+  .generationGrid,
+  .finalStatusGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .metaGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .panelHeader,
+  .footerBar,
+  .footerCard,
+  .finalActionTop {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .footerActions,
+  .finalActionButtons {
+    flex-wrap: wrap;
+  }
+}

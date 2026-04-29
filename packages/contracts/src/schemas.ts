@@ -1,0 +1,340 @@
+import { z } from 'zod';
+
+export const fieldSourceSchema = z.enum(['manual', 'vision', 'ai_section', 'system']);
+export const reportStatusSchema = z.enum(['draft', 'draft_ready', 'review_completed', 'exported']);
+export const reviewStatusSchema = z.enum(['pending', 'reviewed', 'confirmed']);
+export const previousImplementationStatusSchema = z.enum([
+  'implemented',
+  'partial',
+  'not_implemented',
+  '',
+]);
+export const notificationMethodSchema = z.enum([
+  'direct',
+  'registered_mail',
+  'email',
+  'mobile',
+  'other',
+  '',
+]);
+export const photoCategorySchema = z.enum([
+  'site_overview',
+  'hazard',
+  'process',
+  'measurement',
+  'education',
+  'activity',
+]);
+export const photoSourceStepSchema = z.enum(['step1_overview', 'step2_hazard', 'manual_override']);
+export const wizardStepSchema = z.enum([
+  'meta',
+  'step1_overview',
+  'step2_hazard',
+  'review',
+  'ai_generating',
+  'workspace',
+]);
+export const workspaceEntryModeSchema = z.enum(['guided_photo_flow', 'direct_reopen']);
+export const doc11Doc12AutofillModeSchema = z.enum(['resource_autofill', 'manual_override']);
+export const photoStepBucketStatusSchema = z.enum(['pending', 'ready', 'reviewed']);
+
+export const reviewQueueItemSchema = z.object({
+  fieldPath: z.string().min(1),
+  label: z.string().min(1),
+  confidence: z.number().min(0).max(1),
+  needsReview: z.boolean().default(true),
+  status: reviewStatusSchema,
+  notes: z.string().default(''),
+});
+
+export const reportMetaSchema = z.object({
+  workspaceName: z.string().default(''),
+  siteName: z.string().min(1),
+  customerName: z.string().min(1),
+  guidanceAgencyName: z.string().default(''),
+  visitDate: z.string().min(1),
+  drafterName: z.string().min(1),
+  siteManagementNumber: z.string().default(''),
+  businessStartNumber: z.string().default(''),
+  constructionPeriod: z.string().default(''),
+  constructionAmount: z.string().default(''),
+  siteManagerName: z.string().default(''),
+  corporationRegistrationNumber: z.string().default(''),
+  businessRegistrationNumber: z.string().default(''),
+  licenseNumber: z.string().default(''),
+  headquartersContact: z.string().default(''),
+  headquartersAddress: z.string().default(''),
+  constructionType: z.string().default(''),
+  visitCount: z.string().default(''),
+  totalVisitCount: z.string().default(''),
+  previousImplementationStatus: previousImplementationStatusSchema.default(''),
+  notificationMethod: notificationMethodSchema.default(''),
+  notificationRecipientName: z.string().default(''),
+  otherNotificationMethod: z.string().default(''),
+  progressRate: z.string().default(''),
+  processSummary: z.string().default(''),
+  workerCount: z.string().default(''),
+  siteAddress: z.string().default(''),
+  siteContact: z.string().default(''),
+  reportPriceKrw: z.number().int().nonnegative().default(3000),
+});
+
+export const reviewMetaSchema = z.object({
+  reviewCompleted: z.boolean(),
+  reviewCompletedAt: z.string().nullable(),
+  responsibilityConfirmed: z.boolean(),
+  requiredFieldPaths: z.array(z.string()).default([]),
+  reviewQueue: z.array(reviewQueueItemSchema).default([]),
+});
+
+export const aiMetaSchema = z.object({
+  pipelineVersion: z.string().default('v1-photo-first'),
+  lastRunId: z.string().nullable(),
+  lastRunStatus: z.enum(['queued', 'running', 'succeeded', 'failed']).default('queued'),
+  generatedAt: z.string().nullable(),
+  sourceMix: z.array(fieldSourceSchema).default([]),
+});
+
+export const photoStepBucketSchema = z.object({
+  step: photoSourceStepSchema,
+  title: z.string().min(1),
+  description: z.string().default(''),
+  minRequired: z.number().int().nonnegative().default(0),
+  uploadedPhotoIds: z.array(z.string()).default([]),
+  representativePhotoId: z.string().nullable().default(null),
+  status: photoStepBucketStatusSchema.default('pending'),
+});
+
+export const photoChecklistStatusSchema = z.object({
+  step1OverviewComplete: z.boolean().default(false),
+  step2HazardComplete: z.boolean().default(false),
+  reviewReady: z.boolean().default(false),
+  minimumSatisfied: z.boolean().default(false),
+});
+
+export const photoEvidenceSchema = z.object({
+  photoAssetId: z.string().min(1),
+  category: photoCategorySchema,
+  sourceStep: photoSourceStepSchema.default('manual_override'),
+  filename: z.string().default(''),
+  imageUrl: z.string().default(''),
+  aiCategorySuggestion: photoCategorySchema.nullable().default(null),
+  aiCategoryConfidence: z.number().min(0).max(1).default(0),
+  aiCategoryReason: z.string().default(''),
+  sceneType: z.string().default(''),
+  processType: z.string().default(''),
+  locationHint: z.string().default(''),
+  ppeSignals: z.array(z.string()).default([]),
+  hazardSignals: z.array(z.string()).default([]),
+  accidentTypeCandidates: z.array(z.string()).default([]),
+  causativeAgentCandidates: z.array(z.string()).default([]),
+  measurementContext: z.string().default(''),
+  educationContext: z.string().default(''),
+  activityContext: z.string().default(''),
+  confidence: z.number().min(0).max(1),
+  notes: z.string().default(''),
+});
+
+export const findingCandidateSchema = z.object({
+  linkedPhotoIds: z.array(z.string()).default([]),
+  location: z.string().default(''),
+  hazardDescription: z.string().default(''),
+  accidentType: z.string().default(''),
+  causativeAgentKey: z.string().default(''),
+  riskLevel: z.enum(['상', '중', '하']),
+  improvementPlan: z.string().default(''),
+  emphasis: z.string().default(''),
+  legalReferenceCandidates: z.array(z.string()).default([]),
+  referenceMaterialCandidates: z.array(z.string()).default([]),
+  confidence: z.number().min(0).max(1),
+  needsReview: z.boolean().default(true),
+});
+
+export const doc5StructuredSummarySchema = z.object({
+  progressOverview: z.string().default(''),
+  accidentTrend: z.string().default(''),
+  findingCase: z.string().default(''),
+  workEnvironmentRisk: z.string().default(''),
+  futureProcessFocus: z.string().default(''),
+});
+
+export const sectionDraftsSchema = z.object({
+  doc5: doc5StructuredSummarySchema,
+  doc7: z.array(findingCandidateSchema).default([]),
+  doc8: z
+    .array(
+      z.object({
+        processName: z.string(),
+        hazard: z.string(),
+        countermeasure: z.string(),
+        confidence: z.number().min(0).max(1),
+      }),
+    )
+    .default([]),
+  doc11: z
+    .array(
+      z.object({
+        topic: z.string(),
+        content: z.string(),
+        attendeeCount: z.string().optional(),
+        confidence: z.number().min(0).max(1),
+      }),
+    )
+    .default([]),
+  doc12: z
+    .array(
+      z.object({
+        activityType: z.string(),
+        content: z.string(),
+        confidence: z.number().min(0).max(1),
+      }),
+    )
+    .default([]),
+  doc13: z
+    .array(
+      z.object({
+        title: z.string(),
+        summary: z.string(),
+        confidence: z.number().min(0).max(1),
+      }),
+    )
+    .default([]),
+  doc14: z.object({
+    title: z.string().default(''),
+    body: z.string().default(''),
+    confidence: z.number().min(0).max(1),
+  }),
+});
+
+export const validationResultSchema = z.object({
+  valid: z.boolean(),
+  blockingIssues: z.array(z.string()).default([]),
+  warnings: z.array(z.string()).default([]),
+  reviewedFieldPaths: z.array(z.string()).default([]),
+});
+
+export const documentsCompatSchema = z
+  .object({
+    document2Overview: z.record(z.string(), z.unknown()).default({}),
+    document3Scenes: z.array(z.record(z.string(), z.unknown())).default([]),
+    document4FollowUps: z.array(z.record(z.string(), z.unknown())).default([]),
+    document5Summary: z.record(z.string(), z.unknown()).default({}),
+    document6Measures: z.array(z.record(z.string(), z.unknown())).default([]),
+    document7Findings: z.array(z.record(z.string(), z.unknown())).default([]),
+    document8Plans: z.array(z.record(z.string(), z.unknown())).default([]),
+    document9SafetyChecks: z.record(z.string(), z.unknown()).default({}),
+    document10Measurements: z.array(z.record(z.string(), z.unknown())).default([]),
+    document11EducationRecords: z.array(z.record(z.string(), z.unknown())).default([]),
+    document12Activities: z.array(z.record(z.string(), z.unknown())).default([]),
+    document13Cases: z.array(z.record(z.string(), z.unknown())).default([]),
+    document14SafetyInfos: z.array(z.record(z.string(), z.unknown())).default([]),
+  })
+  .default({});
+
+export const reportPayloadSchema = z.object({
+  id: z.string().min(1),
+  workspaceId: z.string().min(1),
+  status: reportStatusSchema,
+  currentSection: z.string().min(1),
+  reportMeta: reportMetaSchema,
+  reviewMeta: reviewMetaSchema,
+  aiMeta: aiMetaSchema,
+  wizardStep: wizardStepSchema.default('meta'),
+  photoStepBuckets: z.array(photoStepBucketSchema).default([]),
+  photoChecklistStatus: photoChecklistStatusSchema.default({}),
+  doc3PhotoCandidates: z.array(z.string()).default([]),
+  doc7PhotoCandidates: z.array(z.string()).default([]),
+  workspaceEntryMode: workspaceEntryModeSchema.default('guided_photo_flow'),
+  doc11Doc12AutofillMode: doc11Doc12AutofillModeSchema.default('resource_autofill'),
+  photoEvidence: z.array(photoEvidenceSchema).default([]),
+  findingCandidates: z.array(findingCandidateSchema).default([]),
+  sectionDrafts: sectionDraftsSchema,
+  validationResult: validationResultSchema,
+  documentsCompat: documentsCompatSchema,
+  createdAt: z.string().min(1),
+  updatedAt: z.string().min(1),
+});
+
+export const signupInputSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8),
+  name: z.string().min(1),
+});
+
+export const loginInputSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8),
+});
+
+export const createWorkspaceInputSchema = z.object({
+  name: z.string().min(1),
+});
+
+export const billingPackageSchema = z.enum(['starter-10', 'team-30', 'agency-100']);
+
+export const createReportInputSchema = z.object({
+  workspace_id: z.string().min(1),
+  site_name: z.string().min(1),
+  customer_name: z.string().min(1),
+  visit_date: z.string().min(1),
+  drafter_name: z.string().min(1),
+  progress_rate: z.string().default(''),
+  process_summary: z.string().default(''),
+  worker_count: z.string().default(''),
+});
+
+export const generateDraftFromPhotosInputSchema = z.object({
+  photo_asset_ids: z.array(z.string().min(1)).min(1),
+});
+
+export const guidedPhotoStepUploadInputSchema = z.object({
+  photos: z
+    .array(
+      z.object({
+        filename: z.string().min(1),
+        category: photoCategorySchema.optional(),
+        data_url: z.string().min(1),
+        location_hint: z.string().default(''),
+      }),
+    )
+    .min(1),
+});
+
+export const guidedPhotoReviewInputSchema = z.object({
+  doc3_photo_ids: z.array(z.string().min(1)).default([]),
+  doc7_photo_ids: z.array(z.string().min(1)).default([]),
+  representative_doc3_photo_id: z.string().nullable().default(null),
+  representative_doc7_photo_id: z.string().nullable().default(null),
+});
+
+export const generateDraftFromGuidedPhotosInputSchema = z.object({
+  doc3_photo_ids: z.array(z.string().min(1)).min(1),
+  doc7_photo_ids: z.array(z.string().min(1)).min(1),
+});
+
+export const exportReportInputSchema = z.object({
+  confirm_reviewed: z.boolean().default(true),
+});
+
+export const creditLedgerEntrySchema = z.object({
+  id: z.string().min(1),
+  workspace_id: z.string().min(1),
+  type: z.enum(['grant_free_trial', 'purchase', 'consume_export', 'refund_export_failure']),
+  amount: z.number().int(),
+  description: z.string().min(1),
+  report_id: z.string().nullable().optional(),
+  created_at: z.string().min(1),
+});
+
+export type ReportPayload = z.infer<typeof reportPayloadSchema>;
+export type PhotoEvidence = z.infer<typeof photoEvidenceSchema>;
+export type FindingCandidate = z.infer<typeof findingCandidateSchema>;
+export type SectionDrafts = z.infer<typeof sectionDraftsSchema>;
+export type ValidationResult = z.infer<typeof validationResultSchema>;
+export type CreateReportInput = z.infer<typeof createReportInputSchema>;
+export type GenerateDraftFromPhotosInput = z.infer<typeof generateDraftFromPhotosInputSchema>;
+export type GuidedPhotoStepUploadInput = z.infer<typeof guidedPhotoStepUploadInputSchema>;
+export type GuidedPhotoReviewInput = z.infer<typeof guidedPhotoReviewInputSchema>;
+export type GenerateDraftFromGuidedPhotosInput = z.infer<typeof generateDraftFromGuidedPhotosInputSchema>;
+export type ExportReportInput = z.infer<typeof exportReportInputSchema>;
+export type CreditLedgerEntry = z.infer<typeof creditLedgerEntrySchema>;

@@ -1,14 +1,28 @@
 {
-  "name": "korea-safety",
+  "name": "saftysite-monorepo",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "apps/web",
+    "packages/contracts",
+    "packages/prompt-packs",
+    "packages/report-engine",
+    "packages/template-assets"
+  ],
   "scripts": {
     "rundev": "node scripts/rundev.mjs",
-    "dev": "node scripts/rundev.mjs",
-    "build": "next build --webpack",
-    "start": "next start",
+    "dev": "npm run dev -w @saftysite/web",
+    "dev:web": "npm run dev -w @saftysite/web",
+    "dev:legacy": "node scripts/rundev.mjs",
+    "build": "npm run build -w @saftysite/web",
+    "build:web": "npm run build -w @saftysite/web",
+    "start": "npm run start -w @saftysite/web",
+    "start:web": "npm run start -w @saftysite/web",
     "prepare": "node scripts/installGitHooks.mjs",
-    "lint": "eslint .",
+    "lint": "npm run lint -w @saftysite/web && npm run lint -w @saftysite/contracts",
+    "lint:legacy": "eslint .",
+    "test": "npm run test -w @saftysite/contracts",
+    "contracts:schemas": "npm run generate:schemas -w @saftysite/contracts",
     "test:domain:bad-workplace": "tsx tests/domain/badWorkplace.domain.ts",
     "test:client:smoke": "tsx tests/client/runSmoke.ts",
     "test:client:smoke:headed": "PLAYWRIGHT_HEADLESS=0 tsx tests/client/runSmoke.ts",
@@ -33,7 +47,9 @@
     "capture:google-review": "tsx scripts/captureGoogleReview.ts",
     "generate:hwpx": "node --experimental-strip-types scripts/generate_hwpx_report.ts",
     "bootstrap:hwpx-template": "node --experimental-strip-types scripts/bootstrap_inspection_hwpx_template.ts",
-    "seed:measurement-templates": "node --experimental-strip-types scripts/seed_measurement_templates.ts"
+    "seed:measurement-templates": "node --experimental-strip-types scripts/seed_measurement_templates.ts",
+    "api:dev": "uvicorn app.main:app --reload --app-dir apps/api --port 8001",
+    "api:check": "python3 -m compileall apps/api/app"
   },
   "dependencies": {
     "exifr": "^7.1.3",
@@ -46,7 +62,8 @@
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "sharp": "^0.34.5",
-    "text-to-svg": "^3.1.5"
+    "text-to-svg": "^3.1.5",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/node": "^20",
@@ -60,6 +77,7 @@
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.4",
     "tsx": "^4.20.3",
-    "typescript": "^5"
+    "typescript": "^5",
+    "zod-to-json-schema": "^3.24.6"
   }
 }
