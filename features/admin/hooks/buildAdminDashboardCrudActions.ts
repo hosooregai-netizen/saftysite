@@ -15,8 +15,9 @@ import {
 import {
   deleteAssignmentsById,
   hasValues,
-  loadAllSafetyAssignments,
-  loadAllSafetySites,
+  loadSafetyAssignmentsForSite,
+  loadSafetyAssignmentsForUser,
+  loadSafetySitesByHeadquarter,
 } from '@/features/admin/lib/adminDashboardMutations';
 import { invalidateAdminDirectoryMutationClientCaches } from '@/features/admin/lib/adminClientCacheInvalidation';
 import type {
@@ -98,10 +99,8 @@ export function buildAdminDashboardCrudActions({
     deleteUser: (id: string) =>
       runMutation(
         async (token) => {
-          const assignments = await loadAllSafetyAssignments(token);
-          const assignmentIds = assignments
-            .filter((assignment) => assignment.user_id === id)
-            .map((assignment) => assignment.id);
+          const assignments = await loadSafetyAssignmentsForUser(token, id);
+          const assignmentIds = assignments.map((assignment) => assignment.id);
           await deleteAssignmentsById(token, assignmentIds, deactivateSafetyAssignment);
           await deleteSafetyUser(token, id);
           return { userId: id };
@@ -137,15 +136,12 @@ export function buildAdminDashboardCrudActions({
     deleteHeadquarter: (id: string) =>
       runMutation(
         async (token) => {
-          const [sites, assignments] = await Promise.all([
-            loadAllSafetySites(token),
-            loadAllSafetyAssignments(token),
-          ]);
-          const relatedSites = sites.filter((site) => site.headquarter_id === id);
+          const relatedSites = await loadSafetySitesByHeadquarter(token, id);
           const relatedSiteIds = new Set(relatedSites.map((site) => site.id));
-          const assignmentIds = assignments
-            .filter((assignment) => relatedSiteIds.has(assignment.site_id))
-            .map((assignment) => assignment.id);
+          const assignmentPages = await Promise.all(
+            Array.from(relatedSiteIds).map((siteId) => loadSafetyAssignmentsForSite(token, siteId)),
+          );
+          const assignmentIds = assignmentPages.flat().map((assignment) => assignment.id);
           await deleteAssignmentsById(token, assignmentIds, deactivateSafetyAssignment);
           for (const site of relatedSites) {
             await deleteSafetySite(token, site.id);
@@ -192,7 +188,7 @@ export function buildAdminDashboardCrudActions({
             enabled: input.enabled === true,
             alerts_enabled: input.alerts_enabled === true,
           }),
-        '?꾩옣 諛쒖넚 愿由??뺤콉??섏젙?덉뒿?덈떎.',
+        '현장 발송 관리 설정을 수정했습니다.',
         {
           applyResult: (current, site) => ({
             ...current,
@@ -204,10 +200,8 @@ export function buildAdminDashboardCrudActions({
     deleteSite: (id: string) =>
       runMutation(
         async (token) => {
-          const assignments = await loadAllSafetyAssignments(token);
-          const assignmentIds = assignments
-            .filter((assignment) => assignment.site_id === id)
-            .map((assignment) => assignment.id);
+          const assignments = await loadSafetyAssignmentsForSite(token, id);
+          const assignmentIds = assignments.map((assignment) => assignment.id);
           await deleteAssignmentsById(token, assignmentIds, deactivateSafetyAssignment);
           await deleteSafetySite(token, id);
           return { siteId: id };

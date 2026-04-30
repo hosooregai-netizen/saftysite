@@ -1,8 +1,9 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
+import { readNumberParam, useUrlQueryUpdater } from '@/hooks/useUrlQueryState';
 import { CONTENT_CRUD_TYPE_OPTIONS } from '@/lib/admin';
 import type { SafetyContentType, SafetyUser } from '@/types/backend';
 import { AdminDashboardShell } from '@/features/admin/components/AdminDashboardShell';
@@ -20,8 +21,10 @@ export function AdminDashboardScreen({
   currentUser,
   onLogout,
 }: AdminDashboardScreenProps) {
-  const [contentPage, setContentPage] = useState(1);
   const searchParams = useSearchParams();
+  const updateUrlQuery = useUrlQueryUpdater();
+  const urlContentPage = readNumberParam(searchParams, 'contentPage', 1, 1);
+  const [contentPage, setContentPage] = useState(urlContentPage);
   const contentTypeParam = searchParams.get('contentType');
   const {
     ensureSessionLoaded,
@@ -51,6 +54,9 @@ export function AdminDashboardScreen({
         : 'all',
     [contentTypeParam],
   );
+  useEffect(() => {
+    setContentPage(urlContentPage);
+  }, [urlContentPage]);
 
   return (
     <AdminDashboardShell
@@ -73,12 +79,15 @@ export function AdminDashboardScreen({
         dashboard={dashboard}
         ensureSessionLoaded={ensureSessionLoaded}
         getSessionById={getSessionById}
-        onContentPageChange={setContentPage}
+        onContentPageChange={(page) => {
+          setContentPage(page);
+          updateUrlQuery({ contentPage: page }, { contentPage: 1 });
+        }}
         onContentTypeChange={(type) => {
           setContentPage(1);
-          dashboard.selectSection(
-            'content',
-            type === 'all' ? {} : { contentType: type },
+          updateUrlQuery(
+            { contentPage: 1, contentType: type === 'all' ? null : type },
+            { contentPage: 1 },
           );
         }}
         sessions={sessions}

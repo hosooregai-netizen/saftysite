@@ -86,7 +86,7 @@ export default function OperationalReportsPanel({
         <div className={styles.cardGrid}>
           <article className={styles.reportCard}>
             <div className={styles.reportCardHeader}>
-              <strong className={styles.reportCardTitle}>분기 종합보고서</strong>
+              <strong className={styles.reportCardTitle}>분기 종합 보고서</strong>
               <span className="app-chip">대상 분기 {quarterTargets.length}개</span>
             </div>
 

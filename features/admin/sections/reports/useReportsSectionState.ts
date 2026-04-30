@@ -4,6 +4,12 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } f
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSubmittedSearchState } from '@/hooks/useSubmittedSearchState';
 import {
+  readEnumParam,
+  readNumberParam,
+  readStringParam,
+  useUrlQueryUpdater,
+} from '@/hooks/useUrlQueryState';
+import {
   readAdminSessionCache,
   writeAdminSessionCache,
 } from '@/features/admin/lib/adminSessionCache';
@@ -36,6 +42,19 @@ import type { SmsProviderStatus } from '@/types/messages';
 import type { ReportsSectionProps, ReportsUserOption } from './reportsSectionTypes';
 
 const adminReportsInFlight = new Map<string, Promise<SafetyAdminReportsResponse>>();
+const REPORT_LIST_QUERY_DEFAULTS = {
+  assigneeUserId: 'all',
+  dateFrom: '',
+  dateTo: '',
+  headquarterId: 'all',
+  offset: 0,
+  qualityStatus: 'all',
+  query: '',
+  reportType: 'all',
+  siteId: 'all',
+  sortBy: 'visitDate',
+  sortDir: 'desc',
+};
 
 function fetchAdminReportsOnce(
   requestKey: string,
@@ -126,6 +145,7 @@ export function useReportsSectionState({
   void onReloadData;
   const router = useRouter();
   const searchParams = useSearchParams();
+  const updateUrlQuery = useUrlQueryUpdater();
   const overviewPreset = useMemo<OverviewReportsPreset | null>(() => {
     const value = searchParams.get('overviewPreset');
     return value === 'badWorkplaceOverdue' || value === 'issueBundle' || value === 'siteOverdueBundle'
@@ -138,7 +158,14 @@ export function useReportsSectionState({
     setQueryInput,
     submitQuery,
   } = useSubmittedSearchState(searchParams.get('query') || '');
-  const [sort, setSort] = useState<TableSortState>({ direction: 'desc', key: 'visitDate' });
+  const urlSort = useMemo<TableSortState>(
+    () => ({
+      direction: readEnumParam(searchParams, 'sortDir', ['asc', 'desc'] as const, 'desc'),
+      key: readStringParam(searchParams, 'sortBy', 'visitDate'),
+    }),
+    [searchParams],
+  );
+  const [sort, setSortState] = useState<TableSortState>(urlSort);
   const [reportType, setReportType] = useState<'all' | ControllerReportRow['reportType']>(() => {
     const value = searchParams.get('reportType');
     return value === 'technical_guidance' ||
@@ -155,7 +182,8 @@ export function useReportsSectionState({
   const [dateTo, setDateTo] = useState(() => searchParams.get('dateTo') || '');
   const [rows, setRows] = useState<ControllerReportRow[]>([]);
   const [total, setTotal] = useState(0);
-  const [offset, setOffset] = useState(0);
+  const urlOffset = readNumberParam(searchParams, 'offset', 0, 0);
+  const [offset, setOffsetState] = useState(urlOffset);
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -219,6 +247,31 @@ export function useReportsSectionState({
   const latestReportRequestKeyRef = useRef('');
   const originalPdfAbortControllerRef = useRef<AbortController | null>(null);
   const originalPdfUrlRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    setOffsetState(urlOffset);
+  }, [urlOffset]);
+
+  useEffect(() => {
+    setSortState(urlSort);
+  }, [urlSort]);
+
+  useEffect(() => {
+    setReportType(() => {
+      const value = searchParams.get('reportType');
+      return value === 'technical_guidance' ||
+        value === 'quarterly_report' ||
+        value === 'bad_workplace'
+        ? value
+        : 'all';
+    });
+    setHeadquarterFilter(searchParams.get('headquarterId') || 'all');
+    setSiteFilter(searchParams.get('siteId') || 'all');
+    setAssigneeFilter(searchParams.get('assigneeUserId') || 'all');
+    setQualityFilter(searchParams.get('qualityStatus') || 'all');
+    setDateFrom(searchParams.get('dateFrom') || '');
+    setDateTo(searchParams.get('dateTo') || '');
+  }, [searchParams]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -582,7 +635,7 @@ export function useReportsSectionState({
   });
 
   const resetHeaderFilters = useCallback(() => {
-    setOffset(0);
+    setOffsetState(0);
     setReportType('all');
     setHeadquarterFilter('all');
     setSiteFilter('all');
@@ -590,7 +643,20 @@ export function useReportsSectionState({
     setQualityFilter('all');
     setDateFrom('');
     setDateTo('');
-  }, []);
+    updateUrlQuery(
+      {
+        assigneeUserId: 'all',
+        dateFrom: '',
+        dateTo: '',
+        headquarterId: 'all',
+        offset: 0,
+        qualityStatus: 'all',
+        reportType: 'all',
+        siteId: 'all',
+      },
+      REPORT_LIST_QUERY_DEFAULTS,
+    );
+  }, [updateUrlQuery]);
 
   const openReviewModal = useCallback((row: ControllerReportRow) => {
     setReviewRow(row);
@@ -704,48 +770,67 @@ export function useReportsSectionState({
     selectedRows,
     sendDispatchSms,
     setAssigneeFilter: (value: string) => {
-      setOffset(0);
+      setOffsetState(0);
       setAssigneeFilter(value);
+      updateUrlQuery({ assigneeUserId: value, offset: 0 }, REPORT_LIST_QUERY_DEFAULTS);
     },
     setDateFrom: (value: string) => {
-      setOffset(0);
+      setOffsetState(0);
       setDateFrom(value);
+      updateUrlQuery({ dateFrom: value, offset: 0 }, REPORT_LIST_QUERY_DEFAULTS);
     },
     setDateTo: (value: string) => {
-      setOffset(0);
+      setOffsetState(0);
       setDateTo(value);
+      updateUrlQuery({ dateTo: value, offset: 0 }, REPORT_LIST_QUERY_DEFAULTS);
     },
     setDispatchRow,
     setDispatchSmsMessage,
     setDispatchSmsPhone,
     setHeadquarterFilter: (value: string) => {
-      setOffset(0);
+      setOffsetState(0);
       setHeadquarterFilter(value);
+      updateUrlQuery(
+        { headquarterId: value, offset: 0, siteId: 'all' },
+        REPORT_LIST_QUERY_DEFAULTS,
+      );
     },
-    setOffset,
+    setOffset: (value: number | ((current: number) => number)) => {
+      const nextOffset = typeof value === 'function' ? value(offset) : value;
+      setOffsetState(nextOffset);
+      updateUrlQuery({ offset: nextOffset }, REPORT_LIST_QUERY_DEFAULTS);
+    },
     setQualityFilter: (value: string) => {
-      setOffset(0);
+      setOffsetState(0);
       setQualityFilter(value);
+      updateUrlQuery({ offset: 0, qualityStatus: value }, REPORT_LIST_QUERY_DEFAULTS);
     },
     setQueryInput,
     submitQuery: () => {
-      setOffset(0);
-      submitQuery();
+      const nextQuery = submitQuery();
+      setOffsetState(0);
+      updateUrlQuery({ offset: 0, query: nextQuery }, REPORT_LIST_QUERY_DEFAULTS);
     },
     setReportType: (value: 'all' | ControllerReportRow['reportType']) => {
-      setOffset(0);
+      setOffsetState(0);
       setReportType(value);
+      updateUrlQuery({ offset: 0, reportType: value }, REPORT_LIST_QUERY_DEFAULTS);
     },
     setReviewForm,
     setReviewRow,
     setSelectedKeys,
     setSiteFilter: (value: string) => {
-      setOffset(0);
+      setOffsetState(0);
       setSiteFilter(value);
+      updateUrlQuery({ offset: 0, siteId: value }, REPORT_LIST_QUERY_DEFAULTS);
     },
     setSort: (next: TableSortState) => {
-      setOffset(0);
-      setSort(next);
+      setOffsetState(0);
+      setSortState(next);
+      updateUrlQuery(
+        { offset: 0, sortBy: next.key, sortDir: next.direction },
+        REPORT_LIST_QUERY_DEFAULTS,
+      );
     },
     siteFilter,
     siteOptions,

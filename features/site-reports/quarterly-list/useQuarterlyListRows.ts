@@ -52,7 +52,7 @@ export function useQuarterlyListRows({
         sequenceNumber: index + 1,
         href: buildSiteQuarterlyHref(currentSite.id, report.id),
         reportId: report.id,
-        reportTitle: report.title || '분기 종합보고서',
+        reportTitle: report.title || '분기 종합 보고서',
         quarterLabel: getQuarterLabel(report.year, report.quarter),
         selectedCount: report.selectedReportCount,
         updatedAt: report.updatedAt || report.lastCalculatedAt || report.createdAt,

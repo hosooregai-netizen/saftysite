@@ -11,6 +11,11 @@ import {
 import { SectionHeaderFilterMenu } from '@/features/admin/components/SectionHeaderFilterMenu';
 import { useSubmittedSearchState } from '@/hooks/useSubmittedSearchState';
 import {
+  readEnumParam,
+  readNumberParam,
+  readStringParam,
+} from '@/hooks/useUrlQueryState';
+import {
   readAdminSessionCache,
   writeAdminSessionCache,
 } from '@/features/admin/lib/adminSessionCache';
@@ -298,6 +303,14 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
   const initialMonth = searchParams.get('month') || defaultMonth;
   const initialSelectedDate = searchParams.get('plannedDate') || '';
   const viewMode: ScheduleViewMode = searchParams.get('view') === 'list' ? 'list' : 'calendar';
+  const urlQueuePage = readNumberParam(searchParams, 'queuePage', 1, 1);
+  const urlSort = useMemo<TableSortState>(
+    () => ({
+      direction: readEnumParam(searchParams, 'scheduleDir', ['asc', 'desc'] as const, DEFAULT_SORT.direction),
+      key: readStringParam(searchParams, 'scheduleSort', DEFAULT_SORT.key),
+    }),
+    [searchParams],
+  );
   const [month, setMonth] = useState(initialMonth);
   const [selectedDate, setSelectedDate] = useState(initialSelectedDate);
   const { query, queryInput, setQueryInput, submitQuery } = useSubmittedSearchState(
@@ -308,8 +321,8 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
     () => searchParams.get('assigneeUserId') || '',
   );
   const [status, setStatus] = useState(() => searchParams.get('status') || '');
-  const [sort, setSort] = useState<TableSortState>(DEFAULT_SORT);
-  const [queuePage, setQueuePage] = useState(1);
+  const [sort, setSort] = useState<TableSortState>(urlSort);
+  const [queuePage, setQueuePage] = useState(urlQueuePage);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dayListDialogOpen, setDayListDialogOpen] = useState(false);
   const [dayListDialogDate, setDayListDialogDate] = useState('');
@@ -361,7 +374,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const replaceScheduleRoute = useCallback(
-    (overrides: Partial<Record<'assigneeUserId' | 'month' | 'plannedDate' | 'query' | 'siteId' | 'status', string>> & {
+    (overrides: Partial<Record<'assigneeUserId' | 'month' | 'plannedDate' | 'query' | 'queuePage' | 'scheduleDir' | 'scheduleSort' | 'siteId' | 'status', string>> & {
       view?: ScheduleViewMode;
     }) => {
       const nextParams = new URLSearchParams();
@@ -372,10 +385,16 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
       const nextAssigneeUserId = overrides.assigneeUserId ?? assigneeUserId;
       const nextStatus = overrides.status ?? status;
       const nextView = overrides.view ?? viewMode;
+      const nextQueuePage = overrides.queuePage ?? String(queuePage);
+      const nextScheduleSort = overrides.scheduleSort ?? sort.key;
+      const nextScheduleDir = overrides.scheduleDir ?? sort.direction;
 
       if (nextMonth && nextMonth !== defaultMonth) nextParams.set('month', nextMonth);
       if (nextPlannedDate) nextParams.set('plannedDate', nextPlannedDate);
       if (nextQuery.trim()) nextParams.set('query', nextQuery.trim());
+      if (nextQueuePage && nextQueuePage !== '1') nextParams.set('queuePage', nextQueuePage);
+      if (nextScheduleSort && nextScheduleSort !== DEFAULT_SORT.key) nextParams.set('scheduleSort', nextScheduleSort);
+      if (nextScheduleDir && nextScheduleDir !== DEFAULT_SORT.direction) nextParams.set('scheduleDir', nextScheduleDir);
       if (nextSiteId) nextParams.set('siteId', nextSiteId);
       if (nextAssigneeUserId) nextParams.set('assigneeUserId', nextAssigneeUserId);
       if (nextStatus) nextParams.set('status', nextStatus);
@@ -383,7 +402,20 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
 
       router.replace(getAdminSectionHref('schedules', Object.fromEntries(nextParams.entries())));
     },
-    [assigneeUserId, defaultMonth, month, query, router, selectedDate, siteId, status, viewMode],
+    [
+      assigneeUserId,
+      defaultMonth,
+      month,
+      query,
+      queuePage,
+      router,
+      selectedDate,
+      siteId,
+      sort.direction,
+      sort.key,
+      status,
+      viewMode,
+    ],
   );
 
   const scheduleRequest = useMemo(
@@ -440,6 +472,28 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
   );
 
   useEffect(() => {
+    setMonth(initialMonth);
+  }, [initialMonth]);
+
+  useEffect(() => {
+    setSelectedDate(initialSelectedDate);
+  }, [initialSelectedDate]);
+
+  useEffect(() => {
+    setSiteId(searchParams.get('siteId') || '');
+    setAssigneeUserId(searchParams.get('assigneeUserId') || '');
+    setStatus(searchParams.get('status') || '');
+  }, [searchParams]);
+
+  useEffect(() => {
+    setSort(urlSort);
+  }, [urlSort]);
+
+  useEffect(() => {
+    setQueuePage(urlQueuePage);
+  }, [urlQueuePage]);
+
+  useEffect(() => {
     if (selectedDate && !selectedDate.startsWith(month)) {
       setSelectedDate('');
     }
@@ -448,6 +502,10 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
   useEffect(() => {
     setQueuePage(1);
   }, [assigneeUserId, month, query, siteId, status]);
+
+  useEffect(() => {
+    replaceScheduleRoute({});
+  }, [replaceScheduleRoute]);
 
   useEffect(() => {
     let lastRequestedAt = 0;

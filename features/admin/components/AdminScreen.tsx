@@ -4,6 +4,7 @@ import LoginPanel from '@/components/auth/LoginPanel';
 import { AdminDashboardShell } from '@/features/admin/components/AdminDashboardShell';
 import { AdminDashboardScreen } from '@/features/admin/components/AdminDashboardScreen';
 import { useAdminScreenState } from '@/features/admin/hooks/useAdminScreenState';
+import { SERVICE_NAME } from '@/lib/branding';
 import shellStyles from '@/features/admin/components/AdminDashboardShell.module.css';
 
 function AdminLoadingScreen() {
@@ -49,7 +50,7 @@ export function AdminScreen() {
       <LoginPanel
         error={authError}
         onSubmit={login}
-        title="현장 안전 점검 시스템"
+        title={SERVICE_NAME}
       />
     );
   }

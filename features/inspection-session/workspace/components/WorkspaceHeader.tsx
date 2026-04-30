@@ -14,7 +14,7 @@ export function WorkspaceHeader({ backHref, session }: WorkspaceHeaderProps) {
       <div className={styles.headerBody}>
         <PageBackControl href={backHref} label="이전" ariaLabel="이전 화면으로 돌아가기" />
         <div className={styles.headerMain}>
-          <h1 className={styles.headerTitle}>기술 지도 - {getSessionTitle(session)}</h1>
+          <h1 className={styles.headerTitle}>기술지도 - {getSessionTitle(session)}</h1>
         </div>
       </div>
     </header>

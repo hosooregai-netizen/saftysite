@@ -48,7 +48,7 @@ export function buildMobileQuarterlyRows(
       periodLabel: formatPeriodRangeLabel(report.periodStartDate, report.periodEndDate),
       periodStartDate: report.periodStartDate,
       reportId: report.id,
-      reportTitle: report.title || '분기 종합보고서',
+      reportTitle: report.title || '분기 종합 보고서',
       updatedAt: report.updatedAt || report.lastCalculatedAt || report.createdAt,
     }));
 }

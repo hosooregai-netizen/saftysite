@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { fetchMailThreadDetail, fetchMailThreads } from '@/lib/mail/apiClient';
 import type { MailAccount, MailThread, MailThreadDetail } from '@/types/mail';
 import {
@@ -17,6 +17,7 @@ interface UseMailboxThreadStateParams {
   accountStateReady: boolean;
   headquarterId: string;
   hasSelectableAccounts: boolean;
+  initialThreadOffset: number;
   isDemoMode: boolean;
   query: string;
   requestedThreadId: string;
@@ -26,12 +27,14 @@ interface UseMailboxThreadStateParams {
   siteId: string;
   tab: MailboxTab;
   view: MailboxView;
+  onThreadOffsetChange?: (value: number) => void;
 }
 
 export function useMailboxThreadState({
   accountStateReady,
   headquarterId,
   hasSelectableAccounts,
+  initialThreadOffset,
   isDemoMode,
   query,
   requestedThreadId,
@@ -41,21 +44,31 @@ export function useMailboxThreadState({
   siteId,
   tab,
   view,
+  onThreadOffsetChange,
 }: UseMailboxThreadStateParams) {
   const [threads, setThreads] = useState<MailThread[]>([]);
-  const [threadOffset, setThreadOffset] = useState(0);
+  const [threadOffset, setThreadOffsetState] = useState(initialThreadOffset);
   const [threadTotal, setThreadTotal] = useState(0);
   const [selectedThreadId, setSelectedThreadId] = useState('');
   const [threadDetail, setThreadDetail] = useState<MailThreadDetail | null>(null);
   const [threadLoading, setThreadLoading] = useState(false);
+  const resetKey = `${headquarterId}:${query}:${selectedAccount?.id || ''}:${siteId}:${tab}`;
+  const lastResetKeyRef = useRef(resetKey);
 
   useEffect(() => {
     setSelectedThreadId(requestedThreadId);
   }, [requestedThreadId]);
 
   useEffect(() => {
-    setThreadOffset(0);
-  }, [headquarterId, query, selectedAccount?.id, siteId, tab]);
+    setThreadOffsetState(initialThreadOffset);
+  }, [initialThreadOffset]);
+
+  useEffect(() => {
+    if (lastResetKeyRef.current === resetKey) return;
+    lastResetKeyRef.current = resetKey;
+    setThreadOffsetState(0);
+    onThreadOffsetChange?.(0);
+  }, [onThreadOffsetChange, resetKey]);
 
   useEffect(() => {
     if (isDemoMode) {
@@ -206,12 +219,17 @@ export function useMailboxThreadState({
     canGoPrevThreadPage: threadOffset > 0,
     moveThreadPage: (nextPage: number) => {
       const boundedPage = Math.min(Math.max(1, nextPage), threadPageCount);
-      setThreadOffset((boundedPage - 1) * THREAD_PAGE_SIZE);
+      const nextOffset = (boundedPage - 1) * THREAD_PAGE_SIZE;
+      setThreadOffsetState(nextOffset);
+      onThreadOffsetChange?.(nextOffset);
     },
     selectedThreadId,
     setSelectedThreadId,
     setThreadDetail,
-    setThreadOffset,
+    setThreadOffset: (value: number) => {
+      setThreadOffsetState(value);
+      onThreadOffsetChange?.(value);
+    },
     setThreadTotal,
     setThreads,
     threadDetail,

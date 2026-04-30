@@ -4,6 +4,12 @@ import { useSearchParams } from 'next/navigation';
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useSubmittedSearchState } from '@/hooks/useSubmittedSearchState';
 import {
+  readEnumParam,
+  readNumberParam,
+  readStringParam,
+  useUrlQueryUpdater,
+} from '@/hooks/useUrlQueryState';
+import {
   readAdminSessionCache,
   writeAdminSessionCache,
 } from '@/features/admin/lib/adminSessionCache';
@@ -31,6 +37,15 @@ const EMPTY_FORM = {
 
 const USERS_PAGE_SIZE = 50;
 const EMPTY_USER_ROWS: SafetyAdminUserListResponse['rows'] = [];
+const USER_LIST_QUERY_DEFAULTS = {
+  query: null,
+  role: null,
+  usersDir: 'asc',
+  usersPage: 1,
+  usersQuery: '',
+  usersRole: 'all',
+  usersSort: 'name',
+};
 
 function buildRequestKey(input: {
   page: number;
@@ -47,22 +62,36 @@ export function useUsersSectionState(
   busy: boolean,
 ) {
   const searchParams = useSearchParams();
+  const updateUrlQuery = useUrlQueryUpdater();
+  const initialQuery = readStringParam(
+    searchParams,
+    'usersQuery',
+    searchParams.get('query') || '',
+  );
+  const urlPage = readNumberParam(searchParams, 'usersPage', 1, 1);
+  const urlRoleFilter = readEnumParam(
+    searchParams,
+    'usersRole',
+    ['all', 'admin', 'field_agent'] as const,
+    readEnumParam(searchParams, 'role', ['all', 'admin', 'field_agent'] as const, 'all'),
+  );
+  const urlSort = useMemo<TableSortState>(
+    () => ({
+      direction: readEnumParam(searchParams, 'usersDir', ['asc', 'desc'] as const, 'asc'),
+      key: readStringParam(searchParams, 'usersSort', 'name'),
+    }),
+    [searchParams],
+  );
   const [editingId, setEditingId] = useState<string | null>(null);
   const {
     query,
     queryInput,
     setQueryInput,
     submitQuery,
-  } = useSubmittedSearchState(searchParams.get('query') || '');
-  const [roleFilter, setRoleFilter] = useState<'all' | UserRoleView>(() => {
-    const value = searchParams.get('role');
-    return value === 'admin' || value === 'field_agent' ? value : 'all';
-  });
-  const [page, setPage] = useState(1);
-  const [sort, setSort] = useState<TableSortState>({
-    direction: 'asc',
-    key: 'name',
-  });
+  } = useSubmittedSearchState(initialQuery);
+  const [roleFilter, setRoleFilterState] = useState<'all' | UserRoleView>(urlRoleFilter);
+  const [page, setPageState] = useState(urlPage);
+  const [sort, setSortState] = useState<TableSortState>(urlSort);
   const [form, setForm] = useState(EMPTY_FORM);
   const [initialForm, setInitialForm] = useState(EMPTY_FORM);
   const [editingRoleSource, setEditingRoleSource] =
@@ -71,6 +100,18 @@ export function useUsersSectionState(
   const [error, setError] = useState<string | null>(null);
   const isOpen = editingId !== null;
   const deferredQuery = useDeferredValue(query);
+  useEffect(() => {
+    setPageState(urlPage);
+  }, [urlPage]);
+
+  useEffect(() => {
+    setRoleFilterState(urlRoleFilter);
+  }, [urlRoleFilter]);
+
+  useEffect(() => {
+    setSortState(urlSort);
+  }, [urlSort]);
+
   const requestKey = useMemo(
     () =>
       buildRequestKey({
@@ -361,20 +402,34 @@ export function useUsersSectionState(
       if (currentResponse) {
         setLastStableResponse(currentResponse);
       }
-      setPage(Math.max(1, Math.min(nextPage, totalPages)));
+      const nextPageValue = Math.max(1, Math.min(nextPage, totalPages));
+      setPageState(nextPageValue);
+      updateUrlQuery({ usersPage: nextPageValue }, USER_LIST_QUERY_DEFAULTS);
     },
     setQueryInput,
     submitQuery: () => {
-      setPage(1);
-      submitQuery();
+      const nextQuery = submitQuery();
+      setPageState(1);
+      updateUrlQuery(
+        { query: null, usersPage: 1, usersQuery: nextQuery },
+        USER_LIST_QUERY_DEFAULTS,
+      );
     },
     setRoleFilter: (value: 'all' | UserRoleView) => {
-      setPage(1);
-      setRoleFilter(value);
+      setPageState(1);
+      setRoleFilterState(value);
+      updateUrlQuery(
+        { role: null, usersPage: 1, usersRole: value },
+        USER_LIST_QUERY_DEFAULTS,
+      );
     },
     setSort: (value: TableSortState) => {
-      setPage(1);
-      setSort(value);
+      setPageState(1);
+      setSortState(value);
+      updateUrlQuery(
+        { usersDir: value.direction, usersPage: 1, usersSort: value.key },
+        USER_LIST_QUERY_DEFAULTS,
+      );
     },
     sort,
     total,

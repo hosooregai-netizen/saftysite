@@ -118,7 +118,7 @@ export function finalizeDraft(report: QuarterlySummaryReport) {
       report.title.trim() ||
       (normalized.periodStartDate && normalized.periodEndDate
         ? buildQuarterlyTitleForPeriod(normalized.periodStartDate, normalized.periodEndDate)
-        : '분기 종합보고서'),
+        : '분기 종합 보고서'),
     updatedAt: new Date().toISOString(),
   };
 }

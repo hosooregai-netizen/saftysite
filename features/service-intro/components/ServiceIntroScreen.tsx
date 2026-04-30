@@ -68,9 +68,9 @@ export function ServiceIntroScreen() {
         <section className={`app-shell ${styles.shell}`}>
           <div className={styles.hero}>
             <span className={styles.eyebrow}>서비스 소개 및 심사 확인용 페이지</span>
-            <h1 className={styles.title}>한국종합안전 업무시스템</h1>
+            <h1 className={styles.title}>한국종합안전</h1>
             <p className={styles.description}>
-              한국종합안전 업무시스템은 건설기술재해예방지도 운영을 위한 ERP형 서비스입니다. 사업장·현장
+              한국종합안전은 건설기술재해예방지도 운영을 위한 ERP형 서비스입니다. 사업장·현장
               관리, 보고서 작성, 문서 출력, 메일 연동, 모바일 현장 업무를 하나의 흐름으로 연결합니다.
             </p>
             <div className={styles.heroMeta}>
@@ -90,7 +90,7 @@ export function ServiceIntroScreen() {
               <div className={styles.summaryGrid}>
                 <article className={styles.summaryCard}>
                   <strong className={styles.summaryLabel}>서비스 주체</strong>
-                  <span className={styles.summaryValue}>한국종합안전 업무시스템</span>
+                  <span className={styles.summaryValue}>한국종합안전</span>
                 </article>
                 <article className={styles.summaryCard}>
                   <strong className={styles.summaryLabel}>콘텐츠 형태</strong>

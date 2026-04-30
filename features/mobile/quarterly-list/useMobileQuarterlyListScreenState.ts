@@ -1,11 +1,16 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { buildMobileSiteQuarterlyHref } from '@/features/home/lib/siteEntry';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { useSiteOperationalReportIndex } from '@/hooks/useSiteOperationalReportIndex';
 import { useSiteOperationalReportMutations } from '@/hooks/useSiteOperationalReportMutations';
+import {
+  readEnumParam,
+  readStringParam,
+  useUrlQueryUpdater,
+} from '@/hooks/useUrlQueryState';
 import { filterMobileQuarterlyRows, buildMobileQuarterlyRows } from './mobileQuarterlyListHelpers';
 import { useMobileQuarterlyCreateDialog } from './useMobileQuarterlyCreateDialog';
 import type { MobileQuarterlyListSortMode } from './types';
@@ -14,12 +19,26 @@ interface UseMobileQuarterlyListScreenStateOptions {
   siteKey: string;
 }
 
+const MOBILE_QUARTERLY_LIST_QUERY_DEFAULTS = {
+  quarterlyQuery: '',
+  quarterlySort: 'recent',
+};
+
 export function useMobileQuarterlyListScreenState({
   siteKey,
 }: UseMobileQuarterlyListScreenStateOptions) {
   const router = useRouter();
-  const [query, setQuery] = useState('');
-  const [sortMode, setSortMode] = useState<MobileQuarterlyListSortMode>('recent');
+  const searchParams = useSearchParams();
+  const updateUrlQuery = useUrlQueryUpdater();
+  const urlQuery = readStringParam(searchParams, 'quarterlyQuery');
+  const urlSortMode = readEnumParam(
+    searchParams,
+    'quarterlySort',
+    ['recent', 'name', 'period'] as const,
+    'recent',
+  );
+  const [query, setQueryState] = useState(urlQuery);
+  const [sortMode, setSortModeState] = useState<MobileQuarterlyListSortMode>(urlSortMode);
   const [dialogReportId, setDialogReportId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isDeletingReport, setIsDeletingReport] = useState(false);
@@ -51,6 +70,14 @@ export function useMobileQuarterlyListScreenState({
     isSaving,
     saveQuarterlyReport,
   } = useSiteOperationalReportMutations(currentSite);
+
+  useEffect(() => {
+    setQueryState(urlQuery);
+  }, [urlQuery]);
+
+  useEffect(() => {
+    setSortModeState(urlSortMode);
+  }, [urlSortMode]);
 
   useEffect(() => {
     if (!currentSite || !isAuthenticated || !isReady) {
@@ -148,7 +175,13 @@ export function useMobileQuarterlyListScreenState({
     closeDeleteDialog,
     handleDeleteSubmit,
     openDeleteDialog,
-    setQuery,
-    setSortMode,
+    setQuery: (value: string) => {
+      setQueryState(value);
+      updateUrlQuery({ quarterlyQuery: value }, MOBILE_QUARTERLY_LIST_QUERY_DEFAULTS);
+    },
+    setSortMode: (value: MobileQuarterlyListSortMode) => {
+      setSortModeState(value);
+      updateUrlQuery({ quarterlySort: value }, MOBILE_QUARTERLY_LIST_QUERY_DEFAULTS);
+    },
   };
 }

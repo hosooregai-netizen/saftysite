@@ -1,7 +1,7 @@
 import {
   fetchAdminAssignmentsPage,
+  fetchAdminSitesList,
 } from '@/lib/admin/apiClient';
-import { fetchSafetySitesAdminPage } from '@/lib/safetyApi/adminEndpoints';
 import type { SafetySite } from '@/types/backend';
 import type { SafetyAssignment } from '@/types/controller';
 
@@ -36,11 +36,21 @@ export async function deleteAssignmentsById(
   deactivateAssignment: (token: string, assignmentId: string) => Promise<unknown>,
 ) {
   const seen = new Set<string>();
+  const uniqueAssignmentIds: string[] = [];
 
   for (const assignmentId of assignmentIds) {
     if (!assignmentId || seen.has(assignmentId)) continue;
     seen.add(assignmentId);
-    await deactivateAssignment(token, assignmentId);
+    uniqueAssignmentIds.push(assignmentId);
+  }
+
+  const concurrency = 4;
+  for (let index = 0; index < uniqueAssignmentIds.length; index += concurrency) {
+    await Promise.all(
+      uniqueAssignmentIds
+        .slice(index, index + concurrency)
+        .map((assignmentId) => deactivateAssignment(token, assignmentId)),
+    );
   }
 }
 
@@ -68,12 +78,32 @@ async function fetchAllPages<T>(
   }
 }
 
-export function loadAllSafetyAssignments(_token: string): Promise<SafetyAssignment[]> {
+export function loadSafetyAssignmentsForSite(
+  _token: string,
+  siteId: string,
+): Promise<SafetyAssignment[]> {
+  void _token;
   return fetchAllPages((offset, limit) =>
-    fetchAdminAssignmentsPage({ activeOnly: true, limit, offset }),
+    fetchAdminAssignmentsPage({ activeOnly: true, limit, offset, siteId }),
   );
 }
 
-export function loadAllSafetySites(token: string): Promise<SafetySite[]> {
-  return fetchAllPages((offset, limit) => fetchSafetySitesAdminPage(token, { limit, offset }));
+export function loadSafetyAssignmentsForUser(
+  _token: string,
+  userId: string,
+): Promise<SafetyAssignment[]> {
+  void _token;
+  return fetchAllPages((offset, limit) =>
+    fetchAdminAssignmentsPage({ activeOnly: true, limit, offset, userId }),
+  );
+}
+
+export function loadSafetySitesByHeadquarter(
+  _token: string,
+  headquarterId: string,
+): Promise<SafetySite[]> {
+  void _token;
+  return fetchAllPages((offset, limit) =>
+    fetchAdminSitesList({ headquarterId, limit, offset }).then((response) => response.rows),
+  );
 }

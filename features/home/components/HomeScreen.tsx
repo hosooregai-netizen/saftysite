@@ -9,6 +9,7 @@ import { WorkerMenuDrawer, WorkerMenuPanel } from '@/components/worker/WorkerMen
 import { AssignedSitesTable } from '@/features/home/components/AssignedSitesTable';
 import { useHomeScreenState } from '@/features/home/hooks/useHomeScreenState';
 import { buildSiteHubHref, buildSiteReportsHref } from '@/features/home/lib/siteEntry';
+import { SERVICE_NAME } from '@/lib/branding';
 import styles from './HomeScreen.module.css';
 
 export function HomeScreen() {
@@ -36,8 +37,8 @@ export function HomeScreen() {
       <LoginPanel
         error={authError}
         onSubmit={login}
-        title="현장 목록 로그인"
-        description="로그인하면 배정된 현장을 선택해 기술지도 보고서, 분기 종합보고서, 불량사업장 신고를 이어서 진행할 수 있습니다."
+        title={SERVICE_NAME}
+        description="로그인하면 배정된 현장을 선택해 기술지도 보고서, 분기 종합 보고서, 불량사업장 신고를 이어서 진행할 수 있습니다."
       />
     );
   }
@@ -136,7 +137,7 @@ export function HomeScreen() {
                             href: buildSiteReportsHref(summary.site.id),
                           },
                           {
-                            label: '분기 종합보고서',
+                            label: '분기 종합 보고서',
                             href: buildSiteHubHref(summary.site.id, 'quarterly'),
                           },
                           {

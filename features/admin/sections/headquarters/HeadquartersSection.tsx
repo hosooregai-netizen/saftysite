@@ -456,7 +456,12 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
 
   const siteStatusFilter = useMemo(() => {
     const value = siteStatusParam;
-    return value === 'all' || value === 'planned' || value === 'active' || value === 'closed'
+    return value === 'all' ||
+      value === 'planned' ||
+      value === 'active' ||
+      value === 'paused' ||
+      value === 'closed' ||
+      value === 'deleted'
       ? (value as 'all' | SafetySiteStatus)
       : 'all';
   }, [siteStatusParam]);
@@ -501,10 +506,14 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
         window.alert(validationMessage);
         return;
       }
-      const payload = state.buildPayload();
       if (state.editingId === 'create') {
-        await onCreate(payload);
+        await onCreate(state.buildPayload());
       } else if (state.editingId) {
+        const payload = state.buildUpdatePayload();
+        if (Object.keys(payload).length === 0) {
+          state.closeModal();
+          return;
+        }
         await onUpdate(state.editingId, payload);
       }
       state.closeModal();

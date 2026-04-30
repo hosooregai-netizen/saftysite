@@ -86,7 +86,7 @@ export function MobileQuarterlyReportScreen({
         error={authError}
         onSubmit={login}
         title="모바일 분기 보고 로그인"
-        description="모바일에서 분기 종합보고서를 작성할 수 있습니다."
+        description="모바일에서 분기 종합 보고서를 작성할 수 있습니다."
       />
     );
   }

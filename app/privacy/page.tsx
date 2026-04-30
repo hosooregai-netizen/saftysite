@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import { LegalDocumentScreen } from '@/features/legal/components/LegalDocumentScreen';
 
 export const metadata: Metadata = {
-  title: '개인정보처리방침 | 한국종합안전 업무시스템',
-  description: '한국종합안전 업무시스템 개인정보처리방침',
+  title: '개인정보처리방침 | 한국종합안전',
+  description: '한국종합안전 개인정보처리방침',
 };
 
 const sections = [
@@ -50,7 +50,7 @@ export default function PrivacyPage() {
     <LegalDocumentScreen
       eyebrow="Privacy Policy"
       title="개인정보처리방침"
-      description="한국종합안전 업무시스템은 건설기술재해예방지도 운영, 보고서 발송, 메일함 연동 기능 제공을 위해 필요한 범위의 정보만 처리합니다."
+      description="한국종합안전은 건설기술재해예방지도 운영, 보고서 발송, 메일함 연동 기능 제공을 위해 필요한 범위의 정보만 처리합니다."
       sections={sections}
     />
   );

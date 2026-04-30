@@ -1,11 +1,16 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { useCallback, useDeferredValue, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useCallback, useDeferredValue, useEffect, useState } from 'react';
 import LoginPanel from '@/components/auth/LoginPanel';
 import { buildSiteHubHref, buildSiteQuarterlyHref } from '@/features/home/lib/siteEntry';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { useSubmittedSearchState } from '@/hooks/useSubmittedSearchState';
+import {
+  readEnumParam,
+  readStringParam,
+  useUrlQueryUpdater,
+} from '@/hooks/useUrlQueryState';
 import { getAdminSectionHref, isAdminUserRole } from '@/lib/admin';
 import { buildToggledReportDispatch } from '@/lib/reportDispatch';
 import { updateReportDispatch } from '@/lib/reportDispatchApi';
@@ -42,16 +47,38 @@ function getErrorMessage(error: unknown) {
   return '발송 여부 변경에 실패했습니다.';
 }
 
+const QUARTERLY_LIST_QUERY_DEFAULTS = {
+  quarterlyDispatch: 'all',
+  quarterlyQuery: '',
+  quarterlySort: 'number',
+};
+
 export function SiteQuarterlyReportsScreen({
   siteKey,
 }: SiteQuarterlyReportsScreenProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const updateUrlQuery = useUrlQueryUpdater();
   const [dialogReportId, setDialogReportId] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const { query, queryInput, setQueryInput, submitQuery } = useSubmittedSearchState();
-  const [dispatchFilter, setDispatchFilter] =
-    useState<QuarterlyListDispatchFilter>('all');
-  const [sortMode, setSortMode] = useState<QuarterlyListSortMode>('number');
+  const { query, queryInput, setQueryInput, submitQuery } = useSubmittedSearchState(
+    readStringParam(searchParams, 'quarterlyQuery'),
+  );
+  const urlDispatchFilter = readEnumParam(
+    searchParams,
+    'quarterlyDispatch',
+    ['all', 'pending', 'completed'] as const,
+    'all',
+  );
+  const urlSortMode = readEnumParam(
+    searchParams,
+    'quarterlySort',
+    ['number', 'recent', 'name', 'period'] as const,
+    'number',
+  );
+  const [dispatchFilter, setDispatchFilterState] =
+    useState<QuarterlyListDispatchFilter>(urlDispatchFilter);
+  const [sortMode, setSortModeState] = useState<QuarterlyListSortMode>(urlSortMode);
   const [dispatchError, setDispatchError] = useState<string | null>(null);
   const [dispatchNotice, setDispatchNotice] = useState<string | null>(null);
   const deferredQuery = useDeferredValue(query);
@@ -79,6 +106,14 @@ export function SiteQuarterlyReportsScreen({
     saveQuarterlyReport,
   } = useSiteOperationalReportMutations(currentSite);
   const operationalError = dispatchError ?? mutationError ?? error;
+  useEffect(() => {
+    setDispatchFilterState(urlDispatchFilter);
+  }, [urlDispatchFilter]);
+
+  useEffect(() => {
+    setSortModeState(urlSortMode);
+  }, [urlSortMode]);
+
   const { existingReportTitles, filteredRows, rows } = useQuarterlyListRows({
     currentSite,
     deferredQuery,
@@ -220,10 +255,28 @@ export function SiteQuarterlyReportsScreen({
           isBusy={isBusy}
           isLoading={isLoading}
           notice={dispatchNotice}
-          onChangeDispatchFilter={setDispatchFilter}
+          onChangeDispatchFilter={(value) => {
+            setDispatchFilterState(value);
+            updateUrlQuery(
+              { quarterlyDispatch: value },
+              QUARTERLY_LIST_QUERY_DEFAULTS,
+            );
+          }}
           onChangeQuery={setQueryInput}
-          onSubmitQuery={submitQuery}
-          onChangeSortMode={setSortMode}
+          onSubmitQuery={() => {
+            const nextQuery = submitQuery();
+            updateUrlQuery(
+              { quarterlyQuery: nextQuery },
+              QUARTERLY_LIST_QUERY_DEFAULTS,
+            );
+          }}
+          onChangeSortMode={(value) => {
+            setSortModeState(value);
+            updateUrlQuery(
+              { quarterlySort: value },
+              QUARTERLY_LIST_QUERY_DEFAULTS,
+            );
+          }}
           onDeleteRequest={setDialogReportId}
           onOpenCreateDialog={openCreateDialog}
           onOpenReport={(href) => router.push(href)}

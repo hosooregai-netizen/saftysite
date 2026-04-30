@@ -1,8 +1,14 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useSubmittedSearchState } from '@/hooks/useSubmittedSearchState';
+import {
+  readEnumParam,
+  readNumberParam,
+  readStringParam,
+  useUrlQueryUpdater,
+} from '@/hooks/useUrlQueryState';
 import {
   downloadAdminSiteBasicMaterial,
   exportAdminWorkbook,
@@ -32,6 +38,16 @@ import type { SafetySite } from '@/types/backend';
 const SITES_PAGE_SIZE = 10;
 const SITES_LIST_CACHE_KEY_PREFIX = 'sites:list:v2:';
 const EMPTY_SITE_ROWS: SafetySite[] = [];
+const SITE_STATUS_VALUES = ['all', 'planned', 'active', 'paused', 'closed', 'deleted'] as const;
+const SITE_ASSIGNMENT_VALUES: readonly SiteAssignmentFilter[] = ['all', 'unassigned'];
+const SITE_LIST_QUERY_DEFAULTS = {
+  siteAssignment: 'all',
+  siteDir: 'asc',
+  sitePage: 1,
+  siteQuery: '',
+  siteSort: 'site_name',
+  siteStatus: 'all',
+};
 
 function normalizeSiteValue(value: string | null | undefined) {
   return String(value ?? '').trim().toLowerCase();
@@ -46,6 +62,17 @@ function buildRequestKey(input: {
   statusFilter: 'all' | SafetySiteStatus;
 }) {
   return JSON.stringify(input);
+}
+
+function buildChangedSitePayload(
+  current: SafetySiteInput | SafetySiteUpdateInput,
+  initial: SafetySiteInput | SafetySiteUpdateInput,
+): SafetySiteUpdateInput {
+  return Object.fromEntries(
+    Object.entries(current).filter(
+      ([key, value]) => initial[key as keyof typeof initial] !== value,
+    ),
+  ) as SafetySiteUpdateInput;
 }
 
 function validateSiteSubmit(
@@ -114,17 +141,38 @@ export function useSitesSectionState({
   | 'onUpdate'
 >) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const updateUrlQuery = useUrlQueryUpdater();
+  const urlPage = readNumberParam(searchParams, 'sitePage', 1, 1);
+  const urlStatusFilter = readEnumParam(
+    searchParams,
+    'siteStatus',
+    SITE_STATUS_VALUES,
+    initialStatusFilter,
+  );
+  const urlAssignmentFilter = readEnumParam(
+    searchParams,
+    'siteAssignment',
+    SITE_ASSIGNMENT_VALUES,
+    'all',
+  );
+  const urlSort = useMemo<TableSortState>(
+    () => ({
+      direction: readEnumParam(searchParams, 'siteDir', ['asc', 'desc'] as const, 'asc'),
+      key: readStringParam(searchParams, 'siteSort', 'site_name'),
+    }),
+    [searchParams],
+  );
   const [editingId, setEditingId] = useState<string | null>(null);
   const [assignmentSiteId, setAssignmentSiteId] = useState<string | null>(null);
   const [newlyCreatedSiteId, setNewlyCreatedSiteId] = useState<string | null>(null);
-  const [page, setPage] = useState(1);
-  const [statusFilter, setStatusFilter] = useState<'all' | SafetySiteStatus>(initialStatusFilter);
-  const [sort, setSort] = useState<TableSortState>({
-    direction: 'asc',
-    key: 'site_name',
-  });
-  const [assignmentFilter, setAssignmentFilter] = useState<SiteAssignmentFilter>('all');
+  const [page, setPageState] = useState(urlPage);
+  const [statusFilter, setStatusFilterState] = useState<'all' | SafetySiteStatus>(urlStatusFilter);
+  const [sort, setSortState] = useState<TableSortState>(urlSort);
+  const [assignmentFilter, setAssignmentFilterState] =
+    useState<SiteAssignmentFilter>(urlAssignmentFilter);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [initialForm, setInitialForm] = useState(EMPTY_FORM);
   const [lastAutoEditSiteId, setLastAutoEditSiteId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [directoryLookups, setDirectoryLookups] = useState<
@@ -135,7 +183,9 @@ export function useSitesSectionState({
     sites: [],
     users: [],
   });
-  const { query, queryInput, setQueryInput, submitQuery } = useSubmittedSearchState();
+  const { query, queryInput, setQueryInput, submitQuery } = useSubmittedSearchState(
+    readStringParam(searchParams, 'siteQuery'),
+  );
   const deferredQuery = useDeferredValue(query);
   const abortControllerRef = useRef<AbortController | null>(null);
   const requestKey = useMemo(
@@ -177,8 +227,20 @@ export function useSitesSectionState({
   const total = currentResponse?.total ?? 0;
 
   useEffect(() => {
-    setStatusFilter(initialStatusFilter);
-  }, [initialStatusFilter]);
+    setPageState(urlPage);
+  }, [urlPage]);
+
+  useEffect(() => {
+    setStatusFilterState(urlStatusFilter);
+  }, [urlStatusFilter]);
+
+  useEffect(() => {
+    setAssignmentFilterState(urlAssignmentFilter);
+  }, [urlAssignmentFilter]);
+
+  useEffect(() => {
+    setSortState(urlSort);
+  }, [urlSort]);
 
   useEffect(() => {
     const cachedLookups = readAdminSessionCache<import('@/types/admin').SafetyAdminDirectoryLookupsResponse>(
@@ -272,21 +334,26 @@ export function useSitesSectionState({
 
   const openCreate = () => {
     setEditingId('create');
-    setForm({
+    const nextForm = {
       ...EMPTY_FORM,
       headquarter_id: lockedHeadquarterId ?? '',
-    });
+    };
+    setForm(nextForm);
+    setInitialForm(nextForm);
   };
 
   const openEdit = (site: SafetySite) => {
+    const nextForm = createEditForm(site);
     setEditingId(site.id);
-    setForm(createEditForm(site));
+    setForm(nextForm);
+    setInitialForm(nextForm);
   };
 
   const closeModal = () => {
     if (busy) return;
     setEditingId(null);
     setForm(EMPTY_FORM);
+    setInitialForm(EMPTY_FORM);
   };
 
   useEffect(() => {
@@ -343,6 +410,7 @@ export function useSitesSectionState({
   const submit = async () => {
     try {
       const payload = buildSitePayload(form, lockedHeadquarterId);
+      const initialPayload = buildSitePayload(initialForm, lockedHeadquarterId);
       if (editingId === 'create' && !isCreateReady(form, lockedHeadquarterId)) return;
       if (editingId !== 'create' && (!payload.headquarter_id || !payload.site_name)) return;
       const validationMessage = validateSiteSubmit(form, rows, editingId);
@@ -353,7 +421,14 @@ export function useSitesSectionState({
       if (editingId === 'create') {
         const createdSite = await onCreate(payload as SafetySiteInput);
         setNewlyCreatedSiteId(createdSite.id);
-      } else if (editingId) await onUpdate(editingId, payload as SafetySiteUpdateInput);
+      } else if (editingId) {
+        const updatePayload = buildChangedSitePayload(payload, initialPayload);
+        if (Object.keys(updatePayload).length === 0) {
+          closeModal();
+          return;
+        }
+        await onUpdate(editingId, updatePayload);
+      }
       closeModal();
       await refreshPage();
     } catch (error) {
@@ -447,8 +522,13 @@ export function useSitesSectionState({
   };
 
   const resetHeaderFilters = () => {
-    setAssignmentFilter('all');
-    setStatusFilter('all');
+    setPageState(1);
+    setAssignmentFilterState('all');
+    setStatusFilterState('all');
+    updateUrlQuery(
+      { siteAssignment: 'all', sitePage: 1, siteStatus: 'all' },
+      SITE_LIST_QUERY_DEFAULTS,
+    );
   };
 
   return {
@@ -493,8 +573,12 @@ export function useSitesSectionState({
     refreshPage,
     resetHeaderFilters,
     setAssignmentFilter: (value: SiteAssignmentFilter) => {
-      setPage(1);
-      setAssignmentFilter(value);
+      setPageState(1);
+      setAssignmentFilterState(value);
+      updateUrlQuery(
+        { siteAssignment: value, sitePage: 1 },
+        SITE_LIST_QUERY_DEFAULTS,
+      );
     },
     setAssignmentSiteId,
     setForm,
@@ -502,20 +586,28 @@ export function useSitesSectionState({
       if (currentResponse) {
         setLastStableResponse(currentResponse);
       }
-      setPage(Math.max(1, Math.min(nextPage, totalPages)));
+      const nextPageValue = Math.max(1, Math.min(nextPage, totalPages));
+      setPageState(nextPageValue);
+      updateUrlQuery({ sitePage: nextPageValue }, SITE_LIST_QUERY_DEFAULTS);
     },
     setQueryInput,
     submitQuery: () => {
-      setPage(1);
-      submitQuery();
+      const nextQuery = submitQuery();
+      setPageState(1);
+      updateUrlQuery({ sitePage: 1, siteQuery: nextQuery }, SITE_LIST_QUERY_DEFAULTS);
     },
     setSort: (value: TableSortState) => {
-      setPage(1);
-      setSort(value);
+      setPageState(1);
+      setSortState(value);
+      updateUrlQuery(
+        { siteDir: value.direction, sitePage: 1, siteSort: value.key },
+        SITE_LIST_QUERY_DEFAULTS,
+      );
     },
     setStatusFilter: (value: 'all' | SafetySiteStatus) => {
-      setPage(1);
-      setStatusFilter(value);
+      setPageState(1);
+      setStatusFilterState(value);
+      updateUrlQuery({ sitePage: 1, siteStatus: value }, SITE_LIST_QUERY_DEFAULTS);
     },
     sort,
     sortedSites: rows,

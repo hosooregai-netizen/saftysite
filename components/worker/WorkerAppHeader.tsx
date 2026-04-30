@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { WorkerMenuButton } from '@/components/worker/WorkerMenu';
+import { SERVICE_NAME } from '@/lib/branding';
 import styles from './WorkerAppHeader.module.css';
 
 interface WorkerAppHeaderProps {
@@ -20,7 +21,7 @@ export default function WorkerAppHeader({
   currentUserName,
   onLogout,
   onOpenMenu,
-  brand = '한국종합안전',
+  brand = SERVICE_NAME,
   brandHref = '/',
   accountLabel = '로그인 계정',
   logoutLabel = '로그아웃',

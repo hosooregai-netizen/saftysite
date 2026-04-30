@@ -149,10 +149,11 @@ export function useAnalyticsSectionState(currentUserId: string) {
 
   useEffect(() => {
     const cachedLookups = readAdminSessionCache<AnalyticsLookups>(currentUserId, 'analytics-lookups');
-    if (cachedLookups.value) {
-      setLookups(cachedLookups.value);
+    const cachedLookupsValue = cachedLookups.value;
+    if (cachedLookupsValue) {
+      queueMicrotask(() => setLookups(cachedLookupsValue));
     }
-    if (cachedLookups.isFresh && cachedLookups.value) {
+    if (cachedLookups.isFresh && cachedLookupsValue) {
       return;
     }
 
@@ -180,24 +181,27 @@ export function useAnalyticsSectionState(currentUserId: string) {
       `analytics-summary:${summaryRequestKey}`,
     );
 
-    if (cachedSummary.value) {
-      setSummaryState((current) => ({
-        data: cachedSummary.value ?? current.data,
-        error: current.errorRequestKey === summaryRequestKey ? current.error : null,
-        errorRequestKey:
-          current.errorRequestKey === summaryRequestKey ? current.errorRequestKey : '',
-        resolvedRequestKey: summaryRequestKey,
-      }));
+    const cachedSummaryValue = cachedSummary.value;
+    if (cachedSummaryValue) {
+      queueMicrotask(() =>
+        setSummaryState((current) => ({
+          data: cachedSummaryValue,
+          error: current.errorRequestKey === summaryRequestKey ? current.error : null,
+          errorRequestKey:
+            current.errorRequestKey === summaryRequestKey ? current.errorRequestKey : '',
+          resolvedRequestKey: summaryRequestKey,
+        })),
+      );
     }
-    if (cachedSummary.isFresh && cachedSummary.value) {
-      setLoadingSummaryRequestKey('');
+    if (cachedSummary.isFresh && cachedSummaryValue) {
+      queueMicrotask(() => setLoadingSummaryRequestKey(''));
       return;
     }
 
     summaryAbortControllerRef.current?.abort();
     const abortController = new AbortController();
     summaryAbortControllerRef.current = abortController;
-    setLoadingSummaryRequestKey(summaryRequestKey);
+    queueMicrotask(() => setLoadingSummaryRequestKey(summaryRequestKey));
 
     void fetchAdminAnalytics(summaryRequest, { signal: abortController.signal })
       .then((response) => {
@@ -265,10 +269,12 @@ export function useAnalyticsSectionState(currentUserId: string) {
     Boolean(cachedSummaryForRequest);
 
   useEffect(() => {
-    setBasisMonthState((current) => {
-      if (current === basisMonth) return current;
-      return basisMonth;
-    });
+    queueMicrotask(() =>
+      setBasisMonthState((current) => {
+        if (current === basisMonth) return current;
+        return basisMonth;
+      }),
+    );
   }, [basisMonth]);
 
   const analyticsDetailRequest = useMemo(
@@ -320,7 +326,7 @@ export function useAnalyticsSectionState(currentUserId: string) {
 
   useEffect(() => {
     if (!canRequestDetail || !basisMonth) {
-      setLoadingAnalyticsDetailRequestKey('');
+      queueMicrotask(() => setLoadingAnalyticsDetailRequestKey(''));
       return;
     }
 
@@ -329,27 +335,30 @@ export function useAnalyticsSectionState(currentUserId: string) {
       `analytics-detail:${analyticsDetailRequestKey}`,
     );
 
-    if (cachedDetail.value) {
-      setAnalyticsDetailState((current) => ({
-        data: cachedDetail.value ?? current.data,
-        error:
-          current.errorRequestKey === analyticsDetailRequestKey ? current.error : null,
-        errorRequestKey:
-          current.errorRequestKey === analyticsDetailRequestKey
-            ? current.errorRequestKey
-            : '',
-        resolvedRequestKey: analyticsDetailRequestKey,
-      }));
+    const cachedDetailValue = cachedDetail.value;
+    if (cachedDetailValue) {
+      queueMicrotask(() =>
+        setAnalyticsDetailState((current) => ({
+          data: cachedDetailValue,
+          error:
+            current.errorRequestKey === analyticsDetailRequestKey ? current.error : null,
+          errorRequestKey:
+            current.errorRequestKey === analyticsDetailRequestKey
+              ? current.errorRequestKey
+              : '',
+          resolvedRequestKey: analyticsDetailRequestKey,
+        })),
+      );
     }
-    if (cachedDetail.isFresh && cachedDetail.value) {
-      setLoadingAnalyticsDetailRequestKey('');
+    if (cachedDetail.isFresh && cachedDetailValue) {
+      queueMicrotask(() => setLoadingAnalyticsDetailRequestKey(''));
       return;
     }
 
     analyticsDetailAbortControllerRef.current?.abort();
     const abortController = new AbortController();
     analyticsDetailAbortControllerRef.current = abortController;
-    setLoadingAnalyticsDetailRequestKey(analyticsDetailRequestKey);
+    queueMicrotask(() => setLoadingAnalyticsDetailRequestKey(analyticsDetailRequestKey));
 
     void fetchAdminAnalyticsMonthDetail(analyticsDetailRequest, { signal: abortController.signal })
       .then((response) => {
@@ -477,11 +486,13 @@ export function useAnalyticsSectionState(currentUserId: string) {
   );
 
   useEffect(() => {
-    setEmployeePage((current) => Math.min(current, employeeTotalPages));
+    queueMicrotask(() =>
+      setEmployeePage((current) => Math.min(current, employeeTotalPages)),
+    );
   }, [employeeTotalPages]);
 
   useEffect(() => {
-    setEmployeePage(1);
+    queueMicrotask(() => setEmployeePage(1));
   }, [analyticsDetailRequestKey, employeeSort]);
 
   const pagedEmployeeRows = useMemo(() => {

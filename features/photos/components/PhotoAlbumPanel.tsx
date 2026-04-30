@@ -1,12 +1,14 @@
 'use client';
 
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import AppModal from '@/components/ui/AppModal';
 import { SubmitSearchField } from '@/components/ui/SubmitSearchField';
 import { SectionHeaderFilterMenu } from '@/features/admin/components/SectionHeaderFilterMenu';
 import adminStyles from '@/features/admin/sections/AdminSectionShared.module.css';
 import { useSubmittedSearchState } from '@/hooks/useSubmittedSearchState';
+import { readStringParam, useUrlQueryUpdater } from '@/hooks/useUrlQueryState';
 import { exportAdminWorkbook } from '@/lib/admin/exportClient';
 import {
   deletePhotoAlbumSelection,
@@ -53,6 +55,11 @@ interface PhotoUploadProgress {
 }
 
 const PAGE_SIZE = 20;
+const PHOTO_LIST_QUERY_DEFAULTS = {
+  photoHeadquarterId: '',
+  photoQuery: '',
+  photoSiteId: '',
+};
 const DEFAULT_SITE_TOTAL_ROUNDS = 8;
 const MAX_PARALLEL_PHOTO_UPLOADS = 3;
 const MAX_PARALLEL_LARGE_PHOTO_UPLOADS = 2;
@@ -235,11 +242,19 @@ export function PhotoAlbumPanel({
 }: PhotoAlbumPanelProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const searchParams = useSearchParams();
+  const updateUrlQuery = useUrlQueryUpdater();
   const defaultHeadquarterId = lockedHeadquarterId || initialHeadquarterId || '';
   const defaultSiteId = lockedSiteId || initialSiteId || '';
-  const { query, queryInput, setQueryInput, submitQuery } = useSubmittedSearchState();
-  const [headquarterId, setHeadquarterId] = useState(() => defaultHeadquarterId);
-  const [siteId, setSiteId] = useState(() => defaultSiteId);
+  const { query, queryInput, setQueryInput, submitQuery } = useSubmittedSearchState(
+    readStringParam(searchParams, 'photoQuery'),
+  );
+  const [headquarterId, setHeadquarterId] = useState(
+    () => lockedHeadquarterId || readStringParam(searchParams, 'photoHeadquarterId', defaultHeadquarterId),
+  );
+  const [siteId, setSiteId] = useState(
+    () => lockedSiteId || readStringParam(searchParams, 'photoSiteId', defaultSiteId),
+  );
   const [uploadRoundNo, setUploadRoundNo] = useState(0);
   const [bulkRoundNo, setBulkRoundNo] = useState(0);
   const [rows, setRows] = useState<PhotoAlbumItem[]>([]);
@@ -263,12 +278,14 @@ export function PhotoAlbumPanel({
   const deferredQuery = useDeferredValue(query.trim().toLowerCase());
 
   useEffect(() => {
-    setHeadquarterId(defaultHeadquarterId);
-  }, [defaultHeadquarterId]);
+    setHeadquarterId(
+      lockedHeadquarterId || readStringParam(searchParams, 'photoHeadquarterId', defaultHeadquarterId),
+    );
+  }, [defaultHeadquarterId, lockedHeadquarterId, searchParams]);
 
   useEffect(() => {
-    setSiteId(defaultSiteId);
-  }, [defaultSiteId]);
+    setSiteId(lockedSiteId || readStringParam(searchParams, 'photoSiteId', defaultSiteId));
+  }, [defaultSiteId, lockedSiteId, searchParams]);
 
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
@@ -609,6 +626,13 @@ export function PhotoAlbumPanel({
     if (!lockedSiteId) {
       setSiteId(defaultSiteId);
     }
+    updateUrlQuery(
+      {
+        photoHeadquarterId: lockedHeadquarterId ? null : defaultHeadquarterId,
+        photoSiteId: lockedSiteId ? null : defaultSiteId,
+      },
+      PHOTO_LIST_QUERY_DEFAULTS,
+    );
   };
 
   const handleToggleAll = () => {
@@ -889,7 +913,10 @@ export function PhotoAlbumPanel({
               placeholder="파일명, 현장명, 보고서명, 업로드 검색"
               value={queryInput}
               onChange={setQueryInput}
-              onSubmit={submitQuery}
+              onSubmit={() => {
+                const nextQuery = submitQuery();
+                updateUrlQuery({ photoQuery: nextQuery }, PHOTO_LIST_QUERY_DEFAULTS);
+              }}
             />
             {showHeaderFilter ? (
               <SectionHeaderFilterMenu
@@ -906,8 +933,16 @@ export function PhotoAlbumPanel({
                         className="app-select"
                         value={headquarterId}
                         onChange={(event) => {
-                          setHeadquarterId(event.target.value);
+                          const nextHeadquarterId = event.target.value;
+                          setHeadquarterId(nextHeadquarterId);
                           setSiteId('');
+                          updateUrlQuery(
+                            {
+                              photoHeadquarterId: nextHeadquarterId,
+                              photoSiteId: '',
+                            },
+                            PHOTO_LIST_QUERY_DEFAULTS,
+                          );
                         }}
                       >
                         <option value="">전체 사업장</option>
@@ -926,7 +961,14 @@ export function PhotoAlbumPanel({
                         id="photo-filter-site"
                         className="app-select"
                         value={siteId}
-                        onChange={(event) => setSiteId(event.target.value)}
+                        onChange={(event) => {
+                          const nextSiteId = event.target.value;
+                          setSiteId(nextSiteId);
+                          updateUrlQuery(
+                            { photoSiteId: nextSiteId },
+                            PHOTO_LIST_QUERY_DEFAULTS,
+                          );
+                        }}
                       >
                         <option value="">{mode === 'admin' ? '전체 현장' : '현장 선택'}</option>
                         {visibleSiteOptions.map((option) => (

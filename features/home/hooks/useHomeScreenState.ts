@@ -1,8 +1,13 @@
 'use client';
 
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
+import {
+  readEnumParam,
+  readStringParam,
+  useUrlQueryUpdater,
+} from '@/hooks/useUrlQueryState';
 import {
   consumePendingPostLoginRedirect,
 } from '@/lib/auth/postLoginRedirect';
@@ -15,6 +20,10 @@ import {
 export type HomeSortMode = 'recent' | 'name' | 'reports';
 
 const HOME_REPORT_INDEX_PREFETCH_DELAY_MS = 400;
+const HOME_LIST_QUERY_DEFAULTS = {
+  query: '',
+  sort: 'recent',
+};
 
 export function getPendingHomeReportIndexSiteIds(
   siteSummaries: HomeSiteSummary[],
@@ -75,8 +84,17 @@ export function useHomeScreenState(): HomeScreenState {
     logout,
     ensureSiteReportIndexLoaded,
   } = useInspectionSessions();
-  const [query, setQuery] = useState('');
-  const [sortMode, setSortMode] = useState<HomeSortMode>('recent');
+  const searchParams = useSearchParams();
+  const updateUrlQuery = useUrlQueryUpdater();
+  const urlQuery = readStringParam(searchParams, 'query');
+  const urlSortMode = readEnumParam(
+    searchParams,
+    'sort',
+    ['recent', 'name', 'reports'] as const,
+    'recent',
+  );
+  const [query, setQueryState] = useState(urlQuery);
+  const [sortMode, setSortModeState] = useState<HomeSortMode>(urlSortMode);
   const prefetchedSiteIdsRef = useRef<Set<string>>(new Set());
   const router = useRouter();
   const deferredQuery = useDeferredValue(query);
@@ -118,6 +136,14 @@ export function useHomeScreenState(): HomeScreenState {
   const isInitialHydration =
     (isHydrating || (hasAuthToken && !currentUser)) && siteSummaries.length === 0;
   const shouldShowLogin = !hasAuthToken && !currentUser;
+
+  useEffect(() => {
+    setQueryState(urlQuery);
+  }, [urlQuery]);
+
+  useEffect(() => {
+    setSortModeState(urlSortMode);
+  }, [urlSortMode]);
 
   useEffect(() => {
     if (!hasAuthToken || sites.length === 0) {
@@ -224,10 +250,16 @@ export function useHomeScreenState(): HomeScreenState {
     login,
     logout,
     query,
-    setQuery,
+    setQuery: (value: string) => {
+      setQueryState(value);
+      updateUrlQuery({ query: value }, HOME_LIST_QUERY_DEFAULTS);
+    },
     shouldShowLogin,
     siteSummaries,
     sortMode,
-    setSortMode,
+    setSortMode: (value: HomeSortMode) => {
+      setSortModeState(value);
+      updateUrlQuery({ sort: value }, HOME_LIST_QUERY_DEFAULTS);
+    },
   };
 }

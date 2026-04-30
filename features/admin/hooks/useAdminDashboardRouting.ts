@@ -61,6 +61,28 @@ export function useAdminDashboardRouting({
     },
     [router],
   );
+  const pushPreservedRoute = useCallback(
+    (section: AdminSectionKey, query: AdminSectionQuery = {}) => {
+      router.push(
+        getAdminSectionHref(section, {
+          ...Object.fromEntries(searchParams.entries()),
+          ...query,
+        }),
+      );
+    },
+    [router, searchParams],
+  );
+  const replacePreservedRoute = useCallback(
+    (section: AdminSectionKey, query: AdminSectionQuery = {}) => {
+      router.replace(
+        getAdminSectionHref(section, {
+          ...Object.fromEntries(searchParams.entries()),
+          ...query,
+        }),
+      );
+    },
+    [router, searchParams],
+  );
 
   useEffect(() => {
     if (!enabled) return;
@@ -122,14 +144,20 @@ export function useAdminDashboardRouting({
   return {
     activeSection,
     activeSectionMeta,
-    clearHeadquarterSelection: () => replaceRoute('headquarters'),
-    clearSiteSelection: () => replaceRoute('headquarters', { headquarterId: selectedHeadquarterId }),
+    clearHeadquarterSelection: () =>
+      replacePreservedRoute('headquarters', { headquarterId: null, siteId: null }),
+    clearSiteSelection: () =>
+      replacePreservedRoute('headquarters', {
+        headquarterId: selectedHeadquarterId,
+        siteId: null,
+      }),
     replaceRoute,
     requestedSection,
-    selectHeadquarter: (headquarterId: string) => replaceRoute('headquarters', { headquarterId }),
+    selectHeadquarter: (headquarterId: string) =>
+      pushPreservedRoute('headquarters', { headquarterId, siteId: null }),
     selectSection,
     selectSite: (headquarterId: string, siteId: string) =>
-      replaceRoute('headquarters', { headquarterId, siteId }),
+      pushPreservedRoute('headquarters', { headquarterId, siteId }),
     selectedHeadquarter,
     selectedHeadquarterId,
     selectedSite,

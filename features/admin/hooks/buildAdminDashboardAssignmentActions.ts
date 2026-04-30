@@ -6,7 +6,7 @@ import {
 import { SafetyApiError } from '@/lib/safetyApi';
 import {
   buildAssignmentPayload,
-  loadAllSafetyAssignments,
+  loadSafetyAssignmentsForSite,
 } from '@/features/admin/lib/adminDashboardMutations';
 import { invalidateAdminDirectoryMutationClientCaches } from '@/features/admin/lib/adminClientCacheInvalidation';
 import type {
@@ -59,7 +59,7 @@ export function buildAdminDashboardAssignmentActions({
             if (!(error instanceof SafetyApiError) || error.status !== 409) {
               throw error;
             }
-            const assignments = await loadAllSafetyAssignments(token);
+            const assignments = await loadSafetyAssignmentsForSite(token, input.site_id);
             const matchedAssignment = assignments.find(
               (assignment) =>
                 assignment.site_id === input.site_id && assignment.user_id === input.user_id,
@@ -114,7 +114,7 @@ export function buildAdminDashboardAssignmentActions({
             if (!(error instanceof SafetyApiError) || error.status !== 409) {
               throw error;
             }
-            const assignments = await loadAllSafetyAssignments(token);
+            const assignments = await loadSafetyAssignmentsForSite(token, siteId);
             const conflictingAssignment = assignments.find(
               (assignment) => assignment.site_id === siteId && assignment.user_id === userId,
             );
@@ -146,7 +146,7 @@ export function buildAdminDashboardAssignmentActions({
                 assignment.user_id === userId &&
                 assignment.is_active,
             ) ??
-            (await loadAllSafetyAssignments(token)).find(
+            (await loadSafetyAssignmentsForSite(token, siteId)).find(
             (assignment) =>
               assignment.site_id === siteId &&
               assignment.user_id === userId &&

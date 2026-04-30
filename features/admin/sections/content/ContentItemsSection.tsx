@@ -1,6 +1,7 @@
 'use client';
 
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import AppModal from '@/components/ui/AppModal';
 import ActionMenu from '@/components/ui/ActionMenu';
 import { SubmitSearchField } from '@/components/ui/SubmitSearchField';
@@ -9,6 +10,11 @@ import {
   SortableHeaderCell,
 } from '@/features/admin/components/SortableHeaderCell';
 import { useSubmittedSearchState } from '@/hooks/useSubmittedSearchState';
+import {
+  readEnumParam,
+  readStringParam,
+  useUrlQueryUpdater,
+} from '@/hooks/useUrlQueryState';
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import {
   getSafetyAssetUploadHelperText,
@@ -44,6 +50,12 @@ import {
 // This file stayed large in this pass because the content CRUD flow has many type-specific branches that were safer to keep together.
 
 const DISASTER_CASE_BATCH_SIZE = 4;
+const CONTENT_LIST_QUERY_DEFAULTS = {
+  contentDir: 'asc',
+  contentPage: 1,
+  contentQuery: '',
+  contentSort: 'title',
+};
 
 type DisasterCaseBatchItem = {
   title: string;
@@ -137,12 +149,20 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
     pageSize,
     refreshing,
   } = props;
+  const searchParams = useSearchParams();
+  const updateUrlQuery = useUrlQueryUpdater();
+  const urlSort = useMemo<TableSortState>(
+    () => ({
+      direction: readEnumParam(searchParams, 'contentDir', ['asc', 'desc'] as const, 'asc'),
+      key: readStringParam(searchParams, 'contentSort', 'title'),
+    }),
+    [searchParams],
+  );
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [sort, setSort] = useState<TableSortState>({
-    direction: 'asc',
-    key: 'title',
-  });
-  const { query, queryInput, setQueryInput, submitQuery } = useSubmittedSearchState();
+  const [sort, setSortState] = useState<TableSortState>(urlSort);
+  const { query, queryInput, setQueryInput, submitQuery } = useSubmittedSearchState(
+    readStringParam(searchParams, 'contentQuery'),
+  );
   const [form, setForm] = useState(createEmptyContentForm());
   const [detailLoadingId, setDetailLoadingId] = useState<string | null>(null);
   const [disasterCaseBatchItems, setDisasterCaseBatchItems] = useState<DisasterCaseBatchItem[]>(
@@ -150,6 +170,10 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
   );
   const isOpen = editingId !== null;
   const deferredQuery = useDeferredValue(query);
+
+  useEffect(() => {
+    setSortState(urlSort);
+  }, [urlSort]);
 
   const filteredItems = useMemo(
     () =>
@@ -416,8 +440,12 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
             value={queryInput}
             onChange={setQueryInput}
             onSubmit={() => {
+              const nextQuery = submitQuery();
               onPageChange(1);
-              submitQuery();
+              updateUrlQuery(
+                { contentPage: 1, contentQuery: nextQuery },
+                CONTENT_LIST_QUERY_DEFAULTS,
+              );
             }}
           />
           <select
@@ -488,7 +516,18 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
                         column={{ key: 'content_type' }}
                         current={sort}
                         label="유형"
-                        onChange={setSort}
+                        onChange={(value) => {
+                          setSortState(value);
+                          onPageChange(1);
+                          updateUrlQuery(
+                            {
+                              contentDir: value.direction,
+                              contentPage: 1,
+                              contentSort: value.key,
+                            },
+                            CONTENT_LIST_QUERY_DEFAULTS,
+                          );
+                        }}
                         sortMenuOptions={buildSortMenuOptions('content_type', {
                           asc: '유형 오름차순',
                           desc: '유형 내림차순',
@@ -498,7 +537,18 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
                         column={{ key: 'title' }}
                         current={sort}
                         label="제목"
-                        onChange={setSort}
+                        onChange={(value) => {
+                          setSortState(value);
+                          onPageChange(1);
+                          updateUrlQuery(
+                            {
+                              contentDir: value.direction,
+                              contentPage: 1,
+                              contentSort: value.key,
+                            },
+                            CONTENT_LIST_QUERY_DEFAULTS,
+                          );
+                        }}
                       />
                       <th>내용 미리보기</th>
                       <SortableHeaderCell
@@ -506,7 +556,18 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
                         current={sort}
                         defaultDirection="desc"
                         label="시작일 ~ 종료일"
-                        onChange={setSort}
+                        onChange={(value) => {
+                          setSortState(value);
+                          onPageChange(1);
+                          updateUrlQuery(
+                            {
+                              contentDir: value.direction,
+                              contentPage: 1,
+                              contentSort: value.key,
+                            },
+                            CONTENT_LIST_QUERY_DEFAULTS,
+                          );
+                        }}
                         title="시작일 정렬"
                       />
                       <th>메뉴</th>

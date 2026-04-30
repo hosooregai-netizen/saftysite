@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import AppModal from '@/components/ui/AppModal';
 import LoginPanel from '@/components/auth/LoginPanel';
@@ -10,6 +10,10 @@ import WorkerShellBody from '@/components/worker/WorkerShellBody';
 import { WorkerMenuDrawer, WorkerMenuPanel } from '@/components/worker/WorkerMenu';
 import { createEmptyTechnicalGuidanceRelations } from '@/constants/inspectionSession/sessionFactory';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
+import {
+  readEnumParam,
+  readStringParam,
+} from '@/hooks/useUrlQueryState';
 import {
   consumePendingPostLoginRedirect,
   WORKER_CALENDAR_POST_LOGIN_REDIRECT,
@@ -365,11 +369,20 @@ function getStatusClassName(row: SafetyInspectionSchedule) {
 
 export function WorkerCalendarScreen() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [month, setMonth] = useState(getMonthToken());
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [month, setMonth] = useState(readStringParam(searchParams, 'month', getMonthToken()));
   const [rows, setRows] = useState<SafetyInspectionSchedule[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [listFilter, setListFilter] = useState<ScheduleListFilter>('all');
+  const [listFilter, setListFilter] = useState<ScheduleListFilter>(
+    readEnumParam(
+      searchParams,
+      'listFilter',
+      ['all', 'unselected', 'selected', 'planned', 'completed', 'postponed', 'canceled'] as const,
+      'all',
+    ),
+  );
   const [notice, setNotice] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState('');
   const [dialog, setDialog] = useState<ScheduleDialogState>(EMPTY_DIALOG_STATE);
@@ -377,8 +390,6 @@ export function WorkerCalendarScreen() {
   const [contractWindowsBySiteId, setContractWindowsBySiteId] = useState<
     Record<string, { windowEnd: string; windowStart: string }>
   >({});
-  const router = useRouter();
-  const searchParams = useSearchParams();
   const {
     authError,
     createSession,
@@ -399,13 +410,23 @@ export function WorkerCalendarScreen() {
   const selectedSiteId = searchParams.get('siteId') || '';
   const viewMode: CalendarViewMode = searchParams.get('view') === 'list' ? 'list' : 'calendar';
 
-  const replaceCalendarRoute = (input: {
+  const replaceCalendarRoute = useCallback((input: {
+    listFilter?: ScheduleListFilter;
+    month?: string;
     siteId?: string;
     view?: CalendarViewMode;
   }) => {
+    const nextMonth = input.month ?? month;
+    const nextListFilter = input.listFilter ?? listFilter;
     const nextSiteId = input.siteId ?? selectedSiteId;
     const nextView = input.view ?? viewMode;
     const nextSearchParams = new URLSearchParams();
+    if (nextMonth && nextMonth !== getMonthToken()) {
+      nextSearchParams.set('month', nextMonth);
+    }
+    if (nextListFilter !== 'all') {
+      nextSearchParams.set('listFilter', nextListFilter);
+    }
     if (nextSiteId) {
       nextSearchParams.set('siteId', nextSiteId);
     }
@@ -414,7 +435,23 @@ export function WorkerCalendarScreen() {
     }
     const query = nextSearchParams.toString();
     router.replace(query ? `/calendar?${query}` : '/calendar');
-  };
+  }, [listFilter, month, router, selectedSiteId, viewMode]);
+
+  useEffect(() => {
+    setMonth(readStringParam(searchParams, 'month', getMonthToken()));
+    setListFilter(
+      readEnumParam(
+        searchParams,
+        'listFilter',
+        ['all', 'unselected', 'selected', 'planned', 'completed', 'postponed', 'canceled'] as const,
+        'all',
+      ),
+    );
+  }, [searchParams]);
+
+  useEffect(() => {
+    replaceCalendarRoute({});
+  }, [replaceCalendarRoute]);
 
   useEffect(() => {
     if (!currentUser) return;

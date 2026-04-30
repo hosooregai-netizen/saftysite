@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   mergeAdminSiteSnapshots,
   normalizeInspectionSite,
@@ -9,6 +9,11 @@ import {
 import { createEmptyTechnicalGuidanceRelations } from '@/constants/inspectionSession/sessionFactory';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { useSubmittedSearchState } from '@/hooks/useSubmittedSearchState';
+import {
+  readEnumParam,
+  readStringParam,
+  useUrlQueryUpdater,
+} from '@/hooks/useUrlQueryState';
 import { mergeReportIndexItems } from '@/hooks/inspectionSessions/helpers';
 import { fetchAdminReports } from '@/lib/admin/apiClient';
 import { isAdminUserRole } from '@/lib/admin';
@@ -43,6 +48,12 @@ type AdminLegacySiteReportsState = {
   error: string | null;
   items: import('@/types/inspectionSession').InspectionReportListItem[];
   status: 'idle' | 'loading' | 'loaded' | 'error';
+};
+
+const SITE_REPORT_LIST_QUERY_DEFAULTS = {
+  dispatch: 'all',
+  reportQuery: '',
+  reportSort: 'round',
 };
 
 function extractVisitRound(value: string | null | undefined) {
@@ -155,6 +166,8 @@ export function useSiteReportListState(
   options: UseSiteReportListStateOptions = {}
 ) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const updateUrlQuery = useUrlQueryUpdater();
   const decodedSiteKey = siteKey ? decodeURIComponent(siteKey) : null;
   const {
     sites,
@@ -174,9 +187,23 @@ export function useSiteReportListState(
     queryInput: reportQueryInput,
     setQueryInput: setReportQueryInput,
     submitQuery: submitReportQuery,
-  } = useSubmittedSearchState();
-  const [reportSortMode, setReportSortMode] = useState<SiteReportSortMode>('round');
-  const [dispatchFilter, setDispatchFilter] = useState<SiteReportDispatchFilter>('all');
+  } = useSubmittedSearchState(readStringParam(searchParams, 'reportQuery'));
+  const urlReportSortMode = readEnumParam(
+    searchParams,
+    'reportSort',
+    ['round', 'name', 'progress'] as const,
+    'round',
+  );
+  const urlDispatchFilter = readEnumParam(
+    searchParams,
+    'dispatch',
+    ['all', 'pending', 'completed'] as const,
+    'all',
+  );
+  const [reportSortMode, setReportSortModeState] =
+    useState<SiteReportSortMode>(urlReportSortMode);
+  const [dispatchFilter, setDispatchFilterState] =
+    useState<SiteReportDispatchFilter>(urlDispatchFilter);
   const currentSite = useMemo(() => {
     if (!decodedSiteKey) {
       return options.siteOverride ?? null;
@@ -259,6 +286,14 @@ export function useSiteReportListState(
   useEffect(() => {
     void reloadAdminLegacyItems();
   }, [reloadAdminLegacyItems]);
+  useEffect(() => {
+    setReportSortModeState(urlReportSortMode);
+  }, [urlReportSortMode]);
+
+  useEffect(() => {
+    setDispatchFilterState(urlDispatchFilter);
+  }, [urlDispatchFilter]);
+
   const deferredReportQuery = useDeferredValue(reportQuery);
   const effectiveReportItems = useMemo(() => {
     if (!isAdminView || !currentSite) {
@@ -405,8 +440,17 @@ export function useSiteReportListState(
     reportQueryInput,
     reportSortMode,
     setReportQuery: setReportQueryInput,
-    submitReportQuery,
-    setReportSortMode,
-    setDispatchFilter,
+    submitReportQuery: () => {
+      const nextQuery = submitReportQuery();
+      updateUrlQuery({ reportQuery: nextQuery }, SITE_REPORT_LIST_QUERY_DEFAULTS);
+    },
+    setReportSortMode: (value: SiteReportSortMode) => {
+      setReportSortModeState(value);
+      updateUrlQuery({ reportSort: value }, SITE_REPORT_LIST_QUERY_DEFAULTS);
+    },
+    setDispatchFilter: (value: SiteReportDispatchFilter) => {
+      setDispatchFilterState(value);
+      updateUrlQuery({ dispatch: value }, SITE_REPORT_LIST_QUERY_DEFAULTS);
+    },
   };
 }

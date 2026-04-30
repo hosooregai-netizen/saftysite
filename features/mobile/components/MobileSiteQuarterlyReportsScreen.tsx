@@ -55,7 +55,7 @@ export function MobileSiteQuarterlyReportsScreen({
   if (!isAuthenticated) {
     return (
       <LoginPanel
-        description="모바일에서 분기 종합보고서를 만들고 수정할 수 있습니다."
+        description="모바일에서 분기 종합 보고서를 만들고 수정할 수 있습니다."
         error={authError}
         onSubmit={login}
         title="모바일 분기 보고 로그인"

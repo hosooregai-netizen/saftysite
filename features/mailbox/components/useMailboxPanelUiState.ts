@@ -6,8 +6,12 @@ interface SearchParamsLike {
   get: (key: string) => string | null;
 }
 
-export function useMailboxPanelUiState(searchParams: SearchParamsLike) {
-  const [query, setQuery] = useState('');
+export function useMailboxPanelUiState(
+  searchParams: SearchParamsLike,
+  options: { onQueryChange?: (value: string) => void } = {},
+) {
+  const routeQuery = searchParams.get('mailboxQuery') || '';
+  const [queryState, setQueryState] = useState({ key: routeQuery, value: routeQuery });
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [oauthProvider, setOauthProvider] = useState<'google' | 'naver_mail' | 'naver_works' | null>(null);
@@ -32,6 +36,8 @@ export function useMailboxPanelUiState(searchParams: SearchParamsLike) {
     window.sessionStorage.removeItem('mailbox-oauth-error');
   }, []);
 
+  const query = queryState.key === routeQuery ? queryState.value : routeQuery;
+
   return {
     activeError: error || searchParams.get('oauthError') || storedOauthError || null,
     activeNotice: notice || searchParams.get('oauthNotice') || storedOauthNotice || null,
@@ -45,7 +51,10 @@ export function useMailboxPanelUiState(searchParams: SearchParamsLike) {
     setIsDemoMode,
     setNotice,
     setOauthProvider,
-    setQuery,
+    setQuery: (value: string) => {
+      setQueryState({ key: routeQuery, value });
+      options.onQueryChange?.(value);
+    },
     setReportPickerOpen,
   };
 }

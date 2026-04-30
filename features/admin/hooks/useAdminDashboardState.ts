@@ -127,7 +127,9 @@ export function useAdminDashboardState({
       },
     ) => {
       const result = await runMutation(task, successMessage, options);
-      await refreshAdminMasterData(refreshMasterData);
+      void refreshAdminMasterData(refreshMasterData).catch((error) => {
+        console.error('Admin master data background refresh failed after content mutation', error);
+      });
       return result;
     },
     [refreshMasterData, runMutation],

@@ -2,15 +2,15 @@ import type { Metadata } from 'next';
 import { LegalDocumentScreen } from '@/features/legal/components/LegalDocumentScreen';
 
 export const metadata: Metadata = {
-  title: '이용약관 | 한국종합안전 업무시스템',
-  description: '한국종합안전 업무시스템 이용약관',
+  title: '이용약관 | 한국종합안전',
+  description: '한국종합안전 이용약관',
 };
 
 const sections = [
   {
     title: '1. 서비스 목적',
     body: [
-      '한국종합안전 업무시스템은 건설기술재해예방지도 운영을 위한 사업장·현장 관리, 보고서 작성, 문서 출력, 메일 발송 및 수신 확인 기능을 제공합니다.',
+      '한국종합안전은 건설기술재해예방지도 운영을 위한 사업장·현장 관리, 보고서 작성, 문서 출력, 메일 발송 및 수신 확인 기능을 제공합니다.',
     ],
   },
   {
@@ -46,7 +46,7 @@ export default function TermsPage() {
     <LegalDocumentScreen
       eyebrow="Terms of Service"
       title="이용약관"
-      description="한국종합안전 업무시스템 이용약관은 서비스 사용 범위, 메일 연동 책임, 운영상 제한 사항을 안내합니다."
+      description="한국종합안전 이용약관은 서비스 사용 범위, 메일 연동 책임, 운영상 제한 사항을 안내합니다."
       sections={sections}
     />
   );
