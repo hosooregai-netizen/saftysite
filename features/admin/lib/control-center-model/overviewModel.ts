@@ -1,4 +1,5 @@
 import { getAdminSectionHref } from '@/lib/admin';
+import { normalizeSiteLifecycleStatus } from '@/lib/admin/lifecycleStatus';
 import {
   buildSiteQuarterlyListHref,
   buildSiteReportsHref,
@@ -498,7 +499,7 @@ export function buildAdminOverviewModel(
   const dispatchOverviewRows = buildDispatchManagementRows(overviewRows, siteById, today);
   const overviewSites = data.sites.filter((site) => isCurrentSiteManagementWindow(site, today));
   const siteStatusSummary = buildSiteStatusSummary(data, overviewSites);
-  const activeSites = overviewSites.filter((site) => site.status === 'active');
+  const activeSites = overviewSites.filter((site) => normalizeSiteLifecycleStatus(site) === 'active');
   const { coverageRows, metricMeta, quarterlyMaterialSummary } = buildQuarterlySummary(
     activeSites,
     materialSourceReports,

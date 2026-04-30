@@ -24,6 +24,7 @@ export const PRIORITY_PROJECT_AMOUNT = 2_000_000_000;
 type SiteLike = Pick<
   SafetySite,
   | 'contract_date'
+  | 'contract_status'
   | 'contract_end_date'
   | 'contract_signed_date'
   | 'contract_start_date'

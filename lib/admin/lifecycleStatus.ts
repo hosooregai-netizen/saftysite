@@ -86,6 +86,11 @@ export function applyHeadquarterLifecycleStatus<T extends HeadquarterLike>(
 export function normalizeSiteLifecycleStatus(
   site: SiteLike | null | undefined,
 ): SafetySiteLifecycleStatus {
+  const contractStatus = normalizeText(site?.contract_status);
+  if (contractStatus === 'completed') {
+    return normalizeText(site?.status) === 'deleted' ? 'deleted' : 'closed';
+  }
+
   const lifecycleStatus = normalizeText(site?.lifecycle_status);
   if (isSiteLifecycleStatus(lifecycleStatus)) {
     return lifecycleStatus;
@@ -95,7 +100,7 @@ export function normalizeSiteLifecycleStatus(
   if (isSiteLifecycleStatus(legacyStatus)) {
     return legacyStatus;
   }
-  if (normalizeText(site?.contract_status) === 'paused') {
+  if (contractStatus === 'paused') {
     return 'paused';
   }
 

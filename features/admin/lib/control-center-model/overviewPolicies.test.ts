@@ -9,6 +9,7 @@ import type { SafetySite } from '@/types/backend';
 import {
   buildDispatchManagementRows,
   compareDispatchManagementUnsentRows,
+  isCurrentSiteManagementWindow,
   isPriorityQuarterlyManagementRowScope,
   isPriorityQuarterlySiteScope,
   isSiteInCurrentQuarterWindow,
@@ -175,6 +176,26 @@ test('dispatch management rows keep non-priority active current-quarter rows onl
   const filtered = buildDispatchManagementRows(rows, siteById, today);
 
   assert.deepEqual(filtered.map((row) => row.siteId), ['site-active-quarter']);
+});
+
+test('completed contract sites are excluded from current management scopes', () => {
+  const completedContractSite = buildSite({
+    contract_status: 'completed',
+    lifecycle_status: 'active',
+    project_start_date: '2026-04-01',
+    project_end_date: '2026-06-30',
+    status: 'active',
+  });
+
+  assert.equal(isCurrentSiteManagementWindow(completedContractSite, today), false);
+  assert.deepEqual(
+    buildDispatchManagementRows(
+      [buildDispatchRow({ siteId: 'site-1' })],
+      new Map([['site-1', completedContractSite]]),
+      today,
+    ),
+    [],
+  );
 });
 
 test('dispatch priority comparator puts mail-ready rows first and then older unsent rows', () => {

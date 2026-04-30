@@ -1,5 +1,6 @@
 import { getSessionProgress } from '@/constants/inspectionSession';
 import { getControllerSectionHref, isFieldAgentUserRole } from '@/lib/admin/adminShared';
+import { normalizeSiteLifecycleStatus } from '@/lib/admin/lifecycleStatus';
 import type { ControllerDashboardData } from '@/types/controller';
 import type { InspectionSession } from '@/types/inspectionSession';
 
@@ -48,7 +49,7 @@ export function buildAdminOverviewModel(
   asyncKpiState: AdminOverviewAsyncKpiState = EMPTY_ASYNC_KPI_STATE,
 ) {
   const activeAssignments = data.assignments.filter((item) => item.is_active);
-  const activeSites = data.sites.filter((item) => item.status === 'active');
+  const activeSites = data.sites.filter((item) => normalizeSiteLifecycleStatus(item) === 'active');
   const assignedSiteIds = new Set(activeAssignments.map((item) => item.site_id));
   const activeFieldAgents = data.users.filter(
     (item) => isFieldAgentUserRole(item.role) && item.is_active,
