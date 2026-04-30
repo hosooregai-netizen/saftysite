@@ -38,10 +38,10 @@ export function BadWorkplaceSitePanel({
                 onChange={(value) => onUpdateSiteSnapshot('siteName', value)}
               />
               <th scope="row" className={operationalStyles.snapshotLabelCell}>
-                사업장개시번호
+                건설사 개시번호
               </th>
               <SnapshotInputCell
-                label="사업장개시번호"
+                label="건설사 개시번호"
                 value={draft.siteSnapshot.businessStartNumber}
                 onChange={(value) => onUpdateSiteSnapshot('businessStartNumber', value)}
               />

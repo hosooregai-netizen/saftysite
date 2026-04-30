@@ -154,7 +154,7 @@ export async function buildAdminServerExportSheets(
           { key: 'reportType', label: '유형' },
           { key: 'reportTitle', label: '보고서명' },
           { key: 'siteName', label: '현장' },
-          { key: 'headquarterName', label: '사업장' },
+          { key: 'headquarterName', label: '건설사' },
           { key: 'assigneeName', label: '담당자' },
           { key: 'status', label: '상태' },
           { key: 'visitDate', label: '기준일' },
@@ -207,7 +207,7 @@ export async function buildAdminServerExportSheets(
         name: '방문 일정',
         columns: [
           { key: 'siteName', label: '현장' },
-          { key: 'headquarterName', label: '사업장' },
+          { key: 'headquarterName', label: '건설사' },
           { key: 'roundNo', label: '회차' },
           { key: 'plannedDate', label: '방문일' },
           { key: 'window', label: '허용 구간' },

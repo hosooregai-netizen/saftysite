@@ -91,11 +91,11 @@ export function MobileSiteHomeInfoSection(props: MobileSiteHomeInfoSectionProps)
           </div>
         ) : null}
         <div className={styles.infoRow}>
-          <span className={styles.infoLabel}>본사</span>
+          <span className={styles.infoLabel}>건설사</span>
           <strong className={styles.infoValue}>{getDisplayValue(props.companyName)}</strong>
         </div>
         <div className={styles.infoRow}>
-          <span className={styles.infoLabel}>본사 연락처</span>
+          <span className={styles.infoLabel}>건설사 연락처</span>
           {props.headquartersContactHref ? (
             <a className={`${styles.infoValue} ${styles.infoValueLink}`} href={props.headquartersContactHref}>
               {props.headquartersContact}
@@ -105,7 +105,7 @@ export function MobileSiteHomeInfoSection(props: MobileSiteHomeInfoSectionProps)
           )}
         </div>
         <div className={styles.infoRow}>
-          <span className={styles.infoLabel}>본사 주소</span>
+          <span className={styles.infoLabel}>건설사 주소</span>
           <strong className={styles.infoValue}>{getDisplayValue(props.headquartersAddress)}</strong>
         </div>
       </div>

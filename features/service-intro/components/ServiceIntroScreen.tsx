@@ -6,8 +6,8 @@ const capabilityCards = [
     description: '여러 현장과 보고서 진행 현황, 우선 대응 이슈를 한 화면에서 파악합니다.',
   },
   {
-    title: '사업장·현장 관리',
-    description: '사업장과 현장, 담당자, 운영 상태를 연결해 분산된 기본정보를 정리합니다.',
+    title: '건설사·현장 관리',
+    description: '건설사와 현장, 담당자, 운영 상태를 연결해 분산된 기본정보를 정리합니다.',
   },
   {
     title: '엑셀 업로드',
@@ -30,7 +30,7 @@ const capabilityCards = [
 const roleCards = [
   {
     title: '관리자',
-    description: '사업장·현장·보고서·매출·알림을 통합 관리하고 운영 현황을 점검합니다.',
+    description: '건설사·현장·보고서·매출·알림을 통합 관리하고 운영 현황을 점검합니다.',
   },
   {
     title: '관제',
@@ -45,7 +45,7 @@ const roleCards = [
 const flowSteps = [
   {
     title: '데이터 정리',
-    description: '사업장·현장 정보를 등록하고 엑셀 업로드로 기본 데이터를 정리합니다.',
+    description: '건설사·현장 정보를 등록하고 엑셀 업로드로 기본 데이터를 정리합니다.',
   },
   {
     title: '문서 작성',
@@ -70,7 +70,7 @@ export function ServiceIntroScreen() {
             <span className={styles.eyebrow}>서비스 소개 및 심사 확인용 페이지</span>
             <h1 className={styles.title}>한국종합안전</h1>
             <p className={styles.description}>
-              한국종합안전은 건설기술재해예방지도 운영을 위한 ERP형 서비스입니다. 사업장·현장
+              한국종합안전은 건설기술재해예방지도 운영을 위한 ERP형 서비스입니다. 건설사·현장
               관리, 보고서 작성, 문서 출력, 메일 연동, 모바일 현장 업무를 하나의 흐름으로 연결합니다.
             </p>
             <div className={styles.heroMeta}>

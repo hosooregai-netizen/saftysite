@@ -37,7 +37,7 @@ export const CONTROLLER_SECTIONS: Array<{
   { key: 'photos', label: '사진첩', description: '현장 사진 통합 조회' },
   { key: 'schedules', label: '일정/캘린더', description: '방문 일정 관리' },
   { key: 'users', label: '사용자', description: '계정 관리' },
-  { key: 'headquarters', label: '사업장/현장', description: '현장 관리' },
+  { key: 'headquarters', label: '건설사/현장', description: '현장 관리' },
   { key: 'content', label: '콘텐츠', description: '콘텐츠 관리' },
 ];
 

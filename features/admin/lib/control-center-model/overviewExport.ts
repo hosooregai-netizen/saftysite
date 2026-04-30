@@ -46,7 +46,7 @@ export function getOverviewExportSheets(model: AdminOverviewModel) {
       name: 'ending-soon-sites',
       columns: [
         { key: 'siteName', label: '현장' },
-        { key: 'headquarterName', label: '본사' },
+        { key: 'headquarterName', label: '건설사' },
         { key: 'endDateSource', label: '종료 기준' },
         { key: 'endDate', label: '종료일' },
         { key: 'deadlineLabel', label: '남은 기간' },
@@ -71,7 +71,7 @@ export function getOverviewExportSheets(model: AdminOverviewModel) {
       name: 'quarterly-material-missing-sites',
       columns: [
         { key: 'siteName', label: '현장' },
-        { key: 'headquarterName', label: '본사' },
+        { key: 'headquarterName', label: '건설사' },
         { key: 'quarterLabel', label: '분기' },
         { key: 'educationStatus', label: '교육 현황' },
         { key: 'measurementStatus', label: '계측 현황' },
@@ -94,7 +94,7 @@ export function getOverviewExportSheets(model: AdminOverviewModel) {
       name: 'unsent-reports',
       columns: [
         { key: 'siteName', label: '현장' },
-        { key: 'headquarterName', label: '본사' },
+        { key: 'headquarterName', label: '건설사' },
         { key: 'reportTitle', label: '보고서' },
         { key: 'reportTypeLabel', label: '유형' },
         { key: 'assigneeName', label: '담당자' },

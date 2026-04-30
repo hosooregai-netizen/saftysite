@@ -859,7 +859,7 @@ export function PhotoAlbumPanel({
       await exportAdminWorkbook('photos', [
         {
           columns: [
-            { key: 'headquarterName', label: '사업장' },
+            { key: 'headquarterName', label: '건설사' },
             { key: 'siteName', label: '현장' },
             { key: 'roundNo', label: '회차' },
             { key: 'fileName', label: '파일명' },
@@ -927,7 +927,7 @@ export function PhotoAlbumPanel({
                 <div className={adminStyles.sectionHeaderMenuGrid}>
                   {mode === 'admin' && !lockedHeadquarterId ? (
                     <div className={adminStyles.sectionHeaderMenuField}>
-                      <label htmlFor="photo-filter-headquarter">사업장</label>
+                      <label htmlFor="photo-filter-headquarter">건설사</label>
                       <select
                         id="photo-filter-headquarter"
                         className="app-select"
@@ -945,7 +945,7 @@ export function PhotoAlbumPanel({
                           );
                         }}
                       >
-                        <option value="">전체 사업장</option>
+                        <option value="">전체 건설사</option>
                         {headquarterOptions.map((option) => (
                           <option key={option.id} value={option.id}>
                             {option.name}
@@ -1412,7 +1412,7 @@ export function PhotoAlbumPanel({
                 <span>{getSourceLabel(activeItem.sourceKind)}</span>
               </div>
               <div className={styles.modalMetaRow}>
-                <span className={styles.modalMetaLabel}>사업장</span>
+                <span className={styles.modalMetaLabel}>건설사</span>
                 <span>{activeItem.headquarterName}</span>
               </div>
               <div className={styles.modalMetaRow}>

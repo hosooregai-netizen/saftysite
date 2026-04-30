@@ -807,7 +807,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
               value={queryInput}
               onChange={setQueryInput}
               onSubmit={submitQuery}
-              placeholder="현장명, 사업장명, 담당자로 검색"
+              placeholder="현장명, 건설사명, 담당자로 검색"
             />
             <SectionHeaderFilterMenu
               activeCount={activeFilterCount}
@@ -1403,7 +1403,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
                     </div>
                     <div className={styles.scheduleSummaryMeta}>
                       {[
-                        activeSchedule.headquarterName || '사업장 정보 없음',
+                        activeSchedule.headquarterName || '건설사 정보 없음',
                         `${activeSchedule.roundNo}회차`,
                       ].join(' · ')}
                     </div>

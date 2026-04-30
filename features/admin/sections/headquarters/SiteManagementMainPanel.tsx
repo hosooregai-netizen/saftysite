@@ -103,7 +103,7 @@ export function SiteManagementMainPanel({
         <div className={styles.siteMainCardGrid}>
           <article className={styles.detailCard}>
             <div className={styles.detailCardHeader}>
-              <h3 className={styles.detailCardTitle}>사업장/현장 식별</h3>
+              <h3 className={styles.detailCardTitle}>건설사/현장 식별</h3>
             </div>
             <div className={styles.detailList}>
               <div className={styles.detailItem}>
@@ -111,7 +111,7 @@ export function SiteManagementMainPanel({
                 <strong className={styles.detailItemValue}>{headquarterName}</strong>
               </div>
               <div className={styles.detailItem}>
-                <span className={styles.detailItemLabel}>사업장관리번호 / 사업장개시번호</span>
+                <span className={styles.detailItemLabel}>건설사 관리번호 / 건설사 개시번호</span>
                 <strong className={styles.detailItemValue}>
                   {headquarterManagementNumber} / {headquarterOpeningNumber}
                 </strong>

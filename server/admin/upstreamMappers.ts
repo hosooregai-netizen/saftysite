@@ -1445,7 +1445,7 @@ export function buildPhotoAlbumItemFromAsset(
     normalizeText(asset.headquarterName) ||
     normalizeText(site?.headquarter_detail?.name) ||
     normalizeText(site?.headquarter?.name) ||
-    '사업장';
+    '건설사';
   const siteName = normalizeText(asset.siteName) || normalizeText(site?.site_name) || '현장';
 
   return {

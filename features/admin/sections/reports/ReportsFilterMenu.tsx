@@ -68,14 +68,14 @@ export function ReportsFilterMenu({
         </div>
 
         <div className={styles.sectionHeaderMenuField}>
-          <label htmlFor="reports-filter-headquarter">사업장</label>
+          <label htmlFor="reports-filter-headquarter">건설사</label>
           <select
             id="reports-filter-headquarter"
             className="app-select"
             value={headquarterFilter}
             onChange={(event) => onHeadquarterFilterChange(event.target.value)}
           >
-            <option value="all">전체 사업장</option>
+            <option value="all">전체 건설사</option>
             {headquarterOptions.map(([id, label]) => (
               <option key={id} value={id}>
                 {label}

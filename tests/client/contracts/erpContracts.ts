@@ -165,7 +165,7 @@ export const ERP_FEATURE_CONTRACTS = {
     markers: [
       '분기 종합 보고서 목록',
       '1. 원본 보고서 선택',
-      '1. 기술지도 사업장 개요',
+      '1. 기술지도 건설사/현장 개요',
       '2. 재해유형 분석',
       '문서 다운로드 (.hwpx)',
       '문서 다운로드 (.pdf)',
@@ -191,7 +191,7 @@ export const ERP_FEATURE_CONTRACTS = {
     id: 'site-hub',
     description: '작업자 로그인 후 내 일정에서 현장 메인 상세 패널과 분기 보고서 목록으로 이어진다.',
     routes: ['/calendar', '/sites/site-1/entry', '/sites/site-1/quarterly'],
-    markers: ['내 일정', '사업장/현장 식별', '운영/담당', '분기 종합 보고서 목록'],
+    markers: ['내 일정', '건설사/현장 식별', '운영/담당', '분기 종합 보고서 목록'],
     apis: ['GET /assignments/me/sites'],
     criticalActions: ['작업자 로그인', '현장 메인 상세 진입', '분기 종합 보고서 목록 이동'],
   },

@@ -42,7 +42,7 @@ const JOB_DIR = path.join(os.tmpdir(), 'safetysite-excel-import-jobs');
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const SAMPLE_ROW_COUNT = 5;
 const REQUIRED_FIELD_LABELS = {
-  contact_phone: '본사 연락처',
+  contact_phone: '건설사 연락처',
   guidance_officer_name: '지도원',
   labor_office: '노동관서',
   manager_name: '현장소장명',
@@ -50,10 +50,10 @@ const REQUIRED_FIELD_LABELS = {
   site_address: '현장 주소',
 } as const;
 const FIELD_ALIASES: Record<string, string[]> = {
-  headquarter_name: ['회사명', '사업장명', '본사명', '본점명', '지점명', '업체명'],
-  headquarter_management_number: ['사업장관리번호', '관리번호', '관리 번호'],
-  headquarter_opening_number: ['사업장개시번호', '사업개시번호'],
-  contact_phone: ['전화', '본사연락처', '대표전화', '전화번호', '연락처'],
+  headquarter_name: ['건설사명', '시공사명', '회사명', '사업장명', '본사명', '본점명', '지점명', '업체명'],
+  headquarter_management_number: ['건설사관리번호', '건설사 관리번호', '사업장관리번호', '관리번호', '관리 번호'],
+  headquarter_opening_number: ['건설사개시번호', '건설사 개시번호', '사업장개시번호', '사업개시번호'],
+  contact_phone: ['전화', '건설사연락처', '건설사 연락처', '본사연락처', '대표전화', '전화번호', '연락처'],
   site_name: ['현장명', '공사명', '현장'],
   labor_office: ['노동관서'],
   guidance_officer_name: ['지도원', '지도요원'],
@@ -322,10 +322,10 @@ function buildMappingWarnings(
   const warnings: string[] = [];
   void ignoredHeaders;
   if (!suggestedMapping.headquarter_management_number) {
-    warnings.push('사업장관리번호가 없어 사업장 중복 판정은 사업장개시번호 또는 회사명 기준으로 진행합니다.');
+    warnings.push('건설사 관리번호가 없어 건설사 중복 판정은 건설사 개시번호 또는 건설사명 기준으로 진행합니다.');
   }
   if (!suggestedMapping.headquarter_opening_number) {
-    warnings.push('사업장개시번호가 없어 사업장 식별은 사업장관리번호 또는 회사명 기준으로 진행합니다.');
+    warnings.push('건설사 개시번호가 없어 건설사 식별은 건설사 관리번호 또는 건설사명 기준으로 진행합니다.');
   }
   if (!suggestedMapping.site_name) {
     warnings.push('현장명이 없어 현장 생성/갱신 정확도가 낮아질 수 있습니다.');
@@ -430,7 +430,7 @@ function buildScopeSummary(
   return {
     sourceSection,
     headquarterId,
-    label: targetSite ? '현장 1곳' : headquarterId ? '사업장 1곳' : '전체',
+    label: targetSite ? '현장 1곳' : headquarterId ? '건설사 1곳' : '전체',
     siteId: targetSite?.id ?? scope?.siteId ?? null,
   };
 }
@@ -580,7 +580,7 @@ function resolveScopeDecision(args: {
       return buildInScopeDecision();
     }
     return {
-      exclusionReason: '다른 사업장 데이터',
+      exclusionReason: '다른 건설사 데이터',
       exclusionReasonCode: 'different_headquarter',
       inScope: false,
     } satisfies ScopeDecision;
@@ -605,7 +605,7 @@ function resolveScopeDecision(args: {
       } satisfies ScopeDecision;
     }
     return {
-      exclusionReason: '다른 사업장 데이터',
+      exclusionReason: '다른 건설사 데이터',
       exclusionReasonCode: 'different_headquarter',
       inScope: false,
     } satisfies ScopeDecision;
@@ -645,8 +645,8 @@ function headquarterCandidates(
       headquarterId: headquarter.id,
       id: headquarter.id,
       kind: 'headquarter',
-      label: headquarter.name || '사업장',
-      reason: '사업장관리번호 일치',
+      label: headquarter.name || '건설사',
+      reason: '건설사 관리번호 일치',
       siteId: null,
     }));
   }
@@ -657,8 +657,8 @@ function headquarterCandidates(
       headquarterId: headquarter.id,
       id: headquarter.id,
       kind: 'headquarter',
-      label: headquarter.name || '사업장',
-      reason: '사업장개시번호 일치',
+      label: headquarter.name || '건설사',
+      reason: '건설사 개시번호 일치',
       siteId: null,
     }));
   }
@@ -669,8 +669,8 @@ function headquarterCandidates(
     headquarterId: headquarter.id,
     id: headquarter.id,
     kind: 'headquarter',
-    label: headquarter.name || '사업장',
-    reason: '사업장명 일치',
+    label: headquarter.name || '건설사',
+    reason: '건설사명 일치',
     siteId: null,
   }));
 }
@@ -734,7 +734,7 @@ function siteCandidates(
       id: site.id,
       kind: 'site',
       label: site.site_name || '현장',
-      reason: '사업장 + 현장명 일치',
+      reason: '건설사 + 현장명 일치',
       siteId: site.id,
     })),
   );
@@ -1255,7 +1255,7 @@ export async function applyLocalExcelWorkbook(
         (firstRow.headquarterMatches.length === 1 ? firstRow.headquarterMatches[0].headquarterId : null);
       headquarter = headquarters.find((item) => item.id === targetHeadquarterId) || null;
       if (!headquarter) {
-        throw new Error(`${firstRow.row.rowIndex}행의 사업장 갱신 대상을 찾을 수 없습니다.`);
+        throw new Error(`${firstRow.row.rowIndex}행의 건설사 갱신 대상을 찾을 수 없습니다.`);
       }
       headquarter = await updateAdminHeadquarter(
         token,
@@ -1308,7 +1308,7 @@ export async function applyLocalExcelWorkbook(
             name:
               normalizeText(firstRow.rowData.headquarter_name) ||
               normalizeText(firstRow.rowData.site_name) ||
-              '엑셀 사업장',
+              '엑셀 건설사',
             ...headquarterPayload,
           },
           request,

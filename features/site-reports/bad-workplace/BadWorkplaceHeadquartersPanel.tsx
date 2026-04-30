@@ -16,7 +16,7 @@ export function BadWorkplaceHeadquartersPanel({
 }: BadWorkplaceHeadquartersPanelProps) {
   return (
     <section className={operationalStyles.snapshotPanel}>
-      <h3 className={operationalStyles.snapshotPanelTitle}>본사</h3>
+      <h3 className={operationalStyles.snapshotPanelTitle}>건설사</h3>
       <div className={operationalStyles.snapshotTableWrap}>
         <table className={operationalStyles.snapshotTable}>
           <colgroup>
@@ -28,10 +28,10 @@ export function BadWorkplaceHeadquartersPanel({
           <tbody>
             <tr>
               <th scope="row" className={operationalStyles.snapshotLabelCell}>
-                회사명
+                건설사명
               </th>
               <SnapshotInputCell
-                label="회사명"
+                label="건설사명"
                 value={draft.siteSnapshot.companyName}
                 onChange={(value) => onUpdateSiteSnapshot('companyName', value)}
               />
@@ -56,10 +56,10 @@ export function BadWorkplaceHeadquartersPanel({
                 }
               />
               <th scope="row" className={operationalStyles.snapshotLabelCell}>
-                사업장관리번호
+                건설사 관리번호
               </th>
               <SnapshotInputCell
-                label="사업장관리번호"
+                label="건설사 관리번호"
                 value={draft.siteSnapshot.siteManagementNumber}
                 onChange={(value) => onUpdateSiteSnapshot('siteManagementNumber', value)}
               />
@@ -69,7 +69,7 @@ export function BadWorkplaceHeadquartersPanel({
                 주소
               </th>
               <SnapshotInputCell
-                label="본사 주소"
+                label="건설사 주소"
                 value={draft.siteSnapshot.headquartersAddress}
                 onChange={(value) => onUpdateSiteSnapshot('headquartersAddress', value)}
                 colSpan={3}

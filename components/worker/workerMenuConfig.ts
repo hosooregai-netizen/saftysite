@@ -82,7 +82,7 @@ export function buildWorkerTopLevelMenuItems(input: {
       active: pathname === '/calendar',
     },
     {
-      label: '사업장/현장',
+      label: '건설사/현장',
       href: '/',
       active:
         isWorkerListPath(pathname) ||

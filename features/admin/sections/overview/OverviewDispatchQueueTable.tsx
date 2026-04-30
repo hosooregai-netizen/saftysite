@@ -67,7 +67,7 @@ export function OverviewDispatchQueueTable({
                 <thead>
                   <tr>
                     <th>현장</th>
-                    <th>사업장</th>
+                    <th>건설사</th>
                     <th>공사금액</th>
                     <th>기본 수신처</th>
                     <th>미발송 보고서</th>

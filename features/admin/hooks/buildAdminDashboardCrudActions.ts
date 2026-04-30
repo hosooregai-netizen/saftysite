@@ -118,7 +118,7 @@ export function buildAdminDashboardCrudActions({
         },
       ),
     createHeadquarter: (input: SafetyHeadquarterInput) =>
-      runMutation((token) => createSafetyHeadquarter(token, input), '사업장 정보를 생성했습니다.', {
+      runMutation((token) => createSafetyHeadquarter(token, input), '건설사 정보를 생성했습니다.', {
         applyResult: (current, headquarter) => ({
           ...current,
           headquarters: upsertRecordById(current.headquarters, headquarter),
@@ -126,7 +126,7 @@ export function buildAdminDashboardCrudActions({
         invalidateClientCaches: invalidateAdminDirectoryMutationClientCaches,
       }),
     updateHeadquarter: (id: string, input: SafetyHeadquarterUpdateInput) =>
-      runMutation((token) => updateSafetyHeadquarter(token, id, input), '사업장 정보를 수정했습니다.', {
+      runMutation((token) => updateSafetyHeadquarter(token, id, input), '건설사 정보를 수정했습니다.', {
         applyResult: (current, headquarter) => ({
           ...current,
           headquarters: upsertRecordById(current.headquarters, headquarter),
@@ -149,7 +149,7 @@ export function buildAdminDashboardCrudActions({
           await deleteSafetyHeadquarter(token, id);
           return { headquarterId: id, relatedSiteIds: Array.from(relatedSiteIds) };
         },
-        '사업장을 삭제했습니다.',
+        '건설사를 삭제했습니다.',
         {
           applyResult: (current, result) => ({
             ...current,

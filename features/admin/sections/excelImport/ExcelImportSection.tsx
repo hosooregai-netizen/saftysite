@@ -23,14 +23,16 @@ interface ExcelImportSectionProps {
 
 const FIELD_LABELS: Record<string, string> = {
   business_registration_no: '사업자등록번호',
-  contact_name: '본사 대표자명',
-  contact_phone: '본사 연락처',
+  contact_name: '건설사 대표자명',
+  contact_phone: '건설사 연락처',
   contract_date: '계약일',
   contract_type: '계약유형',
   corporate_registration_no: '법인등록번호',
-  headquarter_name: '사업장명',
+  headquarter_management_number: '건설사 관리번호',
+  headquarter_name: '건설사명',
+  headquarter_opening_number: '건설사 개시번호',
   license_no: '면허번호',
-  management_number: '사업장 관리번호',
+  management_number: '건설사 관리번호',
   manager_name: '현장소장명',
   manager_phone: '현장소장 연락처',
   per_visit_amount: '회당 단가',
@@ -39,7 +41,7 @@ const FIELD_LABELS: Record<string, string> = {
   project_start_date: '공사시작일',
   road_address: '도로명주소',
   site_address: '현장 주소',
-  site_code: '사업장개시번호',
+  site_code: '건설사 개시번호',
   site_name: '현장명',
   total_contract_amount: '총 계약금액',
   total_rounds: '총 회차',
@@ -48,7 +50,7 @@ const FIELD_LABELS: Record<string, string> = {
 function buildScopeSummary(scope: ExcelImportScope): ExcelImportScopeSummary {
   return {
     ...scope,
-    label: scope.siteId ? '현장 1곳' : scope.headquarterId ? '사업장 1곳' : '전체',
+    label: scope.siteId ? '현장 1곳' : scope.headquarterId ? '건설사 1곳' : '전체',
   };
 }
 
@@ -56,8 +58,8 @@ function formatApplyNotice(preview: ExcelImportPreview, result: ExcelApplyResult
   return [
     `${preview.fileName} 반영이 완료되었습니다.`,
     `포함 행 ${result.rows.length}건`,
-    `사업장 생성 ${result.summary.createdHeadquarterCount}건`,
-    `사업장 갱신 ${result.summary.updatedHeadquarterCount}건`,
+    `건설사 생성 ${result.summary.createdHeadquarterCount}건`,
+    `건설사 갱신 ${result.summary.updatedHeadquarterCount}건`,
     `현장 생성 ${result.summary.createdSiteCount}건`,
     `현장 갱신 ${result.summary.updatedSiteCount}건`,
     `기존 지도요원 매칭 ${result.summary.matchedExistingUserCount ?? 0}건`,
@@ -330,7 +332,7 @@ export function ExcelImportSection({ onReload, scope }: ExcelImportSectionProps)
                 <strong className={styles.summaryValue}>{selectedSheet.summary.createCount}</strong>
               </article>
               <article className={styles.summaryCard}>
-                <span className={styles.summaryLabel}>자동 사업장 갱신</span>
+                <span className={styles.summaryLabel}>자동 건설사 갱신</span>
                 <strong className={styles.summaryValue}>{selectedSheet.summary.updateHeadquarterCount}</strong>
               </article>
               <article className={styles.summaryCard}>

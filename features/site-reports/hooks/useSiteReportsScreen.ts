@@ -14,7 +14,7 @@ export function useSiteReportsScreen(siteKey: string) {
   const { currentSite, currentUser } = reportListState;
   const isAdminView = Boolean(currentUser && isAdminUserRole(currentUser.role));
   const createAvailabilityMessage =
-    currentSite && isResolvingSite ? '사업장 정보를 확인하는 중입니다.' : null;
+    currentSite && isResolvingSite ? '현장 정보를 확인하는 중입니다.' : null;
   const canCreateReport =
     reportListState.canCreateReport && Boolean(currentSite) && !isResolvingSite;
 

@@ -150,7 +150,7 @@ export function SiteQuarterlyReportsScreen({
   });
   const canCreateReport = Boolean(currentSite) && !isResolvingSite;
   const createAvailabilityMessage =
-    currentSite && isResolvingSite ? '사업장 정보를 확인하는 중입니다.' : null;
+    currentSite && isResolvingSite ? '현장 정보를 확인하는 중입니다.' : null;
   const deletingRow = dialogReportId
     ? rows.find((row) => row.reportId === dialogReportId) ?? null
     : null;
@@ -225,7 +225,7 @@ export function SiteQuarterlyReportsScreen({
   }
 
   if (isResolvingSite && !currentSite) {
-    return <QuarterlyReportsStatePanel message="사업장 정보를 확인하는 중입니다." />;
+    return <QuarterlyReportsStatePanel message="현장 정보를 확인하는 중입니다." />;
   }
 
   if (!currentSite) {

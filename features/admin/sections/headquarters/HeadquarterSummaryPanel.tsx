@@ -12,14 +12,14 @@ interface HeadquarterSummaryPanelProps {
 
 function getHeadquarterMissingFields(headquarter: SafetyHeadquarter) {
   const requiredChecks: Array<[string, string | null]> = [
-    ['사업장관리번호', headquarter.management_number],
-    ['개시번호', headquarter.opening_number],
+    ['건설사 관리번호', headquarter.management_number],
+    ['건설사 개시번호', headquarter.opening_number],
     ['사업자등록번호', headquarter.business_registration_no],
     ['법인등록번호', headquarter.corporate_registration_no],
     ['면허번호', headquarter.license_no],
     ['대표자명', headquarter.contact_name],
     ['대표 전화', headquarter.contact_phone],
-    ['본사 주소', headquarter.address],
+    ['건설사 주소', headquarter.address],
   ];
 
   return requiredChecks
@@ -29,8 +29,8 @@ function getHeadquarterMissingFields(headquarter: SafetyHeadquarter) {
 
 function buildRegistrationRows(headquarter: SafetyHeadquarter) {
   return [
-    ['사업장관리번호', headquarter.management_number || '-'],
-    ['개시번호', headquarter.opening_number || '-'],
+    ['건설사 관리번호', headquarter.management_number || '-'],
+    ['건설사 개시번호', headquarter.opening_number || '-'],
     ['사업자등록번호', headquarter.business_registration_no || '-'],
     ['법인등록번호', headquarter.corporate_registration_no || '-'],
     ['면허번호', headquarter.license_no || '-'],
@@ -63,18 +63,18 @@ export function HeadquarterSummaryPanel({
     <section className={styles.sectionCard}>
       <div className={styles.sectionHeader}>
         <div className={styles.sectionHeaderTitleBlock}>
-          <div className={styles.sectionHeaderMeta}>사업장 요약</div>
+          <div className={styles.sectionHeaderMeta}>건설사 요약</div>
           {missingFields.length ? (
             <div className={styles.contextBadgeRow}>
               <span className={`${styles.contextBadge} ${styles.contextBadgeWarning}`}>
-                사업장 보완 {missingFields.length}건
+                건설사 보완 {missingFields.length}건
               </span>
             </div>
           ) : null}
         </div>
         <div className={styles.sectionHeaderActions}>
           <button type="button" className="app-button app-button-primary" onClick={onEdit}>
-            사업장 정보 수정
+            건설사 정보 수정
           </button>
         </div>
       </div>
@@ -82,7 +82,7 @@ export function HeadquarterSummaryPanel({
         <div className={styles.headquarterOverviewShell}>
           <article className={styles.headquarterOverviewPrimary}>
             <div className={styles.headquarterOverviewHeader}>
-              <span className={styles.summaryCardLabel}>사업장 등록 정보</span>
+              <span className={styles.summaryCardLabel}>건설사 등록 정보</span>
               <strong className={styles.headquarterOverviewTitle}>{headquarter.name}</strong>
             </div>
             <div className={styles.summaryCardList}>
@@ -119,7 +119,7 @@ export function HeadquarterSummaryPanel({
               </span>
             </article>
             <article className={styles.contextCell}>
-              <span className={styles.contextCellLabel}>본사 주소</span>
+              <span className={styles.contextCellLabel}>건설사 주소</span>
               <strong className={styles.contextCellValue}>{headquarter.address || '-'}</strong>
               <span className={styles.contextCellMeta}>
                 대표 전화 {headquarter.contact_phone || '-'}
@@ -144,7 +144,7 @@ export function HeadquarterSummaryPanel({
               <span className={styles.contextCellLabel}>운영 메모</span>
               <strong className={styles.contextCellValue}>{headquarter.memo || '운영 메모 없음'}</strong>
               <span className={styles.contextCellMeta}>
-                {missingFields.length ? '빠진 항목을 정리한 뒤 메모를 남겨주세요.' : '사업장 기본 정보 입력 완료'}
+                {missingFields.length ? '빠진 항목을 정리한 뒤 메모를 남겨주세요.' : '건설사 기본 정보 입력 완료'}
               </span>
             </article>
           </div>

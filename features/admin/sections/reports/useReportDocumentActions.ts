@@ -203,7 +203,7 @@ export function useReportDocumentActions({
               { key: 'reportType', label: '유형' },
               { key: 'reportTitle', label: '보고서명' },
               { key: 'siteName', label: '현장' },
-              { key: 'headquarterName', label: '사업장' },
+              { key: 'headquarterName', label: '건설사' },
               { key: 'assigneeName', label: '담당자' },
               { key: 'visitDate', label: '기준일' },
               { key: 'deadlineDate', label: '마감일' },

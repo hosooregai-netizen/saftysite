@@ -10,7 +10,7 @@ export type MobileQuarterlyStepId =
 
 export const MOBILE_QUARTERLY_STEPS: Array<{ id: MobileQuarterlyStepId; label: string }> = [
   { id: 'overview', label: '기본' },
-  { id: 'snapshot', label: '사업장' },
+  { id: 'snapshot', label: '건설사' },
   { id: 'analysis', label: '분석' },
   { id: 'implementation', label: '이행' },
   { id: 'countermeasures', label: '대책' },

@@ -36,7 +36,7 @@ export function SitesSection(props: SitesSectionProps) {
             formClassName={`${styles.sectionHeaderSearchShell} ${styles.sectionHeaderToolbarSearch}`}
             inputClassName={`app-input ${styles.sectionHeaderSearchInput}`}
             buttonClassName={styles.sectionHeaderSearchButton}
-            placeholder="현장명, 사업장 관리번호, 공사 종류, 주소, 점검자·배정 지도요원으로 검색"
+            placeholder="현장명, 건설사 관리번호, 공사 종류, 주소, 점검자·배정 지도요원으로 검색"
             value={state.queryInput}
             onChange={state.setQueryInput}
             onSubmit={state.submitQuery}

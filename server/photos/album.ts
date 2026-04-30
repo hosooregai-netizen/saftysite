@@ -77,7 +77,7 @@ function getHeadquarterName(site: SafetySite) {
   return (
     normalizeText(site.headquarter_detail?.name) ||
     normalizeText(site.headquarter?.name) ||
-    '사업장'
+    '건설사'
   );
 }
 

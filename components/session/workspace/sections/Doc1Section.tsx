@@ -57,9 +57,9 @@ export default function Doc1Section({
                   </th>
                   <td className={styles.doc1ValueCell}>{siteName}</td>
                   <th scope="row" className={styles.doc1LabelCell}>
-                    사업장관리번호
+                    건설사 관리번호
                     <br />
-                    (사업개시번호)
+                    (건설사 개시번호)
                   </th>
                   <td className={styles.doc1ValueCell}>{siteManagementNumber}</td>
                 </tr>
@@ -101,10 +101,10 @@ export default function Doc1Section({
               <tbody>
                 <tr>
                   <th rowSpan={3} scope="rowgroup" className={styles.doc1GroupCell}>
-                    본사
+                    건설사
                   </th>
                   <th scope="row" className={styles.doc1LabelCell}>
-                    회사명
+                    건설사명
                   </th>
                   <td className={styles.doc1ValueCell}>{companyName}</td>
                   <th scope="row" className={styles.doc1LabelCell}>
@@ -126,7 +126,7 @@ export default function Doc1Section({
                 </tr>
                 <tr>
                   <th scope="row" className={styles.doc1LabelCell}>
-                    본사주소
+                    건설사주소
                   </th>
                   <td colSpan={3} className={`${styles.doc1ValueCell} ${styles.doc1AddressCell}`}>
                     {headquartersAddress}

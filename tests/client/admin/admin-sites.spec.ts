@@ -91,7 +91,7 @@ export async function runAdminSitesSmoke(config: ClientSmokePlaywrightConfig) {
 
     await harness.waitForRequestCount('GET /api/admin/sites/list', siteListReadsBefore + 1);
     await harness.waitForRequestCount('GET /api/admin/directory/lookups', lookupReadsBefore + 1);
-    await page.getByRole('button', { name: '사업장 정보 수정' }).waitFor({ state: 'visible' });
+    await page.getByRole('button', { name: '건설사 정보 수정' }).waitFor({ state: 'visible' });
     await page.waitForTimeout(250);
     let settledSiteListReads = requestCounts.get('GET /api/admin/sites/list') || 0;
 
@@ -119,7 +119,7 @@ export async function runAdminSitesSmoke(config: ClientSmokePlaywrightConfig) {
     await page.goto(`${harness.baseURL}/admin?section=headquarters&headquarterId=hq-1`, {
       waitUntil: 'load',
     });
-    await page.getByRole('button', { name: '사업장 정보 수정' }).waitFor({ state: 'visible' });
+    await page.getByRole('button', { name: '건설사 정보 수정' }).waitFor({ state: 'visible' });
     await page.waitForTimeout(250);
     settledSiteListReads = requestCounts.get('GET /api/admin/sites/list') || 0;
     adminSiteReadsBefore = requestCounts.get('GET /api/admin/sites/:id') || 0;
@@ -154,7 +154,7 @@ export async function runAdminSitesSmoke(config: ClientSmokePlaywrightConfig) {
     await siteSearch.getByRole('button').click();
     await page.locator('tbody').getByText('기존 현장', { exact: true }).waitFor({ state: 'visible' });
 
-    const headquarterBackLabelCount = await page.getByText('사업장 목록', { exact: true }).count();
+    const headquarterBackLabelCount = await page.getByText('건설사 목록', { exact: true }).count();
     if (headquarterBackLabelCount !== 1) {
       throw new Error(
         `Expected a single shell back label for the headquarter drilldown, received ${headquarterBackLabelCount}.`,

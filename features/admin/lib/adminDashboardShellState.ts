@@ -30,7 +30,7 @@ export function buildAdminDashboardShellState({
       ? selectedSiteId
         ? '현장 목록'
         : selectedHeadquarterId
-          ? '사업장 목록'
+          ? '건설사 목록'
           : undefined
       : undefined;
   const onBack =

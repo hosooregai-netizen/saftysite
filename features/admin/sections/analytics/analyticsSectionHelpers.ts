@@ -144,7 +144,7 @@ export function buildScopeChips(
   ];
   const headquarter = data.headquarters.find((item) => item.id === input.headquarterId);
   const user = data.users.find((item) => item.id === input.userId);
-  if (headquarter) chips.push({ label: '사업장', value: headquarter.name });
+  if (headquarter) chips.push({ label: '건설사', value: headquarter.name });
   if (user) chips.push({ label: '직원', value: user.name });
   if (input.contractType) {
     chips.push({
@@ -175,7 +175,7 @@ export function buildScopeChipsFromLookups(
   const headquarter = input.headquarterOptions.find((item) => item.value === input.headquarterId);
   const user = input.userOptions.find((item) => item.value === input.userId);
   const contractType = input.contractTypeOptions.find((item) => item.value === input.contractType);
-  if (headquarter) chips.push({ label: '사업장', value: headquarter.label });
+  if (headquarter) chips.push({ label: '건설사', value: headquarter.label });
   if (user) chips.push({ label: '직원', value: user.label });
   if (contractType) chips.push({ label: '구분', value: contractType.label });
   if (input.query.trim()) chips.push({ label: '검색', value: input.query.trim() });

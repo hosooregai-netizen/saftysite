@@ -176,7 +176,7 @@ export async function runQuarterlyReportSmoke(config: ClientSmokePlaywrightConfi
 
     const createButton = page.getByRole('button', { name: '보고서 작성' });
     await createButton.waitFor({ state: 'visible' });
-    await page.getByText('사업장 정보를 확인하는 중입니다.').waitFor({ state: 'visible' });
+    await page.getByText('현장 정보를 확인하는 중입니다.').waitFor({ state: 'visible' });
     assert.equal(await createButton.isDisabled(), true, 'Quarterly create button should stay disabled while resolving site info.');
 
     await harness.waitForRequestCount(
@@ -242,13 +242,13 @@ export async function runQuarterlyReportSmoke(config: ClientSmokePlaywrightConfi
 
     await harness.waitForCondition(
       async () =>
-        (await page.getByLabel('사업장관리번호').inputValue()) === HEADQUARTER_NUMBER,
+        (await page.getByLabel('건설사 관리번호').inputValue()) === HEADQUARTER_NUMBER,
       'Quarterly site snapshot did not populate the management number.',
     );
-    assert.equal(await page.getByLabel('회사명').inputValue(), HEADQUARTER_NAME);
+    assert.equal(await page.getByLabel('건설사명').inputValue(), HEADQUARTER_NAME);
     assert.equal(await page.getByLabel('본사 주소').inputValue(), HEADQUARTER_ADDRESS);
     await page.getByText('1. 원본 보고서 선택').waitFor({ state: 'visible' });
-    await page.getByText('1. 기술지도 사업장 개요').waitFor({ state: 'visible' });
+    await page.getByText('1. 기술지도 건설사/현장 개요').waitFor({ state: 'visible' });
     await page.getByText('2. 재해유형 분석').waitFor({ state: 'visible' });
     await page.getByRole('button', { name: '문서 다운로드 (.hwpx)' }).waitFor({
       state: 'visible',

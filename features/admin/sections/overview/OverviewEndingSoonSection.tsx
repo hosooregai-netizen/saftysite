@@ -62,7 +62,7 @@ export function OverviewEndingSoonSection({
                 <thead>
                   <tr>
                     <th>현장</th>
-                    <th>본사</th>
+                    <th>건설사</th>
                     <th>종료 기준</th>
                     <th>종료일</th>
                     <th>남은 기간</th>

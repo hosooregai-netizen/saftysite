@@ -50,7 +50,7 @@ export function buildMobileRootTabs(activeTab: MobileRootTabKey): TabItem[] {
       isActive: activeTab === 'calendar',
     },
     {
-      label: '사업장/현장',
+      label: '건설사/현장',
       href: buildMobileHomeHref(),
       icon: BUILDING_ICON,
       isActive: activeTab === 'sites',

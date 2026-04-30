@@ -45,13 +45,13 @@ function validateHeadquarterSubmit(
   editingId: string | null,
 ) {
   const maxLengthChecks: Array<[string, string, number]> = [
-    ['회사명', form.name, 200],
-    ['사업장관리번호', form.management_number, 100],
-    ['사업장개시번호', form.opening_number, 100],
+    ['건설사명', form.name, 200],
+    ['건설사 관리번호', form.management_number, 100],
+    ['건설사 개시번호', form.opening_number, 100],
     ['사업자등록번호', form.business_registration_no, 50],
     ['법인등록번호', form.corporate_registration_no, 50],
     ['건설업면허/등록번호', form.license_no, 50],
-    ['본사 대표자명', form.contact_name, 100],
+    ['건설사 대표자명', form.contact_name, 100],
     ['대표 전화', form.contact_phone, 50],
   ];
 
@@ -71,7 +71,7 @@ function validateHeadquarterSubmit(
         normalizeHeadquarterValue(item.management_number) === duplicateManagementNumber,
     )
   ) {
-    return `사업장관리번호 '${duplicateManagementNumber}'는 이미 다른 사업장에서 사용 중입니다.`;
+    return `건설사 관리번호 '${duplicateManagementNumber}'는 이미 다른 건설사에서 사용 중입니다.`;
   }
 
   const duplicateOpeningNumber = normalizeHeadquarterValue(form.opening_number);
@@ -83,7 +83,7 @@ function validateHeadquarterSubmit(
         normalizeHeadquarterValue(item.opening_number) === duplicateOpeningNumber,
     )
   ) {
-    return `사업장개시번호 '${duplicateOpeningNumber}'는 이미 다른 사업장에서 사용 중입니다.`;
+    return `건설사 개시번호 '${duplicateOpeningNumber}'는 이미 다른 건설사에서 사용 중입니다.`;
   }
 
   return null;
@@ -479,8 +479,8 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
       <section className={`${styles.sectionCard} ${styles.listSectionCard}`}>
         <div className={styles.sectionHeader}>
           <div className={styles.sectionHeaderTitleBlock}>
-            <h2 className={styles.sectionTitle}>사업장</h2>
-            <div className={styles.sectionHeaderMeta}>사업장과 현장 목록을 불러오는 중입니다.</div>
+            <h2 className={styles.sectionTitle}>건설사</h2>
+            <div className={styles.sectionHeaderMeta}>건설사와 현장 목록을 불러오는 중입니다.</div>
           </div>
         </div>
         <div className={styles.sectionBody}>
@@ -519,13 +519,13 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
       state.closeModal();
       await refreshHeadquarterList();
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : '사업장 저장에 실패했습니다.');
+      window.alert(error instanceof Error ? error.message : '건설사 저장에 실패했습니다.');
     }
   };
 
   const handleDeleteHeadquarter = async (item: import('@/types/controller').SafetyHeadquarter) => {
     const confirmed = window.confirm(
-      `'${item.name}' 사업장을 삭제하시겠습니까?\n연결된 현장과 현장 배정 정보도 함께 정리되고, 이 작업은 되돌릴 수 없습니다.`,
+      `'${item.name}' 건설사를 삭제하시겠습니까?\n연결된 현장과 현장 배정 정보도 함께 정리되고, 이 작업은 되돌릴 수 없습니다.`,
     );
     if (!confirmed) return;
     await onDelete(item.id);
@@ -572,18 +572,18 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
                 const { exportAdminWorkbook } = await import('@/lib/admin/exportClient');
                 void exportAdminWorkbook('headquarters', [
                   {
-                    name: '사업장',
+                    name: '건설사',
                     columns: [
-                      { key: 'name', label: '회사명' },
+                      { key: 'name', label: '건설사명' },
                       { key: 'site_count', label: '현장 수' },
-                      { key: 'management_number', label: '사업장관리번호' },
-                      { key: 'opening_number', label: '사업장개시번호' },
+                      { key: 'management_number', label: '건설사 관리번호' },
+                      { key: 'opening_number', label: '건설사 개시번호' },
                       { key: 'business_registration_no', label: '사업자등록번호' },
                       { key: 'corporate_registration_no', label: '법인등록번호' },
                       { key: 'license_no', label: '건설업면허/등록번호' },
-                      { key: 'contact_name', label: '본사 대표자명' },
+                      { key: 'contact_name', label: '건설사 대표자명' },
                       { key: 'contact_phone', label: '대표 전화' },
-                      { key: 'address', label: '본사 주소' },
+                      { key: 'address', label: '건설사 주소' },
                       { key: 'memo', label: '운영 메모' },
                       { key: 'updated_at', label: '수정일' },
                     ],
@@ -638,7 +638,7 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
           showHeader
           title={siteStatusTitle}
           titleActionHref={getAdminSectionHref('headquarters')}
-          titleActionLabel="사업장 목록 보기"
+          titleActionLabel="건설사 목록 보기"
         />
       ) : resolvedSelectedSite ? (
         <SiteManagementMainPanel

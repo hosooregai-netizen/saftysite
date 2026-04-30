@@ -97,7 +97,7 @@ export function createGetHandler(deps: HeadquartersListRouteDeps = defaultDeps) 
         return NextResponse.json({ error: error.message }, { status: error.status });
       }
       return NextResponse.json(
-        { error: error instanceof Error ? error.message : '사업장 목록을 불러오지 못했습니다.' },
+        { error: error instanceof Error ? error.message : '건설사 목록을 불러오지 못했습니다.' },
         { status: 500 },
       );
     }

@@ -168,7 +168,7 @@ export const createSafetyHeadquarter = async (token: string, body: SafetyHeadqua
   } catch (error) {
     if (isHeadquarterWriteFailure(error)) {
       throw new SafetyApiError(
-        '사업장 저장이 서버에서 실패했습니다. 사업장관리번호/사업장개시번호가 같은 값이 아니라면 서버 로그 확인이 필요합니다.',
+        '건설사 저장이 서버에서 실패했습니다. 건설사 관리번호/건설사 개시번호가 같은 값이 아니라면 서버 로그 확인이 필요합니다.',
         500,
       );
     }
@@ -191,7 +191,7 @@ export const updateSafetyHeadquarter = async (
   } catch (error) {
     if (isHeadquarterWriteFailure(error)) {
       throw new SafetyApiError(
-        '사업장 수정이 서버에서 실패했습니다. 사업장관리번호/사업장개시번호가 같은 값이 아니라면 서버 로그 확인이 필요합니다.',
+        '건설사 수정이 서버에서 실패했습니다. 건설사 관리번호/건설사 개시번호가 같은 값이 아니라면 서버 로그 확인이 필요합니다.',
         500,
       );
     }

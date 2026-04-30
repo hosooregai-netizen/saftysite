@@ -4,7 +4,7 @@ export const ADMIN_FEATURE_CONTRACTS = {
   'admin-control-center': {
     id: 'admin-control-center',
     description:
-      '관제 대시보드 overview/analytics가 admin 로그인 진입, overview-first 로딩, session cache 기반 재진입, KPI/차트/기준월 전환, 기준월 고정 상세표, 기간 전환, directory lookups 기반 계약 유형 옵션, site 계약 연동 매출, 과거 예정 일정을 실회차로 인정하는 집계, 직원별 표의 지연 중심 간소화, 현장별 표의 건설사/진행률 copy, export 진입 흐름, 그리고 자료 부족 표에서 현장/사업장 이름이 우선 읽히는 컬럼 배치를 유지한다.',
+      '관제 대시보드 overview/analytics가 admin 로그인 진입, overview-first 로딩, session cache 기반 재진입, KPI/차트/기준월 전환, 기준월 고정 상세표, 기간 전환, directory lookups 기반 계약 유형 옵션, site 계약 연동 매출, 과거 예정 일정을 실회차로 인정하는 집계, 직원별 표의 지연 중심 간소화, 현장별 표의 건설사/진행률 copy, export 진입 흐름, 그리고 자료 부족 표에서 현장/건설사 이름이 우선 읽히는 컬럼 배치를 유지한다.',
     routes: ['/admin?section=overview', '/admin?section=analytics'],
     markers: ['운영 개요', '현장 상태', '발송 관리 대상', '매출/실적 집계', '실행 회차', '남은 회차', '월별 매출 추이', '상세 표', '건설사', '진행률'],
     apis: ['GET /api/admin/dashboard/overview', 'GET /api/admin/dashboard/analytics', 'GET /api/admin/dashboard/analytics/month-detail', 'GET /api/admin/directory/lookups', 'POST /api/admin/exports/:section'],
@@ -13,11 +13,11 @@ export const ADMIN_FEATURE_CONTRACTS = {
   'admin-headquarters': {
     id: 'admin-headquarters',
     description:
-      '사업장 목록이 safety-server list passthrough 기반 서버 페이지네이션, session cache, drilldown 진입, 생성/수정/삭제 흐름, 저장 성공 후 empty-body 응답 fallback 재조회, 저장 timeout 시 모달 유지와 안내 메시지, deleted soft-delete hidden refresh를 유지한다.',
+      '건설사 목록이 safety-server list passthrough 기반 서버 페이지네이션, session cache, drilldown 진입, 생성/수정/삭제 흐름, 저장 성공 후 empty-body 응답 fallback 재조회, 저장 timeout 시 모달 유지와 안내 메시지, deleted soft-delete hidden refresh를 유지한다.',
     routes: ['/admin?section=headquarters'],
-    markers: ['사업장 목록', '사업장 추가', '사업장 수정', '현장 보기'],
+    markers: ['건설사 목록', '건설사 추가', '건설사 수정', '현장 보기'],
     apis: ['GET /api/admin/headquarters/list', 'GET /api/admin/sites/list', 'GET /api/admin/directory/assignments', 'POST /headquarters', 'PATCH /headquarters/:id', 'DELETE /headquarters/:id'],
-    criticalActions: ['사업장 목록 페이지 로드', '사업장 생성', '사업장 수정', '사업장 수정 empty-body fallback 재조회 확인', '사업장 수정 timeout 시 모달 유지와 안내 메시지 확인', '현장 drilldown 진입', '사업장 삭제', 'drilldown 현장 생성/수정/삭제 직후 refresh 확인'],
+    criticalActions: ['건설사 목록 페이지 로드', '건설사 생성', '건설사 수정', '건설사 수정 empty-body fallback 재조회 확인', '건설사 수정 timeout 시 모달 유지와 안내 메시지 확인', '현장 drilldown 진입', '건설사 삭제', 'drilldown 현장 생성/수정/삭제 직후 refresh 확인'],
   },
   'admin-users': {
     id: 'admin-users',

@@ -7,8 +7,8 @@ export const INSPECTION_WORKSPACE_SECTIONS: InspectionSectionMeta[] = INSPECTION
     section.key === 'doc1'
       ? {
           ...section,
-          label: '1-2. 기술지도 대상사업장 / 기술지도 개요',
-          shortLabel: '대상사업장 / 개요',
+          label: '1-2. 기술지도 대상 건설사/현장 / 기술지도 개요',
+          shortLabel: '대상 건설사/현장 / 개요',
           compactLabel: '1-2',
         }
       : section.key === 'doc13'

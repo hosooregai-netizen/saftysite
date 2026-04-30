@@ -15,7 +15,7 @@ export async function runSiteHubSmoke(config: ClientSmokePlaywrightConfig) {
 
     await page.goto(`${harness.baseURL}/sites/site-1/entry`, { waitUntil: 'load' });
     await page.waitForURL(/\/sites\/site-1\/entry$/);
-    await page.getByRole('heading', { name: '사업장/현장 식별' }).waitFor({
+    await page.getByRole('heading', { name: '건설사/현장 식별' }).waitFor({
       state: 'visible',
     });
     await page.getByRole('heading', { name: '운영/담당' }).waitFor({

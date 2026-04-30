@@ -27,7 +27,7 @@ export async function runMobileQuarterlyReportSmoke(config: ClientSmokePlaywrigh
     await page.getByRole('button', { name: '저장' }).waitFor({ state: 'visible' });
     await page.getByRole('button', { name: '보고서 선택' }).waitFor({ state: 'visible' });
     await page.getByRole('button', { name: '기본' }).waitFor({ state: 'visible' });
-    await page.getByRole('button', { name: '사업장' }).waitFor({ state: 'visible' });
+    await page.getByRole('button', { name: '건설사' }).waitFor({ state: 'visible' });
 
     await page.getByRole('button', { name: '보고서 선택' }).click();
     const sourceDialog = page.getByRole('dialog', { name: '원본 보고서 선택' });

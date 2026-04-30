@@ -60,7 +60,7 @@ const ADMIN_MENU_LABELS: Record<AdminSectionKey, string> = {
   photos: '\uC0AC\uC9C4\uCCA9',
   schedules: '\uC77C\uC815 / \uCE98\uB9B0\uB354',
   users: '\uC0AC\uC6A9\uC790',
-  headquarters: '\uC0AC\uC5C5\uC7A5 / \uD604\uC7A5',
+  headquarters: '\uAC74\uC124\uC0AC / \uD604\uC7A5',
   content: '\uCF58\uD150\uCE20',
 };
 

@@ -196,7 +196,7 @@ async function installErpRoutes({
       const body = (request.postDataJSON?.() as JsonRecord) || {};
       const created = {
         id: buildFixtureId('hq', body.name),
-        name: String(body.name || '신규 사업장'),
+        name: String(body.name || '신규 건설사'),
         management_number: body.management_number ?? null,
         opening_number: body.opening_number ?? null,
         business_registration_no: body.business_registration_no ?? null,

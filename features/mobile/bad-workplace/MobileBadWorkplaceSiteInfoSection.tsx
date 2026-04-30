@@ -22,7 +22,7 @@ export function MobileBadWorkplaceSiteInfoSection({
   return (
     <section className={styles.mobileEditorCard}>
       <div className={styles.mobileImplementationListHeader}>
-        <div className={styles.mobileImplementationListTitle}>2. 현장 / 본사 기본정보</div>
+      <div className={styles.mobileImplementationListTitle}>2. 현장 / 건설사 기본정보</div>
       </div>
 
       <div className={styles.inlineNotice}>
@@ -80,10 +80,10 @@ export function MobileBadWorkplaceSiteInfoSection({
         </article>
 
         <article className={styles.mobileImplementationItem}>
-          <div className={styles.mobileEditorCardTitle}>본사</div>
+          <div className={styles.mobileEditorCardTitle}>건설사</div>
           <div className={styles.mobileImplementationFieldGrid}>
             <MobileBadWorkplaceEditableField
-              label="회사명"
+              label="건설사명"
               value={draft.siteSnapshot.companyName}
               onChange={(value) => onUpdateSiteSnapshot('companyName', value)}
             />
@@ -98,12 +98,12 @@ export function MobileBadWorkplaceSiteInfoSection({
               onChange={(value) => onUpdateSiteSnapshot('businessRegistrationNumber', value)}
             />
             <MobileBadWorkplaceEditableField
-              label="사업관리번호"
+              label="건설사 관리번호"
               value={draft.siteSnapshot.siteManagementNumber}
               onChange={(value) => onUpdateSiteSnapshot('siteManagementNumber', value)}
             />
             <MobileBadWorkplaceEditableField
-              label="본사 주소"
+              label="건설사 주소"
               value={draft.siteSnapshot.headquartersAddress}
               wide
               onChange={(value) => onUpdateSiteSnapshot('headquartersAddress', value)}

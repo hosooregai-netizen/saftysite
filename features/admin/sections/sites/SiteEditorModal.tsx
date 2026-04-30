@@ -142,7 +142,7 @@ export function SiteEditorModal({
           <div className={styles.modalGrid}>
             {lockedHeadquarterId ? (
               <label className={styles.modalField}>
-                <span className={styles.label}>사업장</span>
+                <span className={styles.label}>건설사</span>
                 <input
                   className="app-input"
                   value={resolvedHeadquarterName}
@@ -152,7 +152,7 @@ export function SiteEditorModal({
               </label>
             ) : (
               <label className={styles.modalField}>
-                <span className={styles.label}>사업장 *</span>
+                <span className={styles.label}>건설사 *</span>
                 <select
                   className="app-select"
                   value={form.headquarter_id}

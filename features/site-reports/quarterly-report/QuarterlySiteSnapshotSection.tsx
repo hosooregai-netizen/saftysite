@@ -19,7 +19,7 @@ export function QuarterlySiteSnapshotSection(props: {
 
   return (
     <article className={operationalStyles.reportCard}>
-      <QuarterlySectionHeader title="1. 기술지도 사업장 개요" />
+      <QuarterlySectionHeader title="1. 기술지도 건설사/현장 개요" />
       <div className={operationalStyles.snapshotSectionGrid}>
         <section className={operationalStyles.snapshotPanel}>
           <h3 className={operationalStyles.snapshotPanelTitle}>현장</h3>
@@ -39,9 +39,9 @@ export function QuarterlySiteSnapshotSection(props: {
                     value={draft.siteSnapshot.siteName}
                     onChange={(value) => onChange('siteName', value)}
                   />
-                  <th scope="row" className={operationalStyles.snapshotLabelCell}>사업장관리번호</th>
+                  <th scope="row" className={operationalStyles.snapshotLabelCell}>건설사 관리번호</th>
                   <SnapshotInputCell
-                    label="사업장관리번호"
+                    label="건설사 관리번호"
                     value={draft.siteSnapshot.siteManagementNumber || draft.siteSnapshot.businessStartNumber}
                     onChange={handleSiteManagementNumberChange}
                   />
@@ -97,7 +97,7 @@ export function QuarterlySiteSnapshotSection(props: {
           </div>
         </section>
         <section className={operationalStyles.snapshotPanel}>
-          <h3 className={operationalStyles.snapshotPanelTitle}>본사</h3>
+          <h3 className={operationalStyles.snapshotPanelTitle}>건설사</h3>
           <div className={operationalStyles.snapshotTableWrap}>
             <table className={operationalStyles.snapshotTable}>
               <colgroup>
@@ -108,9 +108,9 @@ export function QuarterlySiteSnapshotSection(props: {
               </colgroup>
               <tbody>
                 <tr>
-                  <th scope="row" className={operationalStyles.snapshotLabelCell}>회사명</th>
+                  <th scope="row" className={operationalStyles.snapshotLabelCell}>건설사명</th>
                   <SnapshotInputCell
-                    label="회사명"
+                    label="건설사명"
                     value={draft.siteSnapshot.companyName}
                     onChange={(value) => onChange('companyName', value)}
                   />
@@ -130,15 +130,15 @@ export function QuarterlySiteSnapshotSection(props: {
                   />
                   <th scope="row" className={operationalStyles.snapshotLabelCell}>연락처</th>
                   <SnapshotInputCell
-                    label="본사 연락처"
+                    label="건설사 연락처"
                     value={draft.siteSnapshot.headquartersContact}
                     onChange={(value) => onChange('headquartersContact', value)}
                   />
                 </tr>
                 <tr>
-                  <th scope="row" className={operationalStyles.snapshotLabelCell}>본사 주소</th>
+                  <th scope="row" className={operationalStyles.snapshotLabelCell}>건설사 주소</th>
                   <SnapshotInputCell
-                    label="본사 주소"
+                    label="건설사 주소"
                     value={draft.siteSnapshot.headquartersAddress}
                     onChange={(value) => onChange('headquartersAddress', value)}
                     colSpan={3}

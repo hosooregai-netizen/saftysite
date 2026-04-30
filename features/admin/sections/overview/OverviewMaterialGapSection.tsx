@@ -71,7 +71,7 @@ export function OverviewMaterialGapSection({
                 <thead>
                   <tr>
                     <SortableHeaderCell column={{ key: 'siteName' }} current={sort} label="현장" onChange={setSort} sortMenuOptions={buildSortMenuOptions('siteName', { asc: '현장 가나다순', desc: '현장 역순' })} />
-                    <SortableHeaderCell column={{ key: 'headquarterName' }} current={sort} label="사업장" onChange={setSort} sortMenuOptions={buildSortMenuOptions('headquarterName', { asc: '사업장 가나다순', desc: '사업장 역순' })} />
+                    <SortableHeaderCell column={{ key: 'headquarterName' }} current={sort} label="건설사" onChange={setSort} sortMenuOptions={buildSortMenuOptions('headquarterName', { asc: '건설사 가나다순', desc: '건설사 역순' })} />
                     <SortableHeaderCell column={{ key: 'educationMissing' }} current={sort} defaultDirection="desc" label="교육 부족" onChange={setSort} sortMenuOptions={buildSortMenuOptions('educationMissing', { asc: '교육 부족 적은 순', desc: '교육 부족 많은 순' })} />
                     <SortableHeaderCell column={{ key: 'measurementMissing' }} current={sort} defaultDirection="desc" label="계측 부족" onChange={setSort} sortMenuOptions={buildSortMenuOptions('measurementMissing', { asc: '계측 부족 적은 순', desc: '계측 부족 많은 순' })} />
                     <th>교육 현황</th>

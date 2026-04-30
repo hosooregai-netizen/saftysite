@@ -26,7 +26,7 @@ export function HeadquarterEditorModal({
   return (
     <AppModal
       open={open}
-      title={editingId === 'create' ? '사업장 추가' : '사업장 수정'}
+      title={editingId === 'create' ? '건설사 추가' : '건설사 수정'}
       size="large"
       onClose={onClose}
       actions={
@@ -59,7 +59,7 @@ export function HeadquarterEditorModal({
           </div>
           <div className={styles.modalGrid}>
             <label className={styles.modalField}>
-              <span className={styles.label}>회사명</span>
+              <span className={styles.label}>건설사명</span>
               <input
                 className="app-input"
                 value={form.name}
@@ -69,7 +69,7 @@ export function HeadquarterEditorModal({
               />
             </label>
             <label className={styles.modalField}>
-              <span className={styles.label}>사업장관리번호</span>
+              <span className={styles.label}>건설사 관리번호</span>
               <input
                 className="app-input"
                 value={form.management_number}
@@ -81,7 +81,7 @@ export function HeadquarterEditorModal({
               />
             </label>
             <label className={styles.modalField}>
-              <span className={styles.label}>사업장개시번호</span>
+              <span className={styles.label}>건설사 개시번호</span>
               <input
                 className="app-input"
                 value={form.opening_number}
@@ -135,7 +135,7 @@ export function HeadquarterEditorModal({
           </div>
           <div className={styles.modalGrid}>
             <label className={styles.modalField}>
-              <span className={styles.label}>본사 대표자명</span>
+              <span className={styles.label}>건설사 대표자명</span>
               <input
                 className="app-input"
                 value={form.contact_name}
@@ -155,7 +155,7 @@ export function HeadquarterEditorModal({
               />
             </label>
             <label className={styles.modalFieldWide}>
-              <span className={styles.label}>본사 주소</span>
+              <span className={styles.label}>건설사 주소</span>
               <input
                 className="app-input"
                 value={form.address}

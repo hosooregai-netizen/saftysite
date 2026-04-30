@@ -50,7 +50,7 @@ function renderCombinedOverviewSections(props: InspectionWorkspaceSectionProps) 
     <div className={styles.combinedOverviewSectionStack}>
       <section className={styles.combinedOverviewSectionBlock} aria-labelledby="doc1-section-title">
         <h2 id="doc1-section-title" className={styles.combinedOverviewSectionTitle}>
-          1. 기술지도 대상사업장
+          1. 기술지도 대상 건설사/현장
         </h2>
         <Doc1Section session={props.session} />
       </section>
@@ -93,11 +93,11 @@ const inspectionSectionRegistry: Record<
 > = {
   doc1: {
     render: renderCombinedOverviewSections,
-    title: '1. 기술지도 대상사업장 / 2. 기술지도 개요',
+    title: '1. 기술지도 대상 건설사/현장 / 2. 기술지도 개요',
   },
   doc2: {
     render: renderCombinedOverviewSections,
-    title: '1. 기술지도 대상사업장 / 2. 기술지도 개요',
+    title: '1. 기술지도 대상 건설사/현장 / 2. 기술지도 개요',
   },
   doc3: { render: (props) => <Doc3Section {...props} />, title: '문서 3' },
   doc4: {

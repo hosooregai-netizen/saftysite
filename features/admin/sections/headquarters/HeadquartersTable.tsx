@@ -67,7 +67,7 @@ export function HeadquartersTable({
         {showHeader ? (
           <div className={styles.sectionHeaderTitleBlock}>
             <div className={styles.sectionTitleRow}>
-              <h2 className={styles.sectionTitle}>사업장 목록</h2>
+              <h2 className={styles.sectionTitle}>건설사 목록</h2>
               <Link
                 href={getAdminSectionHref('headquarters', { siteStatus: 'all' })}
                 className={styles.sectionTitleInlineAction}
@@ -85,7 +85,7 @@ export function HeadquartersTable({
             formClassName={`${styles.sectionHeaderSearchShell} ${styles.sectionHeaderToolbarSearch}`}
             inputClassName={`app-input ${styles.sectionHeaderSearchInput}`}
             buttonClassName={styles.sectionHeaderSearchButton}
-            placeholder="회사명, 관리번호, 담당자, 등록번호, 주소로 검색"
+            placeholder="건설사명, 관리번호, 담당자, 등록번호, 주소로 검색"
             value={query}
             onChange={onQueryChange}
             onSubmit={onQuerySubmit}
@@ -104,7 +104,7 @@ export function HeadquartersTable({
             onClick={onCreateRequest}
             disabled={busy}
           >
-            사업장 추가
+            건설사 추가
           </button>
         </div>
       </div>
@@ -112,7 +112,7 @@ export function HeadquartersTable({
       <div className={styles.sectionBody}>
         <div className={styles.tableShell}>
           {filteredHeadquarters.length === 0 ? (
-            <div className={styles.tableEmpty}>등록된 사업장이 없습니다.</div>
+            <div className={styles.tableEmpty}>등록된 건설사가 없습니다.</div>
           ) : (
             <div className={styles.tableWrap}>
               <table className={`${styles.table} ${styles.headquartersTable}`}>
@@ -137,7 +137,7 @@ export function HeadquartersTable({
                     <SortableHeaderCell
                       column={{ key: 'name' }}
                       current={sort}
-                      label="사업장명"
+                      label="건설사명"
                       onChange={onSortChange}
                     />
                     <th>담당자</th>

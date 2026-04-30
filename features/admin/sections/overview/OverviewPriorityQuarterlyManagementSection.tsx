@@ -100,7 +100,7 @@ export function OverviewPriorityQuarterlyManagementSection({
                 <thead>
                   <tr>
                     <th>현장</th>
-                    <th>사업장</th>
+                    <th>건설사</th>
                     <th>공사금액</th>
                     <th>최근 지도</th>
                     <th>상태</th>

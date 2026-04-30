@@ -22,7 +22,7 @@ export function PhotosSection({ sites }: PhotosSectionProps) {
       mode="admin"
       sites={sites.map((site) => ({
         headquarterId: site.headquarter_id,
-        headquarterName: site.headquarter_detail?.name || site.headquarter?.name || '사업장 미상',
+        headquarterName: site.headquarter_detail?.name || site.headquarter?.name || '건설사 미상',
         id: site.id,
         siteName: site.site_name,
         totalRounds: site.total_rounds ?? null,

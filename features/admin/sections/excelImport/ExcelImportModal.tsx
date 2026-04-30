@@ -20,7 +20,7 @@ interface ExcelImportModalProps {
 
 function buildScopeLabel(scope: ExcelImportScope) {
   if (scope.siteId) return '현장 1곳';
-  if (scope.headquarterId) return '사업장 1곳';
+  if (scope.headquarterId) return '건설사 1곳';
   return '전체';
 }
 
@@ -38,7 +38,7 @@ export function ExcelImportModal({
     siteId: contextSiteId,
   };
   const scopeLabel = buildScopeLabel(scope);
-  const title = originSection === 'sites' ? '현장 엑셀 업로드' : '사업장 엑셀 업로드';
+  const title = originSection === 'sites' ? '현장 엑셀 업로드' : '건설사 엑셀 업로드';
 
   return (
     <AppModal

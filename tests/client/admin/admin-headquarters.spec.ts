@@ -80,7 +80,7 @@ export async function runAdminHeadquartersSmoke(config: ClientSmokePlaywrightCon
     await harness.loginAs('admin@example.com');
 
     await harness.waitForRequestCount('GET /api/admin/headquarters/list', headquarterReadsBefore + 1);
-    await page.getByRole('heading', { level: 2, name: '사업장 목록' }).waitFor({ state: 'visible' });
+    await page.getByRole('heading', { level: 2, name: '건설사 목록' }).waitFor({ state: 'visible' });
 
     const firstRowName = page.locator('tbody tr').first().locator('td').nth(1);
     await firstRowName.waitFor({ state: 'visible' });
@@ -109,11 +109,11 @@ export async function runAdminHeadquartersSmoke(config: ClientSmokePlaywrightCon
       1,
     );
 
-    await page.getByRole('button', { name: '사업장 추가' }).click();
-    const createDialog = page.getByRole('dialog', { name: '사업장 추가' });
-    await createDialog.getByLabel('회사명').fill('mocked headquarter');
-    await createDialog.getByLabel('사업장관리번호').fill('HQ-NEW-001');
-    await createDialog.getByLabel('사업장개시번호').fill('OPEN-NEW-001');
+    await page.getByRole('button', { name: '건설사 추가' }).click();
+    const createDialog = page.getByRole('dialog', { name: '건설사 추가' });
+    await createDialog.getByLabel('건설사명').fill('mocked headquarter');
+    await createDialog.getByLabel('건설사 관리번호').fill('HQ-NEW-001');
+    await createDialog.getByLabel('건설사 개시번호').fill('OPEN-NEW-001');
     await createDialog.getByLabel('본사 대표자명').fill('김담당');
     await createDialog.getByLabel('대표 전화').fill('02-9999-1111');
     await createDialog
@@ -124,29 +124,29 @@ export async function runAdminHeadquartersSmoke(config: ClientSmokePlaywrightCon
     await createDialog.getByRole('button', { name: '생성' }).click();
     await harness.waitForRequestCount('POST /headquarters', headquarterCreatesBefore + 1);
     await page.goto(`${harness.baseURL}/admin?section=headquarters`, { waitUntil: 'load' });
-    await page.getByRole('heading', { level: 2, name: '사업장 목록' }).waitFor({ state: 'visible' });
+    await page.getByRole('heading', { level: 2, name: '건설사 목록' }).waitFor({ state: 'visible' });
     await page
-      .getByPlaceholder('회사명, 관리번호, 담당자, 등록번호, 주소로 검색')
+      .getByPlaceholder('건설사명, 관리번호, 담당자, 등록번호, 주소로 검색')
       .fill('mocked headquarter');
     await page.getByRole('button', { name: '검색' }).click();
 
     await page.getByRole('button', { name: /mocked headquarter 작업 메뉴 열기/ }).click();
     await page.getByRole('menuitem', { name: '수정' }).click();
-    const editDialog = page.getByRole('dialog', { name: '사업장 수정' });
+    const editDialog = page.getByRole('dialog', { name: '건설사 수정' });
     await editDialog.getByLabel('건설업면허/등록번호').fill('면허-NEW-001');
-    await editDialog.getByLabel('운영 메모').fill('사업장 등록정보 smoke 확인');
+    await editDialog.getByLabel('운영 메모').fill('건설사 등록정보 smoke 확인');
     await editDialog.getByRole('button', { name: '저장' }).click();
     await harness.waitForRequestCount('PATCH /headquarters/:id', headquarterUpdatesBefore + 1);
 
     await page.getByRole('button', { name: /mocked headquarter 작업 메뉴 열기/ }).click();
     await page.getByRole('menuitem', { name: '현장 보기' }).click();
     await harness.waitForRequestCount('GET /api/admin/sites/list', siteReadsBefore + 1);
-    await page.getByRole('button', { name: '사업장 정보 수정' }).waitFor({ state: 'visible' });
+    await page.getByRole('button', { name: '건설사 정보 수정' }).waitFor({ state: 'visible' });
 
     await page.goto(`${harness.baseURL}/admin?section=headquarters`, { waitUntil: 'load' });
-    await page.getByRole('heading', { level: 2, name: '사업장 목록' }).waitFor({ state: 'visible' });
+    await page.getByRole('heading', { level: 2, name: '건설사 목록' }).waitFor({ state: 'visible' });
     await page
-      .getByPlaceholder('회사명, 관리번호, 담당자, 등록번호, 주소로 검색')
+      .getByPlaceholder('건설사명, 관리번호, 담당자, 등록번호, 주소로 검색')
       .fill('mocked headquarter');
     await page.getByRole('button', { name: '검색' }).click();
     page.once('dialog', (dialog) => dialog.accept());

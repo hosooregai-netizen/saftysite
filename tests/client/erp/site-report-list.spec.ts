@@ -173,7 +173,7 @@ export async function runSiteReportListSmoke(config: ClientSmokePlaywrightConfig
 
     const createButton = page.getByRole('button', { name: '보고서 추가' });
     await createButton.waitFor({ state: 'visible' });
-    await page.getByText('사업장 정보를 확인하는 중입니다.').waitFor({ state: 'visible' });
+    await page.getByText('현장 정보를 확인하는 중입니다.').waitFor({ state: 'visible' });
     assert.equal(await createButton.isDisabled(), true, 'Create button should stay disabled while resolving site info.');
 
     await harness.waitForRequestCount(

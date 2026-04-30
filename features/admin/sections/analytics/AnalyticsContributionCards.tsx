@@ -137,7 +137,7 @@ export function AnalyticsSiteContributionCard({
     <section className={styles.surface}>
       <div className={styles.surfaceHeader}>
         <div className={styles.surfaceHeaderText}>
-          <h3 className={styles.surfaceTitle}>상위 매출 사업장 Top 10</h3>
+          <h3 className={styles.surfaceTitle}>상위 매출 건설사 Top 10</h3>
           <p className={styles.surfaceMeta}>{formatBasisMonthLabel(basisMonth)} 기준 건설사 합산 매출, 실회차 수, 담당 현장 중심</p>
         </div>
       </div>
