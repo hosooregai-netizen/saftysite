@@ -10,7 +10,6 @@ export function QuarterlySiteSnapshotSection(props: {
   const { draft, onChange } = props;
   const handleSiteManagementNumberChange = (value: string) => {
     onChange('siteManagementNumber', value);
-    onChange('businessStartNumber', value);
   };
   const handleCorporationNumberChange = (value: string) => {
     onChange('corporationRegistrationNumber', value);
@@ -39,10 +38,10 @@ export function QuarterlySiteSnapshotSection(props: {
                     value={draft.siteSnapshot.siteName}
                     onChange={(value) => onChange('siteName', value)}
                   />
-                  <th scope="row" className={operationalStyles.snapshotLabelCell}>건설사 관리번호</th>
+                  <th scope="row" className={operationalStyles.snapshotLabelCell}>사업장관리번호</th>
                   <SnapshotInputCell
-                    label="건설사 관리번호"
-                    value={draft.siteSnapshot.siteManagementNumber || draft.siteSnapshot.businessStartNumber}
+                    label="사업장관리번호"
+                    value={draft.siteSnapshot.siteManagementNumber}
                     onChange={handleSiteManagementNumberChange}
                   />
                 </tr>

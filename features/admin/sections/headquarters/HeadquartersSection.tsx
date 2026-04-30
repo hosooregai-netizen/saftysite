@@ -9,14 +9,22 @@ import {
 } from '@/features/admin/lib/adminSessionCache';
 import { fetchAdminHeadquartersList, fetchAdminSitesList } from '@/lib/admin/apiClient';
 import { getAdminSectionHref, getSiteStatusLabel } from '@/lib/admin';
+import { readSafetyAuthToken } from '@/lib/safetyApi';
+import {
+  createSafetyHeadquarterAssignment,
+  deactivateSafetyHeadquarterAssignment,
+  fetchSafetyHeadquarterAssignmentsPage,
+} from '@/lib/safetyApi/adminEndpoints';
 import type {
+  SafetyHeadquarterAssignment,
   SafetyHeadquarterInput,
   SafetyHeadquarterUpdateInput,
   SafetySiteInput,
   SafetySiteStatus,
   SafetySiteUpdateInput,
 } from '@/types/controller';
-import type { SafetySite } from '@/types/backend';
+import type { SafetySite, SafetyUser } from '@/types/backend';
+import { HeadquarterAssignmentModal } from './HeadquarterAssignmentModal';
 import { HeadquarterSummaryPanel } from './HeadquarterSummaryPanel';
 import { SiteManagementMainPanel } from './SiteManagementMainPanel';
 import { HeadquartersTable } from './HeadquartersTable';
@@ -39,6 +47,14 @@ function normalizeHeadquarterValue(value: string | null | undefined) {
   return String(value ?? '').trim();
 }
 
+function readRequiredSafetyAuthToken() {
+  const token = readSafetyAuthToken();
+  if (!token) {
+    throw new Error('로그인이 만료되었습니다. 다시 로그인해 주세요.');
+  }
+  return token;
+}
+
 function validateHeadquarterSubmit(
   form: ReturnType<typeof useHeadquartersSectionState>['form'],
   headquarters: import('@/types/controller').SafetyHeadquarter[],
@@ -46,8 +62,8 @@ function validateHeadquarterSubmit(
 ) {
   const maxLengthChecks: Array<[string, string, number]> = [
     ['건설사명', form.name, 200],
-    ['건설사 관리번호', form.management_number, 100],
-    ['건설사 개시번호', form.opening_number, 100],
+    ['사업장관리번호', form.management_number, 100],
+    ['사업개시번호', form.opening_number, 100],
     ['사업자등록번호', form.business_registration_no, 50],
     ['법인등록번호', form.corporate_registration_no, 50],
     ['건설업면허/등록번호', form.license_no, 50],
@@ -71,7 +87,7 @@ function validateHeadquarterSubmit(
         normalizeHeadquarterValue(item.management_number) === duplicateManagementNumber,
     )
   ) {
-    return `건설사 관리번호 '${duplicateManagementNumber}'는 이미 다른 건설사에서 사용 중입니다.`;
+    return `사업장관리번호 '${duplicateManagementNumber}'는 이미 다른 건설사에서 사용 중입니다.`;
   }
 
   const duplicateOpeningNumber = normalizeHeadquarterValue(form.opening_number);
@@ -83,7 +99,7 @@ function validateHeadquarterSubmit(
         normalizeHeadquarterValue(item.opening_number) === duplicateOpeningNumber,
     )
   ) {
-    return `건설사 개시번호 '${duplicateOpeningNumber}'는 이미 다른 건설사에서 사용 중입니다.`;
+    return `사업개시번호 '${duplicateOpeningNumber}'는 이미 다른 건설사에서 사용 중입니다.`;
   }
 
   return null;
@@ -95,9 +111,10 @@ interface HeadquartersSectionProps {
   currentUserId: string;
   selectedHeadquarterId: string | null;
   selectedSiteId: string | null;
+  users: SafetyUser[];
   onClearHeadquarterSelection: () => void;
   onClearSiteSelection: () => void;
-  onCreate: (input: SafetyHeadquarterInput) => Promise<void>;
+  onCreate: (input: SafetyHeadquarterInput) => Promise<import('@/types/controller').SafetyHeadquarter>;
   onCreateSite: (input: SafetySiteInput) => Promise<SafetySite>;
   onDelete: (id: string) => Promise<void>;
   onDeleteSite: (id: string) => Promise<void>;
@@ -117,6 +134,7 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
     currentUserId,
     selectedHeadquarterId,
     selectedSiteId,
+    users,
     onAssignFieldAgent,
     onClearSiteSelection,
     onCreate,
@@ -140,6 +158,11 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
   const [selectedHeadquarterSites, setSelectedHeadquarterSites] = useState<
     import('@/types/backend').SafetySite[]
   >([]);
+  const [assignmentHeadquarterId, setAssignmentHeadquarterId] = useState<string | null>(null);
+  const [headquarterAssignments, setHeadquarterAssignments] = useState<
+    SafetyHeadquarterAssignment[]
+  >([]);
+  const [isAssignmentLoading, setIsAssignmentLoading] = useState(false);
   const [isResolvingSiteContext, setIsResolvingSiteContext] = useState(false);
   const state = useHeadquartersSectionState(busy);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -201,6 +224,16 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
       (selectedSiteId && selectedSite?.id === selectedSiteId ? selectedSite : null),
     [resolvedSelectedHeadquarterSites, selectedSite, selectedSiteId],
   );
+  const assignmentHeadquarter = useMemo(() => {
+    if (!assignmentHeadquarterId) return null;
+    if (resolvedSelectedHeadquarter?.id === assignmentHeadquarterId) {
+      return resolvedSelectedHeadquarter;
+    }
+    if (selectedHeadquarter?.id === assignmentHeadquarterId) {
+      return selectedHeadquarter;
+    }
+    return rows.find((item) => item.id === assignmentHeadquarterId) ?? null;
+  }, [assignmentHeadquarterId, resolvedSelectedHeadquarter, rows, selectedHeadquarter]);
   const isLoadingSelectedSite = Boolean(selectedSiteId && !resolvedSelectedSite);
 
   const refreshHeadquarterList = async (targetPage = state.page) => {
@@ -548,6 +581,57 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
     await refreshSelectedHeadquarterContext();
   };
 
+  const loadHeadquarterAssignments = async (headquarterId: string) => {
+    const token = readRequiredSafetyAuthToken();
+    const assignments = await fetchSafetyHeadquarterAssignmentsPage(token, {
+      activeOnly: true,
+      headquarterId,
+      limit: 500,
+    });
+    setHeadquarterAssignments(assignments);
+  };
+
+  const openHeadquarterAssignmentModal = (headquarterId: string) => {
+    setAssignmentHeadquarterId(headquarterId);
+    setHeadquarterAssignments([]);
+    setIsAssignmentLoading(true);
+    void loadHeadquarterAssignments(headquarterId)
+      .catch((error) => {
+        window.alert(
+          error instanceof Error ? error.message : '건설사 배정 정보를 불러오지 못했습니다.',
+        );
+        setAssignmentHeadquarterId(null);
+      })
+      .finally(() => setIsAssignmentLoading(false));
+  };
+
+  const assignUserToHeadquarter = async (headquarterId: string, userId: string) => {
+    const token = readRequiredSafetyAuthToken();
+    setIsAssignmentLoading(true);
+    try {
+      await createSafetyHeadquarterAssignment(token, {
+        headquarter_id: headquarterId,
+        user_id: userId,
+      });
+      await loadHeadquarterAssignments(headquarterId);
+    } finally {
+      setIsAssignmentLoading(false);
+    }
+  };
+
+  const clearUserFromHeadquarter = async (assignmentId: string) => {
+    const token = readRequiredSafetyAuthToken();
+    setIsAssignmentLoading(true);
+    try {
+      await deactivateSafetyHeadquarterAssignment(token, assignmentId);
+      setHeadquarterAssignments((current) =>
+        current.filter((assignment) => assignment.id !== assignmentId),
+      );
+    } finally {
+      setIsAssignmentLoading(false);
+    }
+  };
+
   return (
     <div className={styles.drilldownStack}>
       {!selectedHeadquarter && !hasSiteStatusScope ? (
@@ -576,8 +660,8 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
                     columns: [
                       { key: 'name', label: '건설사명' },
                       { key: 'site_count', label: '현장 수' },
-                      { key: 'management_number', label: '건설사 관리번호' },
-                      { key: 'opening_number', label: '건설사 개시번호' },
+                      { key: 'management_number', label: '사업장관리번호' },
+                      { key: 'opening_number', label: '사업개시번호' },
                       { key: 'business_registration_no', label: '사업자등록번호' },
                       { key: 'corporate_registration_no', label: '법인등록번호' },
                       { key: 'license_no', label: '건설업면허/등록번호' },
@@ -631,6 +715,7 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
           initialStatusFilter={siteStatusFilter}
           onAssignFieldAgent={onAssignFieldAgent}
           onCreate={handleCreateSite}
+          onCreateHeadquarter={onCreate}
           onDelete={handleDeleteSite}
           onSelectSiteEntry={(site) => onSelectSite(site.headquarter_id, site.id)}
           onUnassignFieldAgent={onUnassignFieldAgent}
@@ -651,6 +736,7 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
             headquarter={resolvedSelectedHeadquarter}
             sites={resolvedSelectedHeadquarterSites}
             onEdit={() => state.openEdit(resolvedSelectedHeadquarter)}
+            onOpenAssignment={() => openHeadquarterAssignmentModal(resolvedSelectedHeadquarter.id)}
           />
           <SitesSection
             autoEditSiteId={autoEditSiteId}
@@ -662,6 +748,7 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
             lockedHeadquarterId={resolvedSelectedHeadquarter.id}
             onAssignFieldAgent={onAssignFieldAgent}
             onCreate={handleCreateSite}
+            onCreateHeadquarter={onCreate}
             onDelete={handleDeleteSite}
             onSelectSiteEntry={(site) => onSelectSite(site.headquarter_id, site.id)}
             onUnassignFieldAgent={onUnassignFieldAgent}
@@ -680,6 +767,33 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
         onFormChange={state.setForm}
         onSubmit={() => void submit()}
         open={state.isOpen}
+      />
+
+      <HeadquarterAssignmentModal
+        assignments={headquarterAssignments}
+        busy={busy || isAssignmentLoading}
+        headquarter={assignmentHeadquarter}
+        open={Boolean(assignmentHeadquarterId)}
+        users={users}
+        onAssign={async (headquarterId, userId) => {
+          try {
+            await assignUserToHeadquarter(headquarterId, userId);
+          } catch (error) {
+            window.alert(error instanceof Error ? error.message : '건설사 배정에 실패했습니다.');
+          }
+        }}
+        onClear={async (assignmentId) => {
+          try {
+            await clearUserFromHeadquarter(assignmentId);
+          } catch (error) {
+            window.alert(error instanceof Error ? error.message : '건설사 배정 해제에 실패했습니다.');
+          }
+        }}
+        onClose={() => {
+          if (busy || isAssignmentLoading) return;
+          setAssignmentHeadquarterId(null);
+          setHeadquarterAssignments([]);
+        }}
       />
     </div>
   );

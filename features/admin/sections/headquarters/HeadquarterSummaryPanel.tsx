@@ -8,12 +8,13 @@ interface HeadquarterSummaryPanelProps {
   headquarter: SafetyHeadquarter;
   sites: SafetySite[];
   onEdit: () => void;
+  onOpenAssignment: () => void;
 }
 
 function getHeadquarterMissingFields(headquarter: SafetyHeadquarter) {
   const requiredChecks: Array<[string, string | null]> = [
-    ['건설사 관리번호', headquarter.management_number],
-    ['건설사 개시번호', headquarter.opening_number],
+    ['사업장관리번호', headquarter.management_number],
+    ['사업개시번호', headquarter.opening_number],
     ['사업자등록번호', headquarter.business_registration_no],
     ['법인등록번호', headquarter.corporate_registration_no],
     ['면허번호', headquarter.license_no],
@@ -29,8 +30,8 @@ function getHeadquarterMissingFields(headquarter: SafetyHeadquarter) {
 
 function buildRegistrationRows(headquarter: SafetyHeadquarter) {
   return [
-    ['건설사 관리번호', headquarter.management_number || '-'],
-    ['건설사 개시번호', headquarter.opening_number || '-'],
+    ['사업장관리번호', headquarter.management_number || '-'],
+    ['사업개시번호', headquarter.opening_number || '-'],
     ['사업자등록번호', headquarter.business_registration_no || '-'],
     ['법인등록번호', headquarter.corporate_registration_no || '-'],
     ['면허번호', headquarter.license_no || '-'],
@@ -41,6 +42,7 @@ export function HeadquarterSummaryPanel({
   headquarter,
   sites,
   onEdit,
+  onOpenAssignment,
 }: HeadquarterSummaryPanelProps) {
   const missingFields = getHeadquarterMissingFields(headquarter);
   const activeSiteCount = sites.filter((site) => site.status === 'active').length;
@@ -73,6 +75,9 @@ export function HeadquarterSummaryPanel({
           ) : null}
         </div>
         <div className={styles.sectionHeaderActions}>
+          <button type="button" className="app-button app-button-secondary" onClick={onOpenAssignment}>
+            지도요원 배정
+          </button>
           <button type="button" className="app-button app-button-primary" onClick={onEdit}>
             건설사 정보 수정
           </button>
@@ -106,7 +111,7 @@ export function HeadquarterSummaryPanel({
               <span className={styles.contextCellLabel}>소속 현장</span>
               <strong className={styles.contextCellValue}>{sites.length}개</strong>
               <span className={styles.contextCellMeta}>
-                운영중 {activeSiteCount} / 준비중 {plannedSiteCount} / 종료 {closedSiteCount}
+                운영중 {activeSiteCount} / 미착수 {plannedSiteCount} / 종료 {closedSiteCount}
               </span>
             </article>
             <article className={styles.contextCell}>
@@ -139,13 +144,6 @@ export function HeadquarterSummaryPanel({
                   ))}
                 </div>
               ) : null}
-            </article>
-            <article className={styles.contextCell}>
-              <span className={styles.contextCellLabel}>운영 메모</span>
-              <strong className={styles.contextCellValue}>{headquarter.memo || '운영 메모 없음'}</strong>
-              <span className={styles.contextCellMeta}>
-                {missingFields.length ? '빠진 항목을 정리한 뒤 메모를 남겨주세요.' : '건설사 기본 정보 입력 완료'}
-              </span>
             </article>
           </div>
         </div>

@@ -13,9 +13,14 @@ import {
 } from '@/lib/auth/postLoginRedirect';
 import { getAdminSectionHref, isAdminUserRole } from '@/lib/admin';
 import {
+  fetchAssignedSafetyHeadquarters,
+  readSafetyAuthToken,
+} from '@/lib/safetyApi';
+import {
   buildHomeSiteSummaries,
   type HomeSiteSummary,
 } from '@/features/home/lib/buildHomeSiteSummaries';
+import type { SafetyAssignedHeadquarterSummary } from '@/types/backend';
 
 export type HomeSortMode = 'recent' | 'name' | 'reports';
 
@@ -53,11 +58,14 @@ export function resolveHomePostAuthRedirect({
 }
 
 interface HomeScreenState {
+  assignedHeadquarters: SafetyAssignedHeadquarterSummary[];
   authError: string | null;
   currentUserName?: string;
   currentUserPosition?: string | null;
   dataError: string | null;
   filteredSiteSummaries: HomeSiteSummary[];
+  headquarterError: string | null;
+  isHeadquarterLoading: boolean;
   isControllerView: boolean;
   isInitialHydration: boolean;
   login: ReturnType<typeof useInspectionSessions>['login'];
@@ -95,6 +103,11 @@ export function useHomeScreenState(): HomeScreenState {
   );
   const [query, setQueryState] = useState(urlQuery);
   const [sortMode, setSortModeState] = useState<HomeSortMode>(urlSortMode);
+  const [assignedHeadquarters, setAssignedHeadquarters] = useState<
+    SafetyAssignedHeadquarterSummary[]
+  >([]);
+  const [isHeadquarterLoading, setIsHeadquarterLoading] = useState(false);
+  const [headquarterError, setHeadquarterError] = useState<string | null>(null);
   const prefetchedSiteIdsRef = useRef<Set<string>>(new Set());
   const router = useRouter();
   const deferredQuery = useDeferredValue(query);
@@ -150,6 +163,50 @@ export function useHomeScreenState(): HomeScreenState {
       prefetchedSiteIdsRef.current.clear();
     }
   }, [hasAuthToken, sites.length]);
+
+  useEffect(() => {
+    if (!isReady || !hasAuthToken || isHydrating || isControllerView) {
+      setAssignedHeadquarters([]);
+      setIsHeadquarterLoading(false);
+      setHeadquarterError(null);
+      return;
+    }
+
+    const token = readSafetyAuthToken();
+    if (!token) {
+      setAssignedHeadquarters([]);
+      setHeadquarterError('로그인이 만료되었습니다. 다시 로그인해 주세요.');
+      return;
+    }
+
+    let cancelled = false;
+    setIsHeadquarterLoading(true);
+    setHeadquarterError(null);
+
+    void fetchAssignedSafetyHeadquarters(token)
+      .then((headquarters) => {
+        if (cancelled) return;
+        setAssignedHeadquarters(headquarters);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setAssignedHeadquarters([]);
+        setHeadquarterError(
+          error instanceof Error
+            ? error.message
+            : '배정된 건설사 정보를 불러오지 못했습니다.',
+        );
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsHeadquarterLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hasAuthToken, isControllerView, isHydrating, isReady]);
 
   useEffect(() => {
     if (
@@ -240,11 +297,14 @@ export function useHomeScreenState(): HomeScreenState {
   }, [currentUser, isControllerView, router]);
 
   return {
+    assignedHeadquarters,
     authError,
     currentUserName: currentUser?.name,
     currentUserPosition: currentUser?.position,
     dataError,
     filteredSiteSummaries,
+    headquarterError,
+    isHeadquarterLoading,
     isControllerView,
     isInitialHydration,
     login,

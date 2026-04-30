@@ -69,7 +69,7 @@ export function HeadquarterEditorModal({
               />
             </label>
             <label className={styles.modalField}>
-              <span className={styles.label}>건설사 관리번호</span>
+              <span className={styles.label}>사업장관리번호</span>
               <input
                 className="app-input"
                 value={form.management_number}
@@ -81,7 +81,7 @@ export function HeadquarterEditorModal({
               />
             </label>
             <label className={styles.modalField}>
-              <span className={styles.label}>건설사 개시번호</span>
+              <span className={styles.label}>사업개시번호</span>
               <input
                 className="app-input"
                 value={form.opening_number}
@@ -161,16 +161,6 @@ export function HeadquarterEditorModal({
                 value={form.address}
                 onChange={(event) => onFormChange({ ...form, address: event.target.value })}
                 disabled={busy}
-              />
-            </label>
-            <label className={styles.modalFieldWide}>
-              <span className={styles.label}>운영 메모</span>
-              <textarea
-                className="app-textarea"
-                value={form.memo}
-                onChange={(event) => onFormChange({ ...form, memo: event.target.value })}
-                disabled={busy}
-                rows={4}
               />
             </label>
           </div>

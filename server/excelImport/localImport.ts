@@ -322,10 +322,10 @@ function buildMappingWarnings(
   const warnings: string[] = [];
   void ignoredHeaders;
   if (!suggestedMapping.headquarter_management_number) {
-    warnings.push('건설사 관리번호가 없어 건설사 중복 판정은 건설사 개시번호 또는 건설사명 기준으로 진행합니다.');
+    warnings.push('사업장관리번호가 없어 건설사 중복 판정은 사업개시번호 또는 건설사명 기준으로 진행합니다.');
   }
   if (!suggestedMapping.headquarter_opening_number) {
-    warnings.push('건설사 개시번호가 없어 건설사 식별은 건설사 관리번호 또는 건설사명 기준으로 진행합니다.');
+    warnings.push('사업개시번호가 없어 건설사 식별은 사업장관리번호 또는 건설사명 기준으로 진행합니다.');
   }
   if (!suggestedMapping.site_name) {
     warnings.push('현장명이 없어 현장 생성/갱신 정확도가 낮아질 수 있습니다.');
@@ -646,7 +646,7 @@ function headquarterCandidates(
       id: headquarter.id,
       kind: 'headquarter',
       label: headquarter.name || '건설사',
-      reason: '건설사 관리번호 일치',
+      reason: '사업장관리번호 일치',
       siteId: null,
     }));
   }
@@ -658,7 +658,7 @@ function headquarterCandidates(
       id: headquarter.id,
       kind: 'headquarter',
       label: headquarter.name || '건설사',
-      reason: '건설사 개시번호 일치',
+      reason: '사업개시번호 일치',
       siteId: null,
     }));
   }

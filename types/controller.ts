@@ -50,6 +50,21 @@ export interface SafetyAssignment {
   site: SafetyAssignmentSummary | null;
 }
 
+export interface SafetyHeadquarterAssignment {
+  id: string;
+  user_id: string;
+  headquarter_id: string;
+  role_on_headquarter: string;
+  memo: string | null;
+  is_active: boolean;
+  assigned_by: string | null;
+  assigned_at: string;
+  created_at: string;
+  updated_at: string;
+  user: SafetyAssignmentSummary | null;
+  headquarter: SafetyAssignmentSummary | null;
+}
+
 export interface SafetyUserCreateInput {
   auto_provisioned_from_excel?: boolean;
   email: string;
@@ -142,8 +157,21 @@ export interface SafetyAssignmentInput {
   memo?: string | null;
 }
 
+export interface SafetyHeadquarterAssignmentInput {
+  user_id: string;
+  headquarter_id: string;
+  role_on_headquarter?: string;
+  memo?: string | null;
+}
+
 export interface SafetyAssignmentUpdateInput {
   role_on_site?: string | null;
+  memo?: string | null;
+  is_active?: boolean | null;
+}
+
+export interface SafetyHeadquarterAssignmentUpdateInput {
+  role_on_headquarter?: string | null;
   memo?: string | null;
   is_active?: boolean | null;
 }

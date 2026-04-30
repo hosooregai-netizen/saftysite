@@ -49,10 +49,6 @@ const SITE_LIST_QUERY_DEFAULTS = {
   siteStatus: 'all',
 };
 
-function normalizeSiteValue(value: string | null | undefined) {
-  return String(value ?? '').trim().toLowerCase();
-}
-
 function buildRequestKey(input: {
   assignmentFilter: SiteAssignmentFilter;
   headquarterId: string | null;
@@ -75,25 +71,14 @@ function buildChangedSitePayload(
   ) as SafetySiteUpdateInput;
 }
 
-function validateSiteSubmit(
-  form: SiteFormState,
-  sites: SafetySite[],
-  editingId: string | null,
-) {
+function validateSiteSubmit(form: SiteFormState) {
   const maxLengthChecks: Array<[string, string, number]> = [
     ['현장명', form.site_name, 200],
-    ['현장코드', form.site_code, 100],
-    ['현장관리번호', form.management_number, 100],
     ['노동관서', form.labor_office, 200],
-    ['지도요원', form.guidance_officer_name, 100],
     ['현장 책임자명', form.manager_name, 100],
     ['현장 책임자 연락처', form.manager_phone, 50],
     ['보고서 수신 메일', form.site_contact_email, 200],
     ['발주처명', form.client_business_name, 200],
-    ['발주유형 구분', form.order_type_division, 100],
-    ['기술지도 구분', form.technical_guidance_kind, 100],
-    ['계약 담당자', form.contract_contact_name, 100],
-    ['점검자', form.inspector_name, 100],
   ];
 
   for (const [label, value, maxLength] of maxLengthChecks) {
@@ -101,14 +86,6 @@ function validateSiteSubmit(
     if (normalized.length > maxLength) {
       return `${label}은(는) ${maxLength}자 이하로 입력해 주세요.`;
     }
-  }
-
-  const duplicateSiteCode = normalizeSiteValue(form.site_code);
-  if (
-    duplicateSiteCode &&
-    sites.some((site) => site.id !== editingId && normalizeSiteValue(site.site_code) === duplicateSiteCode)
-  ) {
-    return `현장코드 '${form.site_code.trim()}'는 이미 다른 현장에서 사용 중입니다.`;
   }
 
   return null;
@@ -121,6 +98,7 @@ export function useSitesSectionState({
   initialStatusFilter = 'all',
   lockedHeadquarterId = null,
   onCreate,
+  onCreateHeadquarter,
   onDelete,
   onSelectSiteEntry,
   onUpdate,
@@ -135,6 +113,7 @@ export function useSitesSectionState({
   | 'lockedHeadquarterId'
   | 'onAssignFieldAgent'
   | 'onCreate'
+  | 'onCreateHeadquarter'
   | 'onDelete'
   | 'onSelectSiteEntry'
   | 'onUnassignFieldAgent'
@@ -413,7 +392,7 @@ export function useSitesSectionState({
       const initialPayload = buildSitePayload(initialForm, lockedHeadquarterId);
       if (editingId === 'create' && !isCreateReady(form, lockedHeadquarterId)) return;
       if (editingId !== 'create' && (!payload.headquarter_id || !payload.site_name)) return;
-      const validationMessage = validateSiteSubmit(form, rows, editingId);
+      const validationMessage = validateSiteSubmit(form);
       if (validationMessage) {
         window.alert(validationMessage);
         return;
@@ -483,30 +462,23 @@ export function useSitesSectionState({
         name: '현장',
         columns: [
           { key: 'site_name', label: '현장명' },
-          { key: 'site_code', label: '현장코드' },
-          { key: 'management_number', label: '현장관리번호' },
           { key: 'headquarter_name', label: '건설사' },
-          { key: 'headquarter_management_number', label: '건설사 관리번호' },
-          { key: 'headquarter_opening_number', label: '건설사 개시번호' },
+          { key: 'business_management_number', label: '사업장관리번호' },
+          { key: 'business_start_number', label: '사업개시번호' },
           { key: 'labor_office', label: '노동관서' },
-          { key: 'guidance_officer_name', label: '지도원' },
           { key: 'site_address', label: '소재지' },
-          { key: 'project_kind', label: '공사종류' },
           { key: 'project_amount', label: '공사금액' },
           { key: 'status', label: '상태' },
           { key: 'pause_start_date', label: '중지 시작일' },
         ],
         rows: response.rows.map((site) => ({
-          guidance_officer_name: site.guidance_officer_name ?? '',
-          headquarter_management_number: site.headquarter_detail?.management_number ?? '',
+          business_management_number:
+            site.headquarter_detail?.management_number ?? site.management_number ?? '',
+          business_start_number: site.headquarter_detail?.opening_number ?? site.site_code ?? '',
           headquarter_name: site.headquarter_detail?.name ?? site.headquarter?.name ?? '',
-          headquarter_opening_number: site.headquarter_detail?.opening_number ?? '',
           labor_office: site.labor_office ?? '',
-          management_number: site.management_number ?? '',
           project_amount: site.project_amount ?? '',
-          project_kind: site.project_kind ?? '',
           site_address: site.site_address ?? '',
-          site_code: site.site_code ?? '',
           site_name: site.site_name,
           status: getSiteStatusLabel(site.status),
           pause_start_date: site.pause_start_date ?? '',
@@ -545,6 +517,22 @@ export function useSitesSectionState({
     exportSites,
     form,
     headquarters: directoryLookups.headquarters,
+    createHeadquarterForSite: onCreateHeadquarter
+      ? async (input: import('@/types/controller').SafetyHeadquarterInput) => {
+          const headquarter = await onCreateHeadquarter(input);
+          setDirectoryLookups((current) => {
+            const nextHeadquarters = [
+              ...current.headquarters.filter((item) => item.id !== headquarter.id),
+              { id: headquarter.id, name: headquarter.name },
+            ].sort((left, right) => left.name.localeCompare(right.name, 'ko'));
+            return {
+              ...current,
+              headquarters: nextHeadquarters,
+            };
+          });
+          return headquarter;
+        }
+      : undefined,
     isCreateReady: isCreateReady(form, lockedHeadquarterId),
     isLoading,
     isOpen,

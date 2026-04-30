@@ -56,10 +56,10 @@ export function BadWorkplaceHeadquartersPanel({
                 }
               />
               <th scope="row" className={operationalStyles.snapshotLabelCell}>
-                건설사 관리번호
+                사업장관리번호
               </th>
               <SnapshotInputCell
-                label="건설사 관리번호"
+                label="사업장관리번호"
                 value={draft.siteSnapshot.siteManagementNumber}
                 onChange={(value) => onUpdateSiteSnapshot('siteManagementNumber', value)}
               />

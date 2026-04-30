@@ -41,10 +41,11 @@ function resolveSiteContractTypeOption(site: SafetySite) {
 
   const contractType = String(site.contract_type ?? '').trim();
   if (!contractType) return null;
+  if (contractType === 'maintenance') return null;
 
   const labelByValue: Record<string, string> = {
     bid: '입찰계약',
-    maintenance: '유지보수',
+    maintenance: '유지보수(기존)',
     negotiated: '수의계약',
     other: '기타',
     private: '민간계약',

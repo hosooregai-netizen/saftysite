@@ -14,6 +14,8 @@ export {
 } from '@/lib/safetyApi/config';
 export {
   archiveSafetyReportByKey,
+  createSafetySiteForHeadquarter,
+  fetchAssignedSafetyHeadquarters,
   fetchAssignedSafetySites,
   fetchCurrentSafetyUser,
   fetchSafetyContentItems,
@@ -26,6 +28,8 @@ export {
   fetchQuarterlySummarySeed,
   fetchTechnicalGuidanceSeed,
   loginSafetyApi,
+  updateAssignedSafetyHeadquarter,
+  updateAssignedSafetySite,
   updateSafetyReportStatus,
   upsertSafetyReport,
 } from '@/lib/safetyApi/endpoints';

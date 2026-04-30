@@ -11,6 +11,8 @@ import type {
   SafetySiteStatus,
   SafetySiteUpdateInput,
   SafetyAssignment,
+  SafetyHeadquarter,
+  SafetyHeadquarterInput,
 } from '@/types/controller';
 import type { SafetySite, SafetyUser } from '@/types/backend';
 
@@ -19,6 +21,7 @@ export interface SitesSectionProps {
   canDelete: boolean;
   currentUserId: string;
   onCreate: (input: SafetySiteInput) => Promise<SafetySite>;
+  onCreateHeadquarter?: (input: SafetyHeadquarterInput) => Promise<SafetyHeadquarter>;
   onUpdate: (id: string, input: SafetySiteUpdateInput) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onAssignFieldAgent: (siteId: string, userId: string) => Promise<void>;
@@ -230,12 +233,17 @@ export function buildSitePayload(
 }
 
 export function getSiteManagementMissingFields(site: SafetySite): string[] {
+  const businessManagementNumber =
+    site.headquarter_detail?.management_number ?? site.management_number;
+  const businessStartNumber = site.headquarter_detail?.opening_number ?? site.site_code;
   const requiredChecks: Array<[string, string | number | null | undefined]> = [
-    ['현장코드', site.site_code],
-    ['현장관리번호', site.management_number],
-    ['현장소장명', site.manager_name],
-    ['현장소장 연락처', site.manager_phone],
-    ['현장대리인 메일', site.site_contact_email],
+    ['사업장관리번호', businessManagementNumber],
+    ['사업개시번호', businessStartNumber],
+    ['현장명', site.site_name],
+    ['현장 주소', site.site_address],
+    ['현장 책임자명', site.manager_name],
+    ['현장 책임자 연락처', site.manager_phone],
+    ['보고서 수신 메일', site.site_contact_email],
     ['계약유형', site.contract_type],
     ['계약상태', site.contract_status],
     ['계약종료일', site.contract_end_date],

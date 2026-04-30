@@ -1,5 +1,6 @@
 import type {
   ErpDocumentKind,
+  SafetyAssignedHeadquarterSummary,
   SafetyAssignedSiteSummary,
   SafetyContentType,
   SafetyContentItem,
@@ -25,6 +26,12 @@ import type {
   WorkerMobileSessionDetail,
   WorkerMobileTaskAcknowledgeInput,
 } from '@/types/backend';
+import type {
+  SafetyHeadquarter,
+  SafetyHeadquarterUpdateInput,
+  SafetySiteInput,
+  SafetySiteUpdateInput,
+} from '@/types/controller';
 import {
   applyReportLifecycleStatus,
   isVisibleReport,
@@ -367,10 +374,70 @@ export function fetchAssignedSafetySites(token: string): Promise<SafetySite[]> {
   ).then((sites) => sites.map(expandAssignedSiteSummaryToSafetySite));
 }
 
+export function fetchAssignedSafetyHeadquarters(
+  token: string
+): Promise<SafetyAssignedHeadquarterSummary[]> {
+  const searchParams = new URLSearchParams({
+    active_only: 'true',
+    limit: String(CLIENT_SITE_LIST_LIMIT),
+  });
+
+  return requestSafetyApi<SafetyAssignedHeadquarterSummary[]>(
+    `/headquarter-assignments/me?${searchParams.toString()}`,
+    {},
+    token,
+  );
+}
+
 export function fetchSafetySiteDetail(token: string, siteId: string): Promise<SafetySite> {
   return requestSafetyApi<SafetySite>(
     `/sites/${encodeURIComponent(siteId)}?include_headquarter_detail=true&include_assigned_user=true`,
     {},
+    token,
+  );
+}
+
+export function createSafetySiteForHeadquarter(
+  token: string,
+  headquarterId: string,
+  payload: Omit<SafetySiteInput, 'headquarter_id'> & { headquarter_id?: string | null },
+): Promise<SafetySite> {
+  return requestSafetyApi<SafetySite>(
+    `/headquarters/${encodeURIComponent(headquarterId)}/sites`,
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    },
+    token,
+  );
+}
+
+export function updateAssignedSafetySite(
+  token: string,
+  siteId: string,
+  payload: SafetySiteUpdateInput,
+): Promise<SafetySite> {
+  return requestSafetyApi<SafetySite>(
+    `/sites/${encodeURIComponent(siteId)}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    },
+    token,
+  );
+}
+
+export function updateAssignedSafetyHeadquarter(
+  token: string,
+  headquarterId: string,
+  payload: SafetyHeadquarterUpdateInput,
+): Promise<SafetyHeadquarter> {
+  return requestSafetyApi<SafetyHeadquarter>(
+    `/headquarters/${encodeURIComponent(headquarterId)}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    },
     token,
   );
 }

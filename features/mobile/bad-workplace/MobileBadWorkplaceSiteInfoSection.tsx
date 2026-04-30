@@ -98,7 +98,7 @@ export function MobileBadWorkplaceSiteInfoSection({
               onChange={(value) => onUpdateSiteSnapshot('businessRegistrationNumber', value)}
             />
             <MobileBadWorkplaceEditableField
-              label="건설사 관리번호"
+              label="사업장관리번호"
               value={draft.siteSnapshot.siteManagementNumber}
               onChange={(value) => onUpdateSiteSnapshot('siteManagementNumber', value)}
             />

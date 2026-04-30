@@ -5,10 +5,12 @@ import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import {
   SITE_CONTRACT_STATUS_OPTIONS,
   SITE_CONTRACT_TYPE_OPTIONS,
-  SITE_STATUS_OPTIONS,
 } from '@/lib/admin';
-import { useState, type Dispatch, type SetStateAction } from 'react';
-import type { SafetySiteStatus } from '@/types/controller';
+import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
+import type {
+  SafetyHeadquarter,
+  SafetyHeadquarterInput,
+} from '@/types/controller';
 import type { SiteFormState } from './siteSectionHelpers';
 
 interface SiteEditorModalProps {
@@ -18,6 +20,7 @@ interface SiteEditorModalProps {
   headquarters: Array<{ id: string; name: string }>;
   isCreateReady: boolean;
   lockedHeadquarterId: string | null;
+  onCreateHeadquarter?: (input: SafetyHeadquarterInput) => Promise<SafetyHeadquarter>;
   onClose: () => void;
   onSubmit: () => void;
   setForm: Dispatch<SetStateAction<SiteFormState>>;
@@ -30,6 +33,30 @@ interface SiteEditorSectionState {
   operationsOpen: boolean;
 }
 
+interface InlineHeadquarterFormState {
+  address: string;
+  business_registration_no: string;
+  contact_name: string;
+  contact_phone: string;
+  corporate_registration_no: string;
+  license_no: string;
+  management_number: string;
+  name: string;
+  opening_number: string;
+}
+
+const EMPTY_INLINE_HEADQUARTER_FORM: InlineHeadquarterFormState = {
+  address: '',
+  business_registration_no: '',
+  contact_name: '',
+  contact_phone: '',
+  corporate_registration_no: '',
+  license_no: '',
+  management_number: '',
+  name: '',
+  opening_number: '',
+};
+
 function hasFilledValue(value: string | boolean) {
   return typeof value === 'boolean' ? value : Boolean(value.trim());
 }
@@ -41,6 +68,7 @@ export function SiteEditorModal({
   headquarters,
   isCreateReady,
   lockedHeadquarterId,
+  onCreateHeadquarter,
   onClose,
   onSubmit,
   setForm,
@@ -51,28 +79,15 @@ export function SiteEditorModal({
     headquarters.find((item) => item.id === resolvedHeadquarterId)?.name || '';
 
   const hasOperationDetails = [
-    form.site_code,
-    form.management_number,
-    form.status !== 'planned' ? form.status : '',
-    form.pause_start_date,
-    form.is_high_risk_site,
     form.labor_office,
-    form.guidance_officer_name,
-    form.inspector_name,
     form.project_amount,
     form.project_start_date,
     form.project_end_date,
-    form.project_scale,
-    form.project_kind,
   ].some(hasFilledValue);
 
-  const hasClientDetails = [form.client_business_name, form.order_type_division].some(
-    hasFilledValue,
-  );
+  const hasClientDetails = [form.client_business_name].some(hasFilledValue);
 
   const hasContractDetails = [
-    form.technical_guidance_kind,
-    form.contract_contact_name,
     form.contract_type,
     form.contract_status,
     form.total_contract_amount,
@@ -91,8 +106,19 @@ export function SiteEditorModal({
   };
 
   const [sectionState, setSectionState] = useState<SiteEditorSectionState>(initialSectionState);
+  const [headquarterQuery, setHeadquarterQuery] = useState(resolvedHeadquarterName);
+  const [headquarterCreateOpen, setHeadquarterCreateOpen] = useState(false);
+  const [headquarterCreateBusy, setHeadquarterCreateBusy] = useState(false);
+  const [headquarterCreateForm, setHeadquarterCreateForm] =
+    useState<InlineHeadquarterFormState>(EMPTY_INLINE_HEADQUARTER_FORM);
   const resolvedSectionState =
     sectionState.key === editingId ? sectionState : initialSectionState;
+
+  useEffect(() => {
+    setHeadquarterQuery(resolvedHeadquarterName);
+    setHeadquarterCreateOpen(false);
+    setHeadquarterCreateForm(EMPTY_INLINE_HEADQUARTER_FORM);
+  }, [editingId, resolvedHeadquarterName]);
 
   const toggleSection = (field: keyof Omit<SiteEditorSectionState, 'key'>) => {
     setSectionState((current) => {
@@ -103,6 +129,34 @@ export function SiteEditorModal({
         [field]: !base[field],
       };
     });
+  };
+
+  const submitInlineHeadquarter = async () => {
+    if (!onCreateHeadquarter || !headquarterCreateForm.name.trim()) return;
+    setHeadquarterCreateBusy(true);
+    try {
+      const created = await onCreateHeadquarter({
+        address: headquarterCreateForm.address.trim() || null,
+        business_registration_no:
+          headquarterCreateForm.business_registration_no.trim() || null,
+        contact_name: headquarterCreateForm.contact_name.trim() || null,
+        contact_phone: headquarterCreateForm.contact_phone.trim() || null,
+        corporate_registration_no:
+          headquarterCreateForm.corporate_registration_no.trim() || null,
+        license_no: headquarterCreateForm.license_no.trim() || null,
+        management_number: headquarterCreateForm.management_number.trim() || null,
+        name: headquarterCreateForm.name.trim(),
+        opening_number: headquarterCreateForm.opening_number.trim() || null,
+      });
+      setForm((current) => ({ ...current, headquarter_id: created.id }));
+      setHeadquarterQuery(created.name);
+      setHeadquarterCreateForm(EMPTY_INLINE_HEADQUARTER_FORM);
+      setHeadquarterCreateOpen(false);
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : '건설사 등록에 실패했습니다.');
+    } finally {
+      setHeadquarterCreateBusy(false);
+    }
   };
 
   return (
@@ -151,25 +205,204 @@ export function SiteEditorModal({
                 />
               </label>
             ) : (
-              <label className={styles.modalField}>
-                <span className={styles.label}>건설사 *</span>
-                <select
-                  className="app-select"
-                  value={form.headquarter_id}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, headquarter_id: event.target.value }))
-                  }
-                  disabled={busy}
-                >
-                  <option value="">선택</option>
-                  {headquarters.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <>
+                <label className={styles.modalField}>
+                  <span className={styles.label}>건설사 *</span>
+                  <input
+                    className="app-input"
+                    list="site-editor-headquarters"
+                    value={headquarterQuery}
+                    onChange={(event) => {
+                      const nextValue = event.target.value;
+                      const matched = headquarters.find((item) => item.name === nextValue);
+                      setHeadquarterQuery(nextValue);
+                      setForm((current) => ({
+                        ...current,
+                        headquarter_id: matched?.id ?? '',
+                      }));
+                    }}
+                    disabled={busy}
+                    placeholder="건설사 검색"
+                  />
+                  <datalist id="site-editor-headquarters">
+                    {headquarters.map((item) => (
+                      <option key={item.id} value={item.name} />
+                    ))}
+                  </datalist>
+                </label>
+                {onCreateHeadquarter ? (
+                  <div className={styles.modalField}>
+                    <span className={styles.label}>새 건설사</span>
+                    <button
+                      type="button"
+                      className="app-button app-button-secondary"
+                      onClick={() => {
+                        setHeadquarterCreateOpen((current) => !current);
+                        setHeadquarterCreateForm((current) => ({
+                          ...current,
+                          name: current.name || headquarterQuery,
+                        }));
+                      }}
+                      disabled={busy}
+                    >
+                      등록
+                    </button>
+                  </div>
+                ) : null}
+              </>
             )}
+
+            {headquarterCreateOpen ? (
+              <>
+                <label className={styles.modalField}>
+                  <span className={styles.label}>건설사명 *</span>
+                  <input
+                    className="app-input"
+                    value={headquarterCreateForm.name}
+                    onChange={(event) =>
+                      setHeadquarterCreateForm((current) => ({
+                        ...current,
+                        name: event.target.value,
+                      }))
+                    }
+                    maxLength={200}
+                    disabled={busy || headquarterCreateBusy}
+                  />
+                </label>
+                <label className={styles.modalField}>
+                  <span className={styles.label}>사업장관리번호</span>
+                  <input
+                    className="app-input"
+                    value={headquarterCreateForm.management_number}
+                    onChange={(event) =>
+                      setHeadquarterCreateForm((current) => ({
+                        ...current,
+                        management_number: event.target.value,
+                      }))
+                    }
+                    maxLength={100}
+                    disabled={busy || headquarterCreateBusy}
+                  />
+                </label>
+                <label className={styles.modalField}>
+                  <span className={styles.label}>사업개시번호</span>
+                  <input
+                    className="app-input"
+                    value={headquarterCreateForm.opening_number}
+                    onChange={(event) =>
+                      setHeadquarterCreateForm((current) => ({
+                        ...current,
+                        opening_number: event.target.value,
+                      }))
+                    }
+                    maxLength={100}
+                    disabled={busy || headquarterCreateBusy}
+                  />
+                </label>
+                <label className={styles.modalField}>
+                  <span className={styles.label}>사업자등록번호</span>
+                  <input
+                    className="app-input"
+                    value={headquarterCreateForm.business_registration_no}
+                    onChange={(event) =>
+                      setHeadquarterCreateForm((current) => ({
+                        ...current,
+                        business_registration_no: event.target.value,
+                      }))
+                    }
+                    maxLength={50}
+                    disabled={busy || headquarterCreateBusy}
+                  />
+                </label>
+                <label className={styles.modalField}>
+                  <span className={styles.label}>법인등록번호</span>
+                  <input
+                    className="app-input"
+                    value={headquarterCreateForm.corporate_registration_no}
+                    onChange={(event) =>
+                      setHeadquarterCreateForm((current) => ({
+                        ...current,
+                        corporate_registration_no: event.target.value,
+                      }))
+                    }
+                    maxLength={50}
+                    disabled={busy || headquarterCreateBusy}
+                  />
+                </label>
+                <label className={styles.modalField}>
+                  <span className={styles.label}>면허번호</span>
+                  <input
+                    className="app-input"
+                    value={headquarterCreateForm.license_no}
+                    onChange={(event) =>
+                      setHeadquarterCreateForm((current) => ({
+                        ...current,
+                        license_no: event.target.value,
+                      }))
+                    }
+                    maxLength={50}
+                    disabled={busy || headquarterCreateBusy}
+                  />
+                </label>
+                <label className={styles.modalField}>
+                  <span className={styles.label}>대표 성명</span>
+                  <input
+                    className="app-input"
+                    value={headquarterCreateForm.contact_name}
+                    onChange={(event) =>
+                      setHeadquarterCreateForm((current) => ({
+                        ...current,
+                        contact_name: event.target.value,
+                      }))
+                    }
+                    maxLength={100}
+                    disabled={busy || headquarterCreateBusy}
+                  />
+                </label>
+                <label className={styles.modalField}>
+                  <span className={styles.label}>대표 전화번호</span>
+                  <input
+                    className="app-input"
+                    value={headquarterCreateForm.contact_phone}
+                    onChange={(event) =>
+                      setHeadquarterCreateForm((current) => ({
+                        ...current,
+                        contact_phone: event.target.value,
+                      }))
+                    }
+                    maxLength={50}
+                    disabled={busy || headquarterCreateBusy}
+                  />
+                </label>
+                <label className={styles.modalFieldWide}>
+                  <span className={styles.label}>소재지</span>
+                  <input
+                    className="app-input"
+                    value={headquarterCreateForm.address}
+                    onChange={(event) =>
+                      setHeadquarterCreateForm((current) => ({
+                        ...current,
+                        address: event.target.value,
+                      }))
+                    }
+                    disabled={busy || headquarterCreateBusy}
+                  />
+                </label>
+                <div className={styles.modalField}>
+                  <span className={styles.label}>저장</span>
+                  <button
+                    type="button"
+                    className="app-button app-button-primary"
+                    onClick={() => void submitInlineHeadquarter()}
+                    disabled={
+                      busy || headquarterCreateBusy || !headquarterCreateForm.name.trim()
+                    }
+                  >
+                    건설사 생성
+                  </button>
+                </div>
+              </>
+            ) : null}
 
             <label className={styles.modalField}>
               <span className={styles.label}>현장명 *</span>
@@ -269,127 +502,12 @@ export function SiteEditorModal({
             <div className={styles.collapsibleContent}>
               <div className={styles.modalGrid}>
                 <label className={styles.modalField}>
-                  <span className={styles.label}>현장코드</span>
-                  <input
-                    className="app-input"
-                    value={form.site_code}
-                    onChange={(event) =>
-                      setForm((current) => ({ ...current, site_code: event.target.value }))
-                    }
-                    maxLength={100}
-                    disabled={busy}
-                  />
-                </label>
-
-                <label className={styles.modalField}>
-                  <span className={styles.label}>현장관리번호</span>
-                  <input
-                    className="app-input"
-                    value={form.management_number}
-                    onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
-                        management_number: event.target.value,
-                      }))
-                    }
-                    maxLength={100}
-                    disabled={busy}
-                  />
-                </label>
-
-                <label className={styles.modalField}>
-                  <span className={styles.label}>현장 상태</span>
-                  <select
-                    className="app-select"
-                    value={form.status}
-                    onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
-                        status: event.target.value as SafetySiteStatus,
-                        pause_start_date:
-                          event.target.value === 'paused' ? current.pause_start_date : '',
-                      }))
-                    }
-                    disabled={busy}
-                  >
-                    {SITE_STATUS_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                {form.status === 'paused' ? (
-                  <label className={styles.modalField}>
-                    <span className={styles.label}>중지 시작일</span>
-                    <input
-                      className="app-input"
-                      type="date"
-                      value={form.pause_start_date}
-                      onChange={(event) =>
-                        setForm((current) => ({
-                          ...current,
-                          pause_start_date: event.target.value,
-                        }))
-                      }
-                      disabled={busy}
-                    />
-                  </label>
-                ) : null}
-
-                <label className={styles.modalField}>
-                  <span className={styles.label}>고위험 여부</span>
-                  <select
-                    className="app-select"
-                    value={form.is_high_risk_site ? 'yes' : 'no'}
-                    onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
-                        is_high_risk_site: event.target.value === 'yes',
-                      }))
-                    }
-                    disabled={busy}
-                  >
-                    <option value="no">일반</option>
-                    <option value="yes">고위험</option>
-                  </select>
-                </label>
-
-                <label className={styles.modalField}>
                   <span className={styles.label}>노동관서</span>
                   <input
                     className="app-input"
                     value={form.labor_office}
                     onChange={(event) =>
                       setForm((current) => ({ ...current, labor_office: event.target.value }))
-                    }
-                    disabled={busy}
-                  />
-                </label>
-
-                <label className={styles.modalField}>
-                  <span className={styles.label}>지도요원</span>
-                  <input
-                    className="app-input"
-                    value={form.guidance_officer_name}
-                    onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
-                        guidance_officer_name: event.target.value,
-                      }))
-                    }
-                    disabled={busy}
-                  />
-                </label>
-
-                <label className={styles.modalField}>
-                  <span className={styles.label}>점검자</span>
-                  <input
-                    className="app-input"
-                    value={form.inspector_name}
-                    onChange={(event) =>
-                      setForm((current) => ({ ...current, inspector_name: event.target.value }))
                     }
                     disabled={busy}
                   />
@@ -439,29 +557,6 @@ export function SiteEditorModal({
                   />
                 </label>
 
-                <label className={styles.modalField}>
-                  <span className={styles.label}>공사 규모</span>
-                  <input
-                    className="app-input"
-                    value={form.project_scale}
-                    onChange={(event) =>
-                      setForm((current) => ({ ...current, project_scale: event.target.value }))
-                    }
-                    disabled={busy}
-                  />
-                </label>
-
-                <label className={styles.modalField}>
-                  <span className={styles.label}>공사 종류</span>
-                  <input
-                    className="app-input"
-                    value={form.project_kind}
-                    onChange={(event) =>
-                      setForm((current) => ({ ...current, project_kind: event.target.value }))
-                    }
-                    disabled={busy}
-                  />
-                </label>
               </div>
             </div>
           ) : null}
@@ -502,6 +597,11 @@ export function SiteEditorModal({
                     }
                     disabled={busy}
                   >
+                    {form.contract_type === 'maintenance' ? (
+                      <option value="maintenance" disabled>
+                        유지보수(기존)
+                      </option>
+                    ) : null}
                     {SITE_CONTRACT_TYPE_OPTIONS.map((option) => (
                       <option key={option.value || 'blank'} value={option.value}>
                         {option.label}
@@ -529,36 +629,6 @@ export function SiteEditorModal({
                       </option>
                     ))}
                   </select>
-                </label>
-
-                <label className={styles.modalField}>
-                  <span className={styles.label}>기술지도 구분</span>
-                  <input
-                    className="app-input"
-                    value={form.technical_guidance_kind}
-                    onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
-                        technical_guidance_kind: event.target.value,
-                      }))
-                    }
-                    disabled={busy}
-                  />
-                </label>
-
-                <label className={styles.modalField}>
-                  <span className={styles.label}>계약 담당자</span>
-                  <input
-                    className="app-input"
-                    value={form.contract_contact_name}
-                    onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
-                        contract_contact_name: event.target.value,
-                      }))
-                    }
-                    disabled={busy}
-                  />
                 </label>
 
                 <label className={styles.modalField}>
@@ -692,46 +762,9 @@ export function SiteEditorModal({
                     disabled={busy}
                   />
                 </label>
-
-                <label className={styles.modalField}>
-                  <span className={styles.label}>발주유형 구분</span>
-                  <input
-                    className="app-input"
-                    value={form.order_type_division}
-                    onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
-                        order_type_division: event.target.value,
-                      }))
-                    }
-                    disabled={busy}
-                  />
-                </label>
               </div>
             </div>
           ) : null}
-        </section>
-
-        <section className={styles.contentTypePanel}>
-          <div className={styles.contentTypeHeader}>
-            <div>
-              <h3 className={styles.menuTitle}>운영 메모</h3>
-            </div>
-          </div>
-          <div className={styles.modalGrid}>
-            <label className={styles.modalFieldWide}>
-              <span className={styles.label}>운영 메모</span>
-              <textarea
-                className="app-textarea"
-                value={form.memo}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, memo: event.target.value }))
-                }
-                disabled={busy}
-                rows={5}
-              />
-            </label>
-          </div>
         </section>
       </div>
     </AppModal>

@@ -10,6 +10,9 @@ import type {
   SafetyAssignmentUpdateInput,
   SafetyContentItemInput,
   SafetyContentItemUpdateInput,
+  SafetyHeadquarterAssignment,
+  SafetyHeadquarterAssignmentInput,
+  SafetyHeadquarterAssignmentUpdateInput,
   SafetyHeadquarter,
   SafetyHeadquarterInput,
   SafetyHeadquarterUpdateInput,
@@ -168,7 +171,7 @@ export const createSafetyHeadquarter = async (token: string, body: SafetyHeadqua
   } catch (error) {
     if (isHeadquarterWriteFailure(error)) {
       throw new SafetyApiError(
-        '건설사 저장이 서버에서 실패했습니다. 건설사 관리번호/건설사 개시번호가 같은 값이 아니라면 서버 로그 확인이 필요합니다.',
+        '건설사 저장이 서버에서 실패했습니다. 사업장관리번호/사업개시번호가 같은 값이 아니라면 서버 로그 확인이 필요합니다.',
         500,
       );
     }
@@ -191,7 +194,7 @@ export const updateSafetyHeadquarter = async (
   } catch (error) {
     if (isHeadquarterWriteFailure(error)) {
       throw new SafetyApiError(
-        '건설사 수정이 서버에서 실패했습니다. 건설사 관리번호/건설사 개시번호가 같은 값이 아니라면 서버 로그 확인이 필요합니다.',
+        '건설사 수정이 서버에서 실패했습니다. 사업장관리번호/사업개시번호가 같은 값이 아니라면 서버 로그 확인이 필요합니다.',
         500,
       );
     }
@@ -232,7 +235,7 @@ export const createSafetySite = async (token: string, body: SafetySiteInput) => 
   } catch (error) {
     if (isDuplicateFieldConflict(error, 'site_code')) {
       throw new SafetyApiError(
-        '현장 저장이 서버에서 실패했습니다. 현장코드가 이미 다른 현장이나 삭제 잔존 데이터와 충돌하고 있습니다.',
+        '현장 저장이 서버에서 실패했습니다. 기존 현장코드 값이 다른 현장이나 삭제 잔존 데이터와 충돌하고 있습니다.',
         409,
       );
     }
@@ -249,7 +252,7 @@ export const updateSafetySite = async (token: string, id: string, body: SafetySi
   } catch (error) {
     if (isDuplicateFieldConflict(error, 'site_code')) {
       throw new SafetyApiError(
-        '현장 수정이 서버에서 실패했습니다. 현장코드가 다른 현장이나 종료 상태 데이터와 충돌하고 있을 수 있습니다.',
+        '현장 수정이 서버에서 실패했습니다. 기존 현장코드 값이 다른 현장이나 종료 상태 데이터와 충돌하고 있을 수 있습니다.',
         409,
       );
     }
@@ -301,6 +304,42 @@ export const updateSafetyAssignment = (token: string, id: string, body: SafetyAs
 export const deactivateSafetyAssignment = (token: string, id: string) =>
   requestSafetyApi<SafetyAssignment>(`/assignments/${id}`, { method: 'DELETE' }, token);
 export const deleteSafetyAssignment = deactivateSafetyAssignment;
+
+export const fetchSafetyHeadquarterAssignmentsPage = (
+  token: string,
+  options: AdminListQueryOptions & {
+    activeOnly?: boolean;
+    headquarterId?: string;
+    userId?: string;
+  } = {},
+) =>
+  requestSafetyApi<SafetyHeadquarterAssignment[]>(
+    withQuery('/headquarter-assignments', {
+      active_only: options.activeOnly ?? true,
+      headquarter_id: options.headquarterId,
+      limit: options.limit ?? ADMIN_LIST_LIMIT,
+      offset: options.offset ?? 0,
+      user_id: options.userId,
+    }),
+    {},
+    token,
+  );
+export const createSafetyHeadquarterAssignment = (
+  token: string,
+  body: SafetyHeadquarterAssignmentInput,
+) => sendJson<SafetyHeadquarterAssignment>('/headquarter-assignments', token, 'POST', body);
+export const updateSafetyHeadquarterAssignment = (
+  token: string,
+  id: string,
+  body: SafetyHeadquarterAssignmentUpdateInput,
+) => sendJson<SafetyHeadquarterAssignment>(`/headquarter-assignments/${id}`, token, 'PATCH', body);
+export const deactivateSafetyHeadquarterAssignment = (token: string, id: string) =>
+  requestSafetyApi<SafetyHeadquarterAssignment>(
+    `/headquarter-assignments/${id}`,
+    { method: 'DELETE' },
+    token,
+  );
+export const deleteSafetyHeadquarterAssignment = deactivateSafetyHeadquarterAssignment;
 
 export const fetchSafetyContentItemsAdmin = (
   token: string,

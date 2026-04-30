@@ -22,6 +22,7 @@ import { getSiteManagementMissingFields } from '../sites/siteSectionHelpers';
 interface SiteManagementMainPanelProps {
   headquarter: SafetyHeadquarter | null;
   site: SafetySite;
+  siteEditHref?: string;
   /** When false, hides the controller "현장 정보 수정" link (e.g. worker site hub). Default true. */
   showSiteEditAction?: boolean;
 }
@@ -37,6 +38,7 @@ function formatCountLabel(value: number | null | undefined, suffix = '회') {
 export function SiteManagementMainPanel({
   headquarter,
   site,
+  siteEditHref,
   showSiteEditAction = true,
 }: SiteManagementMainPanelProps) {
   const assignedUsers =
@@ -63,9 +65,15 @@ export function SiteManagementMainPanel({
   const headquarterName =
     headquarter?.name || site.headquarter_detail?.name || site.headquarter?.name || '-';
   const headquarterManagementNumber =
-    headquarter?.management_number || site.headquarter_detail?.management_number || '-';
+    headquarter?.management_number ||
+    site.headquarter_detail?.management_number ||
+    site.management_number ||
+    '-';
   const headquarterOpeningNumber =
-    headquarter?.opening_number || site.headquarter_detail?.opening_number || '-';
+    headquarter?.opening_number ||
+    site.headquarter_detail?.opening_number ||
+    site.site_code ||
+    '-';
   const managerDisplay =
     site.manager_name || site.manager_phone
       ? `${site.manager_name || '-'}${site.manager_phone ? ` (${site.manager_phone})` : ''}`
@@ -75,7 +83,7 @@ export function SiteManagementMainPanel({
     ? `보완 ${combinedMissingFields.length}건`
     : '기본 정보 입력 완료';
 
-  const editHref = getControllerSectionHref('headquarters', {
+  const editHref = siteEditHref ?? getControllerSectionHref('headquarters', {
     editSiteId: site.id,
     headquarterId: site.headquarter_id,
   });
@@ -111,16 +119,14 @@ export function SiteManagementMainPanel({
                 <strong className={styles.detailItemValue}>{headquarterName}</strong>
               </div>
               <div className={styles.detailItem}>
-                <span className={styles.detailItemLabel}>건설사 관리번호 / 건설사 개시번호</span>
+                <span className={styles.detailItemLabel}>사업장관리번호 / 사업개시번호</span>
                 <strong className={styles.detailItemValue}>
                   {headquarterManagementNumber} / {headquarterOpeningNumber}
                 </strong>
               </div>
               <div className={styles.detailItem}>
-                <span className={styles.detailItemLabel}>현장명 / 현장코드</span>
-                <strong className={styles.detailItemValue}>
-                  {site.site_name || '-'} / {site.site_code || '-'}
-                </strong>
+                <span className={styles.detailItemLabel}>현장명</span>
+                <strong className={styles.detailItemValue}>{site.site_name || '-'}</strong>
               </div>
               <div className={styles.detailItem}>
                 <span className={styles.detailItemLabel}>건설 현장 주소</span>
@@ -169,12 +175,6 @@ export function SiteManagementMainPanel({
                 <span className={styles.detailItemLabel}>공사 기간</span>
                 <strong className={styles.detailItemValue}>
                   {formatDateRange(site.project_start_date, site.project_end_date)}
-                </strong>
-              </div>
-              <div className={styles.detailItem}>
-                <span className={styles.detailItemLabel}>공사 구분 / 공사 종류</span>
-                <strong className={styles.detailItemValue}>
-                  {site.order_type_division || '-'} / {site.project_kind || '-'}
                 </strong>
               </div>
               <div className={styles.detailItem}>

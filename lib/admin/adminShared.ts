@@ -309,7 +309,6 @@ export const SITE_CONTRACT_TYPE_OPTIONS: Array<{
   { value: 'private', label: '민간계약' },
   { value: 'negotiated', label: '수의계약' },
   { value: 'bid', label: '입찰계약' },
-  { value: 'maintenance', label: '유지보수' },
   { value: 'other', label: '기타' },
 ];
 
@@ -318,7 +317,7 @@ export const SITE_CONTRACT_STATUS_OPTIONS: Array<{
   value: SiteContractStatus;
 }> = [
   { value: '', label: '선택' },
-  { value: 'ready', label: '준비중' },
+  { value: 'ready', label: '미착수' },
   { value: 'active', label: '진행중' },
   { value: 'paused', label: '중지' },
   { value: 'completed', label: '완료' },
@@ -327,6 +326,7 @@ export const SITE_CONTRACT_STATUS_OPTIONS: Array<{
 export const SITE_CONTRACT_TYPE_LABELS = Object.fromEntries(
   SITE_CONTRACT_TYPE_OPTIONS.map((option) => [option.value, option.label]),
 ) as Record<SiteContractType, string>;
+SITE_CONTRACT_TYPE_LABELS.maintenance = '유지보수(기존)';
 
 export const SITE_CONTRACT_STATUS_LABELS = Object.fromEntries(
   SITE_CONTRACT_STATUS_OPTIONS.map((option) => [option.value, option.label]),

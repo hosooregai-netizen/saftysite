@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import LoginPanel from '@/components/auth/LoginPanel';
 import WorkerAppHeader from '@/components/worker/WorkerAppHeader';
 import WorkerMenuSidebar from '@/components/worker/WorkerMenuSidebar';
@@ -15,11 +16,14 @@ import styles from './HomeScreen.module.css';
 export function HomeScreen() {
   const [menuOpen, setMenuOpen] = useState(false);
   const {
+    assignedHeadquarters,
     authError,
     currentUserName,
     currentUserPosition,
     dataError,
     filteredSiteSummaries,
+    headquarterError,
+    isHeadquarterLoading,
     isControllerView,
     isInitialHydration,
     login,
@@ -99,6 +103,52 @@ export function HomeScreen() {
                         </strong>
                       </article>
                     </section>
+
+                    {isHeadquarterLoading || headquarterError || assignedHeadquarters.length > 0 ? (
+                      <section className={styles.headquarterPanel}>
+                        <div className={styles.headquarterPanelHeader}>
+                          <div>
+                            <h2 className={styles.headquarterPanelTitle}>배정 건설사</h2>
+                          </div>
+                        </div>
+                        {headquarterError ? (
+                          <p className={styles.headquarterPanelError}>{headquarterError}</p>
+                        ) : isHeadquarterLoading ? (
+                          <p className={styles.headquarterPanelMeta}>배정 건설사를 불러오는 중입니다.</p>
+                        ) : (
+                          <div className={styles.headquarterList}>
+                            {assignedHeadquarters.map((assignment) => {
+                              const headquarter = assignment.headquarter;
+                              return (
+                                <article key={assignment.id} className={styles.headquarterCard}>
+                                  <div className={styles.headquarterCardMain}>
+                                    <strong className={styles.headquarterCardTitle}>
+                                      {headquarter.name}
+                                    </strong>
+                                    <span className={styles.headquarterCardMeta}>
+                                      사업개시번호 {headquarter.opening_number || '-'}
+                                    </span>
+                                  </div>
+                                  <span className={styles.headquarterBadge}>
+                                    {assignment.site_count > 0
+                                      ? `현장 ${assignment.site_count}개`
+                                      : '현장 미등록'}
+                                  </span>
+                                  <Link
+                                    href={`/headquarters/${encodeURIComponent(
+                                      assignment.headquarter_id,
+                                    )}/sites/new`}
+                                    className="app-button app-button-primary"
+                                  >
+                                    현장 등록
+                                  </Link>
+                                </article>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </section>
+                    ) : null}
 
                     <section className={styles.tablePanel}>
                       <div className={styles.tableTools}>

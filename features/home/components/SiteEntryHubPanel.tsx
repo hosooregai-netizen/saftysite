@@ -58,7 +58,8 @@ export function SiteEntryHubPanel({ currentSite }: SiteEntryHubPanelProps) {
   return (
     <SiteManagementMainPanel
       headquarter={null}
-      showSiteEditAction={false}
+      showSiteEditAction
+      siteEditHref={`/sites/${encodeURIComponent(safetySite.id)}/edit`}
       site={safetySite}
     />
   );

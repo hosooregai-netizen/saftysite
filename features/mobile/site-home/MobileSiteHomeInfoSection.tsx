@@ -34,7 +34,7 @@ export function MobileSiteHomeInfoSection(props: MobileSiteHomeInfoSectionProps)
 
       <div className={styles.metaGrid}>
         <div className={styles.metaItem}>
-          <span className={styles.metaLabel}>현장 관리번호</span>
+          <span className={styles.metaLabel}>사업장관리번호</span>
           <strong className={styles.metaValue}>{getDisplayValue(props.managementNumber)}</strong>
         </div>
         <div className={styles.metaItem}>

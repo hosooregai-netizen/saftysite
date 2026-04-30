@@ -73,11 +73,12 @@ export function AdminDashboardSectionContent({
           onClearHeadquarterSelection={dashboard.clearHeadquarterSelection}
           onClearSiteSelection={dashboard.clearSiteSelection}
           currentUserId={currentUser.id}
+          users={dashboard.data.users}
           onAssignFieldAgent={async (siteId, userId) => {
             await dashboard.assignFieldAgentToSite(siteId, userId);
           }}
           onCreate={async (input) => {
-            await dashboard.createHeadquarter(input);
+            return await dashboard.createHeadquarter(input);
           }}
           onCreateSite={dashboard.createSite}
           onDelete={async (id) => {
