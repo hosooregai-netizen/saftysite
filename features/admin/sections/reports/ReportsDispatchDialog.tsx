@@ -8,6 +8,10 @@ import {
   getDispatchStatusLabel,
 } from '@/lib/admin/reportMeta';
 import { buildDispatchMeta, formatDateTime } from './reportsSectionFilters';
+import {
+  getPrimarySiteManagerEmail,
+  getPrimarySiteManagerName,
+} from '@/lib/siteContacts';
 import type { ControllerReportRow, ReportDispatchMeta } from '@/types/admin';
 import type { SmsProviderStatus } from '@/types/messages';
 import type { SafetySite } from '@/types/backend';
@@ -51,6 +55,11 @@ export function ReportsDispatchDialog({
       ? users.find((user) => user.id === dispatchMeta.dispatchCheckedBy)?.name ||
         dispatchMeta.dispatchCheckedBy
       : '-';
+  const defaultRecipientEmail = getPrimarySiteManagerEmail(dispatchSite);
+  const defaultRecipientName =
+    getPrimarySiteManagerName(dispatchSite) ||
+    dispatchSite?.contract_contact_name ||
+    '현장 담당자';
 
   return (
     <AppModal
@@ -83,8 +92,8 @@ export function ReportsDispatchDialog({
             <label className={styles.modalFieldWide}>
               <span className={styles.label}>기본 수신 대상</span>
               <div className={styles.tableSecondary}>
-                {dispatchSite?.site_contact_email
-                  ? `${dispatchSite.manager_name || dispatchSite.contract_contact_name || '현장 담당자'} · ${dispatchSite.site_contact_email}`
+                {defaultRecipientEmail
+                  ? `${defaultRecipientName} · ${defaultRecipientEmail}`
                   : '현장 수신 메일이 등록되어 있지 않습니다.'}
               </div>
             </label>

@@ -25,10 +25,17 @@ export function MobileInspectionSessionStep2({
   session,
 }: MobileInspectionSessionStep2Props) {
   const updateOverview = (patch: Partial<InspectionSessionDraft['document2Overview']>) => {
-    screen.applyDocumentUpdate('doc2', 'manual', (current) => ({
-      ...current,
-      document2Overview: { ...current.document2Overview, ...patch },
-    }));
+    screen.applyDocumentUpdate('doc2', 'manual', (current) => {
+      const nextOverview = { ...current.document2Overview, ...patch };
+      if (
+        patch.notificationMethod === 'direct' &&
+        !nextOverview.notificationRecipientName.trim() &&
+        current.adminSiteSnapshot.siteManagerName.trim()
+      ) {
+        nextOverview.notificationRecipientName = current.adminSiteSnapshot.siteManagerName;
+      }
+      return { ...current, document2Overview: nextOverview };
+    });
   };
 
   return (

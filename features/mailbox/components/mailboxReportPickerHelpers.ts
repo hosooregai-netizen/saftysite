@@ -1,6 +1,7 @@
 import type { ControllerReportRow } from '@/types/admin';
 import type { SafetyReportListItem, SafetySite } from '@/types/backend';
 import { doesLegacySiteMatch, normalizeLegacyMatchText } from '@/lib/admin/legacySiteMatching';
+import { getPrimarySiteManagerEmail } from '@/lib/siteContacts';
 import {
   getMailAttachmentUnavailableReason,
   isLegacyMailAttachmentReport,
@@ -64,7 +65,7 @@ export function mapSafetyReportListItemToMailboxReportOption(
     headquarterId: item.headquarter_id || '',
     headquarterName:
       matchedSite?.headquarter_detail?.name || matchedSite?.headquarter?.name || '',
-    recipientEmail: matchedSite?.site_contact_email || '',
+    recipientEmail: getPrimarySiteManagerEmail(matchedSite),
     documentKind: item.document_kind ?? null,
     meta: item.meta,
     originalPdfAvailable,
@@ -108,7 +109,7 @@ export function mapAdminReportRowToMailboxReportOption(
       matchedSite?.headquarter_detail?.name ||
       matchedSite?.headquarter?.name ||
       '',
-    recipientEmail: matchedSite?.site_contact_email || '',
+    recipientEmail: getPrimarySiteManagerEmail(matchedSite),
     documentKind: null,
     meta: { reportKind: row.reportType },
     originalPdfAvailable,

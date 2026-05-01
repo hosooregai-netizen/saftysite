@@ -22,6 +22,7 @@ import {
   buildControllerReportOpenHref,
 } from '@/lib/admin/controllerReports';
 import { fetchAdminOriginalPdfDocument } from '@/lib/admin/originalPdfClient';
+import { getPrimarySiteManagerPhone } from '@/lib/siteContacts';
 import {
   normalizeControllerReview,
   normalizeDispatchMeta,
@@ -684,7 +685,7 @@ export function useReportsSectionState({
       const cachedSite = readAdminSessionCache<SafetySite>(currentUser.id, cacheKey);
       if (cachedSite.value) {
         setDispatchSite(cachedSite.value);
-        setDispatchSmsPhone(cachedSite.value.manager_phone || '');
+        setDispatchSmsPhone(getPrimarySiteManagerPhone(cachedSite.value));
         return;
       }
 
@@ -696,7 +697,7 @@ export function useReportsSectionState({
         }
         writeAdminSessionCache(currentUser.id, cacheKey, site);
         setDispatchSite(site);
-        setDispatchSmsPhone(site.manager_phone || '');
+        setDispatchSmsPhone(getPrimarySiteManagerPhone(site));
       } catch (nextError) {
         console.error('Failed to load report dispatch site detail', nextError);
       }

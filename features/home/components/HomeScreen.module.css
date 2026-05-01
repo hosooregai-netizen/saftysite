@@ -417,6 +417,70 @@
   color: var(--erp-dark);
 }
 
+.contactEditorBlock {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 10px;
+}
+
+.contactEditorHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.contactEditorTitle {
+  font-size: var(--text-ui);
+  font-weight: 700;
+  color: var(--erp-dark);
+}
+
+.contactEditorRows {
+  display: grid;
+  gap: 10px;
+}
+
+.contactEditorRow {
+  display: grid;
+  grid-template-columns: minmax(110px, 1fr) minmax(120px, 1fr) minmax(160px, 1.2fr) auto auto;
+  gap: 8px;
+  align-items: end;
+  padding: 12px;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-surface);
+  background: #fbfcfe;
+}
+
+.contactEditorRowNoPrimary {
+  grid-template-columns: minmax(110px, 1fr) minmax(120px, 1fr) minmax(160px, 1.2fr) auto;
+}
+
+.contactPrimaryToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
+  font-size: var(--text-ui-sm);
+  font-weight: 700;
+  color: var(--erp-dark);
+  white-space: nowrap;
+}
+
+.contactPrimaryToggle input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+
+.contactEditorEmpty {
+  padding: 12px;
+  border: 1px dashed var(--erp-line);
+  border-radius: var(--erp-radius-surface);
+  color: var(--erp-text-muted);
+  font-size: var(--text-ui-sm);
+}
+
 .emptyState {
   display: flex;
   flex-direction: column;
@@ -572,6 +636,16 @@
 
   .formActions :global(.app-button) {
     flex: 1 1 100%;
+  }
+
+  .contactEditorHeader {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .contactEditorRow,
+  .contactEditorRowNoPrimary {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .headquarterPanel {

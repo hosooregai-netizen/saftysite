@@ -1,9 +1,11 @@
 import type {
   SiteDispatchPolicy,
   SafetyHeadquarterLifecycleStatus,
+  SafetyClientContact,
   SafetyContentItemListItem,
   SafetyContentType,
   SafetySite,
+  SafetySiteManagerContact,
   SafetyUser,
   SafetyUserRole,
 } from '@/types/backend';
@@ -129,6 +131,8 @@ export interface SafetySiteInput {
   contract_contact_name?: string | null;
   manager_phone?: string | null;
   site_contact_email?: string | null;
+  site_managers?: SafetySiteManagerContact[] | null;
+  client_contacts?: SafetyClientContact[] | null;
   is_high_risk_site?: boolean | null;
   site_address?: string | null;
   pause_start_date?: string | null;

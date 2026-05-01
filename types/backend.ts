@@ -161,6 +161,21 @@ export interface SafetyHeadquarterDetail extends SafetyHeadquarterSummary {
   updated_at: string;
 }
 
+export interface SafetySiteManagerContact {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  is_primary: boolean;
+}
+
+export interface SafetyClientContact {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+}
+
 export interface SafetySite {
   id: string;
   headquarter_id: string;
@@ -191,6 +206,9 @@ export interface SafetySite {
   contract_contact_name: string | null;
   manager_phone: string | null;
   site_contact_email?: string | null;
+  site_managers?: SafetySiteManagerContact[] | null;
+  primary_site_manager?: SafetySiteManagerContact | null;
+  client_contacts?: SafetyClientContact[] | null;
   is_high_risk_site?: boolean | null;
   site_address: string | null;
   status: string;

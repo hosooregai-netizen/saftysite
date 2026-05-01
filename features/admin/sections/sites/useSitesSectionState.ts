@@ -72,6 +72,18 @@ function buildChangedSitePayload(
 }
 
 function validateSiteSubmit(form: SiteFormState) {
+  const contactMaxLengthChecks: Array<[string, string, number]> = [
+    ...form.site_managers.flatMap((contact, index) => [
+      [`현장 책임자 ${index + 1} 이름`, contact.name, 100] as [string, string, number],
+      [`현장 책임자 ${index + 1} 연락처`, contact.phone, 50] as [string, string, number],
+      [`현장 책임자 ${index + 1} 이메일`, contact.email, 200] as [string, string, number],
+    ]),
+    ...form.client_contacts.flatMap((contact, index) => [
+      [`발주처 담당자 ${index + 1} 이름`, contact.name, 100] as [string, string, number],
+      [`발주처 담당자 ${index + 1} 연락처`, contact.phone, 50] as [string, string, number],
+      [`발주처 담당자 ${index + 1} 이메일`, contact.email, 200] as [string, string, number],
+    ]),
+  ];
   const maxLengthChecks: Array<[string, string, number]> = [
     ['현장명', form.site_name, 200],
     ['노동관서', form.labor_office, 200],
@@ -81,7 +93,7 @@ function validateSiteSubmit(form: SiteFormState) {
     ['발주처명', form.client_business_name, 200],
   ];
 
-  for (const [label, value, maxLength] of maxLengthChecks) {
+  for (const [label, value, maxLength] of [...maxLengthChecks, ...contactMaxLengthChecks]) {
     const normalized = value.trim();
     if (normalized.length > maxLength) {
       return `${label}은(는) ${maxLength}자 이하로 입력해 주세요.`;

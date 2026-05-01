@@ -21,6 +21,22 @@ export function Doc2OverviewFields({ props }: Doc2OverviewFieldsProps) {
     session.document2Overview.constructionType?.trim() || DEFAULT_CONSTRUCTION_TYPE;
   const hasDirectSignature = session.document2Overview.notificationRecipientSignature.trim().length > 0;
   const recipientName = session.document2Overview.notificationRecipientName;
+  const updateNotificationMethod = (value: string) => {
+    props.applyDocumentUpdate('doc2', 'manual', (current) => {
+      const nextOverview = {
+        ...current.document2Overview,
+        notificationMethod: value as typeof current.document2Overview.notificationMethod,
+      };
+      if (
+        value === 'direct' &&
+        !nextOverview.notificationRecipientName.trim() &&
+        current.adminSiteSnapshot.siteManagerName.trim()
+      ) {
+        nextOverview.notificationRecipientName = current.adminSiteSnapshot.siteManagerName;
+      }
+      return { ...current, document2Overview: nextOverview };
+    });
+  };
 
   return (
     <>
@@ -127,9 +143,7 @@ export function Doc2OverviewFields({ props }: Doc2OverviewFieldsProps) {
                   <select
                     className="app-select"
                     value={session.document2Overview.notificationMethod}
-                    onChange={(event) =>
-                      updateOverviewField(props, 'notificationMethod', event.target.value)
-                    }
+                    onChange={(event) => updateNotificationMethod(event.target.value)}
                   >
                     <option value="">선택</option>
                     {NOTIFICATION_METHOD_OPTIONS.map((option) => (

@@ -15,7 +15,15 @@ import {
 } from '@/lib/admin';
 import { parseSiteRequiredCompletionFields } from '@/lib/admin/siteContractProfile';
 import { getCurrentReportMonth } from '@/lib/erpReports/shared';
-import type { SafetySite } from '@/types/backend';
+import {
+  normalizeSafetyClientContacts,
+  normalizeSafetySiteManagers,
+} from '@/lib/siteContacts';
+import type {
+  SafetyClientContact,
+  SafetySite,
+  SafetySiteManagerContact,
+} from '@/types/backend';
 import type { SafetyHeadquarter } from '@/types/controller';
 import { getSiteManagementMissingFields } from '../sites/siteSectionHelpers';
 
@@ -33,6 +41,36 @@ function formatDateRange(start: string | null | undefined, end: string | null | 
 
 function formatCountLabel(value: number | null | undefined, suffix = '회') {
   return value != null ? `${value}${suffix}` : '-';
+}
+
+function formatContactMeta(contact: Pick<SafetySiteManagerContact, 'phone' | 'email'>) {
+  return [contact.phone, contact.email].filter(Boolean).join(' / ');
+}
+
+function renderContactList(
+  contacts: Array<SafetySiteManagerContact | SafetyClientContact>,
+  primaryLabel?: string,
+) {
+  if (contacts.length === 0) {
+    return '-';
+  }
+  return (
+    <div className={styles.contactList}>
+      {contacts.map((contact) => (
+        <div key={contact.id} className={styles.contactListItem}>
+          <span className={styles.contactListName}>
+            {contact.name || contact.phone || contact.email || '-'}
+            {'is_primary' in contact && contact.is_primary && primaryLabel ? (
+              <span className={styles.contactListBadge}>{primaryLabel}</span>
+            ) : null}
+          </span>
+          {formatContactMeta(contact) ? (
+            <span className={styles.contactListMeta}>{formatContactMeta(contact)}</span>
+          ) : null}
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export function SiteManagementMainPanel({
@@ -74,10 +112,8 @@ export function SiteManagementMainPanel({
     site.headquarter_detail?.opening_number ||
     site.site_code ||
     '-';
-  const managerDisplay =
-    site.manager_name || site.manager_phone
-      ? `${site.manager_name || '-'}${site.manager_phone ? ` (${site.manager_phone})` : ''}`
-      : '-';
+  const siteManagerContacts = normalizeSafetySiteManagers(site);
+  const clientContacts = normalizeSafetyClientContacts(site);
   const assigneeDisplay = assignedUsers.length > 0 ? assignedUsers.join(', ') : '-';
   const statusMeta = combinedMissingFields.length
     ? `보완 ${combinedMissingFields.length}건`
@@ -151,7 +187,9 @@ export function SiteManagementMainPanel({
               </div>
               <div className={styles.detailItem}>
                 <span className={styles.detailItemLabel}>현장 책임자</span>
-                <strong className={styles.detailItemValue}>{managerDisplay}</strong>
+                <div className={styles.detailItemValue}>
+                  {renderContactList(siteManagerContacts, '대표')}
+                </div>
               </div>
               <div className={styles.detailItem}>
                 <span className={styles.detailItemLabel}>담당요원</span>
@@ -180,6 +218,10 @@ export function SiteManagementMainPanel({
               <div className={styles.detailItem}>
                 <span className={styles.detailItemLabel}>발주처</span>
                 <strong className={styles.detailItemValue}>{site.client_business_name || '-'}</strong>
+              </div>
+              <div className={styles.detailItem}>
+                <span className={styles.detailItemLabel}>발주처 담당자</span>
+                <div className={styles.detailItemValue}>{renderContactList(clientContacts)}</div>
               </div>
             </div>
           </article>

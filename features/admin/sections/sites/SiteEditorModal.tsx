@@ -11,7 +11,13 @@ import type {
   SafetyHeadquarter,
   SafetyHeadquarterInput,
 } from '@/types/controller';
-import type { SiteFormState } from './siteSectionHelpers';
+import {
+  createEmptyClientContactRow,
+  createEmptySiteManagerRow,
+  type SiteFormState,
+  type SiteManagerFormRow,
+  type ClientContactFormRow,
+} from './siteSectionHelpers';
 
 interface SiteEditorModalProps {
   busy: boolean;
@@ -59,6 +65,27 @@ const EMPTY_INLINE_HEADQUARTER_FORM: InlineHeadquarterFormState = {
 
 function hasFilledValue(value: string | boolean) {
   return typeof value === 'boolean' ? value : Boolean(value.trim());
+}
+
+function syncPrimarySiteManagerFields(
+  current: SiteFormState,
+  rows: SiteManagerFormRow[],
+): SiteFormState {
+  const primary = rows.find((row) => row.is_primary) ?? rows[0];
+  return {
+    ...current,
+    site_managers: rows,
+    manager_name: primary?.name ?? '',
+    manager_phone: primary?.phone ?? '',
+    site_contact_email: primary?.email ?? '',
+  };
+}
+
+function ensureOnePrimary(rows: SiteManagerFormRow[]) {
+  if (rows.length === 0 || rows.some((row) => row.is_primary)) {
+    return rows;
+  }
+  return rows.map((row, index) => ({ ...row, is_primary: index === 0 }));
 }
 
 export function SiteEditorModal({
@@ -129,6 +156,71 @@ export function SiteEditorModal({
         [field]: !base[field],
       };
     });
+  };
+
+  const addSiteManager = () => {
+    setForm((current) => {
+      const nextRows = [
+        ...current.site_managers,
+        createEmptySiteManagerRow(current.site_managers.length === 0),
+      ];
+      return syncPrimarySiteManagerFields(current, ensureOnePrimary(nextRows));
+    });
+  };
+
+  const updateSiteManager = (
+    rowId: string,
+    patch: Partial<Omit<SiteManagerFormRow, 'id' | 'is_primary'>>,
+  ) => {
+    setForm((current) => {
+      const nextRows = current.site_managers.map((row) =>
+        row.id === rowId ? { ...row, ...patch } : row,
+      );
+      return syncPrimarySiteManagerFields(current, ensureOnePrimary(nextRows));
+    });
+  };
+
+  const selectPrimarySiteManager = (rowId: string) => {
+    setForm((current) => {
+      const nextRows = current.site_managers.map((row) => ({
+        ...row,
+        is_primary: row.id === rowId,
+      }));
+      return syncPrimarySiteManagerFields(current, nextRows);
+    });
+  };
+
+  const removeSiteManager = (rowId: string) => {
+    setForm((current) => {
+      const nextRows = ensureOnePrimary(current.site_managers.filter((row) => row.id !== rowId));
+      return syncPrimarySiteManagerFields(current, nextRows);
+    });
+  };
+
+  const addClientContact = () => {
+    setForm((current) => ({
+      ...current,
+      client_contacts: [...current.client_contacts, createEmptyClientContactRow()],
+    }));
+  };
+
+  const updateClientContact = (
+    rowId: string,
+    patch: Partial<Omit<ClientContactFormRow, 'id'>>,
+  ) => {
+    setForm((current) => ({
+      ...current,
+      client_contacts: current.client_contacts.map((row) =>
+        row.id === rowId ? { ...row, ...patch } : row,
+      ),
+    }));
+  };
+
+  const removeClientContact = (rowId: string) => {
+    setForm((current) => ({
+      ...current,
+      client_contacts: current.client_contacts.filter((row) => row.id !== rowId),
+    }));
   };
 
   const submitInlineHeadquarter = async () => {
@@ -431,51 +523,84 @@ export function SiteEditorModal({
               />
             </label>
 
-            <label className={styles.modalField}>
-              <span className={styles.label}>현장 책임자명</span>
-              <input
-                className="app-input"
-                value={form.manager_name}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, manager_name: event.target.value }))
-                }
-                maxLength={100}
-                disabled={busy}
-                placeholder="예: 홍길동"
-              />
-            </label>
-
-            <label className={styles.modalField}>
-              <span className={styles.label}>현장 책임자 연락처</span>
-              <input
-                className="app-input"
-                value={form.manager_phone}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, manager_phone: event.target.value }))
-                }
-                maxLength={50}
-                disabled={busy}
-                placeholder="예: 010-1234-5678"
-              />
-            </label>
-
-            <label className={styles.modalFieldWide}>
-              <span className={styles.label}>보고서 수신 메일</span>
-              <input
-                className="app-input"
-                type="email"
-                value={form.site_contact_email}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    site_contact_email: event.target.value,
-                  }))
-                }
-                maxLength={200}
-                disabled={busy}
-                placeholder="site@example.com"
-              />
-            </label>
+            <div className={styles.contactEditorBlock}>
+              <div className={styles.contactEditorHeader}>
+                <span className={styles.contactEditorTitle}>현장 책임자</span>
+                <button
+                  type="button"
+                  className="app-button app-button-secondary"
+                  onClick={addSiteManager}
+                  disabled={busy}
+                >
+                  추가
+                </button>
+              </div>
+              <div className={styles.contactEditorRows}>
+                {form.site_managers.length > 0 ? (
+                  form.site_managers.map((manager) => (
+                    <div key={manager.id} className={styles.contactEditorRow}>
+                      <label className={styles.modalField}>
+                        <span className={styles.label}>이름</span>
+                        <input
+                          className="app-input"
+                          value={manager.name}
+                          onChange={(event) =>
+                            updateSiteManager(manager.id, { name: event.target.value })
+                          }
+                          maxLength={100}
+                          disabled={busy}
+                        />
+                      </label>
+                      <label className={styles.modalField}>
+                        <span className={styles.label}>연락처</span>
+                        <input
+                          className="app-input"
+                          value={manager.phone}
+                          onChange={(event) =>
+                            updateSiteManager(manager.id, { phone: event.target.value })
+                          }
+                          maxLength={50}
+                          disabled={busy}
+                        />
+                      </label>
+                      <label className={styles.modalField}>
+                        <span className={styles.label}>이메일</span>
+                        <input
+                          className="app-input"
+                          type="email"
+                          value={manager.email}
+                          onChange={(event) =>
+                            updateSiteManager(manager.id, { email: event.target.value })
+                          }
+                          maxLength={200}
+                          disabled={busy}
+                        />
+                      </label>
+                      <label className={styles.contactPrimaryToggle}>
+                        <input
+                          type="radio"
+                          name="primary-site-manager"
+                          checked={manager.is_primary}
+                          onChange={() => selectPrimarySiteManager(manager.id)}
+                          disabled={busy}
+                        />
+                        대표
+                      </label>
+                      <button
+                        type="button"
+                        className="app-button app-button-secondary"
+                        onClick={() => removeSiteManager(manager.id)}
+                        disabled={busy}
+                      >
+                        삭제
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <div className={styles.contactEditorEmpty}>등록된 현장 책임자가 없습니다.</div>
+                )}
+              </div>
+            </div>
           </div>
         </section>
 
@@ -762,6 +887,77 @@ export function SiteEditorModal({
                     disabled={busy}
                   />
                 </label>
+                <div className={styles.contactEditorBlock}>
+                  <div className={styles.contactEditorHeader}>
+                    <span className={styles.contactEditorTitle}>발주처 담당자</span>
+                    <button
+                      type="button"
+                      className="app-button app-button-secondary"
+                      onClick={addClientContact}
+                      disabled={busy}
+                    >
+                      추가
+                    </button>
+                  </div>
+                  <div className={styles.contactEditorRows}>
+                    {form.client_contacts.length > 0 ? (
+                      form.client_contacts.map((contact) => (
+                        <div
+                          key={contact.id}
+                          className={`${styles.contactEditorRow} ${styles.contactEditorRowNoPrimary}`}
+                        >
+                          <label className={styles.modalField}>
+                            <span className={styles.label}>이름</span>
+                            <input
+                              className="app-input"
+                              value={contact.name}
+                              onChange={(event) =>
+                                updateClientContact(contact.id, { name: event.target.value })
+                              }
+                              maxLength={100}
+                              disabled={busy}
+                            />
+                          </label>
+                          <label className={styles.modalField}>
+                            <span className={styles.label}>연락처</span>
+                            <input
+                              className="app-input"
+                              value={contact.phone}
+                              onChange={(event) =>
+                                updateClientContact(contact.id, { phone: event.target.value })
+                              }
+                              maxLength={50}
+                              disabled={busy}
+                            />
+                          </label>
+                          <label className={styles.modalField}>
+                            <span className={styles.label}>이메일</span>
+                            <input
+                              className="app-input"
+                              type="email"
+                              value={contact.email}
+                              onChange={(event) =>
+                                updateClientContact(contact.id, { email: event.target.value })
+                              }
+                              maxLength={200}
+                              disabled={busy}
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            className="app-button app-button-secondary"
+                            onClick={() => removeClientContact(contact.id)}
+                            disabled={busy}
+                          >
+                            삭제
+                          </button>
+                        </div>
+                      ))
+                    ) : (
+                      <div className={styles.contactEditorEmpty}>등록된 발주처 담당자가 없습니다.</div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           ) : null}

@@ -11,6 +11,10 @@ import {
   SITE_CONTRACT_STATUS_OPTIONS,
   SITE_CONTRACT_TYPE_OPTIONS,
 } from '@/lib/admin';
+import {
+  normalizeSafetyClientContacts,
+  normalizeSafetySiteManagers,
+} from '@/lib/siteContacts';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import {
   createSafetySiteForHeadquarter,
@@ -47,6 +51,7 @@ interface HeadquarterFormState {
 
 interface WorkerSiteFormState {
   client_business_name: string;
+  client_contacts: WorkerClientContactFormRow[];
   contract_end_date: string;
   contract_signed_date: string;
   contract_start_date: string;
@@ -61,9 +66,25 @@ interface WorkerSiteFormState {
   project_start_date: string;
   site_address: string;
   site_contact_email: string;
+  site_managers: WorkerSiteManagerFormRow[];
   site_name: string;
   total_contract_amount: string;
   total_rounds: string;
+}
+
+interface WorkerSiteManagerFormRow {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  is_primary: boolean;
+}
+
+interface WorkerClientContactFormRow {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
 }
 
 const EMPTY_HEADQUARTER_FORM: HeadquarterFormState = {
@@ -80,6 +101,7 @@ const EMPTY_HEADQUARTER_FORM: HeadquarterFormState = {
 
 const EMPTY_SITE_FORM: WorkerSiteFormState = {
   client_business_name: '',
+  client_contacts: [],
   contract_end_date: '',
   contract_signed_date: '',
   contract_start_date: '',
@@ -94,6 +116,7 @@ const EMPTY_SITE_FORM: WorkerSiteFormState = {
   project_start_date: '',
   site_address: '',
   site_contact_email: '',
+  site_managers: [],
   site_name: '',
   total_contract_amount: '',
   total_rounds: '',
@@ -120,6 +143,95 @@ function parseOptionalInteger(value: string): number | null {
   return typeof parsed === 'number' && Number.isFinite(parsed) ? Math.trunc(parsed) : null;
 }
 
+let contactRowSequence = 0;
+
+function createContactRowId(prefix: string) {
+  contactRowSequence += 1;
+  return `${prefix}-${Date.now()}-${contactRowSequence}`;
+}
+
+function createEmptySiteManagerRow(isPrimary = false): WorkerSiteManagerFormRow {
+  return {
+    id: createContactRowId('site-manager'),
+    name: '',
+    phone: '',
+    email: '',
+    is_primary: isPrimary,
+  };
+}
+
+function createEmptyClientContactRow(): WorkerClientContactFormRow {
+  return {
+    id: createContactRowId('client-contact'),
+    name: '',
+    phone: '',
+    email: '',
+  };
+}
+
+function hasContactValue(contact: Pick<WorkerClientContactFormRow, 'name' | 'phone' | 'email'>) {
+  return Boolean(contact.name.trim() || contact.phone.trim() || contact.email.trim());
+}
+
+function normalizeSiteManagerPayload(rows: WorkerSiteManagerFormRow[]) {
+  const contacts = rows
+    .map((row, index) => ({
+      id: row.id || `site-manager-${index + 1}`,
+      name: row.name.trim(),
+      phone: row.phone.trim(),
+      email: row.email.trim(),
+      is_primary: Boolean(row.is_primary),
+    }))
+    .filter(hasContactValue);
+
+  if (contacts.length === 0) {
+    return [];
+  }
+
+  let primarySeen = false;
+  const normalized = contacts.map((contact) => {
+    const isPrimary = contact.is_primary && !primarySeen;
+    if (isPrimary) primarySeen = true;
+    return { ...contact, is_primary: isPrimary };
+  });
+  if (!primarySeen) {
+    normalized[0] = { ...normalized[0], is_primary: true };
+  }
+  return normalized;
+}
+
+function normalizeClientContactPayload(rows: WorkerClientContactFormRow[]) {
+  return rows
+    .map((row, index) => ({
+      id: row.id || `client-contact-${index + 1}`,
+      name: row.name.trim(),
+      phone: row.phone.trim(),
+      email: row.email.trim(),
+    }))
+    .filter(hasContactValue);
+}
+
+function ensureOnePrimary(rows: WorkerSiteManagerFormRow[]) {
+  if (rows.length === 0 || rows.some((row) => row.is_primary)) {
+    return rows;
+  }
+  return rows.map((row, index) => ({ ...row, is_primary: index === 0 }));
+}
+
+function syncPrimarySiteManagerFields(
+  current: WorkerSiteFormState,
+  rows: WorkerSiteManagerFormRow[],
+): WorkerSiteFormState {
+  const primary = rows.find((row) => row.is_primary) ?? rows[0];
+  return {
+    ...current,
+    site_managers: rows,
+    manager_name: primary?.name ?? '',
+    manager_phone: primary?.phone ?? '',
+    site_contact_email: primary?.email ?? '',
+  };
+}
+
 function createHeadquarterForm(headquarter: SafetyHeadquarterDetail | null): HeadquarterFormState {
   if (!headquarter) return EMPTY_HEADQUARTER_FORM;
   return {
@@ -137,22 +249,38 @@ function createHeadquarterForm(headquarter: SafetyHeadquarterDetail | null): Hea
 
 function createSiteForm(site: SafetySite | null): WorkerSiteFormState {
   if (!site) return EMPTY_SITE_FORM;
+  const siteManagers = normalizeSafetySiteManagers(site).map((contact) => ({
+    id: contact.id,
+    name: contact.name,
+    phone: contact.phone,
+    email: contact.email,
+    is_primary: contact.is_primary,
+  }));
+  const clientContacts = normalizeSafetyClientContacts(site).map((contact) => ({
+    id: contact.id,
+    name: contact.name,
+    phone: contact.phone,
+    email: contact.email,
+  }));
+  const primaryManager = siteManagers.find((contact) => contact.is_primary) ?? siteManagers[0];
   return {
     client_business_name: toText(site.client_business_name),
+    client_contacts: clientContacts,
     contract_end_date: toText(site.contract_end_date),
     contract_signed_date: toText(site.contract_signed_date ?? site.contract_date),
     contract_start_date: toText(site.contract_start_date),
     contract_status: toText(site.contract_status),
     contract_type: toText(site.contract_type),
     labor_office: toText(site.labor_office),
-    manager_name: toText(site.manager_name),
-    manager_phone: toText(site.manager_phone),
+    manager_name: primaryManager?.name ?? toText(site.manager_name),
+    manager_phone: primaryManager?.phone ?? toText(site.manager_phone),
     per_visit_amount: site.per_visit_amount != null ? String(site.per_visit_amount) : '',
     project_amount: site.project_amount != null ? String(site.project_amount) : '',
     project_end_date: toText(site.project_end_date),
     project_start_date: toText(site.project_start_date),
     site_address: toText(site.site_address),
-    site_contact_email: toText(site.site_contact_email),
+    site_contact_email: primaryManager?.email ?? toText(site.site_contact_email),
+    site_managers: siteManagers,
     site_name: toText(site.site_name),
     total_contract_amount:
       site.total_contract_amount != null ? String(site.total_contract_amount) : '',
@@ -179,22 +307,26 @@ function buildHeadquarterPayload(form: HeadquarterFormState): SafetyHeadquarterU
 }
 
 function buildSitePayload(form: WorkerSiteFormState): Omit<SafetySiteInput, 'headquarter_id'> {
+  const siteManagers = normalizeSiteManagerPayload(form.site_managers);
+  const primaryManager = siteManagers.find((contact) => contact.is_primary) ?? siteManagers[0];
   return {
     client_business_name: toNullableText(form.client_business_name),
+    client_contacts: normalizeClientContactPayload(form.client_contacts),
     contract_end_date: toNullableText(form.contract_end_date),
     contract_signed_date: toNullableText(form.contract_signed_date),
     contract_start_date: toNullableText(form.contract_start_date),
     contract_status: toNullableText(form.contract_status),
     contract_type: toNullableText(form.contract_type),
     labor_office: toNullableText(form.labor_office),
-    manager_name: toNullableText(form.manager_name),
-    manager_phone: toNullableText(form.manager_phone),
+    manager_name: toNullableText(primaryManager?.name ?? form.manager_name),
+    manager_phone: toNullableText(primaryManager?.phone ?? form.manager_phone),
     per_visit_amount: parseOptionalNumber(form.per_visit_amount),
     project_amount: parseOptionalNumber(form.project_amount),
     project_end_date: toNullableText(form.project_end_date),
     project_start_date: toNullableText(form.project_start_date),
     site_address: toNullableText(form.site_address),
-    site_contact_email: toNullableText(form.site_contact_email),
+    site_contact_email: toNullableText(primaryManager?.email ?? form.site_contact_email),
+    site_managers: siteManagers,
     site_name: form.site_name.trim(),
     total_contract_amount: parseOptionalNumber(form.total_contract_amount),
     total_rounds: parseOptionalInteger(form.total_rounds),
@@ -224,6 +356,71 @@ export function WorkerSiteInfoScreen({
     () => (mode === 'edit' && siteId ? buildSiteHubHref(siteId) : '/'),
     [mode, siteId],
   );
+
+  const addSiteManager = () => {
+    setSiteForm((current) => {
+      const nextRows = [
+        ...current.site_managers,
+        createEmptySiteManagerRow(current.site_managers.length === 0),
+      ];
+      return syncPrimarySiteManagerFields(current, ensureOnePrimary(nextRows));
+    });
+  };
+
+  const updateSiteManager = (
+    rowId: string,
+    patch: Partial<Omit<WorkerSiteManagerFormRow, 'id' | 'is_primary'>>,
+  ) => {
+    setSiteForm((current) => {
+      const nextRows = current.site_managers.map((row) =>
+        row.id === rowId ? { ...row, ...patch } : row,
+      );
+      return syncPrimarySiteManagerFields(current, ensureOnePrimary(nextRows));
+    });
+  };
+
+  const selectPrimarySiteManager = (rowId: string) => {
+    setSiteForm((current) => {
+      const nextRows = current.site_managers.map((row) => ({
+        ...row,
+        is_primary: row.id === rowId,
+      }));
+      return syncPrimarySiteManagerFields(current, nextRows);
+    });
+  };
+
+  const removeSiteManager = (rowId: string) => {
+    setSiteForm((current) => {
+      const nextRows = ensureOnePrimary(current.site_managers.filter((row) => row.id !== rowId));
+      return syncPrimarySiteManagerFields(current, nextRows);
+    });
+  };
+
+  const addClientContact = () => {
+    setSiteForm((current) => ({
+      ...current,
+      client_contacts: [...current.client_contacts, createEmptyClientContactRow()],
+    }));
+  };
+
+  const updateClientContact = (
+    rowId: string,
+    patch: Partial<Omit<WorkerClientContactFormRow, 'id'>>,
+  ) => {
+    setSiteForm((current) => ({
+      ...current,
+      client_contacts: current.client_contacts.map((row) =>
+        row.id === rowId ? { ...row, ...patch } : row,
+      ),
+    }));
+  };
+
+  const removeClientContact = (rowId: string) => {
+    setSiteForm((current) => ({
+      ...current,
+      client_contacts: current.client_contacts.filter((row) => row.id !== rowId),
+    }));
+  };
 
   useEffect(() => {
     const token = readSafetyAuthToken();
@@ -580,7 +777,7 @@ export function WorkerSiteInfoScreen({
                             />
                           </label>
                           <label className={styles.formField}>
-                            <span className={styles.formLabel}>발주처</span>
+                            <span className={styles.formLabel}>발주처명</span>
                             <input
                               className="app-input"
                               value={siteForm.client_business_name}
@@ -593,49 +790,153 @@ export function WorkerSiteInfoScreen({
                               disabled={isSaving}
                             />
                           </label>
-                          <label className={styles.formField}>
-                            <span className={styles.formLabel}>현장 책임자명</span>
-                            <input
-                              className="app-input"
-                              value={siteForm.manager_name}
-                              onChange={(event) =>
-                                setSiteForm((current) => ({
-                                  ...current,
-                                  manager_name: event.target.value,
-                                }))
-                              }
-                              disabled={isSaving}
-                            />
-                          </label>
-                          <label className={styles.formField}>
-                            <span className={styles.formLabel}>현장 책임자 연락처</span>
-                            <input
-                              className="app-input"
-                              value={siteForm.manager_phone}
-                              onChange={(event) =>
-                                setSiteForm((current) => ({
-                                  ...current,
-                                  manager_phone: event.target.value,
-                                }))
-                              }
-                              disabled={isSaving}
-                            />
-                          </label>
-                          <label className={`${styles.formField} ${styles.formFieldWide}`}>
-                            <span className={styles.formLabel}>보고서 수신 메일</span>
-                            <input
-                              className="app-input"
-                              type="email"
-                              value={siteForm.site_contact_email}
-                              onChange={(event) =>
-                                setSiteForm((current) => ({
-                                  ...current,
-                                  site_contact_email: event.target.value,
-                                }))
-                              }
-                              disabled={isSaving}
-                            />
-                          </label>
+                          <div className={styles.contactEditorBlock}>
+                            <div className={styles.contactEditorHeader}>
+                              <span className={styles.contactEditorTitle}>현장 책임자</span>
+                              <button
+                                type="button"
+                                className="app-button app-button-secondary"
+                                onClick={addSiteManager}
+                                disabled={isSaving}
+                              >
+                                추가
+                              </button>
+                            </div>
+                            <div className={styles.contactEditorRows}>
+                              {siteForm.site_managers.length > 0 ? (
+                                siteForm.site_managers.map((manager) => (
+                                  <div key={manager.id} className={styles.contactEditorRow}>
+                                    <label className={styles.formField}>
+                                      <span className={styles.formLabel}>이름</span>
+                                      <input
+                                        className="app-input"
+                                        value={manager.name}
+                                        onChange={(event) =>
+                                          updateSiteManager(manager.id, { name: event.target.value })
+                                        }
+                                        disabled={isSaving}
+                                      />
+                                    </label>
+                                    <label className={styles.formField}>
+                                      <span className={styles.formLabel}>연락처</span>
+                                      <input
+                                        className="app-input"
+                                        value={manager.phone}
+                                        onChange={(event) =>
+                                          updateSiteManager(manager.id, { phone: event.target.value })
+                                        }
+                                        disabled={isSaving}
+                                      />
+                                    </label>
+                                    <label className={styles.formField}>
+                                      <span className={styles.formLabel}>이메일</span>
+                                      <input
+                                        className="app-input"
+                                        type="email"
+                                        value={manager.email}
+                                        onChange={(event) =>
+                                          updateSiteManager(manager.id, { email: event.target.value })
+                                        }
+                                        disabled={isSaving}
+                                      />
+                                    </label>
+                                    <label className={styles.contactPrimaryToggle}>
+                                      <input
+                                        type="radio"
+                                        name="worker-primary-site-manager"
+                                        checked={manager.is_primary}
+                                        onChange={() => selectPrimarySiteManager(manager.id)}
+                                        disabled={isSaving}
+                                      />
+                                      대표
+                                    </label>
+                                    <button
+                                      type="button"
+                                      className="app-button app-button-secondary"
+                                      onClick={() => removeSiteManager(manager.id)}
+                                      disabled={isSaving}
+                                    >
+                                      삭제
+                                    </button>
+                                  </div>
+                                ))
+                              ) : (
+                                <div className={styles.contactEditorEmpty}>
+                                  등록된 현장 책임자가 없습니다.
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className={styles.contactEditorBlock}>
+                            <div className={styles.contactEditorHeader}>
+                              <span className={styles.contactEditorTitle}>발주처 담당자</span>
+                              <button
+                                type="button"
+                                className="app-button app-button-secondary"
+                                onClick={addClientContact}
+                                disabled={isSaving}
+                              >
+                                추가
+                              </button>
+                            </div>
+                            <div className={styles.contactEditorRows}>
+                              {siteForm.client_contacts.length > 0 ? (
+                                siteForm.client_contacts.map((contact) => (
+                                  <div
+                                    key={contact.id}
+                                    className={`${styles.contactEditorRow} ${styles.contactEditorRowNoPrimary}`}
+                                  >
+                                    <label className={styles.formField}>
+                                      <span className={styles.formLabel}>이름</span>
+                                      <input
+                                        className="app-input"
+                                        value={contact.name}
+                                        onChange={(event) =>
+                                          updateClientContact(contact.id, { name: event.target.value })
+                                        }
+                                        disabled={isSaving}
+                                      />
+                                    </label>
+                                    <label className={styles.formField}>
+                                      <span className={styles.formLabel}>연락처</span>
+                                      <input
+                                        className="app-input"
+                                        value={contact.phone}
+                                        onChange={(event) =>
+                                          updateClientContact(contact.id, { phone: event.target.value })
+                                        }
+                                        disabled={isSaving}
+                                      />
+                                    </label>
+                                    <label className={styles.formField}>
+                                      <span className={styles.formLabel}>이메일</span>
+                                      <input
+                                        className="app-input"
+                                        type="email"
+                                        value={contact.email}
+                                        onChange={(event) =>
+                                          updateClientContact(contact.id, { email: event.target.value })
+                                        }
+                                        disabled={isSaving}
+                                      />
+                                    </label>
+                                    <button
+                                      type="button"
+                                      className="app-button app-button-secondary"
+                                      onClick={() => removeClientContact(contact.id)}
+                                      disabled={isSaving}
+                                    >
+                                      삭제
+                                    </button>
+                                  </div>
+                                ))
+                              ) : (
+                                <div className={styles.contactEditorEmpty}>
+                                  등록된 발주처 담당자가 없습니다.
+                                </div>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       </div>
 

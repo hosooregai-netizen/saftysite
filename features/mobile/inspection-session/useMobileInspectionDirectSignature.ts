@@ -39,12 +39,18 @@ export function useMobileInspectionDirectSignature({
     }
     handledDirectSignatureRef.current = true;
     setActiveStep('step2');
-    if (session.document2Overview.notificationMethod !== 'direct') {
+    if (
+      session.document2Overview.notificationMethod !== 'direct' ||
+      !session.document2Overview.notificationRecipientName.trim()
+    ) {
       screen.applyDocumentUpdate('doc2', 'manual', (current) => ({
         ...current,
         document2Overview: {
           ...current.document2Overview,
           notificationMethod: 'direct',
+          notificationRecipientName:
+            current.document2Overview.notificationRecipientName.trim() ||
+            current.adminSiteSnapshot.siteManagerName,
         },
       }));
     }

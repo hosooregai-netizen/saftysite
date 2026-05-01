@@ -15,6 +15,28 @@ import type {
   SafetyHeadquarterInput,
 } from '@/types/controller';
 import type { SafetySite, SafetyUser } from '@/types/backend';
+import {
+  getPrimarySiteManagerEmail,
+  getPrimarySiteManagerName,
+  getPrimarySiteManagerPhone,
+  normalizeSafetyClientContacts,
+  normalizeSafetySiteManagers,
+} from '@/lib/siteContacts';
+
+export interface SiteManagerFormRow {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  is_primary: boolean;
+}
+
+export interface ClientContactFormRow {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+}
 
 export interface SitesSectionProps {
   busy: boolean;
@@ -47,6 +69,8 @@ export interface SiteFormState {
   guidance_officer_name: string;
   site_address: string;
   site_contact_email: string;
+  site_managers: SiteManagerFormRow[];
+  client_contacts: ClientContactFormRow[];
   is_high_risk_site: boolean;
   pause_start_date: string;
   project_amount: string;
@@ -88,6 +112,8 @@ export const EMPTY_FORM: SiteFormState = {
   guidance_officer_name: '',
   site_address: '',
   site_contact_email: '',
+  site_managers: [],
+  client_contacts: [],
   is_high_risk_site: false,
   pause_start_date: '',
   project_amount: '',
@@ -144,7 +170,89 @@ export function isPinnedTestSite(site: SafetySite) {
   return labels.includes('테스트');
 }
 
+let contactRowSequence = 0;
+
+function createContactRowId(prefix: string) {
+  contactRowSequence += 1;
+  return `${prefix}-${Date.now()}-${contactRowSequence}`;
+}
+
+export function createEmptySiteManagerRow(isPrimary = false): SiteManagerFormRow {
+  return {
+    id: createContactRowId('site-manager'),
+    name: '',
+    phone: '',
+    email: '',
+    is_primary: isPrimary,
+  };
+}
+
+export function createEmptyClientContactRow(): ClientContactFormRow {
+  return {
+    id: createContactRowId('client-contact'),
+    name: '',
+    phone: '',
+    email: '',
+  };
+}
+
+function hasContactValue(contact: Pick<ClientContactFormRow, 'name' | 'phone' | 'email'>) {
+  return Boolean(contact.name.trim() || contact.phone.trim() || contact.email.trim());
+}
+
+function normalizeSiteManagerPayload(rows: SiteManagerFormRow[]) {
+  const contacts = rows
+    .map((row, index) => ({
+      id: row.id || `site-manager-${index + 1}`,
+      name: row.name.trim(),
+      phone: row.phone.trim(),
+      email: row.email.trim(),
+      is_primary: Boolean(row.is_primary),
+    }))
+    .filter(hasContactValue);
+
+  if (contacts.length === 0) {
+    return [];
+  }
+
+  let primarySeen = false;
+  const normalized = contacts.map((contact) => {
+    const isPrimary = contact.is_primary && !primarySeen;
+    if (isPrimary) primarySeen = true;
+    return { ...contact, is_primary: isPrimary };
+  });
+  if (!primarySeen) {
+    normalized[0] = { ...normalized[0], is_primary: true };
+  }
+  return normalized;
+}
+
+function normalizeClientContactPayload(rows: ClientContactFormRow[]) {
+  return rows
+    .map((row, index) => ({
+      id: row.id || `client-contact-${index + 1}`,
+      name: row.name.trim(),
+      phone: row.phone.trim(),
+      email: row.email.trim(),
+    }))
+    .filter(hasContactValue);
+}
+
 export function createEditForm(site: SafetySite): SiteFormState {
+  const siteManagers = normalizeSafetySiteManagers(site).map((contact) => ({
+    id: contact.id,
+    name: contact.name,
+    phone: contact.phone,
+    email: contact.email,
+    is_primary: contact.is_primary,
+  }));
+  const clientContacts = normalizeSafetyClientContacts(site).map((contact) => ({
+    id: contact.id,
+    name: contact.name,
+    phone: contact.phone,
+    email: contact.email,
+  }));
+  const primaryManager = siteManagers.find((contact) => contact.is_primary) ?? siteManagers[0];
   return {
     headquarter_id: site.headquarter_id,
     management_number: site.management_number ?? '',
@@ -159,7 +267,9 @@ export function createEditForm(site: SafetySite): SiteFormState {
     project_end_date: site.project_end_date ?? '',
     project_scale: site.project_scale ?? '',
     project_kind: site.project_kind ?? '',
-    site_contact_email: site.site_contact_email ?? '',
+    site_contact_email: primaryManager?.email ?? site.site_contact_email ?? '',
+    site_managers: siteManagers,
+    client_contacts: clientContacts,
     is_high_risk_site: Boolean(site.is_high_risk_site),
     pause_start_date: site.pause_start_date ?? '',
     client_management_number: site.client_management_number ?? '',
@@ -179,8 +289,8 @@ export function createEditForm(site: SafetySite): SiteFormState {
     contract_type: site.contract_type ?? '',
     contract_contact_name: site.contract_contact_name ?? '',
     inspector_name: site.inspector_name ?? '',
-    manager_name: site.manager_name ?? '',
-    manager_phone: site.manager_phone ?? '',
+    manager_name: primaryManager?.name ?? site.manager_name ?? '',
+    manager_phone: primaryManager?.phone ?? site.manager_phone ?? '',
     memo: site.memo ?? '',
   };
 }
@@ -189,6 +299,8 @@ export function buildSitePayload(
   form: SiteFormState,
   lockedHeadquarterId: string | null,
 ): SafetySiteInput | SafetySiteUpdateInput {
+  const siteManagers = normalizeSiteManagerPayload(form.site_managers);
+  const primaryManager = siteManagers.find((contact) => contact.is_primary) ?? siteManagers[0];
   return {
     headquarter_id: lockedHeadquarterId ?? form.headquarter_id,
     management_number: toNullableText(form.management_number),
@@ -198,7 +310,9 @@ export function buildSitePayload(
     labor_office: toNullableText(form.labor_office),
     guidance_officer_name: toNullableText(form.guidance_officer_name),
     site_address: toNullableText(form.site_address),
-    site_contact_email: toNullableText(form.site_contact_email),
+    site_contact_email: toNullableText(primaryManager?.email ?? form.site_contact_email),
+    site_managers: siteManagers,
+    client_contacts: normalizeClientContactPayload(form.client_contacts),
     is_high_risk_site: form.is_high_risk_site,
     pause_start_date: toNullableText(form.pause_start_date),
     project_amount: parseOptionalNumber(form.project_amount),
@@ -213,8 +327,8 @@ export function buildSitePayload(
     client_business_registration_no: toNullableText(form.client_business_registration_no),
     order_type_division: toNullableText(form.order_type_division),
     technical_guidance_kind: toNullableText(form.technical_guidance_kind),
-    manager_name: toNullableText(form.manager_name),
-    manager_phone: toNullableText(form.manager_phone),
+    manager_name: toNullableText(primaryManager?.name ?? form.manager_name),
+    manager_phone: toNullableText(primaryManager?.phone ?? form.manager_phone),
     inspector_name: toNullableText(form.inspector_name),
     contract_contact_name: toNullableText(form.contract_contact_name),
     contract_status: toNullableText(form.contract_status),
@@ -241,9 +355,9 @@ export function getSiteManagementMissingFields(site: SafetySite): string[] {
     ['사업개시번호', businessStartNumber],
     ['현장명', site.site_name],
     ['현장 주소', site.site_address],
-    ['현장 책임자명', site.manager_name],
-    ['현장 책임자 연락처', site.manager_phone],
-    ['보고서 수신 메일', site.site_contact_email],
+    ['현장 책임자명', getPrimarySiteManagerName(site)],
+    ['현장 책임자 연락처', getPrimarySiteManagerPhone(site)],
+    ['보고서 수신 메일', getPrimarySiteManagerEmail(site)],
     ['계약유형', site.contract_type],
     ['계약상태', site.contract_status],
     ['계약종료일', site.contract_end_date],
@@ -320,7 +434,7 @@ export function buildSiteSortComparator(
     }
 
     if (sort.key === 'manager_name') {
-      return (left.manager_name ?? '').localeCompare(right.manager_name ?? '', 'ko') * direction;
+      return getPrimarySiteManagerName(left).localeCompare(getPrimarySiteManagerName(right), 'ko') * direction;
     }
 
     if (sort.key === 'assigned_users') {

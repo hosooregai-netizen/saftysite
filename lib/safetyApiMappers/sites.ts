@@ -1,6 +1,11 @@
 import type { SafetySite } from '@/types/backend';
 import type { AdminSiteSnapshot, InspectionSite } from '@/types/inspectionSession';
 import {
+  getPrimarySiteManagerEmail,
+  getPrimarySiteManagerName,
+  getPrimarySiteManagerPhone,
+} from '@/lib/siteContacts';
+import {
   formatDateRange,
   formatProjectAmount,
   normalizeMapperText,
@@ -44,9 +49,9 @@ export function mapSafetySiteToAdminSnapshot(site: SafetySite): AdminSiteSnapsho
     constructionPeriod: formatDateRange(site.project_start_date, site.project_end_date),
     constructionAmount: formatProjectAmount(site.project_amount),
     isHighRiskSite: Boolean(site.is_high_risk_site),
-    siteManagerName: normalizeMapperText(site.manager_name),
-    siteManagerPhone: normalizeMapperText(site.manager_phone),
-    siteContactEmail: normalizeMapperText(site.site_contact_email),
+    siteManagerName: normalizeMapperText(getPrimarySiteManagerName(site)),
+    siteManagerPhone: normalizeMapperText(getPrimarySiteManagerPhone(site)),
+    siteContactEmail: normalizeMapperText(getPrimarySiteManagerEmail(site)),
     siteAddress: normalizeMapperText(site.site_address),
     companyName:
       headquarterName ||

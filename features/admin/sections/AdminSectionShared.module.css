@@ -1138,6 +1138,48 @@
   color: var(--erp-text-muted);
 }
 
+.contactList {
+  display: grid;
+  gap: 8px;
+}
+
+.contactListItem {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.contactListName {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: var(--text-body);
+  font-weight: 700;
+  line-height: 1.45;
+  color: var(--erp-dark);
+}
+
+.contactListBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 0 6px;
+  border: 1px solid var(--erp-line);
+  border-radius: 999px;
+  background: var(--erp-panel-muted);
+  font-size: var(--text-micro);
+  font-weight: 700;
+  color: var(--erp-mid);
+}
+
+.contactListMeta {
+  font-size: var(--text-ui-sm);
+  line-height: 1.45;
+  color: var(--erp-text-muted);
+  overflow-wrap: anywhere;
+}
+
 .detailChipRow {
   display: flex;
   flex-wrap: wrap;
@@ -2422,6 +2464,70 @@
   color: var(--erp-text-muted);
 }
 
+.contactEditorBlock {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 10px;
+}
+
+.contactEditorHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.contactEditorTitle {
+  font-size: var(--text-ui);
+  font-weight: 700;
+  color: var(--erp-dark);
+}
+
+.contactEditorRows {
+  display: grid;
+  gap: 10px;
+}
+
+.contactEditorRow {
+  display: grid;
+  grid-template-columns: minmax(110px, 1fr) minmax(120px, 1fr) minmax(160px, 1.2fr) auto auto;
+  gap: 8px;
+  align-items: end;
+  padding: 12px;
+  border: 1px solid var(--erp-line);
+  border-radius: var(--erp-radius-surface);
+  background: #fbfcfe;
+}
+
+.contactEditorRowNoPrimary {
+  grid-template-columns: minmax(110px, 1fr) minmax(120px, 1fr) minmax(160px, 1.2fr) auto;
+}
+
+.contactPrimaryToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
+  font-size: var(--text-ui-sm);
+  font-weight: 700;
+  color: var(--erp-dark);
+  white-space: nowrap;
+}
+
+.contactPrimaryToggle input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+
+.contactEditorEmpty {
+  padding: 12px;
+  border: 1px dashed var(--erp-line);
+  border-radius: var(--erp-radius-surface);
+  color: var(--erp-text-muted);
+  font-size: var(--text-ui-sm);
+}
+
 .scheduleSummaryPanel {
   display: grid;
   gap: 12px;
@@ -3484,6 +3590,16 @@
 
   .kpiDonutFigure {
     inline-size: min(100%, 136px);
+  }
+
+  .contactEditorHeader {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .contactEditorRow,
+  .contactEditorRowNoPrimary {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .kpiVisualDescription,

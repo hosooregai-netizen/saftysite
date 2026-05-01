@@ -62,7 +62,7 @@ function createTechnicalGuidanceOverview(
     previousImplementationStatus: '',
     contact: snapshot.siteContactEmail,
     notificationMethod: '',
-    notificationRecipientName: '',
+    notificationRecipientName: snapshot.siteManagerName,
     notificationRecipientSignature: '',
     otherNotificationMethod: '',
     accidentOccurred: 'no',

@@ -1,5 +1,6 @@
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
 import { parseSiteRequiredCompletionFields } from '@/lib/admin/siteContractProfile';
+import { getPrimarySiteManagerEmail } from '@/lib/siteContacts';
 import type { SafetySite } from '@/types/backend';
 import type { SafetyHeadquarter } from '@/types/controller';
 import { getSiteManagementMissingFields } from '../sites/siteSectionHelpers';
@@ -48,7 +49,7 @@ export function HeadquarterSummaryPanel({
   const activeSiteCount = sites.filter((site) => site.status === 'active').length;
   const plannedSiteCount = sites.filter((site) => site.status === 'planned').length;
   const closedSiteCount = sites.filter((site) => site.status === 'closed').length;
-  const missingEmailCount = sites.filter((site) => !String(site.site_contact_email ?? '').trim()).length;
+  const missingEmailCount = sites.filter((site) => !getPrimarySiteManagerEmail(site)).length;
   const siteGapCount = sites.filter((site) => {
     const requiredCompletionFields =
       site.required_completion_fields?.length
