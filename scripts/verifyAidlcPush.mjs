@@ -71,6 +71,7 @@ const FEATURE_RULES = [
       /^features\/admin\/components\//,
       /^features\/admin\/lib\/control-center-model\//,
       /^features\/admin\/lib\/buildAdminControlCenterModel\.ts$/,
+      /^features\/admin\/lib\/buildAdminOverviewModel\.ts$/,
       /^features\/admin\/lib\/adminDashboardShellState\.ts$/,
       /^features\/admin\/sections\/analytics\//,
       /^features\/admin\/sections\/content\//,
@@ -154,6 +155,7 @@ const FEATURE_RULES = [
   {
     id: 'site-hub',
     patterns: [
+      /^app\/sites\/\[siteKey\]\/edit\/page\.tsx$/,
       /^components\/worker\//,
       /^features\/home\//,
     ],
