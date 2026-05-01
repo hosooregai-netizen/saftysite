@@ -24,10 +24,11 @@ export async function runMobileSiteReportsSmoke(config: ClientSmokePlaywrightCon
     });
 
     await page.getByRole('button', { name: /\+ 보고서 추가|첫 보고서 추가/ }).first().click();
-    const createDialog = page.getByRole('dialog', { name: '기술지도 보고서 추가' });
+    const createDialog = page.getByRole('dialog', { name: /기술지도 보고서 (?:추가|생성)/ });
     await createDialog.waitFor({ state: 'visible' });
+    await createDialog.getByLabel('지도일').fill('2026-04-09');
     await createDialog.getByLabel('제목').fill('모바일 보고서 목록 자동화');
-    await createDialog.getByRole('button', { name: '추가' }).click();
+    await createDialog.getByRole('button', { name: /추가|생성/ }).click();
 
     await harness.waitForRequestCount(
       'GET /reports/site/:id/technical-guidance-seed',

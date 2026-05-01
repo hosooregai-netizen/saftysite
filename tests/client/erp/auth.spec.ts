@@ -10,7 +10,7 @@ export async function runAuthSmoke(config: ClientSmokePlaywrightConfig) {
 
     await page.goto(harness.baseURL, { waitUntil: 'load' });
     await harness.waitForLoginPanel();
-    await page.getByText('현장 목록 로그인').waitFor({ state: 'visible' });
+    await page.getByRole('button', { name: '로그인' }).waitFor({ state: 'visible' });
     await page.waitForTimeout(500);
     if ((requestCounts.get('POST /auth/token') || 0) !== authWritesBefore) {
       throw new Error('로그인 버튼을 누르기 전에 자동 로그인 요청이 발생했습니다.');
@@ -22,7 +22,7 @@ export async function runAuthSmoke(config: ClientSmokePlaywrightConfig) {
     await page.getByRole('heading', { name: '내 일정' }).waitFor({ state: 'visible' });
 
     await harness.logoutToLoginPanel();
-    await page.getByText('현장 목록 로그인').waitFor({ state: 'visible' });
+    await page.getByRole('button', { name: '로그인' }).waitFor({ state: 'visible' });
     const authWritesAfterLogout = requestCounts.get('POST /auth/token') || 0;
     await page.waitForTimeout(500);
     if ((requestCounts.get('POST /auth/token') || 0) !== authWritesAfterLogout) {

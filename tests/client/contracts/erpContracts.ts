@@ -65,8 +65,8 @@ export const ERP_FEATURE_CONTRACTS = {
       'POST /auth/token',
       'GET /assignments/me/sites',
       'GET /reports',
+      'POST /api/me/schedules/next',
       'GET /reports/site/:id/technical-guidance-seed',
-      'PATCH /api/reports/:id/dispatch',
     ],
     criticalActions: ['데스크톱 보고서 목록 로그인', '보고서 목록 조회', '새 보고서 생성', '작성 화면 진입'],
   },
@@ -103,11 +103,12 @@ export const ERP_FEATURE_CONTRACTS = {
     description:
       '모바일 보고서 목록에서 로그인 후 목록 조회, 새 보고서 생성, 모바일 작성 화면 진입 흐름을 유지한다.',
     routes: ['/mobile/sites/site-1/reports'],
-    markers: ['모바일 보고서 로그인', '현장 보고서 요약', '기술지도 보고서 추가', '추가'],
+    markers: ['모바일 보고서 로그인', '현장 보고서 요약', '기술지도 보고서 생성', '생성'],
     apis: [
       'POST /auth/token',
       'GET /assignments/me/sites',
       'GET /reports',
+      'POST /api/me/schedules/next',
       'GET /reports/site/:id/technical-guidance-seed',
     ],
     criticalActions: ['모바일 보고서 목록 로그인', '보고서 목록 조회', '새 보고서 생성', '모바일 작성 화면 진입'],

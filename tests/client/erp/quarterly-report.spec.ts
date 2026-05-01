@@ -242,11 +242,11 @@ export async function runQuarterlyReportSmoke(config: ClientSmokePlaywrightConfi
 
     await harness.waitForCondition(
       async () =>
-        (await page.getByLabel('건설사 관리번호').inputValue()) === HEADQUARTER_NUMBER,
+        (await page.getByLabel('사업장관리번호').inputValue()) === HEADQUARTER_NUMBER,
       'Quarterly site snapshot did not populate the management number.',
     );
     assert.equal(await page.getByLabel('건설사명').inputValue(), HEADQUARTER_NAME);
-    assert.equal(await page.getByLabel('본사 주소').inputValue(), HEADQUARTER_ADDRESS);
+    assert.equal(await page.getByLabel('건설사 주소').inputValue(), HEADQUARTER_ADDRESS);
     await page.getByText('1. 원본 보고서 선택').waitFor({ state: 'visible' });
     await page.getByText('1. 기술지도 건설사/현장 개요').waitFor({ state: 'visible' });
     await page.getByText('2. 재해유형 분석').waitFor({ state: 'visible' });

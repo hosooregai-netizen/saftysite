@@ -112,13 +112,13 @@ export async function runAdminHeadquartersSmoke(config: ClientSmokePlaywrightCon
     await page.getByRole('button', { name: '건설사 추가' }).click();
     const createDialog = page.getByRole('dialog', { name: '건설사 추가' });
     await createDialog.getByLabel('건설사명').fill('mocked headquarter');
-    await createDialog.getByLabel('건설사 관리번호').fill('HQ-NEW-001');
-    await createDialog.getByLabel('건설사 개시번호').fill('OPEN-NEW-001');
-    await createDialog.getByLabel('본사 대표자명').fill('김담당');
+    await createDialog.getByLabel('사업장관리번호').fill('HQ-NEW-001');
+    await createDialog.getByLabel('사업개시번호').fill('OPEN-NEW-001');
+    await createDialog.getByLabel('건설사 대표자명').fill('김담당');
     await createDialog.getByLabel('대표 전화').fill('02-9999-1111');
     await createDialog
       .locator('label')
-      .filter({ hasText: '본사 주소' })
+      .filter({ hasText: '건설사 주소' })
       .locator('input')
       .fill('서울시 서초구 테스트로 99');
     await createDialog.getByRole('button', { name: '생성' }).click();
@@ -134,7 +134,6 @@ export async function runAdminHeadquartersSmoke(config: ClientSmokePlaywrightCon
     await page.getByRole('menuitem', { name: '수정' }).click();
     const editDialog = page.getByRole('dialog', { name: '건설사 수정' });
     await editDialog.getByLabel('건설업면허/등록번호').fill('면허-NEW-001');
-    await editDialog.getByLabel('운영 메모').fill('건설사 등록정보 smoke 확인');
     await editDialog.getByRole('button', { name: '저장' }).click();
     await harness.waitForRequestCount('PATCH /headquarters/:id', headquarterUpdatesBefore + 1);
 

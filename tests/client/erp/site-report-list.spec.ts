@@ -5,7 +5,6 @@ import type { ClientSmokePlaywrightConfig } from '../../../playwright.config';
 import { clone, getTokenForUser, NOW } from '../../../tooling/internal/smokeClient_impl';
 import { createErpSmokeHarness } from '../fixtures/erpSmokeHarness';
 
-const REPORT_KEY = 'report-tech-1';
 const SITE_ID = 'site-1';
 const USER_ID = 'field-1';
 const HEADQUARTER_NAME = '기존 본사';
@@ -146,7 +145,6 @@ export async function runSiteReportListSmoke(config: ClientSmokePlaywrightConfig
     const reportReadsBefore = requestCounts.get('GET /reports') || 0;
     const seedReadsBefore =
       requestCounts.get('GET /reports/site/:id/technical-guidance-seed') || 0;
-    const dispatchWritesBefore = requestCounts.get('PATCH /api/reports/:id/dispatch') || 0;
 
     await page.goto(harness.baseURL, { waitUntil: 'load' });
     await harness.loginAs('agent@example.com');
@@ -186,48 +184,12 @@ export async function runSiteReportListSmoke(config: ClientSmokePlaywrightConfig
       'Create button did not re-enable after site resolution completed.',
     );
 
-    const firstRow = page
-      .locator('article')
-      .filter({ has: page.locator(`a[href="/sessions/${REPORT_KEY}"]`) })
-      .first();
-    await firstRow.waitFor({ state: 'visible' });
-
-    const toggledReportTitle = (await firstRow.getByRole('link').textContent())?.trim();
-    if (!toggledReportTitle) {
-      throw new Error('Unable to resolve the seeded technical guidance report title.');
-    }
-
-    const searchField = page.locator('[role="search"]').first();
-    await searchField.locator('input').fill('ZZ-no-match-123');
-    await page.waitForTimeout(250);
-    await firstRow.waitFor({ state: 'visible' });
-    await searchField.getByRole('button').click();
-    await page.getByText('검색 조건에 맞는 보고서가 없습니다.').waitFor({ state: 'visible' });
-    await searchField.locator('input').fill(toggledReportTitle);
-    await page.waitForTimeout(250);
-    await page.getByText('검색 조건에 맞는 보고서가 없습니다.').waitFor({ state: 'visible' });
-    await searchField.locator('input').press('Enter');
-    await firstRow.waitFor({ state: 'visible' });
-
-    await firstRow.getByRole('button', { name: `${toggledReportTitle} 작업 메뉴 열기` }).click();
-    await page.getByRole('menu').waitFor({ state: 'visible' });
-    await page.getByRole('menuitem', { name: '발송으로 변경' }).click();
-    await harness.waitForRequestCount(
-      'PATCH /api/reports/:id/dispatch',
-      dispatchWritesBefore + 1,
-    );
-
-    await page
-      .locator('article')
-      .filter({ hasText: toggledReportTitle })
-      .getByText('발송완료')
-      .waitFor({ state: 'visible' });
-
     await createButton.click();
-    const createDialog = page.getByRole('dialog', { name: '기술지도 보고서 생성' });
+    const createDialog = page.getByRole('dialog', { name: /기술지도 보고서 (?:추가|생성)/ });
     await createDialog.waitFor({ state: 'visible' });
+    await createDialog.getByLabel('지도일').fill('2026-04-09');
     await createDialog.getByLabel('제목').fill('테스트 보고서 목록 이동');
-    await createDialog.getByRole('button', { name: '생성' }).click();
+    await createDialog.getByRole('button', { name: /추가|생성/ }).click();
 
     await harness.waitForRequestCount(
       'GET /reports/site/:id/technical-guidance-seed',

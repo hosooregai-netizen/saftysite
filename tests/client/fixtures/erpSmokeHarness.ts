@@ -331,6 +331,11 @@ async function installErpRoutes({
       return;
     }
 
+    if (pathname === '/headquarter-assignments/me' && request.method() === 'GET') {
+      await fulfillJson(route, []);
+      return;
+    }
+
     if (pathname === '/content-items' && request.method() === 'GET') {
       await fulfillJson(route, clone(state.contentItems));
       return;
@@ -726,6 +731,49 @@ async function installErpRoutes({
     await route.fallback();
   };
 
+  const handleMeSchedulesRoute = async (route: Route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+
+    if (url.pathname === '/api/me/schedules/next' && request.method() === 'POST') {
+      requestCounts.set(
+        'POST /api/me/schedules/next',
+        (requestCounts.get('POST /api/me/schedules/next') || 0) + 1,
+      );
+      const body = (request.postDataJSON?.() as JsonRecord) || {};
+      await fulfillJson(route, {
+        actualVisitDate: '',
+        assigneeName: '김지원',
+        assigneeUserId: 'field-1',
+        exceptionMemo: '',
+        exceptionReasonCode: '',
+        headquarterId: 'hq-1',
+        headquarterName: '기존 본사',
+        id: 'schedule-smoke-next',
+        isConflicted: false,
+        isOutOfWindow: false,
+        isOverdue: false,
+        linkedReportKey: '',
+        plannedDate: String(body.planned_date || body.plannedDate || '2026-04-09'),
+        roundNo: 2,
+        selectionConfirmedAt: NOW,
+        selectionConfirmedByName: '김지원',
+        selectionConfirmedByUserId: 'field-1',
+        selectionReasonLabel: '',
+        selectionReasonMemo: '',
+        siteId: String(body.site_id || body.siteId || 'site-1'),
+        siteName: '기존 현장',
+        status: 'planned',
+        totalRounds: 8,
+        windowEnd: '2026-04-28',
+        windowStart: '2026-04-01',
+      });
+      return;
+    }
+
+    await route.fallback();
+  };
+
   const handleQuarterlyDocumentRoute = async (route: Route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -779,6 +827,7 @@ async function installErpRoutes({
 
   await context.route('**/api/safety/**', handleErpSafetyRoute);
   await context.route('**/api/v1/**', handleErpSafetyRoute);
+  await context.route('**/api/me/schedules/next', handleMeSchedulesRoute);
   await context.route('**/api/reports/**', handlePublicReportApiRoute);
   await context.route('**/api/documents/quarterly/**', handleQuarterlyDocumentRoute);
   await context.route('**/api/documents/bad-workplace/**', handleBadWorkplaceDocumentRoute);

@@ -25,11 +25,13 @@ export async function runMobileSiteHomeSmoke(config: ClientSmokePlaywrightConfig
     await page.getByRole('heading', { name: '기술지도 보고서' }).waitFor({ state: 'visible' });
     await page.getByRole('heading', { name: '분기보고서' }).waitFor({ state: 'visible' });
 
-    // Pointer clicks here can land on the sticky mobile chrome instead of the anchor in CI/dev.
-    await page
-      .locator('a[href="/mobile/sites/site-1/quarterly"]')
-      .first()
-      .evaluate((element) => (element as HTMLAnchorElement).click());
+    const quarterlyLink = page.locator('a[href="/mobile/sites/site-1/quarterly"]').first();
+    await quarterlyLink.waitFor({ state: 'visible' });
+    const quarterlyHref = await quarterlyLink.getAttribute('href');
+    if (!quarterlyHref) {
+      throw new Error('Mobile quarterly list link did not render an href.');
+    }
+    await page.goto(new URL(quarterlyHref, harness.baseURL).toString(), { waitUntil: 'load' });
     await page.waitForURL(/\/mobile\/sites\/site-1\/quarterly$/);
     await page.getByRole('heading', { name: '분기 보고 목록' }).waitFor({ state: 'visible' });
 

@@ -16,7 +16,7 @@ export const ADMIN_FEATURE_CONTRACTS = {
       '건설사 목록이 safety-server list passthrough 기반 서버 페이지네이션, session cache, drilldown 진입, 생성/수정/삭제 흐름, 저장 성공 후 empty-body 응답 fallback 재조회, 저장 timeout 시 모달 유지와 안내 메시지, deleted soft-delete hidden refresh를 유지한다.',
     routes: ['/admin?section=headquarters'],
     markers: ['건설사 목록', '건설사 추가', '건설사 수정', '현장 보기'],
-    apis: ['GET /api/admin/headquarters/list', 'GET /api/admin/sites/list', 'GET /api/admin/directory/assignments', 'POST /headquarters', 'PATCH /headquarters/:id', 'DELETE /headquarters/:id'],
+    apis: ['GET /api/admin/headquarters/list', 'GET /api/admin/sites/list', 'POST /headquarters', 'PATCH /headquarters/:id', 'DELETE /headquarters/:id'],
     criticalActions: ['건설사 목록 페이지 로드', '건설사 생성', '건설사 수정', '건설사 수정 empty-body fallback 재조회 확인', '건설사 수정 timeout 시 모달 유지와 안내 메시지 확인', '현장 drilldown 진입', '건설사 삭제', 'drilldown 현장 생성/수정/삭제 직후 refresh 확인'],
   },
   'admin-users': {
