@@ -14,6 +14,7 @@ interface MailboxReportPickerModalOption {
   reportTitle: string;
   siteName: string;
   visitDate: string | null;
+  visitRound?: number | null;
 }
 
 interface MailboxReportPickerSiteOption {
@@ -31,6 +32,7 @@ interface MailboxReportPickerModalProps {
   reportPickerTotal: number;
   reportSearch: string;
   reportSiteFilter: string;
+  selectedReportKeys: string[];
   siteOptions: MailboxReportPickerSiteOption[];
   onChangeReportSearch: (value: string) => void;
   onChangeSiteFilter: (value: string) => void;
@@ -49,6 +51,7 @@ export function MailboxReportPickerModal({
   reportPickerTotal,
   reportSearch,
   reportSiteFilter,
+  selectedReportKeys,
   siteOptions,
   onChangeReportSearch,
   onChangeSiteFilter,
@@ -63,6 +66,7 @@ export function MailboxReportPickerModal({
   const rangeEnd = canShowPagination
     ? Math.min(reportPickerPage * REPORT_PICKER_PAGE_SIZE, reportPickerTotal)
     : 0;
+  const selectedKeySet = new Set(selectedReportKeys);
 
   return (
     <AppModal
@@ -73,10 +77,10 @@ export function MailboxReportPickerModal({
       actions={
         <button
           type="button"
-          className="app-button app-button-secondary"
+          className="app-button app-button-primary"
           onClick={onClose}
         >
-          닫기
+          선택 완료{selectedReportKeys.length > 0 ? ` (${selectedReportKeys.length})` : ''}
         </button>
       }
     >
@@ -85,7 +89,7 @@ export function MailboxReportPickerModal({
           className={`app-input ${localStyles.reportPickerSearch}`}
           value={reportSearch}
           onChange={(event) => onChangeReportSearch(event.target.value)}
-          placeholder="보고서명, 현장명, 키 검색"
+          placeholder="보고서명, 현장명 검색"
         />
         {mode === 'admin' ? (
           <select
@@ -108,41 +112,48 @@ export function MailboxReportPickerModal({
         ) : filteredReportOptions.length === 0 ? (
           <div className={localStyles.emptyState}>선택할 수 있는 보고서가 없습니다.</div>
         ) : (
-          filteredReportOptions.map((option) => (
-            <article key={option.reportKey} className={localStyles.reportPickerItem}>
-              <div className={localStyles.reportPickerMain}>
-                <strong className={localStyles.reportSelectionTitle}>
-                  {option.reportTitle || option.reportKey}
-                </strong>
-                <span className={localStyles.accountMeta}>
-                  {option.siteName}
-                  {option.headquarterName ? ` · ${option.headquarterName}` : ''}
-                  {option.visitDate ? ` · ${option.visitDate}` : ''}
-                </span>
-                <span className={localStyles.accountMeta}>{option.reportKey}</span>
-                {option.originalPdfAvailable ? (
-                  <span className={localStyles.accountMeta}>원본 PDF 첨부 가능</span>
-                ) : null}
-                {!option.attachmentReady && option.attachmentUnavailableReason ? (
-                  <span className={localStyles.accountMeta}>{option.attachmentUnavailableReason}</span>
-                ) : null}
-              </div>
-              <button
-                type="button"
-                className={`app-button app-button-primary ${localStyles.inlineActionButton}`}
-                disabled={!option.attachmentReady}
-                onClick={() => onSelectReport(option.reportKey)}
-              >
-                {option.attachmentReady ? '선택' : '선택 불가'}
-              </button>
-            </article>
-          ))
+          filteredReportOptions.map((option) => {
+            const isSelected = selectedKeySet.has(option.reportKey);
+            return (
+              <article key={option.reportKey} className={localStyles.reportPickerItem}>
+                <div className={localStyles.reportPickerMain}>
+                  <strong className={localStyles.reportSelectionTitle}>
+                    {option.reportTitle || option.reportKey}
+                  </strong>
+                  <span className={localStyles.accountMeta}>
+                    {option.siteName}
+                    {option.headquarterName ? ` / ${option.headquarterName}` : ''}
+                    {option.visitDate ? ` / ${option.visitDate}` : ''}
+                    {option.visitRound ? ` / ${option.visitRound}회차` : ''}
+                  </span>
+                  <span className={localStyles.accountMeta}>{option.reportKey}</span>
+                  {option.originalPdfAvailable ? (
+                    <span className={localStyles.accountMeta}>원본 PDF 첨부 가능</span>
+                  ) : null}
+                  {!option.attachmentReady && option.attachmentUnavailableReason ? (
+                    <span className={localStyles.accountMeta}>{option.attachmentUnavailableReason}</span>
+                  ) : null}
+                </div>
+                <button
+                  type="button"
+                  className={`app-button ${
+                    isSelected ? 'app-button-secondary' : 'app-button-primary'
+                  } ${localStyles.inlineActionButton}`}
+                  disabled={!option.attachmentReady}
+                  aria-pressed={isSelected}
+                  onClick={() => onSelectReport(option.reportKey)}
+                >
+                  {option.attachmentReady ? (isSelected ? '선택 해제' : '선택') : '선택 불가'}
+                </button>
+              </article>
+            );
+          })
         )}
       </div>
       {canShowPagination ? (
         <div className={localStyles.reportPickerPagination}>
           <span className={localStyles.paginationMeta}>
-            {rangeStart}-{rangeEnd} / {reportPickerTotal}건 · {reportPickerPage} /{' '}
+            {rangeStart}-{rangeEnd} / {reportPickerTotal}건 / {reportPickerPage} /{' '}
             {reportPickerPageCount}
           </span>
           <button

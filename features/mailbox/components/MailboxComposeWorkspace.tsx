@@ -33,7 +33,10 @@ interface MailboxComposeWorkspaceProps {
   selectedAccount: MailAccount | null;
   selectedAccountId: string;
   selectedReport: SelectedReportContext | null;
+  selectedReports: SelectedReportContext[];
   selectableAccounts: MailAccount[];
+  selectedTemplateId: string;
+  onApplyTemplate: (templateId?: string) => void;
   onAttachmentSelect: (event: ChangeEvent<HTMLInputElement>) => void;
   onBlurRecipient: () => void;
   onChangeAccountId: (accountId: string) => void;
@@ -69,7 +72,10 @@ export function MailboxComposeWorkspace({
   selectedAccount,
   selectedAccountId,
   selectedReport,
+  selectedReports,
   selectableAccounts,
+  selectedTemplateId,
+  onApplyTemplate,
   onAttachmentSelect,
   onBlurRecipient,
   onChangeAccountId,
@@ -87,6 +93,7 @@ export function MailboxComposeWorkspace({
   onSelectRecipientSuggestion,
   onSend,
 }: MailboxComposeWorkspaceProps) {
+  const reportItems = selectedReports.length > 0 ? selectedReports : selectedReport ? [selectedReport] : [];
   const composeTitle =
     composeMode === 'reply'
       ? '답장 작성'
@@ -113,14 +120,18 @@ export function MailboxComposeWorkspace({
       selectedAccountId={selectedAccountId}
       selectableAccounts={selectableAccounts}
       selectedReport={selectedReport}
+      selectedReports={selectedReports}
+      selectedTemplateId={selectedTemplateId}
       submitDisabled={
         isDemoMode ||
         isSendingMail ||
         !selectedAccount ||
+        (composeMode === 'report' && reportItems.length === 0) ||
         (compose.toRecipients.length === 0 && !isLikelyEmail(compose.toInput.trim())) ||
         !compose.subject.trim() ||
         !stripHtmlToText(compose.body).trim()
       }
+      onApplyTemplate={onApplyTemplate}
       onAttachmentSelect={onAttachmentSelect}
       onBlurRecipient={onBlurRecipient}
       onChangeAccountId={onChangeAccountId}

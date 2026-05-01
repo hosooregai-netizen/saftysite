@@ -1431,8 +1431,16 @@ export function createWorkerScheduleServer(
   payload: Record<string, unknown>,
   request: Request | null = null,
 ): Promise<SafetyBackendInspectionSchedule> {
+  return reserveNextWorkerScheduleServer(token, payload, request);
+}
+
+export function reserveNextWorkerScheduleServer(
+  token: string,
+  payload: Record<string, unknown>,
+  request: Request | null = null,
+): Promise<SafetyBackendInspectionSchedule> {
   return requestSafetyAdminServer<SafetyBackendInspectionSchedule>(
-    '/me/schedules',
+    '/me/schedules/next',
     {
       method: 'POST',
       body: JSON.stringify(payload),

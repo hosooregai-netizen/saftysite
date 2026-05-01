@@ -17,13 +17,21 @@ import {
   dedupeRecipients,
   isLikelyEmail,
 } from './mailboxComposeHelpers';
+import {
+  getMailReportTemplate,
+  renderMailReportTemplate,
+} from './mailboxReportTemplates';
 
 interface UseMailboxComposeUiActionsParams {
+  applyReportTemplate: (templateId?: string) => void;
   attachmentInputRef: RefObject<HTMLInputElement | null>;
   composeMode: ComposeMode;
   composerRef: RefObject<HTMLDivElement | null>;
+  reportOptions: SelectedReportContext[];
   selectedAccount: MailAccount | null;
   selectedReport: SelectedReportContext | null;
+  selectedReports: SelectedReportContext[];
+  selectedTemplateId: string;
   setAttachments: Dispatch<SetStateAction<ComposeAttachment[]>>;
   setCompose: Dispatch<SetStateAction<ComposeState>>;
   setComposeMode: Dispatch<SetStateAction<ComposeMode>>;
@@ -31,18 +39,51 @@ interface UseMailboxComposeUiActionsParams {
   setReportSearch: Dispatch<SetStateAction<string>>;
   setReportSiteFilter: Dispatch<SetStateAction<string>>;
   setSelectedReport: Dispatch<SetStateAction<SelectedReportContext | null>>;
+  setSelectedReports: Dispatch<SetStateAction<SelectedReportContext[]>>;
   setView: Dispatch<SetStateAction<MailboxView>>;
   siteId: string;
   threadDetail: MailThreadDetail | null;
   resetCompose: (mode: ComposeMode) => void;
 }
 
+function fileFromBase64(input: { contentType?: string; dataBase64: string; filename: string }) {
+  const binary = window.atob(input.dataBase64);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return new File([bytes], input.filename, {
+    type: input.contentType || 'application/octet-stream',
+  });
+}
+
+function getMessageAttachments(detail: MailThreadDetail | null) {
+  const latestOutgoing = detail?.messages
+    .slice()
+    .reverse()
+    .find((message) => message.direction === 'outgoing');
+  const metadata = latestOutgoing?.metadata;
+  const rawAttachments =
+    metadata && Array.isArray(metadata.attachments) ? metadata.attachments : [];
+  return rawAttachments
+    .map((attachment) => (attachment && typeof attachment === 'object' ? attachment as Record<string, unknown> : null))
+    .filter((attachment): attachment is Record<string, unknown> => Boolean(attachment));
+}
+
+function mergeReportRecipients(reports: SelectedReportContext[]) {
+  return dedupeRecipients(reports.map((report) => report.recipientEmail).filter(isLikelyEmail));
+}
+
 export function useMailboxComposeUiActions({
+  applyReportTemplate,
   attachmentInputRef,
   composeMode,
   composerRef,
+  reportOptions,
   selectedAccount,
   selectedReport,
+  selectedReports,
+  selectedTemplateId,
   setAttachments,
   setCompose,
   setComposeMode,
@@ -50,14 +91,32 @@ export function useMailboxComposeUiActions({
   setReportSearch,
   setReportSiteFilter,
   setSelectedReport,
+  setSelectedReports,
   setView,
   siteId,
   threadDetail,
   resetCompose,
 }: UseMailboxComposeUiActionsParams) {
+  const applyReportsToCompose = (reports: SelectedReportContext[]) => {
+    const rendered = renderMailReportTemplate(getMailReportTemplate(selectedTemplateId), reports);
+    const knownReportRecipients = new Set(
+      reportOptions.map((report) => report.recipientEmail).filter(isLikelyEmail),
+    );
+    setCompose((current) => ({
+      ...current,
+      body: reports.length > 0 ? rendered.body : current.body,
+      subject: reports.length > 0 ? rendered.subject : current.subject,
+      toRecipients: dedupeRecipients([
+        ...current.toRecipients.filter((email) => !knownReportRecipients.has(email)),
+        ...mergeReportRecipients(reports),
+      ]),
+    }));
+  };
+
   const handleOpenCompose = (mode: ComposeMode = 'new') => {
     if (mode !== 'report') {
       setSelectedReport(null);
+      setSelectedReports([]);
     }
     setComposeMode(mode);
     if (mode !== 'reply') {
@@ -69,6 +128,7 @@ export function useMailboxComposeUiActions({
   const handleReply = () => {
     if (!threadDetail) return;
     setSelectedReport(null);
+    setSelectedReports([]);
     setComposeMode('reply');
     setCompose(
       buildComposeState({
@@ -93,6 +153,7 @@ export function useMailboxComposeUiActions({
       : null;
     if (!threadDetail || !sourceMessage) return;
     setSelectedReport(null);
+    setSelectedReports([]);
     setComposeMode('new');
     setCompose(
       buildComposeState({
@@ -101,6 +162,45 @@ export function useMailboxComposeUiActions({
       }),
     );
     setAttachments([]);
+    setView('compose');
+  };
+
+  const handleResend = () => {
+    if (!threadDetail) return;
+    const sourceMessage =
+      threadDetail.messages.slice().reverse().find((message) => message.direction === 'outgoing') ||
+      threadDetail.messages[threadDetail.messages.length - 1];
+    if (!sourceMessage) return;
+    const reportKeys = sourceMessage.reportKeys.length
+      ? sourceMessage.reportKeys
+      : sourceMessage.reportKey
+        ? [sourceMessage.reportKey]
+        : [];
+    const reports = reportKeys
+      .map((reportKey) => reportOptions.find((option) => option.reportKey === reportKey))
+      .filter((report): report is SelectedReportContext => Boolean(report));
+    const restoredAttachments = getMessageAttachments(threadDetail)
+      .filter((attachment) => attachment.source !== 'report' && typeof attachment.data_base64 === 'string')
+      .map((attachment) => ({
+        file: fileFromBase64({
+          contentType: typeof attachment.content_type === 'string' ? attachment.content_type : '',
+          dataBase64: String(attachment.data_base64),
+          filename: typeof attachment.filename === 'string' ? attachment.filename : 'attachment.bin',
+        }),
+        id: `${String(attachment.filename || 'attachment')}-${String(attachment.size || attachment.size_bytes || '')}`,
+      }));
+
+    setSelectedReport(reports[0] || null);
+    setSelectedReports(reports);
+    setComposeMode(reports.length > 0 ? 'report' : 'new');
+    setCompose(
+      buildComposeState({
+        body: sourceMessage.body,
+        subject: sourceMessage.subject,
+        toRecipients: sourceMessage.to.map((recipient) => recipient.email).filter(isLikelyEmail),
+      }),
+    );
+    setAttachments(restoredAttachments);
     setView('compose');
   };
 
@@ -155,53 +255,50 @@ export function useMailboxComposeUiActions({
 
   const handleOpenReportPicker = () => {
     setReportSearch('');
-    setReportSiteFilter(selectedReport?.siteId || siteId || '');
+    setReportSiteFilter(selectedReport?.siteId || selectedReports[0]?.siteId || siteId || '');
     setReportPickerOpen(true);
   };
 
   const handleSelectReport = (option: SelectedReportContext) => {
-    setSelectedReport(option);
-    setComposeMode('report');
-    setCompose((current) => ({
-      ...current,
-      subject:
-        current.subject.trim() && composeMode !== 'report'
-          ? current.subject
-          : `[보고서] ${option.reportTitle || option.reportKey}`,
-      toRecipients:
-        current.toRecipients.length > 0
-          ? current.toRecipients
-          : option.recipientEmail && isLikelyEmail(option.recipientEmail)
-            ? [option.recipientEmail]
-            : [],
-    }));
-    if (option.attachmentReady) {
-      void prepareReportMailAttachment({
-        originalPdfAvailable: option.originalPdfAvailable,
-        originalPdfDownloadPath: option.originalPdfDownloadPath,
-        reportFilename: option.reportTitle,
-        reportKey: option.reportKey,
-        reportTitle: option.reportTitle,
-        reportType: option.reportType,
-        reportUpdatedAt: option.updatedAt,
-      }).catch((error) => {
-        console.warn('Report PDF prepare failed; send will retry on demand.', {
-          error: error instanceof Error ? error.message : String(error),
-          reportKey: option.reportKey,
+    const exists = selectedReports.some((report) => report.reportKey === option.reportKey);
+    const nextReports = exists
+      ? selectedReports.filter((report) => report.reportKey !== option.reportKey)
+      : [...selectedReports, option];
+    setSelectedReports(nextReports);
+    setSelectedReport(nextReports[0] || null);
+    setComposeMode(nextReports.length > 0 ? 'report' : 'new');
+    if (nextReports.length > 0) {
+      applyReportsToCompose(nextReports);
+      nextReports.forEach((report) => {
+        if (!report.attachmentReady) return;
+        void prepareReportMailAttachment({
+          originalPdfAvailable: report.originalPdfAvailable,
+          originalPdfDownloadPath: report.originalPdfDownloadPath,
+          reportFilename: report.reportTitle,
+          reportKey: report.reportKey,
+          reportTitle: report.reportTitle,
+          reportType: report.reportType,
+          reportUpdatedAt: report.updatedAt,
+        }).catch((error) => {
+          console.warn('Report PDF prepare failed; send will retry on demand.', {
+            error: error instanceof Error ? error.message : String(error),
+            reportKey: report.reportKey,
+          });
         });
       });
     }
-    setReportPickerOpen(false);
   };
 
   const handleClearSelectedReport = () => {
     setSelectedReport(null);
+    setSelectedReports([]);
     if (composeMode === 'report') {
       setComposeMode('new');
     }
   };
 
   return {
+    applyReportTemplate,
     handleAttachmentSelect,
     handleClearSelectedReport,
     handleComposerCommand,
@@ -212,6 +309,7 @@ export function useMailboxComposeUiActions({
     handleOpenReportPicker,
     handleRemoveAttachment,
     handleReply,
+    handleResend,
     handleSelectReport,
   };
 }

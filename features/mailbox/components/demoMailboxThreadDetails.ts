@@ -10,11 +10,13 @@ function buildMessage(input: {
   headquarterId?: string | null;
   id: string;
   reportKey?: string | null;
+  reportKeys?: string[];
   sentAt: string;
   siteId?: string | null;
   subject: string;
   to: MailMessage['to'];
 }): MailMessage {
+  const reportKey = input.reportKey ?? null;
   return {
     id: input.id,
     threadId: input.id.split(':')[0],
@@ -28,7 +30,9 @@ function buildMessage(input: {
     fromName: input.fromName ?? null,
     headquarterId: input.headquarterId ?? null,
     readAt: input.sentAt,
-    reportKey: input.reportKey ?? null,
+    metadata: {},
+    reportKey,
+    reportKeys: input.reportKeys ?? (reportKey ? [reportKey] : []),
     sentAt: input.sentAt,
     siteId: input.siteId ?? null,
     subject: input.subject,

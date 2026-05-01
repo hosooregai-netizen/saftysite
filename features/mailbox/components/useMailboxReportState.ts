@@ -53,9 +53,11 @@ export function useMailboxReportState({
   const [reportPickerPage, setReportPickerPage] = useState(1);
   const [workerModalReports, setWorkerModalReports] = useState<MailboxReportOption[]>([]);
   const [selectedReport, setSelectedReport] = useState<SelectedReportContext | null>(null);
+  const [selectedReports, setSelectedReports] = useState<SelectedReportContext[]>([]);
 
   useEffect(() => {
     setSelectedReport(null);
+    setSelectedReports([]);
     setReportSiteFilter(siteId || '');
   }, [siteId, reportKey]);
 
@@ -173,11 +175,13 @@ export function useMailboxReportState({
         });
         if (!cancelled) {
           setSelectedReport(nextSelectedReport);
+          setSelectedReports(nextSelectedReport ? [nextSelectedReport] : []);
         }
       } catch (error) {
         if (!cancelled) {
           console.error('Failed to hydrate canonical admin mailbox report selection', error);
           setSelectedReport(null);
+          setSelectedReports([]);
         }
       }
     })();
@@ -230,6 +234,7 @@ export function useMailboxReportState({
               siteName: workerSite.siteName,
               updatedAt: item.updated_at,
               visitDate: item.visit_date,
+              visitRound: item.visit_round ?? null,
               workflowStatus: item.workflow_status || item.status || null,
             }));
           }),
@@ -272,6 +277,9 @@ export function useMailboxReportState({
       }
       return matchedReport;
     });
+    setSelectedReports((current) =>
+      current.map((item) => (item.reportKey === matchedReport.reportKey ? matchedReport : item)),
+    );
   }, [reportOptions, selectedReport]);
 
   const filteredReportOptions = useMemo(() => {
@@ -320,9 +328,11 @@ export function useMailboxReportState({
     reportSiteFilter,
     reportPickerTotal,
     selectedReport,
+    selectedReports,
     setReportPickerPage,
     setReportSearch,
     setReportSiteFilter,
     setSelectedReport,
+    setSelectedReports,
   };
 }

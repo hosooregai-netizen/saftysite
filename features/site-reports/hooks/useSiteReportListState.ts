@@ -17,6 +17,7 @@ import {
 import { mergeReportIndexItems } from '@/hooks/inspectionSessions/helpers';
 import { fetchAdminReports } from '@/lib/admin/apiClient';
 import { isAdminUserRole } from '@/lib/admin';
+import { reserveNextMySchedule } from '@/lib/calendar/apiClient';
 import {
   fetchTechnicalGuidanceSeed,
   readSafetyAuthToken,
@@ -377,10 +378,15 @@ export function useSiteReportListState(
       throw new SafetyApiError('로그인이 만료되었습니다. 다시 로그인해 주세요.', 401);
     }
 
+    const assignedSchedule = await reserveNextMySchedule({
+      plannedDate: normalizedReportDate,
+      siteId: currentSite.id,
+    });
     const seed = await fetchTechnicalGuidanceSeed(token, currentSite.id);
-    const seedReportNumber = seed.next_visit_round || nextReportNumber;
+    const seedReportNumber = assignedSchedule.roundNo || seed.next_visit_round || nextReportNumber;
     const nextSession = createSession(currentSite, {
       reportNumber: seedReportNumber,
+      scheduleId: assignedSchedule.id,
       meta: {
         siteName: currentSite.siteName,
         reportDate: normalizedReportDate,

@@ -85,6 +85,7 @@ export function MailboxPanelLayout({
         reportPickerTotal={reportPickerTotal}
         reportSearch={reportSearch}
         reportSiteFilter={reportSiteFilter}
+        selectedReportKeys={workspaceProps.selectedReports.map((report) => report.reportKey)}
         siteOptions={adminSites}
         onChangeReportSearch={setReportSearch}
         onChangeSiteFilter={setReportSiteFilter}

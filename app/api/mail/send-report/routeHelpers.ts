@@ -134,7 +134,9 @@ export async function materializeMailAttachmentDownload(
     content_type: response.headers.get('content-type') || attachment.content_type || 'application/pdf',
     data_base64: buffer.toString('base64'),
     filename: attachment.filename,
+    report_key: attachment.report_key,
     size_bytes: buffer.length,
+    source: attachment.source,
   };
 }
 
@@ -233,12 +235,20 @@ export function buildQueuedMailMessage(input: {
   headquarterId?: string | null;
   id: string;
   reportKey?: string | null;
+  reportKeys?: string[];
   siteId?: string | null;
   subject: string;
   to: MailRecipient[];
   queuedAt: string;
 }) {
   const bodyPreview = stripHtml(input.body).slice(0, 280);
+  const reportKeys = Array.from(
+    new Set(
+      [input.reportKey, ...(input.reportKeys || [])]
+        .map((reportKey) => normalizeText(reportKey))
+        .filter(Boolean),
+    ),
+  );
   return {
     accountId: input.accountId,
     body: input.body,
@@ -251,12 +261,14 @@ export function buildQueuedMailMessage(input: {
     headquarterId: normalizeText(input.headquarterId) || null,
     id: input.id,
     readAt: null,
-    reportKey: normalizeText(input.reportKey) || null,
+    reportKey: reportKeys[0] || null,
+    reportKeys,
     sentAt: input.queuedAt,
     siteId: normalizeText(input.siteId) || null,
     subject: input.subject,
     threadId: input.id,
     to: input.to,
+    metadata: {},
     updatedAt: input.queuedAt,
   } satisfies MailMessage;
 }

@@ -94,6 +94,7 @@ export function MailboxPanel({
     composeMode: routing.composeMode,
     composerRef,
     selectedReport: reportState.selectedReport,
+    selectedReports: reportState.selectedReports,
   });
   const threadState = useMailboxThreadState({
     accountStateReady: accountState.accountStateReady,

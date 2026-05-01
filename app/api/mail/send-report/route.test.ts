@@ -67,6 +67,7 @@ test('POST /api/mail/send-report waits for oversized link sends and returns the 
       id: message.id,
       readAt: message.read_at,
       reportKey: message.report_key,
+      reportKeys: Array.isArray(message.report_keys) ? message.report_keys : [],
       sentAt: message.sent_at,
       siteId: message.site_id,
       subject: message.subject,
@@ -75,6 +76,7 @@ test('POST /api/mail/send-report waits for oversized link sends and returns the 
         email: recipient.email,
         name: recipient.name ?? null,
       })),
+      metadata: message.metadata ?? {},
       updatedAt: message.updated_at,
     }),
     materializeMailAttachmentDownload: async () => {
@@ -139,13 +141,148 @@ test('POST /api/mail/send-report waits for oversized link sends and returns the 
     id: 'message-1',
     readAt: null,
     reportKey: 'legacy:technical_guidance:427520',
+    reportKeys: [],
     sentAt: '2026-04-24T10:00:01.000Z',
     siteId: 'site-1',
     subject: 'Oversized send',
     threadId: 'thread-1',
     to: [{ email: 'receiver@example.com', name: 'Receiver' }],
+    metadata: {},
     updatedAt: '2026-04-24T10:00:02.000Z',
   });
+});
+
+test('POST /api/mail/send-report attaches every selected report and forwards report_keys', async () => {
+  const builtReportKeys: string[] = [];
+  const sendCalls: Array<{ payload: Record<string, unknown> }> = [];
+  const request = new Request('https://app.example.com/api/mail/send-report', {
+    body: JSON.stringify({
+      account_id: 'account-1',
+      attachments: [{ filename: 'note.txt', data_base64: 'bm90ZQ==', content_type: 'text/plain' }],
+      body: '<p>body</p>',
+      headquarter_id: 'hq-1',
+      reports: [
+        {
+          original_pdf_available: true,
+          original_pdf_download_path: '/api/admin/reports/report-1/original-pdf',
+          report_key: 'report-1',
+          report_title: 'Report 1',
+        },
+        {
+          original_pdf_available: false,
+          report_key: 'report-2',
+          report_title: 'Report 2',
+        },
+      ],
+      site_id: 'site-1',
+      subject: 'Multi report send',
+      to: [{ email: 'receiver@example.com', name: 'Receiver' }],
+    }),
+    headers: {
+      authorization: 'Bearer route-token',
+      'content-type': 'application/json',
+    },
+    method: 'POST',
+  });
+
+  const response = await handleSendReportPost(request, {
+    buildMailReportAttachment: async (_request, _token, report) => {
+      builtReportKeys.push(report.reportKey);
+      return {
+        content_type: 'application/pdf',
+        download_url: `https://app.example.com/api/admin/reports/${report.reportKey}/original-pdf`,
+        filename: `${report.reportKey}.pdf`,
+        size_bytes: 4,
+      };
+    },
+    buildOversizeReportFallbackBody,
+    isOversizeMailAttachmentError,
+    mapBackendMailMessage: (message) => ({
+      accountId: message.account_id,
+      body: message.body,
+      bodyPreview: message.body_preview,
+      createdAt: message.created_at,
+      deliveredAt: message.delivered_at,
+      direction: 'outgoing',
+      fromEmail: message.from_email,
+      fromName: message.from_name,
+      headquarterId: message.headquarter_id,
+      id: message.id,
+      readAt: message.read_at,
+      reportKey: message.report_key,
+      reportKeys: Array.isArray(message.report_keys) ? message.report_keys : [],
+      sentAt: message.sent_at,
+      siteId: message.site_id,
+      subject: message.subject,
+      threadId: message.thread_id,
+      to: message.to.map((recipient) => ({
+        email: recipient.email,
+        name: recipient.name ?? null,
+      })),
+      metadata: message.metadata ?? {},
+      updatedAt: message.updated_at,
+    }),
+    materializeMailAttachmentDownload: async (attachment) => {
+      const { download_url: _downloadUrl, ...materialized } = attachment;
+      return {
+        ...materialized,
+        data_base64: Buffer.from(attachment.filename).toString('base64'),
+      };
+    },
+    readRequiredAdminToken: () => 'route-token',
+    sendSafetyMailServer: async (_token, payload) => {
+      sendCalls.push({ payload });
+      return {
+        account_id: 'account-1',
+        body: String(payload.body || ''),
+        body_preview: 'body',
+        created_at: '2026-04-24T10:00:00.000Z',
+        delivered_at: '2026-04-24T10:00:02.000Z',
+        direction: 'outgoing',
+        from_email: 'sender@example.com',
+        from_name: 'Sender',
+        headquarter_id: 'hq-1',
+        id: 'message-1',
+        metadata: {},
+        read_at: null,
+        report_key: String(payload.report_key || ''),
+        report_keys: Array.isArray(payload.report_keys) ? payload.report_keys : [],
+        sent_at: '2026-04-24T10:00:01.000Z',
+        site_id: 'site-1',
+        subject: 'Multi report send',
+        thread_id: 'thread-1',
+        to: [{ email: 'receiver@example.com', name: 'Receiver' }],
+        updated_at: '2026-04-24T10:00:02.000Z',
+      };
+    },
+    shouldSendReportAsDownloadLink: () => false,
+  });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(builtReportKeys, ['report-1', 'report-2']);
+  assert.equal(sendCalls.length, 1);
+  assert.equal(sendCalls[0]?.payload.report_key, 'report-1');
+  assert.deepEqual(sendCalls[0]?.payload.report_keys, ['report-1', 'report-2']);
+  assert.deepEqual(sendCalls[0]?.payload.attachments, [
+    {
+      content_type: 'application/pdf',
+      data_base64: 'cmVwb3J0LTEucGRm',
+      filename: 'report-1.pdf',
+      report_key: 'report-1',
+      size_bytes: 4,
+      source: 'report',
+    },
+    {
+      content_type: 'application/pdf',
+      data_base64: 'cmVwb3J0LTIucGRm',
+      filename: 'report-2.pdf',
+      report_key: 'report-2',
+      size_bytes: 4,
+      source: 'report',
+    },
+    { filename: 'note.txt', data_base64: 'bm90ZQ==', content_type: 'text/plain' },
+  ]);
+  assert.deepEqual((await response.json()).reportKeys, ['report-1', 'report-2']);
 });
 
 test('isOversizeMailAttachmentError matches backend attachment limit failures', () => {

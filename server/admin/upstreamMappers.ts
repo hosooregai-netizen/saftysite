@@ -1379,11 +1379,15 @@ export function mapBackendMailMessage(message: SafetyBackendMailMessage): MailMe
     id: normalizeText(message.id),
     readAt: normalizeText(message.read_at) || null,
     reportKey: normalizeText(message.report_key) || null,
+    reportKeys: Array.isArray(message.report_keys)
+      ? message.report_keys.map((item) => normalizeText(item)).filter(Boolean)
+      : [],
     sentAt: normalizeText(message.sent_at) || null,
     siteId: normalizeText(message.site_id) || null,
     subject: normalizeText(message.subject),
     threadId: normalizeText(message.thread_id),
     to: Array.isArray(message.to) ? message.to.map((item) => mapMailParticipant(item)) : [],
+    metadata: message.metadata ?? {},
     updatedAt: normalizeText(message.updated_at),
   };
 }

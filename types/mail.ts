@@ -20,7 +20,9 @@ export interface MailAttachmentPayload {
   dataBase64?: string;
   downloadHeaders?: Record<string, string>;
   downloadUrl?: string;
+  reportKey?: string | null;
   sizeBytes?: number;
+  source?: string | null;
 }
 
 export interface MailAccount {
@@ -86,8 +88,10 @@ export interface MailMessage {
   deliveredAt: string | null;
   readAt: string | null;
   reportKey: string | null;
+  reportKeys: string[];
   siteId: string | null;
   headquarterId: string | null;
+  metadata: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
 }

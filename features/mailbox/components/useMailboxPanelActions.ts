@@ -78,6 +78,7 @@ export function useMailboxPanelActions({
     threadState.setSelectedThreadId('');
     threadState.setThreadDetail(null);
     reportState.setSelectedReport(null);
+    reportState.setSelectedReports([]);
     composeState.resetCompose('new');
     routing.setView('list');
     if (!options?.silent) {
@@ -101,6 +102,7 @@ export function useMailboxPanelActions({
     setProviderStatuses: accountState.setProviderStatuses,
     setSelectedAccountId: accountState.setSelectedAccountId,
     setSelectedReport: reportState.setSelectedReport,
+    setSelectedReports: reportState.setSelectedReports,
     setSelectedThreadId: threadState.setSelectedThreadId,
     setThreadDetail: threadState.setThreadDetail,
     setThreadTotal: threadState.setThreadTotal,
@@ -122,12 +124,16 @@ export function useMailboxPanelActions({
   });
 
   const composeUiActions = useMailboxComposeUiActions({
+    applyReportTemplate: composeState.applyReportTemplate,
     attachmentInputRef,
     composeMode: routing.composeMode,
     composerRef,
+    reportOptions: reportState.reportOptions,
     resetCompose: composeState.resetCompose,
     selectedAccount: accountState.selectedAccount,
     selectedReport: reportState.selectedReport,
+    selectedReports: reportState.selectedReports,
+    selectedTemplateId: composeState.selectedTemplateId,
     setAttachments: composeState.setAttachments,
     setCompose: composeState.setCompose,
     setComposeMode: routing.setComposeMode,
@@ -135,6 +141,7 @@ export function useMailboxPanelActions({
     setReportSearch: reportState.setReportSearch,
     setReportSiteFilter: reportState.setReportSiteFilter,
     setSelectedReport: reportState.setSelectedReport,
+    setSelectedReports: reportState.setSelectedReports,
     setView: routing.setView,
     siteId,
     threadDetail: threadState.threadDetail,
@@ -150,12 +157,14 @@ export function useMailboxPanelActions({
     resetCompose: composeState.resetCompose,
     selectedAccount: accountState.selectedAccount,
     selectedReport: reportState.selectedReport,
+    selectedReports: reportState.selectedReports,
     selectedThreadId: threadState.selectedThreadId,
     setComposeMode: routing.setComposeMode,
     setError: uiState.setError,
     setMailSendProgress: composeState.setMailSendProgress,
     setNotice: uiState.setNotice,
     setSelectedReport: reportState.setSelectedReport,
+    setSelectedReports: reportState.setSelectedReports,
     setThreadDetail: threadState.setThreadDetail,
     setThreadTotal: threadState.setThreadTotal,
     setThreads: threadState.setThreads,

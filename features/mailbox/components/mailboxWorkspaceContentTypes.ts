@@ -41,6 +41,8 @@ export interface MailboxWorkspaceContentProps {
   selectedAccount: MailAccount | null;
   selectedAccountId: string;
   selectedReport: SelectedReportContext | null;
+  selectedReports: SelectedReportContext[];
+  selectedTemplateId: string;
   selectableAccounts: MailAccount[];
   showMailboxConnectGate: boolean;
   tab: MailboxTab;
@@ -60,6 +62,7 @@ export interface MailboxWorkspaceContentProps {
   onChangeAccountId: (accountId: string) => void;
   onChangeRecipientInput: (value: string) => void;
   onChangeSubject: (value: string) => void;
+  onApplyTemplate: (templateId?: string) => void;
   onClearSelectedReport: () => void;
   onComposerCommand: (command: string, value?: string) => void;
   onComposerInput: () => void;
@@ -75,6 +78,7 @@ export interface MailboxWorkspaceContentProps {
   onRemoveAttachment: (attachmentId: string) => void;
   onRemoveRecipient: (email: string) => void;
   onForward: () => void;
+  onResend: () => void;
   onReply: () => void;
   onSelectRecipientSuggestion: (suggestion: RecipientSuggestionItem) => void;
   onSend: () => void;

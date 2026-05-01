@@ -95,3 +95,20 @@ export function updateMySchedule(
     }),
   });
 }
+
+export function reserveNextMySchedule(payload: {
+  plannedDate: string;
+  selectionReasonLabel?: string;
+  selectionReasonMemo?: string;
+  siteId: string;
+}) {
+  return requestCalendarApi<SafetyInspectionSchedule>('/schedules/next', {
+    method: 'POST',
+    body: JSON.stringify({
+      planned_date: payload.plannedDate || '',
+      selection_reason_label: payload.selectionReasonLabel || '',
+      selection_reason_memo: payload.selectionReasonMemo || '',
+      site_id: payload.siteId || '',
+    }),
+  });
+}

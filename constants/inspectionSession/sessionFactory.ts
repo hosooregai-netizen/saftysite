@@ -149,6 +149,7 @@ export function createInspectionSession(
     document13Cases?: CaseFeedItem[];
     document14SafetyInfos?: SafetyInfoItem[];
     document4FollowUps?: InspectionSession['document4FollowUps'];
+    scheduleId?: string | null;
     technicalGuidanceRelations?: Partial<TechnicalGuidanceRelations>;
   } = {},
   siteKey = UNTITLED_SITE_KEY,
@@ -168,6 +169,7 @@ export function createInspectionSession(
   return finalizeInspectionSession({
     id: generateId('session'),
     siteKey,
+    scheduleId: options.scheduleId ?? null,
     reportNumber,
     currentSection: 'doc1',
     meta,

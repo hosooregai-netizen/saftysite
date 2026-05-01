@@ -116,6 +116,7 @@ export function normalizeInspectionSession(raw: unknown): InspectionSession {
   const normalizedSession: InspectionSession = {
     ...session,
     id: normalizeText(source.id) || session.id,
+    scheduleId: normalizeText(source.scheduleId) || null,
     currentSection: normalizeSectionKey(source.currentSection),
     reportNumber: normalizedReportNumber,
     meta: {

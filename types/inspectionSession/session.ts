@@ -40,6 +40,7 @@ export interface TechnicalGuidanceRelations {
 export interface InspectionSession {
   id: string;
   siteKey: string;
+  scheduleId?: string | null;
   reportNumber: number;
   currentSection: InspectionSectionKey;
   meta: InspectionReportMeta;
@@ -98,6 +99,7 @@ export interface InspectionReportListItem {
   originalPdfAvailable?: boolean;
   siteId: string;
   headquarterId: string | null;
+  scheduleId?: string | null;
   assignedUserId: string | null;
   visitDate: string | null;
   visitRound: number | null;

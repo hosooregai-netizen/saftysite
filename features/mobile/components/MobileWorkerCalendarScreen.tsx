@@ -5,7 +5,7 @@ import AppModal from '@/components/ui/AppModal';
 import LoginPanel from '@/components/auth/LoginPanel';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { buildDefaultReportTitle } from '@/features/site-reports/report-list/reportListHelpers';
-import { fetchMySchedules, updateMySchedule } from '@/lib/calendar/apiClient';
+import { fetchMySchedules, reserveNextMySchedule, updateMySchedule } from '@/lib/calendar/apiClient';
 import type { SafetyInspectionSchedule } from '@/types/admin';
 import { MobileShell } from './MobileShell';
 import { MobileTabBar } from './MobileTabBar';
@@ -370,7 +370,9 @@ export function MobileWorkerCalendarScreen() {
     if (!site) return null;
 
     const existingSession = getSessionsBySiteId(site.id).find(
-      (session) => session.reportNumber === schedule.roundNo,
+      (session) =>
+        (session.scheduleId && session.scheduleId === schedule.id) ||
+        session.reportNumber === schedule.roundNo,
     );
     if (existingSession) {
       return {
@@ -388,6 +390,7 @@ export function MobileWorkerCalendarScreen() {
         siteName: site.siteName,
       },
       reportNumber: schedule.roundNo,
+      scheduleId: schedule.id,
     });
 
     return {
@@ -397,15 +400,11 @@ export function MobileWorkerCalendarScreen() {
   };
 
   const handleSaveSchedule = async () => {
-    if (!dialog.scheduleId) {
-      setError('회차를 먼저 선택해 주세요.');
+    if (!dialog.siteId) {
+      setError('현장을 먼저 선택해 주세요.');
       return;
     }
-    const schedule = rows.find((row) => row.id === dialog.scheduleId);
-    if (!schedule) {
-      setError('선택한 회차를 찾지 못했습니다.');
-      return;
-    }
+    const schedule = rows.find((row) => row.id === dialog.scheduleId) ?? null;
     if (!dialog.plannedDate) {
       setError('방문 날짜를 먼저 선택해 주세요.');
       return;
@@ -416,11 +415,18 @@ export function MobileWorkerCalendarScreen() {
     }
     try {
       setError(null);
-      const updated = await updateMySchedule(schedule.id, {
-        plannedDate: dialog.plannedDate,
-        selectionReasonLabel: dialog.selectionReasonLabel.trim(),
-        selectionReasonMemo: dialog.selectionReasonMemo.trim(),
-      });
+      const updated = schedule?.plannedDate
+        ? await updateMySchedule(schedule.id, {
+            plannedDate: dialog.plannedDate,
+            selectionReasonLabel: dialog.selectionReasonLabel.trim(),
+            selectionReasonMemo: dialog.selectionReasonMemo.trim(),
+          })
+        : await reserveNextMySchedule({
+            plannedDate: dialog.plannedDate,
+            selectionReasonLabel: dialog.selectionReasonLabel.trim(),
+            selectionReasonMemo: dialog.selectionReasonMemo.trim(),
+            siteId: schedule?.siteId || dialog.siteId,
+          });
       const linkUpdate = ensureDraftSessionForSchedule(updated);
       const finalized =
         linkUpdate && linkUpdate.linkedReportKey !== normalizeText(updated.linkedReportKey)
@@ -432,12 +438,17 @@ export function MobileWorkerCalendarScreen() {
               selectionReasonMemo: dialog.selectionReasonMemo.trim(),
             })
           : updated;
-      setRows((current) => current.map((row) => (row.id === finalized.id ? finalized : row)));
+      setRows((current) => {
+        const nextRows = current.filter(
+          (row) => row.id !== finalized.id && !(row.siteId === finalized.siteId && row.roundNo === finalized.roundNo),
+        );
+        return [...nextRows, finalized];
+      });
       setSelectedDate(finalized.plannedDate || dialog.plannedDate);
       setNotice(
         linkUpdate
-          ? `${schedule.siteName} ${schedule.roundNo}회차 방문 일정과 기술지도 보고서를 연결했습니다.`
-          : `${schedule.siteName} ${schedule.roundNo}회차 방문 일정을 저장했습니다.`,
+          ? `${finalized.siteName} ${finalized.roundNo}회차 방문 일정과 기술지도 보고서를 연결했습니다.`
+          : `${finalized.siteName} ${finalized.roundNo}회차 방문 일정을 저장했습니다.`,
       );
       setDialog(EMPTY_DIALOG_STATE);
     } catch (nextError) {
@@ -469,7 +480,7 @@ export function MobileWorkerCalendarScreen() {
         error={authError}
         onSubmit={login}
         title="모바일 일정 로그인"
-        description="로그인하면 배정된 현장의 회차별 방문 일정을 모바일에서 바로 선택할 수 있습니다."
+        description="로그인하면 배정된 현장의 다음 방문 일정을 모바일에서 바로 등록할 수 있습니다."
       />
     );
   }
@@ -487,7 +498,7 @@ export function MobileWorkerCalendarScreen() {
           <div>
             <h2 className={workerStyles.sectionTitle}>월간 캘린더</h2>
             <div className={workerStyles.sectionMeta}>
-              날짜를 누르면 배정 현장과 회차를 선택해 방문 일정을 바로 저장할 수 있습니다.
+              날짜를 누르면 배정 현장의 다음 진행 회차가 자동 배정됩니다.
             </div>
           </div>
         </div>
@@ -609,7 +620,7 @@ export function MobileWorkerCalendarScreen() {
 
       <AppModal
         open={dialog.open}
-        title="방문 일정 선택"
+        title="방문 일정 등록"
         onClose={() => setDialog(EMPTY_DIALOG_STATE)}
         actions={
           <>
@@ -620,7 +631,7 @@ export function MobileWorkerCalendarScreen() {
               type="button"
               className="app-button app-button-primary"
               onClick={() => void handleSaveSchedule()}
-              disabled={!dialog.scheduleId || !dialog.plannedDate || Boolean(dialogWindowError)}
+              disabled={!dialog.siteId || !dialog.plannedDate || Boolean(dialogWindowError)}
             >
               방문 일정 저장
             </button>
@@ -673,41 +684,13 @@ export function MobileWorkerCalendarScreen() {
 
           <section className={workerStyles.dialogSection}>
             <div className={workerStyles.dialogSectionHeader}>
-              <strong>선택 가능한 회차</strong>
+              <strong>자동 배정 회차</strong>
             </div>
-            {dialogRoundRows.length === 0 ? (
-              <div className={workerStyles.emptyState}>선택 가능한 회차가 없습니다.</div>
-            ) : (
-              <div className={workerStyles.dialogList}>
-                {dialogRoundRows.map((row) => (
-                  <label
-                    key={row.id}
-                    className={`${workerStyles.dialogOption} ${dialog.scheduleId === row.id ? workerStyles.dialogOptionActive : ''}`}
-                  >
-                    <input
-                      type="radio"
-                      name="mobile-worker-schedule"
-                      checked={dialog.scheduleId === row.id}
-                      onChange={() =>
-                        setDialog((current) => ({
-                          ...current,
-                          scheduleId: row.id,
-                          selectionReasonLabel: row.selectionReasonLabel || '',
-                          selectionReasonMemo: row.selectionReasonMemo || '',
-                          siteId: row.siteId,
-                        }))
-                      }
-                    />
-                    <div>
-                      <strong>{row.siteName}</strong>
-                      <div className={workerStyles.rowMeta}>
-                        {formatWorkerRoundLabel(row)} · 허용 구간 {row.windowStart} ~ {row.windowEnd}
-                      </div>
-                    </div>
-                  </label>
-                ))}
-              </div>
-            )}
+            <div className={workerStyles.dialogHint}>
+              {dialogSelectedSchedule
+                ? formatWorkerRoundLabel(dialogSelectedSchedule)
+                : '저장 시 다음 진행 회차가 자동 배정됩니다.'}
+            </div>
           </section>
 
           <label className={workerStyles.field}>

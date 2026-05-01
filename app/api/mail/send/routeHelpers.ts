@@ -44,10 +44,12 @@ function normalizeAttachment(value: unknown): MailAttachmentServerPayload | null
     download_headers: normalizeHeaders(record.download_headers),
     download_url: downloadUrl,
     filename,
+    report_key: normalizeText(record.report_key) || undefined,
     size_bytes:
       typeof record.size_bytes === 'number' && Number.isFinite(record.size_bytes)
         ? record.size_bytes
         : undefined,
+    source: normalizeText(record.source) || undefined,
   };
 }
 

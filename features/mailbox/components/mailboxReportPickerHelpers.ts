@@ -77,6 +77,7 @@ export function mapSafetyReportListItemToMailboxReportOption(
     siteName: matchedSite?.site_name || item.site_id,
     updatedAt: item.updated_at,
     visitDate: item.visit_date,
+    visitRound: item.visit_round ?? null,
     workflowStatus,
   };
 }
@@ -121,6 +122,7 @@ export function mapAdminReportRowToMailboxReportOption(
     siteName: row.siteName || matchedSite?.site_name || row.siteId,
     updatedAt: row.updatedAt || null,
     visitDate: row.visitDate || null,
+    visitRound: null,
     workflowStatus,
   };
 }
@@ -147,6 +149,7 @@ export function mergeMailboxReportOptions(options: MailboxReportOption[]) {
       siteName: option.siteName || existing.siteName,
       updatedAt: option.updatedAt || existing.updatedAt,
       visitDate: option.visitDate || existing.visitDate,
+      visitRound: option.visitRound ?? existing.visitRound,
       workflowStatus: option.workflowStatus || existing.workflowStatus,
     };
     byReportKey.set(option.reportKey, {
@@ -225,6 +228,7 @@ export function mergeCanonicalMailboxReportOptions(options: MailboxReportOption[
       siteName: preferred.siteName || other.siteName,
       updatedAt: preferred.updatedAt || other.updatedAt,
       visitDate: preferred.visitDate || other.visitDate,
+      visitRound: preferred.visitRound ?? other.visitRound,
       workflowStatus: preferred.workflowStatus || other.workflowStatus,
     };
     byIdentity.set(identity, {

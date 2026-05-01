@@ -10,6 +10,7 @@ test('buildSafetyReportUpsertInput persists session adminSiteSnapshot', () => {
   });
   const session = createInspectionSession(
     {
+      scheduleId: 'schedule-9',
       adminSiteSnapshot: {
         siteName: 'Site Alpha',
         siteManagementNumber: 'MG-009',
@@ -36,4 +37,5 @@ test('buildSafetyReportUpsertInput persists session adminSiteSnapshot', () => {
   assert.equal(snapshot?.siteManagementNumber, 'MG-009');
   assert.equal(snapshot?.companyName, 'Acme Construction');
   assert.equal(snapshot?.headquartersAddress, '1 Test-ro, Seoul');
+  assert.equal(payload.schedule_id, 'schedule-9');
 });

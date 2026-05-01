@@ -72,6 +72,7 @@ export function useInspectionSessionsMutations(
   const createSession = useCallback((site: InspectionSite, initial?: {
     meta?: Partial<InspectionReportMeta>;
     reportNumber?: number;
+    scheduleId?: string | null;
     document4FollowUps?: InspectionSession['document4FollowUps'];
     technicalGuidanceRelations?: Partial<InspectionSession['technicalGuidanceRelations']>;
   }) => {
@@ -82,6 +83,7 @@ export function useInspectionSessionsMutations(
       masterDataRef.current,
       {
         meta: initial?.meta,
+        scheduleId: initial?.scheduleId,
         document4FollowUps: initial?.document4FollowUps,
         technicalGuidanceRelations: initial?.technicalGuidanceRelations,
       }

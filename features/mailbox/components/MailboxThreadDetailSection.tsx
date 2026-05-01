@@ -9,11 +9,13 @@ type ThreadMessage = MailThreadDetail['messages'][number];
 
 interface MailboxThreadDetailSectionProps {
   detailEmptyMessage: string;
+  showResend: boolean;
   threadDetail: MailThreadDetail | null;
   title: string;
   onBackToList: () => void;
   onForward: () => void;
   onReply: () => void;
+  onResend: () => void;
   renderMessageBodyHtml: (body: string) => string;
 }
 
@@ -188,11 +190,13 @@ function DetailHistoryItem({
 
 export function MailboxThreadDetailSection({
   detailEmptyMessage,
+  showResend,
   threadDetail,
   title,
   onBackToList,
   onForward,
   onReply,
+  onResend,
   renderMessageBodyHtml,
 }: MailboxThreadDetailSectionProps) {
   const primaryMessage = threadDetail
@@ -246,15 +250,18 @@ export function MailboxThreadDetailSection({
                 >
                   전달
                 </button>
-                <span className={localStyles.detailActionDivider}>/</span>
-                <button
-                  type="button"
-                  className={`${localStyles.detailActionButton} ${localStyles.detailActionButtonDisabled}`}
-                  disabled
-                  title="삭제 기능은 아직 연결되지 않았습니다."
-                >
-                  삭제
-                </button>
+                {showResend ? (
+                  <>
+                    <span className={localStyles.detailActionDivider}>/</span>
+                    <button
+                      type="button"
+                      className={localStyles.detailActionButton}
+                      onClick={onResend}
+                    >
+                      다시 보내기
+                    </button>
+                  </>
+                ) : null}
               </div>
             </div>
           </div>

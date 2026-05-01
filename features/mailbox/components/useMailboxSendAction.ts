@@ -33,12 +33,14 @@ interface UseMailboxSendActionParams {
   resetCompose: (mode: ComposeMode) => void;
   selectedAccount: MailAccount | null;
   selectedReport: SelectedReportContext | null;
+  selectedReports: SelectedReportContext[];
   selectedThreadId: string;
   setComposeMode: Dispatch<SetStateAction<ComposeMode>>;
   setError: Dispatch<SetStateAction<string | null>>;
   setMailSendProgress: Dispatch<SetStateAction<MailSendProgressState | null>>;
   setNotice: Dispatch<SetStateAction<string | null>>;
   setSelectedReport: Dispatch<SetStateAction<SelectedReportContext | null>>;
+  setSelectedReports: Dispatch<SetStateAction<SelectedReportContext[]>>;
   setThreadDetail: Dispatch<SetStateAction<MailThreadDetail | null>>;
   setThreadTotal: Dispatch<SetStateAction<number>>;
   setThreads: Dispatch<SetStateAction<ReturnType<typeof normalizeMailThreadUi>[]>>;
@@ -89,12 +91,14 @@ export function useMailboxSendAction({
   resetCompose,
   selectedAccount,
   selectedReport,
+  selectedReports,
   selectedThreadId,
   setComposeMode,
   setError,
   setMailSendProgress,
   setNotice,
   setSelectedReport,
+  setSelectedReports,
   setThreadDetail,
   setThreadTotal,
   setThreads,
@@ -111,18 +115,19 @@ export function useMailboxSendAction({
     }
     if (!selectedAccount) return;
 
+    const reportItems = selectedReports.length > 0 ? selectedReports : selectedReport ? [selectedReport] : [];
     const normalizedRecipients = dedupeRecipients([
       ...compose.toRecipients,
       ...(isLikelyEmail(compose.toInput.trim()) ? [compose.toInput.trim()] : []),
     ]);
     const selectedReportKey =
-      composeMode === 'reply' ? threadDetail?.thread.reportKey || '' : selectedReport?.reportKey || '';
+      composeMode === 'reply' ? threadDetail?.thread.reportKey || '' : reportItems[0]?.reportKey || '';
     const selectedSiteId =
-      composeMode === 'reply' ? threadDetail?.thread.siteId || '' : selectedReport?.siteId || '';
+      composeMode === 'reply' ? threadDetail?.thread.siteId || '' : reportItems[0]?.siteId || '';
     const selectedHeadquarterId =
       composeMode === 'reply'
         ? threadDetail?.thread.headquarterId || ''
-        : selectedReport?.headquarterId || '';
+        : reportItems[0]?.headquarterId || '';
     const senderName = resolveSenderName(currentUser, selectedAccount);
 
     try {
@@ -133,36 +138,40 @@ export function useMailboxSendAction({
         title: '메일 발송 준비 중',
       });
       const authToken = readSafetyAuthToken();
-      const normalizedAttachments = [];
-      if (composeMode === 'report' && selectedReport?.reportKey) {
-        if (!selectedReport.attachmentReady) {
+      const normalizedAttachments: Array<Awaited<ReturnType<typeof buildFileAttachmentPayload>>> = [];
+
+      if (composeMode === 'report' && reportItems.length > 0) {
+        const unavailableReport = reportItems.find((report) => !report.attachmentReady);
+        if (unavailableReport) {
           throw new Error(
-            selectedReport.attachmentUnavailableReason ||
+            unavailableReport.attachmentUnavailableReason ||
               '선택한 보고서는 메일 첨부 발송을 지원하지 않습니다.',
           );
         }
         if (!authToken) {
           throw new Error('보고서 첨부를 준비하려면 다시 로그인해 주세요.');
         }
-        const usesOriginalPdf = selectedReport.originalPdfAvailable;
+        const usesOriginalPdf = reportItems.some((report) => report.originalPdfAvailable);
         setMailSendProgress({
           detail: usesOriginalPdf
             ? '등록된 원본 PDF를 서버에서 바로 첨부합니다.'
-            : '보고서 PDF는 서버에서 생성해 바로 첨부합니다.',
+            : '보고서 PDF를 서버에서 생성해 첨부합니다.',
           percent: 30,
           title: usesOriginalPdf ? '원본 PDF 첨부 중' : '보고서 PDF 준비 중',
         });
       }
+
       if (attachments.length > 0) {
         setMailSendProgress({
-          detail: `첨부 파일 ${attachments.length}건을 HTTPS 자산으로 업로드하고 있습니다.`,
+          detail: `추가 첨부 파일 ${attachments.length}건을 HTTPS 자산으로 업로드하고 있습니다.`,
           percent: 54,
-          title: '첨부 파일 업로드 중',
+          title: '추가 첨부 파일 업로드 중',
         });
         for (const attachment of attachments) {
           normalizedAttachments.push(await buildFileAttachmentPayload(attachment.file));
         }
       }
+
       setMailSendProgress({
         detail: '메일 서버로 발송 요청을 보내고 있습니다.',
         percent: 78,
@@ -170,20 +179,30 @@ export function useMailboxSendAction({
       });
       const recipients = normalizedRecipients.map((email) => ({ email, name: null }));
       let sentMessageId = '';
-      if (composeMode === 'report' && selectedReport?.reportKey) {
+
+      if (composeMode === 'report' && reportItems.length > 0) {
         const sent = await sendReportMail({
           accountId: selectedAccount.id,
           attachments: normalizedAttachments,
           body: compose.body,
           fromName: senderName,
           headquarterId: selectedHeadquarterId,
-          originalPdfAvailable: selectedReport.originalPdfAvailable,
-          originalPdfDownloadPath: selectedReport.originalPdfDownloadPath,
-          reportFilename: selectedReport.reportTitle,
-          reportKey: selectedReport.reportKey,
-          reportTitle: selectedReport.reportTitle,
-          reportType: selectedReport.reportType,
-          reportUpdatedAt: selectedReport.updatedAt,
+          originalPdfAvailable: reportItems[0]?.originalPdfAvailable,
+          originalPdfDownloadPath: reportItems[0]?.originalPdfDownloadPath,
+          reportFilename: reportItems[0]?.reportTitle,
+          reportKey: reportItems[0]?.reportKey || '',
+          reports: reportItems.map((report) => ({
+            originalPdfAvailable: report.originalPdfAvailable,
+            originalPdfDownloadPath: report.originalPdfDownloadPath,
+            reportFilename: report.reportTitle,
+            reportKey: report.reportKey,
+            reportTitle: report.reportTitle,
+            reportType: report.reportType,
+            reportUpdatedAt: report.updatedAt,
+          })),
+          reportTitle: reportItems[0]?.reportTitle,
+          reportType: reportItems[0]?.reportType,
+          reportUpdatedAt: reportItems[0]?.updatedAt,
           siteId: selectedSiteId,
           subject: compose.subject,
           to: recipients,
@@ -197,6 +216,7 @@ export function useMailboxSendAction({
           fromName: senderName,
           headquarterId: selectedHeadquarterId,
           reportKey: selectedReportKey,
+          reportKeys: reportItems.map((report) => report.reportKey),
           siteId: selectedSiteId,
           subject: compose.subject,
           threadId: composeMode === 'reply' ? threadDetail?.thread.id || '' : '',
@@ -204,25 +224,31 @@ export function useMailboxSendAction({
         });
         sentMessageId = sent.id;
       }
+
       setMailSendProgress({
-        detail: '발송 결과를 메일함 목록에 반영하고 있습니다.',
+        detail: '발송 결과를 메일 목록에 반영하고 있습니다.',
         percent: 92,
         title: '목록 새로고침 중',
       });
+      const extraAttachmentNotice =
+        normalizedAttachments.length > 0
+          ? ` 추가 첨부 ${normalizedAttachments.length}건도 함께 보냈습니다.`
+          : '';
       setNotice(
         isQueuedMailMessageId(sentMessageId)
-          ? '메일 발송을 접수했습니다. 큰 보고서는 다운로드 링크 메일로 백그라운드 전송됩니다.'
-          : normalizedAttachments.length > 0
-            ? `메일을 발송했습니다. 첨부 ${normalizedAttachments.length + (composeMode === 'report' ? 1 : 0)}건을 함께 보냈습니다.`
-            : composeMode === 'report'
-              ? '메일을 발송했습니다. 보고서 PDF를 함께 보냈습니다.'
-              : '메일을 발송했습니다.',
+          ? '메일 발송을 접수했습니다. 큰 보고서는 다운로드 링크 메일로 전송됩니다.'
+          : composeMode === 'report'
+            ? `메일을 발송했습니다. 보고서 ${reportItems.length}건의 PDF를 함께 보냈습니다.${extraAttachmentNotice}`
+            : `메일을 발송했습니다.${extraAttachmentNotice}`,
       );
+
       if (composeMode === 'report') {
         setSelectedReport(null);
+        setSelectedReports([]);
         setComposeMode('new');
       }
       resetCompose('new');
+
       const nextThreads = await fetchMailThreads({
         accountId: selectedAccount.id,
         box: tab,

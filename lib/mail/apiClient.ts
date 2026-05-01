@@ -262,6 +262,7 @@ export async function sendMail(input: {
   fromName?: string;
   headquarterId?: string;
   reportKey?: string;
+  reportKeys?: string[];
   siteId?: string;
   subject: string;
   threadId?: string;
@@ -273,7 +274,9 @@ export async function sendMail(input: {
     ...(attachment.downloadHeaders ? { download_headers: attachment.downloadHeaders } : {}),
     ...(attachment.downloadUrl ? { download_url: attachment.downloadUrl } : {}),
     filename: attachment.filename,
+    ...(attachment.reportKey ? { report_key: attachment.reportKey } : {}),
     ...(typeof attachment.sizeBytes === 'number' ? { size_bytes: attachment.sizeBytes } : {}),
+    ...(attachment.source ? { source: attachment.source } : {}),
   }));
 
   return requestMailApi<MailMessage>('/send', {
@@ -285,6 +288,7 @@ export async function sendMail(input: {
       sender_name: input.fromName || '',
       headquarter_id: input.headquarterId || '',
       report_key: input.reportKey || '',
+      report_keys: input.reportKeys || [],
       site_id: input.siteId || '',
       subject: input.subject,
       thread_id: input.threadId || '',
@@ -303,6 +307,15 @@ export async function sendReportMail(input: {
   originalPdfDownloadPath?: string | null;
   reportFilename?: string | null;
   reportKey: string;
+  reports?: Array<{
+    originalPdfAvailable?: boolean;
+    originalPdfDownloadPath?: string | null;
+    reportFilename?: string | null;
+    reportKey: string;
+    reportTitle?: string | null;
+    reportType?: string | null;
+    reportUpdatedAt?: string | null;
+  }>;
   reportTitle?: string | null;
   reportType?: string | null;
   reportUpdatedAt?: string | null;
@@ -316,8 +329,24 @@ export async function sendReportMail(input: {
     ...(attachment.downloadHeaders ? { download_headers: attachment.downloadHeaders } : {}),
     ...(attachment.downloadUrl ? { download_url: attachment.downloadUrl } : {}),
     filename: attachment.filename,
+    ...(attachment.reportKey ? { report_key: attachment.reportKey } : {}),
     ...(typeof attachment.sizeBytes === 'number' ? { size_bytes: attachment.sizeBytes } : {}),
+    ...(attachment.source ? { source: attachment.source } : {}),
   }));
+
+  const reports = input.reports?.length
+    ? input.reports
+    : [
+        {
+          originalPdfAvailable: input.originalPdfAvailable,
+          originalPdfDownloadPath: input.originalPdfDownloadPath,
+          reportFilename: input.reportFilename,
+          reportKey: input.reportKey,
+          reportTitle: input.reportTitle,
+          reportType: input.reportType,
+          reportUpdatedAt: input.reportUpdatedAt,
+        },
+      ];
 
   return requestMailApi<MailMessage>('/send-report', {
     method: 'POST',
@@ -338,8 +367,18 @@ export async function sendReportMail(input: {
         report_type: input.reportType || '',
         report_updated_at: input.reportUpdatedAt || '',
       },
+      reports: reports.map((report) => ({
+        original_pdf_available: Boolean(report.originalPdfAvailable),
+        original_pdf_download_path: report.originalPdfDownloadPath || '',
+        report_filename: report.reportFilename || report.reportTitle || '',
+        report_key: report.reportKey,
+        report_title: report.reportTitle || '',
+        report_type: report.reportType || '',
+        report_updated_at: report.reportUpdatedAt || '',
+      })),
       report_filename: input.reportFilename || '',
       report_key: input.reportKey,
+      report_keys: reports.map((report) => report.reportKey),
       report_title: input.reportTitle || '',
       report_type: input.reportType || '',
       report_updated_at: input.reportUpdatedAt || '',

@@ -12,6 +12,7 @@ import {
 } from './MailboxRecipientField';
 import { MailboxSendProgress } from './MailboxSendProgress';
 import localStyles from './MailboxPanel.module.css';
+import { MAIL_REPORT_TEMPLATES } from './mailboxReportTemplates';
 
 interface MailboxComposeAccountOption {
   id: string;
@@ -49,7 +50,10 @@ interface MailboxComposeSectionProps {
   selectedAccountId: string;
   selectableAccounts: MailboxComposeAccountOption[];
   selectedReport: MailboxComposeSelectedReport | null;
+  selectedReports: MailboxComposeSelectedReport[];
+  selectedTemplateId: string;
   submitDisabled: boolean;
+  onApplyTemplate: (templateId?: string) => void;
   onAttachmentSelect: (event: ChangeEvent<HTMLInputElement>) => void;
   onBlurRecipient: () => void;
   onChangeAccountId: (accountId: string) => void;
@@ -86,7 +90,10 @@ export function MailboxComposeSection({
   selectedAccountId,
   selectableAccounts,
   selectedReport,
+  selectedReports,
+  selectedTemplateId,
   submitDisabled,
+  onApplyTemplate,
   onAttachmentSelect,
   onBlurRecipient,
   onChangeAccountId,
@@ -110,7 +117,7 @@ export function MailboxComposeSection({
         <div className={localStyles.mailTableHeaderMeta}>
           <strong className={localStyles.panelTitle}>{composeTitle}</strong>
           <span className={localStyles.panelDescription}>
-            메일 작성, 보고서 선택, 첨부 보조 작업을 같은 흐름으로 처리합니다.
+            보고서 선택, 수신자 입력, 제목과 본문 작성, 첨부 보강을 한 화면에서 처리합니다.
           </span>
         </div>
         {hasMultipleAccounts ? (
@@ -149,13 +156,30 @@ export function MailboxComposeSection({
           onSelectSuggestion={onSelectRecipientSuggestion}
         />
 
+        {composeMode === 'report' ? (
+          <label className={localStyles.fieldWide}>
+            <span className={localStyles.fieldLabel}>템플릿</span>
+            <select
+              className="app-select"
+              value={selectedTemplateId}
+              onChange={(event) => onApplyTemplate(event.target.value)}
+            >
+              {MAIL_REPORT_TEMPLATES.map((template) => (
+                <option key={template.id} value={template.id}>
+                  {template.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
+
         <label className={localStyles.fieldWide}>
           <span className={localStyles.fieldLabel}>제목</span>
           <input
             className="app-input"
             value={compose.subject}
             onChange={(event) => onChangeSubject(event.target.value)}
-            placeholder="메일 제목을 입력하세요"
+            placeholder="메일 제목을 입력하세요."
           />
         </label>
 
@@ -171,8 +195,8 @@ export function MailboxComposeSection({
               onInput={onComposerInput}
               data-placeholder={
                 composeMode === 'reply'
-                  ? '답장 내용을 입력하세요'
-                  : '메일 내용을 입력하세요'
+                  ? '답장 내용을 입력하세요.'
+                  : '메일 내용을 입력하세요.'
               }
             />
           </div>
@@ -183,6 +207,7 @@ export function MailboxComposeSection({
             isDemoMode={isDemoMode}
             isSendingMail={isSendingMail}
             selectedReport={selectedReport}
+            selectedReports={selectedReports}
             onAttachmentSelect={onAttachmentSelect}
             onClearSelectedReport={onClearSelectedReport}
             onOpenReportPicker={onOpenReportPicker}
@@ -200,7 +225,7 @@ export function MailboxComposeSection({
               disabled={submitDisabled}
             >
               {isSendingMail
-                ? `메일 발송 중.. ${mailSendProgress?.percent ?? 0}%`
+                ? `메일 발송 중... ${mailSendProgress?.percent ?? 0}%`
                 : '메일 발송'}
             </button>
           </div>

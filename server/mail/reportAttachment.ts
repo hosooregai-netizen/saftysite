@@ -18,7 +18,9 @@ export interface MailAttachmentServerPayload {
   data_base64?: string;
   download_headers?: Record<string, string>;
   download_url?: string;
+  report_key?: string;
   size_bytes?: number;
+  source?: string;
 }
 
 const MAIL_REPORT_INLINE_PREFETCH_MAX_BYTES = 6 * 1024 * 1024;

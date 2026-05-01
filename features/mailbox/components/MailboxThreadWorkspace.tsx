@@ -28,6 +28,7 @@ interface MailboxThreadWorkspaceProps {
   onMoveThreadPage: (nextPage: number) => void;
   onOpenThread: (threadId: string) => void;
   onReply: () => void;
+  onResend: () => void;
 }
 
 export function MailboxThreadWorkspace({
@@ -49,16 +50,19 @@ export function MailboxThreadWorkspace({
   onMoveThreadPage,
   onOpenThread,
   onReply,
+  onResend,
 }: MailboxThreadWorkspaceProps) {
   if (view === 'thread') {
     return (
       <MailboxThreadDetailSection
         detailEmptyMessage="메일을 선택하면 상세 내용을 확인할 수 있습니다."
+        showResend={tab === 'sent'}
         threadDetail={threadDetail}
         title={threadDetail ? threadDetail.thread.subject || '(제목 없음)' : '메일 상세'}
         onBackToList={onBackToList}
         onForward={onForward}
         onReply={onReply}
+        onResend={onResend}
         renderMessageBodyHtml={formatMailBodyHtml}
       />
     );

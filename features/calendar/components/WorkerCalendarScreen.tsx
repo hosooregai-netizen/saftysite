@@ -20,7 +20,7 @@ import {
 } from '@/lib/auth/postLoginRedirect';
 import { isAdminUserRole, getAdminSectionHref } from '@/lib/admin';
 import { buildDefaultReportTitle } from '@/features/site-reports/report-list/reportListHelpers';
-import { fetchMySchedules, updateMySchedule } from '@/lib/calendar/apiClient';
+import { fetchMySchedules, reserveNextMySchedule, updateMySchedule } from '@/lib/calendar/apiClient';
 import { fetchTechnicalGuidanceSeed, readSafetyAuthToken } from '@/lib/safetyApi';
 import homeStyles from '@/features/home/components/HomeScreen.module.css';
 import type { SafetyInspectionSchedule } from '@/types/admin';
@@ -46,24 +46,11 @@ interface WorkerDialogSiteOption {
   totalRounds: number;
 }
 
-type WorkerDialogRoundState =
-  | 'available'
-  | 'needs_schedule_link'
-  | 'linked_report';
-
-interface WorkerDialogRoundOption {
-  linkedReport: InspectionReportListItem | null;
-  row: SafetyInspectionSchedule;
-  state: WorkerDialogRoundState;
-}
-
 interface WorkerGuidanceSessionLink {
   actualVisitDate: string;
   linkedReportKey: string;
   sessionId: string;
 }
-
-const SYNTHETIC_WORKER_SCHEDULE_ID_PREFIX = 'worker-round:';
 
 type CalendarViewMode = 'calendar' | 'list';
 type ScheduleListFilter =
@@ -80,10 +67,6 @@ const EMPTY_DIALOG_STATE: ScheduleDialogState = {
   selectionReasonMemo: '',
   siteId: '',
 };
-
-function isSyntheticWorkerScheduleId(value: string) {
-  return value.startsWith(SYNTHETIC_WORKER_SCHEDULE_ID_PREFIX);
-}
 
 function getMonthToken(date = new Date()) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
@@ -188,139 +171,6 @@ function buildReportItemsByRound(rows: InspectionReportListItem[]) {
     }
   });
   return nextMap;
-}
-
-function buildWorkerDialogRoundOptions(input: {
-  contractWindowEnd: string;
-  contractWindowStart: string;
-  reportItemsByRound: Map<number, InspectionReportListItem>;
-  siteId: string;
-  siteName: string;
-  rows: SafetyInspectionSchedule[];
-  totalRounds: number;
-}) {
-  if (input.totalRounds <= 0) {
-    const existingSiteRows = input.rows.filter((row) => row.siteId === input.siteId);
-    if (existingSiteRows.length === 0) {
-      return [] as WorkerDialogRoundOption[];
-    }
-  }
-
-  const siteRows = sortSchedules(input.rows.filter((row) => row.siteId === input.siteId));
-  const maxRoundNo = Math.max(input.totalRounds, ...siteRows.map((row) => row.roundNo));
-  if (maxRoundNo <= 0) {
-    return [] as WorkerDialogRoundOption[];
-  }
-  const existingByRound = new Map(siteRows.map((row) => [row.roundNo, row]));
-  const fallbackWindowStart = input.contractWindowStart || siteRows[0]?.windowStart || '';
-  const fallbackWindowEnd = input.contractWindowEnd || siteRows[0]?.windowEnd || fallbackWindowStart;
-  const nextRows: WorkerDialogRoundOption[] = [];
-
-  for (let roundNo = 1; roundNo <= maxRoundNo; roundNo += 1) {
-    const existing = existingByRound.get(roundNo) ?? null;
-    const linkedReport = input.reportItemsByRound.get(roundNo) ?? null;
-    if (existing && (existing.status === 'canceled' || existing.status === 'completed')) {
-      continue;
-    }
-    const hasPersistedLink = Boolean(normalizeText(existing?.linkedReportKey));
-    const state: WorkerDialogRoundState = linkedReport
-      ? hasPersistedLink
-        ? 'linked_report'
-        : 'needs_schedule_link'
-      : 'available';
-    if (existing) {
-      nextRows.push({
-        linkedReport,
-        row: {
-          ...existing,
-          actualVisitDate: existing.actualVisitDate || normalizeText(linkedReport?.visitDate),
-          windowEnd: existing.windowEnd || fallbackWindowEnd,
-          windowStart: existing.windowStart || fallbackWindowStart,
-        },
-        state,
-      });
-      continue;
-    }
-
-    nextRows.push({
-      linkedReport,
-      row: {
-        actualVisitDate: normalizeText(linkedReport?.visitDate),
-        assigneeName: '',
-        assigneeUserId: '',
-        exceptionMemo: '',
-        exceptionReasonCode: '',
-        headquarterId: '',
-        headquarterName: '',
-        id: `${SYNTHETIC_WORKER_SCHEDULE_ID_PREFIX}${input.siteId}:${roundNo}`,
-        isConflicted: false,
-        isOutOfWindow: false,
-        isOverdue: false,
-        linkedReportKey: '',
-        plannedDate: '',
-        roundNo,
-        selectionConfirmedAt: '',
-        selectionConfirmedByName: '',
-        selectionConfirmedByUserId: '',
-        selectionReasonLabel: '',
-        selectionReasonMemo: '',
-        siteId: input.siteId,
-        siteName: input.siteName,
-        status: 'planned',
-        totalRounds: input.totalRounds,
-        windowEnd: fallbackWindowEnd,
-        windowStart: fallbackWindowStart,
-      },
-      state,
-    });
-  }
-
-  return [...nextRows].sort(
-    (left, right) =>
-      left.row.roundNo - right.row.roundNo ||
-      left.row.siteName.localeCompare(right.row.siteName, 'ko') ||
-      left.row.windowStart.localeCompare(right.row.windowStart),
-  );
-}
-
-function findPreferredWorkerDialogOption(
-  options: WorkerDialogRoundOption[],
-  input: {
-    plannedDate: string;
-    scheduleId?: string;
-  },
-) {
-  const rows = options.map((option) => option.row);
-  const availableRows = options
-    .filter((option) => option.state === 'available')
-    .map((option) => option.row);
-  const needsLinkRows = options
-    .filter((option) => option.state === 'needs_schedule_link')
-    .map((option) => option.row);
-  return (
-    rows.find((row) => row.id === input.scheduleId) ??
-    availableRows.find((row) => !row.plannedDate) ??
-    needsLinkRows.find((row) => !row.plannedDate) ??
-    rows.find((row) => row.plannedDate === input.plannedDate) ??
-    availableRows[0] ??
-    needsLinkRows[0] ??
-    rows[0] ??
-    null
-  );
-}
-
-function getCompletedRoundNumbers(rows: Array<{ visitRound: number | null }>) {
-  const completed = new Set<number>();
-  rows.forEach((row) => {
-    if (typeof row.visitRound === 'number' && Number.isFinite(row.visitRound) && row.visitRound > 0) {
-      completed.add(Math.trunc(row.visitRound));
-    }
-  });
-  return completed;
-}
-
-function getSelectableWorkerRoundCount(rows: WorkerDialogRoundOption[]) {
-  return rows.filter((option) => option.state !== 'linked_report').length;
 }
 
 function formatWorkerRoundLabel(row: SafetyInspectionSchedule) {
@@ -538,19 +388,6 @@ export function WorkerCalendarScreen() {
     });
     return map;
   }, [selectedRows]);
-  const reportCompletedRoundsBySiteId = useMemo(() => {
-    const nextMap = new Map<string, Set<number>>();
-    sites.forEach((site) => {
-      const reportIndex = getReportIndexBySiteId(site.id);
-      nextMap.set(
-        site.id,
-        reportIndex?.status === 'loaded'
-          ? getCompletedRoundNumbers(reportIndex.items)
-          : new Set<number>(),
-      );
-    });
-    return nextMap;
-  }, [getReportIndexBySiteId, sites]);
   const reportItemsByRoundBySiteId = useMemo(() => {
     const nextMap = new Map<string, Map<number, InspectionReportListItem>>();
     sites.forEach((site) => {
@@ -569,25 +406,22 @@ export function WorkerCalendarScreen() {
       .map((site) => {
         const totalRounds =
           typeof site.totalRounds === 'number' && site.totalRounds > 0 ? site.totalRounds : 0;
-        const reportIndex = getReportIndexBySiteId(site.id);
-        const hasLoadedCompletion = reportIndex?.status === 'loaded';
-        const completedRounds = hasLoadedCompletion
-          ? reportCompletedRoundsBySiteId.get(site.id)?.size ?? 0
-          : 0;
-        const contractWindow = contractWindowsBySiteId[site.id] ?? { windowEnd: '', windowStart: '' };
-        const remainingRounds = hasLoadedCompletion
-          ? getSelectableWorkerRoundCount(
-              buildWorkerDialogRoundOptions({
-                contractWindowEnd: contractWindow.windowEnd,
-                contractWindowStart: contractWindow.windowStart,
-                reportItemsByRound: reportItemsByRoundBySiteId.get(site.id) ?? new Map(),
-                siteId: site.id,
-                siteName: site.siteName,
-                rows,
-                totalRounds,
-              }),
-            )
-          : Math.max(totalRounds - completedRounds, 0);
+        const progressedRounds = new Set<number>();
+        rows
+          .filter((row) => row.siteId === site.id)
+          .forEach((row) => {
+            if (
+              row.plannedDate ||
+              row.actualVisitDate ||
+              row.linkedReportKey ||
+              row.status === 'completed'
+            ) {
+              progressedRounds.add(row.roundNo);
+            }
+          });
+        const completedRounds = progressedRounds.size;
+        const hasLoadedCompletion = true;
+        const remainingRounds = Math.max(totalRounds - completedRounds, 0);
         return {
           completedRounds,
           hasLoadedCompletion,
@@ -599,61 +433,31 @@ export function WorkerCalendarScreen() {
         };
       });
   }, [
-    contractWindowsBySiteId,
-    getReportIndexBySiteId,
-    reportCompletedRoundsBySiteId,
-    reportItemsByRoundBySiteId,
     rows,
     selectedSiteId,
     sites,
   ]);
-  const dialogSelectedSite = useMemo(
-    () => dialogSiteOptions.find((option) => option.siteId === dialog.siteId) ?? null,
-    [dialog.siteId, dialogSiteOptions],
-  );
-  const dialogRoundOptions = useMemo(() => {
-    const contractWindow = contractWindowsBySiteId[dialog.siteId] ?? { windowEnd: '', windowStart: '' };
-    return buildWorkerDialogRoundOptions({
-      contractWindowEnd: contractWindow.windowEnd,
-      contractWindowStart: contractWindow.windowStart,
-      reportItemsByRound: reportItemsByRoundBySiteId.get(dialog.siteId) ?? new Map(),
-      siteId: dialog.siteId,
-      siteName: dialogSelectedSite?.label || '',
-      rows,
-      totalRounds: dialogSelectedSite?.totalRounds ?? 0,
-    });
-  }, [contractWindowsBySiteId, dialog.siteId, dialogSelectedSite, reportItemsByRoundBySiteId, rows]);
-  const dialogPersistedSelectedRow = useMemo(
+  const dialogSelectedSchedule = useMemo(
     () => rows.find((row) => row.id === dialog.scheduleId) ?? null,
     [dialog.scheduleId, rows],
   );
-  const dialogRoundRows = useMemo(
-    () => {
-      const nextRows = dialogRoundOptions
-        .filter((option) => option.state !== 'linked_report' || option.row.id === dialog.scheduleId)
-        .map((option) => option.row);
-      if (
-        dialogPersistedSelectedRow &&
-        !nextRows.some((row) => row.id === dialogPersistedSelectedRow.id)
-      ) {
-        nextRows.unshift(dialogPersistedSelectedRow);
-      }
-      return nextRows;
-    },
-    [dialog.scheduleId, dialogPersistedSelectedRow, dialogRoundOptions],
-  );
-  const dialogRoundOptionById = useMemo(
-    () => new Map(dialogRoundOptions.map((option) => [option.row.id, option])),
-    [dialogRoundOptions],
-  );
-  const dialogSelectedOption = useMemo(
-    () => dialogRoundOptionById.get(dialog.scheduleId) ?? null,
-    [dialog.scheduleId, dialogRoundOptionById],
-  );
-  const dialogSelectedSchedule = useMemo(
-    () => dialogRoundRows.find((row) => row.id === dialog.scheduleId) ?? null,
-    [dialog.scheduleId, dialogRoundRows],
-  );
+  const dialogRoundRows = useMemo(() => {
+    if (dialogSelectedSchedule) {
+      return [dialogSelectedSchedule];
+    }
+    if (!dialog.siteId) {
+      return [];
+    }
+    return sortSchedules(
+      rows.filter(
+        (row) =>
+          row.siteId === dialog.siteId &&
+          !row.plannedDate &&
+          row.status !== 'completed' &&
+          row.status !== 'canceled',
+      ),
+    ).slice(0, 1);
+  }, [dialog.siteId, dialogSelectedSchedule, rows]);
   const dialogWindowError =
     dialogSelectedSchedule &&
     dialog.plannedDate &&
@@ -664,9 +468,6 @@ export function WorkerCalendarScreen() {
     )
       ? buildWindowErrorMessage(dialogSelectedSchedule)
       : '';
-  const dialogSelectedReportIndexState = dialog.siteId
-    ? getReportIndexBySiteId(dialog.siteId)
-    : null;
   useEffect(() => {
     if (!dialog.open || dialog.siteId || dialogSiteOptions.length === 0) return;
     setDialog((current) => ({
@@ -674,6 +475,18 @@ export function WorkerCalendarScreen() {
       siteId: dialogSiteOptions[0].siteId,
     }));
   }, [dialog.open, dialog.siteId, dialogSiteOptions]);
+
+  useEffect(() => {
+    if (!dialog.open || !dialog.siteId || dialog.scheduleId) return;
+    const nextSchedule = dialogRoundRows[0] ?? null;
+    if (!nextSchedule) return;
+    setDialog((current) => ({
+      ...current,
+      scheduleId: nextSchedule.id,
+      selectionReasonLabel: nextSchedule.selectionReasonLabel || '',
+      selectionReasonMemo: nextSchedule.selectionReasonMemo || '',
+    }));
+  }, [dialog.open, dialog.scheduleId, dialog.siteId, dialogRoundRows]);
 
   useEffect(() => {
     if (!dialog.open || !dialog.siteId) return;
@@ -712,64 +525,6 @@ export function WorkerCalendarScreen() {
     };
   }, [contractWindowsBySiteId, dialog.open, dialogSiteOptions, ensureAssignedSafetySite]);
 
-  useEffect(() => {
-    if (!dialog.open || !dialog.siteId) return;
-    const currentOption = dialogRoundOptionById.get(dialog.scheduleId) ?? null;
-    const isEditingExistingSelection = Boolean(
-      (currentOption &&
-        currentOption.row.plannedDate &&
-        currentOption.row.id === dialog.scheduleId) ||
-        (dialogPersistedSelectedRow &&
-          dialogPersistedSelectedRow.plannedDate &&
-          dialogPersistedSelectedRow.id === dialog.scheduleId),
-    );
-    if (isEditingExistingSelection) {
-      return;
-    }
-    const firstReportFreeRow =
-      dialogRoundOptions.find((option) => !option.linkedReport && !option.row.plannedDate)?.row ??
-      dialogRoundOptions.find((option) => !option.linkedReport)?.row ??
-      null;
-    const preferredRow =
-      currentOption?.linkedReport && firstReportFreeRow
-        ? firstReportFreeRow
-        : findPreferredWorkerDialogOption(dialogRoundOptions, {
-      plannedDate: dialog.plannedDate,
-      scheduleId: currentOption?.state === 'available' ? dialog.scheduleId : '',
-    });
-    if (!preferredRow) {
-      if (!dialog.scheduleId) return;
-      setDialog((current) => ({
-        ...current,
-        scheduleId: '',
-        selectionReasonLabel: '',
-        selectionReasonMemo: '',
-      }));
-      return;
-    }
-    const shouldKeepCurrentSelection =
-      preferredRow.id === dialog.scheduleId ||
-      (!dialog.plannedDate && currentOption?.state === 'available');
-    if (shouldKeepCurrentSelection) {
-      return;
-    }
-    setDialog((current) => ({
-      ...current,
-      scheduleId: preferredRow.id,
-      selectionReasonLabel: preferredRow.selectionReasonLabel || '',
-      selectionReasonMemo: preferredRow.selectionReasonMemo || '',
-    }));
-  }, [
-    dialog.open,
-    dialog.plannedDate,
-    dialog.scheduleId,
-    dialog.siteId,
-    dialogPersistedSelectedRow,
-    dialogRoundOptionById,
-    dialogRoundOptions,
-    dialogRoundRows,
-  ]);
-
   const closeDialog = () => {
     setDialog(EMPTY_DIALOG_STATE);
   };
@@ -785,85 +540,25 @@ export function WorkerCalendarScreen() {
       (selectedSiteId && dialogSiteOptions.some((option) => option.siteId === selectedSiteId)
         ? selectedSiteId
         : dialogSiteOptions[0]?.siteId || '');
-    const defaultSiteOption =
-      dialogSiteOptions.find((option) => option.siteId === defaultSiteId) ?? null;
-    const defaultContractWindow = contractWindowsBySiteId[defaultSiteId] ?? { windowEnd: '', windowStart: '' };
-    const defaultTotalRounds = Math.max(
-      defaultSiteOption?.totalRounds ?? 0,
-      requestedSchedule?.totalRounds ?? 0,
-    );
-    const defaultSiteRows = buildWorkerDialogRoundOptions({
-      contractWindowEnd: defaultContractWindow.windowEnd,
-      contractWindowStart: defaultContractWindow.windowStart,
-      reportItemsByRound: reportItemsByRoundBySiteId.get(defaultSiteId) ?? new Map(),
-      siteId: defaultSiteId,
-      siteName: defaultSiteOption?.label || requestedSchedule?.siteName || '',
-      rows,
-      totalRounds: defaultTotalRounds,
-    })
-      .filter((option) => option.state !== 'linked_report' || option.row.id === requestedSchedule?.id)
-      .map((option) => option.row);
-    const defaultSchedule = requestedSchedule
-      ? defaultSiteRows.find((row) => row.roundNo === requestedSchedule.roundNo) ?? requestedSchedule
-      : findPreferredWorkerDialogOption(
-          buildWorkerDialogRoundOptions({
-            contractWindowEnd: defaultContractWindow.windowEnd,
-            contractWindowStart: defaultContractWindow.windowStart,
-            reportItemsByRound: reportItemsByRoundBySiteId.get(defaultSiteId) ?? new Map(),
-            siteId: defaultSiteId,
-            siteName: defaultSiteOption?.label || '',
-            rows,
-            totalRounds: defaultTotalRounds,
-          }).filter((option) => option.state !== 'linked_report'),
-          { plannedDate: nextPlannedDate },
-        );
 
     setSelectedDate(nextPlannedDate);
     setDialog({
       open: true,
       plannedDate: nextPlannedDate,
-      scheduleId: defaultSchedule?.id || '',
-      selectionReasonLabel: defaultSchedule?.selectionReasonLabel || '',
-      selectionReasonMemo: defaultSchedule?.selectionReasonMemo || '',
-      siteId: defaultSchedule?.siteId || defaultSiteId,
+      scheduleId: requestedSchedule?.id || '',
+      selectionReasonLabel: requestedSchedule?.selectionReasonLabel || '',
+      selectionReasonMemo: requestedSchedule?.selectionReasonMemo || '',
+      siteId: requestedSchedule?.siteId || defaultSiteId,
     });
   };
 
   const handleDialogSiteSelect = (siteId: string) => {
-    const selectedSiteOption =
-      dialogSiteOptions.find((option) => option.siteId === siteId) ?? null;
-    const contractWindow = contractWindowsBySiteId[siteId] ?? { windowEnd: '', windowStart: '' };
-    const preferredRow = findPreferredWorkerDialogOption(
-      buildWorkerDialogRoundOptions({
-        contractWindowEnd: contractWindow.windowEnd,
-        contractWindowStart: contractWindow.windowStart,
-        reportItemsByRound: reportItemsByRoundBySiteId.get(siteId) ?? new Map(),
-        siteId,
-        siteName: selectedSiteOption?.label || '',
-        rows,
-        totalRounds: selectedSiteOption?.totalRounds ?? 0,
-      }).filter((option) => option.state !== 'linked_report'),
-      {
-      plannedDate: dialog.plannedDate,
-      scheduleId: dialog.scheduleId,
-      },
-    );
     setDialog((current) => ({
       ...current,
-      scheduleId: preferredRow?.id || '',
-      selectionReasonLabel: preferredRow?.selectionReasonLabel || '',
-      selectionReasonMemo: preferredRow?.selectionReasonMemo || '',
+      scheduleId: '',
+      selectionReasonLabel: '',
+      selectionReasonMemo: '',
       siteId,
-    }));
-  };
-
-  const handleDialogScheduleSelect = (schedule: SafetyInspectionSchedule) => {
-    setDialog((current) => ({
-      ...current,
-      scheduleId: schedule.id,
-      selectionReasonLabel: schedule.selectionReasonLabel || '',
-      selectionReasonMemo: schedule.selectionReasonMemo || '',
-      siteId: schedule.siteId,
     }));
   };
 
@@ -892,7 +587,9 @@ export function WorkerCalendarScreen() {
     if (!site) return null;
 
     const existingSession = getSessionsBySiteId(site.id).find(
-      (session) => session.reportNumber === schedule.roundNo,
+      (session) =>
+        (session.scheduleId && session.scheduleId === schedule.id) ||
+        session.reportNumber === schedule.roundNo,
     );
     if (existingSession) {
       return {
@@ -951,6 +648,7 @@ export function WorkerCalendarScreen() {
         siteName: site.siteName,
       },
       reportNumber: schedule.roundNo,
+      scheduleId: schedule.id,
       technicalGuidanceRelations,
     });
     return {
@@ -961,7 +659,7 @@ export function WorkerCalendarScreen() {
   };
 
   const resolvePersistedScheduleForSave = async (schedule: SafetyInspectionSchedule) => {
-    if (!isSyntheticWorkerScheduleId(schedule.id) && rows.some((row) => row.id === schedule.id)) {
+    if (rows.some((row) => row.id === schedule.id)) {
       return schedule;
     }
 
@@ -1029,27 +727,35 @@ export function WorkerCalendarScreen() {
     return syncedSchedule;
   };
 
-  const saveScheduleSelection = async (schedule: SafetyInspectionSchedule) => {
+  const saveScheduleSelection = async (schedule: SafetyInspectionSchedule | null) => {
     const selectionReasonLabel = dialog.selectionReasonLabel.trim();
     const selectionReasonMemo = dialog.selectionReasonMemo.trim();
-    const linkedReport = dialogSelectedOption?.linkedReport ?? null;
-    const linkedReportKey = normalizeText(linkedReport?.reportKey);
-    const actualVisitDate = normalizeText(linkedReport?.visitDate);
+    const linkedReportKey = '';
+    const actualVisitDate = '';
 
-    const persistedSchedule = await resolvePersistedScheduleForSave(schedule);
-    const saved = await updateMySchedule(persistedSchedule.id, {
-      actualVisitDate,
-      linkedReportKey,
-      plannedDate: dialog.plannedDate,
-      selectionReasonLabel,
-      selectionReasonMemo,
-    });
+    const persistedSchedule = schedule?.plannedDate
+      ? await resolvePersistedScheduleForSave(schedule)
+      : schedule;
+    const saved = schedule?.plannedDate && persistedSchedule
+      ? await updateMySchedule(persistedSchedule.id, {
+          actualVisitDate,
+          linkedReportKey,
+          plannedDate: dialog.plannedDate,
+          selectionReasonLabel,
+          selectionReasonMemo,
+        })
+      : await reserveNextMySchedule({
+          plannedDate: dialog.plannedDate,
+          selectionReasonLabel,
+          selectionReasonMemo,
+          siteId: schedule?.siteId || dialog.siteId,
+        });
     const updated: SafetyInspectionSchedule = {
       ...saved,
       actualVisitDate: saved.actualVisitDate || actualVisitDate,
       linkedReportKey: saved.linkedReportKey || linkedReportKey,
-      windowEnd: saved.windowEnd || persistedSchedule.windowEnd || schedule.windowEnd,
-      windowStart: saved.windowStart || persistedSchedule.windowStart || schedule.windowStart,
+      windowEnd: saved.windowEnd || persistedSchedule?.windowEnd || schedule?.windowEnd || '',
+      windowStart: saved.windowStart || persistedSchedule?.windowStart || schedule?.windowStart || '',
     };
     upsertScheduleRow(updated);
 
@@ -1076,15 +782,11 @@ export function WorkerCalendarScreen() {
   };
 
   const handleSaveSchedule = async () => {
-    if (!dialog.scheduleId) {
-      setError('회차를 먼저 선택해 주세요.');
+    if (!dialog.siteId) {
+      setError('현장을 먼저 선택해 주세요.');
       return;
     }
     const schedule = dialogRoundRows.find((row) => row.id === dialog.scheduleId) ?? null;
-    if (!schedule) {
-      setError('선택한 회차를 찾지 못했습니다.');
-      return;
-    }
     if (!dialog.plannedDate) {
       setError('방문 날짜를 먼저 선택해 주세요.');
       return;
@@ -1102,8 +804,8 @@ export function WorkerCalendarScreen() {
       setSelectedDate(finalized.plannedDate || dialog.plannedDate);
       setNotice(
         selectionReasonLabel || selectionReasonMemo
-          ? `${schedule.siteName} ${schedule.roundNo}회차 방문 일정과 사유를 저장했습니다.`
-          : `${schedule.siteName} ${schedule.roundNo}회차 방문 일정을 저장했습니다.`,
+          ? `${finalized.siteName} ${finalized.roundNo}회차 방문 일정과 사유를 저장했습니다.`
+          : `${finalized.siteName} ${finalized.roundNo}회차 방문 일정을 저장했습니다.`,
       );
       closeDialog();
     } catch (nextError) {
@@ -1112,18 +814,14 @@ export function WorkerCalendarScreen() {
   };
 
   const handleLaunchTechnicalGuidance = async () => {
-    if (!dialog.scheduleId) {
-      setError('회차를 먼저 선택해 주세요.');
+    if (!dialog.siteId) {
+      setError('현장을 먼저 선택해 주세요.');
       return;
     }
 
     const schedule = dialogRoundRows.find((row) => row.id === dialog.scheduleId) ?? null;
-    if (!schedule) {
-      setError('선택한 회차를 찾지 못했습니다.');
-      return;
-    }
 
-    const isReadOnlySchedule = schedule.status === 'completed' || schedule.status === 'canceled';
+    const isReadOnlySchedule = schedule?.status === 'completed' || schedule?.status === 'canceled';
     if (!isReadOnlySchedule && !dialog.plannedDate) {
       setError('방문 날짜를 먼저 선택해 주세요.');
       return;
@@ -1137,13 +835,14 @@ export function WorkerCalendarScreen() {
       setDialogSubmittingAction('launch');
       setError(null);
 
-      const reportLinkUpdate = isReadOnlySchedule
-        ? await ensureDraftSessionForSchedule(schedule)
-        : (await saveScheduleSelection(schedule)).reportLinkUpdate;
+      const savedSelection = isReadOnlySchedule && schedule
+        ? { finalized: schedule, reportLinkUpdate: await ensureDraftSessionForSchedule(schedule) }
+        : await saveScheduleSelection(schedule);
+      const reportLinkUpdate = savedSelection.reportLinkUpdate;
       const sessionId =
         normalizeText(reportLinkUpdate?.sessionId) ||
         normalizeText(reportLinkUpdate?.linkedReportKey) ||
-        normalizeText(schedule.linkedReportKey);
+        normalizeText(savedSelection.finalized.linkedReportKey);
 
       if (!sessionId) {
         throw new Error('연결된 기술지도 보고서를 찾지 못했습니다.');
@@ -1183,7 +882,7 @@ export function WorkerCalendarScreen() {
         error={authError}
         onSubmit={login}
         title="내 일정 로그인"
-        description="로그인하면 배정된 현장의 회차별 방문 일정을 선택할 수 있습니다."
+        description="로그인하면 배정된 현장의 다음 방문 일정을 등록할 수 있습니다."
       />
     );
   }
@@ -1220,7 +919,7 @@ export function WorkerCalendarScreen() {
                 <section className={styles.sectionCard}>
                   <div className={styles.sectionHeader}>
                     <div>
-                      <h2 className={styles.sectionTitle}>회차별 일정 선택</h2>
+                      <h2 className={styles.sectionTitle}>방문 일정 등록</h2>
                       <div className={styles.sectionMeta}>
                         관제와 같은 일정 원본을 기준으로, 달력과 목록 두 방식으로 일정을 확인하고 수정할 수 있습니다.
                       </div>
@@ -1333,7 +1032,7 @@ export function WorkerCalendarScreen() {
                           <div className={styles.calendarPanelHeader}>
                             <h3 className={styles.sectionTitle}>월간 캘린더</h3>
                             <div className={styles.sectionMeta}>
-                              날짜를 누르면 해당 날짜 기준으로 회차를 지정하거나 수정할 수 있습니다.
+                              날짜를 누르면 해당 날짜 기준으로 다음 진행 회차가 자동 배정됩니다.
                             </div>
                           </div>
                           <div className={styles.calendarGrid}>
@@ -1472,7 +1171,7 @@ export function WorkerCalendarScreen() {
 
       <AppModal
         open={dialog.open}
-        title="방문 일정 선택"
+        title="방문 일정 등록"
         onClose={closeDialog}
         actions={
           <>
@@ -1488,7 +1187,7 @@ export function WorkerCalendarScreen() {
               type="button"
               className="app-button app-button-secondary"
               onClick={() => void handleLaunchTechnicalGuidance()}
-              disabled={!dialog.scheduleId || dialogSubmittingAction !== null}
+              disabled={!dialog.siteId || dialogSubmittingAction !== null}
             >
               {dialogSubmittingAction === 'launch' ? '기술지도 여는 중...' : '기술지도 실시'}
             </button>
@@ -1497,7 +1196,7 @@ export function WorkerCalendarScreen() {
               className="app-button app-button-primary"
               onClick={() => void handleSaveSchedule()}
               disabled={
-                !dialog.scheduleId ||
+                !dialog.siteId ||
                 !dialog.plannedDate ||
                 Boolean(dialogWindowError) ||
                 dialogSubmittingAction !== null
@@ -1546,34 +1245,11 @@ export function WorkerCalendarScreen() {
           </section>
 
           <section className={styles.dialogSection}>
-            <label className={styles.field}>
-              <span className={styles.fieldLabel}>회차</span>
-              <select
-                className="app-select"
-                name="worker-round-select"
-                value={dialog.scheduleId}
-                onChange={(event) => {
-                  const nextSchedule = dialogRoundRows.find((row) => row.id === event.target.value) ?? null;
-                  if (nextSchedule) {
-                    handleDialogScheduleSelect(nextSchedule);
-                  }
-                }}
-                disabled={!dialog.siteId || dialogSelectedReportIndexState?.status === 'loading' || dialogRoundRows.length === 0}
-              >
-                {!dialog.siteId ? <option value="">먼저 현장을 선택해 주세요.</option> : null}
-                {dialog.siteId && dialogSelectedReportIndexState?.status === 'loading' ? (
-                  <option value="">회차를 불러오는 중입니다.</option>
-                ) : null}
-                {dialog.siteId && dialogSelectedReportIndexState?.status !== 'loading' && dialogRoundRows.length === 0 ? (
-                  <option value="">선택 가능한 회차가 없습니다.</option>
-                ) : null}
-                {dialogRoundRows.map((row) => (
-                  <option key={row.id} value={row.id}>
-                    {formatWorkerRoundLabel(row)}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <div className={styles.dialogHint}>
+              {dialogSelectedSchedule
+                ? `자동 배정 회차: ${formatWorkerRoundLabel(dialogSelectedSchedule)}`
+                : '저장 시 다음 진행 회차가 자동 배정됩니다.'}
+            </div>
           </section>
 
           <label className={styles.field}>
@@ -1612,9 +1288,6 @@ export function WorkerCalendarScreen() {
               <div className={styles.dialogHint}>
                 계약 기간: {dialogSelectedSchedule.windowStart} ~ {dialogSelectedSchedule.windowEnd}
               </div>
-              {dialogSelectedOption?.state === 'needs_schedule_link' ? (
-                <div className={styles.dialogHint}>기존 보고서가 있어 이 회차 일정에 연결됩니다.</div>
-              ) : null}
               {dialogWindowError ? (
                 <div className={styles.dialogError}>{dialogWindowError}</div>
               ) : null}

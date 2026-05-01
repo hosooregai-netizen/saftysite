@@ -29,6 +29,7 @@ interface UseMailboxAccountActionsParams {
   setProviderStatuses: Dispatch<SetStateAction<MailProviderStatus[]>>;
   setSelectedAccountId: Dispatch<SetStateAction<string>>;
   setSelectedReport: Dispatch<SetStateAction<SelectedReportContext | null>>;
+  setSelectedReports: Dispatch<SetStateAction<SelectedReportContext[]>>;
   setSelectedThreadId: Dispatch<SetStateAction<string>>;
   setThreadDetail: Dispatch<SetStateAction<MailThreadDetail | null>>;
   setThreadTotal: Dispatch<SetStateAction<number>>;
@@ -55,6 +56,7 @@ export function useMailboxAccountActions({
   setProviderStatuses,
   setSelectedAccountId,
   setSelectedReport,
+  setSelectedReports,
   setSelectedThreadId,
   setThreadDetail,
   setThreadTotal,
@@ -153,6 +155,7 @@ export function useMailboxAccountActions({
       setSelectedThreadId('');
       setThreadDetail(null);
       setSelectedReport(null);
+      setSelectedReports([]);
       resetCompose('new');
       setView('list');
       setNotice(`${disconnectableAccount.mailboxLabel} 연결을 해제했습니다.`);

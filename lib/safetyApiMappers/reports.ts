@@ -77,6 +77,7 @@ function buildTechnicalGuidancePayloadForSave(
 ): Record<string, unknown> {
   return {
     siteKey: site.id,
+    scheduleId: session.scheduleId ?? null,
     reportNumber: session.reportNumber,
     currentSection: session.currentSection,
     adminSiteSnapshot: session.adminSiteSnapshot,
@@ -114,6 +115,7 @@ export function mapSafetyReportListItem(
     originalPdfAvailable: false,
     siteId: report.site_id,
     headquarterId: report.headquarter_id,
+    scheduleId: report.schedule_id ?? null,
     assignedUserId: report.assigned_user_id,
     visitDate: report.visit_date,
     visitRound: report.visit_round,
@@ -148,6 +150,7 @@ export function mapInspectionSessionToReportListItem(
     originalPdfAvailable: false,
     siteId: site.id,
     headquarterId: site.headquarterId ?? null,
+    scheduleId: session.scheduleId ?? null,
     assignedUserId: null,
     visitDate: getSessionGuidanceDate(session) || null,
     visitRound: session.reportNumber || null,
@@ -188,6 +191,7 @@ export function mapSafetyReportToInspectionSession(
     ...payload,
     id: report.report_key,
     siteKey: report.site_id,
+    scheduleId: report.schedule_id ?? normalizeMapperText(payload.scheduleId) ?? null,
     reportNumber:
       typeof report.visit_round === 'number' ? report.visit_round : payload.reportNumber,
     createdAt: normalizeMapperText(payload.createdAt) || report.created_at,
@@ -245,6 +249,7 @@ export function buildSafetyReportUpsertInput(
     report_key: session.id,
     report_title: getSessionTitle(session),
     site_id: site.id,
+    schedule_id: session.scheduleId || null,
     visit_date: getSessionGuidanceDate(session) || null,
     visit_round: session.reportNumber || null,
     total_round: parsePositiveInteger(session.document2Overview.totalVisitCount),
@@ -273,6 +278,7 @@ export function createNewSafetySession(
   masterData: SafetyMasterData,
   initial?: {
     meta?: Partial<InspectionSession['meta']>;
+    scheduleId?: string | null;
     document4FollowUps?: InspectionSession['document4FollowUps'];
     technicalGuidanceRelations?: Partial<InspectionSession['technicalGuidanceRelations']>;
   }
@@ -286,6 +292,7 @@ export function createNewSafetySession(
           drafter: site.assigneeName,
           ...initial?.meta,
         },
+        scheduleId: initial?.scheduleId,
         document13Cases: masterData.caseFeed,
         document14SafetyInfos: masterData.safetyInfos,
         document4FollowUps: initial?.document4FollowUps,

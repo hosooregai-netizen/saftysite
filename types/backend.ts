@@ -982,8 +982,10 @@ export interface SafetyBackendMailMessage {
   delivered_at: string | null;
   read_at: string | null;
   report_key: string | null;
+  report_keys?: string[] | null;
   site_id: string | null;
   headquarter_id: string | null;
+  metadata?: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
 }

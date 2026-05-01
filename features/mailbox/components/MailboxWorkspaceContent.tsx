@@ -35,6 +35,8 @@ export function MailboxWorkspaceContent({
   selectedAccount,
   selectedAccountId,
   selectedReport,
+  selectedReports,
+  selectedTemplateId,
   selectableAccounts,
   showMailboxConnectGate,
   tab,
@@ -47,6 +49,7 @@ export function MailboxWorkspaceContent({
   threadTotal,
   threads,
   view,
+  onApplyTemplate,
   onAttachmentSelect,
   onBackToList,
   onBlurRecipient,
@@ -69,6 +72,7 @@ export function MailboxWorkspaceContent({
   onRemoveAttachment,
   onRemoveRecipient,
   onReply,
+  onResend,
   onSelectRecipientSuggestion,
   onSend,
 }: MailboxWorkspaceContentProps) {
@@ -120,7 +124,10 @@ export function MailboxWorkspaceContent({
         selectedAccount={selectedAccount}
         selectedAccountId={selectedAccountId}
         selectedReport={selectedReport}
+        selectedReports={selectedReports}
         selectableAccounts={selectableAccounts}
+        selectedTemplateId={selectedTemplateId}
+        onApplyTemplate={onApplyTemplate}
         onAttachmentSelect={onAttachmentSelect}
         onBlurRecipient={onBlurRecipient}
         onChangeAccountId={onChangeAccountId}
@@ -141,51 +148,30 @@ export function MailboxWorkspaceContent({
     );
   }
 
+  const threadWorkspaceProps = {
+    canGoNextThreadPage,
+    canGoPrevThreadPage,
+    selectedAccountEmail: selectedAccount?.email || '',
+    tab,
+    threadDetail,
+    threadLoading,
+    threadPage,
+    threadPageCount,
+    threadRangeEnd,
+    threadRangeStart,
+    threadTotal,
+    threads,
+    onBackToList,
+    onForward,
+    onMoveThreadPage,
+    onOpenThread,
+    onReply,
+    onResend,
+  };
+
   if (view === 'thread') {
-    return (
-      <MailboxThreadWorkspace
-        canGoNextThreadPage={canGoNextThreadPage}
-        canGoPrevThreadPage={canGoPrevThreadPage}
-        selectedAccountEmail={selectedAccount?.email || ''}
-        tab={tab}
-        threadDetail={threadDetail}
-        threadLoading={threadLoading}
-        threadPage={threadPage}
-        threadPageCount={threadPageCount}
-        threadRangeEnd={threadRangeEnd}
-        threadRangeStart={threadRangeStart}
-        threadTotal={threadTotal}
-        threads={threads}
-        view={view}
-        onBackToList={onBackToList}
-        onMoveThreadPage={onMoveThreadPage}
-        onOpenThread={onOpenThread}
-        onForward={onForward}
-        onReply={onReply}
-      />
-    );
+    return <MailboxThreadWorkspace {...threadWorkspaceProps} view={view} />;
   }
 
-  return (
-    <MailboxThreadWorkspace
-      canGoNextThreadPage={canGoNextThreadPage}
-      canGoPrevThreadPage={canGoPrevThreadPage}
-      selectedAccountEmail={selectedAccount?.email || ''}
-      tab={tab}
-      threadDetail={threadDetail}
-      threadLoading={threadLoading}
-      threadPage={threadPage}
-      threadPageCount={threadPageCount}
-      threadRangeEnd={threadRangeEnd}
-      threadRangeStart={threadRangeStart}
-      threadTotal={threadTotal}
-      threads={threads}
-      view="list"
-      onBackToList={onBackToList}
-      onMoveThreadPage={onMoveThreadPage}
-      onOpenThread={onOpenThread}
-      onForward={onForward}
-      onReply={onReply}
-    />
-  );
+  return <MailboxThreadWorkspace {...threadWorkspaceProps} view="list" />;
 }
