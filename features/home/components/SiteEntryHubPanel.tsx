@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { SiteManagementMainPanel } from '@/features/admin/sections/headquarters/SiteManagementMainPanel';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import type { SafetySite } from '@/types/backend';
@@ -13,14 +13,21 @@ interface SiteEntryHubPanelProps {
 
 export function SiteEntryHubPanel({ currentSite }: SiteEntryHubPanelProps) {
   const { ensureAssignedSafetySite } = useInspectionSessions();
+  const ensureAssignedSafetySiteRef = useRef(ensureAssignedSafetySite);
   const [safetySite, setSafetySite] = useState<SafetySite | null>(null);
   const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
+    ensureAssignedSafetySiteRef.current = ensureAssignedSafetySite;
+  }, [ensureAssignedSafetySite]);
+
+  useEffect(() => {
     let cancelled = false;
+    setSafetySite(null);
+    setLoadError(false);
 
     void (async () => {
-      const site = await ensureAssignedSafetySite(currentSite.id);
+      const site = await ensureAssignedSafetySiteRef.current(currentSite.id);
       if (cancelled) {
         return;
       }
@@ -34,7 +41,7 @@ export function SiteEntryHubPanel({ currentSite }: SiteEntryHubPanelProps) {
     return () => {
       cancelled = true;
     };
-  }, [currentSite.id, ensureAssignedSafetySite]);
+  }, [currentSite.id]);
 
   if (loadError) {
     return (

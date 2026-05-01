@@ -14,5 +14,6 @@ tsconfig.tsbuildinfo
 .tmp-ascii/
 .tmp-ui/generated/*.pdf
 .tmp-ui/generated/footer_*.hwpx
+.qa-bottleneck/
 __pycache__/
 *.pyc

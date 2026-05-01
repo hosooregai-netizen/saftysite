@@ -41,6 +41,12 @@ export function buildHomeSiteSummaries(
       const reportIndexState = reportIndexBySiteId[site.id] ?? null;
       const reportItems = reportIndexState?.status === 'loaded' ? reportIndexState.items : [];
       const latestReport = getLatestReport(reportItems);
+      const sortTime =
+        reportIndexState?.status === 'loaded'
+          ? latestReport
+            ? getReportSortTime(latestReport)
+            : 0
+          : new Date(site.updatedAt).getTime();
 
       return {
         latestReportLastSavedAt: latestReport?.lastAutosavedAt ?? null,
@@ -49,7 +55,7 @@ export function buildHomeSiteSummaries(
         reportCount: reportItems.length,
         reportSyncStatus: reportIndexState?.status ?? 'idle',
         site,
-        sortTime: latestReport ? getReportSortTime(latestReport) : new Date(site.updatedAt).getTime(),
+        sortTime,
       };
     })
     .sort((left, right) => right.sortTime - left.sortTime);
