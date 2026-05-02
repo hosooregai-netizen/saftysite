@@ -1753,6 +1753,103 @@
   color: var(--erp-dark);
 }
 
+.reportsTable {
+  min-width: 1180px;
+  table-layout: auto;
+}
+
+.reportsSelectCol {
+  width: 4%;
+}
+
+.reportsTypeCol {
+  width: 8%;
+}
+
+.reportsTitleCol {
+  width: 40%;
+}
+
+.reportsSiteCol {
+  width: 28%;
+}
+
+.reportsAssigneeCol {
+  width: 8%;
+}
+
+.reportsDateCol {
+  width: 8%;
+}
+
+.reportsMenuCol {
+  width: 4%;
+}
+
+.usersTable {
+  min-width: 1240px;
+  table-layout: auto;
+}
+
+.usersNameCol {
+  width: 9%;
+}
+
+.usersOrganizationCol {
+  width: 14%;
+}
+
+.usersPhoneCol {
+  width: 12%;
+}
+
+.usersPositionCol {
+  width: 14%;
+}
+
+.usersAssignedCol {
+  width: 31%;
+}
+
+.usersStatusCol {
+  width: 6%;
+}
+
+.usersLastLoginCol {
+  width: 10%;
+}
+
+.usersMenuCol {
+  width: 4%;
+}
+
+.reportsTable th,
+.reportsTable td,
+.usersTable th,
+.usersTable td {
+  vertical-align: middle;
+}
+
+.tableCheckboxCell,
+.tableMenuCell,
+.tableNowrap {
+  white-space: nowrap;
+}
+
+.tableCheckboxCell {
+  text-align: center;
+}
+
+.tableMenuCell {
+  text-align: right;
+}
+
+.tableTextOneLine {
+  display: block;
+  min-width: 0;
+  white-space: nowrap;
+}
+
 .table tbody tr:nth-child(even) td {
   background: #fcfdff;
 }

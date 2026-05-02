@@ -25,7 +25,7 @@ export function ReportsSection(props: ReportsSectionProps) {
             formClassName={`${styles.sectionHeaderSearchShell} ${styles.reportsSectionSearch}`}
             inputClassName={`app-input ${styles.sectionHeaderSearchInput}`}
             buttonClassName={styles.sectionHeaderSearchButton}
-            placeholder="보고서명, 현장명, 건설사명, 담당자로 검색"
+            placeholder="보고서/현장 검색"
             value={state.queryInput}
             onChange={state.setQueryInput}
             onSubmit={state.submitQuery}

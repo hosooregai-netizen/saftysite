@@ -109,7 +109,16 @@ export function ReportsTable({
           </div>
         ) : (
           <div className={styles.tableWrap}>
-            <table className={styles.table}>
+            <table className={`${styles.table} ${styles.reportsTable}`}>
+              <colgroup>
+                <col className={styles.reportsSelectCol} />
+                <col className={styles.reportsTypeCol} />
+                <col className={styles.reportsTitleCol} />
+                <col className={styles.reportsSiteCol} />
+                <col className={styles.reportsAssigneeCol} />
+                <col className={styles.reportsDateCol} />
+                <col className={styles.reportsMenuCol} />
+              </colgroup>
               <thead>
                 <tr>
                   <th>
@@ -161,7 +170,7 @@ export function ReportsTable({
                         onOpenReportRow(row);
                       }}
                     >
-                      <td onClick={(event) => event.stopPropagation()}>
+                      <td className={styles.tableCheckboxCell} onClick={(event) => event.stopPropagation()}>
                         <input
                           type="checkbox"
                           checked={selectedKeys.includes(row.reportKey)}
@@ -174,16 +183,23 @@ export function ReportsTable({
                           }
                         />
                       </td>
-                      <td>{getControllerReportTypeLabel(row.reportType)}</td>
+                      <td className={styles.tableNowrap}>{getControllerReportTypeLabel(row.reportType)}</td>
                       <td>
-                        <div className={styles.tablePrimary}>
+                        <div
+                          className={`${styles.tablePrimary} ${styles.tableTextOneLine}`}
+                          title={row.reportTitle || row.periodLabel || row.reportKey}
+                        >
                           {row.reportTitle || row.periodLabel || row.reportKey}
                         </div>
                       </td>
-                      <td>{row.siteName}</td>
-                      <td>{row.assigneeName || '-'}</td>
-                      <td>{formatDateOnly(row.visitDate)}</td>
-                      <td onClick={(event) => event.stopPropagation()}>
+                      <td>
+                        <div className={styles.tableTextOneLine} title={row.siteName}>
+                          {row.siteName}
+                        </div>
+                      </td>
+                      <td className={styles.tableNowrap}>{row.assigneeName || '-'}</td>
+                      <td className={styles.tableNowrap}>{formatDateOnly(row.visitDate)}</td>
+                      <td className={styles.tableMenuCell} onClick={(event) => event.stopPropagation()}>
                         <div className={styles.tableActionMenuWrap}>
                           <ActionMenu
                             label={`${row.reportTitle || row.reportKey} 메뉴 열기`}

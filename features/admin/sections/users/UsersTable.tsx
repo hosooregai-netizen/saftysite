@@ -146,7 +146,7 @@ export function UsersTable({
             formClassName={`${styles.sectionHeaderSearchShell} ${styles.sectionHeaderToolbarSearch}`}
             inputClassName={`app-input ${styles.sectionHeaderSearchInput}`}
             buttonClassName={styles.sectionHeaderSearchButton}
-            placeholder="이름, 소속, 전화번호, 직책으로 검색"
+            placeholder="이름/소속 검색"
             value={queryInput}
             onChange={setQuery}
             onSubmit={submitQuery}
@@ -200,7 +200,17 @@ export function UsersTable({
             <div className={styles.tableEmpty}>등록된 사용자가 없습니다.</div>
           ) : (
             <div className={styles.tableWrap}>
-              <table className={styles.table}>
+              <table className={`${styles.table} ${styles.usersTable}`}>
+                <colgroup>
+                  <col className={styles.usersNameCol} />
+                  <col className={styles.usersOrganizationCol} />
+                  <col className={styles.usersPhoneCol} />
+                  <col className={styles.usersPositionCol} />
+                  <col className={styles.usersAssignedCol} />
+                  <col className={styles.usersStatusCol} />
+                  <col className={styles.usersLastLoginCol} />
+                  <col className={styles.usersMenuCol} />
+                </colgroup>
                 <thead>
                   <tr>
                     <SortableHeaderCell
@@ -240,26 +250,40 @@ export function UsersTable({
                     return (
                       <tr key={user.id}>
                         <td>
-                          <div className={styles.tablePrimary}>{user.name}</div>
-                          <div className={styles.tableSecondary}>{getUserRoleLabel(user.role)}</div>
+                          <div className={`${styles.tablePrimary} ${styles.tableTextOneLine}`} title={user.name}>
+                            {user.name}
+                          </div>
+                          <div className={`${styles.tableSecondary} ${styles.tableTextOneLine}`}>
+                            {getUserRoleLabel(user.role)}
+                          </div>
                           {user.auto_provisioned_from_excel ? (
                             <div className={styles.tableMetaRow}>
                               <span className="app-chip app-chip-warning">자동 생성</span>
                             </div>
                           ) : null}
                         </td>
-                        <td>{user.organization_name || '-'}</td>
-                        <td>{user.phone || '-'}</td>
-                        <td>{user.position || '-'}</td>
+                        <td>
+                          <div className={styles.tableTextOneLine} title={user.organization_name || '-'}>
+                            {user.organization_name || '-'}
+                          </div>
+                        </td>
+                        <td className={styles.tableNowrap}>{user.phone || '-'}</td>
+                        <td>
+                          <div className={styles.tableTextOneLine} title={user.position || '-'}>
+                            {user.position || '-'}
+                          </div>
+                        </td>
                         <td title={assignedSiteSummary.title || undefined}>
-                          <div className={styles.tablePrimary}>{assignedSiteSummary.countLabel}</div>
-                          <div className={styles.tableSecondary}>
+                          <div className={`${styles.tablePrimary} ${styles.tableTextOneLine}`}>
+                            {assignedSiteSummary.countLabel}
+                          </div>
+                          <div className={`${styles.tableSecondary} ${styles.tableTextOneLine}`}>
                             {assignedSiteSummary.detailLabel}
                           </div>
                         </td>
-                        <td>{user.is_active ? '활성' : '비활성'}</td>
-                        <td>{formatTimestamp(user.last_login_at)}</td>
-                        <td>
+                        <td className={styles.tableNowrap}>{user.is_active ? '활성' : '비활성'}</td>
+                        <td className={styles.tableNowrap}>{formatTimestamp(user.last_login_at)}</td>
+                        <td className={styles.tableMenuCell}>
                           <div className={styles.tableActionMenuWrap}>
                             <ActionMenu
                               label={`${user.name} 작업 메뉴 열기`}

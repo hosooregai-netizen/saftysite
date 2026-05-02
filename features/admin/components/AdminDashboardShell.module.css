@@ -130,7 +130,7 @@
 
 .contentStackCentered {
   width: 100%;
-  max-width: 1320px;
+  max-width: min(100%, 1480px);
   margin-inline: auto;
 }
 
