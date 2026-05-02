@@ -48,6 +48,15 @@ export type ReportRecord = {
   updated_at: string;
   exports: ReportExportRecord[];
   creditBalance?: number;
+  exportDisclaimerAccepted: boolean;
+  exportDisclaimerAcceptance?: {
+    id: string;
+    workspace_id: string;
+    user_id: string;
+    accepted_by_name: string;
+    version: string;
+    accepted_at: string;
+  } | null;
 };
 
 type WorkspaceMembershipResponse = {
@@ -211,6 +220,36 @@ function normalizeReportRecord(value: unknown): ReportRecord {
     exports: normalizeExports(source.exports),
     creditBalance:
       typeof source.creditBalance === 'number' ? source.creditBalance : undefined,
+    exportDisclaimerAccepted: Boolean(source.exportDisclaimerAccepted),
+    exportDisclaimerAcceptance:
+      source.exportDisclaimerAcceptance && typeof source.exportDisclaimerAcceptance === 'object'
+        ? {
+            id:
+              typeof (source.exportDisclaimerAcceptance as Record<string, unknown>).id === 'string'
+                ? ((source.exportDisclaimerAcceptance as Record<string, unknown>).id as string)
+                : '',
+            workspace_id:
+              typeof (source.exportDisclaimerAcceptance as Record<string, unknown>).workspace_id === 'string'
+                ? ((source.exportDisclaimerAcceptance as Record<string, unknown>).workspace_id as string)
+                : '',
+            user_id:
+              typeof (source.exportDisclaimerAcceptance as Record<string, unknown>).user_id === 'string'
+                ? ((source.exportDisclaimerAcceptance as Record<string, unknown>).user_id as string)
+                : '',
+            accepted_by_name:
+              typeof (source.exportDisclaimerAcceptance as Record<string, unknown>).accepted_by_name === 'string'
+                ? ((source.exportDisclaimerAcceptance as Record<string, unknown>).accepted_by_name as string)
+                : '',
+            version:
+              typeof (source.exportDisclaimerAcceptance as Record<string, unknown>).version === 'string'
+                ? ((source.exportDisclaimerAcceptance as Record<string, unknown>).version as string)
+                : '',
+            accepted_at:
+              typeof (source.exportDisclaimerAcceptance as Record<string, unknown>).accepted_at === 'string'
+                ? ((source.exportDisclaimerAcceptance as Record<string, unknown>).accepted_at as string)
+                : '',
+          }
+        : null,
   };
 }
 
@@ -451,7 +490,11 @@ export async function registerReportExport(
   session: DemoSession,
   reportId: string,
   format: 'pdf' | 'hwpx',
-  payload: ExportReportInput = { confirm_reviewed: true },
+  payload: ExportReportInput = {
+    confirm_reviewed: true,
+    acknowledge_ai_disclaimer: false,
+    typed_signature_name: '',
+  },
 ): Promise<ReportRecord> {
   const response = (await requestJson(
     `/reports/${encodeURIComponent(reportId)}/exports/${format}`,

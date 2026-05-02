@@ -8,6 +8,7 @@ import {
   bootstrapDemoSession,
   markReportReviewComplete,
   patchReportRecord,
+  type ReportRecord,
   registerReportExport,
 } from '@/lib/reportApi';
 import {
@@ -472,9 +473,10 @@ function buildPersistedReport(
 type ReportWorkspaceProps = {
   reportId: string;
   report: ReportPayload;
+  record: ReportRecord;
 };
 
-export default function ReportWorkspace({ reportId, report }: ReportWorkspaceProps) {
+export default function ReportWorkspace({ reportId, report, record }: ReportWorkspaceProps) {
   const normalizedReport = normalizeReport(report);
   const [baseReport, setBaseReport] = useState<ReportPayload>(normalizedReport);
   const [workspace, setWorkspace] = useState<WorkspaceDraft>(() => buildWorkspaceDraft(normalizedReport));
@@ -485,6 +487,13 @@ export default function ReportWorkspace({ reportId, report }: ReportWorkspacePro
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [actionError, setActionError] = useState('');
   const [downloadState, setDownloadState] = useState<DownloadState>('idle');
+  const [exportDisclaimerAccepted, setExportDisclaimerAccepted] = useState(
+    record.exportDisclaimerAccepted,
+  );
+  const [disclaimerOpen, setDisclaimerOpen] = useState(false);
+  const [pendingDownloadFormat, setPendingDownloadFormat] = useState<'hwpx' | 'pdf' | null>(null);
+  const [typedSignatureName, setTypedSignatureName] = useState('');
+  const [disclaimerError, setDisclaimerError] = useState('');
 
   const baseReportRef = useRef(baseReport);
   const workspaceRef = useRef(workspace);
@@ -529,9 +538,14 @@ export default function ReportWorkspace({ reportId, report }: ReportWorkspacePro
     setActiveSectionId(nextSectionId);
     setSaveState('idle');
     setActionError('');
+    setExportDisclaimerAccepted(record.exportDisclaimerAccepted);
+    setTypedSignatureName(record.exportDisclaimerAcceptance?.accepted_by_name ?? '');
+    setDisclaimerOpen(false);
+    setPendingDownloadFormat(null);
+    setDisclaimerError('');
     lastSavedSignatureRef.current = JSON.stringify(nextPersisted);
     didMountRef.current = false;
-  }, [report, reportId]);
+  }, [record.exportDisclaimerAcceptance?.accepted_by_name, record.exportDisclaimerAccepted, report, reportId]);
 
   const activeSectionIndex = Math.max(
     0,
@@ -802,7 +816,13 @@ export default function ReportWorkspace({ reportId, report }: ReportWorkspacePro
     setActiveSectionId(reportWorkspaceSections[nextIndex]!.id);
   }
 
-  async function handleDownload(format: 'hwpx' | 'pdf') {
+  async function performDownload(
+    format: 'hwpx' | 'pdf',
+    exportPayload: {
+      acknowledge_ai_disclaimer: boolean;
+      typed_signature_name: string;
+    },
+  ) {
     setActionError('');
     setDownloadState(format);
 
@@ -818,9 +838,15 @@ export default function ReportWorkspace({ reportId, report }: ReportWorkspacePro
 
       const reportSession = await bootstrapDemoSession();
       await markReportReviewComplete(reportSession, reportId);
-      const updated = await registerReportExport(reportSession, reportId, format);
+      const updated = await registerReportExport(reportSession, reportId, format, {
+        confirm_reviewed: true,
+        acknowledge_ai_disclaimer: exportPayload.acknowledge_ai_disclaimer,
+        typed_signature_name: exportPayload.typed_signature_name,
+      });
       const nextReport = normalizeReport(updated.payload);
       setBaseReport(nextReport);
+      setExportDisclaimerAccepted(updated.exportDisclaimerAccepted);
+      setTypedSignatureName(updated.exportDisclaimerAcceptance?.accepted_by_name ?? exportPayload.typed_signature_name);
       baseReportRef.current = nextReport;
       lastSavedSignatureRef.current = JSON.stringify(
         buildPersistedReport(nextReport, workspaceRef.current, followUpRowsRef.current, activeSectionIdRef.current),
@@ -841,6 +867,40 @@ export default function ReportWorkspace({ reportId, report }: ReportWorkspacePro
     } finally {
       setDownloadState('idle');
     }
+  }
+
+  async function handleDownload(format: 'hwpx' | 'pdf') {
+    if (!exportDisclaimerAccepted) {
+      setPendingDownloadFormat(format);
+      setDisclaimerError('');
+      setDisclaimerOpen(true);
+      return;
+    }
+
+    await performDownload(format, {
+      acknowledge_ai_disclaimer: false,
+      typed_signature_name: typedSignatureName,
+    });
+  }
+
+  async function handleDisclaimerConfirm() {
+    const signature = typedSignatureName.trim();
+    if (!pendingDownloadFormat) {
+      setDisclaimerOpen(false);
+      return;
+    }
+    if (!signature) {
+      setDisclaimerError('성함 또는 서명명을 입력해 주세요.');
+      return;
+    }
+
+    setDisclaimerError('');
+    setDisclaimerOpen(false);
+    await performDownload(pendingDownloadFormat, {
+      acknowledge_ai_disclaimer: true,
+      typed_signature_name: signature,
+    });
+    setPendingDownloadFormat(null);
   }
 
   function renderSection1() {
@@ -1701,6 +1761,64 @@ export default function ReportWorkspace({ reportId, report }: ReportWorkspacePro
         </div>
       </section>
 
+      {disclaimerOpen ? (
+        <div className={styles.disclaimerBackdrop} role="dialog" aria-modal="true" aria-labelledby="export-disclaimer-title">
+          <div className={styles.disclaimerDialog}>
+            <div className={styles.disclaimerHeader}>
+              <div>
+                <span className={styles.editorEyebrow}>다운로드 전 확인</span>
+                <h2 id="export-disclaimer-title" className={styles.disclaimerTitle}>
+                  최초 1회 책임 확인이 필요합니다
+                </h2>
+              </div>
+              <button
+                type="button"
+                className="erp-button erp-button-secondary"
+                onClick={() => {
+                  setDisclaimerOpen(false);
+                  setPendingDownloadFormat(null);
+                  setDisclaimerError('');
+                }}
+              >
+                닫기
+              </button>
+            </div>
+
+            <div className={styles.disclaimerBody}>
+              <div className={styles.disclaimerPanel}>
+                <strong>확인 내용</strong>
+                <ul className={styles.disclaimerList}>
+                  <li>이 보고서는 AI가 초안을 보조한 문서이며, 법적 효력을 자동으로 보장하지 않습니다.</li>
+                  <li>최종 검토, 보완, 제출 판단과 기술지도 보고서의 책임은 전적으로 사용자에게 있습니다.</li>
+                  <li>당사는 AI 초안 생성 도구를 제공하며, 개별 현장의 법적 책임이나 행정 책임을 대리하지 않습니다.</li>
+                </ul>
+              </div>
+
+              <label className={styles.disclaimerField}>
+                <span>성함 또는 서명명</span>
+                <input
+                  className={styles.inputControl}
+                  value={typedSignatureName}
+                  onChange={(event) => setTypedSignatureName(event.target.value)}
+                  placeholder="홍길동"
+                />
+              </label>
+
+              {disclaimerError ? <div className={styles.inlineNotice}>{disclaimerError}</div> : null}
+            </div>
+
+            <div className={styles.disclaimerFooter}>
+              <p className={styles.disclaimerFootnote}>
+                최초 1회 확인 후 같은 워크스페이스에서는 다시 묻지 않습니다.
+              </p>
+              <button type="button" className="erp-button erp-button-primary" onClick={() => void handleDisclaimerConfirm()}>
+                확인 후 다운로드 계속
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <section className={`erp-panel ${styles.editorPanel}`}>
         <div className={styles.editorHeader}>
           <div>
@@ -1711,6 +1829,11 @@ export default function ReportWorkspace({ reportId, report }: ReportWorkspacePro
         </div>
 
         {actionError ? <div className={styles.inlineNotice}>{actionError}</div> : null}
+        {!exportDisclaimerAccepted ? (
+          <div className={styles.disclaimerReminder}>
+            보고서 다운로드 전 최초 1회 책임 확인과 서명이 필요합니다.
+          </div>
+        ) : null}
 
         <div className={styles.sectionSummaryStrip}>
           <article className={styles.sectionSummaryCard}>

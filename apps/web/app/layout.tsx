@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
-import { saasNavItems } from '@/lib/demoData';
+import { AppShell } from '@/components/AppShell';
 import { Cormorant_Garamond, Noto_Sans_KR } from 'next/font/google';
 import './globals.css';
 
@@ -29,35 +28,7 @@ export default function RootLayout({
   return (
     <html lang="ko" suppressHydrationWarning>
       <body className={`${displayFont.variable} ${bodyFont.variable}`}>
-        <div className="shell-root">
-          <header className="topbar">
-            <Link href="/" className="brand-lockup">
-              <span className="brand-mark">STD</span>
-              <span className="brand-copy">
-                <strong>기술지도 표준보고서</strong>
-              </span>
-            </Link>
-            <div className="topbar-actions">
-              <Link href="/reports/new" className="erp-button erp-button-primary">
-                새 보고서 시작
-              </Link>
-            </div>
-          </header>
-
-          <div className="shell-frame">
-            <aside className="side-rail" aria-label="웹 내비게이션">
-              <nav className="side-nav">
-                {saasNavItems.map((item) => (
-                  <Link key={item.href} href={item.href} className="side-nav-link">
-                    {item.label}
-                  </Link>
-                ))}
-              </nav>
-            </aside>
-
-            <main className="content-area">{children}</main>
-          </div>
-        </div>
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );

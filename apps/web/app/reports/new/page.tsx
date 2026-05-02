@@ -1,64 +1,74 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 import type { GuidedPhotoStepUploadInput } from '@saftysite/contracts';
-import { GuidedImageSlot } from '@/components/GuidedImageSlot';
+import {
+  GuidedImageDropzone,
+  type GuidedUploadFileItem,
+} from '@/components/GuidedImageDropzone';
 import styles from '@/components/GuidedUploadFlow.module.css';
 import {
+  bootstrapDemoSession,
   createReportRecord,
   generateDraftFromGuidedPhotos,
   generateDraftFromPhotos,
   uploadGuidedStepPhotos,
-  bootstrapDemoSession,
 } from '@/lib/reportApi';
 import { prepareUploadImage } from '@/lib/reportImages';
 import {
   creationDialogFields,
-  guidedUploadStep2Slots,
-  guidedUploadStep3Slots,
   guidedUploadSteps,
-  type GuidedUploadSlot,
   type GuidedUploadStepId,
 } from '@/lib/demoData';
 
-type GuidedUploadSlotState = GuidedUploadSlot & {
-  fileName: string;
-  source: 'local' | 'empty';
-};
-
 const STEP_ORDER: GuidedUploadStepId[] = ['meta', 'overview', 'hazard', 'generate'];
 
-function toInitialSlotState(slot: GuidedUploadSlot): GuidedUploadSlotState {
+const STEP2_KINDS = [
+  { value: 'site_overview', label: '대표 전경' },
+  { value: 'process', label: '공정 사진' },
+] as const;
+
+const STEP3_KINDS = [
+  { value: 'hazard', label: '위험요인' },
+  { value: 'hazard_closeup', label: '근거리 보강' },
+] as const;
+
+function createUploadId() {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return `upload-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function normalizeCategory(kind: string | undefined): GuidedPhotoStepUploadInput['photos'][number]['category'] {
+  if (kind === 'site_overview') return 'site_overview';
+  if (kind === 'process') return 'process';
+  return 'hazard';
+}
+
+function buildGuidedPhotoPayload(files: GuidedUploadFileItem[]): GuidedPhotoStepUploadInput {
   return {
-    ...slot,
-    previewAlt: '',
-    previewUrl: '',
-    fileName: '',
-    source: 'empty',
+    photos: files.map((file) => ({
+      filename: file.name,
+      category: normalizeCategory(file.kind),
+      data_url: file.previewUrl,
+      location_hint: file.isRepresentative ? `${file.kind ?? 'image'} 대표사진` : file.kind ?? 'image',
+    })),
   };
 }
 
-function buildGuidedPhotoPayload(slots: GuidedUploadSlotState[]): GuidedPhotoStepUploadInput {
-  return {
-    photos: slots
-      .filter((slot) => Boolean(slot.previewUrl))
-      .map((slot) => {
-        const category: GuidedPhotoStepUploadInput['photos'][number]['category'] =
-          slot.id.startsWith('overview')
-            ? slot.id === 'overview-hero'
-              ? 'site_overview'
-              : 'process'
-            : 'hazard';
+function toUserFacingErrorMessage(error: unknown): string {
+  if (!(error instanceof Error)) {
+    return '보고서를 생성하지 못했습니다.';
+  }
 
-        return {
-          filename: slot.fileName || `${slot.id}.jpg`,
-          category,
-          data_url: slot.previewUrl,
-          location_hint: slot.label,
-        };
-      }),
-  };
+  if (error.message.includes('Report SaaS API is not running')) {
+    return '현재 보고서 생성 서비스를 준비 중입니다. 잠시 후 다시 시도해 주세요.';
+  }
+
+  return error.message;
 }
 
 export default function NewReportPage() {
@@ -69,76 +79,119 @@ export default function NewReportPage() {
       creationDialogFields.map((field) => [field.id, field.value]),
     ) as Record<(typeof creationDialogFields)[number]['id'], string>,
   );
-  const [step2Slots, setStep2Slots] = useState<GuidedUploadSlotState[]>(() =>
-    guidedUploadStep2Slots.map(toInitialSlotState),
-  );
-  const [step3Slots, setStep3Slots] = useState<GuidedUploadSlotState[]>(() =>
-    guidedUploadStep3Slots.map(toInitialSlotState),
-  );
+  const [step2Files, setStep2Files] = useState<GuidedUploadFileItem[]>([]);
+  const [step3Files, setStep3Files] = useState<GuidedUploadFileItem[]>([]);
   const [generationPhase, setGenerationPhase] = useState<'idle' | 'generating' | 'complete'>('idle');
   const [submitError, setSubmitError] = useState('');
+  const [apiAvailable, setApiAvailable] = useState(false);
+  const [apiChecked, setApiChecked] = useState(false);
 
   useEffect(() => {
-    void bootstrapDemoSession().catch(() => {
-      // The actual error will be surfaced when the user starts generation.
-    });
+    let cancelled = false;
+
+    async function checkApi() {
+      try {
+        await bootstrapDemoSession();
+        if (!cancelled) {
+          setApiAvailable(true);
+          setSubmitError('');
+        }
+      } catch {
+        if (!cancelled) {
+          setApiAvailable(false);
+        }
+      } finally {
+        if (!cancelled) {
+          setApiChecked(true);
+        }
+      }
+    }
+
+    void checkApi();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const metaReady = creationDialogFields.every((field) =>
     field.required ? Boolean(metaFields[field.id]?.trim()) : true,
   );
-  const hasStep2Images = step2Slots.some((slot) => Boolean(slot.previewUrl));
-  const hasStep3Images = step3Slots.some((slot) => Boolean(slot.previewUrl));
-  const canGenerateFinalDraft = metaReady && generationPhase !== 'generating';
   const currentStepIndex = STEP_ORDER.indexOf(currentStep);
+  const canGenerateFinalDraft = metaReady && apiAvailable && generationPhase !== 'generating';
   const stepStates = {
     meta: metaReady,
-    overview: hasStep2Images,
-    hazard: hasStep3Images,
+    overview: step2Files.length > 0,
+    hazard: step3Files.length > 0,
     generate: generationPhase === 'complete',
   };
 
-  const updateSlotCollection = (
-    setter: Dispatch<SetStateAction<GuidedUploadSlotState[]>>,
-    slotId: string,
-    updater: (slot: GuidedUploadSlotState) => GuidedUploadSlotState,
+  const generationHelpText = useMemo(() => {
+    if (!apiChecked) {
+      return '보고서 생성 서비스 연결 상태를 확인하고 있습니다.';
+    }
+    if (!apiAvailable) {
+      return '현재 보고서 생성 서비스를 준비 중입니다. 잠시 후 다시 시도해 주세요.';
+    }
+    return '';
+  }, [apiAvailable, apiChecked]);
+
+  const appendPreparedFiles = async (
+    setter: Dispatch<SetStateAction<GuidedUploadFileItem[]>>,
+    files: File[],
+    defaultKind: string,
+  ) => {
+    const prepared = await Promise.all(files.map((file) => prepareUploadImage(file)));
+
+    setGenerationPhase('idle');
+    setSubmitError('');
+    setter((current) => [
+      ...current,
+      ...prepared.map((item, index) => ({
+        id: createUploadId(),
+        name: item.fileName,
+        previewUrl: item.dataUrl,
+        kind: defaultKind,
+        isRepresentative: current.length === 0 && index === 0,
+      })),
+    ]);
+  };
+
+  const deleteFile = (
+    setter: Dispatch<SetStateAction<GuidedUploadFileItem[]>>,
+    fileId: string,
   ) => {
     setGenerationPhase('idle');
     setSubmitError('');
+    setter((current) => {
+      const next = current.filter((file) => file.id !== fileId);
+      if (next.length > 0 && !next.some((file) => file.isRepresentative)) {
+        next[0] = { ...next[0], isRepresentative: true };
+      }
+      return next;
+    });
+  };
+
+  const setRepresentative = (
+    setter: Dispatch<SetStateAction<GuidedUploadFileItem[]>>,
+    fileId: string,
+  ) => {
     setter((current) =>
-      current.map((slot) => {
-        if (slot.id !== slotId) return slot;
-        return updater(slot);
-      }),
+      current.map((file) => ({
+        ...file,
+        isRepresentative: file.id === fileId,
+      })),
     );
   };
 
-  const replaceSlotWithFile = async (
-    setter: Dispatch<SetStateAction<GuidedUploadSlotState[]>>,
-    slotId: string,
-    file: File,
+  const setKind = (
+    setter: Dispatch<SetStateAction<GuidedUploadFileItem[]>>,
+    fileId: string,
+    kind: string,
   ) => {
-    const prepared = await prepareUploadImage(file);
-    updateSlotCollection(setter, slotId, (slot) => ({
-      ...slot,
-      previewAlt: prepared.fileName,
-      previewUrl: prepared.dataUrl,
-      fileName: prepared.fileName,
-      source: 'local',
-    }));
-  };
-
-  const clearSlot = (
-    setter: Dispatch<SetStateAction<GuidedUploadSlotState[]>>,
-    slotId: string,
-  ) => {
-    updateSlotCollection(setter, slotId, (slot) => ({
-      ...slot,
-      previewAlt: '',
-      previewUrl: '',
-      fileName: '',
-      source: 'empty',
-    }));
+    setter((current) =>
+      current.map((file) => (file.id === fileId ? { ...file, kind } : file)),
+    );
   };
 
   const canOpenStep = (stepId: GuidedUploadStepId) => {
@@ -178,8 +231,8 @@ export default function NewReportPage() {
         worker_count: metaFields.workerCount,
       });
 
-      const step1Payload = buildGuidedPhotoPayload(step2Slots);
-      const step2Payload = buildGuidedPhotoPayload(step3Slots);
+      const step1Payload = buildGuidedPhotoPayload(step2Files);
+      const step2Payload = buildGuidedPhotoPayload(step3Files);
       let currentReport = created;
 
       if (step1Payload.photos.length > 0) {
@@ -212,7 +265,7 @@ export default function NewReportPage() {
       router.replace(`/reports/${currentReport.id}`);
     } catch (error) {
       setGenerationPhase('idle');
-      setSubmitError(error instanceof Error ? error.message : '보고서를 생성하지 못했습니다.');
+      setSubmitError(toUserFacingErrorMessage(error));
     }
   };
 
@@ -259,71 +312,73 @@ export default function NewReportPage() {
     }
 
     if (currentStep === 'overview') {
-      const completedCount = step2Slots.filter((slot) => Boolean(slot.previewUrl)).length;
-
       return (
         <section className="erp-panel">
           <div className={styles.panelHeader}>
             <div>
               <span className={styles.panelEyebrow}>Step 2</span>
               <h2 className={styles.panelTitle}>공정 및 전경 이미지</h2>
+              <p className={styles.panelDescription}>
+                전경과 현재 공정 이미지를 한 번에 올리고, 대표사진과 간단한 분류만 지정합니다.
+              </p>
             </div>
-            <span className={`${styles.statusPill} ${completedCount > 0 ? styles.statusPillReady : styles.statusPillPending}`}>
-              {completedCount} / {step2Slots.length}
+            <span
+              className={`${styles.statusPill} ${
+                step2Files.length > 0 ? styles.statusPillReady : styles.statusPillPending
+              }`}
+            >
+              업로드 {step2Files.length}건
             </span>
           </div>
 
-          <div className={styles.slotGrid}>
-            {step2Slots.map((slot) => (
-              <GuidedImageSlot
-                key={slot.id}
-                fileName={slot.fileName}
-                helper={slot.helper}
-                label={slot.label}
-                previewAlt={slot.previewAlt}
-                previewUrl={slot.previewUrl}
-                onSelect={(file) => {
-                  void replaceSlotWithFile(setStep2Slots, slot.id, file);
-                }}
-                onClear={() => clearSlot(setStep2Slots, slot.id)}
-              />
-            ))}
-          </div>
+          <GuidedImageDropzone
+            files={step2Files}
+            helper="대표 전경과 현재 공정 사진을 여러 장 한 번에 올릴 수 있습니다."
+            kinds={STEP2_KINDS.map((item) => ({ ...item }))}
+            label="공정 및 전경 이미지 업로드"
+            onDelete={(id) => deleteFile(setStep2Files, id)}
+            onFilesSelected={(files) => {
+              void appendPreparedFiles(setStep2Files, files, STEP2_KINDS[0].value);
+            }}
+            onKindChange={(id, kind) => setKind(setStep2Files, id, kind)}
+            onRepresentativeChange={(id) => setRepresentative(setStep2Files, id)}
+          />
         </section>
       );
     }
 
     if (currentStep === 'hazard') {
-      const completedCount = step3Slots.filter((slot) => Boolean(slot.previewUrl)).length;
-
       return (
         <section className="erp-panel">
           <div className={styles.panelHeader}>
             <div>
               <span className={styles.panelEyebrow}>Step 3</span>
               <h2 className={styles.panelTitle}>위험 및 기인물 이미지</h2>
+              <p className={styles.panelDescription}>
+                위험요인과 기인물 이미지를 묶음으로 올리고, 대표사진과 이미지 목적만 정리합니다.
+              </p>
             </div>
-            <span className={`${styles.statusPill} ${completedCount > 0 ? styles.statusPillReady : styles.statusPillPending}`}>
-              {completedCount} / {step3Slots.length}
+            <span
+              className={`${styles.statusPill} ${
+                step3Files.length > 0 ? styles.statusPillReady : styles.statusPillPending
+              }`}
+            >
+              업로드 {step3Files.length}건
             </span>
           </div>
 
-          <div className={styles.slotGrid}>
-            {step3Slots.map((slot) => (
-              <GuidedImageSlot
-                key={slot.id}
-                fileName={slot.fileName}
-                helper={slot.helper}
-                label={slot.label}
-                previewAlt={slot.previewAlt}
-                previewUrl={slot.previewUrl}
-                onSelect={(file) => {
-                  void replaceSlotWithFile(setStep3Slots, slot.id, file);
-                }}
-                onClear={() => clearSlot(setStep3Slots, slot.id)}
-              />
-            ))}
-          </div>
+          <GuidedImageDropzone
+            files={step3Files}
+            helper="위험요인, 근거리 보강 사진 등을 한 영역에서 관리할 수 있습니다."
+            kinds={STEP3_KINDS.map((item) => ({ ...item }))}
+            label="위험 및 기인물 이미지 업로드"
+            onDelete={(id) => deleteFile(setStep3Files, id)}
+            onFilesSelected={(files) => {
+              void appendPreparedFiles(setStep3Files, files, STEP3_KINDS[0].value);
+            }}
+            onKindChange={(id, kind) => setKind(setStep3Files, id, kind)}
+            onRepresentativeChange={(id) => setRepresentative(setStep3Files, id)}
+          />
         </section>
       );
     }
@@ -356,14 +411,15 @@ export default function NewReportPage() {
             </article>
             <article className={styles.generateSummaryCard}>
               <span>전경/공정</span>
-              <strong>{step2Slots.filter((slot) => slot.previewUrl).length}건</strong>
+              <strong>{step2Files.length}건</strong>
             </article>
             <article className={styles.generateSummaryCard}>
               <span>위험/기인물</span>
-              <strong>{step3Slots.filter((slot) => slot.previewUrl).length}건</strong>
+              <strong>{step3Files.length}건</strong>
             </article>
           </div>
 
+          {generationHelpText ? <div className={styles.inlineNotice}>{generationHelpText}</div> : null}
           {submitError ? <div className={styles.inlineNotice}>{submitError}</div> : null}
 
           <div className={styles.generateActionArea}>
@@ -383,6 +439,8 @@ export default function NewReportPage() {
     );
   };
 
+  const isFinalStep = currentStep === 'generate';
+
   return (
     <div className="erp-page">
       <section className="page-header-card">
@@ -394,8 +452,7 @@ export default function NewReportPage() {
 
       <section className={styles.stepRail} aria-label="보고서 작성 단계">
         {guidedUploadSteps.map((step, index) => {
-          const stateKey = step.id;
-          const isDone = stepStates[stateKey];
+          const isDone = stepStates[step.id];
           const isActive = currentStep === step.id;
           const canOpen = canOpenStep(step.id);
           return (
@@ -425,18 +482,20 @@ export default function NewReportPage() {
           type="button"
           className="erp-button erp-button-secondary"
           onClick={() => moveStep('prev')}
-          disabled={currentStepIndex === 0}
+          disabled={currentStepIndex === 0 || generationPhase === 'generating'}
         >
           이전
         </button>
-        <button
-          type="button"
-          className="erp-button erp-button-primary"
-          onClick={() => moveStep('next')}
-          disabled={currentStepIndex === STEP_ORDER.length - 1}
-        >
-          다음
-        </button>
+        {!isFinalStep ? (
+          <button
+            type="button"
+            className="erp-button erp-button-primary"
+            onClick={() => moveStep('next')}
+            disabled={currentStepIndex === STEP_ORDER.length - 1}
+          >
+            {currentStep === 'hazard' ? '보고서 생성 단계로 이동' : '다음'}
+          </button>
+        ) : null}
       </section>
     </div>
   );

@@ -3,7 +3,17 @@ from __future__ import annotations
 from collections import defaultdict
 from uuid import uuid4
 
-from .models import AiRun, CreditLedgerEntry, Membership, PhotoAsset, ReportExport, ReportRecord, User, Workspace
+from .models import (
+    AiRun,
+    CreditLedgerEntry,
+    ExportDisclaimerAcceptance,
+    Membership,
+    PhotoAsset,
+    ReportExport,
+    ReportRecord,
+    User,
+    Workspace,
+)
 
 
 class InMemoryStore:
@@ -17,6 +27,7 @@ class InMemoryStore:
         self.photos: dict[str, PhotoAsset] = {}
         self.ai_runs: dict[str, AiRun] = {}
         self.exports: dict[str, list[ReportExport]] = defaultdict(list)
+        self.export_disclaimer_acceptances: dict[str, ExportDisclaimerAcceptance] = {}
 
     @staticmethod
     def new_id(prefix: str) -> str:

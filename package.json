@@ -11,7 +11,7 @@
   ],
   "scripts": {
     "rundev": "node scripts/rundev.mjs",
-    "dev": "npm run dev -w @saftysite/web",
+    "dev": "node scripts/dev.mjs",
     "dev:web": "npm run dev -w @saftysite/web",
     "dev:legacy": "node scripts/rundev.mjs",
     "build": "npm run build -w @saftysite/web",

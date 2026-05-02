@@ -70,6 +70,15 @@ class ReportExport(BaseModel):
     created_at: str = Field(default_factory=utcnow)
 
 
+class ExportDisclaimerAcceptance(BaseModel):
+    id: str
+    workspace_id: str
+    user_id: str
+    accepted_by_name: str
+    version: str = "technical_guidance_disclaimer_v1"
+    accepted_at: str = Field(default_factory=utcnow)
+
+
 class ReportRecord(BaseModel):
     id: str
     workspace_id: str
@@ -165,3 +174,5 @@ class ReviewCompleteRequest(BaseModel):
 
 class ExportRequest(BaseModel):
     confirm_reviewed: bool = True
+    acknowledge_ai_disclaimer: bool = False
+    typed_signature_name: str = ""

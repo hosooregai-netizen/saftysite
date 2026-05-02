@@ -314,6 +314,8 @@ export const generateDraftFromGuidedPhotosInputSchema = z.object({
 
 export const exportReportInputSchema = z.object({
   confirm_reviewed: z.boolean().default(true),
+  acknowledge_ai_disclaimer: z.boolean().default(false),
+  typed_signature_name: z.string().default(''),
 });
 
 export const creditLedgerEntrySchema = z.object({

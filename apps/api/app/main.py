@@ -10,6 +10,7 @@ from .models import (
     CreateReportRequest,
     CreateWorkspaceRequest,
     ExportRequest,
+    ExportDisclaimerAcceptance,
     GenerateDraftFromGuidedPhotosRequest,
     GenerateDraftFromPhotosRequest,
     GuidedPhotoReviewRequest,
@@ -91,10 +92,45 @@ def touch_report(report: ReportRecord) -> None:
     report.payload["updatedAt"] = timestamp
 
 
-def serialize_report(report: ReportRecord) -> dict[str, object]:
+def export_disclaimer_key(workspace_id: str, user_id: str) -> str:
+    return f"{workspace_id}:{user_id}"
+
+
+def get_export_disclaimer_acceptance(workspace_id: str, user_id: str) -> dict[str, object] | None:
+    record = store.export_disclaimer_acceptances.get(export_disclaimer_key(workspace_id, user_id))
+    return record.model_dump() if record is not None else None
+
+
+def ensure_export_disclaimer_acceptance(report: ReportRecord, user: User, payload: ExportRequest) -> None:
+    key = export_disclaimer_key(report.workspace_id, user.id)
+    existing = store.export_disclaimer_acceptances.get(key)
+    if existing is not None:
+        return
+
+    typed_name = payload.typed_signature_name.strip()
+    if not payload.acknowledge_ai_disclaimer or not typed_name:
+        raise HTTPException(
+            status_code=409,
+            detail="최초 1회 다운로드 전 책임 확인과 서명이 필요합니다.",
+        )
+
+    store.export_disclaimer_acceptances[key] = ExportDisclaimerAcceptance(
+        id=store.new_id("disclaimer"),
+        workspace_id=report.workspace_id,
+        user_id=user.id,
+        accepted_by_name=typed_name,
+    )
+
+
+def serialize_report(report: ReportRecord, user: User | None = None) -> dict[str, object]:
     payload = report.model_dump()
     payload["exports"] = [item.model_dump() for item in store.exports[report.id]]
     payload["creditBalance"] = ledger_balance(report.workspace_id)
+    acceptance = (
+        get_export_disclaimer_acceptance(report.workspace_id, user.id) if user is not None else None
+    )
+    payload["exportDisclaimerAccepted"] = acceptance is not None
+    payload["exportDisclaimerAcceptance"] = acceptance
     return payload
 
 
@@ -292,7 +328,7 @@ def list_reports(workspace_id: str, user: User = Depends(require_user)) -> list[
         if report.workspace_id == workspace_id
     ]
     reports.sort(key=lambda item: item.updated_at, reverse=True)
-    return [serialize_report(report) for report in reports]
+    return [serialize_report(report, user) for report in reports]
 
 
 @app.post("/api/v1/reports")
@@ -397,7 +433,7 @@ def create_report(payload: CreateReportRequest, user: User = Depends(require_use
       updated_at=timestamp,
     )
     store.reports[report.id] = report
-    return serialize_report(report)
+    return serialize_report(report, user)
 
 
 @app.get("/api/v1/reports/{report_id}")
@@ -406,7 +442,7 @@ def get_report(report_id: str, user: User = Depends(require_user)) -> dict[str, 
     if report is None:
       raise HTTPException(status_code=404, detail="Report not found.")
     require_workspace_access(report.workspace_id, user)
-    return serialize_report(report)
+    return serialize_report(report, user)
 
 
 @app.patch("/api/v1/reports/{report_id}")
@@ -417,7 +453,7 @@ def patch_report(report_id: str, payload: UpdateReportRequest, user: User = Depe
     require_workspace_access(report.workspace_id, user)
     report.payload = payload.payload
     touch_report(report)
-    return serialize_report(report)
+    return serialize_report(report, user)
 
 
 def create_photo_asset(
@@ -482,7 +518,7 @@ def upload_guided_step_one(
     report.payload["doc3PhotoCandidates"] = bucket["uploadedPhotoIds"]
     sync_guided_photo_state(report.payload)
     touch_report(report)
-    return {"uploadedPhotos": uploaded, "report": serialize_report(report)}
+    return {"uploadedPhotos": uploaded, "report": serialize_report(report, user)}
 
 
 @app.post("/api/v1/reports/{report_id}/photo-steps/step-2")
@@ -511,7 +547,7 @@ def upload_guided_step_two(
     report.payload["doc7PhotoCandidates"] = bucket["uploadedPhotoIds"]
     sync_guided_photo_state(report.payload)
     touch_report(report)
-    return {"uploadedPhotos": uploaded, "report": serialize_report(report)}
+    return {"uploadedPhotos": uploaded, "report": serialize_report(report, user)}
 
 
 @app.post("/api/v1/reports/{report_id}/photo-steps/review")
@@ -537,7 +573,7 @@ def review_guided_photos(
     report.payload["currentSection"] = "photo-review"
     sync_guided_photo_state(report.payload)
     touch_report(report)
-    return {"report": serialize_report(report)}
+    return {"report": serialize_report(report, user)}
 
 
 @app.post("/api/v1/reports/{report_id}/draft-from-photos")
@@ -572,7 +608,7 @@ def draft_from_photos(
         doc7_photo_ids=payload.photo_asset_ids,
     )
     touch_report(report)
-    return {"aiRun": run.model_dump(), "report": serialize_report(report)}
+    return {"aiRun": run.model_dump(), "report": serialize_report(report, user)}
 
 
 @app.post("/api/v1/reports/{report_id}/draft-from-guided-photos")
@@ -614,7 +650,7 @@ def draft_from_guided_photos(
         doc7_photo_ids=payload.doc7_photo_ids,
     )
     touch_report(report)
-    return {"aiRun": run.model_dump(), "report": serialize_report(report)}
+    return {"aiRun": run.model_dump(), "report": serialize_report(report, user)}
 
 
 @app.get("/api/v1/reports/{report_id}/ai-runs/{run_id}")
@@ -643,7 +679,7 @@ def review_complete(report_id: str, payload: ReviewCompleteRequest, user: User =
     report.status = "review_completed"
     report.payload["status"] = "review_completed"
     touch_report(report)
-    return serialize_report(report)
+    return serialize_report(report, user)
 
 
 def create_export(report: ReportRecord, format_name: str) -> ReportExport:
@@ -682,9 +718,15 @@ def export_pdf(report_id: str, payload: ExportRequest, user: User = Depends(requ
     require_workspace_access(report.workspace_id, user)
     if not report.review_completed or not payload.confirm_reviewed:
         raise HTTPException(status_code=409, detail="Review completion is required before export.")
+    ensure_export_disclaimer_acceptance(report, user, payload)
     export = create_export(report, "pdf")
     touch_report(report)
-    return {"export": export.model_dump(), "balance": ledger_balance(report.workspace_id), "report": serialize_report(report)}
+    return {
+        "export": export.model_dump(),
+        "balance": ledger_balance(report.workspace_id),
+        "report": serialize_report(report, user),
+        "exportDisclaimerAcceptance": get_export_disclaimer_acceptance(report.workspace_id, user.id),
+    }
 
 
 @app.post("/api/v1/reports/{report_id}/exports/hwpx")
@@ -695,9 +737,15 @@ def export_hwpx(report_id: str, payload: ExportRequest, user: User = Depends(req
     require_workspace_access(report.workspace_id, user)
     if not report.review_completed or not payload.confirm_reviewed:
         raise HTTPException(status_code=409, detail="Review completion is required before export.")
+    ensure_export_disclaimer_acceptance(report, user, payload)
     export = create_export(report, "hwpx")
     touch_report(report)
-    return {"export": export.model_dump(), "balance": ledger_balance(report.workspace_id), "report": serialize_report(report)}
+    return {
+        "export": export.model_dump(),
+        "balance": ledger_balance(report.workspace_id),
+        "report": serialize_report(report, user),
+        "exportDisclaimerAcceptance": get_export_disclaimer_acceptance(report.workspace_id, user.id),
+    }
 
 
 @app.get("/api/v1/reports/{report_id}/exports")

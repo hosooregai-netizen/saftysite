@@ -63,5 +63,5 @@ export function ReportWorkspaceScreen({ reportId }: { reportId: string }) {
     );
   }
 
-  return <ReportWorkspace reportId={record.id} report={record.payload} />;
+  return <ReportWorkspace reportId={record.id} report={record.payload} record={record} />;
 }
