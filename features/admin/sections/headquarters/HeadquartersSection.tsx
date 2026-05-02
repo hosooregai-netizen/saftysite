@@ -7,7 +7,11 @@ import {
   readAdminSessionCache,
   writeAdminSessionCache,
 } from '@/features/admin/lib/adminSessionCache';
-import { fetchAdminHeadquartersList, fetchAdminSitesList } from '@/lib/admin/apiClient';
+import {
+  fetchAdminDirectoryLookups,
+  fetchAdminHeadquartersList,
+  fetchAdminSitesList,
+} from '@/lib/admin/apiClient';
 import { getAdminSectionHref, getSiteStatusLabel } from '@/lib/admin';
 import { readSafetyAuthToken } from '@/lib/safetyApi';
 import {
@@ -23,6 +27,7 @@ import type {
   SafetySiteStatus,
   SafetySiteUpdateInput,
 } from '@/types/controller';
+import type { SafetyAdminDirectoryLookupUser, TableSortState } from '@/types/admin';
 import type { SafetySite, SafetyUser } from '@/types/backend';
 import { HeadquarterAssignmentModal } from './HeadquarterAssignmentModal';
 import { HeadquarterSummaryPanel } from './HeadquarterSummaryPanel';
@@ -38,7 +43,7 @@ const HEADQUARTERS_PAGE_SIZE = 10;
 function buildRequestKey(input: {
   page: number;
   query: string;
-  sort: import('@/types/admin').TableSortState;
+  sort: TableSortState;
 }) {
   return JSON.stringify(input);
 }
@@ -53,6 +58,33 @@ function readRequiredSafetyAuthToken() {
     throw new Error('로그인이 만료되었습니다. 다시 로그인해 주세요.');
   }
   return token;
+}
+
+function mapDirectoryLookupUserToSafetyUser(user: SafetyAdminDirectoryLookupUser): SafetyUser {
+  return {
+    auto_provisioned_from_excel: false,
+    created_at: '',
+    email: user.email,
+    id: user.id,
+    is_active: user.isActive,
+    last_login_at: null,
+    name: user.name,
+    organization_name: user.organizationName,
+    phone: user.phone,
+    position: user.position,
+    role: user.role,
+    updated_at: '',
+  };
+}
+
+function mergeUsersById(primaryUsers: SafetyUser[], fallbackUsers: SafetyUser[]) {
+  const usersById = new Map<string, SafetyUser>();
+  [...fallbackUsers, ...primaryUsers].forEach((user) => {
+    if (user.id) {
+      usersById.set(user.id, user);
+    }
+  });
+  return Array.from(usersById.values());
 }
 
 function validateHeadquarterSubmit(
@@ -159,6 +191,7 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
     import('@/types/backend').SafetySite[]
   >([]);
   const [assignmentHeadquarterId, setAssignmentHeadquarterId] = useState<string | null>(null);
+  const [assignmentUsers, setAssignmentUsers] = useState<SafetyUser[]>([]);
   const [headquarterAssignments, setHeadquarterAssignments] = useState<
     SafetyHeadquarterAssignment[]
   >([]);
@@ -234,6 +267,10 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
     }
     return rows.find((item) => item.id === assignmentHeadquarterId) ?? null;
   }, [assignmentHeadquarterId, resolvedSelectedHeadquarter, rows, selectedHeadquarter]);
+  const headquarterAssignmentUsers = useMemo(
+    () => mergeUsersById(users, assignmentUsers),
+    [assignmentUsers, users],
+  );
   const isLoadingSelectedSite = Boolean(selectedSiteId && !resolvedSelectedSite);
 
   const refreshHeadquarterList = async (targetPage = state.page) => {
@@ -591,11 +628,22 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
     setHeadquarterAssignments(assignments);
   };
 
+  const loadHeadquarterAssignmentUsers = async () => {
+    if (assignmentUsers.length > 0) {
+      return;
+    }
+    const lookups = await fetchAdminDirectoryLookups();
+    setAssignmentUsers(lookups.users.map(mapDirectoryLookupUserToSafetyUser));
+  };
+
   const openHeadquarterAssignmentModal = (headquarterId: string) => {
     setAssignmentHeadquarterId(headquarterId);
     setHeadquarterAssignments([]);
     setIsAssignmentLoading(true);
-    void loadHeadquarterAssignments(headquarterId)
+    void Promise.all([
+      loadHeadquarterAssignments(headquarterId),
+      loadHeadquarterAssignmentUsers(),
+    ])
       .catch((error) => {
         window.alert(
           error instanceof Error ? error.message : '건설사 배정 정보를 불러오지 못했습니다.',
@@ -774,7 +822,7 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
         busy={busy || isAssignmentLoading}
         headquarter={assignmentHeadquarter}
         open={Boolean(assignmentHeadquarterId)}
-        users={users}
+        users={headquarterAssignmentUsers}
         onAssign={async (headquarterId, userId) => {
           try {
             await assignUserToHeadquarter(headquarterId, userId);

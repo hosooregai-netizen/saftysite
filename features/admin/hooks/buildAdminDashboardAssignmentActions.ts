@@ -34,6 +34,19 @@ export function buildAdminDashboardAssignmentActions({
   getCurrentData,
   runMutation,
 }: BuildAdminDashboardAssignmentActionsParams) {
+  const upsertSingleActiveSiteAssignment = (
+    assignments: ControllerDashboardData['assignments'],
+    nextAssignment: ControllerDashboardData['assignments'][number],
+  ) => {
+    const baseAssignments = nextAssignment.is_active
+      ? assignments.filter(
+          (assignment) =>
+            assignment.id === nextAssignment.id || assignment.site_id !== nextAssignment.site_id,
+        )
+      : assignments;
+    return upsertRecordById(baseAssignments, nextAssignment);
+  };
+
   const findKnownAssignment = (siteId: string, userId: string) =>
     getCurrentData().assignments.find(
       (assignment) => assignment.site_id === siteId && assignment.user_id === userId,
@@ -78,7 +91,7 @@ export function buildAdminDashboardAssignmentActions({
         {
           applyResult: (current, assignment) => ({
             ...current,
-            assignments: upsertRecordById(current.assignments, assignment),
+            assignments: upsertSingleActiveSiteAssignment(current.assignments, assignment),
           }),
           invalidateClientCaches: invalidateAdminDirectoryMutationClientCaches,
         },
@@ -93,10 +106,6 @@ export function buildAdminDashboardAssignmentActions({
           const matchedAssignment = findKnownAssignment(siteId, userId);
 
           if (matchedAssignment) {
-            if (matchedAssignment.is_active) {
-              return matchedAssignment;
-            }
-
             return updateSafetyAssignment(token, matchedAssignment.id, {
               ...buildAssignmentPayload('현장 지도요원', options, matchedAssignment),
               is_active: true,
@@ -131,7 +140,7 @@ export function buildAdminDashboardAssignmentActions({
         {
           applyResult: (current, assignment) => ({
             ...current,
-            assignments: upsertRecordById(current.assignments, assignment),
+            assignments: upsertSingleActiveSiteAssignment(current.assignments, assignment),
           }),
           invalidateClientCaches: invalidateAdminDirectoryMutationClientCaches,
         },
@@ -176,7 +185,7 @@ export function buildAdminDashboardAssignmentActions({
       runMutation((token) => updateSafetyAssignment(token, id, input), '배정 정보를 수정했습니다.', {
         applyResult: (current, assignment) => ({
           ...current,
-          assignments: upsertRecordById(current.assignments, assignment),
+          assignments: upsertSingleActiveSiteAssignment(current.assignments, assignment),
         }),
         invalidateClientCaches: invalidateAdminDirectoryMutationClientCaches,
       }),

@@ -20,13 +20,14 @@ interface SiteAssignmentModalProps {
 export function SiteAssignmentModal(props: SiteAssignmentModalProps) {
   const { busy, open, site, users, currentAssignedUserIds, onClose, onAssign, onClear } = props;
   const fieldAgents = users.filter((user) => isFieldAgentUserRole(user.role) && user.is_active);
-  const activeAssignmentUserIds = useMemo(
-    () => new Set(currentAssignedUserIds),
+  const currentAssignedUserId = useMemo(
+    () => currentAssignedUserIds.find((userId) => userId.trim()) ?? null,
     [currentAssignedUserIds],
   );
-  const currentAssignedNames = fieldAgents
-    .filter((user) => activeAssignmentUserIds.has(user.id))
-    .map((user) => user.name);
+  const currentAssignedName =
+    fieldAgents.find((user) => user.id === currentAssignedUserId)?.name ??
+    (currentAssignedUserId ? '지도요원 1명' : '없음');
+  const hasCurrentAssignment = Boolean(currentAssignedUserId);
 
   return (
     <AppModal
@@ -47,11 +48,10 @@ export function SiteAssignmentModal(props: SiteAssignmentModalProps) {
     >
       <div className={styles.modalForm}>
         <p className={styles.modalHint}>
-          현재 배정: {currentAssignedNames.length > 0 ? currentAssignedNames.join(', ') : '없음'}
+          현재 배정: {currentAssignedName}
         </p>
         <p className={styles.modalHint}>
-          같은 현장에는 여러 지도요원을 동시에 배정할 수 있고, 배정된 지도요원은 해당 현장
-          보고서를 함께 조회합니다.
+          현장에는 지도요원 1명만 배정됩니다. 다른 지도요원을 배정하면 현재 배정이 교체됩니다.
         </p>
         <div className={styles.tableShell}>
           {fieldAgents.length === 0 ? (
@@ -70,13 +70,19 @@ export function SiteAssignmentModal(props: SiteAssignmentModalProps) {
                 </thead>
                 <tbody>
                   {fieldAgents.map((user) => {
-                    const isAssigned = activeAssignmentUserIds.has(user.id);
+                    const isAssigned = user.id === currentAssignedUserId;
                     return (
                       <tr key={user.id}>
                         <td>{user.name}</td>
                         <td>{user.phone || '-'}</td>
                         <td>{user.position || '-'}</td>
-                        <td>{isAssigned ? '현재 배정' : '배정 가능'}</td>
+                        <td>
+                          {isAssigned
+                            ? '현재 배정'
+                            : hasCurrentAssignment
+                              ? '교체 가능'
+                              : '배정 가능'}
+                        </td>
                         <td>
                           <div className={styles.tableActions}>
                             {isAssigned ? (
@@ -95,7 +101,7 @@ export function SiteAssignmentModal(props: SiteAssignmentModalProps) {
                                 onClick={() => site && void onAssign(site.id, user.id)}
                                 disabled={busy}
                               >
-                                배정
+                                {hasCurrentAssignment ? '교체' : '배정'}
                               </button>
                             )}
                           </div>
