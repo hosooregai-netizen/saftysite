@@ -16,3 +16,6 @@ tsconfig.tsbuildinfo
 .tmp-ui/generated/footer_*.hwpx
 __pycache__/
 *.pyc
+.venv/
+apps/api/.venv/
+apps/api/.pytest_cache/

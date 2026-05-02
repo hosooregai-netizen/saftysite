@@ -1,0 +1,13 @@
+{
+  "version": "standard-v1",
+  "status": "runtime_direct_binding_v1",
+  "sections": [
+    { "key": "sec1", "tableIndex": 3 },
+    { "key": "sec2", "tableIndex": 3 },
+    { "key": "sec3", "tableIndex": 4 },
+    { "key": "sec4", "tableIndex": 5 },
+    { "key": "sec5", "tableIndex": 6 },
+    { "key": "sec6", "tableIndex": 7 }
+  ],
+  "imagePlaceholders": []
+}
