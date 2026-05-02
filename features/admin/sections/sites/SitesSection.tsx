@@ -57,14 +57,16 @@ export function SitesSection(props: SitesSectionProps) {
           >
             엑셀 내보내기
           </button>
-          <button
-            type="button"
-            className="app-button app-button-primary"
-            onClick={state.openCreate}
-            disabled={props.busy}
-          >
-            현장 추가
-          </button>
+          {props.allowCreate !== false ? (
+            <button
+              type="button"
+              className="app-button app-button-primary"
+              onClick={state.openCreate}
+              disabled={props.busy}
+            >
+              현장 추가
+            </button>
+          ) : null}
         </div>
       </div>
 

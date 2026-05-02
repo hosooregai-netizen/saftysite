@@ -755,6 +755,7 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
         </section>
       ) : !resolvedSelectedHeadquarter ? (
         <SitesSection
+          allowCreate={false}
           autoEditSiteId={autoEditSiteId}
           busy={busy}
           canDelete={canDelete}
@@ -763,7 +764,6 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
           initialStatusFilter={siteStatusFilter}
           onAssignFieldAgent={onAssignFieldAgent}
           onCreate={handleCreateSite}
-          onCreateHeadquarter={onCreate}
           onDelete={handleDeleteSite}
           onSelectSiteEntry={(site) => onSelectSite(site.headquarter_id, site.id)}
           onUnassignFieldAgent={onUnassignFieldAgent}

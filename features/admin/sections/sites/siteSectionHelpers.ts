@@ -48,6 +48,7 @@ export interface SitesSectionProps {
   onDelete: (id: string) => Promise<void>;
   onAssignFieldAgent: (siteId: string, userId: string) => Promise<void>;
   onUnassignFieldAgent: (siteId: string, userId: string) => Promise<void>;
+  allowCreate?: boolean;
   title?: string;
   titleActionHref?: string;
   titleActionLabel?: string;

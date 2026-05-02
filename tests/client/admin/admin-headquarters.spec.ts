@@ -109,6 +109,26 @@ export async function runAdminHeadquartersSmoke(config: ClientSmokePlaywrightCon
       1,
     );
 
+    await page.getByRole('link', { name: '현장 목록 보기' }).click();
+    await page.waitForURL(/siteStatus=all/);
+    await page.getByRole('heading', { level: 2, name: '현장 목록' }).waitFor({ state: 'visible' });
+    assert.equal(await page.getByRole('button', { name: '현장 추가' }).count(), 0);
+
+    await page.getByRole('button', { name: /현장 작업 메뉴 열기/ }).first().click();
+    await page.getByRole('menuitem', { name: '수정' }).click();
+    const standaloneSiteEditDialog = page.getByRole('dialog', { name: '현장 정보 수정' });
+    await standaloneSiteEditDialog.waitFor({ state: 'visible' });
+    assert.equal(await standaloneSiteEditDialog.getByText('새 건설사', { exact: true }).count(), 0);
+    await standaloneSiteEditDialog.getByRole('button', { name: '취소' }).click();
+
+    await page.getByRole('link', { name: '건설사 목록 보기' }).click();
+    await page.waitForURL(
+      (url) =>
+        url.searchParams.get('section') === 'headquarters' &&
+        !url.searchParams.has('siteStatus'),
+    );
+    await page.getByRole('heading', { level: 2, name: '건설사 목록' }).waitFor({ state: 'visible' });
+
     await page.getByRole('button', { name: '건설사 추가' }).click();
     const createDialog = page.getByRole('dialog', { name: '건설사 추가' });
     await createDialog.getByLabel('건설사명').fill('mocked headquarter');
