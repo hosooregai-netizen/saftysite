@@ -216,7 +216,7 @@ export function buildAdminAnalyticsModel(
     data.sites
       .filter((site) => {
         const profile = parseSiteContractProfile(site);
-        const lifecycleStatus = normalizeSiteLifecycleStatus(site);
+        const lifecycleStatus = normalizeSiteLifecycleStatus(site, today);
         if (filters.headquarterId && site.headquarter_id !== filters.headquarterId) return false;
         if (filters.contractType && getContractBucketKey(profile) !== filters.contractType) return false;
         if (filters.userId && !userScopedSiteIds.has(site.id)) return false;

@@ -498,15 +498,20 @@ export function buildAdminOverviewModel(
   const siteById = new Map(data.sites.map((site) => [site.id, site]));
   const dispatchOverviewRows = buildDispatchManagementRows(overviewRows, siteById, today);
   const overviewSites = data.sites.filter((site) => isCurrentSiteManagementWindow(site, today));
-  const siteStatusSummary = buildSiteStatusSummary(data, overviewSites);
-  const activeSites = overviewSites.filter((site) => normalizeSiteLifecycleStatus(site) === 'active');
+  const activeSites = overviewSites.filter((site) => normalizeSiteLifecycleStatus(site, today) === 'active');
+  const { endingSoonRows, endingSoonSummary } = buildEndingSoonSummary(activeSites, today);
+  const siteStatusSummary = buildSiteStatusSummary(
+    data,
+    overviewSites,
+    today,
+    new Set(endingSoonRows.map((row) => row.siteId)),
+  );
   const { coverageRows, metricMeta, quarterlyMaterialSummary } = buildQuarterlySummary(
     activeSites,
     materialSourceReports,
     today,
   );
   const attention = buildAttentionRows(data, overviewRows, dispatchOverviewRows, today);
-  const { endingSoonRows, endingSoonSummary } = buildEndingSoonSummary(activeSites, today);
   const priorityQuarterlyManagementRows = buildPriorityQuarterlyManagementRows(
     data.sites,
     overviewRows,

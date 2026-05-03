@@ -48,6 +48,7 @@
     "verify:erp-live": "tsx scripts/verifyErpLiveContracts.ts",
     "probe:api-live": "tsx scripts/probeSafetyApiLive.ts",
     "verify:api-live-budgets": "tsx scripts/probeSafetyApiLive.ts --enforce-budgets",
+    "sites:complete-expired": "tsx scripts/completeExpiredPlannedSites.ts",
     "generate:service-intro": "tsx scripts/generateServiceIntro.ts",
     "import:hazard-countermeasure": "python scripts/import_hazard_countermeasure_catalog.py",
     "capture:naver-review": "tsx scripts/captureNaverReview.ts",

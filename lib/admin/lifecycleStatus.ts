@@ -11,7 +11,18 @@ import type {
 import type { SafetyHeadquarter } from '@/types/controller';
 
 type HeadquarterLike = Pick<SafetyHeadquarter, 'is_active' | 'lifecycle_status'>;
-type SiteLike = Pick<SafetySite, 'status' | 'lifecycle_status' | 'contract_status'> & {
+type SiteLike = Pick<
+  SafetySite,
+  | 'contract_date'
+  | 'contract_end_date'
+  | 'contract_signed_date'
+  | 'contract_start_date'
+  | 'project_end_date'
+  | 'project_start_date'
+  | 'status'
+  | 'lifecycle_status'
+  | 'contract_status'
+> & {
   is_active?: boolean | null;
 };
 type ReportLike = Pick<
@@ -58,6 +69,49 @@ function isWorkflowStatus(value: string): value is SafetyReportWorkflowStatus {
   return value === 'draft' || value === 'submitted' || value === 'published';
 }
 
+function normalizeDateText(value: unknown): string {
+  const normalized = normalizeText(value);
+  return /^\d{4}-\d{2}-\d{2}$/.test(normalized) ? normalized : '';
+}
+
+function getKoreanTodayToken(date: Date | string = new Date()): string {
+  if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return date;
+  }
+
+  const nextDate = typeof date === 'string' ? new Date(date) : date;
+  const parts = new Intl.DateTimeFormat('en', {
+    day: '2-digit',
+    month: '2-digit',
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+  }).formatToParts(nextDate);
+  const byType = new Map(parts.map((part) => [part.type, part.value]));
+  return `${byType.get('year')}-${byType.get('month')}-${byType.get('day')}`;
+}
+
+function resolveSitePeriodStatus(
+  site: SiteLike | null | undefined,
+  today: Date | string = new Date(),
+): Extract<SafetySiteLifecycleStatus, 'planned' | 'active' | 'closed'> | null {
+  const contractEndDate = normalizeDateText(site?.contract_end_date);
+  const projectEndDate = normalizeDateText(site?.project_end_date);
+  const endDate = contractEndDate || projectEndDate;
+  if (!endDate) return null;
+
+  const contractStartDate =
+    normalizeDateText(site?.contract_start_date) ||
+    normalizeDateText(site?.contract_date) ||
+    normalizeDateText(site?.contract_signed_date);
+  const projectStartDate = normalizeDateText(site?.project_start_date);
+  const startDate = contractStartDate || projectStartDate;
+  const todayToken = getKoreanTodayToken(today);
+
+  if (endDate < todayToken) return 'closed';
+  if (startDate && startDate > todayToken) return 'planned';
+  return 'active';
+}
+
 export function normalizeHeadquarterLifecycleStatus(
   headquarter: HeadquarterLike | null | undefined,
 ): SafetyHeadquarterLifecycleStatus {
@@ -85,10 +139,27 @@ export function applyHeadquarterLifecycleStatus<T extends HeadquarterLike>(
 
 export function normalizeSiteLifecycleStatus(
   site: SiteLike | null | undefined,
+  today: Date | string = new Date(),
 ): SafetySiteLifecycleStatus {
   const contractStatus = normalizeText(site?.contract_status);
+  const legacyStatus = normalizeText(site?.status);
+  if (legacyStatus === 'deleted') {
+    return 'deleted';
+  }
+
   if (contractStatus === 'completed') {
-    return normalizeText(site?.status) === 'deleted' ? 'deleted' : 'closed';
+    return 'closed';
+  }
+  if (contractStatus === 'paused' || legacyStatus === 'paused') {
+    return 'paused';
+  }
+  if (normalizeBoolean(site?.is_active) === false) {
+    return 'deleted';
+  }
+
+  const periodStatus = resolveSitePeriodStatus(site, today);
+  if (periodStatus) {
+    return periodStatus;
   }
 
   const lifecycleStatus = normalizeText(site?.lifecycle_status);
@@ -96,16 +167,8 @@ export function normalizeSiteLifecycleStatus(
     return lifecycleStatus;
   }
 
-  const legacyStatus = normalizeText(site?.status);
   if (isSiteLifecycleStatus(legacyStatus)) {
     return legacyStatus;
-  }
-  if (contractStatus === 'paused') {
-    return 'paused';
-  }
-
-  if (normalizeBoolean(site?.is_active) === false) {
-    return 'deleted';
   }
 
   if (legacyStatus === 'planned') {
@@ -120,12 +183,13 @@ export function normalizeSiteLifecycleStatus(
 
 export function applySiteLifecycleStatus<T extends SiteLike>(
   site: T,
+  today: Date | string = new Date(),
 ): T & {
   is_active: boolean;
   lifecycle_status: SafetySiteLifecycleStatus;
   status: SafetySiteLifecycleStatus;
 } {
-  const lifecycleStatus = normalizeSiteLifecycleStatus(site);
+  const lifecycleStatus = normalizeSiteLifecycleStatus(site, today);
   return {
     ...site,
     is_active: lifecycleStatus !== 'deleted',

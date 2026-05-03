@@ -169,7 +169,7 @@ export function isManageableSiteScope(site: SiteLike | null | undefined, today: 
   if (!site) return false;
   void today;
 
-  const lifecycleStatus = normalizeSiteLifecycleStatus(site);
+  const lifecycleStatus = normalizeSiteLifecycleStatus(site, today);
   if (lifecycleStatus === 'closed' || lifecycleStatus === 'deleted') return false;
 
   const headquarterStatus = normalizeHeadquarterLifecycleStatus(site.headquarter_detail);
@@ -187,7 +187,7 @@ export function isCurrentSiteManagementWindow(site: SiteLike | null | undefined,
 export function isDispatchManagementSiteScope(site: SiteLike | null | undefined, today: Date) {
   if (!site || !isManageableSiteScope(site, today)) return false;
   return (
-    normalizeSiteLifecycleStatus(site) === 'active' &&
+    normalizeSiteLifecycleStatus(site, today) === 'active' &&
     isSiteInCurrentQuarterWindow(site, today)
   );
 }
@@ -227,7 +227,7 @@ export function isPriorityQuarterlySiteScope({
 }: PriorityQuarterlyScopeInput) {
   if (!isManageableSiteScope(site, today)) return false;
   if ((site.project_amount ?? 0) < PRIORITY_PROJECT_AMOUNT) return false;
-  return normalizeSiteLifecycleStatus(site) === 'active' && isSiteInCurrentQuarterWindow(site, today);
+  return normalizeSiteLifecycleStatus(site, today) === 'active' && isSiteInCurrentQuarterWindow(site, today);
 }
 
 export function isPriorityQuarterlyManagementRowScope(

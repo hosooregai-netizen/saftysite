@@ -139,7 +139,7 @@ test('current-quarter site scope prefers project period and falls back to contra
   );
 });
 
-test('dispatch management rows keep non-priority active current-quarter rows only', () => {
+test('dispatch management rows include period-active current-quarter rows only', () => {
   const siteById = new Map([
     [
       'site-active-quarter',
@@ -165,17 +165,30 @@ test('dispatch management rows keep non-priority active current-quarter rows onl
         status: 'planned',
       }),
     ],
+    [
+      'site-future-quarter',
+      buildSite({
+        project_start_date: '2026-05-01',
+        project_end_date: '2026-06-30',
+        lifecycle_status: 'planned',
+        status: 'planned',
+      }),
+    ],
   ]);
 
   const rows = [
     buildDispatchRow({ siteId: 'site-active-quarter' }),
     buildDispatchRow({ siteId: 'site-other-quarter' }),
     buildDispatchRow({ siteId: 'site-planned-quarter' }),
+    buildDispatchRow({ siteId: 'site-future-quarter' }),
   ];
 
   const filtered = buildDispatchManagementRows(rows, siteById, today);
 
-  assert.deepEqual(filtered.map((row) => row.siteId), ['site-active-quarter']);
+  assert.deepEqual(filtered.map((row) => row.siteId), [
+    'site-active-quarter',
+    'site-planned-quarter',
+  ]);
 });
 
 test('completed contract sites are excluded from current management scopes', () => {
