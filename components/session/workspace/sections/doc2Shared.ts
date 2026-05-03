@@ -45,6 +45,8 @@ export function updateOverviewField(
 
       return {
         ...current,
+        scheduleId: nextRound === current.reportNumber ? current.scheduleId : null,
+        scheduleRoundNo: nextRound === current.reportNumber ? current.scheduleRoundNo : null,
         reportNumber: nextRound,
         meta: {
           ...current.meta,

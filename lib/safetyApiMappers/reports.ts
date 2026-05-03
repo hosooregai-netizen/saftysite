@@ -78,6 +78,7 @@ function buildTechnicalGuidancePayloadForSave(
   return {
     siteKey: site.id,
     scheduleId: session.scheduleId ?? null,
+    scheduleRoundNo: session.scheduleRoundNo ?? null,
     reportNumber: session.reportNumber,
     currentSection: session.currentSection,
     adminSiteSnapshot: session.adminSiteSnapshot,
@@ -192,6 +193,7 @@ export function mapSafetyReportToInspectionSession(
     id: report.report_key,
     siteKey: report.site_id,
     scheduleId: report.schedule_id ?? normalizeMapperText(payload.scheduleId) ?? null,
+    scheduleRoundNo: parsePositiveInteger(String(payload.scheduleRoundNo ?? '')),
     reportNumber:
       typeof report.visit_round === 'number' ? report.visit_round : payload.reportNumber,
     createdAt: normalizeMapperText(payload.createdAt) || report.created_at,
@@ -239,6 +241,18 @@ export function mapSafetyReportToInspectionSession(
   return mergeMasterDataIntoSession(normalized, masterData);
 }
 
+function resolveReportScheduleId(session: InspectionSession): string | null {
+  if (!session.scheduleId) {
+    return null;
+  }
+
+  if (typeof session.scheduleRoundNo === 'number' && session.scheduleRoundNo > 0) {
+    return session.scheduleRoundNo === session.reportNumber ? session.scheduleId : null;
+  }
+
+  return session.reportNumber > 1 ? session.scheduleId : null;
+}
+
 export function buildSafetyReportUpsertInput(
   session: InspectionSession,
   site: InspectionSite
@@ -249,7 +263,7 @@ export function buildSafetyReportUpsertInput(
     report_key: session.id,
     report_title: getSessionTitle(session),
     site_id: site.id,
-    schedule_id: session.scheduleId || null,
+    schedule_id: resolveReportScheduleId(session),
     visit_date: getSessionGuidanceDate(session) || null,
     visit_round: session.reportNumber || null,
     total_round: parsePositiveInteger(session.document2Overview.totalVisitCount),
@@ -264,6 +278,7 @@ export function buildSafetyReportUpsertInput(
       approver: session.meta.approver,
       currentSection: session.currentSection,
       reportNumber: session.reportNumber,
+      scheduleRoundNo: session.scheduleRoundNo ?? null,
       controllerReview: session.controllerReview,
     },
     status: 'draft',
@@ -279,6 +294,7 @@ export function createNewSafetySession(
   initial?: {
     meta?: Partial<InspectionSession['meta']>;
     scheduleId?: string | null;
+    scheduleRoundNo?: number | null;
     document4FollowUps?: InspectionSession['document4FollowUps'];
     technicalGuidanceRelations?: Partial<InspectionSession['technicalGuidanceRelations']>;
   }
@@ -293,6 +309,7 @@ export function createNewSafetySession(
           ...initial?.meta,
         },
         scheduleId: initial?.scheduleId,
+        scheduleRoundNo: initial?.scheduleRoundNo,
         document13Cases: masterData.caseFeed,
         document14SafetyInfos: masterData.safetyInfos,
         document4FollowUps: initial?.document4FollowUps,

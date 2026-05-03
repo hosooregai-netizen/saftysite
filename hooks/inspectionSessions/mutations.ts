@@ -73,6 +73,7 @@ export function useInspectionSessionsMutations(
     meta?: Partial<InspectionReportMeta>;
     reportNumber?: number;
     scheduleId?: string | null;
+    scheduleRoundNo?: number | null;
     document4FollowUps?: InspectionSession['document4FollowUps'];
     technicalGuidanceRelations?: Partial<InspectionSession['technicalGuidanceRelations']>;
   }) => {
@@ -84,6 +85,7 @@ export function useInspectionSessionsMutations(
       {
         meta: initial?.meta,
         scheduleId: initial?.scheduleId,
+        scheduleRoundNo: initial?.scheduleRoundNo,
         document4FollowUps: initial?.document4FollowUps,
         technicalGuidanceRelations: initial?.technicalGuidanceRelations,
       }

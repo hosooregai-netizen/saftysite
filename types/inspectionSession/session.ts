@@ -41,6 +41,7 @@ export interface InspectionSession {
   id: string;
   siteKey: string;
   scheduleId?: string | null;
+  scheduleRoundNo?: number | null;
   reportNumber: number;
   currentSection: InspectionSectionKey;
   meta: InspectionReportMeta;

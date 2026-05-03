@@ -57,6 +57,7 @@ export interface InspectionSessionsContextValue {
       meta?: Partial<InspectionReportMeta>;
       reportNumber?: number;
       scheduleId?: string | null;
+      scheduleRoundNo?: number | null;
       document4FollowUps?: InspectionSession['document4FollowUps'];
       technicalGuidanceRelations?: Partial<InspectionSession['technicalGuidanceRelations']>;
     }

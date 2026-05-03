@@ -387,6 +387,7 @@ export function useSiteReportListState(
     const nextSession = createSession(currentSite, {
       reportNumber: seedReportNumber,
       scheduleId: assignedSchedule.id,
+      scheduleRoundNo: assignedSchedule.roundNo,
       meta: {
         siteName: currentSite.siteName,
         reportDate: normalizedReportDate,
