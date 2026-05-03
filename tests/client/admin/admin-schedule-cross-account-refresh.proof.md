@@ -14,6 +14,7 @@ Worker account saves or changes a schedule date while the admin schedule calenda
 
 - `features/admin/sections/schedules/SchedulesSection.tsx` removes the fresh-cache early return for schedule calendar/queue payloads
 - the schedule section now increments `refreshNonce` on focus, visibility, and a 30-second interval, causing the schedule fetch effect to run again
-- the admin schedule snapshot now merges backend schedule rows into memo-backed rows so worker-entered `/me/schedules` changes are visible in the admin schedule tab
+- the admin schedule response now merges request-month backend calendar/queue rows into memo-backed rows so worker-entered `/me/schedules` changes are visible in the admin schedule tab
+- backend rows are matched by schedule id or the same site/round pair, covering worker rows whose backend id differs from the generated admin round id
 - validation command: `npx eslint features/admin/sections/schedules/SchedulesSection.tsx`
 - validation command: `npx tsx --test server/admin/scheduleSnapshot.test.ts`

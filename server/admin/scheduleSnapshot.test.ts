@@ -100,3 +100,30 @@ test('admin schedule snapshot merge preserves backend-only rows', () => {
   assert.equal(rows[0]?.id, 'backend-only');
   assert.equal(rows[0]?.plannedDate, '2026-04-24');
 });
+
+test('admin schedule snapshot merge matches backend rows by site and round when ids differ', () => {
+  const rows = mergeAdminScheduleSnapshotRows({
+    backendRows: [
+      schedule({
+        id: 'backend-schedule-uuid',
+        plannedDate: '2026-04-29',
+        roundNo: 6,
+        selectionConfirmedAt: '2026-05-04T09:00:00.000Z',
+        siteId: 'site-2',
+      }),
+    ],
+    memoRows: [
+      schedule({
+        id: 'schedule:site-2:6',
+        plannedDate: '',
+        roundNo: 6,
+        siteId: 'site-2',
+      }),
+    ],
+  });
+
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0]?.id, 'backend-schedule-uuid');
+  assert.equal(rows[0]?.plannedDate, '2026-04-29');
+  assert.equal(rows[0]?.siteName, 'Site');
+});

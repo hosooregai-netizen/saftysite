@@ -16,8 +16,14 @@ import {
   alignScheduleRowsWithLegacyReports,
 } from '@/server/admin/legacyReportAlignment';
 import { getLegacyAdminReportsSnapshot } from '@/server/admin/legacyAdminReportsSnapshot';
-import { fetchAdminSchedulesServer } from '@/server/admin/safetyApiServer';
-import { mapBackendScheduleListResponse } from '@/server/admin/upstreamMappers';
+import {
+  fetchAdminScheduleCalendarServer,
+  fetchAdminScheduleQueueServer,
+} from '@/server/admin/safetyApiServer';
+import {
+  mapBackendAdminScheduleCalendarResponse,
+  mapBackendAdminScheduleQueueResponse,
+} from '@/server/admin/upstreamMappers';
 
 /**
  * Schedule snapshot is a legacy/shared helper layer.
@@ -56,8 +62,12 @@ function isFresh(snapshot: ScheduleSourceSnapshot | null) {
   return Date.now() - refreshedAt < SNAPSHOT_TTL_MS;
 }
 
-function getScheduleMergeKey(row: SafetyInspectionSchedule) {
-  return row.id || `${row.siteId}:${row.roundNo}`;
+function getScheduleIdKey(row: SafetyInspectionSchedule) {
+  return row.id ? `id:${row.id}` : '';
+}
+
+function getScheduleSiteRoundKey(row: SafetyInspectionSchedule) {
+  return row.siteId && row.roundNo > 0 ? `site-round:${row.siteId}:${row.roundNo}` : '';
 }
 
 function parseTime(value: string) {
@@ -118,19 +128,32 @@ export function mergeAdminScheduleSnapshotRows(input: {
   memoRows: SafetyInspectionSchedule[];
 }) {
   const mergedByKey = new Map<string, SafetyInspectionSchedule>();
+  const aliasToKey = new Map<string, string>();
+  const registerAliases = (row: SafetyInspectionSchedule, primaryKey: string) => {
+    const idKey = getScheduleIdKey(row);
+    const siteRoundKey = getScheduleSiteRoundKey(row);
+    if (idKey) aliasToKey.set(idKey, primaryKey);
+    if (siteRoundKey) aliasToKey.set(siteRoundKey, primaryKey);
+  };
+
   input.memoRows.forEach((row) => {
-    const key = getScheduleMergeKey(row);
-    if (key) mergedByKey.set(key, row);
+    const key = getScheduleIdKey(row) || getScheduleSiteRoundKey(row);
+    if (!key) return;
+    mergedByKey.set(key, row);
+    registerAliases(row, key);
   });
 
   input.backendRows.forEach((backendRow) => {
-    const key = getScheduleMergeKey(backendRow);
+    const key =
+      aliasToKey.get(getScheduleIdKey(backendRow)) ||
+      aliasToKey.get(getScheduleSiteRoundKey(backendRow)) ||
+      getScheduleIdKey(backendRow) ||
+      getScheduleSiteRoundKey(backendRow);
     if (!key) return;
     const memoRow = mergedByKey.get(key);
-    mergedByKey.set(
-      key,
-      memoRow ? chooseScheduleSnapshotRow(memoRow, backendRow) : backendRow,
-    );
+    const mergedRow = memoRow ? chooseScheduleSnapshotRow(memoRow, backendRow) : backendRow;
+    mergedByKey.set(key, mergedRow);
+    registerAliases(mergedRow, key);
   });
 
   return Array.from(mergedByKey.values());
@@ -138,20 +161,41 @@ export function mergeAdminScheduleSnapshotRows(input: {
 
 async function fetchBackendAdminScheduleRows(
   token: string,
+  filters: {
+    assigneeUserId?: string;
+    month?: string;
+    query?: string;
+    siteId?: string;
+    status?: string;
+  },
   request: Request | null,
 ) {
   try {
-    return mapBackendScheduleListResponse(
-      await fetchAdminSchedulesServer(
+    const params = {
+      assignee_user_id: filters.assigneeUserId || '',
+      limit: 5000,
+      month: filters.month || '',
+      offset: 0,
+      query: filters.query || '',
+      site_id: filters.siteId || '',
+      status: filters.status || '',
+    };
+    const [calendar, queue] = await Promise.all([
+      fetchAdminScheduleCalendarServer(
         token,
-        {
-          limit: 5000,
-          month: 'all',
-          offset: 0,
-        },
+        params,
         request,
       ),
-    ).rows;
+      fetchAdminScheduleQueueServer(
+        token,
+        params,
+        request,
+      ),
+    ]);
+    return [
+      ...mapBackendAdminScheduleCalendarResponse(calendar).rows,
+      ...mapBackendAdminScheduleQueueResponse(queue).rows,
+    ];
   } catch {
     return [];
   }
@@ -166,9 +210,8 @@ export async function refreshAdminScheduleSnapshot(
   const nextPromise = Promise.all([
     getAdminDirectorySnapshot(token, request),
     getLegacyAdminReportsSnapshot(),
-    fetchBackendAdminScheduleRows(token, request),
   ])
-    .then(([directorySnapshot, legacyReports, backendRows]) => {
+    .then(([directorySnapshot, legacyReports]) => {
       const data: ControllerDashboardData = {
         ...directorySnapshot.data,
         contentItems: [],
@@ -177,10 +220,7 @@ export async function refreshAdminScheduleSnapshot(
       const snapshot: ScheduleSourceSnapshot = {
         data,
         refreshedAt: new Date().toISOString(),
-        rows: alignScheduleRowsWithLegacyReports(mergeAdminScheduleSnapshotRows({
-          backendRows,
-          memoRows,
-        }), {
+        rows: alignScheduleRowsWithLegacyReports(memoRows, {
           legacyRows: legacyReports,
           sites: data.sites,
           today,
@@ -244,17 +284,21 @@ export async function buildAdminScheduleCalendarSnapshotResponse(
   today = new Date(),
 ): Promise<SafetyAdminScheduleCalendarResponse> {
   const snapshot = await getAdminScheduleSnapshot(token, request, today);
-  const rows = buildAdminCalendarSchedules(snapshot.rows, filters, today);
-  const unselectedRows = buildAdminQueueSchedules(snapshot.rows, filters, today);
+  const sourceRows = mergeAdminScheduleSnapshotRows({
+    backendRows: await fetchBackendAdminScheduleRows(token, filters, request),
+    memoRows: snapshot.rows,
+  });
+  const rows = buildAdminCalendarSchedules(sourceRows, filters, today);
+  const unselectedRows = buildAdminQueueSchedules(sourceRows, filters, today);
   const allSelectedRows = buildAdminCalendarSchedules(
-    snapshot.rows,
+    sourceRows,
     { ...filters, month: 'all' },
     today,
   );
 
   return {
     allSelectedTotal: allSelectedRows.length,
-    availableMonths: buildFilteredAvailableMonths(snapshot.rows, filters, today),
+    availableMonths: buildFilteredAvailableMonths(sourceRows, filters, today),
     month: filters.month || '',
     monthTotal: rows.length,
     refreshedAt: snapshot.refreshedAt,
@@ -278,9 +322,13 @@ export async function buildAdminScheduleQueueSnapshotResponse(
   today = new Date(),
 ): Promise<SafetyAdminScheduleQueueResponse> {
   const snapshot = await getAdminScheduleSnapshot(token, request, today);
+  const sourceRows = mergeAdminScheduleSnapshotRows({
+    backendRows: await fetchBackendAdminScheduleRows(token, filters, request),
+    memoRows: snapshot.rows,
+  });
   const offset = Math.max(0, filters.offset ?? 0);
   const limit = Math.max(1, Math.min(5000, filters.limit ?? 50));
-  const rows = buildAdminQueueSchedules(snapshot.rows, filters, today);
+  const rows = buildAdminQueueSchedules(sourceRows, filters, today);
 
   return {
     limit,
