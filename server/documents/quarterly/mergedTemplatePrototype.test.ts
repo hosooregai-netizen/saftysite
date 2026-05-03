@@ -41,15 +41,15 @@ function countBlankParagraphsBetweenTablesByText(xml: string, leftText: string, 
   ).length;
 }
 
-test('buildQuarterlyMergedTemplatePrototype builds a single-section merged template for v9', async () => {
-  const document = await buildQuarterlyMergedTemplatePrototype('v9');
+test('buildQuarterlyMergedTemplatePrototype builds a single-section merged template for v10', async () => {
+  const document = await buildQuarterlyMergedTemplatePrototype('v10');
   const zip = await JSZip.loadAsync(document.buffer);
   const [sectionXml, contentHpf] = await Promise.all([
     zip.file('Contents/section0.xml')?.async('string'),
     zip.file('Contents/content.hpf')?.async('string'),
   ]);
 
-  assert.equal(document.filename, 'quarterly-merged-template.v9.hwpx');
+  assert.equal(document.filename, 'quarterly-merged-template.v10.hwpx');
   assert.ok(document.imagePlaceholders.length > 0);
   assert.ok(sectionXml);
   assert.ok(contentHpf);
@@ -102,12 +102,12 @@ test('buildQuarterlyMergedTemplatePrototype builds a single-section merged templ
   }
 });
 
-test('buildQuarterlyMergedTemplatePrototype also supports v9-1 inspection variant', async () => {
-  const document = await buildQuarterlyMergedTemplatePrototype('v9-1');
+test('buildQuarterlyMergedTemplatePrototype also supports v10-1 inspection variant', async () => {
+  const document = await buildQuarterlyMergedTemplatePrototype('v10-1');
   const zip = await JSZip.loadAsync(document.buffer);
   const sectionXml = await zip.file('Contents/section0.xml')?.async('string');
 
-  assert.equal(document.filename, 'quarterly-merged-template.v9-1.hwpx');
+  assert.equal(document.filename, 'quarterly-merged-template.v10-1.hwpx');
   assert.ok(document.imagePlaceholders.length > 0);
   assert.ok(sectionXml);
   assert.match(sectionXml, /\{appendices\[0\]\.sec2\.guidance_date\}/);

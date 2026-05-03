@@ -377,6 +377,29 @@ const TEXT_PLACEHOLDERS = [
 ] as const;
 const TEMPLATE_TEXT_TOKEN_SET = new Set<string>(TEXT_PLACEHOLDERS);
 const TEMPLATE_REPEAT_TOKEN_SET = new Set<string>(REPEAT_BLOCKS);
+const NORMALIZED_TEMPLATE_TEXT_TOKEN_SET = new Set<string>(
+  TEXT_PLACEHOLDERS.map((placeholder) => placeholder.replace(/\[\d+\]/g, '[0]')),
+);
+const MULTILINE_TEXT_PLACEHOLDERS = new Set<string>([
+  'sec2.process_and_notes',
+  'sec5.summary_text',
+  'sec7.findings[0].hazard_description',
+  'sec7.findings[0].improvement_plan',
+  'sec7.findings[0].emphasis',
+  'sec7.findings[0].legal_reference_title',
+  'sec7.findings[0].reference_material_2',
+  'sec8.plans[0].process_name',
+  'sec8.plans[0].hazard',
+  'sec8.plans[0].countermeasure',
+  'sec10.measurements[0].safety_criteria',
+  'sec11.education[0].content',
+]);
+
+interface TextPlaceholderLayoutOptions {
+  templateVariant?: InspectionTemplateVariant;
+}
+
+type TextPlaceholderLayoutMode = 'single-line' | 'multi-line' | null;
 
 const BASE_TEMPLATE_IMAGE_PLACEHOLDERS: TemplateImagePlaceholder[] = [
   { table: 2, row: 2, col: 0, placeholderPath: 'sec3.fixed[0].photo_image', binaryItemId: 'tplimg01' },
@@ -543,7 +566,7 @@ const BASE_TEMPLATE_IMAGE_PLACEHOLDERS: TemplateImagePlaceholder[] = [
 export function getTemplateImagePlaceholders(
   variant: InspectionTemplateVariant,
 ): TemplateImagePlaceholder[] {
-  if (variant === 'v9-1') {
+  if (variant === 'v10-1') {
     return [
       ...BASE_TEMPLATE_IMAGE_PLACEHOLDERS,
       {
@@ -578,7 +601,7 @@ function valueOrBlank(value: unknown): string {
 
 function valueOrDash(value: unknown): string {
   const normalized = valueOrBlank(value);
-  return normalized || '-';
+  return normalized;
 }
 
 function buildVisitPagePrefix(value: unknown): string {
@@ -621,6 +644,50 @@ function escapeRegExp(value: string): string {
 
 function normalizeHwpxPlainText(value: string): string {
   return value.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+}
+
+function normalizePlaceholderPathForLayout(placeholderPath: string): string {
+  return placeholderPath.trim().replace(/\[\d+\]/g, '[0]');
+}
+
+function getInlineTextPlaceholderPaths(text: string): string[] {
+  return Array.from(text.matchAll(/\{(?![#/])([^{}]+)\}/g), (match) => match[1].trim());
+}
+
+function resolveTextPlaceholderLayoutMode(
+  placeholderPaths: string[],
+  options: TextPlaceholderLayoutOptions = {},
+): TextPlaceholderLayoutMode {
+  if (!options.templateVariant || placeholderPaths.length === 0) {
+    return null;
+  }
+
+  const normalizedPaths = placeholderPaths.map(normalizePlaceholderPathForLayout);
+  if (normalizedPaths.some((placeholderPath) => MULTILINE_TEXT_PLACEHOLDERS.has(placeholderPath))) {
+    return 'multi-line';
+  }
+
+  return normalizedPaths.every((placeholderPath) =>
+    NORMALIZED_TEMPLATE_TEXT_TOKEN_SET.has(placeholderPath)
+  )
+    ? 'single-line'
+    : null;
+}
+
+function collapseGeneratedSingleLineText(text: string): string {
+  return normalizeHwpxPlainText(text).replace(/\s*\n\s*/g, ' ').trim();
+}
+
+function setParagraphParaPrId(paragraphOpen: string, paraPrId: string): string {
+  return /paraPrIDRef=/.test(paragraphOpen)
+    ? paragraphOpen.replace(/paraPrIDRef="[^"]*"/, `paraPrIDRef="${paraPrId}"`)
+    : paragraphOpen.replace(/>$/, ` paraPrIDRef="${paraPrId}">`);
+}
+
+function setSubListLineWrap(openTag: string, lineWrap: 'BREAK' | 'SQUEEZE'): string {
+  return /lineWrap=/.test(openTag)
+    ? openTag.replace(/lineWrap="[^"]*"/, `lineWrap="${lineWrap}"`)
+    : openTag.replace(/>$/, ` lineWrap="${lineWrap}">`);
 }
 
 function estimateHwpxMaxCharsPerLine(horzSize: number, textHeight: number): number {
@@ -706,7 +773,11 @@ function isHwpxBlankParagraph(paragraphXml: string): boolean {
   return !text;
 }
 
-function replaceStructuredTextPlaceholders(xml: string, textBindings: Record<string, string>): string {
+function replaceStructuredTextPlaceholders(
+  xml: string,
+  textBindings: Record<string, string>,
+  options: TextPlaceholderLayoutOptions = {},
+): string {
   return xml.replace(/<hp:subList\b[\s\S]*?<\/hp:subList>/g, (subListXml) => {
     const openTagMatch = subListXml.match(/^<hp:subList\b[^>]*>/);
     if (!openTagMatch) {
@@ -721,6 +792,8 @@ function replaceStructuredTextPlaceholders(xml: string, textBindings: Record<str
     }
 
     let changed = false;
+    let hasMultilineLayout = false;
+    let hasSingleLineLayout = false;
     const rebuilt: string[] = [];
 
     for (let index = 0; index < paragraphs.length; index += 1) {
@@ -745,6 +818,12 @@ function replaceStructuredTextPlaceholders(xml: string, textBindings: Record<str
         rebuilt.push(paragraphXml);
         continue;
       }
+      const layoutMode = resolveTextPlaceholderLayoutMode(
+        getInlineTextPlaceholderPaths(rawTextTemplate),
+        options,
+      );
+      hasMultilineLayout ||= layoutMode === 'multi-line';
+      hasSingleLineLayout ||= layoutMode === 'single-line';
 
       const lineSegMatch = lineSegArrayXml.match(
         /^(<hp:linesegarray>\s*)(<hp:lineseg\b[^>]*\bvertpos="(\d+)"[^>]*\bvertsize="(\d+)"[^>]*\btextheight="(\d+)"[^>]*\bspacing="(\d+)"[^>]*\bhorzsize="(\d+)"[^>]*\/>)([\s\S]*<\/hp:linesegarray>)$/,
@@ -794,16 +873,23 @@ function replaceStructuredTextPlaceholders(xml: string, textBindings: Record<str
         /<hp:lineBreak\s*\/>/g,
         '\n',
       );
-      const logicalLines = normalizeHwpxPlainText(renderedText).split('\n');
-      const wrappedLines = logicalLines.flatMap((line) =>
-        wrapHwpxLine(line, estimateHwpxMaxCharsPerLine(horzSize, textHeight)),
-      );
-      const finalLines = wrappedLines.length ? wrappedLines : [' '];
+      const logicalLines =
+        layoutMode === 'single-line'
+          ? [collapseGeneratedSingleLineText(renderedText)]
+          : normalizeHwpxPlainText(renderedText).split('\n');
+      const finalLines =
+        layoutMode === null
+          ? logicalLines.flatMap((line) =>
+              wrapHwpxLine(line, estimateHwpxMaxCharsPerLine(horzSize, textHeight)),
+            )
+          : logicalLines;
       const useSingleParagraphLineBreaks = rawTextTemplate.includes('{sec5.summary_text}');
+      const paragraphOpenForLayout =
+        layoutMode === 'multi-line' ? setParagraphParaPrId(paragraphOpen, '0') : paragraphOpen;
 
       if (useSingleParagraphLineBreaks) {
         rebuilt.push(
-          `${paragraphOpen}${textPrefix}${finalLines.map((line) => escapeXmlText(line)).join('<hp:lineBreak/>')}${textSuffix}${lineSegArrayOpen}${lineSegTemplate}${lineSegArrayClose}</hp:p>`,
+          `${paragraphOpenForLayout}${textPrefix}${finalLines.map((line) => escapeXmlText(line)).join('<hp:lineBreak/>')}${textSuffix}${lineSegArrayOpen}${lineSegTemplate}${lineSegArrayClose}</hp:p>`,
         );
         changed = true;
         index = lookaheadIndex - 1;
@@ -814,7 +900,7 @@ function replaceStructuredTextPlaceholders(xml: string, textBindings: Record<str
         ...finalLines.map((line, lineIndex) => {
           const nextVertPos = baseVertPos + lineStep * lineIndex;
           const nextLineSeg = lineSegTemplate.replace(/\bvertpos="\d+"/, `vertpos="${nextVertPos}"`);
-          return `${paragraphOpen}${textPrefix}${escapeXmlText(line)}${textSuffix}${lineSegArrayOpen}${nextLineSeg}${lineSegArrayClose}</hp:p>`;
+          return `${paragraphOpenForLayout}${textPrefix}${escapeXmlText(line)}${textSuffix}${lineSegArrayOpen}${nextLineSeg}${lineSegArrayClose}</hp:p>`;
         }),
       );
       changed = true;
@@ -825,7 +911,12 @@ function replaceStructuredTextPlaceholders(xml: string, textBindings: Record<str
       return subListXml;
     }
 
-    return `${openTag}${rebuilt.join('')}</hp:subList>`;
+    const nextOpenTag = hasMultilineLayout
+      ? setSubListLineWrap(openTag, 'BREAK')
+      : hasSingleLineLayout
+        ? setSubListLineWrap(openTag, 'SQUEEZE')
+        : openTag;
+    return `${nextOpenTag}${rebuilt.join('')}</hp:subList>`;
   });
 }
 
@@ -906,10 +997,10 @@ function buildNotificationMethodLayout(overview: InspectionSession['document2Ove
 function normalizeCaseTitleForTemplate(title: string): string {
   const normalized = valueOrBlank(title);
   if (!normalized) {
-    return '-';
+    return '';
   }
 
-  return normalized.replace(/\s+/g, '') === '\uD574\uB2F9\uC5C6\uC74C' ? '-' : normalized;
+  return normalized.replace(/\s+/g, '') === '\uD574\uB2F9\uC5C6\uC74C' ? '' : normalized;
 }
 
 function stripParentheticalText(value: string): string {
@@ -1959,8 +2050,12 @@ export function expandRepeatBlocks(
   };
 }
 
-export function replaceTextPlaceholders(xml: string, textBindings: Record<string, string>): string {
-  return replaceStructuredTextPlaceholders(xml, textBindings).replace(/\{(?![#/])([^{}]+)\}/g, (_match, rawPath: string) => {
+export function replaceTextPlaceholders(
+  xml: string,
+  textBindings: Record<string, string>,
+  options: TextPlaceholderLayoutOptions = {},
+): string {
+  return replaceStructuredTextPlaceholders(xml, textBindings, options).replace(/\{(?![#/])([^{}]+)\}/g, (_match, rawPath: string) => {
     const placeholderPath = rawPath.trim();
     return escapeXmlText(textBindings[placeholderPath] ?? '');
   });
@@ -2938,7 +3033,7 @@ function applyVariantTemplateAnnotations(
 ): string {
   let nextSectionXml = ensureCoverClientRepresentativePlaceholder(sectionXml);
 
-  if (variant === 'v9-1') {
+  if (variant === 'v10-1') {
     nextSectionXml = stripPlaceholderFromTemplateCell(
       nextSectionXml,
       { table: 7, row: 19, col: 0 },
@@ -3573,7 +3668,11 @@ export async function buildInspectionHwpxDocument(
         templateImagePlaceholders,
       );
       boundSectionXml = stripLineSegArrays(
-        replaceTextPlaceholders(applyTemplateTextQuirks(expanded.xml), binding.text),
+        replaceTextPlaceholders(
+          applyTemplateTextQuirks(expanded.xml),
+          binding.text,
+          { templateVariant },
+        ),
       );
     } else {
       const donorBuffer = await loadTemplateImageDonorBuffer();
@@ -3606,7 +3705,11 @@ export async function buildInspectionHwpxDocument(
         normalized.sourceBinaryByPlaceholderPath,
       );
       boundSectionXml = stripLineSegArrays(
-        replaceTextPlaceholders(applyTemplateTextQuirks(expanded.xml), binding.text),
+        replaceTextPlaceholders(
+          applyTemplateTextQuirks(expanded.xml),
+          binding.text,
+          { templateVariant },
+        ),
       );
       boundContentHpf = await bindImagesIntoZip(
         zip,

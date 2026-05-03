@@ -102,10 +102,10 @@ function selectQuarterlyMergedTemplateVariant(selectedSessions: InspectionSessio
   }
 
   return selectedSessions.some(
-    (session) => selectInspectionTemplateVariant(session) === 'v9-1',
+    (session) => selectInspectionTemplateVariant(session) === 'v10-1',
   )
-    ? 'v9-1'
-    : 'v9';
+    ? 'v10-1'
+    : 'v10';
 }
 
 function sanitizeDocumentFileName(value: string | null | undefined, fallback: string) {

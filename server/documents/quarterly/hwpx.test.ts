@@ -36,13 +36,6 @@ function collectDuplicateTableIds(xml: string) {
   return Array.from(new Set(tableIds.filter((id, index) => tableIds.indexOf(id) !== index)));
 }
 
-function collectCharacterTreatedTables(xml: string) {
-  const tables = xml.match(/<hp:tbl\b[\s\S]*?<\/hp:tbl>/g) ?? [];
-  return tables
-    .filter((tableXml) => (tableXml.match(/<hp:pos\b[^>]*treatAsChar="(\d+)"/)?.[1] ?? '0') === '1')
-    .map((tableXml) => tableXml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80));
-}
-
 function findTableByText(xml: string, text: string) {
   return (
     (xml.match(/<hp:tbl\b[\s\S]*?<\/hp:tbl>/g) ?? []).find((tableXml) =>
@@ -286,7 +279,7 @@ test('buildQuarterlyHwpxDocument renders doc7 manual reference text inside the m
   assert.match(flattenedText, /appendix-reference-hazard[\s\S]*appendix-reference-body/);
 });
 
-test('buildQuarterlyHwpxDocument renders v9-1 appendix content into the merged section template', async () => {
+test('buildQuarterlyHwpxDocument renders v10-1 appendix content into the merged section template', async () => {
   const fixture = buildQuarterlyFixture();
   const accidentSession = fixture.sessions[0];
   accidentSession.document2Overview.accidentOccurred = 'yes';
@@ -298,16 +291,16 @@ test('buildQuarterlyHwpxDocument renders v9-1 appendix content into the merged s
       carryForward: false,
       causativeAgentKey: '',
       emphasis: '',
-      hazardDescription: 'appendix-v91-hazard',
-      id: 'finding-v91',
-      improvementPlan: 'appendix-v91-plan',
+      hazardDescription: 'appendix-v101-hazard',
+      id: 'finding-v101',
+      improvementPlan: 'appendix-v101-plan',
       improvementRequest: '',
       inspector: '',
       hazardCountermeasureItemId: '',
       legalReferenceId: '',
-      legalReferenceTitle: 'law-v91',
+      legalReferenceTitle: 'law-v101',
       likelihood: '',
-      location: 'zone-v91',
+      location: 'zone-v101',
       photoUrl: '',
       photoUrl2: '',
       referenceCatalogAccidentType: '',
@@ -332,9 +325,9 @@ test('buildQuarterlyHwpxDocument renders v9-1 appendix content into the merged s
   assert.ok(contentHpf);
   assert.ok(sectionXml);
   assert.doesNotMatch(contentHpf, /href="Contents\/section1\.xml"/);
-  assert.match(sectionXml, /appendix-v91-hazard/);
+  assert.match(sectionXml, /appendix-v101-hazard/);
   assert.doesNotMatch(sectionXml, /\{#appendices\}/);
-  const appendixSlice = extractAppendixSlice(sectionXml, 'appendix-v91-hazard');
+  const appendixSlice = extractAppendixSlice(sectionXml, 'appendix-v101-hazard');
   assert.doesNotMatch(appendixSlice, /hidePageNum="1"/);
   assert.doesNotMatch(appendixSlice, /www\.safetysite\.co\.kr/);
 });

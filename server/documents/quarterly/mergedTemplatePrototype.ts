@@ -48,8 +48,8 @@ const QUARTERLY_TEMPLATE_PATH = path.resolve(
   QUARTERLY_TEMPLATE_FILENAME,
 );
 const OUTPUT_FILENAME_BY_VARIANT: Record<InspectionTemplateVariant, string> = {
-  v9: 'quarterly-merged-template.v9.hwpx',
-  'v9-1': 'quarterly-merged-template.v9-1.hwpx',
+  v10: 'quarterly-merged-template.v10.hwpx',
+  'v10-1': 'quarterly-merged-template.v10-1.hwpx',
 };
 const APPENDIX_REPEAT_PATH = 'appendices';
 const BLANK_PNG_BASE64 =
