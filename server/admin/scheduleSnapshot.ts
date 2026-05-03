@@ -16,6 +16,8 @@ import {
   alignScheduleRowsWithLegacyReports,
 } from '@/server/admin/legacyReportAlignment';
 import { getLegacyAdminReportsSnapshot } from '@/server/admin/legacyAdminReportsSnapshot';
+import { fetchAdminSchedulesServer } from '@/server/admin/safetyApiServer';
+import { mapBackendScheduleListResponse } from '@/server/admin/upstreamMappers';
 
 /**
  * Schedule snapshot is a legacy/shared helper layer.
@@ -54,6 +56,107 @@ function isFresh(snapshot: ScheduleSourceSnapshot | null) {
   return Date.now() - refreshedAt < SNAPSHOT_TTL_MS;
 }
 
+function getScheduleMergeKey(row: SafetyInspectionSchedule) {
+  return row.id || `${row.siteId}:${row.roundNo}`;
+}
+
+function parseTime(value: string) {
+  if (!value) return 0;
+  const parsed = new Date(value).getTime();
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+function fillScheduleFallbackFields(
+  primary: SafetyInspectionSchedule,
+  fallback: SafetyInspectionSchedule,
+): SafetyInspectionSchedule {
+  return {
+    ...primary,
+    assigneeName: primary.assigneeName || fallback.assigneeName,
+    assigneeUserId: primary.assigneeUserId || fallback.assigneeUserId,
+    headquarterId: primary.headquarterId || fallback.headquarterId,
+    headquarterName: primary.headquarterName || fallback.headquarterName,
+    siteId: primary.siteId || fallback.siteId,
+    siteName: primary.siteName || fallback.siteName,
+    totalRounds: primary.totalRounds || fallback.totalRounds,
+    windowEnd: primary.windowEnd || fallback.windowEnd,
+    windowStart: primary.windowStart || fallback.windowStart,
+  };
+}
+
+function chooseScheduleSnapshotRow(
+  memoRow: SafetyInspectionSchedule,
+  backendRow: SafetyInspectionSchedule,
+) {
+  const memoConfirmedAt = parseTime(memoRow.selectionConfirmedAt);
+  const backendConfirmedAt = parseTime(backendRow.selectionConfirmedAt);
+
+  if (memoConfirmedAt && backendConfirmedAt && memoConfirmedAt !== backendConfirmedAt) {
+    return memoConfirmedAt > backendConfirmedAt
+      ? fillScheduleFallbackFields(memoRow, backendRow)
+      : fillScheduleFallbackFields(backendRow, memoRow);
+  }
+
+  if (!memoRow.plannedDate && backendRow.plannedDate) {
+    return fillScheduleFallbackFields(backendRow, memoRow);
+  }
+  if (memoRow.plannedDate && !backendRow.plannedDate) {
+    return fillScheduleFallbackFields(memoRow, backendRow);
+  }
+  if (!memoRow.linkedReportKey && backendRow.linkedReportKey) {
+    return fillScheduleFallbackFields(backendRow, memoRow);
+  }
+  if (!memoRow.actualVisitDate && backendRow.actualVisitDate) {
+    return fillScheduleFallbackFields(backendRow, memoRow);
+  }
+
+  return fillScheduleFallbackFields(memoRow, backendRow);
+}
+
+export function mergeAdminScheduleSnapshotRows(input: {
+  backendRows: SafetyInspectionSchedule[];
+  memoRows: SafetyInspectionSchedule[];
+}) {
+  const mergedByKey = new Map<string, SafetyInspectionSchedule>();
+  input.memoRows.forEach((row) => {
+    const key = getScheduleMergeKey(row);
+    if (key) mergedByKey.set(key, row);
+  });
+
+  input.backendRows.forEach((backendRow) => {
+    const key = getScheduleMergeKey(backendRow);
+    if (!key) return;
+    const memoRow = mergedByKey.get(key);
+    mergedByKey.set(
+      key,
+      memoRow ? chooseScheduleSnapshotRow(memoRow, backendRow) : backendRow,
+    );
+  });
+
+  return Array.from(mergedByKey.values());
+}
+
+async function fetchBackendAdminScheduleRows(
+  token: string,
+  request: Request | null,
+) {
+  try {
+    return mapBackendScheduleListResponse(
+      await fetchAdminSchedulesServer(
+        token,
+        {
+          limit: 5000,
+          month: 'all',
+          offset: 0,
+        },
+        request,
+      ),
+    ).rows;
+  } catch {
+    return [];
+  }
+}
+
 export async function refreshAdminScheduleSnapshot(
   token: string,
   request: Request | null = null,
@@ -63,16 +166,21 @@ export async function refreshAdminScheduleSnapshot(
   const nextPromise = Promise.all([
     getAdminDirectorySnapshot(token, request),
     getLegacyAdminReportsSnapshot(),
+    fetchBackendAdminScheduleRows(token, request),
   ])
-    .then(([directorySnapshot, legacyReports]) => {
+    .then(([directorySnapshot, legacyReports, backendRows]) => {
       const data: ControllerDashboardData = {
         ...directorySnapshot.data,
         contentItems: [],
       };
+      const memoRows = buildAdminScheduleRows(data, today);
       const snapshot: ScheduleSourceSnapshot = {
         data,
         refreshedAt: new Date().toISOString(),
-        rows: alignScheduleRowsWithLegacyReports(buildAdminScheduleRows(data, today), {
+        rows: alignScheduleRowsWithLegacyReports(mergeAdminScheduleSnapshotRows({
+          backendRows,
+          memoRows,
+        }), {
           legacyRows: legacyReports,
           sites: data.sites,
           today,
