@@ -17,13 +17,20 @@ import {
 import { mergeReportIndexItems } from '@/hooks/inspectionSessions/helpers';
 import { fetchAdminReports } from '@/lib/admin/apiClient';
 import { isAdminUserRole } from '@/lib/admin';
-import { reserveNextMySchedule } from '@/lib/calendar/apiClient';
+import { fetchMySchedules, reserveNextMySchedule, updateMySchedule } from '@/lib/calendar/apiClient';
 import {
   fetchTechnicalGuidanceSeed,
   readSafetyAuthToken,
   SafetyApiError,
 } from '@/lib/safetyApi';
 import { mapInspectionSessionToReportListItem } from '@/lib/safetyApiMappers';
+import {
+  applyScheduleReportUpdateToSession,
+  buildContractWindowFromScheduleRows,
+  buildContractWindowFromSafetySite,
+  buildScheduleReportSyncPlan,
+  resolveContractWindow,
+} from '@/features/schedule-report-sync/scheduleReportSync';
 import type { ControllerReportRow } from '@/types/admin';
 import type { SafetyReportStatus } from '@/types/backend';
 import type { InspectionSite } from '@/types/inspectionSession';
@@ -41,6 +48,15 @@ import { useSiteReportIndexLoader } from '@/features/site-reports/report-list/us
 interface UseSiteReportListStateOptions {
   buildReportHref?: (reportKey: string) => string;
   siteOverride?: InspectionSite | null;
+}
+
+function getNextVisitRound(items: { visitRound: number | null }[]) {
+  const maxRound = items.reduce((max, item) => {
+    return typeof item.visitRound === 'number' && Number.isFinite(item.visitRound) && item.visitRound > max
+      ? item.visitRound
+      : max;
+  }, 0);
+  return maxRound + 1;
 }
 
 export type { CreateSiteReportInput, SiteReportSortMode };
@@ -176,11 +192,16 @@ export function useSiteReportListState(
     currentUser,
     createSession,
     deleteSession,
+    ensureAssignedSafetySite,
+    ensureSessionLoaded,
     ensureSiteReportIndexLoaded,
+    getSessionById,
     getReportIndexBySiteId,
     canArchiveReports,
     isAuthenticated,
     isReady,
+    saveNow,
+    updateSession,
   } = useInspectionSessions();
   const isAdminView = Boolean(currentUser && isAdminUserRole(currentUser.role));
   const {
@@ -336,8 +357,8 @@ export function useSiteReportListState(
     : reportIndexError;
   const nextReportNumber = useMemo(() => {
     if (!currentSite) return 1;
-    return sessions.filter((session) => session.siteKey === currentSite.id).length + 1;
-  }, [currentSite, sessions]);
+    return getNextVisitRound(effectiveReportItems);
+  }, [currentSite, effectiveReportItems]);
   const assignedUserDisplay = [currentUser?.name, currentUser?.position]
     .filter(Boolean)
     .join(' / ');
@@ -362,12 +383,10 @@ export function useSiteReportListState(
   );
   const getCreateReportTitleSuggestion = (reportDate: string) => buildDefaultReportTitle(reportDate, nextReportNumber);
 
-  const createReport = async ({ reportDate, reportTitle }: CreateSiteReportInput) => {
+  const createReport = async ({ reportDate }: CreateSiteReportInput) => {
     if (!currentSite || effectiveReportIndexStatus !== 'loaded') return;
 
     const normalizedReportDate = reportDate.trim();
-    const normalizedReportTitle =
-      reportTitle.trim() || getCreateReportTitleSuggestion(normalizedReportDate);
 
     if (!normalizedReportDate) {
       return;
@@ -378,12 +397,47 @@ export function useSiteReportListState(
       throw new SafetyApiError('로그인이 만료되었습니다. 다시 로그인해 주세요.', 401);
     }
 
-    const assignedSchedule = await reserveNextMySchedule({
-      plannedDate: normalizedReportDate,
+    const seed = await fetchTechnicalGuidanceSeed(token, currentSite.id);
+    const targetReportNumber = Math.max(seed.next_visit_round || 0, nextReportNumber);
+    const safetySite = await ensureAssignedSafetySite(currentSite.id);
+    const initialScheduleResponse = await fetchMySchedules({
+      limit: 300,
       siteId: currentSite.id,
     });
-    const seed = await fetchTechnicalGuidanceSeed(token, currentSite.id);
-    const seedReportNumber = assignedSchedule.roundNo || seed.next_visit_round || nextReportNumber;
+    const contractWindow = resolveContractWindow(
+      buildContractWindowFromSafetySite(safetySite),
+      buildContractWindowFromScheduleRows(initialScheduleResponse.rows),
+    );
+    if (!contractWindow.windowStart || !contractWindow.windowEnd) {
+      throw new SafetyApiError('현장 계약기간이 설정되어 있지 않아 방문일을 저장할 수 없습니다.', 400);
+    }
+    if (normalizedReportDate < contractWindow.windowStart || normalizedReportDate > contractWindow.windowEnd) {
+      throw new SafetyApiError(
+        `${normalizedReportDate}은 계약기간 ${contractWindow.windowStart} ~ ${contractWindow.windowEnd} 밖입니다.`,
+        400,
+      );
+    }
+    const assignedSchedule = await (async () => {
+      try {
+        const targetSchedule = initialScheduleResponse.rows.find(
+          (row) => row.roundNo === targetReportNumber && !row.linkedReportKey?.trim(),
+        );
+        if (targetSchedule) {
+          return updateMySchedule(targetSchedule.id, {
+            plannedDate: normalizedReportDate,
+          });
+        }
+      } catch {
+        // Fall back to the existing next-schedule reservation path.
+      }
+
+      return reserveNextMySchedule({
+        plannedDate: normalizedReportDate,
+        siteId: currentSite.id,
+      });
+    })();
+    const seedReportNumber = assignedSchedule.roundNo || targetReportNumber;
+    const normalizedReportTitle = buildDefaultReportTitle(normalizedReportDate, seedReportNumber);
     const nextSession = createSession(currentSite, {
       reportNumber: seedReportNumber,
       scheduleId: assignedSchedule.id,
@@ -417,6 +471,54 @@ export function useSiteReportListState(
         cumulativeAgentEntries: seed.cumulative_agent_entries,
       }),
     });
+
+    const linkedSchedule = await updateMySchedule(assignedSchedule.id, {
+      actualVisitDate: normalizedReportDate,
+      linkedReportKey: nextSession.id,
+      plannedDate: normalizedReportDate,
+    });
+    const nextReportItems = mergeReportIndexItems(effectiveReportItems, [
+      mapInspectionSessionToReportListItem(nextSession, currentSite),
+    ]);
+    const scheduleRows = [
+      ...initialScheduleResponse.rows.filter((row) => row.id !== linkedSchedule.id),
+      linkedSchedule,
+    ];
+    const syncPlan = buildScheduleReportSyncPlan({
+      buildReportTitle: buildDefaultReportTitle,
+      changedReport: {
+        reportKey: nextSession.id,
+        visitDate: normalizedReportDate,
+      },
+      contractWindow,
+      reports: nextReportItems,
+      schedules: scheduleRows,
+    });
+
+    if (!syncPlan.ok) {
+      throw new SafetyApiError(syncPlan.message, 400);
+    }
+
+    for (const update of syncPlan.scheduleUpdates) {
+      await updateMySchedule(update.scheduleId, {
+        actualVisitDate: update.actualVisitDate,
+        linkedReportKey: update.linkedReportKey,
+        plannedDate: update.plannedDate,
+      });
+    }
+
+    for (const update of syncPlan.reportUpdates) {
+      if (!getSessionById(update.reportKey)) {
+        await ensureSessionLoaded(update.reportKey);
+      }
+      if (!getSessionById(update.reportKey)) {
+        throw new SafetyApiError('연결된 보고서를 불러오지 못해 일정과 보고서를 함께 정리하지 못했습니다.', 500);
+      }
+      updateSession(update.reportKey, (current) =>
+        applyScheduleReportUpdateToSession(current, update),
+      );
+    }
+    await saveNow();
 
     const nextHref = options.buildReportHref
       ? options.buildReportHref(nextSession.id)

@@ -8,19 +8,6 @@ export function buildInspectionAutoReportTitle(reportDate: string, reportNumber:
   return reportDate ? `${reportDate} 보고서 ${reportNumber}` : `보고서 ${reportNumber}`;
 }
 
-function buildAutoTitleCandidates(session: InspectionSession) {
-  const candidates = new Set<string>();
-  const reportNumber = session.reportNumber;
-  const guidanceDate = normalizeDateText(session.document2Overview.guidanceDate);
-  const reportDate = normalizeDateText(session.meta.reportDate);
-
-  [guidanceDate, reportDate, ''].forEach((date) => {
-    candidates.add(buildInspectionAutoReportTitle(date, reportNumber));
-  });
-
-  return candidates;
-}
-
 export function applyInspectionSessionGuidanceDateChange(
   current: InspectionSession,
   value: string,
@@ -28,18 +15,13 @@ export function applyInspectionSessionGuidanceDateChange(
   const nextDate = normalizeDateText(value);
   const previousGuidanceDate = normalizeDateText(current.document2Overview.guidanceDate);
   const previousReportDate = normalizeDateText(current.meta.reportDate);
-  const currentTitle = current.meta.reportTitle.trim();
-  const shouldRefreshTitle =
-    !currentTitle || buildAutoTitleCandidates(current).has(currentTitle);
 
   return {
     ...current,
     meta: {
       ...current.meta,
       reportDate: nextDate,
-      reportTitle: shouldRefreshTitle
-        ? buildInspectionAutoReportTitle(nextDate, current.reportNumber)
-        : current.meta.reportTitle,
+      reportTitle: buildInspectionAutoReportTitle(nextDate, current.reportNumber),
     },
     document2Overview: {
       ...current.document2Overview,

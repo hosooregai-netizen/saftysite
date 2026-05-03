@@ -1,0 +1,159 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+
+import type { SafetyInspectionSchedule } from '@/types/admin';
+import type { InspectionReportListItem } from '@/types/inspectionSession';
+import {
+  buildWorkerCalendarReportLookup,
+  buildWorkerCalendarRowsWithReportDates,
+  resolveWorkerCalendarReportForSchedule,
+} from './workerCalendarReportMatching';
+
+function buildReport(
+  input: Partial<InspectionReportListItem> & Pick<InspectionReportListItem, 'reportKey'>,
+): InspectionReportListItem {
+  return {
+    assignedUserId: null,
+    createdAt: '2026-04-01T00:00:00.000Z',
+    dispatchCompleted: false,
+    headquarterId: null,
+    id: input.reportKey,
+    lastAutosavedAt: null,
+    latestRevisionNo: 0,
+    meta: {},
+    originalPdfAvailable: false,
+    payloadVersion: 1,
+    progressRate: null,
+    publishedAt: null,
+    readOnly: false,
+    reportKey: input.reportKey,
+    reportOpenHref: null,
+    reportOpenMode: 'session',
+    reportTitle: input.reportTitle ?? input.reportKey,
+    scheduleId: input.scheduleId ?? null,
+    siteId: input.siteId ?? 'site-1',
+    status: input.status ?? 'draft',
+    submittedAt: null,
+    totalRound: null,
+    updatedAt: input.updatedAt ?? '2026-04-01T00:00:00.000Z',
+    visitDate: input.visitDate ?? null,
+    visitRound: input.visitRound ?? null,
+  };
+}
+
+function buildSchedule(input: Partial<SafetyInspectionSchedule> & Pick<SafetyInspectionSchedule, 'id' | 'roundNo'>): SafetyInspectionSchedule {
+  return {
+    actualVisitDate: input.actualVisitDate ?? '',
+    assigneeName: '',
+    assigneeUserId: '',
+    exceptionMemo: '',
+    exceptionReasonCode: '',
+    headquarterId: '',
+    headquarterName: '',
+    id: input.id,
+    isConflicted: false,
+    isOutOfWindow: false,
+    isOverdue: false,
+    linkedReportKey: input.linkedReportKey ?? '',
+    plannedDate: input.plannedDate ?? '',
+    roundNo: input.roundNo,
+    selectionConfirmedAt: '',
+    selectionConfirmedByName: '',
+    selectionConfirmedByUserId: '',
+    selectionReasonLabel: '',
+    selectionReasonMemo: '',
+    siteId: input.siteId ?? 'site-1',
+    siteName: input.siteName ?? 'Site 1',
+    status: input.status ?? 'planned',
+    totalRounds: input.totalRounds ?? 8,
+    windowEnd: input.windowEnd ?? '2026-05-30',
+    windowStart: input.windowStart ?? '2026-04-09',
+  };
+}
+
+test('worker calendar report lookup prefers an explicit linked report key over round fallback', () => {
+  const linked = buildReport({ reportKey: 'report-linked', visitDate: '2026-04-25', visitRound: 5 });
+  const roundFallback = buildReport({ reportKey: 'report-round', visitDate: '2026-04-23', visitRound: 5 });
+  const lookup = buildWorkerCalendarReportLookup([roundFallback, linked]);
+
+  const matched = resolveWorkerCalendarReportForSchedule(
+    { id: 'schedule-5', linkedReportKey: 'report-linked', roundNo: 5 },
+    lookup,
+  );
+
+  assert.equal(matched?.reportKey, 'report-linked');
+});
+
+test('worker calendar report lookup can match by schedule id before using round', () => {
+  const scheduled = buildReport({
+    reportKey: 'report-scheduled',
+    scheduleId: 'schedule-6',
+    visitDate: '2026-04-30',
+    visitRound: 6,
+  });
+  const roundFallback = buildReport({ reportKey: 'report-round', visitDate: '2026-04-28', visitRound: 6 });
+  const lookup = buildWorkerCalendarReportLookup([roundFallback, scheduled]);
+
+  const matched = resolveWorkerCalendarReportForSchedule(
+    { id: 'schedule-6', linkedReportKey: '', roundNo: 6 },
+    lookup,
+  );
+
+  assert.equal(matched?.reportKey, 'report-scheduled');
+});
+
+test('worker calendar rows use report visit date when a schedule date is empty', () => {
+  const rows = buildWorkerCalendarRowsWithReportDates({
+    reportsBySiteId: new Map([
+      [
+        'site-1',
+        [
+          buildReport({
+            reportKey: 'report-1',
+            scheduleId: 'schedule-1',
+            visitDate: '2026-04-08',
+            visitRound: 1,
+          }),
+        ],
+      ],
+    ]),
+    rows: [buildSchedule({ id: 'schedule-1', roundNo: 1 })],
+    sites: [{ id: 'site-1', siteName: 'Site 1', totalRounds: 8 }],
+  });
+
+  assert.equal(rows[0]?.plannedDate, '2026-04-08');
+  assert.equal(rows[0]?.actualVisitDate, '2026-04-08');
+  assert.equal(rows[0]?.linkedReportKey, 'report-1');
+});
+
+test('worker calendar rows can show report-backed schedules omitted from the month response', () => {
+  const rows = buildWorkerCalendarRowsWithReportDates({
+    contractWindowsBySiteId: {
+      'site-1': {
+        windowEnd: '2026-05-30',
+        windowStart: '2026-04-09',
+      },
+    },
+    reportsBySiteId: new Map([
+      [
+        'site-1',
+        [
+          buildReport({
+            reportKey: 'report-2',
+            scheduleId: 'schedule-2',
+            visitDate: '2026-04-10',
+            visitRound: 2,
+          }),
+        ],
+      ],
+    ]),
+    rows: [],
+    sites: [{ id: 'site-1', siteName: 'Site 1', totalRounds: 10 }],
+  });
+
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0]?.id, 'schedule-2');
+  assert.equal(rows[0]?.roundNo, 2);
+  assert.equal(rows[0]?.plannedDate, '2026-04-10');
+  assert.equal(rows[0]?.windowStart, '2026-04-09');
+});

@@ -32,6 +32,8 @@ function buildSummary(
 function buildDetail(overrides: Partial<SafetySite> = {}): SafetySite {
   return {
     ...expandAssignedSiteSummaryToSafetySite(buildSummary()),
+    contract_end_date: '2026-05-31',
+    contract_start_date: '2026-03-22',
     headquarter_detail: {
       id: 'hq-1',
       name: 'HQ One',
@@ -153,4 +155,46 @@ test('resolveAssignedSafetySite returns cached detail without refetching', async
   });
 
   assert.equal(resolved?.site_contact_email, 'site@example.com');
+});
+
+test('resolveAssignedSafetySite refreshes cached detail when contract dates are missing', async () => {
+  const staleDetail = buildDetail({
+    contract_end_date: null,
+    contract_start_date: null,
+    project_end_date: null,
+    project_start_date: null,
+  });
+  const freshDetail = buildDetail({
+    contract_end_date: '2026-05-31',
+    contract_start_date: '2026-03-22',
+  });
+  const assignedSitesById = new Map([[staleDetail.id, staleDetail]]);
+  let detailFetchCount = 0;
+
+  const resolved = await resolveAssignedSafetySite('site-1', {
+    fetchAssignedSafetySites: async () => {
+      assert.fail('summary list refetch should not run when detail cache exists');
+    },
+    fetchSafetySiteDetail: async (siteId) => {
+      detailFetchCount += 1;
+      assert.equal(siteId, 'site-1');
+      return freshDetail;
+    },
+    getAssignedSafetySite: (siteId) => assignedSitesById.get(siteId) ?? null,
+    hasAssignedSafetySiteDetail: () => true,
+    replaceAssignedSafetySites: () => {
+      assert.fail('summary cache should not be replaced for cached detail refresh');
+    },
+    upsertAssignedSafetySiteDetail: (site) => {
+      assignedSitesById.set(site.id, site);
+    },
+    replaceAssignedSitesInStore: () => {
+      assert.fail('store replacement should not run for cached detail refresh');
+    },
+    upsertAssignedSitesIntoStore: () => {},
+  });
+
+  assert.equal(detailFetchCount, 1);
+  assert.equal(resolved?.contract_start_date, '2026-03-22');
+  assert.equal(resolved?.contract_end_date, '2026-05-31');
 });

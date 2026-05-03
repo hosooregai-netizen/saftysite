@@ -3,10 +3,21 @@
 import { useEffect, useMemo, useState } from 'react';
 import AppModal from '@/components/ui/AppModal';
 import LoginPanel from '@/components/auth/LoginPanel';
+import { getSessionGuidanceDate } from '@/constants/inspectionSession';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { buildDefaultReportTitle } from '@/features/site-reports/report-list/reportListHelpers';
+import {
+  applyScheduleReportUpdateToSession,
+  buildContractWindowFromScheduleRows,
+  buildContractWindowFromSafetySite,
+  buildScheduleReportSyncPlan,
+  resolveContractWindow,
+} from '@/features/schedule-report-sync/scheduleReportSync';
+import { buildWorkerCalendarRowsWithReportDates } from '@/features/calendar/components/workerCalendarReportMatching';
 import { fetchMySchedules, reserveNextMySchedule, updateMySchedule } from '@/lib/calendar/apiClient';
+import { mapInspectionSessionToReportListItem } from '@/lib/safetyApiMappers';
 import type { SafetyInspectionSchedule } from '@/types/admin';
+import type { InspectionReportListItem } from '@/types/inspectionSession';
 import { MobileShell } from './MobileShell';
 import { MobileTabBar } from './MobileTabBar';
 import { buildMobileRootTabs } from '../site-list/mobileSiteListTabs';
@@ -99,9 +110,12 @@ function isDateWithinWindow(value: string, windowStart: string, windowEnd: strin
 }
 
 function buildWindowErrorMessage(
-  schedule: Pick<SafetyInspectionSchedule, 'roundNo' | 'siteName' | 'windowEnd' | 'windowStart'>,
+  input: { siteName: string; windowEnd: string; windowStart: string },
 ) {
-  return `${schedule.siteName} ${schedule.roundNo}회차는 허용 구간 ${schedule.windowStart} ~ ${schedule.windowEnd} 안에서만 선택할 수 있습니다.`;
+  if (!input.windowStart || !input.windowEnd) {
+    return `${input.siteName || '선택한 현장'}은 계약 기간이 설정되어 있지 않아 방문일을 저장할 수 없습니다.`;
+  }
+  return `${input.siteName || '선택한 현장'}은 계약 기간 ${input.windowStart} ~ ${input.windowEnd} 안에서만 선택할 수 있습니다.`;
 }
 
 export function MobileWorkerCalendarScreen() {
@@ -112,16 +126,24 @@ export function MobileWorkerCalendarScreen() {
   const [notice, setNotice] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState('');
   const [dialog, setDialog] = useState<ScheduleDialogState>(EMPTY_DIALOG_STATE);
+  const [contractWindowsBySiteId, setContractWindowsBySiteId] = useState<
+    Record<string, { windowEnd: string; windowStart: string }>
+  >({});
   const {
     authError,
     createSession,
     currentUser,
+    ensureAssignedSafetySite,
+    getSessionById,
     getSessionsBySiteId,
     isAuthenticated,
     isReady,
     login,
     logout,
+    saveNow,
+    sessions,
     sites,
+    updateSession,
   } = useInspectionSessions();
 
   useEffect(() => {
@@ -151,10 +173,32 @@ export function MobileWorkerCalendarScreen() {
     };
   }, [isAuthenticated, month]);
 
+  const reportItemsBySiteId = useMemo(() => {
+    const nextMap = new Map<string, InspectionReportListItem[]>();
+    sites.forEach((site) => {
+      nextMap.set(
+        site.id,
+        getSessionsBySiteId(site.id).map((session) =>
+          mapInspectionSessionToReportListItem(session, site),
+        ),
+      );
+    });
+    return nextMap;
+  }, [getSessionsBySiteId, sessions, sites]);
+  const calendarRows = useMemo(
+    () =>
+      buildWorkerCalendarRowsWithReportDates({
+        contractWindowsBySiteId,
+        reportsBySiteId: reportItemsBySiteId,
+        rows,
+        sites,
+      }),
+    [contractWindowsBySiteId, reportItemsBySiteId, rows, sites],
+  );
   const calendar = useMemo(() => buildCalendarDays(month), [month]);
   const selectedRows = useMemo(
     () =>
-      [...rows]
+      [...calendarRows]
         .filter((row) => Boolean(row.plannedDate))
         .sort(
           (left, right) =>
@@ -162,7 +206,7 @@ export function MobileWorkerCalendarScreen() {
             left.roundNo - right.roundNo ||
             left.siteName.localeCompare(right.siteName, 'ko'),
         ),
-    [rows],
+    [calendarRows],
   );
   const rowsByDate = useMemo(() => {
     const map = new Map<string, SafetyInspectionSchedule[]>();
@@ -181,7 +225,7 @@ export function MobileWorkerCalendarScreen() {
   );
   const completedRoundsBySiteId = useMemo(() => {
     const nextMap = new Map<string, Set<number>>();
-    rows.forEach((row) => {
+    calendarRows.forEach((row) => {
       if (!row.siteId) return;
       if (!nextMap.has(row.siteId)) {
         nextMap.set(row.siteId, new Set<number>());
@@ -196,7 +240,7 @@ export function MobileWorkerCalendarScreen() {
       }
     });
     return nextMap;
-  }, [rows]);
+  }, [calendarRows]);
   const dialogSiteOptions = useMemo<WorkerDialogSiteOption[]>(() => {
     return [...sites]
       .sort((left, right) => left.siteName.localeCompare(right.siteName, 'ko'))
@@ -215,8 +259,8 @@ export function MobileWorkerCalendarScreen() {
       });
   }, [completedRoundsBySiteId, sites]);
   const dialogAllRoundRows = useMemo(
-    () => sortSchedules(rows.filter((row) => row.siteId === dialog.siteId)),
-    [dialog.siteId, rows],
+    () => sortSchedules(calendarRows.filter((row) => row.siteId === dialog.siteId)),
+    [calendarRows, dialog.siteId],
   );
   const dialogRoundRows = useMemo(() => {
     const completedRounds = completedRoundsBySiteId.get(dialog.siteId) ?? new Set<number>();
@@ -231,14 +275,42 @@ export function MobileWorkerCalendarScreen() {
     });
   }, [completedRoundsBySiteId, dialog.scheduleId, dialog.siteId, dialogAllRoundRows]);
   const dialogSelectedSchedule = useMemo(
-    () => rows.find((row) => row.id === dialog.scheduleId) ?? null,
-    [dialog.scheduleId, rows],
+    () =>
+      rows.find((row) => row.id === dialog.scheduleId) ??
+      calendarRows.find((row) => row.id === dialog.scheduleId) ??
+      null,
+    [calendarRows, dialog.scheduleId, rows],
   );
+  const dialogScheduleContractWindow = useMemo(
+    () =>
+      dialog.siteId
+        ? buildContractWindowFromScheduleRows(
+            calendarRows.filter((row) => row.siteId === dialog.siteId),
+          )
+        : { windowEnd: '', windowStart: '' },
+    [calendarRows, dialog.siteId],
+  );
+  const dialogContractWindow = dialog.siteId
+    ? resolveContractWindow(
+        contractWindowsBySiteId[dialog.siteId] ?? null,
+        dialogScheduleContractWindow,
+      )
+    : null;
+  const dialogSiteName =
+    dialogSelectedSchedule?.siteName ||
+    dialogSiteOptions.find((option) => option.siteId === dialog.siteId)?.label ||
+    '';
   const dialogWindowError =
-    dialogSelectedSchedule &&
-    dialog.plannedDate &&
-    !isDateWithinWindow(dialog.plannedDate, dialogSelectedSchedule.windowStart, dialogSelectedSchedule.windowEnd)
-      ? buildWindowErrorMessage(dialogSelectedSchedule)
+    dialog.open && dialog.plannedDate && dialog.siteId
+      ? !dialogContractWindow?.windowStart || !dialogContractWindow.windowEnd
+        ? buildWindowErrorMessage({ siteName: dialogSiteName, windowEnd: '', windowStart: '' })
+        : !isDateWithinWindow(dialog.plannedDate, dialogContractWindow.windowStart, dialogContractWindow.windowEnd)
+          ? buildWindowErrorMessage({
+              siteName: dialogSiteName,
+              windowEnd: dialogContractWindow.windowEnd,
+              windowStart: dialogContractWindow.windowStart,
+            })
+          : ''
       : '';
 
   useEffect(() => {
@@ -252,6 +324,30 @@ export function MobileWorkerCalendarScreen() {
     const defaultSite = dialogSiteOptions.find((option) => !option.isComplete) ?? dialogSiteOptions[0];
     setDialog((current) => ({ ...current, siteId: defaultSite.siteId }));
   }, [dialog.open, dialog.siteId, dialogSiteOptions]);
+
+  useEffect(() => {
+    const currentWindow = dialog.siteId ? contractWindowsBySiteId[dialog.siteId] : null;
+    if (
+      !dialog.open ||
+      !dialog.siteId ||
+      (currentWindow?.windowStart && currentWindow.windowEnd)
+    ) {
+      return;
+    }
+    let cancelled = false;
+    void ensureAssignedSafetySite(dialog.siteId)
+      .then((safetySite) => {
+        if (cancelled) return;
+        setContractWindowsBySiteId((current) => ({
+          ...current,
+          [dialog.siteId]: buildContractWindowFromSafetySite(safetySite),
+        }));
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [contractWindowsBySiteId, dialog.open, dialog.siteId, ensureAssignedSafetySite]);
 
   useEffect(() => {
     if (!dialog.open || !dialog.siteId) return;
@@ -307,7 +403,7 @@ export function MobileWorkerCalendarScreen() {
       dialogSiteOptions[0];
     const defaultSiteId = defaultSite?.siteId || '';
     const completedRounds = completedRoundsBySiteId.get(defaultSiteId) ?? new Set<number>();
-    const defaultSiteRows = sortSchedules(rows.filter((row) => row.siteId === defaultSiteId)).filter((row) => {
+    const defaultSiteRows = sortSchedules(calendarRows.filter((row) => row.siteId === defaultSiteId)).filter((row) => {
       if (row.status === 'canceled' || row.status === 'completed') {
         return false;
       }
@@ -336,7 +432,7 @@ export function MobileWorkerCalendarScreen() {
 
   const handleDialogSiteSelect = (siteId: string) => {
     const completedRounds = completedRoundsBySiteId.get(siteId) ?? new Set<number>();
-    const nextRoundRows = sortSchedules(rows.filter((row) => row.siteId === siteId)).filter((row) => {
+    const nextRoundRows = sortSchedules(calendarRows.filter((row) => row.siteId === siteId)).filter((row) => {
       if (row.status === 'canceled' || row.status === 'completed') {
         return false;
       }
@@ -355,6 +451,82 @@ export function MobileWorkerCalendarScreen() {
       selectionReasonMemo: preferredRow?.selectionReasonMemo || '',
       siteId,
     }));
+  };
+
+  const upsertScheduleRows = (schedules: SafetyInspectionSchedule[]) => {
+    if (schedules.length === 0) return;
+    setRows((current) => {
+      const nextRows = current.filter(
+        (row) =>
+          !schedules.some(
+            (schedule) =>
+              schedule.id === row.id ||
+              (schedule.siteId === row.siteId && schedule.roundNo === row.roundNo),
+          ),
+      );
+      return [...nextRows, ...schedules];
+    });
+  };
+
+  const persistScheduleReportSync = async (changedSchedule: SafetyInspectionSchedule) => {
+    const scheduleResponse = await fetchMySchedules({
+      limit: 300,
+      siteId: changedSchedule.siteId,
+    });
+    const site = sites.find((item) => item.id === changedSchedule.siteId) ?? null;
+    const reports =
+      site == null
+        ? []
+        : getSessionsBySiteId(changedSchedule.siteId).map((session) =>
+            mapInspectionSessionToReportListItem(session, site),
+          );
+    const siteSchedules = [
+      ...scheduleResponse.rows.filter((row) => row.id !== changedSchedule.id),
+      changedSchedule,
+    ];
+    const contractWindow = resolveContractWindow(
+      contractWindowsBySiteId[changedSchedule.siteId] ?? null,
+      buildContractWindowFromScheduleRows(siteSchedules),
+    );
+    const plan = buildScheduleReportSyncPlan({
+      buildReportTitle: buildDefaultReportTitle,
+      changedSchedule: {
+        actualVisitDate: changedSchedule.actualVisitDate,
+        linkedReportKey: changedSchedule.linkedReportKey,
+        plannedDate: changedSchedule.plannedDate,
+        scheduleId: changedSchedule.id,
+      },
+      contractWindow,
+      reports,
+      schedules: siteSchedules,
+    });
+
+    if (!plan.ok) {
+      throw new Error(plan.message);
+    }
+
+    const savedSchedules: SafetyInspectionSchedule[] = [];
+    for (const update of plan.scheduleUpdates) {
+      const saved = await updateMySchedule(update.scheduleId, {
+        actualVisitDate: update.actualVisitDate,
+        linkedReportKey: update.linkedReportKey,
+        plannedDate: update.plannedDate,
+      });
+      savedSchedules.push(saved);
+    }
+    upsertScheduleRows(savedSchedules);
+
+    for (const update of plan.reportUpdates) {
+      if (!getSessionById(update.reportKey)) continue;
+      updateSession(update.reportKey, (current) =>
+        applyScheduleReportUpdateToSession(current, update),
+      );
+    }
+    if (plan.reportUpdates.length > 0) {
+      await saveNow();
+    }
+
+    return savedSchedules.find((schedule) => schedule.id === changedSchedule.id) ?? changedSchedule;
   };
 
   const ensureDraftSessionForSchedule = (schedule: SafetyInspectionSchedule) => {
@@ -376,7 +548,7 @@ export function MobileWorkerCalendarScreen() {
     );
     if (existingSession) {
       return {
-        actualVisitDate: normalizeText(existingSession.meta.reportDate) || schedule.plannedDate,
+        actualVisitDate: getSessionGuidanceDate(existingSession) || schedule.plannedDate,
         linkedReportKey: existingSession.id,
       };
     }
@@ -405,7 +577,10 @@ export function MobileWorkerCalendarScreen() {
       setError('현장을 먼저 선택해 주세요.');
       return;
     }
-    const schedule = rows.find((row) => row.id === dialog.scheduleId) ?? null;
+    const schedule =
+      rows.find((row) => row.id === dialog.scheduleId) ??
+      calendarRows.find((row) => row.id === dialog.scheduleId) ??
+      null;
     if (!dialog.plannedDate) {
       setError('방문 날짜를 먼저 선택해 주세요.');
       return;
@@ -429,12 +604,18 @@ export function MobileWorkerCalendarScreen() {
             siteId: schedule?.siteId || dialog.siteId,
           });
       const linkUpdate = ensureDraftSessionForSchedule(updated);
+      const linkPlannedDate = normalizeText(linkUpdate?.actualVisitDate) || updated.plannedDate || dialog.plannedDate;
+      const shouldPersistLink =
+        Boolean(linkUpdate?.linkedReportKey) &&
+        (normalizeText(linkUpdate?.linkedReportKey) !== normalizeText(updated.linkedReportKey) ||
+          normalizeText(linkUpdate?.actualVisitDate) !== normalizeText(updated.actualVisitDate) ||
+          linkPlannedDate !== normalizeText(updated.plannedDate));
       const finalized =
-        linkUpdate && linkUpdate.linkedReportKey !== normalizeText(updated.linkedReportKey)
+        linkUpdate && shouldPersistLink
           ? await updateMySchedule(updated.id, {
               actualVisitDate: linkUpdate.actualVisitDate,
               linkedReportKey: linkUpdate.linkedReportKey,
-              plannedDate: updated.plannedDate || dialog.plannedDate,
+              plannedDate: linkPlannedDate,
               selectionReasonLabel: dialog.selectionReasonLabel.trim(),
               selectionReasonMemo: dialog.selectionReasonMemo.trim(),
             })
@@ -445,7 +626,8 @@ export function MobileWorkerCalendarScreen() {
         );
         return [...nextRows, finalized];
       });
-      setSelectedDate(finalized.plannedDate || dialog.plannedDate);
+      const synced = await persistScheduleReportSync(finalized);
+      setSelectedDate(synced.plannedDate || finalized.plannedDate || dialog.plannedDate);
       setNotice(
         linkUpdate
           ? `${finalized.siteName} ${finalized.roundNo}회차 방문 일정과 기술지도 보고서를 연결했습니다.`
@@ -723,6 +905,12 @@ export function MobileWorkerCalendarScreen() {
               }
             />
           </label>
+
+          {dialog.siteId ? (
+            <div className={workerStyles.dialogHint}>
+              계약 기간: {dialogContractWindow?.windowStart || '-'} ~ {dialogContractWindow?.windowEnd || '-'}
+            </div>
+          ) : null}
 
           {dialogWindowError ? (
             <div className={workerStyles.emptyState}>{dialogWindowError}</div>

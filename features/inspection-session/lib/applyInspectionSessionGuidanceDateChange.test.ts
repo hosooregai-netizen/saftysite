@@ -49,7 +49,7 @@ test('guidance date change syncs report date, auto title, and default confirmati
   assert.equal(next.document4FollowUps[1].confirmationDate, '2026-04-10');
 });
 
-test('guidance date change does not overwrite a manual title', () => {
+test('guidance date change refreshes a manual title with the current date and round', () => {
   const session = createInspectionSession(
     {
       meta: {
@@ -66,5 +66,23 @@ test('guidance date change does not overwrite a manual title', () => {
 
   assert.equal(next.document2Overview.guidanceDate, '2026-04-09');
   assert.equal(next.meta.reportDate, '2026-04-09');
-  assert.equal(next.meta.reportTitle, '수동 제목');
+  assert.equal(next.meta.reportTitle, buildInspectionAutoReportTitle('2026-04-09', 2));
+});
+
+test('guidance date change refreshes stale auto titles with the current round', () => {
+  const session = createInspectionSession(
+    {
+      meta: {
+        reportDate: '2026-04-28',
+        reportTitle: '2026-04-28 보고서 7',
+      },
+    },
+    'site-1',
+    6,
+  );
+  session.document2Overview.guidanceDate = '2026-04-28';
+
+  const next = applyInspectionSessionGuidanceDateChange(session, '2026-04-30');
+
+  assert.equal(next.meta.reportTitle, '2026-04-30 보고서 6');
 });

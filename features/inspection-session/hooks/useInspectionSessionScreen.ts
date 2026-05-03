@@ -12,8 +12,9 @@ import {
 } from '@/constants/inspectionSession';
 import { readFileAsDataUrl } from '@/components/session/workspace/utils';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
+import { mergeReportIndexItems } from '@/hooks/inspectionSessions/helpers';
 import { fetchAdminReportSessionBootstrap } from '@/lib/admin/apiClient';
-import { updateMySchedule } from '@/lib/calendar/apiClient';
+import { fetchMySchedules, updateMySchedule } from '@/lib/calendar/apiClient';
 import {
   fetchInspectionHwpxDocument,
   fetchInspectionHwpxDocumentByReportKey,
@@ -33,6 +34,7 @@ import {
   validateSafetyAssetFile,
 } from '@/lib/safetyApi/assets';
 import { readSafetyAuthToken } from '@/lib/safetyApi';
+import { mapInspectionSessionToReportListItem } from '@/lib/safetyApiMappers';
 import { mergeMasterDataIntoSession } from '@/lib/safetyApiMappers/masterData';
 import type {
   InspectionDocumentSource,
@@ -43,7 +45,15 @@ import type {
   ReportIndexStatus,
 } from '@/types/inspectionSession';
 import { applyInspectionSessionMetaFieldChange } from '@/features/inspection-session/lib/applyInspectionSessionMetaFieldChange';
+import { buildInspectionAutoReportTitle } from '@/features/inspection-session/lib/applyInspectionSessionGuidanceDateChange';
 import { buildInspectionSessionDerivedData } from '@/features/inspection-session/lib/buildInspectionSessionDerivedData';
+import {
+  applyScheduleReportUpdateToSession,
+  buildContractWindowFromScheduleRows,
+  buildContractWindowFromSafetySite,
+  buildScheduleReportSyncPlan,
+  resolveContractWindow,
+} from '@/features/schedule-report-sync/scheduleReportSync';
 import {
   INSPECTION_WORKSPACE_SECTIONS,
   resolveWorkspaceSectionKey,
@@ -99,6 +109,7 @@ type ScheduleDateSyncRequest = {
   guidanceDate: string;
   reportKey: string;
   scheduleId: string;
+  siteId: string;
 };
 
 function buildShellSessionFromReportIndexItem(
@@ -142,8 +153,10 @@ export function useInspectionSessionScreen(sessionId: string) {
   const {
     authError,
     currentUser,
+    ensureAssignedSafetySite,
     ensureMasterDataLoaded,
     ensureSessionLoaded,
+    ensureSiteReportIndexLoaded,
     getReportIndexBySiteId,
     getSessionById,
     getSessionsBySiteId,
@@ -540,6 +553,66 @@ export function useInspectionSessionScreen(sessionId: string) {
     }));
   }, [session, site, updateSession]);
 
+  const synchronizeScheduleDateChange = async (request: ScheduleDateSyncRequest) => {
+    const targetSite = getSiteById(request.siteId) || site;
+    if (!targetSite) {
+      throw new Error('보고서 현장을 찾지 못해 일정과 보고서를 함께 정리하지 못했습니다.');
+    }
+
+    await ensureSiteReportIndexLoaded(request.siteId);
+    const safetySite = await ensureAssignedSafetySite(request.siteId);
+    const scheduleResponse = await fetchMySchedules({
+      limit: 300,
+      siteId: request.siteId,
+    });
+    const reportIndex = getReportIndexBySiteId(request.siteId);
+    const currentSession = getSessionById(request.reportKey);
+    const reportItems = currentSession
+      ? mergeReportIndexItems(reportIndex?.items ?? [], [
+          mapInspectionSessionToReportListItem(currentSession, targetSite),
+        ])
+      : reportIndex?.items ?? [];
+    const contractWindow = resolveContractWindow(
+      buildContractWindowFromSafetySite(safetySite),
+      buildContractWindowFromScheduleRows(scheduleResponse.rows),
+    );
+    const plan = buildScheduleReportSyncPlan({
+      buildReportTitle: buildInspectionAutoReportTitle,
+      changedReport: {
+        reportKey: request.reportKey,
+        visitDate: request.guidanceDate,
+      },
+      contractWindow,
+      reports: reportItems,
+      schedules: scheduleResponse.rows,
+    });
+
+    if (!plan.ok) {
+      throw new Error(plan.message);
+    }
+
+    for (const update of plan.scheduleUpdates) {
+      await updateMySchedule(update.scheduleId, {
+        actualVisitDate: update.actualVisitDate,
+        linkedReportKey: update.linkedReportKey,
+        plannedDate: update.plannedDate,
+      });
+    }
+
+    for (const update of plan.reportUpdates) {
+      if (!getSessionById(update.reportKey)) {
+        await ensureSessionLoaded(update.reportKey);
+      }
+      if (!getSessionById(update.reportKey)) {
+        throw new Error('연결된 보고서를 불러오지 못해 일정과 보고서를 함께 정리하지 못했습니다.');
+      }
+      updateSession(update.reportKey, (current) =>
+        applyScheduleReportUpdateToSession(current, update),
+      );
+    }
+    await saveNowRef.current();
+  };
+
   const applyDocumentUpdate = (
     key: InspectionSectionKey,
     source: InspectionDocumentSource,
@@ -570,6 +643,7 @@ export function useInspectionSessionScreen(sessionId: string) {
           guidanceDate: nextGuidanceDate,
           reportKey: nextWithMasterData.id,
           scheduleId: nextWithMasterData.scheduleId,
+          siteId: getSessionSiteKey(nextWithMasterData),
         };
       }
 
@@ -581,11 +655,7 @@ export function useInspectionSessionScreen(sessionId: string) {
     const scheduleDateSync = scheduleDateSyncRef.value;
     if (scheduleDateSync) {
       setScheduleSyncError(null);
-      void updateMySchedule(scheduleDateSync.scheduleId, {
-        actualVisitDate: scheduleDateSync.guidanceDate,
-        linkedReportKey: scheduleDateSync.reportKey,
-        plannedDate: scheduleDateSync.guidanceDate,
-      }).catch((error) => {
+      void synchronizeScheduleDateChange(scheduleDateSync).catch((error) => {
         setScheduleSyncError(
           error instanceof Error
             ? error.message

@@ -6,7 +6,7 @@ import { buildQuarterlyMergedTemplatePrototype } from '@/server/documents/quarte
 const OUTPUT_DIR = path.resolve(process.cwd(), 'public', 'templates', 'quarterly');
 
 async function main() {
-  for (const variant of ['v9', 'v9-1'] as const) {
+  for (const variant of ['v10', 'v10-1'] as const) {
     const document = await buildQuarterlyMergedTemplatePrototype(variant);
     const outputPath = path.join(OUTPUT_DIR, document.filename);
     await fs.writeFile(outputPath, document.buffer);

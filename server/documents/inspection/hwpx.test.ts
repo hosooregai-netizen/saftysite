@@ -141,8 +141,8 @@ test('mapSessionToTemplateBinding leaves empty report values blank instead of re
         siteManagerName: '',
       },
       document13Cases: [
-        { id: 'blank-case', imageUrl: '', title: '' },
-        { id: 'not-applicable-case', imageUrl: '', title: '\uD574\uB2F9\uC5C6\uC74C' },
+        { id: 'blank-case', imageUrl: '', summary: '', title: '' },
+        { id: 'not-applicable-case', imageUrl: '', summary: '', title: '\uD574\uB2F9\uC5C6\uC74C' },
       ],
       meta: {
         approver: '',
