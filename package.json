@@ -11,7 +11,8 @@
   ],
   "scripts": {
     "rundev": "node scripts/rundev.mjs",
-    "dev": "node scripts/dev.mjs",
+    "dev": "node scripts/rundev.mjs",
+    "dev:sass": "node scripts/dev.mjs",
     "dev:web": "npm run dev -w @saftysite/web",
     "dev:legacy": "node scripts/rundev.mjs",
     "build": "npm run build -w @saftysite/web",
@@ -48,8 +49,9 @@
     "generate:hwpx": "node --experimental-strip-types scripts/generate_hwpx_report.ts",
     "bootstrap:hwpx-template": "node --experimental-strip-types scripts/bootstrap_inspection_hwpx_template.ts",
     "seed:measurement-templates": "node --experimental-strip-types scripts/seed_measurement_templates.ts",
-    "api:dev": "uvicorn app.main:app --reload --app-dir apps/api --port 8001",
-    "api:check": "python3 -m compileall apps/api/app"
+    "api:install": "node scripts/api-env.mjs --install-only",
+    "api:dev": "node scripts/api-env.mjs",
+    "api:check": "apps/api/.venv/bin/python -m compileall apps/api/app"
   },
   "dependencies": {
     "exifr": "^7.1.3",
