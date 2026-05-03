@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { refreshAdminAnalyticsSnapshot } from '@/server/admin/analyticsSnapshot';
 import { refreshAdminScheduleSnapshot } from '@/server/admin/scheduleSnapshot';
 import {
+  applyExcelImportServer,
   readRequiredAdminToken,
   SafetyServerApiError,
 } from '@/server/admin/safetyApiServer';
@@ -67,6 +68,25 @@ export async function POST(request: Request): Promise<Response> {
         { error: '엑셀 업로드 작업 ID와 시트 이름이 필요합니다.' },
         { status: 400 },
       );
+    }
+    if (importKind === 'k2b_guidance') {
+      const result = await applyExcelImportServer(
+        token,
+        {
+          ...payload,
+          import_kind: importKind,
+          scope: {
+            headquarter_id: headquarterId,
+            import_kind: importKind,
+            site_id: siteId,
+            source_section: sourceSection,
+          },
+        },
+        request,
+      );
+      await refreshAdminAnalyticsSnapshot(token, request);
+      await refreshAdminScheduleSnapshot(token, request).catch(() => undefined);
+      return NextResponse.json(result);
     }
     const result = await applyLocalExcelWorkbook(token, request, {
       jobId,
