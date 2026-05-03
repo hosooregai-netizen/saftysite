@@ -37,6 +37,7 @@ import {
   findDuplicateUnlinkedScheduleReservations,
   resolveWorkerCalendarReportForSchedule,
 } from './workerCalendarReportMatching';
+import { buildWorkerCalendarReportIndexSiteIds } from './workerCalendarLoading';
 import type { SafetyInspectionSchedule } from '@/types/admin';
 import type { InspectionReportListItem } from '@/types/inspectionSession';
 import styles from './WorkerCalendarScreen.module.css';
@@ -316,12 +317,19 @@ export function WorkerCalendarScreen() {
     };
   }, [isAdminView, isAuthenticated, month, selectedSiteId]);
 
+  const reportIndexSiteIds = useMemo(
+    () =>
+      buildWorkerCalendarReportIndexSiteIds({
+        rows,
+        selectedSiteId,
+        sites,
+      }),
+    [rows, selectedSiteId, sites],
+  );
+
   useEffect(() => {
-    if (!isAuthenticated || !isReady || isAdminView || sites.length === 0) return;
-    const visibleSiteIds = sites
-      .filter((site) => !selectedSiteId || site.id === selectedSiteId)
-      .map((site) => site.id);
-    visibleSiteIds.forEach((siteId) => {
+    if (!isAuthenticated || !isReady || isAdminView || reportIndexSiteIds.length === 0) return;
+    reportIndexSiteIds.forEach((siteId) => {
       void ensureSiteReportIndexLoaded(siteId).catch(() => undefined);
     });
   }, [
@@ -329,8 +337,7 @@ export function WorkerCalendarScreen() {
     isAdminView,
     isAuthenticated,
     isReady,
-    selectedSiteId,
-    sites,
+    reportIndexSiteIds,
   ]);
 
   const reportItemsBySiteId = useMemo(() => {
@@ -538,39 +545,25 @@ export function WorkerCalendarScreen() {
   }, [dialog.open, dialog.siteId, ensureSiteReportIndexLoaded]);
 
   useEffect(() => {
-    if (!dialog.open) return;
-    const missingSiteIds = dialogSiteOptions
-      .map((option) => option.siteId)
-      .filter((siteId) => {
-        const window = contractWindowsBySiteId[siteId];
-        return !window?.windowStart || !window.windowEnd;
-      });
-    if (missingSiteIds.length === 0) {
-      return;
-    }
+    if (!dialog.open || !dialog.siteId) return;
+    const currentWindow = contractWindowsBySiteId[dialog.siteId];
+    if (currentWindow?.windowStart && currentWindow.windowEnd) return;
+
     let cancelled = false;
-    void (async () => {
-      const nextEntries = await Promise.all(
-        missingSiteIds.map(async (siteId) => {
-          const assignedSite = await ensureAssignedSafetySite(siteId);
-          return [siteId, buildContractWindowFromSafetySite(assignedSite)] as const;
-        }),
-      );
-      if (cancelled) {
-        return;
-      }
-      setContractWindowsBySiteId((current) => {
-        const next = { ...current };
-        nextEntries.forEach(([siteId, contractWindow]) => {
-          next[siteId] = contractWindow;
-        });
-        return next;
-      });
-    })();
+    void ensureAssignedSafetySite(dialog.siteId)
+      .then((assignedSite) => {
+        if (cancelled) return;
+        setContractWindowsBySiteId((current) => ({
+          ...current,
+          [dialog.siteId]: buildContractWindowFromSafetySite(assignedSite),
+        }));
+      })
+      .catch(() => undefined);
+
     return () => {
       cancelled = true;
     };
-  }, [contractWindowsBySiteId, dialog.open, dialogSiteOptions, ensureAssignedSafetySite]);
+  }, [contractWindowsBySiteId, dialog.open, dialog.siteId, ensureAssignedSafetySite]);
 
   const closeDialog = () => {
     setDialog(EMPTY_DIALOG_STATE);
