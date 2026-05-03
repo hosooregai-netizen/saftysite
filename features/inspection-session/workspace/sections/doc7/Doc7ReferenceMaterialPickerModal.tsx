@@ -250,7 +250,7 @@ export function Doc7ReferenceMaterialPickerModal({
                 </div>
                 <div className={styles.doc7ReferencePickerBody}>
                   <strong className={styles.doc7ReferencePickerTitle}>
-                    {buildDoc7ReferenceMaterialLabel(item)}
+                    {index + 1}. {buildDoc7ReferenceMaterialLabel(item)}
                   </strong>
                   <p className={styles.doc7ReferencePickerExcerpt}>
                     {buildExcerpt(item.body)}

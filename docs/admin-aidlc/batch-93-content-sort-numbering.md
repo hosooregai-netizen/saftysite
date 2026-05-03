@@ -1,4 +1,4 @@
-# Batch 93 - Content Sort Numbering
+# Batch 93 - Content Sort Numbering Rollback
 
 ## Scope
 
@@ -6,9 +6,9 @@
 
 ## Change
 
-- Changed the content CRUD default list sort from title to `sort_order` ascending.
-- Added a visible `번호` column that numbers rows according to the current filtered/sorted result, with the underlying `정렬 {sort_order}` value shown as secondary text.
-- Added the same numbered order to the content export workbook so exported rows match the screen order.
+- Reverted the content CRUD list numbering change.
+- Restored the content CRUD default sort to title-based sorting.
+- Kept `sort_order` visible only through the existing editor/export data path, without adding extra row numbering to the CRUD table.
 
 ## Verification
 
