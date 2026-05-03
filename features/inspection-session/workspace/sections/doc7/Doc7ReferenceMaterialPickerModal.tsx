@@ -186,7 +186,7 @@ export function Doc7ReferenceMaterialPickerModal({
           <label className={styles.doc7ReferencePickerField}>
             <span className={styles.label}>검색</span>
             <input
-              className="app-input"
+              className={`app-input ${styles.doc7ReferencePickerControl}`}
               value={query}
               placeholder="사고유형, 기인물, 예방대책 검색"
               onChange={(event) => setQuery(event.target.value)}
@@ -195,7 +195,7 @@ export function Doc7ReferenceMaterialPickerModal({
           <label className={styles.doc7ReferencePickerField}>
             <span className={styles.label}>사고유형</span>
             <select
-              className="app-select"
+              className={`app-select ${styles.doc7ReferencePickerControl}`}
               value={accidentTypeFilter}
               onChange={(event) => setAccidentTypeFilter(event.target.value)}
             >
@@ -210,7 +210,7 @@ export function Doc7ReferenceMaterialPickerModal({
           <label className={styles.doc7ReferencePickerField}>
             <span className={styles.label}>기인물</span>
             <select
-              className="app-select"
+              className={`app-select ${styles.doc7ReferencePickerControl}`}
               value={effectiveCausativeFilter}
               onChange={(event) => setCausativeFilter(event.target.value)}
             >
