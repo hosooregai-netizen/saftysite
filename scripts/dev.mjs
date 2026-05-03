@@ -1,10 +1,11 @@
 import { spawn } from 'node:child_process';
 
 const isWindows = process.platform === 'win32';
-const npmCommand = isWindows ? 'npm.cmd' : 'npm';
 
 function startProcess(label, args) {
-  const child = spawn(npmCommand, args, {
+  const command = isWindows ? 'cmd.exe' : 'npm';
+  const commandArgs = isWindows ? ['/d', '/s', '/c', 'npm', ...args] : args;
+  const child = spawn(command, commandArgs, {
     stdio: 'inherit',
     env: process.env,
   });

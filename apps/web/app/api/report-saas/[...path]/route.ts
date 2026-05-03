@@ -1,6 +1,15 @@
 const DEFAULT_REPORT_API_CANDIDATES = [
   'http://127.0.0.1:8001/api',
   'http://127.0.0.1:8000/api',
+  'http://127.0.0.1:8002/api',
+  'http://127.0.0.1:8003/api',
+  'http://127.0.0.1:8004/api',
+  'http://127.0.0.1:8005/api',
+  'http://127.0.0.1:8006/api',
+  'http://127.0.0.1:8007/api',
+  'http://127.0.0.1:8008/api',
+  'http://127.0.0.1:8009/api',
+  'http://127.0.0.1:8010/api',
 ] as const;
 
 function getConfiguredReportApiBaseUrl(): string | null {
@@ -62,7 +71,7 @@ async function proxyRequest(
     return Response.json(
       {
         error:
-          'Report SaaS API is not running. Start it with `npm run api:dev` and use port 8001, or set REPORT_SAAS_API_BASE_URL.',
+          'Report SaaS API is not running. Start it with `npm run api:dev`, or set REPORT_SAAS_API_BASE_URL.',
       },
       { status: 502 },
     );

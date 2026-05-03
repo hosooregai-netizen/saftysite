@@ -48,7 +48,7 @@
     "generate:hwpx": "node --experimental-strip-types scripts/generate_hwpx_report.ts",
     "bootstrap:hwpx-template": "node --experimental-strip-types scripts/bootstrap_inspection_hwpx_template.ts",
     "seed:measurement-templates": "node --experimental-strip-types scripts/seed_measurement_templates.ts",
-    "api:dev": "uvicorn app.main:app --reload --app-dir apps/api --port 8001",
+    "api:dev": "node scripts/api-dev.mjs",
     "api:check": "python3 -m compileall apps/api/app"
   },
   "dependencies": {
