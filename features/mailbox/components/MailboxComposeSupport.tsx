@@ -1,4 +1,3 @@
-import type { ChangeEvent, RefObject } from 'react';
 import localStyles from './MailboxPanel.module.css';
 
 export interface MailboxComposeAttachmentItem {
@@ -20,16 +19,13 @@ export interface MailboxComposeSelectedReport {
 }
 
 interface MailboxComposeSupportProps {
-  attachmentInputRef: RefObject<HTMLInputElement | null>;
   attachments: MailboxComposeAttachmentItem[];
   composeMode: 'new' | 'reply' | 'report';
   isDemoMode: boolean;
   isSendingMail: boolean;
   selectedReport: MailboxComposeSelectedReport | null;
   selectedReports: MailboxComposeSelectedReport[];
-  onAttachmentSelect: (event: ChangeEvent<HTMLInputElement>) => void;
   onClearSelectedReport: () => void;
-  onOpenReportPicker: () => void;
   onRemoveAttachment: (attachmentId: string) => void;
 }
 
@@ -44,40 +40,27 @@ function formatFileSize(size: number) {
 }
 
 export function MailboxComposeSupport({
-  attachmentInputRef,
   attachments,
   composeMode,
   isDemoMode,
   isSendingMail,
   selectedReport,
   selectedReports,
-  onAttachmentSelect,
   onClearSelectedReport,
-  onOpenReportPicker,
   onRemoveAttachment,
 }: MailboxComposeSupportProps) {
   const reportItems = selectedReports.length > 0 ? selectedReports : selectedReport ? [selectedReport] : [];
+  const shouldRender =
+    (composeMode === 'report' && reportItems.length > 0) ||
+    attachments.length > 0 ||
+    isDemoMode;
+
+  if (!shouldRender) {
+    return null;
+  }
 
   return (
     <div className={localStyles.composeSupportArea}>
-      <div className={localStyles.composeSupportActions}>
-        <button
-          type="button"
-          className={localStyles.toolbarButton}
-          onClick={() => attachmentInputRef.current?.click()}
-        >
-          파일 첨부
-        </button>
-        <button
-          type="button"
-          className={`${localStyles.toolbarButton} ${localStyles.reportPickerButton}`}
-          onClick={onOpenReportPicker}
-        >
-          보고서 선택
-        </button>
-        <input ref={attachmentInputRef} type="file" multiple hidden onChange={onAttachmentSelect} />
-      </div>
-
       {composeMode === 'report' && reportItems.length > 0 ? (
         <div className={localStyles.composeSupportBlock}>
           <div className={localStyles.detailInfoRow}>
@@ -115,9 +98,6 @@ export function MailboxComposeSupport({
               </div>
             </div>
           ))}
-          <span className={localStyles.accountMeta}>
-            발송 시 선택한 보고서 PDF가 자동으로 첨부됩니다.
-          </span>
         </div>
       ) : null}
 

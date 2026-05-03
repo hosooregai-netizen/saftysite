@@ -40,9 +40,21 @@ test('default report mail template renders the requested guidance report format'
     '한국종합안전(홍길동)구의동 신축공사 - 기술지도 결과보고서(03회차)',
   );
   assert.match(rendered.body, /안녕하세요, 한국종합안전\(주\) 홍길동 입니다\./);
+  assert.match(rendered.body, /입니다\.<br \/><br \/>기술지도 결과보고서/);
   assert.match(rendered.body, /① 현장명 : 구의동 신축공사/);
   assert.match(rendered.body, /② 회차 : 지도회차 3 \/ 계약회차 8/);
   assert.match(rendered.body, /③ 지도일자 : 2026\.  05\.  04\./);
+  assert.match(rendered.body, /③ 지도일자 : 2026\.  05\.  04\.<br \/><br \/>감사합니다\./);
+  assert.match(rendered.body, /감사합니다\.<br \/><br \/>한국종합안전\(주\)/);
   assert.match(rendered.body, /T\. 02-454-4541/);
   assert.match(rendered.body, /E\. hts27@safetysite\.co\.kr/);
+});
+
+test('default report mail template falls back when assignee is the company name', () => {
+  const rendered = renderMailReportTemplate(getMailReportTemplate('default'), [
+    buildReport({ assigneeName: '한국종합안전' }),
+  ]);
+
+  assert.match(rendered.body, /안녕하세요, 한국종합안전\(주\) 요원명 입니다\./);
+  assert.match(rendered.subject, /한국종합안전\(요원명\)/);
 });

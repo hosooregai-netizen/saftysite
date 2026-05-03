@@ -270,10 +270,11 @@ export function useMailboxReportState({
         current.attachmentReady === matchedReport.attachmentReady &&
         current.attachmentUnavailableReason === matchedReport.attachmentUnavailableReason &&
         current.reportTitle === matchedReport.reportTitle &&
-        current.siteName === matchedReport.siteName &&
-        current.headquarterName === matchedReport.headquarterName &&
-        current.assigneeName === matchedReport.assigneeName &&
-        current.totalRound === matchedReport.totalRound &&
+          current.siteName === matchedReport.siteName &&
+          current.headquarterName === matchedReport.headquarterName &&
+          current.recipientEmail === matchedReport.recipientEmail &&
+          current.assigneeName === matchedReport.assigneeName &&
+          current.totalRound === matchedReport.totalRound &&
         current.visitRound === matchedReport.visitRound &&
         current.originalPdfAvailable === matchedReport.originalPdfAvailable &&
         current.originalPdfDownloadPath === matchedReport.originalPdfDownloadPath

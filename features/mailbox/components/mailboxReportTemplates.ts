@@ -8,11 +8,27 @@ export interface MailReportTemplate {
 }
 
 const GUIDANCE_REPORT_BODY = [
-  '<p>안녕하세요, 한국종합안전(주) {agentName} 입니다.</p>',
-  '<p>기술지도 결과보고서를 보내 드리오니 확인 부탁드립니다.</p>',
-  '<p>① 현장명 : {siteName}<br />② 회차 : 지도회차 {guidanceRound} / 계약회차 {contractRound}<br />③ 지도일자 : {visitDateDot}</p>',
-  '<p>감사합니다.</p>',
-  '<p>한국종합안전(주)<br />T. 02-454-4541<br />F. 02-2299-0905<br />E. hts27@safetysite.co.kr<br />서울특별시 광진구 구의강변로 45, 6층 603호(구의동, 성진프라자)</p>',
+  '안녕하세요, 한국종합안전(주) {agentName} 입니다.',
+  '<br /><br />',
+  '기술지도 결과보고서를 보내 드리오니 확인 부탁드립니다.',
+  '<br /><br />',
+  '① 현장명 : {siteName}',
+  '<br />',
+  '② 회차 : 지도회차 {guidanceRound} / 계약회차 {contractRound}',
+  '<br />',
+  '③ 지도일자 : {visitDateDot}',
+  '<br /><br />',
+  '감사합니다.',
+  '<br /><br />',
+  '한국종합안전(주)',
+  '<br />',
+  'T. 02-454-4541',
+  '<br />',
+  'F. 02-2299-0905',
+  '<br />',
+  'E. hts27@safetysite.co.kr',
+  '<br />',
+  '서울특별시 광진구 구의강변로 45, 6층 603호(구의동, 성진프라자)',
 ].join('');
 
 const GUIDANCE_REPORT_SUBJECT =
@@ -47,6 +63,13 @@ function pickSharedValue(reports: SelectedReportContext[], key: keyof SelectedRe
   if (values.length === 0) return '';
   if (values.length === 1) return values[0] || '';
   return `${values[0]} 외 ${values.length - 1}건`;
+}
+
+function normalizeAgentName(value: string) {
+  const normalized = normalizeText(value);
+  return normalized && !/^한국종합안전(?:\(주\))?$/u.test(normalized)
+    ? normalized
+    : '요원명';
 }
 
 function formatRoundNo(value: unknown, { pad = false } = {}) {
@@ -105,7 +128,7 @@ export function renderMailReportTemplate(
   const first = reports[0] || null;
   const visitDate = pickSharedValue(reports, 'visitDate');
   const variables: Record<string, string> = {
-    agentName: pickSharedValue(reports, 'assigneeName') || '요원명',
+    agentName: normalizeAgentName(pickSharedValue(reports, 'assigneeName')),
     contractRound: buildRoundValue(reports, 'totalRound'),
     date: visitDate || new Date().toISOString().slice(0, 10),
     guidanceRound: buildRoundValue(reports, 'visitRound'),

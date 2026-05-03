@@ -85,6 +85,56 @@ test('canonical admin selected report hydration uses exact report_key rows', asy
   assert.equal(selected?.originalPdfAvailable, true);
 });
 
+test('canonical admin selected report hydrates site detail when recipient email is missing', async () => {
+  const selected = await fetchCanonicalAdminMailboxSelectedReport({
+    adminSiteById: new Map([
+      [
+        'site-1',
+        {
+          ...buildSiteMap().get('site-1'),
+          site_contact_email: '',
+        } as SafetySite,
+      ],
+    ]),
+    fetchReports: async () => ({
+      limit: 1,
+      offset: 0,
+      rows: [buildRow()],
+      total: 1,
+    }),
+    fetchSite: async (siteId) => ({
+      ...buildSiteMap().get(siteId),
+      site_contact_email: 'site-manager@example.com',
+    } as SafetySite),
+    reportKey: 'report-current-1',
+    siteId: 'site-1',
+  });
+
+  assert.equal(selected?.recipientEmail, 'site-manager@example.com');
+});
+
+test('canonical admin report picker options hydrate site detail for recipient emails', async () => {
+  const response = await fetchCanonicalAdminMailboxReportOptions({
+    adminSiteById: new Map(),
+    fetchReports: async () => ({
+      limit: 500,
+      offset: 0,
+      rows: [buildRow()],
+      total: 1,
+    }),
+    fetchSite: async (siteId) => ({
+      ...buildSiteMap().get(siteId),
+      site_contact_email: 'site-picker@example.com',
+    } as SafetySite),
+    page: 1,
+    reportPickerOpen: false,
+    reportSearch: '',
+    reportSiteFilter: '',
+  });
+
+  assert.equal(response.options[0]?.recipientEmail, 'site-picker@example.com');
+});
+
 test('canonical admin initial options prefer original PDF rows for duplicate report identities', async () => {
   const response = await fetchCanonicalAdminMailboxReportOptions({
     adminSiteById: buildSiteMap(),
