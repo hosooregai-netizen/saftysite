@@ -204,6 +204,7 @@ async function installErpRoutes({
         license_no: body.license_no ?? null,
         contact_name: body.contact_name ?? null,
         contact_phone: body.contact_phone ?? null,
+        contact_email: body.contact_email ?? null,
         address: body.address ?? null,
         memo: body.memo ?? null,
         is_active: body.is_active ?? true,

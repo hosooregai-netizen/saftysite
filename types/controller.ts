@@ -22,6 +22,7 @@ export interface SafetyHeadquarter {
   license_no: string | null;
   contact_name: string | null;
   contact_phone: string | null;
+  contact_email?: string | null;
   address: string | null;
   memo: string | null;
   is_active: boolean;
@@ -99,6 +100,7 @@ export interface SafetyHeadquarterInput {
   license_no?: string | null;
   contact_name?: string | null;
   contact_phone?: string | null;
+  contact_email?: string | null;
   address?: string | null;
   memo?: string | null;
   is_active?: boolean;

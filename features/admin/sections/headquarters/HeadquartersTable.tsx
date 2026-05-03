@@ -179,12 +179,15 @@ export function HeadquartersTable({
                         </td>
                         <td>
                           <div className={styles.tablePrimary}>{item.contact_name || '-'}</div>
+                          <div className={styles.tableSecondary}>
+                            {[item.contact_phone, item.contact_email].filter(Boolean).join(' / ') || '-'}
+                          </div>
                         </td>
                         <td>
                           <div className={styles.tablePrimary}>
                             {item.business_registration_no || '-'}
                           </div>
-                          <div className={styles.tableSecondary}>면허번호 {item.license_no || '-'}</div>
+                          <div className={styles.tableSecondary}>법인등록번호 {item.corporate_registration_no || '-'}</div>
                         </td>
                         <td>
                           <div className={styles.tablePrimary}>{item.address || '-'}</div>

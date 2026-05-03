@@ -42,6 +42,7 @@ interface SiteEditorSectionState {
 interface InlineHeadquarterFormState {
   address: string;
   business_registration_no: string;
+  contact_email: string;
   contact_name: string;
   contact_phone: string;
   corporate_registration_no: string;
@@ -54,6 +55,7 @@ interface InlineHeadquarterFormState {
 const EMPTY_INLINE_HEADQUARTER_FORM: InlineHeadquarterFormState = {
   address: '',
   business_registration_no: '',
+  contact_email: '',
   contact_name: '',
   contact_phone: '',
   corporate_registration_no: '',
@@ -232,6 +234,7 @@ export function SiteEditorModal({
           headquarterCreateForm.business_registration_no.trim() || null,
         contact_name: headquarterCreateForm.contact_name.trim() || null,
         contact_phone: headquarterCreateForm.contact_phone.trim() || null,
+        contact_email: headquarterCreateForm.contact_email.trim() || null,
         corporate_registration_no:
           headquarterCreateForm.corporate_registration_no.trim() || null,
         license_no: headquarterCreateForm.license_no.trim() || null,
@@ -421,22 +424,7 @@ export function SiteEditorModal({
                   />
                 </label>
                 <label className={styles.modalField}>
-                  <span className={styles.label}>면허번호</span>
-                  <input
-                    className="app-input"
-                    value={headquarterCreateForm.license_no}
-                    onChange={(event) =>
-                      setHeadquarterCreateForm((current) => ({
-                        ...current,
-                        license_no: event.target.value,
-                      }))
-                    }
-                    maxLength={50}
-                    disabled={busy || headquarterCreateBusy}
-                  />
-                </label>
-                <label className={styles.modalField}>
-                  <span className={styles.label}>대표 성명</span>
+                  <span className={styles.label}>건설사 담당자명</span>
                   <input
                     className="app-input"
                     value={headquarterCreateForm.contact_name}
@@ -451,7 +439,7 @@ export function SiteEditorModal({
                   />
                 </label>
                 <label className={styles.modalField}>
-                  <span className={styles.label}>대표 전화번호</span>
+                  <span className={styles.label}>건설사 담당자 연락처</span>
                   <input
                     className="app-input"
                     value={headquarterCreateForm.contact_phone}
@@ -465,8 +453,24 @@ export function SiteEditorModal({
                     disabled={busy || headquarterCreateBusy}
                   />
                 </label>
-                <label className={styles.modalFieldWide}>
-                  <span className={styles.label}>소재지</span>
+                <label className={styles.modalField}>
+                  <span className={styles.label}>건설사 담당자 이메일</span>
+                  <input
+                    className="app-input"
+                    type="email"
+                    value={headquarterCreateForm.contact_email}
+                    onChange={(event) =>
+                      setHeadquarterCreateForm((current) => ({
+                        ...current,
+                        contact_email: event.target.value,
+                      }))
+                    }
+                    maxLength={200}
+                    disabled={busy || headquarterCreateBusy}
+                  />
+                </label>
+                <label className={styles.modalField}>
+                  <span className={styles.label}>본사 주소</span>
                   <input
                     className="app-input"
                     value={headquarterCreateForm.address}

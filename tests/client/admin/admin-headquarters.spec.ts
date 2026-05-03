@@ -26,8 +26,9 @@ export async function runAdminHeadquartersSmoke(config: ClientSmokePlaywrightCon
         business_registration_no: `123-45-${String(10000 + index)}`,
         corporate_registration_no: null,
         license_no: `LIC-${padded}`,
-        contact_name: `Owner ${padded}`,
+        contact_name: `Contact ${padded}`,
         contact_phone: `02-1000-${String(1000 + index)}`,
+        contact_email: `contact-${padded}@example.com`,
         address: `Seoul ${padded}`,
         memo: `seeded headquarter ${padded}`,
         is_active: true,
@@ -134,11 +135,12 @@ export async function runAdminHeadquartersSmoke(config: ClientSmokePlaywrightCon
     await createDialog.getByLabel('건설사명').fill('mocked headquarter');
     await createDialog.getByLabel('사업장관리번호').fill('HQ-NEW-001');
     await createDialog.getByLabel('사업개시번호').fill('OPEN-NEW-001');
-    await createDialog.getByLabel('건설사 대표자명').fill('김담당');
-    await createDialog.getByLabel('대표 전화').fill('02-9999-1111');
+    await createDialog.getByLabel('건설사 담당자명').fill('김담당');
+    await createDialog.getByLabel('건설사 담당자 연락처').fill('02-9999-1111');
+    await createDialog.getByLabel('건설사 담당자 이메일').fill('contact-new@example.com');
     await createDialog
       .locator('label')
-      .filter({ hasText: '건설사 주소' })
+      .filter({ hasText: '본사 주소' })
       .locator('input')
       .fill('서울시 서초구 테스트로 99');
     await createDialog.getByRole('button', { name: '생성' }).click();
@@ -153,7 +155,7 @@ export async function runAdminHeadquartersSmoke(config: ClientSmokePlaywrightCon
     await page.getByRole('button', { name: /mocked headquarter 작업 메뉴 열기/ }).click();
     await page.getByRole('menuitem', { name: '수정' }).click();
     const editDialog = page.getByRole('dialog', { name: '건설사 수정' });
-    await editDialog.getByLabel('건설업면허/등록번호').fill('면허-NEW-001');
+    await editDialog.getByLabel('건설사 담당자 이메일').fill('contact-updated@example.com');
     await editDialog.getByRole('button', { name: '저장' }).click();
     await harness.waitForRequestCount('PATCH /headquarters/:id', headquarterUpdatesBefore + 1);
 

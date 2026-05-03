@@ -23,8 +23,9 @@ interface ExcelImportSectionProps {
 
 const FIELD_LABELS: Record<string, string> = {
   business_registration_no: '사업자등록번호',
-  contact_name: '건설사 대표자명',
-  contact_phone: '건설사 연락처',
+  contact_email: '건설사 담당자 이메일',
+  contact_name: '건설사 담당자명',
+  contact_phone: '건설사 담당자 연락처',
   contract_date: '계약일',
   contract_type: '계약유형',
   corporate_registration_no: '법인등록번호',

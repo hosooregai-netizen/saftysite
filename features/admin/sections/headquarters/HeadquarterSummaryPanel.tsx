@@ -18,10 +18,10 @@ function getHeadquarterMissingFields(headquarter: SafetyHeadquarter) {
     ['사업개시번호', headquarter.opening_number],
     ['사업자등록번호', headquarter.business_registration_no],
     ['법인등록번호', headquarter.corporate_registration_no],
-    ['면허번호', headquarter.license_no],
-    ['대표자명', headquarter.contact_name],
-    ['대표 전화', headquarter.contact_phone],
-    ['건설사 주소', headquarter.address],
+    ['건설사 담당자명', headquarter.contact_name],
+    ['건설사 담당자 연락처', headquarter.contact_phone],
+    ['건설사 담당자 이메일', headquarter.contact_email ?? null],
+    ['본사 주소', headquarter.address],
   ];
 
   return requiredChecks
@@ -35,7 +35,6 @@ function buildRegistrationRows(headquarter: SafetyHeadquarter) {
     ['사업개시번호', headquarter.opening_number || '-'],
     ['사업자등록번호', headquarter.business_registration_no || '-'],
     ['법인등록번호', headquarter.corporate_registration_no || '-'],
-    ['면허번호', headquarter.license_no || '-'],
   ] as const;
 }
 
@@ -102,10 +101,11 @@ export function HeadquarterSummaryPanel({
           </article>
           <div className={styles.headquarterOverviewAside}>
             <article className={styles.contextCell}>
-              <span className={styles.contextCellLabel}>대표자</span>
+              <span className={styles.contextCellLabel}>건설사 담당자</span>
               <strong className={styles.contextCellValue}>{headquarter.contact_name || '-'}</strong>
               <span className={styles.contextCellMeta}>
-                {headquarter.contact_phone || '대표 전화 미입력'}
+                {[headquarter.contact_phone, headquarter.contact_email].filter(Boolean).join(' / ') ||
+                  '연락처 미입력'}
               </span>
             </article>
             <article className={styles.contextCell}>
@@ -125,10 +125,10 @@ export function HeadquarterSummaryPanel({
               </span>
             </article>
             <article className={styles.contextCell}>
-              <span className={styles.contextCellLabel}>건설사 주소</span>
+              <span className={styles.contextCellLabel}>본사 주소</span>
               <strong className={styles.contextCellValue}>{headquarter.address || '-'}</strong>
               <span className={styles.contextCellMeta}>
-                대표 전화 {headquarter.contact_phone || '-'}
+                담당자 연락처 {headquarter.contact_phone || '-'}
               </span>
             </article>
             <article className={styles.contextCell}>
