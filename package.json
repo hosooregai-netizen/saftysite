@@ -11,7 +11,10 @@
   ],
   "scripts": {
     "rundev": "node scripts/rundev.mjs",
-    "dev": "node scripts/dev.mjs",
+    "dev": "node scripts/rundev.mjs",
+    "dev:erp": "node scripts/rundev.mjs",
+    "dev:saas": "node scripts/dev.mjs",
+    "dev:sass": "npm run dev:saas",
     "dev:web": "npm run dev -w @saftysite/web",
     "dev:legacy": "node scripts/rundev.mjs",
     "build": "npm run build -w @saftysite/web",
