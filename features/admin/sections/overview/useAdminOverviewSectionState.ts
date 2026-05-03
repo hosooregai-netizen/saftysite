@@ -74,6 +74,100 @@ function pickRowsForCurrentYear<T>(
   return fallbackRows.filter((row) => resolveYear(row) === fallbackYear);
 }
 
+function countMaterialMissingEntries(
+  summary: SafetyAdminOverviewResponse['quarterlyMaterialSummary'],
+) {
+  return summary.entries.reduce((total, entry) => {
+    if (entry.key === 'education_missing' || entry.key === 'measurement_missing' || entry.key === 'both_missing') {
+      return total + entry.count;
+    }
+    return total;
+  }, 0);
+}
+
+function shouldUseFallbackMaterialRows(
+  responseSummary: SafetyAdminOverviewResponse['quarterlyMaterialSummary'],
+  fallbackSummary: SafetyAdminOverviewResponse['quarterlyMaterialSummary'],
+) {
+  const responseRows = responseSummary.missingSiteRows;
+  const fallbackRows = fallbackSummary.missingSiteRows;
+  const expectedMissingRows = countMaterialMissingEntries(responseSummary);
+
+  return (
+    fallbackRows.length > responseRows.length &&
+    (responseRows.length === 0 || expectedMissingRows > responseRows.length)
+  );
+}
+
+function shouldUseFallbackEndingSoonRows(
+  responseRows: SafetyAdminOverviewResponse['endingSoonRows'],
+  responseSummary: SafetyAdminOverviewResponse['endingSoonSummary'],
+  fallbackRows: SafetyAdminOverviewResponse['endingSoonRows'],
+) {
+  return (
+    fallbackRows.length > responseRows.length &&
+    (responseRows.length === 0 || responseSummary.totalSiteCount > responseRows.length)
+  );
+}
+
+export function mergeOverviewResponseWithFallback(
+  overviewResponse: SafetyAdminOverviewResponse | null,
+  fallbackOverview: SafetyAdminOverviewResponse,
+) {
+  if (!overviewResponse) return fallbackOverview;
+
+  const responseEndingSoonRows = Array.isArray(overviewResponse.endingSoonRows)
+    ? overviewResponse.endingSoonRows
+    : [];
+  const responseEndingSoonSummary =
+    overviewResponse.endingSoonSummary && hasEndingSoonSummary(overviewResponse.endingSoonSummary)
+      ? overviewResponse.endingSoonSummary
+      : fallbackOverview.endingSoonSummary;
+  const useFallbackEndingSoonRows = shouldUseFallbackEndingSoonRows(
+    responseEndingSoonRows,
+    responseEndingSoonSummary,
+    fallbackOverview.endingSoonRows,
+  );
+  const useFallbackMaterialRows = shouldUseFallbackMaterialRows(
+    overviewResponse.quarterlyMaterialSummary,
+    fallbackOverview.quarterlyMaterialSummary,
+  );
+
+  return {
+    ...overviewResponse,
+    deadlineSignalSummary: hasDeadlineSignalSummary(overviewResponse.deadlineSignalSummary)
+      ? overviewResponse.deadlineSignalSummary
+      : fallbackOverview.deadlineSignalSummary,
+    endingSoonRows: useFallbackEndingSoonRows
+      ? fallbackOverview.endingSoonRows
+      : responseEndingSoonRows,
+    endingSoonSummary: useFallbackEndingSoonRows
+      ? fallbackOverview.endingSoonSummary
+      : responseEndingSoonSummary,
+    quarterlyMaterialSummary: hasQuarterlyMaterialSummary(overviewResponse.quarterlyMaterialSummary)
+      ? {
+          ...overviewResponse.quarterlyMaterialSummary,
+          missingSiteRows: useFallbackMaterialRows
+            ? fallbackOverview.quarterlyMaterialSummary.missingSiteRows
+            : overviewResponse.quarterlyMaterialSummary.missingSiteRows,
+          quarterKey:
+            overviewResponse.quarterlyMaterialSummary.quarterKey ||
+            fallbackOverview.quarterlyMaterialSummary.quarterKey,
+          quarterLabel:
+            overviewResponse.quarterlyMaterialSummary.quarterLabel ||
+            fallbackOverview.quarterlyMaterialSummary.quarterLabel,
+        }
+      : fallbackOverview.quarterlyMaterialSummary,
+    siteStatusSummary: hasSiteStatusSummary(overviewResponse.siteStatusSummary)
+      ? overviewResponse.siteStatusSummary
+      : fallbackOverview.siteStatusSummary,
+    unsentReportRows:
+      overviewResponse.unsentReportRows.length > 0 || fallbackOverview.unsentReportRows.length === 0
+        ? overviewResponse.unsentReportRows
+        : fallbackOverview.unsentReportRows,
+  } satisfies SafetyAdminOverviewResponse;
+}
+
 export function useAdminOverviewSectionState(
   currentUserId: string,
   data: ControllerDashboardData,
@@ -176,40 +270,10 @@ export function useAdminOverviewSectionState(
     void refreshOverview({ preferCached: false });
   }, [currentUserId, refreshOverview]);
 
-  const overview = useMemo(() => {
-    if (!overviewResponse) return fallbackOverview;
-    return {
-      ...overviewResponse,
-      deadlineSignalSummary: hasDeadlineSignalSummary(overviewResponse.deadlineSignalSummary)
-        ? overviewResponse.deadlineSignalSummary
-        : fallbackOverview.deadlineSignalSummary,
-      endingSoonRows:
-        Array.isArray(overviewResponse.endingSoonRows) && overviewResponse.endingSoonRows.length > 0
-          ? overviewResponse.endingSoonRows
-          : fallbackOverview.endingSoonRows,
-      endingSoonSummary: overviewResponse.endingSoonSummary && hasEndingSoonSummary(overviewResponse.endingSoonSummary)
-        ? overviewResponse.endingSoonSummary
-        : fallbackOverview.endingSoonSummary,
-      quarterlyMaterialSummary: hasQuarterlyMaterialSummary(overviewResponse.quarterlyMaterialSummary)
-        ? {
-            ...overviewResponse.quarterlyMaterialSummary,
-            quarterKey:
-              overviewResponse.quarterlyMaterialSummary.quarterKey ||
-              fallbackOverview.quarterlyMaterialSummary.quarterKey,
-            quarterLabel:
-              overviewResponse.quarterlyMaterialSummary.quarterLabel ||
-              fallbackOverview.quarterlyMaterialSummary.quarterLabel,
-          }
-        : fallbackOverview.quarterlyMaterialSummary,
-      siteStatusSummary: hasSiteStatusSummary(overviewResponse.siteStatusSummary)
-        ? overviewResponse.siteStatusSummary
-        : fallbackOverview.siteStatusSummary,
-      unsentReportRows:
-        overviewResponse.unsentReportRows.length > 0 || fallbackOverview.unsentReportRows.length === 0
-          ? overviewResponse.unsentReportRows
-          : fallbackOverview.unsentReportRows,
-    } satisfies SafetyAdminOverviewResponse;
-  }, [fallbackOverview, overviewResponse]);
+  const overview = useMemo(
+    () => mergeOverviewResponseWithFallback(overviewResponse, fallbackOverview),
+    [fallbackOverview, overviewResponse],
+  );
 
   const normalizedUnsentReportRows = useMemo(() => {
     const fallbackRowsByKey = new Map(fallbackOverview.unsentReportRows.map((row) => [row.reportKey, row]));
