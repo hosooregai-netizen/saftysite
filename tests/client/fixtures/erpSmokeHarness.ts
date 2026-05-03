@@ -735,6 +735,51 @@ async function installErpRoutes({
     const request = route.request();
     const url = new URL(request.url());
 
+    if (url.pathname === '/api/me/schedules' && request.method() === 'GET') {
+      requestCounts.set(
+        'GET /api/me/schedules',
+        (requestCounts.get('GET /api/me/schedules') || 0) + 1,
+      );
+      const siteId = url.searchParams.get('siteId') || 'site-1';
+      await fulfillJson(route, {
+        limit: Number(url.searchParams.get('limit') || '300'),
+        month: url.searchParams.get('month') || '',
+        offset: Number(url.searchParams.get('offset') || '0'),
+        rows: Array.from({ length: 12 }, (_, index) => {
+          const roundNo = index + 1;
+          return {
+            actualVisitDate: '',
+            assigneeName: 'Smoke Worker',
+            assigneeUserId: 'field-1',
+            exceptionMemo: '',
+            exceptionReasonCode: '',
+            headquarterId: 'hq-1',
+            headquarterName: 'Smoke HQ',
+            id: `schedule-smoke-${roundNo}`,
+            isConflicted: false,
+            isOutOfWindow: false,
+            isOverdue: false,
+            linkedReportKey: '',
+            plannedDate: '',
+            roundNo,
+            selectionConfirmedAt: '',
+            selectionConfirmedByName: '',
+            selectionConfirmedByUserId: '',
+            selectionReasonLabel: '',
+            selectionReasonMemo: '',
+            siteId,
+            siteName: 'Smoke Site',
+            status: 'planned',
+            totalRounds: 12,
+            windowEnd: '2026-06-30',
+            windowStart: '2026-01-01',
+          };
+        }),
+        total: 12,
+      });
+      return;
+    }
+
     if (url.pathname === '/api/me/schedules/next' && request.method() === 'POST') {
       requestCounts.set(
         'POST /api/me/schedules/next',
@@ -767,6 +812,50 @@ async function installErpRoutes({
         totalRounds: 8,
         windowEnd: '2026-04-28',
         windowStart: '2026-04-01',
+      });
+      return;
+    }
+
+    if (/^\/api\/me\/schedules\/[^/]+$/.test(url.pathname) && request.method() === 'PATCH') {
+      requestCounts.set(
+        'PATCH /api/me/schedules/:id',
+        (requestCounts.get('PATCH /api/me/schedules/:id') || 0) + 1,
+      );
+      const scheduleId = decodeURIComponent(url.pathname.split('/').pop() || 'schedule-smoke-next');
+      const matchedRoundNo = Number(scheduleId.match(/(\d+)$/)?.[1] || '2');
+      const body = (request.postDataJSON?.() as JsonRecord) || {};
+      await fulfillJson(route, {
+        actualVisitDate: String(
+          body.actual_visit_date ??
+            body.actualVisitDate ??
+            body.planned_date ??
+            body.plannedDate ??
+            '',
+        ),
+        assigneeName: 'Smoke Worker',
+        assigneeUserId: 'field-1',
+        exceptionMemo: '',
+        exceptionReasonCode: '',
+        headquarterId: 'hq-1',
+        headquarterName: 'Smoke HQ',
+        id: scheduleId,
+        isConflicted: false,
+        isOutOfWindow: false,
+        isOverdue: false,
+        linkedReportKey: String(body.linked_report_key ?? body.linkedReportKey ?? ''),
+        plannedDate: String(body.planned_date ?? body.plannedDate ?? '2026-04-09'),
+        roundNo: matchedRoundNo,
+        selectionConfirmedAt: NOW,
+        selectionConfirmedByName: 'Smoke Worker',
+        selectionConfirmedByUserId: 'field-1',
+        selectionReasonLabel: String(body.selection_reason_label ?? body.selectionReasonLabel ?? ''),
+        selectionReasonMemo: String(body.selection_reason_memo ?? body.selectionReasonMemo ?? ''),
+        siteId: 'site-1',
+        siteName: 'Smoke Site',
+        status: String(body.status || 'planned'),
+        totalRounds: 12,
+        windowEnd: '2026-06-30',
+        windowStart: '2026-01-01',
       });
       return;
     }
@@ -827,6 +916,8 @@ async function installErpRoutes({
 
   await context.route('**/api/safety/**', handleErpSafetyRoute);
   await context.route('**/api/v1/**', handleErpSafetyRoute);
+  await context.route('**/api/me/schedules', handleMeSchedulesRoute);
+  await context.route('**/api/me/schedules/*', handleMeSchedulesRoute);
   await context.route('**/api/me/schedules/next', handleMeSchedulesRoute);
   await context.route('**/api/reports/**', handlePublicReportApiRoute);
   await context.route('**/api/documents/quarterly/**', handleQuarterlyDocumentRoute);
