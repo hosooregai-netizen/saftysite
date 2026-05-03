@@ -12,7 +12,6 @@ import {
 } from './MailboxRecipientField';
 import { MailboxSendProgress } from './MailboxSendProgress';
 import localStyles from './MailboxPanel.module.css';
-import { MAIL_REPORT_TEMPLATES } from './mailboxReportTemplates';
 
 interface MailboxComposeAccountOption {
   id: string;
@@ -51,9 +50,7 @@ interface MailboxComposeSectionProps {
   selectableAccounts: MailboxComposeAccountOption[];
   selectedReport: MailboxComposeSelectedReport | null;
   selectedReports: MailboxComposeSelectedReport[];
-  selectedTemplateId: string;
   submitDisabled: boolean;
-  onApplyTemplate: (templateId?: string) => void;
   onAttachmentSelect: (event: ChangeEvent<HTMLInputElement>) => void;
   onBlurRecipient: () => void;
   onChangeAccountId: (accountId: string) => void;
@@ -91,9 +88,7 @@ export function MailboxComposeSection({
   selectableAccounts,
   selectedReport,
   selectedReports,
-  selectedTemplateId,
   submitDisabled,
-  onApplyTemplate,
   onAttachmentSelect,
   onBlurRecipient,
   onChangeAccountId,
@@ -155,23 +150,6 @@ export function MailboxComposeSection({
           onRemoveRecipient={onRemoveRecipient}
           onSelectSuggestion={onSelectRecipientSuggestion}
         />
-
-        {composeMode === 'report' ? (
-          <label className={localStyles.fieldWide}>
-            <span className={localStyles.fieldLabel}>템플릿</span>
-            <select
-              className="app-select"
-              value={selectedTemplateId}
-              onChange={(event) => onApplyTemplate(event.target.value)}
-            >
-              {MAIL_REPORT_TEMPLATES.map((template) => (
-                <option key={template.id} value={template.id}>
-                  {template.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : null}
 
         <label className={localStyles.fieldWide}>
           <span className={localStyles.fieldLabel}>제목</span>

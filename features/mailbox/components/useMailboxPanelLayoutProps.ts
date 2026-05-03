@@ -113,7 +113,6 @@ export function useMailboxPanelLayoutProps({
       selectedAccountId: accountState.selectedAccountId,
       selectedReport: reportState.selectedReport,
       selectedReports: reportState.selectedReports,
-      selectedTemplateId: composeState.selectedTemplateId,
       selectableAccounts: accountState.selectableAccounts,
       showMailboxConnectGate,
       tab: routing.tab,
@@ -134,7 +133,6 @@ export function useMailboxPanelLayoutProps({
       onChangeRecipientInput: actions.handleRecipientInputChange,
       onChangeSubject: (subject: string) =>
         composeState.setCompose((current) => ({ ...current, subject })),
-      onApplyTemplate: actions.applyReportTemplate,
       onClearSelectedReport: actions.handleClearSelectedReport,
       onComposerCommand: actions.handleComposerCommand,
       onComposerInput: actions.handleComposerInput,

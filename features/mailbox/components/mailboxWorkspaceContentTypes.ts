@@ -42,7 +42,6 @@ export interface MailboxWorkspaceContentProps {
   selectedAccountId: string;
   selectedReport: SelectedReportContext | null;
   selectedReports: SelectedReportContext[];
-  selectedTemplateId: string;
   selectableAccounts: MailAccount[];
   showMailboxConnectGate: boolean;
   tab: MailboxTab;
@@ -62,7 +61,6 @@ export interface MailboxWorkspaceContentProps {
   onChangeAccountId: (accountId: string) => void;
   onChangeRecipientInput: (value: string) => void;
   onChangeSubject: (value: string) => void;
-  onApplyTemplate: (templateId?: string) => void;
   onClearSelectedReport: () => void;
   onComposerCommand: (command: string, value?: string) => void;
   onComposerInput: () => void;

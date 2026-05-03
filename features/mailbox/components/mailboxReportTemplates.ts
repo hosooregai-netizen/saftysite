@@ -25,23 +25,6 @@ export const MAIL_REPORT_TEMPLATES: MailReportTemplate[] = [
     subject: GUIDANCE_REPORT_SUBJECT,
     body: GUIDANCE_REPORT_BODY,
   },
-  {
-    id: 'quarterly',
-    name: '분기 보고',
-    subject: '[분기 보고] {headquarterName} / {siteName} {date}',
-    body: [
-      '<p>안녕하세요.</p>',
-      '<p>{headquarterName} {siteName} 현장 분기 보고서를 첨부 드립니다.</p>',
-      '<p>{reportList}</p>',
-      '<p>검토 후 회신 부탁드립니다.</p>',
-    ].join(''),
-  },
-  {
-    id: 'guidance',
-    name: '기술지도 보고',
-    subject: GUIDANCE_REPORT_SUBJECT,
-    body: GUIDANCE_REPORT_BODY,
-  },
 ];
 
 function normalizeText(value: unknown) {
