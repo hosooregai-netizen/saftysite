@@ -1,0 +1,17 @@
+{
+  "name": "@saftysite/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "generate:schemas": "node --import tsx ./scripts/generate-json-schemas.mts",
+    "lint": "eslint .",
+    "test": "node --import tsx --test src/schemas.test.ts"
+  },
+  "dependencies": {
+    "zod": "^3.25.76"
+  }
+}

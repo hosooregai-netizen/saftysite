@@ -1,0 +1,700 @@
+.headerAside {
+  color: var(--text-muted);
+  font-size: 0.92rem;
+  font-weight: 700;
+  text-align: right;
+}
+
+.toolbarLayout {
+  display: flex;
+  flex: 1;
+  align-items: flex-end;
+  gap: 14px;
+}
+
+.toolbarGroup,
+.toolbarGroupWide {
+  display: grid;
+  gap: 8px;
+}
+
+.toolbarGroup {
+  min-width: 260px;
+}
+
+.toolbarGroupWide {
+  flex: 1;
+  min-width: 220px;
+}
+
+.toolbarSelect {
+  min-width: 260px;
+}
+
+.toolbarProgress {
+  display: grid;
+  gap: 8px;
+}
+
+.progressTrack {
+  position: relative;
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e8eef4;
+}
+
+.progressFill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #203648 0%, #47637b 100%);
+}
+
+.progressSummary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.progressValue {
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.progressMeta {
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.toolbarActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.disclaimerBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(15, 23, 32, 0.42);
+  backdrop-filter: blur(6px);
+}
+
+.disclaimerDialog {
+  width: min(720px, 100%);
+  display: grid;
+  gap: 18px;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: #fcfeff;
+  box-shadow: 0 32px 80px rgba(22, 36, 48, 0.22);
+}
+
+.disclaimerHeader,
+.disclaimerFooter {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.disclaimerTitle {
+  margin: 0;
+  color: var(--text);
+  font-size: 1.6rem;
+}
+
+.disclaimerBody {
+  display: grid;
+  gap: 16px;
+}
+
+.disclaimerPanel {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border: 1px solid rgba(185, 122, 42, 0.32);
+  border-radius: 18px;
+  background: linear-gradient(180deg, #fff8ea 0%, #fffdf8 100%);
+}
+
+.disclaimerList {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text);
+  line-height: 1.7;
+}
+
+.disclaimerField {
+  display: grid;
+  gap: 8px;
+}
+
+.disclaimerField span,
+.disclaimerFootnote {
+  color: var(--text-muted);
+  font-size: 0.92rem;
+}
+
+.disclaimerReminder {
+  padding: 14px 16px;
+  border: 1px solid rgba(185, 122, 42, 0.28);
+  border-radius: 14px;
+  background: linear-gradient(180deg, #fff8ec 0%, #fffef9 100%);
+  color: #8f6414;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.editorPanel {
+  gap: 18px;
+}
+
+.editorHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.editorEyebrow {
+  display: inline-flex;
+  margin-bottom: 8px;
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.editorTitle {
+  margin: 0;
+  font-size: 2rem;
+}
+
+.editorDescription {
+  margin: 8px 0 0;
+  max-width: 72ch;
+}
+
+.editorBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: #eef4f9;
+  color: var(--navy);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.sectionSummaryStrip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.sectionSummaryCard {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: linear-gradient(180deg, #f8fbfd 0%, #f1f6fa 100%);
+}
+
+.sectionSummaryCard span {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.sectionSummaryCard strong {
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.editorBody {
+  display: grid;
+  gap: 18px;
+}
+
+.documentStack {
+  display: grid;
+  gap: 18px;
+}
+
+.sheetGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.sheetBlock,
+.repeatCard,
+.findingCard,
+.noteCard {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: #fcfdff;
+}
+
+.sheetBlock {
+  padding: 18px;
+}
+
+.blockHeader {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.blockTitle {
+  margin: 0;
+  color: var(--text);
+  font-size: 1.1rem;
+}
+
+.blockIntro {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.formTable {
+  display: grid;
+  gap: 0;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr);
+  align-items: stretch;
+  min-height: 56px;
+  border-top: 1px solid var(--line);
+}
+
+.formRow:first-child {
+  border-top: 0;
+}
+
+.formRowTall {
+  min-height: 112px;
+}
+
+.formLabel {
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  background: #f5f8fb;
+  color: var(--text);
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.inputControl,
+.selectControl,
+.textareaControl {
+  width: 100%;
+  border: 0;
+  background: #fff;
+  color: var(--text);
+  font: inherit;
+}
+
+.inputControl,
+.selectControl {
+  min-height: 56px;
+  padding: 0 16px;
+}
+
+.textareaControl {
+  min-height: 92px;
+  padding: 14px 16px;
+  resize: vertical;
+}
+
+.textareaTall {
+  min-height: 120px;
+}
+
+.inputControl:focus,
+.selectControl:focus,
+.textareaControl:focus {
+  outline: 2px solid rgba(33, 55, 74, 0.16);
+  outline-offset: -2px;
+}
+
+.formStack {
+  display: grid;
+  gap: 14px;
+}
+
+.formStackRow {
+  display: grid;
+  gap: 8px;
+}
+
+.inlineGrid,
+.fieldGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.fieldGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.fieldSpan {
+  grid-column: 1 / -1;
+}
+
+.sectionActionRow {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.repeatList,
+.findingList,
+.noteList {
+  display: grid;
+  gap: 16px;
+}
+
+.repeatCard {
+  padding: 18px;
+}
+
+.repeatHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.repeatBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  background: #eef4f9;
+  color: var(--navy);
+  font-weight: 800;
+}
+
+.repeatHint {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.repeatBody {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 16px;
+}
+
+.photoPlaceholderGrid {
+  display: grid;
+  gap: 12px;
+}
+
+.photoPlaceholder {
+  display: grid;
+  gap: 8px;
+}
+
+.photoPlaceholderLabel {
+  color: var(--text);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.photoPlaceholderFrame {
+  display: grid;
+  place-items: center;
+  min-height: 152px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 14px;
+  background: linear-gradient(180deg, #f7fafc 0%, #eef4f8 100%);
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.inlineNotice,
+.subtleNotice {
+  padding: 12px 14px;
+  border-radius: 14px;
+  font-weight: 700;
+}
+
+.inlineNotice {
+  border: 1px solid #ead59d;
+  background: #fff8e5;
+  color: #82600c;
+}
+
+.subtleNotice {
+  border: 1px solid var(--line);
+  background: #f6f9fc;
+  color: var(--text-muted);
+}
+
+.findingCard {
+  overflow: hidden;
+}
+
+.findingHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 18px;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, #f8fbfd 0%, #ffffff 100%);
+}
+
+.findingHeaderMain {
+  display: grid;
+  gap: 6px;
+}
+
+.findingIndex {
+  display: inline-flex;
+  width: fit-content;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #eef4f9;
+  color: var(--navy);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.findingTitle {
+  color: var(--text);
+  font-size: 1.1rem;
+}
+
+.findingRisk {
+  display: grid;
+  gap: 8px;
+  min-width: 120px;
+}
+
+.evidenceStrip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  padding: 18px;
+  border-bottom: 1px solid var(--line);
+  background: #fbfdff;
+}
+
+.evidenceCard {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.evidenceFrame {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #dfe8ef;
+}
+
+.evidenceImage {
+  object-fit: cover;
+}
+
+.evidenceText {
+  display: grid;
+  gap: 4px;
+}
+
+.evidenceText strong {
+  color: var(--text);
+}
+
+.evidenceText span {
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.fieldGrid {
+  padding: 18px;
+}
+
+.referenceStrip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 18px 18px;
+}
+
+.referenceChip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #eef3f7;
+  color: var(--navy);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.planTable {
+  display: grid;
+  gap: 0;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.planHead,
+.planRow {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 1.2fr;
+}
+
+.planHead {
+  background: #f5f8fb;
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.planHead span,
+.planRow > * {
+  padding: 14px 16px;
+  border-left: 1px solid var(--line);
+}
+
+.planHead span:first-child,
+.planRow > *:first-child {
+  border-left: 0;
+}
+
+.planRow {
+  border-top: 1px solid var(--line);
+  background: #fff;
+}
+
+.planRow .inputControl,
+.planRow .textareaControl {
+  min-height: 100%;
+  padding: 0;
+}
+
+.planRow .textareaControl {
+  min-height: 120px;
+}
+
+.noteCard {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+}
+
+.noteCard strong {
+  color: var(--text);
+}
+
+.noteCard p {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+@media (max-width: 1180px) {
+  .sheetGrid,
+  .sectionSummaryStrip,
+  .evidenceStrip,
+  .inlineGrid,
+  .fieldGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .repeatBody {
+    grid-template-columns: 1fr;
+  }
+
+  .toolbarLayout {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 900px) {
+  .editorHeader,
+  .sectionActionRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .formRow {
+    grid-template-columns: 1fr;
+  }
+
+  .formLabel {
+    min-height: 46px;
+    padding: 12px 16px 0;
+  }
+
+  .toolbarActions,
+  .progressSummary {
+    justify-content: flex-start;
+  }
+
+  .toolbarGroup,
+  .toolbarGroupWide,
+  .toolbarSelect {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .planHead {
+    display: none;
+  }
+
+  .planRow {
+    grid-template-columns: 1fr;
+  }
+
+  .planRow > * {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .planRow > *:first-child {
+    border-top: 0;
+  }
+}

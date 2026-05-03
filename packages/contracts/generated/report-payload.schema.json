@@ -1,0 +1,865 @@
+{
+  "$ref": "#/definitions/ReportPayload",
+  "definitions": {
+    "ReportPayload": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "workspaceId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "draft",
+            "draft_ready",
+            "review_completed",
+            "exported"
+          ]
+        },
+        "currentSection": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reportMeta": {
+          "type": "object",
+          "properties": {
+            "workspaceName": {
+              "type": "string",
+              "default": ""
+            },
+            "siteName": {
+              "type": "string",
+              "minLength": 1
+            },
+            "customerName": {
+              "type": "string",
+              "minLength": 1
+            },
+            "guidanceAgencyName": {
+              "type": "string",
+              "default": ""
+            },
+            "visitDate": {
+              "type": "string",
+              "minLength": 1
+            },
+            "drafterName": {
+              "type": "string",
+              "minLength": 1
+            },
+            "progressRate": {
+              "type": "string",
+              "default": ""
+            },
+            "processSummary": {
+              "type": "string",
+              "default": ""
+            },
+            "workerCount": {
+              "type": "string",
+              "default": ""
+            },
+            "siteAddress": {
+              "type": "string",
+              "default": ""
+            },
+            "siteContact": {
+              "type": "string",
+              "default": ""
+            },
+            "reportPriceKrw": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 3000
+            }
+          },
+          "required": [
+            "siteName",
+            "customerName",
+            "visitDate",
+            "drafterName"
+          ],
+          "additionalProperties": false
+        },
+        "reviewMeta": {
+          "type": "object",
+          "properties": {
+            "reviewCompleted": {
+              "type": "boolean"
+            },
+            "reviewCompletedAt": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "responsibilityConfirmed": {
+              "type": "boolean"
+            },
+            "requiredFieldPaths": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": []
+            },
+            "reviewQueue": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "fieldPath": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "label": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "confidence": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
+                  "needsReview": {
+                    "type": "boolean",
+                    "default": true
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "pending",
+                      "reviewed",
+                      "confirmed"
+                    ]
+                  },
+                  "notes": {
+                    "type": "string",
+                    "default": ""
+                  }
+                },
+                "required": [
+                  "fieldPath",
+                  "label",
+                  "confidence",
+                  "status"
+                ],
+                "additionalProperties": false
+              },
+              "default": []
+            }
+          },
+          "required": [
+            "reviewCompleted",
+            "reviewCompletedAt",
+            "responsibilityConfirmed"
+          ],
+          "additionalProperties": false
+        },
+        "aiMeta": {
+          "type": "object",
+          "properties": {
+            "pipelineVersion": {
+              "type": "string",
+              "default": "v1-photo-first"
+            },
+            "lastRunId": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "lastRunStatus": {
+              "type": "string",
+              "enum": [
+                "queued",
+                "running",
+                "succeeded",
+                "failed"
+              ],
+              "default": "queued"
+            },
+            "generatedAt": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "sourceMix": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "manual",
+                  "vision",
+                  "ai_section",
+                  "system"
+                ]
+              },
+              "default": []
+            }
+          },
+          "required": [
+            "lastRunId",
+            "generatedAt"
+          ],
+          "additionalProperties": false
+        },
+        "wizardStep": {
+          "type": "string",
+          "enum": [
+            "meta",
+            "step1_overview",
+            "step2_hazard",
+            "review",
+            "ai_generating",
+            "workspace"
+          ],
+          "default": "meta"
+        },
+        "photoStepBuckets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "step": {
+                "type": "string",
+                "enum": [
+                  "step1_overview",
+                  "step2_hazard",
+                  "manual_override"
+                ]
+              },
+              "title": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": {
+                "type": "string",
+                "default": ""
+              },
+              "minRequired": {
+                "type": "integer",
+                "minimum": 0,
+                "default": 0
+              },
+              "uploadedPhotoIds": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              },
+              "representativePhotoId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "default": null
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "ready",
+                  "reviewed"
+                ],
+                "default": "pending"
+              }
+            },
+            "required": [
+              "step",
+              "title"
+            ],
+            "additionalProperties": false
+          },
+          "default": []
+        },
+        "photoChecklistStatus": {
+          "type": "object",
+          "properties": {
+            "step1OverviewComplete": {
+              "type": "boolean",
+              "default": false
+            },
+            "step2HazardComplete": {
+              "type": "boolean",
+              "default": false
+            },
+            "reviewReady": {
+              "type": "boolean",
+              "default": false
+            },
+            "minimumSatisfied": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "additionalProperties": false,
+          "default": {}
+        },
+        "doc3PhotoCandidates": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "doc7PhotoCandidates": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "workspaceEntryMode": {
+          "type": "string",
+          "enum": [
+            "guided_photo_flow",
+            "direct_reopen"
+          ],
+          "default": "guided_photo_flow"
+        },
+        "doc11Doc12AutofillMode": {
+          "type": "string",
+          "enum": [
+            "resource_autofill",
+            "manual_override"
+          ],
+          "default": "resource_autofill"
+        },
+        "photoEvidence": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "photoAssetId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "category": {
+                "type": "string",
+                "enum": [
+                  "site_overview",
+                  "hazard",
+                  "process",
+                  "measurement",
+                  "education",
+                  "activity"
+                ]
+              },
+              "sourceStep": {
+                "$ref": "#/definitions/ReportPayload/properties/photoStepBuckets/items/properties/step",
+                "default": "manual_override"
+              },
+              "aiCategorySuggestion": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/ReportPayload/properties/photoEvidence/items/properties/category"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null
+              },
+              "aiCategoryConfidence": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "default": 0
+              },
+              "aiCategoryReason": {
+                "type": "string",
+                "default": ""
+              },
+              "sceneType": {
+                "type": "string",
+                "default": ""
+              },
+              "processType": {
+                "type": "string",
+                "default": ""
+              },
+              "locationHint": {
+                "type": "string",
+                "default": ""
+              },
+              "ppeSignals": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              },
+              "hazardSignals": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              },
+              "accidentTypeCandidates": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              },
+              "causativeAgentCandidates": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              },
+              "measurementContext": {
+                "type": "string",
+                "default": ""
+              },
+              "educationContext": {
+                "type": "string",
+                "default": ""
+              },
+              "activityContext": {
+                "type": "string",
+                "default": ""
+              },
+              "confidence": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "notes": {
+                "type": "string",
+                "default": ""
+              }
+            },
+            "required": [
+              "photoAssetId",
+              "category",
+              "confidence"
+            ],
+            "additionalProperties": false
+          },
+          "default": []
+        },
+        "findingCandidates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "linkedPhotoIds": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              },
+              "location": {
+                "type": "string",
+                "default": ""
+              },
+              "hazardDescription": {
+                "type": "string",
+                "default": ""
+              },
+              "accidentType": {
+                "type": "string",
+                "default": ""
+              },
+              "causativeAgentKey": {
+                "type": "string",
+                "default": ""
+              },
+              "riskLevel": {
+                "type": "string",
+                "enum": [
+                  "상",
+                  "중",
+                  "하"
+                ]
+              },
+              "improvementPlan": {
+                "type": "string",
+                "default": ""
+              },
+              "emphasis": {
+                "type": "string",
+                "default": ""
+              },
+              "legalReferenceCandidates": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              },
+              "referenceMaterialCandidates": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              },
+              "confidence": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "needsReview": {
+                "type": "boolean",
+                "default": true
+              }
+            },
+            "required": [
+              "riskLevel",
+              "confidence"
+            ],
+            "additionalProperties": false
+          },
+          "default": []
+        },
+        "sectionDrafts": {
+          "type": "object",
+          "properties": {
+            "doc5": {
+              "type": "object",
+              "properties": {
+                "progressOverview": {
+                  "type": "string",
+                  "default": ""
+                },
+                "accidentTrend": {
+                  "type": "string",
+                  "default": ""
+                },
+                "findingCase": {
+                  "type": "string",
+                  "default": ""
+                },
+                "workEnvironmentRisk": {
+                  "type": "string",
+                  "default": ""
+                },
+                "futureProcessFocus": {
+                  "type": "string",
+                  "default": ""
+                }
+              },
+              "additionalProperties": false
+            },
+            "doc7": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/ReportPayload/properties/findingCandidates/items"
+              },
+              "default": []
+            },
+            "doc8": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "processName": {
+                    "type": "string"
+                  },
+                  "hazard": {
+                    "type": "string"
+                  },
+                  "countermeasure": {
+                    "type": "string"
+                  },
+                  "confidence": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  }
+                },
+                "required": [
+                  "processName",
+                  "hazard",
+                  "countermeasure",
+                  "confidence"
+                ],
+                "additionalProperties": false
+              },
+              "default": []
+            },
+            "doc11": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "topic": {
+                    "type": "string"
+                  },
+                  "content": {
+                    "type": "string"
+                  },
+                  "attendeeCount": {
+                    "type": "string"
+                  },
+                  "confidence": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  }
+                },
+                "required": [
+                  "topic",
+                  "content",
+                  "confidence"
+                ],
+                "additionalProperties": false
+              },
+              "default": []
+            },
+            "doc12": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "activityType": {
+                    "type": "string"
+                  },
+                  "content": {
+                    "type": "string"
+                  },
+                  "confidence": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  }
+                },
+                "required": [
+                  "activityType",
+                  "content",
+                  "confidence"
+                ],
+                "additionalProperties": false
+              },
+              "default": []
+            },
+            "doc13": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "summary": {
+                    "type": "string"
+                  },
+                  "confidence": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  }
+                },
+                "required": [
+                  "title",
+                  "summary",
+                  "confidence"
+                ],
+                "additionalProperties": false
+              },
+              "default": []
+            },
+            "doc14": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "default": ""
+                },
+                "body": {
+                  "type": "string",
+                  "default": ""
+                },
+                "confidence": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              },
+              "required": [
+                "confidence"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "doc5",
+            "doc14"
+          ],
+          "additionalProperties": false
+        },
+        "validationResult": {
+          "type": "object",
+          "properties": {
+            "valid": {
+              "type": "boolean"
+            },
+            "blockingIssues": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": []
+            },
+            "warnings": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": []
+            },
+            "reviewedFieldPaths": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": []
+            }
+          },
+          "required": [
+            "valid"
+          ],
+          "additionalProperties": false
+        },
+        "documentsCompat": {
+          "type": "object",
+          "properties": {
+            "document2Overview": {
+              "type": "object",
+              "additionalProperties": {},
+              "default": {}
+            },
+            "document3Scenes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              },
+              "default": []
+            },
+            "document4FollowUps": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              },
+              "default": []
+            },
+            "document5Summary": {
+              "type": "object",
+              "additionalProperties": {},
+              "default": {}
+            },
+            "document6Measures": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              },
+              "default": []
+            },
+            "document7Findings": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              },
+              "default": []
+            },
+            "document8Plans": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              },
+              "default": []
+            },
+            "document9SafetyChecks": {
+              "type": "object",
+              "additionalProperties": {},
+              "default": {}
+            },
+            "document10Measurements": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              },
+              "default": []
+            },
+            "document11EducationRecords": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              },
+              "default": []
+            },
+            "document12Activities": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              },
+              "default": []
+            },
+            "document13Cases": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              },
+              "default": []
+            },
+            "document14SafetyInfos": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              },
+              "default": []
+            }
+          },
+          "additionalProperties": false,
+          "default": {}
+        },
+        "createdAt": {
+          "type": "string",
+          "minLength": 1
+        },
+        "updatedAt": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id",
+        "workspaceId",
+        "status",
+        "currentSection",
+        "reportMeta",
+        "reviewMeta",
+        "aiMeta",
+        "sectionDrafts",
+        "validationResult",
+        "createdAt",
+        "updatedAt"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}

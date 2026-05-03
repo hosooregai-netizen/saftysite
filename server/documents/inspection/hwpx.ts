@@ -1,7 +1,6 @@
 'server-only';
 
 import fs from 'node:fs/promises';
-import path from 'node:path';
 
 import JSZip from 'jszip';
 
@@ -17,6 +16,7 @@ import {
   type InspectionTemplateVariant,
 } from '@/lib/documents/inspection/templateVariant';
 import { renderChartSvgTextPath } from '@/server/documents/shared/chartSvgText';
+import { resolveInspectionTemplatePath } from '@/server/documents/shared/documentAssetPaths';
 import type { ChecklistRating, InspectionSession } from '@/types/inspectionSession';
 
 const DOC5_CHART_TOP_N = 5;
@@ -124,11 +124,7 @@ interface InspectionHwpxBuildOptions {
 
 const HWPX_GENERATION_MODE: 'template_native' | 'advanced' = 'advanced';
 const IMAGE_BINDING_MODE: 'embedded' | 'text_only' = 'embedded';
-const TEMPLATE_IMAGE_DONOR_PATH = path.resolve(
-  process.cwd(),
-  'public',
-  'templates',
-  'inspection',
+const TEMPLATE_IMAGE_DONOR_PATH = resolveInspectionTemplatePath(
   INSPECTION_TEMPLATE_IMAGE_DONOR_FILENAME,
 );
 const BLANK_PNG_BASE64 =
@@ -192,13 +188,7 @@ const COVER_FOOTER_HIDING_CONTROL =
   '<hp:ctrl><hp:pageHiding hideHeader="0" hideFooter="1" hideMasterPage="0" hideBorder="0" hideFill="0" hidePageNum="0"/></hp:ctrl>';
 
 function buildTemplatePath(variant: InspectionTemplateVariant): string {
-  return path.resolve(
-    process.cwd(),
-    'public',
-    'templates',
-    'inspection',
-    getInspectionTemplateFilename(variant),
-  );
+  return resolveInspectionTemplatePath(getInspectionTemplateFilename(variant));
 }
 
 const WORK_PLAN_PLACEHOLDERS = [
