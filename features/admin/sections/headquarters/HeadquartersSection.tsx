@@ -35,6 +35,7 @@ import { SiteManagementMainPanel } from './SiteManagementMainPanel';
 import { HeadquartersTable } from './HeadquartersTable';
 import { HeadquarterEditorModal } from './HeadquarterEditorModal';
 import { useHeadquartersSectionState } from './useHeadquartersSectionState';
+import { ExcelImportModal } from '../excelImport/ExcelImportModal';
 import { SitesSection } from '../sites/SitesSection';
 
 const EMPTY_HEADQUARTER_ROWS: import('@/types/controller').SafetyHeadquarter[] = [];
@@ -197,6 +198,7 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
   >([]);
   const [isAssignmentLoading, setIsAssignmentLoading] = useState(false);
   const [isResolvingSiteContext, setIsResolvingSiteContext] = useState(false);
+  const [isK2bImportOpen, setIsK2bImportOpen] = useState(false);
   const state = useHeadquartersSectionState(busy);
   const abortControllerRef = useRef<AbortController | null>(null);
   const selectedHeadquarterRequestIdRef = useRef(0);
@@ -344,6 +346,13 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
       ? siteResponse.rows.find((site) => site.id === selectedSiteId) ?? null
       : null;
     await refreshSelectedSiteDetail(selectedSiteId, matchedSelectedSite);
+  };
+
+  const reloadAfterExcelImport = async () => {
+    await refreshHeadquarterList();
+    if (selectedHeadquarterId) {
+      await refreshSelectedHeadquarterContext(selectedHeadquarterId);
+    }
   };
 
   useEffect(() => {
@@ -737,6 +746,7 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
                 ]);
               })();
             }}
+            onImportRequest={() => setIsK2bImportOpen(true)}
             onOpenSitesRequest={(item) => onSelectHeadquarter(item.id)}
             onPageChange={(nextPage) => {
               if (currentResponse) {
@@ -815,6 +825,16 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
         onFormChange={state.setForm}
         onSubmit={() => void submit()}
         open={state.isOpen}
+      />
+
+      <ExcelImportModal
+        importKind="k2b_guidance"
+        open={isK2bImportOpen}
+        originSection="headquarters"
+        onClose={() => setIsK2bImportOpen(false)}
+        onReload={async () => {
+          await reloadAfterExcelImport();
+        }}
       />
 
       <HeadquarterAssignmentModal

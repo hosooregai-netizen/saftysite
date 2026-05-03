@@ -864,6 +864,7 @@ export interface SafetyBackendExcelImportPreview {
     source_section: 'headquarters' | 'sites';
     headquarter_id?: string | null;
     site_id?: string | null;
+    import_kind?: 'generic' | 'k2b_guidance';
     label: string;
   };
   sheets: SafetyBackendExcelImportSheetPreview[];
@@ -881,6 +882,11 @@ export interface SafetyBackendExcelImportApplyRowResult {
   matched_user_id?: string;
   matched_user_email?: string;
   placeholder_created?: boolean;
+  schedule_id?: string | null;
+  schedule_created?: boolean;
+  report_key?: string | null;
+  report_created?: boolean;
+  report_reused?: boolean;
   message: string;
 }
 
@@ -895,6 +901,10 @@ export interface SafetyBackendExcelApplyResult {
     created_placeholder_user_count?: number;
     ambiguous_worker_match_count?: number;
     created_assignment_count?: number;
+    created_schedule_count?: number;
+    reused_schedule_count?: number;
+    created_report_count?: number;
+    reused_report_count?: number;
   };
   rows: SafetyBackendExcelImportApplyRowResult[];
 }

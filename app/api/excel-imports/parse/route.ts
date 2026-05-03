@@ -19,6 +19,11 @@ export async function POST(request: Request): Promise<Response> {
     const siteIdEntry = formData.get('siteId');
     const sourceSection =
       formData.get('sourceSection') === 'sites' ? 'sites' : 'headquarters';
+    const importKind =
+      formData.get('importKind') === 'k2b_guidance' ||
+      formData.get('import_kind') === 'k2b_guidance'
+        ? 'k2b_guidance'
+        : 'generic';
     const headquarterId =
       typeof headquarterIdEntry === 'string' ? headquarterIdEntry : null;
     const siteId = typeof siteIdEntry === 'string' ? siteIdEntry : null;
@@ -29,6 +34,7 @@ export async function POST(request: Request): Promise<Response> {
     return NextResponse.json(
       await parseLocalExcelWorkbook(token, file, request, {
         headquarterId,
+        importKind,
         siteId,
         sourceSection,
       }),

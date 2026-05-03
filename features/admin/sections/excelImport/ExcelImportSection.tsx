@@ -40,12 +40,16 @@ const FIELD_LABELS: Record<string, string> = {
   project_amount: '공사금액',
   project_end_date: '공사종료일',
   project_start_date: '공사시작일',
+  progress_rate: '공정률',
   road_address: '도로명주소',
+  round_no: '회차',
   site_address: '현장 주소',
   site_code: '사업개시번호',
   site_name: '현장명',
+  completion_status: '완료여부',
   total_contract_amount: '총 계약금액',
   total_rounds: '총 회차',
+  visit_date: '기술지도일',
 };
 
 function buildScopeSummary(scope: ExcelImportScope): ExcelImportScopeSummary {
@@ -67,6 +71,10 @@ function formatApplyNotice(preview: ExcelImportPreview, result: ExcelApplyResult
     `지도요원 가계정 생성 ${result.summary.createdPlaceholderUserCount ?? 0}건`,
     `지도요원 배정 연결 ${result.summary.createdAssignmentCount ?? 0}건`,
     `동명이인 보류 ${result.summary.ambiguousWorkerMatchCount ?? 0}건`,
+    `회차 일정 생성 ${result.summary.createdScheduleCount ?? 0}건`,
+    `기존 회차 재사용 ${result.summary.reusedScheduleCount ?? 0}건`,
+    `보고서 생성 ${result.summary.createdReportCount ?? 0}건`,
+    `기존 보고서 재사용 ${result.summary.reusedReportCount ?? 0}건`,
     `보완 필요 ${result.summary.completionRequiredCount}건`,
   ].join(' · ');
 }
@@ -134,7 +142,11 @@ export function ExcelImportSection({ onReload, scope }: ExcelImportSectionProps)
       const nextPreview = await parseExcelWorkbook(file, scope);
       setPreview(nextPreview);
       setSelectedSheetName(nextPreview.sheets[0]?.name || '');
-      setNotice('엑셀 파일을 읽었습니다. 포함 행과 제외 행을 확인한 뒤 반영할 수 있습니다.');
+      setNotice(
+        scope.importKind === 'k2b_guidance'
+          ? 'K2B 엑셀 파일을 읽었습니다. 포함 행은 건설사, 현장, 회차 일정, 기술지도 보고서로 반영됩니다.'
+          : '엑셀 파일을 읽었습니다. 포함 행과 제외 행을 확인한 뒤 반영할 수 있습니다.',
+      );
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : '엑셀 파일을 읽지 못했습니다.');
       setNotice(null);
@@ -171,9 +183,15 @@ export function ExcelImportSection({ onReload, scope }: ExcelImportSectionProps)
         <div className={sharedStyles.sectionHeader}>
           <div>
             <h2 className={sharedStyles.sectionTitle}>엑셀 업로드</h2>
-            <p className={styles.stepDescription}>
-              현재 스코프 <strong>{scopeSummary.label}</strong>에 맞는 행만 메인 미리보기에 표시되고,
-              제외된 행은 별도 표에서 확인할 수 있습니다.
+              <p className={styles.stepDescription}>
+              {scope.importKind === 'k2b_guidance'
+                ? '회차와 기술지도일이 있는 K2B 행만 자동등록 대상에 포함됩니다.'
+                : (
+                  <>
+                    현재 스코프 <strong>{scopeSummary.label}</strong>에 맞는 행만 메인 미리보기에 표시되고,
+                    제외된 행은 별도 표에서 확인할 수 있습니다.
+                  </>
+                )}
             </p>
           </div>
           <div className={sharedStyles.sectionHeaderActions}>
@@ -209,7 +227,9 @@ export function ExcelImportSection({ onReload, scope }: ExcelImportSectionProps)
             <div>
               <h2 className={sharedStyles.sectionTitle}>엑셀 미리보기</h2>
               <p className={styles.stepDescription}>
-                포함 행만 반영됩니다. 제외된 행은 반영 대상에 포함되지 않습니다.
+                {scope.importKind === 'k2b_guidance'
+                  ? '포함 행만 반영됩니다. 같은 건설사/현장/회차 보고서가 이미 있으면 새로 만들지 않습니다.'
+                  : '포함 행만 반영됩니다. 제외된 행은 반영 대상에 포함되지 않습니다.'}
               </p>
             </div>
             <div className={sharedStyles.sectionHeaderActions}>

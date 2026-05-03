@@ -1188,12 +1188,14 @@ function mapBackendExcelImportScopeSummary(scope: {
   source_section?: string | null;
   headquarter_id?: string | null;
   site_id?: string | null;
+  import_kind?: string | null;
   label?: string | null;
 } | null | undefined): ExcelImportScopeSummary {
   return {
     sourceSection: normalizeText(scope?.source_section) === 'sites' ? 'sites' : 'headquarters',
     headquarterId: normalizeText(scope?.headquarter_id) || null,
     siteId: normalizeText(scope?.site_id) || null,
+    importKind: normalizeText(scope?.import_kind) === 'k2b_guidance' ? 'k2b_guidance' : 'generic',
     label: normalizeText(scope?.label) || '전체',
   };
 }
@@ -1284,6 +1286,10 @@ export function mapBackendExcelApplyResult(
       createdPlaceholderUserCount: response.summary?.created_placeholder_user_count ?? 0,
       ambiguousWorkerMatchCount: response.summary?.ambiguous_worker_match_count ?? 0,
       createdAssignmentCount: response.summary?.created_assignment_count ?? 0,
+      createdScheduleCount: response.summary?.created_schedule_count ?? 0,
+      reusedScheduleCount: response.summary?.reused_schedule_count ?? 0,
+      createdReportCount: response.summary?.created_report_count ?? 0,
+      reusedReportCount: response.summary?.reused_report_count ?? 0,
     },
     rows: Array.isArray(response.rows)
       ? response.rows.map((row) => ({
@@ -1300,6 +1306,11 @@ export function mapBackendExcelApplyResult(
           matchedUserId: normalizeText(row.matched_user_id),
           matchedUserEmail: normalizeText(row.matched_user_email),
           placeholderCreated: Boolean(row.placeholder_created),
+          scheduleId: normalizeText(row.schedule_id) || null,
+          scheduleCreated: Boolean(row.schedule_created),
+          reportKey: normalizeText(row.report_key) || null,
+          reportCreated: Boolean(row.report_created),
+          reportReused: Boolean(row.report_reused),
           message: normalizeText(row.message),
         }))
       : [],

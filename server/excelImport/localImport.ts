@@ -430,6 +430,7 @@ function buildScopeSummary(
   return {
     sourceSection,
     headquarterId,
+    importKind: scope?.importKind === 'k2b_guidance' ? 'k2b_guidance' : 'generic',
     label: targetSite ? '현장 1곳' : headquarterId ? '건설사 1곳' : '전체',
     siteId: targetSite?.id ?? scope?.siteId ?? null,
   };
@@ -1194,8 +1195,12 @@ export async function applyLocalExcelWorkbook(
     createdAssignmentCount: 0,
     createdHeadquarterCount: 0,
     createdPlaceholderUserCount: 0,
+    createdReportCount: 0,
+    createdScheduleCount: 0,
     createdSiteCount: 0,
     matchedExistingUserCount: 0,
+    reusedReportCount: 0,
+    reusedScheduleCount: 0,
     updatedHeadquarterCount: 0,
     updatedSiteCount: 0,
   };

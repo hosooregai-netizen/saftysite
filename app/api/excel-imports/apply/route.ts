@@ -32,6 +32,16 @@ export async function POST(request: Request): Promise<Response> {
       payload.source_section === 'sites' || payload.sourceSection === 'sites'
         ? 'sites'
         : 'headquarters';
+    const importKind =
+      payload.import_kind === 'k2b_guidance' ||
+      payload.importKind === 'k2b_guidance' ||
+      (payload.scope &&
+      typeof payload.scope === 'object' &&
+      payload.scope &&
+      ((payload.scope as Record<string, unknown>).importKind === 'k2b_guidance' ||
+        (payload.scope as Record<string, unknown>).import_kind === 'k2b_guidance'))
+        ? 'k2b_guidance'
+        : 'generic';
     const headquarterId =
       typeof payload.headquarter_id === 'string'
         ? payload.headquarter_id
@@ -62,6 +72,7 @@ export async function POST(request: Request): Promise<Response> {
       jobId,
       scope: {
         headquarterId,
+        importKind,
         siteId,
         sourceSection,
       },
