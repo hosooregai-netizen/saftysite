@@ -13,6 +13,7 @@ import {
 import { readFileAsDataUrl } from '@/components/session/workspace/utils';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { fetchAdminReportSessionBootstrap } from '@/lib/admin/apiClient';
+import { updateMySchedule } from '@/lib/calendar/apiClient';
 import {
   fetchInspectionHwpxDocument,
   fetchInspectionHwpxDocumentByReportKey,
@@ -94,6 +95,12 @@ function getReportMetaText(meta: Record<string, unknown>, key: string) {
   return typeof value === 'string' ? value.trim() : '';
 }
 
+type ScheduleDateSyncRequest = {
+  guidanceDate: string;
+  reportKey: string;
+  scheduleId: string;
+};
+
 function buildShellSessionFromReportIndexItem(
   item: InspectionReportListItem,
   site: InspectionSite,
@@ -160,6 +167,7 @@ export function useInspectionSessionScreen(sessionId: string) {
   const [isLoadingSession, setIsLoadingSession] = useState(false);
   const [missingRelationsStatus, setMissingRelationsStatus] =
     useState<ReportIndexStatus>('idle');
+  const [scheduleSyncError, setScheduleSyncError] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const forcedRelationRefreshIdsRef = useRef<Set<string>>(new Set());
   const legacyBootstrapAttemptIdsRef = useRef<Set<string>>(new Set());
@@ -538,17 +546,53 @@ export function useInspectionSessionScreen(sessionId: string) {
     updater: (current: InspectionSession) => InspectionSession,
     options?: { touch?: boolean },
   ) => {
+    const scheduleDateSyncRef: { value: ScheduleDateSyncRequest | null } = {
+      value: null,
+    };
+
     updateSession(sessionId, (current) => {
       const next = updater(current);
+      const guidanceDateChanged =
+        current.document2Overview.guidanceDate !== next.document2Overview.guidanceDate;
       const nextWithMasterData =
-        current.document2Overview.guidanceDate !== next.document2Overview.guidanceDate
+        guidanceDateChanged
           ? mergeMasterDataIntoSession(next, masterData)
           : next;
+
+      const nextGuidanceDate = nextWithMasterData.document2Overview.guidanceDate.trim();
+      if (
+        source === 'manual' &&
+        guidanceDateChanged &&
+        nextWithMasterData.scheduleId &&
+        nextGuidanceDate
+      ) {
+        scheduleDateSyncRef.value = {
+          guidanceDate: nextGuidanceDate,
+          reportKey: nextWithMasterData.id,
+          scheduleId: nextWithMasterData.scheduleId,
+        };
+      }
 
       return options?.touch === false
         ? nextWithMasterData
         : touchDocumentMeta(nextWithMasterData, key, source);
     });
+
+    const scheduleDateSync = scheduleDateSyncRef.value;
+    if (scheduleDateSync) {
+      setScheduleSyncError(null);
+      void updateMySchedule(scheduleDateSync.scheduleId, {
+        actualVisitDate: scheduleDateSync.guidanceDate,
+        linkedReportKey: scheduleDateSync.reportKey,
+        plannedDate: scheduleDateSync.guidanceDate,
+      }).catch((error) => {
+        setScheduleSyncError(
+          error instanceof Error
+            ? error.message
+            : '연결 일정 날짜를 저장하지 못했습니다.',
+        );
+      });
+    }
   };
 
   const withFileData = async (
@@ -786,7 +830,7 @@ export function useInspectionSessionScreen(sessionId: string) {
     relationStatus,
     relationNotice,
     saveNow,
-    syncError,
+    syncError: scheduleSyncError ?? syncError,
     uploadError,
     withFileData,
   };

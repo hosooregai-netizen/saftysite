@@ -3,6 +3,10 @@
 import type { MutableRefObject } from 'react';
 import SignaturePad from '@/components/ui/SignaturePad';
 import { NOTIFICATION_METHOD_OPTIONS, PREVIOUS_IMPLEMENTATION_OPTIONS } from '@/components/session/workspace/constants';
+import {
+  applyInspectionSessionGuidanceDateChange,
+  buildInspectionAutoReportTitle,
+} from '@/features/inspection-session/lib/applyInspectionSessionGuidanceDateChange';
 import type { useInspectionSessionScreen } from '@/features/inspection-session/hooks/useInspectionSessionScreen';
 import { buildAutoReportTitle, parsePositiveRound } from './mobileInspectionSessionHelpers';
 import { MobileInspectionSessionStep2ProcessSection } from './MobileInspectionSessionStep2ProcessSection';
@@ -26,15 +30,19 @@ export function MobileInspectionSessionStep2({
 }: MobileInspectionSessionStep2Props) {
   const updateOverview = (patch: Partial<InspectionSessionDraft['document2Overview']>) => {
     screen.applyDocumentUpdate('doc2', 'manual', (current) => {
-      const nextOverview = { ...current.document2Overview, ...patch };
+      const base =
+        patch.guidanceDate !== undefined
+          ? applyInspectionSessionGuidanceDateChange(current, patch.guidanceDate)
+          : current;
+      const nextOverview = { ...base.document2Overview, ...patch };
       if (
         patch.notificationMethod === 'direct' &&
         !nextOverview.notificationRecipientName.trim() &&
-        current.adminSiteSnapshot.siteManagerName.trim()
+        base.adminSiteSnapshot.siteManagerName.trim()
       ) {
-        nextOverview.notificationRecipientName = current.adminSiteSnapshot.siteManagerName;
+        nextOverview.notificationRecipientName = base.adminSiteSnapshot.siteManagerName;
       }
-      return { ...current, document2Overview: nextOverview };
+      return { ...base, document2Overview: nextOverview };
     });
   };
 
@@ -78,14 +86,19 @@ export function MobileInspectionSessionStep2({
                     const autoTitleCandidates = new Set([
                       buildAutoReportTitle(preferredDate, current.reportNumber),
                       buildAutoReportTitle(current.meta.reportDate.trim(), current.reportNumber),
+                      buildInspectionAutoReportTitle(preferredDate, current.reportNumber),
+                      buildInspectionAutoReportTitle(current.meta.reportDate.trim(), current.reportNumber),
+                      buildInspectionAutoReportTitle('', current.reportNumber),
                       `보고서 ${current.reportNumber}`,
                     ]);
                     return {
                       ...current,
+                      scheduleId: nextRound === current.reportNumber ? current.scheduleId : null,
+                      scheduleRoundNo: nextRound === current.reportNumber ? current.scheduleRoundNo : null,
                       reportNumber: nextRound,
                       meta: {
                         ...current.meta,
-                        reportTitle: autoTitleCandidates.has(currentTitle) ? buildAutoReportTitle(preferredDate, nextRound) : current.meta.reportTitle,
+                        reportTitle: autoTitleCandidates.has(currentTitle) ? buildInspectionAutoReportTitle(preferredDate, nextRound) : current.meta.reportTitle,
                       },
                       document2Overview: { ...current.document2Overview, visitCount: String(nextRound) },
                     };

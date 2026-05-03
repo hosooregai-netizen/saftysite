@@ -391,6 +391,7 @@ export function MobileWorkerCalendarScreen() {
       },
       reportNumber: schedule.roundNo,
       scheduleId: schedule.id,
+      scheduleRoundNo: schedule.roundNo,
     });
 
     return {

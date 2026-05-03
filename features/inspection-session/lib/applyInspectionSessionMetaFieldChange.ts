@@ -1,6 +1,7 @@
 import { mergeMasterDataIntoSession } from '@/lib/safetyApiMappers/masterData';
 import type { SafetyMasterData } from '@/types/backend';
 import type { InspectionSession } from '@/types/inspectionSession';
+import { applyInspectionSessionGuidanceDateChange } from './applyInspectionSessionGuidanceDateChange';
 
 export function applyInspectionSessionMetaFieldChange(
   current: InspectionSession,
@@ -8,19 +9,20 @@ export function applyInspectionSessionMetaFieldChange(
   value: string,
   masterData: SafetyMasterData,
 ): InspectionSession {
-  const previousReportDate = current.meta.reportDate;
+  if (field === 'reportDate') {
+    return mergeMasterDataIntoSession(
+      applyInspectionSessionGuidanceDateChange(current, value),
+      masterData,
+    );
+  }
+
   const previousDrafter = current.meta.drafter;
   const next = {
     ...current,
     meta: { ...current.meta, [field]: value },
     document2Overview: {
       ...current.document2Overview,
-      guidanceDate:
-        field === 'reportDate' &&
-        (!current.document2Overview.guidanceDate ||
-          current.document2Overview.guidanceDate === previousReportDate)
-          ? value
-          : current.document2Overview.guidanceDate,
+      guidanceDate: current.document2Overview.guidanceDate,
       assignee:
         field === 'drafter' &&
         (!current.document2Overview.assignee ||
@@ -28,16 +30,7 @@ export function applyInspectionSessionMetaFieldChange(
           ? value
           : current.document2Overview.assignee,
     },
-    document4FollowUps:
-      field === 'reportDate'
-        ? current.document4FollowUps.map((item) => ({
-            ...item,
-            confirmationDate:
-              !item.confirmationDate || item.confirmationDate === previousReportDate
-                ? value
-                : item.confirmationDate,
-          }))
-        : current.document4FollowUps,
+    document4FollowUps: current.document4FollowUps,
     document7Findings:
       field === 'drafter'
         ? current.document7Findings.map((item) => ({
@@ -50,6 +43,6 @@ export function applyInspectionSessionMetaFieldChange(
         : current.document7Findings,
   };
 
-  return field === 'reportDate' ? mergeMasterDataIntoSession(next, masterData) : next;
+  return next;
 }
 

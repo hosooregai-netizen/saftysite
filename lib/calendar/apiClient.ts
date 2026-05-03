@@ -3,6 +3,15 @@
 import { readSafetyAuthToken, SafetyApiError } from '@/lib/safetyApi';
 import type { SafetyAdminScheduleListResponse, SafetyInspectionSchedule } from '@/types/admin';
 
+type MyScheduleUpdateInput = {
+  actualVisitDate?: string;
+  linkedReportKey?: string;
+  plannedDate?: string;
+  selectionReasonLabel?: string;
+  selectionReasonMemo?: string;
+  status?: SafetyInspectionSchedule['status'];
+};
+
 function buildQueryString(params: Record<string, string | number | null | undefined>) {
   const searchParams = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
@@ -72,27 +81,38 @@ export function fetchMySchedules(input: {
   );
 }
 
+export function buildUpdateMyScheduleBody(payload: MyScheduleUpdateInput) {
+  const body: Record<string, string> = {};
+
+  if (payload.actualVisitDate !== undefined) {
+    body.actual_visit_date = payload.actualVisitDate;
+  }
+  if (payload.linkedReportKey !== undefined) {
+    body.linked_report_key = payload.linkedReportKey;
+  }
+  if (payload.plannedDate !== undefined) {
+    body.planned_date = payload.plannedDate;
+  }
+  if (payload.selectionReasonLabel !== undefined) {
+    body.selection_reason_label = payload.selectionReasonLabel;
+  }
+  if (payload.selectionReasonMemo !== undefined) {
+    body.selection_reason_memo = payload.selectionReasonMemo;
+  }
+  if (payload.status !== undefined) {
+    body.status = payload.status;
+  }
+
+  return body;
+}
+
 export function updateMySchedule(
   scheduleId: string,
-  payload: {
-    actualVisitDate?: string;
-    linkedReportKey?: string;
-    plannedDate?: string;
-    selectionReasonLabel?: string;
-    selectionReasonMemo?: string;
-    status?: SafetyInspectionSchedule['status'];
-  },
+  payload: MyScheduleUpdateInput,
 ) {
   return requestCalendarApi<SafetyInspectionSchedule>(`/schedules/${encodeURIComponent(scheduleId)}`, {
     method: 'PATCH',
-    body: JSON.stringify({
-      actual_visit_date: payload.actualVisitDate || '',
-      linked_report_key: payload.linkedReportKey || '',
-      planned_date: payload.plannedDate || '',
-      selection_reason_label: payload.selectionReasonLabel || '',
-      selection_reason_memo: payload.selectionReasonMemo || '',
-      status: payload.status || undefined,
-    }),
+    body: JSON.stringify(buildUpdateMyScheduleBody(payload)),
   });
 }
 

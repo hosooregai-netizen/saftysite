@@ -649,6 +649,7 @@ export function WorkerCalendarScreen() {
       },
       reportNumber: schedule.roundNo,
       scheduleId: schedule.id,
+      scheduleRoundNo: schedule.roundNo,
       technicalGuidanceRelations,
     });
     return {
