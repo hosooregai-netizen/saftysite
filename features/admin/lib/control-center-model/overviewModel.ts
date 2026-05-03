@@ -16,6 +16,7 @@ import {
 import type { SafetyReport, SafetyReportListItem } from '@/types/backend';
 import type { ControllerDashboardData } from '@/types/controller';
 import {
+  extractCurrentQuarterKey,
   formatDateOnly,
   formatDateTime,
   formatQuarterKey,
@@ -115,7 +116,7 @@ function extractQuarterKeyFromText(value: string) {
     return `${directMatched[1]}-Q${directMatched[2]}`;
   }
 
-  const labelMatched = value.match(/(\d{4})\s*년\s*([1-4])\s*분기/);
+  const labelMatched = value.match(/(\d{4})\s*(?:년)?\s*([1-4])\s*분기/);
   if (labelMatched) {
     return `${labelMatched[1]}-Q${labelMatched[2]}`;
   }
@@ -124,9 +125,14 @@ function extractQuarterKeyFromText(value: string) {
 }
 
 function inferQuarterKeyFromRow(row: EnrichedControllerReportRow) {
-  return extractQuarterKeyFromText(
+  const textQuarterKey = extractQuarterKeyFromText(
     [row.routeParam, row.periodLabel, row.reportTitle].filter(Boolean).join(' '),
   );
+  if (textQuarterKey) return textQuarterKey;
+
+  return extractCurrentQuarterKey(row.visitDate) ||
+    extractCurrentQuarterKey(row.reportDate) ||
+    extractCurrentQuarterKey(row.updatedAt);
 }
 
 function buildPriorityQuarterlyManagementRows(
