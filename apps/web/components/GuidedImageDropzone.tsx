@@ -14,17 +14,21 @@ export type GuidedUploadFileItem = {
 
 interface GuidedImageDropzoneProps {
   files: GuidedUploadFileItem[];
-  helper: string;
+  emptyNote?: string;
+  helper?: string;
   kinds?: Array<{ value: string; label: string }>;
   label: string;
   onDelete: (id: string) => void;
   onFilesSelected: (files: File[]) => void;
-  onKindChange: (id: string, kind: string) => void;
+  onKindChange?: (id: string, kind: string) => void;
   onRepresentativeChange: (id: string) => void;
+  uploadHint?: string;
+  uploadTitle?: string;
 }
 
 export function GuidedImageDropzone({
   files,
+  emptyNote,
   helper,
   kinds,
   label,
@@ -32,6 +36,8 @@ export function GuidedImageDropzone({
   onFilesSelected,
   onKindChange,
   onRepresentativeChange,
+  uploadHint,
+  uploadTitle,
 }: GuidedImageDropzoneProps) {
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -47,11 +53,15 @@ export function GuidedImageDropzone({
   return (
     <section className={styles.dropzoneCard}>
       <div className={styles.dropzoneHeader}>
-        <div>
-          <h3 className={styles.dropzoneTitle}>{label}</h3>
-          <p className={styles.dropzoneHelper}>{helper}</p>
-        </div>
-        <span className={styles.dropzoneCount}>업로드 {files.length}건</span>
+        {label || helper ? (
+          <div className={styles.dropzoneHeaderText}>
+            {label ? <h3 className={styles.dropzoneTitle}>{label}</h3> : null}
+            {helper ? <p className={styles.dropzoneHelper}>{helper}</p> : null}
+          </div>
+        ) : (
+          <span />
+        )}
+        <span className={styles.dropzoneCount}>{files.length}장 첨부</span>
       </div>
 
       <input
@@ -85,8 +95,8 @@ export function GuidedImageDropzone({
           handleFiles(event.dataTransfer.files);
         }}
       >
-        <span className={styles.dropzoneBodyTitle}>여러 이미지를 한 번에 올리세요</span>
-        <span className={styles.dropzoneBodyHint}>드래그해서 놓거나 클릭해서 다중 선택할 수 있습니다.</span>
+        <span className={styles.dropzoneBodyTitle}>{uploadTitle ?? '사진을 선택하거나 이곳에 끌어다 놓으세요.'}</span>
+        <span className={styles.dropzoneBodyHint}>{uploadHint ?? 'JPG, PNG 파일을 여러 장 첨부할 수 있습니다.'}</span>
       </button>
 
       {files.length > 0 ? (
@@ -102,7 +112,7 @@ export function GuidedImageDropzone({
                 <span>{file.isRepresentative ? '대표사진' : `업로드 이미지 ${index + 1}`}</span>
               </div>
 
-              {kinds ? (
+              {kinds && onKindChange ? (
                 <select
                   className={styles.uploadedSelect}
                   value={file.kind ?? ''}
@@ -136,7 +146,7 @@ export function GuidedImageDropzone({
           ))}
         </div>
       ) : (
-        <div className={styles.dropzoneEmptyNote}>아직 업로드된 이미지가 없습니다.</div>
+        <div className={styles.dropzoneEmptyNote}>{emptyNote ?? '아직 첨부된 사진이 없습니다.'}</div>
       )}
     </section>
   );

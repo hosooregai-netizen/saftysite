@@ -2,14 +2,23 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { reportPayloadSchema, type ReportPayload } from '@saftysite/contracts';
 import {
   bootstrapDemoSession,
+  claimAnonymousSession,
+  isAuthenticatedSession,
+  loginReportUser,
   markReportReviewComplete,
   patchReportRecord,
+  removeLocalReport,
   type ReportRecord,
   registerReportExport,
+  type DemoSession,
+  type SessionMode,
+  signupReportUser,
+  syncLocalReportToServer,
 } from '@/lib/reportApi';
 import {
   reportWorkspaceSections,
@@ -41,6 +50,12 @@ type FollowUpRow = {
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 type DownloadState = 'idle' | 'hwpx' | 'pdf';
+type AccountMode = 'login' | 'signup';
+type PendingDownloadContext = {
+  reportSession: DemoSession;
+  targetReportId: string;
+  payloadOverride?: ReportPayload;
+};
 
 const NOTIFICATION_METHOD_OPTIONS: Array<{
   label: string;
@@ -474,26 +489,47 @@ type ReportWorkspaceProps = {
   reportId: string;
   report: ReportPayload;
   record: ReportRecord;
+  initialEntry?: string | null;
 };
 
-export default function ReportWorkspace({ reportId, report, record }: ReportWorkspaceProps) {
+export default function ReportWorkspace({
+  reportId,
+  report,
+  record,
+  initialEntry = null,
+}: ReportWorkspaceProps) {
+  const router = useRouter();
   const normalizedReport = normalizeReport(report);
+  const initialSessionMode: SessionMode =
+    record.sessionMode ?? (record.localOnly ? 'local' : 'anonymous');
   const [baseReport, setBaseReport] = useState<ReportPayload>(normalizedReport);
   const [workspace, setWorkspace] = useState<WorkspaceDraft>(() => buildWorkspaceDraft(normalizedReport));
   const [activeSectionId, setActiveSectionId] = useState<ReportWorkspaceSectionId>(() =>
-    resolveReportWorkspaceSectionId(normalizedReport.currentSection),
+    initialEntry === 'generated'
+      ? 'section1'
+      : resolveReportWorkspaceSectionId(normalizedReport.currentSection),
   );
   const [followUpRows, setFollowUpRows] = useState<FollowUpRow[]>(() => buildFollowUpRows(normalizedReport));
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [actionError, setActionError] = useState('');
   const [downloadState, setDownloadState] = useState<DownloadState>('idle');
+  const [sessionMode, setSessionMode] = useState<SessionMode>(initialSessionMode);
   const [exportDisclaimerAccepted, setExportDisclaimerAccepted] = useState(
     record.exportDisclaimerAccepted,
   );
   const [disclaimerOpen, setDisclaimerOpen] = useState(false);
   const [pendingDownloadFormat, setPendingDownloadFormat] = useState<'hwpx' | 'pdf' | null>(null);
+  const [pendingDownloadContext, setPendingDownloadContext] = useState<PendingDownloadContext | null>(null);
   const [typedSignatureName, setTypedSignatureName] = useState('');
   const [disclaimerError, setDisclaimerError] = useState('');
+  const [authDialogOpen, setAuthDialogOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<AccountMode>('login');
+  const [authName, setAuthName] = useState('');
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authBusy, setAuthBusy] = useState(false);
+  const [authError, setAuthError] = useState('');
+  const [anonymousTokenForClaim, setAnonymousTokenForClaim] = useState<string | null>(null);
 
   const baseReportRef = useRef(baseReport);
   const workspaceRef = useRef(workspace);
@@ -524,7 +560,10 @@ export default function ReportWorkspace({ reportId, report, record }: ReportWork
     const nextReport = normalizeReport(report);
     const nextWorkspace = buildWorkspaceDraft(nextReport);
     const nextFollowUps = buildFollowUpRows(nextReport);
-    const nextSectionId = resolveReportWorkspaceSectionId(nextReport.currentSection);
+    const nextSectionId =
+      initialEntry === 'generated'
+        ? 'section1'
+        : resolveReportWorkspaceSectionId(nextReport.currentSection);
     const nextPersisted = buildPersistedReport(nextReport, nextWorkspace, nextFollowUps, nextSectionId);
 
     if (saveTimerRef.current) {
@@ -538,14 +577,28 @@ export default function ReportWorkspace({ reportId, report, record }: ReportWork
     setActiveSectionId(nextSectionId);
     setSaveState('idle');
     setActionError('');
+    setSessionMode(record.sessionMode ?? (record.localOnly ? 'local' : 'anonymous'));
     setExportDisclaimerAccepted(record.exportDisclaimerAccepted);
     setTypedSignatureName(record.exportDisclaimerAcceptance?.accepted_by_name ?? '');
     setDisclaimerOpen(false);
     setPendingDownloadFormat(null);
+    setPendingDownloadContext(null);
     setDisclaimerError('');
+    setAuthDialogOpen(false);
+    setAuthError('');
+    setAuthBusy(false);
+    setAnonymousTokenForClaim(null);
     lastSavedSignatureRef.current = JSON.stringify(nextPersisted);
     didMountRef.current = false;
-  }, [record.exportDisclaimerAcceptance?.accepted_by_name, record.exportDisclaimerAccepted, report, reportId]);
+  }, [
+    initialEntry,
+    record.exportDisclaimerAcceptance?.accepted_by_name,
+    record.exportDisclaimerAccepted,
+    record.localOnly,
+    record.sessionMode,
+    report,
+    reportId,
+  ]);
 
   const activeSectionIndex = Math.max(
     0,
@@ -556,6 +609,7 @@ export default function ReportWorkspace({ reportId, report, record }: ReportWork
   const photoCount = workspace.photoEvidence.length;
   const reviewPendingCount = baseReport.reviewMeta.reviewQueue.filter((item) => item.needsReview).length;
   const entryModeLabel = baseReport.workspaceEntryMode === 'direct_reopen' ? '기본 폼 진입' : '사진 반영';
+  const localRecordMode = Boolean(record.localOnly);
   const progressValue =
     baseReport.status === 'exported' || baseReport.status === 'review_completed' || baseReport.status === 'draft_ready'
       ? 100
@@ -822,13 +876,15 @@ export default function ReportWorkspace({ reportId, report, record }: ReportWork
       acknowledge_ai_disclaimer: boolean;
       typed_signature_name: string;
     },
+    context?: PendingDownloadContext,
   ) {
     setActionError('');
     setDownloadState(format);
 
     try {
-      const payload = await flushAutosave();
-      const session = mapReportPayloadToInspectionSession(reportId, payload);
+      const targetReportId = context?.targetReportId ?? reportId;
+      const payload = context?.payloadOverride ?? (await flushAutosave());
+      const session = mapReportPayloadToInspectionSession(targetReportId, payload);
       const file =
         format === 'hwpx'
           ? await fetchInspectionHwpxDocument(session)
@@ -836,9 +892,9 @@ export default function ReportWorkspace({ reportId, report, record }: ReportWork
 
       saveBlobAsFile(file.blob, file.filename);
 
-      const reportSession = await bootstrapDemoSession();
-      await markReportReviewComplete(reportSession, reportId);
-      const updated = await registerReportExport(reportSession, reportId, format, {
+      const reportSession = context?.reportSession ?? (await bootstrapDemoSession());
+      await markReportReviewComplete(reportSession, targetReportId);
+      const updated = await registerReportExport(reportSession, targetReportId, format, {
         confirm_reviewed: true,
         acknowledge_ai_disclaimer: exportPayload.acknowledge_ai_disclaimer,
         typed_signature_name: exportPayload.typed_signature_name,
@@ -852,6 +908,10 @@ export default function ReportWorkspace({ reportId, report, record }: ReportWork
         buildPersistedReport(nextReport, workspaceRef.current, followUpRowsRef.current, activeSectionIdRef.current),
       );
       setSaveState('saved');
+      setSessionMode('authenticated');
+      if (targetReportId !== reportId) {
+        router.replace(`/reports/${targetReportId}`);
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : '문서 다운로드에 실패했습니다.';
       if (
@@ -869,18 +929,50 @@ export default function ReportWorkspace({ reportId, report, record }: ReportWork
     }
   }
 
+  function openDisclaimer(
+    format: 'hwpx' | 'pdf',
+    context: PendingDownloadContext,
+  ) {
+    setPendingDownloadFormat(format);
+    setPendingDownloadContext(context);
+    setDisclaimerError('');
+    setDisclaimerOpen(true);
+  }
+
+  function openAccountDialog(format: 'hwpx' | 'pdf', anonymousToken: string | null) {
+    setPendingDownloadFormat(format);
+    setPendingDownloadContext(null);
+    setAnonymousTokenForClaim(anonymousToken);
+    setAuthError('');
+    setAuthDialogOpen(true);
+  }
+
   async function handleDownload(format: 'hwpx' | 'pdf') {
+    const currentSession = await bootstrapDemoSession();
+    setSessionMode(currentSession.mode);
+
+    if (localRecordMode || !isAuthenticatedSession(currentSession)) {
+      openAccountDialog(
+        format,
+        currentSession.mode === 'anonymous' ? currentSession.token : null,
+      );
+      return;
+    }
+
+    const context: PendingDownloadContext = {
+      reportSession: currentSession,
+      targetReportId: reportId,
+    };
+
     if (!exportDisclaimerAccepted) {
-      setPendingDownloadFormat(format);
-      setDisclaimerError('');
-      setDisclaimerOpen(true);
+      openDisclaimer(format, context);
       return;
     }
 
     await performDownload(format, {
       acknowledge_ai_disclaimer: false,
       typed_signature_name: typedSignatureName,
-    });
+    }, context);
   }
 
   async function handleDisclaimerConfirm() {
@@ -899,8 +991,94 @@ export default function ReportWorkspace({ reportId, report, record }: ReportWork
     await performDownload(pendingDownloadFormat, {
       acknowledge_ai_disclaimer: true,
       typed_signature_name: signature,
-    });
+    }, pendingDownloadContext ?? undefined);
     setPendingDownloadFormat(null);
+    setPendingDownloadContext(null);
+  }
+
+  async function handleAccountConfirm() {
+    const format = pendingDownloadFormat;
+    if (!format) {
+      setAuthDialogOpen(false);
+      return;
+    }
+
+    const email = authEmail.trim();
+    const password = authPassword.trim();
+    const name = authName.trim();
+
+    if (!email || !password || (authMode === 'signup' && !name)) {
+      setAuthError(authMode === 'signup' ? '이름, 이메일, 비밀번호를 입력해 주세요.' : '이메일과 비밀번호를 입력해 주세요.');
+      return;
+    }
+
+    setAuthBusy(true);
+    setAuthError('');
+
+    try {
+      let nextSession =
+        authMode === 'signup'
+          ? await signupReportUser(name, email, password)
+          : await loginReportUser(email, password);
+      let nextContext: PendingDownloadContext = {
+        reportSession: nextSession,
+        targetReportId: reportId,
+      };
+
+      if (anonymousTokenForClaim && !localRecordMode) {
+        nextSession = await claimAnonymousSession(nextSession, anonymousTokenForClaim);
+        nextContext = {
+          reportSession: nextSession,
+          targetReportId: reportId,
+        };
+      }
+
+      if (localRecordMode) {
+        const payload = await flushAutosave();
+        const syncedRecord = await syncLocalReportToServer(nextSession, {
+          ...record,
+          status: payload.status,
+          payload,
+          updated_at: payload.updatedAt,
+        });
+        await removeLocalReport(reportId);
+        nextContext = {
+          reportSession: nextSession,
+          targetReportId: syncedRecord.id,
+          payloadOverride: syncedRecord.payload,
+        };
+        const nextReport = normalizeReport(syncedRecord.payload);
+        setBaseReport(nextReport);
+        baseReportRef.current = nextReport;
+      }
+
+      setSessionMode('authenticated');
+      setAuthDialogOpen(false);
+      setAnonymousTokenForClaim(null);
+      setPendingDownloadContext(nextContext);
+
+      if (!exportDisclaimerAccepted) {
+        openDisclaimer(format, nextContext);
+        return;
+      }
+
+      await performDownload(
+        format,
+        {
+          acknowledge_ai_disclaimer: false,
+          typed_signature_name: typedSignatureName,
+        },
+        nextContext,
+      );
+      setPendingDownloadFormat(null);
+      setPendingDownloadContext(null);
+    } catch (error) {
+      setAuthError(
+        error instanceof Error ? error.message : '계정 연결을 완료하지 못했습니다.',
+      );
+    } finally {
+      setAuthBusy(false);
+    }
   }
 
   function renderSection1() {
@@ -1730,14 +1908,16 @@ export default function ReportWorkspace({ reportId, report, record }: ReportWork
           >
             이전
           </button>
-          <button
-            type="button"
-            className="erp-button erp-button-primary"
-            onClick={() => moveSection(1)}
-            disabled={activeSectionIndex === reportWorkspaceSections.length - 1}
-          >
-            다음
-          </button>
+          {activeSectionId !== 'section6' ? (
+            <button
+              type="button"
+              className="erp-button erp-button-primary"
+              onClick={() => moveSection(1)}
+              disabled={activeSectionIndex === reportWorkspaceSections.length - 1}
+            >
+              다음
+            </button>
+          ) : null}
           <button
             type="button"
             className="erp-button erp-button-secondary"
@@ -1777,6 +1957,7 @@ export default function ReportWorkspace({ reportId, report, record }: ReportWork
                 onClick={() => {
                   setDisclaimerOpen(false);
                   setPendingDownloadFormat(null);
+                  setPendingDownloadContext(null);
                   setDisclaimerError('');
                 }}
               >
@@ -1819,6 +2000,118 @@ export default function ReportWorkspace({ reportId, report, record }: ReportWork
         </div>
       ) : null}
 
+      {authDialogOpen ? (
+        <div className={styles.disclaimerBackdrop} role="dialog" aria-modal="true" aria-labelledby="export-account-title">
+          <div className={styles.disclaimerDialog}>
+            <div className={styles.disclaimerHeader}>
+              <div>
+                <span className={styles.editorEyebrow}>다운로드 전 로그인</span>
+                <h2 id="export-account-title" className={styles.disclaimerTitle}>
+                  계정 연결 후 다운로드를 이어갑니다
+                </h2>
+              </div>
+              <button
+                type="button"
+                className="erp-button erp-button-secondary"
+                onClick={() => {
+                  setAuthDialogOpen(false);
+                  setAuthError('');
+                  setPendingDownloadFormat(null);
+                  setPendingDownloadContext(null);
+                  setAnonymousTokenForClaim(null);
+                }}
+                disabled={authBusy}
+              >
+                닫기
+              </button>
+            </div>
+
+            <div className={styles.disclaimerBody}>
+              <div className={styles.authTabs}>
+                <button
+                  type="button"
+                  className={`erp-button ${authMode === 'login' ? 'erp-button-primary' : 'erp-button-secondary'}`}
+                  onClick={() => setAuthMode('login')}
+                  disabled={authBusy}
+                >
+                  로그인
+                </button>
+                <button
+                  type="button"
+                  className={`erp-button ${authMode === 'signup' ? 'erp-button-primary' : 'erp-button-secondary'}`}
+                  onClick={() => setAuthMode('signup')}
+                  disabled={authBusy}
+                >
+                  회원가입
+                </button>
+              </div>
+
+              <div className={styles.disclaimerPanel}>
+                <strong>안내</strong>
+                <p className={styles.authHelper}>
+                  PDF/HWPX 다운로드 전에는 계정 확인이 필요합니다.
+                </p>
+              </div>
+
+              {authMode === 'signup' ? (
+                <label className={styles.disclaimerField}>
+                  <span>이름</span>
+                  <input
+                    className={styles.inputControl}
+                    value={authName}
+                    onChange={(event) => setAuthName(event.target.value)}
+                    placeholder="홍길동"
+                    disabled={authBusy}
+                  />
+                </label>
+              ) : null}
+
+              <label className={styles.disclaimerField}>
+                <span>이메일</span>
+                <input
+                  className={styles.inputControl}
+                  type="email"
+                  value={authEmail}
+                  onChange={(event) => setAuthEmail(event.target.value)}
+                  placeholder="name@example.com"
+                  disabled={authBusy}
+                />
+              </label>
+
+              <label className={styles.disclaimerField}>
+                <span>비밀번호</span>
+                <input
+                  className={styles.inputControl}
+                  type="password"
+                  value={authPassword}
+                  onChange={(event) => setAuthPassword(event.target.value)}
+                  placeholder="비밀번호"
+                  disabled={authBusy}
+                />
+              </label>
+
+              {authError ? <div className={styles.inlineNotice}>{authError}</div> : null}
+            </div>
+
+            <div className={styles.disclaimerFooter}>
+              <p className={styles.disclaimerFootnote}>
+                {localRecordMode
+                  ? '로컬 임시 보고서는 로그인 후 서버에 동기화한 뒤 다운로드를 진행합니다.'
+                  : '익명 보고서는 로그인 후 현재 계정 작업공간으로 귀속됩니다.'}
+              </p>
+              <button
+                type="button"
+                className="erp-button erp-button-primary"
+                onClick={() => void handleAccountConfirm()}
+                disabled={authBusy}
+              >
+                {authBusy ? '계정 연결 중' : authMode === 'signup' ? '가입 후 계속' : '로그인 후 계속'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <section className={`erp-panel ${styles.editorPanel}`}>
         <div className={styles.editorHeader}>
           <div>
@@ -1829,6 +2122,16 @@ export default function ReportWorkspace({ reportId, report, record }: ReportWork
         </div>
 
         {actionError ? <div className={styles.inlineNotice}>{actionError}</div> : null}
+        {sessionMode === 'local' ? (
+          <div className={styles.disclaimerReminder}>
+            현재 작성 중인 보고서는 서버 연결 상태에 따라 일부 기능이 제한될 수 있습니다. 다운로드 전에는 계정 확인이 필요합니다.
+          </div>
+        ) : null}
+        {sessionMode === 'anonymous' ? (
+          <div className={styles.disclaimerReminder}>
+            보고서 다운로드 전에는 계정 확인이 필요합니다.
+          </div>
+        ) : null}
         {!exportDisclaimerAccepted ? (
           <div className={styles.disclaimerReminder}>
             보고서 다운로드 전 최초 1회 책임 확인과 서명이 필요합니다.

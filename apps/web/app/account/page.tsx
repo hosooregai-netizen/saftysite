@@ -21,11 +21,11 @@ export default function AccountPage() {
           <strong>대한안전산업연구원</strong>
         </article>
         <article className="summary-tile">
-          <span>잔여 크레딧</span>
+          <span>이용 가능 건수</span>
           <strong>2건</strong>
         </article>
         <article className="summary-tile">
-          <span>과금 규칙</span>
+          <span>이용 기준</span>
           <strong>첫 최종 출력만 차감</strong>
           <p>재출력 무료</p>
         </article>
@@ -71,7 +71,7 @@ export default function AccountPage() {
       <section className="erp-panel" id="billing">
         <div className="erp-panel-header">
           <div>
-            <h2>결제와 크레딧</h2>
+            <h2>요금 및 사용 내역</h2>
           </div>
         </div>
         <div className="package-grid">

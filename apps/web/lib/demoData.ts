@@ -49,7 +49,7 @@ export interface ReportWorkspaceSectionMeta {
   docKeys: string[];
 }
 
-export type GuidedUploadStepId = 'meta' | 'overview' | 'hazard' | 'generate';
+export type GuidedUploadStepId = 'meta' | 'overview' | 'hazard';
 
 export interface GuidedUploadField {
   id: string;
@@ -87,8 +87,11 @@ function buildDemoPreview(title: string, accent: string) {
 }
 
 export const saasNavItems = [
-  { href: '/reports', label: '보고서' },
-  { href: '/account', label: '설정' },
+  { href: '/reports/new', label: '새 보고서 작성', description: '기술지도 보고서 작성' },
+  { href: '/reports', label: '보고서 목록', description: '작성 및 출력 이력' },
+  { href: '/sites', label: '현장 목록', description: '등록 현장 관리' },
+  { href: '/credits', label: '이용내역', description: '요금 및 사용 내역' },
+  { href: '/account', label: '설정', description: '계정 및 기본정보' },
 ] as const;
 
 export const creationDialogFields = [
@@ -115,20 +118,14 @@ export const guidedUploadSteps: Array<{
   {
     id: 'overview',
     shortLabel: 'Step 2',
-    label: '공정 및 전경 이미지',
-    helper: '전경 · 공정',
+    label: '전경·공정 사진',
+    helper: '사진 첨부',
   },
   {
     id: 'hazard',
     shortLabel: 'Step 3',
-    label: '위험 및 기인물 이미지',
-    helper: '위험 · 기인물',
-  },
-  {
-    id: 'generate',
-    shortLabel: 'Final',
-    label: '초안 생성',
-    helper: '검토 화면 이동',
+    label: '위험요인 사진',
+    helper: '문안 초안',
   },
 ];
 
@@ -310,7 +307,7 @@ export function buildDemoReportsList(): DemoReportListItem[] {
 
 export function buildDashboardMetrics() {
   return [
-    { label: '남은 크레딧', value: '2건', meta: '무료 체험 잔여' },
+    { label: '이용 가능 건수', value: '2건', meta: '현재 사용 가능' },
     { label: '진행 중 Step', value: 'Step 2', meta: '표준보고서 보조 사진 수집' },
     { label: '최근 출력', value: '2026-04-15', meta: 'PDF/HWPX 완료' },
     { label: '현장 상태', value: '1개 현장', meta: '세종 복합물류센터' },
@@ -322,7 +319,7 @@ export function buildReportSummaryCards() {
     { label: '현장명', value: '세종 복합물류센터 신축현장' },
     { label: '최근 작성일', value: '2026-04-29' },
     { label: '미검토 초안', value: '1건' },
-    { label: '남은 크레딧', value: '무료 2건' },
+    { label: '이용 가능 건수', value: '2건' },
     { label: '최근 상태', value: '표준 1~6 검토 대기' },
   ];
 }

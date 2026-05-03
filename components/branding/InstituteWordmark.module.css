@@ -1,0 +1,65 @@
+.wordmark {
+  display: inline-grid;
+  gap: 2px;
+  min-width: 0;
+  line-height: 1.1;
+}
+
+.light {
+  color: #f8fbff;
+}
+
+.dark {
+  color: #182838;
+}
+
+.primary {
+  font-size: 1.02rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  white-space: nowrap;
+}
+
+.secondary {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  opacity: 0.82;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.product {
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  opacity: 0.8;
+  white-space: normal;
+}
+
+.compact .primary {
+  font-size: 0.96rem;
+}
+
+.compact .secondary {
+  font-size: 0.64rem;
+}
+
+.compact .product {
+  font-size: 0.68rem;
+}
+
+@media (max-width: 767px) {
+  .primary {
+    font-size: 0.92rem;
+  }
+
+  .secondary {
+    font-size: 0.62rem;
+    letter-spacing: 0.1em;
+  }
+
+  .product {
+    font-size: 0.66rem;
+  }
+}

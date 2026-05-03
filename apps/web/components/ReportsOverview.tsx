@@ -2,11 +2,10 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { creationDialogFields } from '@/lib/demoData';
 import {
   bootstrapDemoSession,
-  fetchCreditBalance,
   listReports,
   type ReportRecord,
 } from '@/lib/reportApi';
@@ -42,7 +41,6 @@ export function ReportsOverview() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [loadState, setLoadState] = useState<LoadState>('idle');
   const [loadError, setLoadError] = useState('');
-  const [creditBalance, setCreditBalance] = useState<number | null>(null);
   const [reports, setReports] = useState<ReportRecord[]>([]);
   const [dialogFields, setDialogFields] = useState<Record<string, string>>(() =>
     Object.fromEntries(creationDialogFields.map((field) => [field.id, field.value])),
@@ -57,17 +55,13 @@ export function ReportsOverview() {
 
       try {
         const session = await bootstrapDemoSession();
-        const [nextReports, nextCreditBalance] = await Promise.all([
-          listReports(session),
-          fetchCreditBalance(session),
-        ]);
+        const nextReports = await listReports(session);
 
         if (cancelled) {
           return;
         }
 
         setReports(nextReports);
-        setCreditBalance(nextCreditBalance);
         setLoadState('loaded');
       } catch (error) {
         if (cancelled) {
@@ -85,38 +79,22 @@ export function ReportsOverview() {
     };
   }, []);
 
-  const summaryCards = useMemo(() => {
-    const latestReport = reports[0];
-    const pendingReports = reports.filter((report) => report.status === 'draft_ready').length;
-
-    return [
-      { label: '현장명', value: latestReport?.payload.reportMeta.siteName || '-' },
-      { label: '최근 작성일', value: latestReport?.payload.reportMeta.visitDate || '-' },
-      { label: '미검토 초안', value: `${pendingReports}건` },
-      { label: '남은 크레딧', value: creditBalance === null ? '-' : `${creditBalance}건` },
-      { label: '최근 상태', value: latestReport ? getReportStatusLabel(latestReport) : '-' },
-    ];
-  }, [creditBalance, reports]);
-
   return (
     <div className="erp-page">
       <section className="page-header-card">
         <div>
-          <span className="page-kicker">Reports</span>
-          <h1 className="page-title">기술지도 보고서</h1>
+          <span className="page-kicker">보고서 보기</span>
+          <h1 className="page-title">기술지도 보고서 목록</h1>
+          <p className="page-meta-line">
+            작성 중인 보고서와 출력 이력을 확인하고, 새 보고서 작성으로 이어갈 수 있습니다.
+          </p>
         </div>
-        <button type="button" className="erp-button erp-button-primary" onClick={() => setIsCreateOpen(true)}>
-          새 보고서 시작
-        </button>
-      </section>
-
-      <section className="summary-strip" aria-label="현장 요약">
-        {summaryCards.map((card) => (
-          <article key={card.label} className="summary-tile">
-            <span>{card.label}</span>
-            <strong>{card.value}</strong>
-          </article>
-        ))}
+        <div className="workspace-header-actions">
+          <span className="workspace-chip workspace-chip-active">보고서 관리</span>
+          <button type="button" className="erp-button erp-button-primary" onClick={() => setIsCreateOpen(true)}>
+            새 보고서 작성
+          </button>
+        </div>
       </section>
 
       <section className="erp-panel">
@@ -132,7 +110,6 @@ export function ReportsOverview() {
 
         {loadState === 'loading' ? <div className="row-meta">목록 불러오는 중</div> : null}
         {loadState === 'error' ? <div className="row-meta">{loadError}</div> : null}
-
         {loadState === 'loaded' ? (
           <div className="report-table">
             <div className="report-table-head">
@@ -204,8 +181,8 @@ export function ReportsOverview() {
           <div className="modal-card" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
             <div className="modal-header">
               <div>
-                <span className="page-kicker">Create</span>
-                <h2>새 보고서 시작</h2>
+                <span className="page-kicker">작성 시작</span>
+                <h2>새 기술지도 보고서 작성</h2>
               </div>
               <button type="button" className="erp-button erp-button-text" onClick={() => setIsCreateOpen(false)}>
                 닫기
@@ -239,7 +216,7 @@ export function ReportsOverview() {
                 className="erp-button erp-button-primary"
                 onClick={() => router.push('/reports/new')}
               >
-                작성 시작
+                보고서 작성 시작
               </button>
             </div>
           </div>
