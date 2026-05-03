@@ -4,7 +4,7 @@ import { startTransition, useCallback } from 'react';
 import {
   fetchAssignedSafetySites,
   fetchCurrentSafetyUser,
-  fetchSafetyContentItems,
+  fetchSafetyInspectionMasterContentItems,
 } from '@/lib/safetyApi';
 import { mergeAssignedSafetySitesIntoInspectionSites } from '@/lib/safetyApi/assignedSites';
 import {
@@ -98,7 +98,7 @@ export function useInspectionSessionStateHydration(
   );
 
   const hydrateRemoteMasterData = useCallback(async (token: string) => {
-    const contentItems = await fetchSafetyContentItems(token);
+    const contentItems = await fetchSafetyInspectionMasterContentItems(token);
     return buildSafetyMasterData(contentItems);
   }, []);
 

@@ -41,6 +41,15 @@ import { expandAssignedSiteSummaryToSafetySite } from './assignedSites';
 
 const CLIENT_SITE_LIST_LIMIT = 500;
 const CLIENT_CONTENT_ITEM_LIMIT = 1000;
+const INSPECTION_MASTER_CONTENT_TYPES: SafetyContentType[] = [
+  'correction_result_option',
+  'disaster_case',
+  'doc7_reference_material',
+  'hazard_countermeasure_catalog',
+  'legal_reference',
+  'measurement_template',
+  'safety_news',
+];
 const ERP_UNSUPPORTED_STATUSES = new Set([405, 501]);
 const ERP_TEMPLATE_CONTENT_TYPES: Record<ErpDocumentKind, SafetyContentType[]> = {
   tbm: ['tbm_template'],
@@ -450,20 +459,29 @@ export function updateAssignedSafetyHeadquarter(
 export function fetchSafetyContentItems(
   token: string,
   options?: {
+    contentTypes?: SafetyContentType[];
     force?: boolean;
   },
 ): Promise<SafetyContentItem[]> {
   if (options?.force) {
     invalidateSafetyApiGetCache('/content-items', token);
   }
-  const rows: SafetyContentItem[] = [];
+  const contentTypes = options?.contentTypes
+    ? [...new Set(options.contentTypes)]
+    : null;
 
-  const fetchNextPage = async (offset: number): Promise<SafetyContentItem[]> => {
+  const fetchNextPage = async (
+    offset: number,
+    contentType?: SafetyContentType,
+  ): Promise<SafetyContentItem[]> => {
     const searchParams = new URLSearchParams({
       active_only: 'true',
       limit: String(CLIENT_CONTENT_ITEM_LIMIT),
       offset: String(offset),
     });
+    if (contentType) {
+      searchParams.set('content_type', contentType);
+    }
 
     return requestSafetyApi<SafetyContentItem[]>(
       `/content-items?${searchParams.toString()}`,
@@ -472,11 +490,14 @@ export function fetchSafetyContentItems(
     );
   };
 
-  return (async () => {
+  const fetchAllPages = async (
+    contentType?: SafetyContentType,
+  ): Promise<SafetyContentItem[]> => {
+    const rows: SafetyContentItem[] = [];
     let offset = 0;
 
     while (true) {
-      const page = await fetchNextPage(offset);
+      const page = await fetchNextPage(offset, contentType);
       rows.push(...page);
 
       if (page.length < CLIENT_CONTENT_ITEM_LIMIT) {
@@ -485,7 +506,26 @@ export function fetchSafetyContentItems(
 
       offset += page.length;
     }
+  };
+
+  return (async () => {
+    if (!contentTypes) {
+      return fetchAllPages();
+    }
+
+    const pages = await Promise.all(contentTypes.map((contentType) => fetchAllPages(contentType)));
+    return pages.flat();
   })();
+}
+
+export function fetchSafetyInspectionMasterContentItems(
+  token: string,
+  options?: { force?: boolean },
+): Promise<SafetyContentItem[]> {
+  return fetchSafetyContentItems(token, {
+    ...options,
+    contentTypes: INSPECTION_MASTER_CONTENT_TYPES,
+  });
 }
 
 export function fetchSafetyReportsBySite(

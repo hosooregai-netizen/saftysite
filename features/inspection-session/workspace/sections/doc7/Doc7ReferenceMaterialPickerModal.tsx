@@ -1,6 +1,12 @@
 'use client';
 
-import { useDeferredValue, useMemo, useState } from 'react';
+import {
+  useCallback,
+  useDeferredValue,
+  useMemo,
+  useState,
+  type UIEvent,
+} from 'react';
 import AppModal from '@/components/ui/AppModal';
 import styles from '@/components/session/InspectionSessionWorkspace.module.css';
 import {
@@ -10,6 +16,9 @@ import {
 import type { SafetyDoc7ReferenceMaterialCatalogItem } from '@/types/backend';
 
 const ALL_FILTER_VALUE = '__all__';
+const INITIAL_VISIBLE_ITEM_COUNT = 18;
+const VISIBLE_ITEM_BATCH_SIZE = 18;
+const LOAD_MORE_SCROLL_THRESHOLD_PX = 280;
 
 interface Doc7ReferenceMaterialPickerModalProps {
   items: SafetyDoc7ReferenceMaterialCatalogItem[];
@@ -101,6 +110,60 @@ export function Doc7ReferenceMaterialPickerModal({
       return buildDoc7ReferenceMaterialSearchText(item).includes(normalizedQuery);
     });
   }, [accidentTypeFilter, deferredQuery, effectiveCausativeFilter, items]);
+  const visibilityKey = useMemo(
+    () =>
+      [
+        deferredQuery.trim().toLowerCase(),
+        accidentTypeFilter,
+        effectiveCausativeFilter,
+        items.length,
+        items[0]?.id ?? '',
+        items[items.length - 1]?.id ?? '',
+      ].join('\n'),
+    [accidentTypeFilter, deferredQuery, effectiveCausativeFilter, items],
+  );
+  const [visibleWindow, setVisibleWindow] = useState({
+    count: INITIAL_VISIBLE_ITEM_COUNT,
+    key: '',
+  });
+  const effectiveVisibleCount =
+    visibleWindow.key === visibilityKey
+      ? visibleWindow.count
+      : INITIAL_VISIBLE_ITEM_COUNT;
+  const visibleItems = useMemo(
+    () => filteredItems.slice(0, effectiveVisibleCount),
+    [effectiveVisibleCount, filteredItems],
+  );
+  const handleListScroll = useCallback(
+    (event: UIEvent<HTMLDivElement>) => {
+      const target = event.currentTarget;
+      const remaining = target.scrollHeight - target.scrollTop - target.clientHeight;
+      if (remaining > LOAD_MORE_SCROLL_THRESHOLD_PX) {
+        return;
+      }
+
+      setVisibleWindow((current) => {
+        const currentCount =
+          current.key === visibilityKey
+            ? current.count
+            : INITIAL_VISIBLE_ITEM_COUNT;
+        if (currentCount >= filteredItems.length) {
+          return current.key === visibilityKey
+            ? current
+            : { count: currentCount, key: visibilityKey };
+        }
+
+        return {
+          count: Math.min(
+            filteredItems.length,
+            currentCount + VISIBLE_ITEM_BATCH_SIZE,
+          ),
+          key: visibilityKey,
+        };
+      });
+    },
+    [filteredItems.length, visibilityKey],
+  );
 
   return (
     <AppModal
@@ -166,8 +229,8 @@ export function Doc7ReferenceMaterialPickerModal({
             조건에 맞는 참고자료가 없습니다.
           </div>
         ) : (
-          <div className={styles.doc7ReferencePickerList}>
-            {filteredItems.map((item) => (
+          <div className={styles.doc7ReferencePickerList} onScroll={handleListScroll}>
+            {visibleItems.map((item, index) => (
               <article key={item.id} className={styles.doc7ReferencePickerCard}>
                 <div className={styles.doc7ReferencePickerThumb}>
                   {item.imageUrl ? (
@@ -176,6 +239,8 @@ export function Doc7ReferenceMaterialPickerModal({
                       src={item.imageUrl}
                       alt={buildDoc7ReferenceMaterialLabel(item)}
                       className={styles.doc7ReferencePickerThumbImage}
+                      loading={index < 6 ? 'eager' : 'lazy'}
+                      decoding="async"
                     />
                   ) : (
                     <div className={styles.doc7ReferencePickerThumbEmpty}>

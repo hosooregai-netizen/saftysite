@@ -54,7 +54,7 @@ const CONTENT_LIST_QUERY_DEFAULTS = {
   contentDir: 'asc',
   contentPage: 1,
   contentQuery: '',
-  contentSort: 'title',
+  contentSort: 'sort_order',
 };
 
 type DisasterCaseBatchItem = {
@@ -154,7 +154,7 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
   const urlSort = useMemo<TableSortState>(
     () => ({
       direction: readEnumParam(searchParams, 'contentDir', ['asc', 'desc'] as const, 'asc'),
-      key: readStringParam(searchParams, 'contentSort', 'title'),
+      key: readStringParam(searchParams, 'contentSort', CONTENT_LIST_QUERY_DEFAULTS.contentSort),
     }),
     [searchParams],
   );
@@ -397,6 +397,7 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
       {
         name: '콘텐츠',
         columns: [
+          { key: 'number', label: '번호' },
           { key: 'content_type', label: '유형' },
           { key: 'title', label: '제목' },
           { key: 'preview', label: '내용 미리보기' },
@@ -405,9 +406,10 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
           { key: 'sort_order', label: '정렬순서' },
           { key: 'updated_at', label: '수정일' },
         ],
-        rows: sortedItems.map((item) => ({
+        rows: sortedItems.map((item, index) => ({
           attachment: getContentAttachmentSummary(item),
           content_type: CONTENT_TYPE_LABELS[item.content_type],
+          number: index + 1,
           period: formatDateRange(item.effective_from, item.effective_to) || '',
           preview: getContentPreview(item),
           sort_order: item.sort_order,
@@ -503,6 +505,7 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
                 <table className={styles.table}>
                   <thead>
                     <tr style={{ display: 'none' }}>
+                      <th>번호</th>
                       <th>유형</th>
                       <th>입력 방식</th>
                       <th>제목</th>
@@ -512,6 +515,28 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
                       <th>메뉴</th>
                     </tr>
                     <tr>
+                      <SortableHeaderCell
+                        column={{ key: 'sort_order' }}
+                        current={sort}
+                        label="번호"
+                        onChange={(value) => {
+                          setSortState(value);
+                          onPageChange(1);
+                          updateUrlQuery(
+                            {
+                              contentDir: value.direction,
+                              contentPage: 1,
+                              contentSort: value.key,
+                            },
+                            CONTENT_LIST_QUERY_DEFAULTS,
+                          );
+                        }}
+                        sortMenuOptions={buildSortMenuOptions('sort_order', {
+                          asc: '정렬 순서 오름차순',
+                          desc: '정렬 순서 내림차순',
+                        })}
+                        title="정렬 순서 기준 번호"
+                      />
                       <SortableHeaderCell
                         column={{ key: 'content_type' }}
                         current={sort}
@@ -574,43 +599,51 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
                     </tr>
                   </thead>
                   <tbody>
-                    {pagedItems.map((item) => (
-                      <tr key={item.id}>
-                        <td>{CONTENT_TYPE_LABELS[item.content_type]}</td>
-                        <td>
-                          <div className={styles.tablePrimary}>{item.title}</div>
-                          <div className={styles.tableSecondary}>
-                            {item.is_active ? '활성' : '비활성'}
-                          </div>
-                        </td>
-                        <td>{getContentPreview(item)}</td>
-                        <td>{formatDateRange(item.effective_from, item.effective_to) || '-'}</td>
-                        <td>
-                          <div className={styles.tableActionMenuWrap}>
-                            <ActionMenu
-                              label={`${item.title} 콘텐츠 작업 메뉴 열기`}
-                              items={[
-                                {
-                                  label: '수정',
-                                  onSelect: () => {
-                                    if (!busy && !detailLoadingId) void openEdit(item);
+                    {pagedItems.map((item, index) => {
+                      const rowNumber = (currentPage - 1) * pageSize + index + 1;
+
+                      return (
+                        <tr key={item.id}>
+                          <td className={styles.tableNowrap}>
+                            <div className={styles.tablePrimary}>{rowNumber}</div>
+                            <div className={styles.tableSecondary}>정렬 {item.sort_order}</div>
+                          </td>
+                          <td>{CONTENT_TYPE_LABELS[item.content_type]}</td>
+                          <td>
+                            <div className={styles.tablePrimary}>{item.title}</div>
+                            <div className={styles.tableSecondary}>
+                              {item.is_active ? '활성' : '비활성'}
+                            </div>
+                          </td>
+                          <td>{getContentPreview(item)}</td>
+                          <td>{formatDateRange(item.effective_from, item.effective_to) || '-'}</td>
+                          <td>
+                            <div className={styles.tableActionMenuWrap}>
+                              <ActionMenu
+                                label={`${item.title} 콘텐츠 작업 메뉴 열기`}
+                                items={[
+                                  {
+                                    label: '수정',
+                                    onSelect: () => {
+                                      if (!busy && !detailLoadingId) void openEdit(item);
+                                    },
                                   },
-                                },
-                                ...(canDelete
-                                  ? [{
-                                      label: '삭제',
-                                      tone: 'danger' as const,
-                                      onSelect: () => {
-                                        if (!busy) void handleDeleteContentItem(item);
-                                      },
-                                    }]
-                                  : []),
-                              ]}
-                            />
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                                  ...(canDelete
+                                    ? [{
+                                        label: '삭제',
+                                        tone: 'danger' as const,
+                                        onSelect: () => {
+                                          if (!busy) void handleDeleteContentItem(item);
+                                        },
+                                      }]
+                                    : []),
+                                ]}
+                              />
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
