@@ -121,6 +121,7 @@ const FEATURE_RULES = [
       /^server\/admin\/automation(\.test)?\.ts$/,
       /^server\/admin\/legacyReportAlignment(\.test)?\.ts$/,
       /^server\/admin\/scheduleSnapshot(\.test)?\.ts$/,
+      /^server\/admin\/workerScheduleMirror(\.test)?\.ts$/,
     ],
   },
   {
