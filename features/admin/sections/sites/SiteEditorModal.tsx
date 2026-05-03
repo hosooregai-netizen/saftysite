@@ -106,7 +106,6 @@ export function SiteEditorModal({
     headquarters.find((item) => item.id === resolvedHeadquarterId)?.name || '';
 
   const hasOperationDetails = [
-    form.labor_office,
     form.project_amount,
     form.project_start_date,
     form.project_end_date,
@@ -626,18 +625,6 @@ export function SiteEditorModal({
           {resolvedSectionState.operationsOpen ? (
             <div className={styles.collapsibleContent}>
               <div className={styles.modalGrid}>
-                <label className={styles.modalField}>
-                  <span className={styles.label}>노동관서</span>
-                  <input
-                    className="app-input"
-                    value={form.labor_office}
-                    onChange={(event) =>
-                      setForm((current) => ({ ...current, labor_office: event.target.value }))
-                    }
-                    disabled={busy}
-                  />
-                </label>
-
                 <label className={styles.modalField}>
                   <span className={styles.label}>공사 금액</span>
                   <input
