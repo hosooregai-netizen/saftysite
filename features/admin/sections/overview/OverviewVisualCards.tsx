@@ -50,6 +50,7 @@ function DonutOverviewCard({
           </svg>
           <div className={styles.kpiDonutCenter} aria-hidden="true">
             <strong>{totalValue}</strong>
+            <span>총현장</span>
           </div>
         </div>
         <ul className={styles.kpiLegend}>
