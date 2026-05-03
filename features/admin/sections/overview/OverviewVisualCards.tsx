@@ -48,6 +48,9 @@ function DonutOverviewCard({
               <path key={slice.label} d={slice.path} fill={slice.color} stroke="none" />
             ))}
           </svg>
+          <div className={styles.kpiDonutCenter} aria-hidden="true">
+            <strong>{totalValue}</strong>
+          </div>
         </div>
         <ul className={styles.kpiLegend}>
           {entries.map((entry) => (
