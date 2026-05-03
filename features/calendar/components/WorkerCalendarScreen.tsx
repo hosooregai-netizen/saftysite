@@ -573,15 +573,25 @@ export function WorkerCalendarScreen() {
       (selectedSiteId && dialogSiteOptions.some((option) => option.siteId === selectedSiteId)
         ? selectedSiteId
         : dialogSiteOptions[0]?.siteId || '');
+    const existingDateSchedule =
+      requestedSchedule ??
+      sortSchedules(
+        calendarRows.filter(
+          (row) =>
+            row.plannedDate === nextPlannedDate &&
+            (!defaultSiteId || row.siteId === defaultSiteId),
+        ),
+      )[0] ??
+      null;
 
     setSelectedDate(nextPlannedDate);
     setDialog({
       open: true,
       plannedDate: nextPlannedDate,
-      scheduleId: requestedSchedule?.id || '',
-      selectionReasonLabel: requestedSchedule?.selectionReasonLabel || '',
-      selectionReasonMemo: requestedSchedule?.selectionReasonMemo || '',
-      siteId: requestedSchedule?.siteId || defaultSiteId,
+      scheduleId: existingDateSchedule?.id || '',
+      selectionReasonLabel: existingDateSchedule?.selectionReasonLabel || '',
+      selectionReasonMemo: existingDateSchedule?.selectionReasonMemo || '',
+      siteId: existingDateSchedule?.siteId || defaultSiteId,
     });
   };
 
@@ -1197,7 +1207,7 @@ export function WorkerCalendarScreen() {
                                   onClick={() =>
                                     openScheduleDialog({
                                       plannedDate: day.token,
-                                      schedule: dayRows.length === 1 ? dayRows[0] : null,
+                                      schedule: dayRows[0] ?? null,
                                     })
                                   }
                                   onKeyDown={(event) => {
@@ -1205,7 +1215,7 @@ export function WorkerCalendarScreen() {
                                       event.preventDefault();
                                       openScheduleDialog({
                                         plannedDate: day.token,
-                                        schedule: dayRows.length === 1 ? dayRows[0] : null,
+                                        schedule: dayRows[0] ?? null,
                                       });
                                     }
                                   }}
