@@ -1538,6 +1538,11 @@
   color: var(--erp-dark);
 }
 
+.overviewTableCountNumber {
+  margin-right: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
 .overviewTableCard .table th:last-child,
 .overviewTableCard .table td:last-child {
   width: auto;

@@ -49,7 +49,10 @@ export function OverviewEndingSoonSection({
           <div className={styles.overviewTableScope}>오늘부터 14일 이내</div>
         </div>
         <div className={styles.sectionHeaderActions}>
-          <span className={styles.overviewTableCount}>{totalRows.toLocaleString('ko-KR')}개 현장</span>
+          <span className={styles.overviewTableCount}>
+            <span className={styles.overviewTableCountNumber}>{totalRows.toLocaleString('ko-KR')}</span>
+            개 현장
+          </span>
         </div>
       </div>
       <div className={styles.sectionBody}>
