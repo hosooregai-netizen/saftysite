@@ -18,12 +18,10 @@ const DEADLINE_SIGNAL_COLOR_BY_KEY: Record<string, string> = {
 function DonutOverviewCard({
   entries,
   title,
-  totalLabel,
   totalValue,
 }: {
   entries: AdminOverviewChartEntry[];
   title: string;
-  totalLabel: string;
   totalValue: number;
 }) {
   const populatedEntries = entries.filter((entry) => entry.count > 0);
@@ -50,10 +48,6 @@ function DonutOverviewCard({
               <path key={slice.label} d={slice.path} fill={slice.color} stroke="none" />
             ))}
           </svg>
-          <div className={styles.kpiDonutCenter} aria-hidden="true">
-            <strong>{totalValue}</strong>
-            <span>{totalLabel}</span>
-          </div>
         </div>
         <ul className={styles.kpiLegend}>
           {entries.map((entry) => (
@@ -160,13 +154,11 @@ export function OverviewVisualCards({
       <DonutOverviewCard
         title="관리 중인 현장"
         entries={siteStatusSummary.entries}
-        totalLabel="관리 중인 현장"
         totalValue={siteStatusSummary.totalSiteCount}
       />
       <DonutOverviewCard
         title="교육/계측 자료 충족 상태"
         entries={quarterlyMaterialSummary.entries}
-        totalLabel={quarterlyMaterialSummary.quarterLabel}
         totalValue={quarterlyMaterialSummary.totalSiteCount}
       />
       <DeadlineSignalOverviewCard
