@@ -1,32 +1,12 @@
 import styles from '@/features/admin/sections/AdminSectionShared.module.css';
-import { parseSiteRequiredCompletionFields } from '@/lib/admin/siteContractProfile';
-import { getPrimarySiteManagerEmail } from '@/lib/siteContacts';
 import type { SafetySite } from '@/types/backend';
 import type { SafetyHeadquarter } from '@/types/controller';
-import { getSiteManagementMissingFields } from '../sites/siteSectionHelpers';
 
 interface HeadquarterSummaryPanelProps {
   headquarter: SafetyHeadquarter;
   sites: SafetySite[];
   onEdit: () => void;
   onOpenAssignment: () => void;
-}
-
-function getHeadquarterMissingFields(headquarter: SafetyHeadquarter) {
-  const requiredChecks: Array<[string, string | null]> = [
-    ['사업장관리번호', headquarter.management_number],
-    ['사업개시번호', headquarter.opening_number],
-    ['사업자등록번호', headquarter.business_registration_no],
-    ['법인등록번호', headquarter.corporate_registration_no],
-    ['건설사 담당자명', headquarter.contact_name],
-    ['건설사 담당자 연락처', headquarter.contact_phone],
-    ['건설사 담당자 이메일', headquarter.contact_email ?? null],
-    ['본사 주소', headquarter.address],
-  ];
-
-  return requiredChecks
-    .filter(([, value]) => !String(value ?? '').trim())
-    .map(([label]) => label);
 }
 
 function buildRegistrationRows(headquarter: SafetyHeadquarter) {
@@ -44,35 +24,20 @@ export function HeadquarterSummaryPanel({
   onEdit,
   onOpenAssignment,
 }: HeadquarterSummaryPanelProps) {
-  const missingFields = getHeadquarterMissingFields(headquarter);
   const activeSiteCount = sites.filter((site) => site.status === 'active').length;
   const plannedSiteCount = sites.filter((site) => site.status === 'planned').length;
   const closedSiteCount = sites.filter((site) => site.status === 'closed').length;
-  const missingEmailCount = sites.filter((site) => !getPrimarySiteManagerEmail(site)).length;
-  const siteGapCount = sites.filter((site) => {
-    const requiredCompletionFields =
-      site.required_completion_fields?.length
-        ? site.required_completion_fields
-        : parseSiteRequiredCompletionFields(site);
-    const combinedMissingFields = new Set([
-      ...requiredCompletionFields,
-      ...getSiteManagementMissingFields(site),
-    ]);
-    return combinedMissingFields.size > 0;
-  }).length;
   const registrationRows = buildRegistrationRows(headquarter);
+  const contactDetails = [
+    headquarter.contact_phone ? `연락처 ${headquarter.contact_phone}` : '',
+    headquarter.contact_email ? `이메일 ${headquarter.contact_email}` : '',
+  ].filter(Boolean);
+
   return (
     <section className={styles.sectionCard}>
       <div className={styles.sectionHeader}>
         <div className={styles.sectionHeaderTitleBlock}>
           <div className={styles.sectionHeaderMeta}>건설사 요약</div>
-          {missingFields.length ? (
-            <div className={styles.contextBadgeRow}>
-              <span className={`${styles.contextBadge} ${styles.contextBadgeWarning}`}>
-                건설사 보완 {missingFields.length}건
-              </span>
-            </div>
-          ) : null}
         </div>
         <div className={styles.sectionHeaderActions}>
           <button type="button" className="app-button app-button-secondary" onClick={onOpenAssignment}>
@@ -101,11 +66,10 @@ export function HeadquarterSummaryPanel({
           </article>
           <div className={styles.headquarterOverviewAside}>
             <article className={styles.contextCell}>
-              <span className={styles.contextCellLabel}>건설사 담당자</span>
+              <span className={styles.contextCellLabel}>담당자 연락 정보</span>
               <strong className={styles.contextCellValue}>{headquarter.contact_name || '-'}</strong>
               <span className={styles.contextCellMeta}>
-                {[headquarter.contact_phone, headquarter.contact_email].filter(Boolean).join(' / ') ||
-                  '연락처 미입력'}
+                {contactDetails.join(' / ') || '연락처 미입력'}
               </span>
             </article>
             <article className={styles.contextCell}>
@@ -115,36 +79,9 @@ export function HeadquarterSummaryPanel({
                 운영중 {activeSiteCount} / 미착수 {plannedSiteCount} / 종료 {closedSiteCount}
               </span>
             </article>
-            <article className={styles.contextCell}>
-              <span className={styles.contextCellLabel}>데이터 보완</span>
-              <strong className={styles.contextCellValue}>
-                {siteGapCount + missingFields.length}건
-              </strong>
-              <span className={styles.contextCellMeta}>
-                현장 보완 {siteGapCount} / 메일 미입력 {missingEmailCount}
-              </span>
-            </article>
-            <article className={styles.contextCell}>
+            <article className={`${styles.contextCell} ${styles.contextCellWide}`}>
               <span className={styles.contextCellLabel}>본사 주소</span>
               <strong className={styles.contextCellValue}>{headquarter.address || '-'}</strong>
-              <span className={styles.contextCellMeta}>
-                담당자 연락처 {headquarter.contact_phone || '-'}
-              </span>
-            </article>
-            <article className={styles.contextCell}>
-              <span className={styles.contextCellLabel}>등록 상태</span>
-              <strong className={styles.contextCellValue}>
-                {missingFields.length ? `입력 필요 ${missingFields.length}건` : '기본 정보 입력 완료'}
-              </strong>
-              {missingFields.length ? (
-                <div className={styles.contextCellList}>
-                  {missingFields.map((item) => (
-                    <span key={item} className={styles.contextCellMeta}>
-                      {item}
-                    </span>
-                  ))}
-                </div>
-              ) : null}
             </article>
           </div>
         </div>
