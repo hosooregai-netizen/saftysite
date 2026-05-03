@@ -24,6 +24,7 @@ import {
   mapBackendAdminScheduleCalendarResponse,
   mapBackendAdminScheduleQueueResponse,
 } from '@/server/admin/upstreamMappers';
+import { getWorkerScheduleMirrorRows } from '@/server/admin/workerScheduleMirror';
 
 /**
  * Schedule snapshot is a legacy/shared helper layer.
@@ -284,8 +285,12 @@ export async function buildAdminScheduleCalendarSnapshotResponse(
   today = new Date(),
 ): Promise<SafetyAdminScheduleCalendarResponse> {
   const snapshot = await getAdminScheduleSnapshot(token, request, today);
+  const workerMirrorRows = getWorkerScheduleMirrorRows();
   const sourceRows = mergeAdminScheduleSnapshotRows({
-    backendRows: await fetchBackendAdminScheduleRows(token, filters, request),
+    backendRows: [
+      ...(await fetchBackendAdminScheduleRows(token, filters, request)),
+      ...workerMirrorRows,
+    ],
     memoRows: snapshot.rows,
   });
   const rows = buildAdminCalendarSchedules(sourceRows, filters, today);
@@ -322,8 +327,12 @@ export async function buildAdminScheduleQueueSnapshotResponse(
   today = new Date(),
 ): Promise<SafetyAdminScheduleQueueResponse> {
   const snapshot = await getAdminScheduleSnapshot(token, request, today);
+  const workerMirrorRows = getWorkerScheduleMirrorRows();
   const sourceRows = mergeAdminScheduleSnapshotRows({
-    backendRows: await fetchBackendAdminScheduleRows(token, filters, request),
+    backendRows: [
+      ...(await fetchBackendAdminScheduleRows(token, filters, request)),
+      ...workerMirrorRows,
+    ],
     memoRows: snapshot.rows,
   });
   const offset = Math.max(0, filters.offset ?? 0);

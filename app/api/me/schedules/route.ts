@@ -5,6 +5,7 @@ import {
   SafetyServerApiError,
 } from '@/server/admin/safetyApiServer';
 import { mapBackendScheduleListResponse } from '@/server/admin/upstreamMappers';
+import { mirrorWorkerSchedulesToSiteMemo } from '@/server/admin/workerScheduleMirror';
 
 export const runtime = 'nodejs';
 
@@ -24,7 +25,10 @@ export async function GET(request: Request): Promise<Response> {
       request,
     );
 
-    return NextResponse.json(mapBackendScheduleListResponse(response));
+    const mapped = mapBackendScheduleListResponse(response);
+    await mirrorWorkerSchedulesToSiteMemo(token, mapped.rows, request);
+
+    return NextResponse.json(mapped);
   } catch (error) {
     if (error instanceof SafetyServerApiError) {
       return NextResponse.json({ error: error.message }, { status: error.status });

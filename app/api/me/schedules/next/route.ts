@@ -8,6 +8,7 @@ import {
   SafetyServerApiError,
 } from '@/server/admin/safetyApiServer';
 import { mapBackendSchedule } from '@/server/admin/upstreamMappers';
+import { mirrorWorkerScheduleToSiteMemo } from '@/server/admin/workerScheduleMirror';
 
 export const runtime = 'nodejs';
 
@@ -33,10 +34,12 @@ export async function POST(request: Request): Promise<Response> {
       },
       request,
     );
+    const mapped = mapBackendSchedule(updated);
+    await mirrorWorkerScheduleToSiteMemo(token, mapped, request);
     invalidateAdminDirectorySnapshot();
     invalidateAdminScheduleSnapshot();
     invalidateAdminOverviewAndReportsRouteCaches();
-    return NextResponse.json(mapBackendSchedule(updated));
+    return NextResponse.json(mapped);
   } catch (error) {
     if (error instanceof SafetyServerApiError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
