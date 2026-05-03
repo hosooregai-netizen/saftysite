@@ -6,6 +6,7 @@ import type { InspectionReportListItem } from '@/types/inspectionSession';
 import {
   buildWorkerCalendarReportLookup,
   buildWorkerCalendarRowsWithReportDates,
+  findDuplicateUnlinkedScheduleReservations,
   resolveWorkerCalendarReportForSchedule,
 } from './workerCalendarReportMatching';
 
@@ -46,8 +47,8 @@ function buildSchedule(input: Partial<SafetyInspectionSchedule> & Pick<SafetyIns
     actualVisitDate: input.actualVisitDate ?? '',
     assigneeName: '',
     assigneeUserId: '',
-    exceptionMemo: '',
-    exceptionReasonCode: '',
+    exceptionMemo: input.exceptionMemo ?? '',
+    exceptionReasonCode: input.exceptionReasonCode ?? '',
     headquarterId: '',
     headquarterName: '',
     id: input.id,
@@ -60,8 +61,8 @@ function buildSchedule(input: Partial<SafetyInspectionSchedule> & Pick<SafetyIns
     selectionConfirmedAt: '',
     selectionConfirmedByName: '',
     selectionConfirmedByUserId: '',
-    selectionReasonLabel: '',
-    selectionReasonMemo: '',
+    selectionReasonLabel: input.selectionReasonLabel ?? '',
+    selectionReasonMemo: input.selectionReasonMemo ?? '',
     siteId: input.siteId ?? 'site-1',
     siteName: input.siteName ?? 'Site 1',
     status: input.status ?? 'planned',
@@ -156,4 +157,59 @@ test('worker calendar rows can show report-backed schedules omitted from the mon
   assert.equal(rows[0]?.roundNo, 2);
   assert.equal(rows[0]?.plannedDate, '2026-04-10');
   assert.equal(rows[0]?.windowStart, '2026-04-09');
+});
+
+test('worker calendar rows hide a blank duplicate reservation when a report owns the same site date', () => {
+  const rows = buildWorkerCalendarRowsWithReportDates({
+    reportsBySiteId: new Map([
+      [
+        'site-1',
+        [
+          buildReport({
+            reportKey: 'report-5',
+            scheduleId: 'schedule-5',
+            visitDate: '2026-04-24',
+            visitRound: 5,
+          }),
+        ],
+      ],
+    ]),
+    rows: [
+      buildSchedule({ id: 'schedule-5', plannedDate: '2026-04-22', roundNo: 5 }),
+      buildSchedule({ id: 'schedule-10', plannedDate: '2026-04-24', roundNo: 10 }),
+    ],
+    sites: [{ id: 'site-1', siteName: 'Site 1', totalRounds: 10 }],
+  });
+
+  assert.deepEqual(
+    rows.map((row) => row.id),
+    ['schedule-5'],
+  );
+  assert.equal(rows[0]?.plannedDate, '2026-04-24');
+  assert.equal(rows[0]?.linkedReportKey, 'report-5');
+});
+
+test('duplicate reservation finder only targets blank unlinked planned rows', () => {
+  const duplicate = buildSchedule({ id: 'schedule-10', plannedDate: '2026-04-24', roundNo: 10 });
+  const duplicates = findDuplicateUnlinkedScheduleReservations([
+    buildSchedule({
+      actualVisitDate: '2026-04-24',
+      id: 'schedule-5',
+      linkedReportKey: 'report-5',
+      plannedDate: '2026-04-24',
+      roundNo: 5,
+    }),
+    duplicate,
+    buildSchedule({
+      id: 'schedule-9',
+      plannedDate: '2026-04-24',
+      roundNo: 9,
+      selectionReasonMemo: 'manual extra visit',
+    }),
+  ]);
+
+  assert.deepEqual(
+    duplicates.map((row) => row.id),
+    ['schedule-10'],
+  );
 });

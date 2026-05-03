@@ -51,6 +51,72 @@ function setPreferredReport(
   }
 }
 
+function getSiteDateKey(row: Pick<SafetyInspectionSchedule, 'plannedDate' | 'siteId'>) {
+  const siteId = normalizeText(row.siteId);
+  const plannedDate = normalizeText(row.plannedDate);
+  return siteId && plannedDate ? `${siteId}::${plannedDate}` : '';
+}
+
+function isReportAnchoredSchedule(
+  row: Pick<SafetyInspectionSchedule, 'actualVisitDate' | 'linkedReportKey' | 'plannedDate'>,
+) {
+  if (normalizeText(row.linkedReportKey)) return true;
+  const plannedDate = normalizeText(row.plannedDate);
+  const actualVisitDate = normalizeText(row.actualVisitDate);
+  return Boolean(plannedDate && actualVisitDate && plannedDate === actualVisitDate);
+}
+
+function isClearableDuplicateReservation(row: SafetyInspectionSchedule) {
+  const plannedDate = normalizeText(row.plannedDate);
+  if (!plannedDate || normalizeText(row.linkedReportKey)) return false;
+  if (row.status !== 'planned') return false;
+  if (normalizeText(row.selectionReasonLabel) || normalizeText(row.selectionReasonMemo)) return false;
+  if (normalizeText(row.exceptionReasonCode) || normalizeText(row.exceptionMemo)) return false;
+
+  const actualVisitDate = normalizeText(row.actualVisitDate);
+  return !actualVisitDate || actualVisitDate === plannedDate;
+}
+
+export function findDuplicateUnlinkedScheduleReservations(rows: SafetyInspectionSchedule[]) {
+  const bySiteDate = new Map<string, SafetyInspectionSchedule[]>();
+  rows.forEach((row) => {
+    const key = getSiteDateKey(row);
+    if (!key) return;
+    const group = bySiteDate.get(key) ?? [];
+    group.push(row);
+    bySiteDate.set(key, group);
+  });
+
+  const duplicates: SafetyInspectionSchedule[] = [];
+  bySiteDate.forEach((group) => {
+    if (group.length < 2 || !group.some(isReportAnchoredSchedule)) return;
+    const anchoredRoundNo = Math.min(
+      ...group
+        .filter(isReportAnchoredSchedule)
+        .map((row) => normalizeRoundNo(row.roundNo))
+        .filter((roundNo) => roundNo > 0),
+    );
+    group.forEach((row) => {
+      if (!isClearableDuplicateReservation(row)) return;
+      if (anchoredRoundNo > 0 && normalizeRoundNo(row.roundNo) <= anchoredRoundNo) return;
+      duplicates.push(row);
+    });
+  });
+
+  return duplicates.sort(
+    (left, right) =>
+      left.siteName.localeCompare(right.siteName, 'ko') ||
+      left.plannedDate.localeCompare(right.plannedDate) ||
+      left.roundNo - right.roundNo ||
+      left.id.localeCompare(right.id),
+  );
+}
+
+function removeDuplicateUnlinkedScheduleReservations(rows: SafetyInspectionSchedule[]) {
+  const duplicateIds = new Set(findDuplicateUnlinkedScheduleReservations(rows).map((row) => row.id));
+  return duplicateIds.size === 0 ? rows : rows.filter((row) => !duplicateIds.has(row.id));
+}
+
 export interface WorkerCalendarReportLookup {
   byReportKey: Map<string, InspectionReportListItem>;
   byRound: Map<number, InspectionReportListItem>;
@@ -141,6 +207,7 @@ function createFallbackScheduleFromReport(input: {
 
 export function buildWorkerCalendarRowsWithReportDates(input: {
   contractWindowsBySiteId?: Record<string, WorkerCalendarContractWindow>;
+  includeDuplicateReservations?: boolean;
   reportsBySiteId: Map<string, InspectionReportListItem[]>;
   rows: SafetyInspectionSchedule[];
   selectedSiteId?: string;
@@ -212,5 +279,8 @@ export function buildWorkerCalendarRowsWithReportDates(input: {
     });
   });
 
-  return Array.from(outputById.values());
+  const outputRows = Array.from(outputById.values());
+  return input.includeDuplicateReservations
+    ? outputRows
+    : removeDuplicateUnlinkedScheduleReservations(outputRows);
 }

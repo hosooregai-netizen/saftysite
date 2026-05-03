@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AppModal from '@/components/ui/AppModal';
 import LoginPanel from '@/components/auth/LoginPanel';
 import { getSessionGuidanceDate } from '@/constants/inspectionSession';
@@ -13,7 +13,10 @@ import {
   buildScheduleReportSyncPlan,
   resolveContractWindow,
 } from '@/features/schedule-report-sync/scheduleReportSync';
-import { buildWorkerCalendarRowsWithReportDates } from '@/features/calendar/components/workerCalendarReportMatching';
+import {
+  buildWorkerCalendarRowsWithReportDates,
+  findDuplicateUnlinkedScheduleReservations,
+} from '@/features/calendar/components/workerCalendarReportMatching';
 import { fetchMySchedules, reserveNextMySchedule, updateMySchedule } from '@/lib/calendar/apiClient';
 import { mapInspectionSessionToReportListItem } from '@/lib/safetyApiMappers';
 import type { SafetyInspectionSchedule } from '@/types/admin';
@@ -126,6 +129,7 @@ export function MobileWorkerCalendarScreen() {
   const [notice, setNotice] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState('');
   const [dialog, setDialog] = useState<ScheduleDialogState>(EMPTY_DIALOG_STATE);
+  const duplicateCleanupKeysRef = useRef(new Set<string>());
   const [contractWindowsBySiteId, setContractWindowsBySiteId] = useState<
     Record<string, { windowEnd: string; windowStart: string }>
   >({});
@@ -141,7 +145,6 @@ export function MobileWorkerCalendarScreen() {
     login,
     logout,
     saveNow,
-    sessions,
     sites,
     updateSession,
   } = useInspectionSessions();
@@ -184,11 +187,22 @@ export function MobileWorkerCalendarScreen() {
       );
     });
     return nextMap;
-  }, [getSessionsBySiteId, sessions, sites]);
+  }, [getSessionsBySiteId, sites]);
   const calendarRows = useMemo(
     () =>
       buildWorkerCalendarRowsWithReportDates({
         contractWindowsBySiteId,
+        reportsBySiteId: reportItemsBySiteId,
+        rows,
+        sites,
+      }),
+    [contractWindowsBySiteId, reportItemsBySiteId, rows, sites],
+  );
+  const cleanupCandidateRows = useMemo(
+    () =>
+      buildWorkerCalendarRowsWithReportDates({
+        contractWindowsBySiteId,
+        includeDuplicateReservations: true,
         reportsBySiteId: reportItemsBySiteId,
         rows,
         sites,
@@ -453,7 +467,7 @@ export function MobileWorkerCalendarScreen() {
     }));
   };
 
-  const upsertScheduleRows = (schedules: SafetyInspectionSchedule[]) => {
+  const upsertScheduleRows = useCallback((schedules: SafetyInspectionSchedule[]) => {
     if (schedules.length === 0) return;
     setRows((current) => {
       const nextRows = current.filter(
@@ -466,7 +480,69 @@ export function MobileWorkerCalendarScreen() {
       );
       return [...nextRows, ...schedules];
     });
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated || loading) return;
+    const persistedIds = new Set(rows.map((row) => row.id));
+    const cleanupTargets = findDuplicateUnlinkedScheduleReservations(cleanupCandidateRows)
+      .filter((row) => persistedIds.has(row.id))
+      .filter((row) => {
+        const key = `${row.id}::${row.plannedDate}::${row.roundNo}`;
+        if (duplicateCleanupKeysRef.current.has(key)) {
+          return false;
+        }
+        duplicateCleanupKeysRef.current.add(key);
+        return true;
+      });
+
+    if (cleanupTargets.length === 0) return;
+
+    let cancelled = false;
+    void (async () => {
+      const cleanedRows: SafetyInspectionSchedule[] = [];
+      try {
+        for (const target of cleanupTargets) {
+          const cleaned = await updateMySchedule(target.id, {
+            actualVisitDate: '',
+            linkedReportKey: '',
+            plannedDate: '',
+          });
+          cleanedRows.push({
+            ...cleaned,
+            actualVisitDate: cleaned.actualVisitDate || '',
+            linkedReportKey: cleaned.linkedReportKey || '',
+            plannedDate: cleaned.plannedDate || '',
+            windowEnd: cleaned.windowEnd || target.windowEnd,
+            windowStart: cleaned.windowStart || target.windowStart,
+          });
+        }
+        if (cancelled) return;
+        upsertScheduleRows(cleanedRows);
+        const firstTarget = cleanupTargets[0];
+        setNotice(
+          cleanupTargets.length > 1
+            ? `${firstTarget.siteName} 중복 방문 일정 ${cleanupTargets.length}건을 정리했습니다.`
+            : `${firstTarget.siteName} ${firstTarget.roundNo}회차 중복 방문 일정을 정리했습니다.`,
+        );
+      } catch (nextError) {
+        cleanupTargets.forEach((row) => {
+          duplicateCleanupKeysRef.current.delete(`${row.id}::${row.plannedDate}::${row.roundNo}`);
+        });
+        if (!cancelled) {
+          setError(
+            nextError instanceof Error
+              ? nextError.message
+              : '중복 방문 일정을 정리하지 못했습니다.',
+          );
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [cleanupCandidateRows, isAuthenticated, loading, rows, upsertScheduleRows]);
 
   const persistScheduleReportSync = async (changedSchedule: SafetyInspectionSchedule) => {
     const scheduleResponse = await fetchMySchedules({

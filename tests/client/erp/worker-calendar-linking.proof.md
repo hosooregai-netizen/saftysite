@@ -8,15 +8,18 @@
 
 - when a worker creates or reuses a draft session from the calendar, the schedule keeps the linked report key
 - reopening the same round should resolve back to the same draft more reliably
+- blank duplicate reservations on the same site/date are hidden from the calendar and cleared from the worker schedule row when a report-backed row already owns that date
 
 ## Validation Notes
 
-- `npx eslint features/calendar/components/WorkerCalendarScreen.tsx`
+- `npx eslint features/calendar/components/workerCalendarReportMatching.ts features/calendar/components/WorkerCalendarScreen.tsx features/mobile/components/MobileWorkerCalendarScreen.tsx features/calendar/components/workerCalendarReportMatching.test.ts`
   - passes
 - `npx tsc --noEmit --pretty false`
   - passes
 - `npm run test:client:smoke -- worker-calendar`
-  - blocked locally because `http://127.0.0.1:3100` was not running
+  - passes with `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3100`
+- `npx tsx --test features/calendar/components/workerCalendarReportMatching.test.ts`
+  - passes
 
 ## Manual Review
 
