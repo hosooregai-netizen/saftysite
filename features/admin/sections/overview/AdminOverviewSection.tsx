@@ -45,14 +45,6 @@ export function AdminOverviewSection({
             <button
               type="button"
               className="app-button app-button-secondary"
-              onClick={() => void state.refreshOverview()}
-              disabled={state.isRefreshing}
-            >
-              {state.isRefreshing ? '불러오는 중...' : '새로고침'}
-            </button>
-            <button
-              type="button"
-              className="app-button app-button-secondary"
               onClick={() => void state.exportOverview()}
             >
               엑셀 내보내기
