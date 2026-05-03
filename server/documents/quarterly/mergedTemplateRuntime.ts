@@ -1,6 +1,9 @@
 import type JSZip from 'jszip';
 
 import {
+  selectInspectionTemplateVariant,
+} from '@/lib/documents/inspection/templateVariant';
+import {
   applyTemplateTextQuirks,
   bindImagesIntoZip,
   expandRepeatBlocks,
@@ -155,6 +158,7 @@ export async function renderAppendicesIntoMergedQuarterlySection(
       replaceTextPlaceholders(
         applyTemplateTextQuirks(expanded.xml),
         binding.text,
+        { templateVariant: selectInspectionTemplateVariant(session) },
       ),
     );
     assertBalancedAppendixBlockXml(renderedBlockXml, sessionIndex);

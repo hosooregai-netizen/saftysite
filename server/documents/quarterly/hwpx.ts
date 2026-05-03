@@ -56,7 +56,7 @@ const OPS_IMAGE_ITEM_ID = 'opsAssetImage';
 const OPS_TEMPLATE_IMAGE_ITEM_ID = 'tplopsimg01';
 const ACCIDENT_CHART_IMAGE_ITEM_ID = 'quarterlyAccidentChartImage';
 const CAUSATIVE_CHART_IMAGE_ITEM_ID = 'quarterlyCausativeChartImage';
-const NO_DATA_VALUE = '-';
+const NO_DATA_VALUE = '';
 const COVER_TITLE_TEXT_INDEX = 2;
 const COVER_SITE_NAME_TEXT_INDEX = 3;
 const COVER_REPORT_DATE_TEXT_INDEX = 4;
@@ -452,56 +452,6 @@ function normalizeHwpxPlainText(value: string) {
   return value.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 }
 
-function estimateHwpxMaxCharsPerLine(horzSize: number, textHeight: number) {
-  const safeHeight = Math.max(textHeight, 900);
-  return Math.max(8, Math.floor(horzSize / (safeHeight * 1.05)));
-}
-
-function charWidthUnits(char: string) {
-  return /[ -~]/.test(char) ? 0.6 : 1;
-}
-
-function wrapHwpxLine(text: string, maxCharsPerLine: number): string[] {
-  const normalized = text.replace(/\s+/g, ' ').trim();
-  if (!normalized) return [' '];
-
-  const lines: string[] = [];
-  let start = 0;
-
-  while (start < normalized.length) {
-    let width = 0;
-    let end = start;
-    let lastWhitespace = -1;
-
-    while (end < normalized.length) {
-      const nextWidth = width + charWidthUnits(normalized[end]);
-      if (nextWidth > maxCharsPerLine) break;
-      width = nextWidth;
-      if (/\s/.test(normalized[end])) lastWhitespace = end;
-      end += 1;
-    }
-
-    if (end === normalized.length) {
-      lines.push(normalized.slice(start));
-      break;
-    }
-
-    if (lastWhitespace >= start) {
-      lines.push(normalized.slice(start, lastWhitespace).trimEnd());
-      start = lastWhitespace + 1;
-      while (start < normalized.length && /\s/.test(normalized[start])) {
-        start += 1;
-      }
-      continue;
-    }
-
-    lines.push(normalized.slice(start, end));
-    start = end;
-  }
-
-  return lines.length > 0 ? lines : [' '];
-}
-
 function extractFirstLineSegMetric(paragraphXml: string, name: string): number | null {
   const match = paragraphXml.match(new RegExp(`<hp:lineseg\\b[^>]*\\b${name}="(\\d+)"`));
   if (!match) return null;
@@ -513,10 +463,8 @@ function buildRunXml(charPrIDRef: string, text: string) {
   return `<hp:run charPrIDRef="${charPrIDRef}"><hp:t>${escaped}</hp:t></hp:run>`;
 }
 
-function wrapHwpxText(text: string, maxChars: number) {
-  const sourceLines = normalizeLineBreaks(text).split('\n');
-  const wrapped = sourceLines.flatMap((line) => wrapHwpxLine(line, maxChars));
-  return wrapped.length > 0 ? wrapped : [' '];
+function splitHwpxTextLines(text: string) {
+  return normalizeLineBreaks(text).split('\n');
 }
 
 function replaceParagraphRuns(paragraphXml: string, text: string) {
@@ -549,27 +497,21 @@ function buildReflowParagraphs(paragraphTemplate: string, text: string) {
     lineSegTemplate,
     baseVertPosText,
     vertSizeText,
-    textHeightText,
+    ,
     spacingText,
-    horzSizeText,
+    ,
     lineSegArrayClose,
   ] = lineSegMatch;
 
   const baseVertPos = Number.parseInt(baseVertPosText, 10);
   const vertSize = Number.parseInt(vertSizeText, 10);
-  const textHeight = Number.parseInt(textHeightText, 10);
   const spacing = Number.parseInt(spacingText, 10);
-  const horzSize = Number.parseInt(horzSizeText, 10);
   const charPrIDRef = paragraphTemplate.match(/<hp:run\b[^>]*charPrIDRef="(\d+)"/)?.[1] ?? '8';
   const lineStep = extractFirstLineSegMetric(paragraphTemplate, 'vertpos') !== null
     ? vertSize + spacing
     : vertSize + spacing;
 
-  const logicalLines = normalizeHwpxPlainText(text).split('\n');
-  const wrappedLines = logicalLines.flatMap((line) =>
-    wrapHwpxLine(line, estimateHwpxMaxCharsPerLine(horzSize, textHeight)),
-  );
-  const finalLines = wrappedLines.length > 0 ? wrappedLines : [' '];
+  const finalLines = normalizeHwpxPlainText(text).split('\n');
 
   return finalLines
     .map((line, lineIndex) => {
@@ -603,7 +545,7 @@ function replaceCellText(
   const nextParagraphs = options?.reflow
     ? buildReflowParagraphs(paragraphTemplate, text)
     : options?.multiline
-    ? wrapHwpxText(text, options.wrapAt ?? 44)
+    ? splitHwpxTextLines(text)
         .map((line) => replaceParagraphRuns(paragraphTemplate, line))
         .join('')
     : replaceParagraphRuns(paragraphTemplate, text);

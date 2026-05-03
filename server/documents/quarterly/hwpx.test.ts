@@ -53,11 +53,12 @@ function findTableCell(tableXml: string, rowAddr: number, colAddr: number) {
   );
 }
 
-function extractVertPositions(cellXml: string) {
-  return Array.from(
-    cellXml.matchAll(/\bvertpos="(\d+)"/g),
-    (match) => Number.parseInt(match[1], 10),
-  ).filter(Number.isFinite);
+function findCellContainingText(xml: string, text: string): string | null {
+  return (
+    (xml.match(/<hp:tc\b[\s\S]*?<\/hp:tc>/g) ?? []).find((cellXml) =>
+      cellXml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').includes(text),
+    ) ?? null
+  );
 }
 
 function extractAppendixSlice(sectionXml: string, marker: string) {
@@ -226,6 +227,42 @@ test('buildQuarterlyHwpxDocument keeps the standalone quarterly structure when n
   );
 });
 
+test('buildQuarterlyHwpxDocument leaves empty quarterly fields blank instead of rendering dashes', async () => {
+  const fixture = buildQuarterlyFixture();
+  const report = {
+    ...fixture.report,
+    implementationRows: [
+      {
+        drafter: '',
+        findingCount: 0,
+        improvedCount: 0,
+        note: '',
+        progressRate: '',
+        reportDate: '',
+        reportNumber: 0,
+        reportTitle: '',
+        sessionId: '',
+      },
+    ],
+    siteSnapshot: {
+      ...fixture.report.siteSnapshot,
+      siteManagementNumber: '',
+    },
+  };
+
+  const document = await buildQuarterlyHwpxDocument(report, fixture.site);
+  const zip = await JSZip.loadAsync(document.buffer);
+  const sectionXml = await zip.file('Contents/section0.xml')?.async('string');
+
+  assert.ok(sectionXml);
+  const snapshotTable = findTableByText(sectionXml, report.siteSnapshot.siteName);
+  assert.ok(snapshotTable);
+  const siteManagementNumberCell = findTableCell(snapshotTable, 1, 4);
+  assert.ok(siteManagementNumberCell);
+  assert.doesNotMatch(siteManagementNumberCell, /<hp:t>-<\/hp:t>/);
+  assert.doesNotMatch(sectionXml, /<hp:t>-<\/hp:t>/);
+});
+
 test('buildQuarterlyHwpxDocument renders selected inspection bodies into the merged section template', async () => {
   const fixture = buildQuarterlyFixture();
   const zip = await loadGeneratedZip(fixture, {
@@ -250,6 +287,35 @@ test('buildQuarterlyHwpxDocument renders selected inspection bodies into the mer
   assert.match(
     findTableByText(sectionXml, 'appendix-hazard-one') ?? '',
     /<hp:tbl\b[^>]*textWrap="TOP_AND_BOTTOM"[\s\S]*?<hp:pos\b[^>]*treatAsChar="0"/,
+  );
+});
+
+test('buildQuarterlyHwpxDocument applies merged appendix text layout policy', async () => {
+  const fixture = buildQuarterlyFixture();
+  const longAppendixText =
+    'QUARTERLY APPENDIX NO AUTO WRAP ALPHA BETA GAMMA DELTA EPSILON ZETA ETA THETA IOTA KAPPA LAMBDA';
+  fixture.sessions[0].document8Plans = [
+    {
+      ...fixture.sessions[0].document8Plans[0],
+      countermeasure: 'quarterly appendix countermeasure',
+      hazard: longAppendixText,
+      processName: 'quarterly appendix process',
+    },
+  ];
+
+  const zip = await loadGeneratedZip(fixture, {
+    selectedSessions: fixture.sessions,
+    siteSessions: fixture.sessions,
+  });
+  const sectionXml = await zip.file('Contents/section0.xml')?.async('string');
+
+  assert.ok(sectionXml);
+  const appendixCell = findCellContainingText(sectionXml, longAppendixText);
+  assert.ok(appendixCell);
+  assert.match(appendixCell, /<hp:subList\b[^>]*\blineWrap="BREAK"/);
+  assert.equal(
+    (appendixCell.match(new RegExp(escapeRegExp(longAppendixText), 'g')) ?? []).length,
+    1,
   );
 });
 
@@ -429,8 +495,12 @@ test('buildQuarterlyHwpxDocument embeds OPS images even when the response is an 
   }
 });
 
-test('buildQuarterlyHwpxDocument reflows long future plan text inside the table cells', async () => {
+test('buildQuarterlyHwpxDocument keeps long future plan text on source lines', async () => {
   const fixture = buildQuarterlyFixture();
+  const hazard =
+    'QUARTERLY FUTURE PLAN HAZARD NO AUTO WRAP ALPHA BETA GAMMA DELTA EPSILON ZETA ETA THETA IOTA KAPPA';
+  const countermeasure =
+    'QUARTERLY FUTURE PLAN COUNTERMEASURE NO AUTO WRAP ALPHA BETA GAMMA DELTA EPSILON ZETA ETA THETA IOTA KAPPA';
   const report = {
     ...fixture.report,
     futurePlans: [
@@ -438,8 +508,8 @@ test('buildQuarterlyHwpxDocument reflows long future plan text inside the table 
         id: 'future-plan-long-text',
         hazardCountermeasureItemId: '',
         processName: '',
-        hazard: '위험요인 첫 줄\n위험요인 둘째 줄\n위험요인 셋째 줄',
-        countermeasure: '대책 첫 줄\n대책 둘째 줄\n대책 셋째 줄',
+        hazard,
+        countermeasure,
         note: '',
         source: 'manual' as const,
       },
@@ -459,6 +529,9 @@ test('buildQuarterlyHwpxDocument reflows long future plan text inside the table 
 
   assert.ok(hazardCell);
   assert.ok(countermeasureCell);
-  assert.ok(new Set(extractVertPositions(hazardCell)).size > 1);
-  assert.ok(new Set(extractVertPositions(countermeasureCell)).size > 1);
+  assert.equal((hazardCell.match(new RegExp(escapeRegExp(hazard), 'g')) ?? []).length, 1);
+  assert.equal(
+    (countermeasureCell.match(new RegExp(escapeRegExp(countermeasure), 'g')) ?? []).length,
+    1,
+  );
 });
