@@ -30,12 +30,10 @@ export function createPreviousGuidanceFollowUpItem(
     sourceSessionId: initial.sourceSessionId,
     sourceFindingId: initial.sourceFindingId,
     location: '',
-    hazardDescription: '',
     guidanceDate: '',
     confirmationDate: '',
     beforePhotoUrl: '',
     afterPhotoUrl: '',
-    actionRequired: '',
     result: '이행',
     ...initial,
   };

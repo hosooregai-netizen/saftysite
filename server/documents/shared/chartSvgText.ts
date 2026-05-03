@@ -1,4 +1,4 @@
-import { resolveNotoSansKrFontPath } from '@/server/documents/shared/documentAssetPaths';
+import path from 'node:path';
 
 type TextToSvgInstance = {
   getPath(
@@ -32,10 +32,11 @@ interface RenderChartSvgTextPathOptions {
   y: number;
 }
 
+const FONT_DIRECTORY = path.join(process.cwd(), 'public', 'fonts', 'noto-sans-kr');
 const FONT_PATHS: Record<ChartFontWeight, string> = {
-  400: resolveNotoSansKrFontPath('noto-sans-kr-korean-400-normal.woff'),
-  500: resolveNotoSansKrFontPath('noto-sans-kr-korean-500-normal.woff'),
-  700: resolveNotoSansKrFontPath('noto-sans-kr-korean-700-normal.woff'),
+  400: path.join(FONT_DIRECTORY, 'noto-sans-kr-korean-400-normal.woff'),
+  500: path.join(FONT_DIRECTORY, 'noto-sans-kr-korean-500-normal.woff'),
+  700: path.join(FONT_DIRECTORY, 'noto-sans-kr-korean-700-normal.woff'),
 };
 const FONT_CACHE = new Map<ChartFontWeight, TextToSvgInstance>();
 

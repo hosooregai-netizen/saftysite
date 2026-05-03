@@ -53,12 +53,10 @@ export interface PreviousGuidanceFollowUpItem {
   sourceSessionId?: string;
   sourceFindingId?: string;
   location: string;
-  hazardDescription?: string;
   guidanceDate: string;
   confirmationDate: string;
   beforePhotoUrl: string;
   afterPhotoUrl: string;
-  actionRequired?: string;
   result: string;
 }
 

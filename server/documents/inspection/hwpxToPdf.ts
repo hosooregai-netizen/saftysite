@@ -29,7 +29,6 @@ const REMOTE_CONVERTER_API_KEY_ENV_KEYS = [
 const REMOTE_WARNING_HEADER = 'x-inspection-pdf-warnings';
 
 let conversionQueue: Promise<unknown> = Promise.resolve();
-let fallbackEnvCache: Map<string, string> | null = null;
 
 function ensureWindowsEnvironment(): void {
   if (process.platform !== 'win32') {
@@ -48,86 +47,6 @@ function normalizeUrl(value: string): string {
   return value.replace(/\/+$/, '');
 }
 
-async function pathExists(targetPath: string): Promise<boolean> {
-  try {
-    await fs.access(targetPath);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function parseEnvFileContent(content: string): Map<string, string> {
-  const result = new Map<string, string>();
-  for (const rawLine of content.split(/\r?\n/)) {
-    const line = rawLine.trim();
-    if (!line || line.startsWith('#')) {
-      continue;
-    }
-    const separatorIndex = line.indexOf('=');
-    if (separatorIndex <= 0) {
-      continue;
-    }
-    const key = line.slice(0, separatorIndex).trim();
-    let value = line.slice(separatorIndex + 1).trim();
-    if (
-      (value.startsWith('"') && value.endsWith('"')) ||
-      (value.startsWith("'") && value.endsWith("'"))
-    ) {
-      value = value.slice(1, -1);
-    }
-    result.set(key, value);
-  }
-  return result;
-}
-
-async function loadFallbackEnvCache(): Promise<Map<string, string>> {
-  if (fallbackEnvCache) {
-    return fallbackEnvCache;
-  }
-
-  const searchRoots = new Set<string>();
-  let currentDir = process.cwd();
-  for (let index = 0; index < 6; index += 1) {
-    searchRoots.add(currentDir);
-    const parentDir = path.dirname(currentDir);
-    if (parentDir === currentDir) {
-      break;
-    }
-    currentDir = parentDir;
-  }
-
-  const merged = new Map<string, string>();
-  for (const rootDir of searchRoots) {
-    for (const fileName of ['.env.local', '.env']) {
-      const candidatePath = path.join(rootDir, fileName);
-      if (!(await pathExists(candidatePath))) {
-        continue;
-      }
-      const parsed = parseEnvFileContent(await fs.readFile(candidatePath, 'utf8'));
-      for (const [key, value] of parsed.entries()) {
-        if (!merged.has(key)) {
-          merged.set(key, value);
-        }
-      }
-    }
-  }
-
-  fallbackEnvCache = merged;
-  return merged;
-}
-
-async function readEnvValueWithFallback(envKey: string): Promise<string | null> {
-  const directValue = process.env[envKey]?.trim();
-  if (directValue) {
-    return directValue;
-  }
-
-  const fallbackEnv = await loadFallbackEnvCache();
-  const fallbackValue = fallbackEnv.get(envKey)?.trim();
-  return fallbackValue || null;
-}
-
 function buildRemoteConverterUrl(baseUrl: string): string | null {
   try {
     const origin = new URL(baseUrl).origin;
@@ -137,16 +56,16 @@ function buildRemoteConverterUrl(baseUrl: string): string | null {
   }
 }
 
-async function getRemoteConverterUrl(): Promise<string | null> {
+function getRemoteConverterUrl(): string | null {
   for (const envKey of REMOTE_CONVERTER_URL_ENV_KEYS) {
-    const configured = await readEnvValueWithFallback(envKey);
+    const configured = process.env[envKey]?.trim();
     if (configured) {
       return normalizeUrl(configured);
     }
   }
 
   for (const envKey of REMOTE_CONVERTER_UPSTREAM_ENV_KEYS) {
-    const configured = await readEnvValueWithFallback(envKey);
+    const configured = process.env[envKey]?.trim();
     if (configured) {
       const derived = buildRemoteConverterUrl(configured);
       if (derived) {
@@ -158,9 +77,9 @@ async function getRemoteConverterUrl(): Promise<string | null> {
   return buildRemoteConverterUrl(getSafetyApiUpstreamBaseUrl());
 }
 
-async function getRemoteConverterApiKey(): Promise<string | null> {
+function getRemoteConverterApiKey(): string | null {
   for (const envKey of REMOTE_CONVERTER_API_KEY_ENV_KEYS) {
-    const configured = await readEnvValueWithFallback(envKey);
+    const configured = process.env[envKey]?.trim();
     if (configured) {
       return configured;
     }
@@ -375,9 +294,9 @@ export async function convertHwpxBufferToPdf(
   hwpxBuffer: Buffer,
   originalFilename: string,
 ): Promise<{ buffer: Buffer; filename: string }> {
-  const remoteUrl = await getRemoteConverterUrl();
+  const remoteUrl = getRemoteConverterUrl();
   if (remoteUrl) {
-    const apiKey = await getRemoteConverterApiKey();
+    const apiKey = getRemoteConverterApiKey();
     if (!apiKey) {
       throw new Error(
         'HWPX_PDF_API_KEY or WINDOWS_HWPX_PDF_API_KEY must be configured for the remote converter.',
