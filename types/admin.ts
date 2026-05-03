@@ -195,6 +195,8 @@ export interface ControllerReportRow {
   status: string;
   updatedAt: string;
   visitDate: string;
+  visitRound?: number | null;
+  totalRound?: number | null;
   controllerReview: ReportControllerReview | null;
   dispatch: ReportDispatchMeta | null;
   periodLabel: string;

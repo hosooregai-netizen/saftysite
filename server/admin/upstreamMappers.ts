@@ -86,6 +86,12 @@ function normalizeCount(value: unknown, fallback = 0) {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
 
+function normalizePositiveInteger(value: unknown) {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0
+    ? Math.trunc(value)
+    : null;
+}
+
 function asBackendRecord<T extends Record<string, unknown>>(value: unknown): T | null {
   return value && typeof value === 'object' ? (value as T) : null;
 }
@@ -158,6 +164,8 @@ export function mapBackendAdminReportRow(
     status: normalizeText(record.workflow_status) || normalizeText(record.status),
     updatedAt: normalizeText(record.updated_at),
     visitDate: normalizeText(record.visit_date),
+    visitRound: normalizePositiveInteger(record.visit_round),
+    totalRound: normalizePositiveInteger(record.total_round),
     workflowStatus: normalizeText(record.workflow_status),
     lifecycleStatus: normalizeText(record.lifecycle_status),
   });

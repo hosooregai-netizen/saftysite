@@ -496,6 +496,8 @@ export interface SafetyBackendAdminReportRow {
   lifecycle_status?: string | null;
   updated_at: string;
   visit_date: string;
+  visit_round?: number | null;
+  total_round?: number | null;
 }
 
 export interface SafetyBackendAdminReportsResponse {
