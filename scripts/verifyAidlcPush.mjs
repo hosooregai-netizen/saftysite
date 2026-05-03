@@ -120,7 +120,7 @@ const FEATURE_RULES = [
       /^server\/admin\/localScheduleNotifications\.ts$/,
       /^server\/admin\/automation(\.test)?\.ts$/,
       /^server\/admin\/legacyReportAlignment(\.test)?\.ts$/,
-      /^server\/admin\/scheduleSnapshot\.ts$/,
+      /^server\/admin\/scheduleSnapshot(\.test)?\.ts$/,
     ],
   },
   {
