@@ -916,9 +916,7 @@ async function installErpRoutes({
 
   await context.route('**/api/safety/**', handleErpSafetyRoute);
   await context.route('**/api/v1/**', handleErpSafetyRoute);
-  await context.route('**/api/me/schedules', handleMeSchedulesRoute);
-  await context.route('**/api/me/schedules/*', handleMeSchedulesRoute);
-  await context.route('**/api/me/schedules/next', handleMeSchedulesRoute);
+  await context.route(/\/api\/me\/schedules(?:\/[^/?#]+)?(?:\?.*)?$/, handleMeSchedulesRoute);
   await context.route('**/api/reports/**', handlePublicReportApiRoute);
   await context.route('**/api/documents/quarterly/**', handleQuarterlyDocumentRoute);
   await context.route('**/api/documents/bad-workplace/**', handleBadWorkplaceDocumentRoute);
