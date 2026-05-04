@@ -106,7 +106,7 @@ export function useInspectionSessionsAutosave(store: InspectionSessionsStore) {
     [replaceSavedSession, sessionsRef],
   );
 
-  const flushDirtySessions = useCallback(async () => {
+  const flushDirtySessions = useCallback(async (options?: { throwOnError?: boolean }) => {
     if (isFlushingRef.current || !authTokenRef.current || !currentUser) return;
     const pendingSessionIds = Array.from(dirtySessionIdsRef.current);
     if (pendingSessionIds.length === 0) return;
@@ -160,11 +160,15 @@ export function useInspectionSessionsAutosave(store: InspectionSessionsStore) {
         }
       }
     } catch (error) {
+      const message = getErrorMessage(error);
       if (isAuthFailure(error)) {
         clearAuthState();
         setAuthError('로그인이 만료되었습니다. 다시 로그인해 주세요.');
       } else {
-        setSyncError(getErrorMessage(error));
+        setSyncError(message);
+      }
+      if (options?.throwOnError) {
+        throw error instanceof Error ? error : new Error(message);
       }
     } finally {
       isFlushingRef.current = false;
@@ -188,13 +192,13 @@ export function useInspectionSessionsAutosave(store: InspectionSessionsStore) {
     store.masterDataRef,
   ]);
 
-  const saveNow = useCallback(async () => {
+  const saveNow = useCallback(async (options?: { throwOnError?: boolean }) => {
     await Promise.all([
       persistReportIndexBySiteId(reportIndexBySiteIdRef.current),
       persistSessions(sessionsRef.current),
       persistSites(sitesRef.current),
     ]);
-    await flushDirtySessions();
+    await flushDirtySessions(options);
   }, [
     flushDirtySessions,
     persistReportIndexBySiteId,

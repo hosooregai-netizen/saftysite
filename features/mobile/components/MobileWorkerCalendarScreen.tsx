@@ -13,8 +13,10 @@ import {
   resolveContractWindow,
 } from '@/features/schedule-report-sync/scheduleReportSync';
 import {
+  buildWorkerCalendarReportLookup,
   buildWorkerCalendarRowsWithReportDates,
   findDuplicateUnlinkedScheduleReservations,
+  resolveWorkerCalendarReportForSchedule,
 } from '@/features/calendar/components/workerCalendarReportMatching';
 import {
   buildWorkerCalendarReportIndexSiteIds,
@@ -148,6 +150,7 @@ export function MobileWorkerCalendarScreen() {
     createSession,
     currentUser,
     ensureAssignedSafetySite,
+    ensureSessionLoaded,
     ensureSiteReportIndexLoaded,
     getSessionById,
     getSessionsBySiteId,
@@ -661,19 +664,36 @@ export function MobileWorkerCalendarScreen() {
       );
     }
     if (plan.reportUpdates.length > 0) {
-      await saveNow();
+      await saveNow({ throwOnError: true });
     }
 
     return savedSchedules.find((schedule) => schedule.id === changedSchedule.id) ?? changedSchedule;
   };
 
-  const ensureDraftSessionForSchedule = (schedule: SafetyInspectionSchedule) => {
-    const existingLinkedReportKey = normalizeText(schedule.linkedReportKey);
-    if (existingLinkedReportKey) {
+  const ensureDraftSessionForSchedule = async (schedule: SafetyInspectionSchedule) => {
+    const reportIndex = getReportIndexBySiteId(schedule.siteId);
+    const reportLookup = buildWorkerCalendarReportLookup(
+      reportIndex?.items ?? reportItemsBySiteId.get(schedule.siteId) ?? [],
+    );
+    const selectedReport = resolveWorkerCalendarReportForSchedule(schedule, reportLookup);
+    if (selectedReport) {
       return {
         actualVisitDate: normalizeText(schedule.actualVisitDate),
-        linkedReportKey: existingLinkedReportKey,
+        linkedReportKey: normalizeText(selectedReport.reportKey),
       };
+    }
+
+    const existingLinkedReportKey = normalizeText(schedule.linkedReportKey);
+    if (existingLinkedReportKey) {
+      if (!getSessionById(existingLinkedReportKey)) {
+        await ensureSessionLoaded(existingLinkedReportKey).catch(() => undefined);
+      }
+      if (getSessionById(existingLinkedReportKey)) {
+        return {
+          actualVisitDate: normalizeText(schedule.actualVisitDate),
+          linkedReportKey: existingLinkedReportKey,
+        };
+      }
     }
 
     const site = sites.find((item) => item.id === schedule.siteId);
@@ -741,8 +761,12 @@ export function MobileWorkerCalendarScreen() {
             selectionReasonLabel: dialog.selectionReasonLabel.trim(),
             selectionReasonMemo: dialog.selectionReasonMemo.trim(),
             siteId: dialog.siteId,
-          });
-      const linkUpdate = ensureDraftSessionForSchedule(updated);
+      });
+      await ensureSiteReportIndexLoaded(updated.siteId, { force: true }).catch(() => undefined);
+      const linkUpdate = await ensureDraftSessionForSchedule(updated);
+      if (!linkUpdate?.linkedReportKey) {
+        throw new Error('방문 일정에 연결할 기술지도 보고서를 생성하지 못했습니다.');
+      }
       const linkActualVisitDate = normalizeText(updated.actualVisitDate);
       const linkPlannedDate = updated.plannedDate || dialog.plannedDate;
       const shouldPersistLink =
@@ -767,7 +791,7 @@ export function MobileWorkerCalendarScreen() {
         return [...nextRows, finalized];
       });
       if (linkUpdate?.linkedReportKey && getSessionById(linkUpdate.linkedReportKey)) {
-        await saveNow();
+        await saveNow({ throwOnError: true });
         await ensureSiteReportIndexLoaded(finalized.siteId, { force: true }).catch(() => undefined);
       }
       const synced = await persistScheduleReportSync(finalized);

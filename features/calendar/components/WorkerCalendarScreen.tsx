@@ -829,7 +829,7 @@ export function WorkerCalendarScreen() {
       );
     }
     if (plan.reportUpdates.length > 0) {
-      await saveNow();
+      await saveNow({ throwOnError: true });
     }
 
     return (
@@ -1038,6 +1038,9 @@ export function WorkerCalendarScreen() {
 
     await ensureSiteReportIndexLoaded(updated.siteId, { force: true }).catch(() => undefined);
     const reportLinkUpdate = await ensureDraftSessionForSchedule(updated);
+    if (!reportLinkUpdate?.linkedReportKey && !reportLinkUpdate?.sessionId) {
+      throw new Error('방문 일정에 연결할 기술지도 보고서를 생성하지 못했습니다.');
+    }
     const finalized = reportLinkUpdate
       ? await persistScheduleReportLink(
           updated,
@@ -1053,7 +1056,7 @@ export function WorkerCalendarScreen() {
       normalizeText(reportLinkUpdate?.sessionId) ||
       normalizeText(reportLinkUpdate?.linkedReportKey);
     if (linkedSessionId && getSessionById(linkedSessionId)) {
-      await saveNow();
+      await saveNow({ throwOnError: true });
       await ensureSiteReportIndexLoaded(finalized.siteId, { force: true }).catch(() => undefined);
     }
     const synced = await persistScheduleReportSync(finalized);

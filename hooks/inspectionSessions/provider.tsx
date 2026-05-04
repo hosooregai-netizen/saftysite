@@ -78,8 +78,8 @@ export function InspectionSessionsProvider({
   );
 
   const getReportIndexBySiteId = useCallback(
-    (siteId: string) => store.reportIndexBySiteId[siteId] || null,
-    [store.reportIndexBySiteId],
+    (siteId: string) => store.reportIndexBySiteIdRef.current[siteId] || null,
+    [store.reportIndexBySiteId, store.reportIndexBySiteIdRef],
   );
 
   const upsertReportIndexItems = useCallback(

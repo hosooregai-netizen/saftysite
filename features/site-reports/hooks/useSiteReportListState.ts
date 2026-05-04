@@ -518,7 +518,7 @@ export function useSiteReportListState(
         applyScheduleReportUpdateToSession(current, update),
       );
     }
-    await saveNow();
+    await saveNow({ throwOnError: true });
 
     const nextHref = options.buildReportHref
       ? options.buildReportHref(nextSession.id)
