@@ -204,6 +204,7 @@ export function WorkerCalendarScreen() {
     ),
   );
   const [notice, setNotice] = useState<string | null>(null);
+  const [dialogError, setDialogError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState('');
   const [dialog, setDialog] = useState<ScheduleDialogState>(EMPTY_DIALOG_STATE);
   const [dialogSubmittingAction, setDialogSubmittingAction] = useState<'save' | 'launch' | null>(null);
@@ -574,6 +575,7 @@ export function WorkerCalendarScreen() {
             })
           : ''
       : '';
+  const dialogBottomError = dialogError || dialogWindowError;
   useEffect(() => {
     if (!dialog.open || dialog.siteId || dialogSiteOptions.length === 0) return;
     setDialog((current) => ({
@@ -621,6 +623,7 @@ export function WorkerCalendarScreen() {
   }, [contractWindowsBySiteId, dialog.open, dialog.siteId, ensureAssignedSafetySite]);
 
   const closeDialog = () => {
+    setDialogError(null);
     setDialog(EMPTY_DIALOG_STATE);
   };
 
@@ -647,6 +650,7 @@ export function WorkerCalendarScreen() {
       null;
 
     setSelectedDate(nextPlannedDate);
+    setDialogError(null);
     setDialog({
       open: true,
       plannedDate: nextPlannedDate,
@@ -658,6 +662,7 @@ export function WorkerCalendarScreen() {
   };
 
   const handleDialogSiteSelect = (siteId: string) => {
+    setDialogError(null);
     setDialog((current) => ({
       ...current,
       scheduleId: '',
@@ -1073,16 +1078,16 @@ export function WorkerCalendarScreen() {
 
   const handleSaveSchedule = async () => {
     if (!dialog.siteId) {
-      setError('현장을 먼저 선택해 주세요.');
+      setDialogError('현장을 먼저 선택해 주세요.');
       return;
     }
     const schedule = dialogRoundRows.find((row) => row.id === dialog.scheduleId) ?? null;
     if (!dialog.plannedDate) {
-      setError('방문 날짜를 먼저 선택해 주세요.');
+      setDialogError('방문 날짜를 먼저 선택해 주세요.');
       return;
     }
     if (dialogWindowError) {
-      setError(dialogWindowError);
+      setDialogError(dialogWindowError);
       return;
     }
     const selectionReasonLabel = dialog.selectionReasonLabel.trim();
@@ -1090,7 +1095,7 @@ export function WorkerCalendarScreen() {
 
     try {
       setDialogSubmittingAction('save');
-      setError(null);
+      setDialogError(null);
       const { finalized } = await saveScheduleSelection(schedule);
       const targetDate = finalized.plannedDate || dialog.plannedDate;
       const targetMonth = targetDate.slice(0, 7) || month;
@@ -1106,7 +1111,7 @@ export function WorkerCalendarScreen() {
       );
       closeDialog();
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : '일정을 저장하지 못했습니다.');
+      setDialogError(nextError instanceof Error ? nextError.message : '일정을 저장하지 못했습니다.');
     } finally {
       setDialogSubmittingAction(null);
     }
@@ -1114,7 +1119,7 @@ export function WorkerCalendarScreen() {
 
   const handleLaunchTechnicalGuidance = async () => {
     if (!dialog.siteId) {
-      setError('현장을 먼저 선택해 주세요.');
+      setDialogError('현장을 먼저 선택해 주세요.');
       return;
     }
 
@@ -1122,17 +1127,17 @@ export function WorkerCalendarScreen() {
 
     const isReadOnlySchedule = schedule?.status === 'completed' || schedule?.status === 'canceled';
     if (!isReadOnlySchedule && !dialog.plannedDate) {
-      setError('방문 날짜를 먼저 선택해 주세요.');
+      setDialogError('방문 날짜를 먼저 선택해 주세요.');
       return;
     }
     if (!isReadOnlySchedule && dialogWindowError) {
-      setError(dialogWindowError);
+      setDialogError(dialogWindowError);
       return;
     }
 
     try {
       setDialogSubmittingAction('launch');
-      setError(null);
+      setDialogError(null);
 
       const savedSelection = isReadOnlySchedule && schedule
         ? { finalized: schedule, reportLinkUpdate: await ensureDraftSessionForSchedule(schedule) }
@@ -1151,7 +1156,7 @@ export function WorkerCalendarScreen() {
       closeDialog();
       router.push(`/sessions/${encodeURIComponent(sessionId)}`);
     } catch (nextError) {
-      setError(
+      setDialogError(
         nextError instanceof Error
           ? nextError.message
           : '연결된 기술지도 보고서를 열지 못했습니다.',
@@ -1528,12 +1533,13 @@ export function WorkerCalendarScreen() {
               className="app-input"
               type="date"
               value={dialog.plannedDate}
-              onChange={(event) =>
+              onChange={(event) => {
+                setDialogError(null);
                 setDialog((current) => ({
                   ...current,
                   plannedDate: event.target.value,
-                }))
-              }
+                }));
+              }}
             />
           </label>
 
@@ -1571,12 +1577,13 @@ export function WorkerCalendarScreen() {
             <input
               className="app-input"
               value={dialog.selectionReasonLabel}
-              onChange={(event) =>
+              onChange={(event) => {
+                setDialogError(null);
                 setDialog((current) => ({
                   ...current,
                   selectionReasonLabel: event.target.value,
-                }))
-              }
+                }));
+              }}
               placeholder="예: 현장 요청, 장비 반입 대기"
             />
           </label>
@@ -1587,25 +1594,25 @@ export function WorkerCalendarScreen() {
               className="app-textarea"
               rows={4}
               value={dialog.selectionReasonMemo}
-              onChange={(event) =>
+              onChange={(event) => {
+                setDialogError(null);
                 setDialog((current) => ({
                   ...current,
                   selectionReasonMemo: event.target.value,
-                }))
-              }
+                }));
+              }}
               placeholder="방문 일정을 이 날짜로 선택한 배경을 자세히 적어 주세요."
             />
           </label>
 
-          {dialogSelectedSchedule ? (
-            <>
-              <div className={styles.dialogHint}>
-                계약 기간: {dialogContractWindow?.windowStart || '-'} ~ {dialogContractWindow?.windowEnd || '-'}
-              </div>
-              {dialogWindowError ? (
-                <div className={styles.dialogError}>{dialogWindowError}</div>
-              ) : null}
-            </>
+          {dialog.siteId ? (
+            <div className={styles.dialogHint}>
+              계약 기간: {dialogContractWindow?.windowStart || '-'} ~ {dialogContractWindow?.windowEnd || '-'}
+            </div>
+          ) : null}
+
+          {dialogBottomError ? (
+            <div className={styles.dialogError}>{dialogBottomError}</div>
           ) : null}
         </div>
       </AppModal>

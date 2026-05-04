@@ -11,3 +11,4 @@
 - Manual edit regression: schedule/report link persistence now keeps the saved schedule row's `plannedDate` and `actualVisitDate` authoritative, so an older linked report visit date cannot issue a second schedule PATCH that moves the chip back.
 - Schedule-save contract: saving a worker visit schedule must resolve or create a linked technical guidance draft, persist it with strict autosave, and fail the modal save instead of silently leaving a schedule without a report.
 - Mobile stale-link repair: mobile schedule save now verifies a schedule's `linkedReportKey` against the fresh report index/session payload before trusting it, and creates a replacement draft when the stored link points at no report.
+- Dialog error placement: worker schedule save/register/edit validation messages are rendered at the bottom of the active schedule modal instead of the page-level error slot, while calendar load and background cleanup errors remain page-scoped.

@@ -134,6 +134,7 @@ export function MobileWorkerCalendarScreen() {
   const [calendarLoadState, setCalendarLoadState] = useState<CalendarLoadState>('idle');
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [dialogError, setDialogError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState('');
   const [dialog, setDialog] = useState<ScheduleDialogState>(EMPTY_DIALOG_STATE);
   const [dialogSubmitting, setDialogSubmitting] = useState(false);
@@ -396,6 +397,7 @@ export function MobileWorkerCalendarScreen() {
             })
           : ''
       : '';
+  const dialogBottomError = dialogError || dialogWindowError;
 
   useEffect(() => {
     if (!selectedDate && calendar.days.length > 0) {
@@ -504,6 +506,7 @@ export function MobileWorkerCalendarScreen() {
       null;
 
     setSelectedDate(input.plannedDate);
+    setDialogError(null);
     setDialog({
       open: true,
       plannedDate: input.plannedDate,
@@ -515,6 +518,7 @@ export function MobileWorkerCalendarScreen() {
   };
 
   const handleDialogSiteSelect = (siteId: string) => {
+    setDialogError(null);
     const completedRounds = completedRoundsBySiteId.get(siteId) ?? new Set<number>();
     const nextRoundRows = sortSchedules(calendarRows.filter((row) => row.siteId === siteId)).filter((row) => {
       if (row.status === 'canceled' || row.status === 'completed') {
@@ -732,7 +736,7 @@ export function MobileWorkerCalendarScreen() {
 
   const handleSaveSchedule = async () => {
     if (!dialog.siteId) {
-      setError('현장을 먼저 선택해 주세요.');
+      setDialogError('현장을 먼저 선택해 주세요.');
       return;
     }
     const schedule =
@@ -740,16 +744,16 @@ export function MobileWorkerCalendarScreen() {
       calendarRows.find((row) => row.id === dialog.scheduleId) ??
       null;
     if (!dialog.plannedDate) {
-      setError('방문 날짜를 먼저 선택해 주세요.');
+      setDialogError('방문 날짜를 먼저 선택해 주세요.');
       return;
     }
     if (dialogWindowError) {
-      setError(dialogWindowError);
+      setDialogError(dialogWindowError);
       return;
     }
     try {
       setDialogSubmitting(true);
-      setError(null);
+      setDialogError(null);
       const updated = schedule
         ? await updateMySchedule(schedule.id, {
             plannedDate: dialog.plannedDate,
@@ -808,9 +812,10 @@ export function MobileWorkerCalendarScreen() {
           ? `${finalized.siteName} ${finalized.roundNo}회차 방문 일정과 기술지도 보고서를 연결했습니다.`
           : `${finalized.siteName} ${finalized.roundNo}회차 방문 일정을 저장했습니다.`,
       );
+      setDialogError(null);
       setDialog(EMPTY_DIALOG_STATE);
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : '일정을 저장하지 못했습니다.');
+      setDialogError(nextError instanceof Error ? nextError.message : '일정을 저장하지 못했습니다.');
     } finally {
       setDialogSubmitting(false);
     }
@@ -997,14 +1002,20 @@ export function MobileWorkerCalendarScreen() {
         open={dialog.open}
         title="방문 일정 등록"
         onClose={() => {
-          if (!dialogSubmitting) setDialog(EMPTY_DIALOG_STATE);
+          if (!dialogSubmitting) {
+            setDialogError(null);
+            setDialog(EMPTY_DIALOG_STATE);
+          }
         }}
         actions={
           <>
             <button
               type="button"
               className="app-button app-button-secondary"
-              onClick={() => setDialog(EMPTY_DIALOG_STATE)}
+              onClick={() => {
+                setDialogError(null);
+                setDialog(EMPTY_DIALOG_STATE);
+              }}
               disabled={dialogSubmitting}
             >
               닫기
@@ -1027,9 +1038,10 @@ export function MobileWorkerCalendarScreen() {
               className="app-input"
               type="date"
               value={dialog.plannedDate}
-              onChange={(event) =>
-                setDialog((current) => ({ ...current, plannedDate: event.target.value }))
-              }
+              onChange={(event) => {
+                setDialogError(null);
+                setDialog((current) => ({ ...current, plannedDate: event.target.value }));
+              }}
             />
           </label>
 
@@ -1081,12 +1093,13 @@ export function MobileWorkerCalendarScreen() {
               className="app-input"
               value={dialog.selectionReasonLabel}
               placeholder="예: 현장 요청, 장비 반입 대기"
-              onChange={(event) =>
+              onChange={(event) => {
+                setDialogError(null);
                 setDialog((current) => ({
                   ...current,
                   selectionReasonLabel: event.target.value,
-                }))
-              }
+                }));
+              }}
             />
           </label>
           <label className={workerStyles.field}>
@@ -1096,12 +1109,13 @@ export function MobileWorkerCalendarScreen() {
               rows={4}
               value={dialog.selectionReasonMemo}
               placeholder="방문 일정을 이 날짜로 선택한 배경을 적어 주세요."
-              onChange={(event) =>
+              onChange={(event) => {
+                setDialogError(null);
                 setDialog((current) => ({
                   ...current,
                   selectionReasonMemo: event.target.value,
-                }))
-              }
+                }));
+              }}
             />
           </label>
 
@@ -1111,8 +1125,8 @@ export function MobileWorkerCalendarScreen() {
             </div>
           ) : null}
 
-          {dialogWindowError ? (
-            <div className={workerStyles.emptyState}>{dialogWindowError}</div>
+          {dialogBottomError ? (
+            <div className={workerStyles.dialogError}>{dialogBottomError}</div>
           ) : null}
         </div>
       </AppModal>
