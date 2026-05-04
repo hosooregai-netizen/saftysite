@@ -8,7 +8,6 @@ import WorkerAppHeader from '@/components/worker/WorkerAppHeader';
 import WorkerMenuSidebar from '@/components/worker/WorkerMenuSidebar';
 import WorkerShellBody from '@/components/worker/WorkerShellBody';
 import { WorkerMenuDrawer, WorkerMenuPanel } from '@/components/worker/WorkerMenu';
-import { getSessionGuidanceDate } from '@/constants/inspectionSession';
 import { createEmptyTechnicalGuidanceRelations } from '@/constants/inspectionSession/sessionFactory';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import {
@@ -844,9 +843,8 @@ export function WorkerCalendarScreen() {
       reportLookupBySiteId.get(schedule.siteId) ?? buildWorkerCalendarReportLookup([]);
     const selectedReport = resolveWorkerCalendarReportForSchedule(schedule, reportLookup);
     if (selectedReport) {
-      const reportVisitDate = normalizeText(selectedReport.visitDate);
       return {
-        actualVisitDate: reportVisitDate || normalizeText(schedule.actualVisitDate),
+        actualVisitDate: normalizeText(schedule.actualVisitDate),
         linkedReportKey: normalizeText(selectedReport.reportKey),
         sessionId: normalizeText(selectedReport.reportKey),
       } satisfies WorkerGuidanceSessionLink;
@@ -862,8 +860,7 @@ export function WorkerCalendarScreen() {
     );
     if (existingSession) {
       return {
-        actualVisitDate:
-          getSessionGuidanceDate(existingSession) || normalizeText(schedule.actualVisitDate),
+        actualVisitDate: normalizeText(schedule.actualVisitDate),
         linkedReportKey: existingSession.id,
         sessionId: existingSession.id,
       } satisfies WorkerGuidanceSessionLink;
@@ -923,7 +920,7 @@ export function WorkerCalendarScreen() {
       technicalGuidanceRelations,
     });
     return {
-      actualVisitDate: reportDate,
+      actualVisitDate: normalizeText(schedule.actualVisitDate),
       linkedReportKey: createdSession.id,
       sessionId: createdSession.id,
     } satisfies WorkerGuidanceSessionLink;
@@ -967,10 +964,8 @@ export function WorkerCalendarScreen() {
   ) => {
     const nextLinkedReportKey =
       normalizeText(reportLinkUpdate?.linkedReportKey) || normalizeText(reportLinkUpdate?.sessionId);
-    const nextActualVisitDate =
-      normalizeText(reportLinkUpdate?.actualVisitDate) || normalizeText(schedule.actualVisitDate);
-    const nextPlannedDate =
-      normalizeText(reportLinkUpdate?.actualVisitDate) || normalizeText(schedule.plannedDate);
+    const nextActualVisitDate = normalizeText(schedule.actualVisitDate);
+    const nextPlannedDate = normalizeText(schedule.plannedDate);
     const mergedSchedule: SafetyInspectionSchedule = {
       ...schedule,
       actualVisitDate: nextActualVisitDate,

@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AppModal from '@/components/ui/AppModal';
 import LoginPanel from '@/components/auth/LoginPanel';
-import { getSessionGuidanceDate } from '@/constants/inspectionSession';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { buildDefaultReportTitle } from '@/features/site-reports/report-list/reportListHelpers';
 import {
@@ -672,7 +671,7 @@ export function MobileWorkerCalendarScreen() {
     const existingLinkedReportKey = normalizeText(schedule.linkedReportKey);
     if (existingLinkedReportKey) {
       return {
-        actualVisitDate: normalizeText(schedule.actualVisitDate) || schedule.plannedDate,
+        actualVisitDate: normalizeText(schedule.actualVisitDate),
         linkedReportKey: existingLinkedReportKey,
       };
     }
@@ -687,7 +686,7 @@ export function MobileWorkerCalendarScreen() {
     );
     if (existingSession) {
       return {
-        actualVisitDate: getSessionGuidanceDate(existingSession) || schedule.plannedDate,
+        actualVisitDate: normalizeText(schedule.actualVisitDate),
         linkedReportKey: existingSession.id,
       };
     }
@@ -706,7 +705,7 @@ export function MobileWorkerCalendarScreen() {
     });
 
     return {
-      actualVisitDate: reportDate,
+      actualVisitDate: normalizeText(schedule.actualVisitDate),
       linkedReportKey: createdSession.id,
     };
   };
@@ -744,16 +743,17 @@ export function MobileWorkerCalendarScreen() {
             siteId: dialog.siteId,
           });
       const linkUpdate = ensureDraftSessionForSchedule(updated);
-      const linkPlannedDate = normalizeText(linkUpdate?.actualVisitDate) || updated.plannedDate || dialog.plannedDate;
+      const linkActualVisitDate = normalizeText(updated.actualVisitDate);
+      const linkPlannedDate = updated.plannedDate || dialog.plannedDate;
       const shouldPersistLink =
         Boolean(linkUpdate?.linkedReportKey) &&
         (normalizeText(linkUpdate?.linkedReportKey) !== normalizeText(updated.linkedReportKey) ||
-          normalizeText(linkUpdate?.actualVisitDate) !== normalizeText(updated.actualVisitDate) ||
+          linkActualVisitDate !== normalizeText(updated.actualVisitDate) ||
           linkPlannedDate !== normalizeText(updated.plannedDate));
       const finalized =
         linkUpdate && shouldPersistLink
           ? await updateMySchedule(updated.id, {
-              actualVisitDate: linkUpdate.actualVisitDate,
+              actualVisitDate: linkActualVisitDate,
               linkedReportKey: linkUpdate.linkedReportKey,
               plannedDate: linkPlannedDate,
               selectionReasonLabel: dialog.selectionReasonLabel.trim(),
