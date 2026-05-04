@@ -39,6 +39,10 @@ function getReportPriorityScore(item: InspectionReportListItem) {
   return score;
 }
 
+function isCompletedReport(item: InspectionReportListItem) {
+  return item.status === 'submitted' || item.status === 'published';
+}
+
 function setPreferredReport(
   map: Map<string, InspectionReportListItem>,
   key: string,
@@ -187,8 +191,9 @@ function createFallbackScheduleFromReport(input: {
   site: WorkerCalendarBackfillSite;
   visitDate: string;
 }): SafetyInspectionSchedule {
+  const actualVisitDate = isCompletedReport(input.report) ? input.visitDate : '';
   return {
-    actualVisitDate: input.visitDate,
+    actualVisitDate,
     assigneeName: '',
     assigneeUserId: '',
     exceptionMemo: '',
@@ -293,7 +298,7 @@ export function buildWorkerCalendarRowsWithReportDates(input: {
 
       outputById.set(fallbackRow.id, {
         ...fallbackRow,
-        actualVisitDate: visitDate,
+        actualVisitDate: isCompletedReport(report) ? visitDate : '',
         linkedReportKey: normalizeText(fallbackRow.linkedReportKey) || reportKey,
         plannedDate: visitDate,
         siteId: fallbackRow.siteId || reportSiteId,

@@ -13,16 +13,15 @@ import {
   resolveContractWindow,
 } from '@/features/schedule-report-sync/scheduleReportSync';
 import {
-  buildWorkerCalendarReportLookup,
   buildWorkerCalendarRowsWithReportDates,
   findDuplicateUnlinkedScheduleReservations,
-  resolveWorkerCalendarReportForSchedule,
 } from '@/features/calendar/components/workerCalendarReportMatching';
 import {
   buildWorkerCalendarReportIndexSiteIds,
   shouldUseWorkerCalendarReportItems,
 } from '@/features/calendar/components/workerCalendarLoading';
 import { fetchAllMySchedules, reserveNextMySchedule, updateMySchedule } from '@/lib/calendar/apiClient';
+import { getScheduleDisplayPhase } from '@/lib/calendar/scheduleDisplayPhase';
 import type { SafetyInspectionSchedule } from '@/types/admin';
 import type { InspectionReportListItem } from '@/types/inspectionSession';
 import { MobileShell } from './MobileShell';
@@ -127,6 +126,26 @@ function buildWindowErrorMessage(
   return `${input.siteName || '선택한 현장'}은 계약 기간 ${input.windowStart} ~ ${input.windowEnd} 안에서만 선택할 수 있습니다.`;
 }
 
+function getScheduleToneClassName(row: SafetyInspectionSchedule) {
+  const displayPhase = getScheduleDisplayPhase(row);
+  if (displayPhase === 'planned' && row.isOverdue) {
+    return workerStyles.scheduleToneWarning;
+  }
+  switch (displayPhase) {
+    case 'completed':
+      return workerStyles.scheduleToneCompleted;
+    case 'in_progress':
+      return workerStyles.scheduleToneInProgress;
+    case 'postponed':
+      return workerStyles.scheduleTonePostponed;
+    case 'canceled':
+      return workerStyles.scheduleToneCanceled;
+    case 'planned':
+    default:
+      return workerStyles.scheduleTonePlanned;
+  }
+}
+
 export function MobileWorkerCalendarScreen() {
   const [month, setMonth] = useState(getMonthToken());
   const [rows, setRows] = useState<SafetyInspectionSchedule[]>([]);
@@ -148,13 +167,10 @@ export function MobileWorkerCalendarScreen() {
   >({});
   const {
     authError,
-    createSession,
     currentUser,
     ensureAssignedSafetySite,
-    ensureSessionLoaded,
     ensureSiteReportIndexLoaded,
     getSessionById,
-    getSessionsBySiteId,
     getReportIndexBySiteId,
     isAuthenticated,
     isReady,
@@ -674,66 +690,6 @@ export function MobileWorkerCalendarScreen() {
     return savedSchedules.find((schedule) => schedule.id === changedSchedule.id) ?? changedSchedule;
   };
 
-  const ensureDraftSessionForSchedule = async (schedule: SafetyInspectionSchedule) => {
-    const reportIndex = getReportIndexBySiteId(schedule.siteId);
-    const reportLookup = buildWorkerCalendarReportLookup(
-      reportIndex?.items ?? reportItemsBySiteId.get(schedule.siteId) ?? [],
-    );
-    const selectedReport = resolveWorkerCalendarReportForSchedule(schedule, reportLookup);
-    if (selectedReport) {
-      return {
-        actualVisitDate: normalizeText(schedule.actualVisitDate),
-        linkedReportKey: normalizeText(selectedReport.reportKey),
-      };
-    }
-
-    const existingLinkedReportKey = normalizeText(schedule.linkedReportKey);
-    if (existingLinkedReportKey) {
-      if (!getSessionById(existingLinkedReportKey)) {
-        await ensureSessionLoaded(existingLinkedReportKey).catch(() => undefined);
-      }
-      if (getSessionById(existingLinkedReportKey)) {
-        return {
-          actualVisitDate: normalizeText(schedule.actualVisitDate),
-          linkedReportKey: existingLinkedReportKey,
-        };
-      }
-    }
-
-    const site = sites.find((item) => item.id === schedule.siteId);
-    if (!site) return null;
-
-    const existingSession = getSessionsBySiteId(site.id).find(
-      (session) =>
-        (session.scheduleId && session.scheduleId === schedule.id) ||
-        session.reportNumber === schedule.roundNo,
-    );
-    if (existingSession) {
-      return {
-        actualVisitDate: normalizeText(schedule.actualVisitDate),
-        linkedReportKey: existingSession.id,
-      };
-    }
-
-    const reportDate = schedule.plannedDate || dialog.plannedDate || new Date().toISOString().slice(0, 10);
-    const createdSession = createSession(site, {
-      meta: {
-        drafter: currentUser?.name || site.assigneeName,
-        reportDate,
-        reportTitle: buildDefaultReportTitle(reportDate, schedule.roundNo),
-        siteName: site.siteName,
-      },
-      reportNumber: schedule.roundNo,
-      scheduleId: schedule.id,
-      scheduleRoundNo: schedule.roundNo,
-    });
-
-    return {
-      actualVisitDate: normalizeText(schedule.actualVisitDate),
-      linkedReportKey: createdSession.id,
-    };
-  };
-
   const handleSaveSchedule = async () => {
     if (!dialog.siteId) {
       setDialogError('현장을 먼저 선택해 주세요.');
@@ -767,40 +723,15 @@ export function MobileWorkerCalendarScreen() {
             siteId: dialog.siteId,
       });
       await ensureSiteReportIndexLoaded(updated.siteId, { force: true }).catch(() => undefined);
-      const linkUpdate = await ensureDraftSessionForSchedule(updated);
-      if (!linkUpdate?.linkedReportKey) {
-        throw new Error('방문 일정에 연결할 기술지도 보고서를 생성하지 못했습니다.');
-      }
-      const linkActualVisitDate = normalizeText(updated.actualVisitDate);
-      const linkPlannedDate = updated.plannedDate || dialog.plannedDate;
-      const shouldPersistLink =
-        Boolean(linkUpdate?.linkedReportKey) &&
-        (normalizeText(linkUpdate?.linkedReportKey) !== normalizeText(updated.linkedReportKey) ||
-          linkActualVisitDate !== normalizeText(updated.actualVisitDate) ||
-          linkPlannedDate !== normalizeText(updated.plannedDate));
-      const finalized =
-        linkUpdate && shouldPersistLink
-          ? await updateMySchedule(updated.id, {
-              actualVisitDate: linkActualVisitDate,
-              linkedReportKey: linkUpdate.linkedReportKey,
-              plannedDate: linkPlannedDate,
-              selectionReasonLabel: dialog.selectionReasonLabel.trim(),
-              selectionReasonMemo: dialog.selectionReasonMemo.trim(),
-            })
-          : updated;
       setRows((current) => {
         const nextRows = current.filter(
-          (row) => row.id !== finalized.id && !(row.siteId === finalized.siteId && row.roundNo === finalized.roundNo),
+          (row) => row.id !== updated.id && !(row.siteId === updated.siteId && row.roundNo === updated.roundNo),
         );
-        return [...nextRows, finalized];
+        return [...nextRows, updated];
       });
-      if (linkUpdate?.linkedReportKey && getSessionById(linkUpdate.linkedReportKey)) {
-        await saveNow({ throwOnError: true });
-        await ensureSiteReportIndexLoaded(finalized.siteId, { force: true }).catch(() => undefined);
-      }
-      const synced = await persistScheduleReportSync(finalized);
+      const synced = await persistScheduleReportSync(updated);
       await ensureSiteReportIndexLoaded(synced.siteId, { force: true }).catch(() => undefined);
-      const targetDate = synced.plannedDate || finalized.plannedDate || dialog.plannedDate;
+      const targetDate = synced.plannedDate || updated.plannedDate || dialog.plannedDate;
       const targetMonth = targetDate.slice(0, 7) || month;
       await reloadCalendarRows({ month: targetMonth });
       if (targetMonth !== month) {
@@ -808,9 +739,7 @@ export function MobileWorkerCalendarScreen() {
       }
       setSelectedDate(targetDate);
       setNotice(
-        linkUpdate
-          ? `${finalized.siteName} ${finalized.roundNo}회차 방문 일정과 기술지도 보고서를 연결했습니다.`
-          : `${finalized.siteName} ${finalized.roundNo}회차 방문 일정을 저장했습니다.`,
+        `${synced.siteName || updated.siteName} ${synced.roundNo || updated.roundNo}회차 방문 일정을 저장했습니다.`,
       );
       setDialogError(null);
       setDialog(EMPTY_DIALOG_STATE);
@@ -947,12 +876,17 @@ export function MobileWorkerCalendarScreen() {
                     <div className={workerStyles.calendarDay}>{day.day}</div>
                     <div className={workerStyles.calendarEvents}>
                       {dayRows.slice(0, 2).map((row) => (
-                        <div key={row.id} className={workerStyles.calendarEvent}>
+                        <div
+                          key={row.id}
+                          className={`${workerStyles.calendarEvent} ${getScheduleToneClassName(row)}`}
+                        >
                           {row.siteName} {row.roundNo}회차
                         </div>
                       ))}
                       {dayRows.length > 2 ? (
-                        <div className={workerStyles.calendarEvent}>+{dayRows.length - 2}건</div>
+                        <div className={`${workerStyles.calendarEvent} ${workerStyles.calendarEventMore}`}>
+                          +{dayRows.length - 2}건
+                        </div>
                       ) : null}
                     </div>
                   </button>

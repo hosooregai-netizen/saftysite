@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
+import { getScheduleDisplayPhase } from '@/lib/calendar/scheduleDisplayPhase';
 import type { SafetyInspectionSchedule } from '@/types/admin';
 import type { InspectionReportListItem } from '@/types/inspectionSession';
 import {
@@ -179,7 +180,60 @@ test('worker calendar rows can show report-backed schedules omitted from the mon
   assert.equal(rows[0]?.id, 'schedule-2');
   assert.equal(rows[0]?.roundNo, 2);
   assert.equal(rows[0]?.plannedDate, '2026-04-10');
+  assert.equal(rows[0]?.actualVisitDate, '');
+  assert.equal(rows[0]?.linkedReportKey, 'report-2');
+  assert.equal(getScheduleDisplayPhase(rows[0]!), 'in_progress');
   assert.equal(rows[0]?.windowStart, '2026-04-09');
+});
+
+test('submitted report-backed fallback rows are completed', () => {
+  const rows = buildWorkerCalendarRowsWithReportDates({
+    reportsBySiteId: new Map([
+      [
+        'site-1',
+        [
+          buildReport({
+            reportKey: 'report-submitted',
+            scheduleId: 'schedule-submitted',
+            status: 'submitted',
+            visitDate: '2026-04-11',
+            visitRound: 3,
+          }),
+        ],
+      ],
+    ]),
+    rows: [],
+    sites: [{ id: 'site-1', siteName: 'Site 1', totalRounds: 10 }],
+  });
+
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0]?.actualVisitDate, '2026-04-11');
+  assert.equal(getScheduleDisplayPhase(rows[0]!), 'completed');
+});
+
+test('published report-backed fallback rows are completed', () => {
+  const rows = buildWorkerCalendarRowsWithReportDates({
+    reportsBySiteId: new Map([
+      [
+        'site-1',
+        [
+          buildReport({
+            reportKey: 'report-published',
+            scheduleId: 'schedule-published',
+            status: 'published',
+            visitDate: '2026-04-12',
+            visitRound: 4,
+          }),
+        ],
+      ],
+    ]),
+    rows: [],
+    sites: [{ id: 'site-1', siteName: 'Site 1', totalRounds: 10 }],
+  });
+
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0]?.actualVisitDate, '2026-04-12');
+  assert.equal(getScheduleDisplayPhase(rows[0]!), 'completed');
 });
 
 test('worker calendar rows keep DB schedule dates when report cache has a different date', () => {

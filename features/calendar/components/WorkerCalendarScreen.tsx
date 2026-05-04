@@ -41,6 +41,10 @@ import {
   buildWorkerCalendarReportIndexSiteIds,
   shouldUseWorkerCalendarReportItems,
 } from './workerCalendarLoading';
+import {
+  getScheduleDisplayPhase,
+  getScheduleStatusLabel,
+} from '@/lib/calendar/scheduleDisplayPhase';
 import type { SafetyInspectionSchedule } from '@/types/admin';
 import type { InspectionReportListItem } from '@/types/inspectionSession';
 import styles from './WorkerCalendarScreen.module.css';
@@ -160,30 +164,32 @@ function buildWindowErrorMessage(
 
 function getStatusLabel(row: SafetyInspectionSchedule) {
   if (!row.plannedDate) return '미선택';
-  switch (row.status) {
+  return getScheduleStatusLabel(row);
+}
+
+function getScheduleToneClassName(row: SafetyInspectionSchedule) {
+  const displayPhase = getScheduleDisplayPhase(row);
+  if (displayPhase === 'planned' && row.isOverdue) {
+    return styles.scheduleToneWarning;
+  }
+  switch (displayPhase) {
     case 'completed':
-      return '완료';
-    case 'canceled':
-      return '취소';
+      return styles.scheduleToneCompleted;
+    case 'in_progress':
+      return styles.scheduleToneInProgress;
     case 'postponed':
-      return '보류';
+      return styles.scheduleTonePostponed;
+    case 'canceled':
+      return styles.scheduleToneCanceled;
+    case 'planned':
     default:
-      return '진행';
+      return styles.scheduleTonePlanned;
   }
 }
 
 function getStatusClassName(row: SafetyInspectionSchedule) {
   if (!row.plannedDate) return styles.statusPending;
-  switch (row.status) {
-    case 'completed':
-      return styles.statusCompleted;
-    case 'canceled':
-      return styles.statusCanceled;
-    case 'postponed':
-      return styles.statusPostponed;
-    default:
-      return styles.statusPlanned;
-  }
+  return getScheduleToneClassName(row);
 }
 
 export function WorkerCalendarScreen() {
@@ -1012,16 +1018,12 @@ export function WorkerCalendarScreen() {
   const saveScheduleSelection = async (schedule: SafetyInspectionSchedule | null) => {
     const selectionReasonLabel = dialog.selectionReasonLabel.trim();
     const selectionReasonMemo = dialog.selectionReasonMemo.trim();
-    const linkedReportKey = '';
-    const actualVisitDate = '';
 
     const persistedSchedule = schedule
       ? await resolvePersistedScheduleForSave(schedule)
       : null;
     const saved = persistedSchedule
       ? await updateMySchedule(persistedSchedule.id, {
-          actualVisitDate,
-          linkedReportKey,
           plannedDate: dialog.plannedDate,
           selectionReasonLabel,
           selectionReasonMemo,
@@ -1034,43 +1036,20 @@ export function WorkerCalendarScreen() {
         });
     const updated: SafetyInspectionSchedule = {
       ...saved,
-      actualVisitDate: saved.actualVisitDate || actualVisitDate,
-      linkedReportKey: saved.linkedReportKey || linkedReportKey,
+      actualVisitDate: saved.actualVisitDate || persistedSchedule?.actualVisitDate || schedule?.actualVisitDate || '',
+      linkedReportKey: saved.linkedReportKey || persistedSchedule?.linkedReportKey || schedule?.linkedReportKey || '',
       windowEnd: saved.windowEnd || persistedSchedule?.windowEnd || schedule?.windowEnd || '',
       windowStart: saved.windowStart || persistedSchedule?.windowStart || schedule?.windowStart || '',
     };
     upsertScheduleRow(updated);
 
     await ensureSiteReportIndexLoaded(updated.siteId, { force: true }).catch(() => undefined);
-    const reportLinkUpdate = await ensureDraftSessionForSchedule(updated);
-    if (!reportLinkUpdate?.linkedReportKey && !reportLinkUpdate?.sessionId) {
-      throw new Error('방문 일정에 연결할 기술지도 보고서를 생성하지 못했습니다.');
-    }
-    const finalized = reportLinkUpdate
-      ? await persistScheduleReportLink(
-          updated,
-          reportLinkUpdate,
-          selectionReasonLabel,
-          selectionReasonMemo,
-        )
-      : updated;
-    if (finalized !== updated) {
-      upsertScheduleRow(finalized);
-    }
-    const linkedSessionId =
-      normalizeText(reportLinkUpdate?.sessionId) ||
-      normalizeText(reportLinkUpdate?.linkedReportKey);
-    if (linkedSessionId && getSessionById(linkedSessionId)) {
-      await saveNow({ throwOnError: true });
-      await ensureSiteReportIndexLoaded(finalized.siteId, { force: true }).catch(() => undefined);
-    }
-    const synced = await persistScheduleReportSync(finalized);
+    const synced = await persistScheduleReportSync(updated);
     await ensureSiteReportIndexLoaded(synced.siteId, { force: true }).catch(() => undefined);
-    setSelectedDate(synced.plannedDate || finalized.plannedDate || dialog.plannedDate);
+    setSelectedDate(synced.plannedDate || updated.plannedDate || dialog.plannedDate);
 
     return {
       finalized: synced,
-      reportLinkUpdate,
       selectionReasonLabel,
       selectionReasonMemo,
     };
@@ -1140,18 +1119,36 @@ export function WorkerCalendarScreen() {
       setDialogError(null);
 
       const savedSelection = isReadOnlySchedule && schedule
-        ? { finalized: schedule, reportLinkUpdate: await ensureDraftSessionForSchedule(schedule) }
+        ? {
+            finalized: schedule,
+            selectionReasonLabel: dialog.selectionReasonLabel.trim(),
+            selectionReasonMemo: dialog.selectionReasonMemo.trim(),
+          }
         : await saveScheduleSelection(schedule);
-      const reportLinkUpdate = savedSelection.reportLinkUpdate;
+      const reportLinkUpdate = await ensureDraftSessionForSchedule(savedSelection.finalized);
+      if (!reportLinkUpdate?.linkedReportKey && !reportLinkUpdate?.sessionId) {
+        throw new Error('방문 일정에 연결할 기술지도 보고서를 생성하지 못했습니다.');
+      }
+      const finalized = await persistScheduleReportLink(
+        savedSelection.finalized,
+        reportLinkUpdate,
+        savedSelection.selectionReasonLabel,
+        savedSelection.selectionReasonMemo,
+      );
       const sessionId =
         normalizeText(reportLinkUpdate?.sessionId) ||
         normalizeText(reportLinkUpdate?.linkedReportKey) ||
-        normalizeText(savedSelection.finalized.linkedReportKey);
+        normalizeText(finalized.linkedReportKey);
 
       if (!sessionId) {
         throw new Error('연결된 기술지도 보고서를 찾지 못했습니다.');
       }
 
+      if (getSessionById(sessionId)) {
+        await saveNow({ throwOnError: true });
+        await ensureSiteReportIndexLoaded(finalized.siteId, { force: true }).catch(() => undefined);
+      }
+      await persistScheduleReportSync(finalized);
       await ensureSessionLoaded(sessionId).catch(() => undefined);
       closeDialog();
       router.push(`/sessions/${encodeURIComponent(sessionId)}`);
@@ -1394,7 +1391,7 @@ export function WorkerCalendarScreen() {
                                       <button
                                         key={row.id}
                                         type="button"
-                                        className={`${styles.calendarEvent} ${styles.calendarEventButton}`}
+                                        className={`${styles.calendarEvent} ${getScheduleToneClassName(row)} ${styles.calendarEventButton}`}
                                         onClick={(event) => {
                                           event.stopPropagation();
                                           openScheduleDialog({
@@ -1407,7 +1404,9 @@ export function WorkerCalendarScreen() {
                                       </button>
                                     ))}
                                     {dayRows.length > 3 ? (
-                                      <span className={styles.calendarEvent}>+ {dayRows.length - 3}건</span>
+                                      <span className={`${styles.calendarEvent} ${styles.calendarEventMore}`}>
+                                        + {dayRows.length - 3}건
+                                      </span>
                                     ) : null}
                                   </div>
                                 </div>

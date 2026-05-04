@@ -33,7 +33,7 @@ import {
 import {
   getScheduleDisplayPhase,
   getScheduleStatusLabel,
-} from './scheduleDisplayPhase';
+} from '@/lib/calendar/scheduleDisplayPhase';
 import type {
   SafetyAdminScheduleCalendarResponse,
   SafetyAdminScheduleLookupsResponse,
