@@ -126,7 +126,7 @@ test('worker calendar report merge keeps local draft sessions when the remote in
   );
 });
 
-test('worker calendar rows use report visit date when a schedule date is empty', () => {
+test('worker calendar rows do not let report cache overwrite an existing schedule row', () => {
   const rows = buildWorkerCalendarRowsWithReportDates({
     reportsBySiteId: new Map([
       [
@@ -145,9 +145,9 @@ test('worker calendar rows use report visit date when a schedule date is empty',
     sites: [{ id: 'site-1', siteName: 'Site 1', totalRounds: 8 }],
   });
 
-  assert.equal(rows[0]?.plannedDate, '2026-04-08');
-  assert.equal(rows[0]?.actualVisitDate, '2026-04-08');
-  assert.equal(rows[0]?.linkedReportKey, 'report-1');
+  assert.equal(rows[0]?.plannedDate, '');
+  assert.equal(rows[0]?.actualVisitDate, '');
+  assert.equal(rows[0]?.linkedReportKey, '');
 });
 
 test('worker calendar rows can show report-backed schedules omitted from the month response', () => {
@@ -182,7 +182,7 @@ test('worker calendar rows can show report-backed schedules omitted from the mon
   assert.equal(rows[0]?.windowStart, '2026-04-09');
 });
 
-test('worker calendar rows hide a blank duplicate reservation when a report owns the same site date', () => {
+test('worker calendar rows keep DB schedule dates when report cache has a different date', () => {
   const rows = buildWorkerCalendarRowsWithReportDates({
     reportsBySiteId: new Map([
       [
@@ -206,10 +206,10 @@ test('worker calendar rows hide a blank duplicate reservation when a report owns
 
   assert.deepEqual(
     rows.map((row) => row.id),
-    ['schedule-5'],
+    ['schedule-5', 'schedule-10'],
   );
-  assert.equal(rows[0]?.plannedDate, '2026-04-24');
-  assert.equal(rows[0]?.linkedReportKey, 'report-5');
+  assert.equal(rows[0]?.plannedDate, '2026-04-22');
+  assert.equal(rows[0]?.linkedReportKey, '');
 });
 
 test('duplicate reservation finder only targets blank unlinked planned rows', () => {

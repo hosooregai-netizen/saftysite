@@ -277,6 +277,20 @@ export function buildWorkerCalendarRowsWithReportDates(input: {
 
       if (!fallbackRow) return;
 
+      if (row) {
+        outputById.set(row.id, {
+          ...row,
+          siteId: row.siteId || reportSiteId,
+          siteName: row.siteName || site.siteName,
+          totalRounds:
+            normalizeRoundNo(row.totalRounds) ||
+            normalizeRoundNo(report.totalRound) ||
+            normalizeRoundNo(site.totalRounds) ||
+            row.roundNo,
+        });
+        return;
+      }
+
       outputById.set(fallbackRow.id, {
         ...fallbackRow,
         actualVisitDate: visitDate,

@@ -21,7 +21,7 @@ import {
 } from '@/lib/auth/postLoginRedirect';
 import { isAdminUserRole, getAdminSectionHref } from '@/lib/admin';
 import { buildDefaultReportTitle } from '@/features/site-reports/report-list/reportListHelpers';
-import { fetchMySchedules, reserveNextMySchedule, updateMySchedule } from '@/lib/calendar/apiClient';
+import { fetchAllMySchedules, reserveNextMySchedule, updateMySchedule } from '@/lib/calendar/apiClient';
 import { fetchTechnicalGuidanceSeed, readSafetyAuthToken } from '@/lib/safetyApi';
 import homeStyles from '@/features/home/components/HomeScreen.module.css';
 import {
@@ -38,8 +38,10 @@ import {
   mergeWorkerCalendarReportItems,
   resolveWorkerCalendarReportForSchedule,
 } from './workerCalendarReportMatching';
-import { buildWorkerCalendarReportIndexSiteIds } from './workerCalendarLoading';
-import { mapInspectionSessionToReportListItem } from '@/lib/safetyApiMappers';
+import {
+  buildWorkerCalendarReportIndexSiteIds,
+  shouldUseWorkerCalendarReportItems,
+} from './workerCalendarLoading';
 import type { SafetyInspectionSchedule } from '@/types/admin';
 import type { InspectionReportListItem } from '@/types/inspectionSession';
 import styles from './WorkerCalendarScreen.module.css';
@@ -70,6 +72,7 @@ interface WorkerGuidanceSessionLink {
 }
 
 type CalendarViewMode = 'calendar' | 'list';
+type CalendarLoadState = 'idle' | 'loading' | 'ready' | 'error';
 type ScheduleListFilter =
   | 'all'
   | 'unselected'
@@ -191,6 +194,7 @@ export function WorkerCalendarScreen() {
   const [month, setMonth] = useState(readStringParam(searchParams, 'month', getMonthToken()));
   const [rows, setRows] = useState<SafetyInspectionSchedule[]>([]);
   const [loading, setLoading] = useState(false);
+  const [calendarLoadState, setCalendarLoadState] = useState<CalendarLoadState>('idle');
   const [error, setError] = useState<string | null>(null);
   const [listFilter, setListFilter] = useState<ScheduleListFilter>(
     readEnumParam(
@@ -204,7 +208,11 @@ export function WorkerCalendarScreen() {
   const [selectedDate, setSelectedDate] = useState('');
   const [dialog, setDialog] = useState<ScheduleDialogState>(EMPTY_DIALOG_STATE);
   const [dialogSubmittingAction, setDialogSubmittingAction] = useState<'save' | 'launch' | null>(null);
+  const calendarLoadRequestIdRef = useRef(0);
+  const lastCompletedCalendarLoadKeyRef = useRef('');
   const duplicateCleanupKeysRef = useRef(new Set<string>());
+  const [loadedReportIndexSiteIds, setLoadedReportIndexSiteIds] = useState<Set<string>>(() => new Set());
+  const [reportIndexLoadedAfterMs, setReportIndexLoadedAfterMs] = useState(0);
   const [contractWindowsBySiteId, setContractWindowsBySiteId] = useState<
     Record<string, { windowEnd: string; windowStart: string }>
   >({});
@@ -230,6 +238,18 @@ export function WorkerCalendarScreen() {
   const isAdminView = Boolean(currentUser && isAdminUserRole(currentUser.role));
   const selectedSiteId = searchParams.get('siteId') || '';
   const viewMode: CalendarViewMode = searchParams.get('view') === 'list' ? 'list' : 'calendar';
+  const siteListKey = useMemo(
+    () => sites.map((site) => site.id).sort().join('|'),
+    [sites],
+  );
+
+  const beginCalendarTransition = useCallback(() => {
+    setRows([]);
+    setLoadedReportIndexSiteIds(new Set());
+    setReportIndexLoadedAfterMs(0);
+    setLoading(true);
+    setCalendarLoadState('loading');
+  }, []);
 
   const replaceCalendarRoute = useCallback((input: {
     listFilter?: ScheduleListFilter;
@@ -241,6 +261,9 @@ export function WorkerCalendarScreen() {
     const nextListFilter = input.listFilter ?? listFilter;
     const nextSiteId = input.siteId ?? selectedSiteId;
     const nextView = input.view ?? viewMode;
+    if (nextMonth !== month || nextSiteId !== selectedSiteId) {
+      beginCalendarTransition();
+    }
     const nextSearchParams = new URLSearchParams();
     if (nextMonth && nextMonth !== getMonthToken()) {
       nextSearchParams.set('month', nextMonth);
@@ -256,7 +279,7 @@ export function WorkerCalendarScreen() {
     }
     const query = nextSearchParams.toString();
     router.replace(query ? `/calendar?${query}` : '/calendar');
-  }, [listFilter, month, router, selectedSiteId, viewMode]);
+  }, [beginCalendarTransition, listFilter, month, router, selectedSiteId, viewMode]);
 
   useEffect(() => {
     setMonth(readStringParam(searchParams, 'month', getMonthToken()));
@@ -290,70 +313,96 @@ export function WorkerCalendarScreen() {
     }
   }, [currentUser, isAdminView, router, selectedSiteId]);
 
-  useEffect(() => {
-    if (!isAuthenticated || isAdminView) return;
-    let cancelled = false;
-    void (async () => {
+  const reloadCalendarRows = useCallback(
+    async (input?: { month?: string; siteId?: string }) => {
+      const loadMonth = input?.month ?? month;
+      const loadSiteId = input?.siteId ?? selectedSiteId;
+      const loadKey = `${loadMonth}\0${loadSiteId}\0${siteListKey}`;
+      const loadStartedAt = Date.now();
+      const requestId = ++calendarLoadRequestIdRef.current;
+
+      setLoading(true);
+      setCalendarLoadState('loading');
+      setError(null);
+      setRows([]);
+      setLoadedReportIndexSiteIds(new Set());
+      setReportIndexLoadedAfterMs(0);
+
       try {
-        setLoading(true);
-        setError(null);
-        const response = await fetchMySchedules({
-          month,
-          siteId: selectedSiteId,
+        const response = await fetchAllMySchedules({
+          month: loadMonth,
+          siteId: loadSiteId,
         });
-        if (!cancelled) {
-          setRows(response.rows);
+        const reportSiteIds = buildWorkerCalendarReportIndexSiteIds({
+          rows: response.rows,
+          selectedSiteId: loadSiteId,
+          sites,
+        });
+
+        await Promise.allSettled(
+          reportSiteIds.map((siteId) =>
+            ensureSiteReportIndexLoaded(siteId, { force: true }),
+          ),
+        );
+
+        if (calendarLoadRequestIdRef.current !== requestId) {
+          return response;
         }
+
+        setRows(response.rows);
+        setLoadedReportIndexSiteIds(new Set(reportSiteIds));
+        setReportIndexLoadedAfterMs(loadStartedAt);
+        setCalendarLoadState('ready');
+        lastCompletedCalendarLoadKeyRef.current = loadKey;
+        return response;
       } catch (nextError) {
-        if (!cancelled) {
+        if (calendarLoadRequestIdRef.current === requestId) {
           setError(nextError instanceof Error ? nextError.message : '내 일정을 불러오지 못했습니다.');
+          setCalendarLoadState('error');
         }
+        throw nextError;
       } finally {
-        if (!cancelled) {
+        if (calendarLoadRequestIdRef.current === requestId) {
           setLoading(false);
         }
       }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [isAdminView, isAuthenticated, month, selectedSiteId]);
-
-  const reportIndexSiteIds = useMemo(
-    () =>
-      buildWorkerCalendarReportIndexSiteIds({
-        rows,
-        selectedSiteId,
-        sites,
-      }),
-    [rows, selectedSiteId, sites],
+    },
+    [ensureSiteReportIndexLoaded, month, selectedSiteId, siteListKey, sites],
   );
 
   useEffect(() => {
-    if (!isAuthenticated || !isReady || isAdminView || reportIndexSiteIds.length === 0) return;
-    reportIndexSiteIds.forEach((siteId) => {
-      void ensureSiteReportIndexLoaded(siteId).catch(() => undefined);
-    });
+    if (!isAuthenticated || isAdminView) return;
+    const loadKey = `${month}\0${selectedSiteId}\0${siteListKey}`;
+    if (lastCompletedCalendarLoadKeyRef.current === loadKey) {
+      return;
+    }
+    void reloadCalendarRows().catch(() => undefined);
   }, [
-    ensureSiteReportIndexLoaded,
     isAdminView,
     isAuthenticated,
-    isReady,
-    reportIndexSiteIds,
+    month,
+    reloadCalendarRows,
+    selectedSiteId,
+    siteListKey,
   ]);
 
   const reportItemsBySiteId = useMemo(() => {
     const nextMap = new Map<string, InspectionReportListItem[]>();
     sites.forEach((site) => {
       const reportIndex = getReportIndexBySiteId(site.id);
-      const indexedReports = reportIndex?.status === 'loaded' ? reportIndex.items : [];
-      const localReports = getSessionsBySiteId(site.id).map((session) =>
-        mapInspectionSessionToReportListItem(session, site),
-      );
-      nextMap.set(site.id, mergeWorkerCalendarReportItems(indexedReports, localReports));
+      const indexedReports = shouldUseWorkerCalendarReportItems({
+        readySiteIds: loadedReportIndexSiteIds,
+        fetchedAt: reportIndex?.fetchedAt,
+        loadedAfterMs: reportIndexLoadedAfterMs,
+        siteId: site.id,
+        status: reportIndex?.status,
+      })
+        ? reportIndex?.items ?? []
+        : [];
+      nextMap.set(site.id, mergeWorkerCalendarReportItems(indexedReports));
     });
     return nextMap;
-  }, [getReportIndexBySiteId, getSessionsBySiteId, sites]);
+  }, [getReportIndexBySiteId, loadedReportIndexSiteIds, reportIndexLoadedAfterMs, sites]);
   const calendarRows = useMemo(
     () =>
       buildWorkerCalendarRowsWithReportDates({
@@ -406,6 +455,7 @@ export function WorkerCalendarScreen() {
     }
   }, [calendarRows, listFilter]);
   const calendar = useMemo(() => buildCalendarDays(month), [month]);
+  const isCalendarLoading = loading || calendarLoadState === 'loading';
   const rowsByDate = useMemo(() => {
     const map = new Map<string, SafetyInspectionSchedule[]>();
     selectedRows.forEach((row) => {
@@ -725,9 +775,8 @@ export function WorkerCalendarScreen() {
   };
 
   const persistScheduleReportSync = async (changedSchedule: SafetyInspectionSchedule) => {
-    const scheduleResponse = await fetchMySchedules({
+    const scheduleResponse = await fetchAllMySchedules({
       includeAll: true,
-      limit: 300,
       siteId: changedSchedule.siteId,
     });
     const siteSchedules = [
@@ -885,9 +934,8 @@ export function WorkerCalendarScreen() {
       return schedule;
     }
 
-    const response = await fetchMySchedules({
+    const response = await fetchAllMySchedules({
       includeAll: true,
-      limit: 300,
       siteId: schedule.siteId,
     });
     const persisted =
@@ -993,7 +1041,7 @@ export function WorkerCalendarScreen() {
     };
     upsertScheduleRow(updated);
 
-    await ensureSiteReportIndexLoaded(updated.siteId).catch(() => undefined);
+    await ensureSiteReportIndexLoaded(updated.siteId, { force: true }).catch(() => undefined);
     const reportLinkUpdate = await ensureDraftSessionForSchedule(updated);
     const finalized = reportLinkUpdate
       ? await persistScheduleReportLink(
@@ -1006,7 +1054,15 @@ export function WorkerCalendarScreen() {
     if (finalized !== updated) {
       upsertScheduleRow(finalized);
     }
+    const linkedSessionId =
+      normalizeText(reportLinkUpdate?.sessionId) ||
+      normalizeText(reportLinkUpdate?.linkedReportKey);
+    if (linkedSessionId && getSessionById(linkedSessionId)) {
+      await saveNow();
+      await ensureSiteReportIndexLoaded(finalized.siteId, { force: true }).catch(() => undefined);
+    }
     const synced = await persistScheduleReportSync(finalized);
+    await ensureSiteReportIndexLoaded(synced.siteId, { force: true }).catch(() => undefined);
     setSelectedDate(synced.plannedDate || finalized.plannedDate || dialog.plannedDate);
 
     return {
@@ -1035,9 +1091,16 @@ export function WorkerCalendarScreen() {
     const selectionReasonMemo = dialog.selectionReasonMemo.trim();
 
     try {
+      setDialogSubmittingAction('save');
       setError(null);
       const { finalized } = await saveScheduleSelection(schedule);
-      setSelectedDate(finalized.plannedDate || dialog.plannedDate);
+      const targetDate = finalized.plannedDate || dialog.plannedDate;
+      const targetMonth = targetDate.slice(0, 7) || month;
+      await reloadCalendarRows({ month: targetMonth, siteId: selectedSiteId });
+      if (targetMonth !== month) {
+        setMonth(targetMonth);
+      }
+      setSelectedDate(targetDate);
       setNotice(
         selectionReasonLabel || selectionReasonMemo
           ? `${finalized.siteName} ${finalized.roundNo}회차 방문 일정과 사유를 저장했습니다.`
@@ -1046,6 +1109,8 @@ export function WorkerCalendarScreen() {
       closeDialog();
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : '일정을 저장하지 못했습니다.');
+    } finally {
+      setDialogSubmittingAction(null);
     }
   };
 
@@ -1190,21 +1255,33 @@ export function WorkerCalendarScreen() {
                       <button
                         type="button"
                         className="app-button app-button-secondary"
-                        onClick={() => setMonth((current) => shiftMonthToken(current, -1))}
+                        onClick={() => {
+                          beginCalendarTransition();
+                          setMonth((current) => shiftMonthToken(current, -1));
+                        }}
                       >
                         이전 달
                       </button>
                       <button
                         type="button"
                         className="app-button app-button-secondary"
-                        onClick={() => setMonth(getMonthToken())}
+                        onClick={() => {
+                          const targetMonth = getMonthToken();
+                          if (targetMonth !== month) {
+                            beginCalendarTransition();
+                          }
+                          setMonth(targetMonth);
+                        }}
                       >
                         이번 달
                       </button>
                       <button
                         type="button"
                         className="app-button app-button-secondary"
-                        onClick={() => setMonth((current) => shiftMonthToken(current, 1))}
+                        onClick={() => {
+                          beginCalendarTransition();
+                          setMonth((current) => shiftMonthToken(current, 1));
+                        }}
                       >
                         다음 달
                       </button>
@@ -1216,7 +1293,10 @@ export function WorkerCalendarScreen() {
                         className="app-input"
                         type="month"
                         value={month}
-                        onChange={(event) => setMonth(event.target.value || getMonthToken())}
+                        onChange={(event) => {
+                          beginCalendarTransition();
+                          setMonth(event.target.value || getMonthToken());
+                        }}
                       />
                     </label>
                     <label className={styles.field}>
@@ -1259,7 +1339,7 @@ export function WorkerCalendarScreen() {
                     ) : null}
                   </div>
 
-                  {loading ? <div className={styles.emptyState}>일정을 불러오는 중입니다.</div> : null}
+                  {isCalendarLoading ? <div className={styles.emptyState}>일정을 불러오는 중입니다.</div> : null}
 
                   {viewMode === 'calendar' ? (
                     <div className={styles.layout}>
@@ -1438,7 +1518,7 @@ export function WorkerCalendarScreen() {
                 dialogSubmittingAction !== null
               }
             >
-              방문 일정 저장
+              {dialogSubmittingAction === 'save' ? '일정 저장 중...' : '방문 일정 저장'}
             </button>
           </>
         }

@@ -17,7 +17,7 @@ import {
 import { mergeReportIndexItems } from '@/hooks/inspectionSessions/helpers';
 import { fetchAdminReports } from '@/lib/admin/apiClient';
 import { isAdminUserRole } from '@/lib/admin';
-import { fetchMySchedules, reserveNextMySchedule, updateMySchedule } from '@/lib/calendar/apiClient';
+import { fetchAllMySchedules, reserveNextMySchedule, updateMySchedule } from '@/lib/calendar/apiClient';
 import {
   fetchTechnicalGuidanceSeed,
   readSafetyAuthToken,
@@ -400,9 +400,8 @@ export function useSiteReportListState(
     const seed = await fetchTechnicalGuidanceSeed(token, currentSite.id);
     const targetReportNumber = Math.max(seed.next_visit_round || 0, nextReportNumber);
     const safetySite = await ensureAssignedSafetySite(currentSite.id);
-    const initialScheduleResponse = await fetchMySchedules({
+    const initialScheduleResponse = await fetchAllMySchedules({
       includeAll: true,
-      limit: 300,
       siteId: currentSite.id,
     });
     const contractWindow = resolveContractWindow(

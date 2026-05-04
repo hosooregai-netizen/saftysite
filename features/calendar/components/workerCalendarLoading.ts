@@ -15,6 +15,16 @@ function pushUnique(target: string[], seen: Set<string>, value: string) {
   target.push(normalized);
 }
 
+function getTimeMs(value: string | number | null | undefined) {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : 0;
+  }
+  const normalized = normalizeText(value);
+  if (!normalized) return 0;
+  const parsed = new Date(normalized).getTime();
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
 export function buildWorkerCalendarReportIndexSiteIds(input: {
   rows: Array<Pick<SafetyInspectionSchedule, 'siteId'>>;
   selectedSiteId?: string;
@@ -36,4 +46,21 @@ export function buildWorkerCalendarReportIndexSiteIds(input: {
   });
 
   return siteIds;
+}
+
+export function shouldUseWorkerCalendarReportItems(input: {
+  fetchedAt?: string | number | null;
+  loadedAfterMs?: number;
+  readySiteIds: ReadonlySet<string>;
+  siteId: string;
+  status?: string;
+}) {
+  const siteId = normalizeText(input.siteId);
+  if (!siteId || !input.readySiteIds.has(siteId) || input.status !== 'loaded') {
+    return false;
+  }
+  if (input.loadedAfterMs && getTimeMs(input.fetchedAt) < input.loadedAfterMs) {
+    return false;
+  }
+  return true;
 }

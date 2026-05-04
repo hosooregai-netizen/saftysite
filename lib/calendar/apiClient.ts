@@ -3,6 +3,8 @@
 import { readSafetyAuthToken, SafetyApiError } from '@/lib/safetyApi';
 import type { SafetyAdminScheduleListResponse, SafetyInspectionSchedule } from '@/types/admin';
 
+const MY_SCHEDULE_PAGE_LIMIT = 300;
+
 type MyScheduleUpdateInput = {
   actualVisitDate?: string;
   linkedReportKey?: string;
@@ -10,6 +12,15 @@ type MyScheduleUpdateInput = {
   selectionReasonLabel?: string;
   selectionReasonMemo?: string;
   status?: SafetyInspectionSchedule['status'];
+};
+
+type MyScheduleListInput = {
+  includeAll?: boolean;
+  limit?: number;
+  month?: string;
+  offset?: number;
+  siteId?: string;
+  status?: string;
 };
 
 function buildQueryString(params: Record<string, boolean | string | number | null | undefined>) {
@@ -63,25 +74,45 @@ async function requestCalendarApi<T>(path: string, options: RequestInit = {}) {
   return (await response.json()) as T;
 }
 
-export function fetchMySchedules(input: {
-  includeAll?: boolean;
-  limit?: number;
-  month?: string;
-  offset?: number;
-  siteId?: string;
-  status?: string;
-}) {
+export function fetchMySchedules(input: MyScheduleListInput) {
   return requestCalendarApi<SafetyAdminScheduleListResponse>(buildFetchMySchedulesPath(input));
 }
 
-export function buildFetchMySchedulesPath(input: {
-  includeAll?: boolean;
-  limit?: number;
-  month?: string;
-  offset?: number;
-  siteId?: string;
-  status?: string;
-}) {
+export async function fetchAllMySchedules(input: MyScheduleListInput) {
+  const initialOffset = Math.max(0, input.offset ?? 0);
+  let offset = initialOffset;
+  let firstResponse: SafetyAdminScheduleListResponse | null = null;
+  const rows: SafetyInspectionSchedule[] = [];
+
+  for (;;) {
+    const response = await fetchMySchedules({
+      ...input,
+      limit: MY_SCHEDULE_PAGE_LIMIT,
+      offset,
+    });
+    firstResponse ??= response;
+    rows.push(...response.rows);
+
+    const nextOffset = offset + response.rows.length;
+    const total = response.total ?? rows.length;
+    const pageLimit = response.limit || MY_SCHEDULE_PAGE_LIMIT;
+
+    if (response.rows.length === 0 || nextOffset >= total || response.rows.length < pageLimit) {
+      return {
+        ...response,
+        limit: firstResponse.limit,
+        month: firstResponse.month,
+        offset: initialOffset,
+        rows,
+        total,
+      };
+    }
+
+    offset = nextOffset;
+  }
+}
+
+export function buildFetchMySchedulesPath(input: MyScheduleListInput) {
   return `/schedules${buildQueryString({
     include_all: input.includeAll,
     limit: input.limit,

@@ -14,7 +14,7 @@ import { readFileAsDataUrl } from '@/components/session/workspace/utils';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { mergeReportIndexItems } from '@/hooks/inspectionSessions/helpers';
 import { fetchAdminReportSessionBootstrap } from '@/lib/admin/apiClient';
-import { fetchMySchedules, updateMySchedule } from '@/lib/calendar/apiClient';
+import { fetchAllMySchedules, updateMySchedule } from '@/lib/calendar/apiClient';
 import {
   fetchInspectionHwpxDocument,
   fetchInspectionHwpxDocumentByReportKey,
@@ -561,9 +561,8 @@ export function useInspectionSessionScreen(sessionId: string) {
 
     await ensureSiteReportIndexLoaded(request.siteId);
     const safetySite = await ensureAssignedSafetySite(request.siteId);
-    const scheduleResponse = await fetchMySchedules({
+    const scheduleResponse = await fetchAllMySchedules({
       includeAll: true,
-      limit: 300,
       siteId: request.siteId,
     });
     const reportIndex = getReportIndexBySiteId(request.siteId);
