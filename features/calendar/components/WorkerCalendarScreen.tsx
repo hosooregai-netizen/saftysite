@@ -35,9 +35,11 @@ import {
   buildWorkerCalendarReportLookup,
   buildWorkerCalendarRowsWithReportDates,
   findDuplicateUnlinkedScheduleReservations,
+  mergeWorkerCalendarReportItems,
   resolveWorkerCalendarReportForSchedule,
 } from './workerCalendarReportMatching';
 import { buildWorkerCalendarReportIndexSiteIds } from './workerCalendarLoading';
+import { mapInspectionSessionToReportListItem } from '@/lib/safetyApiMappers';
 import type { SafetyInspectionSchedule } from '@/types/admin';
 import type { InspectionReportListItem } from '@/types/inspectionSession';
 import styles from './WorkerCalendarScreen.module.css';
@@ -344,10 +346,14 @@ export function WorkerCalendarScreen() {
     const nextMap = new Map<string, InspectionReportListItem[]>();
     sites.forEach((site) => {
       const reportIndex = getReportIndexBySiteId(site.id);
-      nextMap.set(site.id, reportIndex?.status === 'loaded' ? reportIndex.items : []);
+      const indexedReports = reportIndex?.status === 'loaded' ? reportIndex.items : [];
+      const localReports = getSessionsBySiteId(site.id).map((session) =>
+        mapInspectionSessionToReportListItem(session, site),
+      );
+      nextMap.set(site.id, mergeWorkerCalendarReportItems(indexedReports, localReports));
     });
     return nextMap;
-  }, [getReportIndexBySiteId, sites]);
+  }, [getReportIndexBySiteId, getSessionsBySiteId, sites]);
   const calendarRows = useMemo(
     () =>
       buildWorkerCalendarRowsWithReportDates({
@@ -720,6 +726,7 @@ export function WorkerCalendarScreen() {
 
   const persistScheduleReportSync = async (changedSchedule: SafetyInspectionSchedule) => {
     const scheduleResponse = await fetchMySchedules({
+      includeAll: true,
       limit: 300,
       siteId: changedSchedule.siteId,
     });
@@ -879,6 +886,7 @@ export function WorkerCalendarScreen() {
     }
 
     const response = await fetchMySchedules({
+      includeAll: true,
       limit: 300,
       siteId: schedule.siteId,
     });
@@ -959,10 +967,10 @@ export function WorkerCalendarScreen() {
     const linkedReportKey = '';
     const actualVisitDate = '';
 
-    const persistedSchedule = schedule?.plannedDate
+    const persistedSchedule = schedule
       ? await resolvePersistedScheduleForSave(schedule)
-      : schedule;
-    const saved = schedule?.plannedDate && persistedSchedule
+      : null;
+    const saved = persistedSchedule
       ? await updateMySchedule(persistedSchedule.id, {
           actualVisitDate,
           linkedReportKey,
@@ -985,6 +993,7 @@ export function WorkerCalendarScreen() {
     };
     upsertScheduleRow(updated);
 
+    await ensureSiteReportIndexLoaded(updated.siteId).catch(() => undefined);
     const reportLinkUpdate = await ensureDraftSessionForSchedule(updated);
     const finalized = reportLinkUpdate
       ? await persistScheduleReportLink(

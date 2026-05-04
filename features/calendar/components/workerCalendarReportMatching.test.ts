@@ -7,6 +7,7 @@ import {
   buildWorkerCalendarReportLookup,
   buildWorkerCalendarRowsWithReportDates,
   findDuplicateUnlinkedScheduleReservations,
+  mergeWorkerCalendarReportItems,
   resolveWorkerCalendarReportForSchedule,
 } from './workerCalendarReportMatching';
 
@@ -101,6 +102,28 @@ test('worker calendar report lookup can match by schedule id before using round'
   );
 
   assert.equal(matched?.reportKey, 'report-scheduled');
+});
+
+test('worker calendar report merge keeps local draft sessions when the remote index is stale', () => {
+  const remote = buildReport({
+    reportKey: 'report-remote',
+    scheduleId: 'schedule-1',
+    visitDate: '2026-04-08',
+    visitRound: 1,
+  });
+  const localDraft = buildReport({
+    reportKey: 'report-local',
+    scheduleId: 'schedule-2',
+    visitDate: '2026-04-15',
+    visitRound: 2,
+  });
+
+  const merged = mergeWorkerCalendarReportItems([remote], [localDraft]);
+
+  assert.deepEqual(
+    merged.map((row) => row.reportKey),
+    ['report-remote', 'report-local'],
+  );
 });
 
 test('worker calendar rows use report visit date when a schedule date is empty', () => {

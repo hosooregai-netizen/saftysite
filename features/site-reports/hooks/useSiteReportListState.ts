@@ -401,6 +401,7 @@ export function useSiteReportListState(
     const targetReportNumber = Math.max(seed.next_visit_round || 0, nextReportNumber);
     const safetySite = await ensureAssignedSafetySite(currentSite.id);
     const initialScheduleResponse = await fetchMySchedules({
+      includeAll: true,
       limit: 300,
       siteId: currentSite.id,
     });

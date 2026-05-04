@@ -143,6 +143,30 @@ test('buildScheduleReportSyncPlan reorders schedules and reports by visit date',
   );
 });
 
+test('buildScheduleReportSyncPlan keeps capacity when full site schedule rows are supplied', () => {
+  const plan = buildScheduleReportSyncPlan({
+    buildReportTitle: title,
+    contractWindow,
+    reports: [
+      report({ reportKey: 'report-1', scheduleId: 'schedule-1', visitDate: '2026-04-10', visitRound: 1 }),
+      report({ reportKey: 'report-2', scheduleId: 'schedule-2', visitDate: '2026-04-12', visitRound: 2 }),
+      report({ reportKey: 'report-3', scheduleId: 'schedule-3', visitDate: '2026-04-14', visitRound: 3 }),
+      report({ reportKey: 'report-4', scheduleId: 'schedule-4', visitDate: '2026-04-16', visitRound: 4 }),
+    ],
+    schedules: [
+      schedule({ actualVisitDate: '2026-04-10', id: 'schedule-1', linkedReportKey: 'report-1', plannedDate: '2026-04-10', roundNo: 1 }),
+      schedule({ actualVisitDate: '2026-04-12', id: 'schedule-2', linkedReportKey: 'report-2', plannedDate: '2026-04-12', roundNo: 2 }),
+      schedule({ actualVisitDate: '2026-04-14', id: 'schedule-3', linkedReportKey: 'report-3', plannedDate: '2026-04-14', roundNo: 3 }),
+      schedule({ actualVisitDate: '2026-04-16', id: 'schedule-4', linkedReportKey: 'report-4', plannedDate: '2026-04-16', roundNo: 4 }),
+      schedule({ id: 'schedule-5', roundNo: 5 }),
+    ],
+  });
+
+  assert.equal(plan.ok, true);
+  if (!plan.ok) return;
+  assert.equal(plan.scheduleUpdates.length, 0);
+});
+
 test('buildScheduleReportSyncPlan syncs a changed schedule date into the linked report', () => {
   const plan = buildScheduleReportSyncPlan({
     buildReportTitle: title,

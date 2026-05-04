@@ -562,6 +562,7 @@ export function useInspectionSessionScreen(sessionId: string) {
     await ensureSiteReportIndexLoaded(request.siteId);
     const safetySite = await ensureAssignedSafetySite(request.siteId);
     const scheduleResponse = await fetchMySchedules({
+      includeAll: true,
       limit: 300,
       siteId: request.siteId,
     });

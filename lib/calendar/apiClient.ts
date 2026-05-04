@@ -12,7 +12,7 @@ type MyScheduleUpdateInput = {
   status?: SafetyInspectionSchedule['status'];
 };
 
-function buildQueryString(params: Record<string, string | number | null | undefined>) {
+function buildQueryString(params: Record<string, boolean | string | number | null | undefined>) {
   const searchParams = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
     if (value === null || value === undefined || value === '') return;
@@ -64,21 +64,32 @@ async function requestCalendarApi<T>(path: string, options: RequestInit = {}) {
 }
 
 export function fetchMySchedules(input: {
+  includeAll?: boolean;
   limit?: number;
   month?: string;
   offset?: number;
   siteId?: string;
   status?: string;
 }) {
-  return requestCalendarApi<SafetyAdminScheduleListResponse>(
-    `/schedules${buildQueryString({
-      limit: input.limit,
-      month: input.month,
-      offset: input.offset,
-      siteId: input.siteId,
-      status: input.status,
-    })}`,
-  );
+  return requestCalendarApi<SafetyAdminScheduleListResponse>(buildFetchMySchedulesPath(input));
+}
+
+export function buildFetchMySchedulesPath(input: {
+  includeAll?: boolean;
+  limit?: number;
+  month?: string;
+  offset?: number;
+  siteId?: string;
+  status?: string;
+}) {
+  return `/schedules${buildQueryString({
+    include_all: input.includeAll,
+    limit: input.limit,
+    month: input.month,
+    offset: input.offset,
+    siteId: input.siteId,
+    status: input.status,
+  })}`;
 }
 
 export function buildUpdateMyScheduleBody(payload: MyScheduleUpdateInput) {

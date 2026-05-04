@@ -546,6 +546,7 @@ export function MobileWorkerCalendarScreen() {
 
   const persistScheduleReportSync = async (changedSchedule: SafetyInspectionSchedule) => {
     const scheduleResponse = await fetchMySchedules({
+      includeAll: true,
       limit: 300,
       siteId: changedSchedule.siteId,
     });
@@ -667,17 +668,17 @@ export function MobileWorkerCalendarScreen() {
     }
     try {
       setError(null);
-      const updated = schedule?.plannedDate
+      const updated = schedule
         ? await updateMySchedule(schedule.id, {
             plannedDate: dialog.plannedDate,
             selectionReasonLabel: dialog.selectionReasonLabel.trim(),
             selectionReasonMemo: dialog.selectionReasonMemo.trim(),
           })
-        : await reserveNextMySchedule({
+          : await reserveNextMySchedule({
             plannedDate: dialog.plannedDate,
             selectionReasonLabel: dialog.selectionReasonLabel.trim(),
             selectionReasonMemo: dialog.selectionReasonMemo.trim(),
-            siteId: schedule?.siteId || dialog.siteId,
+            siteId: dialog.siteId,
           });
       const linkUpdate = ensureDraftSessionForSchedule(updated);
       const linkPlannedDate = normalizeText(linkUpdate?.actualVisitDate) || updated.plannedDate || dialog.plannedDate;

@@ -149,6 +149,20 @@ export function buildWorkerCalendarReportLookup(
   return { byReportKey, byRound, byScheduleId };
 }
 
+export function mergeWorkerCalendarReportItems(
+  ...groups: InspectionReportListItem[][]
+): InspectionReportListItem[] {
+  const byReportKey = new Map<string, InspectionReportListItem>();
+  groups.forEach((group) => {
+    group.forEach((row) => {
+      const reportKey = normalizeText(row.reportKey);
+      if (!reportKey) return;
+      byReportKey.set(reportKey, row);
+    });
+  });
+  return Array.from(byReportKey.values());
+}
+
 export function resolveWorkerCalendarReportForSchedule(
   schedule: Pick<SafetyInspectionSchedule, 'id' | 'linkedReportKey' | 'roundNo'>,
   lookup: WorkerCalendarReportLookup,

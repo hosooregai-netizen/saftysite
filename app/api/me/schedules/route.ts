@@ -16,10 +16,11 @@ export async function GET(request: Request): Promise<Response> {
     const response = await fetchWorkerSchedulesServer(
       token,
       {
+        include_all: url.searchParams.get('include_all') === 'true',
         limit: Math.max(1, Math.min(300, Number(url.searchParams.get('limit') || '200'))),
         month: url.searchParams.get('month') || '',
         offset: Math.max(0, Number(url.searchParams.get('offset') || '0')),
-        siteId: url.searchParams.get('siteId') || '',
+        site_id: url.searchParams.get('siteId') || url.searchParams.get('site_id') || '',
         status: url.searchParams.get('status') || '',
       },
       request,
