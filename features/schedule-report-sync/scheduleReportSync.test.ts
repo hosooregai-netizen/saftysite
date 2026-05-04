@@ -183,7 +183,7 @@ test('buildScheduleReportSyncPlan syncs a changed schedule date into the linked 
   assert.equal(plan.ok, true);
   if (!plan.ok) return;
   assert.deepEqual(plan.scheduleUpdates[0], {
-    actualVisitDate: '2026-04-22',
+    actualVisitDate: '',
     linkedReportKey: 'report-1',
     plannedDate: '2026-04-22',
     roundNo: 1,
@@ -197,6 +197,54 @@ test('buildScheduleReportSyncPlan syncs a changed schedule date into the linked 
     visitDate: '2026-04-22',
     visitRound: 1,
   });
+});
+
+test('buildScheduleReportSyncPlan does not reorder other rounds for a manual schedule date change', () => {
+  const plan = buildScheduleReportSyncPlan({
+    buildReportTitle: title,
+    changedSchedule: {
+      plannedDate: '2026-05-02',
+      scheduleId: 'schedule-8',
+    },
+    contractWindow: {
+      windowEnd: '2026-05-31',
+      windowStart: '2026-03-22',
+    },
+    reports: [
+      report({ reportKey: 'report-1', scheduleId: 'schedule-1', visitDate: '2026-04-08', visitRound: 1 }),
+      report({ reportKey: 'report-2', scheduleId: 'schedule-2', visitDate: '2026-04-09', visitRound: 2 }),
+      report({ reportKey: 'report-3', scheduleId: 'schedule-3', visitDate: '2026-04-13', visitRound: 3 }),
+      report({ reportKey: 'report-4', scheduleId: 'schedule-4', visitDate: '2026-04-17', visitRound: 4 }),
+      report({ reportKey: 'report-5a', scheduleId: 'schedule-5', visitDate: '2026-04-24', visitRound: 5 }),
+      report({ reportKey: 'report-5b', visitDate: '2026-04-26', visitRound: 5 }),
+      report({ reportKey: 'report-6', scheduleId: 'schedule-6', visitDate: '2026-04-29', visitRound: 6 }),
+      report({ reportKey: 'report-7', scheduleId: 'schedule-7', visitDate: '2026-04-30', visitRound: 7 }),
+    ],
+    schedules: [
+      schedule({ id: 'schedule-1', linkedReportKey: 'report-1', plannedDate: '2026-04-08', roundNo: 1 }),
+      schedule({ id: 'schedule-2', linkedReportKey: 'report-2', plannedDate: '2026-04-09', roundNo: 2 }),
+      schedule({ id: 'schedule-3', linkedReportKey: 'report-3', plannedDate: '2026-04-13', roundNo: 3 }),
+      schedule({ id: 'schedule-4', linkedReportKey: 'report-4', plannedDate: '2026-04-17', roundNo: 4 }),
+      schedule({ id: 'schedule-5', plannedDate: '2026-04-24', roundNo: 5 }),
+      schedule({ id: 'schedule-6', linkedReportKey: 'report-6', plannedDate: '2026-04-26', roundNo: 6 }),
+      schedule({ id: 'schedule-7', linkedReportKey: 'report-7', plannedDate: '2026-04-30', roundNo: 7 }),
+      schedule({ id: 'schedule-8', plannedDate: '2026-04-30', roundNo: 8 }),
+      schedule({ id: 'schedule-9', roundNo: 9 }),
+    ],
+  });
+
+  assert.equal(plan.ok, true);
+  if (!plan.ok) return;
+  assert.deepEqual(plan.scheduleUpdates, [
+    {
+      actualVisitDate: '',
+      linkedReportKey: '',
+      plannedDate: '2026-05-02',
+      roundNo: 8,
+      scheduleId: 'schedule-8',
+    },
+  ]);
+  assert.deepEqual(plan.reportUpdates, []);
 });
 
 test('buildScheduleReportSyncPlan does not clear unlinked schedule-only rows', () => {

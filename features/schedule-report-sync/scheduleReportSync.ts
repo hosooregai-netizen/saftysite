@@ -294,6 +294,92 @@ function hasScheduleChanged(
   );
 }
 
+function buildChangedScheduleOnlyPlan(
+  input: BuildScheduleReportSyncPlanInput,
+  schedules: SafetyInspectionSchedule[],
+  contractWindow: ScheduleReportContractWindow,
+): ScheduleReportSyncPlan | null {
+  const changedSchedule = input.changedSchedule;
+  if (!changedSchedule) return null;
+
+  const schedule = schedules.find((row) => row.id === changedSchedule.scheduleId) ?? null;
+  if (!schedule) {
+    return {
+      ok: true,
+      reportUpdates: [],
+      scheduleUpdates: [],
+    };
+  }
+
+  const plannedDate = normalizeText(changedSchedule.plannedDate);
+  if (plannedDate && !isWithinWindow(plannedDate, contractWindow)) {
+    return {
+      code: 'contract-window-out-of-range',
+      message: `${plannedDate}? 怨꾩빟湲곌컙 ${contractWindow.windowStart} ~ ${contractWindow.windowEnd} 諛뽰엯?덈떎.`,
+      ok: false,
+    };
+  }
+
+  const indexedReports = indexReports(input.reports);
+  const changedLinkedReportKey =
+    normalizeText(changedSchedule.linkedReportKey) || normalizeText(schedule.linkedReportKey);
+  const linkedReport = changedLinkedReportKey
+    ? indexedReports.byKey.get(changedLinkedReportKey) ?? null
+    : null;
+  const scheduleReport = indexedReports.byScheduleId.get(schedule.id) ?? null;
+  const roundReport = changedLinkedReportKey
+    ? null
+    : indexedReports.byRound.get(schedule.roundNo) ?? null;
+  const report = linkedReport ?? scheduleReport ?? roundReport;
+  const reportKey = normalizeText(report?.reportKey) || changedLinkedReportKey;
+  const originalDate =
+    normalizeText(report?.visitDate) ||
+    normalizeText(schedule.actualVisitDate) ||
+    normalizeText(schedule.plannedDate);
+
+  if (report?.dispatchCompleted && originalDate && originalDate !== plannedDate) {
+    return {
+      code: 'dispatch-completed-locked',
+      message: `諛쒖넚?꾨즺 蹂닿퀬??${schedule.roundNo}?뚯감???좎쭨???먮룞 ?ъ젙?щ줈 ?대룞?????놁뒿?덈떎.`,
+      ok: false,
+    };
+  }
+
+  const desiredSchedule: ScheduleReportScheduleUpdate = {
+    actualVisitDate:
+      normalizeText(changedSchedule.actualVisitDate) || normalizeText(schedule.actualVisitDate),
+    linkedReportKey: reportKey,
+    plannedDate,
+    roundNo: schedule.roundNo,
+    scheduleId: schedule.id,
+  };
+  const scheduleUpdates = hasScheduleChanged(schedule, desiredSchedule)
+    ? [desiredSchedule]
+    : [];
+  const shouldUpdateReport =
+    Boolean(reportKey && report && !report.dispatchCompleted && plannedDate) &&
+    (normalizeText(report?.visitDate) !== plannedDate ||
+      normalizeRoundNo(report?.visitRound) !== schedule.roundNo ||
+      normalizeText(report?.scheduleId) !== schedule.id);
+
+  return {
+    ok: true,
+    reportUpdates: shouldUpdateReport
+      ? [
+          {
+            reportKey,
+            reportTitle: input.buildReportTitle(plannedDate, schedule.roundNo),
+            scheduleId: schedule.id,
+            scheduleRoundNo: schedule.roundNo,
+            visitDate: plannedDate,
+            visitRound: schedule.roundNo,
+          },
+        ]
+      : [],
+    scheduleUpdates,
+  };
+}
+
 export function buildScheduleReportSyncPlan(
   input: BuildScheduleReportSyncPlanInput,
 ): ScheduleReportSyncPlan {
@@ -309,6 +395,10 @@ export function buildScheduleReportSyncPlan(
   const schedules = [...input.schedules]
     .filter((schedule) => schedule.id && schedule.roundNo > 0)
     .sort((left, right) => left.roundNo - right.roundNo || left.id.localeCompare(right.id));
+  const changedScheduleOnlyPlan = buildChangedScheduleOnlyPlan(input, schedules, contractWindow);
+  if (changedScheduleOnlyPlan) {
+    return changedScheduleOnlyPlan;
+  }
   const entries = buildScheduleEntries(input)
     .filter((entry) => entry.date)
     .sort(
