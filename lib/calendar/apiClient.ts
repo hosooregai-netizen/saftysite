@@ -4,9 +4,9 @@ import { readSafetyAuthToken, SafetyApiError } from '@/lib/safetyApi';
 import type { SafetyAdminScheduleListResponse, SafetyInspectionSchedule } from '@/types/admin';
 
 const MY_SCHEDULE_PAGE_LIMIT = 300;
+const inFlightCalendarGetRequests = new Map<string, Promise<unknown>>();
 
 type MyScheduleUpdateInput = {
-  actualVisitDate?: string;
   linkedReportKey?: string;
   plannedDate?: string;
   selectionReasonLabel?: string;
@@ -50,6 +50,7 @@ async function requestCalendarApi<T>(path: string, options: RequestInit = {}) {
     throw new SafetyApiError('로그인이 만료되었습니다. 다시 로그인해 주세요.', 401);
   }
 
+  const method = (options.method || 'GET').toUpperCase();
   const headers = new Headers(options.headers);
   headers.set('Authorization', `Bearer ${token}`);
 
@@ -57,21 +58,40 @@ async function requestCalendarApi<T>(path: string, options: RequestInit = {}) {
     headers.set('Content-Type', 'application/json');
   }
 
-  const response = await fetch(`/api/me${path}`, {
-    ...options,
-    headers,
-    cache: 'no-store',
-  });
+  const executeRequest = async () => {
+    const response = await fetch(`/api/me${path}`, {
+      ...options,
+      headers,
+      cache: 'no-store',
+    });
 
-  if (!response.ok) {
-    throw new SafetyApiError(await parseErrorMessage(response), response.status);
+    if (!response.ok) {
+      throw new SafetyApiError(await parseErrorMessage(response), response.status);
+    }
+
+    if (response.status === 204) {
+      return undefined as T;
+    }
+
+    return (await response.json()) as T;
+  };
+
+  if (method === 'GET' || method === 'HEAD') {
+    const requestKey = `${method}:${token}:${path}`;
+    const pending = inFlightCalendarGetRequests.get(requestKey);
+    if (pending) {
+      return pending as Promise<T>;
+    }
+    const requestPromise = executeRequest().finally(() => {
+      if (inFlightCalendarGetRequests.get(requestKey) === requestPromise) {
+        inFlightCalendarGetRequests.delete(requestKey);
+      }
+    });
+    inFlightCalendarGetRequests.set(requestKey, requestPromise);
+    return requestPromise;
   }
 
-  if (response.status === 204) {
-    return undefined as T;
-  }
-
-  return (await response.json()) as T;
+  return executeRequest();
 }
 
 export function fetchMySchedules(input: MyScheduleListInput) {
@@ -126,9 +146,6 @@ export function buildFetchMySchedulesPath(input: MyScheduleListInput) {
 export function buildUpdateMyScheduleBody(payload: MyScheduleUpdateInput) {
   const body: Record<string, string> = {};
 
-  if (payload.actualVisitDate !== undefined) {
-    body.actual_visit_date = payload.actualVisitDate;
-  }
   if (payload.linkedReportKey !== undefined) {
     body.linked_report_key = payload.linkedReportKey;
   }

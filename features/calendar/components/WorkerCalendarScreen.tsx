@@ -82,6 +82,8 @@ type ScheduleListFilter =
   | 'selected'
   | SafetyInspectionSchedule['status'];
 
+const EMPTY_REPORT_ITEMS_BY_SITE_ID = new Map<string, InspectionReportListItem[]>();
+
 const EMPTY_DIALOG_STATE: ScheduleDialogState = {
   open: false,
   plannedDate: '',
@@ -215,6 +217,7 @@ export function WorkerCalendarScreen() {
   const [dialog, setDialog] = useState<ScheduleDialogState>(EMPTY_DIALOG_STATE);
   const [dialogSubmittingAction, setDialogSubmittingAction] = useState<'save' | 'launch' | null>(null);
   const calendarLoadRequestIdRef = useRef(0);
+  const inFlightCalendarLoadKeyRef = useRef('');
   const lastCompletedCalendarLoadKeyRef = useRef('');
   const duplicateCleanupKeysRef = useRef(new Set<string>());
   const [loadedReportIndexSiteIds, setLoadedReportIndexSiteIds] = useState<Set<string>>(() => new Set());
@@ -244,10 +247,6 @@ export function WorkerCalendarScreen() {
   const isAdminView = Boolean(currentUser && isAdminUserRole(currentUser.role));
   const selectedSiteId = searchParams.get('siteId') || '';
   const viewMode: CalendarViewMode = searchParams.get('view') === 'list' ? 'list' : 'calendar';
-  const siteListKey = useMemo(
-    () => sites.map((site) => site.id).sort().join('|'),
-    [sites],
-  );
 
   const beginCalendarTransition = useCallback(() => {
     setRows([]);
@@ -323,9 +322,10 @@ export function WorkerCalendarScreen() {
     async (input?: { month?: string; siteId?: string }) => {
       const loadMonth = input?.month ?? month;
       const loadSiteId = input?.siteId ?? selectedSiteId;
-      const loadKey = `${loadMonth}\0${loadSiteId}\0${siteListKey}`;
+      const loadKey = `${loadMonth}\0${loadSiteId}`;
       const loadStartedAt = Date.now();
       const requestId = ++calendarLoadRequestIdRef.current;
+      inFlightCalendarLoadKeyRef.current = loadKey;
 
       setLoading(true);
       setCalendarLoadState('loading');
@@ -345,21 +345,25 @@ export function WorkerCalendarScreen() {
           sites,
         });
 
-        await Promise.allSettled(
-          reportSiteIds.map((siteId) =>
-            ensureSiteReportIndexLoaded(siteId, { force: true }),
-          ),
-        );
-
         if (calendarLoadRequestIdRef.current !== requestId) {
           return response;
         }
 
         setRows(response.rows);
-        setLoadedReportIndexSiteIds(new Set(reportSiteIds));
-        setReportIndexLoadedAfterMs(loadStartedAt);
         setCalendarLoadState('ready');
         lastCompletedCalendarLoadKeyRef.current = loadKey;
+        const refreshReportIndexes = () => {
+          void Promise.allSettled(
+            reportSiteIds.map((siteId) =>
+              ensureSiteReportIndexLoaded(siteId, { force: true }),
+            ),
+          ).then(() => {
+            if (calendarLoadRequestIdRef.current !== requestId) return;
+            setLoadedReportIndexSiteIds(new Set(reportSiteIds));
+            setReportIndexLoadedAfterMs(loadStartedAt);
+          });
+        };
+        window.setTimeout(refreshReportIndexes, 1200);
         return response;
       } catch (nextError) {
         if (calendarLoadRequestIdRef.current === requestId) {
@@ -369,17 +373,23 @@ export function WorkerCalendarScreen() {
         throw nextError;
       } finally {
         if (calendarLoadRequestIdRef.current === requestId) {
+          if (inFlightCalendarLoadKeyRef.current === loadKey) {
+            inFlightCalendarLoadKeyRef.current = '';
+          }
           setLoading(false);
         }
       }
     },
-    [ensureSiteReportIndexLoaded, month, selectedSiteId, siteListKey, sites],
+    [ensureSiteReportIndexLoaded, month, selectedSiteId, sites],
   );
 
   useEffect(() => {
     if (!isAuthenticated || isAdminView) return;
-    const loadKey = `${month}\0${selectedSiteId}\0${siteListKey}`;
-    if (lastCompletedCalendarLoadKeyRef.current === loadKey) {
+    const loadKey = `${month}\0${selectedSiteId}`;
+    if (
+      lastCompletedCalendarLoadKeyRef.current === loadKey ||
+      inFlightCalendarLoadKeyRef.current === loadKey
+    ) {
       return;
     }
     void reloadCalendarRows().catch(() => undefined);
@@ -389,7 +399,6 @@ export function WorkerCalendarScreen() {
     month,
     reloadCalendarRows,
     selectedSiteId,
-    siteListKey,
   ]);
 
   const reportItemsBySiteId = useMemo(() => {
@@ -413,24 +422,24 @@ export function WorkerCalendarScreen() {
     () =>
       buildWorkerCalendarRowsWithReportDates({
         contractWindowsBySiteId,
-        reportsBySiteId: reportItemsBySiteId,
+        reportsBySiteId: EMPTY_REPORT_ITEMS_BY_SITE_ID,
         rows,
         selectedSiteId,
         sites,
       }),
-    [contractWindowsBySiteId, reportItemsBySiteId, rows, selectedSiteId, sites],
+    [contractWindowsBySiteId, rows, selectedSiteId, sites],
   );
   const cleanupCandidateRows = useMemo(
     () =>
       buildWorkerCalendarRowsWithReportDates({
         contractWindowsBySiteId,
         includeDuplicateReservations: true,
-        reportsBySiteId: reportItemsBySiteId,
+        reportsBySiteId: EMPTY_REPORT_ITEMS_BY_SITE_ID,
         rows,
         selectedSiteId,
         sites,
       }),
-    [contractWindowsBySiteId, reportItemsBySiteId, rows, selectedSiteId, sites],
+    [contractWindowsBySiteId, rows, selectedSiteId, sites],
   );
   const selectedRows = useMemo(
     () =>
@@ -726,7 +735,6 @@ export function WorkerCalendarScreen() {
       try {
         for (const target of cleanupTargets) {
           const cleaned = await updateMySchedule(target.id, {
-            actualVisitDate: '',
             linkedReportKey: '',
             plannedDate: '',
           });
@@ -820,7 +828,6 @@ export function WorkerCalendarScreen() {
     const savedSchedules: SafetyInspectionSchedule[] = [];
     for (const update of plan.scheduleUpdates) {
       const saved = await updateMySchedule(update.scheduleId, {
-        actualVisitDate: update.actualVisitDate,
         linkedReportKey: update.linkedReportKey,
         plannedDate: update.plannedDate,
       });
@@ -987,7 +994,6 @@ export function WorkerCalendarScreen() {
     const shouldPersistLink =
       nextLinkedReportKey &&
       (nextLinkedReportKey !== currentLinkedReportKey ||
-        nextActualVisitDate !== normalizeText(schedule.actualVisitDate) ||
         nextPlannedDate !== normalizeText(schedule.plannedDate));
 
     if (!shouldPersistLink) {
@@ -995,7 +1001,6 @@ export function WorkerCalendarScreen() {
     }
 
     const saved = await updateMySchedule(schedule.id, {
-      actualVisitDate: nextActualVisitDate,
       linkedReportKey: nextLinkedReportKey,
       plannedDate: nextPlannedDate || schedule.plannedDate,
       selectionReasonLabel,

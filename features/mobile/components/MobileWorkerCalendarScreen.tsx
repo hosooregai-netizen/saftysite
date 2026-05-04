@@ -16,10 +16,6 @@ import {
   buildWorkerCalendarRowsWithReportDates,
   findDuplicateUnlinkedScheduleReservations,
 } from '@/features/calendar/components/workerCalendarReportMatching';
-import {
-  buildWorkerCalendarReportIndexSiteIds,
-  shouldUseWorkerCalendarReportItems,
-} from '@/features/calendar/components/workerCalendarLoading';
 import { fetchAllMySchedules, reserveNextMySchedule, updateMySchedule } from '@/lib/calendar/apiClient';
 import { getScheduleDisplayPhase } from '@/lib/calendar/scheduleDisplayPhase';
 import type { SafetyInspectionSchedule } from '@/types/admin';
@@ -51,6 +47,7 @@ interface WorkerDialogSiteOption {
 type CalendarLoadState = 'idle' | 'loading' | 'ready' | 'error';
 
 const DEFAULT_SITE_TOTAL_ROUNDS = 8;
+const EMPTY_REPORT_ITEMS_BY_SITE_ID = new Map<string, InspectionReportListItem[]>();
 
 const EMPTY_DIALOG_STATE: ScheduleDialogState = {
   open: false,
@@ -158,10 +155,9 @@ export function MobileWorkerCalendarScreen() {
   const [dialog, setDialog] = useState<ScheduleDialogState>(EMPTY_DIALOG_STATE);
   const [dialogSubmitting, setDialogSubmitting] = useState(false);
   const calendarLoadRequestIdRef = useRef(0);
+  const inFlightCalendarLoadKeyRef = useRef('');
   const lastCompletedCalendarLoadKeyRef = useRef('');
   const duplicateCleanupKeysRef = useRef(new Set<string>());
-  const [loadedReportIndexSiteIds, setLoadedReportIndexSiteIds] = useState<Set<string>>(() => new Set());
-  const [reportIndexLoadedAfterMs, setReportIndexLoadedAfterMs] = useState(0);
   const [contractWindowsBySiteId, setContractWindowsBySiteId] = useState<
     Record<string, { windowEnd: string; windowStart: string }>
   >({});
@@ -181,15 +177,8 @@ export function MobileWorkerCalendarScreen() {
     updateSession,
   } = useInspectionSessions();
 
-  const siteListKey = useMemo(
-    () => sites.map((site) => site.id).sort().join('|'),
-    [sites],
-  );
-
   const beginCalendarTransition = useCallback(() => {
     setRows([]);
-    setLoadedReportIndexSiteIds(new Set());
-    setReportIndexLoadedAfterMs(0);
     setLoading(true);
     setCalendarLoadState('loading');
   }, []);
@@ -197,37 +186,23 @@ export function MobileWorkerCalendarScreen() {
   const reloadCalendarRows = useCallback(
     async (input?: { month?: string }) => {
       const loadMonth = input?.month ?? month;
-      const loadKey = `${loadMonth}\0${siteListKey}`;
-      const loadStartedAt = Date.now();
+      const loadKey = loadMonth;
       const requestId = ++calendarLoadRequestIdRef.current;
+      inFlightCalendarLoadKeyRef.current = loadKey;
 
       setLoading(true);
       setCalendarLoadState('loading');
       setError(null);
       setRows([]);
-      setLoadedReportIndexSiteIds(new Set());
-      setReportIndexLoadedAfterMs(0);
 
       try {
         const response = await fetchAllMySchedules({ month: loadMonth });
-        const reportSiteIds = buildWorkerCalendarReportIndexSiteIds({
-          rows: response.rows,
-          sites,
-        });
-
-        await Promise.allSettled(
-          reportSiteIds.map((siteId) =>
-            ensureSiteReportIndexLoaded(siteId, { force: true }),
-          ),
-        );
 
         if (calendarLoadRequestIdRef.current !== requestId) {
           return response;
         }
 
         setRows(response.rows);
-        setLoadedReportIndexSiteIds(new Set(reportSiteIds));
-        setReportIndexLoadedAfterMs(loadStartedAt);
         setCalendarLoadState('ready');
         lastCompletedCalendarLoadKeyRef.current = loadKey;
         return response;
@@ -239,61 +214,48 @@ export function MobileWorkerCalendarScreen() {
         throw nextError;
       } finally {
         if (calendarLoadRequestIdRef.current === requestId) {
+          if (inFlightCalendarLoadKeyRef.current === loadKey) {
+            inFlightCalendarLoadKeyRef.current = '';
+          }
           setLoading(false);
         }
       }
     },
-    [ensureSiteReportIndexLoaded, month, siteListKey, sites],
+    [month],
   );
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    const loadKey = `${month}\0${siteListKey}`;
-    if (lastCompletedCalendarLoadKeyRef.current === loadKey) {
+    const loadKey = month;
+    if (
+      lastCompletedCalendarLoadKeyRef.current === loadKey ||
+      inFlightCalendarLoadKeyRef.current === loadKey
+    ) {
       return;
     }
     void reloadCalendarRows().catch(() => undefined);
-  }, [isAuthenticated, month, reloadCalendarRows, siteListKey]);
+  }, [isAuthenticated, month, reloadCalendarRows]);
 
-  const reportItemsBySiteId = useMemo(() => {
-    const nextMap = new Map<string, InspectionReportListItem[]>();
-    sites.forEach((site) => {
-      const reportIndex = getReportIndexBySiteId(site.id);
-      nextMap.set(
-        site.id,
-        shouldUseWorkerCalendarReportItems({
-          readySiteIds: loadedReportIndexSiteIds,
-          fetchedAt: reportIndex?.fetchedAt,
-          loadedAfterMs: reportIndexLoadedAfterMs,
-          siteId: site.id,
-          status: reportIndex?.status,
-        })
-          ? reportIndex?.items ?? []
-          : [],
-      );
-    });
-    return nextMap;
-  }, [getReportIndexBySiteId, loadedReportIndexSiteIds, reportIndexLoadedAfterMs, sites]);
   const calendarRows = useMemo(
     () =>
       buildWorkerCalendarRowsWithReportDates({
         contractWindowsBySiteId,
-        reportsBySiteId: reportItemsBySiteId,
+        reportsBySiteId: EMPTY_REPORT_ITEMS_BY_SITE_ID,
         rows,
         sites,
       }),
-    [contractWindowsBySiteId, reportItemsBySiteId, rows, sites],
+    [contractWindowsBySiteId, rows, sites],
   );
   const cleanupCandidateRows = useMemo(
     () =>
       buildWorkerCalendarRowsWithReportDates({
         contractWindowsBySiteId,
         includeDuplicateReservations: true,
-        reportsBySiteId: reportItemsBySiteId,
+        reportsBySiteId: EMPTY_REPORT_ITEMS_BY_SITE_ID,
         rows,
         sites,
       }),
-    [contractWindowsBySiteId, reportItemsBySiteId, rows, sites],
+    [contractWindowsBySiteId, rows, sites],
   );
   const calendar = useMemo(() => buildCalendarDays(month), [month]);
   const isCalendarLoading = loading || calendarLoadState === 'loading';
@@ -594,7 +556,6 @@ export function MobileWorkerCalendarScreen() {
       try {
         for (const target of cleanupTargets) {
           const cleaned = await updateMySchedule(target.id, {
-            actualVisitDate: '',
             linkedReportKey: '',
             plannedDate: '',
           });
@@ -669,7 +630,6 @@ export function MobileWorkerCalendarScreen() {
     const savedSchedules: SafetyInspectionSchedule[] = [];
     for (const update of plan.scheduleUpdates) {
       const saved = await updateMySchedule(update.scheduleId, {
-        actualVisitDate: update.actualVisitDate,
         linkedReportKey: update.linkedReportKey,
         plannedDate: update.plannedDate,
       });

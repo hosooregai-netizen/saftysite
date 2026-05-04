@@ -473,7 +473,6 @@ export function useSiteReportListState(
     });
 
     const linkedSchedule = await updateMySchedule(assignedSchedule.id, {
-      actualVisitDate: normalizedReportDate,
       linkedReportKey: nextSession.id,
       plannedDate: normalizedReportDate,
     });
@@ -501,7 +500,6 @@ export function useSiteReportListState(
 
     for (const update of syncPlan.scheduleUpdates) {
       await updateMySchedule(update.scheduleId, {
-        actualVisitDate: update.actualVisitDate,
         linkedReportKey: update.linkedReportKey,
         plannedDate: update.plannedDate,
       });

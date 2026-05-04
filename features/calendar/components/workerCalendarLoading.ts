@@ -32,7 +32,7 @@ export function buildWorkerCalendarReportIndexSiteIds(input: {
 }) {
   const selectedSiteId = normalizeText(input.selectedSiteId);
   if (selectedSiteId) {
-    return input.sites.some((site) => site.id === selectedSiteId) ? [selectedSiteId] : [];
+    return [selectedSiteId];
   }
 
   const knownSiteIds = new Set(input.sites.map((site) => site.id));
@@ -41,7 +41,7 @@ export function buildWorkerCalendarReportIndexSiteIds(input: {
 
   input.rows.forEach((row) => {
     const siteId = normalizeText(row.siteId);
-    if (!knownSiteIds.has(siteId)) return;
+    if (knownSiteIds.size > 0 && !knownSiteIds.has(siteId)) return;
     pushUnique(siteIds, seen, siteId);
   });
 

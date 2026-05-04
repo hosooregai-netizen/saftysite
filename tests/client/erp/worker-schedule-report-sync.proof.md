@@ -13,3 +13,6 @@
 - State color contract: worker calendar chips use the shared admin schedule display phase helper, so draft-only links render as in-progress and only submitted/published report fallback rows become completed.
 - Mobile stale-link repair: mobile schedule save now verifies a schedule's `linkedReportKey` against the fresh report index/session payload before trusting it, and creates a replacement draft when the stored link points at no report.
 - Dialog error placement: worker schedule save/register/edit validation messages are rendered at the bottom of the active schedule modal instead of the page-level error slot, while calendar load and background cleanup errors remain page-scoped.
+- Patch contract: worker schedule PATCH clients no longer send `actual_visit_date`; the server-owned completion projection remains driven by submitted/published reports.
+- Loading contract: duplicate worker schedule GETs are deduped while in flight, and desktop/mobile calendars render from fresh DB schedule rows before background report-index refresh work.
+- Performance observation: live QA against `http://127.0.0.1:3100` observed one `/api/me/schedules` call per worker calendar load, with first visible schedule rows at about 1.6s to 1.8s on desktop/mobile.

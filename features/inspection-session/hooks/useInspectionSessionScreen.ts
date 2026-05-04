@@ -593,7 +593,6 @@ export function useInspectionSessionScreen(sessionId: string) {
 
     for (const update of plan.scheduleUpdates) {
       await updateMySchedule(update.scheduleId, {
-        actualVisitDate: update.actualVisitDate,
         linkedReportKey: update.linkedReportKey,
         plannedDate: update.plannedDate,
       });
