@@ -237,11 +237,14 @@ function buildQuarterlySummary(
   const quarterKey = formatQuarterKey(today);
   const quarterLabel = formatQuarterLabel(today);
   const materialCountsBySite = buildQuarterlyMaterialCountsBySite(materialSourceReports, quarterKey);
+  const quarterlyMaterialScopeSites = activeSites.filter((site) =>
+    isPriorityQuarterlySiteScope({ site, today }),
+  );
   const materialBucketCounts = { both_missing: 0, complete: 0, education_missing: 0, measurement_missing: 0 };
   let educationReadyCount = 0;
   let measurementReadyCount = 0;
 
-  const missingSiteRows = activeSites.flatMap((site) => {
+  const missingSiteRows = quarterlyMaterialScopeSites.flatMap((site) => {
     const reportMaterialCounts = materialCountsBySite.get(site.id);
     const materialRecord = reportMaterialCounts == null ? getSiteQuarterlyMaterialRecord(site, quarterKey) : null;
     const educationFilledCount =
@@ -290,12 +293,12 @@ function buildQuarterlySummary(
 
   return {
     coverageRows: [
-      { itemCount: educationReadyCount, label: '교육자료', missingSiteCount: Math.max(0, activeSites.length - educationReadyCount) },
-      { itemCount: measurementReadyCount, label: '계측자료', missingSiteCount: Math.max(0, activeSites.length - measurementReadyCount) },
+      { itemCount: educationReadyCount, label: '교육자료', missingSiteCount: Math.max(0, quarterlyMaterialScopeSites.length - educationReadyCount) },
+      { itemCount: measurementReadyCount, label: '계측자료', missingSiteCount: Math.max(0, quarterlyMaterialScopeSites.length - measurementReadyCount) },
       {
-        itemCount: activeSites.length - activeSites.filter((site) => !hasSiteContractProfile(parseSiteContractProfile(site))).length,
+        itemCount: quarterlyMaterialScopeSites.length - quarterlyMaterialScopeSites.filter((site) => !hasSiteContractProfile(parseSiteContractProfile(site))).length,
         label: '계약정보',
-        missingSiteCount: activeSites.filter((site) => !hasSiteContractProfile(parseSiteContractProfile(site))).length,
+        missingSiteCount: quarterlyMaterialScopeSites.filter((site) => !hasSiteContractProfile(parseSiteContractProfile(site))).length,
       },
     ],
     metricMeta: `${quarterLabel} 교육/계측 각 4건 기준`,
@@ -310,7 +313,7 @@ function buildQuarterlySummary(
       missingSiteRows,
       quarterKey,
       quarterLabel,
-      totalSiteCount: activeSites.length,
+      totalSiteCount: quarterlyMaterialScopeSites.length,
     },
   };
 }
