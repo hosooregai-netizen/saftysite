@@ -25,13 +25,25 @@ import {
   type InspectionTemplateVariant,
 } from '@/lib/documents/inspection/templateVariant';
 
-export interface QuarterlyMergedTemplatePrototype {
+export interface QuarterlyMergedTemplateAppendixPrototype {
   appendixPrototypeXml: string;
   binaryItemIds: string[];
-  buffer: Buffer;
-  filename: string;
   imagePlaceholders: QuarterlyMergedTemplateImagePlaceholder[];
   variant: InspectionTemplateVariant;
+}
+
+export interface QuarterlyMergedTemplatePrototype
+  extends QuarterlyMergedTemplateAppendixPrototype {
+  buffer: Buffer;
+  filename: string;
+}
+
+export interface QuarterlyMergedTemplatePrototypeBundle {
+  appendixPrototypeXml: string;
+  buffer: Buffer;
+  filename: string;
+  prototypes: Partial<Record<InspectionTemplateVariant, QuarterlyMergedTemplateAppendixPrototype>>;
+  variants: InspectionTemplateVariant[];
 }
 
 export interface QuarterlyMergedTemplateImagePlaceholder
@@ -51,6 +63,10 @@ const OUTPUT_FILENAME_BY_VARIANT: Record<InspectionTemplateVariant, string> = {
   v10: 'quarterly-merged-template.v10.hwpx',
   'v10-1': 'quarterly-merged-template.v10-1.hwpx',
 };
+export const QUARTERLY_MERGED_TEMPLATE_VARIANTS: readonly InspectionTemplateVariant[] = [
+  'v10',
+  'v10-1',
+];
 const APPENDIX_REPEAT_PATH = 'appendices';
 const BLANK_PNG_BASE64 =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5cH7QAAAAASUVORK5CYII=';
@@ -401,28 +417,31 @@ async function loadTemplateParts(buffer: Buffer) {
   return { contentEntry, contentHpf, headerEntry, headerXml, sectionEntry, sectionXml, zip };
 }
 
-export async function buildQuarterlyMergedTemplatePrototype(
-  variant: InspectionTemplateVariant,
-): Promise<QuarterlyMergedTemplatePrototype> {
-  const [quarterlyBuffer, inspectionBuffer] = await Promise.all([
-    fs.readFile(QUARTERLY_TEMPLATE_PATH),
-    fs.readFile(inspectionTemplatePath(variant)),
-  ]);
-  const quarterlyTemplate = await loadTemplateParts(quarterlyBuffer);
+async function buildAppendixPrototypeForVariant(args: {
+  contentHpf: string;
+  destinationHeaderXml: string;
+  quarterlyZip: JSZip;
+  variant: InspectionTemplateVariant;
+}): Promise<{
+  contentHpf: string;
+  headerXml: string;
+  prototype: QuarterlyMergedTemplateAppendixPrototype;
+}> {
+  const inspectionBuffer = await fs.readFile(inspectionTemplatePath(args.variant));
   const inspectionTemplate = await loadTemplateParts(inspectionBuffer);
   const normalizedInspectionSectionXml = normalizeInspectionFloatingTableGapPages(
     inspectionTemplate.sectionXml,
   );
 
-  let contentHpf = quarterlyTemplate.contentHpf;
+  let contentHpf = args.contentHpf;
   const mergedHeader = mergeHeaderDefinitions(
-    quarterlyTemplate.headerXml,
+    args.destinationHeaderXml,
     inspectionTemplate.headerXml,
   );
   const appendixSectionXml = extractInspectionAppendixSection(normalizedInspectionSectionXml);
-  const appendixToken = `appendix-prototype-${variant}`;
+  const appendixToken = `appendix-prototype-${args.variant}`;
   const appendixManifestItems = parseManifestItems(inspectionTemplate.contentHpf);
-  const templateImagePlaceholders = getTemplateImagePlaceholders(variant);
+  const templateImagePlaceholders = getTemplateImagePlaceholders(args.variant);
   const referencedBinaryIds = new Set(
     Array.from(appendixSectionXml.matchAll(/\bbinaryItemIDRef="([^"]+)"/g), (match) => match[1]),
   );
@@ -442,7 +461,7 @@ export async function buildQuarterlyMergedTemplatePrototype(
     const nextHref = buildUniqueManifestHref(contentHpf, preferredHref);
 
     binaryIdMap.set(item.id, nextId);
-    quarterlyTemplate.zip.file(
+    args.quarterlyZip.file(
       nextHref,
       sourceEntry ? await sourceEntry.async('uint8array') : BLANK_PNG_ASSET.buffer,
       {
@@ -514,19 +533,74 @@ export async function buildQuarterlyMergedTemplatePrototype(
       ),
     ),
   );
+
+  return {
+    contentHpf,
+    headerXml: mergedHeader.headerXml,
+    prototype: {
+      appendixPrototypeXml: appendixBodyFragment,
+      binaryItemIds: Array.from(binaryIdMap.values()),
+      imagePlaceholders,
+      variant: args.variant,
+    },
+  };
+}
+
+export async function buildQuarterlyMergedTemplatePrototypeBundle(
+  variants: readonly InspectionTemplateVariant[] = QUARTERLY_MERGED_TEMPLATE_VARIANTS,
+  holderVariant: InspectionTemplateVariant = variants[0] ?? 'v10',
+): Promise<QuarterlyMergedTemplatePrototypeBundle> {
+  const uniqueVariants = Array.from(new Set(variants)) as InspectionTemplateVariant[];
+  if (uniqueVariants.length === 0) {
+    throw new Error('Quarterly merged template prototype failed: at least one variant is required.');
+  }
+  if (!uniqueVariants.includes(holderVariant)) {
+    throw new Error(
+      `Quarterly merged template prototype failed: holder variant "${holderVariant}" is not included.`,
+    );
+  }
+
+  const quarterlyBuffer = await fs.readFile(QUARTERLY_TEMPLATE_PATH);
+  const quarterlyTemplate = await loadTemplateParts(quarterlyBuffer);
+  let contentHpf = quarterlyTemplate.contentHpf;
+  let headerXml = quarterlyTemplate.headerXml;
+  const prototypes: Partial<Record<InspectionTemplateVariant, QuarterlyMergedTemplateAppendixPrototype>> = {};
+
+  for (const variant of uniqueVariants) {
+    const built = await buildAppendixPrototypeForVariant({
+      contentHpf,
+      destinationHeaderXml: headerXml,
+      quarterlyZip: quarterlyTemplate.zip,
+      variant,
+    });
+    contentHpf = built.contentHpf;
+    headerXml = built.headerXml;
+    prototypes[variant] = built.prototype;
+  }
+
+  const holderPrototype = prototypes[holderVariant];
+  if (!holderPrototype) {
+    throw new Error(
+      `Quarterly merged template prototype failed: missing holder prototype "${holderVariant}".`,
+    );
+  }
   const mergedSectionXml = appendFragmentToQuarterlySection(
     quarterlyTemplate.sectionXml,
-    appendixBodyFragment,
+    holderPrototype.appendixPrototypeXml,
   );
   const quarterlySectionCloseIndex = quarterlyTemplate.sectionXml.lastIndexOf('</hs:sec>');
   const normalizedAppendixPrototypeXml = mergedSectionXml.slice(
     quarterlySectionCloseIndex,
     mergedSectionXml.length - '</hs:sec>'.length,
   );
+  prototypes[holderVariant] = {
+    ...holderPrototype,
+    appendixPrototypeXml: normalizedAppendixPrototypeXml,
+  };
 
   quarterlyTemplate.zip.file(
     'Contents/header.xml',
-    mergedHeader.headerXml,
+    headerXml,
     {
       compression: 'DEFLATE',
       createFolders: false,
@@ -563,13 +637,30 @@ export async function buildQuarterlyMergedTemplatePrototype(
 
   return {
     appendixPrototypeXml: normalizedAppendixPrototypeXml,
-    binaryItemIds: Array.from(binaryIdMap.values()),
     buffer: await quarterlyTemplate.zip.generateAsync({
       type: 'nodebuffer',
       compression: 'DEFLATE',
     }),
+    filename: OUTPUT_FILENAME_BY_VARIANT[holderVariant],
+    prototypes,
+    variants: uniqueVariants,
+  };
+}
+
+export async function buildQuarterlyMergedTemplatePrototype(
+  variant: InspectionTemplateVariant,
+): Promise<QuarterlyMergedTemplatePrototype> {
+  const bundle = await buildQuarterlyMergedTemplatePrototypeBundle([variant], variant);
+  const prototype = bundle.prototypes[variant];
+  if (!prototype) {
+    throw new Error(
+      `Quarterly merged template prototype failed: missing prototype "${variant}".`,
+    );
+  }
+
+  return {
+    ...prototype,
+    buffer: bundle.buffer,
     filename: OUTPUT_FILENAME_BY_VARIANT[variant],
-    imagePlaceholders,
-    variant,
   };
 }

@@ -398,6 +398,56 @@ test('buildQuarterlyHwpxDocument renders v10-1 appendix content into the merged 
   assert.doesNotMatch(appendixSlice, /www\.safetysite\.co\.kr/);
 });
 
+test('buildQuarterlyHwpxDocument renders mixed v10 and v10-1 appendices per selected session', async () => {
+  const fixture = buildQuarterlyFixture();
+  const noAccidentSession = fixture.sessions[0];
+  const accidentSession = fixture.sessions[1];
+
+  noAccidentSession.document10Measurements = [
+    {
+      actionTaken: '',
+      id: 'measurement-no-accident',
+      instrumentType: 'normal-measure-marker',
+      measuredValue: '',
+      measurementLocation: '',
+      photoUrl: '',
+      safetyCriteria: '',
+    },
+  ];
+  accidentSession.document2Overview.accidentOccurred = 'yes';
+  accidentSession.document2Overview.accidentPhotoUrl = '';
+  accidentSession.document2Overview.accidentPhotoUrl2 = '';
+  accidentSession.document10Measurements = [
+    {
+      actionTaken: '',
+      id: 'measurement-accident',
+      instrumentType: 'accident-measure-marker',
+      measuredValue: '',
+      measurementLocation: '',
+      photoUrl: '',
+      safetyCriteria: '',
+    },
+  ];
+
+  const zip = await loadGeneratedZip(fixture, {
+    selectedSessions: [noAccidentSession, accidentSession],
+    siteSessions: fixture.sessions,
+  });
+  const contentHpf = await zip.file('Contents/content.hpf')?.async('string');
+  const sectionXml = await zip.file('Contents/section0.xml')?.async('string');
+
+  assert.ok(contentHpf);
+  assert.ok(sectionXml);
+  assert.doesNotMatch(contentHpf, /href="Contents\/section1\.xml"/);
+  assert.match(sectionXml, /normal-measure-marker/);
+  assert.match(sectionXml, /accident-measure-marker/);
+
+  const noAccidentSlice = extractAppendixSlice(sectionXml, 'normal-measure-marker');
+  const accidentSlice = extractAppendixSlice(sectionXml, 'accident-measure-marker');
+  assert.doesNotMatch(noAccidentSlice, /산업재해 추적관리/);
+  assert.match(accidentSlice, /산업재해 추적관리/);
+});
+
 test('buildQuarterlyHwpxDocument keeps merged appendix table ids unique', async () => {
   const fixture = buildQuarterlyFixture();
   fixture.sessions[0].document4FollowUps = Array.from({ length: 4 }, (_, index) => ({

@@ -8,9 +8,12 @@ import {
   buildQuarterlyTitleForPeriod,
   normalizeQuarterlyReportPeriod,
 } from '@/lib/erpReports/shared';
-import { selectInspectionTemplateVariant } from '@/lib/documents/inspection/templateVariant';
+import {
+  selectInspectionTemplateVariant,
+  type InspectionTemplateVariant,
+} from '@/lib/documents/inspection/templateVariant';
 import { appendInspectionAppendixSections } from '@/server/documents/quarterly/inspectionAppendixMerge';
-import { buildQuarterlyMergedTemplatePrototype } from '@/server/documents/quarterly/mergedTemplatePrototype';
+import { buildQuarterlyMergedTemplatePrototypeBundle } from '@/server/documents/quarterly/mergedTemplatePrototype';
 import { renderAppendicesIntoMergedQuarterlySection } from '@/server/documents/quarterly/mergedTemplateRuntime';
 import { renderChartSvgTextPath } from '@/server/documents/shared/chartSvgText';
 import type { QuarterlyCounter, QuarterlySummaryReport } from '@/types/erpReports';
@@ -96,16 +99,12 @@ const IMAGE_EXTENSION_TO_MEDIA_TYPE: Record<string, string> = {
 };
 const HWPX_SAFE_IMAGE_EXTENSIONS = new Set(['bmp', 'gif', 'jpg', 'jpeg', 'png']);
 
-function selectQuarterlyMergedTemplateVariant(selectedSessions: InspectionSession[]) {
-  if (selectedSessions.length === 0) {
-    return null;
-  }
-
-  return selectedSessions.some(
-    (session) => selectInspectionTemplateVariant(session) === 'v10-1',
-  )
-    ? 'v10-1'
-    : 'v10';
+function selectQuarterlyMergedTemplateVariants(
+  selectedSessions: InspectionSession[],
+): InspectionTemplateVariant[] {
+  return Array.from(
+    new Set(selectedSessions.map((session) => selectInspectionTemplateVariant(session))),
+  );
 }
 
 function sanitizeDocumentFileName(value: string | null | undefined, fallback: string) {
@@ -1204,12 +1203,18 @@ async function tryBuildQuarterlyMergedHwpxDocument(
   options?: QuarterlyHwpxBuildOptions,
 ): Promise<GeneratedHwpxDocument | null> {
   const selectedSessions = options?.selectedSessions ?? [];
-  const mergedTemplateVariant = selectQuarterlyMergedTemplateVariant(selectedSessions);
-  if (!mergedTemplateVariant || selectedSessions.length === 0) {
+  const mergedTemplateVariants = selectQuarterlyMergedTemplateVariants(selectedSessions);
+  if (mergedTemplateVariants.length === 0) {
     return null;
   }
 
-  const prototype = await buildQuarterlyMergedTemplatePrototype(mergedTemplateVariant);
+  const holderVariant: InspectionTemplateVariant = mergedTemplateVariants.includes('v10')
+    ? 'v10'
+    : mergedTemplateVariants[0]!;
+  const prototype = await buildQuarterlyMergedTemplatePrototypeBundle(
+    mergedTemplateVariants,
+    holderVariant,
+  );
   const zip = await JSZip.loadAsync(prototype.buffer);
   const sectionXmlFile = zip.file('Contents/section0.xml');
   const contentHpfFile = zip.file('Contents/content.hpf');
@@ -1276,9 +1281,9 @@ async function tryBuildQuarterlyMergedHwpxDocument(
   );
   const renderedAppendices = await renderAppendicesIntoMergedQuarterlySection({
     appendixPrototypeXml: prototype.appendixPrototypeXml,
+    appendixPrototypes: prototype.prototypes,
     assetBaseUrl: options?.assetBaseUrl,
     contentHpf,
-    imagePlaceholders: prototype.imagePlaceholders,
     sectionXml: updatedSectionXml,
     selectedSessions,
     zip,

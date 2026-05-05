@@ -3,7 +3,10 @@ import assert from 'node:assert/strict';
 
 import JSZip from 'jszip';
 
-import { buildQuarterlyMergedTemplatePrototype } from './mergedTemplatePrototype';
+import {
+  buildQuarterlyMergedTemplatePrototype,
+  buildQuarterlyMergedTemplatePrototypeBundle,
+} from './mergedTemplatePrototype';
 
 function collectManifestIds(contentHpf: string) {
   return new Set(
@@ -59,6 +62,9 @@ test('buildQuarterlyMergedTemplatePrototype builds a single-section merged templ
   assert.match(sectionXml, /\{appendices\[0\]\.sec1\.site_name\}/);
   assert.match(sectionXml, /\{#appendices\[0\]\.sec7\.findings\}/);
   assert.match(document.appendixPrototypeXml, /pageBreak="1"/);
+  assert.doesNotMatch(sectionXml, /www\.safetysite\.co\.kr/);
+  assert.doesNotMatch(sectionXml, /070-4106-6051|02-2299-1996/);
+  assert.match(sectionXml, /02-454-4541/);
   assert.equal(
     countBlankParagraphsBetweenTablesByText(
       document.appendixPrototypeXml,
@@ -110,6 +116,9 @@ test('buildQuarterlyMergedTemplatePrototype also supports v10-1 inspection varia
   assert.equal(document.filename, 'quarterly-merged-template.v10-1.hwpx');
   assert.ok(document.imagePlaceholders.length > 0);
   assert.ok(sectionXml);
+  assert.doesNotMatch(sectionXml, /www\.safetysite\.co\.kr/);
+  assert.doesNotMatch(sectionXml, /070-4106-6051|02-2299-1996/);
+  assert.match(sectionXml, /02-454-4541/);
   assert.match(sectionXml, /\{appendices\[0\]\.sec2\.guidance_date\}/);
   assert.match(sectionXml, /\{#appendices\[0\]\.sec8\.plans\}/);
   assert.equal(
@@ -139,4 +148,24 @@ test('buildQuarterlyMergedTemplatePrototype also supports v10-1 inspection varia
   assert.doesNotMatch(document.appendixPrototypeXml, /hidePageNum="1"/);
   assert.doesNotMatch(document.appendixPrototypeXml, /www\.safetysite\.co\.kr/);
   assert.doesNotMatch(document.appendixPrototypeXml, /070-4106-6051/);
+});
+
+test('buildQuarterlyMergedTemplatePrototypeBundle prepares v10 and v10-1 appendices in one quarterly v10 package', async () => {
+  const document = await buildQuarterlyMergedTemplatePrototypeBundle(['v10', 'v10-1'], 'v10');
+  const zip = await JSZip.loadAsync(document.buffer);
+  const sectionXml = await zip.file('Contents/section0.xml')?.async('string');
+
+  assert.equal(document.filename, 'quarterly-merged-template.v10.hwpx');
+  assert.ok(sectionXml);
+  assert.ok(document.prototypes.v10);
+  assert.ok(document.prototypes['v10-1']);
+  assert.match(document.prototypes.v10.appendixPrototypeXml, /\{#appendices\}/);
+  assert.doesNotMatch(document.prototypes.v10.appendixPrototypeXml, /sec10\.accident_tracking/);
+  assert.match(
+    document.prototypes['v10-1'].appendixPrototypeXml,
+    /sec10\.accident_tracking/,
+  );
+  assert.match(sectionXml, /\{appendices\[0\]\.sec2\.guidance_date\}/);
+  assert.doesNotMatch(sectionXml, /www\.safetysite\.co\.kr/);
+  assert.doesNotMatch(sectionXml, /070-4106-6051|02-2299-1996/);
 });
