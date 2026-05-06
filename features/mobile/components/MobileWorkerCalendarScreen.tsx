@@ -12,10 +12,7 @@ import {
   buildScheduleReportSyncPlan,
   resolveContractWindow,
 } from '@/features/schedule-report-sync/scheduleReportSync';
-import {
-  buildWorkerCalendarRowsWithReportDates,
-  findDuplicateUnlinkedScheduleReservations,
-} from '@/features/calendar/components/workerCalendarReportMatching';
+import { buildWorkerCalendarRowsWithReportDates } from '@/features/calendar/components/workerCalendarReportMatching';
 import { fetchAllMySchedules, reserveNextMySchedule, updateMySchedule } from '@/lib/calendar/apiClient';
 import { getScheduleDisplayPhase } from '@/lib/calendar/scheduleDisplayPhase';
 import type { SafetyInspectionSchedule } from '@/types/admin';
@@ -157,7 +154,6 @@ export function MobileWorkerCalendarScreen() {
   const calendarLoadRequestIdRef = useRef(0);
   const inFlightCalendarLoadKeyRef = useRef('');
   const lastCompletedCalendarLoadKeyRef = useRef('');
-  const duplicateCleanupKeysRef = useRef(new Set<string>());
   const [contractWindowsBySiteId, setContractWindowsBySiteId] = useState<
     Record<string, { windowEnd: string; windowStart: string }>
   >({});
@@ -240,17 +236,6 @@ export function MobileWorkerCalendarScreen() {
     () =>
       buildWorkerCalendarRowsWithReportDates({
         contractWindowsBySiteId,
-        reportsBySiteId: EMPTY_REPORT_ITEMS_BY_SITE_ID,
-        rows,
-        sites,
-      }),
-    [contractWindowsBySiteId, rows, sites],
-  );
-  const cleanupCandidateRows = useMemo(
-    () =>
-      buildWorkerCalendarRowsWithReportDates({
-        contractWindowsBySiteId,
-        includeDuplicateReservations: true,
         reportsBySiteId: EMPTY_REPORT_ITEMS_BY_SITE_ID,
         rows,
         sites,
@@ -533,67 +518,6 @@ export function MobileWorkerCalendarScreen() {
       return [...nextRows, ...schedules];
     });
   }, []);
-
-  useEffect(() => {
-    if (!isAuthenticated || loading) return;
-    const persistedIds = new Set(rows.map((row) => row.id));
-    const cleanupTargets = findDuplicateUnlinkedScheduleReservations(cleanupCandidateRows)
-      .filter((row) => persistedIds.has(row.id))
-      .filter((row) => {
-        const key = `${row.id}::${row.plannedDate}::${row.roundNo}`;
-        if (duplicateCleanupKeysRef.current.has(key)) {
-          return false;
-        }
-        duplicateCleanupKeysRef.current.add(key);
-        return true;
-      });
-
-    if (cleanupTargets.length === 0) return;
-
-    let cancelled = false;
-    void (async () => {
-      const cleanedRows: SafetyInspectionSchedule[] = [];
-      try {
-        for (const target of cleanupTargets) {
-          const cleaned = await updateMySchedule(target.id, {
-            linkedReportKey: '',
-            plannedDate: '',
-          });
-          cleanedRows.push({
-            ...cleaned,
-            actualVisitDate: cleaned.actualVisitDate || '',
-            linkedReportKey: cleaned.linkedReportKey || '',
-            plannedDate: cleaned.plannedDate || '',
-            windowEnd: cleaned.windowEnd || target.windowEnd,
-            windowStart: cleaned.windowStart || target.windowStart,
-          });
-        }
-        if (cancelled) return;
-        upsertScheduleRows(cleanedRows);
-        const firstTarget = cleanupTargets[0];
-        setNotice(
-          cleanupTargets.length > 1
-            ? `${firstTarget.siteName} 중복 방문 일정 ${cleanupTargets.length}건을 정리했습니다.`
-            : `${firstTarget.siteName} ${firstTarget.roundNo}회차 중복 방문 일정을 정리했습니다.`,
-        );
-      } catch (nextError) {
-        cleanupTargets.forEach((row) => {
-          duplicateCleanupKeysRef.current.delete(`${row.id}::${row.plannedDate}::${row.roundNo}`);
-        });
-        if (!cancelled) {
-          setError(
-            nextError instanceof Error
-              ? nextError.message
-              : '중복 방문 일정을 정리하지 못했습니다.',
-          );
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [cleanupCandidateRows, isAuthenticated, loading, rows, upsertScheduleRows]);
 
   const persistScheduleReportSync = async (changedSchedule: SafetyInspectionSchedule) => {
     const scheduleResponse = await fetchAllMySchedules({

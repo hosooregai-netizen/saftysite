@@ -7,7 +7,6 @@ import type { InspectionReportListItem } from '@/types/inspectionSession';
 import {
   buildWorkerCalendarReportLookup,
   buildWorkerCalendarRowsWithReportDates,
-  findDuplicateUnlinkedScheduleReservations,
   mergeWorkerCalendarReportItems,
   resolveWorkerCalendarReportForSchedule,
 } from './workerCalendarReportMatching';
@@ -266,27 +265,27 @@ test('worker calendar rows keep DB schedule dates when report cache has a differ
   assert.equal(rows[0]?.linkedReportKey, '');
 });
 
-test('duplicate reservation finder only targets blank unlinked planned rows', () => {
-  const duplicate = buildSchedule({ id: 'schedule-10', plannedDate: '2026-04-24', roundNo: 10 });
-  const duplicates = findDuplicateUnlinkedScheduleReservations([
-    buildSchedule({
-      actualVisitDate: '2026-04-24',
-      id: 'schedule-5',
-      linkedReportKey: 'report-5',
-      plannedDate: '2026-04-24',
-      roundNo: 5,
-    }),
-    duplicate,
-    buildSchedule({
-      id: 'schedule-9',
-      plannedDate: '2026-04-24',
-      roundNo: 9,
-      selectionReasonMemo: 'manual extra visit',
-    }),
-  ]);
+test('worker calendar rows keep same-date later rounds even when an earlier round has a report link', () => {
+  const rows = buildWorkerCalendarRowsWithReportDates({
+    reportsBySiteId: new Map(),
+    rows: [
+      buildSchedule({
+        id: 'schedule-7',
+        linkedReportKey: 'report-7',
+        plannedDate: '2026-04-30',
+        roundNo: 7,
+      }),
+      buildSchedule({
+        id: 'schedule-8',
+        plannedDate: '2026-04-30',
+        roundNo: 8,
+      }),
+    ],
+    sites: [{ id: 'site-1', siteName: 'Site 1', totalRounds: 10 }],
+  });
 
   assert.deepEqual(
-    duplicates.map((row) => row.id),
-    ['schedule-10'],
+    rows.map((row) => row.id),
+    ['schedule-7', 'schedule-8'],
   );
 });
