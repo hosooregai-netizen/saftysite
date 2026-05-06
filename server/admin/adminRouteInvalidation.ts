@@ -27,6 +27,7 @@ export function resolveAdminRouteInvalidationTargets(
     root === 'reports' ||
     root === 'assignments' ||
     root === 'headquarters' ||
+    root === 'schedules' ||
     root === 'sites' ||
     root === 'users';
 

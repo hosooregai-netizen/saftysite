@@ -10,6 +10,7 @@ import {
   buildDispatchManagementRows,
   compareDispatchManagementUnsentRows,
   isCurrentSiteManagementWindow,
+  isDispatchManagementUnsentRow,
   isPriorityQuarterlyManagementRowScope,
   isPriorityQuarterlySiteScope,
   isSiteInCurrentQuarterWindow,
@@ -307,6 +308,25 @@ test('priority quarterly row scope follows the current quarter key from upstream
     isPriorityQuarterlyManagementRowScope(
       buildPriorityRow({ currentQuarterKey: '2026-Q1' }),
       today,
+    ),
+    false,
+  );
+});
+
+test('dispatch management unsent rows keep D+15 and drop invalid, sent, and D+16 rows', () => {
+  assert.equal(isDispatchManagementUnsentRow(buildUnsentRow({ unsentDays: -1 })), false);
+  assert.equal(isDispatchManagementUnsentRow(buildUnsentRow({ unsentDays: 15 })), true);
+  assert.equal(isDispatchManagementUnsentRow(buildUnsentRow({ unsentDays: 16 })), false);
+  assert.equal(
+    isDispatchManagementUnsentRow(buildUnsentRow({ dispatchStatus: 'sent', unsentDays: 5 })),
+    false,
+  );
+  assert.equal(
+    isDispatchManagementUnsentRow(
+      buildUnsentRow({
+        dispatchStatus: 'manual_checked' as SafetyAdminUnsentReportRow['dispatchStatus'],
+        unsentDays: 5,
+      }),
     ),
     false,
   );

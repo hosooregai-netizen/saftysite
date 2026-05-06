@@ -352,6 +352,39 @@ test('does not restore long-overdue unsent rows through upstream fallback', () =
   assert.match(restored.metricCards[5]?.value ?? '', /^0/);
 });
 
+test('restores D+15 upstream unsent rows through upstream fallback', () => {
+  const mappedOverview = buildMappedOverview();
+  const backendOverview = buildBackendOverview();
+  backendOverview.unsent_report_rows = [
+    {
+      assignee_name: 'Owner',
+      deadline_date: '2026-03-26',
+      dispatch_status: 'overdue',
+      headquarter_name: 'HQ',
+      href: '/reports/r-d15',
+      mail_missing_reason: '',
+      mail_ready: true,
+      recipient_email: 'owner@example.com',
+      recipient_name: 'Owner',
+      reference_date: '2026-03-26',
+      report_key: 'r-d15',
+      report_title: 'D15 report',
+      report_type_label: 'Technical guidance',
+      site_id: 's1',
+      site_name: 'Site 1',
+      unsent_days: 15,
+      visit_date: '2026-03-26',
+    },
+  ];
+
+  const restored = applyOverviewUpstreamFallbacks(backendOverview, mappedOverview);
+
+  assert.equal(restored.unsentReportRows.length, 1);
+  assert.equal(restored.unsentReportRows[0]?.reportKey, 'r-d15');
+  assert.equal(restored.deadlineSignalSummary.totalReportCount, 1);
+  assert.match(restored.metricCards[5]?.value ?? '', /^1/);
+});
+
 test('restores upstream unsent rows in dispatch priority order', () => {
   const mappedOverview = buildMappedOverview();
   const backendOverview = buildBackendOverview();
