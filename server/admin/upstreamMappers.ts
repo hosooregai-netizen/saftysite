@@ -480,6 +480,82 @@ function syncDispatchSummaryRows(
   );
 }
 
+function countQuarterlyMaterialRows(
+  rows: SafetyAdminOverviewResponse['quarterlyMaterialSummary']['missingSiteRows'],
+) {
+  const counts = {
+    both_missing: 0,
+    complete: 0,
+    education_missing: 0,
+    measurement_missing: 0,
+  };
+
+  rows.forEach((row) => {
+    const hasEducationMissing = row.education.missingCount > 0;
+    const hasMeasurementMissing = row.measurement.missingCount > 0;
+    if (hasEducationMissing && hasMeasurementMissing) counts.both_missing += 1;
+    else if (hasEducationMissing) counts.education_missing += 1;
+    else if (hasMeasurementMissing) counts.measurement_missing += 1;
+  });
+
+  return counts;
+}
+
+function normalizeQuarterlyMaterialSummaryScope(
+  summary: SafetyAdminOverviewResponse['quarterlyMaterialSummary'],
+  priorityRows: SafetyAdminPriorityQuarterlyManagementRow[],
+): SafetyAdminOverviewResponse['quarterlyMaterialSummary'] {
+  if (priorityRows.length === 0) return summary;
+
+  const prioritySiteIds = new Set(priorityRows.map((row) => row.siteId).filter(Boolean));
+  const priorityQuarterKeys = new Set(priorityRows.map((row) => row.currentQuarterKey).filter(Boolean));
+  const scopedRows = summary.missingSiteRows.filter((row) => {
+    const matchesSite = prioritySiteIds.size === 0 || prioritySiteIds.has(row.siteId);
+    const matchesQuarter =
+      priorityQuarterKeys.size === 0 ||
+      !row.quarterKey ||
+      priorityQuarterKeys.has(row.quarterKey);
+    return matchesSite && matchesQuarter;
+  });
+  const totalSiteCount = priorityRows.length;
+  const rowCounts = countQuarterlyMaterialRows(scopedRows);
+  const completeCount = Math.max(0, totalSiteCount - scopedRows.length);
+  const nextCounts: Record<string, number> = {
+    both_missing: rowCounts.both_missing,
+    complete: completeCount,
+    education_missing: rowCounts.education_missing,
+    measurement_missing: rowCounts.measurement_missing,
+  };
+  const hasStaleScope =
+    summary.totalSiteCount !== totalSiteCount ||
+    scopedRows.length !== summary.missingSiteRows.length ||
+    summary.entries.some((entry) => nextCounts[entry.key] != null && entry.count !== nextCounts[entry.key]);
+
+  if (!hasStaleScope) return summary;
+
+  const templateByKey = new Map(summary.entries.map((entry) => [entry.key, entry]));
+  const orderedKeys = ['complete', 'education_missing', 'measurement_missing', 'both_missing'];
+  const entries = orderedKeys.map((key) => {
+    const template = templateByKey.get(key);
+    return {
+      count: nextCounts[key] ?? 0,
+      href: template?.href || '',
+      key,
+      label: template?.label || key,
+    };
+  });
+  const firstPriorityRow = priorityRows[0];
+
+  return {
+    ...summary,
+    entries,
+    missingSiteRows: scopedRows,
+    quarterKey: summary.quarterKey || firstPriorityRow?.currentQuarterKey || '',
+    quarterLabel: summary.quarterLabel || firstPriorityRow?.currentQuarterLabel || '',
+    totalSiteCount,
+  };
+}
+
 export function mapBackendOverviewResponse(
   response: SafetyBackendAdminOverviewResponse,
 ): SafetyAdminOverviewResponse {
@@ -613,6 +689,44 @@ export function mapBackendOverviewResponse(
       siteName: normalizeText(row.site_name),
     }))
     .filter((row) => isPriorityQuarterlyManagementRowScope(row, today));
+  const mappedQuarterlyMaterialSummary = normalizeQuarterlyMaterialSummaryScope(
+    {
+      entries: quarterlyMaterialEntries.map((entry) => ({
+        count: entry.count,
+        href: normalizeText(entry.href),
+        key: normalizeText(entry.key),
+        label: normalizeText(entry.label),
+      })),
+      missingSiteRows: quarterlyMaterialMissingSiteRows.map((row) => ({
+        education: {
+          filledCount: row.education.filled_count,
+          missingCount: row.education.missing_count,
+          requiredCount: row.education.required_count,
+        },
+        headquarterName: normalizeText(row.headquarter_name),
+        href: normalizeText(row.href),
+        measurement: {
+          filledCount: row.measurement.filled_count,
+          missingCount: row.measurement.missing_count,
+          requiredCount: row.measurement.required_count,
+        },
+        missingLabels: Array.isArray(row.missing_labels)
+          ? row.missing_labels.map((item) => normalizeText(item))
+          : [],
+        quarterKey: normalizeText(row.quarter_key),
+        quarterLabel: normalizeText(row.quarter_label),
+        siteId: normalizeText(row.site_id),
+        siteName: normalizeText(row.site_name),
+      })),
+      quarterKey: normalizeText(quarterlyMaterialSummary.quarter_key),
+      quarterLabel: normalizeText(quarterlyMaterialSummary.quarter_label),
+      totalSiteCount:
+        typeof quarterlyMaterialSummary.total_site_count === 'number'
+          ? quarterlyMaterialSummary.total_site_count
+          : 0,
+    },
+    mappedPriorityQuarterlyManagementRows,
+  );
 
   return {
     alerts: response.alerts.map((item) => mapBackendAlert(item)),
@@ -723,41 +837,7 @@ export function mapBackendOverviewResponse(
           ? row.total_contract_amount
           : null,
     })),
-    quarterlyMaterialSummary: {
-      entries: quarterlyMaterialEntries.map((entry) => ({
-        count: entry.count,
-        href: normalizeText(entry.href),
-        key: normalizeText(entry.key),
-        label: normalizeText(entry.label),
-      })),
-      missingSiteRows: quarterlyMaterialMissingSiteRows.map((row) => ({
-        education: {
-          filledCount: row.education.filled_count,
-          missingCount: row.education.missing_count,
-          requiredCount: row.education.required_count,
-        },
-        headquarterName: normalizeText(row.headquarter_name),
-        href: normalizeText(row.href),
-        measurement: {
-          filledCount: row.measurement.filled_count,
-          missingCount: row.measurement.missing_count,
-          requiredCount: row.measurement.required_count,
-        },
-        missingLabels: Array.isArray(row.missing_labels)
-          ? row.missing_labels.map((item) => normalizeText(item))
-          : [],
-        quarterKey: normalizeText(row.quarter_key),
-        quarterLabel: normalizeText(row.quarter_label),
-        siteId: normalizeText(row.site_id),
-        siteName: normalizeText(row.site_name),
-      })),
-      quarterKey: normalizeText(quarterlyMaterialSummary.quarter_key),
-      quarterLabel: normalizeText(quarterlyMaterialSummary.quarter_label),
-      totalSiteCount:
-        typeof quarterlyMaterialSummary.total_site_count === 'number'
-          ? quarterlyMaterialSummary.total_site_count
-          : 0,
-    },
+    quarterlyMaterialSummary: mappedQuarterlyMaterialSummary,
     recipientMissingSiteRows: recipientMissingSiteRows.map((row) => ({
       dispatchAlertsEnabled: Boolean(row.dispatch_alerts_enabled),
       dispatchPolicyEnabled: Boolean(row.dispatch_policy_enabled),

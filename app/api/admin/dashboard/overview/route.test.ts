@@ -214,6 +214,48 @@ test('drops long-overdue unsent rows from the mapped overview queue', () => {
   assert.match(mappedOverview.metricCards[0]?.value ?? '', /^0/);
 });
 
+test('normalizes stale quarterly material summary to mapped priority scope', () => {
+  const backendOverview = buildBackendOverview();
+  backendOverview.quarterly_material_summary = {
+    entries: [
+      { count: 27, href: '/headquarters?siteStatus=active', key: 'complete', label: 'Complete' },
+      { count: 0, href: '/headquarters?siteStatus=active', key: 'education_missing', label: 'Education missing' },
+      { count: 0, href: '/headquarters?siteStatus=active', key: 'measurement_missing', label: 'Measurement missing' },
+      { count: 1, href: '/headquarters?siteStatus=active', key: 'both_missing', label: 'Both missing' },
+    ],
+    missing_site_rows: [
+      {
+        education: { filled_count: 1, missing_count: 3, required_count: 4 },
+        headquarter_name: 'HQ',
+        href: '/headquarters?siteId=s1',
+        measurement: { filled_count: 1, missing_count: 3, required_count: 4 },
+        missing_labels: ['Education 1/4', 'Measurement 1/4'],
+        quarter_key: '2026-Q2',
+        quarter_label: '2026 Q2',
+        site_id: 's1',
+        site_name: 'Site 1',
+      },
+    ],
+    quarter_key: '2026-Q2',
+    quarter_label: '2026 Q2',
+    total_site_count: 28,
+  };
+
+  const mappedOverview = mapBackendOverviewResponse(backendOverview);
+
+  assert.equal(mappedOverview.priorityQuarterlyManagementRows?.length, 1);
+  assert.equal(mappedOverview.quarterlyMaterialSummary.totalSiteCount, 1);
+  assert.equal(mappedOverview.quarterlyMaterialSummary.missingSiteRows.length, 1);
+  assert.equal(
+    mappedOverview.quarterlyMaterialSummary.entries.find((entry) => entry.key === 'complete')?.count,
+    0,
+  );
+  assert.equal(
+    mappedOverview.quarterlyMaterialSummary.entries.find((entry) => entry.key === 'both_missing')?.count,
+    1,
+  );
+});
+
 test('does not restore long-overdue unsent rows through upstream fallback', () => {
   const mappedOverview = buildMappedOverview();
   const backendOverview = buildBackendOverview();
