@@ -186,6 +186,12 @@
   font-size: 1.35rem;
 }
 
+.reviewPanelSummary {
+  margin: 8px 0 0;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
 .reviewSummaryBadges {
   display: flex;
   flex-wrap: wrap;
@@ -230,9 +236,60 @@
   background: #fbfdff;
 }
 
+.reviewSummaryStrip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: linear-gradient(180deg, #fbfdff 0%, #f5f9fc 100%);
+}
+
+.reviewSummaryAccentRequired {
+  border-color: rgba(190, 63, 48, 0.18);
+  background: linear-gradient(180deg, #fff9f8 0%, #fff4f2 100%);
+}
+
+.reviewSummaryAccentAdvisory {
+  border-color: rgba(154, 107, 9, 0.18);
+  background: linear-gradient(180deg, #fffdf8 0%, #fbf7ed 100%);
+}
+
+.reviewSummaryAccentClear {
+  border-color: rgba(50, 80, 106, 0.14);
+}
+
+.reviewSummaryCopy {
+  display: grid;
+  gap: 4px;
+}
+
+.reviewSummaryCopy strong {
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.reviewSummaryCopy span {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
 .reviewList {
   display: grid;
   gap: 12px;
+}
+
+.reviewDialogList {
+  max-height: min(62vh, 720px);
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.reviewQueueDialog {
+  width: min(980px, 100%);
+  max-height: min(86vh, 980px);
 }
 
 .reviewCard {
@@ -788,11 +845,17 @@
   .toolbarLayout {
     flex-wrap: wrap;
   }
+
+  .reviewMetaGrid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 900px) {
   .editorHeader,
-  .sectionActionRow {
+  .sectionActionRow,
+  .reviewPanelHeader,
+  .reviewSummaryStrip {
     flex-direction: column;
     align-items: stretch;
   }
@@ -807,7 +870,8 @@
   }
 
   .toolbarActions,
-  .progressSummary {
+  .progressSummary,
+  .reviewActions {
     justify-content: flex-start;
   }
 
@@ -833,5 +897,15 @@
 
   .planRow > *:first-child {
     border-top: 0;
+  }
+
+  .reviewQueueDialog {
+    width: min(100%, 100%);
+    max-height: calc(100vh - 48px);
+    padding: 20px;
+  }
+
+  .reviewDialogList {
+    max-height: calc(100vh - 240px);
   }
 }

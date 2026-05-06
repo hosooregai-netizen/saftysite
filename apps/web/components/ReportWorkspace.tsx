@@ -7,8 +7,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { reportPayloadSchema, type ReportPayload } from '@saftysite/contracts';
 import {
   bootstrapDemoSession,
-  canUseWorkspaceServerApis,
+  bootstrapReportSession,
+  canUseReportServerApis,
   isAuthenticatedSession,
+  isLocalReportId,
+  isLocalSession,
   markReportReviewComplete,
   patchReportRecord,
   removeLocalReport,
@@ -820,6 +823,7 @@ export default function ReportWorkspace({
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
   const [authBusy, setAuthBusy] = useState(false);
   const [anonymousTokenForClaim, setAnonymousTokenForClaim] = useState<string | null>(null);
+  const [reviewQueueOpen, setReviewQueueOpen] = useState(false);
 
   const baseReportRef = useRef(baseReport);
   const workspaceRef = useRef(workspace);
@@ -884,6 +888,7 @@ export default function ReportWorkspace({
     setAuthDialogOpen(false);
     setAuthBusy(false);
     setAnonymousTokenForClaim(null);
+    setReviewQueueOpen(false);
     lastSavedSignatureRef.current = JSON.stringify(nextPersisted);
     didMountRef.current = false;
     handledAuthReturnRef.current = false;
@@ -937,18 +942,50 @@ export default function ReportWorkspace({
   const unresolvedInfoReviewQueue = unresolvedReviewQueue.filter(
     (item) => item.severity === 'info',
   );
+  const reviewSummaryMessage =
+    unresolvedRequiredReviewQueue.length > 0
+      ? '출력 전 확인이 필요한 필수 항목이 있습니다.'
+      : unresolvedReviewQueue.length > 0
+        ? '검토 권장 항목이 있습니다.'
+        : '현재 확인이 필요한 항목이 없습니다.';
+  const reviewSummaryTone =
+    unresolvedRequiredReviewQueue.length > 0
+      ? styles.reviewSummaryAccentRequired
+      : unresolvedReviewQueue.length > 0
+        ? styles.reviewSummaryAccentAdvisory
+        : styles.reviewSummaryAccentClear;
+
+  useEffect(() => {
+    if (!reviewQueueOpen) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setReviewQueueOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [reviewQueueOpen]);
 
   const resolveReportSession = useCallback(async (): Promise<DemoSession> => {
-    const session = preferredSessionRef.current
-      ? await bootstrapDemoSession({ preferredSession: preferredSessionRef.current })
-      : await bootstrapDemoSession();
+    const preferredSession = preferredSessionRef.current;
+    const session = isLocalReportId(reportId)
+      ? preferredSession
+        ? await bootstrapDemoSession({ preferredSession })
+        : await bootstrapDemoSession()
+      : await bootstrapReportSession({ preferredSession });
     preferredSessionRef.current = session;
     return session;
-  }, []);
+  }, [reportId]);
 
   const shouldSuppressGuestWorkspaceError = useCallback(
     (error: unknown, session: DemoSession) => {
-      if (canUseWorkspaceServerApis(session)) {
+      if (canUseReportServerApis(session)) {
         return false;
       }
       const message = error instanceof Error ? error.message : String(error ?? '');
@@ -2343,6 +2380,7 @@ export default function ReportWorkspace({
           <div>
             <span className={styles.editorEyebrow}>Review Queue</span>
             <h2 className={styles.reviewPanelTitle}>검토 필요 항목</h2>
+            <p className={styles.reviewPanelSummary}>{reviewSummaryMessage}</p>
           </div>
           <div className={styles.reviewSummaryBadges}>
             <span className={`${styles.reviewSummaryBadge} ${styles.reviewSummaryRequired}`}>
@@ -2357,72 +2395,126 @@ export default function ReportWorkspace({
           </div>
         </div>
 
-        {unresolvedReviewQueue.length === 0 ? (
-          <div className={styles.reviewEmptyState}>현재 확인이 필요한 항목이 없습니다.</div>
-        ) : (
-          <div className={styles.reviewList}>
-            {unresolvedReviewQueue.map((item) => (
-              <article key={item.id || item.fieldPath} className={styles.reviewCard}>
-                <div className={styles.reviewCardHeader}>
-                  <div>
-                    <strong>{item.label}</strong>
-                    <p>{safeText(item.reason) || safeText(item.notes) || '사용자 확인이 필요합니다.'}</p>
-                  </div>
-                  <span
-                    className={`${styles.reviewSeverityChip} ${
-                      item.severity === 'required'
-                        ? styles.reviewSeverityRequired
-                        : item.severity === 'warning'
-                          ? styles.reviewSeverityWarning
-                          : styles.reviewSeverityInfo
-                    }`}
-                  >
-                    {item.severity === 'required'
-                      ? '필수'
-                      : item.severity === 'warning'
-                        ? '경고'
-                        : '참고'}
-                  </span>
-                </div>
-
-                <div className={styles.reviewMetaGrid}>
-                  <div>
-                    <span>현재값</span>
-                    <strong>{safeText(item.currentValue) || '-'}</strong>
-                  </div>
-                  <div>
-                    <span>추천값</span>
-                    <strong>{safeText(item.suggestedValue) || '-'}</strong>
-                  </div>
-                  <div>
-                    <span>근거 사진</span>
-                    <strong>
-                      {item.evidencePhotoIds.length > 0 ? item.evidencePhotoIds.join(', ') : '-'}
-                    </strong>
-                  </div>
-                </div>
-
-                <div className={styles.reviewActions}>
-                  <button
-                    type="button"
-                    className="erp-button erp-button-secondary"
-                    onClick={() => jumpToReviewItem(item)}
-                  >
-                    해당 섹션으로 이동
-                  </button>
-                  <button
-                    type="button"
-                    className="erp-button erp-button-secondary"
-                    onClick={() => toggleReviewItemResolved(item.fieldPath)}
-                  >
-                    확인 완료
-                  </button>
-                </div>
-              </article>
-            ))}
+        <div className={`${styles.reviewSummaryStrip} ${reviewSummaryTone}`}>
+          <div className={styles.reviewSummaryCopy}>
+            <strong>
+              {unresolvedReviewQueue.length > 0
+                ? `${unresolvedReviewQueue.length}개 항목이 남아 있습니다.`
+                : '모든 검토 항목이 정리되었습니다.'}
+            </strong>
+            <span>{reviewSummaryMessage}</span>
           </div>
-        )}
+          <button
+            type="button"
+            className="erp-button erp-button-secondary"
+            onClick={() => setReviewQueueOpen(true)}
+          >
+            검토 필요 항목 보기
+          </button>
+        </div>
       </section>
+
+      {reviewQueueOpen ? (
+        <div
+          className={styles.disclaimerBackdrop}
+          role="presentation"
+          onClick={() => setReviewQueueOpen(false)}
+        >
+          <section
+            className={`${styles.disclaimerDialog} ${styles.reviewQueueDialog}`}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="review-queue-dialog-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className={styles.disclaimerHeader}>
+              <div>
+                <span className={styles.editorEyebrow}>Review Queue</span>
+                <h2 id="review-queue-dialog-title" className={styles.reviewPanelTitle}>
+                  검토 필요 항목
+                </h2>
+                <p className={styles.reviewPanelSummary}>{reviewSummaryMessage}</p>
+              </div>
+              <button
+                type="button"
+                className="erp-button erp-button-secondary"
+                onClick={() => setReviewQueueOpen(false)}
+              >
+                닫기
+              </button>
+            </div>
+
+            {unresolvedReviewQueue.length === 0 ? (
+              <div className={styles.reviewEmptyState}>현재 확인이 필요한 항목이 없습니다.</div>
+            ) : (
+              <div className={`${styles.reviewList} ${styles.reviewDialogList}`}>
+                {unresolvedReviewQueue.map((item) => (
+                  <article key={item.id || item.fieldPath} className={styles.reviewCard}>
+                    <div className={styles.reviewCardHeader}>
+                      <div>
+                        <strong>{item.label}</strong>
+                        <p>{safeText(item.reason) || safeText(item.notes) || '사용자 확인이 필요합니다.'}</p>
+                      </div>
+                      <span
+                        className={`${styles.reviewSeverityChip} ${
+                          item.severity === 'required'
+                            ? styles.reviewSeverityRequired
+                            : item.severity === 'warning'
+                              ? styles.reviewSeverityWarning
+                              : styles.reviewSeverityInfo
+                        }`}
+                      >
+                        {item.severity === 'required'
+                          ? '필수'
+                          : item.severity === 'warning'
+                            ? '경고'
+                            : '참고'}
+                      </span>
+                    </div>
+
+                    <div className={styles.reviewMetaGrid}>
+                      <div>
+                        <span>현재값</span>
+                        <strong>{safeText(item.currentValue) || '-'}</strong>
+                      </div>
+                      <div>
+                        <span>추천값</span>
+                        <strong>{safeText(item.suggestedValue) || '-'}</strong>
+                      </div>
+                      <div>
+                        <span>근거 사진</span>
+                        <strong>
+                          {item.evidencePhotoIds.length > 0 ? item.evidencePhotoIds.join(', ') : '-'}
+                        </strong>
+                      </div>
+                    </div>
+
+                    <div className={styles.reviewActions}>
+                      <button
+                        type="button"
+                        className="erp-button erp-button-secondary"
+                        onClick={() => {
+                          setReviewQueueOpen(false);
+                          jumpToReviewItem(item);
+                        }}
+                      >
+                        해당 섹션으로 이동
+                      </button>
+                      <button
+                        type="button"
+                        className="erp-button erp-button-secondary"
+                        onClick={() => toggleReviewItemResolved(item.fieldPath)}
+                      >
+                        확인 완료
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+      ) : null}
 
       {disclaimerOpen ? (
         <div className={styles.disclaimerBackdrop} role="dialog" aria-modal="true" aria-labelledby="export-disclaimer-title">
