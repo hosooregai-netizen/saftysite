@@ -24,8 +24,8 @@ import {
   fetchSafetySitesAdmin,
 } from '@/lib/safetyApi/adminEndpoints';
 import {
-  bootstrapDemoSession,
-  canUseWorkspaceServerApis,
+  bootstrapReportSession,
+  canUseReportServerApis,
   createReportRecord,
   generateDraftFromGuidedPhotos,
   generateDraftFromPhotos,
@@ -399,8 +399,8 @@ export default function NewReportPage() {
 
     async function bootstrapSession() {
       try {
-        const nextSession = await bootstrapDemoSession();
-        const directory = !canUseWorkspaceServerApis(nextSession)
+        const nextSession = await bootstrapReportSession();
+        const directory = !canUseReportServerApis(nextSession)
           ? await loadGuestDirectory()
           : await loadDirectory(nextSession.token);
         if (cancelled) {
@@ -481,7 +481,7 @@ export default function NewReportPage() {
   }, [selectedSite]);
 
   const refreshDirectory = async (token: string) => {
-    if (session && !canUseWorkspaceServerApis(session)) {
+    if (session && !canUseReportServerApis(session)) {
       const directory = await loadGuestDirectory();
       setHeadquarters(directory.headquarters);
       setSites(directory.sites);
@@ -662,7 +662,7 @@ export default function NewReportPage() {
 
     setIsMutatingDirectory(true);
     try {
-      if (!canUseWorkspaceServerApis(session)) {
+      if (!canUseReportServerApis(session)) {
         const timestamp = new Date().toISOString();
         const created: SafetyHeadquarter = {
           id: `local-hq-${Date.now()}`,
@@ -713,7 +713,7 @@ export default function NewReportPage() {
     setIsMutatingDirectory(true);
     try {
       const payload = buildSitePayload(siteForm, selectedHeadquarterId || null) as SafetySiteInput;
-      if (!canUseWorkspaceServerApis(session)) {
+      if (!canUseReportServerApis(session)) {
         const timestamp = new Date().toISOString();
         const headquarter =
           headquarters.find((item) => item.id === payload.headquarter_id) ?? selectedHeadquarter;
@@ -1366,7 +1366,7 @@ export default function NewReportPage() {
         onCreateHeadquarter={
           session
             ? async (input) => {
-                if (!canUseWorkspaceServerApis(session)) {
+                if (!canUseReportServerApis(session)) {
                   const timestamp = new Date().toISOString();
                   const created: SafetyHeadquarter = {
                     id: `local-hq-${Date.now()}`,

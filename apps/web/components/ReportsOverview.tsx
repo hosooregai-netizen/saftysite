@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import {
-  bootstrapDemoSession,
+  bootstrapReportSession,
   hasGeneratedReportSnapshot,
   listReports,
   readLastGeneratedReportSession,
@@ -51,7 +51,7 @@ export function ReportsOverview() {
       setLoadError('');
 
       try {
-        const session = await bootstrapDemoSession({
+        const session = await bootstrapReportSession({
           preferredSession: readLastGeneratedReportSession(),
         });
         const nextReports = await listReports(session);

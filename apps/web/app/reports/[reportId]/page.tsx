@@ -9,6 +9,13 @@ export default async function ReportReviewPage({
 }) {
   const { reportId } = await params;
   const { entry } = await searchParams;
+  const normalizedReportId = (() => {
+    try {
+      return decodeURIComponent(reportId);
+    } catch {
+      return reportId;
+    }
+  })();
 
-  return <ReportWorkspaceScreen reportId={reportId} initialEntry={entry ?? null} />;
+  return <ReportWorkspaceScreen reportId={normalizedReportId} initialEntry={entry ?? null} />;
 }

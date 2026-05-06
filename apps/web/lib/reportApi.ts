@@ -168,8 +168,24 @@ function createRandomId(prefix: string): string {
   return `${prefix}:${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-function isLocalReportId(reportId: string): boolean {
-  return reportId.startsWith('local-report:');
+function normalizeReportId(reportId: string): string {
+  let current = reportId;
+  for (let index = 0; index < 2; index += 1) {
+    try {
+      const decoded = decodeURIComponent(current);
+      if (decoded === current) {
+        return current;
+      }
+      current = decoded;
+    } catch {
+      return current;
+    }
+  }
+  return current;
+}
+
+export function isLocalReportId(reportId: string): boolean {
+  return normalizeReportId(reportId).startsWith('local-report:');
 }
 
 function normalizeDemoSession(value: DemoSessionLike): DemoSession | null {
@@ -218,6 +234,10 @@ export function isAuthenticatedSession(session: DemoSession): boolean {
 
 export function canUseWorkspaceServerApis(session: DemoSession | null | undefined): session is DemoSession {
   return Boolean(session && isAuthenticatedSession(session));
+}
+
+export function canUseReportServerApis(session: DemoSession | null | undefined): session is DemoSession {
+  return Boolean(session && !isLocalSession(session));
 }
 
 function localReportStorageKey(reportId: string): string {
@@ -760,6 +780,36 @@ export async function bootstrapDemoSession(
   } finally {
     bootstrapPromise = null;
   }
+}
+
+export async function bootstrapReportSession(
+  options: { preferredSession?: DemoSession | null } = {},
+): Promise<DemoSession> {
+  const preferredSession =
+    options.preferredSession && !isLocalSession(options.preferredSession)
+      ? options.preferredSession
+      : null;
+  const session = await bootstrapDemoSession(
+    preferredSession ? { preferredSession } : {},
+  );
+  if (canUseReportServerApis(session)) {
+    return session;
+  }
+
+  try {
+    const anonymousSession = await issueAnonymousSession();
+    writeCachedSession(anonymousSession);
+    return anonymousSession;
+  } catch {
+    throw new Error('서버 연결에 실패해 AI draft를 시작할 수 없습니다. 잠시 후 다시 시도해 주세요.');
+  }
+}
+
+async function ensureReportServerSession(session: DemoSession): Promise<DemoSession> {
+  if (canUseReportServerApis(session)) {
+    return session;
+  }
+  return bootstrapReportSession({ preferredSession: session });
 }
 
 export function writeGeneratedReportSnapshot(
@@ -1374,7 +1424,7 @@ export async function confirmBillingPayment(
 export async function listReports(session: DemoSession): Promise<ReportRecord[]> {
   const localReports = await listLocalReports();
   const generatedSnapshots = readGeneratedReportSnapshots().map((item) => item.record);
-  if (!canUseWorkspaceServerApis(session)) {
+  if (!canUseReportServerApis(session)) {
     return sortReports(
       Array.from(
         new Map(
@@ -1403,19 +1453,22 @@ export async function getReportRecord(
   session: DemoSession,
   reportId: string,
 ): Promise<ReportRecord> {
-  if (isLocalReportId(reportId)) {
-    const localReport = await readLocalReportRecord(reportId);
+  const normalizedReportId = normalizeReportId(reportId);
+  if (isLocalReportId(normalizedReportId)) {
+    const localReport = await readLocalReportRecord(normalizedReportId);
     if (!localReport) {
       throw new Error('로컬 보고서를 찾을 수 없습니다.');
     }
     return localReport;
   }
 
+  const reportSession = await ensureReportServerSession(session);
+
   return normalizeReportRecord(
-    await requestJson(`/reports/${encodeURIComponent(reportId)}`, {
-      token: session.token,
+    await requestJson(`/reports/${encodeURIComponent(normalizedReportId)}`, {
+      token: reportSession.token,
     }),
-    session.mode,
+    reportSession.mode,
   );
 }
 
@@ -1423,7 +1476,11 @@ export async function createReportRecord(
   session: DemoSession,
   input: Omit<CreateReportInput, 'workspace_id'>,
 ): Promise<ReportRecord> {
-  if (!canUseWorkspaceServerApis(session)) {
+  if (!canUseReportServerApis(session)) {
+    session = await ensureReportServerSession(session);
+  }
+
+  if (!canUseReportServerApis(session)) {
     const localRecord = createLocalReportRecordObject(session, input);
     return persistLocalReportRecord(localRecord);
   }
@@ -1446,7 +1503,7 @@ export async function patchReportRecord(
   reportId: string,
   payload: ReportPayload,
 ): Promise<ReportRecord> {
-  if (isLocalReportId(reportId) || isLocalSession(session)) {
+  if (isLocalReportId(reportId)) {
     const localRecord = await readLocalReportRecord(reportId);
     if (!localRecord) {
       throw new Error('로컬 보고서를 찾을 수 없습니다.');
@@ -1466,13 +1523,15 @@ export async function patchReportRecord(
     });
   }
 
+  const reportSession = await ensureReportServerSession(session);
+
   return normalizeReportRecord(
     await requestJson(`/reports/${encodeURIComponent(reportId)}`, {
       method: 'PATCH',
-      token: session.token,
+      token: reportSession.token,
       body: { payload },
     }),
-    session.mode,
+    reportSession.mode,
   );
 }
 
@@ -1482,7 +1541,7 @@ export async function uploadGuidedStepPhotos(
   step: GuidedUploadStepKey,
   payload: GuidedPhotoStepUploadInput,
 ): Promise<ReportRecord> {
-  if (isLocalReportId(reportId) || !canUseWorkspaceServerApis(session)) {
+  if (isLocalReportId(reportId)) {
     const localRecord = await readLocalReportRecord(reportId);
     if (!localRecord) {
       throw new Error('로컬 보고서를 찾을 수 없습니다.');
@@ -1540,16 +1599,18 @@ export async function uploadGuidedStepPhotos(
     });
   }
 
+  const reportSession = await ensureReportServerSession(session);
+
   const response = (await requestJson(
     `/reports/${encodeURIComponent(reportId)}/photo-steps/${step}`,
     {
       method: 'POST',
-      token: session.token,
+      token: reportSession.token,
       body: payload,
     },
   )) as { report: unknown };
 
-  return normalizeReportRecord(response.report, session.mode);
+  return normalizeReportRecord(response.report, reportSession.mode);
 }
 
 export async function generateDraftFromGuidedPhotos(
@@ -1557,7 +1618,7 @@ export async function generateDraftFromGuidedPhotos(
   reportId: string,
   payload: GenerateDraftFromGuidedPhotosInput,
 ): Promise<ReportRecord> {
-  if (isLocalReportId(reportId) || !canUseWorkspaceServerApis(session)) {
+  if (isLocalReportId(reportId)) {
     const localRecord = await readLocalReportRecord(reportId);
     if (!localRecord) {
       throw new Error('로컬 보고서를 찾을 수 없습니다.');
@@ -1576,16 +1637,18 @@ export async function generateDraftFromGuidedPhotos(
     return persistLocalReportRecord(nextRecord);
   }
 
+  const reportSession = await ensureReportServerSession(session);
+
   const response = (await requestJson(
     `/reports/${encodeURIComponent(reportId)}/draft-from-guided-photos`,
     {
       method: 'POST',
-      token: session.token,
+      token: reportSession.token,
       body: payload,
     },
   )) as { report: unknown };
 
-  return normalizeReportRecord(response.report, session.mode);
+  return normalizeReportRecord(response.report, reportSession.mode);
 }
 
 export async function generateDraftFromPhotos(
@@ -1593,7 +1656,7 @@ export async function generateDraftFromPhotos(
   reportId: string,
   payload: GenerateDraftFromPhotosInput,
 ): Promise<ReportRecord> {
-  if (isLocalReportId(reportId) || !canUseWorkspaceServerApis(session)) {
+  if (isLocalReportId(reportId)) {
     const localRecord = await readLocalReportRecord(reportId);
     if (!localRecord) {
       throw new Error('로컬 보고서를 찾을 수 없습니다.');
@@ -1617,23 +1680,25 @@ export async function generateDraftFromPhotos(
     return persistLocalReportRecord(nextRecord);
   }
 
+  const reportSession = await ensureReportServerSession(session);
+
   const response = (await requestJson(
     `/reports/${encodeURIComponent(reportId)}/draft-from-photos`,
     {
       method: 'POST',
-      token: session.token,
+      token: reportSession.token,
       body: payload,
     },
   )) as { report: unknown };
 
-  return normalizeReportRecord(response.report, session.mode);
+  return normalizeReportRecord(response.report, reportSession.mode);
 }
 
 export async function markReportReviewComplete(
   session: DemoSession,
   reportId: string,
 ): Promise<ReportRecord> {
-  if (isLocalReportId(reportId) || isLocalSession(session)) {
+  if (isLocalReportId(reportId)) {
     const localRecord = await readLocalReportRecord(reportId);
     if (!localRecord) {
       throw new Error('로컬 보고서를 찾을 수 없습니다.');
@@ -1659,15 +1724,17 @@ export async function markReportReviewComplete(
     });
   }
 
+  const reportSession = await ensureReportServerSession(session);
+
   return normalizeReportRecord(
     await requestJson(`/reports/${encodeURIComponent(reportId)}/review-complete`, {
       method: 'POST',
-      token: session.token,
+      token: reportSession.token,
       body: {
         responsibility_confirmed: true,
       },
     }),
-    session.mode,
+    reportSession.mode,
   );
 }
 

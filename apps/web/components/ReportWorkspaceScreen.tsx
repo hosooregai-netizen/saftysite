@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import {
+  bootstrapReportSession,
   getReportRecord,
   bootstrapDemoSession,
+  isLocalReportId,
   readGeneratedReportSnapshot,
   type DemoSession,
   type ReportRecord,
@@ -28,9 +30,11 @@ export function ReportWorkspaceScreen({
     let cancelled = false;
 
     async function load() {
-      const generatedSnapshot =
-        initialEntry === 'generated' ? readGeneratedReportSnapshot(reportId) : null;
-      if (generatedSnapshot) {
+      const localReport = isLocalReportId(reportId);
+      const generatedSnapshot = readGeneratedReportSnapshot(reportId);
+      const shouldUseGeneratedSnapshot =
+        initialEntry === 'generated' || Boolean(generatedSnapshot);
+      if (generatedSnapshot && shouldUseGeneratedSnapshot) {
         setRecord(generatedSnapshot.record);
         setReportSession(generatedSnapshot.session);
         setLoadState('loaded');
@@ -41,17 +45,26 @@ export function ReportWorkspaceScreen({
 
       try {
         if (generatedSnapshot) {
-          const nextRecord = await getReportRecord(generatedSnapshot.session, reportId);
+          const nextSession = localReport
+            ? await bootstrapDemoSession({
+                preferredSession: generatedSnapshot.session,
+              })
+            : await bootstrapReportSession({
+                preferredSession: generatedSnapshot.session,
+              });
+          const nextRecord = await getReportRecord(nextSession, reportId);
           if (cancelled) {
             return;
           }
           setRecord(nextRecord);
-          setReportSession(generatedSnapshot.session);
+          setReportSession(nextSession);
           setLoadState('loaded');
           return;
         }
 
-        const session = await bootstrapDemoSession();
+        const session = localReport
+          ? await bootstrapDemoSession()
+          : await bootstrapReportSession();
         const nextRecord = await getReportRecord(session, reportId);
         if (cancelled) {
           return;
