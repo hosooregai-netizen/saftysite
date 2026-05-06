@@ -12,12 +12,12 @@ async function main() {
   const mixedDocument = await buildQuarterlyMergedTemplatePrototypeBundle(['v10', 'v10-1'], 'v10');
   const mixedOutputPath = path.join(OUTPUT_DIR, mixedDocument.filename);
   await fs.writeFile(mixedOutputPath, mixedDocument.buffer);
-  process.stdout.write(`v10: ${mixedOutputPath}\n`);
+  process.stdout.write(`v9 holder: ${mixedOutputPath}\n`);
 
   const accidentDocument = await buildQuarterlyMergedTemplatePrototype('v10-1');
   const accidentOutputPath = path.join(OUTPUT_DIR, accidentDocument.filename);
   await fs.writeFile(accidentOutputPath, accidentDocument.buffer);
-  process.stdout.write(`v10-1: ${accidentOutputPath}\n`);
+  process.stdout.write(`v9-1 holder: ${accidentOutputPath}\n`);
 }
 
 main().catch((error) => {

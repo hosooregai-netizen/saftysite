@@ -44,7 +44,7 @@ function countBlankParagraphsBetweenTablesByText(xml: string, leftText: string, 
   ).length;
 }
 
-test('buildQuarterlyMergedTemplatePrototype builds a single-section merged template for v10', async () => {
+test('buildQuarterlyMergedTemplatePrototype builds a single-section merged template with the v9 quarterly holder', async () => {
   const document = await buildQuarterlyMergedTemplatePrototype('v10');
   const zip = await JSZip.loadAsync(document.buffer);
   const [sectionXml, contentHpf] = await Promise.all([
@@ -52,7 +52,7 @@ test('buildQuarterlyMergedTemplatePrototype builds a single-section merged templ
     zip.file('Contents/content.hpf')?.async('string'),
   ]);
 
-  assert.equal(document.filename, 'quarterly-merged-template.v10.hwpx');
+  assert.equal(document.filename, 'quarterly-merged-template.v9.hwpx');
   assert.ok(document.imagePlaceholders.length > 0);
   assert.ok(sectionXml);
   assert.ok(contentHpf);
@@ -113,7 +113,7 @@ test('buildQuarterlyMergedTemplatePrototype also supports v10-1 inspection varia
   const zip = await JSZip.loadAsync(document.buffer);
   const sectionXml = await zip.file('Contents/section0.xml')?.async('string');
 
-  assert.equal(document.filename, 'quarterly-merged-template.v10-1.hwpx');
+  assert.equal(document.filename, 'quarterly-merged-template.v9-1.hwpx');
   assert.ok(document.imagePlaceholders.length > 0);
   assert.ok(sectionXml);
   assert.doesNotMatch(sectionXml, /www\.safetysite\.co\.kr/);
@@ -150,12 +150,12 @@ test('buildQuarterlyMergedTemplatePrototype also supports v10-1 inspection varia
   assert.doesNotMatch(document.appendixPrototypeXml, /070-4106-6051/);
 });
 
-test('buildQuarterlyMergedTemplatePrototypeBundle prepares v10 and v10-1 appendices in one quarterly v10 package', async () => {
+test('buildQuarterlyMergedTemplatePrototypeBundle prepares v10 and v10-1 appendices in one quarterly v9 holder package', async () => {
   const document = await buildQuarterlyMergedTemplatePrototypeBundle(['v10', 'v10-1'], 'v10');
   const zip = await JSZip.loadAsync(document.buffer);
   const sectionXml = await zip.file('Contents/section0.xml')?.async('string');
 
-  assert.equal(document.filename, 'quarterly-merged-template.v10.hwpx');
+  assert.equal(document.filename, 'quarterly-merged-template.v9.hwpx');
   assert.ok(sectionXml);
   assert.ok(document.prototypes.v10);
   assert.ok(document.prototypes['v10-1']);
@@ -170,12 +170,12 @@ test('buildQuarterlyMergedTemplatePrototypeBundle prepares v10 and v10-1 appendi
   assert.doesNotMatch(sectionXml, /070-4106-6051|02-2299-1996/);
 });
 
-test('buildQuarterlyMergedTemplatePrototypeBundle can hold mixed appendices in the v10-1 template', async () => {
+test('buildQuarterlyMergedTemplatePrototypeBundle can hold mixed appendices in the v9-1 quarterly holder', async () => {
   const document = await buildQuarterlyMergedTemplatePrototypeBundle(['v10', 'v10-1'], 'v10-1');
   const zip = await JSZip.loadAsync(document.buffer);
   const sectionXml = await zip.file('Contents/section0.xml')?.async('string');
 
-  assert.equal(document.filename, 'quarterly-merged-template.v10-1.hwpx');
+  assert.equal(document.filename, 'quarterly-merged-template.v9-1.hwpx');
   assert.ok(sectionXml);
   assert.ok(document.prototypes.v10);
   assert.ok(document.prototypes['v10-1']);

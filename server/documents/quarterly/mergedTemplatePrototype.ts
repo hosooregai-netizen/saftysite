@@ -52,8 +52,8 @@ export interface QuarterlyMergedTemplateImagePlaceholder
 }
 
 const OUTPUT_FILENAME_BY_VARIANT: Record<InspectionTemplateVariant, string> = {
-  v10: 'quarterly-merged-template.v10.hwpx',
-  'v10-1': 'quarterly-merged-template.v10-1.hwpx',
+  v10: 'quarterly-merged-template.v9.hwpx',
+  'v10-1': 'quarterly-merged-template.v9-1.hwpx',
 };
 export const QUARTERLY_MERGED_TEMPLATE_VARIANTS: readonly InspectionTemplateVariant[] = [
   'v10',
