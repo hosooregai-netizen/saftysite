@@ -385,7 +385,7 @@ test('restores D+15 upstream unsent rows through upstream fallback', () => {
   assert.match(restored.metricCards[5]?.value ?? '', /^1/);
 });
 
-test('restores upstream unsent rows in dispatch priority order', () => {
+test('restores upstream unsent rows in overdue-age priority order', () => {
   const mappedOverview = buildMappedOverview();
   const backendOverview = buildBackendOverview();
   backendOverview.unsent_report_rows = [
@@ -433,6 +433,6 @@ test('restores upstream unsent rows in dispatch priority order', () => {
 
   assert.deepEqual(
     restored.unsentReportRows.map((row) => row.reportKey),
-    ['r-ready', 'r-not-ready'],
+    ['r-not-ready', 'r-ready'],
   );
 });

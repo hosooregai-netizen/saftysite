@@ -4,6 +4,7 @@
 
 - Overview fallback keeps backend D+15 unsent technical-guidance rows visible.
 - Overview fallback and policy tests continue to drop D+16 and processed dispatch rows.
+- Dispatch-management rows sort longest-unsent reports first, even when the recipient email is missing.
 - Admin schedule mutations invalidate overview/report route caches.
 
 ## Verification
@@ -14,4 +15,5 @@
 ## Expected outcome
 
 - The dispatch-management count, deadline summary total, and table rows stay aligned at the D+15/D+16 boundary.
+- The default dispatch-management order shows the reports that need the fastest handling first.
 - Schedule updates cannot leave the admin overview using a stale frontend route cache.

@@ -12,6 +12,7 @@
 
 - Preserved the D+15 dispatch-management row boundary in upstream overview fallback tests.
 - Kept D+16 and processed dispatch rows filtered out by the overview policy tests.
+- Ordered dispatch-management rows by overdue age first so the longest-unsent reports appear first.
 - Added admin schedule writes to overview/report route cache invalidation so schedule-date changes cannot leave stale dispatch counts.
 
 ## Validation

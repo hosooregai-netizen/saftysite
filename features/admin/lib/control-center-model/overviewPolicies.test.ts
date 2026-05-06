@@ -212,7 +212,7 @@ test('completed contract sites are excluded from current management scopes', () 
   );
 });
 
-test('dispatch priority comparator puts mail-ready rows first and then older unsent rows', () => {
+test('dispatch priority comparator puts older unsent rows first and then mail-ready rows', () => {
   const sorted = [
     buildUnsentRow({
       mailReady: false,
@@ -245,7 +245,7 @@ test('dispatch priority comparator puts mail-ready rows first and then older uns
 
   assert.deepEqual(
     sorted.map((row) => row.reportKey),
-    ['ready-old', 'ready-new', 'not-ready'],
+    ['not-ready', 'ready-old', 'ready-new'],
   );
 });
 

@@ -255,10 +255,10 @@ export function compareDispatchManagementUnsentRows(
   right: SafetyAdminUnsentReportRow,
 ) {
   return (
-    Number(Boolean(right.mailReady)) -
-      Number(Boolean(left.mailReady)) ||
     right.unsentDays - left.unsentDays ||
     compareDateAscending(left.visitDate, right.visitDate) ||
+    Number(Boolean(right.mailReady)) -
+      Number(Boolean(left.mailReady)) ||
     normalizeText(left.siteName).localeCompare(normalizeText(right.siteName), 'ko') ||
     normalizeText(left.reportTitle).localeCompare(normalizeText(right.reportTitle), 'ko') ||
     normalizeText(left.reportKey).localeCompare(normalizeText(right.reportKey), 'ko')
