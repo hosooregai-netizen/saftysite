@@ -1055,6 +1055,7 @@ export interface SafetyBackendSmsSendResponse {
 
 export interface SafetyBackendAdminOverviewResponse {
   alerts: SafetyBackendAdminAlert[];
+  alerts_total_count?: number;
   completion_rows: Array<{
     href: string;
     headquarter_name: string;
@@ -1062,6 +1063,7 @@ export interface SafetyBackendAdminOverviewResponse {
     site_id: string;
     site_name: string;
   }>;
+  completion_rows_total_count?: number;
   coverage_rows: Array<{
     item_count: number;
     label: string;
@@ -1171,6 +1173,11 @@ export interface SafetyBackendAdminOverviewResponse {
         filled_count: number;
         missing_count: number;
         required_count: number;
+        raw_count?: number;
+        distinct_count?: number;
+        counted_count?: number;
+        source?: string;
+        reduced_reasons?: string[];
       };
       headquarter_name: string;
       href: string;
@@ -1178,6 +1185,11 @@ export interface SafetyBackendAdminOverviewResponse {
         filled_count: number;
         missing_count: number;
         required_count: number;
+        raw_count?: number;
+        distinct_count?: number;
+        counted_count?: number;
+        source?: string;
+        reduced_reasons?: string[];
       };
       missing_labels: string[];
       quarter_key: string;

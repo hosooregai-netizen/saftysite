@@ -243,16 +243,31 @@ function buildQuarterlySummary(
   const materialBucketCounts = { both_missing: 0, complete: 0, education_missing: 0, measurement_missing: 0 };
   let educationReadyCount = 0;
   let measurementReadyCount = 0;
+  const buildSiteMemoMaterialRequirement = (values: string[] = []) => {
+    const countedCount = countFilledQuarterlyMaterials(values);
+    return {
+      filledCount: countedCount,
+      missingCount: Math.max(0, QUARTERLY_MATERIAL_REQUIRED_COUNT - countedCount),
+      requiredCount: QUARTERLY_MATERIAL_REQUIRED_COUNT,
+      rawCount: countedCount,
+      distinctCount: countedCount,
+      countedCount,
+      source: 'site_memo',
+      reducedReasons: [],
+    };
+  };
 
   const missingSiteRows = quarterlyMaterialScopeSites.flatMap((site) => {
     const reportMaterialCounts = materialCountsBySite.get(site.id);
     const materialRecord = reportMaterialCounts == null ? getSiteQuarterlyMaterialRecord(site, quarterKey) : null;
-    const educationFilledCount =
-      reportMaterialCounts?.educationKeys.size ??
-      countFilledQuarterlyMaterials(materialRecord?.educationMaterials ?? []);
-    const measurementFilledCount =
-      reportMaterialCounts?.measurementKeys.size ??
-      countFilledQuarterlyMaterials(materialRecord?.measurementMaterials ?? []);
+    const educationRequirement =
+      reportMaterialCounts?.education ??
+      buildSiteMemoMaterialRequirement(materialRecord?.educationMaterials ?? []);
+    const measurementRequirement =
+      reportMaterialCounts?.measurement ??
+      buildSiteMemoMaterialRequirement(materialRecord?.measurementMaterials ?? []);
+    const educationFilledCount = educationRequirement.countedCount;
+    const measurementFilledCount = measurementRequirement.countedCount;
     const educationMissingCount = Math.max(0, QUARTERLY_MATERIAL_REQUIRED_COUNT - educationFilledCount);
     const measurementMissingCount = Math.max(0, QUARTERLY_MATERIAL_REQUIRED_COUNT - measurementFilledCount);
 
@@ -267,13 +282,13 @@ function buildQuarterlySummary(
     if (educationMissingCount === 0 && measurementMissingCount === 0) return [];
 
     return [{
-      education: { filledCount: educationFilledCount, missingCount: educationMissingCount, requiredCount: QUARTERLY_MATERIAL_REQUIRED_COUNT },
+      education: { ...educationRequirement, filledCount: educationFilledCount, missingCount: educationMissingCount, requiredCount: QUARTERLY_MATERIAL_REQUIRED_COUNT },
       headquarterName: site.headquarter_detail?.name || site.headquarter?.name || '-',
       href: getAdminSectionHref('headquarters', {
         headquarterId: site.headquarter_id,
         siteId: site.id,
       }),
-      measurement: { filledCount: measurementFilledCount, missingCount: measurementMissingCount, requiredCount: QUARTERLY_MATERIAL_REQUIRED_COUNT },
+      measurement: { ...measurementRequirement, filledCount: measurementFilledCount, missingCount: measurementMissingCount, requiredCount: QUARTERLY_MATERIAL_REQUIRED_COUNT },
       missingLabels: [
         educationMissingCount > 0 ? `교육자료 ${educationFilledCount}/${QUARTERLY_MATERIAL_REQUIRED_COUNT}` : '',
         measurementMissingCount > 0 ? `계측자료 ${measurementFilledCount}/${QUARTERLY_MATERIAL_REQUIRED_COUNT}` : '',
@@ -535,6 +550,8 @@ export function buildAdminOverviewModel(
   });
 
   return {
+    alertsTotalCount: 0,
+    completionRowsTotalCount: 0,
     coverageRows,
     deadlineSignalSummary: attention.deadlineSignalSummary,
     deadlineRows: attention.deadlineRows,

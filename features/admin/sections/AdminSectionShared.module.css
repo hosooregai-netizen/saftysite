@@ -1624,9 +1624,30 @@
 }
 
 .overviewTableMetric {
+  display: block;
   font-weight: 700;
   color: var(--erp-dark);
   white-space: nowrap;
+}
+
+.overviewTableSubMetric {
+  display: block;
+  margin-top: 3px;
+  font-size: var(--text-ui-xs);
+  line-height: 1.35;
+  color: var(--erp-text-muted);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.overviewTableReason {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--text-ui-xs);
+  line-height: 1.35;
+  color: #b54708;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .overviewTableStatus {

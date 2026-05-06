@@ -339,6 +339,11 @@ export interface SafetyAdminQuarterlyMaterialRequirement {
   filledCount: number;
   missingCount: number;
   requiredCount: number;
+  rawCount: number;
+  distinctCount: number;
+  countedCount: number;
+  source: string;
+  reducedReasons: string[];
 }
 
 export interface SafetyAdminQuarterlyMaterialSiteRow {
@@ -459,7 +464,9 @@ export interface SafetyAdminDataCompletionRow {
 
 export interface SafetyAdminOverviewResponse {
   alerts: SafetyAdminAlert[];
+  alertsTotalCount: number;
   completionRows: SafetyAdminDataCompletionRow[];
+  completionRowsTotalCount: number;
   coverageRows: AdminCoverageRow[];
   deadlineSignalSummary: SafetyAdminDeadlineSignalSummary;
   dispatchQueueRows?: SafetyAdminDispatchQueueRow[];

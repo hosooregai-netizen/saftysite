@@ -556,6 +556,32 @@ function normalizeQuarterlyMaterialSummaryScope(
   };
 }
 
+function mapBackendQuarterlyMaterialRequirement(row: {
+  filled_count: number;
+  missing_count: number;
+  required_count: number;
+  raw_count?: number;
+  distinct_count?: number;
+  counted_count?: number;
+  source?: string;
+  reduced_reasons?: string[];
+}): SafetyAdminOverviewResponse['quarterlyMaterialSummary']['missingSiteRows'][number]['education'] {
+  const filledCount = normalizeCount(row.filled_count);
+  const countedCount = normalizeCount(row.counted_count, filledCount);
+  return {
+    filledCount,
+    missingCount: normalizeCount(row.missing_count),
+    requiredCount: normalizeCount(row.required_count, 4),
+    rawCount: normalizeCount(row.raw_count, countedCount),
+    distinctCount: normalizeCount(row.distinct_count, countedCount),
+    countedCount,
+    source: normalizeText(row.source),
+    reducedReasons: Array.isArray(row.reduced_reasons)
+      ? row.reduced_reasons.map((item) => normalizeText(item)).filter(Boolean)
+      : [],
+  };
+}
+
 export function mapBackendOverviewResponse(
   response: SafetyBackendAdminOverviewResponse,
 ): SafetyAdminOverviewResponse {
@@ -698,18 +724,10 @@ export function mapBackendOverviewResponse(
         label: normalizeText(entry.label),
       })),
       missingSiteRows: quarterlyMaterialMissingSiteRows.map((row) => ({
-        education: {
-          filledCount: row.education.filled_count,
-          missingCount: row.education.missing_count,
-          requiredCount: row.education.required_count,
-        },
+        education: mapBackendQuarterlyMaterialRequirement(row.education),
         headquarterName: normalizeText(row.headquarter_name),
         href: normalizeText(row.href),
-        measurement: {
-          filledCount: row.measurement.filled_count,
-          missingCount: row.measurement.missing_count,
-          requiredCount: row.measurement.required_count,
-        },
+        measurement: mapBackendQuarterlyMaterialRequirement(row.measurement),
         missingLabels: Array.isArray(row.missing_labels)
           ? row.missing_labels.map((item) => normalizeText(item))
           : [],
@@ -730,6 +748,10 @@ export function mapBackendOverviewResponse(
 
   return {
     alerts: response.alerts.map((item) => mapBackendAlert(item)),
+    alertsTotalCount:
+      typeof response.alerts_total_count === 'number'
+        ? Math.max(response.alerts_total_count, response.alerts.length)
+        : response.alerts.length,
     completionRows: response.completion_rows.map((row) => ({
       href: normalizeText(row.href),
       headquarterName: normalizeText(row.headquarter_name),
@@ -737,6 +759,10 @@ export function mapBackendOverviewResponse(
       siteId: normalizeText(row.site_id),
       siteName: normalizeText(row.site_name),
     })),
+    completionRowsTotalCount:
+      typeof response.completion_rows_total_count === 'number'
+        ? Math.max(response.completion_rows_total_count, response.completion_rows.length)
+        : response.completion_rows.length,
     coverageRows: response.coverage_rows.map((row) => ({
       itemCount: row.item_count,
       label: normalizeText(row.label),

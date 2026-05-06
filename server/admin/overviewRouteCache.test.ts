@@ -18,7 +18,9 @@ function buildRequest() {
 function buildOverviewPayload(): SafetyAdminOverviewResponse {
   return {
     alerts: [],
+    alertsTotalCount: 0,
     completionRows: [],
+    completionRowsTotalCount: 0,
     coverageRows: [],
     deadlineSignalSummary: { entries: [], totalReportCount: 0 },
     dispatchQueueRows: [],

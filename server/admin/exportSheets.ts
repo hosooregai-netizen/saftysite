@@ -68,7 +68,7 @@ export async function buildAdminServerExportSheets(
 ): Promise<ServerWorkbookSheet[]> {
   if (section === 'overview') {
     const [rawOverview, directorySnapshot, reports] = await Promise.all([
-      fetchAdminOverviewServer(token, request),
+      fetchAdminOverviewServer(token, request, { includeFullRows: true }),
       getAdminDirectorySnapshot(token, request),
       fetchAdminReports(token, request),
     ]);

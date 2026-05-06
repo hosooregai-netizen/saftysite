@@ -13,7 +13,8 @@ function getOverviewRouteInFlight() {
 }
 
 function buildOverviewRouteCacheKey(request: Request) {
-  return request.headers.get('authorization') || '';
+  const includeFullRows = new URL(request.url).searchParams.get('include_full_rows') === 'true';
+  return `${request.headers.get('authorization') || ''}:includeFullRows=${includeFullRows}`;
 }
 
 export function readOrCreateAdminOverviewRouteResponse(

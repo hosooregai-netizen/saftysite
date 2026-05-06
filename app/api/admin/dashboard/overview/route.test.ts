@@ -9,7 +9,9 @@ import type { SafetyBackendAdminOverviewResponse } from '@/types/backend';
 function buildMappedOverview(): SafetyAdminOverviewResponse {
   return {
     alerts: [],
+    alertsTotalCount: 0,
     completionRows: [],
+    completionRowsTotalCount: 0,
     coverageRows: [],
     deadlineSignalSummary: { entries: [], totalReportCount: 0 },
     dispatchQueueRows: [],
@@ -48,7 +50,9 @@ function buildMappedOverview(): SafetyAdminOverviewResponse {
 function buildBackendOverview(): SafetyBackendAdminOverviewResponse {
   return {
     alerts: [],
+    alerts_total_count: 0,
     completion_rows: [],
+    completion_rows_total_count: 0,
     coverage_rows: [],
     deadline_rows: [],
     deadline_signal_summary: {
@@ -202,7 +206,7 @@ test('drops long-overdue unsent rows from the mapped overview queue', () => {
       report_type_label: 'Technical guidance',
       site_id: 's1',
       site_name: 'Site 1',
-      unsent_days: 49,
+      unsent_days: 16,
       visit_date: '2026-03-01',
     },
   ];
@@ -212,6 +216,42 @@ test('drops long-overdue unsent rows from the mapped overview queue', () => {
   assert.equal(mappedOverview.unsentReportRows.length, 0);
   assert.equal(mappedOverview.deadlineSignalSummary.totalReportCount, 0);
   assert.match(mappedOverview.metricCards[0]?.value ?? '', /^0/);
+});
+
+test('maps capped upstream overview row totals separately from returned rows', () => {
+  const backendOverview = buildBackendOverview();
+  backendOverview.alerts = [
+    {
+      created_at: '2026-04-18',
+      description: 'Alert',
+      href: '/alerts/1',
+      id: 'a1',
+      report_key: '',
+      schedule_id: '',
+      severity: 'info',
+      site_id: 's1',
+      title: 'Alert',
+      type: 'schedule_conflict',
+    },
+  ];
+  backendOverview.alerts_total_count = 125;
+  backendOverview.completion_rows = [
+    {
+      headquarter_name: 'HQ',
+      href: '/headquarters?siteId=s1',
+      missing_items: ['담당자'],
+      site_id: 's1',
+      site_name: 'Site 1',
+    },
+  ];
+  backendOverview.completion_rows_total_count = 125;
+
+  const mappedOverview = mapBackendOverviewResponse(backendOverview);
+
+  assert.equal(mappedOverview.alerts.length, 1);
+  assert.equal(mappedOverview.alertsTotalCount, 125);
+  assert.equal(mappedOverview.completionRows.length, 1);
+  assert.equal(mappedOverview.completionRowsTotalCount, 125);
 });
 
 test('normalizes stale quarterly material summary to mapped priority scope', () => {
@@ -225,10 +265,28 @@ test('normalizes stale quarterly material summary to mapped priority scope', () 
     ],
     missing_site_rows: [
       {
-        education: { filled_count: 1, missing_count: 3, required_count: 4 },
+        education: {
+          filled_count: 1,
+          missing_count: 3,
+          required_count: 4,
+          raw_count: 1,
+          distinct_count: 1,
+          counted_count: 1,
+          source: 'report_payload',
+          reduced_reasons: [],
+        },
         headquarter_name: 'HQ',
         href: '/headquarters?siteId=s1',
-        measurement: { filled_count: 1, missing_count: 3, required_count: 4 },
+        measurement: {
+          filled_count: 1,
+          missing_count: 3,
+          required_count: 4,
+          raw_count: 4,
+          distinct_count: 1,
+          counted_count: 1,
+          source: 'report_payload',
+          reduced_reasons: ['deduped_same_measurement_key'],
+        },
         missing_labels: ['Education 1/4', 'Measurement 1/4'],
         quarter_key: '2026-Q2',
         quarter_label: '2026 Q2',
@@ -246,6 +304,12 @@ test('normalizes stale quarterly material summary to mapped priority scope', () 
   assert.equal(mappedOverview.priorityQuarterlyManagementRows?.length, 1);
   assert.equal(mappedOverview.quarterlyMaterialSummary.totalSiteCount, 1);
   assert.equal(mappedOverview.quarterlyMaterialSummary.missingSiteRows.length, 1);
+  assert.equal(mappedOverview.quarterlyMaterialSummary.missingSiteRows[0]?.measurement.rawCount, 4);
+  assert.equal(mappedOverview.quarterlyMaterialSummary.missingSiteRows[0]?.measurement.distinctCount, 1);
+  assert.deepEqual(
+    mappedOverview.quarterlyMaterialSummary.missingSiteRows[0]?.measurement.reducedReasons,
+    ['deduped_same_measurement_key'],
+  );
   assert.equal(
     mappedOverview.quarterlyMaterialSummary.entries.find((entry) => entry.key === 'complete')?.count,
     0,
@@ -276,7 +340,7 @@ test('does not restore long-overdue unsent rows through upstream fallback', () =
       report_type_label: 'Technical guidance',
       site_id: 's1',
       site_name: 'Site 1',
-      unsent_days: 49,
+      unsent_days: 16,
       visit_date: '2026-03-01',
     },
   ];

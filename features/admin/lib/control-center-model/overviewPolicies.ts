@@ -18,7 +18,7 @@ import {
   startOfToday,
 } from './dates';
 
-export const DISPATCH_MANAGEMENT_MAX_UNSENT_DAYS = 30;
+export const DISPATCH_MANAGEMENT_MAX_UNSENT_DAYS = 15;
 export const PRIORITY_PROJECT_AMOUNT = 2_000_000_000;
 
 type SiteLike = Pick<

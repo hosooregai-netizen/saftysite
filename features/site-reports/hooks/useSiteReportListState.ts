@@ -397,13 +397,15 @@ export function useSiteReportListState(
       throw new SafetyApiError('로그인이 만료되었습니다. 다시 로그인해 주세요.', 401);
     }
 
-    const seed = await fetchTechnicalGuidanceSeed(token, currentSite.id);
-    const targetReportNumber = Math.max(seed.next_visit_round || 0, nextReportNumber);
     const safetySite = await ensureAssignedSafetySite(currentSite.id);
     const initialScheduleResponse = await fetchAllMySchedules({
       includeAll: true,
       siteId: currentSite.id,
     });
+    const firstOpenSchedule = [...initialScheduleResponse.rows]
+      .sort((left, right) => left.roundNo - right.roundNo)
+      .find((row) => !row.linkedReportKey?.trim());
+    const targetReportNumber = firstOpenSchedule?.roundNo || nextReportNumber;
     const contractWindow = resolveContractWindow(
       buildContractWindowFromSafetySite(safetySite),
       buildContractWindowFromScheduleRows(initialScheduleResponse.rows),
@@ -419,11 +421,8 @@ export function useSiteReportListState(
     }
     const assignedSchedule = await (async () => {
       try {
-        const targetSchedule = initialScheduleResponse.rows.find(
-          (row) => row.roundNo === targetReportNumber && !row.linkedReportKey?.trim(),
-        );
-        if (targetSchedule) {
-          return updateMySchedule(targetSchedule.id, {
+        if (firstOpenSchedule) {
+          return updateMySchedule(firstOpenSchedule.id, {
             plannedDate: normalizedReportDate,
           });
         }
@@ -437,6 +436,10 @@ export function useSiteReportListState(
       });
     })();
     const seedReportNumber = assignedSchedule.roundNo || targetReportNumber;
+    const seed = await fetchTechnicalGuidanceSeed(token, currentSite.id, {
+      targetVisitDate: normalizedReportDate,
+      targetVisitRound: seedReportNumber,
+    });
     const normalizedReportTitle = buildDefaultReportTitle(normalizedReportDate, seedReportNumber);
     const nextSession = createSession(currentSite, {
       reportNumber: seedReportNumber,

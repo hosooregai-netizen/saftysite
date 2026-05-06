@@ -142,6 +142,11 @@ export function mergeOverviewResponseWithFallback(
 
   return {
     ...overviewResponse,
+    alertsTotalCount:
+      overviewResponse.alertsTotalCount ?? Math.max(overviewResponse.alerts.length, fallbackOverview.alertsTotalCount),
+    completionRowsTotalCount:
+      overviewResponse.completionRowsTotalCount ??
+      Math.max(overviewResponse.completionRows.length, fallbackOverview.completionRowsTotalCount),
     deadlineSignalSummary: hasDeadlineSignalSummary(overviewResponse.deadlineSignalSummary)
       ? overviewResponse.deadlineSignalSummary
       : fallbackOverview.deadlineSignalSummary,
@@ -432,6 +437,8 @@ export function useAdminOverviewSectionState(
 
   const exportOverview = useCallback(async () => {
     const exportModel: AdminOverviewModel = {
+      alertsTotalCount: overview.alertsTotalCount,
+      completionRowsTotalCount: overview.completionRowsTotalCount,
       coverageRows: overview.coverageRows,
       deadlineSignalSummary: overview.deadlineSignalSummary,
       deadlineRows: overview.deadlineRows,

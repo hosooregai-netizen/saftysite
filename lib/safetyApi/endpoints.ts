@@ -614,9 +614,21 @@ export function fetchSafetyReportByKey(
 export function fetchTechnicalGuidanceSeed(
   token: string,
   siteId: string,
+  options?: {
+    targetVisitDate?: string;
+    targetVisitRound?: number;
+  },
 ): Promise<SafetyTechnicalGuidanceSeed> {
+  const searchParams = new URLSearchParams();
+  if (typeof options?.targetVisitRound === 'number' && Number.isFinite(options.targetVisitRound) && options.targetVisitRound > 0) {
+    searchParams.set('target_visit_round', String(options.targetVisitRound));
+  }
+  if (options?.targetVisitDate?.trim()) {
+    searchParams.set('target_visit_date', options.targetVisitDate.trim());
+  }
+  const query = searchParams.toString();
   return requestSafetyApi<SafetyTechnicalGuidanceSeed>(
-    `/reports/site/${siteId}/technical-guidance-seed`,
+    `/reports/site/${siteId}/technical-guidance-seed${query ? `?${query}` : ''}`,
     {},
     token,
   );

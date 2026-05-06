@@ -7,7 +7,9 @@ import type { SafetyAdminOverviewResponse } from '@/types/admin';
 function buildOverview(): SafetyAdminOverviewResponse {
   return {
     alerts: [],
+    alertsTotalCount: 0,
     completionRows: [],
+    completionRowsTotalCount: 0,
     coverageRows: [],
     deadlineRows: [],
     deadlineSignalSummary: { entries: [], totalReportCount: 0 },
@@ -54,10 +56,28 @@ function buildMaterialRow(
   siteId: string,
 ): SafetyAdminOverviewResponse['quarterlyMaterialSummary']['missingSiteRows'][number] {
   return {
-    education: { filledCount: 1, missingCount: 3, requiredCount: 4 },
+    education: {
+      filledCount: 1,
+      missingCount: 3,
+      requiredCount: 4,
+      rawCount: 1,
+      distinctCount: 1,
+      countedCount: 1,
+      source: 'site_memo',
+      reducedReasons: [],
+    },
     headquarterName: 'HQ',
     href: `/headquarters?siteId=${siteId}`,
-    measurement: { filledCount: 2, missingCount: 2, requiredCount: 4 },
+    measurement: {
+      filledCount: 2,
+      missingCount: 2,
+      requiredCount: 4,
+      rawCount: 2,
+      distinctCount: 2,
+      countedCount: 2,
+      source: 'site_memo',
+      reducedReasons: [],
+    },
     missingLabels: ['education', 'measurement'],
     quarterKey: '2026-Q2',
     quarterLabel: '2026 Q2',

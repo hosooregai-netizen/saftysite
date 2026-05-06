@@ -22,7 +22,9 @@ function buildBaseOverview(): SafetyAdminOverviewResponse {
       title: 'Alert',
       type: 'schedule_conflict',
     }],
+    alertsTotalCount: 1,
     completionRows: [{ href: '/sites/s1', headquarterName: 'HQ', missingItems: ['contact'], siteId: 's1', siteName: 'Site 1' }],
+    completionRowsTotalCount: 1,
     coverageRows: [{ itemCount: 1, label: 'Coverage', missingSiteCount: 0 }],
     deadlineSignalSummary: {
       entries: [{ count: 1, href: '/reports?dispatchStatus=warning', key: 'd_plus_4_6', label: 'D+4~6' }],
@@ -49,7 +51,7 @@ function buildBaseOverview(): SafetyAdminOverviewResponse {
     priorityTargetSiteRows: [{ dispatchAlertsEnabled: true, dispatchPolicyEnabled: true, headquarterName: 'HQ', href: '/reports', openReportCount: 1, projectAmount: 1000, recipientEmail: 'x@example.com', siteId: 's1', siteName: 'Site 1', totalContractAmount: 1000 }],
     quarterlyMaterialSummary: {
       entries: [{ count: 1, href: '/reports?quarter=2026-Q2', key: 'missing', label: 'Missing' }],
-      missingSiteRows: [{ education: { filledCount: 0, missingCount: 1, requiredCount: 1 }, headquarterName: 'HQ', href: '/sites/s1', measurement: { filledCount: 0, missingCount: 1, requiredCount: 1 }, missingLabels: ['education'], quarterKey: '2026-Q2', quarterLabel: '2026 Q2', siteId: 's1', siteName: 'Site 1' }],
+      missingSiteRows: [{ education: { filledCount: 0, missingCount: 1, requiredCount: 1, rawCount: 0, distinctCount: 0, countedCount: 0, source: 'site_memo', reducedReasons: [] }, headquarterName: 'HQ', href: '/sites/s1', measurement: { filledCount: 0, missingCount: 1, requiredCount: 1, rawCount: 0, distinctCount: 0, countedCount: 0, source: 'site_memo', reducedReasons: [] }, missingLabels: ['education'], quarterKey: '2026-Q2', quarterLabel: '2026 Q2', siteId: 's1', siteName: 'Site 1' }],
       quarterKey: '2026-Q2',
       quarterLabel: '2026 Q2',
       totalSiteCount: 1,

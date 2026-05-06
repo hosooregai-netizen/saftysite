@@ -836,9 +836,12 @@ export function appendAdminDispatchEventServer(
 export function fetchAdminOverviewServer(
   token: string,
   request: Request | null = null,
+  options: { includeFullRows?: boolean } = {},
 ): Promise<SafetyBackendAdminOverviewResponse> {
   return requestSafetyAdminServer<SafetyBackendAdminOverviewResponse>(
-    '/admin/dashboard/overview',
+    withQuery('/admin/dashboard/overview', {
+      include_full_rows: options.includeFullRows === true ? true : undefined,
+    }),
     {},
     token,
     request,

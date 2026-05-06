@@ -17,10 +17,11 @@ export const runtime = 'nodejs';
 
 export async function GET(request: Request): Promise<Response> {
   try {
+    const includeFullRows = new URL(request.url).searchParams.get('include_full_rows') === 'true';
     const mergedOverview = await readOrCreateAdminOverviewRouteResponse(request, async () => {
       const token = readRequiredAdminToken(request);
       const [response, sites] = await Promise.all([
-        fetchAdminOverviewServer(token, request),
+        fetchAdminOverviewServer(token, request, { includeFullRows }),
         fetchSafetySitesServer(token, request),
       ]);
       const mappedOverview = mapBackendOverviewResponse(response);

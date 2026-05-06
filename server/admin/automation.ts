@@ -53,13 +53,6 @@ function formatDateValue(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
-function addDays(value: string, days: number) {
-  const parsed = parseDateValue(value);
-  if (!parsed) return '';
-  parsed.setDate(parsed.getDate() + days);
-  return formatDateValue(parsed);
-}
-
 function getMonthWindow(month: string, today: Date) {
   const matched = normalizeText(month).match(/^(\d{4})-(\d{2})$/);
   if (!matched) {
@@ -530,7 +523,9 @@ export function buildAdminOverviewResponse(
   return {
     ...overview,
     alerts,
+    alertsTotalCount: alerts.length,
     completionRows,
+    completionRowsTotalCount: completionRows.length,
     scheduleRows: schedules,
   };
 }

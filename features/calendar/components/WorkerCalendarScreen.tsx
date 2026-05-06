@@ -812,7 +812,10 @@ export function WorkerCalendarScreen() {
     try {
       const token = readSafetyAuthToken();
       if (token) {
-        const seed = await fetchTechnicalGuidanceSeed(token, site.id);
+        const seed = await fetchTechnicalGuidanceSeed(token, site.id, {
+          targetVisitDate: schedule.plannedDate,
+          targetVisitRound: schedule.roundNo,
+        });
         document4FollowUps = seed.open_followups.map((item) => ({
           id: item.id,
           sourceSessionId: item.source_session_id ?? undefined,
