@@ -1,6 +1,3 @@
-import fs from 'node:fs/promises';
-import path from 'node:path';
-
 import { imageSize } from 'image-size';
 import JSZip from 'jszip';
 
@@ -12,7 +9,6 @@ import {
   selectInspectionTemplateVariant,
   type InspectionTemplateVariant,
 } from '@/lib/documents/inspection/templateVariant';
-import { appendInspectionAppendixSections } from '@/server/documents/quarterly/inspectionAppendixMerge';
 import { buildQuarterlyMergedTemplatePrototypeBundle } from '@/server/documents/quarterly/mergedTemplatePrototype';
 import { renderAppendicesIntoMergedQuarterlySection } from '@/server/documents/quarterly/mergedTemplateRuntime';
 import { renderChartSvgTextPath } from '@/server/documents/shared/chartSvgText';
@@ -43,14 +39,6 @@ interface QuarterlyChartImageAssets {
   causative: ResolvedHwpxImageAsset;
 }
 
-const TEMPLATE_FILENAME = '\uBD84\uAE30 \uC885\uD569\uBCF4\uACE0\uC11C2.hwpx';
-const TEMPLATE_PATH = path.resolve(
-  process.cwd(),
-  'public',
-  'templates',
-  'quarterly',
-  TEMPLATE_FILENAME,
-);
 const HWPX_CONTENT_TYPE = 'application/haansofthwpx';
 const EMPTY_CHART_LABEL = '\uC790\uB8CC \uC5C6\uC74C';
 const OPS_PENDING_TITLE = '\uAD00\uB9AC\uC790 \uBCF4\uC644 \uB300\uAE30';
@@ -105,6 +93,16 @@ function selectQuarterlyMergedTemplateVariants(
   return Array.from(
     new Set(selectedSessions.map((session) => selectInspectionTemplateVariant(session))),
   );
+}
+
+export function selectQuarterlyMergedTemplateHolderVariant(
+  selectedSessions: InspectionSession[],
+): InspectionTemplateVariant {
+  return selectedSessions.some(
+    (session) => selectInspectionTemplateVariant(session) === 'v10-1',
+  )
+    ? 'v10-1'
+    : 'v10';
 }
 
 function sanitizeDocumentFileName(value: string | null | undefined, fallback: string) {
@@ -1197,20 +1195,19 @@ function updateSectionXml(
     : ensureUniqueRenderableObjectIds(normalizedSectionXml);
 }
 
-async function tryBuildQuarterlyMergedHwpxDocument(
+async function buildQuarterlyMergedHwpxDocument(
   report: QuarterlySummaryReport,
   site: InspectionSite,
   options?: QuarterlyHwpxBuildOptions,
-): Promise<GeneratedHwpxDocument | null> {
+): Promise<GeneratedHwpxDocument> {
   const selectedSessions = options?.selectedSessions ?? [];
-  const mergedTemplateVariants = selectQuarterlyMergedTemplateVariants(selectedSessions);
-  if (mergedTemplateVariants.length === 0) {
-    return null;
-  }
-
-  const holderVariant: InspectionTemplateVariant = mergedTemplateVariants.includes('v10')
-    ? 'v10'
-    : mergedTemplateVariants[0]!;
+  const selectedTemplateVariants = selectQuarterlyMergedTemplateVariants(selectedSessions);
+  const holderVariant =
+    selectedSessions.length > 0
+      ? selectQuarterlyMergedTemplateHolderVariant(selectedSessions)
+      : 'v10';
+  const mergedTemplateVariants =
+    selectedTemplateVariants.length > 0 ? selectedTemplateVariants : [holderVariant];
   const prototype = await buildQuarterlyMergedTemplatePrototypeBundle(
     mergedTemplateVariants,
     holderVariant,
@@ -1312,110 +1309,5 @@ export async function buildQuarterlyHwpxDocument(
   site: InspectionSite,
   options?: QuarterlyHwpxBuildOptions,
 ): Promise<GeneratedHwpxDocument> {
-  const selectedSessions = options?.selectedSessions ?? [];
-  if (selectedSessions.length > 0) {
-    try {
-      const mergedDocument = await tryBuildQuarterlyMergedHwpxDocument(report, site, options);
-      if (mergedDocument) {
-        return mergedDocument;
-      }
-    } catch {
-      // Fall back to the legacy multi-section path if the merged template renderer
-      // cannot produce a valid document for the current data shape.
-    }
-  }
-
-  const templateBuffer = await fs.readFile(TEMPLATE_PATH);
-  const zip = await JSZip.loadAsync(templateBuffer);
-
-  const sectionXmlFile = zip.file('Contents/section0.xml');
-  const contentHpfFile = zip.file('Contents/content.hpf');
-  const accidentChartFile = zip.file('Chart/chart1.xml');
-  const causativeChartFile = zip.file('Chart/chart2.xml');
-
-  if (!sectionXmlFile || !contentHpfFile) {
-    throw new Error('Quarterly HWPX template is missing required assets.');
-  }
-
-  const sectionXml = await sectionXmlFile.async('string');
-  let contentHpf = await contentHpfFile.async('string');
-  const accidentChartXml = accidentChartFile
-    ? await accidentChartFile.async('string')
-    : null;
-  const causativeChartXml = causativeChartFile
-    ? await causativeChartFile.async('string')
-    : null;
-  const [opsImageAsset, accidentChartImage, causativeChartImage] = await Promise.all([
-    resolveOpsImageAsset(report, options),
-    renderQuarterlyChartImageAsset(report.accidentStats),
-    renderQuarterlyChartImageAsset(report.causativeStats),
-  ]);
-  const chartImages: QuarterlyChartImageAssets = {
-    accident: accidentChartImage,
-    causative: causativeChartImage,
-  };
-
-  if (opsImageAsset) {
-    const href = `BinData/${OPS_IMAGE_ITEM_ID}.${opsImageAsset.extension}`;
-    zip.file(href, opsImageAsset.buffer, { compression: 'STORE' });
-    contentHpf = upsertManifestItem(
-      contentHpf,
-      OPS_IMAGE_ITEM_ID,
-      href,
-      normalizeHwpxMediaType(opsImageAsset.mediaType, href),
-    );
-  }
-
-  for (const [itemId, asset] of [
-    [ACCIDENT_CHART_IMAGE_ITEM_ID, chartImages.accident],
-    [CAUSATIVE_CHART_IMAGE_ITEM_ID, chartImages.causative],
-  ] as const) {
-    const href = `BinData/${itemId}.${asset.extension}`;
-    zip.file(href, asset.buffer, { compression: 'STORE' });
-    contentHpf = upsertManifestItem(
-      contentHpf,
-      itemId,
-      href,
-      normalizeHwpxMediaType(asset.mediaType, href),
-    );
-  }
-
-  let nextHeaderXml = '';
-  if (selectedSessions.length > 0) {
-    const headerXmlFile = zip.file('Contents/header.xml');
-    if (!headerXmlFile) {
-      throw new Error('Quarterly HWPX template is missing Contents/header.xml.');
-    }
-    nextHeaderXml = await headerXmlFile.async('string');
-    const mergedAppendices = await appendInspectionAppendixSections({
-      assetBaseUrl: options?.assetBaseUrl,
-      contentHpf,
-      headerXml: nextHeaderXml,
-      selectedSessions,
-      siteSessions: options?.siteSessions?.length ? options.siteSessions : selectedSessions,
-      zip,
-    });
-    contentHpf = mergedAppendices.contentHpf;
-    nextHeaderXml = mergedAppendices.headerXml;
-  }
-
-  zip.file(
-    'Contents/section0.xml',
-    updateSectionXml(sectionXml, report, site, opsImageAsset, chartImages),
-  );
-  zip.file('Contents/content.hpf', contentHpf);
-  if (nextHeaderXml) {
-    zip.file('Contents/header.xml', nextHeaderXml);
-  }
-  if (accidentChartFile && accidentChartXml) {
-    zip.file('Chart/chart1.xml', updateChartXml(accidentChartXml, report.accidentStats));
-  }
-  if (causativeChartFile && causativeChartXml) {
-    zip.file('Chart/chart2.xml', updateChartXml(causativeChartXml, report.causativeStats));
-  }
-
-  return {
-    buffer: await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' }),
-    filename: fileNameForQuarterlyReport(report, site),
-  };
+  return buildQuarterlyMergedHwpxDocument(report, site, options);
 }

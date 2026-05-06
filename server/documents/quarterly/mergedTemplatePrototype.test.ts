@@ -169,3 +169,18 @@ test('buildQuarterlyMergedTemplatePrototypeBundle prepares v10 and v10-1 appendi
   assert.doesNotMatch(sectionXml, /www\.safetysite\.co\.kr/);
   assert.doesNotMatch(sectionXml, /070-4106-6051|02-2299-1996/);
 });
+
+test('buildQuarterlyMergedTemplatePrototypeBundle can hold mixed appendices in the v10-1 template', async () => {
+  const document = await buildQuarterlyMergedTemplatePrototypeBundle(['v10', 'v10-1'], 'v10-1');
+  const zip = await JSZip.loadAsync(document.buffer);
+  const sectionXml = await zip.file('Contents/section0.xml')?.async('string');
+
+  assert.equal(document.filename, 'quarterly-merged-template.v10-1.hwpx');
+  assert.ok(sectionXml);
+  assert.ok(document.prototypes.v10);
+  assert.ok(document.prototypes['v10-1']);
+  assert.match(document.prototypes.v10.appendixPrototypeXml, /\{#appendices\}/);
+  assert.doesNotMatch(document.prototypes.v10.appendixPrototypeXml, /sec10\.accident_tracking/);
+  assert.match(document.prototypes['v10-1'].appendixPrototypeXml, /sec10\.accident_tracking/);
+  assert.match(sectionXml, /sec10\.accident_tracking/);
+});

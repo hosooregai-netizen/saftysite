@@ -12,7 +12,10 @@ import {
   syncQuarterlySummaryReportSources,
 } from '@/lib/erpReports/quarterly';
 import type { QuarterlySummaryReport } from '@/types/erpReports';
-import { buildQuarterlyHwpxDocument } from './hwpx';
+import {
+  buildQuarterlyHwpxDocument,
+  selectQuarterlyMergedTemplateHolderVariant,
+} from './hwpx';
 
 const TRANSPARENT_PNG_DATA_URL =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aR9kAAAAASUVORK5CYII=';
@@ -209,6 +212,14 @@ async function loadGeneratedZip(
   const document = await buildQuarterlyHwpxDocument(report, site, options);
   return JSZip.loadAsync(document.buffer);
 }
+
+test('selectQuarterlyMergedTemplateHolderVariant follows inspection accident template rules', () => {
+  const fixture = buildQuarterlyFixture();
+  assert.equal(selectQuarterlyMergedTemplateHolderVariant(fixture.sessions), 'v10');
+
+  fixture.sessions[1].document2Overview.accidentOccurred = 'yes';
+  assert.equal(selectQuarterlyMergedTemplateHolderVariant(fixture.sessions), 'v10-1');
+});
 
 test('buildQuarterlyHwpxDocument keeps the standalone quarterly structure when no appendix is selected', async () => {
   const fixture = buildQuarterlyFixture();
