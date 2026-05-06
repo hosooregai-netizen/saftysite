@@ -32,6 +32,19 @@ function readMaterialText(item: Record<string, unknown>, ...keys: string[]) {
   return '';
 }
 
+function readMaterialKeyPart(item: Record<string, unknown>, ...keys: string[]) {
+  return normalizeMaterialKeyPart(readMaterialText(item, ...keys));
+}
+
+function readNestedValue(source: Record<string, unknown>, ...path: string[]) {
+  let current: unknown = source;
+  for (const key of path) {
+    if (!current || typeof current !== 'object') return undefined;
+    current = (current as Record<string, unknown>)[key];
+  }
+  return current;
+}
+
 function asRecordArray(value: unknown): Array<Record<string, unknown>> {
   if (!Array.isArray(value)) return [];
   return value.filter(
@@ -70,31 +83,57 @@ function hasEducationMaterialContent(item: Record<string, unknown>) {
 }
 
 function buildMeasurementMaterialKey(item: Record<string, unknown>, fallbackKey: string) {
-  const instrumentType = normalizeMaterialKeyPart(readMaterialText(item, 'instrumentType', 'instrument_type'));
-  const measurementLocation = normalizeMaterialKeyPart(readMaterialText(item, 'measurementLocation', 'measurement_location'));
-  const measuredValue = normalizeMaterialKeyPart(readMaterialText(item, 'measuredValue', 'measured_value'));
-
-  if (instrumentType && measurementLocation && measuredValue) {
-    return `measurement:${instrumentType}:${measurementLocation}:${measuredValue}`;
-  }
-  if (instrumentType && measurementLocation) return `measurement:${instrumentType}:${measurementLocation}`;
-  if (instrumentType && measuredValue) return `measurement:${instrumentType}:value:${measuredValue}`;
-  if (measurementLocation && measuredValue) return `measurement-location:${measurementLocation}:value:${measuredValue}`;
-  if (instrumentType) return `measurement:${instrumentType}`;
-  if (measurementLocation) return `measurement-location:${measurementLocation}`;
-  if (measuredValue) return `measurement-value:${measuredValue}`;
-  return fallbackKey;
+  const includeId = Boolean(
+    readMaterialKeyPart(item, 'measurementLocation', 'measurement_location') ||
+      readMaterialKeyPart(item, 'measuredValue', 'measured_value') ||
+      readMaterialKeyPart(item, 'photoUrl', 'photo_url') ||
+      readMaterialKeyPart(item, 'actionTaken', 'action_taken'),
+  );
+  const parts = [
+    includeId && readMaterialKeyPart(item, 'id', '_id')
+      ? `id=${readMaterialKeyPart(item, 'id', '_id')}`
+      : '',
+    readMaterialKeyPart(item, 'instrumentType', 'instrument_type')
+      ? `instrument_type=${readMaterialKeyPart(item, 'instrumentType', 'instrument_type')}`
+      : '',
+    readMaterialKeyPart(item, 'measurementLocation', 'measurement_location')
+      ? `measurement_location=${readMaterialKeyPart(item, 'measurementLocation', 'measurement_location')}`
+      : '',
+    readMaterialKeyPart(item, 'measuredValue', 'measured_value')
+      ? `measured_value=${readMaterialKeyPart(item, 'measuredValue', 'measured_value')}`
+      : '',
+    readMaterialKeyPart(item, 'photoUrl', 'photo_url')
+      ? `photo_url=${readMaterialKeyPart(item, 'photoUrl', 'photo_url')}`
+      : '',
+    readMaterialKeyPart(item, 'safetyCriteria', 'safety_criteria')
+      ? `safety_criteria=${readMaterialKeyPart(item, 'safetyCriteria', 'safety_criteria')}`
+      : '',
+    readMaterialKeyPart(item, 'actionTaken', 'action_taken')
+      ? `action_taken=${readMaterialKeyPart(item, 'actionTaken', 'action_taken')}`
+      : '',
+  ].filter(Boolean);
+  return parts.length > 0 ? `measurement|${parts.join('|')}` : fallbackKey;
 }
 
 function buildEducationMaterialKey(item: Record<string, unknown>, fallbackKey: string) {
-  const materialName = normalizeMaterialKeyPart(readMaterialText(item, 'materialName', 'material_name'));
-  const topic = normalizeMaterialKeyPart(item.topic);
-  const content = normalizeMaterialKeyPart(item.content);
-
-  if (materialName) return `education-material:${materialName}`;
-  if (topic) return `education-topic:${topic}`;
-  if (content) return `education-content:${content}`;
-  return fallbackKey;
+  const parts = [
+    readMaterialKeyPart(item, 'id', '_id') ? `id=${readMaterialKeyPart(item, 'id', '_id')}` : '',
+    readMaterialKeyPart(item, 'materialUrl', 'material_url')
+      ? `material_url=${readMaterialKeyPart(item, 'materialUrl', 'material_url')}`
+      : '',
+    readMaterialKeyPart(item, 'photoUrl', 'photo_url')
+      ? `photo_url=${readMaterialKeyPart(item, 'photoUrl', 'photo_url')}`
+      : '',
+    readMaterialKeyPart(item, 'materialName', 'material_name')
+      ? `material_name=${readMaterialKeyPart(item, 'materialName', 'material_name')}`
+      : '',
+    readMaterialKeyPart(item, 'attendeeCount', 'attendee_count')
+      ? `attendee_count=${readMaterialKeyPart(item, 'attendeeCount', 'attendee_count')}`
+      : '',
+    readMaterialKeyPart(item, 'topic') ? `topic=${readMaterialKeyPart(item, 'topic')}` : '',
+    readMaterialKeyPart(item, 'content') ? `content=${readMaterialKeyPart(item, 'content')}` : '',
+  ].filter(Boolean);
+  return parts.length > 0 ? `education|${parts.join('|')}` : fallbackKey;
 }
 
 function resolveReportKind(report: Pick<SafetyReport, 'meta' | 'report_type'>) {
@@ -112,6 +151,25 @@ function resolveReportKind(report: Pick<SafetyReport, 'meta' | 'report_type'>) {
   }
   if (normalized === 'bad_workplace') return 'bad_workplace';
   return 'technical_guidance';
+}
+
+function resolveMaterialReportQuarterKey(report: SafetyReport) {
+  const payload = report.payload && typeof report.payload === 'object'
+    ? (report.payload as Record<string, unknown>)
+    : {};
+  const meta = report.meta && typeof report.meta === 'object'
+    ? (report.meta as Record<string, unknown>)
+    : {};
+  return (
+    extractCurrentQuarterKey(report.visit_date) ||
+    extractCurrentQuarterKey(normalizeMaterialText(readNestedValue(payload, 'document2Overview', 'guidanceDate'))) ||
+    extractCurrentQuarterKey(normalizeMaterialText(readNestedValue(payload, 'document2', 'guidanceDate'))) ||
+    extractCurrentQuarterKey(normalizeMaterialText(meta.guidanceDate)) ||
+    extractCurrentQuarterKey(normalizeMaterialText(meta.guidance_date)) ||
+    extractCurrentQuarterKey(normalizeMaterialText(meta.reportDate)) ||
+    extractCurrentQuarterKey(normalizeMaterialText(meta.report_date)) ||
+    extractCurrentQuarterKey(report.updated_at)
+  );
 }
 
 function calculateMaterialCountedCount(distinctCount: number) {
@@ -153,8 +211,7 @@ export function buildQuarterlyMaterialCountsBySite(reports: SafetyReport[], quar
     const siteId = report.site_id?.trim() || '';
     if (!siteId || resolveReportKind(report) !== 'technical_guidance') return;
 
-    const reportQuarterKey =
-      extractCurrentQuarterKey(report.visit_date) || extractCurrentQuarterKey(report.updated_at);
+    const reportQuarterKey = resolveMaterialReportQuarterKey(report);
     if (!reportQuarterKey || reportQuarterKey !== quarterKey) return;
 
     const payload = report.payload && typeof report.payload === 'object' ? report.payload : {};

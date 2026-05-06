@@ -254,7 +254,7 @@ test('maps capped upstream overview row totals separately from returned rows', (
   assert.equal(mappedOverview.completionRowsTotalCount, 125);
 });
 
-test('normalizes stale quarterly material summary to mapped priority scope', () => {
+test('preserves backend quarterly material summary scope and diagnostics', () => {
   const backendOverview = buildBackendOverview();
   backendOverview.quarterly_material_summary = {
     entries: [
@@ -302,7 +302,7 @@ test('normalizes stale quarterly material summary to mapped priority scope', () 
   const mappedOverview = mapBackendOverviewResponse(backendOverview);
 
   assert.equal(mappedOverview.priorityQuarterlyManagementRows?.length, 1);
-  assert.equal(mappedOverview.quarterlyMaterialSummary.totalSiteCount, 1);
+  assert.equal(mappedOverview.quarterlyMaterialSummary.totalSiteCount, 28);
   assert.equal(mappedOverview.quarterlyMaterialSummary.missingSiteRows.length, 1);
   assert.equal(mappedOverview.quarterlyMaterialSummary.missingSiteRows[0]?.measurement.rawCount, 4);
   assert.equal(mappedOverview.quarterlyMaterialSummary.missingSiteRows[0]?.measurement.distinctCount, 1);
@@ -312,7 +312,7 @@ test('normalizes stale quarterly material summary to mapped priority scope', () 
   );
   assert.equal(
     mappedOverview.quarterlyMaterialSummary.entries.find((entry) => entry.key === 'complete')?.count,
-    0,
+    27,
   );
   assert.equal(
     mappedOverview.quarterlyMaterialSummary.entries.find((entry) => entry.key === 'both_missing')?.count,

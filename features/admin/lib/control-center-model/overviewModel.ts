@@ -42,6 +42,7 @@ import {
   isDispatchManagementUnsentRow,
   isCurrentSiteManagementWindow,
   isPriorityQuarterlySiteScope,
+  isSiteInCurrentQuarterWindow,
 } from './overviewPolicies';
 import type { AdminOverviewModel } from './types';
 import type { SafetyAdminPriorityQuarterlyManagementRow } from '@/types/admin';
@@ -238,7 +239,7 @@ function buildQuarterlySummary(
   const quarterLabel = formatQuarterLabel(today);
   const materialCountsBySite = buildQuarterlyMaterialCountsBySite(materialSourceReports, quarterKey);
   const quarterlyMaterialScopeSites = activeSites.filter((site) =>
-    isPriorityQuarterlySiteScope({ site, today }),
+    isSiteInCurrentQuarterWindow(site, today),
   );
   const materialBucketCounts = { both_missing: 0, complete: 0, education_missing: 0, measurement_missing: 0 };
   let educationReadyCount = 0;
@@ -259,13 +260,19 @@ function buildQuarterlySummary(
 
   const missingSiteRows = quarterlyMaterialScopeSites.flatMap((site) => {
     const reportMaterialCounts = materialCountsBySite.get(site.id);
-    const materialRecord = reportMaterialCounts == null ? getSiteQuarterlyMaterialRecord(site, quarterKey) : null;
+    let materialRecord = reportMaterialCounts == null ? getSiteQuarterlyMaterialRecord(site, quarterKey) : null;
     const educationRequirement =
-      reportMaterialCounts?.education ??
-      buildSiteMemoMaterialRequirement(materialRecord?.educationMaterials ?? []);
+      reportMaterialCounts && reportMaterialCounts.education.rawCount > 0
+        ? reportMaterialCounts.education
+        : buildSiteMemoMaterialRequirement(
+            (materialRecord ??= getSiteQuarterlyMaterialRecord(site, quarterKey)).educationMaterials,
+          );
     const measurementRequirement =
-      reportMaterialCounts?.measurement ??
-      buildSiteMemoMaterialRequirement(materialRecord?.measurementMaterials ?? []);
+      reportMaterialCounts && reportMaterialCounts.measurement.rawCount > 0
+        ? reportMaterialCounts.measurement
+        : buildSiteMemoMaterialRequirement(
+            (materialRecord ??= getSiteQuarterlyMaterialRecord(site, quarterKey)).measurementMaterials,
+          );
     const educationFilledCount = educationRequirement.countedCount;
     const measurementFilledCount = measurementRequirement.countedCount;
     const educationMissingCount = Math.max(0, QUARTERLY_MATERIAL_REQUIRED_COUNT - educationFilledCount);

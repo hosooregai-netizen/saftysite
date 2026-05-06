@@ -480,80 +480,12 @@ function syncDispatchSummaryRows(
   );
 }
 
-function countQuarterlyMaterialRows(
-  rows: SafetyAdminOverviewResponse['quarterlyMaterialSummary']['missingSiteRows'],
-) {
-  const counts = {
-    both_missing: 0,
-    complete: 0,
-    education_missing: 0,
-    measurement_missing: 0,
-  };
-
-  rows.forEach((row) => {
-    const hasEducationMissing = row.education.missingCount > 0;
-    const hasMeasurementMissing = row.measurement.missingCount > 0;
-    if (hasEducationMissing && hasMeasurementMissing) counts.both_missing += 1;
-    else if (hasEducationMissing) counts.education_missing += 1;
-    else if (hasMeasurementMissing) counts.measurement_missing += 1;
-  });
-
-  return counts;
-}
-
 function normalizeQuarterlyMaterialSummaryScope(
   summary: SafetyAdminOverviewResponse['quarterlyMaterialSummary'],
   priorityRows: SafetyAdminPriorityQuarterlyManagementRow[],
 ): SafetyAdminOverviewResponse['quarterlyMaterialSummary'] {
-  if (priorityRows.length === 0) return summary;
-
-  const prioritySiteIds = new Set(priorityRows.map((row) => row.siteId).filter(Boolean));
-  const priorityQuarterKeys = new Set(priorityRows.map((row) => row.currentQuarterKey).filter(Boolean));
-  const scopedRows = summary.missingSiteRows.filter((row) => {
-    const matchesSite = prioritySiteIds.size === 0 || prioritySiteIds.has(row.siteId);
-    const matchesQuarter =
-      priorityQuarterKeys.size === 0 ||
-      !row.quarterKey ||
-      priorityQuarterKeys.has(row.quarterKey);
-    return matchesSite && matchesQuarter;
-  });
-  const totalSiteCount = priorityRows.length;
-  const rowCounts = countQuarterlyMaterialRows(scopedRows);
-  const completeCount = Math.max(0, totalSiteCount - scopedRows.length);
-  const nextCounts: Record<string, number> = {
-    both_missing: rowCounts.both_missing,
-    complete: completeCount,
-    education_missing: rowCounts.education_missing,
-    measurement_missing: rowCounts.measurement_missing,
-  };
-  const hasStaleScope =
-    summary.totalSiteCount !== totalSiteCount ||
-    scopedRows.length !== summary.missingSiteRows.length ||
-    summary.entries.some((entry) => nextCounts[entry.key] != null && entry.count !== nextCounts[entry.key]);
-
-  if (!hasStaleScope) return summary;
-
-  const templateByKey = new Map(summary.entries.map((entry) => [entry.key, entry]));
-  const orderedKeys = ['complete', 'education_missing', 'measurement_missing', 'both_missing'];
-  const entries = orderedKeys.map((key) => {
-    const template = templateByKey.get(key);
-    return {
-      count: nextCounts[key] ?? 0,
-      href: template?.href || '',
-      key,
-      label: template?.label || key,
-    };
-  });
-  const firstPriorityRow = priorityRows[0];
-
-  return {
-    ...summary,
-    entries,
-    missingSiteRows: scopedRows,
-    quarterKey: summary.quarterKey || firstPriorityRow?.currentQuarterKey || '',
-    quarterLabel: summary.quarterLabel || firstPriorityRow?.currentQuarterLabel || '',
-    totalSiteCount,
-  };
+  void priorityRows;
+  return summary;
 }
 
 function mapBackendQuarterlyMaterialRequirement(row: {

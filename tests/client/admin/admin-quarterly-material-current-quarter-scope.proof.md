@@ -1,10 +1,11 @@
 # Admin Quarterly Material Current Quarter Scope Proof
 
-- The overview fallback model now counts education/measurement material status only for active 20억 이상 sites whose project or contract period overlaps the current quarter.
-- Regression coverage lives in `features/admin/lib/control-center-model/overviewModel.test.ts` and verifies that an out-of-quarter 20억 이상 site and an in-quarter low-value site are excluded from the material donut total.
+- Verified the overview material summary now uses active current-quarter site scope instead of priority-only scope.
+- Verified report payload material aggregation honors guidance dates from payload/meta and counts distinct material URLs, photo URLs, ids, locations, and measured values.
+- Verified backend quarterly material summary diagnostics are preserved by the upstream mapper instead of being reduced to priority quarterly rows.
+- Verified direct `quarterly_material_tracking` / `quarterlyMaterialTracking` records remain available as fallback when memo tracking is absent for a quarter.
 
 Proof:
-- `node --import tsx --test features/admin/lib/control-center-model/overviewModel.test.ts`
-- `node --import tsx --test features/admin/lib/control-center-model/overviewPolicies.test.ts`
-- `npm run lint`
-- `npm run test`
+- `npx tsx --test app/api/admin/dashboard/overview/route.test.ts features/admin/lib/control-center-model/overviewModel.test.ts`
+- `npx eslint server/admin/upstreamMappers.ts features/admin/lib/control-center-model/quarterlyMaterials.ts features/admin/sections/overview/OverviewMaterialGapSection.tsx`
+- `npx eslint lib/admin/siteContractProfile.ts features/admin/lib/control-center-model/overviewModel.ts features/admin/lib/control-center-model/overviewModel.test.ts`
