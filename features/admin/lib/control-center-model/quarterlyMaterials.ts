@@ -17,7 +17,9 @@ interface MaterialCountDiagnostic {
 }
 
 function normalizeMaterialText(value: unknown) {
-  return typeof value === 'string' ? value.trim() : '';
+  if (typeof value === 'string') return value.trim();
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  return '';
 }
 
 function normalizeMaterialKeyPart(value: unknown) {
@@ -62,12 +64,13 @@ function readRecordArray(source: Record<string, unknown>, ...keys: string[]) {
 
 function hasMeasurementMaterialContent(item: Record<string, unknown>) {
   return Boolean(
-    readMaterialText(item, 'photoUrl', 'photo_url') ||
-      readMaterialText(item, 'instrumentType', 'instrument_type') ||
-      readMaterialText(item, 'measurementLocation', 'measurement_location') ||
-      readMaterialText(item, 'measuredValue', 'measured_value') ||
-      readMaterialText(item, 'safetyCriteria', 'safety_criteria') ||
-      readMaterialText(item, 'actionTaken', 'action_taken'),
+    readMaterialText(item, 'photoUrl', 'photo_url', 'imageUrl', 'image_url', 'assetUrl', 'asset_url', 'originalPath', 'original_path', 'thumbnailPath', 'thumbnail_path') ||
+      readMaterialText(item, 'photoAssetId', 'photo_asset_id', 'assetId', 'asset_id', 'photoId', 'photo_id') ||
+      readMaterialText(item, 'instrumentType', 'instrument_type', 'instrumentName', 'instrument_name', 'equipmentName', 'equipment_name') ||
+      readMaterialText(item, 'measurementLocation', 'measurement_location', 'measurementLocationDetail', 'measurement_location_detail', 'measurementLocationValue', 'measurement_location_value', 'measurementLocationName', 'measurement_location_name', 'location') ||
+      readMaterialText(item, 'measuredValue', 'measured_value', 'measurementValue', 'measurement_value', 'value') ||
+      readMaterialText(item, 'safetyCriteria', 'safety_criteria', 'measurementCriteria', 'measurement_criteria', 'criteria') ||
+      readMaterialText(item, 'actionTaken', 'action_taken', 'actionStatus', 'action_status', 'suitability'),
   );
 }
 
@@ -83,33 +86,30 @@ function hasEducationMaterialContent(item: Record<string, unknown>) {
 }
 
 function buildMeasurementMaterialKey(item: Record<string, unknown>, fallbackKey: string) {
-  const includeId = Boolean(
-    readMaterialKeyPart(item, 'measurementLocation', 'measurement_location') ||
-      readMaterialKeyPart(item, 'measuredValue', 'measured_value') ||
-      readMaterialKeyPart(item, 'photoUrl', 'photo_url') ||
-      readMaterialKeyPart(item, 'actionTaken', 'action_taken'),
-  );
   const parts = [
-    includeId && readMaterialKeyPart(item, 'id', '_id')
+    readMaterialKeyPart(item, 'id', '_id')
       ? `id=${readMaterialKeyPart(item, 'id', '_id')}`
       : '',
-    readMaterialKeyPart(item, 'instrumentType', 'instrument_type')
-      ? `instrument_type=${readMaterialKeyPart(item, 'instrumentType', 'instrument_type')}`
+    readMaterialKeyPart(item, 'instrumentType', 'instrument_type', 'instrumentName', 'instrument_name', 'equipmentName', 'equipment_name')
+      ? `instrument_type=${readMaterialKeyPart(item, 'instrumentType', 'instrument_type', 'instrumentName', 'instrument_name', 'equipmentName', 'equipment_name')}`
       : '',
-    readMaterialKeyPart(item, 'measurementLocation', 'measurement_location')
-      ? `measurement_location=${readMaterialKeyPart(item, 'measurementLocation', 'measurement_location')}`
+    readMaterialKeyPart(item, 'measurementLocation', 'measurement_location', 'measurementLocationDetail', 'measurement_location_detail', 'measurementLocationValue', 'measurement_location_value', 'measurementLocationName', 'measurement_location_name', 'location')
+      ? `measurement_location=${readMaterialKeyPart(item, 'measurementLocation', 'measurement_location', 'measurementLocationDetail', 'measurement_location_detail', 'measurementLocationValue', 'measurement_location_value', 'measurementLocationName', 'measurement_location_name', 'location')}`
       : '',
-    readMaterialKeyPart(item, 'measuredValue', 'measured_value')
-      ? `measured_value=${readMaterialKeyPart(item, 'measuredValue', 'measured_value')}`
+    readMaterialKeyPart(item, 'measuredValue', 'measured_value', 'measurementValue', 'measurement_value', 'value')
+      ? `measured_value=${readMaterialKeyPart(item, 'measuredValue', 'measured_value', 'measurementValue', 'measurement_value', 'value')}`
       : '',
-    readMaterialKeyPart(item, 'photoUrl', 'photo_url')
-      ? `photo_url=${readMaterialKeyPart(item, 'photoUrl', 'photo_url')}`
+    readMaterialKeyPart(item, 'photoUrl', 'photo_url', 'imageUrl', 'image_url', 'assetUrl', 'asset_url', 'originalPath', 'original_path', 'thumbnailPath', 'thumbnail_path')
+      ? `photo_url=${readMaterialKeyPart(item, 'photoUrl', 'photo_url', 'imageUrl', 'image_url', 'assetUrl', 'asset_url', 'originalPath', 'original_path', 'thumbnailPath', 'thumbnail_path')}`
       : '',
-    readMaterialKeyPart(item, 'safetyCriteria', 'safety_criteria')
-      ? `safety_criteria=${readMaterialKeyPart(item, 'safetyCriteria', 'safety_criteria')}`
+    readMaterialKeyPart(item, 'photoAssetId', 'photo_asset_id', 'assetId', 'asset_id', 'photoId', 'photo_id')
+      ? `photo_asset_id=${readMaterialKeyPart(item, 'photoAssetId', 'photo_asset_id', 'assetId', 'asset_id', 'photoId', 'photo_id')}`
       : '',
-    readMaterialKeyPart(item, 'actionTaken', 'action_taken')
-      ? `action_taken=${readMaterialKeyPart(item, 'actionTaken', 'action_taken')}`
+    readMaterialKeyPart(item, 'safetyCriteria', 'safety_criteria', 'measurementCriteria', 'measurement_criteria', 'criteria')
+      ? `safety_criteria=${readMaterialKeyPart(item, 'safetyCriteria', 'safety_criteria', 'measurementCriteria', 'measurement_criteria', 'criteria')}`
+      : '',
+    readMaterialKeyPart(item, 'actionTaken', 'action_taken', 'actionStatus', 'action_status', 'suitability')
+      ? `action_taken=${readMaterialKeyPart(item, 'actionTaken', 'action_taken', 'actionStatus', 'action_status', 'suitability')}`
       : '',
   ].filter(Boolean);
   return parts.length > 0 ? `measurement|${parts.join('|')}` : fallbackKey;

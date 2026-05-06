@@ -47,12 +47,6 @@ interface OverviewMaterialGapSectionProps {
   totalRows: number;
 }
 
-function formatMaterialReducedReasons(
-  material: OverviewMaterialGapSectionProps['rows'][number]['education'],
-) {
-  return material.reducedReasons.join(', ');
-}
-
 export function OverviewMaterialGapSection({
   currentPage,
   quarterLabel,
@@ -125,15 +119,9 @@ export function OverviewMaterialGapSection({
                         <td><span className={styles.overviewTableStatus}>{`${row.measurement.missingCount}건`}</span></td>
                         <td>
                           <span className={styles.overviewTableMetric}>{`${row.education.filledCount}/${row.education.requiredCount}`}</span>
-                          {row.education.reducedReasons.length > 0 ? (
-                            <span className={styles.overviewTableReason}>{formatMaterialReducedReasons(row.education)}</span>
-                          ) : null}
                         </td>
                         <td>
                           <span className={styles.overviewTableMetric}>{`${row.measurement.filledCount}/${row.measurement.requiredCount}`}</span>
-                          {row.measurement.reducedReasons.length > 0 ? (
-                            <span className={styles.overviewTableReason}>{formatMaterialReducedReasons(row.measurement)}</span>
-                          ) : null}
                         </td>
                         <td><span className={styles.overviewTableStatus}>{`${missingTotal}건`}</span></td>
                       </tr>

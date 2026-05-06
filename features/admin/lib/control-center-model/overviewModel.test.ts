@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import type { SafetyReport, SafetyReportListItem } from '@/types/backend';
+import type { SafetyReport } from '@/types/backend';
 import type { ControllerDashboardData } from '@/types/controller';
 import { buildAdminOverviewModel } from './overviewModel';
 
@@ -85,6 +85,17 @@ test('quarterly material summary uses current-quarter active site scope', () => 
           status: 'active',
         },
         {
+          id: 'site-ended-current-quarter',
+          headquarter_id: 'hq-1',
+          headquarter: { id: 'hq-1', name: 'HQ' },
+          headquarter_detail: { id: 'hq-1', name: 'HQ' },
+          project_amount: 2_500_000_000,
+          project_start_date: '2026-04-01',
+          project_end_date: '2026-04-10',
+          site_name: 'Ended current quarter site',
+          status: 'active',
+        },
+        {
           id: 'site-current-quarter-low-value',
           headquarter_id: 'hq-1',
           headquarter: { id: 'hq-1', name: 'HQ' },
@@ -151,6 +162,63 @@ test('quarterly material summary counts payload guidance-date records with disti
             { id: 'm2', measurementLocation: 'B', photoUrl: '/m/b.jpg' },
             { id: 'm3', measurementLocation: 'C', photoUrl: '/m/c.jpg' },
             { id: 'm4', measurementLocation: 'D', photoUrl: '/m/d.jpg' },
+          ],
+          document11EducationRecords: [
+            { id: 'e1', materialName: 'same', materialUrl: '/e/a.pdf' },
+            { id: 'e2', materialName: 'same', materialUrl: '/e/b.pdf' },
+            { id: 'e3', materialName: 'same', photoUrl: '/e/c.jpg' },
+            { id: 'e4', materialName: 'same', photoUrl: '/e/d.jpg' },
+          ],
+        },
+      },
+    ] as unknown as SafetyReport[],
+    today,
+  );
+
+  assert.equal(overview.quarterlyMaterialSummary.totalSiteCount, 1);
+  assert.deepEqual(overview.quarterlyMaterialSummary.missingSiteRows, []);
+  assert.equal(
+    overview.quarterlyMaterialSummary.entries.find((entry) => entry.key === 'complete')?.count,
+    1,
+  );
+});
+
+test('quarterly material summary counts same-instrument measurement rows by distinct ids', () => {
+  const today = new Date('2026-04-20T00:00:00+09:00');
+  const overview = buildAdminOverviewModel(
+    {
+      assignments: [],
+      headquarters: [{ id: 'hq-1', is_active: true, name: 'HQ' }],
+      sites: [
+        {
+          id: 'site-material',
+          headquarter_id: 'hq-1',
+          headquarter: { id: 'hq-1', name: 'HQ' },
+          headquarter_detail: { id: 'hq-1', name: 'HQ' },
+          project_amount: 1_000_000_000,
+          project_start_date: '2026-04-01',
+          project_end_date: '2026-06-30',
+          site_name: 'Material site',
+          status: 'active',
+        },
+      ],
+      users: [],
+    } as unknown as ControllerDashboardData,
+    [],
+    [
+      {
+        report_key: 'guide-material',
+        report_type: 'technical_guidance',
+        site_id: 'site-material',
+        visit_date: '2026-04-10',
+        updated_at: '2026-04-10T00:00:00+00:00',
+        meta: {},
+        payload: {
+          document10Measurements: [
+            { id: 'm1', instrumentType: 'meter' },
+            { id: 'm2', instrumentType: 'meter' },
+            { id: 'm3', instrumentType: 'meter' },
+            { id: 'm4', instrumentType: 'meter' },
           ],
           document11EducationRecords: [
             { id: 'e1', materialName: 'same', materialUrl: '/e/a.pdf' },
