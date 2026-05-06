@@ -92,10 +92,17 @@ function shouldUseFallbackMaterialRows(
   const responseRows = responseSummary.missingSiteRows;
   const fallbackRows = fallbackSummary.missingSiteRows;
   const expectedMissingRows = countMaterialMissingEntries(responseSummary);
+  const fallbackMissingRows = countMaterialMissingEntries(fallbackSummary);
+  const hasStaleSummaryScope =
+    fallbackSummary.totalSiteCount > 0 &&
+    responseSummary.totalSiteCount !== fallbackSummary.totalSiteCount &&
+    responseRows.length === fallbackRows.length &&
+    expectedMissingRows === fallbackMissingRows;
 
   return (
-    fallbackRows.length > responseRows.length &&
-    (responseRows.length === 0 || expectedMissingRows > responseRows.length)
+    (fallbackRows.length > responseRows.length &&
+      (responseRows.length === 0 || expectedMissingRows > responseRows.length)) ||
+    hasStaleSummaryScope
   );
 }
 

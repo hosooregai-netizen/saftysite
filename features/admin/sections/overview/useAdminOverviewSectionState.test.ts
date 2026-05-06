@@ -109,6 +109,50 @@ test('restores material gap rows when upstream summary has counts but no row pay
   );
 });
 
+test('restores material summary when upstream rows are current-quarter but totals keep the old scope', () => {
+  const materialRow = buildMaterialRow('site-1');
+  const fallbackOverview = buildOverview();
+  fallbackOverview.quarterlyMaterialSummary = {
+    entries: [
+      { count: 0, href: '/headquarters', key: 'complete', label: 'Complete' },
+      { count: 0, href: '/headquarters', key: 'education_missing', label: 'Education missing' },
+      { count: 0, href: '/headquarters', key: 'measurement_missing', label: 'Measurement missing' },
+      { count: 1, href: '/headquarters', key: 'both_missing', label: 'Both missing' },
+    ],
+    missingSiteRows: [materialRow],
+    quarterKey: '2026-Q2',
+    quarterLabel: '2026 Q2',
+    totalSiteCount: 1,
+  };
+  const upstreamOverview = {
+    ...buildOverview(),
+    quarterlyMaterialSummary: {
+      entries: [
+        { count: 27, href: '/headquarters', key: 'complete', label: 'Complete' },
+        { count: 0, href: '/headquarters', key: 'education_missing', label: 'Education missing' },
+        { count: 0, href: '/headquarters', key: 'measurement_missing', label: 'Measurement missing' },
+        { count: 1, href: '/headquarters', key: 'both_missing', label: 'Both missing' },
+      ],
+      missingSiteRows: [materialRow],
+      quarterKey: '2026-Q2',
+      quarterLabel: '2026 Q2',
+      totalSiteCount: 28,
+    },
+  };
+
+  const merged = mergeOverviewResponseWithFallback(upstreamOverview, fallbackOverview);
+
+  assert.equal(merged.quarterlyMaterialSummary.totalSiteCount, 1);
+  assert.equal(
+    merged.quarterlyMaterialSummary.entries.find((entry) => entry.key === 'complete')?.count,
+    0,
+  );
+  assert.equal(
+    merged.quarterlyMaterialSummary.entries.find((entry) => entry.key === 'both_missing')?.count,
+    1,
+  );
+});
+
 test('restores ending-soon rows when upstream summary indicates a partial row payload', () => {
   const fallbackOverview = buildOverview();
   fallbackOverview.endingSoonRows = [buildEndingSoonRow('fallback-1'), buildEndingSoonRow('fallback-2')];
