@@ -2,22 +2,19 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { reportPayloadSchema, type ReportPayload } from '@saftysite/contracts';
 import {
   bootstrapDemoSession,
-  claimAnonymousSession,
+  canUseWorkspaceServerApis,
   isAuthenticatedSession,
-  loginReportUser,
   markReportReviewComplete,
   patchReportRecord,
   removeLocalReport,
   type ReportRecord,
   registerReportExport,
   type DemoSession,
-  type SessionMode,
-  signupReportUser,
   syncLocalReportToServer,
 } from '@/lib/reportApi';
 import {
@@ -26,6 +23,7 @@ import {
   type ReportWorkspaceSectionId,
 } from '@/lib/demoData';
 import { mapReportPayloadToInspectionSession } from '@/lib/reportSessionMapper';
+import { beginGoogleWorkspaceAuth } from '@/lib/sessionAuthFlow';
 import { fetchInspectionHwpxDocument, fetchInspectionPdfDocument, saveBlobAsFile } from '../../../lib/api';
 import styles from './ReportWorkspace.module.css';
 
@@ -35,6 +33,7 @@ type WorkspaceDraft = {
   findingCandidates: ReportPayload['findingCandidates'];
   photoEvidence: ReportPayload['photoEvidence'];
 };
+type ReviewQueueItem = ReportPayload['reviewMeta']['reviewQueue'][number];
 
 type FollowUpRow = {
   id: string;
@@ -50,7 +49,6 @@ type FollowUpRow = {
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 type DownloadState = 'idle' | 'hwpx' | 'pdf';
-type AccountMode = 'login' | 'signup';
 type PendingDownloadContext = {
   reportSession: DemoSession;
   targetReportId: string;
@@ -98,6 +96,8 @@ const EMPTY_PLAN: ReportPayload['sectionDrafts']['doc8'][number] = {
   processName: '',
   hazard: '',
   countermeasure: '',
+  note: '',
+  evidencePhotoIds: [],
   confidence: 0,
 };
 
@@ -116,6 +116,242 @@ const EMPTY_SUPPORT: ReportPayload['sectionDrafts']['doc12'][number] = {
 
 function safeText(value: unknown): string {
   return typeof value === 'string' ? value : '';
+}
+
+function buildReviewItemId(fieldPath: string): string {
+  return `rq-${fieldPath.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '') || 'item'}`;
+}
+
+function inferReviewItemSection(fieldPath: string): ReviewQueueItem['section'] {
+  if (fieldPath.startsWith('reportMeta.')) {
+    return fieldPath === 'reportMeta.notificationMethod' ? 'dispatch' : 'reportMeta';
+  }
+  if (fieldPath.startsWith('findingCandidates[')) {
+    return 'doc4';
+  }
+  if (fieldPath.startsWith('sectionDrafts.doc8[')) {
+    return 'doc5';
+  }
+  if (fieldPath.startsWith('photoObservations[')) {
+    return 'photoObservations';
+  }
+  return 'other';
+}
+
+function inferReviewItemField(fieldPath: string): string {
+  const tokens = tokenizeFieldPath(fieldPath);
+  const lastToken = tokens[tokens.length - 1];
+  return typeof lastToken === 'string' ? lastToken : fieldPath.split('.').at(-1) ?? fieldPath;
+}
+
+function tokenizeFieldPath(fieldPath: string): Array<string | number> {
+  const tokens: Array<string | number> = [];
+  const pattern = /([^[.\]]+)|\[(\d+)\]/g;
+  for (const match of fieldPath.matchAll(pattern)) {
+    if (match[1]) {
+      tokens.push(match[1]);
+      continue;
+    }
+    if (match[2]) {
+      tokens.push(Number(match[2]));
+    }
+  }
+  return tokens;
+}
+
+function readFieldPathValue(payload: ReportPayload, fieldPath: string): string {
+  if (fieldPath.startsWith('photoStepBuckets.')) {
+    const step = fieldPath.replace('photoStepBuckets.', '');
+    const bucket = payload.photoStepBuckets.find((item) => item.step === step);
+    if (!bucket) {
+      return '';
+    }
+    return bucket.uploadedPhotoIds.join(', ');
+  }
+
+  let current: unknown = payload;
+  for (const token of tokenizeFieldPath(fieldPath)) {
+    if (typeof token === 'number') {
+      if (!Array.isArray(current) || token >= current.length) {
+        return '';
+      }
+      current = current[token];
+      continue;
+    }
+    if (!current || typeof current !== 'object' || !(token in current)) {
+      return '';
+    }
+    current = (current as Record<string, unknown>)[token];
+  }
+
+  if (current == null) {
+    return '';
+  }
+  return typeof current === 'string' ? current : String(current);
+}
+
+function normalizeReviewQueueItem(
+  item: ReviewQueueItem,
+  payload: ReportPayload,
+): ReviewQueueItem {
+  const currentValue =
+    readFieldPathValue(payload, item.fieldPath) || safeText(item.currentValue ?? item.value);
+  const manuallyResolved = Boolean(item.resolved) || item.status === 'reviewed' || item.status === 'confirmed';
+  const autoResolved =
+    (!manuallyResolved &&
+      ((item.fieldPath.startsWith('reportMeta.') && Boolean(currentValue)) ||
+        (item.fieldPath.startsWith('photoStepBuckets.') && Boolean(currentValue)) ||
+        (Boolean(currentValue) &&
+          Boolean(safeText(item.suggestedValue)) &&
+          currentValue !== safeText(item.suggestedValue)))) ||
+    false;
+  const resolved = manuallyResolved || autoResolved;
+
+  return {
+    ...item,
+    id: item.id || buildReviewItemId(item.fieldPath),
+    section: item.section ?? inferReviewItemSection(item.fieldPath),
+    field: item.field || inferReviewItemField(item.fieldPath),
+    value: currentValue,
+    currentValue,
+    reason: safeText(item.reason) || safeText(item.notes),
+    severity: item.severity ?? 'warning',
+    resolved,
+    status: resolved ? (item.status === 'confirmed' ? 'confirmed' : 'reviewed') : 'pending',
+    needsReview: !resolved,
+    evidencePhotoIds: [...(item.evidencePhotoIds ?? [])],
+    notes: safeText(item.notes) || safeText(item.reason),
+  };
+}
+
+function buildMissingReviewQueueItems(payload: ReportPayload): ReviewQueueItem[] {
+  const requiredMetaItems: Array<{
+    fieldPath: string;
+    label: string;
+    section: ReviewQueueItem['section'];
+    field: string;
+    reason: string;
+  }> = [
+    {
+      fieldPath: 'reportMeta.progressRate',
+      label: '공정률',
+      section: 'reportMeta',
+      field: 'progressRate',
+      reason: '행정 필수값이 비어 있어 사용자 확인이 필요합니다.',
+    },
+    {
+      fieldPath: 'reportMeta.previousImplementationStatus',
+      label: '이전 기술지도 이행여부',
+      section: 'reportMeta',
+      field: 'previousImplementationStatus',
+      reason: '이전 기술지도 이행여부는 사용자가 최종 확정해야 합니다.',
+    },
+    {
+      fieldPath: 'reportMeta.notificationMethod',
+      label: '통보방법',
+      section: 'dispatch',
+      field: 'notificationMethod',
+      reason: '통보방법은 사용자가 선택해야 합니다.',
+    },
+  ];
+
+  return requiredMetaItems
+    .filter((item) => !safeText(readFieldPathValue(payload, item.fieldPath)))
+    .map((item) => ({
+      id: buildReviewItemId(item.fieldPath),
+      section: item.section,
+      field: item.field,
+      fieldPath: item.fieldPath,
+      label: item.label,
+      currentValue: '',
+      suggestedValue: '',
+      source: item.fieldPath === 'reportMeta.progressRate' ? 'DATA' : 'USER_INPUT',
+      confidence: 0.1,
+      reason: item.reason,
+      severity: 'required',
+      needsReview: true,
+      status: 'pending',
+      evidencePhotoIds: [],
+      resolved: false,
+      notes: item.reason,
+    }));
+}
+
+function buildWorkspaceReviewQueue(
+  payload: ReportPayload,
+  existingQueue: ReportPayload['reviewMeta']['reviewQueue'],
+): ReportPayload['reviewMeta']['reviewQueue'] {
+  const queueByPath = new Map<string, ReviewQueueItem>();
+  [...existingQueue, ...buildMissingReviewQueueItems(payload)].forEach((item) => {
+    if (!item.fieldPath) {
+      return;
+    }
+    const normalizedItem = normalizeReviewQueueItem(item, payload);
+    const existing = queueByPath.get(normalizedItem.fieldPath);
+    if (!existing) {
+      queueByPath.set(normalizedItem.fieldPath, normalizedItem);
+      return;
+    }
+    queueByPath.set(normalizedItem.fieldPath, {
+      ...normalizedItem,
+      id: existing.id || normalizedItem.id,
+      resolved: existing.resolved || normalizedItem.resolved,
+      status:
+        existing.status === 'confirmed'
+          ? 'confirmed'
+          : existing.resolved || normalizedItem.resolved
+            ? 'reviewed'
+            : normalizedItem.status,
+      needsReview: !(existing.resolved || normalizedItem.resolved),
+      currentValue: normalizedItem.currentValue,
+      value: normalizedItem.currentValue,
+      evidencePhotoIds:
+        normalizedItem.evidencePhotoIds.length > 0
+          ? normalizedItem.evidencePhotoIds
+          : existing.evidencePhotoIds,
+    });
+  });
+  return Array.from(queueByPath.values());
+}
+
+function buildValidationResultWithReviewQueue(
+  payload: ReportPayload,
+  reviewQueue: ReportPayload['reviewMeta']['reviewQueue'],
+  existingValidation: ReportPayload['validationResult'],
+  standardWarnings: string[],
+  blockingIssues: string[],
+): ReportPayload['validationResult'] {
+  const unresolvedRequired = reviewQueue.filter(
+    (item) => item.severity === 'required' && !item.resolved,
+  );
+  const unresolvedAdvisories = reviewQueue.filter(
+    (item) => (item.severity === 'warning' || item.severity === 'info') && !item.resolved,
+  );
+  const mergedBlockingIssues = Array.from(
+    new Set([
+      ...blockingIssues,
+      ...existingValidation.blockingIssues,
+      ...unresolvedRequired.map(
+        (item) => `${item.label}: ${safeText(item.reason) || '사용자 확인이 필요합니다.'}`,
+      ),
+    ]),
+  );
+  const mergedWarnings = Array.from(
+    new Set([
+      ...existingValidation.warnings,
+      ...standardWarnings,
+      ...(unresolvedRequired.length > 0 ? ['출력 전 필수 확인 항목이 남아 있습니다.'] : []),
+      ...(unresolvedAdvisories.length > 0 ? ['검토 권장 항목이 남아 있습니다.'] : []),
+    ]),
+  );
+
+  return {
+    ...existingValidation,
+    valid: mergedBlockingIssues.length === 0,
+    blockingIssues: mergedBlockingIssues,
+    warnings: mergedWarnings,
+    reviewedFieldPaths: reviewQueue.filter((item) => item.resolved).map((item) => item.fieldPath),
+  };
 }
 
 function buildPreview(title: string, subtitle: string) {
@@ -178,6 +414,37 @@ function buildStandardWarnings(workspace: WorkspaceDraft) {
   }
 
   return missingLabels.map((label) => `${label} 입력 필요`);
+}
+
+function buildBlockingIssues(workspace: WorkspaceDraft) {
+  const meta = workspace.reportMeta;
+  const blockingIssues: string[] = [];
+  const requiredFields: Array<[keyof ReportPayload['reportMeta'], string]> = [
+    ['siteName', '현장명'],
+    ['customerName', '고객사명'],
+    ['visitDate', '기술지도실시일'],
+    ['drafterName', '담당 요원'],
+    ['siteAddress', '현장 주소'],
+    ['siteContact', '현장 연락처'],
+    ['progressRate', '공정률'],
+    ['visitCount', '회차'],
+    ['totalVisitCount', '총 회차'],
+  ];
+
+  requiredFields.forEach(([field, label]) => {
+    if (!safeText(meta[field])) {
+      blockingIssues.push(`${label} 입력이 필요합니다.`);
+    }
+  });
+
+  if (!workspace.reportMeta.notificationMethod) {
+    blockingIssues.push('통보방법 입력이 필요합니다.');
+  }
+  if (!workspace.findingCandidates.some((item) => safeText(item.location) && safeText(item.improvementPlan))) {
+    blockingIssues.push('4번 현재 위험성 제거 초안 확인이 필요합니다.');
+  }
+
+  return blockingIssues;
 }
 
 function normalizeReport(report: ReportPayload): ReportPayload {
@@ -247,6 +514,8 @@ function buildWorkspaceDraft(report: ReportPayload): WorkspaceDraft {
               processName: safeText(item.processName),
               hazard: safeText(item.hazard),
               countermeasure: safeText(item.countermeasure),
+              note: safeText(item.note),
+              evidencePhotoIds: [...(item.evidencePhotoIds ?? [])],
             }))
           : [{ ...EMPTY_PLAN }],
       doc11:
@@ -384,8 +653,8 @@ function buildPersistedReport(
   activeSectionId: ReportWorkspaceSectionId,
 ): ReportPayload {
   const standardWarnings = buildStandardWarnings(workspace);
-
-  return reportPayloadSchema.parse({
+  const blockingIssues = buildBlockingIssues(workspace);
+  const nextPayload = reportPayloadSchema.parse({
     ...report,
     currentSection: getSectionStorageKey(activeSectionId),
     wizardStep: 'workspace',
@@ -449,6 +718,14 @@ function buildPersistedReport(
         improvementPlan: safeText(item.improvementPlan),
         emphasis: safeText(item.emphasis),
       })),
+      doc8: workspace.sectionDrafts.doc8.map((item) => ({
+        ...item,
+        processName: safeText(item.processName),
+        hazard: safeText(item.hazard),
+        countermeasure: safeText(item.countermeasure),
+        note: safeText(item.note),
+        evidencePhotoIds: [...(item.evidencePhotoIds ?? [])],
+      })),
       doc11: workspace.sectionDrafts.doc11.map((item) => ({
         ...item,
         topic: safeText(item.topic),
@@ -464,8 +741,8 @@ function buildPersistedReport(
     })),
     validationResult: {
       ...report.validationResult,
-      valid: true,
-      blockingIssues: [],
+      valid: blockingIssues.length === 0,
+      blockingIssues,
       warnings: Array.from(new Set([...report.validationResult.warnings, ...standardWarnings])),
     },
     documentsCompat: {
@@ -483,6 +760,24 @@ function buildPersistedReport(
       })),
     },
   });
+
+  const nextReviewQueue = buildWorkspaceReviewQueue(nextPayload, report.reviewMeta.reviewQueue);
+  const nextValidationResult = buildValidationResultWithReviewQueue(
+    nextPayload,
+    nextReviewQueue,
+    nextPayload.validationResult,
+    standardWarnings,
+    blockingIssues,
+  );
+
+  return reportPayloadSchema.parse({
+    ...nextPayload,
+    reviewMeta: {
+      ...nextPayload.reviewMeta,
+      reviewQueue: nextReviewQueue,
+    },
+    validationResult: nextValidationResult,
+  });
 }
 
 type ReportWorkspaceProps = {
@@ -490,6 +785,7 @@ type ReportWorkspaceProps = {
   report: ReportPayload;
   record: ReportRecord;
   initialEntry?: string | null;
+  initialSession?: DemoSession | null;
 };
 
 export default function ReportWorkspace({
@@ -497,11 +793,11 @@ export default function ReportWorkspace({
   report,
   record,
   initialEntry = null,
+  initialSession = null,
 }: ReportWorkspaceProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const normalizedReport = normalizeReport(report);
-  const initialSessionMode: SessionMode =
-    record.sessionMode ?? (record.localOnly ? 'local' : 'anonymous');
   const [baseReport, setBaseReport] = useState<ReportPayload>(normalizedReport);
   const [workspace, setWorkspace] = useState<WorkspaceDraft>(() => buildWorkspaceDraft(normalizedReport));
   const [activeSectionId, setActiveSectionId] = useState<ReportWorkspaceSectionId>(() =>
@@ -513,7 +809,6 @@ export default function ReportWorkspace({
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [actionError, setActionError] = useState('');
   const [downloadState, setDownloadState] = useState<DownloadState>('idle');
-  const [sessionMode, setSessionMode] = useState<SessionMode>(initialSessionMode);
   const [exportDisclaimerAccepted, setExportDisclaimerAccepted] = useState(
     record.exportDisclaimerAccepted,
   );
@@ -523,12 +818,7 @@ export default function ReportWorkspace({
   const [typedSignatureName, setTypedSignatureName] = useState('');
   const [disclaimerError, setDisclaimerError] = useState('');
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<AccountMode>('login');
-  const [authName, setAuthName] = useState('');
-  const [authEmail, setAuthEmail] = useState('');
-  const [authPassword, setAuthPassword] = useState('');
   const [authBusy, setAuthBusy] = useState(false);
-  const [authError, setAuthError] = useState('');
   const [anonymousTokenForClaim, setAnonymousTokenForClaim] = useState<string | null>(null);
 
   const baseReportRef = useRef(baseReport);
@@ -539,6 +829,9 @@ export default function ReportWorkspace({
   const savePromiseRef = useRef<Promise<void> | null>(null);
   const lastSavedSignatureRef = useRef('');
   const didMountRef = useRef(false);
+  const preferredSessionRef = useRef<DemoSession | null>(initialSession);
+  const handledAuthReturnRef = useRef(false);
+  const handleDownloadRef = useRef<(format: 'hwpx' | 'pdf') => Promise<void>>(async () => {});
 
   useEffect(() => {
     baseReportRef.current = baseReport;
@@ -555,6 +848,10 @@ export default function ReportWorkspace({
   useEffect(() => {
     activeSectionIdRef.current = activeSectionId;
   }, [activeSectionId]);
+
+  useEffect(() => {
+    preferredSessionRef.current = initialSession;
+  }, [initialSession, reportId]);
 
   useEffect(() => {
     const nextReport = normalizeReport(report);
@@ -577,7 +874,7 @@ export default function ReportWorkspace({
     setActiveSectionId(nextSectionId);
     setSaveState('idle');
     setActionError('');
-    setSessionMode(record.sessionMode ?? (record.localOnly ? 'local' : 'anonymous'));
+    preferredSessionRef.current = initialSession;
     setExportDisclaimerAccepted(record.exportDisclaimerAccepted);
     setTypedSignatureName(record.exportDisclaimerAcceptance?.accepted_by_name ?? '');
     setDisclaimerOpen(false);
@@ -585,11 +882,11 @@ export default function ReportWorkspace({
     setPendingDownloadContext(null);
     setDisclaimerError('');
     setAuthDialogOpen(false);
-    setAuthError('');
     setAuthBusy(false);
     setAnonymousTokenForClaim(null);
     lastSavedSignatureRef.current = JSON.stringify(nextPersisted);
     didMountRef.current = false;
+    handledAuthReturnRef.current = false;
   }, [
     initialEntry,
     record.exportDisclaimerAcceptance?.accepted_by_name,
@@ -598,6 +895,7 @@ export default function ReportWorkspace({
     record.sessionMode,
     report,
     reportId,
+    initialSession,
   ]);
 
   const activeSectionIndex = Math.max(
@@ -607,8 +905,6 @@ export default function ReportWorkspace({
   const activeSection = reportWorkspaceSections[activeSectionIndex] ?? reportWorkspaceSections[0];
   const section4Photos = workspace.photoEvidence.filter((photo) => photo.sourceStep === 'step2_hazard');
   const photoCount = workspace.photoEvidence.length;
-  const reviewPendingCount = baseReport.reviewMeta.reviewQueue.filter((item) => item.needsReview).length;
-  const entryModeLabel = baseReport.workspaceEntryMode === 'direct_reopen' ? '기본 폼 진입' : '사진 반영';
   const localRecordMode = Boolean(record.localOnly);
   const progressValue =
     baseReport.status === 'exported' || baseReport.status === 'review_completed' || baseReport.status === 'draft_ready'
@@ -624,6 +920,53 @@ export default function ReportWorkspace({
         : photoCount > 0
           ? '사진 반영'
           : '입력 진행';
+  const previewPayload = buildPersistedReport(
+    baseReport,
+    workspace,
+    followUpRows,
+    activeSectionId,
+  );
+  const reviewQueue = previewPayload.reviewMeta.reviewQueue;
+  const unresolvedReviewQueue = reviewQueue.filter((item) => !item.resolved);
+  const unresolvedRequiredReviewQueue = unresolvedReviewQueue.filter(
+    (item) => item.severity === 'required',
+  );
+  const unresolvedWarningReviewQueue = unresolvedReviewQueue.filter(
+    (item) => item.severity === 'warning',
+  );
+  const unresolvedInfoReviewQueue = unresolvedReviewQueue.filter(
+    (item) => item.severity === 'info',
+  );
+
+  const resolveReportSession = useCallback(async (): Promise<DemoSession> => {
+    const session = preferredSessionRef.current
+      ? await bootstrapDemoSession({ preferredSession: preferredSessionRef.current })
+      : await bootstrapDemoSession();
+    preferredSessionRef.current = session;
+    return session;
+  }, []);
+
+  const shouldSuppressGuestWorkspaceError = useCallback(
+    (error: unknown, session: DemoSession) => {
+      if (canUseWorkspaceServerApis(session)) {
+        return false;
+      }
+      const message = error instanceof Error ? error.message : String(error ?? '');
+      return message.toLowerCase().includes('workspace access denied');
+    },
+    [],
+  );
+
+  const buildGoogleAuthReturnPath = useCallback(
+    (format: 'hwpx' | 'pdf') => {
+      const current = new URLSearchParams(searchParams.toString());
+      current.delete('downloadAfterAuth');
+      current.set('downloadAfterAuth', format);
+      const query = current.toString();
+      return `/reports/${reportId}${query ? `?${query}` : ''}`;
+    },
+    [reportId, searchParams],
+  );
 
   const flushAutosave = useCallback(async (): Promise<ReportPayload> => {
     if (saveTimerRef.current) {
@@ -642,20 +985,29 @@ export default function ReportWorkspace({
     if (signature !== lastSavedSignatureRef.current) {
       const task = (async () => {
         setSaveState('saving');
-        const session = await bootstrapDemoSession();
-        const updated = await patchReportRecord(session, reportId, payload);
-        const nextReport = normalizeReport(updated.payload);
-        setBaseReport(nextReport);
-        baseReportRef.current = nextReport;
-        lastSavedSignatureRef.current = JSON.stringify(
-          buildPersistedReport(
-            nextReport,
-            workspaceRef.current,
-            followUpRowsRef.current,
-            activeSectionIdRef.current,
-          ),
-        );
-        setSaveState('saved');
+        const session = await resolveReportSession();
+        try {
+          const updated = await patchReportRecord(session, reportId, payload);
+          const nextReport = normalizeReport(updated.payload);
+          setBaseReport(nextReport);
+          baseReportRef.current = nextReport;
+          lastSavedSignatureRef.current = JSON.stringify(
+            buildPersistedReport(
+              nextReport,
+              workspaceRef.current,
+              followUpRowsRef.current,
+              activeSectionIdRef.current,
+            ),
+          );
+          setSaveState('saved');
+        } catch (error) {
+          if (shouldSuppressGuestWorkspaceError(error, session)) {
+            lastSavedSignatureRef.current = signature;
+            setSaveState('saved');
+            return;
+          }
+          throw error;
+        }
       })().catch((error) => {
         setSaveState('error');
         throw error;
@@ -674,7 +1026,7 @@ export default function ReportWorkspace({
     }
 
     return payload;
-  }, [reportId]);
+  }, [reportId, resolveReportSession, shouldSuppressGuestWorkspaceError]);
 
   useEffect(() => {
     if (!didMountRef.current) {
@@ -700,6 +1052,16 @@ export default function ReportWorkspace({
       }
     };
   }, [activeSectionId, flushAutosave, followUpRows, workspace]);
+
+  useEffect(() => {
+    const format = searchParams.get('downloadAfterAuth');
+    if (handledAuthReturnRef.current || (format !== 'pdf' && format !== 'hwpx')) {
+      return;
+    }
+    handledAuthReturnRef.current = true;
+    router.replace(`/reports/${reportId}`);
+    void handleDownloadRef.current(format);
+  }, [reportId, router, searchParams]);
 
   function updateMetaField<K extends keyof ReportPayload['reportMeta']>(
     field: K,
@@ -814,6 +1176,50 @@ export default function ReportWorkspace({
     }));
   }
 
+  function toggleReviewItemResolved(fieldPath: string) {
+    setActionError('');
+    setBaseReport((current) => ({
+      ...current,
+      reviewMeta: {
+        ...current.reviewMeta,
+        reviewQueue: current.reviewMeta.reviewQueue.map((item) =>
+          item.fieldPath === fieldPath
+            ? {
+                ...item,
+                resolved: !item.resolved,
+                status: !item.resolved ? 'reviewed' : 'pending',
+                needsReview: item.resolved,
+              }
+            : item,
+        ),
+      },
+    }));
+  }
+
+  function jumpToReviewItem(item: ReviewQueueItem) {
+    const fieldPath = item.fieldPath;
+    if (fieldPath.startsWith('findingCandidates[')) {
+      setActiveSectionId('section4');
+      return;
+    }
+    if (fieldPath.startsWith('sectionDrafts.doc8[') || fieldPath.startsWith('photoStepBuckets.step1_overview')) {
+      setActiveSectionId('section5');
+      return;
+    }
+    if (fieldPath.startsWith('photoStepBuckets.step2_hazard') || fieldPath.startsWith('photoObservations[')) {
+      setActiveSectionId('section4');
+      return;
+    }
+    if (fieldPath.startsWith('reportMeta.site') || fieldPath.startsWith('reportMeta.customer')) {
+      setActiveSectionId('section1');
+      return;
+    }
+    if (fieldPath.startsWith('reportMeta.') || fieldPath.startsWith('dispatch.')) {
+      setActiveSectionId('section2');
+      return;
+    }
+  }
+
   function addFollowUpRow() {
     setActionError('');
     setFollowUpRows((current) => [
@@ -892,7 +1298,8 @@ export default function ReportWorkspace({
 
       saveBlobAsFile(file.blob, file.filename);
 
-      const reportSession = context?.reportSession ?? (await bootstrapDemoSession());
+      const reportSession = context?.reportSession ?? (await resolveReportSession());
+      preferredSessionRef.current = reportSession;
       await markReportReviewComplete(reportSession, targetReportId);
       const updated = await registerReportExport(reportSession, targetReportId, format, {
         confirm_reviewed: true,
@@ -908,7 +1315,6 @@ export default function ReportWorkspace({
         buildPersistedReport(nextReport, workspaceRef.current, followUpRowsRef.current, activeSectionIdRef.current),
       );
       setSaveState('saved');
-      setSessionMode('authenticated');
       if (targetReportId !== reportId) {
         router.replace(`/reports/${targetReportId}`);
       }
@@ -943,15 +1349,41 @@ export default function ReportWorkspace({
     setPendingDownloadFormat(format);
     setPendingDownloadContext(null);
     setAnonymousTokenForClaim(anonymousToken);
-    setAuthError('');
+    setActionError('');
     setAuthDialogOpen(true);
   }
 
   async function handleDownload(format: 'hwpx' | 'pdf') {
-    const currentSession = await bootstrapDemoSession();
-    setSessionMode(currentSession.mode);
+    const exportPreviewPayload = buildPersistedReport(
+      baseReportRef.current,
+      workspaceRef.current,
+      followUpRowsRef.current,
+      activeSectionIdRef.current,
+    );
+    const unresolvedRequired = exportPreviewPayload.reviewMeta.reviewQueue.filter(
+      (item) => item.severity === 'required' && !item.resolved,
+    );
+    const blockingIssues = exportPreviewPayload.validationResult.blockingIssues.filter((item) =>
+      safeText(item),
+    );
+    if (unresolvedRequired.length > 0 || blockingIssues.length > 0) {
+      const warningLines = [
+        ...unresolvedRequired.slice(0, 5).map((item) => `- ${item.label}`),
+        ...blockingIssues.slice(0, 5).map((item) => `- ${item}`),
+      ];
+      const proceed = window.confirm(
+        `${unresolvedRequired.length > 0 ? `필수 검토 항목 ${unresolvedRequired.length}개` : '출력 전 확인 항목'}가 남아 있습니다.\n\n${warningLines.join('\n')}\n\n그래도 다운로드를 진행할까요?`,
+      );
+      if (!proceed) {
+        setActionError('필수 검토 항목을 확인한 뒤 다시 다운로드해 주세요.');
+        return;
+      }
+    }
 
-    if (localRecordMode || !isAuthenticatedSession(currentSession)) {
+    const currentSession = await resolveReportSession();
+    preferredSessionRef.current = currentSession;
+
+    if (!isAuthenticatedSession(currentSession)) {
       openAccountDialog(
         format,
         currentSession.mode === 'anonymous' ? currentSession.token : null,
@@ -959,10 +1391,29 @@ export default function ReportWorkspace({
       return;
     }
 
-    const context: PendingDownloadContext = {
+    let context: PendingDownloadContext = {
       reportSession: currentSession,
       targetReportId: reportId,
     };
+
+    if (localRecordMode) {
+      const payload = await flushAutosave();
+      const syncedRecord = await syncLocalReportToServer(currentSession, {
+        ...record,
+        status: payload.status,
+        payload,
+        updated_at: payload.updatedAt,
+      });
+      await removeLocalReport(reportId);
+      const nextReport = normalizeReport(syncedRecord.payload);
+      setBaseReport(nextReport);
+      baseReportRef.current = nextReport;
+      context = {
+        reportSession: currentSession,
+        targetReportId: syncedRecord.id,
+        payloadOverride: syncedRecord.payload,
+      };
+    }
 
     if (!exportDisclaimerAccepted) {
       openDisclaimer(format, context);
@@ -974,6 +1425,10 @@ export default function ReportWorkspace({
       typed_signature_name: typedSignatureName,
     }, context);
   }
+
+  useEffect(() => {
+    handleDownloadRef.current = handleDownload;
+  });
 
   async function handleDisclaimerConfirm() {
     const signature = typedSignatureName.trim();
@@ -1003,79 +1458,15 @@ export default function ReportWorkspace({
       return;
     }
 
-    const email = authEmail.trim();
-    const password = authPassword.trim();
-    const name = authName.trim();
-
-    if (!email || !password || (authMode === 'signup' && !name)) {
-      setAuthError(authMode === 'signup' ? '이름, 이메일, 비밀번호를 입력해 주세요.' : '이메일과 비밀번호를 입력해 주세요.');
-      return;
-    }
-
     setAuthBusy(true);
-    setAuthError('');
 
     try {
-      let nextSession =
-        authMode === 'signup'
-          ? await signupReportUser(name, email, password)
-          : await loginReportUser(email, password);
-      let nextContext: PendingDownloadContext = {
-        reportSession: nextSession,
-        targetReportId: reportId,
-      };
-
-      if (anonymousTokenForClaim && !localRecordMode) {
-        nextSession = await claimAnonymousSession(nextSession, anonymousTokenForClaim);
-        nextContext = {
-          reportSession: nextSession,
-          targetReportId: reportId,
-        };
-      }
-
-      if (localRecordMode) {
-        const payload = await flushAutosave();
-        const syncedRecord = await syncLocalReportToServer(nextSession, {
-          ...record,
-          status: payload.status,
-          payload,
-          updated_at: payload.updatedAt,
-        });
-        await removeLocalReport(reportId);
-        nextContext = {
-          reportSession: nextSession,
-          targetReportId: syncedRecord.id,
-          payloadOverride: syncedRecord.payload,
-        };
-        const nextReport = normalizeReport(syncedRecord.payload);
-        setBaseReport(nextReport);
-        baseReportRef.current = nextReport;
-      }
-
-      setSessionMode('authenticated');
-      setAuthDialogOpen(false);
-      setAnonymousTokenForClaim(null);
-      setPendingDownloadContext(nextContext);
-
-      if (!exportDisclaimerAccepted) {
-        openDisclaimer(format, nextContext);
-        return;
-      }
-
-      await performDownload(
-        format,
-        {
-          acknowledge_ai_disclaimer: false,
-          typed_signature_name: typedSignatureName,
-        },
-        nextContext,
-      );
-      setPendingDownloadFormat(null);
-      setPendingDownloadContext(null);
+      await beginGoogleWorkspaceAuth({
+        anonymousToken: anonymousTokenForClaim,
+        nextPath: buildGoogleAuthReturnPath(format),
+      });
     } catch (error) {
-      setAuthError(
-        error instanceof Error ? error.message : '계정 연결을 완료하지 못했습니다.',
-      );
+      setActionError(error instanceof Error ? error.message : '구글 로그인으로 이동하지 못했습니다.');
     } finally {
       setAuthBusy(false);
     }
@@ -1699,6 +2090,7 @@ export default function ReportWorkspace({
             <span>진행공정</span>
             <span>유해·위험요인</span>
             <span>예방대책</span>
+            <span>비고</span>
           </div>
           {workspace.sectionDrafts.doc8.map((plan, index) => (
             <div key={`plan-${index}`} className={styles.planRow}>
@@ -1716,6 +2108,11 @@ export default function ReportWorkspace({
                 className={`${styles.textareaControl} ${styles.textareaTall}`}
                 value={safeText(plan.countermeasure)}
                 onChange={(event) => updatePlanField(index, 'countermeasure', event.target.value)}
+              />
+              <textarea
+                className={`${styles.textareaControl} ${styles.textareaTall}`}
+                value={safeText(plan.note)}
+                onChange={(event) => updatePlanField(index, 'note', event.target.value)}
               />
             </div>
           ))}
@@ -1941,6 +2338,92 @@ export default function ReportWorkspace({
         </div>
       </section>
 
+      <section className={`erp-panel ${styles.reviewPanel}`}>
+        <div className={styles.reviewPanelHeader}>
+          <div>
+            <span className={styles.editorEyebrow}>Review Queue</span>
+            <h2 className={styles.reviewPanelTitle}>검토 필요 항목</h2>
+          </div>
+          <div className={styles.reviewSummaryBadges}>
+            <span className={`${styles.reviewSummaryBadge} ${styles.reviewSummaryRequired}`}>
+              필수 {unresolvedRequiredReviewQueue.length}
+            </span>
+            <span className={`${styles.reviewSummaryBadge} ${styles.reviewSummaryWarning}`}>
+              경고 {unresolvedWarningReviewQueue.length}
+            </span>
+            <span className={`${styles.reviewSummaryBadge} ${styles.reviewSummaryInfo}`}>
+              참고 {unresolvedInfoReviewQueue.length}
+            </span>
+          </div>
+        </div>
+
+        {unresolvedReviewQueue.length === 0 ? (
+          <div className={styles.reviewEmptyState}>현재 확인이 필요한 항목이 없습니다.</div>
+        ) : (
+          <div className={styles.reviewList}>
+            {unresolvedReviewQueue.map((item) => (
+              <article key={item.id || item.fieldPath} className={styles.reviewCard}>
+                <div className={styles.reviewCardHeader}>
+                  <div>
+                    <strong>{item.label}</strong>
+                    <p>{safeText(item.reason) || safeText(item.notes) || '사용자 확인이 필요합니다.'}</p>
+                  </div>
+                  <span
+                    className={`${styles.reviewSeverityChip} ${
+                      item.severity === 'required'
+                        ? styles.reviewSeverityRequired
+                        : item.severity === 'warning'
+                          ? styles.reviewSeverityWarning
+                          : styles.reviewSeverityInfo
+                    }`}
+                  >
+                    {item.severity === 'required'
+                      ? '필수'
+                      : item.severity === 'warning'
+                        ? '경고'
+                        : '참고'}
+                  </span>
+                </div>
+
+                <div className={styles.reviewMetaGrid}>
+                  <div>
+                    <span>현재값</span>
+                    <strong>{safeText(item.currentValue) || '-'}</strong>
+                  </div>
+                  <div>
+                    <span>추천값</span>
+                    <strong>{safeText(item.suggestedValue) || '-'}</strong>
+                  </div>
+                  <div>
+                    <span>근거 사진</span>
+                    <strong>
+                      {item.evidencePhotoIds.length > 0 ? item.evidencePhotoIds.join(', ') : '-'}
+                    </strong>
+                  </div>
+                </div>
+
+                <div className={styles.reviewActions}>
+                  <button
+                    type="button"
+                    className="erp-button erp-button-secondary"
+                    onClick={() => jumpToReviewItem(item)}
+                  >
+                    해당 섹션으로 이동
+                  </button>
+                  <button
+                    type="button"
+                    className="erp-button erp-button-secondary"
+                    onClick={() => toggleReviewItemResolved(item.fieldPath)}
+                  >
+                    확인 완료
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
       {disclaimerOpen ? (
         <div className={styles.disclaimerBackdrop} role="dialog" aria-modal="true" aria-labelledby="export-disclaimer-title">
           <div className={styles.disclaimerDialog}>
@@ -2015,7 +2498,6 @@ export default function ReportWorkspace({
                 className="erp-button erp-button-secondary"
                 onClick={() => {
                   setAuthDialogOpen(false);
-                  setAuthError('');
                   setPendingDownloadFormat(null);
                   setPendingDownloadContext(null);
                   setAnonymousTokenForClaim(null);
@@ -2027,77 +2509,19 @@ export default function ReportWorkspace({
             </div>
 
             <div className={styles.disclaimerBody}>
-              <div className={styles.authTabs}>
-                <button
-                  type="button"
-                  className={`erp-button ${authMode === 'login' ? 'erp-button-primary' : 'erp-button-secondary'}`}
-                  onClick={() => setAuthMode('login')}
-                  disabled={authBusy}
-                >
-                  로그인
-                </button>
-                <button
-                  type="button"
-                  className={`erp-button ${authMode === 'signup' ? 'erp-button-primary' : 'erp-button-secondary'}`}
-                  onClick={() => setAuthMode('signup')}
-                  disabled={authBusy}
-                >
-                  회원가입
-                </button>
-              </div>
-
               <div className={styles.disclaimerPanel}>
                 <strong>안내</strong>
                 <p className={styles.authHelper}>
-                  PDF/HWPX 다운로드 전에는 계정 확인이 필요합니다.
+                  PDF/HWPX 다운로드 전에는 구글 계정 확인이 필요합니다.
                 </p>
               </div>
-
-              {authMode === 'signup' ? (
-                <label className={styles.disclaimerField}>
-                  <span>이름</span>
-                  <input
-                    className={styles.inputControl}
-                    value={authName}
-                    onChange={(event) => setAuthName(event.target.value)}
-                    placeholder="홍길동"
-                    disabled={authBusy}
-                  />
-                </label>
-              ) : null}
-
-              <label className={styles.disclaimerField}>
-                <span>이메일</span>
-                <input
-                  className={styles.inputControl}
-                  type="email"
-                  value={authEmail}
-                  onChange={(event) => setAuthEmail(event.target.value)}
-                  placeholder="name@example.com"
-                  disabled={authBusy}
-                />
-              </label>
-
-              <label className={styles.disclaimerField}>
-                <span>비밀번호</span>
-                <input
-                  className={styles.inputControl}
-                  type="password"
-                  value={authPassword}
-                  onChange={(event) => setAuthPassword(event.target.value)}
-                  placeholder="비밀번호"
-                  disabled={authBusy}
-                />
-              </label>
-
-              {authError ? <div className={styles.inlineNotice}>{authError}</div> : null}
             </div>
 
             <div className={styles.disclaimerFooter}>
               <p className={styles.disclaimerFootnote}>
                 {localRecordMode
                   ? '로컬 임시 보고서는 로그인 후 서버에 동기화한 뒤 다운로드를 진행합니다.'
-                  : '익명 보고서는 로그인 후 현재 계정 작업공간으로 귀속됩니다.'}
+                  : '비로그인 작업 내용은 로그인 후 현재 계정 작업공간으로 이어집니다.'}
               </p>
               <button
                 type="button"
@@ -2105,7 +2529,7 @@ export default function ReportWorkspace({
                 onClick={() => void handleAccountConfirm()}
                 disabled={authBusy}
               >
-                {authBusy ? '계정 연결 중' : authMode === 'signup' ? '가입 후 계속' : '로그인 후 계속'}
+                {authBusy ? '이동 중...' : 'Google로 계속'}
               </button>
             </div>
           </div>
@@ -2122,36 +2546,6 @@ export default function ReportWorkspace({
         </div>
 
         {actionError ? <div className={styles.inlineNotice}>{actionError}</div> : null}
-        {sessionMode === 'local' ? (
-          <div className={styles.disclaimerReminder}>
-            현재 작성 중인 보고서는 서버 연결 상태에 따라 일부 기능이 제한될 수 있습니다. 다운로드 전에는 계정 확인이 필요합니다.
-          </div>
-        ) : null}
-        {sessionMode === 'anonymous' ? (
-          <div className={styles.disclaimerReminder}>
-            보고서 다운로드 전에는 계정 확인이 필요합니다.
-          </div>
-        ) : null}
-        {!exportDisclaimerAccepted ? (
-          <div className={styles.disclaimerReminder}>
-            보고서 다운로드 전 최초 1회 책임 확인과 서명이 필요합니다.
-          </div>
-        ) : null}
-
-        <div className={styles.sectionSummaryStrip}>
-          <article className={styles.sectionSummaryCard}>
-            <span>진입 방식</span>
-            <strong>{entryModeLabel}</strong>
-          </article>
-          <article className={styles.sectionSummaryCard}>
-            <span>첨부 사진</span>
-            <strong>{photoCount === 0 ? '없음' : `${photoCount}건`}</strong>
-          </article>
-          <article className={styles.sectionSummaryCard}>
-            <span>검토 대기</span>
-            <strong>{reviewPendingCount}건</strong>
-          </article>
-        </div>
 
         <div className={styles.editorBody}>{renderCurrentSection()}</div>
       </section>

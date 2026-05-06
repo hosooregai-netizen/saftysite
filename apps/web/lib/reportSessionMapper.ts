@@ -62,7 +62,14 @@ function getHazardPhotos(report: ReportPayload) {
   );
 }
 
+function getLinkedPhotos(report: ReportPayload, linkedPhotoIds: string[]) {
+  return report.photoEvidence.filter((photo) => linkedPhotoIds.includes(photo.photoAssetId));
+}
+
 function buildSummaryText(report: ReportPayload): string {
+  if (safeText(report.sectionDrafts.doc5.futureProcessFocus)) {
+    return safeText(report.sectionDrafts.doc5.futureProcessFocus);
+  }
   return [
     report.sectionDrafts.doc5.progressOverview,
     report.sectionDrafts.doc5.workEnvironmentRisk,
@@ -201,9 +208,7 @@ export function mapReportPayloadToInspectionSession(
   session.document7Findings =
     report.findingCandidates.length > 0
       ? report.findingCandidates.map((finding, index) => {
-          const linked = hazardPhotos.filter((photo) =>
-            finding.linkedPhotoIds.includes(photo.photoAssetId),
-          );
+          const linked = getLinkedPhotos(report, finding.linkedPhotoIds);
           return createCurrentHazardFinding({
             photoUrl: linked[0]?.imageUrl || '',
             photoUrl2: linked[1]?.imageUrl || '',
@@ -233,6 +238,7 @@ export function mapReportPayloadToInspectionSession(
             processName: plan.processName,
             hazard: plan.hazard,
             countermeasure: plan.countermeasure,
+            note: safeText(plan.note),
             source: 'api',
           }),
         )

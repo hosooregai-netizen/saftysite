@@ -89,8 +89,10 @@ function buildDemoPreview(title: string, accent: string) {
 export const saasNavItems = [
   { href: '/reports/new', label: '새 보고서 작성', description: '기술지도 보고서 작성' },
   { href: '/reports', label: '보고서 목록', description: '작성 및 출력 이력' },
-  { href: '/sites', label: '현장 목록', description: '등록 현장 관리' },
-  { href: '/credits', label: '이용내역', description: '요금 및 사용 내역' },
+  { href: '/headquarters', label: '사업장/현장', description: 'ERP 기준정보 관리' },
+  { href: '/photo-album', label: '사진첩', description: '현장 사진 보관 및 조회' },
+  { href: '/webhard', label: '웹하드', description: '전역 자료함 및 공유 링크' },
+  { href: '/mailbox', label: '메일함', description: '구글 메일 발송 관리' },
   { href: '/account', label: '설정', description: '계정 및 기본정보' },
 ] as const;
 
@@ -118,14 +120,14 @@ export const guidedUploadSteps: Array<{
   {
     id: 'overview',
     shortLabel: 'Step 2',
-    label: '전경·공정 사진',
-    helper: '사진 첨부',
+    label: '현재 공정 또는 현장 전경',
+    helper: '필수 사진 1장',
   },
   {
     id: 'hazard',
     shortLabel: 'Step 3',
-    label: '위험요인 사진',
-    helper: '문안 초안',
+    label: '현재 위험요인',
+    helper: '필수 사진 1장',
   },
 ];
 

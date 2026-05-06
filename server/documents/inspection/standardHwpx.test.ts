@@ -94,6 +94,8 @@ test('buildStandardInspectionHwpxDocument renders standard report content and cl
       note: '우천 시 재점검',
     }),
   ];
+  session.document5Summary.summaryText =
+    '향후 기초 및 토공사 공정에서 유해·위험요인 및 예방대책 재점검 필요';
 
   session.document11EducationRecords = [
     createSafetyEducationRecord({
@@ -131,6 +133,7 @@ test('buildStandardInspectionHwpxDocument renders standard report content and cl
   assert.match(flattened, /안전난간 미설치/);
   assert.match(flattened, /타설 구간 통로/);
   assert.match(flattened, /굴착기 작업반경 충돌/);
+  assert.match(flattened, /향후 기초 및 토공사 공정에서 유해·위험요인 및 예방대책 재점검 필요/);
   assert.match(flattened, /12명/);
   assert.match(flattened, /다음 방문 전 추락방지 조치 재확인/);
   assert.doesNotMatch(flattened, /1동 3층 발코니 자리 슬라브/);

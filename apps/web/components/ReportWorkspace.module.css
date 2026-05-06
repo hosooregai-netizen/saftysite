@@ -117,6 +117,17 @@
   gap: 16px;
 }
 
+.authTabs {
+  display: flex;
+  gap: 10px;
+}
+
+.authHelper {
+  margin: 0;
+  color: var(--text);
+  line-height: 1.7;
+}
+
 .disclaimerPanel {
   display: grid;
   gap: 10px;
@@ -156,6 +167,132 @@
 
 .editorPanel {
   gap: 18px;
+}
+
+.reviewPanel {
+  gap: 16px;
+}
+
+.reviewPanelHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.reviewPanelTitle {
+  margin: 0;
+  color: var(--text);
+  font-size: 1.35rem;
+}
+
+.reviewSummaryBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.reviewSummaryBadge,
+.reviewSeverityChip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.reviewSummaryRequired,
+.reviewSeverityRequired {
+  background: #fff1ef;
+  color: #be3f30;
+}
+
+.reviewSummaryWarning,
+.reviewSeverityWarning {
+  background: #fff8e8;
+  color: #9a6b09;
+}
+
+.reviewSummaryInfo,
+.reviewSeverityInfo {
+  background: #eef5fb;
+  color: #32506a;
+}
+
+.reviewEmptyState {
+  padding: 18px 20px;
+  border: 1px dashed var(--line);
+  border-radius: 16px;
+  color: var(--text-muted);
+  background: #fbfdff;
+}
+
+.reviewList {
+  display: grid;
+  gap: 12px;
+}
+
+.reviewCard {
+  display: grid;
+  gap: 14px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: linear-gradient(180deg, #fbfdff 0%, #f5f9fc 100%);
+}
+
+.reviewCardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.reviewCardHeader strong {
+  color: var(--text);
+}
+
+.reviewCardHeader p {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.reviewMetaGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.reviewMetaGrid div {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.reviewMetaGrid span {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.reviewMetaGrid strong {
+  color: var(--text);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.reviewActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
 }
 
 .editorHeader {
@@ -583,7 +720,7 @@
 .planHead,
 .planRow {
   display: grid;
-  grid-template-columns: 1fr 1.2fr 1.2fr;
+  grid-template-columns: 1fr 1.2fr 1.2fr 1fr;
 }
 
 .planHead {

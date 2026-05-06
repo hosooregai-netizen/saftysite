@@ -3,10 +3,11 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { creationDialogFields } from '@/lib/demoData';
 import {
   bootstrapDemoSession,
+  hasGeneratedReportSnapshot,
   listReports,
+  readLastGeneratedReportSession,
   type ReportRecord,
 } from '@/lib/reportApi';
 
@@ -38,13 +39,9 @@ function getExportStatus(report: ReportRecord): string {
 
 export function ReportsOverview() {
   const router = useRouter();
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [loadState, setLoadState] = useState<LoadState>('idle');
   const [loadError, setLoadError] = useState('');
   const [reports, setReports] = useState<ReportRecord[]>([]);
-  const [dialogFields, setDialogFields] = useState<Record<string, string>>(() =>
-    Object.fromEntries(creationDialogFields.map((field) => [field.id, field.value])),
-  );
 
   useEffect(() => {
     let cancelled = false;
@@ -54,7 +51,9 @@ export function ReportsOverview() {
       setLoadError('');
 
       try {
-        const session = await bootstrapDemoSession();
+        const session = await bootstrapDemoSession({
+          preferredSession: readLastGeneratedReportSession(),
+        });
         const nextReports = await listReports(session);
 
         if (cancelled) {
@@ -91,9 +90,9 @@ export function ReportsOverview() {
         </div>
         <div className="workspace-header-actions">
           <span className="workspace-chip workspace-chip-active">보고서 관리</span>
-          <button type="button" className="erp-button erp-button-primary" onClick={() => setIsCreateOpen(true)}>
+          <Link href="/reports/new" className="erp-button erp-button-primary">
             새 보고서 작성
-          </button>
+          </Link>
         </div>
       </section>
 
@@ -124,9 +123,24 @@ export function ReportsOverview() {
               reports.map((report, index) => {
                 const reviewPendingCount = report.payload.reviewMeta.reviewQueue.filter((item) => item.needsReview).length;
                 const findingCount = report.payload.findingCandidates.length;
+                const reportHref = hasGeneratedReportSnapshot(report.id)
+                  ? `/reports/${report.id}?entry=generated`
+                  : `/reports/${report.id}`;
 
                 return (
-                  <article key={report.id} className="report-row">
+                  <article
+                    key={report.id}
+                    className="report-row"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => router.push(reportHref)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        router.push(reportHref);
+                      }
+                    }}
+                  >
                     <div className="report-row-primary">
                       <strong>{reports.length - index}차</strong>
                       <span>{report.payload.reportMeta.visitDate}</span>
@@ -149,8 +163,8 @@ export function ReportsOverview() {
                       <strong>{getExportStatus(report)}</strong>
                       <span>{report.exports.length > 0 ? `${report.exports.length}회` : '미출력'}</span>
                     </div>
-                    <div className="row-actions">
-                      <Link href={`/reports/${report.id}`} className="erp-button erp-button-secondary">
+                    <div className="row-actions" onClick={(event) => event.stopPropagation()}>
+                      <Link href={reportHref} className="erp-button erp-button-secondary">
                         열기
                       </Link>
                       <button
@@ -175,53 +189,6 @@ export function ReportsOverview() {
           </div>
         ) : null}
       </section>
-
-      {isCreateOpen ? (
-        <div className="modal-scrim" role="presentation" onClick={() => setIsCreateOpen(false)}>
-          <div className="modal-card" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
-            <div className="modal-header">
-              <div>
-                <span className="page-kicker">작성 시작</span>
-                <h2>새 기술지도 보고서 작성</h2>
-              </div>
-              <button type="button" className="erp-button erp-button-text" onClick={() => setIsCreateOpen(false)}>
-                닫기
-              </button>
-            </div>
-
-            <div className="modal-form-grid">
-              {creationDialogFields.map((field) => (
-                <label key={field.id} className="form-field">
-                  <span>{field.label}</span>
-                  <input
-                    className="erp-input"
-                    value={dialogFields[field.id] ?? ''}
-                    onChange={(event) =>
-                      setDialogFields((current) => ({
-                        ...current,
-                        [field.id]: event.target.value,
-                      }))
-                    }
-                  />
-                </label>
-              ))}
-            </div>
-
-            <div className="modal-actions">
-              <button type="button" className="erp-button erp-button-secondary" onClick={() => setIsCreateOpen(false)}>
-                취소
-              </button>
-              <button
-                type="button"
-                className="erp-button erp-button-primary"
-                onClick={() => router.push('/reports/new')}
-              >
-                보고서 작성 시작
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }
