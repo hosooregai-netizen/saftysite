@@ -70,7 +70,7 @@ test('restores material gap rows when upstream summary has counts but no row pay
   const fallbackOverview = buildOverview();
   fallbackOverview.quarterlyMaterialSummary = {
     entries: [
-      { count: 29, href: '/headquarters', key: 'complete', label: 'Complete' },
+      { count: 0, href: '/headquarters', key: 'complete', label: 'Complete' },
       { count: 0, href: '/headquarters', key: 'education_missing', label: 'Education missing' },
       { count: 0, href: '/headquarters', key: 'measurement_missing', label: 'Measurement missing' },
       { count: 1, href: '/headquarters', key: 'both_missing', label: 'Both missing' },
@@ -78,13 +78,21 @@ test('restores material gap rows when upstream summary has counts but no row pay
     missingSiteRows: [buildMaterialRow('fallback-1')],
     quarterKey: '2026-Q2',
     quarterLabel: '2026 Q2',
-    totalSiteCount: 30,
+    totalSiteCount: 1,
   };
   const upstreamOverview = {
     ...buildOverview(),
     quarterlyMaterialSummary: {
-      ...fallbackOverview.quarterlyMaterialSummary,
+      entries: [
+        { count: 27, href: '/headquarters', key: 'complete', label: 'Complete' },
+        { count: 0, href: '/headquarters', key: 'education_missing', label: 'Education missing' },
+        { count: 0, href: '/headquarters', key: 'measurement_missing', label: 'Measurement missing' },
+        { count: 1, href: '/headquarters', key: 'both_missing', label: 'Both missing' },
+      ],
       missingSiteRows: [],
+      quarterKey: '2026-Q2',
+      quarterLabel: '2026 Q2',
+      totalSiteCount: 28,
     },
   };
 
@@ -93,6 +101,11 @@ test('restores material gap rows when upstream summary has counts but no row pay
   assert.deepEqual(
     merged.quarterlyMaterialSummary.missingSiteRows.map((row) => row.siteId),
     ['fallback-1'],
+  );
+  assert.equal(merged.quarterlyMaterialSummary.totalSiteCount, 1);
+  assert.equal(
+    merged.quarterlyMaterialSummary.entries.find((entry) => entry.key === 'complete')?.count,
+    0,
   );
 });
 

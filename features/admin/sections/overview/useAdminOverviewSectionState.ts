@@ -145,18 +145,17 @@ export function mergeOverviewResponseWithFallback(
       ? fallbackOverview.endingSoonSummary
       : responseEndingSoonSummary,
     quarterlyMaterialSummary: hasQuarterlyMaterialSummary(overviewResponse.quarterlyMaterialSummary)
-      ? {
-          ...overviewResponse.quarterlyMaterialSummary,
-          missingSiteRows: useFallbackMaterialRows
-            ? fallbackOverview.quarterlyMaterialSummary.missingSiteRows
-            : overviewResponse.quarterlyMaterialSummary.missingSiteRows,
-          quarterKey:
-            overviewResponse.quarterlyMaterialSummary.quarterKey ||
-            fallbackOverview.quarterlyMaterialSummary.quarterKey,
-          quarterLabel:
-            overviewResponse.quarterlyMaterialSummary.quarterLabel ||
-            fallbackOverview.quarterlyMaterialSummary.quarterLabel,
-        }
+      ? useFallbackMaterialRows
+        ? fallbackOverview.quarterlyMaterialSummary
+        : {
+            ...overviewResponse.quarterlyMaterialSummary,
+            quarterKey:
+              overviewResponse.quarterlyMaterialSummary.quarterKey ||
+              fallbackOverview.quarterlyMaterialSummary.quarterKey,
+            quarterLabel:
+              overviewResponse.quarterlyMaterialSummary.quarterLabel ||
+              fallbackOverview.quarterlyMaterialSummary.quarterLabel,
+          }
       : fallbackOverview.quarterlyMaterialSummary,
     siteStatusSummary: hasSiteStatusSummary(overviewResponse.siteStatusSummary)
       ? overviewResponse.siteStatusSummary
