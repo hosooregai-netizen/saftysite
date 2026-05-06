@@ -275,7 +275,7 @@ test('priority quarterly site scope requires 20억 이상 and current-quarter ov
   assert.equal(
     isPriorityQuarterlySiteScope({
       site: buildSite({
-        project_amount: 1_900_000_000,
+        project_amount: '1,900,000,000' as unknown as number,
         project_start_date: '2026-04-01',
         project_end_date: '2026-06-30',
       }),
@@ -309,6 +309,31 @@ test('priority quarterly row scope follows the current quarter key from upstream
       buildPriorityRow({ currentQuarterKey: '2026-Q1' }),
       today,
     ),
+    false,
+  );
+  assert.equal(
+    isPriorityQuarterlySiteScope({
+      site: buildSite({
+        contract_status: 'completed',
+        project_amount: '10,553,400,000' as unknown as number,
+        project_start_date: '2025-04-01',
+        project_end_date: '2026-08-31',
+        status: 'active',
+      }),
+      today,
+    }),
+    true,
+  );
+  assert.equal(
+    isPriorityQuarterlySiteScope({
+      site: buildSite({
+        project_amount: 3_000_000_000,
+        project_start_date: '2026-04-01',
+        project_end_date: '2026-06-30',
+        status: 'closed',
+      }),
+      today,
+    }),
     false,
   );
 });

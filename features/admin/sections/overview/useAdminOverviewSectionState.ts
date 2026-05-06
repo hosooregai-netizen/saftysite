@@ -33,6 +33,78 @@ import {
 } from './overviewSectionHelpers';
 
 const OVERVIEW_CACHE_KEY = 'overview';
+const PRIORITY_QUARTERLY_EXCEPTION_ORDER: Record<
+  NonNullable<SafetyAdminOverviewResponse['priorityQuarterlyManagementRows']>[number]['exceptionStatus'],
+  number
+> = {
+  reflection_missing: 0,
+  dispatch_overdue: 1,
+  dispatch_pending: 2,
+  ok: 3,
+};
+
+function normalizeKeyPart(value: unknown) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function getPriorityQuarterlyManagementRowKey(
+  row: NonNullable<SafetyAdminOverviewResponse['priorityQuarterlyManagementRows']>[number],
+) {
+  const siteId = normalizeKeyPart(row.siteId);
+  const quarterKey = normalizeKeyPart(row.currentQuarterKey);
+  return siteId && quarterKey ? `${siteId}:${quarterKey}` : '';
+}
+
+function comparePriorityQuarterlyManagementRows(
+  left: NonNullable<SafetyAdminOverviewResponse['priorityQuarterlyManagementRows']>[number],
+  right: NonNullable<SafetyAdminOverviewResponse['priorityQuarterlyManagementRows']>[number],
+) {
+  return (
+    (PRIORITY_QUARTERLY_EXCEPTION_ORDER[left.exceptionStatus] ?? 99) -
+      (PRIORITY_QUARTERLY_EXCEPTION_ORDER[right.exceptionStatus] ?? 99) ||
+    (right.projectAmount ?? 0) - (left.projectAmount ?? 0) ||
+    left.siteName.localeCompare(right.siteName, 'ko')
+  );
+}
+
+function mergePriorityQuarterlyManagementRows(
+  responseRows: SafetyAdminOverviewResponse['priorityQuarterlyManagementRows'] | undefined,
+  fallbackRows: SafetyAdminOverviewResponse['priorityQuarterlyManagementRows'] | undefined,
+): SafetyAdminOverviewResponse['priorityQuarterlyManagementRows'] {
+  const upstreamRows = responseRows ?? [];
+  const localRows = fallbackRows ?? [];
+  if (upstreamRows.length === 0) {
+    return localRows;
+  }
+
+  const upstreamQuarterKeys = new Set(
+    upstreamRows
+      .map((row) => normalizeKeyPart(row.currentQuarterKey))
+      .filter(Boolean),
+  );
+  const mergedRows: NonNullable<SafetyAdminOverviewResponse['priorityQuarterlyManagementRows']> = [];
+  const seenKeys = new Set<string>();
+
+  upstreamRows.forEach((row) => {
+    const rowKey = getPriorityQuarterlyManagementRowKey(row);
+    if (rowKey) {
+      if (seenKeys.has(rowKey)) return;
+      seenKeys.add(rowKey);
+    }
+    mergedRows.push(row);
+  });
+
+  localRows.forEach((row) => {
+    const quarterKey = normalizeKeyPart(row.currentQuarterKey);
+    if (upstreamQuarterKeys.size > 0 && !upstreamQuarterKeys.has(quarterKey)) return;
+    const rowKey = getPriorityQuarterlyManagementRowKey(row);
+    if (rowKey && seenKeys.has(rowKey)) return;
+    if (rowKey) seenKeys.add(rowKey);
+    mergedRows.push(row);
+  });
+
+  return mergedRows.sort(comparePriorityQuarterlyManagementRows);
+}
 
 function parseYearPrefix(value: string) {
   const matched = value.trim().match(/^(\d{4})/);
@@ -176,6 +248,10 @@ export function mergeOverviewResponseWithFallback(
       overviewResponse.unsentReportRows.length > 0 || fallbackOverview.unsentReportRows.length === 0
         ? overviewResponse.unsentReportRows
         : fallbackOverview.unsentReportRows,
+    priorityQuarterlyManagementRows: mergePriorityQuarterlyManagementRows(
+      overviewResponse.priorityQuarterlyManagementRows,
+      fallbackOverview.priorityQuarterlyManagementRows,
+    ),
   } satisfies SafetyAdminOverviewResponse;
 }
 
@@ -303,27 +379,23 @@ export function useAdminOverviewSectionState(
   }, [fallbackOverview.unsentReportRows, overview.unsentReportRows]);
 
   const normalizedPriorityQuarterlyManagementRows = useMemo(() => {
-    const sourceRows =
-      (overview.priorityQuarterlyManagementRows ?? []).length > 0 ||
-      (fallbackOverview.priorityQuarterlyManagementRows ?? []).length === 0
-        ? overview.priorityQuarterlyManagementRows ?? []
-        : fallbackOverview.priorityQuarterlyManagementRows ?? [];
+    const sourceRows = overview.priorityQuarterlyManagementRows ?? [];
     const fallbackRowsByKey = new Map(
       (fallbackOverview.priorityQuarterlyManagementRows ?? []).map((row) => [
-        `${row.siteId}:${row.currentQuarterKey}`,
+        getPriorityQuarterlyManagementRowKey(row),
         row,
       ]),
     );
 
     return sourceRows.map((row) => {
-      const fallbackRow = fallbackRowsByKey.get(`${row.siteId}:${row.currentQuarterKey}`);
+      const fallbackRow = fallbackRowsByKey.get(getPriorityQuarterlyManagementRowKey(row));
       const siteId = row.siteId || fallbackRow?.siteId || '';
       return {
         ...fallbackRow,
         ...row,
         href: siteId ? buildSiteQuarterlyListHref(siteId) : fallbackRow?.href || row.href,
-        quarterlyReportHref: fallbackRow?.quarterlyReportHref || row.quarterlyReportHref,
-        quarterlyReportKey: fallbackRow?.quarterlyReportKey || row.quarterlyReportKey,
+        quarterlyReportHref: row.quarterlyReportHref || fallbackRow?.quarterlyReportHref || '',
+        quarterlyReportKey: row.quarterlyReportKey || fallbackRow?.quarterlyReportKey || '',
       };
     });
   }, [

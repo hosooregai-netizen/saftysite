@@ -86,6 +86,15 @@ function normalizeCount(value: unknown, fallback = 0) {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
 
+function normalizeNumericValue(value: unknown) {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value !== 'string') return null;
+  const normalized = value.replace(/,/g, '').replace(/[^\d.-]/g, '').trim();
+  if (!normalized) return null;
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 function normalizePositiveInteger(value: unknown) {
   return typeof value === 'number' && Number.isFinite(value) && value > 0
     ? Math.trunc(value)
@@ -633,10 +642,7 @@ export function mapBackendOverviewResponse(
         Number.isFinite(row.latest_guidance_round)
           ? row.latest_guidance_round
           : null,
-      projectAmount:
-        typeof row.project_amount === 'number' && Number.isFinite(row.project_amount)
-          ? row.project_amount
-          : null,
+      projectAmount: normalizeNumericValue(row.project_amount),
       quarterlyDispatchStatus: (normalizeText(row.quarterly_dispatch_status) ||
         'report_missing') as SafetyAdminPriorityQuarterlyManagementRow['quarterlyDispatchStatus'],
       quarterlyReflectionStatus: (normalizeText(row.quarterly_reflection_status) ||
@@ -733,10 +739,7 @@ export function mapBackendOverviewResponse(
       headquarterName: normalizeText(row.headquarter_name),
       href: normalizeText(row.href),
       openReportCount: typeof row.open_report_count === 'number' ? row.open_report_count : 0,
-      projectAmount:
-        typeof row.project_amount === 'number' && Number.isFinite(row.project_amount)
-          ? row.project_amount
-          : null,
+      projectAmount: normalizeNumericValue(row.project_amount),
       recipientEmail: normalizeText(row.recipient_email),
       siteId: normalizeText(row.site_id),
       siteName: normalizeText(row.site_name),
@@ -782,10 +785,7 @@ export function mapBackendOverviewResponse(
       headquarterName: normalizeText(row.headquarter_name),
       href: normalizeText(row.href),
       openReportCount: typeof row.open_report_count === 'number' ? row.open_report_count : 0,
-      projectAmount:
-        typeof row.project_amount === 'number' && Number.isFinite(row.project_amount)
-          ? row.project_amount
-          : null,
+      projectAmount: normalizeNumericValue(row.project_amount),
       recipientEmail: normalizeText(row.recipient_email),
       siteId: normalizeText(row.site_id),
       siteName: normalizeText(row.site_name),
@@ -802,10 +802,7 @@ export function mapBackendOverviewResponse(
       headquarterName: normalizeText(row.headquarter_name),
       href: normalizeText(row.href),
       openReportCount: typeof row.open_report_count === 'number' ? row.open_report_count : 0,
-      projectAmount:
-        typeof row.project_amount === 'number' && Number.isFinite(row.project_amount)
-          ? row.project_amount
-          : null,
+      projectAmount: normalizeNumericValue(row.project_amount),
       recipientEmail: normalizeText(row.recipient_email),
       siteId: normalizeText(row.site_id),
       siteName: normalizeText(row.site_name),

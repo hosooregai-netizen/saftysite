@@ -21,22 +21,27 @@ import {
 export const DISPATCH_MANAGEMENT_MAX_UNSENT_DAYS = 15;
 export const PRIORITY_PROJECT_AMOUNT = 2_000_000_000;
 
-type SiteLike = Pick<
-  SafetySite,
-  | 'contract_date'
-  | 'contract_status'
-  | 'contract_end_date'
-  | 'contract_signed_date'
-  | 'contract_start_date'
-  | 'headquarter_detail'
-  | 'is_active'
-  | 'last_visit_date'
-  | 'lifecycle_status'
-  | 'project_amount'
-  | 'project_end_date'
-  | 'project_start_date'
-  | 'status'
->;
+type SiteLike = Omit<
+  Pick<
+    SafetySite,
+    | 'contract_date'
+    | 'contract_status'
+    | 'contract_end_date'
+    | 'contract_signed_date'
+    | 'contract_start_date'
+    | 'headquarter_detail'
+    | 'is_active'
+    | 'last_visit_date'
+    | 'lifecycle_status'
+    | 'project_amount'
+    | 'project_end_date'
+    | 'project_start_date'
+    | 'status'
+  >,
+  'project_amount'
+> & {
+  project_amount?: number | string | null;
+};
 
 type DispatchManagementReportLike = {
   dispatchCompleted?: boolean | null;
@@ -77,6 +82,15 @@ const DEADLINE_BUCKETS = [
 
 function normalizeText(value: unknown) {
   return typeof value === 'string' ? value.trim() : '';
+}
+
+function normalizeAmount(value: unknown) {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value !== 'string') return null;
+  const normalized = value.replace(/,/g, '').replace(/[^\d.-]/g, '').trim();
+  if (!normalized) return null;
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function pickDate(...values: Array<string | null | undefined>) {
@@ -225,16 +239,20 @@ export function isPriorityQuarterlySiteScope({
   site,
   today,
 }: PriorityQuarterlyScopeInput) {
-  if (!isManageableSiteScope(site, today)) return false;
-  if ((site.project_amount ?? 0) < PRIORITY_PROJECT_AMOUNT) return false;
-  return normalizeSiteLifecycleStatus(site, today) === 'active' && isSiteInCurrentQuarterWindow(site, today);
+  const status = normalizeText(site.status);
+  const lifecycleStatus = normalizeText(site.lifecycle_status);
+  if (status === 'closed' || status === 'deleted') return false;
+  if (lifecycleStatus === 'closed' || lifecycleStatus === 'deleted') return false;
+  if (site.is_active === false) return false;
+  if ((normalizeAmount(site.project_amount) ?? 0) < PRIORITY_PROJECT_AMOUNT) return false;
+  return isSiteInCurrentQuarterWindow(site, today);
 }
 
 export function isPriorityQuarterlyManagementRowScope(
   row: SafetyAdminPriorityQuarterlyManagementRow,
   today: Date,
 ) {
-  if ((row.projectAmount ?? 0) < PRIORITY_PROJECT_AMOUNT) return false;
+  if ((normalizeAmount(row.projectAmount) ?? 0) < PRIORITY_PROJECT_AMOUNT) return false;
   return normalizeText(row.currentQuarterKey) === formatQuarterKey(today);
 }
 

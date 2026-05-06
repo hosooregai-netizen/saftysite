@@ -86,6 +86,30 @@ function buildMaterialRow(
   };
 }
 
+function buildPriorityRow(
+  siteId: string,
+  overrides: Partial<NonNullable<SafetyAdminOverviewResponse['priorityQuarterlyManagementRows']>[number]> = {},
+): NonNullable<SafetyAdminOverviewResponse['priorityQuarterlyManagementRows']>[number] {
+  return {
+    currentQuarterKey: '2026-Q2',
+    currentQuarterLabel: '2026년 2분기',
+    exceptionLabel: '분기 미반영',
+    exceptionStatus: 'reflection_missing',
+    headquarterName: 'HQ',
+    href: `/reports?siteId=${siteId}&reportType=quarterly_report`,
+    latestGuidanceDate: '',
+    latestGuidanceRound: null,
+    projectAmount: 3_000_000_000,
+    quarterlyDispatchStatus: 'report_missing',
+    quarterlyReflectionStatus: 'missing',
+    quarterlyReportHref: '',
+    quarterlyReportKey: '',
+    siteId,
+    siteName: `Site ${siteId}`,
+    ...overrides,
+  };
+}
+
 test('restores material gap rows when upstream summary has counts but no row payload', () => {
   const fallbackOverview = buildOverview();
   fallbackOverview.quarterlyMaterialSummary = {
@@ -230,5 +254,78 @@ test('keeps complete upstream row payloads', () => {
   assert.deepEqual(
     merged.quarterlyMaterialSummary.missingSiteRows.map((row) => row.siteId),
     ['upstream-1', 'upstream-2'],
+  );
+});
+
+test('merges partial upstream priority quarterly rows with fallback-only current quarter rows', () => {
+  const fallbackOverview = buildOverview();
+  fallbackOverview.priorityQuarterlyManagementRows = [
+    buildPriorityRow('site-1'),
+    buildPriorityRow('site-2'),
+  ];
+  const upstreamOverview = {
+    ...buildOverview(),
+    priorityQuarterlyManagementRows: [
+      buildPriorityRow('site-1', {
+        exceptionLabel: '정상',
+        exceptionStatus: 'ok',
+        projectAmount: 4_000_000_000,
+        quarterlyDispatchStatus: 'sent',
+        quarterlyReflectionStatus: 'created',
+        quarterlyReportHref: '/reports/q-site-1',
+        quarterlyReportKey: 'q-site-1',
+      }),
+    ],
+  };
+
+  const merged = mergeOverviewResponseWithFallback(upstreamOverview, fallbackOverview);
+
+  assert.deepEqual(
+    new Set((merged.priorityQuarterlyManagementRows ?? []).map((row) => row.siteId)),
+    new Set(['site-1', 'site-2']),
+  );
+  const upstreamRow = (merged.priorityQuarterlyManagementRows ?? []).find((row) => row.siteId === 'site-1');
+  assert.equal(upstreamRow?.quarterlyDispatchStatus, 'sent');
+  assert.equal(upstreamRow?.quarterlyReportKey, 'q-site-1');
+});
+
+test('uses fallback priority quarterly rows when upstream priority rows are empty', () => {
+  const fallbackOverview = buildOverview();
+  fallbackOverview.priorityQuarterlyManagementRows = [
+    buildPriorityRow('site-1'),
+    buildPriorityRow('site-2'),
+  ];
+
+  const merged = mergeOverviewResponseWithFallback(buildOverview(), fallbackOverview);
+
+  assert.deepEqual(
+    (merged.priorityQuarterlyManagementRows ?? []).map((row) => row.siteId),
+    ['site-1', 'site-2'],
+  );
+});
+
+test('does not duplicate complete upstream priority quarterly rows', () => {
+  const fallbackOverview = buildOverview();
+  fallbackOverview.priorityQuarterlyManagementRows = [
+    buildPriorityRow('site-1'),
+    buildPriorityRow('site-2'),
+  ];
+  const upstreamOverview = {
+    ...buildOverview(),
+    priorityQuarterlyManagementRows: [
+      buildPriorityRow('site-1', { quarterlyReportKey: 'backend-1' }),
+      buildPriorityRow('site-2', { quarterlyReportKey: 'backend-2' }),
+    ],
+  };
+
+  const merged = mergeOverviewResponseWithFallback(upstreamOverview, fallbackOverview);
+
+  assert.deepEqual(
+    (merged.priorityQuarterlyManagementRows ?? []).map((row) => row.siteId),
+    ['site-1', 'site-2'],
+  );
+  assert.deepEqual(
+    (merged.priorityQuarterlyManagementRows ?? []).map((row) => row.quarterlyReportKey),
+    ['backend-1', 'backend-2'],
   );
 });

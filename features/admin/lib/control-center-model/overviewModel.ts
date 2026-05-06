@@ -73,6 +73,15 @@ function buildAdminSiteMainHref(siteId: string, headquarterId?: string | null) {
   });
 }
 
+function normalizeProjectAmount(value: unknown) {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value !== 'string') return null;
+  const normalized = value.replace(/,/g, '').replace(/[^\d.-]/g, '').trim();
+  if (!normalized) return null;
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 function resolveSiteEndingDate(site: ControllerDashboardData['sites'][number]) {
   const contractEndDate = site.contract_end_date?.trim() || '';
   if (contractEndDate) {
@@ -210,7 +219,7 @@ function buildPriorityQuarterlyManagementRows(
         href: buildSiteQuarterlyListHref(site.id),
         latestGuidanceDate: latestGuidanceRow?.visitDate || '',
         latestGuidanceRound: latestGuidanceRow?.visitRound ?? null,
-        projectAmount: site.project_amount ?? null,
+        projectAmount: normalizeProjectAmount(site.project_amount),
         quarterlyDispatchStatus,
         quarterlyReflectionStatus,
         quarterlyReportHref: quarterlyRow?.href || '',
