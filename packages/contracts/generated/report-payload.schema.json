@@ -52,6 +52,88 @@
               "type": "string",
               "minLength": 1
             },
+            "siteManagementNumber": {
+              "type": "string",
+              "default": ""
+            },
+            "businessStartNumber": {
+              "type": "string",
+              "default": ""
+            },
+            "constructionPeriod": {
+              "type": "string",
+              "default": ""
+            },
+            "constructionAmount": {
+              "type": "string",
+              "default": ""
+            },
+            "siteManagerName": {
+              "type": "string",
+              "default": ""
+            },
+            "corporationRegistrationNumber": {
+              "type": "string",
+              "default": ""
+            },
+            "businessRegistrationNumber": {
+              "type": "string",
+              "default": ""
+            },
+            "licenseNumber": {
+              "type": "string",
+              "default": ""
+            },
+            "headquartersContact": {
+              "type": "string",
+              "default": ""
+            },
+            "headquartersAddress": {
+              "type": "string",
+              "default": ""
+            },
+            "constructionType": {
+              "type": "string",
+              "default": ""
+            },
+            "visitCount": {
+              "type": "string",
+              "default": ""
+            },
+            "totalVisitCount": {
+              "type": "string",
+              "default": ""
+            },
+            "previousImplementationStatus": {
+              "type": "string",
+              "enum": [
+                "implemented",
+                "partial",
+                "not_implemented",
+                ""
+              ],
+              "default": ""
+            },
+            "notificationMethod": {
+              "type": "string",
+              "enum": [
+                "direct",
+                "registered_mail",
+                "email",
+                "mobile",
+                "other",
+                ""
+              ],
+              "default": ""
+            },
+            "notificationRecipientName": {
+              "type": "string",
+              "default": ""
+            },
+            "otherNotificationMethod": {
+              "type": "string",
+              "default": ""
+            },
             "progressRate": {
               "type": "string",
               "default": ""
@@ -113,6 +195,26 @@
               "items": {
                 "type": "object",
                 "properties": {
+                  "id": {
+                    "type": "string",
+                    "default": ""
+                  },
+                  "section": {
+                    "type": "string",
+                    "enum": [
+                      "reportMeta",
+                      "doc4",
+                      "doc5",
+                      "photoObservations",
+                      "dispatch",
+                      "other"
+                    ],
+                    "default": "other"
+                  },
+                  "field": {
+                    "type": "string",
+                    "default": ""
+                  },
                   "fieldPath": {
                     "type": "string",
                     "minLength": 1
@@ -121,10 +223,42 @@
                     "type": "string",
                     "minLength": 1
                   },
+                  "value": {
+                    "type": "string"
+                  },
+                  "currentValue": {
+                    "type": "string"
+                  },
+                  "suggestedValue": {
+                    "type": "string"
+                  },
+                  "source": {
+                    "type": "string",
+                    "enum": [
+                      "DATA",
+                      "AI_PHOTO",
+                      "RISK_LIBRARY",
+                      "USER_INPUT",
+                      "RULE_TEMPLATE"
+                    ]
+                  },
                   "confidence": {
                     "type": "number",
                     "minimum": 0,
                     "maximum": 1
+                  },
+                  "reason": {
+                    "type": "string",
+                    "default": ""
+                  },
+                  "severity": {
+                    "type": "string",
+                    "enum": [
+                      "required",
+                      "warning",
+                      "info"
+                    ],
+                    "default": "warning"
                   },
                   "needsReview": {
                     "type": "boolean",
@@ -137,6 +271,17 @@
                       "reviewed",
                       "confirmed"
                     ]
+                  },
+                  "evidencePhotoIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "default": []
+                  },
+                  "resolved": {
+                    "type": "boolean",
+                    "default": false
                   },
                   "notes": {
                     "type": "string",
@@ -232,6 +377,9 @@
                 "enum": [
                   "step1_overview",
                   "step2_hazard",
+                  "step3_followup",
+                  "step4_support",
+                  "step5_site_overview",
                   "manual_override"
                 ]
               },
@@ -247,6 +395,21 @@
                 "type": "integer",
                 "minimum": 0,
                 "default": 0
+              },
+              "recommendedCount": {
+                "type": "integer",
+                "minimum": 0,
+                "default": 0
+              },
+              "bucketRole": {
+                "type": "string",
+                "enum": [
+                  "current_process_photo",
+                  "current_hazard_photo",
+                  "previous_guidance_check_photo",
+                  "education_support_photo",
+                  "site_overview_photo"
+                ]
               },
               "uploadedPhotoIds": {
                 "type": "array",
@@ -267,7 +430,8 @@
                 "enum": [
                   "pending",
                   "ready",
-                  "reviewed"
+                  "reviewed",
+                  "skipped"
                 ],
                 "default": "pending"
               }
@@ -348,6 +512,7 @@
                   "site_overview",
                   "hazard",
                   "process",
+                  "followup",
                   "measurement",
                   "education",
                   "activity"
@@ -356,6 +521,14 @@
               "sourceStep": {
                 "$ref": "#/definitions/ReportPayload/properties/photoStepBuckets/items/properties/step",
                 "default": "manual_override"
+              },
+              "filename": {
+                "type": "string",
+                "default": ""
+              },
+              "imageUrl": {
+                "type": "string",
+                "default": ""
               },
               "aiCategorySuggestion": {
                 "anyOf": [
@@ -449,6 +622,219 @@
           },
           "default": []
         },
+        "photoObservations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "default": ""
+              },
+              "reportId": {
+                "type": "string",
+                "default": ""
+              },
+              "photoAssetId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "photoRole": {
+                "$ref": "#/definitions/ReportPayload/properties/photoStepBuckets/items/properties/step"
+              },
+              "observedProcess": {
+                "type": "string",
+                "default": ""
+              },
+              "observedRisk": {
+                "type": "string",
+                "default": ""
+              },
+              "observedProcessStructured": {
+                "type": "object",
+                "properties": {
+                  "majorProcess": {
+                    "type": "string",
+                    "enum": [
+                      "기초 및 토공사",
+                      "골조공사",
+                      "내부 마감공사",
+                      "외부 마감공사",
+                      "지붕공사",
+                      "기타",
+                      "확인 필요"
+                    ],
+                    "default": "확인 필요"
+                  },
+                  "detailProcess": {
+                    "type": "string",
+                    "default": ""
+                  },
+                  "confidence": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  }
+                },
+                "required": [
+                  "confidence"
+                ],
+                "additionalProperties": false
+              },
+              "observedRiskStructured": {
+                "type": "object",
+                "properties": {
+                  "locationText": {
+                    "type": "string",
+                    "default": ""
+                  },
+                  "accidentType": {
+                    "type": "string",
+                    "enum": [
+                      "추락",
+                      "낙하",
+                      "충돌",
+                      "붕괴",
+                      "감전",
+                      "화재",
+                      "협착",
+                      "전도",
+                      "확인 필요"
+                    ],
+                    "default": "확인 필요"
+                  },
+                  "causativeAgent": {
+                    "type": "string",
+                    "default": ""
+                  },
+                  "hazardSummary": {
+                    "type": "string",
+                    "default": ""
+                  },
+                  "recommendedActionKey": {
+                    "type": "string",
+                    "default": ""
+                  },
+                  "riskLevel": {
+                    "type": "string",
+                    "enum": [
+                      "상",
+                      "중",
+                      "하",
+                      "확인 필요"
+                    ]
+                  },
+                  "confidence": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  }
+                },
+                "required": [
+                  "riskLevel",
+                  "confidence"
+                ],
+                "additionalProperties": false
+              },
+              "previousGuidanceCheck": {
+                "type": "object",
+                "properties": {
+                  "matchedPreviousFindingId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "default": null
+                  },
+                  "suggestedResult": {
+                    "type": "string",
+                    "enum": [
+                      "이행 완료",
+                      "불이행",
+                      "부분 이행",
+                      "확인 필요"
+                    ]
+                  },
+                  "reason": {
+                    "type": "string",
+                    "default": ""
+                  },
+                  "confidence": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  }
+                },
+                "required": [
+                  "suggestedResult",
+                  "confidence"
+                ],
+                "additionalProperties": false
+              },
+              "supportObservation": {
+                "type": "object",
+                "properties": {
+                  "supportType": {
+                    "type": "string",
+                    "enum": [
+                      "교육",
+                      "자료보급",
+                      "현장순회",
+                      "기타",
+                      "확인 필요"
+                    ]
+                  },
+                  "attendeeCountText": {
+                    "type": "string",
+                    "default": ""
+                  },
+                  "topicCandidate": {
+                    "type": "string",
+                    "default": ""
+                  },
+                  "contentCandidate": {
+                    "type": "string",
+                    "default": ""
+                  },
+                  "confidence": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  }
+                },
+                "required": [
+                  "supportType",
+                  "confidence"
+                ],
+                "additionalProperties": false
+              },
+              "rawAiNotes": {
+                "type": "string",
+                "default": ""
+              },
+              "confidence": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "default": 0
+              },
+              "needsHumanReview": {
+                "type": "boolean",
+                "default": true
+              },
+              "createdAt": {
+                "type": "string",
+                "default": ""
+              }
+            },
+            "required": [
+              "photoAssetId",
+              "photoRole"
+            ],
+            "additionalProperties": false
+          },
+          "default": []
+        },
         "findingCandidates": {
           "type": "array",
           "items": {
@@ -460,6 +846,23 @@
                   "type": "string"
                 },
                 "default": []
+              },
+              "photoObservationIds": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "standardRiskRuleId": {
+                "type": "string"
+              },
+              "source": {
+                "type": "string",
+                "enum": [
+                  "AI_PHOTO_AND_RISK_LIBRARY",
+                  "USER_INPUT",
+                  "DATA"
+                ]
               },
               "location": {
                 "type": "string",
@@ -575,10 +978,34 @@
                   "countermeasure": {
                     "type": "string"
                   },
+                  "note": {
+                    "type": "string"
+                  },
+                  "evidencePhotoIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
                   "confidence": {
                     "type": "number",
                     "minimum": 0,
                     "maximum": 1
+                  },
+                  "standardRiskRuleId": {
+                    "type": "string"
+                  },
+                  "photoObservationIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "needsReview": {
+                    "type": "boolean"
+                  },
+                  "source": {
+                    "$ref": "#/definitions/ReportPayload/properties/findingCandidates/items/properties/source"
                   }
                 },
                 "required": [
@@ -733,6 +1160,66 @@
             "valid"
           ],
           "additionalProperties": false
+        },
+        "fieldProvenance": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "fieldPath": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source": {
+                "$ref": "#/definitions/ReportPayload/properties/reviewMeta/properties/reviewQueue/items/properties/source"
+              },
+              "sourceId": {
+                "type": "string"
+              },
+              "evidencePhotoIds": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              },
+              "photoObservationIds": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              },
+              "standardRiskRuleId": {
+                "type": "string"
+              },
+              "confidence": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "generatedAt": {
+                "type": "string"
+              },
+              "model": {
+                "type": "string"
+              },
+              "needsReview": {
+                "type": "boolean",
+                "default": false
+              },
+              "note": {
+                "type": "string",
+                "default": ""
+              }
+            },
+            "required": [
+              "fieldPath",
+              "source"
+            ],
+            "additionalProperties": false
+          },
+          "default": []
         },
         "documentsCompat": {
           "type": "object",

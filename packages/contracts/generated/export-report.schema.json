@@ -7,6 +7,14 @@
         "confirm_reviewed": {
           "type": "boolean",
           "default": true
+        },
+        "acknowledge_ai_disclaimer": {
+          "type": "boolean",
+          "default": false
+        },
+        "typed_signature_name": {
+          "type": "string",
+          "default": ""
         }
       },
       "additionalProperties": false
