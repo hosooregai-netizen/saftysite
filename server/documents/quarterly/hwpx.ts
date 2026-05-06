@@ -53,6 +53,8 @@ const COVER_SITE_NAME_TEXT_INDEX = 3;
 const COVER_REPORT_DATE_TEXT_INDEX = 4;
 const BODY_TITLE_TEXT_INDEX = 11;
 const COVER_SITE_NAME_LABEL = '\uD604\uC7A5\uBA85 : ';
+const FUTURE_PLAN_ROWS_PER_TABLE = 5;
+const FUTURE_PLAN_TABLE_PLACEHOLDER = '__QUARTERLY_FUTURE_PLAN_TABLES__';
 const QUARTERLY_CHART_WIDTH = 1560;
 const QUARTERLY_CHART_HEIGHT = 640;
 const QUARTERLY_CHART_CENTER_X = 280;
@@ -523,12 +525,26 @@ function stripLineSegArrays(xml: string) {
   return xml.replace(/<hp:linesegarray>[\s\S]*?<\/hp:linesegarray>/g, '');
 }
 
+function ensureSubListLineWrapBreak(xml: string) {
+  return xml.replace(/<hp:subList\b([^>]*)>/, (match, attributes: string) => {
+    if (/\blineWrap="[^"]*"/.test(attributes)) {
+      return match.replace(/\blineWrap="[^"]*"/, 'lineWrap="BREAK"');
+    }
+    return `<hp:subList${attributes} lineWrap="BREAK">`;
+  });
+}
+
 function replaceCellText(
   tableXml: string,
   rowAddr: number,
   colAddr: number,
   text: string,
-  options?: { multiline?: boolean; wrapAt?: number; reflow?: boolean; stripLineSeg?: boolean },
+  options?: {
+    lineWrapBreak?: boolean;
+    multiline?: boolean;
+    reflow?: boolean;
+    stripLineSeg?: boolean;
+  },
 ) {
   const targetMarker = `<hp:cellAddr colAddr="${colAddr}" rowAddr="${rowAddr}"/>`;
   const cellBlock = [...tableXml.matchAll(/<hp:tc\b[\s\S]*?<\/hp:tc>/g)]
@@ -547,10 +563,13 @@ function replaceCellText(
         .join('')
     : replaceParagraphRuns(paragraphTemplate, text);
 
-  const nextCell = cellBlock.replace(
+  const nextCellWithText = cellBlock.replace(
     /<hp:p\b[\s\S]*?<\/hp:p>/,
     options?.stripLineSeg ? stripLineSegArrays(nextParagraphs) : nextParagraphs,
   );
+  const nextCell = options?.lineWrapBreak
+    ? ensureSubListLineWrapBreak(nextCellWithText)
+    : nextCellWithText;
 
   return tableXml.replace(cellBlock, nextCell);
 }
@@ -710,12 +729,12 @@ function replaceTableRows(tableXml: string, rows: string[]) {
   return `${prefix}${rows.join('')}${suffix}`;
 }
 
-function resizeTable(tableXml: string, rowCount: number, addedHeight: number) {
+function resizeTable(tableXml: string, rowCount: number, heightDelta: number) {
   let nextTable = tableXml.replace(/rowCnt="\d+"/, `rowCnt="${rowCount}"`);
-  if (addedHeight > 0) {
+  if (heightDelta !== 0) {
     nextTable = nextTable.replace(
       /(<hp:sz\b[^>]*height=")(\d+)(")/,
-      (_match, start, value, end) => `${start}${Number(value) + addedHeight}${end}`,
+      (_match, start, value, end) => `${start}${Math.max(1, Number(value) + heightDelta)}${end}`,
     );
   }
   return nextTable;
@@ -738,12 +757,96 @@ function ensureDataRowCapacity(tableXml: string, firstDataRowAddr: number, desir
   return resizeTable(resized, nextRows.length, prototypeHeight * cloneCount);
 }
 
+function setDataRowCapacity(tableXml: string, firstDataRowAddr: number, desiredRowCount: number) {
+  const rows = getTableRows(tableXml);
+  const headerRows = rows.slice(0, firstDataRowAddr);
+  const dataRows = rows.slice(firstDataRowAddr);
+  const prototypeRow = dataRows.at(-1) ?? rows.at(-1);
+  if (!prototypeRow) return tableXml;
+
+  const prototypeHeight = Number(prototypeRow.match(/<hp:cellSz\b[^>]*height="(\d+)"/)?.[1] ?? 0);
+  const nextDataRows = dataRows.slice(0, desiredRowCount);
+  while (nextDataRows.length < desiredRowCount) {
+    const nextRowAddr = firstDataRowAddr + nextDataRows.length;
+    nextDataRows.push(prototypeRow.replace(/rowAddr="\d+"/g, `rowAddr="${nextRowAddr}"`));
+  }
+
+  const nextRows = [...headerRows, ...nextDataRows].map((rowXml, rowIndex) =>
+    rowXml.replace(/rowAddr="\d+"/g, `rowAddr="${rowIndex}"`),
+  );
+  const heightDelta = prototypeHeight * (nextRows.length - rows.length);
+  return resizeTable(replaceTableRows(tableXml, nextRows), nextRows.length, heightDelta);
+}
+
 function matchTableBlocks(sectionXml: string) {
   return [...sectionXml.matchAll(/<hp:tbl\b[\s\S]*?<\/hp:tbl>/g)].map((match) => ({
     start: match.index ?? 0,
     end: (match.index ?? 0) + match[0].length,
     xml: match[0],
   }));
+}
+
+function balancedTagSpans(xml: string, tagName: string): Array<{ start: number; end: number }> {
+  const escapedTagName = tagName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const tokenPattern = new RegExp(`<${escapedTagName}\\b[^>]*\\/?>|<\\/${escapedTagName}>`, 'g');
+  const spans: Array<{ start: number; end: number }> = [];
+  const stack: number[] = [];
+
+  for (const match of xml.matchAll(tokenPattern)) {
+    const token = match[0];
+    const index = match.index ?? 0;
+    const isClosing = token.startsWith(`</${tagName}`);
+    const isSelfClosing = !isClosing && token.endsWith('/>');
+
+    if (isClosing) {
+      const start = stack.pop();
+      if (start != null) {
+        spans.push({ start, end: index + token.length });
+      }
+      continue;
+    }
+
+    if (isSelfClosing) {
+      spans.push({ start: index, end: index + token.length });
+      continue;
+    }
+
+    stack.push(index);
+  }
+
+  return spans.sort((left, right) => left.start - right.start);
+}
+
+function findContainingParagraphSpan(xml: string, marker: string) {
+  const markerIndex = xml.indexOf(marker);
+  if (markerIndex < 0) return null;
+
+  return balancedTagSpans(xml, 'hp:p')
+    .filter((span) => span.start <= markerIndex && markerIndex < span.end)
+    .sort((left, right) => (left.end - left.start) - (right.end - right.start))[0] ?? null;
+}
+
+function setParagraphPageBreak(paragraphXml: string, value: '0' | '1') {
+  return paragraphXml.replace(/<hp:p\b[^>]*>/, (paragraphTag) =>
+    /pageBreak=/.test(paragraphTag)
+      ? paragraphTag.replace(/pageBreak="[^"]*"/, `pageBreak="${value}"`)
+      : paragraphTag.replace(/>$/, ` pageBreak="${value}">`),
+  );
+}
+
+function buildFuturePlanTableParagraphs(sectionXml: string, futurePlanTables: string[]) {
+  const paragraphSpan = findContainingParagraphSpan(sectionXml, FUTURE_PLAN_TABLE_PLACEHOLDER);
+  if (!paragraphSpan) {
+    throw new Error('Quarterly HWPX template future plan table paragraph was not detected.');
+  }
+
+  const paragraphTemplate = sectionXml.slice(paragraphSpan.start, paragraphSpan.end);
+  const paragraphs = futurePlanTables.map((tableXml, index) => {
+    const paragraphXml = paragraphTemplate.replace(FUTURE_PLAN_TABLE_PLACEHOLDER, tableXml);
+    return index === 0 ? paragraphXml : setParagraphPageBreak(paragraphXml, '1');
+  });
+
+  return `${sectionXml.slice(0, paragraphSpan.start)}${paragraphs.join('')}${sectionXml.slice(paragraphSpan.end)}`;
 }
 
 function rebuildSectionXml(
@@ -1078,28 +1181,63 @@ function updateImplementationTable(tableXml: string, report: QuarterlySummaryRep
   return nextTable;
 }
 
-function updateFuturePlanTable(tableXml: string, report: QuarterlySummaryReport) {
-  const rows =
-    report.futurePlans.length > 0
-      ? report.futurePlans
-      : [{ processName: '', hazard: '', countermeasure: '', note: '', source: 'api' as const }];
+function createBlankFuturePlan(): QuarterlySummaryReport['futurePlans'][number] {
+  return {
+    id: 'blank-future-plan',
+    hazardCountermeasureItemId: '',
+    processName: '',
+    hazard: '',
+    countermeasure: '',
+    note: '',
+    source: 'api' as const,
+  };
+}
 
-  let nextTable = ensureDataRowCapacity(tableXml, 2, rows.length);
+function chunkFuturePlans(report: QuarterlySummaryReport) {
+  const rows = report.futurePlans.length > 0 ? report.futurePlans : [createBlankFuturePlan()];
+  const chunks: Array<QuarterlySummaryReport['futurePlans']> = [];
 
-  rows.forEach((item, index) => {
+  for (let index = 0; index < rows.length; index += FUTURE_PLAN_ROWS_PER_TABLE) {
+    chunks.push(rows.slice(index, index + FUTURE_PLAN_ROWS_PER_TABLE));
+  }
+
+  return chunks.length > 0 ? chunks : [[createBlankFuturePlan()]];
+}
+
+function padFuturePlanChunk(chunk: QuarterlySummaryReport['futurePlans']) {
+  const rows = [...chunk];
+  while (rows.length < FUTURE_PLAN_ROWS_PER_TABLE) {
+    rows.push(createBlankFuturePlan());
+  }
+  return rows;
+}
+
+function updateFuturePlanTableChunk(
+  tableXml: string,
+  rows: QuarterlySummaryReport['futurePlans'],
+) {
+  let nextTable = setDataRowCapacity(tableXml, 2, FUTURE_PLAN_ROWS_PER_TABLE);
+
+  padFuturePlanChunk(rows).forEach((item, index) => {
     const rowAddr = 2 + index;
     const leftText = formatOptionalText(item.hazard || item.processName);
     const rightText = formatOptionalText(item.countermeasure);
 
     nextTable = replaceCellText(nextTable, rowAddr, 0, formatText(leftText), {
-      reflow: true,
+      lineWrapBreak: true,
+      stripLineSeg: true,
     });
     nextTable = replaceCellText(nextTable, rowAddr, 1, formatText(rightText), {
-      reflow: true,
+      lineWrapBreak: true,
+      stripLineSeg: true,
     });
   });
 
   return nextTable;
+}
+
+function updateFuturePlanTables(tableXml: string, report: QuarterlySummaryReport) {
+  return chunkFuturePlans(report).map((chunk) => updateFuturePlanTableChunk(tableXml, chunk));
 }
 
 function updateOpsTable(
@@ -1124,7 +1262,6 @@ function updateOpsTable(
       )
     : replaceCellText(nextTable, 2, 0, buildOpsDetailLines(report), {
         multiline: true,
-        wrapAt: 42,
       });
   return nextTable;
 }
@@ -1185,10 +1322,14 @@ function updateSectionXml(
   tables[1] = updateSnapshotTable(tables[1], report, site);
   tables[2] = updateStatsTable(tables[2], chartImages);
   tables[3] = updateImplementationTable(tables[3], report);
-  tables[4] = updateFuturePlanTable(tables[4], report);
+  const futurePlanTables = updateFuturePlanTables(tables[4], report);
+  tables[4] = FUTURE_PLAN_TABLE_PLACEHOLDER;
   tables[5] = updateOpsTable(tables[5], report, opsImageAsset);
 
-  const rebuiltSectionXml = rebuildSectionXml(textUpdatedSection, tableBlocks, tables);
+  const rebuiltSectionXml = buildFuturePlanTableParagraphs(
+    rebuildSectionXml(textUpdatedSection, tableBlocks, tables),
+    futurePlanTables,
+  );
   const normalizedSectionXml = rebuiltSectionXml;
   return options?.skipPictureIdNormalization
     ? normalizedSectionXml

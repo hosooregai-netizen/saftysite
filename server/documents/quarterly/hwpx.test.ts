@@ -64,6 +64,22 @@ function findCellContainingText(xml: string, text: string): string | null {
   );
 }
 
+function findParagraphOpenTagContainingXml(sectionXml: string, containedXml: string) {
+  const containedIndex = sectionXml.indexOf(containedXml);
+  assert.notEqual(containedIndex, -1, 'expected contained XML to exist in section');
+  const paragraphStart = sectionXml.lastIndexOf('<hp:p', containedIndex);
+  assert.notEqual(paragraphStart, -1, 'expected containing paragraph start');
+  const paragraphOpenEnd = sectionXml.indexOf('>', paragraphStart);
+  assert.notEqual(paragraphOpenEnd, -1, 'expected containing paragraph open tag end');
+  return sectionXml.slice(paragraphStart, paragraphOpenEnd + 1);
+}
+
+function findFuturePlanTables(sectionXml: string) {
+  return (sectionXml.match(/<hp:tbl\b[\s\S]*?<\/hp:tbl>/g) ?? []).filter((tableXml) =>
+    /future chunk hazard \d/.test(tableXml),
+  );
+}
+
 function extractAppendixSlice(sectionXml: string, marker: string) {
   const markerIndex = sectionXml.indexOf(marker);
   assert.notEqual(markerIndex, -1, `expected appendix marker "${marker}" to be rendered`);
@@ -595,4 +611,123 @@ test('buildQuarterlyHwpxDocument keeps long future plan text on source lines', a
     (countermeasureCell.match(new RegExp(escapeRegExp(countermeasure), 'g')) ?? []).length,
     1,
   );
+  assert.match(hazardCell, /<hp:subList\b[^>]*\blineWrap="BREAK"/);
+  assert.match(countermeasureCell, /<hp:subList\b[^>]*\blineWrap="BREAK"/);
+  assert.doesNotMatch(hazardCell, /<hp:lineBreak\/>/);
+  assert.doesNotMatch(countermeasureCell, /<hp:lineBreak\/>/);
+  assert.doesNotMatch(hazardCell, /<hp:linesegarray\b/);
+  assert.doesNotMatch(countermeasureCell, /<hp:linesegarray\b/);
+  assert.equal((hazardCell.match(/<hp:p\b/g) ?? []).length, 1);
+  assert.equal((hazardCell.match(/<hp:run\b/g) ?? []).length, 1);
+  assert.equal((countermeasureCell.match(/<hp:p\b/g) ?? []).length, 1);
+  assert.equal((countermeasureCell.match(/<hp:run\b/g) ?? []).length, 1);
+});
+
+test('buildQuarterlyHwpxDocument preserves manual line breaks in future plan cells', async () => {
+  const fixture = buildQuarterlyFixture();
+  const hazard = 'manual hazard first line\nmanual hazard second line';
+  const countermeasure = 'manual countermeasure first line\nmanual countermeasure second line';
+  const report = {
+    ...fixture.report,
+    futurePlans: [
+      {
+        id: 'future-plan-manual-line-break',
+        hazardCountermeasureItemId: '',
+        processName: '',
+        hazard,
+        countermeasure,
+        note: '',
+        source: 'manual' as const,
+      },
+    ],
+  };
+  const document = await buildQuarterlyHwpxDocument(report, fixture.site);
+  const zip = await JSZip.loadAsync(document.buffer);
+  const sectionXml = await zip.file('Contents/section0.xml')?.async('string');
+
+  assert.ok(sectionXml);
+  const tables = sectionXml.match(/<hp:tbl\b[\s\S]*?<\/hp:tbl>/g) ?? [];
+  assert.ok(tables.length >= 5);
+
+  const futurePlanTable = tables[4];
+  const hazardCell = findTableCell(futurePlanTable, 2, 0);
+  const countermeasureCell = findTableCell(futurePlanTable, 2, 1);
+
+  assert.ok(hazardCell);
+  assert.ok(countermeasureCell);
+  assert.match(hazardCell, /manual hazard first line<hp:lineBreak\/>manual hazard second line/);
+  assert.match(
+    countermeasureCell,
+    /manual countermeasure first line<hp:lineBreak\/>manual countermeasure second line/,
+  );
+  assert.doesNotMatch(hazardCell, /<hp:linesegarray\b/);
+  assert.doesNotMatch(countermeasureCell, /<hp:linesegarray\b/);
+  assert.equal((hazardCell.match(/<hp:p\b/g) ?? []).length, 1);
+  assert.equal((hazardCell.match(/<hp:run\b/g) ?? []).length, 1);
+  assert.equal((countermeasureCell.match(/<hp:p\b/g) ?? []).length, 1);
+  assert.equal((countermeasureCell.match(/<hp:run\b/g) ?? []).length, 1);
+});
+
+test('buildQuarterlyHwpxDocument keeps five future plans in one table', async () => {
+  const fixture = buildQuarterlyFixture();
+  const report = {
+    ...fixture.report,
+    futurePlans: Array.from({ length: 5 }, (_item, index) => ({
+      id: `future-plan-five-${index + 1}`,
+      hazardCountermeasureItemId: '',
+      processName: '',
+      hazard: `future chunk hazard ${index + 1}`,
+      countermeasure: `future chunk countermeasure ${index + 1}`,
+      note: '',
+      source: 'manual' as const,
+    })),
+  };
+  const document = await buildQuarterlyHwpxDocument(report, fixture.site);
+  const zip = await JSZip.loadAsync(document.buffer);
+  const sectionXml = await zip.file('Contents/section0.xml')?.async('string');
+
+  assert.ok(sectionXml);
+  const futurePlanTables = findFuturePlanTables(sectionXml);
+  assert.equal(futurePlanTables.length, 1);
+  assert.equal((futurePlanTables[0].match(/<hp:tr>/g) ?? []).length, 7);
+  assert.ok(findTableCell(futurePlanTables[0], 6, 0));
+  assert.equal(findTableCell(futurePlanTables[0], 7, 0), null);
+});
+
+test('buildQuarterlyHwpxDocument chunks future plans into five-row page-broken tables', async () => {
+  const fixture = buildQuarterlyFixture();
+  const report = {
+    ...fixture.report,
+    futurePlans: Array.from({ length: 6 }, (_item, index) => ({
+      id: `future-plan-six-${index + 1}`,
+      hazardCountermeasureItemId: '',
+      processName: '',
+      hazard: `future chunk hazard ${index + 1}`,
+      countermeasure: `future chunk countermeasure ${index + 1}`,
+      note: '',
+      source: 'manual' as const,
+    })),
+  };
+  const document = await buildQuarterlyHwpxDocument(report, fixture.site);
+  const zip = await JSZip.loadAsync(document.buffer);
+  const sectionXml = await zip.file('Contents/section0.xml')?.async('string');
+
+  assert.ok(sectionXml);
+  const futurePlanTables = findFuturePlanTables(sectionXml);
+  assert.equal(futurePlanTables.length, 2);
+
+  const [firstTable, secondTable] = futurePlanTables;
+  assert.match(firstTable, /future chunk hazard 1/);
+  assert.match(firstTable, /future chunk hazard 5/);
+  assert.doesNotMatch(firstTable, /future chunk hazard 6/);
+  assert.match(secondTable, /future chunk hazard 6/);
+  assert.doesNotMatch(secondTable, /future chunk hazard 5/);
+
+  assert.match(findParagraphOpenTagContainingXml(sectionXml, secondTable), /pageBreak="1"/);
+  assert.equal((secondTable.match(/<hp:tr>/g) ?? []).length, 7);
+  for (let rowAddr = 2; rowAddr < 7; rowAddr += 1) {
+    assert.ok(findTableCell(secondTable, rowAddr, 0));
+    assert.ok(findTableCell(secondTable, rowAddr, 1));
+  }
+  assert.equal(findTableCell(secondTable, 7, 0), null);
 });

@@ -8,6 +8,12 @@ import {
   buildQuarterlyMergedTemplatePrototypeBundle,
 } from './mergedTemplatePrototype';
 
+const SAFETY_SLOGAN_PREFIX = '\uD568\uAED8\uD574\uC694 \uC548\uC804\uC791\uC5C5';
+const COMPANY_NAME = '\uD55C\uAD6D\uC885\uD569\uC548\uC804\uC8FC\uC2DD\uD68C\uC0AC';
+const GUIDANCE_AGENCY_LABEL = '\uC9C0\uB3C4\uAE30\uAD00\uBA85';
+const COMPANY_ADDRESS_PREFIX = '\uC11C\uC6B8\uC2DC \uAD11\uC9C4\uAD6C';
+const COMPANY_PHONE = '02-454-4541';
+
 function collectManifestIds(contentHpf: string) {
   return new Set(
     Array.from(
@@ -17,13 +23,72 @@ function collectManifestIds(contentHpf: string) {
   );
 }
 
+function flattenXmlText(xml: string) {
+  return xml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function balancedTagSpans(xml: string, tagName: string): Array<{ start: number; end: number }> {
+  const tokenPattern = new RegExp(`<${tagName}\\b[^>]*\\/?>|<\\/${tagName}>`, 'g');
+  const spans: Array<{ start: number; end: number }> = [];
+  const stack: number[] = [];
+
+  for (const match of xml.matchAll(tokenPattern)) {
+    const token = match[0];
+    const index = match.index ?? 0;
+    const isClosing = token.startsWith(`</${tagName}`);
+    const isSelfClosing = !isClosing && token.endsWith('/>');
+
+    if (isClosing) {
+      const start = stack.pop();
+      if (start != null) {
+        spans.push({ start, end: index + token.length });
+      }
+      continue;
+    }
+
+    if (isSelfClosing) {
+      spans.push({ start: index, end: index + token.length });
+      continue;
+    }
+
+    stack.push(index);
+  }
+
+  return spans.sort((left, right) => left.start - right.start);
+}
+
+function findTableByText(xml: string, text: string) {
+  return (
+    (xml.match(/<hp:tbl\b[\s\S]*?<\/hp:tbl>/g) ?? []).find((tableXml) =>
+      flattenXmlText(tableXml).includes(text),
+    ) ?? null
+  );
+}
+
+function assertAppendixBrandingPolicy(appendixPrototypeXml: string) {
+  assert.doesNotMatch(appendixPrototypeXml, new RegExp(SAFETY_SLOGAN_PREFIX));
+  assert.doesNotMatch(appendixPrototypeXml, new RegExp(COMPANY_ADDRESS_PREFIX));
+
+  for (const tagName of ['hp:ctrl', 'hp:rect']) {
+    for (const span of balancedTagSpans(appendixPrototypeXml, tagName)) {
+      const blockText = flattenXmlText(appendixPrototypeXml.slice(span.start, span.end));
+      assert.ok(!blockText.includes(SAFETY_SLOGAN_PREFIX));
+      assert.ok(!blockText.includes(COMPANY_NAME));
+      assert.ok(!blockText.includes(COMPANY_ADDRESS_PREFIX));
+      assert.ok(!blockText.includes(COMPANY_PHONE));
+    }
+  }
+
+  assert.ok(findTableByText(appendixPrototypeXml, `${GUIDANCE_AGENCY_LABEL} ${COMPANY_NAME}`));
+}
+
 function countBlankParagraphsBetweenTablesByText(xml: string, leftText: string, rightText: string) {
   const tables = xml.match(/<hp:tbl\b[\s\S]*?<\/hp:tbl>/g) ?? [];
   const leftIndex = tables.findIndex((tableXml) =>
-    tableXml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').includes(leftText),
+    flattenXmlText(tableXml).includes(leftText),
   );
   const rightIndex = tables.findIndex((tableXml) =>
-    tableXml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').includes(rightText),
+    flattenXmlText(tableXml).includes(rightText),
   );
 
   assert.notEqual(leftIndex, -1, `expected table containing "${leftText}"`);
@@ -40,7 +105,7 @@ function countBlankParagraphsBetweenTablesByText(xml: string, leftText: string, 
   }
 
   return Array.from(xml.slice(left.end, right.start).matchAll(/<hp:p\b[\s\S]*?<\/hp:p>/g)).filter((match) =>
-    !match[0].replace(/<[^>]+>/g, '').trim(),
+    !flattenXmlText(match[0]),
   ).length;
 }
 
@@ -92,6 +157,7 @@ test('buildQuarterlyMergedTemplatePrototype builds a single-section merged templ
   assert.doesNotMatch(document.appendixPrototypeXml, /hidePageNum="1"/);
   assert.doesNotMatch(document.appendixPrototypeXml, /www\.safetysite\.co\.kr/);
   assert.doesNotMatch(document.appendixPrototypeXml, /070-4106-6051/);
+  assertAppendixBrandingPolicy(document.appendixPrototypeXml);
   assert.ok(!contentHpf.includes('Contents/section1.xml'));
 
   const manifestIds = collectManifestIds(contentHpf);
@@ -148,6 +214,7 @@ test('buildQuarterlyMergedTemplatePrototype also supports v10-1 inspection varia
   assert.doesNotMatch(document.appendixPrototypeXml, /hidePageNum="1"/);
   assert.doesNotMatch(document.appendixPrototypeXml, /www\.safetysite\.co\.kr/);
   assert.doesNotMatch(document.appendixPrototypeXml, /070-4106-6051/);
+  assertAppendixBrandingPolicy(document.appendixPrototypeXml);
 });
 
 test('buildQuarterlyMergedTemplatePrototypeBundle prepares v10 and v10-1 appendices in one quarterly v9 holder package', async () => {
@@ -161,10 +228,12 @@ test('buildQuarterlyMergedTemplatePrototypeBundle prepares v10 and v10-1 appendi
   assert.ok(document.prototypes['v10-1']);
   assert.match(document.prototypes.v10.appendixPrototypeXml, /\{#appendices\}/);
   assert.doesNotMatch(document.prototypes.v10.appendixPrototypeXml, /sec10\.accident_tracking/);
+  assertAppendixBrandingPolicy(document.prototypes.v10.appendixPrototypeXml);
   assert.match(
     document.prototypes['v10-1'].appendixPrototypeXml,
     /sec10\.accident_tracking/,
   );
+  assertAppendixBrandingPolicy(document.prototypes['v10-1'].appendixPrototypeXml);
   assert.match(sectionXml, /\{appendices\[0\]\.sec2\.guidance_date\}/);
   assert.doesNotMatch(sectionXml, /www\.safetysite\.co\.kr/);
   assert.doesNotMatch(sectionXml, /070-4106-6051|02-2299-1996/);
@@ -182,5 +251,7 @@ test('buildQuarterlyMergedTemplatePrototypeBundle can hold mixed appendices in t
   assert.match(document.prototypes.v10.appendixPrototypeXml, /\{#appendices\}/);
   assert.doesNotMatch(document.prototypes.v10.appendixPrototypeXml, /sec10\.accident_tracking/);
   assert.match(document.prototypes['v10-1'].appendixPrototypeXml, /sec10\.accident_tracking/);
+  assertAppendixBrandingPolicy(document.prototypes.v10.appendixPrototypeXml);
+  assertAppendixBrandingPolicy(document.prototypes['v10-1'].appendixPrototypeXml);
   assert.match(sectionXml, /sec10\.accident_tracking/);
 });

@@ -253,8 +253,10 @@ function forceFirstParagraphPageBreak(fragment: string) {
 }
 
 function normalizeAppendixLayoutForMergedQuarterly(fragment: string) {
-  return splitTopLevelTableParagraphs(
-    fragment.replace(/<hp:ctrl><hp:pageHiding\b[^>]*\/><\/hp:ctrl>/g, ''),
+  return removeAppendixBrandingBlocks(
+    splitTopLevelTableParagraphs(
+      fragment.replace(/<hp:ctrl><hp:pageHiding\b[^>]*\/><\/hp:ctrl>/g, ''),
+    ),
   );
 }
 
@@ -332,6 +334,83 @@ function splitTopLevelTableParagraphs(fragment: string): string {
   for (const paragraph of topLevelParagraphSpans(fragment)) {
     result += fragment.slice(cursor, paragraph.start);
     result += splitTopLevelTableParagraph(fragment.slice(paragraph.start, paragraph.end));
+    cursor = paragraph.end;
+  }
+
+  return result + fragment.slice(cursor);
+}
+
+function xmlPlainText(xml: string) {
+  return xml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function containsAppendixBrandingText(xml: string) {
+  const text = xmlPlainText(xml);
+  return [
+    '\uD568\uAED8\uD574\uC694 \uC548\uC804\uC791\uC5C5',
+    '\uD568\uAED8\uD574\uC694 \uC548\uC804\uD55C\uAD6D',
+    '\uD55C\uAD6D\uC885\uD569\uC548\uC804\uC8FC\uC2DD\uD68C\uC0AC',
+    '\uD55C\uAD6D\uC885\uD569\uC548\uC804 (',
+    '\uC11C\uC6B8\uC2DC \uAD11\uC9C4\uAD6C',
+    '\uAD6C\uC758\uAC15\uBCC0\uB85C',
+    '02-454-4541',
+  ].some((marker) => text.includes(marker));
+}
+
+function isInsideAnySpan(span: { start: number; end: number }, containers: Array<{ start: number; end: number }>) {
+  return containers.some((container) => container.start <= span.start && span.end <= container.end);
+}
+
+function removeSpans(xml: string, spans: Array<{ start: number; end: number }>) {
+  let result = '';
+  let cursor = 0;
+
+  for (const span of spans.sort((left, right) => left.start - right.start)) {
+    result += xml.slice(cursor, span.start);
+    cursor = span.end;
+  }
+
+  return result + xml.slice(cursor);
+}
+
+function isEmptyBrandingParagraph(paragraphXml: string) {
+  if (/<hp:tbl\b|<hp:pic\b|<hp:rect\b/.test(paragraphXml)) {
+    return false;
+  }
+  return xmlPlainText(paragraphXml).length === 0;
+}
+
+function removeAppendixBrandingBlocksFromParagraph(paragraphXml: string) {
+  const tableRanges = tableSpans(paragraphXml);
+  const removableSpans = [
+    ...balancedTagSpans(paragraphXml, 'hp:ctrl'),
+    ...balancedTagSpans(paragraphXml, 'hp:rect'),
+  ].filter(
+    (span) =>
+      !isInsideAnySpan(span, tableRanges)
+      && containsAppendixBrandingText(paragraphXml.slice(span.start, span.end)),
+  );
+
+  if (removableSpans.length === 0) {
+    if (!tableRanges.length && containsAppendixBrandingText(paragraphXml)) {
+      return '';
+    }
+    return paragraphXml;
+  }
+
+  const nextParagraphXml = removeSpans(paragraphXml, removableSpans);
+  return isEmptyBrandingParagraph(nextParagraphXml) ? '' : nextParagraphXml;
+}
+
+function removeAppendixBrandingBlocks(fragment: string) {
+  let result = '';
+  let cursor = 0;
+
+  for (const paragraph of topLevelParagraphSpans(fragment)) {
+    result += fragment.slice(cursor, paragraph.start);
+    result += removeAppendixBrandingBlocksFromParagraph(
+      fragment.slice(paragraph.start, paragraph.end),
+    );
     cursor = paragraph.end;
   }
 
@@ -574,8 +653,13 @@ export async function buildQuarterlyMergedTemplatePrototypeBundle(
   const quarterlyBuffer = await fs.readFile(mergedTemplatePath(holderVariant));
   const quarterlyTemplate = await loadTemplateParts(quarterlyBuffer);
   ensureManifestBinaryEntries(quarterlyTemplate.zip, quarterlyTemplate.contentHpf);
-  const holderAppendixPrototypeXml = extractAppendixPrototypeXmlFromMergedTemplate(
+  const rawHolderAppendixPrototypeXml = extractAppendixPrototypeXmlFromMergedTemplate(
     quarterlyTemplate.sectionXml,
+  );
+  const holderAppendixPrototypeXml = removeAppendixBrandingBlocks(rawHolderAppendixPrototypeXml);
+  quarterlyTemplate.sectionXml = quarterlyTemplate.sectionXml.replace(
+    rawHolderAppendixPrototypeXml,
+    holderAppendixPrototypeXml,
   );
   let contentHpf = quarterlyTemplate.contentHpf;
   let headerXml = quarterlyTemplate.headerXml;
