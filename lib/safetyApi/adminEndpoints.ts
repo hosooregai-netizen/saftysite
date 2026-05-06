@@ -29,8 +29,12 @@ const ADMIN_LIST_LIMIT = 500;
 const ADMIN_CONTENT_ITEM_LIMIT = 1000;
 
 export interface AdminListQueryOptions {
+  activeOnly?: boolean;
+  headquarterId?: string;
   limit?: number;
   offset?: number;
+  siteId?: string;
+  userId?: string;
 }
 
 function withQuery(path: string, params: Record<string, string | number | boolean | null | undefined>) {
@@ -290,9 +294,14 @@ export const fetchSafetyAssignments = (token: string) =>
 export const fetchSafetyAssignmentsPage = (token: string, options: AdminListQueryOptions = {}) =>
   requestSafetyApi<SafetyAssignment[]>(
     withQuery('/assignments', {
-      active_only: true,
+      active_only:
+        'activeOnly' in options && typeof options.activeOnly === 'boolean'
+          ? options.activeOnly
+          : true,
       limit: options.limit ?? ADMIN_LIST_LIMIT,
       offset: options.offset ?? 0,
+      site_id: 'siteId' in options ? options.siteId : undefined,
+      user_id: 'userId' in options ? options.userId : undefined,
     }),
     {},
     token
