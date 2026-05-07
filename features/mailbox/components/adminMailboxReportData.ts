@@ -32,9 +32,15 @@ function mapAdminRowsToMailboxReportOptions(
 async function buildRecipientAwareSiteMap(input: {
   adminSiteById: Map<string, SafetySite>;
   fetchSite?: AdminSiteFetcher;
+  hydrateMissingRecipients?: boolean;
   rows: ControllerReportRow[];
 }) {
   const nextSiteById = new Map(input.adminSiteById);
+
+  if (input.hydrateMissingRecipients === false) {
+    return nextSiteById;
+  }
+
   const fetchSite = input.fetchSite ?? fetchAdminSite;
   const missingRecipientSiteIds = Array.from(
     new Set(
@@ -149,6 +155,7 @@ export async function fetchCanonicalAdminMailboxReportOptions(input: {
   const recipientAwareSiteById = await buildRecipientAwareSiteMap({
     adminSiteById: input.adminSiteById,
     fetchSite: input.fetchSite,
+    hydrateMissingRecipients: input.reportPickerOpen,
     rows,
   });
   const recipientAwareSelectedSite = input.reportSiteFilter
