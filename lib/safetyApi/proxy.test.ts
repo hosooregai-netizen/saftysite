@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
   buildSafetyProxyUpstreamUrl,
+  proxySafetyApiRequest,
   resolveSafetyProxyUpstreamBaseUrl,
 } from './proxy';
 
@@ -57,4 +58,29 @@ test('builds upload proxy URLs against the upstream origin root', () => {
       'http://52.64.85.49:8011/uploads/photos/example.jpg?download=1',
     );
   });
+});
+
+test('preserves upstream cache validators for proxied photo asset files', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async () =>
+    new Response('image-bytes', {
+      headers: {
+        'Cache-Control': 'public, max-age=31536000, immutable',
+        ETag: '"thumb-123"',
+        'Last-Modified': 'Wed, 01 Jan 2026 00:00:00 GMT',
+      },
+    })) as typeof fetch;
+
+  try {
+    const response = await proxySafetyApiRequest(
+      new Request('https://app.example.com/api/safety/photo-assets/files/thumbnails/thumb.jpg'),
+      ['photo-assets', 'files', 'thumbnails', 'thumb.jpg'],
+    );
+
+    assert.equal(response.headers.get('cache-control'), 'public, max-age=31536000, immutable');
+    assert.equal(response.headers.get('etag'), '"thumb-123"');
+    assert.equal(response.headers.get('last-modified'), 'Wed, 01 Jan 2026 00:00:00 GMT');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
