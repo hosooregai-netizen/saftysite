@@ -1,6 +1,10 @@
 'use client';
 
-import { readSafetyAuthToken, SafetyApiError } from '@/lib/safetyApi';
+import {
+  invalidateSafetyReportReadCaches,
+  readSafetyAuthToken,
+  SafetyApiError,
+} from '@/lib/safetyApi';
 import type {
   MailAccount,
   MailAttachmentPayload,
@@ -67,6 +71,25 @@ function withQuery(path: string, params: Record<string, string | null | undefine
   });
   const query = searchParams.toString();
   return query ? `${path}?${query}` : path;
+}
+
+function invalidateMailReportReadCaches(input: {
+  reportKey?: string | null;
+  reportKeys?: string[] | null;
+  siteId?: string | null;
+}) {
+  const reportKey =
+    input.reportKey ||
+    input.reportKeys?.map((item) => item.trim()).find(Boolean) ||
+    '';
+  if (!reportKey && !input.siteId) {
+    return;
+  }
+
+  invalidateSafetyReportReadCaches(readSafetyAuthToken(), {
+    reportKey,
+    siteId: input.siteId,
+  });
 }
 
 export async function fetchMailAccounts() {
@@ -294,6 +317,13 @@ export async function sendMail(input: {
       thread_id: input.threadId || '',
       to: input.to,
     }),
+  }).then((message) => {
+    invalidateMailReportReadCaches({
+      reportKey: input.reportKey,
+      reportKeys: input.reportKeys,
+      siteId: input.siteId,
+    });
+    return message;
   });
 }
 
@@ -387,6 +417,13 @@ export async function sendReportMail(input: {
       thread_id: '',
       to: input.to,
     }),
+  }).then((message) => {
+    invalidateMailReportReadCaches({
+      reportKey: input.reportKey,
+      reportKeys: reports.map((report) => report.reportKey),
+      siteId: input.siteId,
+    });
+    return message;
   });
 }
 

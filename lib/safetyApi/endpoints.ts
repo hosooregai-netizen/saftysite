@@ -532,9 +532,14 @@ export function fetchSafetyReportsBySite(
   token: string,
   siteId: string,
   options?: {
+    force?: boolean;
     reportKinds?: string[];
   },
 ): Promise<SafetyReport[]> {
+  if (options?.force) {
+    invalidateSafetyReportReadCaches(token, { siteId });
+  }
+
   const searchParams = new URLSearchParams({
     active_only: 'true',
   });
@@ -558,7 +563,14 @@ export function fetchSafetyReportsBySite(
 export function fetchSafetyOperationalReportIndex(
   token: string,
   siteId: string,
+  options?: {
+    force?: boolean;
+  },
 ): Promise<SafetySiteOperationalReportIndexResponse> {
+  if (options?.force) {
+    invalidateSafetyReportReadCaches(token, { siteId });
+  }
+
   return requestSafetyApi<SafetySiteOperationalReportIndexResponse>(
     `/reports/site/${siteId}/operational-index`,
     {},
@@ -569,12 +581,17 @@ export function fetchSafetyOperationalReportIndex(
 export function fetchSafetyReportList(
   token: string,
   options?: {
+    force?: boolean;
     siteId?: string;
     activeOnly?: boolean;
     limit?: number;
     reportKinds?: string[];
   }
 ): Promise<SafetyReportListItem[]> {
+  if (options?.force) {
+    invalidateSafetyReportReadCaches(token, { siteId: options.siteId });
+  }
+
   const searchParams = new URLSearchParams({
     active_only: String(options?.activeOnly ?? true),
     limit: String(options?.limit ?? 100),
@@ -602,13 +619,42 @@ export function fetchSafetyReportList(
 
 export function fetchSafetyReportByKey(
   token: string,
-  reportKey: string
+  reportKey: string,
+  options?: {
+    force?: boolean;
+  },
 ): Promise<SafetyReport> {
+  if (options?.force) {
+    invalidateSafetyReportReadCaches(token, { reportKey });
+  }
+
   return requestSafetyApi<SafetyReport>(
-    `/reports/by-key/${reportKey}`,
+    `/reports/by-key/${encodeURIComponent(reportKey)}`,
     {},
     token
   ).then((report) => applyReportLifecycleStatus(report));
+}
+
+export function invalidateSafetyReportReadCaches(
+  token?: string | null,
+  options?: {
+    reportKey?: string | null;
+    siteId?: string | null;
+  },
+) {
+  invalidateSafetyApiGetCache('/reports', token);
+  if (options?.reportKey) {
+    invalidateSafetyApiGetCache(
+      `/reports/by-key/${encodeURIComponent(options.reportKey)}`,
+      token,
+    );
+  }
+  if (options?.siteId) {
+    invalidateSafetyApiGetCache(
+      `/reports/site/${encodeURIComponent(options.siteId)}`,
+      token,
+    );
+  }
 }
 
 export function fetchTechnicalGuidanceSeed(
@@ -680,7 +726,13 @@ export function upsertSafetyReport(
       body: JSON.stringify(payload),
     },
     token
-  ).then((report) => report ?? fetchSafetyReportByKey(token, payload.report_key));
+  ).then((report) => {
+    invalidateSafetyReportReadCaches(token, {
+      reportKey: payload.report_key,
+      siteId: payload.site_id,
+    });
+    return report ?? fetchSafetyReportByKey(token, payload.report_key, { force: true });
+  });
 }
 
 export function updateSafetyReportStatus(
@@ -695,7 +747,15 @@ export function updateSafetyReportStatus(
       body: JSON.stringify(payload),
     },
     token
-  ).then((report) => report ?? fetchSafetyReportById(token, reportId));
+  ).then((report) => {
+    invalidateSafetyReportReadCaches(token, report
+      ? {
+          reportKey: report.report_key,
+          siteId: report.site_id,
+        }
+      : undefined);
+    return report ?? fetchSafetyReportById(token, reportId);
+  });
 }
 
 export async function fetchSafetySiteDashboard(
@@ -943,10 +1003,16 @@ export function archiveSafetyReportByKey(
   reportKey: string
 ): Promise<SafetyReport> {
   return requestSafetyApi<SafetyReport>(
-    `/reports/by-key/${reportKey}`,
+    `/reports/by-key/${encodeURIComponent(reportKey)}`,
     {
       method: 'DELETE',
     },
     token
-  );
+  ).then((report) => {
+    invalidateSafetyReportReadCaches(token, {
+      reportKey,
+      siteId: report.site_id,
+    });
+    return report;
+  });
 }

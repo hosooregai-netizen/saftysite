@@ -37,8 +37,11 @@ export interface HydratedSiteState {
 }
 
 export interface InspectionSyncRequestRefs {
+  reportIndexRequestGenerationRef: MutableRefObject<Map<string, number>>;
   reportIndexRequestsRef: MutableRefObject<Map<string, Promise<void>>>;
+  sessionLoadRequestGenerationRef: MutableRefObject<Map<string, number>>;
   sessionLoadRequestsRef: MutableRefObject<Map<string, Promise<void>>>;
+  siteReportsLoadRequestGenerationRef: MutableRefObject<Map<string, number>>;
   siteReportsLoadRequestsRef: MutableRefObject<Map<string, Promise<void>>>;
 }
 
@@ -201,8 +204,11 @@ export function hasActiveReportHydrationRequests(requests: InspectionSyncRequest
 export function resetInspectionSyncRuntime(runtime: InspectionSyncRuntime) {
   runtime.hasLoadedRemoteMasterDataRef.current = false;
   runtime.masterDataPromiseRef.current = null;
+  runtime.reportIndexRequestGenerationRef.current.clear();
   runtime.reportIndexRequestsRef.current.clear();
+  runtime.sessionLoadRequestGenerationRef.current.clear();
   runtime.sessionLoadRequestsRef.current.clear();
+  runtime.siteReportsLoadRequestGenerationRef.current.clear();
   runtime.siteReportsLoadRequestsRef.current.clear();
   runtime.loadedSiteReportsRef.current.clear();
 }

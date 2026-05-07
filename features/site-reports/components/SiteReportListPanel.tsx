@@ -16,6 +16,7 @@ import { useSiteReportCreateDialog } from '@/features/site-reports/report-list/u
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { updateReportDispatch } from '@/lib/reportDispatchApi';
 import { buildToggledReportDispatch } from '@/lib/reportDispatch';
+import { mapSafetyReportListItem } from '@/lib/safetyApiMappers';
 import {
   fetchSafetyReportByKey,
   readSafetyAuthToken,
@@ -83,7 +84,12 @@ export function SiteReportListPanel({
   setReportSortMode,
   showSummaryBar = true,
 }: SiteReportListPanelProps) {
-  const { currentUser, ensureSessionLoaded, ensureSiteReportIndexLoaded } =
+  const {
+    currentUser,
+    ensureSessionLoaded,
+    ensureSiteReportIndexLoaded,
+    upsertReportIndexItems,
+  } =
     useInspectionSessions();
   const [dialogSessionId, setDialogSessionId] = useState<string | null>(null);
   const [dispatchError, setDispatchError] = useState<string | null>(null);
@@ -157,7 +163,7 @@ export function SiteReportListPanel({
         setDispatchError(null);
         setDispatchNotice(null);
 
-        const report = await fetchSafetyReportByKey(token, item.reportKey);
+        const report = await fetchSafetyReportByKey(token, item.reportKey, { force: true });
         const nextCompleted = !item.dispatchCompleted;
         const nextDispatch = buildToggledReportDispatch(report.dispatch, {
           currentUserId: currentUser.id,
@@ -167,10 +173,12 @@ export function SiteReportListPanel({
           nextCompleted,
         });
 
-        await updateReportDispatch(item.reportKey, nextDispatch);
+        const updatedReport = await updateReportDispatch(item.reportKey, nextDispatch);
+        const updatedItem = mapSafetyReportListItem(updatedReport);
+        upsertReportIndexItems(currentSite.id, [updatedItem]);
         setDispatchOverrides((current) => ({
           ...current,
-          [item.reportKey]: nextCompleted,
+          [item.reportKey]: updatedItem.dispatchCompleted,
         }));
         await ensureSessionLoaded(item.reportKey, { force: true });
         void ensureSiteReportIndexLoaded(currentSite.id, { force: true });
@@ -188,6 +196,7 @@ export function SiteReportListPanel({
       currentUser,
       ensureSessionLoaded,
       ensureSiteReportIndexLoaded,
+      upsertReportIndexItems,
     ],
   );
 

@@ -40,6 +40,23 @@ interface ReportLoaderActions {
   removeSessionFromLocalState: (reportKey: string) => Promise<void>;
 }
 
+function nextRequestGeneration(
+  ref: { current: Map<string, number> },
+  key: string,
+) {
+  const nextGeneration = (ref.current.get(key) ?? 0) + 1;
+  ref.current.set(key, nextGeneration);
+  return nextGeneration;
+}
+
+function isCurrentRequestGeneration(
+  ref: { current: Map<string, number> },
+  key: string,
+  generation: number,
+) {
+  return ref.current.get(key) === generation;
+}
+
 function mergePreferredSite(
   primary: InspectionSite | null,
   fallback: InspectionSite | null,
@@ -146,9 +163,13 @@ export function useInspectionSessionReportLoaders(
       }
 
       const inFlightRequest = runtime.reportIndexRequestsRef.current.get(siteId);
-      if (inFlightRequest) {
+      if (!options?.force && inFlightRequest) {
         return inFlightRequest;
       }
+      const requestGeneration = nextRequestGeneration(
+        runtime.reportIndexRequestGenerationRef,
+        siteId,
+      );
 
       if (shouldBlock) {
         setReportIndexBySiteId((current) => ({
@@ -161,15 +182,24 @@ export function useInspectionSessionReportLoaders(
       }
       setIsHydratingReports(true);
 
+      const requestRef: { current: Promise<void> | null } = { current: null };
       const request = (async () => {
         try {
           const reports = await fetchSafetyReportList(token, {
             siteId,
             activeOnly: true,
+            force: options?.force,
             reportKinds: [TECHNICAL_GUIDANCE_REPORT_KIND],
           });
 
-          if (authTokenRef.current !== token) {
+          if (
+            authTokenRef.current !== token ||
+            !isCurrentRequestGeneration(
+              runtime.reportIndexRequestGenerationRef,
+              siteId,
+              requestGeneration,
+            )
+          ) {
             return;
           }
 
@@ -193,6 +223,17 @@ export function useInspectionSessionReportLoaders(
             }),
           }));
         } catch (error) {
+          if (
+            authTokenRef.current !== token ||
+            !isCurrentRequestGeneration(
+              runtime.reportIndexRequestGenerationRef,
+              siteId,
+              requestGeneration,
+            )
+          ) {
+            return;
+          }
+
           if (isAuthFailure(error)) {
             runtime.syncRequestIdRef.current += 1;
             clearAuthState();
@@ -227,11 +268,14 @@ export function useInspectionSessionReportLoaders(
             }
           }
         } finally {
-          runtime.reportIndexRequestsRef.current.delete(siteId);
+          if (runtime.reportIndexRequestsRef.current.get(siteId) === requestRef.current) {
+            runtime.reportIndexRequestsRef.current.delete(siteId);
+          }
           setIsHydratingReports(hasActiveReportHydrationRequests(runtime));
         }
       })();
 
+      requestRef.current = request;
       runtime.reportIndexRequestsRef.current.set(siteId, request);
       return request;
     },
@@ -265,17 +309,31 @@ export function useInspectionSessionReportLoaders(
       }
 
       const inFlightRequest = runtime.sessionLoadRequestsRef.current.get(reportKey);
-      if (inFlightRequest) {
+      if (!options?.force && inFlightRequest) {
         return inFlightRequest;
       }
+      const requestGeneration = nextRequestGeneration(
+        runtime.sessionLoadRequestGenerationRef,
+        reportKey,
+      );
 
       setIsHydratingReports(true);
 
+      const requestRef: { current: Promise<void> | null } = { current: null };
       const request = (async () => {
         try {
-          const report = await fetchSafetyReportByKey(token, reportKey);
+          const report = await fetchSafetyReportByKey(token, reportKey, {
+            force: options?.force,
+          });
 
-          if (authTokenRef.current !== token) {
+          if (
+            authTokenRef.current !== token ||
+            !isCurrentRequestGeneration(
+              runtime.sessionLoadRequestGenerationRef,
+              reportKey,
+              requestGeneration,
+            )
+          ) {
             return;
           }
 
@@ -315,6 +373,17 @@ export function useInspectionSessionReportLoaders(
             }),
           }));
         } catch (error) {
+          if (
+            authTokenRef.current !== token ||
+            !isCurrentRequestGeneration(
+              runtime.sessionLoadRequestGenerationRef,
+              reportKey,
+              requestGeneration,
+            )
+          ) {
+            return;
+          }
+
           if (isAuthFailure(error)) {
             runtime.syncRequestIdRef.current += 1;
             clearAuthState();
@@ -325,11 +394,14 @@ export function useInspectionSessionReportLoaders(
             setDataError(getErrorMessage(error));
           }
         } finally {
-          runtime.sessionLoadRequestsRef.current.delete(reportKey);
+          if (runtime.sessionLoadRequestsRef.current.get(reportKey) === requestRef.current) {
+            runtime.sessionLoadRequestsRef.current.delete(reportKey);
+          }
           setIsHydratingReports(hasActiveReportHydrationRequests(runtime));
         }
       })();
 
+      requestRef.current = request;
       runtime.sessionLoadRequestsRef.current.set(reportKey, request);
       return request;
     },
@@ -368,9 +440,13 @@ export function useInspectionSessionReportLoaders(
       }
 
       const inFlightRequest = runtime.siteReportsLoadRequestsRef.current.get(siteId);
-      if (inFlightRequest) {
+      if (!options?.force && inFlightRequest) {
         return inFlightRequest;
       }
+      const requestGeneration = nextRequestGeneration(
+        runtime.siteReportsLoadRequestGenerationRef,
+        siteId,
+      );
 
       setReportIndexBySiteId((current) => ({
         ...current,
@@ -385,11 +461,21 @@ export function useInspectionSessionReportLoaders(
       }));
       setIsHydratingReports(true);
 
+      const requestRef: { current: Promise<void> | null } = { current: null };
       const request = (async () => {
         try {
-          const reports = await fetchSafetyReportsBySite(token, siteId);
+          const reports = await fetchSafetyReportsBySite(token, siteId, {
+            force: options?.force,
+          });
 
-          if (authTokenRef.current !== token) {
+          if (
+            authTokenRef.current !== token ||
+            !isCurrentRequestGeneration(
+              runtime.siteReportsLoadRequestGenerationRef,
+              siteId,
+              requestGeneration,
+            )
+          ) {
             return;
           }
 
@@ -459,6 +545,17 @@ export function useInspectionSessionReportLoaders(
             [siteId]: 'loaded',
           }));
         } catch (error) {
+          if (
+            authTokenRef.current !== token ||
+            !isCurrentRequestGeneration(
+              runtime.siteReportsLoadRequestGenerationRef,
+              siteId,
+              requestGeneration,
+            )
+          ) {
+            return;
+          }
+
           if (isAuthFailure(error)) {
             runtime.syncRequestIdRef.current += 1;
             clearAuthState();
@@ -479,11 +576,14 @@ export function useInspectionSessionReportLoaders(
             }));
           }
         } finally {
-          runtime.siteReportsLoadRequestsRef.current.delete(siteId);
+          if (runtime.siteReportsLoadRequestsRef.current.get(siteId) === requestRef.current) {
+            runtime.siteReportsLoadRequestsRef.current.delete(siteId);
+          }
           setIsHydratingReports(hasActiveReportHydrationRequests(runtime));
         }
       })();
 
+      requestRef.current = request;
       runtime.siteReportsLoadRequestsRef.current.set(siteId, request);
       return request;
     },

@@ -36,6 +36,7 @@ interface SafetyApiCacheEntry {
 
 const responseCache = new Map<string, SafetyApiCacheEntry>();
 const inFlightGetRequests = new Map<string, Promise<JsonLike>>();
+const getCacheGenerations = new Map<string, number>();
 
 function parseCacheKey(cacheKey: string) {
   const [method, rawToken, ...pathParts] = cacheKey.split('::');
@@ -44,6 +45,14 @@ function parseCacheKey(cacheKey: string) {
     path: pathParts.join('::'),
     token: rawToken === 'anonymous' ? null : rawToken,
   };
+}
+
+function getCacheGeneration(cacheKey: string) {
+  return getCacheGenerations.get(cacheKey) ?? 0;
+}
+
+function bumpCacheGeneration(cacheKey: string) {
+  getCacheGenerations.set(cacheKey, getCacheGeneration(cacheKey) + 1);
 }
 
 export class SafetyApiError extends Error {
@@ -64,6 +73,7 @@ export function invalidateSafetyApiGetCache(pathPrefix: string, token?: string |
 
     if (isGetLike && matchesToken && parsed.path.startsWith(pathPrefix)) {
       responseCache.delete(cacheKey);
+      bumpCacheGeneration(cacheKey);
     }
   }
 
@@ -74,6 +84,7 @@ export function invalidateSafetyApiGetCache(pathPrefix: string, token?: string |
 
     if (isGetLike && matchesToken && parsed.path.startsWith(pathPrefix)) {
       inFlightGetRequests.delete(cacheKey);
+      bumpCacheGeneration(cacheKey);
     }
   }
 }
@@ -379,16 +390,25 @@ export async function requestSafetyApi<T>(
   };
 
   if (cacheTtlMs > 0) {
-    const requestPromise = executeRequest()
+    const requestGeneration = getCacheGeneration(cacheKey);
+    let requestPromise!: Promise<JsonLike>;
+    requestPromise = executeRequest()
       .then((value) => {
-        responseCache.set(cacheKey, {
-          expiresAt: Date.now() + cacheTtlMs,
-          value: cloneJsonLike(value),
-        });
+        if (
+          getCacheGeneration(cacheKey) === requestGeneration &&
+          inFlightGetRequests.get(cacheKey) === requestPromise
+        ) {
+          responseCache.set(cacheKey, {
+            expiresAt: Date.now() + cacheTtlMs,
+            value: cloneJsonLike(value),
+          });
+        }
         return value;
       })
       .finally(() => {
-        inFlightGetRequests.delete(cacheKey);
+        if (inFlightGetRequests.get(cacheKey) === requestPromise) {
+          inFlightGetRequests.delete(cacheKey);
+        }
       });
 
     inFlightGetRequests.set(cacheKey, requestPromise);

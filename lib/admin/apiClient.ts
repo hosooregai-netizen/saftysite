@@ -1,6 +1,10 @@
 'use client';
 
-import { readSafetyAuthToken, SafetyApiError } from '@/lib/safetyApi';
+import {
+  invalidateSafetyReportReadCaches,
+  readSafetyAuthToken,
+  SafetyApiError,
+} from '@/lib/safetyApi';
 import type {
   SafetyAdminDirectoryLookupsResponse,
   ReportControllerReview,
@@ -156,6 +160,12 @@ export function updateAdminReportDispatch(
   return requestAdminApi<SafetyReport>(`/reports/${encodeURIComponent(reportKey)}/dispatch`, {
     method: 'PATCH',
     body: JSON.stringify(dispatch),
+  }).then((report) => {
+    invalidateSafetyReportReadCaches(readSafetyAuthToken(), {
+      reportKey: report.report_key || reportKey,
+      siteId: report.site_id,
+    });
+    return report;
   });
 }
 

@@ -60,12 +60,16 @@ const REPORT_LIST_QUERY_DEFAULTS = {
 function fetchAdminReportsOnce(
   requestKey: string,
   input: Parameters<typeof fetchAdminReports>[0],
+  options?: { force?: boolean },
 ) {
-  const existing = adminReportsInFlight.get(requestKey);
+  const existing = options?.force ? null : adminReportsInFlight.get(requestKey);
   if (existing) return existing;
 
-  const nextRequest = fetchAdminReports(input).finally(() => {
-    adminReportsInFlight.delete(requestKey);
+  let nextRequest!: Promise<SafetyAdminReportsResponse>;
+  nextRequest = fetchAdminReports(input).finally(() => {
+    if (adminReportsInFlight.get(requestKey) === nextRequest) {
+      adminReportsInFlight.delete(requestKey);
+    }
   });
   adminReportsInFlight.set(requestKey, nextRequest);
   return nextRequest;
@@ -246,6 +250,7 @@ export function useReportsSectionState({
   );
   const isMountedRef = useRef(true);
   const latestReportRequestKeyRef = useRef('');
+  const reportFetchGenerationRef = useRef(0);
   const originalPdfAbortControllerRef = useRef<AbortController | null>(null);
   const originalPdfUrlRef = useRef<string | null>(null);
 
@@ -317,8 +322,10 @@ export function useReportsSectionState({
     setSelectedKeys([]);
   }, [currentUser.id, reportCacheKey]);
 
-  const fetchRows = useCallback(async () => {
+  const fetchRows = useCallback(async (options?: { force?: boolean }) => {
     const activeRequestKey = `${currentUser.id}:${reportCacheKey}`;
+    const requestGeneration = reportFetchGenerationRef.current + 1;
+    reportFetchGenerationRef.current = requestGeneration;
     latestReportRequestKeyRef.current = activeRequestKey;
 
     try {
@@ -345,10 +352,12 @@ export function useReportsSectionState({
           sortBy: sort.key,
           sortDir: sort.direction,
         },
+        { force: options?.force },
       );
       if (
         !isMountedRef.current ||
-        latestReportRequestKeyRef.current !== activeRequestKey
+        latestReportRequestKeyRef.current !== activeRequestKey ||
+        reportFetchGenerationRef.current !== requestGeneration
       ) {
         return;
       }
@@ -365,7 +374,8 @@ export function useReportsSectionState({
     } catch (nextError) {
       if (
         !isMountedRef.current ||
-        latestReportRequestKeyRef.current !== activeRequestKey
+        latestReportRequestKeyRef.current !== activeRequestKey ||
+        reportFetchGenerationRef.current !== requestGeneration
       ) {
         return;
       }
@@ -373,7 +383,8 @@ export function useReportsSectionState({
     } finally {
       if (
         isMountedRef.current &&
-        latestReportRequestKeyRef.current === activeRequestKey
+        latestReportRequestKeyRef.current === activeRequestKey &&
+        reportFetchGenerationRef.current === requestGeneration
       ) {
         setLoading(false);
       }

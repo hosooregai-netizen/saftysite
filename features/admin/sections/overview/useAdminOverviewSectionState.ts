@@ -9,6 +9,7 @@ import {
 import { compareDispatchManagementUnsentRows } from '@/features/admin/lib/control-center-model/overviewPolicies';
 import {
   fetchAdminSessionCacheOnce,
+  getAdminSessionCacheGeneration,
   readAdminSessionCache,
   writeAdminSessionCache,
 } from '@/features/admin/lib/adminSessionCache';
@@ -324,10 +325,20 @@ export function useAdminOverviewSectionState(
           currentUserId,
           OVERVIEW_CACHE_KEY,
           async () => {
+            const requestGeneration = getAdminSessionCacheGeneration(
+              currentUserId,
+              OVERVIEW_CACHE_KEY,
+            );
             const freshOverview = await fetchAdminOverview();
-            writeAdminSessionCache(currentUserId, OVERVIEW_CACHE_KEY, freshOverview);
+            if (
+              getAdminSessionCacheGeneration(currentUserId, OVERVIEW_CACHE_KEY) ===
+              requestGeneration
+            ) {
+              writeAdminSessionCache(currentUserId, OVERVIEW_CACHE_KEY, freshOverview);
+            }
             return freshOverview;
           },
+          { force: options?.force },
         );
         if (!isMountedRef.current || latestOverviewRequestKeyRef.current !== activeRequestKey) {
           return;

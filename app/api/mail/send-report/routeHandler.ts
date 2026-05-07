@@ -4,6 +4,7 @@ import {
   SafetyServerApiError,
   sendSafetyMailServer,
 } from '@/server/admin/safetyApiServer';
+import { invalidateAdminOverviewAndReportsRouteCaches } from '@/server/admin/adminRouteInvalidation';
 import { mapBackendMailMessage } from '@/server/admin/upstreamMappers';
 import { buildMailReportAttachment, type MailAttachmentServerPayload } from '@/server/mail/reportAttachment';
 import {
@@ -16,6 +17,7 @@ import {
 export const defaultSendReportRouteDeps = {
   buildMailReportAttachment,
   buildOversizeReportFallbackBody,
+  invalidateAdminOverviewAndReportsRouteCaches,
   isOversizeMailAttachmentError,
   mapBackendMailMessage,
   materializeMailAttachmentDownload,
@@ -87,8 +89,9 @@ function normalizeReportPayloads(payload: Record<string, unknown>) {
 
 export async function handleSendReportPost(
   request: Request,
-  deps: SendReportRouteDeps = defaultSendReportRouteDeps,
+  depsOverride: Partial<SendReportRouteDeps> = {},
 ): Promise<Response> {
+  const deps: SendReportRouteDeps = { ...defaultSendReportRouteDeps, ...depsOverride };
   try {
     const token = deps.readRequiredAdminToken(request);
     const payload = (await request.json()) as Record<string, unknown>;
@@ -136,26 +139,31 @@ export async function handleSendReportPost(
       report_key: reportKeys[0] || normalizeText(payload.report_key),
       report_keys: reportKeys.length ? reportKeys : payload.report_keys,
     };
+    const hasReportDispatchMutation =
+      Boolean(mailPayload.report_key) ||
+      (Array.isArray(mailPayload.report_keys) && mailPayload.report_keys.length > 0);
 
     try {
-      return NextResponse.json(
-        deps.mapBackendMailMessage(await deps.sendSafetyMailServer(token, mailPayload, request)),
-      );
+      const result = await deps.sendSafetyMailServer(token, mailPayload, request);
+      if (hasReportDispatchMutation) {
+        deps.invalidateAdminOverviewAndReportsRouteCaches();
+      }
+      return NextResponse.json(deps.mapBackendMailMessage(result));
     } catch (error) {
       if (deps.isOversizeMailAttachmentError(error)) {
-        return NextResponse.json(
-          deps.mapBackendMailMessage(
-            await deps.sendSafetyMailServer(
-              token,
-              {
-                ...mailPayload,
-                attachments,
-                body: nextBody,
-              },
-              request,
-            ),
-          ),
+        const result = await deps.sendSafetyMailServer(
+          token,
+          {
+            ...mailPayload,
+            attachments,
+            body: nextBody,
+          },
+          request,
         );
+        if (hasReportDispatchMutation) {
+          deps.invalidateAdminOverviewAndReportsRouteCaches();
+        }
+        return NextResponse.json(deps.mapBackendMailMessage(result));
       }
       throw error;
     }

@@ -1,6 +1,10 @@
 'use client';
 
-import { readSafetyAuthToken, SafetyApiError } from '@/lib/safetyApi';
+import {
+  invalidateSafetyReportReadCaches,
+  readSafetyAuthToken,
+  SafetyApiError,
+} from '@/lib/safetyApi';
 import type { SmsProviderStatus, SmsSendResult } from '@/types/messages';
 
 async function parseErrorMessage(response: Response) {
@@ -67,5 +71,13 @@ export function sendSms(input: {
       site_id: input.siteId || '',
       subject: input.subject || '',
     }),
+  }).then((result) => {
+    if (input.reportKey || input.siteId) {
+      invalidateSafetyReportReadCaches(readSafetyAuthToken(), {
+        reportKey: input.reportKey,
+        siteId: input.siteId,
+      });
+    }
+    return result;
   });
 }

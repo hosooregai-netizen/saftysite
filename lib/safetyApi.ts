@@ -29,6 +29,7 @@ export {
   fetchQuarterlySummarySeed,
   fetchTechnicalGuidanceSeed,
   loginSafetyApi,
+  invalidateSafetyReportReadCaches,
   updateAssignedSafetyHeadquarter,
   updateAssignedSafetySite,
   updateSafetyReportStatus,
