@@ -19,8 +19,11 @@ export async function runAdminSchedulesSmoke(config: ClientSmokePlaywrightConfig
     await harness.loginAs('admin@example.com');
 
     await harness.waitForRequestCount('GET /api/admin/schedules/calendar', calendarReadsBefore + 1);
-    await harness.waitForRequestCount('GET /api/admin/schedules/queue', queueReadsBefore + 1);
     await harness.waitForRequestCount('GET /api/admin/schedules/lookups', lookupReadsBefore + 1);
+    await page.waitForTimeout(250);
+    if ((requestCounts.get('GET /api/admin/schedules/queue') || 0) !== queueReadsBefore) {
+      throw new Error('Expected calendar view first load not to request the schedule queue.');
+    }
     await page.getByRole('heading', { level: 2, name: '일정/캘린더' }).waitFor({ state: 'visible' });
     await page.getByRole('tab', { name: '달력으로 보기' }).waitFor({ state: 'visible' });
     await page.getByRole('tab', { name: '목록으로 보기' }).waitFor({ state: 'visible' });
@@ -39,6 +42,9 @@ export async function runAdminSchedulesSmoke(config: ClientSmokePlaywrightConfig
     if (scopeToggleCount !== 0) {
       throw new Error(`Expected controller scope buttons to be removed, received ${scopeToggleCount}.`);
     }
+
+    await page.getByRole('tab', { name: /목록|紐⑸줉/ }).click();
+    await harness.waitForRequestCount('GET /api/admin/schedules/queue', queueReadsBefore + 1);
 
     await page.getByRole('tab', { name: '목록으로 보기' }).click();
     await page.getByRole('heading', { level: 2, name: '미선택 일정 큐' }).waitFor({

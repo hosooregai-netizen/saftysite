@@ -432,6 +432,8 @@ export function fetchAdminScheduleQueue(input: {
   offset?: number;
   query?: string;
   siteId?: string;
+  sortBy?: string;
+  sortDir?: TableSortDirection;
   status?: string;
 }, options: RequestInit = {}) {
   return requestAdminApi<SafetyAdminScheduleQueueResponse>(
@@ -442,6 +444,8 @@ export function fetchAdminScheduleQueue(input: {
       offset: input.offset,
       query: input.query,
       site_id: input.siteId,
+      sort_by: input.sortBy,
+      sort_dir: input.sortDir,
       status: input.status,
     })}`,
     options,

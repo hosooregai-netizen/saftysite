@@ -2,7 +2,12 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import type { SafetyInspectionSchedule } from '@/types/admin';
-import { mergeAdminScheduleSnapshotRows } from './scheduleSnapshot';
+import {
+  buildAdminScheduleCalendarSnapshotResponse,
+  buildAdminScheduleQueueSnapshotResponse,
+  invalidateAdminScheduleSnapshot,
+  mergeAdminScheduleSnapshotRows,
+} from './scheduleSnapshot';
 
 function schedule(
   input: Partial<SafetyInspectionSchedule> & Pick<SafetyInspectionSchedule, 'id' | 'roundNo'>,
@@ -35,6 +40,145 @@ function schedule(
     windowStart: input.windowStart ?? '2026-03-22',
   };
 }
+
+function installScheduleSnapshot(rows: SafetyInspectionSchedule[] = []) {
+  const globalRecord = globalThis as typeof globalThis & {
+    __SAFETY_ADMIN_SCHEDULE_SOURCE_SNAPSHOT__?: {
+      promise: Promise<unknown> | null;
+      snapshot: unknown;
+    };
+  };
+  globalRecord.__SAFETY_ADMIN_SCHEDULE_SOURCE_SNAPSHOT__ = {
+    promise: null,
+    snapshot: {
+      data: {
+        sites: [],
+        users: [],
+      },
+      refreshedAt: new Date().toISOString(),
+      rows,
+    },
+  };
+}
+
+function backendCalendarResponse(rows: SafetyInspectionSchedule[] = []) {
+  return {
+    all_selected_total: rows.length,
+    available_months: [],
+    month: '2026-05',
+    month_total: rows.length,
+    refreshed_at: new Date().toISOString(),
+    rows: rows.map((row) => ({
+      actual_visit_date: row.actualVisitDate,
+      assignee_name: row.assigneeName,
+      assignee_user_id: row.assigneeUserId,
+      exception_memo: row.exceptionMemo,
+      exception_reason_code: row.exceptionReasonCode,
+      headquarter_id: row.headquarterId,
+      headquarter_name: row.headquarterName,
+      id: row.id,
+      is_conflicted: row.isConflicted,
+      is_out_of_window: row.isOutOfWindow,
+      is_overdue: row.isOverdue,
+      linked_report_key: row.linkedReportKey,
+      planned_date: row.plannedDate,
+      round_no: row.roundNo,
+      selection_confirmed_at: row.selectionConfirmedAt,
+      selection_confirmed_by_name: row.selectionConfirmedByName,
+      selection_confirmed_by_user_id: row.selectionConfirmedByUserId,
+      selection_reason_label: row.selectionReasonLabel,
+      selection_reason_memo: row.selectionReasonMemo,
+      site_id: row.siteId,
+      site_name: row.siteName,
+      status: row.status,
+      total_rounds: row.totalRounds,
+      window_end: row.windowEnd,
+      window_start: row.windowStart,
+    })),
+    unselected_total: 0,
+  };
+}
+
+function backendQueueResponse(rows: SafetyInspectionSchedule[] = [], total = rows.length) {
+  return {
+    limit: 25,
+    month: '2026-05',
+    offset: 0,
+    refreshed_at: new Date().toISOString(),
+    rows: backendCalendarResponse(rows).rows,
+    total,
+  };
+}
+
+test('calendar snapshot response fetches backend calendar rows without backend queue rows', async () => {
+  installScheduleSnapshot();
+  let calendarCalls = 0;
+  let queueCalls = 0;
+
+  const response = await buildAdminScheduleCalendarSnapshotResponse(
+    'token-1',
+    { month: '2026-05' },
+    null,
+    new Date('2026-05-08T00:00:00.000Z'),
+    {
+      calendar: async () => {
+        calendarCalls += 1;
+        return backendCalendarResponse();
+      },
+      queue: async () => {
+        queueCalls += 1;
+        throw new Error('calendar response must not fetch backend queue rows');
+      },
+    },
+  );
+
+  assert.equal(calendarCalls, 1);
+  assert.equal(queueCalls, 0);
+  assert.equal(response.monthTotal, 0);
+  invalidateAdminScheduleSnapshot();
+});
+
+test('queue snapshot response fetches backend queue rows without backend calendar rows', async () => {
+  installScheduleSnapshot();
+  let calendarCalls = 0;
+  let queueCalls = 0;
+  let observedLimit = 0;
+  let observedOffset = -1;
+
+  const response = await buildAdminScheduleQueueSnapshotResponse(
+    'token-1',
+    {
+      limit: 25,
+      month: '2026-05',
+      offset: 25,
+      sortBy: 'windowStart',
+      sortDir: 'asc',
+    },
+    null,
+    new Date('2026-05-08T00:00:00.000Z'),
+    {
+      calendar: async () => {
+        calendarCalls += 1;
+        throw new Error('queue response must not fetch backend calendar rows');
+      },
+      queue: async (_token, params) => {
+        queueCalls += 1;
+        observedLimit = Number(params.limit);
+        observedOffset = Number(params.offset);
+        return backendQueueResponse([], 72);
+      },
+    },
+  );
+
+  assert.equal(calendarCalls, 0);
+  assert.equal(queueCalls, 1);
+  assert.equal(observedLimit, 25);
+  assert.equal(observedOffset, 25);
+  assert.equal(response.limit, 25);
+  assert.equal(response.offset, 25);
+  assert.equal(response.total, 72);
+  invalidateAdminScheduleSnapshot();
+});
 
 test('admin schedule snapshot merge includes backend worker-entered selected rows', () => {
   const rows = mergeAdminScheduleSnapshotRows({

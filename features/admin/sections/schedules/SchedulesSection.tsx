@@ -16,6 +16,7 @@ import {
   readStringParam,
 } from '@/hooks/useUrlQueryState';
 import {
+  fetchAdminSessionCacheOnce,
   readAdminSessionCache,
   writeAdminSessionCache,
 } from '@/features/admin/lib/adminSessionCache';
@@ -48,6 +49,7 @@ interface SchedulesSectionProps {
 }
 
 type ScheduleViewMode = 'calendar' | 'list';
+type QueueLoadStatus = 'idle' | 'loading' | 'loaded' | 'error';
 
 interface ScheduleFormState {
   assigneeUserId: string;
@@ -81,7 +83,7 @@ const EMPTY_CALENDAR_RESPONSE: SafetyAdminScheduleCalendarResponse = {
 };
 
 const EMPTY_QUEUE_RESPONSE: SafetyAdminScheduleQueueResponse = {
-  limit: 5000,
+  limit: 25,
   month: '',
   offset: 0,
   refreshedAt: '',
@@ -271,31 +273,6 @@ function buildDayListLabel(
   return buildScheduleDisplayLabel(row, userNameById);
 }
 
-async function fetchSchedulePayloads(
-  filters: {
-    assigneeUserId?: string;
-    month?: string;
-    query?: string;
-    siteId?: string;
-    status?: string;
-  },
-  signal?: AbortSignal,
-) {
-  const [calendar, queue] = await Promise.all([
-    fetchAdminScheduleCalendar(filters, signal ? { signal } : {}),
-    fetchAdminScheduleQueue(
-      {
-        ...filters,
-        limit: 5000,
-        offset: 0,
-      },
-      signal ? { signal } : {},
-    ),
-  ]);
-
-  return { calendar, queue };
-}
-
 export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -338,11 +315,10 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
       ).value ?? EMPTY_LOOKUPS
     );
   });
-  const [scheduleState, setScheduleState] = useState<{
-    calendar: SafetyAdminScheduleCalendarResponse;
+  const [calendarState, setCalendarState] = useState<{
     error: string | null;
     errorRequestKey: string;
-    queue: SafetyAdminScheduleQueueResponse;
+    response: SafetyAdminScheduleCalendarResponse;
     resolvedRequestKey: string;
   }>(() => {
     const initialFilters = {
@@ -354,24 +330,52 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
     };
     const initialRequestKey = JSON.stringify(initialFilters);
     return {
-      calendar:
+      error: null,
+      errorRequestKey: '',
+      response:
         readAdminSessionCache<SafetyAdminScheduleCalendarResponse>(
           currentUser.id,
           `schedule-calendar:${initialRequestKey}`,
         ).value ?? EMPTY_CALENDAR_RESPONSE,
-      error: null,
-      errorRequestKey: '',
-      queue:
-        readAdminSessionCache<SafetyAdminScheduleQueueResponse>(
-          currentUser.id,
-          `schedule-queue:${initialRequestKey}`,
-        ).value ?? EMPTY_QUEUE_RESPONSE,
       resolvedRequestKey: initialRequestKey,
     };
   });
-  const [loadingRequestKey, setLoadingRequestKey] = useState('');
+  const [queueState, setQueueState] = useState<{
+    error: string | null;
+    errorRequestKey: string;
+    response: SafetyAdminScheduleQueueResponse;
+    resolvedRequestKey: string;
+    status: QueueLoadStatus;
+  }>(() => {
+    const initialFilters = {
+      assigneeUserId: searchParams.get('assigneeUserId') || '',
+      limit: QUEUE_PAGE_SIZE,
+      month: initialMonth,
+      offset: (urlQueuePage - 1) * QUEUE_PAGE_SIZE,
+      query: (searchParams.get('query') || '').trim(),
+      siteId: searchParams.get('siteId') || '',
+      sortBy: urlSort.key,
+      sortDir: urlSort.direction,
+      status: searchParams.get('status') || '',
+    };
+    const initialRequestKey = JSON.stringify(initialFilters);
+    const cachedQueue = readAdminSessionCache<SafetyAdminScheduleQueueResponse>(
+      currentUser.id,
+      `schedule-queue:${initialRequestKey}`,
+    ).value;
+    return {
+      error: null,
+      errorRequestKey: '',
+      response: cachedQueue ?? EMPTY_QUEUE_RESPONSE,
+      resolvedRequestKey: initialRequestKey,
+      status: cachedQueue ? 'loaded' : 'idle',
+    };
+  });
+  const [calendarLoadingRequestKey, setCalendarLoadingRequestKey] = useState('');
+  const [queueLoadingRequestKey, setQueueLoadingRequestKey] = useState('');
   const [refreshNonce, setRefreshNonce] = useState(0);
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const calendarAbortControllerRef = useRef<AbortController | null>(null);
+  const queueAbortControllerRef = useRef<AbortController | null>(null);
 
   const replaceScheduleRoute = useCallback(
     (overrides: Partial<Record<'assigneeUserId' | 'month' | 'plannedDate' | 'query' | 'queuePage' | 'scheduleDir' | 'scheduleSort' | 'siteId' | 'status', string>> & {
@@ -428,48 +432,35 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
     }),
     [assigneeUserId, deferredQuery, month, siteId, status],
   );
-  const requestKey = useMemo(() => JSON.stringify(scheduleRequest), [scheduleRequest]);
+  const calendarRequestKey = useMemo(() => JSON.stringify(scheduleRequest), [scheduleRequest]);
+  const queueRequest = useMemo(
+    () => ({
+      ...scheduleRequest,
+      limit: QUEUE_PAGE_SIZE,
+      offset: (queuePage - 1) * QUEUE_PAGE_SIZE,
+      sortBy: sort.key,
+      sortDir: sort.direction,
+    }),
+    [queuePage, scheduleRequest, sort.direction, sort.key],
+  );
+  const queueRequestKey = useMemo(() => JSON.stringify(queueRequest), [queueRequest]);
   const cachedCalendarForRequest = useMemo(
     () =>
       readAdminSessionCache<SafetyAdminScheduleCalendarResponse>(
         currentUser.id,
-        `schedule-calendar:${requestKey}`,
+        `schedule-calendar:${calendarRequestKey}`,
       ).value,
-    [currentUser.id, requestKey],
+    [currentUser.id, calendarRequestKey],
   );
   const cachedQueueForRequest = useMemo(
     () =>
       readAdminSessionCache<SafetyAdminScheduleQueueResponse>(
         currentUser.id,
-        `schedule-queue:${requestKey}`,
+        `schedule-queue:${queueRequestKey}`,
       ).value,
-    [currentUser.id, requestKey],
+    [currentUser.id, queueRequestKey],
   );
-
-  const applySchedulePayloads = useCallback(
-    (
-      nextRequestKey: string,
-      payloads: {
-        calendar: SafetyAdminScheduleCalendarResponse;
-        queue: SafetyAdminScheduleQueueResponse;
-      },
-    ) => {
-      writeAdminSessionCache(
-        currentUser.id,
-        `schedule-calendar:${nextRequestKey}`,
-        payloads.calendar,
-      );
-      writeAdminSessionCache(currentUser.id, `schedule-queue:${nextRequestKey}`, payloads.queue);
-      setScheduleState({
-        calendar: payloads.calendar,
-        error: null,
-        errorRequestKey: '',
-        queue: payloads.queue,
-        resolvedRequestKey: nextRequestKey,
-      });
-    },
-    [currentUser.id],
-  );
+  const shouldLoadQueue = viewMode === 'list';
 
   useEffect(() => {
     setMonth(initialMonth);
@@ -544,7 +535,11 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
       return;
     }
 
-    void fetchAdminScheduleLookups()
+    void fetchAdminSessionCacheOnce(
+      currentUser.id,
+      'schedule-lookups',
+      fetchAdminScheduleLookups,
+    )
       .then((response) => {
         writeAdminSessionCache(currentUser.id, 'schedule-lookups', response);
         setLookups(response);
@@ -557,67 +552,189 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
   useEffect(() => {
     const cachedCalendar = readAdminSessionCache<SafetyAdminScheduleCalendarResponse>(
       currentUser.id,
-      `schedule-calendar:${requestKey}`,
+      `schedule-calendar:${calendarRequestKey}`,
     );
-    const cachedQueue = readAdminSessionCache<SafetyAdminScheduleQueueResponse>(
-      currentUser.id,
-      `schedule-queue:${requestKey}`,
-    );
-
-    if (cachedCalendar.value || cachedQueue.value) {
-      setScheduleState((current) => ({
-        calendar: cachedCalendar.value ?? current.calendar,
-        error: current.errorRequestKey === requestKey ? current.error : null,
+    if (cachedCalendar.value) {
+      setCalendarState((current) => ({
+        error: current.errorRequestKey === calendarRequestKey ? current.error : null,
         errorRequestKey:
-          current.errorRequestKey === requestKey ? current.errorRequestKey : '',
-        queue: cachedQueue.value ?? current.queue,
-        resolvedRequestKey: requestKey,
+          current.errorRequestKey === calendarRequestKey ? current.errorRequestKey : '',
+        response: cachedCalendar.value ?? current.response,
+        resolvedRequestKey: calendarRequestKey,
       }));
     }
-    abortControllerRef.current?.abort();
+    calendarAbortControllerRef.current?.abort();
     const abortController = new AbortController();
-    abortControllerRef.current = abortController;
-    setLoadingRequestKey(requestKey);
+    calendarAbortControllerRef.current = abortController;
+    setCalendarLoadingRequestKey(calendarRequestKey);
 
-    void fetchSchedulePayloads(scheduleRequest, abortController.signal)
-      .then((payloads) => {
-        applySchedulePayloads(requestKey, payloads);
-        setLoadingRequestKey('');
+    void fetchAdminScheduleCalendar(scheduleRequest, { signal: abortController.signal })
+      .then((response) => {
+        if (
+          abortController.signal.aborted ||
+          calendarAbortControllerRef.current !== abortController
+        ) {
+          return;
+        }
+        writeAdminSessionCache(currentUser.id, `schedule-calendar:${calendarRequestKey}`, response);
+        setCalendarState({
+          error: null,
+          errorRequestKey: '',
+          response,
+          resolvedRequestKey: calendarRequestKey,
+        });
+        setCalendarLoadingRequestKey('');
       })
       .catch((error) => {
-        if (abortController.signal.aborted) return;
-        setScheduleState((current) => ({
+        if (
+          abortController.signal.aborted ||
+          calendarAbortControllerRef.current !== abortController
+        ) {
+          return;
+        }
+        setCalendarState((current) => ({
           ...current,
           error:
             error instanceof Error
               ? error.message
               : '일정 데이터를 불러오지 못했습니다.',
-          errorRequestKey: requestKey,
+          errorRequestKey: calendarRequestKey,
         }));
-        setLoadingRequestKey('');
+        setCalendarLoadingRequestKey('');
       });
 
     return () => {
       abortController.abort();
     };
-  }, [applySchedulePayloads, currentUser.id, refreshNonce, requestKey, scheduleRequest]);
+  }, [calendarRequestKey, currentUser.id, refreshNonce, scheduleRequest]);
+
+  useEffect(() => {
+    const cachedQueue = readAdminSessionCache<SafetyAdminScheduleQueueResponse>(
+      currentUser.id,
+      `schedule-queue:${queueRequestKey}`,
+    );
+
+    if (cachedQueue.value) {
+      setQueueState((current) => ({
+        error: current.errorRequestKey === queueRequestKey ? current.error : null,
+        errorRequestKey:
+          current.errorRequestKey === queueRequestKey ? current.errorRequestKey : '',
+        response: cachedQueue.value ?? current.response,
+        resolvedRequestKey: queueRequestKey,
+        status: 'loaded',
+      }));
+    }
+
+    if (!shouldLoadQueue) {
+      queueAbortControllerRef.current?.abort();
+      setQueueLoadingRequestKey('');
+      return;
+    }
+
+    queueAbortControllerRef.current?.abort();
+    const abortController = new AbortController();
+    queueAbortControllerRef.current = abortController;
+    setQueueLoadingRequestKey(queueRequestKey);
+    setQueueState((current) => ({
+      ...current,
+      error: current.errorRequestKey === queueRequestKey ? current.error : null,
+      errorRequestKey:
+        current.errorRequestKey === queueRequestKey ? current.errorRequestKey : '',
+      response:
+        cachedQueue.value ??
+        (current.resolvedRequestKey === queueRequestKey
+          ? current.response
+          : {
+              ...EMPTY_QUEUE_RESPONSE,
+              month: scheduleRequest.month,
+              offset: queueRequest.offset,
+            }),
+      resolvedRequestKey: queueRequestKey,
+      status: 'loading',
+    }));
+
+    void fetchAdminScheduleQueue(queueRequest, { signal: abortController.signal })
+      .then((response) => {
+        if (
+          abortController.signal.aborted ||
+          queueAbortControllerRef.current !== abortController
+        ) {
+          return;
+        }
+        writeAdminSessionCache(currentUser.id, `schedule-queue:${queueRequestKey}`, response);
+        setQueueState({
+          error: null,
+          errorRequestKey: '',
+          response,
+          resolvedRequestKey: queueRequestKey,
+          status: 'loaded',
+        });
+        setQueueLoadingRequestKey('');
+      })
+      .catch((error) => {
+        if (
+          abortController.signal.aborted ||
+          queueAbortControllerRef.current !== abortController
+        ) {
+          return;
+        }
+        setQueueState((current) => ({
+          ...current,
+          error:
+            error instanceof Error
+              ? error.message
+              : '미선택 목록을 불러오지 못했습니다.',
+          errorRequestKey: queueRequestKey,
+          status: 'error',
+        }));
+        setQueueLoadingRequestKey('');
+      });
+
+    return () => {
+      abortController.abort();
+    };
+  }, [
+    currentUser.id,
+    queueRequest,
+    queueRequestKey,
+    refreshNonce,
+    scheduleRequest.month,
+    shouldLoadQueue,
+  ]);
 
   const calendarResponse =
-    scheduleState.resolvedRequestKey === requestKey
-      ? scheduleState.calendar
-      : cachedCalendarForRequest ?? scheduleState.calendar;
+    calendarState.resolvedRequestKey === calendarRequestKey
+      ? calendarState.response
+      : cachedCalendarForRequest ?? calendarState.response;
   const queueResponse =
-    scheduleState.resolvedRequestKey === requestKey
-      ? scheduleState.queue
-      : cachedQueueForRequest ?? scheduleState.queue;
-  const error = scheduleState.errorRequestKey === requestKey ? scheduleState.error : null;
-  const isLoading =
-    loadingRequestKey === requestKey || scheduleState.resolvedRequestKey !== requestKey;
+    queueState.resolvedRequestKey === queueRequestKey
+      ? queueState.response
+      : cachedQueueForRequest ?? {
+          ...EMPTY_QUEUE_RESPONSE,
+          month: calendarResponse.month,
+          total: calendarResponse.unselectedTotal,
+        };
+  const queueLoadStatus: QueueLoadStatus =
+    queueState.resolvedRequestKey === queueRequestKey
+      ? queueState.status
+      : cachedQueueForRequest
+        ? 'loaded'
+        : 'idle';
+  const calendarError =
+    calendarState.errorRequestKey === calendarRequestKey ? calendarState.error : null;
+  const queueError = queueState.errorRequestKey === queueRequestKey ? queueState.error : null;
+  const error = calendarError || (shouldLoadQueue ? queueError : null);
+  const isCalendarLoading =
+    calendarLoadingRequestKey === calendarRequestKey ||
+    calendarState.resolvedRequestKey !== calendarRequestKey;
+  const isQueueLoading =
+    shouldLoadQueue &&
+    (queueLoadingRequestKey === queueRequestKey || queueLoadStatus === 'idle');
+  const isLoading = isCalendarLoading || isQueueLoading;
   const hasVisibleData =
     calendarResponse.rows.length > 0 ||
-    queueResponse.rows.length > 0 ||
     calendarResponse.availableMonths.length > 0;
-  const isInitialLoading = isLoading && !hasVisibleData;
+  const isInitialLoading = isCalendarLoading && !hasVisibleData;
   const activeFilterCount = (siteId ? 1 : 0) + (assigneeUserId ? 1 : 0) + (status ? 1 : 0);
   const siteOptions = lookups.sites;
   const userOptions = lookups.users;
@@ -646,11 +763,15 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
       ? sortedSelectedRows.filter((row) => row.plannedDate === selectedDate)
       : sortedSelectedRows;
   }, [selectedDate, sortedSelectedRows, viewMode]);
-  const pagedQueueRows = useMemo(() => {
-    const offset = (queuePage - 1) * QUEUE_PAGE_SIZE;
-    return sortedQueueRows.slice(offset, offset + QUEUE_PAGE_SIZE);
-  }, [queuePage, sortedQueueRows]);
-  const queueTotalPages = Math.max(1, Math.ceil(sortedQueueRows.length / QUEUE_PAGE_SIZE));
+  const pagedQueueRows = sortedQueueRows;
+  const queueTotalPages = Math.max(1, Math.ceil(queueResponse.total / QUEUE_PAGE_SIZE));
+  const queueSummaryTotal =
+    queueLoadStatus === 'idle' ? calendarResponse.unselectedTotal : queueResponse.total;
+  const queueSummaryLabel = isQueueLoading
+    ? '미선택 목록 로딩 중'
+    : queueLoadStatus === 'idle'
+      ? `${queueSummaryTotal.toLocaleString('ko-KR')}건 (목록 미로딩)`
+      : `${queueResponse.total.toLocaleString('ko-KR')}건`;
   const calendar = useMemo(() => buildCalendarDays(month), [month]);
   const rowsByDate = useMemo(() => {
     const map = new Map<string, SafetyInspectionSchedule[]>();
@@ -685,7 +806,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
       })
     : '';
   const showOtherMonthHint =
-    !isLoading &&
+    !isCalendarLoading &&
     calendarResponse.monthTotal === 0 &&
     calendarResponse.allSelectedTotal > 0 &&
     calendarResponse.availableMonths.some((token) => token !== month);
@@ -729,7 +850,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
 
   const handleExport = async () => {
     try {
-      setScheduleState((current) => ({
+      setCalendarState((current) => ({
         ...current,
         error: null,
         errorRequestKey: '',
@@ -745,27 +866,27 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
         status,
       });
     } catch (nextError) {
-      setScheduleState((current) => ({
+      setCalendarState((current) => ({
         ...current,
         error:
           nextError instanceof Error ? nextError.message : '일정 엑셀 내보내기에 실패했습니다.',
-        errorRequestKey: requestKey,
+        errorRequestKey: calendarRequestKey,
       }));
     }
   };
 
   const handleDownloadBasicMaterial = async () => {
     if (!siteId) {
-      setScheduleState((current) => ({
+      setCalendarState((current) => ({
         ...current,
         error: '기초자료는 특정 현장을 선택한 상태에서만 출력할 수 있습니다.',
-        errorRequestKey: requestKey,
+        errorRequestKey: calendarRequestKey,
       }));
       return;
     }
 
     try {
-      setScheduleState((current) => ({
+      setCalendarState((current) => ({
         ...current,
         error: null,
         errorRequestKey: '',
@@ -776,11 +897,11 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
         matchedSite ? `${matchedSite.name}-기초자료.xlsx` : undefined,
       );
     } catch (nextError) {
-      setScheduleState((current) => ({
+      setCalendarState((current) => ({
         ...current,
         error:
           nextError instanceof Error ? nextError.message : '기초자료 출력에 실패했습니다.',
-        errorRequestKey: requestKey,
+        errorRequestKey: calendarRequestKey,
       }));
     }
   };
@@ -976,7 +1097,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
             <div className={styles.scheduleMonthMeta}>
               {isInitialLoading
                 ? '일정을 불러오는 중입니다.'
-                : `선택 일정 ${calendarResponse.monthTotal.toLocaleString('ko-KR')}건 · 전체 확정 ${calendarResponse.allSelectedTotal.toLocaleString('ko-KR')}건 · 미선택 ${queueResponse.total.toLocaleString('ko-KR')}건`}
+                : `선택 일정 ${calendarResponse.monthTotal.toLocaleString('ko-KR')}건 · 전체 확정 ${calendarResponse.allSelectedTotal.toLocaleString('ko-KR')}건 · 미선택 ${queueSummaryLabel}`}
             </div>
           </div>
 
@@ -1107,7 +1228,7 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
             </div>
             <div className={styles.sectionHeaderActions}>
               <span className={styles.sectionHeaderMeta}>
-                {queueResponse.total.toLocaleString('ko-KR')}건
+                {queueSummaryLabel}
               </span>
             </div>
           </div>
@@ -1115,7 +1236,15 @@ export function SchedulesSection({ currentUser }: SchedulesSectionProps) {
             <div className={styles.tableShell}>
               {sortedQueueRows.length === 0 ? (
                 <div className={styles.tableEmpty}>
-                  {isInitialLoading ? '일정을 불러오는 중입니다.' : '아직 날짜를 선택하지 않은 회차가 없습니다.'}
+                  {isQueueLoading
+                    ? '미선택 목록을 불러오는 중입니다.'
+                    : queueLoadStatus === 'idle'
+                      ? '미선택 목록은 목록 보기에서 불러옵니다.'
+                      : queueError
+                        ? queueError
+                        : queueResponse.total > 0
+                          ? '현재 페이지에 표시할 미선택 회차가 없습니다.'
+                          : '아직 날짜를 선택하지 않은 회차가 없습니다.'}
                 </div>
               ) : (
                 <>
