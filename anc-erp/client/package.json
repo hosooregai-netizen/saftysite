@@ -1,0 +1,18 @@
+{
+  "name": "@anc-erp/client",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "../../node_modules/.bin/next dev",
+    "build": "../../node_modules/.bin/next build",
+    "start": "../../node_modules/.bin/next start",
+    "lint": "../../node_modules/.bin/eslint ."
+  },
+  "dependencies": {
+    "@anc-erp/api-client": "workspace:*",
+    "@anc-erp/contracts": "workspace:*",
+    "next": "16.1.6",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
+  }
+}
